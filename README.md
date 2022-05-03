@@ -25,3 +25,6 @@ hash = $1
 /usr/bin/python3 /path/rename_hash.py --hash $hash
 ```
 QB 中调用该脚本并且引入 **%I** 属性
+
+# 声明
+本项目的自动改名规则根据 https://github.com/miracleyoo/anime_renamer 此项目
