@@ -27,4 +27,4 @@ hash = $1
 QB 中调用该脚本并且引入 **%I** 属性
 
 # 声明
-本项目的自动改名规则根据 https://github.com/miracleyoo/anime_renamer 此项目
+本项目的自动改名规则根据 [miracleyoo/anime_renamer](https://github.com/miracleyoo/anime_renamer) 项目
