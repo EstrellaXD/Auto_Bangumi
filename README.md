@@ -2,7 +2,7 @@
 
 - 需要依赖
 ```bash
-pip install qbittorrent_api
+pip install qbittorrent-api
 ```
 # 使用说明
 ## rename_qb
