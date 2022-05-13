@@ -29,7 +29,7 @@ class Qbtorrent_Rename:
             self.qbt_client.auth_log_in()
         except qbittorrentapi.LoginFailed as e:
             print(e)
-        self.recent_info = self.qbt_client.torrents_info()
+        self.recent_info = self.qbt_client.torrents_info(status_filter='completed')
         self.name = None
         self.hash = None
         self.new_name = None
@@ -53,6 +53,7 @@ class Qbtorrent_Rename:
             print('{} >> {}'.format(self.name, self.new_name))
         except:
             return
+        self.new_name = None
 
 
 if __name__ == "__main__":
