@@ -1,8 +1,8 @@
 # 全自动追番方案
 ## 说明
-
 本项目根据 qBittorrent, Plex 以及 infuse 搭建
 ![Image](https://cdn.sspai.com/2022/02/09/d94ec60db1c136f6b12ba3dca31e5f5f.png?imageView2/2/w/1120/q/90/interlace/1/ignore-error/1)
+完整教程请移步 [自动追番机器建立教程](https://www.craft.do/s/48MFW9QwaCQMzt)
 ### 需要依赖
 ```bash
 pip install qbittorrent-api
