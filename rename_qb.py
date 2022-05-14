@@ -3,10 +3,13 @@ import io
 import sys
 import os.path as op
 import qbittorrentapi
+import json
 
-host_ip = '192.168.31.10:8181'
-user_name = 'admin'
-password = 'adminadmin'
+f = open("config.json")
+server_info = json.load(f)
+host_ip = "http://"+server_info['host_ip']
+user_name = server_info['username']
+password = server_info['password']
 log_name = op.join(op.dirname(op.realpath(__file__)), 'log.txt')
 
 # Episode Regular Expression Matching Rules
