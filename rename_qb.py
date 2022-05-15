@@ -12,6 +12,7 @@ host_ip = "http://"+server_info['host_ip']
 user_name = server_info['username']
 password = server_info['password']
 log_name = op.join(op.dirname(op.realpath(__file__)), 'log.txt')
+method = server_info['method']
 
 # Episode Regular Expression Matching Rules
 episode_rules = [r'(.*)\[(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)',
@@ -25,10 +26,6 @@ episode_rules = [r'(.*)\[(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)',
 suffixs = ['mp4', 'mkv', 'avi', 'mov', 'flv', 'rmvb', 'ass', 'idx']
 sys.stdout = io.TextIOWrapper(buffer=sys.stdout.buffer, encoding='utf8')
 parser = argparse.ArgumentParser(description='Regular Expression Match')
-parser.add_argument('--method', default='',
-                    help='Use pr(pure name) to delete subtitle group name,\n'
-                         'use hash to only change one torrent name, \n'
-                         'use normal to change all torrents name.')
 parser.add_argument('--hash', default='',
                     help='The torrent Hash value.')
 
@@ -81,7 +78,6 @@ class Qbtorrent_Rename:
 
 def app():
     args = parser.parse_args()
-    method = args.method
     if method not in ['hash', 'pr', 'normal']:
         print("Not a correct method")
         quit()
