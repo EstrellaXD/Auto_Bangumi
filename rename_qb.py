@@ -46,7 +46,7 @@ class Qbtorrent_Rename:
         for rule in episode_rules:
             matchObj = re.match(rule, file_name, re.I)
             if matchObj is not None:
-                self.new_name = f'{matchObj.group(1)}{matchObj.group(2)} {matchObj.group(3)}'
+                self.new_name = f'{matchObj.group(1)} E{matchObj.group(2)} {matchObj.group(3)}'
 
     def qb_rename(self, idx):
         self.rename(idx)
