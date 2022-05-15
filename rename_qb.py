@@ -33,7 +33,6 @@ class Qbtorrent_Rename:
         except qbittorrentapi.LoginFailed as e:
             print(e)
         self.recent_info = self.qbt_client.torrents_info(status_filter='completed')
-        self.name = None
         self.hash = None
         self.new_name = None
         self.count = 0
@@ -42,10 +41,12 @@ class Qbtorrent_Rename:
 
     def rename(self, idx):
         self.name = self.recent_info[idx].name
+        n = re.split(r'\[|\]', self.name)
+        file_name = self.name.replace(f'[{n[1]}]', '')
         for rule in episode_rules:
-            matchObj = re.match(rule, self.name, re.I)
+            matchObj = re.match(rule, file_name, re.I)
             if matchObj is not None:
-                self.new_name = f'{matchObj.group(1)} E{matchObj.group(2)} {matchObj.group(3)}'
+                self.new_name = f'{matchObj.group(1)}{matchObj.group(2)} {matchObj.group(3)}'
 
     def qb_rename(self, idx):
         self.rename(idx)
@@ -65,6 +66,6 @@ if __name__ == "__main__":
         try:
             qb.qb_rename(i)
         except:
-            print("-----已完成对{}个文件的检查，已对其中{}个文件进行重命名-----".format(i+1, qb.count))
+            print(f"-----已完成对{i+1}个文件的检查，已对其中{qb.count}个文件进行重命名-----")
             print("------------------------完成------------------------")
             quit()
