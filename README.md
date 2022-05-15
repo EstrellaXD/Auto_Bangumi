@@ -15,7 +15,7 @@ pip install qbittorrent-api
   "username": "admin",
   "password": "adminadmin",
   "savepath": "/downloads/Bangumi",
-  "method": "pr"
+  "method": "pn"
 }
 ```
 ## 自动下载规则建立
@@ -31,7 +31,7 @@ python3 rename_qb.py --help
 ```
 目前有三种重命名模式
 - `normal`: 普通模式，直接重命名，保留番剧字幕组信息。
-- `pr`: 纯净模式，保留番剧名称和剧集信息，去掉多余信息。
+- `pn`: 纯净模式，保留番剧名称和剧集信息，去掉多余信息。
 - `hash`: 哈希模式，用于 Torrent 软件完成之后执行命令。
 
 然后运行 `rename_qb.py` 即可, 如果只想对新番进行重命名，可以在程序中添加添加 `categories="Bangumi"` 语句

@@ -58,8 +58,10 @@ class Qbtorrent_Rename:
             if matchObj is not None:
                 if self.method == 'normal':
                     self.new_name = f'{matchObj.group(1)} E{matchObj.group(2)} {matchObj.group(3)}'
-                elif self.method == 'pr':
-                    self.new_name = f'{matchObj.group(1)} E{matchObj.group(2)}'
+                elif self.method == 'pn':
+                    new_name = f'{matchObj.group(1)} E{matchObj.group(2)}.mp4'
+                    new_name = new_name.replace('[', '')
+                    self.new_name = new_name.replace(']', '')
 
     def qb_rename(self, idx, torrent_hash=''):
         self.rename(idx)
@@ -70,7 +72,7 @@ class Qbtorrent_Rename:
         try:
             self.qbt_client.torrents_rename_file(torrent_hash=self.hash, old_path=self.name, new_path=self.new_name)
             self.count += 1
-            print('{} >> {}'.format(self.name, self.new_name))
+            print(f'{self.name} >> {self.new_name}')
         except:
             return
         self.new_name = None
@@ -78,7 +80,7 @@ class Qbtorrent_Rename:
 
 def app():
     args = parser.parse_args()
-    if method not in ['hash', 'pr', 'normal']:
+    if method not in ['hash', 'pn', 'normal']:
         print("Not a correct method")
         quit()
     qb = Qbtorrent_Rename(method=method)
@@ -89,7 +91,7 @@ def app():
         except:
             print('error')
             quit()
-    elif method == 'pr':
+    elif method == 'pn':
         for i in range(0, qb.torrent_count + 1):
             try:
                 qb.qb_rename(i)
