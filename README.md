@@ -7,18 +7,26 @@
 ```bash
 pip install qbittorrent-api
 ```
-
+## 使用之前
+在 `config.json` 中填入你的 `hostip` `username` `password` `savepath`:
+```json
+{
+  "host_ip": "192.168.31.10:8181",
+  "username": "admin",
+  "password": "adminadmin",
+  "savepath": "/downloads/Bangumi"
+}
+```
 ## 自动下载规则建立
 ```shell
 python3 rule_set.py --name <新番名称>
 ```
 
 # 不符合规则的番剧重命名
-## 使用之前
-在 `config.json` 中填入你的 `hostip` `username` `password` `savepath`。
+
 ## rename_qb
 ```shell
-python3 rename_qb --help
+python3 rename_qb.py --help
 ```
 目前有三种重命名模式
 - `--method normal`: 普通模式，直接重命名，保留番剧字幕组信息。
