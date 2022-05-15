@@ -13,22 +13,30 @@ pip install qbittorrent-api
 python3 rule_set.py --name <新番名称>
 ```
 
-## 不符合规则的番剧重命名
-### rename_qb
-在 `rename_qb.py` 中填入 QB 的地址和用户名密码。
+# 不符合规则的番剧重命名
+## 使用之前
+在 `config.json` 中填入你的 `hostip` `username` `password` `savepath`。
+## rename_qb
+```shell
+python3 rename_qb --help
+```
+目前有三种重命名模式
+- `--method normal`: 普通模式，直接重命名，保留番剧字幕组信息。
+- `--method pr`: 纯净模式，保留番剧名称和剧集信息，去掉多余信息。
+- `--method hash`: 哈希模式，用于 Torrent 软件完成之后执行命令。
 
-然后直接运行 `rename_qb.py` 即可, 如果只想对新番进行重命名，可以添加 `categories="Bangumi"` 语句
+然后运行 `rename_qb.py` 即可, 如果只想对新番进行重命名，可以在程序中添加添加 `categories="Bangumi"` 语句
 
 根据 `qBittorrent` API 自动重命名下载的种子文件，且不会让种子失效。
 
-- 可以作为 `bash` 脚本运行
+- 可以作为 `bash` 脚本运行，可以直接使用仓库中的 `rename.sh`
 - 可以构建 `crontab` 定时运行
 ```shell
-0,30 * * * * python3 /path/rename_qb.py
+0,30 * * * * python3 /path/rename_qb.py --method pr
 ```
 - 也可以监测文件夹变化运行。
 
-### rename_hash
+### rename_qb `hash` 功能
 需要 QB 下载完成之后反向输入种子的哈希值，可以编写 Shell 脚本：
 ```shell
 #!/bin/bash
