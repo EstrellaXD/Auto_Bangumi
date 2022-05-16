@@ -96,8 +96,6 @@ class QbittorrentRename:
             self.rename_hash(args.hash)
 
 
-
-
 if __name__ == "__main__":
     rename = QbittorrentRename(method)
     rename.rename_app()
