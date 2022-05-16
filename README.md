@@ -40,6 +40,7 @@ python3 rename_qb.py --help
 
 - 可以作为 `bash` 脚本运行，可以直接使用仓库中的 `rename.sh`
 - 可以构建 `crontab` 定时运行
+- 可以使用 Docker 部署，详见文末（推荐）
 ```shell
 0,30 * * * * python3 /path/rename_qb.py
 ```
@@ -58,15 +59,15 @@ QB 中调用该脚本并且引入 **%I** 属性
 ## Docker 部署
 可以使用 Docker 部署重命名应用：
 ```shell
-docker run -d \
-  --name=Bangumi_rename \
-  -e HOST=192.168.31.10:8181 \
-  -e USER=admin \
-  -e PASSWORD=adminadmin \
-  -e METHOD=pn \
-  -e TIME=1800 \
+docker run -d \ 
+  --name=Bangumi_rename \ 
+  -e HOST=192.168.31.10:8181 \ 
+  -e USER=admin \ 
+  -e PASSWORD=adminadmin \ 
+  -e METHOD=pn \ 
+  -e TIME=1800 \ 
   estrellaxd/bangumi_rename_qb:latest
 ```
-
+`TIME` 为间隔运行时间，单位为秒
 # 声明
 本项目的自动改名规则根据 [miracleyoo/anime_renamer](https://github.com/miracleyoo/anime_renamer) 项目
