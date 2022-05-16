@@ -33,7 +33,7 @@ for a in item:
         matchObj = re.match(rule, name, re.I)
         if matchObj is not None:
             new_name = re.sub(r'\[|\]', '', f'{matchObj.group(1)}')
-            new_name = re.split(r'/', new_name)[-1].lstrip()
+            new_name = re.split(r'/', new_name)[-1].strip()
             if new_name not in bangumi_title:
                 bangumi_title.append(new_name)
 
@@ -44,13 +44,20 @@ had_data = []
 for data in bangumi_info:
     had_data.append(data["title"])
 
-season_rules = r'S\d'
+season_rules = r'(.*)(S.\d)'
 for title in bangumi_title:
+    a = re.match(season_rules, title, re.I)
+    if a is not None:
+        title = a.group(1).strip()
+        season = a.group(2).strip()
+    else:
+        season = ''
     if title not in had_data:
         bangumi_info.append({
-            "title": title
+            "title": title,
+            "season": season
         })
-        print(f"add {title}")
+        print(f"add {title} {season}")
 
 
 with open("bangumi.json", 'w', encoding='utf8') as f:

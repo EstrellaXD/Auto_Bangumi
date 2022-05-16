@@ -1,4 +1,3 @@
-import argparse
 import re
 import io
 import sys
@@ -12,6 +11,7 @@ password = environ['PASSWORD']
 method = environ['METHOD']
 delay_time = environ['TIME']
 
+
 # Episode Regular Expression Matching Rules
 episode_rules = [r'(.*)\[(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)',
                  r'(.*)\[E(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)',
@@ -23,10 +23,6 @@ episode_rules = [r'(.*)\[(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)',
 # Suffixs of files we are going to rename
 suffixs = ['mp4', 'mkv', 'avi', 'mov', 'flv', 'rmvb', 'ass', 'idx']
 sys.stdout = io.TextIOWrapper(buffer=sys.stdout.buffer, encoding='utf8')
-parser = argparse.ArgumentParser(description='Regular Expression Match')
-parser.add_argument('--hash', default='',
-                    help='The torrent Hash value.')
-args = parser.parse_args()
 
 
 class QbittorrentRename:
@@ -47,6 +43,7 @@ class QbittorrentRename:
 
     def rename_normal(self, idx):
         self.name = self.recent_info[idx].name
+        self.hash = self.recent_info[idx].hash
         file_name = self.name
         for rule in episode_rules:
             matchObj = re.match(rule, file_name, re.I)
@@ -55,6 +52,7 @@ class QbittorrentRename:
 
     def rename_pn(self, idx):
         self.name = self.recent_info[idx].name
+        self.hash = self.recent_info[idx].hash
         n = re.split(r'\[|\]', self.name)
         file_name = self.name.replace(f'[{n[1]}]', '')
         for rule in episode_rules:
@@ -62,36 +60,43 @@ class QbittorrentRename:
             if matchObj is not None:
                 self.new_name = re.sub(r'\[|\]', '', f'{matchObj.group(1)} E{matchObj.group(2)}.{n[-1]}')
 
-    def rename_hash(self, torrent_hash):
-        self.hash = torrent_hash
+    def rename(self):
         try:
             self.qbt_client.torrents_rename_file(torrent_hash=self.hash, old_path=self.name, new_path=self.new_name)
-            self.count += 1
             print(f'{self.name} >> {self.new_name}')
+            self.count += 1
         except:
             return
 
+    def clear_info(self):
+        self.name = None
+        self.hash = None
+        self.new_name = None
+
+    def print_result(self):
+        sys.stdout.write(f"-----已完成对{self.torrent_count}个文件的检查，已对其中{self.count}个文件进行重命名-----" + '\n')
+        sys.stdout.write("------------------------完成------------------------" + '\n')
+        sys.stdout.flush()
+
     def rename_app(self):
-        if self.method not in ['pn', 'normal', 'hash']:
+        if self.method not in ['pn', 'normal']:
             print('error method')
         elif self.method == 'normal':
             for i in range(0, self.torrent_count + 1):
                 try:
                     self.rename_normal(i)
+                    self.rename()
+                    self.clear_info()
                 except:
-                    sys.stdout.write(f"-----已完成对{i + 1}个文件的检查，已对其中{self.count}个文件进行重命名-----" + '\n')
-                    sys.stdout.write("------------------------完成------------------------" + '\n')
-                    sys.stdout.flush()
+                    self.print_result()
         elif self.method == 'pn':
             for i in range(0, self.torrent_count + 1):
                 try:
                     self.rename_pn(i)
+                    self.rename()
+                    self.clear_info()
                 except:
-                    sys.stdout.write(f"-----已完成对{i + 1}个文件的检查，已对其中{self.count}个文件进行重命名-----" + '\n')
-                    sys.stdout.write("------------------------完成------------------------" + '\n')
-                    sys.stdout.flush()
-        elif self.method == 'hash':
-            self.rename_hash(args.hash)
+                    self.print_result()
 
 
 if __name__ == "__main__":
