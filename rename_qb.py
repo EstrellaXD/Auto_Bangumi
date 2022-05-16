@@ -6,8 +6,8 @@ import os.path as op
 import qbittorrentapi
 import json
 
-f = open("config.json")
-server_info = json.load(f)
+with open("config.json") as f:
+    server_info = json.load(f)
 host_ip = "http://"+server_info['host_ip']
 user_name = server_info['username']
 password = server_info['password']
