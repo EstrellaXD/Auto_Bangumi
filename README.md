@@ -55,5 +55,18 @@ hash = $1
 ```
 QB 中调用该脚本并且引入 **%I** 属性
 
+## Docker 部署
+可以使用 Docker 部署重命名应用：
+```shell
+docker run -d \
+  --name=Bangumi_rename \
+  -e HOST=192.168.31.10:8181 \
+  -e USER=admin \
+  -e PASSWORD=adminadmin \
+  -e METHOD=pn \
+  -e TIME=1800 \
+  estrellaxd/bangumi_rename_qb:latest
+```
+
 # 声明
 本项目的自动改名规则根据 [miracleyoo/anime_renamer](https://github.com/miracleyoo/anime_renamer) 项目
