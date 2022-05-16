@@ -32,7 +32,6 @@ python3 rename_qb.py --help
 目前有三种重命名模式
 - `normal`: 普通模式，直接重命名，保留番剧字幕组信息。
 - `pn`: 纯净模式，保留番剧名称和剧集信息，去掉多余信息。
-- `hash`: 哈希模式，用于 Torrent 软件完成之后执行命令。
 
 然后运行 `rename_qb.py` 即可, 如果只想对新番进行重命名，可以在程序中添加添加 `categories="Bangumi"` 语句
 
@@ -46,16 +45,6 @@ python3 rename_qb.py --help
 ```
 - 也可以监测文件夹变化运行。
 
-### rename_qb `hash` 功能
-需要 QB 下载完成之后反向输入种子的哈希值，`config` 的`method` 中填写 `hash`, 添加可以编写 Shell 脚本：
-```shell
-#!/bin/bash
-hash = $1
-
-/usr/bin/python3 /path/rename_hash.py --hash $hash
-```
-QB 中调用该脚本并且引入 **%I** 属性
-
 ## Docker 部署
 可以使用 Docker 部署重命名应用：
 ```shell
@@ -68,6 +57,7 @@ docker run -d \
   -e TIME=1800 \ 
   estrellaxd/bangumi_rename_qb:latest
 ```
+docker 有点小 bug 明早再修
 `TIME` 为间隔运行时间，单位为秒
 # 声明
 本项目的自动改名规则根据 [miracleyoo/anime_renamer](https://github.com/miracleyoo/anime_renamer) 项目
