@@ -48,13 +48,13 @@ python3 rename_qb.py --help
 ## Docker 部署
 可以使用 Docker 部署重命名应用：
 ```shell
-docker run -d \ 
-  --name=Bangumi_rename \ 
-  -e HOST=192.168.31.10:8181 \ 
-  -e USER=admin \ 
-  -e PASSWORD=adminadmin \ 
-  -e METHOD=pn \ 
-  -e TIME=1800 \ 
+docker run -d \
+  --name=Bangumi_rename \
+  -e HOST=192.168.31.10:8181 \
+  -e USER=admin \
+  -e PASSWORD=adminadmin \
+  -e METHOD=pn \
+  -e TIME=1800 \
   estrellaxd/bangumi_rename_qb:latest
 ```
 docker 有点小 bug 明早再修
