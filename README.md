@@ -2,9 +2,9 @@
 ## 全自动追番机
 
 V2.0 Beta 已经完成
-[AutoBangumi V2 简易说明](https://www.craft.do/s/4viN6M3tBqigLp)
-测试请进群：
-[Telegram](t.me/autobangumi)
+
+- [AutoBangumi V2 简易说明](https://www.craft.do/s/4viN6M3tBqigLp)
+- 测试群：[Telegram](t.me/autobangumi)
 
 <img src="https://github.com/EstrellaXD/Bangumi_Auto_Collector/blob/main/image/workthrough-1.0.png?raw=true" alt="drawing" width="350"/><img src="https://github.com/EstrellaXD/Bangumi_Auto_Collector/blob/main/image/workthrough-2.0.png?raw=true" alt="drawing" width="350"/>
 ## 说明
