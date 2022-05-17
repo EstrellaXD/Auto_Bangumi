@@ -66,7 +66,6 @@ docker run -d \
   -e TIME=1800 \
   estrellaxd/bangumi_rename_qb:latest
 ```
-docker 有点小 bug 明早再修
 `TIME` 为间隔运行时间，单位为秒
 # 声明
 本项目的自动改名规则根据 [miracleyoo/anime_renamer](https://github.com/miracleyoo/anime_renamer) 项目
