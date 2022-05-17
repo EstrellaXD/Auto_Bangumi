@@ -1,12 +1,16 @@
-# 全自动追番方案
-## 全自动追番机
+# AutoBangumi - 全自动追番程序
+## V 2.0
 
-V2.0 Beta 已经完成
+V2.0 Beta 已经完成，相比于 1.0 改进：
+- 无需手动设定下载规则
+- 更符合刮削器的命名规则
+- 自动归类 Season
+
+<img src="https://github.com/EstrellaXD/Bangumi_Auto_Collector/blob/main/image/workthrough-1.0.png?raw=true" alt="drawing" width="345.15"/><img src="https://github.com/EstrellaXD/Bangumi_Auto_Collector/blob/main/image/workthrough-2.0.png?raw=true" alt="drawing" width="350"/>
 
 - [AutoBangumi V2 简易说明](https://www.craft.do/s/4viN6M3tBqigLp)
 - 测试群：[Telegram](t.me/autobangumi)
-
-<img src="https://github.com/EstrellaXD/Bangumi_Auto_Collector/blob/main/image/workthrough-1.0.png?raw=true" alt="drawing" width="350"/><img src="https://github.com/EstrellaXD/Bangumi_Auto_Collector/blob/main/image/workthrough-2.0.png?raw=true" alt="drawing" width="350"/>
+# V 1.0
 ## 说明
 本项目根据 qBittorrent, Plex 以及 infuse 搭建
 ![Image](https://cdn.sspai.com/2022/02/09/d94ec60db1c136f6b12ba3dca31e5f5f.png?imageView2/2/w/1120/q/90/interlace/1/ignore-error/1)
@@ -30,9 +34,6 @@ pip install qbittorrent-api
 ```shell
 python3 rule_set.py --name <新番名称>
 ```
-
-# 不符合规则的番剧重命名
-
 ## rename_qb
 ```shell
 python3 rename_qb.py --help
