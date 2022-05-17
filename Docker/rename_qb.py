@@ -99,10 +99,14 @@ class QbittorrentRename:
                     self.print_result()
 
 
-if __name__ == "__main__":
+def rename_main():
     sys.stdout.write('Program start.' + '\n')
     sys.stdout.flush()
     while True:
         rename = QbittorrentRename(method)
         rename.rename_app()
         time.sleep(float(delay_time))
+
+
+if __name__ == "__main__":
+    rename_main()
