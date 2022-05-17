@@ -74,8 +74,9 @@ class QbittorrentRename:
         self.new_name = None
 
     def print_result(self):
-        sys.stdout.write(f"-----已完成对{self.torrent_count}个文件的检查，已对其中{self.count}个文件进行重命名-----" + '\n')
-        sys.stdout.write("------------------------完成------------------------" + '\n')
+        sys.stdout.write(f"[{time.strftime('%X')}]  已完成对{self.torrent_count}个文件的检查" + '\n')
+        sys.stdout.write(f"[{time.strftime('%X')}]  已对其中{self.count}个文件进行重命名" + '\n')
+        sys.stdout.write(f"[{time.strftime('%X')}]  完成" + '\n')
         sys.stdout.flush()
 
     def rename_app(self):
@@ -100,7 +101,7 @@ class QbittorrentRename:
 
 
 def rename_main():
-    sys.stdout.write('Program start.' + '\n')
+    sys.stdout.write(f"[{time.strftime('%X')}]  Program start." + '\n')
     sys.stdout.flush()
     while True:
         rename = QbittorrentRename(method)

@@ -2,6 +2,8 @@ import re
 import io
 import sys
 import os.path as op
+import time
+
 import qbittorrentapi
 import json
 
@@ -75,8 +77,9 @@ class QbittorrentRename:
         self.new_name = None
 
     def print_result(self):
-        print(f"-----已完成对{self.torrent_count}个文件的检查，已对其中{self.count}个文件进行重命名-----")
-        print("------------------------完成------------------------")
+        print(f"[{time.strftime('%X')}]  已完成对{self.torrent_count}个文件的检查")
+        print(f"[{time.strftime('%X')}]  已对其中{self.count}个文件进行重命名")
+        print(f"[{time.strftime('%X')}]  完成")
 
     def rename_app(self):
         if self.method not in ['pn', 'normal']:
