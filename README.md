@@ -2,7 +2,8 @@
 ## 全自动追番机
 
 目前代码已经写完，正在进行测试项目ing
-<img src="/image/workthrough-1.0" alt="drawing" width="200"/><img src="/image/workthrough-2.0" alt="drawing" width="200"/>
+
+<img src="https://github.com/EstrellaXD/Bangumi_Auto_Collector/blob/main/image/workthrough-1.0.png?raw=true" alt="drawing" width="200"/><img src="https://github.com/EstrellaXD/Bangumi_Auto_Collector/blob/main/image/workthrough-2.0.png?raw=true" alt="drawing" width="200"/>
 ## 说明
 本项目根据 qBittorrent, Plex 以及 infuse 搭建
 ![Image](https://cdn.sspai.com/2022/02/09/d94ec60db1c136f6b12ba3dca31e5f5f.png?imageView2/2/w/1120/q/90/interlace/1/ignore-error/1)
