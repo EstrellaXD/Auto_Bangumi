@@ -18,7 +18,10 @@ name = "[NC-Raws] 小书痴的下克上：为了成为图书管理员不择手�
 parrten = r'\[|\]|\u3010|\u3011|\★|\*|\(|\)|\（|\）'
 for i in range(2):
     n = re.split(parrten, name)
-    name = re.sub(f'\[{n[1]}\]|【{n[1]}】|★{n[1]}★', '', name)
+    try:
+        name = re.sub(f'\[{n[1]}\]|【{n[1]}】|★{n[1]}★', '', name)
+    except:
+        name = name
 for rule in episode_rules:
     matchObj = re.match(rule, name, re.I)
     if matchObj is not None:

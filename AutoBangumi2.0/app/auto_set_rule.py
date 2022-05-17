@@ -21,7 +21,7 @@ class SetRule:
 
     def set_rule(self, bangumi_name, season):
         rule = {
-            'enable': False,
+            'enable': True,
             'mustContain': bangumi_name,
             'mustNotContain': '720',
             'useRegx': True,
