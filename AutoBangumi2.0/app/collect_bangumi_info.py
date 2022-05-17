@@ -1,9 +1,10 @@
 # -*- coding: UTF-8 -*-
+import os
+
 import requests
 from bs4 import BeautifulSoup
 import json
 import re
-
 
 class CollectRSS:
     def __init__(self, config, info):
@@ -58,7 +59,7 @@ class CollectRSS:
                 })
                 print(f"add {title} {season}")
         # 写入数据
-        with open("../config/bangumi.json", 'w', encoding='utf8') as f:
+        with open("/config/bangumi.json", 'w', encoding='utf8') as f:
             json.dump(bangumi_info, f, indent=4, separators=(',', ': '), ensure_ascii=False)
 
     def run(self):
