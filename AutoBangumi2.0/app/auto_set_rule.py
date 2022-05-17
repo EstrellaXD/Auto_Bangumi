@@ -13,6 +13,7 @@ class SetRule:
         self.host_ip = config["host_ip"]
         self.user_name = config["user_name"]
         self.password = config["password"]
+        self.download_path = config["download_path"]
         self.qb = qbittorrentapi.Client(host=self.host_ip, username=self.user_name, password=self.password)
         try:
             self.qb.auth_log_in()
@@ -33,15 +34,15 @@ class SetRule:
             'lastMatch': '',
             'addPaused': False,
             'assignedCategory': 'Bangumi',
-            'savePath': os.path.join('/downloads', bangumi_name, season)
+            'savePath': str(os.path.join(self.download_path, bangumi_name, season))
             }
         self.qb.rss_set_rule(rule_name=bangumi_name, rule_def=rule)
 
     def run(self):
-        sys.stdout.write(f"[{time.strftime('%X')}]  Start adding rules.")
+        sys.stdout.write(f"[{time.strftime('%X')}]  Start adding rules." + "\n")
         sys.stdout.flush()
         for info in self.bangumi_info:
             self.set_rule(info["title"], info["season"])
-        sys.stdout.write(f"[{time.strftime('%X')}]  Finished.")
+        sys.stdout.write(f"[{time.strftime('%X')}]  Finished." + "\n")
         sys.stdout.flush()
 

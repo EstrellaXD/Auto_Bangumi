@@ -27,11 +27,9 @@ class CollectRSS:
         rss = requests.get(url, 'utf-8')
         soup = BeautifulSoup(rss.text, 'xml')
         item = soup.find_all('item')
-        bangumi_title = []
         for a in item:
             name = str(a.find('title'))
             name = re.sub('<title>|</title>', '', name)
-            print(name)
             parrten = r'\[|\]|\u3010|\u3011|\★|\*|\(|\)|\（|\）'
             for i in range(2):
                 n = re.split(parrten, name)
@@ -44,7 +42,6 @@ class CollectRSS:
                 if matchObj is not None:
                     new_name = re.sub(r'\[|\]', '', f'{matchObj.group(1)}')
                     new_name = re.split(r'/', new_name)[-1].strip()
-                    print(new_name)
                     if new_name not in self.bangumi_title:
                         self.bangumi_title.append(new_name)
 
@@ -65,16 +62,16 @@ class CollectRSS:
                     "title": title,
                     "season": season
                 })
-                sys.stdout.write(f"[{time.strftime('%X')}]  add {title} {season}")
+                sys.stdout.write(f"[{time.strftime('%X')}]  add {title} {season}" + "\n")
                 sys.stdout.flush()
         # 写入数据
         with open("/config/bangumi.json", 'w', encoding='utf8') as f:
             json.dump(bangumi_info, f, indent=4, separators=(',', ': '), ensure_ascii=False)
 
     def run(self):
-        sys.stdout.write(f"[{time.strftime('%X')}]  Start scanning RSS Feed.")
+        sys.stdout.write(f"[{time.strftime('%X')}]  Start scanning RSS Feed." + "\n")
         sys.stdout.flush()
         self.collect_info()
         self.write_info()
-        sys.stdout.write(f"[{time.strftime('%X')}]  Finished.")
+        sys.stdout.write(f"[{time.strftime('%X')}]  Finished." + "\n")
         sys.stdout.flush()
