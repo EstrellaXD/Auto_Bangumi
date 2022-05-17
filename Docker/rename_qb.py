@@ -36,6 +36,7 @@ class QbittorrentRename:
         self.hash = None
         self.name = None
         self.new_name = None
+        self.path_name = None
         self.count = 0
         self.rename_count = 0
         self.torrent_count = len(self.recent_info)
@@ -44,28 +45,30 @@ class QbittorrentRename:
     def rename_normal(self, idx):
         self.name = self.recent_info[idx].name
         self.hash = self.recent_info[idx].hash
+        self.path_name = self.recent_info[idx].content_path.split("/")[-1]
         file_name = self.name
         for rule in episode_rules:
             matchObj = re.match(rule, file_name, re.I)
             if matchObj is not None:
-                self.new_name = f'{matchObj.group(1)} E{matchObj.group(2)} {matchObj.group(3)}'
+                self.new_name = f'{matchObj.group(1).strip()} E{matchObj.group(2)}{matchObj.group(3)}'
 
     def rename_pn(self, idx):
         self.name = self.recent_info[idx].name
         self.hash = self.recent_info[idx].hash
+        self.path_name = self.recent_info[idx].content_path.split("/")[-1]
         n = re.split(r'\[|\]', self.name)
         file_name = self.name.replace(f'[{n[1]}]', '')
         for rule in episode_rules:
             matchObj = re.match(rule, file_name, re.I)
             if matchObj is not None:
-                self.new_name = re.sub(r'\[|\]', '', f'{matchObj.group(1)} E{matchObj.group(2)}.{n[-1]}')
+                self.new_name = re.sub(r'\[|\]', '', f'{matchObj.group(1).strip()} E{matchObj.group(2)}{n[-1]}')
 
     def rename(self):
-        try:
+        if self.path_name != self.new_name:
             self.qbt_client.torrents_rename_file(torrent_hash=self.hash, old_path=self.name, new_path=self.new_name)
             print(f'{self.name} >> {self.new_name}')
             self.count += 1
-        except:
+        else:
             return
 
     def clear_info(self):
