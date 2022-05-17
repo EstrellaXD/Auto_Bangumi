@@ -66,7 +66,8 @@ class QbittorrentRename:
     def rename(self):
         if self.path_name != self.new_name:
             self.qbt_client.torrents_rename_file(torrent_hash=self.hash, old_path=self.path_name, new_path=self.new_name)
-            print(f'{self.name} >> {self.new_name}')
+            sys.stdout.write(f"[{time.strftime('%X')}]  {self.path_name} >> {self.new_name}" + '\n')
+            sys.stdout.flush()
             self.count += 1
         else:
             return
