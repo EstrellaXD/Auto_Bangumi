@@ -1,30 +1,27 @@
-import re
+import json
+import os
 
-import requests
-from bs4 import BeautifulSoup
-
-
-
-episode_rules = [r'(.*)\[(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)',
-                         r'(.*)\[E(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)',
-                         r'(.*)\[第(\d*\.*\d*)话(?:END)?\](.*)',
-                         r'(.*)\[第(\d*\.*\d*)話(?:END)?\](.*)',
-                         r'(.*)第(\d*\.*\d*)话(?:END)?(.*)',
-                         r'(.*)第(\d*\.*\d*)話(?:END)?(.*)',
-                         r'(.*)- (\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)? (.*)']
+config_path = "config.json"
+info_path = "bangumi.json"
 
 
-name = "[NC-Raws] 小书痴的下克上：为了成为图书管理员不择手段！第三季 / Honzuki no Gekokujou S3 - 32 (Baha 1920x1080 AVC AAC MP4)"
-parrten = r'\[|\]|\u3010|\u3011|\★|\*|\(|\)|\（|\）'
-for i in range(2):
-    n = re.split(parrten, name)
-    try:
-        name = re.sub(f'\[{n[1]}\]|【{n[1]}】|★{n[1]}★', '', name)
-    except:
-        name = name
-for rule in episode_rules:
-    matchObj = re.match(rule, name, re.I)
-    if matchObj is not None:
-        new_name = re.sub(r'\[|\]', '', f'{matchObj.group(1)}')
-        new_name = re.split(r'/', new_name)[-1].strip()
-        print(new_name)
+def create_config():
+    if not os.path.exists(config_path):
+        config = {
+            "host_ip": "127.0.0.1:8080",
+            "user_name": "admin",
+            "password": "adminadmin",
+            "method": "pn",
+            "rss_link": "https://mikanani.me/RSS/MyBangumi?token=qTxKo48gH1SrFNy8X%2fCfQUoeElNsgKNWFNzNieKwBH8%3d",
+            "download_path": "/downloads/Bangumi"
+        }
+        with open(config_path,"w") as c:
+            json.dump(config, c, indent=4, separators=(',', ': '), ensure_ascii=False)
+    if not os.path.exists(info_path):
+        bangumi_info = [{"title": "simple","season": ""}]
+        with open(info_path, "w") as i:
+            json.dump(bangumi_info, i, indent=4, separators=(',', ': '), ensure_ascii=False)
+    print("请填入配置参数")
+    quit()
+
+create_config()
