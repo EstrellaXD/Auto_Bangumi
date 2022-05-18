@@ -76,6 +76,7 @@ class QbittorrentRename:
         self.name = None
         self.hash = None
         self.new_name = None
+        self.path_name = None
 
     def print_result(self):
         sys.stdout.write(f"[{time.strftime('%X')}]  已完成对{self.torrent_count}个文件的检查" + '\n')
