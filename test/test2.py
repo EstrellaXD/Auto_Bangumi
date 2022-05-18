@@ -2,12 +2,9 @@ import re
 
 import requests
 
-url = "http://192.168.200.2"
-try:
-    r = requests.get(url)
-    print(r.content)
-except ConnectionError:
-    print("e")
-except KeyboardInterrupt:
-    print("end")
-
+name = "[IET字幕组][闪电十一人 FF篇][01][1080P][WebRip][繁日双语][AVC AAC][MP4]"
+split_rule = r"\[|\]|\【|\】|\★|\（|\）|\(|\)"
+n = re.split(split_rule, name)
+while '' in n:
+    n.remove('')
+print(n)
