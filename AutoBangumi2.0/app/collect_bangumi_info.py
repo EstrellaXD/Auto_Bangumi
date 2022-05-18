@@ -1,7 +1,6 @@
 # -*- coding: UTF-8 -*-
 import sys
 import time
-
 import requests
 from bs4 import BeautifulSoup
 import json
@@ -27,19 +26,21 @@ class CollectRSS:
         soup = BeautifulSoup(rss.text, 'xml')
         item = soup.find_all('item')
         for a in item:
-            name = str(a.find('title'))
-            name = re.sub('<title>|</title>', '', name)
-            parrten = r'\[|\]|\u3010|\u3011|\★|\*|\(|\)|\（|\）'
+            name = a.title.string
+            pattern = r'\[|\]|\u3010|\u3011|\★|\*|\(|\)|\（|\）|\_'
             for i in range(2):
-                n = re.split(parrten, name)
+                n = re.split(pattern, name)
                 try:
-                    name = re.sub(f'\[{n[1]}\]|【{n[1]}】|★{n[1]}★', '', name)
-                except:
-                    name = name
+                    if re.search("\d{2,3}^月", n[1]) is None:
+                        name = re.sub(f'\[{n[1]}\]|【{n[1]}】|★{n[1]}★', '', name).strip()
+                    else:
+                        break
+                except IndexError:
+                    break
             for rule in episode_rules:
-                matchObj = re.match(rule, name, re.I)
-                if matchObj is not None:
-                    new_name = re.sub(r'\[|\]', '', f'{matchObj.group(1)}')
+                match_obj = re.match(rule, name, re.I)
+                if match_obj is not None:
+                    new_name = re.sub(r'\[|\]', '', f'{match_obj.group(1)}')
                     new_name = re.split(r'/', new_name)[-1].strip()
                     if new_name not in self.bangumi_title:
                         self.bangumi_title.append(new_name)
