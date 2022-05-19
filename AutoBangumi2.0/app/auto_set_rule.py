@@ -39,10 +39,10 @@ class SetRule:
         self.qb.rss_set_rule(rule_name=bangumi_name, rule_def=rule)
 
     def run(self):
-        sys.stdout.write(f"[{time.strftime('%X')}]  Start adding rules." + "\n")
+        sys.stdout.write(f"[{time.strftime('%Y-%m-%d %X')}]  Start adding rules." + "\n")
         sys.stdout.flush()
         for info in self.bangumi_info:
             self.set_rule(info["title"], info["season"])
-        sys.stdout.write(f"[{time.strftime('%X')}]  Finished." + "\n")
+        sys.stdout.write(f"[{time.strftime('%Y-%m-%d %X')}]  Finished." + "\n")
         sys.stdout.flush()
 

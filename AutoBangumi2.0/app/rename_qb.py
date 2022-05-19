@@ -54,7 +54,7 @@ class QbittorrentRename:
     def rename(self):
         if self.path_name != self.new_name:
             self.qbt_client.torrents_rename_file(torrent_hash=self.hash, old_path=self.path_name, new_path=self.new_name)
-            sys.stdout.write(f"[{time.strftime('%X')}]  {self.path_name} >> {self.new_name}")
+            sys.stdout.write(f"[{time.strftime('%Y-%m-%d %X')}]  {self.path_name} >> {self.new_name}")
             self.count += 1
         else:
             return
@@ -66,9 +66,9 @@ class QbittorrentRename:
         self.path_name = None
 
     def print_result(self):
-        sys.stdout.write(f"[{time.strftime('%X')}]  已完成对{self.torrent_count}个文件的检查" + '\n')
-        sys.stdout.write(f"[{time.strftime('%X')}]  已对其中{self.count}个文件进行重命名" + '\n')
-        sys.stdout.write(f"[{time.strftime('%X')}]  完成" + '\n')
+        sys.stdout.write(f"[{time.strftime('%Y-%m-%d %X')}]  已完成对{self.torrent_count}个文件的检查" + '\n')
+        sys.stdout.write(f"[{time.strftime('%Y-%m-%d %X')}]  已对其中{self.count}个文件进行重命名" + '\n')
+        sys.stdout.write(f"[{time.strftime('%Y-%m-%d %X')}]  完成" + '\n')
         sys.stdout.flush()
 
     def run(self):
