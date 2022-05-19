@@ -56,7 +56,7 @@ class CollectRSS:
                 if exit_flag:
                     break
             if not exit_flag:
-                print(f"ERROR Not match with {name}")
+                print(f"[{time.strftime('%Y-%m-%d %X')}]  ERROR Not match with {name}")
 
     def put_info_json(self):
         season_match = r"(.*)(Season \d{1,2}|S\d{1,2}|第.*季)"

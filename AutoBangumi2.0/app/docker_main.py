@@ -27,6 +27,7 @@ def create_config():
             "rss_link": rss_link,
             "download_path": download_path
         }
+        SetRule(config).add_rss_feed()
         with open(config_path, "w") as c:
             json.dump(config, c, indent=4, separators=(',', ': '), ensure_ascii=False)
     if not os.path.exists(info_path):
@@ -43,6 +44,6 @@ if __name__ == "__main__":
         with open(info_path) as f:
             info = json.load(f)
         CollectRSS(config, info).run()
-        SetRule(config, info).run()
+        SetRule(config).run()
         QbittorrentRename(config).run()
         time.sleep(float(sleep_time))
