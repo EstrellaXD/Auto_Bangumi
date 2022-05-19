@@ -1,14 +1,15 @@
 import re
-import io
 import sys
 import qbittorrentapi
-from os import environ
 import time
+from docker_main import EnvInfo
 
 
-class QbittorrentRename:
-    def __init__(self, config):
-        self.qbt_client = qbittorrentapi.Client(host=config['host_ip'], username=config['user_name'], password=config['password'])
+class qBittorrentRename:
+    def __init__(self):
+        self.qbt_client = qbittorrentapi.Client(host=EnvInfo.host_ip,
+                                                username=EnvInfo.user_name,
+                                                password=EnvInfo.password)
         try:
             self.qbt_client.auth_log_in()
         except qbittorrentapi.LoginFailed as e:
@@ -21,7 +22,6 @@ class QbittorrentRename:
         self.count = 0
         self.rename_count = 0
         self.torrent_count = len(self.recent_info)
-        self.method = config['method']
         self.rules = [r'(.*)\[(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)',
                       r'(.*)\[E(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)',
                       r'(.*)\[第(\d*\.*\d*)话(?:END)?\](.*)',
@@ -66,15 +66,15 @@ class QbittorrentRename:
         self.path_name = None
 
     def print_result(self):
-        sys.stdout.write(f"[{time.strftime('%Y-%m-%d %X')}]  已完成对{self.torrent_count}个文件的检查" + '\n')
-        sys.stdout.write(f"[{time.strftime('%Y-%m-%d %X')}]  已对其中{self.count}个文件进行重命名" + '\n')
-        sys.stdout.write(f"[{time.strftime('%Y-%m-%d %X')}]  完成" + '\n')
+        sys.stdout.write(f"[{EnvInfo.time_show_obj}]  已完成对{self.torrent_count}个文件的检查" + '\n')
+        sys.stdout.write(f"[{EnvInfo.time_show_obj}]  已对其中{self.count}个文件进行重命名" + '\n')
+        sys.stdout.write(f"[{EnvInfo.time_show_obj}]  完成" + '\n')
         sys.stdout.flush()
 
     def run(self):
-        if self.method not in ['pn', 'normal']:
+        if EnvInfo.method not in ['pn', 'normal']:
             print('error method')
-        elif self.method == 'normal':
+        elif EnvInfo.method == 'normal':
             for i in range(0, self.torrent_count + 1):
                 try:
                     self.rename_normal(i)
@@ -82,7 +82,7 @@ class QbittorrentRename:
                     self.clear_info()
                 except:
                     self.print_result()
-        elif self.method == 'pn':
+        elif EnvInfo.method == 'pn':
             for i in range(0, self.torrent_count + 1):
                 try:
                     self.rename_pn(i)

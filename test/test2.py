@@ -1,4 +1,4 @@
-import time
-import sys
+from AutoBangumi.app.collect_bangumi_info import CollectRSS
 
-sys.stdout.write(f"[{time.strftime('%Y-%m-%d %X')}]")
+
+cr = CollectRSS(config=)
