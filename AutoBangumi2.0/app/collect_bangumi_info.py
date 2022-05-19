@@ -10,7 +10,7 @@ import re
 class CollectRSS:
     def __init__(self, config, info):
         self.bangumi_list = []
-        with open("rule.json") as f:
+        with open("/app/rule.json") as f:
             self.rules = json.load(f)
         rss = requests.get(config["rss_link"], 'utf-8')
         soup = BeautifulSoup(rss.text, 'xml')

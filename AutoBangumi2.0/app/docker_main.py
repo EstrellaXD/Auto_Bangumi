@@ -10,7 +10,7 @@ config_path = "/config/config.json"
 info_path = "/config/bangumi.json"
 host_ip = os.environ["HOST"]
 sleep_time = os.environ["TIME"]
-user_name = os.environ["USER_NAME"]
+user_name = os.environ["USER"]
 password = os.environ["PASSWORD"]
 rss_link = os.environ["RSS"]
 download_path = os.environ["DOWNLOAD_PATH"]
@@ -30,7 +30,7 @@ def create_config():
         with open(config_path, "w") as c:
             json.dump(config, c, indent=4, separators=(',', ': '), ensure_ascii=False)
     if not os.path.exists(info_path):
-        bangumi_info = [{"title":"simple","season":""}]
+        bangumi_info = []
         with open(info_path, "w") as i:
             json.dump(bangumi_info, i, indent=4, separators=(',', ': '), ensure_ascii=False)
 
