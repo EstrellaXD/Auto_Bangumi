@@ -1,11 +1,10 @@
 # -*- coding: UTF-8 -*-
 import sys
-import time
 import requests
 from bs4 import BeautifulSoup
 import json
 import re
-from docker_main import EnvInfo
+from env import EnvInfo
 
 
 class MatchRule:
@@ -35,6 +34,8 @@ class CollectRSS:
     def get_info_list(self):
         for item in self.items:
             name = item.title.string
+            # debug 用
+            # print(name)
             exit_flag = False
             for rule in self.rules:
                 for group in rule["group_name"]:
@@ -54,7 +55,7 @@ class CollectRSS:
                         while '' in b:
                             b.remove('')
                         pre_name = max(b, key=len, default='').strip()
-                        if pre_name != '':
+                        if pre_name != '' and len(pre_name.encode()) > 3:
                             bangumi_title = pre_name
                         for i in range(2):
                             match_obj = re.match(MatchRule.last_rule, bangumi_title, re.I)
@@ -65,6 +66,8 @@ class CollectRSS:
                             bangumi_title = match_obj.group(2).strip()
                         if bangumi_title not in self.bangumi_list:
                             self.bangumi_list.append(bangumi_title)
+                        # debug
+                        # print(bangumi_title)
                         break
                 if exit_flag:
                     break
@@ -96,3 +99,8 @@ class CollectRSS:
     def run(self):
         self.get_info_list()
         self.put_info_json()
+
+
+if __name__ == "__main__":
+    cr = CollectRSS()
+    cr.get_info_list()

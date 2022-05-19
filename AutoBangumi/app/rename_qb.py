@@ -2,7 +2,7 @@ import re
 import sys
 import qbittorrentapi
 import time
-from docker_main import EnvInfo
+from env import EnvInfo
 
 
 class qBittorrentRename:

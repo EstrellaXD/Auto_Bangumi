@@ -1,5 +1,5 @@
 import sys
-from docker_main import EnvInfo
+from env import EnvInfo
 import qbittorrentapi
 import json
 import os
