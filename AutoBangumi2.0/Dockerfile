@@ -7,6 +7,10 @@ RUN pip install -r requirements.txt
 
 ENV TZ=Asia/Shanghai
 ENV TIME=1800
+ENV HOST=127.0.0.1:8080
+ENV USER=admin
+ENV PASSWORD=adminadmin
+ENV METHOD=pn
 
 COPY ./app /app
 

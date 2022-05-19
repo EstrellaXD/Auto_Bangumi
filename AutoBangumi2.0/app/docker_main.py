@@ -8,27 +8,31 @@ import json
 
 config_path = "/config/config.json"
 info_path = "/config/bangumi.json"
+host_ip = os.environ["HOST"]
 sleep_time = os.environ["TIME"]
+user_name = os.environ["USER_NAME"]
+password = os.environ["PASSWORD"]
+rss_link = os.environ["RSS"]
+download_path = os.environ["DOWNLOAD_PATH"]
+method = os.environ["METHOD"]
 
 
 def create_config():
     if not os.path.exists(config_path):
         config = {
-            "host_ip": "192.168.31.10:8181",
-            "user_name": "admin",
-            "password": "adminadmin",
-            "method": "pn",
-            "rss_link": "https://mikanani.me/RSS/MyBangumi?token=qTxKo48gH1SrFNy8X%2fCfQUoeElNsgKNWFNzNieKwBH8%3d",
-            "download_path": "/downloads/Bangumi"
+            "host_ip": host_ip,
+            "user_name": user_name,
+            "password": password,
+            "method": method,
+            "rss_link": rss_link,
+            "download_path": download_path
         }
-        with open(config_path,"w") as c:
+        with open(config_path, "w") as c:
             json.dump(config, c, indent=4, separators=(',', ': '), ensure_ascii=False)
     if not os.path.exists(info_path):
         bangumi_info = [{"title":"simple","season":""}]
-        with open(info_path) as i:
+        with open(info_path, "w") as i:
             json.dump(bangumi_info, i, indent=4, separators=(',', ': '), ensure_ascii=False)
-    print(f"[{time.strftime('%X')}]   请填入配置参数")
-    quit()
 
 
 if __name__ == "__main__":
