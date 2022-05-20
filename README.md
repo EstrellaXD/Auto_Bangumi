@@ -10,6 +10,32 @@ V2.0 Beta 已经完成，相比于 1.0 改进：
 - [AutoBangumi V2 简易说明](https://www.craft.do/s/4viN6M3tBqigLp)
 - 更新推送：[Telegram Channel](https://t.me/autobangumi_update)
 - 测试群：[Telegram](t.me/autobangumi)
+
+## 部署说明
+直接在 Docker 中部署容器
+```shell
+docker run -d \
+	--name=AutoBangumi \
+	-e TZ=Asia/Shanghai \ #optional
+	-e TIME=1800 \ #optional
+	-e HOST=127.0.0.1:8080 \ #optional
+	-e USER=admin \ #optional
+	-e PASSWORD=adminadmin \ #optional
+	-e METHOD=pn \'$optional'
+	-e DOWNLOAD_PATH=/path/downloads
+	-e RSS=<YOUR RSS ADDRESS> \
+	--restart unless-stopped \
+ 	estrellaxd/auto_bangumi:latest
+```
+| `TZ`            | 时区                  | `Asia/Shanghai`  |
+| --------------- | ------------------- | ---------------- |
+| `TIME`          | 间隔时间                | `1800`           |
+| `HOST`          | qBittorrent 的地址和端口号 | `127.0.0.1:8080` |
+| `USER`          | qBittorrent 的用户名    | `admin`          |
+| `PASSWORD`      | qBittorrent 的密码     | `adminadmin`     |
+| `METHOD`        | 重命名方法               | `pn`             |
+| `DOWNLOAD_PATH` | qBittorrent 中的下载路径  | 必填项              |
+| `RSS`           | RSS 订阅地址            | 必填项              |
 # V 1.0
 ## 说明
 本项目根据 qBittorrent, Plex 以及 infuse 搭建
