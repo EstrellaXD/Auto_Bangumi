@@ -9,13 +9,16 @@ from env import EnvInfo
 
 def create_data_file():
     if not os.path.exists(EnvInfo.info_path):
-        bangumi_info = []
+        bangumi_info = {"rss_link": EnvInfo.rss_link,
+                        "bangumi_info": []
+        }
         with open(EnvInfo.info_path, "w") as i:
             json.dump(bangumi_info, i, indent=4, separators=(',', ': '), ensure_ascii=False)
 
 
 if __name__ == "__main__":
     create_data_file()
+    SetRule().rss_feed()
     while True:
         CollectRSS().run()
         SetRule().run()

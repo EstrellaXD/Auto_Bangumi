@@ -8,7 +8,7 @@ import os
 class SetRule:
     def __init__(self):
         with open(EnvInfo.info_path) as f:
-            self.bangumi_info = json.load(f)
+            self.bangumi_info = json.load(f)["bangumi_info"]
         self.rss_link = EnvInfo.rss_link
         self.host_ip = EnvInfo.host_ip
         self.user_name = EnvInfo.user_name
@@ -38,12 +38,14 @@ class SetRule:
             }
         self.qb.rss_set_rule(rule_name=bangumi_name, rule_def=rule)
 
-    def add_rss_feed(self):
+    def rss_feed(self):
         try:
-            self.qb.rss_add_feed(self.rss_link)
+            self.qb.rss_add_feed(url=self.rss_link, item_path="Mikan_RSS")
             sys.stdout.write(f"[{EnvInfo.time_show_obj}]  Successes adding RSS Feed." + "\n")
         except ConnectionError:
             sys.stdout.write(f"[{EnvInfo.time_show_obj}]  Error with adding RSS Feed." + "\n")
+        except qbittorrentapi.exceptions.Conflict409Error:
+            sys.stdout.write(f"[{EnvInfo.time_show_obj}]  RSS Already exists." + "\n")
 
     def run(self):
         sys.stdout.write(f"[{EnvInfo.time_show_obj}]  Start adding rules." + "\n")

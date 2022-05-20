@@ -76,8 +76,14 @@ class CollectRSS:
 
     def put_info_json(self):
         had_data = []
-        for data in self.info:
-            had_data.append(data["title"])
+        if self.info["rss_link"] == EnvInfo.rss_link:
+            for data in self.info["bangumi_info"]:
+                had_data.append(data["title"])
+        else:
+            self.info = {
+                "rss_link": EnvInfo.rss_link,
+                "bangumi_info": []
+            }
         for title in self.bangumi_list:
             match_title_season = re.match(MatchRule.season_match, title, re.I)
             if match_title_season is not None:
@@ -87,7 +93,7 @@ class CollectRSS:
                 json_season = ''
                 json_title = title
             if json_title not in had_data:
-                self.info.append({
+                self.info["bangumi_info"].append({
                     "title": json_title,
                     "season": json_season
                 })

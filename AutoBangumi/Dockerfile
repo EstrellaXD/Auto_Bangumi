@@ -13,5 +13,6 @@ ENV PASSWORD=adminadmin
 ENV METHOD=pn
 
 COPY ./app /app
+COPY ./config /config
 
 CMD [ "python3", "/app/docker_main.py"]

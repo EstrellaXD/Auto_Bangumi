@@ -13,5 +13,5 @@ class EnvInfo:
     method = os.environ["METHOD"]
     # rss_link = "https://mikanani.me/RSS/Classic"
     rule_url = "https://raw.githubusercontent.com/EstrellaXD/Bangumi_Auto_Collector/main/AutoBangumi/app/rule.json"
-    rule_path = "/app/rule.json"
+    rule_path = "/config/rule.json"
     time_show_obj = time.strftime('%Y-%m-%d %X')
