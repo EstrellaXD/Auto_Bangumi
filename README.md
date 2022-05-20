@@ -15,17 +15,17 @@ V2.0 Beta 已经完成，相比于 1.0 改进：
 直接在 Docker 中部署容器
 ```shell
 docker run -d \
-	--name=AutoBangumi \
-	-e TZ=Asia/Shanghai \ #optional
-	-e TIME=1800 \ #optional
-	-e HOST=127.0.0.1:8080 \ #optional
-	-e USER=admin \ #optional
-	-e PASSWORD=adminadmin \ #optional
-	-e METHOD=pn \ #optional
-	-e DOWNLOAD_PATH=/path/downloads
-	-e RSS=<YOUR RSS ADDRESS> \
-	--restart unless-stopped \
- 	estrellaxd/auto_bangumi:latest
+  --name=AutoBangumi \
+  -e TZ=Asia/Shanghai \ #optional
+  -e TIME=1800 \ #optional
+  -e HOST=localhost:8080 \ #optional
+  -e USER=admin \ #optional
+  -e PASSWORD=adminadmin \ #optional
+  -e METHOD=pn \ #optional
+  -e DOWNLOAD_PATH=/path/downloads
+  -e RSS=<YOUR RSS ADDRESS> \
+  --restart unless-stopped \
+  estrellaxd/auto_bangumi:latest
 ```
 |         环境变量        |   作用                  | 参数               |
 | --------------- | ------------------- |------------------|
@@ -37,6 +37,7 @@ docker run -d \
 | `METHOD`        | 重命名方法               | `pn`             |
 | `DOWNLOAD_PATH` | qBittorrent 中的下载路径  | 必填项              |
 | `RSS`           | RSS 订阅地址            | 必填项              |
+---
 # V 1.0
 ## 说明
 本项目根据 qBittorrent, Plex 以及 infuse 搭建
