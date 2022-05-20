@@ -21,16 +21,17 @@ docker run -d \
 	-e HOST=127.0.0.1:8080 \ #optional
 	-e USER=admin \ #optional
 	-e PASSWORD=adminadmin \ #optional
-	-e METHOD=pn \'$optional'
+	-e METHOD=pn \ #optional
 	-e DOWNLOAD_PATH=/path/downloads
 	-e RSS=<YOUR RSS ADDRESS> \
 	--restart unless-stopped \
  	estrellaxd/auto_bangumi:latest
 ```
+|         环境变量        |   作用                  | 参数               |
+| --------------- | ------------------- |------------------|
 | `TZ`            | 时区                  | `Asia/Shanghai`  |
-| --------------- | ------------------- | ---------------- |
 | `TIME`          | 间隔时间                | `1800`           |
-| `HOST`          | qBittorrent 的地址和端口号 | `127.0.0.1:8080` |
+| `HOST`          | qBittorrent 的地址和端口号 | `loaclhost:8080` |
 | `USER`          | qBittorrent 的用户名    | `admin`          |
 | `PASSWORD`      | qBittorrent 的密码     | `adminadmin`     |
 | `METHOD`        | 重命名方法               | `pn`             |
