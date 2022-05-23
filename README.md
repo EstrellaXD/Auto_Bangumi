@@ -1,11 +1,21 @@
-# AutoBangumi - 全自动追番程序
+<p align="center">
+<img title="icon" src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/image/auto_bangumi_v2.png" alt="drawing" width="500"/>
+</p>
+<p align="center">
+    <img title="docker build version" src="https://img.shields.io/docker/v/estrellaxd/auto_bangumi" alt="">
+    <img title="release date" src="https://img.shields.io/github/release-date/estrellaxd/auto_bangumi" alt="">
+    <img title="docker pull" src="https://img.shields.io/docker/pulls/estrellaxd/auto_bangumi" alt="">
+</p>
+
+# 项目说明
+
 # 2.0
 2.0 Stable 已经完成，相比于 1.0 改进：
 - 无需手动设定下载规则
 - 更符合刮削器的命名规则
 - 自动归类 Season
 
-<img src="https://github.com/EstrellaXD/Bangumi_Auto_Collector/blob/main/image/workthrough-1.0.png?raw=true" alt="drawing" width="345.15"/><img src="https://github.com/EstrellaXD/Bangumi_Auto_Collector/blob/main/image/workthrough-2.0.png?raw=true" alt="drawing" width="350"/>
+
 
 - [AutoBangumi V2 简易说明](https://www.craft.do/s/4viN6M3tBqigLp)
 - 更新推送：[Telegram Channel](https://t.me/autobangumi_update)
