@@ -10,7 +10,7 @@ from env import EnvInfo
 class MatchRule:
     split_rule = r"\[|\]|\【|\】|\★|\（|\）|\(|\)"
     last_rule = r"(.*)( \-)"
-    sub_title = r"[^\x00-\xff]{1,}| \d{1,2}|\·"
+    sub_title = r"[^\x00-\xff]{1,}| \d{1,2}^.*|\·"
     match_rule = r"(S\d{1,2}(.*))"
     season_match = r"(.*)(Season \d{1,2}|S\d{1,2}|第.*季|第.*期)"
 
@@ -55,7 +55,7 @@ class CollectRSS:
                         while '' in b:
                             b.remove('')
                         pre_name = max(b, key=len, default='').strip()
-                        if pre_name != '' and len(pre_name.encode()) > 3:
+                        if len(pre_name.encode()) > 3:
                             bangumi_title = pre_name
                         for i in range(2):
                             match_obj = re.match(MatchRule.last_rule, bangumi_title, re.I)
@@ -90,12 +90,14 @@ class CollectRSS:
                 json_title = match_title_season.group(1).strip()
                 json_season = match_title_season.group(2)
             else:
-                json_season = ''
+                json_season = 'S01'
                 json_title = title
             if json_title not in had_data:
                 self.info["bangumi_info"].append({
                     "title": json_title,
-                    "season": json_season
+                    "season": json_season,
+                    "group": '',
+                    "added": False
                 })
                 sys.stdout.write(f"[{EnvInfo.time_show_obj}]  add {json_title} {json_season}" + "\n")
                 sys.stdout.flush()

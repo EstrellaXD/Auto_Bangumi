@@ -1,3 +1,4 @@
+import re
 import sys
 from env import EnvInfo
 import qbittorrentapi
@@ -8,7 +9,8 @@ import os
 class SetRule:
     def __init__(self):
         with open(EnvInfo.info_path) as f:
-            self.bangumi_info = json.load(f)["bangumi_info"]
+            self.info = json.load(f)
+            self.bangumi_info = self.info["bangumi_info"]
         self.rss_link = EnvInfo.rss_link
         self.host_ip = EnvInfo.host_ip
         self.user_name = EnvInfo.user_name
@@ -34,11 +36,15 @@ class SetRule:
             'lastMatch': '',
             'addPaused': False,
             'assignedCategory': 'Bangumi',
-            'savePath': str(os.path.join(self.download_path, bangumi_name, season))
+            'savePath': str(os.path.join(self.download_path, re.sub(EnvInfo.rule_name_re," ", bangumi_name), season))
             }
         self.qb.rss_set_rule(rule_name=bangumi_name, rule_def=rule)
 
     def rss_feed(self):
+        try:
+            self.qb.rss_remove_item(item_path="Mikan_RSS")
+        except qbittorrentapi.exceptions.Conflict409Error:
+            sys.stdout.write(f"[{EnvInfo.time_show_obj}]  No feed exists, starting adding feed." + "\n")
         try:
             self.qb.rss_add_feed(url=self.rss_link, item_path="Mikan_RSS")
             sys.stdout.write(f"[{EnvInfo.time_show_obj}]  Successes adding RSS Feed." + "\n")
@@ -51,7 +57,11 @@ class SetRule:
         sys.stdout.write(f"[{EnvInfo.time_show_obj}]  Start adding rules." + "\n")
         sys.stdout.flush()
         for info in self.bangumi_info:
-            self.set_rule(info["title"], info["season"])
+            if not info["added"]:
+                self.set_rule(info["title"], info["season"])
+                info["added"] = True
+        with open(EnvInfo.info_path, 'w', encoding='utf8') as f:
+            json.dump(self.info, f, indent=4, separators=(',', ': '), ensure_ascii=False)
         sys.stdout.write(f"[{EnvInfo.time_show_obj}]  Finished." + "\n")
         sys.stdout.flush()
 

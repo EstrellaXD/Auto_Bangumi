@@ -14,7 +14,7 @@ class qBittorrentRename:
             self.qbt_client.auth_log_in()
         except qbittorrentapi.LoginFailed as e:
             print(e)
-        self.recent_info = self.qbt_client.torrents_info(status_filter='completed')
+        self.recent_info = self.qbt_client.torrents_info(status_filter='completed',category="Bangumi")
         self.hash = None
         self.name = None
         self.new_name = None

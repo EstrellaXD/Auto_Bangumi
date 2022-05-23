@@ -9,7 +9,7 @@ from env import EnvInfo
 
 def create_data_file():
     if not os.path.exists(EnvInfo.info_path):
-        bangumi_info = {"rss_link": EnvInfo.rss_link,
+        bangumi_info = {"rss_link": "",
                         "bangumi_info": []
         }
         with open(EnvInfo.info_path, "w") as i:
