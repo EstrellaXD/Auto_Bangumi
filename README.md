@@ -13,7 +13,7 @@
 
 基于 [infuse]() 与 [Plex]() 的效果如下：
 
-<img title="plex" src="https://wx1.sinaimg.cn/mw2000/bf58e6c5ly1h27rhizt60j225c2cu1l1.jpg" alt="" width=50%><img title="release date" src="https://wx1.sinaimg.cn/mw2000/bf58e6c5ly1h27rhpt8qtj234w1u87wl.jpg" alt="" width="50%">
+<img title="plex" src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/image/截屏2022-05-23%2020.47.39.png" alt="" width=50%><img title="release date" src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/image/截屏2022-05-23%2020.48.02.png" alt="" width=50%>
 
 ## 相关文档和群组
 
