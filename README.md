@@ -22,8 +22,9 @@
 - Bug 反馈群：[Telegram](t.me/autobangumi)
 
 # 部署说明
-
-1. 用 Docker 部署 `AutoBangumi` ：
+1. 安装 qBittorrent:
+    
+2. 用 Docker 部署 `AutoBangumi` :
 
 ```other
 docker run -d \
@@ -64,7 +65,7 @@ docker run -d \
 - `DOWNLOAD_PATH`: qBittorrent 的下载地址。
 - `RSS`: Mikan Project 的个人 RSS 订阅链接
 
-2. 检查 Docker 运行日志，出现：
+3. 检查 Docker 运行日志，出现：
 
 ```other
 [2022-05-20 12:47:47]  RSS Already exists.
@@ -93,6 +94,8 @@ docker run -d \
 ```
 
 说明运行成功。之后可以检查 qb 中是否建立自动下载规则。
+
+4. 安装媒体库软件
 
 # 声明
 本项目的自动改名规则根据 [miracleyoo/anime_renamer](https://github.com/miracleyoo/anime_renamer) 项目
