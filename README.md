@@ -1,5 +1,5 @@
 <p align="center">
-<img title="icon" src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/image/auto_bangumi_v2.png" alt="drawing" width="500"/>
+<img title="icon" src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/image/auto_bangumi_v2.png" alt="drawing" width=50%/>
 </p>
 <p align="center">
     <img title="docker build version" src="https://img.shields.io/docker/v/estrellaxd/auto_bangumi" alt="">
@@ -8,14 +8,13 @@
 </p>
 
 # 项目说明
+本项目是基于 [Mikan Project](https://mikanani.me)、[qBittorrent](https://qbittorrent.org) 的全自动追番整理下载工具。只需要在 [Mikan Project](https://mikanani.me) 上订阅番剧，就可以全自动追番。并且整理完成的名称和目录可以直接被 [Plex]()、[Jellyfin]() 等媒体库软件识别，无需二次刮削。
 
-# 2.0
-2.0 Stable 已经完成，相比于 1.0 改进：
-- 无需手动设定下载规则
-- 更符合刮削器的命名规则
-- 自动归类 Season
+基于 [infuse]() 与 [Plex]() 的效果如下：
 
+<img title="plex" src="https://wx1.sinaimg.cn/mw2000/bf58e6c5ly1h27rhizt60j225c2cu1l1.jpg" alt="" width=50%><img title="release date" src="https://wx1.sinaimg.cn/mw2000/bf58e6c5ly1h27rhpt8qtj234w1u87wl.jpg" alt="" width="50%">
 
+## 相关文档和群组
 
 - [AutoBangumi V2 简易说明](https://www.craft.do/s/4viN6M3tBqigLp)
 - 更新推送：[Telegram Channel](https://t.me/autobangumi_update)
