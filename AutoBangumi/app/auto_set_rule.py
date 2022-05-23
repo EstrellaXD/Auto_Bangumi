@@ -22,7 +22,7 @@ class SetRule:
         except qbittorrentapi.LoginFailed as e:
             print(e)
 
-    def set_rule(self, bangumi_name, season):
+    def set_rule(self, bangumi_name, group, season):
         rule = {
             'enable': True,
             'mustContain': bangumi_name,
@@ -38,7 +38,11 @@ class SetRule:
             'assignedCategory': 'Bangumi',
             'savePath': str(os.path.join(self.download_path, re.sub(EnvInfo.rule_name_re," ", bangumi_name), season))
             }
-        self.qb.rss_set_rule(rule_name=bangumi_name, rule_def=rule)
+        if EnvInfo.enable_group_tag:
+            rule_name = f"[{group}] {bangumi_name}"
+        else:
+            rule_name = bangumi_name
+        self.qb.rss_set_rule(rule_name=rule_name, rule_def=rule)
 
     def rss_feed(self):
         try:
@@ -58,10 +62,15 @@ class SetRule:
         sys.stdout.flush()
         for info in self.bangumi_info:
             if not info["added"]:
-                self.set_rule(info["title"], info["season"])
+                self.set_rule(info["title"], info["group"], info["season"])
                 info["added"] = True
         with open(EnvInfo.info_path, 'w', encoding='utf8') as f:
             json.dump(self.info, f, indent=4, separators=(',', ': '), ensure_ascii=False)
         sys.stdout.write(f"[{EnvInfo.time_show_obj}]  Finished." + "\n")
         sys.stdout.flush()
+
+
+if __name__ == "__main__":
+    put = SetRule()
+    put.run()
 

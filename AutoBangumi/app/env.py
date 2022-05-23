@@ -13,6 +13,7 @@ class EnvInfo:
         rss_link = os.environ["RSS"]
         download_path = os.environ["DOWNLOAD_PATH"]
         method = os.environ["METHOD"]
+        enable_group_tag = os.getenv("GROUP_TAG", 'False').lower() in ('true', '1', 't')
         info_path = "/config/bangumi.json"
         rule_path = "/config/rule.json"
     else:
@@ -21,9 +22,10 @@ class EnvInfo:
         sleep_time = 10
         user_name = "admin"
         password = "adminadmin"
-        rss_link = ""
+        rss_link = "https://mikanani.me/RSS/MyBangumi?token=Td8ceWZZv3s2OZm5ji9RoMer8vk5VS3xzC1Hmg8A26E%3d"
         download_path = "/downloads/Bangumi"
         method = "pn"
+        enable_group_tag = True
         info_path = "../config/bangumi.json"
         rule_path = "../config/rule.json"
     # Static ENV

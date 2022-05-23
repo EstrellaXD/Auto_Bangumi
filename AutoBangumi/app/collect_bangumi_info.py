@@ -65,9 +65,13 @@ class CollectRSS:
                         if match_obj is not None:
                             bangumi_title = match_obj.group(2).strip()
                         if bangumi_title not in self.bangumi_list:
-                            self.bangumi_list.append(bangumi_title)
+                            self.bangumi_list.append({
+                                "title": bangumi_title,
+                                "group": group
+                            })
                         # debug
                         # print(bangumi_title)
+                        # print(group)
                         break
                 if exit_flag:
                     break
@@ -84,19 +88,19 @@ class CollectRSS:
                 "rss_link": EnvInfo.rss_link,
                 "bangumi_info": []
             }
-        for title in self.bangumi_list:
-            match_title_season = re.match(MatchRule.season_match, title, re.I)
+        for item in self.bangumi_list:
+            match_title_season = re.match(MatchRule.season_match, item["title"], re.I)
             if match_title_season is not None:
                 json_title = match_title_season.group(1).strip()
                 json_season = match_title_season.group(2)
             else:
                 json_season = 'S01'
-                json_title = title
+                json_title = item["title"]
             if json_title not in had_data:
                 self.info["bangumi_info"].append({
                     "title": json_title,
                     "season": json_season,
-                    "group": '',
+                    "group": item["group"],
                     "added": False
                 })
                 sys.stdout.write(f"[{EnvInfo.time_show_obj}]  add {json_title} {json_season}" + "\n")
@@ -112,3 +116,4 @@ class CollectRSS:
 if __name__ == "__main__":
     cr = CollectRSS()
     cr.get_info_list()
+    cr.put_info_json()
