@@ -12,33 +12,69 @@
 - 测试群：[Telegram](t.me/autobangumi)
 
 ## 部署说明
-直接在 Docker 中部署容器
-```shell
+
+1. 用 Docker 部署 `AutoBangumi` ：
+
+```other
 docker run -d \
-  --name=AutoBangumi \
-  -e TZ=Asia/Shanghai \ #optional
-  -e TIME=1800 \ #optional
-  -e HOST=localhost:8080 \ #optional
-  -e USER=admin \ #optional
-  -e PASSWORD=adminadmin \ #optional
-  -e METHOD=pn \ #optional
-  -e DOWNLOAD_PATH=/path/downloads
-  -e RSS=<YOUR RSS ADDRESS> \
-  --restart unless-stopped \
-  estrellaxd/auto_bangumi:latest
+	--name=AutoBangumi \
+	-e TZ=Asia/Shanghai \ #optional
+	-e TIME=1800 \ #optional
+	-e HOST=localhost:8080 \ #optional
+	-e USER=admin \ #optional
+	-e PASSWORD=adminadmin \ #optional
+	-e METHOD=pn \ #optional
+	-e GROUP=True \ #optional
+	-e DOWNLOAD_PATH=/path/downloads \
+	-e RSS=<YOUR RSS ADDRESS> \
+	--network=host \
+	--restart unless-stopped \
+ 	estrellaxd/auto_bangumi:latest
 ```
-|         环境变量        |   作用                  | 参数               |
-| --------------- | ------------------- |------------------|
+
+| 环境变量            | 作用                  | 参数               |
+| --------------- | ------------------- | ---------------- |
 | `TZ`            | 时区                  | `Asia/Shanghai`  |
 | `TIME`          | 间隔时间                | `1800`           |
-| `HOST`          | qBittorrent 的地址和端口号 | `loaclhost:8080` |
+| `HOST`          | qBittorrent 的地址和端口号 | `localhost:8080` |
 | `USER`          | qBittorrent 的用户名    | `admin`          |
 | `PASSWORD`      | qBittorrent 的密码     | `adminadmin`     |
 | `METHOD`        | 重命名方法               | `pn`             |
+| `GROUP_TAG`     | 是否在下载规则中添加组名        | `False`          |
 | `DOWNLOAD_PATH` | qBittorrent 中的下载路径  | 必填项              |
 | `RSS`           | RSS 订阅地址            | 必填项              |
----
+
+1. 检查 Docker 运行日志，出现：
+
+```other
+[2022-05-20 12:47:47]  RSS Already exists.
+[2022-05-20 12:47:47]  add Summer Time Rendering 
+[2022-05-20 12:47:47]  add Paripi Koumei 
+[2022-05-20 12:47:47]  add Tomodachi Game 
+[2022-05-20 12:47:47]  add Tate no Yuusha no Nariagari S02
+[2022-05-20 12:47:47]  add Shijou Saikyou no Daimaou 
+[2022-05-20 12:47:47]  add Yuusha, Yamemasu 
+[2022-05-20 12:47:47]  add Aharen-san wa Hakarenai 
+[2022-05-20 12:47:47]  add Kawaii dake ja Nai Shikimori-san 
+[2022-05-20 12:47:47]  add Kakkou no Iinazuke 
+[2022-05-20 12:47:47]  add SPYxFAMILY 
+[2022-05-20 12:47:47]  add Love Live S02
+[2022-05-20 12:47:47]  add BUILD-DIVIDE 
+[2022-05-20 12:47:47]  add Machikado Mazoku:-choume 
+[2022-05-20 12:47:47]  add CUE! 
+[2022-05-20 12:47:47]  add Kaguya-sama wa Kokurasetai S03
+[2022-05-20 12:47:47]  add Shokei Shoujo no Virgin Road 
+[2022-05-20 12:47:47]  add Kakkou no Iikagen 
+[2022-05-20 12:47:47]  Start adding rules.
+[2022-05-20 12:47:47]  Finished.
+[2022-05-20 12:47:47]  已完成对0个文件的检查
+[2022-05-20 12:47:47]  已对其中0个文件进行重命名
+[2022-05-20 12:47:47]  完成
+```
+
+   说明运行成功。之后可以检查 qb 中是否建立自动下载规则。
 # V 1.0
+本版本只能作为番剧重命名方便刮削
 ## 说明
 本项目根据 qBittorrent, Plex 以及 infuse 搭建
 ![Image](https://cdn.sspai.com/2022/02/09/d94ec60db1c136f6b12ba3dca31e5f5f.png?imageView2/2/w/1120/q/90/interlace/1/ignore-error/1)
