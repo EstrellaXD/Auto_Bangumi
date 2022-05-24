@@ -32,7 +32,18 @@
     
 2. 用 Docker 部署 `AutoBangumi` :
 
-```other
+最简部署方法
+```dash
+docker run -d \
+	--name=AutoBangumi \
+	-e DOWNLOAD_PATH=/path/downloads \
+	-e RSS=<YOUR RSS ADDRESS> \
+	--network=host \
+	--restart unless-stopped \
+ 	estrellaxd/auto_bangumi:latest
+```
+进阶部署
+```dash
 docker run -d \
 	--name=AutoBangumi \
 	-e TZ=Asia/Shanghai \ #optional
@@ -59,9 +70,10 @@ docker run -d \
 | `PASSWORD`      | qBittorrent 的密码     | `adminadmin`     |
 | `METHOD`        | 重命名方法               | `pn`             |
 | `GROUP_TAG`     | 是否在下载规则中添加组名        | `False`          |
+| `NOT_CONTAIN` | 正则表达式过滤器            | `720`            |
 | `DOWNLOAD_PATH` | qBittorrent 中的下载路径  | 必填项              |
 | `RSS`           | RSS 订阅地址            | 必填项              |
-| `NOT_CONTAIN` | 正则表达式过滤器            | `720`            |
+
 - `TIME` : 程序运行的间隔时间，默认为 `1800` 也就是 30 分钟，如果更新时间要求比较高可以适当降低该值。
 - `HOST`, `USER`, `PASSWORD`: qBittorrent 的地址，用户名，密码。
 - `METHOD`: 重命名规则
