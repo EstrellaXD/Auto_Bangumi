@@ -41,7 +41,7 @@ docker run -d \
 	-e USER=admin \ #optional
 	-e PASSWORD=adminadmin \ #optional
 	-e METHOD=pn \ #optional
-	-e GROUP=True \ #optional
+	-e GROUP_TAG=True \ #optional
 	-e DOWNLOAD_PATH=/path/downloads \
 	-e RSS=<YOUR RSS ADDRESS> \
 	--network=host \
