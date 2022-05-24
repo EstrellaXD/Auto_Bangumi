@@ -7,6 +7,10 @@
     <img title="release date" src="https://img.shields.io/github/release-date/estrellaxd/auto_bangumi" alt="">
     <img title="docker pull" src="https://img.shields.io/docker/pulls/estrellaxd/auto_bangumi" alt="">
 </p>
+<p align="center">
+    <img title="mikan project" src="https://mikanani.me/images/mikan-pic.png" alt="" width="10%">
+    <img title="qbittorrent" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/New_qBittorrent_Logo.svg/600px-New_qBittorrent_Logo.svg.png" width="10%">
+</p>
 
 # 项目说明
 
@@ -14,7 +18,7 @@
 
 基于 [infuse]() 与 [Plex]() 的效果如下：
 
-<img title="plex" src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/image/截屏2022-05-23%2020.47.39.png" alt="" width=50%><img title="release date" src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/image/截屏2022-05-23%2020.48.02.png" alt="" width=50%>
+<img title="plex" src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/image/截屏2022-05-23%2020.47.39.png" alt="" width=50%><img title="infuse" src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/image/截屏2022-05-23%2020.48.02.png" alt="" width=50%>
 
 ## 相关文档和群组
 
