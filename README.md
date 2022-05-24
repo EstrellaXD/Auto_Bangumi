@@ -1,5 +1,6 @@
 <p align="center">
-<img title="icon" src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/image/auto_bangumi_v2.png" alt="drawing" width=50%/>
+    <img src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/image/auto_bangumi_v2.png#gh-light-mode-only" width=50%/>
+    <img src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/image/auto_bangumi_icon_v2-dark.png#gh-dark-mode-only" width=50%/>
 </p>
 <p align="center">
     <img title="docker build version" src="https://img.shields.io/docker/v/estrellaxd/auto_bangumi" alt="">
