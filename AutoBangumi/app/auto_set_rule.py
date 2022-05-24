@@ -26,7 +26,7 @@ class SetRule:
         rule = {
             'enable': True,
             'mustContain': bangumi_name,
-            'mustNotContain': '720',
+            'mustNotContain': EnvInfo.not_contain,
             'useRegx': True,
             'episodeFilter': '',
             'smartFilter': False,

@@ -16,6 +16,7 @@ class EnvInfo:
         enable_group_tag = os.getenv("GROUP_TAG", 'False').lower() in ('true', '1', 't')
         info_path = "/config/bangumi.json"
         rule_path = "/config/rule.json"
+        not_contain = os.environ["NOT_CONTAIN"]
     else:
         # Debug ENV
         host_ip = "localhost:8080"
@@ -28,6 +29,7 @@ class EnvInfo:
         enable_group_tag = True
         info_path = "../config/bangumi.json"
         rule_path = "../config/rule.json"
+        not_contain = "720"
     # Static ENV
     rule_url = "https://raw.githubusercontent.com/EstrellaXD/Bangumi_Auto_Collector/main/AutoBangumi/config/rule.json"
     time_show_obj = time.strftime('%Y-%m-%d %X')

@@ -25,7 +25,7 @@
 
 - [AutoBangumi V2 简易说明](https://www.craft.do/s/4viN6M3tBqigLp)
 - 更新推送：[Telegram Channel](https://t.me/autobangumi_update)
-- Bug 反馈群：[Telegram](t.me/autobangumi)
+- Bug 反馈群：[Telegram](https://t.me/+yNisOnDGaX5jMTM9)
 
 # 部署说明
 1. 安装 qBittorrent:
@@ -51,7 +51,7 @@ docker run -d \
 ### 参数说明
 
 | 环境变量            | 作用                  | 参数               |
-| --------------- | ------------------- | ---------------- |
+| --------------- |---------------------|------------------|
 | `TZ`            | 时区                  | `Asia/Shanghai`  |
 | `TIME`          | 间隔时间                | `1800`           |
 | `HOST`          | qBittorrent 的地址和端口号 | `localhost:8080` |
@@ -61,7 +61,7 @@ docker run -d \
 | `GROUP_TAG`     | 是否在下载规则中添加组名        | `False`          |
 | `DOWNLOAD_PATH` | qBittorrent 中的下载路径  | 必填项              |
 | `RSS`           | RSS 订阅地址            | 必填项              |
-
+| `NOT_CONTAIN` | 正则表达式过滤器            | `720`            |
 - `TIME` : 程序运行的间隔时间，默认为 `1800` 也就是 30 分钟，如果更新时间要求比较高可以适当降低该值。
 - `HOST`, `USER`, `PASSWORD`: qBittorrent 的地址，用户名，密码。
 - `METHOD`: 重命名规则
@@ -70,6 +70,7 @@ docker run -d \
 - `GROUP_TAG`: 开启后自动在自动下载规则中创建组名，方便管理。
 - `DOWNLOAD_PATH`: qBittorrent 的下载地址。
 - `RSS`: Mikan Project 的个人 RSS 订阅链接
+- `NOT_CONTAIN`: 可以自行添加过滤的正则表达式
 
 3. 检查 Docker 运行日志，出现：
 
