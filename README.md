@@ -3,14 +3,15 @@
     <img src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/image/auto_bangumi_icon_v2-dark.png#gh-dark-mode-only" width=50%/>
 </p>
 <p align="center">
+    <img title="mikan project" src="https://mikanani.me/images/mikan-pic.png" alt="" width="10%">
+    <img title="qbittorrent" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/New_qBittorrent_Logo.svg/600px-New_qBittorrent_Logo.svg.png" width="10%">
+</p>
+<p align="center">
     <img title="docker build version" src="https://img.shields.io/docker/v/estrellaxd/auto_bangumi" alt="">
     <img title="release date" src="https://img.shields.io/github/release-date/estrellaxd/auto_bangumi" alt="">
     <img title="docker pull" src="https://img.shields.io/docker/pulls/estrellaxd/auto_bangumi" alt="">
 </p>
-<p align="center">
-    <img title="mikan project" src="https://mikanani.me/images/mikan-pic.png" alt="" width="10%">
-    <img title="qbittorrent" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/New_qBittorrent_Logo.svg/600px-New_qBittorrent_Logo.svg.png" width="10%">
-</p>
+
 
 # 项目说明
 
