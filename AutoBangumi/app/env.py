@@ -3,7 +3,7 @@ import time
 
 
 class EnvInfo:
-    debug_mode = True
+    debug_mode = False
     # Docker Env
     if not debug_mode:
         host_ip = os.environ["HOST"]
@@ -19,7 +19,7 @@ class EnvInfo:
         not_contain = os.environ["NOT_CONTAIN"]
     else:
         # Debug ENV
-        host_ip = "localhost:8080"
+        host_ip = "localhost:8181"
         sleep_time = 10
         user_name = "admin"
         password = "adminadmin"
