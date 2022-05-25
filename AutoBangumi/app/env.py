@@ -3,7 +3,7 @@ import time
 
 
 class EnvInfo:
-    debug_mode = False
+    debug_mode = True
     # Docker Env
     if not debug_mode:
         host_ip = os.environ["HOST"]

@@ -18,18 +18,20 @@ class MatchRule:
 class CollectRSS:
     def __init__(self):
         self.bangumi_list = []
+        with open(EnvInfo.rule_path) as r:
+            self.rules = json.load(r)
         try:
+            self.rules = requests.get(EnvInfo.rule_url).json()
             with open(EnvInfo.rule_path, 'w') as f:
-                json.dump(requests.get(EnvInfo.rule_url).json(), f, indent=4, separators=(',', ': '), ensure_ascii=False)
-        finally:
-            with open(EnvInfo.rule_path) as f:
-                self.rules = json.load(f)
-
+                json.dump(self.rules, f, indent=4, separators=(',', ': '), ensure_ascii=False)
+        except:
+            with open(EnvInfo.rule_path) as r:
+                self.rules = json.load(r)
         rss = requests.get(EnvInfo.rss_link, 'utf-8')
         soup = BeautifulSoup(rss.text, 'xml')
         self.items = soup.find_all('item')
-        with open(EnvInfo.info_path) as f:
-            self.info = json.load(f)
+        with open(EnvInfo.info_path) as i:
+            self.info = json.load(i)
 
     def get_info_list(self):
         for item in self.items:
