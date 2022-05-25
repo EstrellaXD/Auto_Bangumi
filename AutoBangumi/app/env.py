@@ -23,7 +23,7 @@ class EnvInfo:
         sleep_time = 10
         user_name = "admin"
         password = "adminadmin"
-        rss_link = ""
+        rss_link = "https://mikanani.me/RSS/classic"
         download_path = "/downloads/Bangumi"
         method = "pn"
         enable_group_tag = True

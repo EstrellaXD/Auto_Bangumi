@@ -19,12 +19,12 @@ class CollectRSS:
     def __init__(self):
         self.bangumi_list = []
         try:
-            self.rules = requests.get(EnvInfo.rule_url).json()
             with open(EnvInfo.rule_path, 'w') as f:
-                json.dump(self.rules, f, indent=4, separators=(',', ': '), ensure_ascii=False)
-        except ConnectionError:
+                json.dump(requests.get(EnvInfo.rule_url).json(), f, indent=4, separators=(',', ': '), ensure_ascii=False)
+        finally:
             with open(EnvInfo.rule_path) as f:
                 self.rules = json.load(f)
+
         rss = requests.get(EnvInfo.rss_link, 'utf-8')
         soup = BeautifulSoup(rss.text, 'xml')
         self.items = soup.find_all('item')
@@ -115,5 +115,3 @@ class CollectRSS:
 
 if __name__ == "__main__":
     cr = CollectRSS()
-    cr.get_info_list()
-    cr.put_info_json()
