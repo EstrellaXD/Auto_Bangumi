@@ -17,9 +17,16 @@
 
 本项目是基于 [Mikan Project](https://mikanani.me)、[qBittorrent](https://qbittorrent.org) 的全自动追番整理下载工具。只需要在 [Mikan Project](https://mikanani.me) 上订阅番剧，就可以全自动追番。并且整理完成的名称和目录可以直接被 [Plex]()、[Jellyfin]() 等媒体库软件识别，无需二次刮削。
 
-基于 [infuse]() 与 [Plex]() 的效果如下：
+基于 [infuse](https://firecore.com/infuse) 与 [Plex](https://plex.tv) 的效果如下：
 
 <img title="plex" src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/image/截屏2022-05-23%2020.47.39.png" alt="" width=50%><img title="infuse" src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/image/截屏2022-05-23%2020.48.02.png" alt="" width=50%>
+
+## AutoBangumi 好在哪
+
+- 只需单次配置
+- 修改文件名但是不破坏作种
+- 傻瓜式文件整理
+
 
 ## 相关文档和群组
 
