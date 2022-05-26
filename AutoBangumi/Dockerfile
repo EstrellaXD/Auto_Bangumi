@@ -13,6 +13,7 @@ ENV PASSWORD=adminadmin
 ENV METHOD=pn
 ENV GROUP_TAG=False
 ENV NOT_CONTAIN=720
+ENV RULE_DEBUG=False
 
 COPY ./app /app
 COPY ./config /config

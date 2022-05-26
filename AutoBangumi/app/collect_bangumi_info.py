@@ -37,7 +37,8 @@ class CollectRSS:
         for item in self.items:
             name = item.title.string
             # debug 用
-            # print(name)
+            if EnvInfo.get_rule_debug:
+                sys.stdout.write(f"[{EnvInfo.time_show_obj}]  Raw {name}")
             exit_flag = False
             for rule in self.rules:
                 for group in rule["group_name"]:
@@ -78,7 +79,7 @@ class CollectRSS:
                 if exit_flag:
                     break
             if not exit_flag:
-                print(f"[{EnvInfo.time_show_obj}]  ERROR Not match with {name}")
+                sys.stdout.write(f"[{EnvInfo.time_show_obj}]  ERROR Not match with {name}")
 
     def put_info_json(self):
         had_data = []
@@ -105,6 +106,7 @@ class CollectRSS:
                     "group": item["group"],
                     "added": False
                 })
+                had_data.append(json_title)
                 sys.stdout.write(f"[{EnvInfo.time_show_obj}]  add {json_title} {json_season}" + "\n")
                 sys.stdout.flush()
         with open(EnvInfo.info_path, 'w', encoding='utf8') as f:
@@ -117,3 +119,5 @@ class CollectRSS:
 
 if __name__ == "__main__":
     cr = CollectRSS()
+    cr.get_info_list()
+    cr.put_info_json()
