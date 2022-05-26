@@ -7,6 +7,8 @@ import requests
 import logging
 import pandas as pd
 
+from chain_db import ChainDb
+
 
 class Rename:
     def __init__(self, file_name):
@@ -27,10 +29,10 @@ class Rename:
         self.file_info = {}
 
         self.pre_analyse = None
-        self.regognize_group()
+        self.recognize_group()
 
     # 获取字符串出现位置
-    def getStrInfo(self, char, target):
+    def get_str_location(self, char, target):
         locate = []
         for index, value in enumerate(char):
             if target == value:
@@ -39,8 +41,8 @@ class Rename:
 
     # 匹配某字符串最近的括号
     def get_gp(self, char, string):
-        start = [x for x in self.getStrInfo(string, "[") if int(x) < int(string.find(char))][-1] + 1
-        end = [x for x in self.getStrInfo(string, "]") if int(x) > int(string.find(char))][0]
+        start = [x for x in self.get_str_location(string, "[") if int(x) < int(string.find(char))][-1] + 1
+        end = [x for x in self.get_str_location(string, "]") if int(x) > int(string.find(char))][0]
         return string[start:end]
 
     # 清理原链接（中文字符替换为英文）
@@ -49,7 +51,7 @@ class Rename:
         # 去广告
         file_name = re.sub("[（(\[【]?(字幕)?[\u4e00-\u9fa5]{0,3}(新人|招募?新?)[\u4e00-\u9fa5]{0,5}[）)\]】]?", "", file_name)
         # 除杂
-        file_name = re.sub("[（(\[【]?★?(\d{4}[年][春夏秋冬]?)?[\d一二三四五六七八九十]{1,2}月新?番?★?[）)\]】]?", "", file_name)
+        file_name = re.sub("[（(\[【]?★?(\d{4}年[春夏秋冬]?)?[\d一二三四五六七八九十]{1,2}月新?番?★?[）)\]】]?", "", file_name)
         # 除杂x2
         file_name = re.sub("[（(\[【]?(2(\d{3}[年.][春夏秋冬]?)\d{1,2}\.?\d{1,2})[）)\]】]?", "", file_name)
         # 除杂x3
@@ -67,11 +69,10 @@ class Rename:
             for s2 in str2:
                 if s1 in s2:
                     return [True, s2[1:]]
-        else:
-            return [False, name]
+        return [False, name]
 
     # 检索字幕组特征
-    def regognize_group(self):
+    def recognize_group(self):
         character = self.group_character
         group = self.group_char
         rule = self.group_rule
@@ -123,7 +124,7 @@ class Rename:
     # 获取字幕组名
     def get_group(self):
         # 是否匹配成功（哪种方式匹配成功）
-        status = self.regognize_group()
+        status = self.recognize_group()
         # 检索到的特征值
         res_char = self.pre_analyse
         # 强条
@@ -138,9 +139,7 @@ class Rename:
                         # 以特征值为中心，匹配最近的中括号，八成就这个了
                         gp = self.get_gp(res_char, self.file_name.lower())
                         # 防止太长炸了，一般不会这么长的字幕组名
-                        if len(gp) < 30:
-                            pass
-                        else:
+                        if len(gp) > 30:
                             print("name:%s\r\nchar:%s,gp:%s" % (self.file_name, res_char, gp))
                         return gp
                     except Exception as e:
@@ -234,7 +233,7 @@ class Rename:
         file_name = str(self.file_name).lower()
         type_list = []
         # 英文标示
-        for i in range(3):
+        for _ in range(3):
             try:
                 res = re.search(
                     "[（(\[【]?((bd|remux|(viu)?tvb?|bilibili|b ?global|baha|web[ -]?(dl|rip))[ -]?(iso|mut|rip)?)[）)\]】]?",
@@ -369,52 +368,13 @@ class Rename:
         else:
             return False
 
-    # 拿到的数据挨个测试
-    def get_info(self):
-        # 获取到的信息
-        info = {
-            "group": self.get_group(),
-            "dpi": self.get_dpi(),
-            "season": self.get_season(),
-            "episode": self.get_episode(),
-            "vision": self.get_vision(),
-            "lang": self.get_language(),
-            "ass": self.get_ass(),
-            "type": self.get_type(),
-            "code": self.get_code(),
-            "source": self.get_source()
-        }
-
-        # 字母全部小写
-        clean_name = self.file_name.lower()
-        # 去除拿到的有效信息
-        for k, v in info.items():
-            if v is not None:
-                if type(v) is list:
-                    for i in v:
-                        if i is not None:
-                            clean_name = clean_name.replace(i, "")
-                else:
-                    clean_name = clean_name.replace(v, "")
-        # 除杂
-        clean_list = ["pc&psp", "pc&psv", "fin", "opus", "movie", "tvb", "end", "bangumi.online", "donghua",
-                      "话全", "第话", "第集", "全集", " 话", " 集", "+", "@", "。"]
-        for i in clean_list:
-            clean_name = clean_name.replace(i, "").replace(" ]", "]").replace("[ ", "[").replace("  ", "")
-        # 分隔各字段
-        clean_name = clean_name.replace("[", "").replace("]", " ").replace("()", "").replace("( )", "")
-        # 去除多余空格
-        clean_name = re.sub(' +', ' ', clean_name).strip(" ")
-        # 剩下来的几乎就是干净番名了，再刮不到不管了
-        info["clean_name"] = clean_name
-
+    def extract_title(self, raw_name):
         title = {
             "zh": None,
             "en": None,
         }
-        clean_name = re.sub('[^a-zA-Z\u4e00-\u9fa5:@#$%^&*()\[\]/ ]', "", clean_name)
-        clean_name = re.sub(' +', ' ', clean_name).strip(" ")
 
+        clean_name = raw_name
         if self.has_en(clean_name) and self.has_zh(clean_name):
             # 中英
             try:
@@ -462,10 +422,110 @@ class Rename:
             if v is not None and "/" in v:
                 zh_list = v.split("/")
                 title[k] = zh_list[0].strip(" ")
+        return title
+
+    def add_separator(self, clean_name):
+        if "/" not in clean_name:
+            if '\u4e00' <= clean_name[0] <= '\u9fff':
+                try:
+                    res = re.search("(^[a\u4e00-\u9fa5: ]{1,10} ?)([a-z:]{1,20} ?){1,10}", clean_name).group(1)
+                    clean_name = clean_name.replace(res, res.strip(" ") + "/")
+                    print("zh_pre:%s" % clean_name)
+                except Exception as e:
+                    print(e)
+            else:
+                try:
+                    res = re.search("^(([a-z:]{1,20} ?){1,10} )[\u4e00-\u9fa5: a]{1,20}", clean_name).group(1)
+                    clean_name = clean_name.replace(res, res.strip(" ") + "/")
+                    print("en_pre:%s" % clean_name)
+                except Exception as e:
+                    print(e)
+        return clean_name
+
+    def easy_split(self, clean_name, zh_list, en_list):
+        if "/" in clean_name:
+            n_list = clean_name.split("/")
+            for i in n_list:
+                if self.has_zh(i) is False:
+                    en_list.append(i.strip(" "))
+                elif self.has_en(i) is False:
+                    zh_list.append(i.strip(" "))
+                else:
+                    # 如果还是同时包含中英文的情况，递龟一下
+                    i = self.add_separator(i)
+                    self.easy_split(i, zh_list, en_list)
+        else:
+            if self.has_zh(clean_name) is False:
+                en_list.append(clean_name.strip(" "))
+            elif self.has_en(clean_name) is False:
+                zh_list.append(clean_name.strip(" "))
+
+    # 拿到的数据挨个测试
+    def get_info(self):
+        # 获取到的信息
+        info = {
+            "group": self.get_group(),
+            "dpi": self.get_dpi(),
+            "season": self.get_season(),
+            "episode": self.get_episode(),
+            "vision": self.get_vision(),
+            "lang": self.get_language(),
+            "ass": self.get_ass(),
+            "type": self.get_type(),
+            "code": self.get_code(),
+            "source": self.get_source()
+        }
+
+        # 字母全部小写
+        clean_name = self.file_name.lower()
+        # 去除拿到的有效信息
+        for k, v in info.items():
+            if v is not None:
+                if type(v) is list:
+                    for i in v:
+                        clean_name = clean_name.replace(i, "") if i is not None else clean_name
+                else:
+                    clean_name = clean_name.replace(v, "")
+        # 除杂
+        clean_list = ["pc&psp", "pc&psv", "fin", "opus", "movie", "tvb", "end", "web", "bangumi.online", "donghua",
+                      "话全", "第话", "第集", "全集", "话", "集", "+", "@", "轨", "。"]
+        for i in clean_list:
+            clean_name = clean_name.replace(i, "")
+        # 去除多余空格
+        clean_name = re.sub(' +', ' ', clean_name).strip(" ")
+        # 分隔各字段
+        clean_name = re.sub("([(\[] *| *[)\]])", "", clean_name)
+
+        # 剩下来的几乎就是干净番名了，再刮不到不管了
+        info["clean_name"] = clean_name
+        clean_name = re.sub('[^a-zA-Z\u4e00-\u9fa5:@#$%^&*()\[\]/ ]', "", clean_name)
+        clean_name = re.sub(' +', ' ', clean_name).strip(" ")
+        clean_name = re.sub("([(\[] *| *[)\]])", "", clean_name)
+        print(clean_name)
+
+        title = {
+            "zh": None,
+            "en": None
+        }
+        zh_list = []
+        en_list = []
+        clean_name = self.add_separator(clean_name)
+        self.easy_split(clean_name, zh_list, en_list)
+        title["zh"] = zh_list if zh_list else None
+        title["en"] = en_list if en_list else None
+        if title["zh"] is None and title["en"] is None:
+            title = self.extract_title(clean_name)
+        print(title)
         info["title"] = title
         return info
 
 
 if __name__ == "__main__":
-    # 使用方法
-    print(Rename(name).get_info())
+    raw = ChainDb("spider_dmhy").page(1, 1000).field("name").select()
+    name_list = [x["name"] for x in raw]
+    start = time.time()
+    for name in name_list:
+        print(name)
+        Rename(name).get_info()
+        print()
+    print("%s" % (time.time() - start))
