@@ -23,8 +23,24 @@ def read_data(name, rows):
 
 
 class Rename:
+    class Name:
+        raw_name = None
+        group = None
+        dpi = None
+        season = None
+        episode = None
+        vision = None
+        lang = None
+        ass = None
+        type = None
+        code = None
+        source = None
+        zh = None
+        en = None
+        clean_name = None
+
     def __init__(self, file_name):
-        self.file_name = file_name  # 接收文件名参数
+        self.Name.file_name = file_name  # 接收文件名参数
         self.clean()  # 清理广告等杂质
         # 加载日志，匹配特征等
         logging.basicConfig(level=logging.DEBUG,
@@ -40,9 +56,24 @@ class Rename:
             rule_json = json.load(file_obj)[0]["group_name"]
         self.group_rule = [zhconv.convert(x, 'zh-cn') for x in rule_json]
         self.file_info = {}
+
         self.pre_analyse = None
         # 匹配字幕组特征
         self.recognize_group()
+        self.Name.group = self.get_group()
+        self.Name.dpi = self.get_dpi()
+        self.Name.season = self.get_season()
+        self.Name.episode = self.get_episode()
+        self.Name.vision = self.get_vision()
+        self.Name.lang = self.get_language()
+        self.Name.ass = self.get_ass()
+        self.Name.type = self.get_type()
+        self.Name.code = self.get_code()
+        self.Name.source = self.get_source()
+        self.Name.zh = None
+        self.Name.en = None
+        self.Name.clean_name = None
+        self.get_info()
 
     # 获取字符串出现位置
     def get_str_location(self, char, target):
@@ -60,7 +91,7 @@ class Rename:
 
     # 清理原链接（中文字符替换为英文）
     def clean(self):
-        file_name = zhconv.convert(self.file_name, 'zh-cn')
+        file_name = zhconv.convert(self.Name.file_name, 'zh-cn')
         # 去广告
         file_name = re.sub("[（(\[【]?(字幕)?[\u4e00-\u9fa5]{0,3}(新人|招募?新?)[\u4e00-\u9fa5]{0,5}[）)\]】]?", "", file_name)
         # 除杂
@@ -72,7 +103,7 @@ class Rename:
         strip = ["复制磁连", "兼容", "配音", "网盘", "\u200b", "[]", "★"]
         for i in strip:
             file_name = file_name.replace(i, "")
-        self.file_name = str(file_name).replace('：', ':').replace('【', '[').replace('】', ']').replace('-', '-') \
+        self.Name.file_name = str(file_name).replace('：', ':').replace('【', '[').replace('】', ']').replace('-', '-') \
             .replace('（', '(').replace('）', ')').replace("＆", "&").replace("X", "x").replace("×", "x") \
             .replace("Ⅹ", "x").replace("-", " ").replace("_", " ")
 
@@ -85,12 +116,12 @@ class Rename:
         character = group + character
         # !强规则，人工录入标准名，区分大小写，优先匹配
         for char in rule:
-            if "[%s]" % char in self.file_name:
+            if "[%s]" % char in self.Name.file_name:
                 self.pre_analyse = char.lower()
                 return "enforce"
         # 如果文件名以 [字幕组名] 开头
-        if self.file_name[0] == "[":
-            str_split = self.file_name.lower().split("]")
+        if self.Name.file_name[0] == "[":
+            str_split = self.Name.file_name.lower().split("]")
             # 检索特征值是否位于文件名第1、2、最后一段
             for char in character:
                 if char in str_split[0] or char in str_split[1] or char in str_split[-1]:
@@ -105,16 +136,16 @@ class Rename:
             self.pre_analyse = None
             return False
         # 文件名以 -字幕组名 结尾
-        elif "-" in self.file_name:
+        elif "-" in self.Name.file_name:
             for char in character:
-                if char in self.file_name.lower().split("-")[-1]:
-                    self.pre_analyse = self.file_name.lower().split("-")[-1]
+                if char in self.Name.file_name.lower().split("-")[-1]:
+                    self.pre_analyse = self.Name.file_name.lower().split("-")[-1]
                     return "reserve"
             self.pre_analyse = None
             return False
         # 文件名以空格分隔 字幕组名为第一段
         else:
-            first_str = self.file_name.lower().split(" ")[0]
+            first_str = self.Name.file_name.lower().split(" ")[0]
             for char in character:
                 if char in first_str:
                     self.pre_analyse = first_str
@@ -135,14 +166,14 @@ class Rename:
         # 大部分情况
         elif status == "success":
             # 如果是 [字幕组名] ，这么标准的格式直接else送走吧，剩下的匹配一下
-            if "[%s]" % res_char not in self.file_name.lower():
-                if self.file_name[0] == "[":
+            if "[%s]" % res_char not in self.Name.file_name.lower():
+                if self.Name.file_name[0] == "[":
                     try:
                         # 以特征值为中心，匹配最近的中括号，八成就这个了
-                        gp = self.get_gp(res_char, self.file_name.lower())
+                        gp = self.get_gp(res_char, self.Name.file_name.lower())
                         return gp
                     except Exception as e:
-                        print("bug -- res_char:%s,%s,%s" % (res_char, self.file_name.lower(), e))
+                        print("bug -- res_char:%s,%s,%s" % (res_char, self.Name.file_name.lower(), e))
             else:
                 return res_char
         # 再见
@@ -150,7 +181,7 @@ class Rename:
 
     # 扒了6W数据，硬找的参数，没啥说的
     def get_dpi(self):
-        file_name = self.file_name
+        file_name = self.Name.file_name
         dpi_list = ["4k", "2160p", "1440p", "1080p", "1036p", "816p", "810p", "720p", "576p", "544P", "540p", "480p",
                     "1080i", "1080+",
                     "3840x2160", "1920x1080", "1920x1036", "1920x804", "1920x800", "1536x864", "1452x1080", "1440x1080",
@@ -164,7 +195,7 @@ class Rename:
 
     # 获取语种
     def get_language(self):
-        file_name = self.file_name
+        file_name = self.Name.file_name
         lang = []
         # 中文标示
         try:
@@ -186,7 +217,7 @@ class Rename:
 
     # 文件种类
     def get_type(self):
-        file_name = self.file_name
+        file_name = self.Name.file_name
         type_list = []
         # 英文标示
         try:
@@ -201,7 +232,7 @@ class Rename:
 
     # 编码格式
     def get_code(self):
-        file_name = self.file_name
+        file_name = self.Name.file_name
         code = []
         # 英文标示
         try:
@@ -216,7 +247,7 @@ class Rename:
 
     # 来源
     def get_source(self):
-        file_name = str(self.file_name).lower()
+        file_name = str(self.Name.file_name).lower()
         type_list = []
         # 英文标示
         for _ in range(3):
@@ -237,7 +268,7 @@ class Rename:
 
     # 获取季度
     def get_season(self):
-        file_name = self.file_name.lower()
+        file_name = self.Name.file_name.lower()
         season = []
         # 中文标示
         try:
@@ -257,7 +288,7 @@ class Rename:
 
     # 获取集数
     def get_episode(self):
-        file_name = self.file_name.lower()
+        file_name = self.Name.file_name.lower()
         episode = []
         # [10 11]集点名批评这种命名方法，几个国漫的组
         try:
@@ -292,7 +323,7 @@ class Rename:
 
     # 获取版本
     def get_vision(self):
-        file_name = self.file_name.lower()
+        file_name = self.Name.file_name.lower()
         vision = []
         # 中文
         try:
@@ -319,7 +350,7 @@ class Rename:
 
     # 获取字幕类型
     def get_ass(self):
-        file_name = self.file_name.lower()
+        file_name = self.Name.file_name.lower()
         ass = []
         # 中文标示
         try:
@@ -409,7 +440,8 @@ class Rename:
             if v is not None and "/" in v:
                 zh_list = v.split("/")
                 title[k] = zh_list[0].strip(" ")
-        return title
+        self.Name.zh = title["zh"]
+        self.Name.en = title["en"]
 
     # 以 / 代替空格分隔中英文名
     def add_separator(self, clean_name):
@@ -456,20 +488,20 @@ class Rename:
     def get_info(self):
         # 获取到的信息
         info = {
-            "group": self.get_group(),
-            "dpi": self.get_dpi(),
-            "season": self.get_season(),
-            "episode": self.get_episode(),
-            "vision": self.get_vision(),
-            "lang": self.get_language(),
-            "ass": self.get_ass(),
-            "type": self.get_type(),
-            "code": self.get_code(),
-            "source": self.get_source()
+            "group": self.Name.group,
+            "dpi": self.Name.dpi,
+            "season": self.Name.season,
+            "episode": self.Name.episode,
+            "vision": self.Name.vision,
+            "lang": self.Name.lang,
+            "ass": self.Name.ass,
+            "type": self.Name.type,
+            "code": self.Name.code,
+            "source": self.Name.source
         }
 
         # 字母全部小写
-        clean_name = self.file_name.lower()
+        clean_name = self.Name.file_name.lower()
         # 去除拿到的有效信息
         for k, v in info.items():
             if v is not None:
@@ -495,22 +527,16 @@ class Rename:
         clean_name = re.sub("([(\[] *| *[)\]])", "", clean_name)
         print(clean_name)
 
-        title = {
-            "zh": None,
-            "en": None
-        }
         zh_list = []
         en_list = []
 
         clean_name = self.add_separator(clean_name)
         clean_name = re.sub("(/ */)", "", clean_name)
         self.easy_split(clean_name, zh_list, en_list)
-        title["zh"] = zh_list if zh_list else None
-        title["en"] = en_list if en_list else None
-        if title["zh"] is None and title["en"] is None:
-            title = self.extract_title(clean_name)
-        print(title)
-        info["title"] = title
+        self.Name.zh = zh_list if zh_list else None
+        self.Name.en = en_list if en_list else None
+        if self.Name.zh is None and self.Name.en is None:
+            self.extract_title(clean_name)
         return info
 
 
@@ -520,6 +546,6 @@ if __name__ == "__main__":
     start = time.time()
     for name in name_list:
         print(name)
-        Rename(name).get_info()
+        print(Rename(name).Name.zh)
         print()
     print("%s" % (time.time() - start))
