@@ -1,28 +1,10 @@
 import re
-import csv
 import json
-import time
-
 import zhconv
-import requests
 import logging
-import pandas as pd
 
 
-def read_data(name, rows):
-    if name == "mikan":
-        with open('mikan.csv', 'r', encoding='utf-8') as csv_file:
-            reader = csv.reader(csv_file)
-            raw_data = [row[3] for row in reader][0:rows]
-            return raw_data
-    elif name == "dmhy":
-        with open('dmhy.csv', 'r', encoding='utf-8') as csv_file:
-            reader = csv.reader(csv_file)
-            raw_data = [row[4] for row in reader][1:rows + 1]
-            return raw_data
-
-
-class Rename:
+class RSSInfoCleaner:
     class Name:
         raw_name = None
         group = None
@@ -451,14 +433,12 @@ class Rename:
                     try:
                         res = re.search("(^[a\u4e00-\u9fa5: ]{1,10} ?)([a-z:]{1,20} ?){1,10}", clean_name).group(1)
                         clean_name = clean_name.replace(res, res.strip(" ") + "/")
-                        print("zh_pre:%s" % clean_name)
                     except Exception as e:
                         logging.info(e)
                 else:
                     try:
                         res = re.search("^(([a-z:]{1,20} ?){1,10} )[\u4e00-\u9fa5: a]{1,20}", clean_name).group(1)
                         clean_name = clean_name.replace(res, res.strip(" ") + "/")
-                        print("en_pre:%s" % clean_name)
                     except Exception as e:
                         logging.info(e)
         except Exception as e:
@@ -502,6 +482,7 @@ class Rename:
 
         # 字母全部小写
         clean_name = self.Name.file_name.lower()
+        # clean_name = self.Name.file_name
         # 去除拿到的有效信息
         for k, v in info.items():
             if v is not None:
@@ -525,7 +506,6 @@ class Rename:
         clean_name = re.sub('[^a-zA-Z\u4e00-\u9fa5:@#$%^&*()\[\]/ ]', "", clean_name)
         clean_name = re.sub(' +', ' ', clean_name).strip(" ")
         clean_name = re.sub("([(\[] *| *[)\]])", "", clean_name)
-        print(clean_name)
 
         zh_list = []
         en_list = []
@@ -540,12 +520,3 @@ class Rename:
         return info
 
 
-if __name__ == "__main__":
-    # mikan/dmhy 获取数据，dmhy 最多1w行，mikan最多3w行
-    name_list = read_data("dmhy", 1000)
-    start = time.time()
-    for name in name_list:
-        print(name)
-        print(Rename(name).Name.zh)
-        print()
-    print("%s" % (time.time() - start))

@@ -3,7 +3,7 @@ import time
 
 
 class EnvInfo:
-    debug_mode = False
+    debug_mode = True
     # Docker Env
     if not debug_mode:
         host_ip = os.environ["HOST"]
@@ -36,3 +36,15 @@ class EnvInfo:
     rule_url = "https://raw.githubusercontent.com/EstrellaXD/Bangumi_Auto_Collector/main/AutoBangumi/config/rule.json"
     time_show_obj = time.strftime('%Y-%m-%d %X')
     rule_name_re = r"\:|\/|\."
+
+
+class BColors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
