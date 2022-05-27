@@ -173,7 +173,7 @@ class Rename:
                         gp = self.get_gp(res_char, self.Name.file_name.lower())
                         return gp
                     except Exception as e:
-                        print("bug -- res_char:%s,%s,%s" % (res_char, self.Name.file_name.lower(), e))
+                        logging.warning("bug -- res_char:%s,%s,%s" % (res_char, self.Name.file_name.lower(), e))
             else:
                 return res_char
         # 再见
@@ -451,14 +451,12 @@ class Rename:
                     try:
                         res = re.search("(^[a\u4e00-\u9fa5: ]{1,10} ?)([a-z:]{1,20} ?){1,10}", clean_name).group(1)
                         clean_name = clean_name.replace(res, res.strip(" ") + "/")
-                        print("zh_pre:%s" % clean_name)
                     except Exception as e:
                         logging.info(e)
                 else:
                     try:
                         res = re.search("^(([a-z:]{1,20} ?){1,10} )[\u4e00-\u9fa5: a]{1,20}", clean_name).group(1)
                         clean_name = clean_name.replace(res, res.strip(" ") + "/")
-                        print("en_pre:%s" % clean_name)
                     except Exception as e:
                         logging.info(e)
         except Exception as e:
@@ -525,7 +523,6 @@ class Rename:
         clean_name = re.sub('[^a-zA-Z\u4e00-\u9fa5:@#$%^&*()\[\]/ ]', "", clean_name)
         clean_name = re.sub(' +', ' ', clean_name).strip(" ")
         clean_name = re.sub("([(\[] *| *[)\]])", "", clean_name)
-        print(clean_name)
 
         zh_list = []
         en_list = []
@@ -545,7 +542,4 @@ if __name__ == "__main__":
     name_list = read_data("dmhy", 1000)
     start = time.time()
     for name in name_list:
-        print(name)
         print(Rename(name).Name.zh)
-        print()
-    print("%s" % (time.time() - start))
