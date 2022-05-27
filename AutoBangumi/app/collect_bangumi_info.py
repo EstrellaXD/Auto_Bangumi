@@ -4,8 +4,8 @@ import requests
 from bs4 import BeautifulSoup
 import json
 import re
-from env import EnvInfo
-
+from env import EnvInfo, BColors
+from AutoBangumi.app.RssFliter.RSSFliter import RSSInfoCleaner as Cleaner
 
 class MatchRule:
     split_rule = r"\[|\]|\【|\】|\★|\（|\）|\(|\)"
@@ -118,6 +118,25 @@ class CollectRSS:
 
 
 if __name__ == "__main__":
-    cr = CollectRSS()
-    cr.get_info_list()
-    cr.put_info_json()
+    rss = requests.get(EnvInfo.rss_link, 'utf-8')
+    soup = BeautifulSoup(rss.text, 'xml')
+    items = soup.find_all('item')
+    for item in items:
+        name = item.title.string
+        print(BColors.HEADER + name + BColors.OKGREEN)
+        pn = Cleaner(name).Name
+        if pn.en is not None:
+            if type(pn.en) is list:
+                for n in pn.en:
+                    print(n)
+            else:
+                print(pn.en)
+        else:
+            if type(pn.zh) is list:
+                for n in pn.zh:
+                    print(n)
+            else:
+                print(pn.zh)
+
+        # print(BColors.HEADER + name)
+        # print(BColors.OKGREEN + str(pn.Name.en))

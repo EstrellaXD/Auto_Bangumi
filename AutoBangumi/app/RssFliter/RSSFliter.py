@@ -1,28 +1,10 @@
 import re
-import csv
 import json
-import time
-
 import zhconv
-import requests
 import logging
-import pandas as pd
 
 
-def read_data(name, rows):
-    if name == "mikan":
-        with open('mikan.csv', 'r', encoding='utf-8') as csv_file:
-            reader = csv.reader(csv_file)
-            raw_data = [row[3] for row in reader][0:rows]
-            return raw_data
-    elif name == "dmhy":
-        with open('dmhy.csv', 'r', encoding='utf-8') as csv_file:
-            reader = csv.reader(csv_file)
-            raw_data = [row[4] for row in reader][1:rows + 1]
-            return raw_data
-
-
-class Rename:
+class RSSInfoCleaner:
     class Name:
         raw_name = None
         group = None
@@ -500,6 +482,7 @@ class Rename:
 
         # 字母全部小写
         clean_name = self.Name.file_name.lower()
+        # clean_name = self.Name.file_name
         # 去除拿到的有效信息
         for k, v in info.items():
             if v is not None:
@@ -537,9 +520,11 @@ class Rename:
         return info
 
 
+
 if __name__ == "__main__":
     # mikan/dmhy 获取数据，dmhy 最多1w行，mikan最多3w行
     name_list = read_data("dmhy", 1000)
     start = time.time()
     for name in name_list:
         print(Rename(name).Name.zh)
+
