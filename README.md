@@ -125,5 +125,16 @@ docker run -d \
 
 4. 安装媒体库软件
 
+## Roadmap
+
+***开发中的功能：***
+- RSS 解析器：AutoBangumi 可以自行解析分析种子无需依赖下载器。
+- Transmission & Aria2 的支持。
+- 遗漏番剧下载：中间开始追番可以补全之前的剧集。
+
+***计划开发的功能：***
+- Web UI
+- 更为智能细致的分类预设。
+
 # 声明
 本项目的自动改名规则根据 [miracleyoo/anime_renamer](https://github.com/miracleyoo/anime_renamer) 项目

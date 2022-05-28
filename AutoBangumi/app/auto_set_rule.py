@@ -48,26 +48,24 @@ class SetRule:
         try:
             self.qb.rss_remove_item(item_path="Mikan_RSS")
         except qbittorrentapi.exceptions.Conflict409Error:
-            sys.stdout.write(f"[{EnvInfo.time_show_obj}]  No feed exists, starting adding feed." + "\n")
+            print(f"[{EnvInfo.time_show_obj}]  No feed exists, starting adding feed.")
         try:
             self.qb.rss_add_feed(url=self.rss_link, item_path="Mikan_RSS")
-            sys.stdout.write(f"[{EnvInfo.time_show_obj}]  Successes adding RSS Feed." + "\n")
+            print(f"[{EnvInfo.time_show_obj}]  Successes adding RSS Feed.")
         except ConnectionError:
-            sys.stdout.write(f"[{EnvInfo.time_show_obj}]  Error with adding RSS Feed." + "\n")
+            print(f"[{EnvInfo.time_show_obj}]  Error with adding RSS Feed.")
         except qbittorrentapi.exceptions.Conflict409Error:
-            sys.stdout.write(f"[{EnvInfo.time_show_obj}]  RSS Already exists." + "\n")
+            print(f"[{EnvInfo.time_show_obj}]  RSS Already exists.")
 
     def run(self):
-        sys.stdout.write(f"[{EnvInfo.time_show_obj}]  Start adding rules." + "\n")
-        sys.stdout.flush()
+        print(f"[{EnvInfo.time_show_obj}]  Start adding rules.")
         for info in self.bangumi_info:
             if not info["added"]:
                 self.set_rule(info["title"], info["group"], info["season"])
                 info["added"] = True
         with open(EnvInfo.info_path, 'w', encoding='utf8') as f:
             json.dump(self.info, f, indent=4, separators=(',', ': '), ensure_ascii=False)
-        sys.stdout.write(f"[{EnvInfo.time_show_obj}]  Finished." + "\n")
-        sys.stdout.flush()
+        print(f"[{EnvInfo.time_show_obj}]  Finished.")
 
 
 if __name__ == "__main__":

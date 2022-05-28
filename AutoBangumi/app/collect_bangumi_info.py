@@ -1,4 +1,5 @@
 # -*- coding: UTF-8 -*-
+import os
 import sys
 import requests
 from bs4 import BeautifulSoup
@@ -27,7 +28,11 @@ class CollectRSS:
         except:
             with open(EnvInfo.rule_path) as r:
                 self.rules = json.load(r)
-        rss = requests.get(EnvInfo.rss_link, 'utf-8')
+        try:
+            rss = requests.get(EnvInfo.rss_link, 'utf-8')
+        except:
+            print(f"[{EnvInfo.time_show_obj}]  ERROR with DNS/Connection.")
+            quit()
         soup = BeautifulSoup(rss.text, 'xml')
         self.items = soup.find_all('item')
         with open(EnvInfo.info_path) as i:
@@ -79,7 +84,7 @@ class CollectRSS:
                 if exit_flag:
                     break
             if not exit_flag:
-                sys.stdout.write(f"[{EnvInfo.time_show_obj}]  ERROR Not match with {name}")
+                print(f"[{EnvInfo.time_show_obj}]  ERROR Not match with {name}")
 
     def put_info_json(self):
         had_data = []
@@ -107,8 +112,7 @@ class CollectRSS:
                     "added": False
                 })
                 had_data.append(json_title)
-                sys.stdout.write(f"[{EnvInfo.time_show_obj}]  add {json_title} {json_season}" + "\n")
-                sys.stdout.flush()
+                print(f"[{EnvInfo.time_show_obj}]  add {json_title} {json_season}")
         with open(EnvInfo.info_path, 'w', encoding='utf8') as f:
             json.dump(self.info, f, indent=4, separators=(',', ': '), ensure_ascii=False)
 
@@ -118,14 +122,14 @@ class CollectRSS:
 
 
 if __name__ == "__main__":
-    rss = requests.get(EnvInfo.rss_link, 'utf-8')
-    soup = BeautifulSoup(rss.text, 'xml')
-    items = soup.find_all('item')
-    for item in items:
-        name = item.title.string
-        print(BColors.HEADER + name + BColors.OKGREEN)
-        pn = Filter(name).Name
-        print(pn.clean)
-
-        # print(BColors.HEADER + name)
-        # print(BColors.OKGREEN + str(pn.Name.en))
+    # rss = requests.get(EnvInfo.rss_link, 'utf-8')
+    # soup = BeautifulSoup(rss.text, 'xml')
+    # items = soup.find_all('item')
+    # for item in items:
+    #     name = item.title.string
+    #     pn = Filter(name).Name
+    #     print(BColors.HEADER + name)
+    #     print(BColors.OKGREEN + str(pn.zh))
+    #     print(str(pn.en))
+    print(__file__)
+    print(os.path.dirname(__file__))
