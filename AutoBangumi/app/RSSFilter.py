@@ -41,7 +41,7 @@ class RSSInfoCleaner:
         self.clean()  # 清理广告等杂质
         # 加载日志，匹配特征等
         logging.basicConfig(level=logging.DEBUG,
-                            filename='./rename_log.txt',
+                            filename='RssFilter/rename_log.txt',
                             filemode='w',
                             format='%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s')
         self.group_character = ['字幕社', '字幕组', '字幕屋', '发布组', '动漫', '国漫', '汉化', 'raw', 'works', '工作室', '压制', '合成', '制作',
@@ -49,7 +49,7 @@ class RSSInfoCleaner:
         self.group_char = ['dmhy', '澄空学园', 'c.c动漫', "vcb", 'amor', 'moozzi2', 'skytree', 'sweetsub', 'pcsub', 'ahu-sub',
                            'f宅', 'captions', 'dragsterps', 'onestar', "lolihouse", "天空树",
                            '卡通', '时雨初空', 'nyaa', 'ddd', 'koten', 'reinforce', '届恋对邦小队', 'cxraw']
-        with open("rule.json", encoding='utf-8') as file_obj:
+        with open("../config/clean_rule.json", encoding='utf-8') as file_obj:
             rule_json = json.load(file_obj)[0]["group_name"]
         self.group_rule = [zhconv.convert(x, 'zh-cn') for x in rule_json]
         self.file_info = {}
@@ -250,7 +250,7 @@ class RSSInfoCleaner:
         for _ in range(3):
             try:
                 res = re.search(
-                    "[（(\[【]?((bd|remux|(viu)?tvb?|bilibili|b ?global|baha|web[ -]?(dl|rip))[ -]?(iso|mut|rip)?)[）)\]】]?",
+                    "[（(\[【]?((bd|BD-BOX|bd-b0x|psv&pc|remux|(viu)?tvb?|bilibili|b ?global|baha|web[ -]?(dl|rip))[ -]?(iso|mut|rip)?)[）)\]】]?",
                     file_name).group(1).lower().strip(" ")
                 if res not in type_list:
                     type_list.append(res)
@@ -582,6 +582,8 @@ class RSSInfoCleaner:
             self.easy_split(temp_name, zh_list, en_list, jp_list)
         elif zh_list == [] and en_list == []:
             self.extract_title(clean_name)
+        while "" in en_list:
+            en_list.remove("")
 
         self.Name.zh = zh_list if zh_list else None
         self.Name.en = en_list if en_list else None
@@ -596,12 +598,12 @@ if __name__ == "__main__":
 
     def read_data(file_name, rows):
         if file_name == "mikan":
-            with open('mikan.csv', 'r', encoding='utf-8') as csv_file:
+            with open('RssFilter/mikan.csv', 'r', encoding='utf-8') as csv_file:
                 reader = csv.reader(csv_file)
                 raw_data = [row[3] for row in reader][0:rows]
                 return raw_data
         elif file_name == "dmhy":
-            with open('dmhy.csv', 'r', encoding='utf-8') as csv_file:
+            with open('RssFilter/dmhy.csv', 'r', encoding='utf-8') as csv_file:
                 reader = csv.reader(csv_file)
                 raw_data = [row[4] for row in reader][1:rows + 1]
                 return raw_data

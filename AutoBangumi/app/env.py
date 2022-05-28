@@ -15,7 +15,7 @@ class EnvInfo:
         method = os.environ["METHOD"]
         enable_group_tag = os.getenv("GROUP_TAG", 'False').lower() in ('true', '1', 't')
         info_path = "/config/bangumi.json"
-        rule_path = "/config/rule.json"
+        rule_path = "/config/clean_rule.json"
         not_contain = os.environ["NOT_CONTAIN"]
         get_rule_debug = os.getenv("RULE_DEBUG", 'False').lower() in ('true', '1', 't')
     else:

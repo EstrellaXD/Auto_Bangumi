@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 import json
 import re
 from env import EnvInfo, BColors
-from AutoBangumi.app.RssFliter.RSSFliter import RSSInfoCleaner as Cleaner
+from RSSFilter import RSSInfoCleaner as Filter
 
 class MatchRule:
     split_rule = r"\[|\]|\【|\】|\★|\（|\）|\(|\)"
@@ -124,19 +124,8 @@ if __name__ == "__main__":
     for item in items:
         name = item.title.string
         print(BColors.HEADER + name + BColors.OKGREEN)
-        pn = Cleaner(name).Name
-        if pn.en is not None:
-            if type(pn.en) is list:
-                for n in pn.en:
-                    print(n)
-            else:
-                print(pn.en)
-        else:
-            if type(pn.zh) is list:
-                for n in pn.zh:
-                    print(n)
-            else:
-                print(pn.zh)
+        pn = Filter(name).Name
+        print(pn.clean)
 
         # print(BColors.HEADER + name)
         # print(BColors.OKGREEN + str(pn.Name.en))
