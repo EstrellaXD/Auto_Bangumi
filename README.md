@@ -35,6 +35,7 @@
 - [AutoBangumi V2 简易说明](https://www.craft.do/s/4viN6M3tBqigLp)
 - 更新推送：[Telegram Channel](https://t.me/autobangumi_update)
 - Bug 反馈群：[Telegram](https://t.me/+yNisOnDGaX5jMTM9)
+- [常见 bug 和解决方法](https://www.github.com/Estrelaxd/Auto_Bangumi/DOC/常见错误解决.md)
 
 # 部署说明
 1. 安装 qBittorrent:
