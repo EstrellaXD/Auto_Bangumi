@@ -46,11 +46,12 @@ class RSSInfoCleaner:
                             filename='RssFilter/rename_log.txt',
                             filemode='w',
                             format='%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s')
-        self.group_character = ['字幕社', '字幕组', '字幕屋', '发布组', '动漫', '国漫', '汉化', 'raw', 'works', '工作室', '压制', '合成', '制作',
-                                '搬运', '委员会', '家族', '译制', '动画', '研究所', 'sub', '翻译', '联盟', 'dream', '-rip', 'neo', 'team']
+        self.group_character = ['字幕社', '字幕组', '字幕屋', '发布组', "连载组", '动漫', '国漫', '汉化', 'raw', 'works', '工作室', '压制', '合成',
+                                '制作', '搬运', '委员会', '家族', '译制', '动画', '研究所', 'sub', '翻译', '联盟', 'dream', '-rip', 'neo',
+                                'team', "百合组", "慕留人", "行动组"]
         self.group_char = ['dmhy', '澄空学园', 'c.c动漫', "vcb", 'amor', 'moozzi2', 'skytree', 'sweetsub', 'pcsub', 'ahu-sub',
-                           'f宅', 'captions', 'dragsterps', 'onestar', "lolihouse", "天空树", "妇联奶子",
-                           '卡通', '时雨初空', 'nyaa', 'ddd', 'koten', 'reinforce', '届恋对邦小队', 'cxraw']
+                           'f宅', 'captions', 'dragsterps', 'onestar', "lolihouse", "天空树", "妇联奶子", "不够热", "烤肉同好", '卡通',
+                           '时雨初空', 'nyaa', 'ddd', 'koten', 'reinforce', '届恋对邦小队', 'cxraw']
         with open("../config/clean_rule.json", encoding='utf-8') as file_obj:
             rule_json = json.load(file_obj)[0]["group_name"]
         self.group_rule = [zhconv.convert(x, 'zh-cn') for x in rule_json]
@@ -103,9 +104,14 @@ class RSSInfoCleaner:
         character = group + character
         # !强规则，人工录入标准名，区分大小写，优先匹配
         for char in rule:
-            if char in self.file_name:
-                self.pre_analyse = char.lower()
+            if ("&" + char) in self.file_name or (char + "&") in self.file_name:
+                self.pre_analyse = re.search("[（(\[【]?(.*?(&%s|%s&).*?)[）)\]】]?" % (char, char), self.file_name).group(
+                    1).lower()
                 return "enforce"
+            else:
+                if char in self.file_name:
+                    self.pre_analyse = char.lower()
+                    return "enforce"
         # 如果文件名以 [字幕组名] 开头
         if self.Name.raw[0] == "[":
             str_split = self.Name.raw.lower().split("]")
@@ -514,7 +520,8 @@ class RSSInfoCleaner:
             temp_name = del_rules(self.Name.raw, self.en_list)
             self.easy_split(temp_name, self.zh_list, self.en_list, self.jp_list)
         elif self.zh_list == [] and self.en_list == []:
-            self.extract_title(clean_name)
+            # self.extract_title(clean_name)
+            pass
         while "" in self.en_list:
             self.en_list.remove("")
 
@@ -551,10 +558,8 @@ class RSSInfoCleaner:
 if __name__ == "__main__":
     # mikan/dmhy 获取数据，dmhy 最多1w行，mikan最多3w行
     # site,start,row_nums
-    name_list = read_data("mikan", 0, 1000)
+    name_list = read_data("mikan", 1, 1000)
     for name in name_list:
         print(name)
-        print("zh:%s" % RSSInfoCleaner(name).Name.zh)
-        print("en:%s" % RSSInfoCleaner(name).Name.en)
-        print("jp:%s" % RSSInfoCleaner(name).Name.jp)
+        print("group_name:%s" % RSSInfoCleaner(name).Info.group)
         print()
