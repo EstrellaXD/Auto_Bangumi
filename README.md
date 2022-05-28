@@ -44,29 +44,31 @@
 最简部署方法
 ```dash
 docker run -d \
-	--name=AutoBangumi \
-	-e DOWNLOAD_PATH=/path/downloads \
-	-e RSS=<YOUR RSS ADDRESS> \
-	--network=host \
-	--restart unless-stopped \
- 	estrellaxd/auto_bangumi:latest
+  --name=AutoBangumi \
+  -e DOWNLOAD_PATH=/path/downloads \
+  -e RSS=<YOUR RSS ADDRESS> \
+  --network=host \
+  --dns=8.8.8.8 \
+  --restart unless-stopped \
+  estrellaxd/auto_bangumi:latest
 ```
 进阶部署
 ```dash
 docker run -d \
-	--name=AutoBangumi \
-	-e TZ=Asia/Shanghai \ #optional
-	-e TIME=1800 \ #optional
-	-e HOST=localhost:8080 \ #optional
-	-e USER=admin \ #optional
-	-e PASSWORD=adminadmin \ #optional
-	-e METHOD=pn \ #optional
-	-e GROUP_TAG=True \ #optional
-	-e DOWNLOAD_PATH=/path/downloads \
-	-e RSS=<YOUR RSS ADDRESS> \
-	--network=host \
-	--restart unless-stopped \
- 	estrellaxd/auto_bangumi:latest
+  --name=AutoBangumi \
+  -e TZ=Asia/Shanghai \ #optional
+  -e TIME=1800 \ #optional
+  -e HOST=localhost:8080 \ #optional
+  -e USER=admin \ #optional
+  -e PASSWORD=adminadmin \ #optional
+  -e METHOD=pn \ #optional
+  -e GROUP_TAG=True \ #optional
+  -e DOWNLOAD_PATH=/path/downloads \
+  -e RSS=<YOUR RSS ADDRESS> \
+  --network=host \
+  --dns=8.8.8.8 \
+  --restart unless-stopped \
+  estrellaxd/auto_bangumi:latest
 ```
 ### 参数说明
 
