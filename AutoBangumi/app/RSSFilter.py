@@ -37,6 +37,7 @@ class RSSInfoCleaner:
         source = None
 
     def __init__(self, file_name):
+        self.file_name = file_name
         self.Name.raw = file_name  # 接收文件名参数
         self.clean()  # 清理广告等杂质
         # 加载日志，匹配特征等
@@ -47,7 +48,7 @@ class RSSInfoCleaner:
         self.group_character = ['字幕社', '字幕组', '字幕屋', '发布组', '动漫', '国漫', '汉化', 'raw', 'works', '工作室', '压制', '合成', '制作',
                                 '搬运', '委员会', '家族', '译制', '动画', '研究所', 'sub', '翻译', '联盟', 'dream', '-rip', 'neo', 'team']
         self.group_char = ['dmhy', '澄空学园', 'c.c动漫', "vcb", 'amor', 'moozzi2', 'skytree', 'sweetsub', 'pcsub', 'ahu-sub',
-                           'f宅', 'captions', 'dragsterps', 'onestar', "lolihouse", "天空树",
+                           'f宅', 'captions', 'dragsterps', 'onestar', "lolihouse", "天空树", "妇联奶子",
                            '卡通', '时雨初空', 'nyaa', 'ddd', 'koten', 'reinforce', '届恋对邦小队', 'cxraw']
         with open("../config/clean_rule.json", encoding='utf-8') as file_obj:
             rule_json = json.load(file_obj)[0]["group_name"]
@@ -70,7 +71,15 @@ class RSSInfoCleaner:
         self.Name.zh = None
         self.Name.en = None
         self.Name.clean = None
+        self.zh_list = []
+        self.jp_list = []
+        self.en_list = []
         self.get_info()
+
+    def del_rules(self, raw_name, rule_list):
+        for i in rule_list:
+            raw_name = raw_name.replace(i, "")
+        return raw_name
 
     # 获取字符串出现位置
     def get_str_location(self, char, target):
@@ -97,12 +106,11 @@ class RSSInfoCleaner:
         file_name = re.sub("[（(\[【]?(2(\d{3}[年.][春夏秋冬]?)\d{1,2}\.?\d{1,2})[）)\]】]?", "", file_name)
         # 除杂x3
         file_name = re.sub("[（(\[【]检索.*[）)\]】]?", "", file_name)
-        strip = ["复制磁连", "兼容", "配音", "网盘", "\u200b", "[]", "★"]
-        for i in strip:
-            file_name = file_name.replace(i, "")
+        strip = ["特效歌词", "复制磁连", "兼容", "配音", "网盘", "\u200b", "[PSV&PC]", "Fin]", "Fin ", "[mkv]", "[]", "★"]
+        file_name = self.del_rules(file_name, strip)
         self.Name.raw = str(file_name).replace('：', ':').replace('【', '[').replace('】', ']').replace('-', '-') \
             .replace('（', '(').replace('）', ')').replace("＆", "&").replace("X", "x").replace("×", "x") \
-            .replace("Ⅹ", "x").replace("-", " ").replace("_", " ")
+            .replace("Ⅹ", "x").replace("__", "/").replace("_", "/")
 
     # 检索字幕组特征
     def recognize_group(self):
@@ -113,7 +121,7 @@ class RSSInfoCleaner:
         character = group + character
         # !强规则，人工录入标准名，区分大小写，优先匹配
         for char in rule:
-            if "[%s]" % char in self.Name.raw:
+            if char in self.file_name:
                 self.pre_analyse = char.lower()
                 return "enforce"
         # 如果文件名以 [字幕组名] 开头
@@ -233,8 +241,9 @@ class RSSInfoCleaner:
         code = []
         # 英文标示
         try:
-            code = code + re.search("[（(\[【]?(((x26[45]|hevc|aac|avc|((10|8)[ -]?bit))[ -]?(x\d)?[ -]?){1,5})[ ）)\]】]?",
-                                    str(file_name).lower()).group(1).strip(" ").split(" ")
+            code = code + re.search(
+                "[（(\[【]?(((x26[45]|hevc|aac_?|avc_?|((10|8)[ -]?bit))[ -]?(x\d)?[ -]?){1,5})[ ）)\]】]?",
+                str(file_name).lower()).group(1).strip(" ").split(" ")
         except Exception as e:
             logging.info(e)
         if code:
@@ -250,7 +259,7 @@ class RSSInfoCleaner:
         for _ in range(3):
             try:
                 res = re.search(
-                    "[（(\[【]?((bd|BD-BOX|bd-b0x|psv&pc|remux|(viu)?tvb?|bilibili|b ?global|baha|web[ -]?(dl|rip))[ -]?(iso|mut|rip)?)[）)\]】]?",
+                    "[（(\[【]?((bd|bd-b0x|remux|(viu)?tvb?|bilibili|b-?global|baha|web[ -]?(dl|rip))[ -]?(box|iso|mut|rip)?)[）)\]】]?",
                     file_name).group(1).lower().strip(" ")
                 if res not in type_list:
                     type_list.append(res)
@@ -275,7 +284,7 @@ class RSSInfoCleaner:
         # 英文标示
         try:
             season.append(
-                re.search("((final ?)?(season|[ \[]s) ?\d{1,2})", str(file_name)).group(1).strip(" "))
+                re.search("((final ?)?(season|[ \[]s) ?\d{1,2}|\d{1,2}-?choume)", str(file_name)).group(1).strip(" "))
         except Exception as e:
             logging.info(e)
         if season:
@@ -325,7 +334,8 @@ class RSSInfoCleaner:
         # 中文
         try:
             vision.append(
-                re.search("[（(\[【]?(([\u4e00-\u9fa5]{0,2}|v\d)((版本?|修复?正?)|片源?|内详))[）)\]】]?", str(file_name)).group(1))
+                re.search("[（(\[【]?(([\u4e00-\u9fa5]{0,2}|v\d)((版本?|修复?正?|WEB限定)|片源?|内详|[特别篇])(话|版|合?集?))[）)\]】]?",
+                          str(file_name)).group(1))
         except Exception as e:
             logging.info(e)
         # 英文
@@ -454,15 +464,17 @@ class RSSInfoCleaner:
             if "/" not in clean_name:
                 if '\u4e00' <= clean_name[0] <= '\u9fff':
                     try:
-                        res = re.search("(^[\u4e00-\u9fa5\u3040-\u31ff: .。，!！]{1,20} ?)([a-z: .。,，!！]{1,20} ?)*",
-                                        clean_name).group(1)
+                        res = re.search(
+                            "(^[\u4e00-\u9fa5\u3040-\u31ff: \-.。，!！]{1,20}[ -]{0,5})([a-z: \-.。,，!！]{1,20} ?)*",
+                            clean_name).group(1)
                         clean_name = clean_name.replace(res, res.strip(" ") + "/")
                     except Exception as e:
                         logging.info(e)
                 else:
                     try:
-                        res = re.search("^(([a-z: .。,，!！]{1,20} ?)* ?)[\u4e00-\u9fa5\u3040-\u31ff: .。,，!！]{1,20}",
-                                        clean_name).group(1)
+                        res = re.search(
+                            "^(([a-z: \-.。,，!！]{1,20} ?)*[ -]{0,5})[\u4e00-\u9fa5\u3040-\u31ff: \-.。,，!！]{1,20}",
+                            clean_name).group(1)
                         clean_name = clean_name.replace(res, res.strip(" ") + "/")
                     except Exception as e:
                         logging.info(e)
@@ -497,6 +509,24 @@ class RSSInfoCleaner:
                 elif self.has_en(clean_name) is False:
                     zh_list.append(clean_name.strip(" "))
 
+    # 单list验证
+    def re_verity(self, raw_list, raw_name):
+        correct_list = []
+        for c_res in raw_list:
+            if type(raw_name) is list:
+                if c_res in raw_name[0].lower() and c_res in raw_name[1].lower():
+                    correct_list.append(c_res)
+            else:
+                if c_res in raw_name.lower():
+                    correct_list.append(c_res)
+        return correct_list
+
+    # 混合验证
+    def all_verity(self, raw_name):
+        self.zh_list = self.re_verity(self.zh_list, raw_name)
+        self.en_list = self.re_verity(self.en_list, raw_name)
+        self.jp_list = self.re_verity(self.jp_list, raw_name)
+
     # 汇总信息
     def get_info(self):
         # 获取到的信息
@@ -525,8 +555,8 @@ class RSSInfoCleaner:
                 else:
                     clean_name = clean_name.replace(v, "")
         # 除杂
-        clean_list = ["pc&psp", "pc&psv", "fin", "opus", "movie", "tvb", "end", "web", "bangumi.online", "donghua",
-                      "仅限港澳台地区", "话全", "第话", "第集", "全集", "话", "集", "+", "@", "轨", "。"]
+        clean_list = ["pc&psp", "pc&psv", "movie", "bangumi.online", "donghua",
+                      "仅限港澳台地区", "话全", "第话", "第集", "全集", "话", "集", "+", "@"]
         for i in clean_list:
             clean_name = clean_name.replace(i, "")
         # 去除多余空格
@@ -536,59 +566,63 @@ class RSSInfoCleaner:
 
         # 剩下来的几乎就是干净番名了，再刮不到不管了
         info["clean_name"] = clean_name
-        clean_name = re.sub('[^a-zA-Z\u4e00-\u9fa5\u3040-\u31ff:*()\[\]/ .。,，!！]', "", clean_name)
-        clean_name = re.sub(' +', ' ', clean_name).strip(" ")
+        clean_name = re.sub('[^a-zA-Z\u4e00-\u9fa5\u3040-\u31ff:*()\[\]/\-& .。,，!！]', "", clean_name)
+        clean_name = re.sub(' +', ' ', clean_name).strip(" ").strip("-")
         clean_name = re.sub("([(\[] *| *[)\]])", "", clean_name)
 
-        raw_zh_list = []
-        raw_jp_list = []
-        raw_en_list = []
-
-        clean_name = self.add_separator(clean_name)
+        if (self.has_zh(clean_name) or self.has_jp(clean_name)) and self.has_en(clean_name):
+            clean_name = self.add_separator(clean_name)
         clean_name = re.sub("(/ */)", "", clean_name)
 
-        self.easy_split(clean_name, raw_zh_list, raw_en_list, raw_jp_list)
+        clean_name = re.sub(" +- +", "/", clean_name)
+        self.easy_split(clean_name, self.zh_list, self.en_list, self.jp_list)
         self.Name.clean = clean_name
-        zh_list = []
-        en_list = []
-        jp_list = []
-        for res in raw_zh_list:
-            correct_res = re.search(res, self.Name.raw.lower())
-            if correct_res:
-                zh_list.append(correct_res.group())
-        for res in raw_en_list:
-            correct_res = re.search(res, self.Name.raw.lower())
-            if correct_res:
-                en_list.append(correct_res.group())
-        for res in raw_jp_list:
-            correct_res = re.search(res, self.Name.raw.lower())
-            if correct_res:
-                jp_list.append(correct_res.group())
 
-        if jp_list:
-            temp_name = self.Name.clean
-            for i in jp_list:
-                temp_name = temp_name.replace(i, "")
-            self.easy_split(temp_name, zh_list, en_list, jp_list)
-        if zh_list and en_list == []:
-            temp_name = self.Name.clean
-            for i in zh_list:
-                temp_name = temp_name.replace(i, "")
-            self.easy_split(temp_name, zh_list, en_list, jp_list)
-        elif zh_list == [] and en_list:
-            temp_name = self.Name.clean
-            for i in en_list:
-                temp_name = temp_name.replace(i, "")
-            self.easy_split(temp_name, zh_list, en_list, jp_list)
-        elif zh_list == [] and en_list == []:
+        # 结果反代入原名验证
+        self.all_verity([self.Name.raw, self.Name.clean])
+
+        # 去除正确结果后，重新识别其他部分
+        if self.jp_list:
+            temp_name = self.del_rules(self.Name.raw, self.jp_list)
+            self.easy_split(temp_name, self.zh_list, self.en_list, self.jp_list)
+        if self.zh_list and self.en_list == []:
+            temp_name = self.del_rules(self.Name.clean, self.zh_list)
+            self.easy_split(temp_name, self.zh_list, self.en_list, self.jp_list)
+        elif self.zh_list == [] and self.en_list:
+            temp_name = self.del_rules(self.Name.raw, self.en_list)
+            self.easy_split(temp_name, self.zh_list, self.en_list, self.jp_list)
+        elif self.zh_list == [] and self.en_list == []:
             self.extract_title(clean_name)
-        while "" in en_list:
-            en_list.remove("")
+        while "" in self.en_list:
+            self.en_list.remove("")
 
-        self.Name.zh = zh_list if zh_list else None
-        self.Name.en = en_list if en_list else None
-        self.Name.jp = jp_list if jp_list else None
+        # 一步一验
+        self.all_verity([self.Name.raw, self.Name.clean])
+        # 处理中英文混合名
+        if len(self.en_list) > 1:
+            fragment = min(self.en_list, key=len)
+            if fragment in self.Name.raw.lower():
+                for zh_name in self.zh_list:
+                    try:
+                        r_name = re.search("(%s {0,3}%s|%s {0,5}%s)" % (fragment, zh_name, zh_name, fragment),
+                                           self.Name.raw.lower())
+                        if r_name is not None:
+                            self.en_list.remove(fragment)
+                            self.zh_list.remove(zh_name)
+                            self.zh_list.append(r_name.group())
+                    except Exception as e:
+                        print("bug--%s" % e)
+                        print("zh:%s,en:%s" % (zh_name, fragment))
 
+        # 再次验证，这里只能验raw名
+        self.all_verity(self.Name.raw)
+        # 灌装
+        self.Name.zh = self.zh_list if self.zh_list else None
+        if "名侦探柯南" in self.Name.raw:
+            self.Name.zh = "名侦探柯南"
+        self.en_list = [x.strip("-").strip(" ") for x in self.en_list if len(x) > 1]
+        self.Name.en = self.en_list if self.en_list else None
+        self.Name.jp = self.jp_list if self.jp_list else None
         return info
 
 
@@ -596,25 +630,24 @@ if __name__ == "__main__":
     import csv
 
 
-    def read_data(file_name, rows):
+    def read_data(file_name, start, rows):
         if file_name == "mikan":
             with open('RssFilter/mikan.csv', 'r', encoding='utf-8') as csv_file:
                 reader = csv.reader(csv_file)
-                raw_data = [row[3] for row in reader][0:rows]
+                raw_data = [row[3] for row in reader][start:start + rows]
                 return raw_data
         elif file_name == "dmhy":
             with open('RssFilter/dmhy.csv', 'r', encoding='utf-8') as csv_file:
                 reader = csv.reader(csv_file)
-                raw_data = [row[4] for row in reader][1:rows + 1]
+                raw_data = [row[4] for row in reader][start + 1:start + rows + 1]
                 return raw_data
 
 
     # mikan/dmhy 获取数据，dmhy 最多1w行，mikan最多3w行
-    name_list = read_data("dmhy", 100)
+    # site,start,row_nums
+    name_list = read_data("mikan", 0, 1000)
     for name in name_list:
         print(name)
-        print("pure_name:%s" % RSSInfoCleaner(name).Name.raw)
-        print("clean_name:%s" % RSSInfoCleaner(name).Name.clean)
         print("zh:%s" % RSSInfoCleaner(name).Name.zh)
         print("en:%s" % RSSInfoCleaner(name).Name.en)
         print("jp:%s" % RSSInfoCleaner(name).Name.jp)
