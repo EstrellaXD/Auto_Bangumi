@@ -23,7 +23,7 @@ def add_separator(clean_name):
         if '\u4e00' <= clean_name[0] <= '\u9fff':
             try:
                 res = re.search(
-                    "(^[\u4e00-\u9fa5\u3040-\u31ff\d: \-·、.。，!！]{1,20}[ -_]{0,5})([a-z\d: \-.。,，!！]{1,20} ?)*",
+                    "(^[\u4e00-\u9fa5\u3040-\u31ff\d: \-·、.。，!！]{1,20}[ -_]{1,5})([a-z\d:\-.。,，!！]{1,20} ?){2,}",
                     clean_name).group(1)
                 clean_name = clean_name.replace(res, res.strip(" ") + "/")
             except Exception as e:
@@ -31,13 +31,14 @@ def add_separator(clean_name):
         else:
             try:
                 res = re.search(
-                    "^(([a-z\d: \-.。,，!！]{1,20} ?)*[ -]{0,5})[\u4e00-\u9fa5\u3040-\u31ff\d: \-·、.。,，!！]{1,20}",
+                    "^(([a-z\d:\-.。,，!！]{1,20} ?){2,}[ -_]{1,5})[\u4e00-\u9fa5\u3040-\u31ff\d: \-·、.。,，!！]{1,20}",
                     clean_name).group(1)
                 clean_name = clean_name.replace(res, res.strip(" ") + "/")
             except Exception as e:
                 logging.info(e)
     except Exception as e:
         logging.info(e)
+    clean_name = re.sub("(/ */)", "/", clean_name)
     return clean_name
 
 
@@ -58,6 +59,35 @@ def splicing(frag_list, name_list, raw_name):
                 except Exception as e:
                     logging.warning("bug--%s" % e)
                     logging.warning("piece_name:%s,fragment:%s" % (piece_name, fragment))
+
+
+# 清理列表
+def clean_list(raw_list):
+    # 去除碎片和杂质
+    raw_list = [x.strip("_").strip("-").strip(" ") for x in raw_list if len(x) > 1]
+    # 小碎片归并
+    for _ in range(len(raw_list)):
+        if raw_list is not None and len(raw_list) > 1:
+            try:
+                for i in range(0, len(raw_list) - 1):
+                    if raw_list[i] in raw_list[i + 1] and raw_list[i] != raw_list[i + 1]:
+                        raw_list.remove(raw_list[i])
+                    elif raw_list[i + 1] in raw_list[i] and raw_list[i] != raw_list[i + 1]:
+                        raw_list.remove(raw_list[i + 1])
+            except Exception as e:
+                logging.info(e)
+        if raw_list is not None and len(raw_list) > 1:
+            try:
+                for i in range(0, len(raw_list)):
+                    up_list = sorted(raw_list, key=lambda i: len(i), reverse=False)
+                    if up_list[i] in up_list[-1] and up_list[i] != up_list[-1]:
+                        raw_list.remove(up_list[i])
+            except Exception as e:
+                logging.info(e)
+    if raw_list:
+        return set(raw_list)
+    else:
+        return None
 
 
 # 粗略识别失败，re强制匹配
