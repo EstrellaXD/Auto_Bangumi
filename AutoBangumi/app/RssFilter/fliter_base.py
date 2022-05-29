@@ -44,46 +44,60 @@ def add_separator(clean_name):
 
 # 拼合碎片
 def splicing(frag_list, name_list, raw_name):
-    # 处理中英文混合名
-    if len(frag_list) > 1:
-        fragment = min(frag_list, key=len)
-        if fragment in raw_name.lower():
-            for piece_name in name_list:
-                try:
-                    r_name = re.search("(%s {0,3}%s|%s {0,5}%s)" % (fragment, piece_name, piece_name, fragment),
-                                       raw_name.lower())
-                    if r_name is not None:
-                        frag_list.remove(fragment)
-                        name_list.remove(piece_name)
-                        name_list.append(r_name.group())
-                except Exception as e:
-                    logging.warning("bug--%s" % e)
-                    logging.warning("piece_name:%s,fragment:%s" % (piece_name, fragment))
+    try:
+        for i in range(0, len(name_list) - 1):
+            if name_list[i] in name_list[i + 1] and name_list[i] != name_list[i + 1]:
+                name_list.remove(name_list[i])
+            elif raw_list[i + 1] in name_list[i] and name_list[i] != name_list[i + 1]:
+                name_list.remove(name_list[i + 1])
+    except Exception as e:
+        logging.info(e)
+    min_list = sorted(name_list, key=lambda i: len(i), reverse=False)
+    for i in range(0, len(min_list) - 1):
+        # 处理中英文混合名
+        if frag_list is not None and len(frag_list) > 1:
+            fragment = min_list[i]
+            try:
+                if fragment in raw_name.lower():
+                    for piece_name in name_list:
+                        try:
+                            r_name = re.search("(%s {0,3}%s|%s {0,5}%s)" % (fragment, piece_name, piece_name, fragment),
+                                               raw_name.lower())
+                            if r_name is not None:
+                                frag_list.remove(fragment)
+                                name_list.remove(piece_name)
+                                name_list.append(r_name.group())
+                        except Exception as e:
+                            logging.warning("bug--%s" % e)
+                            logging.warning("piece_name:%s,fragment:%s" % (piece_name, fragment))
+            except Exception as e:
+                print(e)
 
 
 # 清理列表
 def clean_list(raw_list):
-    # 去除碎片和杂质
-    raw_list = [x.strip("_").strip("-").strip(" ") for x in raw_list if len(x) > 1]
-    # 小碎片归并
-    for _ in range(len(raw_list)):
-        if raw_list is not None and len(raw_list) > 1:
-            try:
-                for i in range(0, len(raw_list) - 1):
-                    if raw_list[i] in raw_list[i + 1] and raw_list[i] != raw_list[i + 1]:
-                        raw_list.remove(raw_list[i])
-                    elif raw_list[i + 1] in raw_list[i] and raw_list[i] != raw_list[i + 1]:
-                        raw_list.remove(raw_list[i + 1])
-            except Exception as e:
-                logging.info(e)
-        if raw_list is not None and len(raw_list) > 1:
-            try:
-                for i in range(0, len(raw_list)):
-                    up_list = sorted(raw_list, key=lambda i: len(i), reverse=False)
-                    if up_list[i] in up_list[-1] and up_list[i] != up_list[-1]:
-                        raw_list.remove(up_list[i])
-            except Exception as e:
-                logging.info(e)
+    if raw_list is not None:
+        # 去除碎片和杂质
+        raw_list = [x.strip("-").strip(" ") for x in raw_list if len(x) > 1]
+        # 小碎片归并
+        for _ in range(len(raw_list)):
+            if raw_list is not None and len(raw_list) > 1:
+                try:
+                    for i in range(0, len(raw_list) - 1):
+                        if raw_list[i] in raw_list[i + 1] and raw_list[i] != raw_list[i + 1]:
+                            raw_list.remove(raw_list[i])
+                        elif raw_list[i + 1] in raw_list[i] and raw_list[i] != raw_list[i + 1]:
+                            raw_list.remove(raw_list[i + 1])
+                except Exception as e:
+                    logging.info(e)
+            if raw_list is not None and len(raw_list) > 1:
+                try:
+                    for i in range(0, len(raw_list)):
+                        up_list = sorted(raw_list, key=lambda i: len(i), reverse=False)
+                        if up_list[i] in up_list[-1] and up_list[i] != up_list[-1]:
+                            raw_list.remove(up_list[i])
+                except Exception as e:
+                    logging.info(e)
     if raw_list:
         return set(raw_list)
     else:
