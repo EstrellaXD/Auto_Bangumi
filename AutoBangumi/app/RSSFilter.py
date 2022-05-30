@@ -84,6 +84,10 @@ class RSSInfoCleaner:
         strip = ["特效歌词", "复制磁连", "兼容", "配音", "网盘", "\u200b", "[PSV&PC]", "Rv40", "R10", "Fin]", "Fin ", "[mkv]", "[]",
                  "★", "☆"]
         file_name = del_rules(file_name, strip)
+        # xx_xx_xx
+        f_res = re.search("]?(([a-zA-Z:.。,，!！]{1,10})[_\[ ]){2,}", file_name)
+        if f_res is not None:
+            file_name = file_name.replace(f_res.group(), "%s/" % f_res.group().replace("_"," "))
         # 中文_英文名_
         f_res = re.search("_[a-zA-Z_ \-·、.。，!！]*[_）)\]】]", file_name)
         # !!!重要
@@ -94,6 +98,9 @@ class RSSInfoCleaner:
                           file_name)
         if f_res is not None:
             file_name = file_name.replace(f_res.group(1), "%s/" % f_res.group(1).strip("."))
+
+
+
         self.Name.raw = str(file_name).replace('：', ':').replace('【', '[').replace('】', ']').replace('-', '-') \
             .replace('（', '(').replace('）', ')').replace("＆", "&").replace("X", "x").replace("×", "x") \
             .replace("Ⅹ", "x").replace("__", "/")
@@ -570,13 +577,16 @@ class RSSInfoCleaner:
             splicing(self.zh_list, self.zh_list, self.Name.clean)
             splicing(self.en_list, self.en_list, self.Name.clean)
             splicing(self.jp_list, self.jp_list, self.Name.clean)
-            # 拼合中英文碎片
-            for i in self.en_list:
-                for j in self.zh_list:
-                    res = re.search("%s +%s" % (i, j), self.Name.raw.lower())
-                    if res is not None:
-                        self.en_list.remove(i)
-                        self.zh_list.append(res.group())
+            try:
+                # 拼合中英文碎片
+                for i in self.en_list:
+                    for j in self.zh_list:
+                        res = re.search("%s +%s" % (i, j), self.Name.raw.lower())
+                        if res is not None:
+                            self.en_list.remove(i)
+                            self.zh_list.append(res.group())
+            except Exception as e:
+                logging.info(e)
         if debug > 0:
             print("拼合:\r\n%s\r\n%s\r\n%s" % (self.zh_list, self.en_list, self.jp_list))
         # 再次验证，这里只能验raw名
@@ -596,7 +606,7 @@ if __name__ == "__main__":
     debug = 0
     # mikan/dmhy 获取数据，dmhy 最多1w行，mikan最多3w行
     # 数据序号，向下x条
-    num = debug if debug > 1 else 294
+    num = debug if debug > 1 else 800
     row = 1 if debug else 200
     name_list = read_data("mikan", num, row)
     for i in range(0, len(name_list)):
