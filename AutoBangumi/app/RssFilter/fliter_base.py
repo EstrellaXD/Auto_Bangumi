@@ -20,26 +20,146 @@ def read_data(file_name, start, rows):
 # 以 / 代替空格分隔中英文名
 def add_separator(clean_name):
     try:
-        if "/" not in clean_name:
-            if '\u4e00' <= clean_name[0] <= '\u9fff':
-                try:
-                    res = re.search(
-                        "(^[\u4e00-\u9fa5\u3040-\u31ff: \-.。，!！]{1,20}[ -]{0,5})([a-z: \-.。,，!！]{1,20} ?)*",
-                        clean_name).group(1)
-                    clean_name = clean_name.replace(res, res.strip(" ") + "/")
-                except Exception as e:
-                    logging.info(e)
-            else:
-                try:
-                    res = re.search(
-                        "^(([a-z: \-.。,，!！]{1,20} ?)*[ -]{0,5})[\u4e00-\u9fa5\u3040-\u31ff: \-.。,，!！]{1,20}",
-                        clean_name).group(1)
-                    clean_name = clean_name.replace(res, res.strip(" ") + "/")
-                except Exception as e:
-                    logging.info(e)
+        if '\u4e00' <= clean_name[0] <= '\u9fff':
+            try:
+                res = re.search(
+                    "(^[\u4e00-\u9fa5\u3040-\u31ff\d: \-·、.。，!！]{1,20}[ -_]{1,5})([a-z\d:\-.。,，!！]{1,20} ?){2,}",
+                    clean_name).group(1)
+                clean_name = clean_name.replace(res, res.strip(" ") + "/")
+            except Exception as e:
+                logging.info(e)
+        else:
+            try:
+                res = re.search(
+                    "^(([a-z\d:\-.。,，!！]{1,20} ?){2,}[ -_]{1,5})[\u4e00-\u9fa5\u3040-\u31ff\d: \-·、.。,，!！]{1,20}",
+                    clean_name).group(1)
+                clean_name = clean_name.replace(res, res.strip(" ") + "/")
+            except Exception as e:
+                logging.info(e)
     except Exception as e:
         logging.info(e)
+    clean_name = re.sub("(/ */)", "/", clean_name)
     return clean_name
+
+
+# 拼合碎片
+def splicing(frag_list, name_list, raw_name):
+    try:
+        for i in range(0, len(name_list) - 1):
+            if name_list[i] in name_list[i + 1] and name_list[i] != name_list[i + 1]:
+                name_list.remove(name_list[i])
+            elif raw_list[i + 1] in name_list[i] and name_list[i] != name_list[i + 1]:
+                name_list.remove(name_list[i + 1])
+    except Exception as e:
+        logging.info(e)
+    min_list = sorted(name_list, key=lambda i: len(i), reverse=False)
+    for i in range(0, len(min_list) - 1):
+        # 处理中英文混合名
+        if frag_list is not None and len(frag_list) > 1:
+            fragment = min_list[i]
+            try:
+                if fragment in raw_name.lower():
+                    for piece_name in name_list:
+                        try:
+                            r_name = re.search("(%s {0,3}%s|%s {0,5}%s)" % (fragment, piece_name, piece_name, fragment),
+                                               raw_name.lower())
+                            if r_name is not None:
+                                frag_list.remove(fragment)
+                                name_list.remove(piece_name)
+                                name_list.append(r_name.group())
+                        except Exception as e:
+                            logging.warning("bug--%s" % e)
+                            logging.warning("piece_name:%s,fragment:%s" % (piece_name, fragment))
+            except Exception as e:
+                print(e)
+
+
+# 清理列表
+def clean_list(raw_list):
+    if raw_list is not None:
+        # 去除碎片和杂质
+        raw_list = [x.strip("-").strip(" ") for x in raw_list if len(x) > 1]
+        # 小碎片归并
+        for _ in range(len(raw_list)):
+            if raw_list is not None and len(raw_list) > 1:
+                try:
+                    for i in range(0, len(raw_list) - 1):
+                        if raw_list[i] in raw_list[i + 1] and raw_list[i] != raw_list[i + 1]:
+                            raw_list.remove(raw_list[i])
+                        elif raw_list[i + 1] in raw_list[i] and raw_list[i] != raw_list[i + 1]:
+                            raw_list.remove(raw_list[i + 1])
+                except Exception as e:
+                    logging.info(e)
+            if raw_list is not None and len(raw_list) > 1:
+                try:
+                    for i in range(0, len(raw_list)):
+                        up_list = sorted(raw_list, key=lambda i: len(i), reverse=False)
+                        if up_list[i] in up_list[-1] and up_list[i] != up_list[-1]:
+                            raw_list.remove(up_list[i])
+                except Exception as e:
+                    logging.info(e)
+    if raw_list:
+        return set(raw_list)
+    else:
+        return None
+
+
+# 粗略识别失败，re强制匹配
+def extract_title(raw_name):
+    title = {
+        "zh": None,
+        "en": None,
+    }
+    clean_name = raw_name
+
+    if has_en(clean_name) and has_zh(clean_name):
+        # 中英
+        try:
+            res = re.search("(([\u4e00-\u9fa5]{2,12}[ /:]{0,3}){1,5}) {0,5}(( ?[a-z':]{1,15}){1,15})", clean_name)
+            title["zh"] = res.group(1).strip(" ")
+            title["en"] = res.group(3).strip(" ")
+        except Exception as e:
+            logging.info(e)
+        # 本程序依赖此bug运行，这行不能删
+        if title["zh"] is None:
+            # 中英
+            try:
+                res = re.search(
+                    "(([\u4e00-\u9fa5a]{1,12}[ /:]{0,3}){1,5})[&/ (]{0,5}(( ?[a-z':]{1,15}){1,15})[ )/]{0,3}",
+                    clean_name)
+                title["zh"] = res.group(1).strip(" ")
+                title["en"] = res.group(3).strip(" ")
+            except Exception as e:
+                logging.info(e)
+            # 英中
+            try:
+                res = re.search(
+                    "(([ a-z'.:]{1,20}){1,8})[&/ (]{0,5}(([\u4e00-\u9fa5a]{2,10}[a-z]{0,3} ?){1,5})[ )/]{0,3}",
+                    clean_name)
+                title["en"] = res.group(1).strip(" ")
+                title["zh"] = res.group(3).strip(" ")
+            except Exception as e:
+                logging.info(e)
+    else:
+        if has_zh(clean_name):
+            # 中文
+            try:
+                res = re.search("(([\u4e00-\u9fa5:]{2,15}[ /]?){1,5}) *", clean_name)
+                title["zh"] = res.group(1).strip(" ")
+            except Exception as e:
+                logging.info(e)
+        elif has_en(clean_name):
+            # 英文
+            try:
+                res = re.search("(([a-z:]{2,15}[ /]?){1,15}) *", clean_name)
+                title["en"] = res.group(1).strip(" ")
+            except Exception as e:
+                logging.info(e)
+    for k, v in title.items():
+        if v is not None and "/" in v:
+            zh_list = v.split("/")
+            title[k] = zh_list[0].strip(" ")
+    return title
 
 
 def del_rules(raw_name, rule_list):

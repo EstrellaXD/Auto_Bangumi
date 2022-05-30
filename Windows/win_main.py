@@ -8,6 +8,10 @@ import qbittorrentapi
 import requests
 from bs4 import BeautifulSoup
 
+import requests.packages.urllib3.util.ssl_
+
+requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS = 'ALL'
+
 
 class EnvInfo:
     if getattr(sys, 'frozen', False):
@@ -60,7 +64,7 @@ class SetRule:
             'addPaused': False,
             'assignedCategory': 'Bangumi',
             'savePath': str(os.path.join(self.download_path, bangumi_name, season))
-            }
+        }
         self.qb.rss_set_rule(rule_name=bangumi_name, rule_def=rule)
 
     def rss_feed(self):
@@ -184,7 +188,7 @@ class qBittorrentRename:
             self.qbt_client.auth_log_in()
         except qbittorrentapi.LoginFailed as e:
             print(e)
-        self.recent_info = self.qbt_client.torrents_info(status_filter='completed',category="Bangumi")
+        self.recent_info = self.qbt_client.torrents_info(status_filter='completed', category="Bangumi")
         self.hash = None
         self.name = None
         self.new_name = None
@@ -223,7 +227,8 @@ class qBittorrentRename:
 
     def rename(self):
         if self.path_name != self.new_name:
-            self.qbt_client.torrents_rename_file(torrent_hash=self.hash, old_path=self.path_name, new_path=self.new_name)
+            self.qbt_client.torrents_rename_file(torrent_hash=self.hash, old_path=self.path_name,
+                                                 new_path=self.new_name)
             sys.stdout.write(f"[{time.strftime('%Y-%m-%d %X')}]  {self.path_name} >> {self.new_name}")
             self.count += 1
         else:
