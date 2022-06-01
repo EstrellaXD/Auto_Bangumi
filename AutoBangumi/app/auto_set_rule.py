@@ -1,5 +1,4 @@
 import re
-import sys
 from env import EnvInfo
 import qbittorrentapi
 import json
@@ -36,7 +35,7 @@ class SetRule:
             'lastMatch': '',
             'addPaused': False,
             'assignedCategory': 'Bangumi',
-            'savePath': str(os.path.join(self.download_path, re.sub(EnvInfo.rule_name_re," ", bangumi_name), season))
+            'savePath': str(os.path.join(EnvInfo.download_path, re.sub(EnvInfo.rule_name_re, " ", bangumi_name).strip(), season))
             }
         if EnvInfo.enable_group_tag:
             rule_name = f"[{group}] {bangumi_name}"

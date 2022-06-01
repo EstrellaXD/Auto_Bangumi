@@ -1,5 +1,6 @@
-qbittorrent-api==2022.4.30
+qbittorrent-api
 bs4
-requests==2.27.1
+requests
 lxml
+zhconv
 
