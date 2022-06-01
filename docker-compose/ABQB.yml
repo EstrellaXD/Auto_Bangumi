@@ -1,0 +1,40 @@
+version: '3.3'
+services:
+    qbittorrent:
+      container_name: qBittorrent
+      environment:
+        - TZ=Asia/Shanghai
+        - TemPath=/downloads
+        - SavePath=/downloads
+        - PGID=1000
+        - PUID=1000
+        - WEBUI_PORT=8080
+      volumes:
+          - qb_config:/config # 填入实际地址
+          - ${DOWNLOAD_PATH}:/downloads # 填入下载绝对路径
+      ports:
+        - 8080:8080
+        - 6881:6881
+        - 6881:6881/udp
+      network_mode: bridge
+      restart: unless-stopped
+      image: lscr.io/linuxserver/qbittorrent:4.4.1
+    auto_bangumi:
+        container_name: AutoBangumi
+        environment:
+            - TZ=Asia/Shanghai
+            - TIME=1800
+            - HOST=localhost:8080
+            - USER=admin
+            - PASSWORD=adminadmin
+            - METHOD=pn
+            - GROUP_TAG=True
+            - NOT_CONTAIN=720
+            - DOWNLOAD_PATH=/downloads/Bangumi
+            - RSS=YOUR_RSS_ADDRESS
+        network_mode: host
+        dns:
+            - 8.8.8.8
+            - 223.5.5.5
+        restart: unless-stopped
+        image: estrellaxd/auto_bangumi:latest

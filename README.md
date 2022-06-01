@@ -33,9 +33,9 @@
 ## 相关文档和群组
 
 - [AutoBangumi V2 简易说明](https://www.craft.do/s/4viN6M3tBqigLp)
+- [常见 bug 和解决方法](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/DOC/常见错误解决.md)
 - 更新推送：[Telegram Channel](https://t.me/autobangumi_update)
 - Bug 反馈群：[Telegram](https://t.me/+yNisOnDGaX5jMTM9)
-- [常见 bug 和解决方法](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/DOC/常见错误解决.md)
 
 # 部署说明
 1. 安装 qBittorrent:
@@ -47,13 +47,42 @@
 docker run -d \
   --name=AutoBangumi \
   -e DOWNLOAD_PATH=/path/downloads \
-  -e RSS=<YOUR RSS ADDRESS> \
+  -e RSS=<YOUR_RSS_ADDRESS> \
   --network=host \
   --dns=8.8.8.8 \
   --restart unless-stopped \
   estrellaxd/auto_bangumi:latest
 ```
-进阶部署
+**进阶部署:**
+
+Docker-Compose
+
+```yaml
+version: '3.3'
+services:
+    auto_bangumi:
+        container_name: AutoBangumi
+        environment:
+            - TZ=Asia/Shanghai
+            - TIME=1800
+            - HOST=localhost:8080
+            - USER=admin
+            - PASSWORD=adminadmin
+            - METHOD=pn
+            - GROUP_TAG=True
+            - NOT_CONTAIN=720
+            - DOWNLOAD_PATH=/path/downloads
+            - RSS=YOUR_RSS_ADDRESS
+        network_mode: host
+        dns:
+            - 8.8.8.8
+            - 223.5.5.5
+        restart: unless-stopped
+        image: estrellaxd/auto_bangumi:latest
+```
+
+Docker-cli
+
 ```dash
 docker run -d \
   --name=AutoBangumi \
@@ -65,7 +94,8 @@ docker run -d \
   -e METHOD=pn \ #optional
   -e GROUP_TAG=True \ #optional
   -e DOWNLOAD_PATH=/path/downloads \
-  -e RSS=<YOUR RSS ADDRESS> \
+  -e NOT_COTAIN=720
+  -e RSS=<YOUR_RSS_ADDRESS> \
   --network=host \
   --dns=8.8.8.8 \
   --restart unless-stopped \

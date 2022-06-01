@@ -1,5 +1,6 @@
 import os
 import time
+from datetime import datetime
 
 
 class EnvInfo:
@@ -34,7 +35,10 @@ class EnvInfo:
         get_rule_debug = True
     # Static ENV
     rule_url = "https://raw.githubusercontent.com/EstrellaXD/Bangumi_Auto_Collector/main/AutoBangumi/config/rule.json"
-    time_show_obj = time.strftime('%Y-%m-%d %X')
+
+    def time_show_obj(self):
+        return time.strftime('%Y-%m-%d %X')
+
     rule_name_re = r"\:|\/|\."
 
 
