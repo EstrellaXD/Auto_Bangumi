@@ -18,13 +18,13 @@ services:
         - 6881:6881/udp
       network_mode: bridge
       restart: unless-stopped
-      image: lscr.io/linuxserver/qbittorrent:4.4.1
+      image: lscr.io/linuxserver/qbittorrent:4.4.3
     auto_bangumi:
         container_name: AutoBangumi
         environment:
             - TZ=Asia/Shanghai
             - TIME=1800
-            - HOST=localhost:8080
+            - HOST=qbittorrent:8080
             - USER=admin
             - PASSWORD=adminadmin
             - METHOD=pn
@@ -32,9 +32,13 @@ services:
             - NOT_CONTAIN=720
             - DOWNLOAD_PATH=/downloads/Bangumi
             - RSS=YOUR_RSS_ADDRESS
-        network_mode: host
+        network_mode: bridge
+        links:
+            - "qbittorrent:qbittorrent"
         dns:
             - 8.8.8.8
             - 223.5.5.5
         restart: unless-stopped
         image: estrellaxd/auto_bangumi:latest
+        depends_on:
+          - qbittorrent
