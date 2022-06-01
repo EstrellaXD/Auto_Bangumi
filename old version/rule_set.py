@@ -3,6 +3,9 @@ import qbittorrentapi
 import json
 import argparse
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 f = open("config.json")
 server_info = json.load(f)
@@ -22,7 +25,7 @@ def rule_set():
     try:
         qbt_client.auth_log_in()
     except qbittorrentapi.LoginFailed as e:
-        print(e)
+        logger.exception(e)
     args = parser.parse_args()
     bangumi_name = args.name
     rule = {'enable': True,

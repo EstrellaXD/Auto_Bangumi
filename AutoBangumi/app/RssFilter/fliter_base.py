@@ -3,6 +3,7 @@ import logging
 
 import csv
 
+logger = logging.getLogger(__name__)
 
 def read_data(file_name, start, rows):
     if file_name == "mikan":
@@ -27,7 +28,7 @@ def add_separator(clean_name):
                     clean_name).group(1)
                 clean_name = clean_name.replace(res, res.strip(" ") + "/")
             except Exception as e:
-                logging.info(e)
+                logger.exception(e)
         else:
             try:
                 res = re.search(
@@ -35,9 +36,9 @@ def add_separator(clean_name):
                     clean_name).group(1)
                 clean_name = clean_name.replace(res, res.strip(" ") + "/")
             except Exception as e:
-                logging.info(e)
+                logger.exception(e)
     except Exception as e:
-        logging.info(e)
+        logger.exception(e)
     clean_name = re.sub("(/ */)", "/", clean_name)
     return clean_name
 
@@ -48,10 +49,10 @@ def splicing(frag_list, name_list, raw_name):
         for i in range(0, len(name_list) - 1):
             if name_list[i] in name_list[i + 1] and name_list[i] != name_list[i + 1]:
                 name_list.remove(name_list[i])
-            elif raw_list[i + 1] in name_list[i] and name_list[i] != name_list[i + 1]:
+            elif name_list[i + 1] in name_list[i] and name_list[i] != name_list[i + 1]:
                 name_list.remove(name_list[i + 1])
     except Exception as e:
-        logging.info(e)
+        logger.info(e)
     min_list = sorted(name_list, key=lambda i: len(i), reverse=False)
     for i in range(0, len(min_list) - 1):
         # 处理中英文混合名
@@ -68,10 +69,10 @@ def splicing(frag_list, name_list, raw_name):
                                 name_list.remove(piece_name)
                                 name_list.append(r_name.group())
                         except Exception as e:
-                            logging.warning("bug--%s" % e)
-                            logging.warning("piece_name:%s,fragment:%s" % (piece_name, fragment))
+                            logger.warning("bug--%s" % e)
+                            logger.warning("piece_name:%s,fragment:%s" % (piece_name, fragment))
             except Exception as e:
-                print(e)
+                logger.exception(e)
 
 
 # 清理列表
@@ -89,7 +90,7 @@ def clean_list(raw_list):
                         elif raw_list[i + 1] in raw_list[i] and raw_list[i] != raw_list[i + 1]:
                             raw_list.remove(raw_list[i + 1])
                 except Exception as e:
-                    logging.info(e)
+                    logger.info(e)
             if raw_list is not None and len(raw_list) > 1:
                 try:
                     for i in range(0, len(raw_list)):
@@ -97,7 +98,7 @@ def clean_list(raw_list):
                         if up_list[i] in up_list[-1] and up_list[i] != up_list[-1]:
                             raw_list.remove(up_list[i])
                 except Exception as e:
-                    logging.info(e)
+                    logger.info(e)
     if raw_list:
         return set(raw_list)
     else:
@@ -119,7 +120,7 @@ def extract_title(raw_name):
             title["zh"] = res.group(1).strip(" ")
             title["en"] = res.group(3).strip(" ")
         except Exception as e:
-            logging.info(e)
+            logger.info(e)
         # 本程序依赖此bug运行，这行不能删
         if title["zh"] is None:
             # 中英
@@ -130,7 +131,7 @@ def extract_title(raw_name):
                 title["zh"] = res.group(1).strip(" ")
                 title["en"] = res.group(3).strip(" ")
             except Exception as e:
-                logging.info(e)
+                logger.info(e)
             # 英中
             try:
                 res = re.search(
@@ -139,7 +140,7 @@ def extract_title(raw_name):
                 title["en"] = res.group(1).strip(" ")
                 title["zh"] = res.group(3).strip(" ")
             except Exception as e:
-                logging.info(e)
+                logger.info(e)
     else:
         if has_zh(clean_name):
             # 中文
@@ -147,14 +148,14 @@ def extract_title(raw_name):
                 res = re.search("(([\u4e00-\u9fa5:]{2,15}[ /]?){1,5}) *", clean_name)
                 title["zh"] = res.group(1).strip(" ")
             except Exception as e:
-                logging.info(e)
+                logger.info(e)
         elif has_en(clean_name):
             # 英文
             try:
                 res = re.search("(([a-z:]{2,15}[ /]?){1,15}) *", clean_name)
                 title["en"] = res.group(1).strip(" ")
             except Exception as e:
-                logging.info(e)
+                logger.info(e)
     for k, v in title.items():
         if v is not None and "/" in v:
             zh_list = v.split("/")

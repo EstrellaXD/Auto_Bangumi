@@ -36,9 +36,6 @@ class EnvInfo:
     # Static ENV
     rule_url = "https://raw.githubusercontent.com/EstrellaXD/Bangumi_Auto_Collector/main/AutoBangumi/config/rule.json"
 
-    def time_show_obj(self):
-        return time.strftime('%Y-%m-%d %X')
-
     rule_name_re = r"\:|\/|\."
 
 

@@ -1,95 +1,84 @@
 import re
-import sys
 import qbittorrentapi
-import time
+import logging
+
 from env import EnvInfo
+
+logger = logging.getLogger(__name__)
 
 
 class qBittorrentRename:
     def __init__(self):
-        self.qbt_client = qbittorrentapi.Client(host=EnvInfo.host_ip,
-                                                username=EnvInfo.user_name,
-                                                password=EnvInfo.password)
+        self.qbt_client = qbittorrentapi.Client(
+            host=EnvInfo.host_ip, username=EnvInfo.user_name, password=EnvInfo.password
+        )
         try:
             self.qbt_client.auth_log_in()
         except qbittorrentapi.LoginFailed as e:
-            print(e)
-        self.recent_info = self.qbt_client.torrents_info(status_filter='completed',category="Bangumi")
-        self.hash = None
-        self.name = None
-        self.new_name = None
-        self.path_name = None
+            logger.exception(e)
+        self.recent_info = self.qbt_client.torrents_info(
+            status_filter="completed", category="Bangumi"
+        )
         self.count = 0
         self.rename_count = 0
         self.torrent_count = len(self.recent_info)
-        self.rules = [r'(.*)\[(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)',
-                      r'(.*)\[E(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)',
-                      r'(.*)\[第(\d*\.*\d*)话(?:END)?\](.*)',
-                      r'(.*)\[第(\d*\.*\d*)話(?:END)?\](.*)',
-                      r'(.*)第(\d*\.*\d*)话(?:END)?(.*)',
-                      r'(.*)第(\d*\.*\d*)話(?:END)?(.*)',
-                      r'(.*)- (\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)? (.*)']
+        rules = [
+            r"(.*)\[(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)",
+            r"(.*)\[E(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)",
+            r"(.*)\[第(\d*\.*\d*)话(?:END)?\](.*)",
+            r"(.*)\[第(\d*\.*\d*)話(?:END)?\](.*)",
+            r"(.*)第(\d*\.*\d*)话(?:END)?(.*)",
+            r"(.*)第(\d*\.*\d*)話(?:END)?(.*)",
+            r"(.*)- (\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)? (.*)",
+        ]
+        self.rules = [re.compile(rule) for rule in rules]
 
-    def rename_normal(self, idx):
-        self.name = self.recent_info[idx].name
-        self.hash = self.recent_info[idx].hash
-        self.path_name = self.recent_info[idx].content_path.split("/")[-1]
-        file_name = self.name
+    def rename_normal(self, name):
         for rule in self.rules:
-            matchObj = re.match(rule, file_name, re.I)
+            matchObj = rule.match(name, re.I)
             if matchObj is not None:
-                self.new_name = f'{matchObj.group(1).strip()} E{matchObj.group(2)}{matchObj.group(3)}'
+                new_name = f"{matchObj.group(1).strip()} E{matchObj.group(2)}{matchObj.group(3)}"
+                return new_name
 
-    def rename_pn(self, idx):
-        self.name = self.recent_info[idx].name
-        self.hash = self.recent_info[idx].hash
-        self.path_name = self.recent_info[idx].content_path.split("/")[-1]
-        n = re.split(r'\[|\]', self.name)
-        file_name = self.name.replace(f'[{n[1]}]', '')
+    def rename_pn(self, name):
+        n = re.split(r"\[|\]", name)
+        file_name = name.replace(f"[{n[1]}]", "")
         for rule in self.rules:
-            matchObj = re.match(rule, file_name, re.I)
+            matchObj = rule.match(file_name, re.I)
             if matchObj is not None:
-                self.new_name = re.sub(r'\[|\]', '', f'{matchObj.group(1).strip()} E{matchObj.group(2)}{n[-1]}')
+                new_name = re.sub(
+                    r"\[|\]",
+                    "",
+                    f"{matchObj.group(1).strip()} E{matchObj.group(2)}{n[-1]}",
+                )
+                return new_name
 
-    def rename(self):
-        if self.path_name != self.new_name:
-            self.qbt_client.torrents_rename_file(torrent_hash=self.hash, old_path=self.path_name, new_path=self.new_name)
-            print(f"[{time.strftime('%Y-%m-%d %X')}]  {self.path_name} >> {self.new_name}")
+    def rename_torrent_file(self, hash, path_name, new_name):
+        if path_name != new_name:
+            self.qbt_client.torrents_rename_file(
+                torrent_hash=hash, old_path=path_name, new_path=new_name
+            )
+            logger.debug(f"{path_name} >> {new_name}")
             self.count += 1
-        else:
-            return
-
-    def clear_info(self):
-        self.name = None
-        self.hash = None
-        self.new_name = None
-        self.path_name = None
 
     def print_result(self):
-        sys.stdout.write(f"[{EnvInfo.time_show_obj}]  已完成对{self.torrent_count}个文件的检查" + '\n')
-        sys.stdout.write(f"[{EnvInfo.time_show_obj}]  已对其中{self.count}个文件进行重命名" + '\n')
-        sys.stdout.write(f"[{EnvInfo.time_show_obj}]  完成" + '\n')
-        sys.stdout.flush()
+        logger.debug(f"已完成对{self.torrent_count}个文件的检查")
+        logger.debug(f"已对其中{self.count}个文件进行重命名")
+        logger.debug(f"完成")
 
     def run(self):
-        if EnvInfo.method not in ['pn', 'normal']:
-            print('error method')
-        elif EnvInfo.method == 'normal':
-            for i in range(0, self.torrent_count + 1):
+        method_dict = {"pn": self.rename_pn, "normal": self.rename_normal}
+        if EnvInfo.method not in method_dict:
+            logger.error(f"error method")
+        else:
+            for i in range(0, self.torrent_count):
                 try:
-                    self.rename_normal(i)
-                    self.rename()
-                    self.clear_info()
+                    info = self.recent_info[i]
+                    name = info.name
+                    hash = info.hash
+                    path_name = info.content_path.split("/")[-1]
+                    new_name = method_dict[EnvInfo.method](name)
+                    self.rename_torrent_file(hash, path_name, new_name)
                 except:
-                    self.print_result()
-        elif EnvInfo.method == 'pn':
-            for i in range(0, self.torrent_count + 1):
-                try:
-                    self.rename_pn(i)
-                    self.rename()
-                    self.clear_info()
-                except:
-                    self.print_result()
-
-
-
+                    logger.warning(f"{name} rename fail")
+            self.print_result()
