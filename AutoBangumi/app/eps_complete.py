@@ -1,9 +1,12 @@
 import os.path
 import requests
 from qbittorrentapi import Client
-from env import EnvInfo, Other
 from bs4 import BeautifulSoup
 import logging
+
+from conf import settings
+from const import FULL_SEASON_SUPPORT_GROUP
+from downloader import getClient
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +17,7 @@ class FullSeasonGet:
         self.bangumi_name = bangumi_name
         self.group = group
         self.season = season
+        self.client = getClient()
 
     def get_season_rss(self):
         if self.season == "S01":
@@ -21,30 +25,23 @@ class FullSeasonGet:
         else:
             season = self.season
         season = requests.get(
-            f"https://mikanani.me/RSS/Search?searchstr={self.group}+{self.bangumi_name}+{season}")
+            f"https://mikanani.me/RSS/Search?searchstr={self.group}+{self.bangumi_name}+{season}"
+        )
         soup = BeautifulSoup(season.content, "xml")
         self.torrents = soup.find_all("enclosure")
 
     def add_torrents(self):
-        qb = Client(
-            host=EnvInfo.host_ip, username=EnvInfo.user_name, password=EnvInfo.password
-        )
-        try:
-            qb.auth_log_in()
-        except:
-            logger.error("Error")
         for torrent in self.torrents:
-            qb.torrents_add(
+            self.client.torrents_add(
                 urls=torrent["url"],
                 save_path=str(
-                    os.path.join(EnvInfo.download_path,
-                                 self.bangumi_name, self.season)
+                    os.path.join(settings.download_path, self.bangumi_name, self.season)
                 ),
                 category="Bangumi",
             )
 
     def run(self):
-        if self.group in Other.full_season_support_group:
+        if self.group in FULL_SEASON_SUPPORT_GROUP:
             self.get_season_rss()
             self.add_torrents()
 

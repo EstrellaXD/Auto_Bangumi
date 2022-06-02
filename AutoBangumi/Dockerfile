@@ -18,4 +18,4 @@ ENV RULE_DEBUG=False
 COPY ./app /app
 COPY ./config /config
 
-CMD [ "python3", "/app/docker_main.py"]
+CMD [ "python3", "/app/app.py"]
