@@ -3,9 +3,12 @@ import io
 import sys
 import os.path as op
 import time
+import logging
 
 import qbittorrentapi
 import json
+
+logger = logging.getLogger(__name__)
 
 with open("config.json") as f:
     server_info = json.load(f)
@@ -25,7 +28,6 @@ episode_rules = [r'(.*)\[(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)',
                  r'(.*)- (\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)? (.*)']
 # Suffixs of files we are going to rename
 suffixs = ['mp4', 'mkv', 'avi', 'mov', 'flv', 'rmvb', 'ass', 'idx']
-sys.stdout = io.TextIOWrapper(buffer=sys.stdout.buffer, encoding='utf8')
 
 
 class QbittorrentRename:
@@ -34,7 +36,7 @@ class QbittorrentRename:
         try:
             self.qbt_client.auth_log_in()
         except qbittorrentapi.LoginFailed as e:
-            print(e)
+            logger.exception(e)
         self.recent_info = self.qbt_client.torrents_info(status_filter='completed')
         self.hash = None
         self.name = None
@@ -68,7 +70,7 @@ class QbittorrentRename:
     def rename(self):
         if self.path_name != self.new_name:
             self.qbt_client.torrents_rename_file(torrent_hash=self.hash, old_path=self.path_name, new_path=self.new_name)
-            print(f"[{time.strftime('%X')}]  {self.path_name} >> {self.new_name}")
+            logger.debug("{self.path_name} >> {self.new_name}")
             self.count += 1
         else:
             return
@@ -79,13 +81,13 @@ class QbittorrentRename:
         self.new_name = None
 
     def print_result(self):
-        print(f"[{time.strftime('%X')}]  已完成对{self.torrent_count}个文件的检查")
-        print(f"[{time.strftime('%X')}]  已对其中{self.count}个文件进行重命名")
-        print(f"[{time.strftime('%X')}]  完成")
+        logger.debug(f"已完成对{self.torrent_count}个文件的检查")
+        logger.debug(f"已对其中{self.count}个文件进行重命名")
+        logger.debug(f"完成")
 
     def rename_app(self):
         if self.method not in ['pn', 'normal']:
-            print('error method')
+            logger.error('error method')
         elif self.method == 'normal':
             for i in range(0, self.torrent_count + 1):
                 try:

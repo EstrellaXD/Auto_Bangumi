@@ -4,6 +4,9 @@ import sys
 import qbittorrentapi
 from os import environ
 import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 host_ip = environ['HOST']
 user_name = environ['USER']
@@ -22,8 +25,6 @@ episode_rules = [r'(.*)\[(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)',
                  r'(.*)- (\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)? (.*)']
 # Suffixs of files we are going to rename
 suffixs = ['mp4', 'mkv', 'avi', 'mov', 'flv', 'rmvb', 'ass', 'idx']
-sys.stdout = io.TextIOWrapper(buffer=sys.stdout.buffer, encoding='utf8')
-
 
 class QbittorrentRename:
     def __init__(self, rename_method):
@@ -31,7 +32,7 @@ class QbittorrentRename:
         try:
             self.qbt_client.auth_log_in()
         except qbittorrentapi.LoginFailed as e:
-            print(e)
+            logger.exception(e)
         self.recent_info = self.qbt_client.torrents_info(status_filter='completed')
         self.hash = None
         self.name = None
@@ -66,8 +67,7 @@ class QbittorrentRename:
     def rename(self):
         if self.path_name != self.new_name:
             self.qbt_client.torrents_rename_file(torrent_hash=self.hash, old_path=self.path_name, new_path=self.new_name)
-            sys.stdout.write(f"[{time.strftime('%X')}]  {self.path_name} >> {self.new_name}" + '\n')
-            sys.stdout.flush()
+            logger.debug("{self.path_name} >> {self.new_name}")
             self.count += 1
         else:
             return
@@ -79,14 +79,13 @@ class QbittorrentRename:
         self.path_name = None
 
     def print_result(self):
-        sys.stdout.write(f"[{time.strftime('%X')}]  已完成对{self.torrent_count}个文件的检查" + '\n')
-        sys.stdout.write(f"[{time.strftime('%X')}]  已对其中{self.count}个文件进行重命名" + '\n')
-        sys.stdout.write(f"[{time.strftime('%X')}]  完成" + '\n')
-        sys.stdout.flush()
+        logger.debug("已完成对{self.torrent_count}个文件的检查")
+        logger.debug("已对其中{self.count}个文件进行重命名")
+        logger.debug("完成")
 
     def rename_app(self):
         if self.method not in ['pn', 'normal']:
-            print('error method')
+            logger.error('error method')
         elif self.method == 'normal':
             for i in range(0, self.torrent_count + 1):
                 try:
@@ -106,8 +105,7 @@ class QbittorrentRename:
 
 
 def rename_main():
-    sys.stdout.write(f"[{time.strftime('%X')}]  Program start." + '\n')
-    sys.stdout.flush()
+    logger.debug("Program start.")
     while True:
         rename = QbittorrentRename(method)
         rename.rename_app()

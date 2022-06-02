@@ -3,6 +3,7 @@ import re
 import sys
 import time
 import json
+import logging
 
 import qbittorrentapi
 import requests
@@ -12,6 +13,7 @@ import requests.packages.urllib3.util.ssl_
 
 requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS = 'ALL'
 
+logger = logging.getLogger(__name__)
 
 class EnvInfo:
     if getattr(sys, 'frozen', False):
@@ -31,7 +33,6 @@ class EnvInfo:
     method = info["method"]
     # rss_link = "https://mikanani.me/RSS/MyBangumi?token=Td8ceWZZv3s2OZm5ji9RoMer8vk5VS3xzC1Hmg8A26E%3d"
     rule_url = "https://raw.githubusercontent.com/EstrellaXD/Bangumi_Auto_Collector/main/AutoBangumi/config/rule.json"
-    time_show_obj = time.strftime('%Y-%m-%d %X')
     bangumi_info = info["bangumi_info"]
 
 
@@ -47,7 +48,7 @@ class SetRule:
         try:
             self.qb.auth_log_in()
         except qbittorrentapi.LoginFailed as e:
-            print(e)
+            logger.exception(e)
 
     def set_rule(self, bangumi_name, season):
         rule = {
@@ -71,19 +72,17 @@ class SetRule:
         try:
             self.qb.rss_remove_item(item_path="Mikan_RSS")
             self.qb.rss_add_feed(url=self.rss_link, item_path="Mikan_RSS")
-            sys.stdout.write(f"[{EnvInfo.time_show_obj}]  Successes adding RSS Feed." + "\n")
+            logger.debug("Successes adding RSS Feed." + "\n")
         except ConnectionError:
-            sys.stdout.write(f"[{EnvInfo.time_show_obj}]  Error with adding RSS Feed." + "\n")
+            logger.debug("Error with adding RSS Feed." + "\n")
         except qbittorrentapi.exceptions.Conflict409Error:
-            sys.stdout.write(f"[{EnvInfo.time_show_obj}]  RSS Already exists." + "\n")
+            logger.debug("RSS Already exists." + "\n")
 
     def run(self):
-        sys.stdout.write(f"[{EnvInfo.time_show_obj}]  Start adding rules." + "\n")
-        sys.stdout.flush()
+        logger.debug("Start adding rules." + "\n")
         for info in self.bangumi_info:
             self.set_rule(info["title"], info["season"])
-        sys.stdout.write(f"[{EnvInfo.time_show_obj}]  Finished." + "\n")
-        sys.stdout.flush()
+        logger.debug("Finished." + "\n")
 
 
 class MatchRule:
@@ -100,7 +99,7 @@ class CollectRSS:
         try:
             self.rules = requests.get(EnvInfo.rule_url).json()
         except ConnectionError:
-            sys.stdout.write(f"[{EnvInfo.time_show_obj}]   Get rules Erroe=r")
+            logger.debug(" Get rules Erroe=r")
         rss = requests.get(EnvInfo.rss_link, 'utf-8')
         soup = BeautifulSoup(rss.text, 'xml')
         self.items = soup.find_all('item')
@@ -147,7 +146,7 @@ class CollectRSS:
                 if exit_flag:
                     break
             if not exit_flag:
-                print(f"[{EnvInfo.time_show_obj}]  ERROR Not match with {name}")
+                logger.debug("ERROR Not match with {name}")
 
     def put_info_json(self):
         had_data = []
@@ -166,8 +165,7 @@ class CollectRSS:
                     "title": json_title,
                     "season": json_season
                 })
-                sys.stdout.write(f"[{EnvInfo.time_show_obj}]  add {json_title} {json_season}" + "\n")
-                sys.stdout.flush()
+                logger.debug("add {json_title} {json_season}" + "\n")
         EnvInfo.info["bangumi_info"] = self.info
         with open(EnvInfo.path, 'w', encoding='utf8') as f:
             data = json.dumps(EnvInfo.info, indent=4, separators=(',', ': '), ensure_ascii=False)
@@ -187,7 +185,7 @@ class qBittorrentRename:
         try:
             self.qbt_client.auth_log_in()
         except qbittorrentapi.LoginFailed as e:
-            print(e)
+            logger.debug(e)
         self.recent_info = self.qbt_client.torrents_info(status_filter='completed', category="Bangumi")
         self.hash = None
         self.name = None
@@ -229,7 +227,7 @@ class qBittorrentRename:
         if self.path_name != self.new_name:
             self.qbt_client.torrents_rename_file(torrent_hash=self.hash, old_path=self.path_name,
                                                  new_path=self.new_name)
-            sys.stdout.write(f"[{time.strftime('%Y-%m-%d %X')}]  {self.path_name} >> {self.new_name}")
+            logger.debug(f"{self.path_name} >> {self.new_name}")
             self.count += 1
         else:
             return
@@ -241,14 +239,13 @@ class qBittorrentRename:
         self.path_name = None
 
     def print_result(self):
-        sys.stdout.write(f"[{EnvInfo.time_show_obj}]  已完成对{self.torrent_count}个文件的检查" + '\n')
-        sys.stdout.write(f"[{EnvInfo.time_show_obj}]  已对其中{self.count}个文件进行重命名" + '\n')
-        sys.stdout.write(f"[{EnvInfo.time_show_obj}]  完成" + '\n')
-        sys.stdout.flush()
+        logger.debug("已完成对{self.torrent_count}个文件的检查")
+        logger.debug("已对其中{self.count}个文件进行重命名")
+        logger.debug("完成")
 
     def run(self):
         if EnvInfo.method not in ['pn', 'normal']:
-            print('error method')
+            logger.error('error method')
         elif EnvInfo.method == 'normal':
             for i in range(0, self.torrent_count + 1):
                 try:
