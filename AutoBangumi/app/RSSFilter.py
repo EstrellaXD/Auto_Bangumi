@@ -127,11 +127,11 @@ class RSSInfoCleaner:
         self.Tag.type = self.get_type()
         self.Tag.code = self.get_code()
         self.Tag.source = self.get_source()
-        self.Name.clean = self.get_clean_name()
+        # self.Name.clean = self.get_clean_name()
         self.zh_list = []
         self.jp_list = []
         self.en_list = []
-        self.get_title()
+        # self.get_title()
 
         # 清理原链接（中文字符替换为英文）
 
@@ -176,7 +176,7 @@ class RSSInfoCleaner:
         ]
         file_name = del_rules(file_name, strip)
         # xx_xx_xx
-        f_res = re.search("]?(([a-zA-Z:.。,，!！]{1,10})[_\[ ]){2,}", file_name)
+        f_res = re.search("]?(([a-zA-Z:.。,，!！]{1,10})[_\[]){2,}", file_name)
         if f_res is not None:
             file_name = file_name.replace(
                 f_res.group(), "%s/" % f_res.group().replace("_", " ")
@@ -200,17 +200,17 @@ class RSSInfoCleaner:
 
         self.Name.raw = (
             str(file_name)
-            .replace("：", ":")
-            .replace("【", "[")
-            .replace("】", "]")
-            .replace("-", "-")
-            .replace("（", "(")
-            .replace("）", ")")
-            .replace("＆", "&")
-            .replace("X", "x")
-            .replace("×", "x")
-            .replace("Ⅹ", "x")
-            .replace("__", "/")
+                .replace("：", ":")
+                .replace("【", "[")
+                .replace("】", "]")
+                .replace("-", "-")
+                .replace("（", "(")
+                .replace("）", ")")
+                .replace("＆", "&")
+                .replace("X", "x")
+                .replace("×", "x")
+                .replace("Ⅹ", "x")
+                .replace("__", "/")
         )
 
     # 检索字幕组特征
@@ -228,8 +228,8 @@ class RSSInfoCleaner:
                         "[（(\[【]?(.*?(&%s|%s&).*?)[）)\]】]?" % (char, char),
                         self.file_name,
                     )
-                    .group(1)
-                    .lower()
+                        .group(1)
+                        .lower()
                 )
                 return "enforce"
             else:
@@ -242,9 +242,9 @@ class RSSInfoCleaner:
             # 检索特征值是否位于文件名第1、2、最后一段
             for char in character:
                 if (
-                    char in str_split[0]
-                    or char in str_split[1]
-                    or char in str_split[-1]
+                        char in str_split[0]
+                        or char in str_split[1]
+                        or char in str_split[-1]
                 ):
                     self.pre_analyse = char
                     return "success"
@@ -365,8 +365,8 @@ class RSSInfoCleaner:
                     "[（(\[【 ]((tvb)?([粤简繁英俄][日中文体&/]?[_&]?){1,5})[）)\]】]?",
                     str(file_name),
                 )
-                .group(1)
-                .strip(" ")
+                    .group(1)
+                    .strip(" ")
             )
         except Exception as e:
             logger.info(e)
@@ -374,8 +374,8 @@ class RSSInfoCleaner:
         try:
             lang.append(
                 re.search("[（(\[【]?[粤中简繁英俄日文体](双?(语|字幕))[）)\]】]?", str(file_name))
-                .group(1)
-                .strip(" ")
+                    .group(1)
+                    .strip(" ")
             )
         except Exception as e:
             logger.info(e)
@@ -403,8 +403,8 @@ class RSSInfoCleaner:
                     "[（(\[【]?(((mp4|mkv|mp3)[ -]?){1,3})[）)\]】]?",
                     str(file_name).lower(),
                 )
-                .group(1)
-                .strip(" ")
+                    .group(1)
+                    .strip(" ")
             )
         except Exception as e:
             logger.info(e)
@@ -457,9 +457,9 @@ class RSSInfoCleaner:
                         "[（(\[【]?((bd|dvd|hd|remux|(viu)?tvb?|ani-one|bilibili|网飞(动漫)|b-?global|baha|web[ /-]?(dl|rip))[ -]?(b[o0]x|iso|mut|rip)?)[）)\]】]?",
                         file_name,
                     )
-                    .group(1)
-                    .lower()
-                    .strip(" ")
+                        .group(1)
+                        .lower()
+                        .strip(" ")
                 )
                 if res not in type_list:
                     type_list.append(res)
@@ -480,8 +480,8 @@ class RSSInfoCleaner:
         try:
             season.append(
                 re.search(" ?(第?(\d{1,2}|[一二三])(部|季|季度|丁目))", str(file_name))
-                .group(1)
-                .strip(" ")
+                    .group(1)
+                    .strip(" ")
             )
         except Exception as e:
             logger.info(e)
@@ -492,8 +492,8 @@ class RSSInfoCleaner:
                     "((final ?)?(season|[ \[]s) ?\d{1,2}|\d{1,2}-?choume)",
                     str(file_name),
                 )
-                .group(1)
-                .strip(" ")
+                    .group(1)
+                    .strip(" ")
             )
         except Exception as e:
             logger.info(e)
@@ -614,8 +614,8 @@ class RSSInfoCleaner:
                 re.search(
                     "[ （(\[【+](([ +]?(ass|pgs|srt)){1,3})[）)\]】]?", str(file_name)
                 )
-                .group(1)
-                .strip(" ")
+                    .group(1)
+                    .strip(" ")
             )
         except Exception as e:
             logger.info(e)
@@ -760,11 +760,11 @@ class RSSInfoCleaner:
                         self.Name.en = clean_list([en.group()])
                         return
                 elif (
-                    re.search(
-                        "(^[\u4e00-\u9fa5\u3040-\u31ff\d:\-·?？、.。，!]{1,20}[a-z\d]{,3} ?！?)([a-z\d:\-.。,，!！ ]* ?)",
-                        self.Name.clean,
-                    )
-                    is not None
+                        re.search(
+                            "(^[\u4e00-\u9fa5\u3040-\u31ff\d:\-·?？、.。，!]{1,20}[a-z\d]{,3} ?！?)([a-z\d:\-.。,，!！ ]* ?)",
+                            self.Name.clean,
+                        )
+                        is not None
                 ):
                     res = re.search(
                         "(^[\u4e00-\u9fa5\u3040-\u31ff\d:\-·?？、.。，!]{1,20}[a-z\d]{,3} ?！?)[._&]?([a-z\d:\-.。,，!！ ]* ?)",
@@ -781,11 +781,11 @@ class RSSInfoCleaner:
                     return
                 # 英中
                 elif (
-                    re.search(
-                        "(^([a-z\d:\-_.。,，!！ ]* ?) ?)[._&]?([\u4e00-\u9fa5\u3040-\u31ffa-z\d:\-_·?？、.。，!！ ]{1,20})",
-                        self.Name.clean,
-                    )
-                    is not None
+                        re.search(
+                            "(^([a-z\d:\-_.。,，!！ ]* ?) ?)[._&]?([\u4e00-\u9fa5\u3040-\u31ffa-z\d:\-_·?？、.。，!！ ]{1,20})",
+                            self.Name.clean,
+                        )
+                        is not None
                 ):
                     res = re.search(
                         "(^([a-z\d:\-_.。,，!！ ]* ?) ?)[._&]?([\u4e00-\u9fa5\u3040-\u31ffa-z\d:\-_·?？、.。，!！ ]{1,20})",
@@ -809,7 +809,7 @@ class RSSInfoCleaner:
         if debug > 0:
             print("初筛:\r\n%s\r\n%s\r\n%s" % (self.zh_list, self.en_list, self.jp_list))
         if (has_zh(self.Name.clean) or has_jp(self.Name.clean)) and has_en(
-            self.Name.clean
+                self.Name.clean
         ):
             self.Name.clean = add_separator(self.Name.clean)
         self.easy_split(self.Name.clean, self.zh_list, self.en_list, self.jp_list)
@@ -866,18 +866,41 @@ class RSSInfoCleaner:
 
 
 if __name__ == "__main__":
+    type_list = [
+        # 第一类
+        [["lilith-raws", "skymoon", "lolihouse", "天月"],
+         ["nc-raws"],
+         ["桜都字幕组", "离谱sub", "mingy", "霜庭云花", "拨雪寻春", "熔岩动画", "极彩字幕组"],
+         ["喵萌奶茶屋", "雪飘工作室"],
+         ]
+    ]
     debug = 0
     # mikan/dmhy 获取数据，dmhy 最多1w行，mikan最多3w行
-    # 数据序号，向下x条
+    # 如果debug开启，仅输出debug值的那条数据，否则从第n条开始输出
     num = debug if debug > 1 else 800
+    # 如果debug开启，仅输出1条数据，否则输出200条
     row = 1 if debug else 200
     name_list = read_data("mikan", num, row)
+
+
+    def match_group(file_name):
+        m_group = RSSInfoCleaner(file_name).Info.group
+        for m_type_num in range(0, len(type_list)):
+            for m_type_i in range(0, len(type_list[m_type_num])):
+                for type_j in range(0, len(type_list[m_type_num][m_type_i])):
+                    if m_group is not None:
+                        if type_list[m_type_num][m_type_i][type_j] in m_group:
+                            return m_type_num, m_type_i
+
+    # 遍历数据
     for i in range(0, len(name_list)):
-        title = RSSInfoCleaner(name_list[i]).Name
-        print("%s:%s" % (num + i, name_list[i]))
-        print("raw_name:%s" % title.raw)
-        print("clean_name:%s" % title.clean)
-        print("zh:%s" % title.zh)
-        print("en:%s" % title.en)
-        print("jp:%s" % title.jp)
-        print()
+        # 匹配字幕组
+        group = match_group(name_list[i])
+        # 以下为匹配成功的情况，仅包括第一类字幕组
+        if group is not None:
+            type_num, type_i = group[0], group[1]
+            info = RSSInfoCleaner(name_list[i]).Info
+            print("%s:%s" % (num + i, name_list[i]))
+            print("group_name:%s" % info.group)
+            print("第%s类，第%s种命名方式" % (type_num + 1, type_i + 1))
+            print()
