@@ -3,8 +3,8 @@ import time
 import json
 import logging
 
-from collect_bangumi_info import CollectRSS
-from auto_set_rule import SetRule
+from collect_info import CollectRSS
+from set_rule import SetRule
 from rename_qb import qBittorrentRename
 from env import EnvInfo
 

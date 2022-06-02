@@ -19,6 +19,7 @@ class EnvInfo:
         rule_path = "/config/clean_rule.json"
         not_contain = os.environ["NOT_CONTAIN"]
         get_rule_debug = os.getenv("RULE_DEBUG", 'False').lower() in ('true', '1', 't')
+        enable_eps_complete = os.getenv("EP_COMPLETE", 'False').lower() in ('true', '1', 't')
     else:
         # Debug ENV
         host_ip = "localhost:8181"
@@ -30,9 +31,10 @@ class EnvInfo:
         method = "pn"
         enable_group_tag = True
         info_path = "../config/bangumi.json"
-        rule_path = "../config/rule.json"
+        rule_path = "../config/rule_beta.json"
         not_contain = "720"
         get_rule_debug = True
+        enable_eps_complete = True
     # Static ENV
     rule_url = "https://raw.githubusercontent.com/EstrellaXD/Bangumi_Auto_Collector/main/AutoBangumi/config/rule.json"
 
