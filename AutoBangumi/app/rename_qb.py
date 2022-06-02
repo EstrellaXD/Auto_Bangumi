@@ -2,21 +2,17 @@ import re
 import qbittorrentapi
 import logging
 
-from env import EnvInfo
+from downloader import getClient
+
+from conf import settings
 
 logger = logging.getLogger(__name__)
 
 
 class qBittorrentRename:
     def __init__(self):
-        self.qbt_client = qbittorrentapi.Client(
-            host=EnvInfo.host_ip, username=EnvInfo.user_name, password=EnvInfo.password
-        )
-        try:
-            self.qbt_client.auth_log_in()
-        except qbittorrentapi.LoginFailed as e:
-            logger.exception(e)
-        self.recent_info = self.qbt_client.torrents_info(
+        self.client = getClient()
+        self.recent_info = self.client.torrents_info(
             status_filter="completed", category="Bangumi"
         )
         self.count = 0
@@ -55,7 +51,7 @@ class qBittorrentRename:
 
     def rename_torrent_file(self, hash, path_name, new_name):
         if path_name != new_name:
-            self.qbt_client.torrents_rename_file(
+            self.client.torrents_rename_file(
                 torrent_hash=hash, old_path=path_name, new_path=new_name
             )
             logger.debug(f"{path_name} >> {new_name}")
@@ -68,7 +64,7 @@ class qBittorrentRename:
 
     def run(self):
         method_dict = {"pn": self.rename_pn, "normal": self.rename_normal}
-        if EnvInfo.method not in method_dict:
+        if settings.method not in method_dict:
             logger.error(f"error method")
         else:
             for i in range(0, self.torrent_count):
@@ -77,7 +73,7 @@ class qBittorrentRename:
                     name = info.name
                     hash = info.hash
                     path_name = info.content_path.split("/")[-1]
-                    new_name = method_dict[EnvInfo.method](name)
+                    new_name = method_dict[settings.method](name)
                     self.rename_torrent_file(hash, path_name, new_name)
                 except:
                     logger.warning(f"{name} rename fail")
