@@ -11,5 +11,5 @@ def parse():
         无需二次刮削。""",
     )
 
-    parser.add_argument("-d", "--debug",action="store_true", help="debug mode")
+    parser.add_argument("-d", "--debug", action="store_true", help="debug mode")
     return parser.parse_args()

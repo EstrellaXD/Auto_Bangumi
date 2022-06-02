@@ -1,6 +1,5 @@
 import re
 import logging
-import json
 import os
 
 from downloader import getClient
