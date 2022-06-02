@@ -21,8 +21,8 @@ class Parser:
 
     # 第一类字幕组分类
     def parser_type_1(self):
-        name_re_group = re.sub(r"^[^]]*]", "", self.raw_name).strip()
-        match_obj = re.match(r"(.*|\[.*\])( - \d{1,3}|\[d{1,3}])(.*)", name_re_group)
+        name_re_group = re.sub(r"^[^(\]|】)]*(\]|】)", "", self.raw_name).strip()
+        match_obj = re.match(r"(.*|\[.*])( - \d{1,3}|\[\d{1,3}])(.*)", name_re_group)
         name_season = match_obj.group(1).strip()
         if re.search(r"S\d{1,2}", name_season) is not None:
             split = re.sub(r"S\d{1,2}", "", name_season).split("/")
@@ -34,7 +34,7 @@ class Parser:
             self.name = split[1].strip()
         except IndexError:
             self.name = split[-1].strip()
-        self.episode = int(match_obj.group(2).replace("-", "").strip())
+        self.episode = int(re.sub(r"\-|\[|\]", "", match_obj.group(2)))
         other = match_obj.group(3).strip()
         language = None
 
