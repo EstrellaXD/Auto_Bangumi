@@ -11,4 +11,5 @@ def setup_logger():
         encoding="utf-8",
     )
 
+
 setup_logger()

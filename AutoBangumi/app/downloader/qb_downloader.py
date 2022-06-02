@@ -7,7 +7,7 @@ from tomlkit import item
 
 from conf import settings
 
-from downloader.exceptions import ConflictError
+from exceptions import ConflictError
 
 logger = logging.getLogger(__name__)
 

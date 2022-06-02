@@ -21,7 +21,6 @@ if __name__ == "__main__":
     args = parse()
     if args.debug:
         from const_dev import DEV_SETTINGS
-
         settings.init(DEV_SETTINGS)
     else:
         settings.init()

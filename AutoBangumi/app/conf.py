@@ -1,6 +1,6 @@
 import os
-
 import const
+
 
 class Settings(dict):
     def __getattr__(self, item):
@@ -21,7 +21,6 @@ class Settings(dict):
             conv_func = attr[1]
             val = conv_func(val)
         return val
-
 
     def _settings_from_env(self):
         """Loads settings from env."""
