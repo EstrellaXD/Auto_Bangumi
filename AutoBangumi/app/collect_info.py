@@ -1,13 +1,14 @@
 # -*- coding: UTF-8 -*-
 import os
-import sys
 import logging
 import requests
 from bs4 import BeautifulSoup
 import json
 import re
-from env import EnvInfo, BColors
-from RSSFilter import RSSInfoCleaner as Filter
+from conf import settings
+from utils import json_config
+
+# from RssFilter.RSSFilter import RSSInfoCleaner as Filter
 
 logger = logging.getLogger(__name__)
 
@@ -24,32 +25,27 @@ class MatchRule:
 class CollectRSS:
     def __init__(self):
         self.bangumi_list = []
-        with open(EnvInfo.rule_path, encoding="utf-8") as r:
-            self.rules = json.load(r)
+        self.rules = json_config.load(settings.rule_path)
         try:
-            self.rules = requests.get(EnvInfo.rule_url).json()
-            with open(EnvInfo.rule_path, "w", encoding="utf-8") as f:
-                json.dump(
-                    self.rules, f, indent=4, separators=(",", ": "), ensure_ascii=False
-                )
-        except:
-            with open(EnvInfo.rule_path, encoding="utf-8") as r:
-                self.rules = json.load(r)
+            self.rules = requests.get(settings.rule_url).json()
+        except Exception as e:
+            logger.exception(e)
+        json_config.save(settings.rule_path, self.rules)
         try:
-            rss = requests.get(EnvInfo.rss_link, "utf-8")
-        except:
-            logger.debug("ERROR with DNS/Connection.")
+            rss = requests.get(settings.rss_link, "utf-8")
+        except Exception as e:
+            logger.exception(e)
+            logger.error("ERROR with DNS/Connection.")
             quit()
         soup = BeautifulSoup(rss.text, "xml")
         self.items = soup.find_all("item")
-        with open(EnvInfo.info_path, encoding="utf-8") as i:
-            self.info = json.load(i)
+        self.info = json_config.load(settings.info_path)
 
     def get_info_list(self):
         for item in self.items:
             name = item.title.string
             # debug 用
-            if EnvInfo.get_rule_debug:
+            if settings.get_rule_debug:
                 logger.debug(f"Raw {name}")
             exit_flag = False
             for rule in self.rules:
@@ -65,8 +61,7 @@ class CollectRSS:
                             bangumi_title = n[rule["name_position"]].strip()
                         except IndexError:
                             continue
-                        sub_title = re.sub(
-                            MatchRule.sub_title, "", bangumi_title)
+                        sub_title = re.sub(MatchRule.sub_title, "", bangumi_title)
                         b = re.split(r"\/|\_", sub_title)
                         while "" in b:
                             b.remove("")
@@ -79,8 +74,7 @@ class CollectRSS:
                             )
                             if match_obj is not None:
                                 bangumi_title = match_obj.group(1).strip()
-                        match_obj = re.match(
-                            MatchRule.match_rule, bangumi_title, re.I)
+                        match_obj = re.match(MatchRule.match_rule, bangumi_title, re.I)
                         if match_obj is not None:
                             bangumi_title = match_obj.group(2).strip()
                         if bangumi_title not in self.bangumi_list:
@@ -98,11 +92,11 @@ class CollectRSS:
 
     def put_info_json(self):
         had_data = []
-        if self.info["rss_link"] == EnvInfo.rss_link:
+        if self.info["rss_link"] == settings.rss_link:
             for data in self.info["bangumi_info"]:
                 had_data.append(data["title"])
         else:
-            self.info = {"rss_link": EnvInfo.rss_link, "bangumi_info": []}
+            self.info = {"rss_link": settings.rss_link, "bangumi_info": []}
         for item in self.bangumi_list:
             title = item["title"]
             match_title_season = re.match(MatchRule.season_match, title, re.I)
@@ -135,10 +129,7 @@ class CollectRSS:
                 )
                 had_data.append(json_title)
                 logger.debug("add {json_title} {json_season}")
-        with open(EnvInfo.info_path, "w", encoding="utf8") as f:
-            json.dump(
-                self.info, f, indent=4, separators=(",", ": "), ensure_ascii=False
-            )
+        json_config.save(settings.info_path, self.info)
 
     def run(self):
         self.get_info_list()
@@ -146,14 +137,15 @@ class CollectRSS:
 
 
 if __name__ == "__main__":
-    # rss = requests.get(EnvInfo.rss_link, 'utf-8')
+    # from const import BCOLORS
+    # rss = requests.get(settings.rss_link, 'utf-8')
     # soup = BeautifulSoup(rss.text, 'xml')
     # items = soup.find_all('item')
     # for item in items:
     #     name = item.title.string
     #     pn = Filter(name).Name
-    #     print(BColors.HEADER + name)
-    #     print(BColors.OKGREEN + str(pn.zh))
+    #     print(BCOLORS.HEADER + name)
+    #     print(BCOLORS.OKGREEN + str(pn.zh))
     #     print(str(pn.en))
     print(__file__)
     print(os.path.dirname(__file__))

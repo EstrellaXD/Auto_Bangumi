@@ -14,8 +14,9 @@ ENV METHOD=pn
 ENV GROUP_TAG=False
 ENV NOT_CONTAIN=720
 ENV RULE_DEBUG=False
+ENV EP_COMPLETE=True
 
 COPY ./app /app
 COPY ./config /config
 
-CMD [ "python3", "/app/docker_main.py"]
+CMD [ "python3", "/app/app.py"]

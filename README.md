@@ -1,6 +1,6 @@
 <p align="center">
-    <img src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/image/auto_bangumi_v2.png#gh-light-mode-only" width=50%/>
-    <img src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/image/auto_bangumi_icon_v2-dark.png#gh-dark-mode-only" width=50%/>
+    <img src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/Docs/image/auto_bangumi_v2.png#gh-light-mode-only" width=50%/>
+    <img src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/Docs/image/auto_bangumi_icon_v2-dark.png#gh-dark-mode-only" width=50%/>
 </p>
 <p align="center">
     <img title="docker build version" src="https://img.shields.io/docker/v/estrellaxd/auto_bangumi" alt="">
@@ -21,7 +21,7 @@
 
 基于 [infuse](https://firecore.com/infuse) 与 [Plex](https://plex.tv) 的效果如下：
 
-<img title="plex" src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/image/截屏2022-05-23%2020.47.39.png" alt="" width=50%><img title="infuse" src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/image/截屏2022-05-23%2020.48.02.png" alt="" width=50%>
+<img title="plex" src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/Docs/image/截屏2022-05-23%2020.47.39.png" alt="" width=50%><img title="infuse" src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/Docs/image/截屏2022-05-23%2020.48.02.png" alt="" width=50%>
 
 ## AutoBangumi 好在哪
 
@@ -33,7 +33,7 @@
 ## 相关文档和群组
 
 - [AutoBangumi V2 简易说明](https://www.craft.do/s/4viN6M3tBqigLp)
-- [常见 bug 和解决方法](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/DOC/常见错误解决.md)
+- [常见 bug 和解决方法](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/Docs/常见错误解决.md)
 - 更新推送：[Telegram Channel](https://t.me/autobangumi_update)
 - Bug 反馈群：[Telegram](https://t.me/+yNisOnDGaX5jMTM9)
 
