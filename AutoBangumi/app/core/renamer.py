@@ -24,7 +24,7 @@ class Renamer:
 
     def rename_normal(self, name):
         for rule in self.rules:
-            matchObj = rule.match(name, re.I)
+            matchObj = re.match(rule, name, re.I)
             if matchObj is not None:
                 new_name = f"{matchObj.group(1).strip()} E{matchObj.group(2)}{matchObj.group(3)}"
                 return new_name
@@ -33,7 +33,7 @@ class Renamer:
         n = re.split(r"\[|\]", name)
         file_name = name.replace(f"[{n[1]}]", "")
         for rule in self.rules:
-            matchObj = rule.match(file_name, re.I)
+            matchObj = re.match(rule, file_name, re.I)
             if matchObj is not None:
                 new_name = re.sub(
                     r"\[|\]",
@@ -68,3 +68,8 @@ class Renamer:
                 except:
                     logger.warning(f"{name} rename fail")
             self.print_result(torrent_count, rename_count)
+
+
+if __name__ == "__main__":
+    rename = Renamer()
+    rename.rename_pn("[Lilith-Raws] Shokei Shoujo no Virgin Road - 02 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]")

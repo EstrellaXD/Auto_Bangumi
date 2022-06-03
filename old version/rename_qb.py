@@ -12,11 +12,11 @@ logger = logging.getLogger(__name__)
 
 with open("config.json") as f:
     server_info = json.load(f)
-host_ip = "http://"+server_info['host_ip']
-user_name = server_info['username']
-password = server_info['password']
+host_ip = "192.168.1.18:6363"
+user_name = "admin"
+password = "adminadmin"
 log_name = op.join(op.dirname(op.realpath(__file__)), 'log.txt')
-method = server_info['method']
+method = "pn"
 
 # Episode Regular Expression Matching Rules
 episode_rules = [r'(.*)\[(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)',
