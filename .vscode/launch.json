@@ -8,11 +8,11 @@
             "name": "Python: app",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/AutoBangumi/app/app.py",
+            "program": "${workspaceFolder}/auto_bangumi/app.py",
             "args": [
                 "-d"
             ],
-            "cwd": "${workspaceFolder}/AutoBangumi/app",
+            "cwd": "${workspaceFolder}/auto_bangumi",
             "console": "integratedTerminal",
             "justMyCode": true
         },

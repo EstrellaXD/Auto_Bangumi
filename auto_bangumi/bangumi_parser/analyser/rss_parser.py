@@ -1,8 +1,8 @@
 import logging
 import re
-from bangumi_parser.episode import Episode
 from utils import json_config
 from conf import settings
+from bangumi_parser.episode import Episode
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,10 @@ class ParserLV2:
 
     def process(self, raw_name):
         raw_name = raw_name.replace("【", "[").replace("】", "]")
-        match_obj = re.match(r"(.*|\[.*])( -? \d{1,3} |\[\d{1,3}]|\[\d{1,3}.?[vV]\d{1}]|[第第]\d{1,3}[话話集集]|\[\d{1,3}.?END])(.*)", raw_name)
+        match_obj = re.match(
+            r"(.*|\[.*])( -? \d{1,3} |\[\d{1,3}]|\[\d{1,3}.?[vV]\d{1}]|[第第]\d{1,3}[话話集集]|\[\d{1,3}.?END])(.*)",
+            raw_name,
+        )
         name_season = self.pre_process(match_obj.group(1))
         name, season_number, season_raw = self.season_process(name_season)
         name = self.name_process(name).strip()
@@ -124,8 +127,13 @@ if __name__ == "__main__":
                     print(season)
                     print(episode)
                 except:
-                    if re.search(r"\d{1,3}[-~]\d{1,3}|OVA|BD|電影|剧场版|老番|冷番|OAD|合集|劇場版|柯南|海賊王|蜡笔小新|整理|樱桃小丸子", name) is None:
+                    if (
+                        re.search(
+                            r"\d{1,3}[-~]\d{1,3}|OVA|BD|電影|剧场版|老番|冷番|OAD|合集|劇場版|柯南|海賊王|蜡笔小新|整理|樱桃小丸子",
+                            name,
+                        )
+                        is None
+                    ):
                         print(f"{BCOLORS._(BCOLORS.HEADER, name)}")
                         err_count += 1
         print(BCOLORS._(BCOLORS.WARNING, err_count))
-

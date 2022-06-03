@@ -10,8 +10,8 @@
     <img title="platform arch" src="https://img.shields.io/badge/arch-%20AMD64%20%2F%20ARM64-lightgrey" alt="">
 </p>
 
-
 # 项目说明
+
 <p align="center">
     <img title="mikan project" src="https://mikanani.me/images/mikan-pic.png" alt="" width="10%">
     <img title="qbittorrent" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/New_qBittorrent_Logo.svg/600px-New_qBittorrent_Logo.svg.png" width="10%">
@@ -29,7 +29,6 @@
 - 修改文件名但是不破坏作种
 - 傻瓜式文件整理
 
-
 ## 相关文档和群组
 
 - [AutoBangumi V2 简易说明](https://www.craft.do/s/4viN6M3tBqigLp)
@@ -38,11 +37,13 @@
 - Bug 反馈群：[Telegram](https://t.me/+yNisOnDGaX5jMTM9)
 
 # 部署说明
+
 1. 安装 qBittorrent:
-    
+
 2. 用 Docker 部署 `AutoBangumi` :
 
 最简部署方法
+
 ```dash
 docker run -d \
   --name=AutoBangumi \
@@ -53,6 +54,7 @@ docker run -d \
   --restart unless-stopped \
   estrellaxd/auto_bangumi:latest
 ```
+
 **进阶部署:**
 
 Docker-Compose
@@ -101,6 +103,7 @@ docker run -d \
   --restart unless-stopped \
   estrellaxd/auto_bangumi:latest
 ```
+
 ### 参数说明
 
 | 环境变量            | 作用                  | 参数               |
@@ -119,8 +122,8 @@ docker run -d \
 - `TIME` : 程序运行的间隔时间，默认为 `1800` 也就是 30 分钟，如果更新时间要求比较高可以适当降低该值。
 - `HOST`, `USER`, `PASSWORD`: qBittorrent 的地址，用户名，密码。
 - `METHOD`: 重命名规则
-  - `pn`: Pure Name 模式，去掉所有字幕组以及番剧额外信息，只保留名称、季度和集数。
-  - `normal`: 正常模式，仅重命名会影响搜刮的非正常字符。
+    - `pn`: Pure Name 模式，去掉所有字幕组以及番剧额外信息，只保留名称、季度和集数。
+    - `normal`: 正常模式，仅重命名会影响搜刮的非正常字符。
 - `GROUP_TAG`: 开启后自动在自动下载规则中创建组名，方便管理。
 - `DOWNLOAD_PATH`: qBittorrent 的下载地址。
 - `RSS`: Mikan Project 的个人 RSS 订阅链接
@@ -161,13 +164,16 @@ docker run -d \
 ## Roadmap
 
 ***开发中的功能：***
+
 - RSS 解析器：AutoBangumi 可以自行解析分析种子无需依赖下载器。
 - Transmission & Aria2 的支持。
 - 遗漏番剧下载：中间开始追番可以补全之前的剧集。
 
 ***计划开发的功能：***
+
 - Web UI
 - 更为智能细致的分类预设。
 
 # 声明
+
 本项目的自动改名规则根据 [miracleyoo/anime_renamer](https://github.com/miracleyoo/anime_renamer) 项目

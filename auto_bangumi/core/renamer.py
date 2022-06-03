@@ -1,8 +1,8 @@
 import re
 import logging
-from core.download_client import DownloadClient
 
 from conf import settings
+from core.download_client import DownloadClient
 
 logger = logging.getLogger(__name__)
 

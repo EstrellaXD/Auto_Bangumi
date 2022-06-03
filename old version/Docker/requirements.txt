@@ -1,1 +1,0 @@
-qbittorrent_api==2022.4.30
