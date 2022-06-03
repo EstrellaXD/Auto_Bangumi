@@ -33,8 +33,10 @@ def save_data_file(bangumi_data):
 def run():
     args = parse()
     if args.debug:
-        from const_dev import DEV_SETTINGS
-
+        try:
+            from const_dev import DEV_SETTINGS
+        except ModuleNotFoundError:
+            logger.debug("Please copy `const_dev.sample.py` to `const_dev.py` to use custom settings")
         settings.init(DEV_SETTINGS)
     else:
         settings.init()
