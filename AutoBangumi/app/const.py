@@ -4,7 +4,7 @@ from math import fabs
 
 
 DEFAULT_SETTINGS = {
-    "host_ip": "localhost:8080",
+    "host_ip": "192.168.31.10:10101",
     "sleep_time": 1800,
     "user_name": "admin",
     "password": "adminadmin",
@@ -38,14 +38,18 @@ ENV_TO_ATTR = {
 
 FULL_SEASON_SUPPORT_GROUP = ["Lilith-Raws"]
 
-BCOLORS = {
-    "HEADER": "\033[95m",
-    "OKBLUE": "\033[94m",
-    "OKCYAN": "\033[96m",
-    "OKGREEN": "\033[92m",
-    "WARNING": "\033[93m",
-    "FAIL": "\033[91m",
-    "ENDC": "\033[0m",
-    "BOLD": "\033[1m",
-    "UNDERLINE": "\033[4m",
-}
+
+class BCOLORS:
+    @staticmethod
+    def _(color: str, string: str) -> str:
+        return f"{color}{string}{BCOLORS.ENDC}"
+
+    HEADER = "\033[95m"
+    OKBLUE = "\033[94m"
+    OKCYAN = "\033[96m"
+    OKGREEN = "\033[92m"
+    WARNING = "\033[93m"
+    FAIL = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"

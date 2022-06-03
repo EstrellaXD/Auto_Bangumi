@@ -10,6 +10,3 @@ def setup_logger():
         format=LOGGING_FORMAT,
         encoding="utf-8",
     )
-
-
-setup_logger()
