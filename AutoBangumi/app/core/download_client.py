@@ -36,7 +36,7 @@ class DownloadClient:
                 os.path.join(
                     settings.download_path,
                     re.sub(settings.rule_name_re, " ", bangumi_name).strip(),
-                    f"S0{season}",
+                    season,
                 )
             ),
         }

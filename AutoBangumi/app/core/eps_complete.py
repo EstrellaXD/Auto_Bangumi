@@ -1,4 +1,6 @@
 import os.path
+import re
+
 import requests
 from qbittorrentapi import Client
 from bs4 import BeautifulSoup
@@ -35,7 +37,10 @@ class FullSeasonGet:
             self.client.torrents_add(
                 urls=torrent["url"],
                 save_path=str(
-                    os.path.join(settings.download_path, self.bangumi_name, self.season)
+                    os.path.join(
+                        settings.download_path,
+                        re.sub(settings.rule_name_re, " ", self.bangumi_name),
+                        self.season)
                 ),
                 category="Bangumi",
             )
