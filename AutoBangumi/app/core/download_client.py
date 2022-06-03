@@ -8,6 +8,9 @@ from downloader.exceptions import ConflictError
 from conf import settings
 from utils import json_config
 
+from core.eps_complete import FullSeasonGet
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -33,7 +36,7 @@ class DownloadClient:
                 os.path.join(
                     settings.download_path,
                     re.sub(settings.rule_name_re, " ", bangumi_name).strip(),
-                    season,
+                    f"S0{season}",
                 )
             ),
         }
@@ -63,6 +66,13 @@ class DownloadClient:
                 self.set_rule(info["title"], info["group"], info["season"])
                 info["added"] = True
         logger.debug("Finished.")
+
+    def eps_collect(self, bangumi_info):
+        logger.debug("Start collect past eps.")
+        for info in bangumi_info:
+            if not info["download_past"]:
+                FullSeasonGet(info["group"], info["title"], info["season"]).run()
+
 
     def get_torrent_info(self):
         return self.client.torrents_info(

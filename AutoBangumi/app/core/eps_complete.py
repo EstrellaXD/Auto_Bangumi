@@ -25,7 +25,7 @@ class FullSeasonGet:
         else:
             season = self.season
         season = requests.get(
-            f"https://mikanani.me/RSS/Search?searchstr={self.group}+{self.bangumi_name}+{season}"
+            f"https://mikanani.me/RSS/Search?searchstr={self.group}+{self.bangumi_name}+{season}+1080"
         )
         soup = BeautifulSoup(season.content, "xml")
         self.torrents = soup.find_all("enclosure")

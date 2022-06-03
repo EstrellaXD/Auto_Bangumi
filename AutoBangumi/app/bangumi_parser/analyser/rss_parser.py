@@ -1,13 +1,24 @@
 import logging
 import re
 from bangumi_parser.episode import Episode
+from utils import json_config
+from conf import settings
 
 logger = logging.getLogger(__name__)
 
 
 class ParserLV2:
     def __init__(self) -> None:
-        self.name = None
+        self.info = json_config.load(settings.rule_path)
+        self.type = None
+
+    def get_group(self, name):
+        for i in self.info:
+            for group in i["group_name"]:
+                if re.search(group, name) is not None:
+                    self.type = i["type"]
+                    return group
+            logger.warning(f"no Group match {name}")
 
     def pre_process(self, raw_name):
         if re.search(r"新番|月?番", raw_name):
@@ -31,21 +42,23 @@ class ParserLV2:
         seasons = re.findall(season_rule, name_season)
         if not seasons:
             name = name_season
-            season = 1
+            season_number = 1
+            season_raw = ""
         else:
             name = re.sub(season_rule, "", name_season)
             for season in seasons:
+                season_raw = season
                 if re.search(r"S|Season", season) is not None:
-                    season = int(re.sub(r"S|Season", "", season))
+                    season_number = int(re.sub(r"S|Season", "", season))
                     break
                 elif re.search(r"[第 ].*[季期]", season) is not None:
                     season_pro = re.sub(r"[第季期 ]", "", season)
                     try:
-                        season = int(season_pro)
+                        season_number = int(season_pro)
                     except ValueError:
-                        season = season_map[season_pro]
+                        season_number = season_map[season_pro]
                         break
-        return name, season
+        return name, season_number, season_raw
 
     def name_process(self, name):
         split = re.split("/|  |-  ", name.replace("（仅限港澳台地区）", ""))
@@ -70,20 +83,24 @@ class ParserLV2:
         raw_name = raw_name.replace("【", "[").replace("】", "]")
         match_obj = re.match(r"(.*|\[.*])( -? \d{1,3} |\[\d{1,3}]|\[\d{1,3}.?[vV]\d{1}]|[第第]\d{1,3}[话話集集]|\[\d{1,3}.?END])(.*)", raw_name)
         name_season = self.pre_process(match_obj.group(1))
-        name, season = self.season_process(name_season)
+        name, season_number, season_raw = self.season_process(name_season)
         name = self.name_process(name).strip()
         episode = int(re.findall(r"\d{1,3}", match_obj.group(2))[0])
         other = match_obj.group(3).strip()
         language = None
-        return name, season, episode
+        return name, season_number, season_raw, episode
 
-    def run(self, raw) -> Episode:
+    def analyse(self, raw) -> Episode:
         try:
-            name, season, episode = self.process(raw)
             info = Episode()
+            info.group = self.get_group(raw)
+            name, season, season_raw, episode = self.process(raw)
             info.title = name
             info.season_info.number = season
-            info.EpisodeInfo.number = episode
+            info.season_info.raw = season_raw
+            info.ep_info.number = episode
+
+            return info
         except:
             logger.warning(f"ERROR match {raw}")
 
@@ -93,6 +110,7 @@ if __name__ == "__main__":
 
     sys.path.append(os.path.dirname(".."))
     from const import BCOLORS
+    from bangumi_parser.episode import Episode
 
     parser = ParserLV2()
     with (open("bangumi_parser/names.txt", "r", encoding="utf-8") as f):
@@ -101,7 +119,7 @@ if __name__ == "__main__":
             if name != "":
                 try:
                     print(name)
-                    title, season, episode = parser.process(name)
+                    title, season, episode = parser.analyse(name)
                     print(title)
                     print(season)
                     print(episode)
