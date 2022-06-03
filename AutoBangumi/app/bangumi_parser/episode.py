@@ -16,7 +16,7 @@ class Episode:
             self.number: int = None
 
     @dataclass
-    class NumberInfo:
+    class EpisodeInfo:
         def __init__(self) -> None:
             self.raw: str = None
             self.number: int = None
@@ -33,6 +33,6 @@ class Episode:
         self.group: str = None
         self.title_info = Episode.TitleInfo()
         self.season_info = Episode.SeasonInfo()
-        self.number_info = Episode.NumberInfo()
+        self.number_info = Episode.EpisodeInfo()
         self.format: str = None
         self.subtitle: str = None

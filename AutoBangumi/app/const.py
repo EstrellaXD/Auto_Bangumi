@@ -4,7 +4,7 @@ from math import fabs
 
 
 DEFAULT_SETTINGS = {
-    "host_ip": "localhost:8080",
+    "host_ip": "192.168.31.10:10101",
     "sleep_time": 1800,
     "user_name": "admin",
     "password": "adminadmin",

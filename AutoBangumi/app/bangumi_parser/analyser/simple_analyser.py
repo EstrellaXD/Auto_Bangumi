@@ -64,7 +64,7 @@ class SimpleAnalyser:
             if flag:
                 break
         if not flag:
-            logger.debug("ERROR Not match with {name}")
+            logger.debug(f"ERROR Not match with {name}")
             return
         match_title_season = re.match(MatchRule.season_match, title, re.I)
         if match_title_season is not None:

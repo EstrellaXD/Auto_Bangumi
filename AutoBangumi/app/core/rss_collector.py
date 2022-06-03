@@ -42,4 +42,4 @@ class RSSCollector:
                             "added": False,
                         }
                     )
-                    logger.debug("add {json_title} {json_season}")
+                    logger.debug(f"add {title} {season}")
