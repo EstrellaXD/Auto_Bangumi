@@ -47,7 +47,8 @@ def run():
     while True:
         try:
             rss_collector.collect(bangumi_data)
-            download_client.add_rules(bangumi_data["bangumi_info"])
+            if settings.ep_complete:
+                download_client.add_rules(bangumi_data["bangumi_info"])
             download_client.eps_collect(bangumi_data["bangumi_info"])
             renamer.run()
             save_data_file(bangumi_data)
