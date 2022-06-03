@@ -1,6 +1,5 @@
 import re
 import logging
-import json
 import os
 
 from downloader import getClient
@@ -12,12 +11,8 @@ from utils import json_config
 logger = logging.getLogger(__name__)
 
 
-class SetRule:
+class DownloadClient:
     def __init__(self):
-        self.info = json_config.load(settings.info_path)
-        self.bangumi_info = self.info["bangumi_info"]
-        self.rss_link = settings.rss_link
-        self.download_path = settings.download_path
         self.client = getClient()
 
     def set_rule(self, bangumi_name, group, season):
@@ -29,7 +24,7 @@ class SetRule:
             "episodeFilter": "",
             "smartFilter": False,
             "previouslyMatchedEpisodes": [],
-            "affectedFeeds": [self.rss_link],
+            "affectedFeeds": [settings.rss_link],
             "ignoreDays": 0,
             "lastMatch": "",
             "addPaused": False,
@@ -54,23 +49,33 @@ class SetRule:
         except ConflictError:
             logger.debug("No feed exists, starting adding feed.")
         try:
-            self.client.rss_add_feed(url=self.rss_link, item_path="Mikan_RSS")
+            self.client.rss_add_feed(url=settings.rss_link, item_path="Mikan_RSS")
             logger.debug("Successes adding RSS Feed.")
         except ConnectionError:
             logger.debug("Error with adding RSS Feed.")
         except ConflictError:
             logger.debug("RSS Already exists.")
 
-    def run(self):
+    def add_rules(self, bangumi_info):
         logger.debug("Start adding rules.")
-        for info in self.bangumi_info:
+        for info in bangumi_info:
             if not info["added"]:
                 self.set_rule(info["title"], info["group"], info["season"])
                 info["added"] = True
-        json_config.save(settings.info_path, self.info)
         logger.debug("Finished.")
+
+    def get_torrent_info(self):
+        return self.client.torrents_info(
+            status_filter="completed", category="Bangumi"
+        )
+
+    def rename_torrent_file(self, hash, path_name, new_name):
+        self.client.torrents_rename_file(
+            torrent_hash=hash, old_path=path_name, new_path=new_name
+        )
+        logger.debug(f"{path_name} >> {new_name}")
 
 
 if __name__ == "__main__":
-    put = SetRule()
-    put.run()
+    put = DownloadClient()
+    put.add_rules()

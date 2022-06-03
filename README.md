@@ -94,7 +94,7 @@ docker run -d \
   -e METHOD=pn \ #optional
   -e GROUP_TAG=True \ #optional
   -e DOWNLOAD_PATH=/path/downloads \
-  -e NOT_COTAIN=720
+  -e NOT_COTAIN=720 \
   -e RSS=<YOUR_RSS_ADDRESS> \
   --network=host \
   --dns=8.8.8.8 \
