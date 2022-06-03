@@ -1,34 +1,60 @@
+from ast import arg
 import os
 import time
 import logging
 
-from collect_info import CollectRSS
-from set_rule import SetRule
-from rename_qb import qBittorrentRename
 from conf import settings
 from argument_parser import parse
 from log import setup_logger
 from utils import json_config
 
-
-def create_data_file():
-    if not os.path.exists(settings.info_path):
-        bangumi_info = {"rss_link": "", "bangumi_info": []}
-        json_config.save(settings.info_path, bangumi_info)
+from core.rss_collector import RSSCollector
+from core.download_client import DownloadClient
+from core.renamer import Renamer
 
 
-if __name__ == "__main__":
+logger = logging.getLogger(__name__)
+
+
+def load_data_file():
+    info_path = settings.info_path
+    if not os.path.exists(info_path):
+        bangumi_data = {"rss_link": "", "bangumi_info": []}
+    else:
+        bangumi_data = json_config.load(info_path)
+    return bangumi_data
+
+
+def save_data_file(bangumi_data):
+    info_path = settings.info_path
+    json_config.save(info_path, bangumi_data)
+
+
+def run():
     args = parse()
     if args.debug:
         from const_dev import DEV_SETTINGS
+
         settings.init(DEV_SETTINGS)
     else:
         settings.init()
     setup_logger()
-    create_data_file()
-    SetRule().rss_feed()
+    bangumi_data = load_data_file()
+    download_client = DownloadClient()
+    download_client.rss_feed()
+    rss_collector = RSSCollector()
+    renamer = Renamer(download_client)
     while True:
-        CollectRSS().run()
-        SetRule().run()
-        qBittorrentRename().run()
-        time.sleep(settings.sleep_time)
+        try:
+            rss_collector.collect(bangumi_data)
+            download_client.add_rules(bangumi_data["bangumi_info"])
+            renamer.run()
+            save_data_file(bangumi_data)
+            time.sleep(settings.sleep_time)
+        except Exception as e:
+            if args.debug:
+                raise e
+            logger.exception(e)
+
+if __name__ == "__main__":
+    run()
