@@ -75,7 +75,7 @@ class ParserLV2:
             if match_obj is not None:
                 return match_obj.group(2)
         for name in split:
-            if re.search("[\x00-\xff]{4}", name.strip()) is not None:
+            if re.search("[\u4e00-\u9fa5]", name.strip()) is None:
                 return name
         return split[0]
 

@@ -6,21 +6,20 @@ from conf import settings
 
 logger = logging.getLogger(__name__)
 
-rules = [
-    r"(.*)\[(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)",
-    r"(.*)\[E(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)",
-    r"(.*)\[第(\d*\.*\d*)话(?:END)?\](.*)",
-    r"(.*)\[第(\d*\.*\d*)話(?:END)?\](.*)",
-    r"(.*)第(\d*\.*\d*)话(?:END)?(.*)",
-    r"(.*)第(\d*\.*\d*)話(?:END)?(.*)",
-    r"(.*)- (\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)? (.*)",
-]
 
 
 class Renamer:
     def __init__(self, downloadClient: DownloadClient):
         self.client = downloadClient
-        self.rules = [re.compile(rule) for rule in rules]
+        self.rules = [
+                        r"(.*)\[(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)",
+                        r"(.*)\[E(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)",
+                        r"(.*)\[第(\d*\.*\d*)话(?:END)?\](.*)",
+                        r"(.*)\[第(\d*\.*\d*)話(?:END)?\](.*)",
+                        r"(.*)第(\d*\.*\d*)话(?:END)?(.*)",
+                        r"(.*)第(\d*\.*\d*)話(?:END)?(.*)",
+                        r"(.*)- (\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)? (.*)",
+                    ]
 
     def rename_normal(self, name):
         for rule in self.rules:
