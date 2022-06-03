@@ -19,7 +19,6 @@ DEFAULT_SETTINGS = {
     "rule_url": "https://raw.githubusercontent.com/EstrellaXD/Bangumi_Auto_Collector/main/AutoBangumi/config/rule.json",
     "rule_name_re": r"\:|\/|\.",
     "connect_retry_interval": 5,
-    "enable_eps_complete": False,
 }
 
 ENV_TO_ATTR = {

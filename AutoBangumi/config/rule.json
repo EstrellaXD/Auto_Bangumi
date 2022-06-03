@@ -30,12 +30,7 @@
             "爱恋&漫猫字幕组",
             "MingY",
             "VCB-Studio",
-            "虹咲学园烤肉同好会"
-        ],
-        "name_position": 1
-    },
-    {
-        "group_name": [
+            "虹咲学园烤肉同好会",
             "喵萌奶茶屋",
             "爱恋字母社",
             "诸神字幕组",
@@ -46,14 +41,21 @@
             "SweetSub&圆环记录攻略组",
             "动漫萌",
             "极影字幕社",
-            "喵萌Production"
+            "喵萌Production",
+            "ANi",
+            "爱恋字母社",
+            "熔岩字幕",
+            "熔岩动画",
+            "c.c动漫",
+            "霜庭云花Sub"
         ],
-        "name_position": 2
+        "type": 1
     },
     {
         "group_name": [
-            "爱恋字母社"
+            "澄空学园&华盟字幕社",
+            "PoInSu"
         ],
-        "name_position": 3
+        "type": 2
     }
 ]
