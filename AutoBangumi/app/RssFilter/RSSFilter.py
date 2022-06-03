@@ -2,7 +2,7 @@ import re
 import json
 import zhconv
 import logging
-from fliter_base import *
+# from fliter_base import *
 
 logger = logging.getLogger(__name__)
 handler = logging.FileHandler(
@@ -17,70 +17,71 @@ logger.level = logging.WARNING
 logger.addHandler(handler)
 
 const = {
-    "group_character":[
-            "字幕社",
-            "字幕组",
-            "字幕屋",
-            "发布组",
-            "连载组",
-            "动漫",
-            "国漫",
-            "汉化",
-            "raw",
-            "works",
-            "工作室",
-            "压制",
-            "合成",
-            "制作",
-            "搬运",
-            "委员会",
-            "家族",
-            "译制",
-            "动画",
-            "研究所",
-            "sub",
-            "翻译",
-            "联盟",
-            "dream",
-            "-rip",
-            "neo",
-            "team",
-            "百合组",
-            "慕留人",
-            "行动组",
-        ],
-    "group_char" : [
-            "dmhy",
-            "澄空学园",
-            "c.c动漫",
-            "vcb",
-            "amor",
-            "moozzi2",
-            "skytree",
-            "sweetsub",
-            "pcsub",
-            "ahu-sub",
-            "f宅",
-            "captions",
-            "dragsterps",
-            "onestar",
-            "lolihouse",
-            "天空树",
-            "妇联奶子",
-            "不够热",
-            "烤肉同好",
-            "卡通",
-            "时雨初空",
-            "nyaa",
-            "ddd",
-            "koten",
-            "reinforce",
-            "届恋对邦小队",
-            "cxraw",
-            "witex.io",
-        ]
+    "group_character": [
+        "字幕社",
+        "字幕组",
+        "字幕屋",
+        "发布组",
+        "连载组",
+        "动漫",
+        "国漫",
+        "汉化",
+        "raw",
+        "works",
+        "工作室",
+        "压制",
+        "合成",
+        "制作",
+        "搬运",
+        "委员会",
+        "家族",
+        "译制",
+        "动画",
+        "研究所",
+        "sub",
+        "翻译",
+        "联盟",
+        "dream",
+        "-rip",
+        "neo",
+        "team",
+        "百合组",
+        "慕留人",
+        "行动组",
+    ],
+    "group_char": [
+        "dmhy",
+        "澄空学园",
+        "c.c动漫",
+        "vcb",
+        "amor",
+        "moozzi2",
+        "skytree",
+        "sweetsub",
+        "pcsub",
+        "ahu-sub",
+        "f宅",
+        "captions",
+        "dragsterps",
+        "onestar",
+        "lolihouse",
+        "天空树",
+        "妇联奶子",
+        "不够热",
+        "烤肉同好",
+        "卡通",
+        "时雨初空",
+        "nyaa",
+        "ddd",
+        "koten",
+        "reinforce",
+        "届恋对邦小队",
+        "cxraw",
+        "witex.io",
+    ]
 }
 const["all_charactor"] = const["group_character"] + const["group_char"]
+
 
 class RSSInfoCleaner:
     class Name:
@@ -108,7 +109,7 @@ class RSSInfoCleaner:
             self.code = None
             self.source = None
 
-    def __init__(self, file_name):
+    def __init__(self):
         self.name = RSSInfoCleaner.Name()
         self.info = RSSInfoCleaner.Info()
         self.tag = RSSInfoCleaner.Tag()
@@ -207,17 +208,17 @@ class RSSInfoCleaner:
 
         self.name.raw = (
             str(file_name)
-                .replace("：", ":")
-                .replace("【", "[")
-                .replace("】", "]")
-                .replace("-", "-")
-                .replace("（", "(")
-                .replace("）", ")")
-                .replace("＆", "&")
-                .replace("X", "x")
-                .replace("×", "x")
-                .replace("Ⅹ", "x")
-                .replace("__", "/")
+            .replace("：", ":")
+            .replace("【", "[")
+            .replace("】", "]")
+            .replace("-", "-")
+            .replace("（", "(")
+            .replace("）", ")")
+            .replace("＆", "&")
+            .replace("X", "x")
+            .replace("×", "x")
+            .replace("Ⅹ", "x")
+            .replace("__", "/")
         )
 
     # 检索字幕组特征
@@ -233,8 +234,8 @@ class RSSInfoCleaner:
                         "[（(\[【]?(.*?(&%s|%s&).*?)[）)\]】]?" % (char, char),
                         self.file_name,
                     )
-                        .group(1)
-                        .lower()
+                    .group(1)
+                    .lower()
                 )
                 return "enforce"
             else:
@@ -311,8 +312,7 @@ class RSSInfoCleaner:
         return None
 
     # 扒了6W数据，硬找的参数，没啥说的
-    def get_dpi(self):
-        file_name = self.name.raw
+    def get_dpi(file_name):
         dpi_list = [
             "4k",
             "2160p",
@@ -360,8 +360,7 @@ class RSSInfoCleaner:
         return None
 
     # 获取语种
-    def get_language(self):
-        file_name = self.name.raw
+    def get_language(file_name):
         lang = []
         # 中文标示
         try:
@@ -370,8 +369,8 @@ class RSSInfoCleaner:
                     "[（(\[【 ]((tvb)?([粤简繁英俄][日中文体&/]?[_&]?){1,5})[）)\]】]?",
                     str(file_name),
                 )
-                    .group(1)
-                    .strip(" ")
+                .group(1)
+                .strip(" ")
             )
         except Exception as e:
             logger.info(e)
@@ -379,8 +378,8 @@ class RSSInfoCleaner:
         try:
             lang.append(
                 re.search("[（(\[【]?[粤中简繁英俄日文体](双?(语|字幕))[）)\]】]?", str(file_name))
-                    .group(1)
-                    .strip(" ")
+                .group(1)
+                .strip(" ")
             )
         except Exception as e:
             logger.info(e)
@@ -398,8 +397,7 @@ class RSSInfoCleaner:
             return None
 
     # 文件种类
-    def get_type(self):
-        file_name = self.name.raw
+    def get_type(file_name):
         type_list = []
         # 英文标示
         try:
@@ -408,8 +406,8 @@ class RSSInfoCleaner:
                     "[（(\[【]?(((mp4|mkv|mp3)[ -]?){1,3})[）)\]】]?",
                     str(file_name).lower(),
                 )
-                    .group(1)
-                    .strip(" ")
+                .group(1)
+                .strip(" ")
             )
         except Exception as e:
             logger.info(e)
@@ -419,8 +417,7 @@ class RSSInfoCleaner:
             return None
 
     # 编码格式
-    def get_code(self):
-        file_name = self.name.raw
+    def get_code(file_name):
         code = []
         # 视频编码
         try:
@@ -462,9 +459,9 @@ class RSSInfoCleaner:
                         "[（(\[【]?((bd|dvd|hd|remux|(viu)?tvb?|ani-one|bilibili|网飞(动漫)|b-?global|baha|web[ /-]?(dl|rip))[ -]?(b[o0]x|iso|mut|rip)?)[）)\]】]?",
                         file_name,
                     )
-                        .group(1)
-                        .lower()
-                        .strip(" ")
+                    .group(1)
+                    .lower()
+                    .strip(" ")
                 )
                 if res not in type_list:
                     type_list.append(res)
@@ -485,8 +482,8 @@ class RSSInfoCleaner:
         try:
             season.append(
                 re.search(" ?(第?(\d{1,2}|[一二三])(部|季|季度|丁目))", str(file_name))
-                    .group(1)
-                    .strip(" ")
+                .group(1)
+                .strip(" ")
             )
         except Exception as e:
             logger.info(e)
@@ -497,8 +494,8 @@ class RSSInfoCleaner:
                     "((final ?)?(season|[ \[]s) ?\d{1,2}|\d{1,2}-?choume)",
                     str(file_name),
                 )
-                    .group(1)
-                    .strip(" ")
+                .group(1)
+                .strip(" ")
             )
         except Exception as e:
             logger.info(e)
@@ -619,8 +616,8 @@ class RSSInfoCleaner:
                 re.search(
                     "[ （(\[【+](([ +]?(ass|pgs|srt)){1,3})[）)\]】]?", str(file_name)
                 )
-                    .group(1)
-                    .strip(" ")
+                .group(1)
+                .strip(" ")
             )
         except Exception as e:
             logger.info(e)
@@ -786,11 +783,11 @@ class RSSInfoCleaner:
                     return
                 # 英中
                 elif (
-                    re.search(
-                        "(^([a-z\d:\-_.。,，!！ ]* ?) ?)[._&]?([\u4e00-\u9fa5\u3040-\u31ffa-z\d:\-_·?？、.。，!！ ]{1,20})",
-                        self.Name.clean,
-                    )
-                    is not None
+                        re.search(
+                            "(^([a-z\d:\-_.。,，!！ ]* ?) ?)[._&]?([\u4e00-\u9fa5\u3040-\u31ffa-z\d:\-_·?？、.。，!！ ]{1,20})",
+                            self.Name.clean,
+                        )
+                        is not None
                 ):
                     res = re.search(
                         "(^([a-z\d:\-_.。,，!！ ]* ?) ?)[._&]?([\u4e00-\u9fa5\u3040-\u31ffa-z\d:\-_·?？、.。，!！ ]{1,20})",
@@ -815,7 +812,7 @@ class RSSInfoCleaner:
             print("初筛:\r\n%s\r\n%s\r\n%s" % (self.zh_list, self.en_list, self.jp_list))
 
         if (has_zh(self.name.clean) or has_jp(self.name.clean)) and has_en(
-            self.name.clean):
+                self.name.clean):
             self.name.clean = add_separator(self.name.clean)
         self.easy_split(self.name.clean, self.zh_list, self.en_list, self.jp_list)
 
@@ -896,6 +893,7 @@ if __name__ == "__main__":
                     if m_group is not None:
                         if type_list[m_type_num][m_type_i][type_j] in m_group:
                             return m_type_num, m_type_i
+
 
     # 遍历数据
     for i in range(0, len(name_list)):

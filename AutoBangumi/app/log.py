@@ -8,5 +8,5 @@ def setup_logger():
         level=logging.DEBUG,
         datefmt=DATE_FORMAT,
         format=LOGGING_FORMAT,
-        encoding="utf-8",
+        # encoding="utf-8",
     )
