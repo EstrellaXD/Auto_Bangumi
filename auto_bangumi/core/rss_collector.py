@@ -34,7 +34,7 @@ class RSSCollector:
                     if d["title"] == title:
                         break
                 else:
-                    if ep.number > 1 and settings.eps_complete:
+                    if ep.number > 1 and settings.enable_eps_complete:
                         download_past = True
                     else:
                         download_past = False
@@ -47,4 +47,4 @@ class RSSCollector:
                             "download_past": download_past
                         }
                     )
-                    logger.debug(f"add {title} Season {season.raw}")
+                    logger.info(f"add {title} Season {season.raw}")

@@ -43,9 +43,9 @@ class Renamer:
                 return new_name
 
     def print_result(self, torrent_count, rename_count):
-        logger.debug(f"已完成对{torrent_count}个文件的检查")
-        logger.debug(f"已对其中{rename_count}个文件进行重命名")
-        logger.debug(f"完成")
+        logger.info(f"已完成对{torrent_count}个文件的检查")
+        logger.info(f"已对其中{rename_count}个文件进行重命名")
+        logger.info(f"完成")
 
     def run(self):
         recent_info = self.client.get_torrent_info()

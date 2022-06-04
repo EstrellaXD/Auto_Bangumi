@@ -50,28 +50,30 @@ class DownloadClient:
         try:
             self.client.rss_remove_item(item_path="Mikan_RSS")
         except ConflictError:
-            logger.debug("No feed exists, starting adding feed.")
+            logger.info("No feed exists, starting adding feed.")
         try:
             self.client.rss_add_feed(url=settings.rss_link, item_path="Mikan_RSS")
-            logger.debug("Successes adding RSS Feed.")
+            logger.info("Successes adding RSS Feed.")
         except ConnectionError:
-            logger.debug("Error with adding RSS Feed.")
+            logger.warning("Error with adding RSS Feed.")
         except ConflictError:
-            logger.debug("RSS Already exists.")
+            logger.info("RSS Already exists.")
 
     def add_rules(self, bangumi_info):
-        logger.debug("Start adding rules.")
+        logger.info("Start adding rules.")
         for info in bangumi_info:
             if not info["added"]:
                 self.set_rule(info["title"], info["group"], info["season"])
                 info["added"] = True
-        logger.debug("Finished.")
+        logger.info("Finished.")
 
     def eps_collect(self, bangumi_info):
-        logger.debug("Start collect past eps.")
+        logger.info("Start collect past eps.")
         for info in bangumi_info:
-            if not info["download_past"]:
+            if info["download_past"]:
                 FullSeasonGet(info["group"], info["title"], info["season"]).run()
+                info["download_past"] = False
+        json_config.save(settings.info_path, bangumi_info,)
 
 
     def get_torrent_info(self):
@@ -83,7 +85,7 @@ class DownloadClient:
         self.client.torrents_rename_file(
             torrent_hash=hash, old_path=path_name, new_path=new_name
         )
-        logger.debug(f"{path_name} >> {new_name}")
+        logger.info(f"{path_name} >> {new_name}")
 
 
 if __name__ == "__main__":
