@@ -30,6 +30,7 @@ ENV_TO_ATTR = {
     "AB_GROUP_TAG": ("enable_group_tag", lambda e: e.lower() in ("true", "1", "t")),
     "AB_NOT_CONTAIN": "not_contain",
     "AB_RULE_DEBUG": ("get_rule_debug", lambda e: e.lower() in ("true", "1", "t")),
+    "AB_DEBUG_MODE": ("debug_mode", lambda e: e.lower() in ("true", "1", "t")),
     "AB_EP_COMPLETE": (
         "enable_eps_complete",
         lambda e: e.lower() in ("true", "1", "t"),
