@@ -4,15 +4,19 @@ services:
     container_name: AutoBangumi
     environment:
       - TZ=Asia/Shanghai
-      - TIME=1800
-      - HOST=localhost:8080
-      - USER=admin
-      - PASSWORD=adminadmin
-      - METHOD=pn
-      - GROUP_TAG=True
-      - NOT_CONTAIN=720
-      - DOWNLOAD_PATH=${DOWNLOAD_PATH}
-      - RSS=${RSS}
+      - AB_INTERVAL_TIME=1800
+      - AB_DOWNLOADER_HOST=localhost:8080
+      - AB_DOWNLOADER_USERNAME=admin
+      - AB_DOWNLOADER_PASSWORD=adminadmin
+      - AB_METHOD=pn
+      - AB_GROUP_TAG=True
+      - AB_NOT_CONTAIN=720
+      - AB_DOWNLOAD_PATH=${DOWNLOAD_PATH}
+      - AB_RSS=${RSS}
+      - AB_RULE_DEBUG=False
+      - AB_DEBUG_MODE=False
+      - AB_EP_COMPLETE=True
+      - AB_SEASON_ONE=True
     networks:
       - auto_bangumi
     dns:

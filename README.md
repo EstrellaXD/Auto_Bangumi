@@ -47,8 +47,8 @@
 ```dash
 docker run -d \
   --name=AutoBangumi \
-  -e DOWNLOAD_PATH=/path/downloads \
-  -e RSS=<YOUR_RSS_ADDRESS> \
+  -e AB_DOWNLOAD_PATH=/path/downloads \
+  -e AB_RSS=<YOUR_RSS_ADDRESS> \
   --network=host \
   --dns=8.8.8.8 \
   --restart unless-stopped \
@@ -57,7 +57,7 @@ docker run -d \
 
 **进阶部署:**
 
-Docker-Compose
+Docker-Compose（推荐）
 
 ```yaml
 version: '3.3'
@@ -66,15 +66,19 @@ services:
         container_name: AutoBangumi
         environment:
             - TZ=Asia/Shanghai
-            - TIME=1800
-            - HOST=localhost:8080
-            - USER=admin
-            - PASSWORD=adminadmin
-            - METHOD=pn
-            - GROUP_TAG=True
-            - NOT_CONTAIN=720
-            - DOWNLOAD_PATH=/path/downloads
-            - RSS=YOUR_RSS_ADDRESS
+            - AB_INTERVAL_TIME=1800
+            - AB_DOWNLOADER_HOST=localhost:8080
+            - AB_DOWNLOADER_USERNAME=admin
+            - AB_DOWNLOADER_PASSWORD=adminadmin
+            - AB_METHOD=pn
+            - AB_GROUP_TAG=True
+            - AB_NOT_CONTAIN=720
+            - AB_DOWNLOAD_PATH=${DOWNLOAD_PATH}
+            - AB_RSS=${RSS}
+            - AB_RULE_DEBUG=False
+            - AB_DEBUG_MODE=False
+            - AB_EP_COMPLETE=True
+            - AB_SEASON_ONE=True
         network_mode: host
         dns:
             - 8.8.8.8
@@ -89,15 +93,15 @@ Docker-cli
 docker run -d \
   --name=AutoBangumi \
   -e TZ=Asia/Shanghai \ #optional
-  -e TIME=1800 \ #optional
-  -e HOST=localhost:8080 \ #optional
-  -e USER=admin \ #optional
-  -e PASSWORD=adminadmin \ #optional
-  -e METHOD=pn \ #optional
-  -e GROUP_TAG=True \ #optional
-  -e DOWNLOAD_PATH=/path/downloads \
-  -e NOT_COTAIN=720 \
-  -e RSS=<YOUR_RSS_ADDRESS> \
+  -e AB_INTERVAL_TIME=1800 \ #optional
+  -e AB_DOWNLOADER_HOST=localhost:8080 \ #optional
+  -e AB_DOWNLOADER_USERNAME=admin \ #optional
+  -e AB_DOWNLOADER_PASSWORD=adminadmin \ #optional
+  -e AB_METHOD=pn \ #optional
+  -e AB_GROUP_TAG=True \ #optional
+  -e AB_DOWNLOAD_PATH=/path/downloads \
+  -e AB_NOT_COTAIN=720 \
+  -e AB_RSS=<YOUR_RSS_ADDRESS> \
   --network=host \
   --dns=8.8.8.8 \
   --restart unless-stopped \
