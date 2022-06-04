@@ -23,7 +23,7 @@ class DownloadClient:
             "enable": True,
             "mustContain": bangumi_name,
             "mustNotContain": settings.not_contain,
-            "useRegx": True,
+            "useRegex": True,
             "episodeFilter": "",
             "smartFilter": False,
             "previouslyMatchedEpisodes": [],

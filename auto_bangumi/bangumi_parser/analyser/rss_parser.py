@@ -64,23 +64,28 @@ class ParserLV2:
         return name, season_number, season_raw
 
     def name_process(self, name):
+        name = name.strip()
         split = re.split("/|  |-  ", name.replace("（仅限港澳台地区）", ""))
         while "" in split:
             split.remove("")
         if len(split) == 1:
-            if re.search("_{1}", split[0]) is not None:
-                split = re.split("_", split[0])
+            if re.search("_{1}", name) is not None:
+                split = re.split("_", name)
         if len(split) == 1:
-            if re.search(" - {1}", split[0]) is not None:
-                split = re.split("-", split[0])
+            if re.search(" - {1}", name) is not None:
+                split = re.split("-", name)
         if len(split) == 1:
-            match_obj = re.match(r"([^\x00-\xff]{1,}) ([\x00-\xff]{4,})", split[0])
+            match_obj = re.match(r"([^\x00-\xff]{1,})(\s)([\x00-\xff]{4,})", name)
             if match_obj is not None:
-                return match_obj.group(2)
+                return match_obj.group(3)
         for name in split:
-            if re.search("[\u4e00-\u9fa5]", name.strip()) is None:
+            compare = 0
+            l = re.findall("[aA-zZ]{1}", name).__len__()
+            if l > compare:
+                compare = l
+        for name in split:
+            if re.findall("[aA-zZ]{1}", name).__len__() == compare:
                 return name
-        return split[0]
 
     def process(self, raw_name):
         raw_name = raw_name.replace("【", "[").replace("】", "]")
