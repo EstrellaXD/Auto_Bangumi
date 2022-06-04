@@ -70,7 +70,7 @@ class DownloadClient:
     def eps_collect(self, bangumi_info):
         logger.debug("Start collect past eps.")
         for info in bangumi_info:
-            if "download_past" not in info:
+            if not info["download_past"]:
                 FullSeasonGet(info["group"], info["title"], info["season"]).run()
 
 

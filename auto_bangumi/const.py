@@ -10,7 +10,7 @@ DEFAULT_SETTINGS = {
     "method": "pn",
     "enable_group_tag": True,
     "info_path": "/config/bangumi.json",
-    "rule_path": "/config/rule.json",
+    "rule_path": "/config/rule_beta.json",
     "not_contain": "720",
     "get_rule_debug": False,
     "rule_url": "https://raw.githubusercontent.com/EstrellaXD/Bangumi_Auto_Collector/main/AutoBangumi/config/rule.json",

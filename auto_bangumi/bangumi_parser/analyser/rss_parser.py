@@ -18,7 +18,7 @@ class ParserLV2:
                 if re.search(group, name) is not None:
                     self.type = i["type"]
                     return group
-            logger.warning(f"no Group match {name}")
+            logger.warning(f"No Group matched with {name}.")
 
     def pre_process(self, raw_name):
         if re.search(r"新番|月?番", raw_name):
@@ -121,11 +121,12 @@ if __name__ == "__main__":
         for name in f:
             if name != "":
                 try:
-                    print(name)
-                    title, season, episode = parser.analyse(name)
-                    print(title)
-                    print(season)
-                    print(episode)
+                    parser.get_group(name)
+                    # title, season, episode = parser.analyse(name)
+                    # print(name)
+                    # print(title)
+                    # print(season)
+                    # print(episode)
                 except:
                     if (
                         re.search(

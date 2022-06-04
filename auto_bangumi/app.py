@@ -32,14 +32,16 @@ def save_data_file(bangumi_data):
 
 def run():
     args = parse()
-    if args.debug:
-        try:
-            from const_dev import DEV_SETTINGS
-        except ModuleNotFoundError:
-            logger.debug("Please copy `const_dev.sample.py` to `const_dev.py` to use custom settings")
-        settings.init(DEV_SETTINGS)
-    else:
-        settings.init()
+    from const_dev import DEV_SETTINGS
+    settings.init(DEV_SETTINGS)
+    # if args.debug:
+    #     try:
+    #         from const_dev import DEV_SETTINGS
+    #     except ModuleNotFoundError:
+    #         logger.debug("Please copy `const_dev.py` to `const_dev.py` to use custom settings")
+    #     settings.init(DEV_SETTINGS)
+    # else:
+    #     settings.init()
     setup_logger()
     bangumi_data = load_data_file()
     download_client = DownloadClient()
@@ -49,7 +51,7 @@ def run():
     while True:
         try:
             rss_collector.collect(bangumi_data)
-            if settings.ep_complete:
+            if settings.enable_eps_complete:
                 download_client.add_rules(bangumi_data["bangumi_info"])
             download_client.eps_collect(bangumi_data["bangumi_info"])
             renamer.run()
