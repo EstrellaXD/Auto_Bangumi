@@ -73,8 +73,6 @@ class DownloadClient:
             if info["download_past"]:
                 FullSeasonGet(info["group"], info["title"], info["season"]).run()
                 info["download_past"] = False
-        json_config.save(settings.info_path, bangumi_info,)
-
 
     def get_torrent_info(self):
         return self.client.torrents_info(

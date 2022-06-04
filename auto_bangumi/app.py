@@ -43,12 +43,12 @@ def run():
     else:
         settings.init()
     setup_logger()
-    bangumi_data = load_data_file()
     download_client = DownloadClient()
     download_client.rss_feed()
     rss_collector = RSSCollector()
     renamer = Renamer(download_client)
     while True:
+        bangumi_data = load_data_file()
         try:
             rss_collector.collect(bangumi_data)
             if settings.enable_eps_complete:

@@ -16,7 +16,8 @@ DEFAULT_SETTINGS = {
     "rule_url": "https://raw.githubusercontent.com/EstrellaXD/Bangumi_Auto_Collector/main/AutoBangumi/config/rule.json",
     "rule_name_re": r"\:|\/|\.",
     "connect_retry_interval": 5,
-    "debug_mode": True
+    "debug_mode": True,
+    "season_one_tag": True
 }
 
 ENV_TO_ATTR = {
@@ -33,8 +34,9 @@ ENV_TO_ATTR = {
     "AB_DEBUG_MODE": ("debug_mode", lambda e: e.lower() in ("true", "1", "t")),
     "AB_EP_COMPLETE": (
         "enable_eps_complete",
-        lambda e: e.lower() in ("true", "1", "t"),
+        lambda e: e.lower() in ("true", "1", "t")
     ),
+    "AB_SEASON_ONE": ("season_one_tag", lambda e: e.lower() in ("true", "1", "t"))
 }
 
 FULL_SEASON_SUPPORT_GROUP = ["Lilith-Raws"]

@@ -47,4 +47,4 @@ class RSSCollector:
                             "download_past": download_past
                         }
                     )
-                    logger.info(f"add {title} Season {season.raw}")
+                    logger.info(f"add {title} Season {season.number}")

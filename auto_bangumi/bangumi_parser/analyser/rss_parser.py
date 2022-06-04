@@ -43,7 +43,10 @@ class ParserLV2:
         if not seasons:
             name = name_season
             season_number = 1
-            season_raw = ""
+            if settings.season_one_tag:
+                season_raw = "S01"
+            else:
+                season_raw = ""
         else:
             name = re.sub(season_rule, "", name_season)
             for season in seasons:
