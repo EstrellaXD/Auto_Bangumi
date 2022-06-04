@@ -162,3 +162,4 @@ cython_debug/
 # Custom
 /auto_bangumi/const_dev.py
 /config/bangumi.json
+/auto_bangumi/tester.py

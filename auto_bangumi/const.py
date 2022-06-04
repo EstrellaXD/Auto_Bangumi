@@ -22,21 +22,18 @@ DEFAULT_SETTINGS = {
 
 ENV_TO_ATTR = {
     "AB_DOWNLOADER_HOST": "host_ip",
-    "AB_INTERVAL_TIME": ("sleep_time", lambda e: float(e)),
+    "AB_INTERVAL_TIME": "sleep_time",
     "AB_DOWNLOADER_USERNAME": "user_name",
     "AB_DOWNLOADER_PASSWORD": "password",
     "AB_RSS": "rss_link",
     "AB_DOWNLOAD_PATH": "download_path",
     "AB_METHOD": "method",
-    "AB_GROUP_TAG": ("enable_group_tag", lambda e: e.lower() in ("true", "1", "t")),
+    "AB_GROUP_TAG": "enable_group_tag",
     "AB_NOT_CONTAIN": "not_contain",
-    "AB_RULE_DEBUG": ("get_rule_debug", lambda e: e.lower() in ("true", "1", "t")),
-    "AB_DEBUG_MODE": ("debug_mode", lambda e: e.lower() in ("true", "1", "t")),
-    "AB_EP_COMPLETE": (
-        "enable_eps_complete",
-        lambda e: e.lower() in ("true", "1", "t")
-    ),
-    "AB_SEASON_ONE": ("season_one_tag", lambda e: e.lower() in ("true", "1", "t"))
+    "AB_RULE_DEBUG": "get_rule_debug",
+    "AB_DEBUG_MODE": "debug_mode",
+    "AB_EP_COMPLETE": "enable_eps_complete",
+    "AB_SEASON_ONE": "season_one_tag"
 }
 
 FULL_SEASON_SUPPORT_GROUP = ["Lilith-Raws"]

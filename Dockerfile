@@ -7,6 +7,8 @@ ADD requirements.txt .
 
 RUN pip install -r requirements.txt
 
+ENV TZ=Asia/Shanghai
+
 ADD ./auto_bangumi /auto_bangumi
 ADD ./config /config
 
