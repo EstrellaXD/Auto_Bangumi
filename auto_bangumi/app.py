@@ -42,7 +42,7 @@ def run():
             logger.debug("Please copy `const_dev.py` to `const_dev.py` to use custom settings")
         settings.init(DEV_SETTINGS)
     else:
-        init_switch()
+        # init_switch()
         settings.init()
     setup_logger()
     download_client = DownloadClient()

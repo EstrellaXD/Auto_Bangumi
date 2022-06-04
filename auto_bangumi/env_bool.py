@@ -19,5 +19,4 @@ def init_switch():
 
 if __name__ == "__main__":
     settings.init()
-    settings.sleep_time = float(settings.sleep_time)
-    print(type(settings.sleep_time))
+    print(type(settings.debug_mode))
