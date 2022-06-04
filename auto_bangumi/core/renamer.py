@@ -1,5 +1,6 @@
 import re
 import logging
+from pathlib import PurePath
 
 from conf import settings
 from core.download_client import DownloadClient
@@ -59,7 +60,7 @@ class Renamer:
                     info = recent_info[i]
                     name = info.name
                     hash = info.hash
-                    path_name = info.content_path.split("/")[-1]
+                    path_name = PurePath(info.content_path).name
                     new_name = method_dict[settings.method](name)
                     if path_name != new_name:
                         self.client.rename_torrent_file(hash, path_name, new_name)
