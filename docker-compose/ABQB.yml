@@ -1,4 +1,4 @@
-version: "3.3"
+version: "3.2"
 services:
   qbittorrent:
     container_name: qBittorrent
@@ -8,9 +8,9 @@ services:
       - SavePath=/downloads
       - PGID=1000
       - PUID=1000
-      - WEBUI_PORT=8080
+      - WEBUI_PORT=${QB_PORT}
     volumes:
-      - ${QB_CONFIG_PATH}:/config # 填入实际地址
+      - qb_config:/config # 填入实际地址
       - ${DOWNLOAD_PATH}:/downloads # 填入下载绝对路径
     ports:
       - 8080:8080
@@ -26,13 +26,13 @@ services:
     environment:
       - TZ=Asia/Shanghai
       - AB_INTERVAL_TIME=1800
-      - AB_DOWNLOADER_HOST=localhost:8080
+      - AB_DOWNLOADER_HOST=localhost:${QB_PORT}
       - AB_DOWNLOADER_USERNAME=admin
       - AB_DOWNLOADER_PASSWORD=adminadmin
       - AB_METHOD=pn
       - AB_GROUP_TAG=True
       - AB_NOT_CONTAIN=720
-      - AB_DOWNLOAD_PATH=${DOWNLOAD_PATH}
+      - AB_DOWNLOAD_PATH=/downloads/Bangumi
       - AB_RSS=${RSS}
       - AB_RULE_DEBUG=False
       - AB_DEBUG_MODE=False
@@ -50,3 +50,6 @@ services:
 
 networks:
   auto_bangumi:
+volumes:
+  qb_config:
+    external: false
