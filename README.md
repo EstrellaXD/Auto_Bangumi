@@ -9,6 +9,13 @@
     <img title="python version" src="https://img.shields.io/badge/python-3.10-blue" alt="">
     <img title="platform arch" src="https://img.shields.io/badge/arch-%20AMD64%20%2F%20ARM64-lightgrey" alt="">
 </p>
+<p align="center">
+    <font size="5">
+        <a herf="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/部署说明.md">部署说明</a>
+        /
+        <a herf="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/常见错误解决.md">常见问题排错</a>
+    </font>
+</p>
 
 # 项目说明
 
@@ -22,8 +29,6 @@
 基于 [infuse](https://firecore.com/infuse) 与 [Plex](https://plex.tv) 的效果如下：
 
 <img title="plex" src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/image/截屏2022-05-23%2020.47.39.png" alt="" width=50%><img title="infuse" src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/image/截屏2022-05-23%2020.48.02.png" alt="" width=50%>
-
-## [部署说明](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/部署说明.md) / [常见错误说明](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/常见错误解决.md)
 
 ## AutoBangumi 功能说明
 
