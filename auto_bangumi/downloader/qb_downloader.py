@@ -29,6 +29,9 @@ class QbDownloader:
                 )
             time.sleep(settings.connect_retry_interval)
 
+    def prefs_init(self, prefs):
+        return self._client.app_set_preferences(prefs=prefs)
+
     def torrents_info(self, status_filter, category):
         return self._client.torrents_info(status_filter, category)
 
@@ -42,7 +45,7 @@ class QbDownloader:
 
     def torrents_delete(self, hash):
         return self._client.torrents_delete(
-            delete_files=True,
+            delete_files=False,
             torrent_hashes=hash
         )
 

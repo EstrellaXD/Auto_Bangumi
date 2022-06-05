@@ -35,10 +35,6 @@ class RSSCollector:
                     if d["title"] == title:
                         break
                 else:
-                    if ep.number > 1 and settings.enable_eps_complete:
-                        download_past = True
-                    else:
-                        download_past = False
                     bangumi_data["bangumi_info"].append(
                         {
                             "title": title,
@@ -48,7 +44,7 @@ class RSSCollector:
                             "source": source,
                             "dpi": dpi,
                             "added": False,
-                            "download_past": download_past
+                            "download_past": ep.number > 1
                         }
                     )
                     logger.info(f"Adding {title} Season {season.number}")

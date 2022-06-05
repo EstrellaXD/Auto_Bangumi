@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 class ParserLV2:
     def __init__(self) -> None:
         self.info = json_config.load(settings.rule_path)
-        self.type = None
 
     def pre_process(self, raw_name):
         pro_name = raw_name.replace("【", "[").replace("】", "]")

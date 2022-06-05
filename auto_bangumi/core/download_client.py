@@ -19,6 +19,15 @@ class DownloadClient:
     def __init__(self):
         self.client = getClient()
 
+    def init_downloader(self):
+        prefs = {
+            "rss_auto_downloading_enabled": True,
+            "rss_max_articles_per_feed": 500,
+            "rss_processing_enabled": True,
+            "rss_refresh_interval": 30,
+        }
+        self.client.prefs_init(prefs=prefs)
+
     def set_rule(self, bangumi_name, group, season):
         rule = {
             "enable": True,
