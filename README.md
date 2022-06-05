@@ -9,13 +9,13 @@
     <img title="python version" src="https://img.shields.io/badge/python-3.10-blue" alt="">
     <img title="platform arch" src="https://img.shields.io/badge/arch-%20AMD64%20%2F%20ARM64-lightgrey" alt="">
 </p>
-<p align="center">
-    <font size="5">
-        <a herf="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/部署说明.md">部署说明</a>
-        <span>/</span>
-        <a herf="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/常见错误解决.md">常见问题排错</a>
-    </font>
-</p>
+
+
+## 如何开始
+
+**[部署说明](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/部署说明.md)**
+
+**[常见问题排错](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/常见错误解决.md)**
 
 # 项目说明
 
