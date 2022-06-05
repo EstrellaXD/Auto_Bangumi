@@ -23,7 +23,7 @@
 
 <img title="plex" src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/image/截屏2022-05-23%2020.47.39.png" alt="" width=50%><img title="infuse" src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/image/截屏2022-05-23%2020.48.02.png" alt="" width=50%>
 
-## [部署说明](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/Docs/部署说明.md) / [常见错误说明](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/Docs/常见错误解决.md)
+## [部署说明](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/部署说明.md) / [常见错误说明](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/常见错误解决.md)
 
 ## AutoBangumi 好在哪
 
