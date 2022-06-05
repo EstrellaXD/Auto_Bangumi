@@ -18,6 +18,7 @@ DEFAULT_SETTINGS = {
     "connect_retry_interval": 5,
     "debug_mode": True,
     "season_one_tag": True,
+    "remove_bad_torrent": False,
     "data_version": 3.0
 }
 
@@ -37,7 +38,8 @@ ENV_TO_ATTR = {
         "enable_eps_complete",
         lambda e: e.lower() in ("true", "1", "t")
     ),
-    "AB_SEASON_ONE": ("season_one_tag", lambda e: e.lower() in ("true", "1", "t"))
+    "AB_SEASON_ONE": ("season_one_tag", lambda e: e.lower() in ("true", "1", "t")),
+    "AB_REMOVE_BAD_BT": ("remove_bad_torrent", lambda e: e.lower() in ("true", "1", "t"))
 }
 
 FULL_SEASON_SUPPORT_GROUP = ["Lilith-Raws"]
