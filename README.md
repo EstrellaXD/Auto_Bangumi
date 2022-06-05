@@ -52,4 +52,7 @@
 # 声明
 感谢 [Sean](https://github.com/findix) 提供的大量帮助
 
+## *LICENCE*
+[MIT LICENCE](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/LICENSE)
+
 
