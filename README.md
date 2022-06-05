@@ -12,7 +12,7 @@
 <p align="center">
     <font size="5">
         <a herf="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/部署说明.md">部署说明</a>
-        /
+        <span>/</span>
         <a herf="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/常见错误解决.md">常见问题排错</a>
     </font>
 </p>
