@@ -19,6 +19,8 @@ services:
       - AB_SEASON_ONE=True
     networks:
       - auto_bangumi
+    volumes:
+      - auto_bangumi:/config
     dns:
       - 8.8.8.8
       - 223.5.5.5
@@ -27,3 +29,6 @@ services:
 
 networks:
   auto_bangumi:
+volumes:
+  auto_bangumi:
+    external: false

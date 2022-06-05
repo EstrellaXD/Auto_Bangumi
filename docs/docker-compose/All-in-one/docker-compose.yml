@@ -10,10 +10,10 @@ services:
       - PUID=${UID}
       - WEBUI_PORT=${QB_PORT}
     volumes:
-      - qb_config:/config # 填入实际地址
-      - ${DOWNLOAD_PATH}:/downloads # 填入下载绝对路径
+      - qb_config:/config
+      - ${DOWNLOAD_PATH}:/downloads
     ports:
-      - 8080:8080
+      - ${QB_PORT}:${QB_PORT}
       - 6881:6881
       - 6881:6881/udp
     networks:
@@ -40,6 +40,8 @@ services:
       - AB_SEASON_ONE=True
     networks:
       - auto_bangumi
+    volumes:
+      - auto_bangumi:/config
     dns:
       - 8.8.8.8
       - 223.5.5.5
@@ -70,5 +72,7 @@ volumes:
   qb_config:
     external: false
   plex_config:
+    external: false
+  auto_bangumi:
     external: false
 
