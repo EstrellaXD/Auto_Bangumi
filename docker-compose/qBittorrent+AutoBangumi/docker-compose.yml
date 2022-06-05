@@ -10,7 +10,7 @@ services:
       - PUID=1000
       - WEBUI_PORT=${QB_PORT}
     volumes:
-      - qb_config:/config # 填入实际地址
+      - qb_config:/config
       - ${DOWNLOAD_PATH}:/downloads # 填入下载绝对路径
     ports:
       - ${QB_PORT}:${QB_PORT}
