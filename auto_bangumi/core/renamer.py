@@ -43,9 +43,9 @@ class Renamer:
                 return new_name
 
     def print_result(self, torrent_count, rename_count):
-        logger.info(f"已完成对{torrent_count}个文件的检查")
-        logger.info(f"已对其中{rename_count}个文件进行重命名")
-        logger.info(f"完成")
+        logger.info(f"Finished checking {torrent_count} file's name.")
+        logger.info(f"Renamed {rename_count} files.")
+        logger.info(f"Finished rename process.")
 
     def run(self):
         recent_info = self.client.get_torrent_info()
@@ -66,7 +66,7 @@ class Renamer:
                         self.client.rename_torrent_file(hash, path_name, new_name)
                         rename_count += 1
                 except:
-                    logger.warning(f"{info.name} rename fail")
+                    logger.warning(f"{info.name} rename failed")
                     if settings.remove_bad_torrent:
                         self.client.delete_torrent(info.hash)
             self.print_result(torrent_count, rename_count)

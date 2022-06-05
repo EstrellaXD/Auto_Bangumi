@@ -1,6 +1,7 @@
 import re
 import logging
 import os
+import time
 
 from downloader import getClient
 from downloader.exceptions import ConflictError
@@ -51,10 +52,10 @@ class DownloadClient:
         try:
             self.client.rss_remove_item(item_path="Mikan_RSS")
         except ConflictError:
-            logger.info("No feed exists, starting adding feed.")
+            logger.info("No feed exists, start adding feed.")
         try:
             self.client.rss_add_feed(url=settings.rss_link, item_path="Mikan_RSS")
-            logger.info("Successes adding RSS Feed.")
+            logger.info("Add RSS Feed successfully.")
         except ConnectionError:
             logger.warning("Error with adding RSS Feed.")
         except ConflictError:
@@ -69,7 +70,7 @@ class DownloadClient:
         logger.info("Finished.")
 
     def eps_collect(self, bangumi_info):
-        logger.info("Start collect past eps.")
+        logger.info("Start collecting past episodes.")
         for info in bangumi_info:
             if info["download_past"]:
                 downloads = FullSeasonGet(
@@ -85,6 +86,7 @@ class DownloadClient:
                         save_path=download["save_path"],
                         category="Bangumi"
                     )
+                    time.sleep(0.1)
                 info["download_past"] = False
 
     def get_torrent_info(self):

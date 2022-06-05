@@ -55,6 +55,7 @@ def run():
     download_client.rss_feed()
     rss_collector = RSSCollector()
     renamer = Renamer(download_client)
+    loop = 0
     while True:
         bangumi_data = load_data_file()
         try:
@@ -62,6 +63,9 @@ def run():
             if settings.enable_eps_complete:
                 download_client.eps_collect(bangumi_data["bangumi_info"])
             download_client.add_rules(bangumi_data["bangumi_info"])
+            if loop == 0:
+                logger.info(f"Waiting for downloading torrents...")
+                time.sleep(600)
             renamer.run()
             save_data_file(bangumi_data)
             time.sleep(settings.sleep_time)
@@ -69,6 +73,7 @@ def run():
             if args.debug:
                 raise e
             logger.exception(e)
+        loop += 1
 
 
 if __name__ == "__main__":
