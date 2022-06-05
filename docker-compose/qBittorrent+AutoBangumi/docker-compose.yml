@@ -13,7 +13,7 @@ services:
       - qb_config:/config # 填入实际地址
       - ${DOWNLOAD_PATH}:/downloads # 填入下载绝对路径
     ports:
-      - 8080:8080
+      - ${QB_PORT}:${QB_PORT}
       - 6881:6881
       - 6881:6881/udp
     networks:
