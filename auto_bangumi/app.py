@@ -7,7 +7,6 @@ from conf import settings
 from argument_parser import parse
 from log import setup_logger
 from utils import json_config
-from env_bool import init_switch
 
 from core.rss_collector import RSSCollector
 from core.download_client import DownloadClient

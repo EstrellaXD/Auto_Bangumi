@@ -3,7 +3,6 @@ import time
 
 from qbittorrentapi import Client, LoginFailed
 from qbittorrentapi.exceptions import Conflict409Error
-from tomlkit import item
 
 from conf import settings
 

@@ -20,4 +20,4 @@ coverage.xml
 .hypothesis
 
 auto_bangumi/const_dev.py
-config/bangumi.json
+config/bangumi.json/config/bangumi.json

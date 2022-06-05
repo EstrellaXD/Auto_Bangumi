@@ -2,7 +2,6 @@ import os.path
 import re
 
 import requests
-from qbittorrentapi import Client
 from bs4 import BeautifulSoup
 import logging
 
@@ -58,8 +57,3 @@ class FullSeasonGet:
         return downloads
 
 
-if __name__ == "__main__":
-    a = FullSeasonGet("Lilith-Raws", "Shijou Saikyou no Daimaou", "S01")
-    a.run()
-    for torrent in a.torrents:
-        logger.debug(torrent["url"])

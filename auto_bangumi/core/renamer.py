@@ -8,7 +8,6 @@ from core.download_client import DownloadClient
 logger = logging.getLogger(__name__)
 
 
-
 class Renamer:
     def __init__(self, downloadClient: DownloadClient):
         self.client = downloadClient
@@ -30,13 +29,13 @@ class Renamer:
                 return new_name
 
     def rename_pn(self, name):
-        n = re.split(r"\[|\]", name)
+        n = re.split(r"[\[\]]", name)
         file_name = name.replace(f"[{n[1]}]", "")
         for rule in self.rules:
             matchObj = re.match(rule, file_name, re.I)
             if matchObj is not None:
                 new_name = re.sub(
-                    r"\[|\]",
+                    r"[\[\]]",
                     "",
                     f"{matchObj.group(1).strip()} E{matchObj.group(2)}{n[-1]}",
                 )
@@ -71,7 +70,3 @@ class Renamer:
                         self.client.delete_torrent(info.hash)
             self.print_result(torrent_count, rename_count)
 
-
-if __name__ == "__main__":
-    rename = Renamer()
-    rename.rename_pn("[Lilith-Raws] Shokei Shoujo no Virgin Road - 02 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]")

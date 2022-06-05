@@ -7,7 +7,6 @@ from downloader import getClient
 from downloader.exceptions import ConflictError
 
 from conf import settings
-from utils import json_config
 
 from core.eps_complete import FullSeasonGet
 
