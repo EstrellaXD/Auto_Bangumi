@@ -163,4 +163,5 @@ cython_debug/
 /auto_bangumi/const_dev.py
 /config/bangumi.json
 /auto_bangumi/tester.py
-!/source/names.txt
+/source/names.txt
+

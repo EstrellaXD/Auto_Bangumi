@@ -17,7 +17,6 @@ setup(
     packages=find_packages(where=".", exclude=("tests",), include=('*',)),
     package_data={"auto_bangumi.RssFilter": ["*.json"]},
     package_dir={"auto_bangumi": "auto_bangumi"},
-    data_files=[("config", ["config/rule_bata.json"])],
     install_requires= [
         "qbittorrent-api",
         "bs4",
