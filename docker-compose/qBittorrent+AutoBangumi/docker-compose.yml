@@ -6,8 +6,8 @@ services:
       - TZ=Asia/Shanghai
       - TemPath=/downloads
       - SavePath=/downloads
-      - PGID=1000
-      - PUID=1000
+      - PGID=${GID}
+      - PUID=${UID}
       - WEBUI_PORT=${QB_PORT}
     volumes:
       - qb_config:/config

@@ -6,8 +6,8 @@ services:
       - TZ=Asia/Shanghai
       - TemPath=/downloads
       - SavePath=/downloads
-      - PGID=1000
-      - PUID=1000
+      - PGID=${GID}
+      - PUID=${UID}
       - WEBUI_PORT=${QB_PORT}
     volumes:
       - qb_config:/config # 填入实际地址
@@ -52,14 +52,14 @@ services:
     container_name: Plex
     environment:
       - TZ=Asia/Shanghai
-      - PUID=1000
-      - PGID=1000
+      - PUID=${UID}
+      - PGID=${GID}
       - VERSION=docker
     networks:
       - host
     volumes:
       - plex_config:/config
-      - $DOWNLOAD_PATH}/Bangumi:/tv
+      - ${DOWNLOAD_PATH}/Bangumi:/tv
     restart: unless-stopped
     image: lscr.io/linuxserver/plex:latest
 
