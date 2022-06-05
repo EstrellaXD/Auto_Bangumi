@@ -25,11 +25,33 @@
 
 ## [部署说明](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/部署说明.md) / [常见错误说明](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/常见错误解决.md)
 
-## AutoBangumi 好在哪
+## AutoBangumi 功能说明
 
-- 只需单次配置
-- 修改文件名但是不破坏作种
-- 傻瓜式文件整理
+- 简易单词配置就能持续使用
+- 无需介入的 `RSS` 解析器，解析番组信息并且自动生成下载规则。
+- 番剧文件整理:
+    ```
+    downloader
+    ├── bangumi_A_title
+    │   ├── SO1
+    │   │   ├── A E01.mp4
+    │   │   ├── A E02.mp4
+    │   │   ├── A E03.mp4
+    │   │   ├── A E04.mp4
+    │   ├── SO2
+    │   │   ├── A E01.mp4
+    │   │   ├── A E02.mp4
+    │   │   ├── A E03.mp4
+    │   │   ├── A E04.mp4
+    ```
+- 全自动重命名，重命名后 95% 以上的番剧可以直接被媒体库软件直接刮削
+    ```
+  [Lilith-Raws] Kakkou no Iinazuke - 07 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4].mp4 
+  >>
+   Kakkou no Iinazuke E07.mp4
+  ```
+- 季中追番可以补全当季遗漏的所有剧集
+- 无需维护完全无感的使用体验
 
 ## 相关群组
 
