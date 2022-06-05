@@ -56,8 +56,8 @@ class Renamer:
             logger.error(f"error method")
         else:
             for i in range(0, torrent_count):
+                info = recent_info[i]
                 try:
-                    info = recent_info[i]
                     name = info.name
                     hash = info.hash
                     path_name = PurePath(info.content_path).name
@@ -66,7 +66,7 @@ class Renamer:
                         self.client.rename_torrent_file(hash, path_name, new_name)
                         rename_count += 1
                 except:
-                    self.client.delete_torrent(hash)
+                    self.client.delete_torrent(info.hash)
                     logger.warning(f"{name} rename fail")
             self.print_result(torrent_count, rename_count)
 

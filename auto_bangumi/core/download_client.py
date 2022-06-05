@@ -100,7 +100,7 @@ class DownloadClient:
 
     def delete_torrent(self, hash):
         self.client.torrents_delete(
-            torrent_hash=hash
+            hash
         )
         logger.info(f"Remove bad torrents.")
 
