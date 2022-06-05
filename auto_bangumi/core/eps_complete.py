@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class FullSeasonGet:
-    def __init__(self, group, bangumi_name, season, sub, source):
+    def __init__(self, group, bangumi_name, season, sub, source, dpi):
         self.bangumi_name = re.sub(settings.rule_name_re, " ", bangumi_name).strip()
         if group is not None:
             self.group = group
@@ -27,14 +27,17 @@ class FullSeasonGet:
             self.source = source
         else:
             self.source = ""
+        self.dpi = dpi
 
     def get_season_rss(self):
         if self.season == "S01":
             season = ""
         else:
             season = self.season
+        search_str = re.sub(r"[& ]", "+",
+                            f"{self.group}+{self.bangumi_name}+{season}+{self.subtitle}+{self.source}+{self.dpi}")
         season = requests.get(
-            f"https://mikanani.me/RSS/Search?searchstr={self.group}+{self.bangumi_name}+{season}+{self.subtitle}+{self.source}+1080"
+            f"https://mikanani.me/RSS/Search?searchstr={search_str}"
         )
         soup = BeautifulSoup(season.content, "xml")
         torrents = soup.find_all("enclosure")

@@ -78,7 +78,8 @@ class DownloadClient:
                     info["title"],
                     info["season"],
                     info["subtitle"],
-                    info["source"]
+                    info["source"],
+                    info["dpi"]
                 ).add_torrents_info()
                 for download in downloads:
                     self.client.torrents_add(

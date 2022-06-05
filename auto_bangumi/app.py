@@ -63,11 +63,11 @@ def run():
             if settings.enable_eps_complete:
                 download_client.eps_collect(bangumi_data["bangumi_info"])
             download_client.add_rules(bangumi_data["bangumi_info"])
+            save_data_file(bangumi_data)
             if loop == 0:
                 logger.info(f"Waiting for downloading torrents...")
                 time.sleep(600)
             renamer.run()
-            save_data_file(bangumi_data)
             time.sleep(settings.sleep_time)
         except Exception as e:
             if args.debug:
