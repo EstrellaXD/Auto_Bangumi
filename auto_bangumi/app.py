@@ -27,6 +27,7 @@ def load_data_file():
     else:
         bangumi_data = json_config.load(info_path)
         if bangumi_data["data_version"] != settings.data_version:
+            bangumi_data["data_version"] = settings.data_version
             bangumi_data["bangumi_info"] = []
     return bangumi_data
 
