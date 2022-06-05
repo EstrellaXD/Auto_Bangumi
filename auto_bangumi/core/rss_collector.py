@@ -30,6 +30,7 @@ class RSSCollector:
             episode = self._simple_analyser.analyse(name)
             if episode:
                 group, title, season, ep = episode.group, episode.title, episode.season_info, episode.ep_info
+                sub, dpi, source = episode.subtitle, episode.dpi, episode.source
                 for d in bangumi_data["bangumi_info"]:
                     if d["title"] == title:
                         break
@@ -43,6 +44,9 @@ class RSSCollector:
                             "title": title,
                             "season": season.raw,
                             "group": group,
+                            "subtitle": sub,
+                            "source": source,
+                            "dpi": dpi,
                             "added": False,
                             "download_past": download_past
                         }

@@ -39,6 +39,12 @@ class QbDownloader:
             category=category,
         )
 
+    def torrents_delete(self, hash):
+        return self._client.torrents_delete(
+            delete_files=True,
+            torrent_hashes=hash
+        )
+
     def torrents_rename_file(self, torrent_hash, old_path, new_path):
         self._client.torrents_rename_file(torrent_hash=torrent_hash, old_path=old_path, new_path=new_path)
 

@@ -7,19 +7,26 @@ from bs4 import BeautifulSoup
 import logging
 
 from conf import settings
-from const import FULL_SEASON_SUPPORT_GROUP
-from downloader import getClient
 
 logger = logging.getLogger(__name__)
 
 
 class FullSeasonGet:
-    def __init__(self, group, bangumi_name, season):
-        self.torrents = None
-        self.bangumi_name = bangumi_name
-        self.group = group
+    def __init__(self, group, bangumi_name, season, sub, source):
+        self.bangumi_name = re.sub(settings.rule_name_re, " ", bangumi_name).strip()
+        if group is not None:
+            self.group = group
+        else:
+            self.group = ""
         self.season = season
-        self.client = getClient()
+        if sub is not None:
+            self.subtitle = sub
+        else:
+            self.subtitle = ""
+        if source is not None:
+            self.source = source
+        else:
+            self.source = ""
 
     def get_season_rss(self):
         if self.season == "S01":
@@ -27,28 +34,25 @@ class FullSeasonGet:
         else:
             season = self.season
         season = requests.get(
-            f"https://mikanani.me/RSS/Search?searchstr={self.group}+{self.bangumi_name}+{season}+1080"
+            f"https://mikanani.me/RSS/Search?searchstr={self.group}+{self.bangumi_name}+{season}+{self.subtitle}+{self.source}+1080"
         )
         soup = BeautifulSoup(season.content, "xml")
-        self.torrents = soup.find_all("enclosure")
+        torrents = soup.find_all("enclosure")
+        return torrents
 
-    def add_torrents(self):
-        for torrent in self.torrents:
-            self.client.torrents_add(
-                urls=torrent["url"],
-                save_path=str(
-                    os.path.join(
+    def add_torrents_info(self):
+        torrents = self.get_season_rss()
+        downloads = []
+        for torrent in torrents:
+            download_info = {
+                "url": torrent["url"],
+                "save_path": os.path.join(
                         settings.download_path,
-                        re.sub(settings.rule_name_re, " ", self.bangumi_name),
+                        self.bangumi_name,
                         self.season)
-                ),
-                category="Bangumi",
-            )
-
-    def run(self):
-        if self.group in FULL_SEASON_SUPPORT_GROUP:
-            self.get_season_rss()
-            self.add_torrents()
+            }
+            downloads.append(download_info)
+        return downloads
 
 
 if __name__ == "__main__":

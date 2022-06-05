@@ -21,6 +21,7 @@ class Episode:
             self.raw: str = None
             self.number: int = None
 
+
     @property
     def title(self) -> str:
         return self.title_info.name
@@ -34,5 +35,6 @@ class Episode:
         self.title_info = Episode.TitleInfo()
         self.season_info = Episode.SeasonInfo()
         self.ep_info = Episode.EpisodeInfo()
-        self.format: str = None
+        self.dpi: str = None
         self.subtitle: str = None
+        self.source: str = None

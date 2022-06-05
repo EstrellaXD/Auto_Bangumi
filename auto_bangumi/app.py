@@ -20,9 +20,14 @@ logger = logging.getLogger(__name__)
 def load_data_file():
     info_path = settings.info_path
     if not os.path.exists(info_path):
-        bangumi_data = {"rss_link": "", "bangumi_info": []}
+        bangumi_data = {"rss_link": "",
+                        "data_version": settings.data_version,
+                        "bangumi_info": []
+                        }
     else:
         bangumi_data = json_config.load(info_path)
+        if bangumi_data["data_version"] != settings.data_version:
+            bangumi_data["bangumi_info"] = []
     return bangumi_data
 
 

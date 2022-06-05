@@ -17,7 +17,8 @@ DEFAULT_SETTINGS = {
     "rule_name_re": r"\:|\/|\.",
     "connect_retry_interval": 5,
     "debug_mode": True,
-    "season_one_tag": True
+    "season_one_tag": True,
+    "data_version": 3.0
 }
 
 ENV_TO_ATTR = {

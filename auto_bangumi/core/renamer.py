@@ -66,6 +66,7 @@ class Renamer:
                         self.client.rename_torrent_file(hash, path_name, new_name)
                         rename_count += 1
                 except:
+                    self.client.delete_torrent(hash)
                     logger.warning(f"{name} rename fail")
             self.print_result(torrent_count, rename_count)
 

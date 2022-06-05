@@ -12,15 +12,15 @@ class ParserLV2:
         self.info = json_config.load(settings.rule_path)
         self.type = None
 
-    def get_group(self, name):
-        for i in self.info:
-            for group in i["group_name"]:
-                if re.search(group, name) is not None:
-                    self.type = i["type"]
-                    return group
-            logger.warning(f"No Group matched with {name}.")
-
     def pre_process(self, raw_name):
+        pro_name = raw_name.replace("【", "[").replace("】", "]")
+        return pro_name
+
+    def get_group(self, name):
+        group = re.split(r"[\[\]]", name)[1]
+        return group
+
+    def second_process(self, raw_name):
         if re.search(r"新番|月?番", raw_name):
             pro_name = re.sub(".*新番.", "", raw_name)
         else:
@@ -71,8 +71,7 @@ class ParserLV2:
         if len(split) == 1:
             if re.search("_{1}", name) is not None:
                 split = re.split("_", name)
-        if len(split) == 1:
-            if re.search(" - {1}", name) is not None:
+            elif re.search(" - {1}", name) is not None:
                 split = re.split("-", name)
         if len(split) == 1:
             match_obj = re.match(r"([^\x00-\xff]{1,})(\s)([\x00-\xff]{4,})", name)
@@ -87,30 +86,45 @@ class ParserLV2:
             if re.findall("[aA-zZ]{1}", name).__len__() == compare:
                 return name
 
+    def find_tags(self, other):
+        elements = re.sub(r"[\[\]()（）]", " ", other).split(" ")
+        while "" in elements:
+            elements.remove("")
+        # find CHT
+        sub = None
+        dpi = None
+        source = None
+        for element in elements:
+            if re.search(r"[简繁日字幕]|CH|BIG5|GB", element) is not None:
+                sub = element.replace("_MP4","")
+            elif re.search(r"1080|720|2160|4K", element) is not None:
+                dpi = element
+            elif re.search(r"B-Global|[Bb]aha|[Bb]ilibili|AT-X|Web", element) is not None:
+                source = element
+        return sub, dpi, source
+
     def process(self, raw_name):
-        raw_name = raw_name.replace("【", "[").replace("】", "]")
+        raw_name = self.pre_process(raw_name)
+        group = self.get_group(raw_name)
         match_obj = re.match(
             r"(.*|\[.*])( -? \d{1,3} |\[\d{1,3}]|\[\d{1,3}.?[vV]\d{1}]|[第第]\d{1,3}[话話集集]|\[\d{1,3}.?END])(.*)",
             raw_name,
         )
-        name_season = self.pre_process(match_obj.group(1))
+        name_season = self.second_process(match_obj.group(1))
         name, season_number, season_raw = self.season_process(name_season)
         name = self.name_process(name).strip()
         episode = int(re.findall(r"\d{1,3}", match_obj.group(2))[0])
         other = match_obj.group(3).strip()
-        language = None
-        return name, season_number, season_raw, episode
+        sub, dpi, source= self.find_tags(other)
+        return group, name, season_number, season_raw, episode, sub, dpi, source
 
     def analyse(self, raw) -> Episode:
         try:
             info = Episode()
-            info.group = self.get_group(raw)
-            name, season, season_raw, episode = self.process(raw)
-            info.title = name
-            info.season_info.number = season
-            info.season_info.raw = season_raw
-            info.ep_info.number = episode
-
+            info.group, info.title, info.season_info.number,\
+            info.season_info.raw, info.ep_info.number,\
+            info.subtitle, info.dpi, info.source \
+                = self.process(raw)
             return info
         except:
             logger.warning(f"ERROR match {raw}")
@@ -129,8 +143,8 @@ if __name__ == "__main__":
         for name in f:
             if name != "":
                 try:
-                    parser.get_group(name)
-                    # title, season, episode = parser.analyse(name)
+                    # parser.get_group(name)
+                    title, season, episode = parser.analyse(name)
                     # print(name)
                     # print(title)
                     # print(season)

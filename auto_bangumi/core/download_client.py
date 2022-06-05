@@ -46,6 +46,7 @@ class DownloadClient:
             rule_name = bangumi_name
         self.client.rss_set_rule(rule_name=rule_name, rule_def=rule)
 
+
     def rss_feed(self):
         try:
             self.client.rss_remove_item(item_path="Mikan_RSS")
@@ -71,7 +72,19 @@ class DownloadClient:
         logger.info("Start collect past eps.")
         for info in bangumi_info:
             if info["download_past"]:
-                FullSeasonGet(info["group"], info["title"], info["season"]).run()
+                downloads = FullSeasonGet(
+                    info["group"],
+                    info["title"],
+                    info["season"],
+                    info["subtitle"],
+                    info["source"]
+                ).add_torrents_info()
+                for download in downloads:
+                    self.client.torrents_add(
+                        urls=download["url"],
+                        save_path=download["save_path"],
+                        category="Bangumi"
+                    )
                 info["download_past"] = False
 
     def get_torrent_info(self):
@@ -84,6 +97,12 @@ class DownloadClient:
             torrent_hash=hash, old_path=path_name, new_path=new_name
         )
         logger.info(f"{path_name} >> {new_name}")
+
+    def delete_torrent(self, hash):
+        self.client.torrents_delete(
+            torrent_hash=hash
+        )
+        logger.info(f"Remove bad torrents.")
 
 
 if __name__ == "__main__":
