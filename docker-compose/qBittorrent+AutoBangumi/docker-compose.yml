@@ -36,7 +36,7 @@ services:
       - AB_RSS=${RSS}
       - AB_RULE_DEBUG=False
       - AB_DEBUG_MODE=False
-      - AB_EP_COMPLETE=True
+      - AB_EP_COMPLETE=False
       - AB_SEASON_ONE=True
     networks:
       - auto_bangumi
