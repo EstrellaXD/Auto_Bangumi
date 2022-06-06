@@ -51,7 +51,7 @@ def run():
         # init_switch()
         settings.init()
     setup_logger()
-    time.sleep(10)
+    time.sleep(3)
     download_client = DownloadClient()
     download_client.init_downloader()
     download_client.rss_feed()

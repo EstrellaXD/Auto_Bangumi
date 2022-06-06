@@ -9,15 +9,14 @@ logger = logging.getLogger(__name__)
 
 class ParserLV2:
     def __init__(self) -> None:
-        self.info = json_config.load(settings.rule_path)
+        self._info = Episode()
 
     def pre_process(self, raw_name):
         pro_name = raw_name.replace("【", "[").replace("】", "]")
         return pro_name
 
     def get_group(self, name):
-        group = re.split(r"[\[\]]", name)[1]
-        return group
+        self._info.group = re.split(r"[\[\]]", name)[1]
 
     def second_process(self, raw_name):
         if re.search(r"新番|月?番", raw_name):
@@ -115,16 +114,15 @@ class ParserLV2:
         episode = int(re.findall(r"\d{1,3}", match_obj.group(2))[0])
         other = match_obj.group(3).strip()
         sub, dpi, source= self.find_tags(other)
-        return group, name, season_number, season_raw, episode, sub, dpi, source
+        return name, season_number, season_raw, episode, sub, dpi, source
 
     def analyse(self, raw) -> Episode:
         try:
-            info = Episode()
-            info.group, info.title, info.season_info.number,\
-            info.season_info.raw, info.ep_info.number,\
-            info.subtitle, info.dpi, info.source \
+            self._info.title, self._info.season_info.number,\
+            self._info.season_info.raw, self._info.ep_info.number,\
+            self._info.subtitle, self._info.dpi, self._info.source \
                 = self.process(raw)
-            return info
+            return self._info
         except:
             logger.warning(f"ERROR match {raw}")
 

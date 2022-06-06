@@ -36,7 +36,7 @@ class QbDownloader:
 
     def torrents_add(self, urls, save_path, category):
         return self._client.torrents_add(
-            is_paused=False,
+            is_paused=settings.add_pause,
             urls=urls,
             save_path=save_path,
             category=category,

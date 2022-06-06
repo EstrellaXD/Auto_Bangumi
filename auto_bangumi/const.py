@@ -11,13 +11,13 @@ DEFAULT_SETTINGS = {
     "enable_group_tag": True,
     "info_path": "/config/bangumi.json",
     "not_contain": "720",
-    "get_rule_debug": False,
     "rule_url": "https://raw.githubusercontent.com/EstrellaXD/Bangumi_Auto_Collector/main/AutoBangumi/config/rule.json",
     "rule_name_re": r"\:|\/|\.",
     "connect_retry_interval": 5,
-    "debug_mode": True,
+    "debug_mode": False,
     "season_one_tag": True,
     "remove_bad_torrent": False,
+    "add_pause": False,
     "data_version": 3.0
 }
 
@@ -31,7 +31,6 @@ ENV_TO_ATTR = {
     "AB_METHOD": "method",
     "AB_GROUP_TAG": ("enable_group_tag", lambda e: e.lower() in ("true", "1", "t")),
     "AB_NOT_CONTAIN": "not_contain",
-    "AB_RULE_DEBUG": ("get_rule_debug", lambda e: e.lower() in ("true", "1", "t")),
     "AB_DEBUG_MODE": ("debug_mode", lambda e: e.lower() in ("true", "1", "t")),
     "AB_EP_COMPLETE": (
         "enable_eps_complete",
