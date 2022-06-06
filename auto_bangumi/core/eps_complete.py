@@ -34,7 +34,7 @@ class FullSeasonGet:
         else:
             season = self.season
         search_str = re.sub(r"[& ]", "+",
-                            f"{self.group}+{self.bangumi_name}+{season}+{self.subtitle}+{self.source}+{self.dpi}")
+                            f"{self.group} {self.bangumi_name} {season} {self.subtitle} {self.source} {self.dpi}")
         season = requests.get(
             f"https://mikanani.me/RSS/Search?searchstr={search_str}"
         )

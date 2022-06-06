@@ -1,4 +1,5 @@
 # -*- coding: UTF-8 -*-
+import os
 import logging
 import requests
 from bs4 import BeautifulSoup
@@ -24,7 +25,7 @@ class RSSCollector:
         for item in items:
             name = item.title.string
             # debug 用
-            if settings.get_rule_debug:
+            if settings.debug_mode:
                 logger.debug(f"Raw {name}")
             episode = self._simple_analyser.analyse(name)
             if episode:
@@ -34,6 +35,10 @@ class RSSCollector:
                     if d["title"] == title:
                         break
                 else:
+                    if ep.number > 1 and settings.enable_eps_complete:
+                        download_past = True
+                    else:
+                        download_past = False
                     bangumi_data["bangumi_info"].append(
                         {
                             "title": title,
@@ -43,7 +48,7 @@ class RSSCollector:
                             "source": source,
                             "dpi": dpi,
                             "added": False,
-                            "download_past": ep.number > 1
+                            "download_past": download_past
                         }
                     )
                     logger.info(f"Adding {title} Season {season.number}")

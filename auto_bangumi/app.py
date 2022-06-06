@@ -39,8 +39,6 @@ def save_data_file(bangumi_data):
 
 def run():
     args = parse()
-    # from const_dev import DEV_SETTINGS
-    # settings.init(DEV_SETTINGS)
     if args.debug:
         try:
             from const_dev import DEV_SETTINGS
@@ -48,16 +46,18 @@ def run():
             logger.debug("Please copy `const_dev.py` to `const_dev.py` to use custom settings")
         settings.init(DEV_SETTINGS)
     else:
-        # init_switch()
         settings.init()
     setup_logger()
     time.sleep(3)
     download_client = DownloadClient()
     download_client.init_downloader()
+    if settings.rss_link is None:
+        logger.error("Please add RIGHT RSS url.")
+        quit()
     download_client.rss_feed()
     rss_collector = RSSCollector()
     renamer = Renamer(download_client)
-    loop = 0
+    loop_zero = True
     while True:
         bangumi_data = load_data_file()
         try:
@@ -66,16 +66,16 @@ def run():
                 download_client.eps_collect(bangumi_data["bangumi_info"])
             download_client.add_rules(bangumi_data["bangumi_info"])
             save_data_file(bangumi_data)
-            if loop == 0:
+            if loop_zero:
                 logger.info(f"Waiting for downloading torrents...")
-                time.sleep(600)
+                time.sleep(0)
             renamer.run()
             time.sleep(settings.sleep_time)
         except Exception as e:
             if args.debug:
                 raise e
             logger.exception(e)
-        loop += 1
+        loop_zero = False
 
 
 if __name__ == "__main__":

@@ -39,7 +39,7 @@ class DownloadClient:
             "affectedFeeds": [settings.rss_link],
             "ignoreDays": 0,
             "lastMatch": "",
-            "addPaused": False,
+            "addPaused": settings.dev_debug,
             "assignedCategory": "Bangumi",
             "savePath": str(
                 os.path.join(
@@ -49,10 +49,7 @@ class DownloadClient:
                 )
             ),
         }
-        if settings.enable_group_tag:
-            rule_name = f"[{group}] {bangumi_name}"
-        else:
-            rule_name = bangumi_name
+        rule_name = f"[{group}] {bangumi_name}" if settings.enable_group_tag else bangumi_name
         self.client.rss_set_rule(rule_name=rule_name, rule_def=rule)
 
 
@@ -95,7 +92,7 @@ class DownloadClient:
                         save_path=download["save_path"],
                         category="Bangumi"
                     )
-                    time.sleep(0.1)
+                time.sleep(settings.connect_retry_interval)
                 info["download_past"] = False
 
     def get_torrent_info(self):

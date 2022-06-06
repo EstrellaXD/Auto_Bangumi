@@ -34,7 +34,6 @@ services:
       - AB_NOT_CONTAIN=720
       - AB_DOWNLOAD_PATH=/downloads/Bangumi
       - AB_RSS=${RSS}
-      - AB_RULE_DEBUG=False
       - AB_DEBUG_MODE=False
       - AB_EP_COMPLETE=False
       - AB_SEASON_ONE=True
@@ -58,7 +57,9 @@ services:
       - PGID=${GID}
       - VERSION=docker
     networks:
-      - host
+      - auto_bangumi
+    ports:
+      - 32400:32400
     volumes:
       - plex_config:/config
       - ${DOWNLOAD_PATH}/Bangumi:/tv

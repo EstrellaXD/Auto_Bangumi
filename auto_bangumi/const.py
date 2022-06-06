@@ -1,14 +1,13 @@
 # -*- encoding: utf-8 -*-
 
 DEFAULT_SETTINGS = {
-    "host_ip": "localhost:8080",
+    "host_ip": "localhost:8181",
     "sleep_time": 1800,
     "user_name": "admin",
     "password": "adminadmin",
-    "rss_link": "https://mikanani.me/RSS/classic",
     "download_path": "/downloads/Bangumi",
     "method": "pn",
-    "enable_group_tag": True,
+    "enable_group_tag": False,
     "info_path": "/config/bangumi.json",
     "not_contain": "720",
     "rule_url": "https://raw.githubusercontent.com/EstrellaXD/Bangumi_Auto_Collector/main/AutoBangumi/config/rule.json",
@@ -17,8 +16,9 @@ DEFAULT_SETTINGS = {
     "debug_mode": False,
     "season_one_tag": True,
     "remove_bad_torrent": False,
-    "add_pause": False,
-    "data_version": 3.0
+    "dev_debug": False,
+    "data_version": 3.0,
+    "enable_eps_complete": False
 }
 
 ENV_TO_ATTR = {

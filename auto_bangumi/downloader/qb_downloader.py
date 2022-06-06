@@ -24,7 +24,7 @@ class QbDownloader:
                 break
             except LoginFailed:
                 logger.warning(
-                    f"Can't log in qBittorrent Server {host} by {username}, retry in {settings.connect_retry_interval}"
+                    f"Can't login qBittorrent Server {host} by {username}, retry in {settings.connect_retry_interval}"
                 )
             time.sleep(settings.connect_retry_interval)
 
@@ -36,7 +36,7 @@ class QbDownloader:
 
     def torrents_add(self, urls, save_path, category):
         return self._client.torrents_add(
-            is_paused=settings.add_pause,
+            is_paused=settings.dev_debug,
             urls=urls,
             save_path=save_path,
             category=category,
