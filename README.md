@@ -44,10 +44,10 @@
     │   │   ├── A E03.mp4
     │   │   └── A E04.mp4
     │   └── SO2
-    │       ├── A E01.mp4
-    │       ├── A E02.mp4
-    │       ├── A E03.mp4
-    │       └── A E04.mp4
+    │       ├── A S02 E01.mp4
+    │       ├── A S02 E02.mp4
+    │       ├── A S02 E03.mp4
+    │       └── A S02 E04.mp4
     ├── bangumi_B_title
     │   └─── SO1
     ```
