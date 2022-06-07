@@ -63,7 +63,18 @@ class QbDownloader:
             self._client.rss_remove_item(item_path)
         except Conflict409Error as e:
             logger.exception(e)
+            logger.info("Add new RSS")
             raise ConflictError()
 
     def rss_set_rule(self, rule_name, rule_def):
         self._client.rss_set_rule(rule_name, rule_def)
+
+
+if __name__ == "__main__":
+    try:
+        from const_dev import DEV_SETTINGS
+    except ModuleNotFoundError:
+        logger.debug("Please copy `const_dev.py` to `const_dev.py` to use custom settings")
+    settings.init(DEV_SETTINGS)
+    client = QbDownloader(settings.host_ip, settings.user_name, settings.password)
+    client.rss_remove_item("Mikan_RSS")

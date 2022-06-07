@@ -29,6 +29,7 @@ def load_data_file():
         if bangumi_data["data_version"] != settings.data_version or bangumi_data["rss_link"] != settings.rss_link:
             bangumi_data["bangumi_info"] = []
             bangumi_data["rss_link"] = settings.rss_link
+            logger.info("Rebuilding data information...")
     return bangumi_data
 
 

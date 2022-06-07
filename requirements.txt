@@ -2,5 +2,4 @@ qbittorrent-api
 bs4
 requests
 lxml
-zhconv
 

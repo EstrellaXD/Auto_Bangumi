@@ -114,5 +114,13 @@ class DownloadClient:
 
 
 if __name__ == "__main__":
-    put = DownloadClient()
-    put.add_rules()
+    try:
+        from const_dev import DEV_SETTINGS
+    except ModuleNotFoundError:
+        logger.debug("Please copy `const_dev.py` to `const_dev.py` to use custom settings")
+    settings.init(DEV_SETTINGS)
+    client = getClient()
+    try:
+        client.rss_remove_item(item_path="Mikan_RSS")
+    except ConflictError:
+        logger.info("No feed exists, start adding feed.")
