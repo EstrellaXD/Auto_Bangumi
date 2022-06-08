@@ -26,7 +26,7 @@ services:
     environment:
       - TZ=Asia/Shanghai
       - AB_INTERVAL_TIME=1800
-      - AB_DOWNLOADER_HOST=localhost:${QB_PORT}
+      - AB_DOWNLOADER_HOST=qbittorrent:${QB_PORT}
       - AB_DOWNLOADER_USERNAME=admin
       - AB_DOWNLOADER_PASSWORD=adminadmin
       - AB_METHOD=pn
