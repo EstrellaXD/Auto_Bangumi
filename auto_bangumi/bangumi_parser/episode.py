@@ -8,6 +8,7 @@ class Episode:
         def __init__(self) -> None:
             self.raw: str = None
             self.name: str = None
+            self.official: str = None
 
     @dataclass
     class SeasonInfo:

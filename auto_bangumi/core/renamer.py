@@ -17,14 +17,14 @@ class Renamer:
         self.torrent_count = len(self.recent_info)
 
     def print_result(self):
-        logger.info(f"Finished checking {self.torrent_count} file's name.")
+        logger.info(f"Finished checking {self.torrent_count} files' name.")
         logger.info(f"Renamed {self.rename_count} files.")
         logger.info(f"Finished rename process.")
 
     def run(self):
         method_dict = {"pn": self._renamer.rename_pn, "normal": self._renamer.rename_normal}
         if settings.method not in method_dict:
-            logger.error(f"error method")
+            logger.error(f"Error method")
         else:
             for i in range(0, self.torrent_count):
                 info = self.recent_info[i]
@@ -35,11 +35,13 @@ class Renamer:
                     else PureWindowsPath(info.content_path).name
                 try:
                     new_name = method_dict[settings.method](name)
-                    logger.debug(f"{path_name}")
-                    logger.debug(f"{new_name}")
+                    logger.debug(f"Origin name: {path_name}")
+                    logger.debug(f"New name: {new_name}")
                     if path_name != new_name:
                         self.client.rename_torrent_file(hash, path_name, new_name)
                         self.rename_count += 1
+                    else:
+                        continue
                 except:
                     logger.warning(f"{path_name} rename failed")
                     if settings.remove_bad_torrent:

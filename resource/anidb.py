@@ -97,11 +97,11 @@ def get_title(id):
 
 
 if __name__ == "__main__":
-    ids = get_list(2022, 2)
+    ids = get_list(2022, 0)
     json = []
     for id in ids:
         data = get_title(id)
         print(data)
         time.sleep(2.5)
         json.append(data)
-    json_config.save("season_summer.json", json)
+    json_config.save("season_winter.json", json)

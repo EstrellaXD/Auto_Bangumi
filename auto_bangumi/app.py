@@ -74,7 +74,6 @@ def run():
         quit()
     download_client.rss_feed()
     rss_collector = RSSCollector()
-    renamer = Renamer(download_client)
     while True:
         bangumi_data = load_data_file()
         try:
@@ -87,7 +86,7 @@ def run():
                 time.sleep(settings.first_sleep)
                 bangumi_data["first_run"] = False
             save_data_file(bangumi_data)
-            renamer.run()
+            Renamer(download_client).run()
             time.sleep(settings.sleep_time)
         except Exception as e:
             if args.debug:
