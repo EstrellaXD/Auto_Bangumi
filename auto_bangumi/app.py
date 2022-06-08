@@ -22,12 +22,14 @@ def load_data_file():
         bangumi_data = {
             "rss_link": settings.rss_link,
             "data_version": settings.data_version,
+            "first_run": True,
             "bangumi_info": []
         }
     else:
         bangumi_data = json_config.load(info_path)
         if bangumi_data["data_version"] != settings.data_version or bangumi_data["rss_link"] != settings.rss_link:
             bangumi_data["bangumi_info"] = []
+            bangumi_data["first_run"] = True
             bangumi_data["rss_link"] = settings.rss_link
     return bangumi_data
 
@@ -35,6 +37,20 @@ def load_data_file():
 def save_data_file(bangumi_data):
     info_path = settings.info_path
     json_config.save(info_path, bangumi_data)
+
+
+def show_info():
+    logger.info("                _        ____                                    _ ")
+    logger.info("     /\        | |      |  _ \                                  (_)")
+    logger.info("    /  \  _   _| |_ ___ | |_) | __ _ _ __   __ _ _   _ _ __ ___  _ ")
+    logger.info("   / /\ \| | | | __/ _ \|  _ < / _` | '_ \ / _` | | | | '_ ` _ \| |")
+    logger.info("  / ____ \ |_| | || (_) | |_) | (_| | | | | (_| | |_| | | | | | | |")
+    logger.info(" /_/    \_\__,_|\__\___/|____/ \__,_|_| |_|\__, |\__,_|_| |_| |_|_|")
+    logger.info("                                            __/ |                  ")
+    logger.info("                                           |___/                   ")
+    logger.info("Version 2.4.9  Author: EstrellaXD Twitter: https://twitter.com/Estrella_Pan")
+    logger.info("GitHub: https://github.com/EstrellaXD/Auto_Bangumi/")
+    logger.info("Starting AutoBangumi...")
 
 
 def run():
@@ -48,6 +64,7 @@ def run():
     else:
         settings.init()
     setup_logger()
+    show_info()
     time.sleep(3)
     download_client = DownloadClient()
     download_client.init_downloader()
@@ -57,7 +74,6 @@ def run():
     download_client.rss_feed()
     rss_collector = RSSCollector()
     renamer = Renamer(download_client)
-    loop_zero = True
     while True:
         bangumi_data = load_data_file()
         try:
@@ -65,17 +81,17 @@ def run():
             if settings.enable_eps_complete:
                 download_client.eps_collect(bangumi_data["bangumi_info"])
             download_client.add_rules(bangumi_data["bangumi_info"])
-            save_data_file(bangumi_data)
-            if loop_zero:
+            if bangumi_data["first_run"]:
                 logger.info(f"Waiting for downloading torrents...")
-                time.sleep(0)
+                time.sleep(600)
+                bangumi_data["first_run"] = False
+            save_data_file(bangumi_data)
             renamer.run()
             time.sleep(settings.sleep_time)
         except Exception as e:
             if args.debug:
                 raise e
             logger.exception(e)
-        loop_zero = False
 
 
 if __name__ == "__main__":

@@ -115,4 +115,4 @@ class DownloadClient:
 
 if __name__ == "__main__":
     put = DownloadClient()
-    put.add_rules()
+

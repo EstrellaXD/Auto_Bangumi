@@ -1,6 +1,5 @@
-import re
 import logging
-from pathlib import PurePath
+from pathlib import PurePath, PureWindowsPath
 
 from conf import settings
 from core.download_client import DownloadClient
@@ -29,21 +28,28 @@ class Renamer:
         else:
             for i in range(0, self.torrent_count):
                 info = self.recent_info[i]
+                name = info.name
+                hash = info.hash
+                path_name = PurePath(info.content_path).name \
+                    if PurePath(info.content_path).name != info.content_path \
+                    else PureWindowsPath(info.content_path).name
                 try:
-                    name = info.name
-                    hash = info.hash
-                    path_name = PurePath(info.content_path).name
                     new_name = method_dict[settings.method](name)
+                    logger.debug(f"{path_name}")
+                    logger.debug(f"{new_name}")
                     if path_name != new_name:
                         self.client.rename_torrent_file(hash, path_name, new_name)
                         self.rename_count += 1
                 except:
-                    logger.warning(f"{info.name} rename failed")
+                    logger.warning(f"{path_name} rename failed")
                     if settings.remove_bad_torrent:
-                        self.client.delete_torrent(info.hash)
+                        self.client.delete_torrent(hash)
             self.print_result()
 
 
 if __name__ == "__main__":
+    from const_dev import DEV_SETTINGS
+    settings.init(DEV_SETTINGS)
     client = DownloadClient()
     rename = Renamer(client)
+    rename.run()

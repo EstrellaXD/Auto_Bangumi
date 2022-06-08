@@ -10,14 +10,13 @@ DEFAULT_SETTINGS = {
     "enable_group_tag": False,
     "info_path": "/config/bangumi.json",
     "not_contain": "720",
-    "rule_url": "https://raw.githubusercontent.com/EstrellaXD/Bangumi_Auto_Collector/main/AutoBangumi/config/rule.json",
     "rule_name_re": r"\:|\/|\.",
     "connect_retry_interval": 5,
     "debug_mode": False,
     "season_one_tag": True,
     "remove_bad_torrent": False,
     "dev_debug": False,
-    "data_version": 3.0,
+    "data_version": 3.1,
     "enable_eps_complete": False
 }
 
