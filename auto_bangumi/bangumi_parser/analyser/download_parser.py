@@ -21,7 +21,7 @@ class EPParser:
         for rule in self.rules:
             matchObj = re.match(rule, name, re.I)
             if matchObj is not None:
-                new_name = f"{matchObj.group(1).strip()} E{matchObj.group(2)}{matchObj.group(3)}"
+                new_name = f"{matchObj.group(1).strip()} EP{matchObj.group(2)}{matchObj.group(3)}"
                 return new_name
 
     def rename_pn(self, name):
@@ -33,7 +33,7 @@ class EPParser:
                 new_name = re.sub(
                     r"[\[\]]",
                     "",
-                    f"{matchObj.group(1).strip()} E{matchObj.group(2)}{path.splitext(name)[-1]}",
+                    f"{matchObj.group(1).strip()} EP{matchObj.group(2)}{path.splitext(name)[-1]}",
                 )
                 return new_name
 
