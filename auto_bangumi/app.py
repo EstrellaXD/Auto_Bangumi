@@ -49,7 +49,7 @@ def show_info():
     logger.info(" /_/    \_\__,_|\__\___/|____/ \__,_|_| |_|\__, |\__,_|_| |_| |_|_|")
     logger.info("                                            __/ |                  ")
     logger.info("                                           |___/                   ")
-    logger.info("Version 2.4.9  Author: EstrellaXD Twitter: https://twitter.com/Estrella_Pan")
+    logger.info("Version 2.4.10  Author: EstrellaXD Twitter: https://twitter.com/Estrella_Pan")
     logger.info("GitHub: https://github.com/EstrellaXD/Auto_Bangumi/")
     logger.info("Starting AutoBangumi...")
 
@@ -84,7 +84,7 @@ def run():
             download_client.add_rules(bangumi_data["bangumi_info"])
             if bangumi_data["first_run"]:
                 logger.info(f"Waiting for downloading torrents...")
-                time.sleep(600)
+                time.sleep(settings.first_sleep)
                 bangumi_data["first_run"] = False
             save_data_file(bangumi_data)
             renamer.run()
@@ -93,7 +93,6 @@ def run():
             if args.debug:
                 raise e
             logger.exception(e)
-
 
 if __name__ == "__main__":
     run()

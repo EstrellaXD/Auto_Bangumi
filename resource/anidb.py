@@ -1,8 +1,11 @@
 #! /usr/bin/python
 import re
+import time
+
 import requests
 from bs4 import BeautifulSoup
 from utils import json_config
+from const import BCOLORS
 
 header = {
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ApplewebKit/537.36 (KHtml, like Gecko) Chrome/80.0.3987.163 Safari/537.36',
@@ -26,7 +29,7 @@ def get_list(year, season):
     return ids
 
 
-def get_title(id):
+def get_title_legecy(id):
     url = "https://anidb.net/anime/%s" % id
     soup = BeautifulSoup(get_html(url), "lxml")
     titles = soup.find("div", id="tab_2_pane")
@@ -63,14 +66,42 @@ def get_title(id):
             t_dic["kana"] = v[i].text
     return t_dic
 
+
+def get_title(id):
+    url = f"http://api.anidb.net:9001/httpapi?request=anime&client=autobangumi&clientver=1&protover=1&aid={id}"
+    req = requests.get(url)
+    soup = BeautifulSoup(req.text, "xml")
+    titles = soup.titles.find_all("title")
+    all_title_info = {
+        "id": id,
+        "main": None,
+        "en": None,
+        "zh-Hans": None,
+        "zh-Hant": None,
+        "ja": None,
+        "other": []
+    }
+    for title in titles:
+        if title["type"] == "main":
+            all_title_info["main"] = title.string
+        elif title["type"] == "official":
+            if title["xml:lang"] in ["en", "zh-Hant", "zh-Hans", "ja"]:
+                all_title_info[title["xml:lang"]] = title.string
+            else:
+                break
+        elif title["type"] == "synonym":
+            all_title_info["other"].append(title.string)
+        else:
+            break
+    return all_title_info
+
+
 if __name__ == "__main__":
-    print("start")
-    # 年份，季度
-    id_list = (get_list(2022, 1))
-    for i in id_list:
-        url = f"http://api.anidb.net:9001/httpapi?request=anime&client=autobangumi&clientver=1&protover=1&aid={i}"
-        req = requests.get(url)
-        soup = BeautifulSoup(req.text, "xml")
-        titles = soup.find("titles")["official"]
-        for item in titles:
-            print(item)
+    ids = get_list(2022, 2)
+    json = []
+    for id in ids:
+        data = get_title(id)
+        print(data)
+        time.sleep(2.5)
+        json.append(data)
+    json_config.save("season_summer.json", json)
