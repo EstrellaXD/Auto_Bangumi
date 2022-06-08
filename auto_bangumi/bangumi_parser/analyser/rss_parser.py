@@ -72,8 +72,8 @@ class ParserLV2:
             match_obj = re.match(r"([^\x00-\xff]{1,})(\s)([\x00-\xff]{4,})", name)
             if match_obj is not None:
                 return match_obj.group(3)
+        compare = 0
         for name in split:
-            compare = 0
             l = re.findall("[aA-zZ]{1}", name).__len__()
             if l > compare:
                 compare = l
