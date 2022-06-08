@@ -31,6 +31,7 @@ def load_data_file():
             bangumi_data["bangumi_info"] = []
             bangumi_data["first_run"] = True
             bangumi_data["rss_link"] = settings.rss_link
+            logger.info("Rebuilding data information...")
     return bangumi_data
 
 
