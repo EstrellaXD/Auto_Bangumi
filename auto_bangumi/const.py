@@ -5,7 +5,7 @@ DEFAULT_SETTINGS = {
     "sleep_time": 1800,
     "user_name": "admin",
     "password": "adminadmin",
-    "download_path": "/downloads/Bangumi",
+    "download_path": "",
     "method": "pn",
     "enable_group_tag": False,
     "info_path": "/config/bangumi.json",
@@ -40,8 +40,6 @@ ENV_TO_ATTR = {
     "AB_REMOVE_BAD_BT": ("remove_bad_torrent", lambda e: e.lower() in ("true", "1", "t")),
     "AB_FIRST_SLEEP": "first_sleep"
 }
-
-FULL_SEASON_SUPPORT_GROUP = ["Lilith-Raws"]
 
 
 class BCOLORS:

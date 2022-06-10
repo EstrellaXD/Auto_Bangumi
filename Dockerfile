@@ -13,3 +13,4 @@ ADD ./auto_bangumi /auto_bangumi
 ADD ./config /config
 
 CMD [ "python3", "app.py"]
+CMD [ "uvicorn", "api:app", "--reload" ]

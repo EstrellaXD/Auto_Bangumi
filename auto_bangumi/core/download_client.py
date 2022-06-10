@@ -26,8 +26,11 @@ class DownloadClient:
             "rss_refresh_interval": 30,
         }
         self.client.prefs_init(prefs=prefs)
+        if settings.download_path == "":
+            prefs = self.client.get_app_prefs()
+            settings.download_path = os.path.join(prefs["save_path"], "Bangumi")
 
-    def set_rule(self, bangumi_name, group, season):
+    def set_rule(self, bangumi_name, group, season, rss):
         rule = {
             "enable": True,
             "mustContain": bangumi_name,
@@ -36,7 +39,7 @@ class DownloadClient:
             "episodeFilter": "",
             "smartFilter": False,
             "previouslyMatchedEpisodes": [],
-            "affectedFeeds": [settings.rss_link],
+            "affectedFeeds": [rss],
             "ignoreDays": 0,
             "lastMatch": "",
             "addPaused": settings.dev_debug,
@@ -52,7 +55,6 @@ class DownloadClient:
         rule_name = f"[{group}] {bangumi_name}" if settings.enable_group_tag else bangumi_name
         self.client.rss_set_rule(rule_name=rule_name, rule_def=rule)
 
-
     def rss_feed(self):
         try:
             self.client.rss_remove_item(item_path="Mikan_RSS")
@@ -66,11 +68,15 @@ class DownloadClient:
         except ConflictError:
             logger.info("RSS Already exists.")
 
+    def add_collection_feed(self, rss_link):
+        self.client.rss_add_feed(url=rss_link)
+        logger.info("Add RSS Feed successfully.")
+
     def add_rules(self, bangumi_info):
         logger.info("Start adding rules.")
         for info in bangumi_info:
             if not info["added"]:
-                self.set_rule(info["title"], info["group"], info["season"])
+                self.set_rule(info["title"], info["group"], info["season"], settings.rss_link)
                 info["added"] = True
         logger.info("Finished.")
 

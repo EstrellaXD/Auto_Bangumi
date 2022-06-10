@@ -31,6 +31,9 @@ class QbDownloader:
     def prefs_init(self, prefs):
         return self._client.app_set_preferences(prefs=prefs)
 
+    def get_app_prefs(self):
+        return self._client.app_preferences()
+
     def torrents_info(self, status_filter, category):
         return self._client.torrents_info(status_filter, category)
 

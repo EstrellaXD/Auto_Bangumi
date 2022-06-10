@@ -34,6 +34,9 @@ class ParserLV2:
             "四": 4,
             "五": 5,
             "六": 6,
+            "七": 7,
+            "八": 8,
+            "九": 9,
             "十": 10,
         }
         name_season = re.sub(r"[\[\]]", " ", name_season)
@@ -100,7 +103,6 @@ class ParserLV2:
 
     def process(self, raw_name):
         raw_name = self.pre_process(raw_name)
-        group = self.get_group(raw_name)
         match_obj = re.match(
             r"(.*|\[.*])( -? \d{1,3} |\[\d{1,3}]|\[\d{1,3}.?[vV]\d{1}]|[第第]\d{1,3}[话話集集]|\[\d{1,3}.?END])(.*)",
             raw_name,

@@ -8,8 +8,8 @@ class FuzzMatch:
     def __init__(self, anidb_data):
         self.match_data = anidb_data
 
-    def match(self, title, info):
-        compare_value = []
+    def match(self, title, info: dict):
+        compare_value: list = []
         for type in ["main", "en", "ja", "zh-Hans", "zh-Hant"]:
             if info[type] is not None:
                 a = fuzz.ratio(title.replace(" ", "").lower(), info[type].replace(" ", "").lower())
@@ -20,7 +20,7 @@ class FuzzMatch:
         return max(compare_value)
 
     def find_max_name(self, title):
-        value = []
+        value: list = []
         for info in self.match_data:
             a = self.match(title, info)
             value.append([a, info])

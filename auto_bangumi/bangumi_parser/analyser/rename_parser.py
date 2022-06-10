@@ -37,6 +37,9 @@ class EPParser:
                 )
                 return new_name
 
+    def rename_none(self, name):
+        return name
+
 
 if __name__ == "__main__":
     name = "[NC-Raws]间谍过家家 - 09(B-Global 3840x2160 HEVC AAC MKV).mkv"
