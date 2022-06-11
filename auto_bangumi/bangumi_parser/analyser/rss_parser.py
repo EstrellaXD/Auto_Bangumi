@@ -103,6 +103,7 @@ class ParserLV2:
 
     def process(self, raw_name):
         raw_name = self.pre_process(raw_name)
+        self.get_group(raw_name)
         match_obj = re.match(
             r"(.*|\[.*])( -? \d{1,3} |\[\d{1,3}]|\[\d{1,3}.?[vV]\d{1}]|[第第]\d{1,3}[话話集集]|\[\d{1,3}.?END])(.*)",
             raw_name,

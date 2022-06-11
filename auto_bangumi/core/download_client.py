@@ -30,10 +30,10 @@ class DownloadClient:
             prefs = self.client.get_app_prefs()
             settings.download_path = os.path.join(prefs["save_path"], "Bangumi")
 
-    def set_rule(self, bangumi_name, group, season, rss):
+    def set_rule(self, official_name, raw_name, group, season, rss):
         rule = {
             "enable": True,
-            "mustContain": bangumi_name,
+            "mustContain": raw_name,
             "mustNotContain": settings.not_contain,
             "useRegex": True,
             "episodeFilter": "",
@@ -47,12 +47,12 @@ class DownloadClient:
             "savePath": str(
                 os.path.join(
                     settings.download_path,
-                    re.sub(settings.rule_name_re, " ", bangumi_name).strip(),
+                    re.sub(settings.rule_name_re, " ", official_name).strip(),
                     season,
                 )
             ),
         }
-        rule_name = f"[{group}] {bangumi_name}" if settings.enable_group_tag else bangumi_name
+        rule_name = f"[{group}] {official_name}" if settings.enable_group_tag else official_name
         self.client.rss_set_rule(rule_name=rule_name, rule_def=rule)
 
     def rss_feed(self):
@@ -72,11 +72,11 @@ class DownloadClient:
         self.client.rss_add_feed(url=rss_link)
         logger.info("Add RSS Feed successfully.")
 
-    def add_rules(self, bangumi_info):
+    def add_rules(self, bangumi_info, rss_link=settings.rss_link):
         logger.info("Start adding rules.")
         for info in bangumi_info:
             if not info["added"]:
-                self.set_rule(info["title"], info["group"], info["season"], settings.rss_link)
+                self.set_rule(info["title"], info["title_raw"], info["group"], info["season"], rss_link)
                 info["added"] = True
         logger.info("Finished.")
 

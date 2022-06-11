@@ -74,7 +74,7 @@ def run():
         quit()
     download_client.rss_feed()
     rss_collector = RSSCollector()
-    rename = Renamer()
+    rename = Renamer(download_client)
     while True:
         bangumi_data = load_data_file()
         try:

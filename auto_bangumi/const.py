@@ -18,7 +18,8 @@ DEFAULT_SETTINGS = {
     "dev_debug": False,
     "data_version": 3.1,
     "enable_eps_complete": False,
-    "first_sleep": 600
+    "first_sleep": 600,
+    "webui_port": 7892
 }
 
 ENV_TO_ATTR = {
@@ -38,7 +39,8 @@ ENV_TO_ATTR = {
     ),
     "AB_SEASON_ONE": ("season_one_tag", lambda e: e.lower() in ("true", "1", "t")),
     "AB_REMOVE_BAD_BT": ("remove_bad_torrent", lambda e: e.lower() in ("true", "1", "t")),
-    "AB_FIRST_SLEEP": "first_sleep"
+    "AB_FIRST_SLEEP": ("first_sleep", lambda e: float(e)),
+    "AB_WEBUI_PORT": ("webui_port", lambda e: int(e))
 }
 
 
