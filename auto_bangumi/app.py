@@ -3,6 +3,8 @@ import os
 import time
 import logging
 
+from multiprocessing import Process
+
 from conf import settings
 from argument_parser import parse
 from log import setup_logger

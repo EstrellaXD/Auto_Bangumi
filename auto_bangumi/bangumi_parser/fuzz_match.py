@@ -1,30 +1,39 @@
 from thefuzz import fuzz
 import logging
 from utils import json_config
+from conf import settings
 
 logger = logging.getLogger(__name__)
 
 
 class FuzzMatch:
     def __init__(self):
-        self.match_data = json_config.load("/Users/Estrella/Developer/Bangumi_Auto_Collector/resource/season_data.json")
+        try:
+            anidb_data = json_config.get(settings.anidb_url)
+            json_config.save(settings.anidb_path, anidb_data)
+        except Exception as e:
+            logger.debug(e)
+            logger.info(f"Fail to get anidb data, reading local data")
+            anidb_data = json_config.load(settings.anidb_data)
+        self.match_data = anidb_data
 
-    def match(self, title, info: dict):
+    @staticmethod
+    def match(title_raw, info: dict):
         compare_value = []
-        for type in ["main", "en", "ja", "zh-Hans", "zh-Hant"]:
-            if info[type] is not None:
-                a = fuzz.token_sort_ratio(title.lower(), info[type].lower())
+        for tag in ["main", "en", "ja", "zh-Hans", "zh-Hant"]:
+            if info[tag] is not None:
+                a = fuzz.token_sort_ratio(title_raw.lower(), info[tag].lower())
                 compare_value.append(a)
         for compare in info["other"]:
-            a = fuzz.token_sort_ratio(title.lower(), compare.lower())
+            a = fuzz.token_sort_ratio(title_raw.lower(), compare.lower())
             compare_value.append(a)
         return max(compare_value)
 
-    def find_max_name(self, title):
+    def find_max_name(self, title_raw):
         max_value = 0
         max_info = None
         for info in self.match_data:
-            a = self.match(title, info)
+            a = self.match(title_raw, info)
             if a > max_value:
                 max_value = a
                 max_info = info
@@ -33,6 +42,11 @@ class FuzzMatch:
 
 
 if __name__ == "__main__":
+    from const_dev import DEV_SETTINGS
+    settings.init(DEV_SETTINGS)
     f = FuzzMatch()
-    value, title = f.find_max_name("辉夜大小姐想让我告白")
-    print(value,title)
+    name = "勇者、辞职不干了"
+    value, title = f.find_max_name(name)
+    print(f"Raw    Name: {name} \n"
+          f"Match  Name: {title} \n"
+          f"Match Value: {value}")

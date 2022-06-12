@@ -9,6 +9,8 @@ DEFAULT_SETTINGS = {
     "method": "pn",
     "enable_group_tag": False,
     "info_path": "/config/bangumi.json",
+    "anidb_path": "/config/anidb.json",
+    "anidb_url": "https://raw.githubusercontent.com/EstrellaXD/Auto_Bangumi_resourse/main/resource/season_data.json",
     "not_contain": "720",
     "rule_name_re": r"\:|\/|\.",
     "connect_retry_interval": 5,
@@ -16,10 +18,11 @@ DEFAULT_SETTINGS = {
     "season_one_tag": True,
     "remove_bad_torrent": False,
     "dev_debug": False,
-    "data_version": 3.1,
+    "data_version": 4.0,
     "enable_eps_complete": False,
     "first_sleep": 600,
-    "webui_port": 7892
+    "webui_port": 7892,
+    "enable_fuzz_match": True
 }
 
 ENV_TO_ATTR = {
@@ -40,7 +43,8 @@ ENV_TO_ATTR = {
     "AB_SEASON_ONE": ("season_one_tag", lambda e: e.lower() in ("true", "1", "t")),
     "AB_REMOVE_BAD_BT": ("remove_bad_torrent", lambda e: e.lower() in ("true", "1", "t")),
     "AB_FIRST_SLEEP": ("first_sleep", lambda e: float(e)),
-    "AB_WEBUI_PORT": ("webui_port", lambda e: int(e))
+    "AB_WEBUI_PORT": ("webui_port", lambda e: int(e)),
+    "AB_FUZZ_MATCH": ("enable_fuzz_match", lambda e: e.lower() in ("true", "1", "t"))
 }
 
 

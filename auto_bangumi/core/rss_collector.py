@@ -25,7 +25,7 @@ class RSSCollector:
             # logger.exception(e)
             logger.error("ERROR with DNS/Connection.")
 
-    def title_parser(self, title):
+    def title_parser(self, title, fuzz_match=True):
         episode = self._simple_analyser.analyse(title)
         if episode:
             group, title_raw, season, ep = episode.group, episode.title, episode.season_info, episode.ep_info
@@ -34,9 +34,13 @@ class RSSCollector:
                 download_past = True
             else:
                 download_past = False
-            match_value, title_official = self._fuzz_match.find_max_name(title_raw)
+            if fuzz_match:
+                match_value, title_official = self._fuzz_match.find_max_name(title_raw)
+            else:
+                match_value, title_official = 0, None
+            title_official = title_official if match_value > 55 else title_raw
             data = {
-                "title": title_official if match_value > 55 else title_raw,
+                "title": title_official,
                 "title_raw": title_raw,
                 "season": season.raw,
                 "group": group,
@@ -46,31 +50,39 @@ class RSSCollector:
                 "added": False,
                 "download_past": download_past
             }
-            return episode, data
+            return episode, data, title_official
 
     def collect(self, bangumi_data):
         rss = self.get_rss_info(settings.rss_link)
         items = rss.find_all("item")
         for item in items:
+            add = True
             name = item.title.string
-            # debug 用
-            if settings.debug_mode:
-                logger.debug(f"Raw {name}")
-            episode, data = self.title_parser(name)
+            episode, data, title_official = self.title_parser(name)
             for d in bangumi_data["bangumi_info"]:
-                if d["title"] == episode.title:
+                if d["title"] == title_official:
+                    add = False
                     break
+            if add:
+                if settings.debug_mode:
+                    logger.debug(f"Raw {name}")
                 bangumi_data["bangumi_info"].append(data)
-                logger.info(f"Adding {episode.title} Season {episode.season_info.number}")
+                logger.info(f"Adding {title_official} Season {episode.season_info.number}")
 
     def collect_collection(self, rss_link):
         rss = self.get_rss_info(rss_link)
         item = rss.find("item")
         title = item.title.string
-        _, data = self.title_parser(title)
+        _, data, _ = self.title_parser(title, fuzz_match=True)
         return data
 
 
 if __name__ == "__main__":
+    from const_dev import DEV_SETTINGS
+    from utils import json_config
+    settings.init(DEV_SETTINGS)
     rss = RSSCollector()
-    data = rss.get_rss_info("https://mikanasni.me/RSS/Classic")
+    info = json_config.load("/Users/Estrella/Developer/Bangumi_Auto_Collector/config/bangumi.json")
+    rss.collect(info)
+    print(info)
+

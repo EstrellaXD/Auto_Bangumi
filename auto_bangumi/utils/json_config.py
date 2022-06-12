@@ -1,4 +1,5 @@
 import json
+import requests
 
 
 def load(filename):
@@ -10,3 +11,8 @@ def save(filename, obj):
     with open(filename, "w", encoding="utf8") as f:
         json.dump(obj, f, indent=4, separators=(",", ": "), ensure_ascii=False)
     pass
+
+
+def get(url):
+    req = requests.get(url)
+    return req.json()
