@@ -3,8 +3,6 @@ import os
 import time
 import logging
 
-from multiprocessing import Process
-
 from conf import settings
 from argument_parser import parse
 from log import setup_logger
@@ -31,6 +29,7 @@ def load_data_file():
         bangumi_data = json_config.load(info_path)
         if bangumi_data["data_version"] != settings.data_version or bangumi_data["rss_link"] != settings.rss_link:
             bangumi_data["bangumi_info"] = []
+            bangumi_data["data_version"] = settings.data_version
             bangumi_data["first_run"] = True
             bangumi_data["rss_link"] = settings.rss_link
             logger.info("Rebuilding data information...")
@@ -51,9 +50,10 @@ def show_info():
     logger.info(" /_/    \_\__,_|\__\___/|____/ \__,_|_| |_|\__, |\__,_|_| |_| |_|_|")
     logger.info("                                            __/ |                  ")
     logger.info("                                           |___/                   ")
-    logger.info("Version 2.4.10  Author: EstrellaXD Twitter: https://twitter.com/Estrella_Pan")
+    logger.info(f"Version {settings.version}  Author: EstrellaXD Twitter: https://twitter.com/Estrella_Pan")
     logger.info("GitHub: https://github.com/EstrellaXD/Auto_Bangumi/")
     logger.info("Starting AutoBangumi...")
+
 
 
 def run():
@@ -61,8 +61,10 @@ def run():
     if args.debug:
         try:
             from const_dev import DEV_SETTINGS
+            import sys
         except ModuleNotFoundError:
             logger.debug("Please copy `const_dev.py` to `const_dev.py` to use custom settings")
+        sys.path.append('/opt/homebrew/Caskroom/miniforge/base/envs/auto_bangumi/bin/python')
         settings.init(DEV_SETTINGS)
     else:
         settings.init()
@@ -83,7 +85,7 @@ def run():
             rss_collector.collect(bangumi_data)
             if settings.enable_eps_complete:
                 download_client.eps_collect(bangumi_data["bangumi_info"])
-            download_client.add_rules(bangumi_data["bangumi_info"])
+            download_client.add_rules(bangumi_data["bangumi_info"], settings.rss_link)
             if bangumi_data["first_run"]:
                 logger.info(f"Waiting for downloading torrents...")
                 time.sleep(settings.first_sleep)

@@ -30,7 +30,8 @@ class DownloadClient:
             prefs = self.client.get_app_prefs()
             settings.download_path = os.path.join(prefs["save_path"], "Bangumi")
 
-    def set_rule(self, official_name, raw_name, group, season, rss):
+    def set_rule(self, info: dict, rss):
+        official_name, raw_name, season, group = info["title"], info["title_raw"], info["season"], info["group"]
         rule = {
             "enable": True,
             "mustContain": raw_name,
@@ -53,7 +54,7 @@ class DownloadClient:
             ),
         }
         rule_name = f"[{group}] {official_name}" if settings.enable_group_tag else official_name
-        self.client.rss_set_rule(rule_name=rule_name, rule_def=rule)
+        self.client.rss_set_rule(rule_name=f"{rule_name} {season}", rule_def=rule)
 
     def rss_feed(self):
         try:
@@ -72,11 +73,11 @@ class DownloadClient:
         self.client.rss_add_feed(url=rss_link, item_path=item_path)
         logger.info("Add RSS Feed successfully.")
 
-    def add_rules(self, bangumi_info, rss_link=settings.rss_link):
+    def add_rules(self, bangumi_info, rss_link):
         logger.info("Start adding rules.")
         for info in bangumi_info:
             if not info["added"]:
-                self.set_rule(info["title"], info["title_raw"], info["group"], info["season"], rss_link)
+                self.set_rule(info, rss_link)
                 info["added"] = True
         logger.info("Finished.")
 

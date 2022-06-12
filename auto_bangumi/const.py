@@ -1,11 +1,13 @@
 # -*- encoding: utf-8 -*-
 
 DEFAULT_SETTINGS = {
-    "host_ip": "localhost:8181",
+    "version": "2.5.0-beta1",
+    "data_version": 4.0,
+    "host_ip": "localhost:8080",
     "sleep_time": 1800,
     "user_name": "admin",
     "password": "adminadmin",
-    "download_path": "",
+    "download_path": "/downloads/Bangumi",
     "method": "pn",
     "enable_group_tag": False,
     "info_path": "/config/bangumi.json",
@@ -18,7 +20,6 @@ DEFAULT_SETTINGS = {
     "season_one_tag": True,
     "remove_bad_torrent": False,
     "dev_debug": False,
-    "data_version": 4.0,
     "enable_eps_complete": False,
     "first_sleep": 600,
     "webui_port": 7892,

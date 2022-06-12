@@ -72,8 +72,19 @@ async def receive(link: RSS):
     settings.init(DEV_SETTINGS)
     client = DownloadClient()
     client.add_collection_feed(link.link, item_path=data["title"])
-    client.add_rules(data, rss_link=link.link)
+    client.set_rule(data, link.link)
     return "Successed"
+
+
+class Search(BaseModel):
+    group: str
+    title: str
+    subtitle: str
+
+
+@app.post("/api/v1/search")
+async def search(input: Search):
+    return "Nothing Happened"
 
 
 if __name__ == "__main__":

@@ -13,19 +13,10 @@ logger = logging.getLogger(__name__)
 class FullSeasonGet:
     def __init__(self, group, bangumi_name, season, sub, source, dpi):
         self.bangumi_name = re.sub(settings.rule_name_re, " ", bangumi_name).strip()
-        if group is not None:
-            self.group = group
-        else:
-            self.group = ""
+        self.group = "" if group is None else group
         self.season = season
-        if sub is not None:
-            self.subtitle = sub
-        else:
-            self.subtitle = ""
-        if source is not None:
-            self.source = source
-        else:
-            self.source = ""
+        self.subtitle = "" if sub is None else sub
+        self.source = "" if source is None else source
         self.dpi = dpi
 
     def get_season_rss(self):

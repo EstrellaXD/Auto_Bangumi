@@ -10,11 +10,11 @@ class FuzzMatch:
     def __init__(self):
         try:
             anidb_data = json_config.get(settings.anidb_url)
-            json_config.save("anidb.json", anidb_data)
+            json_config.save(settings.anidb_path, anidb_data)
         except Exception as e:
             logger.debug(e)
             logger.info(f"Fail to get anidb data, reading local data")
-            anidb_data = json_config.load("anidb.json")
+            anidb_data = json_config.load(settings.anidb_path)
         self.match_data = anidb_data
 
     @staticmethod
