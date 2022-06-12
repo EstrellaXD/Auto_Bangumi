@@ -45,7 +45,8 @@ ENV_TO_ATTR = {
     "AB_REMOVE_BAD_BT": ("remove_bad_torrent", lambda e: e.lower() in ("true", "1", "t")),
     "AB_FIRST_SLEEP": ("first_sleep", lambda e: float(e)),
     "AB_WEBUI_PORT": ("webui_port", lambda e: int(e)),
-    "AB_FUZZ_MATCH": ("enable_fuzz_match", lambda e: e.lower() in ("true", "1", "t"))
+    "AB_FUZZ_MATCH": ("enable_fuzz_match", lambda e: e.lower() in ("true", "1", "t")),
+    "AB_HTTP_PROXY": "http_proxy"
 }
 
 

@@ -1,5 +1,3 @@
-from typing import Union
-
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
@@ -7,7 +5,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import logging
 
-from core.rss_collector import RSSCollector
+from mikanani.rss_collector import RSSCollector
 from core.download_client import DownloadClient
 from conf import settings
 from utils import json_config
@@ -68,7 +66,7 @@ class RSS(BaseModel):
 @app.post("/api/v1/subscriptions")
 async def receive(link: RSS):
     data = RSSCollector().collect_collection(link.link)
-    from const_dev import DEV_SETTINGS
+    from conf.const_dev import DEV_SETTINGS
     settings.init(DEV_SETTINGS)
     client = DownloadClient()
     client.add_collection_feed(link.link, item_path=data["title"])

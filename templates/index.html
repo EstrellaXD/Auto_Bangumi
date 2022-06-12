@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AutoBangumi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
+  </head>
+  <body>
+    <div class="container">
+        <div class="row">
+            <div class="col-3"></div>
+            <div class="col-auto text-center p-3">
+                <img src="/docs/image/auto_bangumi_v2.png" class="img-fluid" width=50%>
+            </div>
+            <div class="col-3"></div>
+        </div>
+        <div class="row">
+            <div class="col text-center">
+                <h2>Configuration</h2>
+            </div>
+        </div>
+        <div class="row justify-content-center p-3">
+            <div class="col-8">
+                <h2>基础配置</h2>
+                <ui class="list-group list-group-flush gap-1 shadow p-3 mb-5 rounded-3">
+                    <li class="list-group-item">
+                        <div class="row">
+                            <div class="col">
+                                <div class="d-flex justify-content-between">
+                                    <div class="col-3">
+                                        <h4>RSS link</h4>
+                                    </div>
+                                    <div class="col-8">
+                                        <input type="rss" class="form-control" id="rsslink" aria-describedby="rsslinkHelp">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="list-group-item">
+                        <div class="row">
+                            <div class="col">
+                                <div class="d-flex justify-content-between">
+                                    <div class="col-2">
+                                        <h4 class="text-left">HOST</h4>
+                                    </div>
+                                    <div class="col-8">
+                                        <input type="rss" class="form-control" id="hostip" aria-describedby="hostipHelp">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="list-group-item">
+                        <div class="row">
+                            <div class="col">
+                                <div class="d-flex justify-content-between">
+                                    <div class="col-2">
+                                        <h4 class="text-left">Username</h4>
+                                    </div>
+                                    <div class="col-4">
+                                        <input type="rss" class="form-control" id="username" aria-describedby="emailHelp">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="list-group-item">
+                        <div class="row">
+                            <div class="col">
+                                <div class="d-flex justify-content-between">
+                                    <div class="col-2">
+                                        <h4 class="text-left">Password</h4>
+                                    </div>
+                                    <div class="col-4">
+                                        <input type="rss" class="form-control" id="password" aria-describedby="emailHelp">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="list-group-item">
+                        <div class="row">
+                            <div class="col">
+                                <div class="d-flex justify-content-between">
+                                    <div class="col-4">
+                                        <h4 class="text-left">Download Path</h4>
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="rss" class="form-control" id="downloadpath" aria-describedby="emailHelp">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    
+                </ui>
+            </div>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-8">
+                <h2>进阶配置</h2>
+                <ui class="list-group list-group-flush gap-1 shadow p-3 mb-5 rounded-3">
+                    <li class="list-group-item">
+                        <div class="row">
+                            <div class="col">
+                                <div class="d-flex justify-content-between">
+                                    <h4 class="text-center">字幕组 TAG</h4>
+                                    <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                                        <input type="radio" class="btn-check" name="grouptag" id="grouptag1" autocomplete="off" checked>
+                                        <label class="btn btn-primary" for="grouptag1">ON</label>
+                                    
+                                        <input type="radio" class="btn-check" name="grouptag" id="grouptag2" autocomplete="off">
+                                        <label class="btn btn-primary" for="grouptag2">OFF</label>
+                        
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="list-group-item">
+                        <div class="row">
+                            <div class="col">
+                                <div class="d-flex justify-content-between">
+                                    <h4 class="text-center">历史补全</h4>
+                                    <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                                        <input type="radio" class="btn-check" name="btnradio" id="btnradio1" autocomplete="off" checked>
+                                        <label class="btn btn-primary" for="btnradio1">ON</label>
+                                    
+                                        <input type="radio" class="btn-check" name="btnradio" id="btnradio2" autocomplete="off">
+                                        <label class="btn btn-primary" for="btnradio2">OFF</label>
+                        
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="list-group-item">
+                        <div class="row">
+                            <div class="col">
+                                <div class="d-flex justify-content-between">
+                                    <h4 class="text-center">坏种移除</h4>
+                                    <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                                        <input type="radio" class="btn-check" name="btnradio" id="btnradio1" autocomplete="off" checked>
+                                        <label class="btn btn-primary" for="btnradio1">ON</label>
+                                    
+                                        <input type="radio" class="btn-check" name="btnradio" id="btnradio2" autocomplete="off">
+                                        <label class="btn btn-primary" for="btnradio2">OFF</label>
+                        
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                </ui>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-pprn3073KE6tl6bjs2QrFaJGz5/SUsLqktiwsUTF55Jfv3qYSDhgCecCxMW52nD2" crossorigin="anonymous"></script>
+  </body>
+</html>

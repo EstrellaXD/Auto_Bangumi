@@ -75,7 +75,7 @@ class QbDownloader:
 
 if __name__ == "__main__":
     try:
-        from const_dev import DEV_SETTINGS
+        from conf.const_dev import DEV_SETTINGS
     except ModuleNotFoundError:
         logger.debug("Please copy `const_dev.py` to `const_dev.py` to use custom settings")
     settings.init(DEV_SETTINGS)

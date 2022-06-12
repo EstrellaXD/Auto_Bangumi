@@ -1,29 +1,19 @@
 # -*- coding: UTF-8 -*-
-import os
 import logging
-import requests
-from bs4 import BeautifulSoup
 
 from conf import settings
 from bangumi_parser.analyser.rss_parser import ParserLV2
 from bangumi_parser.fuzz_match import FuzzMatch
+from network.request import RequestsURL
 
 logger = logging.getLogger(__name__)
 
 
 class RSSCollector:
-    def __init__(self):
+    def __init__(self, request: RequestsURL):
         self._simple_analyser = ParserLV2()
         self._fuzz_match = FuzzMatch()
-
-    def get_rss_info(self, rss_link):
-        try:
-            req = requests.get(rss_link, "utf-8")
-            rss = BeautifulSoup(req.text, "xml")
-            return rss
-        except Exception as e:
-            # logger.exception(e)
-            logger.error("ERROR with DNS/Connection.")
+        self._req = request
 
     def title_parser(self, title, fuzz_match=True):
         episode = self._simple_analyser.analyse(title)
@@ -53,8 +43,8 @@ class RSSCollector:
             return episode, data, title_official
 
     def collect(self, bangumi_data):
-        rss = self.get_rss_info(settings.rss_link)
-        items = rss.find_all("item")
+        req = self._req.get_url(settings.rss_link)
+        items = req.find_all("item")
         for item in items:
             add = True
             name = item.title.string
@@ -70,19 +60,19 @@ class RSSCollector:
                 logger.info(f"Adding {title_official} Season {episode.season_info.number}")
 
     def collect_collection(self, rss_link):
-        rss = self.get_rss_info(rss_link)
-        item = rss.find("item")
+        req = self._req.get_url(rss_link)
+        item = req.find("item")
         title = item.title.string
         _, data, _ = self.title_parser(title, fuzz_match=False)
         return data
 
 
 if __name__ == "__main__":
-    from const_dev import DEV_SETTINGS
+    from conf.const_dev import DEV_SETTINGS
     from utils import json_config
     settings.init(DEV_SETTINGS)
     rss = RSSCollector()
-    info = json_config.load("/Users/Estrella/Developer/Bangumi_Auto_Collector/config/bangumi.json")
+    info = json_config.load("/config/bangumi.json")
     rss.collect(info)
     print(info)
 

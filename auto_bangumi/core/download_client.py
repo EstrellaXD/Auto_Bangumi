@@ -8,7 +8,7 @@ from downloader.exceptions import ConflictError
 
 from conf import settings
 
-from core.eps_complete import FullSeasonGet
+from mikanani.eps_complete import FullSeasonGet
 
 
 logger = logging.getLogger(__name__)
@@ -81,7 +81,7 @@ class DownloadClient:
                 info["added"] = True
         logger.info("Finished.")
 
-    def eps_collect(self, bangumi_info):
+    def eps_collect(self, bangumi_info, request):
         logger.info("Start collecting past episodes.")
         for info in bangumi_info:
             if info["download_past"]:
@@ -91,7 +91,8 @@ class DownloadClient:
                     info["season"],
                     info["subtitle"],
                     info["source"],
-                    info["dpi"]
+                    info["dpi"],
+                    request
                 ).add_torrents_info()
                 for download in downloads:
                     self.client.torrents_add(

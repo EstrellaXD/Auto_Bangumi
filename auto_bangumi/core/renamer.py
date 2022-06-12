@@ -56,7 +56,7 @@ class Renamer:
 
 
 if __name__ == "__main__":
-    from const_dev import DEV_SETTINGS
+    from conf.const_dev import DEV_SETTINGS
     settings.init(DEV_SETTINGS)
     client = DownloadClient()
     rename = Renamer(client)

@@ -42,7 +42,7 @@ class FuzzMatch:
 
 
 if __name__ == "__main__":
-    from const_dev import DEV_SETTINGS
+    from conf.const_dev import DEV_SETTINGS
     settings.init(DEV_SETTINGS)
     f = FuzzMatch()
     name = "勇者、辞职不干了"

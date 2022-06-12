@@ -11,6 +11,6 @@ ENV TZ=Asia/Shanghai
 
 ADD ./auto_bangumi /auto_bangumi
 ADD ./config /config
+ADD ./templates /templates
 
-CMD [ "python3", "app.py"]
-CMD [ "uvicorn", "api:app", "--reload" ]
+CMD [ "run.sh"]

@@ -24,8 +24,8 @@ if __name__ == "__main__":
     import sys, os
 
     sys.path.append(os.path.dirname(".."))
-    from log import setup_logger
-    from const import BCOLORS
+    from conf.log import setup_logger
+    from conf.const import BCOLORS
 
     setup_logger()
     parser = Parser()

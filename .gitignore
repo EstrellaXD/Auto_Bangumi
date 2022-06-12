@@ -160,9 +160,10 @@ cython_debug/
 #.idea/
 
 # Custom
-/auto_bangumi/const_dev.py
+/auto_bangumi/conf/const_dev.py
 /config/bangumi.json
 /auto_bangumi/tester.py
 /resource/names.txt
 
-/auto_bangumi/webui/
+
+
