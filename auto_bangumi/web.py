@@ -68,10 +68,12 @@ class RSS(BaseModel):
 @app.post("/api/v1/subscriptions")
 async def receive(link: RSS):
     data = RSSCollector().collect_collection(link.link)
+    from const_dev import DEV_SETTINGS
+    settings.init(DEV_SETTINGS)
     client = DownloadClient()
-    client.add_collection_feed(link.link)
+    client.add_collection_feed(link.link, item_path=data["title"])
     client.add_rules(data, rss_link=link.link)
-    return data
+    return "Successed"
 
 
 if __name__ == "__main__":

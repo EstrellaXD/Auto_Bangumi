@@ -68,8 +68,8 @@ class DownloadClient:
         except ConflictError:
             logger.info("RSS Already exists.")
 
-    def add_collection_feed(self, rss_link):
-        self.client.rss_add_feed(url=rss_link)
+    def add_collection_feed(self, rss_link, item_path):
+        self.client.rss_add_feed(url=rss_link, item_path=item_path)
         logger.info("Add RSS Feed successfully.")
 
     def add_rules(self, bangumi_info, rss_link=settings.rss_link):

@@ -73,7 +73,7 @@ class RSSCollector:
         rss = self.get_rss_info(rss_link)
         item = rss.find("item")
         title = item.title.string
-        _, data, _ = self.title_parser(title, fuzz_match=True)
+        _, data, _ = self.title_parser(title, fuzz_match=False)
         return data
 
 
