@@ -13,7 +13,8 @@
 
 ## 如何开始
 
-- **[部署说明](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/部署说明.md)**
+- **[部署说明 (Official)](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/部署说明.md)**
+- **[部署说明 (手把手)](https://www.himiku.com/archives/auto-bangumi.html)**
 
 - **[常见问题排错](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/常见错误解决.md)**
 
@@ -83,7 +84,7 @@
 # 声明
 感谢 [Sean](https://github.com/findix) 提供的大量帮助
 
-## Licence
+# Licence
 [MIT licence](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/LICENSE)
 
 
