@@ -11,7 +11,7 @@
 </p>
 
 
-## 如何开始
+# 如何开始
 
 - **[部署说明 (Official)](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/部署说明.md)**
 - **[部署说明 (手把手)](https://www.himiku.com/archives/auto-bangumi.html)**
