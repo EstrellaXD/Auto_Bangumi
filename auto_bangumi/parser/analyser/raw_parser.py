@@ -29,15 +29,39 @@ class RawParser:
     @staticmethod
     def season_process(name_season):
         season_rule = r"S\d{1,2}|Season \d{1,2}|[第].[季期]"
+        season_map = {
+            "一": 1,
+            "二": 2,
+            "三": 3,
+            "四": 4,
+            "五": 5,
+            "六": 6,
+            "七": 7,
+            "八": 8,
+            "九": 9,
+            "十": 10,
+        }
         name_season = re.sub(r"[\[\]]", " ", name_season)
         seasons = re.findall(season_rule, name_season)
         if not seasons:
             name = name_season
             season_raw = ""
+            season = 1
         else:
             name = re.sub(season_rule, "", name_season)
-            season_raw = seasons[0]
-        return name, season_raw
+            for season in seasons:
+                season_raw = season
+                if re.search(r"S|Season", season) is not None:
+                    season = int(re.sub(r"S|Season", "", season))
+                    break
+                elif re.search(r"[第 ].*[季期]", season) is not None:
+                    season_pro = re.sub(r"[第季期 ]", "", season)
+                    try:
+                        season = int(season_pro)
+                    except ValueError:
+                        season = season_map[season_pro]
+                        break
+        return name, season_raw, season
 
     @staticmethod
     def name_process(name):
@@ -89,16 +113,16 @@ class RawParser:
             raw_name,
         )
         name_season = self.second_process(match_obj.group(1))
-        name, season_raw = self.season_process(name_season)
+        name, season_raw, season = self.season_process(name_season)
         name, name_group = self.name_process(name)
         episode = int(re.findall(r"\d{1,3}", match_obj.group(2))[0])
         other = match_obj.group(3).strip()
         sub, dpi, source= self.find_tags(other)
-        return name, season_raw, episode, sub, dpi, source, name_group
+        return name, season, season_raw, episode, sub, dpi, source, name_group
 
     def analyse(self, raw) -> Episode:
         try:
-            self._info.title,\
+            self._info.title, self._info.season_info.number, \
             self._info.season_info.raw, self._info.ep_info.number,\
             self._info.subtitle, self._info.dpi, self._info.source, \
             self._info.title_info.group = self.process(raw)

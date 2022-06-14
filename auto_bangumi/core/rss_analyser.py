@@ -40,4 +40,5 @@ if __name__ == "__main__":
     ra = RSSAnalyser()
     data = []
     ra.rss_to_data(data)
-    print(data)
+    for d in data:
+        print(d)

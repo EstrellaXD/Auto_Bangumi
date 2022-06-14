@@ -23,7 +23,8 @@ DEFAULT_SETTINGS = {
     "enable_eps_complete": False,
     "first_sleep": 600,
     "webui_port": 7892,
-    "enable_fuzz_match": True
+    "enable_fuzz_match": True,
+    "zh_title": True
 }
 
 ENV_TO_ATTR = {
