@@ -1,7 +1,7 @@
 import re
 import logging
 import requests
-from conf import settings
+from conf.conf import settings
 from utils import json_config
 
 from bangumi_parser.episode import Episode

@@ -2,15 +2,14 @@ import os
 import time
 import logging
 
-from conf import settings
+from conf.conf import settings
 from conf.argument_parser import parse
 from conf.log import setup_logger
 from utils import json_config
 
-from mikanani.rss_collector import RSSCollector
+from core.rss_analyser import RSSAnalyser
 from core.download_client import DownloadClient
 from core.renamer import Renamer
-from network.request import RequestsURL
 
 
 logger = logging.getLogger(__name__)
@@ -55,6 +54,9 @@ def show_info():
     logger.info("Starting AutoBangumi...")
 
 
+
+
+
 def run():
     # DEBUG 模式初始化
     args = parse()
@@ -71,40 +73,18 @@ def run():
     show_info()
     time.sleep(3)
     download_client = DownloadClient()
-    url_request = RequestsURL()
     download_client.init_downloader()
     if settings.rss_link is None:
         logger.error("Please add RIGHT RSS url.")
         quit()
     download_client.rss_feed()
-    rss_collector = RSSCollector(url_request)
+    rss_analyser = RSSAnalyser()
     rename = Renamer(download_client)
     # 主程序循环
     while True:
-        bangumi_data = load_data_file()
-        try:
-            # 解析 RSS
-            rss_collector.collect(bangumi_data)
-            # 历史剧集收集
-            if settings.enable_eps_complete:
-                download_client.eps_collect(bangumi_data["bangumi_info"], url_request)
-            url_request.close()
-            download_client.add_rules(bangumi_data["bangumi_info"], settings.rss_link)
-            # 首次等待
-            if bangumi_data["first_run"]:
-                logger.info(f"Waiting for downloading torrents...")
-                time.sleep(settings.first_sleep)
-                bangumi_data["first_run"] = False
-            save_data_file(bangumi_data)
-            # rename
-            if settings.method != "none":
-                rename.refresh()
-                rename.run()
-            time.sleep(settings.sleep_time)
-        except Exception as e:
-            if args.debug:
-                raise e
-            logger.exception(e)
+        bangumi_data = json_config.load(settings.info_path)
+        rss_analyser.rss_to_data(bangumi_data["bangumi_info"])
+        download_client.add_rules(bangumi_data["bangumi_info"])
 
 
 if __name__ == "__main__":

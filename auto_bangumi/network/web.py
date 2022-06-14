@@ -7,7 +7,7 @@ import logging
 
 from mikanani.rss_collector import RSSCollector
 from core.download_client import DownloadClient
-from conf import settings
+from conf.conf import settings
 from utils import json_config
 
 logger = logging.getLogger(__name__)

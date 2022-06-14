@@ -1,7 +1,7 @@
 from thefuzz import fuzz
 import logging
 from utils import json_config
-from conf import settings
+from conf.conf import settings
 
 logger = logging.getLogger(__name__)
 

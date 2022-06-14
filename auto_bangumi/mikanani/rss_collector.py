@@ -1,19 +1,19 @@
 # -*- coding: UTF-8 -*-
 import logging
 
-from conf import settings
-from bangumi_parser.analyser.rss_parser import ParserLV2
-from bangumi_parser.fuzz_match import FuzzMatch
-from network.request import RequestsURL
+from bs4 import BeautifulSoup
+
+from conf.conf import settings
+from parser.analyser.raw_parser import ParserLV2
+from parser.fuzz_match import FuzzMatch
 
 logger = logging.getLogger(__name__)
 
 
 class RSSCollector:
-    def __init__(self, request: RequestsURL):
+    def __init__(self):
         self._simple_analyser = ParserLV2()
         self._fuzz_match = FuzzMatch()
-        self._req = request
 
     def title_parser(self, title, fuzz_match=True):
         episode = self._simple_analyser.analyse(title)
@@ -42,9 +42,8 @@ class RSSCollector:
             }
             return episode, data, title_official
 
-    def collect(self, bangumi_data):
-        req = self._req.get_url(settings.rss_link)
-        items = req.find_all("item")
+    def collect(self, bangumi_data, rss_data: BeautifulSoup):
+        items = rss_data.find_all("item")
         for item in items:
             add = True
             name = item.title.string
@@ -59,9 +58,8 @@ class RSSCollector:
                 bangumi_data["bangumi_info"].append(data)
                 logger.info(f"Adding {title_official} Season {episode.season_info.number}")
 
-    def collect_collection(self, rss_link):
-        req = self._req.get_url(rss_link)
-        item = req.find("item")
+    def collect_collection(self, rss_data: BeautifulSoup):
+        item = rss_data.find("item")
         title = item.title.string
         _, data, _ = self.title_parser(title, fuzz_match=False)
         return data

@@ -167,3 +167,5 @@ cython_debug/
 
 
 
+/auto_bangumi/parser/analyser/tmdb.py
+

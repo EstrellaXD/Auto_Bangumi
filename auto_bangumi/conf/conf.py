@@ -1,5 +1,5 @@
 import os
-import const
+from conf import const
 
 
 class Settings(dict):

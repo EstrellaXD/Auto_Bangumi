@@ -5,42 +5,46 @@ import logging
 
 from bs4 import BeautifulSoup
 
-from conf import settings
+from conf.conf import settings
 
 logger = logging.getLogger(__name__)
 
 
-class RequestsURL:
+class RequestURL:
     def __init__(self):
         self.session = requests.session()
         if settings.http_proxy is not None:
             self.proxy = {
                 "https": settings.http_proxy,
-                "http": settings.http_proxy
+                "http": settings.http_proxy,
+                "socks": settings.http_proxy
             }
         else:
             self.proxy = None
+        self.header = {
+            "user-agent": "Mozilla/5.0",
+            "Accept": "application/xml"
+        }
 
     def get_url(self, url):
-        times = 1
+        times = 0
         while times < 5:
             try:
-                req = self.session.get(url, proxies=self.proxy)
-                return BeautifulSoup(req.text, "xml")
-            except Exception:
-                # logger.exception(e)
+                req = self.session.get(url=url, headers=self.header, proxies=self.proxy)
+                return req
+            except Exception as e:
+                logger.debug(e)
                 logger.error("ERROR with DNS/Connection.")
                 time.sleep(settings.connect_retry_interval)
                 times += 1
+
+    def get_content(self, url, content="xml"):
+        if content == "xml":
+            return BeautifulSoup(self.get_url(url).text, content)
+        elif content == "json":
+            return self.get_url(url).json()
 
     def close(self):
         self.session.close()
 
 
-if __name__ == "__main__":
-    network_req = RequestsURL()
-    req = network_req.get_url("https://mikanani.me/RSS/Classic")
-    print(req.find_all("item"))
-    network_req.close()
-    req = network_req.get_url("https://mikanani.me/RSS/Classic")
-    print(req.find_all("item"))

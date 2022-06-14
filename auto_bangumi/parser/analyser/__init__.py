@@ -1,4 +1,4 @@
-from bangumi_parser.episode import Episode
+from parser.episode import Episode
 
 class Analyser():
     def analyse(self,name, tokens) -> Episode:

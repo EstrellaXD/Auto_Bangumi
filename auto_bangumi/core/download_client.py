@@ -1,15 +1,11 @@
 import re
 import logging
 import os
-import time
 
 from downloader import getClient
 from downloader.exceptions import ConflictError
 
-from conf import settings
-
-from mikanani.eps_complete import FullSeasonGet
-
+from conf.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -73,35 +69,13 @@ class DownloadClient:
         self.client.rss_add_feed(url=rss_link, item_path=item_path)
         logger.info("Add RSS Feed successfully.")
 
-    def add_rules(self, bangumi_info, rss_link):
+    def add_rules(self, bangumi_info, rss_link=settings.rss_link):
         logger.info("Start adding rules.")
         for info in bangumi_info:
             if not info["added"]:
                 self.set_rule(info, rss_link)
                 info["added"] = True
         logger.info("Finished.")
-
-    def eps_collect(self, bangumi_info, request):
-        logger.info("Start collecting past episodes.")
-        for info in bangumi_info:
-            if info["download_past"]:
-                downloads = FullSeasonGet(
-                    info["group"],
-                    info["title"],
-                    info["season"],
-                    info["subtitle"],
-                    info["source"],
-                    info["dpi"],
-                    request
-                ).add_torrents_info()
-                for download in downloads:
-                    self.client.torrents_add(
-                        urls=download["url"],
-                        save_path=download["save_path"],
-                        category="Bangumi"
-                    )
-                time.sleep(settings.connect_retry_interval)
-                info["download_past"] = False
 
     def get_torrent_info(self):
         return self.client.torrents_info(
@@ -114,11 +88,18 @@ class DownloadClient:
         )
         logger.info(f"{path_name} >> {new_name}")
 
-    def delete_torrent(self, hash):
+    def delete_torrent(self, hashes):
         self.client.torrents_delete(
-            hash
+            hashes
         )
         logger.info(f"Remove bad torrents.")
+
+    def add_torrent(self, torrent: dict):
+        self.client.torrents_add(
+            urls=torrent["url"],
+            save_path=torrent["save_path"],
+            category="Bangumi"
+        )
 
 
 if __name__ == "__main__":

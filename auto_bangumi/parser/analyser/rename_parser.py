@@ -5,7 +5,8 @@ from os import path
 
 logger = logging.getLogger(__name__)
 
-class EPParser:
+
+class DownloadEPParser:
     def __init__(self):
         self.rules = [
             r"(.*)\[(\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?:END)?\](.*)",
@@ -37,8 +38,13 @@ class EPParser:
                 )
                 return new_name
 
-    def rename_none(self, name):
-        return name
+    def download_rename(self, name, method):
+        if method.lower() == "pn":
+            return self.rename_pn(name)
+        elif method.lower() == "normal":
+            return self.rename_normal(name)
+        elif method.lower() == "none":
+            return name
 
 
 if __name__ == "__main__":

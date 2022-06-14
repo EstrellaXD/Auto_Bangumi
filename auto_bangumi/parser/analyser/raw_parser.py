@@ -1,13 +1,12 @@
 import logging
 import re
-from utils import json_config
-from conf import settings
-from bangumi_parser.episode import Episode
+from conf.conf import settings
+from parser.episode import Episode
 
 logger = logging.getLogger(__name__)
 
 
-class ParserLV2:
+class RawParser:
     def __init__(self) -> None:
         self._info = Episode()
 
@@ -30,39 +29,15 @@ class ParserLV2:
     @staticmethod
     def season_process(name_season):
         season_rule = r"S\d{1,2}|Season \d{1,2}|[第].[季期]"
-        season_map = {
-            "一": 1,
-            "二": 2,
-            "三": 3,
-            "四": 4,
-            "五": 5,
-            "六": 6,
-            "七": 7,
-            "八": 8,
-            "九": 9,
-            "十": 10,
-        }
         name_season = re.sub(r"[\[\]]", " ", name_season)
         seasons = re.findall(season_rule, name_season)
         if not seasons:
             name = name_season
-            season_number = 1
-            season_raw = "S01" if settings.season_one_tag else ""
+            season_raw = ""
         else:
             name = re.sub(season_rule, "", name_season)
-            for season in seasons:
-                season_raw = season
-                if re.search(r"S|Season", season) is not None:
-                    season_number = int(re.sub(r"S|Season", "", season))
-                    break
-                elif re.search(r"[第 ].*[季期]", season) is not None:
-                    season_pro = re.sub(r"[第季期 ]", "", season)
-                    try:
-                        season_number = int(season_pro)
-                    except ValueError:
-                        season_number = season_map[season_pro]
-                        break
-        return name, season_number, season_raw
+            season_raw = seasons[0]
+        return name, season_raw
 
     @staticmethod
     def name_process(name):
@@ -114,16 +89,16 @@ class ParserLV2:
             raw_name,
         )
         name_season = self.second_process(match_obj.group(1))
-        name, season_number, season_raw = self.season_process(name_season)
+        name, season_raw = self.season_process(name_season)
         name, name_group = self.name_process(name)
         episode = int(re.findall(r"\d{1,3}", match_obj.group(2))[0])
         other = match_obj.group(3).strip()
         sub, dpi, source= self.find_tags(other)
-        return name, season_number, season_raw, episode, sub, dpi, source, name_group
+        return name, season_raw, episode, sub, dpi, source, name_group
 
     def analyse(self, raw) -> Episode:
         try:
-            self._info.title, self._info.season_info.number,\
+            self._info.title,\
             self._info.season_info.raw, self._info.ep_info.number,\
             self._info.subtitle, self._info.dpi, self._info.source, \
             self._info.title_info.group = self.process(raw)
@@ -133,6 +108,6 @@ class ParserLV2:
 
 
 if __name__ == "__main__":
-    test = ParserLV2()
-    ep = test.analyse("【幻樱字幕组】【4月新番】【古见同学有交流障碍症 Komi-san wa, Komyushou Desu.】【22】【GB_MP4】【1920X1080】")
-    print(ep.title)
+    test = RawParser()
+    ep = test.analyse("【幻樱字幕组】【4月新番】【古见同学有交流障碍症 第二季 Komi-san wa, Komyushou Desu. S02】【22】【GB_MP4】【1920X1080】")
+    print(ep.season_info.raw)
