@@ -5,7 +5,7 @@ import logging
 
 from bs4 import BeautifulSoup
 
-from conf.conf import settings
+from conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class RequestURL:
                 req = self.session.get(url=url, headers=self.header, proxies=self.proxy)
                 return req
             except Exception as e:
-                logger.debug(e)
+                logger.debug(f"URL: {url}")
                 logger.error("ERROR with DNS/Connection.")
                 time.sleep(settings.connect_retry_interval)
                 times += 1

@@ -5,6 +5,7 @@ DEFAULT_SETTINGS = {
     "data_version": 4.0,
     "host_ip": "localhost:8080",
     "sleep_time": 1800,
+    "rename_sleep": 600,
     "user_name": "admin",
     "password": "adminadmin",
     "download_path": "/downloads/Bangumi",

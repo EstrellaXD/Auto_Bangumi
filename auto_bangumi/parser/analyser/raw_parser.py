@@ -1,6 +1,5 @@
 import logging
 import re
-from conf.conf import settings
 from parser.episode import Episode
 
 logger = logging.getLogger(__name__)
@@ -109,7 +108,7 @@ class RawParser:
         raw_name = self.pre_process(raw_name)
         self.get_group(raw_name)
         match_obj = re.match(
-            r"(.*|\[.*])( -? \d{1,3} |\[\d{1,3}]|\[\d{1,3}.?[vV]\d{1}]|[第第]\d{1,3}[话話集集]|\[\d{1,3}.?END])(.*)",
+            r"(.*|\[.*])( -? \d{1,3} |\[\d{1,3}]|\[\d{1,3}.?[vV]\d{1}]|[第]\d{1,3}[话話集]|\[\d{1,3}.?END])(.*)",
             raw_name,
         )
         name_season = self.second_process(match_obj.group(1))

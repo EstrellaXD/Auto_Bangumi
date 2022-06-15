@@ -1,10 +1,7 @@
 import logging
 
-from parser.analyser.raw_parser import RawParser
-from parser.analyser.rename_parser import DownloadEPParser
-from parser.analyser.tmdb import TMDBMatcher
-
-from conf.conf import settings
+from parser.analyser import RawParser, DownloadParser, TMDBMatcher
+from conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -12,13 +9,13 @@ logger = logging.getLogger(__name__)
 class TitleParser:
     def __init__(self):
         self._raw_parser = RawParser()
-        self._download_parser = DownloadEPParser()
+        self._download_parser = DownloadParser()
 
     def raw_parser(self, raw):
         return self._raw_parser.analyse(raw)
 
-    def download_parser(self, download_raw, method=settings.method):
-        return self._download_parser.download_rename(download_raw, method)
+    def download_parser(self, download_raw, season, method=settings.method):
+        return self._download_parser.download_rename(download_raw, season, method)
 
     def return_dict(self, raw):
         tmdb = TMDBMatcher()
@@ -45,8 +42,3 @@ class TitleParser:
             "eps_collect": True if settings.eps_complete else False,
         }
         return data
-
-if __name__ == "__main__":
-    raw = "[Lilith-Raws] Love Live！虹咲学园 学园偶像同好会 S02 - 11 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4] "
-    p = TitleParser()
-    print(p.return_dict(raw))

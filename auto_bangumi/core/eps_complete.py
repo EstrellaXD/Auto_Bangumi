@@ -2,16 +2,16 @@ import os.path
 import re
 import logging
 
-from conf.conf import settings
-from network.rss_collector import GetRssInfo
-from core.download_client import DownloadClient
+from conf import settings
+from network import RequestContent
+from core import DownloadClient
 
 logger = logging.getLogger(__name__)
 
 
 class FullSeasonGet:
     def __init__(self):
-        self._get_rss = GetRssInfo()
+        self._get_rss = RequestContent()
 
     def init_eps_complete_search_str(self, data: dict):
         search_str = re.sub(r"[\W_]", "+",

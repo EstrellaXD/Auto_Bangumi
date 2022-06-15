@@ -5,7 +5,7 @@ import os
 from downloader import getClient
 from downloader.exceptions import ConflictError
 
-from conf.conf import settings
+from conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +26,8 @@ class DownloadClient:
             prefs = self.client.get_app_prefs()
             settings.download_path = os.path.join(prefs["save_path"], "Bangumi")
 
-    def set_rule(self, info: dict, rss):
-        official_name, raw_name, season, group = info["title"], info["title_raw"], info["season"], info["group"]
+    def set_rule(self, info: dict, rss_link):
+        official_name, raw_name, season, group = info["official_title"], info["title_raw"], info["season"], info["group"]
         rule = {
             "enable": True,
             "mustContain": raw_name,
@@ -36,7 +36,7 @@ class DownloadClient:
             "episodeFilter": "",
             "smartFilter": False,
             "previouslyMatchedEpisodes": [],
-            "affectedFeeds": [rss],
+            "affectedFeeds": [rss_link],
             "ignoreDays": 0,
             "lastMatch": "",
             "addPaused": settings.dev_debug,
@@ -45,12 +45,13 @@ class DownloadClient:
                 os.path.join(
                     settings.download_path,
                     re.sub(settings.rule_name_re, " ", official_name).strip(),
-                    season,
+                    f"Season {season}",
                 )
             ),
         }
         rule_name = f"[{group}] {official_name}" if settings.enable_group_tag else official_name
-        self.client.rss_set_rule(rule_name=f"{rule_name} {season}", rule_def=rule)
+        self.client.rss_set_rule(rule_name=f"{rule_name} S{season}", rule_def=rule)
+        logger.info(f"Add {official_name} Season {season}")
 
     def rss_feed(self):
         try:

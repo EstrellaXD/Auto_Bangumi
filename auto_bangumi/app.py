@@ -1,16 +1,13 @@
 import os
 import time
 import logging
+from multiprocessing import Process
 
-from conf.conf import settings
-from conf.argument_parser import parse
+from conf import settings, parse
 from conf.log import setup_logger
 from utils import json_config
 
-from core.rss_analyser import RSSAnalyser
-from core.download_client import DownloadClient
-from core.renamer import Renamer
-
+from core import RSSAnalyser, DownloadClient, Renamer
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +18,6 @@ def load_data_file():
         bangumi_data = {
             "rss_link": settings.rss_link,
             "data_version": settings.data_version,
-            "first_run": True,
             "bangumi_info": []
         }
     else:
@@ -29,7 +25,6 @@ def load_data_file():
         if bangumi_data["data_version"] != settings.data_version or bangumi_data["rss_link"] != settings.rss_link:
             bangumi_data["bangumi_info"] = []
             bangumi_data["data_version"] = settings.data_version
-            bangumi_data["first_run"] = True
             bangumi_data["rss_link"] = settings.rss_link
             logger.info("Rebuilding data information...")
     return bangumi_data
@@ -54,7 +49,20 @@ def show_info():
     logger.info("Starting AutoBangumi...")
 
 
+def rss_process(download_client: DownloadClient):
+    bangumi_data = json_config.load(settings.info_path)
+    rss_analyser = RSSAnalyser()
+    while True:
+        rss_analyser.run(bangumi_data["bangumi_info"], download_client)
+        save_data_file(bangumi_data)
+        time.sleep(settings.sleep_time)
 
+
+def rename_process(download_client: DownloadClient):
+    rename = Renamer(download_client)
+    while True:
+        rename.run()
+        time.sleep(settings.rename_sleep)
 
 
 def run():
@@ -78,13 +86,14 @@ def run():
         logger.error("Please add RIGHT RSS url.")
         quit()
     download_client.rss_feed()
-    rss_analyser = RSSAnalyser()
-    rename = Renamer(download_client)
     # 主程序循环
-    while True:
-        bangumi_data = json_config.load(settings.info_path)
-        rss_analyser.rss_to_data(bangumi_data["bangumi_info"])
-        download_client.add_rules(bangumi_data["bangumi_info"])
+
+    rss_thread = Process(target=rss_process, args=(download_client,))
+    rename_thread = Process(target=rss_process, args=(download_client,))
+    rss_thread.start()
+    rename_thread.start()
+    rename_thread.join()
+    rename_thread.join()
 
 
 if __name__ == "__main__":
