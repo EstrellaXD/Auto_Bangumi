@@ -14,7 +14,7 @@ class RequestContent:
     def get_title(self, url):
         soup = self._req.get_content(url)
         item = soup.find("item")
-        return item.title
+        return item.title.string
 
     def get_torrents(self, url):
         soup = self._req.get_content(url)
@@ -27,3 +27,10 @@ class RequestContent:
 
     def close_session(self):
         self._req.close()
+
+
+if __name__ == "__main__":
+    r = RequestContent()
+    url = "https://mikanani.me/RSS/Bangumi?bangumiId=2685&subgroupid=552"
+    title = r.get_title(url)
+    print(title)

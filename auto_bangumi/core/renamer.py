@@ -18,9 +18,9 @@ class Renamer:
         self.torrent_count = len(self.recent_info)
 
     def print_result(self):
-        logger.info(f"Finished checking {self.torrent_count} files' name.")
-        logger.info(f"Renamed {self.rename_count} files.")
-        logger.info(f"Finished rename process.")
+        if self.rename_count != 0:
+            logger.info(f"Finished checking {self.torrent_count} files' name, renamed {self.rename_count} files.")
+        logger.debug(f"Checked {self.torrent_count} files")
 
     def refresh(self):
         self.recent_info = self.client.get_torrent_info()

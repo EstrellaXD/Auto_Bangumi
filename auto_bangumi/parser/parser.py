@@ -23,7 +23,7 @@ class TitleParser:
             episode = self.raw_parser(raw)
             try:
                 tmdb_info = tmdb.tmdb_search(episode.title)
-                official_title = tmdb_info.title_zh if settings.zh_title else tmdb_info.title_jp
+                official_title = tmdb_info.title_zh if settings.title_language == "zh" else tmdb_info.title_jp
                 season = tmdb_info.last_season
             except Exception as e:
                 logger.debug(e)

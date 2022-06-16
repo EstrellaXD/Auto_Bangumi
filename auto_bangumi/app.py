@@ -60,7 +60,7 @@ def main_process(bangumi_data, download_client: DownloadClient):
             rename.refresh()
             rename.run()
             times += 1
-            time.sleep(settings.sleep_time)
+            time.sleep(settings.sleep_time/settings.times)
 
 
 def run():

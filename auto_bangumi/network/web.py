@@ -5,9 +5,9 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import logging
 
-from mikanani.rss_collector import RSSCollector
-from core.download_client import DownloadClient
-from conf.conf import settings
+from core import RSSAnalyser
+from core import DownloadClient
+from conf import settings
 from utils import json_config
 
 logger = logging.getLogger(__name__)
@@ -65,13 +65,13 @@ class RSS(BaseModel):
 
 @app.post("/api/v1/subscriptions")
 async def receive(link: RSS):
-    data = RSSCollector().collect_collection(link.link)
+    data = RSSAnalyser().rss_to_data(link.link)
     from conf.const_dev import DEV_SETTINGS
     settings.init(DEV_SETTINGS)
     client = DownloadClient()
     client.add_collection_feed(link.link, item_path=data["title"])
     client.set_rule(data, link.link)
-    return "Successed"
+    return "Successes"
 
 
 class Search(BaseModel):

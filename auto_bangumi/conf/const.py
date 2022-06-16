@@ -4,34 +4,29 @@ DEFAULT_SETTINGS = {
     "version": "2.5.0-beta2",
     "data_version": 4.0,
     "host_ip": "localhost:8080",
-    "sleep_time": 180,
+    "sleep_time": 1800,
     "times": 10,
-    "rename_sleep": 600,
     "user_name": "admin",
     "password": "adminadmin",
     "download_path": "/downloads/Bangumi",
     "method": "pn",
     "enable_group_tag": False,
     "info_path": "/config/bangumi.json",
-    "anidb_path": "/config/anidb.json",
-    "anidb_url": "https://raw.githubusercontent.com/EstrellaXD/Auto_Bangumi_resourse/main/resource/season_data.json",
     "not_contain": "720",
     "rule_name_re": r"\:|\/|\.",
     "connect_retry_interval": 5,
     "debug_mode": False,
-    "season_one_tag": True,
     "remove_bad_torrent": False,
     "dev_debug": False,
-    "enable_eps_complete": False,
-    "first_sleep": 600,
+    "eps_complete": False,
     "webui_port": 7892,
-    "enable_fuzz_match": True,
-    "zh_title": True
+    "title_language": "zh",
 }
 
 ENV_TO_ATTR = {
     "AB_DOWNLOADER_HOST": "host_ip",
     "AB_INTERVAL_TIME": ("sleep_time", lambda e: float(e)),
+    "AB_RENAME_FREQ": ("times", lambda e: float(e)),
     "AB_DOWNLOADER_USERNAME": "user_name",
     "AB_DOWNLOADER_PASSWORD": "password",
     "AB_RSS": "rss_link",
@@ -44,12 +39,10 @@ ENV_TO_ATTR = {
         "enable_eps_complete",
         lambda e: e.lower() in ("true", "1", "t")
     ),
-    "AB_SEASON_ONE": ("season_one_tag", lambda e: e.lower() in ("true", "1", "t")),
     "AB_REMOVE_BAD_BT": ("remove_bad_torrent", lambda e: e.lower() in ("true", "1", "t")),
-    "AB_FIRST_SLEEP": ("first_sleep", lambda e: float(e)),
     "AB_WEBUI_PORT": ("webui_port", lambda e: int(e)),
-    "AB_FUZZ_MATCH": ("enable_fuzz_match", lambda e: e.lower() in ("true", "1", "t")),
-    "AB_HTTP_PROXY": "http_proxy"
+    "AB_HTTP_PROXY": "http_proxy",
+    "AB_LANGUAGE": "title_language",
 }
 
 
