@@ -4,7 +4,7 @@ import requests
 from conf.conf import settings
 from utils import json_config
 
-from bangumi_parser.episode import Episode
+from parser.episode import Episode
 
 logger = logging.getLogger(__name__)
 

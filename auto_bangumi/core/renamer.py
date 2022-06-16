@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 
 
 class Renamer:
-    def __init__(self, downloadClient: DownloadClient):
-        self.client = downloadClient
+    def __init__(self, download_client: DownloadClient):
+        self.client = download_client
         self._renamer = TitleParser()
         self.recent_info = self.client.get_torrent_info()
         self.rename_count = 0
@@ -29,7 +29,7 @@ class Renamer:
         for i in range(0, self.torrent_count):
             info = self.recent_info[i]
             name = info.name
-            hash = info.hash
+            torrent_hash = info.hash
             path_parts = PurePath(info.content_path).parts \
                 if PurePath(info.content_path).name != info.content_path \
                 else PureWindowsPath(info.content_path).parts
@@ -40,14 +40,14 @@ class Renamer:
                 logger.debug(f"Origin name: {path_name}")
                 logger.debug(f"New name: {new_name}")
                 if path_name != new_name:
-                    self.client.rename_torrent_file(hash, path_name, new_name)
+                    self.client.rename_torrent_file(torrent_hash, path_name, new_name)
                     self.rename_count += 1
                 else:
                     continue
             except:
                 logger.warning(f"{path_name} rename failed")
                 if settings.remove_bad_torrent:
-                    self.client.delete_torrent(hash)
+                    self.client.delete_torrent(torrent_hash)
         self.print_result()
 
 

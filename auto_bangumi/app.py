@@ -49,20 +49,18 @@ def show_info():
     logger.info("Starting AutoBangumi...")
 
 
-def rss_process(download_client: DownloadClient):
-    bangumi_data = json_config.load(settings.info_path)
+def main_process(bangumi_data, download_client: DownloadClient):
     rss_analyser = RSSAnalyser()
+    rename = Renamer(download_client)
     while True:
         rss_analyser.run(bangumi_data["bangumi_info"], download_client)
         save_data_file(bangumi_data)
-        time.sleep(settings.sleep_time)
-
-
-def rename_process(download_client: DownloadClient):
-    rename = Renamer(download_client)
-    while True:
-        rename.run()
-        time.sleep(settings.rename_sleep)
+        times = 0
+        while times < settings.times:
+            rename.refresh()
+            rename.run()
+            times += 1
+            time.sleep(settings.sleep_time)
 
 
 def run():
@@ -86,14 +84,9 @@ def run():
         logger.error("Please add RIGHT RSS url.")
         quit()
     download_client.rss_feed()
+    bangumi_data = load_data_file()
     # 主程序循环
-
-    rss_thread = Process(target=rss_process, args=(download_client,))
-    rename_thread = Process(target=rss_process, args=(download_client,))
-    rss_thread.start()
-    rename_thread.start()
-    rename_thread.join()
-    rename_thread.join()
+    main_process(bangumi_data, download_client)
 
 
 if __name__ == "__main__":
