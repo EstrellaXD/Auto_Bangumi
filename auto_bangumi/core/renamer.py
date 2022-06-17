@@ -34,11 +34,14 @@ class Renamer:
                 if PurePath(info.content_path).name != info.content_path \
                 else PureWindowsPath(info.content_path).parts
             path_name = path_parts[-1]
-            season = int(re.search(r"\d", path_parts[-2]).group())
             try:
-                new_name = self._renamer.download_parser(name, season, settings.method)
-                logger.debug(f"Origin name: {path_name}")
-                logger.debug(f"New name: {new_name}")
+                season = int(re.search(r"\d", path_parts[-2]).group())
+            except Exception as e:
+                logger.debug(e)
+                season = 1
+            folder_name = path_parts[-3]
+            try:
+                new_name = self._renamer.download_parser(name, folder_name, season, settings.method)
                 if path_name != new_name:
                     self.client.rename_torrent_file(torrent_hash, path_name, new_name)
                     self.rename_count += 1
@@ -46,6 +49,7 @@ class Renamer:
                     continue
             except:
                 logger.warning(f"{path_name} rename failed")
+                logger.debug(f"origin: {name}")
                 if settings.remove_bad_torrent:
                     self.client.delete_torrent(torrent_hash)
         self.print_result()

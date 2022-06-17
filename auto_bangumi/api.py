@@ -7,7 +7,7 @@ import logging
 
 from core import RSSAnalyser
 from core import DownloadClient
-from conf import settings
+from conf import settings, parse
 from utils import json_config
 
 logger = logging.getLogger(__name__)
@@ -15,13 +15,13 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 
 
-templates = Jinja2Templates(directory="templates")
+# templates = Jinja2Templates(directory="templates")
 
 
-@app.get("/", response_class=HTMLResponse)
-def index(request: Request):
-    context = {"request": request}
-    return templates.TemplateResponse("index.html", context)
+# @app.get("/", response_class=HTMLResponse)
+# def index(request: Request):
+#     context = {"request": request}
+#     return templates.TemplateResponse("index.html", context)
 
 
 class Config(BaseModel):
@@ -65,13 +65,16 @@ class RSS(BaseModel):
 
 @app.post("/api/v1/subscriptions")
 async def receive(link: RSS):
-    data = RSSAnalyser().rss_to_data(link.link)
-    from conf.const_dev import DEV_SETTINGS
-    settings.init(DEV_SETTINGS)
     client = DownloadClient()
-    client.add_collection_feed(link.link, item_path=data["title"])
-    client.set_rule(data, link.link)
-    return "Successes"
+    try:
+        data = RSSAnalyser().rss_to_data(link.link)
+        client.add_collection_feed(link.link, item_path=data["official_title"])
+        client.set_rule(data, link.link)
+        return data
+    except Exception as e:
+        logger.debug(e)
+        return "Error"
+
 
 
 class Search(BaseModel):
@@ -85,5 +88,19 @@ async def search(input: Search):
     return "Nothing Happened"
 
 
-if __name__ == "__main__":
+def run():
+    args = parse()
+    if args.debug:
+        try:
+            from conf.const_dev import DEV_SETTINGS
+            settings.init(DEV_SETTINGS)
+        except ModuleNotFoundError:
+            logger.debug("Please copy `const_dev.py` to `const_dev.py` to use custom settings")
+    else:
+        settings.init()
     uvicorn.run(app, host="0.0.0.0", port=settings.webui_port)
+
+
+if __name__ == "__main__":
+    run()
+

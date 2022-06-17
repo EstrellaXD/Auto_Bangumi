@@ -1,11 +1,11 @@
 # -*- encoding: utf-8 -*-
 
 DEFAULT_SETTINGS = {
-    "version": "2.5.0-beta2",
+    "version": "2.5.0-beta10",
     "data_version": 4.0,
     "host_ip": "localhost:8080",
-    "sleep_time": 1800,
-    "times": 10,
+    "sleep_time": 7200,
+    "times": 20,
     "user_name": "admin",
     "password": "adminadmin",
     "download_path": "/downloads/Bangumi",
@@ -21,6 +21,11 @@ DEFAULT_SETTINGS = {
     "eps_complete": False,
     "webui_port": 7892,
     "title_language": "zh",
+    "tmdb_api": "",
+    "enable_tmdb": False,
+    "socks": None,
+    "enable_rss_collector": True,
+    "enable_rename": True
 }
 
 ENV_TO_ATTR = {
@@ -36,13 +41,17 @@ ENV_TO_ATTR = {
     "AB_NOT_CONTAIN": "not_contain",
     "AB_DEBUG_MODE": ("debug_mode", lambda e: e.lower() in ("true", "1", "t")),
     "AB_EP_COMPLETE": (
-        "enable_eps_complete",
+        "eps_complete",
         lambda e: e.lower() in ("true", "1", "t")
     ),
     "AB_REMOVE_BAD_BT": ("remove_bad_torrent", lambda e: e.lower() in ("true", "1", "t")),
     "AB_WEBUI_PORT": ("webui_port", lambda e: int(e)),
     "AB_HTTP_PROXY": "http_proxy",
     "AB_LANGUAGE": "title_language",
+    "AB_ENABLE_TMDB": ("enable_tmdb", lambda e: e.lower() in ("true", "1", "t")),
+    "AB_SOCKS": "socks",
+    "AB_RENAME": ("enable_rename", lambda e: e.lower() in ("true", "1", "t")),
+    "AB_RSS_COLLECTOR": ("enable_rss_collector", lambda e: e.lower() in ("true", "1", "t")),
 }
 
 

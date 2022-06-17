@@ -1,13 +1,13 @@
 import os
 import time
 import logging
-from multiprocessing import Process
 
 from conf import settings, parse
 from conf.log import setup_logger
 from utils import json_config
 
-from core import RSSAnalyser, DownloadClient, Renamer
+from core import RSSAnalyser, DownloadClient, Renamer, FullSeasonGet
+
 
 logger = logging.getLogger(__name__)
 
@@ -20,12 +20,15 @@ def load_data_file():
             "data_version": settings.data_version,
             "bangumi_info": []
         }
+        logger.info("Building data information...")
     else:
         bangumi_data = json_config.load(info_path)
         if bangumi_data["data_version"] != settings.data_version or bangumi_data["rss_link"] != settings.rss_link:
-            bangumi_data["bangumi_info"] = []
-            bangumi_data["data_version"] = settings.data_version
-            bangumi_data["rss_link"] = settings.rss_link
+            bangumi_data = {
+                "rss_link": settings.rss_link,
+                "data_version": settings.data_version,
+                "bangumi_info": []
+            }
             logger.info("Rebuilding data information...")
     return bangumi_data
 
@@ -50,15 +53,22 @@ def show_info():
 
 
 def main_process(bangumi_data, download_client: DownloadClient):
-    rss_analyser = RSSAnalyser()
     rename = Renamer(download_client)
+    rss_analyser = RSSAnalyser()
+    first_run = True
     while True:
-        rss_analyser.run(bangumi_data["bangumi_info"], download_client)
-        save_data_file(bangumi_data)
         times = 0
+        if settings.enable_rss_collector:
+            rss_analyser.run(bangumi_data["bangumi_info"], download_client)
+        if settings.eps_complete and first_run:
+            FullSeasonGet().eps_complete(bangumi_data["bangumi_info"], download_client)
+            first_run = False
+        logger.info("Running....")
+        save_data_file(bangumi_data)
         while times < settings.times:
-            rename.refresh()
-            rename.run()
+            if settings.enable_rename:
+                rename.refresh()
+                rename.run()
             times += 1
             time.sleep(settings.sleep_time/settings.times)
 
@@ -77,7 +87,7 @@ def run():
     # 初始化
     setup_logger()
     show_info()
-    time.sleep(3)
+    time.sleep(1)
     download_client = DownloadClient()
     download_client.init_downloader()
     if settings.rss_link is None:

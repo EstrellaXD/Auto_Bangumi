@@ -16,9 +16,9 @@ class TMDBInfo:
 class TMDBMatcher:
     def __init__(self):
         self.search_url = lambda e: \
-            f"https://api.themoviedb.org/3/search/tv?api_key={settings.tdmb_api}&page=1&query={e}&include_adult=false"
+            f"https://api.themoviedb.org/3/search/tv?api_key={settings.tmdb_api}&page=1&query={e}&include_adult=false"
         self.info_url = lambda e: \
-            f"https://api.themoviedb.org/3/tv/{e}?api_key={settings.tdmb_api}&language=zh-CN"
+            f"https://api.themoviedb.org/3/tv/{e}?api_key={settings.tmdb_api}&language=zh-CN"
         self._request = RequestContent()
 
     def is_animation(self, id):

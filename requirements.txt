@@ -1,6 +1,7 @@
 qbittorrent-api
 bs4
-requests~=2.27.1
+requests==2.28.0
+pysocks
 lxml
 
 setuptools~=62.1.0

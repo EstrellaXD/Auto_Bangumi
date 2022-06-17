@@ -13,4 +13,6 @@ ADD ./auto_bangumi /auto_bangumi
 ADD ./config /config
 ADD ./templates /templates
 
-CMD ["python3", "app.py"]
+RUN chmod a+x run.sh
+
+CMD ["./run.sh"]

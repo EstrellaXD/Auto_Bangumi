@@ -24,6 +24,7 @@ class RSSAnalyser:
             extra_add = True
             for d in bangumi_info:
                 if re.search(d["title_raw"], raw_title) is not None:
+                    logger.debug(f"Had added {d['title_raw']} before")
                     extra_add = False
                     break
             if extra_add:
@@ -38,8 +39,14 @@ class RSSAnalyser:
         return data
 
     def run(self, bangumi_info: list, download_client: DownloadClient):
-        self.rss_to_datas(bangumi_info)
-        download_client.add_rules(bangumi_info, rss_link=settings.rss_link)
+        logger.info("Start collecting RSS info.")
+        try:
+            self.rss_to_datas(bangumi_info)
+            download_client.add_rules(bangumi_info, rss_link=settings.rss_link)
+        except Exception as e:
+            logger.debug(e)
+            logger.info("Connection error.")
+        logger.info("Finished")
 
 
 if __name__ == "__main__":

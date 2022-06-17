@@ -14,20 +14,24 @@ class TitleParser:
     def raw_parser(self, raw):
         return self._raw_parser.analyse(raw)
 
-    def download_parser(self, download_raw, season, method=settings.method):
-        return self._download_parser.download_rename(download_raw, season, method)
+    def download_parser(self, download_raw, folder_name, season, method=settings.method):
+        return self._download_parser.download_rename(download_raw, folder_name, season, method)
 
     def return_dict(self, raw):
         tmdb = TMDBMatcher()
         try:
             episode = self.raw_parser(raw)
-            try:
-                tmdb_info = tmdb.tmdb_search(episode.title)
-                official_title = tmdb_info.title_zh if settings.title_language == "zh" else tmdb_info.title_jp
-                season = tmdb_info.last_season
-            except Exception as e:
-                logger.debug(e)
-                logger.info("Not Match in TMDB")
+            if settings.enable_tmdb:
+                try:
+                    tmdb_info = tmdb.tmdb_search(episode.title)
+                    official_title = tmdb_info.title_zh if settings.title_language == "zh" else tmdb_info.title_jp
+                    season = tmdb_info.last_season
+                except Exception as e:
+                    logger.debug(e)
+                    logger.info("Not Match in TMDB")
+                    official_title = episode.title
+                    season = episode.season_info.number
+            else:
                 official_title = episode.title
                 season = episode.season_info.number
             data = {
