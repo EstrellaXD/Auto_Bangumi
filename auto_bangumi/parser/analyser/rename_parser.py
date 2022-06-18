@@ -69,7 +69,7 @@ class DownloadParser:
 
 
 if __name__ == "__main__":
-    name = "[NC-Raws]Summer Time Rendering S02 - 09(B-Global 3840x2160 HEVC AAC MKV).mkv"
+    name = "[Nekomoe kissaten] Komi-san wa, Komyushou Desu. 02 [WebRip 1080p HEVC-10bit AAC ASSx2]"
     rename = DownloadParser()
     new_name = rename.rename_pn(name, 1)
     print(new_name)
