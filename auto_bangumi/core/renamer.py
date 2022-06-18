@@ -80,5 +80,5 @@ if __name__ == "__main__":
     settings.init(DEV_SETTINGS)
     client = DownloadClient()
     rename = Renamer(client)
-    # print(rename.split_path("/downloads/Bangumi/勇者辞职/Season 1/勇者辞职.mp4"))
-    rename.set_folder()
+    print(rename.split_path("/downloads/Bangumi/勇者辞职.mp4"))
+    # rename.set_folder()

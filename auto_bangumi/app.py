@@ -54,7 +54,8 @@ def show_info():
 
 def main_process(bangumi_data, download_client: DownloadClient):
     rename = Renamer(download_client)
-    rename.set_folder()
+    if settings.reset_folder:
+        rename.set_folder()
     rss_analyser = RSSAnalyser()
     first_run = True
     while True:

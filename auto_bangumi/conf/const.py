@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 
 DEFAULT_SETTINGS = {
-    "version": "2.5.0-beta10",
+    "version": "2.5.1",
     "data_version": 4.0,
     "host_ip": "localhost:8080",
     "sleep_time": 7200,
@@ -25,7 +25,8 @@ DEFAULT_SETTINGS = {
     "enable_tmdb": False,
     "socks": None,
     "enable_rss_collector": True,
-    "enable_rename": True
+    "enable_rename": True,
+    "reset_folder": False
 }
 
 ENV_TO_ATTR = {
@@ -52,6 +53,7 @@ ENV_TO_ATTR = {
     "AB_SOCKS": "socks",
     "AB_RENAME": ("enable_rename", lambda e: e.lower() in ("true", "1", "t")),
     "AB_RSS_COLLECTOR": ("enable_rss_collector", lambda e: e.lower() in ("true", "1", "t")),
+    "AB_RESET_FOLDER": ("reset_folder", lambda e: e.lower() in ("true", "1", "t"))
 }
 
 
