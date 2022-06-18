@@ -51,7 +51,7 @@ class DownloadClient:
         }
         rule_name = f"[{group}] {official_name}" if settings.enable_group_tag else official_name
         self.client.rss_set_rule(rule_name=f"{rule_name} S{season}", rule_def=rule)
-        logger.info(f"Add {official_name} Season {season} to download rule")
+        logger.info(f"Add {official_name} Season {season}")
 
     def rss_feed(self):
         try:
@@ -76,6 +76,7 @@ class DownloadClient:
             if not info["added"]:
                 self.set_rule(info, rss_link)
                 info["added"] = True
+        logger.info("to rule.")
         logger.debug("Finished.")
 
     def get_torrent_info(self):
@@ -100,6 +101,12 @@ class DownloadClient:
             urls=torrent["url"],
             save_path=torrent["save_path"],
             category="Bangumi"
+        )
+
+    def move_torrent(self, hashes, location):
+        self.client.move_torrent(
+            hashes=hashes,
+            new_location=location
         )
 
 

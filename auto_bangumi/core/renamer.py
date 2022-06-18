@@ -1,6 +1,8 @@
 import logging
+import os.path
 import re
 from pathlib import PurePath, PureWindowsPath
+
 
 from conf import settings
 from core import DownloadClient
@@ -13,38 +15,47 @@ class Renamer:
     def __init__(self, download_client: DownloadClient):
         self.client = download_client
         self._renamer = TitleParser()
-        self.recent_info = self.client.get_torrent_info()
-        self.rename_count = 0
-        self.torrent_count = len(self.recent_info)
 
-    def print_result(self):
-        if self.rename_count != 0:
-            logger.info(f"Finished checking {self.torrent_count} files' name, renamed {self.rename_count} files.")
-        logger.debug(f"Checked {self.torrent_count} files")
+    def print_result(self, torrent_count, rename_count):
+        if rename_count != 0:
+            logger.info(f"Finished checking {torrent_count} files' name, renamed {rename_count} files.")
+        logger.debug(f"Checked {torrent_count} files")
 
-    def refresh(self):
-        self.recent_info = self.client.get_torrent_info()
+    def get_torrent_info(self):
+        recent_info = self.client.get_torrent_info()
+        torrent_count = len(recent_info)
+        return recent_info, torrent_count
+
+    def split_path(self, path: str):
+        path = path.replace(settings.download_path, "")
+        path_parts = PurePath(path).parts \
+            if PurePath(path).name != path \
+            else PureWindowsPath(path).parts
+        path_name = path_parts[-1]
+        try:
+            if re.search(r"S\d{1,2}|[Ss]eason", path_parts[-2]) is not None:
+                season = int(re.search(r"\d{1,2}", path_parts[-2]).group())
+            else:
+                season = 1
+        except Exception as e:
+            logger.debug("No Season info")
+            season = 1
+        folder_name = path_parts[1] if path_parts[0] == "/" else path_parts[0]
+        download_path = path_parts[1]
+        return path_name, season, folder_name, download_path
 
     def run(self):
-        for i in range(0, self.torrent_count):
-            info = self.recent_info[i]
+        recent_info, torrent_count = self.get_torrent_info()
+        rename_count = 0
+        for info in recent_info:
             name = info.name
             torrent_hash = info.hash
-            path_parts = PurePath(info.content_path).parts \
-                if PurePath(info.content_path).name != info.content_path \
-                else PureWindowsPath(info.content_path).parts
-            path_name = path_parts[-1]
-            try:
-                season = int(re.search(r"\d", path_parts[-2]).group())
-            except Exception as e:
-                logger.debug(e)
-                season = 1
-            folder_name = path_parts[-3]
+            path_name, season, folder_name, _ = self.split_path(info.content_path)
             try:
                 new_name = self._renamer.download_parser(name, folder_name, season, settings.method)
                 if path_name != new_name:
                     self.client.rename_torrent_file(torrent_hash, path_name, new_name)
-                    self.rename_count += 1
+                    rename_count += 1
                 else:
                     continue
             except:
@@ -52,7 +63,16 @@ class Renamer:
                 logger.debug(f"origin: {name}")
                 if settings.remove_bad_torrent:
                     self.client.delete_torrent(torrent_hash)
-        self.print_result()
+        self.print_result(torrent_count, rename_count)
+
+    def set_folder(self):
+        recent_info, _ = self.get_torrent_info()
+        for info in recent_info:
+            torrent_hash = info.hash
+            _, season, folder_name, download_path = self.split_path(info.content_path)
+            new_path = os.path.join(settings.download_path, folder_name, f"Season {season}")
+            # print(new_path)
+            self.client.move_torrent(torrent_hash, new_path)
 
 
 if __name__ == "__main__":
@@ -60,4 +80,5 @@ if __name__ == "__main__":
     settings.init(DEV_SETTINGS)
     client = DownloadClient()
     rename = Renamer(client)
-    rename.run()
+    # print(rename.split_path("/downloads/Bangumi/勇者辞职/Season 1/勇者辞职.mp4"))
+    rename.set_folder()

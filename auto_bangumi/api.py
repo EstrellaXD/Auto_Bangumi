@@ -76,7 +76,6 @@ async def receive(link: RSS):
         return "Error"
 
 
-
 class Search(BaseModel):
     group: str
     title: str

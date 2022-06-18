@@ -72,6 +72,9 @@ class QbDownloader:
     def rss_set_rule(self, rule_name, rule_def):
         self._client.rss_set_rule(rule_name, rule_def)
 
+    def move_torrent(self, hashes, new_location):
+        self._client.torrents_set_location(new_location, hashes)
+
 
 if __name__ == "__main__":
     try:

@@ -49,3 +49,12 @@ class TitleParser:
             return data
         except Exception as e:
             logger.debug(e)
+
+
+if __name__ == '__main__':
+    import re
+    T = TitleParser()
+    raw = "[dasdas]sadasdsa S01 - 07[dasdasdas]"
+    season = int(re.search(r"\d{1,2}", "S02").group())
+    title = T.download_parser(raw, "asdad", season)
+    print(season,title)

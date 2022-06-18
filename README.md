@@ -39,24 +39,24 @@
     ```
     Bangumi
     ├── bangumi_A_title
-    │   ├── SO1
-    │   │   ├── A E01.mp4
-    │   │   ├── A E02.mp4
-    │   │   ├── A E03.mp4
-    │   │   └── A E04.mp4
-    │   └── SO2
-    │       ├── A S02 E01.mp4
-    │       ├── A S02 E02.mp4
-    │       ├── A S02 E03.mp4
-    │       └── A S02 E04.mp4
+    │   ├── Season 1
+    │   │   ├── A S01E01.mp4
+    │   │   ├── A S01E02.mp4
+    │   │   ├── A S01E03.mp4
+    │   │   └── A S01E04.mp4
+    │   └── Season 1
+    │       ├── A S02E01.mp4
+    │       ├── A S02E02.mp4
+    │       ├── A S02E03.mp4
+    │       └── A S02E04.mp4
     ├── bangumi_B_title
-    │   └─── SO1
+    │   └─── Season 1
     ```
 - 全自动重命名，重命名后 95% 以上的番剧可以直接被媒体库软件直接刮削
     ```
   [Lilith-Raws] Kakkou no Iinazuke - 07 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4].mp4 
   >>
-   Kakkou no Iinazuke E07.mp4
+   Kakkou no Iinazuke S01E07.mp4
   ```
 - 季中追番可以补全当季遗漏的所有剧集
 - 高度可自定义的功能选项，可以针对不同媒体库软件微调
@@ -73,7 +73,7 @@
 ***开发中的功能：***
 
 - ✅ RSS 解析器：AutoBangumi 可以自行解析分析种子无需依赖下载器。
-- Transmission & Aria2 的支持。
+- ~~Transmission & Aria2 的支持。~~
 - ✅ 遗漏番剧下载：中间开始追番可以补全之前的剧集。
 
 ***计划开发的功能：***

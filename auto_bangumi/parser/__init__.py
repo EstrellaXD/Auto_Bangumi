@@ -1,1 +1,1 @@
-from .parser import TitleParser
+from .title_parser import TitleParser

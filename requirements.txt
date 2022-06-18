@@ -1,10 +1,11 @@
 qbittorrent-api
-bs4
+bs4~=4.11.1
 requests==2.28.0
 pysocks
 lxml
 
 setuptools~=62.1.0
-fastapi
-uvicorn
+fastapi~=0.78.0
+uvicorn~=0.17.6
 jinja2
+pydantic~=1.9.1
