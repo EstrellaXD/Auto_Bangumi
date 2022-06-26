@@ -4,14 +4,32 @@ from parser.episode import Episode
 
 logger = logging.getLogger(__name__)
 
-# TODO: 正则表达式可以放到全局，改成 re.compile 的形式
+EPISODE_RE = re.compile(r"\d{1,3}")
+TITLE_RE = re.compile(
+    r"(.*|\[.*])( -? \d{1,3} |\[\d{1,3}]|\[\d{1,3}.?[vV]\d{1}]|[第]\d{1,3}[话話集]|\[\d{1,3}.?END])(.*)"
+)
+RESOLUTION_RE = re.compile(r"1080|720|2160|4K")
+SOURCE_RE = re.compile(r"B-Global|[Bb]aha|[Bb]ilibili|AT-X|Web")
+SUB_RE = re.compile(r"[简繁日字幕]|CH|BIG5|GB")
+
+CHINESE_NUMBER_MAP = {
+    "一": 1,
+    "二": 2,
+    "三": 3,
+    "四": 4,
+    "五": 5,
+    "六": 6,
+    "七": 7,
+    "八": 8,
+    "九": 9,
+    "十": 10,
+}
+
 
 class RawParser:
 
-    def __init__(self) -> None:
-        pass
-
-    def get_group(self, name: str) -> str:
+    @staticmethod
+    def get_group(name: str) -> str:
         return re.split(r"[\[\]]", name)[1]
 
     @staticmethod
@@ -19,28 +37,13 @@ class RawParser:
         return raw_name.replace("【", "[").replace("】", "]")
 
     @staticmethod
-    def second_process(raw_name):
-        if re.search(r"新番|月?番", raw_name):
-            pro_name = re.sub(".*新番.", "", raw_name)
+    def season_process(season_info: str):
+        if re.search(r"新番|月?番", season_info):
+            name_season = re.sub(".*新番.", "", season_info)
         else:
-            pro_name = re.sub(r"^[^]】]*[]】]", "", raw_name).strip()
-        return pro_name
+            name_season = re.sub(r"^[^]】]*[]】]", "", season_info).strip()
 
-    @staticmethod
-    def season_process(name_season):
         season_rule = r"S\d{1,2}|Season \d{1,2}|[第].[季期]"
-        season_map = {
-            "一": 1,
-            "二": 2,
-            "三": 3,
-            "四": 4,
-            "五": 5,
-            "六": 6,
-            "七": 7,
-            "八": 8,
-            "九": 9,
-            "十": 10,
-        }
         name_season = re.sub(r"[\[\]]", " ", name_season)
         seasons = re.findall(season_rule, name_season)
         if not seasons:
@@ -56,12 +59,12 @@ class RawParser:
                 try:
                     season = int(season_pro)
                 except ValueError:
-                    season = season_map[season_pro]
+                    season = CHINESE_NUMBER_MAP[season_pro]
                     break
         return name, season_raw, season
 
     @staticmethod
-    def name_process(name):
+    def name_process(name: str):
         name = name.strip()
         split = re.split("/|  |-  ", name.replace("（仅限港澳台地区）", ""))
         while "" in split:
@@ -84,46 +87,66 @@ class RawParser:
         for name in split:
             if re.findall("[aA-zZ]{1}", name).__len__() == compare:
                 return name.strip(), split
+        raise ValueError()
 
     @staticmethod
     def find_tags(other):
         elements = re.sub(r"[\[\]()（）]", " ", other).split(" ")
-        while "" in elements:
-            elements.remove("")
         # find CHT
-        sub = None
-        dpi = None
-        source = None
-        for element in elements:
-            if re.search(r"[简繁日字幕]|CH|BIG5|GB", element) is not None:
-                # TODO: 这里需要改成更精准的匹配，可能不止 _MP4 ?
-                sub = element.replace("_MP4", "")
-            elif re.search(r"1080|720|2160|4K", element) is not None:
-                dpi = element
-            elif re.search(r"B-Global|[Bb]aha|[Bb]ilibili|AT-X|Web", element) is not None:
+        sub, resolution, source = None, None, None
+
+        for element in filter(lambda x: x != "", elements):
+            if SUB_RE.search(element):
+                sub = element
+            elif RESOLUTION_RE.search(element):
+                resolution = element
+            elif SOURCE_RE.search(element):
                 source = element
-        return sub, dpi, source
+        return RawParser.clean_sub(sub), resolution, source
 
-    def process(self, raw_name):
-        raw_name = self.pre_process(raw_name)
-        group = self.get_group(raw_name)
+    @staticmethod
+    def clean_sub(sub: str | None) -> str | None:
+        if sub is None:
+            return sub
+        # TODO: 这里需要改成更精准的匹配，可能不止 _MP4 ?
+        return sub.replace("_MP4", "")
 
-        match_obj = re.match(
-            r"(.*|\[.*])( -? \d{1,3} |\[\d{1,3}]|\[\d{1,3}.?[vV]\d{1}]|[第]\d{1,3}[话話集]|\[\d{1,3}.?END])(.*)",
-            raw_name,
-        )
-        name_season = self.second_process(match_obj.group(1))
-        name, season_raw, season = self.season_process(name_season)
-        name, name_group = self.name_process(name)
-        episode = int(re.findall(r"\d{1,3}", match_obj.group(2))[0])
-        other = match_obj.group(3).strip()
-        sub, dpi, source = self.find_tags(other)
+    def process(self, raw_title: str):
+        raw_title = raw_title.strip()
+
+        content_title = self.pre_process(raw_title)  # 预处理标题
+        group = self.get_group(content_title)  # 翻译组的名字
+
+        match_obj = TITLE_RE.match(content_title)  # 处理标题
+
+        season_info, episode_info, other = list(map(
+            lambda x: x.strip(), match_obj.groups()
+        ))
+
+        raw_name, season_raw, season = self.season_process(season_info)  # 处理 第n季
+        name, name_group = "", ""
+        try:
+            name, name_group = self.name_process(raw_name)  # 处理 名字
+        except ValueError:
+            pass
+
+        # 处理 集数
+        raw_episode = EPISODE_RE.search(episode_info)
+        episode = 0
+        if raw_episode is not None:
+            episode = int(raw_episode.group())
+
+        sub, dpi, source = self.find_tags(other)  # 剩余信息处理
+
         return name, season, season_raw, episode, sub, dpi, source, name_group, group
 
     def analyse(self, raw) -> Episode:
         try:
+            ret = self.process(raw)
+            if ret is None:
+                return None
             name, season, sr, episode, \
-                sub, dpi, source, ng, group = self.process(raw)
+                sub, dpi, source, ng, group = ret
         except Exception as e:
             logger.error(f"ERROR match {raw} {e}")
             return None
