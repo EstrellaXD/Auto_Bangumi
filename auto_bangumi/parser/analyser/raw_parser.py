@@ -132,5 +132,5 @@ class RawParser:
 
 if __name__ == "__main__":
     test = RawParser()
-    ep = test.analyse("【幻樱字幕组】【4月新番】【古见同学有交流障碍症 第二季 Komi-san wa, Komyushou Desu. S02】【22】【GB_MP4】【1920X1080】")
-    print(ep.season_info.raw)
+    ep = test.analyse("[Nekomoe kissaten] Komi-san wa, Komyushou Desu. 02 [WebRip 1080p HEVC-10bit AAC ASSx2]")
+    print(ep.title)
