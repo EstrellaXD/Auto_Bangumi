@@ -4,18 +4,19 @@ from parser.episode import Episode
 
 logger = logging.getLogger(__name__)
 
+# TODO: 正则表达式可以放到全局，改成 re.compile 的形式
 
 class RawParser:
+
     def __init__(self) -> None:
-        self._info = Episode()
+        pass
+
+    def get_group(self, name: str) -> str:
+        return re.split(r"[\[\]]", name)[1]
 
     @staticmethod
-    def pre_process(raw_name):
-        pro_name = raw_name.replace("【", "[").replace("】", "]")
-        return pro_name
-
-    def get_group(self, name):
-        self._info.group = re.split(r"[\[\]]", name)[1]
+    def pre_process(raw_name: str) -> str:
+        return raw_name.replace("【", "[").replace("】", "]")
 
     @staticmethod
     def second_process(raw_name):
@@ -43,23 +44,20 @@ class RawParser:
         name_season = re.sub(r"[\[\]]", " ", name_season)
         seasons = re.findall(season_rule, name_season)
         if not seasons:
-            name = name_season
-            season_raw = ""
-            season = 1
-        else:
-            name = re.sub(season_rule, "", name_season)
-            for season in seasons:
-                season_raw = season
-                if re.search(r"S|Season", season) is not None:
-                    season = int(re.sub(r"S|Season", "", season))
+            return name_season, "", 1
+        name = re.sub(season_rule, "", name_season)
+        for season in seasons:
+            season_raw = season
+            if re.search(r"S|Season", season) is not None:
+                season = int(re.sub(r"S|Season", "", season))
+                break
+            elif re.search(r"[第 ].*[季期]", season) is not None:
+                season_pro = re.sub(r"[第季期 ]", "", season)
+                try:
+                    season = int(season_pro)
+                except ValueError:
+                    season = season_map[season_pro]
                     break
-                elif re.search(r"[第 ].*[季期]", season) is not None:
-                    season_pro = re.sub(r"[第季期 ]", "", season)
-                    try:
-                        season = int(season_pro)
-                    except ValueError:
-                        season = season_map[season_pro]
-                        break
         return name, season_raw, season
 
     @staticmethod
@@ -74,7 +72,8 @@ class RawParser:
             elif re.search(" - {1}", name) is not None:
                 split = re.split("-", name)
         if len(split) == 1:
-            match_obj = re.match(r"([^\x00-\xff]{1,})(\s)([\x00-\xff]{4,})", name)
+            match_obj = re.match(
+                r"([^\x00-\xff]{1,})(\s)([\x00-\xff]{4,})", name)
             if match_obj is not None:
                 return match_obj.group(3), split
         compare = 0
@@ -97,7 +96,8 @@ class RawParser:
         source = None
         for element in elements:
             if re.search(r"[简繁日字幕]|CH|BIG5|GB", element) is not None:
-                sub = element.replace("_MP4","")
+                # TODO: 这里需要改成更精准的匹配，可能不止 _MP4 ?
+                sub = element.replace("_MP4", "")
             elif re.search(r"1080|720|2160|4K", element) is not None:
                 dpi = element
             elif re.search(r"B-Global|[Bb]aha|[Bb]ilibili|AT-X|Web", element) is not None:
@@ -106,7 +106,8 @@ class RawParser:
 
     def process(self, raw_name):
         raw_name = self.pre_process(raw_name)
-        self.get_group(raw_name)
+        group = self.get_group(raw_name)
+
         match_obj = re.match(
             r"(.*|\[.*])( -? \d{1,3} |\[\d{1,3}]|\[\d{1,3}.?[vV]\d{1}]|[第]\d{1,3}[话話集]|\[\d{1,3}.?END])(.*)",
             raw_name,
@@ -116,21 +117,26 @@ class RawParser:
         name, name_group = self.name_process(name)
         episode = int(re.findall(r"\d{1,3}", match_obj.group(2))[0])
         other = match_obj.group(3).strip()
-        sub, dpi, source= self.find_tags(other)
-        return name, season, season_raw, episode, sub, dpi, source, name_group
+        sub, dpi, source = self.find_tags(other)
+        return name, season, season_raw, episode, sub, dpi, source, name_group, group
 
     def analyse(self, raw) -> Episode:
         try:
-            self._info.title, self._info.season_info.number, \
-            self._info.season_info.raw, self._info.ep_info.number,\
-            self._info.subtitle, self._info.dpi, self._info.source, \
-            self._info.title_info.group = self.process(raw)
-            return self._info
-        except:
-            logger.warning(f"ERROR match {raw}")
+            name, season, sr, episode, \
+                sub, dpi, source, ng, group = self.process(raw)
+        except Exception as e:
+            logger.error(f"ERROR match {raw} {e}")
+            return None
 
+        info = Episode()
+        info.title = name
+        info.season_info.number = season
+        info.season_info.raw = sr
+        info.ep_info.number = episode
+        info.subtitle = sub
+        info.dpi = dpi
+        info.source = source
+        info.title_info.group = ng
+        info.group = group
 
-if __name__ == "__main__":
-    test = RawParser()
-    ep = test.analyse("【幻樱字幕组】【4月新番】【古见同学有交流障碍症 第二季 Komi-san wa, Komyushou Desu. S02】【22】【GB_MP4】【1920X1080】")
-    print(ep.season_info.raw)
+        return info
