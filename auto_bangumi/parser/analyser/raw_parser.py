@@ -150,7 +150,6 @@ class RawParser:
         except Exception as e:
             logger.error(f"ERROR match {raw} {e}")
             return None
-
         info = Episode()
         info.title = name
         info.season_info.number = season
@@ -161,5 +160,10 @@ class RawParser:
         info.source = source
         info.title_info.group = ng
         info.group = group
-
         return info
+
+
+if __name__ == "__main__":
+    test = RawParser()
+    ep = test.analyse("[Nekomoe kissaten] Komi-san wa, Komyushou Desu. 02 [WebRip 1080p HEVC-10bit AAC ASSx2]")
+    print(ep.title)

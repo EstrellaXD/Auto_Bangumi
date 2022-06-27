@@ -41,7 +41,10 @@ class Renamer:
             logger.debug("No Season info")
             season = 1
         folder_name = path_parts[1] if path_parts[0] == "/" else path_parts[0]
-        download_path = path_parts[1]
+        try:
+            download_path = path_parts[1]
+        except IndexError:
+            download_path = ""
         return path_name, season, folder_name, download_path
 
     def run(self):
