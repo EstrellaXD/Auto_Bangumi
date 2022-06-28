@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 class DownloadParser:
     def __init__(self):
         self.rules = [
-            r"(.*)(?: -)?[\[ E](\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?: )?(?:END)?[\] ](.*)",
+            r"(.*) - (\d{1,4}|\d{1,4}\.\d{1,2})(?:v\d{1,2})?(?: )?(?:END)?(.*)",
+            r"(.*)[\[ E](\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?: )?(?:END)?[\] ](.*)",
             r"(.*)\[第(\d*\.*\d*)话(?:END)?\](.*)",
             r"(.*)\[第(\d*\.*\d*)話(?:END)?\](.*)",
             r"(.*)第(\d*\.*\d*)话(?:END)?(.*)",
@@ -84,7 +85,7 @@ class DownloadParser:
 
 
 if __name__ == "__main__":
-    name = "[Nekomoe kissaten][Summer Time Rendering][11][1080p][JPTC].mp4"
+    name = "[Nekomoe kissaten][Summer Time Rendering - 11 [1080p][JPTC].mp4"
     rename = DownloadParser()
     new_name = rename.rename_pn(name, 1)
     print(new_name)

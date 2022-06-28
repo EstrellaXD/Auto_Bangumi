@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 EPISODE_RE = re.compile(r"\d{1,3}")
 TITLE_RE = re.compile(
-    r"\[(.*)[] ]-?[ \[第](\d{1,4})(?:[vV]\d)?(?:[ \]话話集])?(?:END)?(.*)"
+    r"(.*|\[.*])( -? \d{1,3} |\[\d{1,3}]|\[\d{1,3}.?[vV]\d{1}]|[第]\d{1,3}[话話集]|\[\d{1,3}.?END])(.*)"
 )
 RESOLUTION_RE = re.compile(r"1080|720|2160|4K")
 SOURCE_RE = re.compile(r"B-Global|[Bb]aha|[Bb]ilibili|AT-X|Web")
@@ -165,5 +165,5 @@ class RawParser:
 
 if __name__ == "__main__":
     test = RawParser()
-    ep = test.analyse("[Nekomoe kissaten][Komi-san wa, Komyushou Desu.] - 1002 [WebRip 1080p HEVC-10bit AAC ASSx2]")
+    ep = test.analyse("[Nekomoe kissaten][Summer Time Rendering - 11 [1080p][JPTC].mp4")
     print(ep.title, ep.dpi)
