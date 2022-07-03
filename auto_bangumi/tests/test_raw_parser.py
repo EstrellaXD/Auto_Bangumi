@@ -68,14 +68,12 @@ class TestRawParser(unittest.TestCase):
 
     def test_episode(self):
         parser = RawParser()
-        for i in range(1, 100000, 123):
-            epi = i + randrange(1, 100)
+        for epi in range(1, 100000, 100):
             content = f"【幻樱字幕组】【4月新番】【古见同学有交流障碍症 第一季 Komi-san wa, Komyushou Desu. S01】【{epi}】【GB_MP4】【4K】"
             info = parser.analyse(content)
             self.assertEqual(info.ep_info.number, epi)
 
-        for i in range(1, 100000, 123):
-            epi = i + randrange(1, 100)
+        for epi in range(1, 100000, 100):
             content = f"[Nekomoe kissaten][Summer Time Rendering - {epi} [1080p][JPTC].mp4"
             info = parser.analyse(content)
             self.assertEqual(info.ep_info.number, epi)
