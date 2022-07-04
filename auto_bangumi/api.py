@@ -87,6 +87,17 @@ async def search(input: Search):
     return "Nothing Happened"
 
 
+class AddRule(BaseModel):
+    title: str
+    season: int
+
+
+@app.post("/api/v1/addrule")
+async def add_rule(info: AddRule):
+
+    return "success"
+
+
 def run():
     args = parse()
     if args.debug:
