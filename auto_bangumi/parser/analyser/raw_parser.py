@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 EPISODE_RE = re.compile(r"\d{1,3}")
 TITLE_RE = re.compile(
-    r"(.*|\[.*])( -? \d{1,3} |\[\d{1,3}]|\[\d{1,3}.?[vV]\d{1}]|[第]\d{1,3}[话話集]|\[\d{1,3}.?END])(.*)"
+    r"(.*|\[.*])( -? \d{1,3} |\[\d{1,3}]|\[\d{1,3}.?[vV]\d{1}]|[第]\d{1,3}[话話集]|\[\d{1,3}.?END]|)(.*)"
 )
 RESOLUTION_RE = re.compile(r"1080|720|2160|4K")
 SOURCE_RE = re.compile(r"B-Global|[Bb]aha|[Bb]ilibili|AT-X|Web")
@@ -27,7 +27,6 @@ CHINESE_NUMBER_MAP = {
 
 
 class RawParser:
-
     @staticmethod
     def get_group(name: str) -> str:
         return re.split(r"[\[\]]", name)[1]
@@ -94,7 +93,6 @@ class RawParser:
         elements = re.sub(r"[\[\]()（）]", " ", other).split(" ")
         # find CHT
         sub, resolution, source = None, None, None
-
         for element in filter(lambda x: x != "", elements):
             if SUB_RE.search(element):
                 sub = element
@@ -163,7 +161,43 @@ class RawParser:
         return info
 
 
+class RawParserV2:
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def split_title(raw_title: str):
+        raw_title = raw_title.strip()
+        content_title = RawParser.pre_process(raw_title)
+        contents = re.split(r"[\[\]()]| - ", content_title)
+        return contents
+
+    @staticmethod
+    def remove_blanks(contents: list):
+        while "" in contents:
+            contents.remove("")
+        return contents
+
+    @staticmethod
+    def get_other_info(contents: list):
+        group = contents[0]
+        contents.remove(group)
+        for item in contents:
+            if re.search(RESOLUTION_RE, item):
+                resolution = item
+                contents.remove(item)
+            elif re.search(SOURCE_RE, item):
+                source = item
+                contents.remove(item)
+            elif re.search(SUB_RE, item):
+                sub = item
+                contents.remove(item)
+        for item in contents:
+            if re.search(r"\d+", item):
+                episode = item
+                contents.remove(item)
+
 if __name__ == "__main__":
     test = RawParser()
-    ep = test.analyse("[Nekomoe kissaten][Summer Time Rendering - 11 [1080p][JPTC].mp4")
-    print(ep.title, ep.dpi)
+    ep = test.analyse("【幻樱字幕组】【7月新番】【异世界舅舅 Isekai Ojisan】【01_先行版】【GB_MP4】【1280X720】")
+    print(ep.title, ep.season_info.number)

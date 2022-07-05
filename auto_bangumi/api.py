@@ -94,8 +94,7 @@ class AddRule(BaseModel):
 
 @app.post("/api/v1/addrule")
 async def add_rule(info: AddRule):
-
-    return "success"
+    return "Nothing Happened"
 
 
 def run():
