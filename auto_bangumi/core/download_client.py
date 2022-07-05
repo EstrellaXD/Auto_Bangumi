@@ -76,7 +76,7 @@ class DownloadClient:
             if not info["added"]:
                 self.set_rule(info, rss_link)
                 info["added"] = True
-        logger.info("to rule.")
+        # logger.info("to rule.")
         logger.debug("Finished.")
 
     def get_torrent_info(self):

@@ -65,7 +65,7 @@ class QbDownloader:
         try:
             self._client.rss_remove_item(item_path)
         except Conflict409Error as e:
-            # logger.exception(e)
+            logger.debug(e)
             logger.info("Add new RSS")
             raise ConflictError()
 
