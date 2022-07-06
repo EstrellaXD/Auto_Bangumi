@@ -1,3 +1,5 @@
+import re
+
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
@@ -22,6 +24,33 @@ app = FastAPI()
 # def index(request: Request):
 #     context = {"request": request}
 #     return templates.TemplateResponse("index.html", context)
+
+@app.get("/api/v1/data")
+def get_data():
+    data = json_config.load(settings.info_path)
+    return data
+
+
+@app.get("/api/v1/resetRule")
+def reset_rule():
+    data = {}
+    json_config.save(settings.info_path, data)
+    return "Success"
+
+
+class RuleName(BaseModel):
+    name: str
+
+
+@app.post("/api/v1/removeRule")
+def remove_rule(name: RuleName):
+    datas = json_config.load(settings.info_path)["bangumi_info"]
+    for data in datas:
+        if re.search(name.name, data["raw_title"]) is not None:
+            datas.remove(data)
+            json_config.save(settings.info_path, datas)
+            return "Success"
+    return "Not matched"
 
 
 class Config(BaseModel):
@@ -92,9 +121,8 @@ class AddRule(BaseModel):
     season: int
 
 
-@app.post("/api/v1/addrule")
+@app.post("/api/v1/addRule")
 async def add_rule(info: AddRule):
-
     return "success"
 
 

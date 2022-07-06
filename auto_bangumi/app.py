@@ -36,6 +36,7 @@ def load_data_file():
 def save_data_file(bangumi_data):
     info_path = settings.info_path
     json_config.save(info_path, bangumi_data)
+    logger.debug("Saved")
 
 
 def show_info():

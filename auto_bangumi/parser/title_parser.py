@@ -54,7 +54,7 @@ class TitleParser:
 if __name__ == '__main__':
     import re
     T = TitleParser()
-    raw = "[dasdas]sadasdsa S01 - 07[dasdasdas]"
+    raw = "[Lilith-Raws] 神渣☆偶像 / Kami Kuzu☆Idol - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
     season = int(re.search(r"\d{1,2}", "S02").group())
-    title = T.download_parser(raw, "asdad", season)
-    print(season,title)
+    title = T.raw_parser(raw)
+    print(season,title.title)
