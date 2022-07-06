@@ -85,7 +85,7 @@ class DownloadParser:
 
 
 if __name__ == "__main__":
-    name = "[Nekomoe kissaten][Summer Time Rendering - 11 [1080p][JPTC].mp4"
+    name = "[Nekomoe kissaten][Summer Time Rendering - 11 [1080p][JPTC][9900E95].mp4"
     rename = DownloadParser()
     new_name = rename.rename_pn(name, 1)
     print(new_name)

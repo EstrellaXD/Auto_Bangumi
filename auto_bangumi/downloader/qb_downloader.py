@@ -5,12 +5,14 @@ from qbittorrentapi import Client, LoginFailed
 from qbittorrentapi.exceptions import Conflict409Error
 
 from conf import settings
+from ab_decorator import qb_connect_failed_wait
 
 from downloader.exceptions import ConflictError
 
 logger = logging.getLogger(__name__)
 
 
+@qb_connect_failed_wait
 class QbDownloader:
     def __init__(self, host, username, password):
         self._client = Client(
