@@ -63,7 +63,6 @@ class Renamer:
                     continue
             except:
                 logger.warning(f"{path_name} rename failed")
-                logger.debug(f"origin: {name}")
                 if settings.remove_bad_torrent:
                     self.client.delete_torrent(torrent_hash)
         self.print_result(torrent_count, rename_count)

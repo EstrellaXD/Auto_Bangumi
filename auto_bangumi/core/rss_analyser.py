@@ -20,7 +20,6 @@ class RSSAnalyser:
         rss_titles = self._request.get_titles(settings.rss_link)
         self._request.close_session()
         for raw_title in rss_titles:
-            logger.debug(raw_title)
             extra_add = True
             if bangumi_info is not []:
                 for d in bangumi_info:
@@ -47,7 +46,6 @@ class RSSAnalyser:
             download_client.add_rules(bangumi_info, rss_link=settings.rss_link)
         except Exception as e:
             logger.debug(e)
-            logger.info("Connection error.")
         logger.info("Finished")
 
 

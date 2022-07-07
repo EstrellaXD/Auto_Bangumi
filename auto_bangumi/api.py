@@ -31,6 +31,12 @@ def get_data():
     return data
 
 
+@app.get("/api/v1/log")
+def get_log():
+    with open(settings.log_path, "r") as f:
+        return f.read()
+
+
 @app.get("/api/v1/resetRule")
 def reset_rule():
     data = {}
@@ -46,7 +52,7 @@ class RuleName(BaseModel):
 def remove_rule(name: RuleName):
     datas = json_config.load(settings.info_path)["bangumi_info"]
     for data in datas:
-        if re.search(name.name, data["raw_title"]) is not None:
+        if re.search(name.name.lower(), data["title_raw"].lower()) is not None:
             datas.remove(data)
             json_config.save(settings.info_path, datas)
             return "Success"

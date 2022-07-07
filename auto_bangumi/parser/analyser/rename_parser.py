@@ -18,7 +18,9 @@ class DownloadParser:
             r"(.*)第(\d*\.*\d*)話(?:END)?(.*)",
         ]
 
-    def rename_normal(self, name, season):
+    def rename_normal(self, info_dict):
+        name = info_dict["name"]
+        season = info_dict["season"]
         for rule in self.rules:
             match_obj = re.match(rule, name, re.I)
             if match_obj is not None:
@@ -26,7 +28,9 @@ class DownloadParser:
                 new_name = f"{title} S{season}E{match_obj.group(2)}{match_obj.group(3)}"
                 return new_name
 
-    def rename_pn(self, name, season):
+    def rename_pn(self, info_dict):
+        name = info_dict["name"]
+        season = info_dict["season"]
         n = re.split(r"[\[\]()【】（）]", name)
         file_name = name.replace(f"[{n[1]}]", "")
         if season < 10:
@@ -42,7 +46,10 @@ class DownloadParser:
                 )
                 return new_name
 
-    def rename_advance(self, name, folder_name, season):
+    def rename_advance(self, info_dict):
+        name = info_dict["name"]
+        folder_name = info_dict["folder_name"]
+        season = info_dict["season"]
         n = re.split(r"[\[\]()【】（）]", name)
         file_name = name.replace(f"[{n[1]}]", "")
         if season < 10:
@@ -57,7 +64,8 @@ class DownloadParser:
                 )
                 return new_name
 
-    def rename_no_season_pn(self, name):
+    def rename_no_season_pn(self, info_dict):
+        name = info_dict["name"]
         n = re.split(r"[\[\]()【】（）]", name)
         file_name = name.replace(f"[{n[1]}]", "")
         for rule in self.rules:
@@ -72,20 +80,33 @@ class DownloadParser:
                 return new_name
 
     def download_rename(self, name, folder_name, season, method):
-        if method.lower() == "pn":
-            return self.rename_pn(name, season)
-        elif method.lower() == "normal":
-            return self.rename_normal(name, season)
-        elif method.lower() == "none":
-            return name
-        elif method.lower() == "advance":
-            return self.rename_advance(name, folder_name, season)
-        elif method.lower() == "no_season_pn":
-            return self.rename_no_season_pn(name)
+        info_dict = {
+            "name": name,
+            "folder_name": folder_name,
+            "season": season,
+        }
+        method_dict = {
+            "normal": self.rename_normal,
+            "pn": self.rename_pn,
+            "advance": self.rename_advance,
+            "no_season_pn": self.rename_no_season_pn,
+        }
+        logger.debug(f"Name: {folder_name}, File type: {path.splitext(name)[-1]}, Season {season}")
+        return method_dict[method](info_dict)
+        # if method.lower() == "pn":
+        #     return self.rename_pn(name, season)
+        # elif method.lower() == "normal":
+        #     return self.rename_normal(name, season)
+        # elif method.lower() == "none":
+        #     return name
+        # elif method.lower() == "advance":
+        #     return self.rename_advance(name, folder_name, season)
+        # elif method.lower() == "no_season_pn":
+        #     return self.rename_no_season_pn(name)
 
 
 if __name__ == "__main__":
-    name = "[Nekomoe kissaten][Summer Time Rendering - 11 [1080p][JPTC][9900E95].mp4"
+    name = "[NC-Raws] 來自深淵 烈日的黃金鄉 - 01 (Baha 1920x1080 AVC AAC MP4) [89D4923F].mp4"
     rename = DownloadParser()
-    new_name = rename.rename_pn(name, 1)
+    new_name = rename.download_rename(name, "Made abyess", 1, "pn")
     print(new_name)

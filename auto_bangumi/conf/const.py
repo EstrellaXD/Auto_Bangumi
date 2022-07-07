@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 
 DEFAULT_SETTINGS = {
-    "version": "2.5.5",
+    "version": "2.5.6",
     "data_version": 4.0,
     "host_ip": "localhost:8080",
     "sleep_time": 7200,
@@ -26,7 +26,8 @@ DEFAULT_SETTINGS = {
     "socks": None,
     "enable_rss_collector": True,
     "enable_rename": True,
-    "reset_folder": False
+    "reset_folder": False,
+    "log_path": "/config/log.txt",
 }
 
 ENV_TO_ATTR = {

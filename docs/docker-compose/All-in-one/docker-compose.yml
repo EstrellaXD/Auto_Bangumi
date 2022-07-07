@@ -41,6 +41,8 @@ services:
       - auto_bangumi
     volumes:
       - auto_bangumi:/config
+    ports:
+      - 7892:7892
     dns:
       - 8.8.8.8
       - 223.5.5.5

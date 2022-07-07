@@ -36,11 +36,12 @@ services:
       - AB_RSS=${RSS}
       - AB_DEBUG_MODE=False
       - AB_EP_COMPLETE=False
-      - AB_SEASON_ONE=True
     volumes:
       - auto_bangumi:/config
     networks:
       - auto_bangumi
+    ports:
+      - 7892:7892
     dns:
       - 8.8.8.8
       - 223.5.5.5

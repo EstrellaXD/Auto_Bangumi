@@ -27,7 +27,6 @@ CHINESE_NUMBER_MAP = {
 
 
 class RawParser:
-
     @staticmethod
     def get_group(name: str) -> str:
         return re.split(r"[\[\]]", name)[1]
@@ -66,7 +65,7 @@ class RawParser:
     @staticmethod
     def name_process(name: str):
         name = name.strip()
-        split = re.split("/|  |-  ", name.replace("（仅限港澳台地区）", ""))
+        split = re.split("/|\s{2}|-\s{2}", name.replace("（仅限港澳台地区）", ""))
         while "" in split:
             split.remove("")
         if len(split) == 1:
@@ -79,22 +78,19 @@ class RawParser:
                 r"([^\x00-\xff]{1,})(\s)([\x00-\xff]{4,})", name)
             if match_obj is not None:
                 return match_obj.group(3), split
-        compare = 0
-        for name in split:
+        compare, compare_idx = 0, 0
+        for idx, name in list(enumerate(split)):
             l = re.findall("[aA-zZ]{1}", name).__len__()
             if l > compare:
                 compare = l
-        for name in split:
-            if re.findall("[aA-zZ]{1}", name).__len__() == compare:
-                return name.strip(), split
-        raise ValueError()
+                compare_idx = idx
+        return split[compare_idx], split
 
     @staticmethod
     def find_tags(other):
         elements = re.sub(r"[\[\]()（）]", " ", other).split(" ")
         # find CHT
         sub, resolution, source = None, None, None
-
         for element in filter(lambda x: x != "", elements):
             if SUB_RE.search(element):
                 sub = element
@@ -152,12 +148,9 @@ class RawParser:
             return None
         info = Episode()
         info.title = name
-        info.season_info.number = season
-        info.season_info.raw = sr
+        info.season_info.number, info.season_info.raw = season, sr
         info.ep_info.number = episode
-        info.subtitle = sub
-        info.dpi = dpi
-        info.source = source
+        info.subtitle, info.dpi, info.source = sub, dpi, source
         info.title_info.group = ng
         info.group = group
         return info
@@ -165,5 +158,5 @@ class RawParser:
 
 if __name__ == "__main__":
     test = RawParser()
-    ep = test.analyse("[Lilith-Raws] 神渣☆偶像 / Kami Kuzu☆Idol - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]")
+    ep = test.analyse("[ANi] Classroom of the Elite S2 -  欢迎来到实力至上主义的教室 第二季 - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]")
     print(ep.title, ep.dpi)

@@ -18,6 +18,8 @@ services:
       - AB_SEASON_ONE=True
     networks:
       - auto_bangumi
+    ports:
+      - 7892:7892
     volumes:
       - auto_bangumi:/config
     dns:

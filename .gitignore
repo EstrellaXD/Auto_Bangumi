@@ -171,3 +171,4 @@ cython_debug/
 
 /auto_bangumi/parser/analyser/tmdb.py
 
+/auto_bangumi/run_debug.sh

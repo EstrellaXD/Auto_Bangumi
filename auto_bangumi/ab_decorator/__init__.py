@@ -18,6 +18,6 @@ def qb_connect_failed_wait(func):
             except Exception as e:
                 logger.debug(f"URL: {args[0]}")
                 logger.warning("Cannot connect to qBittorrent. Wait 5 min and retry...")
-                time.sleep(3)
+                time.sleep(300)
                 times += 1
     return wrapper

@@ -46,6 +46,7 @@ class TitleParser:
                 "added": False,
                 "eps_collect": True if settings.eps_complete else False,
             }
+            logger.debug(f"RAW:{raw} >> {episode.title}")
             return data
         except Exception as e:
             logger.debug(e)
