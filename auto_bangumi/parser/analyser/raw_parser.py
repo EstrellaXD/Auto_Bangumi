@@ -84,7 +84,7 @@ class RawParser:
             if l > compare:
                 compare = l
                 compare_idx = idx
-        return split[compare_idx], split
+        return split[compare_idx].strip(), split
 
     @staticmethod
     def find_tags(other):

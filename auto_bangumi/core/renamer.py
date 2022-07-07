@@ -1,6 +1,7 @@
 import logging
 import os.path
 import re
+import os.path
 from pathlib import PurePath, PureWindowsPath
 
 
@@ -27,6 +28,7 @@ class Renamer:
         return recent_info, torrent_count
 
     def split_path(self, path: str):
+        suffix = os.path.splitext(path)[-1]
         path = path.replace(settings.download_path, "")
         path_parts = PurePath(path).parts \
             if PurePath(path).name != path \
@@ -45,7 +47,7 @@ class Renamer:
             download_path = path_parts[1]
         except IndexError:
             download_path = ""
-        return path_name, season, folder_name, download_path
+        return path_name, season, folder_name, suffix, download_path
 
     def run(self):
         recent_info, torrent_count = self.get_torrent_info()
@@ -53,9 +55,10 @@ class Renamer:
         for info in recent_info:
             name = info.name
             torrent_hash = info.hash
-            path_name, season, folder_name, _ = self.split_path(info.content_path)
+            path_name, season, folder_name, suffix, _ = self.split_path(info.content_path)
+
             try:
-                new_name = self._renamer.download_parser(name, folder_name, season, settings.method)
+                new_name = self._renamer.download_parser(name, folder_name, season, suffix, settings.method)
                 if path_name != new_name:
                     self.client.rename_torrent_file(torrent_hash, path_name, new_name)
                     rename_count += 1
@@ -71,7 +74,7 @@ class Renamer:
         recent_info, _ = self.get_torrent_info()
         for info in recent_info:
             torrent_hash = info.hash
-            _, season, folder_name, download_path = self.split_path(info.content_path)
+            _, season, folder_name, _, download_path = self.split_path(info.content_path)
             new_path = os.path.join(settings.download_path, folder_name, f"Season {season}")
             # print(new_path)
             self.client.move_torrent(torrent_hash, new_path)

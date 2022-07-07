@@ -14,8 +14,8 @@ class TitleParser:
     def raw_parser(self, raw):
         return self._raw_parser.analyse(raw)
 
-    def download_parser(self, download_raw, folder_name, season, method=settings.method):
-        return self._download_parser.download_rename(download_raw, folder_name, season, method)
+    def download_parser(self, download_raw, folder_name, season, suffix, method=settings.method):
+        return self._download_parser.download_rename(download_raw, folder_name, season, suffix, method)
 
     def return_dict(self, raw):
         tmdb = TMDBMatcher()

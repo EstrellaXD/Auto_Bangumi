@@ -12,8 +12,8 @@ from downloader.exceptions import ConflictError
 logger = logging.getLogger(__name__)
 
 
-@qb_connect_failed_wait
 class QbDownloader:
+    @qb_connect_failed_wait
     def __init__(self, host, username, password):
         self._client = Client(
             host=host,
@@ -30,12 +30,15 @@ class QbDownloader:
                 )
             time.sleep(settings.connect_retry_interval)
 
+    @qb_connect_failed_wait
     def prefs_init(self, prefs):
         return self._client.app_set_preferences(prefs=prefs)
 
+    @qb_connect_failed_wait
     def get_app_prefs(self):
         return self._client.app_preferences()
 
+    @qb_connect_failed_wait
     def torrents_info(self, status_filter, category):
         return self._client.torrents_info(status_filter, category)
 
