@@ -44,7 +44,7 @@ class TitleParser:
                 "source": episode.source,
                 "subtitle": episode.subtitle,
                 "added": False,
-                "eps_collect": True if settings.eps_complete else False,
+                "eps_collect": True if settings.eps_complete and episode.ep_info.number > 1 else False,
             }
             logger.debug(f"RAW:{raw} >> {episode.title}")
             return data
@@ -58,4 +58,5 @@ if __name__ == '__main__':
     raw = "[Lilith-Raws] 神渣☆偶像 / Kami Kuzu☆Idol - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
     season = int(re.search(r"\d{1,2}", "S02").group())
     title = T.raw_parser(raw)
-    print(season,title.title)
+    print(season, title.title, title.ep_info.number)
+    print(T.return_dict(raw))

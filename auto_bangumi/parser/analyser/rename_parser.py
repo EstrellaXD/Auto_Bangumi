@@ -40,6 +40,7 @@ class DownloadParser:
             match_obj = re.match(rule, file_name, re.I)
             if match_obj is not None:
                 title = re.sub(r"([Ss]|Season )\d{1,3}", "", match_obj.group(1)).strip()
+                title = title if title != "" else info_dict.get("folder_name")
                 new_name = re.sub(
                     r"[\[\]]",
                     "",
@@ -82,6 +83,7 @@ class DownloadParser:
                 )
                 return new_name
 
+    @staticmethod
     def rename_none(self, info_dict):
         return info_dict["name"]
 
@@ -104,7 +106,7 @@ class DownloadParser:
 
 
 if __name__ == "__main__":
-    name = "[NC-Raws] 來自深淵 烈日的黃金鄉 - 01 (Baha 1920x1080 AVC AAC MP4) [89D4923F].mp4"
+    name = "[Isekai Meikyuu de Harem wo][01][BIG5][1080P][AT-X].mp4"
     rename = DownloadParser()
     new_name = rename.download_rename(name, "Made abyess", 1, ".mp4", "pn")
     print(new_name)

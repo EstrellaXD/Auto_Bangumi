@@ -1,14 +1,14 @@
 import re
 
 import uvicorn
+from uvicorn.config import LOGGING_CONFIG
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import logging
 
-from core import RSSAnalyser
-from core import DownloadClient
+from core import RSSAnalyser, DownloadClient, FullSeasonGet
 from conf import settings, parse
 from utils import json_config
 
@@ -39,7 +39,8 @@ def get_log():
 
 @app.get("/api/v1/resetRule")
 def reset_rule():
-    data = {}
+    data = json_config.load(settings.info_path)
+    data["bangumi_info"] = []
     json_config.save(settings.info_path, data)
     return "Success"
 
@@ -59,41 +60,6 @@ def remove_rule(name: RuleName):
     return "Not matched"
 
 
-class Config(BaseModel):
-    rss_link: str
-    host: str
-    user_name: str
-    password: str
-    download_path: str
-    method: str
-    enable_group_tag: bool
-    not_contain: str
-    debug_mode: bool
-    season_one_tag: bool
-    remove_bad_torrent: bool
-    enable_eps_complete: bool
-
-
-@app.post("/api/v1/config")
-async def config(config: Config):
-    data = {
-        "rss_link": config.rss_link,
-        "host": config.host,
-        "user_name": config.user_name,
-        "password": config.password,
-        "download_path": config.download_path,
-        "method": config.method,
-        "enable_group_tag": config.enable_group_tag,
-        "not_contain": config.not_contain,
-        "debug_mode": config.debug_mode,
-        "season_one": config.season_one_tag,
-        "remove_bad_torrent": config.remove_bad_torrent,
-        "enable_eps_complete": config.enable_eps_complete
-    }
-    json_config.save("/config/config.json", data)
-    return "received"
-
-
 class RSS(BaseModel):
     link: str
 
@@ -103,8 +69,7 @@ async def receive(link: RSS):
     client = DownloadClient()
     try:
         data = RSSAnalyser().rss_to_data(link.link)
-        client.add_collection_feed(link.link, item_path=data["official_title"])
-        client.set_rule(data, link.link)
+        FullSeasonGet().download_collection(data, link.link, client)
         return data
     except Exception as e:
         logger.debug(e)
@@ -129,7 +94,7 @@ class AddRule(BaseModel):
 
 @app.post("/api/v1/addRule")
 async def add_rule(info: AddRule):
-    return "success"
+    return "Not complete"
 
 
 def run():
@@ -142,6 +107,7 @@ def run():
             logger.debug("Please copy `const_dev.py` to `const_dev.py` to use custom settings")
     else:
         settings.init()
+    LOGGING_CONFIG["formatters"]["default"]["fmt"] = "%(asctime)s %(levelprefix)s %(message)s"
     uvicorn.run(app, host="0.0.0.0", port=settings.webui_port)
 
 

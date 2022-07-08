@@ -58,14 +58,12 @@ def main_process(bangumi_data, download_client: DownloadClient):
     if settings.reset_folder:
         rename.set_folder()
     rss_analyser = RSSAnalyser()
-    first_run = True
     while True:
         times = 0
         if settings.enable_rss_collector:
             rss_analyser.run(bangumi_data["bangumi_info"], download_client)
-        if settings.eps_complete and first_run:
+        if settings.eps_complete:
             FullSeasonGet().eps_complete(bangumi_data["bangumi_info"], download_client)
-            first_run = False
         logger.info("Running....")
         save_data_file(bangumi_data)
         while times < settings.times:
@@ -89,7 +87,6 @@ def run():
     # 初始化
     setup_logger()
     show_info()
-    time.sleep(1)
     download_client = DownloadClient()
     download_client.init_downloader()
     if settings.rss_link is None:

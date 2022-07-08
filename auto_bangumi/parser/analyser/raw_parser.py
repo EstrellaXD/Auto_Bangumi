@@ -41,7 +41,6 @@ class RawParser:
             name_season = re.sub(".*新番.", "", season_info)
         else:
             name_season = re.sub(r"^[^]】]*[]】]", "", season_info).strip()
-
         season_rule = r"S\d{1,2}|Season \d{1,2}|[第].[季期]"
         name_season = re.sub(r"[\[\]]", " ", name_season)
         seasons = re.findall(season_rule, name_season)
@@ -105,35 +104,28 @@ class RawParser:
         if sub is None:
             return sub
         # TODO: 这里需要改成更精准的匹配，可能不止 _MP4 ?
-        return sub.replace("_MP4", "")
+        return re.sub(r"_MP4|_MKV", "", sub)
 
     def process(self, raw_title: str):
         raw_title = raw_title.strip()
-
         content_title = self.pre_process(raw_title)  # 预处理标题
         group = self.get_group(content_title)  # 翻译组的名字
-
         match_obj = TITLE_RE.match(content_title)  # 处理标题
-
         season_info, episode_info, other = list(map(
             lambda x: x.strip(), match_obj.groups()
         ))
-
         raw_name, season_raw, season = self.season_process(season_info)  # 处理 第n季
         name, name_group = "", ""
         try:
             name, name_group = self.name_process(raw_name)  # 处理 名字
         except ValueError:
             pass
-
         # 处理 集数
         raw_episode = EPISODE_RE.search(episode_info)
         episode = 0
         if raw_episode is not None:
             episode = int(raw_episode.group())
-
         sub, dpi, source = self.find_tags(other)  # 剩余信息处理
-
         return name, season, season_raw, episode, sub, dpi, source, name_group, group
 
     def analyse(self, raw):
@@ -159,4 +151,4 @@ class RawParser:
 if __name__ == "__main__":
     test = RawParser()
     ep = test.analyse("[ANi] Classroom of the Elite S2 -  欢迎来到实力至上主义的教室 第二季 - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]")
-    print(ep.title, ep.dpi)
+    print(ep.title, ep.ep_info.number)
