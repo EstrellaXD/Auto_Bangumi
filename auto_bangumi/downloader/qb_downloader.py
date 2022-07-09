@@ -25,7 +25,7 @@ class QbDownloader:
                 self._client.auth_log_in()
                 break
             except LoginFailed:
-                logger.warning(
+                logger.debug(
                     f"Can't login qBittorrent Server {host} by {username}, retry in {settings.connect_retry_interval}"
                 )
             time.sleep(settings.connect_retry_interval)

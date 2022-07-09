@@ -12,6 +12,13 @@ from core import RSSAnalyser, DownloadClient, Renamer, FullSeasonGet
 logger = logging.getLogger(__name__)
 
 
+def reset_log():
+    try:
+        os.remove(settings.log_path)
+    except FileNotFoundError:
+        pass
+
+
 def load_data_file():
     info_path = settings.info_path
     if not os.path.exists(info_path):
@@ -85,6 +92,7 @@ def run():
     else:
         settings.init()
     # 初始化
+    reset_log()
     setup_logger()
     show_info()
     download_client = DownloadClient()

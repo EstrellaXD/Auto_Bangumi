@@ -4,11 +4,13 @@ from conf import settings
 
 def setup_logger():
     level = logging.DEBUG if settings.debug_mode else logging.INFO
-    DATE_FORMAT = "%Y-%m-%d %X"
-    LOGGING_FORMAT = "%(asctime)s %(levelname)s: %(message)s"
+    LOGGING_FORMAT = "[%(asctime)s] %(levelname)s:\t%(message)s"
     logging.basicConfig(
         level=level,
-        datefmt=DATE_FORMAT,
         format=LOGGING_FORMAT,
         encoding="utf-8",
+        handlers=[
+            logging.FileHandler(settings.log_path),
+            logging.StreamHandler(),
+        ]
     )

@@ -3,7 +3,7 @@ import re
 import uvicorn
 from uvicorn.config import LOGGING_CONFIG
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import logging
@@ -13,7 +13,6 @@ from conf import settings, parse
 from utils import json_config
 
 logger = logging.getLogger(__name__)
-
 app = FastAPI()
 
 
@@ -32,9 +31,9 @@ def get_data():
 
 
 @app.get("/api/v1/log")
-def get_log():
-    with open(settings.log_path, "r") as f:
-        return f.read()
+async def get_log():
+    log_path = settings.log_path
+    return FileResponse(log_path)
 
 
 @app.get("/api/v1/resetRule")
@@ -45,12 +44,8 @@ def reset_rule():
     return "Success"
 
 
-class RuleName(BaseModel):
-    name: str
-
-
-@app.post("/api/v1/removeRule")
-def remove_rule(name: RuleName):
+@app.get("api/v1/removeRule/{name}")
+def remove_rule(name: str):
     datas = json_config.load(settings.info_path)["bangumi_info"]
     for data in datas:
         if re.search(name.name.lower(), data["title_raw"].lower()) is not None:
@@ -60,12 +55,8 @@ def remove_rule(name: RuleName):
     return "Not matched"
 
 
-class RSS(BaseModel):
-    link: str
-
-
-@app.post("/api/v1/subscriptions")
-async def receive(link: RSS):
+@app.get("/api/v1/subscribe/{link}")
+async def receive(link: str):
     client = DownloadClient()
     try:
         data = RSSAnalyser().rss_to_data(link.link)
@@ -74,17 +65,6 @@ async def receive(link: RSS):
     except Exception as e:
         logger.debug(e)
         return "Error"
-
-
-class Search(BaseModel):
-    group: str
-    title: str
-    subtitle: str
-
-
-@app.post("/api/v1/search")
-async def search(input: Search):
-    return "Nothing Happened"
 
 
 class AddRule(BaseModel):
@@ -107,7 +87,7 @@ def run():
             logger.debug("Please copy `const_dev.py` to `const_dev.py` to use custom settings")
     else:
         settings.init()
-    LOGGING_CONFIG["formatters"]["default"]["fmt"] = "%(asctime)s %(levelprefix)s %(message)s"
+    LOGGING_CONFIG["formatters"]["default"]["fmt"] = "[%(asctime)s] %(levelprefix)s\t%(message)s"
     uvicorn.run(app, host="0.0.0.0", port=settings.webui_port)
 
 
