@@ -1,4 +1,4 @@
-name: ci
+name: build-docker-image
 
 on:
   push:
@@ -21,7 +21,7 @@ jobs:
         with:
           images: ${{ secrets.DOCKER_HUB_USERNAME }}/auto_bangumi
           tags: |
-            type=ref,event=tag
+            type=ref, event=tag
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v2
