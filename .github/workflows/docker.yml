@@ -13,17 +13,6 @@ jobs:
         name: Checkout
         uses: actions/checkout@v3
       -
-        name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          # list of Docker images to use as base name for tags
-          images: |
-            ${{ secrets.DOCKER_HUB_USERNAME }}/auto_bangumi
-          # generate Docker tags based on the following events/attributes
-          tags: |
-            type=ref,event=release
-      -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       -
@@ -42,5 +31,4 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/auto_bangumi:latest
