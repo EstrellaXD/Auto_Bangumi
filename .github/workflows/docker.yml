@@ -18,7 +18,7 @@ jobs:
         with:
           images: ${{ secrets.DOCKER_HUB_USERNAME }}/auto_bangumi
           tags: |
-            type=ref
+            type=ref, event=tag
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v2
