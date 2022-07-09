@@ -10,7 +10,7 @@ RUN pip install -r requirements.txt
 ENV TZ=Asia/Shanghai
 
 ADD ./auto_bangumi /auto_bangumi
-ADD ./config /config
+RUN mkdir /config
 ADD ./templates /templates
 
 RUN chmod a+x run.sh
