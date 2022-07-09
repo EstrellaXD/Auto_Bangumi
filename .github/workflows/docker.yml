@@ -1,9 +1,12 @@
 name: ci
 
 on:
-  release:
-    types:
-      - published
+  push:
+    branches:
+      - 'main'
+    tags:
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
   docker:
