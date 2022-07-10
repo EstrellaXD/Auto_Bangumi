@@ -84,7 +84,7 @@ class DownloadParser:
                 return new_name
 
     @staticmethod
-    def rename_none(self, info_dict):
+    def rename_none(info_dict):
         return info_dict["name"]
 
     def download_rename(self, name, folder_name, season,suffix, method):
@@ -102,11 +102,11 @@ class DownloadParser:
             "none": self.rename_none
         }
         logger.debug(f"Name: {folder_name}, File type: {path.splitext(name)[-1]}, Season {season}")
-        return method_dict[method](info_dict)
+        return method_dict[method.lower()](info_dict)
 
 
 if __name__ == "__main__":
     name = "[Isekai Meikyuu de Harem wo][01][BIG5][1080P][AT-X].mp4"
     rename = DownloadParser()
-    new_name = rename.download_rename(name, "Made abyess", 1, ".mp4", "pn")
+    new_name = rename.download_rename(name, "Made abyess", 1, ".mp4", "Advance")
     print(new_name)

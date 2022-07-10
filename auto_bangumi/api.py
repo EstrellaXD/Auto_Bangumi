@@ -55,12 +55,24 @@ def remove_rule(name: str):
     return "Not matched"
 
 
-@app.get("/api/v1/subscribe/{link}")
+@app.get("/api/v1/collection/{link}")
 async def receive(link: str):
     client = DownloadClient()
     try:
         data = RSSAnalyser().rss_to_data(link.link)
         FullSeasonGet().download_collection(data, link.link, client)
+        return data
+    except Exception as e:
+        logger.debug(e)
+        return "Error"
+
+
+@app.get("/api/v1/subscribe/{link}")
+async def add_link(link: str):
+    client = DownloadClient()
+    try:
+        data = RSSAnalyser().rss_to_data(link.link)
+        client.set_rule(data, link.link)
         return data
     except Exception as e:
         logger.debug(e)
@@ -87,7 +99,7 @@ def run():
             logger.debug("Please copy `const_dev.py` to `const_dev.py` to use custom settings")
     else:
         settings.init()
-    LOGGING_CONFIG["formatters"]["default"]["fmt"] = "[%(asctime)s] %(levelprefix)s\t%(message)s"
+    LOGGING_CONFIG["formatters"]["default"]["fmt"] = "[%(asctime)s] %(levelprefix)s %(message)s"
     uvicorn.run(app, host="0.0.0.0", port=settings.webui_port)
 
 
