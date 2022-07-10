@@ -13,10 +13,8 @@
 
 # 如何开始
 
-- **[部署说明 (Official)](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/部署说明.md)**
+- **[部署说明 (Official)](https://github.com/EstrellaXD/Auto_Bangumi/wiki)**
 - **[部署说明 (手把手)](https://www.himiku.com/archives/auto-bangumi.html)**
-
-- **[常见问题排错](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/常见错误解决.md)**
 
 # 项目说明
 
@@ -82,9 +80,13 @@
 - 更为智能细致的分类预设。
 
 # 声明
+## 致谢
 感谢 [Sean](https://github.com/findix) 提供的大量帮助
 
-# Licence
+## 请我喝一杯咖啡
+<img src="https://tva1.sinaimg.cn/large/e6c9d24ely1h425na5hldj20u019077h.jpg" width=50%/>
+
+## Licence
 [MIT licence](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/LICENSE)
 
 

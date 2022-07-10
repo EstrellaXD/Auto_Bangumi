@@ -8,12 +8,24 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import logging
 
-from core import RSSAnalyser, DownloadClient, FullSeasonGet
+from core import APIProcess
 from conf import settings, parse
 from utils import json_config
 
 logger = logging.getLogger(__name__)
+args = parse()
+if args.debug:
+    try:
+        from conf.const_dev import DEV_SETTINGS
+
+        settings.init(DEV_SETTINGS)
+    except ModuleNotFoundError:
+        logger.debug("Please copy `const_dev.py` to `const_dev.py` to use custom settings")
+else:
+    settings.init()
 app = FastAPI()
+api_func = APIProcess()
+
 
 
 # templates = Jinja2Templates(directory="templates")
@@ -38,45 +50,26 @@ async def get_log():
 
 @app.get("/api/v1/resetRule")
 def reset_rule():
-    data = json_config.load(settings.info_path)
-    data["bangumi_info"] = []
-    json_config.save(settings.info_path, data)
-    return "Success"
+    return api_func.reset_rule()
 
 
 @app.get("api/v1/removeRule/{name}")
 def remove_rule(name: str):
-    datas = json_config.load(settings.info_path)["bangumi_info"]
-    for data in datas:
-        if re.search(name.name.lower(), data["title_raw"].lower()) is not None:
-            datas.remove(data)
-            json_config.save(settings.info_path, datas)
-            return "Success"
-    return "Not matched"
+    return api_func.remove_rule(name)
 
 
-@app.get("/api/v1/collection/{link}")
-async def receive(link: str):
-    client = DownloadClient()
-    try:
-        data = RSSAnalyser().rss_to_data(link.link)
-        FullSeasonGet().download_collection(data, link.link, client)
-        return data
-    except Exception as e:
-        logger.debug(e)
-        return "Error"
+class RssLink(BaseModel):
+    rss_link: str
 
 
-@app.get("/api/v1/subscribe/{link}")
-async def add_link(link: str):
-    client = DownloadClient()
-    try:
-        data = RSSAnalyser().rss_to_data(link.link)
-        client.set_rule(data, link.link)
-        return data
-    except Exception as e:
-        logger.debug(e)
-        return "Error"
+@app.post("/api/v1/collection")
+async def collection(link: RssLink):
+    return api_func.download_collection(link.rss_link)
+
+
+@app.post("/api/v1/subscribe")
+async def subscribe(link: RssLink):
+    return api_func.add_subscribe(link.rss_link)
 
 
 class AddRule(BaseModel):
@@ -86,19 +79,10 @@ class AddRule(BaseModel):
 
 @app.post("/api/v1/addRule")
 async def add_rule(info: AddRule):
-    return "Not complete"
+    return api_func.add_rule(info.title, info.season)
 
 
 def run():
-    args = parse()
-    if args.debug:
-        try:
-            from conf.const_dev import DEV_SETTINGS
-            settings.init(DEV_SETTINGS)
-        except ModuleNotFoundError:
-            logger.debug("Please copy `const_dev.py` to `const_dev.py` to use custom settings")
-    else:
-        settings.init()
     LOGGING_CONFIG["formatters"]["default"]["fmt"] = "[%(asctime)s] %(levelprefix)s %(message)s"
     uvicorn.run(app, host="0.0.0.0", port=settings.webui_port)
 

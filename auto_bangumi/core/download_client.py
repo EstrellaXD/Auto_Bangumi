@@ -109,6 +109,9 @@ class DownloadClient:
             new_location=location
         )
 
+    def add_rss_feed(self, rss_link, item_path):
+        self.client.rss_add_feed(url=rss_link, item_path=item_path)
+        logger.info("Add RSS Feed successfully.")
 
 if __name__ == "__main__":
     put = DownloadClient()
