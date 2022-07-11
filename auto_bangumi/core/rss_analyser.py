@@ -27,6 +27,8 @@ class RSSAnalyser:
                         logger.debug(f"Had added {d['title_raw']} before")
                         extra_add = False
                         break
+            if re.search(settings.not_contain, raw_title) is not None:
+                extra_add = False
             if extra_add:
                 data = self._title_analyser.return_dict(raw_title)
                 if data is not None and data["official_title"] not in bangumi_info:

@@ -71,7 +71,7 @@
 ***开发中的功能：***
 
 - ✅ RSS 解析器：AutoBangumi 可以自行解析分析种子无需依赖下载器。
-- ~~Transmission & Aria2 的支持。~~
+- ~~Transmission & Aria2 的支持。~~ 可以转到 [RanKKI/Bangumi](https://github.com/RanKKI/Bangumi)，该项目具有 Aria2/Tr 的支持
 - ✅ 遗漏番剧下载：中间开始追番可以补全之前的剧集。
 
 ***计划开发的功能：***
