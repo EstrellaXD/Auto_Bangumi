@@ -1,6 +1,7 @@
 import re
 import logging
 import os
+from attrdict import AttrDict
 
 from downloader import getClient
 from downloader.exceptions import ConflictError
@@ -54,17 +55,25 @@ class DownloadClient:
         logger.info(f"Add {official_name} Season {season}")
 
     def rss_feed(self):
-        try:
-            self.client.rss_remove_item(item_path="Mikan_RSS")
-        except ConflictError:
-            logger.info("No feed exists, start adding feed.")
-        try:
-            self.client.rss_add_feed(url=settings.rss_link, item_path="Mikan_RSS")
-            logger.info("Add RSS Feed successfully.")
-        except ConnectionError:
-            logger.warning("Error with adding RSS Feed.")
-        except ConflictError:
-            logger.info("RSS Already exists.")
+        if not settings.refresh_rss:
+            if self.client.get_rss_info() == settings.rss_link:
+                logger.info("RSS Already exists.")
+            else:
+                logger.info("No feed exists, start adding feed.")
+                self.client.rss_add_feed(url=settings.rss_link, item_path="Mikan_RSS")
+                logger.info("Add RSS Feed successfully.")
+        else:
+            try:
+                self.client.rss_remove_item(item_path="Mikan_RSS")
+            except ConflictError:
+                logger.info("No feed exists, start adding feed.")
+            try:
+                self.client.rss_add_feed(url=settings.rss_link, item_path="Mikan_RSS")
+                logger.info("Add RSS Feed successfully.")
+            except ConnectionError:
+                logger.warning("Error with adding RSS Feed.")
+            except ConflictError:
+                logger.info("RSS Already exists.")
 
     def add_collection_feed(self, rss_link, item_path):
         self.client.rss_add_feed(url=rss_link, item_path=item_path)
@@ -79,7 +88,7 @@ class DownloadClient:
         # logger.info("to rule.")
         logger.debug("Finished.")
 
-    def get_torrent_info(self):
+    def get_torrent_info(self) -> [AttrDict]:
         return self.client.torrents_info(
             status_filter="completed", category="Bangumi"
         )
@@ -112,6 +121,7 @@ class DownloadClient:
     def add_rss_feed(self, rss_link, item_path):
         self.client.rss_add_feed(url=rss_link, item_path=item_path)
         logger.info("Add RSS Feed successfully.")
+
 
 if __name__ == "__main__":
     put = DownloadClient()

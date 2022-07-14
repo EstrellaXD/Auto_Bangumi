@@ -163,13 +163,13 @@ cython_debug/
 
 # Custom
 /auto_bangumi/conf/const_dev.py
-/config/bangumi.json
+/config
 /auto_bangumi/tester.py
 /resource/names.txt
 
 
 
-/auto_bangumi/parser/analyser/tmdb.py
+/auto_bangumi/parser/analyser/tmdb_parser.py
 
 /auto_bangumi/run_debug.sh
 /auto_bangumi/debug_run.sh

@@ -5,7 +5,7 @@ from network import RequestContent
 from conf import settings
 
 
-class BangumiAPI:
+class BgmAPI:
     def __init__(self):
         self.search_url = lambda e: \
             f"https://api.bgm.tv/search/subject/{e}?type=2"
@@ -21,7 +21,6 @@ class BangumiAPI:
         return contents[0]["name"], contents[0]["name_cn"]
 
 
-
 if __name__ == '__main__':
-    BGM = BangumiAPI()
+    BGM = BgmAPI()
     print(BGM.search("辉夜大小姐"))

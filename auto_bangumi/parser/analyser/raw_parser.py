@@ -128,7 +128,7 @@ class RawParser:
         sub, dpi, source = self.find_tags(other)  # 剩余信息处理
         return name, season, season_raw, episode, sub, dpi, source, name_group, group
 
-    def analyse(self, raw):
+    def analyse(self, raw: str) -> Episode or None:
         try:
             ret = self.process(raw)
             if ret is None:
@@ -150,5 +150,6 @@ class RawParser:
 
 if __name__ == "__main__":
     test = RawParser()
-    ep = test.analyse("[ANi] Classroom of the Elite S2 -  欢迎来到实力至上主义的教室 第二季 - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]")
-    print(ep.title, ep.ep_info.number)
+    test_txt = "[SWSUB][7月新番][继母的拖油瓶是我的前女友/継母の连れ子が元カノだった][001][GB_JP][AVC][1080P][网盘][无修正] [331.6MB] [复制磁连]"
+    ep = test.analyse(test_txt)
+    print(ep.title)

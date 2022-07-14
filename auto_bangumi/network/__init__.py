@@ -1,4 +1,14 @@
+import re
+from dataclasses import dataclass
+
 from network.request import RequestURL
+from conf import settings
+
+
+@dataclass
+class TorrentInfo:
+    name: str
+    torrent_link: str
 
 
 class RequestContent:
@@ -6,23 +16,24 @@ class RequestContent:
         self._req = RequestURL()
 
     # Mikanani RSS
-    def get_titles(self, url):
+    def get_torrents(self, url: str) -> [TorrentInfo]:
         soup = self._req.get_content(url)
-        items = soup.find_all("item")
-        return [item.title.string for item in items]
+        torrent_titles = [item.title.string for item in soup.find_all("item")]
+        keep_index = []
+        for idx, title in enumerate(torrent_titles):
+            if re.search(settings.not_contain, title) is None:
+                keep_index.append(idx)
+        torrent_urls = [item.get("url") for item in soup.find_all("enclosure")]
+        return [TorrentInfo(torrent_titles[i], torrent_urls[i]) for i in keep_index]
 
-    def get_title(self, url):
+    def get_torrent(self, url) -> TorrentInfo:
         soup = self._req.get_content(url)
         item = soup.find("item")
-        return item.title.string
-
-    def get_torrents(self, url):
-        soup = self._req.get_content(url)
-        enclosure = soup.find_all("enclosure")
-        return [t["url"] for t in enclosure]
+        enclosure = item.find("enclosure")
+        return TorrentInfo(item.title.string, enclosure["url"])
 
     # API JSON
-    def get_json(self, url):
+    def get_json(self, url) -> dict:
         return self._req.get_content(url, content="json")
 
     def close_session(self):
@@ -31,6 +42,8 @@ class RequestContent:
 
 if __name__ == "__main__":
     r = RequestContent()
-    url = "https://mikanani.me/RSS/Bangumi?bangumiId=2685&subgroupid=552"
-    title = r.get_title(url)
-    print(title)
+    rss_url = "https://mikanani.me/RSS/Bangumi?bangumiId=2739&subgroupid=203"
+    titles = r.get_torrents(rss_url)
+    print(settings.not_contain)
+    for title in titles:
+        print(title.name, title.torrent_link)

@@ -17,3 +17,4 @@ soupsieve
 typing_extensions==4.3.0
 urllib3==1.26.9
 uvicorn
+attrdict

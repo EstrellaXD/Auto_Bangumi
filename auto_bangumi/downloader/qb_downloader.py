@@ -59,6 +59,13 @@ class QbDownloader:
     def torrents_rename_file(self, torrent_hash, old_path, new_path):
         self._client.torrents_rename_file(torrent_hash=torrent_hash, old_path=old_path, new_path=new_path)
 
+    def get_rss_info(self):
+        item = self._client.rss_items().get("Mikan_RSS")
+        if item is not None:
+            return item.url
+        else:
+            return None
+
     def rss_add_feed(self, url, item_path):
         try:
             self._client.rss_add_feed(url, item_path)

@@ -1,16 +1,19 @@
 import re
 import time
+from dataclasses import dataclass
 
 from network import RequestContent
 from conf import settings
 
 
+@dataclass
 class TMDBInfo:
     id: int
     title_jp: str
     title_zh: str
     season: dict
     last_season: int
+    year_number: int
 
 
 class TMDBMatcher:
@@ -21,11 +24,11 @@ class TMDBMatcher:
             f"https://api.themoviedb.org/3/tv/{e}?api_key={settings.tmdb_api}&language=zh-CN"
         self._request = RequestContent()
 
-    def is_animation(self, id):
-        url_info = self.info_url(id)
+    def is_animation(self, tv_id) -> bool:
+        url_info = self.info_url(tv_id)
         type_id = self._request.get_json(url_info)["genres"]
         for type in type_id:
-            if type["id"] == 16:
+            if type.get("id") == 16:
                 return True
         return False
 
@@ -37,39 +40,40 @@ class TMDBMatcher:
     #             return title["title"]
     #     return None
 
-    def get_season(self, seasons: list):
+    @staticmethod
+    def get_season(seasons: list) -> int:
         for season in seasons:
-            if re.search(r"第 \d 季", season["season"]) is not None:
-                date = season["air_date"].split("-")
+            if re.search(r"第 \d 季", season.get("season")) is not None:
+                date = season.get("air_date").split("-")
                 [year, _ , _] = date
                 now_year = time.localtime().tm_year
                 if int(year) == now_year:
-                    return int(re.findall(r"\d", season["season"])[0])
+                    return int(re.findall(r"\d", season.get("season"))[0])
 
-    def tmdb_search(self, title):
-        tmdb_info = TMDBInfo()
+    def tmdb_search(self, title) -> TMDBInfo:
         url = self.search_url(title)
-        contents = self._request.get_json(url)["results"]
+        contents = self._request.get_json(url).get("results")
         if contents.__len__() == 0:
             url = self.search_url(title.replace(" ", ""))
-            contents = self._request.get_json(url)["results"]
+            contents = self._request.get_json(url).get("results")
         # 判断动画
         for content in contents:
             id = content["id"]
             if self.is_animation(id):
-                tmdb_info.id = id
                 break
-        url_info = self.info_url(tmdb_info.id)
+        url_info = self.info_url(id)
         info_content = self._request.get_json(url_info)
         # 关闭链接
         self._request.close_session()
-        tmdb_info.season = [{"season": s["name"], "air_date": s["air_date"]} for s in info_content["seasons"]]
-        tmdb_info.last_season = self.get_season(tmdb_info.season)
-        tmdb_info.title_jp = info_content["original_name"]
-        tmdb_info.title_zh = info_content["name"]
-        return tmdb_info
+        season = [{"season": s.get("name"), "air_date": s.get("air_date")} for s in info_content.get("seasons")]
+        last_season = self.get_season(season)
+        title_jp = info_content.get("original_name")
+        title_zh = info_content.get("name")
+        year_number = info_content.get("first_air_date").split("-")[0]
+        return TMDBInfo(id, title_jp, title_zh, season, last_season, year_number)
 
 
 if __name__ == "__main__":
-    test = " Love Live！虹咲学园 学园偶像同好会"
-    print(TMDBMatcher().tmdb_search(test).title_zh)
+    test = "辉夜大小姐"
+    info = TMDBMatcher().tmdb_search(test)
+    print(f"{info.title_zh}({info.year_number})")

@@ -17,7 +17,8 @@ class Renamer:
         self.client = download_client
         self._renamer = TitleParser()
 
-    def print_result(self, torrent_count, rename_count):
+    @staticmethod
+    def print_result(torrent_count, rename_count):
         if rename_count != 0:
             logger.info(f"Finished checking {torrent_count} files' name, renamed {rename_count} files.")
         logger.debug(f"Checked {torrent_count} files")
@@ -27,7 +28,8 @@ class Renamer:
         torrent_count = len(recent_info)
         return recent_info, torrent_count
 
-    def split_path(self, path: str):
+    @staticmethod
+    def split_path(path: str):
         suffix = os.path.splitext(path)[-1]
         path = path.replace(settings.download_path, "")
         path_parts = PurePath(path).parts \

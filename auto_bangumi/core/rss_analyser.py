@@ -16,10 +16,11 @@ class RSSAnalyser:
         self._title_analyser = TitleParser()
         self._request = RequestContent()
 
-    def rss_to_datas(self, bangumi_info: list):
-        rss_titles = self._request.get_titles(settings.rss_link)
+    def rss_to_datas(self, bangumi_info: list) -> list:
+        rss_torrents = self._request.get_torrents(settings.rss_link)
         self._request.close_session()
-        for raw_title in rss_titles:
+        for torrent in rss_torrents:
+            raw_title = torrent.name
             extra_add = True
             if bangumi_info is not []:
                 for d in bangumi_info:
@@ -27,18 +28,16 @@ class RSSAnalyser:
                         logger.debug(f"Had added {d['title_raw']} before")
                         extra_add = False
                         break
-            if re.search(settings.not_contain, raw_title) is not None:
-                extra_add = False
             if extra_add:
                 data = self._title_analyser.return_dict(raw_title)
                 if data is not None and data["official_title"] not in bangumi_info:
                     bangumi_info.append(data)
         return bangumi_info
 
-    def rss_to_data(self, url):
-        rss_title = self._request.get_title(url)
+    def rss_to_data(self, url) -> dict:
+        rss_torrents = self._request.get_torrents(url)
         self._request.close_session()
-        data = self._title_analyser.return_dict(rss_title)
+        data = self._title_analyser.return_dict(rss_torrents[0].name)
         return data
 
     def run(self, bangumi_info: list, download_client: DownloadClient):

@@ -1,4 +1,4 @@
-name: build-docker-image
+name: Build(Docker)
 
 on:
   release:

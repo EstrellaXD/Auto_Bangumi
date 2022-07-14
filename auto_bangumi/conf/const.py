@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 
 DEFAULT_SETTINGS = {
-    "version": "2.5.10",
+    "version": "2.5.11",
     "data_version": 4.0,
     "host_ip": "localhost:8080",
     "sleep_time": 7200,
@@ -12,7 +12,7 @@ DEFAULT_SETTINGS = {
     "method": "pn",
     "enable_group_tag": False,
     "info_path": "/config/bangumi.json",
-    "not_contain": "720",
+    "not_contain": r"720|\d+-\d+",
     "rule_name_re": r"\:|\/|\.",
     "connect_retry_interval": 5,
     "debug_mode": False,

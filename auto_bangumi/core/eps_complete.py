@@ -31,7 +31,7 @@ class FullSeasonGet:
         downloads = []
         for torrent in torrents:
             download_info = {
-                "url": torrent,
+                "url": torrent.torrent_link,
                 "save_path": os.path.join(
                         settings.download_path,
                         data["official_title"],
