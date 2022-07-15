@@ -2,6 +2,7 @@ import re
 from dataclasses import dataclass
 
 from network.request import RequestURL
+from .notification import PostNotification
 from conf import settings
 
 

@@ -1,7 +1,6 @@
 import re
 import logging
 import os
-from attrdict import AttrDict
 
 from downloader import getClient
 from downloader.exceptions import ConflictError
@@ -88,7 +87,7 @@ class DownloadClient:
         # logger.info("to rule.")
         logger.debug("Finished.")
 
-    def get_torrent_info(self) -> [AttrDict]:
+    def get_torrent_info(self):
         return self.client.torrents_info(
             status_filter="completed", category="Bangumi"
         )
@@ -122,7 +121,19 @@ class DownloadClient:
         self.client.rss_add_feed(url=rss_link, item_path=item_path)
         logger.info("Add RSS Feed successfully.")
 
+    def get_download_rules(self):
+        return self.client.get_download_rule()
+
+    def get_torrent_path(self, hashes):
+        return self.client.get_torrent_path(hashes)
+
 
 if __name__ == "__main__":
+    from conf.const_dev import DEV_SETTINGS
+    settings.init(DEV_SETTINGS)
     put = DownloadClient()
+    info = put.get_torrent_info()
+    for i in info:
+        print(i.name)
+
 

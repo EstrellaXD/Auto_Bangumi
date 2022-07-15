@@ -87,6 +87,12 @@ class QbDownloader:
     def move_torrent(self, hashes, new_location):
         self._client.torrents_set_location(new_location, hashes)
 
+    def get_download_rule(self):
+        return self._client.rss_rules()
+
+    def get_torrent_path(self, hash):
+        return self._client.torrents_info(hashes=hash)[0].save_path
+
 
 if __name__ == "__main__":
     try:
@@ -95,4 +101,5 @@ if __name__ == "__main__":
         logger.debug("Please copy `const_dev.py` to `const_dev.py` to use custom settings")
     settings.init(DEV_SETTINGS)
     client = QbDownloader(settings.host_ip, settings.user_name, settings.password)
-    client.rss_remove_item("Mikan_RSS")
+    path = client.get_torrent_path("39adad0d0c82ebb3971810a7592e03138b7345d2")
+    print(path)
