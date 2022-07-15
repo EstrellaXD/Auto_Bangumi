@@ -76,7 +76,7 @@
 
 ***计划开发的功能：***
 
-- Web UI #57
+- Web UI [#57](https://github.com/EstrellaXD/Auto_Bangumi/issues/57)
 - 更为智能细致的分类预设。
 
 # 声明
