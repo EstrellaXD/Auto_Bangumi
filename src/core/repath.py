@@ -1,3 +1,4 @@
+import pathlib
 import re
 from dataclasses import dataclass
 from pathlib import PurePath, PureWindowsPath
@@ -9,14 +10,15 @@ from utils import json_config
 @dataclass
 class RuleInfo:
     rule_name: str
+    contain: str
     season: int
     folder_name: str
+    new_path: str
 
 
 @dataclass
 class RePathInfo:
-    name: str
-    season: int
+    path: str
     hashes: list
 
 
@@ -43,8 +45,10 @@ class RePath:
         all_rule = []
         for rule in rules:
             path = rules.get(rule).savePath
+            must_contain = rules.get(rule).mustContain
             season, folder_name = self.analyse_path(path)
-            all_rule.append(RuleInfo(rule, season, folder_name))
+            new_path = PurePath(settings.download_path, folder_name, f"Season {season}").__str__()
+            all_rule.append(RuleInfo(rule, must_contain, season, folder_name, new_path))
         return all_rule
 
     def get_difference(self, bangumi_data: list, rules: list):
@@ -59,27 +63,28 @@ class RePath:
                     break
         return different_data
 
-    def get_matched_torrents_list(self, difference_data: list) -> [RePathInfo]:
+    def get_matched_torrents_list(self, repath_rules: [RuleInfo]) -> [RePathInfo]:
         infos = self._client.get_torrent_info()
         repath_list = []
-        for data in difference_data:
+        for rule in repath_rules:
+            hashes = []
             for info in infos:
-                if re.search(data["raw_title"], info.name):
-                    repath_list.append(RePathInfo(data["name"], data["season"], [info.hash]))
+                if re.search(rule.contain, info.name):
+                    if rule.new_path != info.save_path:
+                        hashes.append(info.hash)
+                        infos.remove(info)
+            if hashes:
+                repath_list.append(RePathInfo(rule.new_path, hashes))
         return repath_list
 
-    def re_path(self, hashes, season):
-        old_path = self._client.get_torrent_path(hashes)
-        new_path = re.sub(r"Season \d", f"Season {season}", old_path)
-        self._client.move_torrent(hashes, new_path)
+    def re_path(self, repath_info: RePathInfo):
+        self._client.move_torrent(repath_info.hashes, repath_info.path)
 
-    # def get_hashes(self):
-    def run(self, bangumi_data: list):
+    def run(self):
         rules = self.get_rule()
-        different_data = self.get_difference(bangumi_data, rules)
-        repath_list = self.get_matched_torrents_list(different_data)
-        for group in repath_list:
-            self.re_path(group.hashes, group.season)
+        match_list = self.get_matched_torrents_list(rules)
+        for list in match_list:
+            self.re_path(list)
 
 
 if __name__ == '__main__':
@@ -87,5 +92,4 @@ if __name__ == '__main__':
     settings.init(DEV_SETTINGS)
     client = DownloadClient()
     r = RePath(client)
-    data = []
-    r.run(data)
+    r.run()

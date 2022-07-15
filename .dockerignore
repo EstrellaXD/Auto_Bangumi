@@ -19,6 +19,6 @@ coverage.xml
 .pytest_cache
 .hypothesis
 
-auto_bangumi/tests
-auto_bangumi/conf/const_dev.py
+src/tests
+src/conf/const_dev.py
 config/bangumi.json/config/bangumi.json

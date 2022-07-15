@@ -9,7 +9,7 @@ RUN pip install -r requirements.txt
 
 ENV TZ=Asia/Shanghai
 
-ADD ./auto_bangumi /auto_bangumi
+ADD src /auto_bangumi
 RUN mkdir /config
 ADD ./templates /templates
 
