@@ -29,5 +29,5 @@ jobs:
 
     - name: Test
       run: |
-        cd auto_bangumi
+        cd src
         python -m unittest discover tests
