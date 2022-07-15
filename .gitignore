@@ -161,3 +161,4 @@ cython_debug/
 
 # Custom
 /AutoBangumi/config/bangumi.json
+/auto_bangumi
