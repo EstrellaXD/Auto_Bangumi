@@ -27,7 +27,7 @@
 
 基于 [infuse](https://firecore.com/infuse) 与 [Plex](https://plex.tv) 的效果如下：
 
-<img title="plex" src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/image/截屏2022-05-23%2020.47.39.png" alt="" width=50%><img title="infuse" src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/image/截屏2022-05-23%2020.48.02.png" alt="" width=50%>
+<img title="plex" src="https://tva1.sinaimg.cn/large/e6c9d24ely1h47zd0v04zj21a50u0gvr.jpg" alt="" width=50%><img title="infuse" src="https://tva1.sinaimg.cn/large/e6c9d24ely1h47zd0gqz3j21a50u0dqc.jpg" alt="" width=50%>
 
 ## AutoBangumi 功能说明
 
