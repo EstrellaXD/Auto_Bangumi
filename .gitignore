@@ -165,9 +165,6 @@ cython_debug/
 /auto_bangumi/conf/const_dev.py
 /config
 /auto_bangumi/tester.py
-/resource/names.txt
-
-
 
 /auto_bangumi/parser/analyser/tmdb_parser.py
 
