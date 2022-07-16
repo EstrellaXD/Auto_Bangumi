@@ -64,6 +64,7 @@ class DownloadClient:
         else:
             try:
                 self.client.rss_remove_item(item_path="Mikan_RSS")
+                logger.info("Remove RSS Feed successfully.")
             except ConflictError:
                 logger.info("No feed exists, start adding feed.")
             try:
@@ -132,8 +133,5 @@ if __name__ == "__main__":
     from conf.const_dev import DEV_SETTINGS
     settings.init(DEV_SETTINGS)
     put = DownloadClient()
-    info = put.get_torrent_info()
-    for i in info:
-        print(i.name)
-
+    put.rss_feed()
 

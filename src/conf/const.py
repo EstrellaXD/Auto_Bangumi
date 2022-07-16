@@ -28,6 +28,7 @@ DEFAULT_SETTINGS = {
     "enable_rename": True,
     "reset_folder": False,
     "log_path": "/config/log.txt",
+    "refresh_rss": True,
 }
 
 ENV_TO_ATTR = {
