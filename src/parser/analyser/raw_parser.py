@@ -97,11 +97,11 @@ class RawParser:
                     break
         for item in split:
             if re.search(r"[\u0800-\u4e00]{2,}", item):
-                name_jp = item
+                name_jp = item.strip()
             elif re.search(r"[\u4e00-\u9fa5]{2,}", item):
-                name_zh = item
+                name_zh = item.strip()
             elif re.search(r"[a-zA-Z]{3,}", item):
-                name_en = item
+                name_en = item.strip()
         return name_en, name_zh, name_jp
 
     @staticmethod
@@ -162,6 +162,6 @@ class RawParser:
 
 if __name__ == "__main__":
     test = RawParser()
-    test_txt = "[SWSUB][7月新番][继母的拖油瓶是我的前女友/継母の连れ子が元カノだった][001][GB_JP][AVC][1080P][网盘][无修正] [331.6MB] [复制磁连]"
-    en, zh, jp = test.name_process("继母的拖油瓶是我的前女友/継母の连れ子が元カノだった")
+    test_txt = "[SWSUB][7月新番][继母的拖油瓶是我的前女友 / 継母の连れ子が元カノだった][001][GB_JP][AVC][1080P][网盘][无修正] [331.6MB] [复制磁连]"
+    en, zh, jp = test.name_process("继母的拖油瓶是我的前女友 / 継母の连れ子が元カノだった")
     print(f"en:{en}, zh:{zh}, jp:{jp}")
