@@ -35,7 +35,7 @@ class TestRawParser(unittest.TestCase):
 
         content = "【喵萌奶茶屋】★04月新番★夏日重现/Summer Time Rendering[11][1080p][繁日双语][招募翻译] [539.4 MB]"
         info = parser.analyse(content)
-        self.assertEqual(info.title, "Summer Time Rendering")
+        self.assertEqual(info.title_en, "Summer Time Rendering")
 
     def test_pre_process(self):
         content = "【幻樱字幕组】【4月新番】"
