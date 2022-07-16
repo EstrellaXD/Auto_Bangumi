@@ -52,7 +52,7 @@ class TitleParser:
                 "source": episode.source,
                 "subtitle": episode.sub,
                 "added": False,
-                "eps_collect": True if settings.eps_complete and episode.ep_info.number > 1 else False,
+                "eps_collect": True if settings.eps_complete and episode.episode > 1 else False,
             }
             logger.debug(f"RAW:{raw} >> {episode.title_en}")
             return data
@@ -65,7 +65,7 @@ if __name__ == '__main__':
     from conf.const_dev import DEV_SETTINGS
     settings.init(DEV_SETTINGS)
     T = TitleParser()
-    raw = "[Lilith-Raws] 在地下城寻求邂逅是否搞错了什么 - 00 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
+    raw = "[Lilith-Raws] 在地下城寻求邂逅是否搞错了什么/Danmachi [无修正][01][Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
     season = int(re.search(r"\d{1,2}", "S02").group())
     dict = T.return_dict(raw)
     print(dict)

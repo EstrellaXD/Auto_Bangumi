@@ -2,7 +2,7 @@ import re
 from dataclasses import dataclass
 
 from network.request import RequestURL
-from .notification import PostNotification
+from network.notification import PostNotification
 from conf import settings
 
 
@@ -20,12 +20,12 @@ class RequestContent:
     def get_torrents(self, url: str) -> [TorrentInfo]:
         soup = self._req.get_content(url)
         torrent_titles = [item.title.string for item in soup.find_all("item")]
-        keep_index = []
-        for idx, title in enumerate(torrent_titles):
-            if re.search(settings.not_contain, title) is None:
-                keep_index.append(idx)
         torrent_urls = [item.get("url") for item in soup.find_all("enclosure")]
-        return [TorrentInfo(torrent_titles[i], torrent_urls[i]) for i in keep_index]
+        torrents = []
+        for title, torrent_url in zip(torrent_titles, torrent_urls):
+            if re.search(settings.not_contain, title) is None:
+                torrents.append(TorrentInfo(title, torrent_url))
+        return torrents
 
     def get_torrent(self, url) -> TorrentInfo:
         soup = self._req.get_content(url)
