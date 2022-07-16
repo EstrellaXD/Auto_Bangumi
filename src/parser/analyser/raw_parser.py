@@ -1,6 +1,8 @@
 import logging
 import re
-from parser.episode import Episode
+from dataclasses import dataclass
+
+# from parser.episode import Episode
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +26,20 @@ CHINESE_NUMBER_MAP = {
     "九": 9,
     "十": 10,
 }
+
+
+@dataclass
+class Episode:
+    title_en: str
+    title_zh: str
+    title_jp: str
+    season: int
+    season_raw: str
+    episode: int
+    sub: str
+    group: str
+    resolution: str
+    source: str
 
 
 class RawParser:
@@ -63,6 +79,7 @@ class RawParser:
 
     @staticmethod
     def name_process(name: str):
+        name_en, name_zh, name_jp = "", "", ""
         name = name.strip()
         split = re.split("/|\s{2}|-\s{2}", name.replace("（仅限港澳台地区）", ""))
         while "" in split:
@@ -73,17 +90,19 @@ class RawParser:
             elif re.search(" - {1}", name) is not None:
                 split = re.split("-", name)
         if len(split) == 1:
-            match_obj = re.match(
-                r"([^\x00-\xff]{1,})(\s)([\x00-\xff]{4,})", name)
-            if match_obj is not None:
-                return match_obj.group(3), split
-        compare, compare_idx = 0, 0
-        for idx, name in list(enumerate(split)):
-            l = re.findall("[aA-zZ]{1}", name).__len__()
-            if l > compare:
-                compare = l
-                compare_idx = idx
-        return split[compare_idx].strip(), split
+            split_space = name.split(" ")
+            for idx, item in enumerate(split_space):
+                if re.search(r"^[\u4e00-\u9fa5]{2,}", item) is not None:
+                    split = [item.strip(), " ".join(split_space[idx+1:]).strip()]
+                    break
+        for item in split:
+            if re.search(r"[\u0800-\u4e00]{2,}", item):
+                name_jp = item
+            elif re.search(r"[\u4e00-\u9fa5]{2,}", item):
+                name_zh = item
+            elif re.search(r"[a-zA-Z]{3,}", item):
+                name_en = item
+        return name_en, name_zh, name_jp
 
     @staticmethod
     def find_tags(other):
@@ -115,9 +134,9 @@ class RawParser:
             lambda x: x.strip(), match_obj.groups()
         ))
         raw_name, season_raw, season = self.season_process(season_info)  # 处理 第n季
-        name, name_group = "", ""
+        name_en, name_zh, name_jp = "", "", ""
         try:
-            name, name_group = self.name_process(raw_name)  # 处理 名字
+            name_en, name_zh, name_jp = self.name_process(raw_name)  # 处理 名字
         except ValueError:
             pass
         # 处理 集数
@@ -126,30 +145,23 @@ class RawParser:
         if raw_episode is not None:
             episode = int(raw_episode.group())
         sub, dpi, source = self.find_tags(other)  # 剩余信息处理
-        return name, season, season_raw, episode, sub, dpi, source, name_group, group
+        return name_en, name_zh, name_jp, season, season_raw, episode, sub, dpi, source, group
 
     def analyse(self, raw: str) -> Episode or None:
         try:
             ret = self.process(raw)
             if ret is None:
                 return None
-            name, season, sr, episode, \
-                sub, dpi, source, ng, group = ret
+            name_en, name_zh, name_jp, season, sr, episode, \
+                sub, dpi, source, group = ret
         except Exception as e:
             logger.error(f"ERROR match {raw} {e}")
             return None
-        info = Episode()
-        info.title = name
-        info.season_info.number, info.season_info.raw = season, sr
-        info.ep_info.number = episode
-        info.subtitle, info.dpi, info.source = sub, dpi, source
-        info.title_info.group = ng
-        info.group = group
-        return info
+        return Episode(name_en, name_zh, name_jp, season, sr, episode, sub, group, dpi, source)
 
 
 if __name__ == "__main__":
     test = RawParser()
     test_txt = "[SWSUB][7月新番][继母的拖油瓶是我的前女友/継母の连れ子が元カノだった][001][GB_JP][AVC][1080P][网盘][无修正] [331.6MB] [复制磁连]"
-    ep = test.analyse(test_txt)
-    print(ep.title)
+    en, zh, jp = test.name_process("继母的拖油瓶是我的前女友/継母の连れ子が元カノだった")
+    print(f"en:{en}, zh:{zh}, jp:{jp}")

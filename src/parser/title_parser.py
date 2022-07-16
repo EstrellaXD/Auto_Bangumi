@@ -18,7 +18,7 @@ class TitleParser:
     def download_parser(self, download_raw, folder_name, season, suffix, method=settings.method):
         return self._download_parser.download_rename(download_raw, folder_name, season, suffix, method)
 
-    def tmdb_parser(self, title: str, season:int):
+    def tmdb_parser(self, title: str, season: int):
         try:
             tmdb_info = self._tmdb_parser.tmdb_search(title)
             logger.debug(f"TMDB Matched, title is {tmdb_info.title_zh}")
@@ -35,24 +35,25 @@ class TitleParser:
     def return_dict(self, raw: str):
         try:
             episode = self.raw_parser(raw)
+            title_search = episode.title_zh if episode.title_zh != "" else episode.title_en
             if settings.enable_tmdb:
-                official_title, season = self.tmdb_parser(episode.title, episode.season_info.number)
+                official_title, season = self.tmdb_parser(title_search, episode.season)
             else:
-                official_title = episode.title
-                season = episode.season_info.number
+                official_title = title_search
+                season = episode.season
             data = {
                 "official_title": official_title,
-                "title_raw": episode.title,
-                "season": season,
-                "season_raw": episode.season_info.raw,
+                "title_raw": episode.title_en,
+                "season": season if season is not None else episode.season,
+                "season_raw": episode.season_raw,
                 "group": episode.group,
-                "dpi": episode.dpi,
+                "dpi": episode.resolution,
                 "source": episode.source,
-                "subtitle": episode.subtitle,
+                "subtitle": episode.sub,
                 "added": False,
                 "eps_collect": True if settings.eps_complete and episode.ep_info.number > 1 else False,
             }
-            logger.debug(f"RAW:{raw} >> {episode.title}")
+            logger.debug(f"RAW:{raw} >> {episode.title_en}")
             return data
         except Exception as e:
             logger.debug(e)
@@ -63,7 +64,7 @@ if __name__ == '__main__':
     from conf.const_dev import DEV_SETTINGS
     settings.init(DEV_SETTINGS)
     T = TitleParser()
-    raw = "[SWSUB][7月新番][继母的拖油瓶是我的前女友/継母の连れ子が元カノだった][001][GB_JP][AVC][1080P][网盘][无修正] [331.6MB] [复制磁连]"
+    raw = "[Lilith-Raws] 在地下城寻求邂逅是否搞错了什么 / Danmachi S04 - 00 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
     season = int(re.search(r"\d{1,2}", "S02").group())
     dict = T.return_dict(raw)
     print(dict)

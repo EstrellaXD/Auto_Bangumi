@@ -1,10 +1,13 @@
-import pathlib
+import logging
 import re
 from dataclasses import dataclass
 from pathlib import PurePath, PureWindowsPath
+
 from core import DownloadClient
 from conf import settings
 from utils import json_config
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -28,11 +31,6 @@ class RePath:
         self.re_season = re.compile(r"S\d{1,2}")
 
     @staticmethod
-    def get_data() -> list:
-        data = json_config.load(settings.info_path)
-        return data.get("bangumi_info")
-
-    @staticmethod
     def analyse_path(path: str):
         path_parts = PurePath(path).parts
         folder_name = path_parts[-2]
@@ -51,16 +49,17 @@ class RePath:
             all_rule.append(RuleInfo(rule, must_contain, season, folder_name, new_path))
         return all_rule
 
-    def get_difference(self, bangumi_data: list, rules: list):
+    @staticmethod
+    def get_difference(bangumi_data: list, rules: [RuleInfo]) -> [RuleInfo]:
         different_data = []
-        for rule in rules:
-            for item in bangumi_data:
-                if item["official_title"] == self.re_season.sub("", rule.rule_name).strip():
-                    if item["season"] != rule.season:
-                        item["season"] = rule.season
-                        item["official_title"] = self.re_season.sub("", rule.rule_name).strip()
-                        different_data.append(item)
-                    break
+        for data in bangumi_data:
+            for rule in rules:
+                rule_name = re.sub(r"S\d", "", rule.rule_name).strip()
+                if data.get("official_title") == rule_name:
+                    if data.get("season") != rule.season:
+                        different_data.append(rule)
+                        data["season"] = rule.season
+                        break
         return different_data
 
     def get_matched_torrents_list(self, repath_rules: [RuleInfo]) -> [RePathInfo]:
@@ -83,6 +82,7 @@ class RePath:
     def run(self):
         rules = self.get_rule()
         match_list = self.get_matched_torrents_list(rules)
+        logging.info(f"Starting repath process.")
         for list in match_list:
             self.re_path(list)
 

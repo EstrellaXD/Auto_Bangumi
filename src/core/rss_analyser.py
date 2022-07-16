@@ -59,4 +59,5 @@ if __name__ == "__main__":
     data = []
     ra.run(data, client)
     for d in data:
-        print(d)
+        print(d.get("official_title"))
+        print(d.get("season"))
