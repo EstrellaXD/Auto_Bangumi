@@ -26,9 +26,9 @@ class TitleParser:
             logger.warning("Not Matched with TMDB")
             return title, season
         if settings.title_language == "zh":
-            official_title = f"{tmdb_info.title_zh}({tmdb_info.year_number})"
+            official_title = f"{tmdb_info.title_zh} ({tmdb_info.year_number})"
         elif settings.title_language == "jp":
-            official_title = f"{tmdb_info.title_jp}({tmdb_info.year_number})"
+            official_title = f"{tmdb_info.title_jp} ({tmdb_info.year_number})"
         season = tmdb_info.last_season
         return official_title, season
 
@@ -36,6 +36,7 @@ class TitleParser:
         try:
             episode = self.raw_parser(raw)
             title_search = episode.title_zh if episode.title_zh != "" else episode.title_en
+            title_raw = episode.title_en if episode.title_en != "" else episode.title_zh
             if settings.enable_tmdb:
                 official_title, season = self.tmdb_parser(title_search, episode.season)
             else:
@@ -43,7 +44,7 @@ class TitleParser:
                 season = episode.season
             data = {
                 "official_title": official_title,
-                "title_raw": episode.title_en,
+                "title_raw": title_raw,
                 "season": season if season is not None else episode.season,
                 "season_raw": episode.season_raw,
                 "group": episode.group,
@@ -64,7 +65,7 @@ if __name__ == '__main__':
     from conf.const_dev import DEV_SETTINGS
     settings.init(DEV_SETTINGS)
     T = TitleParser()
-    raw = "[Lilith-Raws] 在地下城寻求邂逅是否搞错了什么 / Danmachi S04 - 00 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
+    raw = "[Lilith-Raws] 在地下城寻求邂逅是否搞错了什么 - 00 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
     season = int(re.search(r"\d{1,2}", "S02").group())
     dict = T.return_dict(raw)
     print(dict)
