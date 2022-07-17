@@ -30,9 +30,9 @@ CHINESE_NUMBER_MAP = {
 
 @dataclass
 class Episode:
-    title_en: str
-    title_zh: str
-    title_jp: str
+    title_en: str or None
+    title_zh: str or None
+    title_jp: str or None
     season: int
     season_raw: str
     episode: int
@@ -79,7 +79,7 @@ class RawParser:
 
     @staticmethod
     def name_process(name: str):
-        name_en, name_zh, name_jp = "", "", ""
+        name_en, name_zh, name_jp = None, None, None
         name = name.strip()
         split = re.split("/|\s{2}|-\s{2}", name.replace("（仅限港澳台地区）", ""))
         while "" in split:
@@ -96,11 +96,11 @@ class RawParser:
                     split = [item.strip(), " ".join(split_space[idx+1:]).strip()]
                     break
         for item in split:
-            if re.search(r"[\u0800-\u4e00]{2,}", item):
+            if re.search(r"[\u0800-\u4e00]{2,}", item) and not name_jp:
                 name_jp = item.strip()
-            elif re.search(r"[\u4e00-\u9fa5]{2,}", item):
+            elif re.search(r"[\u4e00-\u9fa5]{2,}", item) and not name_zh:
                 name_zh = item.strip()
-            elif re.search(r"[a-zA-Z]{3,}", item):
+            elif re.search(r"[a-zA-Z]{3,}", item) and not name_en:
                 name_en = item.strip()
         return name_en, name_zh, name_jp
 
@@ -122,7 +122,6 @@ class RawParser:
     def clean_sub(sub: str | None) -> str | None:
         if sub is None:
             return sub
-        # TODO: 这里需要改成更精准的匹配，可能不止 _MP4 ?
         return re.sub(r"_MP4|_MKV", "", sub)
 
     def process(self, raw_title: str):
@@ -163,5 +162,5 @@ class RawParser:
 if __name__ == "__main__":
     test = RawParser()
     test_txt = "[SWSUB][7月新番][继母的拖油瓶是我的前女友 / 継母の连れ子が元カノだった][001][GB_JP][AVC][1080P][网盘][无修正] [331.6MB] [复制磁连]"
-    en, zh, jp = test.name_process("继母的拖油瓶是我的前女友 / 継母の连れ子が元カノだった")
-    print(f"en:{en}, zh:{zh}, jp:{jp}")
+    ep = test.analyse(test_txt)
+    print(f"en:{ep.title_en}, zh:{ep.title_zh}, jp:{ep.title_jp}")

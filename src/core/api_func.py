@@ -41,7 +41,7 @@ class APIProcess:
     def remove_rule(name):
         datas = json_config.load(settings.info_path)["bangumi_info"]
         for data in datas:
-            if re.search(name.lower(), data["title_raw"].lower()) is not None:
+            if re.search(name.lower(), data["title_raw"].lower()):
                 datas.remove(data)
                 json_config.save(settings.info_path, datas)
                 return "Success"
