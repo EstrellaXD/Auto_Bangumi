@@ -4,7 +4,7 @@ lxml
 certifi==2022.6.15
 charset-normalizer
 click==8.1.3
-fastapi==0.78.0
+fastapi
 h11==0.13.0
 idna==3.3
 pydantic==1.9.1
@@ -15,6 +15,6 @@ six==1.16.0
 sniffio==1.2.0
 soupsieve
 typing_extensions==4.3.0
-urllib3==1.26.9
+urllib3
 uvicorn
 attrdict

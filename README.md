@@ -56,10 +56,11 @@
   >>
    Kakkou no Iinazuke S01E07.mp4
   ```
+- 自定义重命名，可以根据上级文件夹对所有子文件重命名。
 - 季中追番可以补全当季遗漏的所有剧集
 - 高度可自定义的功能选项，可以针对不同媒体库软件微调
 - 无需维护完全无感使用
-
+- 内置 TDMB 解析器，可以直接生成完整的 TMDB 格式的文件以及番剧信息。
 
 ## 相关群组
 
@@ -69,15 +70,18 @@
 ## Roadmap
 
 ***开发中的功能：***
-
-- ✅ RSS 解析器：AutoBangumi 可以自行解析分析种子无需依赖下载器。
-- ~~Transmission & Aria2 的支持。~~ 可以转到 [RanKKI/Bangumi](https://github.com/RanKKI/Bangumi)，该项目具有 Aria2/Tr 的支持
-- ✅ 遗漏番剧下载：中间开始追番可以补全之前的剧集。
+- Web UI [#57](https://github.com/EstrellaXD/Auto_Bangumi/issues/57)
+- 文件统一整理，对单个规则或者文件微调文件夹可以自动调整所有对应的文件。
+- 通知功能，可以通过 IFTTT 等方式通知用户番剧更新进度。
+- 剧场版以及合集的支持。
+- 各类 API 接口。
 
 ***计划开发的功能：***
+- 对其他站点种子的解析归类。
+- 本地化番剧订阅方式。
 
-- Web UI [#57](https://github.com/EstrellaXD/Auto_Bangumi/issues/57)
-- 更为智能细致的分类预设。
+***未计划开发的功能：***
+- Transmission & Aria2 的支持，可以转到 [RanKKI/Bangumi](https://github.com/RanKKI/Bangumi)，该项目具有 Aria2/Tr 的支持
 
 # 声明
 ## 致谢
