@@ -93,7 +93,8 @@ class RawParser:
             split_space = name.split(" ")
             for idx, item in enumerate(split_space):
                 if re.search(r"^[\u4e00-\u9fa5]{2,}", item) is not None:
-                    split = [item.strip(), " ".join(split_space[idx+1:]).strip()]
+                    split_space.remove(item)
+                    split = [item.strip(), " ".join(split_space).strip()]
                     break
         for item in split:
             if re.search(r"[\u0800-\u4e00]{2,}", item) and not name_jp:
@@ -161,6 +162,6 @@ class RawParser:
 
 if __name__ == "__main__":
     test = RawParser()
-    test_txt = "[SWSUB][7月新番][继母的拖油瓶是我的前女友 / 継母の连れ子が元カノだった][001][GB_JP][AVC][1080P][网盘][无修正] [331.6MB] [复制磁连]"
+    test_txt = "[SWSUB][7月新番][Love Live! 红小学员][无修正][001][GB_JP][AVC][1080P][网盘][无修正] [331.6MB] [复制磁连]"
     ep = test.analyse(test_txt)
     print(f"en:{ep.title_en}, zh:{ep.title_zh}, jp:{ep.title_jp}")
