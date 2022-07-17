@@ -53,9 +53,9 @@ def reset_rule():
     return api_func.reset_rule()
 
 
-@app.get("api/v1/removeRule/{name}")
-def remove_rule(name: str):
-    return api_func.remove_rule(name)
+@app.get("api/v1/removeRule/{bangumi_title}")
+def remove_rule(bangumi_title: str):
+    return api_func.remove_rule(bangumi_title)
 
 
 class RssLink(BaseModel):
