@@ -1,11 +1,11 @@
 name: Build(Docker)
 
 on:
-  release:
+  push:
     branches:
-      - master
-    types:
-      - released
+      - main
+    tags:
+      - "*"
 
 jobs:
   docker:
