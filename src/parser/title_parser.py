@@ -54,7 +54,7 @@ class TitleParser:
                 "source": episode.source,
                 "subtitle": episode.sub,
                 "added": False,
-                "eps_collect": True if settings.eps_complete and episode.episode > 1 else False,
+                "eps_collect": True if episode.episode > 1 else False,
             }
             logger.debug(f"RAW:{raw} >> {episode.title_en}")
             return data

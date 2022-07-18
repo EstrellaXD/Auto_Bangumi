@@ -2,9 +2,10 @@ name: Build(Docker)
 
 on:
   release:
+    branches:
+      - master
     types:
       - released
-  workflow_dispatch:
 
 jobs:
   docker:
