@@ -38,7 +38,7 @@ class RequestURL:
                 return req
             except Exception as e:
                 logger.debug(f"URL: {url}")
-                logger.warning("ERROR with DNS/Connection.")
+                logger.warning("ERROR with Connection.Please check DNS/Connection settings")
                 time.sleep(settings.connect_retry_interval)
                 times += 1
 

@@ -25,7 +25,7 @@ class RSSAnalyser:
             if bangumi_info is not []:
                 for d in bangumi_info:
                     if re.search(d["title_raw"], raw_title) is not None:
-                        logger.debug(f"Had added {d['title_raw']} before")
+                        logger.debug(f"Had added {d['title_raw']} in auto_download rule before")
                         extra_add = False
                         break
             if extra_add:

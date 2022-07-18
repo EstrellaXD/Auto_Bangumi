@@ -22,7 +22,7 @@ class TitleParser:
         official_title, tmdb_season = None, None
         try:
             tmdb_info = self._tmdb_parser.tmdb_search(title)
-            logger.debug(f"TMDB Matched, title is {tmdb_info.title_zh}")
+            logger.debug(f"TMDB Matched, official title is {tmdb_info.title_zh}")
         except Exception as e:
             logger.warning("Not Matched with TMDB")
             return title, season

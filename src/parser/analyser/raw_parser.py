@@ -155,7 +155,7 @@ class RawParser:
             name_en, name_zh, name_jp, season, sr, episode, \
                 sub, dpi, source, group = ret
         except Exception as e:
-            logger.error(f"ERROR match {raw} {e}")
+            logger.error(f"Parser cannot analyse {raw} {e}")
             return None
         return Episode(name_en, name_zh, name_jp, season, sr, episode, sub, group, dpi, source)
 
