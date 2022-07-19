@@ -2,7 +2,8 @@ import os
 import time
 import logging
 
-from conf import settings, parse, version
+from __version__ import version
+from conf import settings, parse
 from conf.log import setup_logger
 from utils import json_config
 

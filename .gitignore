@@ -170,4 +170,4 @@ cython_debug/
 
 /src/run_debug.sh
 /src/debug_run.sh
-/src/conf/__version__.py
+/src/__version__.py
