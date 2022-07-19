@@ -28,7 +28,7 @@ DEFAULT_SETTINGS = {
     "enable_rename": True,
     "reset_folder": False,
     "log_path": "/config/log.txt",
-    "refresh_rss": True,
+    "refresh_rss": False,
 }
 
 ENV_TO_ATTR = {
@@ -55,7 +55,8 @@ ENV_TO_ATTR = {
     "AB_SOCKS": "socks",
     "AB_RENAME": ("enable_rename", lambda e: e.lower() in ("true", "1", "t")),
     "AB_RSS_COLLECTOR": ("enable_rss_collector", lambda e: e.lower() in ("true", "1", "t")),
-    "AB_RESET_FOLDER": ("reset_folder", lambda e: e.lower() in ("true", "1", "t"))
+    "AB_RESET_FOLDER": ("reset_folder", lambda e: e.lower() in ("true", "1", "t")),
+    "AB_REFRESH_RSS": ("refresh_rss", lambda e: e.lower() in ("true", "1", "t")),
 }
 
 
