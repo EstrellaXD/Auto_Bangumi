@@ -34,20 +34,20 @@ class TitleParser:
         official_title = official_title if official_title else title
         return official_title, tmdb_season
 
-    def return_dict(self, raw: str):
+    def return_dict(self, _raw: str):
         try:
-            episode = self.raw_parser(raw)
+            episode = self.raw_parser(_raw)
             title_search = episode.title_zh if episode.title_zh else episode.title_en
             title_raw = episode.title_en if episode.title_en else episode.title_zh
             if settings.enable_tmdb:
-                official_title, season = self.tmdb_parser(title_search, episode.season)
+                official_title, _season = self.tmdb_parser(title_search, episode.season)
             else:
-                official_title = title_search
-                season = episode.season
+                official_title = title_search if settings.language == "zh" else title_raw
+                _season = episode.season
             data = {
                 "official_title": official_title,
                 "title_raw": title_raw,
-                "season": season,
+                "season": _season,
                 "season_raw": episode.season_raw,
                 "group": episode.group,
                 "dpi": episode.resolution,
@@ -69,5 +69,5 @@ if __name__ == '__main__':
     T = TitleParser()
     raw = "[Lilith-Raws] 在地下城寻求邂逅是否搞错了什么/Danmachi S4[01][Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
     season = int(re.search(r"\d{1,2}", "S02").group())
-    dict = T.return_dict(raw)
-    print(dict)
+    _dict = T.return_dict(raw)
+    print(_dict)

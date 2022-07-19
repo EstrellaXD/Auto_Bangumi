@@ -2,7 +2,7 @@ import os
 import time
 import logging
 
-from conf import settings, parse
+from conf import settings, parse, version
 from conf.log import setup_logger
 from utils import json_config
 
@@ -55,7 +55,7 @@ def show_info():
     logger.info(" /_/    \_\__,_|\__\___/|____/ \__,_|_| |_|\__, |\__,_|_| |_| |_|_|")
     logger.info("                                            __/ |                  ")
     logger.info("                                           |___/                   ")
-    logger.info(f"Version {settings.version}  Author: EstrellaXD Twitter: https://twitter.com/Estrella_Pan")
+    logger.info(f"Version {version}  Author: EstrellaXD Twitter: https://twitter.com/Estrella_Pan")
     logger.info("GitHub: https://github.com/EstrellaXD/Auto_Bangumi/")
     logger.info("Starting AutoBangumi...")
 

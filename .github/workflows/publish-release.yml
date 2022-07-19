@@ -1,8 +1,0 @@
-name: publish-release
-
-on:
-  push:
-    tags:
-    - '*'
-
-jobs:

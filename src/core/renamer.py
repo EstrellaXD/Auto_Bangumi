@@ -58,7 +58,6 @@ class Renamer:
             name = info.name
             torrent_hash = info.hash
             path_name, season, folder_name, suffix, _ = self.split_path(info.content_path)
-
             try:
                 new_name = self._renamer.download_parser(name, folder_name, season, suffix, settings.method)
                 if path_name != new_name:
@@ -66,8 +65,9 @@ class Renamer:
                     rename_count += 1
                 else:
                     continue
-            except:
+            except Exception as e:
                 logger.warning(f"{path_name} rename failed")
+                logger.debug(e)
                 if settings.remove_bad_torrent:
                     self.client.delete_torrent(torrent_hash)
         self.print_result(torrent_count, rename_count)
@@ -85,7 +85,4 @@ class Renamer:
 if __name__ == "__main__":
     from conf.const_dev import DEV_SETTINGS
     settings.init(DEV_SETTINGS)
-    client = DownloadClient()
-    rename = Renamer(client)
-    rename.run()
-    # rename.set_folder()
+    rename = Renamer(DownloadClient())

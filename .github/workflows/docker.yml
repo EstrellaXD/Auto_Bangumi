@@ -1,9 +1,9 @@
 name: Build(Docker)
 
 on:
-  push:
-    tags:
-      - '*'
+  release:
+    types:
+      - released
 
 jobs:
   docker:
@@ -12,6 +12,9 @@ jobs:
       -
         name: Checkout
         uses: actions/checkout@v3
+      - name: Create Version info
+        run: |
+          echo "version = '$GITHUB_REF_NAME'" > src/conf/__version__.py
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v4
