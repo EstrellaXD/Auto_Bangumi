@@ -56,7 +56,7 @@ class TitleParser:
                 "added": False,
                 "eps_collect": True if episode.episode > 1 else False,
             }
-            logger.debug(f"RAW:{raw} >> {episode.title_en}")
+            logger.debug(f"RAW:{_raw} >> {episode.title_en}")
             return data
         except Exception as e:
             logger.debug(e)

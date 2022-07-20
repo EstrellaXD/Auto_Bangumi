@@ -1,7 +1,6 @@
 # -*- encoding: utf-8 -*-
 
 DEFAULT_SETTINGS = {
-    "version": "2.5.15",
     "data_version": 4.0,
     "host_ip": "localhost:8080",
     "sleep_time": 7200,

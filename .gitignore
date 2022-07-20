@@ -165,6 +165,7 @@ cython_debug/
 /src/conf/const_dev.py
 /config
 /src/tester.py
+/src/config
 
 /src/parser/analyser/tmdb_parser.py
 
