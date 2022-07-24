@@ -5,6 +5,7 @@ from uvicorn.config import LOGGING_CONFIG
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import logging
 
@@ -26,15 +27,15 @@ else:
 app = FastAPI()
 api_func = APIProcess()
 
+app.mount("/assets", StaticFiles(directory="=/templates/assets"), name="assets")
+templates = Jinja2Templates(directory="/templates")
 
 
-# templates = Jinja2Templates(directory="templates")
+@app.get("/", response_class=HTMLResponse)
+def index(request: Request):
+    context = {"request": request}
+    return templates.TemplateResponse("index.html", context)
 
-
-# @app.get("/", response_class=HTMLResponse)
-# def index(request: Request):
-#     context = {"request": request}
-#     return templates.TemplateResponse("index.html", context)
 
 @app.get("/api/v1/data")
 def get_data():

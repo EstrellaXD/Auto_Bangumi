@@ -29,6 +29,10 @@
 
 <img title="plex" src="https://tva1.sinaimg.cn/large/e6c9d24ely1h47zd0v04zj21a50u0gvr.jpg" alt="" width=50%><img title="infuse" src="https://tva1.sinaimg.cn/large/e6c9d24ely1h47zd0gqz3j21a50u0dqc.jpg" alt="" width=50%>
 
+- 主项目地址：[Github](https://www.github.com/EstrellaXD/Auto_Bangumi)
+- 项目资源仓库：[Github](https://www.github.com/EstrellaXD/ab_resources)
+- WebUI 仓库：[Github](https://github.com/Rewrite0/Auto_Bangumi_WebUI)
+
 ## AutoBangumi 功能说明
 
 - 简易单次配置就能持续使用
@@ -86,6 +90,7 @@
 # 声明
 ## 致谢
 感谢 [Sean](https://github.com/findix) 提供的大量帮助
+感谢 [Rewrite0](https://github.com/Rewrite0) 开发的 WebUI
 
 ## 请我喝一杯咖啡
 <img src="https://tva1.sinaimg.cn/large/e6c9d24ely1h425na5hldj20u019077h.jpg" width=50%/>
