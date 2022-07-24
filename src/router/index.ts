@@ -3,6 +3,7 @@ import { createRouter, createWebHashHistory } from 'vue-router';
 const YLayout = () => import('../pages/YLayout.vue');
 const YBangumi = () => import('../pages/bangumi/index.vue');
 const YDebug = () => import('../pages/debug/index.vue');
+const YLog = () => import('../pages/journal/index.vue');
 
 const routes = [
   {
@@ -17,6 +18,10 @@ const routes = [
       {
         path: 'debug',
         component: YDebug
+      },
+      {
+        path: 'log',
+        component: YLog
       }
     ]
   },

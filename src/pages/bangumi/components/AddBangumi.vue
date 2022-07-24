@@ -6,7 +6,7 @@ const props = defineProps<{
   type: string
 }>()
 
-const rssLink = ref();
+const rssLink = ref('');
 const loading = ref(false);
 const dialog = ref();
 const dialogData = ref(null);

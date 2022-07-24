@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@vueuse/core": "^8.9.4",
     "axios": "^0.27.2",
     "element-plus": "^2.2.10",
     "modern-normalize": "^1.1.0",

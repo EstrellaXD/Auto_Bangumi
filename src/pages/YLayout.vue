@@ -14,7 +14,7 @@ import YMenu from './YMenu.vue';
       </el-header>
 
       <el-container style="overflow: hidden;">
-        <el-aside width="200px">
+        <el-aside width="auto">
           <YMenu />
         </el-aside>
 
@@ -34,6 +34,10 @@ import YMenu from './YMenu.vue';
   height: 100vh;
   overflow: hidden;
   display: flex;
+
+  @media screen and (max-width: 980px){
+    font-size: 14px;
+  }
 }
 
 .header {

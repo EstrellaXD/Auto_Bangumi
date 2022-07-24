@@ -16,13 +16,13 @@ import AddBangumi from './components/AddBangumi.vue'
     <el-row :gutter="20">
 
       <!-- S 添加新番 -->
-      <el-col :span="8">
+      <el-col :xs="24" :sm="24" :md="12" :lg="8">
         <AddBangumi type="new" />
       </el-col>
       <!-- E 添加新番 -->
 
       <!-- S 添加旧番 -->
-      <el-col :span="8">
+      <el-col :xs="24" :sm="24" :md="12" :lg="8">
         <AddBangumi type="old" />
       </el-col>
       <!-- E 添加旧番 -->
