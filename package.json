@@ -9,8 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "axios": "^0.27.2",
     "element-plus": "^2.2.10",
     "modern-normalize": "^1.1.0",
+    "pinia": "^2.0.16",
     "vue": "^3.2.37",
     "vue-global-api": "^0.4.1",
     "vue-router": "4"

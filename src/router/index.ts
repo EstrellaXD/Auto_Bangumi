@@ -1,8 +1,8 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
 
 const YLayout = () => import('../pages/YLayout.vue');
-const YBangumi = () => import('../pages/YBangumi.vue');
-const YDebug = () => import('../pages/YDebug.vue');
+const YBangumi = () => import('../pages/bangumi/index.vue');
+const YDebug = () => import('../pages/debug/index.vue');
 
 const routes = [
   {

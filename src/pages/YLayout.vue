@@ -13,13 +13,15 @@ import YMenu from './YMenu.vue';
         >
       </el-header>
 
-      <el-container>
+      <el-container style="overflow: hidden;">
         <el-aside width="200px">
           <YMenu />
         </el-aside>
 
         <el-main>
-          <RouterView />
+          <el-scrollbar>
+            <RouterView />
+          </el-scrollbar>
         </el-main>
       </el-container>
     </el-container>
