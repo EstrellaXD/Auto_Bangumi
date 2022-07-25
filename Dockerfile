@@ -15,4 +15,6 @@ ADD ./templates /templates
 
 RUN chmod a+x run.sh
 
+EXPOSE 7892
+
 CMD ["./run.sh"]
