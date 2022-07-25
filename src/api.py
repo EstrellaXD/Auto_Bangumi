@@ -1,5 +1,3 @@
-import re
-
 import uvicorn
 from uvicorn.config import LOGGING_CONFIG
 from fastapi import FastAPI, Request
@@ -27,7 +25,7 @@ else:
 app = FastAPI()
 api_func = APIProcess()
 
-app.mount("/assets", StaticFiles(directory="=/templates/assets"), name="assets")
+app.mount("/assets", StaticFiles(directory="/templates/assets"), name="assets")
 templates = Jinja2Templates(directory="/templates")
 
 
