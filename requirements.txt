@@ -18,3 +18,4 @@ typing_extensions==4.3.0
 urllib3
 uvicorn
 attrdict
+jinja2
