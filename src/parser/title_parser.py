@@ -27,9 +27,9 @@ class TitleParser:
             logger.debug(e)
             logger.warning("Not Matched with TMDB")
             return title, season
-        if settings.title_language == "zh":
+        if settings.language == "zh":
             official_title = f"{tmdb_info.title_zh} ({tmdb_info.year_number})"
-        elif settings.title_language == "jp":
+        elif settings.language == "jp":
             official_title = f"{tmdb_info.title_jp} ({tmdb_info.year_number})"
         tmdb_season = tmdb_info.last_season if tmdb_info.last_season else season
         official_title = official_title if official_title else title
