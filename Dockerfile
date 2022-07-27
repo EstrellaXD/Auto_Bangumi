@@ -5,6 +5,7 @@ WORKDIR /src
 
 ADD requirements.txt .
 
+RUN apt-get update && apt-get install python3-lxml
 RUN pip install -r requirements.txt
 
 ENV TZ=Asia/Shanghai
