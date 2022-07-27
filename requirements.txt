@@ -1,5 +1,6 @@
 anyio
 beautifulsoup4
+lxml
 certifi==2022.6.15
 charset-normalizer
 click==8.1.3
