@@ -1,11 +1,11 @@
 # syntax=docker/dockerfile:1
-FROM python:3.10-buster
+FROM python:3.10-slim-buster
 
 WORKDIR /src
 
 ADD requirements.txt .
 
-RUN apt-get update && apt-get install python3-lxml
+RUN apt-get update && apt-get install -y python3-lxml
 RUN pip install -r requirements.txt
 
 ENV TZ=Asia/Shanghai
