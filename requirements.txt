@@ -1,5 +1,9 @@
 anyio==3.6.1
 beautifulsoup4==4.11.1
+clang
+libxml2
+libxslt
+cython
 lxml
 certifi==2022.6.15
 charset-normalizer
