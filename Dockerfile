@@ -5,7 +5,7 @@ WORKDIR /src
 
 ADD requirements.txt .
 
-RUN apk add --no-cache build-base libxml2-dev libxslt-dev curl
+RUN apt-get update && apt-get install -y libxml2-dev libxslt-dev
 RUN pip install -r requirements.txt
 
 ENV TZ=Asia/Shanghai
