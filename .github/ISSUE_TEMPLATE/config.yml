@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: 使用说明
+    url: https://github.com/EstrellaXD/Auto_Bangumi/wiki/Home
+    about: 使用说明
   - name: Twitter
     url: https://twitter.com/Estrella_Pan
     about: 推特联系我
