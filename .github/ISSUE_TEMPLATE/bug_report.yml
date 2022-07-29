@@ -1,0 +1,42 @@
+name: 问题反馈
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        描述问题前，请先更新到最新版本，版本可以在首页 README 或者 Release 查看。
+        如果更新到最新版本后仍然有问题，请先查阅 [FAQ](https://github.com/EstrellaXD/Auto_Bangumi/wiki/FAQ.md)。
+        确认非上述问题后，请详细描述你所遇到的问题，并附上相应信息。
+  - type: input
+    id: version
+    attributes:
+      label: 当前程序版本
+      description: 遇到问题时程序所在的版本号
+    validations:
+      required: true
+  - type: dropdown
+    id: type
+    attributes:
+      label: 问题类型
+      description: 你在以下哪个部分碰到了问题
+      options:
+        - RSS 解析器
+        - 改名器
+        - WebUI
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 问题描述
+      description: 请详细描述你碰到的问题
+      placeholder: "问题描述"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 发生问题时系统日志
+      description: 问题出现时，程序运行日志请复制到这里。
+      render: shell
