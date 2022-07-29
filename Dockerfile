@@ -1,21 +1,25 @@
 # syntax=docker/dockerfile:1
-FROM python:3.10-slim-buster
+FROM python:3.10-buster AS build
+
+RUN mkdir /install
+WORKDIR /install
+COPY requirements.txt .
+RUN python3 -m pip install --upgrade pip \
+    && pip install -r requirements.txt --prefix="/install"
+
+FROM python:3.10-alpine
 
 WORKDIR /src
 
-ADD requirements.txt .
+COPY --from=build /install /usr/local
+ADD ./src /src
+ADD ./templates /templates
 
-RUN apt-get update && apt-get install -y libxml2-dev libxslt-dev libz-dev gcc
-RUN pip install -r requirements.txt
+RUN mkdir "/config" && \
+    chmod a+x run.sh
 
 ENV TZ=Asia/Shanghai
 
-ADD ./src /src
-RUN mkdir /config
-ADD ./templates /templates
-
-RUN chmod a+x run.sh
-
 EXPOSE 7892
 
-CMD ["./run.sh"]
+CMD ["sh", "run.sh"]
