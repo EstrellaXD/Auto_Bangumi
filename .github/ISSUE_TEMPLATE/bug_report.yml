@@ -1,4 +1,5 @@
 name: 问题反馈
+description: File a bug report
 title: "[BUG] "
 labels: ["bug"]
 body:
