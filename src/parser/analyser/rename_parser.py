@@ -37,7 +37,7 @@ class DownloadParser:
 
     def rename_normal(self, info: DownloadInfo):
         for rule in self.rules:
-            match_obj = re.match(rule, name, re.I)
+            match_obj = re.match(rule, info.file_name, re.I)
             if match_obj is not None:
                 title = re.sub(r"([Ss]|Season )\d{1,3}", "", match_obj.group(1)).strip()
                 new_name = f"{title} S{info.season}E{match_obj.group(2)}{match_obj.group(3)}"

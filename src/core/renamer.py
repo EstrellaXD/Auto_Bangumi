@@ -87,3 +87,4 @@ if __name__ == "__main__":
     from conf.const_dev import DEV_SETTINGS
     settings.init(DEV_SETTINGS)
     rename = Renamer(DownloadClient())
+    rename.run()
