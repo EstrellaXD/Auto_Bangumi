@@ -7,8 +7,7 @@ body:
     attributes:
       value: |
         描述问题前，请先更新到最新版本。
-        最新版本: 
-        [!img](https://img.shields.io/docker/v/estrellaxd/auto_bangumi)
+        最新版本: [version](https://img.shields.io/docker/v/estrellaxd/auto_bangumi)
         如果更新到最新版本后仍然有问题，请先查阅 [FAQ](https://github.com/EstrellaXD/Auto_Bangumi/wiki/FAQ)。
         确认非上述问题后，请详细描述你所遇到的问题，并附上相应信息。
   - type: input
