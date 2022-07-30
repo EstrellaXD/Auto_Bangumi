@@ -92,13 +92,11 @@ class DownloadParser:
             "no_season_pn": self.rename_no_season_pn,
             "none": self.rename_none
         }
-        logger.debug(f"Raw name: {name}, rename method: {method}")
-        logger.debug(f"Folder Name: {folder_name}, File type: {suffix}, Season {season}")
         return method_dict[method.lower()](rename_info)
 
 
 if __name__ == "__main__":
-    name = "[Nekomoe kissaten][Isekai Ojisan][01][1080p][JPSC][v2].mp4"
+    name = "[Lilith-Raws] Tate no Yuusha no Nariagari S02 - 02 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
     rename = DownloadParser()
     new_name = rename.download_rename(name, "异世界舅舅（2022）", 1, ".mp4", "normal")
     print(new_name)

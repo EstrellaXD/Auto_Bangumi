@@ -42,7 +42,7 @@ class Renamer:
             else:
                 season = 1
         except Exception as e:
-            logger.warning(e)
+            logger.debug(e)
             logger.debug("No Season info")
             season = 1
         folder_name = path_parts[1] if path_parts[0] == "/" else path_parts[0]
@@ -68,6 +68,7 @@ class Renamer:
                     continue
             except Exception as e:
                 logger.warning(f"{path_name} rename failed")
+                logger.warning(f"Folder name: {folder_name}, Season: {season}, Suffix: {suffix}")
                 logger.debug(e)
                 if settings.remove_bad_torrent:
                     self.client.delete_torrent(torrent_hash)

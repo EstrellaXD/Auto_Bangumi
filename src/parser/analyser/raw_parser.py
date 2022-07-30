@@ -162,6 +162,6 @@ class RawParser:
 
 if __name__ == "__main__":
     test = RawParser()
-    test_txt = "[SWSUB][7月新番][Love Live! 红小学员][无修正][001][GB_JP][AVC][1080P][网盘][无修正] [331.6MB] [复制磁连]"
+    test_txt = "[梦蓝字幕组]New Doraemon 哆啦A梦新番[716][2022.07.23][AVC][10080P][GB_JP]"
     ep = test.analyse(test_txt)
-    print(f"en:{ep.title_en}, zh:{ep.title_zh}, jp:{ep.title_jp}")
+    print(f"en:{ep.title_en}, zh:{ep.title_zh}, jp:{ep.title_jp}, group:{ep.group}")

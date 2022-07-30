@@ -68,7 +68,7 @@ if __name__ == '__main__':
     from conf.const_dev import DEV_SETTINGS
     settings.init(DEV_SETTINGS)
     T = TitleParser()
-    raw = "[Lilith-Raws] 在地下城寻求邂逅是否搞错了什么/Danmachi S4[01][Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
+    raw = "[梦蓝字幕组]New Doraemon 哆啦A梦新番[716][2022.07.23][AVC][10080P][GB_JP]"
     season = int(re.search(r"\d{1,2}", "S02").group())
     _dict = T.return_dict(raw)
     print(_dict)
