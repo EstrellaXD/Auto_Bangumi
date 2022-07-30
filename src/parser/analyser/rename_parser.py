@@ -1,10 +1,7 @@
-import dataclasses
 import re
 import logging
-from os import path
 from dataclasses import dataclass
 
-# from .raw_parser import RawParser
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +92,8 @@ class DownloadParser:
             "no_season_pn": self.rename_no_season_pn,
             "none": self.rename_none
         }
-        logger.debug(f"Name: {folder_name}, File type: {path.splitext(name)[-1]}, Season {season}")
+        logger.debug(f"Raw name: {name}, rename method: {method}")
+        logger.debug(f"Folder Name: {folder_name}, File type: {suffix}, Season {season}")
         return method_dict[method.lower()](rename_info)
 
 

@@ -42,6 +42,7 @@ class Renamer:
             else:
                 season = 1
         except Exception as e:
+            logger.warning(e)
             logger.debug("No Season info")
             season = 1
         folder_name = path_parts[1] if path_parts[0] == "/" else path_parts[0]
