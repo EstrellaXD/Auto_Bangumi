@@ -100,7 +100,7 @@ class DownloadParser:
 
 
 if __name__ == "__main__":
-    name = " [MCE][Kidou Senshi Gundam Suisei no Majo][PROLOGUE][00][GB][1080p][x264 AAC].mp4"
+    name = "[Nekomoe kissaten][Isekai Ojisan][01][1080p][JPSC][v2].mp4"
     rename = DownloadParser()
-    new_name = rename.download_rename(name, "Made abyess", 1, ".mp4", "pn")
+    new_name = rename.download_rename(name, "异世界舅舅（2022）", 1, ".mp4", "normal")
     print(new_name)
