@@ -48,12 +48,12 @@ def save_data_file(bangumi_data):
 
 
 def show_info():
-    logger.info("                _        ____                                    _ ")
-    logger.info("     /\        | |      |  _ \                                  (_)")
-    logger.info("    /  \  _   _| |_ ___ | |_) | __ _ _ __   __ _ _   _ _ __ ___  _ ")
-    logger.info("   / /\ \| | | | __/ _ \|  _ < / _` | '_ \ / _` | | | | '_ ` _ \| |")
-    logger.info("  / ____ \ |_| | || (_) | |_) | (_| | | | | (_| | |_| | | | | | | |")
-    logger.info(" /_/    \_\__,_|\__\___/|____/ \__,_|_| |_|\__, |\__,_|_| |_| |_|_|")
+    logger.info(r"                _        ____                                    _ ")
+    logger.info(r"     /\        | |      |  _ \                                  (_)")
+    logger.info(r"    /  \  _   _| |_ ___ | |_) | __ _ _ __   __ _ _   _ _ __ ___  _ ")
+    logger.info(r"   / /\ \| | | | __/ _ \|  _ < / _` | '_ \ / _` | | | | '_ ` _ \| |")
+    logger.info(r"  / ____ \ |_| | || (_) | |_) | (_| | | | | (_| | |_| | | | | | | |")
+    logger.info(r" /_/    \_\__,_|\__\___/|____/ \__,_|_| |_|\__, |\__,_|_| |_| |_|_|")
     logger.info("                                            __/ |                  ")
     logger.info("                                           |___/                   ")
     logger.info(f"Version {version}  Author: EstrellaXD Twitter: https://twitter.com/Estrella_Pan")
