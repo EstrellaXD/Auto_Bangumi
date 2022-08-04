@@ -40,14 +40,13 @@ body:
   - type: input
     id: RawName
     attributes:
-      label: Raw Name
-      description: 字幕组提供的名称
+      label: 字幕组提供的名称
     validations:
       required: true
   - type: input
     id: ErrorName
     attributes:
-      label: Error Name
+      label: 错误识别名称
       description: 解析错误的名称，如果出现 `Not Matched` 确实非合集之类的无法解析的名称后再提交 issue
     validations:
       required: true

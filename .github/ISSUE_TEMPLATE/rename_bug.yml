@@ -30,21 +30,27 @@ body:
   - type: input
     id: RawName
     attributes:
-      label: Raw Name
+      label: 种子名称
       description: 原本种子的名称
     validations:
       required: true
   - type: input
     id: path
     attributes:
-      label: path
+      label: 文件路径
       description: 种子所在的目录，请以 AB 创建的文件夹为例子，如：`/Lycoris Recoil/Season 1/`，如果没有创建类似的文件夹请参考 [FAQ]() 中的排错指南。
     validations:
       required: true
   - type: input
     id: ErrorName
     attributes:
-      label: Error Name
+      label: 错误命名
       description: 重命名错误的名称
     validations:
       required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 发生问题时系统日志
+      description: 如果有条件，请打开 Debug 模式复制针对错误命名的日志。
+      render: shell

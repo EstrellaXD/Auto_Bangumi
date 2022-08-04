@@ -11,8 +11,7 @@ body:
         如果更新到最新版本后仍然有问题，请先查阅 [FAQ](https://github.com/EstrellaXD/Auto_Bangumi/wiki/FAQ)。
         确认非上述问题后，请详细描述你所遇到的问题，并附上相应信息。
         如果问题已经列在 [FAQ](https://github.com/EstrellaXD/Auto_Bangumi/wiki/FAQ) 中，会直接关闭 issue。
-        解析器问题请转到[专用模板]()
-        重命名
+        解析器问题请转到[专用模板](https://github.com/EstrellaXD/Auto_Bangumi/issues/new?assignees=&labels=bug&template=parser_bug.yml&title=%5B解析器错误%5D)，重命名问题请到[专用模板](https://github.com/EstrellaXD/Auto_Bangumi/issues/new?assignees=&labels=bug&template=rename_bug.yml&title=%5B重命名错误%5D)
   - type: input
     id: version
     attributes:
@@ -26,9 +25,9 @@ body:
       label: 问题类型
       description: 你在以下哪个部分碰到了问题
       options:
-        - RSS 解析器
-        - 改名器
         - WebUI
+        - 程序运行问题
+        - 其他问题
     validations:
       required: true
   - type: textarea
