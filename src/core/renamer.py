@@ -59,19 +59,22 @@ class Renamer:
             name = info.name
             torrent_hash = info.hash
             path_name, season, folder_name, suffix, _ = self.split_path(info.content_path)
-            try:
-                new_name = self._renamer.download_parser(name, folder_name, season, suffix, settings.method)
-                if path_name != new_name:
-                    self.client.rename_torrent_file(torrent_hash, path_name, new_name)
-                    rename_count += 1
-                else:
-                    continue
-            except Exception as e:
-                logger.warning(f"{path_name} rename failed")
-                logger.warning(f"Folder name: {folder_name}, Season: {season}, Suffix: {suffix}")
-                logger.debug(e)
-                if settings.remove_bad_torrent:
-                    self.client.delete_torrent(torrent_hash)
+            if path_name is folder_name:
+                logger.warning("Wrong bangumi path, please check your qbittorrent settings.")
+            else:
+                try:
+                    new_name = self._renamer.download_parser(name, folder_name, season, suffix, settings.method)
+                    if path_name != new_name:
+                        self.client.rename_torrent_file(torrent_hash, path_name, new_name)
+                        rename_count += 1
+                    else:
+                        continue
+                except Exception as e:
+                    logger.warning(f"{path_name} rename failed")
+                    logger.warning(f"Folder name: {folder_name}, Season: {season}, Suffix: {suffix}")
+                    logger.debug(e)
+                    if settings.remove_bad_torrent:
+                        self.client.delete_torrent(torrent_hash)
         self.print_result(torrent_count, rename_count)
 
     def set_folder(self):
@@ -83,9 +86,3 @@ class Renamer:
             # print(new_path)
             self.client.move_torrent(torrent_hash, new_path)
 
-
-if __name__ == "__main__":
-    from conf.const_dev import DEV_SETTINGS
-    settings.init(DEV_SETTINGS)
-    rename = Renamer(DownloadClient())
-    rename.run()

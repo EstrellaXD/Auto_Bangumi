@@ -70,7 +70,7 @@ def main_process(bangumi_data, download_client: DownloadClient):
         times = 0
         if settings.enable_rss_collector:
             rss_analyser.run(bangumi_data["bangumi_info"], download_client)
-        if settings.eps_complete:
+        if settings.eps_complete and bangumi_data["bangumi_info"] != []:
             FullSeasonGet().eps_complete(bangumi_data["bangumi_info"], download_client)
         logger.info("Running....")
         save_data_file(bangumi_data)
