@@ -1,6 +1,6 @@
 name: 问题反馈
 description: File a bug report
-title: "[BUG]:"
+title: "[错误报告]"
 labels: ["bug"]
 body:
   - type: markdown
@@ -11,6 +11,8 @@ body:
         如果更新到最新版本后仍然有问题，请先查阅 [FAQ](https://github.com/EstrellaXD/Auto_Bangumi/wiki/FAQ)。
         确认非上述问题后，请详细描述你所遇到的问题，并附上相应信息。
         如果问题已经列在 [FAQ](https://github.com/EstrellaXD/Auto_Bangumi/wiki/FAQ) 中，会直接关闭 issue。
+        解析器问题请转到[专用模板]()
+        重命名
   - type: input
     id: version
     attributes:
