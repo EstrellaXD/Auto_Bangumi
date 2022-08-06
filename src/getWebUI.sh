@@ -12,7 +12,7 @@ fi
 
 getWeb() {
 	echo '准备下载最新版本webui'
-	wget https://github.com/Rewrite0/Auto_Bangumi_WebUI/releases/download/$1/dist.zip
+	wget https://cdn.jsdelivr.net/gh/Rewrite0/Auto_Bangumi_WebUI@$1/build/dist.zip
 	file=./dist.zip
 
 	# 检查是否下载完成
