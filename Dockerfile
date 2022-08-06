@@ -17,8 +17,8 @@ ADD ./src /src
 RUN apk add curl
 
 RUN mkdir "/config" && \
-    chmod a+x run.sh &&\
-    chmod a+x getWebUI.sh &&\
+    chmod a+x run.sh && \
+    chmod a+x getWebUI.sh
 
 ENV TZ=Asia/Shanghai
 
