@@ -13,7 +13,8 @@ WORKDIR /src
 
 COPY --from=build /install /usr/local
 ADD ./src /src
-ADD ./templates /templates
+
+RUN apk add curl
 
 RUN mkdir "/config" && \
     chmod a+x run.sh
