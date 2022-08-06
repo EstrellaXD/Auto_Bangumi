@@ -37,8 +37,12 @@ class RSSAnalyser:
     def rss_to_data(self, url) -> dict:
         rss_torrents = self._request.get_torrents(url)
         self._request.close_session()
-        data = self._title_analyser.return_dict(rss_torrents[0].name)
-        return data
+        for torrent in rss_torrents:
+            try:
+                data = self._title_analyser.return_dict(torrent.name)
+                return data
+            except Exception as e:
+                logger.debug(e)
 
     def run(self, bangumi_info: list, download_client: DownloadClient):
         logger.info("Start collecting RSS info.")
@@ -48,16 +52,3 @@ class RSSAnalyser:
         except Exception as e:
             logger.debug(e)
         logger.info("Finished")
-
-
-if __name__ == "__main__":
-    from conf.const_dev import DEV_SETTINGS
-    settings.init(DEV_SETTINGS)
-    print(settings.host_ip)
-    client = DownloadClient()
-    ra = RSSAnalyser()
-    data = []
-    ra.run(data, client)
-    for d in data:
-        print(d.get("official_title"))
-        print(d.get("season"))

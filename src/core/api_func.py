@@ -14,8 +14,7 @@ class APIProcess:
         self._full_season_get = FullSeasonGet()
 
     def link_process(self, link):
-        data = self._rss_analyser.rss_to_data(link)
-        return data
+        return self._rss_analyser.rss_to_data(link)
 
     @api_failed
     def download_collection(self, link):
@@ -68,5 +67,6 @@ class APIProcess:
 if __name__ == '__main__':
     from conf.const_dev import DEV_SETTINGS
     settings.init(DEV_SETTINGS)
+    url = "https://mikanani.me/RSS/Bangumi?bangumiId=2621&subgroupid=382"
     API = APIProcess()
-    API.add_subscribe("http://dmhy.org/topics/rss/rss.xml?keyword=彻夜之歌+星空+简")
+    API.download_collection(url)
