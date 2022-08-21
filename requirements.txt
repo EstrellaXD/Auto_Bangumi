@@ -9,7 +9,7 @@ h11==0.13.0
 idna==3.3
 pydantic==1.9.1
 PySocks==1.7.1
-qbittorrent-api==2022.5.32
+qbittorrent-api
 requests
 six==1.16.0
 sniffio==1.2.0
