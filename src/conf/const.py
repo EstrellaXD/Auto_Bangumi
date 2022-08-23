@@ -28,7 +28,14 @@ DEFAULT_SETTINGS = {
     "reset_folder": False,
     "log_path": "/config/log.txt",
     "refresh_rss": False,
+    "setting_path": "/config/setting.json",
 }
+
+INTERNAL_SETTINGS = [
+    "data_version",
+    "tmdb_api",
+    "setting_path",
+]
 
 ENV_TO_ATTR = {
     "AB_DOWNLOADER_HOST": "host_ip",

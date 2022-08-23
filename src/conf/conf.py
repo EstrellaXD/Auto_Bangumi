@@ -1,5 +1,6 @@
 import os
 from conf import const
+from utils import json_config
 
 
 class Settings(dict):
@@ -11,8 +12,17 @@ class Settings(dict):
 
     def init(self, args=None):
         self.update(self._settings_from_env())
+        self.update(self._settings_from_json())
         if args:
             self.update(args)
+
+    def save_settings(self):
+        save_data = {
+            key : value
+            for key, value in self.items()
+            if not key in const.INTERNAL_SETTINGS
+        }
+        json_config.save(self.setting_path, save_data)
 
     def _val_from_env(self, env, attr):
         """Transforms env-strings to python."""
@@ -30,5 +40,17 @@ class Settings(dict):
             if env in os.environ
         }
 
+    def _settings_from_json(self):
+        """Loads settings from setting.json."""
+        if os.path.exists(self.setting_path):
+            setting_data = json_config.load(self.setting_path)
+            return {
+                key : value
+                for key, value in setting_data.items()
+                if not key in const.INTERNAL_SETTINGS
+            }
+        else:
+            self.save_settings()
+        return {}
 
 settings = Settings(const.DEFAULT_SETTINGS)

@@ -3,8 +3,11 @@ import requests
 
 
 def load(filename):
-    with open(filename, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(filename, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return {}
 
 
 def save(filename, obj):
