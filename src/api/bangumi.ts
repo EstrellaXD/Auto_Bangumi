@@ -8,9 +8,9 @@ import axios from "axios";
  */
 const addBangumi = (type: string, rss_link: string) => {
   if(type === 'new') {
-    return axios.post('/api/v1/subscribe', { rss_link });
+    return axios.post('api/v1/subscribe', { rss_link });
   } else if(type === 'old') {
-    return axios.post('/api/v1/collection', { rss_link });
+    return axios.post('api/v1/collection', { rss_link });
   } else {
     console.error('type错误, type应为 new 或 old');
     return false;
@@ -20,13 +20,13 @@ const addBangumi = (type: string, rss_link: string) => {
 /**
  *  获取AB存储的数据 
  */
-const getABData = () => axios.get('/api/v1/data');
+const getABData = () => axios.get('api/v1/data');
 
 /**
  * 删除番剧规则
  * @param {string} name 番名 (title_raw)
  */
-const removeRule = (name: string) => axios.get(`/api/v1/removeRule/${name}`);
+const removeRule = (name: string) => axios.get(`api/v1/removeRule/${name}`);
 
 export {
   addBangumi,

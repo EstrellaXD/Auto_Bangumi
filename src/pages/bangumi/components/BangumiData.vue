@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import ShowResults from '@/components/ShowResults.vue';
-import { getABData, removeRule } from '@/api/bangumi';
+import { getABData } from '@/api/bangumi';
 
 const res = await getABData();
 const bangumiData = ref(res.data);
-console.log(res);
 
 const activeName = ref('1');
 const dialogData = ref(null);
