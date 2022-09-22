@@ -14,13 +14,22 @@ WORKDIR /src
 COPY --from=build /install /usr/local
 ADD ./src /src
 
-RUN apk add curl
+RUN apk add --update --no-cache \
+    curl \
+    shadow \
+    supervisor
 
-RUN mkdir "/config" && \
+RUN addgroup -S bangumi && \
+    adduser -S bangumi -G bangumi -h /home/bangumi && \
+    usermod -s /bin/bash bangumi
+
+RUN mkdir -p "/config" "/config/logs/supervisor" && \
     chmod a+x run.sh && \
     chmod a+x getWebUI.sh
 
-ENV TZ=Asia/Shanghai
+ENV TZ=Asia/Shanghai \
+    PUID=1000 \
+    PGID=1000
 
 EXPOSE 7892
 
