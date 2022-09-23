@@ -17,13 +17,12 @@ ADD ./src /src
 RUN apk add --update --no-cache \
     curl \
     shadow \
-    supervisor
+    su-exec
 
-RUN addgroup -S bangumi && \
-    adduser -S bangumi -G bangumi -h /home/bangumi && \
-    usermod -s /bin/bash bangumi
-
-RUN mkdir -p "/config" "/config/logs/supervisor" && \
+RUN addgroup -S auto_bangumi && \
+    adduser -S auto_bangumi -G auto_bangumi -h /home/auto_bangumi && \
+    usermod -s /bin/bash auto_bangumi && \
+    mkdir -p "/config" && \
     chmod a+x run.sh && \
     chmod a+x getWebUI.sh
 

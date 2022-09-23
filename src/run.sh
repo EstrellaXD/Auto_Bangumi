@@ -2,11 +2,7 @@
 
 sh ./getWebUI.sh
 
-groupmod -o -g "$PGID" bangumi
-usermod -o -u "$PUID" bangumi
+sh ./setID.sh
 
-echo '设置文件夹权限'
-chown bangumi:bangumi /config
-chown -R bangumi:bangumi /src
-
-exec /usr/bin/supervisord -n -c /src/bangumi.conf
+su-exec auto_bangumi:auto_bangumi python3 app.py &
+su-exec auto_bangumi:auto_bangumi python3 api.py
