@@ -7,6 +7,6 @@ usermod -o -u "$PUID" bangumi
 
 echo '设置文件夹权限'
 chown bangumi:bangumi /config
-chown -R bangumi:bangumi /src /usr/local
+chown -R bangumi:bangumi /src
 
 exec /usr/bin/supervisord -n -c /src/bangumi.conf

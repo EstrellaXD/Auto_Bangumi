@@ -11,7 +11,7 @@ FROM python:3.10-alpine
 
 WORKDIR /src
 
-COPY --from=build /install /usr/local
+COPY --from=build --chmod=777 /install /usr/local
 ADD ./src /src
 
 RUN apk add --update --no-cache \
@@ -32,5 +32,7 @@ ENV TZ=Asia/Shanghai \
     PGID=1000
 
 EXPOSE 7892
+
+VOLUME [ "/config" ]
 
 CMD ["sh", "run.sh"]
