@@ -23,6 +23,7 @@ RUN addgroup -S auto_bangumi && \
     adduser -S auto_bangumi -G auto_bangumi -h /home/auto_bangumi && \
     usermod -s /bin/bash auto_bangumi && \
     mkdir -p "/config" && \
+    chmod -R 777 /usr/local && \
     chmod a+x run.sh && \
     chmod a+x getWebUI.sh
 
