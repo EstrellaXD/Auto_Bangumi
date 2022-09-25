@@ -22,7 +22,8 @@ ADD ./src /src
 RUN apk add --update --no-cache \
     curl \
     shadow \
-    su-exec
+    su-exec \
+    bash
 
 RUN addgroup -S auto_bangumi && \
     adduser -S auto_bangumi -G auto_bangumi -h /home/auto_bangumi && \
