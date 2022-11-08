@@ -47,7 +47,7 @@
     │   │   ├── A S01E02.mp4
     │   │   ├── A S01E03.mp4
     │   │   └── A S01E04.mp4
-    │   └── Season 1
+    │   └── Season 2
     │       ├── A S02E01.mp4
     │       ├── A S02E02.mp4
     │       ├── A S02E03.mp4
