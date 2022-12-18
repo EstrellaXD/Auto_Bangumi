@@ -3,9 +3,14 @@
 webDir=/templates
 versionFile=$webDir/version
 version=$AB_WEBUI_VERSION
-
-echo '获取webui最新版本号'
-tag=$(curl 'https://api.github.com/repos/Rewrite0/Auto_Bangumi_WebUI/releases/latest' | grep "tag_name" | head -n 1 | awk -F ":" '{print $2}' | sed 's/\"//g;s/,//g;s/ //g')
+while 
+	echo '获取webui最新版本号'
+	githubResp=$(curl 'https://api.github.com/repos/Rewrite0/Auto_Bangumi_WebUI/releases/latest')
+	curlCode=$?
+	:
+	[ $curlCode != 0 ]
+do : ; done
+tag=$(echo $githubResp | tr ',' '\n' | grep "tag_name" | head -n 1 | awk -F ":" '{print $2}' | sed 's/\"//g;s/,//g;s/ //g')
 if [ -f $versionFile ]; then
 	oldTag=$(cat $versionFile)
 fi
