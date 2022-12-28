@@ -9,12 +9,17 @@ RUN python3 -m pip install --upgrade pip \
 
 FROM python:3.10-alpine
 
+ENV TZ=Asia/Shanghai \
+    PUID=1000 \
+    PGID=1000 \
+    UMASK=022
+
 WORKDIR /src
 
 COPY --from=build --chmod=777 /install /usr/local
-ADD ./src /src
+COPY --chmod=755 ./src /src
 
-RUN apk add --update --no-cache \
+RUN apk add --no-cache \
     curl \
     shadow \
     su-exec \
@@ -28,11 +33,6 @@ RUN addgroup -S auto_bangumi -g 1000 && \
         run.sh \
         getWebUI.sh \
         setID.sh
-
-ENV TZ=Asia/Shanghai \
-    PUID=1000 \
-    PGID=1000 \
-    UMASK=022
 
 EXPOSE 7892
 
