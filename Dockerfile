@@ -20,16 +20,19 @@ RUN apk add --update --no-cache \
     su-exec \
     bash
 
-RUN addgroup -S auto_bangumi && \
-    adduser -S auto_bangumi -G auto_bangumi -h /home/auto_bangumi && \
+RUN addgroup -S auto_bangumi -g 1000 && \
+    adduser -S auto_bangumi -G auto_bangumi -h /home/auto_bangumi -u 1000 && \
     usermod -s /bin/bash auto_bangumi && \
     mkdir -p "/config" && \
-    chmod a+x run.sh && \
-    chmod a+x getWebUI.sh
+    chmod a+x \
+        run.sh \
+        getWebUI.sh \
+        setID.sh
 
 ENV TZ=Asia/Shanghai \
     PUID=1000 \
-    PGID=1000
+    PGID=1000 \
+    UMASK=022
 
 EXPOSE 7892
 
