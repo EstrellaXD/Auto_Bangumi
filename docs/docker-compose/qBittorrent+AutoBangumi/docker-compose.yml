@@ -25,6 +25,8 @@ services:
     container_name: AutoBangumi
     environment:
       - TZ=Asia/Shanghai
+      - PGID=${GID}
+      - PUID=${UID}
       - AB_INTERVAL_TIME=1800
       - AB_DOWNLOADER_HOST=qbittorrent:${QB_PORT}
       - AB_DOWNLOADER_USERNAME=admin
