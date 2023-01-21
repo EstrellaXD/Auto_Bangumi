@@ -2,12 +2,16 @@ import re
 import logging
 import os
 
-from downloader import getClient
-from downloader.exceptions import ConflictError
+from autobangumi.downloader import getClient
+from autobangumi.downloader.exceptions import ConflictError
 
-from conf import settings
+from autobangumi.conf import settings
 
 logger = logging.getLogger(__name__)
+
+
+DOWNLOADER = settings.DOWNLOADER
+DEBUG = settings.DEBUG
 
 
 class DownloadClient:
@@ -22,16 +26,16 @@ class DownloadClient:
             "rss_refresh_interval": 30,
         }
         self.client.prefs_init(prefs=prefs)
-        if settings.download_path == "":
+        if DOWNLOADER["DownloadPath"] == "":
             prefs = self.client.get_app_prefs()
-            settings.download_path = os.path.join(prefs["save_path"], "Bangumi")
+            DOWNLOADER["DownloadPath"] = os.path.join(prefs["save_path"], "Bangumi")
 
     def set_rule(self, info: dict, rss_link):
         official_name, raw_name, season, group = info["official_title"], info["title_raw"], info["season"], info["group"]
         rule = {
             "enable": True,
             "mustContain": raw_name,
-            "mustNotContain": settings.not_contain,
+            "mustNotContain": DOWNLOADER["Filter"],
             "useRegex": True,
             "episodeFilter": "",
             "smartFilter": False,
@@ -39,11 +43,11 @@ class DownloadClient:
             "affectedFeeds": [rss_link],
             "ignoreDays": 0,
             "lastMatch": "",
-            "addPaused": settings.dev_debug,
+            "addPaused": DEBUG["Enable"],
             "assignedCategory": "Bangumi",
             "savePath": str(
                 os.path.join(
-                    settings.download_path,
+                    DOWNLOADER["Path"],
                     re.sub(settings.rule_name_re, " ", official_name).strip(),
                     f"Season {season}",
                 )
@@ -130,8 +134,6 @@ class DownloadClient:
 
 
 if __name__ == "__main__":
-    from conf.const_dev import DEV_SETTINGS
-    settings.init(DEV_SETTINGS)
     put = DownloadClient()
     put.rss_feed()
 

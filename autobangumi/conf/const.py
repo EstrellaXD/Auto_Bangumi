@@ -58,6 +58,100 @@ ENV_TO_ATTR = {
     "AB_REFRESH_RSS": ("refresh_rss", lambda e: e.lower() in ("true", "1", "t")),
 }
 
+DOWNLOADER_DEFAULT = {
+    "Host": "localhost:8080",
+    "Username": "admin",
+    "Password": "adminadmin",
+    "DownloadPath": "/downloads/Bangumi/",
+    "Filter": r"720|\d+-\d+/",
+}
+
+DOWNLOADER_ENV ={
+    "AB_DOWNLOADER_HOST": "Host",
+    "AB_DOWNLOADER_USERNAME": "Username",
+    "AB_DOWNLOADER_PASSWORD": "Password",
+    "AB_DOWNLOAD_PATH": "DownloadPath",
+    "AB_NOT_CONTAIN": "Filter"
+}
+
+DEFAULT_ENV = {
+    "AB_INTERVAL_TIME": "SleepTime",
+    "AB_RENAME_FREQ": "RenameFreq",
+    "AB_RSS_COLLECTOR": "EnableParser",
+    "AB_RENAME": "EnableRenamer",
+    "AB_EP_COMPLETE": "SeasonCollect",
+}
+
+DEFAULT_DEFAULT = {
+    "SleepTime": 7200,
+    "RenameFreq": 20,
+    "EnableParser": True,
+    "EnableRenamer": True,
+    "SeasonCollect": False,
+}
+
+
+PARSER_ENV = {
+    "AB_RSS": "URL",
+    "AB_NOT_CONTAIN": "Filter",
+    "AB_LANGUAGE": "Language",
+}
+
+PARSER_DEFAULT = {
+    "URL": "",
+    "Filter": r"720|\d+-\d+/",
+    "Language": "zh",
+}
+
+TMDB_ENV = {
+    "AB_ENABLE_TMDB": "EnableTMDB",
+    "AB_LANGUAGE": "Language",
+}
+
+TMDB_DEFAULT = {
+    "EnableTMDB": False,
+    "Language": "zh",
+}
+
+
+RENAME_ENV = {
+    "AB_METHOD": "RenameMethod",
+}
+
+RENAME_DEFAULT = {
+    "RenameMethod": "pn",
+}
+
+NETWORK_ENV = {
+    "AB_WEBUI_PORT": "WebUIPort",
+    "AB_HTTP_PROXY": "HTTPProxy",
+    "AB_SOCKS": "Socks",
+}
+
+NETWORK_DEFAULT = {
+    "WebUIPort": 7892,
+    "HTTPProxy": "",
+    "Socks": "",
+}
+
+ENV_DICT = {
+    "DEFAULT": DEFAULT_ENV,
+    "DOWNLOADER": DOWNLOADER_ENV,
+    "PARSER": PARSER_ENV,
+    "TMDB": TMDB_ENV,
+    "RENAME": RENAME_ENV,
+    "NETWORK": NETWORK_ENV,
+}
+
+DEFAULT_DICT = {
+    "DEFAULT": DEFAULT_DEFAULT,
+    "DOWNLOADER": DOWNLOADER_DEFAULT,
+    "PARSER": PARSER_DEFAULT,
+    "TMDB": TMDB_DEFAULT,
+    "RENAME": RENAME_DEFAULT,
+    "NETWORK": NETWORK_DEFAULT,
+}
+
 
 class BCOLORS:
     @staticmethod

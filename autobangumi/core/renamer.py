@@ -4,10 +4,10 @@ import re
 import os.path
 from pathlib import PurePath, PureWindowsPath
 
+from .download_client import DownloadClient
 
-from conf import settings
-from core import DownloadClient
-from parser import TitleParser
+from autobangumi.conf import settings
+from autobangumi.parser import TitleParser
 
 logger = logging.getLogger(__name__)
 

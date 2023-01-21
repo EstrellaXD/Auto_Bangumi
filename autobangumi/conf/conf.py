@@ -1,5 +1,5 @@
 import os
-from conf import const
+from autobangumi.conf import const
 
 
 class Settings(dict):

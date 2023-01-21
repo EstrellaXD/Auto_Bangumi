@@ -1,5 +1,5 @@
 import logging
-from conf import settings
+from autobangumi.conf import settings
 
 
 def setup_logger():

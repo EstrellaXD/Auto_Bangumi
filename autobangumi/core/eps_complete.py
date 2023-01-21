@@ -2,9 +2,9 @@ import os.path
 import re
 import logging
 
-from conf import settings
-from network import RequestContent
-from core import DownloadClient
+from autobangumi.conf import settings
+from autobangumi.network import RequestContent
+from .download_client import DownloadClient
 
 logger = logging.getLogger(__name__)
 SEARCH_KEY = ["group", "title_raw", "season_raw", "subtitle", "source", "dpi"]

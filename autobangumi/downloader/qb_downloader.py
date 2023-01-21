@@ -4,10 +4,10 @@ import time
 from qbittorrentapi import Client, LoginFailed
 from qbittorrentapi.exceptions import Conflict409Error
 
-from conf import settings
-from ab_decorator import qb_connect_failed_wait
+from autobangumi.conf import settings
+from autobangumi.ab_decorator import qb_connect_failed_wait
 
-from downloader.exceptions import ConflictError
+from .exceptions import ConflictError
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +26,9 @@ class QbDownloader:
                 break
             except LoginFailed:
                 logger.debug(
-                    f"Can't login qBittorrent Server {host} by {username}, retry in {settings.connect_retry_interval}"
+                    f"Can't login qBittorrent Server {host} by {username}, retry in {5} seconds."
                 )
-            time.sleep(settings.connect_retry_interval)
+            time.sleep(5)
 
     @qb_connect_failed_wait
     def prefs_init(self, prefs):
@@ -44,7 +44,7 @@ class QbDownloader:
 
     def torrents_add(self, urls, save_path, category):
         return self._client.torrents_add(
-            is_paused=settings.dev_debug,
+            is_paused=settings.DEBUG["enable"],
             urls=urls,
             save_path=save_path,
             category=category,
@@ -92,14 +92,3 @@ class QbDownloader:
 
     def get_torrent_path(self, hash):
         return self._client.torrents_info(hashes=hash)[0].save_path
-
-
-if __name__ == "__main__":
-    try:
-        from conf.const_dev import DEV_SETTINGS
-    except ModuleNotFoundError:
-        logger.debug("Please copy `const_dev.py` to `const_dev.py` to use custom settings")
-    settings.init(DEV_SETTINGS)
-    client = QbDownloader(settings.host_ip, settings.user_name, settings.password)
-    path = client.get_torrent_path("39adad0d0c82ebb3971810a7592e03138b7345d2")
-    print(path)

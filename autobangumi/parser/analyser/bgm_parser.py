@@ -1,8 +1,4 @@
-import re
-import time
-
-from network import RequestContent
-from conf import settings
+from autobangumi.network import RequestContent
 
 
 class BgmAPI:
@@ -19,8 +15,3 @@ class BgmAPI:
         if contents.__len__() == 0:
             return None
         return contents[0]["name"], contents[0]["name_cn"]
-
-
-if __name__ == '__main__':
-    BGM = BgmAPI()
-    print(BGM.search("辉夜大小姐"))

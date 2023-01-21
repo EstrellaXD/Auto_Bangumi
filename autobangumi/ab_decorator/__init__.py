@@ -1,11 +1,6 @@
 import logging
 import time
 
-import requests
-
-from conf import settings
-
-
 logger = logging.getLogger(__name__)
 
 
