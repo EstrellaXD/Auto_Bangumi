@@ -1,0 +1,5 @@
+#!/usr/bin/with-contenv bash
+
+if [ ! -f /config ]; then
+    mkdir /config
+fi

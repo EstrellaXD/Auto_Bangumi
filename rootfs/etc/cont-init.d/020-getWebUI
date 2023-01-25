@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/with-contenv bash
 
 webDir=/templates
 versionFile=$webDir/version

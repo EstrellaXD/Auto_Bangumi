@@ -1,0 +1,11 @@
+#!/usr/bin/with-contenv bash
+
+echo "设置文件夹权限"
+echo "PUID=${PUID}"
+echo "PGID=${PGID}"
+echo "Umask=${UMASK}"
+
+chown -R ${PUID}:${PGID} \
+    /src \
+    /templates \
+    /config

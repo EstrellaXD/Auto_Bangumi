@@ -6,6 +6,7 @@ services:
       - TZ=Asia/Shanghai
       - PGID=${GID}
       - PUID=${UID}
+      - UMASK=022
       - AB_INTERVAL_TIME=1800
       - AB_DOWNLOADER_HOST=localhost:${QB_PORT}
       - AB_DOWNLOADER_USERNAME=admin

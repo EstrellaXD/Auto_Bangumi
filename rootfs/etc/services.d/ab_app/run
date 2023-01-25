@@ -1,0 +1,5 @@
+#!/usr/bin/with-contenv bash
+
+cd /src
+umask ${UMASK}
+s6-setuidgid ${PUID}:${PGID} python3 app.py

@@ -16,26 +16,15 @@ ENV TZ=Asia/Shanghai \
 
 WORKDIR /src
 
-COPY --from=build --chmod=777 /install /usr/local
-COPY --chmod=755 autobangumi /src
-
 RUN apk add --no-cache \
     curl \
-    shadow \
-    su-exec \
+    s6-overlay \
     bash
 
-RUN addgroup -S auto_bangumi -g 1000 && \
-    adduser -S auto_bangumi -G auto_bangumi -h /home/auto_bangumi -u 1000 && \
-    usermod -s /bin/bash auto_bangumi && \
-    mkdir -p "/config" && \
-    chmod a+x \
-        run.sh \
-        getWebUI.sh \
-        setID.sh
+COPY --chmod=777 --from=build /install /usr/local
+COPY --chmod=755 autobangumi /src
+COPY --chmod=755 ./rootfs /
+
+ENTRYPOINT [ "/init" ]
 
 EXPOSE 7892
-
-VOLUME [ "/config" ]
-
-CMD ["sh", "run.sh"]
