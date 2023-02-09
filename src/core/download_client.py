@@ -109,7 +109,8 @@ class DownloadClient:
         self.client.torrents_add(
             urls=torrent["url"],
             save_path=torrent["save_path"],
-            category="Bangumi"
+            category="Bangumi",
+            use_auto_torrent_management=True
         )
 
     def move_torrent(self, hashes, location):
