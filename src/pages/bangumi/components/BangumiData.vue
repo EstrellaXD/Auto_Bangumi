@@ -27,7 +27,7 @@ const dialog = ref();
         title="已订阅番剧"
         name="1"
       >
-        <span class="tips">注: 目前只能管理mikan源, 如通过api添加其他来源的新番将不过出现在此处</span>
+        <span class="tips">注: 目前只能管理 mikan 源, 如通过 api 添加其他来源的新番将 <b>不会</b> 出现在此处</span>
         <el-table
           :data="bangumiData.bangumi_info"
           stripe
