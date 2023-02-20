@@ -99,6 +99,12 @@ class DownloadClient:
         )
         logger.info(f"{path_name} >> {new_name}")
 
+    def rename_torrent_file(self, hash, new_file_name, old_path, new_path):
+        self.client.torrents_rename_file(
+            torrent_hash=hash, new_file_name=new_file_name, old_path=old_path, new_path=new_path
+        )
+        logger.info(f"{old_path} >> {new_path}, new name {new_file_name}")
+
     def delete_torrent(self, hashes):
         self.client.torrents_delete(
             hashes

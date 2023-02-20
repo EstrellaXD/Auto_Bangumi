@@ -65,7 +65,8 @@ class Renamer:
                 try:
                     new_name = self._renamer.download_parser(name, folder_name, season, suffix, settings.method)
                     if path_name != new_name:
-                        self.client.rename_torrent_file(torrent_hash, path_name, new_name)
+                        old_name = info.content_path.replace(info.save_path, "")
+                        self.client.rename_torrent_file(torrent_hash, new_name, old_name, new_name)
                         rename_count += 1
                     else:
                         continue
