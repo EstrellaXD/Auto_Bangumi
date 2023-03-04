@@ -2,8 +2,8 @@ import re
 import time
 from dataclasses import dataclass
 
-from network import RequestContent
-from conf import settings
+from module.network import RequestContent
+from module.conf import TMDB_API
 
 
 @dataclass
@@ -19,9 +19,9 @@ class TMDBInfo:
 class TMDBMatcher:
     def __init__(self):
         self.search_url = lambda e: \
-            f"https://api.themoviedb.org/3/search/tv?api_key={settings.tmdb_api}&page=1&query={e}&include_adult=false"
+            f"https://api.themoviedb.org/3/search/tv?api_key={TMDB_API}&page=1&query={e}&include_adult=false"
         self.info_url = lambda e: \
-            f"https://api.themoviedb.org/3/tv/{e}?api_key={settings.tmdb_api}&language=zh-CN"
+            f"https://api.themoviedb.org/3/tv/{e}?api_key={TMDB_API}&language=zh-CN"
         self._request = RequestContent()
 
     def is_animation(self, tv_id) -> bool:
@@ -71,9 +71,3 @@ class TMDBMatcher:
         title_zh = info_content.get("name")
         year_number = info_content.get("first_air_date").split("-")[0]
         return TMDBInfo(id, title_jp, title_zh, season, last_season, year_number)
-
-
-if __name__ == "__main__":
-    test = "辉夜大小姐"
-    info = TMDBMatcher().tmdb_search(test)
-    print(f"{info.title_zh}({info.year_number})")

@@ -7,7 +7,7 @@ import logging
 
 from bs4 import BeautifulSoup
 
-from autobangumi.conf import settings
+from module.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -15,16 +15,17 @@ logger = logging.getLogger(__name__)
 class RequestURL:
     def __init__(self):
         self.session = requests.session()
-        if settings.NETWORK["HTTP"] is not None:
-            self.session.proxies = {
-                "https": settings.NETWORK["HTTP"],
-                "http": settings.NETWORK["HTTP"],
-            }
-        elif settings.NETWORK["Socks"] is not None:
-            socks_info = settings.NETWORK["Socks"].split(",")
-            socks.set_default_proxy(socks.SOCKS5, addr=socks_info[0], port=int(socks_info[1]), rdns=True,
-                                    username=socks_info[2], password=socks_info[3])
-            socket.socket = socks.socksocket
+        if settings.proxy.enable:
+            if settings.proxy.type == "http":
+                url = f"http://{settings.proxy.host}:{settings.proxy.port}"
+                self.session.proxies = {
+                    "https": url,
+                    "http": url,
+                }
+            elif settings.proxy.type == "socks5":
+                socks.set_default_proxy(socks.SOCKS5, addr=settings.proxy.host, port=settings.proxy.port, rdns=True,
+                                        username=settings.proxy.username, password=settings.proxy.password)
+                socket.socket = socks.socksocket
         self.header = {
             "user-agent": "Mozilla/5.0",
             "Accept": "application/xml"

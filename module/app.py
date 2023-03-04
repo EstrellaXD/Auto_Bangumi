@@ -2,36 +2,31 @@ import os
 import time
 import logging
 
-from __version__ import version
-from conf import settings, parse
-from conf.log import setup_logger
-from utils import json_config
+from module.conf import settings, setup_logger, LOG_PATH, DATA_PATH, VERSION
+from module.utils import json_config
 
-from core import RSSAnalyser, DownloadClient, Renamer, FullSeasonGet
+from module.core import RSSAnalyser, DownloadClient, Renamer, FullSeasonGet
 
 
 logger = logging.getLogger(__name__)
 
 
 def reset_log():
-    try:
-        os.remove(settings.log_path)
-    except FileNotFoundError:
-        pass
+    if os.path.exists(LOG_PATH):
+        os.remove(LOG_PATH)
 
 
 def load_data_file():
-    info_path = settings.info_path
-    if not os.path.exists(info_path):
+    if not os.path.exists(DATA_PATH):
         bangumi_data = {
-            "rss_link": settings.rss_link,
-            "data_version": settings.data_version,
+            "rss_link": settings.rss_parser.link,
+            "data_version": settings.program.data_version,
             "bangumi_info": []
         }
         logger.info("Building data information...")
     else:
-        bangumi_data = json_config.load(info_path)
-        if bangumi_data["data_version"] != settings.data_version or bangumi_data["rss_link"] != settings.rss_link:
+        bangumi_data = json_config.load(DATA_PATH)
+        if bangumi_data["data_version"] != settings.program.data_version or bangumi_data["rss_link"] != settings.rss_parser.link:
             bangumi_data = {
                 "rss_link": settings.rss_link,
                 "data_version": settings.data_version,
@@ -42,8 +37,7 @@ def load_data_file():
 
 
 def save_data_file(bangumi_data):
-    info_path = settings.info_path
-    json_config.save(info_path, bangumi_data)
+    json_config.save(DATA_PATH, bangumi_data)
     logger.debug("Saved")
 
 
@@ -56,56 +50,40 @@ def show_info():
     logger.info(r" /_/    \_\__,_|\__\___/|____/ \__,_|_| |_|\__, |\__,_|_| |_| |_|_|")
     logger.info("                                            __/ |                  ")
     logger.info("                                           |___/                   ")
-    logger.info(f"Version {version}  Author: EstrellaXD Twitter: https://twitter.com/Estrella_Pan")
+    logger.info(f"Version {VERSION}  Author: EstrellaXD Twitter: https://twitter.com/Estrella_Pan")
     logger.info("GitHub: https://github.com/EstrellaXD/Auto_Bangumi/")
     logger.info("Starting AutoBangumi...")
 
 
 def main_process(bangumi_data, download_client: DownloadClient):
     rename = Renamer(download_client)
-    if settings.reset_folder:
-        rename.set_folder()
     rss_analyser = RSSAnalyser()
     while True:
         times = 0
-        if settings.enable_rss_collector:
+        if settings.rss_parser.enable:
             rss_analyser.run(bangumi_data["bangumi_info"], download_client)
-        if settings.eps_complete and bangumi_data["bangumi_info"] != []:
+        if settings.bangumi_manage.eps_complete and bangumi_data["bangumi_info"] != []:
             FullSeasonGet().eps_complete(bangumi_data["bangumi_info"], download_client)
         logger.info("Running....")
         save_data_file(bangumi_data)
-        while times < settings.times:
-            if settings.enable_rename:
+        while times < settings.program.times:
+            if settings.bangumi_manage.enable:
                 rename.run()
             times += 1
-            time.sleep(settings.sleep_time/settings.times)
+            time.sleep(settings.program.sleep_time/settings.program.times)
 
 
 def run():
-    # DEBUG 模式初始化
-    args = parse()
-    if args.debug:
-        try:
-            from conf.const_dev import DEV_SETTINGS
-            settings.init(DEV_SETTINGS)
-        except ModuleNotFoundError:
-            logger.debug("Please copy `const_dev.py` to `const_dev.py` to use custom settings")
-    else:
-        settings.init()
     # 初始化
     reset_log()
     setup_logger()
     show_info()
     download_client = DownloadClient()
     download_client.init_downloader()
-    if settings.rss_link is None:
+    if settings.rss_parser.link is None:
         logger.error("Please add RIGHT RSS url.")
         quit()
     download_client.rss_feed()
     bangumi_data = load_data_file()
     # 主程序循环
     main_process(bangumi_data, download_client)
-
-
-if __name__ == "__main__":
-    run()

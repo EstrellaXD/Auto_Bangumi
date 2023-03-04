@@ -2,8 +2,8 @@ import os.path
 import re
 import logging
 
-from autobangumi.conf import settings
-from autobangumi.network import RequestContent
+from module.conf import settings
+from module.network import RequestContent
 from .download_client import DownloadClient
 
 logger = logging.getLogger(__name__)

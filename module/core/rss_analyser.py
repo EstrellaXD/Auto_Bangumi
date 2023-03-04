@@ -1,12 +1,12 @@
 import re
 import logging
 
-from network import RequestContent
-from parser import TitleParser
+from module.network import RequestContent
+from module.parser import TitleParser
 
-from conf import settings
+from module.conf import settings
 
-from core import DownloadClient
+from module.core import DownloadClient
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +17,8 @@ class RSSAnalyser:
         self._request = RequestContent()
 
     def rss_to_datas(self, bangumi_info: list) -> list:
-        rss_torrents = self._request.get_torrents(settings.rss_link)
-        self._request.close_session()
+        rss_torrents = self._request.get_torrents(settings.rss_parser.link)
+        self._request.close()
         for torrent in rss_torrents:
             raw_title = torrent.name
             extra_add = True
@@ -36,7 +36,7 @@ class RSSAnalyser:
 
     def rss_to_data(self, url) -> dict:
         rss_torrents = self._request.get_torrents(url)
-        self._request.close_session()
+        self._request.close()
         for torrent in rss_torrents:
             try:
                 data = self._title_analyser.return_dict(torrent.name)
@@ -48,7 +48,7 @@ class RSSAnalyser:
         logger.info("Start collecting RSS info.")
         try:
             self.rss_to_datas(bangumi_info)
-            download_client.add_rules(bangumi_info, rss_link=settings.rss_link)
+            download_client.add_rules(bangumi_info, rss_link=settings.rss_parser.link)
         except Exception as e:
             logger.debug(e)
         logger.info("Finished")

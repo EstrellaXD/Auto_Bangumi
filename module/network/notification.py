@@ -1,6 +1,6 @@
 import requests
 
-from autobangumi.conf import settings
+from module.conf import settings
 
 
 class PostNotification:

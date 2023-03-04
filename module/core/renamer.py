@@ -6,8 +6,8 @@ from pathlib import PurePath, PureWindowsPath
 
 from .download_client import DownloadClient
 
-from autobangumi.conf import settings
-from autobangumi.parser import TitleParser
+from module.conf import settings
+from module.parser import TitleParser
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class Renamer:
     @staticmethod
     def split_path(path: str):
         suffix = os.path.splitext(path)[-1]
-        path = path.replace(settings.download_path, "")
+        path = path.replace(settings.downloader.path, "")
         path_parts = PurePath(path).parts \
             if PurePath(path).name != path \
             else PureWindowsPath(path).parts
@@ -63,7 +63,7 @@ class Renamer:
                 logger.warning("Wrong bangumi path, please check your qbittorrent settings.")
             else:
                 try:
-                    new_name = self._renamer.download_parser(name, folder_name, season, suffix, settings.method)
+                    new_name = self._renamer.download_parser(name, folder_name, season, suffix, settings.bangumi_manage.rename_method)
                     if path_name != new_name:
                         self.client.rename_torrent_file(torrent_hash, path_name, new_name)
                         rename_count += 1
@@ -73,7 +73,7 @@ class Renamer:
                     logger.warning(f"{path_name} rename failed")
                     logger.warning(f"Folder name: {folder_name}, Season: {season}, Suffix: {suffix}")
                     logger.debug(e)
-                    if settings.remove_bad_torrent:
+                    if settings.bangumi_manage.remove_bad_torrent:
                         self.client.delete_torrent(torrent_hash)
         self.print_result(torrent_count, rename_count)
 
@@ -82,7 +82,7 @@ class Renamer:
         for info in recent_info:
             torrent_hash = info.hash
             _, season, folder_name, _, download_path = self.split_path(info.content_path)
-            new_path = os.path.join(settings.download_path, folder_name, f"Season {season}")
+            new_path = os.path.join(settings.downloader.path, folder_name, f"Season {season}")
             # print(new_path)
             self.client.move_torrent(torrent_hash, new_path)
 
