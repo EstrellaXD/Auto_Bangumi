@@ -1,9 +1,5 @@
-from autobangumi.conf.setting import setting
-
-
-def main():
-    pass
+from module.app import run
 
 
 if __name__ == "__main__":
-    print(setting.DOWNLOADER["HOST"])
+    run()

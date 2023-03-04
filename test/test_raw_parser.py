@@ -1,7 +1,7 @@
 import unittest
 from random import randrange
 
-from parser.analyser import RawParser
+from module.parser.analyser import RawParser
 
 
 class TestRawParser(unittest.TestCase):

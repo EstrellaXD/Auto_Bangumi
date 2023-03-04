@@ -4,8 +4,8 @@ import time
 from qbittorrentapi import Client, LoginFailed
 from qbittorrentapi.exceptions import Conflict409Error
 
-from autobangumi.conf import settings
-from autobangumi.ab_decorator import qb_connect_failed_wait
+from module.conf import settings
+from module.ab_decorator import qb_connect_failed_wait
 
 from .exceptions import ConflictError
 

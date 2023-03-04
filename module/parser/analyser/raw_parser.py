@@ -81,7 +81,8 @@ class RawParser:
     def name_process(name: str):
         name_en, name_zh, name_jp = None, None, None
         name = name.strip()
-        split = re.split("/|\s{2}|-\s{2}", name.replace("（仅限港澳台地区）", ""))
+        name = re.sub(r"[(（]仅限港澳台地区[）)]", "", name)
+        split = re.split("/|\s{2}|-\s{2}", name)
         while "" in split:
             split.remove("")
         if len(split) == 1:

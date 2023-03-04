@@ -2,16 +2,12 @@ import re
 import logging
 import os
 
-from autobangumi.downloader import getClient
-from autobangumi.downloader.exceptions import ConflictError
+from module.downloader import getClient
+from module.downloader.exceptions import ConflictError
 
-from autobangumi.conf import settings
+from module.conf import settings
 
 logger = logging.getLogger(__name__)
-
-
-DOWNLOADER = settings.DOWNLOADER
-DEBUG = settings.DEBUG
 
 
 class DownloadClient:
@@ -26,16 +22,16 @@ class DownloadClient:
             "rss_refresh_interval": 30,
         }
         self.client.prefs_init(prefs=prefs)
-        if DOWNLOADER["DownloadPath"] == "":
+        if settings.downloader.download_path == "":
             prefs = self.client.get_app_prefs()
-            DOWNLOADER["DownloadPath"] = os.path.join(prefs["save_path"], "Bangumi")
+            settings.downloader.path = os.path.join(prefs["save_path"], "Bangumi")
 
     def set_rule(self, info: dict, rss_link):
         official_name, raw_name, season, group = info["official_title"], info["title_raw"], info["season"], info["group"]
         rule = {
             "enable": True,
             "mustContain": raw_name,
-            "mustNotContain": DOWNLOADER["Filter"],
+            "mustNotContain": "|".join(settings.rss_parser.filter),
             "useRegex": True,
             "episodeFilter": "",
             "smartFilter": False,
@@ -43,47 +39,34 @@ class DownloadClient:
             "affectedFeeds": [rss_link],
             "ignoreDays": 0,
             "lastMatch": "",
-            "addPaused": DEBUG["Enable"],
+            "addPaused": settings.debug.dev_debug,
             "assignedCategory": "Bangumi",
             "savePath": str(
                 os.path.join(
-                    DOWNLOADER["Path"],
-                    re.sub(settings.rule_name_re, " ", official_name).strip(),
+                    settings.downloader.path,
+                    re.sub(r"\:|\/|\.", " ", official_name).strip(),
                     f"Season {season}",
                 )
             ),
         }
-        rule_name = f"[{group}] {official_name}" if settings.enable_group_tag else official_name
+        rule_name = f"[{group}] {official_name}" if settings.bangumi_manage.group_tag else official_name
         self.client.rss_set_rule(rule_name=f"{rule_name} S{season}", rule_def=rule)
         logger.info(f"Add {official_name} Season {season}")
 
     def rss_feed(self):
-        if not settings.refresh_rss:
-            if self.client.get_rss_info() == settings.rss_link:
-                logger.info("RSS Already exists.")
-            else:
-                logger.info("No feed exists, start adding feed.")
-                self.client.rss_add_feed(url=settings.rss_link, item_path="Mikan_RSS")
-                logger.info("Add RSS Feed successfully.")
+        # TODO: 定时刷新 RSS
+        if self.client.get_rss_info() == settings.rss_parser.link:
+            logger.info("RSS Already exists.")
         else:
-            try:
-                self.client.rss_remove_item(item_path="Mikan_RSS")
-                logger.info("Remove RSS Feed successfully.")
-            except ConflictError:
-                logger.info("No feed exists, start adding feed.")
-            try:
-                self.client.rss_add_feed(url=settings.rss_link, item_path="Mikan_RSS")
-                logger.info("Add RSS Feed successfully.")
-            except ConnectionError:
-                logger.warning("Error with adding RSS Feed.")
-            except ConflictError:
-                logger.info("RSS Already exists.")
+            logger.info("No feed exists, start adding feed.")
+            self.client.rss_add_feed(url=settings.rss_parser.link, item_path="Mikan_RSS")
+            logger.info("Add RSS Feed successfully.")
 
     def add_collection_feed(self, rss_link, item_path):
         self.client.rss_add_feed(url=rss_link, item_path=item_path)
         logger.info("Add RSS Feed successfully.")
 
-    def add_rules(self, bangumi_info, rss_link=settings.rss_link):
+    def add_rules(self, bangumi_info, rss_link=settings.rss_parser.link):
         logger.debug("Start adding rules.")
         for info in bangumi_info:
             if not info["added"]:

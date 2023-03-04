@@ -1,10 +1,10 @@
 import re
 
-from core import FullSeasonGet, DownloadClient, RSSAnalyser
-from utils import json_config
-from conf import settings
+from module.core import FullSeasonGet, DownloadClient, RSSAnalyser
+from module.utils import json_config
+from module.conf import DATA_PATH
 
-from ab_decorator import api_failed
+from module.ab_decorator import api_failed
 
 
 class APIProcess:
@@ -31,24 +31,24 @@ class APIProcess:
 
     @staticmethod
     def reset_rule():
-        data = json_config.load(settings.info_path)
+        data = json_config.load(DATA_PATH)
         data["bangumi_info"] = []
-        json_config.save(settings.info_path, data)
+        json_config.save(DATA_PATH, data)
         return "Success"
 
     @staticmethod
     def remove_rule(name):
-        datas = json_config.load(settings.info_path)["bangumi_info"]
+        datas = json_config.load(DATA_PATH)["bangumi_info"]
         for data in datas:
             if re.search(name.lower(), data["title_raw"].lower()):
                 datas.remove(data)
-                json_config.save(settings.info_path, datas)
+                json_config.save(DATA_PATH, datas)
                 return "Success"
         return "Not matched"
 
     @staticmethod
     def add_rule(title, season):
-        data = json_config.load(settings.info_path)
+        data = json_config.load(DATA_PATH)
         extra_data = {
             "official_title": title,
             "title_raw": title,
@@ -60,13 +60,5 @@ class APIProcess:
             "added": False,
         }
         data["bangumi_info"].append(extra_data)
-        json_config.save(settings.info_path, data)
+        json_config.save(DATA_PATH, data)
         return "Success"
-
-
-if __name__ == '__main__':
-    from conf.const_dev import DEV_SETTINGS
-    settings.init(DEV_SETTINGS)
-    url = "https://mikanani.me/RSS/Bangumi?bangumiId=2621&subgroupid=382"
-    API = APIProcess()
-    API.download_collection(url)

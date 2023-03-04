@@ -1,9 +1,11 @@
 import logging
-from autobangumi.conf import settings
+from module.conf import settings
+
+LOG_PATH = "data/log.txt"
 
 
 def setup_logger():
-    level = logging.DEBUG if settings.debug_mode else logging.INFO
+    level = logging.DEBUG if settings.debug.enable else logging.INFO
     logging.addLevelName(logging.DEBUG, 'DEBUG:')
     logging.addLevelName(logging.INFO, 'INFO:')
     logging.addLevelName(logging.WARNING, 'WARNING:')
@@ -13,7 +15,7 @@ def setup_logger():
         format=LOGGING_FORMAT,
         encoding="utf-8",
         handlers=[
-            logging.FileHandler(settings.log_path),
+            logging.FileHandler(LOG_PATH, encoding="utf-8"),
             logging.StreamHandler(),
         ]
     )

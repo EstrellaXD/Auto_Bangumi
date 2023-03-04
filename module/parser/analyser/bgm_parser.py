@@ -1,4 +1,4 @@
-from autobangumi.network import RequestContent
+from module.network import RequestContent
 
 
 class BgmAPI:
