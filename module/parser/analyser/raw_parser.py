@@ -184,13 +184,3 @@ class RawParser:
             sub, dpi, source, group = ret
         return Episode(name_en, name_zh, name_jp, season, sr, episode, sub, group, dpi, source)
 
-
-if __name__ == "__main__":
-    test = RawParser()
-    test_list = [
-        "[ANi] Urusei Yatsura - 她来自烦星（仅限港澳台地区） - 19 [1080P][Bilibili][WEB-DL][AAC AVC][CHT CHS][MP4]",
-        "[织梦字幕组][尼尔：机械纪元 NieR Automata Ver1.1a][第02集][1080P][AVC][简日双语]"
-    ]
-    for test_txt in test_list:
-        ep = test.analyse(test_txt)
-        print(f"en:{ep.title_en}, zh:{ep.title_zh}, jp:{ep.title_jp}, group:{ep.group}")
