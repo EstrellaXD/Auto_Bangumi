@@ -65,8 +65,8 @@ class RawParser:
         name = re.sub(season_rule, "", name_season)
         for season in seasons:
             season_raw = season
-            if re.search(r"S|Season", season) is not None:
-                season = int(re.sub(r"S|Season", "", season))
+            if re.search(r"Season|S", season) is not None:
+                season = int(re.sub(r"Season|S", "", season))
                 break
             elif re.search(r"[第 ].*[季期]", season) is not None:
                 season_pro = re.sub(r"[第季期 ]", "", season)
@@ -148,7 +148,7 @@ class RawParser:
         sub, dpi, source = self.find_tags(other)  # 剩余信息处理
         return name_en, name_zh, name_jp, season, season_raw, episode, sub, dpi, source, group
 
-    def analyse(self, raw: str) -> Episode or None:
+    def analyse(self, raw: str) -> Episode | None:
         try:
             ret = self.process(raw)
             if ret is None:
