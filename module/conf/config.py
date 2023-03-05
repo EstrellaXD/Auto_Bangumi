@@ -2,13 +2,8 @@ import json
 import os
 
 from dataclasses import dataclass
-from .const import DEFAULT_SETTINGS, ENV_TO_ATTR
-from .version import VERSION
 
-if VERSION == "DEV_VERSION":
-    CONFIG_PATH = "config/config_dev.json"
-else:
-    CONFIG_PATH = "config/config.json"
+from .const import DEFAULT_SETTINGS, ENV_TO_ATTR
 
 
 class ConfLoad(dict):
@@ -20,7 +15,7 @@ class ConfLoad(dict):
 
 
 @dataclass
-class Settings():
+class Settings:
     program: ConfLoad
     downloader: ConfLoad
     rss_parser: ConfLoad
@@ -28,11 +23,14 @@ class Settings():
     debug: ConfLoad
     proxy: ConfLoad
     notification: ConfLoad
-    def __init__(self):
-        self.load(CONFIG_PATH)
 
-    def load(self, path):
-        if os.path.isfile(path):
+    def __init__(self, path: str | None):
+        self.load(path)
+
+    def load(self, path: str | None):
+        if isinstance(path, dict):
+            conf = DEFAULT_SETTINGS
+        elif os.path.isfile(path):
             with open(path, "r") as f:
                 conf = json.load(f)
         else:
@@ -40,7 +38,8 @@ class Settings():
         for key, section in conf.items():
             setattr(self, key, ConfLoad(section))
 
-    def _val_from_env(self, env, attr):
+    @staticmethod
+    def _val_from_env(env, attr):
         val = os.environ[env]
         if isinstance(attr, tuple):
             conv_func = attr[1]
@@ -58,6 +57,14 @@ class Settings():
         return settings
 
 
-settings = Settings()
+if os.path.isfile("version.py"):
+    from .version import VERSION
+    if VERSION == "DEV_VERSION":
+        CONFIG_PATH = "config/config_dev.json"
+    else:
+        CONFIG_PATH = "config/config.json"
+    settings = Settings(CONFIG_PATH)
+else:
+    settings = Settings(DEFAULT_SETTINGS)
 
 
