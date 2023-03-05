@@ -26,9 +26,9 @@ RUN apk add --no-cache \
     bash
 
 # Download WebUI
-RUN wget https://github.com/Rewrite0/Auto_Bangumi_WebUI/releases/download/v1.0.4/dist.zip && \
+RUN wget "https://github.com/Rewrite0/Auto_Bangumi_WebUI/releases/download/$(curl 'https://api.github.com/repos/Rewrite0/Auto_Bangumi_WebUI/releases/latest' | grep "tag_name" | head -n 1 | awk -F ":" '{print $2}' | sed 's/\"//g;s/,//g;s/ //g')/dist.zip" && \
     unzip dist.zip && \
-    mv dist template
+    mv dist templates
 
 RUN addgroup -S auto_bangumi -g 1000 && \
     adduser -S auto_bangumi -G auto_bangumi -h /home/auto_bangumi -u 1000 && \

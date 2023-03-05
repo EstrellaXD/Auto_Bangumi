@@ -3,9 +3,9 @@ import re
 from dataclasses import dataclass
 from pathlib import PurePath, PureWindowsPath
 
-from core import DownloadClient
-from conf import settings
-from utils import json_config
+from module.core import DownloadClient
+from module.conf import settings
+from module.utils import json_config
 
 logger = logging.getLogger(__name__)
 
@@ -85,11 +85,3 @@ class RePath:
         logging.info(f"Starting repath process.")
         for list in match_list:
             self.re_path(list)
-
-
-if __name__ == '__main__':
-    from conf.const_dev import DEV_SETTINGS
-    settings.init(DEV_SETTINGS)
-    client = DownloadClient()
-    r = RePath(client)
-    r.run()

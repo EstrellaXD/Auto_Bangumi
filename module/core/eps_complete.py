@@ -4,6 +4,7 @@ import logging
 
 from module.conf import settings
 from module.network import RequestContent
+
 from .download_client import DownloadClient
 
 logger = logging.getLogger(__name__)

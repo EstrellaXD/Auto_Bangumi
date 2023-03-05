@@ -3,8 +3,8 @@ import logging
 
 from bs4 import BeautifulSoup
 
-from conf import settings
-from utils import json_config
+from module.conf import settings
+from module.utils import json_config
 
 logger = logging.getLogger(__name__)
 

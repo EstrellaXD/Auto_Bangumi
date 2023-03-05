@@ -44,7 +44,7 @@ class DownloadClient:
             "savePath": str(
                 os.path.join(
                     settings.downloader.path,
-                    re.sub(r"\:|\/|\.", " ", official_name).strip(),
+                    re.sub(r"[:/.]", " ", official_name).strip(),
                     f"Season {season}",
                 )
             ),

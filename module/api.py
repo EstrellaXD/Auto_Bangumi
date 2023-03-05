@@ -12,16 +12,7 @@ from conf import settings, parse
 from utils import json_config
 
 logger = logging.getLogger(__name__)
-args = parse()
-if args.debug:
-    try:
-        from conf.const_dev import DEV_SETTINGS
 
-        settings.init(DEV_SETTINGS)
-    except ModuleNotFoundError:
-        logger.debug("Please copy `const_dev.py` to `const_dev.py` to use custom settings")
-else:
-    settings.init()
 app = FastAPI()
 api_func = APIProcess()
 
