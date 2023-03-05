@@ -1,5 +1,11 @@
-from module.app import run
+from module import app
+from module import api
 
+import multiprocessing
 
 if __name__ == "__main__":
-    run()
+    multiprocessing.process()
+
+    app.run()
+    api.run()
+

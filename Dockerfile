@@ -14,7 +14,7 @@ ENV TZ=Asia/Shanghai \
     PGID=1000 \
     UMASK=022
 
-WORKDIR /app
+WORKDIR /
 
 COPY --from=build --chmod=777 /install /usr/local
 COPY --chmod=755 . .
