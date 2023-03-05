@@ -29,4 +29,4 @@ jobs:
         pip install pytest
 
     - name: Test
-      run: python -m unittest discover tests
+      run: pytest test/test_raw_parser.py
