@@ -14,6 +14,8 @@ RESOLUTION_RE = re.compile(r"1080|720|2160|4K")
 SOURCE_RE = re.compile(r"B-Global|[Bb]aha|[Bb]ilibili|AT-X|Web")
 SUB_RE = re.compile(r"[简繁日字幕]|CH|BIG5|GB")
 
+PREFIX_RE = re.compile(r"[^\w\s\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff-]")
+
 CHINESE_NUMBER_MAP = {
     "一": 1,
     "二": 2,
@@ -51,32 +53,25 @@ class RawParser:
     def pre_process(raw_name: str) -> str:
         return raw_name.replace("【", "[").replace("】", "]")
 
-    def preffix_process(self, raw: str, group: str) -> str:
-        raw_process = re.sub(r"[^\w\s\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff-]", "/", raw)
+    @staticmethod
+    def prefix_process(raw: str, group: str) -> str:
+        raw = re.sub(f".{group}.", "", raw)
+        raw_process = PREFIX_RE.sub("/", raw)
         arg_group = raw_process.split("/")
-        title_list = []
         for arg in arg_group:
-            if re.search(group, arg):
-                pass
-            elif re.search(r"新番|月?番", arg) and len(arg) <= 5:
-                pass
+            if re.search(r"新番|月?番", arg) and len(arg) <= 5:
+                raw = re.sub(f".{arg}.", "", raw)
             elif re.search(r"港澳台地区", arg):
-                pass
-            elif arg == "":
-                pass
-            else:
-                title_list.append(arg)
-        if len(title_list) == 1:
-            return title_list[0]
-        return "/".join(arg_group)
+                raw = re.sub(f".{arg}.", "", raw)
+        return raw
 
     @staticmethod
     def season_process(season_info: str):
         name_season = season_info
-        if re.search(r"新番|月?番", season_info):
-            name_season = re.sub(".*新番.", "", season_info)
-            # 去除「新番」信息
-        name_season = re.sub(r"^[^]】]*[]】]", "", name_season).strip()
+        # if re.search(r"新番|月?番", season_info):
+        #     name_season = re.sub(".*新番.", "", season_info)
+        #     # 去除「新番」信息
+        # name_season = re.sub(r"^[^]】]*[]】]", "", name_season).strip()
         season_rule = r"S\d{1,2}|Season \d{1,2}|[第].[季期]"
         name_season = re.sub(r"[\[\]]", " ", name_season)
         seasons = re.findall(season_rule, name_season)
@@ -157,7 +152,7 @@ class RawParser:
         season_info, episode_info, other = list(map(
             lambda x: x.strip(), match_obj.groups()
         ))
-        process_raw = self.preffix_process(season_info, group)
+        process_raw = self.prefix_process(season_info, group)
         # 处理 前缀
         raw_name, season_raw, season = self.season_process(process_raw)
         # 处理 第n季
@@ -183,4 +178,16 @@ class RawParser:
         name_en, name_zh, name_jp, season, sr, episode, \
             sub, dpi, source, group = ret
         return Episode(name_en, name_zh, name_jp, season, sr, episode, sub, group, dpi, source)
+
+
+if __name__ == '__main__':
+    test_list = [
+        "[Lilith-Raws] 关于我在无意间被隔壁的天使变成废柴这件事 / Otonari no Tenshi-sama - 09 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]",
+        "【幻樱字幕组】【4月新番】【古见同学有交流障碍症 第二季 Komi-san wa, Komyushou Desu. S02】【22】【GB_MP4】【1920X1080】",
+        "[百冬练习组&LoliHouse] BanG Dream! 少女乐团派对！☆PICO FEVER！ / Garupa Pico: Fever! - 26 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][END]"
+    ]
+    parser = RawParser()
+    for l in test_list:
+        ep = parser.analyse(l)
+        print(f"en: {ep.title_en}, zh: {ep.title_zh}, jp: {ep.title_jp}, group: {ep.group}")
 
