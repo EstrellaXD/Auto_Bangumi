@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 EPISODE_RE = re.compile(r"\d+")
 TITLE_RE = re.compile(
-    r"(.*|\[.*])( -? \d+|\[\d+]|\[\d+.?[vV]\d{1}]|[第]\d+[话話集]|\[\d+.?END])(.*)"
+    r"(.*|\[.*])( -? \d+|\[\d+]|\[\d+.?[vV]\d{1}]|[第]?\d+[话話集]|\[\d+.?END])(.*)"
 )
 RESOLUTION_RE = re.compile(r"1080|720|2160|4K")
 SOURCE_RE = re.compile(r"B-Global|[Bb]aha|[Bb]ilibili|AT-X|Web")
@@ -51,12 +51,32 @@ class RawParser:
     def pre_process(raw_name: str) -> str:
         return raw_name.replace("【", "[").replace("】", "]")
 
+    def preffix_process(self, raw: str, group: str) -> str:
+        raw_process = re.sub(r"[^\w\s\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff-]", "/", raw)
+        arg_group = raw_process.split("/")
+        title_list = []
+        for arg in arg_group:
+            if re.search(group, arg):
+                pass
+            elif re.search(r"新番|月?番", arg) and len(arg) <= 5:
+                pass
+            elif re.search(r"港澳台地区", arg):
+                pass
+            elif arg == "":
+                pass
+            else:
+                title_list.append(arg)
+        if len(title_list) == 1:
+            return title_list[0]
+        return "/".join(arg_group)
+
     @staticmethod
     def season_process(season_info: str):
+        name_season = season_info
         if re.search(r"新番|月?番", season_info):
             name_season = re.sub(".*新番.", "", season_info)
-        else:
-            name_season = re.sub(r"^[^]】]*[]】]", "", season_info).strip()
+            # 去除「新番」信息
+        name_season = re.sub(r"^[^]】]*[]】]", "", name_season).strip()
         season_rule = r"S\d{1,2}|Season \d{1,2}|[第].[季期]"
         name_season = re.sub(r"[\[\]]", " ", name_season)
         seasons = re.findall(season_rule, name_season)
@@ -68,7 +88,7 @@ class RawParser:
             if re.search(r"Season|S", season) is not None:
                 season = int(re.sub(r"Season|S", "", season))
                 break
-            elif re.search(r"[第 ].*[季期]", season) is not None:
+            elif re.search(r"[第 ].*[季期(部分)]|部分", season) is not None:
                 season_pro = re.sub(r"[第季期 ]", "", season)
                 try:
                     season = int(season_pro)
@@ -91,7 +111,7 @@ class RawParser:
             elif re.search(" - {1}", name) is not None:
                 split = re.split("-", name)
         if len(split) == 1:
-            split_space = name.split(" ")
+            split_space = split[0].split(" ")
             for idx, item in enumerate(split_space):
                 if re.search(r"^[\u4e00-\u9fa5]{2,}", item) is not None:
                     split_space.remove(item)
@@ -128,16 +148,23 @@ class RawParser:
 
     def process(self, raw_title: str):
         raw_title = raw_title.strip()
-        content_title = self.pre_process(raw_title)  # 预处理标题
-        group = self.get_group(content_title)  # 翻译组的名字
-        match_obj = TITLE_RE.match(content_title)  # 处理标题
+        content_title = self.pre_process(raw_title)
+        # 预处理标题
+        group = self.get_group(content_title)
+        # 翻译组的名字
+        match_obj = TITLE_RE.match(content_title)
+        # 处理标题
         season_info, episode_info, other = list(map(
             lambda x: x.strip(), match_obj.groups()
         ))
-        raw_name, season_raw, season = self.season_process(season_info)  # 处理 第n季
+        process_raw = self.preffix_process(season_info, group)
+        # 处理 前缀
+        raw_name, season_raw, season = self.season_process(process_raw)
+        # 处理 第n季
         name_en, name_zh, name_jp = "", "", ""
         try:
-            name_en, name_zh, name_jp = self.name_process(raw_name)  # 处理 名字
+            name_en, name_zh, name_jp = self.name_process(raw_name)
+            # 处理 名字
         except ValueError:
             pass
         # 处理 集数
@@ -149,20 +176,21 @@ class RawParser:
         return name_en, name_zh, name_jp, season, season_raw, episode, sub, dpi, source, group
 
     def analyse(self, raw: str) -> Episode | None:
-        try:
-            ret = self.process(raw)
-            if ret is None:
-                return None
-            name_en, name_zh, name_jp, season, sr, episode, \
-                sub, dpi, source, group = ret
-        except Exception as e:
-            logger.error(f"Parser cannot analyse {raw} {e}")
+        ret = self.process(raw)
+        if ret is None:
+            logger.error(f"Parser cannot analyse {raw}")
             return None
+        name_en, name_zh, name_jp, season, sr, episode, \
+            sub, dpi, source, group = ret
         return Episode(name_en, name_zh, name_jp, season, sr, episode, sub, group, dpi, source)
 
 
 if __name__ == "__main__":
     test = RawParser()
-    test_txt = "[梦蓝字幕组]New Doraemon 哆啦A梦新番[716][2022.07.23][AVC][10080P][GB_JP]"
-    ep = test.analyse(test_txt)
-    print(f"en:{ep.title_en}, zh:{ep.title_zh}, jp:{ep.title_jp}, group:{ep.group}")
+    test_list = [
+        "[ANi] Urusei Yatsura - 她来自烦星（仅限港澳台地区） - 19 [1080P][Bilibili][WEB-DL][AAC AVC][CHT CHS][MP4]",
+        "[织梦字幕组][尼尔：机械纪元 NieR Automata Ver1.1a][第02集][1080P][AVC][简日双语]"
+    ]
+    for test_txt in test_list:
+        ep = test.analyse(test_txt)
+        print(f"en:{ep.title_en}, zh:{ep.title_zh}, jp:{ep.title_jp}, group:{ep.group}")
