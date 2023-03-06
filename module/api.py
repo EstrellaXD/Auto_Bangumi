@@ -7,9 +7,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import logging
 
-from core import APIProcess
-from conf import settings, parse
-from utils import json_config
+from .core import APIProcess
+from .conf import settings
+from .utils import json_config
 
 logger = logging.getLogger(__name__)
 

@@ -87,3 +87,6 @@ def run():
     bangumi_data = load_data_file()
     # 主程序循环
     main_process(bangumi_data, download_client)
+
+if __name__ == '__main__':
+    run()

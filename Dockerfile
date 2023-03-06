@@ -34,6 +34,7 @@ RUN addgroup -S auto_bangumi -g 1000 && \
     adduser -S auto_bangumi -G auto_bangumi -h /home/auto_bangumi -u 1000 && \
     usermod -s /bin/bash auto_bangumi && \
     mkdir -p "/config" && \
+    mkdir -p "/data" && \
     chmod a+x \
         run.sh \
         setID.sh
