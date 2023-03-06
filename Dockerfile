@@ -36,8 +36,7 @@ RUN addgroup -S auto_bangumi -g 1000 && \
     mkdir -p "/config" && \
     mkdir -p "/data" && \
     chmod a+x \
-        run.sh \
-        setID.sh
+        run.sh
 
 EXPOSE 7892
 
