@@ -8,7 +8,7 @@ from pydantic import BaseModel
 import logging
 
 from .core import APIProcess
-from .conf import settings
+from .conf import settings, DATA_PATH, LOG_PATH
 from .utils import json_config
 
 logger = logging.getLogger(__name__)
@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 api_func = APIProcess()
 
-app.mount("/assets", StaticFiles(directory="/templates/assets"), name="assets")
-templates = Jinja2Templates(directory="/templates")
+app.mount("/assets", StaticFiles(directory="templates/assets"), name="assets")
+templates = Jinja2Templates(directory="templates")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -28,14 +28,13 @@ def index(request: Request):
 
 @app.get("/api/v1/data")
 def get_data():
-    data = json_config.load(settings.info_path)
+    data = json_config.load(DATA_PATH)
     return data
 
 
 @app.get("/api/v1/log")
 async def get_log():
-    log_path = settings.log_path
-    return FileResponse(log_path)
+    return FileResponse(LOG_PATH)
 
 
 @app.get("/api/v1/resetRule")
@@ -74,7 +73,7 @@ async def add_rule(info: AddRule):
 
 def run():
     LOGGING_CONFIG["formatters"]["default"]["fmt"] = "[%(asctime)s] %(levelprefix)s %(message)s"
-    uvicorn.run(app, host="0.0.0.0", port=settings.webui_port)
+    uvicorn.run(app, host="0.0.0.0", port=settings.program.webui_port)
 
 
 if __name__ == "__main__":

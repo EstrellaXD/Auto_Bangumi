@@ -5,6 +5,7 @@ from module.conf import settings
 
 import re
 
+FILTER = "|".join(settings.rss_parser.filter)
 
 @dataclass
 class TorrentInfo:
@@ -23,7 +24,7 @@ class RequestContent:
         torrent_urls = [item.get("url") for item in soup.find_all("enclosure")]
         torrents = []
         for _title, torrent_url in zip(torrent_titles, torrent_urls):
-            if re.search(settings.not_contain, _title) is None:
+            if re.search(FILTER, _title) is None:
                 torrents.append(TorrentInfo(_title, torrent_url))
         return torrents
 

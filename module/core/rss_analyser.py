@@ -18,7 +18,7 @@ class RSSAnalyser:
 
     def rss_to_datas(self, bangumi_info: list) -> list:
         rss_torrents = self._request.get_torrents(settings.rss_parser.link)
-        self._request.close()
+        self._request.close_session()
         for torrent in rss_torrents:
             raw_title = torrent.name
             extra_add = True
@@ -36,7 +36,7 @@ class RSSAnalyser:
 
     def rss_to_data(self, url) -> dict:
         rss_torrents = self._request.get_torrents(url)
-        self._request.close()
+        self._request.close_session()
         for torrent in rss_torrents:
             try:
                 data = self._title_analyser.return_dict(torrent.name)

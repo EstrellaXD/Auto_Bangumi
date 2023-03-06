@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from .const import DEFAULT_SETTINGS, ENV_TO_ATTR
 
 
+
 class ConfLoad(dict):
     def __getattr__(self, item):
         return self.get(item)
@@ -56,15 +57,13 @@ class Settings:
             json.dump(settings, f, indent=4)
         return settings
 
-
-if os.path.isfile("version.py"):
+try:
     from .version import VERSION
-    if VERSION == "DEV_VERSION":
-        CONFIG_PATH = "config/config_dev.json"
-    else:
-        CONFIG_PATH = "config/config.json"
-    settings = Settings(CONFIG_PATH)
-else:
-    settings = Settings(DEFAULT_SETTINGS)
+    CONFIG_PATH = ("config/config.json")
+except ImportError:
+    VERSION = "DEV_VERSION"
+    CONFIG_PATH = "config/config_dev.json"
+
+settings = Settings(CONFIG_PATH)
 
 

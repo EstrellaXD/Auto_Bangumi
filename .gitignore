@@ -179,3 +179,4 @@ cython_debug/
 test.*
 .run
 /module/conf/version.py
+/templates/
