@@ -18,4 +18,4 @@ chown -R ${PUID}:${PGID} /config /data /app
 
 umask ${UMASK}
 
-exec su-exec ${PUID}:${PGID} python3 main.py
+exec su-exec ${PUID}:${PGID} dumb-init python3 main.py

@@ -18,7 +18,7 @@ WORKDIR /app
 RUN apk add --no-cache \
         curl \
         su-exec \
-        tini \
+        dumb-init \
         bash \
         unzip \
     && \
@@ -36,7 +36,7 @@ RUN apk add --no-cache \
 COPY --chmod=777 --from=build /install /usr/local
 COPY --chmod=755 . /app
 
-ENTRYPOINT [ "tini", "/app/entrypoint.sh" ]
+ENTRYPOINT [ "/app/entrypoint.sh" ]
 
 EXPOSE 7892
 
