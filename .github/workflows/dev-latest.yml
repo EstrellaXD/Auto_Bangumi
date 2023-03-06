@@ -1,6 +1,8 @@
 name: Deploy To Dockerhub(dev)
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    branches: [ 2.6.0-dev ]
 
 jobs:
   latest:
