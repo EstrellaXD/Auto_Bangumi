@@ -59,7 +59,10 @@ class Settings:
 
 try:
     from .version import VERSION
-    CONFIG_PATH = ("config/config.json")
+    if os.path.isdir("config"):
+        CONFIG_PATH = ("config/config.json")
+    else:
+        CONFIG_PATH = DEFAULT_SETTINGS
 except ImportError:
     VERSION = "DEV_VERSION"
     CONFIG_PATH = "config/config_dev.json"
