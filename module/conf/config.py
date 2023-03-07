@@ -52,7 +52,8 @@ class Settings:
         for key, section in ENV_TO_ATTR.items():
             for env, attr in section.items():
                 if env in os.environ:
-                    settings[key][env] = self._val_from_env(env, attr)
+                    attr_name = attr[0] if isinstance(attr, tuple) else attr
+                    settings[key][attr_name] = self._val_from_env(env, attr)
         with open(CONFIG_PATH, "w") as f:
             json.dump(settings, f, indent=4)
         return settings
