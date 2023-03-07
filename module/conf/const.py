@@ -66,21 +66,21 @@ ENV_TO_ATTR = {
         "AB_DOWNLOAD_PATH": "path",
     },
     "rss_parser": {
-        "AB_RSS_COLLECTOR": ("enable", lambda e: e.lower() in ("True", "1", "t")),
+        "AB_RSS_COLLECTOR": ("enable", lambda e: e.lower() in ("true", "1", "t")),
         "AB_RSS": "link",
         "AB_NOT_CONTAIN": ("filter", lambda e: e.split("|")),
         "AB_LANGUAGE": "language",
-        "AB_ENABLE_TMDB": ("enable_tmdb", lambda e: e.lower() in ("True", "1", "t")),
+        "AB_ENABLE_TMDB": ("enable_tmdb", lambda e: e.lower() in ("true", "1", "t")),
     },
     "bangumi_manage": {
-        "AB_RENAME": ("enable", lambda e: e.lower() in ("True", "1", "t")),
+        "AB_RENAME": ("enable", lambda e: e.lower() in ("true", "1", "t")),
         "AB_METHOD": "method",
-        "AB_GROUP_TAG": ("group_tag", lambda e: e.lower() in ("True", "1", "t")),
-        "AB_EP_COMPLETE": ("eps_complete", lambda e: e.lower() in ("True", "1", "t")),
-        "AB_REMOVE_BAD_BT": ("remove_bad_torrent", lambda e: e.lower() in ("True", "1", "t")),
+        "AB_GROUP_TAG": ("group_tag", lambda e: e.lower() in ("true", "1", "t")),
+        "AB_EP_COMPLETE": ("eps_complete", lambda e: e.lower() in ("true", "1", "t")),
+        "AB_REMOVE_BAD_BT": ("remove_bad_torrent", lambda e: e.lower() in ("true", "1", "t")),
     },
     "debug": {
-        "AB_DEBUG_MODE": ("enable", lambda e: e.lower() in ("True", "1", "t")),
+        "AB_DEBUG_MODE": ("enable", lambda e: e.lower() in ("true", "1", "t")),
     },
     "proxy": {
         "AB_HTTP_PROXY": "http",
