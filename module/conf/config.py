@@ -52,7 +52,7 @@ class Settings:
         for key, section in ENV_TO_ATTR.items():
             for env, attr in section.items():
                 if env in os.environ:
-                    settings[key][attr] = self._val_from_env(env, attr)
+                    settings[key][env] = self._val_from_env(env, attr)
         with open(CONFIG_PATH, "w") as f:
             json.dump(settings, f, indent=4)
         return settings
