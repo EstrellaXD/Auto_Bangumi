@@ -93,9 +93,6 @@
 感谢 [Sean](https://github.com/findix) 提供的大量帮助
 感谢 [Rewrite0](https://github.com/Rewrite0) 开发的 WebUI
 
-## 请我喝一杯咖啡
-<img src="https://tva1.sinaimg.cn/large/e6c9d24ely1h425na5hldj20u019077h.jpg" width=50%/>
-
 ## Licence
 [MIT licence](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/LICENSE)
 
