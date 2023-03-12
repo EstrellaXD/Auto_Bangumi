@@ -57,7 +57,8 @@ class FullSeasonGet:
                 self.download_eps(data, download_client)
 
     def download_collection(self, data, link, download_client: DownloadClient):
-        torrents = self._get_rss.get_torrents(link)
+        with RequestContent() as req:
+            torrents = req.get_torrents(link)
         downloads = self.collect_season_torrents(data, torrents)
         logger.info(f"Starting download {data.get('official_title')}")
         for download in downloads:
