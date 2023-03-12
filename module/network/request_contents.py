@@ -7,16 +7,14 @@ import re
 
 FILTER = "|".join(settings.rss_parser.filter)
 
+
 @dataclass
 class TorrentInfo:
     name: str
     torrent_link: str
 
 
-class RequestContent:
-    def __init__(self):
-        self._req = RequestURL()
-
+class RequestContent(RequestURL):
     # Mikanani RSS
     def get_torrents(self, _url: str) -> [TorrentInfo]:
         soup = self._req.get_content(_url)
@@ -37,6 +35,3 @@ class RequestContent:
     # API JSON
     def get_json(self, _url) -> dict:
         return self._req.get_content(_url, content="json")
-
-    def close_session(self):
-        self._req.close()
