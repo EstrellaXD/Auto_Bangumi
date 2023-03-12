@@ -13,7 +13,7 @@ SEARCH_KEY = ["group", "title_raw", "season_raw", "subtitle", "source", "dpi"]
 
 class FullSeasonGet:
     def __init__(self):
-        self._get_rss = RequestContent()
+        pass
 
     @staticmethod
     def init_eps_complete_search_str(data: dict):
@@ -24,7 +24,8 @@ class FullSeasonGet:
 
     def get_season_torrents(self, data: dict):
         keyword = self.init_eps_complete_search_str(data)
-        torrents = self._get_rss.get_torrents(f"https://mikanani.me/RSS/Search?searchstr={keyword}")
+        with RequestContent() as req:
+            torrents = req.get_torrents(f"https://mikanani.me/RSS/Search?searchstr={keyword}")
         return torrents
 
     @staticmethod
