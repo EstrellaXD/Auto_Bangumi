@@ -19,7 +19,7 @@ class PostNotification:
         return response.status_code == 200
 
 
-class FtqqNotification:
+class ServerChanNotification:
     """Server酱推送"""
 
     def __init__(self):
@@ -35,12 +35,12 @@ class FtqqNotification:
             resp = requests.post(self.notification_url, json=data, timeout=3)
             resp.raise_for_status()
         except requests.RequestException as e:
-            logging.error("[FtqqNotification] send fail, error: %s" % e)
+            logging.error("[ServerChanNotification] send fail, error: %s" % e)
             return False
         return True
 
 
 if __name__ == '__main__':
     name = "勇者、辞职不干了"
-    notification = FtqqNotification()
+    notification = ServerChanNotification()
     notification.send_msg(f"《{name[:10]}》缓存成功", f"[Auto Bangumi]《{name}》缓存成功")

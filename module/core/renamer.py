@@ -8,7 +8,7 @@ from .download_client import DownloadClient
 
 from module.conf import settings
 from module.parser import TitleParser
-from ..network import PostNotification, FtqqNotification
+from ..network import PostNotification, ServerChanNotification
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ class Renamer:
         return path_name, season, folder_name, suffix, download_path
 
     def run(self):
-        notification = FtqqNotification()
+        notification = ServerChanNotification()
         recent_info, torrent_count = self.get_torrent_info()
         rename_count = 0
         for info in recent_info:
