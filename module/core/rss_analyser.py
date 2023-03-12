@@ -14,11 +14,10 @@ logger = logging.getLogger(__name__)
 class RSSAnalyser:
     def __init__(self):
         self._title_analyser = TitleParser()
-        self._request = RequestContent()
 
     def rss_to_datas(self, bangumi_info: list) -> list:
-        rss_torrents = self._request.get_torrents(settings.rss_parser.link)
-        self._request.close_session()
+        with RequestContent() as req:
+            rss_torrents = req.get_torrents(settings.rss_parser.link)
         for torrent in rss_torrents:
             raw_title = torrent.name
             extra_add = True
@@ -35,8 +34,8 @@ class RSSAnalyser:
         return bangumi_info
 
     def rss_to_data(self, url) -> dict:
-        rss_torrents = self._request.get_torrents(url)
-        self._request.close_session()
+        with RequestContent() as req:
+            rss_torrents = req.get_torrents(url)
         for torrent in rss_torrents:
             try:
                 data = self._title_analyser.return_dict(torrent.name)
