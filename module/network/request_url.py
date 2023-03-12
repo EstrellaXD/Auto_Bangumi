@@ -5,8 +5,6 @@ import socket
 import socks
 import logging
 
-from bs4 import BeautifulSoup
-
 from module.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -36,12 +34,6 @@ class RequestURL:
                 logger.debug(f"URL: {url}")
                 logger.debug(e)
                 break
-
-    def get_content(self, url, content="xml"):
-        if content == "xml":
-            return BeautifulSoup(self.get_url(url).text, content)
-        elif content == "json":
-            return self.get_url(url).json()
 
     def __enter__(self):
         self.session = requests.Session()
