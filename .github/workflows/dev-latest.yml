@@ -12,7 +12,7 @@ jobs:
         uses: actions/checkout@v3
       - name: Create Version info
         run: |
-          echo "version='2.6.0'" > module/conf/version.py
+          echo "VERSION = '2.6.0-beta'" > module/conf/version.py
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -30,5 +30,5 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           push: true
-          tags: estrellaxd/auto_bangumi:dev-latest
+          tags: estrellaxd/auto_bangumi:2.6.0-beta2
           file: ./Dockerfile

@@ -4,12 +4,12 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
 import logging
 
 from .core import APIProcess
 from .conf import settings, DATA_PATH, LOG_PATH
 from .utils import json_config
+from .models.api import *
 
 logger = logging.getLogger(__name__)
 
@@ -47,10 +47,6 @@ def remove_rule(bangumi_title: str):
     return api_func.remove_rule(bangumi_title)
 
 
-class RssLink(BaseModel):
-    rss_link: str
-
-
 @app.post("/api/v1/collection")
 async def collection(link: RssLink):
     return api_func.download_collection(link.rss_link)
@@ -59,11 +55,6 @@ async def collection(link: RssLink):
 @app.post("/api/v1/subscribe")
 async def subscribe(link: RssLink):
     return api_func.add_subscribe(link.rss_link)
-
-
-class AddRule(BaseModel):
-    title: str
-    season: int
 
 
 @app.post("/api/v1/addRule")
@@ -76,6 +67,4 @@ def run():
     uvicorn.run(app, host="0.0.0.0", port=settings.program.webui_port)
 
 
-if __name__ == "__main__":
-    run()
 

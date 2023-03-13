@@ -1,9 +1,17 @@
 # syntax=docker/dockerfile:1
-FROM python:3.11-buster AS build
+FROM python:3.11-alpine AS build
 
 RUN mkdir /install
 WORKDIR /install
 COPY requirements.txt .
+
+RUN apk update \
+    && apk add --no-cache \
+    curl \
+    gcc \
+    g++ \
+    linux-headers \
+
 RUN python3 -m pip install --upgrade pip \
     && pip install -r requirements.txt --prefix="/install"
 
@@ -14,10 +22,10 @@ ENV TZ=Asia/Shanghai \
     PGID=1000 \
     UMASK=022
 
-WORKDIR /
+WORKDIR /app
 
 COPY --from=build --chmod=777 /install /usr/local
-COPY --chmod=755 . .
+COPY --chmod=755 . /app
 
 RUN apk add --no-cache \
     curl \
@@ -33,13 +41,13 @@ RUN wget "https://github.com/Rewrite0/Auto_Bangumi_WebUI/releases/download/$(cur
 RUN addgroup -S auto_bangumi -g 1000 && \
     adduser -S auto_bangumi -G auto_bangumi -h /home/auto_bangumi -u 1000 && \
     usermod -s /bin/bash auto_bangumi && \
-    mkdir -p "/config" && \
-    mkdir -p "/data" && \
+    mkdir -p "config" && \
+    mkdir -p "data" && \
     chmod a+x \
         run.sh
 
 EXPOSE 7892
 
-VOLUME [ "/config" , "/data"]
+VOLUME [ "config" , "data"]
 
 CMD ["sh", "run.sh"]
