@@ -22,14 +22,14 @@ class TMDBMatcher:
             f"https://api.themoviedb.org/3/search/tv?api_key={TMDB_API}&page=1&query={e}&include_adult=false"
         self.info_url = lambda e: \
             f"https://api.themoviedb.org/3/tv/{e}?api_key={TMDB_API}&language=zh-CN"
-        self._request = RequestContent()
 
     def is_animation(self, tv_id) -> bool:
         url_info = self.info_url(tv_id)
-        type_id = self._request.get_json(url_info)["genres"]
-        for type in type_id:
-            if type.get("id") == 16:
-                return True
+        with RequestContent() as req:
+            type_id = req.get_json(url_info)["genres"]
+            for type in type_id:
+                if type.get("id") == 16:
+                    return True
         return False
 
     # def get_zh_title(self, id):
@@ -51,20 +51,20 @@ class TMDBMatcher:
                     return int(re.findall(r"\d", season.get("season"))[0])
 
     def tmdb_search(self, title) -> TMDBInfo:
-        url = self.search_url(title)
-        contents = self._request.get_json(url).get("results")
-        if contents.__len__() == 0:
-            url = self.search_url(title.replace(" ", ""))
-            contents = self._request.get_json(url).get("results")
-        # 判断动画
-        for content in contents:
-            id = content["id"]
-            if self.is_animation(id):
-                break
-        url_info = self.info_url(id)
-        info_content = self._request.get_json(url_info)
-        # 关闭链接
-        self._request.close()
+        with RequestContent() as req:
+            url = self.search_url(title)
+            contents = req.get_json(url).get("results")
+            if contents.__len__() == 0:
+                url = self.search_url(title.replace(" ", ""))
+                contents = req.get_json(url).get("results")
+            # 判断动画
+            for content in contents:
+                id = content["id"]
+                if self.is_animation(id):
+                    break
+            url_info = self.info_url(id)
+            info_content = req.get_json(url_info)
+
         season = [{"season": s.get("name"), "air_date": s.get("air_date")} for s in info_content.get("seasons")]
         last_season = self.get_season(season)
         title_jp = info_content.get("original_name")

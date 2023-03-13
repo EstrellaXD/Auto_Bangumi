@@ -8,6 +8,7 @@ from .download_client import DownloadClient
 
 from module.conf import settings
 from module.parser import TitleParser
+from ..network import PostNotification, ServerChanNotification
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,7 @@ class Renamer:
         return path_name, season, folder_name, suffix, download_path
 
     def run(self):
+        notification = ServerChanNotification()
         recent_info, torrent_count = self.get_torrent_info()
         rename_count = 0
         for info in recent_info:
@@ -68,6 +70,7 @@ class Renamer:
                         old_name = info.content_path.replace(info.save_path, "")
                         self.client.rename_torrent_file(torrent_hash, new_name, old_name, new_name)
                         rename_count += 1
+                        notification.send_msg(f"《{name[:10]}》缓存成功", f"[Auto Bangumi]《{name}》缓存成功")
                     else:
                         continue
                 except Exception as e:
