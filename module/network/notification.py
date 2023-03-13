@@ -27,6 +27,8 @@ class ServerChanNotification:
         self.notification_url = f"https://sctapi.ftqq.com/{self.token}.send"
 
     def send_msg(self, title: str, desp: str) -> bool:
+        if not settings.notification.enable:
+            return False
         data = {
             "title": title,
             "desp": desp,
