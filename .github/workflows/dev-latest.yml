@@ -32,4 +32,4 @@ jobs:
         with:
           push: true
           tags: estrellaxd/auto_bangumi:2.6.0-beta2
-          file: .src/Dockerfile
+          file: src/Dockerfile
