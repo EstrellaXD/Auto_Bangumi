@@ -8,12 +8,10 @@ jobs:
   latest:
     runs-on: ubuntu-latest
     steps:
-      - name: Enter directory
-        run: |
-          cd src
       - name: Checkout
         uses: actions/checkout@v3
       - name: Create Version info
+        working-directory: ./src
         run: |
           echo "VERSION = '2.6.0-beta'" > module/__version__.py
       -
@@ -30,6 +28,7 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
       -
         name: Build and push
+        working-directory: ./src
         uses: docker/build-push-action@v3
         with:
           push: true
