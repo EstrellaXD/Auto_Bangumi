@@ -5,8 +5,9 @@ import logging
 from module.conf import settings, setup_logger, LOG_PATH, DATA_PATH, VERSION
 from module.utils import json_config
 
-from module.core import RSSAnalyser, DownloadClient, Renamer, FullSeasonGet
-
+from module.core import DownloadClient
+from module.manager import Renamer, FullSeasonGet
+from module.rss import RSSAnalyser
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +29,8 @@ def load_data_file():
         bangumi_data = json_config.load(DATA_PATH)
         if bangumi_data["data_version"] != settings.program.data_version or bangumi_data["rss_link"] != settings.rss_parser.link:
             bangumi_data = {
-                "rss_link": settings.rss_link,
-                "data_version": settings.data_version,
+                "rss_link": settings.rss_parser.link,
+                "data_version": settings.program.data_version,
                 "bangumi_info": []
             }
             logger.info("Rebuilding data information...")

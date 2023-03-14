@@ -25,7 +25,7 @@ ENV TZ=Asia/Shanghai \
 WORKDIR /app
 
 COPY --from=build --chmod=777 /install /usr/local
-COPY --chmod=755 . /app
+COPY --chmod=755 src/. /app
 
 RUN apk add --no-cache \
     curl \

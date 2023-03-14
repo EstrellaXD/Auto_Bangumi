@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from bs4 import BeautifulSoup
 
 from .request_url import RequestURL
+
 from module.conf import settings
 
 import re

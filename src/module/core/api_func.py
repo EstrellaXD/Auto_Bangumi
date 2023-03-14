@@ -1,6 +1,8 @@
 import re
 
-from module.core import FullSeasonGet, DownloadClient, RSSAnalyser
+from module.core import DownloadClient
+from module.manager import FullSeasonGet
+from module.rss import RSSAnalyser
 from module.utils import json_config
 from module.conf import DATA_PATH
 

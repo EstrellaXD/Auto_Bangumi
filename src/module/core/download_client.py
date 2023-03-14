@@ -3,7 +3,6 @@ import logging
 import os
 
 from module.downloader import getClient
-from module.downloader.exceptions import ConflictError
 
 from module.conf import settings
 
@@ -114,9 +113,4 @@ class DownloadClient:
 
     def get_torrent_path(self, hashes):
         return self.client.get_torrent_path(hashes)
-
-
-if __name__ == "__main__":
-    put = DownloadClient()
-    put.rss_feed()
 

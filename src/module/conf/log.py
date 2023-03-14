@@ -1,5 +1,6 @@
 import logging
-from module.conf import settings
+
+from .config import settings
 
 LOG_PATH = "data/log.txt"
 

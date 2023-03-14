@@ -5,6 +5,10 @@ from dataclasses import dataclass
 
 from .const import DEFAULT_SETTINGS, ENV_TO_ATTR
 
+try:
+    from ..__version__ import VERSION
+except ImportError:
+    VERSION = "DEV_VERSION"
 
 
 class ConfLoad(dict):
@@ -29,7 +33,7 @@ class Settings:
         self.load(path)
 
     def load(self, path: str | None):
-        if isinstance(path, dict):
+        if path is None:
             conf = DEFAULT_SETTINGS
         elif os.path.isfile(path):
             with open(path, "r") as f:
@@ -58,15 +62,13 @@ class Settings:
             json.dump(settings, f, indent=4)
         return settings
 
-try:
-    from .version import VERSION
-    if os.path.isdir("config"):
-        CONFIG_PATH = "config/config.json"
-    else:
-        CONFIG_PATH = None
-except ImportError:
-    VERSION = "DEV_VERSION"
+
+if os.path.isdir("config") and VERSION == "DEV_VERSION":
     CONFIG_PATH = "config/config_dev.json"
+elif os.path.isdir("config") and VERSION != "DEV_VERSION":
+    CONFIG_PATH = "config/config.json"
+else:
+    CONFIG_PATH = None
 
 settings = Settings(CONFIG_PATH)
 

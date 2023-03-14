@@ -1,6 +1,5 @@
 import re
 import logging
-
 from module.network import RequestContent
 from module.parser import TitleParser
 

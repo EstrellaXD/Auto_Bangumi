@@ -5,7 +5,7 @@ import logging
 from module.conf import settings
 from module.network import RequestContent
 
-from .download_client import DownloadClient
+from module.core.download_client import DownloadClient
 
 logger = logging.getLogger(__name__)
 SEARCH_KEY = ["group", "title_raw", "season_raw", "subtitle", "source", "dpi"]

@@ -19,6 +19,20 @@ class PostNotification:
         return response.status_code == 200
 
 
+class TelegramNotification:
+    def __init__(self):
+        self.token = settings.notification_token
+        self.notification_url = f"https://api.telegram.org/bot{self.token}/sendMessage"
+
+    def send_msg(self, title: str, desp: str) -> bool:
+        if not settings.notification_enable:
+            return False
+        data = {
+            "chat_id": settings.notification_chat_id,
+            "text": f"{title}\n{desp}",
+        }
+
+
 class ServerChanNotification:
     """Server酱推送"""
 

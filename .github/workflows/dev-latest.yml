@@ -12,7 +12,7 @@ jobs:
         uses: actions/checkout@v3
       - name: Create Version info
         run: |
-          echo "VERSION = '2.6.0-beta'" > module/conf/version.py
+          echo "VERSION = '2.6.0-beta'" > module/__version__.py
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v2

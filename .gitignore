@@ -162,21 +162,19 @@ cython_debug/
 #.idea/
 
 # Custom
-/module/conf/const_dev.py
-/config
-/module/tester.py
-/module/config
+/src/test.py
 
-/module/parser/analyser/tmdb_parser.py
+/src/module/parser/analyser/tmdb_parser.py
 
-/module/run_debug.sh
-/module/debug_run.sh
-/module/__version__.py
-/data/
+/src/module/run_debug.sh
+/src/module/debug_run.sh
+/src/module/__version__.py
+/src/data/
 
-/module/conf/config_dev.ini
+/src/module/conf/config_dev.ini
 
 test.*
 .run
-/module/conf/version.py
-/templates/
+
+/src/templates/
+/src/config/
