@@ -9,12 +9,15 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
+      - name: Enter directory
+        run: |
+          cd src
       -
         name: Checkout
         uses: actions/checkout@v3
       - name: Create Version info
         run: |
-          echo "version='$GITHUB_REF_NAME'" > src/module/__version__.py
+          echo "VERSION = '$GITHUB_REF_NAME'" > module/__version__.py
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v4

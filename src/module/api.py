@@ -9,7 +9,7 @@ import logging
 from .core import APIProcess
 from .conf import settings, DATA_PATH, LOG_PATH
 from .utils import json_config
-from .models.api import *
+from models.api import *
 
 logger = logging.getLogger(__name__)
 

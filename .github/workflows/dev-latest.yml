@@ -8,6 +8,9 @@ jobs:
   latest:
     runs-on: ubuntu-latest
     steps:
+      - name: Enter directory
+        run: |
+          cd src
       - name: Checkout
         uses: actions/checkout@v3
       - name: Create Version info

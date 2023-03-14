@@ -25,7 +25,7 @@ ENV TZ=Asia/Shanghai \
 WORKDIR /app
 
 COPY --from=build --chmod=777 /install /usr/local
-COPY --chmod=755 src/. /app
+COPY --chmod=755 . /app
 
 RUN apk add --no-cache \
     curl \
@@ -48,6 +48,6 @@ RUN addgroup -S auto_bangumi -g 1000 && \
 
 EXPOSE 7892
 
-VOLUME [ "config" , "data"]
+VOLUME [ "/app/config" , "/app/data"]
 
 CMD ["sh", "run.sh"]

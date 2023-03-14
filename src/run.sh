@@ -6,6 +6,5 @@ if [ -f /config/bangumi.json ]; then
 fi
 
 
-
 umask ${UMASK}
 python3 main.py

@@ -65,8 +65,9 @@ class Renamer:
                 try:
                     new_name = self._renamer.download_parser(name, folder_name, season, suffix, settings.bangumi_manage.rename_method)
                     if path_name != new_name:
-                        old_name = os.path.basename(info.content_path)
-                        self.client.rename_torrent_file(torrent_hash, new_name, old_name, new_name)
+                        old_path = info.content_path.replace(info.save_path, "")
+                        old_path = old_path[len(os.path.sep):]
+                        self.client.rename_torrent_file(torrent_hash, new_name, old_path, new_name)
                         rename_count += 1
                     else:
                         continue

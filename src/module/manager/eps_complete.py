@@ -66,18 +66,3 @@ class FullSeasonGet:
         logger.info("Completed!")
 
 
-if __name__ == "__main__":
-    a = FullSeasonGet()
-    data = {
-            "official_title": "指名！",
-            "title_raw": "CUE!",
-            "season": 1,
-            "season_raw": "",
-            "group": "喵萌Production",
-            "dpi": "1080p",
-            "source": None,
-            "subtitle": "简日双语",
-            "added": True,
-            "eps_collect": True
-        }
-    print(a.init_eps_complete_search_str(data))

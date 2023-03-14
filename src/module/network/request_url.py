@@ -48,6 +48,7 @@ class RequestURL:
                 socks.set_default_proxy(socks.SOCKS5, addr=settings.proxy.host, port=settings.proxy.port, rdns=True,
                                         username=settings.proxy.username, password=settings.proxy.password)
                 socket.socket = socks.socksocket
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.session.close()

@@ -16,7 +16,7 @@ coverage.xml
 *.log
 .git
 .mypy_cache
-.pytest_cache
+../.pytest_cache
 .hypothesis
 
 src/module/tests
