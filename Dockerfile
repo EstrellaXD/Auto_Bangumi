@@ -5,12 +5,11 @@ RUN mkdir /install
 WORKDIR /install
 COPY requirements.txt .
 
-RUN apk update \
-    && apk add --no-cache \
-    curl \
-    gcc \
-    g++ \
-    linux-headers \
+RUN apk add --no-cache \
+        curl \
+        gcc \
+        g++ \
+        linux-headers
 
 RUN python3 -m pip install --upgrade pip \
     && pip install -r requirements.txt --prefix="/install"
