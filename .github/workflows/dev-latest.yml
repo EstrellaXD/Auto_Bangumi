@@ -28,9 +28,8 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
       -
         name: Build and push
-        working-directory: ./src
         uses: docker/build-push-action@v3
         with:
           push: true
           tags: estrellaxd/auto_bangumi:2.6.0-beta2
-          file: ./Dockerfile
+          file: .src/Dockerfile

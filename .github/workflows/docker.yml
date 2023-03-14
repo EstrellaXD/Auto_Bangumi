@@ -37,10 +37,9 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
       -
         name: Build and push
-        working-directory: ./src
         uses: docker/build-push-action@v3
         with:
-          context: .
+          context: src/.
           platforms: linux/amd64,linux/arm64,linux/arm
           push: true
           tags: ${{ steps.meta.outputs.tags }}
