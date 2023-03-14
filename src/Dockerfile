@@ -1,20 +1,4 @@
 # syntax=docker/dockerfile:1
-FROM python:3.11-alpine AS build
-
-RUN mkdir /install
-WORKDIR /install
-COPY requirements.txt .
-
-RUN apk update \
-    && apk add --no-cache \
-    curl \
-    gcc \
-    g++ \
-    linux-headers \
-
-RUN python3 -m pip install --upgrade pip \
-    && pip install -r requirements.txt --prefix="/install"
-
 FROM python:3.11-alpine
 
 ENV TZ=Asia/Shanghai \
@@ -24,7 +8,11 @@ ENV TZ=Asia/Shanghai \
 
 WORKDIR /app
 
-COPY --from=build --chmod=777 /install /usr/local
+COPY requirements.txt .
+
+RUN python3 -m pip install --upgrade pip \
+    && pip install -r requirements.txt --no-cache-dir
+
 COPY --chmod=755 . /app
 
 RUN apk add --no-cache \
