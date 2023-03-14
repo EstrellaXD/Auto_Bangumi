@@ -30,7 +30,7 @@ jobs:
         name: Build and push
         uses: docker/build-push-action@v3
         with:
-          context: ./src
+          context: ./src/.
           push: true
           tags: estrellaxd/auto_bangumi:2.6.0-beta2
           file: Dockerfile
