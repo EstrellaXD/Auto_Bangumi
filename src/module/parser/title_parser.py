@@ -1,10 +1,12 @@
 import logging
 
 from .analyser import RawParser, DownloadParser, TMDBMatcher
+
 from module.conf import settings
 
 logger = logging.getLogger(__name__)
 LANGUAGE = settings.rss_parser.language
+
 
 class TitleParser:
     def __init__(self):

@@ -1,7 +1,7 @@
 from thefuzz import fuzz
 import logging
-from utils import json_config
-from conf import settings
+from module.utils import json_config
+from module.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -40,13 +40,3 @@ class FuzzMatch:
         return max_value, max_info["main"]
         # logger.debug(max(value))
 
-
-if __name__ == "__main__":
-    from conf.const_dev import DEV_SETTINGS
-    settings.init(DEV_SETTINGS)
-    f = FuzzMatch()
-    name = "勇者、辞职不干了"
-    value, title = f.find_max_name(name)
-    print(f"Raw    Name: {name} \n"
-          f"Match  Name: {title} \n"
-          f"Match Value: {value}")

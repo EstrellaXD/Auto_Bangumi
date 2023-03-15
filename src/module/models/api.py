@@ -16,3 +16,4 @@ class ChangeConfig(BaseModel):
 
 class ChangeRule(BaseModel):
     rule: dict
+

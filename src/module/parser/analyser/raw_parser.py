@@ -2,7 +2,7 @@ import logging
 import re
 from dataclasses import dataclass
 
-# from parser.episode import Episode
+from module.models import Episode
 
 logger = logging.getLogger(__name__)
 
@@ -30,18 +30,7 @@ CHINESE_NUMBER_MAP = {
 }
 
 
-@dataclass
-class Episode:
-    title_en: str or None
-    title_zh: str or None
-    title_jp: str or None
-    season: int
-    season_raw: str
-    episode: int
-    sub: str
-    group: str
-    resolution: str
-    source: str
+
 
 
 class RawParser:
