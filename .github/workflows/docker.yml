@@ -42,5 +42,5 @@ jobs:
           tags: |
             estrellaxd/auto_bangumi:latest
             estrellaxd/auto_bangumi:${{ github.sha }}
-            estrellaxd/auto_bangumi:${{ github.ref }}
+            estrellaxd/auto_bangumi:${{ github.ref_name }}
           labels: ${{ steps.meta.outputs.labels }}
