@@ -10,7 +10,7 @@ def qb_connect_failed_wait(func):
         while times < 5:
             try:
                 return func(*args, **kwargs)
-            except Exception as e:
+            except Exception:  # pylint: disable=broad-exception-caught
                 logger.debug(f"URL: {args[0]}")
                 logger.warning("Cannot connect to qBittorrent. Wait 5 min and retry...")
                 time.sleep(300)
@@ -22,7 +22,7 @@ def api_failed(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.debug(f"URL: {args[0]}")
             logger.warning("Wrong API response.")
             logger.debug(e)

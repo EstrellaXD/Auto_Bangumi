@@ -36,7 +36,7 @@ class Settings:
         if path is None:
             conf = DEFAULT_SETTINGS
         elif os.path.isfile(path):
-            with open(path, "r") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 conf = json.load(f)
         else:
             conf = self._create_config()
@@ -52,15 +52,15 @@ class Settings:
         return val
 
     def _create_config(self):
-        settings = DEFAULT_SETTINGS
+        temp_settings = DEFAULT_SETTINGS
         for key, section in ENV_TO_ATTR.items():
             for env, attr in section.items():
                 if env in os.environ:
                     attr_name = attr[0] if isinstance(attr, tuple) else attr
-                    settings[key][attr_name] = self._val_from_env(env, attr)
-        with open(CONFIG_PATH, "w") as f:
-            json.dump(settings, f, indent=4)
-        return settings
+                    temp_settings[key][attr_name] = self._val_from_env(env, attr)
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(temp_settings, f, indent=4)
+        return temp_settings
 
 
 if os.path.isdir("config") and VERSION == "DEV_VERSION":
@@ -71,5 +71,3 @@ else:
     CONFIG_PATH = None
 
 settings = Settings(CONFIG_PATH)
-
-

@@ -1,7 +1,5 @@
-from module import app
-from module import api
-
 import multiprocessing
+from module import app, api
 
 if __name__ == "__main__":
     num_processes = 2
@@ -14,4 +12,3 @@ if __name__ == "__main__":
         processes.append(p)
     for p in processes:
         p.join()
-

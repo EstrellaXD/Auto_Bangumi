@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import List
 
 from bs4 import BeautifulSoup
 
@@ -19,7 +20,7 @@ class TorrentInfo:
 
 class RequestContent(RequestURL):
     # Mikanani RSS
-    def get_torrents(self, _url: str) -> [TorrentInfo]:
+    def get_torrents(self, _url: str) -> List[TorrentInfo]:
         soup = self.get_xml(_url)
         torrent_titles = [item.title.string for item in soup.find_all("item")]
         torrent_urls = [item.get("url") for item in soup.find_all("enclosure")]

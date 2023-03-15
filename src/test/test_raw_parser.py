@@ -1,3 +1,5 @@
+# pylint: disable=line-too-long
+
 from module.parser.analyser import RawParser
 
 

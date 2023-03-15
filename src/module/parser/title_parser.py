@@ -1,8 +1,8 @@
 import logging
 
+from module.conf import settings
 from .analyser import RawParser, DownloadParser, TMDBMatcher
 
-from module.conf import settings
 
 logger = logging.getLogger(__name__)
 LANGUAGE = settings.rss_parser.language
@@ -17,8 +17,21 @@ class TitleParser:
     def raw_parser(self, raw: str):
         return self._raw_parser.analyse(raw)
 
-    def download_parser(self, download_raw, folder_name, season, suffix, method=settings.bangumi_manage.method):
-        return self._download_parser.download_rename(download_raw, folder_name, season, suffix, method)
+    def download_parser(
+            self,
+            download_raw,
+            folder_name,
+            season,
+            suffix,
+            method=settings.bangumi_manage.method
+        ):
+        return self._download_parser.download_rename(
+            download_raw,
+            folder_name,
+            season,
+            suffix,
+            method
+        )
 
     def tmdb_parser(self, title: str, season: int):
 
@@ -26,7 +39,7 @@ class TitleParser:
         try:
             tmdb_info = self._tmdb_parser.tmdb_search(title)
             logger.debug(f"TMDB Matched, official title is {tmdb_info.title_zh}")
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.debug(e)
             logger.warning("Not Matched with TMDB")
             return title, season
@@ -62,5 +75,5 @@ class TitleParser:
             }
             logger.debug(f"RAW:{_raw} >> {episode.title_en}")
             return data
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.debug(e)

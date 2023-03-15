@@ -39,7 +39,7 @@ class RSSAnalyser:
             try:
                 data = self._title_analyser.return_dict(torrent.name)
                 return data
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 logger.debug(e)
 
     def run(self, bangumi_info: list, download_client: DownloadClient):
@@ -47,6 +47,6 @@ class RSSAnalyser:
         try:
             self.rss_to_datas(bangumi_info)
             download_client.add_rules(bangumi_info, rss_link=settings.rss_parser.link)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.debug(e)
         logger.info("Finished")

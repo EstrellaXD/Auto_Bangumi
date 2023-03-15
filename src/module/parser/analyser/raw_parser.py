@@ -30,9 +30,6 @@ CHINESE_NUMBER_MAP = {
 }
 
 
-
-
-
 class RawParser:
     @staticmethod
     def get_group(name: str) -> str:
@@ -96,7 +93,7 @@ class RawParser:
                 split = re.split("-", name)
         if len(split) == 1:
             split_space = split[0].split(" ")
-            for idx, item in enumerate(split_space):
+            for idx, item in enumerate(split_space):  # pylint: disable=unused-variable
                 if re.search(r"^[\u4e00-\u9fa5]{2,}", item) is not None:
                     split_space.remove(item)
                     split = [item.strip(), " ".join(split_space).strip()]
@@ -170,6 +167,7 @@ class RawParser:
 
 
 if __name__ == '__main__':
+    # pylint: disable=line-too-long
     test_list = [
         "[Lilith-Raws] 关于我在无意间被隔壁的天使变成废柴这件事 / Otonari no Tenshi-sama - 09 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]",
         "【幻樱字幕组】【4月新番】【古见同学有交流障碍症 第二季 Komi-san wa, Komyushou Desu. S02】【22】【GB_MP4】【1920X1080】",
@@ -179,4 +177,3 @@ if __name__ == '__main__':
     for l in test_list:
         ep = parser.analyse(l)
         print(f"en: {ep.title_en}, zh: {ep.title_zh}, jp: {ep.title_jp}, group: {ep.group}")
-

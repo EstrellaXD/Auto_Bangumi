@@ -8,10 +8,11 @@ logger = logging.getLogger(__name__)
 
 class FuzzMatch:
     def __init__(self):
+        # FIXME: settings has no anidb_*
         try:
             anidb_data = json_config.get(settings.anidb_url)
             json_config.save(settings.anidb_path, anidb_data)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.debug(e)
             logger.info(f"Fail to get anidb data, reading local data")
             anidb_data = json_config.load(settings.anidb_path)
@@ -39,4 +40,3 @@ class FuzzMatch:
                 max_info = info
         return max_value, max_info["main"]
         # logger.debug(max(value))
-

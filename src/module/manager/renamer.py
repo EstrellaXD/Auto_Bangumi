@@ -41,7 +41,7 @@ class Renamer:
                 season = int(re.search(r"\d{1,2}", path_parts[-2]).group())
             else:
                 season = 1
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.debug(e)
             logger.debug("No Season info")
             season = 1
@@ -71,7 +71,7 @@ class Renamer:
                         rename_count += 1
                     else:
                         continue
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-exception-caught
                     logger.warning(f"{path_name} rename failed")
                     logger.warning(f"Folder name: {folder_name}, Season: {season}, Suffix: {suffix}")
                     logger.debug(e)
@@ -83,8 +83,7 @@ class Renamer:
         recent_info, _ = self.get_torrent_info()
         for info in recent_info:
             torrent_hash = info.hash
-            _, season, folder_name, _, download_path = self.split_path(info.content_path)
+            _, season, folder_name, _, _ = self.split_path(info.content_path)
             new_path = os.path.join(settings.downloader.path, folder_name, f"Season {season}")
             # print(new_path)
             self.client.move_torrent(torrent_hash, new_path)
-
