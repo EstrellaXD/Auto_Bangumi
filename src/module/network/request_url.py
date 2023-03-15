@@ -18,8 +18,8 @@ class RequestURL:
         }
 
     def get_url(self, url):
-        times = 0
-        while times < 5:
+        try_time = 0
+        while try_time < 5:
             try:
                 req = self.session.get(url=url, headers=self.header)
                 req.raise_for_status()
@@ -29,7 +29,25 @@ class RequestURL:
                 logger.debug(e)
                 logger.warning("ERROR with Connection.Please check DNS/Connection settings")
                 time.sleep(5)
-                times += 1
+                try_time += 1
+            except Exception as e:
+                logger.debug(f"URL: {url}")
+                logger.debug(e)
+                break
+
+    def post_url(self, url: str, data: dict):
+        try_time = 0
+        while try_time < 5:
+            try:
+                req = self.session.post(url=url, headers=self.header, data=data)
+                req.raise_for_status()
+                return req
+            except requests.RequestException as e:
+                logger.debug(f"URL: {url}")
+                logger.debug(e)
+                logger.warning("ERROR with Connection.Please check DNS/Connection settings")
+                time.sleep(5)
+                try_time += 1
             except Exception as e:
                 logger.debug(f"URL: {url}")
                 logger.debug(e)

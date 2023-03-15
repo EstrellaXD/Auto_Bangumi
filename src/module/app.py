@@ -71,7 +71,7 @@ def main_process(bangumi_data, download_client: DownloadClient):
             if settings.bangumi_manage.enable:
                 rename.run()
             times += 1
-            time.sleep(settings.program.sleep_time/settings.program.times)
+            time.sleep(settings.program.sleep_time / settings.program.times)
 
 
 def run():

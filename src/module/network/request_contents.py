@@ -1,12 +1,12 @@
-from dataclasses import dataclass
+import re
 
+from dataclasses import dataclass
 from bs4 import BeautifulSoup
 
 from .request_url import RequestURL
 
 from module.conf import settings
 
-import re
 
 FILTER = "|".join(settings.rss_parser.filter)
 
@@ -41,3 +41,9 @@ class RequestContent(RequestURL):
     # API JSON
     def get_json(self, _url) -> dict:
         return self.get_url(_url).json()
+
+    def post_json(self, _url, data: dict) -> dict:
+        return self.post_url(_url, data).json()
+
+    def post_data(self, _url, data: dict) -> dict:
+        return self.post_url(_url, data)

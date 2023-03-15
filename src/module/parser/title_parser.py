@@ -3,6 +3,7 @@ import logging
 from .analyser import RawParser, DownloadParser, TMDBMatcher
 
 from module.conf import settings
+from module.models import SeasonInfo
 
 logger = logging.getLogger(__name__)
 LANGUAGE = settings.rss_parser.language
@@ -38,7 +39,7 @@ class TitleParser:
         official_title = official_title if official_title else title
         return official_title, tmdb_season
 
-    def return_dict(self, _raw: str):
+    def return_dict(self, _raw: str) -> dict:
         try:
             episode = self.raw_parser(_raw)
             title_search = episode.title_zh if episode.title_zh else episode.title_en
@@ -59,6 +60,8 @@ class TitleParser:
                 "subtitle": episode.sub,
                 "added": False,
                 "eps_collect": True if episode.episode > 1 else False,
+                "offset": 0,
+                "filter": settings.rss_parser.filter
             }
             logger.debug(f"RAW:{_raw} >> {episode.title_en}")
             return data
