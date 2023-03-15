@@ -1,0 +1,7 @@
+[MESSAGES CONTROL]
+disable=
+    invalid-name,
+    logging-fstring-interpolation,
+    missing-class-docstring,
+    missing-module-docstring,
+    missing-function-docstring
