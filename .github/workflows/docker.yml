@@ -1,9 +1,13 @@
 name: Build(Docker)
 
 on:
-  release:
-    types:
-      - released
+  push:
+    tags:
+      - '\d+\.\d+\.\d+'
+  pull_request:
+    tags:
+      - '\d+\.\d+\.\d+'
+
 
 jobs:
   docker:
@@ -16,13 +20,6 @@ jobs:
         working-directory: ./src
         run: |
           echo "VERSION = '$GITHUB_REF_NAME'" > module/__version__.py
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          images: ${{ secrets.DOCKER_HUB_USERNAME }}/auto_bangumi
-          tags: |
-            type=ref, event=tag
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -42,5 +39,8 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64,linux/arm
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            estrellaxd/auto_bangumi:latest
+            estrellaxd/auto_bangumi:${{ github.sha }}
+            estrellaxd/auto_bangumi:${{ github.ref }}
           labels: ${{ steps.meta.outputs.labels }}
