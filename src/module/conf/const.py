@@ -55,9 +55,9 @@ DEFAULT_SETTINGS = {
 
 ENV_TO_ATTR = {
     "program": {
-        "AB_INTERVAL_TIME": ("sleep_time", lambda e: float(e)),
-        "AB_RENAME_FREQ": ("times", lambda e: float(e)),
-        "AB_WEBUI_PORT": ("webui_port", lambda e: int(e)),
+        "AB_INTERVAL_TIME": ("sleep_time", float),
+        "AB_RENAME_FREQ": ("times", float),
+        "AB_WEBUI_PORT": ("webui_port", int),
     },
     "downloader": {
         "AB_DOWNLOADER_HOST": "host",

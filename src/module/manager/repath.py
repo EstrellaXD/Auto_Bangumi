@@ -45,7 +45,7 @@ class RePath:
             path = rules.get(rule).savePath
             must_contain = rules.get(rule).mustContain
             season, folder_name = self.analyse_path(path)
-            new_path = PurePath(settings.download_path, folder_name, f"Season {season}").__str__()
+            new_path = PurePath(settings.downloader.path, folder_name, f"Season {season}").__str__()
             all_rule.append(RuleInfo(rule, must_contain, season, folder_name, new_path))
         return all_rule
 
