@@ -2,12 +2,13 @@ import os
 import time
 import logging
 
-from module.conf import settings, setup_logger, LOG_PATH, DATA_PATH, VERSION
+from module.conf import settings, LOG_PATH, DATA_PATH
 from module.utils import json_config
 
 from module.core import DownloadClient
 from module.manager import Renamer, FullSeasonGet
 from module.rss import RSSAnalyser
+
 
 logger = logging.getLogger(__name__)
 
@@ -42,20 +43,6 @@ def save_data_file(bangumi_data):
     logger.debug("Saved")
 
 
-def show_info():
-    logger.info(r"                _        ____                                    _ ")
-    logger.info(r"     /\        | |      |  _ \                                  (_)")
-    logger.info(r"    /  \  _   _| |_ ___ | |_) | __ _ _ __   __ _ _   _ _ __ ___  _ ")
-    logger.info(r"   / /\ \| | | | __/ _ \|  _ < / _` | '_ \ / _` | | | | '_ ` _ \| |")
-    logger.info(r"  / ____ \ |_| | || (_) | |_) | (_| | | | | (_| | |_| | | | | | | |")
-    logger.info(r" /_/    \_\__,_|\__\___/|____/ \__,_|_| |_|\__, |\__,_|_| |_| |_|_|")
-    logger.info("                                            __/ |                  ")
-    logger.info("                                           |___/                   ")
-    logger.info(f"Version {VERSION}  Author: EstrellaXD Twitter: https://twitter.com/Estrella_Pan")
-    logger.info("GitHub: https://github.com/EstrellaXD/Auto_Bangumi/")
-    logger.info("Starting AutoBangumi...")
-
-
 def main_process(bangumi_data, download_client: DownloadClient):
     rename = Renamer(download_client)
     rss_analyser = RSSAnalyser()
@@ -77,8 +64,6 @@ def main_process(bangumi_data, download_client: DownloadClient):
 def run():
     # 初始化
     reset_log()
-    setup_logger()
-    show_info()
     download_client = DownloadClient()
     download_client.init_downloader()
     if settings.rss_parser.link is None:
