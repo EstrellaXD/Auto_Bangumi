@@ -16,11 +16,11 @@ coverage.xml
 *.log
 .git
 .mypy_cache
-.pytest_cache
+../.pytest_cache
 .hypothesis
 
-module/tests
-module/conf/const_dev.py
+src/module/tests
+src/module/conf/const_dev.py
 config/bangumi.json/config/bangumi.json
 /docs
 /.github

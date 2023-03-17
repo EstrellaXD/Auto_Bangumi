@@ -1,8 +1,9 @@
 name: Deploy To Dockerhub(dev)
 
 on:
-  workflow_dispatch:
-    branches: [ 2.6.0-dev ]
+  push:
+    tags:
+      - '\d+\.\d+\.\d+-beta\d+'
 
 jobs:
   latest:
@@ -11,8 +12,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Create Version info
+        working-directory: ./src
         run: |
-          echo "version='2.6.0'" > module/conf/version.py
+          echo "VERSION = '$GITHUB_REF_NAME'" > module/__version__.py
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -29,6 +31,9 @@ jobs:
         name: Build and push
         uses: docker/build-push-action@v3
         with:
+          context: .
           push: true
-          tags: estrellaxd/auto_bangumi:dev-latest
-          file: ./Dockerfile
+          tags: |
+            estrellaxd/auto_bangumi:dev-latest
+            estrellaxd/auto_bangumi:${{ github.ref_name }}
+          file: Dockerfile
