@@ -13,6 +13,7 @@ class TMDBInfo:
     title_zh: str
     season: dict
     last_season: int
+    episode_count: int
     year_number: int
 
 
@@ -45,10 +46,31 @@ class TMDBMatcher:
         for season in seasons:
             if re.search(r"第 \d 季", season.get("season")) is not None:
                 date = season.get("air_date").split("-")
-                [year, _ , _] = date
+                [year, _, _] = date
                 now_year = time.localtime().tm_year
                 if int(year) == now_year:
                     return int(re.findall(r"\d", season.get("season"))[0])
+
+    @staticmethod
+    def guess_last_season(seasons: list):
+        guess_last_season = -1
+        episode_count = 0
+        now_year = time.localtime().tm_year
+        for season in seasons:
+            date = season.get("air_date").split("-")
+            [year, _, _] = date
+            if int(year) == now_year:
+                episode_count = season["episode_count"]
+                if re.search(r"第 \d 季", season.get("season")) is not None:
+                    guess_last_season = int(re.findall(r"\d", season.get("season"))[0])
+                else:
+                    guess_last_season = season["season_number"]
+                break
+            else:
+                if guess_last_season < season["season_number"]:
+                    guess_last_season = season["season_number"]
+                    episode_count = season["episode_count"]
+        return guess_last_season, episode_count
 
     def tmdb_search(self, title) -> TMDBInfo:
         url = self.search_url(title)
@@ -65,9 +87,10 @@ class TMDBMatcher:
         info_content = self._request.get_json(url_info)
         # 关闭链接
         self._request.close()
-        season = [{"season": s.get("name"), "air_date": s.get("air_date")} for s in info_content.get("seasons")]
-        last_season = self.get_season(season)
+        season = [{"season": s.get("name"), "air_date": s.get("air_date"), "episode_count": s.get("episode_count"),
+                   "season_number": s.get("season_number")} for s in info_content.get("seasons")]
+        last_season, episode_count = self.guess_last_season(season)
         title_jp = info_content.get("original_name")
         title_zh = info_content.get("name")
         year_number = info_content.get("first_air_date").split("-")[0]
-        return TMDBInfo(id, title_jp, title_zh, season, last_season, year_number)
+        return TMDBInfo(id, title_jp, title_zh, season, last_season, episode_count, year_number)

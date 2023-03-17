@@ -68,7 +68,7 @@ def main_process(bangumi_data, download_client: DownloadClient):
         save_data_file(bangumi_data)
         while times < settings.program.times:
             if settings.bangumi_manage.enable:
-                rename.run()
+                rename.run(bangumi_data["bangumi_info"])
             times += 1
             time.sleep(settings.program.sleep_time/settings.program.times)
 

@@ -29,7 +29,7 @@ class Renamer:
         return recent_info, torrent_count
 
     @staticmethod
-    def split_path(path: str):
+    def split_path(path: str, bangumi_info: list):
         suffix = os.path.splitext(path)[-1]
         path = path.replace(settings.downloader.path, "")
         path_parts = PurePath(path).parts \
@@ -50,20 +50,29 @@ class Renamer:
             download_path = path_parts[1]
         except IndexError:
             download_path = ""
-        return path_name, season, folder_name, suffix, download_path
+        offset_episode = 0
+        episode_count = 0
+        for info in bangumi_info:
+            if info["official_title"] == path_parts[-3]:
+                if 0 != info["offset_episode"]:
+                    offset_episode = info["offset_episode"]
+                    episode_count = info["episode_count"]
+                break
+        return path_name, season, folder_name, suffix, download_path, offset_episode, episode_count
 
-    def run(self):
+    def run(self, bangumi_info: list):
         recent_info, torrent_count = self.get_torrent_info()
         rename_count = 0
         for info in recent_info:
             name = info.name
             torrent_hash = info.hash
-            path_name, season, folder_name, suffix, _ = self.split_path(info.content_path)
+            path_name, season, folder_name, suffix, _, offset_episode, episode_count = self.split_path(info.content_path, bangumi_info)
             if path_name is folder_name:
                 logger.warning("Wrong bangumi path, please check your qbittorrent settings.")
             else:
                 try:
-                    new_name = self._renamer.download_parser(name, folder_name, season, suffix, settings.bangumi_manage.rename_method)
+                    new_name = self._renamer.download_parser(name, folder_name, season, suffix, offset_episode,
+                                                             episode_count, settings.bangumi_manage.rename_method)
                     if path_name != new_name:
                         old_name = info.content_path.replace(info.save_path, "")
                         self.client.rename_torrent_file(torrent_hash, new_name, old_name, new_name)
@@ -82,7 +91,7 @@ class Renamer:
         recent_info, _ = self.get_torrent_info()
         for info in recent_info:
             torrent_hash = info.hash
-            _, season, folder_name, _, download_path = self.split_path(info.content_path)
+            _, season, folder_name, _, download_path, _, _ = self.split_path(info.content_path)
             new_path = os.path.join(settings.downloader.path, folder_name, f"Season {season}")
             # print(new_path)
             self.client.move_torrent(torrent_hash, new_path)

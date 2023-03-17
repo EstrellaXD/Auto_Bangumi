@@ -13,6 +13,8 @@ class DownloadInfo:
     suffix: str
     file_name: str
     folder_name: str
+    offset_episode: int
+    episode_count: int
 
 
 class DownloadParser:
@@ -27,13 +29,13 @@ class DownloadParser:
         ]
 
     @staticmethod
-    def rename_init(name, folder_name, season, suffix) -> DownloadInfo:
+    def rename_init(name, folder_name, season, suffix, offset_episode, episode_count) -> DownloadInfo:
         n = re.split(r"[\[\]()【】（）]", name)
         suffix = suffix if suffix is not None else n[-1]
         file_name = name.replace(f"[{n[1]}]", "")
         if season < 10:
             season = f"0{season}"
-        return DownloadInfo(name, season, suffix, file_name, folder_name)
+        return DownloadInfo(name, season, suffix, file_name, folder_name, offset_episode, episode_count)
 
     def rename_normal(self, info: DownloadInfo):
         for rule in self.rules:
@@ -60,10 +62,14 @@ class DownloadParser:
         for rule in self.rules:
             match_obj = re.match(rule, info.file_name, re.I)
             if match_obj is not None:
+                episode = int(match_obj.group(2))
+                fixed_episode = episode + info.offset_episode
+                if info.offset_episode > 0 and fixed_episode <= info.episode_count:
+                    episode = fixed_episode
                 new_name = re.sub(
                     r"[\[\]]",
                     "",
-                    f"{info.folder_name} S{info.season}E{match_obj.group(2)}{info.suffix}",
+                    f"{info.folder_name} S{info.season}E{episode}{info.suffix}",
                 )
                 return new_name
 
@@ -83,8 +89,8 @@ class DownloadParser:
     def rename_none(info: DownloadInfo):
         return info.name
 
-    def download_rename(self, name, folder_name, season, suffix, method):
-        rename_info = self.rename_init(name, folder_name, season, suffix)
+    def download_rename(self, name, folder_name, season, suffix, offset_episode, episode_count, method):
+        rename_info = self.rename_init(name, folder_name, season, suffix, offset_episode, episode_count)
         method_dict = {
             "normal": self.rename_normal,
             "pn": self.rename_pn,
