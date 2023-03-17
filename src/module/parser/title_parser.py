@@ -56,7 +56,8 @@ class TitleParser:
             else:
                 official_title = title_search if LANGUAGE == "zh" else title_raw
                 _season = episode.season
-                offset_episode, episode_count = 0
+                offset_episode = 0
+                episode_count = 0
             data = {
                 "official_title": official_title,
                 "title_raw": title_raw,
@@ -69,7 +70,7 @@ class TitleParser:
                 "added": False,
                 "eps_collect": True if episode.episode > 1 else False,
                 "offset_episode": offset_episode,
-                "episode_count": episode_count
+                "episode_count": episode_count,
                 "offset": 0,
                 "filter": settings.rss_parser.filter
             }
