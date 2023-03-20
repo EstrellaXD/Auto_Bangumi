@@ -40,11 +40,13 @@ class APIProcess:
 
     @staticmethod
     def remove_rule(name):
-        datas = json_config.load(DATA_PATH)["bangumi_info"]
-        for data in datas:
-            if re.search(name.lower(), data["title_raw"].lower()):
-                datas.remove(data)
-                json_config.save(DATA_PATH, datas)
+        data = json_config.load(DATA_PATH)
+        bangumi_list = data["bangumi_info"]
+        for bangumi in bangumi_list:
+            if re.search(name.lower(), bangumi["title_raw"].lower()):
+                bangumi_list.remove(bangumi)
+                data["bangumi_info"] = bangumi_list
+                json_config.save(DATA_PATH, data)
                 return "Success"
         return "Not matched"
 
