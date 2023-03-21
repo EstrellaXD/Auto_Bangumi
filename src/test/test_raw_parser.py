@@ -53,6 +53,14 @@ def test_raw_parser():
     assert info.episode == "02"
     assert info.season == 1
 
+    content = "[澄空学园] NEW GAME!! 第12话 MP4 720p 完"
+    info = parser.analyse(content)
+    assert info.group == "澄空学园"
+    assert info.title_en == "NEW GAME!!"
+    assert info.resolution == "720p"
+    assert info.episode == "12"
+    assert info.season == 1
+
     content = "[澄空学园] NEW GAME!! 第01-12话 MKV 1080p HEVC 简体外挂 合集"
     info = parser.analyse(content)
     assert info.group == "澄空学园"
@@ -68,4 +76,21 @@ def test_raw_parser():
     assert info.title_en == "Higurashi no Naku Koro ni Gou"
     assert info.resolution == "1080p"
     assert info.episode == "01-24"
+    assert info.season == 1
+
+    content = "【极影字幕社】 ★ 魔女之旅 01-12 BIG5 1080P MP4 BDrip HEVC"
+    info = parser.analyse(content)
+    assert info.group == "极影字幕社"
+    assert info.title_zh == "魔女之旅"
+    assert info.resolution == "1080P"
+    assert info.episode == "01-12"
+    assert info.season == 1
+
+    content = "[千夏字幕组&LoliHouse] 科学超电磁炮T / Toaru Kagaku no Railgun T [01-25合集][WebRip 1080p HEVC-10bit AAC][简繁内封字幕][Fin]"
+    info = parser.analyse(content)
+    assert info.group == "千夏字幕组&LoliHouse"
+    assert info.title_zh == "科学超电磁炮T"
+    assert info.title_en == "Toaru Kagaku no Railgun T"
+    assert info.resolution == "1080p"
+    assert info.episode == "01-25"
     assert info.season == 1
