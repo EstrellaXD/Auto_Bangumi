@@ -81,9 +81,9 @@ def run():
     show_info()
     download_client = DownloadClient()
     download_client.init_downloader()
-    if settings.rss_parser.link is None:
+    if "://" not in settings.rss_parser.link:
         logger.error("Please add RIGHT RSS url.")
-        quit()
+        os._exit(1)
     download_client.rss_feed()
     bangumi_data = load_data_file()
     # 主程序循环

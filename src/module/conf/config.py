@@ -3,6 +3,7 @@ import os
 
 from dataclasses import dataclass
 
+from . import parse
 from .const import DEFAULT_SETTINGS, ENV_TO_ATTR
 
 try:
@@ -62,6 +63,8 @@ class Settings:
             json.dump(settings, f, indent=4)
         return settings
 
+# Command line prompt
+parse.parse()
 
 if os.path.isdir("config") and VERSION == "DEV_VERSION":
     CONFIG_PATH = "config/config_dev.json"
