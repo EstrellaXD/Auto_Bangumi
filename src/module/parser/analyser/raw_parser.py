@@ -7,8 +7,12 @@ from module.models import Episode
 logger = logging.getLogger(__name__)
 
 EPISODE_RE = re.compile(r"\d+")
+EPISODE_COLLECTION_RE = re.compile(r"\d+-\d+|\d+ - \d+")
 TITLE_RE = re.compile(
-    r"(.*|\[.*])( -? \d+|\[\d+]|\[\d+.?[vV]\d{1}]|[第]?\d+[话話集]|\[\d+.?END])(.*)"
+    r"(.*|\[.*])( -? \d+| \d+ |\[\d+]|\[\d+.?[vV]\d{1}]|[第]?\d+[话話集]|\[\d+.?END])(.*)"
+)
+TITLE_COLLECTION_RE = re.compile(
+    r"(.*|\[.*])(\[\d+-\d+]| \d+-\d+ |[第]\d+-\d+[话話集]|\[\d+-\d+[全]|\[\d+-\d+[话話合集F+P])(.*)"
 )
 RESOLUTION_RE = re.compile(r"1080|720|2160|4K")
 SOURCE_RE = re.compile(r"B-Global|[Bb]aha|[Bb]ilibili|AT-X|Web")
@@ -28,9 +32,6 @@ CHINESE_NUMBER_MAP = {
     "九": 9,
     "十": 10,
 }
-
-
-
 
 
 class RawParser:
@@ -137,7 +138,13 @@ class RawParser:
         group = self.get_group(content_title)
         # 翻译组的名字
         match_obj = TITLE_RE.match(content_title)
-        # 处理标题
+        is_collection = 0
+
+        if not match_obj:
+            # See if it's a collection
+            match_obj = TITLE_COLLECTION_RE.match(content_title)
+            # It doesn't matter if match_obj empty, for now (o ‵-′)ノ
+            is_collection = 1
         season_info, episode_info, other = list(map(
             lambda x: x.strip(), match_obj.groups()
         ))
@@ -152,10 +159,14 @@ class RawParser:
         except ValueError:
             pass
         # 处理 集数
-        raw_episode = EPISODE_RE.search(episode_info)
-        episode = 0
-        if raw_episode is not None:
-            episode = int(raw_episode.group())
+        # Use string format compatible collection mode
+        episode = "0"
+        if not is_collection:
+            raw_episode = EPISODE_RE.search(episode_info)
+        else:
+            raw_episode = EPISODE_COLLECTION_RE.search(episode_info)
+        if raw_episode:
+            episode = raw_episode.group()
         sub, dpi, source = self.find_tags(other)  # 剩余信息处理
         return name_en, name_zh, name_jp, season, season_raw, episode, sub, dpi, source, group
 
@@ -173,7 +184,28 @@ if __name__ == '__main__':
     test_list = [
         "[Lilith-Raws] 关于我在无意间被隔壁的天使变成废柴这件事 / Otonari no Tenshi-sama - 09 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]",
         "【幻樱字幕组】【4月新番】【古见同学有交流障碍症 第二季 Komi-san wa, Komyushou Desu. S02】【22】【GB_MP4】【1920X1080】",
-        "[百冬练习组&LoliHouse] BanG Dream! 少女乐团派对！☆PICO FEVER！ / Garupa Pico: Fever! - 26 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][END]"
+        "[百冬练习组&LoliHouse] BanG Dream! 少女乐团派对！☆PICO FEVER！ / Garupa Pico: Fever! - 26 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][END]",
+        "[桜都字幕组][寒蝉鸣泣之时 业/Higurashi no Naku Koro ni Gou][18-22][1080P][简体内嵌]",
+        "[桜都字幕组][寒蝉鸣泣之时 业/Higurashi no Naku Koro ni Gou][24][1080P][繁体内嵌]",
+        "【DHR百合组】[NEW GAME!!][11][繁体][720P][MP4]",
+        "[澄空学园] NEW GAME!! 第12话 MP4 720p 完",
+        "[澄空学园] NEW GAME!! 第11话 MP4 720p",
+        "【极影字幕社】 ★ 魔女之旅 01-12 BIG5 1080P MP4 BDrip HEVC",
+        "【极影字幕社】 ★10月新番 魔女之旅 12 GB 1080P MP4",
+        "[爱恋&漫猫字幕组][1月新番][寒蝉鸣泣之时业][Higurashi no Naku Koro ni Gou][01-24Fin][WEB][1080p][AVC][简中]",
+        "[千夏字幕组&LoliHouse] 科学超电磁炮T / Toaru Kagaku no Railgun T [01-25合集][WebRip 1080p HEVC-10bit AAC][简繁内封字幕][Fin]",
+        "[桜都字幕组][某科学的超电磁砲T/To Aru Kagaku no Railgun T][1-25][END][CHT][1080P]",
+        "【铃风字幕组】【科学超电磁砲T/To_Aru_Kagaku_no_Railgun_T】[01-25+PV][1080P][MKV][繁体外挂][招募翻译]",
+        "【极影字幕社】★ 某科学的超电磁炮T （科学超电磁炮T） 第01-25集 GB_CN 720p HEVC MP4",
+        "【澄空学园&动漫国字幕组】★01月新番[科学的超电磁炮T][01-25][合集][720P][繁体][MP4]",
+        "[Lilith-Raws] 科学超电磁砲T / Toaru Kagaku no Railgun S03 - 25 [BiliBili][WEB-DL][1080p][AVC AAC][CHT][MKV]",
+        "[星空字幕组][末日时在做什么？有没有空？可以来拯救吗？][01-12][繁日双语][1080P][BDrip][MP4] [复制磁连]",
+        "【DHRx幻之】[末日时在做甚麽？有没有空？可以来拯救吗？_Shuumatsu Nani Shitemasu ka? Isogashii desu ka? Sukutte Moratte Ii desu ka?][07-08][繁体BIG5][720P]",
+        "[澄空学园] NEW GAME!! 第01-12话 MKV 1080p HEVC 简体外挂 合集",
+        "【西农YUI汉化组】★七月新番【New Game!!】 第01-12话 BIG5繁体 720P MP4",
+        "【DMHY】【NEW GAME!!】[01-12][合集][720P][繁体]",
+        "[银光字幕组][七月新番★][NEW GAME!!][01-12全][BIG5][HDrip][X264-AAC][720P][MP4]",
+        "【DHR百合组】[NEW GAME!!][01-12全][繁体][720P][MP4](合集版本)"
     ]
     parser = RawParser()
     for l in test_list:

@@ -26,6 +26,7 @@ DEFAULT_SETTINGS = {
     "bangumi_manage": {
         "enable": True,
         "eps_complete": False,
+        "eps_collection": False,
         "rename_method": "pn",
         "group_tag": False,
         "remove_bad_torrent": False

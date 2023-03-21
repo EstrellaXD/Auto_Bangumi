@@ -58,7 +58,7 @@ class TitleParser:
                 "source": episode.source,
                 "subtitle": episode.sub,
                 "added": False,
-                "eps_collect": True if episode.episode > 1 else False,
+                "eps_collect": settings.bangumi_manage.eps_complete,
             }
             logger.debug(f"RAW:{_raw} >> {episode.title_en}")
             return data

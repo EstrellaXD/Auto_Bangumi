@@ -8,8 +8,6 @@ from module.conf import settings
 
 import re
 
-FILTER = "|".join(settings.rss_parser.filter)
-
 
 @dataclass
 class TorrentInfo:
@@ -24,9 +22,25 @@ class RequestContent(RequestURL):
         torrent_titles = [item.title.string for item in soup.find_all("item")]
         torrent_urls = [item.get("url") for item in soup.find_all("enclosure")]
         torrents = []
+        is_collection = 0
+
+        user_reg = "|".join(settings.rss_parser.filter)
+        # Priority download anime collection will cover user regular expressions
+        if settings.bangumi_manage.eps_collection:
+            # Remove the regular judgment about the anime collection
+            user_reg = user_reg.replace('\\d+-\\d+', '').replace('||', '|').strip('|')
+
         for _title, torrent_url in zip(torrent_titles, torrent_urls):
-            if re.search(FILTER, _title) is None:
-                torrents.append(TorrentInfo(_title, torrent_url))
+            if not re.search(user_reg, _title):
+                # Existence collection
+                if re.search(r'\d+-\d+', _title):
+                    # Clear
+                    if not is_collection:
+                        torrents = []
+                        is_collection = 1
+                    torrents.append(TorrentInfo(_title, torrent_url))
+                if not is_collection:
+                    torrents.append(TorrentInfo(_title, torrent_url))
         return torrents
 
     def get_torrent(self, _url) -> TorrentInfo:
