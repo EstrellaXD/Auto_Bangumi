@@ -2,7 +2,7 @@
 
 # Check old version
 if [ -f /config/bangumi.json ]; then
-    mv /config/bangumi.json /data/bangumi.json
+    mv /config/bangumi.json /app/data/bangumi.json
 fi
 
 

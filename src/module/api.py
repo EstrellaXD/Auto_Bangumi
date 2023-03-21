@@ -20,6 +20,7 @@ app.mount("/assets", StaticFiles(directory="templates/assets"), name="assets")
 templates = Jinja2Templates(directory="templates")
 
 
+# HTML Response
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
     context = {"request": request}
