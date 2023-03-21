@@ -30,7 +30,7 @@ def test_raw_parser():
     info = parser.analyse(content)
     assert info.group == "Lilith-Raws"
     assert info.title_zh == "关于我在无意间被隔壁的天使变成废柴这件事"
-    assert info.title_en == "Otonari no Tenshi-sama -"
+    assert info.title_en == "Otonari no Tenshi-sama"
     assert info.resolution == "1080p"
     assert info.episode == "09"
     assert info.season == 1

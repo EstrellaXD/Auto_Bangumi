@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 EPISODE_RE = re.compile(r"\d+")
 EPISODE_COLLECTION_RE = re.compile(r"\d+-\d+")
 TITLE_RE = re.compile(
-    r"(.*|\[.*])( -? \d+| \d+ |\[\d+]|\[\d+.?[vV]\d{1}]|[第]\d+[话話集]|\[\d+[话話集]]|\[\d+.?END])(.*)"
+    r"(.*|\[.*])( \d+ |\[\d+]|\[\d+.?[vV]\d{1}]|[第]\d+[话話集]|\[\d+[话話集]]|\[\d+.?END])(.*)"
 )
 TITLE_COLLECTION_RE = re.compile(
     r"(.*|\[.*])(\[\d+-\d+]| \d+-\d+ |[第]\d+-\d+[话話集]|\[\d+-\d+[全]|\[\d+-\d+[话話合集F+P])(.*)"
@@ -87,7 +87,7 @@ class RawParser:
         name_en, name_zh, name_jp = None, None, None
         name = name.strip()
         name = re.sub(r"[(（]仅限港澳台地区[）)]", "", name)
-        split = re.split("/|\s{2}|-\s{2}", name)
+        split = re.split(r"/|\s{2}|-\s{2}", name)
         while "" in split:
             split.remove("")
         if len(split) == 1:
@@ -104,11 +104,11 @@ class RawParser:
                     break
         for item in split:
             if re.search(r"[\u0800-\u4e00]{2,}", item) and not name_jp:
-                name_jp = item.strip()
+                name_jp = item.strip("-").strip()
             elif re.search(r"[\u4e00-\u9fa5]{2,}", item) and not name_zh:
-                name_zh = item.strip()
+                name_zh = item.strip("-").strip()
             elif re.search(r"[a-zA-Z]{3,}", item) and not name_en:
-                name_en = item.strip()
+                name_en = item.strip("-").strip()
         return name_en, name_zh, name_jp
 
     @staticmethod
