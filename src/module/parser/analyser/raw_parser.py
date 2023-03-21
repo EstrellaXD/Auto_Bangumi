@@ -7,9 +7,9 @@ from module.models import Episode
 logger = logging.getLogger(__name__)
 
 EPISODE_RE = re.compile(r"\d+")
-EPISODE_COLLECTION_RE = re.compile(r"\d+-\d+|\d+ - \d+")
+EPISODE_COLLECTION_RE = re.compile(r"\d+-\d+")
 TITLE_RE = re.compile(
-    r"(.*|\[.*])( -? \d+| \d+ |\[\d+]|\[\d+.?[vV]\d{1}]|[第]?\d+[话話集]|\[\d+.?END])(.*)"
+    r"(.*|\[.*])( -? \d+| \d+ |\[\d+]|\[\d+.?[vV]\d{1}]|[第]\d+[话話集]|\[\d+[话話集]]|\[\d+.?END])(.*)"
 )
 TITLE_COLLECTION_RE = re.compile(
     r"(.*|\[.*])(\[\d+-\d+]| \d+-\d+ |[第]\d+-\d+[话話集]|\[\d+-\d+[全]|\[\d+-\d+[话話合集F+P])(.*)"
