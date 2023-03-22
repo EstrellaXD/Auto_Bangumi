@@ -36,7 +36,7 @@ class Settings:
         if path is None:
             conf = DEFAULT_SETTINGS
         elif os.path.isfile(path):
-            with open(path, "r") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 conf = json.load(f)
         else:
             conf = self._create_config()
