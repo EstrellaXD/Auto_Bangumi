@@ -51,3 +51,11 @@ def test_raw_parser():
     assert info.resolution == "1080P"
     assert info.episode == 2
     assert info.season == 1
+
+    content = "【豌豆字幕组&风之圣殿字幕组】★04月新番[鬼灭之刃 刀匠村篇 / Kimetsu_no_Yaiba-Katanakaji_no_Sato_Hen][01(45)][简体][1080P][MP4]"
+    info = parser.analyse(content)
+    assert info.group == "豌豆字幕组&风之圣殿字幕组"
+    assert info.title_zh == "鬼灭之刃 刀匠村篇"
+    assert info.resolution == "1080P"
+    assert info.episode == 1
+    assert info.season == 1
