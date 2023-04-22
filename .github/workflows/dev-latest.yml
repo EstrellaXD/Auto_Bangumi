@@ -35,6 +35,5 @@ jobs:
           push: true
           tags: |
             estrellaxd/auto_bangumi:dev-latest
-            estrellaxd/auto_bangumi:dev-${{ github.sha }}
             estrellaxd/auto_bangumi:${{ github.ref_name }}
           file: Dockerfile
