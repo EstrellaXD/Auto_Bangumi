@@ -1,13 +1,17 @@
 import json
 import os
+import logging
 
 from dataclasses import dataclass
 
 from .const import DEFAULT_SETTINGS, ENV_TO_ATTR
 
+logger = logging.getLogger(__name__)
+
 try:
     from ..__version__ import VERSION
 except ImportError:
+    logger.info("Can't find version info, use DEV_VERSION instead")
     VERSION = "DEV_VERSION"
 
 
@@ -37,7 +41,8 @@ class Settings:
             conf = DEFAULT_SETTINGS
         elif os.path.isfile(path):
             with open(path, "r") as f:
-                conf = json.load(f)
+                # Use utf-8 to avoid encoding error
+                conf = json.load(f, encoding="utf-8")
         else:
             conf = self._create_config()
         for key, section in conf.items():
@@ -52,15 +57,19 @@ class Settings:
         return val
 
     def _create_config(self):
-        settings = DEFAULT_SETTINGS
+        _settings = DEFAULT_SETTINGS
         for key, section in ENV_TO_ATTR.items():
             for env, attr in section.items():
                 if env in os.environ:
                     attr_name = attr[0] if isinstance(attr, tuple) else attr
-                    settings[key][attr_name] = self._val_from_env(env, attr)
+                    _settings[key][attr_name] = self._val_from_env(env, attr)
         with open(CONFIG_PATH, "w") as f:
-            json.dump(settings, f, indent=4)
-        return settings
+            # Save utf-8 to avoid encoding error
+            json.dump(_settings, f, indent=4, ensure_ascii=False)
+        logger.warning(f"Config file had been transferred from environment variables to {CONFIG_PATH}, some settings may be lost.")
+        logger.warning("Please check the config file and restart the program.")
+        logger.warning("Please check github wiki (https://github.com/EstrellaXD/Auto_Bangumi/#/wiki) for more information.")
+        return _settings
 
 
 if os.path.isdir("config") and VERSION == "DEV_VERSION":

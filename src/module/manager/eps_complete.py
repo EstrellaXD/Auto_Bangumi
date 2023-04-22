@@ -9,6 +9,7 @@ from module.core.download_client import DownloadClient
 
 logger = logging.getLogger(__name__)
 SEARCH_KEY = ["group", "title_raw", "season_raw", "subtitle", "source", "dpi"]
+CUSTOM_URL = "mikanani.me" if settings.rss_parser.custom_url == "" else settings.rss_parser.custom_url
 
 
 class FullSeasonGet:
@@ -25,7 +26,7 @@ class FullSeasonGet:
     def get_season_torrents(self, data: dict):
         keyword = self.init_eps_complete_search_str(data)
         with RequestContent() as req:
-            torrents = req.get_torrents(f"https://mikanani.me/RSS/Search?searchstr={keyword}")
+            torrents = req.get_torrents(f"https://{CUSTOM_URL}/RSS/Search?searchstr={keyword}")
         return torrents
 
     @staticmethod

@@ -8,7 +8,7 @@ ENV TZ=Asia/Shanghai \
 
 WORKDIR /app
 
-COPY src/requirements.txt .
+COPY requirements.txt .
 
 RUN python3 -m pip install --upgrade pip \
     && pip install -r requirements.txt --no-cache-dir

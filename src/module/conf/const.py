@@ -18,7 +18,8 @@ DEFAULT_SETTINGS = {
     "rss_parser": {
         "enable": True,
         "type": "mikan",
-        "link": "",
+        "custom_url": "mikanani.me",
+        "token": "",
         "enable_tmdb": False,
         "filter": ["720", "\\d+-\\d+"],
         "language": "zh"
@@ -67,7 +68,7 @@ ENV_TO_ATTR = {
     },
     "rss_parser": {
         "AB_RSS_COLLECTOR": ("enable", lambda e: e.lower() in ("true", "1", "t")),
-        "AB_RSS": "link",
+        "AB_RSS": ("token", lambda e: e.replace("https://mikanani.me/RSS/MyBangumi?token=", "")),
         "AB_NOT_CONTAIN": ("filter", lambda e: e.split("|")),
         "AB_LANGUAGE": "language",
         "AB_ENABLE_TMDB": ("enable_tmdb", lambda e: e.lower() in ("true", "1", "t")),
