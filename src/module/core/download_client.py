@@ -4,7 +4,7 @@ import os
 
 from module.downloader import getClient
 
-from module.conf import settings
+from module.conf import settings, RSS_LINK
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class DownloadClient:
             "rss_refresh_interval": 30,
         }
         self.client.prefs_init(prefs=prefs)
-        if settings.downloader.download_path == "":
+        if settings.downloader.path == "":
             prefs = self.client.get_app_prefs()
             settings.downloader.path = os.path.join(prefs["save_path"], "Bangumi")
 
@@ -54,18 +54,18 @@ class DownloadClient:
 
     def rss_feed(self):
         # TODO: 定时刷新 RSS
-        if self.client.get_rss_info() == settings.rss_parser.link:
+        if self.client.get_rss_info() == RSS_LINK:
             logger.info("RSS Already exists.")
         else:
             logger.info("No feed exists, start adding feed.")
-            self.client.rss_add_feed(url=settings.rss_parser.link, item_path="Mikan_RSS")
+            self.client.rss_add_feed(url=RSS_LINK, item_path="Mikan_RSS")
             logger.info("Add RSS Feed successfully.")
 
     def add_collection_feed(self, rss_link, item_path):
         self.client.rss_add_feed(url=rss_link, item_path=item_path)
         logger.info("Add RSS Feed successfully.")
 
-    def add_rules(self, bangumi_info, rss_link=settings.rss_parser.link):
+    def add_rules(self, bangumi_info, rss_link=RSS_LINK):
         logger.debug("Start adding rules.")
         for info in bangumi_info:
             if not info["added"]:

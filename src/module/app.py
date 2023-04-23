@@ -2,7 +2,7 @@ import os
 import time
 import logging
 
-from module.conf import settings, LOG_PATH, DATA_PATH
+from module.conf import settings, LOG_PATH, DATA_PATH, RSS_LINK
 from module.utils import json_config
 
 from module.core import DownloadClient
@@ -21,17 +21,17 @@ def reset_log():
 def load_data_file():
     if not os.path.exists(DATA_PATH):
         bangumi_data = {
-            "rss_link": settings.rss_parser.link,
+            "rss_link": RSS_LINK,
             "data_version": settings.program.data_version,
             "bangumi_info": []
         }
         logger.info("Building data information...")
     else:
         bangumi_data = json_config.load(DATA_PATH)
-        if bangumi_data["data_version"] != settings.program.data_version or bangumi_data["rss_link"] != settings.rss_parser.link:
+        if bangumi_data["data_version"] != settings.data_version or bangumi_data["rss_link"] != RSS_LINK:
             bangumi_data = {
-                "rss_link": settings.rss_parser.link,
-                "data_version": settings.program.data_version,
+                "rss_link": RSS_LINK,
+                "data_version": settings.data_version,
                 "bangumi_info": []
             }
             logger.info("Rebuilding data information...")
@@ -54,11 +54,11 @@ def main_process(bangumi_data, download_client: DownloadClient):
             FullSeasonGet().eps_complete(bangumi_data["bangumi_info"], download_client)
         logger.info("Running....")
         save_data_file(bangumi_data)
-        while times < settings.program.times:
+        while times < settings.program.rename_times:
             if settings.bangumi_manage.enable:
-                rename.run()
+                rename.rename()
             times += 1
-            time.sleep(settings.program.sleep_time / settings.program.times)
+            time.sleep(settings.program.sleep_time / settings.program.rename_times)
 
 
 def run():
@@ -66,8 +66,8 @@ def run():
     reset_log()
     download_client = DownloadClient()
     download_client.init_downloader()
-    if settings.rss_parser.link is None:
-        logger.error("Please add RIGHT RSS url.")
+    if settings.rss_parser.token is None:
+        logger.error("Please set your RSS token in config file.")
         quit()
     download_client.rss_feed()
     bangumi_data = load_data_file()

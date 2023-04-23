@@ -2,7 +2,7 @@ import json
 import os
 import logging
 
-from module.conf.const import ENV_TO_ATTR
+from .const import ENV_TO_ATTR
 from module.models import Config
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ def save_config_to_file(config: Config, path: str):
 def load_config_from_file(path: str) -> Config:
     with open(path, "r", encoding="utf-8") as f:
         config = json.load(f)
-    return config
+    return Config(**config)
 
 
 def _val_from_env(env: str, attr: tuple):
