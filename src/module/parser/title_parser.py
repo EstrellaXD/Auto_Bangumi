@@ -18,7 +18,14 @@ class TitleParser:
     def raw_parser(self, raw: str):
         return self._raw_parser.analyse(raw)
 
-    def download_parser(self, download_raw, folder_name, season, suffix, method=settings.bangumi_manage.method):
+    def download_parser(
+            self,
+            download_raw: str,
+            folder_name: str | None = None,
+            season: int | None = None,
+            suffix: str | None = None,
+            method: str = settings.bangumi_manage.rename_method
+    ):
         return self._download_parser.download_rename(download_raw, folder_name, season, suffix, method)
 
     def tmdb_parser(self, title: str, season: int):

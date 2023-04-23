@@ -19,6 +19,8 @@ class QbDownloader:
             host=host,
             username=username,
             password=password,
+            VERIFY_WEBUI_CERTIFICATE=settings.downloader.ssl,
+            RAISE_ERROR_FOR_UNSUPPORTED_QBITTORRENT_VERSIONS=True,
         )
         while True:
             try:
@@ -56,9 +58,8 @@ class QbDownloader:
             torrent_hashes=hash
         )
 
-    def torrents_rename_file(self, torrent_hash, new_file_name, old_path, new_path):
-        self._client.torrents_rename_file(torrent_hash=torrent_hash, new_file_name=new_file_name,
-                                          old_path=old_path, new_path=new_path)
+    def torrents_rename_file(self, torrent_hash, old_path, new_path):
+        self._client.torrents_rename_file(torrent_hash=torrent_hash, old_path=old_path, new_path=new_path)
 
     def get_rss_info(self):
         item = self._client.rss_items().get("Mikan_RSS")
@@ -92,5 +93,8 @@ class QbDownloader:
     def get_download_rule(self):
         return self._client.rss_rules()
 
-    def get_torrent_path(self, hash):
-        return self._client.torrents_info(hashes=hash)[0].save_path
+    def get_torrent_path(self, _hash):
+        return self._client.torrents_info(hashes=_hash)[0].save_path
+
+    def set_category(self, _hash, category):
+        self._client.torrents_set_category(category, hashes=_hash)

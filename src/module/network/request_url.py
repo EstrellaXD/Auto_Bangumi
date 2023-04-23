@@ -43,9 +43,9 @@ class RequestURL:
                 req.raise_for_status()
                 return req
             except requests.RequestException as e:
-                logger.debug(f"URL: {url}")
                 logger.debug(e)
-                logger.warning("ERROR with Connection.Please check DNS/Connection settings")
+                logger.warning(f"Cannot connect to {url}.")
+                logger.warning("Please check DNS/Connection settings")
                 time.sleep(5)
                 try_time += 1
             except Exception as e:
