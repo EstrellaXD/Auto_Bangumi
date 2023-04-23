@@ -60,10 +60,10 @@ class Notification(BaseModel):
 
 class Config(BaseModel):
     data_version: float = Field(4.0, description="Data version")
-    program: Program
-    downloader: Downloader
-    rss_parser: RSSParser
-    bangumi_manage: BangumiManage
-    debug: Debug
-    proxy: Proxy
-    notification: Notification
+    program: Program = Program()
+    downloader: Downloader = Downloader()
+    rss_parser: RSSParser = RSSParser()
+    bangumi_manage: BangumiManage = BangumiManage()
+    debug: Debug = Debug()
+    proxy: Proxy = Proxy()
+    notification: Notification = Notification()

@@ -52,10 +52,21 @@ def env_to_config() -> Config:
 
 if os.path.isdir("config") and VERSION == "DEV_VERSION":
     CONFIG_PATH = "config/config_dev.json"
-    settings = load_config_from_file(CONFIG_PATH)
-    print(dict(settings))
+    if os.path.isfile(CONFIG_PATH):
+        settings = load_config_from_file(CONFIG_PATH)
+    else:
+        settings = env_to_config()
+        save_config_to_file(settings, CONFIG_PATH)
 elif os.path.isdir("config") and VERSION != "DEV_VERSION":
     CONFIG_PATH = "config/config.json"
+    if os.path.isfile(CONFIG_PATH):
+        settings = load_config_from_file(CONFIG_PATH)
+    else:
+        settings = env_to_config()
+        save_config_to_file(settings, CONFIG_PATH)
+else:
+    settings = Config()
+
 
 
 
