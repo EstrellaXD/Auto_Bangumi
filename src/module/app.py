@@ -65,6 +65,7 @@ def run():
     setup_logger()
     # 初始化
     reset_log()
+    settings.reload()
     download_client = DownloadClient()
     download_client.init_downloader()
     if settings.rss_parser.token is None:

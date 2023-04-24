@@ -14,6 +14,12 @@ except ImportError:
     VERSION = "DEV_VERSION"
 
 
+class Setting(Config):
+    @staticmethod
+    def reload():
+        load_config_from_file(CONFIG_PATH)
+
+
 def save_config_to_file(config: Config, path: str):
     with open(path, "w", encoding="utf-8") as f:
         json.dump(config, f, indent=4)
@@ -23,7 +29,7 @@ def save_config_to_file(config: Config, path: str):
 def load_config_from_file(path: str) -> Config:
     with open(path, "r", encoding="utf-8") as f:
         config = json.load(f)
-    return Config(**config)
+    return Setting(**config)
 
 
 def _val_from_env(env: str, attr: tuple):
@@ -40,8 +46,8 @@ def _val_from_env(env: str, attr: tuple):
         return os.environ[env]
 
 
-def env_to_config() -> Config:
-    _settings = Config()
+def env_to_config() -> Setting:
+    _settings = Setting()
     for key, section in ENV_TO_ATTR.items():
         for env, attr in section.items():
             if env in os.environ:
@@ -65,7 +71,7 @@ elif os.path.isdir("config") and VERSION != "DEV_VERSION":
         settings = env_to_config()
         save_config_to_file(settings, CONFIG_PATH)
 else:
-    settings = Config()
+    settings = Setting()
 
 
 
