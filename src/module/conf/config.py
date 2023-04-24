@@ -36,14 +36,8 @@ def load_config_from_file(path: str) -> Config:
 
 def _val_from_env(env: str, attr: tuple):
     if isinstance(attr, tuple):
-        if attr[1] == "bool":
-            return os.environ[env].lower() == "true"
-        elif attr[1] == "int":
-            return int(os.environ[env])
-        elif attr[1] == "float":
-            return float(os.environ[env])
-        else:
-            return os.environ[env]
+        conv_func = attr[1]
+        return conv_func(os.environ[env])
     else:
         return os.environ[env]
 
