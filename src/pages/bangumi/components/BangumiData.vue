@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import ShowResults from '@/components/ShowResults.vue';
 import { getABData } from '@/api/bangumi';
 
 const res = await getABData();

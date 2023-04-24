@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import ShowResults from '@/components/ShowResults.vue';
 import { addBangumi } from '@/api/bangumi';
 
 const props = defineProps<{

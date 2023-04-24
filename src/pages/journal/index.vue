@@ -2,7 +2,7 @@
 import { getABLog } from '@/api/debug';
 
 const log = ref(null);
-const timer = ref<NodeJS.Timer | null>(null);
+const timer = ref<number | null>(null);
 
 async function getLog() {
   const res = await getABLog();
@@ -21,21 +21,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="log-box">
-    <pre>{{ log }}</pre>
+  <div class="log-box" wh-full overflow-hidden px-2em leading-2em>
+    <pre whitespace-break-spaces>{{ log }}</pre>
   </div>
 </template>
-
-<style lang="scss" scope>
-.log-box {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  line-height: 2;
-  padding: 0 2em;
-
-  pre {
-    white-space: break-spaces;
-  }
-}
-</style>
