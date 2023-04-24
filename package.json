@@ -1,33 +1,43 @@
 {
   "name": "ab-webui",
-  "private": true,
-  "version": "0.0.0",
   "type": "module",
+  "version": "0.0.0",
+  "private": true,
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@vueuse/core": "^8.9.4",
     "axios": "^0.27.2",
-    "element-plus": "^2.2.10",
+    "element-plus": "^2.3.4",
     "modern-normalize": "^1.1.0",
-    "pinia": "^2.0.16",
-    "vue": "^3.2.37",
-    "vue-global-api": "^0.4.1",
-    "vue-router": "4"
+    "pinia": "^2.0.35",
+    "vue": "^3.2.47",
+    "vue-router": "^4.1.6"
   },
   "devDependencies": {
-    "@types/node": "^18.0.6",
+    "@antfu/eslint-config": "^0.38.5",
+    "@types/node": "^18.16.0",
+    "@unocss/preset-rem-to-px": "^0.51.8",
+    "@unocss/reset": "^0.51.8",
     "@vicons/carbon": "^0.12.0",
     "@vicons/utils": "^0.1.4",
-    "@vitejs/plugin-vue": "^3.0.0",
-    "sass": "^1.54.0",
-    "typescript": "^4.6.4",
-    "unplugin-auto-import": "^0.10.0",
-    "unplugin-vue-components": "^0.21.1",
-    "vite": "^3.0.0",
-    "vue-tsc": "^0.38.4"
+    "@vitejs/plugin-vue": "^3.2.0",
+    "eslint": "^8.39.0",
+    "eslint-config-prettier": "^8.8.0",
+    "prettier": "^2.8.8",
+    "sass": "^1.62.0",
+    "typescript": "^4.9.5",
+    "unocss": "^0.51.8",
+    "unplugin-auto-import": "^0.10.3",
+    "unplugin-vue-components": "^0.21.2",
+    "vite": "^3.2.6",
+    "vue-tsc": "^0.38.9"
   }
 }

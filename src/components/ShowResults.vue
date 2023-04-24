@@ -1,20 +1,20 @@
 <script setup lang="ts">
-const props = defineProps<{
-  title: string,
-  results: object | null
+defineProps<{
+  title: string;
+  results: object | null;
 }>();
 
 const dialogVisible = ref(false);
-const handleClose = () => {
+function handleClose() {
   dialogVisible.value = false;
 }
-const open = () => {
+function open() {
   dialogVisible.value = true;
 }
 
 defineExpose({
-  open
-})
+  open,
+});
 </script>
 
 <template>
@@ -34,9 +34,9 @@ defineExpose({
   </div>
 </template>
 
-<style lang='scss' scope>
-.dia-log{
-  .results{
+<style lang="scss" scope>
+.dia-log {
+  .results {
     padding: 1em;
     line-height: 1.5;
     color: #fff;

@@ -6,14 +6,10 @@ import YMenu from './YMenu.vue';
   <div class="app-layout">
     <el-container>
       <el-header class="header">
-        <img
-          src="@/assets/logo.png"
-          alt="logo"
-          class="logo"
-        >
+        <img src="@/assets/logo.png" alt="logo" class="logo" />
       </el-header>
 
-      <el-container style="overflow: hidden;">
+      <el-container style="overflow: hidden">
         <el-aside width="auto">
           <YMenu />
         </el-aside>
@@ -28,14 +24,14 @@ import YMenu from './YMenu.vue';
   </div>
 </template>
 
-<style lang='scss' scope>
+<style lang="scss" scope>
 .app-layout {
   width: 100%;
   height: 100vh;
   overflow: hidden;
   display: flex;
 
-  @media screen and (max-width: 980px){
+  @media screen and (max-width: 980px) {
     font-size: 14px;
   }
 }

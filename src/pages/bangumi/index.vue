@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import BangumiData from './components/BangumiData.vue'
-import AddBangumi from './components/AddBangumi.vue'
+import BangumiData from './components/BangumiData.vue';
+import AddBangumi from './components/AddBangumi.vue';
 </script>
 
 <template>
@@ -14,7 +14,6 @@ import AddBangumi from './components/AddBangumi.vue'
     </el-row>
 
     <el-row :gutter="20">
-
       <!-- S 添加新番 -->
       <el-col :xs="24" :sm="24" :md="12" :lg="8">
         <AddBangumi type="new" />
@@ -26,12 +25,11 @@ import AddBangumi from './components/AddBangumi.vue'
         <AddBangumi type="old" />
       </el-col>
       <!-- E 添加旧番 -->
-
     </el-row>
   </section>
 </template>
 
-<style lang='scss' scope>
+<style lang="scss" scope>
 .el-row {
   &:not(:last-child) {
     margin-bottom: 20px;

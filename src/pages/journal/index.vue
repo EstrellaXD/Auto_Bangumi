@@ -4,12 +4,12 @@ import { getABLog } from '@/api/debug';
 const log = ref(null);
 const timer = ref<NodeJS.Timer | null>(null);
 
-const getLog = async () => {
+async function getLog() {
   const res = await getABLog();
   log.value = res.data;
 }
 
-const autoUpdate = () => {
+function autoUpdate() {
   timer.value = setInterval(getLog, 5000);
 }
 getLog();
@@ -17,7 +17,7 @@ getLog();
 onMounted(autoUpdate);
 onUnmounted(() => {
   clearInterval(Number(timer.value));
-})
+});
 </script>
 
 <template>
@@ -26,7 +26,7 @@ onUnmounted(() => {
   </div>
 </template>
 
-<style lang='scss' scope>
+<style lang="scss" scope>
 .log-box {
   width: 100%;
   height: 100%;

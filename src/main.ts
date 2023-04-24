@@ -1,14 +1,12 @@
-import { createApp } from 'vue'
-import App from './App.vue'
-import 'vue-global-api'
-import 'modern-normalize/modern-normalize.css'
+import { createApp } from 'vue';
+import { Icon } from '@vicons/utils';
 import router from './router';
-import { Icon } from '@vicons/utils'
+import App from './App.vue';
 
-const app = createApp(App)
+import '@unocss/reset/tailwind-compat.css';
+import 'virtual:uno.css';
 
+const app = createApp(App);
 app.component('Icon', Icon);
-
-app.use(router)
-
-app.mount('#app')
+app.use(router);
+app.mount('#app');
