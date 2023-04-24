@@ -1,5 +1,5 @@
-import multiprocessing
 import logging
+import multiprocessing
 
 from module import app
 from module import api

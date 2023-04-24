@@ -2,7 +2,7 @@ import os
 import time
 import logging
 
-from module.conf import settings, LOG_PATH, DATA_PATH, RSS_LINK
+from module.conf import settings, setup_logger, LOG_PATH, DATA_PATH, RSS_LINK
 from module.utils import json_config
 
 from module.core import DownloadClient
@@ -22,7 +22,7 @@ def load_data_file():
     if not os.path.exists(DATA_PATH):
         bangumi_data = {
             "rss_link": RSS_LINK,
-            "data_version": settings.program.data_version,
+            "data_version": settings.data_version,
             "bangumi_info": []
         }
         logger.info("Building data information...")
@@ -62,6 +62,7 @@ def main_process(bangumi_data, download_client: DownloadClient):
 
 
 def run():
+    setup_logger()
     # 初始化
     reset_log()
     download_client = DownloadClient()

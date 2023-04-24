@@ -76,9 +76,3 @@ class APIProcess:
     def update_config(config: Config):
         save_config_to_file(config, CONFIG_PATH)
         return {"message": "Success"}
-
-    def restart_main_process(self, mp):
-        os.kill(mp.pid, signal.SIGTERM)
-        global main_process
-        main_process = multiprocessing.Process(target=main_program)
-        main_process.start()
