@@ -1,7 +1,5 @@
 import re
-import os
 import logging
-import signal
 
 from module.core import DownloadClient
 from module.manager import FullSeasonGet
@@ -76,3 +74,7 @@ class APIProcess:
     def update_config(config: Config):
         save_config_to_file(config, CONFIG_PATH)
         return {"message": "Success"}
+
+    @staticmethod
+    def get_config() -> dict:
+        return json_config.load(CONFIG_PATH)

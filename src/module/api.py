@@ -58,6 +58,11 @@ async def add_rule(info: AddRule):
     return api_func.add_rule(info.title, info.season)
 
 
+@router.get("/api/v1/getConfig", tags=["config"])
+async def get_config():
+    return api_func.get_config()
+
+
 @router.post("/api/v1/updateConfig", tags=["config"])
 async def update_config(config: Config):
     return api_func.update_config(config)

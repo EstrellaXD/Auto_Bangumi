@@ -56,8 +56,8 @@ DEFAULT_SETTINGS = {
 
 ENV_TO_ATTR = {
     "program": {
-        "AB_INTERVAL_TIME": ("sleep_time", float),
-        "AB_RENAME_FREQ": ("times", float),
+        "AB_INTERVAL_TIME": ("sleep_time", int),
+        "AB_RENAME_FREQ": ("times", int),
         "AB_WEBUI_PORT": ("webui_port", int),
     },
     "downloader": {
@@ -82,10 +82,6 @@ ENV_TO_ATTR = {
     },
     "debug": {
         "AB_DEBUG_MODE": ("enable", lambda e: e.lower() in ("true", "1", "t")),
-    },
-    "proxy": {
-        "AB_HTTP_PROXY": "http",
-        "AB_SOCKS": "socks",
     },
 }
 
