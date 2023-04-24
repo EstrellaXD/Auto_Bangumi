@@ -2,7 +2,7 @@ import os
 import time
 import logging
 
-from module.conf import settings, setup_logger, LOG_PATH, DATA_PATH, RSS_LINK
+from module.conf import settings, setup_logger, LOG_PATH, DATA_PATH, RSS_LINK, VERSION
 from module.utils import json_config
 
 from module.core import DownloadClient
@@ -61,11 +61,21 @@ def main_process(bangumi_data, download_client: DownloadClient):
             time.sleep(settings.program.sleep_time / settings.program.rename_times)
 
 
+def show_info():
+    with open("icon", "r") as f:
+        for line in f.readlines():
+            logger.info(line.strip("\n"))
+    logger.info(f"Version {VERSION}  Author: EstrellaXD Twitter: https://twitter.com/Estrella_Pan")
+    logger.info("GitHub: https://github.com/EstrellaXD/Auto_Bangumi/")
+    logger.info("Starting AutoBangumi...")
+
+
 def run():
-    setup_logger()
     # 初始化
-    reset_log()
     settings.reload()
+    reset_log()
+    setup_logger()
+    show_info()
     download_client = DownloadClient()
     download_client.init_downloader()
     if settings.rss_parser.token is None:

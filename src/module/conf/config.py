@@ -21,8 +21,9 @@ class Setting(Config):
 
 
 def save_config_to_file(config: Config, path: str):
+    config_dict = config.dict()
     with open(path, "w", encoding="utf-8") as f:
-        json.dump(config, f, indent=4)
+        json.dump(config_dict, f, indent=4)
     logger.info(f"Config saved")
 
 
