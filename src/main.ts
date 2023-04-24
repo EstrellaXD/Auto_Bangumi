@@ -1,5 +1,4 @@
 import { createApp } from 'vue';
-import { Icon } from '@vicons/utils';
 import { createPinia } from 'pinia';
 import router from './router';
 import App from './App.vue';
@@ -10,7 +9,6 @@ import 'virtual:uno.css';
 const pinia = createPinia();
 
 const app = createApp(App);
-app.component('Icon', Icon);
 app.use(router);
 app.use(pinia);
 app.mount('#app');
