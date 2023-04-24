@@ -6,10 +6,11 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 import logging
 
-from .core import APIProcess
-from .conf import settings, DATA_PATH, LOG_PATH
-from .utils import json_config
-from .models.api import *
+from module.core import APIProcess
+from module.conf import settings, DATA_PATH, LOG_PATH
+from module.utils import json_config
+from module.models.api import *
+from module.models import Config
 
 logger = logging.getLogger(__name__)
 
@@ -18,13 +19,6 @@ api_func = APIProcess()
 
 app.mount("/assets", StaticFiles(directory="templates/assets"), name="assets")
 templates = Jinja2Templates(directory="templates")
-
-
-# HTML Response
-@app.get("/", response_class=HTMLResponse)
-def index(request: Request):
-    context = {"request": request}
-    return templates.TemplateResponse("index.html", context)
 
 
 @app.get("/api/v1/data")
@@ -61,6 +55,18 @@ async def subscribe(link: RssLink):
 @app.post("/api/v1/addRule")
 async def add_rule(info: AddRule):
     return api_func.add_rule(info.title, info.season)
+
+
+@app.post("/api/v1/updateConfig", tags=["config"])
+async def update_config(config: Config):
+    return api_func.update_config(config)
+
+
+# HTML Response
+@app.get("/{full_path:path}", response_class=HTMLResponse)
+def index(request: Request):
+    context = {"request": request}
+    return templates.TemplateResponse("index.html", context)
 
 
 def run():
