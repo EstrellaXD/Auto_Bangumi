@@ -13,7 +13,7 @@ COPY src/requirements.txt .
 RUN python3 -m pip install --upgrade pip \
     && pip install -r requirements.txt --no-cache-dir
 
-COPY --chmod=755 src/. /app/.
+COPY --chmod=755 src/. .
 
 RUN apk add --no-cache \
     curl \
