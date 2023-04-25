@@ -1,12 +1,6 @@
 <script lang="ts" setup>
 import AddBangumi from './components/AddBangumi.vue';
 import BangumiData from './components/BangumiData.vue';
-
-const program = {
-  sleep_time: 7200,
-  rename_times: 20,
-  webui_port: 7892,
-};
 </script>
 
 <template>

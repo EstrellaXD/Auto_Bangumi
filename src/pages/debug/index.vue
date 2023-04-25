@@ -3,6 +3,7 @@ import 'element-plus/es/components/message/style/css';
 import 'element-plus/es/components/message-box/style/css';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { resetRule } from '@/api/debug';
+import { appRestart } from '@/api/program';
 
 const loading = ref(false);
 async function reset() {
@@ -11,7 +12,7 @@ async function reset() {
   loading.value = false;
   if (res.data === 'Success') {
     ElMessage({
-      message: '数据已重置, 建议重启容器',
+      message: '数据已重置, 建议重启程序或容器',
       type: 'success',
     });
   } else {
@@ -25,7 +26,28 @@ async function reset() {
 function restart() {
   ElMessageBox.confirm('该操作将重启程序!', {
     type: 'warning',
-  });
+  })
+    .then(async () => {
+      appRestart()
+        .then(({ data }) => {
+          console.log('🚀 ~ file: index.vue:33 ~ .then ~ data:', data);
+
+          if (data.status === 'success') {
+            ElMessage({
+              message: '正在重启, 请稍后刷新页面...',
+              type: 'success',
+            });
+          }
+        })
+        .catch((error) => {
+          console.error('🚀 ~ file: index.vue:41 ~ .then ~ e:', error);
+          ElMessage({
+            message: '操作失败, 请重试!',
+            type: 'error',
+          });
+        });
+    })
+    .catch(() => {});
 }
 </script>
 

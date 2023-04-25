@@ -1,20 +1,55 @@
-<script lang="ts" setup></script>
+<script lang="ts" setup>
+import ProgramItem from './components/ProgramItem.vue';
+import DownloaderItem from './components/DownloaderItem.vue';
+import RssParserItem from './components/RssParserItem.vue';
+import BangumiManageItem from './components/BangumiManageItem.vue';
+import LogItem from './components/LogItem.vue';
+import ProxyItem from './components/ProxyItem.vue';
+import NotificationItem from './components/NotificationItem.vue';
+
+import { form } from './form-data';
+
+const store = configStore();
+
+watch(form, (v) => {
+  console.log('🚀 ~ file: index.vue:54 ~ v:', v);
+});
+
+onBeforeMount(async () => {
+  await store.get();
+
+  if (store.config) {
+    Object.keys(store.config).forEach((key) => {
+      if (store.config) {
+        form[key] = store.config[key];
+      }
+    });
+  }
+});
+</script>
 
 <template>
   <section class="settings">
     <el-row :gutter="20">
-      <!-- S 添加新番 -->
-      <el-col :xs="24" :sm="24" :md="12" :lg="8">
-        <AddBangumi type="new" />
+      <el-col :xs="24" :sm="24">
+        <el-form :model="form" label-position="right">
+          <el-collapse>
+            <ProgramItem />
+            <DownloaderItem />
+            <RssParserItem />
+            <BangumiManageItem />
+            <LogItem />
+            <ProxyItem />
+            <NotificationItem />
+          </el-collapse>
+        </el-form>
       </el-col>
-      <!-- E 添加新番 -->
-
-      <!-- S 添加旧番 -->
-      <el-col :xs="24" :sm="24" :md="12" :lg="8">
-        <AddBangumi type="old" />
-      </el-col>
-      <!-- E 添加旧番 -->
     </el-row>
+
+    <div flex="~ items-center justify-center" mt20>
+      <el-button type="primary">保存</el-button>
+      <el-button>还原</el-button>
+    </div>
   </section>
 </template>
 
