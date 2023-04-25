@@ -17,7 +17,7 @@ class PostNotification:
     def getClient():
         if settings.notification.type.lower() == "telegram":
             return TelegramNotification()
-        elif settings.notification.type.lower() == "serverchan":
+        elif settings.notification.type.lower() == "server-chan":
             return ServerChanNotification()
         else:
             return None
@@ -32,16 +32,19 @@ class PostNotification:
 
 class TelegramNotification:
     def __init__(self):
-        self.token = settings.notification_token
+        self.token = settings.notification.token
+        self.chat_id = settings.notification.chat_id
         self.notification_url = f"https://api.telegram.org/bot{self.token}/sendMessage"
 
-    def send_msg(self, title: str, desp: str) -> bool:
-        if not settings.notification_enable:
-            return False
+    def send_msg(self, title: str, desp: str):
         data = {
             "chat_id": settings.notification_chat_id,
             "text": f"{title}\n{desp}",
+            "disable_notification": True,
         }
+        with RequestContent() as req:
+            resp = req.post_data(self.notification_url, data)
+        return resp.status_code == 200
 
 
 class ServerChanNotification:
@@ -51,8 +54,6 @@ class ServerChanNotification:
         self.notification_url = f"https://sctapi.ftqq.com/{self.token}.send"
 
     def send_msg(self, title: str, desp: str) -> bool:
-        if not settings.notification.enable:
-            return False
         data = {
             "title": title,
             "desp": desp,

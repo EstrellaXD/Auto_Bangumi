@@ -7,6 +7,7 @@ from module.core.download_client import DownloadClient
 
 from module.conf import settings
 from module.parser import TitleParser
+from module.network import PostNotification
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +16,7 @@ class Renamer:
     def __init__(self, download_client: DownloadClient):
         self.client = download_client
         self._renamer = TitleParser()
+        self.notification = PostNotification()
 
     @staticmethod
     def print_result(torrent_count, rename_count):
@@ -50,6 +52,7 @@ class Renamer:
         if compare_name != new_path:
             try:
                 self.client.rename_torrent_file(_hash=info.hash, old_path=media_path, new_path=new_path)
+                self.notification.send_msg(folder_name, "update")
             except Exception as e:
                 logger.warning(f"{old_name} rename failed")
                 logger.warning(f"Folder name: {folder_name}, Season: {season}, Suffix: {suffix}")

@@ -31,7 +31,6 @@ async def restart():
     logger.info("Restarted")
     return {"status": "success"}
 
-
 @router.get("/api/v1/stop", tags=["program"])
 async def stop():
     global main_process
