@@ -33,9 +33,9 @@ class RSSAnalyser:
                     bangumi_info.append(data)
         return bangumi_info
 
-    def rss_to_data(self, url) -> dict:
+    def rss_to_data(self, url, filter: bool = True) -> dict:
         with RequestContent() as req:
-            rss_torrents = req.get_torrents(url)
+            rss_torrents = req.get_torrents(url, filter)
         for torrent in rss_torrents:
             try:
                 data = self._title_analyser.return_dict(torrent.name)

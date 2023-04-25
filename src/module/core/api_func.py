@@ -21,7 +21,7 @@ class APIProcess:
         self._full_season_get = FullSeasonGet()
 
     def link_process(self, link):
-        return self._rss_analyser.rss_to_data(link)
+        return self._rss_analyser.rss_to_data(link, filter=False)
 
     @api_failed
     def download_collection(self, link):

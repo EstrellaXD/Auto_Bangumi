@@ -19,13 +19,16 @@ class TorrentInfo:
 
 class RequestContent(RequestURL):
     # Mikanani RSS
-    def get_torrents(self, _url: str) -> [TorrentInfo]:
+    def get_torrents(self, _url: str, filter: bool = True) -> [TorrentInfo]:
         soup = self.get_xml(_url)
         torrent_titles = [item.title.string for item in soup.find_all("item")]
         torrent_urls = [item.get("url") for item in soup.find_all("enclosure")]
         torrents = []
         for _title, torrent_url in zip(torrent_titles, torrent_urls):
-            if re.search(FILTER, _title) is None:
+            if filter:
+                if re.search(FILTER, _title) is None:
+                    torrents.append(TorrentInfo(_title, torrent_url))
+            else:
                 torrents.append(TorrentInfo(_title, torrent_url))
         return torrents
 
