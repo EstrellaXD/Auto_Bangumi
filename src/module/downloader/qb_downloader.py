@@ -7,27 +7,30 @@ from qbittorrentapi.exceptions import Conflict409Error
 from module.conf import settings
 from module.ab_decorator import qb_connect_failed_wait
 
-from .exceptions import ConflictError
+from module.downloader.exceptions import ConflictError
 
 logger = logging.getLogger(__name__)
 
 
 class QbDownloader:
     @qb_connect_failed_wait
-    def __init__(self, host, username, password):
+    def __init__(self):
+        self._client: Client | None = None
+
+    @qb_connect_failed_wait
+    def auth(self, host, username, password):
         self._client = Client(
             host=host,
             username=username,
             password=password,
-            VERIFY_WEBUI_CERTIFICATE=settings.downloader.ssl,
-            RAISE_ERROR_FOR_UNSUPPORTED_QBITTORRENT_VERSIONS=True,
+            VERIFY_WEBUI_CERTIFICATE=settings.downloader.ssl
         )
         while True:
             try:
                 self._client.auth_log_in()
                 break
             except LoginFailed:
-                logger.debug(
+                logger.warning(
                     f"Can't login qBittorrent Server {host} by {username}, retry in {5} seconds."
                 )
             time.sleep(5)

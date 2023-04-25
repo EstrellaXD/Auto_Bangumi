@@ -13,6 +13,10 @@ class DownloadClient:
     def __init__(self):
         self.client = getClient()
 
+    def auth(self):
+        host, username, password = settings.downloader.host, settings.downloader.username, settings.downloader.password
+        self.client.auth(host, username, password)
+
     def init_downloader(self):
         prefs = {
             "rss_auto_downloading_enabled": True,
