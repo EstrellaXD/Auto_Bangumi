@@ -3,11 +3,12 @@ import logging
 from module.network import RequestContent
 from module.parser import TitleParser
 
-from module.conf import settings, RSS_LINK
+from module.conf import RSSLink
 
 from module.core import DownloadClient
 
 logger = logging.getLogger(__name__)
+RSS_LINK = RSSLink()
 
 
 class RSSAnalyser:

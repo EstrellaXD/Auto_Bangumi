@@ -17,6 +17,7 @@ class Downloader(BaseModel):
     path: str = Field("/downloads/Bangumi", description="Downloader path")
     ssl: bool = Field(False, description="Downloader ssl")
 
+
 class RSSParser(BaseModel):
     enable: bool = Field(True, description="Enable RSS parser")
     type: str = Field("mikan", description="RSS parser type")
@@ -35,11 +36,8 @@ class BangumiManage(BaseModel):
     remove_bad_torrent: bool = Field(False, description="Remove bad torrent")
 
 
-class Debug(BaseModel):
-    enable: bool = Field(False, description="Enable debug")
-    level: str = Field("debug", description="Debug level")
-    file: str = Field("debug.log", description="Debug file")
-    dev_debug: bool = Field(False, description="Enable dev debug")
+class Log(BaseModel):
+    debug_enable: bool = Field(False, description="Enable debug")
 
 
 class Proxy(BaseModel):
@@ -64,6 +62,6 @@ class Config(BaseModel):
     downloader: Downloader = Downloader()
     rss_parser: RSSParser = RSSParser()
     bangumi_manage: BangumiManage = BangumiManage()
-    debug: Debug = Debug()
+    log: Log = Log()
     proxy: Proxy = Proxy()
     notification: Notification = Notification()

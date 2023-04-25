@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 
 class QbDownloader:
-    @qb_connect_failed_wait
     def __init__(self):
         self._client: Client | None = None
 
@@ -101,3 +100,6 @@ class QbDownloader:
 
     def set_category(self, _hash, category):
         self._client.torrents_set_category(category, hashes=_hash)
+
+    def check_connection(self):
+        return self._client.app_version()

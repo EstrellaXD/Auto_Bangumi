@@ -4,7 +4,9 @@ import os
 
 from module.downloader import getClient
 
-from module.conf import settings, RSS_LINK
+from module.conf import settings, RSSLink
+
+RSS_LINK = RSSLink()
 
 logger = logging.getLogger(__name__)
 
@@ -12,10 +14,15 @@ logger = logging.getLogger(__name__)
 class DownloadClient:
     def __init__(self):
         self.client = getClient()
+        self.authed = False
 
     def auth(self):
         host, username, password = settings.downloader.host, settings.downloader.username, settings.downloader.password
-        self.client.auth(host, username, password)
+        try:
+            self.client.auth(host, username, password)
+            self.authed = True
+        except Exception as e:
+            logger.error(f"Can't login {host} by {username}, {e}")
 
     def init_downloader(self):
         prefs = {

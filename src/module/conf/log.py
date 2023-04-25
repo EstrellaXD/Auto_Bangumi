@@ -6,7 +6,7 @@ LOG_PATH = "data/log.txt"
 
 
 def setup_logger():
-    level = logging.DEBUG if settings.debug.enable else logging.INFO
+    level = logging.DEBUG if settings.log.debug_enable else logging.INFO
     logging.addLevelName(logging.DEBUG, 'DEBUG:')
     logging.addLevelName(logging.INFO, 'INFO:')
     logging.addLevelName(logging.WARNING, 'WARNING:')

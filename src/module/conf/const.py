@@ -31,11 +31,8 @@ DEFAULT_SETTINGS = {
         "group_tag": False,
         "remove_bad_torrent": False
     },
-    "debug": {
-        "enable": False,
-        "level": "info",
-        "file": "bangumi.log",
-        "dev_debug": False
+    "log": {
+        "debug_enable": False,
     },
     "proxy": {
         "enable": False,
@@ -56,9 +53,9 @@ DEFAULT_SETTINGS = {
 
 ENV_TO_ATTR = {
     "program": {
-        "AB_INTERVAL_TIME": ("sleep_time", int),
-        "AB_RENAME_FREQ": ("times", int),
-        "AB_WEBUI_PORT": ("webui_port", int),
+        "AB_INTERVAL_TIME": ("sleep_time", lambda e: int(e)),
+        "AB_RENAME_FREQ": ("times", lambda e: int(e)),
+        "AB_WEBUI_PORT": ("webui_port", lambda e: int(e)),
     },
     "downloader": {
         "AB_DOWNLOADER_HOST": "host",
@@ -80,8 +77,8 @@ ENV_TO_ATTR = {
         "AB_EP_COMPLETE": ("eps_complete", lambda e: e.lower() in ("true", "1", "t")),
         "AB_REMOVE_BAD_BT": ("remove_bad_torrent", lambda e: e.lower() in ("true", "1", "t")),
     },
-    "debug": {
-        "AB_DEBUG_MODE": ("enable", lambda e: e.lower() in ("true", "1", "t")),
+    "log": {
+        "AB_DEBUG_MODE": ("debug_enable", lambda e: e.lower() in ("true", "1", "t")),
     },
 }
 

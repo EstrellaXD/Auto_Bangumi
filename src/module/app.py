@@ -77,8 +77,9 @@ def run():
     setup_logger()
     show_info()
     download_client = DownloadClient()
+    download_client.auth()
     download_client.init_downloader()
-    if settings.rss_parser.token is None:
+    if settings.rss_parser.token in ["", "token", None]:
         logger.error("Please set your RSS token in config file.")
         quit()
     download_client.rss_feed()
