@@ -51,7 +51,7 @@ watch(filter, (nv) => {
       <el-input v-model="rssParser.custom_url"></el-input>
     </ConfigFormCol>
 
-    <ConfigFormCol label="ssl">
+    <ConfigFormCol label="tmdb解析">
       <el-select v-model="rssParser.enable_tmdb" flex-1>
         <el-option
           v-for="(opt, index) in tfOptions"
