@@ -47,7 +47,7 @@ watch(filter, (nv) => {
       </el-select>
     </ConfigFormCol>
 
-    <ConfigFormCol label="反代链接">
+    <ConfigFormCol label="源站链接">
       <el-input v-model="rssParser.custom_url"></el-input>
     </ConfigFormCol>
 

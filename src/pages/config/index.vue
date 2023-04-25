@@ -29,7 +29,7 @@ onBeforeMount(async () => {
 </script>
 
 <template>
-  <section class="settings">
+  <section class="settings" pb30>
     <el-row :gutter="20">
       <el-col :xs="24" :sm="24">
         <el-form :model="form" label-position="right">
