@@ -2,7 +2,7 @@ import os
 import time
 import logging
 
-from module.conf import settings, setup_logger, LOG_PATH, DATA_PATH, RSS_LINK, VERSION
+from module.conf import settings, setup_logger, LOG_PATH, DATA_PATH, RSSLink, VERSION
 from module.utils import json_config
 
 from module.core import DownloadClient
@@ -11,6 +11,7 @@ from module.rss import RSSAnalyser
 
 
 logger = logging.getLogger(__name__)
+RSS_LINK = RSSLink()
 
 
 def reset_log():
@@ -81,7 +82,7 @@ def run():
     download_client.init_downloader()
     if settings.rss_parser.token in ["", "token", None]:
         logger.error("Please set your RSS token in config file.")
-        quit()
+        exit(0)
     download_client.rss_feed()
     bangumi_data = load_data_file()
     # 主程序循环

@@ -49,7 +49,7 @@ class DownloadClient:
             "affectedFeeds": [rss_link],
             "ignoreDays": 0,
             "lastMatch": "",
-            "addPaused": settings.debug.dev_debug,
+            "addPaused": False,
             "assignedCategory": "Bangumi",
             "savePath": str(
                 os.path.join(

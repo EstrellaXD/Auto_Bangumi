@@ -49,6 +49,7 @@ async def start():
     if main_process.is_alive():
         return {"status": "failed", "reason": "Already started"}
     logger.info("Starting...")
+    main_process = multiprocessing.Process(target=app.run)
     main_process.start()
     logger.info("Started")
     return {"status": "success"}
