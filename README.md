@@ -93,6 +93,10 @@
 感谢 [Sean](https://github.com/findix) 提供的大量帮助
 感谢 [Rewrite0](https://github.com/Rewrite0) 开发的 WebUI
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=EstrellaXD/Auto_Bangumi&type=Date)](https://star-history.com/#EstrellaXD/Auto_Bangumi)
+
 ## Licence
 [MIT licence](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/LICENSE)
 
