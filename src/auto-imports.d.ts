@@ -2,6 +2,7 @@
 export {}
 declare global {
   const EffectScope: typeof import('vue')['EffectScope']
+  const bangumiStore: typeof import('./store/bangumi')['bangumiStore']
   const computed: typeof import('vue')['computed']
   const configStore: typeof import('./store/config')['configStore']
   const createApp: typeof import('vue')['createApp']
@@ -17,6 +18,7 @@ declare global {
   const isReactive: typeof import('vue')['isReactive']
   const isReadonly: typeof import('vue')['isReadonly']
   const isRef: typeof import('vue')['isRef']
+  const logStore: typeof import('./store/log')['logStore']
   const markRaw: typeof import('vue')['markRaw']
   const nextTick: typeof import('vue')['nextTick']
   const onActivated: typeof import('vue')['onActivated']

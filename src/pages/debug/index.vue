@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import 'element-plus/es/components/message/style/css';
-import 'element-plus/es/components/message-box/style/css';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { resetRule } from '@/api/debug';
 import { appRestart } from '@/api/program';
@@ -30,8 +28,6 @@ function restart() {
     .then(async () => {
       appRestart()
         .then(({ data }) => {
-          console.log('🚀 ~ file: index.vue:33 ~ .then ~ data:', data);
-
           if (data.status === 'success') {
             ElMessage({
               message: '正在重启, 请稍后刷新页面...',

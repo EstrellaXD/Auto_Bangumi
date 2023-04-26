@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { getABData } from '@/api/bangumi';
-
-const res = await getABData();
-const bangumiData = ref(res.data);
+const store = bangumiStore();
 
 const activeName = ref('1');
 const dialogData = ref(null);
 const dialog = ref();
+
+onActivated(() => {
+  store.get();
+});
 </script>
 
 <template>
@@ -20,7 +21,7 @@ const dialog = ref();
           <b>不会</b> 出现在此处</span
         >
         <el-table
-          :data="bangumiData.bangumi_info"
+          :data="store.data.bangumi_info"
           stripe
           border
           style="width: 100%"

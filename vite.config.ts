@@ -16,7 +16,7 @@ export default defineConfig({
       imports: ['vue', 'vue-router'],
       dts: 'src/auto-imports.d.ts',
       resolvers: [ElementPlusResolver()],
-      dirs: ['src/store'],
+      dirs: ['src/store', 'src/hooks'],
     }),
     Components({
       dts: 'src/components.d.ts',

@@ -1,27 +1,18 @@
 <script setup lang="ts">
-import { getABLog } from '@/api/debug';
+const store = logStore();
 
-const log = ref(null);
-const timer = ref<number | null>(null);
+onActivated(() => {
+  store.get();
+  store.onUpdate();
+});
 
-async function getLog() {
-  const res = await getABLog();
-  log.value = res.data;
-}
-
-function autoUpdate() {
-  timer.value = setInterval(getLog, 5000);
-}
-getLog();
-
-onMounted(autoUpdate);
-onUnmounted(() => {
-  clearInterval(Number(timer.value));
+onDeactivated(() => {
+  store.removeUpdate();
 });
 </script>
 
 <template>
   <div class="log-box" wh-full overflow-hidden px-2em leading-2em>
-    <pre whitespace-break-spaces>{{ log }}</pre>
+    <pre whitespace-break-spaces>{{ store.log }}</pre>
   </div>
 </template>
