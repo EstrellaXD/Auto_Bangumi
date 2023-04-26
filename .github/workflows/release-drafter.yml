@@ -1,10 +1,6 @@
 name: Release Drafter
 
 on:
-  push:
-    branches:
-      tags:
-        - '\d+\.\d+\.\d+'
   pull_request:
     tags:
       - '\d+\.\d+\.\d+'
