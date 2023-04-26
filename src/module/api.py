@@ -81,11 +81,19 @@ async def update_config(config: Config):
 
 
 @router.get("/RSS/{full_path:path}")
-async def get_rss(full_path: str, token: str = None, searchstr: str = None):
+async def get_rss(
+        full_path: str,
+        token: str = None,
+        searchstr: str = None,
+        bangumiId: str = None,
+        groupid: str = None,
+):
     if token is not None:
         full_path = full_path + "?token=" + token
     if searchstr is not None:
         full_path = full_path + "?searchstr=" + searchstr
+    if bangumiId is not None and groupid is not None:
+        full_path = full_path + "?bangumiId=" + bangumiId + "&groupid=" + groupid
     content = api_func.get_rss(full_path)
     print(full_path)
     return Response(content, media_type="application/xml")
