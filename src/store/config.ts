@@ -17,7 +17,7 @@ export const configStore = defineStore('config', () => {
 
       if (message === 'Success') {
         ElMessage({
-          message: '保存成功!',
+          message: '保存成功, 请重启容器以应用新的配置！',
           type: 'success',
         });
       } else {

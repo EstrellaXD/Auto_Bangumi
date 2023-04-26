@@ -69,7 +69,7 @@ function restart() {
       <!-- E 重置数据 -->
 
       <!-- S 重启程序 -->
-      <el-col :xs="24" :sm="12" :lg="8">
+      <el-col :xs="24" :sm="12" :lg="8" style="display: none">
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">
