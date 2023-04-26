@@ -12,3 +12,4 @@
 - debug
   - 重置`Auto_Bangumi`的数据
   - 查看日志
+- config 设置页
