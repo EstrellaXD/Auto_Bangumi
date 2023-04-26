@@ -1,0 +1,13 @@
+#!/usr/bin/with-contenv bash
+# shellcheck shell=bash
+
+function __fixuser {
+
+    groupmod -o -g "${PGID}" ab
+    usermod -o -u "${PUID}" ab
+
+    chown ab:ab -R /app
+
+}
+
+__fixuser 2>&1 | sed "s#^#cont-init: info: $(realpath $0): &#g"
