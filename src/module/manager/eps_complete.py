@@ -11,6 +11,10 @@ from module.models import BangumiData
 logger = logging.getLogger(__name__)
 SEARCH_KEY = ["group", "title_raw", "season_raw", "subtitle", "source", "dpi"]
 CUSTOM_URL = "https://mikanani.me" if settings.rss_parser.custom_url == "" else settings.rss_parser.custom_url
+if "://" not in CUSTOM_URL:
+    if re.match(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", CUSTOM_URL):
+        CUSTOM_URL = f"http://{CUSTOM_URL}"
+    CUSTOM_URL = f"https://{CUSTOM_URL}"
 
 
 class FullSeasonGet:
