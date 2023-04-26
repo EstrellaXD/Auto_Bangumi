@@ -16,7 +16,7 @@ const downloader = computed(() => form.downloader);
       </el-select>
     </ConfigFormCol>
 
-    <ConfigFormCol label="host">
+    <ConfigFormCol label="host" prop="downloader.host">
       <el-input v-model="downloader.host"></el-input>
     </ConfigFormCol>
 

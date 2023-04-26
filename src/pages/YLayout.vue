@@ -16,7 +16,11 @@ import YMenu from './YMenu.vue';
 
         <el-main>
           <el-scrollbar>
-            <RouterView />
+            <RouterView v-slot="{ Component }">
+              <KeepAlive>
+                <component :is="Component" />
+              </KeepAlive>
+            </RouterView>
           </el-scrollbar>
         </el-main>
       </el-container>

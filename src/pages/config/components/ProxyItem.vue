@@ -28,12 +28,12 @@ const proxy = computed(() => form.proxy);
       </el-select>
     </ConfigFormCol>
 
-    <ConfigFormCol label="host">
+    <ConfigFormCol label="ip" prop="proxy.host">
       <el-input v-model="proxy.host"></el-input>
     </ConfigFormCol>
 
-    <ConfigFormCol label="port">
-      <el-input v-model="proxy.port" type="number"></el-input>
+    <ConfigFormCol label="port" prop="proxy.port">
+      <el-input v-model.number="proxy.port" type="number"></el-input>
     </ConfigFormCol>
 
     <ConfigFormCol label="username">
@@ -41,7 +41,11 @@ const proxy = computed(() => form.proxy);
     </ConfigFormCol>
 
     <ConfigFormCol label="password">
-      <el-input v-model="proxy.password"></el-input>
+      <el-input
+        v-model="proxy.password"
+        type="password"
+        show-password
+      ></el-input>
     </ConfigFormCol>
   </ConfigFormRow>
 </template>

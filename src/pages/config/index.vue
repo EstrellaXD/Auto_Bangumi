@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import type { FormInstance, FormRules } from 'element-plus';
+import { ElMessage } from 'element-plus';
 import ProgramItem from './components/ProgramItem.vue';
 import DownloaderItem from './components/DownloaderItem.vue';
 import RssParserItem from './components/RssParserItem.vue';
@@ -8,23 +10,48 @@ import ProxyItem from './components/ProxyItem.vue';
 import NotificationItem from './components/NotificationItem.vue';
 
 import { form } from './form-data';
+import { useConfigCheck } from './useConfigCheck';
 
 const store = configStore();
+const { validtePort, validteHost, validteFormProxy } = useConfigCheck();
+const ruleFormRef = ref<FormInstance>();
 
-watch(form, (v) => {
-  console.log('🚀 ~ file: index.vue:54 ~ v:', v);
+const rules = reactive<FormRules>({
+  'program.webui_port': [{ validator: validtePort, trigger: 'blur' }],
+  'downloader.host': [{ validator: validteHost, trigger: 'blur' }],
+
+  'proxy.host': [{ validator: validteFormProxy.ip, trigger: 'blur' }],
+  'proxy.port': [{ validator: validteFormProxy.port, trigger: 'blur' }],
 });
 
-onBeforeMount(async () => {
-  await store.get();
+function submit(formEl: FormInstance | undefined) {
+  if (!formEl) return false;
+  formEl.validate((valid) => {
+    if (valid) {
+      store.set(form);
+    } else {
+      ElMessage({
+        message: '配置验证失败! 请检查你的配置',
+        type: 'error',
+      });
+      return false;
+    }
+  });
+}
 
+function formSync() {
   if (store.config) {
     Object.keys(store.config).forEach((key) => {
       if (store.config) {
-        form[key] = store.config[key];
+        form[key] = JSON.parse(JSON.stringify(store.config[key]));
       }
     });
   }
+}
+
+onActivated(async () => {
+  await store.get();
+  formSync();
 });
 </script>
 
@@ -32,7 +59,12 @@ onBeforeMount(async () => {
   <section class="settings" pb30>
     <el-row :gutter="20">
       <el-col :xs="24" :sm="24">
-        <el-form :model="form" label-position="right">
+        <el-form
+          ref="ruleFormRef"
+          :model="form"
+          :rules="rules"
+          label-position="right"
+        >
           <el-collapse>
             <ProgramItem />
             <DownloaderItem />
@@ -47,8 +79,8 @@ onBeforeMount(async () => {
     </el-row>
 
     <div flex="~ items-center justify-center" mt20>
-      <el-button type="primary">保存</el-button>
-      <el-button>还原</el-button>
+      <el-button type="primary" @click="submit(ruleFormRef)">保存</el-button>
+      <el-button @click="formSync">还原</el-button>
     </div>
   </section>
 </template>
