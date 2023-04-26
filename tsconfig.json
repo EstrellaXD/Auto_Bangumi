@@ -12,15 +12,20 @@
     "esModuleInterop": true,
     "lib": ["ESNext", "DOM"],
     "skipLibCheck": true,
+    "noImplicitAny": false,
     "baseUrl": "./",
     "paths": {
       "@/*": ["src/*"],
-      "#/*": ["src/types/*"]
+      "#/*": ["types/*"]
     },
-    "types": [
-      "element-plus/global"
-    ]
+    "types": ["element-plus/global"]
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue",
+    "types/config.ts"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

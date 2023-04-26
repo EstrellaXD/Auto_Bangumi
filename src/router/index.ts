@@ -4,6 +4,7 @@ const YLayout = () => import('../pages/YLayout.vue');
 const YBangumi = () => import('../pages/bangumi/index.vue');
 const YDebug = () => import('../pages/debug/index.vue');
 const YLog = () => import('../pages/journal/index.vue');
+const YConfig = () => import('../pages/config/index.vue');
 
 const routes = [
   {
@@ -13,23 +14,27 @@ const routes = [
     children: [
       {
         path: 'bangumi',
-        component: YBangumi
+        component: YBangumi,
       },
       {
         path: 'debug',
-        component: YDebug
+        component: YDebug,
       },
       {
         path: 'log',
-        component: YLog
-      }
-    ]
+        component: YLog,
+      },
+      {
+        path: 'config',
+        component: YConfig,
+      },
+    ],
   },
-]
+];
 
 const router = createRouter({
   history: createWebHashHistory(),
   routes,
-})
+});
 
 export default router;
