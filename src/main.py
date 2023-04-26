@@ -31,6 +31,7 @@ async def restart():
     logger.info("Restarted")
     return {"status": "success"}
 
+
 @router.get("/api/v1/stop", tags=["program"])
 async def stop():
     global main_process
@@ -52,6 +53,15 @@ async def start():
     main_process.start()
     logger.info("Started")
     return {"status": "success"}
+
+
+@router.get("/api/v1/status", tags=["program"])
+async def status():
+    global main_process
+    if main_process.is_alive():
+        return True
+    else:
+        return False
 
 
 if VERSION != "DEV_VERSION":
