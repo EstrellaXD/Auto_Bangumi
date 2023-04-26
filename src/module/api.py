@@ -80,9 +80,14 @@ async def update_config(config: Config):
     return api_func.update_config(config)
 
 
-@router.get("/RSS/MyBangumi")
-async def get_rss(token: str):
-    content = api_func.get_rss(token)
+@router.get("/RSS/{full_path:path}")
+async def get_rss(full_path: str, token: str = None, searchstr: str = None):
+    if token is not None:
+        full_path = full_path + "?token=" + token
+    if searchstr is not None:
+        full_path = full_path + "?searchstr=" + searchstr
+    content = api_func.get_rss(full_path)
+    print(full_path)
     return Response(content, media_type="application/xml")
 
 

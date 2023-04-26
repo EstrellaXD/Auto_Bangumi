@@ -9,8 +9,6 @@ logger = logging.getLogger(__name__)
 
 class PostNotification:
     def __init__(self):
-        self.token = settings.notification_token
-        self.notification_url = lambda message: f"https://api.pushbullet.com/v2/{self.token}/{message}"
         self.client = self.getClient()
 
     @staticmethod

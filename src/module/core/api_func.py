@@ -85,14 +85,17 @@ class APIProcess:
         return json_config.load(CONFIG_PATH)
 
     @staticmethod
-    def get_rss(token: str):
-        url = f"https://mikanani.me/RSS/MyBangumi?token={token}"
+    def get_rss(full_path: str):
+        url = f"https://mikanani.me/RSS/{full_path}"
+        custom_url = settings.rss_parser.custom_url
+        if "://" not in custom_url:
+            custom_url = f"https://{custom_url}"
         with RequestContent() as request:
             content = request.get_html(url)
-        return re.sub(r"mikanani.me", settings.rss_parser.custom_url, content)
+        return re.sub(r"https://mikanani.me", custom_url, content)
 
     @staticmethod
     def get_torrent(full_path):
-        url = f"https://mikanani.me/Downloads/{full_path}"
+        url = f"https://mikanani.me/Download/{full_path}"
         with RequestContent() as request:
             return request.get_content(url)
