@@ -1,4 +1,6 @@
 import logging
+import os
+
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, Response
 
@@ -24,13 +26,23 @@ async def startup_event():
 
 @router.get("/api/v1/data")
 async def get_data():
-    data = json_config.load(DATA_PATH)
-    return data
+    try:
+        data = json_config.load(DATA_PATH)
+        return data
+    except FileNotFoundError:
+        return {
+            "rss_link": "",
+            "data_version": settings.data_version,
+            "bangumi_info": [],
+        }
 
 
 @router.get("/api/v1/log")
 async def get_log():
-    return FileResponse(LOG_PATH)
+    if os.path.isfile(LOG_PATH):
+        return FileResponse(LOG_PATH)
+    else:
+        return Response("Log file not found", status_code=404)
 
 
 @router.get("/api/v1/resetRule")

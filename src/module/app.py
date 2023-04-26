@@ -82,7 +82,7 @@ def run():
     download_client.init_downloader()
     if settings.rss_parser.token in ["", "token", None]:
         logger.error("Please set your RSS token in config file.")
-        exit(0)
+        exit(1)
     download_client.rss_feed()
     bangumi_data = load_data_file()
     # 主程序循环
