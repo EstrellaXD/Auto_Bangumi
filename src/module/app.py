@@ -3,11 +3,12 @@ import time
 import logging
 
 from module.conf import settings, setup_logger, LOG_PATH, DATA_PATH, RSSLink, VERSION
-from module.utils import json_config
+from module.utils import load_program_data, save_program_data, json_config
 
 from module.core import DownloadClient
 from module.manager import Renamer, FullSeasonGet
 from module.rss import RSSAnalyser
+from module.models import ProgramData
 
 
 logger = logging.getLogger(__name__)
@@ -19,42 +20,35 @@ def reset_log():
         os.remove(LOG_PATH)
 
 
-def load_data_file():
+def load_data_file() -> ProgramData:
+    empty_data = ProgramData(
+        rss_link=RSS_LINK,
+        data_version=settings.data_version,
+    )
     if not os.path.exists(DATA_PATH):
-        bangumi_data = {
-            "rss_link": RSS_LINK,
-            "data_version": settings.data_version,
-            "bangumi_info": []
-        }
+        program_data = empty_data
+        save_program_data(DATA_PATH, program_data)
         logger.info("Building data information...")
     else:
-        bangumi_data = json_config.load(DATA_PATH)
-        if bangumi_data["data_version"] != settings.data_version or bangumi_data["rss_link"] != RSS_LINK:
-            bangumi_data = {
-                "rss_link": RSS_LINK,
-                "data_version": settings.data_version,
-                "bangumi_info": []
-            }
+        program_data = load_program_data(DATA_PATH)
+        if program_data.rss_link != RSS_LINK or program_data.data_version != settings.data_version:
+            program_data = empty_data
             logger.info("Rebuilding data information...")
-    return bangumi_data
+    return program_data
 
 
-def save_data_file(bangumi_data):
-    json_config.save(DATA_PATH, bangumi_data)
-    logger.debug("Saved")
 
-
-def main_process(bangumi_data, download_client: DownloadClient):
+def main_process(program_data: ProgramData, download_client: DownloadClient):
     rename = Renamer(download_client)
     rss_analyser = RSSAnalyser()
     while True:
         times = 0
         if settings.rss_parser.enable:
-            rss_analyser.run(bangumi_data["bangumi_info"], download_client)
-        if settings.bangumi_manage.eps_complete and bangumi_data["bangumi_info"] != []:
-            FullSeasonGet().eps_complete(bangumi_data["bangumi_info"], download_client)
+            rss_analyser.run(program_data.bangumi_info, download_client)
+        if settings.bangumi_manage.eps_complete and program_data.bangumi_info != []:
+            FullSeasonGet().eps_complete(program_data.bangumi_info, download_client)
         logger.info("Running....")
-        save_data_file(bangumi_data)
+        save_program_data(DATA_PATH, program_data)
         while times < settings.program.rename_times:
             if settings.bangumi_manage.enable:
                 rename.rename()

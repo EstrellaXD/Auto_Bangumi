@@ -50,9 +50,10 @@ def reset_rule():
     return api_func.reset_rule()
 
 
-@router.get("api/v1/removeRule/{bangumi_title}")
-def remove_rule(bangumi_title: str):
-    return api_func.remove_rule(bangumi_title)
+@router.get("api/v1/removeRule/{bangumi_id}")
+def remove_rule(bangumi_id: str):
+    bangumi_id = int(bangumi_id)
+    return api_func.remove_rule(bangumi_id)
 
 
 @router.post("/api/v1/collection", tags=["download"])

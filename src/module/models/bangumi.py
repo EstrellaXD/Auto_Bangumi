@@ -5,7 +5,7 @@ from dataclasses import dataclass
 class BangumiData(BaseModel):
     id: int = Field(..., alias="id", title="番剧ID")
     official_title: str = Field(..., alias="official_title", title="番剧中文名")
-    year: int = Field(..., alias="year", title="番剧年份")
+    year: int | None = Field(None, alias="year", title="番剧年份")
     title_raw: str = Field(..., alias="title_raw", title="番剧原名")
     season: int = Field(..., alias="season", title="番剧季度")
     season_raw: str = Field(..., alias="season_raw", title="番剧季度原名")
@@ -18,6 +18,11 @@ class BangumiData(BaseModel):
     offset: int = Field(0, alias="offset", title="番剧偏移量")
     filter: list[str] = Field(..., alias="filter", title="番剧过滤器")
 
+
+class ProgramData(BaseModel):
+    rss_link: str = Field(..., alias="rss_link", title="RSS链接")
+    data_version: float = Field(..., alias="data_version", title="数据版本")
+    bangumi_info: list[BangumiData] = Field([], alias="bangumi_info", title="番剧信息")
 
 
 @dataclass

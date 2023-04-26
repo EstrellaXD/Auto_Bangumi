@@ -3,8 +3,8 @@ import logging
 import os
 
 from module.downloader import getClient
-
 from module.conf import settings, RSSLink
+from module.models import BangumiData
 
 RSS_LINK = RSSLink()
 
@@ -36,8 +36,8 @@ class DownloadClient:
             prefs = self.client.get_app_prefs()
             settings.downloader.path = os.path.join(prefs["save_path"], "Bangumi")
 
-    def set_rule(self, info: dict, rss_link):
-        official_name, raw_name, season, group = info["official_title"], info["title_raw"], info["season"], info["group"]
+    def set_rule(self, info: BangumiData, rss_link):
+        official_name, raw_name, season, group = info.official_title, info.title_raw, info.season, info.group
         rule = {
             "enable": True,
             "mustContain": raw_name,
@@ -76,13 +76,12 @@ class DownloadClient:
         self.client.rss_add_feed(url=rss_link, item_path=item_path)
         logger.info("Add RSS Feed successfully.")
 
-    def add_rules(self, bangumi_info, rss_link=RSS_LINK):
+    def add_rules(self, bangumi_info: list[BangumiData], rss_link=RSS_LINK):
         logger.debug("Start adding rules.")
         for info in bangumi_info:
-            if not info["added"]:
+            if not info.added:
                 self.set_rule(info, rss_link)
-                info["added"] = True
-        # logger.info("to rule.")
+                info.added = True
         logger.debug("Finished.")
 
     def get_torrent_info(self, category="Bangumi"):

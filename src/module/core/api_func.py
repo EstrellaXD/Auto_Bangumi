@@ -37,7 +37,7 @@ class APIProcess:
         if not self._client.authed:
             self._client.auth()
         data = self.link_process(link)
-        self._client.add_rss_feed(link, data.get("official_title"))
+        self._client.add_rss_feed(link, data.official_title)
         self._client.set_rule(data, link)
         return data
 
@@ -49,14 +49,15 @@ class APIProcess:
         return "Success"
 
     @staticmethod
-    def remove_rule(name):
+    def remove_rule(_id: int):
         datas = json_config.load(DATA_PATH)["bangumi_info"]
         for data in datas:
-            if re.search(name.lower(), data["title_raw"].lower()):
+            if data["id"] == _id:
                 datas.remove(data)
-                json_config.save(DATA_PATH, datas)
-                return "Success"
-        return "Not matched"
+                break
+        json_config.save(DATA_PATH, datas)
+        return "Success"
+
 
     @staticmethod
     def add_rule(title, season):

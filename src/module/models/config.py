@@ -57,7 +57,7 @@ class Notification(BaseModel):
 
 
 class Config(BaseModel):
-    data_version: float = Field(4.0, description="Data version")
+    data_version: float = Field(5.0, description="Data version")
     program: Program = Program()
     downloader: Downloader = Downloader()
     rss_parser: RSSParser = RSSParser()
