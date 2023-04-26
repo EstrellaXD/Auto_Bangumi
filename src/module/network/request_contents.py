@@ -38,8 +38,8 @@ class RequestContent(RequestURL):
         enclosure = item.find("enclosure")
         return TorrentInfo(item.title.string, enclosure["url"])
 
-    def get_xml(self, url):
-        return BeautifulSoup(self.get_url(url).text, "xml")
+    def get_xml(self, _url):
+        return BeautifulSoup(self.get_url(_url).text, "xml")
 
     # API JSON
     def get_json(self, _url) -> dict:
@@ -50,3 +50,9 @@ class RequestContent(RequestURL):
 
     def post_data(self, _url, data: dict) -> dict:
         return self.post_url(_url, data)
+
+    def get_html(self, _url):
+        return self.get_url(_url).text
+
+    def get_content(self, _url):
+        return self.get_url(_url).content

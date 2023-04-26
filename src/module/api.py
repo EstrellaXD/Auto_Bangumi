@@ -1,6 +1,6 @@
 import logging
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 
 from module.core import APIProcess
 from module.conf import DATA_PATH, LOG_PATH, settings
@@ -66,4 +66,16 @@ async def get_config():
 @router.post("/api/v1/updateConfig", tags=["config"])
 async def update_config(config: Config):
     return api_func.update_config(config)
+
+
+@router.get("/RSS/MyBangumi")
+async def get_rss(token: str):
+    content = api_func.get_rss(token)
+    return Response(content, media_type="application/xml")
+
+
+@router.get("/Download/{full_path:path}")
+async def download(full_path: str):
+    torrent = api_func.get_torrent(full_path)
+    return Response(torrent, media_type="application/x-bittorrent")
 

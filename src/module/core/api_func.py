@@ -5,9 +5,10 @@ from module.core import DownloadClient
 from module.manager import FullSeasonGet
 from module.rss import RSSAnalyser
 from module.utils import json_config
-from module.conf import DATA_PATH
+from module.conf import DATA_PATH, settings
 from module.conf.config import save_config_to_file, CONFIG_PATH
 from module.models import Config
+from module.network import RequestContent
 
 from module.ab_decorator import api_failed
 
@@ -82,3 +83,16 @@ class APIProcess:
     @staticmethod
     def get_config() -> dict:
         return json_config.load(CONFIG_PATH)
+
+    @staticmethod
+    def get_rss(token: str):
+        url = f"https://mikanani.me/RSS/MyBangumi?token={token}"
+        with RequestContent() as request:
+            content = request.get_html(url)
+        return re.sub(r"mikanani.me", settings.rss_parser.custom_url, content)
+
+    @staticmethod
+    def get_torrent(full_path):
+        url = f"https://mikanani.me/Downloads/{full_path}"
+        with RequestContent() as request:
+            return request.get_content(url)
