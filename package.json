@@ -23,7 +23,6 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "^0.38.5",
-    "@iconify-json/carbon": "^1.1.16",
     "@types/node": "^18.16.0",
     "@unocss/preset-rem-to-px": "^0.51.8",
     "@unocss/reset": "^0.51.8",

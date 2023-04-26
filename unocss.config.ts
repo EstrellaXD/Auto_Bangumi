@@ -11,7 +11,7 @@ export default defineConfig({
     presetUno(),
     presetRemToPx(),
     presetAttributify(),
-    presetIcons({ autoInstall: true, cdn: 'https://esm.sh/' }),
+    presetIcons({ cdn: 'https://esm.sh/' }),
   ],
   shortcuts: [[/^wh-(.*)$/, ([, t]) => `w-${t} h-${t}`]],
 });
