@@ -1,4 +1,6 @@
 # -*- encoding: utf-8 -*-
+from urllib.parse import urlparse, parse_qs
+
 
 DEFAULT_SETTINGS = {
     "program": {
@@ -18,7 +20,8 @@ DEFAULT_SETTINGS = {
     "rss_parser": {
         "enable": True,
         "type": "mikan",
-        "link": "",
+        "custom_url": "mikanani.me",
+        "token": "",
         "enable_tmdb": False,
         "filter": ["720", "\\d+-\\d+"],
         "language": "zh"
@@ -30,11 +33,8 @@ DEFAULT_SETTINGS = {
         "group_tag": False,
         "remove_bad_torrent": False
     },
-    "debug": {
-        "enable": False,
-        "level": "info",
-        "file": "bangumi.log",
-        "dev_debug": False
+    "log": {
+        "debug_enable": False,
     },
     "proxy": {
         "enable": False,
@@ -55,9 +55,9 @@ DEFAULT_SETTINGS = {
 
 ENV_TO_ATTR = {
     "program": {
-        "AB_INTERVAL_TIME": ("sleep_time", float),
-        "AB_RENAME_FREQ": ("times", float),
-        "AB_WEBUI_PORT": ("webui_port", int),
+        "AB_INTERVAL_TIME": ("sleep_time", lambda e: int(e)),
+        "AB_RENAME_FREQ": ("times", lambda e: int(e)),
+        "AB_WEBUI_PORT": ("webui_port", lambda e: int(e)),
     },
     "downloader": {
         "AB_DOWNLOADER_HOST": "host",
@@ -67,7 +67,10 @@ ENV_TO_ATTR = {
     },
     "rss_parser": {
         "AB_RSS_COLLECTOR": ("enable", lambda e: e.lower() in ("true", "1", "t")),
-        "AB_RSS": "link",
+        "AB_RSS": [
+            ("token", lambda e: parse_qs(urlparse(e).query).get("token", [None])[0]),
+            ("custom_url", lambda e: urlparse(e).netloc),
+        ],
         "AB_NOT_CONTAIN": ("filter", lambda e: e.split("|")),
         "AB_LANGUAGE": "language",
         "AB_ENABLE_TMDB": ("enable_tmdb", lambda e: e.lower() in ("true", "1", "t")),
@@ -79,12 +82,24 @@ ENV_TO_ATTR = {
         "AB_EP_COMPLETE": ("eps_complete", lambda e: e.lower() in ("true", "1", "t")),
         "AB_REMOVE_BAD_BT": ("remove_bad_torrent", lambda e: e.lower() in ("true", "1", "t")),
     },
-    "debug": {
-        "AB_DEBUG_MODE": ("enable", lambda e: e.lower() in ("true", "1", "t")),
+    "log": {
+        "AB_DEBUG_MODE": ("debug_enable", lambda e: e.lower() in ("true", "1", "t")),
     },
     "proxy": {
-        "AB_HTTP_PROXY": "http",
-        "AB_SOCKS": "socks",
+        "AB_HTTP_PROXY": [
+            ("enable", lambda e: True),
+            ("type", lambda e: "http"),
+            ("host", lambda e: e.split(":")[0]),
+            ("port", lambda e: int(e.split(":")[1])),
+        ],
+        "AB_SOCKS": [
+            ("enable", lambda e: True),
+            ("type", lambda e: "socks"),
+            ("host", lambda e: e.split(",")[0]),
+            ("port", lambda e: int(e.split(",")[1])),
+            ("username", lambda e: e.split(",")[2]),
+            ("password", lambda e: e.split(",")[3]),
+        ],
     },
 }
 

@@ -1,41 +1,65 @@
 # syntax=docker/dockerfile:1
-FROM python:3.11-alpine
 
-ENV TZ=Asia/Shanghai \
+FROM python:3.11-alpine AS Builder
+WORKDIR /app
+COPY requirements.txt .
+RUN apk add --no-cache --virtual=build-dependencies \
+        libxml2-dev \
+        libxslt-dev \
+        gcc \
+        g++ \
+        linux-headers \
+        build-base && \
+    python3 -m pip install --upgrade pip && \
+    pip install cython && \
+    pip install --no-cache-dir -r requirements.txt && \
+    apk del --purge \
+        build-dependencies && \
+    rm -rf \
+        /root/.cache \
+        /tmp/*
+
+FROM scratch AS APP
+
+ENV S6_SERVICES_GRACETIME=30000 \
+    S6_KILL_GRACETIME=60000 \
+    S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0 \
+    S6_SYNC_DISKS=1 \
+    TERM="xterm" \
+    HOME="/ab" \
+    LANG="C.UTF-8" \
+    TZ=Asia/Shanghai \
     PUID=1000 \
     PGID=1000 \
     UMASK=022
 
+COPY --from=Builder / /
+
 WORKDIR /app
 
-COPY src/requirements.txt .
-
-RUN python3 -m pip install --upgrade pip \
-    && pip install -r requirements.txt --no-cache-dir
-
-COPY --chmod=755 src/. /app/.
-
 RUN apk add --no-cache \
-    curl \
-    shadow \
-    su-exec \
-    bash
+        curl \
+        wget \
+        jq \
+        shadow \
+        s6-overlay \
+        bash && \
+    # Download WebUI
+    wget "https://github.com/Rewrite0/Auto_Bangumi_WebUI/releases/latest/download/dist.zip" -O /tmp/dist.zip && \
+    unzip -q -d /tmp /tmp/dist.zip && \
+    mv /tmp/dist /app/templates && \
+    # Add user
+    mkdir /ab && \
+    addgroup -S ab -g 911 && \
+    adduser -S ab -G ab -h /ab -s /bin/bash -u 911 && \
+    rm -rf \
+        /root/.cache \
+        /tmp/*
 
-# Download WebUI
-RUN wget "https://github.com/Rewrite0/Auto_Bangumi_WebUI/releases/download/$(curl 'https://api.github.com/repos/Rewrite0/Auto_Bangumi_WebUI/releases/latest' | grep "tag_name" | head -n 1 | awk -F ":" '{print $2}' | sed 's/\"//g;s/,//g;s/ //g')/dist.zip" && \
-    unzip dist.zip && \
-    mv dist templates
+COPY --chmod=755 src/. .
+COPY --chmod=755 ./docker /
 
-RUN addgroup -S auto_bangumi -g 1000 && \
-    adduser -S auto_bangumi -G auto_bangumi -h /home/auto_bangumi -u 1000 && \
-    usermod -s /bin/bash auto_bangumi && \
-    mkdir -p "config" && \
-    mkdir -p "data" && \
-    chmod a+x \
-        run.sh
+ENTRYPOINT [ "/init" ]
 
 EXPOSE 7892
-
-VOLUME [ "/app/config" , "/app/data"]
-
-CMD ["sh", "run.sh"]
+VOLUME [ "/app/config" , "/app/data" ]

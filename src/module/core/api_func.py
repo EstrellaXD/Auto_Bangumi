@@ -1,34 +1,44 @@
 import re
+import logging
 
 from module.core import DownloadClient
 from module.manager import FullSeasonGet
 from module.rss import RSSAnalyser
 from module.utils import json_config
-from module.conf import DATA_PATH
+from module.conf import DATA_PATH, settings
+from module.conf.config import save_config_to_file, CONFIG_PATH
+from module.models import Config
+from module.network import RequestContent
 
 from module.ab_decorator import api_failed
+
+logger = logging.getLogger(__name__)
 
 
 class APIProcess:
     def __init__(self):
         self._rss_analyser = RSSAnalyser()
-        self._download_client = DownloadClient()
+        self._client = DownloadClient()
         self._full_season_get = FullSeasonGet()
 
     def link_process(self, link):
-        return self._rss_analyser.rss_to_data(link)
+        return self._rss_analyser.rss_to_data(link, filter=False)
 
     @api_failed
     def download_collection(self, link):
+        if not self._client.authed:
+            self._client.auth()
         data = self.link_process(link)
-        self._full_season_get.download_collection(data, link, self._download_client)
+        self._full_season_get.download_collection(data, link, self._client)
         return data
 
     @api_failed
     def add_subscribe(self, link):
+        if not self._client.authed:
+            self._client.auth()
         data = self.link_process(link)
-        self._download_client.add_rss_feed(link, data.get("official_title"))
-        self._download_client.set_rule(data, link)
+        self._client.add_rss_feed(link, data.official_title)
+        self._client.set_rule(data, link)
         return data
 
     @staticmethod
@@ -39,14 +49,15 @@ class APIProcess:
         return "Success"
 
     @staticmethod
-    def remove_rule(name):
+    def remove_rule(_id: int):
         datas = json_config.load(DATA_PATH)["bangumi_info"]
         for data in datas:
-            if re.search(name.lower(), data["title_raw"].lower()):
+            if data["id"] == _id:
                 datas.remove(data)
-                json_config.save(DATA_PATH, datas)
-                return "Success"
-        return "Not matched"
+                break
+        json_config.save(DATA_PATH, datas)
+        return "Success"
+
 
     @staticmethod
     def add_rule(title, season):
@@ -64,3 +75,28 @@ class APIProcess:
         data["bangumi_info"].append(extra_data)
         json_config.save(DATA_PATH, data)
         return "Success"
+
+    @staticmethod
+    def update_config(config: Config):
+        save_config_to_file(config, CONFIG_PATH)
+        return {"message": "Success"}
+
+    @staticmethod
+    def get_config() -> dict:
+        return json_config.load(CONFIG_PATH)
+
+    @staticmethod
+    def get_rss(full_path: str):
+        url = f"https://mikanani.me/RSS/{full_path}"
+        custom_url = settings.rss_parser.custom_url
+        if "://" not in custom_url:
+            custom_url = f"https://{custom_url}"
+        with RequestContent() as request:
+            content = request.get_html(url)
+        return re.sub(r"https://mikanani.me", custom_url, content)
+
+    @staticmethod
+    def get_torrent(full_path):
+        url = f"https://mikanani.me/Download/{full_path}"
+        with RequestContent() as request:
+            return request.get_content(url)

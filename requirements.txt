@@ -19,3 +19,4 @@ urllib3
 uvicorn
 attrdict
 jinja2
+python-dotenv

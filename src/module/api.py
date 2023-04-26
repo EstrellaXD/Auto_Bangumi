@@ -1,70 +1,115 @@
-import uvicorn
-from uvicorn.config import LOGGING_CONFIG
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, FileResponse
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
 import logging
+import os
 
-from .core import APIProcess
-from .conf import settings, DATA_PATH, LOG_PATH
-from .utils import json_config
-from .models.api import *
+from fastapi import FastAPI
+from fastapi.responses import FileResponse, Response
 
-logger = logging.getLogger(__name__)
+from module.core import APIProcess
+from module.conf import DATA_PATH, LOG_PATH, settings
+from module.utils import json_config
+from module.models.api import *
+from module.models import Config
 
-app = FastAPI()
+
+router = FastAPI()
 api_func = APIProcess()
 
-app.mount("/assets", StaticFiles(directory="templates/assets"), name="assets")
-templates = Jinja2Templates(directory="templates")
+
+@router.on_event("startup")
+async def startup_event():
+    logger = logging.getLogger("uvicorn.access")
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.INFO)
+    handler.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)-8s  %(message)s"))
+    logger.addHandler(handler)
 
 
-@app.get("/", response_class=HTMLResponse)
-def index(request: Request):
-    context = {"request": request}
-    return templates.TemplateResponse("index.html", context)
+@router.get("/api/v1/data", tags=["info"])
+async def get_data():
+    try:
+        data = json_config.load(DATA_PATH)
+        return data
+    except FileNotFoundError:
+        return {
+            "rss_link": "",
+            "data_version": settings.data_version,
+            "bangumi_info": [],
+        }
 
 
-@app.get("/api/v1/data")
-def get_data():
-    data = json_config.load(DATA_PATH)
-    return data
-
-
-@app.get("/api/v1/log")
+@router.get("/api/v1/log", tags=["info"])
 async def get_log():
-    return FileResponse(LOG_PATH)
+    if os.path.isfile(LOG_PATH):
+        return FileResponse(LOG_PATH)
+    else:
+        return Response("Log file not found", status_code=404)
 
 
-@app.get("/api/v1/resetRule")
+@router.get("/api/v1/resetRule")
 def reset_rule():
     return api_func.reset_rule()
 
 
-@app.get("api/v1/removeRule/{bangumi_title}")
-def remove_rule(bangumi_title: str):
-    return api_func.remove_rule(bangumi_title)
+@router.get("api/v1/removeRule/{bangumi_id}")
+def remove_rule(bangumi_id: str):
+    bangumi_id = int(bangumi_id)
+    return api_func.remove_rule(bangumi_id)
 
 
-@app.post("/api/v1/collection")
+@router.post("/api/v1/collection", tags=["download"])
 async def collection(link: RssLink):
     return api_func.download_collection(link.rss_link)
 
 
-@app.post("/api/v1/subscribe")
+@router.post("/api/v1/subscribe", tags=["download"])
 async def subscribe(link: RssLink):
     return api_func.add_subscribe(link.rss_link)
 
 
-@app.post("/api/v1/addRule")
+@router.post("/api/v1/addRule", tags=["download"])
 async def add_rule(info: AddRule):
     return api_func.add_rule(info.title, info.season)
 
 
-def run():
-    LOGGING_CONFIG["formatters"]["default"]["fmt"] = "[%(asctime)s] %(levelprefix)s %(message)s"
-    uvicorn.run(app, host="0.0.0.0", port=settings.program.webui_port)
+@router.get("/api/v1/getConfig", tags=["config"])
+async def get_config():
+    return api_func.get_config()
 
 
+@router.post("/api/v1/updateConfig", tags=["config"])
+async def update_config(config: Config):
+    return api_func.update_config(config)
+
+
+@router.get("/RSS/MyBangumi", tags=["proxy"])
+async def get_my_bangumi(token: str):
+    full_path = "MyBangumi?token=" + token
+    content = api_func.get_rss(full_path)
+    return Response(content, media_type="application/xml")
+
+
+@router.get("/RSS/Search", tags=["proxy"])
+async def get_search_result(searchstr: str):
+    full_path = "Search?searchstr=" + searchstr
+    content = api_func.get_rss(full_path)
+    return Response(content, media_type="application/xml")
+
+
+@router.get("/RSS/Bangumi", tags=["proxy"])
+async def get_bangumi(bangumiId: str, groupid: str):
+    full_path = "Bangumi?bangumiId=" + bangumiId + "&groupid=" + groupid
+    content = api_func.get_rss(full_path)
+    return Response(content, media_type="application/xml")
+
+
+@router.get("/RSS/{full_path:path}", tags=["proxy"])
+async def get_rss(full_path: str):
+    content = api_func.get_rss(full_path)
+    return Response(content, media_type="application/xml")
+
+
+@router.get("/Download/{full_path:path}", tags=["proxy"])
+async def download(full_path: str):
+    torrent = api_func.get_torrent(full_path)
+    return Response(torrent, media_type="application/x-bittorrent")
 

@@ -7,25 +7,29 @@ from qbittorrentapi.exceptions import Conflict409Error
 from module.conf import settings
 from module.ab_decorator import qb_connect_failed_wait
 
-from .exceptions import ConflictError
+from module.downloader.exceptions import ConflictError
 
 logger = logging.getLogger(__name__)
 
 
 class QbDownloader:
+    def __init__(self):
+        self._client: Client | None = None
+
     @qb_connect_failed_wait
-    def __init__(self, host, username, password):
+    def auth(self, host, username, password):
         self._client = Client(
             host=host,
             username=username,
             password=password,
+            VERIFY_WEBUI_CERTIFICATE=settings.downloader.ssl
         )
         while True:
             try:
                 self._client.auth_log_in()
                 break
             except LoginFailed:
-                logger.debug(
+                logger.warning(
                     f"Can't login qBittorrent Server {host} by {username}, retry in {5} seconds."
                 )
             time.sleep(5)
@@ -38,13 +42,16 @@ class QbDownloader:
     def get_app_prefs(self):
         return self._client.app_preferences()
 
+    def add_category(self, category):
+        return self._client.torrents_createCategory(name=category)
+
     @qb_connect_failed_wait
     def torrents_info(self, status_filter, category):
         return self._client.torrents_info(status_filter, category)
 
     def torrents_add(self, urls, save_path, category):
         return self._client.torrents_add(
-            is_paused=settings.DEBUG["enable"],
+            is_paused=False,
             urls=urls,
             save_path=save_path,
             category=category,
@@ -56,9 +63,8 @@ class QbDownloader:
             torrent_hashes=hash
         )
 
-    def torrents_rename_file(self, torrent_hash, new_file_name, old_path, new_path):
-        self._client.torrents_rename_file(torrent_hash=torrent_hash, new_file_name=new_file_name,
-                                          old_path=old_path, new_path=new_path)
+    def torrents_rename_file(self, torrent_hash, old_path, new_path):
+        self._client.torrents_rename_file(torrent_hash=torrent_hash, old_path=old_path, new_path=new_path)
 
     def get_rss_info(self):
         item = self._client.rss_items().get("Mikan_RSS")
@@ -92,5 +98,11 @@ class QbDownloader:
     def get_download_rule(self):
         return self._client.rss_rules()
 
-    def get_torrent_path(self, hash):
-        return self._client.torrents_info(hashes=hash)[0].save_path
+    def get_torrent_path(self, _hash):
+        return self._client.torrents_info(hashes=_hash)[0].save_path
+
+    def set_category(self, _hash, category):
+        self._client.torrents_set_category(category, hashes=_hash)
+
+    def check_connection(self):
+        return self._client.app_version()

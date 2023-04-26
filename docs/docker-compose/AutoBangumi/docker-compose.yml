@@ -6,22 +6,15 @@ services:
       - TZ=Asia/Shanghai
       - PGID=${GID}
       - PUID=${UID}
-      - AB_INTERVAL_TIME=1800
       - AB_DOWNLOADER_HOST=localhost:${QB_PORT}
       - AB_DOWNLOADER_USERNAME=admin
       - AB_DOWNLOADER_PASSWORD=adminadmin
-      - AB_METHOD=pn
-      - AB_GROUP_TAG=True
-      - AB_NOT_CONTAIN=720
       - AB_DOWNLOAD_PATH=${DOWNLOAD_PATH}
       - AB_RSS=${RSS}
-      - AB_DEBUG_MODE=False
-      - AB_EP_COMPLETE=False
-      - AB_SEASON_ONE=True
     networks:
       - auto_bangumi
     ports:
-      - 7892:7892
+      - '7892:7892'
     volumes:
       - auto_bangumi:/config
     dns:

@@ -2,6 +2,8 @@ name: Build(Docker)
 
 on:
   push:
+    branches:
+      - main
     tags:
       - '\d+\.\d+\.\d+'
   pull_request:
@@ -41,6 +43,5 @@ jobs:
           push: true
           tags: |
             estrellaxd/auto_bangumi:latest
-            estrellaxd/auto_bangumi:${{ github.sha }}
-            estrellaxd/auto_bangumi:${{ github.ref }}
+            estrellaxd/auto_bangumi:${{ github.ref_name }}
           labels: ${{ steps.meta.outputs.labels }}

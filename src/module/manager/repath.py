@@ -20,12 +20,12 @@ class RuleInfo:
 
 
 @dataclass
-class RePathInfo:
+class RepathInfo:
     path: str
     hashes: list
 
 
-class RePath:
+class RepathTorrents:
     def __init__(self, download_client: DownloadClient):
         self._client = download_client
         self.re_season = re.compile(r"S\d{1,2}")
@@ -73,10 +73,10 @@ class RePath:
                         hashes.append(info.hash)
                         infos.remove(info)
             if hashes:
-                repath_list.append(RePathInfo(rule.new_path, hashes))
+                repath_list.append(RepathInfo(rule.new_path, hashes))
         return repath_list
 
-    def re_path(self, repath_info: RePathInfo):
+    def re_path(self, repath_info: RepathInfo):
         self._client.move_torrent(repath_info.hashes, repath_info.path)
 
     def run(self):

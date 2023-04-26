@@ -3,6 +3,7 @@ import logging
 from .analyser import RawParser, DownloadParser, TMDBMatcher
 
 from module.conf import settings
+from module.models import BangumiData
 
 logger = logging.getLogger(__name__)
 LANGUAGE = settings.rss_parser.language
@@ -17,7 +18,14 @@ class TitleParser:
     def raw_parser(self, raw: str):
         return self._raw_parser.analyse(raw)
 
-    def download_parser(self, download_raw, folder_name, season, suffix, method=settings.bangumi_manage.method):
+    def download_parser(
+            self,
+            download_raw: str,
+            folder_name: str | None = None,
+            season: int | None = None,
+            suffix: str | None = None,
+            method: str = settings.bangumi_manage.rename_method
+    ):
         return self._download_parser.download_rename(download_raw, folder_name, season, suffix, method)
 
     def tmdb_parser(self, title: str, season: int):
@@ -38,7 +46,7 @@ class TitleParser:
         official_title = official_title if official_title else title
         return official_title, tmdb_season
 
-    def return_dict(self, _raw: str):
+    def return_data(self, _raw: str, _id: int) -> BangumiData:
         try:
             episode = self.raw_parser(_raw)
             title_search = episode.title_zh if episode.title_zh else episode.title_en
@@ -48,18 +56,21 @@ class TitleParser:
             else:
                 official_title = title_search if LANGUAGE == "zh" else title_raw
                 _season = episode.season
-            data = {
-                "official_title": official_title,
-                "title_raw": title_raw,
-                "season": _season,
-                "season_raw": episode.season_raw,
-                "group": episode.group,
-                "dpi": episode.resolution,
-                "source": episode.source,
-                "subtitle": episode.sub,
-                "added": False,
-                "eps_collect": True if episode.episode > 1 else False,
-            }
+            data = BangumiData(
+                id=_id,
+                official_title=official_title,
+                title_raw=title_raw,
+                season=_season,
+                season_raw=episode.season_raw,
+                group=episode.group,
+                dpi=episode.resolution,
+                source=episode.source,
+                subtitle=episode.sub,
+                added=False,
+                eps_collect=True if episode.episode > 1 else False,
+                offset=0,
+                filter=settings.rss_parser.filter
+            )
             logger.debug(f"RAW:{_raw} >> {episode.title_en}")
             return data
         except Exception as e:

@@ -14,12 +14,12 @@ services:
       - ${DOWNLOAD_PATH}:/downloads # 填入下载绝对路径
     ports:
       - ${QB_PORT}:${QB_PORT}
-      - 6881:6881
-      - 6881:6881/udp
+      - "6881:6881"
+      - "6881:6881/udp"
     networks:
       - auto_bangumi
     restart: unless-stopped
-    image: lscr.io/linuxserver/qbittorrent:4.4.3
+    image: superng6/qbittorrent
 
   auto_bangumi:
     container_name: AutoBangumi
@@ -27,23 +27,16 @@ services:
       - TZ=Asia/Shanghai
       - PGID=${GID}
       - PUID=${UID}
-      - AB_INTERVAL_TIME=1800
       - AB_DOWNLOADER_HOST=qbittorrent:${QB_PORT}
       - AB_DOWNLOADER_USERNAME=admin
       - AB_DOWNLOADER_PASSWORD=adminadmin
-      - AB_METHOD=pn
-      - AB_GROUP_TAG=True
-      - AB_NOT_CONTAIN=720
       - AB_DOWNLOAD_PATH=/downloads/Bangumi
       - AB_RSS=${RSS}
-      - AB_DEBUG_MODE=False
-      - AB_EP_COMPLETE=False
-    volumes:
-      - auto_bangumi:/config
     networks:
-      - auto_bangumi
+      - /path/to/config:/app/config
+      - /path/to/data:/app/data
     ports:
-      - 7892:7892
+      - '7892:7892'
     dns:
       - 8.8.8.8
       - 223.5.5.5
@@ -56,6 +49,4 @@ networks:
   auto_bangumi:
 volumes:
   qb_config:
-    external: false
-  auto_bangumi:
     external: false
