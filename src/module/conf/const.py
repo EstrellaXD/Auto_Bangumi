@@ -67,7 +67,10 @@ ENV_TO_ATTR = {
     },
     "rss_parser": {
         "AB_RSS_COLLECTOR": ("enable", lambda e: e.lower() in ("true", "1", "t")),
-        "AB_RSS": ("token", lambda e: parse_qs(urlparse(e).query).get("token", [None])[0]),
+        "AB_RSS": [
+            ("token", lambda e: parse_qs(urlparse(e).query).get("token", [None])[0]),
+            ("custom_url", lambda e: urlparse(e).netloc),
+        ],
         "AB_NOT_CONTAIN": ("filter", lambda e: e.split("|")),
         "AB_LANGUAGE": "language",
         "AB_ENABLE_TMDB": ("enable_tmdb", lambda e: e.lower() in ("true", "1", "t")),
@@ -81,6 +84,22 @@ ENV_TO_ATTR = {
     },
     "log": {
         "AB_DEBUG_MODE": ("debug_enable", lambda e: e.lower() in ("true", "1", "t")),
+    },
+    "proxy": {
+        "AB_HTTP_PROXY": [
+            ("enable", lambda e: True),
+            ("type", lambda e: "http"),
+            ("host", lambda e: e.split(":")[0]),
+            ("port", lambda e: int(e.split(":")[1])),
+        ],
+        "AB_SOCKS": [
+            ("enable", lambda e: True),
+            ("type", lambda e: "socks"),
+            ("host", lambda e: e.split(",")[0]),
+            ("port", lambda e: int(e.split(",")[1])),
+            ("username", lambda e: e.split(",")[2]),
+            ("password", lambda e: e.split(",")[3]),
+        ],
     },
 }
 

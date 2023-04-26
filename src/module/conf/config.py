@@ -47,8 +47,13 @@ def env_to_config() -> Setting:
     for key, section in ENV_TO_ATTR.items():
         for env, attr in section.items():
             if env in os.environ:
-                attr_name = attr[0] if isinstance(attr, tuple) else attr
-                _settings[key][attr_name] = _val_from_env(env, attr)
+                if isinstance(attr, list):
+                    for _attr in attr:
+                        attr_name = _attr[0] if isinstance(_attr, tuple) else _attr
+                        _settings[key][attr_name] = _val_from_env(env, _attr)
+                else:
+                    attr_name = attr[0] if isinstance(attr, tuple) else attr
+                    _settings[key][attr_name] = _val_from_env(env, attr)
     return Setting(**_settings)
 
 
