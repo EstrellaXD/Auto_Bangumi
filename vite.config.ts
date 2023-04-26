@@ -23,6 +23,9 @@ export default defineConfig({
       resolvers: [ElementPlusResolver()],
     }),
   ],
+  build: {
+    cssCodeSplit: false,
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
