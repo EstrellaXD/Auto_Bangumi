@@ -1,4 +1,6 @@
 # -*- encoding: utf-8 -*-
+from urllib.parse import urlparse, parse_qs
+
 
 DEFAULT_SETTINGS = {
     "program": {
@@ -65,7 +67,7 @@ ENV_TO_ATTR = {
     },
     "rss_parser": {
         "AB_RSS_COLLECTOR": ("enable", lambda e: e.lower() in ("true", "1", "t")),
-        "AB_RSS": ("token", lambda e: e.replace("https://mikanani.me/RSS/MyBangumi?token=", "")),
+        "AB_RSS": ("token", lambda e: parse_qs(urlparse(e).query).get("token", [None])[0]),
         "AB_NOT_CONTAIN": ("filter", lambda e: e.split("|")),
         "AB_LANGUAGE": "language",
         "AB_ENABLE_TMDB": ("enable_tmdb", lambda e: e.lower() in ("true", "1", "t")),
