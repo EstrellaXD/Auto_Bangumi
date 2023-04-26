@@ -11,6 +11,6 @@ export const appStop = () => axios.get('api/v1/stop');
 
 /** 状态 */
 export async function appStatus() {
-  const { data } = await axios.get('api/v1/getStatus');
+  const { data } = await axios.get<boolean>('api/v1/status');
   return data;
 }

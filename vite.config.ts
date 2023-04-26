@@ -13,7 +13,7 @@ export default defineConfig({
     vue(),
     UnoCSS(),
     AutoImport({
-      imports: ['vue', 'vue-router'],
+      imports: ['vue', 'vue-router', 'vitest', 'pinia'],
       dts: 'src/auto-imports.d.ts',
       resolvers: [ElementPlusResolver()],
       dirs: ['src/store', 'src/hooks'],

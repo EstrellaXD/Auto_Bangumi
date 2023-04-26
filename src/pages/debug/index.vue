@@ -36,7 +36,7 @@ function restart() {
           }
         })
         .catch((error) => {
-          console.error('🚀 ~ file: index.vue:41 ~ .then ~ e:', error);
+          console.error('🚀 ~ file: index.vue:41 ~ .then ~ error:', error);
           ElMessage({
             message: '操作失败, 请重试!',
             type: 'error',

@@ -1,12 +1,27 @@
 <script lang="ts" setup>
 import YMenu from './YMenu.vue';
+
+const { status } = storeToRefs(programStore());
 </script>
 
 <template>
   <div class="app-layout" w-full h-screen overflow-hidden flex>
     <el-container>
-      <el-header class="header" flex="~ items-center justify-center" h-65px>
+      <el-header
+        class="header"
+        flex="~ items-center justify-center"
+        h-65px
+        relative
+      >
         <img src="@/assets/logo.png" alt="logo" class="h-7/10" />
+
+        <div absolute right-5 flex="~ items-center" text-3>
+          运行状态:
+          <div
+            class="i-carbon:dot-mark"
+            :class="{ 'text-red': !status, 'text-green': status }"
+          ></div>
+        </div>
       </el-header>
 
       <el-container overflow-hidden>

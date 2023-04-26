@@ -12,7 +12,7 @@ onDeactivated(() => {
 </script>
 
 <template>
-  <div class="log-box" wh-full overflow-hidden px-2em leading-2em>
+  <div class="log-box" wh-full overflow-hidden px-2em leading-2em text-12px>
     <pre whitespace-break-spaces>{{ store.log }}</pre>
   </div>
 </template>

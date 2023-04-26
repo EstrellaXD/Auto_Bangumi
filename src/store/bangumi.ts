@@ -1,4 +1,3 @@
-import { defineStore } from 'pinia';
 import { getABData } from '../api/bangumi';
 
 export const bangumiStore = defineStore('bangumi', () => {

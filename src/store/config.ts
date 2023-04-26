@@ -1,4 +1,3 @@
-import { defineStore } from 'pinia';
 import { ElMessage } from 'element-plus';
 import { getConfig, setConfig } from '@/api/config';
 import type { Config } from '#/config';
