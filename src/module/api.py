@@ -24,7 +24,7 @@ async def startup_event():
     logger.addHandler(handler)
 
 
-@router.get("/api/v1/data")
+@router.get("/api/v1/data", tags=["info"])
 async def get_data():
     try:
         data = json_config.load(DATA_PATH)
@@ -37,7 +37,7 @@ async def get_data():
         }
 
 
-@router.get("/api/v1/log")
+@router.get("/api/v1/log", tags=["info"])
 async def get_log():
     if os.path.isfile(LOG_PATH):
         return FileResponse(LOG_PATH)
@@ -55,17 +55,17 @@ def remove_rule(bangumi_title: str):
     return api_func.remove_rule(bangumi_title)
 
 
-@router.post("/api/v1/collection")
+@router.post("/api/v1/collection", tags=["download"])
 async def collection(link: RssLink):
     return api_func.download_collection(link.rss_link)
 
 
-@router.post("/api/v1/subscribe")
+@router.post("/api/v1/subscribe", tags=["download"])
 async def subscribe(link: RssLink):
     return api_func.add_subscribe(link.rss_link)
 
 
-@router.post("/api/v1/addRule")
+@router.post("/api/v1/addRule", tags=["download"])
 async def add_rule(info: AddRule):
     return api_func.add_rule(info.title, info.season)
 
@@ -80,26 +80,34 @@ async def update_config(config: Config):
     return api_func.update_config(config)
 
 
-@router.get("/RSS/{full_path:path}")
-async def get_rss(
-        full_path: str,
-        token: str = None,
-        searchstr: str = None,
-        bangumiId: str = None,
-        groupid: str = None,
-):
-    if token is not None:
-        full_path = full_path + "?token=" + token
-    if searchstr is not None:
-        full_path = full_path + "?searchstr=" + searchstr
-    if bangumiId is not None and groupid is not None:
-        full_path = full_path + "?bangumiId=" + bangumiId + "&groupid=" + groupid
+@router.get("/RSS/MyBangumi", tags=["proxy"])
+async def get_my_bangumi(token: str):
+    full_path = "MyBangumi?token=" + token
     content = api_func.get_rss(full_path)
-    print(full_path)
     return Response(content, media_type="application/xml")
 
 
-@router.get("/Download/{full_path:path}")
+@router.get("/RSS/Search", tags=["proxy"])
+async def get_search_result(searchstr: str):
+    full_path = "Search?searchstr=" + searchstr
+    content = api_func.get_rss(full_path)
+    return Response(content, media_type="application/xml")
+
+
+@router.get("/RSS/Bangumi", tags=["proxy"])
+async def get_bangumi(bangumiId: str, groupid: str):
+    full_path = "Bangumi?bangumiId=" + bangumiId + "&groupid=" + groupid
+    content = api_func.get_rss(full_path)
+    return Response(content, media_type="application/xml")
+
+
+@router.get("/RSS/{full_path:path}", tags=["proxy"])
+async def get_rss(full_path: str):
+    content = api_func.get_rss(full_path)
+    return Response(content, media_type="application/xml")
+
+
+@router.get("/Download/{full_path:path}", tags=["proxy"])
 async def download(full_path: str):
     torrent = api_func.get_torrent(full_path)
     return Response(torrent, media_type="application/x-bittorrent")
