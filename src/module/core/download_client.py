@@ -3,10 +3,9 @@ import logging
 import os
 
 from module.downloader import getClient
-from module.conf import settings, RSSLink
+from module.conf import settings
 from module.models import BangumiData
 
-RSS_LINK = RSSLink()
 
 logger = logging.getLogger(__name__)
 
@@ -63,20 +62,20 @@ class DownloadClient:
         self.client.rss_set_rule(rule_name=f"{rule_name} S{season}", rule_def=rule)
         logger.info(f"Add {official_name} Season {season}")
 
-    def rss_feed(self):
+    def rss_feed(self, rss_link):
         # TODO: 定时刷新 RSS
-        if self.client.get_rss_info() == RSS_LINK:
+        if self.client.get_rss_info() == rss_link:
             logger.info("RSS Already exists.")
         else:
             logger.info("No feed exists, start adding feed.")
-            self.client.rss_add_feed(url=RSS_LINK, item_path="Mikan_RSS")
+            self.client.rss_add_feed(url=rss_link, item_path="Mikan_RSS")
             logger.info("Add RSS Feed successfully.")
 
     def add_collection_feed(self, rss_link, item_path):
         self.client.rss_add_feed(url=rss_link, item_path=item_path)
         logger.info("Add RSS Feed successfully.")
 
-    def add_rules(self, bangumi_info: list[BangumiData], rss_link=RSS_LINK):
+    def add_rules(self, bangumi_info: list[BangumiData], rss_link: str):
         logger.debug("Start adding rules.")
         for info in bangumi_info:
             if not info.added:

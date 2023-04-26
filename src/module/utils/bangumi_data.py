@@ -11,8 +11,9 @@ def load_program_data(path: str) -> ProgramData:
     try:
         data = ProgramData(**data)
         logger.info("Data file loaded")
-    except TypeError:
+    except Exception as e:
         logger.warning("Data file is not compatible with the current version, rebuilding...")
+        logger.debug(e)
         data = ProgramData(
             rss_link=data["rss_link"],
             data_version=data["data_version"],

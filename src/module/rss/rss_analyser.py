@@ -1,30 +1,29 @@
 import re
 import logging
+
 from module.network import RequestContent
 from module.parser import TitleParser
-from module.conf import RSSLink
 from module.core import DownloadClient
 from module.models import BangumiData
 
 logger = logging.getLogger(__name__)
-RSS_LINK = RSSLink()
 
 
 class RSSAnalyser:
     def __init__(self):
         self._title_analyser = TitleParser()
 
-
-    def find_id(self, bangumi_info: list[BangumiData]) -> int:
+    @staticmethod
+    def find_id(bangumi_info: list[BangumiData]) -> int:
         _id = 0
         for info in bangumi_info:
             if info.id > _id:
                 _id = info.id
         return _id
 
-    def rss_to_datas(self, bangumi_info: list[BangumiData]) -> list[BangumiData]:
+    def rss_to_datas(self, bangumi_info: list[BangumiData], rss_link: str) -> list[BangumiData]:
         with RequestContent() as req:
-            rss_torrents = req.get_torrents(RSS_LINK)
+            rss_torrents = req.get_torrents(rss_link)
         # Find largest bangumi id
         _id = self.find_id(bangumi_info)
         for torrent in rss_torrents:
@@ -53,11 +52,11 @@ class RSSAnalyser:
             except Exception as e:
                 logger.debug(e)
 
-    def run(self, bangumi_info: list[BangumiData], download_client: DownloadClient):
+    def run(self, bangumi_info: list[BangumiData], download_client: DownloadClient, rss_link: str):
         logger.info("Start collecting RSS info.")
         try:
-            self.rss_to_datas(bangumi_info)
-            download_client.add_rules(bangumi_info, rss_link=RSS_LINK)
+            self.rss_to_datas(bangumi_info, rss_link)
+            download_client.add_rules(bangumi_info, rss_link=rss_link)
         except Exception as e:
             logger.debug(e)
         logger.info("Finished")
