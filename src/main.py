@@ -22,10 +22,11 @@ main_process = multiprocessing.Process(target=app.run)
 @router.get("/api/v1/restart", tags=["program"])
 async def restart():
     global main_process
-    if not main_process.is_alive():
-        return {"status": "failed", "reason": "Already stopped"}
-    logger.info("Restarting...")
-    os.kill(main_process.pid, signal.SIGTERM)
+    if main_process.is_alive():
+        os.kill(main_process.pid, signal.SIGTERM)
+        logger.info("Restarting...")
+    else:
+        logger.info("Starting...")
     main_process = multiprocessing.Process(target=app.run)
     main_process.start()
     logger.info("Restarted")

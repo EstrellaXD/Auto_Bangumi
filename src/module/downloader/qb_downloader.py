@@ -42,6 +42,9 @@ class QbDownloader:
     def get_app_prefs(self):
         return self._client.app_preferences()
 
+    def add_category(self, category):
+        return self._client.torrents_createCategory(name=category)
+
     @qb_connect_failed_wait
     def torrents_info(self, status_filter, category):
         return self._client.torrents_info(status_filter, category)

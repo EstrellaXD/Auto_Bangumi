@@ -31,3 +31,9 @@ config/bangumi.json/config/bangumi.json
 /README.md
 /setup.py
 dist.zip
+data
+config
+.pytest_cache
+test
+.env
+test.py

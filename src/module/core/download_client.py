@@ -31,6 +31,11 @@ class DownloadClient:
             "rss_refresh_interval": 30,
         }
         self.client.prefs_init(prefs=prefs)
+        try:
+            self.client.add_category("BangumiCollection")
+        except Exception as e:
+            logger.warning("Cannot add new category, maybe already exists.")
+            logger.debug(e)
         if settings.downloader.path == "":
             prefs = self.client.get_app_prefs()
             settings.downloader.path = os.path.join(prefs["save_path"], "Bangumi")
