@@ -58,12 +58,12 @@ def remove_rule(bangumi_id: str):
 
 @router.post("/api/v1/collection", tags=["download"])
 async def collection(link: RssLink):
-    return api_func.download_collection(link.rss_link)
+    return api_func.download_collection(link.rss_link).dict()
 
 
 @router.post("/api/v1/subscribe", tags=["download"])
 async def subscribe(link: RssLink):
-    return api_func.add_subscribe(link.rss_link)
+    return api_func.add_subscribe(link.rss_link).dict()
 
 
 @router.post("/api/v1/addRule", tags=["download"])
