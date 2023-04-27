@@ -2,14 +2,8 @@ name: Build(Docker)
 
 on:
   push:
-    branches:
-      - main
     tags:
       - '\d+\.\d+\.\d+'
-  pull_request:
-    tags:
-      - '\d+\.\d+\.\d+'
-
 
 jobs:
   docker:

@@ -77,7 +77,7 @@ ENV_TO_ATTR = {
     },
     "bangumi_manage": {
         "AB_RENAME": ("enable", lambda e: e.lower() in ("true", "1", "t")),
-        "AB_METHOD": ("method", lambda e: e.lower()),
+        "AB_METHOD": ("rename_method", lambda e: e.lower()),
         "AB_GROUP_TAG": ("group_tag", lambda e: e.lower() in ("true", "1", "t")),
         "AB_EP_COMPLETE": ("eps_complete", lambda e: e.lower() in ("true", "1", "t")),
         "AB_REMOVE_BAD_BT": ("remove_bad_torrent", lambda e: e.lower() in ("true", "1", "t")),
