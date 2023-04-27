@@ -32,9 +32,11 @@ services:
       - AB_DOWNLOADER_PASSWORD=adminadmin
       - AB_DOWNLOAD_PATH=/downloads/Bangumi
       - AB_RSS=${RSS}
-    networks:
+    volumes:
       - /path/to/config:/app/config
       - /path/to/data:/app/data
+    networks:
+      - auto_bangumi
     ports:
       - '7892:7892'
     dns:
