@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 
 class BangumiData(BaseModel):
-    id: int = Field(..., alias="id", title="番剧ID")
+    id: int | None = Field(None, alias="id", title="番剧ID")
     official_title: str = Field(..., alias="official_title", title="番剧中文名")
     year: int | None = Field(None, alias="year", title="番剧年份")
     title_raw: str = Field(..., alias="title_raw", title="番剧原名")

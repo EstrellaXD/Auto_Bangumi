@@ -2,8 +2,7 @@ name: Release Drafter
 
 on:
   pull_request:
-    tags:
-      - '\d+\.\d+\.\d+'
+
 
 permissions:
   contents: read

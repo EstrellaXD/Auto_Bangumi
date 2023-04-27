@@ -5,7 +5,7 @@ import logging
 from module.conf import settings
 from module.network import RequestContent
 
-from module.core.download_client import DownloadClient
+from module.core import DownloadClient
 from module.models import BangumiData
 
 logger = logging.getLogger(__name__)

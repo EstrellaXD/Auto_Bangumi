@@ -1,6 +1,6 @@
 import logging
 
-from .analyser import RawParser, DownloadParser, TMDBMatcher
+from .analyser import raw_parser, DownloadParser, TMDBMatcher
 
 from module.conf import settings
 from module.models import BangumiData
@@ -11,12 +11,8 @@ LANGUAGE = settings.rss_parser.language
 
 class TitleParser:
     def __init__(self):
-        self._raw_parser = RawParser()
         self._download_parser = DownloadParser()
         self._tmdb_parser = TMDBMatcher()
-
-    def raw_parser(self, raw: str):
-        return self._raw_parser.analyse(raw)
 
     def download_parser(
             self,
@@ -47,15 +43,20 @@ class TitleParser:
         official_title = official_title if official_title else title
         return official_title, tmdb_season
 
-    def return_data(self, _raw: str, _id: int) -> BangumiData:
+    def raw_parser(self, raw: str, _id: int | None = None) -> BangumiData:
         try:
-            episode = self.raw_parser(_raw)
+            episode = raw_parser(raw)
+            titles = {
+                "zh": episode.title_zh,
+                "en": episode.title_en,
+                "jp": episode.title_jp
+            }
             title_search = episode.title_zh if episode.title_zh else episode.title_en
             title_raw = episode.title_en if episode.title_en else episode.title_zh
             if settings.rss_parser.enable_tmdb:
                 official_title, _season = self.tmdb_parser(title_search, episode.season)
             else:
-                official_title = title_search if LANGUAGE == "zh" else title_raw
+                official_title = titles[LANGUAGE] if titles[LANGUAGE] else titles["zh"]
                 _season = episode.season
             data = BangumiData(
                 id=_id,
@@ -72,7 +73,7 @@ class TitleParser:
                 offset=0,
                 filter=settings.rss_parser.filter
             )
-            logger.debug(f"RAW:{_raw} >> {episode.title_en}")
+            logger.debug(f"RAW:{raw} >> {episode.title_en}")
             return data
         except Exception as e:
             logger.debug(e)
