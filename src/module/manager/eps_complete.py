@@ -36,7 +36,7 @@ class FullSeasonGet:
         keyword = self.init_eps_complete_search_str(data)
         with RequestContent() as req:
             torrents = req.get_torrents(f"{CUSTOM_URL}/RSS/Search?searchstr={keyword}")
-        return torrents
+        return [torrent for torrent in torrents if data.title_raw in torrent.title]
 
     @staticmethod
     def collect_season_torrents(data: BangumiData, torrents):
