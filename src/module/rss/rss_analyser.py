@@ -37,7 +37,7 @@ class RSSAnalyser:
                         break
             if extra_add:
                 _id += 1
-                data = self._title_analyser.return_data(raw_title, _id)
+                data = self._title_analyser.raw_parser(raw_title, _id)
                 if data is not None and data.official_title not in bangumi_info:
                     bangumi_info.append(data)
         return bangumi_info
@@ -47,7 +47,7 @@ class RSSAnalyser:
             rss_torrents = req.get_torrents(url, filter)
         for torrent in rss_torrents:
             try:
-                data = self._title_analyser.return_data(torrent.name, 9999)
+                data = self._title_analyser.raw_parser(torrent.name)
                 return data
             except Exception as e:
                 logger.debug(e)

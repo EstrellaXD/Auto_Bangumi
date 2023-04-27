@@ -11,7 +11,7 @@ class TMDBInfo:
     id: int
     title_jp: str
     title_zh: str
-    season: dict
+    season: list[dict]
     last_season: int
     year_number: int
 

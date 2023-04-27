@@ -5,7 +5,7 @@ import logging
 from module.conf import settings
 from module.network import RequestContent
 
-from module.core.download_client import DownloadClient
+from module.core import DownloadClient
 from module.models import BangumiData
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ class FullSeasonGet:
         keyword = self.init_eps_complete_search_str(data)
         with RequestContent() as req:
             torrents = req.get_torrents(f"{CUSTOM_URL}/RSS/Search?searchstr={keyword}")
-        return torrents
+        return [torrent for torrent in torrents if data.title_raw in torrent.title]
 
     @staticmethod
     def collect_season_torrents(data: BangumiData, torrents):

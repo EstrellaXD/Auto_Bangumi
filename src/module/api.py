@@ -58,12 +58,20 @@ def remove_rule(bangumi_id: str):
 
 @router.post("/api/v1/collection", tags=["download"])
 async def collection(link: RssLink):
-    return api_func.download_collection(link.rss_link)
+    response = api_func.download_collection(link.rss_link).dict()
+    if response:
+        return response
+    else:
+        return {"status": "Failed to parse link"}
 
 
 @router.post("/api/v1/subscribe", tags=["download"])
 async def subscribe(link: RssLink):
-    return api_func.add_subscribe(link.rss_link)
+    response = api_func.add_subscribe(link.rss_link)
+    if response:
+        return response.dict()
+    else:
+        return {"status": "Failed to parse link"}
 
 
 @router.post("/api/v1/addRule", tags=["download"])
