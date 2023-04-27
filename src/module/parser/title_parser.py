@@ -36,7 +36,8 @@ class TitleParser:
             logger.debug(f"TMDB Matched, official title is {tmdb_info.title_zh}")
         except Exception as e:
             logger.debug(e)
-            logger.warning("Not Matched with TMDB")
+            logger.warning(f"{title} can not Matched with TMDB")
+            logger.info("Please change the bangumi info in webui")
             return title, season
         if LANGUAGE == "zh":
             official_title = f"{tmdb_info.title_zh} ({tmdb_info.year_number})"
@@ -75,3 +76,4 @@ class TitleParser:
             return data
         except Exception as e:
             logger.debug(e)
+            print(e)
