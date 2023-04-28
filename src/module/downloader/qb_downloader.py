@@ -66,17 +66,18 @@ class QbDownloader:
     def torrents_rename_file(self, torrent_hash, old_path, new_path):
         self._client.torrents_rename_file(torrent_hash=torrent_hash, old_path=old_path, new_path=new_path)
 
-    def get_rss_info(self):
-        item = self._client.rss_items().get("Mikan_RSS")
-        if item is not None:
-            return item.url
-        else:
-            return None
+    def get_rss_info(self, url) -> str | None:
+        items = self._client.rss_items()
+        for item in items.items():
+            if item[1].url == url:
+                return item[0]
+        return None
 
     def rss_add_feed(self, url, item_path):
         try:
-            if self.get_rss_info() is not None:
-                self.rss_remove_item(item_path)
+            path = self.get_rss_info(url)
+            if path:
+                self.rss_remove_item(path)
             self._client.rss_add_feed(url, item_path)
         except Conflict409Error:
             logger.exception("RSS Exist.")
