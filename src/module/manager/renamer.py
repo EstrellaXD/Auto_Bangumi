@@ -39,7 +39,7 @@ class Renamer:
         for f in info.files:
             file_name = f.name
             suffix = os.path.splitext(file_name)[-1]
-            if suffix in suffix_list:
+            if suffix.lower() in suffix_list:
                 file_list.append(file_name)
         return file_list
 
