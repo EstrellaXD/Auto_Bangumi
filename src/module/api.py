@@ -58,9 +58,9 @@ def remove_rule(bangumi_id: str):
 
 @router.post("/api/v1/collection", tags=["download"])
 async def collection(link: RssLink):
-    response = api_func.download_collection(link.rss_link).dict()
+    response = api_func.download_collection(link.rss_link)
     if response:
-        return response
+        return response.dict()
     else:
         return {"status": "Failed to parse link"}
 
