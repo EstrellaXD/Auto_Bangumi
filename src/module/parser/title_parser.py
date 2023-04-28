@@ -1,6 +1,6 @@
 import logging
 
-from .analyser import raw_parser, DownloadParser, TMDBMatcher
+from .analyser import raw_parser, torrent_parser, TMDBMatcher
 
 from module.conf import settings
 from module.models import BangumiData
@@ -11,18 +11,17 @@ LANGUAGE = settings.rss_parser.language
 
 class TitleParser:
     def __init__(self):
-        self._download_parser = DownloadParser()
         self._tmdb_parser = TMDBMatcher()
 
-    def download_parser(
-            self,
+    @staticmethod
+    def torrent_parser(
             download_raw: str,
             folder_name: str | None = None,
             season: int | None = None,
             suffix: str | None = None,
             method: str = settings.bangumi_manage.rename_method
     ):
-        return self._download_parser.download_rename(download_raw, folder_name, season, suffix, method)
+        return torrent_parser(download_raw, folder_name, season, suffix, method)
 
     def tmdb_parser(self, title: str, season: int):
 
