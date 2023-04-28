@@ -69,7 +69,7 @@ class DownloadClient:
 
     def rss_feed(self, rss_link, item_path="Mikan_RSS"):
         # TODO: 定时刷新 RSS
-        if self.client.get_rss_info(item_path) == rss_link:
+        if self.client.get_rss_info(rss_link):
             logger.info("RSS Already exists.")
         else:
             logger.info("No feed exists, start adding feed.")
