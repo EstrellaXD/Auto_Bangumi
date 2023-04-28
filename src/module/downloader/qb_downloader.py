@@ -66,8 +66,8 @@ class QbDownloader:
     def torrents_rename_file(self, torrent_hash, old_path, new_path):
         self._client.torrents_rename_file(torrent_hash=torrent_hash, old_path=old_path, new_path=new_path)
 
-    def get_rss_info(self):
-        item = self._client.rss_items().get("Mikan_RSS")
+    def get_rss_info(self, item_path: str = "Mikan_RSS"):
+        item = self._client.rss_items().get(item_path)
         if item is not None:
             return item.url
         else:
@@ -75,7 +75,7 @@ class QbDownloader:
 
     def rss_add_feed(self, url, item_path):
         try:
-            if self.get_rss_info() is not None:
+            if self.get_rss_info(item_path) is not None:
                 self.rss_remove_item(item_path)
             self._client.rss_add_feed(url, item_path)
         except Conflict409Error:

@@ -83,6 +83,6 @@ else:
 if __name__ == "__main__":
     log_config = uvicorn.config.LOGGING_CONFIG
     log_config["formatters"]["default"]["fmt"] = "[%(asctime)s] %(levelname)-8s  %(message)s"
-    main_process.start()
+    # main_process.start()
     uvicorn.run(router, host="0.0.0.0", port=settings.program.webui_port, log_config=log_config)
 
