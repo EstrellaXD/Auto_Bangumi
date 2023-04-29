@@ -19,7 +19,7 @@ class DataOperator(DataConnector):
             if isinstance(item, int):
                 if key not in ["id", "offset", "season"]:
                     db_data[key] = bool(item)
-            elif key == "filter":
+            elif key in ["filter", "rss"]:
                 db_data[key] = item.split(",")
         return BangumiData(**db_data)
 
@@ -38,7 +38,8 @@ class DataOperator(DataConnector):
                 dpi,
                 eps_collect,
                 offset,
-                filter
+                filter,
+                rss
                 ) VALUES (
                 :id,
                 :official_title,
@@ -51,7 +52,8 @@ class DataOperator(DataConnector):
                 :dpi,
                 :eps_collect,
                 :offset,
-                :filter
+                :filter,
+                :rss
                 )
                 ''', db_data)
 
@@ -70,7 +72,8 @@ class DataOperator(DataConnector):
                 dpi,
                 eps_collect,
                 offset,
-                filter
+                filter,
+                rss
                 ) VALUES (
                 :id,
                 :official_title,
@@ -83,7 +86,8 @@ class DataOperator(DataConnector):
                 :dpi,
                 :eps_collect,
                 :offset,
-                :filter
+                :filter,
+                :rss
                 )
                 ''', db_data)
 
@@ -138,6 +142,5 @@ class DataOperator(DataConnector):
 
 if __name__ == '__main__':
     with DataOperator() as op:
-        a = op.match_title("THE IDOLM@STR CINDERELLA GIRLS U149")
-        print(a)
+        pass
 

@@ -25,7 +25,8 @@ class DataConnector:
                 dpi TEXT,
                 eps_collect INTEGER NOT NULL,
                 offset INTEGER NOT NULL,
-                filter TEXT NOT NULL
+                filter TEXT NOT NULL,
+                rss TEXT NOT NULL
             );
             """
         )
@@ -36,5 +37,4 @@ class DataConnector:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._conn.commit()
         self._conn.close()
-
 
