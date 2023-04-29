@@ -1,24 +1,5 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.11-alpine AS Builder
-WORKDIR /app
-COPY requirements.txt .
-RUN apk add --no-cache --virtual=build-dependencies \
-        libxml2-dev \
-        libxslt-dev \
-        gcc \
-        g++ \
-        linux-headers \
-        build-base && \
-    python3 -m pip install --upgrade pip && \
-    pip install cython && \
-    pip install --no-cache-dir -r requirements.txt && \
-    apk del --purge \
-        build-dependencies && \
-    rm -rf \
-        /root/.cache \
-        /tmp/*
-
 FROM scratch AS APP
 
 ENV S6_SERVICES_GRACETIME=30000 \
@@ -33,25 +14,36 @@ ENV S6_SERVICES_GRACETIME=30000 \
     PGID=1000 \
     UMASK=022
 
-COPY --from=Builder / /
+COPY --from=python:3.11-alpine / /
 
 WORKDIR /app
 
+COPY requirements.txt .
 RUN apk add --no-cache \
         curl \
-        wget \
         jq \
         shadow \
         s6-overlay \
         bash && \
+    apk add --no-cache --virtual=build-dependencies \
+        libxml2-dev \
+        libxslt-dev \
+        gcc \
+        g++ \
+        linux-headers \
+        build-base && \
+    python3 -m pip install --upgrade pip && \
+    pip install cython && \
+    pip install --no-cache-dir -r requirements.txt && \
     # Download WebUI
-    wget "https://github.com/Rewrite0/Auto_Bangumi_WebUI/releases/latest/download/dist.zip" -O /tmp/dist.zip && \
-    unzip -q -d /tmp /tmp/dist.zip && \
-    mv /tmp/dist /app/templates && \
+    curl -sL "https://github.com/Rewrite0/Auto_Bangumi_WebUI/releases/latest/download/dist.zip" | busybox unzip -q -d /app - && \
+    mv /app/dist /app/templates && \
     # Add user
-    mkdir /ab && \
     addgroup -S ab -g 911 && \
     adduser -S ab -G ab -h /ab -s /bin/bash -u 911 && \
+    # Clear
+    apk del --purge \
+        build-dependencies && \
     rm -rf \
         /root/.cache \
         /tmp/*
