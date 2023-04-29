@@ -1,7 +1,6 @@
 name: Build(Docker)
 
 on:
-  pull_request:
   push:
     tags:
       - '\d+\.\d+\.\d+'
