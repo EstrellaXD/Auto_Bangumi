@@ -48,7 +48,7 @@ class Renamer:
         suffix = os.path.splitext(media_path)[-1]
         compare_name = media_path.split(os.path.sep)[-1]
         folder_name, season = self.get_folder_and_season(info.save_path)
-        new_path = self._renamer.download_parser(old_name, folder_name, season, suffix)
+        new_path = self._renamer.torrent_parser(old_name, folder_name, season, suffix)
         if compare_name != new_path:
             try:
                 self.client.rename_torrent_file(_hash=info.hash, old_path=media_path, new_path=new_path)
@@ -68,7 +68,7 @@ class Renamer:
             if path_len <= 2:
                 suffix = os.path.splitext(media_path)[-1]
                 old_name = media_path.split(os.path.sep)[-1]
-                new_name = self._renamer.download_parser(old_name, folder_name, season, suffix)
+                new_name = self._renamer.torrent_parser(old_name, folder_name, season, suffix)
                 if old_name != new_name:
                     try:
                         self.client.rename_torrent_file(_hash=_hash, old_path=media_path, new_path=new_name)
@@ -80,13 +80,18 @@ class Renamer:
                         self.delete_bad_torrent(info)
         self.client.set_category(category="BangumiCollection", hashes=_hash)
 
-    def rename_subtitles(self, subtitle_list: list[str], media_old_name, media_new_name, _hash):
-        for subtitle_file in subtitle_list:
-            if re.search(media_old_name, subtitle_file) is not None:
-                subtitle_lang = subtitle_file.split(".")[-2]
-                new_subtitle_name = f"{media_new_name}.{subtitle_lang}.ass"
-                self.client.rename_torrent_file(_hash, subtitle_file, new_subtitle_name)
-                logger.info(f"Rename subtitles for {media_old_name} to {media_new_name}")
+    def rename_subtitles(self, subtitle_list: list[str], _hash):
+        for subtitle_path in subtitle_list:
+            suffix = os.path.splitext(subtitle_path)[-1]
+            old_name = subtitle_path.split(os.path.sep)[-1]
+            new_name = self._renamer.torrent_parser(old_name, suffix)
+            if old_name != new_name:
+                try:
+                    self.client.rename_torrent_file(_hash=_hash, old_path=subtitle_path, new_path=new_name)
+                except Exception as e:
+                    logger.warning(f"{old_name} rename failed")
+                    logger.warning(f"Suffix: {suffix}")
+                    logger.debug(e)
 
     def delete_bad_torrent(self, info):
         if settings.bangumi_manage.remove_bad_torrent:
@@ -137,4 +142,3 @@ if __name__ == '__main__':
     client = DownloadClient()
     rn = Renamer(client)
     rn.rename()
-
