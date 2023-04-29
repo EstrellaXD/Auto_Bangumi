@@ -24,7 +24,6 @@ RUN apk add --no-cache \
         s6-overlay \
         bash && \
     python3 -m pip install --upgrade pip && \
-    pip install cython && \
     pip install --no-cache-dir -r requirements.txt && \
     # Download WebUI
     curl -sL "https://github.com/Rewrite0/Auto_Bangumi_WebUI/releases/latest/download/dist.zip" | busybox unzip -q -d /app - && \
