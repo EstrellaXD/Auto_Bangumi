@@ -1,12 +1,10 @@
 import re
-
+import xml.etree.ElementTree
 from dataclasses import dataclass
-from bs4 import BeautifulSoup
 
 from .request_url import RequestURL
 
 from module.conf import settings
-
 
 FILTER = "|".join(settings.rss_parser.filter)
 
@@ -21,8 +19,13 @@ class RequestContent(RequestURL):
     # Mikanani RSS
     def get_torrents(self, _url: str, filter: bool = True) -> [TorrentInfo]:
         soup = self.get_xml(_url)
-        torrent_titles = [item.title.string for item in soup.find_all("item")]
-        torrent_urls = [item.get("url") for item in soup.find_all("enclosure")]
+        torrent_titles = []
+        torrent_urls = []
+
+        for item in soup.findall("./channel/item"):
+            torrent_titles.append(item.find("title").text)
+            torrent_urls.append(item.find("enclosure").attrib['url'])
+
         torrents = []
         for _title, torrent_url in zip(torrent_titles, torrent_urls):
             if filter:
@@ -32,14 +35,8 @@ class RequestContent(RequestURL):
                 torrents.append(TorrentInfo(_title, torrent_url))
         return torrents
 
-    def get_torrent(self, _url) -> TorrentInfo:
-        soup = self.get_xml(_url)
-        item = soup.find("item")
-        enclosure = item.find("enclosure")
-        return TorrentInfo(item.title.string, enclosure["url"])
-
-    def get_xml(self, _url):
-        return BeautifulSoup(self.get_url(_url).text, "xml")
+    def get_xml(self, _url) -> xml.etree.ElementTree.ElementTree:
+        return xml.etree.ElementTree.fromstring(self.get_url(_url).text)
 
     # API JSON
     def get_json(self, _url) -> dict:
