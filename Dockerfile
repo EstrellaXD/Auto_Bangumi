@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM scratch AS APP
+FROM python:3.11-alpine AS APP
 
 ENV S6_SERVICES_GRACETIME=30000 \
     S6_KILL_GRACETIME=60000 \
@@ -13,8 +13,6 @@ ENV S6_SERVICES_GRACETIME=30000 \
     PUID=1000 \
     PGID=1000 \
     UMASK=022
-
-COPY --from=python:3.11-alpine / /
 
 WORKDIR /app
 
