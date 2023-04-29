@@ -1,6 +1,5 @@
 anyio
 beautifulsoup4
-lxml
 certifi
 charset-normalizer
 click
