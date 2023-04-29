@@ -1,13 +1,10 @@
 import re
-
+import xml.etree.ElementTree
 from dataclasses import dataclass
-from bs4 import BeautifulSoup
 
 from .request_url import RequestURL
 
 from module.conf import settings
-
-import xml.etree.ElementTree
 
 FILTER = "|".join(settings.rss_parser.filter)
 
