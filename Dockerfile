@@ -25,13 +25,6 @@ RUN apk add --no-cache \
         shadow \
         s6-overlay \
         bash && \
-    apk add --no-cache --virtual=build-dependencies \
-        libxml2-dev \
-        libxslt-dev \
-        gcc \
-        g++ \
-        linux-headers \
-        build-base && \
     python3 -m pip install --upgrade pip && \
     pip install cython && \
     pip install --no-cache-dir -r requirements.txt && \
@@ -42,8 +35,6 @@ RUN apk add --no-cache \
     addgroup -S ab -g 911 && \
     adduser -S ab -G ab -h /ab -s /bin/bash -u 911 && \
     # Clear
-    apk del --purge \
-        build-dependencies && \
     rm -rf \
         /root/.cache \
         /tmp/*
