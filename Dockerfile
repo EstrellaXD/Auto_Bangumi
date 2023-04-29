@@ -5,20 +5,9 @@ WORKDIR /app
 COPY requirements.txt .
 
 RUN   --mount=target=/root/.cache/pip,type=cache,sharing=locked \
-      --mount=target=/root/.ccache,type=cache,sharing=locked  \
-   apk add --no-cache --virtual=build-dependencies \
-        libxml2-dev \
-        libxslt-dev \
-        gcc \
-        g++ \
-        linux-headers \
-        ccache \
-        build-base && \
     python3 -m pip install --upgrade pip && \
     pip install cython && \
     pip install --no-cache-dir -r requirements.txt && \
-    apk del --purge \
-        build-dependencies && \
     rm -rf \
         /root/.cache \
         /tmp/*
