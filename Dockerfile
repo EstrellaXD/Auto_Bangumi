@@ -4,8 +4,7 @@ FROM python:3.11-alpine AS Builder
 WORKDIR /app
 COPY requirements.txt .
 
-RUN   --mount=target=/root/.cache/pip,type=cache,sharing=locked \
-    python3 -m pip install --upgrade pip && \
+RUN python3 -m pip install --upgrade pip && \
     pip install cython && \
     pip install --no-cache-dir -r requirements.txt && \
     rm -rf \
