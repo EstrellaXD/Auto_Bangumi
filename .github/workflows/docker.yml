@@ -1,7 +1,10 @@
 name: Build(Docker)
 
 on:
+  pull_request:
   push:
+    tags:
+      - '\d+\.\d+\.\d+'
 
 jobs:
   docker:
@@ -27,7 +30,7 @@ jobs:
           context: .
           builder: ${{ steps.buildx.output.name }}
           platforms: linux/amd64,linux/arm64,linux/arm
-          push: false
+          push: ${{ github.event_name == 'push' }}
           tags: |
             estrellaxd/auto_bangumi:latest
             estrellaxd/auto_bangumi:${{ github.ref_name }}
