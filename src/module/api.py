@@ -12,7 +12,7 @@ from module.models import Config
 
 
 router = FastAPI()
-api_func = APIProcess()
+api_func = APIProcess(settings)
 
 
 @router.on_event("startup")

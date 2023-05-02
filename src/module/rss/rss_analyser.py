@@ -46,9 +46,9 @@ class RSSAnalyser:
                     bangumi_info.append(data)
         return bangumi_info
 
-    def rss_to_data(self, url, filter: bool = True) -> BangumiData:
+    def rss_to_data(self, url, _filter: bool = True) -> BangumiData:
         with RequestContent() as req:
-            rss_torrents = req.get_torrents(url, filter)
+            rss_torrents = req.get_torrents(url, _filter)
         for torrent in rss_torrents:
             try:
                 data = self._title_analyser.raw_parser(
@@ -59,11 +59,10 @@ class RSSAnalyser:
             except Exception as e:
                 logger.debug(e)
 
-    def run(self, bangumi_info: list[BangumiData], download_client: DownloadClient, rss_link: str):
+    def run(self, bangumi_info: list[BangumiData], rss_link: str):
         logger.info("Start collecting RSS info.")
         try:
             self.rss_to_datas(bangumi_info, rss_link)
-            download_client.add_rules(bangumi_info, rss_link=rss_link)
         except Exception as e:
             logger.debug(e)
         logger.info("Finished")

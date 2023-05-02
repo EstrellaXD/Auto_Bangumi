@@ -16,7 +16,7 @@ from module.conf import VERSION, settings
 
 logger = logging.getLogger(__name__)
 
-main_process = multiprocessing.Process(target=app.run)
+main_process = multiprocessing.Process(target=app.run, args=(settings,))
 
 
 @router.get("/api/v1/restart", tags=["program"])
@@ -27,7 +27,8 @@ async def restart():
         logger.info("Restarting...")
     else:
         logger.info("Starting...")
-    main_process = multiprocessing.Process(target=app.run)
+    settings.reload()
+    main_process = multiprocessing.Process(target=app.run, args=(settings,))
     main_process.start()
     logger.info("Restarted")
     return {"status": "success"}
@@ -50,7 +51,8 @@ async def start():
     if main_process.is_alive():
         return {"status": "failed", "reason": "Already started"}
     logger.info("Starting...")
-    main_process = multiprocessing.Process(target=app.run)
+    settings.reload()
+    main_process = multiprocessing.Process(target=app.run, args=(settings,))
     main_process.start()
     logger.info("Started")
     return {"status": "success"}
