@@ -37,8 +37,8 @@ def load_data_file(rss_link: str) -> ProgramData:
 
 
 def main_process(program_data: ProgramData, download_client: DownloadClient):
-    rename = Renamer(download_client)
-    rss_analyser = RSSAnalyser()
+    rename = Renamer(download_client, settings)
+    rss_analyser = RSSAnalyser(settings)
     while True:
         times = 0
         if settings.rss_parser.enable:

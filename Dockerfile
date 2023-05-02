@@ -37,7 +37,7 @@ RUN apk add --no-cache \
         /tmp/*
 
 COPY --chmod=755 src/. .
-COPY --chmod=755 ./docker /
+COPY --chmod=755 src/docker /
 
 ENTRYPOINT [ "/init" ]
 

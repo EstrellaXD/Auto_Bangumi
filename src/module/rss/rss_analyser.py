@@ -4,14 +4,15 @@ import logging
 from module.network import RequestContent
 from module.parser import TitleParser
 from module.core import DownloadClient
-from module.models import BangumiData
+from module.models import BangumiData, Config
 
 logger = logging.getLogger(__name__)
 
 
 class RSSAnalyser:
-    def __init__(self):
+    def __init__(self, settings: Config):
         self._title_analyser = TitleParser()
+        self.settings = settings
 
     @staticmethod
     def find_id(bangumi_info: list[BangumiData]) -> int:
@@ -37,7 +38,10 @@ class RSSAnalyser:
                         break
             if extra_add:
                 _id += 1
-                data = self._title_analyser.raw_parser(raw_title, _id)
+                data = self._title_analyser.raw_parser(
+                    raw=raw_title,
+                    _id=_id,
+                    settings=self.settings)
                 if data is not None and data.official_title not in bangumi_info:
                     bangumi_info.append(data)
         return bangumi_info
@@ -47,7 +51,10 @@ class RSSAnalyser:
             rss_torrents = req.get_torrents(url, filter)
         for torrent in rss_torrents:
             try:
-                data = self._title_analyser.raw_parser(torrent.name)
+                data = self._title_analyser.raw_parser(
+                    torrent.name,
+                    settings=self.settings
+                )
                 return data
             except Exception as e:
                 logger.debug(e)
