@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class DownloadInfo:
     name: str
@@ -16,11 +17,9 @@ class DownloadInfo:
 RULES = [
     r"(.*) - (\d{1,4}|\d{1,4}\.\d{1,2})(?:v\d{1,2})?(?: )?(?:END)?(.*)",
     r"(.*)[\[ E](\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?: )?(?:END)?[\] ](.*)",
-    r"(.*)\[第(\d*\.*\d*)话(?:END)?\](.*)",
-    r"(.*)\[第(\d*\.*\d*)話(?:END)?\](.*)",
-    r"(.*)第(\d*\.*\d*)话(?:END)?(.*)",
-    r"(.*)第(\d*\.*\d*)話(?:END)?(.*)",
-    r"(.*)E(\d{1,3})(.*)",
+    r"(.*)\[(?:第)?(\d*\.*\d*)[话集話](?:END)?\](.*)",
+    r"(.*)第(\d*\.*\d*)[话話集](?:END)?(.*)",
+    r"(.*)E(\d{1,4})(.*)",
 ]
 
 
@@ -109,6 +108,6 @@ def torrent_parser(
 
 
 if __name__ == "__main__":
-    name = "[Lilith-Raws] Tate no Yuusha no Nariagari S02 - 02 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
-    new_name = torrent_parser(name, "异世界舅舅（2022）", 2, ".mp4", "advance")
+    name = "[织梦字幕组][鬼灭之刃 锻刀村篇 鬼滅の刃 刀鍛冶の里編][01集][1080P][AVC][简日双语].mp4"
+    new_name = torrent_parser(name, "异世界舅舅（2022）", 2, ".mp4", "pn")
     print(new_name)

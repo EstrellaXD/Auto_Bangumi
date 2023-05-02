@@ -59,7 +59,6 @@ class APIProcess:
         json_config.save(DATA_PATH, datas)
         return "Success"
 
-
     @staticmethod
     def add_rule(title, season):
         data = json_config.load(DATA_PATH)

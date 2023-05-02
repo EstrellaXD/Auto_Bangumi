@@ -3,7 +3,6 @@ import xml.etree.ElementTree
 from dataclasses import dataclass
 
 from .request_url import RequestURL
-
 from module.conf import settings
 
 FILTER = "|".join(settings.rss_parser.filter)
@@ -17,7 +16,7 @@ class TorrentInfo:
 
 class RequestContent(RequestURL):
     # Mikanani RSS
-    def get_torrents(self, _url: str, filter: bool = True) -> [TorrentInfo]:
+    def get_torrents(self, _url: str, _filter: bool = True) -> [TorrentInfo]:
         soup = self.get_xml(_url)
         torrent_titles = []
         torrent_urls = []
@@ -28,7 +27,7 @@ class RequestContent(RequestURL):
 
         torrents = []
         for _title, torrent_url in zip(torrent_titles, torrent_urls):
-            if filter:
+            if _filter:
                 if re.search(FILTER, _title) is None:
                     torrents.append(TorrentInfo(_title, torrent_url))
             else:
