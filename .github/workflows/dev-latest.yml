@@ -3,7 +3,7 @@ name: Deploy To Dockerhub(dev)
 on:
   push:
     tags:
-      - '\d+\.\d+\.\d+-beta\d+'
+      - '\d+\.\d+\.\d+-beta(?:\d+)?'
 
 jobs:
   latest:
