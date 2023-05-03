@@ -24,9 +24,10 @@
 
 <img title="plex" src="https://tva1.sinaimg.cn/large/e6c9d24ely1h47zd0v04zj21a50u0gvr.jpg" alt="" width=50%><img title="infuse" src="https://tva1.sinaimg.cn/large/e6c9d24ely1h47zd0gqz3j21a50u0dqc.jpg" alt="" width=50%>
 
-[主项目地址](https://www.github.com/EstrellaXD/Auto_Bangumi) 
-/ [项目资源仓库](https://www.github.com/EstrellaXD/ab_resource) 
-/ [WebUI 仓库](https://github.com/Rewrite0/Auto_Bangumi_WebUI)
+[主项目地址](https://www.github.com/EstrellaXD/Auto_Bangumi)
+/ [WebUI 仓库](https://github.com/Rewrite0/Auto_Bangumi_WebUI) 
+/ [Wiki 说明](https://www.github.com/EstrellaXD/Auto_Bangumi/wiki)
+
 
 ## AutoBangumi 功能说明
 

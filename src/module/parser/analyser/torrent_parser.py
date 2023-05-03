@@ -22,6 +22,11 @@ RULES = [
     r"(.*)E(\d{1,4})(.*)",
 ]
 
+SUBTITLE_LANG = {
+    "zh-tw": ["TC", "CHT", "繁", "zh-tw"],
+    "zh": ["SC", "CHS", "简", "zh"],
+}
+
 
 def rename_init(name, folder_name, season, suffix) -> DownloadInfo:
     n = re.split(r"[\[\]()【】（）]", name)
@@ -87,12 +92,33 @@ def rename_none(info: DownloadInfo):
     return info.name
 
 
+def rename_subtitle(info: DownloadInfo):
+    subtitle_lang = "zh"
+    for key, value in SUBTITLE_LANG.items():
+        for lang in value:
+            if lang in info.name:
+                subtitle_lang = key
+                break
+    for rule in RULES:
+        match_obj = re.match(rule, info.file_name, re.I)
+        if match_obj is not None:
+            title = re.sub(r"([Ss]|Season )\d{1,3}", "", match_obj.group(1)).strip()
+            title = title if title != "" else info.folder_name
+            new_name = re.sub(
+                r"[\[\]]",
+                "",
+                f"{title} S{info.season}E{match_obj.group(2)}.{subtitle_lang}{info.suffix}",
+            )
+            return new_name
+
+
 METHODS = {
     "normal": rename_normal,
     "pn": rename_pn,
     "advance": rename_advance,
     "no_season_pn": rename_no_season_pn,
-    "none": rename_none
+    "none": rename_none,
+    "subtitle": rename_subtitle,
 }
 
 
@@ -108,6 +134,6 @@ def torrent_parser(
 
 
 if __name__ == "__main__":
-    name = "[织梦字幕组][鬼灭之刃 锻刀村篇 鬼滅の刃 刀鍛冶の里編][01集][1080P][AVC][简日双语].mp4"
-    new_name = torrent_parser(name, "异世界舅舅（2022）", 2, ".mp4", "pn")
+    name = "Lycoris Recoil S01E08.mp4"
+    new_name = torrent_parser(name, "Lycoris", 1, ".ass", "subtitle")
     print(new_name)
