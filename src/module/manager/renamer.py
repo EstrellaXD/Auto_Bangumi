@@ -95,13 +95,15 @@ class Renamer:
             subtitle_list: list[str],
             bangumi_name: str,
             season: int,
+            method: str,
             _hash
     ):
+        method = "subtitle_" + method
         for subtitle_path in subtitle_list:
             suffix = os.path.splitext(subtitle_path)[-1]
             old_name = self.get_file_name(subtitle_path)
             new_name = self._renamer.torrent_parser(
-                method="subtitle",
+                method=method,
                 torrent_name=old_name,
                 bangumi_name=bangumi_name,
                 season=season,
@@ -175,6 +177,7 @@ class Renamer:
                         subtitle_list=subtitle_list,
                         bangumi_name=bangumi_name,
                         season=season,
+                        method=rename_method,
                         _hash=info.hash
                     )
             elif len(media_list) > 1:
@@ -191,17 +194,8 @@ class Renamer:
                         subtitle_list=subtitle_list,
                         bangumi_name=bangumi_name,
                         season=season,
+                        method=rename_method,
                         _hash=info.hash
                     )
             else:
                 logger.warning(f"{info.name} has no media file")
-
-
-if __name__ == '__main__':
-    from module.conf import settings, setup_logger
-    setup_logger()
-    client = DownloadClient(settings)
-    renamer = Renamer(client, settings)
-    save_path = "D:\Videos\Bangumi\我推的孩子\Season 1\[XKsub][Oshi no Ko][01][CHS][1080P][WEBrip][MP4].mp4"
-    path  = renamer.get_file_name(save_path)
-    print(path)

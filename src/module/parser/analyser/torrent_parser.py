@@ -116,13 +116,36 @@ def rename_subtitle(info: DownloadInfo):
             return new_name
 
 
+def rename_subtitle_advance(info: DownloadInfo):
+    subtitle_lang = "zh"
+    break_flag = False
+    for key, value in SUBTITLE_LANG.items():
+        for lang in value:
+            if lang in info.name:
+                subtitle_lang = key
+                break_flag = True
+                break
+        if break_flag:
+            break
+    for rule in RULES:
+        match_obj = re.match(rule, info.file_name, re.I)
+        if match_obj is not None:
+            new_name = re.sub(
+                r"[\[\]]",
+                "",
+                f"{info.folder_name} S{info.season}E{match_obj.group(2)}.{subtitle_lang}{info.suffix}",
+            )
+            return new_name
+
+
 METHODS = {
     "normal": rename_normal,
     "pn": rename_pn,
     "advance": rename_advance,
     "no_season_pn": rename_no_season_pn,
     "none": rename_none,
-    "subtitle": rename_subtitle,
+    "subtitle_pn": rename_subtitle,
+    "subtitle_advance": rename_subtitle_advance,
 }
 
 
