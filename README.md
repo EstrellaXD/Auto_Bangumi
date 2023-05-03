@@ -24,9 +24,9 @@
 
 <img title="plex" src="https://tva1.sinaimg.cn/large/e6c9d24ely1h47zd0v04zj21a50u0gvr.jpg" alt="" width=50%><img title="infuse" src="https://tva1.sinaimg.cn/large/e6c9d24ely1h47zd0gqz3j21a50u0dqc.jpg" alt="" width=50%>
 
-- 主项目地址：[AutoBangumi](https://www.github.com/EstrellaXD/Auto_Bangumi)
-- 项目资源仓库：[ab_resource](https://www.github.com/EstrellaXD/ab_resource)
-- WebUI 仓库：[Auto_Bangumi_WebUI](https://github.com/Rewrite0/Auto_Bangumi_WebUI)
+[主项目地址](https://www.github.com/EstrellaXD/Auto_Bangumi) 
+/ [项目资源仓库](https://www.github.com/EstrellaXD/ab_resource) 
+/ [WebUI 仓库](https://github.com/Rewrite0/Auto_Bangumi_WebUI)
 
 ## AutoBangumi 功能说明
 
@@ -64,8 +64,8 @@
 
 ## 如何开始
 
-- **[部署说明 (Official)](/wiki)**
-- **[2.6版本更新说明](/wiki/2.6更新说明)**
+- **[部署说明 (Official)](https://github.com/EstrellaXD/Auto_Bangumi/wiki)**
+- **[2.6版本更新说明](https://github.com/EstrellaXD/Auto_Bangumi/wiki/2.6更新说明)**
 - **[部署说明 (手把手)](https://www.himiku.com/archives/auto-bangumi.html)**
 
 ## 相关群组
@@ -76,7 +76,7 @@
 ## Roadmap
 
 ***开发中的功能：***
-- Web UI [#57](https://github.com/EstrellaXD/Auto_Bangumi/issues/57) ✅
+- Web UI #57 ✅
 - 文件统一整理，对单个规则或者文件微调文件夹可以自动调整所有对应的文件。
 - 通知功能，可以通过 IFTTT 等方式通知用户番剧更新进度。✅
 - 剧场版以及合集的支持。✅
