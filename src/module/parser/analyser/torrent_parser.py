@@ -94,11 +94,15 @@ def rename_none(info: DownloadInfo):
 
 def rename_subtitle(info: DownloadInfo):
     subtitle_lang = "zh"
+    break_flag = False
     for key, value in SUBTITLE_LANG.items():
         for lang in value:
             if lang in info.name:
                 subtitle_lang = key
+                break_flag = True
                 break
+        if break_flag:
+            break
     for rule in RULES:
         match_obj = re.match(rule, info.file_name, re.I)
         if match_obj is not None:
@@ -132,8 +136,3 @@ def torrent_parser(
     info = rename_init(file_name, folder_name, season, suffix)
     return METHODS[method.lower()](info)
 
-
-if __name__ == "__main__":
-    name = "Lycoris Recoil S01E08.mp4"
-    new_name = torrent_parser(name, "Lycoris", 1, ".ass", "subtitle")
-    print(new_name)
