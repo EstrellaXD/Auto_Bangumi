@@ -1,31 +1,27 @@
 import logging
 
-from .analyser import raw_parser, DownloadParser, TMDBMatcher
+from .analyser import raw_parser, torrent_parser, TMDBMatcher
 
-from module.conf import settings
-from module.models import BangumiData
+from module.models import BangumiData, Config
 
 logger = logging.getLogger(__name__)
-LANGUAGE = settings.rss_parser.language
 
 
 class TitleParser:
     def __init__(self):
-        self._download_parser = DownloadParser()
         self._tmdb_parser = TMDBMatcher()
 
-    def download_parser(
-            self,
-            download_raw: str,
-            folder_name: str | None = None,
+    @staticmethod
+    def torrent_parser(
+            method: str,
+            torrent_name: str,
+            bangumi_name: str | None = None,
             season: int | None = None,
             suffix: str | None = None,
-            method: str = settings.bangumi_manage.rename_method
     ):
-        return self._download_parser.download_rename(download_raw, folder_name, season, suffix, method)
+        return torrent_parser(torrent_name, bangumi_name, season, suffix, method)
 
-    def tmdb_parser(self, title: str, season: int):
-
+    def tmdb_parser(self, title: str, season: int, language: str):
         official_title, tmdb_season = None, None
         try:
             tmdb_info = self._tmdb_parser.tmdb_search(title)
@@ -35,15 +31,21 @@ class TitleParser:
             logger.warning(f"{title} can not Matched with TMDB")
             logger.info("Please change the bangumi info in webui")
             return title, season
-        if LANGUAGE == "zh":
+        if language == "zh":
             official_title = f"{tmdb_info.title_zh} ({tmdb_info.year_number})"
-        elif LANGUAGE == "jp":
+        elif language == "jp":
             official_title = f"{tmdb_info.title_jp} ({tmdb_info.year_number})"
         tmdb_season = tmdb_info.last_season if tmdb_info.last_season else season
         official_title = official_title if official_title else title
         return official_title, tmdb_season
 
-    def raw_parser(self, raw: str, _id: int | None = None) -> BangumiData:
+    def raw_parser(
+            self,
+            raw: str,
+            settings: Config,
+            _id: int | None = None
+    ) -> BangumiData:
+        language = settings.rss_parser.language
         try:
             episode = raw_parser(raw)
             titles = {
@@ -54,9 +56,13 @@ class TitleParser:
             title_search = episode.title_zh if episode.title_zh else episode.title_en
             title_raw = episode.title_en if episode.title_en else episode.title_zh
             if settings.rss_parser.enable_tmdb:
-                official_title, _season = self.tmdb_parser(title_search, episode.season)
+                official_title, _season = self.tmdb_parser(
+                    title_search,
+                    episode.season,
+                    language
+                )
             else:
-                official_title = titles[LANGUAGE] if titles[LANGUAGE] else titles["zh"]
+                official_title = titles[language] if titles[language] else titles["zh"]
                 _season = episode.season
             data = BangumiData(
                 id=_id,

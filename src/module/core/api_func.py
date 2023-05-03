@@ -5,7 +5,7 @@ from module.core import DownloadClient
 from module.manager import FullSeasonGet
 from module.rss import RSSAnalyser
 from module.utils import json_config
-from module.conf import DATA_PATH, settings
+from module.conf import DATA_PATH
 from module.conf.config import save_config_to_file, CONFIG_PATH
 from module.models import Config
 from module.network import RequestContent
@@ -16,13 +16,14 @@ logger = logging.getLogger(__name__)
 
 
 class APIProcess:
-    def __init__(self):
-        self._rss_analyser = RSSAnalyser()
-        self._client = DownloadClient()
-        self._full_season_get = FullSeasonGet()
+    def __init__(self, settings: Config):
+        self._rss_analyser = RSSAnalyser(settings)
+        self._client = DownloadClient(settings)
+        self._full_season_get = FullSeasonGet(settings)
+        self._custom_url = settings.rss_parser.custom_url
 
     def link_process(self, link):
-        return self._rss_analyser.rss_to_data(link, filter=False)
+        return self._rss_analyser.rss_to_data(link, _filter=False)
 
     @api_failed
     def download_collection(self, link):
@@ -58,7 +59,6 @@ class APIProcess:
         json_config.save(DATA_PATH, datas)
         return "Success"
 
-
     @staticmethod
     def add_rule(title, season):
         data = json_config.load(DATA_PATH)
@@ -85,10 +85,9 @@ class APIProcess:
     def get_config() -> dict:
         return json_config.load(CONFIG_PATH)
 
-    @staticmethod
-    def get_rss(full_path: str):
+    def get_rss(self, full_path: str):
         url = f"https://mikanani.me/RSS/{full_path}"
-        custom_url = settings.rss_parser.custom_url
+        custom_url = self._custom_url
         if "://" not in custom_url:
             custom_url = f"https://{custom_url}"
         with RequestContent() as request:

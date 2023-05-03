@@ -4,33 +4,32 @@ import time
 from qbittorrentapi import Client, LoginFailed
 from qbittorrentapi.exceptions import Conflict409Error
 
-from module.conf import settings
 from module.ab_decorator import qb_connect_failed_wait
-
 from module.downloader.exceptions import ConflictError
 
 logger = logging.getLogger(__name__)
 
 
 class QbDownloader:
-    def __init__(self):
-        self._client: Client | None = None
-
-    @qb_connect_failed_wait
-    def auth(self, host, username, password):
-        self._client = Client(
+    def __init__(self, host: str, username: str, password: str, ssl: bool):
+        self._client: Client = Client(
             host=host,
             username=username,
             password=password,
-            VERIFY_WEBUI_CERTIFICATE=settings.downloader.ssl
+            VERIFY_WEBUI_CERTIFICATE=ssl
         )
+        self.host = host
+        self.username = username
+
+    @qb_connect_failed_wait
+    def auth(self):
         while True:
             try:
                 self._client.auth_log_in()
                 break
             except LoginFailed:
-                logger.warning(
-                    f"Can't login qBittorrent Server {host} by {username}, retry in {5} seconds."
+                logger.error(
+                    f"Can't login qBittorrent Server {self.host} by {self.username}, retry in {5} seconds."
                 )
             time.sleep(5)
 
@@ -66,21 +65,35 @@ class QbDownloader:
     def torrents_rename_file(self, torrent_hash, old_path, new_path):
         self._client.torrents_rename_file(torrent_hash=torrent_hash, old_path=old_path, new_path=new_path)
 
-    def get_rss_info(self, url) -> str | None:
+    def check_rss(self, url, item_path) -> tuple[str | None, bool]:
         items = self._client.rss_items()
-        for item in items.items():
-            if item[1].url == url:
-                return item[0]
-        return None
+        for key, value in items.items():
+            rss_url = value.get("url")
+            if key == item_path:
+                if rss_url != url:
+                    return key, False
+                return None, True
+            else:
+                if rss_url == url:
+                    return key, True
+        return None, False
 
     def rss_add_feed(self, url, item_path):
-        try:
-            path = self.get_rss_info(url)
-            if path:
-                self.rss_remove_item(path)
-            self._client.rss_add_feed(url, item_path)
-        except Conflict409Error:
-            logger.exception("RSS Exist.")
+        path, added = self.check_rss(url, item_path)
+        if path:
+            if not added:
+                logger.info("RSS Exist, Update URL.")
+                self._client.rss_remove_item(path)
+                self._client.rss_add_feed(url, item_path)
+            else:
+                logger.info("RSS Exist.")
+        else:
+            if added:
+                logger.info("RSS Exist.")
+            else:
+                logger.info("Add new RSS")
+                self._client.rss_add_feed(url, item_path)
+                logger.info("Successfully added RSS")
 
     def rss_remove_item(self, item_path):
         try:

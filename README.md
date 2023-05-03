@@ -1,21 +1,15 @@
 <p align="center">
-    <img src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/image/auto_bangumi_v2.png#gh-light-mode-only" width=50%/>
-    <img src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/image/auto_bangumi_icon_v2-dark.png#gh-dark-mode-only" width=50%/>
+    <img src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/image/auto_bangumi_v2.png#gh-light-mode-only" width=50%/ alt="">
+    <img src="https://github.com/EstrellaXD/Auto_Bangumi/blob/main/docs/image/auto_bangumi_icon_v2-dark.png#gh-dark-mode-only" width=50%/ alt="">
 </p>
 <p align="center">
     <img title="docker build version" src="https://img.shields.io/docker/v/estrellaxd/auto_bangumi" alt="">
     <img title="release date" src="https://img.shields.io/github/release-date/estrellaxd/auto_bangumi" alt="">
     <img title="docker pull" src="https://img.shields.io/docker/pulls/estrellaxd/auto_bangumi" alt="">
-    <img title="python version" src="https://img.shields.io/badge/python-3.10-blue" alt="">
-    <img title="platform arch" src="https://img.shields.io/badge/arch-%20AMD64%20%2F%20ARM64-lightgrey" alt="">
+    <img title="python version" src="https://img.shields.io/badge/python-3.11-blue" alt="">
+    <img title="telegram" src="https://img.shields.io/badge/telegram-autobangumi_update-blue" herf="https://t.me/autobangumi_update" alt="">
 </p>
 
-
-
-# 如何开始
-
-- **[部署说明 (Official)](https://github.com/EstrellaXD/Auto_Bangumi/wiki)**
-- **[部署说明 (手把手)](https://www.himiku.com/archives/auto-bangumi.html)**
 
 # 项目说明
 
@@ -30,9 +24,10 @@
 
 <img title="plex" src="https://tva1.sinaimg.cn/large/e6c9d24ely1h47zd0v04zj21a50u0gvr.jpg" alt="" width=50%><img title="infuse" src="https://tva1.sinaimg.cn/large/e6c9d24ely1h47zd0gqz3j21a50u0dqc.jpg" alt="" width=50%>
 
-- 主项目地址：[AutoBangumi](https://www.github.com/EstrellaXD/Auto_Bangumi)
-- 项目资源仓库：[ab_resource](https://www.github.com/EstrellaXD/ab_resource)
-- WebUI 仓库：[AutoBangumi_WebUI](https://github.com/Rewrite0/Auto_Bangumi_WebUI)
+[主项目地址](https://www.github.com/EstrellaXD/Auto_Bangumi)
+/ [WebUI 仓库](https://github.com/Rewrite0/Auto_Bangumi_WebUI) 
+/ [Wiki 说明](https://www.github.com/EstrellaXD/Auto_Bangumi/wiki)
+
 
 ## AutoBangumi 功能说明
 
@@ -66,6 +61,13 @@
 - 高度可自定义的功能选项，可以针对不同媒体库软件微调
 - 无需维护完全无感使用
 - 内置 TDMB 解析器，可以直接生成完整的 TMDB 格式的文件以及番剧信息。
+- 对于 Mikan RSS 的反代支持。
+
+## 如何开始
+
+- **[部署说明 (Official)](https://github.com/EstrellaXD/Auto_Bangumi/wiki)**
+- **[2.6版本更新说明](https://github.com/EstrellaXD/Auto_Bangumi/wiki/2.6更新说明)**
+- **[部署说明 (手把手)](https://www.himiku.com/archives/auto-bangumi.html)**
 
 ## 相关群组
 
@@ -75,18 +77,18 @@
 ## Roadmap
 
 ***开发中的功能：***
-- Web UI [#57](https://github.com/EstrellaXD/Auto_Bangumi/issues/57)
+- Web UI #57 ✅
 - 文件统一整理，对单个规则或者文件微调文件夹可以自动调整所有对应的文件。
-- 通知功能，可以通过 IFTTT 等方式通知用户番剧更新进度。
-- 剧场版以及合集的支持。
+- 通知功能，可以通过 IFTTT 等方式通知用户番剧更新进度。✅
+- 剧场版以及合集的支持。✅
 - 各类 API 接口。
 
 ***计划开发的功能：***
 - 对其他站点种子的解析归类。
 - 本地化番剧订阅方式。
+- Transmission & Aria2 的支持。
+- 更完善的 WebUI。
 
-***未计划开发的功能：***
-- Transmission & Aria2 的支持，可以转到 [RanKKI/Bangumi](https://github.com/RanKKI/Bangumi)，该项目具有 Aria2/Tr 的支持
 
 # 声明
 ## 致谢
