@@ -42,6 +42,7 @@ class TelegramNotification:
         }
         with RequestContent() as req:
             resp = req.post_data(self.notification_url, data)
+            logger.debug(f"Telegram notification: {resp.status_code}")
         return resp.status_code == 200
 
 
@@ -58,4 +59,5 @@ class ServerChanNotification:
         }
         with RequestContent() as req:
             resp = req.post_data(self.notification_url, data)
+            logger.debug(f"ServerChan notification: {resp.status_code}")
         return resp.status_code == 200

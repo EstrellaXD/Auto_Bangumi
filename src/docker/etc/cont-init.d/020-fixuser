@@ -6,7 +6,7 @@ function __fixuser {
     groupmod -o -g "${PGID}" ab
     usermod -o -u "${PUID}" ab
 
-    chown ab:ab -R /app
+    chown ab:ab -R /app /ab
 
 }
 
