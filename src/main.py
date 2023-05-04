@@ -19,6 +19,19 @@ logger = logging.getLogger(__name__)
 main_process = multiprocessing.Process(target=app.run, args=(settings,))
 
 
+@router.on_event("startup")
+async def startup():
+    global main_process
+    main_process.start()
+
+
+@router.on_event("shutdown")
+async def shutdown():
+    global main_process
+    if main_process.is_alive():
+        os.kill(main_process.pid, signal.SIGTERM)
+
+
 @router.get("/api/v1/restart", tags=["program"])
 async def restart():
     global main_process
@@ -85,6 +98,5 @@ else:
 if __name__ == "__main__":
     log_config = uvicorn.config.LOGGING_CONFIG
     log_config["formatters"]["default"]["fmt"] = "[%(asctime)s] %(levelname)-8s  %(message)s"
-    main_process.start()
     uvicorn.run(router, host="0.0.0.0", port=settings.program.webui_port, log_config=log_config)
 

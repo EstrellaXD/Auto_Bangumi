@@ -15,15 +15,6 @@ router = FastAPI()
 api_func = APIProcess(settings)
 
 
-@router.on_event("startup")
-async def startup_event():
-    logger = logging.getLogger("uvicorn.access")
-    handler = logging.StreamHandler()
-    handler.setLevel(logging.INFO)
-    handler.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)-8s  %(message)s"))
-    logger.addHandler(handler)
-
-
 @router.get("/api/v1/data", tags=["info"])
 async def get_data():
     try:
