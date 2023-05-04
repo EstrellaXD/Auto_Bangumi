@@ -11,7 +11,7 @@ watch(filter, (nv) => {
 </script>
 
 <template>
-  <ConfigFormRow title="RSS解析">
+  <ConfigFormRow title="RSS 解析">
     <ConfigFormCol label="启用">
       <el-select v-model="rssParser.enable" flex-1>
         <el-option
@@ -51,7 +51,7 @@ watch(filter, (nv) => {
       <el-input v-model="rssParser.custom_url"></el-input>
     </ConfigFormCol>
 
-    <ConfigFormCol label="tmdb解析">
+    <ConfigFormCol label="TMDB 解析">
       <el-select v-model="rssParser.enable_tmdb" flex-1>
         <el-option
           v-for="(opt, index) in tfOptions"
