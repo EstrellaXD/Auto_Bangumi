@@ -29,4 +29,4 @@ jobs:
     - name: Test
       working-directory: ./src
       run: |
-        pytest test/test_raw_parser.py
+        pytest
