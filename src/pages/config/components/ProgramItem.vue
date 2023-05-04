@@ -10,7 +10,7 @@ const program = computed(() => form.program);
       <el-input v-model.number="program.sleep_time" type="number" />
     </ConfigFormCol>
 
-    <ConfigFormCol label="重命频率">
+    <ConfigFormCol label="重命名频率">
       <el-input v-model.number="program.rename_times" type="number" />
     </ConfigFormCol>
 
