@@ -19,7 +19,7 @@ RULES = [
     r"(.*)[\[\ E](\d{1,4}|\d{1,4}\.\d{1,2})(?:v\d{1,2})?(?: )?(?:END)?[\]\ ](.*)",
     r"(.*)\[(?:第)?(\d*\.*\d*)[话集話](?:END)?\](.*)",
     r"(.*)第(\d*\.*\d*)[话話集](?:END)?(.*)",
-    r"(.*)(?<!\w)EP?(\d+)(?!\w)(.*)",
+    r"(.*)(?:S\d{2})?EP?(\d+)(.*)",
 ]
 
 SUBTITLE_LANG = {
@@ -161,8 +161,8 @@ def torrent_parser(
 
 
 if __name__ == '__main__':
-    title = "[MagicStar] 假面骑士Geats / 仮面ライダーギーツ EP33 [WEBDL] [1080p] [TTFC]【生】"
-    folder_name = "名侦探柯南"
-    season = 1
-    suffix = ".mp4"
-    print(torrent_parser(title, folder_name, season, suffix, method="pn"))
+    title = "海盗战记 S02E17.zh.ass"
+    folder_name = "海盗战记"
+    season = 2
+    suffix = ".ass"
+    print(torrent_parser(title, folder_name, season, suffix, method="advance"))

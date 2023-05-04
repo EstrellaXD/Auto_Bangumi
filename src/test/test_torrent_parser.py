@@ -38,3 +38,10 @@ def test_torrent_parser():
     suffix = ".mp4"
     assert torrent_parser(file_name, folder_name, season, suffix, "pn") == "CONAN S01E1082.mp4"
     assert torrent_parser(file_name, folder_name, season, suffix, "advance") == "名侦探柯南(1996) S01E1082.mp4"
+
+    file_name = "海盗战记 S01E01.mp4"
+    folder_name = "海盗战记(2021)"
+    season = 1
+    suffix = ".mp4"
+    assert torrent_parser(file_name, folder_name, season, suffix, "pn") == "海盗战记 S01E01.mp4"
+    assert torrent_parser(file_name, folder_name, season, suffix, "advance") == "海盗战记(2021) S01E01.mp4"

@@ -199,3 +199,4 @@ class Renamer:
                     )
             else:
                 logger.warning(f"{info.name} has no media file")
+
