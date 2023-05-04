@@ -5,7 +5,7 @@ const downloader = computed(() => form.downloader);
 </script>
 
 <template>
-  <ConfigFormRow title="下载">
+  <ConfigFormRow title="下载器设置">
     <ConfigFormCol label="下载器">
       <el-select v-model="downloader.type" flex-1>
         <el-option
@@ -16,19 +16,19 @@ const downloader = computed(() => form.downloader);
       </el-select>
     </ConfigFormCol>
 
-    <ConfigFormCol label="host" prop="downloader.host">
+    <ConfigFormCol label="下载器地址" prop="downloader.host">
       <el-input v-model="downloader.host"></el-input>
     </ConfigFormCol>
 
-    <ConfigFormCol label="path">
+    <ConfigFormCol label="下载路径(映射后)">
       <el-input v-model="downloader.path"></el-input>
     </ConfigFormCol>
 
-    <ConfigFormCol label="username">
+    <ConfigFormCol label="用户名">
       <el-input v-model="downloader.username"></el-input>
     </ConfigFormCol>
 
-    <ConfigFormCol label="password">
+    <ConfigFormCol label="密码">
       <el-input v-model="downloader.password"></el-input>
     </ConfigFormCol>
 
