@@ -20,6 +20,9 @@ class Setting(Config):
     def reload():
         load_config_from_file(CONFIG_PATH)
 
+    def save(self):
+        save_config_to_file(self, CONFIG_PATH)
+
 
 def save_config_to_file(config: Config, path: str):
     config_dict = config.dict()
