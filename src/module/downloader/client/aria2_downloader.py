@@ -6,7 +6,7 @@ from aria2p import Client, ClientException, API
 
 from module.conf import settings
 
-from .exceptions import ConflictError
+from module.downloader.exceptions import ConflictError
 
 logger = logging.getLogger(__name__)
 

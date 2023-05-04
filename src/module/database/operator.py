@@ -5,7 +5,8 @@ from module.models import BangumiData
 
 
 class DataOperator(DataConnector):
-    def data_to_db(self, data: BangumiData) -> dict:
+    @staticmethod
+    def data_to_db(data: BangumiData) -> dict:
         db_data = data.dict()
         for key, value in db_data.items():
             if isinstance(value, bool):
@@ -13,8 +14,9 @@ class DataOperator(DataConnector):
             elif isinstance(value, list):
                 db_data[key] = ",".join(value)
         return db_data
-    
-    def db_to_data(self, db_data: dict) -> BangumiData:
+
+    @staticmethod
+    def db_to_data(db_data: dict) -> BangumiData:
         for key, item in db_data.items():
             if isinstance(item, int):
                 if key not in ["id", "offset", "season"]:
@@ -56,6 +58,7 @@ class DataOperator(DataConnector):
                 :rss
                 )
                 ''', db_data)
+        self._conn.commit()
 
     def insert_list(self, data: list[BangumiData]):
         db_data = [self.data_to_db(x) for x in data]
@@ -90,6 +93,7 @@ class DataOperator(DataConnector):
                 :rss
                 )
                 ''', db_data)
+        self._conn.commit()
 
     def update(self, data: BangumiData) -> bool:
         db_data = self.data_to_db(data)
@@ -108,6 +112,7 @@ class DataOperator(DataConnector):
                 filter = :filter
             WHERE id = :id
             ''', db_data)
+        self._conn.commit()
         return self._cursor.rowcount == 1
 
     def search(self, _id: int) -> BangumiData | None:

@@ -9,7 +9,7 @@ def getClient(settings: Config):
     password = settings.downloader.password
     ssl = settings.downloader.ssl
     if type == "qbittorrent":
-        from .qb_downloader import QbDownloader
+        from module.downloader.client.qb_downloader import QbDownloader
         return QbDownloader(host, username, password, ssl)
     else:
         raise Exception(f"Unsupported downloader type: {type}")
