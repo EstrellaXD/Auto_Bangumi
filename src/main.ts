@@ -1,14 +1,17 @@
-import { createApp } from 'vue'
-import App from './App.vue'
-import 'vue-global-api'
-import 'modern-normalize/modern-normalize.css'
+import { createApp } from 'vue';
+import { createPinia } from 'pinia';
 import router from './router';
-import { Icon } from '@vicons/utils'
+import App from './App.vue';
 
-const app = createApp(App)
+import '@unocss/reset/tailwind-compat.css';
+import 'virtual:uno.css';
 
-app.component('Icon', Icon);
+import 'element-plus/es/components/message/style/css';
+import 'element-plus/es/components/message-box/style/css';
 
-app.use(router)
+const pinia = createPinia();
 
-app.mount('#app')
+const app = createApp(App);
+app.use(router);
+app.use(pinia);
+app.mount('#app');

@@ -1,0 +1,7 @@
+{
+  "extends": ["@antfu", "prettier"],
+  "rules": {
+    "antfu/if-newline": ["off"],
+    "no-console": ["off"]
+  }
+}

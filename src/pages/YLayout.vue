@@ -1,26 +1,41 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import YMenu from './YMenu.vue';
+
+const { status } = storeToRefs(programStore());
 </script>
 
 <template>
-  <div class="app-layout">
+  <div class="app-layout" w-full h-screen overflow-hidden flex>
     <el-container>
-      <el-header class="header">
-        <img
-          src="@/assets/logo.png"
-          alt="logo"
-          class="logo"
-        >
+      <el-header
+        class="header"
+        flex="~ items-center justify-center"
+        h-65px
+        relative
+      >
+        <img src="@/assets/logo.png" alt="logo" class="h-7/10" />
+
+        <div absolute right-5 flex="~ items-center" text-3>
+          运行状态:
+          <div
+            class="i-carbon:dot-mark"
+            :class="{ 'text-red': !status, 'text-green': status }"
+          ></div>
+        </div>
       </el-header>
 
-      <el-container style="overflow: hidden;">
+      <el-container overflow-hidden>
         <el-aside width="auto">
           <YMenu />
         </el-aside>
 
         <el-main>
           <el-scrollbar>
-            <RouterView />
+            <RouterView v-slot="{ Component }">
+              <KeepAlive>
+                <component :is="Component" />
+              </KeepAlive>
+            </RouterView>
           </el-scrollbar>
         </el-main>
       </el-container>
@@ -28,27 +43,14 @@ import YMenu from './YMenu.vue';
   </div>
 </template>
 
-<style lang='scss' scope>
+<style lang="scss" scope>
 .app-layout {
-  width: 100%;
-  height: 100vh;
-  overflow: hidden;
-  display: flex;
-
-  @media screen and (max-width: 980px){
+  @media screen and (max-width: 980px) {
     font-size: 14px;
   }
 }
 
 .header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   border-bottom: 1px solid var(--el-border-color);
-  height: 65px;
-
-  .logo {
-    height: 70%;
-  }
 }
 </style>
