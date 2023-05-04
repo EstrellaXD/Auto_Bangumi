@@ -24,3 +24,17 @@ def test_torrent_parser():
     suffix = ".mkv"
     assert torrent_parser(file_name, folder_name, season, suffix, "pn") == "Heavenly Delusion S01E01.mkv"
     assert torrent_parser(file_name, folder_name, season, suffix, "advance") == "天国大魔境(2023) S01E01.mkv"
+
+    file_name = "[SBSUB][Kanojo mo Kanojo][01][GB][1080P](456E234).mp4"
+    folder_name = "女友也要有"
+    season = 1
+    suffix = ".mp4"
+    assert torrent_parser(file_name, folder_name, season, suffix, "pn") == "Kanojo mo Kanojo S01E01.mp4"
+    assert torrent_parser(file_name, folder_name, season, suffix, "advance") == "女友也要有 S01E01.mp4"
+
+    file_name = "[SBSUB][CONAN][1082][V2][1080P][AVC_AAC][CHS_JP](C1E4E331).mp4"
+    folder_name = "名侦探柯南(1996)"
+    season = 1
+    suffix = ".mp4"
+    assert torrent_parser(file_name, folder_name, season, suffix, "pn") == "CONAN S01E1082.mp4"
+    assert torrent_parser(file_name, folder_name, season, suffix, "advance") == "名侦探柯南(1996) S01E1082.mp4"

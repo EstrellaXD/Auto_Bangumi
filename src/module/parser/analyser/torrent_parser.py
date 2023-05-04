@@ -16,10 +16,10 @@ class DownloadInfo:
 
 RULES = [
     r"(.*) - (\d{1,4}|\d{1,4}\.\d{1,2})(?:v\d{1,2})?(?: )?(?:END)?(.*)",
-    r"(.*)[\[ E](\d{1,3}|\d{1,3}\.\d{1,2})(?:v\d{1,2})?(?: )?(?:END)?[\] ](.*)",
+    r"(.*)[\[\ E](\d{1,4}|\d{1,4}\.\d{1,2})(?:v\d{1,2})?(?: )?(?:END)?[\]\ ](.*)",
     r"(.*)\[(?:第)?(\d*\.*\d*)[话集話](?:END)?\](.*)",
     r"(.*)第(\d*\.*\d*)[话話集](?:END)?(.*)",
-    r"(.*)EP?(\d{1,4})(.*)",
+    r"(.*)(?<!\w)EP?(\d+)(?!\w)(.*)",
 ]
 
 SUBTITLE_LANG = {
@@ -159,3 +159,10 @@ def torrent_parser(
     info = rename_init(file_name, folder_name, season, suffix)
     return METHODS[method.lower()](info)
 
+
+if __name__ == '__main__':
+    title = "[MagicStar] 假面骑士Geats / 仮面ライダーギーツ EP33 [WEBDL] [1080p] [TTFC]【生】"
+    folder_name = "名侦探柯南"
+    season = 1
+    suffix = ".mp4"
+    print(torrent_parser(title, folder_name, season, suffix, method="pn"))
