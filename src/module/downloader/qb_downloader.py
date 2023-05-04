@@ -58,7 +58,7 @@ class QbDownloader:
 
     def torrents_delete(self, hash):
         return self._client.torrents_delete(
-            delete_files=False,
+            delete_files=True,
             torrent_hashes=hash
         )
 

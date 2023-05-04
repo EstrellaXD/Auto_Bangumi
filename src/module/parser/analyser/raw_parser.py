@@ -1,6 +1,5 @@
 import logging
 import re
-from dataclasses import dataclass
 
 from module.models import Episode
 
@@ -8,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 EPISODE_RE = re.compile(r"\d+")
 TITLE_RE = re.compile(
-    r"(.*|\[.*])( -? \d+|\[\d+]|\[\d+.?[vV]\d{1}]|[第]?\d+[话話集]|\[\d+.?END])(.*)"
+    r"(.*|\[.*])( -? \d+|\[\d+]|\[\d+.?[vV]\d]|[ 第]?\d+[话話集]|\[\d+.?END]|[Ee][Pp]?\d+)(.*)"
 )
 RESOLUTION_RE = re.compile(r"1080|720|2160|4K")
 SOURCE_RE = re.compile(r"B-Global|[Bb]aha|[Bb]ilibili|AT-X|Web")
@@ -81,7 +80,7 @@ def name_process(name: str):
     name_en, name_zh, name_jp = None, None, None
     name = name.strip()
     name = re.sub(r"[(（]仅限港澳台地区[）)]", "", name)
-    split = re.split("/|\s{2}|-\s{2}", name)
+    split = re.split(r"/|\s{2}|-\s{2}", name)
     while "" in split:
         split.remove("")
     if len(split) == 1:

@@ -46,7 +46,7 @@ class Renamer:
     def rename_file(self, info, media_path: str, rename_method: str, bangumi_name: str, season: int, remove_bad_torrents: bool):
         torrent_name = info.name
         suffix = os.path.splitext(media_path)[-1]
-        compare_name = media_path.split(os.path.sep)[-1]
+        compare_name = self.get_file_name(media_path)
         new_path = self._renamer.torrent_parser(
             torrent_name=torrent_name,
             bangumi_name=bangumi_name,
@@ -71,7 +71,7 @@ class Renamer:
             path_len = len(media_path.split(os.path.sep))
             if path_len <= 2:
                 suffix = os.path.splitext(media_path)[-1]
-                torrent_name = media_path.split(os.path.sep)[-1]
+                torrent_name = self.get_file_name(media_path)
                 new_name = self._renamer.torrent_parser(
                     torrent_name=torrent_name,
                     bangumi_name=bangumi_name,
@@ -95,13 +95,15 @@ class Renamer:
             subtitle_list: list[str],
             bangumi_name: str,
             season: int,
+            method: str,
             _hash
     ):
+        method = "subtitle_" + method
         for subtitle_path in subtitle_list:
             suffix = os.path.splitext(subtitle_path)[-1]
-            old_name = subtitle_path.split(os.path.sep)[-1]
+            old_name = self.get_file_name(subtitle_path)
             new_name = self._renamer.torrent_parser(
-                method="subtitle",
+                method=method,
                 torrent_name=old_name,
                 bangumi_name=bangumi_name,
                 season=season,
@@ -129,7 +131,7 @@ class Renamer:
             if PurePath(save_path).name != save_path \
             else PureWindowsPath(save_path).parts
         # Get folder name
-        folder_name = path_parts[1] if path_parts[0] == "/" else path_parts[0]
+        folder_name = path_parts[1] if path_parts[0] == "/" or path_parts[0] == "\\" else path_parts[0]
         # Get season
         try:
             if re.search(r"S\d{1,2}|[Ss]eason", path_parts[-1]) is not None:
@@ -141,6 +143,16 @@ class Renamer:
             logger.debug("No Season info")
             season = 1
         return folder_name, season
+
+    @staticmethod
+    def get_file_name(file_path: str):
+        # Check windows or linux path
+        path_parts = PurePath(file_path).parts \
+            if PurePath(file_path).name != file_path \
+            else PureWindowsPath(file_path).parts
+        # Get file name
+        file_name = path_parts[-1]
+        return file_name
 
     def rename(self):
         # Get torrent info
@@ -165,6 +177,7 @@ class Renamer:
                         subtitle_list=subtitle_list,
                         bangumi_name=bangumi_name,
                         season=season,
+                        method=rename_method,
                         _hash=info.hash
                     )
             elif len(media_list) > 1:
@@ -181,26 +194,9 @@ class Renamer:
                         subtitle_list=subtitle_list,
                         bangumi_name=bangumi_name,
                         season=season,
+                        method=rename_method,
                         _hash=info.hash
                     )
             else:
                 logger.warning(f"{info.name} has no media file")
 
-
-if __name__ == '__main__':
-    from module.conf import settings, setup_logger
-    setup_logger()
-    client = DownloadClient(settings)
-    renamer = Renamer(client, settings)
-    info, _ = renamer.get_torrent_info(category="BangumiCollection")
-    for i in info:
-        _hash = i.hash
-        _, subtitle_list = renamer.check_files(i)
-        print(_hash)
-        bangumi_name, season = renamer.get_season_info(i.save_path, settings.downloader.path)
-        renamer.rename_subtitles(
-            subtitle_list,
-            bangumi_name=bangumi_name,
-            season=season,
-            _hash=_hash
-        )

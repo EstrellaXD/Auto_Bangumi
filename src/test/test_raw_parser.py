@@ -50,3 +50,12 @@ def test_raw_parser():
     assert info.resolution == "1080P"
     assert info.episode == 2
     assert info.season == 1
+
+    content = "[MagicStar] 假面骑士Geats / 仮面ライダーギーツ EP33 [WEBDL] [1080p] [TTFC]【生】"
+    info = raw_parser(content)
+    assert info.group == "MagicStar"
+    assert info.title_zh == "假面骑士Geats"
+    assert info.title_jp == "仮面ライダーギーツ"
+    assert info.resolution == "1080p"
+    assert info.episode == 33
+    assert info.season == 1
