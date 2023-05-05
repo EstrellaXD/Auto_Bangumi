@@ -50,7 +50,7 @@ class RepathTorrents:
         return all_rule
 
     @staticmethod
-    def get_difference(bangumi_data: list, rules: List[RuleInfo]) -> list[RuleInfo]:
+    def get_difference(bangumi_data: list, rules: list[RuleInfo]) -> list[RuleInfo]:
         different_data = []
         for data in bangumi_data:
             for rule in rules:
@@ -62,7 +62,7 @@ class RepathTorrents:
                         break
         return different_data
 
-    def get_matched_torrents_list(self, repath_rules: List[RuleInfo]) -> List[RepathInfo]:
+    def get_matched_torrents_list(self, repath_rules: list[RuleInfo]) -> list[RepathInfo]:
         infos = self._client.get_torrent_info()
         repath_list = []
         for rule in repath_rules:
