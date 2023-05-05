@@ -1,5 +1,6 @@
 import logging
 import re
+from typing import List
 from dataclasses import dataclass
 from pathlib import PurePath, PureWindowsPath
 
@@ -38,7 +39,7 @@ class RepathTorrents:
         season = int(re.search(r"\d{1,2}", season_folder).group())
         return season, folder_name
 
-    def get_rule(self) -> [RuleInfo]:
+    def get_rule(self) -> List[RuleInfo]:
         rules = self._client.get_download_rules()
         all_rule = []
         for rule in rules:
@@ -50,7 +51,7 @@ class RepathTorrents:
         return all_rule
 
     @staticmethod
-    def get_difference(bangumi_data: list, rules: [RuleInfo]) -> [RuleInfo]:
+    def get_difference(bangumi_data: list, rules: List[RuleInfo]) -> List[RuleInfo]:
         different_data = []
         for data in bangumi_data:
             for rule in rules:
@@ -62,7 +63,7 @@ class RepathTorrents:
                         break
         return different_data
 
-    def get_matched_torrents_list(self, repath_rules: [RuleInfo]) -> [RePathInfo]:
+    def get_matched_torrents_list(self, repath_rules: List[RuleInfo]) -> List[RepathInfo]:
         infos = self._client.get_torrent_info()
         repath_list = []
         for rule in repath_rules:
