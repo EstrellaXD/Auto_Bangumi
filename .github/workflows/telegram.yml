@@ -1,0 +1,18 @@
+name: telegram message
+on:
+  - release
+  - prerelease
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: send telegram message on push
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          message: |
+            New release: ${{ github.event.release.tag_name }}
+            Link: ${{ github.event.release.html_url }}
