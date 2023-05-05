@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.pull_request.merged == true
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
       - name: Generate Release Draft
         uses: actions/create-release@v1
         with:
@@ -17,6 +19,7 @@ jobs:
           release_name: ${{ github.event.pull_request.title }}🌟
           body: |
             - ${{ github.event.pull_request.body }}
-          draft: true
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
