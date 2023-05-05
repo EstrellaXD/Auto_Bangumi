@@ -1,7 +1,6 @@
 name: telegram message
 on:
   - release
-  - prerelease
 jobs:
 
   build:
