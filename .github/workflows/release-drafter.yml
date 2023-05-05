@@ -2,42 +2,21 @@ name: Generate Release Draft
 
 on:
   pull_request:
-    types: [opened]
+    types:
+      - closed
 
 jobs:
   generate_release_draft:
     runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Setup Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.8'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests
-
       - name: Generate Release Draft
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.event.pull_request.title }}
+          release_name: ${{ github.event.pull_request.title }}🌟
+          body: |
+            - ${{ github.event.pull_request.body }}
+          draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-        run: |
-          pr_title=$(echo ${{ github.event.pull_request.title }} | tr '[:upper:]' '[:lower:]')
-          pr_body=$(echo ${{ github.event.pull_request.body }} | tr '[:upper:]' '[:lower:]')
-
-          # Parse information from PR title and body
-          # Example: "Add feature X (#123)" and "This PR adds feature X"
-          pr_number=$(echo ${{ github.event.pull_request.number }})
-          feature_name=$(echo $pr_title | sed -E 's/.*add (.*) \(.*#\d+\).*/\1/')
-          feature_description=$(echo $pr_body | sed -E 's/.*this pr (.*)/\1/')
-
-          # Create release draft
-          release_title="Release ${feature_name} (PR #${pr_number})"
-          release_body="This release includes the following changes:\n\n- ${feature_description}\n\nPlease review and publish the release when ready."
-          response=$(curl -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "https://api.github.com/repos/${{ github.repository }}/releases" -d "{\"tag_name\":\"${feature_name}\",\"name\":\"${release_title}\",\"body\":\"${release_body}\",\"draft\":true}")
-
-          # Print response
-          echo $response
