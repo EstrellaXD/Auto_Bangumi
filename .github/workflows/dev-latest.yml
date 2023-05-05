@@ -3,7 +3,7 @@ name: Deploy To Dockerhub(dev)
 on:
   push:
     tags:
-      - '\d+\.\d+\.\d+-beta(?:\d+)?'
+      - '\d+\.\d+\.\d+-beta\d+'
 
 jobs:
   test:
@@ -56,3 +56,20 @@ jobs:
             estrellaxd/auto_bangumi:dev-latest
             estrellaxd/auto_bangumi:${{ github.ref_name }}
           file: Dockerfile
+
+  generate_release:
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Generate Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: 🌙${{ github.ref_name }}
+          draft: true
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+
