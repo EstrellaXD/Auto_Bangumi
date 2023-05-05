@@ -47,7 +47,7 @@ def rename_normal(info: DownloadInfo):
             episode = match_obj.group(2)
             title = re.sub(r"([Ss]|Season )\d{1,3}", "", match_obj.group(1)).strip()
             new_name = f"{title} S{info.season}E{episode}{match_obj.group(3)}"
-            return new_name, episode
+            return new_name
 
 
 def rename_pn(info: DownloadInfo):
@@ -62,7 +62,7 @@ def rename_pn(info: DownloadInfo):
                 "",
                 f"{title} S{info.season}E{episode}{info.suffix}",
             )
-            return new_name, episode
+            return new_name
 
 
 def rename_advance(info: DownloadInfo):
@@ -75,7 +75,7 @@ def rename_advance(info: DownloadInfo):
                 "",
                 f"{info.folder_name} S{info.season}E{episode}{info.suffix}",
             )
-            return new_name, episode
+            return new_name
 
 
 def rename_no_season_pn(info: DownloadInfo):
@@ -89,7 +89,7 @@ def rename_no_season_pn(info: DownloadInfo):
                 "",
                 f"{title} E{episode}{info.suffix}",
             )
-            return new_name, episode
+            return new_name
 
 
 def rename_none(info: DownloadInfo):

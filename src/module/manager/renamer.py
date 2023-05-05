@@ -47,7 +47,7 @@ class Renamer:
         torrent_name = info.name
         suffix = os.path.splitext(media_path)[-1]
         compare_name = self.get_file_name(media_path)
-        new_path, episode = self._renamer.torrent_parser(
+        new_path = self._renamer.torrent_parser(
             torrent_name=torrent_name,
             bangumi_name=bangumi_name,
             season=season,
@@ -57,7 +57,7 @@ class Renamer:
         if compare_name != new_path:
             try:
                 self._client.rename_torrent_file(_hash=info.hash, old_path=media_path, new_path=new_path)
-                self._notification.send_msg(bangumi_name, f"第{episode}集已经更新，已自动重命名。")
+                self._notification.send_msg(bangumi_name, f"{new_path}已经更新，已自动重命名。")
             except Exception as e:
                 logger.warning(f"{torrent_name} rename failed")
                 logger.warning(f"Season name: {bangumi_name}, Season: {season}, Suffix: {suffix}")
