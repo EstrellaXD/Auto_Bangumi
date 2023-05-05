@@ -43,7 +43,7 @@ class Renamer:
                 subtitle_list.append(file_name)
         return media_list, subtitle_list
 
-    def rename_file(self, info, media_path: str, rename_method: str, bangumi_name: str, season: int, remove_bad_torrents: bool):
+    def rename_file(self, info, media_path: str, method: str, bangumi_name: str, season: int, remove_bad_torrents: bool):
         torrent_name = info.name
         suffix = os.path.splitext(media_path)[-1]
         compare_name = self.get_file_name(media_path)
@@ -52,7 +52,7 @@ class Renamer:
             bangumi_name=bangumi_name,
             season=season,
             suffix=suffix,
-            method=rename_method
+            method=method
         )
         if compare_name != new_path:
             try:
@@ -65,19 +65,19 @@ class Renamer:
                 # Delete bad torrent
                 self.delete_bad_torrent(info, remove_bad_torrents)
 
-    def rename_collection(self, info, media_list: list[str],bangumi_name: str, season: int, remove_bad_torrents: bool):
+    def rename_collection(self, info, media_list: list[str], bangumi_name: str, season: int, remove_bad_torrents: bool, method: str):
         _hash = info.hash
         for media_path in media_list:
             path_len = len(media_path.split(os.path.sep))
             if path_len <= 2:
                 suffix = os.path.splitext(media_path)[-1]
                 torrent_name = self.get_file_name(media_path)
-                new_name, episode = self._renamer.torrent_parser(
+                new_name = self._renamer.torrent_parser(
                     torrent_name=torrent_name,
                     bangumi_name=bangumi_name,
                     season=season,
                     suffix=suffix,
-                    method="pn"
+                    method=method
                 )
                 if torrent_name != new_name:
                     try:
@@ -167,7 +167,7 @@ class Renamer:
                 self.rename_file(
                     info=info,
                     media_path=media_list[0],
-                    rename_method=rename_method,
+                    method=rename_method,
                     bangumi_name=bangumi_name,
                     season=season,
                     remove_bad_torrents=remove_bad_torrents
@@ -183,11 +183,12 @@ class Renamer:
             elif len(media_list) > 1:
                 logger.info("Start rename collection")
                 self.rename_collection(
-                    info,
-                    media_list,
-                    bangumi_name,
-                    season,
-                    remove_bad_torrents
+                    info=info,
+                    media_list=media_list,
+                    bangumi_name=bangumi_name,
+                    season=season,
+                    remove_bad_torrents=remove_bad_torrents,
+                    method=rename_method
                 )
                 if len(subtitle_list) > 0:
                     self.rename_subtitles(
