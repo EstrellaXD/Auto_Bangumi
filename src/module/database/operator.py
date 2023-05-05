@@ -115,10 +115,21 @@ class DataOperator(DataConnector):
         self._conn.commit()
         return self._cursor.rowcount == 1
 
-    def search(self, _id: int) -> BangumiData | None:
+    def search_id(self, _id: int) -> BangumiData | None:
         self._cursor.execute('''
             SELECT * FROM bangumi WHERE id = :id
             ''', {"id": _id})
+        values = self._cursor.fetchone()
+        if values is None:
+            return None
+        keys = [x[0] for x in self._cursor.description]
+        dict_data = dict(zip(keys, values))
+        return self.db_to_data(dict_data)
+
+    def search_official_title(self, official_title: str) -> BangumiData | None:
+        self._cursor.execute('''
+            SELECT * FROM bangumi WHERE official_title = :official_title
+            ''', {"official_title": official_title})
         values = self._cursor.fetchone()
         if values is None:
             return None
@@ -137,6 +148,19 @@ class DataOperator(DataConnector):
             if title_raw in title:
                 return True
         return False
+
+    def not_exist_titles(self, titles: list[str]) -> list[str]:
+        # Select all title_raw
+        self._cursor.execute('''
+            SELECT title_raw FROM bangumi
+            ''')
+        title_raws = [x[0] for x in self._cursor.fetchall()]
+        # Match title
+        for title_raw in title_raws:
+            for title in titles:
+                if title_raw in title:
+                    titles.remove(title)
+        return titles
 
     def gen_id(self) -> int:
         self._cursor.execute('''

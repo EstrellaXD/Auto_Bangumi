@@ -43,7 +43,7 @@ class TitleParser:
             self,
             raw: str,
             settings: Config,
-            _id: int | None = None
+            _id: int = 0
     ) -> BangumiData:
         language = settings.rss_parser.language
         try:
@@ -74,10 +74,10 @@ class TitleParser:
                 dpi=episode.resolution,
                 source=episode.source,
                 subtitle=episode.sub,
-                added=False,
                 eps_collect=True if episode.episode > 1 else False,
                 offset=0,
-                filter=settings.rss_parser.filter
+                filter=settings.rss_parser.filter,
+                rss=rss_link,
             )
             logger.debug(f"RAW:{raw} >> {episode.title_en}")
             return data

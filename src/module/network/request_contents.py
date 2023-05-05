@@ -1,6 +1,7 @@
 import re
 import xml.etree.ElementTree
 from dataclasses import dataclass
+from bs4 import BeautifulSoup
 
 from .request_url import RequestURL
 from module.conf import settings
@@ -20,10 +21,12 @@ class RequestContent(RequestURL):
         soup = self.get_xml(_url)
         torrent_titles = []
         torrent_urls = []
+        torrent_homepage = []
 
         for item in soup.findall("./channel/item"):
             torrent_titles.append(item.find("title").text)
             torrent_urls.append(item.find("enclosure").attrib['url'])
+            torrent_homepage.append(item.find("link").text)
 
         torrents = []
         for _title, torrent_url in zip(torrent_titles, torrent_urls):
@@ -34,7 +37,16 @@ class RequestContent(RequestURL):
                 torrents.append(TorrentInfo(_title, torrent_url))
         return torrents
 
-    def get_xml(self, _url) -> xml.etree.ElementTree.ElementTree:
+    def get_poster(self, _url):
+        content = self.get_html(_url).text
+        soup = BeautifulSoup(content, 'html.parser')
+        div = soup.find('div', {'class': 'bangumi-poster'})
+        style = div.get('style')
+        if style:
+            return style.split('url(\'')[1].split('\')')[0]
+        return None
+
+    def get_xml(self, _url) -> xml.etree.ElementTree.Element:
         return xml.etree.ElementTree.fromstring(self.get_url(_url).text)
 
     # API JSON
@@ -52,3 +64,4 @@ class RequestContent(RequestURL):
 
     def get_content(self, _url):
         return self.get_url(_url).content
+

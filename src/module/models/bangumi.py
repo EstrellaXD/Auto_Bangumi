@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 
 class BangumiData(BaseModel):
-    id: int | None = Field(None, alias="id", title="番剧ID")
+    id: int = Field(..., alias="id", title="番剧ID")
     official_title: str = Field(..., alias="official_title", title="番剧中文名")
     year: int | None = Field(None, alias="year", title="番剧年份")
     title_raw: str = Field(..., alias="title_raw", title="番剧原名")
@@ -13,11 +13,11 @@ class BangumiData(BaseModel):
     dpi: str | None = Field(None, alias="dpi", title="分辨率")
     source: str | None = Field(None, alias="source", title="来源")
     subtitle: str | None = Field(None, alias="subtitle", title="字幕")
-    added: bool = Field(False, alias="added", title="是否已添加")
     eps_collect: bool = Field(False, alias="eps_collect", title="是否已收集")
     offset: int = Field(0, alias="offset", title="番剧偏移量")
     filter: list[str] = Field(..., alias="filter", title="番剧过滤器")
     rss: list[str] = Field(None, alias="rss", title="番剧RSS链接")
+    poster_link: str | None = Field(None, alias="poster_link", title="番剧海报链接")
 
 
 class ProgramData(BaseModel):

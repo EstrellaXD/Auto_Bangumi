@@ -3,8 +3,8 @@ import logging
 
 from module.network import RequestContent
 from module.parser import TitleParser
-from module.core import DownloadClient
 from module.models import BangumiData, Config
+from module.database import DataOperator
 
 logger = logging.getLogger(__name__)
 
@@ -14,37 +14,24 @@ class RSSAnalyser:
         self._title_analyser = TitleParser()
         self.settings = settings
 
-    @staticmethod
-    def find_id(bangumi_info: list[BangumiData]) -> int:
-        _id = 0
-        for info in bangumi_info:
-            if info.id > _id:
-                _id = info.id
-        return _id
-
-    def rss_to_datas(self, bangumi_info: list[BangumiData], rss_link: str) -> list[BangumiData]:
+    def rss_to_datas(self, rss_link: str) -> list[BangumiData]:
         with RequestContent() as req:
             rss_torrents = req.get_torrents(rss_link)
-        # Find largest bangumi id
-        _id = self.find_id(bangumi_info)
-        for torrent in rss_torrents:
-            raw_title = torrent.name
-            extra_add = True
-            if bangumi_info is not []:
-                for info in bangumi_info:
-                    if re.search(info.title_raw, raw_title) is not None:
-                        logger.debug(f"Had added {info.official_title} in auto_download rule before")
-                        extra_add = False
-                        break
-            if extra_add:
-                _id += 1
+        title_list = [torrent.name for torrent in rss_torrents]
+        data_list = []
+        with DataOperator() as op:
+            add_title_list = op.not_exist_titles(title_list)
+            _id = op.gen_id()
+            for raw_title in add_title_list:
                 data = self._title_analyser.raw_parser(
                     raw=raw_title,
                     _id=_id,
                     settings=self.settings)
-                if data is not None and data.official_title not in bangumi_info:
-                    bangumi_info.append(data)
-        return bangumi_info
+                if data is not None and op.match_title(data.official_title) is None:
+                    data_list.append(data)
+                    _id += 1
+            op.insert_list(data_list)
+        return data_list
 
     def rss_to_data(self, url, _filter: bool = True) -> BangumiData:
         with RequestContent() as req:
@@ -59,10 +46,9 @@ class RSSAnalyser:
             except Exception as e:
                 logger.debug(e)
 
-    def run(self, bangumi_info: list[BangumiData], rss_link: str):
+    def run(self, rss_link: str):
         logger.info("Start collecting RSS info.")
         try:
-            self.rss_to_datas(bangumi_info, rss_link)
+            return self.rss_to_datas(rss_link)
         except Exception as e:
             logger.debug(e)
-        logger.info("Finished")
