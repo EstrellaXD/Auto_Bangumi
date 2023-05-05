@@ -1,22 +1,20 @@
-name: Generate Release Draft
+name: Release Drafter
 
 on:
   pull_request:
-    types:
-      - closed
+
+
+permissions:
+  contents: read
+
 
 jobs:
-  generate_release_draft:
+  update_release_draft:
+    permissions:
+      contents: write  # for release-drafter/release-drafter to create a github release
+      pull-requests: write  # for release-drafter/release-drafter to add label to PR
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == true
     steps:
-      - name: Generate Release Draft
-        uses: actions/create-release@v1
-        with:
-          tag_name: ${{ github.event.pull_request.title }}
-          release_name: ${{ github.event.pull_request.title }}🌟
-          body: |
-            - ${{ github.event.pull_request.body }}
-          draft: true
+      - uses: release-drafter/release-drafter@v5
         env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}

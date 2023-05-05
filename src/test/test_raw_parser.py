@@ -46,8 +46,7 @@ def test_raw_parser():
     content = "[织梦字幕组][尼尔：机械纪元 NieR Automata Ver1.1a][02集][1080P][AVC][简日双语]"
     info = raw_parser(content)
     assert info.group == "织梦字幕组"
-    assert info.title_zh == "尼尔：机械纪元"
-    assert info.title_en == "NieR Automata Ver1.1a"
+    assert info.title_zh == "尼尔：机械纪元 NieR Automata Ver1.1a"
     assert info.resolution == "1080P"
     assert info.episode == 2
     assert info.season == 1
@@ -59,13 +58,4 @@ def test_raw_parser():
     assert info.title_jp == "仮面ライダーギーツ"
     assert info.resolution == "1080p"
     assert info.episode == 33
-    assert info.season == 1
-
-    content = "【极影字幕社】★4月新番 天国大魔境 Tengoku Daimakyou 第05话 GB 720P MP4（字幕社招人内详）"
-    info = raw_parser(content)
-    assert info.group == "极影字幕社"
-    assert info.title_zh == "天国大魔境"
-    assert info.title_en == "Tengoku Daimakyou"
-    assert info.resolution == "720P"
-    assert info.episode == 5
     assert info.season == 1

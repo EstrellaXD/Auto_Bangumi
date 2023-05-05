@@ -26,7 +26,7 @@ jobs:
         pytest
     
 
-  build:
+  docker:
     runs-on: ubuntu-latest
     needs: [test]
     steps:

@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 EPISODE_RE = re.compile(r"\d+")
 TITLE_RE = re.compile(
-    r"(.*|\[.*])( -? \d+|\[\d+]|\[\d+.?[vV]\d]|第\d+[话話集]|\[第?\d+[话話集]]|\[\d+.?END]|[Ee][Pp]?\d+)(.*)"
+    r"(.*|\[.*])( -? \d+|\[\d+]|\[\d+.?[vV]\d]|[ 第]?\d+[话話集]|\[\d+.?END]|[Ee][Pp]?\d+)(.*)"
 )
 RESOLUTION_RE = re.compile(r"1080|720|2160|4K")
 SOURCE_RE = re.compile(r"B-Global|[Bb]aha|[Bb]ilibili|AT-X|Web")
@@ -41,10 +41,6 @@ def prefix_process(raw: str, group: str) -> str:
     raw = re.sub(f".{group}.", "", raw)
     raw_process = PREFIX_RE.sub("/", raw)
     arg_group = raw_process.split("/")
-    while "" in arg_group:
-        arg_group.remove("")
-    if len(arg_group) == 1:
-        arg_group = arg_group[0].split(" ")
     for arg in arg_group:
         if re.search(r"新番|月?番", arg) and len(arg) <= 5:
             raw = re.sub(f".{arg}.", "", raw)
@@ -127,7 +123,6 @@ def clean_sub(sub: str | None) -> str | None:
         return sub
     return re.sub(r"_MP4|_MKV", "", sub)
 
-
 def process(raw_title: str):
     raw_title = raw_title.strip()
     content_title = pre_process(raw_title)
@@ -168,9 +163,5 @@ def raw_parser(raw: str) -> Episode | None:
     return Episode(name_en, name_zh, name_jp, season, sr, episode, sub, group, dpi, source)
 
 
-if __name__ == '__main__':
-    title = "【幻樱字幕组】【4月新番】【古见同学有交流障碍症 第二季 Komi-san wa, Komyushou Desu. S02】【22】【GB_MP4】【1920X1080】"
-    ep = raw_parser(title)
-    print(ep)
 
 

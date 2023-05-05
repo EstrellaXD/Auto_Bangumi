@@ -1,32 +1,44 @@
-name-template: 'v$RESOLVED_VERSION 🌈'
-tag-template: 'v$RESOLVED_VERSION'
+# Configuration for Release Drafter: https://github.com/toolmantim/release-drafter
+name-template: 'v$NEXT_PATCH_VERSION 🌈'
+tag-template: 'v$NEXT_PATCH_VERSION'
+version-template: $MAJOR.$MINOR.$PATCH
+# Emoji reference: https://gitmoji.carloscuesta.me/
 categories:
   - title: '🚀 Features'
     labels:
       - 'feature'
       - 'enhancement'
-      - 'new'
+      - 'kind/feature'
   - title: '🐛 Bug Fixes'
     labels:
       - 'fix'
       - 'bugfix'
       - 'bug'
-  - title: '🧰 Maintenance'
-    label: 'chore'
-change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
-change-title-escapes: '\<*_&' # You can add # and @ to disable mentions, and add ` to disable code blocks.
-version-resolver:
-  major:
+      - 'regression'
+      - 'kind/bug'
+  - title: 📝 Documentation updates
     labels:
-      - 'major'
-  minor:
+      - documentation
+      - 'kind/doc'
+  - title: 👻 Maintenance
     labels:
-      - 'minor'
-  patch:
+      - chore
+      - dependencies
+      - 'kind/chore'
+      - 'kind/dep'
+  - title: 🚦 Tests
     labels:
-      - 'patch'
-  default: patch
+      - test
+      - tests
+exclude-labels:
+  - reverted
+  - no-changelog
+  - skip-changelog
+  - invalid
+change-template: '* $TITLE (#$NUMBER) @$AUTHOR'
 template: |
-  ## Changes
-
+  ## What’s Changed
   $CHANGES
+Terms
+Privacy
+Security

@@ -44,9 +44,8 @@ def rename_normal(info: DownloadInfo):
     for rule in RULES:
         match_obj = re.match(rule, info.name, re.I)
         if match_obj is not None:
-            episode = match_obj.group(2)
             title = re.sub(r"([Ss]|Season )\d{1,3}", "", match_obj.group(1)).strip()
-            new_name = f"{title} S{info.season}E{episode}{match_obj.group(3)}"
+            new_name = f"{title} S{info.season}E{match_obj.group(2)}{match_obj.group(3)}"
             return new_name
 
 
@@ -56,11 +55,10 @@ def rename_pn(info: DownloadInfo):
         if match_obj is not None:
             title = re.sub(r"([Ss]|Season )\d{1,3}", "", match_obj.group(1)).strip()
             title = title if title != "" else info.folder_name
-            episode = match_obj.group(2)
             new_name = re.sub(
                 r"[\[\]]",
                 "",
-                f"{title} S{info.season}E{episode}{info.suffix}",
+                f"{title} S{info.season}E{match_obj.group(2)}{info.suffix}",
             )
             return new_name
 
@@ -69,11 +67,10 @@ def rename_advance(info: DownloadInfo):
     for rule in RULES:
         match_obj = re.match(rule, info.file_name, re.I)
         if match_obj is not None:
-            episode = match_obj.group(2)
             new_name = re.sub(
                 r"[\[\]]",
                 "",
-                f"{info.folder_name} S{info.season}E{episode}{info.suffix}",
+                f"{info.folder_name} S{info.season}E{match_obj.group(2)}{info.suffix}",
             )
             return new_name
 
@@ -83,11 +80,10 @@ def rename_no_season_pn(info: DownloadInfo):
         match_obj = re.match(rule, info.file_name, re.I)
         if match_obj is not None:
             title = match_obj.group(1).strip()
-            episode = match_obj.group(2)
             new_name = re.sub(
                 r"[\[\]]",
                 "",
-                f"{title} E{episode}{info.suffix}",
+                f"{title} E{match_obj.group(2)}{info.suffix}",
             )
             return new_name
 
