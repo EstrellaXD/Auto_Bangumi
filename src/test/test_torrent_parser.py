@@ -10,7 +10,6 @@ def test_torrent_parser():
     assert torrent_parser(file_name, folder_name, season, suffix, "advance") == "我内心的糟糕念头(2023) S01E01.mp4"
     assert torrent_parser(file_name, folder_name, season, suffix, "none") == "[Lilith-Raws] Boku no Kokoro no Yabai Yatsu - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4].mp4"
 
-
     file_name = "[Sakurato] Tonikaku Kawaii S2 [01][AVC-8bit 1080p AAC][CHS].mp4"
     folder_name = "总之就是非常可爱(2021)"
     season = 2
@@ -45,3 +44,18 @@ def test_torrent_parser():
     suffix = ".mp4"
     assert torrent_parser(file_name, folder_name, season, suffix, "pn") == "海盗战记 S01E01.mp4"
     assert torrent_parser(file_name, folder_name, season, suffix, "advance") == "海盗战记(2021) S01E01.mp4"
+
+    file_name = "海盗战记 S01E01.zh-tw.ass"
+    folder_name = "海盗战记(2021)"
+    season = 1
+    suffix = ".ass"
+    assert torrent_parser(file_name, folder_name, season, suffix, "subtitle_pn") == "海盗战记 S01E01.zh-tw.ass"
+    assert torrent_parser(file_name, folder_name, season, suffix, "subtitle_advance") == "海盗战记(2021) S01E01.zh-tw.ass"
+
+    file_name = "海盗战记 S01E01.SC.ass"
+    folder_name = "海盗战记(2021)"
+    season = 1
+    suffix = ".ass"
+    assert torrent_parser(file_name, folder_name, season, suffix, "subtitle_pn") == "海盗战记 S01E01.zh.ass"
+    assert torrent_parser(file_name, folder_name, season, suffix, "subtitle_advance") == "海盗战记(2021) S01E01.zh.ass"
+
