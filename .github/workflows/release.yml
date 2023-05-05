@@ -18,7 +18,7 @@ jobs:
         uses: actions/create-release@v1
         with:
           tag_name: ${{ github.event.pull_request.title }}
-          release_name: ${{ github.event.pull_request.title }}🌟
+          release_name: 🌟${{ github.event.pull_request.title }}
           body: ${{ github.event.pull_request.body }}
           draft: false
           prerelease: false
