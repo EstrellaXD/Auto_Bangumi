@@ -4,6 +4,8 @@ on:
   pull_request:
     types:
       - closed
+    branches:
+      - main
 
 jobs:
   generate_release_draft:
