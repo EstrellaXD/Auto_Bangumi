@@ -10,7 +10,6 @@ def test_torrent_parser():
     assert torrent_parser(file_name, folder_name, season, suffix, "advance") == "我内心的糟糕念头(2023) S01E01.mp4"
     assert torrent_parser(file_name, folder_name, season, suffix, "none") == "[Lilith-Raws] Boku no Kokoro no Yabai Yatsu - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4].mp4"
 
-
     file_name = "[Sakurato] Tonikaku Kawaii S2 [01][AVC-8bit 1080p AAC][CHS].mp4"
     folder_name = "总之就是非常可爱(2021)"
     season = 2
