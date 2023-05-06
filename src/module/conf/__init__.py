@@ -14,3 +14,4 @@ class RSSLink(str):
 
 
 PLATFORM = "Windows" if "\\" in settings.downloader.path else "Unix"
+MIKANANI_URL = "mikanani.me"
