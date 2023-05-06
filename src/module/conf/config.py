@@ -16,6 +16,21 @@ except ImportError:
 
 
 class Setting(Config):
+    def __init__(self):
+        if VERSION != "DEV_VERSION":
+            CONFIG_PATH = "config/config.json"
+        else:
+            CONFIG_PATH = "config/config_dev.json"
+        if os.path.isfile(CONFIG_PATH):
+            config = load_config_from_file(CONFIG_PATH)
+        else:
+            logger.info(f"Can't find config file, use env instead")
+            load_dotenv()
+            config = env_to_config()
+        super().__init__(config)
+        save_config_to_file(self, CONFIG_PATH)
+        self.reload()
+        
     @staticmethod
     def reload():
         load_config_from_file(CONFIG_PATH)
@@ -34,7 +49,7 @@ def save_config_to_file(config: Config, path: str):
 def load_config_from_file(path: str) -> Config:
     with open(path, "r", encoding="utf-8") as f:
         config = json.load(f)
-    return Setting(**config)
+    return config
 
 
 def _val_from_env(env: str, attr: tuple):
@@ -57,26 +72,7 @@ def env_to_config() -> Setting:
                 else:
                     attr_name = attr[0] if isinstance(attr, tuple) else attr
                     _settings[key][attr_name] = _val_from_env(env, attr)
-    return Setting(**_settings)
-
-
-if os.path.isdir("config") and VERSION == "DEV_VERSION":
-    CONFIG_PATH = "config/config_dev.json"
-    if os.path.isfile(CONFIG_PATH):
-        settings = load_config_from_file(CONFIG_PATH)
-    else:
-        load_dotenv(".env")
-        settings = env_to_config()
-        save_config_to_file(settings, CONFIG_PATH)
-elif os.path.isdir("config") and VERSION != "DEV_VERSION":
-    CONFIG_PATH = "config/config.json"
-    if os.path.isfile(CONFIG_PATH):
-        settings = load_config_from_file(CONFIG_PATH)
-    else:
-        settings = env_to_config()
-        save_config_to_file(settings, CONFIG_PATH)
-else:
-    settings = Setting()
+    return _settings
 
 
 
