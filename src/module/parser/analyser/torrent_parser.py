@@ -154,17 +154,17 @@ METHODS = {
 
 
 def torrent_parser(
-        file_name: str,
-        folder_name: str,
-        season: int,
-        suffix: str,
-        method: str = "pn",
+    file_name: str,
+    folder_name: str,
+    season: int,
+    suffix: str,
+    method: str = "pn",
 ):
     info = rename_init(file_name, folder_name, season, suffix)
     return METHODS[method.lower()](info)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     title = "海盗战记 S02E17.zh.ass"
     folder_name = "海盗战记"
     season = 2

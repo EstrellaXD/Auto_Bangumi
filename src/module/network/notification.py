@@ -50,6 +50,7 @@ class TelegramNotification:
 
 class ServerChanNotification:
     """Server酱推送"""
+
     def __init__(self):
         self.token = settings.notification.token
         self.notification_url = f"https://sctapi.ftqq.com/{self.token}.send"
@@ -71,11 +72,7 @@ class BarkNotification:
         self.notification_url = "https://api.day.app/push"
 
     def send_msg(self, title: str, desp: str):
-        data = {
-            "title": title,
-            "body": desp,
-            "device_key": self.token
-        }
+        data = {"title": title, "body": desp, "device_key": self.token}
         with RequestContent() as req:
             resp = req.post_data(self.notification_url, data)
             logger.debug(f"Bark notification: {resp.status_code}")

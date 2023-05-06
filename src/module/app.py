@@ -1,6 +1,7 @@
 import os
 import time
 import logging
+import asyncio
 
 from module.conf import setup_logger, LOG_PATH, RSSLink, VERSION
 
@@ -18,45 +19,33 @@ def reset_log():
         os.remove(LOG_PATH)
 
 
-def main_process(rss_link: str, download_client: DownloadClient, _settings: Config):
-    rename = Renamer(download_client, _settings)
-    rss_analyser = RSSAnalyser(_settings)
-    while True:
-        times = 0
-        if _settings.rss_parser.enable:
-            extra_data = rss_analyser.run(rss_link=rss_link)
-            download_client.add_rules(extra_data, rss_link)
-        if _settings.bangumi_manage.eps_complete:
-            FullSeasonGet(settings=_settings).eps_complete(download_client)
-        logger.info("Running....")
-        while times < _settings.program.rename_times:
-            if _settings.bangumi_manage.enable:
-                rename.rename()
-            times += 1
-            time.sleep(_settings.program.sleep_time / _settings.program.rename_times)
+async def rss_loop(
+    rss_link: str,
+    rss_analyser: RSSAnalyser,
+    download_client: DownloadClient,
+    season_get: FullSeasonGet,
+    eps_complete: bool = False,
+    wait_time: int = 7200,
+):
+    datas = rss_analyser.run(rss_link)
+    if datas:
+        download_client.add_rules(datas, rss_link)
+        if eps_complete:
+            season_get.eps_complete(datas, download_client)
+    await asyncio.sleep(wait_time)
+
+
+async def rename_loop(renamer: Renamer, wait_time: int = 360):
+    renamer.rename()
+    await asyncio.sleep(wait_time)
 
 
 def show_info():
     with open("icon", "r") as f:
         for line in f.readlines():
             logger.info(line.strip("\n"))
-    logger.info(f"Version {VERSION}  Author: EstrellaXD Twitter: https://twitter.com/Estrella_Pan")
+    logger.info(
+        f"Version {VERSION}  Author: EstrellaXD Twitter: https://twitter.com/Estrella_Pan"
+    )
     logger.info("GitHub: https://github.com/EstrellaXD/Auto_Bangumi/")
     logger.info("Starting AutoBangumi...")
-
-
-def run(settings: Config):
-    # 初始化
-    rss_link = RSSLink()
-    reset_log()
-    setup_logger()
-    show_info()
-    if settings.rss_parser.token in ["", "token", None]:
-        logger.error("Please set your RSS token in config file.")
-        exit(1)
-    download_client = DownloadClient(settings)
-    download_client.auth()
-    download_client.init_downloader()
-    download_client.rss_feed(rss_link)
-    # 主程序循环
-    main_process(rss_link, download_client, settings)

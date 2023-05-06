@@ -111,4 +111,3 @@ async def get_rss(full_path: str):
 async def download(full_path: str):
     torrent = api_func.get_torrent(full_path)
     return Response(torrent, media_type="application/x-bittorrent")
-

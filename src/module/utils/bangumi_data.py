@@ -12,12 +12,14 @@ def load_program_data(path: str) -> ProgramData:
         data = ProgramData(**data)
         logger.info("Data file loaded")
     except Exception as e:
-        logger.warning("Data file is not compatible with the current version, rebuilding...")
+        logger.warning(
+            "Data file is not compatible with the current version, rebuilding..."
+        )
         logger.debug(e)
         data = ProgramData(
             rss_link=data["rss_link"],
             data_version=data["data_version"],
-            bangumi_info=[]
+            bangumi_info=[],
         )
     return data
 

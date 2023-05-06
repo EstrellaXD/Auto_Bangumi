@@ -15,13 +15,7 @@ class QbDownloader:
     def __init__(self, host, username, password):
         while True:
             try:
-                self._client = API(
-                    Client(
-                        host=host,
-                        port=6800,
-                        secret=password
-                    )
-                )
+                self._client = API(Client(host=host, port=6800, secret=password))
                 break
             except ClientException:
                 logger.warning(

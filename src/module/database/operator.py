@@ -27,7 +27,8 @@ class DataOperator(DataConnector):
 
     def insert(self, data: BangumiData):
         db_data = self.data_to_db(data)
-        self._cursor.execute('''
+        self._cursor.execute(
+            """
             INSERT INTO bangumi (
                 id,
                 official_title,
@@ -57,12 +58,15 @@ class DataOperator(DataConnector):
                 :filter,
                 :rss
                 )
-                ''', db_data)
+                """,
+            db_data,
+        )
         self._conn.commit()
 
     def insert_list(self, data: list[BangumiData]):
         db_data = [self.data_to_db(x) for x in data]
-        self._cursor.executemany('''
+        self._cursor.executemany(
+            """
             INSERT INTO bangumi (
                 id,
                 official_title,
@@ -92,12 +96,15 @@ class DataOperator(DataConnector):
                 :filter,
                 :rss
                 )
-                ''', db_data)
+                """,
+            db_data,
+        )
         self._conn.commit()
 
     def update(self, data: BangumiData) -> bool:
         db_data = self.data_to_db(data)
-        self._cursor.execute('''
+        self._cursor.execute(
+            """
             UPDATE bangumi SET
                 official_title = :official_title,
                 title_raw = :title_raw,
@@ -111,14 +118,19 @@ class DataOperator(DataConnector):
                 offset = :offset,
                 filter = :filter
             WHERE id = :id
-            ''', db_data)
+            """,
+            db_data,
+        )
         self._conn.commit()
         return self._cursor.rowcount == 1
 
     def search_id(self, _id: int) -> BangumiData | None:
-        self._cursor.execute('''
+        self._cursor.execute(
+            """
             SELECT * FROM bangumi WHERE id = :id
-            ''', {"id": _id})
+            """,
+            {"id": _id},
+        )
         values = self._cursor.fetchone()
         if values is None:
             return None
@@ -127,9 +139,12 @@ class DataOperator(DataConnector):
         return self.db_to_data(dict_data)
 
     def search_official_title(self, official_title: str) -> BangumiData | None:
-        self._cursor.execute('''
+        self._cursor.execute(
+            """
             SELECT * FROM bangumi WHERE official_title = :official_title
-            ''', {"official_title": official_title})
+            """,
+            {"official_title": official_title},
+        )
         values = self._cursor.fetchone()
         if values is None:
             return None
@@ -139,9 +154,11 @@ class DataOperator(DataConnector):
 
     def match_title(self, title: str) -> bool:
         # Select all title_raw
-        self._cursor.execute('''
+        self._cursor.execute(
+            """
             SELECT title_raw FROM bangumi
-            ''')
+            """
+        )
         title_raws = [x[0] for x in self._cursor.fetchall()]
         # Match title
         for title_raw in title_raws:
@@ -151,9 +168,11 @@ class DataOperator(DataConnector):
 
     def not_exist_titles(self, titles: list[str]) -> list[str]:
         # Select all title_raw
-        self._cursor.execute('''
+        self._cursor.execute(
+            """
             SELECT title_raw FROM bangumi
-            ''')
+            """
+        )
         title_raws = [x[0] for x in self._cursor.fetchall()]
         # Match title
         for title_raw in title_raws:
@@ -163,13 +182,14 @@ class DataOperator(DataConnector):
         return titles
 
     def gen_id(self) -> int:
-        self._cursor.execute('''
+        self._cursor.execute(
+            """
             SELECT id FROM bangumi ORDER BY id DESC LIMIT 1
-            ''')
+            """
+        )
         return self._cursor.fetchone()[0] + 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     with DataOperator() as op:
         pass
-

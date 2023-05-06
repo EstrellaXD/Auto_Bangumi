@@ -24,9 +24,8 @@ class RSSAnalyser:
             _id = op.gen_id()
             for raw_title in add_title_list:
                 data = self._title_analyser.raw_parser(
-                    raw=raw_title,
-                    _id=_id,
-                    settings=self.settings)
+                    raw=raw_title, _id=_id, settings=self.settings
+                )
                 if data is not None and op.match_title(data.official_title) is None:
                     data_list.append(data)
                     _id += 1
@@ -39,8 +38,7 @@ class RSSAnalyser:
         for torrent in rss_torrents:
             try:
                 data = self._title_analyser.raw_parser(
-                    torrent.name,
-                    settings=self.settings
+                    torrent.name, settings=self.settings
                 )
                 return data
             except Exception as e:

@@ -89,7 +89,9 @@ if VERSION != "DEV_VERSION":
     def index(request: Request):
         context = {"request": request}
         return templates.TemplateResponse("index.html", context)
+
 else:
+
     @router.get("/", status_code=302, tags=["html"])
     def index():
         return RedirectResponse("/docs")
@@ -97,6 +99,9 @@ else:
 
 if __name__ == "__main__":
     log_config = uvicorn.config.LOGGING_CONFIG
-    log_config["formatters"]["default"]["fmt"] = "[%(asctime)s] %(levelname)-8s  %(message)s"
-    uvicorn.run(router, host="0.0.0.0", port=settings.program.webui_port, log_config=log_config)
-
+    log_config["formatters"]["default"][
+        "fmt"
+    ] = "[%(asctime)s] %(levelname)-8s  %(message)s"
+    uvicorn.run(
+        router, host="0.0.0.0", port=settings.program.webui_port, log_config=log_config
+    )

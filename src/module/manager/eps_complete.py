@@ -12,8 +12,19 @@ logger = logging.getLogger(__name__)
 
 class FullSeasonGet:
     def __init__(self, settings: Config):
-        self.SEARCH_KEY = ["group", "title_raw", "season_raw", "subtitle", "source", "dpi"]
-        self.CUSTOM_URL = "https://mikanani.me" if settings.rss_parser.custom_url == "" else settings.rss_parser.custom_url
+        self.SEARCH_KEY = [
+            "group",
+            "title_raw",
+            "season_raw",
+            "subtitle",
+            "source",
+            "dpi",
+        ]
+        self.CUSTOM_URL = (
+            "https://mikanani.me"
+            if settings.rss_parser.custom_url == ""
+            else settings.rss_parser.custom_url
+        )
         if "://" not in self.CUSTOM_URL:
             if re.match(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", self.CUSTOM_URL):
                 self.CUSTOM_URL = f"http://{self.CUSTOM_URL}"
@@ -33,7 +44,9 @@ class FullSeasonGet:
     def get_season_torrents(self, data: BangumiData):
         keyword = self.init_eps_complete_search_str(data)
         with RequestContent() as req:
-            torrents = req.get_torrents(f"{self.CUSTOM_URL}/RSS/Search?searchstr={keyword}")
+            torrents = req.get_torrents(
+                f"{self.CUSTOM_URL}/RSS/Search?searchstr={keyword}"
+            )
         return [torrent for torrent in torrents if data.title_raw in torrent.name]
 
     def collect_season_torrents(self, data: BangumiData, torrents):
@@ -42,14 +55,13 @@ class FullSeasonGet:
             download_info = {
                 "url": torrent.torrent_link,
                 "save_path": os.path.join(
-                        self.save_path,
-                        data.official_title,
-                        f"Season {data.season}")
+                    self.save_path, data.official_title, f"Season {data.season}"
+                ),
             }
             downloads.append(download_info)
         return downloads
 
-    def download_eps(self, data: BangumiData, download_client: DownloadClient):
+    def download_season(self, data: BangumiData, download_client: DownloadClient):
         logger.info(f"Start collecting {data.official_title} Season {data.season}...")
         torrents = self.get_season_torrents(data)
         downloads = self.collect_season_torrents(data, torrents)
@@ -58,12 +70,14 @@ class FullSeasonGet:
         logger.info("Completed!")
         data.eps_collect = False
 
-    def eps_complete(self, bangumi_info: list[BangumiData], download_client: DownloadClient):
-        for data in bangumi_info:
+    def eps_complete(self, datas: list[BangumiData], download_client: DownloadClient):
+        for data in datas:
             if data.eps_collect:
-                self.download_eps(data, download_client)
+                self.download_season(data, download_client)
 
-    def download_collection(self, data: BangumiData, link, download_client: DownloadClient):
+    def download_collection(
+        self, data: BangumiData, link, download_client: DownloadClient
+    ):
         with RequestContent() as req:
             torrents = req.get_torrents(link)
         downloads = self.collect_season_torrents(data, torrents)
@@ -71,5 +85,3 @@ class FullSeasonGet:
         for download in downloads:
             download_client.add_torrent(download)
         logger.info("Completed!")
-
-
