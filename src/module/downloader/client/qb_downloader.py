@@ -16,7 +16,7 @@ class QbDownloader:
             host=host,
             username=username,
             password=password,
-            VERIFY_WEBUI_CERTIFICATE=ssl
+            VERIFY_WEBUI_CERTIFICATE=ssl,
         )
         self.host = host
         self.username = username
@@ -32,6 +32,9 @@ class QbDownloader:
                     f"Can't login qBittorrent Server {self.host} by {self.username}, retry in {5} seconds."
                 )
             time.sleep(5)
+
+    def logout(self):
+        self._client.auth_log_out()
 
     @qb_connect_failed_wait
     def prefs_init(self, prefs):
@@ -57,13 +60,12 @@ class QbDownloader:
         )
 
     def torrents_delete(self, hash):
-        return self._client.torrents_delete(
-            delete_files=True,
-            torrent_hashes=hash
-        )
+        return self._client.torrents_delete(delete_files=True, torrent_hashes=hash)
 
     def torrents_rename_file(self, torrent_hash, old_path, new_path):
-        self._client.torrents_rename_file(torrent_hash=torrent_hash, old_path=old_path, new_path=new_path)
+        self._client.torrents_rename_file(
+            torrent_hash=torrent_hash, old_path=old_path, new_path=new_path
+        )
 
     def check_rss(self, url, item_path) -> tuple[str | None, bool]:
         items = self._client.rss_items()

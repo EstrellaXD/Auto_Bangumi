@@ -86,16 +86,16 @@ class APIProcess:
         return json_config.load(CONFIG_PATH)
 
     def get_rss(self, full_path: str):
-        url = f"https://mikanime.tv/RSS/{full_path}"
+        url = f"https://mikanani.me/RSS/{full_path}"
         custom_url = self._custom_url
         if "://" not in custom_url:
             custom_url = f"https://{custom_url}"
         with RequestContent() as request:
             content = request.get_html(url)
-        return re.sub(r"https://mikanime.tv", custom_url, content)
+        return re.sub(r"https://mikanani.me", custom_url, content)
 
     @staticmethod
     def get_torrent(full_path):
-        url = f"https://mikanime.tv/Download/{full_path}"
+        url = f"https://mikanani.me/Download/{full_path}"
         with RequestContent() as request:
             return request.get_content(url)

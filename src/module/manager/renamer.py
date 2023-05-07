@@ -12,9 +12,9 @@ from module.models import Config
 logger = logging.getLogger(__name__)
 
 
-class Renamer:
-    def __init__(self, download_client: DownloadClient, settings: Config):
-        self._client = download_client
+class Renamer(DownloadClient):
+    def __init__(self, settings: Config):
+        super().__init__(settings)
         self._renamer = TitleParser()
         self._notification = PostNotification()
         self.settings = settings
@@ -22,11 +22,13 @@ class Renamer:
     @staticmethod
     def print_result(torrent_count, rename_count):
         if rename_count != 0:
-            logger.info(f"Finished checking {torrent_count} files' name, renamed {rename_count} files.")
+            logger.info(
+                f"Finished checking {torrent_count} files' name, renamed {rename_count} files."
+            )
         logger.debug(f"Checked {torrent_count} files")
 
     def get_torrent_info(self, category="Bangumi"):
-        recent_info = self._client.get_torrent_info(category=category)
+        recent_info = self.get_torrent_info(category=category)
         torrent_count = len(recent_info)
         return recent_info, torrent_count
 
@@ -43,7 +45,15 @@ class Renamer:
                 subtitle_list.append(file_name)
         return media_list, subtitle_list
 
-    def rename_file(self, info, media_path: str, method: str, bangumi_name: str, season: int, remove_bad_torrents: bool):
+    def rename_file(
+        self,
+        info,
+        media_path: str,
+        method: str,
+        bangumi_name: str,
+        season: int,
+        remove_bad_torrents: bool,
+    ):
         torrent_name = info.name
         suffix = os.path.splitext(media_path)[-1]
         compare_name = self.get_file_name(media_path)
@@ -52,20 +62,32 @@ class Renamer:
             bangumi_name=bangumi_name,
             season=season,
             suffix=suffix,
-            method=method
+            method=method,
         )
         if compare_name != new_path:
             try:
-                self._client.rename_torrent_file(_hash=info.hash, old_path=media_path, new_path=new_path)
+                self.rename_torrent_file(
+                    _hash=info.hash, old_path=media_path, new_path=new_path
+                )
                 self._notification.send_msg(bangumi_name, f"{new_path}已经更新，已自动重命名。")
             except Exception as e:
                 logger.warning(f"{torrent_name} rename failed")
-                logger.warning(f"Season name: {bangumi_name}, Season: {season}, Suffix: {suffix}")
+                logger.warning(
+                    f"Season name: {bangumi_name}, Season: {season}, Suffix: {suffix}"
+                )
                 logger.debug(e)
                 # Delete bad torrent
                 self.delete_bad_torrent(info, remove_bad_torrents)
 
-    def rename_collection(self, info, media_list: list[str], bangumi_name: str, season: int, remove_bad_torrents: bool, method: str):
+    def rename_collection(
+        self,
+        info,
+        media_list: list[str],
+        bangumi_name: str,
+        season: int,
+        remove_bad_torrents: bool,
+        method: str,
+    ):
         _hash = info.hash
         for media_path in media_list:
             path_len = len(media_path.split(os.path.sep))
@@ -77,26 +99,30 @@ class Renamer:
                     bangumi_name=bangumi_name,
                     season=season,
                     suffix=suffix,
-                    method=method
+                    method=method,
                 )
                 if torrent_name != new_name:
                     try:
-                        self._client.rename_torrent_file(_hash=_hash, old_path=media_path, new_path=new_name)
+                        self.rename_torrent_file(
+                            _hash=_hash, old_path=media_path, new_path=new_name
+                        )
                     except Exception as e:
                         logger.warning(f"{torrent_name} rename failed")
-                        logger.warning(f"Bangumi name: {bangumi_name}, Season: {season}, Suffix: {suffix}")
+                        logger.warning(
+                            f"Bangumi name: {bangumi_name}, Season: {season}, Suffix: {suffix}"
+                        )
                         logger.debug(e)
                         # Delete bad torrent.
                         self.delete_bad_torrent(info, remove_bad_torrents)
-        self._client.set_category(category="BangumiCollection", hashes=_hash)
+        self.set_category(category="BangumiCollection", hashes=_hash)
 
     def rename_subtitles(
-            self,
-            subtitle_list: list[str],
-            bangumi_name: str,
-            season: int,
-            method: str,
-            _hash
+        self,
+        subtitle_list: list[str],
+        bangumi_name: str,
+        season: int,
+        method: str,
+        _hash,
     ):
         method = "subtitle_" + method
         for subtitle_path in subtitle_list:
@@ -107,11 +133,13 @@ class Renamer:
                 torrent_name=old_name,
                 bangumi_name=bangumi_name,
                 season=season,
-                suffix=suffix
+                suffix=suffix,
             )
             if old_name != new_name:
                 try:
-                    self._client.rename_torrent_file(_hash=_hash, old_path=subtitle_path, new_path=new_name)
+                    self.rename_torrent_file(
+                        _hash=_hash, old_path=subtitle_path, new_path=new_name
+                    )
                 except Exception as e:
                     logger.warning(f"{old_name} rename failed")
                     logger.warning(f"Suffix: {suffix}")
@@ -119,7 +147,7 @@ class Renamer:
 
     def delete_bad_torrent(self, info, remove_bad_torrent: bool):
         if remove_bad_torrent:
-            self._client.delete_torrent(info.hash)
+            self.delete_torrent(info.hash)
             logger.info(f"{info.name} have been deleted.")
 
     @staticmethod
@@ -127,11 +155,17 @@ class Renamer:
         # Remove default save path
         save_path = save_path.replace(download_path, "")
         # Check windows or linux path
-        path_parts = PurePath(save_path).parts \
-            if PurePath(save_path).name != save_path \
+        path_parts = (
+            PurePath(save_path).parts
+            if PurePath(save_path).name != save_path
             else PureWindowsPath(save_path).parts
+        )
         # Get folder name
-        folder_name = path_parts[1] if path_parts[0] == "/" or path_parts[0] == "\\" else path_parts[0]
+        folder_name = (
+            path_parts[1]
+            if path_parts[0] == "/" or path_parts[0] == "\\"
+            else path_parts[0]
+        )
         # Get season
         try:
             if re.search(r"S\d{1,2}|[Ss]eason", path_parts[-1]) is not None:
@@ -147,9 +181,11 @@ class Renamer:
     @staticmethod
     def get_file_name(file_path: str):
         # Check windows or linux path
-        path_parts = PurePath(file_path).parts \
-            if PurePath(file_path).name != file_path \
+        path_parts = (
+            PurePath(file_path).parts
+            if PurePath(file_path).name != file_path
             else PureWindowsPath(file_path).parts
+        )
         # Get file name
         file_name = path_parts[-1]
         return file_name
@@ -170,7 +206,7 @@ class Renamer:
                     method=rename_method,
                     bangumi_name=bangumi_name,
                     season=season,
-                    remove_bad_torrents=remove_bad_torrents
+                    remove_bad_torrents=remove_bad_torrents,
                 )
                 if len(subtitle_list) > 0:
                     self.rename_subtitles(
@@ -178,7 +214,7 @@ class Renamer:
                         bangumi_name=bangumi_name,
                         season=season,
                         method=rename_method,
-                        _hash=info.hash
+                        _hash=info.hash,
                     )
             elif len(media_list) > 1:
                 logger.info("Start rename collection")
@@ -188,7 +224,7 @@ class Renamer:
                     bangumi_name=bangumi_name,
                     season=season,
                     remove_bad_torrents=remove_bad_torrents,
-                    method=rename_method
+                    method=rename_method,
                 )
                 if len(subtitle_list) > 0:
                     self.rename_subtitles(
@@ -196,8 +232,7 @@ class Renamer:
                         bangumi_name=bangumi_name,
                         season=season,
                         method=rename_method,
-                        _hash=info.hash
+                        _hash=info.hash,
                     )
             else:
                 logger.warning(f"{info.name} has no media file")
-

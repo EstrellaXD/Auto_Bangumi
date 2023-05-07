@@ -25,7 +25,7 @@ class RequestContent(RequestURL):
 
         for item in soup.findall("./channel/item"):
             torrent_titles.append(item.find("title").text)
-            torrent_urls.append(item.find("enclosure").attrib['url'])
+            torrent_urls.append(item.find("enclosure").attrib["url"])
             torrent_homepage.append(item.find("link").text)
 
         torrents = []
@@ -39,11 +39,11 @@ class RequestContent(RequestURL):
 
     def get_poster(self, _url):
         content = self.get_html(_url).text
-        soup = BeautifulSoup(content, 'html.parser')
-        div = soup.find('div', {'class': 'bangumi-poster'})
-        style = div.get('style')
+        soup = BeautifulSoup(content, "html.parser")
+        div = soup.find("div", {"class": "bangumi-poster"})
+        style = div.get("style")
         if style:
-            return style.split('url(\'')[1].split('\')')[0]
+            return style.split("url('")[1].split("')")[0]
         return None
 
     def get_xml(self, _url) -> xml.etree.ElementTree.Element:
@@ -64,4 +64,3 @@ class RequestContent(RequestURL):
 
     def get_content(self, _url):
         return self.get_url(_url).content
-

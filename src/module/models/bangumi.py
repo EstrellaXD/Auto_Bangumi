@@ -67,6 +67,3 @@ class SeasonInfo(dict):
     subtitle: str
     added: bool
     eps_collect: bool
-
-
-

@@ -45,7 +45,9 @@ class RepathTorrents:
             path = rules.get(rule).savePath
             must_contain = rules.get(rule).mustContain
             season, folder_name = self.analyse_path(path)
-            new_path = PurePath(settings.downloader.path, folder_name, f"Season {season}").__str__()
+            new_path = PurePath(
+                settings.downloader.path, folder_name, f"Season {season}"
+            ).__str__()
             all_rule.append(RuleInfo(rule, must_contain, season, folder_name, new_path))
         return all_rule
 
@@ -62,7 +64,9 @@ class RepathTorrents:
                         break
         return different_data
 
-    def get_matched_torrents_list(self, repath_rules: list[RuleInfo]) -> list[RepathInfo]:
+    def get_matched_torrents_list(
+        self, repath_rules: list[RuleInfo]
+    ) -> list[RepathInfo]:
         infos = self._client.get_torrent_info()
         repath_list = []
         for rule in repath_rules:

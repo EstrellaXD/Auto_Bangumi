@@ -13,11 +13,11 @@ class TitleParser:
 
     @staticmethod
     def torrent_parser(
-            method: str,
-            torrent_name: str,
-            bangumi_name: str | None = None,
-            season: int | None = None,
-            suffix: str | None = None,
+        method: str,
+        torrent_name: str,
+        bangumi_name: str | None = None,
+        season: int | None = None,
+        suffix: str | None = None,
     ):
         return torrent_parser(torrent_name, bangumi_name, season, suffix, method)
 
@@ -39,27 +39,20 @@ class TitleParser:
         official_title = official_title if official_title else title
         return official_title, tmdb_season
 
-    def raw_parser(
-            self,
-            raw: str,
-            settings: Config,
-            _id: int = 0
-    ) -> BangumiData:
+    def raw_parser(self, raw: str, settings: Config, _id: int = 0) -> BangumiData:
         language = settings.rss_parser.language
         try:
             episode = raw_parser(raw)
             titles = {
                 "zh": episode.title_zh,
                 "en": episode.title_en,
-                "jp": episode.title_jp
+                "jp": episode.title_jp,
             }
             title_search = episode.title_zh if episode.title_zh else episode.title_en
             title_raw = episode.title_en if episode.title_en else episode.title_zh
             if settings.rss_parser.enable_tmdb:
                 official_title, _season = self.tmdb_parser(
-                    title_search,
-                    episode.season,
-                    language
+                    title_search, episode.season, language
                 )
             else:
                 official_title = titles[language] if titles[language] else titles["zh"]

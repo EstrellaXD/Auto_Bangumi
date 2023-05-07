@@ -108,6 +108,7 @@ def name_process(name: str):
             name_en = item.strip()
     return name_en, name_zh, name_jp
 
+
 def find_tags(other):
     elements = re.sub(r"[\[\]()（）]", " ", other).split(" ")
     # find CHT
@@ -136,9 +137,9 @@ def process(raw_title: str):
     # 翻译组的名字
     match_obj = TITLE_RE.match(content_title)
     # 处理标题
-    season_info, episode_info, other = list(map(
-        lambda x: x.strip(), match_obj.groups()
-    ))
+    season_info, episode_info, other = list(
+        map(lambda x: x.strip(), match_obj.groups())
+    )
     process_raw = prefix_process(season_info, group)
     # 处理 前缀
     raw_name, season_raw, season = season_process(process_raw)
@@ -155,7 +156,18 @@ def process(raw_title: str):
     if raw_episode is not None:
         episode = int(raw_episode.group())
     sub, dpi, source = find_tags(other)  # 剩余信息处理
-    return name_en, name_zh, name_jp, season, season_raw, episode, sub, dpi, source, group
+    return (
+        name_en,
+        name_zh,
+        name_jp,
+        season,
+        season_raw,
+        episode,
+        sub,
+        dpi,
+        source,
+        group,
+    )
 
 
 def raw_parser(raw: str) -> Episode | None:
@@ -163,14 +175,13 @@ def raw_parser(raw: str) -> Episode | None:
     if ret is None:
         logger.error(f"Parser cannot analyse {raw}")
         return None
-    name_en, name_zh, name_jp, season, sr, episode, \
-        sub, dpi, source, group = ret
-    return Episode(name_en, name_zh, name_jp, season, sr, episode, sub, group, dpi, source)
+    name_en, name_zh, name_jp, season, sr, episode, sub, dpi, source, group = ret
+    return Episode(
+        name_en, name_zh, name_jp, season, sr, episode, sub, group, dpi, source
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     title = "【幻樱字幕组】【4月新番】【古见同学有交流障碍症 第二季 Komi-san wa, Komyushou Desu. S02】【22】【GB_MP4】【1920X1080】"
     ep = raw_parser(title)
     print(ep)
-
-

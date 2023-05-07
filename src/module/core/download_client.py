@@ -16,6 +16,14 @@ class DownloadClient:
         self.download_path = settings.downloader.path
         self.group_tag = settings.bangumi_manage.group_tag
 
+    def __enter__(self):
+        if not self.authed:
+            self.auth()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.client.logout()
+
     def auth(self):
         self.client.auth()
         self.authed = True
@@ -38,7 +46,12 @@ class DownloadClient:
             self.download_path = os.path.join(prefs["save_path"], "Bangumi")
 
     def set_rule(self, info: BangumiData, rss_link):
-        official_name, raw_name, season, group = info.official_title, info.title_raw, info.season, info.group
+        official_name, raw_name, season, group = (
+            info.official_title,
+            info.title_raw,
+            info.season,
+            info.group,
+        )
         rule = {
             "enable": True,
             "mustContain": raw_name,
@@ -81,9 +94,7 @@ class DownloadClient:
         logger.debug("Finished.")
 
     def get_torrent_info(self, category="Bangumi"):
-        return self.client.torrents_info(
-            status_filter="completed", category=category
-        )
+        return self.client.torrents_info(status_filter="completed", category=category)
 
     def rename_torrent_file(self, _hash, old_path, new_path):
         self.client.torrents_rename_file(
@@ -92,23 +103,16 @@ class DownloadClient:
         logger.info(f"{old_path} >> {new_path}")
 
     def delete_torrent(self, hashes):
-        self.client.torrents_delete(
-            hashes
-        )
+        self.client.torrents_delete(hashes)
         logger.info(f"Remove bad torrents.")
 
     def add_torrent(self, torrent: dict):
         self.client.torrents_add(
-            urls=torrent["url"],
-            save_path=torrent["save_path"],
-            category="Bangumi"
+            urls=torrent["url"], save_path=torrent["save_path"], category="Bangumi"
         )
 
     def move_torrent(self, hashes, location):
-        self.client.move_torrent(
-            hashes=hashes,
-            new_location=location
-        )
+        self.client.move_torrent(hashes=hashes, new_location=location)
 
     def add_rss_feed(self, rss_link, item_path):
         self.client.rss_add_feed(url=rss_link, item_path=item_path)
@@ -122,4 +126,3 @@ class DownloadClient:
 
     def set_category(self, hashes, category):
         self.client.set_category(hashes, category)
-
