@@ -44,7 +44,7 @@ export interface Config {
   };
   notification: {
     enable: boolean;
-    type: 'telegram' | 'server-chan';
+    type: 'telegram' | 'server-chan' | 'bark';
     token: string;
     chat_id: string;
   };
