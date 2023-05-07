@@ -1,7 +1,9 @@
+import logging
+
 from module.database.connector import DataConnector
-
-
 from module.models import BangumiData
+
+logger = logging.getLogger(__name__)
 
 
 class DataOperator(DataConnector):
@@ -21,7 +23,7 @@ class DataOperator(DataConnector):
             if isinstance(item, int):
                 if key not in ["id", "offset", "season"]:
                     db_data[key] = bool(item)
-            elif key in ["filter", "rss"]:
+            elif key in ["filter", "rss_link"]:
                 db_data[key] = item.split(",")
         return BangumiData(**db_data)
 
@@ -32,35 +34,38 @@ class DataOperator(DataConnector):
             INSERT INTO bangumi (
                 id,
                 official_title,
+                year,
                 title_raw,
                 season,
                 season_raw,
-                subtitle,
                 group_name,
-                source,
                 dpi,
+                source,
+                subtitle,
                 eps_collect,
                 offset,
                 filter,
-                rss
+                rss_link
                 ) VALUES (
                 :id,
                 :official_title,
+                :year,
                 :title_raw,
                 :season,
                 :season_raw,
-                :subtitle,
                 :group,
-                :source,
                 :dpi,
+                :source,
+                :subtitle,
                 :eps_collect,
                 :offset,
                 :filter,
-                :rss
+                :rss_link
                 )
                 """,
             db_data,
         )
+        logger.debug(f"Add {data.official_title} into database.")
         self._conn.commit()
 
     def insert_list(self, data: list[BangumiData]):
@@ -70,31 +75,33 @@ class DataOperator(DataConnector):
             INSERT INTO bangumi (
                 id,
                 official_title,
+                year,
                 title_raw,
                 season,
                 season_raw,
-                subtitle,
                 group_name,
-                source,
                 dpi,
+                source,
+                subtitle,
                 eps_collect,
                 offset,
                 filter,
-                rss
+                rss_link
                 ) VALUES (
                 :id,
                 :official_title,
+                :year,
                 :title_raw,
                 :season,
                 :season_raw,
-                :subtitle,
                 :group,
-                :source,
                 :dpi,
+                :source,
+                :subtitle,
                 :eps_collect,
                 :offset,
                 :filter,
-                :rss
+                :rss_link
                 )
                 """,
             db_data,
@@ -122,6 +129,19 @@ class DataOperator(DataConnector):
             db_data,
         )
         self._conn.commit()
+        return self._cursor.rowcount == 1
+
+    def update_rss(self, title_raw, rss_set: list[str]):
+        self._cursor.execute(
+            """
+            UPDATE bangumi SET
+                rss_link = :rss_link
+            WHERE title_raw = :title_raw
+            """,
+            {"rss_link": ",".join(rss_set), "title_raw": title_raw},
+        )
+        self._conn.commit()
+        logger.info(f"Update {title_raw} rss_link to {rss_set}.")
         return self._cursor.rowcount == 1
 
     def search_id(self, _id: int) -> BangumiData | None:
@@ -156,30 +176,51 @@ class DataOperator(DataConnector):
         # Select all title_raw
         self._cursor.execute(
             """
-            SELECT title_raw FROM bangumi
+            SELECT official_title FROM bangumi
             """
         )
-        title_raws = [x[0] for x in self._cursor.fetchall()]
+        db_titles = [x[0] for x in self._cursor.fetchall()]
         # Match title
-        for title_raw in title_raws:
-            if title_raw in title:
+        for db_title in db_titles:
+            if title == db_title:
                 return True
         return False
 
-    def not_exist_titles(self, titles: list[str]) -> list[str]:
+    def not_exist_titles(self, titles: list[str], rss_link) -> list[str]:
         # Select all title_raw
         self._cursor.execute(
             """
-            SELECT title_raw FROM bangumi
+            SELECT title_raw, rss_link FROM bangumi
             """
         )
-        title_raws = [x[0] for x in self._cursor.fetchall()]
+        data = self._cursor.fetchall()
+        if not data:
+            return titles
         # Match title
-        for title_raw in title_raws:
+        for title_raw, rss_set in data:
+            rss_set = rss_set.split(",")
             for title in titles:
-                if title_raw in title:
-                    titles.remove(title)
+                if rss_link in rss_set:
+                    if title_raw in title:
+                        titles.remove(title)
+                elif rss_link not in rss_set:
+                    rss_set.append(rss_link)
+                    self.update_rss(title_raw, rss_set)
         return titles
+
+    def get_uncompleted(self) -> list[BangumiData] | None:
+        # Find eps_complete = False
+        self._cursor.execute(
+            """
+            SELECT * FROM bangumi WHERE eps_collect == 1
+            """
+        )
+        values = self._cursor.fetchall()
+        if values is None:
+            return None
+        keys = [x[0] for x in self._cursor.description]
+        dict_data = [dict(zip(keys, value)) for value in values]
+        return [self.db_to_data(x) for x in dict_data]
 
     def gen_id(self) -> int:
         self._cursor.execute(
@@ -187,9 +228,8 @@ class DataOperator(DataConnector):
             SELECT id FROM bangumi ORDER BY id DESC LIMIT 1
             """
         )
-        return self._cursor.fetchone()[0] + 1
+        data = self._cursor.fetchone()
+        if data is None:
+            return 1
+        return data[0] + 1
 
-
-if __name__ == "__main__":
-    with DataOperator() as op:
-        pass

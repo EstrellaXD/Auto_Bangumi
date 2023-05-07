@@ -39,7 +39,7 @@ class TitleParser:
         official_title = official_title if official_title else title
         return official_title, tmdb_season
 
-    def raw_parser(self, raw: str, settings: Config, _id: int = 0) -> BangumiData:
+    def raw_parser(self, raw: str, rss_link: str, settings: Config, _id: int = 0) -> BangumiData:
         language = settings.rss_parser.language
         try:
             episode = raw_parser(raw)
@@ -70,7 +70,7 @@ class TitleParser:
                 eps_collect=True if episode.episode > 1 else False,
                 offset=0,
                 filter=settings.rss_parser.filter,
-                rss=rss_link,
+                rss_link=[rss_link],
             )
             logger.debug(f"RAW:{raw} >> {episode.title_en}")
             return data

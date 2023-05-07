@@ -1,11 +1,9 @@
 import os
-import time
 import logging
 import asyncio
 
-from module.conf import setup_logger, LOG_PATH, RSSLink, VERSION
+from module.conf import LOG_PATH, VERSION
 
-from module.core import DownloadClient
 from module.manager import Renamer, FullSeasonGet
 from module.rss import RSSAnalyser
 from module.models import Config
@@ -23,8 +21,8 @@ async def rss_loop(
     rss_link: str,
     settings: Config,
 ):
-    with RSSAnalyser(settings) as rss:
-        rss.rss_to_datas(rss_link)
+    with RSSAnalyser(settings) as analyser:
+        analyser.rss_to_datas(rss_link)
     if settings.bangumi_manage.eps_complete:
         with FullSeasonGet(settings) as season:
             season.eps_complete()

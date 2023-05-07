@@ -6,6 +6,7 @@ from module.network import RequestContent
 
 from module.core import DownloadClient
 from module.models import BangumiData, Config
+from module.database import DataOperator
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +72,9 @@ class FullSeasonGet(DownloadClient):
         logger.info("Completed!")
         data.eps_collect = False
 
-    def eps_complete(self, datas: list[BangumiData]):
+    def eps_complete(self):
+        with DataOperator() as op:
+            datas = op.get_uncompleted()
         for data in datas:
             if data.eps_collect:
                 self.download_season(data)

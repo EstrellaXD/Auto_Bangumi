@@ -16,17 +16,18 @@ class DataConnector:
             CREATE TABLE IF NOT EXISTS bangumi (
                 id INTEGER PRIMARY KEY,
                 official_title TEXT NOT NULL,
+                year INTEGER,
                 title_raw TEXT NOT NULL,
                 season INTEGER NOT NULL,
                 season_raw TEXT NOT NULL,
-                subtitle TEXT,
                 group_name TEXT,
-                source TEXT,
                 dpi TEXT,
+                source TEXT,
+                subtitle TEXT,
                 eps_collect INTEGER NOT NULL,
                 offset INTEGER NOT NULL,
                 filter TEXT NOT NULL,
-                rss TEXT NOT NULL
+                rss_link TEXT NOT NULL
             );
             """
         )

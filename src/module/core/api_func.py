@@ -6,7 +6,7 @@ from module.manager import FullSeasonGet
 from module.rss import RSSAnalyser
 from module.utils import json_config
 from module.conf import DATA_PATH
-from module.conf.config import save_config_to_file, CONFIG_PATH
+from module.conf.config import CONFIG_PATH
 from module.models import Config
 from module.network import RequestContent
 
