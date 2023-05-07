@@ -63,7 +63,7 @@ export const rssParserType: RssParserType = ['mikan'];
 export const rssParserLang: RssParserLang = ['zh', 'en', 'jp'];
 export const renameMethod: RenameMethod = ['normal', 'pn', 'advance', 'none'];
 export const proxyType: ProxyType = ['http', 'https', 'socks5'];
-export const notificationType: NotificationType = ['telegram', 'server-chan'];
+export const notificationType: NotificationType = ['telegram', 'server-chan', 'bark'];
 export const tfOptions = [
   { label: '是', value: true },
   { label: '否', value: false },
