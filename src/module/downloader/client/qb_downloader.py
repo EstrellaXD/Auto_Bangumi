@@ -33,6 +33,9 @@ class QbDownloader:
                 )
             time.sleep(5)
 
+    def logout(self):
+        self._client.auth_log_out()
+
     @qb_connect_failed_wait
     def prefs_init(self, prefs):
         return self._client.app_set_preferences(prefs=prefs)

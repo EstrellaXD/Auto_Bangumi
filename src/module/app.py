@@ -21,18 +21,14 @@ def reset_log():
 
 async def rss_loop(
     rss_link: str,
-    rss_analyser: RSSAnalyser,
-    download_client: DownloadClient,
-    season_get: FullSeasonGet,
-    eps_complete: bool = False,
-    wait_time: int = 7200,
+    settings: Config,
 ):
-    datas = rss_analyser.run(rss_link)
-    if datas:
-        download_client.add_rules(datas, rss_link)
-        if eps_complete:
-            season_get.eps_complete(datas, download_client)
-    await asyncio.sleep(wait_time)
+    with RSSAnalyser(settings) as rss:
+        rss.rss_to_datas(rss_link)
+    if settings.bangumi_manage.eps_complete:
+        with FullSeasonGet(settings) as season:
+            season.eps_complete()
+    await asyncio.sleep(settings.program.sleep_time)
 
 
 async def rename_loop(renamer: Renamer, wait_time: int = 360):

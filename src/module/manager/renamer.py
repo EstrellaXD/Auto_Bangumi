@@ -12,9 +12,9 @@ from module.models import Config
 logger = logging.getLogger(__name__)
 
 
-class Renamer:
-    def __init__(self, download_client: DownloadClient, settings: Config):
-        self._client = download_client
+class Renamer(DownloadClient):
+    def __init__(self, settings: Config):
+        super().__init__(settings)
         self._renamer = TitleParser()
         self._notification = PostNotification()
         self.settings = settings
@@ -28,7 +28,7 @@ class Renamer:
         logger.debug(f"Checked {torrent_count} files")
 
     def get_torrent_info(self, category="Bangumi"):
-        recent_info = self._client.get_torrent_info(category=category)
+        recent_info = self.get_torrent_info(category=category)
         torrent_count = len(recent_info)
         return recent_info, torrent_count
 
@@ -66,7 +66,7 @@ class Renamer:
         )
         if compare_name != new_path:
             try:
-                self._client.rename_torrent_file(
+                self.rename_torrent_file(
                     _hash=info.hash, old_path=media_path, new_path=new_path
                 )
                 self._notification.send_msg(bangumi_name, f"{new_path}已经更新，已自动重命名。")
@@ -103,7 +103,7 @@ class Renamer:
                 )
                 if torrent_name != new_name:
                     try:
-                        self._client.rename_torrent_file(
+                        self.rename_torrent_file(
                             _hash=_hash, old_path=media_path, new_path=new_name
                         )
                     except Exception as e:
@@ -114,7 +114,7 @@ class Renamer:
                         logger.debug(e)
                         # Delete bad torrent.
                         self.delete_bad_torrent(info, remove_bad_torrents)
-        self._client.set_category(category="BangumiCollection", hashes=_hash)
+        self.set_category(category="BangumiCollection", hashes=_hash)
 
     def rename_subtitles(
         self,
@@ -137,7 +137,7 @@ class Renamer:
             )
             if old_name != new_name:
                 try:
-                    self._client.rename_torrent_file(
+                    self.rename_torrent_file(
                         _hash=_hash, old_path=subtitle_path, new_path=new_name
                     )
                 except Exception as e:
@@ -147,7 +147,7 @@ class Renamer:
 
     def delete_bad_torrent(self, info, remove_bad_torrent: bool):
         if remove_bad_torrent:
-            self._client.delete_torrent(info.hash)
+            self.delete_torrent(info.hash)
             logger.info(f"{info.name} have been deleted.")
 
     @staticmethod

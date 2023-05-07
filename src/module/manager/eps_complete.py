@@ -10,8 +10,9 @@ from module.models import BangumiData, Config
 logger = logging.getLogger(__name__)
 
 
-class FullSeasonGet:
+class FullSeasonGet(DownloadClient):
     def __init__(self, settings: Config):
+        super().__init__(settings)
         self.SEARCH_KEY = [
             "group",
             "title_raw",
@@ -61,27 +62,27 @@ class FullSeasonGet:
             downloads.append(download_info)
         return downloads
 
-    def download_season(self, data: BangumiData, download_client: DownloadClient):
+    def download_season(self, data: BangumiData):
         logger.info(f"Start collecting {data.official_title} Season {data.season}...")
         torrents = self.get_season_torrents(data)
         downloads = self.collect_season_torrents(data, torrents)
         for download in downloads:
-            download_client.add_torrent(download)
+            self.add_torrent(download)
         logger.info("Completed!")
         data.eps_collect = False
 
-    def eps_complete(self, datas: list[BangumiData], download_client: DownloadClient):
+    def eps_complete(self, datas: list[BangumiData]):
         for data in datas:
             if data.eps_collect:
-                self.download_season(data, download_client)
+                self.download_season(data)
 
     def download_collection(
-        self, data: BangumiData, link, download_client: DownloadClient
+        self, data: BangumiData, link
     ):
         with RequestContent() as req:
             torrents = req.get_torrents(link)
         downloads = self.collect_season_torrents(data, torrents)
         logger.info(f"Starting download {data.official_title} Season {data.season}...")
         for download in downloads:
-            download_client.add_torrent(download)
+            self.add_torrent(download)
         logger.info("Completed!")

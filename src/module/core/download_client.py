@@ -16,6 +16,14 @@ class DownloadClient:
         self.download_path = settings.downloader.path
         self.group_tag = settings.bangumi_manage.group_tag
 
+    def __enter__(self):
+        if not self.authed:
+            self.auth()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.client.logout()
+
     def auth(self):
         self.client.auth()
         self.authed = True
