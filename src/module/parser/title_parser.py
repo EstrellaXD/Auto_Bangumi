@@ -13,13 +13,10 @@ class TitleParser:
 
     @staticmethod
     def torrent_parser(
-        method: str,
-        torrent_name: str,
-        bangumi_name: str | None = None,
+        torrent_path: str,
         season: int | None = None,
-        suffix: str | None = None,
     ):
-        return torrent_parser(torrent_name, bangumi_name, season, suffix, method)
+        return torrent_parser(torrent_path, season)
 
     def tmdb_parser(self, title: str, season: int, language: str):
         official_title, tmdb_season = None, None

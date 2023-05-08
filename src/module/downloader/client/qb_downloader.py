@@ -62,10 +62,15 @@ class QbDownloader:
     def torrents_delete(self, hash):
         return self._client.torrents_delete(delete_files=True, torrent_hashes=hash)
 
-    def torrents_rename_file(self, torrent_hash, old_path, new_path):
-        self._client.torrents_rename_file(
-            torrent_hash=torrent_hash, old_path=old_path, new_path=new_path
-        )
+    def torrents_rename_file(self, torrent_hash, old_path, new_path) -> bool:
+        try:
+            self._client.torrents_rename_file(
+                torrent_hash=torrent_hash, old_path=old_path, new_path=new_path
+            )
+            return True
+        except Conflict409Error:
+            logger.debug(f"Conflict409Error: {old_path} -> {new_path}")
+            return False
 
     def check_rss(self, url, item_path) -> tuple[str | None, bool]:
         items = self._client.rss_items()

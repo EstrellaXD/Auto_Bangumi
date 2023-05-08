@@ -7,7 +7,7 @@ from module.core.download_client import DownloadClient
 
 from module.parser import TitleParser
 from module.network import PostNotification
-from module.models import Config
+from module.models import Config, SubtitleFile, EpisodeFile
 
 logger = logging.getLogger(__name__)
 
@@ -54,30 +54,24 @@ class Renamer(DownloadClient):
         season: int,
         remove_bad_torrents: bool,
     ):
-        torrent_name = info.name
-        suffix = os.path.splitext(media_path)[-1]
-        compare_name = self.get_file_name(media_path)
-        new_path = self._renamer.torrent_parser(
-            torrent_name=torrent_name,
-            bangumi_name=bangumi_name,
+        ep = self._renamer.torrent_parser(
+            torrent_path=media_path,
             season=season,
-            suffix=suffix,
-            method=method,
         )
-        if compare_name != new_path:
-            try:
-                self.rename_torrent_file(
-                    _hash=info.hash, old_path=media_path, new_path=new_path
-                )
+        new_path = self.gen_path(ep, method)
+        # TODO: rewrite rename file func
+        if media_path != new_path:
+            pass
+            renamed = self.rename_torrent_file(
+                _hash=info.hash, old_path=media_path, new_path=new_path
+            )
+            if renamed:
+                logger.info(f"{bangumi_name} Season {ep.season} Ep {ep.episode} renamed.")
                 self._notification.send_msg(bangumi_name, f"{new_path}已经更新，已自动重命名。")
-            except Exception as e:
-                logger.warning(f"{torrent_name} rename failed")
-                logger.warning(
-                    f"Season name: {bangumi_name}, Season: {season}, Suffix: {suffix}"
-                )
-                logger.debug(e)
-                # Delete bad torrent
-                self.delete_bad_torrent(info, remove_bad_torrents)
+            else:
+                logger.warning(f"{bangumi_name} Season {ep.season} Ep {ep.episode} rename failed.")
+                if remove_bad_torrents:
+                    self.delete_torrent(info.hash)
 
     def rename_collection(
         self,
@@ -113,7 +107,7 @@ class Renamer(DownloadClient):
                         )
                         logger.debug(e)
                         # Delete bad torrent.
-                        self.delete_bad_torrent(info, remove_bad_torrents)
+                        self.delete_torrent(_hash, remove_bad_torrents)
         self.set_category(category="BangumiCollection", hashes=_hash)
 
     def rename_subtitles(
@@ -144,11 +138,6 @@ class Renamer(DownloadClient):
                     logger.warning(f"{old_name} rename failed")
                     logger.warning(f"Suffix: {suffix}")
                     logger.debug(e)
-
-    def delete_bad_torrent(self, info, remove_bad_torrent: bool):
-        if remove_bad_torrent:
-            self.delete_torrent(info.hash)
-            logger.info(f"{info.name} have been deleted.")
 
     @staticmethod
     def get_season_info(save_path: str, download_path: str):

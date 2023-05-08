@@ -96,11 +96,11 @@ class DownloadClient:
     def get_torrent_info(self, category="Bangumi"):
         return self.client.torrents_info(status_filter="completed", category=category)
 
-    def rename_torrent_file(self, _hash, old_path, new_path):
-        self.client.torrents_rename_file(
+    def rename_torrent_file(self, _hash, old_path, new_path) -> bool:
+        logger.debug(f"{old_path} >> {new_path}")
+        return self.client.torrents_rename_file(
             torrent_hash=_hash, old_path=old_path, new_path=new_path
         )
-        logger.info(f"{old_path} >> {new_path}")
 
     def delete_torrent(self, hashes):
         self.client.torrents_delete(hashes)
