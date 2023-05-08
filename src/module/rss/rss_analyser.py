@@ -18,10 +18,10 @@ class RSSAnalyser(DownloadClient):
     def rss_to_datas(self, rss_link: str):
         with RequestContent() as req:
             rss_torrents = req.get_torrents(rss_link)
-        title_list = [torrent.name for torrent in rss_torrents]
+        title_dict = {torrent.name: rss_link for torrent in rss_torrents}
         with DataOperator() as op:
-            add_title_list = op.not_exist_titles(title_list, rss_link)
-            if not add_title_list:
+            update_dict = op.match_list(title_dict)
+            if not update_dict:
                 logger.debug("No new title found.")
                 return
             _id = op.gen_id()
@@ -29,7 +29,7 @@ class RSSAnalyser(DownloadClient):
                 data = self._title_analyser.raw_parser(
                     raw=raw_title, _id=_id, settings=self.settings, rss_link=rss_link
                 )
-                if data is not None and not op.match_title(data.official_title):
+                if data is not None:
                     op.insert(data)
                     self.set_rule(data, rss_link)
                     _id += 1

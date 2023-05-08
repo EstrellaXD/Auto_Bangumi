@@ -114,16 +114,18 @@ class DataOperator(DataConnector):
             """
             UPDATE bangumi SET
                 official_title = :official_title,
+                year = :year,
                 title_raw = :title_raw,
                 season = :season,
                 season_raw = :season_raw,
-                subtitle = :subtitle,
                 group_name = :group,
-                source = :source,
                 dpi = :dpi,
+                source = :source,
+                subtitle = :subtitle,
                 eps_collect = :eps_collect,
                 offset = :offset,
-                filter = :filter
+                filter = :filter,
+                rss_link = :rss_link
             WHERE id = :id
             """,
             db_data,
@@ -172,22 +174,48 @@ class DataOperator(DataConnector):
         dict_data = dict(zip(keys, values))
         return self.db_to_data(dict_data)
 
-    def match_title(self, title: str) -> bool:
-        # Select all title_raw
+    def match_official_title(self, title: str) -> bool:
         self._cursor.execute(
             """
-            SELECT official_title FROM bangumi
+            SELECT official_title FROM bangumi 
+            WHERE official_title = :official_title
+            """,
+            {"official_title": title},
+        )
+        return self._cursor.fetchone() is not None
+
+    def match_title_raw(self, title: str, rss_link: str) -> bool:
+        self._cursor.execute(
+            """
+            SELECT title_raw, rss_link FROM bangumi 
+            WHERE INSTR (:title_raw, title_raw) > 0 AND INSTR (:rss_link, rss_link) > 0
+            """,
+            {"title_raw": title, "rss_link": rss_link},
+        )
+        return self._cursor.fetchone() is not None
+
+    def match_list(self, title_dict: dict) -> dict:
+        # Match title_raw in database
+        self._cursor.execute(
+            """
+            SELECT title_raw, rss_link FROM bangumi
             """
         )
-        db_titles = [x[0] for x in self._cursor.fetchall()]
+        data = self._cursor.fetchall()
+        if not data:
+            return {}
         # Match title
-        for db_title in db_titles:
-            if title == db_title:
-                return True
-        return False
+        for title, rss_link in title_dict.items():
+            for title_raw, rss_set in data:
+                if rss_link in rss_set and title_raw in title:
+                    del title_dict[title]
+                elif rss_link not in rss_set and title_raw in title:
+                    # TODO: Logic problem
+                break
+        return title_dict
 
     def not_exist_titles(self, titles: list[str], rss_link) -> list[str]:
-        # Select all title_raw
+        # Select all title in titles that title_raw in database not in title
         self._cursor.execute(
             """
             SELECT title_raw, rss_link FROM bangumi
@@ -208,11 +236,11 @@ class DataOperator(DataConnector):
                     self.update_rss(title_raw, rss_set)
         return titles
 
-    def get_uncompleted(self) -> list[BangumiData] | None:
+    def get_to_complete(self) -> list[BangumiData] | None:
         # Find eps_complete = False
         self._cursor.execute(
             """
-            SELECT * FROM bangumi WHERE eps_collect == 1
+            SELECT * FROM bangumi WHERE eps_collect = 1
             """
         )
         values = self._cursor.fetchall()
@@ -233,3 +261,11 @@ class DataOperator(DataConnector):
             return 1
         return data[0] + 1
 
+
+if __name__ == '__main__':
+    with DataOperator() as op:
+        datas = op.get_to_complete()
+        _id = op.gen_id()
+        for data in datas:
+            print(data)
+        print(_id)
