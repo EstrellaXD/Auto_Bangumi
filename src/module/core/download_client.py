@@ -3,14 +3,15 @@ import logging
 import os
 
 from module.downloader import getClient
-from module.models import BangumiData, Config
+from module.models import BangumiData
+from module.conf import settings
 
 
 logger = logging.getLogger(__name__)
 
 
 class DownloadClient:
-    def __init__(self, settings: Config):
+    def __init__(self):
         self.client = getClient(settings)
         self.authed = False
         self.download_path = settings.downloader.path
@@ -50,7 +51,7 @@ class DownloadClient:
             info.official_title,
             info.title_raw,
             info.season,
-            info.group,
+            info.group_name,
         )
         rule = {
             "enable": True,
@@ -85,11 +86,11 @@ class DownloadClient:
         self.client.rss_add_feed(url=rss_link, item_path=item_path)
         logger.info("Add Collection RSS Feed successfully.")
 
-    def add_rules(self, bangumi_info: list[BangumiData], rss_link: str):
+    def add_rules(self, bangumi_info: list[BangumiData]):
         logger.debug("Start adding rules.")
         for info in bangumi_info:
             if not info.added:
-                self.set_rule(info, rss_link)
+                self.set_rule(info)
                 info.added = True
         logger.debug("Finished.")
 
@@ -97,7 +98,7 @@ class DownloadClient:
         return self.client.torrents_info(status_filter="completed", category=category)
 
     def rename_torrent_file(self, _hash, old_path, new_path) -> bool:
-        logger.debug(f"{old_path} >> {new_path}")
+        logger.info(f"{old_path} >> {new_path}")
         return self.client.torrents_rename_file(
             torrent_hash=_hash, old_path=old_path, new_path=new_path
         )

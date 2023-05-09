@@ -2,15 +2,15 @@ import logging
 
 from module.network.request_contents import RequestContent
 from module.models import Notification
+from module.conf import settings
 
 
 logger = logging.getLogger(__name__)
 
 
 class PostNotification:
-    def __init__(self, settings):
+    def __init__(self):
         self.type: str = settings.notification.type
-        self.enable: bool = settings.notification.enable
         self.token = settings.notification.token
         self.chat_id = settings.notification.chat_id
         self.client = self.getClient()
@@ -30,8 +30,6 @@ class PostNotification:
                f"季度： 第{info.season}季\n" \
                f"更新集数： 第{info.episode}集\n" \
                f"{info.poster_link}\n"
-        if not self.enable:
-            return False
         if self.client is None:
             return False
         return self.client.send_msg(text)
@@ -85,9 +83,7 @@ class BarkNotification:
 
 
 if __name__ == '__main__':
-    from module.conf import settings
-    print(settings.notification)
-    notification = PostNotification(settings=settings)
+    notification = PostNotification()
     info = Notification(
         official_title="魔法纪录 魔法少女小圆外传",
         season=2,

@@ -69,7 +69,7 @@ class QbDownloader:
             )
             return True
         except Conflict409Error:
-            logger.debug(f"Conflict409Error: {old_path} -> {new_path}")
+            logger.debug(f"Conflict409Error: {old_path} >> {new_path}")
             return False
 
     def check_rss(self, url, item_path) -> tuple[str | None, bool]:

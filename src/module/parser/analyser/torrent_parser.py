@@ -60,9 +60,9 @@ def torrent_parser(torrent_path: str, season: int | None = None, file_type: str 
     media_path = split_path(torrent_path)
     for rule in RULES:
         match_obj = re.match(rule, media_path, re.I)
-        if match_obj is not None:
+        if match_obj:
             group, title = get_group(match_obj.group(1))
-            if season is None:
+            if not season:
                 title, season = get_season_and_title(title)
             else:
                 title, _ = get_season_and_title(title)
@@ -70,6 +70,7 @@ def torrent_parser(torrent_path: str, season: int | None = None, file_type: str 
             suffix = unix_path.splitext(torrent_path)[-1]
             if file_type == "media":
                 return EpisodeFile(
+                    media_path=torrent_path,
                     group=group,
                     title=title,
                     season=season,
@@ -79,6 +80,7 @@ def torrent_parser(torrent_path: str, season: int | None = None, file_type: str 
             elif file_type == "subtitle":
                 language = get_subtitle_lang(media_path)
                 return SubtitleFile(
+                    media_path=torrent_path,
                     group=group,
                     title=title,
                     season=season,

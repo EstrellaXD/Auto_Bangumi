@@ -21,7 +21,7 @@ async def rss_loop(
     rss_link: str,
     settings: Config,
 ):
-    with RSSAnalyser(settings) as analyser:
+    with RSSAnalyser() as analyser:
         analyser.rss_to_datas(rss_link)
     if settings.bangumi_manage.eps_complete:
         with FullSeasonGet(settings) as season:

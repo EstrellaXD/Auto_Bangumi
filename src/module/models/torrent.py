@@ -13,6 +13,7 @@ class FileSet(BaseModel):
 
 
 class EpisodeFile(BaseModel):
+    media_path: str = Field(...)
     group: str | None = Field(None)
     title: str = Field(...)
     season: int = Field(...)
@@ -21,6 +22,7 @@ class EpisodeFile(BaseModel):
 
 
 class SubtitleFile(BaseModel):
+    media_path: str = Field(...)
     group: str | None = Field(None)
     title: str = Field(...)
     season: int = Field(...)
