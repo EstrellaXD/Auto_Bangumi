@@ -17,20 +17,20 @@ logger = logging.getLogger(__name__)
 
 class APIProcess:
     def __init__(self, settings: Config):
-        self._rss_analyser = RSSAnalyser(settings)
-        self._client = DownloadClient(settings)
+        self._rss_analyser = RSSAnalyser()
+        self._client = DownloadClient()
         self._full_season_get = FullSeasonGet(settings)
         self._custom_url = settings.rss_parser.custom_url
 
     def link_process(self, link):
-        return self._rss_analyser.rss_to_data(link, _filter=False)
+        return self._rss_analyser.rss_to_data(link)
 
     @api_failed
     def download_collection(self, link):
         if not self._client.authed:
             self._client.auth()
         data = self.link_process(link)
-        self._full_season_get.download_collection(data, link, self._client)
+        self._full_season_get.download_collection(data, link)
         return data
 
     @api_failed

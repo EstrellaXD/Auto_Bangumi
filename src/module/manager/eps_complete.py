@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class FullSeasonGet(DownloadClient):
     def __init__(self, settings: Config):
-        super().__init__(settings)
+        super().__init__()
         self.SEARCH_KEY = [
             "group",
             "title_raw",

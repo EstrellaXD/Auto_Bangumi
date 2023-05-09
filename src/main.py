@@ -1,83 +1,103 @@
-import os
-import signal
 import logging
 import uvicorn
-import multiprocessing
+import threading
+import time
 
 from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from module import app
 from module.api import router
-from module.conf import VERSION, settings
+from module.conf import VERSION, settings, setup_logger
+from module.rss import RSSAnalyser
+from module.conf.uvicorn_logging import logging_config
 
 
 logger = logging.getLogger(__name__)
 
-main_process = multiprocessing.Process(target=app.run, args=(settings,))
+
+stop_event = threading.Event()
+
+rss_link = settings.rss_link()
+
+
+def rss_loop(stop_event, rss_link: str):
+    rss_analyser = RSSAnalyser()
+    while not stop_event.is_set():
+        rss_analyser.run(rss_link)
+        logger.info("RSS loop finished.")
+        stop_event.wait(settings.program.sleep_time)
+
+
+rss_thread = threading.Thread(
+    target=rss_loop,
+    args=(stop_event, rss_link),
+)
 
 
 @router.on_event("startup")
 async def startup():
-    global main_process
-    main_process.start()
+    global rss_thread
+    setup_logger()
+    rss_thread = threading.Thread(
+        target=rss_loop,
+        args=(stop_event, rss_link),
+    )
+    rss_thread.start()
 
 
 @router.on_event("shutdown")
 async def shutdown():
-    global main_process
-    if main_process.is_alive():
-        os.kill(main_process.pid, signal.SIGTERM)
+    stop_event.set()
+    logger.info("Stopping RSS analyser...")
 
 
 @router.get("/api/v1/restart", tags=["program"])
 async def restart():
-    global main_process
-    if main_process.is_alive():
-        os.kill(main_process.pid, signal.SIGTERM)
-        logger.info("Restarting...")
-    else:
-        logger.info("Starting...")
-    settings.reload()
-    main_process = multiprocessing.Process(target=app.run, args=(settings,))
-    main_process.start()
-    logger.info("Restarted")
-    return {"status": "success"}
-
-
-@router.get("/api/v1/stop", tags=["program"])
-async def stop():
-    global main_process
-    if not main_process.is_alive():
-        return {"status": "failed", "reason": "Already stopped"}
-    logger.info("Stopping...")
-    os.kill(main_process.pid, signal.SIGTERM)
-    logger.info("Stopped")
-    return {"status": "success"}
+    global rss_thread
+    if not rss_thread.is_alive():
+        return {"status": "Already stopped."}
+    stop_event.set()
+    logger.info("Stopping RSS analyser...")
+    rss_thread.join()
+    stop_event.clear()
+    time.sleep(1)
+    settings.load()
+    rss_link = settings.rss_link()
+    if "://" not in rss_link:
+        rss_link = f"https://{rss_link}"
+    rss_thread = threading.Thread(
+        target=rss_loop,
+        args=(stop_event, rss_link),
+    )
+    rss_thread.start()
+    return {"status": "ok"}
 
 
 @router.get("/api/v1/start", tags=["program"])
 async def start():
-    global main_process
-    if main_process.is_alive():
-        return {"status": "failed", "reason": "Already started"}
-    logger.info("Starting...")
-    settings.reload()
-    main_process = multiprocessing.Process(target=app.run, args=(settings,))
-    main_process.start()
-    logger.info("Started")
-    return {"status": "success"}
+    global rss_thread
+    if rss_thread.is_alive():
+        return {"status": "Already started."}
+    rss_thread = threading.Thread(
+        target=rss_loop,
+        args=(stop_event, rss_link),
+    )
+    rss_thread.start()
+    return {"status": "ok"}
 
 
-@router.get("/api/v1/status", tags=["program"])
-async def status():
-    global main_process
-    if main_process.is_alive():
-        return True
-    else:
-        return False
+@router.get("/api/v1/stop", tags=["program"])
+async def stop():
+    global rss_thread
+    if not rss_thread.is_alive():
+        return {"status": "Already stopped."}
+    stop_event.set()
+    logger.info("Stopping RSS analyser...")
+    rss_thread.join()
+    stop_event.clear()
+    return {"status": "ok"}
 
 
 if VERSION != "DEV_VERSION":
@@ -98,10 +118,6 @@ else:
 
 
 if __name__ == "__main__":
-    log_config = uvicorn.config.LOGGING_CONFIG
-    log_config["formatters"]["default"][
-        "fmt"
-    ] = "[%(asctime)s] %(levelname)-8s  %(message)s"
     uvicorn.run(
-        router, host="0.0.0.0", port=settings.program.webui_port, log_config=log_config
+        router, host="0.0.0.0", port=settings.program.webui_port
     )
