@@ -1,11 +1,11 @@
 import logging
 
-from module.models import Config
+from .config import settings
 
 LOG_PATH = "data/log.txt"
 
 
-def setup_logger(settings: Config):
+def setup_logger():
     level = logging.DEBUG if settings.log.debug_enable else logging.INFO
     logging.addLevelName(logging.DEBUG, "DEBUG:")
     logging.addLevelName(logging.INFO, "INFO:")

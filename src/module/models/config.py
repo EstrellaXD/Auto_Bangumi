@@ -23,7 +23,7 @@ class RSSParser(BaseModel):
     type: str = Field("mikan", description="RSS parser type")
     token: str = Field("token", description="RSS parser token")
     custom_url: str = Field("mikanani.me", description="Custom RSS host url")
-    enable_tmdb: bool = Field(False, description="Enable TMDB")
+    parser_type: str = Field("parser", description="Parser type")
     filter: list[str] = Field(["720", r"\d+-\d"], description="Filter")
     language: str = "zh"
 

@@ -7,8 +7,44 @@ logger = logging.getLogger(__name__)
 
 
 class DataOperator(DataConnector):
+    def __init__(self):
+        super().__init__()
+        self.__update_table()
+
+    def __update_table(self):
+        table_name = "bangumi"
+        db_data = self.__data_to_db(BangumiData())
+        columns = ", ".join([f"{key} {self.__python_to_sqlite_type(value)}" for key, value in db_data.items()])
+        create_table_sql = f"CREATE TABLE IF NOT EXISTS {table_name} ({columns});"
+        self._cursor.execute(create_table_sql)
+        self._cursor.execute(f"PRAGMA table_info({table_name})")
+        existing_columns = {column_info[1]: column_info for column_info in self._cursor.fetchall()}
+        for key, value in db_data.items():
+            if key not in existing_columns:
+                add_column_sql = f"ALTER TABLE {table_name} ADD COLUMN {key} {self.__python_to_sqlite_type(value)} DEFAULT {value};"
+                self._cursor.execute(add_column_sql)
+        self._conn.commit()
+        logger.debug("Create / Update table bangumi.")
+
     @staticmethod
-    def data_to_db(data: BangumiData) -> dict:
+    def __python_to_sqlite_type(value) -> str:
+        if isinstance(value, int):
+            return "INTEGER NOT NULL"
+        elif isinstance(value, float):
+            return "REAL NOT NULL"
+        elif isinstance(value, str):
+            return "TEXT NOT NULL"
+        elif isinstance(value, bool):
+            return "INTEGER NOT NULL"
+        elif isinstance(value, list):
+            return "TEXT NOT NULL"
+        elif value is None:
+            return "TEXT"
+        else:
+            raise ValueError(f"Unsupported data type: {type(value)}")
+
+    @staticmethod
+    def __data_to_db(data: BangumiData) -> dict:
         db_data = data.dict()
         for key, value in db_data.items():
             if isinstance(value, bool):
@@ -18,7 +54,7 @@ class DataOperator(DataConnector):
         return db_data
 
     @staticmethod
-    def db_to_data(db_data: dict) -> BangumiData:
+    def __db_to_data(db_data: dict) -> BangumiData:
         for key, item in db_data.items():
             if isinstance(item, int):
                 if key not in ["id", "offset", "season", "year"]:
@@ -28,122 +64,27 @@ class DataOperator(DataConnector):
         return BangumiData(**db_data)
 
     def insert(self, data: BangumiData):
-        db_data = self.data_to_db(data)
-        self._cursor.execute(
-            """
-            INSERT INTO bangumi (
-                id,
-                official_title,
-                year,
-                title_raw,
-                season,
-                season_raw,
-                group_name,
-                dpi,
-                source,
-                subtitle,
-                eps_collect,
-                offset,
-                filter,
-                rss_link,
-                poster_link,
-                added
-                ) VALUES (
-                :id,
-                :official_title,
-                :year,
-                :title_raw,
-                :season,
-                :season_raw,
-                :group,
-                :dpi,
-                :source,
-                :subtitle,
-                :eps_collect,
-                :offset,
-                :filter,
-                :rss_link,
-                :poster_link,
-                :added
-                )
-                """,
-            db_data,
-        )
+        db_data = self.__data_to_db(data)
+        columns = ", ".join(db_data.keys())
+        values = ", ".join([f":{key}" for key in db_data.keys()])
+        self._cursor.execute(f"INSERT INTO bangumi ({columns}) VALUES ({values})", db_data)
         logger.debug(f"Add {data.official_title} into database.")
         self._conn.commit()
 
     def insert_list(self, data: list[BangumiData]):
-        db_data = [self.data_to_db(x) for x in data]
-        self._cursor.executemany(
-            """
-            INSERT INTO bangumi (
-                id,
-                official_title,
-                year,
-                title_raw,
-                season,
-                season_raw,
-                group_name,
-                dpi,
-                source,
-                subtitle,
-                eps_collect,
-                offset,
-                filter,
-                rss_link,
-                poster_link,
-                added
-                ) VALUES (
-                :id,
-                :official_title,
-                :year,
-                :title_raw,
-                :season,
-                :season_raw,
-                :group,
-                :dpi,
-                :source,
-                :subtitle,
-                :eps_collect,
-                :offset,
-                :filter,
-                :rss_link,
-                :poster_link,
-                :added
-                )
-                """,
-            db_data,
-        )
+        db_data = [self.__data_to_db(x) for x in data]
+        columns = ", ".join(db_data[0].keys())
+        values = ", ".join([f":{key}" for key in db_data[0].keys()])
+        self._cursor.executemany(f"INSERT INTO bangumi ({columns}) VALUES ({values})", db_data)
+        logger.debug(f"Add {len(data)} bangumi into database.")
         self._conn.commit()
 
     def update(self, data: BangumiData) -> bool:
-        db_data = self.data_to_db(data)
-        self._cursor.execute(
-            """
-            UPDATE bangumi SET
-                official_title = :official_title,
-                year = :year,
-                title_raw = :title_raw,
-                season = :season,
-                season_raw = :season_raw,
-                group_name = :group,
-                dpi = :dpi,
-                source = :source,
-                subtitle = :subtitle,
-                eps_collect = :eps_collect,
-                offset = :offset,
-                filter = :filter,
-                rss_link = :rss_link,
-                poster_link = :poster_link,
-                added = :added
-            WHERE id = :id
-            """,
-            db_data,
-        )
+        db_data = self.__data_to_db(data)
+        update_columns = ", ".join([f"{key} = :{key}" for key in db_data.keys() if key != "id"])
+        self._cursor.execute(f"UPDATE bangumi SET {update_columns} WHERE id = :id", db_data)
         self._conn.commit()
         return self._cursor.rowcount == 1
-
-    def update_column(self, title_raw: str, column: str, value: str):
 
     def update_rss(self, title_raw, rss_set: str):
         # Update rss and select all data
@@ -168,7 +109,7 @@ class DataOperator(DataConnector):
             return None
         keys = [x[0] for x in self._cursor.description]
         dict_data = dict(zip(keys, values))
-        return self.db_to_data(dict_data)
+        return self.__db_to_data(dict_data)
 
     def search_official_title(self, official_title: str) -> BangumiData | None:
         self._cursor.execute(
@@ -182,7 +123,7 @@ class DataOperator(DataConnector):
             return None
         keys = [x[0] for x in self._cursor.description]
         dict_data = dict(zip(keys, values))
-        return self.db_to_data(dict_data)
+        return self.__db_to_data(dict_data)
 
     def match_official_title(self, title: str) -> bool:
         self._cursor.execute(
@@ -260,7 +201,7 @@ class DataOperator(DataConnector):
             return None
         keys = [x[0] for x in self._cursor.description]
         dict_data = [dict(zip(keys, value)) for value in values]
-        return [self.db_to_data(x) for x in dict_data]
+        return [self.__db_to_data(x) for x in dict_data]
 
     def gen_id(self) -> int:
         self._cursor.execute(
@@ -272,12 +213,3 @@ class DataOperator(DataConnector):
         if data is None:
             return 1
         return data[0] + 1
-
-
-if __name__ == '__main__':
-    with DataOperator() as op:
-        datas = op.get_to_complete()
-        _id = op.gen_id()
-        for data in datas:
-            print(data)
-        print(_id)
