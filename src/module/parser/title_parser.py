@@ -47,13 +47,8 @@ class TitleParser:
             }
             title_search = episode.title_zh if episode.title_zh else episode.title_en
             title_raw = episode.title_en if episode.title_en else episode.title_zh
-            if settings.rss_parser.enable_tmdb:
-                official_title, _season = self.tmdb_parser(
-                    title_search, episode.season, language
-                )
-            else:
-                official_title = titles[language] if titles[language] else titles["zh"]
-                _season = episode.season
+            official_title = titles[language] if titles[language] else titles["zh"]
+            _season = episode.season
             data = BangumiData(
                 id=_id,
                 official_title=official_title,

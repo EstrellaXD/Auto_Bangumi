@@ -21,7 +21,7 @@ class DataOperator(DataConnector):
     def db_to_data(db_data: dict) -> BangumiData:
         for key, item in db_data.items():
             if isinstance(item, int):
-                if key not in ["id", "offset", "season"]:
+                if key not in ["id", "offset", "season", "year"]:
                     db_data[key] = bool(item)
             elif key in ["filter", "rss_link"]:
                 db_data[key] = item.split(",")
@@ -45,7 +45,9 @@ class DataOperator(DataConnector):
                 eps_collect,
                 offset,
                 filter,
-                rss_link
+                rss_link,
+                poster_link,
+                added
                 ) VALUES (
                 :id,
                 :official_title,
@@ -60,7 +62,9 @@ class DataOperator(DataConnector):
                 :eps_collect,
                 :offset,
                 :filter,
-                :rss_link
+                :rss_link,
+                :poster_link,
+                :added
                 )
                 """,
             db_data,
@@ -86,7 +90,9 @@ class DataOperator(DataConnector):
                 eps_collect,
                 offset,
                 filter,
-                rss_link
+                rss_link,
+                poster_link,
+                added
                 ) VALUES (
                 :id,
                 :official_title,
@@ -101,7 +107,9 @@ class DataOperator(DataConnector):
                 :eps_collect,
                 :offset,
                 :filter,
-                :rss_link
+                :rss_link,
+                :poster_link,
+                :added
                 )
                 """,
             db_data,
@@ -125,7 +133,9 @@ class DataOperator(DataConnector):
                 eps_collect = :eps_collect,
                 offset = :offset,
                 filter = :filter,
-                rss_link = :rss_link
+                rss_link = :rss_link,
+                poster_link = :poster_link,
+                added = :added
             WHERE id = :id
             """,
             db_data,
@@ -133,18 +143,18 @@ class DataOperator(DataConnector):
         self._conn.commit()
         return self._cursor.rowcount == 1
 
-    def update_rss(self, title_raw, rss_set: list[str]):
+    def update_column(self, title_raw: str, column: str, value: str):
+
+    def update_rss(self, title_raw, rss_set: str):
+        # Update rss and select all data
         self._cursor.execute(
             """
-            UPDATE bangumi SET
-                rss_link = :rss_link
-            WHERE title_raw = :title_raw
+            UPDATE bangumi SET rss_link = :rss_link WHERE title_raw = :title_raw
             """,
-            {"rss_link": ",".join(rss_set), "title_raw": title_raw},
+            {"rss_link": rss_set, "title_raw": title_raw},
         )
         self._conn.commit()
         logger.info(f"Update {title_raw} rss_link to {rss_set}.")
-        return self._cursor.rowcount == 1
 
     def search_id(self, _id: int) -> BangumiData | None:
         self._cursor.execute(
@@ -194,7 +204,7 @@ class DataOperator(DataConnector):
         )
         return self._cursor.fetchone() is not None
 
-    def match_list(self, title_dict: dict) -> dict:
+    def match_list(self, title_dict: dict, rss_link: str) -> dict:
         # Match title_raw in database
         self._cursor.execute(
             """
@@ -203,15 +213,17 @@ class DataOperator(DataConnector):
         )
         data = self._cursor.fetchall()
         if not data:
-            return {}
+            return title_dict
         # Match title
-        for title, rss_link in title_dict.items():
+        for title in title_dict.copy().keys():
             for title_raw, rss_set in data:
-                if rss_link in rss_set and title_raw in title:
-                    del title_dict[title]
-                elif rss_link not in rss_set and title_raw in title:
-                    # TODO: Logic problem
-                break
+                if title_raw in title:
+                    if rss_link in rss_set:
+                        title_dict.pop(title)
+                    else:
+                        rss_set += "," + rss_link
+                        self.update_rss(title_raw, rss_set)
+                    break
         return title_dict
 
     def not_exist_titles(self, titles: list[str], rss_link) -> list[str]:

@@ -13,6 +13,7 @@ FILTER = "|".join(settings.rss_parser.filter)
 class TorrentInfo:
     name: str
     torrent_link: str
+    homepage: str = None
 
 
 class RequestContent(RequestURL):
@@ -29,22 +30,24 @@ class RequestContent(RequestURL):
             torrent_homepage.append(item.find("link").text)
 
         torrents = []
-        for _title, torrent_url in zip(torrent_titles, torrent_urls):
+        for _title, torrent_url, homepage in zip(torrent_titles, torrent_urls, torrent_homepage):
             if _filter:
                 if re.search(FILTER, _title) is None:
-                    torrents.append(TorrentInfo(_title, torrent_url))
+                    torrents.append(TorrentInfo(_title, torrent_url, homepage))
             else:
-                torrents.append(TorrentInfo(_title, torrent_url))
+                torrents.append(TorrentInfo(_title, torrent_url, homepage))
         return torrents
 
-    def get_poster(self, _url):
-        content = self.get_html(_url).text
+    def get_mikan_info(self, _url) -> tuple[str, str]:
+        content = self.get_html(_url)
         soup = BeautifulSoup(content, "html.parser")
-        div = soup.find("div", {"class": "bangumi-poster"})
-        style = div.get("style")
-        if style:
-            return style.split("url('")[1].split("')")[0]
-        return None
+        poster_div = soup.find("div", {"class": "bangumi-poster"})
+        poster_style = poster_div.get("style")
+        official_title = soup.select_one('p.bangumi-title a[href^="/Home/Bangumi/"]').text
+        if poster_style:
+            poster_path = poster_style.split("url('")[1].split("')")[0]
+            return poster_path, official_title
+        return "", ""
 
     def get_xml(self, _url) -> xml.etree.ElementTree.Element:
         return xml.etree.ElementTree.fromstring(self.get_url(_url).text)

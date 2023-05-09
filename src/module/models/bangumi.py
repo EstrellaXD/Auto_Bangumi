@@ -17,7 +17,8 @@ class BangumiData(BaseModel):
     offset: int = Field(0, alias="offset", title="番剧偏移量")
     filter: list[str] = Field(..., alias="filter", title="番剧过滤器")
     rss_link: list[str] = Field(..., alias="rss_link", title="番剧RSS链接")
-    # poster_link: str | None = Field(None, alias="poster_link", title="番剧海报链接")
+    poster_link: str | None = Field(None, alias="poster_link", title="番剧海报链接")
+    added: bool = Field(False, alias="added", title="是否已添加")
 
 
 class Notification(BaseModel):

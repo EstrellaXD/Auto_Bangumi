@@ -27,7 +27,9 @@ class DataConnector:
                 eps_collect INTEGER NOT NULL,
                 offset INTEGER NOT NULL,
                 filter TEXT NOT NULL,
-                rss_link TEXT NOT NULL
+                rss_link TEXT NOT NULL,
+                poster_link TEXT,
+                added INTEGER NOT NULL
             );
             """
         )

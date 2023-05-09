@@ -45,7 +45,7 @@ class DownloadClient:
             prefs = self.client.get_app_prefs()
             self.download_path = os.path.join(prefs["save_path"], "Bangumi")
 
-    def set_rule(self, info: BangumiData, rss_link):
+    def set_rule(self, info: BangumiData):
         official_name, raw_name, season, group = (
             info.official_title,
             info.title_raw,
@@ -60,7 +60,7 @@ class DownloadClient:
             "episodeFilter": "",
             "smartFilter": False,
             "previouslyMatchedEpisodes": [],
-            "affectedFeeds": [rss_link],
+            "affectedFeeds": info.rss_link,
             "ignoreDays": 0,
             "lastMatch": "",
             "addPaused": False,
