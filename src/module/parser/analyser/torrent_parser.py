@@ -35,6 +35,8 @@ def get_group(group_and_title) -> tuple[str | None, str]:
     while "" in n:
         n.remove("")
     if len(n) > 1:
+        if re.match(r"\d+", n[1]):
+            return None, group_and_title
         return n[0], n[1]
     else:
         return None, n[0]
@@ -96,3 +98,9 @@ def torrent_parser(
                     episode=episode,
                     suffix=suffix
                 )
+
+
+if __name__ == '__main__':
+    name = "海盗战记 (2019) S01E01.mp4"
+    bf = torrent_parser(name, file_type="media")
+    print(bf)

@@ -30,6 +30,12 @@ def test_torrent_parser():
     assert bf.episode == 1082
     assert bf.season == 1
 
+    file_name = "海盗战记 (2019) S01E01.mp4"
+    bf = torrent_parser(file_name)
+    assert bf.title == "海盗战记 (2019)"
+    assert bf.episode == 1
+    assert bf.season == 1
+
     file_name = "海盗战记/海盗战记 S01E01.mp4"
     bf = torrent_parser(file_name)
     assert bf.title == "海盗战记"

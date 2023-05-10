@@ -7,7 +7,7 @@ logging_config = {
             "handlers": ["default"],
             "propagate": True,
         },
-        "uvicorn.access": {
+        "uvicorn.asgi": {  # 更改 "uvicorn.access" 为 "uvicorn.asgi"
             "level": "INFO",
             "handlers": ["access"],
             "propagate": True,
@@ -18,18 +18,16 @@ logging_config = {
             "class": "logging.StreamHandler",
             "level": "INFO",
             "formatter": "default",
-            "stream": "ext://sys.stderr",
         },
         "access": {
             "class": "logging.StreamHandler",
-            "level": "INFO",
+            "level": "DEBUG",
             "formatter": "access",
-            "stream": "ext://sys.stdout",
         },
     },
     "formatters": {
         "default": {
-            "format": "[%(asctime)s] %(levelname)s: %(message)s",
+            "format": "[%(asctime)s] %(levelname)-8s  %(message)s",
             "datefmt": "%Y-%m-%d %H:%M:%S",
         },
         "access": {

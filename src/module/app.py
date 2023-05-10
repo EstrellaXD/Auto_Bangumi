@@ -34,12 +34,4 @@ async def rename_loop(renamer: Renamer, wait_time: int = 360):
     await asyncio.sleep(wait_time)
 
 
-def show_info():
-    with open("icon", "r") as f:
-        for line in f.readlines():
-            logger.info(line.strip("\n"))
-    logger.info(
-        f"Version {VERSION}  Author: EstrellaXD Twitter: https://twitter.com/Estrella_Pan"
-    )
-    logger.info("GitHub: https://github.com/EstrellaXD/Auto_Bangumi/")
-    logger.info("Starting AutoBangumi...")
+

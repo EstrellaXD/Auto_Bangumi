@@ -227,10 +227,3 @@ class Renamer(DownloadClient):
                     )
             else:
                 logger.warning(f"{info.name} has no media file")
-
-
-if __name__ == '__main__':
-    from module.conf import setup_logger
-    setup_logger()
-    with Renamer() as renamer:
-        renamer.rename()
