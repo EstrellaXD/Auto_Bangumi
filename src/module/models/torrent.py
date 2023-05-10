@@ -18,7 +18,7 @@ class EpisodeFile(BaseModel):
     title: str = Field(...)
     season: int = Field(...)
     episode: int = Field(None)
-    suffix: str = Field(..., regex=r"\.(mkv|mp4)$")
+    suffix: str = Field(..., regex=r"\.(mkv|mp4|MKV|MP4)$")
 
 
 class SubtitleFile(BaseModel):
@@ -28,5 +28,5 @@ class SubtitleFile(BaseModel):
     season: int = Field(...)
     episode: int = Field(None)
     language: str = Field(..., regex=r"(zh|zh-tw)")
-    suffix: str = Field(..., regex=r"\.(ass|srt)$")
+    suffix: str = Field(..., regex=r"\.(ass|srt|ASS|SRT)$")
 
