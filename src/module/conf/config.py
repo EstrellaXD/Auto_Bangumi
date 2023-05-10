@@ -32,6 +32,7 @@ class Settings(Config):
             # load from env
             load_dotenv(".env")
             self.__load_from_env()
+            os.makedirs(CONFIG_PATH, exist_ok=True)
             self.save()
 
     def load(self):
