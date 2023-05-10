@@ -2,7 +2,6 @@ import os
 import logging
 import uvicorn
 
-
 from module.api import router
 from module.conf import settings
 from module.conf.uvicorn_logging import logging_config

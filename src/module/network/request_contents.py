@@ -6,8 +6,6 @@ from bs4 import BeautifulSoup
 from .request_url import RequestURL
 from module.conf import settings
 
-FILTER = "|".join(settings.rss_parser.filter)
-
 
 @dataclass
 class TorrentInfo:
@@ -18,7 +16,10 @@ class TorrentInfo:
 
 class RequestContent(RequestURL):
     # Mikanani RSS
-    def get_torrents(self, _url: str, _filter: bool = True) -> [TorrentInfo]:
+    def get_torrents(
+            self,
+            _url: str,
+            _filter: str = "|".join(settings.rss_parser.filter)) -> [TorrentInfo]:
         soup = self.get_xml(_url)
         torrent_titles = []
         torrent_urls = []
@@ -31,10 +32,7 @@ class RequestContent(RequestURL):
 
         torrents = []
         for _title, torrent_url, homepage in zip(torrent_titles, torrent_urls, torrent_homepage):
-            if _filter:
-                if re.search(FILTER, _title) is None:
-                    torrents.append(TorrentInfo(_title, torrent_url, homepage))
-            else:
+            if re.search(_filter, _title) is None:
                 torrents.append(TorrentInfo(_title, torrent_url, homepage))
         return torrents
 

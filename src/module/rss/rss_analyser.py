@@ -28,9 +28,35 @@ class RSSAnalyser:
         else:
             pass
 
-    def rss_to_data(self, rss_link: str, full_parse: bool = True) -> list[BangumiData]:
+    @staticmethod
+    def get_rss_torrents(rss_link: str, full_parse: bool = True) -> list:
         with RequestContent() as req:
-            rss_torrents = req.get_torrents(rss_link)
+            if full_parse:
+                rss_torrents = req.get_torrents(rss_link)
+            else:
+                rss_torrents = req.get_torrents(rss_link, "\\d+-\\d+")
+        return rss_torrents
+
+    def get_new_data_list(self, new_dict: dict, rss_link: str, _id: int, full_parse: bool = True) -> list:
+        new_data = []
+        with RequestContent() as req:
+            for raw_title, homepage in new_dict.items():
+                data = self._title_analyser.raw_parser(
+                    raw=raw_title, rss_link=rss_link, _id=_id
+                )
+                if data and data.title_raw not in [i.title_raw for i in new_data]:
+                    poster_link, mikan_title = req.get_mikan_info(homepage)
+                    data.poster_link = poster_link
+                    self.official_title_parser(data, mikan_title)
+                    if not full_parse:
+                        return [data]
+                    new_data.append(data)
+                    _id += 1
+                    logger.debug(f"New title found: {data.official_title}")
+        return new_data
+
+    def rss_to_data(self, rss_link: str, full_parse: bool = True) -> list[BangumiData]:
+        rss_torrents = self.get_rss_torrents(rss_link, full_parse)
         title_dict = {torrent.name: torrent.homepage for torrent in rss_torrents}
         with BangumiDatabase() as database:
             new_dict = database.match_list(title_dict, rss_link)
@@ -38,26 +64,10 @@ class RSSAnalyser:
                 logger.debug("No new title found.")
                 return []
             _id = database.gen_id()
-            new_data = []
             # New List
-            with RequestContent() as req:
-                for raw_title, homepage in new_dict.items():
-                    data = self._title_analyser.raw_parser(
-                        raw=raw_title, rss_link=rss_link, _id=_id
-                    )
-                    if data and data.title_raw not in [i.title_raw for i in new_data]:
-                        poster_link, mikan_title = req.get_mikan_info(homepage)
-                        data.poster_link = poster_link
-                        # Official title type
-                        self.official_title_parser(data, mikan_title)
-                        if not full_parse:
-                            database.insert(data)
-                            return [data]
-                        new_data.append(data)
-                        _id += 1
-                        logger.debug(f"New title found: {data.official_title}")
-                database.insert_list(new_data)
-            return new_data
+            new_data = self.get_new_data_list(new_dict, rss_link, _id, full_parse)
+            database.insert_list(new_data)
+        return new_data
 
     def run(self, rss_link: str):
         logger.info("Start collecting RSS info.")
