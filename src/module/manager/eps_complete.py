@@ -3,19 +3,19 @@ import re
 import logging
 
 from module.network import RequestContent
-
-from module.core import DownloadClient
-from module.models import BangumiData, Config
-from module.database import DataOperator
+from module.downloader import DownloadClient
+from module.models import BangumiData
+from module.database import BangumiDatabase
+from module.conf import settings
 
 logger = logging.getLogger(__name__)
 
 
 class FullSeasonGet(DownloadClient):
-    def __init__(self, settings: Config):
+    def __init__(self):
         super().__init__()
         self.SEARCH_KEY = [
-            "group",
+            "group_name",
             "title_raw",
             "season_raw",
             "subtitle",
@@ -70,14 +70,17 @@ class FullSeasonGet(DownloadClient):
         for download in downloads:
             self.add_torrent(download)
         logger.info("Completed!")
-        data.eps_collect = False
+        data.eps_collect = True
 
     def eps_complete(self):
-        with DataOperator() as op:
-            datas = op.get_uncompleted()
-        for data in datas:
-            if data.eps_collect:
-                self.download_season(data)
+        with BangumiDatabase() as bd:
+            datas = bd.not_complete()
+            if datas:
+                logger.info("Start collecting full season...")
+                for data in datas:
+                    if not data.eps_collect:
+                        self.download_season(data)
+                bd.update_list(datas)
 
     def download_collection(
         self, data: BangumiData, link
@@ -89,3 +92,10 @@ class FullSeasonGet(DownloadClient):
         for download in downloads:
             self.add_torrent(download)
         logger.info("Completed!")
+
+
+if __name__ == '__main__':
+    from module.conf import setup_logger
+    setup_logger()
+    with FullSeasonGet() as full_season_get:
+        full_season_get.eps_complete()

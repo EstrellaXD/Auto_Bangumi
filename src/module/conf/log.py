@@ -3,7 +3,7 @@ import logging
 LOG_PATH = "data/log.txt"
 
 
-def setup_logger(level):
+def setup_logger(level: int = logging.INFO):
     logging.addLevelName(logging.DEBUG, "DEBUG:")
     logging.addLevelName(logging.INFO, "INFO:")
     logging.addLevelName(logging.WARNING, "WARNING:")

@@ -10,9 +10,10 @@ from module.utils import json_config
 from module.models.api import *
 from module.models import Config
 
+logger = logging.getLogger(__name__)
 
 router = FastAPI()
-api_func = APIProcess(settings)
+api_func = APIProcess()
 
 
 @router.get("/api/v1/data", tags=["info"])

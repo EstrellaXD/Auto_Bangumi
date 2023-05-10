@@ -1,1 +1,1 @@
-from .operator import DataOperator
+from .bangumi import BangumiDatabase

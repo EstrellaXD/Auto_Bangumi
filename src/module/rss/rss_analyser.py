@@ -2,8 +2,8 @@ import logging
 
 from module.network import RequestContent
 from module.parser import TitleParser
-from module.models import Config, BangumiData
-from module.database import DataOperator
+from module.models import BangumiData
+from module.database import BangumiDatabase
 from module.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -32,12 +32,12 @@ class RSSAnalyser:
         with RequestContent() as req:
             rss_torrents = req.get_torrents(rss_link)
         title_dict = {torrent.name: torrent.homepage for torrent in rss_torrents}
-        with DataOperator() as op:
-            new_dict = op.match_list(title_dict, rss_link)
+        with BangumiDatabase() as database:
+            new_dict = database.match_list(title_dict, rss_link)
             if not new_dict:
                 logger.debug("No new title found.")
                 return []
-            _id = op.gen_id()
+            _id = database.gen_id()
             new_data = []
             # New List
             with RequestContent() as req:
@@ -51,12 +51,12 @@ class RSSAnalyser:
                         # Official title type
                         self.official_title_parser(data, mikan_title)
                         if not full_parse:
-                            op.insert(data)
+                            database.insert(data)
                             return [data]
                         new_data.append(data)
                         _id += 1
                         logger.debug(f"New title found: {data.official_title}")
-                op.insert_list(new_data)
+                database.insert_list(new_data)
             return new_data
 
     def run(self, rss_link: str):

@@ -2,7 +2,6 @@ import re
 import logging
 import os
 
-from module.downloader import getClient
 from module.models import BangumiData
 from module.conf import settings
 
@@ -12,10 +11,25 @@ logger = logging.getLogger(__name__)
 
 class DownloadClient:
     def __init__(self):
-        self.client = getClient(settings)
+        self.client = self.__getClient()
         self.authed = False
         self.download_path = settings.downloader.path
         self.group_tag = settings.bangumi_manage.group_tag
+
+    @staticmethod
+    def __getClient():
+        # TODO 多下载器支持
+        type = settings.downloader.type
+        host = settings.downloader.host
+        username = settings.downloader.username
+        password = settings.downloader.password
+        ssl = settings.downloader.ssl
+        if type == "qbittorrent":
+            from .client.qb_downloader import QbDownloader
+
+            return QbDownloader(host, username, password, ssl)
+        else:
+            raise Exception(f"Unsupported downloader type: {type}")
 
     def __enter__(self):
         if not self.authed:
@@ -47,8 +61,8 @@ class DownloadClient:
             self.download_path = os.path.join(prefs["save_path"], "Bangumi")
 
     def set_rule(self, info: BangumiData):
-        official_name, raw_name, season, group = (
-            info.official_title,
+        official_name = f"{info.official_title}({info.year})" if info.year else info.official_title
+        raw_name, season, group = (
             info.title_raw,
             info.season,
             info.group_name,
@@ -76,17 +90,13 @@ class DownloadClient:
         }
         rule_name = f"[{group}] {official_name}" if self.group_tag else official_name
         self.client.rss_set_rule(rule_name=f"{rule_name} S{season}", rule_def=rule)
-        logger.info(f"Add {official_name} Season {season}")
-
-    def rss_feed(self, rss_link, item_path="Mikan_RSS"):
-        # TODO: 定时刷新 RSS
-        self.client.rss_add_feed(url=rss_link, item_path=item_path)
+        logger.info(f"Add {official_name} Season {season} to auto download rules.")
 
     def add_collection_feed(self, rss_link, item_path):
         self.client.rss_add_feed(url=rss_link, item_path=item_path)
         logger.info("Add Collection RSS Feed successfully.")
 
-    def add_rules(self, bangumi_info: list[BangumiData]):
+    def set_rules(self, bangumi_info: list[BangumiData]):
         logger.debug("Start adding rules.")
         for info in bangumi_info:
             if not info.added:
@@ -115,7 +125,7 @@ class DownloadClient:
     def move_torrent(self, hashes, location):
         self.client.move_torrent(hashes=hashes, new_location=location)
 
-    def add_rss_feed(self, rss_link, item_path):
+    def add_rss_feed(self, rss_link, item_path="Mikan_RSS"):
         self.client.rss_add_feed(url=rss_link, item_path=item_path)
         logger.info("Add RSS Feed successfully.")
 

@@ -3,7 +3,7 @@ import os.path
 import re
 from pathlib import PurePath, PureWindowsPath
 
-from module.core.download_client import DownloadClient
+from module.downloader import DownloadClient
 
 from module.parser import TitleParser
 from module.network import PostNotification

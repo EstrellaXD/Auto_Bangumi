@@ -1,38 +1,38 @@
+from .log import LOG_PATH
+
 logging_config = {
     "version": 1,
     "disable_existing_loggers": False,
-    "loggers": {
-        "uvicorn.error": {
-            "level": "INFO",
-            "handlers": ["default"],
-            "propagate": True,
-        },
-        "uvicorn.asgi": {  # 更改 "uvicorn.access" 为 "uvicorn.asgi"
-            "level": "INFO",
-            "handlers": ["access"],
-            "propagate": True,
-        },
-    },
-    "handlers": {
-        "default": {
-            "class": "logging.StreamHandler",
-            "level": "INFO",
-            "formatter": "default",
-        },
-        "access": {
-            "class": "logging.StreamHandler",
-            "level": "DEBUG",
-            "formatter": "access",
-        },
-    },
     "formatters": {
         "default": {
             "format": "[%(asctime)s] %(levelname)-8s  %(message)s",
             "datefmt": "%Y-%m-%d %H:%M:%S",
+        }
+    },
+    "handlers": {
+        "file": {
+            "class": "logging.FileHandler",
+            "filename": LOG_PATH,
+            "formatter": "default",
+            "encoding": "utf-8",
         },
-        "access": {
-            "format": "[%(asctime)s] %(levelname)s: %(client_addr)s - \"%(request_line)s\" %(status_code)s",
-            "datefmt": "%Y-%m-%d %H:%M:%S",
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "default",
+        },
+    },
+    "loggers": {
+        "uvicorn": {
+            "handlers": ["file", "console"],
+            "level": "INFO",
+        },
+        "uvicorn.error": {
+            "level": "INFO",
+        },
+        "uvicorn.access": {
+            "handlers": ["file", "console"],
+            "level": "INFO",
+            "propagate": False,
         },
     },
 }
