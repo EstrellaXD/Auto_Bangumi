@@ -62,10 +62,10 @@ class BangumiDatabase(DataConnector):
                 db_data[key] = item.split(",")
         return BangumiData(**db_data)
 
-    def __fetch_data(self) -> list[BangumiData] | None:
+    def __fetch_data(self) -> list[BangumiData]:
         values = self._cursor.fetchall()
         if values is None:
-            return None
+            return []
         keys = [x[0] for x in self._cursor.description]
         dict_data = [dict(zip(keys, value)) for value in values]
         return [self.__db_to_data(x) for x in dict_data]
@@ -111,6 +111,14 @@ class BangumiDatabase(DataConnector):
         )
         self._conn.commit()
         logger.debug(f"Update {title_raw} rss_link to {rss_set}.")
+
+    def search_all(self) -> list[BangumiData]:
+        self._cursor.execute(
+            """
+            SELECT * FROM bangumi
+            """
+        )
+        return self.__fetch_data()
 
     def search_id(self, _id: int) -> BangumiData | None:
         self._cursor.execute(
@@ -203,7 +211,7 @@ class BangumiDatabase(DataConnector):
                     self.update_rss(title_raw, rss_set)
         return titles
 
-    def not_complete(self) -> list[BangumiData] | None:
+    def not_complete(self) -> list[BangumiData]:
         # Find eps_complete = False
         self._cursor.execute(
             """
@@ -212,7 +220,7 @@ class BangumiDatabase(DataConnector):
         )
         return self.__fetch_data()
 
-    def not_added(self) -> list[BangumiData] | None:
+    def not_added(self) -> list[BangumiData]:
         self._cursor.execute(
             """
             SELECT * FROM bangumi WHERE added = 0

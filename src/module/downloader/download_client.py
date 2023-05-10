@@ -1,12 +1,16 @@
 import re
 import logging
-import os
 
 from module.models import BangumiData
 from module.conf import settings
 
 
 logger = logging.getLogger(__name__)
+
+if ":\\" in settings.downloader.path:
+    import ntpath as path
+else:
+    import os.path as path
 
 
 class DownloadClient:
@@ -58,7 +62,7 @@ class DownloadClient:
             logger.debug(e)
         if self.download_path == "":
             prefs = self.client.get_app_prefs()
-            self.download_path = os.path.join(prefs["save_path"], "Bangumi")
+            self.download_path = path.join(prefs["save_path"], "Bangumi")
 
     def set_rule(self, info: BangumiData):
         official_name = f"{info.official_title}({info.year})" if info.year else info.official_title
@@ -81,7 +85,7 @@ class DownloadClient:
             "addPaused": False,
             "assignedCategory": "Bangumi",
             "savePath": str(
-                os.path.join(
+                path.join(
                     self.download_path,
                     re.sub(r"[:/.]", " ", official_name).strip(),
                     f"Season {season}",
