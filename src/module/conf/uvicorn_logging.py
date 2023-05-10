@@ -23,15 +23,15 @@ logging_config = {
     },
     "loggers": {
         "uvicorn": {
-            "handlers": ["file", "console"],
+            "handlers": ["console"],
             "level": "INFO",
         },
         "uvicorn.error": {
             "level": "INFO",
         },
         "uvicorn.access": {
-            "handlers": ["file", "console"],
-            "level": "INFO",
+            "handlers": ["console"],
+            "level": "DEBUG",
             "propagate": False,
         },
     },
