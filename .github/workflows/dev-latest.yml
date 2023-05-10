@@ -2,6 +2,8 @@ name: Deploy To Dockerhub(dev)
 
 on:
   push:
+    branches:
+      - '*-dev'
     tags:
       - '\d+\.\d+\.\d+-beta\d+'
       - '\d+\.\d+-beta\d+'
