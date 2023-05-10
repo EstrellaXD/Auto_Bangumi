@@ -5,6 +5,7 @@ on:
     tags:
       - '\d+\.\d+\.\d+-beta\d+'
       - '\d+\.\d+-beta\d+'
+      - '\d+\.\d+-alpha\d+'
 
 jobs:
   test:

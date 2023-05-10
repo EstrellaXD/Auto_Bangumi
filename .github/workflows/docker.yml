@@ -52,8 +52,6 @@ jobs:
             estrellaxd/auto_bangumi
           tags: |
             type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
             type=raw,value=latest
 
       - name: Login to DockerHub
