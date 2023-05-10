@@ -11,6 +11,7 @@ from fastapi.templating import Jinja2Templates
 from module.api import router
 from module.conf import VERSION, settings, setup_logger
 from module.rss import RSSAnalyser
+from module.manager import Renamer
 from module.conf.uvicorn_logging import logging_config
 
 
@@ -27,7 +28,14 @@ def rss_loop(stop_event, rss_link: str):
     while not stop_event.is_set():
         rss_analyser.run(rss_link)
         logger.info("RSS loop finished.")
-        stop_event.wait(settings.program.sleep_time)
+        stop_event.wait(settings.program.rss_time)
+
+def rename_loop(stop_event):
+    while not stop_event.is_set():
+        with Renamer() as renamer:
+            renamer.rename()
+        logger.info("Rename loop finished.")
+        stop_event.wait(settings.program.rename_time)
 
 
 rss_thread = threading.Thread(
@@ -35,68 +43,70 @@ rss_thread = threading.Thread(
     args=(stop_event, rss_link),
 )
 
+rename_thread = threading.Thread(
+    target=rename_loop,
+    args=(stop_event,),
+)
+
 
 @router.on_event("startup")
 async def startup():
-    global rss_thread
+    global rss_thread, rename_thread
     setup_logger()
-    rss_thread = threading.Thread(
-        target=rss_loop,
-        args=(stop_event, rss_link),
-    )
     rss_thread.start()
+    rename_thread.start()
 
 
 @router.on_event("shutdown")
 async def shutdown():
     stop_event.set()
-    logger.info("Stopping RSS analyser...")
+    logger.info("Stopping program...")
 
 
 @router.get("/api/v1/restart", tags=["program"])
 async def restart():
-    global rss_thread
+    global rss_thread, rename_thread
     if not rss_thread.is_alive():
         return {"status": "Already stopped."}
     stop_event.set()
     logger.info("Stopping RSS analyser...")
     rss_thread.join()
+    rename_thread.join()
     stop_event.clear()
     time.sleep(1)
     settings.load()
     rss_link = settings.rss_link()
-    if "://" not in rss_link:
-        rss_link = f"https://{rss_link}"
-    rss_thread = threading.Thread(
-        target=rss_loop,
-        args=(stop_event, rss_link),
-    )
+    setup_logger()
+    rss_thread = threading.Thread(target=rss_loop, args=(stop_event, rss_link))
+    rename_thread = threading.Thread(target=rename_loop, args=(stop_event,))
     rss_thread.start()
+    rename_thread.start()
     return {"status": "ok"}
 
 
 @router.get("/api/v1/start", tags=["program"])
 async def start():
-    global rss_thread
-    if rss_thread.is_alive():
+    global rss_thread, rename_thread
+    if not stop_event.is_set():
         return {"status": "Already started."}
-    rss_thread = threading.Thread(
-        target=rss_loop,
-        args=(stop_event, rss_link),
-    )
+    rss_thread = threading.Thread(target=rss_loop, args=(stop_event, rss_link))
+    rename_thread = threading.Thread(target=rename_loop,args=(stop_event,))
     rss_thread.start()
+    rename_thread.start()
     return {"status": "ok"}
 
 
 @router.get("/api/v1/stop", tags=["program"])
 async def stop():
-    global rss_thread
-    if not rss_thread.is_alive():
+    global rss_thread, rename_thread
+    if stop_event.is_set():
         return {"status": "Already stopped."}
     stop_event.set()
-    logger.info("Stopping RSS analyser...")
+    logger.info("Stopping program...")
+    rename_thread.join()
     rss_thread.join()
     stop_event.clear()
+    logger.info("Program stopped.")
     return {"status": "ok"}
 
 

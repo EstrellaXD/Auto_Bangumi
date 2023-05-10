@@ -4,8 +4,8 @@ from pydantic import BaseModel, Field
 
 
 class Program(BaseModel):
-    sleep_time: int = Field(7200, description="Sleep time")
-    rename_times: int = Field(20, description="Rename times in one loop")
+    rss_time: int = Field(7200, description="Sleep time")
+    rename_time: int = Field(60, description="Rename times in one loop")
     webui_port: int = Field(7892, description="WebUI port")
 
 

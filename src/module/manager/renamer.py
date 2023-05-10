@@ -54,7 +54,7 @@ class Renamer(DownloadClient):
         elif method == "pn":
             return f"{file_info.title} S{season}E{episode}{file_info.suffix}"
         elif method == "advance":
-            return f"{bangumi_name} S{file_info.season}E{file_info.episode}{file_info.suffix}"
+            return f"{bangumi_name} S{season}E{episode}{file_info.suffix}"
         elif method == "subtitle_pn":
             return f"{file_info.title} S{season}E{episode}.{file_info.language}{file_info.suffix}"
         elif method == "subtitle_advance":
