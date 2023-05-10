@@ -17,8 +17,12 @@ class TitleParser:
         torrent_path: str,
         torrent_name: str | None = None,
         season: int | None = None,
+        file_type: str = "media",
     ):
-        return torrent_parser(torrent_path, torrent_name, season)
+        try:
+            return torrent_parser(torrent_path, torrent_name, season, file_type)
+        except Exception as e:
+            logger.warning(f"Cannot parse {torrent_path} with error {e}")
 
     @staticmethod
     def tmdb_parser(title: str, season: int, language: str):

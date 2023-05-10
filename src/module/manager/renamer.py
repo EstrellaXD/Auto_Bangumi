@@ -132,6 +132,7 @@ class Renamer(DownloadClient):
                 torrent_path=subtitle_path,
                 torrent_name=torrent_name,
                 season=season,
+                file_type="subtitle",
             )
             new_path = self.gen_path(sub, bangumi_name, method=method)
             if subtitle_path != new_path:
