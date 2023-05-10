@@ -91,13 +91,13 @@ class DataOperator(DataConnector):
         self._cursor.execute(
             """
             UPDATE bangumi 
-            SET rss_link = :rss_link AND added = 0
+            SET rss_link = :rss_link, added = 0
             WHERE title_raw = :title_raw
             """,
             {"rss_link": rss_set, "title_raw": title_raw},
         )
         self._conn.commit()
-        logger.info(f"Update {title_raw} rss_link to {rss_set}.")
+        logger.debug(f"Update {title_raw} rss_link to {rss_set}.")
 
     def search_id(self, _id: int) -> BangumiData | None:
         self._cursor.execute(

@@ -56,10 +56,18 @@ def get_subtitle_lang(subtitle_name: str) -> str:
                 return key
 
 
-def torrent_parser(torrent_path: str, season: int | None = None, file_type: str = "media") -> EpisodeFile | SubtitleFile:
+def torrent_parser(
+        torrent_path: str,
+        torrent_name: str | None = None,
+        season: int | None = None,
+        file_type: str = "media"
+) -> EpisodeFile | SubtitleFile:
     media_path = split_path(torrent_path)
     for rule in RULES:
-        match_obj = re.match(rule, media_path, re.I)
+        if torrent_name:
+            match_obj = re.match(rule, torrent_name, re.I)
+        else:
+            match_obj = re.match(rule, media_path, re.I)
         if match_obj:
             group, title = get_group(match_obj.group(1))
             if not season:

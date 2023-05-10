@@ -65,10 +65,4 @@ class RSSAnalyser:
             self.rss_to_data(rss_link)
         except Exception as e:
             logger.debug(e)
-
-
-if __name__ == '__main__':
-    from module.conf import setup_logger
-    setup_logger()
-    link = "https://mikan.estrella.cloud/RSS/Bangumi?bangumiId=2906&subgroupid=552"
-    data = RSSAnalyser().rss_to_data(link)
+            logger.error("Failed to collect RSS info.")
