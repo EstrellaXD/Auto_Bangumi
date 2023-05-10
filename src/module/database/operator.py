@@ -87,10 +87,12 @@ class DataOperator(DataConnector):
         return self._cursor.rowcount == 1
 
     def update_rss(self, title_raw, rss_set: str):
-        # Update rss and select all data
+        # Update rss and added
         self._cursor.execute(
             """
-            UPDATE bangumi SET rss_link = :rss_link WHERE title_raw = :title_raw
+            UPDATE bangumi 
+            SET rss_link = :rss_link AND added = 0
+            WHERE title_raw = :title_raw
             """,
             {"rss_link": rss_set, "title_raw": title_raw},
         )
@@ -159,11 +161,10 @@ class DataOperator(DataConnector):
         for title in title_dict.copy().keys():
             for title_raw, rss_set in data:
                 if title_raw in title:
-                    if rss_link in rss_set:
-                        title_dict.pop(title)
-                    else:
+                    if rss_link not in rss_set:
                         rss_set += "," + rss_link
                         self.update_rss(title_raw, rss_set)
+                    title_dict.pop(title)
                     break
         return title_dict
 

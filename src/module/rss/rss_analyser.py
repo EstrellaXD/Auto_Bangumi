@@ -13,6 +13,21 @@ class RSSAnalyser:
     def __init__(self):
         self._title_analyser = TitleParser()
 
+    def official_title_parser(self, data: BangumiData, mikan_title: str):
+        if settings.rss_parser.parser_type == "mikan":
+            data.official_title = mikan_title
+        elif settings.rss_parser.parser_type == "tmdb":
+            tmdb_title, season, year = self._title_analyser.tmdb_parser(
+                data.official_title,
+                data.season,
+                settings.rss_parser.language
+            )
+            data.official_title = tmdb_title
+            data.year = year
+            data.season = season
+        else:
+            pass
+
     def rss_to_data(self, rss_link: str, full_parse: bool = True) -> list[BangumiData]:
         with RequestContent() as req:
             rss_torrents = req.get_torrents(rss_link)
@@ -31,22 +46,10 @@ class RSSAnalyser:
                         raw=raw_title, rss_link=rss_link, _id=_id
                     )
                     if data and data.title_raw not in [i.title_raw for i in new_data]:
-                        poster_link, official_title = req.get_mikan_info(homepage)
+                        poster_link, mikan_title = req.get_mikan_info(homepage)
                         data.poster_link = poster_link
                         # Official title type
-                        if settings.rss_parser.parser_type == "mikan":
-                            data.official_title = official_title
-                        elif settings.rss_parser.parser_type == "tmdb":
-                            official_title, season, year = self._title_analyser.tmdb_parser(
-                                data.official_title,
-                                data.season,
-                                settings.rss_parser.language
-                            )
-                            data.official_title = official_title
-                            data.year = year
-                            data.season = season
-                        else:
-                            pass
+                        self.official_title_parser(data, mikan_title)
                         if not full_parse:
                             op.insert(data)
                             return [data]
@@ -67,5 +70,5 @@ class RSSAnalyser:
 if __name__ == '__main__':
     from module.conf import setup_logger
     setup_logger()
-    link = "https://mikanani.me/RSS/Bangumi?bangumiId=2906&subgroupid=552"
+    link = "https://mikan.estrella.cloud/RSS/Bangumi?bangumiId=2906&subgroupid=552"
     data = RSSAnalyser().rss_to_data(link)
