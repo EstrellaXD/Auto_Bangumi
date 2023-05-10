@@ -20,11 +20,6 @@ async def get_log():
         return Response("Log file not found", status_code=404)
 
 
-@router.get("/api/v1/resetRule")
-def reset_rule():
-    pass
-
-
 
 
 

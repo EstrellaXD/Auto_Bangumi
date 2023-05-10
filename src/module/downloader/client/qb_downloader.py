@@ -127,3 +127,6 @@ class QbDownloader:
 
     def check_connection(self):
         return self._client.app_version()
+
+    def remove_rule(self, rule_name):
+        self._client.rss_remove_rule(rule_name)

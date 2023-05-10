@@ -86,7 +86,7 @@ class BangumiDatabase(DataConnector):
         logger.debug(f"Add {len(data)} bangumi into database.")
         self._conn.commit()
 
-    def update(self, data: BangumiData) -> bool:
+    def update_one(self, data: BangumiData) -> bool:
         db_data = self.__data_to_db(data)
         update_columns = ", ".join([f"{key} = :{key}" for key in db_data.keys() if key != "id"])
         self._cursor.execute(f"UPDATE bangumi SET {update_columns} WHERE id = :id", db_data)
@@ -111,6 +111,26 @@ class BangumiDatabase(DataConnector):
         )
         self._conn.commit()
         logger.debug(f"Update {title_raw} rss_link to {rss_set}.")
+
+    def delete_one(self, _id: int) -> bool:
+        self._cursor.execute(
+            """
+            DELETE FROM bangumi WHERE id = :id
+            """,
+            {"id": _id},
+        )
+        self._conn.commit()
+        logger.debug(f"Delete bangumi id: {_id}.")
+        return self._cursor.rowcount == 1
+
+    def delete_all(self):
+        self._cursor.execute(
+            """
+            DELETE FROM bangumi
+            """
+        )
+        self._conn.commit()
+        logger.debug("Delete all bangumi.")
 
     def search_all(self) -> list[BangumiData]:
         self._cursor.execute(

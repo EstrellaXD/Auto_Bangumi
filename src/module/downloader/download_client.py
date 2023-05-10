@@ -119,7 +119,7 @@ class DownloadClient:
 
     def delete_torrent(self, hashes):
         self.client.torrents_delete(hashes)
-        logger.info(f"Remove bad torrents.")
+        logger.info(f"Remove torrents.")
 
     def add_torrent(self, torrent: dict):
         self.client.torrents_add(
@@ -141,3 +141,7 @@ class DownloadClient:
 
     def set_category(self, hashes, category):
         self.client.set_category(hashes, category)
+
+    def remove_rule(self, rule_name):
+        self.client.remove_rule(rule_name)
+        logger.info(f"Delete rule: {rule_name}")
