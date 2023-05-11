@@ -168,19 +168,20 @@ class BangumiDatabase(DataConnector):
         dict_data = dict(zip(keys, values))
         return self.__db_to_data(dict_data)
 
-    def match_poster(self, torrent_name: str) -> tuple[str, str]:
+    def match_poster(self, bangumi_name: str) -> str:
         # Find title_raw which in torrent_name
         self._cursor.execute(
             """
-            SELECT title_raw, poster_link, official_title FROM bangumi
+            SELECT official_title, poster_link FROM bangumi
             """
         )
         data = self._cursor.fetchall()
         if not data:
-            return "", ""
-        for title_raw, poster_link, official_title in data:
-            if title_raw in torrent_name:
-                return poster_link, official_title
+            return ""
+        for official_title, poster_link in data:
+            if official_title in bangumi_name:
+                return poster_link
+        return ""
 
     def match_list(self, title_dict: dict, rss_link: str) -> dict:
         # Match title_raw in database
@@ -233,6 +234,6 @@ class BangumiDatabase(DataConnector):
 
 
 if __name__ == '__main__':
-    title = "[Lilith-Raws] Boku no Kokoro no Yabai Yatsu - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4].mp4"
+    title = "[SweetSub&LoliHouse] Heavenly Delusion - 06 [WebRip 1080p HEVC-10bit AAC ASSx2].mkv"
     with BangumiDatabase() as db:
         print(db.match_poster(title))

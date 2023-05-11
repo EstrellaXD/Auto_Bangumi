@@ -66,14 +66,12 @@ class Renamer(DownloadClient):
             return f"{bangumi_name} S{season}E{episode}.{file_info.language}{file_info.suffix}"
 
     @staticmethod
-    def send_notification(torrent_name, ep: EpisodeFile):
+    def send_notification(bangumi_name, ep: EpisodeFile):
         with BangumiDatabase() as db:
-            poster_path, official_name = db.match_poster(torrent_name)
-        poster_link = settings.rss_parser.custom_url + poster_path
-        if "://" not in poster_link:
-            poster_link = "https://" + poster_link
+            poster_path = db.match_poster(bangumi_name)
+        poster_link = "https://mikanani.me" + poster_path
         n = Notification(
-            title=official_name,
+            official_title=bangumi_name,
             season=ep.season,
             episode=ep.episode,
             poster_link=poster_link,
@@ -105,8 +103,8 @@ class Renamer(DownloadClient):
                 renamed = self.rename_torrent_file(_hash=_hash, old_path=media_path, new_path=new_path)
                 if renamed:
                     if settings.notification.enable:
-                        self.send_notification(torrent_name, ep)
-                    return
+                        self.send_notification(bangumi_name, ep)
+            return True
         logger.warning(f"{media_path} parse failed")
         if settings.bangumi_manage.remove_bad_torrent:
             self.delete_torrent(hashes=_hash)
