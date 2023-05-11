@@ -2,7 +2,7 @@ import logging
 import os
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import Response
 
 from module.conf import LOG_PATH
 

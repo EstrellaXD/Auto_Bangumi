@@ -83,7 +83,7 @@ def start_thread():
         return {"status": "ok"}
 
 
-def start_program():
+async def start_program():
     global rss_thread, rename_thread
     start_info()
     if not os.path.exists(DATA_PATH):

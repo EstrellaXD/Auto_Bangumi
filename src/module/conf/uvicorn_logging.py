@@ -27,7 +27,7 @@ logging_config = {
             "level": "INFO",
         },
         "uvicorn.error": {
-            "level": "INFO",
+            "level": "WARNING",
         },
         "uvicorn.access": {
             "handlers": ["console"],

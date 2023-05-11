@@ -1,11 +1,11 @@
 import os
 import signal
 import logging
+import asyncio
 
 from .download import router
 
 from module.core import start_thread, start_program, stop_thread, stop_event
-from module.conf import settings, setup_logger
 
 
 logger = logging.getLogger(__name__)
@@ -13,9 +13,7 @@ logger = logging.getLogger(__name__)
 
 @router.on_event("startup")
 async def startup():
-    log_level = logging.DEBUG if settings.log.debug_enable else logging.INFO
-    setup_logger(log_level)
-    start_program()
+    await start_program()
 
 
 @router.on_event("shutdown")
@@ -58,3 +56,24 @@ async def shutdown_program():
     os.kill(os.getpid(), signal.SIGINT)
     return {"status": "ok"}
 
+
+@router.get("/api/v1/setLog/{log_level}", tags=["program"])
+async def set_log_level(log_level: str):
+    if log_level == "DEBUG":
+        logger.setLevel(logging.DEBUG)
+        logger.debug("Log level set to DEBUG")
+    elif log_level == "INFO":
+        logger.setLevel(logging.INFO)
+        logger.info("Log level set to INFO")
+    elif log_level == "WARNING":
+        logger.setLevel(logging.WARNING)
+        logger.warning("Log level set to WARNING")
+    elif log_level == "ERROR":
+        logger.setLevel(logging.ERROR)
+        logger.error("Log level set to ERROR")
+    elif log_level == "CRITICAL":
+        logger.setLevel(logging.CRITICAL)
+        logger.critical("Log level set to CRITICAL")
+    else:
+        return {"status": "invalid log level"}
+    return {"status": "ok"}
