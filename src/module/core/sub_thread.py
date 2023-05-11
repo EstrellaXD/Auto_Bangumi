@@ -17,11 +17,6 @@ logger = logging.getLogger(__name__)
 stop_event = threading.Event()
 
 
-def reset_log():
-    if os.path.isfile(LOG_PATH):
-        os.remove(LOG_PATH)
-
-
 def rss_loop(stop_event):
     rss_analyser = RSSAnalyser()
     rss_link = settings.rss_link()
