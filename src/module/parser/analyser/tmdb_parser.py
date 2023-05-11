@@ -63,7 +63,7 @@ def tmdb_parser(title, language) -> TMDBInfo | None:
                     break
             url_info = info_url(id, language)
             info_content = req.get_json(url_info)
-            season = [{"season": s.get("name"), "air_date": s.get("air_date")} for s in info_content.get("seasons")]
+            season = [{"season": s.get("name"), "air_date": s.get("air_date"), "poster_path": s.get("poster_path")} for s in info_content.get("seasons")]
             last_season = get_season(season)
             original_title = info_content.get("original_name")
             official_title = info_content.get("name")
@@ -74,5 +74,5 @@ def tmdb_parser(title, language) -> TMDBInfo | None:
 
 
 if __name__ == '__main__':
-    title = "鬼灭之刃+刀匠村篇"
+    title = "鬼灭之刃"
     print(tmdb_parser(title, "zh"))

@@ -99,8 +99,3 @@ def torrent_parser(
                     suffix=suffix
                 )
 
-
-if __name__ == '__main__':
-    name = "海盗战记 (2019) S01E01.mp4"
-    bf = torrent_parser(name, file_type="media")
-    print(bf)

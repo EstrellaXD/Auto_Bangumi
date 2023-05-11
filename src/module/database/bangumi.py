@@ -180,7 +180,8 @@ class BangumiDatabase(DataConnector):
             return ""
         for official_title, poster_link in data:
             if official_title in bangumi_name:
-                return poster_link
+                if poster_link:
+                    return poster_link
         return ""
 
     def match_list(self, title_dict: dict, rss_link: str) -> dict:
