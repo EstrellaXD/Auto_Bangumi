@@ -6,7 +6,7 @@ from module.api import router
 from module.conf import settings, setup_logger
 from module.core import reset_log
 
-log_level = logging.INFO
+log_level = logging.DEBUG if settings.log.debug_enable else logging.INFO
 setup_logger(log_level)
 logger = logging.getLogger(__name__)
 

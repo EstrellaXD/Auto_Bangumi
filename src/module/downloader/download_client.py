@@ -37,7 +37,9 @@ class DownloadClient:
 
     def __enter__(self):
         if not self.authed:
+            logger.debug("Authing to downloader...")
             self.auth()
+            logger.debug("Authed.")
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
