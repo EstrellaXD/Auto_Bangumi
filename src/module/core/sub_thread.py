@@ -3,6 +3,8 @@ import time
 import logging
 import threading
 
+from .data_migration import data_migration
+
 from module.rss import RSSAnalyser, add_rules
 from module.manager import Renamer, FullSeasonGet
 from module.database import BangumiDatabase
@@ -83,13 +85,22 @@ def start_thread():
         return {"status": "ok"}
 
 
+def first_run():
+    if not os.path.exists(DATA_PATH):
+        if data_migration():
+            logger.info("Updated, data migration completed.")
+        else:
+            logger.info("First run, init downloader.")
+            with DownloadClient() as client:
+                client.init_downloader()
+                client.add_rss_feed(settings.rss_link())
+
+
 async def start_program():
     global rss_thread, rename_thread
     start_info()
-    if not os.path.exists(DATA_PATH):
-        with DownloadClient() as client:
-            client.init_downloader()
-            client.add_rss_feed(settings.rss_link())
+    # First init
+    first_run()
     with BangumiDatabase() as database:
         database.update_table()
     rss_thread = threading.Thread(target=rss_loop, args=(stop_event,))
