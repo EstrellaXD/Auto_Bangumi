@@ -125,17 +125,18 @@ class Renamer(DownloadClient):
                     torrent_path=media_path,
                     season=season,
                 )
-                new_path = self.gen_path(ep, bangumi_name, method=method)
-                if media_path != new_path:
-                    renamed = self.rename_torrent_file(
-                        _hash=_hash, old_path=media_path, new_path=new_path
-                    )
-                    if not renamed:
-                        logger.warning(f"{media_path} rename failed")
-                        # Delete bad torrent.
-                        if settings.bangumi_manage.remove_bad_torrent:
-                            self.delete_torrent(_hash)
-                            break
+                if ep:
+                    new_path = self.gen_path(ep, bangumi_name, method=method)
+                    if media_path != new_path:
+                        renamed = self.rename_torrent_file(
+                            _hash=_hash, old_path=media_path, new_path=new_path
+                        )
+                        if not renamed:
+                            logger.warning(f"{media_path} rename failed")
+                            # Delete bad torrent.
+                            if settings.bangumi_manage.remove_bad_torrent:
+                                self.delete_torrent(_hash)
+                                break
 
     def rename_subtitles(
         self,
@@ -154,13 +155,14 @@ class Renamer(DownloadClient):
                 season=season,
                 file_type="subtitle",
             )
-            new_path = self.gen_path(sub, bangumi_name, method=method)
-            if subtitle_path != new_path:
-                renamed = self.rename_torrent_file(
-                    _hash=_hash, old_path=subtitle_path, new_path=new_path
-                )
-                if not renamed:
-                    logger.warning(f"{subtitle_path} rename failed")
+            if sub:
+                new_path = self.gen_path(sub, bangumi_name, method=method)
+                if subtitle_path != new_path:
+                    renamed = self.rename_torrent_file(
+                        _hash=_hash, old_path=subtitle_path, new_path=new_path
+                    )
+                    if not renamed:
+                        logger.warning(f"{subtitle_path} rename failed")
 
     @staticmethod
     def get_season_info(save_path: str, download_path: str):
