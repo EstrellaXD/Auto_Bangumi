@@ -1,9 +1,14 @@
+import os
 import logging
 
 LOG_PATH = "data/log.txt"
 
 
-def setup_logger(level: int = logging.INFO):
+def setup_logger(level: int = logging.INFO, reset: bool = False):
+    if not os.path.isdir("data"):
+        os.mkdir("data")
+    if reset and os.path.isfile(LOG_PATH):
+        os.remove(LOG_PATH)
     logging.addLevelName(logging.DEBUG, "DEBUG:")
     logging.addLevelName(logging.INFO, "INFO:")
     logging.addLevelName(logging.WARNING, "WARNING:")
