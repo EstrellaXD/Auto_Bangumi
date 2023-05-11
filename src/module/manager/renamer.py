@@ -90,12 +90,10 @@ class Renamer(DownloadClient):
                     if settings.notification.enable:
                         self.send_notification(torrent_name, ep, bangumi_name)
                         pass
-                else:
-                    logger.warning(f"{bangumi_name} Season {ep.season} Ep {ep.episode} rename failed.")
-                    if settings.bangumi_manage.remove_bad_torrent:
-                        self.delete_torrent(hashes=_hash)
-        else:
-            logger.warning(f"{media_path} parse failed")
+                    return
+        logger.warning(f"{media_path} parse failed")
+        if settings.bangumi_manage.remove_bad_torrent:
+            self.delete_torrent(hashes=_hash)
 
     def rename_collection(
         self,
