@@ -4,6 +4,7 @@ import logging
 import threading
 
 from .data_migration import data_migration
+from .check import check_status
 
 from module.rss import RSSAnalyser, add_rules
 from module.manager import Renamer, FullSeasonGet
@@ -99,13 +100,16 @@ def first_run():
 async def start_program():
     global rss_thread, rename_thread
     start_info()
-    # First init
-    first_run()
-    with BangumiDatabase() as database:
-        database.update_table()
-    rss_thread = threading.Thread(target=rss_loop, args=(stop_event,))
-    rename_thread = threading.Thread(target=rename_loop, args=(stop_event,))
-    if settings.rss_parser.enable:
-        rss_thread.start()
-    if settings.bangumi_manage.enable:
-        rename_thread.start()
+    if check_status():
+        # First init
+        first_run()
+        with BangumiDatabase() as database:
+            database.update_table()
+        rss_thread = threading.Thread(target=rss_loop, args=(stop_event,))
+        rename_thread = threading.Thread(target=rename_loop, args=(stop_event,))
+        if settings.rss_parser.enable:
+            rss_thread.start()
+        if settings.bangumi_manage.enable:
+            rename_thread.start()
+
+

@@ -19,7 +19,8 @@ class RequestContent(RequestURL):
     def get_torrents(
             self,
             _url: str,
-            _filter: str = "|".join(settings.rss_parser.filter)) -> [TorrentInfo]:
+            _filter: str = "|".join(settings.rss_parser.filter)
+    ) -> [TorrentInfo]:
         soup = self.get_xml(_url)
         torrent_titles = []
         torrent_urls = []

@@ -4,8 +4,7 @@ import logging
 
 from .download import router
 
-from module.core import start_thread, start_program, stop_thread, stop_event
-
+from module.core import start_thread, start_program, stop_thread, stop_event, check_status, check_rss, check_downloader
 
 logger = logging.getLogger(__name__)
 
@@ -54,3 +53,20 @@ async def shutdown_program():
     logger.info("Shutting down program...")
     os.kill(os.getpid(), signal.SIGINT)
     return {"status": "ok"}
+
+
+# Check status
+@router.get("/api/v1/check/downloader", tags=["program"])
+async def check_downloader_status():
+    return check_downloader()
+
+
+@router.get("/api/v1/check/rss", tags=["program"])
+async def check_rss_status():
+    return check_rss()
+
+
+@router.get("/api/v1/check", tags=["program"])
+async def check_all():
+    return check_status()
+

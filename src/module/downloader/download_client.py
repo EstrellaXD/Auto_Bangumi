@@ -30,7 +30,6 @@ class DownloadClient:
         ssl = settings.downloader.ssl
         if type == "qbittorrent":
             from .client.qb_downloader import QbDownloader
-
             return QbDownloader(host, username, password, ssl)
         else:
             raise Exception(f"Unsupported downloader type: {type}")
