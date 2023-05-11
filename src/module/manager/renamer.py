@@ -7,8 +7,9 @@ from module.downloader import DownloadClient
 
 from module.parser import TitleParser
 from module.network import PostNotification
-from module.models import SubtitleFile, EpisodeFile
+from module.models import SubtitleFile, EpisodeFile, Notification
 from module.conf import settings, PLATFORM
+from module.database import BangumiDatabase
 
 if PLATFORM == "Windows":
     import ntpath as path
@@ -22,7 +23,6 @@ class Renamer(DownloadClient):
     def __init__(self):
         super().__init__()
         self._renamer = TitleParser()
-        self._notification = PostNotification()
 
     @staticmethod
     def print_result(torrent_count, rename_count):
@@ -65,8 +65,25 @@ class Renamer(DownloadClient):
         elif method == "subtitle_advance":
             return f"{bangumi_name} S{season}E{episode}.{file_info.language}{file_info.suffix}"
 
-    def send_notification(self, torrent_name, ep: EpisodeFile, bangumi_name: str):
-        pass
+    @staticmethod
+    def send_notification(torrent_name, ep: EpisodeFile):
+        with BangumiDatabase() as db:
+            poster_path, official_name = db.match_poster(torrent_name)
+        poster_link = settings.rss_parser.custom_url + poster_path
+        if "://" not in poster_link:
+            poster_link = "https://" + poster_link
+        n = Notification(
+            title=official_name,
+            season=ep.season,
+            episode=ep.episode,
+            poster_link=poster_link,
+        )
+        with PostNotification() as notificator:
+            status = notificator.send_msg(n)
+        if status:
+            logger.info(f"Notification sent: {ep.title} S{ep.season}E{ep.episode}")
+        else:
+            logger.warning(f"Notification failed: {ep.title} S{ep.season}E{ep.episode}")
 
     def rename_file(
         self,
@@ -88,8 +105,7 @@ class Renamer(DownloadClient):
                 renamed = self.rename_torrent_file(_hash=_hash, old_path=media_path, new_path=new_path)
                 if renamed:
                     if settings.notification.enable:
-                        self.send_notification(torrent_name, ep, bangumi_name)
-                        pass
+                        self.send_notification(torrent_name, ep)
                     return
         logger.warning(f"{media_path} parse failed")
         if settings.bangumi_manage.remove_bad_torrent:

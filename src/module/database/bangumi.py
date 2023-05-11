@@ -168,25 +168,19 @@ class BangumiDatabase(DataConnector):
         dict_data = dict(zip(keys, values))
         return self.__db_to_data(dict_data)
 
-    def match_official_title(self, title: str) -> bool:
+    def match_poster(self, torrent_name: str) -> tuple[str, str]:
+        # Find title_raw which in torrent_name
         self._cursor.execute(
             """
-            SELECT official_title FROM bangumi 
-            WHERE official_title = :official_title
-            """,
-            {"official_title": title},
-        )
-        return self._cursor.fetchone() is not None
-
-    def match_title_raw(self, title: str, rss_link: str) -> bool:
-        self._cursor.execute(
+            SELECT title_raw, poster_link, official_title FROM bangumi
             """
-            SELECT title_raw, rss_link FROM bangumi 
-            WHERE INSTR (:title_raw, title_raw) > 0 AND INSTR (:rss_link, rss_link) > 0
-            """,
-            {"title_raw": title, "rss_link": rss_link},
         )
-        return self._cursor.fetchone() is not None
+        data = self._cursor.fetchall()
+        if not data:
+            return "", ""
+        for title_raw, poster_link, official_title in data:
+            if title_raw in torrent_name:
+                return poster_link, official_title
 
     def match_list(self, title_dict: dict, rss_link: str) -> dict:
         # Match title_raw in database
@@ -208,28 +202,6 @@ class BangumiDatabase(DataConnector):
                     title_dict.pop(title)
                     break
         return title_dict
-
-    def not_exist_titles(self, titles: list[str], rss_link) -> list[str]:
-        # Select all title in titles that title_raw in database not in title
-        self._cursor.execute(
-            """
-            SELECT title_raw, rss_link FROM bangumi
-            """
-        )
-        data = self._cursor.fetchall()
-        if not data:
-            return titles
-        # Match title
-        for title_raw, rss_set in data:
-            rss_set = rss_set.split(",")
-            for title in titles:
-                if rss_link in rss_set:
-                    if title_raw in title:
-                        titles.remove(title)
-                elif rss_link not in rss_set:
-                    rss_set.append(rss_link)
-                    self.update_rss(title_raw, rss_set)
-        return titles
 
     def not_complete(self) -> list[BangumiData]:
         # Find eps_complete = False
@@ -258,3 +230,9 @@ class BangumiDatabase(DataConnector):
         if data is None:
             return 1
         return data[0] + 1
+
+
+if __name__ == '__main__':
+    title = "[Lilith-Raws] Boku no Kokoro no Yabai Yatsu - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4].mp4"
+    with BangumiDatabase() as db:
+        print(db.match_poster(title))
