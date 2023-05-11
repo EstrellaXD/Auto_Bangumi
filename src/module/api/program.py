@@ -56,17 +56,17 @@ async def shutdown_program():
 
 
 # Check status
-@router.get("/api/v1/check/downloader", tags=["program"])
+@router.get("/api/v1/check/downloader", tags=["check"])
 async def check_downloader_status():
     return check_downloader()
 
 
-@router.get("/api/v1/check/rss", tags=["program"])
+@router.get("/api/v1/check/rss", tags=["check"])
 async def check_rss_status():
     return check_rss()
 
 
-@router.get("/api/v1/check", tags=["program"])
+@router.get("/api/v1/check", tags=["check"])
 async def check_all():
     return check_status()
 

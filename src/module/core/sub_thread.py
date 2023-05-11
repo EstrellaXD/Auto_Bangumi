@@ -95,8 +95,10 @@ def first_run():
 async def start_program():
     global rss_thread, rename_thread
     start_info()
-    if check_status():
-        # First init
+    if not check_status():
+        stop_event.set()
+        logger.info("Program paused.")
+    else:
         first_run()
         with BangumiDatabase() as database:
             database.update_table()
