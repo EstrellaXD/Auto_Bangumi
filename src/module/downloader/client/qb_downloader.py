@@ -2,7 +2,7 @@ import logging
 import time
 
 from qbittorrentapi import Client, LoginFailed
-from qbittorrentapi.exceptions import Conflict409Error
+from qbittorrentapi.exceptions import Conflict409Error, Forbidden403Error
 
 from module.ab_decorator import qb_connect_failed_wait
 from module.downloader.exceptions import ConflictError
@@ -22,17 +22,23 @@ class QbDownloader:
         self.host = host
         self.username = username
 
-    @qb_connect_failed_wait
     def auth(self):
-        while True:
+        times = 0
+        while times < 3:
             try:
                 self._client.auth_log_in()
-                break
+                return True
             except LoginFailed:
                 logger.error(
                     f"Can't login qBittorrent Server {self.host} by {self.username}, retry in {5} seconds."
                 )
-            time.sleep(5)
+                time.sleep(5)
+                times += 1
+            except Forbidden403Error:
+                logger.error(f"Login refused by qBittorrent Server")
+                logger.info(f"Please release the IP in qBittorrent Server")
+                break
+        return False
 
     def logout(self):
         self._client.auth_log_out()

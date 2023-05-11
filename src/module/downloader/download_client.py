@@ -42,11 +42,12 @@ class DownloadClient:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.client.logout()
+        if self.authed:
+            self.client.logout()
+            self.authed = False
 
     def auth(self):
-        self.client.auth()
-        self.authed = True
+        self.authed = self.client.auth()
 
     def init_downloader(self):
         prefs = {
