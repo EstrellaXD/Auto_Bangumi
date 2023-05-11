@@ -48,7 +48,6 @@ class Settings(Config):
             os.makedirs("config")
         with open(CONFIG_PATH, "w", encoding="utf-8") as f:
             json.dump(config_dict, f, indent=4)
-        logger.info(f"Config saved")
 
     def rss_link(self):
         if "://" not in self.rss_parser.custom_url:

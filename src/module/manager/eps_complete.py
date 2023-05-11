@@ -93,8 +93,8 @@ class FullSeasonGet(DownloadClient):
             self.add_torrent(download)
         logger.info("Completed!")
 
-    def add_subscribe(self, data: BangumiData, link):
-        self.add_rss_feed(link, item_path=data.official_title)
+    def add_subscribe(self, data: BangumiData):
+        self.add_rss_feed(data.rss_link, item_path=data.official_title)
         self.set_rule(data)
 
 
