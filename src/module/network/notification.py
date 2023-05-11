@@ -75,7 +75,11 @@ class PostNotification(getClient()):
                f"季度： 第{info.season}季\n" \
                f"更新集数： 第{info.episode}集\n" \
                f"{info.poster_link}\n"
-        return self.post_msg(text)
+        try:
+            return self.post_msg(text)
+        except Exception as e:
+            logger.warning(f"Failed to send notification: {e}")
+            return False
 
 
 if __name__ == '__main__':
