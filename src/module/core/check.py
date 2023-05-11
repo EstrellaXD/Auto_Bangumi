@@ -18,7 +18,6 @@ def check_status() -> bool:
     return False
 
 
-
 def check_downloader():
     with DownloadClient() as client:
         if client.authed:
