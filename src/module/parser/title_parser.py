@@ -57,7 +57,7 @@ class TitleParser:
                 title_raw=title_raw,
                 season=_season,
                 season_raw=episode.season_raw,
-                group=episode.group,
+                group_name=episode.group,
                 dpi=episode.resolution,
                 source=episode.source,
                 subtitle=episode.sub,

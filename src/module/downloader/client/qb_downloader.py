@@ -2,7 +2,7 @@ import logging
 import time
 
 from qbittorrentapi import Client, LoginFailed
-from qbittorrentapi.exceptions import Conflict409Error, Forbidden403Error
+from qbittorrentapi.exceptions import Conflict409Error, Forbidden403Error, APIConnectionError
 
 from module.ab_decorator import qb_connect_failed_wait
 from module.downloader.exceptions import ConflictError
@@ -37,6 +37,13 @@ class QbDownloader:
             except Forbidden403Error:
                 logger.error(f"Login refused by qBittorrent Server")
                 logger.info(f"Please release the IP in qBittorrent Server")
+                break
+            except APIConnectionError:
+                logger.error(f"Cannot connect to qBittorrent Server")
+                logger.info(f"Please check the IP and port in qBittorrent Server")
+                time.sleep(30)
+            except Exception as e:
+                logger.error(f"Unknown error: {e}")
                 break
         return False
 
