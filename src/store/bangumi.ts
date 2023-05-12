@@ -1,7 +1,8 @@
 import { getABData } from '../api/bangumi';
+import type { BangumiItem } from '#/bangumi';
 
 export const bangumiStore = defineStore('bangumi', () => {
-  const data = ref({ rss_link: '', data_version: 4, bangumi_info: [] });
+  const data = ref<BangumiItem[]>();
 
   const get = async () => {
     const res = await getABData();

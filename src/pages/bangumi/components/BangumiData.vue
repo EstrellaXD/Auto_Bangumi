@@ -21,7 +21,7 @@ onActivated(() => {
           <b>不会</b> 出现在此处</span
         >
         <el-table
-          :data="store.data.bangumi_info"
+          :data="store.data"
           stripe
           border
           style="width: 100%"
@@ -31,7 +31,7 @@ onActivated(() => {
           <el-table-column prop="season" label="季度" width="60" />
           <el-table-column prop="dpi" label="分辨率" />
           <el-table-column prop="subtitle" label="字幕" />
-          <el-table-column prop="group" label="字幕组" />
+          <el-table-column prop="group_name" label="字幕组" />
         </el-table>
       </el-collapse-item>
     </el-collapse>
