@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { BangumiItem } from '#/bangumi';
 
 /**
  * 添加番剧订阅
@@ -17,14 +18,8 @@ function addBangumi(type: string, rss_link: string) {
 }
 
 /**
- *  获取AB存储的数据
+ *  获取订阅番剧数据
  */
-const getABData = () => axios.get('api/v1/data');
+const getABData = () => axios.get<BangumiItem[]>('api/v1/bangumi/getAll');
 
-/**
- * 删除番剧规则
- * @param {string} name 番名 (title_raw)
- */
-const removeRule = (name: string) => axios.get(`api/v1/removeRule/${name}`);
-
-export { addBangumi, getABData, removeRule };
+export { addBangumi, getABData };

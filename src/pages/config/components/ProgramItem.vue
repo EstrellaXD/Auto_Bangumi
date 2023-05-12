@@ -7,11 +7,11 @@ const program = computed(() => form.program);
 <template>
   <ConfigFormRow title="主程序">
     <ConfigFormCol label="RSS 检查间隔">
-      <el-input v-model.number="program.sleep_time" type="number" />
+      <el-input v-model.number="program.rss_time" type="number" />
     </ConfigFormCol>
 
     <ConfigFormCol label="重命名频率">
-      <el-input v-model.number="program.rename_times" type="number" />
+      <el-input v-model.number="program.rename_time" type="number" />
     </ConfigFormCol>
 
     <ConfigFormCol label="WebUI 端口" prop="program.webui_port">

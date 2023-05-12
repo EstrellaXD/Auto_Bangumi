@@ -5,14 +5,14 @@ import type {
   ProxyType,
   RenameMethod,
   RssParserLang,
+  RssParserMethodType,
   RssParserType,
 } from '#/config';
 
 export const form = reactive<Config>({
-  data_version: 4,
   program: {
-    sleep_time: 0,
-    rename_times: 0,
+    rss_time: 0,
+    rename_time: 0,
     webui_port: 0,
   },
   downloader: {
@@ -28,9 +28,9 @@ export const form = reactive<Config>({
     type: 'mikan',
     token: '',
     custom_url: '',
-    enable_tmdb: false,
     filter: [],
     language: 'zh',
+    parser_type: 'parser',
   },
   bangumi_manage: {
     enable: true,
@@ -60,10 +60,19 @@ export const form = reactive<Config>({
 
 export const downloaderType: DownloaderType = ['qbittorrent'];
 export const rssParserType: RssParserType = ['mikan'];
+export const rssParserMethodType: RssParserMethodType = [
+  'tmdb',
+  'mikan',
+  'parser',
+];
 export const rssParserLang: RssParserLang = ['zh', 'en', 'jp'];
 export const renameMethod: RenameMethod = ['normal', 'pn', 'advance', 'none'];
 export const proxyType: ProxyType = ['http', 'https', 'socks5'];
-export const notificationType: NotificationType = ['telegram', 'server-chan', 'bark'];
+export const notificationType: NotificationType = [
+  'telegram',
+  'server-chan',
+  'bark',
+];
 export const tfOptions = [
   { label: '是', value: true },
   { label: '否', value: false },

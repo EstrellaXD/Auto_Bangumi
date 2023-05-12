@@ -25,12 +25,12 @@ function restart() {
   ElMessageBox.confirm('该操作将重启程序!', {
     type: 'warning',
   })
-    .then(async () => {
+    .then(() => {
       appRestart()
-        .then(({ data }) => {
-          if (data.status === 'success') {
+        .then((res) => {
+          if (res) {
             ElMessage({
-              message: '正在重启, 请稍后刷新页面...',
+              message: '重启中...',
               type: 'success',
             });
           }
@@ -38,7 +38,7 @@ function restart() {
         .catch((error) => {
           console.error('🚀 ~ file: index.vue:41 ~ .then ~ error:', error);
           ElMessage({
-            message: '操作失败, 请重试!',
+            message: '操作失败, 请手动重启容器!',
             type: 'error',
           });
         });
@@ -51,7 +51,7 @@ function restart() {
   <section class="debug">
     <el-row :gutter="20">
       <!-- S 重置数据 -->
-      <el-col :xs="24" :sm="12" :lg="8">
+      <el-col :xs="24" :sm="12" :lg="8" mb-20px>
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">
@@ -69,7 +69,7 @@ function restart() {
       <!-- E 重置数据 -->
 
       <!-- S 重启程序 -->
-      <el-col :xs="24" :sm="12" :lg="8" style="display: none">
+      <el-col :xs="24" :sm="12" :lg="8" mb-20px>
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">

@@ -13,15 +13,15 @@ import BangumiData from './components/BangumiData.vue';
       <!-- E 番剧列表 -->
     </el-row>
 
-    <el-row :gutter="20">
+    <el-row :gutter="20" style="display: none">
       <!-- S 添加新番 -->
-      <el-col :xs="24" :sm="24" :md="12" :lg="8">
+      <el-col :xs="24" :sm="24" :md="12" :lg="8" mb-20px>
         <AddBangumi type="new" />
       </el-col>
       <!-- E 添加新番 -->
 
       <!-- S 添加旧番 -->
-      <el-col :xs="24" :sm="24" :md="12" :lg="8">
+      <el-col :xs="24" :sm="24" :md="12" :lg="8" mb-20px>
         <AddBangumi type="old" />
       </el-col>
       <!-- E 添加旧番 -->
