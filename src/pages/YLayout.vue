@@ -19,7 +19,7 @@ const { status } = storeToRefs(programStore());
           运行状态:
           <div
             class="i-carbon:dot-mark"
-            :class="{ 'text-red': !status, 'text-green': status }"
+            :class="[status ? 'text-green' : 'text-red']"
           ></div>
         </div>
       </el-header>
