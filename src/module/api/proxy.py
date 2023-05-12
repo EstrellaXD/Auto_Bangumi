@@ -12,7 +12,7 @@ from module.network import RequestContent
 logger = logging.getLogger(__name__)
 
 
-def get_rss(full_path):
+def get_rss_content(full_path):
     url = f"https://mikanani.me/RSS/{full_path}"
     custom_url = settings.rss_parser.custom_url
     if "://" not in custom_url:
@@ -31,27 +31,27 @@ def get_torrent(full_path):
 @router.get("/RSS/MyBangumi", tags=["proxy"])
 async def get_my_bangumi(token: str):
     full_path = "MyBangumi?token=" + token
-    content = get_rss(full_path)
+    content = get_rss_content(full_path)
     return Response(content, media_type="application/xml")
 
 
 @router.get("/RSS/Search", tags=["proxy"])
 async def get_search_result(searchstr: str):
     full_path = "Search?searchstr=" + searchstr
-    content = get_rss(full_path)
+    content = get_rss_content(full_path)
     return Response(content, media_type="application/xml")
 
 
 @router.get("/RSS/Bangumi", tags=["proxy"])
 async def get_bangumi(bangumiId: str, groupid: str):
     full_path = "Bangumi?bangumiId=" + bangumiId + "&groupid=" + groupid
-    content = get_rss(full_path)
+    content = get_rss_content(full_path)
     return Response(content, media_type="application/xml")
 
 
 @router.get("/RSS/{full_path:path}", tags=["proxy"])
 async def get_rss(full_path: str):
-    content = get_rss(full_path)
+    content = get_rss_content(full_path)
     return Response(content, media_type="application/xml")
 
 
