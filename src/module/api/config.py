@@ -17,6 +17,7 @@ async def get_config():
 async def update_config(config: Config):
     try:
         settings.save(config_dict=config.dict())
+        settings.load()
         logger.info("Config updated")
         return {"message": "Success"}
     except Exception as e:

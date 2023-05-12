@@ -1,3 +1,5 @@
+import sqlite3
+
 from .api import router
 
 from module.models import BangumiData
@@ -7,8 +9,11 @@ from module.manager import TorrentManager
 
 @router.get("/api/v1/bangumi/getAll", tags=["bangumi"], response_model=list[BangumiData])
 async def get_all_data():
-    with BangumiDatabase() as database:
-        return database.search_all()
+    try:
+        with BangumiDatabase() as database:
+            return database.search_all()
+    except sqlite3.OperationalError:
+        return []
 
 
 @router.get("/api/v1/bangumi/getData/{bangumi_id}", tags=["bangumi"], response_model=BangumiData)

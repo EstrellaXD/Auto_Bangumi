@@ -13,7 +13,7 @@ if VERSION != "DEV_VERSION":
     templates = Jinja2Templates(directory="templates")
 
     # HTML Response
-    @router.get("/#/{full_path:path}", response_class=HTMLResponse, tags=["html"])
+    @router.get("/{full_path:path}", response_class=HTMLResponse, tags=["html"])
     def index(request: Request):
         context = {"request": request}
         return templates.TemplateResponse("index.html", context)

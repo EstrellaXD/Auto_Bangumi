@@ -17,7 +17,8 @@ class QbDownloader:
             username=username,
             password=password,
             VERIFY_WEBUI_CERTIFICATE=ssl,
-            DISABLE_LOGGING_DEBUG_OUTPUT=True
+            DISABLE_LOGGING_DEBUG_OUTPUT=True,
+            REQUESTS_ARGS={'timeout': (3.1, 10)}
         )
         self.host = host
         self.username = username
