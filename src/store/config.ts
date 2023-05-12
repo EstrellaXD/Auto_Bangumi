@@ -33,7 +33,7 @@ export const configStore = defineStore('config', () => {
                 .then((res) => {
                   if (res) {
                     ElMessage({
-                      message: '正在重启, 请稍后刷新页面...',
+                      message: '重启中...',
                       type: 'success',
                     });
                   }
