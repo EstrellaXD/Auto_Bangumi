@@ -1,4 +1,4 @@
-export type BangumiItem = {
+export interface BangumiItem {
   id: number;
   official_title: string;
   year: string | null;
@@ -15,4 +15,4 @@ export type BangumiItem = {
   rss_link: string[];
   poster_link: string;
   added: boolean;
-};
+}

@@ -2,8 +2,8 @@
 import {
   form,
   rssParserLang,
-  rssParserType,
   rssParserMethodType,
+  rssParserType,
   tfOptions,
 } from '../form-data';
 
@@ -60,7 +60,7 @@ watch(filter, (nv) => {
     <ConfigFormCol label="解析类型">
       <el-select v-model="rssParser.parser_type" flex-1>
         <el-option
-          v-for="(opt, index) in rssParserMethodType"
+          v-for="opt in rssParserMethodType"
           :key="opt"
           :value="opt"
         ></el-option>

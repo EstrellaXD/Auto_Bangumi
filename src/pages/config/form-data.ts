@@ -5,8 +5,8 @@ import type {
   ProxyType,
   RenameMethod,
   RssParserLang,
-  RssParserType,
   RssParserMethodType,
+  RssParserType,
 } from '#/config';
 
 export const form = reactive<Config>({
