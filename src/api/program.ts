@@ -1,7 +1,10 @@
 import axios from 'axios';
 
 /** 重启 */
-export const appRestart = () => axios.get('api/v1/restart');
+export async function appRestart() {
+  const { data } = await axios.get<{ status: 'ok' }>('api/v1/restart');
+  return data.status === 'ok';
+}
 
 /** 启动 */
 export const appStart = () => axios.get('api/v1/start');

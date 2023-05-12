@@ -1,6 +1,9 @@
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import { getConfig, setConfig } from '@/api/config';
+import { appRestart } from '@/api/program';
 import type { Config } from '#/config';
+
+const { status } = storeToRefs(programStore());
 
 export const configStore = defineStore('config', () => {
   const config = ref<Config>();
@@ -13,13 +16,41 @@ export const configStore = defineStore('config', () => {
     let finalConfig: Config;
     if (config.value !== undefined) {
       finalConfig = Object.assign(config.value, newConfig);
-      const { message } = await setConfig(finalConfig);
+      const res = await setConfig(finalConfig);
 
-      if (message === 'Success') {
+      if (res) {
         ElMessage({
-          message: '保存成功, 请重启容器以应用新的配置！',
+          message: '保存成功！',
           type: 'success',
         });
+
+        if (!status.value) {
+          ElMessageBox.confirm('当前程序没有运行，是否重启?', {
+            type: 'warning',
+          })
+            .then(() => {
+              appRestart()
+                .then((res) => {
+                  if (res) {
+                    ElMessage({
+                      message: '正在重启, 请稍后刷新页面...',
+                      type: 'success',
+                    });
+                  }
+                })
+                .catch((error) => {
+                  console.error(
+                    '🚀 ~ file: index.vue:41 ~ .then ~ error:',
+                    error
+                  );
+                  ElMessage({
+                    message: '操作失败, 请手动重启容器!',
+                    type: 'error',
+                  });
+                });
+            })
+            .catch(() => {});
+        }
       } else {
         ElMessage({
           message: '保存失败, 请重试!',
