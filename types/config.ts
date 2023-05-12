@@ -1,10 +1,9 @@
 import type { UnionToTuple } from '#/utils';
 
 export interface Config {
-  data_version: 4;
   program: {
-    sleep_time: number;
-    rename_times: number;
+    rss_time: number;
+    rename_time: number;
     webui_port: number;
   };
   downloader: {
@@ -20,9 +19,9 @@ export interface Config {
     type: 'mikan';
     token: string;
     custom_url: string;
-    enable_tmdb: boolean;
     filter: Array<string>;
     language: 'zh' | 'en' | 'jp';
+    parser_type: 'tmdb' | 'mikan' | 'parser';
   };
   bangumi_manage: {
     enable: boolean;
@@ -64,6 +63,8 @@ export type Notification = getItem<'notification'>;
 export type DownloaderType = UnionToTuple<Downloader['type']>;
 /** rss parser 源 */
 export type RssParserType = UnionToTuple<RssParser['type']>;
+/** rss parser 方法 */
+export type RssParserMethodType = UnionToTuple<RssParser['parser_type']>;
 /** rss parser 语言 */
 export type RssParserLang = UnionToTuple<RssParser['language']>;
 /** 重命名方式 */

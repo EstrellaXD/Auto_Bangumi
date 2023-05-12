@@ -28,7 +28,7 @@ const proxy = computed(() => form.proxy);
       </el-select>
     </ConfigFormCol>
 
-    <ConfigFormCol label="ip" prop="proxy.host">
+    <ConfigFormCol label="host" prop="proxy.host">
       <el-input v-model="proxy.host"></el-input>
     </ConfigFormCol>
 

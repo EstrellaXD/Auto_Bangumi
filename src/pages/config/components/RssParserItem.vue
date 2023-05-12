@@ -1,5 +1,11 @@
 <script lang="ts" setup>
-import { form, rssParserLang, rssParserType, tfOptions } from '../form-data';
+import {
+  form,
+  rssParserLang,
+  rssParserType,
+  rssParserMethodType,
+  tfOptions,
+} from '../form-data';
 
 const rssParser = computed(() => form.rss_parser);
 
@@ -51,13 +57,12 @@ watch(filter, (nv) => {
       <el-input v-model="rssParser.custom_url"></el-input>
     </ConfigFormCol>
 
-    <ConfigFormCol label="TMDB 解析">
-      <el-select v-model="rssParser.enable_tmdb" flex-1>
+    <ConfigFormCol label="解析类型">
+      <el-select v-model="rssParser.parser_type" flex-1>
         <el-option
-          v-for="(opt, index) in tfOptions"
-          :key="index"
-          :label="opt.label"
-          :value="opt.value"
+          v-for="(opt, index) in rssParserMethodType"
+          :key="opt"
+          :value="opt"
         ></el-option>
       </el-select>
     </ConfigFormCol>
