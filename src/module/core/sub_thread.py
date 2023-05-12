@@ -10,7 +10,7 @@ from module.rss import RSSAnalyser, add_rules
 from module.manager import Renamer, FullSeasonGet
 from module.database import BangumiDatabase
 from module.downloader import DownloadClient
-from module.conf import settings, VERSION, DATA_PATH, LOG_PATH
+from module.conf import settings, VERSION, DATA_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -72,13 +72,14 @@ def start_thread():
         stop_event.clear()
         time.sleep(1)
         settings.load()
-        rss_thread = threading.Thread(target=rss_loop, args=(stop_event,))
-        rename_thread = threading.Thread(target=rename_loop, args=(stop_event,))
-        if settings.rss_parser.enable:
-            rss_thread.start()
-        if settings.bangumi_manage.enable:
-            rename_thread.start()
-        return {"status": "ok"}
+        if check_status():
+            rss_thread = threading.Thread(target=rss_loop, args=(stop_event,))
+            rename_thread = threading.Thread(target=rename_loop, args=(stop_event,))
+            if settings.rss_parser.enable:
+                rss_thread.start()
+            if settings.bangumi_manage.enable:
+                rename_thread.start()
+            return {"status": "ok"}
 
 
 def first_run():
