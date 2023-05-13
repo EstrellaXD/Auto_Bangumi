@@ -1,0 +1,13 @@
+@mixin bg-mouse-event($normal, $hover, $active) {
+  background: $normal;
+  transition: background 0.3s;
+
+  &:hover {
+    background: $hover;
+  }
+
+  &:active {
+    transition: none;
+    background: $active;
+  }
+}

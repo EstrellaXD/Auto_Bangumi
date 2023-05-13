@@ -6,7 +6,6 @@ import AutoImport from 'unplugin-auto-import/vite';
 import Components from 'unplugin-vue-components/vite';
 import VueRouter from 'unplugin-vue-router/vite';
 import { VueRouterAutoImports } from 'unplugin-vue-router';
-import { HeadlessUiResolver } from 'unplugin-vue-components/resolvers';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -25,9 +24,15 @@ export default defineConfig({
     Components({
       dts: 'src/components.d.ts',
       dirs: ['src/basic'],
-      resolvers: [HeadlessUiResolver()],
     }),
   ],
+  css: {
+    preprocessorOptions: {
+      scss: {
+        additionalData: '@import "./src/style/mixin.scss";',
+      },
+    },
+  },
   build: {
     cssCodeSplit: false,
   },
