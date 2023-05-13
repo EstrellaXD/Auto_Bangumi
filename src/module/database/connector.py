@@ -28,6 +28,18 @@ class DataConnector:
         self._conn.commit()
         logger.debug(f"Create / Update table {table_name}.")
 
+    def _insert(self, table_name: str,  db_data: dict):
+        columns = ", ".join(db_data.keys())
+        values = ", ".join([f":{key}" for key in db_data.keys()])
+        self._cursor.execute(f"INSERT INTO {table_name} ({columns}) VALUES ({values})", db_data)
+        self._conn.commit()
+
+    def _insert_list(self, table_name: str, data_list: list[dict]):
+        columns = ", ".join(data_list[0].keys())
+        values = ", ".join([f":{key}" for key in data_list[0].keys()])
+        self._cursor.executemany(f"INSERT INTO {table_name} ({columns}) VALUES ({values})", data_list)
+        self._conn.commit()
+
     @staticmethod
     def __python_to_sqlite_type(value) -> str:
         if isinstance(value, int):
