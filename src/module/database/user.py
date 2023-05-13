@@ -8,7 +8,19 @@ from module.models import UserLogin
 
 class AuthDB(DataConnector):
     def update_table(self):
-        pass
+        table_name = "user"
+        db_data = self.__data_to_db(UserLogin())
+        self._update_table(table_name, db_data)
+
+    @staticmethod
+    def __data_to_db(data: UserLogin) -> dict:
+        db_data = data.dict()
+        db_data["password"] = get_password_hash(db_data["password"])
+        return db_data
+
+    @staticmethod
+    def __db_to_data(db_data: dict) -> UserLogin:
+        return UserLogin(**db_data)
 
     def auth_user(self, user: UserLogin) -> bool:
         username = user.username

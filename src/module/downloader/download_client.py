@@ -17,8 +17,6 @@ class DownloadClient:
     def __init__(self):
         self.client = self.__getClient()
         self.authed = False
-        self.download_path = settings.downloader.path
-        self.group_tag = settings.bangumi_manage.group_tag
 
     @staticmethod
     def __getClient():
@@ -62,9 +60,9 @@ class DownloadClient:
         except Exception as e:
             logger.warning("Cannot add new category, maybe already exists.")
             logger.debug(e)
-        if self.download_path == "":
+        if settings.downloader.path == "":
             prefs = self.client.get_app_prefs()
-            self.download_path = path.join(prefs["save_path"], "Bangumi")
+            settings.downloader.path = path.join(prefs["save_path"], "Bangumi")
 
     def set_rule(self, info: BangumiData):
         official_name = f"{info.official_title}({info.year})" if info.year else info.official_title
@@ -88,13 +86,15 @@ class DownloadClient:
             "assignedCategory": "Bangumi",
             "savePath": str(
                 path.join(
-                    self.download_path,
+                    settings.downloader.path,
                     re.sub(r"[:/.]", " ", official_name).strip(),
                     f"Season {season}",
                 )
             ),
         }
-        rule_name = f"[{group}] {official_name}" if self.group_tag else official_name
+        rule_name = f"[{group}] {official_name}" \
+            if settings.bangumi_manage.group_tag \
+            else official_name
         self.client.rss_set_rule(rule_name=f"{rule_name} S{season}", rule_def=rule)
         logger.info(f"Add {official_name} Season {season} to auto download rules.")
 
