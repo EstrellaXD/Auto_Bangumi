@@ -55,7 +55,8 @@ class RequestURL:
         if "://" not in url:
             url = f"http://{url}"
         try:
-            req = self.session.head(url=url, headers=self.header, timeout=5)
+
+            req = requests.head(url=url, headers=self.header, timeout=5)
             req.raise_for_status()
             return True
         except requests.RequestException as e:
