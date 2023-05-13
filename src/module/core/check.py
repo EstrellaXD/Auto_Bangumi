@@ -19,6 +19,10 @@ def check_status() -> bool:
 
 
 def check_downloader():
+    with RequestContent() as req:
+        if not req.check_connection():
+            logger.warning("Can't connect to downloader")
+            return False
     with DownloadClient() as client:
         if client.authed:
             logger.debug("Downloader is running")

@@ -68,20 +68,23 @@ def stop_thread():
 
 def start_thread():
     global rss_thread, rename_thread
-    if not check_status():
-        stop_event.set()
-        return {"status": "start failed"}
     if stop_event.is_set():
-        stop_event.clear()
         time.sleep(1)
         settings.load()
-        rss_thread = threading.Thread(target=rss_loop, args=(stop_event,))
-        rename_thread = threading.Thread(target=rename_loop, args=(stop_event,))
-        if settings.rss_parser.enable:
-            rss_thread.start()
-        if settings.bangumi_manage.enable:
-            rename_thread.start()
-        return {"status": "ok"}
+        stop_event.clear()
+    else:
+        return {"status": "Program is running."}
+    if not check_status():
+        stop_event.set()
+        logger.info("Program paused.")
+        return {"status": "start failed"}
+    rss_thread = threading.Thread(target=rss_loop, args=(stop_event,))
+    rename_thread = threading.Thread(target=rename_loop, args=(stop_event,))
+    if settings.rss_parser.enable:
+        rss_thread.start()
+    if settings.bangumi_manage.enable:
+        rename_thread.start()
+    return {"status": "Restart successfully."}
 
 
 def first_run():

@@ -16,9 +16,9 @@ class RequestURL:
 
     def get_url(self, url):
         try_time = 0
-        while try_time < 5:
+        while try_time < 3:
             try:
-                req = self.session.get(url=url, headers=self.header)
+                req = self.session.get(url=url, headers=self.header, timeout=5)
                 req.raise_for_status()
                 return req
             except requests.RequestException as e:
@@ -35,9 +35,9 @@ class RequestURL:
 
     def post_url(self, url: str, data: dict):
         try_time = 0
-        while try_time < 5:
+        while try_time < 3:
             try:
-                req = self.session.post(url=url, headers=self.header, data=data)
+                req = self.session.post(url=url, headers=self.header, data=data, timeout=5)
                 req.raise_for_status()
                 return req
             except requests.RequestException as e:
@@ -50,6 +50,17 @@ class RequestURL:
                 logger.debug(f"URL: {url}")
                 logger.debug(e)
                 break
+
+    def check_url(self, url: str):
+        if "://" not in url:
+            url = f"http://{url}"
+        try:
+            req = self.session.head(url=url, headers=self.header, timeout=5)
+            req.raise_for_status()
+            return True
+        except requests.RequestException as e:
+            logger.debug(f"Cannot connect to {url}.")
+            return False
 
     def __enter__(self):
         self.session = requests.Session()

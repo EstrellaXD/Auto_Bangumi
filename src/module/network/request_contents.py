@@ -66,3 +66,6 @@ class RequestContent(RequestURL):
 
     def get_content(self, _url):
         return self.get_url(_url).content
+
+    def check_connection(self, _url=settings.downloader.host):
+        return self.check_url(_url)
