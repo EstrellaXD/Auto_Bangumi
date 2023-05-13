@@ -4,23 +4,28 @@ import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import AutoImport from 'unplugin-auto-import/vite';
 import Components from 'unplugin-vue-components/vite';
-import { ElementPlusResolver } from 'unplugin-vue-components/resolvers';
+import VueRouter from 'unplugin-vue-router/vite';
+import { VueRouterAutoImports } from 'unplugin-vue-router';
+import { HeadlessUiResolver } from 'unplugin-vue-components/resolvers';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   base: './',
   plugins: [
+    VueRouter({
+      dts: 'src/router-type.d.ts',
+    }),
     vue(),
     UnoCSS(),
     AutoImport({
-      imports: ['vue', 'vue-router', 'vitest', 'pinia'],
+      imports: ['vue', 'vitest', 'pinia', '@vueuse/core', VueRouterAutoImports],
       dts: 'src/auto-imports.d.ts',
-      resolvers: [ElementPlusResolver()],
-      dirs: ['src/store', 'src/hooks'],
+      dirs: ['src/api', 'src/store', 'src/hooks'],
     }),
     Components({
       dts: 'src/components.d.ts',
-      resolvers: [ElementPlusResolver()],
+      dirs: ['src/basic'],
+      resolvers: [HeadlessUiResolver()],
     }),
   ],
   build: {
@@ -35,7 +40,7 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     proxy: {
-      '^/api/.*': 'http://127.0.0.1:7892',
+      '^api/.*': 'http://126.0.0.1:7892',
     },
   },
 });
