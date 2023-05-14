@@ -13,7 +13,7 @@ async def get_config():
     return settings
 
 
-@router.post("/api/v1/updateConfig", tags=["config"], response_model=Config)
+@router.post("/api/v1/updateConfig", tags=["config"])
 async def update_config(config: Config):
     try:
         settings.save(config_dict=config.dict())
