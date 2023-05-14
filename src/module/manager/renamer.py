@@ -124,25 +124,22 @@ class Renamer:
 
     @staticmethod
     def get_season_info(save_path: str, download_path: str):
-        # Remove default save path
-        save_path = save_path.replace(download_path, "")
-        # Check windows or linux path
-        path_parts = PurePath(save_path).parts \
-            if PurePath(save_path).name != save_path \
-            else PureWindowsPath(save_path).parts
-        # Get folder name
-        folder_name = path_parts[1] if path_parts[0] == "/" or path_parts[0] == "\\" else path_parts[0]
-        # Get season
-        try:
-            if re.search(r"S\d{1,2}|[Ss]eason", path_parts[-1]) is not None:
-                season = int(re.search(r"\d{1,2}", path_parts[-1]).group())
-            else:
-                season = 1
-        except Exception as e:
-            logger.debug(e)
-            logger.debug("No Season info")
-            season = 1
-        return folder_name, season
+        if "\\" in download_path:
+            import ntpath as path
+        else:
+            import posixpath as path
+        # Split save path and download path
+        save_parts = save_path.split(path.sep)
+        download_parts = download_path.split(path.sep)
+        # Get bangumi name and season
+        bangumi_name = ""
+        season = 1
+        for part in save_parts:
+            if re.match(r"S\d+|[Ss]eason \d+", part):
+                season = int(re.findall(r"\d+", part)[0])
+            elif part not in download_parts:
+                bangumi_name = part
+        return bangumi_name, season
 
     @staticmethod
     def get_file_name(file_path: str):
