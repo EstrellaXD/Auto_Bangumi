@@ -9,11 +9,11 @@ logger = logging.getLogger(__name__)
 class BangumiDatabase(DataConnector):
     def __init__(self):
         super().__init__()
+        self.__table_name = "bangumi"
 
     def update_table(self):
-        table_name = "bangumi"
         db_data = self.__data_to_db(BangumiData())
-        self._update_table(table_name, db_data)
+        self._update_table(self.__table_name, db_data)
 
     @staticmethod
     def __data_to_db(data: BangumiData) -> dict:
@@ -45,19 +45,13 @@ class BangumiDatabase(DataConnector):
 
     def insert(self, data: BangumiData):
         db_data = self.__data_to_db(data)
-        columns = ", ".join(db_data.keys())
-        values = ", ".join([f":{key}" for key in db_data.keys()])
-        self._cursor.execute(f"INSERT INTO bangumi ({columns}) VALUES ({values})", db_data)
-        logger.debug(f"Add {data.official_title} into database.")
-        self._conn.commit()
+        self._insert(db_data=db_data, table_name=self.__table_name)
+        logger.debug(f"Insert {data.official_title} into database.")
 
     def insert_list(self, data: list[BangumiData]):
-        db_data = [self.__data_to_db(x) for x in data]
-        columns = ", ".join(db_data[0].keys())
-        values = ", ".join([f":{key}" for key in db_data[0].keys()])
-        self._cursor.executemany(f"INSERT INTO bangumi ({columns}) VALUES ({values})", db_data)
-        logger.debug(f"Add {len(data)} bangumi into database.")
-        self._conn.commit()
+        data_list = [self.__data_to_db(x) for x in data]
+        self._insert_list(data_list=data_list, table_name=self.__table_name)
+        logger.debug(f"Insert {len(data)} bangumi into database.")
 
     def update_one(self, data: BangumiData) -> bool:
         db_data = self.__data_to_db(data)
@@ -97,13 +91,7 @@ class BangumiDatabase(DataConnector):
         return self._cursor.rowcount == 1
 
     def delete_all(self):
-        self._cursor.execute(
-            """
-            DELETE FROM bangumi
-            """
-        )
-        self._conn.commit()
-        logger.debug("Delete all bangumi.")
+        self._delete_all(self.__table_name)
 
     def search_all(self) -> list[BangumiData]:
         self._cursor.execute(
