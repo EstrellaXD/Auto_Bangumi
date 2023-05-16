@@ -56,3 +56,16 @@ def test_torrent_parser():
     assert sf.episode == 1
     assert sf.language == "zh"
 
+    file_name = "水星的魔女(2022) S00E19.mp4"
+    bf = torrent_parser(file_name, season=0)
+    assert bf.title == "水星的魔女(2022)"
+    assert bf.season == 0
+    assert bf.episode == 19
+
+    file_name = "【失眠搬运组】放学后失眠的你-Kimi wa Houkago Insomnia - 06 [bilibili - 1080p AVC1 CHS-JP].mp4"
+    bf = torrent_parser(file_name, season=1)
+    assert bf.title == "放学后失眠的你-Kimi wa Houkago Insomnia"
+    assert bf.season == 1
+    assert bf.episode == 6
+
+
