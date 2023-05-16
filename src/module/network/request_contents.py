@@ -12,6 +12,22 @@ class TorrentInfo:
     name: str
     torrent_link: str
     homepage: str = None
+    _poster_link: str = None
+    _official_title: str = None
+
+    @property
+    def poster_link(self) -> str:
+        if self._poster_link is None:
+            with RequestContent() as req:
+                self._poster_link, self._official_title = req.get_mikan_info(self.homepage)
+        return self._poster_link
+
+    @property
+    def official_title(self) -> str:
+        if self._official_title is None:
+            with RequestContent() as req:
+                self._poster_link, self._official_title = req.get_mikan_info(self.homepage)
+        return self._official_title
 
 
 class RequestContent(RequestURL):
@@ -67,5 +83,5 @@ class RequestContent(RequestURL):
     def get_content(self, _url):
         return self.get_url(_url).content
 
-    def check_connection(self, _url=settings.downloader.host):
+    def check_connection(self, _url):
         return self.check_url(_url)

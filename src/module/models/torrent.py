@@ -4,6 +4,9 @@ from pydantic import BaseModel, Field
 class TorrentInfo(BaseModel):
     name: str = Field(...)
     link: str = Field(...)
+    homepage: str | None = Field(None)
+    poster_link: str = Field(...)
+    official_title: str = Field(...)
 
 
 class FileSet(BaseModel):

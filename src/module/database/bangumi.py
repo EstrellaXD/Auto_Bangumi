@@ -157,7 +157,7 @@ class BangumiDatabase(DataConnector):
                     return poster_link
         return ""
 
-    def match_list(self, title_dict: dict, rss_link: str) -> dict:
+    def match_list(self, torrent_list: list, rss_link: str) -> list:
         # Match title_raw in database
         self._cursor.execute(
             """
@@ -166,17 +166,21 @@ class BangumiDatabase(DataConnector):
         )
         data = self._cursor.fetchall()
         if not data:
-            return title_dict
+            return torrent_list
         # Match title
-        for title in title_dict.copy().keys():
+        i = 0
+        while i < len(torrent_list):
+            torrent = torrent_list[i]
             for title_raw, rss_set in data:
-                if title_raw in title:
+                if title_raw in torrent.name:
                     if rss_link not in rss_set:
                         rss_set += "," + rss_link
                         self.update_rss(title_raw, rss_set)
-                    title_dict.pop(title)
+                    torrent_list.pop(i)
                     break
-        return title_dict
+            else:
+                i += 1
+        return torrent_list
 
     def not_complete(self) -> list[BangumiData]:
         # Find eps_complete = False
