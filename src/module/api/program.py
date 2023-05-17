@@ -2,46 +2,58 @@ import os
 import signal
 import logging
 
+from fastapi.exceptions import HTTPException
+
 from .download import router
 
-from module.core import start_thread, start_program, stop_thread, stop_event, check_status, check_rss, check_downloader
+from module.core import Program, check_status, check_rss, check_downloader
 
 logger = logging.getLogger(__name__)
+program = Program()
 
 
 @router.on_event("startup")
 async def startup():
-    await start_program()
+    await program.startup()
 
 
 @router.on_event("shutdown")
 async def shutdown():
-    stop_event.set()
+    await program.stop()
     logger.info("Stopping program...")
 
 
 @router.get("/api/v1/restart", tags=["program"])
 async def restart():
-    stop_thread()
-    start_thread()
-    return {"status": "ok"}
+    try:
+        await program.restart()
+        return {"status": "ok"}
+    except Exception as e:
+        logger.debug(e)
+        logger.warning("Failed to restart program")
+        raise HTTPException(status_code=500, detail="Failed to restart program")
 
 
 @router.get("/api/v1/start", tags=["program"])
 async def start():
-    start_thread()
-    return {"status": "ok"}
+    try:
+        await program.start()
+        return {"status": "ok"}
+    except Exception as e:
+        logger.debug(e)
+        logger.warning("Failed to start program")
+        raise HTTPException(status_code=500, detail="Failed to start program")
 
 
 @router.get("/api/v1/stop", tags=["program"])
 async def stop():
-    stop_thread()
+    await program.stop()
     return {"status": "ok"}
 
 
 @router.get("/api/v1/status", tags=["program"])
 async def status():
-    if stop_event.is_set():
+    if not program.is_running:
         return {"status": "stop"}
     else:
         return {"status": "running"}
@@ -49,7 +61,7 @@ async def status():
 
 @router.get("/api/v1/shutdown", tags=["program"])
 async def shutdown_program():
-    stop_thread()
+    await program.stop()
     logger.info("Shutting down program...")
     os.kill(os.getpid(), signal.SIGINT)
     return {"status": "ok"}

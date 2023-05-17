@@ -67,7 +67,7 @@ class RSSAnalyser:
             database.insert_list(new_data)
         return new_data
 
-    def run(self, rss_link: str):
+    def run(self, rss_link: str = settings.rss_link):
         logger.info("Start collecting RSS info.")
         try:
             self.rss_to_data(rss_link)

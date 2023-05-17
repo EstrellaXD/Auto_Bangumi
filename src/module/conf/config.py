@@ -49,7 +49,8 @@ class Settings(Config):
         with open(CONFIG_PATH, "w", encoding="utf-8") as f:
             json.dump(config_dict, f, indent=4)
 
-    def rss_link(self):
+    @property
+    def rss_link(self) -> str:
         if "://" not in self.rss_parser.custom_url:
             return f"https://{self.rss_parser.custom_url}/RSS/MyBangumi?token={self.rss_parser.token}"
         return (

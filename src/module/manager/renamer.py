@@ -193,6 +193,7 @@ class Renamer(DownloadClient):
 
     def rename(self):
         # Get torrent info
+        logger.debug("Start rename process.")
         download_path = settings.downloader.path
         rename_method = settings.bangumi_manage.rename_method
         recent_info, torrent_count = self.rename_info()
@@ -237,3 +238,4 @@ class Renamer(DownloadClient):
                     )
             else:
                 logger.warning(f"{info.name} has no media file")
+        logger.debug("Rename process finished.")

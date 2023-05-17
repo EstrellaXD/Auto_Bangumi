@@ -1,118 +1,69 @@
-import os.path
-import time
-import logging
 import threading
 
-from .data_migration import data_migration
-from .check import check_status
+from .status import ProgramStatus
 
 from module.rss import RSSAnalyser, add_rules
 from module.manager import Renamer, FullSeasonGet
-from module.database import BangumiDatabase
-from module.downloader import DownloadClient
-from module.conf import settings, VERSION, DATA_PATH
-
-logger = logging.getLogger(__name__)
-
-stop_event = threading.Event()
+from module.conf import settings
 
 
-def rss_loop(stop_event):
-    rss_analyser = RSSAnalyser()
-    rss_link = settings.rss_link()
-    while not stop_event.is_set():
-        rss_analyser.run(rss_link)
-        add_rules()
-        if settings.bangumi_manage.eps_complete:
-            with FullSeasonGet() as full_season_get:
-                full_season_get.eps_complete()
-        stop_event.wait(settings.program.rss_time)
+class RSSThread(ProgramStatus):
+    def __init__(self):
+        super().__init__()
+        self._rss_thread = threading.Thread(
+            target=self.rss_loop,
+        )
+
+    def rss_loop(self):
+        rss_analyser = RSSAnalyser()
+        while not self.stop_event.is_set():
+            rss_analyser.run()
+            add_rules()
+            if settings.bangumi_manage.eps_complete:
+                with FullSeasonGet() as full_season_get:
+                    full_season_get.eps_complete()
+            self.stop_event.wait(settings.program.rss_time)
+
+    def rss_start(self):
+        self.rss_thread.start()
+
+    def rss_stop(self):
+        if self._rss_thread.is_alive():
+            self._rss_thread.join()
+
+    @property
+    def rss_thread(self):
+        if not self._rss_thread.is_alive():
+            self._rss_thread = threading.Thread(
+                target=self.rss_loop,
+            )
+        return self._rss_thread
 
 
-def rename_loop(stop_event):
-    while not stop_event.is_set():
-        with Renamer() as renamer:
-            renamer.rename()
-        stop_event.wait(settings.program.rename_time)
+class RenameThread(ProgramStatus):
+    def __init__(self):
+        super().__init__()
+        self._rename_thread = threading.Thread(
+            target=self.rename_loop,
+        )
 
+    def rename_loop(self):
+        while not self.stop_event.is_set():
+            with Renamer() as renamer:
+                renamer.rename()
+            self.stop_event.wait(settings.program.rename_time)
 
-rss_thread = threading.Thread(
-    target=rss_loop,
-    args=(stop_event,),
-)
+    def rename_start(self):
+        self.rename_thread.start()
 
-rename_thread = threading.Thread(
-    target=rename_loop,
-    args=(stop_event,),
-)
+    def rename_stop(self):
+        if self._rename_thread.is_alive():
+            self._rename_thread.join()
 
-
-def start_info():
-    with open("icon", "r") as f:
-        for line in f.readlines():
-            logger.info(line.strip("\n"))
-    logger.info(
-        f"Version {VERSION}  Author: EstrellaXD Twitter: https://twitter.com/Estrella_Pan"
-    )
-    logger.info("GitHub: https://github.com/EstrellaXD/Auto_Bangumi/")
-    logger.info("Starting AutoBangumi...")
-
-
-def stop_thread():
-    global rss_thread, rename_thread
-    if not stop_event.is_set():
-        stop_event.set()
-        rename_thread.join()
-        rss_thread.join()
-
-
-def start_thread():
-    global rss_thread, rename_thread
-    if stop_event.is_set():
-        time.sleep(1)
-        settings.load()
-        stop_event.clear()
-    else:
-        return {"status": "Program is running."}
-    if not check_status():
-        stop_event.set()
-        logger.info("Program paused.")
-        return {"status": "start failed"}
-    rss_thread = threading.Thread(target=rss_loop, args=(stop_event,))
-    rename_thread = threading.Thread(target=rename_loop, args=(stop_event,))
-    if settings.rss_parser.enable:
-        rss_thread.start()
-    if settings.bangumi_manage.enable:
-        rename_thread.start()
-    return {"status": "Restart successfully."}
-
-
-def first_run():
-    if not os.path.exists(DATA_PATH):
-        if data_migration():
-            logger.info("Updated, data migration completed.")
-        else:
-            logger.info("First run, init downloader.")
-            with DownloadClient() as client:
-                client.init_downloader()
-                client.add_rss_feed(settings.rss_link())
-
-
-async def start_program():
-    global rss_thread, rename_thread
-    start_info()
-    if not check_status():
-        stop_event.set()
-        logger.info("Program paused.")
-    else:
-        first_run()
-        with BangumiDatabase() as database:
-            database.update_table()
-        rss_thread = threading.Thread(target=rss_loop, args=(stop_event,))
-        rename_thread = threading.Thread(target=rename_loop, args=(stop_event,))
-        if settings.rss_parser.enable:
-            rss_thread.start()
-        if settings.bangumi_manage.enable:
-            rename_thread.start()
-
-
+    @property
+    def rename_thread(self):
+        if not self._rename_thread.is_alive():
+            self._rename_thread = threading.Thread(
+                target=self.rename_loop,
+            )
+        return self._rename_thread

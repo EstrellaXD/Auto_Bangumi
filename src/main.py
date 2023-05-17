@@ -4,8 +4,7 @@ import uvicorn
 from module.api import router
 from module.conf import settings, setup_logger
 
-log_level = logging.DEBUG if settings.log.debug_enable else logging.INFO
-setup_logger(log_level, reset=True)
+setup_logger(reset=True)
 logger = logging.getLogger(__name__)
 uvicorn_logging_config = {
     "version": 1,
@@ -13,7 +12,7 @@ uvicorn_logging_config = {
     "handlers": logger.handlers,
     "loggers": {
         "uvicorn": {
-            "level": log_level,
+            "level": logger.level,
         },
         "uvicorn.access": {
             "level": "WARNING",
