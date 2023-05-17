@@ -2,6 +2,7 @@ import re
 import logging
 
 from fastapi.responses import Response
+from fastapi.exceptions import HTTPException
 
 from .program import router
 
@@ -17,15 +18,25 @@ def get_rss_content(full_path):
     custom_url = settings.rss_parser.custom_url
     if "://" not in custom_url:
         custom_url = f"https://{custom_url}"
-    with RequestContent() as request:
-        content = request.get_html(url)
-    return re.sub(r"https://mikanani.me", custom_url, content)
+    try:
+        with RequestContent() as request:
+            content = request.get_html(url)
+            return re.sub(r"https://mikanani.me", custom_url, content)
+    except Exception as e:
+        logger.debug(e)
+        logger.warning("Failed to get RSS content")
+        raise HTTPException(status_code=500, detail="Failed to get RSS content")
 
 
 def get_torrent(full_path):
     url = f"https://mikanani.me/Download/{full_path}"
-    with RequestContent() as request:
-        return request.get_content(url)
+    try:
+        with RequestContent() as request:
+            return request.get_content(url)
+    except Exception as e:
+        logger.debug(e)
+        logger.warning("Failed to get torrent")
+        raise HTTPException(status_code=500, detail="Failed to get torrent")
 
     
 @router.get("/RSS/MyBangumi", tags=["proxy"])
