@@ -11,18 +11,13 @@ def check_status() -> bool:
     if settings.rss_parser.token in ["", "token"]:
         logger.warning("Please set RSS token")
         return False
-    if check_rss():
-        if check_downloader():
-            logger.debug("All check passed")
-            return True
+    if check_downloader():
+        logger.debug("All check passed")
+        return True
     return False
 
 
 def check_downloader():
-    with RequestContent() as req:
-        if not req.check_connection():
-            logger.warning("Can't connect to downloader")
-            return False
     with DownloadClient() as client:
         if client.authed:
             logger.debug("Downloader is running")

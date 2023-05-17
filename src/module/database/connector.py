@@ -40,6 +40,10 @@ class DataConnector:
         self._cursor.executemany(f"INSERT INTO {table_name} ({columns}) VALUES ({values})", data_list)
         self._conn.commit()
 
+    def _delete_all(self, table_name: str):
+        self._cursor.execute(f"DELETE FROM {table_name}")
+        self._conn.commit()
+
     @staticmethod
     def __python_to_sqlite_type(value) -> str:
         if isinstance(value, int):
