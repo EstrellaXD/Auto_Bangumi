@@ -1,6 +1,6 @@
 import sqlite3
 
-from .api import router
+from .log import router
 
 from module.models import BangumiData
 from module.database import BangumiDatabase

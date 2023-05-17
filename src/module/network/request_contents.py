@@ -35,9 +35,10 @@ class RequestContent(RequestURL):
     def get_torrents(
             self,
             _url: str,
-            _filter: str = "|".join(settings.rss_parser.filter)
+            _filter: str = "|".join(settings.rss_parser.filter),
+            retry: int = 3
     ) -> [TorrentInfo]:
-        soup = self.get_xml(_url)
+        soup = self.get_xml(_url, retry)
         torrent_titles = []
         torrent_urls = []
         torrent_homepage = []
@@ -64,8 +65,8 @@ class RequestContent(RequestURL):
             return poster_path, official_title
         return "", ""
 
-    def get_xml(self, _url) -> xml.etree.ElementTree.Element:
-        return xml.etree.ElementTree.fromstring(self.get_url(_url).text)
+    def get_xml(self, _url, retry: int = 3) -> xml.etree.ElementTree.Element:
+        return xml.etree.ElementTree.fromstring(self.get_url(_url, retry).text)
 
     # API JSON
     def get_json(self, _url) -> dict:

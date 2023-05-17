@@ -36,11 +36,13 @@ class Checker:
     def check_torrents() -> bool:
         with RequestContent() as req:
             try:
-                torrents = req.get_torrents(settings.rss_link)
+                torrents = req.get_torrents(settings.rss_link, retry=2)
                 if torrents:
                     return True
             except AttributeError:
-                pass
+                link = f"https://mikanani.me/RSS/MyBangumi?token={settings.rss_parser.token}"
+                if req.get_torrents(link):
+                    return True
         return False
 
     @staticmethod

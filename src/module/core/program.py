@@ -19,7 +19,7 @@ class Program(RenameThread, RSSThread):
         logger.info("GitHub: https://github.com/EstrellaXD/Auto_Bangumi/")
         logger.info("Starting AutoBangumi...")
 
-    async def startup(self):
+    def startup(self):
         self.__start_info()
         self.start()
 

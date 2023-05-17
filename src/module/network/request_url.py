@@ -14,9 +14,9 @@ class RequestURL:
     def __init__(self):
         self.header = {"user-agent": "Mozilla/5.0", "Accept": "application/xml"}
 
-    def get_url(self, url):
+    def get_url(self, url, retry=3):
         try_time = 0
-        while try_time < 3:
+        while try_time < retry:
             try:
                 req = self.session.get(url=url, headers=self.header, timeout=5)
                 req.raise_for_status()
@@ -33,9 +33,9 @@ class RequestURL:
                 logger.debug(e)
                 break
 
-    def post_url(self, url: str, data: dict):
+    def post_url(self, url: str, data: dict, retry=3):
         try_time = 0
-        while try_time < 3:
+        while try_time < retry:
             try:
                 req = self.session.post(url=url, headers=self.header, data=data, timeout=5)
                 req.raise_for_status()

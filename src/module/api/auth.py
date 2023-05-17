@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from module.database.user import AuthDB
 from module.security.jwt import decode_token, oauth2_scheme
 
-from .api import router
+from .log import router
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):

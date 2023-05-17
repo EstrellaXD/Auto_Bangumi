@@ -1,11 +1,12 @@
-import os
 import signal
 import logging
-import asyncio
+import os
 
+from contextlib import asynccontextmanager
 from fastapi.exceptions import HTTPException
 
-from .download import router
+
+from fastapi import FastAPI
 
 from module.core import Program, check_status, check_rss, check_downloader
 
@@ -13,9 +14,15 @@ logger = logging.getLogger(__name__)
 program = Program()
 
 
-@router.on_event("startup")
-async def on_startup():
-    asyncio.create_task(program.startup())
+@asynccontextmanager
+async def lifespan(router: FastAPI):
+    logger.info("Starting program...")
+    program.startup()
+    yield
+    program.stop()
+
+
+router = FastAPI(lifespan=lifespan)
 
 
 @router.on_event("shutdown")

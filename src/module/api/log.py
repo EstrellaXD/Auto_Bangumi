@@ -1,14 +1,9 @@
-import logging
 import os
+from fastapi import Response
 
-from fastapi import FastAPI
-from fastapi.responses import Response
+from .program import router
 
 from module.conf import LOG_PATH
-
-logger = logging.getLogger(__name__)
-
-router = FastAPI()
 
 
 @router.get("/api/v1/log", tags=["log"])
