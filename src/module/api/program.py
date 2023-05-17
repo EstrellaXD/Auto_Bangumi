@@ -1,6 +1,7 @@
 import os
 import signal
 import logging
+import asyncio
 
 from fastapi.exceptions import HTTPException
 
@@ -13,20 +14,20 @@ program = Program()
 
 
 @router.on_event("startup")
-async def startup():
-    await program.startup()
+async def on_startup():
+    asyncio.create_task(program.startup())
 
 
 @router.on_event("shutdown")
-async def shutdown():
-    await program.stop()
+def shutdown():
+    program.stop()
     logger.info("Stopping program...")
 
 
 @router.get("/api/v1/restart", tags=["program"])
 async def restart():
     try:
-        await program.restart()
+        program.restart()
         return {"status": "ok"}
     except Exception as e:
         logger.debug(e)
@@ -37,7 +38,7 @@ async def restart():
 @router.get("/api/v1/start", tags=["program"])
 async def start():
     try:
-        await program.start()
+        program.start()
         return {"status": "ok"}
     except Exception as e:
         logger.debug(e)
@@ -47,7 +48,7 @@ async def start():
 
 @router.get("/api/v1/stop", tags=["program"])
 async def stop():
-    await program.stop()
+    program.stop()
     return {"status": "ok"}
 
 
@@ -61,7 +62,7 @@ async def status():
 
 @router.get("/api/v1/shutdown", tags=["program"])
 async def shutdown_program():
-    await program.stop()
+    program.stop()
     logger.info("Shutting down program...")
     os.kill(os.getpid(), signal.SIGINT)
     return {"status": "ok"}

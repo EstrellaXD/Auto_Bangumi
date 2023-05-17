@@ -21,9 +21,9 @@ class Program(RenameThread, RSSThread):
 
     async def startup(self):
         self.__start_info()
-        await self.start()
+        self.start()
 
-    async def start(self):
+    def start(self):
         self.stop_event.clear()
         settings.load()
         if self.enable_renamer:
@@ -34,7 +34,7 @@ class Program(RenameThread, RSSThread):
             logger.info("RSS started.")
         return {"status": "Program started."}
 
-    async def stop(self):
+    def stop(self):
         if self.is_running:
             self.stop_event.set()
             self.rename_stop()
@@ -42,7 +42,7 @@ class Program(RenameThread, RSSThread):
         else:
             return {"status": "Program is not running."}
 
-    async def restart(self):
-        await self.stop()
-        await self.start()
+    def restart(self):
+        self.stop()
+        self.start()
         return {"status": "Program restarted."}

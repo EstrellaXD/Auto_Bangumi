@@ -35,11 +35,13 @@ class Checker:
     @staticmethod
     def check_torrents() -> bool:
         with RequestContent() as req:
-            torrents = req.get_torrents(settings.rss_link)
-            if torrents:
-                return True
-            else:
-                return False
+            try:
+                torrents = req.get_torrents(settings.rss_link)
+                if torrents:
+                    return True
+            except AttributeError:
+                pass
+        return False
 
     @staticmethod
     def check_first_run() -> bool:
