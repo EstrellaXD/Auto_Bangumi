@@ -2,33 +2,26 @@ import signal
 import logging
 import os
 
-from contextlib import asynccontextmanager
 from fastapi.exceptions import HTTPException
 
 
 from fastapi import FastAPI
 
-from module.core import Program, check_status, check_rss, check_downloader
+from module.core import Program
 
 logger = logging.getLogger(__name__)
 program = Program()
+router = FastAPI()
 
 
-@asynccontextmanager
-async def lifespan(router: FastAPI):
-    logger.info("Starting program...")
+@router.on_event("startup")
+async def startup():
     program.startup()
-    yield
-    program.stop()
-
-
-router = FastAPI(lifespan=lifespan)
 
 
 @router.on_event("shutdown")
-def shutdown():
+async def shutdown():
     program.stop()
-    logger.info("Stopping program...")
 
 
 @router.get("/api/v1/restart", tags=["program"])
@@ -78,15 +71,9 @@ async def shutdown_program():
 # Check status
 @router.get("/api/v1/check/downloader", tags=["check"])
 async def check_downloader_status():
-    return check_downloader()
+    return program.check_downloader()
 
 
 @router.get("/api/v1/check/rss", tags=["check"])
 async def check_rss_status():
-    return check_rss()
-
-
-@router.get("/api/v1/check", tags=["check"])
-async def check_all():
-    return check_status()
-
+    return program.check_analyser()

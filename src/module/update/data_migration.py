@@ -18,4 +18,3 @@ def data_migration():
         database.update_table()
         database.insert_list(new_data)
     os.remove("data/data.json")
-    return True

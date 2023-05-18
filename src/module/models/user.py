@@ -16,9 +16,8 @@ class UserUpdate(UserBase):
 
 
 class User(UserBase):
-    user_id: int
+    id: int = Field(..., alias="_id")
     password: str = Field(..., min_length=8)
-    id: str = Field(..., alias="_id")
 
 
 class UserInDB(UserBase):

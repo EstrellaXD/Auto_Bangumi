@@ -29,10 +29,7 @@ class Settings(Config):
             self.load()
             self.save()
         else:
-            # load from env
-            load_dotenv(".env")
-            self.__load_from_env()
-            self.save()
+            self.init()
 
     def load(self):
         with open(CONFIG_PATH, "r", encoding="utf-8") as f:
@@ -44,10 +41,13 @@ class Settings(Config):
     def save(self, config_dict: dict | None = None):
         if not config_dict:
             config_dict = self.dict()
-        if not os.path.exists("config"):
-            os.makedirs("config")
         with open(CONFIG_PATH, "w", encoding="utf-8") as f:
             json.dump(config_dict, f, indent=4)
+
+    def init(self):
+        load_dotenv(".env")
+        self.__load_from_env()
+        self.save()
 
     @property
     def rss_link(self) -> str:

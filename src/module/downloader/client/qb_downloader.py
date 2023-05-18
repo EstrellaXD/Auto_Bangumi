@@ -41,7 +41,7 @@ class QbDownloader:
                 break
             except APIConnectionError:
                 logger.error(f"Cannot connect to qBittorrent Server")
-                logger.info(f"Please check the IP and port in qBittorrent Server")
+                logger.info(f"Please check the IP and port in WebUI settings")
                 time.sleep(30)
             except Exception as e:
                 logger.error(f"Unknown error: {e}")

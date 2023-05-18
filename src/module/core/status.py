@@ -1,7 +1,9 @@
+import os.path
 import threading
 import asyncio
 
 from module.checker import Checker
+from module.conf import DATA_PATH
 
 
 class ProgramStatus(Checker):
@@ -44,3 +46,7 @@ class ProgramStatus(Checker):
     @property
     def first_run(self):
         return self.check_first_run()
+
+    @property
+    def legacy_data(self):
+        return os.path.exists("data/data.json")

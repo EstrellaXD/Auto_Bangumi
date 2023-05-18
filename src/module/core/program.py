@@ -3,6 +3,7 @@ import logging
 from .sub_thread import RenameThread, RSSThread
 
 from module.conf import settings, VERSION
+from module.update import data_migration
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,14 @@ class Program(RenameThread, RSSThread):
 
     def startup(self):
         self.__start_info()
+        if self.first_run:
+            logger.info("First run detected, please configure the program in webui.")
+            return {"status": "First run detected."}
+        if self.legacy_data:
+            logger.info(
+                "Legacy data detected, starting data migration, please wait patiently."
+            )
+            data_migration()
         self.start()
 
     def start(self):

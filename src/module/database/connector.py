@@ -40,6 +40,35 @@ class DataConnector:
         self._cursor.executemany(f"INSERT INTO {table_name} ({columns}) VALUES ({values})", data_list)
         self._conn.commit()
 
+    def _select(self, keys: list[str], table_name: str, condition: str = None) -> dict:
+        if condition is None:
+            self._cursor.execute(f"SELECT {', '.join(keys)} FROM {table_name}")
+        else:
+            self._cursor.execute(f"SELECT {', '.join(keys)} FROM {table_name} WHERE {condition}")
+        return dict(zip(keys, self._cursor.fetchone()))
+
+    def _update(self, table_name: str, db_data: dict):
+        _id = db_data.get("id")
+        if _id is None:
+            raise ValueError("No _id in db_data.")
+        set_sql = ", ".join([f"{key} = :{key}" for key in db_data.keys()])
+        self._cursor.execute(f"UPDATE {table_name} SET {set_sql} WHERE id = {_id}", db_data)
+        self._conn.commit()
+        return self._cursor.rowcount == 1
+
+    def _update_list(self, table_name: str, data_list: list[dict]):
+        if len(data_list) == 0:
+            return
+        set_sql = ", ".join([f"{key} = :{key}" for key in data_list[0].keys() if key != "id"])
+        self._cursor.executemany(f"UPDATE {table_name} SET {set_sql} WHERE id = :id", data_list)
+        self._conn.commit()
+
+    def _update_section(self, table_name: str, location: dict, update_dict: dict):
+        set_sql = ", ".join([f"{key} = :{key}" for key in update_dict.keys()])
+        sql_loc = f"{location['key']} = {location['value']}"
+        self._cursor.execute(f"UPDATE {table_name} SET {set_sql} WHERE {sql_loc}", update_dict)
+        self._conn.commit()
+
     def _delete_all(self, table_name: str):
         self._cursor.execute(f"DELETE FROM {table_name}")
         self._conn.commit()

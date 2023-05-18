@@ -10,6 +10,7 @@ class BangumiDatabase(DataConnector):
     def __init__(self):
         super().__init__()
         self.__table_name = "bangumi"
+        self.update_table()
 
     def update_table(self):
         db_data = self.__data_to_db(BangumiData())
@@ -55,16 +56,11 @@ class BangumiDatabase(DataConnector):
 
     def update_one(self, data: BangumiData) -> bool:
         db_data = self.__data_to_db(data)
-        update_columns = ", ".join([f"{key} = :{key}" for key in db_data.keys() if key != "id"])
-        self._cursor.execute(f"UPDATE bangumi SET {update_columns} WHERE id = :id", db_data)
-        self._conn.commit()
-        return self._cursor.rowcount == 1
+        return self._update(db_data=db_data, table_name=self.__table_name)
 
     def update_list(self, data: list[BangumiData]):
-        db_data = [self.__data_to_db(x) for x in data]
-        update_columns = ", ".join([f"{key} = :{key}" for key in db_data[0].keys() if key != "id"])
-        self._cursor.executemany(f"UPDATE bangumi SET {update_columns} WHERE id = :id", db_data)
-        self._conn.commit()
+        data_list = [self.__data_to_db(x) for x in data]
+        self._update_list(data_list=data_list, table_name=self.__table_name)
 
     def update_rss(self, title_raw, rss_set: str):
         # Update rss and added
@@ -78,6 +74,18 @@ class BangumiDatabase(DataConnector):
         )
         self._conn.commit()
         logger.debug(f"Update {title_raw} rss_link to {rss_set}.")
+
+    def update_poster(self, title_raw, poster_link: str):
+        self._cursor.execute(
+            """
+            UPDATE bangumi 
+            SET poster_link = :poster_link
+            WHERE title_raw = :title_raw
+            """,
+            {"poster_link": poster_link, "title_raw": title_raw},
+        )
+        self._conn.commit()
+        logger.debug(f"Update {title_raw} poster_link to {poster_link}.")
 
     def delete_one(self, _id: int) -> bool:
         self._cursor.execute(
@@ -130,26 +138,28 @@ class BangumiDatabase(DataConnector):
         return self.__db_to_data(dict_data)
 
     def match_poster(self, bangumi_name: str) -> str:
-        # Find title_raw which in torrent_name
         self._cursor.execute(
             """
-            SELECT official_title, poster_link FROM bangumi
+            SELECT official_title, poster_link 
+            FROM bangumi 
+            WHERE INSTR(:bangumi_name, official_title) > 0
             """
+            ,
+            {"bangumi_name": bangumi_name},
         )
-        data = self._cursor.fetchall()
+        data = self._cursor.fetchone()
         if not data:
             return ""
-        for official_title, poster_link in data:
-            if official_title in bangumi_name:
-                if poster_link:
-                    return poster_link
-        return ""
+        official_title, poster_link = data
+        if not poster_link:
+            return ""
+        return poster_link
 
     def match_list(self, torrent_list: list, rss_link: str) -> list:
         # Match title_raw in database
         self._cursor.execute(
             """
-            SELECT title_raw, rss_link FROM bangumi
+            SELECT title_raw, rss_link, poster_link FROM bangumi
             """
         )
         data = self._cursor.fetchall()
@@ -159,11 +169,13 @@ class BangumiDatabase(DataConnector):
         i = 0
         while i < len(torrent_list):
             torrent = torrent_list[i]
-            for title_raw, rss_set in data:
+            for title_raw, rss_set, poster_link in data:
                 if title_raw in torrent.name:
                     if rss_link not in rss_set:
                         rss_set += "," + rss_link
                         self.update_rss(title_raw, rss_set)
+                    if not poster_link:
+                        self.update_poster(title_raw, torrent.poster_link)
                     torrent_list.pop(i)
                     break
             else:
@@ -197,9 +209,3 @@ class BangumiDatabase(DataConnector):
         if data is None:
             return 1
         return data[0] + 1
-
-
-if __name__ == '__main__':
-    title = "[SweetSub&LoliHouse] Heavenly Delusion - 06 [WebRip 1080p HEVC-10bit AAC ASSx2].mkv"
-    with BangumiDatabase() as db:
-        print(db.match_poster(title))
