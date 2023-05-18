@@ -3,7 +3,6 @@ import threading
 import asyncio
 
 from module.checker import Checker
-from module.conf import DATA_PATH
 
 
 class ProgramStatus(Checker):

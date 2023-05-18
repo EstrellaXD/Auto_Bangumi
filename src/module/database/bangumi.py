@@ -10,7 +10,10 @@ class BangumiDatabase(DataConnector):
     def __init__(self):
         super().__init__()
         self.__table_name = "bangumi"
-        self.update_table()
+        self.__updated = False
+        if not self.__updated:
+            self.update_table()
+            self.__updated = True
 
     def update_table(self):
         db_data = self.__data_to_db(BangumiData())

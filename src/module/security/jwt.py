@@ -1,11 +1,10 @@
 from datetime import datetime, timedelta
-from typing import Optional
 from passlib.context import CryptContext
 from jose import jwt, JWTError
 
 
-# app_pwd_key = settings.KEY
-# app_pwd_algorithm = settings.ALGORITHM
+app_pwd_key = "auto_bangumi"
+app_pwd_algorithm = "HS256"
 
 # Hashing 密码
 app_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -17,7 +16,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=120)
+        expire = datetime.utcnow() + timedelta(minutes=1440)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, app_pwd_key, algorithm=app_pwd_algorithm)
     return encoded_jwt

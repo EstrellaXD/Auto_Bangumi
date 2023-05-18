@@ -73,6 +73,10 @@ class DataConnector:
         self._cursor.execute(f"DELETE FROM {table_name}")
         self._conn.commit()
 
+    def _table_exists(self, table_name: str) -> bool:
+        self._cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'")
+        return len(self._cursor.fetchall()) == 1
+
     @staticmethod
     def __python_to_sqlite_type(value) -> str:
         if isinstance(value, int):

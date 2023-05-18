@@ -1,7 +1,7 @@
 import os
 from fastapi import Response
 
-from .program import router
+from .auth import router
 
 from module.conf import LOG_PATH
 

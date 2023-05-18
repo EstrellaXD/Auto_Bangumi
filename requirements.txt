@@ -1,5 +1,5 @@
 anyio
-beautifulsoup4
+bs4
 certifi
 charset-normalizer
 click
@@ -19,3 +19,7 @@ uvicorn
 attrdict
 jinja2
 python-dotenv
+python-jose
+passlib
+bcrypt
+python-multipart
