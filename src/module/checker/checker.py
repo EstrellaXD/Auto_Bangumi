@@ -17,8 +17,7 @@ class Checker:
             return False
 
     def check_analyser(self) -> bool:
-        if self.check_torrents() and\
-                self.check_downloader() and\
+        if self.check_downloader() and\
                 settings.rss_parser.enable:
             return True
         else:

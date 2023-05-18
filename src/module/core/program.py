@@ -37,10 +37,9 @@ class Program(RenameThread, RSSThread):
         settings.load()
         if self.enable_renamer:
             self.rename_start()
-            logger.info("Renamer started.")
         if self.enable_rss:
             self.rss_start()
-            logger.info("RSS started.")
+        logger.info("Program running.")
         return {"status": "Program started."}
 
     def stop(self):

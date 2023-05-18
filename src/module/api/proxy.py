@@ -70,3 +70,15 @@ async def get_rss(full_path: str):
 async def download(full_path: str):
     torrent = get_torrent(full_path)
     return Response(torrent, media_type="application/x-bittorrent")
+
+
+@router.get("/Home/Episode/{full_path:path}", tags=["proxy"])
+async def get_ep_info(full_path: str):
+    url = f"https://mikanani.me/Home/Episode/{full_path}"
+    try:
+        with RequestContent() as request:
+            return Response(request.get_html(url), media_type="text/html")
+    except Exception as e:
+        logger.debug(e)
+        logger.warning("Failed to get ep info")
+        raise HTTPException(status_code=500, detail="Failed to get ep info")

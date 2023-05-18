@@ -12,10 +12,12 @@ logger = logging.getLogger(__name__)
 class RSSAnalyser:
     def __init__(self):
         self._title_analyser = TitleParser()
+        with BangumiDatabase() as db:
+            db.update_table()
 
     def official_title_parser(self, data: BangumiData, mikan_title: str):
         if settings.rss_parser.parser_type == "mikan":
-            data.official_title = mikan_title
+            data.official_title = mikan_title if mikan_title else data.official_title
         elif settings.rss_parser.parser_type == "tmdb":
             tmdb_title, season, year = self._title_analyser.tmdb_parser(
                 data.official_title,
@@ -44,7 +46,10 @@ class RSSAnalyser:
                 raw=torrent.name, rss_link=rss_link, _id=_id
             )
             if data and data.title_raw not in [i.title_raw for i in new_data]:
-                poster_link, mikan_title = torrent.poster_link, torrent.official_title
+                try:
+                    poster_link, mikan_title = torrent.poster_link, torrent.official_title
+                except AttributeError:
+                    poster_link, mikan_title = None, None
                 data.poster_link = poster_link
                 self.official_title_parser(data, mikan_title)
                 if not full_parse:
@@ -73,5 +78,4 @@ class RSSAnalyser:
             self.rss_to_data(rss_link)
         except Exception as e:
             logger.debug(e)
-            print(e)
             logger.error("Failed to collect RSS info.")

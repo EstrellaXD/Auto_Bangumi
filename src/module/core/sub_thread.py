@@ -13,11 +13,11 @@ class RSSThread(ProgramStatus):
         self._rss_thread = threading.Thread(
             target=self.rss_loop,
         )
+        self._rss_analyser = RSSAnalyser()
 
     def rss_loop(self):
-        rss_analyser = RSSAnalyser()
         while not self.stop_event.is_set():
-            rss_analyser.run()
+            self._rss_analyser.run()
             add_rules()
             if settings.bangumi_manage.eps_complete:
                 with FullSeasonGet() as full_season_get:

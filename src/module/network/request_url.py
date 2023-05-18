@@ -16,7 +16,7 @@ class RequestURL:
 
     def get_url(self, url, retry=3):
         try_time = 0
-        while try_time < retry:
+        while True:
             try:
                 req = self.session.get(url=url, headers=self.header, timeout=5)
                 req.raise_for_status()
@@ -26,8 +26,10 @@ class RequestURL:
                 logger.debug(e)
                 logger.warning(f"Cannot connect to {url}. Wait for 5 seconds.")
                 logger.warning("Please check DNS/Connection settings")
-                time.sleep(5)
                 try_time += 1
+                if try_time >= retry:
+                    break
+                time.sleep(5)
             except Exception as e:
                 logger.debug(f"URL: {url}")
                 logger.debug(e)
@@ -35,7 +37,7 @@ class RequestURL:
 
     def post_url(self, url: str, data: dict, retry=3):
         try_time = 0
-        while try_time < retry:
+        while True:
             try:
                 req = self.session.post(url=url, headers=self.header, data=data, timeout=5)
                 req.raise_for_status()
@@ -44,8 +46,10 @@ class RequestURL:
                 logger.debug(e)
                 logger.warning(f"Cannot connect to {url}.")
                 logger.warning("Please check DNS/Connection settings")
-                time.sleep(5)
                 try_time += 1
+                if try_time >= retry:
+                    break
+                time.sleep(5)
             except Exception as e:
                 logger.debug(f"URL: {url}")
                 logger.debug(e)
