@@ -23,6 +23,7 @@ jobs:
     - name: Test
       working-directory: ./src
       run: |
+        mkdir -p config
         pytest
     
 
