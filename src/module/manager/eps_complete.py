@@ -6,69 +6,50 @@ from module.network import RequestContent
 from module.downloader import DownloadClient
 from module.models import BangumiData
 from module.database import BangumiDatabase
+from module.searcher import SearchTorrent
 from module.conf import settings
 
 logger = logging.getLogger(__name__)
+SEARCH_KEY = [
+    "group_name",
+    "title_raw",
+    "season_raw",
+    "subtitle",
+    "source",
+    "dpi",
+]
 
 
 class FullSeasonGet(DownloadClient):
-    def __init__(self):
-        super().__init__()
-        self.SEARCH_KEY = [
-            "group_name",
-            "title_raw",
-            "season_raw",
-            "subtitle",
-            "source",
-            "dpi",
-        ]
-        self.CUSTOM_URL = (
-            "https://mikanani.me"
-            if settings.rss_parser.custom_url == ""
-            else settings.rss_parser.custom_url
-        )
-        if "://" not in self.CUSTOM_URL:
-            if re.match(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", self.CUSTOM_URL):
-                self.CUSTOM_URL = f"http://{self.CUSTOM_URL}"
-            self.CUSTOM_URL = f"https://{self.CUSTOM_URL}"
-        self.save_path = settings.downloader.path
-
-    def init_eps_complete_search_str(self, data: BangumiData):
-        test = []
-        for key in self.SEARCH_KEY:
+    def init_search_str(self, data: BangumiData):
+        str_list = []
+        for key in SEARCH_KEY:
             data_dict = data.dict()
             if data_dict[key] is not None:
-                test.append(data_dict[key])
-        search_str_pre = "+".join(test)
-        search_str = re.sub(r"[\W_ ]", "+", search_str_pre)
-        return search_str
+                str_list.append(data_dict[key])
+        return str_list
 
     def get_season_torrents(self, data: BangumiData):
-        keyword = self.init_eps_complete_search_str(data)
-        with RequestContent() as req:
-            torrents = req.get_torrents(
-                f"{self.CUSTOM_URL}/RSS/Search?searchstr={keyword}"
-            )
+        keywords = self.init_search_str(data)
+        with SearchTorrent() as st:
+            torrents = st.search_torrents(keywords)
         return [torrent for torrent in torrents if data.title_raw in torrent.name]
 
-    def collect_season_torrents(self, data: BangumiData, torrents):
-        downloads = []
+    def collect_season(self, data: BangumiData, torrents):
+        official_title = f"{data.official_title}({data.year})" if data.year else data.official_title
         for torrent in torrents:
             download_info = {
                 "url": torrent.torrent_link,
                 "save_path": os.path.join(
-                    self.save_path, data.official_title, f"Season {data.season}"
+                    settings.downloader.path, official_title, f"Season {data.season}"
                 ),
             }
-            downloads.append(download_info)
-        return downloads
+            self.add_torrent(download_info)
 
     def download_season(self, data: BangumiData):
         logger.info(f"Start collecting {data.official_title} Season {data.season}...")
         torrents = self.get_season_torrents(data)
-        downloads = self.collect_season_torrents(data, torrents)
-        for download in downloads:
-            self.add_torrent(download)
+        self.collect_season(data, torrents)
         logger.info("Completed!")
         data.eps_collect = True
 
@@ -87,10 +68,8 @@ class FullSeasonGet(DownloadClient):
     ):
         with RequestContent() as req:
             torrents = req.get_torrents(link)
-        downloads = self.collect_season_torrents(data, torrents)
         logger.info(f"Starting download {data.official_title} Season {data.season}...")
-        for download in downloads:
-            self.add_torrent(download)
+        self.collect_season(data, torrents)
         logger.info("Completed!")
 
     def add_subscribe(self, data: BangumiData):

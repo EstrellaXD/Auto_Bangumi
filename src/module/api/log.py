@@ -15,6 +15,16 @@ async def get_log():
         return Response("Log file not found", status_code=404)
 
 
+@router.get("/api/v1/log/clear", tags=["log"])
+async def clear_log():
+    if os.path.isfile(LOG_PATH):
+        with open(LOG_PATH, "w") as f:
+            f.write("")
+        return {"status": "ok"}
+    else:
+        return Response("Log file not found", status_code=404)
+
+
 
 
 

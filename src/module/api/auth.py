@@ -31,7 +31,7 @@ async def get_token_data(token: str = Depends(oauth2_scheme)):
     return payload
 
 
-@router.post("/api/v1/auth/login", response_model=dict, tags=["login"])
+@router.post("/api/v1/auth/login", response_model=dict, tags=["auth"])
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     username = form_data.username
     password = form_data.password
@@ -42,7 +42,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         return {"access_token": token, "token_type": "bearer", "expire": 86400}
 
 
-@router.get("/api/v1/auth/refresh_token", response_model=dict, tags=["login"])
+@router.get("/api/v1/auth/refresh_token", response_model=dict, tags=["auth"])
 async def refresh(
         current_user: User = Depends(get_current_user)
 ):
@@ -52,7 +52,7 @@ async def refresh(
     return {"access_token": token, "token_type": "bearer", "expire": 86400}
 
 
-@router.get("/api/v1/auth/logout", response_model=dict, tags=["login"])
+@router.get("/api/v1/auth/logout", response_model=dict, tags=["auth"])
 async def logout(
         current_user: User = Depends(get_current_user)
 ):
@@ -61,7 +61,7 @@ async def logout(
     return {"message": "logout success"}
 
 
-@router.post("/api/v1/auth/update", response_model=dict, tags=["users"])
+@router.post("/api/v1/auth/update", response_model=dict, tags=["auth"])
 async def update_user(data: User, current_user: User = Depends(get_current_user)):
     if not current_user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")

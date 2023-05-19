@@ -32,7 +32,7 @@ class TorrentManager(DownloadClient):
     def delete_rule(self, data: BangumiData):
         rule_name = f"{data.official_title}({data.year})" if data.year else data.title_raw
         if settings.bangumi_manage.group_tag:
-            rule_name = f"[{data.group_name}] {rule_name}" if self.group_tag else rule_name
+            rule_name = f"[{data.group_name}] {rule_name}" if settings.bangumi_manage.group_tag else rule_name
         self.remove_rule(rule_name)
 
     def set_new_path(self, data: BangumiData):
