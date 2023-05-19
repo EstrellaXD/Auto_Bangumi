@@ -10,9 +10,9 @@ on:
 jobs:
   generate_release_draft:
     runs-on: ubuntu-latest
-    if:
-     - github.event.pull_request.merged == true
-     - github.event.pull_request.base.ref == 'main'
+    if: >
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main'
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
