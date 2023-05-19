@@ -1,3 +1,4 @@
+import re
 import logging
 
 from module.network import RequestContent
@@ -29,6 +30,7 @@ class RSSAnalyser:
             data.season = season
         else:
             pass
+        data.official_title = re.sub(r"[/:.\\]", " ", data.official_title)
 
     @staticmethod
     def get_rss_torrents(rss_link: str, full_parse: bool = True) -> list:
@@ -39,11 +41,11 @@ class RSSAnalyser:
                 rss_torrents = req.get_torrents(rss_link, "\\d+-\\d+")
         return rss_torrents
 
-    def get_new_data_list(self, torrents: list, rss_link: str, _id: int, full_parse: bool = True) -> list:
+    def new_bangumi_list(self, torrents: list, rss_link: str, full_parse: bool = True) -> list:
         new_data = []
         for torrent in torrents:
             data = self._title_analyser.raw_parser(
-                raw=torrent.name, rss_link=rss_link, _id=_id
+                raw=torrent.name, rss_link=rss_link
             )
             if data and data.title_raw not in [i.title_raw for i in new_data]:
                 try:
@@ -55,7 +57,6 @@ class RSSAnalyser:
                 if not full_parse:
                     return [data]
                 new_data.append(data)
-                _id += 1
                 logger.debug(f"New title found: {data.official_title}")
         return new_data
 
@@ -66,10 +67,10 @@ class RSSAnalyser:
             if not torrents_to_add:
                 logger.debug("No new title found.")
                 return []
-            _id = database.gen_id()
             # New List
-            new_data = self.get_new_data_list(torrents_to_add, rss_link, _id, full_parse)
-            database.insert_list(new_data)
+            new_data = self.new_bangumi_list(torrents_to_add, rss_link, full_parse)
+            if full_parse:
+                database.insert_list(new_data)
         return new_data
 
     def run(self, rss_link: str = settings.rss_link):

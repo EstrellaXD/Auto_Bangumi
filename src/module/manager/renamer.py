@@ -1,20 +1,13 @@
-import re
 import logging
-
-from pathlib import PurePath, PureWindowsPath
 
 from module.downloader import DownloadClient
 
 from module.parser import TitleParser
 from module.network import PostNotification
 from module.models import SubtitleFile, EpisodeFile, Notification
-from module.conf import settings, PLATFORM
+from module.conf import settings
 from module.database import BangumiDatabase
 
-if PLATFORM == "Windows":
-    import ntpath as path
-else:
-    import os.path as path
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +15,7 @@ logger = logging.getLogger(__name__)
 class Renamer(DownloadClient):
     def __init__(self):
         super().__init__()
-        self._renamer = TitleParser()
+        self._parser = TitleParser()
 
     @staticmethod
     def print_result(torrent_count, rename_count):
@@ -31,24 +24,6 @@ class Renamer(DownloadClient):
                 f"Finished checking {torrent_count} files' name, renamed {rename_count} files."
             )
         logger.debug(f"Checked {torrent_count} files")
-
-    def rename_info(self, category="Bangumi"):
-        recent_info = self.get_torrent_info(category=category)
-        torrent_count = len(recent_info)
-        return recent_info, torrent_count
-
-    @staticmethod
-    def check_files(info):
-        media_list = []
-        subtitle_list = []
-        for f in info.files:
-            file_name = f.name
-            suffix = path.splitext(file_name)[-1]
-            if suffix.lower() in [".mp4", ".mkv"]:
-                media_list.append(file_name)
-            elif suffix.lower() in [".ass", ".srt"]:
-                subtitle_list.append(file_name)
-        return media_list, subtitle_list
 
     @staticmethod
     def gen_path(file_info: EpisodeFile | SubtitleFile, bangumi_name: str, method: str) -> str:
@@ -91,8 +66,9 @@ class Renamer(DownloadClient):
         method: str,
         season: int,
         _hash: str,
+        **kwargs
     ):
-        ep = self._renamer.torrent_parser(
+        ep = self._parser.torrent_parser(
             torrent_name=torrent_name,
             torrent_path=media_path,
             season=season,
@@ -111,17 +87,16 @@ class Renamer(DownloadClient):
 
     def rename_collection(
         self,
-        info,
         media_list: list[str],
         bangumi_name: str,
         season: int,
         method: str,
+        _hash: str,
+        **kwargs
     ):
-        _hash = info.hash
         for media_path in media_list:
-            path_len = len(media_path.split(path.sep))
-            if path_len <= 2:
-                ep = self._renamer.torrent_parser(
+            if self.is_ep(media_path):
+                ep = self._parser.torrent_parser(
                     torrent_path=media_path,
                     season=season,
                 )
@@ -146,10 +121,11 @@ class Renamer(DownloadClient):
         season: int,
         method: str,
         _hash,
+        **kwargs
     ):
         method = "subtitle_" + method
         for subtitle_path in subtitle_list:
-            sub = self._renamer.torrent_parser(
+            sub = self._parser.torrent_parser(
                 torrent_path=subtitle_path,
                 torrent_name=torrent_name,
                 season=season,
@@ -164,78 +140,42 @@ class Renamer(DownloadClient):
                     if not renamed:
                         logger.warning(f"{subtitle_path} rename failed")
 
-    @staticmethod
-    def get_season_info(save_path: str, download_path: str):
-        # Split save path and download path
-        save_parts = save_path.split(path.sep)
-        download_parts = download_path.split(path.sep)
-        # Get bangumi name and season
-        bangumi_name = ""
-        season = 1
-        for part in save_parts:
-            if re.match(r"S\d+|[Ss]eason \d+", part):
-                season = int(re.findall(r"\d+", part)[0])
-            elif part not in download_parts:
-                bangumi_name = part
-        return bangumi_name, season
-
-    @staticmethod
-    def get_file_name(file_path: str):
-        # Check windows or linux path
-        path_parts = (
-            PurePath(file_path).parts
-            if PurePath(file_path).name != file_path
-            else PureWindowsPath(file_path).parts
-        )
-        # Get file name
-        file_name = path_parts[-1]
-        return file_name
-
     def rename(self):
         # Get torrent info
         logger.debug("Start rename process.")
-        download_path = settings.downloader.path
         rename_method = settings.bangumi_manage.rename_method
-        recent_info, torrent_count = self.rename_info()
-        for info in recent_info:
+        torrents_info = self.get_torrent_info()
+        for info in torrents_info:
             media_list, subtitle_list = self.check_files(info)
-            bangumi_name, season = self.get_season_info(info.save_path, download_path)
+            bangumi_name, season = self._path_to_bangumi(info.save_path)
+            kwargs = {
+                "torrent_name": info.name,
+                "bangumi_name": bangumi_name,
+                "method": rename_method,
+                "season": season,
+                "_hash": info.hash,
+            }
+            # Rename single media file
             if len(media_list) == 1:
-                self.rename_file(
-                    media_path=media_list[0],
-                    torrent_name=info.name,
-                    method=rename_method,
-                    bangumi_name=bangumi_name,
-                    season=season,
-                    _hash=info.hash,
-                )
+                self.rename_file(media_path=media_list[0], **kwargs)
+                # Rename subtitle file
                 if len(subtitle_list) > 0:
-                    self.rename_subtitles(
-                        subtitle_list=subtitle_list,
-                        torrent_name=info.name,
-                        bangumi_name=bangumi_name,
-                        season=season,
-                        method=rename_method,
-                        _hash=info.hash,
-                    )
+                    self.rename_subtitles(subtitle_list=subtitle_list, **kwargs)
+            # Rename collection
             elif len(media_list) > 1:
                 logger.info("Start rename collection")
-                self.rename_collection(
-                    info=info,
-                    media_list=media_list,
-                    bangumi_name=bangumi_name,
-                    season=season,
-                    method=rename_method,
-                )
+                self.rename_collection(media_list=media_list, **kwargs)
                 if len(subtitle_list) > 0:
-                    self.rename_subtitles(
-                        subtitle_list=subtitle_list,
-                        torrent_name=info.name,
-                        bangumi_name=bangumi_name,
-                        season=season,
-                        method=rename_method,
-                        _hash=info.hash,
-                    )
+                    self.rename_subtitles(subtitle_list=subtitle_list,**kwargs)
+                self.set_category(info.hash, "BangumiCollection")
             else:
                 logger.warning(f"{info.name} has no media file")
         logger.debug("Rename process finished.")
+
+
+if __name__ == '__main__':
+    from module.conf import setup_logger
+    settings.log.debug_enable = True
+    setup_logger()
+    with Renamer() as renamer:
+        renamer.rename()

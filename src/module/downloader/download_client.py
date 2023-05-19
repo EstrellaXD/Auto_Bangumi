@@ -1,20 +1,16 @@
-import re
 import logging
+
+from .path import TorrentPath
 
 from module.models import BangumiData
 from module.conf import settings
 
-
 logger = logging.getLogger(__name__)
 
-if ":\\" in settings.downloader.path:
-    import ntpath as path
-else:
-    import os.path as path
 
-
-class DownloadClient:
+class DownloadClient(TorrentPath):
     def __init__(self):
+        super().__init__()
         self.client = self.__getClient()
         self.authed = False
 
@@ -62,41 +58,27 @@ class DownloadClient:
             logger.debug(e)
         if settings.downloader.path == "":
             prefs = self.client.get_app_prefs()
-            settings.downloader.path = path.join(prefs["save_path"], "Bangumi")
+            settings.downloader.path = self._join_path(prefs["save_path"], "Bangumi")
 
-    def set_rule(self, info: BangumiData):
-        official_name = f"{info.official_title}({info.year})" if info.year else info.official_title
-        raw_name, season, group = (
-            info.title_raw,
-            info.season,
-            info.group_name,
-        )
+    def set_rule(self, data: BangumiData):
         rule = {
             "enable": True,
-            "mustContain": raw_name,
-            "mustNotContain": "|".join(info.filter),
+            "mustContain": data.title_raw,
+            "mustNotContain": "|".join(data.filter),
             "useRegex": True,
             "episodeFilter": "",
             "smartFilter": False,
             "previouslyMatchedEpisodes": [],
-            "affectedFeeds": info.rss_link,
+            "affectedFeeds": data.rss_link,
             "ignoreDays": 0,
             "lastMatch": "",
             "addPaused": False,
             "assignedCategory": "Bangumi",
-            "savePath": str(
-                path.join(
-                    settings.downloader.path,
-                    re.sub(r"[:/.]", " ", official_name).strip(),
-                    f"Season {season}",
-                )
-            ),
+            "savePath": self._gen_save_path(data),
         }
-        rule_name = f"[{group}] {official_name}" \
-            if settings.bangumi_manage.group_tag \
-            else official_name
-        self.client.rss_set_rule(rule_name=f"{rule_name} S{season}", rule_def=rule)
-        logger.info(f"Add {official_name} Season {season} to auto download rules.")
+        rule_name = self._rule_name(data)
+        self.client.rss_set_rule(rule_name=rule_name, rule_def=rule)
+        logger.info(f"Add {data.official_title} Season {data.season} to auto download rules.")
 
     def add_collection_feed(self, rss_link, item_path):
         self.client.rss_add_feed(url=rss_link, item_path=item_path)

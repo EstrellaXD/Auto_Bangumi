@@ -2,17 +2,17 @@ from .config import router
 
 from module.models.api import *
 from module.models import BangumiData
-from module.manager import FullSeasonGet
-from module.rss import RSSAnalyser
+from module.manager import SeasonCollector
+from module.rss import analyser
 
 
 def link_process(link):
-    return RSSAnalyser().rss_to_data(link, full_parse=False)
+    return analyser.rss_to_data(link, full_parse=False)
 
 
 @router.post("/api/v1/download/analysis", tags=["download"])
 async def analysis(link: RssLink):
-    data = link_process(link)
+    data = link_process(link.rss_link)
     if data:
         return data[0]
     else:
@@ -22,8 +22,8 @@ async def analysis(link: RssLink):
 @router.post("/api/v1/download/collection", tags=["download"])
 async def download_collection(data: BangumiData):
     if data:
-        with FullSeasonGet() as season:
-            season.download_collection(data, data.rss_link)
+        with SeasonCollector() as collector:
+            collector.collect_season(data, data.rss_link[0])
         return {"status": "Success"}
     else:
         return {"status": "Failed to parse link"}
@@ -32,8 +32,8 @@ async def download_collection(data: BangumiData):
 @router.post("/api/v1/download/subscribe", tags=["download"])
 async def subscribe(data: BangumiData):
     if data:
-        with FullSeasonGet() as season:
-            season.add_subscribe(data)
+        with SeasonCollector() as collector:
+            collector.subscribe_season(data)
         return {"status": "Success"}
     else:
         return {"status": "Failed to parse link"}

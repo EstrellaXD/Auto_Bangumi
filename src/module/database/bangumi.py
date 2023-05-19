@@ -44,11 +44,18 @@ class BangumiDatabase(DataConnector):
         return [self.__db_to_data(x) for x in dict_data]
 
     def insert(self, data: BangumiData):
-        db_data = self.__data_to_db(data)
-        self._insert(db_data=db_data, table_name=self.__table_name)
-        logger.debug(f"Insert {data.official_title} into database.")
+        if self.__check_exist(data):
+            self.update_one(data)
+        else:
+            db_data = self.__data_to_db(data)
+            db_data["id"] = self.gen_id()
+            self._insert(db_data=db_data, table_name=self.__table_name)
+            logger.debug(f"Insert {data.official_title} into database.")
 
     def insert_list(self, data: list[BangumiData]):
+        _id = self.gen_id()
+        for i, item in enumerate(data):
+            item.id = _id + i
         data_list = [self.__data_to_db(x) for x in data]
         self._insert_list(data_list=data_list, table_name=self.__table_name)
         logger.debug(f"Insert {len(data)} bangumi into database.")
@@ -208,3 +215,21 @@ class BangumiDatabase(DataConnector):
         if data is None:
             return 1
         return data[0] + 1
+
+    def __check_exist(self, data: BangumiData):
+        self._cursor.execute(
+            """
+            SELECT * FROM bangumi WHERE official_title = :official_title
+            """,
+            {"official_title": data.official_title},
+        )
+        values = self._cursor.fetchone()
+        if values is None:
+            return False
+        return True
+
+    def __check_list_exist(self, data_list: list[BangumiData]):
+        for data in data_list:
+            if self.__check_exist(data):
+                return True
+        return False
