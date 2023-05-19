@@ -51,6 +51,7 @@ jobs:
         with:
           images: |
             estrellaxd/auto_bangumi
+            ghcr.io/${{ github.repository }}
           tags: |
             type=semver,pattern={{version}}
             type=raw,value=latest
@@ -77,9 +78,7 @@ jobs:
           builder: ${{ steps.buildx.output.name }}
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name == 'push' }}
-          tags: |
-            docker.io/${{ steps.meta.outputs.tags }}
-            ghcr.io/${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}
