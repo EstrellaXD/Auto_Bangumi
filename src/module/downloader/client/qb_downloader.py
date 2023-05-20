@@ -87,35 +87,8 @@ class QbDownloader:
             logger.debug(f"Conflict409Error: {old_path} >> {new_path}")
             return False
 
-    def check_rss(self, url, item_path) -> tuple[str | None, bool]:
-        items = self._client.rss_items()
-        for key, value in items.items():
-            rss_url = value.get("url")
-            if key == item_path:
-                if rss_url != url:
-                    return key, False
-                return None, True
-            else:
-                if rss_url == url:
-                    return key, True
-        return None, False
-
     def rss_add_feed(self, url, item_path):
-        path, added = self.check_rss(url, item_path)
-        if path:
-            if not added:
-                logger.info("RSS Exist, Update URL.")
-                self._client.rss_remove_item(path)
-                self._client.rss_add_feed(url, item_path)
-            else:
-                logger.info("RSS Exist.")
-        else:
-            if added:
-                logger.info("RSS Exist.")
-            else:
-                logger.info("Add new RSS")
-                self._client.rss_add_feed(url, item_path)
-                logger.info("Successfully added RSS")
+        self._client.rss_add_feed(url, item_path)
 
     def rss_remove_item(self, item_path):
         try:
@@ -124,6 +97,9 @@ class QbDownloader:
             logger.debug(e)
             logger.info("Add new RSS")
             raise ConflictError()
+
+    def rss_get_feeds(self):
+        return self._client.rss_items()
 
     def rss_set_rule(self, rule_name, rule_def):
         self._client.rss_set_rule(rule_name, rule_def)

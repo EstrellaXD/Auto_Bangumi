@@ -30,9 +30,7 @@ class DownloadClient(TorrentPath):
 
     def __enter__(self):
         if not self.authed:
-            logger.debug("Authing to downloader...")
             self.auth()
-            logger.debug("Authed.")
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -42,6 +40,7 @@ class DownloadClient(TorrentPath):
 
     def auth(self):
         self.authed = self.client.auth()
+        logger.debug("Authed.")
 
     def init_downloader(self):
         prefs = {
@@ -82,10 +81,6 @@ class DownloadClient(TorrentPath):
         data.added = True
         logger.info(f"Add {data.official_title} Season {data.season} to auto download rules.")
 
-    def add_collection_feed(self, rss_link, item_path):
-        self.client.rss_add_feed(url=rss_link, item_path=item_path)
-        logger.info("Add Collection RSS Feed successfully.")
-
     def set_rules(self, bangumi_info: list[BangumiData]):
         logger.debug("Start adding rules.")
         for info in bangumi_info:
@@ -114,9 +109,15 @@ class DownloadClient(TorrentPath):
     def move_torrent(self, hashes, location):
         self.client.move_torrent(hashes=hashes, new_location=location)
 
+    # RSS Parts
     def add_rss_feed(self, rss_link, item_path="Mikan_RSS"):
         self.client.rss_add_feed(url=rss_link, item_path=item_path)
-        logger.info("Add RSS Feed successfully.")
+
+    def remove_rss_feed(self, item_path):
+        self.client.rss_remove_item(item_path=item_path)
+
+    def get_rss_feed(self):
+        return self.client.rss_get_feeds()
 
     def get_download_rules(self):
         return self.client.get_download_rule()

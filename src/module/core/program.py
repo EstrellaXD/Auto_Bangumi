@@ -1,6 +1,7 @@
 import logging
 
 from .sub_thread import RenameThread, RSSThread
+from .rss_feed import add_rss_feed
 
 from module.conf import settings, VERSION
 from module.update import data_migration
@@ -30,7 +31,7 @@ class Program(RenameThread, RSSThread):
                 "Legacy data detected, starting data migration, please wait patiently."
             )
             data_migration()
-        # TODO: Add rss feed to downloader
+        add_rss_feed()
         self.start()
 
     def start(self):
