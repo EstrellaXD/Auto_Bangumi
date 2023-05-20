@@ -61,6 +61,8 @@ class DownloadClient(TorrentPath):
             settings.downloader.path = self._join_path(prefs["save_path"], "Bangumi")
 
     def set_rule(self, data: BangumiData):
+        data.rule_name = self._rule_name(data)
+        data.save_path = self._gen_save_path(data)
         rule = {
             "enable": True,
             "mustContain": data.title_raw,
@@ -74,10 +76,10 @@ class DownloadClient(TorrentPath):
             "lastMatch": "",
             "addPaused": False,
             "assignedCategory": "Bangumi",
-            "savePath": self._gen_save_path(data),
+            "savePath": data.save_path,
         }
-        rule_name = self._rule_name(data)
-        self.client.rss_set_rule(rule_name=rule_name, rule_def=rule)
+        self.client.rss_set_rule(rule_name=data.rule_name, rule_def=rule)
+        data.added = True
         logger.info(f"Add {data.official_title} Season {data.season} to auto download rules.")
 
     def add_collection_feed(self, rss_link, item_path):
@@ -89,7 +91,6 @@ class DownloadClient(TorrentPath):
         for info in bangumi_info:
             if not info.added:
                 self.set_rule(info)
-                info.added = True
         logger.debug("Finished.")
 
     def get_torrent_info(self, category="Bangumi"):

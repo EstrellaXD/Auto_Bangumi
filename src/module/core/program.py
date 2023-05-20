@@ -30,6 +30,7 @@ class Program(RenameThread, RSSThread):
                 "Legacy data detected, starting data migration, please wait patiently."
             )
             data_migration()
+        # TODO: Add rss feed to downloader
         self.start()
 
     def start(self):

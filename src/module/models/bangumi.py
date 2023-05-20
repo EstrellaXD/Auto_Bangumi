@@ -19,6 +19,8 @@ class BangumiData(BaseModel):
     rss_link: list[str] = Field([], alias="rss_link", title="番剧RSS链接")
     poster_link: str | None = Field(None, alias="poster_link", title="番剧海报链接")
     added: bool = Field(False, alias="added", title="是否已添加")
+    rule_name: str | None = Field(None, alias="rule_name", title="番剧规则名")
+    save_path: str | None = Field(None, alias="save_path", title="番剧保存路径")
 
 
 class Notification(BaseModel):

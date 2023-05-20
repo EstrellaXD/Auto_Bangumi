@@ -27,12 +27,12 @@ async def get_data(bangumi_id: str):
 
 
 @router.post("/api/v1/bangumi/updateData", tags=["bangumi"])
-async def update_data(data: BangumiData):
+async def update_data(old_data: BangumiData, new_data: BangumiData):
     with BangumiDatabase() as database:
-        updated = database.update_one(data)
+        updated = database.update_one(new_data)
     if updated:
         with TorrentManager() as torrent:
-            torrent.set_new_path(data)
+            torrent.set_new_path(old_data, new_data)
         return {"status": "ok"}
     else:
         return {"status": "data not exist"}

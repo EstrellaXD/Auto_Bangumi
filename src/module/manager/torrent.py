@@ -13,9 +13,7 @@ class TorrentManager(DownloadClient):
         torrents = self.get_torrent_info()
         matched_list = []
         for torrent in torrents:
-            save_path = torrent.save_path
-            bangumi_name, season = self._path_to_bangumi(save_path)
-            if data.official_title in bangumi_name and data.season == season:
+            if data.save_path == torrent.save_path:
                 matched_list.append(torrent.hash)
         return matched_list
 
@@ -29,10 +27,11 @@ class TorrentManager(DownloadClient):
             rule_name = f"[{data.group_name}] {rule_name}"
         self.remove_rule(rule_name)
 
-    def set_new_path(self, data: BangumiData):
+    def set_new_path(self, old_data: BangumiData, new_data: BangumiData):
         # set download rule
-        self.set_rule(data)
+        self.remove_rule(old_data.rule_name)
+        self.set_rule(new_data)
         # set torrent path
-        match_list = self.__match_torrents_list(data)
-        path = self._gen_save_path(data)
+        match_list = self.__match_torrents_list(old_data)
+        path = self._gen_save_path(new_data)
         self.move_torrent(match_list, path)
