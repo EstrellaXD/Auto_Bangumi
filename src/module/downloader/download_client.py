@@ -84,8 +84,7 @@ class DownloadClient(TorrentPath):
     def set_rules(self, bangumi_info: list[BangumiData]):
         logger.debug("Start adding rules.")
         for info in bangumi_info:
-            if not info.added:
-                self.set_rule(info)
+            self.set_rule(info)
         logger.debug("Finished.")
 
     def get_torrent_info(self, category="Bangumi"):

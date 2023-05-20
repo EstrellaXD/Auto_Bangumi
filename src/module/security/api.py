@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordBearer
 
 from .jwt import decode_token
 
-from module.database import AuthDB
+from module.database.user import AuthDB
 from module.models.user import User
 
 

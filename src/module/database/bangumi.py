@@ -201,7 +201,7 @@ class BangumiDatabase(DataConnector):
         self._cursor.execute(
             """
             SELECT * FROM bangumi 
-            WHERE added = 0 or save_path is null or rule_name is null
+            WHERE added = 0 OR rule_name IS NULL OR save_path IS NULL
             """
         )
         return self.__fetch_data()
