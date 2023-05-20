@@ -33,7 +33,7 @@ class Renamer(DownloadClient):
         episode = (
             f"0{file_info.episode}" if file_info.episode < 10 else file_info.episode
         )
-        if method == "None":
+        if method == "none" or method == "subtitle_none":
             return file_info.media_path
         elif method == "pn":
             return f"{file_info.title} S{season}E{episode}{file_info.suffix}"
@@ -43,6 +43,9 @@ class Renamer(DownloadClient):
             return f"{file_info.title} S{season}E{episode}.{file_info.language}{file_info.suffix}"
         elif method == "subtitle_advance":
             return f"{bangumi_name} S{season}E{episode}.{file_info.language}{file_info.suffix}"
+        else:
+            logger.error(f"Unknown rename method: {method}")
+            return file_info.media_path
 
     @staticmethod
     def send_notification(bangumi_name, ep: EpisodeFile):
