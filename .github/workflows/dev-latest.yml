@@ -52,7 +52,7 @@ jobs:
             estrellaxd/auto_bangumi
             ghcr.io/${{ github.repository }}
           tags: |
-            type=semver,pattern={{raw}}
+            type=raw,pattern=${{ github.ref_name }}
             type=raw,value=dev-latest
 
       - name: Login to Docker Hub
