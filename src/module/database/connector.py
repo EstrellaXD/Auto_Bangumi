@@ -23,7 +23,10 @@ class DataConnector:
         existing_columns = {column_info[1]: column_info for column_info in self._cursor.fetchall()}
         for key, value in db_data.items():
             if key not in existing_columns:
-                add_column_sql = f"ALTER TABLE {table_name} ADD COLUMN {key} {self.__python_to_sqlite_type(value)} DEFAULT {value};"
+                insert_column = self.__python_to_sqlite_type(value)
+                if value is None:
+                    value = "NULL"
+                add_column_sql = f"ALTER TABLE {table_name} ADD COLUMN {key} {insert_column} DEFAULT {value};"
                 self._cursor.execute(add_column_sql)
         self._conn.commit()
         logger.debug(f"Create / Update table {table_name}.")
@@ -74,7 +77,7 @@ class DataConnector:
         self._conn.commit()
 
     def _table_exists(self, table_name: str) -> bool:
-        self._cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'")
+        self._cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name=?;", (table_name,))
         return len(self._cursor.fetchall()) == 1
 
     @staticmethod

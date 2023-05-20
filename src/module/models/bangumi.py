@@ -21,6 +21,7 @@ class BangumiData(BaseModel):
     added: bool = Field(False, alias="added", title="是否已添加")
     rule_name: str | None = Field(None, alias="rule_name", title="番剧规则名")
     save_path: str | None = Field(None, alias="save_path", title="番剧保存路径")
+    deleted: bool = Field(False, alias="deleted", title="是否已删除")
 
 
 class Notification(BaseModel):

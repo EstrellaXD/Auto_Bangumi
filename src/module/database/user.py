@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from module.database.connector import DataConnector
 
 from module.security.jwt import get_password_hash, verify_password
-from module.models.user import UserLogin, User
+from module.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class AuthDB(DataConnector):
         return User(**db_data)
 
     def get_user(self, username):
-        self._cursor.execute(f"SELECT * FROM {self.__table_name} WHERE username='{username}'")
+        self._cursor.execute(f"SELECT * FROM {self.__table_name} WHERE username=?", (username,))
         result = self._cursor.fetchone()
         if not result:
             return None
@@ -41,7 +41,7 @@ class AuthDB(DataConnector):
         return self.__db_to_data(db_data)
 
     def auth_user(self, username, password) -> bool:
-        self._cursor.execute(f"SELECT username, password FROM {self.__table_name} WHERE username='{username}'")
+        self._cursor.execute(f"SELECT username, password FROM {self.__table_name} WHERE username=?", (username,))
         result = self._cursor.fetchone()
         if not result:
             raise HTTPException(status_code=404, detail="User not found")

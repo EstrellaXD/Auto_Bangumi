@@ -200,7 +200,8 @@ class BangumiDatabase(DataConnector):
     def not_added(self) -> list[BangumiData]:
         self._cursor.execute(
             """
-            SELECT * FROM bangumi WHERE added = 0
+            SELECT * FROM bangumi 
+            WHERE added = 0 or save_path is null or rule_name is null
             """
         )
         return self.__fetch_data()
