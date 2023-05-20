@@ -24,6 +24,7 @@ class DownloadClient(TorrentPath):
         ssl = settings.downloader.ssl
         if type == "qbittorrent":
             from .client.qb_downloader import QbDownloader
+
             return QbDownloader(host, username, password, ssl)
         else:
             raise Exception(f"Unsupported downloader type: {type}")
@@ -79,7 +80,9 @@ class DownloadClient(TorrentPath):
         }
         self.client.rss_set_rule(rule_name=data.rule_name, rule_def=rule)
         data.added = True
-        logger.info(f"Add {data.official_title} Season {data.season} to auto download rules.")
+        logger.info(
+            f"Add {data.official_title} Season {data.season} to auto download rules."
+        )
 
     def set_rules(self, bangumi_info: list[BangumiData]):
         logger.debug("Start adding rules.")

@@ -25,7 +25,10 @@ class TorrentManager(BangumiDatabase):
             hash_list = self.__match_torrents_list(data)
             with DownloadClient() as client:
                 client.delete_torrent(hash_list)
-            return {"status": "success", "msg": f"Delete torrents for {data.official_title}"}
+            return {
+                "status": "success",
+                "msg": f"Delete torrents for {data.official_title}",
+            }
         else:
             return data
 
@@ -48,9 +51,15 @@ class TorrentManager(BangumiDatabase):
             if file:
                 self.delete_torrents(data.id)
                 logger.info(f"Delete rule and torrents for {data.official_title}")
-                return {"status": "success", "msg": f"Delete rule and torrents for {data.official_title}"}
+                return {
+                    "status": "success",
+                    "msg": f"Delete rule and torrents for {data.official_title}",
+                }
             logger.info(f"Delete rule for {data.official_title}")
-            return {"status": "success", "msg": f"Delete rule for {data.official_title}"}
+            return {
+                "status": "success",
+                "msg": f"Delete rule for {data.official_title}",
+            }
         else:
             return data
 
@@ -69,7 +78,10 @@ class TorrentManager(BangumiDatabase):
                 client.remove_rule(data.rule_name)
                 client.set_rule(data)
             self.update_one(data)
-            return {"status": "success", "msg": f"Set new path for {data.official_title}"}
+            return {
+                "status": "success",
+                "msg": f"Set new path for {data.official_title}",
+            }
 
     def search_all_bangumi(self):
         datas = self.search_all()

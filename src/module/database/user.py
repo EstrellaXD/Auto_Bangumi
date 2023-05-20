@@ -33,7 +33,9 @@ class AuthDB(DataConnector):
         return User(**db_data)
 
     def get_user(self, username):
-        self._cursor.execute(f"SELECT * FROM {self.__table_name} WHERE username=?", (username,))
+        self._cursor.execute(
+            f"SELECT * FROM {self.__table_name} WHERE username=?", (username,)
+        )
         result = self._cursor.fetchone()
         if not result:
             return None
@@ -41,7 +43,10 @@ class AuthDB(DataConnector):
         return self.__db_to_data(db_data)
 
     def auth_user(self, username, password) -> bool:
-        self._cursor.execute(f"SELECT username, password FROM {self.__table_name} WHERE username=?", (username,))
+        self._cursor.execute(
+            f"SELECT username, password FROM {self.__table_name} WHERE username=?",
+            (username,),
+        )
         result = self._cursor.fetchone()
         if not result:
             raise HTTPException(status_code=404, detail="User not found")
@@ -53,11 +58,13 @@ class AuthDB(DataConnector):
         # Update username and password
         new_username = update_user.username
         new_password = update_user.password
-        self._cursor.execute(f"""
+        self._cursor.execute(
+            f"""
             UPDATE {self.__table_name}
             SET username = '{new_username}', password = '{get_password_hash(new_password)}'
             WHERE username = '{username}'
-        """)
+        """
+        )
         self._conn.commit()
 
 

@@ -39,7 +39,9 @@ class RequestURL:
         try_time = 0
         while True:
             try:
-                req = self.session.post(url=url, headers=self.header, data=data, timeout=5)
+                req = self.session.post(
+                    url=url, headers=self.header, data=data, timeout=5
+                )
                 req.raise_for_status()
                 return req
             except requests.RequestException as e:
@@ -59,7 +61,6 @@ class RequestURL:
         if "://" not in url:
             url = f"http://{url}"
         try:
-
             req = requests.head(url=url, headers=self.header, timeout=5)
             req.raise_for_status()
             return True

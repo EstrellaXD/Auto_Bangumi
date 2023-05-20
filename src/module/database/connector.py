@@ -16,11 +16,18 @@ class DataConnector:
         self._cursor = self._conn.cursor()
 
     def _update_table(self, table_name: str, db_data: dict):
-        columns = ", ".join([f"{key} {self.__python_to_sqlite_type(value)}" for key, value in db_data.items()])
+        columns = ", ".join(
+            [
+                f"{key} {self.__python_to_sqlite_type(value)}"
+                for key, value in db_data.items()
+            ]
+        )
         create_table_sql = f"CREATE TABLE IF NOT EXISTS {table_name} ({columns});"
         self._cursor.execute(create_table_sql)
         self._cursor.execute(f"PRAGMA table_info({table_name})")
-        existing_columns = {column_info[1]: column_info for column_info in self._cursor.fetchall()}
+        existing_columns = {
+            column_info[1]: column_info for column_info in self._cursor.fetchall()
+        }
         for key, value in db_data.items():
             if key not in existing_columns:
                 insert_column = self.__python_to_sqlite_type(value)
@@ -31,23 +38,29 @@ class DataConnector:
         self._conn.commit()
         logger.debug(f"Create / Update table {table_name}.")
 
-    def _insert(self, table_name: str,  db_data: dict):
+    def _insert(self, table_name: str, db_data: dict):
         columns = ", ".join(db_data.keys())
         values = ", ".join([f":{key}" for key in db_data.keys()])
-        self._cursor.execute(f"INSERT INTO {table_name} ({columns}) VALUES ({values})", db_data)
+        self._cursor.execute(
+            f"INSERT INTO {table_name} ({columns}) VALUES ({values})", db_data
+        )
         self._conn.commit()
 
     def _insert_list(self, table_name: str, data_list: list[dict]):
         columns = ", ".join(data_list[0].keys())
         values = ", ".join([f":{key}" for key in data_list[0].keys()])
-        self._cursor.executemany(f"INSERT INTO {table_name} ({columns}) VALUES ({values})", data_list)
+        self._cursor.executemany(
+            f"INSERT INTO {table_name} ({columns}) VALUES ({values})", data_list
+        )
         self._conn.commit()
 
     def _select(self, keys: list[str], table_name: str, condition: str = None) -> dict:
         if condition is None:
             self._cursor.execute(f"SELECT {', '.join(keys)} FROM {table_name}")
         else:
-            self._cursor.execute(f"SELECT {', '.join(keys)} FROM {table_name} WHERE {condition}")
+            self._cursor.execute(
+                f"SELECT {', '.join(keys)} FROM {table_name} WHERE {condition}"
+            )
         return dict(zip(keys, self._cursor.fetchone()))
 
     def _update(self, table_name: str, db_data: dict):
@@ -55,21 +68,29 @@ class DataConnector:
         if _id is None:
             raise ValueError("No _id in db_data.")
         set_sql = ", ".join([f"{key} = :{key}" for key in db_data.keys()])
-        self._cursor.execute(f"UPDATE {table_name} SET {set_sql} WHERE id = {_id}", db_data)
+        self._cursor.execute(
+            f"UPDATE {table_name} SET {set_sql} WHERE id = {_id}", db_data
+        )
         self._conn.commit()
         return self._cursor.rowcount == 1
 
     def _update_list(self, table_name: str, data_list: list[dict]):
         if len(data_list) == 0:
             return
-        set_sql = ", ".join([f"{key} = :{key}" for key in data_list[0].keys() if key != "id"])
-        self._cursor.executemany(f"UPDATE {table_name} SET {set_sql} WHERE id = :id", data_list)
+        set_sql = ", ".join(
+            [f"{key} = :{key}" for key in data_list[0].keys() if key != "id"]
+        )
+        self._cursor.executemany(
+            f"UPDATE {table_name} SET {set_sql} WHERE id = :id", data_list
+        )
         self._conn.commit()
 
     def _update_section(self, table_name: str, location: dict, update_dict: dict):
         set_sql = ", ".join([f"{key} = :{key}" for key in update_dict.keys()])
         sql_loc = f"{location['key']} = {location['value']}"
-        self._cursor.execute(f"UPDATE {table_name} SET {set_sql} WHERE {sql_loc}", update_dict)
+        self._cursor.execute(
+            f"UPDATE {table_name} SET {set_sql} WHERE {sql_loc}", update_dict
+        )
         self._conn.commit()
 
     def _delete_all(self, table_name: str):
@@ -77,7 +98,10 @@ class DataConnector:
         self._conn.commit()
 
     def _table_exists(self, table_name: str) -> bool:
-        self._cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name=?;", (table_name,))
+        self._cursor.execute(
+            f"SELECT name FROM sqlite_master WHERE type='table' AND name=?;",
+            (table_name,),
+        )
         return len(self._cursor.fetchall()) == 1
 
     @staticmethod

@@ -2,7 +2,11 @@ import logging
 import time
 
 from qbittorrentapi import Client, LoginFailed
-from qbittorrentapi.exceptions import Conflict409Error, Forbidden403Error, APIConnectionError
+from qbittorrentapi.exceptions import (
+    Conflict409Error,
+    Forbidden403Error,
+    APIConnectionError,
+)
 
 from module.ab_decorator import qb_connect_failed_wait
 from module.downloader.exceptions import ConflictError
@@ -18,7 +22,7 @@ class QbDownloader:
             password=password,
             VERIFY_WEBUI_CERTIFICATE=ssl,
             DISABLE_LOGGING_DEBUG_OUTPUT=True,
-            REQUESTS_ARGS={'timeout': (3.1, 10)}
+            REQUESTS_ARGS={"timeout": (3.1, 10)},
         )
         self.host = host
         self.username = username

@@ -8,18 +8,26 @@ from module.manager import TorrentManager
 from module.security import get_current_user
 
 
-@router.get("/api/v1/bangumi/getAll", tags=["bangumi"], response_model=list[BangumiData])
+@router.get(
+    "/api/v1/bangumi/getAll", tags=["bangumi"], response_model=list[BangumiData]
+)
 async def get_all_data(current_user=Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
+        )
     with TorrentManager() as torrent:
         return torrent.search_all()
 
 
-@router.get("/api/v1/bangumi/getData/{bangumi_id}", tags=["bangumi"], response_model=BangumiData)
+@router.get(
+    "/api/v1/bangumi/getData/{bangumi_id}", tags=["bangumi"], response_model=BangumiData
+)
 async def get_data(bangumi_id: str, current_user=Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
+        )
     with TorrentManager() as torrent:
         return torrent.search_data(bangumi_id)
 
@@ -27,7 +35,9 @@ async def get_data(bangumi_id: str, current_user=Depends(get_current_user)):
 @router.post("/api/v1/bangumi/updateData", tags=["bangumi"])
 async def update_data(data: BangumiData, current_user=Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
+        )
     with TorrentManager() as torrent:
         return torrent.update_rule(data)
 
@@ -35,15 +45,21 @@ async def update_data(data: BangumiData, current_user=Depends(get_current_user))
 @router.delete("/api/v1/bangumi/deleteData/{bangumi_id}", tags=["bangumi"])
 async def delete_data(bangumi_id: str, current_user=Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
+        )
     with TorrentManager() as torrent:
         return torrent.delete_data(bangumi_id)
 
 
 @router.delete("/api/v1/bangumi/deleteRule/{bangumi_id}", tags=["bangumi"])
-async def delete_rule(bangumi_id: str, file: bool = False, current_user=Depends(get_current_user)):
+async def delete_rule(
+    bangumi_id: str, file: bool = False, current_user=Depends(get_current_user)
+):
     if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
+        )
     with TorrentManager() as torrent:
         return torrent.delete_rule(bangumi_id, file)
 
@@ -51,7 +67,9 @@ async def delete_rule(bangumi_id: str, file: bool = False, current_user=Depends(
 @router.get("/api/v1/bangumi/resetAll", tags=["bangumi"])
 async def reset_all(current_user=Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
+        )
     with BangumiDatabase() as database:
         database.delete_all()
         return {"status": "ok"}

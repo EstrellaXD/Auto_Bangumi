@@ -27,7 +27,8 @@ def add_rss_feed():
             logger.info(f"Add RSS Feed: {settings.rss_link}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from module.conf import setup_logger
+
     setup_logger()
     add_rss_feed()

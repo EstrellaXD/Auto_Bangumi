@@ -16,7 +16,9 @@ def link_process(link):
 @router.post("/api/v1/download/analysis", tags=["download"])
 async def analysis(link: RssLink, current_user=Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
+        )
     data = link_process(link.rss_link)
     if data:
         return data[0]
@@ -25,9 +27,13 @@ async def analysis(link: RssLink, current_user=Depends(get_current_user)):
 
 
 @router.post("/api/v1/download/collection", tags=["download"])
-async def download_collection(data: BangumiData, current_user=Depends(get_current_user)):
+async def download_collection(
+    data: BangumiData, current_user=Depends(get_current_user)
+):
     if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
+        )
     if data:
         with SeasonCollector() as collector:
             collector.collect_season(data, data.rss_link[0])
@@ -39,7 +45,9 @@ async def download_collection(data: BangumiData, current_user=Depends(get_curren
 @router.post("/api/v1/download/subscribe", tags=["download"])
 async def subscribe(data: BangumiData, current_user=Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
+        )
     if data:
         with SeasonCollector() as collector:
             collector.subscribe_season(data)

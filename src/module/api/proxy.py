@@ -38,7 +38,7 @@ def get_torrent(full_path):
         logger.warning("Failed to get torrent")
         raise HTTPException(status_code=500, detail="Failed to get torrent")
 
-    
+
 @router.get("/RSS/MyBangumi", tags=["proxy"])
 async def get_my_bangumi(token: str):
     full_path = "MyBangumi?token=" + token

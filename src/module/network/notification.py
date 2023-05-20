@@ -31,6 +31,7 @@ class TelegramNotification(RequestContent):
 
 class ServerChanNotification(RequestContent):
     """Server酱推送"""
+
     def __init__(self):
         super().__init__()
         self.notification_url = f"https://sctapi.ftqq.com/{token}.send"
@@ -71,10 +72,12 @@ def getClient():
 
 class PostNotification(getClient()):
     def send_msg(self, info: Notification) -> bool:
-        text = f"番剧名称：{info.official_title}\n" \
-               f"季度： 第{info.season}季\n" \
-               f"更新集数： 第{info.episode}集\n" \
-               f"{info.poster_link}\n"
+        text = (
+            f"番剧名称：{info.official_title}\n"
+            f"季度： 第{info.season}季\n"
+            f"更新集数： 第{info.episode}集\n"
+            f"{info.poster_link}\n"
+        )
         try:
             return self.post_msg(text)
         except Exception as e:
@@ -82,7 +85,7 @@ class PostNotification(getClient()):
             return False
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     info = Notification(
         official_title="魔法纪录 魔法少女小圆外传",
         season=2,

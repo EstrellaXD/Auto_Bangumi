@@ -15,7 +15,9 @@ def matched(torrent_title: str):
 
 
 def save_path(data: BangumiData):
-    folder = f"{data.official_title}({data.year})" if data.year else f"{data.official_title}"
+    folder = (
+        f"{data.official_title}({data.year})" if data.year else f"{data.official_title}"
+    )
     season = f"Season {data.season}"
     return path.join(
         settings.downloader.path,

@@ -2,7 +2,9 @@ from pydantic import BaseModel, Field
 
 
 class User(BaseModel):
-    username: str = Field("admin", min_length=4, max_length=20, regex=r"^[a-zA-Z0-9_]+$")
+    username: str = Field(
+        "admin", min_length=4, max_length=20, regex=r"^[a-zA-Z0-9_]+$"
+    )
     password: str = Field("adminadmin", min_length=8)
 
 

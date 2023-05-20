@@ -1,17 +1,14 @@
 import re
 import xml.etree.ElementTree
-from dataclasses import dataclass
 from bs4 import BeautifulSoup
 
 from .request_url import RequestURL
+from .site import mikan_parser
 from module.conf import settings
+from module.models import TorrentBase
 
 
-@dataclass
-class TorrentInfo:
-    name: str
-    torrent_link: str
-    homepage: str = None
+class TorrentInfo(TorrentBase):
     _poster_link: str = None
     _official_title: str = None
 
@@ -19,39 +16,38 @@ class TorrentInfo:
     def poster_link(self) -> str:
         if self._poster_link is None:
             with RequestContent() as req:
-                self._poster_link, self._official_title = req.get_mikan_info(self.homepage)
+                self._poster_link, self._official_title = req.get_mikan_info(
+                    self.homepage
+                )
         return self._poster_link
 
     @property
     def official_title(self) -> str:
         if self._official_title is None:
             with RequestContent() as req:
-                self._poster_link, self._official_title = req.get_mikan_info(self.homepage)
+                self._poster_link, self._official_title = req.get_mikan_info(
+                    self.homepage
+                )
         return self._official_title
 
 
 class RequestContent(RequestURL):
     # Mikanani RSS
     def get_torrents(
-            self,
-            _url: str,
-            _filter: str = "|".join(settings.rss_parser.filter),
-            retry: int = 3
+        self,
+        _url: str,
+        _filter: str = "|".join(settings.rss_parser.filter),
+        retry: int = 3,
     ) -> [TorrentInfo]:
         soup = self.get_xml(_url, retry)
-        torrent_titles = []
-        torrent_urls = []
-        torrent_homepage = []
-
-        for item in soup.findall("./channel/item"):
-            torrent_titles.append(item.find("title").text)
-            torrent_urls.append(item.find("enclosure").attrib["url"])
-            torrent_homepage.append(item.find("link").text)
+        torrent_titles, torrent_urls, torrent_homepage = mikan_parser(soup)
 
         torrents = []
-        for _title, torrent_url, homepage in zip(torrent_titles, torrent_urls, torrent_homepage):
+        for _title, torrent_url, homepage in zip(
+            torrent_titles, torrent_urls, torrent_homepage
+        ):
             if re.search(_filter, _title) is None:
-                torrents.append(TorrentInfo(_title, torrent_url, homepage))
+                torrents.append(TorrentInfo(name=_title, torrent_link=torrent_url, homepage=homepage))
         return torrents
 
     def get_mikan_info(self, _url) -> tuple[str, str]:
@@ -59,7 +55,9 @@ class RequestContent(RequestURL):
         soup = BeautifulSoup(content, "html.parser")
         poster_div = soup.find("div", {"class": "bangumi-poster"})
         poster_style = poster_div.get("style")
-        official_title = soup.select_one('p.bangumi-title a[href^="/Home/Bangumi/"]').text
+        official_title = soup.select_one(
+            'p.bangumi-title a[href^="/Home/Bangumi/"]'
+        ).text
         if poster_style:
             poster_path = poster_style.split("url('")[1].split("')")[0]
             return poster_path, official_title

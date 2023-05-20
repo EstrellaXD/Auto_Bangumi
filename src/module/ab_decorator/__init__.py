@@ -16,6 +16,7 @@ def qb_connect_failed_wait(func):
                 logger.warning("Cannot connect to qBittorrent. Wait 5 min and retry...")
                 time.sleep(300)
                 times += 1
+
     return wrapper
 
 

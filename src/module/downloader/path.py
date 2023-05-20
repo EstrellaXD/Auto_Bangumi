@@ -52,15 +52,19 @@ class TorrentPath:
         return self._file_depth(path) <= 2
 
     def _gen_save_path(self, data: BangumiData):
-        folder = f"{data.official_title}({data.year})" if data.year else data.official_title
+        folder = (
+            f"{data.official_title}({data.year})" if data.year else data.official_title
+        )
         save_path = path.join(self.download_path, folder, f"Season {data.season}")
         return save_path
 
     @staticmethod
     def _rule_name(data: BangumiData):
-        rule_name = f"[{data.group_name}] {data.official_title} S{data.season}" \
-            if settings.bangumi_manage.group_tag \
+        rule_name = (
+            f"[{data.group_name}] {data.official_title} S{data.season}"
+            if settings.bangumi_manage.group_tag
             else f"{data.official_title} S{data.season}"
+        )
         return rule_name
 
     @staticmethod

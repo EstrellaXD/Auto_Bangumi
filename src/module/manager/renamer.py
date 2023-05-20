@@ -26,9 +26,13 @@ class Renamer(DownloadClient):
         logger.debug(f"Checked {torrent_count} files")
 
     @staticmethod
-    def gen_path(file_info: EpisodeFile | SubtitleFile, bangumi_name: str, method: str) -> str:
+    def gen_path(
+        file_info: EpisodeFile | SubtitleFile, bangumi_name: str, method: str
+    ) -> str:
         season = f"0{file_info.season}" if file_info.season < 10 else file_info.season
-        episode = f"0{file_info.episode}" if file_info.episode < 10 else file_info.episode
+        episode = (
+            f"0{file_info.episode}" if file_info.episode < 10 else file_info.episode
+        )
         if method == "None":
             return file_info.media_path
         elif method == "pn":
@@ -66,7 +70,7 @@ class Renamer(DownloadClient):
         method: str,
         season: int,
         _hash: str,
-        **kwargs
+        **kwargs,
     ):
         ep = self._parser.torrent_parser(
             torrent_name=torrent_name,
@@ -76,7 +80,9 @@ class Renamer(DownloadClient):
         if ep:
             new_path = self.gen_path(ep, bangumi_name, method=method)
             if media_path != new_path:
-                renamed = self.rename_torrent_file(_hash=_hash, old_path=media_path, new_path=new_path)
+                renamed = self.rename_torrent_file(
+                    _hash=_hash, old_path=media_path, new_path=new_path
+                )
                 if renamed:
                     if settings.notification.enable:
                         self.send_notification(bangumi_name, ep)
@@ -92,7 +98,7 @@ class Renamer(DownloadClient):
         season: int,
         method: str,
         _hash: str,
-        **kwargs
+        **kwargs,
     ):
         for media_path in media_list:
             if self.is_ep(media_path):
@@ -121,7 +127,7 @@ class Renamer(DownloadClient):
         season: int,
         method: str,
         _hash,
-        **kwargs
+        **kwargs,
     ):
         method = "subtitle_" + method
         for subtitle_path in subtitle_list:
@@ -166,15 +172,16 @@ class Renamer(DownloadClient):
                 logger.info("Start rename collection")
                 self.rename_collection(media_list=media_list, **kwargs)
                 if len(subtitle_list) > 0:
-                    self.rename_subtitles(subtitle_list=subtitle_list,**kwargs)
+                    self.rename_subtitles(subtitle_list=subtitle_list, **kwargs)
                 self.set_category(info.hash, "BangumiCollection")
             else:
                 logger.warning(f"{info.name} has no media file")
         logger.debug("Rename process finished.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from module.conf import setup_logger
+
     settings.log.debug_enable = True
     setup_logger()
     with Renamer() as renamer:

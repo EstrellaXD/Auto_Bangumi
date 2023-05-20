@@ -1,7 +1,12 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from module.security import create_access_token, get_current_user, update_user_info, auth_user
+from module.security import (
+    create_access_token,
+    get_current_user,
+    update_user_info,
+    auth_user,
+)
 from module.models.user import User
 
 from .program import router
@@ -17,27 +22,28 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
 
 @router.get("/api/v1/auth/refresh_token", response_model=dict, tags=["auth"])
-async def refresh(
-        current_user: User = Depends(get_current_user)
-):
+async def refresh(current_user: User = Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
+        )
     token = create_access_token({"sub": current_user.username})
     return {"access_token": token, "token_type": "bearer", "expire": 86400}
 
 
 @router.get("/api/v1/auth/logout", response_model=dict, tags=["auth"])
-async def logout(
-        current_user: User = Depends(get_current_user)
-):
+async def logout(current_user: User = Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
+        )
     return {"message": "logout success"}
 
 
 @router.post("/api/v1/auth/update", response_model=dict, tags=["auth"])
 async def update_user(user_data: User, current_user: User = Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
+        )
     return update_user_info(user_data, current_user)
-

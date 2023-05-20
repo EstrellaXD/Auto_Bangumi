@@ -26,7 +26,9 @@ async def shutdown():
 @router.get("/api/v1/restart", tags=["program"])
 async def restart(current_user=Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
+        )
     try:
         program.restart()
         return {"status": "ok"}
@@ -39,7 +41,9 @@ async def restart(current_user=Depends(get_current_user)):
 @router.get("/api/v1/start", tags=["program"])
 async def start(current_user=Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
+        )
     try:
         program.start()
         return {"status": "ok"}
@@ -52,7 +56,9 @@ async def start(current_user=Depends(get_current_user)):
 @router.get("/api/v1/stop", tags=["program"])
 async def stop(current_user=Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
+        )
     program.stop()
     return {"status": "ok"}
 
@@ -60,7 +66,9 @@ async def stop(current_user=Depends(get_current_user)):
 @router.get("/api/v1/status", tags=["program"])
 async def status(current_user=Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
+        )
     if not program.is_running:
         return {"status": "stop"}
     else:
@@ -70,7 +78,9 @@ async def status(current_user=Depends(get_current_user)):
 @router.get("/api/v1/shutdown", tags=["program"])
 async def shutdown_program(current_user=Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
+        )
     program.stop()
     logger.info("Shutting down program...")
     os.kill(os.getpid(), signal.SIGINT)
@@ -81,12 +91,16 @@ async def shutdown_program(current_user=Depends(get_current_user)):
 @router.get("/api/v1/check/downloader", tags=["check"])
 async def check_downloader_status(current_user=Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
+        )
     return program.check_downloader()
 
 
 @router.get("/api/v1/check/rss", tags=["check"])
 async def check_rss_status(current_user=Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
+        )
     return program.check_analyser()

@@ -1,7 +1,7 @@
 import re
 import logging
 
-from module.network import RequestContent
+from module.network import RequestContent, TorrentInfo
 from module.parser import TitleParser
 from module.models import BangumiData
 from module.database import BangumiDatabase
@@ -21,9 +21,7 @@ class RSSAnalyser:
             data.official_title = mikan_title if mikan_title else data.official_title
         elif settings.rss_parser.parser_type == "tmdb":
             tmdb_title, season, year = self._title_analyser.tmdb_parser(
-                data.official_title,
-                data.season,
-                settings.rss_parser.language
+                data.official_title, data.season, settings.rss_parser.language
             )
             data.official_title = tmdb_title
             data.year = year
@@ -41,15 +39,18 @@ class RSSAnalyser:
                 rss_torrents = req.get_torrents(rss_link, "\\d+-\\d+")
         return rss_torrents
 
-    def new_bangumi_list(self, torrents: list, rss_link: str, full_parse: bool = True) -> list:
+    def torrents_to_data(
+        self, torrents: list, rss_link: str, full_parse: bool = True
+    ) -> list:
         new_data = []
         for torrent in torrents:
-            data = self._title_analyser.raw_parser(
-                raw=torrent.name, rss_link=rss_link
-            )
+            data = self._title_analyser.raw_parser(raw=torrent.name, rss_link=rss_link)
             if data and data.title_raw not in [i.title_raw for i in new_data]:
                 try:
-                    poster_link, mikan_title = torrent.poster_link, torrent.official_title
+                    poster_link, mikan_title = (
+                        torrent.poster_link,
+                        torrent.official_title,
+                    )
                 except AttributeError:
                     poster_link, mikan_title = None, None
                 data.poster_link = poster_link
@@ -60,6 +61,20 @@ class RSSAnalyser:
                 logger.debug(f"New title found: {data.official_title}")
         return new_data
 
+    def torrent_to_data(self, torrent: TorrentInfo, rss_link: str | None = None) -> BangumiData:
+        data = self._title_analyser.raw_parser(raw=torrent.name, rss_link=rss_link)
+        if data:
+            try:
+                poster_link, mikan_title = (
+                    torrent.poster_link,
+                    torrent.official_title,
+                )
+            except AttributeError:
+                poster_link, mikan_title = None, None
+            data.poster_link = poster_link
+            self.official_title_parser(data, mikan_title)
+            return data
+
     def rss_to_data(self, rss_link: str, full_parse: bool = True) -> list[BangumiData]:
         rss_torrents = self.get_rss_torrents(rss_link, full_parse)
         with BangumiDatabase() as database:
@@ -68,7 +83,7 @@ class RSSAnalyser:
                 logger.debug("No new title found.")
                 return []
             # New List
-            new_data = self.new_bangumi_list(torrents_to_add, rss_link, full_parse)
+            new_data = self.torrents_to_data(torrents_to_add, rss_link, full_parse)
             if full_parse:
                 database.insert_list(new_data)
         return new_data

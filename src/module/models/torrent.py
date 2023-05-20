@@ -1,12 +1,10 @@
 from pydantic import BaseModel, Field
 
 
-class TorrentInfo(BaseModel):
+class TorrentBase(BaseModel):
     name: str = Field(...)
-    link: str = Field(...)
+    torrent_link: str = Field(...)
     homepage: str | None = Field(None)
-    poster_link: str = Field(...)
-    official_title: str = Field(...)
 
 
 class FileSet(BaseModel):
@@ -32,4 +30,3 @@ class SubtitleFile(BaseModel):
     episode: int = Field(None)
     language: str = Field(..., regex=r"(zh|zh-tw)")
     suffix: str = Field(..., regex=r"\.(ass|srt|ASS|SRT)$")
-

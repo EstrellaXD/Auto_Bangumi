@@ -4,8 +4,8 @@ from .connector import DataConnector
 
 logger = logging.getLogger(__name__)
 
-class TorrentDatabase(DataConnector):
 
+class TorrentDatabase(DataConnector):
     def update_table(self):
         table_name = "torrent"
         db_data = self.__data_to_db()
@@ -30,14 +30,18 @@ class TorrentDatabase(DataConnector):
         return SaveTorrent(**db_data)
 
     def if_downloaded(self, torrent_url: str, torrent_name: str) -> bool:
-        self._cursor.execute("SELECT * FROM torrent WHERE torrent_url = ? OR torrent_name = ?",
-                                (torrent_url, torrent_name))
+        self._cursor.execute(
+            "SELECT * FROM torrent WHERE torrent_url = ? OR torrent_name = ?",
+            (torrent_url, torrent_name),
+        )
         return bool(self._cursor.fetchone())
 
     def insert(self, data: SaveTorrent):
         db_data = self.__data_to_db(data)
         columns = ", ".join(db_data.keys())
         values = ", ".join([f":{key}" for key in db_data.keys()])
-        self._cursor.execute(f"INSERT INTO torrent ({columns}) VALUES ({values})", db_data)
+        self._cursor.execute(
+            f"INSERT INTO torrent ({columns}) VALUES ({values})", db_data
+        )
         logger.debug(f"Add {data.torrent_name} into database.")
         self._conn.commit()

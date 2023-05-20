@@ -5,6 +5,7 @@ from .config import settings
 
 LOG_PATH = "data/log.txt"
 
+
 def setup_logger(level: int = logging.INFO, reset: bool = False):
     level = logging.DEBUG if settings.log.debug_enable else level
     if not os.path.isdir("data"):

@@ -149,8 +149,7 @@ class BangumiDatabase(DataConnector):
             SELECT official_title, poster_link 
             FROM bangumi 
             WHERE INSTR(:bangumi_name, official_title) > 0
-            """
-            ,
+            """,
             {"bangumi_name": bangumi_name},
         )
         data = self._cursor.fetchone()

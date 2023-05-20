@@ -59,10 +59,10 @@ def get_subtitle_lang(subtitle_name: str) -> str:
 
 
 def torrent_parser(
-        torrent_path: str,
-        torrent_name: str | None = None,
-        season: int | None = None,
-        file_type: str = "media"
+    torrent_path: str,
+    torrent_name: str | None = None,
+    season: int | None = None,
+    file_type: str = "media",
 ) -> EpisodeFile | SubtitleFile:
     media_path = split_path(torrent_path)
     for rule in RULES:
@@ -85,7 +85,7 @@ def torrent_parser(
                     title=title,
                     season=season,
                     episode=episode,
-                    suffix=suffix
+                    suffix=suffix,
                 )
             elif file_type == "subtitle":
                 language = get_subtitle_lang(media_path)
@@ -96,5 +96,5 @@ def torrent_parser(
                     season=season,
                     language=language,
                     episode=episode,
-                    suffix=suffix
+                    suffix=suffix,
                 )

@@ -17,11 +17,13 @@ uvicorn_logging_config = {
         "uvicorn.access": {
             "level": "WARNING",
         },
-    }
+    },
 }
 
 if __name__ == "__main__":
     uvicorn.run(
-        router, host="0.0.0.0", port=settings.program.webui_port,
+        router,
+        host="0.0.0.0",
+        port=settings.program.webui_port,
         log_config=uvicorn_logging_config,
     )

@@ -10,15 +10,13 @@ class Checker:
         pass
 
     def check_renamer(self) -> bool:
-        if self.check_downloader() and\
-                settings.bangumi_manage.enable:
+        if self.check_downloader() and settings.bangumi_manage.enable:
             return True
         else:
             return False
 
     def check_analyser(self) -> bool:
-        if self.check_downloader() and\
-                settings.rss_parser.enable:
+        if self.check_downloader() and settings.rss_parser.enable:
             return True
         else:
             return False

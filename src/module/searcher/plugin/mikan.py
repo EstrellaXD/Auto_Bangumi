@@ -10,4 +10,3 @@ def mikan_url(keywords: list[str]):
     if "://" not in url:
         url = f"https://{url}"
     return url
-

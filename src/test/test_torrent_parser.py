@@ -67,5 +67,3 @@ def test_torrent_parser():
     assert bf.title == "放学后失眠的你-Kimi wa Houkago Insomnia"
     assert bf.season == 1
     assert bf.episode == 6
-
-
