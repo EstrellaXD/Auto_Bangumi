@@ -35,24 +35,26 @@ withDefaults(
         overflow-hidden
         shadow
       >
-        <MenuItem v-for="i in items" :key="i.id">
+        <MenuItem v-for="i in items" :key="i.id" v-slot="{ active }">
           <div
             w-full
             h-32px
             px-12px
             fx-cer
             justify-between
-            text-black
             is-btn
-            transition-colors
             hover:text-white
             hover:bg-primary
             class="group"
+            :class="[active ? 'text-white bg-theme-row' : 'text-black']"
           >
             <div text-main>{{ i.label }}</div>
 
-            <div text-primary class="group-hover:text-white" transition-colors>
-              <component :is="i.icon" size="16"></component>
+            <div
+              class="group-hover:text-white"
+              :class="[active ? 'text-white' : 'text-primary']"
+            >
+              <Component :is="i.icon" size="16"></Component>
             </div>
           </div>
         </MenuItem>
