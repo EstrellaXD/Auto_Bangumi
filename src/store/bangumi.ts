@@ -1,13 +1,12 @@
-import { getABData } from '../api/bangumi';
 import type { BangumiItem } from '#/bangumi';
 
-export const bangumiStore = defineStore('bangumi', () => {
+export const useBangumiStore = defineStore('bangumi', () => {
   const data = ref<BangumiItem[]>();
 
-  const get = async () => {
-    const res = await getABData();
-    data.value = res.data;
+  const getAll = async () => {
+    const res = await apiBangumi.getAll();
+    data.value = res;
   };
 
-  return { data, get };
+  return { data, getAll };
 });

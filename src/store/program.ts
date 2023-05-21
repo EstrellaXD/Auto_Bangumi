@@ -1,4 +1,4 @@
-export const programStore = defineStore('program', () => {
+export const useProgramStore = defineStore('program', () => {
   const running = ref(false);
   const timer = ref<NodeJS.Timer | null>(null);
 
