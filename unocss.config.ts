@@ -16,6 +16,8 @@ export default defineConfig({
   theme: {
     colors: {
       primary: '#493475',
+      running: '#A3D491',
+      stopped: '#DF7F91',
     },
   },
   rules: [
@@ -31,9 +33,33 @@ export default defineConfig({
         background: 'linear-gradient(180deg, #3C239F 0%, #793572 100%)',
       },
     ],
+    [
+      'poster-shandow',
+      {
+        filter: 'drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.1))',
+      },
+    ],
+    [
+      'poster-pen-active',
+      {
+        background: '#B4ABC6',
+        'box-shadow': '2px 2px 4px rgba(0, 0, 0, 0.25)',
+      },
+    ],
   ],
   shortcuts: [
     [/^wh-(.*)$/, ([, t]) => `w-${t} h-${t}`],
+
+    [
+      'layout-container',
+      'wh-screen min-w-1024px min-h-768px p-16px space-y-12px flex flex-col',
+    ],
+    [
+      'layout-main',
+      'flex space-x-20px overflow-hidden h-[calc(100vh_-_2_*_16px_-_60px_-_12px)]',
+    ],
+    ['layout-content', 'overflow-hidden h-full grow flex="~ col"'],
+
     ['rel', 'relative'],
     ['abs', 'absolute'],
     ['fx-cer', 'flex items-center'],
@@ -49,5 +75,7 @@ export default defineConfig({
     ['input-error', 'border-color-[#CA0E0E]'],
     ['is-btn', 'cursor-pointer select-none'],
     ['is-disabled', 'cursor-not-allowed select-none'],
+    ['input-reset', 'bg-transparent min-w-0 flex-1 outline-none'],
+    ['btn-click', 'hover:scale-110 active:scale-100'],
   ],
 });

@@ -1,0 +1,16 @@
+// transition
+
+.fade {
+  &-enter-active,
+  &-leave-active {
+    position: absolute;
+    transition: opacity 0.2s ease;
+  }
+
+  &-enter-from,
+  &-leave-to {
+    opacity: 0;
+  }
+}
+
+// transition-group

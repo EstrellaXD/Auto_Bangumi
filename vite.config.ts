@@ -23,7 +23,7 @@ export default defineConfig({
     }),
     Components({
       dts: 'src/components.d.ts',
-      dirs: ['src/basic'],
+      dirs: ['src/basic', 'src/components', 'src/views'],
     }),
   ],
   css: {
@@ -43,9 +43,8 @@ export default defineConfig({
     },
   },
   server: {
-    host: '0.0.0.0',
     proxy: {
-      '^api/.*': 'http://126.0.0.1:7892',
+      '^/api/.*': 'http://127.0.0.1:7892',
     },
   },
 });
