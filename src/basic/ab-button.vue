@@ -3,25 +3,41 @@ const props = withDefaults(
   defineProps<{
     type?: 'primary' | 'warn';
     size?: 'big' | 'normal' | 'small';
+    link?: string | null;
   }>(),
   {
     type: 'primary',
     size: 'normal',
+    link: null,
   }
 );
 
 defineEmits(['click']);
+
+const buttonSize = computed(() => {
+  switch (props.size) {
+    case 'big':
+      return 'rounded-10px text-h1 w-276px h-55px';
+    case 'normal':
+      return 'rounded-6px w-170px h-36px';
+    case 'small':
+      return 'rounded-6px w-86px h-28px';
+  }
+});
 </script>
 
 <template>
-  <button
+  <Component
+    :is="link !== null ? 'a' : 'button'"
+    :href="link"
     text-white
     outline-none
-    :class="[`type-${type}`, `size-${size}`]"
+    f-cer
+    :class="[`type-${type}`, buttonSize]"
     @click="$emit('click')"
   >
     <slot></slot>
-  </button>
+  </Component>
 </template>
 
 <style lang="scss" scoped>
