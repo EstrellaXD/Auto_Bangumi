@@ -3,8 +3,8 @@ import { PlayOne, Pause, Refresh, Power, Me } from '@icon-park/vue-next';
 
 const search = ref('');
 
-const { onUpdate } = programStore();
-const { running } = storeToRefs(programStore());
+const { onUpdate } = useProgramStore();
+const { running } = storeToRefs(useProgramStore());
 
 const items = [
   {

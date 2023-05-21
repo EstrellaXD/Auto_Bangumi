@@ -39,7 +39,9 @@ import type {
 
 declare module 'vue-router/auto/routes' {
   export interface RouteNamedMap {
-    '/': RouteRecordInfo<'/', '/', Record<never, never>, Record<never, never>>,
+    'Bangumi List': RouteRecordInfo<'Bangumi List', '/', Record<never, never>, Record<never, never>>,
+    'Log': RouteRecordInfo<'Log', '/log', Record<never, never>, Record<never, never>>,
+    'Player': RouteRecordInfo<'Player', '/player', Record<never, never>, Record<never, never>>,
   }
 }
 

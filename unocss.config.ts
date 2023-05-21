@@ -52,13 +52,13 @@ export default defineConfig({
 
     [
       'layout-container',
-      'wh-screen min-w-1024px min-h-768px p-16px space-y-12px flex flex-col',
+      'wh-screen min-w-1024px min-h-768px p-16px space-y-12px flex flex-col bg-[#F0F0F0]',
     ],
     [
       'layout-main',
       'flex space-x-20px overflow-hidden h-[calc(100vh_-_2_*_16px_-_60px_-_12px)]',
     ],
-    ['layout-content', 'overflow-hidden h-full grow flex="~ col"'],
+    ['layout-content', 'overflow-hidden h-full flex flex-col flex-1'],
 
     ['rel', 'relative'],
     ['abs', 'absolute'],
@@ -77,5 +77,6 @@ export default defineConfig({
     ['is-disabled', 'cursor-not-allowed select-none'],
     ['input-reset', 'bg-transparent min-w-0 flex-1 outline-none'],
     ['btn-click', 'hover:scale-110 active:scale-100'],
+    ['line', 'w-full h-2px bg-[#DFE1EF]'],
   ],
 });

@@ -1,4 +1,8 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+definePage({
+  name: 'Player',
+});
+</script>
 
 <template>
   <Suspense>
@@ -9,10 +13,14 @@
         <ab-sidebar />
 
         <div layout-content>
-          <ab-page-title title="Bangumi List"></ab-page-title>
+          <ab-page-title :title="$route.name"></ab-page-title>
 
-          <div overflow-auto mt-12px>
-            <RouterView />
+          <div overflow-auto mt-12px flex-grow>
+            <RouterView v-slot="{ Component }">
+              <KeepAlive>
+                <component :is="Component" />
+              </KeepAlive>
+            </RouterView>
           </div>
         </div>
       </main>
