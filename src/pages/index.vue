@@ -1,5 +1,22 @@
-<script lang="ts" setup></script>
+<script lang="ts" setup>
+const { data } = storeToRefs(useBangumiStore());
+const { getAll } = useBangumiStore();
+
+onBeforeMount(() => getAll());
+
+definePage({
+  name: 'Bangumi List',
+});
+</script>
 
 <template>
-  <div>index</div>
+  <div flex="~ wrap" space-y-12px space-x-50px>
+    <template v-for="i in data" :key="i.id">
+      <ab-bangumi-card
+        :poster="i.poster_link"
+        :name="i.official_title"
+        :season="i.season"
+      ></ab-bangumi-card>
+    </template>
+  </div>
 </template>
