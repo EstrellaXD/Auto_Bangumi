@@ -67,8 +67,8 @@ class QbDownloader:
         return self._client.torrents_createCategory(name=category)
 
     @qb_connect_failed_wait
-    def torrents_info(self, status_filter, category):
-        return self._client.torrents_info(status_filter, category)
+    def torrents_info(self, status_filter, category, tag=None):
+        return self._client.torrents_info(status_filter=status_filter, category=category, tag=tag)
 
     def torrents_add(self, urls, save_path, category):
         return self._client.torrents_add(
@@ -125,3 +125,6 @@ class QbDownloader:
 
     def remove_rule(self, rule_name):
         self._client.rss_remove_rule(rule_name)
+
+    def add_tag(self, _hash, tag):
+        self._client.torrents_add_tags(tags=tag, hashes=_hash)
