@@ -1,33 +1,37 @@
 import re
 import xml.etree.ElementTree
+from dataclasses import dataclass
+
 from bs4 import BeautifulSoup
 
 from .request_url import RequestURL
 from .site import mikan_parser
 from module.conf import settings
-from module.models import TorrentBase
 
 
-class TorrentInfo(TorrentBase):
-    _poster_link: str = None
-    _official_title: str = None
+@dataclass
+class TorrentInfo:
+    name: str
+    torrent_link: str
+    homepage: str
+    _poster_link: str | None = None
+    _official_title: str | None = None
 
-    @property
-    def poster_link(self) -> str:
-        if self._poster_link is None:
+    def __fetch_mikan_info(self):
+        if self._poster_link is None or self._official_title is None:
             with RequestContent() as req:
                 self._poster_link, self._official_title = req.get_mikan_info(
                     self.homepage
                 )
+
+    @property
+    def poster_link(self) -> str:
+        self.__fetch_mikan_info()
         return self._poster_link
 
     @property
     def official_title(self) -> str:
-        if self._official_title is None:
-            with RequestContent() as req:
-                self._poster_link, self._official_title = req.get_mikan_info(
-                    self.homepage
-                )
+        self.__fetch_mikan_info()
         return self._official_title
 
 
