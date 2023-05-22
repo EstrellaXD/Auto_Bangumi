@@ -22,6 +22,8 @@ const props = withDefaults(
       select-none
     >
       <div text-h2>{{ title }}</div>
+
+      <slot name="title-right"></slot>
     </div>
 
     <div p-20px bg-white>

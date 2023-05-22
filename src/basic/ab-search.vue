@@ -4,9 +4,11 @@ import { Search } from '@icon-park/vue-next';
 const props = withDefaults(
   defineProps<{
     value?: string;
+    placeholder?: string;
   }>(),
   {
     value: '',
+    placeholder: '',
   }
 );
 
@@ -25,6 +27,7 @@ const onSearch = () => {
 <template>
   <div
     bg="#7752B4"
+    text-white
     fx-cer
     rounded-12px
     h-36px
@@ -46,6 +49,7 @@ const onSearch = () => {
     <input
       type="text"
       :value="value"
+      :placeholder="placeholder"
       @input="onInput"
       @keyup.enter="onSearch"
       input-reset

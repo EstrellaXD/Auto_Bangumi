@@ -31,10 +31,10 @@ const props = withDefaults(
 
       <div bg-white px-8px py-20px>
         <DisclosurePanel>
-          <slot name="title"></slot>
+          <slot name="top"></slot>
         </DisclosurePanel>
 
-        <div line></div>
+        <div line my-12px></div>
 
         <DisclosurePanel>
           <slot></slot>

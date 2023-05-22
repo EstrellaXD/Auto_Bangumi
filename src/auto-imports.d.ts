@@ -146,6 +146,7 @@ declare global {
   const useClamp: typeof import('@vueuse/core')['useClamp']
   const useClipboard: typeof import('@vueuse/core')['useClipboard']
   const useColorMode: typeof import('@vueuse/core')['useColorMode']
+  const useConfigStore: typeof import('./store/config')['useConfigStore']
   const useConfirmDialog: typeof import('@vueuse/core')['useConfirmDialog']
   const useCounter: typeof import('@vueuse/core')['useCounter']
   const useCssModule: typeof import('vue')['useCssModule']

@@ -14,7 +14,11 @@ export default defineConfig({
     VueRouter({
       dts: 'src/router-type.d.ts',
     }),
-    vue(),
+    vue({
+      script: {
+        defineModel: true,
+      },
+    }),
     UnoCSS(),
     AutoImport({
       imports: ['vue', 'vitest', 'pinia', '@vueuse/core', VueRouterAutoImports],

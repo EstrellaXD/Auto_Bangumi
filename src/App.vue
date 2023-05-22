@@ -1,8 +1,4 @@
-<script setup lang="ts">
-definePage({
-  name: 'Player',
-});
-</script>
+<script setup lang="ts"></script>
 
 <template>
   <Suspense>

@@ -1,23 +1,16 @@
 <script lang="ts" setup>
 import { Switch } from '@headlessui/vue';
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
-    modelValue: boolean;
     small?: boolean;
   }>(),
   {
-    modelValue: false,
     small: false,
   }
 );
 
-const emit = defineEmits(['update:modelValue']);
-
-const checked = ref(props.modelValue);
-watchEffect(() => {
-  emit('update:modelValue', checked.value);
-});
+const checked = defineModel<boolean>({ default: false });
 </script>
 
 <template>

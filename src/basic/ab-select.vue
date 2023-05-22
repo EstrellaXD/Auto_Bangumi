@@ -6,13 +6,7 @@ import {
   ListboxOptions,
 } from '@headlessui/vue';
 import { Down, Up } from '@icon-park/vue-next';
-
-export interface SelectItem {
-  id: number;
-  label?: string;
-  value: string;
-  disabled?: boolean;
-}
+import type { SelectItem } from '#/components';
 
 const props = withDefaults(
   defineProps<{
