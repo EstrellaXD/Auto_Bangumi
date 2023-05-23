@@ -58,8 +58,8 @@ const items = [
   {
     id: 6,
     icon: Setting,
-    label: 'Setting',
-    path: '/setting',
+    label: 'Config',
+    path: '/config',
   },
 ];
 </script>
@@ -99,7 +99,7 @@ const items = [
       />
     </div>
 
-    <template v-for="i in items" :key="i.id">
+    <template v-for="i in items">
       <RouterLink
         :to="i.path"
         replace

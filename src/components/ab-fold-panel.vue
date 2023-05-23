@@ -29,12 +29,8 @@ const props = withDefaults(
         <Component :is="open ? Up : Down" size="24" />
       </DisclosureButton>
 
-      <div bg-white px-8px py-20px>
-        <DisclosurePanel>
-          <slot name="top"></slot>
-        </DisclosurePanel>
-
-        <div line my-12px></div>
+      <div bg-white py-20px :class="[open ? 'px-20px' : 'px-8px']">
+        <div line my-12px v-show="!open"></div>
 
         <DisclosurePanel>
           <slot></slot>

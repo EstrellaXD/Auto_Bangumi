@@ -40,6 +40,9 @@ import type {
 declare module 'vue-router/auto/routes' {
   export interface RouteNamedMap {
     'Bangumi List': RouteRecordInfo<'Bangumi List', '/', Record<never, never>, Record<never, never>>,
+    'Calendar': RouteRecordInfo<'Calendar', '/calendar', Record<never, never>, Record<never, never>>,
+    'Config': RouteRecordInfo<'Config', '/config', Record<never, never>, Record<never, never>>,
+    'Downloader': RouteRecordInfo<'Downloader', '/downloader', Record<never, never>, Record<never, never>>,
     'Log': RouteRecordInfo<'Log', '/log', Record<never, never>, Record<never, never>>,
     'Player': RouteRecordInfo<'Player', '/player', Record<never, never>, Record<never, never>>,
   }

@@ -29,6 +29,7 @@ declare module '@vue/runtime-core' {
     AbTopbar: typeof import('./views/ab-topbar.vue')['default']
     BangumiCard: typeof import('./components/bangumi-card.vue')['default']
     ConfigNormal: typeof import('./views/config-normal.vue')['default']
+    ConfigParser: typeof import('./views/config-parser.vue')['default']
     copy: typeof import('./basic/ab-switch copy.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

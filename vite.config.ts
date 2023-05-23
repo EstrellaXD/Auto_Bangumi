@@ -23,7 +23,7 @@ export default defineConfig({
     AutoImport({
       imports: ['vue', 'vitest', 'pinia', '@vueuse/core', VueRouterAutoImports],
       dts: 'src/auto-imports.d.ts',
-      dirs: ['src/api', 'src/store', 'src/hooks'],
+      dirs: ['src/api', 'src/store', 'src/hooks', 'src/utils'],
     }),
     Components({
       dts: 'src/components.d.ts',

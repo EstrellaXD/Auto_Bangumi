@@ -70,13 +70,13 @@ export default defineConfig({
     ['text-main', 'text-12px'],
     [
       'ab-input',
-      'outline-none min-w-0 w-200px rounded-6px border-1 border-black shadow-inset hover:border-color-[#7A46AE]',
+      'outline-none min-w-0 w-200px h-28px px-12px text-main text-right rounded-6px border-1 border-black shadow-inset hover:border-color-[#7A46AE]',
     ],
     ['input-error', 'border-color-[#CA0E0E]'],
     ['is-btn', 'cursor-pointer select-none'],
     ['is-disabled', 'cursor-not-allowed select-none'],
     ['input-reset', 'bg-transparent min-w-0 flex-1 outline-none'],
     ['btn-click', 'hover:scale-110 active:scale-100'],
-    ['line', 'w-full h-2px bg-[#DFE1EF]'],
+    ['line', 'w-full h-1px bg-[#DFE1EF]'],
   ],
 });

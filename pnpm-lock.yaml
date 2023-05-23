@@ -10,6 +10,9 @@ dependencies:
   axios:
     specifier: ^0.27.2
     version: 0.27.2
+  lodash:
+    specifier: ^4.17.21
+    version: 4.17.21
   pinia:
     specifier: ^2.1.3
     version: 2.1.3(typescript@4.9.5)(vue@3.3.4)
@@ -48,6 +51,9 @@ devDependencies:
   '@storybook/vue3-vite':
     specifier: ^7.0.12
     version: 7.0.12(react-dom@18.2.0)(react@18.2.0)(typescript@4.9.5)(vite@4.3.5)(vue@3.3.4)
+  '@types/lodash':
+    specifier: ^4.14.194
+    version: 4.14.194
   '@types/node':
     specifier: ^18.16.14
     version: 18.16.14
@@ -6653,7 +6659,6 @@ packages:
 
   /lodash@4.17.21:
     resolution: {integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==}
-    dev: true
 
   /loose-envify@1.4.0:
     resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}

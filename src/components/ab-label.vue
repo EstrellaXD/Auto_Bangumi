@@ -10,7 +10,7 @@ const props = withDefaults(
 </script>
 
 <template>
-  <div fx-cer justify-between>
+  <div flex="~ items-start" justify-between>
     <div>{{ label }}</div>
 
     <slot> </slot>
