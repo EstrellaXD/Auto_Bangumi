@@ -90,8 +90,8 @@ class DownloadClient(TorrentPath):
             self.set_rule(info)
         logger.debug("Finished.")
 
-    def get_torrent_info(self, category="Bangumi", status_filter="completed", tags=None):
-        return self.client.torrents_info(status_filter=status_filter, category=category, tags=tags)
+    def get_torrent_info(self, category="Bangumi", status_filter="completed", tag=None):
+        return self.client.torrents_info(status_filter=status_filter, category=category, tag=tag)
 
     def rename_torrent_file(self, _hash, old_path, new_path) -> bool:
         logger.info(f"{old_path} >> {new_path}")
