@@ -2,7 +2,7 @@
 const { data } = storeToRefs(useBangumiStore());
 const { getAll } = useBangumiStore();
 
-onBeforeMount(() => getAll());
+getAll();
 
 definePage({
   name: 'Bangumi List',

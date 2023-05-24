@@ -28,7 +28,7 @@ const items = [
     id: 1,
     icon: Home,
     label: 'HomePage',
-    path: '/',
+    path: '/bangumi',
   },
   {
     id: 2,

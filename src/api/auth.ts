@@ -3,18 +3,16 @@ import type { Auth, Logout, Update } from '#/auth';
 
 export const apiAuth = {
   async login(username: string, password: string) {
-    const { data } = await axios.post<Auth>(
-      'api/v1/auth/login',
-      {
-        username,
-        password,
+    const formData = new URLSearchParams({
+      username,
+      password,
+    });
+
+    const { data } = await axios.post<Auth>('api/v1/auth/login', formData, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-      }
-    );
+    });
 
     return data;
   },

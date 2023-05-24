@@ -1,4 +1,9 @@
-<script lang="ts" setup></script>
+<script lang="ts" setup>
+definePage({
+  name: 'Index',
+  redirect: '/bangumi',
+});
+</script>
 
 <template>
   <div layout-container>

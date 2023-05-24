@@ -25,6 +25,7 @@ definePage({
             type="text"
             placeholder="password"
             ab-input
+            @keyup.enter="login"
           />
         </ab-label>
 

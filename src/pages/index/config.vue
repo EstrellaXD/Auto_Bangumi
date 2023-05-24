@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 const { getConfig, setConfig } = useConfigStore();
 
-onBeforeMount(() => getConfig());
+getConfig();
 
 definePage({
   name: 'Config',

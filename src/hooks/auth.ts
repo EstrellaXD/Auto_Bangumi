@@ -12,7 +12,7 @@ export const useAuth = createSharedComposable(() => {
 
   const login = async () => {
     const res = await apiAuth.login(user.username, user.password);
-    console.log(res);
+    token.value = res.access_token;
   };
 
   const logout = async () => {
