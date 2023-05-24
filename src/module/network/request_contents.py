@@ -34,7 +34,6 @@ class TorrentInfo:
         self.__fetch_mikan_info()
         return self._official_title
 
-
 class RequestContent(RequestURL):
     # Mikanani RSS
     def get_torrents(

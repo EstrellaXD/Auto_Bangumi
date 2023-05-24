@@ -17,7 +17,15 @@ class SearchTorrent(RequestContent):
         url = search_url(site, keywords)
         # TorrentInfo to TorrentBase
         torrents = self.get_torrents(url)
-        return [TorrentBase(**torrent.dict()) for torrent in torrents]
+
+        def to_dict():
+            for torrent in torrents:
+                yield {
+                    "name": torrent.name,
+                    "torrent_link": torrent.torrent_link,
+                    "homepage": torrent.homepage,
+                }
+        return [TorrentBase(**d) for d in to_dict()]
 
     def search_season(self, data: BangumiData):
         keywords = [getattr(data, key) for key in SEARCH_KEY if getattr(data, key)]
