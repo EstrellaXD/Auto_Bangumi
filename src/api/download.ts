@@ -1,9 +1,9 @@
 import axios from 'axios';
 import type { BangumiItem } from '#/bangumi';
 
-type Status = {
+interface Status {
   status: 'Success' | 'Failed to parse link';
-};
+}
 
 export const apiDownload = {
   /**

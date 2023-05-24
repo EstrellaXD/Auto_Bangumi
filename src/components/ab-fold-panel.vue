@@ -2,7 +2,7 @@
 import { Down, Up } from '@icon-park/vue-next';
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/vue';
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     title: string;
   }>(),
@@ -30,7 +30,7 @@ const props = withDefaults(
       </DisclosureButton>
 
       <div bg-white py-20px :class="[open ? 'px-20px' : 'px-8px']">
-        <div line my-12px v-show="!open"></div>
+        <div v-show="!open" line my-12px></div>
 
         <DisclosurePanel>
           <slot></slot>

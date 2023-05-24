@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { PlayOne, Pause, Refresh, Power, Me } from '@icon-park/vue-next';
+import { Me, Pause, PlayOne, Power, Refresh } from '@icon-park/vue-next';
 
 const search = ref('');
 

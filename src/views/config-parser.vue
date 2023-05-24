@@ -1,9 +1,9 @@
 <script lang="ts" setup>
 import type {
   RssParser,
-  RssParserType,
   RssParserLang,
   RssParserMethodType,
+  RssParserType,
 } from '#/config';
 import type { SettingItem } from '#/components';
 
@@ -13,7 +13,7 @@ const parser = getSettingGroup('rss_parser');
 
 const sourceItems: RssParserType = ['mikan'];
 const langs: RssParserLang = ['zh', 'en', 'jp'];
-/** @ts-ignore */
+/** @ts-expect-error Incorrect order */
 const parserMethods: RssParserMethodType = ['tmdb', 'mikan', 'parser'];
 
 const items: SettingItem<RssParser>[] = [

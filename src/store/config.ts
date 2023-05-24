@@ -56,7 +56,7 @@ export const useConfigStore = defineStore('config', () => {
   };
 
   const setConfig = async () => {
-    const res = await apiConfig.updateConfig(config.value);
+    await apiConfig.updateConfig(config.value);
   };
 
   const getSettingGroup = <Tkey extends keyof Config>(key: Tkey) => {

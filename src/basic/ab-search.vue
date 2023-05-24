@@ -14,14 +14,14 @@ const props = withDefaults(
 
 const emit = defineEmits(['update:value', 'click-search']);
 
-const onInput = (e: Event) => {
+function onInput(e: Event) {
   const input = e.target as HTMLInputElement;
   emit('update:value', input.value);
-};
+}
 
-const onSearch = () => {
+function onSearch() {
   emit('click-search', props.value);
-};
+}
 </script>
 
 <template>
@@ -37,22 +37,22 @@ const onSearch = () => {
     focus-within:w-396px
     transition-width
   >
-    <search
+    <Search
       theme="outline"
       size="24"
       fill="#fff"
-      @click="onSearch"
       is-btn
       btn-click
+      @click="onSearch"
     />
 
     <input
       type="text"
       :value="value"
       :placeholder="placeholder"
+      input-reset
       @input="onInput"
       @keyup.enter="onSearch"
-      input-reset
     />
   </div>
 </template>

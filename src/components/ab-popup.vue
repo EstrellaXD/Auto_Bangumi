@@ -1,9 +1,9 @@
 <script lang="ts" setup>
 import {
-  TransitionRoot,
-  TransitionChild,
   Dialog,
   DialogPanel,
+  TransitionChild,
+  TransitionRoot,
 } from '@headlessui/vue';
 
 const props = withDefaults(
@@ -21,16 +21,16 @@ const props = withDefaults(
 
 const emit = defineEmits(['update:show']);
 
-const close = () => {
+function close() {
   if (props.maskClick) {
     emit('update:show', false);
   }
-};
+}
 </script>
 
 <template>
   <TransitionRoot appear :show="show" as="template">
-    <Dialog as="div" @close="close" class="relative z-10">
+    <Dialog as="div" class="relative z-10" @close="close">
       <TransitionChild
         as="template"
         enter="duration-300 ease-out"

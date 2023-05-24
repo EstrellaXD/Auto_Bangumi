@@ -1,13 +1,13 @@
 <script lang="ts" setup>
 import {
-  MenuUnfold,
-  Home,
   Calendar,
-  Play,
   Download,
+  Home,
   Log,
-  Setting,
   Logout,
+  MenuUnfold,
+  Play,
+  Setting,
 } from '@icon-park/vue-next';
 
 const props = withDefaults(
@@ -76,7 +76,6 @@ const items = [
     pb-12px
   >
     <div
-      @click="toggle"
       w-full
       h-60px
       is-btn
@@ -84,12 +83,13 @@ const items = [
       bg="#E7E7E7"
       text="#2A1C52"
       rel
+      @click="toggle"
     >
       <div :class="[!show && 'abs opacity-0']" transition-opacity>
         <div text-h1>Menu</div>
       </div>
 
-      <menu-unfold
+      <MenuUnfold
         theme="outline"
         size="24"
         fill="#2A1C52"
@@ -99,28 +99,28 @@ const items = [
       />
     </div>
 
-    <template v-for="i in items">
-      <RouterLink
-        :to="i.path"
-        replace
-        :title="i.label"
-        fx-cer
-        px-24px
-        space-x-42px
-        h-48px
-        is-btn
-        transition-colors
-        hover:bg="#F1F5FA"
-        hover:text="#2A1C52"
-        :class="[
-          route.path === i.path && 'bg-[#F1F5FA] text-[#2A1C52]',
-          i.hidden && 'hidden',
-        ]"
-      >
-        <Component :is="i.icon" :size="24" />
-        <div text-h2>{{ i.label }}</div>
-      </RouterLink>
-    </template>
+    <RouterLink
+      v-for="i in items"
+      :key="i.id"
+      :to="i.path"
+      replace
+      :title="i.label"
+      fx-cer
+      px-24px
+      space-x-42px
+      h-48px
+      is-btn
+      transition-colors
+      hover:bg="#F1F5FA"
+      hover:text="#2A1C52"
+      :class="[
+        route.path === i.path && 'bg-[#F1F5FA] text-[#2A1C52]',
+        i.hidden && 'hidden',
+      ]"
+    >
+      <Component :is="i.icon" :size="24" />
+      <div text-h2>{{ i.label }}</div>
+    </RouterLink>
 
     <div
       title="logout"

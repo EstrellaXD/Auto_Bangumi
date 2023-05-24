@@ -11,12 +11,12 @@ definePage({
 
 <template>
   <div flex="~ wrap" space-y-12px space-x-50px>
-    <template v-for="i in data">
-      <ab-bangumi-card
-        :poster="i.poster_link"
-        :name="i.official_title"
-        :season="i.season"
-      ></ab-bangumi-card>
-    </template>
+    <ab-bangumi-card
+      v-for="i in data"
+      :key="i.id"
+      :poster="i.poster_link"
+      :name="i.official_title"
+      :season="i.season"
+    ></ab-bangumi-card>
   </div>
 </template>

@@ -1,13 +1,13 @@
-export type Auth = {
+export interface Auth {
   access_token: string;
   token_type: string;
   expire: number;
-};
+}
 
-export type Logout = {
+export interface Logout {
   message: 'logout success';
-};
+}
 
-export type Update = {
+export interface Update {
   message: 'update success';
-};
+}

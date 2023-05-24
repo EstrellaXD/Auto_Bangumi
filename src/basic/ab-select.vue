@@ -6,8 +6,8 @@ import {
   ListboxOptions,
 } from '@headlessui/vue';
 import { Down, Up } from '@icon-park/vue-next';
-import type { SelectItem } from '#/components';
 import { isObject, isString } from 'lodash';
+import type { SelectItem } from '#/components';
 
 const props = withDefaults(
   defineProps<{
@@ -30,6 +30,8 @@ const otherItems = computed(() => {
         return e !== selected.value;
       } else if (isObject(e) && isObject(selected.value)) {
         return e.id !== selected.value.id;
+      } else {
+        return false;
       }
     }) ?? []
   );
@@ -43,17 +45,17 @@ const label = computed(() => {
   }
 });
 
-const getLabel = (item: SelectItem | string) => {
+function getLabel(item: SelectItem | string) {
   if (isString(item)) {
     return item;
   } else {
     return item.label ?? item.value;
   }
-};
+}
 
-const getDisabled = (item: SelectItem | string) => {
+function getDisabled(item: SelectItem | string) {
   return isString(item) ? false : item.disabled;
-};
+}
 
 watchEffect(() => {
   emit('update:modelValue', selected.value);
@@ -61,7 +63,7 @@ watchEffect(() => {
 </script>
 
 <template>
-  <Listbox v-model="selected" v-slot="{ open }">
+  <Listbox v-slot="{ open }" v-model="selected">
     <div
       rel
       flex="inline col"
@@ -84,8 +86,8 @@ watchEffect(() => {
         <div flex="~ items-end" justify-between space-x-24px>
           <div flex="~ col" space-y-8px>
             <ListboxOption
-              v-slot="{ active }"
               v-for="item in otherItems"
+              v-slot="{ active }"
               :key="isString(item) ? item : item.id"
               :value="item"
               :disabled="getDisabled(item)"

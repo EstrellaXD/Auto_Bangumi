@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-type Success = {
+interface Success {
   status: 'ok';
-};
+}
 
 export const apiProgram = {
   /**

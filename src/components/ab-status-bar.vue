@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue';
+import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue';
 import { AddOne, More } from '@icon-park/vue-next';
 
 withDefaults(
@@ -17,10 +17,10 @@ withDefaults(
   <Menu>
     <div rel>
       <div fx-cer space-x-16px>
-        <add-one theme="outline" size="24" fill="#fff" is-btn btn-click />
+        <AddOne theme="outline" size="24" fill="#fff" is-btn btn-click />
 
         <MenuButton bg-transparent is-btn btn-click>
-          <more theme="outline" size="24" fill="#fff" />
+          <More theme="outline" size="24" fill="#fff" />
         </MenuButton>
 
         <ab-status :running="running" />

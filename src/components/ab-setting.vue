@@ -14,19 +14,19 @@ const data = defineModel<any>('data');
 <template>
   <div>
     <ab-label :label="label">
-      <ab-switch
+      <AbSwitch
         v-if="type === 'switch'"
         v-model:checked="data"
         v-bind="prop"
         :class="css"
-      ></ab-switch>
+      ></AbSwitch>
 
-      <ab-select
+      <AbSelect
         v-else-if="type === 'select'"
         v-model="data"
         v-bind="prop"
         :class="css"
-      ></ab-select>
+      ></AbSelect>
 
       <input
         v-else-if="type === 'input'"

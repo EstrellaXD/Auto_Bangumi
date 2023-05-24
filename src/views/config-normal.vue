@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { Program, Log } from '#/config';
+import type { Log, Program } from '#/config';
 import type { SettingItem } from '#/components';
 
 const { getSettingGroup } = useConfigStore();
