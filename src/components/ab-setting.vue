@@ -8,7 +8,7 @@ withDefaults(defineProps<AbSettingProps>(), {
   bottomLine: false,
 });
 
-const data = defineModel('data');
+const data = defineModel<any>('data');
 </script>
 
 <template>

@@ -11,7 +11,7 @@ import { isObject, isString } from 'lodash';
 
 const props = withDefaults(
   defineProps<{
-    modelValue?: SelectItem;
+    modelValue?: SelectItem | string;
     items: Array<SelectItem | string>;
   }>(),
   {}

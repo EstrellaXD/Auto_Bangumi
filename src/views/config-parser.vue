@@ -13,6 +13,7 @@ const parser = getSettingGroup('rss_parser');
 
 const sourceItems: RssParserType = ['mikan'];
 const langs: RssParserLang = ['zh', 'en', 'jp'];
+/** @ts-ignore */
 const parserMethods: RssParserMethodType = ['tmdb', 'mikan', 'parser'];
 
 const items: SettingItem<RssParser>[] = [

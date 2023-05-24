@@ -5,6 +5,7 @@ declare global {
   const acceptHMRUpdate: typeof import('pinia')['acceptHMRUpdate']
   const afterAll: typeof import('vitest')['afterAll']
   const afterEach: typeof import('vitest')['afterEach']
+  const apiAuth: typeof import('./api/auth')['apiAuth']
   const apiBangumi: typeof import('./api/bangumi')['apiBangumi']
   const apiCheck: typeof import('./api/check')['apiCheck']
   const apiConfig: typeof import('./api/config')['apiConfig']

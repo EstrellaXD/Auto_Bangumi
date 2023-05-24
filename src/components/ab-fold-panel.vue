@@ -14,7 +14,7 @@ const props = withDefaults(
 
 <template>
   <Disclosure v-slot="{ open }">
-    <div rounded-10px overflow-hidden>
+    <div rounded-10px overflow-hidden h-max>
       <DisclosureButton
         bg-theme-row
         w-full
