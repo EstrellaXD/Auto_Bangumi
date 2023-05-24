@@ -18,6 +18,7 @@ export default defineConfig({
       primary: '#493475',
       running: '#A3D491',
       stopped: '#DF7F91',
+      page: '#F0F0F0',
     },
   },
   rules: [
@@ -52,7 +53,7 @@ export default defineConfig({
 
     [
       'layout-container',
-      'wh-screen min-w-1024px min-h-768px p-16px space-y-12px flex flex-col bg-[#F0F0F0]',
+      'wh-screen min-w-1024px min-h-768px p-16px space-y-12px flex flex-col bg-page',
     ],
     [
       'layout-main',

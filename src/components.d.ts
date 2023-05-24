@@ -37,6 +37,7 @@ declare module '@vue/runtime-core' {
     ConfigParser: typeof import('./views/config-parser.vue')['default']
     ConfigProxy: typeof import('./views/config-proxy.vue')['default']
     copy: typeof import('./basic/ab-switch copy.vue')['default']
+    Login: typeof import('./pages/login.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
   }

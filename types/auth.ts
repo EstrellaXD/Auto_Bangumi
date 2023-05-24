@@ -11,3 +11,8 @@ export interface Logout {
 export interface Update {
   message: 'update success';
 }
+
+export interface User {
+  username: string;
+  password: string;
+}

@@ -2,8 +2,20 @@ import axios from 'axios';
 import type { Auth, Logout, Update } from '#/auth';
 
 export const apiAuth = {
-  async login() {
-    const { data } = await axios.post<Auth>('api/v1/auth/login');
+  async login(username: string, password: string) {
+    const { data } = await axios.post<Auth>(
+      'api/v1/auth/login',
+      {
+        username,
+        password,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      }
+    );
+
     return data;
   },
 
@@ -17,8 +29,11 @@ export const apiAuth = {
     return data;
   },
 
-  async update() {
-    const { data } = await axios.post<Update>('api/v1/auth/update');
+  async update(username: string, password: string) {
+    const { data } = await axios.post<Update>('api/v1/auth/update', {
+      username,
+      password,
+    });
     return data;
   },
 };

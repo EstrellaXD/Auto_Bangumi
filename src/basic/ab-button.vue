@@ -17,11 +17,11 @@ defineEmits(['click']);
 const buttonSize = computed(() => {
   switch (props.size) {
     case 'big':
-      return 'rounded-10px text-h1 w-276px h-55px';
+      return 'rounded-10px text-h1 w-276px h-55px text-h1';
     case 'normal':
       return 'rounded-6px w-170px h-36px';
     case 'small':
-      return 'rounded-6px w-86px h-28px';
+      return 'rounded-6px w-86px h-28px text-main';
   }
 });
 </script>
@@ -48,28 +48,6 @@ const buttonSize = computed(() => {
 
   &-warn {
     @include bg-mouse-event(#943c61, #521e2a, #9c8a93);
-  }
-}
-
-.size {
-  &-normal {
-    border-radius: 6px;
-    width: 171px;
-    height: 36px;
-  }
-
-  &-big {
-    font-size: 24px;
-    border-radius: 10px;
-    width: 276px;
-    height: 55px;
-  }
-
-  &-small {
-    font-size: 12px;
-    border-radius: 6px;
-    width: 86px;
-    height: 28px;
   }
 }
 </style>

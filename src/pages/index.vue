@@ -1,22 +1,23 @@
-<script lang="ts" setup>
-const { data } = storeToRefs(useBangumiStore());
-const { getAll } = useBangumiStore();
-
-onBeforeMount(() => getAll());
-
-definePage({
-  name: 'Bangumi List',
-});
-</script>
+<script lang="ts" setup></script>
 
 <template>
-  <div flex="~ wrap" space-y-12px space-x-50px>
-    <ab-bangumi-card
-      v-for="i in data"
-      :key="i.id"
-      :poster="i.poster_link"
-      :name="i.official_title"
-      :season="i.season"
-    ></ab-bangumi-card>
+  <div layout-container>
+    <ab-topbar />
+
+    <main layout-main>
+      <ab-sidebar />
+
+      <div layout-content>
+        <ab-page-title :title="$route.name"></ab-page-title>
+
+        <div overflow-auto mt-12px flex-grow>
+          <RouterView v-slot="{ Component }">
+            <KeepAlive>
+              <component :is="Component" />
+            </KeepAlive>
+          </RouterView>
+        </div>
+      </div>
+    </main>
   </div>
 </template>
