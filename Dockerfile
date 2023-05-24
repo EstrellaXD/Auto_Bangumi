@@ -32,6 +32,7 @@ RUN apk add --no-cache \
         shadow \
         tzdata && \
     python3 -m pip install --upgrade pip && \
+    sed -i '/bcrypt/d' requirements.txt && \
     pip install --no-cache-dir -r requirements.txt && \
     # Download WebUI
     curl -sL "https://github.com/Rewrite0/Auto_Bangumi_WebUI/releases/download/v1.2.0/dist.zip" | busybox unzip -q -d /app - && \
