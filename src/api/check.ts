@@ -1,5 +1,3 @@
-import axios from 'axios';
-
 export const apiCheck = {
   /**
    * 检测下载器

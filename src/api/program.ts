@@ -1,5 +1,3 @@
-import axios from 'axios';
-
 interface Success {
   status: 'ok';
 }

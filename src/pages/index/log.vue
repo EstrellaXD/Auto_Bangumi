@@ -12,7 +12,13 @@ definePage({
 <template>
   <div flex="~ wrap" gap-12px>
     <ab-container title="Log" w-660px grow>
-      <div rounded-10px border="1px solid black" overflow-auto p-10px>
+      <div
+        rounded-10px
+        border="1px solid black"
+        overflow-auto
+        p-10px
+        max-h-60vh
+      >
         <pre text-main>{{ log }}</pre>
       </div>
     </ab-container>

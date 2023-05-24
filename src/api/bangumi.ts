@@ -1,4 +1,3 @@
-import axios from 'axios';
 import type { BangumiItem } from '#/bangumi';
 
 export const apiBangumi = {

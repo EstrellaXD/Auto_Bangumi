@@ -1,4 +1,3 @@
-import axios from 'axios';
 import type { Config } from '#/config';
 
 export const apiConfig = {

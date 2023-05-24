@@ -1,18 +1,18 @@
 import type { User } from '#/auth';
 
 export const useAuth = createSharedComposable(() => {
-  const token = useLocalStorage('token', '');
+  const auth = useLocalStorage('auth', '');
 
   const user = reactive<User>({
     username: '',
     password: '',
   });
 
-  const isLogin = computed(() => token.value !== '');
+  const isLogin = computed(() => auth.value !== '');
 
   const login = async () => {
     const res = await apiAuth.login(user.username, user.password);
-    token.value = res.access_token;
+    auth.value = `${res.token_type} ${res.access_token}`;
   };
 
   const logout = async () => {
@@ -29,7 +29,7 @@ export const useAuth = createSharedComposable(() => {
   };
 
   return {
-    token,
+    auth,
     user,
     isLogin,
 
