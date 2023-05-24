@@ -1,7 +1,7 @@
 import type { User } from '#/auth';
 
 export const useAuth = createSharedComposable(() => {
-  const auth = useLocalStorage('auth', '');
+  const auth = useSessionStorage('auth', '');
 
   const user = reactive<User>({
     username: '',
