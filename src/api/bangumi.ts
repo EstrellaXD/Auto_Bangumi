@@ -1,4 +1,4 @@
-import type { BangumiItem } from '#/bangumi';
+import type { BangumiRule } from '#/bangumi';
 
 export const apiBangumi = {
   /**
@@ -6,31 +6,31 @@ export const apiBangumi = {
    * @returns 所有 bangumi 数据
    */
   async getAll() {
-    const { data } = await axios.get<BangumiItem[]>('api/v1/bangumi/getAll');
+    const { data } = await axios.get<BangumiRule[]>('api/v1/bangumi/getAll');
 
     return data;
   },
 
   /**
-   * 获取指定 bangumiId 的数据
-   * @param bangumiId 需要获取数据的 bangumi 的 id
-   * @returns 获取指定 bangumi 的数据
+   * 获取指定 bangumiId 的规则
+   * @param bangumiId  bangumi id
+   * @returns 指定 bangumi 的规则
    */
-  async getData(bangumiId: number) {
-    const { data } = await axios.get<BangumiItem>(
-      `api/v1/bangumi/getData/${bangumiId}`
+  async getRule(bangumiId: number) {
+    const { data } = await axios.get<BangumiRule>(
+      `api/v1/bangumi/getRule/${bangumiId}`
     );
 
     return data;
   },
 
   /**
-   * 更新指定 bangumiId 的数据
-   * @param bangumiData - 需要更新的数据
+   * 更新指定 bangumiId 的规则
+   * @param bangumiData - 需要更新的规则
    * @returns axios 请求返回的数据
    */
-  async updateData(bangumiData: BangumiItem) {
-    const { data } = await axios.post('api/v1/bangumi/updateData', bangumiData);
+  async updateRule(bangumiRule: BangumiRule) {
+    const { data } = await axios.post('api/v1/bangumi/updateData', bangumiRule);
     return data;
   },
 

@@ -1,4 +1,4 @@
-import type { BangumiItem } from '#/bangumi';
+import type { BangumiRule } from '#/bangumi';
 
 interface Status {
   status: 'Success' | 'Failed to parse link';
@@ -10,7 +10,7 @@ export const apiDownload = {
    * @param rss_link - RSS 链接
    */
   async analysis(rss_link: string) {
-    const { data } = await axios.post<BangumiItem>('api/v1/download/analysis', {
+    const { data } = await axios.post<BangumiRule>('api/v1/download/analysis', {
       rss_link,
     });
     return data;
@@ -20,7 +20,7 @@ export const apiDownload = {
    * 旧番
    * @param bangumiData - Bangumi 数据
    */
-  async collection(bangumiData: BangumiItem) {
+  async collection(bangumiData: BangumiRule) {
     const { data } = await axios.post<Status>(
       'api/v1/download/collection',
       bangumiData
@@ -32,7 +32,7 @@ export const apiDownload = {
    * 新番
    * @param bangumiData - Bangumi 数据
    */
-  async subscribe(bangumiData: BangumiItem) {
+  async subscribe(bangumiData: BangumiRule) {
     const { data } = await axios.post<Status>(
       'api/v1/download/subscribe',
       bangumiData
