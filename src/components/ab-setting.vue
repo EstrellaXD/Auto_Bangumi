@@ -2,6 +2,7 @@
 import AbSwitch from '../basic/ab-switch.vue';
 import AbSelect from '../basic/ab-select.vue';
 import type { AbSettingProps } from '#/components';
+import { NDynamicTags } from 'naive-ui';
 
 withDefaults(defineProps<AbSettingProps>(), {
   css: '',
@@ -35,6 +36,10 @@ const data = defineModel<any>('data');
         :class="css"
         v-bind="prop"
       />
+
+      <div max-w-200px v-else-if="type === 'dynamic-tags'">
+        <n-dynamic-tags v-model:value="data" size="small"></n-dynamic-tags>
+      </div>
     </ab-label>
 
     <div v-if="bottomLine" line my-12px></div>

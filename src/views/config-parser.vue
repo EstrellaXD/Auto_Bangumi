@@ -66,6 +66,11 @@ const items: SettingItem<RssParser>[] = [
       items: parserMethods,
     },
   },
+  {
+    configKey: 'filter',
+    label: 'Exclude',
+    type: 'dynamic-tags',
+  },
 ];
 </script>
 
