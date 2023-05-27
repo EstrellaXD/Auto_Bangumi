@@ -1,4 +1,4 @@
-export interface Auth {
+export interface LoginSuccess {
   access_token: string;
   token_type: string;
   expire: number;

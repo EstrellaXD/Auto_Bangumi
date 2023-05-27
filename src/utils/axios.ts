@@ -1,9 +1,35 @@
 import Axios from 'axios';
+import type { ApiError } from '#/error';
 
-const { auth } = useAuth();
+export const axios = Axios.create();
 
-export const axios = Axios.create({
-  headers: {
-    Authorization: auth.value,
-  },
+axios.interceptors.request.use((config) => {
+  const { auth } = useAuth();
+
+  if (auth.value !== '' && config.headers) {
+    config.headers.Authorization = auth.value;
+  }
+
+  return config;
 });
+
+axios.interceptors.response.use(
+  (res) => {
+    return res;
+  },
+  (err) => {
+    const status = err.response.status as ApiError['status'];
+    const detail = err.response.data.detail as ApiError['detail'];
+    const error = {
+      status,
+      detail,
+    };
+
+    if (error.detail === 'Not authenticated') {
+      const { auth } = useAuth();
+      auth.value = '';
+    }
+
+    return Promise.reject(error);
+  }
+);

@@ -22,7 +22,7 @@ definePage({
         <ab-label label="Password">
           <input
             v-model="user.password"
-            type="text"
+            type="password"
             placeholder="password"
             ab-input
             @keyup.enter="login"

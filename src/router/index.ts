@@ -14,9 +14,12 @@ router.beforeEach((to) => {
     return { name: 'Index' };
   }
 
-  watchOnce(isLogin, (val) => {
+  watch(isLogin, (val) => {
     if (to.path === '/login' && val) {
       router.replace({ name: 'Index' });
+    }
+    if (to.path !== '/login' && !val) {
+      router.replace({ name: 'Login' });
     }
   });
 });

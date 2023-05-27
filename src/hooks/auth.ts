@@ -1,7 +1,9 @@
 import type { User } from '#/auth';
+import type { ApiError } from '#/error';
 
 export const useAuth = createSharedComposable(() => {
   const auth = useSessionStorage('auth', '');
+  const message = useMessage();
 
   const user = reactive<User>({
     username: '',
@@ -11,16 +13,23 @@ export const useAuth = createSharedComposable(() => {
   const isLogin = computed(() => auth.value !== '');
 
   const login = async () => {
-    const res = await apiAuth.login(user.username, user.password);
-    auth.value = `${res.token_type} ${res.access_token}`;
+    try {
+      const res = await apiAuth.login(user.username, user.password);
+      auth.value = `${res.token_type} ${res.access_token}`;
+      user.username = '';
+      user.password = '';
+    } catch (err) {
+      const error = err as ApiError;
+      message.error(error.detail);
+    }
   };
 
   const logout = async () => {
     apiAuth.logout();
   };
 
-  const refresh = async () => {
-    const res = await apiAuth.refresh();
+  const refresh = () => {
+    apiAuth.refresh();
   };
 
   const update = async () => {
