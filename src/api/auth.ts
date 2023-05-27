@@ -34,7 +34,7 @@ export const apiAuth = {
     const message = useMessage();
     if (password.length < 8) {
       message.error('密码至少8个字符!');
-      return;
+      
     } else {
       const { data } = await axios.post<Update>('api/v1/auth/update', {
         username,

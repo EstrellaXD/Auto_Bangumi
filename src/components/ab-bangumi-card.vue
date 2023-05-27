@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Write } from '@icon-park/vue-next';
+import { ErrorPicture , Write } from '@icon-park/vue-next';
 
 withDefaults(
   defineProps<{
@@ -16,7 +16,17 @@ defineEmits(['click']);
 <template>
   <div w-150px is-btn @click="() => $emit('click')">
     <div rounded-4px overflow-hidden poster-shandow rel>
-      <img :src="`https://mikanani.me${poster}`" alt="poster" w-full h-210px />
+      <div w-full h-210px>
+        <template v-if="poster !== ''">
+          <img :src="`https://mikanani.me${poster}`" alt="poster" wh-full />
+        </template>
+
+        <template v-else>
+          <div wh-full f-cer border="1 white">
+            <ErrorPicture theme="outline" size="24" fill="#333" />
+          </div>
+        </template>
+      </div>
 
       <div
         abs

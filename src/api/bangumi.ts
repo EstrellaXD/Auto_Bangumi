@@ -30,12 +30,15 @@ export const apiBangumi = {
    * @returns axios 请求返回的数据
    */
   async updateRule(bangumiRule: BangumiRule) {
-    const { data } = await axios.post('api/v1/bangumi/updateData', bangumiRule);
+    const { data } = await axios.post<{
+      msg: string;
+      status: 'success';
+    }>('api/v1/bangumi/updateRule', bangumiRule);
     return data;
   },
 
   /**
-   * 删除指定 bangumiId 的数据
+   * 删除指定 bangumiId 的数据库规则，会在重新匹配到后重建
    * @param bangumiId - 需要删除的 bangumi 的 id
    * @returns axios 请求返回的数据
    */
@@ -53,14 +56,14 @@ export const apiBangumi = {
    * @returns axios 请求返回的数据
    */
   async deleteRule(bangumiId: number, file: boolean) {
-    const { data } = await axios.delete(
-      `api/v1/bangumi/deleteRule/${bangumiId}`,
-      {
-        params: {
-          file,
-        },
-      }
-    );
+    const { data } = await axios.delete<{
+      msg: string;
+      status: 'success';
+    }>(`api/v1/bangumi/deleteRule/${bangumiId}`, {
+      params: {
+        file,
+      },
+    });
     return data;
   },
 

@@ -52,7 +52,7 @@ export const useAuth = createSharedComposable(() => {
       auth.value = '';
       message.success('Logout Success!');
     } else {
-      message.error('Logout Fail!');
+      message.error('Logout Failed!');
     }
   };
 
@@ -66,7 +66,7 @@ export const useAuth = createSharedComposable(() => {
       message.success('Update Success!');
       clearUser();
     } else if (res === false) {
-      message.error('Update Fail!');
+      message.error('Update Failed!');
     } else {
       user.password = '';
     }

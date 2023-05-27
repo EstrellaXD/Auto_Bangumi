@@ -24,7 +24,7 @@ export const useProgramStore = defineStore('program', () => {
     if (success) {
       message.success(`${handle} Success!`);
     } else {
-      message.error(`${handle} Fail!`);
+      message.error(`${handle} Failed!`);
     }
   }
 

@@ -59,9 +59,9 @@ export const useConfigStore = defineStore('config', () => {
   const setConfig = async () => {
     const status = await apiConfig.updateConfig(config.value);
     if (status) {
-      message.success('apply success!');
+      message.success('Apply Success!');
     } else {
-      message.error('apply fail!');
+      message.error('Apply Failed!');
     }
   };
 

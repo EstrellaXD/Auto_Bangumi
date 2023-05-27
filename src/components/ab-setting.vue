@@ -1,8 +1,8 @@
 <script lang="ts" setup>
+import { NDynamicTags } from 'naive-ui';
 import AbSwitch from '../basic/ab-switch.vue';
 import AbSelect from '../basic/ab-select.vue';
 import type { AbSettingProps } from '#/components';
-import { NDynamicTags } from 'naive-ui';
 
 withDefaults(defineProps<AbSettingProps>(), {
   css: '',
@@ -37,8 +37,8 @@ const data = defineModel<any>('data');
         v-bind="prop"
       />
 
-      <div max-w-200px v-else-if="type === 'dynamic-tags'">
-        <n-dynamic-tags v-model:value="data" size="small"></n-dynamic-tags>
+      <div v-else-if="type === 'dynamic-tags'" max-w-200px>
+        <NDynamicTags v-model:value="data" size="small"></NDynamicTags>
       </div>
     </ab-label>
 

@@ -4,9 +4,9 @@ import { NMessageProvider } from 'naive-ui';
 
 <template>
   <Suspense>
-    <n-message-provider>
+    <NMessageProvider>
       <RouterView></RouterView>
-    </n-message-provider>
+    </NMessageProvider>
   </Suspense>
 </template>
 

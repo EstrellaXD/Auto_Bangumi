@@ -15,5 +15,13 @@ export interface AbSettingProps {
 
 export type SettingItem<T> = AbSettingProps & {
   configKey: keyof T;
-  data?: any;
 };
+
+export interface AbEditRule {
+  id: number;
+  official_title: string;
+  year: string;
+  season: number;
+  offset: number;
+  filter: string[];
+}
