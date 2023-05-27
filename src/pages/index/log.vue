@@ -58,7 +58,7 @@ definePage({
             </ab-button>
           </ab-label>
 
-          <ab-label label="Telegram">
+          <ab-label label="Telegram Group">
             <ab-button
               size="small"
               link="https://t.me/autobangumi"
