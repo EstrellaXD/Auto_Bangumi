@@ -44,7 +44,7 @@ class Renamer(DownloadClient):
         elif method == "subtitle_advance":
             return f"{bangumi_name} S{season}E{episode}.{file_info.language}{file_info.suffix}"
         else:
-            logger.error(f"Unknown rename method: {method}")
+            logger.error(f"[Renamer] Unknown rename method: {method}")
             return file_info.media_path
 
     @staticmethod
@@ -61,9 +61,9 @@ class Renamer(DownloadClient):
         with PostNotification() as notificator:
             status = notificator.send_msg(n)
         if status:
-            logger.info(f"Notification sent: {ep.title} S{ep.season}E{ep.episode}")
+            logger.info(f"[Renamer] Notification sent: {ep.title} S{ep.season}E{ep.episode}")
         else:
-            logger.warning(f"Notification failed: {ep.title} S{ep.season}E{ep.episode}")
+            logger.warning(f"[Renamer] Notification failed: {ep.title} S{ep.season}E{ep.episode}")
 
     def rename_file(
         self,
@@ -90,7 +90,7 @@ class Renamer(DownloadClient):
                     if settings.notification.enable:
                         self.send_notification(bangumi_name, ep)
             return True
-        logger.warning(f"{media_path} parse failed")
+        logger.warning(f"[Renamer] {media_path} parse failed")
         if settings.bangumi_manage.remove_bad_torrent:
             self.delete_torrent(hashes=_hash)
 
@@ -116,7 +116,7 @@ class Renamer(DownloadClient):
                             _hash=_hash, old_path=media_path, new_path=new_path
                         )
                         if not renamed:
-                            logger.warning(f"{media_path} rename failed")
+                            logger.warning(f"[Renamrr] {media_path} rename failed")
                             # Delete bad torrent.
                             if settings.bangumi_manage.remove_bad_torrent:
                                 self.delete_torrent(_hash)
@@ -147,11 +147,11 @@ class Renamer(DownloadClient):
                         _hash=_hash, old_path=subtitle_path, new_path=new_path
                     )
                     if not renamed:
-                        logger.warning(f"{subtitle_path} rename failed")
+                        logger.warning(f"[Renamer] {subtitle_path} rename failed")
 
     def rename(self):
         # Get torrent info
-        logger.debug("Start rename process.")
+        logger.debug("[Renamer] Start rename process.")
         rename_method = settings.bangumi_manage.rename_method
         torrents_info = self.get_torrent_info()
         for info in torrents_info:
@@ -172,14 +172,14 @@ class Renamer(DownloadClient):
                     self.rename_subtitles(subtitle_list=subtitle_list, **kwargs)
             # Rename collection
             elif len(media_list) > 1:
-                logger.info("Start rename collection")
+                logger.info("[Renamer] Start rename collection")
                 self.rename_collection(media_list=media_list, **kwargs)
                 if len(subtitle_list) > 0:
                     self.rename_subtitles(subtitle_list=subtitle_list, **kwargs)
                 self.set_category(info.hash, "BangumiCollection")
             else:
-                logger.warning(f"{info.name} has no media file")
-        logger.debug("Rename process finished.")
+                logger.warning(f"[Renamer] {info.name} has no media file")
+        logger.debug("[Renamer] Rename process finished.")
 
 
 if __name__ == "__main__":

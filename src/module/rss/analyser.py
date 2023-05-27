@@ -58,7 +58,7 @@ class RSSAnalyser:
                 if not full_parse:
                     return [data]
                 new_data.append(data)
-                logger.debug(f"New title found: {data.official_title}")
+                logger.debug(f"[RSS] New title found: {data.official_title}")
         return new_data
 
     def torrent_to_data(self, torrent: TorrentInfo, rss_link: str | None = None) -> BangumiData:
@@ -80,7 +80,7 @@ class RSSAnalyser:
         with BangumiDatabase() as database:
             torrents_to_add = database.match_list(rss_torrents, rss_link)
             if not torrents_to_add:
-                logger.debug("No new title found.")
+                logger.debug("[RSS] No new title has been found.")
                 return []
             # New List
             new_data = self.torrents_to_data(torrents_to_add, rss_link, full_parse)
@@ -89,9 +89,9 @@ class RSSAnalyser:
         return new_data
 
     def run(self, rss_link: str = settings.rss_link):
-        logger.info("Start collecting RSS info.")
+        logger.info("[RSS] Start collecting RSS info.")
         try:
             self.rss_to_data(rss_link)
         except Exception as e:
-            logger.debug(e)
-            logger.error("Failed to collect RSS info.")
+            logger.debug(f"[RSS] {e}")
+            logger.error("[RSS] Failed to collect RSS info.")
