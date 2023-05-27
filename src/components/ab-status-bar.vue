@@ -5,7 +5,12 @@ import { AddOne, More } from '@icon-park/vue-next';
 withDefaults(
   defineProps<{
     running: boolean;
-    items: { id: number; icon: any; label: string; handle: () => void }[];
+    items: {
+      id: number;
+      icon: any;
+      label: string;
+      handle?: () => void | Promise<void>;
+    }[];
   }>(),
   {
     running: false,

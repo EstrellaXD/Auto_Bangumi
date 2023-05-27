@@ -27,14 +27,21 @@ export const apiAuth = {
 
   async logout() {
     const { data } = await axios.get<Logout>('api/v1/auth/logout');
-    return data;
+    return data.message === 'logout success';
   },
 
   async update(username: string, password: string) {
-    const { data } = await axios.post<Update>('api/v1/auth/update', {
-      username,
-      password,
-    });
-    return data;
+    const message = useMessage();
+    if (password.length < 8) {
+      message.error('密码至少8个字符!');
+      return;
+    } else {
+      const { data } = await axios.post<Update>('api/v1/auth/update', {
+        username,
+        password,
+      });
+
+      return data.message === 'update success';
+    }
   },
 };

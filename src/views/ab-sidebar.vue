@@ -22,6 +22,7 @@ const props = withDefaults(
 const show = ref(props.open);
 const toggle = () => (show.value = !show.value);
 const route = useRoute();
+const { logout } = useAuth();
 
 const items = [
   {
@@ -133,6 +134,7 @@ const items = [
       transition-colors
       hover:bg="#F1F5FA"
       hover:text="#2A1C52"
+      @click="logout"
     >
       <Logout :size="24" />
       <div text-h2>Logout</div>

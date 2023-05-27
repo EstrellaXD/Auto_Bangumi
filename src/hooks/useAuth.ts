@@ -12,12 +12,33 @@ export const useAuth = createSharedComposable(() => {
 
   const isLogin = computed(() => auth.value !== '');
 
+  const clearUser = () => {
+    user.username = '';
+    user.password = '';
+  };
+
+  const check = () => {
+    if (user.username === '') {
+      message.warning('Please Enter Username!');
+      return false;
+    }
+
+    if (user.password === '') {
+      message.warning('Please Enter Password!');
+      return false;
+    }
+
+    return true;
+  };
+
   const login = async () => {
     try {
-      const res = await apiAuth.login(user.username, user.password);
-      auth.value = `${res.token_type} ${res.access_token}`;
-      user.username = '';
-      user.password = '';
+      if (check()) {
+        const res = await apiAuth.login(user.username, user.password);
+        auth.value = `${res.token_type} ${res.access_token}`;
+        clearUser();
+        message.success('Login Success!');
+      }
     } catch (err) {
       const error = err as ApiError;
       message.error(error.detail);
@@ -25,7 +46,14 @@ export const useAuth = createSharedComposable(() => {
   };
 
   const logout = async () => {
-    apiAuth.logout();
+    const res = await apiAuth.logout();
+    if (res) {
+      clearUser();
+      auth.value = '';
+      message.success('Logout Success!');
+    } else {
+      message.error('Logout Fail!');
+    }
   };
 
   const refresh = () => {
@@ -34,7 +62,14 @@ export const useAuth = createSharedComposable(() => {
 
   const update = async () => {
     const res = await apiAuth.update(user.username, user.password);
-    console.log(res);
+    if (res) {
+      message.success('Update Success!');
+      clearUser();
+    } else if (res === false) {
+      message.error('Update Fail!');
+    } else {
+      user.password = '';
+    }
   };
 
   return {
