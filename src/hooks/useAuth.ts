@@ -2,7 +2,7 @@ import type { User } from '#/auth';
 import type { ApiError } from '#/error';
 
 export const useAuth = createSharedComposable(() => {
-  const auth = useSessionStorage('auth', '');
+  const auth = useLocalStorage('auth', '');
   const message = useMessage();
 
   const user = reactive<User>({
