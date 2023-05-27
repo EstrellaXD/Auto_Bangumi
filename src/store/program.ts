@@ -1,15 +1,23 @@
 export const useProgramStore = defineStore('program', () => {
   const message = useMessage();
+  const { auth } = useAuth();
   const running = ref(false);
   const timer = ref<NodeJS.Timer | null>(null);
 
   const getStatus = async () => {
-    running.value = await apiProgram.status();
+    if (auth.value !== '') {
+      running.value = await apiProgram.status();
+    }
   };
 
   const onUpdate = () => {
     getStatus();
     timer.value = setInterval(() => getStatus(), 3000);
+  };
+
+  const offUpdate = () => {
+    clearInterval(Number(timer.value));
+    timer.value = null;
   };
 
   function handleMessage(handle: string, success: boolean) {
@@ -44,6 +52,7 @@ export const useProgramStore = defineStore('program', () => {
     running,
     getStatus,
     onUpdate,
+    offUpdate,
 
     start,
     pause,

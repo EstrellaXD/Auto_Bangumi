@@ -1,8 +1,14 @@
 <script lang="ts" setup>
-const { onUpdate } = useLogStore();
+const { onUpdate, offUpdate } = useLogStore();
 const { log } = storeToRefs(useLogStore());
 
-onBeforeMount(() => onUpdate());
+onActivated(() => {
+  onUpdate();
+});
+
+onDeactivated(() => {
+  offUpdate();
+});
 
 definePage({
   name: 'Log',

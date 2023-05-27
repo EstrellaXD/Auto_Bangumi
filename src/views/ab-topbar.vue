@@ -2,8 +2,10 @@
 import { Me, Pause, PlayOne, Power, Refresh } from '@icon-park/vue-next';
 
 const search = ref('');
+const show = ref(false);
 
-const { onUpdate, start, pause, shutdown, restart } = useProgramStore();
+const { onUpdate, offUpdate, start, pause, shutdown, restart } =
+  useProgramStore();
 const { running } = storeToRefs(useProgramStore());
 
 const items = [
@@ -35,10 +37,19 @@ const items = [
     id: 5,
     label: 'Profile',
     icon: Me,
+    handle: () => {
+      show.value = true;
+    },
   },
 ];
 
-onBeforeMount(() => onUpdate());
+onBeforeMount(() => {
+  onUpdate();
+});
+
+onUnmounted(() => {
+  offUpdate();
+});
 </script>
 
 <template>
@@ -50,7 +61,7 @@ onBeforeMount(() => onUpdate());
     <div ml-auto>
       <ab-status-bar :items="items" :running="running"></ab-status-bar>
     </div>
+
+    <ab-change-account v-model:show="show"></ab-change-account>
   </div>
 </template>
-
-<style lang="scss" scope></style>
