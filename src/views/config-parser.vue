@@ -42,7 +42,7 @@ const items: SettingItem<RssParser>[] = [
   },
   {
     configKey: 'custom_url',
-    label: 'Custom url',
+    label: 'Custom Url',
     type: 'input',
     prop: {
       type: 'text',
@@ -60,7 +60,7 @@ const items: SettingItem<RssParser>[] = [
   },
   {
     configKey: 'parser_type',
-    label: 'Official title source',
+    label: 'Parser Type',
     type: 'select',
     prop: {
       items: parserMethods,
