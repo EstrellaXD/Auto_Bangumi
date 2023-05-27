@@ -5,7 +5,7 @@ import { AddOne, More } from '@icon-park/vue-next';
 withDefaults(
   defineProps<{
     running: boolean;
-    items: { id: number; icon: any; label: string }[];
+    items: { id: number; icon: any; label: string; handle: () => void }[];
   }>(),
   {
     running: false,
@@ -47,6 +47,7 @@ withDefaults(
             hover:bg-primary
             class="group"
             :class="[active ? 'text-white bg-theme-row' : 'text-black']"
+            @click="i.handle"
           >
             <div text-main>{{ i.label }}</div>
 

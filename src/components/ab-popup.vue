@@ -8,22 +8,22 @@ import {
 
 const props = withDefaults(
   defineProps<{
-    show: boolean;
     title: string;
-    maskClick: boolean;
+    maskClick?: boolean;
+    css?: string;
   }>(),
   {
-    show: false,
     title: 'title',
     maskClick: true,
+    css: '',
   }
 );
 
-const emit = defineEmits(['update:show']);
+const show = defineModel('show', { default: false });
 
 function close() {
   if (props.maskClick) {
-    emit('update:show', false);
+    show.value = false;
   }
 }
 </script>
@@ -57,7 +57,7 @@ function close() {
             leave-to="opacity-0 scale-95"
           >
             <DialogPanel>
-              <ab-container :title="title">
+              <ab-container :title="title" :class="[css]">
                 <slot></slot>
               </ab-container>
             </DialogPanel>
