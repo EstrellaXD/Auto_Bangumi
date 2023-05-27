@@ -1,6 +1,7 @@
 import type { Config } from '#/config';
 
 export const useConfigStore = defineStore('config', () => {
+  const message = useMessage();
   const config = ref<Config>({
     program: {
       rss_time: 0,
@@ -56,7 +57,12 @@ export const useConfigStore = defineStore('config', () => {
   };
 
   const setConfig = async () => {
-    await apiConfig.updateConfig(config.value);
+    const status = await apiConfig.updateConfig(config.value);
+    if (status) {
+      message.success('apply success!');
+    } else {
+      message.error('apply fail!');
+    }
   };
 
   const getSettingGroup = <Tkey extends keyof Config>(key: Tkey) => {

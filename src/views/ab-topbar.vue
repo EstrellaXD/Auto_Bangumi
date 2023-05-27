@@ -3,7 +3,7 @@ import { Me, Pause, PlayOne, Power, Refresh } from '@icon-park/vue-next';
 
 const search = ref('');
 
-const { onUpdate } = useProgramStore();
+const { onUpdate, start, pause, shutdown, restart } = useProgramStore();
 const { running } = storeToRefs(useProgramStore());
 
 const items = [
@@ -11,21 +11,25 @@ const items = [
     id: 1,
     label: 'Start',
     icon: PlayOne,
+    handle: start,
   },
   {
     id: 2,
     label: 'Pause',
     icon: Pause,
+    handle: pause,
   },
   {
     id: 3,
     label: 'Restart',
     icon: Refresh,
+    handle: restart,
   },
   {
     id: 4,
     label: 'Shutdown',
     icon: Power,
+    handle: shutdown,
   },
   {
     id: 5,

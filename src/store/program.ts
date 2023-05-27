@@ -1,4 +1,5 @@
 export const useProgramStore = defineStore('program', () => {
+  const message = useMessage();
   const running = ref(false);
   const timer = ref<NodeJS.Timer | null>(null);
 
@@ -11,9 +12,42 @@ export const useProgramStore = defineStore('program', () => {
     timer.value = setInterval(() => getStatus(), 3000);
   };
 
+  function handleMessage(handle: string, success: boolean) {
+    if (success) {
+      message.success(`${handle} Success!`);
+    } else {
+      message.error(`${handle} Fail!`);
+    }
+  }
+
+  const start = async () => {
+    const res = await apiProgram.start();
+    handleMessage('Start', res);
+  };
+
+  const pause = async () => {
+    const res = await apiProgram.stop();
+    handleMessage('Pause', res);
+  };
+
+  const shutdown = async () => {
+    const res = await apiProgram.shutdown();
+    handleMessage('Shutdown', res);
+  };
+
+  const restart = async () => {
+    const res = await apiProgram.restart();
+    handleMessage('Restart', res);
+  };
+
   return {
     running,
     getStatus,
     onUpdate,
+
+    start,
+    pause,
+    shutdown,
+    restart,
   };
 });
