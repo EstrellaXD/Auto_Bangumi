@@ -39,7 +39,7 @@ class TitleParser:
         return official_title, tmdb_season, year
 
     @staticmethod
-    def raw_parser(raw: str, rss_link: str) -> BangumiData:
+    def raw_parser(raw: str, rss_link: str) -> BangumiData | None:
         language = settings.rss_parser.language
         try:
             episode = raw_parser(raw)
@@ -70,3 +70,4 @@ class TitleParser:
         except Exception as e:
             logger.debug(e)
             logger.warning(f"Cannot parse {raw}.")
+            return None
