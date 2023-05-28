@@ -49,6 +49,7 @@ const items = [
     icon: Download,
     label: 'Downloader',
     path: '/downloader',
+    hidden: true,
   },
   {
     id: 5,

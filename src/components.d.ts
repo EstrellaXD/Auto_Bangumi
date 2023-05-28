@@ -39,6 +39,7 @@ declare module '@vue/runtime-core' {
     ConfigNotification: typeof import('./views/config-notification.vue')['default']
     ConfigNotificcation: typeof import('./views/config-notificcation.vue')['default']
     ConfigParser: typeof import('./views/config-parser.vue')['default']
+    ConfigPlayer: typeof import('./views/config-player.vue')['default']
     ConfigProxy: typeof import('./views/config-proxy.vue')['default']
     copy: typeof import('./basic/ab-switch copy.vue')['default']
     Login: typeof import('./pages/login.vue')['default']

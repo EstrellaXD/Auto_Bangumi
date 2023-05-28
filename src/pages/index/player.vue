@@ -2,11 +2,22 @@
 definePage({
   name: 'Player',
 });
+
+const { url } = storeToRefs(usePlayerStore());
 </script>
 
 <template>
+  <template v-if="url === ''">
+    <div wh-full f-cer text-h1 text-primary>
+      <RouterLink to="/config" hover:underline
+        >Please set up the media player</RouterLink
+      >
+    </div>
+  </template>
+
   <iframe
-    src="http://192.168.0.100:8096"
+    v-else
+    :src="url"
     frameborder="0"
     allowfullscreen="true"
     w-full
@@ -15,5 +26,3 @@ definePage({
     rounded-12px
   ></iframe>
 </template>
-
-<style lang="scss" scope></style>

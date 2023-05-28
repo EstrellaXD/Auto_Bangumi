@@ -22,6 +22,8 @@ definePage({
 
     <config-proxy></config-proxy>
 
+    <config-player></config-player>
+
     <div fx-cer justify-end gap-8px col-span-2>
       <ab-button type="warn" @click="getConfig">Cancel</ab-button>
       <ab-button @click="setConfig">Apply</ab-button>
