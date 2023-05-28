@@ -1,0 +1,126 @@
+<script lang="ts" setup>
+import { useMessage } from 'naive-ui';
+import type { BangumiRule } from '#/bangumi';
+
+const { getAll } = useBangumiStore();
+const show = defineModel('show', { default: false });
+
+const rss = ref('');
+const message = useMessage();
+const rule = ref<BangumiRule>();
+const analysis = reactive({
+  loading: false,
+  next: false,
+});
+
+const loading = reactive({
+  collect: false,
+  subscribe: false,
+});
+
+watch(show, (val) => {
+  if (!val) {
+    rss.value = '';
+    setTimeout(() => {
+      analysis.next = false;
+    }, 300);
+  }
+});
+
+const analyser = async () => {
+  if (rss.value === '') {
+    message.error('Please enter the RSS link!');
+  } else {
+    try {
+      analysis.loading = true;
+      const { onError, onResult } = await apiDownload.analysis(rss.value);
+      onResult((data) => {
+        rule.value = data;
+        analysis.loading = false;
+        analysis.next = true;
+        console.log('rule', data);
+      });
+
+      onError((err) => {
+        message.error(err.status);
+        analysis.loading = false;
+        console.log('error', err);
+      });
+    } catch (error) {
+      message.error('Failed to analyser!');
+    }
+  }
+};
+
+const collect = async () => {
+  if (rule.value) {
+    try {
+      loading.collect = true;
+      const res = await apiDownload.collection(rule.value);
+      loading.collect = false;
+      if (res) {
+        message.success('Collect Success!');
+        getAll();
+        show.value = false;
+      } else {
+        message.error('Collect Failed!');
+      }
+    } catch (error) {
+      message.error('Collect Error!');
+    }
+  }
+};
+const subscribe = async () => {
+  if (rule.value) {
+    try {
+      loading.subscribe = true;
+      const res = await apiDownload.subscribe(rule.value);
+      loading.subscribe = false;
+      if (res) {
+        message.success('Subscribe Success!');
+        getAll();
+        show.value = false;
+      } else {
+        message.error('Subscribe Failed!');
+      }
+    } catch (error) {
+      message.error('Subscribe Error!');
+    }
+  }
+};
+</script>
+
+<template>
+  <ab-popup v-model:show="show" title="Add Bangumi" css="w-360px">
+    <div space-y-12px v-if="!analysis.next">
+      <ab-setting
+        label="RSS Link"
+        type="input"
+        :prop="{
+          placeholder: 'Please enter the RSS link',
+        }"
+        :bottom-line="true"
+        v-model:data="rss"
+      ></ab-setting>
+
+      <div flex="~ justify-end">
+        <ab-button size="small" :loading="analysis.loading" @click="analyser"
+          >Analyser</ab-button
+        >
+      </div>
+    </div>
+
+    <div v-else>
+      <ab-rule v-model:rule="rule"></ab-rule>
+
+      <div flex="~ justify-end" space-x-10px>
+        <ab-button size="small" :loading="loading.collect" @click="collect"
+          >Collect</ab-button
+        >
+        <ab-button size="small" :loading="loading.subscribe" @click="subscribe"
+          >Subscribe</ab-button
+        >
+      </div>
+    </div>
+  </ab-popup>
+</template>

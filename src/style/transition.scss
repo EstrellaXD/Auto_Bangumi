@@ -3,12 +3,12 @@
 .fade {
   &-enter-active,
   &-leave-active {
-    position: absolute;
     transition: opacity 0.2s ease;
   }
 
   &-enter-from,
   &-leave-to {
+    position: absolute;
     opacity: 0;
   }
 }

@@ -16,13 +16,22 @@ withDefaults(
     running: false,
   }
 );
+
+defineEmits(['clickAdd']);
 </script>
 
 <template>
   <Menu>
     <div rel>
       <div fx-cer space-x-16px>
-        <AddOne theme="outline" size="24" fill="#fff" is-btn btn-click />
+        <AddOne
+          theme="outline"
+          size="24"
+          fill="#fff"
+          is-btn
+          btn-click
+          @click="() => $emit('clickAdd')"
+        />
 
         <MenuButton bg-transparent is-btn btn-click>
           <More theme="outline" size="24" fill="#fff" />

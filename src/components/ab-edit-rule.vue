@@ -1,23 +1,14 @@
 <script lang="ts" setup>
-import type { AbEditRuleItem, SettingItem } from '#/components';
+import type { BangumiRule } from '#/bangumi';
 
 const emit = defineEmits<{
   delete: [{ id: number; deleteFile: boolean }];
-  apply: [item: AbEditRuleItem];
+  apply: [item: BangumiRule];
 }>();
 
 const show = defineModel('show', { default: false });
-const item = defineModel<AbEditRuleItem>('item', {
-  default: () => {
-    return {
-      id: -1,
-      official_title: '',
-      year: '',
-      season: 1,
-      offset: 0,
-      filter: [],
-    };
-  },
+const rule = defineModel<BangumiRule>('rule', {
+  required: true,
 });
 
 const deleteRuleDialog = ref(false);
@@ -29,69 +20,19 @@ watch(show, (val) => {
 
 function emitDelete(deleteFile: boolean) {
   emit('delete', {
-    id: item.value.id,
+    id: rule.value.id,
     deleteFile,
   });
 }
 function emitApply() {
-  emit('apply', item.value);
+  emit('apply', rule.value);
 }
-
-const items: SettingItem<AbEditRuleItem>[] = [
-  {
-    configKey: 'official_title',
-    label: 'Officical Ttile',
-    type: 'input',
-    prop: {
-      type: 'text',
-    },
-  },
-  {
-    configKey: 'year',
-    label: 'Year',
-    type: 'input',
-    css: 'w-72px',
-    prop: {
-      type: 'text',
-    },
-  },
-  {
-    configKey: 'season',
-    label: 'Season',
-    type: 'input',
-    css: 'w-72px',
-    prop: {
-      type: 'number',
-    },
-    bottomLine: true,
-  },
-  {
-    configKey: 'offset',
-    label: 'Offset',
-    type: 'input',
-    css: 'w-72px',
-    prop: {
-      type: 'number',
-    },
-  },
-  {
-    configKey: 'filter',
-    label: 'Exclude',
-    type: 'dynamic-tags',
-    bottomLine: true,
-  },
-];
 </script>
 
 <template>
   <ab-popup v-model:show="show" title="Edit Rule" css="w-380px">
     <div space-y-12px>
-      <ab-setting
-        v-for="i in items"
-        :key="i.configKey"
-        v-bind="i"
-        v-model:data="item[i.configKey]"
-      ></ab-setting>
+      <ab-rule v-model:rule="rule"></ab-rule>
 
       <div fx-cer justify-end space-x-10px>
         <ab-button
@@ -109,10 +50,10 @@ const items: SettingItem<AbEditRuleItem>[] = [
       <div line my-8px></div>
 
       <div fx-cer justify-center space-x-10px>
-        <ab-button size="small" type="warn" @click="emitDelete(true)"
+        <ab-button size="small" type="warn" @click="() => emitDelete(true)"
           >Yes</ab-button
         >
-        <ab-button size="small" @click="emitDelete(false)">No</ab-button>
+        <ab-button size="small" @click="() => emitDelete(false)">No</ab-button>
       </div>
     </ab-popup>
   </ab-popup>

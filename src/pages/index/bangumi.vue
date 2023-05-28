@@ -1,35 +1,40 @@
 <script lang="ts" setup>
 import type { BangumiRule } from '#/bangumi';
-import type { AbEditRuleItem } from '#/components';
 
 const { data } = storeToRefs(useBangumiStore());
 const { getAll, updateRule, removeRule } = useBangumiStore();
 
 const editRule = reactive<{
   show: boolean;
-  item: AbEditRuleItem;
+  item: BangumiRule;
 }>({
   show: false,
   item: {
-    id: -1,
-    official_title: '',
-    year: '',
-    season: 1,
-    offset: 0,
+    added: false,
+    deleted: false,
+    dpi: '',
+    eps_collect: false,
     filter: [],
+    group_name: '',
+    id: 0,
+    official_title: '',
+    offset: 0,
+    poster_link: '',
+    rss_link: [],
+    rule_name: '',
+    save_path: '',
+    season: 1,
+    season_raw: '',
+    source: null,
+    subtitle: '',
+    title_raw: '',
+    year: null,
   },
 });
 
-function open(data: BangumiRule) {
+async function open(data: BangumiRule) {
   editRule.show = true;
-  editRule.item = {
-    id: data.id,
-    official_title: data.official_title,
-    year: data.year ?? '',
-    season: data.season,
-    offset: data.offset,
-    filter: data.filter,
-  };
+  editRule.item = data;
 }
 
 async function deleteRule({
@@ -46,11 +51,8 @@ async function deleteRule({
   }
 }
 
-async function applyRule(newData: AbEditRuleItem) {
-  const id = newData.id;
-  const oldData = await apiBangumi.getRule(id);
-  const data = Object.assign(oldData, newData);
-  const res = await updateRule(data);
+async function applyRule(newData: BangumiRule) {
+  const res = await updateRule(newData);
   if (res) {
     editRule.show = false;
     getAll();
@@ -75,12 +77,12 @@ definePage({
       :poster="i.poster_link ?? ''"
       :name="i.official_title"
       :season="i.season"
-      @click="open(i)"
+      @click="() => open(i)"
     ></ab-bangumi-card>
 
     <AbEditRule
       v-model:show="editRule.show"
-      :item="editRule.item"
+      v-model:rule="editRule.item"
       @delete="deleteRule"
       @apply="applyRule"
     ></AbEditRule>

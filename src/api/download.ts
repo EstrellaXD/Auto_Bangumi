@@ -1,7 +1,11 @@
 import type { BangumiRule } from '#/bangumi';
 
 interface Status {
-  status: 'Success' | 'Failed to parse link';
+  status: 'Success';
+}
+
+interface AnalysisError {
+  status: 'Failed to parse link';
 }
 
 export const apiDownload = {
@@ -10,10 +14,25 @@ export const apiDownload = {
    * @param rss_link - RSS 链接
    */
   async analysis(rss_link: string) {
-    const { data } = await axios.post<BangumiRule>('api/v1/download/analysis', {
-      rss_link,
-    });
-    return data;
+    const fetchResult = createEventHook<BangumiRule>();
+    const fetchError = createEventHook<AnalysisError>();
+
+    axios
+      .post<any>('api/v1/download/analysis', {
+        rss_link,
+      })
+      .then(({ data }) => {
+        if (data.status) {
+          fetchError.trigger(data as AnalysisError);
+        } else {
+          fetchResult.trigger(data as BangumiRule);
+        }
+      });
+
+    return {
+      onResult: fetchResult.on,
+      onError: fetchError.on,
+    };
   },
 
   /**

@@ -10,6 +10,7 @@ export {}
 declare module '@vue/runtime-core' {
   export interface GlobalComponents {
     AbAdd: typeof import('./basic/ab-add.vue')['default']
+    AbAddBangumi: typeof import('./components/ab-add-bangumi.vue')['default']
     AbBangumiCard: typeof import('./components/ab-bangumi-card.vue')['default']
     AbButton: typeof import('./basic/ab-button.vue')['default']
     AbChangeAccount: typeof import('./components/ab-change-account.vue')['default']
@@ -21,6 +22,7 @@ declare module '@vue/runtime-core' {
     AbLabel: typeof import('./components/ab-label.vue')['default']
     AbPageTitle: typeof import('./basic/ab-page-title.vue')['default']
     AbPopup: typeof import('./components/ab-popup.vue')['default']
+    AbRule: typeof import('./components/ab-rule.vue')['default']
     AbSearch: typeof import('./basic/ab-search.vue')['default']
     AbSelect: typeof import('./basic/ab-select.vue')['default']
     AbSetting: typeof import('./components/ab-setting.vue')['default']

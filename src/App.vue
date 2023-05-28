@@ -1,12 +1,24 @@
 <script setup lang="ts">
-import { NMessageProvider } from 'naive-ui';
+import {
+  NMessageProvider,
+  NConfigProvider,
+  type GlobalThemeOverrides,
+} from 'naive-ui';
+
+const theme: GlobalThemeOverrides = {
+  Spin: {
+    color: '#fff',
+  },
+};
 </script>
 
 <template>
   <Suspense>
-    <NMessageProvider>
-      <RouterView></RouterView>
-    </NMessageProvider>
+    <n-config-provider :theme-overrides="theme">
+      <n-message-provider>
+        <RouterView></RouterView>
+      </n-message-provider>
+    </n-config-provider>
   </Suspense>
 </template>
 

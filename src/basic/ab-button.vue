@@ -1,14 +1,18 @@
 <script lang="ts" setup>
+import { NSpin } from 'naive-ui';
+
 const props = withDefaults(
   defineProps<{
     type?: 'primary' | 'warn';
     size?: 'big' | 'normal' | 'small';
     link?: string | null;
+    loading?: boolean;
   }>(),
   {
     type: 'primary',
     size: 'normal',
     link: null,
+    loading: false,
   }
 );
 
@@ -24,6 +28,17 @@ const buttonSize = computed(() => {
       return 'rounded-6px w-86px h-28px text-main';
   }
 });
+
+const loadingSize = computed(() => {
+  switch (props.size) {
+    case 'big':
+      return 'large';
+    case 'normal':
+      return 'small';
+    case 'small':
+      return 18;
+  }
+});
 </script>
 
 <template>
@@ -36,7 +51,9 @@ const buttonSize = computed(() => {
     :class="[`type-${type}`, buttonSize]"
     @click="$emit('click')"
   >
-    <slot></slot>
+    <n-spin :show="loading" :size="loadingSize">
+      <slot></slot>
+    </n-spin>
   </Component>
 </template>
 

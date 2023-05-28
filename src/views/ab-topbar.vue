@@ -3,6 +3,7 @@ import { Me, Pause, PlayOne, Power, Refresh } from '@icon-park/vue-next';
 
 const search = ref('');
 const show = ref(false);
+const showAdd = ref(false);
 
 const { onUpdate, offUpdate, start, pause, shutdown, restart } =
   useProgramStore();
@@ -59,9 +60,15 @@ onUnmounted(() => {
     <ab-search v-model:value="search" />
 
     <div ml-auto>
-      <ab-status-bar :items="items" :running="running"></ab-status-bar>
+      <ab-status-bar
+        :items="items"
+        :running="running"
+        @click-add="() => (showAdd = true)"
+      ></ab-status-bar>
     </div>
 
     <ab-change-account v-model:show="show"></ab-change-account>
+
+    <ab-add-bangumi v-model:show="showAdd"></ab-add-bangumi>
   </div>
 </template>

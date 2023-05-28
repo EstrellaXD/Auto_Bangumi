@@ -7,7 +7,7 @@ import {
   Logout,
   MenuUnfold,
   Play,
-  Setting,
+  SettingTwo,
 } from '@icon-park/vue-next';
 
 const props = withDefaults(
@@ -58,7 +58,7 @@ const items = [
   },
   {
     id: 6,
-    icon: Setting,
+    icon: SettingTwo,
     label: 'Config',
     path: '/config',
   },
