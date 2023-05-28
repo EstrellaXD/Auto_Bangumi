@@ -58,7 +58,7 @@ defineEmits(['click']);
     </div>
 
     <div px-4px py-8px>
-      <div text-h3>{{ name }}</div>
+      <div text-h3 truncate>{{ name }}</div>
       <div text-main>Season {{ season }}</div>
     </div>
   </div>
