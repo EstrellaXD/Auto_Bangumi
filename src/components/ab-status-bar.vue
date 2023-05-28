@@ -48,6 +48,7 @@ defineEmits(['clickAdd']);
         bg-white
         overflow-hidden
         shadow
+        z-99
       >
         <MenuItem v-for="i in items" :key="i.id" v-slot="{ active }">
           <div
