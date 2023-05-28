@@ -1,13 +1,13 @@
 <script lang="ts" setup>
-import type { AbEditRule, SettingItem } from '#/components';
+import type { AbEditRuleItem, SettingItem } from '#/components';
 
 const emit = defineEmits<{
   delete: [{ id: number; deleteFile: boolean }];
-  apply: [item: AbEditRule];
+  apply: [item: AbEditRuleItem];
 }>();
 
 const show = defineModel('show', { default: false });
-const item = defineModel<AbEditRule>('item', {
+const item = defineModel<AbEditRuleItem>('item', {
   default: () => {
     return {
       id: -1,
@@ -37,7 +37,7 @@ function emitApply() {
   emit('apply', item.value);
 }
 
-const items: SettingItem<AbEditRule>[] = [
+const items: SettingItem<AbEditRuleItem>[] = [
   {
     configKey: 'official_title',
     label: 'Officical Ttile',

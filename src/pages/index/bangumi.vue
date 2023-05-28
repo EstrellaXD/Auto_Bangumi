@@ -1,13 +1,13 @@
 <script lang="ts" setup>
 import type { BangumiRule } from '#/bangumi';
-import { AbEditRule } from '#/components';
+import type { AbEditRuleItem } from '#/components';
 
 const { data } = storeToRefs(useBangumiStore());
 const { getAll, updateRule, removeRule } = useBangumiStore();
 
 const editRule = reactive<{
   show: boolean;
-  item: AbEditRule;
+  item: AbEditRuleItem;
 }>({
   show: false,
   item: {
@@ -46,7 +46,7 @@ async function deleteRule({
   }
 }
 
-async function applyRule(newData: AbEditRule) {
+async function applyRule(newData: AbEditRuleItem) {
   const id = newData.id;
   const oldData = await apiBangumi.getRule(id);
   const data = Object.assign(oldData, newData);

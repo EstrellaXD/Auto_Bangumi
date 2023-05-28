@@ -17,7 +17,7 @@ export type SettingItem<T> = AbSettingProps & {
   configKey: keyof T;
 };
 
-export interface AbEditRule {
+export interface AbEditRuleItem {
   id: number;
   official_title: string;
   year: string;

@@ -8,7 +8,7 @@ export interface Logout {
   message: 'logout success';
 }
 
-export interface Update {
+export interface Update extends LoginSuccess {
   message: 'update success';
 }
 
