@@ -61,14 +61,19 @@ export const useAuth = createSharedComposable(() => {
   };
 
   const update = async () => {
-    const res = await apiAuth.update(user.username, user.password);
-    if (res) {
-      message.success('Update Success!');
-      clearUser();
-    } else if (res === false) {
+    try {
+      const res = await apiAuth.update(user.username, user.password);
+
+      if (res?.message === 'update success') {
+        auth.value = `${res.token_type} ${res.access_token}`;
+        message.success('Update Success!');
+        clearUser();
+      } else {
+        message.error('Update Failed!');
+        user.password = '';
+      }
+    } catch (error) {
       message.error('Update Failed!');
-    } else {
-      user.password = '';
     }
   };
 
