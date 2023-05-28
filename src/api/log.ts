@@ -6,6 +6,6 @@ export const apiLog = {
 
   async clearLog() {
     const { data } = await axios.get<{ status: 'ok' }>('api/v1/log/clear');
-    return data;
+    return data.status === 'ok';
   },
 };

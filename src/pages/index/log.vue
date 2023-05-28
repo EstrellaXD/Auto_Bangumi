@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-const { onUpdate, offUpdate } = useLogStore();
+const { onUpdate, offUpdate, reset, copy } = useLogStore();
 const { log } = storeToRefs(useLogStore());
 
 onActivated(() => {
@@ -26,6 +26,11 @@ definePage({
         max-h-60vh
       >
         <pre text-main>{{ log }}</pre>
+      </div>
+
+      <div flex="~ justify-end" space-x-10px mt-12px>
+        <ab-button type="warn" size="small" @click="reset">Reset</ab-button>
+        <ab-button size="small" @click="copy">Copy</ab-button>
       </div>
     </ab-container>
 
