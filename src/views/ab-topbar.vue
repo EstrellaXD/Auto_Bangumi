@@ -57,7 +57,7 @@ onUnmounted(() => {
   <div h-60px bg-theme-row text-white rounded-12px fx-cer px-24px>
     <div text-h1 mr-12px>AutoBangumi</div>
 
-    <ab-search v-model:value="search" />
+    <ab-search v-model:value="search" hidden />
 
     <div ml-auto>
       <ab-status-bar
