@@ -46,4 +46,10 @@ async def update_user(user_data: User, current_user: User = Depends(get_current_
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
         )
-    return update_user_info(user_data, current_user)
+    if update_user_info(user_data, current_user):
+        return {
+            "message": "update success",
+            "access_token": create_access_token({"sub": user_data.username}),
+            "token_type": "bearer",
+            "expire": 86400,
+        }

@@ -43,7 +43,7 @@ def update_user_info(user_data: User, current_user):
     try:
         with AuthDB() as db:
             db.update_user(current_user.username, user_data)
-        return {"message": "update success"}
+        return True
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
