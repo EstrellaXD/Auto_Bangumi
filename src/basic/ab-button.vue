@@ -51,9 +51,9 @@ const loadingSize = computed(() => {
     :class="[`type-${type}`, buttonSize]"
     @click="$emit('click')"
   >
-    <n-spin :show="loading" :size="loadingSize">
+    <NSpin :show="loading" :size="loadingSize">
       <slot></slot>
-    </n-spin>
+    </NSpin>
   </Component>
 </template>
 

@@ -4,4 +4,6 @@ definePage({
 });
 </script>
 
-<template></template>
+<template>
+  <div>null</div>
+</template>

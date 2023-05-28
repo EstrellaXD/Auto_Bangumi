@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ErrorPicture , Write } from '@icon-park/vue-next';
+import { ErrorPicture, Write } from '@icon-park/vue-next';
 
 withDefaults(
   defineProps<{

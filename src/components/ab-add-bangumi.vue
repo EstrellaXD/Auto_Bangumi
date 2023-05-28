@@ -27,7 +27,7 @@ watch(show, (val) => {
   }
 });
 
-const analyser = async () => {
+async function analyser() {
   if (rss.value === '') {
     message.error('Please enter the RSS link!');
   } else {
@@ -50,9 +50,9 @@ const analyser = async () => {
       message.error('Failed to analyser!');
     }
   }
-};
+}
 
-const collect = async () => {
+async function collect() {
   if (rule.value) {
     try {
       loading.collect = true;
@@ -69,8 +69,8 @@ const collect = async () => {
       message.error('Collect Error!');
     }
   }
-};
-const subscribe = async () => {
+}
+async function subscribe() {
   if (rule.value) {
     try {
       loading.subscribe = true;
@@ -87,20 +87,20 @@ const subscribe = async () => {
       message.error('Subscribe Error!');
     }
   }
-};
+}
 </script>
 
 <template>
   <ab-popup v-model:show="show" title="Add Bangumi" css="w-360px">
-    <div space-y-12px v-if="!analysis.next">
+    <div v-if="!analysis.next" space-y-12px>
       <ab-setting
+        v-model:data="rss"
         label="RSS Link"
         type="input"
         :prop="{
           placeholder: 'Please enter the RSS link',
         }"
         :bottom-line="true"
-        v-model:data="rss"
       ></ab-setting>
 
       <div flex="~ justify-end">

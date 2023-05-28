@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import {
-  NMessageProvider,
-  NConfigProvider,
   type GlobalThemeOverrides,
+  NConfigProvider,
+  NMessageProvider,
 } from 'naive-ui';
 
 const theme: GlobalThemeOverrides = {
@@ -14,11 +14,11 @@ const theme: GlobalThemeOverrides = {
 
 <template>
   <Suspense>
-    <n-config-provider :theme-overrides="theme">
-      <n-message-provider>
+    <NConfigProvider :theme-overrides="theme">
+      <NMessageProvider>
         <RouterView></RouterView>
-      </n-message-provider>
-    </n-config-provider>
+      </NMessageProvider>
+    </NConfigProvider>
   </Suspense>
 </template>
 
