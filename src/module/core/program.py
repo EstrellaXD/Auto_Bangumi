@@ -35,6 +35,8 @@ class Program(RenameThread, RSSThread):
         self.start()
 
     def start(self):
+        if self.first_run:
+            return {"status": "Not ready to start."}
         self.stop_event.clear()
         settings.load()
         if self.enable_renamer:
@@ -49,6 +51,7 @@ class Program(RenameThread, RSSThread):
             self.stop_event.set()
             self.rename_stop()
             self.rss_stop()
+            return {"status": "Program stopped."}
         else:
             return {"status": "Program is not running."}
 

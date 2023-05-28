@@ -45,8 +45,7 @@ async def start(current_user=Depends(get_current_user)):
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
         )
     try:
-        program.start()
-        return {"status": "ok"}
+        return program.start()
     except Exception as e:
         logger.debug(e)
         logger.warning("Failed to start program")
@@ -59,8 +58,7 @@ async def stop(current_user=Depends(get_current_user)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
         )
-    program.stop()
-    return {"status": "ok"}
+    return program.stop()
 
 
 @router.get("/api/v1/status", tags=["program"])
