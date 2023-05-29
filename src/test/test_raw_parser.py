@@ -69,3 +69,4 @@ def test_raw_parser():
     assert info.resolution == "720P"
     assert info.episode == 5
     assert info.season == 1
+

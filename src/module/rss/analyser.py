@@ -84,8 +84,9 @@ class RSSAnalyser:
                 return []
             # New List
             new_data = self.torrents_to_data(torrents_to_add, rss_link, full_parse)
-            if full_parse:
-                database.insert_list(new_data)
+            if new_data:
+                if full_parse:
+                    database.insert_list(new_data)
         return new_data
 
     def run(self, rss_link: str = settings.rss_link):

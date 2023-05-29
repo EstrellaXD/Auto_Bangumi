@@ -179,9 +179,3 @@ def raw_parser(raw: str) -> Episode | None:
     return Episode(
         name_en, name_zh, name_jp, season, sr, episode, sub, group, dpi, source
     )
-
-
-if __name__ == "__main__":
-    title = "【幻樱字幕组】【4月新番】【古见同学有交流障碍症 第二季 Komi-san wa, Komyushou Desu. S02】【22】【GB_MP4】【1920X1080】"
-    ep = raw_parser(title)
-    print(ep)
