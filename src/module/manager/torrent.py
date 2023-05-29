@@ -32,16 +32,23 @@ class TorrentManager(BangumiDatabase):
         else:
             return data
 
-    def delete_data(self, _id: int | str):
+    def delete_rule(self, _id: int | str, file: bool = False):
         data = self.search_id(int(_id))
         if isinstance(data, BangumiData):
             self.delete_one(int(_id))
+            if file:
+                self.delete_torrents(data.id)
+                logger.info(f"Delete {data.official_title} and torrents.")
+                return {
+                    "status": "success",
+                    "msg": f"Delete {data.official_title} and torrents.",
+                }
             logger.info(f"Delete {data.official_title}")
             return {"status": "success", "msg": f"Delete {data.official_title}"}
         else:
             return data
 
-    def delete_rule(self, _id: str | int, file: bool = False):
+    def disable_rule(self, _id: str | int, file: bool = False):
         data = self.search_id(int(_id))
         if isinstance(data, BangumiData):
             with DownloadClient() as client:
@@ -53,15 +60,28 @@ class TorrentManager(BangumiDatabase):
                 logger.info(f"Delete rule and torrents for {data.official_title}")
                 return {
                     "status": "success",
-                    "msg": f"Delete rule and torrents for {data.official_title}",
+                    "msg": f"Disable rule and delete torrents for {data.official_title}",
                 }
-            logger.info(f"Delete rule for {data.official_title}")
+            logger.info(f"Disable rule for {data.official_title}")
             return {
                 "status": "success",
-                "msg": f"Delete rule for {data.official_title}",
+                "msg": f"Disable rule for {data.official_title}",
             }
         else:
             return data
+
+    def enable_rule(self, _id: str | int):
+        data = self.search_id(int(_id))
+        if isinstance(data, BangumiData):
+            data.deleted = False
+            self.update_one(data)
+            with DownloadClient() as client:
+                client.set_rule(data)
+            logger.info(f"Enable rule for {data.official_title}")
+            return {
+                "status": "success",
+                "msg": f"Enable rule for {data.official_title}",
+            }
 
     def update_rule(self, data: BangumiData):
         old_data = self.search_id(data.id)
