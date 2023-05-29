@@ -73,7 +73,8 @@ class TorrentManager(BangumiDatabase):
             match_list = self.__match_torrents_list(data)
             with DownloadClient() as client:
                 path = client._gen_save_path(data)
-                client.move_torrent(match_list, path)
+                if match_list:
+                    client.move_torrent(match_list, path)
                 # Set new download rule
                 client.remove_rule(data.rule_name)
                 client.set_rule(data)
