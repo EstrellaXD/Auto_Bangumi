@@ -29,7 +29,7 @@ async def get_data(bangumi_id: str, current_user=Depends(get_current_user)):
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
         )
     with TorrentManager() as torrent:
-        return torrent.search_data(bangumi_id)
+        return torrent.search_one(bangumi_id)
 
 
 @router.post("/api/v1/bangumi/updateRule", tags=["bangumi"])
