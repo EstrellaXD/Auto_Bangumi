@@ -34,6 +34,7 @@ class TorrentInfo:
         self.__fetch_mikan_info()
         return self._official_title
 
+
 class RequestContent(RequestURL):
     # Mikanani RSS
     def get_torrents(
@@ -42,16 +43,19 @@ class RequestContent(RequestURL):
         _filter: str = "|".join(settings.rss_parser.filter),
         retry: int = 3,
     ) -> [TorrentInfo]:
-        soup = self.get_xml(_url, retry)
-        torrent_titles, torrent_urls, torrent_homepage = mikan_parser(soup)
+        try:
+            soup = self.get_xml(_url, retry)
+            torrent_titles, torrent_urls, torrent_homepage = mikan_parser(soup)
 
-        torrents = []
-        for _title, torrent_url, homepage in zip(
-            torrent_titles, torrent_urls, torrent_homepage
-        ):
-            if re.search(_filter, _title) is None:
-                torrents.append(TorrentInfo(name=_title, torrent_link=torrent_url, homepage=homepage))
-        return torrents
+            torrents = []
+            for _title, torrent_url, homepage in zip(
+                torrent_titles, torrent_urls, torrent_homepage
+            ):
+                if re.search(_filter, _title) is None:
+                    torrents.append(TorrentInfo(name=_title, torrent_link=torrent_url, homepage=homepage))
+            return torrents
+        except ConnectionError:
+            return []
 
     def get_mikan_info(self, _url) -> tuple[str, str]:
         content = self.get_html(_url)

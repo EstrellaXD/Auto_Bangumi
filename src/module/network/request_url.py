@@ -21,19 +21,18 @@ class RequestURL:
                 req = self.session.get(url=url, headers=self.header, timeout=5)
                 req.raise_for_status()
                 return req
-            except requests.RequestException as e:
-                logger.debug(f"URL: {url}")
-                logger.debug(e)
-                logger.warning(f"Cannot connect to {url}. Wait for 5 seconds.")
-                logger.warning("Please check DNS/Connection settings")
+            except requests.RequestException:
+                logger.warning(f"[Network] Cannot connect to {url}. Wait for 5 seconds.")
                 try_time += 1
                 if try_time >= retry:
                     break
                 time.sleep(5)
             except Exception as e:
-                logger.debug(f"URL: {url}")
                 logger.debug(e)
                 break
+        logger.error(f"[Network] Failed connecting to {url}")
+        logger.warning("[Network] Please check DNS/Connection settings")
+        raise ConnectionError(f"Failed connecting to {url}")
 
     def post_url(self, url: str, data: dict, retry=3):
         try_time = 0
@@ -44,18 +43,18 @@ class RequestURL:
                 )
                 req.raise_for_status()
                 return req
-            except requests.RequestException as e:
-                logger.debug(e)
-                logger.warning(f"Cannot connect to {url}.")
-                logger.warning("Please check DNS/Connection settings")
+            except requests.RequestException:
+                logger.warning(f"[Network] Cannot connect to {url}. Wait for 5 seconds.")
                 try_time += 1
                 if try_time >= retry:
                     break
                 time.sleep(5)
             except Exception as e:
-                logger.debug(f"URL: {url}")
                 logger.debug(e)
                 break
+        logger.error(f"[Network] Failed connecting to {url}")
+        logger.warning("[Network] Please check DNS/Connection settings")
+        raise ConnectionError(f"Failed connecting to {url}")
 
     def check_url(self, url: str):
         if "://" not in url:
