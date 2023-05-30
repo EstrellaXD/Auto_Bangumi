@@ -13,62 +13,77 @@ class TorrentManager(BangumiDatabase):
     def __match_torrents_list(data: BangumiData) -> list:
         with DownloadClient() as client:
             torrents = client.get_torrent_info()
-        matched_list = []
-        for torrent in torrents:
-            if data.save_path == torrent.save_path:
-                matched_list.append(torrent.hash)
-        return matched_list
+        return [torrent.hash for torrent in torrents if torrent.save_path == data.save_path]
 
-    def delete_torrents(self, _id: int | str):
-        data = self.search_one(int(_id))
-        if isinstance(data, BangumiData):
-            hash_list = self.__match_torrents_list(data)
-            with DownloadClient() as client:
-                client.delete_torrent(hash_list)
+    def delete_torrents(self, data: BangumiData, client: DownloadClient):
+        hash_list = self.__match_torrents_list(data)
+        if hash_list:
+            client.delete_torrent(hash_list)
+            logger.info(f"Delete rule and torrents for {data.official_title}")
             return {
                 "status": "success",
                 "msg": f"Delete torrents for {data.official_title}",
             }
         else:
-            return data
+            return {
+                "status": "error",
+                "msg": f"Can't find torrents for {data.official_title}",
+            }
 
     def delete_rule(self, _id: int | str, file: bool = False):
         data = self.search_id(int(_id))
         if isinstance(data, BangumiData):
-            self.delete_one(int(_id))
-            if file:
-                self.delete_torrents(data.id)
-                logger.info(f"Delete {data.official_title} and torrents.")
+            with DownloadClient() as client:
+                client.remove_rule(data.rule_name)
+                self.delete_one(int(_id))
+                if file:
+                    self.delete_torrents(data, client)
+                    return {
+                        "status": "success",
+                        "msg": f"Delete rule and torrents for {data.official_title}",
+                    }
+                logger.info(f"Delete rule for {data.official_title}")
                 return {
                     "status": "success",
-                    "msg": f"Delete {data.official_title} and torrents.",
+                    "msg": f"Delete rule for {data.official_title}",
                 }
-            logger.info(f"Delete {data.official_title}")
-            return {"status": "success", "msg": f"Delete {data.official_title}"}
         else:
-            return data
+            return {"status": "error", "msg": f"Can't find id {_id}"}
+        # data = self.search_id(int(_id))
+        # if isinstance(data, BangumiData):
+        #     self.delete_one(int(_id))
+        #     if file:
+        #         self.delete_torrents(data)
+        #         logger.info(f"Delete {data.official_title} and torrents.")
+        #         return {
+        #             "status": "success",
+        #             "msg": f"Delete {data.official_title} and torrents.",
+        #         }
+        #     logger.info(f"Delete {data.official_title}")
+        #     return {"status": "success", "msg": f"Delete {data.official_title}"}
+        # else:
+        #     return data
 
     def disable_rule(self, _id: str | int, file: bool = False):
         data = self.search_id(int(_id))
         if isinstance(data, BangumiData):
             with DownloadClient() as client:
                 client.remove_rule(data.rule_name)
-            data.deleted = True
-            self.update_one(data)
-            if file:
-                self.delete_torrents(data.id)
-                logger.info(f"Delete rule and torrents for {data.official_title}")
+                data.deleted = True
+                self.update_one(data)
+                if file:
+                    self.delete_torrents(data, client)
+                    return {
+                        "status": "success",
+                        "msg": f"Disable rule and delete torrents for {data.official_title}",
+                    }
+                logger.info(f"Disable rule for {data.official_title}")
                 return {
                     "status": "success",
-                    "msg": f"Disable rule and delete torrents for {data.official_title}",
+                    "msg": f"Disable rule for {data.official_title}",
                 }
-            logger.info(f"Disable rule for {data.official_title}")
-            return {
-                "status": "success",
-                "msg": f"Disable rule for {data.official_title}",
-            }
         else:
-            return data
+            return {"status": "error", "msg": f"Can't find data with id {_id}"}
 
     def enable_rule(self, _id: str | int):
         data = self.search_id(int(_id))

@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
-from .jwt import decode_token
+from .jwt import verify_token
 
 from module.database.user import AuthDB
 from module.models.user import User
@@ -15,7 +15,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
         )
-    payload = decode_token(token)
+    payload = verify_token(token)
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
@@ -31,7 +31,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
 
 async def get_token_data(token: str = Depends(oauth2_scheme)):
-    payload = decode_token(token)
+    payload = verify_token(token)
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"

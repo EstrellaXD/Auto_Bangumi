@@ -4,6 +4,7 @@ from .status import ProgramStatus
 
 from module.rss import analyser, add_rules
 from module.manager import Renamer, eps_complete
+from module.network import PostNotification
 from module.conf import settings
 
 
@@ -48,7 +49,7 @@ class RenameThread(ProgramStatus):
     def rename_loop(self):
         while not self.stop_event.is_set():
             with Renamer() as renamer:
-                renamer.rename()
+                renamed_info = renamer.rename()
             self.stop_event.wait(settings.program.rename_time)
 
     def rename_start(self):

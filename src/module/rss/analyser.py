@@ -75,24 +75,13 @@ class RSSAnalyser:
             self.official_title_parser(data, mikan_title)
             return data
 
-    def rss_to_data(self, rss_link: str, full_parse: bool = True) -> list[BangumiData]:
+    def rss_to_data(self, rss_link: str, database: BangumiDatabase, full_parse: bool = True) -> list[BangumiData]:
         rss_torrents = self.get_rss_torrents(rss_link, full_parse)
-        with BangumiDatabase() as database:
-            torrents_to_add = database.match_list(rss_torrents, rss_link)
-            if not torrents_to_add:
-                logger.debug("[RSS] No new title has been found.")
-                return []
-            # New List
-            new_data = self.torrents_to_data(torrents_to_add, rss_link, full_parse)
-            if new_data:
-                if full_parse:
-                    database.insert_list(new_data)
-        return new_data
-
-    def run(self, rss_link: str = settings.rss_link):
-        logger.info("[RSS] Start collecting RSS info.")
-        try:
-            self.rss_to_data(rss_link)
-        except Exception as e:
-            logger.debug(f"[RSS] {e}")
-            logger.error("[RSS] Failed to collect RSS info.")
+        torrents_to_add = database.match_list(rss_torrents, rss_link)
+        if not torrents_to_add:
+            logger.debug("[RSS] No new title has been found.")
+            return []
+        # New List
+        new_data = self.torrents_to_data(torrents_to_add, rss_link, full_parse)
+        if new_data:
+            return new_data

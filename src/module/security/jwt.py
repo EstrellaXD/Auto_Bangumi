@@ -30,8 +30,8 @@ def decode_token(token: str):
         if username is None:
             return None
         return payload
-    except JWTError as e:
-        raise e
+    except JWTError:
+        return None
 
 
 def verify_token(token: str):

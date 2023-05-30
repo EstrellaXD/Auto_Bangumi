@@ -47,7 +47,6 @@ class TorrentPath:
     def _file_depth(path):
         return len(path.split(path.sep))
 
-    @staticmethod
     def is_ep(self, path):
         return self._file_depth(path) <= 2
 
