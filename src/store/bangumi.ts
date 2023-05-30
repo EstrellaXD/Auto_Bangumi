@@ -6,7 +6,15 @@ export const useBangumiStore = defineStore('bangumi', () => {
 
   const getAll = async () => {
     const res = await apiBangumi.getAll();
-    data.value = res.sort((a, b) => b.id - a.id);
+
+    const sort = (arr: BangumiRule[]) => {
+      return arr.sort((a, b) => b.id - a.id);
+    };
+
+    const enabled = sort(res.filter((e) => !e.deleted));
+    const disabled = sort(res.filter((e) => e.deleted));
+
+    data.value = [...enabled, ...disabled];
   };
 
   const updateRule = async (newRule: BangumiRule) => {

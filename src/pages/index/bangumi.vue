@@ -72,7 +72,7 @@ definePage({
   <div flex="~ wrap" gap-y-12px gap-x-50px>
     <ab-bangumi-card
       v-for="i in data"
-      v-show="!i.deleted"
+      :class="[i.deleted && 'grayscale']"
       :key="i.id"
       :poster="i.poster_link ?? ''"
       :name="i.official_title"
