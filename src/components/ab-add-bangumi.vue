@@ -125,7 +125,7 @@ async function subscribe() {
 
       <div flex="~ justify-end">
         <ab-button size="small" :loading="analysis.loading" @click="analyser"
-          >Analyser</ab-button
+          >Analyse</ab-button
         >
       </div>
     </div>
