@@ -4,7 +4,8 @@ from .status import ProgramStatus
 
 from module.rss import analyser, add_rules
 from module.manager import Renamer, eps_complete
-from module.network import PostNotification
+from module.notification import PostNotification
+from module.database import BangumiDatabase
 from module.conf import settings
 
 
@@ -17,7 +18,8 @@ class RSSThread(ProgramStatus):
 
     def rss_loop(self):
         while not self.stop_event.is_set():
-            analyser.run()
+            with BangumiDatabase() as db:
+                analyser.rss_to_data(rss_link=settings.rss_link, database=db)
             add_rules()
             if settings.bangumi_manage.eps_complete:
                 eps_complete()

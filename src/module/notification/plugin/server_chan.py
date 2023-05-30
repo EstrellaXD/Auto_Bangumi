@@ -1,3 +1,6 @@
+from module.network import RequestContent
+
+
 class ServerChanNotification(RequestContent):
     """Server酱推送"""
 

@@ -1,3 +1,5 @@
+from module.network import RequestContent
+
 class BarkNotification(RequestContent):
     def __init__(self):
         super().__init__()
