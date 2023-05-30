@@ -6,7 +6,7 @@ export const useBangumiStore = defineStore('bangumi', () => {
 
   const getAll = async () => {
     const res = await apiBangumi.getAll();
-    data.value = res;
+    data.value = res.sort((a, b) => b.id - a.id);
   };
 
   const updateRule = async (newRule: BangumiRule) => {
