@@ -12,12 +12,12 @@ export const useAuth = createSharedComposable(() => {
 
   const isLogin = computed(() => auth.value !== '');
 
-  const clearUser = () => {
+  function clearUser() {
     user.username = '';
     user.password = '';
-  };
+  }
 
-  const check = () => {
+  function check() {
     if (user.username === '') {
       message.warning('Please Enter Username!');
       return false;
@@ -29,53 +29,82 @@ export const useAuth = createSharedComposable(() => {
     }
 
     return true;
-  };
+  }
 
-  const login = async () => {
-    try {
-      if (check()) {
-        const res = await apiAuth.login(user.username, user.password);
-        auth.value = `${res.token_type} ${res.access_token}`;
-        clearUser();
-        message.success('Login Success!');
-      }
-    } catch (err) {
+  function login() {
+    const { execute, onResult, onError } = useApi(apiAuth.login, {
+      message: {
+        success: 'Login Success!',
+      },
+    });
+
+    onResult((res) => {
+      auth.value = `${res.token_type} ${res.access_token}`;
+      clearUser();
+    });
+
+    onError((err) => {
       const error = err as ApiError;
       message.error(error.detail);
+    });
+
+    if (check()) {
+      execute(user.username, user.password);
     }
-  };
+  }
 
-  const logout = async () => {
-    const res = await apiAuth.logout();
-    if (res) {
-      clearUser();
-      auth.value = '';
-      message.success('Logout Success!');
-    } else {
-      message.error('Logout Failed!');
+  const { execute: logout, onResult: onLogoutResult } = useApi(apiAuth.logout, {
+    failRule: (res) => !res,
+    message: {
+      success: 'Logout Success!',
+      fail: 'Logout Failed!',
+    },
+  });
+
+  onLogoutResult(() => {
+    clearUser();
+    auth.value = '';
+  });
+
+  const { execute: refresh, onResult: onRefreshResult } = useApi(
+    apiAuth.refresh,
+    {
+      message: {
+        success: 'Refresh Success!',
+      },
     }
-  };
+  );
 
-  const refresh = () => {
-    apiAuth.refresh();
-  };
+  onRefreshResult((res) => {
+    auth.value = `${res.token_type} ${res.access_token}`;
+  });
 
-  const update = async () => {
-    try {
-      const res = await apiAuth.update(user.username, user.password);
+  function update() {
+    const { execute, onResult } = useApi(apiAuth.update, {
+      failRule: (res) => res.message !== 'update success',
+      message: {
+        success: 'Update Success!',
+        fail: 'Update Failed!',
+      },
+    });
 
-      if (res?.message === 'update success') {
+    onResult((res) => {
+      if (res.message === 'update success') {
         auth.value = `${res.token_type} ${res.access_token}`;
-        message.success('Update Success!');
         clearUser();
       } else {
-        message.error('Update Failed!');
         user.password = '';
       }
-    } catch (error) {
-      message.error('Update Failed!');
+    });
+
+    if (check()) {
+      if (user.password.length < 8) {
+        message.error('Password must be at least 8 characters long!');
+      } else {
+        execute(user.username, user.password);
+      }
     }
-  };
+  }
 
   return {
     auth,

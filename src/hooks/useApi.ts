@@ -33,9 +33,9 @@ export function useApi<
 
         if (options?.failRule && options.failRule(res)) {
           options.message?.fail && message.error(options.message.fail);
+        } else {
+          options?.message?.success && message.success(options.message.success);
         }
-
-        options?.message?.success && message.success(options.message.success);
       })
       .catch((err: TError) => {
         fetchError.trigger(err);

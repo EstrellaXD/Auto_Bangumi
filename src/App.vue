@@ -10,6 +10,9 @@ const theme: GlobalThemeOverrides = {
     color: '#fff',
   },
 };
+
+const { refresh } = useAuth();
+refresh();
 </script>
 
 <template>
