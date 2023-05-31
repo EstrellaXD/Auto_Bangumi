@@ -1,14 +1,17 @@
 type AnyAsyncFuntion<TData = any> = (...args: any[]) => Promise<TData>;
+type UnPromisify<T> = T extends AnyAsyncFuntion<infer U> ? U : never;
 
 export function useApi<
   TError = any,
   TApi extends AnyAsyncFuntion = AnyAsyncFuntion,
-  TData = ReturnType<TApi>
+  TData = UnPromisify<TApi>
 >(
   api: TApi,
   options?: {
+    failRule?: (data: TData) => boolean;
     message?: {
       success?: string;
+      fail?: string;
       error?: string;
     };
   }
@@ -24,13 +27,17 @@ export function useApi<
     isLoading.value = true;
 
     api(...params)
-      .then((res) => {
+      .then((res: TData) => {
         data.value = res;
         fetchResult.trigger(res);
 
+        if (options?.failRule && options.failRule(res)) {
+          options.message?.fail && message.error(options.message.fail);
+        }
+
         options?.message?.success && message.success(options.message.success);
       })
-      .catch((err) => {
+      .catch((err: TError) => {
         fetchError.trigger(err);
 
         options?.message?.error && message.error(options.message.error);
