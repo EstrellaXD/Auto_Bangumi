@@ -1,33 +1,36 @@
 export const useLogStore = defineStore('log', () => {
   const log = ref('');
-  const timer = ref<NodeJS.Timer | null>(null);
   const { auth } = useAuth();
   const message = useMessage();
 
-  const get = async () => {
+  function get() {
+    const { execute, onResult } = useApi(apiLog.getLog);
+
+    onResult((value) => {
+      log.value = value;
+    });
+
     if (auth.value !== '') {
-      log.value = await apiLog.getLog();
+      execute();
     }
-  };
+  }
 
-  const onUpdate = () => {
-    get();
-    timer.value = setInterval(() => get(), 3000);
-  };
+  const { execute: reset, onResult: onClearLogResult } = useApi(
+    apiLog.clearLog
+  );
 
-  const offUpdate = () => {
-    clearInterval(Number(timer.value));
-    timer.value = null;
-  };
-
-  const reset = async () => {
-    const res = await apiLog.clearLog();
+  onClearLogResult((res) => {
     if (res) {
       log.value = '';
     }
-  };
+  });
 
-  const copy = () => {
+  const { pause: offUpdate, resume: onUpdate } = useIntervalFn(get, 3000, {
+    immediate: false,
+    immediateCallback: true,
+  });
+
+  function copy() {
     const { copy: copyLog, isSupported } = useClipboard({ source: log });
     if (isSupported) {
       copyLog();
@@ -35,7 +38,7 @@ export const useLogStore = defineStore('log', () => {
     } else {
       message.error('Your browser does not support Clipboard API!');
     }
-  };
+  }
 
   return {
     log,

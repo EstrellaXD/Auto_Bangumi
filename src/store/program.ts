@@ -1,52 +1,42 @@
-export const useProgramStore = defineStore('program', () => {
-  const message = useMessage();
+export const useProgramStore = defineStore('program', function () {
   const { auth } = useAuth();
   const running = ref(false);
-  const timer = ref<NodeJS.Timer | null>(null);
 
-  const getStatus = async () => {
+  function getStatus() {
+    const { execute, onResult } = useApi(apiProgram.status);
+
+    onResult((res) => {
+      running.value = res;
+    });
+
     if (auth.value !== '') {
-      running.value = await apiProgram.status();
-    }
-  };
-
-  const onUpdate = () => {
-    getStatus();
-    timer.value = setInterval(() => getStatus(), 3000);
-  };
-
-  const offUpdate = () => {
-    clearInterval(Number(timer.value));
-    timer.value = null;
-  };
-
-  function handleMessage(handle: string, success: boolean) {
-    if (success) {
-      message.success(`${handle} Success!`);
-    } else {
-      message.error(`${handle} Failed!`);
+      execute();
     }
   }
 
-  const start = async () => {
-    const res = await apiProgram.start();
-    handleMessage('Start', res);
-  };
+  const { pause: offUpdate, resume: onUpdate } = useIntervalFn(
+    getStatus,
+    3000,
+    {
+      immediate: false,
+      immediateCallback: true,
+    }
+  );
 
-  const pause = async () => {
-    const res = await apiProgram.stop();
-    handleMessage('Pause', res);
-  };
+  function opts(handle: string) {
+    return {
+      failRule: (res: boolean) => !res,
+      message: {
+        success: `${handle} Success!`,
+        fail: `${handle} Failed!`,
+      },
+    };
+  }
 
-  const shutdown = async () => {
-    const res = await apiProgram.shutdown();
-    handleMessage('Shutdown', res);
-  };
-
-  const restart = async () => {
-    const res = await apiProgram.restart();
-    handleMessage('Restart', res);
-  };
+  const { execute: start } = useApi(apiProgram.start, opts('Start'));
+  const { execute: pause } = useApi(apiProgram.stop, opts('Pause'));
+  const { execute: shutdown } = useApi(apiProgram.shutdown, opts('Shutdown'));
+  const { execute: restart } = useApi(apiProgram.restart, opts('Restart'));
 
   return {
     running,
