@@ -80,11 +80,11 @@ definePage({
       @click="() => open(i)"
     ></ab-bangumi-card>
 
-    <AbEditRule
+    <ab-edit-rule
       v-model:show="editRule.show"
       v-model:rule="editRule.item"
       @delete="deleteRule"
       @apply="applyRule"
-    ></AbEditRule>
+    ></ab-edit-rule>
   </div>
 </template>
