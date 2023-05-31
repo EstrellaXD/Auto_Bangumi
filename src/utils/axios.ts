@@ -25,10 +25,17 @@ axios.interceptors.response.use(
       detail,
     };
 
+    const message = useMessage();
+
     /** token 过期 */
     if (error.status === 401) {
       const { auth } = useAuth();
       auth.value = '';
+    }
+
+    if (error.status === 500) {
+      const msg = error.detail ? error.detail : 'Request Error!';
+      message.error(msg);
     }
 
     return Promise.reject(error);
