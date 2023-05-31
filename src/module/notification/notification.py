@@ -4,16 +4,13 @@ from .plugin import *
 
 from module.models import Notification
 from module.conf import settings
+from module.database import BangumiDatabase
 
 
 logger = logging.getLogger(__name__)
 
-type = settings.notification.type
-token = settings.notification.token
-chat_id = settings.notification.chat_id
 
-
-def getClient():
+def getClient(type=settings.notification.type):
     if type.lower() == "telegram":
         return TelegramNotification
     elif type.lower() == "server-chan":
@@ -25,15 +22,37 @@ def getClient():
 
 
 class PostNotification(getClient()):
-    def send_msg(self, info: Notification) -> bool:
-        text = (
-            f"番剧名称：{info.official_title}\n"
-            f"季度： 第{info.season}季\n"
-            f"更新集数： 第{info.episode}集\n"
-            f"{info.poster_link}\n"
+    def __init__(self):
+        super().__init__(
+            token=settings.notification.token,
+            chat_id=settings.notification.chat_id
         )
+
+    @staticmethod
+    def _gen_message(notify: Notification) -> str:
+        with BangumiDatabase() as db:
+            poster_path = db.match_poster(notify.official_title)
+        if poster_path:
+            poster_link = "https://mikanani.me" + poster_path
+            text = f"""
+            番剧名称：{info.official_title}\n
+            季度： 第{info.season}季\n
+            更新集数： 第{info.episode}集\n
+            {poster_link}\n
+            """
+        else:
+            text = """
+            番剧名称：{info.official_title}\n
+            季度： 第{info.season}季\n
+            更新集数： 第{info.episode}集\n
+            """
+        return text
+
+    def send_msg(self, notify: Notification) -> bool:
+        text = self._gen_message(notify)
         try:
-            return self.post_msg(text)
+            self.post_msg(text)
+            logger.debug(f"Send notification: {text}")
         except Exception as e:
             logger.warning(f"Failed to send notification: {e}")
             return False
@@ -44,7 +63,6 @@ if __name__ == "__main__":
         official_title="魔法纪录 魔法少女小圆外传",
         season=2,
         episode=1,
-        poster_link="https://mikanani.me/images/Bangumi/202107/3788b33f.jpg",
     )
     with PostNotification() as client:
         client.send_msg(info)

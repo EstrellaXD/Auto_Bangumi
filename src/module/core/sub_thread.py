@@ -52,6 +52,9 @@ class RenameThread(ProgramStatus):
         while not self.stop_event.is_set():
             with Renamer() as renamer:
                 renamed_info = renamer.rename()
+            with PostNotification() as notifier:
+                for info in renamed_info:
+                    notifier.send_msg(info)
             self.stop_event.wait(settings.program.rename_time)
 
     def rename_start(self):

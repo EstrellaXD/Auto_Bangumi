@@ -3,10 +3,8 @@ import logging
 from module.downloader import DownloadClient
 
 from module.parser import TitleParser
-# from module.network import PostNotification
 from module.models import SubtitleFile, EpisodeFile, Notification
 from module.conf import settings
-# from module.database import BangumiDatabase
 
 
 logger = logging.getLogger(__name__)
@@ -47,24 +45,6 @@ class Renamer(DownloadClient):
             logger.error(f"[Renamer] Unknown rename method: {method}")
             return file_info.media_path
 
-    # @staticmethod
-    # def send_notification(bangumi_name, ep: EpisodeFile):
-    #     with BangumiDatabase() as db:
-    #         poster_path = db.match_poster(bangumi_name)
-    #     poster_link = "https://mikanani.me" + poster_path
-    #     n = Notification(
-    #         official_title=bangumi_name,
-    #         season=ep.season,
-    #         episode=ep.episode,
-    #         poster_link=poster_link,
-    #     )
-    #     with PostNotification() as notificator:
-    #         status = notificator.send_msg(n)
-    #     if status:
-    #         logger.info(f"[Renamer] Notification sent: {ep.title} S{ep.season}E{ep.episode}")
-    #     else:
-    #         logger.warning(f"[Renamer] Notification failed: {ep.title} S{ep.season}E{ep.episode}")
-
     def rename_file(
         self,
         torrent_name: str,
@@ -87,9 +67,12 @@ class Renamer(DownloadClient):
                     _hash=_hash, old_path=media_path, new_path=new_path
                 )
                 if renamed:
-                    # if settings.notification.enable:
-                    #     self.send_notification(bangumi_name, ep)
-                    return ep
+                    n = Notification(
+                            official_title=bangumi_name,
+                            season=ep.season,
+                            episode=ep.episode,
+                        )
+                    return n
         else:
             logger.warning(f"[Renamer] {media_path} parse failed")
             if settings.bangumi_manage.remove_bad_torrent:
@@ -169,9 +152,9 @@ class Renamer(DownloadClient):
             }
             # Rename single media file
             if len(media_list) == 1:
-                ep_info = self.rename_file(media_path=media_list[0], **kwargs)
-                if ep_info:
-                    renamed_info.append(ep_info)
+                notify_info = self.rename_file(media_path=media_list[0], **kwargs)
+                if notify_info:
+                    renamed_info.append(notify_info)
                 # Rename subtitle file
                 if len(subtitle_list) > 0:
                     self.rename_subtitles(subtitle_list=subtitle_list, **kwargs)

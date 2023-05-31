@@ -1,10 +1,14 @@
+import logging
+
 from module.network import RequestContent
+
+logger = logging.getLogger(__name__)
 
 
 class ServerChanNotification(RequestContent):
     """Server酱推送"""
 
-    def __init__(self):
+    def __init__(self, token, **kwargs):
         super().__init__()
         self.notification_url = f"https://sctapi.ftqq.com/{token}.send"
 
