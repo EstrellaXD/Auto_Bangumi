@@ -27,7 +27,12 @@ export default defineConfig({
     }),
     Components({
       dts: 'src/components.d.ts',
-      dirs: ['src/basic', 'src/components', 'src/views'],
+      dirs: [
+        'src/components',
+        'src/components/basic',
+        'src/components/layout',
+        'src/components/setting',
+      ],
     }),
   ],
   css: {

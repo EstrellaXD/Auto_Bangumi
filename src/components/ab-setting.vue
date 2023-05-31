@@ -1,7 +1,5 @@
 <script lang="ts" setup>
 import { NDynamicTags } from 'naive-ui';
-import AbSwitch from '../basic/ab-switch.vue';
-import AbSelect from '../basic/ab-select.vue';
 import type { AbSettingProps } from '#/components';
 
 withDefaults(defineProps<AbSettingProps>(), {
