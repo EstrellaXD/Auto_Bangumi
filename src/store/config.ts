@@ -1,4 +1,4 @@
-import { initConfig, type Config } from '#/config';
+import { type Config, initConfig } from '#/config';
 
 export const useConfigStore = defineStore('config', () => {
   const config = ref<Config>(initConfig);

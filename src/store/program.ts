@@ -1,4 +1,4 @@
-export const useProgramStore = defineStore('program', function () {
+export const useProgramStore = defineStore('program', () => {
   const { auth } = useAuth();
   const running = ref(false);
 
