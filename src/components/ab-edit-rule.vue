@@ -2,8 +2,9 @@
 import type { BangumiRule } from '#/bangumi';
 
 const emit = defineEmits<{
-  delete: [{ id: number; deleteFile: boolean }];
-  apply: [item: BangumiRule];
+  (e: 'disable', opts: { id: number; deleteFile: boolean }): void;
+  (e: 'apply', rule: BangumiRule): void;
+  (e: 'enable', id: number): void;
 }>();
 
 const show = defineModel('show', { default: false });
@@ -18,8 +19,10 @@ watch(show, (val) => {
   }
 });
 
-function emitDelete(deleteFile: boolean) {
-  emit('delete', {
+const close = () => (show.value = false);
+
+function emitDisable(deleteFile: boolean) {
+  emit('disable', {
     id: rule.value.id,
     deleteFile,
   });
@@ -27,11 +30,44 @@ function emitDelete(deleteFile: boolean) {
 function emitApply() {
   emit('apply', rule.value);
 }
+
+function emitEnable() {
+  emit('enable', rule.value.id);
+}
+
+const popupTitle = computed(() => {
+  if (rule.value.deleted) {
+    return 'Enable Rule';
+  } else {
+    return 'Edit Rule';
+  }
+});
+
+const boxSize = computed(() => {
+  if (rule.value.deleted) {
+    return 'w-300px';
+  } else {
+    return 'w-380px';
+  }
+});
 </script>
 
 <template>
-  <ab-popup v-model:show="show" title="Edit Rule" css="w-380px">
-    <div space-y-12px>
+  <ab-popup v-model:show="show" :title="popupTitle" :css="boxSize">
+    <div v-if="rule.deleted">
+      <div>Do you want to enable this rule?</div>
+
+      <div line my-8px></div>
+
+      <div fx-cer justify-center space-x-10px>
+        <ab-button size="small" type="warn" @click="() => emitEnable()"
+          >Yes</ab-button
+        >
+        <ab-button size="small" @click="() => close()">No</ab-button>
+      </div>
+    </div>
+
+    <div v-else space-y-12px>
       <ab-rule v-model:rule="rule"></ab-rule>
 
       <div fx-cer justify-end space-x-10px>
@@ -39,7 +75,7 @@ function emitApply() {
           size="small"
           type="warn"
           @click="() => (deleteRuleDialog = true)"
-          >Delete</ab-button
+          >Disable</ab-button
         >
         <ab-button size="small" @click="emitApply">Apply</ab-button>
       </div>
@@ -50,10 +86,10 @@ function emitApply() {
       <div line my-8px></div>
 
       <div fx-cer justify-center space-x-10px>
-        <ab-button size="small" type="warn" @click="() => emitDelete(true)"
+        <ab-button size="small" type="warn" @click="() => emitDisable(true)"
           >Yes</ab-button
         >
-        <ab-button size="small" @click="() => emitDelete(false)">No</ab-button>
+        <ab-button size="small" @click="() => emitDisable(false)">No</ab-button>
       </div>
     </ab-popup>
   </ab-popup>

@@ -1,49 +1,78 @@
 import type { BangumiRule } from '#/bangumi';
 
 export const useBangumiStore = defineStore('bangumi', () => {
-  const message = useMessage();
   const data = ref<BangumiRule[]>();
 
-  const getAll = async () => {
-    const res = await apiBangumi.getAll();
+  function getAll() {
+    const { execute, onResult } = useApi(apiBangumi.getAll);
 
-    const sort = (arr: BangumiRule[]) => {
+    function sort(arr: BangumiRule[]) {
       return arr.sort((a, b) => b.id - a.id);
+    }
+
+    onResult((res) => {
+      const enabled = sort(res.filter((e) => !e.deleted));
+      const disabled = sort(res.filter((e) => e.deleted));
+
+      data.value = [...enabled, ...disabled];
+    });
+
+    execute();
+  }
+
+  function useUpdateRule() {
+    const { execute, onResult } = useApi(apiBangumi.updateRule, {
+      failRule: (data) => {
+        return data.status !== 'success';
+      },
+      message: {
+        success: 'Update Success!',
+        fail: 'Update Failed!',
+        error: 'Operation Failed!',
+      },
+    });
+
+    return {
+      execute,
+      onResult,
     };
+  }
 
-    const enabled = sort(res.filter((e) => !e.deleted));
-    const disabled = sort(res.filter((e) => e.deleted));
+  function useDisableRule() {
+    const { execute, onResult } = useApi(apiBangumi.disableRule, {
+      failRule: (data) => {
+        return data.status !== 'success';
+      },
+      message: {
+        success: 'Disabled Success!',
+        fail: 'Disabled Failed!',
+        error: 'Operation Failed!',
+      },
+    });
 
-    data.value = [...enabled, ...disabled];
-  };
+    return {
+      execute,
+      onResult,
+    };
+  }
 
-  const updateRule = async (newRule: BangumiRule) => {
-    try {
-      const res = await apiBangumi.updateRule(newRule);
-      if (res.status === 'success') {
-        message.success('Update Success!');
-        return true;
-      } else {
-        message.error('Update Failed!');
-      }
-    } catch (error) {
-      message.error('Operation Failed!');
-    }
-  };
+  function useEnableRule() {
+    const { execute, onResult } = useApi(apiBangumi.enableRule, {
+      failRule: (data) => {
+        return data.status !== 'success';
+      },
+      message: {
+        success: 'Enabled Success!',
+        fail: 'Enabled Failed!',
+        error: 'Operation Failed!',
+      },
+    });
 
-  const removeRule = async (bangumiId: number, deleteFile = false) => {
-    try {
-      const res = await apiBangumi.deleteRule(bangumiId, deleteFile);
-      if (res.status === 'success') {
-        message.success(`${res.msg} Success!`);
-        return true;
-      } else {
-        message.error('Delete Failed!');
-      }
-    } catch (error) {
-      message.error('Operation Failed!');
-    }
-  };
+    return {
+      execute,
+      onResult,
+    };
+  }
 
-  return { data, getAll, updateRule, removeRule };
+  return { data, getAll, useUpdateRule, useDisableRule, useEnableRule };
 });

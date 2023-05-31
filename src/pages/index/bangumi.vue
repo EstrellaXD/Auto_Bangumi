@@ -2,7 +2,8 @@
 import type { BangumiRule } from '#/bangumi';
 
 const { data } = storeToRefs(useBangumiStore());
-const { getAll, updateRule, removeRule } = useBangumiStore();
+const { getAll, useUpdateRule, useDisableRule, useEnableRule } =
+  useBangumiStore();
 
 const editRule = reactive<{
   show: boolean;
@@ -32,32 +33,32 @@ const editRule = reactive<{
   },
 });
 
-async function open(data: BangumiRule) {
+function open(data: BangumiRule) {
   editRule.show = true;
   editRule.item = data;
 }
 
-async function deleteRule({
-  id,
-  deleteFile,
-}: {
-  id: number;
-  deleteFile: boolean;
-}) {
-  const res = await removeRule(id, deleteFile);
-  if (res) {
-    editRule.show = false;
-    getAll();
-  }
+function refresh() {
+  editRule.show = false;
+  getAll();
 }
 
-async function applyRule(newData: BangumiRule) {
-  const res = await updateRule(newData);
-  if (res) {
-    editRule.show = false;
-    getAll();
-  }
-}
+const { execute: updateRule, onResult: onUpdateRuleResult } = useUpdateRule();
+const { execute: enableRule, onResult: onEnableRuleResult } = useEnableRule();
+const { execute: disableRule, onResult: onDisableRuleResult } =
+  useDisableRule();
+
+onUpdateRuleResult(() => {
+  refresh();
+});
+
+onDisableRuleResult(() => {
+  refresh();
+});
+
+onEnableRuleResult(() => {
+  refresh();
+});
 
 onActivated(() => {
   getAll();
@@ -83,8 +84,9 @@ definePage({
     <ab-edit-rule
       v-model:show="editRule.show"
       v-model:rule="editRule.item"
-      @delete="deleteRule"
-      @apply="applyRule"
+      @enable="(id) => enableRule(id)"
+      @disable="({ id, deleteFile }) => disableRule(id, deleteFile)"
+      @apply="(rule) => updateRule(rule)"
     ></ab-edit-rule>
   </div>
 </template>
