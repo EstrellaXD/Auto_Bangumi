@@ -87,3 +87,10 @@ class RSSAnalyser:
             return new_data
         else:
             return []
+
+    def link_to_data(self, link: str) -> BangumiData:
+        torrents = self.get_rss_torrents(link, False)
+        for torrent in torrents:
+            data = self.torrent_to_data(torrent, link)
+            if data:
+                return data

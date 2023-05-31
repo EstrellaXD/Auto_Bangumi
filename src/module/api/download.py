@@ -9,19 +9,15 @@ from module.rss import analyser
 from module.security import get_current_user
 
 
-def link_process(link):
-    return analyser.rss_to_data(link, full_parse=False)
-
-
 @router.post("/api/v1/download/analysis", tags=["download"])
 async def analysis(link: RssLink, current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
         )
-    data = link_process(link.rss_link)
+    data = analyser.link_to_data(link.rss_link)
     if data:
-        return data[0]
+        return data
     else:
         return {"status": "Failed to parse link"}
 

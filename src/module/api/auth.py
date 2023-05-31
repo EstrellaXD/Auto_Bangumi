@@ -20,10 +20,10 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     password = form_data.password
     auth_user(username, password)
     token = create_access_token(
-        data={"sub": username}, expires_delta=timedelta(seconds=10)
+        data={"sub": username}, expires_delta=timedelta(days=1)
     )
 
-    return {"access_token": token, "token_type": "bearer", "expire": 10}
+    return {"access_token": token, "token_type": "bearer", "expire": 86400}
 
 
 @router.get("/api/v1/auth/refresh_token", response_model=dict, tags=["auth"])
