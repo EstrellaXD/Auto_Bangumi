@@ -85,3 +85,5 @@ class RSSAnalyser:
         new_data = self.torrents_to_data(torrents_to_add, rss_link, full_parse)
         if new_data:
             return new_data
+        else:
+            return []

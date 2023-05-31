@@ -35,9 +35,9 @@ class PostNotification(getClient()):
         if poster_path:
             poster_link = "https://mikanani.me" + poster_path
             text = f"""
-            番剧名称：{info.official_title}\n
-            季度： 第{info.season}季\n
-            更新集数： 第{info.episode}集\n
+            番剧名称：{notify.official_title}\n
+            季度： 第{notify.season}季\n
+            更新集数： 第{notify.episode}集\n
             {poster_link}\n
             """
         else:

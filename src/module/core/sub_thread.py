@@ -2,7 +2,8 @@ import threading
 
 from .status import ProgramStatus
 
-from module.rss import analyser, add_rules
+from module.rss import analyser
+from module.downloader import DownloadClient
 from module.manager import Renamer, eps_complete
 from module.notification import PostNotification
 from module.database import BangumiDatabase
@@ -18,9 +19,16 @@ class RSSThread(ProgramStatus):
 
     def rss_loop(self):
         while not self.stop_event.is_set():
+            # Analyse RSS
             with BangumiDatabase() as db:
-                analyser.rss_to_data(rss_link=settings.rss_link, database=db)
-            add_rules()
+                new_data = analyser.rss_to_data(rss_link=settings.rss_link, database=db)
+                if new_data:
+                    db.insert_list(new_data)
+                bangumi_list = db.not_added()
+                if bangumi_list:
+                    with DownloadClient() as client:
+                        client.set_rules(bangumi_list)
+                    db.update_list(bangumi_list)
             if settings.bangumi_manage.eps_complete:
                 eps_complete()
             self.stop_event.wait(settings.program.rss_time)
@@ -52,9 +60,10 @@ class RenameThread(ProgramStatus):
         while not self.stop_event.is_set():
             with Renamer() as renamer:
                 renamed_info = renamer.rename()
-            with PostNotification() as notifier:
-                for info in renamed_info:
-                    notifier.send_msg(info)
+            if settings.notification.enable:
+                with PostNotification() as notifier:
+                    for info in renamed_info:
+                        notifier.send_msg(info)
             self.stop_event.wait(settings.program.rename_time)
 
     def rename_start(self):
