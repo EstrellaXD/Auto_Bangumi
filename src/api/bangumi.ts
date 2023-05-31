@@ -42,9 +42,9 @@ export const apiBangumi = {
    * @param bangumiId - 需要删除的 bangumi 的 id
    * @returns axios 请求返回的数据
    */
-  async deleteData(bangumiId: number) {
+  async deleteRule(bangumiId: number) {
     const { data } = await axios.delete(
-      `api/v1/bangumi/deleteData/${bangumiId}`
+      `api/v1/bangumi/deleteRule/${bangumiId}`
     );
     return data;
   },
@@ -55,11 +55,11 @@ export const apiBangumi = {
    * @param file - 是否同时删除关联文件。
    * @returns axios 请求返回的数据
    */
-  async deleteRule(bangumiId: number, file: boolean) {
+  async disableRule(bangumiId: number, file: boolean) {
     const { data } = await axios.delete<{
-      msg: string;
       status: 'success';
-    }>(`api/v1/bangumi/deleteRule/${bangumiId}`, {
+      msg: string;
+    }>(`api/v1/bangumi/disableRule/${bangumiId}`, {
       params: {
         file,
       },
@@ -68,10 +68,24 @@ export const apiBangumi = {
   },
 
   /**
+   * 启用指定 bangumiId 的规则
+   * @param bangumiId - 需要启用的 bangumi 的 id
+   */
+  async enableRule(bangumiId: number) {
+    const { data } = await axios.get<{
+      status: 'success';
+      msg: string;
+    }>(`api/v1/bangumi/enableRule/${bangumiId}`);
+    return data;
+  },
+
+  /**
    * 重置所有 bangumi 数据
    */
   async resetAll() {
-    const { data } = await axios.post('api/v1/bangumi/resetAll');
+    const { data } = await axios.post<{
+      status: 'ok';
+    }>('api/v1/bangumi/resetAll');
     return data;
   },
 };
