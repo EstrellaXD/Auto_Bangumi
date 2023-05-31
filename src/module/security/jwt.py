@@ -41,7 +41,7 @@ def verify_token(token: str):
     expires = token_data.get("exp")
     if datetime.utcnow() >= datetime.fromtimestamp(expires):
         raise JWTError("Token expired")
-    return create_access_token(data={"sub": token_data.get("sub")})
+    return token_data
 
 
 # 密码加密&验证

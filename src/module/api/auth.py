@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -17,8 +19,11 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     username = form_data.username
     password = form_data.password
     auth_user(username, password)
-    token = create_access_token({"sub": username})
-    return {"access_token": token, "token_type": "bearer", "expire": 86400}
+    token = create_access_token(
+        data={"sub": username}, expires_delta=timedelta(seconds=10)
+    )
+
+    return {"access_token": token, "token_type": "bearer", "expire": 10}
 
 
 @router.get("/api/v1/auth/refresh_token", response_model=dict, tags=["auth"])
@@ -27,7 +32,10 @@ async def refresh(current_user: User = Depends(get_current_user)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
         )
-    token = create_access_token({"sub": current_user.username})
+    token = create_access_token(
+        data = {"sub": current_user.username}
+
+    )
     return {"access_token": token, "token_type": "bearer", "expire": 86400}
 
 
