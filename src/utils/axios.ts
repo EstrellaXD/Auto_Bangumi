@@ -25,7 +25,8 @@ axios.interceptors.response.use(
       detail,
     };
 
-    if (error.detail === 'Not authenticated') {
+    /** token 过期 */
+    if (error.status === 401) {
       const { auth } = useAuth();
       auth.value = '';
     }
