@@ -1,20 +1,52 @@
-import { appStatus } from '../api/program';
+export const useProgramStore = defineStore('program', () => {
+  const { auth } = useAuth();
+  const running = ref(false);
 
-export const programStore = defineStore('program', () => {
-  const status = ref(false);
-  const timer = ref<NodeJS.Timer | null>(null);
+  function getStatus() {
+    const { execute, onResult } = useApi(apiProgram.status);
 
-  const getStatus = async () => {
-    status.value = await appStatus();
-  };
+    onResult((res) => {
+      running.value = res;
+    });
 
-  const onUpdate = () => {
-    timer.value = setInterval(() => getStatus(), 3000);
-  };
+    if (auth.value !== '') {
+      execute();
+    }
+  }
+
+  const { pause: offUpdate, resume: onUpdate } = useIntervalFn(
+    getStatus,
+    3000,
+    {
+      immediate: false,
+      immediateCallback: true,
+    }
+  );
+
+  function opts(handle: string) {
+    return {
+      failRule: (res: boolean) => !res,
+      message: {
+        success: `${handle} Success!`,
+        fail: `${handle} Failed!`,
+      },
+    };
+  }
+
+  const { execute: start } = useApi(apiProgram.start, opts('Start'));
+  const { execute: pause } = useApi(apiProgram.stop, opts('Pause'));
+  const { execute: shutdown } = useApi(apiProgram.shutdown, opts('Shutdown'));
+  const { execute: restart } = useApi(apiProgram.restart, opts('Restart'));
 
   return {
-    status,
+    running,
     getStatus,
     onUpdate,
+    offUpdate,
+
+    start,
+    pause,
+    shutdown,
+    restart,
   };
 });

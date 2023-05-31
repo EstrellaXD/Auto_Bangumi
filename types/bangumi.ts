@@ -1,18 +1,21 @@
-export interface BangumiItem {
+export interface BangumiRule {
+  added: boolean;
+  deleted: boolean;
+  dpi: string;
+  eps_collect: boolean;
+  filter: string[];
+  group_name: string;
   id: number;
   official_title: string;
-  year: string | null;
-  title_raw: string;
+  offset: number;
+  poster_link: string | null;
+  rss_link: string[];
+  rule_name: string;
+  save_path: string;
   season: number;
   season_raw: string;
-  group_name: string;
-  dpi: string;
-  source: string;
+  source: string | null;
   subtitle: string;
-  eps_collect: boolean;
-  offset: number;
-  filter: string[];
-  rss_link: string[];
-  poster_link: string;
-  added: boolean;
+  title_raw: string;
+  year: string | null;
 }

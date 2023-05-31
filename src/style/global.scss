@@ -1,0 +1,50 @@
+$scrollbar-color: #372a87;
+
+:root {
+  --scrollbar-size: 6px;
+  --scrollbar-color: transparent;
+  --scrollbar-thumb-color: #{rgba($scrollbar-color, 0.5)};
+  --scrollbar-thumb-hover-color: #{rgba($scrollbar-color, 1)};
+}
+
+::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+/* 滚动槽--外层轨道 */
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-color);
+}
+
+/* 内层轨道（不包含滚动块部分） */
+/* 透明度设置为全透明，使得滚动条背景色为网页颜色 */
+::-webkit-scrollbar-track-piece {
+  opacity: 0;
+}
+
+/* 滚动条滑块 */
+::-webkit-scrollbar-thumb {
+  border-radius: calc(var(--scrollbar-size) / 2);
+  background: var(--scrollbar-thumb-color);
+
+  &:hover {
+    background: var(--scrollbar-thumb-hover-color);
+  }
+}
+
+/* 滚动条按钮 */
+::-webkit-scrollbar-button {
+  display: none;
+}
+
+/* 横向滚动条和纵向滚动条相交处尖角的颜色 */
+::-webkit-scrollbar-corner {
+  background-color: transparent;
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

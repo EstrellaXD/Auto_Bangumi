@@ -1,25 +1,51 @@
-import { getABLog } from '../api/debug';
-
-export const logStore = defineStore('log', () => {
+export const useLogStore = defineStore('log', () => {
   const log = ref('');
-  const timer = ref<NodeJS.Timer | null>(null);
+  const { auth } = useAuth();
+  const message = useMessage();
 
-  const get = async () => {
-    log.value = await getABLog();
-  };
+  function get() {
+    const { execute, onResult } = useApi(apiLog.getLog);
 
-  const onUpdate = () => {
-    timer.value = setInterval(() => get(), 3000);
-  };
+    onResult((value) => {
+      log.value = value;
+    });
 
-  const removeUpdate = () => {
-    clearInterval(Number(timer.value));
-  };
+    if (auth.value !== '') {
+      execute();
+    }
+  }
+
+  const { execute: reset, onResult: onClearLogResult } = useApi(
+    apiLog.clearLog
+  );
+
+  onClearLogResult((res) => {
+    if (res) {
+      log.value = '';
+    }
+  });
+
+  const { pause: offUpdate, resume: onUpdate } = useIntervalFn(get, 3000, {
+    immediate: false,
+    immediateCallback: true,
+  });
+
+  function copy() {
+    const { copy: copyLog, isSupported } = useClipboard({ source: log });
+    if (isSupported) {
+      copyLog();
+      message.success('Copy Success!');
+    } else {
+      message.error('Your browser does not support Clipboard API!');
+    }
+  }
 
   return {
     log,
     get,
+    reset,
     onUpdate,
-    removeUpdate,
+    offUpdate,
+    copy,
   };
 });

@@ -1,70 +1,34 @@
-import { ElMessage, ElMessageBox } from 'element-plus';
-import { getConfig, setConfig } from '@/api/config';
-import { appRestart } from '@/api/program';
-import type { Config } from '#/config';
+import { type Config, initConfig } from '#/config';
 
-const { status } = storeToRefs(programStore());
+export const useConfigStore = defineStore('config', () => {
+  const config = ref<Config>(initConfig);
 
-export const configStore = defineStore('config', () => {
-  const config = ref<Config>();
+  const { execute: getConfig, onResult: onGetConfigRusult } = useApi(
+    apiConfig.getConfig
+  );
 
-  const get = async () => {
-    config.value = await getConfig();
-  };
+  onGetConfigRusult((res) => {
+    config.value = res;
+  });
 
-  const set = async (newConfig: Omit<Config, 'data_version'>) => {
-    let finalConfig: Config;
-    if (config.value !== undefined) {
-      finalConfig = Object.assign(config.value, newConfig);
-      const res = await setConfig(finalConfig);
+  const { execute: set } = useApi(apiConfig.updateConfig, {
+    failRule: (res) => !res,
+    message: {
+      success: 'Apply Success!',
+      fail: 'Apply Failed!',
+    },
+  });
 
-      if (res) {
-        ElMessage({
-          message: '保存成功！',
-          type: 'success',
-        });
+  const setConfig = () => set(config.value);
 
-        if (!status.value) {
-          ElMessageBox.confirm('当前程序没有运行，是否重启?', {
-            type: 'warning',
-          })
-            .then(() => {
-              appRestart()
-                .then((res) => {
-                  if (res) {
-                    ElMessage({
-                      message: '重启中...',
-                      type: 'success',
-                    });
-                  }
-                })
-                .catch((error) => {
-                  console.error(
-                    '🚀 ~ file: index.vue:41 ~ .then ~ error:',
-                    error
-                  );
-                  ElMessage({
-                    message: '操作失败, 请手动重启容器!',
-                    type: 'error',
-                  });
-                });
-            })
-            .catch(() => {});
-        }
-      } else {
-        ElMessage({
-          message: '保存失败, 请重试!',
-          type: 'error',
-        });
-      }
-    }
-
-    return false;
-  };
+  function getSettingGroup<Tkey extends keyof Config>(key: Tkey) {
+    return computed<Config[Tkey]>(() => config.value[key]);
+  }
 
   return {
-    get,
-    set,
     config,
+    getConfig,
+    setConfig,
+    getSettingGroup,
   };
 });
