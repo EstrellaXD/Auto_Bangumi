@@ -52,7 +52,7 @@ class TorrentPath:
 
     def _gen_save_path(self, data: BangumiData):
         folder = (
-            f"{data.official_title}({data.year})" if data.year else data.official_title
+            f"{data.official_title} ({data.year})" if data.year else data.official_title
         )
         save_path = path.join(self.download_path, folder, f"Season {data.season}")
         return save_path
