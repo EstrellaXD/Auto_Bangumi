@@ -12,7 +12,7 @@ export default defineConfig({
   base: './',
   plugins: [
     VueRouter({
-      dts: 'src/router-type.d.ts',
+      dts: 'types/dts/router-type.d.ts',
     }),
     vue({
       script: {
@@ -22,11 +22,11 @@ export default defineConfig({
     UnoCSS(),
     AutoImport({
       imports: ['vue', 'vitest', 'pinia', '@vueuse/core', VueRouterAutoImports],
-      dts: 'src/auto-imports.d.ts',
+      dts: 'types/dts/auto-imports.d.ts',
       dirs: ['src/api', 'src/store', 'src/hooks', 'src/utils'],
     }),
     Components({
-      dts: 'src/components.d.ts',
+      dts: 'types/dts/components.d.ts',
       dirs: [
         'src/components',
         'src/components/basic',
