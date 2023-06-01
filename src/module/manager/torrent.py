@@ -12,7 +12,7 @@ class TorrentManager(BangumiDatabase):
     @staticmethod
     def __match_torrents_list(data: BangumiData) -> list:
         with DownloadClient() as client:
-            torrents = client.get_torrent_info()
+            torrents = client.get_torrent_info(status_filter=None)
         return [torrent.hash for torrent in torrents if torrent.save_path == data.save_path]
 
     def delete_torrents(self, data: BangumiData, client: DownloadClient):

@@ -28,9 +28,9 @@ class SeasonCollector(DownloadClient):
         logger.info("Completed!")
 
     def subscribe_season(self, data: BangumiData):
-        data.added = True
-        data.eps_collect = True
         with BangumiDatabase() as db:
+            data.added = True
+            data.eps_collect = True
             db.insert(data)
         self.add_rss_feed(data.rss_link[0], item_path=data.official_title)
         self.set_rule(data)

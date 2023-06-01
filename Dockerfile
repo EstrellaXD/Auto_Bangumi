@@ -35,7 +35,7 @@ RUN apk add --no-cache \
     sed -i '/bcrypt/d' requirements.txt && \
     pip install --no-cache-dir -r requirements.txt && \
     # Download WebUI
-    curl -sL "https://github.com/Rewrite0/Auto_Bangumi_WebUI/releases/download/v2.0.0-beta1/dist.zip" | busybox unzip -q -d /app - && \
+    curl -sL "https://github.com/Rewrite0/Auto_Bangumi_WebUI/releases/latest/download/dist.zip" | busybox unzip -q -d /app - && \
     mv /app/dist /app/templates && \
     # Add user
     addgroup -S ab -g 911 && \

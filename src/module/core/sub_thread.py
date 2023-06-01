@@ -1,4 +1,5 @@
 import threading
+import time
 
 from .status import ProgramStatus
 
@@ -64,6 +65,7 @@ class RenameThread(ProgramStatus):
                 with PostNotification() as notifier:
                     for info in renamed_info:
                         notifier.send_msg(info)
+                        time.sleep(2)
             self.stop_event.wait(settings.program.rename_time)
 
     def rename_start(self):
