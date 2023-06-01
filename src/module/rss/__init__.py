@@ -1,1 +1,4 @@
-from .rss_analyser import RSSAnalyser
+from .analyser import RSSAnalyser
+
+
+analyser = RSSAnalyser()

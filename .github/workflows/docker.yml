@@ -23,6 +23,7 @@ jobs:
     - name: Test
       working-directory: ./src
       run: |
+        mkdir -p config
         pytest
     
 
@@ -50,6 +51,7 @@ jobs:
         with:
           images: |
             estrellaxd/auto_bangumi
+            ghcr.io/${{ github.repository }}
           tags: |
             type=semver,pattern={{version}}
             type=raw,value=latest
@@ -74,11 +76,9 @@ jobs:
         with:
           context: .
           builder: ${{ steps.buildx.output.name }}
-          platforms: linux/amd64,linux/arm64,linux/arm
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: ${{ github.event_name == 'push' }}
-          tags: |
-            docker.io/estrellaxd/auto_bangumi:${{ steps.meta.outputs.tags }}
-            ghcr.io/estrellaxd/auto_bangumi:${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}

@@ -6,7 +6,7 @@ from aria2p import Client, ClientException, API
 
 from module.conf import settings
 
-from .exceptions import ConflictError
+from module.downloader.exceptions import ConflictError
 
 logger = logging.getLogger(__name__)
 
@@ -15,13 +15,7 @@ class QbDownloader:
     def __init__(self, host, username, password):
         while True:
             try:
-                self._client = API(
-                    Client(
-                        host=host,
-                        port=6800,
-                        secret=password
-                    )
-                )
+                self._client = API(Client(host=host, port=6800, secret=password))
                 break
             except ClientException:
                 logger.warning(

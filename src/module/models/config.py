@@ -4,8 +4,8 @@ from pydantic import BaseModel, Field
 
 
 class Program(BaseModel):
-    sleep_time: int = Field(7200, description="Sleep time")
-    rename_times: int = Field(20, description="Rename times in one loop")
+    rss_time: int = Field(7200, description="Sleep time")
+    rename_time: int = Field(60, description="Rename times in one loop")
     webui_port: int = Field(7892, description="WebUI port")
 
 
@@ -23,7 +23,7 @@ class RSSParser(BaseModel):
     type: str = Field("mikan", description="RSS parser type")
     token: str = Field("token", description="RSS parser token")
     custom_url: str = Field("mikanani.me", description="Custom RSS host url")
-    enable_tmdb: bool = Field(False, description="Enable TMDB")
+    parser_type: str = Field("parser", description="Parser type")
     filter: list[str] = Field(["720", r"\d+-\d"], description="Filter")
     language: str = "zh"
 
@@ -57,7 +57,6 @@ class Notification(BaseModel):
 
 
 class Config(BaseModel):
-    data_version: float = Field(5.0, description="Data version")
     program: Program = Program()
     downloader: Downloader = Downloader()
     rss_parser: RSSParser = RSSParser()

@@ -28,8 +28,6 @@ services:
       - PGID=${GID}
       - PUID=${UID}
       - AB_DOWNLOADER_HOST=qbittorrent:${QB_PORT}
-      - AB_RSS=${AB_RSS}
-      - AB_DOWNLOAD_PATH=/downloads/Bangumi
     volumes:
       - ./config:/app/config
       - ./data:/app/data

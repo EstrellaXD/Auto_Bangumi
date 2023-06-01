@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.11-alpine AS APP
+FROM alpine:3.18 AS APP
 
 ENV S6_SERVICES_GRACETIME=30000 \
     S6_KILL_GRACETIME=60000 \
@@ -18,12 +18,21 @@ WORKDIR /app
 
 COPY requirements.txt .
 RUN apk add --no-cache \
+        bash \
+        ca-certificates \
+        coreutils \
         curl \
         jq \
-        shadow \
+        netcat-openbsd \
+        procps-ng \
+        python3 \
+        py3-bcrypt \
+        py3-pip \
         s6-overlay \
-        bash && \
+        shadow \
+        tzdata && \
     python3 -m pip install --upgrade pip && \
+    sed -i '/bcrypt/d' requirements.txt && \
     pip install --no-cache-dir -r requirements.txt && \
     # Download WebUI
     curl -sL "https://github.com/Rewrite0/Auto_Bangumi_WebUI/releases/latest/download/dist.zip" | busybox unzip -q -d /app - && \

@@ -33,6 +33,8 @@ config/bangumi.json/config/bangumi.json
 dist.zip
 data
 config
+/src/config
+/src/data
 .pytest_cache
 test
 .env

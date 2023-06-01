@@ -7,7 +7,7 @@ DEFAULT_SETTINGS = {
         "sleep_time": 7200,
         "times": 20,
         "webui_port": 7892,
-        "data_version": 4.0
+        "data_version": 4.0,
     },
     "downloader": {
         "type": "qbittorrent",
@@ -15,7 +15,7 @@ DEFAULT_SETTINGS = {
         "username": "admin",
         "password": "adminadmin",
         "path": "/downloads/Bangumi",
-        "ssl": False
+        "ssl": False,
     },
     "rss_parser": {
         "enable": True,
@@ -24,14 +24,14 @@ DEFAULT_SETTINGS = {
         "token": "",
         "enable_tmdb": False,
         "filter": ["720", "\\d+-\\d+"],
-        "language": "zh"
+        "language": "zh",
     },
     "bangumi_manage": {
         "enable": True,
         "eps_complete": False,
         "rename_method": "pn",
         "group_tag": False,
-        "remove_bad_torrent": False
+        "remove_bad_torrent": False,
     },
     "log": {
         "debug_enable": False,
@@ -42,14 +42,9 @@ DEFAULT_SETTINGS = {
         "host": "",
         "port": 1080,
         "username": "",
-        "password": ""
+        "password": "",
     },
-    "notification": {
-        "enable": False,
-        "type": "telegram",
-        "token": "",
-        "chat_id": ""
-    }
+    "notification": {"enable": False, "type": "telegram", "token": "", "chat_id": ""},
 }
 
 
@@ -80,7 +75,10 @@ ENV_TO_ATTR = {
         "AB_METHOD": ("rename_method", lambda e: e.lower()),
         "AB_GROUP_TAG": ("group_tag", lambda e: e.lower() in ("true", "1", "t")),
         "AB_EP_COMPLETE": ("eps_complete", lambda e: e.lower() in ("true", "1", "t")),
-        "AB_REMOVE_BAD_BT": ("remove_bad_torrent", lambda e: e.lower() in ("true", "1", "t")),
+        "AB_REMOVE_BAD_BT": (
+            "remove_bad_torrent",
+            lambda e: e.lower() in ("true", "1", "t"),
+        ),
     },
     "log": {
         "AB_DEBUG_MODE": ("debug_enable", lambda e: e.lower() in ("true", "1", "t")),

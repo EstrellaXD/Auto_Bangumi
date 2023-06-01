@@ -1,86 +1,73 @@
 import logging
 
-from .analyser import raw_parser, torrent_parser, TMDBMatcher
+from .analyser import raw_parser, torrent_parser, tmdb_parser
 
-from module.models import BangumiData, Config
+from module.models import BangumiData
+from module.conf import settings
 
 logger = logging.getLogger(__name__)
 
 
 class TitleParser:
     def __init__(self):
-        self._tmdb_parser = TMDBMatcher()
+        pass
 
     @staticmethod
     def torrent_parser(
-            method: str,
-            torrent_name: str,
-            bangumi_name: str | None = None,
-            season: int | None = None,
-            suffix: str | None = None,
+        torrent_path: str,
+        torrent_name: str | None = None,
+        season: int | None = None,
+        file_type: str = "media",
     ):
-        return torrent_parser(torrent_name, bangumi_name, season, suffix, method)
-
-    def tmdb_parser(self, title: str, season: int, language: str):
-        official_title, tmdb_season = None, None
         try:
-            tmdb_info = self._tmdb_parser.tmdb_search(title)
-            logger.debug(f"TMDB Matched, official title is {tmdb_info.title_zh}")
+            return torrent_parser(torrent_path, torrent_name, season, file_type)
         except Exception as e:
-            logger.debug(e)
-            logger.warning(f"{title} can not Matched with TMDB")
-            logger.info("Please change the bangumi info in webui")
-            return title, season
-        if language == "zh":
-            official_title = f"{tmdb_info.title_zh} ({tmdb_info.year_number})"
-        elif language == "jp":
-            official_title = f"{tmdb_info.title_jp} ({tmdb_info.year_number})"
-        tmdb_season = tmdb_info.last_season if tmdb_info.last_season else season
-        official_title = official_title if official_title else title
-        return official_title, tmdb_season
+            logger.warning(f"Cannot parse {torrent_path} with error {e}")
 
-    def raw_parser(
-            self,
-            raw: str,
-            settings: Config,
-            _id: int | None = None
-    ) -> BangumiData:
+    @staticmethod
+    def tmdb_parser(title: str, season: int, language: str):
+        official_title, tmdb_season, year = title, season, None
+        tmdb_info = tmdb_parser(title, language)
+        if tmdb_info:
+            logger.debug(f"TMDB Matched, official title is {tmdb_info.title}")
+            tmdb_season = tmdb_info.last_season if tmdb_info.last_season else season
+            official_title = tmdb_info.title
+            year = tmdb_info.year
+        else:
+            logger.warning(f"Cannot match {title} in TMDB. Use raw title instead.")
+            logger.warning("Please change bangumi info manually.")
+        return official_title, tmdb_season, year
+
+    @staticmethod
+    def raw_parser(raw: str, rss_link: str) -> BangumiData | None:
         language = settings.rss_parser.language
         try:
             episode = raw_parser(raw)
             titles = {
                 "zh": episode.title_zh,
                 "en": episode.title_en,
-                "jp": episode.title_jp
+                "jp": episode.title_jp,
             }
-            title_search = episode.title_zh if episode.title_zh else episode.title_en
             title_raw = episode.title_en if episode.title_en else episode.title_zh
-            if settings.rss_parser.enable_tmdb:
-                official_title, _season = self.tmdb_parser(
-                    title_search,
-                    episode.season,
-                    language
-                )
-            else:
-                official_title = titles[language] if titles[language] else titles["zh"]
-                _season = episode.season
+            official_title = titles[language] if titles[language] else titles["zh"]
+            _season = episode.season
             data = BangumiData(
-                id=_id,
                 official_title=official_title,
                 title_raw=title_raw,
                 season=_season,
                 season_raw=episode.season_raw,
-                group=episode.group,
+                group_name=episode.group,
                 dpi=episode.resolution,
                 source=episode.source,
                 subtitle=episode.sub,
-                added=False,
-                eps_collect=True if episode.episode > 1 else False,
+                eps_collect=False if episode.episode > 1 else True,
                 offset=0,
-                filter=settings.rss_parser.filter
+                filter=settings.rss_parser.filter,
+                rss_link=[rss_link],
             )
-            logger.debug(f"RAW:{raw} >> {episode.title_en}")
+            logger.debug(f"RAW:{raw} >> {title_raw}")
             return data
         except Exception as e:
             logger.debug(e)
-            print(e)
+            logger.warning(f"Cannot parse {raw}.")
+            return None

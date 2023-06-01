@@ -2,7 +2,11 @@ import logging
 import time
 
 from qbittorrentapi import Client, LoginFailed
-from qbittorrentapi.exceptions import Conflict409Error
+from qbittorrentapi.exceptions import (
+    Conflict409Error,
+    Forbidden403Error,
+    APIConnectionError,
+)
 
 from module.ab_decorator import qb_connect_failed_wait
 from module.downloader.exceptions import ConflictError
@@ -16,22 +20,40 @@ class QbDownloader:
             host=host,
             username=username,
             password=password,
-            VERIFY_WEBUI_CERTIFICATE=ssl
+            VERIFY_WEBUI_CERTIFICATE=ssl,
+            DISABLE_LOGGING_DEBUG_OUTPUT=True,
+            REQUESTS_ARGS={"timeout": (3.1, 10)},
         )
         self.host = host
         self.username = username
 
-    @qb_connect_failed_wait
     def auth(self):
-        while True:
+        times = 0
+        while times < 3:
             try:
                 self._client.auth_log_in()
-                break
+                return True
             except LoginFailed:
                 logger.error(
                     f"Can't login qBittorrent Server {self.host} by {self.username}, retry in {5} seconds."
                 )
-            time.sleep(5)
+                time.sleep(5)
+                times += 1
+            except Forbidden403Error:
+                logger.error(f"Login refused by qBittorrent Server")
+                logger.info(f"Please release the IP in qBittorrent Server")
+                break
+            except APIConnectionError:
+                logger.error(f"Cannot connect to qBittorrent Server")
+                logger.info(f"Please check the IP and port in WebUI settings")
+                time.sleep(30)
+            except Exception as e:
+                logger.error(f"Unknown error: {e}")
+                break
+        return False
+
+    def logout(self):
+        self._client.auth_log_out()
 
     @qb_connect_failed_wait
     def prefs_init(self, prefs):
@@ -45,8 +67,8 @@ class QbDownloader:
         return self._client.torrents_createCategory(name=category)
 
     @qb_connect_failed_wait
-    def torrents_info(self, status_filter, category):
-        return self._client.torrents_info(status_filter, category)
+    def torrents_info(self, status_filter, category, tag=None):
+        return self._client.torrents_info(status_filter=status_filter, category=category, tag=tag)
 
     def torrents_add(self, urls, save_path, category):
         return self._client.torrents_add(
@@ -54,46 +76,24 @@ class QbDownloader:
             urls=urls,
             save_path=save_path,
             category=category,
+            use_auto_torrent_management=False
         )
 
     def torrents_delete(self, hash):
-        return self._client.torrents_delete(
-            delete_files=True,
-            torrent_hashes=hash
-        )
+        return self._client.torrents_delete(delete_files=True, torrent_hashes=hash)
 
-    def torrents_rename_file(self, torrent_hash, old_path, new_path):
-        self._client.torrents_rename_file(torrent_hash=torrent_hash, old_path=old_path, new_path=new_path)
-
-    def check_rss(self, url, item_path) -> tuple[str | None, bool]:
-        items = self._client.rss_items()
-        for key, value in items.items():
-            rss_url = value.get("url")
-            if key == item_path:
-                if rss_url != url:
-                    return key, False
-                return None, True
-            else:
-                if rss_url == url:
-                    return key, True
-        return None, False
+    def torrents_rename_file(self, torrent_hash, old_path, new_path) -> bool:
+        try:
+            self._client.torrents_rename_file(
+                torrent_hash=torrent_hash, old_path=old_path, new_path=new_path
+            )
+            return True
+        except Conflict409Error:
+            logger.debug(f"Conflict409Error: {old_path} >> {new_path}")
+            return False
 
     def rss_add_feed(self, url, item_path):
-        path, added = self.check_rss(url, item_path)
-        if path:
-            if not added:
-                logger.info("RSS Exist, Update URL.")
-                self._client.rss_remove_item(path)
-                self._client.rss_add_feed(url, item_path)
-            else:
-                logger.info("RSS Exist.")
-        else:
-            if added:
-                logger.info("RSS Exist.")
-            else:
-                logger.info("Add new RSS")
-                self._client.rss_add_feed(url, item_path)
-                logger.info("Successfully added RSS")
+        self._client.rss_add_feed(url, item_path)
 
     def rss_remove_item(self, item_path):
         try:
@@ -102,6 +102,9 @@ class QbDownloader:
             logger.debug(e)
             logger.info("Add new RSS")
             raise ConflictError()
+
+    def rss_get_feeds(self):
+        return self._client.rss_items()
 
     def rss_set_rule(self, rule_name, rule_def):
         self._client.rss_set_rule(rule_name, rule_def)
@@ -120,3 +123,9 @@ class QbDownloader:
 
     def check_connection(self):
         return self._client.app_version()
+
+    def remove_rule(self, rule_name):
+        self._client.rss_remove_rule(rule_name)
+
+    def add_tag(self, _hash, tag):
+        self._client.torrents_add_tags(tags=tag, hashes=_hash)

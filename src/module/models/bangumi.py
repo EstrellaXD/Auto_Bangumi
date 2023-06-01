@@ -3,39 +3,31 @@ from dataclasses import dataclass
 
 
 class BangumiData(BaseModel):
-    id: int | None = Field(None, alias="id", title="番剧ID")
-    official_title: str = Field(..., alias="official_title", title="番剧中文名")
-    year: int | None = Field(None, alias="year", title="番剧年份")
-    title_raw: str = Field(..., alias="title_raw", title="番剧原名")
-    season: int = Field(..., alias="season", title="番剧季度")
+    id: int = Field(0, alias="id", title="番剧ID")
+    official_title: str = Field("official_title", alias="official_title", title="番剧中文名")
+    year: str | None = Field(None, alias="year", title="番剧年份")
+    title_raw: str = Field("title_raw", alias="title_raw", title="番剧原名")
+    season: int = Field(1, alias="season", title="番剧季度")
     season_raw: str | None = Field(None, alias="season_raw", title="番剧季度原名")
-    group: str | None = Field(None, alias="group", title="字幕组")
+    group_name: str | None = Field(None, alias="group_name", title="字幕组")
     dpi: str | None = Field(None, alias="dpi", title="分辨率")
     source: str | None = Field(None, alias="source", title="来源")
     subtitle: str | None = Field(None, alias="subtitle", title="字幕")
-    added: bool = Field(False, alias="added", title="是否已添加")
     eps_collect: bool = Field(False, alias="eps_collect", title="是否已收集")
     offset: int = Field(0, alias="offset", title="番剧偏移量")
-    filter: list[str] = Field(..., alias="filter", title="番剧过滤器")
+    filter: list[str] = Field(["720", "\\d+-\\d+"], alias="filter", title="番剧过滤器")
+    rss_link: list[str] = Field([], alias="rss_link", title="番剧RSS链接")
+    poster_link: str | None = Field(None, alias="poster_link", title="番剧海报链接")
+    added: bool = Field(False, alias="added", title="是否已添加")
+    rule_name: str | None = Field(None, alias="rule_name", title="番剧规则名")
+    save_path: str | None = Field(None, alias="save_path", title="番剧保存路径")
+    deleted: bool = Field(False, alias="deleted", title="是否已删除")
 
 
-class ProgramData(BaseModel):
-    rss_link: str = Field(..., alias="rss_link", title="RSS链接")
-    data_version: float = Field(..., alias="data_version", title="数据版本")
-    bangumi_info: list[BangumiData] = Field([], alias="bangumi_info", title="番剧信息")
-
-
-@dataclass
-class MatchRule:
-    keyword: str
-    filter: list
-    rss_link: str
-
-
-@dataclass
-class GroupFilter:
-    name: str
-    filter: list
+class Notification(BaseModel):
+    official_title: str = Field(..., alias="official_title", title="番剧名")
+    season: int = Field(..., alias="season", title="番剧季度")
+    episode: int = Field(..., alias="episode", title="番剧集数")
 
 
 @dataclass
@@ -66,6 +58,3 @@ class SeasonInfo(dict):
     subtitle: str
     added: bool
     eps_collect: bool
-
-
-

@@ -3,59 +3,67 @@ from module.parser.analyser import torrent_parser
 
 def test_torrent_parser():
     file_name = "[Lilith-Raws] Boku no Kokoro no Yabai Yatsu - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4].mp4"
-    folder_name = "我内心的糟糕念头(2023)"
-    season = 1
-    suffix = ".mp4"
-    assert torrent_parser(file_name, folder_name, season, suffix, "pn") == "Boku no Kokoro no Yabai Yatsu S01E01.mp4"
-    assert torrent_parser(file_name, folder_name, season, suffix, "advance") == "我内心的糟糕念头(2023) S01E01.mp4"
-    assert torrent_parser(file_name, folder_name, season, suffix, "none") == "[Lilith-Raws] Boku no Kokoro no Yabai Yatsu - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4].mp4"
+    bf = torrent_parser(file_name)
+    assert bf.title == "Boku no Kokoro no Yabai Yatsu"
+    assert bf.group == "Lilith-Raws"
+    assert bf.episode == 1
+    assert bf.season == 1
 
     file_name = "[Sakurato] Tonikaku Kawaii S2 [01][AVC-8bit 1080p AAC][CHS].mp4"
-    folder_name = "总之就是非常可爱(2021)"
-    season = 2
-    suffix = ".mp4"
-    assert torrent_parser(file_name, folder_name, season, suffix, "pn") == "Tonikaku Kawaii S02E01.mp4"
-    assert torrent_parser(file_name, folder_name, season, suffix, "advance") == "总之就是非常可爱(2021) S02E01.mp4"
+    bf = torrent_parser(file_name)
+    assert bf.title == "Tonikaku Kawaii"
+    assert bf.group == "Sakurato"
+    assert bf.episode == 1
+    assert bf.season == 2
 
     file_name = "[SweetSub&LoliHouse] Heavenly Delusion - 01 [WebRip 1080p HEVC-10bit AAC ASSx2].mkv"
-    folder_name = "天国大魔境(2023)"
-    season = 1
-    suffix = ".mkv"
-    assert torrent_parser(file_name, folder_name, season, suffix, "pn") == "Heavenly Delusion S01E01.mkv"
-    assert torrent_parser(file_name, folder_name, season, suffix, "advance") == "天国大魔境(2023) S01E01.mkv"
-
-    file_name = "[SBSUB][Kanojo mo Kanojo][01][GB][1080P](456E234).mp4"
-    folder_name = "女友也要有"
-    season = 1
-    suffix = ".mp4"
-    assert torrent_parser(file_name, folder_name, season, suffix, "pn") == "Kanojo mo Kanojo S01E01.mp4"
-    assert torrent_parser(file_name, folder_name, season, suffix, "advance") == "女友也要有 S01E01.mp4"
+    bf = torrent_parser(file_name)
+    assert bf.title == "Heavenly Delusion"
+    assert bf.group == "SweetSub&LoliHouse"
+    assert bf.episode == 1
+    assert bf.season == 1
 
     file_name = "[SBSUB][CONAN][1082][V2][1080P][AVC_AAC][CHS_JP](C1E4E331).mp4"
-    folder_name = "名侦探柯南(1996)"
-    season = 1
-    suffix = ".mp4"
-    assert torrent_parser(file_name, folder_name, season, suffix, "pn") == "CONAN S01E1082.mp4"
-    assert torrent_parser(file_name, folder_name, season, suffix, "advance") == "名侦探柯南(1996) S01E1082.mp4"
+    bf = torrent_parser(file_name)
+    assert bf.title == "CONAN"
+    assert bf.group == "SBSUB"
+    assert bf.episode == 1082
+    assert bf.season == 1
 
-    file_name = "海盗战记 S01E01.mp4"
-    folder_name = "海盗战记(2021)"
-    season = 1
-    suffix = ".mp4"
-    assert torrent_parser(file_name, folder_name, season, suffix, "pn") == "海盗战记 S01E01.mp4"
-    assert torrent_parser(file_name, folder_name, season, suffix, "advance") == "海盗战记(2021) S01E01.mp4"
+    file_name = "海盗战记 (2019) S01E01.mp4"
+    bf = torrent_parser(file_name)
+    assert bf.title == "海盗战记 (2019)"
+    assert bf.episode == 1
+    assert bf.season == 1
+
+    file_name = "海盗战记/海盗战记 S01E01.mp4"
+    bf = torrent_parser(file_name)
+    assert bf.title == "海盗战记"
+    assert bf.episode == 1
+    assert bf.season == 1
 
     file_name = "海盗战记 S01E01.zh-tw.ass"
-    folder_name = "海盗战记(2021)"
-    season = 1
-    suffix = ".ass"
-    assert torrent_parser(file_name, folder_name, season, suffix, "subtitle_pn") == "海盗战记 S01E01.zh-tw.ass"
-    assert torrent_parser(file_name, folder_name, season, suffix, "subtitle_advance") == "海盗战记(2021) S01E01.zh-tw.ass"
+    sf = torrent_parser(file_name, file_type="subtitle")
+    assert sf.title == "海盗战记"
+    assert sf.episode == 1
+    assert sf.season == 1
+    assert sf.language == "zh-tw"
 
     file_name = "海盗战记 S01E01.SC.ass"
-    folder_name = "海盗战记(2021)"
-    season = 1
-    suffix = ".ass"
-    assert torrent_parser(file_name, folder_name, season, suffix, "subtitle_pn") == "海盗战记 S01E01.zh.ass"
-    assert torrent_parser(file_name, folder_name, season, suffix, "subtitle_advance") == "海盗战记(2021) S01E01.zh.ass"
+    sf = torrent_parser(file_name, file_type="subtitle")
+    assert sf.title == "海盗战记"
+    assert sf.season == 1
+    assert sf.episode == 1
+    assert sf.language == "zh"
 
+    file_name = "水星的魔女(2022) S00E19.mp4"
+    bf = torrent_parser(file_name, season=0)
+    assert bf.title == "水星的魔女(2022)"
+    assert bf.season == 0
+    assert bf.episode == 19
+
+    file_name = "【失眠搬运组】放学后失眠的你-Kimi wa Houkago Insomnia - 06 [bilibili - 1080p AVC1 CHS-JP].mp4"
+    bf = torrent_parser(file_name, season=1)
+    assert bf.title == "放学后失眠的你-Kimi wa Houkago Insomnia"
+    assert bf.season == 1
+    assert bf.episode == 6
