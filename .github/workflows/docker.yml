@@ -5,6 +5,7 @@ on:
   push:
     tags:
       - '\d+\.\d+\.\d+'
+      - '\d+\.\d+'
 
 jobs:
   test:
@@ -50,6 +51,7 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: |
+            ghcr.io/estrellaxd/auto_bangumi
             estrellaxd/auto_bangumi
             ghcr.io/${{ github.repository }}
           tags: |
