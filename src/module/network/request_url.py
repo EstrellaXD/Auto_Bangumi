@@ -64,14 +64,14 @@ class RequestURL:
             req.raise_for_status()
             return True
         except requests.RequestException as e:
-            logger.debug(f"Cannot connect to {url}.")
+            logger.debug(f"[Network] Cannot connect to {url}.")
             return False
 
     def __enter__(self):
         self.session = requests.Session()
         if settings.proxy.enable:
-            if settings.proxy.type == "http":
-                url = f"http://{settings.proxy.host}:{settings.proxy.port}"
+            if "http" in settings.proxy.type:
+                url = f"{settings.proxy.type}://{settings.proxy.host}:{settings.proxy.port}"
                 self.session.proxies = {
                     "https": url,
                     "http": url,
@@ -86,6 +86,8 @@ class RequestURL:
                     password=settings.proxy.password,
                 )
                 socket.socket = socks.socksocket
+            else:
+                logger.error(f"[Network] Unsupported proxy type: {settings.proxy.type}")
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

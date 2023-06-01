@@ -50,7 +50,7 @@ class BangumiDatabase(DataConnector):
             db_data = self.__data_to_db(data)
             db_data["id"] = self.gen_id()
             self._insert(db_data=db_data, table_name=self.__table_name)
-            logger.debug(f"Insert {data.official_title} into database.")
+            logger.debug(f"[Database] Insert {data.official_title} into database.")
 
     def insert_list(self, data: list[BangumiData]):
         _id = self.gen_id()
@@ -58,7 +58,7 @@ class BangumiDatabase(DataConnector):
             item.id = _id + i
         data_list = [self.__data_to_db(x) for x in data]
         self._insert_list(data_list=data_list, table_name=self.__table_name)
-        logger.debug(f"Insert {len(data)} bangumi into database.")
+        logger.debug(f"[Database] Insert {len(data)} bangumi into database.")
 
     def update_one(self, data: BangumiData) -> bool:
         db_data = self.__data_to_db(data)
@@ -79,7 +79,7 @@ class BangumiDatabase(DataConnector):
             {"rss_link": rss_set, "title_raw": title_raw},
         )
         self._conn.commit()
-        logger.debug(f"Update {title_raw} rss_link to {rss_set}.")
+        logger.debug(f"[Database] Update {title_raw} rss_link to {rss_set}.")
 
     def update_poster(self, title_raw, poster_link: str):
         self._cursor.execute(
@@ -91,7 +91,7 @@ class BangumiDatabase(DataConnector):
             {"poster_link": poster_link, "title_raw": title_raw},
         )
         self._conn.commit()
-        logger.debug(f"Update {title_raw} poster_link to {poster_link}.")
+        logger.debug(f"[Database] Update {title_raw} poster_link to {poster_link}.")
 
     def delete_one(self, _id: int) -> bool:
         self._cursor.execute(
@@ -101,7 +101,7 @@ class BangumiDatabase(DataConnector):
             {"id": _id},
         )
         self._conn.commit()
-        logger.debug(f"Delete bangumi id: {_id}.")
+        logger.debug(f"[Database] Delete bangumi id: {_id}.")
         return self._cursor.rowcount == 1
 
     def delete_all(self):

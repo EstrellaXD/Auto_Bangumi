@@ -27,6 +27,7 @@ class DownloadClient(TorrentPath):
 
             return QbDownloader(host, username, password, ssl)
         else:
+            logger.error(f"[Downloader] Unsupported downloader type: {type}")
             raise Exception(f"Unsupported downloader type: {type}")
 
     def __enter__(self):
@@ -54,8 +55,7 @@ class DownloadClient(TorrentPath):
         try:
             self.client.add_category("BangumiCollection")
         except Exception as e:
-            logger.warning("Cannot add new category, maybe already exists.")
-            logger.debug(e)
+            logger.debug("[Downloader] Cannot add new category, maybe already exists.")
         if settings.downloader.path == "":
             prefs = self.client.get_app_prefs()
             settings.downloader.path = self._join_path(prefs["save_path"], "Bangumi")
@@ -81,14 +81,14 @@ class DownloadClient(TorrentPath):
         self.client.rss_set_rule(rule_name=data.rule_name, rule_def=rule)
         data.added = True
         logger.info(
-            f"Add {data.official_title} Season {data.season} to auto download rules."
+            f"[Downloader] Add {data.official_title} Season {data.season} to auto download rules."
         )
 
     def set_rules(self, bangumi_info: list[BangumiData]):
-        logger.debug("Start adding rules.")
+        logger.debug("[Downloader] Start adding rules.")
         for info in bangumi_info:
             self.set_rule(info)
-        logger.debug("Finished.")
+        logger.debug("[Downloader] Finished.")
 
     def get_torrent_info(self, category="Bangumi", status_filter="completed", tag=None):
         return self.client.torrents_info(status_filter=status_filter, category=category, tag=tag)
@@ -101,7 +101,7 @@ class DownloadClient(TorrentPath):
 
     def delete_torrent(self, hashes):
         self.client.torrents_delete(hashes)
-        logger.info(f"Remove torrents.")
+        logger.info(f"[Downloader] Remove torrents.")
 
     def add_torrent(self, torrent: dict):
         self.client.torrents_add(
@@ -132,4 +132,4 @@ class DownloadClient(TorrentPath):
 
     def remove_rule(self, rule_name):
         self.client.remove_rule(rule_name)
-        logger.info(f"Delete rule: {rule_name}")
+        logger.info(f"[Downloader] Delete rule: {rule_name}")

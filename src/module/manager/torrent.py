@@ -42,7 +42,7 @@ class TorrentManager(BangumiDatabase):
                         "status": "success",
                         "msg": f"Delete rule and torrents for {data.official_title}",
                     }
-                logger.info(f"Delete rule for {data.official_title}")
+                logger.info(f"[Manager] Delete rule for {data.official_title}")
                 return {
                     "status": "success",
                     "msg": f"Delete rule for {data.official_title}",
@@ -77,7 +77,7 @@ class TorrentManager(BangumiDatabase):
                         "status": "success",
                         "msg": f"Disable rule and delete torrents for {data.official_title}",
                     }
-                logger.info(f"Disable rule for {data.official_title}")
+                logger.info(f"[Manager] Disable rule for {data.official_title}")
                 return {
                     "status": "success",
                     "msg": f"Disable rule for {data.official_title}",
@@ -92,7 +92,7 @@ class TorrentManager(BangumiDatabase):
             self.update_one(data)
             with DownloadClient() as client:
                 client.set_rule(data)
-            logger.info(f"Enable rule for {data.official_title}")
+            logger.info(f"[Manager] Enable rule for {data.official_title}")
             return {
                 "status": "success",
                 "msg": f"Enable rule for {data.official_title}",
@@ -101,7 +101,7 @@ class TorrentManager(BangumiDatabase):
     def update_rule(self, data: BangumiData):
         old_data = self.search_id(data.id)
         if not old_data:
-            logger.error(f"Can't find data with id {data.id}")
+            logger.error(f"[Manager] Can't find data with id {data.id}")
             return {"status": "error", "msg": f"Can't find data with id {data.id}"}
         else:
             # Set torrent path
@@ -128,7 +128,7 @@ class TorrentManager(BangumiDatabase):
     def search_one(self, _id: int | str):
         data = self.search_id(int(_id))
         if not data:
-            logger.error(f"Can't find data with id {_id}")
+            logger.error(f"[Manager] Can't find data with id {_id}")
             return {"status": "error", "msg": f"Can't find data with id {_id}"}
         else:
             return data
