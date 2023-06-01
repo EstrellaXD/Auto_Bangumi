@@ -67,12 +67,7 @@ export const useAuth = createSharedComposable(() => {
   });
 
   const { execute: refresh, onResult: onRefreshResult } = useApi(
-    apiAuth.refresh,
-    {
-      message: {
-        success: 'Refresh Success!',
-      },
-    }
+    apiAuth.refresh
   );
 
   onRefreshResult((res) => {
