@@ -76,6 +76,7 @@ class QbDownloader:
             urls=urls,
             save_path=save_path,
             category=category,
+            use_auto_torrent_management=False
         )
 
     def torrents_delete(self, hash):
