@@ -37,6 +37,11 @@ class Renamer(DownloadClient):
             return f"{file_info.title} S{season}E{episode}{file_info.suffix}"
         elif method == "advance":
             return f"{bangumi_name} S{season}E{episode}{file_info.suffix}"
+        elif method == "normal":
+            logger.warning(
+                "[Renamer] Normal rename method is deprecated."
+            )
+            return file_info.media_path
         elif method == "subtitle_pn":
             return f"{file_info.title} S{season}E{episode}.{file_info.language}{file_info.suffix}"
         elif method == "subtitle_advance":
