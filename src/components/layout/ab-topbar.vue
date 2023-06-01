@@ -55,7 +55,10 @@ onUnmounted(() => {
 
 <template>
   <div h-60px bg-theme-row text-white rounded-12px fx-cer px-24px>
-    <div text-h1 mr-12px>AutoBangumi</div>
+    <div fx-cer space-x-16px>
+      <img src="/favicon-light.svg" alt="favicon" wh-24px />
+      <img src="/AutoBangumi.svg" alt="AutoBangumi" h-24px rel top-2px />
+    </div>
 
     <ab-search v-model:value="search" hidden />
 
