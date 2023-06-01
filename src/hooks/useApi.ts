@@ -1,10 +1,9 @@
 type AnyAsyncFuntion<TData = any> = (...args: any[]) => Promise<TData>;
-type UnPromisify<T> = T extends AnyAsyncFuntion<infer U> ? U : never;
 
 export function useApi<
   TError = any,
   TApi extends AnyAsyncFuntion = AnyAsyncFuntion,
-  TData = UnPromisify<TApi>
+  TData = Awaited<ReturnType<TApi>>
 >(
   api: TApi,
   options?: {
