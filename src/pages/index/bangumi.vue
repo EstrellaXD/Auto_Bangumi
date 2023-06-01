@@ -2,7 +2,7 @@
 import type { BangumiRule } from '#/bangumi';
 
 const { data } = storeToRefs(useBangumiStore());
-const { getAll, useUpdateRule, useDisableRule, useEnableRule } =
+const { getAll, useUpdateRule, useDisableRule, useEnableRule, useDeleteRule } =
   useBangumiStore();
 
 const editRule = reactive<{
@@ -47,6 +47,7 @@ const { execute: updateRule, onResult: onUpdateRuleResult } = useUpdateRule();
 const { execute: enableRule, onResult: onEnableRuleResult } = useEnableRule();
 const { execute: disableRule, onResult: onDisableRuleResult } =
   useDisableRule();
+const { execute: deleteRule, onResult: onDeleteRuleResult } = useDeleteRule();
 
 onUpdateRuleResult(() => {
   refresh();
@@ -60,9 +61,26 @@ onEnableRuleResult(() => {
   refresh();
 });
 
+onDeleteRuleResult(() => {
+  refresh();
+});
+
 onActivated(() => {
   getAll();
 });
+
+function ruleManage(
+  type: 'disable' | 'delete',
+  id: number,
+  deleteFile: boolean
+) {
+  if (type === 'disable') {
+    disableRule(id, deleteFile);
+  }
+  if (type === 'delete') {
+    deleteRule(id, deleteFile);
+  }
+}
 
 definePage({
   name: 'Bangumi List',
@@ -85,7 +103,9 @@ definePage({
       v-model:show="editRule.show"
       v-model:rule="editRule.item"
       @enable="(id) => enableRule(id)"
-      @disable="({ id, deleteFile }) => disableRule(id, deleteFile)"
+      @delete-file="
+        (type, { id, deleteFile }) => ruleManage(type, id, deleteFile)
+      "
       @apply="(rule) => updateRule(rule)"
     ></ab-edit-rule>
   </div>

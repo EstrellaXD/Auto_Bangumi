@@ -74,5 +74,30 @@ export const useBangumiStore = defineStore('bangumi', () => {
     };
   }
 
-  return { data, getAll, useUpdateRule, useDisableRule, useEnableRule };
+  function useDeleteRule() {
+    const { execute, onResult } = useApi(apiBangumi.deleteRule, {
+      failRule: (data) => {
+        return data.status !== 'success';
+      },
+      message: {
+        success: 'Delete Success!',
+        fail: 'Delete Failed!',
+        error: 'Operation Failed!',
+      },
+    });
+
+    return {
+      execute,
+      onResult,
+    };
+  }
+
+  return {
+    data,
+    getAll,
+    useUpdateRule,
+    useDisableRule,
+    useEnableRule,
+    useDeleteRule,
+  };
 });

@@ -2,9 +2,13 @@
 import type { BangumiRule } from '#/bangumi';
 
 const emit = defineEmits<{
-  (e: 'disable', opts: { id: number; deleteFile: boolean }): void;
   (e: 'apply', rule: BangumiRule): void;
   (e: 'enable', id: number): void;
+  (
+    e: 'deleteFile',
+    type: 'disable' | 'delete',
+    opts: { id: number; deleteFile: boolean }
+  ): void;
 }>();
 
 const show = defineModel('show', { default: false });
@@ -12,17 +16,28 @@ const rule = defineModel<BangumiRule>('rule', {
   required: true,
 });
 
-const deleteRuleDialog = ref(false);
+const deleteFileDialog = reactive<{
+  show: boolean;
+  type: 'disable' | 'delete';
+}>({
+  show: false,
+  type: 'disable',
+});
 watch(show, (val) => {
   if (!val) {
-    deleteRuleDialog.value = false;
+    deleteFileDialog.show = false;
   }
 });
 
+const showDeleteFileDialog = (type: 'disable' | 'delete') => {
+  deleteFileDialog.show = true;
+  deleteFileDialog.type = type;
+};
+
 const close = () => (show.value = false);
 
-function emitDisable(deleteFile: boolean) {
-  emit('disable', {
+function emitdeleteFile(deleteFile: boolean) {
+  emit('deleteFile', deleteFileDialog.type, {
     id: rule.value.id,
     deleteFile,
   });
@@ -74,22 +89,30 @@ const boxSize = computed(() => {
         <ab-button
           size="small"
           type="warn"
-          @click="() => (deleteRuleDialog = true)"
+          @click="() => showDeleteFileDialog('disable')"
           >Disable</ab-button
+        >
+        <ab-button
+          size="small"
+          type="warn"
+          @click="() => showDeleteFileDialog('delete')"
+          >Delete</ab-button
         >
         <ab-button size="small" @click="emitApply">Apply</ab-button>
       </div>
     </div>
 
-    <ab-popup v-model:show="deleteRuleDialog" title="Delete">
+    <ab-popup v-model:show="deleteFileDialog.show" title="Delete">
       <div>Delete Local File?</div>
       <div line my-8px></div>
 
       <div fx-cer justify-center space-x-10px>
-        <ab-button size="small" type="warn" @click="() => emitDisable(true)"
+        <ab-button size="small" type="warn" @click="() => emitdeleteFile(true)"
           >Yes</ab-button
         >
-        <ab-button size="small" @click="() => emitDisable(false)">No</ab-button>
+        <ab-button size="small" @click="() => emitdeleteFile(false)"
+          >No</ab-button
+        >
       </div>
     </ab-popup>
   </ab-popup>
