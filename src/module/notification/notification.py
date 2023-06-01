@@ -38,8 +38,8 @@ class PostNotification(getClient()):
             番剧名称：{notify.official_title}\n季度： 第{notify.season}季\n更新集数： 第{notify.episode}集\n{poster_link}\n
             """
         else:
-            text = """
-            番剧名称：{info.official_title}\n季度： 第{info.season}季\n更新集数： 第{info.episode}集\n
+            text = f"""
+            番剧名称：{notify.official_title}\n季度： 第{notify.season}季\n更新集数： 第{notify.episode}集\n
             """
         return text
 
