@@ -63,6 +63,7 @@
 
 - **[部署说明 (Official)](https://github.com/EstrellaXD/Auto_Bangumi/wiki)**
 - **[2.6版本更新说明](https://github.com/EstrellaXD/Auto_Bangumi/wiki/2.6更新说明)**
+- **[3.0版本更新说明](https://github.com/EstrellaXD/Auto_Bangumi/wiki/3.0更新说明)**
 - **[部署说明 (手把手)](https://www.himiku.com/archives/auto-bangumi.html)**
 
 ## 相关群组
