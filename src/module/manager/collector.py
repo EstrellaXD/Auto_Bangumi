@@ -38,7 +38,6 @@ class SeasonCollector(DownloadClient):
         self.add_rss_feed(data.rss_link[0], item_path=data.official_title)
 
 
-
 def eps_complete():
     with BangumiDatabase() as bd:
         datas = bd.not_complete()

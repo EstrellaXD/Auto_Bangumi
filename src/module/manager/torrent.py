@@ -21,9 +21,9 @@ class TorrentManager(BangumiDatabase):
         if hash_list:
             client.delete_torrent(hash_list)
             logger.info(f"Delete rule and torrents for {data.official_title}")
-            return f"Delete torrents for {data.official_title}"
+            return f"Delete {data.official_title} torrents."
         else:
-            return f"Can't find torrents for {data.official_title}"
+            return f"Can't find {data.official_title} torrents."
 
     def delete_rule(self, _id: int | str, file: bool = False):
         data = self.search_id(int(_id))
@@ -35,8 +35,7 @@ class TorrentManager(BangumiDatabase):
                 if file:
                     torrent_message = self.delete_torrents(data, client)
                     return JSONResponse(status_code=200, content={
-                        "msg": f"Delete rule and torrents for {data.official_title}, "
-                               f"{torrent_message}",
+                        "msg": f"Delete {data.official_title} rule. {torrent_message}"
                     })
                 logger.info(f"[Manager] Delete rule for {data.official_title}")
                 return JSONResponse(status_code=200, content={
@@ -57,12 +56,11 @@ class TorrentManager(BangumiDatabase):
                 if file:
                     torrent_message = self.delete_torrents(data, client)
                     return JSONResponse(status_code=200, content={
-                        "msg": f"Disable rule and delete torrents for {data.official_title}"
-                               f"{torrent_message}",
+                        "msg": f"Disable {data.official_title} rule. {torrent_message}"
                     })
                 logger.info(f"[Manager] Disable rule for {data.official_title}")
                 return JSONResponse(status_code=200, content={
-                    "msg": f"Disable rule for {data.official_title}",
+                    "msg": f"Disable {data.official_title} rule.",
                 })
         else:
             return JSONResponse(status_code=406, content={
@@ -78,7 +76,7 @@ class TorrentManager(BangumiDatabase):
                 client.set_rule(data)
             logger.info(f"[Manager] Enable rule for {data.official_title}")
             return JSONResponse(status_code=200, content={
-                "msg": f"Enable rule for {data.official_title}",
+                "msg": f"Enable {data.official_title} rule.",
             })
         else:
             return JSONResponse(status_code=406, content={
@@ -88,9 +86,9 @@ class TorrentManager(BangumiDatabase):
     def update_rule(self, data: BangumiData):
         old_data = self.search_id(data.id)
         if not old_data:
-            logger.error(f"[Manager] Can't find data with id {data.id}")
+            logger.error(f"[Manager] Can't find data with {data.id}")
             return JSONResponse(status_code=406, content={
-                "msg": f"Can't find data with id {data.id}"
+                "msg": f"Can't find data with {data.id}"
             })
         else:
             # Move torrent
@@ -116,7 +114,7 @@ class TorrentManager(BangumiDatabase):
     def search_one(self, _id: int | str):
         data = self.search_id(int(_id))
         if not data:
-            logger.error(f"[Manager] Can't find data with id {_id}")
-            return {"status": "error", "msg": f"Can't find data with id {_id}"}
+            logger.error(f"[Manager] Can't find data with {_id}")
+            return {"status": "error", "msg": f"Can't find data with {_id}"}
         else:
             return data
