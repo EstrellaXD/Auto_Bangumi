@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 class TorrentPath:
-    def __init__(self):
-        self.download_path = settings.downloader.path
+    def __init__(self, download_path: str = settings.downloader.path):
+        self.download_path = download_path
 
     @staticmethod
     def check_files(info):

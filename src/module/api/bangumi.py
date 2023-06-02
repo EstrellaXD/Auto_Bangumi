@@ -1,4 +1,5 @@
 from fastapi import Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 
 from .log import router
 
@@ -39,7 +40,8 @@ async def update_data(data: BangumiData, current_user=Depends(get_current_user))
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
         )
     with TorrentManager() as torrent:
-        return torrent.update_rule(data)
+        response = torrent.update_rule(data)
+        return JSONResponse(status_code=200, content=response)
 
 
 @router.delete("/api/v1/bangumi/deleteRule/{bangumi_id}", tags=["bangumi"])
@@ -49,7 +51,8 @@ async def delete_data(bangumi_id: str, file:bool = False, current_user=Depends(g
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
         )
     with TorrentManager() as torrent:
-        return torrent.delete_rule(bangumi_id, file)
+        response = torrent.delete_rule(bangumi_id, file)
+        return JSONResponse(status_code=200, content=response)
 
 
 @router.delete("/api/v1/bangumi/disableRule/{bangumi_id}", tags=["bangumi"])
@@ -61,7 +64,8 @@ async def delete_rule(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
         )
     with TorrentManager() as torrent:
-        return torrent.disable_rule(bangumi_id, file)
+        response = torrent.disable_rule(bangumi_id, file)
+        return JSONResponse(status_code=200, content=response)
 
 
 @router.get("/api/v1/bangumi/enableRule/{bangumi_id}", tags=["bangumi"])
@@ -71,7 +75,8 @@ async def enable_rule(bangumi_id: str, current_user=Depends(get_current_user)):
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
         )
     with TorrentManager() as torrent:
-        return torrent.enable_rule(bangumi_id)
+        response = torrent.enable_rule(bangumi_id)
+        return JSONResponse(status_code=200, content=response)
 
 
 @router.get("/api/v1/bangumi/resetAll", tags=["bangumi"])
