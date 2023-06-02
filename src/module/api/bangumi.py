@@ -1,9 +1,9 @@
 from fastapi import Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 
 from .log import router
 
 from module.models import BangumiData
-from module.database import BangumiDatabase
 from module.manager import TorrentManager
 from module.security import get_current_user
 
@@ -80,6 +80,6 @@ async def reset_all(current_user=Depends(get_current_user)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
         )
-    with BangumiDatabase() as database:
-        database.delete_all()
-        return {"status": "ok"}
+    with TorrentManager() as torrent:
+        torrent.delete_all()
+        return JSONResponse(status_code=200, content={"message": "OK"})
