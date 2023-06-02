@@ -33,7 +33,7 @@ async def get_data(bangumi_id: str, current_user=Depends(get_current_user)):
 
 
 @router.post("/api/v1/bangumi/updateRule", tags=["bangumi"])
-async def update_data(data: BangumiData, current_user=Depends(get_current_user)):
+async def update_rule(data: BangumiData, current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
@@ -43,7 +43,7 @@ async def update_data(data: BangumiData, current_user=Depends(get_current_user))
 
 
 @router.delete("/api/v1/bangumi/deleteRule/{bangumi_id}", tags=["bangumi"])
-async def delete_data(bangumi_id: str, file:bool = False, current_user=Depends(get_current_user)):
+async def delete_rule(bangumi_id: str, file: bool = False, current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
@@ -53,7 +53,7 @@ async def delete_data(bangumi_id: str, file:bool = False, current_user=Depends(g
 
 
 @router.delete("/api/v1/bangumi/disableRule/{bangumi_id}", tags=["bangumi"])
-async def delete_rule(
+async def disable_rule(
     bangumi_id: str, file: bool = False, current_user=Depends(get_current_user)
 ):
     if not current_user:
