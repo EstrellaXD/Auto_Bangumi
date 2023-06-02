@@ -14,7 +14,7 @@ async def get_log(current_user=Depends(get_current_user)):
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
         )
     if os.path.isfile(LOG_PATH):
-        with open(LOG_PATH, "r") as f:
+        with open(LOG_PATH, "rb") as f:
             return Response(f.read(), media_type="text/plain")
     else:
         return Response("Log file not found", status_code=404)

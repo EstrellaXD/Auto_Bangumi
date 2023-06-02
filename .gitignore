@@ -164,8 +164,6 @@ cython_debug/
 # Custom
 /src/test.py
 
-/src/module/parser/analyser/tmdb_parser.py
-
 /src/module/run_debug.sh
 /src/module/debug_run.sh
 /src/module/__version__.py
@@ -175,7 +173,7 @@ cython_debug/
 
 test.*
 .run
-
+/dev.sh
 /src/templates/
 /src/config/
 /src/debuger.py
