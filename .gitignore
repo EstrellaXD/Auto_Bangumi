@@ -173,7 +173,6 @@ cython_debug/
 
 test.*
 .run
-/dev.sh
 /src/templates/
 /src/config/
 /src/debuger.py
