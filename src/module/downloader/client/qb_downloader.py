@@ -93,15 +93,16 @@ class QbDownloader:
             return False
 
     def rss_add_feed(self, url, item_path):
-        self._client.rss_add_feed(url, item_path)
+        try:
+            self._client.rss_add_feed(url, item_path)
+        except Conflict409Error:
+            logger.warning(f"[Downloader] RSS feed {url} already exists")
 
     def rss_remove_item(self, item_path):
         try:
             self._client.rss_remove_item(item_path)
-        except Conflict409Error as e:
-            logger.debug(e)
-            logger.info("Add new RSS")
-            raise ConflictError()
+        except Conflict409Error:
+            logger.warning(f"[Downloader] RSS item {item_path} does not exist")
 
     def rss_get_feeds(self):
         return self._client.rss_items()

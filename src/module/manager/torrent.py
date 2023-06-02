@@ -36,6 +36,7 @@ class TorrentManager(BangumiDatabase):
         if isinstance(data, BangumiData):
             with DownloadClient() as client:
                 client.remove_rule(data.rule_name)
+                client.remove_rss_feed(data.official_title)
                 self.delete_one(int(_id))
                 if file:
                     self.delete_torrents(data, client)
