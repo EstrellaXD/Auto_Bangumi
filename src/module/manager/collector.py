@@ -25,7 +25,7 @@ class SeasonCollector(DownloadClient):
             if not link:
                 torrents = st.search_season(data)
             else:
-                torrents = st.get_torrents(link)
+                torrents = st.get_torrents(link, _filter="|".join(data.filter))
         self.add_season_torrents(data, torrents)
         logger.info("Completed!")
 
