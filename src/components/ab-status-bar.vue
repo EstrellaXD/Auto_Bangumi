@@ -62,7 +62,7 @@ defineEmits(['clickAdd']);
             hover:bg-primary
             class="group"
             :class="[active ? 'text-white bg-theme-row' : 'text-black']"
-            @click="i.handle"
+            @click="() => i.handle && i.handle()"
           >
             <div text-main>{{ i.label }}</div>
 

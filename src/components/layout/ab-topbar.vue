@@ -1,11 +1,18 @@
 <script lang="ts" setup>
-import { Me, Pause, PlayOne, Power, Refresh } from '@icon-park/vue-next';
+import {
+  Me,
+  Pause,
+  PlayOne,
+  Power,
+  Refresh,
+  Format,
+} from '@icon-park/vue-next';
 
 const search = ref('');
 const show = ref(false);
 const showAdd = ref(false);
 
-const { onUpdate, offUpdate, start, pause, shutdown, restart } =
+const { onUpdate, offUpdate, start, pause, shutdown, restart, resetRule } =
   useProgramStore();
 const { running } = storeToRefs(useProgramStore());
 
@@ -36,6 +43,12 @@ const items = [
   },
   {
     id: 5,
+    label: 'Reset Rule',
+    icon: Format,
+    handle: resetRule,
+  },
+  {
+    id: 6,
     label: 'Profile',
     icon: Me,
     handle: () => {

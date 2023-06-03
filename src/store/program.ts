@@ -37,6 +37,10 @@ export const useProgramStore = defineStore('program', () => {
   const { execute: pause } = useApi(apiProgram.stop, opts('Pause'));
   const { execute: shutdown } = useApi(apiProgram.shutdown, opts('Shutdown'));
   const { execute: restart } = useApi(apiProgram.restart, opts('Restart'));
+  const { execute: resetRule } = useApi(
+    apiBangumi.resetAll,
+    opts('Reset Rule')
+  );
 
   return {
     running,
@@ -48,5 +52,6 @@ export const useProgramStore = defineStore('program', () => {
     pause,
     shutdown,
     restart,
+    resetRule,
   };
 });
