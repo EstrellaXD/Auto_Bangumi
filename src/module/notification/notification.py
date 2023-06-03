@@ -10,7 +10,7 @@ from module.database import BangumiDatabase
 logger = logging.getLogger(__name__)
 
 
-def getClient(type=settings.notification.type):
+def getClient(type: str):
     if type.lower() == "telegram":
         return TelegramNotification
     elif type.lower() == "server-chan":
@@ -23,9 +23,10 @@ def getClient(type=settings.notification.type):
         return None
 
 
-class PostNotification(getClient()):
+class PostNotification:
     def __init__(self):
-        super().__init__(
+        Notifier = getClient(settings.notification.type)
+        self.notifier = Notifier(
             token=settings.notification.token,
             chat_id=settings.notification.chat_id
         )
@@ -48,12 +49,18 @@ class PostNotification(getClient()):
     def send_msg(self, notify: Notification) -> bool:
         text = self._gen_message(notify)
         try:
-            self.post_msg(text)
+            self.notifier.post_msg(text)
             logger.debug(f"Send notification: {notify.official_title}")
         except Exception as e:
             logger.warning(f"Failed to send notification: {e}")
             return False
 
+    def __enter__(self):
+        self.notifier.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.notifier.__exit__(exc_type, exc_val, exc_tb)
 
 if __name__ == "__main__":
     info = Notification(
