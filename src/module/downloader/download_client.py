@@ -45,7 +45,7 @@ class DownloadClient(TorrentPath):
     def auth(self):
         self.authed = self.client.auth()
         if self.authed:
-            logger.info("[Downloader] Authed.")
+            logger.debug("[Downloader] Authed.")
         else:
             logger.error("[Downloader] Auth failed.")
 
