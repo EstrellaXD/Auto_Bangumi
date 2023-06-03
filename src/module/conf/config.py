@@ -42,7 +42,7 @@ class Settings(Config):
         if not config_dict:
             config_dict = self.dict()
         with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-            json.dump(config_dict, f, indent=4)
+            json.dump(config_dict, f, indent=4, ensure_ascii=False)
 
     def init(self):
         load_dotenv(".env")
