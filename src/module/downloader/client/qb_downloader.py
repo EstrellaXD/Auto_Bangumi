@@ -9,7 +9,6 @@ from qbittorrentapi.exceptions import (
 )
 
 from module.ab_decorator import qb_connect_failed_wait
-from module.downloader.exceptions import ConflictError
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +26,9 @@ class QbDownloader:
         self.host = host
         self.username = username
 
-    def auth(self):
+    def auth(self, retry=3):
         times = 0
-        while times < 3:
+        while times < retry:
             try:
                 self._client.auth_log_in()
                 return True
@@ -46,7 +45,8 @@ class QbDownloader:
             except APIConnectionError:
                 logger.error(f"Cannot connect to qBittorrent Server")
                 logger.info(f"Please check the IP and port in WebUI settings")
-                time.sleep(30)
+                time.sleep(10)
+                times += 1
             except Exception as e:
                 logger.error(f"Unknown error: {e}")
                 break
@@ -54,6 +54,16 @@ class QbDownloader:
 
     def logout(self):
         self._client.auth_log_out()
+
+    def check_host(self):
+        try:
+            self._client.app_version()
+            return True
+        except APIConnectionError:
+            return False
+
+    def check_rss(self, rss_link: str):
+        pass
 
     @qb_connect_failed_wait
     def prefs_init(self, prefs):
