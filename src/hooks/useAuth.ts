@@ -1,5 +1,5 @@
 import type { User } from '#/auth';
-import type { ApiError } from '#/error';
+import type { ApiError } from '#/api';
 
 export const useAuth = createSharedComposable(() => {
   const auth = useLocalStorage('auth', '');

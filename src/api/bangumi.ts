@@ -1,4 +1,5 @@
 import type { BangumiRule } from '#/bangumi';
+import type { ApiSuccess } from '#/api';
 
 export const apiBangumi = {
   /**
@@ -30,10 +31,10 @@ export const apiBangumi = {
    * @returns axios 请求返回的数据
    */
   async updateRule(bangumiRule: BangumiRule) {
-    const { data } = await axios.post<{
-      msg: string;
-      status: 'success';
-    }>('api/v1/bangumi/updateRule', bangumiRule);
+    const { data } = await axios.post<ApiSuccess>(
+      'api/v1/bangumi/updateRule',
+      bangumiRule
+    );
     return data;
   },
 
@@ -44,10 +45,14 @@ export const apiBangumi = {
    * @returns axios 请求返回的数据
    */
   async deleteRule(bangumiId: number, file: boolean) {
-    const { data } = await axios.delete<{
-      status: 'success';
-      msg: string;
-    }>(`api/v1/bangumi/deleteRule/${bangumiId}`);
+    const { data } = await axios.delete<ApiSuccess>(
+      `api/v1/bangumi/deleteRule/${bangumiId}`,
+      {
+        params: {
+          file,
+        },
+      }
+    );
     return data;
   },
 
@@ -58,14 +63,14 @@ export const apiBangumi = {
    * @returns axios 请求返回的数据
    */
   async disableRule(bangumiId: number, file: boolean) {
-    const { data } = await axios.delete<{
-      status: 'success';
-      msg: string;
-    }>(`api/v1/bangumi/disableRule/${bangumiId}`, {
-      params: {
-        file,
-      },
-    });
+    const { data } = await axios.delete<ApiSuccess>(
+      `api/v1/bangumi/disableRule/${bangumiId}`,
+      {
+        params: {
+          file,
+        },
+      }
+    );
     return data;
   },
 
@@ -74,10 +79,9 @@ export const apiBangumi = {
    * @param bangumiId - 需要启用的 bangumi 的 id
    */
   async enableRule(bangumiId: number) {
-    const { data } = await axios.get<{
-      status: 'success';
-      msg: string;
-    }>(`api/v1/bangumi/enableRule/${bangumiId}`);
+    const { data } = await axios.get<ApiSuccess>(
+      `api/v1/bangumi/enableRule/${bangumiId}`
+    );
     return data;
   },
 
@@ -85,8 +89,8 @@ export const apiBangumi = {
    * 重置所有 bangumi 数据
    */
   async resetAll() {
-    const { data } = await axios.post<{
-      status: 'ok';
+    const { data } = await axios.get<{
+      message: 'OK';
     }>('api/v1/bangumi/resetAll');
     return data;
   },

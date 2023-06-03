@@ -1,5 +1,5 @@
 import Axios from 'axios';
-import type { ApiError } from '#/error';
+import type { ApiError } from '#/api';
 
 export const axios = Axios.create();
 
@@ -19,10 +19,13 @@ axios.interceptors.response.use(
   },
   (err) => {
     const status = err.response.status as ApiError['status'];
-    const detail = err.response.data.detail as ApiError['detail'];
+    const detail = (err.response.data.detail ?? '') as ApiError['detail'];
+    const msg = (err.response.data.msg ?? '') as ApiError['msg'];
+
     const error = {
       status,
       detail,
+      msg,
     };
 
     const message = useMessage();
@@ -31,6 +34,11 @@ axios.interceptors.response.use(
     if (error.status === 401) {
       const { auth } = useAuth();
       auth.value = '';
+    }
+
+    /** 执行失败 */
+    if (error.status === 406) {
+      message.error(error.msg);
     }
 
     if (error.status === 500) {

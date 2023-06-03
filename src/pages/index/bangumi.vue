@@ -48,20 +48,25 @@ const { execute: enableRule, onResult: onEnableRuleResult } = useEnableRule();
 const { execute: disableRule, onResult: onDisableRuleResult } =
   useDisableRule();
 const { execute: deleteRule, onResult: onDeleteRuleResult } = useDeleteRule();
+const message = useMessage();
 
-onUpdateRuleResult(() => {
+onUpdateRuleResult(({ msg }) => {
+  message.success(msg);
   refresh();
 });
 
-onDisableRuleResult(() => {
+onDisableRuleResult(({ msg }) => {
+  message.success(msg);
   refresh();
 });
 
-onEnableRuleResult(() => {
+onEnableRuleResult(({ msg }) => {
+  message.success(msg);
   refresh();
 });
 
-onDeleteRuleResult(() => {
+onDeleteRuleResult(({ msg }) => {
+  message.success(msg);
   refresh();
 });
 

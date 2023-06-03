@@ -21,16 +21,7 @@ export const useBangumiStore = defineStore('bangumi', () => {
   }
 
   function useUpdateRule() {
-    const { execute, onResult } = useApi(apiBangumi.updateRule, {
-      failRule: (data) => {
-        return data.status !== 'success';
-      },
-      message: {
-        success: 'Update Success!',
-        fail: 'Update Failed!',
-        error: 'Operation Failed!',
-      },
-    });
+    const { execute, onResult } = useApi(apiBangumi.updateRule);
 
     return {
       execute,
@@ -39,16 +30,7 @@ export const useBangumiStore = defineStore('bangumi', () => {
   }
 
   function useDisableRule() {
-    const { execute, onResult } = useApi(apiBangumi.disableRule, {
-      failRule: (data) => {
-        return data.status !== 'success';
-      },
-      message: {
-        success: 'Disabled Success!',
-        fail: 'Disabled Failed!',
-        error: 'Operation Failed!',
-      },
-    });
+    const { execute, onResult } = useApi(apiBangumi.disableRule);
 
     return {
       execute,
@@ -57,16 +39,7 @@ export const useBangumiStore = defineStore('bangumi', () => {
   }
 
   function useEnableRule() {
-    const { execute, onResult } = useApi(apiBangumi.enableRule, {
-      failRule: (data) => {
-        return data.status !== 'success';
-      },
-      message: {
-        success: 'Enabled Success!',
-        fail: 'Enabled Failed!',
-        error: 'Operation Failed!',
-      },
-    });
+    const { execute, onResult } = useApi(apiBangumi.enableRule);
 
     return {
       execute,
@@ -75,16 +48,7 @@ export const useBangumiStore = defineStore('bangumi', () => {
   }
 
   function useDeleteRule() {
-    const { execute, onResult } = useApi(apiBangumi.deleteRule, {
-      failRule: (data) => {
-        return data.status !== 'success';
-      },
-      message: {
-        success: 'Delete Success!',
-        fail: 'Delete Failed!',
-        error: 'Operation Failed!',
-      },
-    });
+    const { execute, onResult } = useApi(apiBangumi.deleteRule);
 
     return {
       execute,
