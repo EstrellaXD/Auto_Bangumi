@@ -31,7 +31,6 @@ class Program(RenameThread, RSSThread):
                 "Legacy data detected, starting data migration, please wait patiently."
             )
             data_migration()
-        add_rss_feed()
         self.start()
 
     def start(self):
@@ -39,12 +38,16 @@ class Program(RenameThread, RSSThread):
             return {"status": "Not ready to start."}
         self.stop_event.clear()
         settings.load()
-        if self.enable_renamer:
-            self.rename_start()
-        if self.enable_rss:
-            self.rss_start()
-        logger.info("Program running.")
-        return {"status": "Program started."}
+        if self.downloader_status:
+            if self.enable_renamer:
+                self.rename_start()
+            if self.enable_rss:
+                add_rss_feed()
+                self.rss_start()
+            logger.info("Program running.")
+            return {"status": "Program started."}
+        else:
+            return {"status": "Can't connect to downloader. Program not paused."}
 
     def stop(self):
         if self.is_running:

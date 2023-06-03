@@ -1,9 +1,9 @@
 from fastapi import Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 
 from .log import router
 
 from module.models import BangumiData
-from module.database import BangumiDatabase
 from module.manager import TorrentManager
 from module.security import get_current_user
 
@@ -33,7 +33,7 @@ async def get_data(bangumi_id: str, current_user=Depends(get_current_user)):
 
 
 @router.post("/api/v1/bangumi/updateRule", tags=["bangumi"])
-async def update_data(data: BangumiData, current_user=Depends(get_current_user)):
+async def update_rule(data: BangumiData, current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
@@ -43,7 +43,7 @@ async def update_data(data: BangumiData, current_user=Depends(get_current_user))
 
 
 @router.delete("/api/v1/bangumi/deleteRule/{bangumi_id}", tags=["bangumi"])
-async def delete_data(bangumi_id: str, file:bool = False, current_user=Depends(get_current_user)):
+async def delete_rule(bangumi_id: str, file: bool = False, current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
@@ -53,7 +53,7 @@ async def delete_data(bangumi_id: str, file:bool = False, current_user=Depends(g
 
 
 @router.delete("/api/v1/bangumi/disableRule/{bangumi_id}", tags=["bangumi"])
-async def delete_rule(
+async def disable_rule(
     bangumi_id: str, file: bool = False, current_user=Depends(get_current_user)
 ):
     if not current_user:
@@ -80,6 +80,6 @@ async def reset_all(current_user=Depends(get_current_user)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
         )
-    with BangumiDatabase() as database:
-        database.delete_all()
-        return {"status": "ok"}
+    with TorrentManager() as torrent:
+        torrent.delete_all()
+        return JSONResponse(status_code=200, content={"message": "OK"})

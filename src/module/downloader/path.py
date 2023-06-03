@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 class TorrentPath:
-    def __init__(self):
-        self.download_path = settings.downloader.path
+    def __init__(self, download_path: str = settings.downloader.path):
+        self.download_path = download_path
 
     @staticmethod
     def check_files(info):
@@ -44,11 +44,11 @@ class TorrentPath:
         return bangumi_name, season
 
     @staticmethod
-    def _file_depth(path):
-        return len(path.split(path.sep))
+    def _file_depth(file_path):
+        return len(file_path.split(path.sep))
 
-    def is_ep(self, path):
-        return self._file_depth(path) <= 2
+    def is_ep(self, file_path):
+        return self._file_depth(file_path) <= 2
 
     def _gen_save_path(self, data: BangumiData):
         folder = (

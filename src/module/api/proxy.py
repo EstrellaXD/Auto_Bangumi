@@ -54,8 +54,8 @@ async def get_search_result(searchstr: str):
 
 
 @router.get("/RSS/Bangumi", tags=["proxy"])
-async def get_bangumi(bangumiId: str, groupid: str):
-    full_path = "Bangumi?bangumiId=" + bangumiId + "&groupid=" + groupid
+async def get_bangumi(bangumiId: str, subgroupid: str):
+    full_path = "Bangumi?bangumiId=" + bangumiId + "&subgroupid=" + subgroupid
     content = get_rss_content(full_path)
     return Response(content, media_type="application/xml")
 

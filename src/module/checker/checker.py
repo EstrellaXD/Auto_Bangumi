@@ -9,14 +9,16 @@ class Checker:
     def __init__(self):
         pass
 
-    def check_renamer(self) -> bool:
-        if self.check_downloader() and settings.bangumi_manage.enable:
+    @staticmethod
+    def check_renamer() -> bool:
+        if settings.bangumi_manage.enable:
             return True
         else:
             return False
 
-    def check_analyser(self) -> bool:
-        if self.check_downloader() and settings.rss_parser.enable:
+    @staticmethod
+    def check_analyser() -> bool:
+        if settings.rss_parser.enable:
             return True
         else:
             return False

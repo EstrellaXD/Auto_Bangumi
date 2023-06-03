@@ -1,4 +1,5 @@
 import logging
+from fastapi.responses import JSONResponse
 
 from module.downloader import DownloadClient
 from module.models import BangumiData
@@ -20,49 +21,30 @@ class TorrentManager(BangumiDatabase):
         if hash_list:
             client.delete_torrent(hash_list)
             logger.info(f"Delete rule and torrents for {data.official_title}")
-            return {
-                "status": "success",
-                "msg": f"Delete torrents for {data.official_title}",
-            }
+            return f"Delete {data.official_title} torrents."
         else:
-            return {
-                "status": "error",
-                "msg": f"Can't find torrents for {data.official_title}",
-            }
+            return f"Can't find {data.official_title} torrents."
 
     def delete_rule(self, _id: int | str, file: bool = False):
         data = self.search_id(int(_id))
         if isinstance(data, BangumiData):
             with DownloadClient() as client:
                 client.remove_rule(data.rule_name)
+                client.remove_rss_feed(data.official_title)
                 self.delete_one(int(_id))
                 if file:
-                    self.delete_torrents(data, client)
-                    return {
-                        "status": "success",
-                        "msg": f"Delete rule and torrents for {data.official_title}",
-                    }
+                    torrent_message = self.delete_torrents(data, client)
+                    return JSONResponse(status_code=200, content={
+                        "msg": f"Delete {data.official_title} rule. {torrent_message}"
+                    })
                 logger.info(f"[Manager] Delete rule for {data.official_title}")
-                return {
-                    "status": "success",
-                    "msg": f"Delete rule for {data.official_title}",
-                }
+                return JSONResponse(status_code=200, content={
+                    "msg": f"Delete rule for {data.official_title}"
+                })
         else:
-            return {"status": "error", "msg": f"Can't find id {_id}"}
-        # data = self.search_id(int(_id))
-        # if isinstance(data, BangumiData):
-        #     self.delete_one(int(_id))
-        #     if file:
-        #         self.delete_torrents(data)
-        #         logger.info(f"Delete {data.official_title} and torrents.")
-        #         return {
-        #             "status": "success",
-        #             "msg": f"Delete {data.official_title} and torrents.",
-        #         }
-        #     logger.info(f"Delete {data.official_title}")
-        #     return {"status": "success", "msg": f"Delete {data.official_title}"}
-        # else:
-        #     return data
+            return JSONResponse(status_code=406, content={
+                "msg": f"Can't find id {_id}"
+            })
 
     def disable_rule(self, _id: str | int, file: bool = False):
         data = self.search_id(int(_id))
@@ -72,18 +54,18 @@ class TorrentManager(BangumiDatabase):
                 data.deleted = True
                 self.update_one(data)
                 if file:
-                    self.delete_torrents(data, client)
-                    return {
-                        "status": "success",
-                        "msg": f"Disable rule and delete torrents for {data.official_title}",
-                    }
+                    torrent_message = self.delete_torrents(data, client)
+                    return JSONResponse(status_code=200, content={
+                        "msg": f"Disable {data.official_title} rule. {torrent_message}"
+                    })
                 logger.info(f"[Manager] Disable rule for {data.official_title}")
-                return {
-                    "status": "success",
-                    "msg": f"Disable rule for {data.official_title}",
-                }
+                return JSONResponse(status_code=200, content={
+                    "msg": f"Disable {data.official_title} rule.",
+                })
         else:
-            return {"status": "error", "msg": f"Can't find data with id {_id}"}
+            return JSONResponse(status_code=406, content={
+                "msg": f"Can't find id {_id}"
+            })
 
     def enable_rule(self, _id: str | int):
         data = self.search_id(int(_id))
@@ -93,18 +75,23 @@ class TorrentManager(BangumiDatabase):
             with DownloadClient() as client:
                 client.set_rule(data)
             logger.info(f"[Manager] Enable rule for {data.official_title}")
-            return {
-                "status": "success",
-                "msg": f"Enable rule for {data.official_title}",
-            }
+            return JSONResponse(status_code=200, content={
+                "msg": f"Enable {data.official_title} rule.",
+            })
+        else:
+            return JSONResponse(status_code=406, content={
+                "msg": f"Can't find bangumi id {_id}"
+            })
 
     def update_rule(self, data: BangumiData):
         old_data = self.search_id(data.id)
         if not old_data:
-            logger.error(f"[Manager] Can't find data with id {data.id}")
-            return {"status": "error", "msg": f"Can't find data with id {data.id}"}
+            logger.error(f"[Manager] Can't find data with {data.id}")
+            return JSONResponse(status_code=406, content={
+                "msg": f"Can't find data with {data.id}"
+            })
         else:
-            # Set torrent path
+            # Move torrent
             match_list = self.__match_torrents_list(data)
             with DownloadClient() as client:
                 path = client._gen_save_path(data)
@@ -114,10 +101,9 @@ class TorrentManager(BangumiDatabase):
                 client.remove_rule(data.rule_name)
                 client.set_rule(data)
             self.update_one(data)
-            return {
-                "status": "success",
+            return JSONResponse(status_code=200, content={
                 "msg": f"Set new path for {data.official_title}",
-            }
+            })
 
     def search_all_bangumi(self):
         datas = self.search_all()
@@ -128,7 +114,7 @@ class TorrentManager(BangumiDatabase):
     def search_one(self, _id: int | str):
         data = self.search_id(int(_id))
         if not data:
-            logger.error(f"[Manager] Can't find data with id {_id}")
-            return {"status": "error", "msg": f"Can't find data with id {_id}"}
+            logger.error(f"[Manager] Can't find data with {_id}")
+            return {"status": "error", "msg": f"Can't find data with {_id}"}
         else:
             return data

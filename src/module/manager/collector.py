@@ -1,5 +1,7 @@
 import logging
 
+from fastapi.responses import JSONResponse
+
 from module.downloader import DownloadClient
 from module.models import BangumiData
 from module.database import BangumiDatabase
@@ -31,9 +33,9 @@ class SeasonCollector(DownloadClient):
         with BangumiDatabase() as db:
             data.added = True
             data.eps_collect = True
+            self.set_rule(data)
             db.insert(data)
         self.add_rss_feed(data.rss_link[0], item_path=data.official_title)
-        self.set_rule(data)
 
 
 def eps_complete():

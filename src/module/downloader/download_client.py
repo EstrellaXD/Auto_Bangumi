@@ -33,6 +33,8 @@ class DownloadClient(TorrentPath):
     def __enter__(self):
         if not self.authed:
             self.auth()
+        else:
+            logger.error("[Downloader] Already authed.")
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -42,7 +44,13 @@ class DownloadClient(TorrentPath):
 
     def auth(self):
         self.authed = self.client.auth()
-        logger.debug("Authed.")
+        if self.authed:
+            logger.info("[Downloader] Authed.")
+        else:
+            logger.error("[Downloader] Auth failed.")
+
+    def check_host(self):
+        return self.client.check_host()
 
     def init_downloader(self):
         prefs = {
