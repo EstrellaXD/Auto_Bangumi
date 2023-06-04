@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 class RequestURL:
     def __init__(self):
         self.header = {"user-agent": "Mozilla/5.0", "Accept": "application/xml"}
+        self._socks5_proxy = False
 
     def get_url(self, url, retry=3):
         try_time = 0
@@ -77,6 +78,7 @@ class RequestURL:
                     "http": url,
                 }
             elif settings.proxy.type == "socks5":
+                self._socks5_proxy = True
                 socks.set_default_proxy(
                     socks.SOCKS5,
                     addr=settings.proxy.host,
@@ -91,4 +93,7 @@ class RequestURL:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._socks5_proxy:
+            socks.set_default_proxy()
+            socket.socket = socks.socksocket
         self.session.close()
