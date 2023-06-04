@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 class TorrentPath:
-    def __init__(self, download_path: str = settings.downloader.path):
-        self.download_path = download_path
+    def __init__(self):
+        pass
 
     @staticmethod
     def check_files(info):
@@ -29,10 +29,11 @@ class TorrentPath:
                 subtitle_list.append(file_name)
         return media_list, subtitle_list
 
-    def _path_to_bangumi(self, save_path):
+    @staticmethod
+    def _path_to_bangumi(save_path):
         # Split save path and download path
         save_parts = save_path.split(path.sep)
-        download_parts = self.download_path.split(path.sep)
+        download_parts = settings.downloader.path.split(path.sep)
         # Get bangumi name and season
         bangumi_name = ""
         season = 1
@@ -50,11 +51,12 @@ class TorrentPath:
     def is_ep(self, file_path):
         return self._file_depth(file_path) <= 2
 
-    def _gen_save_path(self, data: BangumiData):
+    @staticmethod
+    def _gen_save_path(data: BangumiData):
         folder = (
             f"{data.official_title} ({data.year})" if data.year else data.official_title
         )
-        save_path = path.join(self.download_path, folder, f"Season {data.season}")
+        save_path = path.join(settings.downloader.path, folder, f"Season {data.season}")
         return save_path
 
     @staticmethod

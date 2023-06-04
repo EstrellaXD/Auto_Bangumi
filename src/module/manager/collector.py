@@ -32,9 +32,10 @@ class SeasonCollector(DownloadClient):
                 torrents = st.search_season(data)
             else:
                 torrents = st.get_torrents(link, _filter="|".join(data.filter))
+            torrent_files = None
             if proxy:
                 torrent_files = [st.get_content(torrent.torrent_link) for torrent in torrents]
-            return self.add_season_torrents(data, torrents, torrent_files=torrent_files)
+            return self.add_season_torrents(data=data, torrents=torrents, torrent_files=torrent_files)
 
     def subscribe_season(self, data: BangumiData):
         with BangumiDatabase() as db:
