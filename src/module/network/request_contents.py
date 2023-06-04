@@ -46,7 +46,6 @@ class RequestContent(RequestURL):
         try:
             soup = self.get_xml(_url, retry)
             torrent_titles, torrent_urls, torrent_homepage = mikan_parser(soup)
-
             torrents = []
             for _title, torrent_url, homepage in zip(
                 torrent_titles, torrent_urls, torrent_homepage
