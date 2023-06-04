@@ -17,6 +17,8 @@ def getClient(type=settings.notification.type):
         return ServerChanNotification
     elif type.lower() == "bark":
         return BarkNotification
+    elif type.lower() == "wecom":
+        return WecomNotification
     else:
         return None
 
