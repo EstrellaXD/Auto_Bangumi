@@ -43,7 +43,7 @@ export interface Config {
   };
   notification: {
     enable: boolean;
-    type: 'telegram' | 'server-chan' | 'bark';
+    type: 'telegram' | 'server-chan' | 'bark' | 'wecom';
     token: string;
     chat_id: string;
   };

@@ -5,7 +5,7 @@ import type { SettingItem } from '#/components';
 const { getSettingGroup } = useConfigStore();
 
 const notification = getSettingGroup('notification');
-const notificationType: NotificationType = ['telegram', 'server-chan', 'bark'];
+const notificationType: NotificationType = ['telegram', 'server-chan', 'bark', 'wecom'];
 
 const items: SettingItem<Notification>[] = [
   {
