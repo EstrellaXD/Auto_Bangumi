@@ -96,4 +96,5 @@ class RequestURL:
         if self._socks5_proxy:
             socks.set_default_proxy()
             socket.socket = socks.socksocket
+            self._socks5_proxy = False
         self.session.close()
