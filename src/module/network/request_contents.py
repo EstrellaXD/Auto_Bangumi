@@ -42,12 +42,11 @@ class RequestContent(RequestURL):
         _url: str,
         _filter: str = "|".join(settings.rss_parser.filter),
         retry: int = 3,
-    ) -> [TorrentInfo]:
+    ) -> list[TorrentInfo]:
         try:
             soup = self.get_xml(_url, retry)
             torrent_titles, torrent_urls, torrent_homepage = mikan_parser(soup)
-
-            torrents = []
+            torrents: list[TorrentInfo] = []
             for _title, torrent_url, homepage in zip(
                 torrent_titles, torrent_urls, torrent_homepage
             ):
