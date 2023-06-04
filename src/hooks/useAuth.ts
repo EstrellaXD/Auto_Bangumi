@@ -45,7 +45,12 @@ export const useAuth = createSharedComposable(() => {
 
     onError((err) => {
       const error = err as ApiError;
-      message.error(error.detail);
+
+      if (error.status === 404) {
+        message.error('请更新AutoBangumi!');
+      } else {
+        message.error(error.detail);
+      }
     });
 
     if (check()) {
