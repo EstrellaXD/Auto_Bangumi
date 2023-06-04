@@ -2,7 +2,9 @@ import os
 import sqlite3
 import logging
 
+
 from module.conf import DATA_PATH
+from module.ab_decorator import locked
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +17,7 @@ class DataConnector:
         self._conn = sqlite3.connect(DATA_PATH)
         self._cursor = self._conn.cursor()
 
+    @locked
     def _update_table(self, table_name: str, db_data: dict):
         columns = ", ".join(
             [
@@ -38,6 +41,7 @@ class DataConnector:
         self._conn.commit()
         logger.debug(f"Create / Update table {table_name}.")
 
+    @locked
     def _insert(self, table_name: str, db_data: dict):
         columns = ", ".join(db_data.keys())
         values = ", ".join([f":{key}" for key in db_data.keys()])
@@ -46,6 +50,7 @@ class DataConnector:
         )
         self._conn.commit()
 
+    @locked
     def _insert_list(self, table_name: str, data_list: list[dict]):
         columns = ", ".join(data_list[0].keys())
         values = ", ".join([f":{key}" for key in data_list[0].keys()])
@@ -54,6 +59,7 @@ class DataConnector:
         )
         self._conn.commit()
 
+    @locked
     def _select(self, keys: list[str], table_name: str, condition: str = None) -> dict:
         if condition is None:
             self._cursor.execute(f"SELECT {', '.join(keys)} FROM {table_name}")
@@ -63,6 +69,7 @@ class DataConnector:
             )
         return dict(zip(keys, self._cursor.fetchone()))
 
+    @locked
     def _update(self, table_name: str, db_data: dict):
         _id = db_data.get("id")
         if _id is None:
@@ -74,6 +81,7 @@ class DataConnector:
         self._conn.commit()
         return self._cursor.rowcount == 1
 
+    @locked
     def _update_list(self, table_name: str, data_list: list[dict]):
         if len(data_list) == 0:
             return
@@ -85,6 +93,7 @@ class DataConnector:
         )
         self._conn.commit()
 
+    @locked
     def _update_section(self, table_name: str, location: dict, update_dict: dict):
         set_sql = ", ".join([f"{key} = :{key}" for key in update_dict.keys()])
         sql_loc = f"{location['key']} = {location['value']}"
@@ -93,9 +102,34 @@ class DataConnector:
         )
         self._conn.commit()
 
+    @locked
     def _delete_all(self, table_name: str):
         self._cursor.execute(f"DELETE FROM {table_name}")
         self._conn.commit()
+
+    @locked
+    def _search_data(self, table_name: str, keys: list[str] | None, condition: str) -> dict:
+        if keys is None:
+            self._cursor.execute(f"SELECT * FROM {table_name} WHERE {condition}")
+        else:
+            self._cursor.execute(
+                f"SELECT {', '.join(keys)} FROM {table_name} WHERE {condition}"
+            )
+        return dict(zip(keys, self._cursor.fetchone()))
+
+    @locked
+    def _search_datas(self, table_name: str, keys: list[str] | None, condition: str = None) -> list[dict]:
+        if keys is None:
+            select_sql = "*"
+        else:
+            select_sql = ", ".join(keys)
+        if condition is None:
+            self._cursor.execute(f"SELECT {select_sql} FROM {table_name}")
+        else:
+            self._cursor.execute(
+                f"SELECT {select_sql} FROM {table_name} WHERE {condition}"
+            )
+        return [dict(zip(keys, row)) for row in self._cursor.fetchall()]
 
     def _table_exists(self, table_name: str) -> bool:
         self._cursor.execute(
