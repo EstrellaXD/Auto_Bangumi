@@ -11,15 +11,28 @@ export const useConfigStore = defineStore('config', () => {
     config.value = res;
   });
 
-  const { execute: set } = useApi(apiConfig.updateConfig, {
-    failRule: (res) => !res,
-    message: {
-      success: 'Apply Success!',
-      fail: 'Apply Failed!',
-    },
+  const { execute: set, onResult: onSetRusult } = useApi(
+    apiConfig.updateConfig,
+    {
+      failRule: (res) => !res,
+      message: {
+        success: 'Apply Success!',
+        fail: 'Apply Failed!',
+      },
+    }
+  );
+
+  /**
+   * 保持 config 后重启，以应用最新配置
+   */
+  onSetRusult(() => {
+    const { restart } = useProgramStore();
+    restart();
   });
 
-  const setConfig = () => set(config.value);
+  const setConfig = () => {
+    set(config.value);
+  };
 
   function getSettingGroup<Tkey extends keyof Config>(key: Tkey) {
     return computed<Config[Tkey]>(() => config.value[key]);
