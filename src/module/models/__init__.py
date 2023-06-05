@@ -3,3 +3,4 @@ from .config import Config
 from .torrent import EpisodeFile, SubtitleFile
 from .user import UserLogin
 from .torrent import TorrentBase
+from .rss import RSSTorrents
