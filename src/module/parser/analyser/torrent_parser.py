@@ -18,8 +18,8 @@ RULES = [
 ]
 
 SUBTITLE_LANG = {
-    "zh-tw": ["TC", "CHT", "繁", "zh-tw"],
-    "zh": ["SC", "CHS", "简", "zh"],
+    "zh-tw": ["TC", "CHT", "cht", "繁", "zh-tw"],
+    "zh": ["SC", "CHS", "chs", "简", "zh"],
 }
 
 

@@ -32,8 +32,10 @@ async def download_collection(
         )
     if data:
         with SeasonCollector() as collector:
-            collector.collect_season(data, data.rss_link[0])
-        return {"status": "Success"}
+            if collector.collect_season(data, data.rss_link[0], proxy=True):
+                return {"status": "Success"}
+            else:
+                return {"status": "Failed to add torrent"}
     else:
         return {"status": "Failed to parse link"}
 

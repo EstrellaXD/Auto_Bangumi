@@ -80,14 +80,16 @@ class QbDownloader:
     def torrents_info(self, status_filter, category, tag=None):
         return self._client.torrents_info(status_filter=status_filter, category=category, tag=tag)
 
-    def torrents_add(self, urls, save_path, category):
-        return self._client.torrents_add(
+    def torrents_add(self, urls, save_path, category, torrent_files=None):
+        resp = self._client.torrents_add(
             is_paused=False,
             urls=urls,
+            torrent_files=torrent_files,
             save_path=save_path,
             category=category,
             use_auto_torrent_management=False
         )
+        return resp == "Ok."
 
     def torrents_delete(self, hash):
         return self._client.torrents_delete(delete_files=True, torrent_hashes=hash)

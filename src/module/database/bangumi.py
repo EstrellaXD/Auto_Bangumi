@@ -2,6 +2,7 @@ import logging
 
 from module.database.connector import DataConnector
 from module.models import BangumiData
+from module.ab_decorator import locked
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,7 @@ class BangumiDatabase(DataConnector):
         data_list = [self.__data_to_db(x) for x in data]
         self._update_list(data_list=data_list, table_name=self.__table_name)
 
+    @locked
     def update_rss(self, title_raw, rss_set: str):
         # Update rss and added
         self._cursor.execute(
@@ -108,51 +110,59 @@ class BangumiDatabase(DataConnector):
         self._delete_all(self.__table_name)
 
     def search_all(self) -> list[BangumiData]:
-        self._cursor.execute(
-            """
-            SELECT * FROM bangumi
-            """
-        )
-        return self.__fetch_data()
+        dict_data = self._search_datas(self.__table_name)
+        return [self.__db_to_data(x) for x in dict_data]
 
     def search_id(self, _id: int) -> BangumiData | None:
-        self._cursor.execute(
-            """
-            SELECT * FROM bangumi WHERE id = :id
-            """,
-            {"id": _id},
-        )
-        values = self._cursor.fetchone()
-        if values is None:
+        condition = {"id": _id}
+        value = self._search_data(table_name=self.__table_name, condition=condition)
+        # self._cursor.execute(
+        #     """
+        #     SELECT * FROM bangumi WHERE id = :id
+        #     """,
+        #     {"id": _id},
+        # )
+        # values = self._cursor.fetchone()
+        if value is None:
             return None
         keys = [x[0] for x in self._cursor.description]
-        dict_data = dict(zip(keys, values))
+        dict_data = dict(zip(keys, value))
         return self.__db_to_data(dict_data)
 
     def search_official_title(self, official_title: str) -> BangumiData | None:
-        self._cursor.execute(
-            """
-            SELECT * FROM bangumi WHERE official_title = :official_title
-            """,
-            {"official_title": official_title},
+        value = self._search_data(
+            table_name=self.__table_name, condition={"official_title": official_title}
         )
-        values = self._cursor.fetchone()
-        if values is None:
+        # self._cursor.execute(
+        #     """
+        #     SELECT * FROM bangumi WHERE official_title = :official_title
+        #     """,
+        #     {"official_title": official_title},
+        # )
+        # values = self._cursor.fetchone()
+        if value is None:
             return None
         keys = [x[0] for x in self._cursor.description]
-        dict_data = dict(zip(keys, values))
+        dict_data = dict(zip(keys, value))
         return self.__db_to_data(dict_data)
 
     def match_poster(self, bangumi_name: str) -> str:
-        self._cursor.execute(
-            """
-            SELECT official_title, poster_link 
-            FROM bangumi 
-            WHERE INSTR(:bangumi_name, official_title) > 0
-            """,
-            {"bangumi_name": bangumi_name},
+        condition = f"INSTR({bangumi_name}, official_title) > 0"
+        keys = ["official_title", "poster_link"]
+        data = self._search_data(
+            table_name=self.__table_name,
+            keys=keys,
+            condition=condition,
         )
-        data = self._cursor.fetchone()
+        # self._cursor.execute(
+        #     """
+        #     SELECT official_title, poster_link
+        #     FROM bangumi
+        #     WHERE INSTR(:bangumi_name, official_title) > 0
+        #     """,
+        #     {"bangumi_name": bangumi_name},
+        # )
+        # data = self._cursor.fetchone()
         if not data:
             return ""
         official_title, poster_link = data
@@ -160,14 +170,20 @@ class BangumiDatabase(DataConnector):
             return ""
         return poster_link
 
+    @locked
     def match_list(self, torrent_list: list, rss_link: str) -> list:
         # Match title_raw in database
-        self._cursor.execute(
-            """
-            SELECT title_raw, rss_link, poster_link FROM bangumi
-            """
+        keys = ["title_raw", "rss_link", "poster_link"]
+        data = self._search_datas(
+            table_name=self.__table_name,
+            keys=keys,
         )
-        data = self._cursor.fetchall()
+        # self._cursor.execute(
+        #     """
+        #     SELECT title_raw, rss_link, poster_link FROM bangumi
+        #     """
+        # )
+        # data = self._cursor.fetchall()
         if not data:
             return torrent_list
         # Match title
@@ -189,6 +205,12 @@ class BangumiDatabase(DataConnector):
 
     def not_complete(self) -> list[BangumiData]:
         # Find eps_complete = False
+        condition = "eps_complete = 0"
+        data = self._search_datas(
+            table_name=self.__table_name,
+            condition=condition,
+        )
+
         self._cursor.execute(
             """
             SELECT * FROM bangumi WHERE eps_collect = 0

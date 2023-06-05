@@ -139,12 +139,12 @@ class Renamer(DownloadClient):
                     if not renamed:
                         logger.warning(f"[Renamer] {subtitle_path} rename failed")
 
-    def rename(self):
+    def rename(self) -> list[Notification]:
         # Get torrent info
         logger.debug("[Renamer] Start rename process.")
         rename_method = settings.bangumi_manage.rename_method
         torrents_info = self.get_torrent_info()
-        renamed_info = []
+        renamed_info: list[Notification] = []
         for info in torrents_info:
             media_list, subtitle_list = self.check_files(info)
             bangumi_name, season = self._path_to_bangumi(info.save_path)

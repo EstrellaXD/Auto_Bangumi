@@ -6,7 +6,6 @@ from .jwt import verify_token
 from module.database.user import AuthDB
 from module.models.user import User
 
-
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
@@ -50,8 +49,4 @@ def update_user_info(user_data: User, current_user):
 
 def auth_user(username, password):
     with AuthDB() as db:
-        if not db.auth_user(username, password):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="invalid username or password",
-            )
+        db.auth_user(username, password)
