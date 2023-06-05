@@ -132,7 +132,12 @@ class QbDownloader:
         return self._client.torrents_info(hashes=_hash)[0].save_path
 
     def set_category(self, _hash, category):
-        self._client.torrents_set_category(category, hashes=_hash)
+        try:
+            self._client.torrents_set_category(category, hashes=_hash)
+        except Conflict409Error:
+            logger.warning(f"[Downloader] Category {category} does not exist")
+            self.add_category(category)
+            self._client.torrents_set_category(category, hashes=_hash)
 
     def check_connection(self):
         return self._client.app_version()
