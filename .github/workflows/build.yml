@@ -6,6 +6,9 @@ on:
     tags:
       - '\d+\.\d+\.\d+'
       - '\d+\.\d+'
+      - '\d+\.\d+\.\d+-beta\d+'
+      - '\d+\.\d+-beta\d+'
+      - '\d+\.\d+-alpha\d+'
 
 jobs:
   test:
@@ -26,6 +29,25 @@ jobs:
       run: |
         mkdir -p config
         pytest
+
+  create-tag:
+    runs-on: ubuntu-latest
+    if: >
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main'
+    needs: [test]
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v3
+      -
+        name: Create tag
+        run: |
+          git checkout main
+          git config --global user.name "GitHub Action"
+          git config --global user.email "
+          git tag ${{ github.event.pull_request.title }}
+          git push --tags
 
   build-webui:
     runs-on: ubuntu-latest
@@ -58,36 +80,6 @@ jobs:
           path: webui/dist.zip
 
 
-  draft-release:
-    runs-on: ubuntu-latest
-    needs: [test]
-    if: >
-      github.event.pull_request.merged == true &&
-      github.event.pull_request.base.ref == 'main'
-    steps:
-
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: download artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: dist
-          path: webui/dist.zip
-
-      - name: Generate Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.event.pull_request.title }}
-          name: 🌟${{ github.event.pull_request.title }}
-          body: ${{ github.event.pull_request.body }}
-          draft: true
-          prerelease: false
-          files: |
-            webui/dist.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-
   build-docker:
     runs-on: ubuntu-latest
     needs: [test, build-webui]
@@ -106,17 +98,28 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Docker metadata
+      - name: Docker metadata main
         id: meta
         uses: docker/metadata-action@v4
         with:
           images: |
-            ghcr.io/estrellaxd/auto_bangumi
             estrellaxd/auto_bangumi
             ghcr.io/${{ github.repository }}
           tags: |
             type=semver,pattern={{version}}
             type=raw,value=latest
+
+      - name: Docker metadata dev
+        if: contains(github.ref, 'tags') && contains(github.ref, 'alpha') || contains(github.ref, 'beta')
+        id: meta-dev
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            estrellaxd/auto_bangumi:dev
+            ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=${{ github.ref_name }}
+            type=raw,value=dev-latest
 
       - name: Login to DockerHub
         if: ${{ github.event_name == 'push' }}
@@ -150,3 +153,58 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [ create-tag, build-docker ]
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: dist
+          path: webui/dist.zip
+
+      - name: Generate Release
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged == true }}
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.pull_request.title }}
+          name: 🌟${{ github.event.pull_request.title }}
+          body: ${{ github.event.pull_request.body }}
+          draft: false
+          prerelease: false
+          files: |
+            webui/dist.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Generate dev Release
+        if: ${{ github.event_name == 'push' && contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: 🌙${{ github.ref_name }}
+          body: ${{ github.event.pull_request.body }}
+          draft: true
+          prerelease: true
+          files: |
+            webui/dist.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+
+  telegram:
+    runs-on: ubuntu-latest
+    needs: [ release ]
+    steps:
+      - name: send telegram message on push
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          message: |
+            New release: ${{ github.event.release.title }}
+            Link: ${{ github.event.release.html_url }}
