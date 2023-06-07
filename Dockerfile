@@ -17,7 +17,7 @@ ENV S6_SERVICES_GRACETIME=30000 \
 WORKDIR /app
 
 COPY backend/requirements.txt .
-COPY dist.zip .
+COPY backend/dist.zip .
 RUN apk add --no-cache \
         bash \
         ca-certificates \
