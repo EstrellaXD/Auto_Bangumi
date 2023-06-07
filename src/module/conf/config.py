@@ -15,7 +15,7 @@ try:
         logger.info("Can't find version info, use DEV_VERSION instead")
         CONFIG_PATH = "config/config_dev.json"
     else:
-        CONFIG_PATH = f"config/config.json"
+        CONFIG_PATH = "config/config.json"
 except ImportError:
     logger.info("Can't find version info, use DEV_VERSION instead")
     VERSION = "DEV_VERSION"
@@ -36,7 +36,7 @@ class Settings(Config):
             config = json.load(f)
         config_obj = Config.parse_obj(config)
         self.__dict__.update(config_obj.__dict__)
-        logger.info(f"Config loaded")
+        logger.info("Config loaded")
 
     def save(self, config_dict: dict | None = None):
         if not config_dict:
@@ -73,7 +73,7 @@ class Settings(Config):
                         config_dict[key][attr_name] = self.__val_from_env(env, attr)
         config_obj = Config.parse_obj(config_dict)
         self.__dict__.update(config_obj.__dict__)
-        logger.info(f"Config loaded from env")
+        logger.info("Config loaded from env")
 
     @staticmethod
     def __val_from_env(env: str, attr: tuple):

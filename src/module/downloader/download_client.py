@@ -109,7 +109,7 @@ class DownloadClient(TorrentPath):
 
     def delete_torrent(self, hashes):
         self.client.torrents_delete(hashes)
-        logger.info(f"[Downloader] Remove torrents.")
+        logger.info("[Downloader] Remove torrents.")
 
     def add_torrent(self, torrent: dict):
         if self.client.torrents_add(
