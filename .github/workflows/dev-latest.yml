@@ -47,13 +47,15 @@ jobs:
           run_install: true
 
       - name: Build
-        run: pnpm build && zip -r dist.zip dist
+        run: |
+          cd webui
+          pnpm build && zip -r dist.zip dist
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: dist
-          path: dist.zip
+          path: webui/dist.zip
 
 
   dev-build:
@@ -77,7 +79,6 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: dist
-          path: dist.zip
 
       - name: Docker metadata
         id: meta
