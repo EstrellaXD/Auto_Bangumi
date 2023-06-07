@@ -16,7 +16,7 @@ ENV S6_SERVICES_GRACETIME=30000 \
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN apk add --no-cache \
         bash \
         ca-certificates \
@@ -45,8 +45,8 @@ RUN apk add --no-cache \
         /root/.cache \
         /tmp/*
 
-COPY --chmod=755 src/. .
-COPY --chmod=755 src/docker /
+COPY --chmod=755 backend/src/. .
+COPY --chmod=755 backend/src/docker /
 
 ENTRYPOINT [ "/init" ]
 
