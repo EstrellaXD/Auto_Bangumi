@@ -34,7 +34,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Create Version info
-        working-directory: ./src
+        working-directory: ./backend/src
         run: |
           echo "VERSION = '$GITHUB_REF_NAME'" > module/__version__.py
 
