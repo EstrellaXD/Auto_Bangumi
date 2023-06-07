@@ -39,9 +39,6 @@ jobs:
         with:
           node-version: latest
 
-      - name: CD into path
-        run: cd webui
-
       - uses: pnpm/action-setup@v2
         name: Install pnpm
         id: pnpm-install
@@ -50,13 +47,15 @@ jobs:
           run_install: true
 
       - name: Build
-        run: pnpm build && zip -r dist.zip dist
+        run: |
+          cd webui
+          pnpm build && zip -r dist.zip dist
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: dist
-          path: dist.zip
+          path: webui/dist.zip
 
 
   draft-release:
