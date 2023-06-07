@@ -162,18 +162,17 @@ cython_debug/
 #.idea/
 
 # Custom
-/src/test.py
+/backend/src/test.py
 
-/src/module/run_debug.sh
-/src/module/debug_run.sh
-/src/module/__version__.py
-/src/data/
+/backend/src/module/run_debug.sh
+/backend/src/module/debug_run.sh
+/backend/src/module/__version__.py
+/backend/src/data/
 
 /src/module/conf/config_dev.ini
 
 test.*
 .run
-/src/templates/
-/src/config/
-/src/debuger.py
-/src/dist.zip
+/backend/src/templates/
+/backend/src/config/
+/backend/src/dist.zip
