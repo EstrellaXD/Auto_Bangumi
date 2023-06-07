@@ -8,12 +8,21 @@ from module.update import data_migration
 
 logger = logging.getLogger(__name__)
 
+figlet = r"""
+                _        ____                                    _
+     /\        | |      |  _ \                                  (_)
+    /  \  _   _| |_ ___ | |_) | __ _ _ __   __ _ _   _ _ __ ___  _
+   / /\ \| | | | __/ _ \|  _ < / _` | '_ \ / _` | | | | '_ ` _ \| |
+  / ____ \ |_| | || (_) | |_) | (_| | | | | (_| | |_| | | | | | | |
+ /_/    \_\__,_|\__\___/|____/ \__,_|_| |_|\__, |\__,_|_| |_| |_|_|
+                                            __/ |
+                                           |___/
+"""
 
 class Program(RenameThread, RSSThread):
     @staticmethod
     def __start_info():
-        with open("icon", "r") as f:
-            for line in f.readlines():
+        for line in figlet.splitlines():
                 logger.info(line.strip("\n"))
         logger.info(
             f"Version {VERSION}  Author: EstrellaXD Twitter: https://twitter.com/Estrella_Pan"
