@@ -1,11 +1,9 @@
 import logging
 
-from module.downloader import DownloadClient
-
-from module.parser import TitleParser
-from module.models import SubtitleFile, EpisodeFile, Notification
 from module.conf import settings
-
+from module.downloader import DownloadClient
+from module.models import EpisodeFile, Notification, SubtitleFile
+from module.parser import TitleParser
 
 logger = logging.getLogger(__name__)
 

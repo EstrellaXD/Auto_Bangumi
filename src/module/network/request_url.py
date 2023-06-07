@@ -1,9 +1,9 @@
+import logging
+import socket
 import time
 
 import requests
-import socket
 import socks
-import logging
 
 from module.conf import settings
 

@@ -1,10 +1,12 @@
 import json
-import os
 import logging
+import os
+
 from dotenv import load_dotenv
 
-from .const import ENV_TO_ATTR
 from module.models.config import Config
+
+from .const import ENV_TO_ATTR
 
 logger = logging.getLogger(__name__)
 

@@ -2,11 +2,11 @@ import logging
 
 from fastapi import Depends, HTTPException, status
 
-from .bangumi import router
-
 from module.conf import settings
 from module.models import Config
 from module.security import get_current_user
+
+from .bangumi import router
 
 logger = logging.getLogger(__name__)
 

@@ -1,10 +1,10 @@
 import logging
 
+from module.conf import settings
 from module.database import BangumiDatabase
 from module.downloader import DownloadClient
-from module.network import RequestContent
-from module.conf import settings
 from module.models import BangumiData
+from module.network import RequestContent
 
 logger = logging.getLogger(__name__)
 

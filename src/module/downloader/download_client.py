@@ -1,9 +1,9 @@
 import logging
 
-from .path import TorrentPath
-
-from module.models import BangumiData
 from module.conf import settings
+from module.models import BangumiData
+
+from .path import TorrentPath
 
 logger = logging.getLogger(__name__)
 

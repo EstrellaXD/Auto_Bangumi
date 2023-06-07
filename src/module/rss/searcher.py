@@ -1,5 +1,5 @@
-from module.network import RequestContent
 from module.conf import settings
+from module.network import RequestContent
 
 
 class RSSSearcher(RequestContent):

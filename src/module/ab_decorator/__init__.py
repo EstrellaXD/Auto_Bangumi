@@ -1,6 +1,6 @@
 import logging
-import time
 import threading
+import time
 
 logger = logging.getLogger(__name__)
 lock = threading.Lock()

@@ -1,9 +1,9 @@
 import re
 
-from module.database import RSSDatabase
-from module.network import RequestContent, TorrentInfo
-from module.models import BangumiData, RSSTorrents
 from module.conf import settings
+from module.database import RSSDatabase
+from module.models import BangumiData, RSSTorrents
+from module.network import RequestContent, TorrentInfo
 
 
 class RSSPoller(RSSDatabase):

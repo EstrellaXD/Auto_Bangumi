@@ -1,11 +1,11 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 
-from .log import router
-
-from module.models import BangumiData
 from module.manager import TorrentManager
+from module.models import BangumiData
 from module.security import get_current_user
+
+from .log import router
 
 
 @router.get(

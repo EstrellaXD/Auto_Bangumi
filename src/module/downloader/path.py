@@ -1,5 +1,5 @@
-import re
 import logging
+import re
 
 from module.conf import settings
 from module.models import BangumiData

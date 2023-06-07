@@ -3,9 +3,9 @@ import time
 
 from qbittorrentapi import Client, LoginFailed
 from qbittorrentapi.exceptions import (
+    APIConnectionError,
     Conflict409Error,
     Forbidden403Error,
-    APIConnectionError,
 )
 
 from module.ab_decorator import qb_connect_failed_wait

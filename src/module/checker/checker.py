@@ -1,8 +1,8 @@
 import os.path
 
+from module.conf import DATA_PATH, settings
 from module.downloader import DownloadClient
 from module.network import RequestContent
-from module.conf import settings, DATA_PATH
 
 
 class Checker:

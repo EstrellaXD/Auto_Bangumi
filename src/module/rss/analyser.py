@@ -1,11 +1,11 @@
-import re
 import logging
+import re
 
+from module.conf import settings
+from module.database import BangumiDatabase
+from module.models import BangumiData
 from module.network import RequestContent, TorrentInfo
 from module.parser import TitleParser
-from module.models import BangumiData
-from module.database import BangumiDatabase
-from module.conf import settings
 
 logger = logging.getLogger(__name__)
 

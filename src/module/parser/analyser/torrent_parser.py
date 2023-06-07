@@ -1,7 +1,7 @@
-import re
 import logging
-import os.path as unix_path
 import ntpath as win_path
+import os.path as unix_path
+import re
 
 from module.models import EpisodeFile, SubtitleFile
 

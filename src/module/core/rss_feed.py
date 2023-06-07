@@ -1,7 +1,7 @@
 import logging
 
-from module.downloader import DownloadClient
 from module.conf import settings
+from module.downloader import DownloadClient
 
 logger = logging.getLogger(__name__)
 
