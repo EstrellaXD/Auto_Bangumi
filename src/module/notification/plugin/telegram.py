@@ -11,7 +11,7 @@ class TelegramNotification(RequestContent):
         self.notification_url = f"https://api.telegram.org/bot{token}/sendMessage"
         self.chat_id = chat_id
 
-    def post_msg(self, text: str) -> bool:
+    def post_msg(self, text: str, title: str) -> bool:
         data = {
             "chat_id": self.chat_id,
             "text": text,

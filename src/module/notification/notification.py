@@ -32,7 +32,7 @@ class PostNotification:
         )
 
     @staticmethod
-    def _gen_message(notify: Notification) -> str:
+    def _gen_message(notify: Notification) -> (str, str):
         with BangumiDatabase() as db:
             poster_path = db.match_poster(notify.official_title)
         if poster_path:
@@ -44,12 +44,14 @@ class PostNotification:
             text = f"""
             番剧名称：{notify.official_title}\n季度： 第{notify.season}季\n更新集数： 第{notify.episode}集\n
             """
-        return text
+
+        title = f"""{notify.official_title}S{notify.season}E{notify.episode}"""
+        return text, title
 
     def send_msg(self, notify: Notification) -> bool:
-        text = self._gen_message(notify)
+        text, title = self._gen_message(notify)
         try:
-            self.notifier.post_msg(text)
+            self.notifier.post_msg(text, title)
             logger.debug(f"Send notification: {notify.official_title}")
         except Exception as e:
             logger.warning(f"Failed to send notification: {e}")

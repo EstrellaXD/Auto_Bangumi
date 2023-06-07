@@ -12,9 +12,9 @@ class ServerChanNotification(RequestContent):
         super().__init__()
         self.notification_url = f"https://sctapi.ftqq.com/{token}.send"
 
-    def post_msg(self, text: str) -> bool:
+    def post_msg(self, text: str, title: str) -> bool:
         data = {
-            "title": "AutoBangumi 番剧更新",
+            "title": title,
             "desp": text,
         }
         resp = self.post_data(self.notification_url, data)
