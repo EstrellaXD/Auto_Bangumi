@@ -61,7 +61,7 @@ async def stop(current_user=Depends(get_current_user)):
 
 
 @router.get("/api/v1/status", tags=["program"])
-async def status(current_user=Depends(get_current_user)):
+async def program_status(current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"

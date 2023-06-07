@@ -206,7 +206,7 @@ class BangumiDatabase(DataConnector):
     def not_complete(self) -> list[BangumiData]:
         # Find eps_complete = False
         condition = "eps_complete = 0"
-        data = self._search_datas(
+        self._search_datas(
             table_name=self.__table_name,
             condition=condition,
         )

@@ -2,7 +2,7 @@ from fastapi import Depends, HTTPException, status
 
 from module.manager import SeasonCollector
 from module.models import BangumiData
-from module.models.api import *
+from module.models.api import RssLink
 from module.rss import analyser
 from module.security import get_current_user
 

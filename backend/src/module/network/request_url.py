@@ -64,7 +64,7 @@ class RequestURL:
             req = requests.head(url=url, headers=self.header, timeout=5)
             req.raise_for_status()
             return True
-        except requests.RequestException as e:
+        except requests.RequestException:
             logger.debug(f"[Network] Cannot connect to {url}.")
             return False
 

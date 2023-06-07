@@ -62,7 +62,7 @@ class DownloadClient(TorrentPath):
         self.client.prefs_init(prefs=prefs)
         try:
             self.client.add_category("BangumiCollection")
-        except Exception as e:
+        except Exception:
             logger.debug("[Downloader] Cannot add new category, maybe already exists.")
         if settings.downloader.path == "":
             prefs = self.client.get_app_prefs()
@@ -109,7 +109,7 @@ class DownloadClient(TorrentPath):
 
     def delete_torrent(self, hashes):
         self.client.torrents_delete(hashes)
-        logger.info(f"[Downloader] Remove torrents.")
+        logger.info("[Downloader] Remove torrents.")
 
     def add_torrent(self, torrent: dict):
         if self.client.torrents_add(
