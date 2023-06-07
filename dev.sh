@@ -3,7 +3,7 @@
 
 # This script is used to run the development environment.
 
-python3 -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple install -r requirements.txt
+python3 -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple install -r requirements-dev.txt
 
 cd src || exit
 
