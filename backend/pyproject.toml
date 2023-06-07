@@ -1,7 +1,19 @@
 [tool.ruff]
-# Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
-select = ["E", "F", "I"]
-ignore = ['E501', 'F401']
+select = [
+    # pycodestyle(E): https://beta.ruff.rs/docs/rules/#pycodestyle-e-w
+    "E", 
+    # Pyflakes(F): https://beta.ruff.rs/docs/rules/#pyflakes-f
+    "F", 
+    # isort(I): https://beta.ruff.rs/docs/rules/#isort-i
+    "I"
+]
+ignore = [
+    # E501: https://beta.ruff.rs/docs/rules/line-too-long/
+    'E501', 
+    # F401: https://beta.ruff.rs/docs/rules/unused-import/
+    # avoid unused imports lint in `__init__.py`
+    'F401',
+]
 
 # Allow autofix for all enabled rules (when `--fix`) is provided.
 fixable = ["A", "B", "C", "D", "E", "F", "G", "I", "N", "Q", "S", "T", "W", "ANN", "ARG", "BLE", "COM", "DJ", "DTZ", "EM", "ERA", "EXE", "FBT", "ICN", "INP", "ISC", "NPY", "PD", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RET", "RSE", "RUF", "SIM", "SLF", "TCH", "TID", "TRY", "UP", "YTT"]
