@@ -17,6 +17,7 @@ ENV S6_SERVICES_GRACETIME=30000 \
 WORKDIR /app
 
 COPY backend/requirements.txt .
+COPY dist.zip .
 RUN apk add --no-cache \
         bash \
         ca-certificates \
@@ -34,9 +35,8 @@ RUN apk add --no-cache \
     python3 -m pip install --upgrade pip && \
     sed -i '/bcrypt/d' requirements.txt && \
     pip install --no-cache-dir -r requirements.txt && \
-    # Download WebUI
-    curl -sL "https://github.com/Rewrite0/Auto_Bangumi_WebUI/releases/latest/download/dist.zip" | busybox unzip -q -d /app - && \
-    mv /app/dist /app/templates && \
+    # Unzip WebUI \
+    unzip dist.zip -d /app/templates && \
     # Add user
     addgroup -S ab -g 911 && \
     adduser -S ab -G ab -h /ab -s /bin/bash -u 911 && \
