@@ -72,7 +72,7 @@ jobs:
       - name: download artifact
         uses: actions/download-artifact@v3
         with:
-          name: dist
+          name: dist.zip
           path: dist.zip
 
       - name: Generate Release
@@ -136,7 +136,7 @@ jobs:
       - name: download artifact
         uses: actions/download-artifact@v3
         with:
-          name: dist
+          name: dist.zip
 
       - name: Build and push
         uses: docker/build-push-action@v4
