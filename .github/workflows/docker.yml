@@ -22,7 +22,7 @@ jobs:
         if [ -f backend/requirements.txt ]; then pip install -r backend/requirements.txt; fi
         pip install pytest
     - name: Test
-      working-directory: .backend/src
+      working-directory: ./backend/src
       run: |
         mkdir -p config
         pytest
