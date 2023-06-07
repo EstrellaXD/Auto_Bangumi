@@ -54,7 +54,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
-          name: dist
+          name: dist.zip
           path: webui/dist.zip
 
 
@@ -133,7 +133,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.ACCESS_TOKEN }}
 
-      - name: download artifact
+      - name: Download artifact
         uses: actions/download-artifact@v3
         with:
           name: dist.zip
