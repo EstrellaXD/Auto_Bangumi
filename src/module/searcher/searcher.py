@@ -1,6 +1,6 @@
-from module.searcher.plugin import search_url
-from module.network import RequestContent
 from module.models import BangumiData, TorrentBase
+from module.network import RequestContent
+from module.searcher.plugin import search_url
 
 SEARCH_KEY = [
     "group_name",

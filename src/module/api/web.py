@@ -1,12 +1,11 @@
 from fastapi import Request
-from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from .proxy import router
-
 from module.conf import VERSION
 
+from .proxy import router
 
 if VERSION != "DEV_VERSION":
     router.mount("/assets", StaticFiles(directory="templates/assets"), name="assets")

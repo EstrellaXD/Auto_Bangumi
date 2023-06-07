@@ -1,4 +1,5 @@
 import logging
+
 from module.network import RequestContent
 
 logger = logging.getLogger(__name__)

@@ -3,9 +3,8 @@ import logging
 from fastapi import HTTPException
 
 from module.database.connector import DataConnector
-
-from module.security.jwt import get_password_hash, verify_password
 from module.models.user import User
+from module.security.jwt import get_password_hash, verify_password
 
 logger = logging.getLogger(__name__)
 

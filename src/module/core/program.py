@@ -1,10 +1,10 @@
 import logging
 
-from .sub_thread import RenameThread, RSSThread
-from .rss_feed import add_rss_feed
-
-from module.conf import settings, VERSION
+from module.conf import VERSION, settings
 from module.update import data_migration
+
+from .rss_feed import add_rss_feed
+from .sub_thread import RenameThread, RSSThread
 
 logger = logging.getLogger(__name__)
 

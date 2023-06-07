@@ -1,8 +1,8 @@
 import os
 
+from module.database import BangumiDatabase
 from module.models import BangumiData
 from module.utils import json_config
-from module.database import BangumiDatabase
 
 
 def data_migration():

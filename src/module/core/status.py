@@ -1,6 +1,6 @@
+import asyncio
 import os.path
 import threading
-import asyncio
 
 from module.checker import Checker
 

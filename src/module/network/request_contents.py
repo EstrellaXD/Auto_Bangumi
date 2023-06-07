@@ -4,9 +4,10 @@ from dataclasses import dataclass
 
 from bs4 import BeautifulSoup
 
+from module.conf import settings
+
 from .request_url import RequestURL
 from .site import mikan_parser
-from module.conf import settings
 
 
 @dataclass

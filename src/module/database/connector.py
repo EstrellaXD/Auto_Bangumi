@@ -1,7 +1,6 @@
+import logging
 import os
 import sqlite3
-import logging
-
 
 from module.conf import DATA_PATH
 

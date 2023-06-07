@@ -3,13 +3,13 @@ from datetime import timedelta
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
+from module.models.user import User
 from module.security import (
+    auth_user,
     create_access_token,
     get_current_user,
     update_user_info,
-    auth_user,
 )
-from module.models.user import User
 
 from .program import router
 

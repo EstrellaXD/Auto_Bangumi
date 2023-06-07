@@ -1,6 +1,6 @@
 import logging
-import uvicorn
 
+import uvicorn
 from module.api import router
 from module.conf import settings, setup_logger
 

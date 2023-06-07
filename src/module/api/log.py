@@ -1,10 +1,11 @@
 import os
-from fastapi import Response, HTTPException, Depends, status
 
-from .auth import router
+from fastapi import Depends, HTTPException, Response, status
 
 from module.conf import LOG_PATH
 from module.security import get_current_user
+
+from .auth import router
 
 
 @router.get("/api/v1/log", tags=["log"])

@@ -1,9 +1,9 @@
 import logging
 
-from .analyser import raw_parser, torrent_parser, tmdb_parser
-
-from module.models import BangumiData
 from module.conf import settings
+from module.models import BangumiData
+
+from .analyser import raw_parser, tmdb_parser, torrent_parser
 
 logger = logging.getLogger(__name__)
 

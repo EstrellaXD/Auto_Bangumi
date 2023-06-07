@@ -1,11 +1,10 @@
 import logging
 
-from .plugin import *
-
-from module.models import Notification
 from module.conf import settings
 from module.database import BangumiDatabase
+from module.models import Notification
 
+from .plugin import *
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
-from passlib.context import CryptContext
-from jose import jwt, JWTError
 
+from jose import JWTError, jwt
+from passlib.context import CryptContext
 
 app_pwd_key = "auto_bangumi"
 app_pwd_algorithm = "HS256"

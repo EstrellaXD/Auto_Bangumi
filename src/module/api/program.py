@@ -1,9 +1,8 @@
-import signal
 import logging
 import os
+import signal
 
-from fastapi import HTTPException, status, Depends
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, HTTPException, status
 
 from module.core import Program
 from module.security import get_current_user

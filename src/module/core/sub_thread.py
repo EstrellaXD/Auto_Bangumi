@@ -1,14 +1,14 @@
 import threading
 import time
 
-from .status import ProgramStatus
-
-from module.rss import analyser
+from module.conf import settings
+from module.database import BangumiDatabase
 from module.downloader import DownloadClient
 from module.manager import Renamer, eps_complete
 from module.notification import PostNotification
-from module.database import BangumiDatabase
-from module.conf import settings
+from module.rss import analyser
+
+from .status import ProgramStatus
 
 
 class RSSThread(ProgramStatus):

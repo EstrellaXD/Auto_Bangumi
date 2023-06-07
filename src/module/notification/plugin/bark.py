@@ -1,6 +1,6 @@
 import logging
-from module.network import RequestContent
 
+from module.network import RequestContent
 
 logger = logging.getLogger(__name__)
 
