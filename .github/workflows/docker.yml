@@ -73,7 +73,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: dist
-          path: dist.zip
+          path: webui/dist.zip
 
       - name: Generate Release
         uses: softprops/action-gh-release@v1
@@ -84,7 +84,7 @@ jobs:
           draft: true
           prerelease: false
           files: |
-            dist.zip
+            webui/dist.zip
         env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 

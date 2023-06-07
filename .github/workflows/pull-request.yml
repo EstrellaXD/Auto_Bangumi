@@ -21,7 +21,7 @@ jobs:
         with:
           token: ${{ secrets.ACCESS_TOKEN }}
           commit-message: 'chore: release ${{ github.ref }}'
-          title: 'chore: release ${{ github.ref }}'
+          title: '${{ github.ref }}'
           body: |
             ${{ steps.pr.outputs.body }}
           branch: release/${{ github.ref }}
