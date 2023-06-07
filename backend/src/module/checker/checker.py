@@ -1,6 +1,5 @@
-import os.path
 
-from module.conf import DATA_PATH, settings
+from module.conf import settings
 from module.downloader import DownloadClient
 from module.network import RequestContent
 

@@ -124,7 +124,7 @@ class DataConnector:
 
     def _table_exists(self, table_name: str) -> bool:
         self._cursor.execute(
-            f"SELECT name FROM sqlite_master WHERE type='table' AND name=?;",
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=?;",
             (table_name,),
         )
         return len(self._cursor.fetchall()) == 1

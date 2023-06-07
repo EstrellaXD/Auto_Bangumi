@@ -1,6 +1,5 @@
 import re
 
-from module.conf import settings
 from module.database import RSSDatabase
 from module.models import BangumiData, RSSTorrents
 from module.network import RequestContent, TorrentInfo
@@ -25,4 +24,4 @@ class RSSPoller(RSSDatabase):
         rss_datas: list[RSSTorrents] = self.get_rss_data()
         with RequestContent() as req:
             for rss_data in rss_datas:
-                torrents = self.polling(rss_data.url, req)
+                self.polling(rss_data.url, req)
