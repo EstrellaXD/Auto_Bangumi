@@ -1,7 +1,9 @@
 import logging
 import time
+import threading
 
 logger = logging.getLogger(__name__)
+lock = threading.Lock()
 
 
 def qb_connect_failed_wait(func):
@@ -29,4 +31,11 @@ def api_failed(func):
             logger.warning("Wrong API response.")
             logger.debug(e)
 
+    return wrapper
+
+
+def locked(func):
+    def wrapper(*args, **kwargs):
+        with lock:
+            return func(*args, **kwargs)
     return wrapper

@@ -2,6 +2,7 @@ import os
 import sqlite3
 import logging
 
+
 from module.conf import DATA_PATH
 
 logger = logging.getLogger(__name__)
@@ -93,9 +94,34 @@ class DataConnector:
         )
         self._conn.commit()
 
+    
     def _delete_all(self, table_name: str):
         self._cursor.execute(f"DELETE FROM {table_name}")
         self._conn.commit()
+
+    
+    def _search_data(self, table_name: str, keys: list[str] | None, condition: str) -> dict:
+        if keys is None:
+            self._cursor.execute(f"SELECT * FROM {table_name} WHERE {condition}")
+        else:
+            self._cursor.execute(
+                f"SELECT {', '.join(keys)} FROM {table_name} WHERE {condition}"
+            )
+        return dict(zip(keys, self._cursor.fetchone()))
+
+    
+    def _search_datas(self, table_name: str, keys: list[str] | None, condition: str = None) -> list[dict]:
+        if keys is None:
+            select_sql = "*"
+        else:
+            select_sql = ", ".join(keys)
+        if condition is None:
+            self._cursor.execute(f"SELECT {select_sql} FROM {table_name}")
+        else:
+            self._cursor.execute(
+                f"SELECT {select_sql} FROM {table_name} WHERE {condition}"
+            )
+        return [dict(zip(keys, row)) for row in self._cursor.fetchall()]
 
     def _table_exists(self, table_name: str) -> bool:
         self._cursor.execute(

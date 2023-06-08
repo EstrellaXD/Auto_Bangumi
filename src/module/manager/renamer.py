@@ -106,7 +106,7 @@ class Renamer(DownloadClient):
                             _hash=_hash, old_path=media_path, new_path=new_path
                         )
                         if not renamed:
-                            logger.warning(f"[Renamrr] {media_path} rename failed")
+                            logger.warning(f"[Renamer] {media_path} rename failed")
                             # Delete bad torrent.
                             if settings.bangumi_manage.remove_bad_torrent:
                                 self.delete_torrent(_hash)
