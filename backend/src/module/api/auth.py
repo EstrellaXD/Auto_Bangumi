@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from fastapi import Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from module.models.user import User
@@ -11,10 +11,10 @@ from module.security import (
     update_user_info,
 )
 
-from .program import router
+router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/api/v1/auth/login", response_model=dict, tags=["auth"])
+@router.post("/login", response_model=dict)
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     username = form_data.username
     password = form_data.password
@@ -26,7 +26,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     return {"access_token": token, "token_type": "bearer", "expire": 86400}
 
 
-@router.get("/api/v1/auth/refresh_token", response_model=dict, tags=["auth"])
+@router.get("/refresh_token", response_model=dict)
 async def refresh(current_user: User = Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
@@ -39,7 +39,7 @@ async def refresh(current_user: User = Depends(get_current_user)):
     return {"access_token": token, "token_type": "bearer", "expire": 86400}
 
 
-@router.get("/api/v1/auth/logout", response_model=dict, tags=["auth"])
+@router.get("/logout", response_model=dict)
 async def logout(current_user: User = Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
@@ -48,7 +48,7 @@ async def logout(current_user: User = Depends(get_current_user)):
     return {"message": "logout success"}
 
 
-@router.post("/api/v1/auth/update", response_model=dict, tags=["auth"])
+@router.post("/update", response_model=dict)
 async def update_user(user_data: User, current_user: User = Depends(get_current_user)):
     if not current_user:
         raise HTTPException(

@@ -1,15 +1,15 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 
 from module.manager import TorrentManager
 from module.models import BangumiData
 from module.security import get_current_user
 
-from .log import router
+router = APIRouter(prefix="/bangumi", tags=["bangumi"])
 
 
 @router.get(
-    "/api/v1/bangumi/getAll", tags=["bangumi"], response_model=list[BangumiData]
+    "/getAll", response_model=list[BangumiData]
 )
 async def get_all_data(current_user=Depends(get_current_user)):
     if not current_user:
@@ -21,7 +21,7 @@ async def get_all_data(current_user=Depends(get_current_user)):
 
 
 @router.get(
-    "/api/v1/bangumi/getData/{bangumi_id}", tags=["bangumi"], response_model=BangumiData
+    "/getData/{bangumi_id}", response_model=BangumiData
 )
 async def get_data(bangumi_id: str, current_user=Depends(get_current_user)):
     if not current_user:
@@ -32,7 +32,7 @@ async def get_data(bangumi_id: str, current_user=Depends(get_current_user)):
         return torrent.search_one(bangumi_id)
 
 
-@router.post("/api/v1/bangumi/updateRule", tags=["bangumi"])
+@router.post("/updateRule")
 async def update_rule(data: BangumiData, current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
@@ -42,7 +42,7 @@ async def update_rule(data: BangumiData, current_user=Depends(get_current_user))
         return torrent.update_rule(data)
 
 
-@router.delete("/api/v1/bangumi/deleteRule/{bangumi_id}", tags=["bangumi"])
+@router.delete("/deleteRule/{bangumi_id}")
 async def delete_rule(bangumi_id: str, file: bool = False, current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
@@ -52,7 +52,7 @@ async def delete_rule(bangumi_id: str, file: bool = False, current_user=Depends(
         return torrent.delete_rule(bangumi_id, file)
 
 
-@router.delete("/api/v1/bangumi/disableRule/{bangumi_id}", tags=["bangumi"])
+@router.delete("/disableRule/{bangumi_id}")
 async def disable_rule(
     bangumi_id: str, file: bool = False, current_user=Depends(get_current_user)
 ):
@@ -64,7 +64,7 @@ async def disable_rule(
         return torrent.disable_rule(bangumi_id, file)
 
 
-@router.get("/api/v1/bangumi/enableRule/{bangumi_id}", tags=["bangumi"])
+@router.get("/enableRule/{bangumi_id}")
 async def enable_rule(bangumi_id: str, current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
@@ -74,7 +74,7 @@ async def enable_rule(bangumi_id: str, current_user=Depends(get_current_user)):
         return torrent.enable_rule(bangumi_id)
 
 
-@router.get("/api/v1/bangumi/resetAll", tags=["bangumi"])
+@router.get("/resetAll")
 async def reset_all(current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(

@@ -1,11 +1,11 @@
-from fastapi import Request
+from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from module.conf import VERSION
 
-from .proxy import router
+router = APIRouter()
 
 if VERSION != "DEV_VERSION":
     router.mount("/assets", StaticFiles(directory="templates/assets"), name="assets")
@@ -29,9 +29,7 @@ if VERSION != "DEV_VERSION":
     def index(request: Request):
         context = {"request": request}
         return templates.TemplateResponse("index.html", context)
-
 else:
-
     @router.get("/", status_code=302, tags=["html"])
     def index():
         return RedirectResponse("/docs")
