@@ -1,6 +1,7 @@
 import logging
 
 from module.network import RequestContent
+from module.models import Notification
 
 logger = logging.getLogger(__name__)
 
@@ -12,9 +13,17 @@ class ServerChanNotification(RequestContent):
         super().__init__()
         self.notification_url = f"https://sctapi.ftqq.com/{token}.send"
 
-    def post_msg(self, text: str, title: str) -> bool:
+    @staticmethod
+    def gen_message(notify: Notification) -> str:
+        text = f"""
+        番剧名称：{notify.official_title}\n季度： 第{notify.season}季\n更新集数： 第{notify.episode}集\n{notify.poster_path}\n
+        """
+        return text
+
+    def post_msg(self, notify: Notification) -> bool:
+        text = self.gen_message(notify)
         data = {
-            "title": title,
+            "title": notify.official_title,
             "desp": text,
         }
         resp = self.post_data(self.notification_url, data)

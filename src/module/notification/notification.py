@@ -32,26 +32,25 @@ class PostNotification:
         )
 
     @staticmethod
-    def _gen_message(notify: Notification) -> (str, str):
+    def _get_poster(notify: Notification):
         with BangumiDatabase() as db:
             poster_path = db.match_poster(notify.official_title)
         if poster_path:
             poster_link = "https://mikanani.me" + poster_path
-            text = f"""
-            番剧名称：{notify.official_title}\n季度： 第{notify.season}季\n更新集数： 第{notify.episode}集\n{poster_link}\n
-            """
+            # text = f"""
+            # 番剧名称：{notify.official_title}\n季度： 第{notify.season}季\n更新集数： 第{notify.episode}集\n{poster_link}\n
+            # """
         else:
-            text = f"""
-            番剧名称：{notify.official_title}\n季度： 第{notify.season}季\n更新集数： 第{notify.episode}集\n
-            """
-
-        title = f"""{notify.official_title}S{notify.season}E{notify.episode}"""
-        return text, title
+            poster_link = "https://mikanani.me"
+            # text = f"""
+            # 番剧名称：{notify.official_title}\n季度： 第{notify.season}季\n更新集数： 第{notify.episode}集\n
+            # """
+        notify.poster_path = poster_link
 
     def send_msg(self, notify: Notification) -> bool:
-        text, title = self._gen_message(notify)
+        self._get_poster(notify)
         try:
-            self.notifier.post_msg(text, title)
+            self.notifier.post_msg(notify)
             logger.debug(f"Send notification: {notify.official_title}")
         except Exception as e:
             logger.warning(f"Failed to send notification: {e}")
