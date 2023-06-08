@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script is used to run the development environment.
 
 python3 -m venv venv
 
-./venv/bin/python3 -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple install -r requirements-dev.txt
+./venv/bin/python3 -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements-dev.txt
 
 # install git-hooks for pre-commit before committing.
 ./venv/bin/pre-commit install
