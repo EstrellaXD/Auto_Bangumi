@@ -2,14 +2,14 @@ import logging
 import os
 import signal
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from module.core import Program
 from module.security import get_current_user
 
 logger = logging.getLogger(__name__)
 program = Program()
-router = FastAPI()
+router = APIRouter(tags=["program"])
 
 
 @router.on_event("startup")
@@ -22,7 +22,7 @@ async def shutdown():
     program.stop()
 
 
-@router.get("/api/v1/restart", tags=["program"])
+@router.get("/restart")
 async def restart(current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
@@ -37,7 +37,7 @@ async def restart(current_user=Depends(get_current_user)):
         raise HTTPException(status_code=500, detail="Failed to restart program")
 
 
-@router.get("/api/v1/start", tags=["program"])
+@router.get("/start")
 async def start(current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
@@ -51,7 +51,7 @@ async def start(current_user=Depends(get_current_user)):
         raise HTTPException(status_code=500, detail="Failed to start program")
 
 
-@router.get("/api/v1/stop", tags=["program"])
+@router.get("/stop")
 async def stop(current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
@@ -60,7 +60,7 @@ async def stop(current_user=Depends(get_current_user)):
     return program.stop()
 
 
-@router.get("/api/v1/status", tags=["program"])
+@router.get("/status")
 async def program_status(current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
@@ -72,7 +72,7 @@ async def program_status(current_user=Depends(get_current_user)):
         return {"status": "running"}
 
 
-@router.get("/api/v1/shutdown", tags=["program"])
+@router.get("/shutdown")
 async def shutdown_program(current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
@@ -85,7 +85,7 @@ async def shutdown_program(current_user=Depends(get_current_user)):
 
 
 # Check status
-@router.get("/api/v1/check/downloader", tags=["check"])
+@router.get("/check/downloader", tags=["check"])
 async def check_downloader_status(current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
@@ -94,7 +94,7 @@ async def check_downloader_status(current_user=Depends(get_current_user)):
     return program.check_downloader()
 
 
-@router.get("/api/v1/check/rss", tags=["check"])
+@router.get("/check/rss", tags=["check"])
 async def check_rss_status(current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(

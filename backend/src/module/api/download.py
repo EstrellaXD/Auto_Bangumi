@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from module.manager import SeasonCollector
 from module.models import BangumiData
@@ -6,10 +6,9 @@ from module.models.api import RssLink
 from module.rss import analyser
 from module.security import get_current_user
 
-from .config import router
+router = APIRouter(prefix="/download", tags=["download"])
 
-
-@router.post("/api/v1/download/analysis", tags=["download"])
+@router.post("/analysis")
 async def analysis(link: RssLink, current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
@@ -22,7 +21,7 @@ async def analysis(link: RssLink, current_user=Depends(get_current_user)):
         return {"status": "Failed to parse link"}
 
 
-@router.post("/api/v1/download/collection", tags=["download"])
+@router.post("/collection")
 async def download_collection(
     data: BangumiData, current_user=Depends(get_current_user)
 ):
@@ -40,7 +39,7 @@ async def download_collection(
         return {"status": "Failed to parse link"}
 
 
-@router.post("/api/v1/download/subscribe", tags=["download"])
+@router.post("/subscribe")
 async def subscribe(data: BangumiData, current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(

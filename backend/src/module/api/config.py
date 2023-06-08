@@ -1,17 +1,16 @@
 import logging
 
-from fastapi import Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from module.conf import settings
 from module.models import Config
 from module.security import get_current_user
 
-from .bangumi import router
-
+router = APIRouter(tags=["config"])
 logger = logging.getLogger(__name__)
 
 
-@router.get("/api/v1/getConfig", tags=["config"], response_model=Config)
+@router.get("/getConfig", response_model=Config)
 async def get_config(current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
@@ -20,7 +19,7 @@ async def get_config(current_user=Depends(get_current_user)):
     return settings
 
 
-@router.post("/api/v1/updateConfig", tags=["config"])
+@router.post("/updateConfig")
 async def update_config(config: Config, current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
