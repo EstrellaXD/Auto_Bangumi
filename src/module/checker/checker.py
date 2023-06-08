@@ -47,7 +47,8 @@ class Checker:
     @staticmethod
     def check_first_run() -> bool:
         token_exist = False if settings.rss_parser.token in ["", "token"] else True
-        if token_exist:
-            return False
-        else:
-            return True
+        if settings.rss_parser.enable:
+            if token_exist:
+                return False
+            else:
+                return True
