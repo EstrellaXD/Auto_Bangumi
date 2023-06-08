@@ -19,6 +19,8 @@ class RSSThread(ProgramStatus):
         )
 
     def rss_loop(self):
+        with DownloadClient() as client:
+            client.init_downloader()
         while not self.stop_event.is_set():
             # Analyse RSS
             with BangumiDatabase() as db:
