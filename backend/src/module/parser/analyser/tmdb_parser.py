@@ -2,8 +2,8 @@ import re
 import time
 from dataclasses import dataclass
 
-from module.network import RequestContent
 from module.conf import TMDB_API
+from module.network import RequestContent
 
 
 @dataclass
@@ -22,10 +22,10 @@ LANGUAGE = {
     "en": "en-US"
 }
 
-search_url = lambda e: \
-        f"https://api.themoviedb.org/3/search/tv?api_key={TMDB_API}&page=1&query={e}&include_adult=false"
-info_url = lambda e, key: \
-        f"https://api.themoviedb.org/3/tv/{e}?api_key={TMDB_API}&language={LANGUAGE[key]}"
+def search_url(e):
+    return f"https://api.themoviedb.org/3/search/tv?api_key={TMDB_API}&page=1&query={e}&include_adult=false"
+def info_url(e, key):
+    return f"https://api.themoviedb.org/3/tv/{e}?api_key={TMDB_API}&language={LANGUAGE[key]}"
 
 
 def is_animation(tv_id, language) -> bool:

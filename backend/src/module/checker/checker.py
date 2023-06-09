@@ -1,9 +1,7 @@
-import os.path
-
-from module.downloader import DownloadClient
-from module.network import RequestContent
 from module.conf import settings
+from module.downloader import DownloadClient
 from module.models import Config
+from module.network import RequestContent
 
 
 class Checker:

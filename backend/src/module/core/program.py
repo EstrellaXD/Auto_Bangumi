@@ -19,11 +19,12 @@ figlet = r"""
                                            |___/
 """
 
+
 class Program(RenameThread, RSSThread):
     @staticmethod
     def __start_info():
         for line in figlet.splitlines():
-                logger.info(line.strip("\n"))
+            logger.info(line.strip("\n"))
         logger.info(
             f"Version {VERSION}  Author: EstrellaXD Twitter: https://twitter.com/Estrella_Pan"
         )

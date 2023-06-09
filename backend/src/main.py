@@ -27,13 +27,14 @@ uvicorn_logging_config = {
 
 def create_app() -> ASGIApp:
     app = FastAPI()
-    
+
     # mount routers
     app.include_router(web_router)
     app.include_router(proxy_router)
     app.include_router(v1, prefix="/api")
 
     return app
+
 
 app = create_app()
 

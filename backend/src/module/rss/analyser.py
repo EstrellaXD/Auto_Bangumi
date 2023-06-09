@@ -61,7 +61,9 @@ class RSSAnalyser:
                 logger.debug(f"[RSS] New title found: {data.official_title}")
         return new_data
 
-    def torrent_to_data(self, torrent: TorrentInfo, rss_link: str | None = None) -> BangumiData:
+    def torrent_to_data(
+        self, torrent: TorrentInfo, rss_link: str | None = None
+    ) -> BangumiData:
         data = self._title_analyser.raw_parser(raw=torrent.name, rss_link=rss_link)
         if data:
             try:
@@ -75,7 +77,9 @@ class RSSAnalyser:
             self.official_title_parser(data, mikan_title)
             return data
 
-    def rss_to_data(self, rss_link: str, database: BangumiDatabase, full_parse: bool = True) -> list[BangumiData]:
+    def rss_to_data(
+        self, rss_link: str, database: BangumiDatabase, full_parse: bool = True
+    ) -> list[BangumiData]:
         rss_torrents = self.get_rss_torrents(rss_link, full_parse)
         torrents_to_add = database.match_list(rss_torrents, rss_link)
         if not torrents_to_add:

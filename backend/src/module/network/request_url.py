@@ -23,7 +23,9 @@ class RequestURL:
                 req.raise_for_status()
                 return req
             except requests.RequestException:
-                logger.warning(f"[Network] Cannot connect to {url}. Wait for 5 seconds.")
+                logger.warning(
+                    f"[Network] Cannot connect to {url}. Wait for 5 seconds."
+                )
                 try_time += 1
                 if try_time >= retry:
                     break
@@ -45,7 +47,9 @@ class RequestURL:
                 req.raise_for_status()
                 return req
             except requests.RequestException:
-                logger.warning(f"[Network] Cannot connect to {url}. Wait for 5 seconds.")
+                logger.warning(
+                    f"[Network] Cannot connect to {url}. Wait for 5 seconds."
+                )
                 try_time += 1
                 if try_time >= retry:
                     break

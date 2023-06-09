@@ -8,9 +8,7 @@ from module.security import get_current_user
 router = APIRouter(prefix="/bangumi", tags=["bangumi"])
 
 
-@router.get(
-    "/getAll", response_model=list[BangumiData]
-)
+@router.get("/getAll", response_model=list[BangumiData])
 async def get_all_data(current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
@@ -20,9 +18,7 @@ async def get_all_data(current_user=Depends(get_current_user)):
         return torrent.search_all()
 
 
-@router.get(
-    "/getData/{bangumi_id}", response_model=BangumiData
-)
+@router.get("/getData/{bangumi_id}", response_model=BangumiData)
 async def get_data(bangumi_id: str, current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
@@ -43,7 +39,9 @@ async def update_rule(data: BangumiData, current_user=Depends(get_current_user))
 
 
 @router.delete("/deleteRule/{bangumi_id}")
-async def delete_rule(bangumi_id: str, file: bool = False, current_user=Depends(get_current_user)):
+async def delete_rule(
+    bangumi_id: str, file: bool = False, current_user=Depends(get_current_user)
+):
     if not current_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"

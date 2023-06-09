@@ -11,7 +11,7 @@ class WecomNotification(RequestContent):
 
     def __init__(self, token, chat_id, **kwargs):
         super().__init__()
-        #Chat_id is used as noti_url in this push tunnel
+        # Chat_id is used as noti_url in this push tunnel
         self.notification_url = f"{chat_id}"
         self.token = token
 

@@ -6,7 +6,6 @@ from module.network import RequestContent, TorrentInfo
 
 
 class RSSPoller(RSSDatabase):
-
     @staticmethod
     def polling(rss_link, req: RequestContent) -> list[TorrentInfo]:
         return req.get_torrents(rss_link)
