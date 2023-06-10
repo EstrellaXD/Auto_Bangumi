@@ -93,25 +93,28 @@ definePage({
 </script>
 
 <template>
-  <div flex="~ wrap" gap-y-12px gap-x-50px>
-    <ab-bangumi-card
-      v-for="i in data"
-      :key="i.id"
-      :class="[i.deleted && 'grayscale']"
-      :poster="i.poster_link ?? ''"
-      :name="i.official_title"
-      :season="i.season"
-      @click="() => open(i)"
-    ></ab-bangumi-card>
-
-    <ab-edit-rule
-      v-model:show="editRule.show"
-      v-model:rule="editRule.item"
-      @enable="(id) => enableRule(id)"
-      @delete-file="
-        (type, { id, deleteFile }) => ruleManage(type, id, deleteFile)
-      "
-      @apply="(rule) => updateRule(rule)"
-    ></ab-edit-rule>
+  <ab-page-title :title="$t('homepage.title')"></ab-page-title>
+  <div overflow-auto mt-12px flex-grow>
+    <div flex="~ wrap" gap-y-12px gap-x-50px>
+      <ab-bangumi-card
+        v-for="i in data"
+        :key="i.id"
+        :class="[i.deleted && 'grayscale']"
+        :poster="i.poster_link ?? ''"
+        :name="i.official_title"
+        :season="i.season"
+        @click="() => open(i)"
+      ></ab-bangumi-card>
+  
+      <ab-edit-rule
+        v-model:show="editRule.show"
+        v-model:rule="editRule.item"
+        @enable="(id) => enableRule(id)"
+        @delete-file="
+          (type, { id, deleteFile }) => ruleManage(type, id, deleteFile)
+        "
+        @apply="(rule) => updateRule(rule)"
+      ></ab-edit-rule>
+    </div>
   </div>
 </template>
