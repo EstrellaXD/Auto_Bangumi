@@ -1,0 +1,127 @@
+login:
+  title: 'Login'
+  username: 'Username'
+  password: 'Password'
+  loginbtn: 'Login'
+  default: 'Default'
+
+sidebar:
+  title: 'Menu'
+  homepage: 'HomePage'
+  player: 'Player'
+  log: 'Log'
+  config: 'Config'
+  logout: 'Logout'
+
+topbar:
+  start: 'Start'
+  pause: 'Pause'
+  restart: 'Restart'
+  shutdown: 'Shutdown'
+  resetrule: 'Reset Rule'
+
+  profile: 
+    title: 'Profile'
+    poptitle: 'Change Account'
+    username: 'Username'
+    password: 'Password'
+    updatebtn: 'Update'
+    
+  add:
+    title: 'Add Bangumi'
+    rsslink: 'RSS Link'
+    placeholder: 'Please enter the RSS link'
+    analyse: 'Analyse'
+
+homepage:
+  title: 'Bangumi List'
+  rule: 
+    officaltitle: 'Official Title'
+    year: 'Year'
+    season: 'Season'
+    offset: 'Offset'
+    exclude: 'Exclude'
+    enable: 'Enable'
+    disable: 'Disable'
+    delete: 'Delete'
+    apply: 'Apply'
+    yesbtn: 'Yes'
+    nobtn: 'No'
+    enablehit: 'Do you want to enable this rule?'
+    deletehit: 'Delete Local File?'
+    enablerule: 'Enable Rule'
+    editrule: 'Edit Rule'
+
+player:
+  title: 'Player'
+  hit: 'Please set up the media player'
+
+log:
+  title: 'Log'
+  reset: 'Reset'
+  copy: 'Copy'
+  contactinfo: 'Contact Infomation'
+  go: 'Go'
+  join: 'Join'
+  bugrepo: 'Bug Report'
+
+config:
+  title: 'Config'
+  normalset: 
+    title: 'Normal Setting'
+    rssintvl: 'Interval Time of Rss'
+    renameintvl: 'Interval Time of Rename'
+    webport: 'WebUI Port'
+    debug: 'Debug'
+
+  parserset: 
+    title: 'Parser Setting'
+    enable: 'Enable'
+    source: 'Source'
+    token: 'Token'
+    url: 'Custom Url'
+    language: 'Language'
+    type: 'Parser Type'
+    exclude: 'Exclude'
+
+  downloaderset: 
+    title: 'Downloader Setting'
+    type: 'Downloader Type'
+    host: 'Host'
+    username: 'Username'
+    password: 'Password'
+    path: 'Download Path'
+    ssl: 'SSL'
+  
+  manageset: 
+    title: 'Manage SEtting'
+    enable: 'Enable'
+    method: 'Rename Method'
+    eps: 'EPS complete'
+    grouptag: 'Add Group Tag'
+    deletebadtorr: 'Delete Bad Torrent'
+
+  notificationset: 
+    title: 'Notification Setting'
+    enable: 'Enable'
+    type: 'Type'
+    token: 'Token'
+    chatid: 'Chat ID'
+
+  proxyset: 
+    title: 'Proxy Setting'
+    enable: 'Enable'
+    type: 'Proxy Type'
+    host: 'Host'
+    port: 'Port'
+    username: 'Username'
+    password: 'Password'
+
+  mediaplayerset: 
+    title: 'Media Player Setting'
+    type: 'type'
+    url: 'url'
+
+  cancel: 'Cancel'
+  apply: 'Apply'
+  
