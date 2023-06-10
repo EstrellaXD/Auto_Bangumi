@@ -6,7 +6,9 @@ import type {
   RssParserType,
 } from '#/config';
 import type { SettingItem } from '#/components';
+import { useI18n } from 'vue-i18n';
 
+const { t } = useI18n({ useScope: 'global' });
 const { getSettingGroup } = useConfigStore();
 
 const parser = getSettingGroup('rss_parser');
@@ -19,12 +21,12 @@ const parserMethods: RssParserMethodType = ['tmdb', 'mikan', 'parser'];
 const items: SettingItem<RssParser>[] = [
   {
     configKey: 'enable',
-    label: 'Enable',
+    label: t('config.parserset.enable'),
     type: 'switch',
   },
   {
     configKey: 'type',
-    label: 'Source',
+    label: t('config.parserset.source'),
     type: 'select',
     css: 'w-115px',
     prop: {
@@ -33,7 +35,7 @@ const items: SettingItem<RssParser>[] = [
   },
   {
     configKey: 'token',
-    label: 'Token',
+    label: t('config.parserset.token'),
     type: 'input',
     prop: {
       type: 'text',
@@ -42,7 +44,7 @@ const items: SettingItem<RssParser>[] = [
   },
   {
     configKey: 'custom_url',
-    label: 'Custom Url',
+    label: t('config.parserset.url'),
     type: 'input',
     prop: {
       type: 'text',
@@ -52,7 +54,7 @@ const items: SettingItem<RssParser>[] = [
   },
   {
     configKey: 'language',
-    label: 'Language',
+    label: t('config.parserset.language'),
     type: 'select',
     prop: {
       items: langs,
@@ -60,7 +62,7 @@ const items: SettingItem<RssParser>[] = [
   },
   {
     configKey: 'parser_type',
-    label: 'Parser Type',
+    label: t('config.parserset.type'),
     type: 'select',
     prop: {
       items: parserMethods,
@@ -68,14 +70,14 @@ const items: SettingItem<RssParser>[] = [
   },
   {
     configKey: 'filter',
-    label: 'Exclude',
+    label: t('config.parserset.exclude'),
     type: 'dynamic-tags',
   },
 ];
 </script>
 
 <template>
-  <ab-fold-panel title="Parser Setting">
+  <ab-fold-panel :title="$t('config.parserset.title')">
     <div space-y-12px>
       <ab-setting
         v-for="i in items"

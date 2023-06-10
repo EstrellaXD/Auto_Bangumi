@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue';
-import { AddOne, More } from '@icon-park/vue-next';
+import { Earth, AddOne, More } from '@icon-park/vue-next';
 
 withDefaults(
   defineProps<{
@@ -17,13 +17,22 @@ withDefaults(
   }
 );
 
-defineEmits(['clickAdd']);
+defineEmits(['clickAdds']);
 </script>
 
 <template>
   <Menu>
     <div rel>
       <div fx-cer space-x-16px>
+        <Earth
+          theme="outline"
+          size="24"
+          fill="#fff"
+          is-btn
+          btn-click
+          @click="() => $emit('changeLang')"
+        />
+        
         <AddOne
           theme="outline"
           size="24"

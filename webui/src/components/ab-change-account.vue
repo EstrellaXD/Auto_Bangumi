@@ -7,22 +7,22 @@ const { user, update } = useAuth();
 </script>
 
 <template>
-  <ab-popup v-model:show="show" title="Change Account" css="w-365px">
+  <ab-popup v-model:show="show" :title="$t('topbar.profile.poptitle')" css="w-365px">
     <div space-y-16px>
-      <ab-label label="Username">
+      <ab-label :label="$t('topbar.profile.username')">
         <input
           v-model="user.username"
           type="text"
-          placeholder="username"
+          :placeholder="$t('topbar.profile.username')"
           ab-input
         />
       </ab-label>
 
-      <ab-label label="Password">
+      <ab-label :label="$t('topbar.profile.password')">
         <input
           v-model="user.password"
           type="password"
-          placeholder="password"
+          :placeholder="$t('topbar.profile.password')"
           ab-input
         />
       </ab-label>
@@ -30,7 +30,7 @@ const { user, update } = useAuth();
       <div line></div>
 
       <div flex="~ justify-end">
-        <ab-button size="small" @click="update">Update</ab-button>
+        <ab-button size="small" @click="update">{{$t('topbar.profile.updatebtn')}}</ab-button>
       </div>
     </div>
   </ab-popup>
