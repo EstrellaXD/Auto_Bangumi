@@ -68,12 +68,14 @@ onUnmounted(() => {
 
 function changeLocale(){
   if(localStorage.getItem('lang') === 'zh-CN'){
-    locale.value = 'en-US';
-    localStorage.setItem('lang', locale.value);
+    let newLang = 'en-US';
+    locale.value = newLang;
+    localStorage.setItem('lang', newLang);
     location.reload();
   } else {
-    locale.value = 'zh-CN';
-    localStorage.setItem('lang', locale.value);
+    let newLang = 'zh-CN';
+    locale.value = newLang;
+    localStorage.setItem('lang', newLang);
     location.reload();
   }
 }

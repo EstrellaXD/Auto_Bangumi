@@ -4,7 +4,7 @@ import messages from '@intlify/unplugin-vue-i18n/messages'
 //Default language is the same as last setting (undefined is browser language)
 let lang = localStorage.getItem('lang');
 if(lang === null){
-    const navLang = navigator.language || navigator.userLanguage;
+    const navLang = navigator.language;
     let localLang = navLang || false;
     lang = localLang || 'en-US';
 }
