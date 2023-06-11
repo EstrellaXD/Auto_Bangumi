@@ -104,7 +104,7 @@ const boxSize = computed(() => {
       </div>
     </div>
 
-    <ab-popup v-model:show="deleteFileDialog.show" title="Delete">
+    <ab-popup v-model:show="deleteFileDialog.show" :title="$t('homepage.rule.delete')">
       <div>{{$t('homepage.rule.deletehit')}}</div>
       <div line my-8px></div>
 

@@ -1,10 +1,4 @@
-<script lang="ts">
-
-</script>
 <script lang="ts" setup>
-import { string } from 'yargs';
-import { thisTypeAnnotation } from '@babel/types';
-
 const { getConfig, setConfig } = useConfigStore();
 
 getConfig();
