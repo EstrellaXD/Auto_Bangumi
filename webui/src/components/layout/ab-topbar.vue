@@ -1,11 +1,11 @@
 <script lang="ts" setup>
 import {
+  Format,
   Me,
   Pause,
   PlayOne,
   Power,
   Refresh,
-  Format,
 } from '@icon-park/vue-next';
 
 const search = ref('');
