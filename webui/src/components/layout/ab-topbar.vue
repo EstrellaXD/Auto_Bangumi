@@ -67,10 +67,14 @@ onUnmounted(() => {
 });
 
 function changeLocale(){
-  if(t.value === 'zh-CN'){
-    t.value = locale.value = 'en'
+  if(localStorage.getItem('lang') === 'zh-CN'){
+    locale.value = 'en-US';
+    localStorage.setItem('lang', locale.value);
+    location.reload();
   } else {
-    t.value = locale.value = 'zh-CN';
+    locale.value = 'zh-CN';
+    localStorage.setItem('lang', locale.value);
+    location.reload();
   }
 }
 </script>

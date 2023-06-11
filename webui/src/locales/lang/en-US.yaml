@@ -94,7 +94,7 @@ config:
     ssl: 'SSL'
   
   manageset: 
-    title: 'Manage SEtting'
+    title: 'Manage Setting'
     enable: 'Enable'
     method: 'Rename Method'
     eps: 'EPS complete'
