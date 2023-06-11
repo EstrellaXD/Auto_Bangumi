@@ -3,12 +3,6 @@ name: Build Docker
 on:
   pull_request:
   push:
-    tags:
-      - '\d+\.\d+\.\d+'
-      - '\d+\.\d+'
-      - '\d+\.\d+\.\d+-beta\d+'
-      - '\d+\.\d+-beta\d+'
-      - '\d+\.\d+-alpha\d+'
 
 jobs:
   test:
@@ -32,6 +26,9 @@ jobs:
 
   build-webui:
     runs-on: ubuntu-latest
+    if: >
+      ${{ github.event_name == 'pull_request' }} ||
+      ${{ github.event_name == 'push' && github.ref_type == 'tag' && (contains(github.ref, 'alpha') || contains(github.ref, 'beta')) }}
     needs: [test]
     steps:
       - name: Checkout
@@ -63,7 +60,7 @@ jobs:
 
   build-docker:
     runs-on: ubuntu-latest
-    needs: [test, build-webui]
+    needs: [build-webui]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
