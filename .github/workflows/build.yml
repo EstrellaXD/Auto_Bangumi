@@ -27,8 +27,8 @@ jobs:
   build-webui:
     runs-on: ubuntu-latest
     if: >
-        ${{ github.event_name == 'pull_request' && github.event.pull_request.merged == true }}
-            || ${{ github.event_name == 'push' && contains(github.ref, 'tags') }}
+      ${{ github.event_name == 'pull_request' }} ||
+      ${{ github.event_name == 'push' && github.ref_type == 'tag' && (contains(github.ref, 'alpha') || contains(github.ref, 'beta')) }}
     needs: [test]
     steps:
       - name: Checkout
