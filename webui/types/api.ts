@@ -12,11 +12,11 @@ export type ApiErrorMessage = AuthError | LoginError;
  */
 export type StatusCode = 401 | 404 | 406 | 500;
 
-export type ApiError = {
+export interface ApiError {
   status: StatusCode;
   detail: ApiErrorMessage;
   msg: string;
-};
+}
 
 export interface ApiSuccess {
   msg: string;
