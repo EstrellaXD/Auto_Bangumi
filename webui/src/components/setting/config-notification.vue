@@ -1,7 +1,7 @@
 <script lang="ts" setup>
+import { useI18n } from 'vue-i18n';
 import type { Notification, NotificationType } from '#/config';
 import type { SettingItem } from '#/components';
-import { useI18n } from 'vue-i18n';
 
 const { t } = useI18n({ useScope: 'global' });
 const { getSettingGroup } = useConfigStore();
@@ -17,13 +17,13 @@ const notificationType: NotificationType = [
 const items: SettingItem<Notification>[] = [
   {
     configKey: 'enable',
-    label: t("config.notificationset.enable"),
+    label: t('config.notificationset.enable'),
     type: 'switch',
     bottomLine: true,
   },
   {
     configKey: 'type',
-    label: t("config.notificationset.type"),
+    label: t('config.notificationset.type'),
     type: 'select',
     css: 'w-140px',
     prop: {
@@ -32,7 +32,7 @@ const items: SettingItem<Notification>[] = [
   },
   {
     configKey: 'token',
-    label: t("config.notificationset.token"),
+    label: t('config.notificationset.token'),
     type: 'input',
     prop: {
       type: 'text',
@@ -41,7 +41,7 @@ const items: SettingItem<Notification>[] = [
   },
   {
     configKey: 'chat_id',
-    label: t("config.notificationset.chatid"),
+    label: t('config.notificationset.chatid'),
     type: 'input',
     prop: {
       type: 'text',

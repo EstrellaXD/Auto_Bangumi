@@ -1,9 +1,9 @@
 <script lang="ts" setup>
+import { useI18n } from 'vue-i18n';
 import type { Log, Program } from '#/config';
 import type { SettingItem } from '#/components';
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n({ useScope: 'global' })
+const { t } = useI18n({ useScope: 'global' });
 const { getSettingGroup } = useConfigStore();
 
 const program = getSettingGroup('program');

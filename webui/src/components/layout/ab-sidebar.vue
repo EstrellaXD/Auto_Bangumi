@@ -10,7 +10,7 @@ import {
   SettingTwo,
 } from '@icon-park/vue-next';
 import { useI18n } from 'vue-i18n';
-const { t } = useI18n({ useScope: 'global' });
+
 const props = withDefaults(
   defineProps<{
     open?: boolean;
@@ -19,7 +19,7 @@ const props = withDefaults(
     open: false,
   }
 );
-
+const { t } = useI18n({ useScope: 'global' });
 const show = ref(props.open);
 const toggle = () => (show.value = !show.value);
 const route = useRoute();
@@ -89,7 +89,7 @@ const items = [
         @click="toggle"
       >
         <div :class="[!show && 'abs opacity-0']" transition-opacity>
-          <div text-h1>{{$t('sidebar.title')}}</div>
+          <div text-h1>{{ $t('sidebar.title') }}</div>
         </div>
 
         <MenuUnfold
@@ -139,7 +139,7 @@ const items = [
         @click="logout"
       >
         <Logout :size="24" />
-        <div text-h2>{{$t('sidebar.logout')}}</div>
+        <div text-h2>{{ $t('sidebar.logout') }}</div>
       </div>
     </div>
   </div>

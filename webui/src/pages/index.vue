@@ -13,12 +13,11 @@ definePage({
       <ab-sidebar />
 
       <div layout-content>
-
-          <RouterView v-slot="{ Component }">
-            <KeepAlive>
-              <component :is="Component" />
-            </KeepAlive>
-          </RouterView>
+        <RouterView v-slot="{ Component }">
+          <KeepAlive>
+            <component :is="Component" />
+          </KeepAlive>
+        </RouterView>
       </div>
     </main>
   </div>

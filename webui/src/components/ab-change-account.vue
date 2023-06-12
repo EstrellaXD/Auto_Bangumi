@@ -7,7 +7,11 @@ const { user, update } = useAuth();
 </script>
 
 <template>
-  <ab-popup v-model:show="show" :title="$t('topbar.profile.poptitle')" css="w-365px">
+  <ab-popup
+    v-model:show="show"
+    :title="$t('topbar.profile.poptitle')"
+    css="w-365px"
+  >
     <div space-y-16px>
       <ab-label :label="$t('topbar.profile.username')">
         <input
@@ -30,7 +34,9 @@ const { user, update } = useAuth();
       <div line></div>
 
       <div flex="~ justify-end">
-        <ab-button size="small" @click="update">{{$t('topbar.profile.updatebtn')}}</ab-button>
+        <ab-button size="small" @click="update">{{
+          $t('topbar.profile.updatebtn')
+        }}</ab-button>
       </div>
     </div>
   </ab-popup>

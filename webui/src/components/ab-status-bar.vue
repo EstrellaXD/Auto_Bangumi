@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue';
-import { Earth, AddOne, More } from '@icon-park/vue-next';
+import { AddOne, Earth, More } from '@icon-park/vue-next';
 
 withDefaults(
   defineProps<{
@@ -32,7 +32,7 @@ defineEmits(['clickAdds']);
           btn-click
           @click="() => $emit('changeLang')"
         />
-        
+
         <AddOne
           theme="outline"
           size="24"

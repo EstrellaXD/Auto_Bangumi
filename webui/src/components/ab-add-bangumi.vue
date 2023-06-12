@@ -124,9 +124,9 @@ async function subscribe() {
       ></ab-setting>
 
       <div flex="~ justify-end">
-        <ab-button size="small" :loading="analysis.loading" @click="analyser"
-          >{{$t('topbar.add.analyse')}}</ab-button
-        >
+        <ab-button size="small" :loading="analysis.loading" @click="analyser">{{
+          $t('topbar.add.analyse')
+        }}</ab-button>
       </div>
     </div>
 

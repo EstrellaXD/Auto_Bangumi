@@ -1,7 +1,7 @@
 <script lang="ts" setup>
+import { useI18n } from 'vue-i18n';
 import type { BangumiRule } from '#/bangumi';
 import type { SettingItem } from '#/components';
-import { useI18n } from 'vue-i18n';
 
 const { t } = useI18n({ useScope: 'global' });
 const rule = defineModel<BangumiRule>('rule', {

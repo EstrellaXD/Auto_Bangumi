@@ -29,13 +29,15 @@ definePage({
         >
           <pre text-main>{{ log }}</pre>
         </div>
-  
+
         <div flex="~ justify-end" space-x-10px mt-12px>
-          <ab-button type="warn" size="small" @click="reset">{{$t('log.reset')}}</ab-button>
-          <ab-button size="small" @click="copy">{{$t('log.copy')}}</ab-button>
+          <ab-button type="warn" size="small" @click="reset">{{
+            $t('log.reset')
+          }}</ab-button>
+          <ab-button size="small" @click="copy">{{ $t('log.copy') }}</ab-button>
         </div>
       </ab-container>
-  
+
       <div grow w-500px space-y-20px>
         <ab-container :title="$t('log.contactinfo')">
           <div space-y-12px>
@@ -45,44 +47,44 @@ definePage({
                 link="https://github.com/EstrellaXD/Auto_Bangumi"
                 target="_blank"
               >
-              {{$t('log.go')}}
+                {{ $t('log.go') }}
               </ab-button>
             </ab-label>
-  
+
             <ab-label label="WebUI Repo">
               <ab-button
                 size="small"
                 link="https://github.com/Rewrite0/Auto_Bangumi_WebUI"
                 target="_blank"
               >
-              {{$t('log.go')}}
+                {{ $t('log.go') }}
               </ab-button>
             </ab-label>
-  
+
             <div line></div>
-  
+
             <ab-label label="Twitter">
               <ab-button
                 size="small"
                 link="https://twitter.com/Estrella_Pan"
                 target="_blank"
               >
-              {{$t('log.go')}}
+                {{ $t('log.go') }}
               </ab-button>
             </ab-label>
-  
+
             <ab-label label="Telegram Group">
               <ab-button
                 size="small"
                 link="https://t.me/autobangumi"
                 target="_blank"
               >
-              {{$t('log.join')}}
+                {{ $t('log.join') }}
               </ab-button>
             </ab-label>
           </div>
         </ab-container>
-  
+
         <ab-container :title="$t('log.bugrepo')">
           <div space-y-12px>
             <ab-button
@@ -94,9 +96,9 @@ definePage({
               link="https://github.com/EstrellaXD/Auto_Bangumi/issues"
               >Github Issue</ab-button
             >
-  
+
             <div line></div>
-  
+
             <ab-button
               mx-auto
               text-16px

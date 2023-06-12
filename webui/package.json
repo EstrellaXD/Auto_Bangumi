@@ -30,7 +30,6 @@
   "devDependencies": {
     "@antfu/eslint-config": "^0.38.6",
     "@icon-park/vue-next": "^1.4.2",
-    "@intlify/unplugin-vue-i18n": "^0.11.0",
     "@storybook/addon-essentials": "^7.0.12",
     "@storybook/addon-interactions": "^7.0.12",
     "@storybook/addon-links": "^7.0.12",

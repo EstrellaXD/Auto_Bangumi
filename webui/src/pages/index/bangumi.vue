@@ -105,7 +105,7 @@ definePage({
         :season="i.season"
         @click="() => open(i)"
       ></ab-bangumi-card>
-  
+
       <ab-edit-rule
         v-model:show="editRule.show"
         v-model:rule="editRule.item"

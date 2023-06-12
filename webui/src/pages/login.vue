@@ -32,13 +32,15 @@ definePage({
         <div line></div>
 
         <div flex="~ justify-end">
-          <ab-button size="small" @click="login">{{$t('login.loginbtn')}}</ab-button>
+          <ab-button size="small" @click="login">{{
+            $t('login.loginbtn')
+          }}</ab-button>
         </div>
       </div>
     </ab-container>
 
     <div bg="#C7C4AB" text-white rounded-4px py-4px px-2em text-main>
-      <div>{{$t('login.default')}}: admin adminadmin</div>
+      <div>{{ $t('login.default') }}: admin adminadmin</div>
     </div>
   </div>
 </template>

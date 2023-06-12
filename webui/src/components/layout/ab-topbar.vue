@@ -8,6 +8,7 @@ import {
   Refresh,
 } from '@icon-park/vue-next';
 import { useI18n } from 'vue-i18n';
+
 const { t, locale } = useI18n({ useScope: 'global' });
 const search = ref('');
 const show = ref(false);
@@ -66,14 +67,14 @@ onUnmounted(() => {
   offUpdate();
 });
 
-function changeLocale(){
-  if(localStorage.getItem('lang') === 'zh-CN'){
-    let newLang = 'en-US';
+function changeLocale() {
+  if (localStorage.getItem('lang') === 'zh-CN') {
+    const newLang = 'en-US';
     locale.value = newLang;
     localStorage.setItem('lang', newLang);
     location.reload();
   } else {
-    let newLang = 'zh-CN';
+    const newLang = 'zh-CN';
     locale.value = newLang;
     localStorage.setItem('lang', newLang);
     location.reload();
@@ -91,7 +92,7 @@ function changeLocale(){
     <ab-search v-model:value="search" hidden />
 
     <div ml-auto>
-        <ab-status-bar
+      <ab-status-bar
         :items="items"
         :running="running"
         @click-add="() => (showAdd = true)"

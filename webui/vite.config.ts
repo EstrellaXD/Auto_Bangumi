@@ -6,8 +6,6 @@ import AutoImport from 'unplugin-auto-import/vite';
 import Components from 'unplugin-vue-components/vite';
 import VueRouter from 'unplugin-vue-router/vite';
 import { VueRouterAutoImports } from 'unplugin-vue-router';
-import vueI18n from '@intlify/unplugin-vue-i18n/vite';
-import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -35,9 +33,6 @@ export default defineConfig({
         'src/components/layout',
         'src/components/setting',
       ],
-    }),
-    vueI18n({
-        include: path.resolve(__dirname, './src/locales/lang/**')
     }),
   ],
   css: {
