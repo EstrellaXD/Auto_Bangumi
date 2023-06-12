@@ -31,10 +31,10 @@ watch(show, (val) => {
   }
 });
 
-const showDeleteFileDialog = (type: 'disable' | 'delete') => {
+function showDeleteFileDialog(type: 'disable' | 'delete') {
   deleteFileDialog.show = true;
   deleteFileDialog.type = type;
-};
+}
 
 const close = () => (show.value = false);
 
