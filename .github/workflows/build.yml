@@ -27,7 +27,7 @@ jobs:
   build-webui:
     if: >
       (github.event_name == 'pull_request') ||
-      (github.event_name == 'push' && github.ref_type == 'tag' && (contains(github.ref, 'alpha') || contains(github.ref, 'beta'))
+      (github.event_name == 'push' && github.ref_type == 'tag' && (contains(github.ref, 'alpha') || contains(github.ref, 'beta')))
     runs-on: ubuntu-latest
     needs: [test]
     steps:
