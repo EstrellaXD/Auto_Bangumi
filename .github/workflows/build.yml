@@ -31,9 +31,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test]
     steps:
-      - name: Debug
-        run: |
-          echo "${{
       - name: Checkout
         uses: actions/checkout@v3
 
