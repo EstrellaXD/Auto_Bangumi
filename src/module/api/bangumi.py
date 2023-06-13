@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 
@@ -7,6 +9,7 @@ from module.models import BangumiData
 from module.manager import TorrentManager
 from module.security import get_current_user
 
+logger = logging.getLogger(__name__)
 
 @router.get(
     "/api/v1/bangumi/getAll", tags=["bangumi"], response_model=list[BangumiData]
@@ -39,7 +42,11 @@ async def update_rule(data: BangumiData, current_user=Depends(get_current_user))
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
         )
     with TorrentManager() as torrent:
-        return torrent.update_rule(data)
+        try:
+            return torrent.update_rule(data)
+        except Exception as e:
+            logger.error(f"Failed to update rule: {e}")
+            return JSONResponse(status_code=500, content={"message": "Failed"})
 
 
 @router.delete("/api/v1/bangumi/deleteRule/{bangumi_id}", tags=["bangumi"])
