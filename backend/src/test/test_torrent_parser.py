@@ -1,3 +1,6 @@
+import sys
+
+import pytest
 from module.parser.analyser import torrent_parser
 from module.parser.analyser.torrent_parser import get_path_basename
 
@@ -80,5 +83,6 @@ class TestGetPathBasename:
     def test_path_with_trailing_slash(self):
         assert get_path_basename('/path/to/folder/') == 'folder'
 
+    @pytest.mark.skipif(not sys.platform.startswith("win"), reason="Windows specific")
     def test_windows_path(self):
         assert get_path_basename('C:\\path\\to\\file.txt') == 'file.txt'
