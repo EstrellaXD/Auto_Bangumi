@@ -43,7 +43,7 @@ def get_season(seasons: list) -> int:
     for season in ss:
         if re.search(r"第 \d 季", season.get("season")) is not None:
             date = season.get("air_date").split("-")
-            [year, _ , _] = date
+            [year, _, _] = date
             now_year = time.localtime().tm_year
             if int(year) <= now_year:
                 return int(re.findall(r"\d", season.get("season"))[0])
@@ -64,16 +64,24 @@ def tmdb_parser(title, language) -> TMDBInfo | None:
                     break
             url_info = info_url(id, language)
             info_content = req.get_json(url_info)
-            season = [{"season": s.get("name"), "air_date": s.get("air_date"), "poster_path": s.get("poster_path")} for s in info_content.get("seasons")]
+            season = [
+                {
+                    "season": s.get("name"),
+                    "air_date": s.get("air_date"),
+                    "poster_path": s.get("poster_path")
+                } for s in info_content.get("seasons")
+            ]
             last_season = get_season(season)
             original_title = info_content.get("original_name")
             official_title = info_content.get("name")
             year_number = info_content.get("first_air_date").split("-")[0]
-            return TMDBInfo(id, official_title, original_title, season, last_season, str(year_number))
+            return TMDBInfo(
+                id,
+                official_title,
+                original_title,
+                season,
+                last_season,
+                str(year_number)
+            )
         else:
             return None
-
-
-if __name__ == '__main__':
-    title = "海盗战记"
-    print(tmdb_parser(title, "zh").last_season)

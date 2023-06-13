@@ -1,6 +1,11 @@
 import logging
 
-from .plugin import *
+from .plugin import (
+    TelegramNotification,
+    ServerChanNotification,
+    BarkNotification,
+    WecomNotification,
+)
 
 from module.models import Notification
 from module.conf import settings
@@ -37,14 +42,8 @@ class PostNotification:
             poster_path = db.match_poster(notify.official_title)
         if poster_path:
             poster_link = "https://mikanani.me" + poster_path
-            # text = f"""
-            # 番剧名称：{notify.official_title}\n季度： 第{notify.season}季\n更新集数： 第{notify.episode}集\n{poster_link}\n
-            # """
         else:
             poster_link = "https://mikanani.me"
-            # text = f"""
-            # 番剧名称：{notify.official_title}\n季度： 第{notify.season}季\n更新集数： 第{notify.episode}集\n
-            # """
         notify.poster_path = poster_link
 
     def send_msg(self, notify: Notification) -> bool:
@@ -62,12 +61,3 @@ class PostNotification:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.notifier.__exit__(exc_type, exc_val, exc_tb)
-
-if __name__ == "__main__":
-    info = Notification(
-        official_title="魔法纪录 魔法少女小圆外传",
-        season=2,
-        episode=1,
-    )
-    with PostNotification() as client:
-        client.send_msg(info)
