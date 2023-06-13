@@ -36,14 +36,16 @@ RUN apk add --no-cache \
     sed -i '/bcrypt/d' requirements.txt && \
     pip install --no-cache-dir -r requirements.txt && \
     # Unzip WebUI \
-    unzip dist.zip -d /app/templates && \
+    unzip dist.zip && \
+    mv dist templates && \
     # Add user
     addgroup -S ab -g 911 && \
     adduser -S ab -G ab -h /ab -s /bin/bash -u 911 && \
     # Clear
     rm -rf \
         /root/.cache \
-        /tmp/*
+        /tmp/* \
+        /app/dist.zip
 
 COPY --chmod=755 backend/src/. .
 COPY --chmod=755 backend/src/docker /
