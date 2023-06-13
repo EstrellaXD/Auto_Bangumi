@@ -1,16 +1,15 @@
 import logging
 
-from .plugin import (
-    TelegramNotification,
-    ServerChanNotification,
-    BarkNotification,
-    WecomNotification,
-)
-
-from module.models import Notification
 from module.conf import settings
 from module.database import BangumiDatabase
+from module.models import Notification
 
+from .plugin import (
+    BarkNotification,
+    ServerChanNotification,
+    TelegramNotification,
+    WecomNotification,
+)
 
 logger = logging.getLogger(__name__)
 
