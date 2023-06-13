@@ -179,12 +179,13 @@ class BangumiDatabase(DataConnector):
         return [self.__db_to_data(x) for x in dict_data]
 
     def not_added(self) -> list[BangumiData]:
-        condition = {"added": 0, "rule_name": None, "save_path": None}
-        dict_data = self._search_datas(
-            table_name=self.__table_name,
-            condition=condition,
+        self._cursor.execute(
+            """
+            SELECT * FROM bangumi 
+            WHERE added = 0 OR rule_name IS NULL OR save_path IS NULL
+            """
         )
-        return [self.__db_to_data(x) for x in dict_data]
+        return self.__fetch_data()
 
     def gen_id(self) -> int:
         self._cursor.execute(
@@ -215,7 +216,24 @@ class BangumiDatabase(DataConnector):
                 return True
         return False
 
+
 if __name__ == '__main__':
     with BangumiDatabase() as db:
+        db.update_table()
+        data = BangumiData(
+            id=1,
+            title_raw="",
+            official_title="",
+            poster_link="",
+            rss_link=[],
+            eps_collect=0,
+            eps_total=0,
+            eps_update=0,
+            eps_complete=False,
+            added=False,
+            rule_name=None,
+            save_path=None,
+        )
+        db.insert(data)
         print(db.not_added())
         print(db.not_complete())
