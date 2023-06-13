@@ -18,8 +18,8 @@ RULES = [
 ]
 
 SUBTITLE_LANG = {
-    "zh-tw": ["TC", "CHT", "cht", "繁", "zh-tw"],
-    "zh": ["SC", "CHS", "chs", "简", "zh"],
+    "zh-tw": ["tc", "cht", "繁", "zh-tw"],
+    "zh": ["sc", "chs", "简", "zh"],
 }
 
 
@@ -54,7 +54,7 @@ def get_season_and_title(season_and_title) -> tuple[str, int]:
 def get_subtitle_lang(subtitle_name: str) -> str:
     for key, value in SUBTITLE_LANG.items():
         for v in value:
-            if v in subtitle_name:
+            if v in subtitle_name.lower():
                 return key
 
 
