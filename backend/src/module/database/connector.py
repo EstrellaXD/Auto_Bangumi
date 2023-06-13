@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 class DataConnector:
     def __init__(self):
         # Create folder if not exists
-        if not os.path.exists(os.path.dirname(DATA_PATH)):
-            os.makedirs(os.path.dirname(DATA_PATH))
+        DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
+
         self._conn = sqlite3.connect(DATA_PATH)
         self._cursor = self._conn.cursor()
 
@@ -99,10 +99,14 @@ class DataConnector:
 
     def _delete(self, table_name: str, condition: dict):
         condition_sql = " AND ".join([f"{key} = :{key}" for key in condition.keys()])
-        self._cursor.execute(f"DELETE FROM {table_name} WHERE {condition_sql}", condition)
+        self._cursor.execute(
+            f"DELETE FROM {table_name} WHERE {condition_sql}", condition
+        )
         self._conn.commit()
 
-    def _search(self, table_name: str, keys: list[str] | None = None, condition: dict = None):
+    def _search(
+        self, table_name: str, keys: list[str] | None = None, condition: dict = None
+    ):
         if keys is None:
             select_sql = "*"
         else:
@@ -111,20 +115,25 @@ class DataConnector:
             self._cursor.execute(f"SELECT {select_sql} FROM {table_name}")
         else:
             custom_condition = condition.pop("_custom_condition", None)
-            condition_sql = " AND ".join([f"{key} = :{key}" for key in condition.keys()]) + (
-                f" AND {custom_condition}" if custom_condition else ""
-            )
+            condition_sql = " AND ".join(
+                [f"{key} = :{key}" for key in condition.keys()]
+            ) + (f" AND {custom_condition}" if custom_condition else "")
             self._cursor.execute(
-                f"SELECT {select_sql} FROM {table_name} WHERE {condition_sql}", condition
+                f"SELECT {select_sql} FROM {table_name} WHERE {condition_sql}",
+                condition,
             )
 
-    def _search_data(self, table_name: str, keys: list[str] | None = None, condition: dict = None) -> dict:
+    def _search_data(
+        self, table_name: str, keys: list[str] | None = None, condition: dict = None
+    ) -> dict:
         if keys is None:
             keys = self.__get_table_columns(table_name)
         self._search(table_name, keys, condition)
         return dict(zip(keys, self._cursor.fetchone()))
 
-    def _search_datas(self, table_name: str, keys: list[str] | None = None, condition: dict = None) -> list[dict]:
+    def _search_datas(
+        self, table_name: str, keys: list[str] | None = None, condition: dict = None
+    ) -> list[dict]:
         if keys is None:
             keys = self.__get_table_columns(table_name)
         self._search(table_name, keys, condition)
