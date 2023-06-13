@@ -3,7 +3,7 @@ import pathlib
 
 from .config import settings
 
-LOG_ROOT = pathlib.Path("src/data")
+LOG_ROOT = pathlib.Path("data")
 LOG_PATH = LOG_ROOT / "log.txt"
 
 

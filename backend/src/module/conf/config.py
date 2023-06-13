@@ -10,7 +10,7 @@ from module.models.config import Config
 from .const import ENV_TO_ATTR
 
 logger = logging.getLogger(__name__)
-CONFIG_ROOT = pathlib.Path("src/config")
+CONFIG_ROOT = pathlib.Path("config")
 
 
 try:
