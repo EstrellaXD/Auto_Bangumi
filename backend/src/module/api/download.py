@@ -8,6 +8,7 @@ from module.security import get_current_user
 
 router = APIRouter(prefix="/download", tags=["download"])
 
+
 @router.post("/analysis")
 async def analysis(link: RssLink, current_user=Depends(get_current_user)):
     if not current_user:

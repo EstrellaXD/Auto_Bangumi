@@ -5,6 +5,9 @@
 
 python3 -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple install -r requirements-dev.txt
 
+# install git-hooks for pre-commit before committing.
+pre-commit install
+
 cd src || exit
 
 CONFIG_DIR="config"

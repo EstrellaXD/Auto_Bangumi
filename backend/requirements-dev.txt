@@ -1,2 +1,4 @@
 -r requirements.txt
 ruff
+black
+pre-commit

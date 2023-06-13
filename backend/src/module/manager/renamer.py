@@ -36,9 +36,7 @@ class Renamer(DownloadClient):
         elif method == "advance":
             return f"{bangumi_name} S{season}E{episode}{file_info.suffix}"
         elif method == "normal":
-            logger.warning(
-                "[Renamer] Normal rename method is deprecated."
-            )
+            logger.warning("[Renamer] Normal rename method is deprecated.")
             return file_info.media_path
         elif method == "subtitle_pn":
             return f"{file_info.title} S{season}E{episode}.{file_info.language}{file_info.suffix}"
@@ -71,10 +69,10 @@ class Renamer(DownloadClient):
                 )
                 if renamed:
                     n = Notification(
-                            official_title=bangumi_name,
-                            season=ep.season,
-                            episode=ep.episode,
-                        )
+                        official_title=bangumi_name,
+                        season=ep.season,
+                        episode=ep.episode,
+                    )
                     return n
         else:
             logger.warning(f"[Renamer] {media_path} parse failed")
@@ -176,6 +174,7 @@ class Renamer(DownloadClient):
 
 if __name__ == "__main__":
     from module.conf import setup_logger
+
     settings.log.debug_enable = True
     setup_logger()
     with Renamer() as renamer:

@@ -19,9 +19,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     username = form_data.username
     password = form_data.password
     auth_user(username, password)
-    token = create_access_token(
-        data={"sub": username}, expires_delta=timedelta(days=1)
-    )
+    token = create_access_token(data={"sub": username}, expires_delta=timedelta(days=1))
 
     return {"access_token": token, "token_type": "bearer", "expire": 86400}
 
@@ -32,10 +30,7 @@ async def refresh(current_user: User = Depends(get_current_user)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
         )
-    token = create_access_token(
-        data = {"sub": current_user.username}
-
-    )
+    token = create_access_token(data={"sub": current_user.username})
     return {"access_token": token, "token_type": "bearer", "expire": 86400}
 
 

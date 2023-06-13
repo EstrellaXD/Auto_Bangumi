@@ -57,3 +57,7 @@ target-version = "py310"
 [tool.ruff.mccabe]
 # Unlike Flake8, default to a complexity level of 10.
 max-complexity = 10
+
+[tool.black]
+line-length = 88
+target-version = ['py310', 'py311']

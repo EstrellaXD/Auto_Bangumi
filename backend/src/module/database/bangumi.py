@@ -1,8 +1,8 @@
 import logging
 
+from module.ab_decorator import locked
 from module.database.connector import DataConnector
 from module.models import BangumiData
-from module.ab_decorator import locked
 
 logger = logging.getLogger(__name__)
 

@@ -7,4 +7,3 @@ class RSSTorrents(BaseModel):
     analyze: bool = Field(..., alias="analyze")
     enabled: bool = Field(..., alias="enabled")
     torrents: list[str] = Field(..., alias="torrents")
-

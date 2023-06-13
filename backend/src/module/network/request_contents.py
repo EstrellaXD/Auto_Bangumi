@@ -52,7 +52,11 @@ class RequestContent(RequestURL):
                 torrent_titles, torrent_urls, torrent_homepage
             ):
                 if re.search(_filter, _title) is None:
-                    torrents.append(TorrentInfo(name=_title, torrent_link=torrent_url, homepage=homepage))
+                    torrents.append(
+                        TorrentInfo(
+                            name=_title, torrent_link=torrent_url, homepage=homepage
+                        )
+                    )
             return torrents
         except ConnectionError:
             return []

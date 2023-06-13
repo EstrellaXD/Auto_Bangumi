@@ -78,7 +78,9 @@ class QbDownloader:
 
     @qb_connect_failed_wait
     def torrents_info(self, status_filter, category, tag=None):
-        return self._client.torrents_info(status_filter=status_filter, category=category, tag=tag)
+        return self._client.torrents_info(
+            status_filter=status_filter, category=category, tag=tag
+        )
 
     def torrents_add(self, urls, save_path, category, torrent_files=None):
         resp = self._client.torrents_add(
@@ -87,7 +89,7 @@ class QbDownloader:
             torrent_files=torrent_files,
             save_path=save_path,
             category=category,
-            use_auto_torrent_management=False
+            use_auto_torrent_management=False,
         )
         return resp == "Ok."
 
