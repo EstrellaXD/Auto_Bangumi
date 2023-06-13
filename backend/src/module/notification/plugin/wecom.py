@@ -1,6 +1,7 @@
 import logging
 
 from module.network import RequestContent
+from module.models import Notification
 
 logger = logging.getLogger(__name__)
 
@@ -14,21 +15,26 @@ class WecomNotification(RequestContent):
         self.notification_url = f"{chat_id}"
         self.token = token
 
-    def post_msg(self, text: str) -> bool:
+    @staticmethod
+    def gen_message(notify: Notification) -> str:
+        text = f"""
+        番剧名称：{notify.official_title}\n季度： 第{notify.season}季\n更新集数： 第{notify.episode}集\n{notify.poster_path}\n
+        """
+        return text
+
+    def post_msg(self, notify: Notification) -> bool:
         ##Change message format to match Wecom push better
-        info = text.split("：")
-        print(info)
-        title = "【番剧更新】" + info[1].split("\n")[0].strip()
-        msg = info[2].split("\n")[0].strip()+" "+info[3].split("\n")[0].strip()
-        picurl = info[3].split("\n")[1].strip()
+        title = "【番剧更新】" + notify.official_title
+        msg = self.gen_message(notify)
+        picurl = notify.poster_path
         #Default pic to avoid blank in message. Resolution:1068*455
-        if picurl == "":
+        if picurl == "https://mikanani.me":
             picurl = "https://article.biliimg.com/bfs/article/d8bcd0408bf32594fd82f27de7d2c685829d1b2e.png"
         data = {
-            "key":self.token,                                       
-            "type": "news", 
-            "title": title,                                                              
-            "msg": msg, 
+            "key":self.token,
+            "type": "news",
+            "title": title,
+            "msg": msg,
             "picurl":picurl
         }
         resp = self.post_data(self.notification_url, data)

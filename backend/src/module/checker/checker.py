@@ -1,7 +1,9 @@
+import os.path
 
-from module.conf import settings
 from module.downloader import DownloadClient
 from module.network import RequestContent
+from module.conf import settings
+from module.models import Config
 
 
 class Checker:
@@ -45,8 +47,7 @@ class Checker:
 
     @staticmethod
     def check_first_run() -> bool:
-        token_exist = False if settings.rss_parser.token in ["", "token"] else True
-        if token_exist:
-            return False
-        else:
+        if settings.dict() == Config().dict():
             return True
+        else:
+            return False

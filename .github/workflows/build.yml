@@ -25,10 +25,10 @@ jobs:
         pytest
 
   build-webui:
-    runs-on: ubuntu-latest
     if: >
-      ${{ github.event_name == 'pull_request' }} ||
-      ${{ github.event_name == 'push' && github.ref_type == 'tag' && (contains(github.ref, 'alpha') || contains(github.ref, 'beta')) }}
+      (github.event_name == 'pull_request') ||
+      (github.event_name == 'push' && github.ref_type == 'tag' && (contains(github.ref, 'alpha') || contains(github.ref, 'beta')))
+    runs-on: ubuntu-latest
     needs: [test]
     steps:
       - name: Checkout
@@ -143,10 +143,10 @@ jobs:
           cache-to: type=gha, scope=${{ github.workflow }}
 
   release:
-    runs-on: ubuntu-latest
     if: >
-      ${{ github.event_name == 'pull_request' && github.event.pull_request.merged == true }}
-        || ${{ github.event_name == 'push' && contains(github.ref, 'tags') }}
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      (github.event_name == 'push' && contains(github.ref, 'tags'))
+    runs-on: ubuntu-latest
     needs: [ build-docker ]
     steps:
 
