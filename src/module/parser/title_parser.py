@@ -49,7 +49,16 @@ class TitleParser:
                 "jp": episode.title_jp,
             }
             title_raw = episode.title_en if episode.title_en else episode.title_zh
-            official_title = titles[language] if titles[language] else titles["zh"]
+            if titles[language]:
+                official_title = titles[language]
+            elif titles["zh"]:
+                official_title = titles["zh"]
+            elif titles["en"]:
+                official_title = titles["en"]
+            elif titles["jp"]:
+                official_title = titles["jp"]
+            else:
+                official_title = title_raw
             _season = episode.season
             data = BangumiData(
                 official_title=official_title,
