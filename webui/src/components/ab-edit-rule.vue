@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useI18n } from 'vue-i18n';
 import type { BangumiRule } from '#/bangumi';
 
 const emit = defineEmits<{
@@ -10,7 +11,7 @@ const emit = defineEmits<{
     opts: { id: number; deleteFile: boolean }
   ): void;
 }>();
-
+const { t } = useI18n({ useScope: 'global' });
 const show = defineModel('show', { default: false });
 const rule = defineModel<BangumiRule>('rule', {
   required: true,
@@ -52,9 +53,9 @@ function emitEnable() {
 
 const popupTitle = computed(() => {
   if (rule.value.deleted) {
-    return 'Enable Rule';
+    return t('homepage.rule.enablerule');
   } else {
-    return 'Edit Rule';
+    return t('homepage.rule.editrule');
   }
 });
 
@@ -70,15 +71,17 @@ const boxSize = computed(() => {
 <template>
   <ab-popup v-model:show="show" :title="popupTitle" :css="boxSize">
     <div v-if="rule.deleted">
-      <div>Do you want to enable this rule?</div>
+      <div>{{ $t('homepage.rule.enablehit') }}</div>
 
       <div line my-8px></div>
 
       <div fx-cer justify-center space-x-10px>
-        <ab-button size="small" type="warn" @click="() => emitEnable()"
-          >Yes</ab-button
-        >
-        <ab-button size="small" @click="() => close()">No</ab-button>
+        <ab-button size="small" type="warn" @click="() => emitEnable()">{{
+          $t('homepage.rule.yesbtn')
+        }}</ab-button>
+        <ab-button size="small" @click="() => close()">{{
+          $t('homepage.rule.nobtn')
+        }}</ab-button>
       </div>
     </div>
 
@@ -90,29 +93,37 @@ const boxSize = computed(() => {
           size="small"
           type="warn"
           @click="() => showDeleteFileDialog('disable')"
-          >Disable</ab-button
+          >{{ $t('homepage.rule.disable') }}</ab-button
         >
         <ab-button
           size="small"
           type="warn"
           @click="() => showDeleteFileDialog('delete')"
-          >Delete</ab-button
+          >{{ $t('homepage.rule.delete') }}</ab-button
         >
-        <ab-button size="small" @click="emitApply">Apply</ab-button>
+        <ab-button size="small" @click="emitApply">{{
+          $t('homepage.rule.apply')
+        }}</ab-button>
       </div>
     </div>
 
-    <ab-popup v-model:show="deleteFileDialog.show" title="Delete">
-      <div>Delete Local File?</div>
+    <ab-popup
+      v-model:show="deleteFileDialog.show"
+      :title="$t('homepage.rule.delete')"
+    >
+      <div>{{ $t('homepage.rule.deletehit') }}</div>
       <div line my-8px></div>
 
       <div fx-cer justify-center space-x-10px>
-        <ab-button size="small" type="warn" @click="() => emitdeleteFile(true)"
-          >Yes</ab-button
+        <ab-button
+          size="small"
+          type="warn"
+          @click="() => emitdeleteFile(true)"
+          >{{ $t('homepage.rule.yesbtn') }}</ab-button
         >
-        <ab-button size="small" @click="() => emitdeleteFile(false)"
-          >No</ab-button
-        >
+        <ab-button size="small" @click="() => emitdeleteFile(false)">{{
+          $t('homepage.rule.nobtn')
+        }}</ab-button>
       </div>
     </ab-popup>
   </ab-popup>

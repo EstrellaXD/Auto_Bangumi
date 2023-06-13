@@ -111,22 +111,22 @@ async function subscribe() {
 </script>
 
 <template>
-  <ab-popup v-model:show="show" title="Add Bangumi" css="w-360px">
+  <ab-popup v-model:show="show" :title="$t('topbar.add.title')" css="w-360px">
     <div v-if="!analysis.next" space-y-12px>
       <ab-setting
         v-model:data="rss"
-        label="RSS Link"
+        :label="$t('topbar.add.rsslink')"
         type="input"
         :prop="{
-          placeholder: 'Please enter the RSS link',
+          placeholder: $t('topbar.add.placeholder'),
         }"
         :bottom-line="true"
       ></ab-setting>
 
       <div flex="~ justify-end">
-        <ab-button size="small" :loading="analysis.loading" @click="analyser"
-          >Analyse</ab-button
-        >
+        <ab-button size="small" :loading="analysis.loading" @click="analyser">{{
+          $t('topbar.add.analyse')
+        }}</ab-button>
       </div>
     </div>
 

@@ -1,7 +1,9 @@
 <script lang="ts" setup>
+import { useI18n } from 'vue-i18n';
 import type { Downloader, DownloaderType } from '#/config';
 import type { SettingItem } from '#/components';
 
+const { t } = useI18n({ useScope: 'global' });
 const { getSettingGroup } = useConfigStore();
 
 const downloader = getSettingGroup('downloader');
@@ -10,7 +12,7 @@ const downloaderType: DownloaderType = ['qbittorrent'];
 const items: SettingItem<Downloader>[] = [
   {
     configKey: 'type',
-    label: 'Downloader Type',
+    label: t('config.downloaderset.type'),
     type: 'select',
     css: 'w-115px',
     prop: {
@@ -19,7 +21,7 @@ const items: SettingItem<Downloader>[] = [
   },
   {
     configKey: 'host',
-    label: 'Host',
+    label: t('config.downloaderset.host'),
     type: 'input',
     prop: {
       type: 'text',
@@ -28,7 +30,7 @@ const items: SettingItem<Downloader>[] = [
   },
   {
     configKey: 'username',
-    label: 'Username',
+    label: t('config.downloaderset.username'),
     type: 'input',
     prop: {
       type: 'text',
@@ -37,7 +39,7 @@ const items: SettingItem<Downloader>[] = [
   },
   {
     configKey: 'password',
-    label: 'Password',
+    label: t('config.downloaderset.password'),
     type: 'input',
     prop: {
       type: 'text',
@@ -47,7 +49,7 @@ const items: SettingItem<Downloader>[] = [
   },
   {
     configKey: 'path',
-    label: 'Download Path',
+    label: t('config.downloaderset.path'),
     type: 'input',
     prop: {
       type: 'text',
@@ -56,14 +58,14 @@ const items: SettingItem<Downloader>[] = [
   },
   {
     configKey: 'ssl',
-    label: 'SSL',
+    label: t('config.downloaderset.ssl'),
     type: 'switch',
   },
 ];
 </script>
 
 <template>
-  <ab-fold-panel title="Downloader Setting">
+  <ab-fold-panel :title="$t('config.downloaderset.title')">
     <div space-y-12px>
       <ab-setting
         v-for="i in items"

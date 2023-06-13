@@ -1,7 +1,9 @@
 <script lang="ts" setup>
+import { useI18n } from 'vue-i18n';
 import type { BangumiRule } from '#/bangumi';
 import type { SettingItem } from '#/components';
 
+const { t } = useI18n({ useScope: 'global' });
 const rule = defineModel<BangumiRule>('rule', {
   required: true,
 });
@@ -9,7 +11,7 @@ const rule = defineModel<BangumiRule>('rule', {
 const items: SettingItem<BangumiRule>[] = [
   {
     configKey: 'official_title',
-    label: 'Officical Ttile',
+    label: t('homepage.rule.officaltitle'),
     type: 'input',
     prop: {
       type: 'text',
@@ -17,7 +19,7 @@ const items: SettingItem<BangumiRule>[] = [
   },
   {
     configKey: 'year',
-    label: 'Year',
+    label: t('homepage.rule.year'),
     type: 'input',
     css: 'w-72px',
     prop: {
@@ -26,7 +28,7 @@ const items: SettingItem<BangumiRule>[] = [
   },
   {
     configKey: 'season',
-    label: 'Season',
+    label: t('homepage.rule.season'),
     type: 'input',
     css: 'w-72px',
     prop: {
@@ -36,7 +38,7 @@ const items: SettingItem<BangumiRule>[] = [
   },
   {
     configKey: 'offset',
-    label: 'Offset',
+    label: t('homepage.rule.offset'),
     type: 'input',
     css: 'w-72px',
     prop: {
@@ -45,7 +47,7 @@ const items: SettingItem<BangumiRule>[] = [
   },
   {
     configKey: 'filter',
-    label: 'Exclude',
+    label: t('homepage.rule.exclude'),
     type: 'dynamic-tags',
     bottomLine: true,
   },

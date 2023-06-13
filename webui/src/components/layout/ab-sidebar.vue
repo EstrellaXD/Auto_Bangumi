@@ -9,6 +9,7 @@ import {
   Play,
   SettingTwo,
 } from '@icon-park/vue-next';
+import { useI18n } from 'vue-i18n';
 
 const props = withDefaults(
   defineProps<{
@@ -18,7 +19,7 @@ const props = withDefaults(
     open: false,
   }
 );
-
+const { t } = useI18n({ useScope: 'global' });
 const show = ref(props.open);
 const toggle = () => (show.value = !show.value);
 const route = useRoute();
@@ -28,39 +29,39 @@ const items = [
   {
     id: 1,
     icon: Home,
-    label: 'HomePage',
+    label: t('sidebar.homepage'),
     path: '/bangumi',
   },
   {
     id: 2,
     icon: Calendar,
-    label: 'Calendar',
+    label: t('sidebar.calendar'),
     path: '/calendar',
     hidden: true,
   },
   {
     id: 3,
     icon: Play,
-    label: 'Player',
+    label: t('sidebar.player'),
     path: '/player',
   },
   {
     id: 4,
     icon: Download,
-    label: 'Downloader',
+    label: t('sidebar.downloader'),
     path: '/downloader',
     hidden: true,
   },
   {
     id: 5,
     icon: Log,
-    label: 'Log',
+    label: t('sidebar.log'),
     path: '/log',
   },
   {
     id: 6,
     icon: SettingTwo,
-    label: 'Config',
+    label: t('sidebar.config'),
     path: '/config',
   },
 ];
@@ -88,7 +89,7 @@ const items = [
         @click="toggle"
       >
         <div :class="[!show && 'abs opacity-0']" transition-opacity>
-          <div text-h1>Menu</div>
+          <div text-h1>{{ $t('sidebar.title') }}</div>
         </div>
 
         <MenuUnfold
@@ -138,7 +139,7 @@ const items = [
         @click="logout"
       >
         <Logout :size="24" />
-        <div text-h2>Logout</div>
+        <div text-h2>{{ $t('sidebar.logout') }}</div>
       </div>
     </div>
   </div>

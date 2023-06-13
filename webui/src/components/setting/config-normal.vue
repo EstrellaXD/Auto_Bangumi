@@ -1,7 +1,9 @@
 <script lang="ts" setup>
+import { useI18n } from 'vue-i18n';
 import type { Log, Program } from '#/config';
 import type { SettingItem } from '#/components';
 
+const { t } = useI18n({ useScope: 'global' });
 const { getSettingGroup } = useConfigStore();
 
 const program = getSettingGroup('program');
@@ -10,7 +12,7 @@ const log = getSettingGroup('log');
 const programItems: SettingItem<Program>[] = [
   {
     configKey: 'rss_time',
-    label: 'Interval Time of Rss',
+    label: t('config.normalset.rssintvl'),
     type: 'input',
     css: 'w-72px',
     prop: {
@@ -20,7 +22,7 @@ const programItems: SettingItem<Program>[] = [
   },
   {
     configKey: 'rename_time',
-    label: 'Interval Time of Rename',
+    label: t('config.normalset.renameintvl'),
     type: 'input',
     css: 'w-72px',
     prop: {
@@ -30,7 +32,7 @@ const programItems: SettingItem<Program>[] = [
   },
   {
     configKey: 'webui_port',
-    label: 'WebUI Port',
+    label: t('config.normalset.webport'),
     type: 'input',
     css: 'w-72px',
     prop: {
@@ -43,13 +45,13 @@ const programItems: SettingItem<Program>[] = [
 
 const logItems: SettingItem<Log> = {
   configKey: 'debug_enable',
-  label: 'Debug',
+  label: t('config.normalset.debug'),
   type: 'switch',
 };
 </script>
 
 <template>
-  <ab-fold-panel title="Normal Setting">
+  <ab-fold-panel :title="$t('config.normalset.title')">
     <div space-y-12px>
       <ab-setting
         v-for="i in programItems"
