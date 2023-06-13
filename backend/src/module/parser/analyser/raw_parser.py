@@ -179,3 +179,8 @@ def raw_parser(raw: str) -> Episode | None:
     return Episode(
         name_en, name_zh, name_jp, season, sr, episode, sub, group, dpi, source
     )
+
+
+if __name__ == '__main__':
+    title = "[动漫国字幕组&LoliHouse] THE MARGINAL SERVICE - 08 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕]"
+    print(raw_parser(title))

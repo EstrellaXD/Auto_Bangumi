@@ -57,8 +57,3 @@ def eps_complete():
             bd.update_list(datas)
 
 
-if __name__ == "__main__":
-    from module.conf import setup_logger
-
-    setup_logger()
-    eps_complete()

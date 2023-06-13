@@ -93,23 +93,16 @@ class DataConnector:
         )
         self._conn.commit()
 
-    
     def _delete_all(self, table_name: str):
         self._cursor.execute(f"DELETE FROM {table_name}")
         self._conn.commit()
 
-    
-    def _search_data(self, table_name: str, keys: list[str] | None, condition: str) -> dict:
-        if keys is None:
-            self._cursor.execute(f"SELECT * FROM {table_name} WHERE {condition}")
-        else:
-            self._cursor.execute(
-                f"SELECT {', '.join(keys)} FROM {table_name} WHERE {condition}"
-            )
-        return dict(zip(keys, self._cursor.fetchone()))
+    def _delete(self, table_name: str, condition: dict):
+        condition_sql = " AND ".join([f"{key} = :{key}" for key in condition.keys()])
+        self._cursor.execute(f"DELETE FROM {table_name} WHERE {condition_sql}", condition)
+        self._conn.commit()
 
-    
-    def _search_datas(self, table_name: str, keys: list[str] | None, condition: str = None) -> list[dict]:
+    def _search(self, table_name: str, keys: list[str] | None = None, condition: dict = None):
         if keys is None:
             select_sql = "*"
         else:
@@ -117,9 +110,24 @@ class DataConnector:
         if condition is None:
             self._cursor.execute(f"SELECT {select_sql} FROM {table_name}")
         else:
-            self._cursor.execute(
-                f"SELECT {select_sql} FROM {table_name} WHERE {condition}"
+            custom_condition = condition.pop("_custom_condition", None)
+            condition_sql = " AND ".join([f"{key} = :{key}" for key in condition.keys()]) + (
+                f" AND {custom_condition}" if custom_condition else ""
             )
+            self._cursor.execute(
+                f"SELECT {select_sql} FROM {table_name} WHERE {condition_sql}", condition
+            )
+
+    def _search_data(self, table_name: str, keys: list[str] | None = None, condition: dict = None) -> dict:
+        if keys is None:
+            keys = self.__get_table_columns(table_name)
+        self._search(table_name, keys, condition)
+        return dict(zip(keys, self._cursor.fetchone()))
+
+    def _search_datas(self, table_name: str, keys: list[str] | None = None, condition: dict = None) -> list[dict]:
+        if keys is None:
+            keys = self.__get_table_columns(table_name)
+        self._search(table_name, keys, condition)
         return [dict(zip(keys, row)) for row in self._cursor.fetchall()]
 
     def _table_exists(self, table_name: str) -> bool:
@@ -128,6 +136,10 @@ class DataConnector:
             (table_name,),
         )
         return len(self._cursor.fetchall()) == 1
+
+    def __get_table_columns(self, table_name: str) -> list[str]:
+        self._cursor.execute(f"PRAGMA table_info({table_name})")
+        return [column_info[1] for column_info in self._cursor.fetchall()]
 
     @staticmethod
     def __python_to_sqlite_type(value) -> str:
