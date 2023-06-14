@@ -39,15 +39,21 @@ class Connector:
         self._cursor.executemany(sql, params)
         self._conn.commit()
 
-    def fetchall(self) -> dict:
+    def fetchall(self, keys: str = None) -> list[dict]:
         datas = self._cursor.fetchall()
-        for data in datas:
-            yield dict(zip(self._columns, data))
+        if keys:
+            return [dict(zip(keys, data)) for data in datas]
+        return [dict(zip(self._columns, data)) for data in datas]
 
-    def fetchone(self):
-        return dict(zip(self._columns, self._cursor.fetchone()))
+    def fetchone(self, keys: list[str] = None) -> dict:
+        data = self._cursor.fetchone()
+        if data:
+            if keys:
+                return dict(zip(keys, data))
+            return dict(zip(self._columns, data))
 
-    def fetchmany(self, size: int):
+    def fetchmany(self, keys: list[str], size: int) -> list[dict]:
         datas = self._cursor.fetchmany(size)
-        for data in datas:
-            yield dict(zip(self._columns, data))
+        if keys:
+            return [dict(zip(keys, data)) for data in datas]
+        return [dict(zip(self._columns, data)) for data in datas]

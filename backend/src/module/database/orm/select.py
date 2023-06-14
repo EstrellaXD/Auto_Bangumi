@@ -33,7 +33,7 @@ class Select:
         if keys is None:
             keys = ["*"]
         columns = ", ".join(keys)
-
+        condition_sql = self.__select_condition(conditions, combine_operator)
         self._connector.execute(
             f"""
             SELECT {columns} FROM {self._table_name}
@@ -41,7 +41,7 @@ class Select:
             """,
             conditions,
         )
-        return self._connector.fetchone()
+        return self._connector.fetchone(keys)
 
     def many(
         self,
@@ -51,10 +51,11 @@ class Select:
         limit: int = None,
     ):
         if keys is None:
-            keys = ["*"]
+            columns = "*"
+        else:
+            columns = ", ".join(keys)
         if limit is None:
             limit = 10000
-        columns = ", ".join(keys)
         condition_sql = self.__select_condition(conditions, combine_operator)
         self._connector.execute(
             f"""
@@ -64,7 +65,7 @@ class Select:
             """,
             conditions,
         )
-        return self._connector.fetchall()
+        return self._connector.fetchall(keys)
 
     def column(self, keys: list[str]):
         columns = ", ".join(keys)
@@ -73,7 +74,7 @@ class Select:
             SELECT {columns} FROM {self._table_name}
             """,
         )
-        return self._connector.fetchall()
+        return self._connector.fetchall(keys)
 
     @staticmethod
     def __select_condition(conditions: dict, combine_operator: str = "AND"):

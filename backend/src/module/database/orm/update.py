@@ -7,22 +7,20 @@ class Update:
     def __init__(self, connector, table_name: str, data: dict):
         self._connector = connector
         self._table_name = table_name
-        self._columns = data.items()
+        self._example_data = data
 
     def table(self):
         columns = ", ".join(
             [
                 f"{key} {self.__python_to_sqlite_type(value)}"
-                for key, value in self._columns
+                for key, value in self._example_data.items()
             ]
         )
         create_table_sql = f"CREATE TABLE IF NOT EXISTS {self._table_name} ({columns});"
         self._connector.execute(create_table_sql)
         self._connector.execute(f"PRAGMA table_info({self._table_name})")
-        existing_columns = {
-            column_info[1]: column_info for column_info in self._connector.fetchall()
-        }
-        for key, value in self._columns:
+        existing_columns = self._connector._columns
+        for key, value in self._example_data.items():
             if key not in existing_columns:
                 insert_column = self.__python_to_sqlite_type(value)
                 if value is None:
@@ -46,7 +44,7 @@ class Update:
         return True
 
     def many(self, data: list[dict]) -> bool:
-        columns = ", ".join(data[0].keys())
+        columns = ", ".join([f"{key} = :{key}" for key in data[0].keys()])
         self._connector.executemany(
             f"""
             UPDATE {self._table_name}
