@@ -1,9 +1,8 @@
 <script lang="ts" setup>
-import { useI18n } from 'vue-i18n';
 import type { Proxy, ProxyType } from '#/config';
 import type { SettingItem } from '#/components';
 
-const { t } = useI18n({ useScope: 'global' });
+const { t } = useMyI18n();
 const { getSettingGroup } = useConfigStore();
 
 const proxy = getSettingGroup('proxy');
@@ -12,12 +11,12 @@ const proxyType: ProxyType = ['http', 'https', 'socks5'];
 const items: SettingItem<Proxy>[] = [
   {
     configKey: 'enable',
-    label: t('config.proxy_set.enable'),
+    label: () => t('config.proxy_set.enable'),
     type: 'switch',
   },
   {
     configKey: 'type',
-    label: t('config.proxy_set.type'),
+    label: () => t('config.proxy_set.type'),
     type: 'select',
     prop: {
       items: proxyType,
@@ -26,7 +25,7 @@ const items: SettingItem<Proxy>[] = [
   },
   {
     configKey: 'host',
-    label: t('config.proxy_set.host'),
+    label: () => t('config.proxy_set.host'),
     type: 'input',
     prop: {
       type: 'text',
@@ -35,7 +34,7 @@ const items: SettingItem<Proxy>[] = [
   },
   {
     configKey: 'port',
-    label: t('config.proxy_set.port'),
+    label: () => t('config.proxy_set.port'),
     type: 'input',
     prop: {
       type: 'text',
@@ -44,7 +43,7 @@ const items: SettingItem<Proxy>[] = [
   },
   {
     configKey: 'username',
-    label: t('config.proxy_set.username'),
+    label: () => t('config.proxy_set.username'),
     type: 'input',
     prop: {
       type: 'text',
@@ -53,7 +52,7 @@ const items: SettingItem<Proxy>[] = [
   },
   {
     configKey: 'password',
-    label: t('config.proxy_set.password'),
+    label: () => t('config.proxy_set.password'),
     type: 'input',
     prop: {
       type: 'text',

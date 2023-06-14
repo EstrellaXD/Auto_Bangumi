@@ -103,7 +103,7 @@
       "delete_bad_torrent": "删除坏种"
     },
     "notification_set": {
-      "title": "推送设置",
+      "title": "通知设置",
       "enable": "启用",
       "type": "类型",
       "token": "Token",

@@ -17,7 +17,10 @@ withDefaults(
   }
 );
 
-defineEmits(['clickAdd']);
+defineEmits<{
+  (e: 'changeLang'): void;
+  (e: 'clickAdd'): void;
+}>();
 </script>
 
 <template>

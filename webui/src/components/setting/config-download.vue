@@ -1,9 +1,8 @@
 <script lang="ts" setup>
-import { useI18n } from 'vue-i18n';
 import type { Downloader, DownloaderType } from '#/config';
 import type { SettingItem } from '#/components';
 
-const { t } = useI18n({ useScope: 'global' });
+const { t } = useMyI18n();
 const { getSettingGroup } = useConfigStore();
 
 const downloader = getSettingGroup('downloader');
@@ -12,7 +11,7 @@ const downloaderType: DownloaderType = ['qbittorrent'];
 const items: SettingItem<Downloader>[] = [
   {
     configKey: 'type',
-    label: t('config.downloader_set.type'),
+    label: () => t('config.downloader_set.type'),
     type: 'select',
     css: 'w-115px',
     prop: {
@@ -21,7 +20,7 @@ const items: SettingItem<Downloader>[] = [
   },
   {
     configKey: 'host',
-    label: t('config.downloader_set.host'),
+    label: () => t('config.downloader_set.host'),
     type: 'input',
     prop: {
       type: 'text',
@@ -30,7 +29,7 @@ const items: SettingItem<Downloader>[] = [
   },
   {
     configKey: 'username',
-    label: t('config.downloader_set.username'),
+    label: () => t('config.downloader_set.username'),
     type: 'input',
     prop: {
       type: 'text',
@@ -39,7 +38,7 @@ const items: SettingItem<Downloader>[] = [
   },
   {
     configKey: 'password',
-    label: t('config.downloader_set.password'),
+    label: () => t('config.downloader_set.password'),
     type: 'input',
     prop: {
       type: 'text',
@@ -49,7 +48,7 @@ const items: SettingItem<Downloader>[] = [
   },
   {
     configKey: 'path',
-    label: t('config.downloader_set.path'),
+    label: () => t('config.downloader_set.path'),
     type: 'input',
     prop: {
       type: 'text',
@@ -58,7 +57,7 @@ const items: SettingItem<Downloader>[] = [
   },
   {
     configKey: 'ssl',
-    label: t('config.downloader_set.ssl'),
+    label: () => t('config.downloader_set.ssl'),
     type: 'switch',
   },
 ];

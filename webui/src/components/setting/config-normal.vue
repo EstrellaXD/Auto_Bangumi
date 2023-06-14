@@ -1,9 +1,8 @@
 <script lang="ts" setup>
-import { useI18n } from 'vue-i18n';
 import type { Log, Program } from '#/config';
 import type { SettingItem } from '#/components';
 
-const { t } = useI18n({ useScope: 'global' });
+const { t } = useMyI18n();
 const { getSettingGroup } = useConfigStore();
 
 const program = getSettingGroup('program');
@@ -12,7 +11,7 @@ const log = getSettingGroup('log');
 const programItems: SettingItem<Program>[] = [
   {
     configKey: 'rss_time',
-    label: t('config.normal_set.rss_interval'),
+    label: () => t('config.normal_set.rss_interval'),
     type: 'input',
     css: 'w-72px',
     prop: {
@@ -22,7 +21,7 @@ const programItems: SettingItem<Program>[] = [
   },
   {
     configKey: 'rename_time',
-    label: t('config.normal_set.rename_interval'),
+    label: () => t('config.normal_set.rename_interval'),
     type: 'input',
     css: 'w-72px',
     prop: {
@@ -32,7 +31,7 @@ const programItems: SettingItem<Program>[] = [
   },
   {
     configKey: 'webui_port',
-    label: t('config.normal_set.web_port'),
+    label: () => t('config.normal_set.web_port'),
     type: 'input',
     css: 'w-72px',
     prop: {
@@ -45,7 +44,7 @@ const programItems: SettingItem<Program>[] = [
 
 const logItems: SettingItem<Log> = {
   configKey: 'debug_enable',
-  label: t('config.normal_set.debug'),
+  label: () => t('config.normal_set.debug'),
   type: 'switch',
 };
 </script>

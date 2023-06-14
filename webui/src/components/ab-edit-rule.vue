@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { useI18n } from 'vue-i18n';
 import type { BangumiRule } from '#/bangumi';
 
 const emit = defineEmits<{
@@ -11,7 +10,9 @@ const emit = defineEmits<{
     opts: { id: number; deleteFile: boolean }
   ): void;
 }>();
-const { t } = useI18n({ useScope: 'global' });
+
+const { t } = useMyI18n();
+
 const show = defineModel('show', { default: false });
 const rule = defineModel<BangumiRule>('rule', {
   required: true,

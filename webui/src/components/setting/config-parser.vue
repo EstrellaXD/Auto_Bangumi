@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { useI18n } from 'vue-i18n';
 import type {
   RssParser,
   RssParserLang,
@@ -8,12 +7,13 @@ import type {
 } from '#/config';
 import type { SettingItem } from '#/components';
 
-const { t } = useI18n({ useScope: 'global' });
+const { t } = useMyI18n();
 const { getSettingGroup } = useConfigStore();
 
 const parser = getSettingGroup('rss_parser');
 
 const sourceItems: RssParserType = ['mikan'];
+/** @ts-expect-error Incorrect order */
 const langs: RssParserLang = ['zh', 'en', 'jp'];
 /** @ts-expect-error Incorrect order */
 const parserMethods: RssParserMethodType = ['tmdb', 'mikan', 'parser'];
@@ -21,12 +21,12 @@ const parserMethods: RssParserMethodType = ['tmdb', 'mikan', 'parser'];
 const items: SettingItem<RssParser>[] = [
   {
     configKey: 'enable',
-    label: t('config.parser_set.enable'),
+    label: () => t('config.parser_set.enable'),
     type: 'switch',
   },
   {
     configKey: 'type',
-    label: t('config.parser_set.source'),
+    label: () => t('config.parser_set.source'),
     type: 'select',
     css: 'w-115px',
     prop: {
@@ -35,7 +35,7 @@ const items: SettingItem<RssParser>[] = [
   },
   {
     configKey: 'token',
-    label: t('config.parser_set.token'),
+    label: () => t('config.parser_set.token'),
     type: 'input',
     prop: {
       type: 'text',
@@ -44,7 +44,7 @@ const items: SettingItem<RssParser>[] = [
   },
   {
     configKey: 'custom_url',
-    label: t('config.parser_set.url'),
+    label: () => t('config.parser_set.url'),
     type: 'input',
     prop: {
       type: 'text',
@@ -54,7 +54,7 @@ const items: SettingItem<RssParser>[] = [
   },
   {
     configKey: 'language',
-    label: t('config.parser_set.language'),
+    label: () => t('config.parser_set.language'),
     type: 'select',
     prop: {
       items: langs,
@@ -62,7 +62,7 @@ const items: SettingItem<RssParser>[] = [
   },
   {
     configKey: 'parser_type',
-    label: t('config.parser_set.type'),
+    label: () => t('config.parser_set.type'),
     type: 'select',
     prop: {
       items: parserMethods,
@@ -70,7 +70,7 @@ const items: SettingItem<RssParser>[] = [
   },
   {
     configKey: 'filter',
-    label: t('config.parser_set.exclude'),
+    label: () => t('config.parser_set.exclude'),
     type: 'dynamic-tags',
   },
 ];

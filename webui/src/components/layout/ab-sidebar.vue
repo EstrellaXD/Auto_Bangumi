@@ -9,7 +9,6 @@ import {
   Play,
   SettingTwo,
 } from '@icon-park/vue-next';
-import { useI18n } from 'vue-i18n';
 
 const props = withDefaults(
   defineProps<{
@@ -19,7 +18,9 @@ const props = withDefaults(
     open: false,
   }
 );
-const { t } = useI18n({ useScope: 'global' });
+
+const { t } = useMyI18n();
+
 const show = ref(props.open);
 const toggle = () => (show.value = !show.value);
 const route = useRoute();
@@ -29,39 +30,39 @@ const items = [
   {
     id: 1,
     icon: Home,
-    label: t('sidebar.homepage'),
+    label: () => t('sidebar.homepage'),
     path: '/bangumi',
   },
   {
     id: 2,
     icon: Calendar,
-    label: t('sidebar.calendar'),
+    label: () => t('sidebar.calendar'),
     path: '/calendar',
     hidden: true,
   },
   {
     id: 3,
     icon: Play,
-    label: t('sidebar.player'),
+    label: () => t('sidebar.player'),
     path: '/player',
   },
   {
     id: 4,
     icon: Download,
-    label: t('sidebar.downloader'),
+    label: () => t('sidebar.downloader'),
     path: '/downloader',
     hidden: true,
   },
   {
     id: 5,
     icon: Log,
-    label: t('sidebar.log'),
+    label: () => t('sidebar.log'),
     path: '/log',
   },
   {
     id: 6,
     icon: SettingTwo,
-    label: t('sidebar.config'),
+    label: () => t('sidebar.config'),
     path: '/config',
   },
 ];
@@ -107,7 +108,7 @@ const items = [
         :key="i.id"
         :to="i.path"
         replace
-        :title="i.label"
+        :title="i.label()"
         fx-cer
         px-24px
         space-x-42px
@@ -122,7 +123,7 @@ const items = [
         ]"
       >
         <Component :is="i.icon" :size="24" />
-        <div text-h2>{{ i.label }}</div>
+        <div text-h2>{{ i.label() }}</div>
       </RouterLink>
 
       <div
