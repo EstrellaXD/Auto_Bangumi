@@ -1,0 +1,6 @@
+{
+  "i18n-ally.localesPaths": ["src/i18n"],
+  "commentTranslate.targetLanguage": "zh-CN",
+  "i18n-ally.sourceLanguage": "en",
+  "typescript.tsdk": "node_modules/typescript/lib"
+}

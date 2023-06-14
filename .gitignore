@@ -121,7 +121,6 @@ celerybeat.pid
 
 # Environments
 .idea
-.vscode
 .env
 .venv
 env/
@@ -162,6 +161,8 @@ cython_debug/
 #.idea/
 
 # Custom
+#
+# backend
 /backend/src/test.py
 
 /backend/src/module/run_debug.sh
@@ -175,4 +176,33 @@ test.*
 .run
 /backend/src/templates/
 /backend/src/config/
+/src/debuger.py
 /backend/src/dist.zip
+
+# webui
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist.zip
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
