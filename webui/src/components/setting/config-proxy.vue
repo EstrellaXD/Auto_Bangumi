@@ -12,12 +12,12 @@ const proxyType: ProxyType = ['http', 'https', 'socks5'];
 const items: SettingItem<Proxy>[] = [
   {
     configKey: 'enable',
-    label: t('config.proxyset.enable'),
+    label: t('config.proxy_set.enable'),
     type: 'switch',
   },
   {
     configKey: 'type',
-    label: t('config.proxyset.type'),
+    label: t('config.proxy_set.type'),
     type: 'select',
     prop: {
       items: proxyType,
@@ -26,7 +26,7 @@ const items: SettingItem<Proxy>[] = [
   },
   {
     configKey: 'host',
-    label: t('config.proxyset.host'),
+    label: t('config.proxy_set.host'),
     type: 'input',
     prop: {
       type: 'text',
@@ -35,7 +35,7 @@ const items: SettingItem<Proxy>[] = [
   },
   {
     configKey: 'port',
-    label: t('config.proxyset.port'),
+    label: t('config.proxy_set.port'),
     type: 'input',
     prop: {
       type: 'text',
@@ -44,7 +44,7 @@ const items: SettingItem<Proxy>[] = [
   },
   {
     configKey: 'username',
-    label: t('config.proxyset.username'),
+    label: t('config.proxy_set.username'),
     type: 'input',
     prop: {
       type: 'text',
@@ -53,7 +53,7 @@ const items: SettingItem<Proxy>[] = [
   },
   {
     configKey: 'password',
-    label: t('config.proxyset.password'),
+    label: t('config.proxy_set.password'),
     type: 'input',
     prop: {
       type: 'text',
@@ -64,7 +64,7 @@ const items: SettingItem<Proxy>[] = [
 </script>
 
 <template>
-  <ab-fold-panel :title="$t('config.proxyset.title')">
+  <ab-fold-panel :title="$t('config.proxy_set.title')">
     <div space-y-12px>
       <ab-setting
         v-for="i in items"

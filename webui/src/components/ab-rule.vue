@@ -11,7 +11,7 @@ const rule = defineModel<BangumiRule>('rule', {
 const items: SettingItem<BangumiRule>[] = [
   {
     configKey: 'official_title',
-    label: t('homepage.rule.officaltitle'),
+    label: t('homepage.rule.offical_title'),
     type: 'input',
     prop: {
       type: 'text',

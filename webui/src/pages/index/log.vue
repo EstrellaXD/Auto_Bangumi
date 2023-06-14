@@ -39,7 +39,7 @@ definePage({
       </ab-container>
 
       <div grow w-500px space-y-20px>
-        <ab-container :title="$t('log.contactinfo')">
+        <ab-container :title="$t('log.contact_info')">
           <div space-y-12px>
             <ab-label label="Github">
               <ab-button
@@ -85,7 +85,7 @@ definePage({
           </div>
         </ab-container>
 
-        <ab-container :title="$t('log.bugrepo')">
+        <ab-container :title="$t('log.bug_repo')">
           <div space-y-12px>
             <ab-button
               mx-auto

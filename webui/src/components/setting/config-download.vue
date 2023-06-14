@@ -12,7 +12,7 @@ const downloaderType: DownloaderType = ['qbittorrent'];
 const items: SettingItem<Downloader>[] = [
   {
     configKey: 'type',
-    label: t('config.downloaderset.type'),
+    label: t('config.downloader_set.type'),
     type: 'select',
     css: 'w-115px',
     prop: {
@@ -21,7 +21,7 @@ const items: SettingItem<Downloader>[] = [
   },
   {
     configKey: 'host',
-    label: t('config.downloaderset.host'),
+    label: t('config.downloader_set.host'),
     type: 'input',
     prop: {
       type: 'text',
@@ -30,7 +30,7 @@ const items: SettingItem<Downloader>[] = [
   },
   {
     configKey: 'username',
-    label: t('config.downloaderset.username'),
+    label: t('config.downloader_set.username'),
     type: 'input',
     prop: {
       type: 'text',
@@ -39,7 +39,7 @@ const items: SettingItem<Downloader>[] = [
   },
   {
     configKey: 'password',
-    label: t('config.downloaderset.password'),
+    label: t('config.downloader_set.password'),
     type: 'input',
     prop: {
       type: 'text',
@@ -49,7 +49,7 @@ const items: SettingItem<Downloader>[] = [
   },
   {
     configKey: 'path',
-    label: t('config.downloaderset.path'),
+    label: t('config.downloader_set.path'),
     type: 'input',
     prop: {
       type: 'text',
@@ -58,14 +58,14 @@ const items: SettingItem<Downloader>[] = [
   },
   {
     configKey: 'ssl',
-    label: t('config.downloaderset.ssl'),
+    label: t('config.downloader_set.ssl'),
     type: 'switch',
   },
 ];
 </script>
 
 <template>
-  <ab-fold-panel :title="$t('config.downloaderset.title')">
+  <ab-fold-panel :title="$t('config.downloader_set.title')">
     <div space-y-12px>
       <ab-setting
         v-for="i in items"

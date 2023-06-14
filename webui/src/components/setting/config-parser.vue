@@ -21,12 +21,12 @@ const parserMethods: RssParserMethodType = ['tmdb', 'mikan', 'parser'];
 const items: SettingItem<RssParser>[] = [
   {
     configKey: 'enable',
-    label: t('config.parserset.enable'),
+    label: t('config.parser_set.enable'),
     type: 'switch',
   },
   {
     configKey: 'type',
-    label: t('config.parserset.source'),
+    label: t('config.parser_set.source'),
     type: 'select',
     css: 'w-115px',
     prop: {
@@ -35,7 +35,7 @@ const items: SettingItem<RssParser>[] = [
   },
   {
     configKey: 'token',
-    label: t('config.parserset.token'),
+    label: t('config.parser_set.token'),
     type: 'input',
     prop: {
       type: 'text',
@@ -44,7 +44,7 @@ const items: SettingItem<RssParser>[] = [
   },
   {
     configKey: 'custom_url',
-    label: t('config.parserset.url'),
+    label: t('config.parser_set.url'),
     type: 'input',
     prop: {
       type: 'text',
@@ -54,7 +54,7 @@ const items: SettingItem<RssParser>[] = [
   },
   {
     configKey: 'language',
-    label: t('config.parserset.language'),
+    label: t('config.parser_set.language'),
     type: 'select',
     prop: {
       items: langs,
@@ -62,7 +62,7 @@ const items: SettingItem<RssParser>[] = [
   },
   {
     configKey: 'parser_type',
-    label: t('config.parserset.type'),
+    label: t('config.parser_set.type'),
     type: 'select',
     prop: {
       items: parserMethods,
@@ -70,14 +70,14 @@ const items: SettingItem<RssParser>[] = [
   },
   {
     configKey: 'filter',
-    label: t('config.parserset.exclude'),
+    label: t('config.parser_set.exclude'),
     type: 'dynamic-tags',
   },
 ];
 </script>
 
 <template>
-  <ab-fold-panel :title="$t('config.parserset.title')">
+  <ab-fold-panel :title="$t('config.parser_set.title')">
     <div space-y-12px>
       <ab-setting
         v-for="i in items"

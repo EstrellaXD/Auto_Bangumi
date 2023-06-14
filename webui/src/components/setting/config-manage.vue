@@ -12,12 +12,12 @@ const renameMethod: RenameMethod = ['normal', 'pn', 'advance', 'none'];
 const items: SettingItem<BangumiManage>[] = [
   {
     configKey: 'enable',
-    label: t('config.manageset.enable'),
+    label: t('config.manage_set.enable'),
     type: 'switch',
   },
   {
     configKey: 'rename_method',
-    label: t('config.manageset.method'),
+    label: t('config.manage_set.method'),
     type: 'select',
     prop: {
       items: renameMethod,
@@ -26,24 +26,24 @@ const items: SettingItem<BangumiManage>[] = [
   },
   {
     configKey: 'eps_complete',
-    label: t('config.manageset.eps'),
+    label: t('config.manage_set.eps'),
     type: 'switch',
   },
   {
     configKey: 'group_tag',
-    label: t('config.manageset.grouptag'),
+    label: t('config.manage_set.group_tag'),
     type: 'switch',
   },
   {
     configKey: 'remove_bad_torrent',
-    label: t('config.manageset.deletebadtorr'),
+    label: t('config.manage_set.delete_bad_torrent'),
     type: 'switch',
   },
 ];
 </script>
 
 <template>
-  <ab-fold-panel :title="$t('config.manageset.title')">
+  <ab-fold-panel :title="$t('config.manage_set.title')">
     <div space-y-12px>
       <ab-setting
         v-for="i in items"

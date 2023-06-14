@@ -33,7 +33,7 @@ definePage({
 
         <div flex="~ justify-end">
           <ab-button size="small" @click="login">{{
-            $t('login.loginbtn')
+            $t('login.login_btn')
           }}</ab-button>
         </div>
       </div>

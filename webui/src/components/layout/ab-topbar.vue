@@ -45,7 +45,7 @@ const items = [
   },
   {
     id: 5,
-    label: t('topbar.resetrule'),
+    label: t('topbar.reset_rule'),
     icon: Format,
     handle: resetRule,
   },
