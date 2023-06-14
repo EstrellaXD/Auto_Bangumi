@@ -3,8 +3,8 @@
     "title": "登录",
     "username": "用户名",
     "password": "密码",
-    "loginbtn": "登录",
-    "default": "默认账号密码 "
+    "login_btn": "登录",
+    "default": "默认账号密码"
   },
   "sidebar": {
     "title": "菜单",
@@ -13,7 +13,7 @@
     "log": "日志",
     "config": "设置",
     "logout": "退出",
-    "calendar": "日历",
+    "calendar": "番剧日历",
     "downloader": "下载器"
   },
   "topbar": {
@@ -21,64 +21,61 @@
     "pause": "暂停",
     "restart": "重启",
     "shutdown": "关闭",
-    "resetrule": "重置规则",
+    "reset_rule": "重置规则",
     "profile": {
-      "title": "账户资料",
-      "poptitle": "修改账户信息",
+      "title": "账户设置",
+      "pop_title": "修改账户",
       "username": "用户名",
       "password": "密码",
-      "updatebtn": "更新"
+      "update_btn": "更新"
     },
     "add": {
       "title": "添加番剧",
-      "rsslink": "RSS链接",
+      "rss_link": "RSS链接",
       "placeholder": "请输入RSS链接",
       "analyse": "分析"
     }
   },
   "homepage": {
-    "title": "番剧列表",
     "rule": {
-      "officaltitle": "官方名称",
+      "offical_title": "官方名称",
       "year": "年份",
       "season": "季度",
-      "offset": "偏移",
+      "offset": "剧集偏移",
       "exclude": "排除",
       "enable": "启用",
       "disable": "禁用",
       "delete": "删除",
       "apply": "应用",
-      "yesbtn": "是",
-      "nobtn": "否",
-      "enablehit": "确定要让规则生效吗？",
-      "deletehit": "删除本地文件？",
-      "enablerule": "启用规则",
-      "editrule": "编辑规则"
+      "yes_btn": "是",
+      "no_btn": "否",
+      "enable_hit": "确定启用该规则?",
+      "delete_hit": "是否删除本地文件?",
+      "enable_rule": "启用规则",
+      "edit_rule": "编辑规则"
     }
   },
   "player": {
-    "title": "播放器",
-    "hit": "请设置播放器地址"
+    "hit": "请设置媒体播放器地址"
   },
   "log": {
     "title": "日志",
     "reset": "重置",
     "copy": "复制",
-    "contactinfo": "联系方式",
+    "contact_info": "联系方式",
     "go": "访问",
     "join": "加入",
-    "bugrepo": "Bug反馈"
+    "bug_repo": "Bug 反馈"
   },
   "config": {
-    "title": "系统设置",
-    "normalset": {
-      "title": "一般设置",
-      "rssintvl": "RSS间隔",
-      "renameintvl": "重命名间隔",
-      "webport": "网页端口",
+    "normal_set": {
+      "title": "常规设置",
+      "rss_interval": "RSS 间隔",
+      "rename_interval": "重命名间隔",
+      "web_port": "网页端口",
       "debug": "调试"
     },
-    "parserset": {
+    "parser_set": {
       "title": "解析设置",
       "enable": "启用",
       "source": "数据源",
@@ -88,7 +85,7 @@
       "type": "解析类型",
       "exclude": "排除"
     },
-    "downloaderset": {
+    "downloader_set": {
       "title": "下载设置",
       "type": "下载器类型",
       "host": "下载器地址",
@@ -97,22 +94,22 @@
       "path": "下载地址",
       "ssl": "SSL"
     },
-    "manageset": {
+    "manage_set": {
       "title": "番剧管理设置",
       "enable": "启用",
       "method": "重命名方式",
-      "eps": "EPS完成",
-      "grouptag": "添加组标签",
-      "deletebadtorr": "删除坏种"
+      "eps": "番剧补全",
+      "group_tag": "添加组标签",
+      "delete_bad_torrent": "删除坏种"
     },
-    "notificationset": {
-      "title": "推送设置",
+    "notification_set": {
+      "title": "通知设置",
       "enable": "启用",
       "type": "类型",
       "token": "Token",
-      "chatid": "Chat ID"
+      "chat_id": "Chat ID"
     },
-    "proxyset": {
+    "proxy_set": {
       "title": "代理设置",
       "enable": "启用",
       "type": "类型",
@@ -121,7 +118,7 @@
       "username": "用户名",
       "password": "密码"
     },
-    "mediaplayerset": {
+    "media_player_set": {
       "title": "播放器设置",
       "type": "类型",
       "url": "播放器地址"

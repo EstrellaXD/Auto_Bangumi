@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { useI18n } from 'vue-i18n';
 import type { BangumiRule } from '#/bangumi';
 
 const emit = defineEmits<{
@@ -11,7 +10,9 @@ const emit = defineEmits<{
     opts: { id: number; deleteFile: boolean }
   ): void;
 }>();
-const { t } = useI18n({ useScope: 'global' });
+
+const { t } = useMyI18n();
+
 const show = defineModel('show', { default: false });
 const rule = defineModel<BangumiRule>('rule', {
   required: true,
@@ -53,9 +54,9 @@ function emitEnable() {
 
 const popupTitle = computed(() => {
   if (rule.value.deleted) {
-    return t('homepage.rule.enablerule');
+    return t('homepage.rule.enable_rule');
   } else {
-    return t('homepage.rule.editrule');
+    return t('homepage.rule.edit_rule');
   }
 });
 
@@ -71,16 +72,16 @@ const boxSize = computed(() => {
 <template>
   <ab-popup v-model:show="show" :title="popupTitle" :css="boxSize">
     <div v-if="rule.deleted">
-      <div>{{ $t('homepage.rule.enablehit') }}</div>
+      <div>{{ $t('homepage.rule.enable_hit') }}</div>
 
       <div line my-8px></div>
 
       <div fx-cer justify-center space-x-10px>
         <ab-button size="small" type="warn" @click="() => emitEnable()">{{
-          $t('homepage.rule.yesbtn')
+          $t('homepage.rule.yes_btn')
         }}</ab-button>
         <ab-button size="small" @click="() => close()">{{
-          $t('homepage.rule.nobtn')
+          $t('homepage.rule.no_btn')
         }}</ab-button>
       </div>
     </div>
@@ -111,7 +112,7 @@ const boxSize = computed(() => {
       v-model:show="deleteFileDialog.show"
       :title="$t('homepage.rule.delete')"
     >
-      <div>{{ $t('homepage.rule.deletehit') }}</div>
+      <div>{{ $t('homepage.rule.delete_hit') }}</div>
       <div line my-8px></div>
 
       <div fx-cer justify-center space-x-10px>
@@ -119,10 +120,10 @@ const boxSize = computed(() => {
           size="small"
           type="warn"
           @click="() => emitdeleteFile(true)"
-          >{{ $t('homepage.rule.yesbtn') }}</ab-button
+          >{{ $t('homepage.rule.yes_btn') }}</ab-button
         >
         <ab-button size="small" @click="() => emitdeleteFile(false)">{{
-          $t('homepage.rule.nobtn')
+          $t('homepage.rule.no_btn')
         }}</ab-button>
       </div>
     </ab-popup>

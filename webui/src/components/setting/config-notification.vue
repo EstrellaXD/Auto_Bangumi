@@ -1,9 +1,8 @@
 <script lang="ts" setup>
-import { useI18n } from 'vue-i18n';
 import type { Notification, NotificationType } from '#/config';
 import type { SettingItem } from '#/components';
 
-const { t } = useI18n({ useScope: 'global' });
+const { t } = useMyI18n();
 const { getSettingGroup } = useConfigStore();
 
 const notification = getSettingGroup('notification');
@@ -17,13 +16,13 @@ const notificationType: NotificationType = [
 const items: SettingItem<Notification>[] = [
   {
     configKey: 'enable',
-    label: t('config.notificationset.enable'),
+    label: () => t('config.notification_set.enable'),
     type: 'switch',
     bottomLine: true,
   },
   {
     configKey: 'type',
-    label: t('config.notificationset.type'),
+    label: () => t('config.notification_set.type'),
     type: 'select',
     css: 'w-140px',
     prop: {
@@ -32,7 +31,7 @@ const items: SettingItem<Notification>[] = [
   },
   {
     configKey: 'token',
-    label: t('config.notificationset.token'),
+    label: () => t('config.notification_set.token'),
     type: 'input',
     prop: {
       type: 'text',
@@ -41,7 +40,7 @@ const items: SettingItem<Notification>[] = [
   },
   {
     configKey: 'chat_id',
-    label: t('config.notificationset.chatid'),
+    label: () => t('config.notification_set.chat_id'),
     type: 'input',
     prop: {
       type: 'text',
@@ -52,7 +51,7 @@ const items: SettingItem<Notification>[] = [
 </script>
 
 <template>
-  <ab-fold-panel :title="$t('config.notificationset.title')">
+  <ab-fold-panel :title="$t('config.notification_set.title')">
     <div space-y-12px>
       <ab-setting
         v-for="i in items"

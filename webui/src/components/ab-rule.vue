@@ -1,9 +1,9 @@
 <script lang="ts" setup>
-import { useI18n } from 'vue-i18n';
 import type { BangumiRule } from '#/bangumi';
 import type { SettingItem } from '#/components';
 
-const { t } = useI18n({ useScope: 'global' });
+const { t } = useMyI18n();
+
 const rule = defineModel<BangumiRule>('rule', {
   required: true,
 });
@@ -11,7 +11,7 @@ const rule = defineModel<BangumiRule>('rule', {
 const items: SettingItem<BangumiRule>[] = [
   {
     configKey: 'official_title',
-    label: t('homepage.rule.officaltitle'),
+    label: () => t('homepage.rule.offical_title'),
     type: 'input',
     prop: {
       type: 'text',
@@ -19,7 +19,7 @@ const items: SettingItem<BangumiRule>[] = [
   },
   {
     configKey: 'year',
-    label: t('homepage.rule.year'),
+    label: () => t('homepage.rule.year'),
     type: 'input',
     css: 'w-72px',
     prop: {
@@ -28,7 +28,7 @@ const items: SettingItem<BangumiRule>[] = [
   },
   {
     configKey: 'season',
-    label: t('homepage.rule.season'),
+    label: () => t('homepage.rule.season'),
     type: 'input',
     css: 'w-72px',
     prop: {
@@ -38,7 +38,7 @@ const items: SettingItem<BangumiRule>[] = [
   },
   {
     configKey: 'offset',
-    label: t('homepage.rule.offset'),
+    label: () => t('homepage.rule.offset'),
     type: 'input',
     css: 'w-72px',
     prop: {
@@ -47,7 +47,7 @@ const items: SettingItem<BangumiRule>[] = [
   },
   {
     configKey: 'filter',
-    label: t('homepage.rule.exclude'),
+    label: () => t('homepage.rule.exclude'),
     type: 'dynamic-tags',
     bottomLine: true,
   },

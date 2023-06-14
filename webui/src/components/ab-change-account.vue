@@ -9,7 +9,7 @@ const { user, update } = useAuth();
 <template>
   <ab-popup
     v-model:show="show"
-    :title="$t('topbar.profile.poptitle')"
+    :title="$t('topbar.profile.pop_title')"
     css="w-365px"
   >
     <div space-y-16px>
@@ -35,7 +35,7 @@ const { user, update } = useAuth();
 
       <div flex="~ justify-end">
         <ab-button size="small" @click="update">{{
-          $t('topbar.profile.updatebtn')
+          $t('topbar.profile.update_btn')
         }}</ab-button>
       </div>
     </div>

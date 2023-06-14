@@ -3,7 +3,7 @@
     "title": "Login",
     "username": "Username",
     "password": "Password",
-    "loginbtn": "Login",
+    "login_btn": "Login",
     "default": "Default"
   },
   "sidebar": {
@@ -21,25 +21,24 @@
     "pause": "Pause",
     "restart": "Restart",
     "shutdown": "Shutdown",
-    "resetrule": "Reset Rule",
+    "reset_rule": "Reset Rule",
     "profile": {
       "title": "Profile",
-      "poptitle": "Change Account",
+      "pop_title": "Change Account",
       "username": "Username",
       "password": "Password",
-      "updatebtn": "Update"
+      "update_btn": "Update"
     },
     "add": {
       "title": "Add Bangumi",
-      "rsslink": "RSS Link",
+      "rss_link": "RSS Link",
       "placeholder": "Please enter the RSS link",
       "analyse": "Analyse"
     }
   },
   "homepage": {
-    "title": "Bangumi List",
     "rule": {
-      "officaltitle": "Official Title",
+      "offical_title": "Official Title",
       "year": "Year",
       "season": "Season",
       "offset": "Offset",
@@ -48,37 +47,35 @@
       "disable": "Disable",
       "delete": "Delete",
       "apply": "Apply",
-      "yesbtn": "Yes",
-      "nobtn": "No",
-      "enablehit": "Do you want to enable this rule?",
-      "deletehit": "Delete Local File?",
-      "enablerule": "Enable Rule",
-      "editrule": "Edit Rule"
+      "yes_btn": "Yes",
+      "no_btn": "No",
+      "enable_hit": "Do you want to enable this rule?",
+      "delete_hit": "Delete Local File?",
+      "enable_rule": "Enable Rule",
+      "edit_rule": "Edit Rule"
     }
   },
   "player": {
-    "title": "Player",
     "hit": "Please set up the media player"
   },
   "log": {
     "title": "Log",
     "reset": "Reset",
     "copy": "Copy",
-    "contactinfo": "Contact Infomation",
+    "contact_info": "Contact Infomation",
     "go": "Go",
     "join": "Join",
-    "bugrepo": "Bug Report"
+    "bug_repo": "Bug Report"
   },
   "config": {
-    "title": "Config",
-    "normalset": {
+    "normal_set": {
       "title": "Normal Setting",
-      "rssintvl": "Interval Time of Rss",
-      "renameintvl": "Interval Time of Rename",
-      "webport": "WebUI Port",
+      "rss_interval": "Interval Time of Rss",
+      "rename_interval": "Interval Time of Rename",
+      "web_port": "WebUI Port",
       "debug": "Debug"
     },
-    "parserset": {
+    "parser_set": {
       "title": "Parser Setting",
       "enable": "Enable",
       "source": "Source",
@@ -88,7 +85,7 @@
       "type": "Parser Type",
       "exclude": "Exclude"
     },
-    "downloaderset": {
+    "downloader_set": {
       "title": "Downloader Setting",
       "type": "Downloader Type",
       "host": "Host",
@@ -97,22 +94,22 @@
       "path": "Download Path",
       "ssl": "SSL"
     },
-    "manageset": {
+    "manage_set": {
       "title": "Manage Setting",
       "enable": "Enable",
       "method": "Rename Method",
       "eps": "EPS complete",
-      "grouptag": "Add Group Tag",
-      "deletebadtorr": "Delete Bad Torrent"
+      "group_tag": "Add Group Tag",
+      "delete_bad_torrent": "Delete Bad Torrent"
     },
-    "notificationset": {
+    "notification_set": {
       "title": "Notification Setting",
       "enable": "Enable",
       "type": "Type",
       "token": "Token",
-      "chatid": "Chat ID"
+      "chat_id": "Chat ID"
     },
-    "proxyset": {
+    "proxy_set": {
       "title": "Proxy Setting",
       "enable": "Enable",
       "type": "Proxy Type",
@@ -121,7 +118,7 @@
       "username": "Username",
       "password": "Password"
     },
-    "mediaplayerset": {
+    "media_player_set": {
       "title": "Media Player Setting",
       "type": "type",
       "url": "url"

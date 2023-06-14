@@ -9,7 +9,6 @@ definePage({
 </script>
 
 <template>
-  <ab-page-title :title="$t('config.title')"></ab-page-title>
   <div overflow-auto mt-12px flex-grow>
     <div h-full flex="~ col">
       <div grid="~ cols-2" gap-20px mb-auto>

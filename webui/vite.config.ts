@@ -6,6 +6,7 @@ import AutoImport from 'unplugin-auto-import/vite';
 import Components from 'unplugin-vue-components/vite';
 import VueRouter from 'unplugin-vue-router/vite';
 import { VueRouterAutoImports } from 'unplugin-vue-router';
+import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -21,7 +22,14 @@ export default defineConfig({
     }),
     UnoCSS(),
     AutoImport({
-      imports: ['vue', 'vitest', 'pinia', '@vueuse/core', VueRouterAutoImports],
+      imports: [
+        'vue',
+        'vitest',
+        'pinia',
+        '@vueuse/core',
+        VueRouterAutoImports,
+        'vue-i18n',
+      ],
       dts: 'types/dts/auto-imports.d.ts',
       dirs: ['src/api', 'src/store', 'src/hooks', 'src/utils'],
     }),
@@ -33,6 +41,9 @@ export default defineConfig({
         'src/components/layout',
         'src/components/setting',
       ],
+    }),
+    VueI18nPlugin({
+      include: resolve(__dirname, './src/i18n/**'),
     }),
   ],
   css: {

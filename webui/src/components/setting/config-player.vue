@@ -3,19 +3,19 @@ const { types, type, url } = storeToRefs(usePlayerStore());
 </script>
 
 <template>
-  <ab-fold-panel :title="$t('config.mediaplayerset.title')">
+  <ab-fold-panel :title="$t('config.media_player_set.title')">
     <div space-y-12px>
       <ab-setting
         v-model:data="type"
         type="select"
-        :label="$t('config.mediaplayerset.type')"
+        :label="$t('config.media_player_set.type')"
         :prop="{ items: types }"
       ></ab-setting>
 
       <ab-setting
         v-model:data="url"
         type="input"
-        :label="$t('config.mediaplayerset.url')"
+        :label="$t('config.media_player_set.url')"
         :prop="{ placeholder: 'media player url' }"
       ></ab-setting>
     </div>

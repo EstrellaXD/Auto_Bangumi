@@ -35,7 +35,14 @@ export const useConfigStore = defineStore('config', () => {
   };
 
   function getSettingGroup<Tkey extends keyof Config>(key: Tkey) {
-    return computed<Config[Tkey]>(() => config.value[key]);
+    return computed<Config[Tkey]>({
+      get() {
+        return config.value[key];
+      },
+      set(newVal) {
+        config.value[key] = newVal;
+      },
+    });
   }
 
   return {

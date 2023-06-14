@@ -115,7 +115,7 @@ async function subscribe() {
     <div v-if="!analysis.next" space-y-12px>
       <ab-setting
         v-model:data="rss"
-        :label="$t('topbar.add.rsslink')"
+        :label="$t('topbar.add.rss_link')"
         type="input"
         :prop="{
           placeholder: $t('topbar.add.placeholder'),

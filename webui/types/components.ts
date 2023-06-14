@@ -6,7 +6,7 @@ export interface SelectItem {
 }
 
 export interface AbSettingProps {
-  label: string;
+  label: string | (() => string);
   type: 'input' | 'switch' | 'select' | 'dynamic-tags';
   css?: string;
   prop?: any;

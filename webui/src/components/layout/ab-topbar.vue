@@ -7,9 +7,9 @@ import {
   Power,
   Refresh,
 } from '@icon-park/vue-next';
-import { useI18n } from 'vue-i18n';
 
-const { t, locale } = useI18n({ useScope: 'global' });
+const { t, changeLocale } = useMyI18n();
+
 const search = ref('');
 const show = ref(false);
 const showAdd = ref(false);
@@ -21,37 +21,37 @@ const { running } = storeToRefs(useProgramStore());
 const items = [
   {
     id: 1,
-    label: t('topbar.start'),
+    label: () => t('topbar.start'),
     icon: PlayOne,
     handle: start,
   },
   {
     id: 2,
-    label: t('topbar.pause'),
+    label: () => t('topbar.pause'),
     icon: Pause,
     handle: pause,
   },
   {
     id: 3,
-    label: t('topbar.restart'),
+    label: () => t('topbar.restart'),
     icon: Refresh,
     handle: restart,
   },
   {
     id: 4,
-    label: t('topbar.shutdown'),
+    label: () => t('topbar.shutdown'),
     icon: Power,
     handle: shutdown,
   },
   {
     id: 5,
-    label: t('topbar.resetrule'),
+    label: () => t('topbar.reset_rule'),
     icon: Format,
     handle: resetRule,
   },
   {
     id: 6,
-    label: t('topbar.profile.title'),
+    label: () => t('topbar.profile.title'),
     icon: Me,
     handle: () => {
       show.value = true;
@@ -66,20 +66,6 @@ onBeforeMount(() => {
 onUnmounted(() => {
   offUpdate();
 });
-
-function changeLocale() {
-  if (localStorage.getItem('lang') === 'zh-CN') {
-    const newLang = 'en-US';
-    locale.value = newLang;
-    localStorage.setItem('lang', newLang);
-    location.reload();
-  } else {
-    const newLang = 'zh-CN';
-    locale.value = newLang;
-    localStorage.setItem('lang', newLang);
-    location.reload();
-  }
-}
 </script>
 
 <template>
