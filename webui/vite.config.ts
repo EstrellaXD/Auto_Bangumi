@@ -21,7 +21,14 @@ export default defineConfig({
     }),
     UnoCSS(),
     AutoImport({
-      imports: ['vue', 'vitest', 'pinia', '@vueuse/core', VueRouterAutoImports],
+      imports: [
+        'vue',
+        'vitest',
+        'pinia',
+        '@vueuse/core',
+        VueRouterAutoImports,
+        'vue-i18n',
+      ],
       dts: 'types/dts/auto-imports.d.ts',
       dirs: ['src/api', 'src/store', 'src/hooks', 'src/utils'],
     }),
