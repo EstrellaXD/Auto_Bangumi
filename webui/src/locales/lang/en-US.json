@@ -37,7 +37,6 @@
     }
   },
   "homepage": {
-    "title": "Bangumi List",
     "rule": {
       "offical_title": "Official Title",
       "year": "Year",
@@ -57,7 +56,6 @@
     }
   },
   "player": {
-    "title": "Player",
     "hit": "Please set up the media player"
   },
   "log": {
@@ -70,7 +68,6 @@
     "bug_repo": "Bug Report"
   },
   "config": {
-    "title": "Config",
     "normal_set": {
       "title": "Normal Setting",
       "rss_interval": "Interval Time of Rss",

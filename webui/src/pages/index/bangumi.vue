@@ -93,7 +93,6 @@ definePage({
 </script>
 
 <template>
-  <ab-page-title :title="$t('homepage.title')"></ab-page-title>
   <div overflow-auto mt-12px flex-grow>
     <div flex="~ wrap" gap-y-12px gap-x-50px>
       <ab-bangumi-card

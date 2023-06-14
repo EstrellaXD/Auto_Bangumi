@@ -13,6 +13,8 @@ definePage({
       <ab-sidebar />
 
       <div layout-content>
+        <ab-page-title :title="$route.name"></ab-page-title>
+
         <RouterView v-slot="{ Component }">
           <KeepAlive>
             <component :is="Component" />

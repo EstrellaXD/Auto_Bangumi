@@ -16,7 +16,6 @@ definePage({
 </script>
 
 <template>
-  <ab-page-title :title="$t('log.title')"></ab-page-title>
   <div overflow-auto mt-12px flex-grow>
     <div flex="~ wrap" gap-12px>
       <ab-container :title="$t('log.title')" w-660px grow>

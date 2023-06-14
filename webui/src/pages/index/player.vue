@@ -7,7 +7,6 @@ const { url } = storeToRefs(usePlayerStore());
 </script>
 
 <template>
-  <ab-page-title :title="$t('player.title')"></ab-page-title>
   <div overflow-auto mt-12px flex-grow>
     <template v-if="url === ''">
       <div wh-full f-cer text-h1 text-primary>

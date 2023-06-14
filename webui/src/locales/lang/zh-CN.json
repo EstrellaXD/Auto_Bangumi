@@ -37,7 +37,6 @@
     }
   },
   "homepage": {
-    "title": "番剧列表",
     "rule": {
       "offical_title": "官方名称",
       "year": "年份",
@@ -57,7 +56,6 @@
     }
   },
   "player": {
-    "title": "播放器",
     "hit": "请设置媒体播放器地址"
   },
   "log": {
@@ -70,7 +68,6 @@
     "bug_repo": "Bug 反馈"
   },
   "config": {
-    "title": "系统设置",
     "normal_set": {
       "title": "常规设置",
       "rss_interval": "RSS 间隔",
