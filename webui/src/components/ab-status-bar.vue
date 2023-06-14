@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue';
-import { AddOne, Earth, More } from '@icon-park/vue-next';
+import { AddOne, More, International } from '@icon-park/vue-next';
 
 withDefaults(
   defineProps<{
@@ -24,7 +24,7 @@ defineEmits(['clickAdd']);
   <Menu>
     <div rel>
       <div fx-cer space-x-16px>
-        <Earth
+        <International
           theme="outline"
           size="24"
           fill="#fff"
