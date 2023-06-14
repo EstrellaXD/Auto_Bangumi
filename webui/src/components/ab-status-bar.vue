@@ -17,7 +17,7 @@ withDefaults(
   }
 );
 
-defineEmits(['clickAdds']);
+defineEmits(['clickAdd']);
 </script>
 
 <template>
