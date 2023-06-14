@@ -129,13 +129,13 @@ class BangumiDatabase(DataConnector):
         return self.__db_to_data(dict_data)
 
     def match_poster(self, bangumi_name: str) -> str:
-        condition = {"_custom_condition": "INSTR(:bangumi_name, official_title) > 0"}
-        keys = ["official_title", "poster_link"]
-        data = self._search_data(
-            table_name=self.__table_name,
-            keys=keys,
-            condition=condition,
-        )
+        data = self._cursor.execute(
+            """
+            SELECT official_title, poster_link FROM bangumi
+            WHERE INSTR(:title_raw, title_raw) > 0
+            """,
+            {"title_raw": bangumi_name},
+        ).fetchone()
         if not data:
             return ""
         official_title, poster_link = data
