@@ -8,13 +8,13 @@ const props = withDefaults(
   }
 );
 
-const abLabel = () => {
+function abLabel() {
   if (typeof props.label === 'function') {
     return props.label();
   } else {
     return props.label;
   }
-};
+}
 </script>
 
 <template>

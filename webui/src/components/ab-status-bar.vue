@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue';
-import { AddOne, More, International } from '@icon-park/vue-next';
+import { AddOne, International, More } from '@icon-park/vue-next';
 
 withDefaults(
   defineProps<{
@@ -8,7 +8,7 @@ withDefaults(
     items: {
       id: number;
       icon: any;
-      label: string;
+      label: string | (() => string);
       handle?: () => void | Promise<void>;
     }[];
   }>(),
@@ -21,6 +21,14 @@ defineEmits<{
   (e: 'changeLang'): void;
   (e: 'clickAdd'): void;
 }>();
+
+function abLabel(label: string | (() => string)) {
+  if (typeof label === 'function') {
+    return label();
+  } else {
+    return label;
+  }
+}
 </script>
 
 <template>
@@ -76,7 +84,7 @@ defineEmits<{
             :class="[active ? 'text-white bg-theme-row' : 'text-black']"
             @click="() => i.handle && i.handle()"
           >
-            <div text-main>{{ i.label }}</div>
+            <div text-main>{{ abLabel(i.label) }}</div>
 
             <div
               class="group-hover:text-white"
