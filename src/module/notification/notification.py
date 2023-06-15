@@ -63,9 +63,10 @@ class PostNotification:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.notifier.__exit__(exc_type, exc_val, exc_tb)
 
+
 if __name__ == "__main__":
     info = Notification(
-        official_title="魔法纪录 魔法少女小圆外传",
+        official_title="久保同学不放过我",
         season=2,
         episode=1,
     )
