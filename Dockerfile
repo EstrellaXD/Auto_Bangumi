@@ -37,6 +37,7 @@ RUN apk add --no-cache \
     pip install --no-cache-dir -r requirements.txt && \
     # Unzip WebUI \
     unzip dist.zip && \
+    mv dist templates && \
     # Add user
     addgroup -S ab -g 911 && \
     adduser -S ab -G ab -h /ab -s /bin/bash -u 911 && \
