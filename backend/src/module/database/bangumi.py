@@ -1,9 +1,6 @@
 import logging
 
 from module.database.orm import Connector
-
-from module.ab_decorator import locked
-from module.database.connector import DataConnector
 from module.models import BangumiData
 from module.conf import DATA_PATH
 
@@ -91,26 +88,10 @@ class BangumiDatabase(Connector):
         location = {"title_raw": title_raw}
         set_value = {"poster_link": poster_link}
         self.update.value(location, set_value)
-        # self._cursor.execute(
-        #     """
-        #     UPDATE bangumi
-        #     SET poster_link = :poster_link
-        #     WHERE title_raw = :title_raw
-        #     """,
-        #     {"poster_link": poster_link, "title_raw": title_raw},
-        # )
-        # self._conn.commit()
         logger.debug(f"[Database] Update {title_raw} poster_link to {poster_link}.")
 
     def delete_one(self, _id: int):
         self.delete.one(_id)
-        # self._cursor.execute(
-        #     """
-        #     DELETE FROM bangumi WHERE id = :id
-        #     """,
-        #     {"id": _id},
-        # )
-        # self._conn.commit()
         logger.debug(f"[Database] Delete bangumi id: {_id}.")
 
     def delete_all(self):
@@ -122,8 +103,6 @@ class BangumiDatabase(Connector):
 
     def search_id(self, _id: int) -> BangumiData | None:
         dict_data = self.select.one(conditions={"id": _id})
-        # condition = {"id": _id}
-        # dict_data = self._search_data(table_name=self.__table_name, condition=condition)
         if dict_data is None:
             logger.warning(f"[Database] Cannot find bangumi id: {_id}.")
             return None

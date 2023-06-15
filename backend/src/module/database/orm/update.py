@@ -9,6 +9,15 @@ class Update:
         self._table_name = table_name
         self._example_data = data
 
+    def __table_exists(self) -> bool:
+        self._connector.execute(
+            f"""
+            SELECT name FROM sqlite_master
+            WHERE type='table' AND name='{self._table_name}'
+            """
+        )
+        return self._connector.fetch() is not None
+
     def table(self):
         columns = ", ".join(
             [
@@ -18,8 +27,9 @@ class Update:
         )
         create_table_sql = f"CREATE TABLE IF NOT EXISTS {self._table_name} ({columns});"
         self._connector.execute(create_table_sql)
+        logger.debug(f"Create table {self._table_name}.")
         self._connector.execute(f"PRAGMA table_info({self._table_name})")
-        existing_columns = self._connector._columns
+        existing_columns = [x[1] for x in self._connector.fetch()]
         for key, value in self._example_data.items():
             if key not in existing_columns:
                 insert_column = self.__python_to_sqlite_type(value)
@@ -27,7 +37,7 @@ class Update:
                     value = "NULL"
                 add_column_sql = f"ALTER TABLE {self._table_name} ADD COLUMN {key} {insert_column} DEFAULT {value};"
                 self._connector.execute(add_column_sql)
-        logger.debug(f"Create / Update table {self._table_name}.")
+                logger.debug(f"Update table {self._table_name}.")
 
     def one(self, data: dict) -> bool:
         _id = data["id"]

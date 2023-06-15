@@ -28,6 +28,7 @@ def test_database():
     with BangumiDatabase(database=TEST_PATH) as database:
         # create table
         database.update_table()
+    with BangumiDatabase(database=TEST_PATH) as database:
         # insert
         database.insert_one(test_data)
         assert database.search_id(1) == test_data

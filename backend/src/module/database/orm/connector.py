@@ -57,3 +57,6 @@ class Connector:
         if keys:
             return [dict(zip(keys, data)) for data in datas]
         return [dict(zip(self._columns, data)) for data in datas]
+
+    def fetch(self):
+        return self._cursor.fetchall()
