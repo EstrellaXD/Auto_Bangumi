@@ -1,11 +1,13 @@
 import logging
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from module.api import v1
 from module.api.proxy import router as proxy_router
-from module.api.web import router as web_router
-from module.conf import settings, setup_logger
+from module.conf import settings, setup_logger, VERSION
 from starlette.types import ASGIApp
 
 setup_logger(reset=True)
@@ -25,18 +27,47 @@ uvicorn_logging_config = {
 }
 
 
-def create_app() -> ASGIApp:
+def create_app() -> FastAPI:
     app = FastAPI()
 
     # mount routers
-    app.include_router(web_router)
-    app.include_router(proxy_router)
     app.include_router(v1, prefix="/api")
+    app.include_router(proxy_router)
 
     return app
 
 
 app = create_app()
+
+
+if VERSION != "DEV_VERSION":
+    app.mount("/assets", StaticFiles(directory="dist/assets"), name="assets")
+    # app.mount("/pwa", StaticFiles(directory="dist/pwa"), name="pwa")
+    templates = Jinja2Templates(directory="dist")
+
+    # Resource
+    @app.get("/favicon.svg", tags=["html"])
+    def favicon():
+        return FileResponse("dist/favicon.svg")
+
+    @app.get("/AutoBangumi.svg", tags=["html"])
+    def logo():
+        return FileResponse("dist/AutoBangumi.svg")
+
+    @app.get("/favicon-light.svg", tags=["html"])
+    def favicon_light():
+        return FileResponse("dist/favicon-light.svg")
+
+    # HTML Response
+    @app.get("/{full_path:path}", response_class=HTMLResponse, tags=["html"])
+    def index(request: Request):
+        context = {"request": request}
+        return templates.TemplateResponse("index.html", context)
+
+else:
+    @app.get("/", status_code=302, tags=["html"])
+    def index():
+        return RedirectResponse("/docs")
 
 if __name__ == "__main__":
     uvicorn.run(
