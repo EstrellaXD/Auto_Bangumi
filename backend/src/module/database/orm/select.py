@@ -31,8 +31,9 @@ class Select:
         combine_operator: str = "AND",
     ):
         if keys is None:
-            keys = ["*"]
-        columns = ", ".join(keys)
+            columns = "*"
+        else:
+            columns = ", ".join(keys)
         condition_sql = self.__select_condition(conditions, combine_operator)
         self._connector.execute(
             f"""
@@ -81,9 +82,13 @@ class Select:
         if not conditions:
             raise ValueError("No conditions provided.")
         if combine_operator not in ["AND", "OR", "INSTR"]:
-            raise ValueError("Invalid combine_operator, must be 'AND' or 'OR'.")
+            raise ValueError(
+                "Invalid combine_operator, must be 'AND' or 'OR' or 'INSTR'."
+            )
         if combine_operator == "INSTR":
-            condition_sql = f" {combine_operator} {' AND '.join([f'({key} = :{key})' for key in conditions.keys()])}"
+            condition_sql = f" AND ".join(
+                [f"INSTR({key}, :{key})" for key in conditions.keys()]
+            )
         else:
             condition_sql = f" {combine_operator} ".join(
                 [f"{key} = :{key}" for key in conditions.keys()]

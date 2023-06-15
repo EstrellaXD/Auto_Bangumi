@@ -5,13 +5,18 @@ from module.database.orm import Connector
 from module.ab_decorator import locked
 from module.database.connector import DataConnector
 from module.models import BangumiData
+from module.conf import DATA_PATH
 
 logger = logging.getLogger(__name__)
 
 
 class BangumiDatabase(Connector):
-    def __init__(self):
-        super().__init__(table_name="bangumi", data=self.__data_to_db(BangumiData()))
+    def __init__(self, database: str = DATA_PATH):
+        super().__init__(
+            table_name="bangumi",
+            data=self.__data_to_db(BangumiData()),
+            database=database,
+        )
 
     def update_table(self):
         self.update.table()
@@ -116,7 +121,7 @@ class BangumiDatabase(Connector):
         return [self.__db_to_data(x) for x in all_data]
 
     def search_id(self, _id: int) -> BangumiData | None:
-        dict_data = self.select.one(_id)
+        dict_data = self.select.one(conditions={"id": _id})
         # condition = {"id": _id}
         # dict_data = self._search_data(table_name=self.__table_name, condition=condition)
         if dict_data is None:
@@ -134,11 +139,12 @@ class BangumiDatabase(Connector):
     #     return self.__db_to_data(dict_data)
 
     def match_poster(self, bangumi_name: str) -> str:
-        condition = {"title_raw": bangumi_name}
+        condition = {"official_title": bangumi_name}
         keys = ["poster_link"]
         data = self.select.one(
             keys=keys,
-            condition=condition,
+            conditions=condition,
+            combine_operator="INSTR",
         )
         if not data:
             return ""
@@ -187,7 +193,4 @@ class BangumiDatabase(Connector):
 
 if __name__ == "__main__":
     with BangumiDatabase() as db:
-        datas = db.not_added()
-        for data in datas:
-            print(data)
-        # print(db.not_complete())
+        print(db.match_poster("久保"))
