@@ -53,7 +53,7 @@ jobs:
 
       - name: Build
         run: |
-          pnpm build && zip -r dist.zip dist
+          cd webui && pnpm build && zip -r dist.zip dist
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
