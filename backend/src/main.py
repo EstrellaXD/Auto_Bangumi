@@ -1,10 +1,12 @@
 import logging
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from module.api import v1
 from module.api.proxy import router as proxy_router
-from module.api.web import router as web_router
 from module.conf import settings, setup_logger
 from starlette.types import ASGIApp
 
@@ -25,11 +27,25 @@ uvicorn_logging_config = {
 }
 
 
+def mount_dist(app: ASGIApp):
+    from module.conf import VERSION
+
+    if VERSION != "DEV_VERSION":
+        app.mount("/", StaticFiles(directory="dist", html=True), name="dist")
+        templates = Jinja2Templates(directory="dist")
+        @app.get("/", response_class=HTMLResponse, tags=["html"])
+        def index(request: Request):
+            return templates.TemplateResponse("index.html", {"request": request})
+    else:
+        @app.get("/", status_code=302, tags=["html"])
+        def index():
+            return RedirectResponse("/docs")
+
 def create_app() -> ASGIApp:
     app = FastAPI()
 
-    # mount routers
-    app.include_router(web_router)
+    # mount dist
+    mount_dist(app)
     app.include_router(proxy_router)
     app.include_router(v1, prefix="/api")
 
