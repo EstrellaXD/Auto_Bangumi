@@ -43,6 +43,7 @@ app = create_app()
 if VERSION != "DEV_VERSION":
     app.mount("/assets", StaticFiles(directory="dist/assets"), name="assets")
     # app.mount("/pwa", StaticFiles(directory="dist/pwa"), name="pwa")
+    # app.mount("/icons", StaticFiles(directory="dist/icons"), name="icons")
     templates = Jinja2Templates(directory="dist")
 
     # Resource
@@ -57,6 +58,10 @@ if VERSION != "DEV_VERSION":
     @app.get("/favicon-light.svg", tags=["html"])
     def favicon_light():
         return FileResponse("dist/favicon-light.svg")
+    
+    @app.get("/robots.txt", tags=["html"])
+    def robots():
+        return FileResponse("dist/robots.txt")
 
     # HTML Response
     @app.get("/{full_path:path}", response_class=HTMLResponse, tags=["html"])
