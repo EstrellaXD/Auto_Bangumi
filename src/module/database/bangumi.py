@@ -131,14 +131,14 @@ class BangumiDatabase(DataConnector):
     def match_poster(self, bangumi_name: str) -> str:
         data = self._cursor.execute(
             """
-            SELECT official_title, poster_link FROM bangumi
-            WHERE INSTR(:title_raw, title_raw) > 0
+            SELECT poster_link FROM bangumi
+            WHERE INSTR(official_title, :official_title) > 0
             """,
-            {"title_raw": bangumi_name},
+            {"official_title": bangumi_name},
         ).fetchone()
         if not data:
             return ""
-        official_title, poster_link = data
+        poster_link = data[0]
         if not poster_link:
             return ""
         return poster_link
@@ -219,21 +219,5 @@ class BangumiDatabase(DataConnector):
 
 if __name__ == '__main__':
     with BangumiDatabase() as db:
-        db.update_table()
-        data = BangumiData(
-            id=1,
-            title_raw="",
-            official_title="",
-            poster_link="",
-            rss_link=[],
-            eps_collect=0,
-            eps_total=0,
-            eps_update=0,
-            eps_complete=False,
-            added=False,
-            rule_name=None,
-            save_path=None,
-        )
-        db.insert(data)
-        print(db.not_added())
-        print(db.not_complete())
+        name = "久保"
+        print(db.match_poster(name))
