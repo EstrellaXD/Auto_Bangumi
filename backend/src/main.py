@@ -46,6 +46,8 @@ def create_app() -> ASGIApp:
 
     # mount dist
     mount_dist(app)
+
+    # mount router
     app.include_router(proxy_router)
     app.include_router(v1, prefix="/api")
 
