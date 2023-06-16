@@ -58,7 +58,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
-          name: dist
+          name: dist.zip
           path: webui/dist.zip
 
   build-docker:
@@ -130,7 +130,7 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v3
         with:
-          name: dist
+          name: dist.zip
           path: backend/dist.zip
 
       - name: Unzip webui
