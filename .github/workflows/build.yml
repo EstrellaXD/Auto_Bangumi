@@ -134,8 +134,9 @@ jobs:
           path: backend/dist.zip
 
       - name: Unzip webui
-        run: |
-          unzip /home/runner/work/Auto_Bangumi/Auto_Bangumi/backend/dist.zip -d backend/src/
+        uses: montudor/action-zip@v1
+        with:
+          args: unzip backend/dist.zip -d backend/src/
 
       - name: Build and push
         uses: docker/build-push-action@v4
