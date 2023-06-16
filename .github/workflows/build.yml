@@ -58,7 +58,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
-          name: dist.zip
+          name: dist
           path: webui/dist.zip
 
   build-docker:
@@ -130,12 +130,12 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v3
         with:
-          name: dist.zip
+          name: dist
           path: backend/dist.zip
 
       - name: Unzip webui
         run: |
-          unzip backend/dist.zip -d backend/src/
+          unzip /home/runner/work/Auto_Bangumi/Auto_Bangumi/backend/dist.zip -d backend/src/
 
       - name: Build and push
         uses: docker/build-push-action@v4
