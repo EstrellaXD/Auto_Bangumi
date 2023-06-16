@@ -133,6 +133,10 @@ jobs:
           name: dist
           path: backend/dist.zip
 
+      - name: Unzip webui
+        run: |
+          unzip backend/dist.zip -d backend/src/
+
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
