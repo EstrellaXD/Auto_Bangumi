@@ -95,3 +95,12 @@ class RequestContent(RequestURL):
 
     def check_connection(self, _url):
         return self.check_url(_url)
+
+    def get_rss_title(self, _url):
+        soup = self.get_xml(_url)
+        return soup.find("title").text
+
+
+if __name__ == '__main__':
+    with RequestContent() as req:
+        req.get_xml("https://mikanani.me/RSS/Classic")

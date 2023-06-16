@@ -1,17 +1,24 @@
 import logging
 
-from .connector import DataConnector
+from .orm import Connector
+from module.models import TorrentData
+from module.conf import DATA_PATH
 
 logger = logging.getLogger(__name__)
 
 
-class TorrentDatabase(DataConnector):
-    def update_table(self):
-        table_name = "torrent"
-        db_data = self.__data_to_db()
-        self._update_table(table_name, db_data)
+class TorrentDatabase(Connector):
+    def __init__(self, database: str = DATA_PATH):
+        super().__init__(
+            table_name="torrent",
+            data=TorrentData().dict(),
+            database=DATA_PATH
+        )
 
-    def __data_to_db(self, data: SaveTorrent):
+    def update_table(self):
+        self.update.table()
+
+    def __data_to_db(self, data: TorrentData) -> dict:
         db_data = data.dict()
         for key, value in db_data.items():
             if isinstance(value, bool):
@@ -20,28 +27,18 @@ class TorrentDatabase(DataConnector):
                 db_data[key] = ",".join(value)
         return db_data
 
-    def __db_to_data(self, db_data: dict):
+    def __db_to_data(self, db_data: dict) -> TorrentData:
         for key, item in db_data.items():
             if isinstance(item, int):
-                if key not in ["id", "offset", "season", "year"]:
-                    db_data[key] = bool(item)
+                db_data[key] = bool(item)
             elif key in ["filter", "rss_link"]:
                 db_data[key] = item.split(",")
-        return SaveTorrent(**db_data)
+        return TorrentData(**db_data)
 
-    def if_downloaded(self, torrent_url: str, torrent_name: str) -> bool:
-        self._cursor.execute(
-            "SELECT * FROM torrent WHERE torrent_url = ? OR torrent_name = ?",
-            (torrent_url, torrent_name),
-        )
-        return bool(self._cursor.fetchone())
+    def insert_many(self, data_list: list[TorrentData]):
+        dict_datas = [self.__data_to_db(data) for data in data_list]
+        self.insert.many(dict_datas)
 
-    def insert(self, data: SaveTorrent):
-        db_data = self.__data_to_db(data)
-        columns = ", ".join(db_data.keys())
-        values = ", ".join([f":{key}" for key in db_data.keys()])
-        self._cursor.execute(
-            f"INSERT INTO torrent ({columns}) VALUES ({values})", db_data
-        )
-        logger.debug(f"Add {data.torrent_name} into database.")
-        self._conn.commit()
+    def get_all(self) -> list[TorrentData]:
+        dict_datas = self.select.all()
+        return [self.__db_to_data(data) for data in dict_datas]

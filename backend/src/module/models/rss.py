@@ -1,9 +1,18 @@
 from pydantic import BaseModel, Field
 
 
-class RSSTorrents(BaseModel):
-    name: str = Field(..., alias="item_path")
+class RSSItem(BaseModel):
+    id: int = Field(0, alias="id", title="id")
+    item_path: str = Field("example path", alias="item_path")
+    url: str = Field("https://mikanani.me", alias="url")
+    combine: bool = Field(True, alias="combine")
+    enabled: bool = Field(True, alias="enabled")
+
+
+class TorrentData(BaseModel):
+    id: int = Field(0, alias="id")
+    name: str = Field(..., alias="name")
     url: str = Field(..., alias="url")
-    analyze: bool = Field(..., alias="analyze")
-    enabled: bool = Field(..., alias="enabled")
-    torrents: list[str] = Field(..., alias="torrents")
+    matched: bool = Field(..., alias="matched")
+    downloaded: bool = Field(..., alias="downloaded")
+    save_path: str = Field(..., alias="save_path")
