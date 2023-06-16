@@ -17,8 +17,8 @@ ENV S6_SERVICES_GRACETIME=30000 \
 WORKDIR /app
 
 COPY backend/requirements.txt .
-COPY backend/dist.zip .
-RUN apk add --no-cache \
+RUN set -ex && \
+    apk add --no-cache \
         bash \
         ca-certificates \
         coreutils \
@@ -32,22 +32,19 @@ RUN apk add --no-cache \
         s6-overlay \
         shadow \
         tzdata && \
-    python3 -m pip install --upgrade pip && \
+    python3 -m pip install --no-cache-dir --upgrade pip && \
     sed -i '/bcrypt/d' requirements.txt && \
     pip install --no-cache-dir -r requirements.txt && \
-    # Unzip WebUI \
-    unzip dist.zip && \
     # Add user
     addgroup -S ab -g 911 && \
     adduser -S ab -G ab -h /ab -s /bin/bash -u 911 && \
     # Clear
     rm -rf \
-        /root/.cache \
-        /tmp/* \
-        /app/dist.zip
+        /ab/.cache \
+        /tmp/*
 
 COPY --chmod=755 backend/src/. .
-COPY --chmod=755 backend/src/docker /
+COPY --chmod=755 docker/ /
 
 ENTRYPOINT [ "/init" ]
 

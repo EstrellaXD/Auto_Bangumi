@@ -53,13 +53,13 @@ jobs:
 
       - name: Build
         run: |
-          cd webui && pnpm build && zip -r dist.zip dist
+          cd webui && pnpm build
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: dist
-          path: webui/dist.zip
+          path: webui/dist
 
   build-docker:
     runs-on: ubuntu-latest
@@ -131,7 +131,11 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: dist
-          path: backend/dist.zip
+          path: backend/src/dist
+
+      - name: View files
+        run: |
+          pwd && ls -al && tree
 
       - name: Build and push
         uses: docker/build-push-action@v4
@@ -155,11 +159,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: download artifact
+      - name: Download artifact
         uses: actions/download-artifact@v3
         with:
           name: dist
-          path: webui/dist.zip
+          path: webui/dist
+
+      - name: Zip webui
+        run: |
+          cd webui && ls -al && tree && zip -r dist.zip dist
 
       - name: Generate Release
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged == true }}
