@@ -53,13 +53,13 @@ jobs:
 
       - name: Build
         run: |
-          cd webui && pnpm build && zip -r dist.zip dist
+          cd webui && pnpm build
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: dist
-          path: webui/dist.zip
+          path: webui/dist
 
   build-docker:
     runs-on: ubuntu-latest
@@ -135,7 +135,7 @@ jobs:
 
       - name: Unzip webui
         run: |
-          unzip backend/dist.zip/dist.zip -d backend/src/
+          unzip backend/dist.zip -d backend/src/
 
       - name: Build and push
         uses: docker/build-push-action@v4
