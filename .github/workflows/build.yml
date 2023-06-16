@@ -135,8 +135,7 @@ jobs:
 
       - name: Unzip webui
         run: |
-          ls -al
-          find / -name dist.zip
+          unzip backend/dist.zip/dist.zip -d backend/src/
 
       - name: Build and push
         uses: docker/build-push-action@v4
