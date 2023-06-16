@@ -1,3 +1,4 @@
+import os
 import sqlite3
 
 from .delete import Delete
@@ -10,6 +11,10 @@ from module.conf import DATA_PATH
 
 class Connector:
     def __init__(self, table_name: str, data: dict, database: str = DATA_PATH):
+        # Create folder if not exists
+        if not os.path.exists(os.path.dirname(DATA_PATH)):
+            os.makedirs(os.path.dirname(DATA_PATH))
+
         self._conn = sqlite3.connect(database)
         self._cursor = self._conn.cursor()
         self.update = Update(self, table_name, data)
