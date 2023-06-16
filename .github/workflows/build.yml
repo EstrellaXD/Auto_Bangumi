@@ -131,12 +131,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: dist
-          path: backend/
-
-      - name: Unzip webui
-        run: |
-          ls -al backend
-          unzip backend/dist.zip -d backend/src/dist
+          path: backend/src/dist
 
       - name: Build and push
         uses: docker/build-push-action@v4
@@ -164,7 +159,11 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: dist
-          path: webui/dist.zip
+          path: webui/dist
+
+      - name: zip webui
+        run: |
+          cd webui && zip -r dist.zip dist
 
       - name: Generate Release
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged == true }}
