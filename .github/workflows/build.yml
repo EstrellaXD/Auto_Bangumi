@@ -131,11 +131,12 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: dist
-          path: backend/dist.zip
+          path: backend/
 
       - name: Unzip webui
         run: |
-          unzip backend/dist.zip -d backend/src/
+          ls -al backend
+          unzip backend/dist.zip -d backend/src/dist
 
       - name: Build and push
         uses: docker/build-push-action@v4
