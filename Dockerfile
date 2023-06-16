@@ -40,6 +40,7 @@ RUN set -ex && \
     adduser -S ab -G ab -h /ab -s /bin/bash -u 911 && \
     # Clear
     rm -rf \
+        /ab/.cache \
         /tmp/*
 
 COPY --chmod=755 backend/src/. .
