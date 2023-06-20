@@ -6,7 +6,6 @@ from module.network import RequestContent, TorrentInfo
 
 
 class RSSEngine(RequestContent):
-
     @staticmethod
     def _get_rss_items() -> list[RSSItem]:
         with RSSDatabase() as db:
@@ -73,3 +72,8 @@ class RSSEngine(RequestContent):
             with TorrentDatabase() as db:
                 db.insert_many(matched_torrents)
             return matched_torrents
+
+
+if __name__ == '__main__':
+    with RSSEngine() as engine:
+        engine.run()
