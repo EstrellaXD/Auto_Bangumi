@@ -1,7 +1,7 @@
 name: 功能提案
-description: Feature in Development
-title: "[Dev Feature]: "
-labels: ["dev feature"]
+description: Request for Comments
+title: "[RFC]: "
+labels: ["RFC"]
 body:
   - type: markdown
     attributes:
