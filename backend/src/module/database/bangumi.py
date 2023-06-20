@@ -73,15 +73,6 @@ class BangumiDatabase(Connector):
         location = {"title_raw": title_raw}
         set_value = {"rss_link": rss_set, "added": 0}
         self.update.value(location, set_value)
-        # self._cursor.execute(
-        #     """
-        #     UPDATE bangumi
-        #     SET rss_link = :rss_link, added = 0
-        #     WHERE title_raw = :title_raw
-        #     """,
-        #     {"rss_link": rss_set, "title_raw": title_raw},
-        # )
-        # self._conn.commit()
         logger.debug(f"[Database] Update {title_raw} rss_link to {rss_set}.")
 
     def update_poster(self, title_raw, poster_link: str):
@@ -108,14 +99,6 @@ class BangumiDatabase(Connector):
             return None
         logger.debug(f"[Database] Find bangumi id: {_id}.")
         return self.__db_to_data(dict_data)
-
-    # def search_official_title(self, official_title: str) -> BangumiData | None:
-    #     dict_data = self._search_data(
-    #         table_name=self.__table_name, condition={"official_title": official_title}
-    #     )
-    #     if dict_data is None:
-    #         return None
-    #     return self.__db_to_data(dict_data)
 
     def match_poster(self, bangumi_name: str) -> str:
         condition = {"official_title": bangumi_name}

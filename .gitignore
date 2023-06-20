@@ -178,6 +178,7 @@ test.*
 /backend/src/config/
 /src/debuger.py
 /backend/src/dist.zip
+/pyrightconfig.json
 
 # webui
 logs
@@ -208,4 +209,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-

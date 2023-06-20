@@ -44,3 +44,8 @@ def test_database():
         # delete
         database.delete_one(1)
         assert database.search_id(1) is None
+
+    # Delete test database
+    import os
+
+    os.remove(TEST_PATH)
