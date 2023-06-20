@@ -1,0 +1,17 @@
+name: 功能提案
+description: Feature in Development
+title: "[Dev Feature]: "
+labels: ["dev feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请说明你希望添加的功能。
+  - type: textarea
+    id: feature-request
+    attributes:
+      label: 功能改进
+      description: 请详细描述需要改进或者添加的功能。
+      placeholder: "功能改进"
+    validations:
+      required: true
