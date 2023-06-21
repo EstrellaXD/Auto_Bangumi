@@ -19,12 +19,11 @@ class Update:
         return self._connector.fetch() is not None
 
     def table(self):
-        columns = ", ".join(
-            [
-                f"{key} {self.__python_to_sqlite_type(value)}"
-                for key, value in self._example_data.items()
-            ]
-        )
+        columns_list = [
+            self.__python_to_sqlite_type(key, value)
+            for key, value in self._example_data.items()
+        ]
+        columns = ", ".join(columns_list)
         create_table_sql = f"CREATE TABLE IF NOT EXISTS {self._table_name} ({columns});"
         self._connector.execute(create_table_sql)
         logger.debug(f"Create table {self._table_name}.")
@@ -32,10 +31,10 @@ class Update:
         existing_columns = [x[1] for x in self._connector.fetch()]
         for key, value in self._example_data.items():
             if key not in existing_columns:
-                insert_column = self.__python_to_sqlite_type(value)
+                insert_column = self.__python_to_sqlite_type(key, value)
                 if value is None:
                     value = "NULL"
-                add_column_sql = f"ALTER TABLE {self._table_name} ADD COLUMN {key} {insert_column} DEFAULT {value};"
+                add_column_sql = f"ALTER TABLE {self._table_name} ADD COLUMN {insert_column} DEFAULT {value};"
                 self._connector.execute(add_column_sql)
                 logger.debug(f"Update table {self._table_name}.")
 
@@ -81,18 +80,21 @@ class Update:
         return True
 
     @staticmethod
-    def __python_to_sqlite_type(value) -> str:
-        if isinstance(value, int):
-            return "INTEGER NOT NULL"
+    def __python_to_sqlite_type(key, value) -> str:
+        if key == "id":
+            column = "INTEGER PRIMARY KEY"
+        elif isinstance(value, int):
+            column = "INTEGER NOT NULL"
         elif isinstance(value, float):
-            return "REAL NOT NULL"
+            column = "REAL NOT NULL"
         elif isinstance(value, str):
-            return "TEXT NOT NULL"
+            column = "TEXT NOT NULL"
         elif isinstance(value, bool):
-            return "INTEGER NOT NULL"
+            column = "INTEGER NOT NULL"
         elif isinstance(value, list):
-            return "TEXT NOT NULL"
+            column = "TEXT NOT NULL"
         elif value is None:
-            return "TEXT"
+            column = "TEXT"
         else:
             raise ValueError(f"Unsupported data type: {type(value)}")
+        return f"{key} {column}"

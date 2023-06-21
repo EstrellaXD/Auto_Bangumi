@@ -14,7 +14,7 @@ class RSSEngine(RequestContent):
     @staticmethod
     def _get_bangumi_data(rss_link: str) -> list[BangumiData]:
         with BangumiDatabase() as db:
-            return db.get_rss_data(rss_link)
+            return db.get_rss(rss_link)
 
     def add_rss(self, rss_link: str, name: str, combine: bool):
         if not name:
@@ -28,9 +28,9 @@ class RSSEngine(RequestContent):
         return torrents
 
     @staticmethod
-    def match_torrent(torrent: TorrentInfo) -> TorrentData | None:
+    def match_torrent(torrent: TorrentInfo, rss_link: str) -> TorrentData | None:
         with BangumiDatabase() as db:
-            bangumi_data = db.match_torrent(torrent.name)
+            bangumi_data = db.match_torrent(torrent.name, rss_link)
             if bangumi_data:
                 _filter = "|".join(bangumi_data.filter)
                 if re.search(_filter, torrent.name):
@@ -44,16 +44,13 @@ class RSSEngine(RequestContent):
 
     @staticmethod
     def filter_torrent(torrents: list[TorrentInfo]) -> list[TorrentInfo]:
+        new_torrents = []
         with TorrentDatabase() as db:
-            in_db_torrents = db.get_all()
-        in_db_torrents = [x.name for x in in_db_torrents]
-        i = 0
-        while i < len(torrents):
-            torrent = torrents[i]
-            if torrent.name in in_db_torrents:
-                torrents.pop(i)
-            i += 1
-        return torrents
+            in_db_torrents: list = db.get_torrent_name()
+            for torrent in torrents:
+                if torrent.name not in in_db_torrents:
+                    new_torrents.append(torrent)
+        return new_torrents
 
     def run(self):
         # Get All RSS Items
@@ -61,10 +58,10 @@ class RSSEngine(RequestContent):
         # From RSS Items, get all torrents
         for rss_item in rss_items:
             torrents = self.get_torrents(rss_item.url)
-            self.filter_torrent(torrents)
+            new_torrents = self.filter_torrent(torrents)
             # Get all enabled bangumi data
             matched_torrents = []
-            for torrent in torrents:
+            for torrent in new_torrents:
                 matched_torrent = self.match_torrent(torrent)
                 if matched_torrent:
                     matched_torrents.append(matched_torrent)
@@ -74,6 +71,6 @@ class RSSEngine(RequestContent):
             return matched_torrents
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     with RSSEngine() as engine:
         engine.run()

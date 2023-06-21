@@ -178,6 +178,7 @@ test.*
 /backend/src/config/
 /src/debuger.py
 /backend/src/dist.zip
+/src
 
 # webui
 logs
@@ -205,4 +206,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-

@@ -1,6 +1,6 @@
 import logging
 
-from .orm import Connector
+from module.database.orm import Connector
 from module.models import TorrentData
 from module.conf import DATA_PATH
 
@@ -10,9 +10,7 @@ logger = logging.getLogger(__name__)
 class TorrentDatabase(Connector):
     def __init__(self, database: str = DATA_PATH):
         super().__init__(
-            table_name="torrent",
-            data=TorrentData().dict(),
-            database=DATA_PATH
+            table_name="torrent", data=TorrentData().dict(), database=database
         )
 
     def update_table(self):
@@ -42,3 +40,12 @@ class TorrentDatabase(Connector):
     def get_all(self) -> list[TorrentData]:
         dict_datas = self.select.all()
         return [self.__db_to_data(data) for data in dict_datas]
+
+    def get_torrent_name(self) -> list[str]:
+        dict_data = self.select.all()
+        return [data["name"] for data in dict_data]
+
+
+if __name__ == "__main__":
+    with TorrentDatabase() as db:
+        db.update_table()

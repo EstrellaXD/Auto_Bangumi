@@ -169,7 +169,21 @@ class BangumiDatabase(Connector):
         dict_data = self.select.many(conditions=conditions, combine_operator="OR")
         return [self.__db_to_data(x) for x in dict_data]
 
+    def get_rss(self, rss_link: str) -> list[BangumiData]:
+        conditions = {"rss_link": rss_link}
+        dict_data = self.select.many(conditions=conditions, combine_operator="INSTR")
+        return [self.__db_to_data(x) for x in dict_data]
+
+    def match_torrent(self, torrent_name: str, rss_link: str) -> BangumiData | None:
+        conditions = {"title_raw": torrent_name, "rss_link": rss_link}
+        dict_data = self.select.one(conditions=conditions, combine_operator="INSTR")
+        if not dict_data:
+            return None
+        return self.__db_to_data(dict_data)
+
 
 if __name__ == "__main__":
     with BangumiDatabase() as db:
-        print(db.match_poster("久保"))
+        db.match_torrent(
+            "魔法科高校の劣等生 来訪者編", "https://bangumi.moe/rss/5f6b3e3e4e8c4b0001b2e3a3"
+        )

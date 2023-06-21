@@ -11,8 +11,7 @@ class RSSItem(BaseModel):
 
 class TorrentData(BaseModel):
     id: int = Field(0, alias="id")
-    name: str = Field(..., alias="name")
-    url: str = Field(..., alias="url")
-    matched: bool = Field(..., alias="matched")
-    downloaded: bool = Field(..., alias="downloaded")
-    save_path: str = Field(..., alias="save_path")
+    rss_id: int = Field(0, alias="rss_id")
+    name: str = Field("", alias="name")
+    url: str = Field("https://example.com/torrent", alias="url")
+    save_path: str = Field("path/to/save", alias="save_path")
