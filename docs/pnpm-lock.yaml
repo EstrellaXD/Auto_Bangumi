@@ -1,6 +1,9 @@
 lockfileVersion: '6.0'
 
 devDependencies:
+  medium-zoom:
+    specifier: ^1.0.8
+    version: 1.0.8
   typescript:
     specifier: 4.9.5
     version: 4.9.5
@@ -4920,6 +4923,10 @@ packages:
   /media-typer@0.3.0:
     resolution: {integrity: sha512-dq+qelQ9akHpcOl/gUVRTxVIOkAJ1wR3QAvb4RsVjS8oVoFjDGTc679wJYmUmknUF5HwMLOgb5O+a3KxfWapPQ==}
     engines: {node: '>= 0.6'}
+    dev: true
+
+  /medium-zoom@1.0.8:
+    resolution: {integrity: sha512-CjFVuFq/IfrdqesAXfg+hzlDKu6A2n80ZIq0Kl9kWjoHh9j1N9Uvk5X0/MmN0hOfm5F9YBswlClhcwnmtwz7gA==}
     dev: true
 
   /merge-descriptors@1.0.1:

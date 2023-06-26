@@ -6,5 +6,8 @@
     "tsconfig.json": "json5",
     "tsconfig.*.json": "json5",
   },
+  "[markdown]": {
+    "editor.wordWrap": "off",
+  },
   "python.venvPath": "./backend/venv",
 }
