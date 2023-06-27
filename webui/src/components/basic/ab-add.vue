@@ -18,8 +18,8 @@ defineEmits(['click']);
 </template>
 
 <style lang="scss" scoped>
-$normal: #493475;
-$hover: #756596;
+$normal: #5739ca;
+$hover: #71669f;
 
 .box {
   background: $normal;

@@ -2,12 +2,13 @@
 import { 
   h, 
   onMounted, 
-  watch, 
+  watch,
   nextTick,
 } from 'vue'
 import Theme from 'vitepress/theme'
 import { useRoute } from 'vitepress'
 import mediumZoom from 'medium-zoom'
+import HomePreviewWebUI from './components/HomePreviewWebUI.vue'
 
 import './style.css'
 
@@ -16,6 +17,7 @@ export default {
   Layout: () => {
     return h(Theme.Layout, null, {
       // https://vitepress.dev/guide/extending-default-theme#layout-slots
+      'home-features-after': () => h(HomePreviewWebUI),
     })
   },
   setup() {

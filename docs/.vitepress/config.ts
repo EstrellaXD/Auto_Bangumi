@@ -1,11 +1,34 @@
 import { defineConfig } from "vitepress";
 
+
+const version = `v3.0`
+
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: "AutoBangumi",
   description: "从 Mikan Project 全自动追番下载整理",
+
+  head: [
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/image/icons/light-logo.svg' }],
+  ],
+
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
+    logo: '/image/icons/light-logo.svg',
+
+    editLink: {
+      pattern: 'https://github.com/vitejs/vite/blob/3.1-dev/docs/:path',
+      text: 'Edit this page',
+    },
+
+    search: {
+      provider: 'local'
+    },
+
+    socialLinks: [
+      { icon: "github", link: "https://github.com/EstrellaXD/Auto_Bangumi" },
+    ],
+
     nav: [
       { text: "项目说明", link: "/home/" },
       { text: "快速开始", link: "/deploy/quick-start" },
@@ -13,8 +36,9 @@ export default defineConfig({
       { text: "常见问题", link: "/faq/常见问题" },
     ],
 
-    search: {
-      provider: 'local'
+    footer: {
+      message: `AutoBangumi Released under the MIT License. (latest: ${version})`,
+      copyright: 'Copyright © 2021-present @EstrellaXD & AutoBangumi Contributors',
     },
 
     sidebar: [
@@ -116,10 +140,6 @@ export default defineConfig({
           },
         ],
       },
-    ],
-
-    socialLinks: [
-      { icon: "github", link: "https://github.com/EstrellaXD/Auto_Bangumi" },
     ],
   },
 });

@@ -1,6 +1,6 @@
 <p align="center">
-    <img src="docs/image/light-icon.png#gh-light-mode-only" width=50%/ alt="">
-    <img src="docs/image/dark-icon.png#gh-dark-mode-only" width=50%/ alt="">
+    <img src="docs/image/icons/light-icon.svg#gh-light-mode-only" width=50%/ alt="">
+    <img src="docs/image/icons/dark-icon.svg#gh-dark-mode-only" width=50%/ alt="">
 </p>
 <p align="center">
     <img title="docker build version" src="https://img.shields.io/docker/v/estrellaxd/auto_bangumi" alt="">
@@ -12,7 +12,7 @@
 # 项目说明
 
 <p align="center">
-    <img title="AutoBangumi" src="docs/image/window.png" alt="" width=75%>
+    <img title="AutoBangumi" src="docs/image/preview/window.png" alt="" width=75%>
 </p>
 
 本项目是基于 [Mikan Project](https://mikanani.me)、[qBittorrent](https://qbittorrent.org) 的全自动追番整理下载工具。只需要在 [Mikan Project](https://mikanani.me) 上订阅番剧，就可以全自动追番。并且整理完成的名称和目录可以直接被 [Plex]()、[Jellyfin]() 等媒体库软件识别，无需二次刮削。

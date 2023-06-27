@@ -7,6 +7,7 @@
     "deploy:preview": "vercel --cwd .vitepress/dist"
   },
   "devDependencies": {
+    "@vue/tsconfig": "^0.4.0",
     "medium-zoom": "^1.0.8",
     "typescript": "4.9.5",
     "vercel": "31.0.1",

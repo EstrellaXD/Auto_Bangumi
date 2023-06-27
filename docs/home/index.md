@@ -1,8 +1,12 @@
+---
+title: 项目说明
+---
+
 <p align="center">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../image/dark-icon.png">
-  <source media="(prefers-color-scheme: light)" srcset="../image/light-icon.png">
-  <img src="../image/light-icon.png" width=50%>
+  <source media="(prefers-color-scheme: dark)" srcset="../image/icons/dark-icon.svg">
+  <source media="(prefers-color-scheme: light)" srcset="../image/icons/light-icon.svg">
+  <img src="../image/icons/light-icon.svg" width=50%>
 </picture>
 </p>
 
@@ -14,15 +18,17 @@
   <img
     title="AutoBangumi WebUI"
     alt="AutoBangumi WebUI"
-    src="../image/window.png"
-    width=75%
+    src="../image/preview/window.png"
+    width=85%
     data-zoomable
   >
 </p>
 
-本项目是基于 [Mikan Project](https://mikanani.me)、[qBittorrent](https://qbittorrent.org) 的全自动追番整理下载工具。只需要在 [Mikan Project](https://mikanani.me) 上订阅番剧，就可以全自动追番。并且整理完成的名称和目录可以直接被 [Plex]()、[Jellyfin]() 等媒体库软件识别，无需二次刮削。
+**`AutoBangumi`** 是从 [Mikan Project](https://mikanani.me) 全自动追番整理下载工具。
+只需要在 [Mikan Project](https://mikanani.me) 上订阅番剧，就可以全自动追番、下载并整理文件，
+整理后的番剧名称和目录可以直接被 [Plex]()、[Jellyfin]() 等媒体库软件识别，无需二次刮削。
 
-## AutoBangumi 功能说明
+## 功能说明
 
 - 简易单次配置就能持续使用
 - 无需介入的 `RSS` 解析器，解析番组信息并且自动生成下载规则。
