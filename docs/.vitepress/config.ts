@@ -14,7 +14,10 @@ export default defineConfig({
 
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
-    logo: '/image/icons/light-logo.svg',
+    logo: {
+      dark: '/image/icons/dark-logo.svg',
+      light: '/image/icons/light-logo.svg',
+    },
 
     editLink: {
       pattern: 'https://github.com/vitejs/vite/blob/3.1-dev/docs/:path',

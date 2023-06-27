@@ -93,12 +93,11 @@
  * Component: medium-zoom
  * -------------------------------------------------------------------------- */
 
-.medium-zoom--opened {
-  .medium-zoom-overlay {
-    z-index: 20;
-  }
+
+.medium-zoom--opened .medium-zoom-overlay {
+  z-index: 20;
+}
   
-  .medium-zoom-image {
-    z-index: 21;
-  }
+.medium-zoom--opened .medium-zoom-image {
+  z-index: 21;
 }
