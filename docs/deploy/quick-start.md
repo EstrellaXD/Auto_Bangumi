@@ -90,11 +90,11 @@ https://mikanime.tv/RSS/MyBangumi?token=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 1. 填入下载器的地址，端口，用户名和密码。
 
-![ab-webui](../image/config/downloader.png)
+![ab-webui](../image/config/downloader.png){width=500}{class=ab-shadow-card}
 
 2. 填入 Mikan RSS 的 Token。
 
-![ab-rss](../image/config/parser.png)
+![ab-rss](../image/config/parser.png){width=500}{class=ab-shadow-card}
 
 3. 点击 **Apply** 保存配置，此时 AB 会重启运行，当右上角的圆点变为绿色时，表示 AB 已经正常运行。
 

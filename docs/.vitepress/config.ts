@@ -46,11 +46,14 @@ export default defineConfig({
 
     sidebar: [
       {
-        text: "项目说明",
         items: [
           {
             text: "项目说明",
             link: "/home/",
+          },
+          {
+            text: "快速开始",
+            link: "/deploy/quick-start",
           },
         ],
       },
