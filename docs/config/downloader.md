@@ -2,7 +2,9 @@
 
 ## WebUI 设置
 
-![downloader](../image/config/downloader.png)
+![downloader](../image/config/downloader.png){width=500}{class=ab-shadow-card}
+
+<br/>
 
 - **Downloader Type** 为下载器类型，目前支持 qBittorrent 下载器，目前暂不支持修改。
 - **Host** 为下载器地址。[1](#下载器地址)

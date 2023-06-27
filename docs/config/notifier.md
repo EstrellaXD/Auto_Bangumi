@@ -2,7 +2,9 @@
 
 ## WebUI 配置
 
-![notification](../image/config/notifier.png)
+![notification](../image/config/notifier.png){width=500}{class=ab-shadow-card}
+
+<br/>
 
 - **Enable** 为是否启用通知，如果不启用通知，下面的配置项将不会生效。
 - **Type** 为通知类型，目前支持:

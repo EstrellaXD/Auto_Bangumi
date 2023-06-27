@@ -2,7 +2,9 @@
 
 ## 代理
 
-![proxy](../image/config/proxy.png)
+![proxy](../image/config/proxy.png){width=500}{class=ab-shadow-card}
+
+<br/>
 
 AB 支持 HTTP 代理和 SOCKS5 代理，通过设置代理可以解决一些网络问题。
 

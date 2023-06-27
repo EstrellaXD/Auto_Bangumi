@@ -2,7 +2,9 @@
 
 ## WebUI 配置
 
-![program](../image/config/program.png)
+![program](../image/config/program.png){width=500}{class=ab-shadow-card}
+
+<br/>
 
 - Interval Time 参数的单位为秒，如果你需要设置为分钟，请自行转换为秒。
 - RSS 为 RSS 检查时间间隔，这个参数影响自动下载规则生成的周期间隔。

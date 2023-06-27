@@ -4,7 +4,9 @@ AB 的解析器用于解析聚合 RSS 链接，如果 RSS 有新条目更新，A
 
 ## Webui 中的解析器设置
 
-![parser](../image/config/parser.png)
+![parser](../image/config/parser.png){width=500}{class=ab-shadow-card}
+
+<br/>
 
 - **Enable**: 是否启用 RSS 解析器。
 - **Source** 为 RSS 解析器类型，目前支持 `mikan` 。
