@@ -45,8 +45,8 @@ RUN apk add --no-cache \
         /root/.cache \
         /tmp/*
 
-COPY --chmod=755 src/. .
-COPY --chmod=755 src/docker /
+COPY --chmod=755 backend/src/. .
+COPY --chmod=755 backend/src/docker /
 
 ENTRYPOINT [ "/init" ]
 
