@@ -19,8 +19,8 @@ coverage.xml
 ../.pytest_cache
 .hypothesis
 
-src/module/tests
-src/module/conf/const_dev.py
+backend/src/module/tests
+backend/src/module/conf/const_dev.py
 config/bangumi.json/config/bangumi.json
 /docs
 /.github
@@ -33,8 +33,8 @@ config/bangumi.json/config/bangumi.json
 dist.zip
 data
 config
-/src/config
-/src/data
+/backend/src/config
+/backend/src/data
 .pytest_cache
 test
 .env
