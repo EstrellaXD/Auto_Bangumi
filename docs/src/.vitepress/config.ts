@@ -2,12 +2,12 @@ import { defineConfig } from "vitepress";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: "Auto_Bangumi",
-  description: "A Auto_Bangumi Documents",
+  title: "AutoBangumi",
+  description: "从 Mikan Project 全自动追番下载整理",
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
-      { text: "Home", link: "/" },
+      { text: "项目说明", link: "/home/" },
       { text: "开始部署", link: "/deploy/部署说明" },
       { text: "排错流程", link: "/faq/排错流程" },
       { text: "常见问题", link: "/faq/常见问题" },
@@ -20,19 +20,6 @@ export default defineConfig({
           {
             text: "项目说明",
             link: "/home/",
-          },
-        ],
-      },
-      {
-        text: "更新日志",
-        items: [
-          {
-            text: "3.0 更新说明",
-            link: "/changelog/3.0",
-          },
-          {
-            text: "2.6 更新日志",
-            link: "/changelog/2.6",
           },
         ],
       },
@@ -97,6 +84,19 @@ export default defineConfig({
           {
             text: "常见问题",
             link: "/faq/常见问题",
+          },
+        ],
+      },
+      {
+        text: "更新日志",
+        items: [
+          {
+            text: "3.0 更新说明",
+            link: "/changelog/3.0",
+          },
+          {
+            text: "2.6 更新日志",
+            link: "/changelog/2.6",
           },
         ],
       },

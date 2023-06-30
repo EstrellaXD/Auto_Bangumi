@@ -38,7 +38,7 @@ docker run -d \
 
 此时 AB 的 WebUI 会自动运行，但是主程序会处于暂停状态，可以进入 `http://abhost:7892` 进行配置。
 
-当然也可以使用环境变量进行配置，具体内容请参考 [Docker Compose](/Docker-compose) 章节中同样内容
+当然也可以使用环境变量进行配置，具体内容请参考 [Docker Compose](/deploy/Docker-compose) 章节中同样内容
 
 ```shell
 docker run -d \

@@ -1,19 +1,17 @@
-[//]: # '<p align="center">'
-[//]: # '    <img src="/image/auto_bangumi_v2.png#gh-light-mode-only" width=50%/>'
-[//]: # "</p>"
-
 <p align="center">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="/image/dark-icon.png" width=50%>
-  <source media="(prefers-color-scheme: light)" srcset="/image/light-icon.png" width=50%>
-  <img alt="Shows an illustrated sun in light color mode and a moon with stars in dark color mode." src="/image/auto_bangumi_v2.png">
+  <source media="(prefers-color-scheme: dark)" srcset="../image/dark-icon.png">
+  <source media="(prefers-color-scheme: light)" srcset="../image/light-icon.png">
+  <img src="../image/light-icon.png" width=50%>
 </picture>
 </p>
 
-# 项目说明
+
+## 项目说明
+
 
 <p align="center">
-    <img title="AutoBangumi" src="/image/window.png" alt="" width=75%>
+  <img title="AutoBangumi" src="../image/window.png" alt="" width=75%>
 </p>
 
 本项目是基于 [Mikan Project](https://mikanani.me)、[qBittorrent](https://qbittorrent.org) 的全自动追番整理下载工具。只需要在 [Mikan Project](https://mikanani.me) 上订阅番剧，就可以全自动追番。并且整理完成的名称和目录可以直接被 [Plex]()、[Jellyfin]() 等媒体库软件识别，无需二次刮削。

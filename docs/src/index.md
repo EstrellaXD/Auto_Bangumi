@@ -3,8 +3,8 @@
 layout: home
 
 hero:
-  name: "Auto_Bangumi"
-  tagline: 基于 Mikan Project、qBittorrent 的全自动追番整理下载工具
+  name: AutoBangumi
+  tagline: 从 Mikan Project 全自动追番下载整理
   actions:
     - theme: brand
       text: 快速开始
@@ -21,3 +21,4 @@ features:
   - title: Feature C
     details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
 ---
+
