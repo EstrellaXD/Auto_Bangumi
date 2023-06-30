@@ -132,7 +132,7 @@ class BangumiDatabase(DataConnector):
         data = self._cursor.execute(
             """
             SELECT poster_link FROM bangumi
-            WHERE INSTR(official_title, :official_title) > 0
+            WHERE INSTR(:official_title, official_title) > 0
             """,
             {"official_title": bangumi_name},
         ).fetchone()
@@ -223,5 +223,5 @@ class BangumiDatabase(DataConnector):
 
 if __name__ == "__main__":
     with BangumiDatabase() as db:
-        name = "久保"
+        name = "久保同学不放过我(2023)"
         print(db.match_poster(name))
