@@ -22,7 +22,7 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         pip install pytest
     - name: Test
-      working-directory: ./src
+      working-directory: ./backend/src
       run: |
         mkdir -p config
         pytest
@@ -35,7 +35,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Create Version info
-        working-directory: ./src
+        working-directory: ./backend/src
         run: |
           echo "VERSION = '$GITHUB_REF_NAME'" > module/__version__.py
 

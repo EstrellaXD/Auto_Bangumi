@@ -1,6 +1,6 @@
 name: 功能改进
 description: Feature Request
-title: "[Feature Request]: "
+title: "[Feature Request]"
 labels: ["feature request"]
 body:
   - type: markdown

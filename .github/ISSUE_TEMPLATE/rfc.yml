@@ -2,7 +2,7 @@
 
 name: 功能提案
 description: Request for Comments
-title: "[RFC]: "
+title: "[RFC]"
 labels: ["RFC"]
 body:
   - type: markdown
