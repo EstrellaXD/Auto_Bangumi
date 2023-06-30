@@ -8,12 +8,28 @@ on:
       - main
 
 jobs:
-  generate_release_draft:
-    runs-on: ubuntu-latest
+  check_pr_title:
     if: >
       github.event.pull_request.merged == true &&
-      github.event.pull_request.base.ref == 'main' &&
-      github.event.pull_request.title =~ '^v(\d+\.\d+\.\d+)$'
+      github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    outputs:
+      version_pr: ${{ steps.check.outputs.version_pr }}
+    steps:
+      - name: Check if PR title is version
+        id: check
+        run: |
+          if [[ "${{ github.event.pull_request.title }}" =~ ^([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "::set-output name=version_pr::true"
+          else
+            echo "::set-output name=version_pr::false"
+          fi
+
+  generate_release_draft:
+    needs: check_pr_title
+    if:
+      needs.check_pr_title.outputs.version_pr == 'true'
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
