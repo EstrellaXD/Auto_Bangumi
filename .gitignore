@@ -211,4 +211,4 @@ dist-ssr
 *.sw?
 
 # vitepress
-/docs/src/.vitepress/cache/
+/docs/.vitepress/cache/

@@ -1,10 +1,10 @@
 {
   "private": true,
   "scripts": {
-    "docs:dev": "vitepress dev src",
-    "docs:build": "vitepress build src",
-    "docs:preview": "vitepress preview src",
-    "deploy:preview": "vercel --cwd src/.vitepress/dist"
+    "docs:dev": "vitepress dev",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview",
+    "deploy:preview": "vercel --cwd .vitepress/dist"
   },
   "devDependencies": {
     "typescript": "4.9.5",
