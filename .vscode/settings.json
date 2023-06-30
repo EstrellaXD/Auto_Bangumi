@@ -1,0 +1,10 @@
+{
+  "files.associations": {
+    "settings.json": "json5",
+    "launch.json": "json5",
+    "extensions.json": "json5",
+    "tsconfig.json": "json5",
+    "tsconfig.*.json": "json5",
+  },
+  "python.venvPath": "./backend/venv",
+}
