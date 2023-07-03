@@ -1,9 +1,9 @@
 import logging
-import pathlib
+from pathlib import Path
 
 from .config import settings
 
-LOG_ROOT = pathlib.Path("data")
+LOG_ROOT = Path("data")
 LOG_PATH = LOG_ROOT / "log.txt"
 
 

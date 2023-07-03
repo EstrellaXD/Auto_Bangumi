@@ -1,5 +1,5 @@
 import logging
-import pathlib
+from pathlib import Path
 import re
 
 from module.models import EpisodeFile, SubtitleFile
@@ -31,7 +31,7 @@ def get_path_basename(torrent_path: str) -> str:
     :return: A string representing the basename of the given path.
     :rtype: str
     """
-    return pathlib.Path(torrent_path).name
+    return Path(torrent_path).name
 
 
 def get_group(group_and_title) -> tuple[str | None, str]:
@@ -81,7 +81,7 @@ def torrent_parser(
             else:
                 title, _ = get_season_and_title(title)
             episode = int(match_obj.group(2))
-            suffix = pathlib.Path(torrent_path).suffix
+            suffix = Path(torrent_path).suffix
             if file_type == "media":
                 return EpisodeFile(
                     media_path=torrent_path,

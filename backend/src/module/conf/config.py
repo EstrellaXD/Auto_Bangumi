@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-import pathlib
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -10,7 +10,7 @@ from module.models.config import Config
 from .const import ENV_TO_ATTR
 
 logger = logging.getLogger(__name__)
-CONFIG_ROOT = pathlib.Path("config")
+CONFIG_ROOT = Path("config")
 
 
 try:
