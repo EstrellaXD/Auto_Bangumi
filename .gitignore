@@ -209,3 +209,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# vitepress
+/docs/.vitepress/cache/
