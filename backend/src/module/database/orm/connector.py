@@ -15,7 +15,7 @@ class Connector:
         self, table_name: str, data: dict, database: PathLike[str] | Path = DATA_PATH
     ):
         # Create folder if not exists
-        if isinstance(database, PathLike):
+        if isinstance(database, PathLike, str):
             database = Path(database)
         database.parent.mkdir(parents=True, exist_ok=True)
 
