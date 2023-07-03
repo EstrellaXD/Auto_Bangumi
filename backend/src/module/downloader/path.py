@@ -4,6 +4,7 @@ import re
 from module.conf import settings
 from module.models import BangumiData
 
+# TODO: replace this logic with pathlib
 if ":\\" in settings.downloader.path:
     import ntpath as path
 else:
