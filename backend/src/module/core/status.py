@@ -1,8 +1,8 @@
 import asyncio
-import os.path
 import threading
 
 from module.checker import Checker
+from module.conf import LEGACY_DATA_PATH
 
 
 class ProgramStatus(Checker):
@@ -51,4 +51,4 @@ class ProgramStatus(Checker):
 
     @property
     def legacy_data(self):
-        return os.path.exists("data/data.json")
+        return LEGACY_DATA_PATH.exists()

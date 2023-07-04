@@ -59,5 +59,3 @@ def eps_complete():
                         sc.collect_season(data)
                 data.eps_collect = True
             bd.update_list(datas)
-
-

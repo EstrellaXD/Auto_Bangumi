@@ -31,8 +31,7 @@ class PostNotification:
     def __init__(self):
         Notifier = getClient(settings.notification.type)
         self.notifier = Notifier(
-            token=settings.notification.token,
-            chat_id=settings.notification.chat_id
+            token=settings.notification.token, chat_id=settings.notification.chat_id
         )
 
     @staticmethod

@@ -14,7 +14,7 @@ async def get_log(current_user=Depends(get_current_user)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
         )
-    if os.path.isfile(LOG_PATH):
+    if LOG_PATH.exists():
         with open(LOG_PATH, "rb") as f:
             return Response(f.read(), media_type="text/plain")
     else:
@@ -27,9 +27,8 @@ async def clear_log(current_user=Depends(get_current_user)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
         )
-    if os.path.isfile(LOG_PATH):
-        with open(LOG_PATH, "w") as f:
-            f.write("")
+    if LOG_PATH.exists():
+        LOG_PATH.write_text("")
         return {"status": "ok"}
     else:
         return Response("Log file not found", status_code=404)
