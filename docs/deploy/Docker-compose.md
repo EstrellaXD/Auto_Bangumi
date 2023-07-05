@@ -51,8 +51,7 @@ cd AutoBangumi
 
 ```shell
 export \
-QB_PORT=<YOUR_PORT> \
-DOWNLOAD_PATH=<YOUR_DOWNLOAD_PATH>
+QB_PORT=<YOUR_PORT>
 ```
 
 - `QB_PORT`: 填写你的已经部署的 qBittorrent 端口号，或者想要自定义的端口号，比如: `8080`
