@@ -69,3 +69,12 @@ def test_raw_parser():
     assert info.resolution == "720P"
     assert info.episode == 5
     assert info.season == 1
+
+    content = "【极影字幕·毁片党】LoveLive! SunShine!! 幻日的夜羽 -SUNSHINE in the MIRROR- 第01集 TV版 HEVC_opus 1080p "
+    info = raw_parser(content)
+    assert info.group == "极影字幕·毁片党"
+    assert info.title_zh == "幻日的夜羽"
+    assert info.title_en == "LoveLive! SunShine!!"
+    assert info.resolution == "1080p"
+    assert info.episode == 1
+    assert info.season == 1
