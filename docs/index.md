@@ -17,7 +17,7 @@ features:
   - title: 自动解析下载规则
     details: 自动解析 Mikan Project RSS 并下载
   - title: 自动重命名
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
+    details: 自动管理下载重命名的种子
   - title: 一键管理
     details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
 ---
