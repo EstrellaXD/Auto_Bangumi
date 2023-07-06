@@ -34,3 +34,7 @@ AB 中需要填入的 `token` 为以上 url 中 `token=` 后面的一串字符�
 - 如果字幕组有简体繁体不同的字幕，Mikan Project 大多时候提供了选择订阅的方式，选择一种字幕订阅。
 - 如果不提供简繁选择，那么可以在 AutoBangumi 中设置 `filter` 进行过滤，也可以在规则生成之后进入 qBittorrent 中手动过滤。
 - 目前不支持 OVA 以及 剧场版 的订阅解析。
+
+
+[mikan-site]: https://mikanani.me/
+[mikan-cn-site]: https://mikanime.tv/
