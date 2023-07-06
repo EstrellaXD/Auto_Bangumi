@@ -8,7 +8,7 @@ hero:
   actions:
     - theme: brand
       text: 快速开始
-      link: /deploy/quickstart
+      link: /deploy/
     - theme: alt
       text: 更新日志
       link: /changelog/3.0
