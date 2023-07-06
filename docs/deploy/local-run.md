@@ -16,7 +16,7 @@ python3 pip install -r requirements.txt
 ## 进入源代码目录并且创建版本信息
 
 ```bash
-cd src
+cd backend/src
 
 echo "VERSION = 'local'" >> module/__version__.py
 ```
