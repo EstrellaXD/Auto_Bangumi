@@ -5,7 +5,7 @@
    cd Auto_Bangumi
    ```
 
-2. 修改 `src\module\api\web.py` 以允许 `DEV_VERSION` 下仍然可以显示 Web UI：
+2. 修改 `backend\src\module\api\web.py` 以允许 `DEV_VERSION` 下仍然可以显示 Web UI：
 
    ```powershell
    ((Get-Content -path .\src\module\api\web.py -Raw) -replace 'if VERSION != "DEV_VERSION":','if True:') | Set-Content -Path .\src\module\api\web.py
@@ -32,22 +32,22 @@
    ```powershell
    Invoke-WebRequest -Uri "https://github.com/Rewrite0/Auto_Bangumi_WebUI/releases/latest/download/dist.zip" -OutFile "dist.zip"
    Expand-Archive -Path "dist.zip"
-   mv dist\* src\templates
+   mv dist\* backend\src\templates
    ```
 
 6. 创建 `data` 与 `config` 目录和空白的 `config_dev.json`（如果有必要将这些目录存储在其他位置，建议使用 Junction Directory 链接即可）
 
    ```powershell
-   mkdir src\data
-   mkdir src\config
-   echo "{}" > src\config\config_dev.json
+   mkdir backend\src\data
+   mkdir backend\src\config
+   echo "{}" > backend\src\config\config_dev.json
    ```
    默认情况下，PowerShell 输出文件编码为 `UTF-16LE`，你需要将 `config_dev.json` 的编码格式改为 `UTF-8`。
 
 7. 运行程序测试是否配置正确：
 
    ```powershell
-   cd src
+   cd backend\src
    python main.py
    ```
 
