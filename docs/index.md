@@ -15,7 +15,7 @@ hero:
 
 features:
   - title: 自动解析下载规则
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
+    details: 自动解析 Mikan Project RSS 并下载
   - title: 自动重命名
     details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
   - title: 一键管理
