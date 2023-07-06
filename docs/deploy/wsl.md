@@ -17,9 +17,9 @@ services:
       - GID=1000
       - QB_WEBUI_PORT=8989
     ports:
-      - 6881:6881
-      - 6881:6881/udp
-      - 8989:8989
+      - "6881:6881"
+      - "6881:6881/udp"
+      - "8989:8989"
     volumes:
       - qb_config:/config
       - /mnt/g/animation:/Downloads   #下载路径，对应 Windows上目录是 G:\animation
@@ -42,8 +42,8 @@ services:
       - PGID=1000
       - TZ=Asia/Shanghai
       - AB_DOWNLOADER_HOST=qbittorrent:8989
-      - AB_DOWNLOADER_USERNAME=admin 
-      - AB_DOWNLOADER_PASSWORD=adminadmin 
+      - AB_DOWNLOADER_USERNAME=admin
+      - AB_DOWNLOADER_PASSWORD=adminadmin
       - AB_NOT_CONTAIN=720|繁体|CHT|JPTC|繁日|BIG5
       - AB_DOWNLOAD_PATH=/Downloads  #qbittorrent 映射的地址，否者可能提示下载失败
       - AB_RSS=https://mikanani.me/RSS/MyBangumi?token=xxxxxxxx%3d%3d  #订阅地址，改成自己的
@@ -58,5 +58,4 @@ volumes:
     external: false
   auto_bangumi:
     external: false
-
 ```

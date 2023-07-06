@@ -8,7 +8,7 @@ export default defineConfig({
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       { text: "项目说明", link: "/home/" },
-      { text: "开始部署", link: "/deploy/部署说明" },
+      { text: "快速开始", link: "/deploy/quick-start" },
       { text: "排错流程", link: "/faq/排错流程" },
       { text: "常见问题", link: "/faq/常见问题" },
     ],
@@ -27,20 +27,16 @@ export default defineConfig({
         text: "部署",
         items: [
           {
-            text: "部署前准备",
-            link: "/deploy/部署说明",
-          },
-          {
             text: "Docker-cli 部署",
-            link: "/deploy/Docker-cli",
+            link: "/deploy/docker-cli",
           },
           {
             text: "Docker-Compose 部署",
-            link: "/deploy/Docker-compose",
+            link: "/deploy/docker-compose",
           },
           {
             text: "群晖NAS",
-            link: "/deploy/群晖",
+            link: "/deploy/dsm",
           },
           {
             text: "WSL",
@@ -53,26 +49,42 @@ export default defineConfig({
         items: [
           {
             text: "Windows 本地部署",
-            link: "/deploy/Windows-本地部署",
+            link: "/deploy/windows",
           },
           {
             text: "Unix 本地部署",
-            link: "/deploy/local-run",
+            link: "/deploy/unix",
           },
         ],
       },
       {
-        text: "使用说明",
+        text: "配置说明",
         items: [
-          {
-            text: "使用说明",
-            link: "/use/使用说明",
-          },
-          {
-            text: "配置选项说明",
-            link: "/use/配置选项说明",
-          },
-        ],
+            {
+                text: "获取 RSS 订阅链接",
+                link: "/config/rss",
+            },
+            {
+              text: "主程序配置",
+              link: "/config/program",
+            },
+            {
+                text: "下载器配置",
+                link: "/config/downloader",
+            },
+            {
+                text: "解析器配置",
+                link: "/config/parser",
+            },
+            {
+                text: "推送器配置",
+                link: "/config/notifier",
+            },
+            {
+                text: "代理配置",
+                link: "/config/proxy",
+            }
+            ]
       },
       {
         text: "FAQ",
