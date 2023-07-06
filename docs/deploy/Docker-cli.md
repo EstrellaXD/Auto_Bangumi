@@ -2,7 +2,7 @@
 
 ### 设置环境变量
 
-添加环境变量（注意这里最好手动输入）详细内容请参考 [Docker Compose](https://github) 章节中同样内容
+添加环境变量（注意这里最好手动输入）详细内容请参考 [Docker Compose](/deploy/Docker-compose) 章节中同样内容
 
 ```shell
 export \
