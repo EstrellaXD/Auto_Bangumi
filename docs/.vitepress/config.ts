@@ -13,6 +13,10 @@ export default defineConfig({
       { text: "常见问题", link: "/faq/常见问题" },
     ],
 
+    search: {
+      provider: 'local'
+    },
+
     sidebar: [
       {
         text: "项目说明",

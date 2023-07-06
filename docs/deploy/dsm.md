@@ -9,13 +9,13 @@
 
 进入套件中心，安装 Container Manager (Docker) 套件。
 
-![install-docker](../image/dsm/install-docker.png)
+![install-docker](../image/dsm/install-docker.png){data-zoomable}
 
 ## 通过 Docker compose 安装配置 AB
 
 点击 **项目**，然后点击 **新建**，选择 **Docker Compose**。
 
-![new-compose](../image/dsm/new-compose.png)
+![new-compose](../image/dsm/new-compose.png){data-zoomable}
 
 复制以下内容填入 **Docker Compose** 中。
 ```yaml
@@ -36,7 +36,7 @@ services:
 
 点击 **下一步**，然后点击 **完成**。
 
-![create](../image/dsm/create.png)
+![create](../image/dsm/create.png){data-zoomable}
 
 完成创建之后进入 `http://<NAS IP>:7892` 即可进入 AB 并进行配置。
 
