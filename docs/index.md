@@ -14,11 +14,11 @@ hero:
       link: /changelog/3.0
 
 features:
-  - title: Feature A
+  - title: 自动解析下载规则
     details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
-  - title: Feature B
+  - title: 自动重命名
     details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
-  - title: Feature C
+  - title: 一键管理
     details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
 ---
 
