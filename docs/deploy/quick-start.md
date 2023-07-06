@@ -1,9 +1,9 @@
-## 快速开始
+# 快速开始
 
 我们推荐你在 Docker 中部署运行 AutoBangumi。
 部署前请确认已经安装了 [Docker Engine][docker-engine] 或者 [Docker Desktop][docker-desktop]。
 
-### 创建数据和配置文件夹
+## 创建数据和配置文件夹
 
 为了保证 AB 在每次更新之后数据和配置不丢失，推荐使用 Docker volume 进行数据和配置的持久化。
 
@@ -11,8 +11,9 @@
 docker volume create AutoBangumi_config
 docker volume create AutoBangumi_data
 ```
+## 使用 Docker 部署 AutoBangumi
 
-### 使用 Docker-cli 部署 AutoBangumi
+### 选项1: 使用 Docker-cli 部署
 
 复制以下命令运行即可。
 
@@ -29,7 +30,7 @@ docker run -d \
 
 ```
 
-### 使用 Docker-compose 部署 AutoBangumi
+### 选项2: 使用 Docker-compose 部署
 
 复制以下内容到 `docker-compose.yml` 文件中，然后运行 `docker-compose up -d` 即可。
 
@@ -57,10 +58,32 @@ volumes:
         name: AutoBangumi_data
 ```
 
-### 配置 AutoBangumi
+## 安装 qBittorrent
 
-此时 AB 的 WebUI 会自动运行，但是主程序会处于暂停状态，可以进入 `http://abhost:7892` 进行配置。
+如果你没有安装 qBittorrent，请先安装 qBittorrent。
+
+- 
+
+## 获取 Mikan Project 的 RSS 链接
+
+进入 [MiKan Project][mikan-project]，注册账号并登录，然后点击右下角的 **RSS** 按钮，复制链接。
+
+![mikan-rss](../image/rss/rss-token.png)
+
+
+详细步骤参考 [Mikan RSS][config-rss]
+
+
+
+
+
+## 配置 AutoBangumi
+
+安装好 AB 之后，AB 的 WebUI 会自动运行，但是主程序会处于暂停状态，可以进入 `http://abhost:7892` 进行配置。
+
+
 
 
 [docker-engine]: https://docs.docker.com/engine/install/
 [docker-desktop]: https://www.docker.com/products/docker-desktop
+[config-rss]: ../config/rss
