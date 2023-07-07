@@ -22,10 +22,6 @@
 
 本项目是基于 [Mikan Project](https://mikanani.me)、[qBittorrent](https://qbittorrent.org) 的全自动追番整理下载工具。只需要在 [Mikan Project](https://mikanani.me) 上订阅番剧，就可以全自动追番。并且整理完成的名称和目录可以直接被 [Plex]()、[Jellyfin]() 等媒体库软件识别，无需二次刮削。
 
-[主项目地址](https://www.github.com/EstrellaXD/Auto_Bangumi)
-/ [WebUI 仓库](https://github.com/Rewrite0/Auto_Bangumi_WebUI)
-/ [Wiki 说明](https://www.github.com/EstrellaXD/Auto_Bangumi/wiki)
-
 ## AutoBangumi 功能说明
 
 - 简易单次配置就能持续使用
@@ -64,19 +60,10 @@
 - 内置 TDMB 解析器，可以直接生成完整的 TMDB 格式的文件以及番剧信息。
 - 对于 Mikan RSS 的反代支持。
 
-## 如何开始
-
-- **[部署说明 (Official)](https://github.com/EstrellaXD/Auto_Bangumi/wiki)**
-- **[2.6 版本更新说明](https://github.com/EstrellaXD/Auto_Bangumi/wiki/2.6更新说明)**
-- **[3.0 版本更新说明](https://github.com/EstrellaXD/Auto_Bangumi/wiki/3.0更新说明)**
-- **[部署说明 (手把手)](https://www.himiku.com/archives/auto-bangumi.html)**
-
 ## 相关群组
 
 - 更新推送：[Telegram Channel](https://t.me/autobangumi_update)
 - Bug 反馈群：[Telegram](https://t.me/+yNisOnDGaX5jMTM9)
-
-# 声明
 
 ## 致谢
 
