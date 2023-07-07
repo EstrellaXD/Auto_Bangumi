@@ -5,11 +5,11 @@
 ![downloader](../image/config/downloader.png)
 
 - **Downloader Type** 为下载器类型，目前支持 qBittorrent 下载器，目前暂不支持修改。
-- **Host** 为下载器地址。[1](./###下载器地址)
-- **Download path** 为映射的下载器下载路径。[2](./###下载器路径问题)
+- **Host** 为下载器地址。[1](#下载器地址)
+- **Download path** 为映射的下载器下载路径。[2](#下载器路径问题)
 - **SSL** 为下载器是否使用 SSL。
 
-## 常见问题问题
+## 常见问题
 
 ### 下载器地址
 
