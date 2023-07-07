@@ -4,11 +4,14 @@
 
 ![notification](../image/config/notifier.png)
 
-- `type` 为通知类型，目前支持 `telegram` 、 `serverchan` 、 `bark`、 `wecom` 四种类型。
-- `token` 为通知 Token，目前支持 `telegram` 、 `serverchan` 、 `bark`、 `wecom` 四种类型。
-- `chat_id` 为通知 Chat ID，仅在使用 `telegram` 通知时需要填写。[Telegram Bot 获取 Chat ID][5]
-- 使用`wecom`时，chat_id参数框填写自建推送的url地址，同时需要在服务端增加[图文消息][6]类型。[Wecom酱配置说明][7]
-
+- **Enable** 为是否启用通知，如果不启用通知，下面的配置项将不会生效。
+- **Type** 为通知类型，目前支持:
+  - Telegram
+  - Wecom
+  - Bark
+  - ServerChan
+- **Chat ID** 仅在使用 `telegram` 通知时需要填写。[Telegram Bot 获取 Chat ID][1]
+- **Wecom**，chat_id参数框填写自建推送的url地址，同时需要在服务端增加[图文消息][2]类型。[Wecom酱配置说明][3]
 
 ## `config.json` 中的配置选项
 
@@ -23,3 +26,7 @@
 | token   | 通知 Token   | 字符串  | 通知 Token   |
 | chat_id | 通知 Chat ID | 字符串  | 通知 Chat ID |
 
+
+[1]: https://core.telegram.org/bots#6-botfather
+[2]: https://github.com/umbors/wecomchan-alifun
+[3]: https://github.com/easychen/wecomchan
