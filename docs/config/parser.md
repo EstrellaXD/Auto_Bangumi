@@ -6,16 +6,16 @@ AB 的解析器用于解析聚合 RSS 链接，如果 RSS 有新条目更新，A
 
 ![parser](../image/config/parser.png)
 
-- Enable: 是否启用 RSS 解析器。
-- Source 为 RSS 解析器类型，目前支持 `mikan` 。
-- Token 为蜜柑计划的 Token。[蜜柑计划 Token 获取][rss_token]
-- Custom_url 为自定义蜜柑计划地址。[自定义反代地址][reproxy]
-- Language 为 RSS 解析器语言，目前支持 `zh` 、 `jp` 、 `en` 三种语言。
-- Parser_type 为 **官方标题** 解析器解析类型，支持类型如下：
+- **Enable**: 是否启用 RSS 解析器。
+- **Source** 为 RSS 解析器类型，目前支持 `mikan` 。
+- **Token** 为蜜柑计划的 Token。[蜜柑计划 Token 获取][rss_token]
+- **Custom_url** 为自定义蜜柑计划地址。[自定义反代地址][reproxy]
+- **Language** 为 RSS 解析器语言，目前支持 `zh` 、 `jp` 、 `en` 三种语言。
+- **Parser_type** 为 **官方标题** 解析器解析类型，支持类型如下：
   - parser 为正则表达式解析器，使用正则表达式解析标题。
   - mikan 为蜜柑计划解析器，使用蜜柑计划解析标题。
   - tmdb 为 TMDB 解析器，使用 TMDB 解析标题。
-- Exclude 为全局 RSS 解析器过滤器，可以填入字符串或者正则表达式，AB 在解析 RSS 时会过滤掉符合过滤器的条目。
+- **Exclude** 为全局 RSS 解析器过滤器，可以填入字符串或者正则表达式，AB 在解析 RSS 时会过滤掉符合过滤器的条目。
 
 
 ## `config.json` 中的配置选项

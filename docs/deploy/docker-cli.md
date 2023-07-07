@@ -1,10 +1,10 @@
-## 使用 Docker-cli 部署
+# 使用 Docker-cli 部署
 
-### 新版本提醒
+## 新版本提醒
 
-AutoBangumi 2.6 版本后支持直接在 WebUI 中配置，你可以选择直接拉起容器再在 WebUI 中配置。老版本的环境变量配置参数会自动迁移
+AutoBangumi 2.6 版本后支持直接在 WebUI 中配置，你可以选择直接拉起容器再在 WebUI 中配置。老版本的环境变量配置参数会自动迁移，环境变量配置方式仍然可用，但是仅在第一次启动时生效。
 
-### 创建数据和配置文件夹
+## 创建数据和配置文件夹
 
 为了保证 AB 在每次更新之后数据和配置不丢失，推荐使用 Docker volume 或者 bind mount 进行数据和配置的持久化。
 
@@ -20,7 +20,7 @@ mkdir -p $PWD/config
 mkdir -p $PWD/data
 ```
 
-### 使用 Docker-cli 部署 AutoBangumi
+## 使用 Docker-cli 部署 AutoBangumi
 
 复制以下命令运行即可。
 

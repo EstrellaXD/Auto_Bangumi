@@ -18,7 +18,7 @@ python3 pip install -r requirements.txt
 ```bash
 cd backend/src
 
-echo "VERSION = 'local'" >> module/__version__.py
+echo "VERSION = 'local'" > module/__version__.py
 ```
 
 ## 下载 WebUI
