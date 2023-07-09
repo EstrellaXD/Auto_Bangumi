@@ -9,17 +9,18 @@ export default defineConfig({
   description: "从 Mikan Project 全自动追番下载整理",
 
   head: [
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/image/icons/light-logo.svg' }],
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/light-logo.svg' }],
+    ['meta', { property: 'og:title', content: 'AutoBangumi' }],
     ['meta', { property: 'og:description', content: '自动追番，解放双手！' }],
-    ['meta', { property: 'og:image', content: '/image/preview/social.png' }],
+    ['meta', { property: 'og:image', content: '/social.png' }],
     ['meta', { property: 'og:site_name', content: 'AutoBangumi' }],
   ],
 
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     logo: {
-      dark: '/image/icons/dark-logo.svg',
-      light: '/image/icons/light-logo.svg',
+      dark: '/dark-logo.svg',
+      light: '/light-logo.svg',
     },
 
     editLink: {
