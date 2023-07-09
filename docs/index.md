@@ -9,10 +9,10 @@ hero:
   name: AutoBangumi
   text: 自动追番，解放双手！
   tagline: 从 Mikan Project 全自动 订阅解析、下载管理、重命名整理
-  image:
-    dark: /image/icons/dark-logo.svg
-    light: /image/icons/light-logo.svg
-    alt: AutoBangumi WebUI
+#  image:
+#    dark: /image/icons/dark-logo.svg
+#    light: /image/icons/light-logo.svg
+#    alt: AutoBangumi WebUI
   actions:
     - theme: brand
       text: 快速开始

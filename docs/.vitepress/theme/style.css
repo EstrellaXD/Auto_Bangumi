@@ -8,12 +8,12 @@
  * -------------------------------------------------------------------------- */
 
  :root {
-  --vp-c-brand: #646cff;
-  --vp-c-brand-light: #747bff;
-  --vp-c-brand-lighter: #9499ff;
-  --vp-c-brand-lightest: #bcc0ff;
-  --vp-c-brand-dark: #535bf2;
-  --vp-c-brand-darker: #454ce1;
+  --vp-c-brand: #7B65D6;
+  --vp-c-brand-light: #7162AE;
+  --vp-c-brand-lighter: #8D7FC2;
+  --vp-c-brand-lightest: #8E8A9C;
+  --vp-c-brand-dark: #4E3C94;
+  --vp-c-brand-darker: #281E52;
   --vp-c-brand-dimm: rgba(100, 108, 255, 0.08);
 }
 
@@ -106,4 +106,5 @@
   box-shadow: 0 10px 30px -10px rgba(0,0,0,0.2), 
               0 0 2px rgba(0,0,0,0.2), 
               0 20px 30px -20px rgba(0,0,0,0.4);
+  border-radius: 10px;
 }

@@ -4,7 +4,7 @@
 <template>
   <div class="container">
     <img
-      src="/image/preview/webui-home.png"
+      src="/image/preview/window.png"
       alt="AutoBangumi WebUI Preview"
       class="webui-preview"
       data-zoomable
@@ -44,9 +44,7 @@
   height: auto;
   border-radius: 10px;
 
-  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.3), 
-              0 0 2px rgba(0,0,0,0.2), 
-              0 20px 40px -20px rgba(0,0,0,0.5);
+  box-shadow: none;
 }
 
 </style>
