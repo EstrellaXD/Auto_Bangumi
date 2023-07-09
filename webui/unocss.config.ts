@@ -15,7 +15,7 @@ export default defineConfig({
   ],
   theme: {
     colors: {
-      primary: '#493475',
+      primary: '#5739ca',
       running: '#A3D491',
       stopped: '#DF7F91',
       page: '#F0F0F0',
@@ -25,13 +25,13 @@ export default defineConfig({
     [
       'bg-theme-row',
       {
-        background: 'linear-gradient(90.5deg, #372A87 1.53%, #9B4D9C 96.48%)',
+        background: 'linear-gradient(120deg, #441bd9 0%, #b42ff1 100%)',
       },
     ],
     [
       'bg-theme-col',
       {
-        background: 'linear-gradient(180deg, #3C239F 0%, #793572 100%)',
+        background: 'linear-gradient(135deg, #441bd9 0%, #b42ff1 100%)',
       },
     ],
     [
