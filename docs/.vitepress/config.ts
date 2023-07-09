@@ -10,6 +10,9 @@ export default defineConfig({
 
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/image/icons/light-logo.svg' }],
+    ['meta', { property: 'og:description', content: '自动追番，解放双手！' }],
+    ['meta', { property: 'og:image', content: '/image/preview/social.png' }],
+    ['meta', { property: 'og:site_name', content: 'AutoBangumi' }],
   ],
 
   themeConfig: {
