@@ -78,3 +78,13 @@ def test_raw_parser():
     assert info.resolution == "1080p"
     assert info.episode == 1
     assert info.season == 1
+
+    content = "[ANi] BLEACH 死神 千年血战篇-诀别谭- - 14 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+    info = raw_parser(content)
+    assert info.group == "ANi"
+    assert info.title_en == "BLEACH"
+    assert info.title_zh == "死神 千年血战篇-诀别谭-"
+    assert info.resolution == "1080P"
+    assert info.episode == 14
+    assert info.season == 1
+
