@@ -6,7 +6,7 @@ click
 fastapi
 h11
 idna
-pydantic
+pydantic == 1.10
 PySocks
 qbittorrent-api
 requests

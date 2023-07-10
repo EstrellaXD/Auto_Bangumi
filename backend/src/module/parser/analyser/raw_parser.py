@@ -94,11 +94,23 @@ def name_process(name: str):
             split = re.split("-", name)
     if len(split) == 1:
         split_space = split[0].split(" ")
-        for idx, item in enumerate(split_space):
+        language_pattern = []
+        for item in split_space:
             if re.search(r"^[\u4e00-\u9fa5]{2,}", item) is not None:
-                split_space.remove(item)
-                split = [item.strip(), " ".join(split_space).strip()]
-                break
+                language_pattern.append(1)
+            elif re.search(r"[a-zA-Z]{2,}", item) is not None:
+                language_pattern.append(0)
+            elif re.search(r"[\u0800-\u4e00]{2,}", item) is not None:
+                language_pattern.append(2)
+        split = [split_space[0]]
+        for i in range(1, len(split_space)):
+            # 如果当前字符串的语言与上一个字符串的语言相同
+            if language_pattern[i] == language_pattern[i - 1]:
+                # 合并这两个字符串
+                split[-1] += ' ' + split_space[i]
+            else:
+                # 否则，将当前字符串添加到结果列表中
+                split.append(split_space[i])
     for item in split:
         if re.search(r"[\u0800-\u4e00]{2,}", item) and not name_jp:
             name_jp = item.strip()
@@ -106,6 +118,8 @@ def name_process(name: str):
             name_zh = item.strip()
         elif re.search(r"[a-zA-Z]{3,}", item) and not name_en:
             name_en = item.strip()
+            if name_en not in name:
+                name_en = None
     return name_en, name_zh, name_jp
 
 
@@ -182,5 +196,5 @@ def raw_parser(raw: str) -> Episode | None:
 
 
 if __name__ == "__main__":
-    title = "[动漫国字幕组&LoliHouse] THE MARGINAL SERVICE - 08 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕]"
+    title = "【极影字幕·毁片党】LoveLive! SunShine!! 幻日的夜羽 -SUNSHINE in the MIRROR- 第01集 TV版 HEVC_opus 1080p"
     print(raw_parser(title))
