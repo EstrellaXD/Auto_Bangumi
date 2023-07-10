@@ -13,5 +13,8 @@
     "vercel": "31.0.1",
     "vitepress": "1.0.0-beta.3",
     "vue": "3.3.4"
+  },
+  "dependencies": {
+    "@vercel/analytics": "^1.0.1"
   }
 }

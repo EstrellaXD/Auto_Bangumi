@@ -1,5 +1,7 @@
 import { defineConfig } from "vitepress";
+import { inject } from '@vercel/analytics';
 
+inject();
 
 const version = `v3.0`
 
