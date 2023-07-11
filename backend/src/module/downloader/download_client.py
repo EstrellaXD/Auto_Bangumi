@@ -55,9 +55,8 @@ class DownloadClient(TorrentPath):
     def init_downloader(self):
         prefs = {
             "rss_auto_downloading_enabled": True,
-            "rss_max_articles_per_feed": 500,
+            "rss_max_articles_per_feed": 5000,
             "rss_processing_enabled": True,
-            "rss_refresh_interval": 30,
         }
         self.client.prefs_init(prefs=prefs)
         try:
