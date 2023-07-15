@@ -96,7 +96,7 @@ def name_process(name: str):
         split_space = split[0].split(" ")
         language_pattern = []
         for item in split_space:
-            if re.search(r"^[\u4e00-\u9fa5]{2,}", item) is not None:
+            if re.search(r"[\u4e00-\u9fa5]{2,}", item) is not None:
                 language_pattern.append(1)
             elif re.search(r"[a-zA-Z]{2,}", item) is not None:
                 language_pattern.append(0)
@@ -107,7 +107,7 @@ def name_process(name: str):
             # 如果当前字符串的语言与上一个字符串的语言相同
             if language_pattern[i] == language_pattern[i - 1]:
                 # 合并这两个字符串
-                split[-1] += ' ' + split_space[i]
+                split[-1] += " " + split_space[i]
             else:
                 # 否则，将当前字符串添加到结果列表中
                 split.append(split_space[i])

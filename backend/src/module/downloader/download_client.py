@@ -1,4 +1,5 @@
 import logging
+import re
 
 from .path import TorrentPath
 
@@ -55,9 +56,8 @@ class DownloadClient(TorrentPath):
     def init_downloader(self):
         prefs = {
             "rss_auto_downloading_enabled": True,
-            "rss_max_articles_per_feed": 500,
+            "rss_max_articles_per_feed": 5000,
             "rss_processing_enabled": True,
-            "rss_refresh_interval": 30,
         }
         self.client.prefs_init(prefs=prefs)
         try:
@@ -71,9 +71,10 @@ class DownloadClient(TorrentPath):
     def set_rule(self, data: BangumiData):
         data.rule_name = self._rule_name(data)
         data.save_path = self._gen_save_path(data)
+        raw_title = re.escape(data.title_raw)
         rule = {
             "enable": True,
-            "mustContain": data.title_raw,
+            "mustContain": raw_title,
             "mustNotContain": "|".join(data.filter),
             "useRegex": True,
             "episodeFilter": "",
