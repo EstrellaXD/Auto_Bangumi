@@ -84,7 +84,9 @@
 
 ## 贡献
 
-欢迎提供 ISSUE 或者 PR
+欢迎提供 ISSUE 或者 PR, 贡献代码前建议阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+贡献者名单请见：
 
 <a href="https://github.com/EstrellaXD/Auto_Bangumi/graphs/contributors"><img src="https://contrib.rocks/image?repo=EstrellaXD/Auto_Bangumi"></a>
 
