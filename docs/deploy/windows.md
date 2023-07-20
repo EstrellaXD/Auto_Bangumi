@@ -8,29 +8,21 @@
    cd Auto_Bangumi
    ```
 
-2. 修改 `backend\src\module\api\web.py` 以允许 `DEV_VERSION` 下仍然可以显示 Web UI：
+2. 创建版本信息文件：
 
    ```powershell
-   ((Get-Content -path .\src\module\api\web.py -Raw) -replace 'if VERSION != "DEV_VERSION":','if True:') | Set-Content -Path .\src\module\api\web.py
+   echo "VERSION='local'" > backend\src\__version__.py
    ```
 
-3. 创建一个新的分支，以方便后续更新时与远程 `main` 分支合并：
-
-   ```powershell
-   git checkout -b non-docker-deployment
-   git commit -a -m "Enable WebUI for dev version"
-   ```
-
-4. 新建 `python` 虚拟环境、激活并安装依赖（需保证 `python -V` 打印的版本符合 `Dockerfile` 中的要求，如 `FROM python:3.11-alpine AS APP`）
+3. 新建 `python` 虚拟环境、激活并安装依赖（需保证 `python -V` 打印的版本符合 `Dockerfile` 中的要求，如 `FROM python:3.11-alpine AS APP`）
 
    ```powershell
    python -m venv env
    .\env\Scripts\Activate.ps1
-   python -m pip install -r requirements.txt
+   python -m pip install -r backend\requirements.txt
    ```
 
-
-5. 下载 WebUI 并安装：
+4. 下载 WebUI 并安装：
 
    ```powershell
    Invoke-WebRequest -Uri "https://github.com/Rewrite0/Auto_Bangumi_WebUI/releases/latest/download/dist.zip" -OutFile "dist.zip"
@@ -38,7 +30,7 @@
    mv dist\* backend\src\templates
    ```
 
-6. 创建 `data` 与 `config` 目录和空白的 `config_dev.json`（如果有必要将这些目录存储在其他位置，建议使用 Junction Directory 链接即可）
+5. 创建 `data` 与 `config` 目录和空白的 `config_dev.json`（如果有必要将这些目录存储在其他位置，建议使用 Junction Directory 链接即可）
 
    ```powershell
    mkdir backend\src\data
@@ -47,14 +39,14 @@
    ```
    默认情况下，PowerShell 输出文件编码为 `UTF-16LE`，你需要将 `config_dev.json` 的编码格式改为 `UTF-8`。
 
-7. 运行程序测试是否配置正确：
+6. 运行程序测试是否配置正确：
 
    ```powershell
    cd backend\src
    python main.py
    ```
 
-8. 接下来配置成服务以实现开机自启，以下以 `nssm` 为例：
+7. 接下来配置成服务以实现开机自启，以下以 `nssm` 为例：
 
    ```powershell
    nssm install AutoBangumi (Get-Command python).Source
@@ -63,7 +55,7 @@
    nssm set AutoBangumi Start SERVICE_DELAYED_AUTO_START
    ```
 
-9. [可选] 由于 3.0 版本之前 AutoBangumi 没有修改规则或者批量移动下载位置的功能，可能遇到季名不符合需要 (如《鬼灭之刃 刀匠村篇》被视作一个仅具有一季的独立的影视作品，而不是系列动画的第三季) 或者中途想继续下载但是移出库防止出现在新剧集通知中等情况，可与考虑将下载目录和库目录区分开并用 Junction Directory 相连，这样在管理库时可以随意移动软链接而不影响 AutoBangumi 的工作。比如：
+8. [可选] 由于 3.0 版本之前 AutoBangumi 没有修改规则或者批量移动下载位置的功能，可能遇到季名不符合需要 (如《鬼灭之刃 刀匠村篇》被视作一个仅具有一季的独立的影视作品，而不是系列动画的第三季) 或者中途想继续下载但是移出库防止出现在新剧集通知中等情况，可与考虑将下载目录和库目录区分开并用 Junction Directory 相连，这样在管理库时可以随意移动软链接而不影响 AutoBangumi 的工作。比如：
 	```powershell
 	﻿### Configurations
 	$downloadDir = "path\to\download_dir"

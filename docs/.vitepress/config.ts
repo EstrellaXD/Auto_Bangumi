@@ -156,11 +156,20 @@ export default defineConfig({
             link: "/changelog/3.0",
           },
           {
-            text: "2.6 更新日志",
+            text: "2.6 更新说明",
             link: "/changelog/2.6",
           },
         ],
       },
+      {
+        text: "开发者文档",
+        items: [
+            {
+                text: "贡献指南",
+                link: "/dev/",
+            },
+        ]
+      }
     ],
   },
 });
