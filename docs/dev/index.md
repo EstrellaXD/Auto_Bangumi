@@ -99,49 +99,7 @@ AutoBangumi 项目使用「分支开发，主干发布」的模式，
 
 > 图中 commit timeline 从左到右 --->
 
-```mermaid
-%%{init: {'theme': 'base', 'gitGraph': {'showCommitLabel': true}}}%%
-
-gitGraph:
-  checkout main
-  commit id: "."
-  branch 3.0-dev
-  commit id: "feat 1"
-  commit id: "feat 2"
-  commit id: "feat 3"
-
-  checkout main
-  merge 3.0-dev tag: "3.0.9"
-  commit id: ".."
-
-  branch 3.1-dev
-  commit id: "feat 4"
-
-  checkout 3.0-dev
-  commit id: "PR merge (fix)"
-  checkout main
-  merge 3.0-dev tag: "3.0.10"
-
-  checkout 3.1-dev
-  commit id: "feat 5"
-  commit id: "feat 6"
-
-  checkout main
-  merge 3.1-dev tag: "3.1.0"
-  commit id: "..."
-
-  branch 3.2-dev
-  commit id: "feat 7"
-  commit id: "feat 8"
-
-  checkout 3.1-dev
-  commit id: "PR merge (fix) "
-  checkout main
-  merge 3.1-dev tag: "3.1.1"
-
-  checkout 3.2-dev
-  commit id: "PR merge (feat)"
-```
+![dev-branch](../image/dev/branch.png)
 
 
 ## Pull Request
