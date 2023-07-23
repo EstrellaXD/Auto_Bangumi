@@ -23,7 +23,7 @@ AB 支持 HTTP 代理和 SOCKS5 代理，通过设置代理可以解决一些网
 
     老版本的 AB 就有这项功能，升级到 2.6 版本之后只需要在 WebUI 中检查代理配置即可正常访问蜜柑计划。
     
-    不过这时候 qBittorrent 无法正常访问蜜柑计划的 RSS 和种子地址，因此需要在 qBittorrent 中添加代理。详情可以查看 #198
+    不过这时候 qBittorrent 无法正常访问蜜柑计划的 RSS 和种子地址，因此需要在 qBittorrent 中添加代理。详情可以查看: [Mikan 被墙怎么办](../faq/mikan-network.md)
 
 2. 自定义反向代理 URL
 
