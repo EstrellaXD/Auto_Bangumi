@@ -9,6 +9,10 @@
     <img title="python version" src="https://img.shields.io/badge/python-3.11-blue" alt="">
 </p>
 
+<p align="center">
+  <a href="https://www.autobangumi.org">官方网站</a> | <a herf="https://www.autobangumi.org/deploy/quick-start.html">快速开始</a> | <a href="https://www.autobangumi.org/changelog/3.0.html">更新日志</a> | <a herf="https://t.me/autobangumi">TG 群组</a>
+</p>
+
 # 项目说明
 
 <p align="center">
@@ -55,17 +59,12 @@
 - 内置 TDMB 解析器，可以直接生成完整的 TMDB 格式的文件以及番剧信息。
 - 对于 Mikan RSS 的反代支持。
 
-## [快速开始](https://www.autobangumi.org/deploy/quick-start.html)
-
-- **[项目官网](https://autobangumi.org)**
-- **[3.0 更新说明](https://www.autobangumi.org/changelog/3.0.html)**
-
 ## 相关群组
 
 - 更新推送：[Telegram Channel](https://t.me/autobangumi_update)
 - Bug 反馈群：[Telegram](https://t.me/+yNisOnDGaX5jMTM9)
 
-## Roadmap
+## [Roadmap](https://github.com/users/EstrellaXD/projects/2)
 
 ***开发中的功能：***
 
