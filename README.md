@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://www.autobangumi.org">官方网站</a> | <a herf="https://www.autobangumi.org/deploy/quick-start.html">快速开始</a> | <a href="https://www.autobangumi.org/changelog/3.0.html">更新日志</a> | <a herf="https://t.me/autobangumi">TG 群组</a>
+  <a href="https://www.autobangumi.org">官方网站</a> | <a href="https://www.autobangumi.org/deploy/quick-start.html">快速开始</a> | <a href="https://www.autobangumi.org/changelog/3.0.html">更新日志</a> | <a href="https://t.me/autobangumi">TG 群组</a>
 </p>
 
 # 项目说明
