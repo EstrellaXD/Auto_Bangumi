@@ -144,6 +144,10 @@ export default defineConfig({
             text: "常见问题",
             link: "/faq/常见问题",
           },
+          {
+            text: "网络问题",
+            link: "/faq/mikan-network",
+          }
         ],
       },
       {
