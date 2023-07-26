@@ -4,6 +4,7 @@ import { defineConfig } from "vitepress";
 const version = `v3.0`
 
 // https://vitepress.dev/reference/site-config
+// @ts-ignore
 export default defineConfig({
   title: "AutoBangumi",
   description: "从 Mikan Project 全自动追番下载整理",
@@ -13,6 +14,7 @@ export default defineConfig({
     ['meta', { property: 'og:image', content: '/social.png' }],
     ['meta', { property: 'og:site_name', content: 'AutoBangumi' }],
     ['meta', { property: 'og:url', content: 'https://www.autobangumi.org' }],
+    ["script", { src: '/_vercel/insights/script.js' }]
   ],
 
   themeConfig: {
