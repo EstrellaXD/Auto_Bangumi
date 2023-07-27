@@ -38,7 +38,7 @@
   },
   "homepage": {
     "rule": {
-      "offical_title": "官方名称",
+      "official_title": "官方名称",
       "year": "年份",
       "season": "季度",
       "offset": "剧集偏移",
