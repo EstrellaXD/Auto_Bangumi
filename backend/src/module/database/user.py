@@ -6,18 +6,22 @@ from module.models.user import User, UserUpdate, UserLogin
 from module.security.jwt import get_password_hash, verify_password
 from module.database.engine import engine
 from sqlmodel import Session, select, SQLModel
+from sqlalchemy.exc import UnboundExecutionError, OperationalError
 
 logger = logging.getLogger(__name__)
 
 
-class AuthDB(Session):
+class UserDatabase(Session):
     def __init__(self):
-        super().__init__()
-        self.__update_table()
+        super().__init__(engine)
+        statement = select(User)
+        try:
+            self.exec(statement)
+        except OperationalError:
+            SQLModel.metadata.create_all(engine)
+            self.add(User())
+            self.commit()
 
-    @staticmethod
-    def __update_table():
-        SQLModel.metadata.create_all(engine)
 
     # @staticmethod
     # def __data_to_db(data: User) -> dict:
@@ -61,6 +65,6 @@ class AuthDB(Session):
 
 
 if __name__ == "__main__":
-    with AuthDB() as db:
+    with UserDatabase() as db:
         # db.update_user(UserLogin(username="admin", password="adminadmin"), User(username="admin", password="cica1234"))
-        db.update_user("admin", User(username="estrella", password="cica1234"))
+        db.update_user("admin", UserUpdate(username="estrella", password="cica1234"))

@@ -1,8 +1,6 @@
 import logging
 
-from module.database.orm import Connector
 from module.models import Bangumi, BangumiUpdate
-from module.conf import DATA_PATH
 from sqlmodel import Session, select, delete, SQLModel
 from module.database.engine import engine
 from typing import Optional
@@ -14,51 +12,18 @@ logger = logging.getLogger(__name__)
 class BangumiDatabase(Session):
     def __init__(self):
         super().__init__(engine)
-        #     table_name="bangumi",
-        #     data=self.__data_to_db(BangumiData()),
-        #     database=database,
-        # )
 
     @staticmethod
     def update_table():
         SQLModel.metadata.create_all(engine)
 
-    # @staticmethod
-    # def __data_to_db(data: BangumiData) -> Bangumi:
-    #     db_data = data.dict()
-    #     for key, value in db_data.items():
-    #         if isinstance(value, bool):
-    #             db_data[key] = int(value)
-    #         elif isinstance(value, list):
-    #             db_data[key] = ",".join(value)
-    #     return db_data
-    #
-    # @staticmethod
-    # def __db_to_data(db_data: Bangumi) -> BangumiData:
-    #     for key, item in db_data.items():
-    #         if isinstance(item, int):
-    #             if key not in ["id", "offset", "season", "year"]:
-    #                 db_data[key] = bool(item)
-    #         elif key in ["filter", "rss_link"]:
-    #             db_data[key] = item.split(",")
-    #     return BangumiData(**db_data)
-
     def insert_one(self, data: Bangumi):
         self.add(data)
         self.commit()
-        # db_data = self.__data_to_db(data)
-        # self.insert.one(db_data)
         logger.debug(f"[Database] Insert {data.official_title} into database.")
 
     def insert_list(self, data: list[Bangumi]):
         self.add_all(data)
-        # data_list = [self.__data_to_db(x) for x in data]
-        # self.insert.many(data_list)
-        # _id = self.gen_id()
-        # for i, item in enumerate(data):
-        #     item.id = _id + i
-        # data_list = [self.__data_to_db(x) for x in data]
-        # self._insert_list(data_list=data_list, table_name=self.__table_name)
         logger.debug(f"[Database] Insert {len(data)} bangumi into database.")
 
     def update_one(self, data: BangumiUpdate) -> bool:
