@@ -102,10 +102,13 @@ def name_process(name: str):
                 language_pattern.append(0)
             elif re.search(r"[\u0800-\u4e00]{2,}", item) is not None:
                 language_pattern.append(2)
+            else:
+                language_pattern.append(-1) # handle unmatched item
         split = [split_space[0]]
         for i in range(1, len(split_space)):
             # 如果当前字符串的语言与上一个字符串的语言相同
-            if language_pattern[i] == language_pattern[i - 1]:
+            if language_pattern[i] == language_pattern[i - 1] \
+                or language_pattern[i] == -1 or language_pattern[i - 1] == -1:
                 # 合并这两个字符串
                 split[-1] += " " + split_space[i]
             else:
