@@ -3,7 +3,7 @@ import re
 
 from module.conf import settings
 from module.database import BangumiDatabase
-from module.models import BangumiData
+from module.models import Bangumi
 from module.network import RequestContent, TorrentInfo
 from module.parser import TitleParser
 
@@ -16,7 +16,7 @@ class RSSAnalyser:
         with BangumiDatabase() as db:
             db.update_table()
 
-    def official_title_parser(self, data: BangumiData, mikan_title: str):
+    def official_title_parser(self, data: Bangumi, mikan_title: str):
         if settings.rss_parser.parser_type == "mikan":
             data.official_title = mikan_title if mikan_title else data.official_title
         elif settings.rss_parser.parser_type == "tmdb":
@@ -63,7 +63,7 @@ class RSSAnalyser:
 
     def torrent_to_data(
         self, torrent: TorrentInfo, rss_link: str | None = None
-    ) -> BangumiData:
+    ) -> Bangumi:
         data = self._title_analyser.raw_parser(raw=torrent.name, rss_link=rss_link)
         if data:
             try:
@@ -79,7 +79,7 @@ class RSSAnalyser:
 
     def rss_to_data(
         self, rss_link: str, database: BangumiDatabase, full_parse: bool = True
-    ) -> list[BangumiData]:
+    ) -> list[Bangumi]:
         rss_torrents = self.get_rss_torrents(rss_link, full_parse)
         torrents_to_add = database.match_list(rss_torrents, rss_link)
         if not torrents_to_add:
@@ -92,7 +92,7 @@ class RSSAnalyser:
         else:
             return []
 
-    def link_to_data(self, link: str) -> BangumiData:
+    def link_to_data(self, link: str) -> Bangumi:
         torrents = self.get_rss_torrents(link, False)
         for torrent in torrents:
             data = self.torrent_to_data(torrent, link)

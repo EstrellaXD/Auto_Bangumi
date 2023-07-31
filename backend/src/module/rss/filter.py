@@ -3,7 +3,7 @@ import logging
 from module.conf import settings
 from module.database import BangumiDatabase
 from module.downloader import DownloadClient
-from module.models import BangumiData
+from module.models import Bangumi
 from module.network import RequestContent
 
 logger = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ def matched(torrent_title: str):
         return db.match_torrent(torrent_title)
 
 
-def save_path(data: BangumiData):
+def save_path(data: Bangumi):
     folder = (
         f"{data.official_title}({data.year})" if data.year else f"{data.official_title}"
     )

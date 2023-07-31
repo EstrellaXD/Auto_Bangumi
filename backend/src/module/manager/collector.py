@@ -2,14 +2,14 @@ import logging
 
 from module.database import BangumiDatabase
 from module.downloader import DownloadClient
-from module.models import BangumiData
+from module.models import Bangumi
 from module.searcher import SearchTorrent
 
 logger = logging.getLogger(__name__)
 
 
 class SeasonCollector(DownloadClient):
-    def add_season_torrents(self, data: BangumiData, torrents, torrent_files=None):
+    def add_season_torrents(self, data: Bangumi, torrents, torrent_files=None):
         if torrent_files:
             download_info = {
                 "torrent_files": torrent_files,
@@ -23,7 +23,7 @@ class SeasonCollector(DownloadClient):
             }
             return self.add_torrent(download_info)
 
-    def collect_season(self, data: BangumiData, link: str = None, proxy: bool = False):
+    def collect_season(self, data: Bangumi, link: str = None, proxy: bool = False):
         logger.info(f"Start collecting {data.official_title} Season {data.season}...")
         with SearchTorrent() as st:
             if not link:
@@ -39,7 +39,7 @@ class SeasonCollector(DownloadClient):
                 data=data, torrents=torrents, torrent_files=torrent_files
             )
 
-    def subscribe_season(self, data: BangumiData):
+    def subscribe_season(self, data: Bangumi):
         with BangumiDatabase() as db:
             data.added = True
             data.eps_collect = True
