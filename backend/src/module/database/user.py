@@ -22,17 +22,6 @@ class UserDatabase(Session):
             self.add(User())
             self.commit()
 
-
-    # @staticmethod
-    # def __data_to_db(data: User) -> dict:
-    #     db_data = data.dict()
-    #     db_data["password"] = get_password_hash(db_data["password"])
-    #     return db_data
-    #
-    # @staticmethod
-    # def __db_to_data(db_data: dict) -> User:
-    #     return User(**db_data)
-
     def get_user(self, username):
         statement = select(User).where(User.username == username)
         result = self.exec(statement).first()

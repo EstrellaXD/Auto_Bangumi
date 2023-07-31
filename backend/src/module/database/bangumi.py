@@ -1,21 +1,18 @@
 import logging
 
-from module.models import Bangumi, BangumiUpdate
-from sqlmodel import Session, select, delete, SQLModel
-from module.database.engine import engine
+from sqlmodel import Session, select, delete, SQLModel, or_, and_
 from typing import Optional
 from sqlalchemy.exc import IntegrityError, NoResultFound
+
+from .engine import engine
+from module.models import Bangumi
 
 logger = logging.getLogger(__name__)
 
 
 class BangumiDatabase(Session):
-    def __init__(self):
-        super().__init__(engine)
-
-    @staticmethod
-    def update_table():
-        SQLModel.metadata.create_all(engine)
+    def __init__(self, _engine=engine):
+        super().__init__(_engine)
 
     def insert_one(self, data: Bangumi):
         self.add(data)
@@ -26,7 +23,7 @@ class BangumiDatabase(Session):
         self.add_all(data)
         logger.debug(f"[Database] Insert {len(data)} bangumi into database.")
 
-    def update_one(self, data: BangumiUpdate) -> bool:
+    def update_one(self, data: Bangumi) -> bool:
         db_data = self.get(Bangumi, data.id)
         if not db_data:
             return False
@@ -39,7 +36,7 @@ class BangumiDatabase(Session):
         logger.debug(f"[Database] Update {data.official_title}")
         return True
 
-    def update_list(self, datas: list[BangumiUpdate]):
+    def update_list(self, datas: list[Bangumi]):
         for data in datas:
             self.update_one(data)
 
@@ -48,7 +45,7 @@ class BangumiDatabase(Session):
         statement = select(Bangumi).where(Bangumi.title_raw == title_raw)
         bangumi = self.exec(statement).first()
         bangumi.rss_link = rss_set
-        bangumi.added = 0
+        bangumi.added = False
         self.add(bangumi)
         self.commit()
         self.refresh(bangumi)
@@ -93,14 +90,8 @@ class BangumiDatabase(Session):
             return self.exec(statement).first()
 
     def match_poster(self, bangumi_name: str) -> str:
-        # condition = {"official_title": bangumi_name}
-        statement = select(Bangumi).where(Bangumi.official_title == bangumi_name)
-        # keys = ["poster_link"]
-        # data = self.select.one(
-        #     keys=keys,
-        #     conditions=condition,
-        #     combine_operator="INSTR",
-        # )
+        # Use like to match
+        statement = select(Bangumi).where(Bangumi.title_raw.like(f"%{bangumi_name}%"))
         data = self.exec(statement).first()
         if data:
             return data.poster_link
@@ -108,9 +99,6 @@ class BangumiDatabase(Session):
             return ""
 
     def match_list(self, torrent_list: list, rss_link: str) -> list:
-        # Match title_raw in database
-        # keys = ["title_raw", "rss_link", "poster_link"]
-        # match_datas = self.select.column(keys)
         match_datas = self.search_all()
         if not match_datas:
             return torrent_list
@@ -122,13 +110,9 @@ class BangumiDatabase(Session):
                 if match_data.title_raw in torrent.name:
                     if rss_link not in match_data.rss_link:
                         match_data.rss_link += f",{rss_link}"
-                        self.update_rss(
-                            match_data.title_raw, match_data.rss_link
-                        )
+                        self.update_rss(match_data.title_raw, match_data.rss_link)
                     if not match_data.poster_link:
-                        self.update_poster(
-                            match_data.title_raw, torrent.poster_link
-                        )
+                        self.update_poster(match_data.title_raw, torrent.poster_link)
                     torrent_list.pop(i)
                     break
             else:
@@ -143,13 +127,22 @@ class BangumiDatabase(Session):
 
     def not_added(self) -> list[Bangumi]:
         conditions = select(Bangumi).where(
-            Bangumi.added == 0 or
-            Bangumi.rule_name is None or
-            Bangumi.save_path is None
+            or_(
+                Bangumi.added == 0, Bangumi.rule_name is None, Bangumi.save_path is None
             )
+        )
         datas = self.exec(conditions).all()
         # dict_data = self.select.many(conditions=conditions, combine_operator="OR")
         return datas
+
+    def disable_rule(self, _id: int):
+        statement = select(Bangumi).where(Bangumi.id == _id)
+        bangumi = self.exec(statement).first()
+        bangumi.deleted = True
+        self.add(bangumi)
+        self.commit()
+        self.refresh(bangumi)
+        logger.debug(f"[Database] Disable rule {bangumi.title_raw}.")
 
 
 if __name__ == "__main__":

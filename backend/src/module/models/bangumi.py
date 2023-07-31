@@ -7,7 +7,9 @@ from typing import Optional
 
 class Bangumi(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
-    official_title: str = Field(default="official_title", alias="official_title", title="番剧中文名")
+    official_title: str = Field(
+        default="official_title", alias="official_title", title="番剧中文名"
+    )
     year: Optional[str] = Field(alias="year", title="番剧年份")
     title_raw: str = Field(default="title_raw", alias="title_raw", title="番剧原名")
     season: int = Field(default=1, alias="season", title="番剧季度")
@@ -28,7 +30,9 @@ class Bangumi(SQLModel, table=True):
 
 
 class BangumiUpdate(SQLModel):
-    official_title: str = Field(default="official_title", alias="official_title", title="番剧中文名")
+    official_title: str = Field(
+        default="official_title", alias="official_title", title="番剧中文名"
+    )
     year: Optional[str] = Field(alias="year", title="番剧年份")
     season: int = Field(default=1, alias="season", title="番剧季度")
     season_raw: Optional[str] = Field(alias="season_raw", title="番剧季度原名")

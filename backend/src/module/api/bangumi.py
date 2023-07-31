@@ -2,13 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 
 from module.manager import TorrentManager
-from module.models import BangumiData
+from module.models import Bangumi
 from module.security import get_current_user
 
 router = APIRouter(prefix="/bangumi", tags=["bangumi"])
 
 
-@router.get("/getAll", response_model=list[BangumiData])
+@router.get("/getAll", response_model=list[Bangumi])
 async def get_all_data(current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
@@ -18,7 +18,7 @@ async def get_all_data(current_user=Depends(get_current_user)):
         return torrent.search_all()
 
 
-@router.get("/getData/{bangumi_id}", response_model=BangumiData)
+@router.get("/getData/{bangumi_id}", response_model=Bangumi)
 async def get_data(bangumi_id: str, current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
@@ -29,7 +29,7 @@ async def get_data(bangumi_id: str, current_user=Depends(get_current_user)):
 
 
 @router.post("/updateRule")
-async def update_rule(data: BangumiData, current_user=Depends(get_current_user)):
+async def update_rule(data: Bangumi, current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"

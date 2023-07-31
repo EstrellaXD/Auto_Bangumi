@@ -1,7 +1,7 @@
 import re
 
 from module.database import RSSDatabase
-from module.models import BangumiData, RSSTorrents
+from module.models import Bangumi, RSSTorrents
 from module.network import RequestContent, TorrentInfo
 
 
@@ -11,7 +11,7 @@ class RSSPoller(RSSDatabase):
         return req.get_torrents(rss_link)
 
     @staticmethod
-    def filter_torrent(data: BangumiData, torrent: TorrentInfo) -> bool:
+    def filter_torrent(data: Bangumi, torrent: TorrentInfo) -> bool:
         if data.title_raw in torrent.name:
             _filter = "|".join(data.filter)
             if not re.search(_filter, torrent.name):

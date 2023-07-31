@@ -14,7 +14,9 @@ class Downloader(BaseModel):
     type: str = Field("qbittorrent", description="Downloader type")
     host: str = Field("172.17.0.1:8080", description="Downloader host")
     username_: str = Field("admin", alias="username", description="Downloader username")
-    password_: str = Field("adminadmin", alias="password", description="Downloader password")
+    password_: str = Field(
+        "adminadmin", alias="password", description="Downloader password"
+    )
     path: str = Field("/downloads/Bangumi", description="Downloader path")
     ssl: bool = Field(False, description="Downloader ssl")
 
@@ -25,6 +27,7 @@ class Downloader(BaseModel):
     @property
     def password(self):
         return expandvars(self.password_)
+
 
 class RSSParser(BaseModel):
     enable: bool = Field(True, description="Enable RSS parser")
@@ -38,6 +41,7 @@ class RSSParser(BaseModel):
     @property
     def token(self):
         return expandvars(self.token_)
+
 
 class BangumiManage(BaseModel):
     enable: bool = Field(True, description="Enable bangumi manage")
@@ -81,6 +85,7 @@ class Notification(BaseModel):
     @property
     def chat_id(self):
         return expandvars(self.chat_id_)
+
 
 class Config(BaseModel):
     program: Program = Program()

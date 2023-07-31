@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from module.manager import SeasonCollector
-from module.models import BangumiData
+from module.models import Bangumi
 from module.models.api import RssLink
 from module.rss import analyser
 from module.security import get_current_user
@@ -23,9 +23,7 @@ async def analysis(link: RssLink, current_user=Depends(get_current_user)):
 
 
 @router.post("/collection")
-async def download_collection(
-    data: BangumiData, current_user=Depends(get_current_user)
-):
+async def download_collection(data: Bangumi, current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
@@ -41,7 +39,7 @@ async def download_collection(
 
 
 @router.post("/subscribe")
-async def subscribe(data: BangumiData, current_user=Depends(get_current_user)):
+async def subscribe(data: Bangumi, current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
