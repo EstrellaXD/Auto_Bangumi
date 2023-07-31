@@ -1,8 +1,8 @@
 import logging
 
-from sqlmodel import Session, select, delete, SQLModel, or_, and_
+from sqlmodel import Session, select, delete, or_
+from sqlalchemy.sql import func
 from typing import Optional
-from sqlalchemy.exc import IntegrityError, NoResultFound
 
 from .engine import engine
 from module.models import Bangumi
@@ -49,9 +49,6 @@ class BangumiDatabase(Session):
         self.add(bangumi)
         self.commit()
         self.refresh(bangumi)
-        # location = {"title_raw": title_raw}
-        # set_value = {"rss_link": rss_set, "added": 0}
-        # self.update.value(location, set_value)
         logger.debug(f"[Database] Update {title_raw} rss_link to {rss_set}.")
 
     def update_poster(self, title_raw, poster_link: str):
@@ -91,7 +88,7 @@ class BangumiDatabase(Session):
 
     def match_poster(self, bangumi_name: str) -> str:
         # Use like to match
-        statement = select(Bangumi).where(Bangumi.title_raw.like(f"%{bangumi_name}%"))
+        statement = select(Bangumi).where(func.instr(bangumi_name, Bangumi.title_raw) > 0)
         data = self.exec(statement).first()
         if data:
             return data.poster_link
@@ -132,7 +129,6 @@ class BangumiDatabase(Session):
             )
         )
         datas = self.exec(conditions).all()
-        # dict_data = self.select.many(conditions=conditions, combine_operator="OR")
         return datas
 
     def disable_rule(self, _id: int):

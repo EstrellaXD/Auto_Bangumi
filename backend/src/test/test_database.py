@@ -1,11 +1,11 @@
-from sqlmodel import create_engine, SQLModel, Session
+from sqlmodel import create_engine, SQLModel
 from sqlmodel.pool import StaticPool
 
 from module.database import BangumiDatabase
 from module.models import Bangumi
 
 
-def test_database():
+def test_bangumi_database():
     # sqlite mock engine
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
@@ -42,7 +42,7 @@ def test_database():
         assert database.search_id(1) == test_data
 
         # search poster
-        assert database.match_poster("test") == "/test/test.jpg"
+        assert database.match_poster("test2 (2021)") == "/test/test.jpg"
 
         # delete
         database.delete_one(1)
