@@ -1,17 +1,19 @@
 import logging
-import os
+from pathlib import Path
 
 from .config import settings
 
-LOG_PATH = "data/log.txt"
+LOG_ROOT = Path("data")
+LOG_PATH = LOG_ROOT / "log.txt"
 
 
 def setup_logger(level: int = logging.INFO, reset: bool = False):
     level = logging.DEBUG if settings.log.debug_enable else level
-    if not os.path.isdir("data"):
-        os.mkdir("data")
-    if reset and os.path.isfile(LOG_PATH):
-        os.remove(LOG_PATH)
+    LOG_ROOT.mkdir(exist_ok=True)
+
+    if reset and LOG_PATH.exists():
+        LOG_PATH.unlink(missing_ok=True)
+
     logging.addLevelName(logging.DEBUG, "DEBUG:")
     logging.addLevelName(logging.INFO, "INFO:")
     logging.addLevelName(logging.WARNING, "WARNING:")

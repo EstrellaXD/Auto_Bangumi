@@ -1,5 +1,5 @@
-from .bangumi import BangumiData
+from .bangumi import Bangumi, Episode
 from .config import Config
-from .rss import RSSItem, TorrentData
+from .rss import RSSTorrents
 from .torrent import EpisodeFile, SubtitleFile, TorrentBase
 from .user import UserLogin

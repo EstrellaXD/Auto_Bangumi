@@ -178,7 +178,7 @@ test.*
 /backend/src/config/
 /src/debuger.py
 /backend/src/dist.zip
-/src
+/pyrightconfig.json
 
 # webui
 logs
@@ -197,8 +197,11 @@ dist-ssr
 
 # Editor directories and files
 .vscode/*
-!.vscode/extensions.json
 !.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
 .idea
 .DS_Store
 *.suo
@@ -206,3 +209,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# vitepress
+/docs/.vitepress/cache/

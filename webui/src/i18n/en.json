@@ -38,7 +38,7 @@
   },
   "homepage": {
     "rule": {
-      "offical_title": "Official Title",
+      "official_title": "Official Title",
       "year": "Year",
       "season": "Season",
       "offset": "Offset",

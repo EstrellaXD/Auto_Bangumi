@@ -1,7 +1,7 @@
 import logging
 
 from module.conf import settings
-from module.models import BangumiData
+from module.models import Bangumi
 
 from .path import TorrentPath
 
@@ -68,7 +68,7 @@ class DownloadClient(TorrentPath):
             prefs = self.client.get_app_prefs()
             settings.downloader.path = self._join_path(prefs["save_path"], "Bangumi")
 
-    def set_rule(self, data: BangumiData):
+    def set_rule(self, data: Bangumi):
         data.rule_name = self._rule_name(data)
         data.save_path = self._gen_save_path(data)
         rule = {
@@ -92,7 +92,7 @@ class DownloadClient(TorrentPath):
             f"[Downloader] Add {data.official_title} Season {data.season} to auto download rules."
         )
 
-    def set_rules(self, bangumi_info: list[BangumiData]):
+    def set_rules(self, bangumi_info: list[Bangumi]):
         logger.debug("[Downloader] Start adding rules.")
         for info in bangumi_info:
             self.set_rule(info)

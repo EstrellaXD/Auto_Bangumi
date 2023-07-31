@@ -15,7 +15,7 @@ export default defineConfig({
   ],
   theme: {
     colors: {
-      primary: '#493475',
+      primary: '#5739ca',
       running: '#A3D491',
       stopped: '#DF7F91',
       page: '#F0F0F0',

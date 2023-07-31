@@ -1,7 +1,7 @@
 import logging
 
 from module.conf import settings
-from module.models import BangumiData
+from module.models import Bangumi
 
 from .analyser import raw_parser, tmdb_parser, torrent_parser
 
@@ -39,7 +39,7 @@ class TitleParser:
         return official_title, tmdb_season, year
 
     @staticmethod
-    def raw_parser(raw: str, rss_link: str) -> BangumiData | None:
+    def raw_parser(raw: str, rss_link: str) -> Bangumi | None:
         language = settings.rss_parser.language
         try:
             episode = raw_parser(raw)
@@ -60,7 +60,7 @@ class TitleParser:
             else:
                 official_title = title_raw
             _season = episode.season
-            data = BangumiData(
+            data = Bangumi(
                 official_title=official_title,
                 title_raw=title_raw,
                 season=_season,

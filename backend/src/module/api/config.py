@@ -16,7 +16,7 @@ async def get_config(current_user=Depends(get_current_user)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
         )
-    return settings
+    return settings.dict()
 
 
 @router.post("/updateConfig")

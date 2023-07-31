@@ -1,4 +1,4 @@
-from module.models import BangumiData, TorrentBase
+from module.models import Bangumi, TorrentBase
 from module.network import RequestContent
 from module.searcher.plugin import search_url
 
@@ -30,7 +30,7 @@ class SearchTorrent(RequestContent):
 
         return [TorrentBase(**d) for d in to_dict()]
 
-    def search_season(self, data: BangumiData):
+    def search_season(self, data: Bangumi):
         keywords = [getattr(data, key) for key in SEARCH_KEY if getattr(data, key)]
         torrents = self.search_torrents(keywords)
         return [torrent for torrent in torrents if data.title_raw in torrent.name]

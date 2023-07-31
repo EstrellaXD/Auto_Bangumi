@@ -58,7 +58,7 @@ if VERSION != "DEV_VERSION":
     @app.get("/favicon-light.svg", tags=["html"])
     def favicon_light():
         return FileResponse("dist/favicon-light.svg")
-    
+
     @app.get("/robots.txt", tags=["html"])
     def robots():
         return FileResponse("dist/robots.txt")
@@ -70,9 +70,11 @@ if VERSION != "DEV_VERSION":
         return templates.TemplateResponse("index.html", context)
 
 else:
+
     @app.get("/", status_code=302, tags=["html"])
     def index():
         return RedirectResponse("/docs")
+
 
 if __name__ == "__main__":
     uvicorn.run(

@@ -27,15 +27,15 @@ class WecomNotification(RequestContent):
         title = "【番剧更新】" + notify.official_title
         msg = self.gen_message(notify)
         picurl = notify.poster_path
-        #Default pic to avoid blank in message. Resolution:1068*455
+        # Default pic to avoid blank in message. Resolution:1068*455
         if picurl == "https://mikanani.me":
             picurl = "https://article.biliimg.com/bfs/article/d8bcd0408bf32594fd82f27de7d2c685829d1b2e.png"
         data = {
-            "key":self.token,
+            "key": self.token,
             "type": "news",
             "title": title,
             "msg": msg,
-            "picurl":picurl
+            "picurl": picurl,
         }
         resp = self.post_data(self.notification_url, data)
         logger.debug(f"Wecom notification: {resp.status_code}")
