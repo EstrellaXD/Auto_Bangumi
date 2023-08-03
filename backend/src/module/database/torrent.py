@@ -1,51 +1,54 @@
 import logging
 
-from module.database.orm import Connector
-from module.models import TorrentData
-from module.conf import DATA_PATH
+from sqlmodel import Session, select
+
+from module.models import Torrent
 
 logger = logging.getLogger(__name__)
 
 
-class TorrentDatabase(Connector):
-    def __init__(self, database: str = DATA_PATH):
-        super().__init__(
-            table_name="torrent", data=TorrentData().dict(), database=database
-        )
+class TorrentDatabase:
+    def __init__(self, session: Session):
+        self.session = session
 
-    def update_table(self):
-        self.update.table()
+    def insert_one(self, data: Torrent):
+        self.session.add(data)
+        self.session.commit()
+        self.session.refresh(data)
+        logger.debug(f"Insert {data.name} in database.")
 
-    def __data_to_db(self, data: TorrentData) -> dict:
-        db_data = data.dict()
-        for key, value in db_data.items():
-            if isinstance(value, bool):
-                db_data[key] = int(value)
-            elif isinstance(value, list):
-                db_data[key] = ",".join(value)
-        return db_data
+    def insert_many(self, datas: list[Torrent]):
+        self.session.add_all(datas)
+        self.session.commit()
+        logger.debug(f"Insert {len(datas)} torrents in database.")
 
-    def __db_to_data(self, db_data: dict) -> TorrentData:
-        for key, item in db_data.items():
-            if isinstance(item, int):
-                db_data[key] = bool(item)
-            elif key in ["filter", "rss_link"]:
-                db_data[key] = item.split(",")
-        return TorrentData(**db_data)
+    def update_one_sys(self, data: Torrent):
+        self.session.add(data)
+        self.session.commit()
+        self.session.refresh(data)
+        logger.debug(f"Update {data.name} in database.")
 
-    def insert_many(self, data_list: list[TorrentData]):
-        dict_datas = [self.__data_to_db(data) for data in data_list]
-        self.insert.many(dict_datas)
+    def update_many_sys(self, datas: list[Torrent]):
+        self.session.add_all(datas)
+        self.session.commit()
 
-    def get_all(self) -> list[TorrentData]:
-        dict_datas = self.select.all()
-        return [self.__db_to_data(data) for data in dict_datas]
+    def update_one_user(self, data: Torrent):
+        self.session.add(data)
+        self.session.commit()
+        self.session.refresh(data)
+        logger.debug(f"Update {data.name} in database.")
 
-    def get_torrent_name(self) -> list[str]:
-        dict_data = self.select.all()
-        return [data["name"] for data in dict_data]
+    def search_one(self, _id: int) -> Torrent:
+        return self.session.exec(select(Torrent).where(Torrent.id == _id)).first()
 
+    def search_all(self) -> list[Torrent]:
+        return self.session.exec(select(Torrent)).all()
 
-if __name__ == "__main__":
-    with TorrentDatabase() as db:
-        db.update_table()
+    def check_new(self, torrents_list: list[Torrent]) -> list[Torrent]:
+        new_torrents = []
+        for torrent in torrents_list:
+            statement = select(Torrent).where(Torrent.name == torrent.name)
+            db_torrent = self.session.exec(statement).first()
+            if not db_torrent:
+                new_torrents.append(torrent)
+        return new_torrents

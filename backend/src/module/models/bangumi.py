@@ -34,6 +34,7 @@ class BangumiUpdate(SQLModel):
         default="official_title", alias="official_title", title="番剧中文名"
     )
     year: Optional[str] = Field(alias="year", title="番剧年份")
+    title_raw: str = Field(default="title_raw", alias="title_raw", title="番剧原名")
     season: int = Field(default=1, alias="season", title="番剧季度")
     season_raw: Optional[str] = Field(alias="season_raw", title="番剧季度原名")
     group_name: Optional[str] = Field(alias="group_name", title="字幕组")
@@ -44,7 +45,10 @@ class BangumiUpdate(SQLModel):
     offset: int = Field(default=0, alias="offset", title="番剧偏移量")
     filter: str = Field(default="720, \\d+-\\d+", alias="filter", title="番剧过滤器")
     rss_link: str = Field(default="", alias="rss_link", title="番剧RSS链接")
+    poster_link: Optional[str] = Field(alias="poster_link", title="番剧海报链接")
     added: bool = Field(default=False, alias="added", title="是否已添加")
+    rule_name: Optional[str] = Field(alias="rule_name", title="番剧规则名")
+    save_path: Optional[str] = Field(alias="save_path", title="番剧保存路径")
     deleted: bool = Field(False, alias="deleted", title="是否已删除")
 
 

@@ -1,20 +1,35 @@
 import re
 
 from module.database import RSSDatabase, BangumiDatabase, TorrentDatabase
-from module.models import BangumiData, RSSItem, TorrentData
+from module.models import Bangumi, RSSItem, Torrent
 from module.network import RequestContent, TorrentInfo
 
+from module.database.combine import Database
 
-class RSSEngine(RequestContent):
-    @staticmethod
-    def _get_rss_items() -> list[RSSItem]:
-        with RSSDatabase() as db:
-            return db.get_all()
 
-    @staticmethod
-    def _get_bangumi_data(rss_link: str) -> list[BangumiData]:
-        with BangumiDatabase() as db:
-            return db.get_rss(rss_link)
+class RSSEngine(Database):
+    def _get_rss_items(self) -> list[RSSItem]:
+        return self.rss.search_all()
+
+    def _get_bangumi_data(self, rss_link: str) -> list[Bangumi]:
+        return self.bangumi.search_rss(rss_link)
+
+    def get_torrent(self, rss_link: str) -> list[Torrent]:
+        with RequestContent() as req:
+            torrent_infos = req.get_torrents(rss_link)
+        torrents: list[Torrent] = []
+        for torrent_info in torrent_infos:
+            torrents.append(
+                Torrent(
+                    name=torrent_info.name,
+                    url=torrent_info.torrent_link,
+                    homepage=torrent_info.homepage,
+                )
+            )
+        return torrents
+
+    def check_new_torrents(self, torrents_list: list[list[Torrent]]) -> list[Torrent]:
+        return self.torrent.check_new(torrents_list)
 
     def add_rss(self, rss_link: str, name: str, combine: bool):
         if not name:

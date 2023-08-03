@@ -1,7 +1,7 @@
 from sqlmodel import create_engine, SQLModel
 from sqlmodel.pool import StaticPool
 
-from module.database import BangumiDatabase
+from module.database.combine import Database
 from module.models import Bangumi
 
 
@@ -31,19 +31,19 @@ def test_bangumi_database():
         save_path=None,
         deleted=False,
     )
-    with BangumiDatabase(engine) as database:
+    with Database(engine) as db:
         # insert
-        database.insert_one(test_data)
-        assert database.search_id(1) == test_data
+        db.bangumi.insert_one(test_data)
+        assert db.bangumi.search_id(1) == test_data
 
         # update
         test_data.official_title = "test2"
-        database.update_one(test_data)
-        assert database.search_id(1) == test_data
+        db.bangumi.update_one(test_data)
+        assert db.bangumi.search_id(1) == test_data
 
         # search poster
-        assert database.match_poster("test2 (2021)") == "/test/test.jpg"
+        assert db.bangumi.match_poster("test2 (2021)") == "/test/test.jpg"
 
         # delete
-        database.delete_one(1)
-        assert database.search_id(1) is None
+        db.bangumi.delete_one(1)
+        assert db.bangumi.search_id(1) is None

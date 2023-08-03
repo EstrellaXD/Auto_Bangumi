@@ -37,7 +37,6 @@ class TorrentInfo:
 
 
 class RequestContent(RequestURL):
-    # Mikanani RSS
     def get_torrents(
         self,
         _url: str,
@@ -103,4 +102,6 @@ class RequestContent(RequestURL):
 
 if __name__ == '__main__':
     with RequestContent() as req:
-        req.get_xml("https://mikanani.me/RSS/Classic")
+        ts = req.get_torrents("https://mikanani.me/RSS/Classic")
+        for t in ts:
+            print(t)

@@ -1,17 +1,21 @@
-from pydantic import BaseModel, Field
+from sqlmodel import SQLModel, Field
+from typing import Optional
 
 
-class RSSItem(BaseModel):
-    id: int = Field(0, alias="id", title="id")
+class RSSItem(SQLModel, table=True):
+    id: int = Field(default=None, primary_key=True, alias="id")
     item_path: str = Field("example path", alias="item_path")
     url: str = Field("https://mikanani.me", alias="url")
     combine: bool = Field(True, alias="combine")
     enabled: bool = Field(True, alias="enabled")
 
 
-class TorrentData(BaseModel):
-    id: int = Field(0, alias="id")
-    rss_id: int = Field(0, alias="rss_id")
-    name: str = Field("", alias="name")
-    url: str = Field("https://example.com/torrent", alias="url")
-    save_path: str = Field("path/to/save", alias="save_path")
+class RSSUpdate(SQLModel):
+    item_path: Optional[str] = Field("example path", alias="item_path")
+    url: Optional[str] = Field("https://mikanani.me", alias="url")
+    combine: Optional[bool] = Field(True, alias="combine")
+    enabled: Optional[bool] = Field(True, alias="enabled")
+
+
+
+
