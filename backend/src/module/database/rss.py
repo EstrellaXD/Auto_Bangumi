@@ -12,7 +12,20 @@ class RSSDatabase:
     def __init__(self, session: Session):
         self.session = session
 
-    def insert_one(self, data: RSSItem):
+    def add(self, data: RSSItem):
+        # Check if exists
+        statement = select(RSSItem).where(RSSItem.url == data.url)
+        db_data = self.session.exec(statement).first()
+        if db_data:
+            logger.debug(f"RSS Item {data.url} already exists.")
+            return
+        else:
+            logger.debug(f"RSS Item {data.url} not exists, adding...")
+            self.session.add(data)
+            self.session.commit()
+            self.session.refresh(data)
+
+    def update(self, data: RSSItem):
         self.session.add(data)
         self.session.commit()
         self.session.refresh(data)
@@ -20,7 +33,10 @@ class RSSDatabase:
     def search_all(self) -> list[RSSItem]:
         return self.session.exec(select(RSSItem)).all()
 
-    def delete_one(self, _id: int):
+    def search_active(self) -> list[RSSItem]:
+        return self.session.exec(select(RSSItem).where(RSSItem.enabled)).all()
+
+    def delete(self, _id: int):
         condition = delete(RSSItem).where(RSSItem.id == _id)
         self.session.exec(condition)
         self.session.commit()
@@ -29,5 +45,3 @@ class RSSDatabase:
         condition = delete(RSSItem)
         self.session.exec(condition)
         self.session.commit()
-
-

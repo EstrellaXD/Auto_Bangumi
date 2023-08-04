@@ -1,4 +1,4 @@
-from sqlmodel import Session,SQLModel
+from sqlmodel import Session, SQLModel
 
 from .engine import engine
 from .rss import RSSDatabase

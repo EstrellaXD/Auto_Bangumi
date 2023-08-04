@@ -11,13 +11,13 @@ class TorrentDatabase:
     def __init__(self, session: Session):
         self.session = session
 
-    def insert_one(self, data: Torrent):
+    def add(self, data: Torrent):
         self.session.add(data)
         self.session.commit()
         self.session.refresh(data)
         logger.debug(f"Insert {data.name} in database.")
 
-    def insert_many(self, datas: list[Torrent]):
+    def add_all(self, datas: list[Torrent]):
         self.session.add_all(datas)
         self.session.commit()
         logger.debug(f"Insert {len(datas)} torrents in database.")
@@ -46,9 +46,9 @@ class TorrentDatabase:
 
     def check_new(self, torrents_list: list[Torrent]) -> list[Torrent]:
         new_torrents = []
+        old_torrents = self.search_all()
+        old_urls = [t.url for t in old_torrents]
         for torrent in torrents_list:
-            statement = select(Torrent).where(Torrent.name == torrent.name)
-            db_torrent = self.session.exec(statement).first()
-            if not db_torrent:
+            if torrent.url not in old_urls:
                 new_torrents.append(torrent)
         return new_torrents

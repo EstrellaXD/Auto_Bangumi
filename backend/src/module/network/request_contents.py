@@ -97,11 +97,4 @@ class RequestContent(RequestURL):
 
     def get_rss_title(self, _url):
         soup = self.get_xml(_url)
-        return soup.find("title").text
-
-
-if __name__ == '__main__':
-    with RequestContent() as req:
-        ts = req.get_torrents("https://mikanani.me/RSS/Classic")
-        for t in ts:
-            print(t)
+        return soup.find("./channel/title").text

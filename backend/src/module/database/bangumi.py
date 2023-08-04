@@ -1,6 +1,6 @@
 import logging
 
-from sqlmodel import Session, select, delete, or_
+from sqlmodel import Session, select, delete, or_, and_
 from sqlalchemy.sql import func
 from typing import Optional
 
@@ -87,7 +87,9 @@ class BangumiDatabase:
 
     def match_poster(self, bangumi_name: str) -> str:
         # Use like to match
-        statement = select(Bangumi).where(func.instr(bangumi_name, Bangumi.title_raw) > 0)
+        statement = select(Bangumi).where(
+            func.instr(bangumi_name, Bangumi.title_raw) > 0
+        )
         data = self.session.exec(statement).first()
         if data:
             return data.poster_link
@@ -115,6 +117,12 @@ class BangumiDatabase:
                 i += 1
         return torrent_list
 
+    def match_torrent(self, torrent_name: str) -> Optional[Bangumi]:
+        statement = select(Bangumi).where(
+            and_(func.instr(torrent_name, Bangumi.title_raw) > 0, not Bangumi.deleted)
+        )
+        return self.session.exec(statement).first()
+
     def not_complete(self) -> list[Bangumi]:
         # Find eps_complete = False
         condition = select(Bangumi).where(Bangumi.eps_collect == 0)
@@ -140,7 +148,5 @@ class BangumiDatabase:
         logger.debug(f"[Database] Disable rule {bangumi.title_raw}.")
 
     def search_rss(self, rss_link: str) -> list[Bangumi]:
-        statement = select(Bangumi).where(
-            func.instr(rss_link, Bangumi.rss_link) > 0
-        )
+        statement = select(Bangumi).where(func.instr(rss_link, Bangumi.rss_link) > 0)
         return self.session.exec(statement).all()
