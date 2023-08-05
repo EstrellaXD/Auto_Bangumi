@@ -20,7 +20,7 @@ class Bangumi(SQLModel, table=True):
     subtitle: Optional[str] = Field(alias="subtitle", title="字幕")
     eps_collect: bool = Field(default=False, alias="eps_collect", title="是否已收集")
     offset: int = Field(default=0, alias="offset", title="番剧偏移量")
-    filter: str = Field(default="720, \\d+-\\d+", alias="filter", title="番剧过滤器")
+    filter: str = Field(default="720,\\d+-\\d+", alias="filter", title="番剧过滤器")
     rss_link: str = Field(default="", alias="rss_link", title="番剧RSS链接")
     poster_link: Optional[str] = Field(alias="poster_link", title="番剧海报链接")
     added: bool = Field(default=False, alias="added", title="是否已添加")

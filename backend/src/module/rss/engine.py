@@ -44,17 +44,18 @@ class RSSEngine(Database):
     def match_torrent(self, torrent: Torrent):
         matched: Bangumi = self.bangumi.match_torrent(torrent.name)
         if matched:
-            torrent.refer_id = matched.id
-            torrent.save_path = matched.save_path
-            with RequestContent() as req:
-                torrent_file = req.get_content(torrent.url)
-            with DownloadClient() as client:
-                client.add_torrent(
-                    {"torrent_files": torrent_file, "save_path": torrent.save_path}
-                )
-                torrent.downloaded = True
+            _filter = matched.filter.replace(",", "|")
+            if re.search(_filter, torrent.name, re.IGNORECASE):
+                torrent.refer_id = matched.id
+                torrent.save_path = matched.save_path
+                with RequestContent() as req:
+                    torrent_file = req.get_content(torrent.url)
+                return {
+                    "torrent_files": torrent_file,
+                    "save_path": torrent.save_path,
+                }
 
-    def run(self):
+    def run(self, client: DownloadClient):
         # Get All RSS Items
         rss_items: list[RSSItem] = self.rss.search_active()
         # From RSS Items, get all torrents
@@ -62,7 +63,10 @@ class RSSEngine(Database):
             new_torrents = self.pull_rss(rss_item)
             # Get all enabled bangumi data
             for torrent in new_torrents:
-                self.match_torrent(torrent)
+                download_info = self.match_torrent(torrent)
+                client.add_torrent(download_info)
+                torrent.downloaded = True
+            # Add all torrents to database
             self.torrent.add_all(new_torrents)
 
 

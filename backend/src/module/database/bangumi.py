@@ -89,7 +89,7 @@ class BangumiDatabase:
     def match_poster(self, bangumi_name: str) -> str:
         # Use like to match
         statement = select(Bangumi).where(
-            func.instr(bangumi_name, Bangumi.title_raw) > 0
+            func.instr(bangumi_name, Bangumi.official_title) > 0
         )
         data = self.session.exec(statement).first()
         if data:
