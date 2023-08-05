@@ -22,13 +22,13 @@ class TorrentDatabase:
         self.session.commit()
         logger.debug(f"Insert {len(datas)} torrents in database.")
 
-    def update_one_sys(self, data: Torrent):
+    def update(self, data: Torrent):
         self.session.add(data)
         self.session.commit()
         self.session.refresh(data)
         logger.debug(f"Update {data.name} in database.")
 
-    def update_many_sys(self, datas: list[Torrent]):
+    def update_all(self, datas: list[Torrent]):
         self.session.add_all(datas)
         self.session.commit()
 
@@ -38,7 +38,7 @@ class TorrentDatabase:
         self.session.refresh(data)
         logger.debug(f"Update {data.name} in database.")
 
-    def search_one(self, _id: int) -> Torrent:
+    def search(self, _id: int) -> Torrent:
         return self.session.exec(select(Torrent).where(Torrent.id == _id)).first()
 
     def search_all(self) -> list[Torrent]:

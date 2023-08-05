@@ -2,8 +2,8 @@ import logging
 import re
 
 from module.conf import settings
-from module.database import BangumiDatabase
 from module.models import Bangumi
+from module.database import Database
 from module.network import RequestContent, TorrentInfo
 from module.parser import TitleParser
 
@@ -13,8 +13,6 @@ logger = logging.getLogger(__name__)
 class RSSAnalyser:
     def __init__(self):
         self._title_analyser = TitleParser()
-        with BangumiDatabase() as db:
-            db.update_table()
 
     def official_title_parser(self, data: Bangumi, mikan_title: str):
         if settings.rss_parser.parser_type == "mikan":
@@ -78,10 +76,10 @@ class RSSAnalyser:
             return data
 
     def rss_to_data(
-        self, rss_link: str, database: BangumiDatabase, full_parse: bool = True
+        self, rss_link: str, database: Database, full_parse: bool = True
     ) -> list[Bangumi]:
         rss_torrents = self.get_rss_torrents(rss_link, full_parse)
-        torrents_to_add = database.match_list(rss_torrents, rss_link)
+        torrents_to_add = database.bangumi.match_list(rss_torrents, rss_link)
         if not torrents_to_add:
             logger.debug("[RSS] No new title has been found.")
             return []

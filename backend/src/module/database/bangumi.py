@@ -13,16 +13,16 @@ class BangumiDatabase:
     def __init__(self, session: Session):
         self.session = session
 
-    def insert_one(self, data: Bangumi):
+    def add(self, data: Bangumi):
         self.session.add(data)
         self.session.commit()
         logger.debug(f"[Database] Insert {data.official_title} into database.")
 
-    def insert_list(self, data: list[Bangumi]):
+    def add_all(self, data: list[Bangumi]):
         self.session.add_all(data)
         logger.debug(f"[Database] Insert {len(data)} bangumi into database.")
 
-    def update_one(self, data: Bangumi) -> bool:
+    def update(self, data: Bangumi) -> bool:
         db_data = self.session.get(Bangumi, data.id)
         if not db_data:
             return False
@@ -35,9 +35,10 @@ class BangumiDatabase:
         logger.debug(f"[Database] Update {data.official_title}")
         return True
 
-    def update_list(self, datas: list[Bangumi]):
-        for data in datas:
-            self.update_one(data)
+    def update_all(self, datas: list[Bangumi]):
+        self.session.add_all(datas)
+        self.session.commit()
+        logger.debug(f"[Database] Update {len(datas)} bangumi.")
 
     def update_rss(self, title_raw, rss_set: str):
         # Update rss and added
@@ -119,13 +120,16 @@ class BangumiDatabase:
 
     def match_torrent(self, torrent_name: str) -> Optional[Bangumi]:
         statement = select(Bangumi).where(
-            and_(func.instr(torrent_name, Bangumi.title_raw) > 0, not Bangumi.deleted)
+            and_(
+                func.instr(torrent_name, Bangumi.title_raw) > 0,
+                Bangumi.deleted == False,
+            )
         )
         return self.session.exec(statement).first()
 
     def not_complete(self) -> list[Bangumi]:
         # Find eps_complete = False
-        condition = select(Bangumi).where(Bangumi.eps_collect == 0)
+        condition = select(Bangumi).where(Bangumi.eps_collect == False)
         datas = self.session.exec(condition).all()
         return datas
 

@@ -2,13 +2,18 @@ import re
 import logging
 
 from module.models import Bangumi, RSSItem, Torrent
-from module.network import RequestContent, TorrentInfo
+from module.network import RequestContent
 from module.downloader import DownloadClient
 
-from module.database.combine import Database
+from module.database import Database, engine
+
+logger = logging.getLogger(__name__)
 
 
 class RSSEngine(Database):
+    def __init__(self, _engine=engine):
+        super().__init__(_engine)
+
     @staticmethod
     def _get_torrents(rss_link: str) -> list[Torrent]:
         with RequestContent() as req:
