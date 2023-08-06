@@ -21,7 +21,6 @@ async def startup():
 @router.on_event("shutdown")
 async def shutdown():
     program.stop()
-    sys.exit(0)
 
 
 @router.get("/restart")

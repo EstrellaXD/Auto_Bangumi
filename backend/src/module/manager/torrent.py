@@ -31,8 +31,9 @@ class TorrentManager(Database):
         data = self.bangumi.search_id(int(_id))
         if isinstance(data, Bangumi):
             with DownloadClient() as client:
-                client.remove_rule(data.rule_name)
-                client.remove_rss_feed(data.official_title)
+                # client.remove_rule(data.rule_name)
+                # client.remove_rss_feed(data.official_title)
+                self.rss.delete(data.official_title)
                 self.bangumi.delete_one(int(_id))
                 if file:
                     torrent_message = self.delete_torrents(data, client)
@@ -56,7 +57,7 @@ class TorrentManager(Database):
         data = self.bangumi.search_id(int(_id))
         if isinstance(data, Bangumi):
             with DownloadClient() as client:
-                client.remove_rule(data.rule_name)
+                # client.remove_rule(data.rule_name)
                 data.deleted = True
                 self.bangumi.update(data)
                 if file:
@@ -84,8 +85,6 @@ class TorrentManager(Database):
         if isinstance(data, Bangumi):
             data.deleted = False
             self.bangumi.update(data)
-            with DownloadClient() as client:
-                client.set_rule(data)
             logger.info(f"[Manager] Enable rule for {data.official_title}")
             return JSONResponse(
                 status_code=200,
@@ -112,9 +111,6 @@ class TorrentManager(Database):
                 path = client._gen_save_path(data)
                 if match_list:
                     client.move_torrent(match_list, path)
-                # Set new download rule
-                client.remove_rule(data.rule_name)
-                client.set_rule(data)
             self.bangumi.update(data)
             return JSONResponse(
                 status_code=200,

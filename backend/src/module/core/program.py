@@ -3,7 +3,6 @@ import logging
 from module.conf import VERSION, settings
 from module.update import data_migration
 
-from .rss_feed import add_rss_feed
 from .sub_thread import RenameThread, RSSThread
 
 logger = logging.getLogger(__name__)
@@ -52,7 +51,6 @@ class Program(RenameThread, RSSThread):
             if self.enable_renamer:
                 self.rename_start()
             if self.enable_rss:
-                add_rss_feed()
                 self.rss_start()
             logger.info("Program running.")
             return {"status": "Program started."}
