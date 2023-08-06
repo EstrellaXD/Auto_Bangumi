@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from module.models import RSSItem
 from module.rss import RSSEngine
 from module.security import get_current_user
+from module.downloader import DownloadClient
 
 
 router = APIRouter(prefix="/rss", tags=["rss"])

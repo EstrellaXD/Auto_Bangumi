@@ -56,9 +56,13 @@ class RSSEngine(Database):
                 return matched
         return None
 
-    def run(self, client: DownloadClient):
+    def refresh_rss(self, client: DownloadClient, rss_id: Optional[int] = None):
         # Get All RSS Items
-        rss_items: list[RSSItem] = self.rss.search_active()
+        if not rss_id:
+            rss_items: list[RSSItem] = self.rss.search_active()
+        else:
+            rss_item = self.rss.search_id(rss_id)
+            rss_items = [rss_item] if rss_item else []
         # From RSS Items, get all torrents
         for rss_item in rss_items:
             new_torrents = self.pull_rss(rss_item)

@@ -29,7 +29,7 @@ class RSSThread(ProgramStatus):
                 for rss in rss_list:
                     self.analyser.rss_to_data(rss_link=rss.url, engine=engine)
                 # Run RSS Engine
-                engine.run(client)
+                engine.refresh_rss(client)
             if settings.bangumi_manage.eps_complete:
                 eps_complete()
             self.stop_event.wait(settings.program.rss_time)
