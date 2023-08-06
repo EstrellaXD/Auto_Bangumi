@@ -13,7 +13,7 @@ from .site import mikan_parser
 @dataclass
 class TorrentInfo:
     name: str
-    torrent_link: str
+    url: str
     homepage: str
     _poster_link: str | None = None
     _official_title: str | None = None
@@ -52,9 +52,7 @@ class RequestContent(RequestURL):
             ):
                 if re.search(_filter, _title) is None:
                     torrents.append(
-                        TorrentInfo(
-                            name=_title, torrent_link=torrent_url, homepage=homepage
-                        )
+                        TorrentInfo(name=_title, url=torrent_url, homepage=homepage)
                     )
             return torrents
         except ConnectionError:

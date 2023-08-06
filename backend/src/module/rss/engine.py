@@ -1,6 +1,8 @@
 import re
 import logging
 
+from typing import Optional
+
 from module.models import Bangumi, RSSItem, Torrent
 from module.network import RequestContent
 from module.downloader import DownloadClient
@@ -23,11 +25,14 @@ class RSSEngine(Database):
             torrents.append(
                 Torrent(
                     name=torrent_info.name,
-                    url=torrent_info.torrent_link,
+                    url=torrent_info.url,
                     homepage=torrent_info.homepage,
                 )
             )
         return torrents
+
+    def get_combine_rss(self) -> list[RSSItem]:
+        return self.rss.get_combine()
 
     def add_rss(self, rss_link: str, name: str | None = None, combine: bool = True):
         if not name:
@@ -41,19 +46,15 @@ class RSSEngine(Database):
         new_torrents = self.torrent.check_new(torrents)
         return new_torrents
 
-    def match_torrent(self, torrent: Torrent):
+    def match_torrent(self, torrent: Torrent) -> Optional[Bangumi]:
         matched: Bangumi = self.bangumi.match_torrent(torrent.name)
         if matched:
             _filter = matched.filter.replace(",", "|")
-            if re.search(_filter, torrent.name, re.IGNORECASE):
+            if not re.search(_filter, torrent.name, re.IGNORECASE):
                 torrent.refer_id = matched.id
                 torrent.save_path = matched.save_path
-                with RequestContent() as req:
-                    torrent_file = req.get_content(torrent.url)
-                return {
-                    "torrent_files": torrent_file,
-                    "save_path": torrent.save_path,
-                }
+                return matched
+        return None
 
     def run(self, client: DownloadClient):
         # Get All RSS Items
@@ -63,13 +64,9 @@ class RSSEngine(Database):
             new_torrents = self.pull_rss(rss_item)
             # Get all enabled bangumi data
             for torrent in new_torrents:
-                download_info = self.match_torrent(torrent)
-                client.add_torrent(download_info)
-                torrent.downloaded = True
+                matched_data = self.match_torrent(torrent)
+                if matched_data:
+                    if client.add_torrent(torrent, matched_data):
+                        torrent.downloaded = True
             # Add all torrents to database
             self.torrent.add_all(new_torrents)
-
-
-if __name__ == "__main__":
-    with RSSEngine() as engine:
-        engine.run()

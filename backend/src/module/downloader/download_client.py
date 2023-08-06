@@ -1,7 +1,8 @@
 import logging
 
 from module.conf import settings
-from module.models import Bangumi
+from module.models import Bangumi, Torrent
+from module.network import RequestContent, TorrentInfo
 
 from .path import TorrentPath
 
@@ -113,17 +114,25 @@ class DownloadClient(TorrentPath):
         self.client.torrents_delete(hashes)
         logger.info("[Downloader] Remove torrents.")
 
-    def add_torrent(self, torrent: dict):
+    def add_torrent(
+        self, torrent: Torrent | TorrentInfo | list, bangumi: Bangumi
+    ) -> bool:
+        if not bangumi.save_path:
+            bangumi.save_path = self._gen_save_path(bangumi)
+        with RequestContent() as req:
+            if isinstance(torrent, list):
+                torrent_file = [req.get_content(t.url) for t in torrent]
+            else:
+                torrent_file = req.get_content(torrent.url)
         if self.client.torrents_add(
-            urls=torrent.get("urls"),
-            torrent_files=torrent.get("torrent_files"),
-            save_path=torrent.get("save_path"),
+            torrent_files=torrent_file,
+            save_path=bangumi.save_path,
             category="Bangumi",
         ):
-            logger.debug(f"[Downloader] Add torrent: {torrent.get('save_path')}")
+            logger.debug(f"[Downloader] Add torrent: {bangumi.official_title}")
             return True
         else:
-            logger.error(f"[Downloader] Add torrent failed: {torrent.get('save_path')}")
+            logger.error(f"[Downloader] Add torrent failed: {bangumi.official_title}")
             return False
 
     def move_torrent(self, hashes, location):

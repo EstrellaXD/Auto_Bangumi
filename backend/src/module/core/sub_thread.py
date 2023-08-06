@@ -2,11 +2,11 @@ import threading
 import time
 
 from module.conf import settings
-from module.database import BangumiDatabase
+from module.database import Database
 from module.downloader import DownloadClient
 from module.manager import Renamer, eps_complete
 from module.notification import PostNotification
-from module.rss import analyser
+from module.rss import RSSAnalyser, RSSEngine
 
 from .status import ProgramStatus
 
@@ -17,21 +17,19 @@ class RSSThread(ProgramStatus):
         self._rss_thread = threading.Thread(
             target=self.rss_loop,
         )
+        self.analyser = RSSAnalyser()
 
     def rss_loop(self):
         with DownloadClient() as client:
             client.init_downloader()
         while not self.stop_event.is_set():
-            # Analyse RSS
-            with BangumiDatabase() as db:
-                new_data = analyser.rss_to_data(rss_link=settings.rss_link, database=db)
-                if new_data:
-                    db.insert_list(new_data)
-                bangumi_list = db.not_added()
-                if bangumi_list:
-                    with DownloadClient() as client:
-                        client.set_rules(bangumi_list)
-                    db.update_list(bangumi_list)
+            with DownloadClient() as client, RSSEngine() as engine:
+                # Analyse RSS
+                rss_list = engine.rss.search_combine()
+                for rss in rss_list:
+                    self.analyser.rss_to_data(rss_link=rss.url, engine=engine)
+                # Run RSS Engine
+                engine.run(client)
             if settings.bangumi_manage.eps_complete:
                 eps_complete()
             self.stop_event.wait(settings.program.rss_time)
