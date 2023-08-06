@@ -1,8 +1,6 @@
 from os.path import expandvars
 from pydantic import BaseModel, Field
 
-# Sub config
-
 
 class Program(BaseModel):
     rss_time: int = Field(7200, description="Sleep time")

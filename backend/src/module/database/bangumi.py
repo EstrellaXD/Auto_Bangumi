@@ -1,95 +1,97 @@
 import logging
 
-from sqlmodel import Session, select, delete, or_
+from sqlmodel import Session, select, delete, or_, and_
 from sqlalchemy.sql import func
 from typing import Optional
 
-from .engine import engine
 from module.models import Bangumi
 
 logger = logging.getLogger(__name__)
 
 
-class BangumiDatabase(Session):
-    def __init__(self, _engine=engine):
-        super().__init__(_engine)
+class BangumiDatabase:
+    def __init__(self, session: Session):
+        self.session = session
 
-    def insert_one(self, data: Bangumi):
-        self.add(data)
-        self.commit()
+    def add(self, data: Bangumi):
+        self.session.add(data)
+        self.session.commit()
         logger.debug(f"[Database] Insert {data.official_title} into database.")
 
-    def insert_list(self, data: list[Bangumi]):
-        self.add_all(data)
+    def add_all(self, data: list[Bangumi]):
+        self.session.add_all(data)
         logger.debug(f"[Database] Insert {len(data)} bangumi into database.")
 
-    def update_one(self, data: Bangumi) -> bool:
-        db_data = self.get(Bangumi, data.id)
+    def update(self, data: Bangumi) -> bool:
+        db_data = self.session.get(Bangumi, data.id)
         if not db_data:
             return False
         bangumi_data = data.dict(exclude_unset=True)
         for key, value in bangumi_data.items():
             setattr(db_data, key, value)
-        self.add(db_data)
-        self.commit()
-        self.refresh(db_data)
+        self.session.add(db_data)
+        self.session.commit()
+        self.session.refresh(db_data)
         logger.debug(f"[Database] Update {data.official_title}")
         return True
 
-    def update_list(self, datas: list[Bangumi]):
-        for data in datas:
-            self.update_one(data)
+    def update_all(self, datas: list[Bangumi]):
+        self.session.add_all(datas)
+        self.session.commit()
+        logger.debug(f"[Database] Update {len(datas)} bangumi.")
 
     def update_rss(self, title_raw, rss_set: str):
         # Update rss and added
         statement = select(Bangumi).where(Bangumi.title_raw == title_raw)
-        bangumi = self.exec(statement).first()
+        bangumi = self.session.exec(statement).first()
         bangumi.rss_link = rss_set
         bangumi.added = False
-        self.add(bangumi)
-        self.commit()
-        self.refresh(bangumi)
+        self.session.add(bangumi)
+        self.session.commit()
+        self.session.refresh(bangumi)
         logger.debug(f"[Database] Update {title_raw} rss_link to {rss_set}.")
 
     def update_poster(self, title_raw, poster_link: str):
         statement = select(Bangumi).where(Bangumi.title_raw == title_raw)
-        bangumi = self.exec(statement).first()
+        bangumi = self.session.exec(statement).first()
         bangumi.poster_link = poster_link
-        self.add(bangumi)
-        self.commit()
-        self.refresh(bangumi)
+        self.session.add(bangumi)
+        self.session.commit()
+        self.session.refresh(bangumi)
         logger.debug(f"[Database] Update {title_raw} poster_link to {poster_link}.")
 
     def delete_one(self, _id: int):
         statement = select(Bangumi).where(Bangumi.id == _id)
-        bangumi = self.exec(statement).first()
-        self.delete(bangumi)
-        self.commit()
+        bangumi = self.session.exec(statement).first()
+        self.session.delete(bangumi)
+        self.session.commit()
         logger.debug(f"[Database] Delete bangumi id: {_id}.")
 
     def delete_all(self):
         statement = delete(Bangumi)
-        self.exec(statement)
-        self.commit()
+        self.session.exec(statement)
+        self.session.commit()
 
     def search_all(self) -> list[Bangumi]:
         statement = select(Bangumi)
-        return self.exec(statement).all()
+        return self.session.exec(statement).all()
 
     def search_id(self, _id: int) -> Optional[Bangumi]:
         statement = select(Bangumi).where(Bangumi.id == _id)
-        bangumi = self.exec(statement).first()
+        bangumi = self.session.exec(statement).first()
         if bangumi is None:
             logger.warning(f"[Database] Cannot find bangumi id: {_id}.")
             return None
         else:
             logger.debug(f"[Database] Find bangumi id: {_id}.")
-            return self.exec(statement).first()
+            return self.session.exec(statement).first()
 
     def match_poster(self, bangumi_name: str) -> str:
         # Use like to match
-        statement = select(Bangumi).where(func.instr(bangumi_name, Bangumi.title_raw) > 0)
-        data = self.exec(statement).first()
+        statement = select(Bangumi).where(
+            func.instr(bangumi_name, Bangumi.official_title) > 0
+        )
+        data = self.session.exec(statement).first()
         if data:
             return data.poster_link
         else:
@@ -116,10 +118,19 @@ class BangumiDatabase(Session):
                 i += 1
         return torrent_list
 
+    def match_torrent(self, torrent_name: str) -> Optional[Bangumi]:
+        statement = select(Bangumi).where(
+            and_(
+                func.instr(torrent_name, Bangumi.title_raw) > 0,
+                Bangumi.deleted == False,
+            )
+        )
+        return self.session.exec(statement).first()
+
     def not_complete(self) -> list[Bangumi]:
         # Find eps_complete = False
-        condition = select(Bangumi).where(Bangumi.eps_collect == 0)
-        datas = self.exec(condition).all()
+        condition = select(Bangumi).where(Bangumi.eps_collect == False)
+        datas = self.session.exec(condition).all()
         return datas
 
     def not_added(self) -> list[Bangumi]:
@@ -128,19 +139,18 @@ class BangumiDatabase(Session):
                 Bangumi.added == 0, Bangumi.rule_name is None, Bangumi.save_path is None
             )
         )
-        datas = self.exec(conditions).all()
+        datas = self.session.exec(conditions).all()
         return datas
 
     def disable_rule(self, _id: int):
         statement = select(Bangumi).where(Bangumi.id == _id)
-        bangumi = self.exec(statement).first()
+        bangumi = self.session.exec(statement).first()
         bangumi.deleted = True
-        self.add(bangumi)
-        self.commit()
-        self.refresh(bangumi)
+        self.session.add(bangumi)
+        self.session.commit()
+        self.session.refresh(bangumi)
         logger.debug(f"[Database] Disable rule {bangumi.title_raw}.")
 
-
-if __name__ == "__main__":
-    with BangumiDatabase() as db:
-        print(db.not_complete())
+    def search_rss(self, rss_link: str) -> list[Bangumi]:
+        statement = select(Bangumi).where(func.instr(rss_link, Bangumi.rss_link) > 0)
+        return self.session.exec(statement).all()

@@ -13,7 +13,7 @@ from .site import mikan_parser
 @dataclass
 class TorrentInfo:
     name: str
-    torrent_link: str
+    url: str
     homepage: str
     _poster_link: str | None = None
     _official_title: str | None = None
@@ -37,7 +37,6 @@ class TorrentInfo:
 
 
 class RequestContent(RequestURL):
-    # Mikanani RSS
     def get_torrents(
         self,
         _url: str,
@@ -53,9 +52,7 @@ class RequestContent(RequestURL):
             ):
                 if re.search(_filter, _title) is None:
                     torrents.append(
-                        TorrentInfo(
-                            name=_title, torrent_link=torrent_url, homepage=homepage
-                        )
+                        TorrentInfo(name=_title, url=torrent_url, homepage=homepage)
                     )
             return torrents
         except ConnectionError:
@@ -95,3 +92,7 @@ class RequestContent(RequestURL):
 
     def check_connection(self, _url):
         return self.check_url(_url)
+
+    def get_rss_title(self, _url):
+        soup = self.get_xml(_url)
+        return soup.find("./channel/title").text

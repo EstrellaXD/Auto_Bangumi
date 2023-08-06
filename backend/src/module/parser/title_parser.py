@@ -39,7 +39,7 @@ class TitleParser:
         return official_title, tmdb_season, year
 
     @staticmethod
-    def raw_parser(raw: str, rss_link: str) -> Bangumi | None:
+    def raw_parser(raw: str) -> Bangumi | None:
         language = settings.rss_parser.language
         try:
             episode = raw_parser(raw)
@@ -72,7 +72,6 @@ class TitleParser:
                 eps_collect=False if episode.episode > 1 else True,
                 offset=0,
                 filter=settings.rss_parser.filter,
-                rss_link=[rss_link],
             )
             logger.debug(f"RAW:{raw} >> {title_raw}")
             return data
