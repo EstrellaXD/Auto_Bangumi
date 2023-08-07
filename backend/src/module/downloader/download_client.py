@@ -2,7 +2,7 @@ import logging
 
 from module.conf import settings
 from module.models import Bangumi, Torrent
-from module.network import RequestContent, TorrentInfo
+from module.network import RequestContent
 
 from .path import TorrentPath
 
@@ -114,9 +114,7 @@ class DownloadClient(TorrentPath):
         self.client.torrents_delete(hashes)
         logger.info("[Downloader] Remove torrents.")
 
-    def add_torrent(
-        self, torrent: Torrent | TorrentInfo | list, bangumi: Bangumi
-    ) -> bool:
+    def add_torrent(self, torrent: Torrent | list, bangumi: Bangumi) -> bool:
         if not bangumi.save_path:
             bangumi.save_path = self._gen_save_path(bangumi)
         with RequestContent() as req:

@@ -1,39 +1,13 @@
 import re
 import xml.etree.ElementTree
-from dataclasses import dataclass
 
 from bs4 import BeautifulSoup
 
 from module.conf import settings
+from module.models import Torrent
 
 from .request_url import RequestURL
 from .site import mikan_parser
-
-
-@dataclass
-class TorrentInfo:
-    name: str
-    url: str
-    homepage: str
-    _poster_link: str | None = None
-    _official_title: str | None = None
-
-    def __fetch_mikan_info(self):
-        if self._poster_link is None or self._official_title is None:
-            with RequestContent() as req:
-                self._poster_link, self._official_title = req.get_mikan_info(
-                    self.homepage
-                )
-
-    @property
-    def poster_link(self) -> str:
-        self.__fetch_mikan_info()
-        return self._poster_link
-
-    @property
-    def official_title(self) -> str:
-        self.__fetch_mikan_info()
-        return self._official_title
 
 
 class RequestContent(RequestURL):
@@ -42,17 +16,17 @@ class RequestContent(RequestURL):
         _url: str,
         _filter: str = "|".join(settings.rss_parser.filter),
         retry: int = 3,
-    ) -> list[TorrentInfo]:
+    ) -> list[Torrent]:
         try:
             soup = self.get_xml(_url, retry)
             torrent_titles, torrent_urls, torrent_homepage = mikan_parser(soup)
-            torrents: list[TorrentInfo] = []
+            torrents: list[Torrent] = []
             for _title, torrent_url, homepage in zip(
                 torrent_titles, torrent_urls, torrent_homepage
             ):
                 if re.search(_filter, _title) is None:
                     torrents.append(
-                        TorrentInfo(name=_title, url=torrent_url, homepage=homepage)
+                        Torrent(name=_title, url=torrent_url, homepage=homepage)
                     )
             return torrents
         except ConnectionError:

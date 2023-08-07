@@ -4,8 +4,8 @@ import re
 from .engine import RSSEngine
 
 from module.conf import settings
-from module.models import Bangumi
-from module.network import RequestContent, TorrentInfo
+from module.models import Bangumi, Torrent
+from module.network import RequestContent
 from module.parser import TitleParser
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ class RSSAnalyser(TitleParser):
         data.official_title = re.sub(r"[/:.\\]", " ", data.official_title)
 
     @staticmethod
-    def get_rss_torrents(rss_link: str, full_parse: bool = True) -> list[TorrentInfo]:
+    def get_rss_torrents(rss_link: str, full_parse: bool = True) -> list[Torrent]:
         with RequestContent() as req:
             if full_parse:
                 rss_torrents = req.get_torrents(rss_link)
@@ -42,13 +42,8 @@ class RSSAnalyser(TitleParser):
         for torrent in torrents:
             data = self.raw_parser(raw=torrent.name)
             if data and data.title_raw not in [i.title_raw for i in new_data]:
-                try:
-                    poster_link, mikan_title = (
-                        torrent.poster_link,
-                        torrent.official_title,
-                    )
-                except AttributeError:
-                    poster_link, mikan_title = None, None
+                with RequestContent() as req:
+                    poster_link, mikan_title = req.get_mikan_info(torrent.homepage)
                 data.poster_link = poster_link
                 data.rss_link = rss_link
                 self.official_title_parser(data, mikan_title)
@@ -58,16 +53,11 @@ class RSSAnalyser(TitleParser):
                 logger.debug(f"[RSS] New title found: {data.official_title}")
         return new_data
 
-    def torrent_to_data(self, torrent: TorrentInfo) -> Bangumi:
+    def torrent_to_data(self, torrent: Torrent) -> Bangumi:
         data = self.raw_parser(raw=torrent.name)
         if data:
-            try:
-                poster_link, mikan_title = (
-                    torrent.poster_link,
-                    torrent.official_title,
-                )
-            except AttributeError:
-                poster_link, mikan_title = None, None
+            with RequestContent() as req:
+                poster_link, mikan_title = req.get_mikan_info(torrent.homepage)
             data.poster_link = poster_link
             self.official_title_parser(data, mikan_title)
             return data

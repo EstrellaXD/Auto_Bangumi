@@ -19,16 +19,7 @@ class RSSEngine(Database):
     @staticmethod
     def _get_torrents(rss_link: str) -> list[Torrent]:
         with RequestContent() as req:
-            torrent_infos = req.get_torrents(rss_link)
-        torrents: list[Torrent] = []
-        for torrent_info in torrent_infos:
-            torrents.append(
-                Torrent(
-                    name=torrent_info.name,
-                    url=torrent_info.url,
-                    homepage=torrent_info.homepage,
-                )
-            )
+            torrents = req.get_torrents(rss_link)
         return torrents
 
     def get_combine_rss(self) -> list[RSSItem]:
