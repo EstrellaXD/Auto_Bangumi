@@ -4,6 +4,7 @@
 
 ## 创建配置和数据存储文件夹
 
+‼️在 `/volume1/docker/` 下创建 `ab` 文件夹，然后在 `ab` 文件夹下创建 `config` 和 `data` 文件夹。
 
 ## 安装 Container Manager (Docker) 套件
 
@@ -31,7 +32,6 @@ services:
     volumes:
       - "/volume1/docker/ab/config:/app/config"
       - "/volume1/docker/ab/data:/app/data"
-      - "/volume1/docker/ab/log:/app/log"
 ```
 
 点击 **下一步**，然后点击 **完成**。
