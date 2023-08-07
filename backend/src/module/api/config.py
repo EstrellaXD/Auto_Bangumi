@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from module.conf import settings
 from module.models import Config
-from module.security import get_current_user
+from module.security.api import get_current_user
 
 router = APIRouter(tags=["config"])
 logger = logging.getLogger(__name__)

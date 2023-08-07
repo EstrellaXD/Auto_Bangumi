@@ -1,7 +1,7 @@
 import logging
 
 from module.conf import VERSION, settings
-from module.update import data_migration
+from module.update import data_migration, start_up
 
 from .sub_thread import RenameThread, RSSThread
 
@@ -32,6 +32,7 @@ class Program(RenameThread, RSSThread):
 
     def startup(self):
         self.__start_info()
+        start_up(self.first_run)
         if self.first_run:
             logger.info("First run detected, please configure the program in webui.")
             return {"status": "First run detected."}

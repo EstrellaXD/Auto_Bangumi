@@ -4,7 +4,7 @@ from module.manager import SeasonCollector
 from module.models import Bangumi
 from module.models.api import RssLink
 from module.rss import analyser
-from module.security import get_current_user
+from module.security.api import get_current_user
 
 router = APIRouter(prefix="/download", tags=["download"])
 

@@ -17,9 +17,12 @@ class RSSEngine(Database):
         super().__init__(_engine)
 
     @staticmethod
-    def _get_torrents(rss_link: str) -> list[Torrent]:
+    def _get_torrents(rss: RSSItem) -> list[Torrent]:
         with RequestContent() as req:
-            torrents = req.get_torrents(rss_link)
+            torrents = req.get_torrents(rss.url)
+            # Add RSS ID
+            for torrent in torrents:
+                torrent.rss_id = rss.id
         return torrents
 
     def get_combine_rss(self) -> list[RSSItem]:
@@ -33,7 +36,7 @@ class RSSEngine(Database):
         self.rss.add(rss_data)
 
     def pull_rss(self, rss_item: RSSItem) -> list[Torrent]:
-        torrents = self._get_torrents(rss_item.url)
+        torrents = self._get_torrents(rss_item)
         new_torrents = self.torrent.check_new(torrents)
         return new_torrents
 
@@ -42,7 +45,7 @@ class RSSEngine(Database):
         if matched:
             _filter = matched.filter.replace(",", "|")
             if not re.search(_filter, torrent.name, re.IGNORECASE):
-                torrent.refer_id = matched.id
+                torrent.bangumi_id = matched.id
                 torrent.save_path = matched.save_path
                 return matched
         return None

@@ -3,7 +3,7 @@ import os
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from module.conf import LOG_PATH
-from module.security import get_current_user
+from module.security.api import get_current_user
 
 router = APIRouter(prefix="/log", tags=["log"])
 

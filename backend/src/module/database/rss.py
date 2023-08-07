@@ -30,6 +30,10 @@ class RSSDatabase:
         self.session.commit()
         self.session.refresh(data)
 
+    # TODO: Check if this is needed
+    def search_id(self, _id: int) -> RSSItem:
+        return self.session.get(RSSItem, _id)
+
     def search_all(self) -> list[RSSItem]:
         return self.session.exec(select(RSSItem)).all()
 

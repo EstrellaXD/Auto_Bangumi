@@ -6,7 +6,7 @@ import sys
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from module.core import Program
-from module.security import get_current_user
+from module.security.api import get_current_user
 
 logger = logging.getLogger(__name__)
 program = Program()

@@ -5,7 +5,8 @@ from typing import Optional
 
 class Torrent(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True, alias="id")
-    refer_id: Optional[int] = Field(None, alias="refer_id")
+    bangumi_id: Optional[int] = Field(None, alias="refer_id", foreign_key="bangumi.id")
+    rss_id: Optional[int] = Field(None, alias="rss_id", foreign_key="rssitem.id")
     name: str = Field("", alias="name")
     url: str = Field("https://example.com/torrent", alias="url")
     homepage: Optional[str] = Field(None, alias="homepage")
