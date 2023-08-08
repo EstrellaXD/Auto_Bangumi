@@ -1,7 +1,6 @@
 import logging
 import os
 import signal
-import sys
 
 from fastapi import APIRouter, Depends, HTTPException, status
 

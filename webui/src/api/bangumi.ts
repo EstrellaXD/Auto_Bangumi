@@ -1,4 +1,4 @@
-import type { BangumiRule } from '#/bangumi';
+import type { BangumiRule, BangumiUpdate } from '#/bangumi';
 import type { ApiSuccess } from '#/api';
 
 export const apiBangumi = {
@@ -7,7 +7,7 @@ export const apiBangumi = {
    * @returns 所有 bangumi 数据
    */
   async getAll() {
-    const { data } = await axios.get<BangumiRule[]>('api/v1/bangumi/getAll');
+    const { data } = await axios.get<BangumiRule[]>('api/v1/bangumi/get/all');
 
     return data;
   },
@@ -19,7 +19,7 @@ export const apiBangumi = {
    */
   async getRule(bangumiId: number) {
     const { data } = await axios.get<BangumiRule>(
-      `api/v1/bangumi/getRule/${bangumiId}`
+      `api/v1/bangumi/get/${bangumiId}`
     );
 
     return data;
@@ -27,12 +27,13 @@ export const apiBangumi = {
 
   /**
    * 更新指定 bangumiId 的规则
-   * @param bangumiData - 需要更新的规则
+   * @param bangumiId - 需要更新的 bangumi 的 id
+   * @param bangumiRule
    * @returns axios 请求返回的数据
    */
-  async updateRule(bangumiRule: BangumiRule) {
-    const { data } = await axios.post<ApiSuccess>(
-      'api/v1/bangumi/updateRule',
+  async updateRule(bangumiId: number, bangumiRule: BangumiUpdate) {
+    const { data } = await axios.patch<ApiSuccess>(
+      `api/v1/bangumi/update/${bangumiId}`,
       bangumiRule
     );
     return data;
@@ -46,7 +47,7 @@ export const apiBangumi = {
    */
   async deleteRule(bangumiId: number, file: boolean) {
     const { data } = await axios.delete<ApiSuccess>(
-      `api/v1/bangumi/deleteRule/${bangumiId}`,
+      `api/v1/bangumi/delete/${bangumiId}`,
       {
         params: {
           file,
@@ -64,7 +65,7 @@ export const apiBangumi = {
    */
   async disableRule(bangumiId: number, file: boolean) {
     const { data } = await axios.delete<ApiSuccess>(
-      `api/v1/bangumi/disableRule/${bangumiId}`,
+      `api/v1/bangumi/disable/${bangumiId}`,
       {
         params: {
           file,
@@ -80,7 +81,7 @@ export const apiBangumi = {
    */
   async enableRule(bangumiId: number) {
     const { data } = await axios.get<ApiSuccess>(
-      `api/v1/bangumi/enableRule/${bangumiId}`
+      `api/v1/bangumi/enable/${bangumiId}`
     );
     return data;
   },

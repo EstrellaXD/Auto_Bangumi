@@ -2,7 +2,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
 from module.database import Database
-from module.models.user import User
+from module.models.user import User, UserUpdate
 
 from .jwt import verify_token
 
@@ -38,7 +38,7 @@ async def get_token_data(token: str = Depends(oauth2_scheme)):
     return payload
 
 
-def update_user_info(user_data: User, current_user):
+def update_user_info(user_data: UserUpdate, current_user):
     try:
         with Database() as db:
             db.user.update_user(current_user.username, user_data)
@@ -47,6 +47,6 @@ def update_user_info(user_data: User, current_user):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-def auth_user(username, password):
+def auth_user(user: User):
     with Database() as db:
-        db.user.auth_user(username, password)
+        db.user.auth_user(user)

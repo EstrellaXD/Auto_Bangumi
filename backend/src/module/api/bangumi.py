@@ -2,13 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 
 from module.manager import TorrentManager
-from module.models import Bangumi
+from module.models import Bangumi, BangumiUpdate
 from module.security.api import get_current_user
 
 router = APIRouter(prefix="/bangumi", tags=["bangumi"])
 
 
-@router.get("/getAll", response_model=list[Bangumi])
+@router.get("/get/all", response_model=list[Bangumi])
 async def get_all_data(current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
@@ -18,7 +18,7 @@ async def get_all_data(current_user=Depends(get_current_user)):
         return manager.bangumi.search_all()
 
 
-@router.get("/getData/{bangumi_id}", response_model=Bangumi)
+@router.get("/get/{bangumi_id}", response_model=Bangumi)
 async def get_data(bangumi_id: str, current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
@@ -28,17 +28,19 @@ async def get_data(bangumi_id: str, current_user=Depends(get_current_user)):
         return manager.search_one(bangumi_id)
 
 
-@router.post("/updateRule")
-async def update_rule(data: Bangumi, current_user=Depends(get_current_user)):
+@router.patch("/update/{bangumi_id}")
+async def update_rule(
+    bangumi_id: int, data: BangumiUpdate, current_user=Depends(get_current_user)
+):
     if not current_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
         )
     with TorrentManager() as manager:
-        return manager.update_rule(data)
+        return manager.update_rule(bangumi_id, data)
 
 
-@router.delete("/deleteRule/{bangumi_id}")
+@router.delete("/delete/{bangumi_id}")
 async def delete_rule(
     bangumi_id: str, file: bool = False, current_user=Depends(get_current_user)
 ):
@@ -50,7 +52,7 @@ async def delete_rule(
         return manager.delete_rule(bangumi_id, file)
 
 
-@router.delete("/disableRule/{bangumi_id}")
+@router.delete("/disable/{bangumi_id}")
 async def disable_rule(
     bangumi_id: str, file: bool = False, current_user=Depends(get_current_user)
 ):
@@ -62,7 +64,7 @@ async def disable_rule(
         return manager.disable_rule(bangumi_id, file)
 
 
-@router.get("/enableRule/{bangumi_id}")
+@router.get("/enable/{bangumi_id}")
 async def enable_rule(bangumi_id: str, current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(
@@ -72,7 +74,7 @@ async def enable_rule(bangumi_id: str, current_user=Depends(get_current_user)):
         return manager.enable_rule(bangumi_id)
 
 
-@router.get("/resetAll")
+@router.get("/reset/all")
 async def reset_all(current_user=Depends(get_current_user)):
     if not current_user:
         raise HTTPException(

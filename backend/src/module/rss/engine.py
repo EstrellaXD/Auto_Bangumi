@@ -58,6 +58,7 @@ class RSSEngine(Database):
             rss_item = self.rss.search_id(rss_id)
             rss_items = [rss_item] if rss_item else []
         # From RSS Items, get all torrents
+        logger.debug(f"[Engine] Get {len(rss_items)} RSS items")
         for rss_item in rss_items:
             new_torrents = self.pull_rss(rss_item)
             # Get all enabled bangumi data
@@ -65,6 +66,7 @@ class RSSEngine(Database):
                 matched_data = self.match_torrent(torrent)
                 if matched_data:
                     if client.add_torrent(torrent, matched_data):
+                        logger.debug(f"[Engine] Add torrent {torrent.name} to client")
                         torrent.downloaded = True
             # Add all torrents to database
             self.torrent.add_all(new_torrents)

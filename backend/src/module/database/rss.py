@@ -2,8 +2,7 @@ import logging
 
 from sqlmodel import Session, select, delete
 
-from .engine import engine
-from module.models import RSSItem
+from module.models import RSSItem, RSSUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -25,12 +24,21 @@ class RSSDatabase:
             self.session.commit()
             self.session.refresh(data)
 
-    def update(self, data: RSSItem):
-        self.session.add(data)
+    def update(self, _id: int, data: RSSUpdate):
+        # Check if exists
+        statement = select(RSSItem).where(RSSItem.id == _id)
+        db_data = self.session.exec(statement).first()
+        if not db_data:
+            return False
+        # Update
+        dict_data = data.dict(exclude_unset=True)
+        for key, value in dict_data.items():
+            setattr(db_data, key, value)
+        self.session.add(db_data)
         self.session.commit()
-        self.session.refresh(data)
+        self.session.refresh(db_data)
+        return True
 
-    # TODO: Check if this is needed
     def search_id(self, _id: int) -> RSSItem:
         return self.session.get(RSSItem, _id)
 

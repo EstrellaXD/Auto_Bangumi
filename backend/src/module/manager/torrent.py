@@ -4,14 +4,14 @@ from fastapi.responses import JSONResponse
 
 from module.database import Database
 from module.downloader import DownloadClient
-from module.models import Bangumi
+from module.models import Bangumi, BangumiUpdate
 
 logger = logging.getLogger(__name__)
 
 
 class TorrentManager(Database):
     @staticmethod
-    def __match_torrents_list(data: Bangumi) -> list:
+    def __match_torrents_list(data: Bangumi | BangumiUpdate) -> list:
         with DownloadClient() as client:
             torrents = client.get_torrent_info(status_filter=None)
         return [
@@ -97,16 +97,14 @@ class TorrentManager(Database):
                 status_code=406, content={"msg": f"Can't find bangumi id {_id}"}
             )
 
-    def update_rule(self, data: Bangumi):
-        old_data = self.bangumi.search_id(data.id)
+    def update_rule(self, bangumi_id, data: BangumiUpdate):
+        old_data = self.bangumi.search_id(bangumi_id)
         if not old_data:
-            logger.error(f"[Manager] Can't find data with {data.id}")
-            return JSONResponse(
-                status_code=406, content={"msg": f"Can't find data with {data.id}"}
-            )
+            logger.error(f"[Manager] Can't find data with {bangumi_id}")
+            return {"status": False, "msg": f"Can't find data with {bangumi_id}"}
         else:
             # Move torrent
-            match_list = self.__match_torrents_list(data)
+            match_list = self.__match_torrents_list(old_data.save_path)
             with DownloadClient() as client:
                 path = client._gen_save_path(data)
                 if match_list:
