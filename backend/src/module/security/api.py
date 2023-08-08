@@ -50,3 +50,8 @@ def update_user_info(user_data: UserUpdate, current_user):
 def auth_user(user: User):
     with Database() as db:
         db.user.auth_user(user)
+
+
+UNAUTHORIZED = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized"
+)

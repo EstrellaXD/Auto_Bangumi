@@ -1,20 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 
 from module.manager import SeasonCollector
 from module.models import Bangumi
 from module.models.api import RssLink
-from module.rss import analyser
-from module.security.api import get_current_user
+from module.rss import RSSAnalyser
+from module.security.api import get_current_user, UNAUTHORIZED
 
 router = APIRouter(prefix="/download", tags=["download"])
+analyser = RSSAnalyser()
 
 
 @router.post("/analysis")
 async def analysis(link: RssLink, current_user=Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
-        )
+        raise UNAUTHORIZED
     data = analyser.link_to_data(link.rss_link)
     if data:
         return data
@@ -25,12 +24,10 @@ async def analysis(link: RssLink, current_user=Depends(get_current_user)):
 @router.post("/collection")
 async def download_collection(data: Bangumi, current_user=Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
-        )
+        raise UNAUTHORIZED
     if data:
         with SeasonCollector() as collector:
-            if collector.collect_season(data, data.rss_link[0], proxy=True):
+            if collector.collect_season(data, data.rss_link[0]):
                 return {"status": "Success"}
             else:
                 return {"status": "Failed to add torrent"}
@@ -41,9 +38,7 @@ async def download_collection(data: Bangumi, current_user=Depends(get_current_us
 @router.post("/subscribe")
 async def subscribe(data: Bangumi, current_user=Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
-        )
+        raise UNAUTHORIZED
     if data:
         with SeasonCollector() as collector:
             collector.subscribe_season(data)

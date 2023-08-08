@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 
 from module.models import RSSItem, RSSUpdate
 from module.rss import RSSEngine
-from module.security.api import get_current_user
+from module.security.api import get_current_user, UNAUTHORIZED
 from module.downloader import DownloadClient
 
 
@@ -13,9 +13,7 @@ router = APIRouter(prefix="/rss", tags=["rss"])
 @router.get("", response_model=list[RSSItem])
 async def get_rss(current_user=Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
-        )
+        raise UNAUTHORIZED
     with RSSEngine() as engine:
         return engine.rss.search_all()
 
@@ -23,9 +21,7 @@ async def get_rss(current_user=Depends(get_current_user)):
 @router.delete("/delete/{rss_id}")
 async def delete_rss(rss_id: int, current_user=Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
-        )
+        raise UNAUTHORIZED
     with RSSEngine() as engine:
         result = engine.rss.delete(rss_id)
     if result:
@@ -45,9 +41,7 @@ async def update_rss(
     rss_id: int, data: RSSUpdate, current_user=Depends(get_current_user)
 ):
     if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
-        )
+        raise UNAUTHORIZED
     with RSSEngine() as engine:
         result = engine.rss.update(rss_id, data)
     if result:
@@ -65,9 +59,7 @@ async def update_rss(
 @router.get("/refresh/all")
 async def refresh_all(current_user=Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
-        )
+        raise UNAUTHORIZED
     with RSSEngine() as engine, DownloadClient() as client:
         response = engine.refresh_rss(client)
     if response:
@@ -85,9 +77,7 @@ async def refresh_all(current_user=Depends(get_current_user)):
 @router.get("/refresh/{rss_id}")
 async def refresh_rss(rss_id: int, current_user=Depends(get_current_user)):
     if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
-        )
+        raise UNAUTHORIZED
     with RSSEngine() as engine, DownloadClient() as client:
         response = engine.refresh_rss(client, rss_id)
     if response:
