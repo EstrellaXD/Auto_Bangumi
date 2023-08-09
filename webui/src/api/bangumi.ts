@@ -31,7 +31,7 @@ export const apiBangumi = {
    * @param bangumiRule
    * @returns axios 请求返回的数据
    */
-  async updateRule(bangumiId: number, bangumiRule: BangumiUpdate) {
+  async updateRule(bangumiId: number, bangumiRule: BangumiRule) {
     const { data } = await axios.patch<ApiSuccess>(
       `api/v1/bangumi/update/${bangumiId}`,
       bangumiRule
