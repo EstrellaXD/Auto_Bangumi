@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
+from .response import u_response
+
 from module.manager import TorrentManager
 from module.models import Bangumi, BangumiUpdate
 from module.security.api import get_current_user, UNAUTHORIZED
@@ -13,7 +15,8 @@ async def get_all_data(current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED
     with TorrentManager() as manager:
-        return manager.bangumi.search_all()
+        resp = manager.bangumi.search_all()
+    return u_response(resp)
 
 
 @router.get("/get/{bangumi_id}", response_model=Bangumi)
@@ -21,7 +24,8 @@ async def get_data(bangumi_id: str, current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED
     with TorrentManager() as manager:
-        return manager.search_one(bangumi_id)
+        resp = manager.search_one(bangumi_id)
+    return u_response(resp)
 
 
 @router.patch("/update/{bangumi_id}")
@@ -31,7 +35,8 @@ async def update_rule(
     if not current_user:
         raise UNAUTHORIZED
     with TorrentManager() as manager:
-        return manager.update_rule(bangumi_id, data)
+        resp = manager.update_rule(bangumi_id, data)
+    return u_response(resp)
 
 
 @router.delete("/delete/{bangumi_id}")
@@ -41,7 +46,8 @@ async def delete_rule(
     if not current_user:
         raise UNAUTHORIZED
     with TorrentManager() as manager:
-        return manager.delete_rule(bangumi_id, file)
+        resp = manager.delete_rule(bangumi_id, file)
+    return u_response(resp)
 
 
 @router.delete("/disable/{bangumi_id}")

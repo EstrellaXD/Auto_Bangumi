@@ -1,6 +1,6 @@
 import logging
 
-from sqlmodel import Session, select, delete
+from sqlmodel import Session, select, delete, and_
 
 from module.models import RSSItem, RSSUpdate
 
@@ -49,7 +49,9 @@ class RSSDatabase:
         return self.session.exec(select(RSSItem).where(RSSItem.enabled)).all()
 
     def search_combine(self) -> list[RSSItem]:
-        return self.session.exec(select(RSSItem).where(RSSItem.combine)).all()
+        return self.session.exec(
+            select(RSSItem).where(and_(RSSItem.combine, RSSItem.enabled))
+        ).all()
 
     def delete(self, _id: int):
         condition = delete(RSSItem).where(RSSItem.id == _id)

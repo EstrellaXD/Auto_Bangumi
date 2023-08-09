@@ -18,9 +18,9 @@ class BangumiDatabase:
         self.session.commit()
         logger.debug(f"[Database] Insert {data.official_title} into database.")
 
-    def add_all(self, data: list[Bangumi]):
-        self.session.add_all(data)
-        logger.debug(f"[Database] Insert {len(data)} bangumi into database.")
+    def add_all(self, datas: list[Bangumi]):
+        self.session.add_all(datas)
+        logger.debug(f"[Database] Insert {len(datas)} bangumi into database.")
 
     def update(self, data: Bangumi) -> bool:
         db_data = self.session.get(Bangumi, data.id)
