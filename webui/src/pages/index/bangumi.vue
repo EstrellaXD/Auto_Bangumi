@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { BangumiRule } from '#/bangumi';
+import { ruleTemplate } from '#/bangumi';
 
 const { data } = storeToRefs(useBangumiStore());
 const { getAll, useUpdateRule, useDisableRule, useEnableRule, useDeleteRule } =
@@ -10,27 +11,7 @@ const editRule = reactive<{
   item: BangumiRule;
 }>({
   show: false,
-  item: {
-    added: false,
-    deleted: false,
-    dpi: '',
-    eps_collect: false,
-    filter: [],
-    group_name: '',
-    id: 0,
-    official_title: '',
-    offset: 0,
-    poster_link: '',
-    rss_link: [],
-    rule_name: '',
-    save_path: '',
-    season: 1,
-    season_raw: '',
-    source: null,
-    subtitle: '',
-    title_raw: '',
-    year: null,
-  },
+  item: ruleTemplate,
 });
 
 function open(data: BangumiRule) {

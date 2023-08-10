@@ -1,33 +1,14 @@
 <script lang="ts" setup>
 import { useMessage } from 'naive-ui';
 import type { BangumiRule } from '#/bangumi';
+import { ruleTemplate } from '#/bangumi';
 
 const { getAll } = useBangumiStore();
 const show = defineModel('show', { default: false });
 
 const rss = ref('');
 const message = useMessage();
-const rule = ref<BangumiRule>({
-  added: false,
-  deleted: false,
-  dpi: '',
-  eps_collect: false,
-  filter: [],
-  group_name: '',
-  id: 0,
-  official_title: '',
-  offset: 0,
-  poster_link: '',
-  rss_link: [],
-  rule_name: '',
-  save_path: '',
-  season: 1,
-  season_raw: '',
-  source: null,
-  subtitle: '',
-  title_raw: '',
-  year: null,
-});
+const rule = ref<BangumiRule>(ruleTemplate);
 const analysis = reactive({
   loading: false,
   next: false,
