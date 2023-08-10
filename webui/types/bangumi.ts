@@ -20,6 +20,8 @@ export interface BangumiRule {
   year: string | null;
 }
 
+export type BangumiUpdate = Omit<BangumiRule, 'id'>;
+
 export const ruleTemplate: BangumiRule = {
   added: false,
   deleted: false,
