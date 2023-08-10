@@ -112,7 +112,7 @@ definePage({
         @delete-file="
           (type, { id, deleteFile }) => ruleManage(type, id, deleteFile)
         "
-        @apply="(rule) => updateRule(rule)"
+        @apply="(rule) => updateRule(rule.id, rule)"
       ></ab-edit-rule>
     </div>
   </div>
