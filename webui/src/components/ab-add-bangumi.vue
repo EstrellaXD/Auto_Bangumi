@@ -3,17 +3,19 @@ import { useMessage } from 'naive-ui';
 import type { BangumiRule } from '#/bangumi';
 import { ruleTemplate } from '#/bangumi';
 
-const { getAll } = useBangumiStore();
+/** v-model show */
 const show = defineModel('show', { default: false });
 
-const rss = ref('');
 const message = useMessage();
+const { getAll } = useBangumiStore();
+
+const rss = ref('');
 const rule = ref<BangumiRule>(ruleTemplate);
+
 const analysis = reactive({
   loading: false,
   next: false,
 });
-
 const loading = reactive({
   collect: false,
   subscribe: false,
@@ -32,10 +34,11 @@ async function analysisRss() {
   if (rss.value === '') {
     message.error('Please enter the RSS link!');
   } else {
-    analysis.loading = true;
-
     try {
+      analysis.loading = true;
       const data = await apiDownload.analysis(rss.value);
+      analysis.loading = false;
+
       rule.value = data;
       analysis.next = true;
       console.log('rule', data);
@@ -44,8 +47,6 @@ async function analysisRss() {
       message.error(err.status);
       console.log('error', err);
     }
-
-    analysis.loading = false;
   }
 }
 
@@ -55,6 +56,7 @@ async function collect() {
       loading.collect = true;
       const res = await apiDownload.collection(rule.value);
       loading.collect = false;
+
       if (res) {
         message.success('Collect Success!');
         getAll();
