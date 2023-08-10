@@ -15,6 +15,7 @@ class RequestContent(RequestURL):
         self,
         _url: str,
         _filter: str = "|".join(settings.rss_parser.filter),
+        limit: int = 100,
         retry: int = 3,
     ) -> list[Torrent]:
         try:
@@ -28,6 +29,8 @@ class RequestContent(RequestURL):
                     torrents.append(
                         Torrent(name=_title, url=torrent_url, homepage=homepage)
                     )
+                if len(torrents) >= limit:
+                    break
             return torrents
         except ConnectionError:
             return []

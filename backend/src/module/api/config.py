@@ -6,18 +6,18 @@ from module.conf import settings
 from module.models import Config
 from module.security.api import get_current_user, UNAUTHORIZED
 
-router = APIRouter(tags=["config"])
+router = APIRouter(prefix="/config", tags=["config"])
 logger = logging.getLogger(__name__)
 
 
-@router.get("/getConfig", response_model=Config)
+@router.get("/get", response_model=Config)
 async def get_config(current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED
     return settings.dict()
 
 
-@router.post("/updateConfig")
+@router.patch("/update")
 async def update_config(config: Config, current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED

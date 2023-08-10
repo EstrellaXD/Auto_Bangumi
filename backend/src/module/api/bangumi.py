@@ -15,8 +15,7 @@ async def get_all_data(current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED
     with TorrentManager() as manager:
-        resp = manager.bangumi.search_all()
-    return u_response(resp)
+        return manager.bangumi.search_all()
 
 
 @router.get("/get/{bangumi_id}", response_model=Bangumi)
@@ -24,8 +23,7 @@ async def get_data(bangumi_id: str, current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED
     with TorrentManager() as manager:
-        resp = manager.search_one(bangumi_id)
-    return u_response(resp)
+        return manager.search_one(bangumi_id)
 
 
 @router.patch("/update/{bangumi_id}")

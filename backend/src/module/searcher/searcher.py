@@ -1,5 +1,9 @@
+import json
+
 from module.models import Bangumi, Torrent
 from module.network import RequestContent
+from module.rss import RSSAnalyser
+
 from module.searcher.plugin import search_url
 
 SEARCH_KEY = [
@@ -12,23 +16,27 @@ SEARCH_KEY = [
 ]
 
 
-class SearchTorrent(RequestContent):
+class SearchTorrent(RequestContent, RSSAnalyser):
     def search_torrents(
-        self, keywords: list[str], site: str = "mikan"
+        self, keywords: list[str], site: str = "mikan", limit: int = 5
     ) -> list[Torrent]:
         url = search_url(site, keywords)
-        # TorrentInfo to TorrentBase
-        torrents = self.get_torrents(url)
+        torrents = self.get_torrents(url, limit=limit)
+        return torrents
 
-        def to_dict():
-            for torrent in torrents:
-                yield {
-                    "name": torrent.name,
-                    "torrent_link": torrent.url,
-                    "homepage": torrent.homepage,
-                }
-
-        return [Torrent(**d) for d in to_dict()]
+    def analyse_keyword(self, keywords: list[str], site: str = "mikan"):
+        bangumis = []
+        torrents = self.search_torrents(keywords, site)
+        # Generate a list of json
+        yield "["
+        for idx, torrent in enumerate(torrents):
+            bangumi = self.torrent_to_data(torrent)
+            if bangumi:
+                yield json.dumps(bangumi.dict())
+                if idx != len(torrents) - 1:
+                    yield ","
+        yield "]"
+        # Analyse bangumis
 
     def search_season(self, data: Bangumi):
         keywords = [getattr(data, key) for key in SEARCH_KEY if getattr(data, key)]
@@ -38,5 +46,7 @@ class SearchTorrent(RequestContent):
 
 if __name__ == "__main__":
     with SearchTorrent() as st:
-        for t in st.search_torrents(["魔法科高校の劣等生"]):
-            print(t)
+        keywords = ["无职转生", "第二季"]
+        bangumis = st.analyse_keyword(keywords)
+        for bangumi in bangumis:
+            print(bangumi)
