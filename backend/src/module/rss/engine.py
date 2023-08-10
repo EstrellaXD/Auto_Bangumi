@@ -46,7 +46,6 @@ class RSSEngine(Database):
             _filter = matched.filter.replace(",", "|")
             if not re.search(_filter, torrent.name, re.IGNORECASE):
                 torrent.bangumi_id = matched.id
-                torrent.save_path = matched.save_path
                 return matched
         return None
 

@@ -2,7 +2,6 @@ import threading
 import time
 
 from module.conf import settings
-from module.database import Database
 from module.downloader import DownloadClient
 from module.manager import Renamer, eps_complete
 from module.notification import PostNotification

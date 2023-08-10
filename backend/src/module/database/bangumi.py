@@ -20,6 +20,7 @@ class BangumiDatabase:
 
     def add_all(self, datas: list[Bangumi]):
         self.session.add_all(datas)
+        self.session.commit()
         logger.debug(f"[Database] Insert {len(datas)} bangumi into database.")
 
     def update(self, data: Bangumi) -> bool:

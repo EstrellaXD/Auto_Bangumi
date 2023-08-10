@@ -16,7 +16,7 @@ def start_up(first_run):
                 engine.add_rss(settings.rss_link, name="Mikan RSS", combine=True)
             elif main_rss.url != settings.rss_link:
                 main_rss.url = settings.rss_link
-                engine.rss.update(main_rss)
+                engine.rss.update(1, main_rss)
 
 
 if __name__ == "__main__":
