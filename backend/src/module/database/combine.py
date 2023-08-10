@@ -6,6 +6,8 @@ from .bangumi import BangumiDatabase
 from .user import UserDatabase
 from .engine import engine as e
 
+from module.models import User, Bangumi
+
 
 class Database(Session):
     def __init__(self, engine=e):
@@ -24,8 +26,19 @@ class Database(Session):
 
     def migrate(self):
         # Run migration online
-        from alembic import command
-        from alembic.config import Config
+        bangumi_data = self.bangumi.search_all()
+        user_data = self.exec("SELECT * FROM user").all()
+        readd_bangumi = []
+        for bangumi in bangumi_data:
+            dict_data = bangumi.dict()
+            del dict_data["id"]
+            readd_bangumi.append(Bangumi(**dict_data))
+        self.drop_table()
+        self.create_table()
+        self.commit()
+        bangumi_data = self.bangumi.search_all()
+        self.bangumi.add_all(readd_bangumi)
+        self.add(User(**user_data[0]))
+        self.commit()
 
-        alembic_cfg = Config("alembic.ini")
-        command.upgrade(alembic_cfg, "head")
+

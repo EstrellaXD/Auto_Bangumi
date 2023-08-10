@@ -24,6 +24,10 @@ class RSSDatabase:
             self.session.commit()
             self.session.refresh(data)
 
+    def add_all(self, data: list[RSSItem]):
+        for item in data:
+            self.add(item)
+
     def update(self, _id: int, data: RSSUpdate):
         # Check if exists
         statement = select(RSSItem).where(RSSItem.id == _id)
