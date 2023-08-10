@@ -1,38 +1,21 @@
 <script lang="ts" setup>
 import { useMessage } from 'naive-ui';
 import type { BangumiRule } from '#/bangumi';
+import { ruleTemplate } from '#/bangumi';
 
-const { getAll } = useBangumiStore();
+/** v-model show */
 const show = defineModel('show', { default: false });
 
-const rss = ref('');
 const message = useMessage();
-const rule = ref<BangumiRule>({
-  added: false,
-  deleted: false,
-  dpi: '',
-  eps_collect: false,
-  filter: [],
-  group_name: '',
-  id: 0,
-  official_title: '',
-  offset: 0,
-  poster_link: '',
-  rss_link: [],
-  rule_name: '',
-  save_path: '',
-  season: 1,
-  season_raw: '',
-  source: null,
-  subtitle: '',
-  title_raw: '',
-  year: null,
-});
+const { getAll } = useBangumiStore();
+
+const rss = ref('');
+const rule = ref<BangumiRule>(ruleTemplate);
+
 const analysis = reactive({
   loading: false,
   next: false,
 });
-
 const loading = reactive({
   collect: false,
   subscribe: false,
@@ -47,27 +30,22 @@ watch(show, (val) => {
   }
 });
 
-async function analyser() {
+async function analysisRss() {
   if (rss.value === '') {
     message.error('Please enter the RSS link!');
   } else {
     try {
       analysis.loading = true;
-      const { onError, onResult } = await apiDownload.analysis(rss.value);
-      onResult((data) => {
-        rule.value = data;
-        analysis.loading = false;
-        analysis.next = true;
-        console.log('rule', data);
-      });
+      const data = await apiDownload.analysis(rss.value);
+      analysis.loading = false;
 
-      onError((err) => {
-        message.error(err.status);
-        analysis.loading = false;
-        console.log('error', err);
-      });
+      rule.value = data;
+      analysis.next = true;
+      console.log('rule', data);
     } catch (error) {
-      message.error('Failed to analyser!');
+      const err = error as { status: string };
+      message.error(err.status);
+      console.log('error', err);
     }
   }
 }
@@ -78,6 +56,7 @@ async function collect() {
       loading.collect = true;
       const res = await apiDownload.collection(rule.value);
       loading.collect = false;
+
       if (res) {
         message.success('Collect Success!');
         getAll();
@@ -90,6 +69,7 @@ async function collect() {
     }
   }
 }
+
 async function subscribe() {
   if (rule.value) {
     try {
@@ -124,9 +104,12 @@ async function subscribe() {
       ></ab-setting>
 
       <div flex="~ justify-end">
-        <ab-button size="small" :loading="analysis.loading" @click="analyser">{{
-          $t('topbar.add.analyse')
-        }}</ab-button>
+        <ab-button
+          size="small"
+          :loading="analysis.loading"
+          @click="analysisRss"
+          >{{ $t('topbar.add.analyse') }}</ab-button
+        >
       </div>
     </div>
 

@@ -32,9 +32,11 @@ export const apiBangumi = {
    * @returns axios 请求返回的数据
    */
   async updateRule(bangumiId: number, bangumiRule: BangumiRule) {
+    const rule = omit(bangumiRule, ['id']);
+
     const { data } = await axios.patch<ApiSuccess>(
       `api/v1/bangumi/update/${bangumiId}`,
-      bangumiRule
+      rule
     );
     return data;
   },
