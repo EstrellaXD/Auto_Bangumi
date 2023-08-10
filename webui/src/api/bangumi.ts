@@ -1,4 +1,4 @@
-import type { BangumiRule, BangumiUpdate } from '#/bangumi';
+import type { BangumiRule } from '#/bangumi';
 import type { ApiSuccess } from '#/api';
 
 export const apiBangumi = {
