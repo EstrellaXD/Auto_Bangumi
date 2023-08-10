@@ -1,72 +1,11 @@
 <script lang="ts" setup>
-import type { BangumiRule } from '#/bangumi';
-import { ruleTemplate } from '#/bangumi';
-
-const { data } = storeToRefs(useBangumiStore());
-const { getAll, useUpdateRule, useDisableRule, useEnableRule, useDeleteRule } =
+const { bangumi, editRule } = storeToRefs(useBangumiStore());
+const { getAll, updateRule, enableRule, openEditPopup, ruleManage } =
   useBangumiStore();
-
-const editRule = reactive<{
-  show: boolean;
-  item: BangumiRule;
-}>({
-  show: false,
-  item: ruleTemplate,
-});
-
-function open(data: BangumiRule) {
-  editRule.show = true;
-  editRule.item = data;
-}
-
-function refresh() {
-  editRule.show = false;
-  getAll();
-}
-
-const { execute: updateRule, onResult: onUpdateRuleResult } = useUpdateRule();
-const { execute: enableRule, onResult: onEnableRuleResult } = useEnableRule();
-const { execute: disableRule, onResult: onDisableRuleResult } =
-  useDisableRule();
-const { execute: deleteRule, onResult: onDeleteRuleResult } = useDeleteRule();
-const message = useMessage();
-
-onUpdateRuleResult(({ msg }) => {
-  message.success(msg);
-  refresh();
-});
-
-onDisableRuleResult(({ msg }) => {
-  message.success(msg);
-  refresh();
-});
-
-onEnableRuleResult(({ msg }) => {
-  message.success(msg);
-  refresh();
-});
-
-onDeleteRuleResult(({ msg }) => {
-  message.success(msg);
-  refresh();
-});
 
 onActivated(() => {
   getAll();
 });
-
-function ruleManage(
-  type: 'disable' | 'delete',
-  id: number,
-  deleteFile: boolean
-) {
-  if (type === 'disable') {
-    disableRule(id, deleteFile);
-  }
-  if (type === 'delete') {
-    deleteRule(id, deleteFile);
-  }
-}
 
 definePage({
   name: 'Bangumi List',
@@ -77,13 +16,13 @@ definePage({
   <div overflow-auto mt-12px flex-grow>
     <div flex="~ wrap" gap-y-12px gap-x-50px>
       <ab-bangumi-card
-        v-for="i in data"
+        v-for="i in bangumi"
         :key="i.id"
         :class="[i.deleted && 'grayscale']"
         :poster="i.poster_link ?? ''"
         :name="i.official_title"
         :season="i.season"
-        @click="() => open(i)"
+        @click="() => openEditPopup(i)"
       ></ab-bangumi-card>
 
       <ab-edit-rule
