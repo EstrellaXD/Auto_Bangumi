@@ -47,28 +47,24 @@ watch(show, (val) => {
   }
 });
 
-async function analyser() {
+async function analysisRss() {
   if (rss.value === '') {
     message.error('Please enter the RSS link!');
   } else {
-    try {
-      analysis.loading = true;
-      const { onError, onResult } = await apiDownload.analysis(rss.value);
-      onResult((data) => {
-        rule.value = data;
-        analysis.loading = false;
-        analysis.next = true;
-        console.log('rule', data);
-      });
+    analysis.loading = true;
 
-      onError((err) => {
-        message.error(err.status);
-        analysis.loading = false;
-        console.log('error', err);
-      });
+    try {
+      const data = await apiDownload.analysis(rss.value);
+      rule.value = data;
+      analysis.next = true;
+      console.log('rule', data);
     } catch (error) {
-      message.error('Failed to analyser!');
+      const err = error as { status: string };
+      message.error(err.status);
+      console.log('error', err);
     }
+
+    analysis.loading = false;
   }
 }
 
@@ -90,6 +86,7 @@ async function collect() {
     }
   }
 }
+
 async function subscribe() {
   if (rule.value) {
     try {
@@ -124,9 +121,12 @@ async function subscribe() {
       ></ab-setting>
 
       <div flex="~ justify-end">
-        <ab-button size="small" :loading="analysis.loading" @click="analyser">{{
-          $t('topbar.add.analyse')
-        }}</ab-button>
+        <ab-button
+          size="small"
+          :loading="analysis.loading"
+          @click="analysisRss"
+          >{{ $t('topbar.add.analyse') }}</ab-button
+        >
       </div>
     </div>
 

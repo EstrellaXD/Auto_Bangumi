@@ -20,6 +20,7 @@ export function useApi<
 
   const fetchResult = createEventHook<TData>();
   const fetchError = createEventHook<TError>();
+  const fetchFinally = createEventHook();
   const message = useMessage();
 
   function execute(...params: Parameters<TApi>) {
@@ -43,6 +44,7 @@ export function useApi<
       })
       .finally(() => {
         isLoading.value = false;
+        fetchFinally.trigger('');
       });
   }
 
@@ -53,5 +55,6 @@ export function useApi<
     execute,
     onResult: fetchResult.on,
     onError: fetchError.on,
+    onFinally: fetchFinally.on,
   };
 }
