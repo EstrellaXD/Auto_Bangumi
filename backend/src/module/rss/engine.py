@@ -3,7 +3,7 @@ import logging
 
 from typing import Optional
 
-from module.models import Bangumi, RSSItem, Torrent
+from module.models import Bangumi, RSSItem, Torrent, ResponseModel
 from module.network import RequestContent
 from module.downloader import DownloadClient
 
@@ -33,7 +33,20 @@ class RSSEngine(Database):
             with RequestContent() as req:
                 name = req.get_rss_title(rss_link)
         rss_data = RSSItem(item_path=name, url=rss_link, combine=combine)
-        self.rss.add(rss_data)
+        if self.rss.add(rss_data):
+            return ResponseModel(
+                status=True,
+                status_code=200,
+                msg_en="RSS added successfully.",
+                msg_zh="RSS 添加成功。",
+            )
+        else:
+            return ResponseModel(
+                status=False,
+                status_code=400,
+                msg_en="RSS added failed.",
+                msg_zh="RSS 添加失败。",
+            )
 
     def pull_rss(self, rss_item: RSSItem) -> list[Torrent]:
         torrents = self._get_torrents(rss_item)

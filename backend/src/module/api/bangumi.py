@@ -48,6 +48,17 @@ async def delete_rule(
     return u_response(resp)
 
 
+@router.delete("/delete/many/{bangumi_id}")
+async def delete_many_rule(
+    bangumi_id: list, file: bool = False, current_user=Depends(get_current_user)
+):
+    if not current_user:
+        raise UNAUTHORIZED
+    with TorrentManager() as manager:
+        for i in bangumi_id:
+            manager.delete_rule(i, file)
+
+
 @router.delete("/disable/{bangumi_id}")
 async def disable_rule(
     bangumi_id: str, file: bool = False, current_user=Depends(get_current_user)
@@ -56,6 +67,17 @@ async def disable_rule(
         raise UNAUTHORIZED
     with TorrentManager() as manager:
         return manager.disable_rule(bangumi_id, file)
+
+
+@router.delete("/disable/many/{bangumi_id}")
+async def disable_many_rule(
+    bangumi_id: list, file: bool = False, current_user=Depends(get_current_user)
+):
+    if not current_user:
+        raise UNAUTHORIZED
+    with TorrentManager() as manager:
+        for i in bangumi_id:
+            manager.disable_rule(i, file)
 
 
 @router.get("/enable/{bangumi_id}")

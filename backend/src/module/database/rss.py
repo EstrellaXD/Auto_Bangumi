@@ -17,12 +17,13 @@ class RSSDatabase:
         db_data = self.session.exec(statement).first()
         if db_data:
             logger.debug(f"RSS Item {data.url} already exists.")
-            return
+            return False
         else:
             logger.debug(f"RSS Item {data.url} not exists, adding...")
             self.session.add(data)
             self.session.commit()
             self.session.refresh(data)
+            return True
 
     def add_all(self, data: list[RSSItem]):
         for item in data:

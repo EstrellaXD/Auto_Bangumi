@@ -1,5 +1,9 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
+
+from .response import u_response
 
 from module.models import RSSItem, RSSUpdate
 from module.rss import RSSEngine
@@ -16,6 +20,17 @@ async def get_rss(current_user=Depends(get_current_user)):
         raise UNAUTHORIZED
     with RSSEngine() as engine:
         return engine.rss.search_all()
+
+
+@router.post("/add")
+async def add_rss(
+    url: str, name: Optional[str], combine: bool, current_user=Depends(get_current_user)
+):
+    if not current_user:
+        raise UNAUTHORIZED
+    with RSSEngine() as engine:
+        result = engine.add_rss(url, name, combine)
+    return u_response(result)
 
 
 @router.delete("/delete/{rss_id}")
