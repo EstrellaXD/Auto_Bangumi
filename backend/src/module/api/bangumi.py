@@ -48,7 +48,7 @@ async def delete_rule(
     return u_response(resp)
 
 
-@router.delete("/delete/many/{bangumi_id}")
+@router.delete("/delete/many/")
 async def delete_many_rule(
     bangumi_id: list, file: bool = False, current_user=Depends(get_current_user)
 ):
@@ -69,7 +69,7 @@ async def disable_rule(
         return manager.disable_rule(bangumi_id, file)
 
 
-@router.delete("/disable/many/{bangumi_id}")
+@router.delete("/disable/many/")
 async def disable_many_rule(
     bangumi_id: list, file: bool = False, current_user=Depends(get_current_user)
 ):

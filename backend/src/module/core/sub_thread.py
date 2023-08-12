@@ -26,7 +26,7 @@ class RSSThread(ProgramStatus):
                 # Analyse RSS
                 rss_list = engine.rss.search_combine()
                 for rss in rss_list:
-                    self.analyser.rss_to_data(rss_link=rss.url, engine=engine)
+                    self.analyser.rss_to_data(rss, engine)
                 # Run RSS Engine
                 engine.refresh_rss(client)
             if settings.bangumi_manage.eps_complete:

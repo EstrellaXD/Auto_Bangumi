@@ -24,7 +24,7 @@ async def update_config(config: Config, current_user=Depends(get_current_user)):
     try:
         settings.save(config_dict=config.dict())
         settings.load()
-        update_rss()
+        # update_rss()
         logger.info("Config updated")
         return {"message": "Success"}
     except Exception as e:
