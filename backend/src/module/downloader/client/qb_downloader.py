@@ -82,9 +82,10 @@ class QbDownloader:
             status_filter=status_filter, category=category, tag=tag
         )
 
-    def torrents_add(self, torrent_files, save_path, category):
+    def add_torrents(self, torrent_urls, torrent_files, save_path, category):
         resp = self._client.torrents_add(
             is_paused=False,
+            urls=torrent_urls,
             torrent_files=torrent_files,
             save_path=save_path,
             category=category,

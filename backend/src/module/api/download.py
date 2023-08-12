@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from module.manager import SeasonCollector
-from module.models import Bangumi
+from module.models import Bangumi, RSSItem
 from module.models.api import RssLink
 from module.rss import RSSAnalyser
 from module.security.api import get_current_user, UNAUTHORIZED
@@ -11,10 +11,10 @@ analyser = RSSAnalyser()
 
 
 @router.post("/analysis")
-async def analysis(link: RssLink, current_user=Depends(get_current_user)):
+async def analysis(rss: RSSItem, current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED
-    data = analyser.link_to_data(link.rss_link)
+    data = analyser.link_to_data(rss)
     if data:
         return data
     else:

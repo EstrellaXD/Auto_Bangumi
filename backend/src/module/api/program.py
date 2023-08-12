@@ -2,9 +2,10 @@ import logging
 import os
 import signal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 
 from module.core import Program
+from module.conf import VERSION
 from module.security.api import get_current_user, UNAUTHORIZED
 
 logger = logging.getLogger(__name__)
@@ -82,8 +83,8 @@ async def check_downloader_status(current_user=Depends(get_current_user)):
     return program.check_downloader()
 
 
-@router.get("/check/rss", tags=["check"])
-async def check_rss_status(current_user=Depends(get_current_user)):
+@router.get("/check/version", tags=["check"])
+async def check_version(current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED
-    return program.check_analyser()
+    return VERSION

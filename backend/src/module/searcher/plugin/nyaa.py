@@ -1,8 +1,8 @@
 import re
 
 
-def mikan_url(keywords: list[str]):
+def nyaa_url(keywords: list[str]):
     keyword = "+".join(keywords)
     search_str = re.sub(r"[\W_ ]", "+", keyword)
-    url = f"https://mikanani.me/RSS/Search?searchstr={search_str}"
+    url = f"https://nyaa.si/?page=rss&q={search_str}&c=0_0&f=0"
     return url

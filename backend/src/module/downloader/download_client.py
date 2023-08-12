@@ -119,10 +119,21 @@ class DownloadClient(TorrentPath):
             bangumi.save_path = self._gen_save_path(bangumi)
         with RequestContent() as req:
             if isinstance(torrent, list):
-                torrent_file = [req.get_content(t.url) for t in torrent]
+                if "magnet" in torrent[0].url:
+                    torrent_url = [t.url for t in torrent]
+                    torrent_file = None
+                else:
+                    torrent_file = [req.get_content(t.url) for t in torrent]
+                    torrent_url = None
             else:
-                torrent_file = req.get_content(torrent.url)
-        if self.client.torrents_add(
+                if "magnet" in torrent.url:
+                    torrent_url = torrent.url
+                    torrent_file = None
+                else:
+                    torrent_file = req.get_content(torrent.url)
+                    torrent_url = None
+        if self.client.add_torrents(
+            torrent_urls=torrent_url,
             torrent_files=torrent_file,
             save_path=bangumi.save_path,
             category="Bangumi",
@@ -130,7 +141,7 @@ class DownloadClient(TorrentPath):
             logger.debug(f"[Downloader] Add torrent: {bangumi.official_title}")
             return True
         else:
-            logger.error(f"[Downloader] Add torrent failed: {bangumi.official_title}")
+            logger.debug(f"[Downloader] Torrent added before: {bangumi.official_title}")
             return False
 
     def move_torrent(self, hashes, location):
