@@ -1,7 +1,7 @@
 import logging
 
 from module.conf import VERSION, settings
-from module.update import data_migration, start_up
+from module.update import data_migration, database_migration, start_up, first_run
 
 from .sub_thread import RenameThread, RSSThread
 
@@ -32,8 +32,8 @@ class Program(RenameThread, RSSThread):
 
     def startup(self):
         self.__start_info()
-        start_up(self.first_run)
         if self.first_run:
+            first_run()
             logger.info("First run detected, please configure the program in webui.")
             return {"status": "First run detected."}
         if self.legacy_data:
@@ -41,6 +41,10 @@ class Program(RenameThread, RSSThread):
                 "Legacy data detected, starting data migration, please wait patiently."
             )
             data_migration()
+        elif self.version_update:
+            # Update database
+            database_migration()
+            logger.info("Database updated.")
         self.start()
 
     def start(self):
@@ -71,3 +75,10 @@ class Program(RenameThread, RSSThread):
         self.stop()
         self.start()
         return {"status": "Program restarted."}
+
+    def update_database(self):
+        if not self.version_update:
+            return {"status": "No update found."}
+        else:
+            start_up(True)
+            return {"status": "Database updated."}

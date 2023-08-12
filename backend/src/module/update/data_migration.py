@@ -14,8 +14,11 @@ def data_migration():
     for info in infos:
         new_data.append(Bangumi(**info, rss_link=[rss_link]))
     with RSSEngine() as engine:
-        engine.create_table()
         engine.bangumi.add_all(new_data)
-        engine.user.add_default_user()
         engine.add_rss(rss_link)
     LEGACY_DATA_PATH.unlink(missing_ok=True)
+
+
+def database_migration():
+    with RSSEngine() as engine:
+        engine.migrate()

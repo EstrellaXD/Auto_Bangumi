@@ -53,14 +53,6 @@ class Settings(Config):
         self.__load_from_env()
         self.save()
 
-    @property
-    def rss_link(self) -> str:
-        if "://" not in self.rss_parser.custom_url:
-            return f"https://{self.rss_parser.custom_url}/RSS/MyBangumi?token={self.rss_parser.token}"
-        return (
-            f"{self.rss_parser.custom_url}/RSS/MyBangumi?token={self.rss_parser.token}"
-        )
-
     def __load_from_env(self):
         config_dict = self.dict()
         for key, section in ENV_TO_ATTR.items():

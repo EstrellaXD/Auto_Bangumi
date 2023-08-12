@@ -3,7 +3,7 @@ import logging
 from module.conf import settings
 from module.models import Bangumi
 
-from .analyser import raw_parser, tmdb_parser, torrent_parser
+from .analyser import raw_parser, tmdb_parser, torrent_parser, mikan_parser
 
 logger = logging.getLogger(__name__)
 
@@ -79,3 +79,7 @@ class TitleParser:
             logger.debug(e)
             logger.warning(f"Cannot parse {raw}.")
             return None
+
+    @staticmethod
+    def mikan_parser(homepage: str) -> tuple[str, str]:
+        return mikan_parser(homepage)

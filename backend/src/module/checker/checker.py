@@ -1,4 +1,6 @@
-from module.conf import settings
+import os
+
+from module.conf import settings, VERSION
 from module.downloader import DownloadClient
 from module.models import Config
 from module.network import RequestContent
@@ -49,3 +51,21 @@ class Checker:
             return True
         else:
             return False
+
+    @staticmethod
+    def check_version() -> bool:
+        if not os.path.exists("config/version.info"):
+            with open("config/version.info", "w+") as f:
+                f.writelines(VERSION)
+            return True
+        with open("config/version.info", "r+") as f:
+            legacy_version = f.readlines()[-1]
+            if VERSION == legacy_version:
+                return False
+            else:
+                f.writelines(VERSION)
+                return True
+
+
+if __name__ == "__main__":
+    print(Checker().check_version())

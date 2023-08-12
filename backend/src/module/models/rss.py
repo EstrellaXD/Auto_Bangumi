@@ -7,6 +7,7 @@ class RSSItem(SQLModel, table=True):
     item_path: str = Field("example path", alias="item_path")
     url: str = Field("https://mikanani.me", alias="url")
     combine: bool = Field(True, alias="combine")
+    parser: str = Field("mikan", alias="parser")
     enabled: bool = Field(True, alias="enabled")
 
 
@@ -14,8 +15,5 @@ class RSSUpdate(SQLModel):
     item_path: Optional[str] = Field("example path", alias="item_path")
     url: Optional[str] = Field("https://mikanani.me", alias="url")
     combine: Optional[bool] = Field(True, alias="combine")
+    parser: Optional[str] = Field("mikan", alias="parser")
     enabled: Optional[bool] = Field(True, alias="enabled")
-
-
-
-

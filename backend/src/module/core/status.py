@@ -52,3 +52,7 @@ class ProgramStatus(Checker):
     @property
     def legacy_data(self):
         return LEGACY_DATA_PATH.exists()
+
+    @property
+    def version_update(self):
+        return self.check_version()
