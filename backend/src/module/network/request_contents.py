@@ -35,19 +35,6 @@ class RequestContent(RequestURL):
         except ConnectionError:
             return []
 
-    def get_mikan_info(self, _url) -> tuple[str, str]:
-        content = self.get_html(_url)
-        soup = BeautifulSoup(content, "html.parser")
-        poster_div = soup.find("div", {"class": "bangumi-poster"})
-        poster_style = poster_div.get("style")
-        official_title = soup.select_one(
-            'p.bangumi-title a[href^="/Home/Bangumi/"]'
-        ).text
-        if poster_style:
-            poster_path = poster_style.split("url('")[1].split("')")[0]
-            return poster_path, official_title
-        return "", ""
-
     def get_xml(self, _url, retry: int = 3) -> xml.etree.ElementTree.Element:
         return xml.etree.ElementTree.fromstring(self.get_url(_url, retry).text)
 
