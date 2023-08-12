@@ -55,6 +55,7 @@ class RSSAnalyser(TitleParser):
         bangumi = self.raw_parser(raw=torrent.name)
         if bangumi:
             self.official_title_parser(bangumi=bangumi, rss=rss, torrent=torrent)
+            bangumi.rss_link = rss.url
             return bangumi
 
     def rss_to_data(
