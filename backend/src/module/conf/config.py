@@ -79,5 +79,9 @@ class Settings(Config):
         else:
             return os.environ[env]
 
+    @property
+    def group_rules(self):
+        return self.__dict__["group_rules"]
+
 
 settings = Settings()
