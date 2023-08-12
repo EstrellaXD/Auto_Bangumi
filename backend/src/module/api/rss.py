@@ -1,7 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, status
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends
 
 from .response import u_response
 
@@ -65,3 +64,11 @@ async def refresh_rss(rss_id: int, current_user=Depends(get_current_user)):
         raise UNAUTHORIZED
     with RSSEngine() as engine, DownloadClient() as client:
         response = engine.refresh_rss(client, rss_id)
+
+
+@router.get("/torrent/{rss_id}")
+async def get_torrent(rss_id: int, current_user=Depends(get_current_user)):
+    if not current_user:
+        raise UNAUTHORIZED
+    with RSSEngine() as engine:
+        return engine.get_rss_torrents(rss_id)

@@ -28,6 +28,13 @@ class RSSEngine(Database):
     def get_combine_rss(self) -> list[RSSItem]:
         return self.rss.get_combine()
 
+    def get_rss_torrents(self, rss_id: int) -> list[Torrent]:
+        rss = self.rss.search_id(rss_id)
+        if rss:
+            return self.torrent.search_rss(rss_id)
+        else:
+            return []
+
     def add_rss(self, rss_link: str, name: str | None = None, combine: bool = True):
         if not name:
             with RequestContent() as req:
