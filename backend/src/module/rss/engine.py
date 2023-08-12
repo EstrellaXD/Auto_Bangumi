@@ -86,6 +86,6 @@ class RSSEngine(Database):
                 if matched_data:
                     if client.add_torrent(torrent, matched_data):
                         logger.debug(f"[Engine] Add torrent {torrent.name} to client")
-                        torrent.downloaded = True
+                    torrent.downloaded = True
             # Add all torrents to database
             self.torrent.add_all(new_torrents)

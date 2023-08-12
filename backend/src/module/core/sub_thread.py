@@ -19,8 +19,6 @@ class RSSThread(ProgramStatus):
         self.analyser = RSSAnalyser()
 
     def rss_loop(self):
-        with DownloadClient() as client:
-            client.init_downloader()
         while not self.stop_event.is_set():
             with DownloadClient() as client, RSSEngine() as engine:
                 # Analyse RSS

@@ -130,7 +130,7 @@ class DownloadClient(TorrentPath):
             logger.debug(f"[Downloader] Add torrent: {bangumi.official_title}")
             return True
         else:
-            logger.error(f"[Downloader] Add torrent failed: {bangumi.official_title}")
+            logger.debug(f"[Downloader] Torrent added before: {bangumi.official_title}")
             return False
 
     def move_torrent(self, hashes, location):
