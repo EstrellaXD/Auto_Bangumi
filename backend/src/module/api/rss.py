@@ -22,13 +22,11 @@ async def get_rss(current_user=Depends(get_current_user)):
 
 
 @router.post("/add")
-async def add_rss(
-    url: str, name: Optional[str], combine: bool, current_user=Depends(get_current_user)
-):
+async def add_rss(rss: RSSItem, current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED
     with RSSEngine() as engine:
-        result = engine.add_rss(url, name, combine)
+        result = engine.add_rss(rss.url, rss.item_path, rss.combine)
     return u_response(result)
 
 
