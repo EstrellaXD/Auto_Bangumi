@@ -83,6 +83,17 @@ title: 项目说明
   <img src="https://contrib.rocks/image?repo=EstrellaXD/Auto_Bangumi" />
 </a>
 
+## 传播声明
+
+由于 AutoBangumi 为非正规版权渠道获取番剧，因此：
+
+- **请勿**将 AutoBangumi 用于商业用途。
+- **请勿**将 AutoBangumi 制作为视频内容，于境内视频网站(版权利益方)传播。
+- **请勿**将 AutoBangumi 用于任何违反法律法规的行为。
+
+
+AutoBangumi 仅供学习交流使用。
+
 ## Licence
 
 [MIT licence](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/LICENSE)
