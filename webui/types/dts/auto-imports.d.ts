@@ -136,6 +136,7 @@ declare global {
   const until: typeof import('@vueuse/core')['until']
   const useActiveElement: typeof import('@vueuse/core')['useActiveElement']
   const useApi: typeof import('../../src/hooks/useApi')['useApi']
+  const useAppInfo: typeof import('../../src/hooks/useAppInfo')['useAppInfo']
   const useAsyncQueue: typeof import('@vueuse/core')['useAsyncQueue']
   const useAsyncState: typeof import('@vueuse/core')['useAsyncState']
   const useAttrs: typeof import('vue')['useAttrs']

@@ -1,28 +1,4 @@
 export const useProgramStore = defineStore('program', () => {
-  const { auth } = useAuth();
-  const running = ref(false);
-
-  function getStatus() {
-    const { execute, onResult } = useApi(apiProgram.status);
-
-    onResult((res) => {
-      running.value = res;
-    });
-
-    if (auth.value !== '') {
-      execute();
-    }
-  }
-
-  const { pause: offUpdate, resume: onUpdate } = useIntervalFn(
-    getStatus,
-    3000,
-    {
-      immediate: false,
-      immediateCallback: true,
-    }
-  );
-
   function opts(handle: string) {
     return {
       failRule: (res: boolean) => !res,
@@ -43,11 +19,6 @@ export const useProgramStore = defineStore('program', () => {
   );
 
   return {
-    running,
-    getStatus,
-    onUpdate,
-    offUpdate,
-
     start,
     pause,
     shutdown,
