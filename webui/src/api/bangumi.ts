@@ -47,15 +47,23 @@ export const apiBangumi = {
    * @param file - 是否同时删除关联文件。
    * @returns axios 请求返回的数据
    */
-  async deleteRule(bangumiId: number, file: boolean) {
-    const { data } = await axios.delete<ApiSuccess>(
-      `api/v1/bangumi/delete/${bangumiId}`,
-      {
-        params: {
-          file,
-        },
-      }
-    );
+  async deleteRule(bangumiId: number | number[], file: boolean) {
+    let url = 'api/v1/bangumi/delete';
+    let ids: undefined | number[];
+
+    if (typeof bangumiId === 'number') {
+      url = `${url}/${bangumiId}`;
+    } else {
+      url = `${url}/many`;
+      ids = bangumiId;
+    }
+
+    const { data } = await axios.delete<ApiSuccess>(url, {
+      data: ids,
+      params: {
+        file,
+      },
+    });
     return data;
   },
 
@@ -65,15 +73,23 @@ export const apiBangumi = {
    * @param file - 是否同时删除关联文件。
    * @returns axios 请求返回的数据
    */
-  async disableRule(bangumiId: number, file: boolean) {
-    const { data } = await axios.delete<ApiSuccess>(
-      `api/v1/bangumi/disable/${bangumiId}`,
-      {
-        params: {
-          file,
-        },
-      }
-    );
+  async disableRule(bangumiId: number | number[], file: boolean) {
+    let url = 'api/v1/bangumi/disable';
+    let ids: undefined | number[];
+
+    if (typeof bangumiId === 'number') {
+      url = `${url}/${bangumiId}`;
+    } else {
+      url = `${url}/many`;
+      ids = bangumiId;
+    }
+
+    const { data } = await axios.delete<ApiSuccess>(url, {
+      data: ids,
+      params: {
+        file,
+      },
+    });
     return data;
   },
 

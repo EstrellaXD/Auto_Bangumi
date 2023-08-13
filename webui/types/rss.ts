@@ -1,8 +1,8 @@
 export interface RSS {
   id: number;
-  item_path: string;
+  name: string;
   url: string;
-  combine: boolean;
+  aggregate: boolean;
   parser: string;
   enabled: boolean;
 }
