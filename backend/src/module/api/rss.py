@@ -26,7 +26,7 @@ async def add_rss(rss: RSSItem, current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED
     with RSSEngine() as engine:
-        result = engine.add_rss(rss.url, rss.item_path, rss.combine)
+        result = engine.add_rss(rss.url, rss.name, rss.aggregate)
     return u_response(result)
 
 

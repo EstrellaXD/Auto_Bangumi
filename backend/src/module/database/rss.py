@@ -53,9 +53,9 @@ class RSSDatabase:
     def search_active(self) -> list[RSSItem]:
         return self.session.exec(select(RSSItem).where(RSSItem.enabled)).all()
 
-    def search_combine(self) -> list[RSSItem]:
+    def search_aggregate(self) -> list[RSSItem]:
         return self.session.exec(
-            select(RSSItem).where(and_(RSSItem.combine, RSSItem.enabled))
+            select(RSSItem).where(and_(RSSItem.aggregate, RSSItem.enabled))
         ).all()
 
     def delete(self, _id: int):

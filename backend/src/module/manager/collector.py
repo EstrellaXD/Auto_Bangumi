@@ -25,7 +25,7 @@ class SeasonCollector(DownloadClient):
             data.added = True
             data.eps_collect = True
             engine.add_rss(
-                rss_link=data.rss_link, name=data.official_title, combine=False
+                rss_link=data.rss_link, name=data.official_title, aggregate=False
             )
             engine.bangumi.add(data)
             engine.refresh_rss(self)

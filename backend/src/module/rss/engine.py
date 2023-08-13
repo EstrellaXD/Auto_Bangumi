@@ -25,9 +25,6 @@ class RSSEngine(Database):
                 torrent.rss_id = rss.id
         return torrents
 
-    def get_combine_rss(self) -> list[RSSItem]:
-        return self.rss.get_combine()
-
     def get_rss_torrents(self, rss_id: int) -> list[Torrent]:
         rss = self.rss.search_id(rss_id)
         if rss:
@@ -35,11 +32,11 @@ class RSSEngine(Database):
         else:
             return []
 
-    def add_rss(self, rss_link: str, name: str | None = None, combine: bool = True):
+    def add_rss(self, rss_link: str, name: str | None = None, aggregate: bool = True):
         if not name:
             with RequestContent() as req:
                 name = req.get_rss_title(rss_link)
-        rss_data = RSSItem(item_path=name, url=rss_link, combine=combine)
+        rss_data = RSSItem(name=name, url=rss_link, aggregate=aggregate)
         if self.rss.add(rss_data):
             return ResponseModel(
                 status=True,
