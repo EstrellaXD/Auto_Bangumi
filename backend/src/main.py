@@ -48,27 +48,43 @@ if VERSION != "DEV_VERSION":
     templates = Jinja2Templates(directory="dist")
 
     # Resource
-    @app.get("/favicon.svg", tags=["html"])
-    def favicon():
-        return FileResponse("dist/favicon.svg")
+    # @app.get("/favicon.svg", tags=["html"])
+    # def favicon():
+    #     return FileResponse("dist/favicon.svg")
+    #
+    # @app.get("/AutoBangumi.svg", tags=["html"])
+    # def logo():
+    #     return FileResponse("dist/AutoBangumi.svg")
+    #
+    # @app.get("/favicon-light.svg", tags=["html"])
+    # def favicon_light():
+    #     return FileResponse("dist/favicon-light.svg")
+    #
+    # @app.get("/robots.txt", tags=["html"])
+    # def robots():
+    #     return FileResponse("dist/robots.txt")
+    #
+    # @app.get("/manifest.webmanifest", tags=["html"])
+    # def manifest():
+    #     return FileResponse("dist/manifest.webmanifest")
+    #
+    # @app.get("/sw.js", tags=["html"])
+    # def sw():
+    #     return FileResponse("dist/sw.js")
 
-    @app.get("/AutoBangumi.svg", tags=["html"])
-    def logo():
-        return FileResponse("dist/AutoBangumi.svg")
+    @app.get("/{path:path}")
+    def html(path: str):
+        files = os.listdir("dist")
+        if path in files:
+            return FileResponse(f"dist/{path}")
+        else:
+            return FileResponse("dist/index.html")
 
-    @app.get("/favicon-light.svg", tags=["html"])
-    def favicon_light():
-        return FileResponse("dist/favicon-light.svg")
-
-    @app.get("/robots.txt", tags=["html"])
-    def robots():
-        return FileResponse("dist/robots.txt")
-
-    # HTML Response
-    @app.get("/{full_path:path}", response_class=HTMLResponse, tags=["html"])
-    def index(request: Request):
-        context = {"request": request}
-        return templates.TemplateResponse("index.html", context)
+    # # HTML Response
+    # @app.get("/{full_path:path}", response_class=HTMLResponse, tags=["html"])
+    # def index(request: Request):
+    #     context = {"request": request}
+    #     return templates.TemplateResponse("index.html", context)
 
 else:
 
