@@ -12,6 +12,7 @@ declare global {
   const apiDownload: typeof import('../../src/api/download')['apiDownload']
   const apiLog: typeof import('../../src/api/log')['apiLog']
   const apiProgram: typeof import('../../src/api/program')['apiProgram']
+  const apiRSS: typeof import('../../src/api/rss')['apiRSS']
   const assert: typeof import('vitest')['assert']
   const asyncComputed: typeof import('@vueuse/core')['asyncComputed']
   const autoResetRef: typeof import('@vueuse/core')['autoResetRef']
