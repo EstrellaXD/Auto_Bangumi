@@ -37,7 +37,7 @@ async def restart(current_user=Depends(get_current_user)):
         raise HTTPException(status_code=500, detail="Failed to restart program")
 
 
-@router.get("/start", response_model=JSONResponse)
+@router.get("/start")
 async def start(current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED

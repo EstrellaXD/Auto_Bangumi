@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 
 from .response import u_response
 
-from module.models import RSSItem, RSSUpdate, Torrent
+from module.models import RSSItem, RSSUpdate, Torrent, APIResponse
 from module.rss import RSSEngine
 from module.security.api import get_current_user, UNAUTHORIZED
 from module.downloader import DownloadClient
@@ -20,7 +20,7 @@ async def get_rss(current_user=Depends(get_current_user)):
         return engine.rss.search_all()
 
 
-@router.post("/add", response_model=JSONResponse)
+@router.post("/add", response_model=APIResponse)
 async def add_rss(rss: RSSItem, current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED
@@ -29,7 +29,7 @@ async def add_rss(rss: RSSItem, current_user=Depends(get_current_user)):
     return u_response(result)
 
 
-@router.delete("/delete/{rss_id}", response_model=JSONResponse)
+@router.delete("/delete/{rss_id}", response_model=APIResponse)
 async def delete_rss(rss_id: int, current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED
@@ -47,7 +47,7 @@ async def delete_rss(rss_id: int, current_user=Depends(get_current_user)):
         )
 
 
-@router.patch("/update/{rss_id}", response_model=JSONResponse)
+@router.patch("/update/{rss_id}", response_model=APIResponse)
 async def update_rss(
     rss_id: int, data: RSSUpdate, current_user=Depends(get_current_user)
 ):
@@ -67,7 +67,7 @@ async def update_rss(
         )
 
 
-@router.get("/refresh/all", response_model=JSONResponse)
+@router.get("/refresh/all", response_model=APIResponse)
 async def refresh_all(current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED
@@ -79,7 +79,7 @@ async def refresh_all(current_user=Depends(get_current_user)):
         )
 
 
-@router.get("/refresh/{rss_id}", response_model=JSONResponse)
+@router.get("/refresh/{rss_id}", response_model=APIResponse)
 async def refresh_rss(rss_id: int, current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED
