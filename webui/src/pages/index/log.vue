@@ -51,10 +51,10 @@ definePage({
               </ab-button>
             </ab-label>
 
-            <ab-label label="WebUI Repo">
+            <ab-label label="Official Website">
               <ab-button
                 size="small"
-                link="https://github.com/Rewrite0/Auto_Bangumi_WebUI"
+                link="https://autobangumi.org"
                 target="_blank"
               >
                 {{ $t('log.go') }}
@@ -63,7 +63,7 @@ definePage({
 
             <div line></div>
 
-            <ab-label label="Twitter">
+            <ab-label label="X">
               <ab-button
                 size="small"
                 link="https://twitter.com/Estrella_Pan"
