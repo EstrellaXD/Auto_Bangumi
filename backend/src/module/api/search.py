@@ -3,12 +3,13 @@ from fastapi.responses import StreamingResponse
 
 from module.searcher import SearchTorrent
 from module.security.api import get_current_user, UNAUTHORIZED
+from module.models import Torrent
 
 
 router = APIRouter(prefix="/search", tags=["search"])
 
 
-@router.get("/")
+@router.get("/", response_model=list[Torrent])
 async def search_torrents(
     site: str = "mikan",
     keywords: str = Query(None),

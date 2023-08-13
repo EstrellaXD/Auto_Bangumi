@@ -3,6 +3,7 @@ import os
 import signal
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
 
 from module.core import Program
 from module.conf import VERSION
