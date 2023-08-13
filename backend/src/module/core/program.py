@@ -32,7 +32,7 @@ class Program(RenameThread, RSSThread):
 
     def startup(self):
         self.__start_info()
-        if self.first_run:
+        if self.first_run or not self.database:
             first_run()
             logger.info("First run detected, please configure the program in webui.")
             return {"status": "First run detected."}

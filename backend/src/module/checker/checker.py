@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from module.conf import settings, VERSION
 from module.downloader import DownloadClient
@@ -52,6 +53,14 @@ class Checker:
             else:
                 f.writelines(VERSION)
                 return True
+
+    @staticmethod
+    def check_database() -> bool:
+        db_path = Path("data/data.db")
+        if not db_path.exists():
+            return False
+        else:
+            return True
 
 
 if __name__ == "__main__":

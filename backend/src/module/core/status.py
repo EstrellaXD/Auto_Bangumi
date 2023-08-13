@@ -50,3 +50,7 @@ class ProgramStatus(Checker):
     @property
     def version_update(self):
         return self.check_version()
+
+    @property
+    def database(self):
+        return self.check_database()

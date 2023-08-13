@@ -10,7 +10,7 @@ def test_rss_engine():
         engine.add_rss(rss_link, aggregate=False)
 
         result = engine.rss.search_active()
-        assert result[1].item_path == "Mikan Project - 无职转生～到了异世界就拿出真本事～"
+        assert result[1].name == "Mikan Project - 无职转生～到了异世界就拿出真本事～"
 
         new_torrents = engine.pull_rss(result[1])
         torrent = new_torrents[0]
