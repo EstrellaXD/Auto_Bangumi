@@ -194,6 +194,7 @@ dist
 dist.zip
 dist-ssr
 *.local
+dev-dist
 
 # Editor directories and files
 .vscode/*
