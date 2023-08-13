@@ -58,10 +58,15 @@ class RSSDatabase:
             select(RSSItem).where(and_(RSSItem.aggregate, RSSItem.enabled))
         ).all()
 
-    def delete(self, _id: int):
+    def delete(self, _id: int) -> bool:
         condition = delete(RSSItem).where(RSSItem.id == _id)
-        self.session.exec(condition)
-        self.session.commit()
+        try:
+            self.session.exec(condition)
+            self.session.commit()
+            return True
+        except Exception as e:
+            logger.error("Delete RSS Item failed.")
+            return False
 
     def delete_all(self):
         condition = delete(RSSItem)

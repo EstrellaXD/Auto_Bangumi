@@ -3,6 +3,7 @@ import os
 import signal
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
 
 from module.core import Program
 from module.conf import VERSION
@@ -36,7 +37,7 @@ async def restart(current_user=Depends(get_current_user)):
         raise HTTPException(status_code=500, detail="Failed to restart program")
 
 
-@router.get("/start")
+@router.get("/start", response_model=JSONResponse)
 async def start(current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED

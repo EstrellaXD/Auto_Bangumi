@@ -72,12 +72,7 @@ class TorrentManager(Database):
                 self.bangumi.update(data)
                 if file:
                     torrent_message = self.delete_torrents(data, client)
-                    return JSONResponse(
-                        status_code=200,
-                        content={
-                            "msg": f"Disable {data.official_title} rule. {torrent_message}"
-                        },
-                    )
+                    return torrent_message
                 logger.info(f"[Manager] Disable rule for {data.official_title}")
                 return ResponseModel(
                     status_code=200,
@@ -148,6 +143,9 @@ class TorrentManager(Database):
         data = self.bangumi.search_id(int(_id))
         if not data:
             logger.error(f"[Manager] Can't find data with {_id}")
-            return {"status": "error", "msg": f"Can't find data with {_id}"}
+            return JSONResponse(
+                status_code=406,
+                content={"msg_en": f"Can't find data with {_id}", "msg_zh": f"无法找到 id {_id} 的数据"},
+            )
         else:
             return data
