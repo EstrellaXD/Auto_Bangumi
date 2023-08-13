@@ -14,7 +14,8 @@
     "config": "设置",
     "logout": "退出",
     "calendar": "番剧日历",
-    "downloader": "下载器"
+    "downloader": "下载器",
+    "rss": "RSS 管理"
   },
   "topbar": {
     "start": "启动",

@@ -14,7 +14,8 @@
     "config": "Config",
     "logout": "Logout",
     "downloader": "Downloader",
-    "calendar": "Calendar"
+    "calendar": "Calendar",
+    "rss": "RSS Manager"
   },
   "topbar": {
     "start": "Start",
