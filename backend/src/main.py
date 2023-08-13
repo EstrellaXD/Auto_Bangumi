@@ -43,7 +43,7 @@ app = create_app()
 
 if VERSION != "DEV_VERSION":
     app.mount("/assets", StaticFiles(directory="dist/assets"), name="assets")
-    # app.mount("/pwa", StaticFiles(directory="dist/pwa"), name="pwa")
+    app.mount("/images", StaticFiles(directory="dist/images"), name="images")
     # app.mount("/icons", StaticFiles(directory="dist/icons"), name="icons")
     templates = Jinja2Templates(directory="dist")
 
@@ -73,16 +73,19 @@ if VERSION != "DEV_VERSION":
     #     return FileResponse("dist/sw.js")
 
     @app.get("/{path:path}")
-    def html(path: str):
+    def html(request: Request, path: str):
         files = os.listdir("dist")
         if path in files:
             return FileResponse(f"dist/{path}")
         else:
-            return FileResponse("dist/index.html")
+            context = {"request": request}
+            return templates.TemplateResponse("index.html", context)
 
-    # # HTML Response
-    # @app.get("/{full_path:path}", response_class=HTMLResponse, tags=["html"])
-    # def index(request: Request):
+    # HTML Response
+    # @app.get("/{path:path}", response_class=HTMLResponse, tags=["html"])
+    # def index(request: Request, path: str):
+    #     print(request)
+    #     print(path)
     #     context = {"request": request}
     #     return templates.TemplateResponse("index.html", context)
 

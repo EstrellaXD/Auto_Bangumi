@@ -60,9 +60,15 @@ async def program_status(current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED
     if not program.is_running:
-        return {"status": "stop"}
+        return {
+            "status": False,
+            "version": VERSION,
+        }
     else:
-        return {"status": "running"}
+        return {
+            "status": True,
+            "version": VERSION,
+        }
 
 
 @router.get("/shutdown")
@@ -81,10 +87,3 @@ async def check_downloader_status(current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED
     return program.check_downloader()
-
-
-@router.get("/check/version", tags=["check"])
-async def check_version(current_user=Depends(get_current_user)):
-    if not current_user:
-        raise UNAUTHORIZED
-    return VERSION
