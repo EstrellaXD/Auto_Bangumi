@@ -16,7 +16,9 @@ export default defineConfig({
     ['meta', { property: 'og:image', content: '/social.png' }],
     ['meta', { property: 'og:site_name', content: 'AutoBangumi' }],
     ['meta', { property: 'og:url', content: 'https://www.autobangumi.org' }],
-    ["script", { src: '/_vercel/insights/script.js' }]
+    ["script", { src: '/_vercel/insights/script.js' }],
+    ["script", { src: 'https://www.googletagmanager.com/gtag/js?id=G-3Z8W6WMN7J' }],
+    ["script", {}, `window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag('js', new Date());gtag('config', 'G-3Z8W6WMN7J');`],
   ],
 
   themeConfig: {
