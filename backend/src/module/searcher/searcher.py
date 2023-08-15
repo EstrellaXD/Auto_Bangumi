@@ -1,10 +1,10 @@
 import json
 
-from module.models import Bangumi, Torrent
+from module.models import Bangumi, Torrent, RSSItem
 from module.network import RequestContent
 from module.rss import RSSAnalyser
 
-from module.searcher.plugin import search_url
+from .provider import search_url
 
 SEARCH_KEY = [
     "group_name",
@@ -18,29 +18,28 @@ SEARCH_KEY = [
 
 class SearchTorrent(RequestContent, RSSAnalyser):
     def search_torrents(
-        self, keywords: list[str], site: str = "mikan", limit: int = 5
+        self, rss_item: RSSItem, limit: int = 5
     ) -> list[Torrent]:
-        url = search_url(site, keywords)
-        torrents = self.get_torrents(url, limit=limit)
+        torrents = self.get_torrents(rss_item.url, limit=limit)
         return torrents
 
     def analyse_keyword(self, keywords: list[str], site: str = "mikan"):
-        bangumis = []
-        torrents = self.search_torrents(keywords, site)
+        rss_item = search_url(site, keywords)
+        torrents = self.search_torrents(rss_item)
         # Generate a list of json
         yield "["
         for idx, torrent in enumerate(torrents):
-            bangumi = self.torrent_to_data(torrent)
+            bangumi = self.torrent_to_data(torrent=torrent, rss=rss_item)
             if bangumi:
                 yield json.dumps(bangumi.dict())
                 if idx != len(torrents) - 1:
                     yield ","
         yield "]"
-        # Analyse bangumis
 
     def search_season(self, data: Bangumi):
         keywords = [getattr(data, key) for key in SEARCH_KEY if getattr(data, key)]
-        torrents = self.search_torrents(keywords)
+        url = search_url("mikan", keywords)
+        torrents = self.search_torrents(url)
         return [torrent for torrent in torrents if data.title_raw in torrent.name]
 
 
