@@ -56,8 +56,9 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
       },
       manifest: {
-        name: 'Auto_Bangumi',
-        short_name: 'Auto_Bangumi',
+        name: 'AutoBangumi',
+        display: 'standalone',
+        short_name: 'AutoBangumi',
         description: 'Automated Bangumi Download Tool',
         theme_color: '#ffffff',
         icons: [
@@ -66,6 +67,11 @@ export default defineConfig({
             sizes: 'any',
             type: 'image/svg+xml',
             purpose: 'any',
+          },
+          {
+            src: '/images/pwa-192.png',
+            sizes: '192x192',
+            type: 'image/png',
           },
           {
             src: '/images/pwa-512.png',
