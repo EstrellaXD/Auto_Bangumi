@@ -11,7 +11,7 @@ def search_url(site: str, keywords: list[str]) -> RSSItem:
     keyword = "+".join(keywords)
     search_str = re.sub(r"[\W_ ]", "+", keyword)
     if site in SEARCH_CONFIG.keys():
-        url = re.sub(r"%s", search_str, SEARCH_CONFIG[site].get("url"))
+        url = re.sub(r"%s", search_str, SEARCH_CONFIG[site])
         rss_item = RSSItem(
             url=url,
             parser="mikan"
