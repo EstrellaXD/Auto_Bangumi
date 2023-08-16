@@ -39,8 +39,8 @@ definePage({
       </div>
     </ab-container>
 
-    <div bg="#C7C4AB" text-white rounded-4px py-4px px-2em text-main>
-      <div>{{ $t('login.default') }}: admin adminadmin</div>
-    </div>
+<!--    <div bg="#C7C4AB" text-white rounded-4px py-4px px-2em text-main> -->
+<!--      <div>{{ $t('login.default') }}: admin adminadmin</div> -->
+<!--    </div> -->
   </div>
 </template>
