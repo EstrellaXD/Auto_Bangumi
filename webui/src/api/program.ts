@@ -1,4 +1,4 @@
-import type { UniversalResponse } from "#/message";
+import type { ApiResponse } from "#/api";
 
 
 export const apiProgram = {
@@ -6,7 +6,7 @@ export const apiProgram = {
    * 重启
    */
   async restart() {
-    const { data } = await axios.get< UniversalResponse >('api/v1/restart');
+    const { data } = await axios.get< ApiResponse >('api/v1/restart');
     return data;
   },
 
@@ -14,7 +14,7 @@ export const apiProgram = {
    * 启动
    */
   async start() {
-    const { data } = await axios.get< UniversalResponse >('api/v1/start');
+    const { data } = await axios.get< ApiResponse >('api/v1/start');
     return data;
   },
 
@@ -22,7 +22,7 @@ export const apiProgram = {
    * 停止
    */
   async stop() {
-    const { data } = await axios.get< UniversalResponse >('api/v1/stop');
+    const { data } = await axios.get< ApiResponse >('api/v1/stop');
     return data;
   },
 
@@ -41,7 +41,7 @@ export const apiProgram = {
    * 终止
    */
   async shutdown() {
-    const { data } = await axios.get< UniversalResponse >('api/v1/shutdown');
+    const { data } = await axios.get< ApiResponse >('api/v1/shutdown');
     return data;
   },
 };

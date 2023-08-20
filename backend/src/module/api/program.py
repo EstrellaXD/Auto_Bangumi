@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
 from module.core import Program
+from module.models import APIResponse
 from module.conf import VERSION
 from module.security.api import get_current_user, UNAUTHORIZED
 
@@ -24,20 +25,29 @@ async def shutdown():
     program.stop()
 
 
-@router.get("/restart")
+@router.get("/restart", response_model=APIResponse)
 async def restart(current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED
     try:
         program.restart()
-        return {"status": "ok"}
+        return JSONResponse(
+            status_code=200,
+            content={"msg_en": "Restart program successfully.", "msg_zh": "重启程序成功。"},
+        )
     except Exception as e:
         logger.debug(e)
         logger.warning("Failed to restart program")
-        raise HTTPException(status_code=500, detail="Failed to restart program")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "msg_en": "Failed to restart program.",
+                "msg_zh": "重启程序失败。",
+           }
+        )
 
 
-@router.get("/start")
+@router.get("/start", response_model=APIResponse)
 async def start(current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED
@@ -46,7 +56,13 @@ async def start(current_user=Depends(get_current_user)):
     except Exception as e:
         logger.debug(e)
         logger.warning("Failed to start program")
-        raise HTTPException(status_code=500, detail="Failed to start program")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "msg_en": "Failed to start program.",
+                "msg_zh": "启动程序失败。",
+            }
+        )
 
 
 @router.get("/stop")
@@ -79,7 +95,10 @@ async def shutdown_program(current_user=Depends(get_current_user)):
     program.stop()
     logger.info("Shutting down program...")
     os.kill(os.getpid(), signal.SIGINT)
-    return {"status": "ok"}
+    return JSONResponse(
+        status_code=200,
+        content={"msg_en": "Shutdown program successfully.", "msg_zh": "关闭程序成功。"},
+    )
 
 
 # Check status

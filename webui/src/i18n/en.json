@@ -33,7 +33,11 @@
     "add": {
       "title": "Add Bangumi",
       "rss_link": "RSS Link",
-      "placeholder": "Please enter the RSS link",
+      "name": "Name",
+      "aggregate": "Aggregate RSS",
+      "parser": "Parser",
+      "placeholder_link": "Please enter the RSS link",
+      "placeholder_name": "Optional",
       "analyse": "Analyse"
     }
   },

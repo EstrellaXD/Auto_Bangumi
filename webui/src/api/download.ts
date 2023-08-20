@@ -1,5 +1,5 @@
 import type { BangumiRule } from '#/bangumi';
-import type { UniversalResponse } from '#/message';
+import type { ApiResponse } from '#/api';
 
 interface Status {
   status: 'Success';
@@ -31,7 +31,7 @@ export const apiDownload = {
    * @param bangumiData - Bangumi 数据
    */
   async collection(bangumiData: BangumiRule) {
-    const { data } = await axios.post< UniversalResponse >(
+    const { data } = await axios.post< ApiResponse >(
       'api/v1/download/collection',
       bangumiData
     );
@@ -43,7 +43,7 @@ export const apiDownload = {
    * @param bangumiData - Bangumi 数据
    */
   async subscribe(bangumiData: BangumiRule) {
-    const { data } = await axios.post< UniversalResponse >(
+    const { data } = await axios.post< ApiResponse >(
       'api/v1/download/subscribe',
       bangumiData
     );

@@ -9,5 +9,6 @@ class ResponseModel(BaseModel):
 
 
 class APIResponse(BaseModel):
+    status: bool = Field(..., example=True)
     msg_en: str = Field(..., example="Success")
     msg_zh: str = Field(..., example="成功")

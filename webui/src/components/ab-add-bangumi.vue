@@ -98,8 +98,26 @@ async function subscribe() {
         :label="$t('topbar.add.rss_link')"
         type="input"
         :prop="{
-          placeholder: $t('topbar.add.placeholder'),
+          placeholder: $t('topbar.add.placeholder_link'),
         }"
+      ></ab-setting>
+      <ab-setting
+        v-model:data="rule"
+        :label="$t('topbar.add.name')"
+        type="input"
+        :prop="{
+          placeholder: $t('topbar.add.placeholder_name'),
+        }"
+      ></ab-setting>
+      <ab-setting
+        v-model:data="rule"
+        :label="$t('topbar.add.aggregate')"
+        type="switch"
+      ></ab-setting>
+      <ab-setting
+        v-model:data="rule"
+        :label="$t('topbar.add.parser')"
+        type="select"
         :bottom-line="true"
       ></ab-setting>
 

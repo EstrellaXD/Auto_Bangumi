@@ -1,5 +1,4 @@
 import type { BangumiRule, BangumiUpdate } from '#/bangumi';
-import type { UniversalResponse } from '#/message';
 import type { ApiResponse } from '#/api';
 
 export const apiBangumi = {
@@ -99,7 +98,7 @@ export const apiBangumi = {
    * @param bangumiId - 需要启用的 bangumi 的 id
    */
   async enableRule(bangumiId: number) {
-    const { data } = await axios.get< UniversalResponse >(
+    const { data } = await axios.get< ApiResponse >(
       `api/v1/bangumi/enable/${bangumiId}`
     );
     return data;
