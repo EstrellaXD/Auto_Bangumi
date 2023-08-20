@@ -1,7 +1,10 @@
 <script lang="ts" setup>
 import { useMessage } from 'naive-ui';
 import type { BangumiRule } from '#/bangumi';
+import type { RSS } from '#/rss';
+import { rssTemplate } from '#/rss';
 import { ruleTemplate } from '#/bangumi';
+import { registerSW } from 'virtual:pwa-register';
 
 /** v-model show */
 const show = defineModel('show', { default: false });
@@ -9,8 +12,10 @@ const show = defineModel('show', { default: false });
 const message = useMessage();
 const { getAll } = useBangumiStore();
 
-const rss = ref('');
+const rss = ref<RSS>(rssTemplate);
 const rule = ref<BangumiRule>(ruleTemplate);
+
+const parserType = ['mikan', 'tmdb', 'parser'];
 
 const analysis = reactive({
   loading: false,
@@ -23,20 +28,40 @@ const loading = reactive({
 
 watch(show, (val) => {
   if (!val) {
-    rss.value = '';
+    rss.value = rssTemplate;
     setTimeout(() => {
       analysis.next = false;
     }, 300);
   }
 });
 
-async function analysisRss() {
-  if (rss.value === '') {
+async function addRss() {
+  if (rss.value.url === '') {
     message.error('Please enter the RSS link!');
+  } else if (rss.value.aggregate) {
+    try {
+      analysis.loading = true;
+      const data = await apiRSS.add(rss.value);
+      analysis.loading = false;
+      analysis.next = true;
+      if (data.status) {
+        message.success(data.msg_en);
+        show.value = false;
+        console.log('rss', data);
+      } else {
+        message.error(data.msg_en);
+      }
+      // TODO 这部分 WebUI 无法判断 406 错误无法跳出信息。
+      // RSS API 添加正常。后端正常。
+    } catch (error) {
+      const err = error as { status: string };
+      message.error(err.status);
+      console.log('error', err);
+    }
   } else {
     try {
       analysis.loading = true;
-      const data = await apiDownload.analysis(rss.value);
+      const data = await apiDownload.analysis(rss.value.url);
       analysis.loading = false;
 
       rule.value = data;
@@ -94,7 +119,7 @@ async function subscribe() {
   <ab-popup v-model:show="show" :title="$t('topbar.add.title')" css="w-360px">
     <div v-if="!analysis.next" space-y-12px>
       <ab-setting
-        v-model:data="rss"
+        v-model:data="rss.url"
         :label="$t('topbar.add.rss_link')"
         type="input"
         :prop="{
@@ -102,7 +127,7 @@ async function subscribe() {
         }"
       ></ab-setting>
       <ab-setting
-        v-model:data="rule"
+        v-model:data="rss.name"
         :label="$t('topbar.add.name')"
         type="input"
         :prop="{
@@ -110,14 +135,17 @@ async function subscribe() {
         }"
       ></ab-setting>
       <ab-setting
-        v-model:data="rule"
+        v-model:data="rss.aggregate"
         :label="$t('topbar.add.aggregate')"
         type="switch"
       ></ab-setting>
       <ab-setting
-        v-model:data="rule"
+        v-model:data="rss.parser"
         :label="$t('topbar.add.parser')"
         type="select"
+        :prop="{
+          items: parserType,
+        }"
         :bottom-line="true"
       ></ab-setting>
 
@@ -125,7 +153,7 @@ async function subscribe() {
         <ab-button
           size="small"
           :loading="analysis.loading"
-          @click="analysisRss"
+          @click="addRss"
           >{{ $t('topbar.add.analyse') }}</ab-button
         >
       </div>

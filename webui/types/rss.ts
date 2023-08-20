@@ -6,3 +6,12 @@ export interface RSS {
   parser: string;
   enabled: boolean;
 }
+
+export const rssTemplate: RSS = {
+  id: 0,
+  name: '',
+  url: '',
+  aggregate: false,
+  parser: '',
+  enabled: false,
+};

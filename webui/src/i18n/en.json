@@ -31,7 +31,7 @@
       "update_btn": "Update"
     },
     "add": {
-      "title": "Add Bangumi",
+      "title": "Add RSS",
       "rss_link": "RSS Link",
       "name": "Name",
       "aggregate": "Aggregate RSS",
