@@ -83,7 +83,7 @@ async def shutdown_program(current_user=Depends(get_current_user)):
 
 
 # Check status
-@router.get("/check/downloader", tags=["check"])
+@router.get("/check/downloader", tags=["check"], response_model=bool)
 async def check_downloader_status(current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED

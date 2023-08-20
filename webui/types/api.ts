@@ -21,3 +21,9 @@ export interface ApiError {
 export interface ApiSuccess {
   msg: string;
 }
+
+export interface ApiResponse {
+  status: boolean;
+  msg_en: string;
+  msg_zh: string;
+}

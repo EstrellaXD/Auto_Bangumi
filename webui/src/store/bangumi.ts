@@ -45,8 +45,8 @@ export const useBangumiStore = defineStore('bangumi', () => {
     getAll();
   }
 
-  function actionSuccess({ msg }) {
-    message.success(msg);
+  function actionSuccess({ status }) {
+    message.success(status);
     refresh();
   }
   onUpdateRuleResult(actionSuccess);

@@ -1,5 +1,6 @@
 import type { BangumiRule, BangumiUpdate } from '#/bangumi';
-import type { ApiSuccess } from '#/api';
+import type { UniversalResponse } from '#/message';
+import type { ApiResponse } from '#/api';
 
 export const apiBangumi = {
   /**
@@ -34,7 +35,7 @@ export const apiBangumi = {
   async updateRule(bangumiId: number, bangumiRule: BangumiRule) {
     const rule = omit(bangumiRule, ['id']);
 
-    const { data } = await axios.patch<ApiSuccess>(
+    const { data } = await axios.patch< ApiResponse >(
       `api/v1/bangumi/update/${bangumiId}`,
       rule
     );
@@ -58,7 +59,7 @@ export const apiBangumi = {
       ids = bangumiId;
     }
 
-    const { data } = await axios.delete<ApiSuccess>(url, {
+    const { data } = await axios.delete< ApiResponse >(url, {
       data: ids,
       params: {
         file,
@@ -84,7 +85,7 @@ export const apiBangumi = {
       ids = bangumiId;
     }
 
-    const { data } = await axios.delete<ApiSuccess>(url, {
+    const { data } = await axios.delete< ApiResponse >(url, {
       data: ids,
       params: {
         file,
@@ -98,7 +99,7 @@ export const apiBangumi = {
    * @param bangumiId - 需要启用的 bangumi 的 id
    */
   async enableRule(bangumiId: number) {
-    const { data } = await axios.get<ApiSuccess>(
+    const { data } = await axios.get< UniversalResponse >(
       `api/v1/bangumi/enable/${bangumiId}`
     );
     return data;
@@ -108,9 +109,7 @@ export const apiBangumi = {
    * 重置所有 bangumi 数据
    */
   async resetAll() {
-    const { data } = await axios.get<{
-      message: 'OK';
-    }>('api/v1/bangumi/resetAll');
+    const { data } = await axios.get< ApiResponse >('api/v1/bangumi/resetAll');
     return data;
   },
 };
