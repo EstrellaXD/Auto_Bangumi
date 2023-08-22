@@ -1,5 +1,6 @@
 import type { BangumiRule } from '#/bangumi';
 import { ruleTemplate } from '#/bangumi';
+import type { ApiSuccess } from '#/api';
 
 export const useBangumiStore = defineStore('bangumi', () => {
   const message = useMessage();
@@ -45,8 +46,8 @@ export const useBangumiStore = defineStore('bangumi', () => {
     getAll();
   }
 
-  function actionSuccess({ status }) {
-    message.success(status);
+  function actionSuccess(apiRes: ApiSuccess) {
+    message.success(apiRes.msg_en);
     refresh();
   }
   onUpdateRuleResult(actionSuccess);
