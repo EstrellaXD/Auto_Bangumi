@@ -5,6 +5,7 @@ import type { RSS } from '#/rss';
 import { rssTemplate } from '#/rss';
 import { ruleTemplate } from '#/bangumi';
 import { registerSW } from 'virtual:pwa-register';
+import type { ApiError } from "#/api";
 
 /** v-model show */
 const show = defineModel('show', { default: false });
@@ -44,19 +45,14 @@ async function addRss() {
       const data = await apiRSS.add(rss.value);
       analysis.loading = false;
       analysis.next = true;
-      if (data.status) {
-        message.success(data.msg_en);
-        show.value = false;
-        console.log('rss', data);
-      } else {
-        message.error(data.msg_en);
-      }
-      // TODO 这部分 WebUI 无法判断 406 错误无法跳出信息。
-      // RSS API 添加正常。后端正常。
+      message.success(data.msg_en);
+      show.value = false;
+      console.log('rss', data);
     } catch (error) {
-      const err = error as { status: string };
-      message.error(err.status);
-      console.log('error', err);
+      const err = error as ApiError;
+      message.error(err.msg_en);
+      console.log('error', err.msg_en);
+      analysis.loading = false;
     }
   } else {
     try {
@@ -68,9 +64,9 @@ async function addRss() {
       analysis.next = true;
       console.log('rule', data);
     } catch (error) {
-      const err = error as { status: string };
-      message.error(err.status);
-      console.log('error', err);
+      const err = error as ApiError;
+      message.error(err.msg_en);
+      console.log('error', err.msg_en);
     }
   }
 }
@@ -154,7 +150,7 @@ async function subscribe() {
           size="small"
           :loading="analysis.loading"
           @click="addRss"
-          >{{ $t('topbar.add.analyse') }}</ab-button
+          >{{ $t('topbar.add.button') }}</ab-button
         >
       </div>
     </div>

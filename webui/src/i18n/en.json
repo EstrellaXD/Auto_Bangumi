@@ -38,7 +38,7 @@
       "parser": "Parser",
       "placeholder_link": "Please enter the RSS link",
       "placeholder_name": "Optional",
-      "analyse": "Analyse"
+      "button": "Add"
     }
   },
   "homepage": {

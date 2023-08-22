@@ -1,6 +1,6 @@
 import type { RSS } from '#/rss';
 import type { Torrent } from '#/torrent';
-import type { ApiResponse } from '#/api';
+import type { ApiSuccess } from '#/api';
 
 export const apiRSS = {
   async get() {
@@ -9,27 +9,27 @@ export const apiRSS = {
   },
 
   async add(rss: RSS) {
-    const { data } = await axios.post<ApiResponse>('api/v1/rss/add', rss);
+    const { data } = await axios.post<ApiSuccess>('api/v1/rss/add', rss);
     return data;
   },
 
   async delete(rss_id: number) {
-    const { data } = await axios.delete<ApiResponse>(`api/v1/rss/delete/${rss_id}`);
+    const { data } = await axios.delete<ApiSuccess>(`api/v1/rss/delete/${rss_id}`);
     return data!;
   },
 
   async update(rss_id: number, rss: RSS) {
-    const { data } = await axios.patch<ApiResponse>(`api/v1/rss/update/${rss_id}`, rss);
+    const { data } = await axios.patch<ApiSuccess>(`api/v1/rss/update/${rss_id}`, rss);
     return data!;
   },
 
   async refreshAll() {
-    const { data } = await axios.get<ApiResponse>('api/v1/rss/refresh/all');
+    const { data } = await axios.get<ApiSuccess>('api/v1/rss/refresh/all');
     return data!;
   },
 
   async refresh(rss_id: number) {
-    const { data } = await axios.get<ApiResponse>(`api/v1/rss/refresh/${rss_id}`);
+    const { data } = await axios.get<ApiSuccess>(`api/v1/rss/refresh/${rss_id}`);
     return data!;
   },
 

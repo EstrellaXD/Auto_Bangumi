@@ -1,4 +1,4 @@
-import type { ApiResponse } from "#/api";
+import type { ApiSuccess } from "#/api";
 
 export const apiLog = {
   async getLog() {
@@ -7,7 +7,7 @@ export const apiLog = {
   },
 
   async clearLog() {
-    const { data } = await axios.get<ApiResponse>('api/v1/log/clear');
+    const { data } = await axios.get<ApiSuccess>('api/v1/log/clear');
     return data;
   },
 };

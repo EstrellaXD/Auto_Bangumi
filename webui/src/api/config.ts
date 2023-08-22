@@ -1,5 +1,5 @@
 import type { Config } from '#/config';
-import type { ApiResponse } from '#/api';
+import type { ApiSuccess } from '#/api';
 
 export const apiConfig = {
   /**
@@ -15,7 +15,7 @@ export const apiConfig = {
    * @param newConfig - 需要更新的 config
    */
   async updateConfig(newConfig: Config) {
-    const { data } = await axios.patch<ApiResponse>(
+    const { data } = await axios.patch<ApiSuccess>(
       'api/v1/config/update',
       newConfig
     );

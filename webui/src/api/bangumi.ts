@@ -1,5 +1,7 @@
 import type { BangumiRule, BangumiUpdate } from '#/bangumi';
-import type { ApiResponse } from '#/api';
+import type { ApiSuccess } from '#/api';
+import {forEach} from "lodash";
+
 
 export const apiBangumi = {
   /**
@@ -8,7 +10,10 @@ export const apiBangumi = {
    */
   async getAll() {
     const { data } = await axios.get<BangumiRule[]>('api/v1/bangumi/get/all');
-
+    forEach(data, (item) => {
+        item.rss_link = item.rss_link.split(',');
+        item.filter = item.filter.split(',');
+    });
     return data;
   },
 
@@ -21,7 +26,8 @@ export const apiBangumi = {
     const { data } = await axios.get<BangumiRule>(
       `api/v1/bangumi/get/${bangumiId}`
     );
-
+    data.rss_link = data.rss_link.split(',');
+    data.filter = data.filter.split(',');
     return data;
   },
 
@@ -33,8 +39,9 @@ export const apiBangumi = {
    */
   async updateRule(bangumiId: number, bangumiRule: BangumiRule) {
     const rule = omit(bangumiRule, ['id']);
-
-    const { data } = await axios.patch< ApiResponse >(
+    rule.rss_link = rule.rss_link.join(',');
+    rule.filter = rule.filter.join(',');
+    const { data } = await axios.patch< ApiSuccess >(
       `api/v1/bangumi/update/${bangumiId}`,
       rule
     );
@@ -58,7 +65,7 @@ export const apiBangumi = {
       ids = bangumiId;
     }
 
-    const { data } = await axios.delete< ApiResponse >(url, {
+    const { data } = await axios.delete< ApiSuccess >(url, {
       data: ids,
       params: {
         file,
@@ -84,7 +91,7 @@ export const apiBangumi = {
       ids = bangumiId;
     }
 
-    const { data } = await axios.delete< ApiResponse >(url, {
+    const { data } = await axios.delete< ApiSuccess >(url, {
       data: ids,
       params: {
         file,
@@ -98,7 +105,7 @@ export const apiBangumi = {
    * @param bangumiId - 需要启用的 bangumi 的 id
    */
   async enableRule(bangumiId: number) {
-    const { data } = await axios.get< ApiResponse >(
+    const { data } = await axios.get< ApiSuccess >(
       `api/v1/bangumi/enable/${bangumiId}`
     );
     return data;
@@ -108,7 +115,7 @@ export const apiBangumi = {
    * 重置所有 bangumi 数据
    */
   async resetAll() {
-    const { data } = await axios.get< ApiResponse >('api/v1/bangumi/resetAll');
+    const { data } = await axios.get< ApiSuccess >('api/v1/bangumi/resetAll');
     return data;
   },
 };

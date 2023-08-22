@@ -10,6 +10,12 @@ from module.security.api import get_current_user, UNAUTHORIZED
 router = APIRouter(prefix="/bangumi", tags=["bangumi"])
 
 
+def str_to_list(data: Bangumi):
+    data.filter = data.filter.split(",")
+    data.rss_link = data.rss_link.split(",")
+    return data
+
+
 @router.get("/get/all", response_model=list[Bangumi])
 async def get_all_data(current_user=Depends(get_current_user)):
     if not current_user:

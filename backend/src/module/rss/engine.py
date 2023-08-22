@@ -47,7 +47,7 @@ class RSSEngine(Database):
         else:
             return ResponseModel(
                 status=False,
-                status_code=400,
+                status_code=406,
                 msg_en="RSS added failed.",
                 msg_zh="RSS 添加失败。",
             )
