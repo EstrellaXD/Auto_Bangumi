@@ -143,9 +143,11 @@ class TorrentManager(Database):
         data = self.bangumi.search_id(int(_id))
         if not data:
             logger.error(f"[Manager] Can't find data with {_id}")
-            return JSONResponse(
+            return ResponseModel(
                 status_code=406,
-                content={"msg_en": f"Can't find data with {_id}", "msg_zh": f"无法找到 id {_id} 的数据"},
+                status=False,
+                msg_en=f"Can't find data with {_id}",
+                msg_zh=f"无法找到 id {_id} 的数据",
             )
         else:
             return data

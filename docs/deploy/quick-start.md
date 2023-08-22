@@ -24,7 +24,7 @@ docker run -d \
   -v AutoBangumi_data:/app/data \
   -p 7892:7892 \
   --network=bridge \
-  --dns=8.8.8.8
+  --dns=8.8.8.8 \
   --restart unless-stopped \
   estrellaxd/auto_bangumi:latest
 
@@ -32,7 +32,7 @@ docker run -d \
 
 ### 选项2: 使用 Docker-compose 部署
 
-复制以下内容到 `docker-compose.yml` 文件中，然后运行 `docker-compose up -d` 即可。
+复制以下内容到 `docker-compose.yml` 文件中。
 
 ```yaml
 version: "3.8"
@@ -56,6 +56,12 @@ volumes:
         name: AutoBangumi_config
     AutoBangumi_data:
         name: AutoBangumi_data
+```
+
+运行以下命令启动容器。
+
+```shell
+docker compose up -d
 ```
 
 ## 安装 qBittorrent

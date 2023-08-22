@@ -1,7 +1,7 @@
 import logging
 
 from module.downloader import DownloadClient
-from module.models import Bangumi
+from module.models import Bangumi, ResponseModel
 from module.searcher import SearchTorrent
 from module.rss import RSSEngine
 
@@ -18,7 +18,25 @@ class SeasonCollector(DownloadClient):
                 torrents = st.search_season(bangumi)
             else:
                 torrents = st.get_torrents(link, _filter="|".join(bangumi.filter))
-            return self.add_torrent(torrents, bangumi)
+            if self.add_torrent(torrents, bangumi):
+                logger.info(f"Collections of {bangumi.official_title} Season {bangumi.season} completed.")
+                bangumi.eps_collect = True
+                with RSSEngine() as engine:
+                    engine.bangumi.update(bangumi)
+                return ResponseModel(
+                    status=True,
+                    status_code=200,
+                    msg_en=f"Collections of {bangumi.official_title} Season {bangumi.season} completed.",
+                    msg_zh=f"收集 {bangumi.official_title} 第 {bangumi.season} 季完成。",
+                )
+            else:
+                logger.warning(f"Collection of {bangumi.official_title} Season {bangumi.season} failed.")
+                return ResponseModel(
+                    status=False,
+                    status_code=406,
+                    msg_en=f"Collection of {bangumi.official_title} Season {bangumi.season} failed.",
+                    msg_zh=f"收集 {bangumi.official_title} 第 {bangumi.season} 季失败。",
+                )
 
     def subscribe_season(self, data: Bangumi):
         with RSSEngine() as engine:
@@ -29,6 +47,12 @@ class SeasonCollector(DownloadClient):
             )
             engine.bangumi.add(data)
             engine.refresh_rss(self)
+            return ResponseModel(
+                status=True,
+                status_code=200,
+                msg_en=f"Subscribe {data.official_title} successfully.",
+                msg_zh=f"订阅 {data.official_title} 成功。",
+            )
 
 
 def eps_complete():
