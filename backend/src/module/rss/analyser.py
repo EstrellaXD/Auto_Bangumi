@@ -4,7 +4,7 @@ import re
 from .engine import RSSEngine
 
 from module.conf import settings
-from module.models import Bangumi, Torrent, RSSItem
+from module.models import Bangumi, Torrent, RSSItem, ResponseModel
 from module.network import RequestContent
 from module.parser import TitleParser
 
@@ -75,9 +75,16 @@ class RSSAnalyser(TitleParser):
         else:
             return []
 
-    def link_to_data(self, rss: RSSItem) -> Bangumi:
+    def link_to_data(self, rss: RSSItem) -> Bangumi | ResponseModel:
         torrents = self.get_rss_torrents(rss.url, False)
         for torrent in torrents:
             data = self.torrent_to_data(torrent, rss)
             if data:
                 return data
+            else:
+                return ResponseModel(
+                    status=False,
+                    status_code=406,
+                    msg_en="No new title has been found.",
+                    msg_zh="没有找到新的番剧。",
+                )

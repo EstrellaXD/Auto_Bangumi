@@ -25,4 +25,4 @@ if [ ! -f "$VERSION_FILE" ]; then
 	echo "VERSION='DEV_VERSION'" >>"$VERSION_FILE"
 fi
 
-../venv/bin/python3 main.py
+../venv/bin/uvicorn main:app --reload --port 7892

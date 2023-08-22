@@ -38,7 +38,7 @@ async def update_rule(
     return u_response(resp)
 
 
-@router.delete("/delete/{bangumi_id}", response_model=APIResponse)
+@router.delete(path="/delete/{bangumi_id}", response_model=APIResponse)
 async def delete_rule(
     bangumi_id: str, file: bool = False, current_user=Depends(get_current_user)
 ):
@@ -49,7 +49,7 @@ async def delete_rule(
     return u_response(resp)
 
 
-@router.delete("/delete/many/", response_model=APIResponse)
+@router.delete(path="/delete/many/", response_model=APIResponse)
 async def delete_many_rule(
     bangumi_id: list, file: bool = False, current_user=Depends(get_current_user)
 ):
@@ -57,10 +57,11 @@ async def delete_many_rule(
         raise UNAUTHORIZED
     with TorrentManager() as manager:
         for i in bangumi_id:
-            manager.delete_rule(i, file)
+            resp = manager.delete_rule(i, file)
+    return u_response(resp)
 
 
-@router.delete("/disable/{bangumi_id}", response_model=APIResponse)
+@router.delete(path="/disable/{bangumi_id}", response_model=APIResponse)
 async def disable_rule(
     bangumi_id: str, file: bool = False, current_user=Depends(get_current_user)
 ):
@@ -71,7 +72,7 @@ async def disable_rule(
     return u_response(resp)
 
 
-@router.delete("/disable/many/")
+@router.delete(path="/disable/many/", response_model=APIResponse)
 async def disable_many_rule(
     bangumi_id: list, file: bool = False, current_user=Depends(get_current_user)
 ):
@@ -79,10 +80,11 @@ async def disable_many_rule(
         raise UNAUTHORIZED
     with TorrentManager() as manager:
         for i in bangumi_id:
-            manager.disable_rule(i, file)
+            resp = manager.disable_rule(i, file)
+    return u_response(resp)
 
 
-@router.get("/enable/{bangumi_id}", response_model=APIResponse)
+@router.get(path="/enable/{bangumi_id}", response_model=APIResponse)
 async def enable_rule(bangumi_id: str, current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED
