@@ -11,7 +11,7 @@
 2. 创建版本信息文件：
 
    ```powershell
-   echo "VERSION='local'" > backend\src\__version__.py
+   echo "VERSION='local'" > backend\src\module\__version__.py
    ```
 
 3. 新建 `python` 虚拟环境、激活并安装依赖（需保证 `python -V` 打印的版本符合 `Dockerfile` 中的要求，如 `FROM python:3.11-alpine AS APP`）
