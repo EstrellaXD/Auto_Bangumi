@@ -1,7 +1,0 @@
-#!/usr/bin/with-contenv bash
-# shellcheck shell=bash
-
-groupmod -o -g "${PGID}" ab
-usermod -o -u "${PUID}" ab
-
-chown ab:ab -R /app /ab
