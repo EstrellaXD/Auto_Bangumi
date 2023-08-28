@@ -8,6 +8,8 @@ onActivated(() => {
 definePage({
   name: 'RSS',
 });
+
+
 </script>
 
 <template>
@@ -24,7 +26,7 @@ definePage({
         <div text-h3>{{ $t('rss.status') }}</div>
       </div>
     </div>
-    <div v-show="!open" line my-12px></div>
+    <div line my-12px></div>
     <div>
       <ab-rss-item
           v-for="i in rss"
@@ -36,7 +38,7 @@ definePage({
           :aggregate="i.aggregate">
       </ab-rss-item>
     </div>
-    <div v-show="!open" line my-12px></div>
+    <div line my-12px></div>
     <div flex="~ justify-end" space-x-10px>
       <ab-button icon="edit">{{ $t('rss.disable') }}</ab-button>
       <ab-button class="type-warn" text="delete">{{ $t('rss.delete') }}</ab-button>

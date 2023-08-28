@@ -1,8 +1,7 @@
 <script lang="ts" setup>
-
+import { ref } from 'vue';
 withDefaults(
     defineProps<{
-      select: boolean;
       name: string;
       url: string;
       enable: boolean;
@@ -10,10 +9,11 @@ withDefaults(
       parser: string;
     }>(),
     {
-      select: false,
       enable: false,
     }
 );
+
+const select = ref(false);
 </script>
 
 <template>

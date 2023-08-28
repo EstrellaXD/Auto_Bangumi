@@ -1,6 +1,5 @@
-import type { BangumiRule, BangumiUpdate } from '#/bangumi';
+import type { BangumiAPI, BangumiRule, BangumiUpdate } from '#/bangumi';
 import type { ApiSuccess } from '#/api';
-import {forEach} from "lodash";
 
 
 export const apiBangumi = {
@@ -9,12 +8,15 @@ export const apiBangumi = {
    * @returns 所有 bangumi 数据
    */
   async getAll() {
-    const { data } = await axios.get<BangumiRule[]>('api/v1/bangumi/get/all');
-    forEach(data, (item) => {
-        item.rss_link = item.rss_link.split(',');
-        item.filter = item.filter.split(',');
-    });
-    return data;
+    const { data } = await axios.get<BangumiAPI[]>('api/v1/bangumi/get/all');
+    const result: BangumiRule[] = data.map((bangumi) => (
+        {
+            ...bangumi,
+            filter: bangumi.filter.split(','),
+            rss_link: bangumi.rss_link.split(','),
+        }
+    ));
+    return result;
   },
 
   /**
@@ -23,12 +25,15 @@ export const apiBangumi = {
    * @returns 指定 bangumi 的规则
    */
   async getRule(bangumiId: number) {
-    const { data } = await axios.get<BangumiRule>(
+    const { data } = await axios.get<BangumiAPI>(
       `api/v1/bangumi/get/${bangumiId}`
     );
-    data.rss_link = data.rss_link.split(',');
-    data.filter = data.filter.split(',');
-    return data;
+    const result: BangumiRule = {
+        ...data,
+        filter: data.filter.split(','),
+        rss_link: data.rss_link.split(','),
+    }
+    return result;
   },
 
   /**
@@ -38,12 +43,15 @@ export const apiBangumi = {
    * @returns axios 请求返回的数据
    */
   async updateRule(bangumiId: number, bangumiRule: BangumiRule) {
-    const rule = omit(bangumiRule, ['id']);
-    rule.rss_link = rule.rss_link.join(',');
-    rule.filter = rule.filter.join(',');
+    const rule: BangumiAPI = {
+        ...bangumiRule,
+        filter: bangumiRule.filter.join(','),
+        rss_link: bangumiRule.rss_link.join(','),
+    }
+    const post = omit(rule, ['id'])
     const { data } = await axios.patch< ApiSuccess >(
       `api/v1/bangumi/update/${bangumiId}`,
-      rule
+      post
     );
     return data;
   },

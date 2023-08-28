@@ -20,7 +20,14 @@ export interface BangumiRule {
   year: string | null;
 }
 
-export type BangumiUpdate = Omit<BangumiRule, 'id'>;
+
+
+export interface BangumiAPI extends Omit<BangumiRule, 'filter' | 'rss_link'> {
+    filter: string;
+    rss_link: string;
+}
+
+export type BangumiUpdate = Omit<BangumiAPI, 'id'>;
 
 export const ruleTemplate: BangumiRule = {
   added: false,
