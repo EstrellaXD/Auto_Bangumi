@@ -1,3 +1,5 @@
+import os
+
 import logging
 import uvicorn
 
@@ -21,9 +23,10 @@ uvicorn_logging_config = {
 }
 
 if __name__ == "__main__":
+    host = "::" if os.getenv("IPV6") else "0.0.0.0"
     uvicorn.run(
         router,
-        host="0.0.0.0",
+        host=host,
         port=settings.program.webui_port,
         log_config=uvicorn_logging_config,
     )
