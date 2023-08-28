@@ -60,6 +60,15 @@
       "edit_rule": "编辑规则"
     }
   },
+  "rss": {
+    "title": "RSS 条目",
+    "selectbox": "选择",
+    "name": "名称",
+    "url": "Url",
+    "status": "状态",
+    "delete": "删除",
+    "disable": "禁用",
+  },
   "player": {
     "hit": "请设置媒体播放器地址"
   },

@@ -60,6 +60,15 @@
       "edit_rule": "Edit Rule"
     }
   },
+  "rss": {
+    "title": "RSS Item",
+    "selectbox": "select",
+    "name": "Name",
+    "url": "Url",
+    "status": "Status",
+    "delete": "Delete",
+    "disable": "Disable"
+  },
   "player": {
     "hit": "Please set up the media player"
   },
