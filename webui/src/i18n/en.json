@@ -62,7 +62,7 @@
   },
   "rss": {
     "title": "RSS Item",
-    "selectbox": "select",
+    "selectbox": "Select",
     "name": "Name",
     "url": "Url",
     "status": "Status",
