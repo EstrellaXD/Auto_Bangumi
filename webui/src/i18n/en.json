@@ -14,7 +14,8 @@
     "config": "Config",
     "logout": "Logout",
     "downloader": "Downloader",
-    "calendar": "Calendar"
+    "calendar": "Calendar",
+    "rss": "RSS Manager"
   },
   "topbar": {
     "start": "Start",
@@ -30,10 +31,14 @@
       "update_btn": "Update"
     },
     "add": {
-      "title": "Add Bangumi",
+      "title": "Add RSS",
       "rss_link": "RSS Link",
-      "placeholder": "Please enter the RSS link",
-      "analyse": "Analyse"
+      "name": "Name",
+      "aggregate": "Aggregate RSS",
+      "parser": "Parser",
+      "placeholder_link": "Please enter the RSS link",
+      "placeholder_name": "Optional",
+      "button": "Add"
     }
   },
   "homepage": {
@@ -54,6 +59,15 @@
       "enable_rule": "Enable Rule",
       "edit_rule": "Edit Rule"
     }
+  },
+  "rss": {
+    "title": "RSS Item",
+    "selectbox": "Select",
+    "name": "Name",
+    "url": "Url",
+    "status": "Status",
+    "delete": "Delete",
+    "disable": "Disable"
   },
   "player": {
     "hit": "Please set up the media player"

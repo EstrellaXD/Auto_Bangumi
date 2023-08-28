@@ -16,6 +16,7 @@
     "baseUrl": "./",
     "types": ["vite-plugin-pwa/client"],
     "paths": {
+      "~/*": ["./*"],
       "@/*": ["src/*"],
       "#/*": ["types/*"]
     }

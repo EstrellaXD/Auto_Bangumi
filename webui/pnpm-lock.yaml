@@ -29,6 +29,9 @@ dependencies:
   vue-i18n:
     specifier: ^9.2.2
     version: 9.2.2(vue@3.3.4)
+  vue-inline-svg:
+    specifier: ^3.1.2
+    version: 3.1.2(vue@3.3.4)
   vue-router:
     specifier: ^4.2.1
     version: 4.2.1(vue@3.3.4)
@@ -9768,6 +9771,14 @@ packages:
     dependencies:
       vue: 3.3.4
     dev: true
+
+  /vue-inline-svg@3.1.2(vue@3.3.4):
+    resolution: {integrity: sha512-K01sLANBnjosObee4JrBu/igXpYIFhQfy4EcEyVWxEWf6nmrxp7Isz6pmeRCsWx6XGrGWfrQH3uNwt4nOmrFdA==}
+    peerDependencies:
+      vue: ^3
+    dependencies:
+      vue: 3.3.4
+    dev: false
 
   /vue-router@4.2.1(vue@3.3.4):
     resolution: {integrity: sha512-nW28EeifEp8Abc5AfmAShy5ZKGsGzjcnZ3L1yc2DYUo+MqbBClrRP9yda3dIekM4I50/KnEwo1wkBLf7kHH5Cw==}

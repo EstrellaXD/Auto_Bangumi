@@ -1,16 +1,16 @@
 <script lang="ts" setup>
-import { Switch } from '@headlessui/vue';
+import {Switch} from '@headlessui/vue';
 
 withDefaults(
-  defineProps<{
-    small?: boolean;
-  }>(),
-  {
-    small: false,
-  }
+    defineProps<{
+      small?: boolean;
+    }>(),
+    {
+      small: false,
+    }
 );
 
-const checked = defineModel<boolean>({ default: false });
+const checked = defineModel<boolean>({default: false});
 </script>
 
 <template>
@@ -19,23 +19,26 @@ const checked = defineModel<boolean>({ default: false });
       <slot name="before"></slot>
 
       <div
-        rounded-4px
-        rel
-        f-cer
-        bg-white
-        border="3px #3c239f"
-        :class="[small ? 'wh-16px' : 'wh-32px', !checked && 'group']"
+          rel
+          f-cer
+          bg-white
+          :class="[
+            small ? 'wh-16px' : 'wh-32px',
+            !checked && 'group'
+          ]"
+          :border="small ? '2px solid #3c239f' : '4px solid #3c239f'"
+          :rounded="small ? '4px' : '6px'"
       >
         <div
-          rounded-2px
-          transition-all
-          duration-300
-          :class="[
+            rounded-2px
+            transition-all
+            duration-300
+            :class="[
             small ? 'wh-8px' : 'wh-16px',
             checked ? 'bg-[#3c239f]' : 'bg-transparent',
           ]"
-          group-hover:bg="#cccad4"
-          group-active:bg="#3c239f"
+            group-hover:bg="#cccad4"
+            group-active:bg="#3c239f"
         ></div>
       </div>
 

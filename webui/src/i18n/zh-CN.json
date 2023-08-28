@@ -14,7 +14,8 @@
     "config": "设置",
     "logout": "退出",
     "calendar": "番剧日历",
-    "downloader": "下载器"
+    "downloader": "下载器",
+    "rss": "RSS 管理"
   },
   "topbar": {
     "start": "启动",
@@ -30,10 +31,14 @@
       "update_btn": "更新"
     },
     "add": {
-      "title": "添加番剧",
-      "rss_link": "RSS链接",
-      "placeholder": "请输入RSS链接",
-      "analyse": "分析"
+      "title": "添加 RSS",
+      "rss_link": "RSS 链接",
+      "name": "名称",
+      "aggregate": "聚合 RSS",
+      "parser": "解析器",
+      "placeholder_link": "请输入 RSS 链接",
+      "placeholder_name": "可选",
+      "button": "添加"
     }
   },
   "homepage": {
@@ -54,6 +59,15 @@
       "enable_rule": "启用规则",
       "edit_rule": "编辑规则"
     }
+  },
+  "rss": {
+    "title": "RSS 条目",
+    "selectbox": "选择",
+    "name": "名称",
+    "url": "Url",
+    "status": "状态",
+    "delete": "删除",
+    "disable": "禁用",
   },
   "player": {
     "hit": "请设置媒体播放器地址"

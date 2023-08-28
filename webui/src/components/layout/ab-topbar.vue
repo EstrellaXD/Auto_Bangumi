@@ -9,14 +9,13 @@ import {
 } from '@icon-park/vue-next';
 
 const { t, changeLocale } = useMyI18n();
+const { running, onUpdate, offUpdate } = useAppInfo();
 
 const search = ref('');
 const show = ref(false);
 const showAdd = ref(false);
 
-const { onUpdate, offUpdate, start, pause, shutdown, restart, resetRule } =
-  useProgramStore();
-const { running } = storeToRefs(useProgramStore());
+const { start, pause, shutdown, restart, resetRule } = useProgramStore();
 
 const items = [
   {

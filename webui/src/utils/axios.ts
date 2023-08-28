@@ -1,5 +1,5 @@
 import Axios from 'axios';
-import type { ApiError } from '#/api';
+import type { ApiError } from "#/api";
 
 export const axios = Axios.create();
 
@@ -19,13 +19,13 @@ axios.interceptors.response.use(
   },
   (err) => {
     const status = err.response.status as ApiError['status'];
-    const detail = (err.response.data.detail ?? '') as ApiError['detail'];
-    const msg = (err.response.data.msg ?? '') as ApiError['msg'];
+    const msg_en = (err.response.data.msg_en ?? '') as ApiError['msg_en'];
+    const msg_zh = (err.response.data.msg_zh ?? '') as ApiError['msg_zh'];
 
     const error = {
       status,
-      detail,
-      msg,
+      msg_en,
+      msg_zh,
     };
 
     const message = useMessage();
@@ -38,11 +38,11 @@ axios.interceptors.response.use(
 
     /** 执行失败 */
     if (error.status === 406) {
-      message.error(error.msg);
+      message.error(error.msg_zh);
     }
 
     if (error.status === 500) {
-      const msg = error.detail ? error.detail : 'Request Error!';
+      const msg = (err.response.data.msg_en ?? '')  as ApiError['msg_en']
       message.error(msg);
     }
 

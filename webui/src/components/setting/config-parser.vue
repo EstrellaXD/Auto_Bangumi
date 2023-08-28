@@ -25,47 +25,11 @@ const items: SettingItem<RssParser>[] = [
     type: 'switch',
   },
   {
-    configKey: 'type',
-    label: () => t('config.parser_set.source'),
-    type: 'select',
-    css: 'w-115px',
-    prop: {
-      items: sourceItems,
-    },
-  },
-  {
-    configKey: 'token',
-    label: () => t('config.parser_set.token'),
-    type: 'input',
-    prop: {
-      type: 'text',
-      placeholder: 'token',
-    },
-  },
-  {
-    configKey: 'custom_url',
-    label: () => t('config.parser_set.url'),
-    type: 'input',
-    prop: {
-      type: 'text',
-      placeholder: 'mikanime.tv',
-    },
-    bottomLine: true,
-  },
-  {
     configKey: 'language',
     label: () => t('config.parser_set.language'),
     type: 'select',
     prop: {
       items: langs,
-    },
-  },
-  {
-    configKey: 'parser_type',
-    label: () => t('config.parser_set.type'),
-    type: 'select',
-    prop: {
-      items: parserMethods,
     },
   },
   {

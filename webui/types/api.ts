@@ -14,10 +14,11 @@ export type StatusCode = 401 | 404 | 406 | 500;
 
 export interface ApiError {
   status: StatusCode;
-  detail: ApiErrorMessage;
-  msg: string;
+  msg_en: string;
+  msg_zh: string;
 }
 
 export interface ApiSuccess {
-  msg: string;
+  msg_en: string;
+  msg_zh: string;
 }
