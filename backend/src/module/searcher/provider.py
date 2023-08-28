@@ -1,10 +1,7 @@
 import re
 
-from module.utils import json_config
 from module.models import RSSItem
-
-
-SEARCH_CONFIG = json_config.load("config/search_provider.json")
+from module.conf import SEARCH_CONFIG
 
 
 def search_url(site: str, keywords: list[str]) -> RSSItem:
