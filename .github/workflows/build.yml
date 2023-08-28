@@ -189,8 +189,8 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: 🌙${{ github.ref_name }}
-          body: ${{ github.event.pull_request.body }}
-          draft: true
+          body: "Dev release"
+          draft: false
           prerelease: true
           files: |
             webui/dist.zip
