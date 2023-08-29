@@ -236,7 +236,7 @@ jobs:
           else
             echo "version=🌟${{ needs.version-info.outputs.version }}" >> $GITHUB_OUTPUT
             echo "pre_release=false" >> $GITHUB_OUTPUT
-
+          fi
       - name: Release
         id: release
         uses: softprops/action-gh-release@v1
