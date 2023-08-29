@@ -211,8 +211,8 @@ jobs:
     needs: [build-docker, version-info]
     if: ${{ needs.version-info.outputs.release == 1 }}
     outputs:
-        url: ${{ steps.release.outputs.url }}
-        version: ${{ needs.version-info.outputs.version }}
+      url: ${{ steps.release.outputs.url }}
+      version: ${{ needs.version-info.outputs.version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -228,6 +228,7 @@ jobs:
           cd webui && ls -al && tree && zip -r dist.zip dist
 
       - name: Generate Release
+        id: release
         if: ${{  needs.version-info.outputs.dev != 1 }}
         uses: softprops/action-gh-release@v1
         with:
