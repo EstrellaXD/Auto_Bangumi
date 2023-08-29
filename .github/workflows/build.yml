@@ -53,7 +53,7 @@ jobs:
             git config --local user.name "github-actions"
             git tag -a ${{ github.event.pull_request.title }} -m ${{ github.event.pull_request.body }}
             git push origin ${{ github.event.pull_request.title }}
-          elif [ ${{ github.event_name }} == 'push' && (${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'*) ]; then
+          elif [[ ${{ github.event_name }} == 'push' && (${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'*) ]]; then
             echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           else
             echo "version=Test" >> $GITHUB_OUTPUT
