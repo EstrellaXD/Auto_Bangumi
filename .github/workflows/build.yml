@@ -28,17 +28,25 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test]
     steps:
-      - name: Normal Release
+      - name: Test
+        run: echo "Test"
+        with:
+          release: 0
+          dev: 0
+          version: "Test"
+      - name: Normal Release, generate tag.
         if: |
           github.event_name == 'pull_request' &&
           github.event.pull_request.merged == true
         run: |
-          echo "release = 1" >> $GITHUB_ENV
           git config --local user.email "
           git config --local user.name "github-actions"
           git tag -a ${{ github.event.pull_request.title }} -m ${{ github.event.pull_request.body }}
           git push origin ${{ github.event.pull_request.title }}
-          echo "version = ${{ github.event.pull_request.title }}" >> $GITHUB_ENV
+        with:
+          release: 1
+          dev: 0
+          version: ${{ github.event.pull_request.title }}
       - name: Dev Release
         if: |
             github.event_name == 'push' &&
@@ -48,10 +56,18 @@ jobs:
           echo "release = 1" >> $GITHUB_ENV
           echo "dev = 1" >> $GITHUB_ENV
           echo "version = ${{ github.ref_name }}" >> $GITHUB_ENV
+        with:
+          release: 1
+          dev: 1
+          version: ${{ github.ref_name }}
+    outputs:
+      release: ${{ steps.version-info.outputs.release }}
+      dev: ${{ steps.version-info.outputs.dev }}
+      version: ${{ steps.version-info.outputs.version }}
 
   build-webui:
     runs-on: ubuntu-latest
-    needs: [test]
+    needs: [version-info]
     strategy:
       matrix:
         node-version: [18]
@@ -78,7 +94,7 @@ jobs:
           cd webui && pnpm build
 
       - name: Upload artifact
-        if: ${{ env.release == 1 }}
+        if: ${{ needs.version-info.outputs.release == 1 }}
         uses: actions/upload-artifact@v3
         with:
           name: dist
@@ -86,17 +102,17 @@ jobs:
 
   build-docker:
     runs-on: ubuntu-latest
-    needs: [build-webui]
+    needs: [build-webui, version-info]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
       - name: Create Version info via tag
-        if: ${{ env.release == 1 }}
+        if: ${{ needs.version-info.outputs.release == 1 }}
         working-directory: ./backend/src
         run: |
-          echo ${{ env.version }}
-          echo "VERSION = ${{ env.version }}" >> module/__version__.py
+          echo ${{ needs.version-info.outputs.version }}
+          echo "VERSION = ${{ needs.version-info.outputs.version }}" >> config.py
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -106,7 +122,7 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       - name: Docker metadata main
-        if: ${{ env.release == 1 }} || ${{ env.dev != 1 }}
+        if: ${{ needs.version-info.outputs.release == 1 }} && ${{ needs.version-info.outputs.dev != 1 }}
         id: meta
         uses: docker/metadata-action@v4
         with:
@@ -114,11 +130,11 @@ jobs:
             estrellaxd/auto_bangumi
             ghcr.io/${{ github.repository }}
           tags: |
-            type=semver,pattern=${{ env.version }}
+            type=semver,pattern=${{ needs.version-info.outputs.version }}
             type=raw,value=latest
 
       - name: Docker metadata dev
-        if: ${{ env.dev == 1 }}
+        if: ${{ needs.version-info.outputs.dev == 1 }}
         id: meta-dev
         uses: docker/metadata-action@v4
         with:
@@ -126,18 +142,18 @@ jobs:
             estrellaxd/auto_bangumi:dev
             ghcr.io/${{ github.repository }}
           tags: |
-            type=raw,value=${{ env.version }}
+            type=raw,value=${{ needs.version-info.outputs.version }}
             type=raw,value=dev-latest
 
       - name: Login to DockerHub
-        if: ${{ env.release == 1 }}
+        if: ${{ needs.version-info.outputs.release == 1 }}
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
       - name: Login to ghcr.io
-        if: ${{ env.release == 1 }}
+        if: ${{ needs.version-info.outputs.release == 1 }}
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
@@ -167,10 +183,8 @@ jobs:
           cache-to: type=gha, scope=${{ github.workflow }}
 
   release:
-
     runs-on: ubuntu-latest
-    if: ${{ env.release == 1 }}
-    needs: [build-docker]
+    needs: [build-docker, build-webui, version-info]
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -186,7 +200,7 @@ jobs:
           cd webui && ls -al && tree && zip -r dist.zip dist
 
       - name: Generate Release
-        if: ${{ env.dev != 1 }}
+        if: ${{ needs.version-info.outputs.release == 1 }} && ${{ needs.version-info.outputs.dev != 1 }}
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.event.pull_request.title }}
@@ -200,7 +214,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
       - name: Generate dev Release
-        if: ${{ env.dev == 1 }}
+        if: ${{ needs.version-info.outputs.dev == 1 }}
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
