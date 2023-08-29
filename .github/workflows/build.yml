@@ -159,6 +159,7 @@ jobs:
           path: backend/src/dist
 
       - name: Build and push
+        if: ${{ needs.version-info.outputs.release == 1 && needs.version-info.outputs.dev != 1 }}
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -169,6 +170,29 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}
+
+      - name: Build and push dev
+        if: ${{ needs.version-info.outputs.dev == 1 }}
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          builder: ${{ steps.buildx.output.name }}
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.meta-dev.outputs.tags }}
+          labels: ${{ steps.meta-dev.outputs.labels }}
+          cache-from: type=gha, scope=${{ github.workflow }}
+          cache-to: type=gha, scope=${{ github.workflow }}
+
+      - name: Build test
+        if: ${{ needs.version-info.outputs.release == 0 }}
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          builder: ${{ steps.buildx.output.name }}
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: false
+          tags: estrellaxd/auto_bangumi:test
 
   release:
     runs-on: ubuntu-latest
@@ -189,7 +213,7 @@ jobs:
           cd webui && ls -al && tree && zip -r dist.zip dist
 
       - name: Generate Release
-        if: ${{ needs.version-info.outputs.release == 1 && needs.version-info.outputs.dev != 1 }}
+        if: ${{  needs.version-info.outputs.dev != 1 }}
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.event.pull_request.title }}
