@@ -173,6 +173,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     needs: [build-docker, build-webui, version-info]
+    if: ${{ needs.version-info.outputs.release == 1 }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -217,7 +218,7 @@ jobs:
 
   telegram:
     runs-on: ubuntu-latest
-    needs: [release]
+    needs: [release, version-info]
     steps:
       - name: send telegram message on push
         uses: appleboy/telegram-action@master
@@ -225,5 +226,5 @@ jobs:
           to: ${{ secrets.TELEGRAM_TO }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
-            New release: ${{ github.event.release.title }}
-            Link: ${{ github.event.release.html_url }}
+            New release: ${{ needs.version-info.outputs.version }}
+            Link: ${{ needs.release.outputs.url }}
