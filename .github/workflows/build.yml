@@ -141,7 +141,7 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: |
-            estrellaxd/auto_bangumi:dev
+            estrellaxd/auto_bangumi
             ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=${{ needs.version-info.outputs.version }}
