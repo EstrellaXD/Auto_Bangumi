@@ -32,7 +32,7 @@ export const apiDownload = {
       rss_link: bangumiData.rss_link.join(','),
     }
     const { data } = await axios.post<ApiSuccess>(
-      'api/v1/rss/collection',
+      'api/v1/rss/collect',
       postData
     );
     return data;

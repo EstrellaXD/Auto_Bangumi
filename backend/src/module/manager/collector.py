@@ -17,7 +17,7 @@ class SeasonCollector(DownloadClient):
             if not link:
                 torrents = st.search_season(bangumi)
             else:
-                torrents = st.get_torrents(link, _filter="|".join(bangumi.filter))
+                torrents = st.get_torrents(link, bangumi.filter.replace(",", "|"))
             if self.add_torrent(torrents, bangumi):
                 logger.info(f"Collections of {bangumi.official_title} Season {bangumi.season} completed.")
                 bangumi.eps_collect = True

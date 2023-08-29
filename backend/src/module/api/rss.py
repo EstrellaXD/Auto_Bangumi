@@ -135,7 +135,7 @@ async def download_collection(data: Bangumi, current_user=Depends(get_current_us
     if not current_user:
         raise UNAUTHORIZED
     with SeasonCollector() as collector:
-        resp = collector.collect_season(data, data.rss_link[0])
+        resp = collector.collect_season(data, data.rss_link)
         return u_response(resp)
 
 
@@ -146,3 +146,4 @@ async def subscribe(data: Bangumi, current_user=Depends(get_current_user)):
     with SeasonCollector() as collector:
         resp = collector.subscribe_season(data)
         return u_response(resp)
+
