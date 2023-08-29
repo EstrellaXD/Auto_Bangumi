@@ -29,37 +29,32 @@ jobs:
     needs: [test]
     steps:
       - name: Test
-        run: echo "Test"
-        with:
-          release: 0
-          dev: 0
-          version: "Test"
+        run:
+          echo ::set-output name=release::0
+          echo ::set-output name=dev::0
+          echo ::set-output name=version::Test
       - name: Normal Release, generate tag.
         if: |
           github.event_name == 'pull_request' &&
           github.event.pull_request.merged == true
         run: |
-          git config --local user.email "
+          git config --local user.email
           git config --local user.name "github-actions"
           git tag -a ${{ github.event.pull_request.title }} -m ${{ github.event.pull_request.body }}
           git push origin ${{ github.event.pull_request.title }}
-        with:
-          release: 1
-          dev: 0
-          version: ${{ github.event.pull_request.title }}
+          echo ::set-output name=release::1
+          echo ::set-output name=dev::0
+          echo ::set-output name=version::${{ github.event.pull_request.title }}
+
       - name: Dev Release
         if: |
             github.event_name == 'push' &&
             contains(github.ref, 'alpha') ||
             contains(github.ref, 'beta')
         run: |
-          echo "release = 1" >> $GITHUB_ENV
-          echo "dev = 1" >> $GITHUB_ENV
-          echo "version = ${{ github.ref_name }}" >> $GITHUB_ENV
-        with:
-          release: 1
-          dev: 1
-          version: ${{ github.ref_name }}
+          echo ::set-output name=release::1
+          echo ::set-output name=dev::1
+          echo ::set-output name=version::${{ github.ref_name }}
     outputs:
       release: ${{ steps.version-info.outputs.release }}
       dev: ${{ steps.version-info.outputs.dev }}
