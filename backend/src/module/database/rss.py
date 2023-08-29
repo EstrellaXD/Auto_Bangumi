@@ -44,6 +44,18 @@ class RSSDatabase:
         self.session.refresh(db_data)
         return True
 
+    def disable(self, _id: int):
+        statement = select(RSSItem).where(RSSItem.id == _id)
+        db_data = self.session.exec(statement).first()
+        if not db_data:
+            return False
+        db_data.enabled = False
+        self.session.add(db_data)
+        self.session.commit()
+        self.session.refresh(db_data)
+        return True
+
+
     def search_id(self, _id: int) -> RSSItem:
         return self.session.get(RSSItem, _id)
 

@@ -1,13 +1,14 @@
 import re
+import logging
 import xml.etree.ElementTree
-
-from bs4 import BeautifulSoup
 
 from module.conf import settings
 from module.models import Torrent
 
 from .request_url import RequestURL
 from .site import mikan_parser
+
+logger = logging.getLogger(__name__)
 
 
 class RequestContent(RequestURL):
@@ -58,5 +59,8 @@ class RequestContent(RequestURL):
         return self.check_url(_url)
 
     def get_rss_title(self, _url):
-        soup = self.get_xml(_url)
-        return soup.find("./channel/title").text
+        try:
+            soup = self.get_xml(_url)
+            return soup.find("./channel/title").text
+        except ConnectionError:
+            logger.warning(f"Failed to get RSS title: {_url}")

@@ -227,30 +227,25 @@ jobs:
         run: |
           cd webui && ls -al && tree && zip -r dist.zip dist
 
-      - name: Generate Release
+      - name: Generate Release info
+        id: release-info
+        run: |
+          if ${{ needs.version-info.outputs.dev == 1 }}; then
+            echo "version=🌙${{ needs.version-info.outputs.version }}" >> $GITHUB_OUTPUT
+            echo "pre_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "version=🌟${{ needs.version-info.outputs.version }}" >> $GITHUB_OUTPUT
+            echo "pre_release=false" >> $GITHUB_OUTPUT
+
+      - name: Release
         id: release
-        if: ${{  needs.version-info.outputs.dev != 1 }}
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.event.pull_request.title }}
-          name: 🌟${{ github.event.pull_request.title }}
+          tag_name: ${{ needs.version-info.outputs.version }}
+          name: ${{ steps.release-info.outputs.version }}
           body: ${{ github.event.pull_request.body }}
           draft: false
-          prerelease: false
-          files: |
-            webui/dist.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-
-      - name: Generate dev Release
-        if: ${{ needs.version-info.outputs.dev == 1 }}
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: 🌙${{ github.ref_name }}
-          body: "Dev release"
-          draft: false
-          prerelease: true
+          prerelease: ${{ steps.release-info.outputs.pre_release == 'true' }}
           files: |
             webui/dist.zip
         env:

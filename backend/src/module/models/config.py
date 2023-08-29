@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 
 
 class Program(BaseModel):
-    rss_time: int = Field(7200, description="Sleep time")
+    rss_time: int = Field(900, description="Sleep time")
     rename_time: int = Field(60, description="Rename times in one loop")
     webui_port: int = Field(7892, description="WebUI port")
 
@@ -29,7 +29,6 @@ class Downloader(BaseModel):
 
 class RSSParser(BaseModel):
     enable: bool = Field(True, description="Enable RSS parser")
-    type: str = Field("mikan", description="RSS parser type")
     filter: list[str] = Field(["720", r"\d+-\d"], description="Filter")
     language: str = "zh"
 

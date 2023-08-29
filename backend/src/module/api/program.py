@@ -80,11 +80,13 @@ async def program_status(current_user=Depends(get_current_user)):
         return {
             "status": False,
             "version": VERSION,
+            "first_run": program.first_run,
         }
     else:
         return {
             "status": True,
             "version": VERSION,
+            "first_run": program.first_run,
         }
 
 

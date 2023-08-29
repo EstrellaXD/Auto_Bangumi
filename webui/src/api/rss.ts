@@ -18,6 +18,11 @@ export const apiRSS = {
     return data!;
   },
 
+  async disable(rss_id: number) {
+    const { data } = await axios.patch<ApiSuccess>(`api/v1/rss/disable/${rss_id}`);
+    return data!;
+  },
+
   async update(rss_id: number, rss: RSS) {
     const { data } = await axios.patch<ApiSuccess>(`api/v1/rss/update/${rss_id}`, rss);
     return data!;

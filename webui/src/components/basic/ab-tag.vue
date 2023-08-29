@@ -45,7 +45,7 @@ $notify-font: #A76E18;
 
 .round-label {
     padding: 2px 12px;
-    font-size: 8px;
+    font-size: 10px;
     display: inline-flex;
     flex-direction: column;
     align-items: flex-start;

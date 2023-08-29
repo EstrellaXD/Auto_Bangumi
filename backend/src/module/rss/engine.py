@@ -36,6 +36,13 @@ class RSSEngine(Database):
         if not name:
             with RequestContent() as req:
                 name = req.get_rss_title(rss_link)
+                if not name:
+                    return ResponseModel(
+                        status=False,
+                        status_code=406,
+                        msg_en="Failed to get RSS title.",
+                        msg_zh="无法获取 RSS 标题。",
+                    )
         rss_data = RSSItem(name=name, url=rss_link, aggregate=aggregate)
         if self.rss.add(rss_data):
             return ResponseModel(

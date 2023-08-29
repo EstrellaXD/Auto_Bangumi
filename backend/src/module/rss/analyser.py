@@ -48,7 +48,7 @@ class RSSAnalyser(TitleParser):
                 if not full_parse:
                     return [bangumi]
                 new_data.append(bangumi)
-                logger.debug(f"[RSS] New title found: {bangumi.official_title}")
+                logger.info(f"[RSS] New bangumi founded: {bangumi.official_title}")
         return new_data
 
     def torrent_to_data(self, torrent: Torrent, rss: RSSItem) -> Bangumi:

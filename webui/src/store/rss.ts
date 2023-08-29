@@ -11,6 +11,9 @@ export const useRSSStore = defineStore('rss', () => {
     const { execute: updateRSS, onResult: onUpdateRSSResult } = useApi(
         apiRSS.update
     );
+    const { execute: disableRSS, onResult: onDisableRSSResult} = useApi(
+        apiRSS.disable
+    );
     const { execute: deleteRSS, onResult: onDeleteRSSResult } = useApi(
         apiRSS.delete
     );
@@ -38,12 +41,14 @@ export const useRSSStore = defineStore('rss', () => {
 
     onUpdateRSSResult(actionSuccess);
     onDeleteRSSResult(actionSuccess);
+    onDisableRSSResult(actionSuccess)
 
     return {
         rss,
         getAll,
         refresh,
         updateRSS,
+        disableRSS,
         deleteRSS,
     };
 });
