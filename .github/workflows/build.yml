@@ -114,7 +114,7 @@ jobs:
         working-directory: ./backend/src
         run: |
           echo ${{ needs.version-info.outputs.version }}
-          echo "VERSION=${{ needs.version-info.outputs.version }}" >> module/__version__.py
+          echo "VERSION='${{ needs.version-info.outputs.version }}'" >> module/__version__.py
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
