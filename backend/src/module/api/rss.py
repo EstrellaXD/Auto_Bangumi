@@ -138,6 +138,7 @@ async def download_collection(data: Bangumi, current_user=Depends(get_current_us
         resp = collector.collect_season(data, data.rss_link[0])
         return u_response(resp)
 
+
 @router.post("/subscribe", response_model=APIResponse)
 async def subscribe(data: Bangumi, current_user=Depends(get_current_user)):
     if not current_user:

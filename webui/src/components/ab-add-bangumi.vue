@@ -18,8 +18,9 @@ const rule = ref<BangumiRule>(ruleTemplate);
 
 const parserType = ['mikan', 'tmdb', 'parser'];
 
-const analysis = reactive({
+const window = reactive({
   loading: false,
+  rule: false,
   next: false,
 });
 const loading = reactive({
@@ -31,7 +32,7 @@ watch(show, (val) => {
   if (!val) {
     rss.value = rssTemplate;
     setTimeout(() => {
-      analysis.next = false;
+      window.next = false;
     }, 300);
   }
 });
@@ -41,10 +42,10 @@ async function addRss() {
     message.error('Please enter the RSS link!');
   } else if (rss.value.aggregate) {
     try {
-      analysis.loading = true;
+      window.loading = true;
       const data = await apiRSS.add(rss.value);
-      analysis.loading = false;
-      analysis.next = true;
+      window.loading = false;
+      window.next = true;
       message.success(data.msg_en);
       show.value = false;
       console.log('rss', data);
@@ -52,16 +53,17 @@ async function addRss() {
       const err = error as ApiError;
       message.error(err.msg_en);
       console.log('error', err.msg_en);
-      analysis.loading = false;
+      window.loading = false;
     }
   } else {
     try {
-      analysis.loading = true;
-      const data = await apiDownload.analysis(rss.value.url);
-      analysis.loading = false;
+      window.loading = true;
+      const data = await apiDownload.analysis(rss.value);
+      window.loading = false;
 
       rule.value = data;
-      analysis.next = true;
+      window.next = true;
+      window.rule = true;
       console.log('rule', data);
     } catch (error) {
       const err = error as ApiError;
@@ -113,7 +115,7 @@ async function subscribe() {
 
 <template>
   <ab-popup v-model:show="show" :title="$t('topbar.add.title')" css="w-360px">
-    <div v-if="!analysis.next" space-y-12px>
+    <div v-if="!window.next" space-y-12px>
       <ab-setting
         v-model:data="rss.url"
         :label="$t('topbar.add.rss_link')"
@@ -148,14 +150,14 @@ async function subscribe() {
       <div flex="~ justify-end">
         <ab-button
           size="small"
-          :loading="analysis.loading"
+          :loading="window.loading"
           @click="addRss"
           >{{ $t('topbar.add.button') }}</ab-button
         >
       </div>
     </div>
 
-    <div v-else>
+    <div v-else-if="window.rule">
       <ab-rule v-model:rule="rule"></ab-rule>
 
       <div flex="~ justify-end" space-x-10px>

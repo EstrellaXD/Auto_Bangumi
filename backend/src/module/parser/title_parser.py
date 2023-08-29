@@ -71,7 +71,7 @@ class TitleParser:
                 subtitle=episode.sub,
                 eps_collect=False if episode.episode > 1 else True,
                 offset=0,
-                filter=settings.rss_parser.filter,
+                filter=",".join(settings.rss_parser.filter),
             )
             logger.debug(f"RAW:{raw} >> {title_raw}")
             return data

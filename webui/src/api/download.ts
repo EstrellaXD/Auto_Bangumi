@@ -1,25 +1,24 @@
-import type { BangumiRule } from '#/bangumi';
-import type { ApiSuccess } from '#/api';
+import type { BangumiAPI, BangumiRule } from '#/bangumi';
+import type { RSS } from '#/rss';
+import type { ApiError, ApiSuccess } from '#/api';
 
 export const apiDownload = {
   /**
    * 解析 RSS 链接
-   * @param rss_link - RSS 链接
+   * @param rss_item - RSS 链接
    */
-  async analysis(rss_link: string) {
-    const { data } = await axios.post<BangumiRule & { status?: string }>(
-      'api/v1/download/analysis',
-      {
-        rss_link,
-      }
+  async analysis(rss_item: RSS) {
+    const { data } = await axios.post<BangumiAPI>(
+      'api/v1/rss/analysis',
+        rss_item
     );
 
-    // 解析失败抛出错误
-    if (data.status) {
-      throw data;
+    const result: BangumiRule = {
+        ...data,
+        filter: data.filter.split(','),
+        rss_link: data.rss_link.split(','),
     }
-
-    return data;
+    return result;
   },
 
   /**
@@ -27,9 +26,14 @@ export const apiDownload = {
    * @param bangumiData - Bangumi 数据
    */
   async collection(bangumiData: BangumiRule) {
+    const postData: BangumiAPI = {
+      ...bangumiData,
+      filter: bangumiData.filter.join(','),
+      rss_link: bangumiData.rss_link.join(','),
+    }
     const { data } = await axios.post<ApiSuccess>(
-      'api/v1/download/collection',
-      bangumiData
+      'api/v1/rss/collection',
+      postData
     );
     return data;
   },
@@ -39,9 +43,14 @@ export const apiDownload = {
    * @param bangumiData - Bangumi 数据
    */
   async subscribe(bangumiData: BangumiRule) {
+    const postData: BangumiAPI = {
+        ...bangumiData,
+        filter: bangumiData.filter.join(','),
+        rss_link: bangumiData.rss_link.join(','),
+    }
     const { data } = await axios.post<ApiSuccess>(
-      'api/v1/download/subscribe',
-      bangumiData
+      'api/v1/rss/subscribe',
+      postData
     );
     return data;
   },
