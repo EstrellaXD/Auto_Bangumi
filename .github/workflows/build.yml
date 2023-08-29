@@ -45,7 +45,6 @@ jobs:
           echo "release=1" >> $GITHUB_OUTPUT
           echo "dev=0" >> $GITHUB_OUTPUT
           echo "version=${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
-
       - name: Dev Release
         if: |
             github.event_name == 'push' &&
@@ -177,7 +176,7 @@ jobs:
     needs: [build-docker, build-webui, version-info]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Download artifact
         uses: actions/download-artifact@v3
