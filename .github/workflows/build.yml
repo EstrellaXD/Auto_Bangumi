@@ -208,8 +208,11 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    needs: [build-webui, version-info]
+    needs: [build-docker, version-info]
     if: ${{ needs.version-info.outputs.release == 1 }}
+    outputs:
+        url: ${{ steps.release.outputs.url }}
+        version: ${{ needs.version-info.outputs.version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -252,9 +255,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
+
   telegram:
     runs-on: ubuntu-latest
-    needs: [release, version-info, build-docker]
+    needs: [release]
     steps:
       - name: send telegram message on push
         uses: appleboy/telegram-action@master
@@ -262,5 +266,5 @@ jobs:
           to: ${{ secrets.TELEGRAM_TO }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
-            New release: ${{ needs.version-info.outputs.version }}
+            New release: ${{ needs.release.outputs.version }}
             Link: ${{ needs.release.outputs.url }}
