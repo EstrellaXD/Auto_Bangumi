@@ -123,7 +123,7 @@ export const apiBangumi = {
    * 重置所有 bangumi 数据
    */
   async resetAll() {
-    const { data } = await axios.get< ApiSuccess >('api/v1/bangumi/resetAll');
+    const { data } = await axios.get< ApiSuccess >('api/v1/bangumi/reset/all');
     return data;
   },
 };
