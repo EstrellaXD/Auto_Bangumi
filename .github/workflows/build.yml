@@ -56,10 +56,6 @@ jobs:
           echo "release=1" >> $GITHUB_OUTPUT
           echo "dev=1" >> $GITHUB_OUTPUT
           echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-    outputs:
-      release: ${{ steps.version-info.outputs.release }}
-      dev: ${{ steps.version-info.outputs.dev }}
-      version: ${{ steps.version-info.outputs.version }}
 
   build-webui:
     runs-on: ubuntu-latest
