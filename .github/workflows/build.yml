@@ -30,7 +30,7 @@ jobs:
       - name: If release
         id: release
         run: |
-          if [[github.event_name == 'pull_request'] && [github.event.pull_request.merged == true]] || \
+          if [[${{ github.event_name }}== 'pull_request'] && [${{ github.event.pull_request.merged }} == true]] || \
           [[ ${{ github.event_name }} == 'push' && (${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'*) ]]; then
             echo "release=1" >> $GITHUB_OUTPUT
           else
@@ -39,7 +39,7 @@ jobs:
       - name: If dev
         id: dev
         run: |
-          if [[contains(github.ref, 'alpha') || contains(github.ref, 'beta')]]; then
+          if [ ${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'* ]; then
             echo "dev=1" >> $GITHUB_OUTPUT
           else
             echo "dev=0" >> $GITHUB_OUTPUT
@@ -47,13 +47,13 @@ jobs:
       - name: Check version
         id: version
         run: |
-          if [github.event_name == 'pull_request' && github.event.pull_request.merged == true]; then
+          if [${{ github.event_name }} == 'pull_request' && ${{ github.event.pull_request.merged }} == true]; then
             echo "version=${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
             git config --local user.email
             git config --local user.name "github-actions"
             git tag -a ${{ github.event.pull_request.title }} -m ${{ github.event.pull_request.body }}
             git push origin ${{ github.event.pull_request.title }}
-          elif [github.event_name == 'push' && contains(github.ref, 'alpha') || contains(github.ref, 'beta')]; then
+          elif [ ${{ github.event_name }} == 'push' && (${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'*) ]; then
             echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           else
             echo "version=Test" >> $GITHUB_OUTPUT
