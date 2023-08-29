@@ -29,10 +29,10 @@ jobs:
     needs: [test]
     steps:
       - name: Test
-        run:
-          echo ::set-output name=release::0
-          echo ::set-output name=dev::0
-          echo ::set-output name=version::Test
+        run: |
+          echo "release=1" >> $GITHUB_OUTPUT
+          echo "dev=0" >> $GITHUB_OUTPUT
+          echo "version=Test" >> $GITHUB_OUTPUT
       - name: Normal Release, generate tag.
         if: |
           github.event_name == 'pull_request' &&
@@ -42,9 +42,9 @@ jobs:
           git config --local user.name "github-actions"
           git tag -a ${{ github.event.pull_request.title }} -m ${{ github.event.pull_request.body }}
           git push origin ${{ github.event.pull_request.title }}
-          echo ::set-output name=release::1
-          echo ::set-output name=dev::0
-          echo ::set-output name=version::${{ github.event.pull_request.title }}
+          echo "release=1" >> $GITHUB_OUTPUT
+          echo "dev=0" >> $GITHUB_OUTPUT
+          echo "version=${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
 
       - name: Dev Release
         if: |
@@ -52,9 +52,9 @@ jobs:
             contains(github.ref, 'alpha') ||
             contains(github.ref, 'beta')
         run: |
-          echo ::set-output name=release::1
-          echo ::set-output name=dev::1
-          echo ::set-output name=version::${{ github.ref_name }}
+          echo "release=1" >> $GITHUB_OUTPUT
+          echo "dev=1" >> $GITHUB_OUTPUT
+          echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
     outputs:
       release: ${{ steps.version-info.outputs.release }}
       dev: ${{ steps.version-info.outputs.dev }}
@@ -156,14 +156,11 @@ jobs:
           password: ${{ secrets.ACCESS_TOKEN }}
 
       - name: Download artifact
+        if: ${{ needs.version-info.outputs.release == 1 }}
         uses: actions/download-artifact@v3
         with:
           name: dist
           path: backend/src/dist
-
-      - name: View files
-        run: |
-          pwd && ls -al && tree
 
       - name: Build and push
         uses: docker/build-push-action@v4
