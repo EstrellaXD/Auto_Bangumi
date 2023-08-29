@@ -30,7 +30,7 @@ jobs:
     steps:
       - name: Test
         run: |
-          echo "release=1" >> $GITHUB_OUTPUT
+          echo "release=0" >> $GITHUB_OUTPUT
           echo "dev=0" >> $GITHUB_OUTPUT
           echo "version=Test" >> $GITHUB_OUTPUT
       - name: Normal Release, generate tag.
@@ -89,7 +89,6 @@ jobs:
           cd webui && pnpm build
 
       - name: Upload artifact
-        if: ${{ needs.version-info.outputs.release == 1 }}
         uses: actions/upload-artifact@v3
         with:
           name: dist
@@ -156,7 +155,6 @@ jobs:
           password: ${{ secrets.ACCESS_TOKEN }}
 
       - name: Download artifact
-        if: ${{ needs.version-info.outputs.release == 1 }}
         uses: actions/download-artifact@v3
         with:
           name: dist
