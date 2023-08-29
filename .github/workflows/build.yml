@@ -26,12 +26,14 @@ jobs:
 
   version-info:
     runs-on: ubuntu-latest
-    needs: [test]
     steps:
       - name: Test
+        if: |
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.merged == false
         run: |
           echo "release=0" >> $GITHUB_OUTPUT
-          echo "dev=0" >> $GITHUB_OUTPUT
+          echo "dev=1" >> $GITHUB_OUTPUT
           echo "version=Test" >> $GITHUB_OUTPUT
       - name: Normal Release, generate tag.
         if: |
@@ -62,7 +64,7 @@ jobs:
   build-webui:
     runs-on: ubuntu-latest
     needs: [version-info]
-    if: ${{ needs.version-info.outputs.release == 1 }}
+    if: ${{ needs.version-info.outputs.release == 1 || needs.version-info.outputs.dev == 1 }}
     strategy:
       matrix:
         node-version: [18]
@@ -199,7 +201,7 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    needs: [build-docker, build-webui, version-info]
+    needs: [build-webui, version-info]
     if: ${{ needs.version-info.outputs.release == 1 }}
     steps:
       - name: Checkout code
@@ -245,7 +247,7 @@ jobs:
 
   telegram:
     runs-on: ubuntu-latest
-    needs: [release, version-info]
+    needs: [release, version-info, build-docker]
     steps:
       - name: send telegram message on push
         uses: appleboy/telegram-action@master
