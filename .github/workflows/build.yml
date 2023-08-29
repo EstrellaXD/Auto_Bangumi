@@ -63,7 +63,7 @@ jobs:
 
   build-webui:
     runs-on: ubuntu-latest
-    needs: [version-info]
+    needs: [test, version-info]
     if: ${{ needs.version-info.outputs.release == 1 || needs.version-info.outputs.dev == 1 }}
     strategy:
       matrix:
