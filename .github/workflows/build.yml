@@ -39,7 +39,7 @@ jobs:
       - name: If dev
         id: dev
         run: |
-          if [ ${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'* ]; then
+          if [[ ${{ github.event_name }} == 'push' && (${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'*) ]]; then
             echo "dev=1" >> $GITHUB_OUTPUT
           else
             echo "dev=0" >> $GITHUB_OUTPUT
@@ -58,6 +58,11 @@ jobs:
           else
             echo "version=Test" >> $GITHUB_OUTPUT
           fi
+      - name: Check result
+        run: |
+          echo "release: ${{ steps.release.outputs.release }}"
+          echo "dev: ${{ steps.dev.outputs.dev }}"
+          echo "version: ${{ steps.version.outputs.version }}"
     outputs:
         release: ${{ steps.release.outputs.release }}
         dev: ${{ steps.dev.outputs.dev }}
