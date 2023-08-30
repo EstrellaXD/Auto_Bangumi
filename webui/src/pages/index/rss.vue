@@ -28,7 +28,7 @@ definePage({
         </div>
       </div>
       <div line my-12px></div>
-      <div>
+      <div space-y-12px>
         <ab-rss-item
             v-for="i in rss"
             :key="i.id"
