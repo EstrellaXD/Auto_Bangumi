@@ -1,4 +1,5 @@
 import json
+from typing import TypeAlias
 
 from module.models import Bangumi, Torrent, RSSItem
 from module.network import RequestContent
@@ -15,6 +16,7 @@ SEARCH_KEY = [
     "dpi",
 ]
 
+BangumiJSON: TypeAlias = str
 
 class SearchTorrent(RequestContent, RSSAnalyser):
     def search_torrents(
@@ -23,18 +25,14 @@ class SearchTorrent(RequestContent, RSSAnalyser):
         torrents = self.get_torrents(rss_item.url, limit=limit)
         return torrents
 
-    def analyse_keyword(self, keywords: list[str], site: str = "mikan"):
+    def analyse_keyword(self, keywords: list[str], site: str = "mikan") -> BangumiJSON:
         rss_item = search_url(site, keywords)
         torrents = self.search_torrents(rss_item)
-        # Generate a list of json
-        yield "["
-        for idx, torrent in enumerate(torrents):
+        # yield for EventSourceResponse (Server Send)
+        for torrent in torrents:
             bangumi = self.torrent_to_data(torrent=torrent, rss=rss_item)
             if bangumi:
-                yield json.dumps(bangumi.dict())
-                if idx != len(torrents) - 1:
-                    yield ","
-        yield "]"
+                yield json.dumps(bangumi.dict(), separators=(',', ':'))
 
     def search_season(self, data: Bangumi):
         keywords = [getattr(data, key) for key in SEARCH_KEY if getattr(data, key)]

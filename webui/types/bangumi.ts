@@ -1,3 +1,6 @@
+/**
+ * @type `Bangumi` in backend/src/module/models/bangumi.py
+ */
 export interface BangumiRule {
   added: boolean;
   deleted: boolean;
