@@ -1,0 +1,18 @@
+{
+  "recommendations": [
+    // https://marketplace.visualstudio.com/items?itemName=antfu.unocss
+    "antfu.unocss",
+    // https://marketplace.visualstudio.com/items?itemName=formulahendry.auto-rename-tag
+    "formulahendry.auto-rename-tag",
+    // https://marketplace.visualstudio.com/items?itemName=streetsidesoftware.code-spell-checker
+    "streetsidesoftware.code-spell-checker",
+    // https://marketplace.visualstudio.com/items?itemName=naumovs.color-highlight
+    "naumovs.color-highlight",
+    // https://marketplace.visualstudio.com/items?itemName=ms-python.vscode-pylance
+    "ms-python.vscode-pylance",
+    // https://marketplace.visualstudio.com/items?itemName=ms-python.python
+    "ms-python.python",
+    // https://marketplace.visualstudio.com/items?itemName=vue.volar
+    "vue.volar"
+  ]
+}

@@ -10,4 +10,10 @@
     "editor.wordWrap": "off",
   },
   "python.venvPath": "./backend/venv",
+  "cSpell.words": [
+    "Bangumi",
+    "fastapi",
+    "mikan",
+    "starlette"
+  ],
 }
