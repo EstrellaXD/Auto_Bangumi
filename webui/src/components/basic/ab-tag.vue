@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
       type: 'primary' | 'warn' | 'inactive' | 'active' | 'notify';
       title: string;
@@ -11,18 +11,24 @@ withDefaults(
     }
 );
 
+const InnerStyle = computed(() => {
+  return `${props.type}-inner`;
+});
+
 
 </script>
 
 <template>
-  <div class="round-label" :class="type">
-    {{ title }}
+  <div p-1px rounded-16px inline-flex :class="type">
+    <div bg-white rounded-12px px-8px text-10px :class="InnerStyle">
+      {{ title }}
+    </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
 // border
-$primary: #4e3c94;
+$primary: linear-gradient(90.5deg, #492897 1.53%, #783674 96.48%);
 $warn: #892F2F;
 $inactive: #797979;
 $active: #104931;
@@ -32,7 +38,7 @@ $notify: #F5C451;
 $primary-inner: #EEE5F4;
 $warn-inner: #FFDFDF;
 $inactive-inner: #E0E0E0;
-$active-inner:#E5F4E0;
+$active-inner: #E5F4E0;
 $notify-inner: #FFF4DB;
 
 //font-color
@@ -42,45 +48,49 @@ $inactive-font: #3F3F3F;
 $active-font: #4C6643;
 $notify-font: #A76E18;
 
-
-.round-label {
-    padding: 2px 12px;
-    font-size: 10px;
-    display: inline-flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-    border-radius: 12px;
+.primary {
+  background: $primary;
 }
 
-.primary {
-    border: 1px solid $primary;
-    background-color: $primary-inner;
-    color: $primary-font;
+.primary-inner {
+  background: $primary-inner;
+  color: $primary-font;
 }
 
 .warn {
-    border: 1px solid $warn;
-    background-color: $warn-inner;
-    color: $warn-font;
+  background: $warn;
+}
+
+.warn-inner {
+  background: $warn-inner;
+  color: $warn-font;
 }
 
 .inactive {
-    border: 1px solid $inactive;
-    background-color: $inactive-inner;
-    color: $inactive-font;
+  background: $inactive;
+}
+
+.inactive-inner {
+  background: $inactive-inner;
+  color: $inactive-font;
 }
 
 .active {
-    border: 1px solid $active;
-    background-color: $active-inner;
-    color: $active-font;
+  background: $active;
+}
+
+.active-inner {
+  background: $active-inner;
+  color: $active-font;
 }
 
 .notify {
-    border: 1px solid $notify;
-    background-color: $notify-inner;
-    color: $notify-font;
+  background: $notify;
+}
+
+.notify-inner {
+  background: $notify-inner;
+  color: $notify-font;
 }
 
 </style>

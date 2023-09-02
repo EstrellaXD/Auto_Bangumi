@@ -1,29 +1,55 @@
 <script lang="ts" setup>
-withDefaults(
+const props = withDefaults(
   defineProps<{
     round?: boolean;
+    type?: 'large' | 'medium' | 'small';
   }>(),
   {
     round: false,
+    type: 'large',
   }
 );
 
 defineEmits(['click']);
+
+const buttonSize = computed(() => {
+  switch (props.type) {
+    case 'large':
+      return 'wh-36px'
+    case 'medium':
+      return 'wh-24px';
+    case 'small':
+      return 'wh-12px';
+  }
+});
+
+const lineSize = computed(() => {
+  switch (props.type) {
+    case 'large':
+      return 'w-18px h-4px';
+    case 'medium':
+      return 'w-3px h-12px';
+    case 'small':
+      return 'w-2px h-6px';
+  }
+});
 
 </script>
 
 <template>
   <button
     :rounded="round ? '1/2' : '8px'"
-    wh-36px
     f-cer
     rel
     transition-colors
     class="box"
+    :class="[`type-${type}`, buttonSize]"
     @click="$emit('click')"
   >
-    <div class="line" abs></div>
-    <div class="line" abs rotate-90></div>
+    <div
+      :class="[`type-${type}`, lineSize]"
+      class="line" abs/>
+    <div :class="[`type-${type}`, lineSize]" class="line" abs rotate-90></div>
   </button>
 </template>
 
@@ -45,8 +71,6 @@ $active: #8e8a9c;
 }
 
 .line {
-  width: 4px;
-  height: 18px;
   border-radius: 1px;
   background: #fff;
 }

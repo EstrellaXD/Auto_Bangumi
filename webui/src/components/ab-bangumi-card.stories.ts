@@ -20,8 +20,8 @@ export const Template: Story = {
         template: '<ab-bangumi-card v-bind="args" />',
     }),
     args: {
-        poster: "images/Bangumi/202306/b56b49ea.jpg",
-        name: "魔法少女小圆",
+        poster: "/images/Bangumi/202306/b56b49ea.jpg",
+        name: "BanGDream",
         season: 1,
     }
 
