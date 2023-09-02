@@ -8,14 +8,14 @@ import {
   Refresh,
 } from '@icon-park/vue-next';
 
-const { t, changeLocale } = useMyI18n();
-const { running, onUpdate, offUpdate } = useAppInfo();
+const {t, changeLocale} = useMyI18n();
+const {running, onUpdate, offUpdate} = useAppInfo();
 
 const search = ref('');
 const show = ref(false);
 const showAdd = ref(false);
 
-const { start, pause, shutdown, restart, resetRule } = useProgramStore();
+const {start, pause, shutdown, restart, resetRule} = useProgramStore();
 
 const items = [
   {
@@ -69,19 +69,21 @@ onUnmounted(() => {
 
 <template>
   <div h-60px bg-theme-row text-white rounded-12px fx-cer px-24px>
-    <div fx-cer space-x-16px>
-      <img src="/images/logo-light.svg" alt="favicon" wh-24px />
-      <img src="/images/AutoBangumi.svg" alt="AutoBangumi" h-24px rel top-2px />
-    </div>
+    <div flex space-x-16px>
+      <div fx-cer space-x-16px>
+        <img src="/images/logo-light.svg" alt="favicon" wh-24px/>
+        <img src="/images/AutoBangumi.svg" alt="AutoBangumi" h-24px rel top-2px/>
+      </div>
 
-    <ab-search v-model:value="search" hidden />
+      <ab-search v-model:value="search"/>
+    </div>
 
     <div ml-auto>
       <ab-status-bar
-        :items="items"
-        :running="running"
-        @click-add="() => (showAdd = true)"
-        @change-lang="() => changeLocale()"
+          :items="items"
+          :running="running"
+          @click-add="() => (showAdd = true)"
+          @change-lang="() => changeLocale()"
       ></ab-status-bar>
     </div>
 

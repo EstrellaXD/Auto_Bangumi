@@ -60,7 +60,9 @@ async function addRss() {
       window.loading = true;
       const data = await apiDownload.analysis(rss.value);
       window.loading = false;
-
+      const response = await apiRSS.add(rss.value);
+      message.success(response.msg_en);
+      console.log('rss', response);
       rule.value = data;
       window.next = true;
       window.rule = true;

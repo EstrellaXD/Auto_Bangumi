@@ -14,7 +14,9 @@ const props = withDefaults(
     modelValue?: SelectItem | string;
     items: Array<SelectItem | string>;
   }>(),
-  {}
+  {
+    items: ['test1', 'test2'],
+  }
 );
 
 const emit = defineEmits(['update:modelValue']);
