@@ -4,7 +4,6 @@ import type { BangumiRule } from '#/bangumi';
 import type { RSS } from '#/rss';
 import { rssTemplate } from '#/rss';
 import { ruleTemplate } from '#/bangumi';
-import { registerSW } from 'virtual:pwa-register';
 import type { ApiError } from "#/api";
 
 /** v-model show */
