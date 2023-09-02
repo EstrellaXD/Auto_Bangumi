@@ -10,7 +10,7 @@ withDefaults(
       group?: string;
     }>(),
     {
-      type: 'search',
+      type: 'primary',
     }
 );
 
