@@ -74,7 +74,7 @@ defineEmits(['click']);
         fx-cer justify-between
         space-x-16px>
       <div w-400px space-x-16px fx-cer>
-        <div h-44px w-72px rounded-6px class="image-container">
+        <div h-44px w-72px rounded-6px overflow-hidden>
           <template v-if="poster !== ''">
             <img :src="`https://mikanani.me${poster}`" alt="poster" w-full class="search-image"/>
           </template>
@@ -105,19 +105,10 @@ defineEmits(['click']);
 </template>
 
 <style>
-.vertical-border {
-  border: 4px solid #EEE5F4;
-  border-radius: 12px;
-}
-
 .card-border {
   background: #EEE5F4;
 }
 
-.image-container {
-  border-radius: 6px;
-  overflow: hidden;
-}
 
 .search-image {
   transform: translateY(-25%);

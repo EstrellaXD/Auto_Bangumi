@@ -77,4 +77,10 @@ export const apiSearch = {
 
     return bangumiInfo$;
   },
+
+  async getProvider() {
+    const { data } = await axios.get<string[]>('api/v1/search/provider');
+    return data;
+  }
 };
+
