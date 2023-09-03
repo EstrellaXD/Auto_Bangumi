@@ -86,7 +86,7 @@ defineEmits(['click']);
           </template>
         </div>
         <div flex-col space-y-4px>
-          <div w-300px text-h3 truncate>{{ name }}</div>
+          <div w-300px text-h3 text-primary truncate>{{ name }}</div>
           <div flex space-x-8px>
             <ab-tag
                 :title="`Season ${season}`"

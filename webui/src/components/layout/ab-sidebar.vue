@@ -88,7 +88,7 @@ const items = [
     text-white
     transition-width
     pb-12px
-    rounded-12px
+    rounded-16px
   >
     <div overflow-hidden wh-full flex="~ col">
       <div
