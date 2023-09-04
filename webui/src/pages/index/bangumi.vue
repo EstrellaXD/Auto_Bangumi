@@ -14,7 +14,7 @@ definePage({
 
 <template>
   <div overflow-auto mt-12px flex-grow>
-    <div flex="~ wrap" gap-y-12px gap-x-50px>
+    <div flex="~ wrap" gap-y-12px gap-x-32px>
       <ab-bangumi-card
         v-for="i in bangumi"
         :key="i.id"
