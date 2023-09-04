@@ -68,6 +68,7 @@
     "status": "状态",
     "delete": "删除",
     "disable": "禁用",
+    "enable": "启用",
   },
   "player": {
     "hit": "请设置媒体播放器地址"

@@ -10,11 +10,13 @@ withDefaults(
       parser: string;
     }>(),
     {
-      enable: false,
+      aggregate: false,
     }
 );
 
-const select = ref(false);
+defineEmits(['on-select']);
+
+const checked = ref(false);
 </script>
 
 <template>
@@ -22,8 +24,9 @@ const select = ref(false);
     <div class="left-side" flex space-x-40px>
       <ab-checkbox
           small
-          :model-value="select"
-          @update:model-value="select = $event"
+          :model-value="checked"
+          @update:model-value="checked = $event"
+          @click="() => $emit('on-select')"
       />
       <div w-200px text-h3 truncate>{{ name }}</div>
       <div w-300px text-h3 truncate>{{ url }}</div>

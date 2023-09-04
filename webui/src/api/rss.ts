@@ -38,6 +38,11 @@ export const apiRSS = {
     return data!;
   },
 
+  async enableMany(rss_list: number[]) {
+    const { data } = await axios.post<ApiSuccess>(`api/v1/rss/enable/many`, rss_list);
+    return data!;
+  },
+
   async refreshAll() {
     const { data } = await axios.get<ApiSuccess>('api/v1/rss/refresh/all');
     return data!;

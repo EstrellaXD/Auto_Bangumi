@@ -58,6 +58,8 @@ const items = [
   },
 ];
 
+const onSearchFocus = ref(false);
+
 onBeforeMount(() => {
   onUpdate();
 });
@@ -68,14 +70,14 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div h-60px bg-theme-row text-white rounded-12px fx-cer px-24px>
+  <div h-60px bg-theme-row text-white rounded-16px fx-cer px-24px>
     <div flex space-x-16px>
       <div fx-cer space-x-16px>
         <img src="/images/logo-light.svg" alt="favicon" wh-24px/>
-        <img src="/images/AutoBangumi.svg" alt="AutoBangumi" h-24px rel top-2px/>
+        <img v-show="onSearchFocus === false" src="/images/AutoBangumi.svg" alt="AutoBangumi" h-24px rel top-2px/>
       </div>
 
-      <ab-search v-model:value="search"/>
+      <ab-search/>
     </div>
 
     <div ml-auto>

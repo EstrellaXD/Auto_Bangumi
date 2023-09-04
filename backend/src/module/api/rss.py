@@ -30,6 +30,15 @@ async def add_rss(rss: RSSItem, current_user=Depends(get_current_user)):
     return u_response(result)
 
 
+@router.post(path="/enable/many", response_model=APIResponse)
+async def enable_many_rss(rss_ids: list[int], current_user=Depends(get_current_user)):
+    if not current_user:
+        raise UNAUTHORIZED
+    with RSSEngine() as engine:
+        result = engine.enable_list(rss_ids)
+    return u_response(result)
+
+
 @router.delete(path="/delete/{rss_id}", response_model=APIResponse)
 async def delete_rss(rss_id: int, current_user=Depends(get_current_user)):
     if not current_user:
@@ -45,6 +54,15 @@ async def delete_rss(rss_id: int, current_user=Depends(get_current_user)):
                 status_code=406,
                 content={"msg_en": "Delete RSS failed.", "msg_zh": "删除 RSS 失败。"},
             )
+
+
+@router.post(path="/delete/many", response_model=APIResponse)
+async def delete_many_rss(rss_ids: list[int], current_user=Depends(get_current_user)):
+    if not current_user:
+        raise UNAUTHORIZED
+    with RSSEngine() as engine:
+        result = engine.delete_list(rss_ids)
+    return u_response(result)
 
 
 @router.patch(path="/disable/{rss_id}", response_model=APIResponse)
@@ -69,16 +87,8 @@ async def disable_many_rss(rss_ids: list[int], current_user=Depends(get_current_
     if not current_user:
         raise UNAUTHORIZED
     with RSSEngine() as engine:
-        if engine.disable_list(rss_ids):
-            return JSONResponse(
-                status_code=200,
-                content={"msg_en": "Disable RSS successfully.", "msg_zh": "禁用 RSS 成功。"},
-            )
-        else:
-            return JSONResponse(
-                status_code=406,
-                content={"msg_en": "Disable RSS failed.", "msg_zh": "禁用 RSS 失败。"},
-            )
+        result = engine.disable_list(rss_ids)
+    return u_response(result)
 
 
 @router.patch(path="/update/{rss_id}", response_model=APIResponse)

@@ -14,8 +14,8 @@ const props = withDefaults(
 );
 
 const emit = defineEmits(['update:value', 'click-search']);
-const { site, providers, bangumiInfo$} = storeToRefs(useSearchStore());
-const { getProviders, onInput } = useSearchStore();
+const {site, providers } = storeToRefs(useSearchStore());
+const {getProviders} = useSearchStore();
 
 onMounted(() => {
   getProviders();
@@ -60,8 +60,7 @@ function onSearch() {
         :value="value"
         :placeholder="placeholder"
         input-reset
-        @keyup.enter="onInput"
-        @input="onInput"
+        @keyup.enter="onSearch"
     />
     <div
         h-full
@@ -104,15 +103,18 @@ function onSearch() {
       </div>
     </div>
   </div>
-  <div abs top-84px left-200px z-98>
-    <ab-bangumi-card
-        name="name"
-        season=1
-        poster=""
-        group="Lilith-Raws"
-        type="search"
-    />
-  </div>
+  <!--  <div -->
+  <!--      v-if="bangumiInfo$" -->
+  <!--      abs top-84px left-200px z-98> -->
+  <!--    <ab-bangumi-card-->
+  <!--        v-for="i in bangumiInfo$" -->
+  <!--        :key="i.id"-->
+  <!--        :poster="i.poster_link ?? ''" -->
+  <!--        :name="i.official_title"  -->
+  <!--        :season="i.season"  -->
+  <!--        :group="i.group_name" -->
+  <!--    />  -->
+  <!--  </div>  -->
 </template>
 
 <style lang="scss" scoped>

@@ -15,7 +15,6 @@ const props = withDefaults(
     items: Array<SelectItem | string>;
   }>(),
   {
-    items: ['test1', 'test2'],
   }
 );
 

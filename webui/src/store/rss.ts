@@ -1,22 +1,26 @@
-import type { RSS } from '#/rss';
-import type { ApiSuccess } from '#/api';
+import type {RSS} from '#/rss';
+import type {ApiSuccess} from '#/api';
 
 export const useRSSStore = defineStore('rss', () => {
     const message = useMessage();
     const rss = ref<RSS[]>();
-    const selectedRSS= ref<number[]>([]);
+    const selectedRSS = ref<number[]>([]);
 
-    const { execute: getAll, onResult: onRSSResult } = useApi(
+    const {execute: getAll, onResult: onRSSResult} = useApi(
         apiRSS.get
     );
-    const { execute: updateRSS, onResult: onUpdateRSSResult } = useApi(
+    const {execute: updateRSS, onResult: onUpdateRSSResult} = useApi(
         apiRSS.update
     );
-    const { execute: disableRSS, onResult: onDisableRSSResult} = useApi(
+    const {execute: disableRSS, onResult: onDisableRSSResult} = useApi(
         apiRSS.disableMany
     );
-    const { execute: deleteRSS, onResult: onDeleteRSSResult } = useApi(
+    const {execute: deleteRSS, onResult: onDeleteRSSResult} = useApi(
         apiRSS.deleteMany
+    );
+
+    const {execute: enableRSS, onResult: onEnableRSSResult} = useApi(
+        apiRSS.enableMany
     );
 
 
@@ -43,18 +47,28 @@ export const useRSSStore = defineStore('rss', () => {
         deleteRSS(selectedRSS.value);
     }
 
+    function enableSelected() {
+        enableRSS(selectedRSS.value);
+    }
+
     function actionSuccess(apiRes: ApiSuccess) {
         message.success(apiRes.msg_en);
         refresh();
     }
 
-    function appendSelected(id: number) {
-        selectedRSS.value.push(id);
+    function handleCheckboxClicked(id: number) {
+        if (selectedRSS.value.includes(id)) {
+            //       delete id in list
+            selectedRSS.value = selectedRSS.value.filter((e) => e !== id);
+        } else {
+            selectedRSS.value.push(id)
+        }
     }
 
     onUpdateRSSResult(actionSuccess);
     onDeleteRSSResult(actionSuccess);
-    onDisableRSSResult(actionSuccess)
+    onDisableRSSResult(actionSuccess);
+    onEnableRSSResult(actionSuccess);
 
     return {
         rss,
@@ -63,6 +77,7 @@ export const useRSSStore = defineStore('rss', () => {
         selectedRSS,
         disableSelected,
         deleteSelected,
-        appendSelected,
+        enableSelected,
+        handleCheckboxClicked,
     };
 });

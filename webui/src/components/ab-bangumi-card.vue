@@ -65,6 +65,7 @@ defineEmits(['click']);
       <div text-h3 truncate>{{ name }}</div>
       <ab-tag
           :title="`Season ${season}`"
+          type="primary"
       />
     </div>
   </div>
@@ -90,6 +91,7 @@ defineEmits(['click']);
           <div flex space-x-8px>
             <ab-tag
                 :title="`Season ${season}`"
+                type="primary"
             />
             <ab-tag
                 v-if="group !== ''"
@@ -99,7 +101,7 @@ defineEmits(['click']);
           </div>
         </div>
       </div>
-      <ab-add round="true" type="medium" @click="()=> $emit('click')"/>
+      <ab-add :round="true" type="medium" @click="()=> $emit('click')"/>
     </div>
   </div>
 </template>

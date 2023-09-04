@@ -22,6 +22,7 @@ definePage({
         :poster="i.poster_link ?? ''"
         :name="i.official_title"
         :season="i.season"
+        type="primary"
         @click="() => openEditPopup(i)"
       ></ab-bangumi-card>
 

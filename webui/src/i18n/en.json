@@ -67,7 +67,8 @@
     "url": "Url",
     "status": "Status",
     "delete": "Delete",
-    "disable": "Disable"
+    "disable": "Disable",
+    "enable": "Enable",
   },
   "player": {
     "hit": "Please set up the media player"

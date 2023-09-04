@@ -62,6 +62,32 @@ class RSSEngine(Database):
     def disable_list(self, rss_id_list: list[int]):
         for rss_id in rss_id_list:
             self.rss.disable(rss_id)
+        return ResponseModel(
+            status=True,
+            status_code=200,
+            msg_en="Disable RSS successfully.",
+            msg_zh="禁用 RSS 成功。",
+        )
+
+    def enable_list(self, rss_id_list: list[int]):
+        for rss_id in rss_id_list:
+            self.rss.enable(rss_id)
+        return ResponseModel(
+            status=True,
+            status_code=200,
+            msg_en="Enable RSS successfully.",
+            msg_zh="启用 RSS 成功。",
+        )
+
+    def delete_list(self, rss_id_list: list[int]):
+        for rss_id in rss_id_list:
+            self.rss.delete(rss_id)
+        return ResponseModel(
+            status=True,
+            status_code=200,
+            msg_en="Delete RSS successfully.",
+            msg_zh="删除 RSS 成功。",
+        )
 
     def pull_rss(self, rss_item: RSSItem) -> list[Torrent]:
         torrents = self._get_torrents(rss_item)
