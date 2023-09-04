@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-const {rss} = storeToRefs(useRSSStore());
-const {getAll, updateRSS, deleteRSS} = useRSSStore();
+const {rss, selectedRSS} = storeToRefs(useRSSStore());
+const {getAll, deleteSelected, disableSelected, appendSelected} = useRSSStore();
 
 onActivated(() => {
   getAll();
@@ -39,11 +39,14 @@ definePage({
             :aggregate="i.aggregate">
         </ab-rss-item>
       </div>
-      <!--      <div line my-12px></div>  -->
-      <!--      <div flex="~ justify-end" space-x-10px> -->
-      <!--        <ab-button @click="updateRSS">{{ $t('rss.disable') }}</ab-button> -->
-      <!--        <ab-button class="type-warn" @click="deleteRSS">{{ $t('rss.delete') }}</ab-button>  -->
-      <!--      </div>  -->
+      <div line my-12px></div>
+      <div text-h2>
+        {{ selectedRSS }}
+      </div>
+      <div flex="~ justify-end" space-x-10px>
+        <ab-button @click="disableSelected">{{ $t('rss.disable') }}</ab-button>
+        <ab-button class="type-warn" @click="deleteSelected">{{ $t('rss.delete') }}</ab-button>
+      </div>
     </ab-container>
   </div>
 </template>

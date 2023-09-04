@@ -55,7 +55,7 @@ export const apiSearch = {
   get(keyword: string, site = 'mikan'): Observable<BangumiRule> { 
     const bangumiInfo$ = new Observable<BangumiRule>(observer => {
       const eventSource = new EventSource(
-        `api/v1/search?site=${site}&keyword=${encodeURIComponent(keyword)}`,
+        `api/v1/search/bangumi?site=${site}&keywords=${encodeURIComponent(keyword)}`,
         { withCredentials: true },
       );
 

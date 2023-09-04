@@ -1,73 +1,31 @@
 <script lang="ts" setup>
-import {Search} from '@icon-park/vue-next';
+import {Down, Search} from '@icon-park/vue-next';
 import {ref} from 'vue';
-import {Down, Up} from '@icon-park/vue-next';
-import {isString} from "lodash";
-import type {SelectItem} from "#/components";
-import {apiSearch} from "@/api/search";
-import {
-  Subject,
-  tap,
-  map,
-  switchMap,
-  debounceTime,
-} from "rxjs";
-import type {BangumiRule} from "#/bangumi";
 
 const props = withDefaults(
     defineProps<{
       value?: string;
-      provider: string[];
       placeholder?: string;
     }>(),
     {
       value: '',
-      provider: ['Mikan', 'Dmhy', 'Nyaa'],
       placeholder: '',
     }
 );
 
 const emit = defineEmits(['update:value', 'click-search']);
+const { site, providers, bangumiInfo$} = storeToRefs(useSearchStore());
+const { getProviders, onInput } = useSearchStore();
 
-const selected = ref<SelectItem | string>(
-    (props.provider?.[0] ?? '')
-);
+onMounted(() => {
+  getProviders();
+});
 
 const selectedProvider = computed(() => {
-  if (isString(selected.value)) {
-    return selected.value;
-  } else {
-    return selected.value.label ?? selected.value.value;
-  }
+  return site.value || '';
 });
 
 const onSelect = ref(false);
-
-const input$ = new Subject<string>();
-const onInput = (value: string) => {
-  input$.next(value);
-};
-
-const bangumiInfo$ = apiSearch.get('魔女之旅')
-
-input$.pipe(
-    debounceTime(500),
-    tap((input: string) => {
-      console.log(input);
-    }),
-    switchMap((input: string) => {
-      return apiSearch.get(input, site);
-    }),
-    tap((bangumi: BangumiRule) => console.log(bangumi)),
-    tap((bangumi: BangumiRule) => {
-      console.log('bangumi', bangumi)
-      // set bangumi info to Search Result List
-    }),
-).subscribe({
-  complete() {
-
-  }
-});
 
 function onSearch() {
   emit('click-search', props.value);
@@ -102,7 +60,8 @@ function onSearch() {
         :value="value"
         :placeholder="placeholder"
         input-reset
-        @keyup.enter="onSearch"
+        @keyup.enter="onInput"
+        @input="onInput"
     />
     <div
         h-full
@@ -111,10 +70,10 @@ function onSearch() {
         px-12px
         w-100px
         is-btn
-        @click="() => onSelect = !onSelect"
         class="provider-select"
+        @click="() => onSelect = !onSelect"
     >
-      <div text-h3>
+      <div text-h3 truncate>
         {{ selectedProvider }}
       </div>
       <div class="provider-select">
@@ -124,12 +83,12 @@ function onSearch() {
   </div>
   <div v-show="onSelect" abs top-84px left-540px w-100px rounded-12px shadow bg-white z-99 overflow-hidden>
     <div
-        v-for="i in provider"
+        v-for="i in providers"
         :key="i"
         hover:bg-theme-row
         is-btn
         @click="() => {
-        selected = i;
+        site = i;
         onSelect = false;
       }"
 
@@ -139,10 +98,20 @@ function onSearch() {
           text-primary
           hover:text-white
           p-12px
+          truncate
       >
         {{ i }}
       </div>
     </div>
+  </div>
+  <div abs top-84px left-200px z-98>
+    <ab-bangumi-card
+        name="name"
+        season=1
+        poster=""
+        group="Lilith-Raws"
+        type="search"
+    />
   </div>
 </template>
 

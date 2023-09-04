@@ -59,6 +59,10 @@ class RSSEngine(Database):
                 msg_zh="RSS 添加失败。",
             )
 
+    def disable_list(self, rss_id_list: list[int]):
+        for rss_id in rss_id_list:
+            self.rss.disable(rss_id)
+
     def pull_rss(self, rss_item: RSSItem) -> list[Torrent]:
         torrents = self._get_torrents(rss_item)
         new_torrents = self.torrent.check_new(torrents)

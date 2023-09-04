@@ -4,6 +4,7 @@ import type { ApiSuccess } from '#/api';
 export const useRSSStore = defineStore('rss', () => {
     const message = useMessage();
     const rss = ref<RSS[]>();
+    const selectedRSS= ref<number[]>([]);
 
     const { execute: getAll, onResult: onRSSResult } = useApi(
         apiRSS.get
@@ -12,10 +13,10 @@ export const useRSSStore = defineStore('rss', () => {
         apiRSS.update
     );
     const { execute: disableRSS, onResult: onDisableRSSResult} = useApi(
-        apiRSS.disable
+        apiRSS.disableMany
     );
     const { execute: deleteRSS, onResult: onDeleteRSSResult } = useApi(
-        apiRSS.delete
+        apiRSS.deleteMany
     );
 
 
@@ -34,9 +35,21 @@ export const useRSSStore = defineStore('rss', () => {
         getAll();
     }
 
+    function disableSelected() {
+        disableRSS(selectedRSS.value);
+    }
+
+    function deleteSelected() {
+        deleteRSS(selectedRSS.value);
+    }
+
     function actionSuccess(apiRes: ApiSuccess) {
         message.success(apiRes.msg_en);
         refresh();
+    }
+
+    function appendSelected(id: number) {
+        selectedRSS.value.push(id);
     }
 
     onUpdateRSSResult(actionSuccess);
@@ -47,8 +60,9 @@ export const useRSSStore = defineStore('rss', () => {
         rss,
         getAll,
         refresh,
-        updateRSS,
-        disableRSS,
-        deleteRSS,
+        selectedRSS,
+        disableSelected,
+        deleteSelected,
+        appendSelected,
     };
 });

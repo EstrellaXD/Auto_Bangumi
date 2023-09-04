@@ -1,4 +1,4 @@
-import type { BangumiAPI, BangumiRule, BangumiUpdate } from '#/bangumi';
+import type { BangumiAPI, BangumiRule } from '#/bangumi';
 import type { ApiSuccess } from '#/api';
 
 

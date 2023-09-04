@@ -9,7 +9,7 @@ from module.models import Bangumi
 router = APIRouter(prefix="/search", tags=["search"])
 
 
-@router.get("/", response_model=list[Bangumi])
+@router.get("/bangumi", response_model=list[Bangumi])
 async def search_torrents(
     site: str = "mikan",
     keywords: str = Query(None),

@@ -64,6 +64,23 @@ async def disable_rss(rss_id: int, current_user=Depends(get_current_user)):
             )
 
 
+@router.post(path="/disable/many", response_model=APIResponse)
+async def disable_many_rss(rss_ids: list[int], current_user=Depends(get_current_user)):
+    if not current_user:
+        raise UNAUTHORIZED
+    with RSSEngine() as engine:
+        if engine.disable_list(rss_ids):
+            return JSONResponse(
+                status_code=200,
+                content={"msg_en": "Disable RSS successfully.", "msg_zh": "禁用 RSS 成功。"},
+            )
+        else:
+            return JSONResponse(
+                status_code=406,
+                content={"msg_en": "Disable RSS failed.", "msg_zh": "禁用 RSS 失败。"},
+            )
+
+
 @router.patch(path="/update/{rss_id}", response_model=APIResponse)
 async def update_rss(
     rss_id: int, data: RSSUpdate, current_user=Depends(get_current_user)
