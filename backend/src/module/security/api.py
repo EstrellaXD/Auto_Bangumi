@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Cookie
 from fastapi.security import OAuth2PasswordBearer
 
 from module.database import Database
@@ -8,25 +8,21 @@ from .jwt import verify_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
+active_user = []
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+
+async def get_current_user(token: str = Cookie(None)):
     if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
-        )
+        raise UNAUTHORIZED
     payload = verify_token(token)
     if not payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
-        )
+        raise UNAUTHORIZED
     username = payload.get("sub")
-    with Database() as db:
-        user = db.user.get_user(username)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid username"
-        )
-    return user
+    if not username:
+        raise UNAUTHORIZED
+    if username not in active_user:
+        raise UNAUTHORIZED
+    return username
 
 
 async def get_token_data(token: str = Depends(oauth2_scheme)):
@@ -41,7 +37,7 @@ async def get_token_data(token: str = Depends(oauth2_scheme)):
 def update_user_info(user_data: UserUpdate, current_user):
     try:
         with Database() as db:
-            db.user.update_user(current_user.username, user_data)
+            db.user.update_user(current_user, user_data)
         return True
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -49,7 +45,9 @@ def update_user_info(user_data: UserUpdate, current_user):
 
 def auth_user(user: User):
     with Database() as db:
-        db.user.auth_user(user)
+        if db.user.auth_user(user):
+            active_user.append(user.username)
+            return True
 
 
 UNAUTHORIZED = HTTPException(

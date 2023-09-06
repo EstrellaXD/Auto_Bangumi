@@ -16,93 +16,67 @@ def str_to_list(data: Bangumi):
     return data
 
 
-@router.get("/get/all", response_model=list[Bangumi])
-async def get_all_data(current_user=Depends(get_current_user)):
-    if not current_user:
-        raise UNAUTHORIZED
+@router.get("/get/all", response_model=list[Bangumi], dependencies=[Depends(get_current_user)])
+async def get_all_data():
     with TorrentManager() as manager:
         return manager.bangumi.search_all()
 
 
-@router.get("/get/{bangumi_id}", response_model=Bangumi)
-async def get_data(bangumi_id: str, current_user=Depends(get_current_user)):
-    if not current_user:
-        raise UNAUTHORIZED
+@router.get("/get/{bangumi_id}", response_model=Bangumi, dependencies=[Depends(get_current_user)])
+async def get_data(bangumi_id: str):
     with TorrentManager() as manager:
         resp = manager.search_one(bangumi_id)
     return resp
 
 
-@router.patch("/update/{bangumi_id}", response_model=APIResponse)
+@router.patch("/update/{bangumi_id}", response_model=APIResponse, dependencies=[Depends(get_current_user)])
 async def update_rule(
-    bangumi_id: int, data: BangumiUpdate, current_user=Depends(get_current_user)
+    bangumi_id: int, data: BangumiUpdate, 
 ):
-    if not current_user:
-        raise UNAUTHORIZED
     with TorrentManager() as manager:
         resp = manager.update_rule(bangumi_id, data)
     return u_response(resp)
 
 
-@router.delete(path="/delete/{bangumi_id}", response_model=APIResponse)
-async def delete_rule(
-    bangumi_id: str, file: bool = False, current_user=Depends(get_current_user)
-):
-    if not current_user:
-        raise UNAUTHORIZED
+@router.delete(path="/delete/{bangumi_id}", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+async def delete_rule(bangumi_id: str, file: bool = False):
     with TorrentManager() as manager:
         resp = manager.delete_rule(bangumi_id, file)
     return u_response(resp)
 
 
-@router.delete(path="/delete/many/", response_model=APIResponse)
-async def delete_many_rule(
-    bangumi_id: list, file: bool = False, current_user=Depends(get_current_user)
-):
-    if not current_user:
-        raise UNAUTHORIZED
+@router.delete(path="/delete/many/", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+async def delete_many_rule(bangumi_id: list, file: bool = False):
     with TorrentManager() as manager:
         for i in bangumi_id:
             resp = manager.delete_rule(i, file)
     return u_response(resp)
 
 
-@router.delete(path="/disable/{bangumi_id}", response_model=APIResponse)
-async def disable_rule(
-    bangumi_id: str, file: bool = False, current_user=Depends(get_current_user)
-):
-    if not current_user:
-        raise UNAUTHORIZED
+@router.delete(path="/disable/{bangumi_id}", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+async def disable_rule(bangumi_id: str, file: bool = False):
     with TorrentManager() as manager:
         resp = manager.disable_rule(bangumi_id, file)
     return u_response(resp)
 
 
-@router.delete(path="/disable/many/", response_model=APIResponse)
-async def disable_many_rule(
-    bangumi_id: list, file: bool = False, current_user=Depends(get_current_user)
-):
-    if not current_user:
-        raise UNAUTHORIZED
+@router.delete(path="/disable/many/", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+async def disable_many_rule(bangumi_id: list, file: bool = False):
     with TorrentManager() as manager:
         for i in bangumi_id:
             resp = manager.disable_rule(i, file)
     return u_response(resp)
 
 
-@router.get(path="/enable/{bangumi_id}", response_model=APIResponse)
-async def enable_rule(bangumi_id: str, current_user=Depends(get_current_user)):
-    if not current_user:
-        raise UNAUTHORIZED
+@router.get(path="/enable/{bangumi_id}", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+async def enable_rule(bangumi_id: str):
     with TorrentManager() as manager:
         resp = manager.enable_rule(bangumi_id)
     return u_response(resp)
 
 
-@router.get("/reset/all", response_model=APIResponse)
-async def reset_all(current_user=Depends(get_current_user)):
-    if not current_user:
-        raise UNAUTHORIZED
+@router.get("/reset/all", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+async def reset_all():
     with TorrentManager() as manager:
         manager.bangumi.delete_all()
         return JSONResponse(
