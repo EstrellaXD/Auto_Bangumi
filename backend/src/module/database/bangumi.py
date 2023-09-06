@@ -111,8 +111,8 @@ class BangumiDatabase:
                     if rss_link not in match_data.rss_link:
                         match_data.rss_link += f",{rss_link}"
                         self.update_rss(match_data.title_raw, match_data.rss_link)
-                    if not match_data.poster_link:
-                        self.update_poster(match_data.title_raw, torrent.poster_link)
+                    # if not match_data.poster_link:
+                    #     self.update_poster(match_data.title_raw, torrent.poster_link)
                     torrent_list.pop(i)
                     break
             else:

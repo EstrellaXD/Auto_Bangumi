@@ -1,7 +1,6 @@
 import logging
 
 from module.rss import RSSEngine
-from module.conf import settings
 
 logger = logging.getLogger(__name__)
 

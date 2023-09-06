@@ -1,7 +1,7 @@
 import logging
 
 from module.conf import VERSION, settings
-from module.update import data_migration, database_migration, start_up, first_run
+from module.update import data_migration, from_30_to_31, start_up, first_run
 
 from .sub_thread import RenameThread, RSSThread
 
@@ -43,7 +43,7 @@ class Program(RenameThread, RSSThread):
             data_migration()
         elif self.version_update:
             # Update database
-            database_migration()
+            from_30_to_31()
             logger.info("Database updated.")
         self.start()
 

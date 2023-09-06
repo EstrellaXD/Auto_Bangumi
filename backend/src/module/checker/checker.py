@@ -5,6 +5,7 @@ from module.conf import settings, VERSION
 from module.downloader import DownloadClient
 from module.models import Config
 from module.network import RequestContent
+from module.update import version_check
 
 
 class Checker:
@@ -42,17 +43,7 @@ class Checker:
 
     @staticmethod
     def check_version() -> bool:
-        if not os.path.exists("config/version.info"):
-            with open("config/version.info", "w+") as f:
-                f.writelines(VERSION)
-            return True
-        with open("config/version.info", "r+") as f:
-            legacy_version = f.readlines()[-1]
-            if VERSION == legacy_version:
-                return False
-            else:
-                f.writelines(VERSION)
-                return True
+        return version_check()
 
     @staticmethod
     def check_database() -> bool:

@@ -1,9 +1,11 @@
 from bs4 import BeautifulSoup
+from urllib3.util import parse_url
 
 from module.network import RequestContent
 
 
 def mikan_parser(homepage: str):
+    root_path = parse_url(homepage).host
     with RequestContent() as req:
         content = req.get_html(homepage)
         soup = BeautifulSoup(content, "html.parser")
@@ -14,5 +16,6 @@ def mikan_parser(homepage: str):
         ).text
         if poster_style:
             poster_path = poster_style.split("url('")[1].split("')")[0]
-            return poster_path, official_title
+            poster_link = f"https://{root_path}{poster_path}"
+            return poster_link, official_title
         return "", ""

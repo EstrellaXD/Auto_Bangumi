@@ -32,7 +32,7 @@ class RSSEngine(Database):
         else:
             return []
 
-    def add_rss(self, rss_link: str, name: str | None = None, aggregate: bool = True):
+    def add_rss(self, rss_link: str, name: str | None = None, aggregate: bool = True, parser: str = "mikan"):
         if not name:
             with RequestContent() as req:
                 name = req.get_rss_title(rss_link)
@@ -43,7 +43,7 @@ class RSSEngine(Database):
                         msg_en="Failed to get RSS title.",
                         msg_zh="无法获取 RSS 标题。",
                     )
-        rss_data = RSSItem(name=name, url=rss_link, aggregate=aggregate)
+        rss_data = RSSItem(name=name, url=rss_link, aggregate=aggregate, parser=parser)
         if self.rss.add(rss_data):
             return ResponseModel(
                 status=True,

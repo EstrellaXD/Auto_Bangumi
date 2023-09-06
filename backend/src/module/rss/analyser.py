@@ -18,12 +18,13 @@ class RSSAnalyser(TitleParser):
                 torrent.homepage
             )
         elif rss.parser == "tmdb":
-            tmdb_title, season, year = self.tmdb_parser(
+            tmdb_title, season, year, poster_link = self.tmdb_parser(
                 bangumi.official_title, bangumi.season, settings.rss_parser.language
             )
             bangumi.official_title = tmdb_title
             bangumi.year = year
             bangumi.season = season
+            bangumi.poster_link = poster_link
         else:
             pass
         bangumi.official_title = re.sub(r"[/:.\\]", " ", bangumi.official_title)

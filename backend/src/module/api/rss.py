@@ -22,7 +22,7 @@ async def get_rss():
 @router.post(path="/add", response_model=APIResponse, dependencies=[Depends(get_current_user)])
 async def add_rss(rss: RSSItem, ):
     with RSSEngine() as engine:
-        result = engine.add_rss(rss.url, rss.name, rss.aggregate)
+        result = engine.add_rss(rss.url, rss.name, rss.aggregate, rss.parser)
     return u_response(result)
 
 
