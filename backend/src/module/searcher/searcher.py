@@ -18,6 +18,7 @@ SEARCH_KEY = [
 
 BangumiJSON: TypeAlias = str
 
+
 class SearchTorrent(RequestContent, RSSAnalyser):
     def search_torrents(
         self, rss_item: RSSItem, limit: int = 5
@@ -29,9 +30,11 @@ class SearchTorrent(RequestContent, RSSAnalyser):
         rss_item = search_url(site, keywords)
         torrents = self.search_torrents(rss_item)
         # yield for EventSourceResponse (Server Send)
+        exist_list = []
         for torrent in torrents:
             bangumi = self.torrent_to_data(torrent=torrent, rss=rss_item)
-            if bangumi:
+            if bangumi and bangumi not in exist_list:
+                exist_list.append(bangumi)
                 yield json.dumps(bangumi.dict(), separators=(',', ':'))
 
     def search_season(self, data: Bangumi):

@@ -79,7 +79,10 @@ def tmdb_parser(title, language) -> TMDBInfo | None:
             original_title = info_content.get("original_name")
             official_title = info_content.get("name")
             year_number = info_content.get("first_air_date").split("-")[0]
-            poster_link = "https://image.tmdb.org/t/p/w300" + poster_path
+            if poster_path:
+                poster_link = "https://image.tmdb.org/t/p/w300" + poster_path
+            else:
+                poster_link = None
             return TMDBInfo(
                 id,
                 official_title,

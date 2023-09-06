@@ -12,6 +12,7 @@ def search_url(site: str, keywords: list[str]) -> RSSItem:
         parser = "mikan" if site == "mikan" else "tmdb"
         rss_item = RSSItem(
             url=url,
+            aggregate=False,
             parser=parser,
         )
         return rss_item

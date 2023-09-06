@@ -89,6 +89,7 @@ class TorrentManager(Database):
             )
 
     def enable_rule(self, _id: str | int):
+        # TODO: to fix search_id
         data = self.bangumi.search(int(_id))
         if isinstance(data, Bangumi):
             data.deleted = False

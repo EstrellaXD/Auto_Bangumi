@@ -1,13 +1,11 @@
 <script lang="ts" setup>
 import {ErrorPicture, Write} from '@icon-park/vue-next';
+import type {BangumiRule} from "#/bangumi";
 
 withDefaults(
     defineProps<{
       type?: 'primary' | 'search' | 'mobile';
-      poster: string;
-      name: string;
-      season: number;
-      group?: string;
+      bangumi: BangumiRule;
     }>(),
     {
       type: 'primary',
@@ -21,8 +19,8 @@ defineEmits(['click']);
   <div v-if="type === 'primary'" w-150px is-btn @click="() => $emit('click')">
     <div rounded-4px overflow-hidden poster-shandow rel>
       <div w-full h-210px>
-        <template v-if="poster !== ''">
-          <img :src="poster" alt="poster" wh-full/>
+        <template v-if="bangumi.poster_link">
+          <img :src="bangumi.poster_link" alt="poster" wh-full/>
         </template>
 
         <template v-else>
@@ -62,9 +60,9 @@ defineEmits(['click']);
     </div>
 
     <div py-4px>
-      <div text-h3 truncate>{{ name }}</div>
+      <div text-h3 truncate>{{ bangumi.official_title }}</div>
       <ab-tag
-          :title="`Season ${season}`"
+          :title="`Season ${bangumi.season}`"
           type="primary"
       />
     </div>
@@ -76,8 +74,8 @@ defineEmits(['click']);
         space-x-16px>
       <div w-400px space-x-16px fx-cer>
         <div h-44px w-72px rounded-6px overflow-hidden>
-          <template v-if="poster !== ''">
-            <img :src="poster" alt="poster" w-full class="search-image"/>
+          <template v-if="bangumi.poster_link">
+            <img :src="bangumi.poster_link" alt="poster" w-full class="search-image"/>
           </template>
 
           <template v-else>
@@ -87,15 +85,15 @@ defineEmits(['click']);
           </template>
         </div>
         <div flex-col space-y-4px>
-          <div w-300px text-h3 text-primary truncate>{{ name }}</div>
+          <div w-300px text-h3 text-primary truncate>{{ bangumi.official_title }}</div>
           <div flex space-x-8px>
             <ab-tag
-                :title="`Season ${season}`"
+                :title="`Season ${bangumi.season}`"
                 type="primary"
             />
             <ab-tag
-                v-if="group !== ''"
-                :title="group"
+                v-if="bangumi.group_name !== ''"
+                :title="bangumi.group_name"
                 type="primary"
             />
           </div>

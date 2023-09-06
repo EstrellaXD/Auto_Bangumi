@@ -6,7 +6,7 @@ import {ref} from 'vue';
 const inputValue = ref<string>('');
 const selectingProvider = ref<boolean>(false);
 
-const {input$, provider, providers, getProviders, bangumiList } = useSearchStore();
+const {input$, provider, providers, getProviders, bangumiList} = useSearchStore();
 
 /**
  * - 输入中 debounce 600ms 后触发搜索
@@ -15,17 +15,17 @@ const {input$, provider, providers, getProviders, bangumiList } = useSearchStore
  */
 
 
-function onInput (e: Event) {
+function onInput(e: Event) {
   const value = (e.target as HTMLInputElement).value;
   input$.next(value);
   inputValue.value = value;
 }
 
-function onSearch () {
+function onSearch() {
   input$.next(inputValue.value);
 }
 
-function onSelect (site: string) {
+function onSelect(site: string) {
   provider.value = site;
   selectingProvider.value = !selectingProvider.value
   onSearch();
@@ -105,24 +105,27 @@ onMounted(() => {
       </div>
     </div>
   </div>
-    <div
-        abs top-84px left-200px z-98
-    >
-      <ab-bangumi-card
-          v-for="(item, index) in bangumiList"
-          :key="index"
-          :poster="item.poster_link ?? ''"
-          :name="item.official_title"
-          :season="item.season"
-          :group="item.group_name"
-      />
-    </div>
+  <div
+      abs top-84px left-200px space-y-8px z-98
+  >
+    <ab-bangumi-card
+        v-for="(item, index) in bangumiList"
+        :key="index"
+        :bangumi="item"
+        type="search"
+        transition-all
+    />
+  </div>
 </template>
 
 <style lang="scss" scoped>
 
 .provider-select {
   background: #4E2A94;
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity .3s;
 }
 
 </style>
