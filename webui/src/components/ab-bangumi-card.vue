@@ -22,7 +22,7 @@ defineEmits(['click']);
     <div rounded-4px overflow-hidden poster-shandow rel>
       <div w-full h-210px>
         <template v-if="poster !== ''">
-          <img :src="`https://mikanani.me${poster}`" alt="poster" wh-full/>
+          <img :src="poster" alt="poster" wh-full/>
         </template>
 
         <template v-else>
@@ -77,7 +77,7 @@ defineEmits(['click']);
       <div w-400px space-x-16px fx-cer>
         <div h-44px w-72px rounded-6px overflow-hidden>
           <template v-if="poster !== ''">
-            <img :src="`https://mikanani.me${poster}`" alt="poster" w-full class="search-image"/>
+            <img :src="poster" alt="poster" w-full class="search-image"/>
           </template>
 
           <template v-else>
