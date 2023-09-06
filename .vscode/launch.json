@@ -10,6 +10,9 @@
       "request": "launch",
       "cwd": "${workspaceFolder}/backend/src",
       "program": "main.py",
+      "env": {
+        "HOST": "127.0.0.1",
+      },
       "console": "integratedTerminal",
       "justMyCode": true
     }

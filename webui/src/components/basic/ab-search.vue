@@ -2,35 +2,39 @@
 import {Down, Search} from '@icon-park/vue-next';
 import {ref} from 'vue';
 
-const props = withDefaults(
-    defineProps<{
-      value?: string;
-      placeholder?: string;
-    }>(),
-    {
-      value: '',
-      placeholder: '',
-    }
-);
 
-const emit = defineEmits(['update:value', 'click-search']);
-const {site, providers, bangumiInfo$ } = storeToRefs(useSearchStore());
-const {getProviders, onInput} = useSearchStore();
+const inputValue = ref<string>('');
+const selectingProvider = ref<boolean>(false);
 
+const {input$, provider, providers, getProviders, bangumiList } = useSearchStore();
+
+/**
+ * - 输入中 debounce 600ms 后触发搜索
+ * - 按回车或点击搜索 icon 按钮后触发搜索
+ * - 切换 provider 源站时触发搜索
+ */
+
+
+function onInput (e: Event) {
+  const value = (e.target as HTMLInputElement).value;
+  input$.next(value);
+  inputValue.value = value;
+}
+
+function onSearch () {
+  input$.next(inputValue.value);
+}
+
+function onSelect (site: string) {
+  provider.value = site;
+  selectingProvider.value = !selectingProvider.value
+  onSearch();
+}
 
 onMounted(() => {
   getProviders();
 });
 
-const selectedProvider = computed(() => {
-  return site.value || '';
-});
-
-const onSelect = ref(false);
-
-function onSearch() {
-  emit('click-search', props.value);
-}
 </script>
 
 <template>
@@ -58,9 +62,9 @@ function onSearch() {
 
     <input
         type="text"
-        :value="value"
-        :placeholder="placeholder"
+        placeholder="Input to search"
         input-reset
+        :value="inputValue"
         @keyup.enter="onSearch"
         @input="onInput"
     />
@@ -72,27 +76,23 @@ function onSearch() {
         w-100px
         is-btn
         class="provider-select"
-        @click="() => onSelect = !onSelect"
+        @click="() => selectingProvider = !selectingProvider"
     >
       <div text-h3 truncate>
-        {{ selectedProvider }}
+        {{ provider }}
       </div>
       <div class="provider-select">
         <Down/>
       </div>
     </div>
   </div>
-  <div v-show="onSelect" abs top-84px left-540px w-100px rounded-12px shadow bg-white z-99 overflow-hidden>
+  <div v-show="selectingProvider" abs top-84px left-540px w-100px rounded-12px shadow bg-white z-99 overflow-hidden>
     <div
-        v-for="i in providers"
-        :key="i"
+        v-for="site in providers"
+        :key="site"
         hover:bg-theme-row
         is-btn
-        @click="() => {
-        site = i;
-        onSelect = false;
-      }"
-
+        @click="() => onSelect(site)"
     >
       <div
           text-h3
@@ -101,19 +101,20 @@ function onSearch() {
           p-12px
           truncate
       >
-        {{ i }}
+        {{ site }}
       </div>
     </div>
   </div>
     <div
-        v-if="bangumiInfo$"
-        abs top-84px left-200px z-98>
+        abs top-84px left-200px z-98
+    >
       <ab-bangumi-card
-          :key="bangumiInfo$.id"
-          :poster="bangumiInfo$.poster_link ?? ''"
-          :name="bangumiInfo$.official_title"
-          :season="bangumiInfo$.season"
-          :group="bangumiInfo$.group_name"
+          v-for="(item, index) in bangumiList"
+          :key="index"
+          :poster="item.poster_link ?? ''"
+          :name="item.official_title"
+          :season="item.season"
+          :group="item.group_name"
       />
     </div>
 </template>
