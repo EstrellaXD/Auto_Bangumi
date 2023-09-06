@@ -9,17 +9,14 @@ from module.models import Bangumi
 router = APIRouter(prefix="/search", tags=["search"])
 
 
-@router.get("/bangumi", response_model=list[Bangumi])
+@router.get("/bangumi", response_model=list[Bangumi], dependencies=[Depends(get_current_user)])
 async def search_torrents(
     site: str = "mikan",
-    keywords: str = Query(None),
-    current_user=Depends(get_current_user),
+    keywords: str = Query(None)
 ):
     """
     Server Send Event for per Bangumi item
     """
-    if not current_user:
-        raise UNAUTHORIZED
     if not keywords:
         return []
     keywords = keywords.split(" ")
@@ -29,8 +26,6 @@ async def search_torrents(
         )
 
 
-@router.get("/provider", response_model=list[str])
-async def search_provider(current_user=Depends(get_current_user)):
-    if not current_user:
-        raise UNAUTHORIZED
+@router.get("/provider", response_model=list[str], dependencies=[Depends(get_current_user)])
+async def search_provider():
     return list(SEARCH_CONFIG.keys())

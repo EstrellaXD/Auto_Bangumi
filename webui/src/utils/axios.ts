@@ -3,15 +3,18 @@ import type { ApiError } from "#/api";
 
 export const axios = Axios.create();
 
-axios.interceptors.request.use((config) => {
-  const { auth } = useAuth();
+// axios.interceptors.request.use((config) => {
+//   const { auth } = useAuth();
+//
+//   // if (auth.value !== '' && config.headers) {
+//   //   config.headers.Authorization = auth.value;
+//   // }
+//
+//   return config;
+// });
 
-  if (auth.value !== '' && config.headers) {
-    config.headers.Authorization = auth.value;
-  }
-
-  return config;
-});
+// axios.defaults.baseURL = '/api/v1';
+axios.defaults.withCredentials = true;
 
 axios.interceptors.response.use(
   (res) => {

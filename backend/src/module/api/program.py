@@ -25,10 +25,8 @@ async def shutdown():
     program.stop()
 
 
-@router.get("/restart", response_model=APIResponse)
-async def restart(current_user=Depends(get_current_user)):
-    if not current_user:
-        raise UNAUTHORIZED
+@router.get("/restart", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+async def restart():
     try:
         program.restart()
         return JSONResponse(
