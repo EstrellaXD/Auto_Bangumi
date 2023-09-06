@@ -26,17 +26,15 @@ class TitleParser:
 
     @staticmethod
     def tmdb_parser(title: str, season: int, language: str):
-        official_title, tmdb_season, year = title, season, None
         tmdb_info = tmdb_parser(title, language)
         if tmdb_info:
             logger.debug(f"TMDB Matched, official title is {tmdb_info.title}")
             tmdb_season = tmdb_info.last_season if tmdb_info.last_season else season
-            official_title = tmdb_info.title
-            year = tmdb_info.year
+            return tmdb_info.title, tmdb_season, tmdb_info.year, tmdb_info.poster_link
         else:
             logger.warning(f"Cannot match {title} in TMDB. Use raw title instead.")
             logger.warning("Please change bangumi info manually.")
-        return official_title, tmdb_season, year
+            return title, season, None, None
 
     @staticmethod
     def raw_parser(raw: str) -> Bangumi | None:
@@ -60,7 +58,8 @@ class TitleParser:
             else:
                 official_title = title_raw
             _season = episode.season
-            data = Bangumi(
+            logger.debug(f"RAW:{raw} >> {title_raw}")
+            return Bangumi(
                 official_title=official_title,
                 title_raw=title_raw,
                 season=_season,
@@ -73,8 +72,6 @@ class TitleParser:
                 offset=0,
                 filter=",".join(settings.rss_parser.filter),
             )
-            logger.debug(f"RAW:{raw} >> {title_raw}")
-            return data
         except Exception as e:
             logger.debug(e)
             logger.warning(f"Cannot parse {raw}.")
