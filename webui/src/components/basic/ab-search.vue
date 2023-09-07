@@ -3,7 +3,6 @@ import {Down, Search} from '@icon-park/vue-next';
 
 const {
   onSelect,
-  onInput,
   onSearch,
   inputValue,
   selectingProvider,
@@ -43,12 +42,11 @@ onMounted(() => {
     />
 
     <input
+        v-model="inputValue"
         type="text"
         :placeholder="$t('topbar.search.placeholder')"
         input-reset
-        :value="inputValue"
         @keyup.enter="onSearch"
-        @input="onInput"
     />
     <div
         h-full

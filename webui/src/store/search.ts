@@ -4,7 +4,7 @@ import {
     debounceTime,
     filter,
     switchMap,
-    takeUntil, tap,
+    tap,
 } from "rxjs";
 import type {BangumiRule} from "#/bangumi";
 
@@ -18,6 +18,10 @@ export function useSearchStore() {
     const provider = ref<string>('mikan');
 
     const input$ = new Subject<string>();
+
+    watch(inputValue, input => {
+        input$.next(input);
+    })
 
     const {execute: getProviders, onResult: onGetProvidersResult} = useApi(
         apiSearch.getProvider
@@ -33,26 +37,20 @@ export function useSearchStore() {
      * - 切换 provider 源站时触发搜索
      */
 
-
-
     const bangumiInfo$ = input$.pipe(
         debounceTime(600),
         tap(() => {
+            // 有输入更新后清理之前的搜索结果
             bangumiList.value = [];
         }),
         filter(Boolean),
-        switchMap((input: string) => apiSearch.get(input, provider.value).pipe(takeUntil(input$))),
+        // switchMap 把输入 keyword 查询为 bangumiInfo$ 流，多次输入自动取消并停止前一次查询
+        switchMap((input: string) => apiSearch.get(input, provider.value)),
         tap((bangumi: BangumiRule) => {
             bangumiList.value.push(bangumi);
         }),
     )
         .subscribe()
-
-    function onInput(e: Event) {
-        const value = (e.target as HTMLInputElement).value;
-        input$.next(value);
-        inputValue.value = value;
-    }
 
     function onSearch() {
         input$.next(inputValue.value);
@@ -70,7 +68,6 @@ export function useSearchStore() {
         inputValue,
         selectingProvider,
         onSelect,
-        onInput,
         onSearch,
         provider,
         getProviders,
