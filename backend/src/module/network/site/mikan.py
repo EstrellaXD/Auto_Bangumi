@@ -1,4 +1,4 @@
-def mikan_parser(soup):
+def rss_parser(soup):
     torrent_titles = []
     torrent_urls = []
     torrent_homepage = []

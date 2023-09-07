@@ -35,7 +35,7 @@ class RequestURL:
                 break
         logger.error(f"[Network] Failed connecting to {url}")
         logger.warning("[Network] Please check DNS/Connection settings")
-        raise ConnectionError(f"Failed connecting to {url}")
+        return None
 
     def post_url(self, url: str, data: dict, retry=3):
         try_time = 0
@@ -59,7 +59,7 @@ class RequestURL:
                 break
         logger.error(f"[Network] Failed connecting to {url}")
         logger.warning("[Network] Please check DNS/Connection settings")
-        raise ConnectionError(f"Failed connecting to {url}")
+        return None
 
     def check_url(self, url: str):
         if "://" not in url:

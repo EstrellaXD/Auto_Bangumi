@@ -6,7 +6,7 @@ from module.conf import settings
 from module.models import Torrent
 
 from .request_url import RequestURL
-from .site import mikan_parser
+from .site import rss_parser
 
 logger = logging.getLogger(__name__)
 
@@ -19,9 +19,9 @@ class RequestContent(RequestURL):
         limit: int = 100,
         retry: int = 3,
     ) -> list[Torrent]:
-        try:
-            soup = self.get_xml(_url, retry)
-            torrent_titles, torrent_urls, torrent_homepage = mikan_parser(soup)
+        soup = self.get_xml(_url, retry)
+        if soup:
+            torrent_titles, torrent_urls, torrent_homepage = rss_parser(soup)
             torrents: list[Torrent] = []
             for _title, torrent_url, homepage in zip(
                 torrent_titles, torrent_urls, torrent_homepage
@@ -33,21 +33,20 @@ class RequestContent(RequestURL):
                 if len(torrents) >= limit:
                     break
             return torrents
-        except ConnectionError:
+        else:
+            logger.warning(f"[Network] Failed to get torrents: {_url}")
             return []
 
     def get_xml(self, _url, retry: int = 3) -> xml.etree.ElementTree.Element:
-        try:
-            return xml.etree.ElementTree.fromstring(self.get_url(_url, retry).text)
-        except ConnectionError:
-            logger.warning(f"[Network] Failed to get XML: {_url}")
+        req = self.get_url(_url, retry)
+        if req:
+            return xml.etree.ElementTree.fromstring(req.text)
 
     # API JSON
     def get_json(self, _url) -> dict:
-        try:
-            return self.get_url(_url).json()
-        except ConnectionError:
-            logger.warning(f"[Network] Failed to get JSON: {_url}")
+        req = self.get_url(_url)
+        if req:
+            return req.json()
 
     def post_json(self, _url, data: dict) -> dict:
         return self.post_url(_url, data).json()
@@ -59,14 +58,14 @@ class RequestContent(RequestURL):
         return self.get_url(_url).text
 
     def get_content(self, _url):
-        return self.get_url(_url).content
+        req = self.get_url(_url)
+        if req:
+            return req.content
 
     def check_connection(self, _url):
         return self.check_url(_url)
 
     def get_rss_title(self, _url):
-        try:
-            soup = self.get_xml(_url)
+        soup = self.get_xml(_url)
+        if soup:
             return soup.find("./channel/title").text
-        except ConnectionError:
-            logger.warning(f"[Network] Failed to get RSS title: {_url}")
