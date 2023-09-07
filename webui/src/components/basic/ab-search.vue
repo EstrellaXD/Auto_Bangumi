@@ -1,35 +1,18 @@
 <script lang="ts" setup>
 import {Down, Search} from '@icon-park/vue-next';
-import {ref} from 'vue';
 
+const {
+  onSelect,
+  onInput,
+  onSearch,
+  inputValue,
+  selectingProvider,
+  provider,
+  providers,
+  getProviders,
+  bangumiList
+} = useSearchStore();
 
-const inputValue = ref<string>('');
-const selectingProvider = ref<boolean>(false);
-
-const {input$, provider, providers, getProviders, bangumiList} = useSearchStore();
-
-/**
- * - 输入中 debounce 600ms 后触发搜索
- * - 按回车或点击搜索 icon 按钮后触发搜索
- * - 切换 provider 源站时触发搜索
- */
-
-
-function onInput(e: Event) {
-  const value = (e.target as HTMLInputElement).value;
-  input$.next(value);
-  inputValue.value = value;
-}
-
-function onSearch() {
-  input$.next(inputValue.value);
-}
-
-function onSelect(site: string) {
-  provider.value = site;
-  selectingProvider.value = !selectingProvider.value
-  onSearch();
-}
 
 onMounted(() => {
   getProviders();
@@ -48,7 +31,6 @@ onMounted(() => {
       space-x-12px
       w-400px
       overflow-hidden
-      transition-width
       shadow-inner
   >
     <Search
@@ -62,7 +44,7 @@ onMounted(() => {
 
     <input
         type="text"
-        placeholder="Input to search"
+        :placeholder="$t('topbar.search.placeholder')"
         input-reset
         :value="inputValue"
         @keyup.enter="onSearch"
@@ -113,7 +95,7 @@ onMounted(() => {
         :key="index"
         :bangumi="item"
         type="search"
-        transition-all
+        transition-opacity
     />
   </div>
 </template>
@@ -124,8 +106,8 @@ onMounted(() => {
   background: #4E2A94;
 }
 
-.fade-enter-active, .fade-leave-active {
-  transition: opacity .3s;
+.list-enter-active, .list-leave-active {
+  transition: opacity 0.5s ease;
 }
 
 </style>

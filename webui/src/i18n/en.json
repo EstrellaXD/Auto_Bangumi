@@ -23,6 +23,9 @@
     "restart": "Restart",
     "shutdown": "Shutdown",
     "reset_rule": "Reset Rule",
+    "search": {
+      "placeholder": "Type to search"
+    },
     "profile": {
       "title": "Profile",
       "pop_title": "Change Account",

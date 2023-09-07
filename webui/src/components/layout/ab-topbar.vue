@@ -11,7 +11,6 @@ import {
 const {t, changeLocale} = useMyI18n();
 const {running, onUpdate, offUpdate} = useAppInfo();
 
-const search = ref('');
 const show = ref(false);
 const showAdd = ref(false);
 

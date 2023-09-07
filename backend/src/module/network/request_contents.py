@@ -37,11 +37,17 @@ class RequestContent(RequestURL):
             return []
 
     def get_xml(self, _url, retry: int = 3) -> xml.etree.ElementTree.Element:
-        return xml.etree.ElementTree.fromstring(self.get_url(_url, retry).text)
+        try:
+            return xml.etree.ElementTree.fromstring(self.get_url(_url, retry).text)
+        except ConnectionError:
+            logger.warning(f"[Network] Failed to get XML: {_url}")
 
     # API JSON
     def get_json(self, _url) -> dict:
-        return self.get_url(_url).json()
+        try:
+            return self.get_url(_url).json()
+        except ConnectionError:
+            logger.warning(f"[Network] Failed to get JSON: {_url}")
 
     def post_json(self, _url, data: dict) -> dict:
         return self.post_url(_url, data).json()
@@ -63,4 +69,4 @@ class RequestContent(RequestURL):
             soup = self.get_xml(_url)
             return soup.find("./channel/title").text
         except ConnectionError:
-            logger.warning(f"Failed to get RSS title: {_url}")
+            logger.warning(f"[Network] Failed to get RSS title: {_url}")

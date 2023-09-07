@@ -20,7 +20,7 @@ const InnerStyle = computed(() => {
 
 <template>
   <div p-1px rounded-16px inline-flex :class="type">
-    <div bg-white rounded-12px px-8px text-10px :class="InnerStyle">
+    <div bg-white rounded-12px px-8px text-10px truncate max-w-72px :class="InnerStyle">
       {{ title }}
     </div>
   </div>

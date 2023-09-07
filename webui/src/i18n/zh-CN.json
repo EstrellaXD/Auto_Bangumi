@@ -23,6 +23,9 @@
     "restart": "重启",
     "shutdown": "关闭",
     "reset_rule": "重置规则",
+    "search": {
+      "placeholder": "输入关键字搜索"
+    },
     "profile": {
       "title": "账户设置",
       "pop_title": "修改账户",
@@ -68,7 +71,7 @@
     "status": "状态",
     "delete": "删除",
     "disable": "禁用",
-    "enable": "启用",
+    "enable": "启用"
   },
   "player": {
     "hit": "请设置媒体播放器地址"

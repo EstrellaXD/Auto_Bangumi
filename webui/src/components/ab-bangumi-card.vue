@@ -96,6 +96,16 @@ defineEmits(['click']);
                 :title="bangumi.group_name"
                 type="primary"
             />
+            <ab-tag
+                v-if="bangumi.dpi"
+                :title="bangumi.dpi"
+                type="primary"
+            />
+            <ab-tag
+                v-if="bangumi.subtitle"
+                :title="bangumi.subtitle"
+                type="primary"
+            />
           </div>
         </div>
       </div>
