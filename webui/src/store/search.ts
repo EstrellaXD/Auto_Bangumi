@@ -1,8 +1,8 @@
 import {ref} from 'vue';
 import {
+    EMPTY,
     Subject,
     debounceTime,
-    filter,
     switchMap,
     tap,
 } from "rxjs";
@@ -39,18 +39,18 @@ export function useSearchStore() {
 
     const bangumiInfo$ = input$.pipe(
         debounceTime(600),
-        tap(() => {
+        // switchMap 把输入 keyword 查询为 bangumiInfo$ 流，多次输入自动取消并停止前一次查询
+        switchMap((input: string) => {
             // 有输入更新后清理之前的搜索结果
             bangumiList.value = [];
+            return input
+              ? apiSearch.get(input, provider.value)
+              : EMPTY
         }),
-        filter(Boolean),
-        // switchMap 把输入 keyword 查询为 bangumiInfo$ 流，多次输入自动取消并停止前一次查询
-        switchMap((input: string) => apiSearch.get(input, provider.value)),
         tap((bangumi: BangumiRule) => {
             bangumiList.value.push(bangumi);
         }),
-    )
-        .subscribe()
+    ).subscribe()
 
     function onSearch() {
         input$.next(inputValue.value);

@@ -27,6 +27,8 @@ export const apiSearch = {
 
       eventSource.onerror = ev => {
         console.error('[/search/bangumi] Server Error |', { keyword }, 'error:', ev)
+        // 目前后端搜索完成关闭连接时会触发 error 事件，前端手动调用 close 不再自动重连
+        eventSource.close();
       };
 
       return () => {
