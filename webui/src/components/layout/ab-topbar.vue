@@ -76,7 +76,7 @@ onUnmounted(() => {
         <img v-show="onSearchFocus === false" src="/images/AutoBangumi.svg" alt="AutoBangumi" h-24px rel top-2px/>
       </div>
 
-      <ab-search/>
+      <ab-search-bar/>
     </div>
 
     <div ml-auto>

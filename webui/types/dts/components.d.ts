@@ -24,6 +24,7 @@ declare module '@vue/runtime-core' {
     AbRssItem: typeof import('./../../src/components/ab-rss-item.vue')['default']
     AbRule: typeof import('./../../src/components/ab-rule.vue')['default']
     AbSearch: typeof import('./../../src/components/basic/ab-search.vue')['default']
+    AbSearchBar: typeof import('./../../src/components/ab-search-bar.vue')['default']
     AbSelect: typeof import('./../../src/components/basic/ab-select.vue')['default']
     AbSetting: typeof import('./../../src/components/ab-setting.vue')['default']
     AbSidebar: typeof import('./../../src/components/layout/ab-sidebar.vue')['default']
