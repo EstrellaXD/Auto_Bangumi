@@ -1,5 +1,8 @@
 <script lang="ts" setup>
 import {Down, Search} from '@icon-park/vue-next';
+import { vOnClickOutside } from '@vueuse/components'
+
+defineEmits(['click']);
 
 const {
   onSelect,
@@ -11,6 +14,11 @@ const {
   getProviders,
   bangumiList
 } = useSearchStore();
+
+function closeModal() {
+  selectingProvider.value = false;
+  bangumiList.value = [];
+}
 
 
 onMounted(() => {
@@ -66,7 +74,12 @@ onMounted(() => {
       </div>
     </div>
   </div>
-  <div v-show="selectingProvider" abs top-84px left-540px w-100px rounded-12px shadow bg-white z-99 overflow-hidden>
+  <div
+      v-show="selectingProvider"
+      v-on-click-outside="closeModal"
+      abs top-84px
+      left-540px w-100px
+      rounded-12px shadow bg-white z-99 overflow-hidden>
     <div
         v-for="site in providers"
         :key="site"
@@ -91,9 +104,11 @@ onMounted(() => {
     <ab-bangumi-card
         v-for="(item, index) in bangumiList"
         :key="index"
+        v-on-click-outside="closeModal"
         :bangumi="item"
         type="search"
         transition-opacity
+        @click="$emit('click', item)"
     />
   </div>
 </template>
