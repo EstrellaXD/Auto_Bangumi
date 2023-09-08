@@ -16,9 +16,9 @@ withDefaults(
 
 defineEmits(['select', 'search']);
 
-const inputValue = ref('');
+const inputValue = defineModel<string>('inputValue');
 
-watch (inputValue, (val) => {
+watch(inputValue, (val) => {
   console.log(val);
 });
 
@@ -44,7 +44,7 @@ watch (inputValue, (val) => {
         fill="#fff"
         is-btn
         btn-click
-        @click="$emit('search', inputValue)"
+        @click="$emit('search')"
     />
     <NSpin v-else :size="20"/>
 
@@ -53,7 +53,7 @@ watch (inputValue, (val) => {
         type="text"
         :placeholder="$t('topbar.search.placeholder')"
         input-reset
-        @keyup.enter="$emit('search', inputValue)"
+        @keyup.enter="$emit('search')"
     />
       <div
           h-full

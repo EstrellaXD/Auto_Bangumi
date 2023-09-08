@@ -55,7 +55,7 @@ export function useSearchStore() {
     ).subscribe()
 
     function onSearch() {
-        console.log('onSearch');
+        console.log(inputValue.value, 'onSearch');
         loading.value = true;
         input$.next(inputValue.value);
         loading.value = false;
