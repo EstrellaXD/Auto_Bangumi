@@ -7,50 +7,7 @@ import type { BangumiRule } from '#/bangumi';
 export const apiSearch = {
   /**
    * 番剧搜索接口是 Server Send 流式数据，每条是一个 Bangumi JSON 字符串，
-   * 使用接口方式需要订阅使用
-   * 
-   * Usage Example:
-   * 
-   * ```ts
-   *   import {
-   *     Subject,
-   *     tap,
-   *     map,
-   *     switchMap,
-   *     debounceTime,
-   *   } from 'rxjs';
-   *
-   *   
-   *   const input$ = new Subject<string>();
-   *   const onInput = (e: Event) => input$.next(e.target);
-   * 
-   *   // vue: <input @input="onInput">
-   * 
-   *   const bangumiInfo$ = apiSearch.get('魔女之旅');
-   *   
-   *   // vue: start loading animation
-   * 
-   *   input$.pipe(
-   *     debounceTime(1000),
-   *     tap((input: string) => {
-   *       console.log('input', input)
-   *       // clear Search Result List
-   *     }),
-   *
-   *     // switchMap 把输入 keyword 查询为 bangumiInfo$ 流，多次输入停用前一次查询
-   *     switchMap((input: string) => apiSearch(input, site)),
-   *
-   *     tap((bangumi: BangumiRule) => console.log(bangumi)),
-   *     tap((bangumi: BangumiRule) => {
-   *       console.log('bangumi', bangumi)
-   *       // set bangumi info to Search Result List
-   *     }),
-   *   ).subscribe({
-   *     complete() {
-   *       // end of stream, stop loading animation 
-   *     },
-   *   })
-   * ```
+   * 使用接口方式是监听连接消息后，转为 Observable 配合外层调用时 switchMap 订阅使用
    */
   get(keyword: string, site = 'mikan'): Observable<BangumiRule> { 
     const bangumiInfo$ = new Observable<BangumiRule>(observer => {
@@ -64,11 +21,13 @@ export const apiSearch = {
           const data: BangumiRule = JSON.parse(ev.data);
           observer.next(data);
         } catch (error) {
-          observer.error(error);
+          console.error('[/search/bangumi] Parse Error |', { keyword }, 'response:', ev.data)
         }
       };
 
-      eventSource.onerror = ev => observer.error(ev);
+      eventSource.onerror = ev => {
+        console.error('[/search/bangumi] Server Error |', { keyword }, 'error:', ev)
+      };
 
       return () => {
         eventSource.close();
