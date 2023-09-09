@@ -7,13 +7,14 @@ import {
   Power,
   Refresh,
 } from '@icon-park/vue-next';
+import { ruleTemplate } from "#/bangumi";
 import type {BangumiRule} from "#/bangumi";
 
 const {t, changeLocale} = useMyI18n();
 const {running, onUpdate, offUpdate} = useAppInfo();
 
 const showAccount = ref(false);
-const showAdd = ref(false);
+const showAddRSS = ref(false);
 const searchRule = ref<BangumiRule>()
 
 const {start, pause, shutdown, restart, resetRule} = useProgramStore();
@@ -62,10 +63,19 @@ const items = [
 const onSearchFocus = ref(false);
 
 function addSearchResult(bangumi: BangumiRule) {
-  showAdd.value = true;
+  showAddRSS.value = true;
   searchRule.value = bangumi;
   console.log('searchRule', searchRule.value);
 }
+
+watch(showAddRSS, (val) => {
+  if (!val) {
+    searchRule.value = ruleTemplate;
+    setTimeout(() => {
+      onSearchFocus.value = false;
+    }, 300);
+  }
+});
 
 onBeforeMount(() => {
   onUpdate();
@@ -85,19 +95,20 @@ onUnmounted(() => {
       </div>
 
       <ab-search-bar @add-bangumi="addSearchResult"/>
+      <div text-h2>{{ showAddRSS }}</div>
     </div>
 
     <div ml-auto>
       <ab-status-bar
           :items="items"
           :running="running"
-          @click-add="() => (showAdd = true)"
+          @click-add="() => (showAddRSS = true)"
           @change-lang="() => changeLocale()"
       ></ab-status-bar>
     </div>
 
     <ab-change-account v-model:show="showAccount"></ab-change-account>
 
-    <ab-add-bangumi v-model:show="showAdd" v-model:searchRule="searchRule"></ab-add-bangumi>
+    <ab-add-rss v-model:show="showAddRSS" v-model:rule="searchRule"></ab-add-rss>
   </div>
 </template>

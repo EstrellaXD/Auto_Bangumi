@@ -3,6 +3,7 @@ import { ref } from 'vue';
 
 withDefaults(
     defineProps<{
+      id: number
       name: string;
       url: string;
       enable: boolean;
@@ -26,7 +27,7 @@ const checked = ref(false);
           small
           :model-value="checked"
           @update:model-value="checked = $event"
-          @click="() => $emit('on-select')"
+          @click="() => $emit('on-select', checked, id)"
       />
       <div w-200px text-h3 truncate>{{ name }}</div>
       <div w-300px text-h3 truncate>{{ url }}</div>

@@ -56,15 +56,6 @@ export const useRSSStore = defineStore('rss', () => {
         refresh();
     }
 
-    function handleCheckboxClicked(id: number) {
-        if (selectedRSS.value.includes(id)) {
-            //       delete id in list
-            selectedRSS.value = selectedRSS.value.filter((e) => e !== id);
-        } else {
-            selectedRSS.value.push(id)
-        }
-    }
-
     onUpdateRSSResult(actionSuccess);
     onDeleteRSSResult(actionSuccess);
     onDisableRSSResult(actionSuccess);
@@ -78,6 +69,5 @@ export const useRSSStore = defineStore('rss', () => {
         disableSelected,
         deleteSelected,
         enableSelected,
-        handleCheckboxClicked,
     };
 });

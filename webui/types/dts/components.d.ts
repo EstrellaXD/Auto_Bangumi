@@ -10,7 +10,7 @@ export {}
 declare module '@vue/runtime-core' {
   export interface GlobalComponents {
     AbAdd: typeof import('./../../src/components/basic/ab-add.vue')['default']
-    AbAddBangumi: typeof import('./../../src/components/ab-add-bangumi.vue')['default']
+    AbAddRss: typeof import('./../../src/components/ab-add-rss.vue')['default']
     AbBangumiCard: typeof import('./../../src/components/ab-bangumi-card.vue')['default']
     AbButton: typeof import('./../../src/components/basic/ab-button.vue')['default']
     AbChangeAccount: typeof import('./../../src/components/ab-change-account.vue')['default']

@@ -84,8 +84,5 @@ function onSelect(site: string) {
 
 
 <style lang="scss" scoped>
-.result-enter-active {
-  transition: all 0.3s;
-}
 
 </style>

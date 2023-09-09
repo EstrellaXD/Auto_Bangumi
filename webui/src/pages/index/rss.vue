@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 const {rss, selectedRSS} = storeToRefs(useRSSStore());
-const {getAll, deleteSelected, disableSelected, enableSelected, handleCheckboxClicked} = useRSSStore();
+const {getAll, deleteSelected, disableSelected, enableSelected} = useRSSStore();
 
 onActivated(() => {
   getAll();
@@ -9,6 +9,13 @@ definePage({
   name: 'RSS',
 });
 
+function addSelected(checked: boolean, id: number) {
+  if (!checked) {
+    selectedRSS.value.push(id);
+  } else {
+    selectedRSS.value = selectedRSS.value.filter((i) => i !== id);
+  }
+}
 
 </script>
 
@@ -31,13 +38,14 @@ definePage({
       <div space-y-12px>
         <ab-rss-item
             v-for="i in rss"
+            :id="i.id"
             :key="i.id"
             :name="i.name"
             :url="i.url"
             :enable="i.enabled"
             :parser="i.parser"
             :aggregate="i.aggregate"
-            @on-select="handleCheckboxClicked(i.id)"
+            @on-select="addSelected"
         >
         </ab-rss-item>
       </div>

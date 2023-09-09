@@ -13,8 +13,7 @@ const message = useMessage();
 const { getAll } = useBangumiStore();
 
 const rss = ref<RSS>(rssTemplate);
-const searchRule = defineModel<BangumiRule>('searchRule', { default: null });
-const rule = ref<BangumiRule>(ruleTemplate);
+const rule = defineModel<BangumiRule>('rule', { default: ruleTemplate })
 const parserType = ['mikan', 'tmdb', 'parser'];
 
 const window = reactive({
@@ -33,10 +32,9 @@ watch(show, (val) => {
     setTimeout(() => {
       window.next = false;
     }, 300);
-  } else if (val || searchRule.value)  {
+  } else if (val && rule.value.official_title !== '') {
     window.next = true;
     window.rule = true;
-    rule.value = searchRule.value;
   }
 });
 
@@ -48,7 +46,6 @@ async function addRss() {
       window.loading = true;
       const data = await apiRSS.add(rss.value);
       window.loading = false;
-      window.next = true;
       message.success(data.msg_en);
       show.value = false;
       console.log('rss', data);
@@ -161,7 +158,6 @@ async function subscribe() {
 
     <div v-else-if="window.rule">
       <ab-rule v-model:rule="rule"></ab-rule>
-
       <div flex="~ justify-end" space-x-10px>
         <ab-button size="small" :loading="loading.collect" @click="collect"
           >Collect</ab-button

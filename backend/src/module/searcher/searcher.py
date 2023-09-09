@@ -35,18 +35,16 @@ class SearchTorrent(RequestContent, RSSAnalyser):
             bangumi = self.torrent_to_data(torrent=torrent, rss=rss_item)
             if bangumi and bangumi not in exist_list:
                 exist_list.append(bangumi)
+                bangumi.rss_link = self.special_url(bangumi, site).url
                 yield json.dumps(bangumi.dict(), separators=(',', ':'))
 
-    def search_season(self, data: Bangumi):
+    @staticmethod
+    def special_url(data: Bangumi, site: str) -> RSSItem:
         keywords = [getattr(data, key) for key in SEARCH_KEY if getattr(data, key)]
-        url = search_url("mikan", keywords)
-        torrents = self.search_torrents(url)
+        url = search_url(site, keywords)
+        return url
+
+    def search_season(self, data: Bangumi, site: str = "mikan") -> list[Torrent]:
+        rss_item = self.special_url(data, site)
+        torrents = self.search_torrents(rss_item)
         return [torrent for torrent in torrents if data.title_raw in torrent.name]
-
-
-if __name__ == "__main__":
-    with SearchTorrent() as st:
-        keywords = ["无职转生", "第二季"]
-        bangumis = st.analyse_keyword(keywords)
-        for bangumi in bangumis:
-            print(bangumi)
