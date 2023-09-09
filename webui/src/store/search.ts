@@ -3,8 +3,7 @@ import {
     EMPTY,
     Subject,
     debounceTime,
-    switchMap,
-    tap,
+    switchMap, tap,
 } from "rxjs";
 import type {BangumiRule} from "#/bangumi";
 
@@ -16,12 +15,13 @@ export function useSearchStore() {
     const providers = ref<string[]>(['mikan', 'dmhy', 'nyaa']);
     const provider = ref<string>(providers.value[0]);
 
-    const loading = ref<boolean>(true);
+    const loading = ref<boolean>(false);
 
     const input$ = new Subject<string>();
 
     watch(inputValue, input => {
         input$.next(input);
+        loading.value = !!input;
     })
 
     const {execute: getProviders, onResult: onGetProvidersResult} = useApi(
@@ -50,15 +50,16 @@ export function useSearchStore() {
         }),
         tap((bangumi: BangumiRule) => {
             bangumiList.value.push(bangumi);
-
         }),
     ).subscribe()
 
     function onSearch() {
-        console.log(inputValue.value, 'onSearch');
-        loading.value = true;
         input$.next(inputValue.value);
-        loading.value = false;
+    }
+
+    function clearSearch() {
+        inputValue.value = '';
+        bangumiList.value = [];
     }
 
     return {
@@ -66,6 +67,7 @@ export function useSearchStore() {
         bangumiInfo$,
         inputValue,
         onSearch,
+        clearSearch,
         loading,
         provider,
         getProviders,

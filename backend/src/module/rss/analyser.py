@@ -14,9 +14,13 @@ logger = logging.getLogger(__name__)
 class RSSAnalyser(TitleParser):
     def official_title_parser(self, bangumi: Bangumi, rss: RSSItem, torrent: Torrent):
         if rss.parser == "mikan":
-            bangumi.poster_link, bangumi.official_title = self.mikan_parser(
-                torrent.homepage
-            )
+            try:
+                bangumi.poster_link, bangumi.official_title = self.mikan_parser(
+                    torrent.homepage
+                )
+            except AttributeError:
+                logger.warning("[Parser] Mikan torrent has no homepage info.")
+                pass
         elif rss.parser == "tmdb":
             tmdb_title, season, year, poster_link = self.tmdb_parser(
                 bangumi.official_title, bangumi.season, settings.rss_parser.language

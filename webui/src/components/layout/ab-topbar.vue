@@ -7,12 +7,14 @@ import {
   Power,
   Refresh,
 } from '@icon-park/vue-next';
+import type {BangumiRule} from "#/bangumi";
 
 const {t, changeLocale} = useMyI18n();
 const {running, onUpdate, offUpdate} = useAppInfo();
 
-const show = ref(false);
+const showAccount = ref(false);
 const showAdd = ref(false);
+const searchRule = ref<BangumiRule>()
 
 const {start, pause, shutdown, restart, resetRule} = useProgramStore();
 
@@ -52,12 +54,18 @@ const items = [
     label: () => t('topbar.profile.title'),
     icon: Me,
     handle: () => {
-      show.value = true;
+      showAccount.value = true;
     },
   },
 ];
 
 const onSearchFocus = ref(false);
+
+function addSearchResult(bangumi: BangumiRule) {
+  showAdd.value = true;
+  searchRule.value = bangumi;
+  console.log('searchRule', searchRule.value);
+}
 
 onBeforeMount(() => {
   onUpdate();
@@ -76,7 +84,7 @@ onUnmounted(() => {
         <img v-show="onSearchFocus === false" src="/images/AutoBangumi.svg" alt="AutoBangumi" h-24px rel top-2px/>
       </div>
 
-      <ab-search-bar/>
+      <ab-search-bar @add-bangumi="addSearchResult"/>
     </div>
 
     <div ml-auto>
@@ -88,8 +96,8 @@ onUnmounted(() => {
       ></ab-status-bar>
     </div>
 
-    <ab-change-account v-model:show="show"></ab-change-account>
+    <ab-change-account v-model:show="showAccount"></ab-change-account>
 
-    <ab-add-bangumi v-model:show="showAdd"></ab-add-bangumi>
+    <ab-add-bangumi v-model:show="showAdd" v-model:searchRule="searchRule"></ab-add-bangumi>
   </div>
 </template>

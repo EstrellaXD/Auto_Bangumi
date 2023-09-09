@@ -10,6 +10,7 @@ const {
   provider,
   loading,
   onSearch,
+  clearSearch,
   inputValue,
   bangumiList,
 } = useSearchStore();
@@ -63,9 +64,11 @@ function onSelect(site: string) {
     </div>
   </div>
   <div
-      abs top-84px left-192px space-y-12px z-8
+      v-on-click-outside="clearSearch"
+      abs top-84px left-192px z-8
   >
-    <TransitionGroup name="search-result">
+    <TransitionGroup name="result" tag="ab-bangumi-card" space-y-12px>
+      <!--      TODO: Transition Effect to fix.   -->
       <ab-bangumi-card
           v-for="bangumi in bangumiList"
           :key="bangumi.id"
@@ -81,7 +84,7 @@ function onSelect(site: string) {
 
 
 <style lang="scss" scoped>
-.search-result-enter-active, .search-result-leave-active {
+.result-enter-active {
   transition: all 0.3s;
 }
 
