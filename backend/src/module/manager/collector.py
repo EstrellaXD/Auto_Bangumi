@@ -38,7 +38,8 @@ class SeasonCollector(DownloadClient):
                     msg_zh=f"收集 {bangumi.official_title} 第 {bangumi.season} 季失败。",
                 )
 
-    def subscribe_season(self, data: Bangumi):
+    @staticmethod
+    def subscribe_season(data: Bangumi):
         with RSSEngine() as engine:
             data.added = True
             data.eps_collect = True
@@ -46,13 +47,8 @@ class SeasonCollector(DownloadClient):
                 rss_link=data.rss_link, name=data.official_title, aggregate=False
             )
             engine.bangumi.add(data)
-            engine.refresh_rss(self)
-            return ResponseModel(
-                status=True,
-                status_code=200,
-                msg_en=f"Subscribe {data.official_title} successfully.",
-                msg_zh=f"订阅 {data.official_title} 成功。",
-            )
+            return engine.download_bangumi(data)
+
 
 
 def eps_complete():

@@ -95,7 +95,6 @@ onUnmounted(() => {
       </div>
 
       <ab-search-bar @add-bangumi="addSearchResult"/>
-      <div text-h2>{{ showAddRSS }}</div>
     </div>
 
     <div ml-auto>
@@ -104,11 +103,9 @@ onUnmounted(() => {
           :running="running"
           @click-add="() => (showAddRSS = true)"
           @change-lang="() => changeLocale()"
-      ></ab-status-bar>
+      />
     </div>
-
     <ab-change-account v-model:show="showAccount"></ab-change-account>
-
     <ab-add-rss v-model:show="showAddRSS" v-model:rule="searchRule"></ab-add-rss>
   </div>
 </template>
