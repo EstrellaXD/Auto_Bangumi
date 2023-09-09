@@ -13,8 +13,8 @@ const message = useMessage();
 const { getAll } = useBangumiStore();
 
 const rss = ref<RSS>(rssTemplate);
+const searchRule = defineModel<BangumiRule>('searchRule', { default: null });
 const rule = ref<BangumiRule>(ruleTemplate);
-
 const parserType = ['mikan', 'tmdb', 'parser'];
 
 const window = reactive({
@@ -33,6 +33,10 @@ watch(show, (val) => {
     setTimeout(() => {
       window.next = false;
     }, 300);
+  } else if (val || searchRule.value)  {
+    window.next = true;
+    window.rule = true;
+    rule.value = searchRule.value;
   }
 });
 
@@ -59,9 +63,6 @@ async function addRss() {
       window.loading = true;
       const data = await apiDownload.analysis(rss.value);
       window.loading = false;
-      const response = await apiRSS.add(rss.value);
-      message.success(response.msg_en);
-      console.log('rss', response);
       rule.value = data;
       window.next = true;
       window.rule = true;

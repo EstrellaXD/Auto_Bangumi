@@ -3,8 +3,7 @@ import {
     EMPTY,
     Subject,
     debounceTime,
-    switchMap,
-    tap,
+    switchMap, tap,
 } from "rxjs";
 import type {BangumiRule} from "#/bangumi";
 
@@ -12,15 +11,17 @@ import type {BangumiRule} from "#/bangumi";
 export function useSearchStore() {
     const bangumiList = ref<BangumiRule[]>([]);
     const inputValue = ref<string>('');
-    const selectingProvider = ref<boolean>(false);
 
     const providers = ref<string[]>(['mikan', 'dmhy', 'nyaa']);
-    const provider = ref<string>('mikan');
+    const provider = ref<string>(providers.value[0]);
+
+    const loading = ref<boolean>(false);
 
     const input$ = new Subject<string>();
 
     watch(inputValue, input => {
         input$.next(input);
+        loading.value = !!input;
     })
 
     const {execute: getProviders, onResult: onGetProvidersResult} = useApi(
@@ -44,8 +45,8 @@ export function useSearchStore() {
             // 有输入更新后清理之前的搜索结果
             bangumiList.value = [];
             return input
-              ? apiSearch.get(input, provider.value)
-              : EMPTY
+                ? apiSearch.get(input, provider.value)
+                : EMPTY
         }),
         tap((bangumi: BangumiRule) => {
             bangumiList.value.push(bangumi);
@@ -56,19 +57,18 @@ export function useSearchStore() {
         input$.next(inputValue.value);
     }
 
-    function onSelect(site: string) {
-        provider.value = site;
-        selectingProvider.value = !selectingProvider.value
-        onSearch();
+    function clearSearch() {
+        inputValue.value = '';
+        bangumiList.value = [];
     }
 
     return {
         input$,
         bangumiInfo$,
         inputValue,
-        selectingProvider,
-        onSelect,
         onSearch,
+        clearSearch,
+        loading,
         provider,
         getProviders,
         providers,

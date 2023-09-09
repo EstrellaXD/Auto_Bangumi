@@ -14,8 +14,11 @@ definePage({
 
 <template>
   <div overflow-auto mt-12px flex-grow>
-    <div flex="~ wrap" gap-y-12px gap-x-32px>
-      <transition-group name="fade">
+    <div>
+      <TransitionGroup
+          name="bangumi" tag="div"
+          flex="~ wrap" gap-y-12px gap-x-32px>
+        <!--      TODO: Transition Effect to fix.   -->
         <ab-bangumi-card
             v-for="i in bangumi"
             :key="i.id"
@@ -24,7 +27,7 @@ definePage({
             type="primary"
             @click="() => openEditPopup(i)"
         ></ab-bangumi-card>
-      </transition-group>
+      </TransitionGroup>
 
       <ab-edit-rule
           v-model:show="editRule.show"
@@ -40,7 +43,7 @@ definePage({
 </template>
 
 <style>
-.fade-enter-active, .fade-leave-active {
+.bangumi-enter-active, .bangumi-leave-active {
   transition: opacity .3s;
 }
 </style>

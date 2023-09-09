@@ -2,7 +2,7 @@ import {
   Observable,
 } from 'rxjs';
 
-import type { BangumiRule } from '#/bangumi';
+import type { BangumiRule, BangumiAPI } from '#/bangumi';
 
 export const apiSearch = {
   /**
@@ -18,7 +18,12 @@ export const apiSearch = {
 
       eventSource.onmessage = ev => {
         try {
-          const data: BangumiRule = JSON.parse(ev.data);
+          const apiData: BangumiAPI = JSON.parse(ev.data);
+            const data: BangumiRule = {
+                ...apiData,
+                filter: apiData.filter.split(','),
+                rss_link: apiData.rss_link.split(','),
+            }
           observer.next(data);
         } catch (error) {
           console.error('[/search/bangumi] Parse Error |', { keyword }, 'response:', ev.data)

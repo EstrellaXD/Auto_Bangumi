@@ -1,28 +1,25 @@
 <script lang="ts" setup>
 import {Down, Search} from '@icon-park/vue-next';
-import { vOnClickOutside } from '@vueuse/components'
+import { NSpin } from 'naive-ui';
+import { watch } from 'vue';
 
-defineEmits(['click']);
+withDefaults(
+  defineProps<{
+    provider: string;
+    loading: boolean;
+  }>(),
+  {
+    provider: '',
+    loading: false,
+  }
+);
 
-const {
-  onSelect,
-  onSearch,
-  inputValue,
-  selectingProvider,
-  provider,
-  providers,
-  getProviders,
-  bangumiList
-} = useSearchStore();
+defineEmits(['select', 'search']);
 
-function closeModal() {
-  selectingProvider.value = false;
-  bangumiList.value = [];
-}
+const inputValue = defineModel<string>('inputValue');
 
-
-onMounted(() => {
-  getProviders();
+watch(inputValue, (val) => {
+  console.log(val);
 });
 
 </script>
@@ -41,86 +38,47 @@ onMounted(() => {
       shadow-inner
   >
     <Search
+        v-if="!loading"
         theme="outline"
         size="24"
         fill="#fff"
         is-btn
         btn-click
-        @click="onSearch"
+        @click="$emit('search')"
     />
+    <NSpin v-else :size="20"/>
 
     <input
         v-model="inputValue"
         type="text"
         :placeholder="$t('topbar.search.placeholder')"
         input-reset
-        @keyup.enter="onSearch"
+        @keyup.enter="$emit('search')"
     />
-    <div
-        h-full
-        f-cer
-        justify-between
-        px-12px
-        w-100px
-        is-btn
-        class="provider-select"
-        @click="() => selectingProvider = !selectingProvider"
-    >
-      <div text-h3 truncate>
-        {{ provider }}
-      </div>
-      <div class="provider-select">
-        <Down/>
-      </div>
-    </div>
-  </div>
-  <div
-      v-show="selectingProvider"
-      v-on-click-outside="closeModal"
-      abs top-84px
-      left-540px w-100px
-      rounded-12px shadow bg-white z-99 overflow-hidden>
-    <div
-        v-for="site in providers"
-        :key="site"
-        hover:bg-theme-row
-        is-btn
-        @click="() => onSelect(site)"
-    >
       <div
-          text-h3
-          text-primary
-          hover:text-white
-          p-12px
-          truncate
+          h-full
+          f-cer
+          justify-between
+          px-12px
+          w-100px
+          class="provider"
+          is-btn
+          @click="$emit('select')"
       >
-        {{ site }}
+        <div text-h3 truncate>
+          {{ provider }}
+        </div>
+        <div class="provider">
+          <Down/>
+        </div>
       </div>
-    </div>
-  </div>
-  <div
-      abs top-84px left-200px space-y-8px z-98
-  >
-    <ab-bangumi-card
-        v-for="(item, index) in bangumiList"
-        :key="index"
-        v-on-click-outside="closeModal"
-        :bangumi="item"
-        type="search"
-        transition-opacity
-        @click="$emit('click', item)"
-    />
   </div>
 </template>
 
 <style lang="scss" scoped>
 
-.provider-select {
+.provider {
   background: #4E2A94;
-}
-
-.list-enter-active, .list-leave-active {
-  transition: opacity 0.5s ease;
 }
 
 </style>
