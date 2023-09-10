@@ -38,11 +38,7 @@ class PostNotification:
     def _get_poster(notify: Notification):
         with Database() as db:
             poster_path = db.bangumi.match_poster(notify.official_title)
-        if poster_path:
-            poster_link = "https://mikanani.me" + poster_path
-        else:
-            poster_link = "https://mikanani.me"
-        notify.poster_path = poster_link
+        notify.poster_path = poster_path
 
     def send_msg(self, notify: Notification) -> bool:
         self._get_poster(notify)

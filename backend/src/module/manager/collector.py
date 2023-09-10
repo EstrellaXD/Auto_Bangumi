@@ -50,7 +50,6 @@ class SeasonCollector(DownloadClient):
             return engine.download_bangumi(data)
 
 
-
 def eps_complete():
     with RSSEngine() as engine:
         datas = engine.bangumi.not_complete()
