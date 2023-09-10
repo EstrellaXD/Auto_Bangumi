@@ -1,4 +1,4 @@
-import {defineConfig} from "vitepress";
+import {defineConfig} from 'vitepress';
 
 
 const version = `v3.1`
@@ -46,10 +46,8 @@ export default defineConfig({
         nav: [
             {text: "项目说明", link: "/home/"},
             {text: "快速开始", link: "/deploy/quick-start"},
-            // { text: "排错流程", link: "/faq/排错流程" },
-            {text: "常见问题", link: "/faq/常见问题"},
+            {text: "常见问题", link: "/faq/"},
         ],
-
         footer: {
             message: `AutoBangumi Released under the MIT License. (latest: ${version})`,
             copyright: 'Copyright © 2021-present @EstrellaXD & AutoBangumi Contributors',
@@ -145,19 +143,23 @@ export default defineConfig({
                     {
                         text: "重命名",
                         link: "/feature/rename",
+                    },
+                    {
+                        text: "搜索番组",
+                        link: "/feature/search",
                     }
                 ]
             },
             {
                 text: "FAQ",
                 items: [
-                    // {
-                    //   text: "排错流程",
-                    //   link: "/faq/排错流程",
-                    // },
                     {
                         text: "常见问题",
-                        link: "/faq/常见问题",
+                        link: "/faq/",
+                    },
+                    {
+                        text: "排错流程",
+                        link: "/faq/troubleshooting",
                     },
                     {
                         text: "网络问题",
@@ -176,10 +178,10 @@ export default defineConfig({
                         text: "3.0 更新说明",
                         link: "/changelog/3.0",
                     },
-                    // {
-                    //   text: "2.6 更新说明",
-                    //   link: "/changelog/2.6",
-                    // },
+                    {
+                      text: "2.6 更新说明",
+                      link: "/changelog/2.6",
+                    },
                 ],
             },
             {
