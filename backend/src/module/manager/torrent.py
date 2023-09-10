@@ -120,7 +120,7 @@ class TorrentManager(Database):
             )
         else:
             # Move torrent
-            match_list = self.__match_torrents_list(old_data.save_path)
+            match_list = self.__match_torrents_list(old_data)
             with DownloadClient() as client:
                 path = client._gen_save_path(data)
                 if match_list:
