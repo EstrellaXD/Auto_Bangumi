@@ -109,7 +109,7 @@ class TorrentManager(Database):
             )
 
     def update_rule(self, bangumi_id, data: BangumiUpdate):
-        old_data = self.bangumi.search_id(bangumi_id)
+        old_data: Bangumi = self.bangumi.search_id(bangumi_id)
         if not old_data:
             logger.error(f"[Manager] Can't find data with {bangumi_id}")
             return ResponseModel(
