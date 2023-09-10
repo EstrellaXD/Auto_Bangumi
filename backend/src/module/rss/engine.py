@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 class RSSEngine(Database):
     def __init__(self, _engine=engine):
         super().__init__(_engine)
+        self._to_refresh = False
 
     @staticmethod
     def _get_torrents(rss: RSSItem) -> list[Torrent]:
@@ -123,3 +124,24 @@ class RSSEngine(Database):
                     torrent.downloaded = True
             # Add all torrents to database
             self.torrent.add_all(new_torrents)
+
+    def download_bangumi(self, bangumi: Bangumi):
+        with RequestContent() as req:
+            torrents = req.get_torrents(bangumi.rss_link, bangumi.filter.replace(",", "|"))
+            if torrents:
+                with DownloadClient() as client:
+                    client.add_torrent(torrents, bangumi)
+                    self.torrent.add_all(torrents)
+                    return ResponseModel(
+                        status=True,
+                        status_code=200,
+                        msg_en=f"[Engine] Download {bangumi.official_title} successfully.",
+                        msg_zh=f"下载 {bangumi.official_title} 成功。",
+                    )
+            else:
+                return ResponseModel(
+                    status=False,
+                    status_code=406,
+                    msg_en=f"[Engine] Download {bangumi.official_title} failed.",
+                    msg_zh=f"[Engine] 下载 {bangumi.official_title} 失败。",
+                )
