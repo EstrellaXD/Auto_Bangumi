@@ -28,14 +28,20 @@ const mobile = isMobile();
     </main>
   </div>
   <div v-else wh-screen bg-page>
-<!--    <RouterView v-slot="{ Component }">-->
-<!--      <KeepAlive>-->
-<!--        <component :is="Component"/>-->
-<!--      </KeepAlive>-->
-<!--    </RouterView>-->
-    <div flex-col justify-between>
+    <!--    <RouterView v-slot="{ Component }">-->
+    <!--      <KeepAlive>-->
+    <!--        <component :is="Component"/>-->
+    <!--      </KeepAlive>-->
+    <!--    </RouterView>-->
+    <div abs flex-col wh-full inline-flex z-10 justify-between class="mobile-component">
       <ab-topbar :mobile="true"/>
       <ab-bottombar/>
     </div>
   </div>
 </template>
+
+<style lang="scss">
+.mobile-component {
+  position: fixed;
+}
+</style>
