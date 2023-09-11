@@ -38,6 +38,9 @@ dependencies:
   vue-inline-svg:
     specifier: ^3.1.2
     version: 3.1.2(vue@3.3.4)
+  vue-mobile-detection:
+    specifier: ^2.0.1
+    version: 2.0.1
   vue-router:
     specifier: ^4.2.1
     version: 4.2.1(vue@3.3.4)
@@ -9843,6 +9846,12 @@ packages:
     resolution: {integrity: sha512-K01sLANBnjosObee4JrBu/igXpYIFhQfy4EcEyVWxEWf6nmrxp7Isz6pmeRCsWx6XGrGWfrQH3uNwt4nOmrFdA==}
     peerDependencies:
       vue: ^3
+    dependencies:
+      vue: 3.3.4
+    dev: false
+
+  /vue-mobile-detection@2.0.1:
+    resolution: {integrity: sha512-ziB0Rp8Snp08+p7E+WCRzeYYYp0ddPaqHlFxWN0kpLAddB5D/PRwgIv18P08hkhwNFRgBQ71T19jNIbttR7P0g==}
     dependencies:
       vue: 3.3.4
     dev: false

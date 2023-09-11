@@ -12,6 +12,7 @@ declare module '@vue/runtime-core' {
     AbAdd: typeof import('./../../src/components/basic/ab-add.vue')['default']
     AbAddRss: typeof import('./../../src/components/ab-add-rss.vue')['default']
     AbBangumiCard: typeof import('./../../src/components/ab-bangumi-card.vue')['default']
+    AbBottombar: typeof import('./../../src/components/layout/ab-bottombar.vue')['default']
     AbButton: typeof import('./../../src/components/basic/ab-button.vue')['default']
     AbChangeAccount: typeof import('./../../src/components/ab-change-account.vue')['default']
     AbCheckbox: typeof import('./../../src/components/basic/ab-checkbox.vue')['default']

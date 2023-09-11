@@ -7,8 +7,14 @@ import {
   Power,
   Refresh,
 } from '@icon-park/vue-next';
-import { ruleTemplate } from "#/bangumi";
+import {ruleTemplate} from "#/bangumi";
 import type {BangumiRule} from "#/bangumi";
+
+defineProps(
+    {
+      mobile: Boolean,
+    },
+);
 
 const {t, changeLocale} = useMyI18n();
 const {running, onUpdate, offUpdate} = useAppInfo();
@@ -87,7 +93,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div h-60px bg-theme-row text-white rounded-16px fx-cer px-24px>
+  <div v-if="!mobile" h-60px bg-theme-row text-white rounded-16px fx-cer px-24px>
     <div flex space-x-16px>
       <div fx-cer space-x-16px>
         <img src="/images/logo-light.svg" alt="favicon" wh-24px/>
@@ -107,5 +113,12 @@ onUnmounted(() => {
     </div>
     <ab-change-account v-model:show="showAccount"></ab-change-account>
     <ab-add-rss v-model:show="showAddRSS" v-model:rule="searchRule"></ab-add-rss>
+  </div>
+  <div v-else px-16px>
+    <div f-cer rounded-16px p-16px space-x-12px bg-theme-row>
+      <img src="/images/logo-light.svg" alt="favicon" wh-24px/>
+      <img v-show="onSearchFocus === false" src="/images/AutoBangumi.svg" alt="AutoBangumi" h-24px rel top-2px/>
+    </div>
+
   </div>
 </template>

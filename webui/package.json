@@ -29,6 +29,7 @@
     "vue": "^3.3.4",
     "vue-i18n": "^9.2.2",
     "vue-inline-svg": "^3.1.2",
+    "vue-mobile-detection": "^2.0.1",
     "vue-router": "^4.2.1"
   },
   "devDependencies": {
