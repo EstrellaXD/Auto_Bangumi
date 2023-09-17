@@ -32,24 +32,22 @@ class Program(RenameThread, RSSThread):
 
     def startup(self):
         self.__start_info()
-        if self.first_run or not self.database:
+        if not self.database:
             first_run()
-            logger.info("First run detected, please configure the program in webui.")
+            logger.info("[Core] No db file exists, create database file.")
             return {"status": "First run detected."}
         if self.legacy_data:
             logger.info(
-                "Legacy data detected, starting data migration, please wait patiently."
+                "[Core] Legacy data detected, starting data migration, please wait patiently."
             )
             data_migration()
         elif self.version_update:
             # Update database
             from_30_to_31()
-            logger.info("Database updated.")
+            logger.info("[Core] Database updated.")
         self.start()
 
     def start(self):
-        if self.first_run:
-            return {"status": "Not ready to start."}
         self.stop_event.clear()
         settings.load()
         if self.downloader_status:
@@ -60,6 +58,7 @@ class Program(RenameThread, RSSThread):
             logger.info("Program running.")
             return {"status": "Program started."}
         else:
+            self.stop_event.set()
             return {"status": "Can't connect to downloader. Program not paused."}
 
     def stop(self):
@@ -80,5 +79,5 @@ class Program(RenameThread, RSSThread):
         if not self.version_update:
             return {"status": "No update found."}
         else:
-            start_up(True)
+            start_up()
             return {"status": "Database updated."}
