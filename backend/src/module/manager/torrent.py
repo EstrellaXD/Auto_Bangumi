@@ -110,7 +110,21 @@ class TorrentManager(Database):
 
     def update_rule(self, bangumi_id, data: BangumiUpdate):
         old_data: Bangumi = self.bangumi.search_id(bangumi_id)
-        if not old_data:
+        if old_data:
+            # Move torrent
+            match_list = self.__match_torrents_list(old_data)
+            with DownloadClient() as client:
+                path = client._gen_save_path(data)
+                if match_list:
+                    client.move_torrent(match_list, path)
+            self.bangumi.update(data, bangumi_id)
+            return ResponseModel(
+                status_code=200,
+                status=True,
+                msg_en=f"Update rule for {data.official_title}",
+                msg_zh=f"更新 {data.official_title} 规则",
+            )
+        else:
             logger.error(f"[Manager] Can't find data with {bangumi_id}")
             return ResponseModel(
                 status_code=406,
@@ -118,20 +132,7 @@ class TorrentManager(Database):
                 msg_en=f"Can't find data with {bangumi_id}",
                 msg_zh=f"无法找到 id {bangumi_id} 的数据",
             )
-        else:
-            # Move torrent
-            match_list = self.__match_torrents_list(old_data)
-            with DownloadClient() as client:
-                path = client._gen_save_path(data)
-                if match_list:
-                    client.move_torrent(match_list, path)
-            self.bangumi.update(data)
-            return ResponseModel(
-                status_code=200,
-                status=True,
-                msg_en=f"Update rule for {data.official_title}",
-                msg_zh=f"更新 {data.official_title} 规则",
-            )
+
 
     def search_all_bangumi(self):
         datas = self.bangumi.search_all()

@@ -4,7 +4,7 @@ from sqlmodel import Session, select, delete, or_, and_
 from sqlalchemy.sql import func
 from typing import Optional
 
-from module.models import Bangumi
+from module.models import Bangumi, BangumiUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +23,13 @@ class BangumiDatabase:
         self.session.commit()
         logger.debug(f"[Database] Insert {len(datas)} bangumi into database.")
 
-    def update(self, data: Bangumi) -> bool:
-        db_data = self.session.get(Bangumi, data.id)
+    def update(self, data: Bangumi | BangumiUpdate, _id: int = None) -> bool:
+        if _id and isinstance(data, BangumiUpdate):
+            db_data = self.session.get(Bangumi, _id)
+        elif isinstance(data, Bangumi):
+            db_data = self.session.get(Bangumi, data.id)
+        else:
+            return False
         if not db_data:
             return False
         bangumi_data = data.dict(exclude_unset=True)
