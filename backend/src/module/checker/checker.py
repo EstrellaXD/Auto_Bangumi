@@ -50,7 +50,8 @@ class Checker:
     @staticmethod
     def check_downloader() -> bool:
         try:
-            response = requests.get(settings.downloader.host, timeout=2)
+            url = f"http://{settings.downloader.host}" if "://" not in settings.downloader.host else f"{settings.downloader.host}"
+            response = requests.get(url, timeout=2)
             if settings.downloader.type in response.text.lower():
                 with DownloadClient() as client:
                     if client.authed:
@@ -59,16 +60,18 @@ class Checker:
                         return False
             else:
                 return False
-        except requests.exceptions.Timeout:
+        except requests.exceptions.ReadTimeout:
             logger.error("[Checker] Downloader connect timeout.")
             return False
         except requests.exceptions.ConnectionError:
             logger.error("[Checker] Downloader connect failed.")
             return False
-        except requests.exceptions.InvalidSchema:
-            logger.error("[Checker] No route to downloader.")
+        except Exception as e:
+            logger.error(f"[Checker] Downloader connect failed: {e}")
             return False
 
 
 if __name__ == "__main__":
-    print(Checker().check_downloader())
+    # print(Checker().check_downloader())
+    requests.get("http://162.200.20.1", timeout=2)
+

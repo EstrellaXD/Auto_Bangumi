@@ -68,28 +68,27 @@ function onSelect(site: string) {
       v-on-click-outside="clearSearch"
       abs top-84px left-192px z-8
   >
-    <transition-group name="result" tag="div" space-y-12px>
-      <!--      TODO: Transition Effect to fix.   -->
-      <ab-bangumi-card
-          v-for="bangumi in bangumiList"
-          :key="bangumi.id"
-          :bangumi="bangumi"
-          type="search"
-          @click="() => $emit('add-bangumi', bangumi)"
-      />
+    <transition-group name="list" tag="ul" space-y-12px>
+      <li v-for="bangumi in bangumiList" :key="bangumi.id">
+        <ab-bangumi-card
+            :bangumi="bangumi"
+            type="search"
+            @click="() => $emit('add-bangumi', bangumi)"
+        />
+      </li>
     </transition-group>
   </div>
 </template>
 
 
 <style lang="scss" scoped>
-.result-enter-active,
-.result-leave-active {
+.list-enter-active,
+.list-leave-active {
   transition: all 0.5s ease;
 }
 
-.result-enter-from,
-.result-leave-to {
+.list-enter-from,
+.list-leave-to {
   opacity: 0;
 }
 
