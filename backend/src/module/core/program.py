@@ -2,6 +2,7 @@ import logging
 
 from module.conf import VERSION, settings
 from module.update import data_migration, from_30_to_31, start_up, first_run
+from module.models import ResponseModel
 
 from .sub_thread import RenameThread, RSSThread
 
@@ -56,24 +57,50 @@ class Program(RenameThread, RSSThread):
             if self.enable_rss:
                 self.rss_start()
             logger.info("Program running.")
-            return {"status": "Program started."}
+            return ResponseModel(
+                status=True,
+                status_code=200,
+                msg_en="Program started.",
+                msg_zh="程序启动成功。",
+            )
         else:
             self.stop_event.set()
-            return {"status": "Can't connect to downloader. Program not paused."}
+            logger.warning("Program failed to start.")
+            return ResponseModel(
+                status=False,
+                status_code=406,
+                msg_en="Program failed to start.",
+                msg_zh="程序启动失败。",
+            )
 
     def stop(self):
         if self.is_running:
             self.stop_event.set()
             self.rename_stop()
             self.rss_stop()
-            return {"status": "Program stopped."}
+            return ResponseModel(
+                status=True,
+                status_code=200,
+                msg_en="Program stopped.",
+                msg_zh="程序停止成功。",
+            )
         else:
-            return {"status": "Program is not running."}
+            return ResponseModel(
+                status=False,
+                status_code=406,
+                msg_en="Program is not running.",
+                msg_zh="程序未运行。",
+            )
 
     def restart(self):
         self.stop()
         self.start()
-        return {"status": "Program restarted."}
+        return ResponseModel(
+            status=True,
+            status_code=200,
+            msg_en="Program restarted.",
+            msg_zh="程序重启成功。",
+        )
 
     def update_database(self):
         if not self.version_update:

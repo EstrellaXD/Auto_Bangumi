@@ -5,6 +5,8 @@ import signal
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
+from .response import u_response
+
 from module.core import Program
 from module.models import APIResponse
 from module.conf import VERSION
@@ -28,11 +30,8 @@ async def shutdown():
 @router.get("/restart", response_model=APIResponse, dependencies=[Depends(get_current_user)])
 async def restart():
     try:
-        program.restart()
-        return JSONResponse(
-            status_code=200,
-            content={"msg_en": "Restart program successfully.", "msg_zh": "重启程序成功。"},
-        )
+        resp = program.restart()
+        return u_response(resp)
     except Exception as e:
         logger.debug(e)
         logger.warning("Failed to restart program")
@@ -45,12 +44,11 @@ async def restart():
         )
 
 
-@router.get("/start", response_model=APIResponse)
-async def start(current_user=Depends(get_current_user)):
-    if not current_user:
-        raise UNAUTHORIZED
+@router.get("/start", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+async def start():
     try:
-        return program.start()
+        resp = program.start()
+        return u_response(resp)
     except Exception as e:
         logger.debug(e)
         logger.warning("Failed to start program")
@@ -63,17 +61,13 @@ async def start(current_user=Depends(get_current_user)):
         )
 
 
-@router.get("/stop")
-async def stop(current_user=Depends(get_current_user)):
-    if not current_user:
-        raise UNAUTHORIZED
-    return program.stop()
+@router.get("/stop", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+async def stop():
+    return u_response(program.stop())
 
 
-@router.get("/status")
-async def program_status(current_user=Depends(get_current_user)):
-    if not current_user:
-        raise UNAUTHORIZED
+@router.get("/status", response_model=dict, dependencies=[Depends(get_current_user)])
+async def program_status():
     if not program.is_running:
         return {
             "status": False,
@@ -88,10 +82,8 @@ async def program_status(current_user=Depends(get_current_user)):
         }
 
 
-@router.get("/shutdown")
-async def shutdown_program(current_user=Depends(get_current_user)):
-    if not current_user:
-        raise UNAUTHORIZED
+@router.get("/shutdown", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+async def shutdown_program():
     program.stop()
     logger.info("Shutting down program...")
     os.kill(os.getpid(), signal.SIGINT)
@@ -102,8 +94,6 @@ async def shutdown_program(current_user=Depends(get_current_user)):
 
 
 # Check status
-@router.get("/check/downloader", tags=["check"], response_model=bool)
-async def check_downloader_status(current_user=Depends(get_current_user)):
-    if not current_user:
-        raise UNAUTHORIZED
+@router.get("/check/downloader", tags=["check"], response_model=bool, dependencies=[Depends(get_current_user)])
+async def check_downloader_status():
     return program.check_downloader()

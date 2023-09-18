@@ -67,7 +67,14 @@ defineEmits(['click']);
       />
     </div>
   </div>
-  <div v-else-if="type === 'search'" w-480px rounded-12px p-4px shadow class="card-border">
+  <div
+      v-else-if="type === 'search'"
+      w-480px rounded-12px p-4px
+      shadow
+      transition-opacity
+      ease-in-out
+      duration-300
+      class="card-border">
     <div
         bg-white rounded-8px p-12px
         fx-cer justify-between
@@ -122,5 +129,16 @@ defineEmits(['click']);
 
 .search-image {
   transform: translateY(-25%);
+}
+
+.bangumi-enter-active,
+.bangumi-leave-active {
+  transition: all 0.3s ease;
+}
+
+.bangumi-enter-from,
+.bangumi-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
 }
 </style>
