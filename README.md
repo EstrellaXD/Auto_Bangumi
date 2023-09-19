@@ -9,6 +9,10 @@
     <img title="python version" src="https://img.shields.io/badge/python-3.11-blue" alt="">
 </p>
 
+<p align="center">
+  <a href="https://www.autobangumi.org">官方网站</a> | <a href="https://www.autobangumi.org/deploy/quick-start.html">快速开始</a> | <a href="https://www.autobangumi.org/changelog/3.0.html">更新日志</a> | <a href="https://t.me/autobangumi">TG 群组</a>
+</p>
+
 # 项目说明
 
 <p align="center">
@@ -16,10 +20,6 @@
 </p>
 
 本项目是基于 [Mikan Project](https://mikanani.me)、[qBittorrent](https://qbittorrent.org) 的全自动追番整理下载工具。只需要在 [Mikan Project](https://mikanani.me) 上订阅番剧，就可以全自动追番。并且整理完成的名称和目录可以直接被 [Plex]()、[Jellyfin]() 等媒体库软件识别，无需二次刮削。
-
-[主项目地址](https://www.github.com/EstrellaXD/Auto_Bangumi)
-/ [WebUI 仓库](https://github.com/Rewrite0/Auto_Bangumi_WebUI)
-/ [Wiki 说明](https://www.github.com/EstrellaXD/Auto_Bangumi/wiki)
 
 ## AutoBangumi 功能说明
 
@@ -59,19 +59,12 @@
 - 内置 TDMB 解析器，可以直接生成完整的 TMDB 格式的文件以及番剧信息。
 - 对于 Mikan RSS 的反代支持。
 
-## 如何开始
-
-- **[部署说明 (Official)](https://github.com/EstrellaXD/Auto_Bangumi/wiki)**
-- **[2.6版本更新说明](https://github.com/EstrellaXD/Auto_Bangumi/wiki/2.6更新说明)**
-- **[3.0版本更新说明](https://github.com/EstrellaXD/Auto_Bangumi/wiki/3.0更新说明)**
-- **[部署说明 (手把手)](https://www.himiku.com/archives/auto-bangumi.html)**
-
 ## 相关群组
 
 - 更新推送：[Telegram Channel](https://t.me/autobangumi_update)
 - Bug 反馈群：[Telegram](https://t.me/+yNisOnDGaX5jMTM9)
 
-## Roadmap
+## [Roadmap](https://github.com/users/EstrellaXD/projects/2)
 
 ***开发中的功能：***
 
@@ -82,18 +75,20 @@
 
 - 对其他站点种子的解析归类。
 - 本地化番剧订阅方式。
-- Transmission & Aria2 的支持。
-
-# 声明
-
-## 致谢
-
-感谢 [Sean](https://github.com/findix) 提供的大量帮助
-感谢 [Rewrite0](https://github.com/Rewrite0) 开发的 WebUI
+- Transmission 的支持。
 
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=EstrellaXD/Auto_Bangumi&type=Date)](https://star-history.com/#EstrellaXD/Auto_Bangumi)
+
+## 贡献
+
+欢迎提供 ISSUE 或者 PR, 贡献代码前建议阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+贡献者名单请见：
+
+<a href="https://github.com/EstrellaXD/Auto_Bangumi/graphs/contributors"><img src="https://contrib.rocks/image?repo=EstrellaXD/Auto_Bangumi"></a>
+
 
 ## Licence
 

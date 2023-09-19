@@ -1,6 +1,6 @@
 name: 项目讨论
 description: discussion
-title: "[Discussion]: "
+title: "[Discussion] "
 labels: ["discussion"]
 body:
   - type: markdown
