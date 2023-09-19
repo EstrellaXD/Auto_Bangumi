@@ -3,6 +3,7 @@ import logging
 from fastapi import HTTPException
 
 from module.models.user import User, UserUpdate, UserLogin
+from module.models import ResponseModel
 from module.security.jwt import get_password_hash, verify_password
 from sqlmodel import Session, select
 
@@ -20,14 +21,29 @@ class UserDatabase:
             raise HTTPException(status_code=404, detail="User not found")
         return result
 
-    def auth_user(self, user: User) -> bool:
+    def auth_user(self, user: User):
         statement = select(User).where(User.username == user.username)
         result = self.session.exec(statement).first()
         if not result:
-            raise HTTPException(status_code=401, detail="User not found")
+            return ResponseModel(
+                status_code=401,
+                status=False,
+                msg_en="User not found",
+                msg_zh="用户不存在"
+            )
         if not verify_password(user.password, result.password):
-            raise HTTPException(status_code=401, detail="Password error")
-        return True
+            return ResponseModel(
+                status_code=401,
+                status=False,
+                msg_en="Incorrect password",
+                msg_zh="密码错误"
+            )
+        return ResponseModel(
+            status_code=200,
+            status=True,
+            msg_en="Login successfully",
+            msg_zh="登录成功"
+        )
 
     def update_user(self, username, update_user: UserUpdate):
         # Update username and password

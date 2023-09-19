@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import JSONResponse, Response
 
+from .response import u_response
+
 from module.models.user import User, UserUpdate
 from module.models import APIResponse
 from module.security.api import (
@@ -20,13 +22,14 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/login", response_model=dict)
 async def login(response: Response, form_data=Depends(OAuth2PasswordRequestForm)):
     user = User(username=form_data.username, password=form_data.password)
-    auth_user(user)
-    token = create_access_token(
-        data={"sub": user.username}, expires_delta=timedelta(days=1)
-    )
-    response.set_cookie(key="token", value=token, httponly=True, max_age=86400)
-    return {"access_token": token, "token_type": "bearer"}
-
+    resp = auth_user(user)
+    if resp.status:
+        token = create_access_token(
+            data={"sub": user.username}, expires_delta=timedelta(days=1)
+        )
+        response.set_cookie(key="token", value=token, httponly=True, max_age=86400)
+        return {"access_token": token, "token_type": "bearer"}
+    return u_response(resp)
 
 @router.get("/refresh_token", response_model=dict, dependencies=[Depends(get_current_user)])
 async def refresh(response: Response):

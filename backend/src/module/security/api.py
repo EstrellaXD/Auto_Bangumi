@@ -45,9 +45,10 @@ def update_user_info(user_data: UserUpdate, current_user):
 
 def auth_user(user: User):
     with Database() as db:
-        if db.user.auth_user(user):
+        resp = db.user.auth_user(user)
+        if resp.status:
             active_user.append(user.username)
-            return True
+        return resp
 
 
 UNAUTHORIZED = HTTPException(
