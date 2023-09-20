@@ -49,6 +49,7 @@ export function useSearchStore() {
                 : EMPTY
         }),
         tap((bangumi: BangumiRule) => {
+            bangumi.id = bangumiList.value.length;
             bangumiList.value.push(bangumi);
         }),
     ).subscribe()

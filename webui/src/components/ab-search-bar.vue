@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import {ref} from 'vue';
 import {vOnClickOutside} from "@vueuse/components";
+import {BangumiRule} from "#/bangumi";
 
 defineEmits(['add-bangumi']);
 const showProvider = ref(false);
@@ -23,6 +24,11 @@ onMounted(() => {
 function onSelect(site: string) {
   provider.value = site;
   showProvider.value = false;
+}
+
+function throwID(bangumi: BangumiRule) {
+  bangumi.id = null
+  return bangumi
 }
 </script>
 
@@ -73,7 +79,7 @@ function onSelect(site: string) {
         <ab-bangumi-card
             :bangumi="bangumi"
             type="search"
-            @click="() => $emit('add-bangumi', bangumi)"
+            @click="() => $emit('add-bangumi', throwID(bangumi))"
         />
       </li>
     </transition-group>
