@@ -63,4 +63,4 @@ async def update_user(
             httponly=True,
             max_age=86400,
         )
-        return {"access_token": token, "token_type": "bearer"}
+        return {"access_token": token, "token_type": "bearer", "message": "update success"}

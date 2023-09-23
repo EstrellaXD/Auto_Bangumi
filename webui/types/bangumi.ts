@@ -8,7 +8,7 @@ export interface BangumiRule {
   eps_collect: boolean;
   filter: string[];
   group_name: string;
-  id: number | null;
+  id: number;
   official_title: string;
   offset: number;
   poster_link: string | null;

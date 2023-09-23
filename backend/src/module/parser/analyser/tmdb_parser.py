@@ -76,6 +76,8 @@ def tmdb_parser(title, language) -> TMDBInfo | None:
                 for s in info_content.get("seasons")
             ]
             last_season, poster_path = get_season(season)
+            if poster_path is None:
+                poster_path = info_content.get("poster_path")
             original_title = info_content.get("original_name")
             official_title = info_content.get("name")
             year_number = info_content.get("first_air_date").split("-")[0]
