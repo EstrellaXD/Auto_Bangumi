@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import {ref} from 'vue';
 import {vOnClickOutside} from "@vueuse/components";
-import {BangumiRule} from "#/bangumi";
 
 defineEmits(['add-bangumi']);
 const showProvider = ref(false);
@@ -24,11 +23,6 @@ onMounted(() => {
 function onSelect(site: string) {
   provider.value = site;
   showProvider.value = false;
-}
-
-function throwID(bangumi: BangumiRule) {
-  bangumi.id = null
-  return bangumi
 }
 </script>
 
@@ -75,11 +69,11 @@ function throwID(bangumi: BangumiRule) {
       abs top-84px left-192px z-8
   >
     <transition-group name="list" tag="ul" space-y-12px>
-      <li v-for="bangumi in bangumiList" :key="bangumi.id">
+      <li v-for="bangumi in bangumiList" :key="bangumi.order">
         <ab-bangumi-card
-            :bangumi="bangumi"
+            :bangumi="bangumi.value"
             type="search"
-            @click="() => $emit('add-bangumi', throwID(bangumi))"
+            @click="() => $emit('add-bangumi', bangumi.value)"
         />
       </li>
     </transition-group>

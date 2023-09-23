@@ -30,6 +30,11 @@ export interface BangumiAPI extends Omit<BangumiRule, 'filter' | 'rss_link'> {
     rss_link: string;
 }
 
+export interface SearchResult {
+    order: number;
+    value: BangumiRule;
+}
+
 export type BangumiUpdate = Omit<BangumiAPI, 'id'>;
 
 export const ruleTemplate: BangumiRule = {

@@ -5,11 +5,11 @@ import {
     debounceTime,
     switchMap, tap,
 } from "rxjs";
-import type {BangumiRule} from "#/bangumi";
+import type {BangumiRule, SearchResult} from "#/bangumi";
 
 
 export function useSearchStore() {
-    const bangumiList = ref<BangumiRule[]>([]);
+    const bangumiList = ref<SearchResult[]>([]);
     const inputValue = ref<string>('');
 
     const providers = ref<string[]>(['mikan', 'dmhy', 'nyaa']);
@@ -49,8 +49,11 @@ export function useSearchStore() {
                 : EMPTY
         }),
         tap((bangumi: BangumiRule) => {
-            bangumi.id = bangumiList.value.length;
-            bangumiList.value.push(bangumi);
+            const result: SearchResult = {
+                order: bangumiList.value.length + 1,
+                value: bangumi,
+            }
+            bangumiList.value.push(result);
         }),
     ).subscribe()
 
