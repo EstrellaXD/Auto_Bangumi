@@ -18,7 +18,6 @@ definePage({
       <transition-group
           name="bangumi" tag="div"
           flex="~ wrap" gap-y-12px gap-x-32px>
-        <!--      TODO: Transition Effect to fix.   -->
         <ab-bangumi-card
             v-for="i in bangumi"
             :key="i.id"

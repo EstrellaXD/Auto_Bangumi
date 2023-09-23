@@ -131,14 +131,4 @@ defineEmits(['click']);
   transform: translateY(-25%);
 }
 
-.bangumi-enter-active,
-.bangumi-leave-active {
-  transition: all 0.3s ease;
-}
-
-.bangumi-enter-from,
-.bangumi-leave-to {
-  opacity: 0;
-  transform: translateY(20px);
-}
 </style>
