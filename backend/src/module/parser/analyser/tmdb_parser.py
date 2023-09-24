@@ -42,7 +42,7 @@ def is_animation(tv_id, language) -> bool:
 
 
 def get_season(seasons: list) -> tuple[int, str]:
-    ss = [s for s in seasons if s["air_date"] is not None]
+    ss = [s for s in seasons if s["air_date"] is not None and "特别" not in s["season"]]
     ss = sorted(ss, key=lambda e: e.get("air_date"), reverse=True)
     for season in ss:
         if re.search(r"第 \d 季", season.get("season")) is not None:
@@ -51,6 +51,7 @@ def get_season(seasons: list) -> tuple[int, str]:
             now_year = time.localtime().tm_year
             if int(year) <= now_year:
                 return int(re.findall(r"\d", season.get("season"))[0]), season.get("poster_path")
+    return len(ss), ss[-1].get("poster_path")
 
 
 def tmdb_parser(title, language) -> TMDBInfo | None:
