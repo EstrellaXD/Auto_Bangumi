@@ -31,6 +31,8 @@ jobs:
   version-info:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
       - name: If release
         id: release
         run: |
@@ -56,12 +58,14 @@ jobs:
       - name: Check version
         id: version
         run: |
-          if [[ '${{ github.event_name }}' == 'pull_request' && ${{ github.event.pull_request.merged }} == true ]]; then
-            echo "version=${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
-            git config --local user.email
-            git config --local user.name "github-actions"
-            git tag ${{ github.event.pull_request.title }}
-            git push origin ${{ github.event.pull_request.title }}
+          if [ '${{ github.event_name }}' == 'pull_request' ]; then
+            if [ ${{ github.event.pull_request.merged }} == true ]; then
+              echo "version=${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
+              git config --local user.email "action@github.com"
+              git config --local user.name "github-actions"
+              git tag ${{ github.event.pull_request.title }}
+              git push origin ${{ github.event.pull_request.title }}
+            fi
           elif [[ ${{ github.event_name }} == 'push' && (${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'*) ]]; then
             echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           else
