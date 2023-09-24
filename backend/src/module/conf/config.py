@@ -1,31 +1,35 @@
 import json
-import os
 import logging
+import os
+from pathlib import Path
+
 from dotenv import load_dotenv
 
-from .const import ENV_TO_ATTR
 from module.models.config import Config
 
+from .const import ENV_TO_ATTR
+
 logger = logging.getLogger(__name__)
+CONFIG_ROOT = Path("config")
+
 
 try:
     from module.__version__ import VERSION
-
-    if VERSION == "DEV_VERSION":
-        logger.info("Can't find version info, use DEV_VERSION instead")
-        CONFIG_PATH = "config/config_dev.json"
-    else:
-        CONFIG_PATH = f"config/config.json"
 except ImportError:
     logger.info("Can't find version info, use DEV_VERSION instead")
     VERSION = "DEV_VERSION"
-    CONFIG_PATH = "config/config_dev.json"
+
+CONFIG_PATH = (
+    CONFIG_ROOT / "config_dev.json"
+    if VERSION == "DEV_VERSION"
+    else CONFIG_ROOT / "config.json"
+).resolve()
 
 
 class Settings(Config):
     def __init__(self):
         super().__init__()
-        if os.path.exists(CONFIG_PATH):
+        if CONFIG_PATH.exists():
             self.load()
             self.save()
         else:
@@ -36,7 +40,7 @@ class Settings(Config):
             config = json.load(f)
         config_obj = Config.parse_obj(config)
         self.__dict__.update(config_obj.__dict__)
-        logger.info(f"Config loaded")
+        logger.info("Config loaded")
 
     def save(self, config_dict: dict | None = None):
         if not config_dict:
@@ -48,14 +52,6 @@ class Settings(Config):
         load_dotenv(".env")
         self.__load_from_env()
         self.save()
-
-    @property
-    def rss_link(self) -> str:
-        if "://" not in self.rss_parser.custom_url:
-            return f"https://{self.rss_parser.custom_url}/RSS/MyBangumi?token={self.rss_parser.token}"
-        return (
-            f"{self.rss_parser.custom_url}/RSS/MyBangumi?token={self.rss_parser.token}"
-        )
 
     def __load_from_env(self):
         config_dict = self.dict()
@@ -73,7 +69,7 @@ class Settings(Config):
                         config_dict[key][attr_name] = self.__val_from_env(env, attr)
         config_obj = Config.parse_obj(config_dict)
         self.__dict__.update(config_obj.__dict__)
-        logger.info(f"Config loaded from env")
+        logger.info("Config loaded from env")
 
     @staticmethod
     def __val_from_env(env: str, attr: tuple):
@@ -82,6 +78,10 @@ class Settings(Config):
             return conv_func(os.environ[env])
         else:
             return os.environ[env]
+
+    @property
+    def group_rules(self):
+        return self.__dict__["group_rules"]
 
 
 settings = Settings()

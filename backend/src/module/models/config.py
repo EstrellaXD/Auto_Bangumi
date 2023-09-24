@@ -1,29 +1,38 @@
+from os.path import expandvars
 from pydantic import BaseModel, Field
-
-# Sub config
 
 
 class Program(BaseModel):
-    rss_time: int = Field(7200, description="Sleep time")
+    rss_time: int = Field(900, description="Sleep time")
     rename_time: int = Field(60, description="Rename times in one loop")
     webui_port: int = Field(7892, description="WebUI port")
 
 
 class Downloader(BaseModel):
     type: str = Field("qbittorrent", description="Downloader type")
-    host: str = Field("172.17.0.1:8080", description="Downloader host")
-    username: str = Field("admin", description="Downloader username")
-    password: str = Field("adminadmin", description="Downloader password")
+    host_: str = Field("172.17.0.1:8080", alias="host", description="Downloader host")
+    username_: str = Field("admin", alias="username", description="Downloader username")
+    password_: str = Field(
+        "adminadmin", alias="password", description="Downloader password"
+    )
     path: str = Field("/downloads/Bangumi", description="Downloader path")
     ssl: bool = Field(False, description="Downloader ssl")
+
+    @property
+    def host(self):
+        return expandvars(self.host_)
+
+    @property
+    def username(self):
+        return expandvars(self.username_)
+
+    @property
+    def password(self):
+        return expandvars(self.password_)
 
 
 class RSSParser(BaseModel):
     enable: bool = Field(True, description="Enable RSS parser")
-    type: str = Field("mikan", description="RSS parser type")
-    token: str = Field("token", description="RSS parser token")
-    custom_url: str = Field("mikanani.me", description="Custom RSS host url")
-    parser_type: str = Field("parser", description="Parser type")
     filter: list[str] = Field(["720", r"\d+-\d"], description="Filter")
     language: str = "zh"
 
@@ -45,15 +54,31 @@ class Proxy(BaseModel):
     type: str = Field("http", description="Proxy type")
     host: str = Field("", description="Proxy host")
     port: int = Field(0, description="Proxy port")
-    username: str = Field("", description="Proxy username")
-    password: str = Field("", description="Proxy password")
+    username_: str = Field("", alias="username", description="Proxy username")
+    password_: str = Field("", alias="password", description="Proxy password")
+
+    @property
+    def username(self):
+        return expandvars(self.username_)
+
+    @property
+    def password(self):
+        return expandvars(self.password_)
 
 
 class Notification(BaseModel):
     enable: bool = Field(False, description="Enable notification")
     type: str = Field("telegram", description="Notification type")
-    token: str = Field("", description="Notification token")
-    chat_id: str = Field("", description="Notification chat id")
+    token_: str = Field("", alias="token", description="Notification token")
+    chat_id_: str = Field("", alias="chat_id", description="Notification chat id")
+
+    @property
+    def token(self):
+        return expandvars(self.token_)
+
+    @property
+    def chat_id(self):
+        return expandvars(self.chat_id_)
 
 
 class Config(BaseModel):
@@ -64,3 +89,6 @@ class Config(BaseModel):
     log: Log = Log()
     proxy: Proxy = Proxy()
     notification: Notification = Notification()
+
+    def dict(self, *args, by_alias=True, **kwargs):
+        return super().dict(*args, by_alias=by_alias, **kwargs)

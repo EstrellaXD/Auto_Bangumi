@@ -1,13 +1,10 @@
-import re
 import logging
+from os import PathLike
+import re
+from pathlib import Path
 
 from module.conf import settings
-from module.models import BangumiData
-
-if ":\\" in settings.downloader.path:
-    import ntpath as path
-else:
-    import os.path as path
+from module.models import Bangumi, BangumiUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +19,7 @@ class TorrentPath:
         subtitle_list = []
         for f in info.files:
             file_name = f.name
-            suffix = path.splitext(file_name)[-1]
+            suffix = Path(file_name).suffix
             if suffix.lower() in [".mp4", ".mkv"]:
                 media_list.append(file_name)
             elif suffix.lower() in [".ass", ".srt"]:
@@ -30,10 +27,10 @@ class TorrentPath:
         return media_list, subtitle_list
 
     @staticmethod
-    def _path_to_bangumi(save_path):
+    def _path_to_bangumi(save_path: PathLike[str] | str):
         # Split save path and download path
-        save_parts = save_path.split(path.sep)
-        download_parts = settings.downloader.path.split(path.sep)
+        save_parts = Path(save_path).parts
+        download_parts = Path(settings.downloader.path).parts
         # Get bangumi name and season
         bangumi_name = ""
         season = 1
@@ -45,22 +42,22 @@ class TorrentPath:
         return bangumi_name, season
 
     @staticmethod
-    def _file_depth(file_path):
-        return len(file_path.split(path.sep))
+    def _file_depth(file_path: PathLike[str] | str):
+        return len(Path(file_path).parts)
 
-    def is_ep(self, file_path):
+    def is_ep(self, file_path: PathLike[str] | str):
         return self._file_depth(file_path) <= 2
 
     @staticmethod
-    def _gen_save_path(data: BangumiData):
+    def _gen_save_path(data: Bangumi | BangumiUpdate):
         folder = (
             f"{data.official_title} ({data.year})" if data.year else data.official_title
         )
-        save_path = path.join(settings.downloader.path, folder, f"Season {data.season}")
-        return save_path
+        save_path = Path(settings.downloader.path) / folder / f"Season {data.season}"
+        return str(save_path)
 
     @staticmethod
-    def _rule_name(data: BangumiData):
+    def _rule_name(data: Bangumi):
         rule_name = (
             f"[{data.group_name}] {data.official_title} S{data.season}"
             if settings.bangumi_manage.group_tag
@@ -70,4 +67,4 @@ class TorrentPath:
 
     @staticmethod
     def _join_path(*args):
-        return path.join(*args)
+        return str(Path(*args))

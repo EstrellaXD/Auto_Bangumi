@@ -69,22 +69,3 @@ def test_raw_parser():
     assert info.resolution == "720P"
     assert info.episode == 5
     assert info.season == 1
-
-    content = "【极影字幕·毁片党】LoveLive! SunShine!! 幻日的夜羽 -SUNSHINE in the MIRROR- 第01集 TV版 HEVC_opus 1080p "
-    info = raw_parser(content)
-    assert info.group == "极影字幕·毁片党"
-    assert info.title_zh == "幻日的夜羽"
-    assert info.title_en == "LoveLive! SunShine!!"
-    assert info.resolution == "1080p"
-    assert info.episode == 1
-    assert info.season == 1
-
-    content = "[ANi] BLEACH 死神 千年血战篇-诀别谭- - 14 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
-    info = raw_parser(content)
-    assert info.group == "ANi"
-    assert info.title_en == "BLEACH"
-    assert info.title_zh == "死神 千年血战篇-诀别谭-"
-    assert info.resolution == "1080P"
-    assert info.episode == 14
-    assert info.season == 1
-

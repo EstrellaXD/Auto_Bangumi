@@ -1,6 +1,11 @@
-from module.searcher.plugin import search_url
+import json
+from typing import TypeAlias
+
+from module.models import Bangumi, Torrent, RSSItem
 from module.network import RequestContent
-from module.models import BangumiData, TorrentBase
+from module.rss import RSSAnalyser
+
+from .provider import search_url
 
 SEARCH_KEY = [
     "group_name",
@@ -11,32 +16,35 @@ SEARCH_KEY = [
     "dpi",
 ]
 
+BangumiJSON: TypeAlias = str
 
-class SearchTorrent(RequestContent):
+
+class SearchTorrent(RequestContent, RSSAnalyser):
     def search_torrents(
-        self, keywords: list[str], site: str = "mikan"
-    ) -> list[TorrentBase]:
-        url = search_url(site, keywords)
-        # TorrentInfo to TorrentBase
-        torrents = self.get_torrents(url)
+        self, rss_item: RSSItem, limit: int = 5
+    ) -> list[Torrent]:
+        torrents = self.get_torrents(rss_item.url, limit=limit)
+        return torrents
 
-        def to_dict():
-            for torrent in torrents:
-                yield {
-                    "name": torrent.name,
-                    "torrent_link": torrent.torrent_link,
-                    "homepage": torrent.homepage,
-                }
+    def analyse_keyword(self, keywords: list[str], site: str = "mikan") -> BangumiJSON:
+        rss_item = search_url(site, keywords)
+        torrents = self.search_torrents(rss_item)
+        # yield for EventSourceResponse (Server Send)
+        exist_list = []
+        for torrent in torrents:
+            bangumi = self.torrent_to_data(torrent=torrent, rss=rss_item)
+            if bangumi and bangumi not in exist_list:
+                exist_list.append(bangumi)
+                bangumi.rss_link = self.special_url(bangumi, site).url
+                yield json.dumps(bangumi.dict(), separators=(',', ':'))
 
-        return [TorrentBase(**d) for d in to_dict()]
-
-    def search_season(self, data: BangumiData):
+    @staticmethod
+    def special_url(data: Bangumi, site: str) -> RSSItem:
         keywords = [getattr(data, key) for key in SEARCH_KEY if getattr(data, key)]
-        torrents = self.search_torrents(keywords)
+        url = search_url(site, keywords)
+        return url
+
+    def search_season(self, data: Bangumi, site: str = "mikan") -> list[Torrent]:
+        rss_item = self.special_url(data, site)
+        torrents = self.search_torrents(rss_item)
         return [torrent for torrent in torrents if data.title_raw in torrent.name]
-
-
-if __name__ == "__main__":
-    with SearchTorrent() as st:
-        for t in st.search_torrents(["魔法科高校の劣等生"]):
-            print(t)

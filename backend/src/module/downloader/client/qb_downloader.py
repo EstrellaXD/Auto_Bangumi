@@ -3,9 +3,9 @@ import time
 
 from qbittorrentapi import Client, LoginFailed
 from qbittorrentapi.exceptions import (
+    APIConnectionError,
     Conflict409Error,
     Forbidden403Error,
-    APIConnectionError,
 )
 
 from module.ab_decorator import qb_connect_failed_wait
@@ -39,12 +39,12 @@ class QbDownloader:
                 time.sleep(5)
                 times += 1
             except Forbidden403Error:
-                logger.error(f"Login refused by qBittorrent Server")
-                logger.info(f"Please release the IP in qBittorrent Server")
+                logger.error("Login refused by qBittorrent Server")
+                logger.info("Please release the IP in qBittorrent Server")
                 break
             except APIConnectionError:
-                logger.error(f"Cannot connect to qBittorrent Server")
-                logger.info(f"Please check the IP and port in WebUI settings")
+                logger.error("Cannot connect to qBittorrent Server")
+                logger.info("Please check the IP and port in WebUI settings")
                 time.sleep(10)
                 times += 1
             except Exception as e:
@@ -82,10 +82,10 @@ class QbDownloader:
             status_filter=status_filter, category=category, tag=tag
         )
 
-    def torrents_add(self, urls, save_path, category, torrent_files=None):
+    def add_torrents(self, torrent_urls, torrent_files, save_path, category):
         resp = self._client.torrents_add(
             is_paused=False,
-            urls=urls,
+            urls=torrent_urls,
             torrent_files=torrent_files,
             save_path=save_path,
             category=category,

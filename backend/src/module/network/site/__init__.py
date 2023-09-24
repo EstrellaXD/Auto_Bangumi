@@ -1,1 +1,1 @@
-from .mikan import mikan_parser
+from .mikan import rss_parser

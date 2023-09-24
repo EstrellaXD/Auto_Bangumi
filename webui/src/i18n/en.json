@@ -1,0 +1,147 @@
+{
+  "login": {
+    "title": "Login",
+    "username": "Username",
+    "password": "Password",
+    "login_btn": "Login",
+    "default": "Default"
+  },
+  "sidebar": {
+    "title": "Menu",
+    "homepage": "HomePage",
+    "player": "Player",
+    "log": "Log",
+    "config": "Config",
+    "logout": "Logout",
+    "downloader": "Downloader",
+    "calendar": "Calendar",
+    "rss": "RSS Manager"
+  },
+  "topbar": {
+    "start": "Start",
+    "pause": "Pause",
+    "restart": "Restart",
+    "shutdown": "Shutdown",
+    "reset_rule": "Reset Rule",
+    "search": {
+      "placeholder": "Type to search"
+    },
+    "profile": {
+      "title": "Profile",
+      "pop_title": "Change Account",
+      "username": "Username",
+      "password": "Password",
+      "update_btn": "Update"
+    },
+    "add": {
+      "title": "Add RSS",
+      "rss_link": "RSS Link",
+      "name": "Name",
+      "aggregate": "Aggregate RSS",
+      "parser": "Parser",
+      "placeholder_link": "Please enter the RSS link",
+      "placeholder_name": "Optional",
+      "button": "Add"
+    }
+  },
+  "homepage": {
+    "rule": {
+      "official_title": "Official Title",
+      "year": "Year",
+      "season": "Season",
+      "offset": "Offset",
+      "exclude": "Exclude",
+      "enable": "Enable",
+      "disable": "Disable",
+      "delete": "Delete",
+      "apply": "Apply",
+      "yes_btn": "Yes",
+      "no_btn": "No",
+      "enable_hit": "Do you want to enable this rule?",
+      "delete_hit": "Delete Local File?",
+      "enable_rule": "Enable Rule",
+      "edit_rule": "Edit Rule"
+    }
+  },
+  "rss": {
+    "title": "RSS Item",
+    "selectbox": "Select",
+    "name": "Name",
+    "url": "Url",
+    "status": "Status",
+    "delete": "Delete",
+    "disable": "Disable",
+    "enable": "Enable",
+  },
+  "player": {
+    "hit": "Please set up the media player"
+  },
+  "log": {
+    "title": "Log",
+    "reset": "Reset",
+    "copy": "Copy",
+    "contact_info": "Contact Infomation",
+    "go": "Go",
+    "join": "Join",
+    "bug_repo": "Bug Report"
+  },
+  "config": {
+    "normal_set": {
+      "title": "Normal Setting",
+      "rss_interval": "Interval Time of Rss",
+      "rename_interval": "Interval Time of Rename",
+      "web_port": "WebUI Port",
+      "debug": "Debug"
+    },
+    "parser_set": {
+      "title": "Parser Setting",
+      "enable": "Enable",
+      "source": "Source",
+      "token": "Token",
+      "url": "Custom Url",
+      "language": "Language",
+      "type": "Parser Type",
+      "exclude": "Exclude"
+    },
+    "downloader_set": {
+      "title": "Downloader Setting",
+      "type": "Downloader Type",
+      "host": "Host",
+      "username": "Username",
+      "password": "Password",
+      "path": "Download Path",
+      "ssl": "SSL"
+    },
+    "manage_set": {
+      "title": "Manage Setting",
+      "enable": "Enable",
+      "method": "Rename Method",
+      "eps": "EPS complete",
+      "group_tag": "Add Group Tag",
+      "delete_bad_torrent": "Delete Bad Torrent"
+    },
+    "notification_set": {
+      "title": "Notification Setting",
+      "enable": "Enable",
+      "type": "Type",
+      "token": "Token",
+      "chat_id": "Chat ID"
+    },
+    "proxy_set": {
+      "title": "Proxy Setting",
+      "enable": "Enable",
+      "type": "Proxy Type",
+      "host": "Host",
+      "port": "Port",
+      "username": "Username",
+      "password": "Password"
+    },
+    "media_player_set": {
+      "title": "Media Player Setting",
+      "type": "type",
+      "url": "url"
+    },
+    "cancel": "Cancel",
+    "apply": "Apply"
+  }
+}

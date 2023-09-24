@@ -1,0 +1,4 @@
+{
+  // https://github.com/vuejs/tsconfig
+  "extends": "@vue/tsconfig/tsconfig.json",
+}

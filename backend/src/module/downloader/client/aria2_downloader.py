@@ -1,12 +1,9 @@
 import logging
 import time
 
-from aria2p import Client, ClientException, API
-
+from aria2p import API, Client, ClientException
 
 from module.conf import settings
-
-from module.downloader.exceptions import ConflictError
 
 logger = logging.getLogger(__name__)
 

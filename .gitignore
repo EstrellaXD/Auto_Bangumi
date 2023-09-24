@@ -121,7 +121,6 @@ celerybeat.pid
 
 # Environments
 .idea
-.vscode
 .env
 .venv
 env/
@@ -162,6 +161,8 @@ cython_debug/
 #.idea/
 
 # Custom
+#
+# backend
 /backend/src/test.py
 
 /backend/src/module/run_debug.sh
@@ -169,11 +170,46 @@ cython_debug/
 /backend/src/module/__version__.py
 /backend/src/data/
 
-/backend/src/module/conf/config_dev.ini
+/src/module/conf/config_dev.ini
 
 test.*
 .run
 /backend/src/templates/
 /backend/src/config/
-/backend/src/debuger.py
+/src/debuger.py
 /backend/src/dist.zip
+/pyrightconfig.json
+
+# webui
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist.zip
+dist-ssr
+*.local
+dev-dist
+
+# Editor directories and files
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# vitepress
+/docs/.vitepress/cache/

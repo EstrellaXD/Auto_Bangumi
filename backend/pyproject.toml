@@ -1,15 +1,15 @@
 [tool.ruff]
 select = [
     # pycodestyle(E): https://beta.ruff.rs/docs/rules/#pycodestyle-e-w
-    "E",
+    "E", 
     # Pyflakes(F): https://beta.ruff.rs/docs/rules/#pyflakes-f
-    "F",
+    "F", 
     # isort(I): https://beta.ruff.rs/docs/rules/#isort-i
     "I"
 ]
 ignore = [
     # E501: https://beta.ruff.rs/docs/rules/line-too-long/
-    'E501',
+    'E501', 
     # F401: https://beta.ruff.rs/docs/rules/unused-import/
     # avoid unused imports lint in `__init__.py`
     'F401',

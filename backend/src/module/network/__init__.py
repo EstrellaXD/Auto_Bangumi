@@ -1,1 +1,1 @@
-from .request_contents import RequestContent, TorrentInfo
+from .request_contents import RequestContent

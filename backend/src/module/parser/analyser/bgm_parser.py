@@ -1,7 +1,8 @@
 from module.network import RequestContent
 
 
-search_url = lambda e: f"https://api.bgm.tv/search/subject/{e}?responseGroup=large"
+def search_url(e):
+    return f"https://api.bgm.tv/search/subject/{e}?responseGroup=large"
 
 
 def bgm_parser(title):

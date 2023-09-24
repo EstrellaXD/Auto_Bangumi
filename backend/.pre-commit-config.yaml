@@ -5,4 +5,4 @@ repos:
     - id: black
       language: python
 
-# TODO: add ruff lint check before committing
+# TODO: add ruff lint check before committing.

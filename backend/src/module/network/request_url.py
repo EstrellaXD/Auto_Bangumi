@@ -1,9 +1,9 @@
+import logging
+import socket
 import time
 
 import requests
-import socket
 import socks
-import logging
 
 from module.conf import settings
 
@@ -35,7 +35,7 @@ class RequestURL:
                 break
         logger.error(f"[Network] Failed connecting to {url}")
         logger.warning("[Network] Please check DNS/Connection settings")
-        raise ConnectionError(f"Failed connecting to {url}")
+        return None
 
     def post_url(self, url: str, data: dict, retry=3):
         try_time = 0
@@ -59,7 +59,7 @@ class RequestURL:
                 break
         logger.error(f"[Network] Failed connecting to {url}")
         logger.warning("[Network] Please check DNS/Connection settings")
-        raise ConnectionError(f"Failed connecting to {url}")
+        return None
 
     def check_url(self, url: str):
         if "://" not in url:
@@ -68,7 +68,7 @@ class RequestURL:
             req = requests.head(url=url, headers=self.header, timeout=5)
             req.raise_for_status()
             return True
-        except requests.RequestException as e:
+        except requests.RequestException:
             logger.debug(f"[Network] Cannot connect to {url}.")
             return False
 

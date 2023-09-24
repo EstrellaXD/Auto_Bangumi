@@ -1,0 +1,8 @@
+{
+  "extends": ["@antfu", "prettier", "plugin:storybook/recommended"],
+  "rules": {
+    "antfu/if-newline": ["off"],
+    "no-console": ["off"],
+    "vue/custom-event-name-casing": ["off"]
+  }
+}

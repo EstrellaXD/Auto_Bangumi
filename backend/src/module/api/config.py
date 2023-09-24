@@ -1,36 +1,35 @@
 import logging
 
-from fastapi import Depends, HTTPException, status
-
-from .bangumi import router
+from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
 
 from module.conf import settings
-from module.models import Config
-from module.security import get_current_user
+from module.models import Config, APIResponse
+from module.security.api import get_current_user, UNAUTHORIZED
 
+router = APIRouter(prefix="/config", tags=["config"])
 logger = logging.getLogger(__name__)
 
 
-@router.get("/api/v1/getConfig", tags=["config"], response_model=Config)
-async def get_config(current_user=Depends(get_current_user)):
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
-        )
+@router.get("/get", response_model=Config, dependencies=[Depends(get_current_user)])
+async def get_config():
     return settings
 
 
-@router.post("/api/v1/updateConfig", tags=["config"])
-async def update_config(config: Config, current_user=Depends(get_current_user)):
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
-        )
+@router.patch("/update", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+async def update_config(config: Config):
     try:
         settings.save(config_dict=config.dict())
         settings.load()
+        # update_rss()
         logger.info("Config updated")
-        return {"message": "Success"}
+        return JSONResponse(
+            status_code=200,
+            content={"msg_en": "Update config successfully.", "msg_zh": "更新配置成功。"}
+        )
     except Exception as e:
         logger.warning(e)
-        return {"message": "Failed to update config"}
+        return JSONResponse(
+            status_code=406,
+            content={"msg_en": "Update config failed.", "msg_zh": "更新配置失败。"}
+        )

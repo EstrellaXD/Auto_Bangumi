@@ -1,11 +1,15 @@
 import logging
 
-from .plugin import *
-
-from module.models import Notification
 from module.conf import settings
-from module.database import BangumiDatabase
+from module.database import Database
+from module.models import Notification
 
+from .plugin import (
+    BarkNotification,
+    ServerChanNotification,
+    TelegramNotification,
+    WecomNotification,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,19 +36,9 @@ class PostNotification:
 
     @staticmethod
     def _get_poster(notify: Notification):
-        with BangumiDatabase() as db:
-            poster_path = db.match_poster(notify.official_title)
-        if poster_path:
-            poster_link = "https://mikanani.me" + poster_path
-            # text = f"""
-            # 番剧名称：{notify.official_title}\n季度： 第{notify.season}季\n更新集数： 第{notify.episode}集\n{poster_link}\n
-            # """
-        else:
-            poster_link = "https://mikanani.me"
-            # text = f"""
-            # 番剧名称：{notify.official_title}\n季度： 第{notify.season}季\n更新集数： 第{notify.episode}集\n
-            # """
-        notify.poster_path = poster_link
+        with Database() as db:
+            poster_path = db.bangumi.match_poster(notify.official_title)
+        notify.poster_path = poster_path
 
     def send_msg(self, notify: Notification) -> bool:
         self._get_poster(notify)
@@ -61,13 +55,3 @@ class PostNotification:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.notifier.__exit__(exc_type, exc_val, exc_tb)
-
-
-if __name__ == "__main__":
-    info = Notification(
-        official_title="久保同学不放过我",
-        season=2,
-        episode=1,
-    )
-    with PostNotification() as client:
-        client.send_msg(info)

@@ -1,7 +1,7 @@
 import logging
 
-from module.network import RequestContent
 from module.models import Notification
+from module.network import RequestContent
 
 logger = logging.getLogger(__name__)
 

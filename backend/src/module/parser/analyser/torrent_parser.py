@@ -1,7 +1,6 @@
-import re
 import logging
-import os.path as unix_path
-import ntpath as win_path
+from pathlib import Path
+import re
 
 from module.models import EpisodeFile, SubtitleFile
 
@@ -23,11 +22,16 @@ SUBTITLE_LANG = {
 }
 
 
-def split_path(torrent_path: str) -> str:
-    if PLATFORM == "Windows":
-        return win_path.split(torrent_path)[-1]
-    else:
-        return unix_path.split(torrent_path)[-1]
+def get_path_basename(torrent_path: str) -> str:
+    """
+    Returns the basename of a path string.
+
+    :param torrent_path: A string representing a path to a file.
+    :type torrent_path: str
+    :return: A string representing the basename of the given path.
+    :rtype: str
+    """
+    return Path(torrent_path).name
 
 
 def get_group(group_and_title) -> tuple[str | None, str]:
@@ -64,7 +68,7 @@ def torrent_parser(
     season: int | None = None,
     file_type: str = "media",
 ) -> EpisodeFile | SubtitleFile:
-    media_path = split_path(torrent_path)
+    media_path = get_path_basename(torrent_path)
     for rule in RULES:
         if torrent_name:
             match_obj = re.match(rule, torrent_name, re.I)
@@ -77,7 +81,7 @@ def torrent_parser(
             else:
                 title, _ = get_season_and_title(title)
             episode = int(match_obj.group(2))
-            suffix = unix_path.splitext(torrent_path)[-1]
+            suffix = Path(torrent_path).suffix
             if file_type == "media":
                 return EpisodeFile(
                     media_path=torrent_path,

@@ -1,14 +1,14 @@
-import re
 import logging
+import re
 
-from fastapi.responses import Response
+from fastapi import APIRouter
 from fastapi.exceptions import HTTPException
-
-from .download import router
+from fastapi.responses import Response
 
 from module.conf import settings
 from module.network import RequestContent
 
+router = APIRouter()
 
 logger = logging.getLogger(__name__)
 

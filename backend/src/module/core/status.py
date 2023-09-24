@@ -1,8 +1,8 @@
-import os.path
-import threading
 import asyncio
+import threading
 
 from module.checker import Checker
+from module.conf import LEGACY_DATA_PATH
 
 
 class ProgramStatus(Checker):
@@ -32,12 +32,6 @@ class ProgramStatus(Checker):
         return self._downloader_status
 
     @property
-    def torrents_status(self):
-        if not self._torrents_status:
-            self._torrents_status = self.check_torrents()
-        return self._torrents_status
-
-    @property
     def enable_rss(self):
         return self.check_analyser()
 
@@ -51,4 +45,12 @@ class ProgramStatus(Checker):
 
     @property
     def legacy_data(self):
-        return os.path.exists("data/data.json")
+        return LEGACY_DATA_PATH.exists()
+
+    @property
+    def version_update(self):
+        return not self.check_version()
+
+    @property
+    def database(self):
+        return self.check_database()
