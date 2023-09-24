@@ -184,7 +184,7 @@ jobs:
           context: .
           builder: ${{ steps.buildx.output.name }}
           platforms: linux/amd64,linux/arm64,linux/arm/v7
-          push: ${{ github.event_name == 'push' }}
+          push: True
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha, scope=${{ github.workflow }}
