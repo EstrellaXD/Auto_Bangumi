@@ -141,7 +141,7 @@ jobs:
             estrellaxd/auto_bangumi
             ghcr.io/${{ github.repository }}
           tags: |
-            type=semver,pattern=${{ needs.version-info.outputs.version }}
+            type=raw,pattern=${{ needs.version-info.outputs.version }}
             type=raw,value=latest
 
       - name: Docker metadata dev
