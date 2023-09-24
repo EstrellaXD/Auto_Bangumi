@@ -2,6 +2,8 @@ import logging
 import threading
 import time
 
+from .timeout import timeout
+
 logger = logging.getLogger(__name__)
 lock = threading.Lock()
 

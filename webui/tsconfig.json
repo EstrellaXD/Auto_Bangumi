@@ -14,7 +14,9 @@
     "skipLibCheck": true,
     "noImplicitAny": false,
     "baseUrl": "./",
+    "types": ["vite-plugin-pwa/client"],
     "paths": {
+      "~/*": ["./*"],
       "@/*": ["src/*"],
       "#/*": ["types/*"]
     }

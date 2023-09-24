@@ -1,4 +1,4 @@
-def mikan_parser(soup):
+def rss_parser(soup):
     torrent_titles = []
     torrent_urls = []
     torrent_homepage = []
@@ -7,3 +7,7 @@ def mikan_parser(soup):
         torrent_urls.append(item.find("enclosure").attrib["url"])
         torrent_homepage.append(item.find("link").text)
     return torrent_titles, torrent_urls, torrent_homepage
+
+
+def mikan_title(soup):
+    return soup.find("title").text

@@ -7,16 +7,17 @@ import {
   Power,
   Refresh,
 } from '@icon-park/vue-next';
+import { ruleTemplate } from "#/bangumi";
+import type {BangumiRule} from "#/bangumi";
 
-const { t, changeLocale } = useMyI18n();
+const {t, changeLocale} = useMyI18n();
+const {running, onUpdate, offUpdate} = useAppInfo();
 
-const search = ref('');
-const show = ref(false);
-const showAdd = ref(false);
+const showAccount = ref(false);
+const showAddRSS = ref(false);
+const searchRule = ref<BangumiRule>()
 
-const { onUpdate, offUpdate, start, pause, shutdown, restart, resetRule } =
-  useProgramStore();
-const { running } = storeToRefs(useProgramStore());
+const {start, pause, shutdown, restart, resetRule} = useProgramStore();
 
 const items = [
   {
@@ -54,10 +55,27 @@ const items = [
     label: () => t('topbar.profile.title'),
     icon: Me,
     handle: () => {
-      show.value = true;
+      showAccount.value = true;
     },
   },
 ];
+
+const onSearchFocus = ref(false);
+
+function addSearchResult(bangumi: BangumiRule) {
+  showAddRSS.value = true;
+  searchRule.value = bangumi;
+  console.log('searchRule', searchRule.value);
+}
+
+watch(showAddRSS, (val) => {
+  if (!val) {
+    searchRule.value = ruleTemplate;
+    setTimeout(() => {
+      onSearchFocus.value = false;
+    }, 300);
+  }
+});
 
 onBeforeMount(() => {
   onUpdate();
@@ -69,25 +87,25 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div h-60px bg-theme-row text-white rounded-12px fx-cer px-24px>
-    <div fx-cer space-x-16px>
-      <img src="/favicon-light.svg" alt="favicon" wh-24px />
-      <img src="/AutoBangumi.svg" alt="AutoBangumi" h-24px rel top-2px />
-    </div>
+  <div h-60px bg-theme-row text-white rounded-16px fx-cer px-24px>
+    <div flex space-x-16px>
+      <div fx-cer space-x-16px>
+        <img src="/images/logo-light.svg" alt="favicon" wh-24px/>
+        <img v-show="onSearchFocus === false" src="/images/AutoBangumi.svg" alt="AutoBangumi" h-24px rel top-2px/>
+      </div>
 
-    <ab-search v-model:value="search" hidden />
+      <ab-search-bar @add-bangumi="addSearchResult"/>
+    </div>
 
     <div ml-auto>
       <ab-status-bar
-        :items="items"
-        :running="running"
-        @click-add="() => (showAdd = true)"
-        @change-lang="() => changeLocale()"
-      ></ab-status-bar>
+          :items="items"
+          :running="running"
+          @click-add="() => (showAddRSS = true)"
+          @change-lang="() => changeLocale()"
+      />
     </div>
-
-    <ab-change-account v-model:show="show"></ab-change-account>
-
-    <ab-add-bangumi v-model:show="showAdd"></ab-add-bangumi>
+    <ab-change-account v-model:show="showAccount"></ab-change-account>
+    <ab-add-rss v-model:show="showAddRSS" v-model:rule="searchRule"></ab-add-rss>
   </div>
 </template>

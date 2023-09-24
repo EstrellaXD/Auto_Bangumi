@@ -5,6 +5,7 @@ import {
   NMessageProvider,
 } from 'naive-ui';
 
+
 const theme: GlobalThemeOverrides = {
   Spin: {
     color: '#fff',

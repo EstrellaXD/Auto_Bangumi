@@ -9,6 +9,7 @@ import {
   Play,
   SettingTwo,
 } from '@icon-park/vue-next';
+import InlineSvg from 'vue-inline-svg';
 
 const props = withDefaults(
   defineProps<{
@@ -26,6 +27,12 @@ const toggle = () => (show.value = !show.value);
 const route = useRoute();
 const { logout } = useAuth();
 
+const RSS = h(
+  'span',
+  { class: ['rel', 'left-2px'] },
+  h(InlineSvg, { src: '/images/RSS.svg' })
+);
+
 const items = [
   {
     id: 1,
@@ -42,25 +49,31 @@ const items = [
   },
   {
     id: 3,
+    icon: RSS,
+    label: () => t('sidebar.rss'),
+    path: '/rss',
+  },
+  {
+    id: 4,
     icon: Play,
     label: () => t('sidebar.player'),
     path: '/player',
   },
   {
-    id: 4,
+    id: 5,
     icon: Download,
     label: () => t('sidebar.downloader'),
     path: '/downloader',
     hidden: true,
   },
   {
-    id: 5,
+    id: 6,
     icon: Log,
     label: () => t('sidebar.log'),
     path: '/log',
   },
   {
-    id: 6,
+    id: 7,
     icon: SettingTwo,
     label: () => t('sidebar.config'),
     path: '/config',
@@ -75,7 +88,7 @@ const items = [
     text-white
     transition-width
     pb-12px
-    rounded-12px
+    rounded-16px
   >
     <div overflow-hidden wh-full flex="~ col">
       <div
@@ -123,6 +136,7 @@ const items = [
         ]"
       >
         <Component :is="i.icon" :size="24" />
+
         <div text-h2>{{ i.label() }}</div>
       </RouterLink>
 

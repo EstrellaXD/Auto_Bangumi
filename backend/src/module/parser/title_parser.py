@@ -1,9 +1,9 @@
 import logging
 
 from module.conf import settings
-from module.models import BangumiData
+from module.models import Bangumi
 
-from .analyser import raw_parser, tmdb_parser, torrent_parser
+from .analyser import raw_parser, tmdb_parser, torrent_parser, mikan_parser
 
 logger = logging.getLogger(__name__)
 
@@ -26,20 +26,18 @@ class TitleParser:
 
     @staticmethod
     def tmdb_parser(title: str, season: int, language: str):
-        official_title, tmdb_season, year = title, season, None
         tmdb_info = tmdb_parser(title, language)
         if tmdb_info:
             logger.debug(f"TMDB Matched, official title is {tmdb_info.title}")
             tmdb_season = tmdb_info.last_season if tmdb_info.last_season else season
-            official_title = tmdb_info.title
-            year = tmdb_info.year
+            return tmdb_info.title, tmdb_season, tmdb_info.year, tmdb_info.poster_link
         else:
             logger.warning(f"Cannot match {title} in TMDB. Use raw title instead.")
             logger.warning("Please change bangumi info manually.")
-        return official_title, tmdb_season, year
+            return title, season, None, None
 
     @staticmethod
-    def raw_parser(raw: str, rss_link: str) -> BangumiData | None:
+    def raw_parser(raw: str) -> Bangumi | None:
         language = settings.rss_parser.language
         try:
             episode = raw_parser(raw)
@@ -60,7 +58,8 @@ class TitleParser:
             else:
                 official_title = title_raw
             _season = episode.season
-            data = BangumiData(
+            logger.debug(f"RAW:{raw} >> {title_raw}")
+            return Bangumi(
                 official_title=official_title,
                 title_raw=title_raw,
                 season=_season,
@@ -71,12 +70,13 @@ class TitleParser:
                 subtitle=episode.sub,
                 eps_collect=False if episode.episode > 1 else True,
                 offset=0,
-                filter=settings.rss_parser.filter,
-                rss_link=[rss_link],
+                filter=",".join(settings.rss_parser.filter),
             )
-            logger.debug(f"RAW:{raw} >> {title_raw}")
-            return data
         except Exception as e:
             logger.debug(e)
             logger.warning(f"Cannot parse {raw}.")
             return None
+
+    @staticmethod
+    def mikan_parser(homepage: str) -> tuple[str, str]:
+        return mikan_parser(homepage)

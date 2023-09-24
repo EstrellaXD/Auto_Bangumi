@@ -1,7 +1,13 @@
-from module.conf import settings
+import logging
+import requests
+from pathlib import Path
+
+from module.conf import settings, VERSION
 from module.downloader import DownloadClient
 from module.models import Config
-from module.network import RequestContent
+from module.update import version_check
+
+logger = logging.getLogger(__name__)
 
 
 class Checker:
@@ -23,29 +29,49 @@ class Checker:
             return False
 
     @staticmethod
-    def check_downloader() -> bool:
-        with DownloadClient() as client:
-            if client.authed:
-                return True
-            else:
-                return False
-
-    @staticmethod
-    def check_torrents() -> bool:
-        with RequestContent() as req:
-            try:
-                torrents = req.get_torrents(settings.rss_link, retry=2)
-                if torrents:
-                    return True
-            except AttributeError:
-                link = f"https://mikanani.me/RSS/MyBangumi?token={settings.rss_parser.token}"
-                if req.get_torrents(link):
-                    return True
-        return False
-
-    @staticmethod
     def check_first_run() -> bool:
         if settings.dict() == Config().dict():
             return True
         else:
             return False
+
+    @staticmethod
+    def check_version() -> bool:
+        return version_check()
+
+    @staticmethod
+    def check_database() -> bool:
+        db_path = Path("data/data.db")
+        if not db_path.exists():
+            return False
+        else:
+            return True
+
+    @staticmethod
+    def check_downloader() -> bool:
+        try:
+            url = f"http://{settings.downloader.host}" if "://" not in settings.downloader.host else f"{settings.downloader.host}"
+            response = requests.get(url, timeout=2)
+            if settings.downloader.type in response.text.lower():
+                with DownloadClient() as client:
+                    if client.authed:
+                        return True
+                    else:
+                        return False
+            else:
+                return False
+        except requests.exceptions.ReadTimeout:
+            logger.error("[Checker] Downloader connect timeout.")
+            return False
+        except requests.exceptions.ConnectionError:
+            logger.error("[Checker] Downloader connect failed.")
+            return False
+        except Exception as e:
+            logger.error(f"[Checker] Downloader connect failed: {e}")
+            return False
+
+
+if __name__ == "__main__":
+    # print(Checker().check_downloader())
+    requests.get("http://162.200.20.1", timeout=2)
+

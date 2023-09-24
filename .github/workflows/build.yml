@@ -2,6 +2,10 @@ name: Build Docker
 
 on:
   pull_request:
+    types:
+      - closed
+    branches:
+      - main
   push:
 
 jobs:
@@ -24,15 +28,62 @@ jobs:
           mkdir -p config
           pytest
 
-  build-webui:
-    if: >
-      (github.event_name == 'pull_request') ||
-      (github.event_name == 'push' && github.ref_type == 'tag' && (contains(github.ref, 'alpha') || contains(github.ref, 'beta')))
+  version-info:
     runs-on: ubuntu-latest
-    needs: [test]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: If release
+        id: release
+        run: |
+          if [ '${{ github.event_name }}' == 'pull_request' ]; then
+            if [ ${{ github.event.pull_request.merged }} == true ]; then
+              echo "release=1" >> $GITHUB_OUTPUT
+            else
+              echo "release=0" >> $GITHUB_OUTPUT
+            fi
+          elif [[ '${{ github.event_name }}' == 'push' && (${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'*) ]]; then
+            echo "release=1" >> $GITHUB_OUTPUT
+          else
+            echo "release=0" >> $GITHUB_OUTPUT
+          fi
+      - name: If dev
+        id: dev
+        run: |
+          if [[ '${{ github.event_name }}' == 'push' && (${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'*) ]]; then
+            echo "dev=1" >> $GITHUB_OUTPUT
+          else
+            echo "dev=0" >> $GITHUB_OUTPUT
+          fi
+      - name: Check version
+        id: version
+        run: |
+          if [ '${{ github.event_name }}' == 'pull_request' ]; then
+            if [ ${{ github.event.pull_request.merged }} == true ]; then
+              echo "version=${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
+            fi
+          elif [[ ${{ github.event_name }} == 'push' && (${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'*) ]]; then
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=Test" >> $GITHUB_OUTPUT
+          fi
+      - name: Check result
+        run: |
+          echo "release: ${{ steps.release.outputs.release }}"
+          echo "dev: ${{ steps.dev.outputs.dev }}"
+          echo "version: ${{ steps.version.outputs.version }}"
+    outputs:
+      release: ${{ steps.release.outputs.release }}
+      dev: ${{ steps.dev.outputs.dev }}
+      version: ${{ steps.version.outputs.version }}
+
+  build-webui:
+    runs-on: ubuntu-latest
+    needs: [ test, version-info ]
+    if: ${{ needs.version-info.outputs.release == 1 || needs.version-info.outputs.dev == 1 }}
     strategy:
       matrix:
-        node-version: [18]
+        node-version: [ 18 ]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -63,24 +114,16 @@ jobs:
 
   build-docker:
     runs-on: ubuntu-latest
-    needs: [build-webui]
+    needs: [ build-webui, version-info ]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Create Version info
+      - name: Create Version info via tag
         working-directory: ./backend/src
         run: |
-          echo "VERSION = '$GITHUB_REF_NAME'" > module/__version__.py
-
-      - name: Create Tag
-        if: ${{ github.pull_request.merged == true }}
-        id: create-tag
-        run: |
-          git config --local user.email "
-          git config --local user.name "github-actions"
-          git tag -a ${{ github.event.pull_request.title }} -m ${{ github.event.pull_request.body }}
-          git push origin ${{ github.event.pull_request.title }}
+          echo ${{ needs.version-info.outputs.version }}
+          echo "VERSION='${{ needs.version-info.outputs.version }}'" >> module/__version__.py
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -90,6 +133,7 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       - name: Docker metadata main
+        if: ${{ needs.version-info.outputs.release == 1 && needs.version-info.outputs.dev != 1 }}
         id: meta
         uses: docker/metadata-action@v4
         with:
@@ -97,30 +141,30 @@ jobs:
             estrellaxd/auto_bangumi
             ghcr.io/${{ github.repository }}
           tags: |
-            type=semver,pattern={{version}}
+            type=raw,value=${{ needs.version-info.outputs.version }}
             type=raw,value=latest
 
       - name: Docker metadata dev
-        if: contains(github.ref, 'tags') && contains(github.ref, 'alpha') || contains(github.ref, 'beta')
+        if: ${{ needs.version-info.outputs.dev == 1 }}
         id: meta-dev
         uses: docker/metadata-action@v4
         with:
           images: |
-            estrellaxd/auto_bangumi:dev
+            estrellaxd/auto_bangumi
             ghcr.io/${{ github.repository }}
           tags: |
-            type=raw,value=${{ github.ref_name }}
+            type=raw,value=${{ needs.version-info.outputs.version }}
             type=raw,value=dev-latest
 
       - name: Login to DockerHub
-        if: ${{ github.event_name == 'push' }}
+        if: ${{ needs.version-info.outputs.release == 1 }}
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
       - name: Login to ghcr.io
-        if: ${{ github.event_name == 'push' }}
+        if: ${{ needs.version-info.outputs.release == 1 }}
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
@@ -133,31 +177,54 @@ jobs:
           name: dist
           path: backend/src/dist
 
-      - name: View files
-        run: |
-          pwd && ls -al && tree
-
       - name: Build and push
+        if: ${{ needs.version-info.outputs.release == 1 && needs.version-info.outputs.dev != 1 }}
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          builder: ${{ steps.buildx.output.name }}
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: True
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha, scope=${{ github.workflow }}
+          cache-to: type=gha, scope=${{ github.workflow }}
+
+      - name: Build and push dev
+        if: ${{ needs.version-info.outputs.dev == 1 }}
         uses: docker/build-push-action@v4
         with:
           context: .
           builder: ${{ steps.buildx.output.name }}
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: ${{ github.event_name == 'push' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-dev.outputs.tags }}
+          labels: ${{ steps.meta-dev.outputs.labels }}
+          cache-from: type=gha, scope=${{ github.workflow }}
+          cache-to: type=gha, scope=${{ github.workflow }}
+
+      - name: Build test
+        if: ${{ needs.version-info.outputs.release == 0 }}
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          builder: ${{ steps.buildx.output.name }}
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: false
+          tags: estrellaxd/auto_bangumi:test
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}
 
   release:
-    if: >
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      (github.event_name == 'push' && contains(github.ref, 'tags'))
     runs-on: ubuntu-latest
-    needs: [build-docker]
+    needs: [ build-docker, version-info ]
+    if: ${{ needs.version-info.outputs.release == 1 }}
+    outputs:
+      url: ${{ steps.release.outputs.url }}
+      version: ${{ needs.version-info.outputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Download artifact
         uses: actions/download-artifact@v3
@@ -169,37 +236,34 @@ jobs:
         run: |
           cd webui && ls -al && tree && zip -r dist.zip dist
 
-      - name: Generate Release
-        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged == true }}
+      - name: Generate Release info
+        id: release-info
+        run: |
+          if ${{ needs.version-info.outputs.dev == 1 }}; then
+            echo "version=🌙${{ needs.version-info.outputs.version }}" >> $GITHUB_OUTPUT
+            echo "pre_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "version=🌟${{ needs.version-info.outputs.version }}" >> $GITHUB_OUTPUT
+            echo "pre_release=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Release
+        id: release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.event.pull_request.title }}
-          name: 🌟${{ github.event.pull_request.title }}
+          tag_name: ${{ needs.version-info.outputs.version }}
+          name: ${{ steps.release-info.outputs.version }}
           body: ${{ github.event.pull_request.body }}
           draft: false
-          prerelease: false
+          prerelease: ${{ steps.release-info.outputs.pre_release == 'true' }}
           files: |
             webui/dist.zip
         env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
-      - name: Generate dev Release
-        if: ${{ github.event_name == 'push' && contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: 🌙${{ github.ref_name }}
-          body: ${{ github.event.pull_request.body }}
-          draft: true
-          prerelease: true
-          files: |
-            webui/dist.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
   telegram:
     runs-on: ubuntu-latest
-    needs: [release]
+    needs: [ release ]
     steps:
       - name: send telegram message on push
         uses: appleboy/telegram-action@master
@@ -207,5 +271,5 @@ jobs:
           to: ${{ secrets.TELEGRAM_TO }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
-            New release: ${{ github.event.release.title }}
-            Link: ${{ github.event.release.html_url }}
+            New release: ${{ needs.release.outputs.version }}
+            Link: ${{ needs.release.outputs.url }}

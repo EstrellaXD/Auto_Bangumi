@@ -1,3 +1,6 @@
+/**
+ * @type `Bangumi` in backend/src/module/models/bangumi.py
+ */
 export interface BangumiRule {
   added: boolean;
   deleted: boolean;
@@ -19,3 +22,39 @@ export interface BangumiRule {
   title_raw: string;
   year: string | null;
 }
+
+
+
+export interface BangumiAPI extends Omit<BangumiRule, 'filter' | 'rss_link'> {
+    filter: string;
+    rss_link: string;
+}
+
+export interface SearchResult {
+    order: number;
+    value: BangumiRule;
+}
+
+export type BangumiUpdate = Omit<BangumiAPI, 'id'>;
+
+export const ruleTemplate: BangumiRule = {
+  added: false,
+  deleted: false,
+  dpi: '',
+  eps_collect: false,
+  filter: [],
+  group_name: '',
+  id: 0,
+  official_title: '',
+  offset: 0,
+  poster_link: '',
+  rss_link: [],
+  rule_name: '',
+  save_path: '',
+  season: 1,
+  season_raw: '',
+  source: null,
+  subtitle: '',
+  title_raw: '',
+  year: null,
+};

@@ -7,6 +7,7 @@ import Components from 'unplugin-vue-components/vite';
 import VueRouter from 'unplugin-vue-router/vite';
 import { VueRouterAutoImports } from 'unplugin-vue-router';
 import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite';
+import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -45,6 +46,42 @@ export default defineConfig({
     VueI18nPlugin({
       include: resolve(__dirname, './src/i18n/**'),
     }),
+    VitePWA({
+      injectRegister: false,
+      registerType: 'autoUpdate',
+      devOptions: {
+        enabled: true,
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+      },
+      manifest: {
+        name: 'AutoBangumi',
+        display: 'standalone',
+        short_name: 'AutoBangumi',
+        description: 'Automated Bangumi Download Tool',
+        theme_color: '#ffffff',
+        icons: [
+          {
+            src: '/images/logo.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
+            purpose: 'any',
+          },
+          {
+            src: '/images/pwa-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: '/images/pwa-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any',
+          },
+        ],
+      },
+    }),
   ],
   css: {
     preprocessorOptions: {
@@ -58,6 +95,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      '~': resolve(__dirname, './'),
       '@': resolve(__dirname, 'src'),
       '#': resolve(__dirname, 'types'),
     },

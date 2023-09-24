@@ -1,7 +1,7 @@
 import logging
 
 from module.conf import settings
-from module.database import BangumiDatabase
+from module.database import Database
 from module.models import Notification
 
 from .plugin import (
@@ -36,13 +36,9 @@ class PostNotification:
 
     @staticmethod
     def _get_poster(notify: Notification):
-        with BangumiDatabase() as db:
-            poster_path = db.match_poster(notify.official_title)
-        if poster_path:
-            poster_link = "https://mikanani.me" + poster_path
-        else:
-            poster_link = "https://mikanani.me"
-        notify.poster_path = poster_link
+        with Database() as db:
+            poster_path = db.bangumi.match_poster(notify.official_title)
+        notify.poster_path = poster_path
 
     def send_msg(self, notify: Notification) -> bool:
         self._get_poster(notify)

@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 const { onUpdate, offUpdate, reset, copy } = useLogStore();
 const { log } = storeToRefs(useLogStore());
+const { version } = useAppInfo();
 
 onActivated(() => {
   onUpdate();
@@ -50,10 +51,10 @@ definePage({
               </ab-button>
             </ab-label>
 
-            <ab-label label="WebUI Repo">
+            <ab-label label="Official Website">
               <ab-button
                 size="small"
-                link="https://github.com/Rewrite0/Auto_Bangumi_WebUI"
+                link="https://autobangumi.org"
                 target="_blank"
               >
                 {{ $t('log.go') }}
@@ -62,7 +63,7 @@ definePage({
 
             <div line></div>
 
-            <ab-label label="Twitter">
+            <ab-label label="X">
               <ab-button
                 size="small"
                 link="https://twitter.com/Estrella_Pan"
@@ -98,15 +99,10 @@ definePage({
 
             <div line></div>
 
-            <ab-button
-              mx-auto
-              text-16px
-              w-300px
-              h-46px
-              rounded-10px
-              link="mailto:estrellaxd05@gmail.com"
-              >Email Contact</ab-button
-            >
+            <div text-center text-primary text-h3>
+              <span>Version: </span>
+              <span>{{ version }}</span>
+            </div>
           </div>
         </ab-container>
       </div>

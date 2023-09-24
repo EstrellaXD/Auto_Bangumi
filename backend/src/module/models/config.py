@@ -1,22 +1,26 @@
 from os.path import expandvars
 from pydantic import BaseModel, Field
 
-# Sub config
-
 
 class Program(BaseModel):
-    rss_time: int = Field(7200, description="Sleep time")
+    rss_time: int = Field(900, description="Sleep time")
     rename_time: int = Field(60, description="Rename times in one loop")
     webui_port: int = Field(7892, description="WebUI port")
 
 
 class Downloader(BaseModel):
     type: str = Field("qbittorrent", description="Downloader type")
-    host: str = Field("172.17.0.1:8080", description="Downloader host")
+    host_: str = Field("172.17.0.1:8080", alias="host", description="Downloader host")
     username_: str = Field("admin", alias="username", description="Downloader username")
-    password_: str = Field("adminadmin", alias="password", description="Downloader password")
+    password_: str = Field(
+        "adminadmin", alias="password", description="Downloader password"
+    )
     path: str = Field("/downloads/Bangumi", description="Downloader path")
     ssl: bool = Field(False, description="Downloader ssl")
+
+    @property
+    def host(self):
+        return expandvars(self.host_)
 
     @property
     def username(self):
@@ -26,18 +30,12 @@ class Downloader(BaseModel):
     def password(self):
         return expandvars(self.password_)
 
+
 class RSSParser(BaseModel):
     enable: bool = Field(True, description="Enable RSS parser")
-    type: str = Field("mikan", description="RSS parser type")
-    token_: str = Field("token", alias="token", description="RSS parser token")
-    custom_url: str = Field("mikanani.me", description="Custom RSS host url")
-    parser_type: str = Field("parser", description="Parser type")
     filter: list[str] = Field(["720", r"\d+-\d"], description="Filter")
     language: str = "zh"
 
-    @property
-    def token(self):
-        return expandvars(self.token_)
 
 class BangumiManage(BaseModel):
     enable: bool = Field(True, description="Enable bangumi manage")
@@ -81,6 +79,7 @@ class Notification(BaseModel):
     @property
     def chat_id(self):
         return expandvars(self.chat_id_)
+
 
 class Config(BaseModel):
     program: Program = Program()

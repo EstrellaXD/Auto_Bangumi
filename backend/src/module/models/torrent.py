@@ -1,16 +1,20 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from sqlmodel import SQLModel, Field
+from typing import Optional
 
 
-class TorrentBase(BaseModel):
-    name: str = Field(...)
-    torrent_link: str = Field(...)
-    homepage: str | None = Field(None)
+class Torrent(SQLModel, table=True):
+    id: int = Field(default=None, primary_key=True, alias="id")
+    bangumi_id: Optional[int] = Field(None, alias="refer_id", foreign_key="bangumi.id")
+    rss_id: Optional[int] = Field(None, alias="rss_id", foreign_key="rssitem.id")
+    name: str = Field("", alias="name")
+    url: str = Field("https://example.com/torrent", alias="url")
+    homepage: Optional[str] = Field(None, alias="homepage")
+    downloaded: bool = Field(False, alias="downloaded")
 
 
-class FileSet(BaseModel):
-    media_path: str = Field(...)
-    sc_subtitle: str | None = Field(None)
-    tc_subtitle: str | None = Field(None)
+class TorrentUpdate(SQLModel):
+    downloaded: bool = Field(False, alias="downloaded")
 
 
 class EpisodeFile(BaseModel):

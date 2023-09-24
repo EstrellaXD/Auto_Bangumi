@@ -1,9 +1,9 @@
 import logging
 
 from module.conf import VERSION, settings
-from module.update import data_migration
+from module.update import data_migration, from_30_to_31, start_up, first_run
+from module.models import ResponseModel
 
-from .rss_feed import add_rss_feed
 from .sub_thread import RenameThread, RSSThread
 
 logger = logging.getLogger(__name__)
@@ -33,42 +33,78 @@ class Program(RenameThread, RSSThread):
 
     def startup(self):
         self.__start_info()
-        if self.first_run:
-            logger.info("First run detected, please configure the program in webui.")
+        if not self.database:
+            first_run()
+            logger.info("[Core] No db file exists, create database file.")
             return {"status": "First run detected."}
         if self.legacy_data:
             logger.info(
-                "Legacy data detected, starting data migration, please wait patiently."
+                "[Core] Legacy data detected, starting data migration, please wait patiently."
             )
             data_migration()
+        elif self.version_update:
+            # Update database
+            from_30_to_31()
+            logger.info("[Core] Database updated.")
         self.start()
 
     def start(self):
-        if self.first_run:
-            return {"status": "Not ready to start."}
         self.stop_event.clear()
         settings.load()
         if self.downloader_status:
             if self.enable_renamer:
                 self.rename_start()
             if self.enable_rss:
-                add_rss_feed()
                 self.rss_start()
             logger.info("Program running.")
-            return {"status": "Program started."}
+            return ResponseModel(
+                status=True,
+                status_code=200,
+                msg_en="Program started.",
+                msg_zh="程序启动成功。",
+            )
         else:
-            return {"status": "Can't connect to downloader. Program not paused."}
+            self.stop_event.set()
+            logger.warning("Program failed to start.")
+            return ResponseModel(
+                status=False,
+                status_code=406,
+                msg_en="Program failed to start.",
+                msg_zh="程序启动失败。",
+            )
 
     def stop(self):
         if self.is_running:
             self.stop_event.set()
             self.rename_stop()
             self.rss_stop()
-            return {"status": "Program stopped."}
+            return ResponseModel(
+                status=True,
+                status_code=200,
+                msg_en="Program stopped.",
+                msg_zh="程序停止成功。",
+            )
         else:
-            return {"status": "Program is not running."}
+            return ResponseModel(
+                status=False,
+                status_code=406,
+                msg_en="Program is not running.",
+                msg_zh="程序未运行。",
+            )
 
     def restart(self):
         self.stop()
         self.start()
-        return {"status": "Program restarted."}
+        return ResponseModel(
+            status=True,
+            status_code=200,
+            msg_en="Program restarted.",
+            msg_zh="程序重启成功。",
+        )
+
+    def update_database(self):
+        if not self.version_update:
+            return {"status": "No update found."}
+        else:
+            start_up()
+            return {"status": "Database updated."}

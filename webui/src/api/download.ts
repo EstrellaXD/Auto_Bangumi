@@ -1,38 +1,24 @@
-import type { BangumiRule } from '#/bangumi';
-
-interface Status {
-  status: 'Success';
-}
-
-interface AnalysisError {
-  status: 'Failed to parse link';
-}
+import type { BangumiAPI, BangumiRule } from '#/bangumi';
+import type { RSS } from '#/rss';
+import type { ApiError, ApiSuccess } from '#/api';
 
 export const apiDownload = {
   /**
    * 解析 RSS 链接
-   * @param rss_link - RSS 链接
+   * @param rss_item - RSS 链接
    */
-  async analysis(rss_link: string) {
-    const fetchResult = createEventHook<BangumiRule>();
-    const fetchError = createEventHook<AnalysisError>();
+  async analysis(rss_item: RSS) {
+    const { data } = await axios.post<BangumiAPI>(
+      'api/v1/rss/analysis',
+        rss_item
+    );
 
-    axios
-      .post<any>('api/v1/download/analysis', {
-        rss_link,
-      })
-      .then(({ data }) => {
-        if (data.status) {
-          fetchError.trigger(data as AnalysisError);
-        } else {
-          fetchResult.trigger(data as BangumiRule);
-        }
-      });
-
-    return {
-      onResult: fetchResult.on,
-      onError: fetchError.on,
-    };
+    const result: BangumiRule = {
+        ...data,
+        filter: data.filter.split(','),
+        rss_link: data.rss_link.split(','),
+    }
+    return result;
   },
 
   /**
@@ -40,11 +26,16 @@ export const apiDownload = {
    * @param bangumiData - Bangumi 数据
    */
   async collection(bangumiData: BangumiRule) {
-    const { data } = await axios.post<Status>(
-      'api/v1/download/collection',
-      bangumiData
+    const postData: BangumiAPI = {
+      ...bangumiData,
+      filter: bangumiData.filter.join(','),
+      rss_link: bangumiData.rss_link.join(','),
+    }
+    const { data } = await axios.post<ApiSuccess>(
+      'api/v1/rss/collect',
+      postData
     );
-    return data.status === 'Success';
+    return data;
   },
 
   /**
@@ -52,10 +43,15 @@ export const apiDownload = {
    * @param bangumiData - Bangumi 数据
    */
   async subscribe(bangumiData: BangumiRule) {
-    const { data } = await axios.post<Status>(
-      'api/v1/download/subscribe',
-      bangumiData
+    const postData: BangumiAPI = {
+        ...bangumiData,
+        filter: bangumiData.filter.join(','),
+        rss_link: bangumiData.rss_link.join(','),
+    }
+    const { data } = await axios.post<ApiSuccess>(
+      'api/v1/rss/subscribe',
+      postData
     );
-    return data.status === 'Success';
+    return data;
   },
 };

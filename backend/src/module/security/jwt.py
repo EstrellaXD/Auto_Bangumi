@@ -3,7 +3,14 @@ from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-app_pwd_key = "auto_bangumi"
+
+def generate_key():
+    import secrets
+
+    return secrets.token_urlsafe(32)
+
+
+app_pwd_key = generate_key()
 app_pwd_algorithm = "HS256"
 
 # Hashing 密码

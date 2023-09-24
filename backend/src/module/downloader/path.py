@@ -4,8 +4,7 @@ import re
 from pathlib import Path
 
 from module.conf import settings
-from module.models import BangumiData
-
+from module.models import Bangumi, BangumiUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +49,7 @@ class TorrentPath:
         return self._file_depth(file_path) <= 2
 
     @staticmethod
-    def _gen_save_path(data: BangumiData):
+    def _gen_save_path(data: Bangumi | BangumiUpdate):
         folder = (
             f"{data.official_title} ({data.year})" if data.year else data.official_title
         )
@@ -58,7 +57,7 @@ class TorrentPath:
         return str(save_path)
 
     @staticmethod
-    def _rule_name(data: BangumiData):
+    def _rule_name(data: Bangumi):
         rule_name = (
             f"[{data.group_name}] {data.official_title} S{data.season}"
             if settings.bangumi_manage.group_tag

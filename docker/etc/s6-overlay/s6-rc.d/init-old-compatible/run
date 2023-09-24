@@ -1,8 +1,0 @@
-#!/usr/bin/with-contenv bash
-# shellcheck shell=bash
-
-umask ${UMASK}
-
-if [ -f /config/bangumi.json ]; then
-    mv /config/bangumi.json /app/data/bangumi.json
-fi

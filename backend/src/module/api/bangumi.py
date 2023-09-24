@@ -1,83 +1,85 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
+from .response import u_response
+
 from module.manager import TorrentManager
-from module.models import BangumiData
-from module.security import get_current_user
+from module.models import Bangumi, BangumiUpdate, APIResponse
+from module.security.api import get_current_user, UNAUTHORIZED
 
 router = APIRouter(prefix="/bangumi", tags=["bangumi"])
 
 
-@router.get("/getAll", response_model=list[BangumiData])
-async def get_all_data(current_user=Depends(get_current_user)):
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
-        )
-    with TorrentManager() as torrent:
-        return torrent.search_all()
+def str_to_list(data: Bangumi):
+    data.filter = data.filter.split(",")
+    data.rss_link = data.rss_link.split(",")
+    return data
 
 
-@router.get("/getData/{bangumi_id}", response_model=BangumiData)
-async def get_data(bangumi_id: str, current_user=Depends(get_current_user)):
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
-        )
-    with TorrentManager() as torrent:
-        return torrent.search_one(bangumi_id)
+@router.get("/get/all", response_model=list[Bangumi], dependencies=[Depends(get_current_user)])
+async def get_all_data():
+    with TorrentManager() as manager:
+        return manager.bangumi.search_all()
 
 
-@router.post("/updateRule")
-async def update_rule(data: BangumiData, current_user=Depends(get_current_user)):
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
-        )
-    with TorrentManager() as torrent:
-        return torrent.update_rule(data)
+@router.get("/get/{bangumi_id}", response_model=Bangumi, dependencies=[Depends(get_current_user)])
+async def get_data(bangumi_id: str):
+    with TorrentManager() as manager:
+        resp = manager.search_one(bangumi_id)
+    return resp
 
 
-@router.delete("/deleteRule/{bangumi_id}")
-async def delete_rule(
-    bangumi_id: str, file: bool = False, current_user=Depends(get_current_user)
+@router.patch("/update/{bangumi_id}", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+async def update_rule(
+    bangumi_id: int, data: BangumiUpdate, 
 ):
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
+    with TorrentManager() as manager:
+        resp = manager.update_rule(bangumi_id, data)
+    return u_response(resp)
+
+
+@router.delete(path="/delete/{bangumi_id}", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+async def delete_rule(bangumi_id: str, file: bool = False):
+    with TorrentManager() as manager:
+        resp = manager.delete_rule(bangumi_id, file)
+    return u_response(resp)
+
+
+@router.delete(path="/delete/many/", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+async def delete_many_rule(bangumi_id: list, file: bool = False):
+    with TorrentManager() as manager:
+        for i in bangumi_id:
+            resp = manager.delete_rule(i, file)
+    return u_response(resp)
+
+
+@router.delete(path="/disable/{bangumi_id}", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+async def disable_rule(bangumi_id: str, file: bool = False):
+    with TorrentManager() as manager:
+        resp = manager.disable_rule(bangumi_id, file)
+    return u_response(resp)
+
+
+@router.delete(path="/disable/many/", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+async def disable_many_rule(bangumi_id: list, file: bool = False):
+    with TorrentManager() as manager:
+        for i in bangumi_id:
+            resp = manager.disable_rule(i, file)
+    return u_response(resp)
+
+
+@router.get(path="/enable/{bangumi_id}", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+async def enable_rule(bangumi_id: str):
+    with TorrentManager() as manager:
+        resp = manager.enable_rule(bangumi_id)
+    return u_response(resp)
+
+
+@router.get("/reset/all", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+async def reset_all():
+    with TorrentManager() as manager:
+        manager.bangumi.delete_all()
+        return JSONResponse(
+            status_code=200,
+            content={"msg_en": "Reset all rules successfully.", "msg_zh": "重置所有规则成功。"},
         )
-    with TorrentManager() as torrent:
-        return torrent.delete_rule(bangumi_id, file)
-
-
-@router.delete("/disableRule/{bangumi_id}")
-async def disable_rule(
-    bangumi_id: str, file: bool = False, current_user=Depends(get_current_user)
-):
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
-        )
-    with TorrentManager() as torrent:
-        return torrent.disable_rule(bangumi_id, file)
-
-
-@router.get("/enableRule/{bangumi_id}")
-async def enable_rule(bangumi_id: str, current_user=Depends(get_current_user)):
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
-        )
-    with TorrentManager() as torrent:
-        return torrent.enable_rule(bangumi_id)
-
-
-@router.get("/resetAll")
-async def reset_all(current_user=Depends(get_current_user)):
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
-        )
-    with TorrentManager() as torrent:
-        torrent.delete_all()
-        return JSONResponse(status_code=200, content={"message": "OK"})
