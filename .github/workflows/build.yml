@@ -69,7 +69,7 @@ jobs:
           fi
       - name: Create Tag
         uses: rickstaa/action-create-tag@v1
-        if: ${{ step.release.outputs.release == 1 }} && ${{ step.dev.outputs.dev != 1 }}
+        if: ${{ step.release.outputs.release == 1 && step.dev.outputs.dev != 1 }}
         with:
           tag: ${{ step.version.outputs.version }}
           message: ${{ step.version.outputs.version }}
