@@ -58,7 +58,7 @@ jobs:
       - name: Check version
         id: version
         run: |
-          if [ '${{ github.event_name }}' == 'pull_request']; then
+          if [ '${{ github.event_name }}' == 'pull_request' ]; then
             if [ ${{ github.event.pull_request.merged }} == true ]; then
               echo "version=${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
               git config --local user.email "action@github.com"
