@@ -42,7 +42,8 @@ def is_animation(tv_id, language) -> bool:
 
 
 def get_season(seasons: list) -> tuple[int, str]:
-    ss = sorted(seasons, key=lambda e: e.get("air_date"), reverse=True)
+    ss = [s for s in seasons if s["air_date"] is not None]
+    ss = sorted(ss, key=lambda e: e.get("air_date"), reverse=True)
     for season in ss:
         if re.search(r"第 \d 季", season.get("season")) is not None:
             date = season.get("air_date").split("-")
