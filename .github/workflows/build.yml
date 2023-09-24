@@ -67,13 +67,6 @@ jobs:
           else
             echo "version=Test" >> $GITHUB_OUTPUT
           fi
-      - name: Create Tag
-        uses: rickstaa/action-create-tag@v1
-        if: ${{ steps.release.outputs.release == 1 && steps.dev.outputs.dev != 1 }}
-        with:
-          tag: ${{ steps.version.outputs.version }}
-          message: ${{ steps.version.outputs.version }}
-          github_token: ${{ secrets.ACCESS_TOKEN }}
       - name: Check result
         run: |
           echo "release: ${{ steps.release.outputs.release }}"
