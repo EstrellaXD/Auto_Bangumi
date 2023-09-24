@@ -21,7 +21,7 @@
 4. 下载 WebUI 并安装：
 
    ```powershell
-   Invoke-WebRequest -Uri "https://github.com/Rewrite0/Auto_Bangumi_WebUI/releases/latest/download/dist.zip" -OutFile "dist.zip"
+   Invoke-WebRequest -Uri "https://github.com/EstrellaXD/Auto_Bangumi/releases/latest/download/dist.zip" -OutFile "dist.zip"
    Expand-Archive -Path "dist.zip"
    mv dist\* backend\src\templates
    ```

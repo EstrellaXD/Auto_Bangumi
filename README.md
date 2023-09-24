@@ -19,7 +19,8 @@
     <img title="AutoBangumi" src="docs/image/preview/window.png" alt="" width=75%>
 </p>
 
-本项目是基于 [Mikan Project](https://mikanani.me)、[qBittorrent](https://qbittorrent.org) 的全自动追番整理下载工具。只需要在 [Mikan Project](https://mikanani.me) 上订阅番剧，就可以全自动追番。并且整理完成的名称和目录可以直接被 [Plex]()、[Jellyfin]() 等媒体库软件识别，无需二次刮削。
+本项目是基于 RSS 的全自动追番整理下载工具。只需要在 [Mikan Project][mikan] 等网站上订阅番剧，就可以全自动追番。
+并且整理完成的名称和目录可以直接被 [Plex][plex]、[Jellyfin][plex] 等媒体库软件识别，无需二次刮削。
 
 ## AutoBangumi 功能说明
 
@@ -55,9 +56,9 @@
 - 自定义重命名，可以根据上级文件夹对所有子文件重命名。
 - 季中追番可以补全当季遗漏的所有剧集
 - 高度可自定义的功能选项，可以针对不同媒体库软件微调
+- 支持多种 RSS 站点，支持聚合 RSS 的解析。
 - 无需维护完全无感使用
 - 内置 TDMB 解析器，可以直接生成完整的 TMDB 格式的文件以及番剧信息。
-- 对于 Mikan RSS 的反代支持。
 
 ## 相关群组
 
@@ -66,15 +67,9 @@
 
 ## [Roadmap](https://github.com/users/EstrellaXD/projects/2)
 
-***开发中的功能：***
-
-- 内置 RSS 推送更新器。
-- 搜索功能
 
 ***计划开发的功能：***
 
-- 对其他站点种子的解析归类。
-- 本地化番剧订阅方式。
 - Transmission 的支持。
 
 ## Star History
@@ -93,3 +88,7 @@
 ## Licence
 
 [MIT licence](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/LICENSE)
+
+[mikan]: https://mikanani.me
+[plex]: https://plex.tv
+[jellyfin]: https://jellyfin.org
