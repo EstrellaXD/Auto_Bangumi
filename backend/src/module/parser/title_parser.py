@@ -37,6 +37,16 @@ class TitleParser:
             return title, season, None, None
 
     @staticmethod
+    def tmdb_poster_parser(bangumi: Bangumi):
+        tmdb_info = tmdb_parser(bangumi.official_title, settings.rss_parser.language)
+        if tmdb_info:
+            logger.debug(f"TMDB Matched, official title is {tmdb_info.title}")
+            bangumi.poster_link = tmdb_info.poster_link
+        else:
+            logger.warning(f"Cannot match {bangumi.official_title} in TMDB. Use raw title instead.")
+            logger.warning("Please change bangumi info manually.")
+
+    @staticmethod
     def raw_parser(raw: str) -> Bangumi | None:
         language = settings.rss_parser.language
         try:

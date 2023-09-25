@@ -1,10 +1,10 @@
 import logging
 
-from fastapi.responses import JSONResponse
 
 from module.database import Database
 from module.downloader import DownloadClient
 from module.models import Bangumi, BangumiUpdate, ResponseModel
+from module.parser import TitleParser
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +132,19 @@ class TorrentManager(Database):
                 msg_en=f"Can't find data with {bangumi_id}",
                 msg_zh=f"无法找到 id {bangumi_id} 的数据",
             )
+
+    def refresh_poster(self):
+        bangumis = self.bangumi.search_all()
+        for bangumi in bangumis:
+            if not bangumi.poster_link:
+                TitleParser().tmdb_poster_parser(bangumi)
+        self.bangumi.update_all(bangumis)
+        return ResponseModel(
+            status_code=200,
+            status=True,
+            msg_en=f"Refresh poster link successfully.",
+            msg_zh=f"刷新海报链接成功。",
+        )
 
 
     def search_all_bangumi(self):

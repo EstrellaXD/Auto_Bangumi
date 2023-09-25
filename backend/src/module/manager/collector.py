@@ -9,13 +9,13 @@ logger = logging.getLogger(__name__)
 
 
 class SeasonCollector(DownloadClient):
-    def collect_season(self, bangumi: Bangumi, link: str = None):
+    def collect_season(self, bangumi: Bangumi, link: str = None, limit: int = 50):
         logger.info(
             f"Start collecting {bangumi.official_title} Season {bangumi.season}..."
         )
         with SearchTorrent() as st:
             if not link:
-                torrents = st.search_season(bangumi)
+                torrents = st.search_season(bangumi, limit=limit)
             else:
                 torrents = st.get_torrents(link, bangumi.filter.replace(",", "|"))
             if self.add_torrent(torrents, bangumi):
@@ -23,6 +23,7 @@ class SeasonCollector(DownloadClient):
                 bangumi.eps_collect = True
                 with RSSEngine() as engine:
                     engine.bangumi.update(bangumi)
+                    engine.torrent.add_all(torrents)
                 return ResponseModel(
                     status=True,
                     status_code=200,
@@ -57,7 +58,7 @@ def eps_complete():
             logger.info("Start collecting full season...")
             for data in datas:
                 if not data.eps_collect:
-                    with SeasonCollector() as sc:
-                        sc.collect_season(data)
+                    with SeasonCollector() as collector:
+                        collector.collect_season(data)
                 data.eps_collect = True
             engine.bangumi.update_all(datas)
