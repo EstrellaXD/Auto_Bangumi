@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class SeasonCollector(DownloadClient):
-    def collect_season(self, bangumi: Bangumi, link: str = None, limit: int = 50):
+    def collect_season(self, bangumi: Bangumi, link: str = None, limit: int = None):
         logger.info(
             f"Start collecting {bangumi.official_title} Season {bangumi.season}..."
         )

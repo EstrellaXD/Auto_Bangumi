@@ -30,8 +30,9 @@ class RequestContent(RequestURL):
                     torrents.append(
                         Torrent(name=_title, url=torrent_url, homepage=homepage)
                     )
-                if len(torrents) >= limit:
-                    break
+                if isinstance(limit, int):
+                    if len(torrents) >= limit:
+                        break
             return torrents
         else:
             logger.warning(f"[Network] Failed to get torrents: {_url}")
