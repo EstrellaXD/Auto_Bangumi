@@ -128,6 +128,10 @@ export default defineConfig({
                         link: "/config/notifier",
                     },
                     {
+                        text: "番剧管理配置",
+                        link: "/config/manager",
+                    },
+                    {
                         text: "代理配置",
                         link: "/config/proxy",
                     }
