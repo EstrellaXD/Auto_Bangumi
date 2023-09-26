@@ -127,7 +127,7 @@ export default defineConfig({
             },
             {
                 text: "番剧管理配置",
-                link: "/config/notifier",
+                link: "/config/manager",
             },
             {
                 text: "代理配置",
