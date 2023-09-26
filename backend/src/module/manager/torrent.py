@@ -146,7 +146,6 @@ class TorrentManager(Database):
             msg_zh=f"刷新海报链接成功。",
         )
 
-
     def search_all_bangumi(self):
         datas = self.bangumi.search_all()
         if not datas:
@@ -165,3 +164,7 @@ class TorrentManager(Database):
             )
         else:
             return data
+
+if __name__ == '__main__':
+    with TorrentManager() as manager:
+        manager.refresh_poster()

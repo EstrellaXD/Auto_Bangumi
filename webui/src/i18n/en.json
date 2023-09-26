@@ -23,6 +23,7 @@
     "restart": "Restart",
     "shutdown": "Shutdown",
     "reset_rule": "Reset Rule",
+    "refresh_poster": "Refresh Poster",
     "search": {
       "placeholder": "Type to search"
     },

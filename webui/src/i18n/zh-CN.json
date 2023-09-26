@@ -23,6 +23,7 @@
     "restart": "重启",
     "shutdown": "关闭",
     "reset_rule": "重置规则",
+    "refresh_poster": "刷新海报",
     "search": {
       "placeholder": "输入关键字搜索"
     },
