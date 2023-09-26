@@ -7,7 +7,7 @@ import {
   Power,
   Refresh,
 } from '@icon-park/vue-next';
-import { ruleTemplate } from "#/bangumi";
+import {ruleTemplate} from "#/bangumi";
 import type {BangumiRule} from "#/bangumi";
 
 const {t, changeLocale} = useMyI18n();
@@ -18,6 +18,7 @@ const showAddRSS = ref(false);
 const searchRule = ref<BangumiRule>()
 
 const {start, pause, shutdown, restart, resetRule} = useProgramStore();
+const {refreshPoster} = useBangumiStore();
 
 const items = [
   {
@@ -46,12 +47,18 @@ const items = [
   },
   {
     id: 5,
+    label: () => t('topbar.refresh_poster'),
+    icon: Refresh,
+    handle: refreshPoster
+  },
+  {
+    id: 6,
     label: () => t('topbar.reset_rule'),
     icon: Format,
     handle: resetRule,
   },
   {
-    id: 6,
+    id: 7,
     label: () => t('topbar.profile.title'),
     icon: Me,
     handle: () => {

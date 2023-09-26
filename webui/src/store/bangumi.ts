@@ -1,88 +1,94 @@
-import type { BangumiRule } from '#/bangumi';
-import { ruleTemplate } from '#/bangumi';
-import type { ApiSuccess } from '#/api';
+import type {BangumiRule} from '#/bangumi';
+import {ruleTemplate} from '#/bangumi';
+import type {ApiSuccess} from '#/api';
 
 export const useBangumiStore = defineStore('bangumi', () => {
-  const message = useMessage();
+    const message = useMessage();
 
-  const bangumi = ref<BangumiRule[]>();
-  const editRule = reactive<{
-    show: boolean;
-    item: BangumiRule;
-  }>({
-    show: false,
-    item: ruleTemplate,
-  });
+    const bangumi = ref<BangumiRule[]>();
+    const editRule = reactive<{
+        show: boolean;
+        item: BangumiRule;
+    }>({
+        show: false,
+        item: ruleTemplate,
+    });
 
-  const { execute: getAll, onResult: onBangumiResult } = useApi(
-    apiBangumi.getAll
-  );
-  const { execute: updateRule, onResult: onUpdateRuleResult } = useApi(
-    apiBangumi.updateRule
-  );
-  const { execute: enableRule, onResult: onEnableRuleResult } = useApi(
-    apiBangumi.enableRule
-  );
-  const { execute: disableRule, onResult: onDisableRuleResult } = useApi(
-    apiBangumi.disableRule
-  );
-  const { execute: deleteRule, onResult: onDeleteRuleResult } = useApi(
-    apiBangumi.deleteRule
-  );
+    const {execute: getAll, onResult: onBangumiResult} = useApi(
+        apiBangumi.getAll
+    );
+    const {execute: updateRule, onResult: onUpdateRuleResult} = useApi(
+        apiBangumi.updateRule
+    );
+    const {execute: enableRule, onResult: onEnableRuleResult} = useApi(
+        apiBangumi.enableRule
+    );
+    const {execute: disableRule, onResult: onDisableRuleResult} = useApi(
+        apiBangumi.disableRule
+    );
+    const {execute: deleteRule, onResult: onDeleteRuleResult} = useApi(
+        apiBangumi.deleteRule
+    );
+    const {execute: refreshPoster, onResult: onRefreshPosterResult} = useApi(
+        apiBangumi.refreshPoster
+    );
 
-  onBangumiResult((res) => {
-    function sort(arr: BangumiRule[]) {
-      return arr.sort((a, b) => b.id - a.id);
+    onBangumiResult((res) => {
+        function sort(arr: BangumiRule[]) {
+            return arr.sort((a, b) => b.id - a.id);
+        }
+
+        const enabled = sort(res.filter((e) => !e.deleted));
+        const disabled = sort(res.filter((e) => e.deleted));
+
+        bangumi.value = [...enabled, ...disabled];
+    });
+
+    function refresh() {
+        editRule.show = false;
+        getAll();
     }
 
-    const enabled = sort(res.filter((e) => !e.deleted));
-    const disabled = sort(res.filter((e) => e.deleted));
-
-    bangumi.value = [...enabled, ...disabled];
-  });
-
-  function refresh() {
-    editRule.show = false;
-    getAll();
-  }
-
-  function actionSuccess(apiRes: ApiSuccess) {
-    message.success(apiRes.msg_en);
-    refresh();
-  }
-  onUpdateRuleResult(actionSuccess);
-  onDisableRuleResult(actionSuccess);
-  onEnableRuleResult(actionSuccess);
-  onDeleteRuleResult(actionSuccess);
-
-  function openEditPopup(data: BangumiRule) {
-    editRule.show = true;
-    editRule.item = data;
-  }
-
-  function ruleManage(
-    type: 'disable' | 'delete',
-    id: number,
-    deleteFile: boolean
-  ) {
-    if (type === 'disable') {
-      disableRule(id, deleteFile);
+    function actionSuccess(apiRes: ApiSuccess) {
+        message.success(apiRes.msg_en);
+        refresh();
     }
-    if (type === 'delete') {
-      deleteRule(id, deleteFile);
+
+    onUpdateRuleResult(actionSuccess);
+    onDisableRuleResult(actionSuccess);
+    onEnableRuleResult(actionSuccess);
+    onDeleteRuleResult(actionSuccess);
+    onRefreshPosterResult(actionSuccess);
+
+    function openEditPopup(data: BangumiRule) {
+        editRule.show = true;
+        editRule.item = data;
     }
-  }
 
-  return {
-    bangumi,
-    editRule,
+    function ruleManage(
+        type: 'disable' | 'delete',
+        id: number,
+        deleteFile: boolean
+    ) {
+        if (type === 'disable') {
+            disableRule(id, deleteFile);
+        }
+        if (type === 'delete') {
+            deleteRule(id, deleteFile);
+        }
+    }
 
-    getAll,
-    updateRule,
-    enableRule,
-    disableRule,
-    deleteRule,
-    openEditPopup,
-    ruleManage,
-  };
+    return {
+        bangumi,
+        editRule,
+
+        getAll,
+        updateRule,
+        enableRule,
+        disableRule,
+        deleteRule,
+        refreshPoster,
+        openEditPopup,
+        ruleManage,
+    };
 });

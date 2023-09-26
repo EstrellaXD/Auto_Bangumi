@@ -75,6 +75,13 @@ async def enable_rule(bangumi_id: str):
     return u_response(resp)
 
 
+@router.get(path="/refresh/poster/all", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+async def refresh_poster():
+    with TorrentManager() as manager:
+        resp = manager.refresh_poster()
+    return u_response(resp)
+
+
 @router.get("/reset/all", response_model=APIResponse, dependencies=[Depends(get_current_user)])
 async def reset_all():
     with TorrentManager() as manager:
