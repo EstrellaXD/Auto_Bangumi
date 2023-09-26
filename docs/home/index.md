@@ -24,9 +24,8 @@ title: 项目说明
   >
 </p>
 
-**`AutoBangumi`** 是从 [Mikan Project](https://mikanani.me) 全自动追番整理下载工具。
-只需要在 [Mikan Project](https://mikanani.me) 上订阅番剧，就可以全自动追番、下载并整理文件，
-整理后的番剧名称和目录可以直接被 [Plex]()、[Jellyfin]() 等媒体库软件识别，无需二次刮削。
+**`AutoBangumi`** 是基于 RSS 的全自动追番整理下载工具。只需要在 [Mikan Project][mikan] 等网站上订阅番剧，就可以全自动追番。
+并且整理完成的名称和目录可以直接被 [Plex][plex]、[Jellyfin][plex] 等媒体库软件识别，无需二次刮削。
 
 ## 功能说明
 
@@ -97,3 +96,8 @@ AutoBangumi 仅供学习交流使用。
 ## Licence
 
 [MIT licence](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/LICENSE)
+
+[mikan]: https://mikanani.me
+[plex]: https://plex.tv
+[jellyfin]: https://jellyfin.org
+

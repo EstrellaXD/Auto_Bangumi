@@ -24,7 +24,7 @@ echo "VERSION = 'local'" > module/__version__.py
 ## 下载 WebUI
 
 ```bash
-wget https://github.com/Rewrite0/Auto_Bangumi_WebUI/releases/download/latest/dist.zip
+wget https://github.com/EstrellaXD/Auto_Bangumi/releases/download/latest/dist.zip
 
 unzip dist.zip
 
