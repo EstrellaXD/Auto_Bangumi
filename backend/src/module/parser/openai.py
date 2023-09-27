@@ -44,16 +44,16 @@ class OpenAIParser:
     def __init__(
         self,
         api_key: str,
-        api_base: str | None = None,
-        model: str | None = None,
+        api_base: str = "https://api.openai.com/v1",
+        model: str = "gpt-3.5-turbo",
         **kwargs,
     ) -> None:
         if not api_key:
             raise ValueError("API key is required.")
 
         self._api_key = api_key
-        self.api_base = api_base or "https://api.openai.com/v1"
-        self.model = model or "gpt-3.5-turbo"
+        self.api_base = api_base
+        self.model = model
         self.openai_kwargs = kwargs
 
     def parse(self, text: str, prompt: str | None = None) -> str:
