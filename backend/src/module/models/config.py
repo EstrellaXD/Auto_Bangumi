@@ -81,6 +81,13 @@ class Notification(BaseModel):
         return expandvars(self.chat_id_)
 
 
+class Experimental(BaseModel):
+    openai_enable: bool = Field(False, description="Enable experimental OpenAI")
+    openai_api_key: str = Field("", description="OpenAI api key")
+    openai_api_base: str = Field("", description="OpenAI api base url")
+    openai_model: str = Field("", description="OpenAI model")
+
+
 class Config(BaseModel):
     program: Program = Program()
     downloader: Downloader = Downloader()
@@ -89,6 +96,7 @@ class Config(BaseModel):
     log: Log = Log()
     proxy: Proxy = Proxy()
     notification: Notification = Notification()
+    Experimental: Experimental = Experimental()
 
     def dict(self, *args, by_alias=True, **kwargs):
         return super().dict(*args, by_alias=by_alias, **kwargs)

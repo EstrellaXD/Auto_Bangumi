@@ -137,6 +137,13 @@
       "username": "用户名",
       "password": "密码"
     },
+    "experimental_set": {
+      "title": "实验功能设置",
+      "openai_enable": "启用 OpenAI",
+      "openai_api_key": "OpenAI API Key",
+      "openai_api_base": "OpenAI API Base URL",
+      "openai_model": "OpenAI 模型"
+    },
     "media_player_set": {
       "title": "播放器设置",
       "type": "类型",
