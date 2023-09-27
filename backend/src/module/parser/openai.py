@@ -3,6 +3,8 @@ import logging
 
 import openai
 
+logger = logging.getLogger(__name__)
+
 DEFAULT_PROMPT = """\
 You will now play the role of a super assistant. 
 Your task is to extract structured data from unstructured text content and output it in JSON format. 
@@ -48,6 +50,22 @@ class OpenAIParser:
         model: str = "gpt-3.5-turbo",
         **kwargs,
     ) -> None:
+        """OpenAIParser is a class to parse text with openai
+
+        Args:
+            api_key (str): the OpenAI api key
+            api_base (str):
+                the OpenAI api base url, you can use custom url here. \
+                Defaults to "https://api.openai.com/v1".
+            model (str):
+                the ChatGPT model parameter, you can get more details from https://platform.openai.com/docs/api-reference/chat/create. \
+                Defaults to "gpt-3.5-turbo".
+            kwargs (dict):
+                the OpenAI ChatGPT parameters, you can get more details from https://platform.openai.com/docs/api-reference/chat/create.
+
+        Raises:
+            ValueError: if api_key is not provided.
+        """
         if not api_key:
             raise ValueError("API key is required.")
 
@@ -57,6 +75,17 @@ class OpenAIParser:
         self.openai_kwargs = kwargs
 
     def parse(self, text: str, prompt: str | None = None) -> str:
+        """parse text with openai
+
+        Args:
+            text (str): the text to be parsed
+            prompt (str | None, optional):
+                the custom prompt. Built-in prompt will be used if no prompt is provided. \
+                Defaults to None.
+
+        Returns:
+            str: the parsed text.
+        """
         if not prompt:
             prompt = DEFAULT_PROMPT
 
@@ -80,6 +109,6 @@ class OpenAIParser:
         loop = asyncio.get_event_loop()
         result = loop.run_until_complete(complete())
 
-        logging.debug(f"the parsed result is: {result}")
+        logger.debug(f"the parsed result is: {result}")
 
         return result
