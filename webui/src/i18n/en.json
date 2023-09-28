@@ -72,7 +72,7 @@
     "status": "Status",
     "delete": "Delete",
     "disable": "Disable",
-    "enable": "Enable",
+    "enable": "Enable"
   },
   "player": {
     "hit": "Please set up the media player"
@@ -136,6 +136,14 @@
       "port": "Port",
       "username": "Username",
       "password": "Password"
+    },
+    "experimental_set": {
+      "title": "Experimental Setting",
+      "warning": "Warning: Experimental feature is not yet stable. Please use with caution.",
+      "openai_enable": "Enable OpenAI",
+      "openai_api_key": "OpenAI API Key",
+      "openai_api_base": "OpenAI API Base URL",
+      "openai_model": "OpenAI Model"
     },
     "media_player_set": {
       "title": "Media Player Setting",

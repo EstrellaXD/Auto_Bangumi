@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { Caution } from '@icon-park/vue-next';
 import type { SettingItem } from '#/components';
 import type { Experimental } from '#/config';
 
@@ -33,6 +34,10 @@ const items: SettingItem<Experimental>[] = [
 
 <template>
   <ab-fold-panel :title="$t('config.experimental_set.title')">
+    <div fx-cer gap-2 mb-4 p-2 bg-amber-300 rounded-4px>
+      <Caution />
+      <span>{{ $t('config.experimental_set.warning') }}</span>
+    </div>
     <div space-y-12px>
       <ab-setting
         v-for="i in items"
