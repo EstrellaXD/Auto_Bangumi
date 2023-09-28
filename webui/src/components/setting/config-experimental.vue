@@ -18,11 +18,19 @@ const items: SettingItem<Experimental>[] = [
     configKey: 'openai_api_key',
     label: () => t('config.experimental_set.openai_api_key'),
     type: 'input',
+    prop: {
+      type: 'password',
+      placeholder: 'e.g: sk-3Bl****w2E9kW',
+    },
   },
   {
     configKey: 'openai_api_base',
     label: () => t('config.experimental_set.openai_api_base'),
     type: 'input',
+    prop: {
+      type: 'url',
+      placeholder: 'OpenAI API Base URL',
+    },
   },
   {
     configKey: 'openai_model',
