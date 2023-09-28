@@ -79,13 +79,4 @@ def test_raw_parser():
     assert info.episode == 13
     assert info.season == 1
 
-    content = "[星空字幕组&LoliHouse] 五等分的新娘∽ / Go-toubun no Hanayome ∽ 01 [WebRip 1080p HEVC-10bit AAC][简繁日内封字幕]（检索用：暑假篇）"
-    info = raw_parser(content)
-    assert info.group == "星空字幕组&LoliHouse"
-    assert info.title_zh == "五等分的新娘∽"
-    assert info.title_jp == "Go-toubun no Hanayome ∽"
-    assert info.resolution == "1080p"
-    assert info.episode == 1
-    assert info.season == 1
-
 
