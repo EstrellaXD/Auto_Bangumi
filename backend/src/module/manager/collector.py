@@ -9,13 +9,13 @@ logger = logging.getLogger(__name__)
 
 
 class SeasonCollector(DownloadClient):
-    def collect_season(self, bangumi: Bangumi, link: str = None, limit: int = None):
+    def collect_season(self, bangumi: Bangumi, link: str = None):
         logger.info(
             f"Start collecting {bangumi.official_title} Season {bangumi.season}..."
         )
         with SearchTorrent() as st:
             if not link:
-                torrents = st.search_season(bangumi, limit=limit)
+                torrents = st.search_season(bangumi)
             else:
                 torrents = st.get_torrents(link, bangumi.filter.replace(",", "|"))
             if self.add_torrent(torrents, bangumi):

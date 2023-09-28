@@ -69,3 +69,23 @@ def test_raw_parser():
     assert info.resolution == "720P"
     assert info.episode == 5
     assert info.season == 1
+
+    content = "【喵萌奶茶屋】★07月新番★[银砂糖师与黑妖精 ~ Sugar Apple Fairy Tale ~][13][1080p][简日双语][招募翻译]"
+    info = raw_parser(content)
+    assert info.group == "喵萌奶茶屋"
+    assert info.title_zh == "银砂糖师与黑妖精"
+    assert info.title_en == "~ Sugar Apple Fairy Tale ~"
+    assert info.resolution == "1080p"
+    assert info.episode == 13
+    assert info.season == 1
+
+    content = "[星空字幕组&LoliHouse] 五等分的新娘∽ / Go-toubun no Hanayome ∽ 01 [WebRip 1080p HEVC-10bit AAC][简繁日内封字幕]（检索用：暑假篇）"
+    info = raw_parser(content)
+    assert info.group == "星空字幕组&LoliHouse"
+    assert info.title_zh == "五等分的新娘∽"
+    assert info.title_jp == "Go-toubun no Hanayome ∽"
+    assert info.resolution == "1080p"
+    assert info.episode == 1
+    assert info.season == 1
+
+
