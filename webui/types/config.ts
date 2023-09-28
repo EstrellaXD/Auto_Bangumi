@@ -105,7 +105,7 @@ export const initConfig: Config = {
   experimental: {
     openai_enable: false,
     openai_api_key: '',
-    openai_api_base: '',
+    openai_api_base: 'https://api.openai.com/v1/',
     openai_model: 'gpt-3.5-turbo',
   },
 };

@@ -58,10 +58,12 @@ class OpenAIParser:
                 the OpenAI api base url, you can use custom url here. \
                 Defaults to "https://api.openai.com/v1".
             model (str):
-                the ChatGPT model parameter, you can get more details from https://platform.openai.com/docs/api-reference/chat/create. \
+                the ChatGPT model parameter, you can get more details from \
+                https://platform.openai.com/docs/api-reference/chat/create. \
                 Defaults to "gpt-3.5-turbo".
             kwargs (dict):
-                the OpenAI ChatGPT parameters, you can get more details from https://platform.openai.com/docs/api-reference/chat/create.
+                the OpenAI ChatGPT parameters, you can get more details from \
+                https://platform.openai.com/docs/api-reference/chat/create.
 
         Raises:
             ValueError: if api_key is not provided.
