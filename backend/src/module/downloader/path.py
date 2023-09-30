@@ -8,7 +8,7 @@ from module.models import Bangumi, BangumiUpdate
 logger = logging.getLogger(__name__)
 
 if PLATFORM == "Windows":
-    from pathlib import WindowsPath as Path
+    from pathlib import PureWindowsPath as Path
 else:
     from pathlib import Path
 
@@ -72,9 +72,4 @@ class TorrentPath:
     @staticmethod
     def _join_path(*args):
         return str(Path(*args))
-
-
-if __name__ == '__main__':
-    path = "C:\\ABC\\Season 1\\Bangumi Name"
-    print(TorrentPath()._path_to_bangumi(path))
 
