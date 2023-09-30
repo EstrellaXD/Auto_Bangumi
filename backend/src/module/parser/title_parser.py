@@ -2,8 +2,10 @@ import logging
 
 from module.conf import settings
 from module.models import Bangumi
+from module.models.bangumi import Episode
+from module.parser.openai import OpenAIParser
 
-from .analyser import raw_parser, tmdb_parser, torrent_parser, mikan_parser
+from .analyser import mikan_parser, raw_parser, tmdb_parser, torrent_parser
 
 logger = logging.getLogger(__name__)
 
@@ -43,14 +45,28 @@ class TitleParser:
             logger.debug(f"TMDB Matched, official title is {tmdb_info.title}")
             bangumi.poster_link = tmdb_info.poster_link
         else:
-            logger.warning(f"Cannot match {bangumi.official_title} in TMDB. Use raw title instead.")
+            logger.warning(
+                f"Cannot match {bangumi.official_title} in TMDB. Use raw title instead."
+            )
             logger.warning("Please change bangumi info manually.")
 
     @staticmethod
     def raw_parser(raw: str) -> Bangumi | None:
         language = settings.rss_parser.language
         try:
-            episode = raw_parser(raw)
+            # use OpenAI ChatGPT to parse raw title and get structured data
+            if settings.experimental.openai_enable:
+                gpt = OpenAIParser(
+                    api_key=settings.experimental.openai_api_key,
+                    api_base=settings.experimental.openai_api_base,
+                    model=settings.experimental.openai_model,
+                )
+                episode_dict = gpt.parse(raw, asdict=True)
+                print(f"Episode dict: {episode_dict}")
+                episode = Episode(**episode_dict)
+            else:
+                episode = raw_parser(raw)
+
             titles = {
                 "zh": episode.title_zh,
                 "en": episode.title_en,
