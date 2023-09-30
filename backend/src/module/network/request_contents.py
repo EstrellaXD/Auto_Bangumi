@@ -16,7 +16,7 @@ class RequestContent(RequestURL):
         self,
         _url: str,
         _filter: str = "|".join(settings.rss_parser.filter),
-        limit: int = 100,
+        limit: int = None,
         retry: int = 3,
     ) -> list[Torrent]:
         soup = self.get_xml(_url, retry)

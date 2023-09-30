@@ -69,3 +69,14 @@ def test_raw_parser():
     assert info.resolution == "720P"
     assert info.episode == 5
     assert info.season == 1
+
+    content = "【喵萌奶茶屋】★07月新番★[银砂糖师与黑妖精 ~ Sugar Apple Fairy Tale ~][13][1080p][简日双语][招募翻译]"
+    info = raw_parser(content)
+    assert info.group == "喵萌奶茶屋"
+    assert info.title_zh == "银砂糖师与黑妖精"
+    assert info.title_en == "~ Sugar Apple Fairy Tale ~"
+    assert info.resolution == "1080p"
+    assert info.episode == 13
+    assert info.season == 1
+
+

@@ -1,4 +1,5 @@
 import logging
+import re
 
 from module.conf import settings
 from module.downloader import DownloadClient
@@ -12,6 +13,7 @@ class Renamer(DownloadClient):
     def __init__(self):
         super().__init__()
         self._parser = TitleParser()
+        self.check_pool = {}
 
     @staticmethod
     def print_result(torrent_count, rename_count):
@@ -23,7 +25,7 @@ class Renamer(DownloadClient):
 
     @staticmethod
     def gen_path(
-        file_info: EpisodeFile | SubtitleFile, bangumi_name: str, method: str
+            file_info: EpisodeFile | SubtitleFile, bangumi_name: str, method: str
     ) -> str:
         season = f"0{file_info.season}" if file_info.season < 10 else file_info.season
         episode = (
@@ -47,14 +49,14 @@ class Renamer(DownloadClient):
             return file_info.media_path
 
     def rename_file(
-        self,
-        torrent_name: str,
-        media_path: str,
-        bangumi_name: str,
-        method: str,
-        season: int,
-        _hash: str,
-        **kwargs,
+            self,
+            torrent_name: str,
+            media_path: str,
+            bangumi_name: str,
+            method: str,
+            season: int,
+            _hash: str,
+            **kwargs,
     ):
         ep = self._parser.torrent_parser(
             torrent_name=torrent_name,
@@ -64,16 +66,15 @@ class Renamer(DownloadClient):
         if ep:
             new_path = self.gen_path(ep, bangumi_name, method=method)
             if media_path != new_path:
-                renamed = self.rename_torrent_file(
-                    _hash=_hash, old_path=media_path, new_path=new_path
-                )
-                if renamed:
-                    n = Notification(
-                        official_title=bangumi_name,
-                        season=ep.season,
-                        episode=ep.episode,
-                    )
-                    return n
+                if new_path not in self.check_pool.keys():
+                    if self.rename_torrent_file(
+                        _hash=_hash, old_path=media_path, new_path=new_path
+                    ):
+                        return Notification(
+                            official_title=bangumi_name,
+                            season=ep.season,
+                            episode=ep.episode,
+                        )
         else:
             logger.warning(f"[Renamer] {media_path} parse failed")
             if settings.bangumi_manage.remove_bad_torrent:
@@ -81,13 +82,13 @@ class Renamer(DownloadClient):
         return None
 
     def rename_collection(
-        self,
-        media_list: list[str],
-        bangumi_name: str,
-        season: int,
-        method: str,
-        _hash: str,
-        **kwargs,
+            self,
+            media_list: list[str],
+            bangumi_name: str,
+            season: int,
+            method: str,
+            _hash: str,
+            **kwargs,
     ):
         for media_path in media_list:
             if self.is_ep(media_path):
@@ -109,14 +110,14 @@ class Renamer(DownloadClient):
                                 break
 
     def rename_subtitles(
-        self,
-        subtitle_list: list[str],
-        torrent_name: str,
-        bangumi_name: str,
-        season: int,
-        method: str,
-        _hash,
-        **kwargs,
+            self,
+            subtitle_list: list[str],
+            torrent_name: str,
+            bangumi_name: str,
+            season: int,
+            method: str,
+            _hash,
+            **kwargs,
     ):
         method = "subtitle_" + method
         for subtitle_path in subtitle_list:
@@ -170,6 +171,12 @@ class Renamer(DownloadClient):
                 logger.warning(f"[Renamer] {info.name} has no media file")
         logger.debug("[Renamer] Rename process finished.")
         return renamed_info
+
+    def compare_ep_version(self, torrent_name: str, torrent_hash: str):
+        if re.search(r"v\d.", torrent_name):
+            pass
+        else:
+            self.delete_torrent(hashes=torrent_hash)
 
 
 if __name__ == "__main__":

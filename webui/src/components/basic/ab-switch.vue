@@ -36,29 +36,16 @@ const checked = defineModel<boolean>('checked', {
 
 <style lang="scss" scope>
 $bg-unchecked: #929292;
-$bg-checked: #e7e7e7;
+$bg-checked: #1c1259;
 
 $slider-unchecked: #ececef;
-$slider-unchecked-hover: #dbd8ec;
-
-$slider-checked: #1c1259;
-$slider-checked-hover: #62589e;
+$slider-checked: #fff;
 
 .box {
   background: $bg-unchecked;
 
   &.checked {
     background: $bg-checked;
-  }
-
-  &:hover .slider {
-    &:not(.checked) {
-      background: $slider-unchecked-hover;
-    }
-
-    &.checked {
-      background: $slider-checked-hover;
-    }
   }
 }
 
