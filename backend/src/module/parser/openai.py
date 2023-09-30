@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 
 import openai
@@ -76,7 +77,9 @@ class OpenAIParser:
         self.model = model
         self.openai_kwargs = kwargs
 
-    def parse(self, text: str, prompt: str | None = None) -> str:
+    def parse(
+        self, text: str, prompt: str | None = None, asdict: bool = True
+    ) -> dict | str:
         """parse text with openai
 
         Args:
@@ -84,9 +87,12 @@ class OpenAIParser:
             prompt (str | None, optional):
                 the custom prompt. Built-in prompt will be used if no prompt is provided. \
                 Defaults to None.
+            asdict (bool, optional):
+                whether to return the result as dict or not. \
+                Defaults to True.
 
         Returns:
-            str: the parsed text.
+            dict | str: the parsed result.
         """
         if not prompt:
             prompt = DEFAULT_PROMPT
@@ -110,6 +116,12 @@ class OpenAIParser:
 
         loop = asyncio.get_event_loop()
         result = loop.run_until_complete(complete())
+
+        if asdict:
+            try:
+                result = json.loads(result)
+            except json.JSONDecodeError:
+                logger.warning(f"Cannot parse result {result} as python dict.")
 
         logger.debug(f"the parsed result is: {result}")
 

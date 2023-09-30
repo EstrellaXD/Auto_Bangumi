@@ -15,7 +15,7 @@ class TestOpenAIParser:
 
     def test_parse(self):
         text = "[梦蓝字幕组]New Doraemon 哆啦A梦新番[747][2023.02.25][AVC][1080P][GB_JP][MP4]"
-        result = self.parser.parse(text=text)
+        result = self.parser.parse(text=text, asdict=False)
         assert json.loads(result) == {
             "group": "梦蓝字幕组",
             "title_en": "New Doraemon",
