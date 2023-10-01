@@ -3,7 +3,7 @@ import os
 from unittest import mock
 
 from dotenv import load_dotenv
-from module.parser.openai import OpenAIParser
+from module.parser.analyser.openai import OpenAIParser
 
 load_dotenv()
 

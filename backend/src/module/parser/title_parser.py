@@ -3,9 +3,13 @@ import logging
 from module.conf import settings
 from module.models import Bangumi
 from module.models.bangumi import Episode
-from module.parser.openai import OpenAIParser
-
-from .analyser import mikan_parser, raw_parser, tmdb_parser, torrent_parser
+from module.parser.analyser import (
+    OpenAIParser,
+    mikan_parser,
+    raw_parser,
+    tmdb_parser,
+    torrent_parser,
+)
 
 logger = logging.getLogger(__name__)
 
