@@ -62,7 +62,6 @@ class TitleParser:
                     model=settings.experimental.openai_model,
                 )
                 episode_dict = gpt.parse(raw, asdict=True)
-                print(f"Episode dict: {episode_dict}")
                 episode = Episode(**episode_dict)
             else:
                 episode = raw_parser(raw)
