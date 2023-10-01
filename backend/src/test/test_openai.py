@@ -29,7 +29,7 @@ class TestOpenAIParser:
             "source": "AVC",
         }
 
-        with mock.patch("module.parser.openai.OpenAIParser.parse") as mocker:
+        with mock.patch("module.parser.analyser.OpenAIParser.parse") as mocker:
             mocker.return_value = json.dumps(expected)
 
             result = self.parser.parse(text=text, asdict=False)
