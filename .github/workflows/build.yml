@@ -2,6 +2,10 @@ name: Build Docker
 
 on:
   pull_request:
+    types:
+      - closed
+    branches:
+      - main
   push:
 
 jobs:
@@ -27,11 +31,18 @@ jobs:
   version-info:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
       - name: If release
         id: release
         run: |
-          if [[${{ github.event_name }}== 'pull_request'] && [${{ github.event.pull_request.merged }} == true]] || \
-          [[ ${{ github.event_name }} == 'push' && (${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'*) ]]; then
+          if [ '${{ github.event_name }}' == 'pull_request' ]; then
+            if [ ${{ github.event.pull_request.merged }} == true ]; then
+              echo "release=1" >> $GITHUB_OUTPUT
+            else
+              echo "release=0" >> $GITHUB_OUTPUT
+            fi
+          elif [[ '${{ github.event_name }}' == 'push' && (${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'*) ]]; then
             echo "release=1" >> $GITHUB_OUTPUT
           else
             echo "release=0" >> $GITHUB_OUTPUT
@@ -39,7 +50,7 @@ jobs:
       - name: If dev
         id: dev
         run: |
-          if [[ ${{ github.event_name }} == 'push' && (${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'*) ]]; then
+          if [[ '${{ github.event_name }}' == 'push' && (${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'*) ]]; then
             echo "dev=1" >> $GITHUB_OUTPUT
           else
             echo "dev=0" >> $GITHUB_OUTPUT
@@ -47,12 +58,10 @@ jobs:
       - name: Check version
         id: version
         run: |
-          if [${{ github.event_name }} == 'pull_request' && ${{ github.event.pull_request.merged }} == true]; then
-            echo "version=${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
-            git config --local user.email
-            git config --local user.name "github-actions"
-            git tag -a ${{ github.event.pull_request.title }} -m ${{ github.event.pull_request.body }}
-            git push origin ${{ github.event.pull_request.title }}
+          if [ '${{ github.event_name }}' == 'pull_request' ]; then
+            if [ ${{ github.event.pull_request.merged }} == true ]; then
+              echo "version=${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
+            fi
           elif [[ ${{ github.event_name }} == 'push' && (${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'*) ]]; then
             echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           else
@@ -64,17 +73,17 @@ jobs:
           echo "dev: ${{ steps.dev.outputs.dev }}"
           echo "version: ${{ steps.version.outputs.version }}"
     outputs:
-        release: ${{ steps.release.outputs.release }}
-        dev: ${{ steps.dev.outputs.dev }}
-        version: ${{ steps.version.outputs.version }}
+      release: ${{ steps.release.outputs.release }}
+      dev: ${{ steps.dev.outputs.dev }}
+      version: ${{ steps.version.outputs.version }}
 
   build-webui:
     runs-on: ubuntu-latest
-    needs: [test, version-info]
+    needs: [ test, version-info ]
     if: ${{ needs.version-info.outputs.release == 1 || needs.version-info.outputs.dev == 1 }}
     strategy:
       matrix:
-        node-version: [18]
+        node-version: [ 18 ]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -105,7 +114,7 @@ jobs:
 
   build-docker:
     runs-on: ubuntu-latest
-    needs: [build-webui, version-info]
+    needs: [ build-webui, version-info ]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -132,7 +141,7 @@ jobs:
             estrellaxd/auto_bangumi
             ghcr.io/${{ github.repository }}
           tags: |
-            type=semver,pattern=${{ needs.version-info.outputs.version }}
+            type=raw,value=${{ needs.version-info.outputs.version }}
             type=raw,value=latest
 
       - name: Docker metadata dev
@@ -175,7 +184,7 @@ jobs:
           context: .
           builder: ${{ steps.buildx.output.name }}
           platforms: linux/amd64,linux/arm64,linux/arm/v7
-          push: ${{ github.event_name == 'push' }}
+          push: True
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha, scope=${{ github.workflow }}
@@ -208,7 +217,7 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    needs: [build-docker, version-info]
+    needs: [ build-docker, version-info ]
     if: ${{ needs.version-info.outputs.release == 1 }}
     outputs:
       url: ${{ steps.release.outputs.url }}
@@ -254,7 +263,7 @@ jobs:
 
   telegram:
     runs-on: ubuntu-latest
-    needs: [release]
+    needs: [ release ]
     steps:
       - name: send telegram message on push
         uses: appleboy/telegram-action@master
