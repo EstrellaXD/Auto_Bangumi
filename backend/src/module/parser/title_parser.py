@@ -55,12 +55,9 @@ class TitleParser:
         language = settings.rss_parser.language
         try:
             # use OpenAI ChatGPT to parse raw title and get structured data
-            if settings.experimental.openai_enable:
-                gpt = OpenAIParser(
-                    api_key=settings.experimental.openai_api_key,
-                    api_base=settings.experimental.openai_api_base,
-                    model=settings.experimental.openai_model,
-                )
+            if settings.experimental_openai.enable:
+                kwargs = settings.experimental_openai.dict(exclude={"enable"})
+                gpt = OpenAIParser(**kwargs)
                 episode_dict = gpt.parse(raw, asdict=True)
                 episode = Episode(**episode_dict)
             else:

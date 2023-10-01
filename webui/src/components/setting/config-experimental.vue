@@ -1,22 +1,22 @@
 <script lang="ts" setup>
 import { Caution } from '@icon-park/vue-next';
 import type { SettingItem } from '#/components';
-import type { Experimental } from '#/config';
+import type { ExperimentalOpenAI } from '#/config';
 
 const { t } = useMyI18n();
 const { getSettingGroup } = useConfigStore();
 
-const experimentalFeatures = getSettingGroup('experimental');
+const experimentalFeatures = getSettingGroup('experimental_openai');
 
-const items: SettingItem<Experimental>[] = [
+const items: SettingItem<ExperimentalOpenAI>[] = [
   {
-    configKey: 'openai_enable',
-    label: () => t('config.experimental_set.openai_enable'),
+    configKey: 'enable',
+    label: () => t('config.experimental_openai_set.enable'),
     type: 'switch',
   },
   {
-    configKey: 'openai_api_key',
-    label: () => t('config.experimental_set.openai_api_key'),
+    configKey: 'api_key',
+    label: () => t('config.experimental_openai_set.api_key'),
     type: 'input',
     prop: {
       type: 'password',
@@ -24,8 +24,8 @@ const items: SettingItem<Experimental>[] = [
     },
   },
   {
-    configKey: 'openai_api_base',
-    label: () => t('config.experimental_set.openai_api_base'),
+    configKey: 'api_base',
+    label: () => t('config.experimental_openai_set.api_base'),
     type: 'input',
     prop: {
       type: 'url',
@@ -33,18 +33,18 @@ const items: SettingItem<Experimental>[] = [
     },
   },
   {
-    configKey: 'openai_model',
-    label: () => t('config.experimental_set.openai_model'),
+    configKey: 'model',
+    label: () => t('config.experimental_openai_set.model'),
     type: 'select',
   },
 ];
 </script>
 
 <template>
-  <ab-fold-panel :title="$t('config.experimental_set.title')">
+  <ab-fold-panel :title="$t('config.experimental_openai_set.title')">
     <div fx-cer gap-2 mb-4 p-2 bg-amber-300 rounded-4px>
       <Caution />
-      <span>{{ $t('config.experimental_set.warning') }}</span>
+      <span>{{ $t('config.experimental_openai_set.warning') }}</span>
     </div>
     <div space-y-12px>
       <ab-setting

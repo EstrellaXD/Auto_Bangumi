@@ -81,11 +81,13 @@ class Notification(BaseModel):
         return expandvars(self.chat_id_)
 
 
-class Experimental(BaseModel):
-    openai_enable: bool = Field(False, description="Enable experimental OpenAI")
-    openai_api_key: str = Field("", description="OpenAI api key")
-    openai_api_base: str = Field("https://api.openai.com/v1", description="OpenAI api base url")
-    openai_model: str = Field("gpt-3.5-turbo", description="OpenAI model")
+class ExperimentalOpenAI(BaseModel):
+    enable: bool = Field(False, description="Enable experimental OpenAI")
+    api_key: str = Field("", description="OpenAI api key")
+    api_base: str = Field(
+        "https://api.openai.com/v1", description="OpenAI api base url"
+    )
+    model: str = Field("gpt-3.5-turbo", description="OpenAI model")
 
 
 class Config(BaseModel):
@@ -96,7 +98,7 @@ class Config(BaseModel):
     log: Log = Log()
     proxy: Proxy = Proxy()
     notification: Notification = Notification()
-    experimental: Experimental = Experimental()
+    experimental_openai: ExperimentalOpenAI = ExperimentalOpenAI()
 
     def dict(self, *args, by_alias=True, **kwargs):
         return super().dict(*args, by_alias=by_alias, **kwargs)

@@ -17,7 +17,7 @@ class TestTitleParser:
         assert result.subtitle == "GB_JP"
 
     @pytest.mark.skipif(
-        not settings.experimental.openai_enable,
+        not settings.experimental_openai.enable,
         reason="OpenAI is not enabled in settings",
     )
     def test_parse_with_openai(self):

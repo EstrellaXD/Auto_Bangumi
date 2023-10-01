@@ -22,4 +22,9 @@ class TestOpenAIParser:
             "resolution": "1080P",
             "episode": 747,
             "season": 1,
+            "title_zh": "哆啦A梦新番",
+            "sub": "GB_JP",
+            "title_jp": "",
+            "season_raw": "2023.02.25",
+            "source": "AVC",
         }
