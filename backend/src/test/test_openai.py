@@ -12,9 +12,7 @@ class TestOpenAIParser:
     @classmethod
     def setup_class(cls):
         api_key = os.getenv("OPENAI_API_KEY") or "testing!"
-        cls.mocker = mock.Mock()
-        with mock.patch.object(OpenAIParser, "parse", new_callable=cls.mocker):
-            cls.parser = OpenAIParser(api_key=api_key)
+        cls.parser = OpenAIParser(api_key=api_key)
 
     def test_parse(self):
         text = "[梦蓝字幕组]New Doraemon 哆啦A梦新番[747][2023.02.25][AVC][1080P][GB_JP][MP4]"
@@ -30,7 +28,9 @@ class TestOpenAIParser:
             "season_raw": "2023.02.25",
             "source": "AVC",
         }
-        self.mocker.return_value = expected
 
-        result = self.parser.parse(text=text, asdict=False)
-        assert json.loads(result) == expected
+        with mock.patch("module.parser.openai.OpenAIParser.parse") as mocker:
+            mocker.return_value = json.dumps(expected)
+
+            result = self.parser.parse(text=text, asdict=False)
+            assert json.loads(result) == expected
