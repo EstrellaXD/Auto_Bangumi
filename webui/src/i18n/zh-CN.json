@@ -58,8 +58,8 @@
       "apply": "应用",
       "yes_btn": "是",
       "no_btn": "否",
-      "enable_hit": "确定启用该规则?",
-      "delete_hit": "是否删除本地文件?",
+      "enable_hit": "确定启用该规则？",
+      "delete_hit": "是否删除本地文件？",
       "enable_rule": "启用规则",
       "edit_rule": "编辑规则"
     }
@@ -136,6 +136,14 @@
       "port": "端口",
       "username": "用户名",
       "password": "密码"
+    },
+    "experimental_openai_set": {
+      "title": "实验功能设置",
+      "warning": "警告：实验功能尚未稳定，请谨慎使用",
+      "enable": "启用 OpenAI",
+      "api_key": "OpenAI API Key",
+      "api_base": "OpenAI API Base URL",
+      "model": "OpenAI 模型"
     },
     "media_player_set": {
       "title": "播放器设置",

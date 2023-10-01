@@ -47,6 +47,12 @@ export interface Config {
     token: string;
     chat_id: string;
   };
+  experimental_openai: {
+    enable: boolean;
+    api_key: string;
+    api_base: string;
+    model: string;
+  };
 }
 
 export const initConfig: Config = {
@@ -96,6 +102,12 @@ export const initConfig: Config = {
     token: '',
     chat_id: '',
   },
+  experimental_openai: {
+    enable: false,
+    api_key: '',
+    api_base: 'https://api.openai.com/v1/',
+    model: 'gpt-3.5-turbo',
+  },
 };
 
 type getItem<T extends keyof Config> = Pick<Config, T>[T];
@@ -107,6 +119,7 @@ export type BangumiManage = getItem<'bangumi_manage'>;
 export type Log = getItem<'log'>;
 export type Proxy = getItem<'proxy'>;
 export type Notification = getItem<'notification'>;
+export type ExperimentalOpenAI = getItem<'experimental_openai'>;
 
 /** 下载方式 */
 export type DownloaderType = UnionToTuple<Downloader['type']>;
