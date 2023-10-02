@@ -26,7 +26,7 @@ hero:
 
 features:
   - icon:
-      src: /image/icons/mikan-pic.png
+      src: /image/icons/rss.png
     title: RSS 订阅解析
     details: 自动识别解析各种番剧 RSS，无需手动输入番剧，仅需订阅即可自动解析、下载、整理。
   - icon:
