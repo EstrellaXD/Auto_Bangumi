@@ -21,8 +21,6 @@ https://mikanani.me/RSS/MyBangumi?token=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 https://mikanime.tv/RSS/MyBangumi?token=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-AB 中需要填入的 `token` 为以上 url 中 `token=` 后面的一串字符。
-
 ## Mikan Project 订阅贴士
 
 由于 AutoBangumi 会解析所有获得的 RSS 信息，因此在订阅番剧的时候需要注意以下几点：
