@@ -1,7 +1,7 @@
 # 准备 Mikan RSS 订阅链接
 
-AutoBangumi 可以自动解析 [Mikan Project][mikan-site] 的 RSS 订阅地址，根据字幕组以及番剧名称生成下载规则， 从而实现自动追番。
-因此在开始自动追番之前，你需要准备好 [Mikan Project][mikan-site] 的 RSS 订阅地址。
+AutoBangumi 可以自动解析番剧聚合 RSS，根据字幕组以及番剧名称生成下载规则， 从而实现自动追番。
+以下以 [Mikan Project][mikan-site] 为例，介绍如何获取 RSS 订阅地址。
 
 需要注意的是，目前 Mikan Project 主站已经被墙，当你不知道如何使用代理时请使用如下链接进行访问订阅：
 
@@ -20,8 +20,6 @@ https://mikanani.me/RSS/MyBangumi?token=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 # 或者
 https://mikanime.tv/RSS/MyBangumi?token=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
-
-AB 中需要填入的 `token` 为以上 url 中 `token=` 后面的一串字符。
 
 ## Mikan Project 订阅贴士
 

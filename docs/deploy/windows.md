@@ -8,11 +8,7 @@
    cd Auto_Bangumi
    ```
 
-2. 创建版本信息文件：
-
-   ```powershell
-   echo "VERSION='local'" > backend\src\module\__version__.py
-   ```
+2. 在 `backend\src` 目录下创建 `__version__.py` 文件并写入 `VERSION='local', 请注意文件编码格式为 `UTF-8`：
 
 3. 新建 `python` 虚拟环境、激活并安装依赖（需保证 `python -V` 打印的版本符合 `Dockerfile` 中的要求，如 `FROM python:3.11-alpine AS APP`）
 
@@ -25,7 +21,7 @@
 4. 下载 WebUI 并安装：
 
    ```powershell
-   Invoke-WebRequest -Uri "https://github.com/Rewrite0/Auto_Bangumi_WebUI/releases/latest/download/dist.zip" -OutFile "dist.zip"
+   Invoke-WebRequest -Uri "https://github.com/EstrellaXD/Auto_Bangumi/releases/latest/download/dist.zip" -OutFile "dist.zip"
    Expand-Archive -Path "dist.zip"
    mv dist\* backend\src\templates
    ```
