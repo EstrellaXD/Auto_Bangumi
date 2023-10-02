@@ -37,7 +37,7 @@ jobs:
         id: release
         run: |
           if [ '${{ github.event_name }}' == 'pull_request' ]; then
-            if [[ ${{ github.event.pull_request.merged }} == true && '${{ github.event.pull_request.source.branch }}' == *'dev'* ]]; then
+            if [[ ${{ github.event.pull_request.merged }} == true && '${{ github.ref }}' == *'dev'* ]]; then
               echo "release=1" >> $GITHUB_OUTPUT
             else
               echo "release=0" >> $GITHUB_OUTPUT
