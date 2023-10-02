@@ -128,7 +128,11 @@ export default defineConfig({
             {
                 text: "代理配置",
                 link: "/config/proxy",
-            }
+            },
+            {
+                text: "实验功能配置",
+                link: "/config/experimental",
+            },
             ]
       },
       {
