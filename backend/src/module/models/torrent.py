@@ -1,6 +1,7 @@
-from pydantic import BaseModel
-from sqlmodel import SQLModel, Field
 from typing import Optional
+
+from pydantic import BaseModel
+from sqlmodel import Field, SQLModel
 
 
 class Torrent(SQLModel, table=True):

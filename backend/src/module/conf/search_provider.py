@@ -1,10 +1,11 @@
 from pathlib import Path
+
 from module.utils import json_config
 
 DEFAULT_PROVIDER = {
-  "mikan": "https://mikanani.me/RSS/Search?searchstr=%s",
-  "nyaa": "https://nyaa.si/?page=rss&q=%s&c=0_0&f=0",
-  "dmhy": "http://dmhy.org/topics/rss/rss.xml?keyword=%s"
+    "mikan": "https://mikanani.me/RSS/Search?searchstr=%s",
+    "nyaa": "https://nyaa.si/?page=rss&q=%s&c=0_0&f=0",
+    "dmhy": "http://dmhy.org/topics/rss/rss.xml?keyword=%s",
 }
 
 PROVIDER_PATH = Path("config/search_provider.json")
@@ -19,5 +20,3 @@ def load_provider():
 
 
 SEARCH_CONFIG = load_provider()
-
-

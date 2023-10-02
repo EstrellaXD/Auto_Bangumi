@@ -4,5 +4,8 @@ repos:
   hooks:
     - id: black
       language: python
-
-# TODO: add ruff lint check before committing.
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  # Ruff version.
+  rev: v0.0.291
+  hooks:
+    - id: ruff

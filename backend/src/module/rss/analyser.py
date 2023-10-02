@@ -1,12 +1,12 @@
 import logging
 import re
 
-from .engine import RSSEngine
-
 from module.conf import settings
-from module.models import Bangumi, Torrent, RSSItem, ResponseModel
+from module.models import Bangumi, ResponseModel, RSSItem, Torrent
 from module.network import RequestContent
 from module.parser import TitleParser
+
+from .engine import RSSEngine
 
 logger = logging.getLogger(__name__)
 

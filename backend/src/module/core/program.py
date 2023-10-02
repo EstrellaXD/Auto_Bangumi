@@ -1,8 +1,8 @@
 import logging
 
 from module.conf import VERSION, settings
-from module.update import data_migration, from_30_to_31, start_up, first_run
 from module.models import ResponseModel
+from module.update import data_migration, first_run, from_30_to_31, start_up
 
 from .sub_thread import RenameThread, RSSThread
 
