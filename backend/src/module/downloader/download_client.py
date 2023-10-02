@@ -119,6 +119,9 @@ class DownloadClient(TorrentPath):
             bangumi.save_path = self._gen_save_path(bangumi)
         with RequestContent() as req:
             if isinstance(torrent, list):
+                if len(torrent) == 0:
+                    logger.debug(f"[Downloader] No torrent found: {bangumi.official_title}")
+                    return False
                 if "magnet" in torrent[0].url:
                     torrent_url = [t.url for t in torrent]
                     torrent_file = None

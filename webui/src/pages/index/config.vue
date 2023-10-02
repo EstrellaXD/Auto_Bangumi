@@ -28,6 +28,8 @@ definePage({
           <config-proxy></config-proxy>
 
           <config-player></config-player>
+
+          <config-experimental></config-experimental>
         </div>
       </div>
 

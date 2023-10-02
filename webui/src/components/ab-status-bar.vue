@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import {Menu, MenuButton, MenuItem, MenuItems} from '@headlessui/vue';
-import {AddOne, International, More} from '@icon-park/vue-next';
+import {AddOne, International, More, System} from '@icon-park/vue-next';
 
 withDefaults(
     defineProps<{
@@ -54,7 +54,7 @@ function abLabel(label: string | (() => string)) {
         />
 
         <MenuButton bg-transparent is-btn btn-click>
-          <More theme="outline" size="24" fill="#fff"/>
+          <System theme="outline" size="24" fill="#fff"/>
         </MenuButton>
 
         <ab-status :running="running"/>

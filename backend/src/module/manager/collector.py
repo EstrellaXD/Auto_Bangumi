@@ -23,6 +23,7 @@ class SeasonCollector(DownloadClient):
                 bangumi.eps_collect = True
                 with RSSEngine() as engine:
                     engine.bangumi.update(bangumi)
+                    engine.torrent.add_all(torrents)
                 return ResponseModel(
                     status=True,
                     status_code=200,
@@ -57,7 +58,7 @@ def eps_complete():
             logger.info("Start collecting full season...")
             for data in datas:
                 if not data.eps_collect:
-                    with SeasonCollector() as sc:
-                        sc.collect_season(data)
+                    with SeasonCollector() as collector:
+                        collector.collect_season(data)
                 data.eps_collect = True
             engine.bangumi.update_all(datas)
