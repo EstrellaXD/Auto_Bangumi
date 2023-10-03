@@ -45,17 +45,17 @@ services:
       - AutoBangumi_config:/app/config
       - AutoBangumi_data:/app/data
     ports:
-      - 7892:7892
+      - "7892:7892"
     restart: unless-stopped
     dns:
       - 223.5.5.5
     network_mode: bridge
 
 volumes:
-    AutoBangumi_config:
-        name: AutoBangumi_config
-    AutoBangumi_data:
-        name: AutoBangumi_data
+  AutoBangumi_config:
+    name: AutoBangumi_config
+  AutoBangumi_data:
+    name: AutoBangumi_data
 ```
 
 运行以下命令启动容器。
@@ -72,7 +72,7 @@ docker compose up -d
 - [在 Windows/macOS 中安装 qBittorrent][qbittorrent-desktop]
 - [在 Linux 中安装 qBittorrent-nox][qbittorrent-nox]
 
-## 获取 Mikan Project 的 RSS 链接
+## 获取聚合 RSS 链接 (以蜜柑计划的聚合 RSS 为例)
 
 进入 [MiKan Project][mikan-project]，注册账号并登录，然后点击右下角的 **RSS** 按钮，复制链接。
 
@@ -85,7 +85,6 @@ https://mikanani.me/RSS/MyBangumi?token=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 # 或者
 https://mikanime.tv/RSS/MyBangumi?token=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
-复制 token= 后面的内容。
 
 详细步骤参考 [Mikan RSS][config-rss]
 
@@ -98,11 +97,15 @@ https://mikanime.tv/RSS/MyBangumi?token=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ![ab-webui](../image/config/downloader.png){width=500}{class=ab-shadow-card}
 
-2. 填入 Mikan RSS 的 Token。
+2. 点击 **Apply** 保存配置，此时 AB 会重启运行，当右上角的圆点变为绿色时，表示 AB 已经正常运行。
 
-![ab-rss](../image/config/parser.png){width=500}{class=ab-shadow-card}
+3. 点击右上角的添加按钮，勾选 **聚合 RSS**， 选择解析器类型，填入 Mikan RSS 的地址。
 
-3. 点击 **Apply** 保存配置，此时 AB 会重启运行，当右上角的圆点变为绿色时，表示 AB 已经正常运行。
+![ab-rss](../image/config/add-rss.png){width=500}{class=ab-shadow-card}
+
+等待 AB 解析聚合 RSS，解析完成会自动添加番剧并且下载管理。
+
+
 
 [docker-engine]: https://docs.docker.com/engine/install/
 [docker-desktop]: https://www.docker.com/products/docker-desktop
