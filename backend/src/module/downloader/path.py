@@ -1,8 +1,8 @@
 import logging
-from os import PathLike
 import re
+from os import PathLike
 
-from module.conf import settings, PLATFORM
+from module.conf import PLATFORM, settings
 from module.models import Bangumi, BangumiUpdate
 
 logger = logging.getLogger(__name__)
@@ -72,4 +72,3 @@ class TorrentPath:
     @staticmethod
     def _join_path(*args):
         return str(Path(*args))
-

@@ -1,6 +1,6 @@
-from sqlmodel import create_engine, Session
-from module.conf import DATA_PATH
+from sqlmodel import Session, create_engine
 
+from module.conf import DATA_PATH
 
 engine = create_engine(DATA_PATH)
 

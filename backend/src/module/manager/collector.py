@@ -2,8 +2,8 @@ import logging
 
 from module.downloader import DownloadClient
 from module.models import Bangumi, ResponseModel
-from module.searcher import SearchTorrent
 from module.rss import RSSEngine
+from module.searcher import SearchTorrent
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,9 @@ class SeasonCollector(DownloadClient):
             else:
                 torrents = st.get_torrents(link, bangumi.filter.replace(",", "|"))
             if self.add_torrent(torrents, bangumi):
-                logger.info(f"Collections of {bangumi.official_title} Season {bangumi.season} completed.")
+                logger.info(
+                    f"Collections of {bangumi.official_title} Season {bangumi.season} completed."
+                )
                 bangumi.eps_collect = True
                 with RSSEngine() as engine:
                     engine.bangumi.update(bangumi)
@@ -31,7 +33,9 @@ class SeasonCollector(DownloadClient):
                     msg_zh=f"收集 {bangumi.official_title} 第 {bangumi.season} 季完成。",
                 )
             else:
-                logger.warning(f"Collection of {bangumi.official_title} Season {bangumi.season} failed.")
+                logger.warning(
+                    f"Collection of {bangumi.official_title} Season {bangumi.season} failed."
+                )
                 return ResponseModel(
                     status=False,
                     status_code=406,

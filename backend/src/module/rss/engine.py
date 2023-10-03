@@ -1,13 +1,11 @@
-import re
 import logging
-
+import re
 from typing import Optional
 
-from module.models import Bangumi, RSSItem, Torrent, ResponseModel
-from module.network import RequestContent
-from module.downloader import DownloadClient
-
 from module.database import Database, engine
+from module.downloader import DownloadClient
+from module.models import Bangumi, ResponseModel, RSSItem, Torrent
+from module.network import RequestContent
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +31,13 @@ class RSSEngine(Database):
         else:
             return []
 
-    def add_rss(self, rss_link: str, name: str | None = None, aggregate: bool = True, parser: str = "mikan"):
+    def add_rss(
+        self,
+        rss_link: str,
+        name: str | None = None,
+        aggregate: bool = True,
+        parser: str = "mikan",
+    ):
         if not name:
             with RequestContent() as req:
                 name = req.get_rss_title(rss_link)
@@ -127,7 +131,9 @@ class RSSEngine(Database):
 
     def download_bangumi(self, bangumi: Bangumi):
         with RequestContent() as req:
-            torrents = req.get_torrents(bangumi.rss_link, bangumi.filter.replace(",", "|"))
+            torrents = req.get_torrents(
+                bangumi.rss_link, bangumi.filter.replace(",", "|")
+            )
             if torrents:
                 with DownloadClient() as client:
                     client.add_torrent(torrents, bangumi)

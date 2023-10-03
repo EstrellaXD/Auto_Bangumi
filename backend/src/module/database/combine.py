@@ -1,12 +1,12 @@
 from sqlmodel import Session, SQLModel
 
+from module.models import Bangumi, User
+
+from .bangumi import BangumiDatabase
+from .engine import engine as e
 from .rss import RSSDatabase
 from .torrent import TorrentDatabase
-from .bangumi import BangumiDatabase
 from .user import UserDatabase
-from .engine import engine as e
-
-from module.models import User, Bangumi
 
 
 class Database(Session):
@@ -40,5 +40,3 @@ class Database(Session):
         self.bangumi.add_all(readd_bangumi)
         self.add(User(**user_data[0]))
         self.commit()
-
-
