@@ -1,9 +1,7 @@
-from sqlmodel import create_engine, SQLModel
-from sqlmodel.pool import StaticPool
-
 from module.database.combine import Database
-from module.models import Bangumi, Torrent, RSSItem
-
+from module.models import Bangumi, RSSItem, Torrent
+from sqlmodel import SQLModel, create_engine
+from sqlmodel.pool import StaticPool
 
 # sqlite mock engine
 engine = create_engine(
@@ -47,7 +45,9 @@ def test_bangumi_database():
         assert db.bangumi.match_poster("无职转生，到了异世界就拿出真本事II (2021)") == "/test/test.jpg"
 
         # match torrent
-        result = db.bangumi.match_torrent("[Lilith-Raws] 无职转生，到了异世界就拿出真本事 / Mushoku Tensei - 11 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]")
+        result = db.bangumi.match_torrent(
+            "[Lilith-Raws] 无职转生，到了异世界就拿出真本事 / Mushoku Tensei - 11 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
+        )
         assert result.official_title == "无职转生，到了异世界就拿出真本事II"
 
         # delete

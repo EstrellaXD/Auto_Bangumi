@@ -1,4 +1,5 @@
 import re
+
 from urllib3.util import parse_url
 
 from module.rss import RSSEngine
@@ -13,7 +14,9 @@ def from_30_to_31():
         for bangumi in bangumis:
             if bangumi.poster_link:
                 rss_link = bangumi.rss_link.split(",")[-1]
-                if rss_link not in rss_pool and not re.search(r"\d+.\d+.\d+.\d+", rss_link):
+                if rss_link not in rss_pool and not re.search(
+                    r"\d+.\d+.\d+.\d+", rss_link
+                ):
                     rss_pool.append(rss_link)
                 root_path = parse_url(rss_link).host
                 if "://" not in bangumi.poster_link:

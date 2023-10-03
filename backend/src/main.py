@@ -1,5 +1,5 @@
-import os
 import logging
+import os
 
 import uvicorn
 from fastapi import FastAPI, Request
@@ -8,8 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from module.api import v1
 from module.api.proxy import router as proxy_router
-from module.conf import settings, setup_logger, VERSION
-from starlette.types import ASGIApp
+from module.conf import VERSION, settings, setup_logger
 
 setup_logger(reset=True)
 logger = logging.getLogger(__name__)

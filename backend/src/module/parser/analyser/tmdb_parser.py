@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from module.conf import TMDB_API
 from module.network import RequestContent
 
-
 TMDB_URL = "https://api.themoviedb.org"
 
 
@@ -50,7 +49,9 @@ def get_season(seasons: list) -> tuple[int, str]:
             [year, _, _] = date
             now_year = time.localtime().tm_year
             if int(year) <= now_year:
-                return int(re.findall(r"\d", season.get("season"))[0]), season.get("poster_path")
+                return int(re.findall(r"\d", season.get("season"))[0]), season.get(
+                    "poster_path"
+                )
     return len(ss), ss[-1].get("poster_path")
 
 
@@ -100,5 +101,5 @@ def tmdb_parser(title, language) -> TMDBInfo | None:
             return None
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print(tmdb_parser("魔法禁书目录", "zh"))

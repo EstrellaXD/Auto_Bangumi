@@ -1,6 +1,6 @@
 from module.conf import LEGACY_DATA_PATH
-from module.rss import RSSEngine
 from module.models import Bangumi
+from module.rss import RSSEngine
 from module.utils import json_config
 
 

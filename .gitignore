@@ -182,7 +182,6 @@ test.*
 
 # webui
 logs
-*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -202,8 +201,6 @@ dev-dist
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
-
-.idea
 .DS_Store
 *.suo
 *.ntvs*
@@ -211,5 +208,11 @@ dev-dist
 *.sln
 *.sw?
 
+
 # vitepress
 /docs/.vitepress/cache/
+
+
+# test file
+test.*
+test_*

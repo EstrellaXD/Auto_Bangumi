@@ -1,6 +1,6 @@
-from .bangumi import Bangumi, Episode, BangumiUpdate, Notification
+from .bangumi import Bangumi, BangumiUpdate, Episode, Notification
 from .config import Config
+from .response import APIResponse, ResponseModel
 from .rss import RSSItem, RSSUpdate
 from .torrent import EpisodeFile, SubtitleFile, Torrent, TorrentUpdate
-from .user import UserLogin, User, UserUpdate
-from .response import ResponseModel, APIResponse
+from .user import User, UserLogin, UserUpdate

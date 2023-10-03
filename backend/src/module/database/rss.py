@@ -1,6 +1,6 @@
 import logging
 
-from sqlmodel import Session, select, delete, and_
+from sqlmodel import Session, and_, delete, select
 
 from module.models import RSSItem, RSSUpdate
 
@@ -66,7 +66,6 @@ class RSSDatabase:
         self.session.refresh(db_data)
         return True
 
-
     def search_id(self, _id: int) -> RSSItem:
         return self.session.get(RSSItem, _id)
 
@@ -88,7 +87,7 @@ class RSSDatabase:
             self.session.commit()
             return True
         except Exception as e:
-            logger.error("Delete RSS Item failed.")
+            logger.error(f"Delete RSS Item failed. Because: {e}")
             return False
 
     def delete_all(self):

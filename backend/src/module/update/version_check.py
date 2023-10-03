@@ -6,6 +6,8 @@ from module.conf import VERSION, VERSION_PATH
 def version_check() -> bool:
     if VERSION == "DEV_VERSION":
         return True
+    if VERSION == "local":
+        return True
     if not VERSION_PATH.exists():
         with open(VERSION_PATH, "w") as f:
             f.write(VERSION + "\n")
