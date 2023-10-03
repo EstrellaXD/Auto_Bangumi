@@ -13,7 +13,7 @@ class SeasonCollector(DownloadClient):
         logger.info(
             f"Start collecting {bangumi.official_title} Season {bangumi.season}..."
         )
-        with SearchTorrent() as st:
+        with SearchTorrent() as st, RSSEngine() as engine:
             if not link:
                 torrents = st.search_season(bangumi)
             else:
@@ -23,9 +23,9 @@ class SeasonCollector(DownloadClient):
                     f"Collections of {bangumi.official_title} Season {bangumi.season} completed."
                 )
                 bangumi.eps_collect = True
-                with RSSEngine() as engine:
-                    engine.bangumi.update(bangumi)
-                    engine.torrent.add_all(torrents)
+                if engine.bangumi.update(bangumi):
+                    engine.bangumi.add(bangumi)
+                engine.torrent.add_all(torrents)
                 return ResponseModel(
                     status=True,
                     status_code=200,
@@ -34,13 +34,13 @@ class SeasonCollector(DownloadClient):
                 )
             else:
                 logger.warning(
-                    f"Collection of {bangumi.official_title} Season {bangumi.season} failed."
+                    f"Already collected {bangumi.official_title} Season {bangumi.season}."
                 )
                 return ResponseModel(
                     status=False,
                     status_code=406,
                     msg_en=f"Collection of {bangumi.official_title} Season {bangumi.season} failed.",
-                    msg_zh=f"收集 {bangumi.official_title} 第 {bangumi.season} 季失败。",
+                    msg_zh=f"收集 {bangumi.official_title} 第 {bangumi.season} 季失败, 种子已经添加。",
                 )
 
     @staticmethod
