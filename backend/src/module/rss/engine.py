@@ -102,6 +102,8 @@ class RSSEngine(Database):
     def match_torrent(self, torrent: Torrent) -> Optional[Bangumi]:
         matched: Bangumi = self.bangumi.match_torrent(torrent.name)
         if matched:
+            if matched.filter == "":
+                return matched
             _filter = matched.filter.replace(",", "|")
             if not re.search(_filter, torrent.name, re.IGNORECASE):
                 torrent.bangumi_id = matched.id
