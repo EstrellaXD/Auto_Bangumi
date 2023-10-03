@@ -1,6 +1,5 @@
 import logging
 
-
 from module.database import Database
 from module.downloader import DownloadClient
 from module.models import Bangumi, BangumiUpdate, ResponseModel
@@ -117,6 +116,7 @@ class TorrentManager(Database):
                 path = client._gen_save_path(data)
                 if match_list:
                     client.move_torrent(match_list, path)
+            data.save_path = path
             self.bangumi.update(data, bangumi_id)
             return ResponseModel(
                 status_code=200,
@@ -142,8 +142,8 @@ class TorrentManager(Database):
         return ResponseModel(
             status_code=200,
             status=True,
-            msg_en=f"Refresh poster link successfully.",
-            msg_zh=f"刷新海报链接成功。",
+            msg_en="Refresh poster link successfully.",
+            msg_zh="刷新海报链接成功。",
         )
 
     def search_all_bangumi(self):
@@ -165,6 +165,7 @@ class TorrentManager(Database):
         else:
             return data
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     with TorrentManager() as manager:
         manager.refresh_poster()

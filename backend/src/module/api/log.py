@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import JSONResponse
 
 from module.conf import LOG_PATH
-from module.security.api import get_current_user, UNAUTHORIZED
 from module.models import APIResponse
+from module.security.api import UNAUTHORIZED, get_current_user
 
 router = APIRouter(prefix="/log", tags=["log"])
 
@@ -17,7 +17,9 @@ async def get_log():
         return Response("Log file not found", status_code=404)
 
 
-@router.get("/clear", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+@router.get(
+    "/clear", response_model=APIResponse, dependencies=[Depends(get_current_user)]
+)
 async def clear_log():
     if LOG_PATH.exists():
         LOG_PATH.write_text("")

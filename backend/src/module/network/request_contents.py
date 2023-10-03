@@ -1,5 +1,5 @@
-import re
 import logging
+import re
 import xml.etree.ElementTree
 
 from module.conf import settings

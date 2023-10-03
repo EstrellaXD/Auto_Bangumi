@@ -1,8 +1,8 @@
 import logging
-
-from sqlmodel import Session, select, delete, or_, and_
-from sqlalchemy.sql import func
 from typing import Optional
+
+from sqlalchemy.sql import func
+from sqlmodel import Session, and_, delete, false, or_, select
 
 from module.models import Bangumi, BangumiUpdate
 
@@ -14,9 +14,14 @@ class BangumiDatabase:
         self.session = session
 
     def add(self, data: Bangumi):
+        statement = select(Bangumi).where(Bangumi.title_raw == data.title_raw)
+        bangumi = self.session.exec(statement).first()
+        if bangumi:
+            return False
         self.session.add(data)
         self.session.commit()
         logger.debug(f"[Database] Insert {data.official_title} into database.")
+        return True
 
     def add_all(self, datas: list[Bangumi]):
         self.session.add_all(datas)
@@ -128,14 +133,18 @@ class BangumiDatabase:
         statement = select(Bangumi).where(
             and_(
                 func.instr(torrent_name, Bangumi.title_raw) > 0,
-                Bangumi.deleted == False,
+                # use `false()` to avoid E712 checking
+                # see: https://docs.astral.sh/ruff/rules/true-false-comparison/
+                Bangumi.deleted == false(),
             )
         )
         return self.session.exec(statement).first()
 
     def not_complete(self) -> list[Bangumi]:
         # Find eps_complete = False
-        condition = select(Bangumi).where(Bangumi.eps_collect == False)
+        # use `false()` to avoid E712 checking
+        # see: https://docs.astral.sh/ruff/rules/true-false-comparison/
+        condition = select(Bangumi).where(Bangumi.eps_collect == false())
         datas = self.session.exec(condition).all()
         return datas
 
