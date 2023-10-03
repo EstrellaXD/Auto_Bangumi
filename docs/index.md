@@ -8,7 +8,7 @@ titleTemplate: 自动追番，解放双手！
 hero:
   name: AutoBangumi
   text: 自动追番，解放双手！
-  tagline: 从 Mikan Project 全自动 订阅解析、下载管理、重命名整理
+  tagline: 从 RSS 全自动 订阅解析、下载管理、重命名整理
 #  image:
 #    dark: /image/icons/dark-logo.svg
 #    light: /image/icons/light-logo.svg
@@ -26,9 +26,9 @@ hero:
 
 features:
   - icon:
-      src: /image/icons/mikan-pic.png
-    title: Mikan Project 订阅源
-    details: 自动识别蜜柑计划 RSS 订阅格式，无需手动输入番剧，仅需订阅即可自动解析、下载、整理。
+      src: /image/icons/rss.png
+    title: RSS 订阅解析
+    details: 自动识别解析各种番剧 RSS，无需手动输入番剧，仅需订阅即可自动解析、下载、整理。
   - icon:
       src: /image/icons/qbittorrent-logo.svg
     title: qBitTorrent 下载器

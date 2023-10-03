@@ -4,7 +4,7 @@
 
 ### WebUI 地址
 
-默认端口为 7892，请访问 `http://serverhost:7892`，如果你修改了端口，请记得同时更改 Docker 中的端口映射。
+默认端口为 7892，如果是服务器部署，请访问 `http://serverhost:7892`，如果本地部署可以访问 `http://localhost:7892` 。如果你修改了端口，请记得同时更改 Docker 中的端口映射。
 
 ### 默认用户名和密码
 
@@ -27,7 +27,12 @@
 
 ### 海报墙没有显示图片
 
-AB 默认使用 `mikanani.me` 的地址作为海报图片的源地址，如果没有显示图片说明你访问 AB 主页的主机网络环境不能访问这些图片。
+- 如果你的版本是 3.0：
+    AB 默认使用 `mikanani.me` 的地址作为海报图片的源地址，如果没有显示图片说明你访问 AB 主页的主机网络环境不能访问这些图片。
+- 如果你的版本是 3.1 以及以后：
+  - 如果海报为图片错误 ICON，说明缺少图片，可以点击右上角菜单中的刷新海报获取 TMDB 海报。
+  - 如果海报为图片无法加载，请清除浏览器缓存。
+  - 使用 `mikanani.tv` 为 RSS 地址，在访问 WebUI 的时候客户端上如果有代理，可能会导致海报无法加载。为其添加 `direct` 规则即可。
 
 ## 3.0 是如何管理番剧的
 
@@ -47,12 +52,8 @@ AB 默认使用 `mikanani.me` 的地址作为海报图片的源地址，如果�
 
 ### 没有开始自动下载怎么办：
 
-- 检查 AutoBangumi 的日志，如果日志一切正常，说明是 qBittorrent 的设置问题，检查：
-  - 设置 >> RSS >> 启用 RSS Torrent 自动下载
-  - Options >> RSS >> Enable auto downloading of RSS torrents
-  - 设置 >> RSS >> 启用获取 RSS 订阅
-  - Options >> RSS >> Enable fetching RSS feeds
-  - 检查 qb 配置，看是否有权限新建文件夹
+请检查 AutoBangumi 的日志，是否有添加种子相关的日志。
+- 如果没有，请检查订阅是否正确。
 
 ### 下载没有存储在正确的目录中
 
@@ -150,7 +151,7 @@ AB 中的过滤关键词是正则表达式，只会在建立规则的时候添�
 - 如果 DNS 解析正常，添加代理。
 - 使用 TMDB 请添加代理。
 
-### 如何给 Mikanani 添加代理
+### 如何给 Mikan 添加代理
 
 AB 现在提供三种代理模式
 1. HTTP 以及 Socks 代理
@@ -192,4 +193,7 @@ AB 现在提供三种代理模式
 然后在 WebUI 中重新配置一下即可。
 如果你是老版本升级，请先参考[升级指南](/changelog/2.6)。
 
-如果有上述没有覆盖的问题，请到 [ISSUE](https://github.com/EstrellaXD/Auto_Bangumi/issues) 按照 bug 模板反馈。
+如果有上述没有覆盖的问题，请到 [ISSUE][ISSUE]按照 bug 模板反馈。
+
+
+[ISSUE]: https://github.com/EstrellaXD/Auto_Bangumi/issues
