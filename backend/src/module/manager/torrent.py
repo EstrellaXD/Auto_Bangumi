@@ -116,6 +116,7 @@ class TorrentManager(Database):
                 path = client._gen_save_path(data)
                 if match_list:
                     client.move_torrent(match_list, path)
+            data.save_path = path
             self.bangumi.update(data, bangumi_id)
             return ResponseModel(
                 status_code=200,
