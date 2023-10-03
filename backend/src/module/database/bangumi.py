@@ -14,9 +14,14 @@ class BangumiDatabase:
         self.session = session
 
     def add(self, data: Bangumi):
+        statement = select(Bangumi).where(Bangumi.title_raw == data.title_raw)
+        bangumi = self.session.exec(statement).first()
+        if bangumi:
+            return False
         self.session.add(data)
         self.session.commit()
         logger.debug(f"[Database] Insert {data.official_title} into database.")
+        return True
 
     def add_all(self, datas: list[Bangumi]):
         self.session.add_all(datas)
