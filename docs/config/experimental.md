@@ -29,5 +29,5 @@ output: '{"group": "喵萌奶茶屋", "title_en": "Summer Time Rendering", "reso
 |---------|------------|------|------------|----------|
 | enable  | 是否启用 OpenAI 解析器    | 布尔值  | 启用 OpenAI         | false    |
 | api_key    | OpenAI API Key       | 字符串  | OpenAI API Key       | |
-| api_base   | OpenAI API Base URL   | 字符串  | OpenAI API Base URL   | https://api.openai.com/v1 |
+| api_base   | OpenAI API Base URL   | 字符串  | OpenAI API Base URL   | https://api.openai.com/ |
 | model | OpenAI 模型 | 字符串  | OpenAI 模型 | gpt-3.5-turbo
