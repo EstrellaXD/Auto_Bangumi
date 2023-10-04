@@ -72,6 +72,17 @@ class RequestURL:
             logger.debug(f"[Network] Cannot connect to {url}.")
             return False
 
+    def post_form(self, url: str, data: dict):
+        try:
+            req = self.session.post(
+                url=url, headers=self.header, data=data, timeout=5
+            )
+            req.raise_for_status()
+            return req
+        except requests.RequestException:
+            logger.warning(f"[Network] Cannot connect to {url}.")
+            return None
+
     def __enter__(self):
         self.session = requests.Session()
         if settings.proxy.enable:
