@@ -22,6 +22,7 @@ RUN set -ex && \
         shadow \
         tini \
         openssl \
+        busybox-suid \
         tzdata && \
     python3 -m pip install --no-cache-dir --upgrade pip && \
     sed -i '/bcrypt/d' requirements.txt && \
