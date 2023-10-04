@@ -36,7 +36,7 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-
+app.mount("/posters", StaticFiles(directory="data/posters"), name="posters")
 
 if VERSION != "DEV_VERSION":
     app.mount("/assets", StaticFiles(directory="dist/assets"), name="assets")
@@ -56,6 +56,9 @@ else:
     @app.get("/", status_code=302, tags=["html"])
     def index():
         return RedirectResponse("/docs")
+
+
+
 
 
 if __name__ == "__main__":

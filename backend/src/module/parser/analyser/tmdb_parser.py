@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from module.conf import TMDB_API
 from module.network import RequestContent
+from module.utils import save_image
 
 TMDB_URL = "https://api.themoviedb.org"
 
@@ -85,7 +86,8 @@ def tmdb_parser(title, language) -> TMDBInfo | None:
             official_title = info_content.get("name")
             year_number = info_content.get("first_air_date").split("-")[0]
             if poster_path:
-                poster_link = "https://image.tmdb.org/t/p/w300" + poster_path
+                img = req.get_content(f"https://image.tmdb.org/t/p/w780{poster_path}")
+                poster_link = save_image(img, "jpg")
             else:
                 poster_link = None
             return TMDBInfo(
