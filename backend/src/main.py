@@ -36,7 +36,12 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-app.mount("/posters", StaticFiles(directory="data/posters"), name="posters")
+
+
+@app.get("/posters/{path:path}", tags=["posters"])
+def posters(path: str):
+    return FileResponse(f"data/posters/{path}")
+
 
 if VERSION != "DEV_VERSION":
     app.mount("/assets", StaticFiles(directory="dist/assets"), name="assets")
@@ -63,7 +68,6 @@ if __name__ == "__main__":
         host = "::"
     else:
         host = os.getenv("HOST", "0.0.0.0")
-    os.mkdir("data/posters") if not os.path.exists("data/posters") else None
     uvicorn.run(
         app,
         host=host,
