@@ -10,5 +10,5 @@ def save_image(img, suffix):
 
 
 def load_image(img_path):
-    with open(f"data/images/{img_path}", "rb") as f:
+    with open(f"data/{img_path}", "rb") as f:
         return f.read()
