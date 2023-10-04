@@ -89,6 +89,8 @@ def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
                 if not test:
                     img = req.get_content(f"https://image.tmdb.org/t/p/w780{poster_path}")
                     poster_link = save_image(img, "jpg")
+                else:
+                    poster_link = "https://image.tmdb.org/t/p/w780" + poster_path
             else:
                 poster_link = None
             return TMDBInfo(
