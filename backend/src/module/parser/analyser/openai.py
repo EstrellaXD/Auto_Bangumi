@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 
-import openai
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +74,8 @@ class OpenAIParser:
             raise ValueError("API key is required.")
 
         self._api_key = api_key
-        self.api_base = api_base
+        # remove trailing slash
+        self.api_base = api_base.strip("/")
         self.model = model
         self.openai_kwargs = kwargs
 
@@ -99,21 +100,30 @@ class OpenAIParser:
             prompt = DEFAULT_PROMPT
 
         async def complete() -> str:
-            resp = await openai.ChatCompletion.acreate(
-                api_key=self._api_key,
-                api_base=self.api_base,
-                model=self.model,
-                messages=[
-                    dict(role="system", content=prompt),
-                    dict(role="user", content=text),
-                ],
-                # set temperature to 0 to make results be more stable and reproducible.
-                temperature=0,
-                **self.openai_kwargs,
-            )
+            auth_header = {"Authorization": f"Bearer {self._api_key}"}
+            async with httpx.AsyncClient(
+                base_url=self.api_base, headers=auth_header
+            ) as req:
+                # see: https://platform.openai.com/docs/api-reference/chat/create
+                json_body = dict(
+                    model=self.model,
+                    messages=[
+                        dict(role="system", content=prompt),
+                        dict(role="user", content=text),
+                    ],
+                    # set temperature to 0 to make results be more stable and reproducible.
+                    temperature=0,
+                    **self.openai_kwargs,
+                )
 
-            result = resp["choices"][0]["message"]["content"]
-            return result
+                resp = await req.post(
+                    url="/v1/chat/completions", json=json_body, headers=auth_header
+                )
+
+                resp.raise_for_status()
+
+                result = resp.json()["choices"][0]["message"]["content"]
+                return result
 
         loop = asyncio.get_event_loop()
         result = loop.run_until_complete(complete())
