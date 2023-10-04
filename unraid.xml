@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Container version="2">
+  <Name Default="AutoBangumi">AutoBangumi</Name>
+  <Repository>estrellaxd/auto_bangumi:latest</Repository>
+  <Registry>https://registry.hub.docker.com/r/estrellaxd/auto_bangumi</Registry>
+  <Network Default="bridge">bridge</Network>
+  <Category>MediaServer:Video Tools Productivity</Category>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/EstrellaXD/Auto_Bangumi/issues</Support>
+  <Project/>
+  <Overview>
+    AutoBangumi 是基于 Mikan Project、qBittorrent 的全自动追番整理下载工具。只需要在 Mikan Project 上订阅番剧，就可以全自动追番。并且整理完成的名称和目录可以直接被 Plex、Jellyfin 等媒体库软件识别，无需二次刮削。
+  </Overview>
+  <Category/>
+  <WebUI>http://[IP]:[PORT:7892]/</WebUI>
+  <TemplateURL/>
+  <Icon>https://quantil.jsdelivr.net/gh/9bingyin/static@main/images/AutoBangumi.png</Icon>
+  <ExtraParams>--dns 8.8.8.8 --dns 223.5.5.5</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+  <Config Name="WebUI" Target="7892" Default="7892" Mode="tcp" Description="" Type="Port" Display="always" Required="false" Mask="false">7892</Config>
+  <Config Name="Config" Target="/app/config" Default="" Mode="rw" Description="" Type="Path" Display="always" Required="false" Mask="false">/mnt/user/appdata/AutoBangumi/config</Config>
+  <Config Name="Data" Target="/app/data" Default="" Mode="rw" Description="" Type="Path" Display="always" Required="false" Mask="false">/mnt/user/appdata/AutoBangumi/data</Config>
+</Container>
