@@ -14,10 +14,11 @@ COPY backend/requirements.txt .
 RUN set -ex && \
     apk add --no-cache \
         bash \
+        busybox-suid \
         python3 \
+        py3-aiohttp \
         py3-bcrypt \
         py3-pip \
-        py3-aiohttp \
         su-exec \
         shadow \
         tini \
