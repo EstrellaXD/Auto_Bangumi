@@ -7,7 +7,6 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from module.api import v1
-from module.api.proxy import router as proxy_router
 from module.conf import VERSION, settings, setup_logger
 
 setup_logger(reset=True)
@@ -32,7 +31,6 @@ def create_app() -> FastAPI:
 
     # mount routers
     app.include_router(v1, prefix="/api")
-    app.include_router(proxy_router)
 
     return app
 
@@ -46,31 +44,6 @@ if VERSION != "DEV_VERSION":
     # app.mount("/icons", StaticFiles(directory="dist/icons"), name="icons")
     templates = Jinja2Templates(directory="dist")
 
-    # Resource
-    # @app.get("/favicon.svg", tags=["html"])
-    # def favicon():
-    #     return FileResponse("dist/favicon.svg")
-    #
-    # @app.get("/AutoBangumi.svg", tags=["html"])
-    # def logo():
-    #     return FileResponse("dist/AutoBangumi.svg")
-    #
-    # @app.get("/favicon-light.svg", tags=["html"])
-    # def favicon_light():
-    #     return FileResponse("dist/favicon-light.svg")
-    #
-    # @app.get("/robots.txt", tags=["html"])
-    # def robots():
-    #     return FileResponse("dist/robots.txt")
-    #
-    # @app.get("/manifest.webmanifest", tags=["html"])
-    # def manifest():
-    #     return FileResponse("dist/manifest.webmanifest")
-    #
-    # @app.get("/sw.js", tags=["html"])
-    # def sw():
-    #     return FileResponse("dist/sw.js")
-
     @app.get("/{path:path}")
     def html(request: Request, path: str):
         files = os.listdir("dist")
@@ -79,17 +52,7 @@ if VERSION != "DEV_VERSION":
         else:
             context = {"request": request}
             return templates.TemplateResponse("index.html", context)
-
-    # HTML Response
-    # @app.get("/{path:path}", response_class=HTMLResponse, tags=["html"])
-    # def index(request: Request, path: str):
-    #     print(request)
-    #     print(path)
-    #     context = {"request": request}
-    #     return templates.TemplateResponse("index.html", context)
-
 else:
-
     @app.get("/", status_code=302, tags=["html"])
     def index():
         return RedirectResponse("/docs")
