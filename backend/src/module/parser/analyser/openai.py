@@ -48,7 +48,7 @@ class OpenAIParser:
     def __init__(
         self,
         api_key: str,
-        api_base: str = "https://api.openai.com/v1",
+        api_base: str = "https://api.openai.com/",
         model: str = "gpt-3.5-turbo",
         **kwargs,
     ) -> None:
@@ -58,7 +58,7 @@ class OpenAIParser:
             api_key (str): the OpenAI api key
             api_base (str):
                 the OpenAI api base url, you can use custom url here. \
-                Defaults to "https://api.openai.com/v1".
+                Defaults to "https://api.openai.com/".
             model (str):
                 the ChatGPT model parameter, you can get more details from \
                 https://platform.openai.com/docs/api-reference/chat/create. \
@@ -74,8 +74,7 @@ class OpenAIParser:
             raise ValueError("API key is required.")
 
         self._api_key = api_key
-        # remove trailing slash
-        self.api_base = api_base.strip("/")
+        self.api_base = api_base
         self.model = model
         self.openai_kwargs = kwargs
 
