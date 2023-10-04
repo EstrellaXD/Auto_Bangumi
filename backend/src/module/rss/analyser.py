@@ -82,14 +82,16 @@ class RSSAnalyser(TitleParser):
 
     def link_to_data(self, rss: RSSItem) -> Bangumi | ResponseModel:
         torrents = self.get_rss_torrents(rss.url, False)
-        for torrent in torrents:
-            data = self.torrent_to_data(torrent, rss)
-            if data:
-                return data
-            else:
-                return ResponseModel(
-                    status=False,
-                    status_code=406,
-                    msg_en="No new title has been found.",
-                    msg_zh="没有找到新的番剧。",
-                )
+        try:
+            for torrent in torrents:
+                data = self.torrent_to_data(torrent, rss)
+                if data:
+                    return data
+        except Exception as e:
+            logger.debug(e)
+            return ResponseModel(
+                status=False,
+                status_code=406,
+                msg_en="No new title has been found.",
+                msg_zh="没有找到新的番剧。",
+            )

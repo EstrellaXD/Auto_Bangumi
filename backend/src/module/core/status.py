@@ -54,3 +54,7 @@ class ProgramStatus(Checker):
     @property
     def database(self):
         return self.check_database()
+
+    @property
+    def img_cache(self):
+        return self.check_img_cache()

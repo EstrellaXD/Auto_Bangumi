@@ -75,6 +75,15 @@ class Checker:
             logger.error(f"[Checker] Downloader connect failed: {e}")
             return False
 
+    @staticmethod
+    def check_img_cache() -> bool:
+        img_path = Path("data/posters")
+        if img_path.exists():
+            return True
+        else:
+            img_path.mkdir()
+            return False
+
 
 if __name__ == "__main__":
     # print(Checker().check_downloader())

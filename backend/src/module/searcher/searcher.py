@@ -35,11 +35,12 @@ class SearchTorrent(RequestContent, RSSAnalyser):
             if len(exist_list) >= limit:
                 break
             bangumi = self.torrent_to_data(torrent=torrent, rss=rss_item)
-            special_link = self.special_url(bangumi, site).url
-            if bangumi and special_link not in exist_list:
-                bangumi.rss_link = special_link
-                exist_list.append(special_link)
-                yield json.dumps(bangumi.dict(), separators=(",", ":"))
+            if bangumi:
+                special_link = self.special_url(bangumi, site).url
+                if special_link not in exist_list:
+                    bangumi.rss_link = special_link
+                    exist_list.append(special_link)
+                    yield json.dumps(bangumi.dict(), separators=(",", ":"))
 
     @staticmethod
     def special_url(data: Bangumi, site: str) -> RSSItem:
