@@ -58,14 +58,12 @@ else:
         return RedirectResponse("/docs")
 
 
-
-
-
 if __name__ == "__main__":
     if os.getenv("IPV6"):
         host = "::"
     else:
         host = os.getenv("HOST", "0.0.0.0")
+    os.mkdir("data/posters") if not os.path.exists("data/posters") else None
     uvicorn.run(
         app,
         host=host,
