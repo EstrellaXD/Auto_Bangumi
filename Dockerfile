@@ -17,9 +17,11 @@ RUN set -ex && \
         python3 \
         py3-bcrypt \
         py3-pip \
+        py3-aiohttp \
         su-exec \
         shadow \
         tini \
+        openssl \
         tzdata && \
     python3 -m pip install --no-cache-dir --upgrade pip && \
     sed -i '/bcrypt/d' requirements.txt && \
