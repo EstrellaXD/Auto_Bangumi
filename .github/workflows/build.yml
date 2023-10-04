@@ -226,7 +226,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Download artifact
+      - name: Download artifact webui
         uses: actions/download-artifact@v3
         with:
           name: dist
@@ -235,6 +235,22 @@ jobs:
       - name: Zip webui
         run: |
           cd webui && ls -al && tree && zip -r dist.zip dist
+
+      - name: Download artifact app
+        uses: actions/download-artifact@v3
+        with:
+          name: dist
+          path: backend/src/dist
+
+      - name: Create Version info via tag
+        working-directory: ./backend/src
+        run: |
+          echo ${{ needs.version-info.outputs.version }}
+          echo "VERSION='${{ needs.version-info.outputs.version }}'" >> module/__version__.py
+
+      - name: Zip app
+        run: |
+          cd backend && zip -r app-v${{ needs.version-info.outputs.version }}.zip src
 
       - name: Generate Release info
         id: release-info
@@ -257,6 +273,7 @@ jobs:
           prerelease: ${{ steps.release-info.outputs.pre_release == 'true' }}
           files: |
             webui/dist.zip
+            backend/app-v${{ needs.version-info.outputs.version }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
