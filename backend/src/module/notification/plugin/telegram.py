@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 class TelegramNotification(RequestContent):
     def __init__(self, token, chat_id):
         super().__init__()
-        self.notification_url = f"https://api.telegram.org/bot{token}/sendPhoto"
+        self.photo_url = f"https://api.telegram.org/bot{token}/sendPhoto"
+        self.message_url = f"https://api.telegram.org/bot{token}/sendMessage"
         self.chat_id = chat_id
 
     @staticmethod
@@ -29,10 +30,10 @@ class TelegramNotification(RequestContent):
         }
         photo = load_image(notify.poster_path)
         if photo:
-            resp = self.post_form(
-                self.notification_url, data, files={"photo": photo}
+            resp = self.post_files(
+                self.photo_url, data, files={"photo": photo}
             )
         else:
-            resp = self.post_data(self.notification_url, data)
+            resp = self.post_data(self.message_url, data)
         logger.debug(f"Telegram notification: {resp.status_code}")
         return resp.status_code == 200

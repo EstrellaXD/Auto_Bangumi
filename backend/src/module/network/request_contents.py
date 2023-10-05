@@ -55,7 +55,7 @@ class RequestContent(RequestURL):
     def post_data(self, _url, data: dict) -> dict:
         return self.post_url(_url, data)
 
-    def post_form(self, _url, data: dict, files: dict) -> dict:
+    def post_files(self, _url, data: dict, files: dict) -> dict:
         return self.post_form(_url, data, files)
 
     def get_html(self, _url):
