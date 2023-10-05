@@ -29,7 +29,7 @@ class TelegramNotification(RequestContent):
         }
         photo = load_image(notify.poster_path)
         if photo:
-            resp = self.post_form(
+            resp = self.post_files(
                 self.notification_url, data, files={"photo": photo}
             )
         else:

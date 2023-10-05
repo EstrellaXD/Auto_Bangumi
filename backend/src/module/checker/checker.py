@@ -78,7 +78,6 @@ class Checker:
     @staticmethod
     def check_img_cache() -> bool:
         img_path = Path("data/posters")
-        # If poster folder is not empty, return True
         if img_path.exists():
             return True
         else:
