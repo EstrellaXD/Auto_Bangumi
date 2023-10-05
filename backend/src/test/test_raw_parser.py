@@ -79,4 +79,13 @@ def test_raw_parser():
     assert info.episode == 13
     assert info.season == 1
 
+    content = "[ANi]  16bit 的感动 ANOTHER LAYER - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+    info = raw_parser(content)
+    assert info.group == "ANi"
+    assert info.title_zh == "16bit 的感动 ANOTHER LAYER"
+    assert info.resolution == "1080P"
+    assert info.episode == 1
+    assert info.season == 1
+
+
 
