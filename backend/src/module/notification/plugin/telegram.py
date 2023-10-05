@@ -18,7 +18,7 @@ class TelegramNotification(RequestContent):
         text = f"""
         番剧名称：{notify.official_title}\n季度： 第{notify.season}季\n更新集数： 第{notify.episode}集
         """
-        return text
+        return text.strip()
 
     def post_msg(self, notify: Notification) -> bool:
         text = self.gen_message(notify)
