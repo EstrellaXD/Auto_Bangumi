@@ -1,12 +1,13 @@
 <script lang="ts" setup>
 import { Caution } from '@icon-park/vue-next';
 import type { SettingItem } from '#/components';
-import type { ExperimentalOpenAI } from '#/config';
+import type { ExperimentalOpenAI, OpenAIModel } from '#/config';
 
 const { t } = useMyI18n();
 const { getSettingGroup } = useConfigStore();
 
-const experimentalFeatures = getSettingGroup('experimental_openai');
+const openAI = getSettingGroup('experimental_openai');
+const openAIModels: OpenAIModel = ['gpt-3.5-turbo'];
 
 const items: SettingItem<ExperimentalOpenAI>[] = [
   {
@@ -36,6 +37,9 @@ const items: SettingItem<ExperimentalOpenAI>[] = [
     configKey: 'model',
     label: () => t('config.experimental_openai_set.model'),
     type: 'select',
+    prop: {
+      items: openAIModels,
+    },
   },
 ];
 </script>
@@ -46,12 +50,13 @@ const items: SettingItem<ExperimentalOpenAI>[] = [
       <Caution />
       <span>{{ $t('config.experimental_openai_set.warning') }}</span>
     </div>
+
     <div space-y-12px>
       <ab-setting
         v-for="i in items"
         :key="i.configKey"
         v-bind="i"
-        v-model:data="experimentalFeatures[i.configKey]"
+        v-model:data="openAI[i.configKey]"
       ></ab-setting>
     </div>
   </ab-fold-panel>

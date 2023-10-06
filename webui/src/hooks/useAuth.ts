@@ -48,7 +48,7 @@ export const useAuth = createSharedComposable(() => {
 
       if (error.status === 404) {
         message.error('请更新AutoBangumi!');
-      } else if (error.status === 401){
+      } else if (error.status === 401) {
         message.error(err.msg_zh);
       }
     });

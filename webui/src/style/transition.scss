@@ -14,3 +14,13 @@
 }
 
 // transition-group
+
+.fade-list-enter-active,
+.fade-list-leave-active {
+  transition: all 0.3s ease;
+}
+
+.fade-list-enter-from,
+.fade-list-leave-to {
+  opacity: 0;
+}

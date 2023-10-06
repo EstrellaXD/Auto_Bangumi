@@ -51,7 +51,7 @@ export interface Config {
     enable: boolean;
     api_key: string;
     api_base: string;
-    model: string;
+    model: 'gpt-3.5-turbo';
   };
 }
 
@@ -135,3 +135,5 @@ export type RenameMethod = UnionToTuple<BangumiManage['rename_method']>;
 export type ProxyType = UnionToTuple<Proxy['type']>;
 /** 通知类型 */
 export type NotificationType = UnionToTuple<Notification['type']>;
+/** OpenAI Model List */
+export type OpenAIModel = UnionToTuple<ExperimentalOpenAI['model']>;
