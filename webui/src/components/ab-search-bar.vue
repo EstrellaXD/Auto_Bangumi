@@ -59,8 +59,9 @@ function onSelect(site: string) {
       </div>
     </div>
   </div>
+
   <div v-on-click-outside="clearSearch" abs top-84px left-192px z-8>
-    <transition-group name="list" tag="ul" space-y-12px>
+    <transition-group name="fade-list" tag="ul" space-y-12px>
       <li v-for="bangumi in bangumiList" :key="bangumi.order">
         <ab-bangumi-card
           :bangumi="bangumi.value"
@@ -72,14 +73,4 @@ function onSelect(site: string) {
   </div>
 </template>
 
-<style lang="scss" scoped>
-.list-enter-active,
-.list-leave-active {
-  transition: all 0.3s ease;
-}
-
-.list-enter-from,
-.list-leave-to {
-  opacity: 0;
-}
-</style>
+<style lang="scss" scoped></style>
