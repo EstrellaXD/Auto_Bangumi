@@ -1,3 +1,7 @@
+from unittest import mock
+
+import pytest
+from aioresponses import aioresponses
 from module.notification.base import NotifierAdapter
 from module.notification.services.bark import BarkMessage, BarkService
 
@@ -26,17 +30,55 @@ class TestBarkMessage:
         assert message.title == "AutoBangumi"
 
 
-class TestGotifyService:
-    def test_GotifyService_inherits_NotifierAdapter(self):
+class TestBarkService:
+    def test_BarkService_inherits_NotifierAdapter(self):
         assert issubclass(BarkService, NotifierAdapter)
 
     @classmethod
     def setup_class(cls):
         cls.token = "YOUR_TOKEN"
-        cls.base_url = "https://example.com"
 
-        cls.bark = BarkService(token=cls.token, base_url=cls.base_url)
+        cls.bark = BarkService(token=cls.token)
 
     def test_init_properties(self):
         assert self.bark.token == self.token
-        assert self.bark.base_url == self.base_url
+        assert self.bark.base_url == "https://api.day.app"
+
+    @pytest.mark.asyncio
+    async def test__send(self, fake_notification):
+        # Create a mock response for the HTTP request
+        with aioresponses() as m:
+            m.post("https://api.day.app/push")
+
+            data = BarkMessage(
+                title=fake_notification.official_title,
+                body="test message",
+                icon=fake_notification.poster_path,
+                device_key=self.token,
+            )
+
+            # Call the send method
+            await self.bark._send(data.dict())
+
+            m.assert_called_once_with(
+                "/push",
+                method="POST",
+                data=data.dict(),
+            )
+
+    def test_send(self, fake_notification):
+        with mock.patch("module.notification.services.bark.BarkService.send") as m:
+            return_value = {"errcode": 0, "errmsg": "ok"}
+            m.return_value = return_value
+
+            res = self.bark.send(fake_notification)
+
+            m.assert_called_with(fake_notification)
+            assert res == return_value
+
+    def test_send_failed(self, fake_notification):
+        with mock.patch("module.notification.services.bark.BarkService.send") as m:
+            m.return_value = None
+            res = self.bark.send(fake_notification)
+
+            assert res is None

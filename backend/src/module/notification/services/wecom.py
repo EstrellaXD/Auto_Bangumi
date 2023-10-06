@@ -39,7 +39,7 @@ class WecomService(NotifierAdapter):
         description="wecom notification url",
     )
 
-    async def _send(self, data: Dict[str, Any]) -> Any:
+    async def _send(self, data: Dict[str, Any], **kwargs) -> Any:
         async with aiohttp.ClientSession(base_url=self.base_url) as req:
             try:
                 resp: aiohttp.ClientResponse = await req.post(
@@ -48,10 +48,7 @@ class WecomService(NotifierAdapter):
                     data=data,
                 )
 
-                res = await resp.json()
-                if not resp.ok:
-                    logger.error(f"Can't send to wecom because: {res}")
-                    return
+                return await resp.json()
 
             except Exception as e:
                 logger.error(f"Wecom notification error: {e}")

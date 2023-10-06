@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Any
+from typing import Any, Dict
 
 import aiohttp
 from pydantic import BaseModel, Field
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class TelegramPhotoMessage(BaseModel):
     # see: https://core.telegram.org/bots/api#sendphoto
-    chat_id: int = Field(..., description="telegram channel name id")
+    chat_id: str = Field(..., description="telegram channel name id")
     caption: str = Field(..., description="the caption for photo")
     photo: str = Field(..., description="the photo url")
     disable_notification: bool = True
@@ -29,18 +29,14 @@ class TelegramService(NotifierAdapter):
         description="telegram bot base url",
     )
 
-    async def _send(self, *args, **kwargs) -> Any:
-        data = kwargs.get("data")
+    async def _send(self, data: Dict[str, Any], **kwargs) -> Any:
         async with aiohttp.ClientSession(base_url=self.base_url) as req:
             try:
                 resp: aiohttp.ClientResponse = await req.post(
                     f"/bot{self.token}/sendPhoto", data=data
                 )
 
-                res = await resp.json()
-                if not resp.ok:
-                    logger.error(f"Can't send to telegram because: {res}")
-                    return
+                return await resp.json()
 
             except Exception as e:
                 logger.error(f"Telegram notification error: {e}")

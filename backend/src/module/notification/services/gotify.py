@@ -16,7 +16,9 @@ class GotifyMessage(BaseModel):
     priority: int = Field(5, description="priority", ge=0, le=10)
     message: str = Field(..., description="message")
     title: str = Field("AutoBangumi", description="title")
-    extras: Optional[Dict[str, Any]] = Field(None, description="extras information")
+    extras: Dict[str, Any] = Field(
+        default_factory=dict, description="extras information"
+    )
 
 
 class GotifyService(NotifierAdapter):
@@ -25,18 +27,14 @@ class GotifyService(NotifierAdapter):
     token: str = Field(..., description="gotify client or app token")
     base_url: str = Field(..., description="gotify base url")
 
-    async def _send(self, *args, **kwargs) -> Any:
-        data = kwargs.get("data")
+    async def _send(self, data: Dict[str, Any]) -> Any:
         async with aiohttp.ClientSession(base_url=self.base_url) as req:
             try:
                 resp: aiohttp.ClientResponse = await req.post(
                     "/message", params={"token": self.token}, data=data
                 )
 
-                res = await resp.json()
-                if not resp.ok:
-                    logger.error(f"Can't send to gotify because: {res}")
-                    return
+                return await resp.json()
 
             except Exception as e:
                 logger.error(f"Gotify notification error: {e}")

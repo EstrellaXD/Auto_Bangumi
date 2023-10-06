@@ -27,10 +27,7 @@ class BarkService(NotifierAdapter):
             async with aiohttp.ClientSession(base_url=self.base_url) as req:
                 resp: aiohttp.ClientResponse = await req.post("/push", data=data)
 
-                res = await resp.json()
-                if not resp.ok:
-                    logger.error(f"Can't send to bark because: {res}")
-                    return
+                return await resp.json()
 
         except Exception as e:
             logger.error(f"Bark notification error: {e}")

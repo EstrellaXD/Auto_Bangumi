@@ -1,6 +1,4 @@
-import asyncio
 from unittest import mock
-import aiohttp
 from aioresponses import aioresponses
 import pytest
 from module.notification.base import NotifierAdapter
@@ -71,31 +69,46 @@ class TestWecomService:
         assert self.wecom.agentid == self.agentid
         assert self.wecom.base_url == self.base_url
 
-    # def test__send(self, fake_notification):
-    #     # Create a mock response for the HTTP request
-    #     mock_response = {"errcode": 0, "errmsg": "ok"}
-    #     loop = asyncio.get_event_loop()
-    #     with mock.patch("aiohttp.ClientSession.post") as m:
-    #         m.post("/send", payload=mock_response, status=200)
+    @pytest.mark.asyncio
+    async def test__send(self, fake_notification):
+        # Create a mock response for the HTTP request
+        with aioresponses() as m:
+            m.post("https://qyapi.weixin.qq.com/cgi-bin/message/send")
 
-    #         data = WecomMessage(
-    #             agentid=self.agentid,
-    #             articles=[
-    #                 WecomArticle(
-    #                     title="Test Title",
-    #                     description="<formatted message>",
-    #                     picurl="https://example.com/image.jpg",
-    #                 )
-    #             ],
-    #         )
+            data = WecomMessage(
+                agentid=self.agentid,
+                articles=[
+                    WecomArticle(
+                        title="Test Title",
+                        description="<formatted message>",
+                        picurl="https://example.com/image.jpg",
+                    )
+                ],
+            )
 
-    #         # Call the send method
-    #         res = loop.run_until_complete(self.wecom._send(data.dict()))
-    #         # Assertions
-    #         m.assert_called_with(
-    #             "/cgi-bin/message/send",
-    #             params={"access_token": "YOUR_TOKEN"},
-    #             status=200,
-    #             data=data.dict(),
-    #         )
-    #         assert res == mock_response
+            # Call the send method
+            await self.wecom._send(data.dict())
+
+            m.assert_called_once_with(
+                "/cgi-bin/message/send",
+                method="POST",
+                data=data.dict(),
+                params={"access_token": "YOUR_TOKEN"},
+            )
+
+    def test_send(self, fake_notification):
+        with mock.patch("module.notification.services.wecom.WecomService.send") as m:
+            return_value = {"errcode": 0, "errmsg": "ok"}
+            m.return_value = return_value
+
+            res = self.wecom.send(fake_notification)
+
+            m.assert_called_with(fake_notification)
+            assert res == return_value
+
+    def test_send_failed(self, fake_notification):
+        with mock.patch("module.notification.services.wecom.WecomService.send") as m:
+            m.return_value = None
+            res = self.wecom.send(fake_notification)
+
+            assert res is None

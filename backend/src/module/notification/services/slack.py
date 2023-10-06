@@ -36,10 +36,7 @@ class SlackService(NotifierAdapter):
                     data=data,
                 )
 
-                res = await resp.json()
-                if not resp.ok:
-                    logger.error(f"Can't send to slack because: {res}")
-                    return
+                return await resp.json()
 
             except Exception as e:
                 logger.error(f"Slack notification error: {e}")

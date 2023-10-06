@@ -27,10 +27,7 @@ class ServerChanService(NotifierAdapter):
                     f"/{self.token}.send", params=data
                 )
 
-                res = await resp.json()
-                if not resp.ok:
-                    logger.error(f"Can't send to server chan because: {res}")
-                    return
+                return await resp.json()
 
             except Exception as e:
                 logger.error(f"ServerChan notification error: {e}")
