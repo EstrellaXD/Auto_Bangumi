@@ -25,13 +25,13 @@ class SlackMessage(BaseModel):
 class SlackService(NotifierAdapter):
     token: str = Field(..., description="slack token")
     channel: str = Field(..., description="slack channel id")
-    base_url: str = Field("https://slack.com/api", description="slack base url")
+    base_url: str = Field("https://slack.com", description="slack base url")
 
     async def _send(self, data: Dict[str, Any]) -> Any:
-        try:
-            async with aiohttp.ClientSession(base_url=self.base_url) as req:
+        async with aiohttp.ClientSession(base_url=self.base_url) as req:
+            try:
                 resp: aiohttp.ClientResponse = await req.post(
-                    "/chat.postMessage",
+                    "/api/chat.postMessage",
                     headers={"Authorization": f"Bearer {self.token}"},
                     data=data,
                 )
@@ -41,8 +41,8 @@ class SlackService(NotifierAdapter):
                     logger.error(f"Can't send to slack because: {res}")
                     return
 
-        except Exception as e:
-            logger.error(f"Slack notification error: {e}")
+            except Exception as e:
+                logger.error(f"Slack notification error: {e}")
 
     def send(self, notification: Notification, *args, **kwargs):
         message = self.template.format(**notification.dict())

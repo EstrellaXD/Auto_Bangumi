@@ -27,8 +27,8 @@ class GotifyService(NotifierAdapter):
 
     async def _send(self, *args, **kwargs) -> Any:
         data = kwargs.get("data")
-        try:
-            async with aiohttp.ClientSession(base_url=self.base_url) as req:
+        async with aiohttp.ClientSession(base_url=self.base_url) as req:
+            try:
                 resp: aiohttp.ClientResponse = await req.post(
                     "/message", params={"token": self.token}, data=data
                 )
@@ -38,8 +38,8 @@ class GotifyService(NotifierAdapter):
                     logger.error(f"Can't send to gotify because: {res}")
                     return
 
-        except Exception as e:
-            logger.error(f"Gotify notification error: {e}")
+            except Exception as e:
+                logger.error(f"Gotify notification error: {e}")
 
     def send(self, notification: Notification, *args, **kwargs):
         message = self.template.format(**notification.dict())

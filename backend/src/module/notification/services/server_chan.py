@@ -21,10 +21,10 @@ class ServerChanService(NotifierAdapter):
     base_url: str = Field("https://sctapi.ftqq.com", description="server chan base url")
 
     async def _send(self, data: Dict[str, Any]) -> Any:
-        try:
-            async with aiohttp.ClientSession(base_url=self.base_url) as req:
-                resp: aiohttp.ClientResponse = await req.post(
-                    f"/{self.token}.send", data=data
+        async with aiohttp.ClientSession(base_url=self.base_url) as req:
+            try:
+                resp: aiohttp.ClientResponse = await req.get(
+                    f"/{self.token}.send", params=data
                 )
 
                 res = await resp.json()
@@ -32,8 +32,8 @@ class ServerChanService(NotifierAdapter):
                     logger.error(f"Can't send to server chan because: {res}")
                     return
 
-        except Exception as e:
-            logger.error(f"ServerChan notification error: {e}")
+            except Exception as e:
+                logger.error(f"ServerChan notification error: {e}")
 
     def send(self, notification: Notification, *args, **kwargs):
         message = self.template.format(**notification.dict())

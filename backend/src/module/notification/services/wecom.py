@@ -35,15 +35,17 @@ class WecomService(NotifierAdapter):
     token: str = Field(..., description="wecom access token")
     agentid: str = Field(..., description="wecom agent id")
     base_url: str = Field(
-        "https://qyapi.weixin.qq.com/cgi-bin/message",
+        "https://qyapi.weixin.qq.com",
         description="wecom notification url",
     )
 
     async def _send(self, data: Dict[str, Any]) -> Any:
-        try:
-            async with aiohttp.ClientSession(base_url=self.base_url) as req:
+        async with aiohttp.ClientSession(base_url=self.base_url) as req:
+            try:
                 resp: aiohttp.ClientResponse = await req.post(
-                    "/send", params={"access_token": self.token}, data=data
+                    "/cgi-bin/message/send",
+                    params={"access_token": self.token},
+                    data=data,
                 )
 
                 res = await resp.json()
@@ -51,8 +53,8 @@ class WecomService(NotifierAdapter):
                     logger.error(f"Can't send to wecom because: {res}")
                     return
 
-        except Exception as e:
-            logger.error(f"Wecom notification error: {e}")
+            except Exception as e:
+                logger.error(f"Wecom notification error: {e}")
 
     def send(self, notification: Notification, *args, **kwargs):
         message = self.template.format(**notification.dict())

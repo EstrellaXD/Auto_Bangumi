@@ -31,8 +31,8 @@ class TelegramService(NotifierAdapter):
 
     async def _send(self, *args, **kwargs) -> Any:
         data = kwargs.get("data")
-        try:
-            async with aiohttp.ClientSession(base_url=self.base_url) as req:
+        async with aiohttp.ClientSession(base_url=self.base_url) as req:
+            try:
                 resp: aiohttp.ClientResponse = await req.post(
                     f"/bot{self.token}/sendPhoto", data=data
                 )
@@ -42,9 +42,9 @@ class TelegramService(NotifierAdapter):
                     logger.error(f"Can't send to telegram because: {res}")
                     return
 
-        except Exception as e:
-            logger.error(f"Telegram notification error: {e}")
-            return e
+            except Exception as e:
+                logger.error(f"Telegram notification error: {e}")
+                return
 
     def send(self, notification: Notification, *args, **kwargs):
         message = self.template.format(**notification.dict())
