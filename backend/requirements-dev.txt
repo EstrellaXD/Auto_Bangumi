@@ -7,3 +7,4 @@ pre-commit
 pytest          # testing framework
 aioresponses    # aiohttp mock testing
 pytest-asyncio  # asyncio testing
+pytest-cov      # testing coverage
