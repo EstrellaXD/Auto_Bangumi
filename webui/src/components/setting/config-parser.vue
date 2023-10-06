@@ -1,10 +1,5 @@
 <script lang="ts" setup>
-import type {
-  RssParser,
-  RssParserLang,
-  RssParserMethodType,
-  RssParserType,
-} from '#/config';
+import type { RssParser, RssParserLang } from '#/config';
 import type { SettingItem } from '#/components';
 
 const { t } = useMyI18n();
@@ -12,11 +7,8 @@ const { getSettingGroup } = useConfigStore();
 
 const parser = getSettingGroup('rss_parser');
 
-const sourceItems: RssParserType = ['mikan'];
 /** @ts-expect-error Incorrect order */
 const langs: RssParserLang = ['zh', 'en', 'jp'];
-/** @ts-expect-error Incorrect order */
-const parserMethods: RssParserMethodType = ['tmdb', 'mikan', 'parser'];
 
 const items: SettingItem<RssParser>[] = [
   {

@@ -4,7 +4,6 @@ import { vOnClickOutside } from '@vueuse/components';
 
 defineEmits(['add-bangumi']);
 const showProvider = ref(false);
-const hasUpdate = ref(false);
 const {
   providers,
   getProviders,
