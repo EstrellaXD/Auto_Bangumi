@@ -1,6 +1,8 @@
 import asyncio
 import logging
-from typing import Any, Dict
+from turtle import title
+from typing import Any, Dict, List
+from wsgiref import headers
 
 import aiohttp
 from pydantic import BaseModel, Field
@@ -11,26 +13,34 @@ from module.notification.base import NotifierAdapter
 logger = logging.getLogger(__name__)
 
 
+class SlackAttachment(BaseModel):
+    title: str = Field(..., description="title")
+    text: str = Field(..., description="text")
+    image_url: str = Field(..., description="image url")
+
+
 class SlackMessage(BaseModel):
-    title: str = Field("AutoBangumi", description="title")
-    body: str = Field(..., description="body")
-    device_key: str = Field(..., description="device_key")
+    channel: str = Field(..., description="slack channel id")
+    attechment: List[SlackAttachment] = Field(..., description="attechments")
 
 
 class SlackService(NotifierAdapter):
     token: str = Field(..., description="slack token")
-    base_url: str = Field(..., description="slack base url")
+    channel: str = Field(..., description="slack channel id")
+    base_url: str = Field("https://slack.com/api", description="slack base url")
 
     async def _send(self, data: Dict[str, Any]) -> Any:
         try:
-            async with aiohttp.ClientSession() as session:
-                resp: aiohttp.ClientResponse = await session.post(
-                    self.base_url, data=data
+            async with aiohttp.ClientSession(base_url=self.base_url) as req:
+                resp: aiohttp.ClientResponse = await req.post(
+                    "/chat.postMessage",
+                    headers={"Authorization": f"Bearer {self.token}"},
+                    data=data,
                 )
 
                 res = await resp.json()
                 if not resp.ok:
-                    logger.error(f"Can't send to telegram because: {res}")
+                    logger.error(f"Can't send to slack because: {res}")
                     return
 
         except Exception as e:
@@ -40,9 +50,14 @@ class SlackService(NotifierAdapter):
         message = self.template.format(**notification.dict())
 
         data = SlackMessage(
-            title=notification.official_title,
-            body=message,
-            device_key=self.token,
+            channel=self.channel,
+            attechment=[
+                SlackAttachment(
+                    title=notification.official_title,
+                    text=message,
+                    image_url=notification.poster_path,
+                )
+            ],
         ).dict()
 
         loop = asyncio.get_event_loop()

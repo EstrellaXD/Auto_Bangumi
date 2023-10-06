@@ -1,9 +1,8 @@
 import asyncio
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import aiohttp
-from attr import validate
 from pydantic import BaseModel, Field, validator
 
 from module.models import Notification
@@ -12,11 +11,9 @@ from module.notification.base import NotifierAdapter
 logger = logging.getLogger(__name__)
 
 
-class WecomMessage(BaseModel):
-    key: str = Field(..., description="key")
-    type: str = Field("news", description="message type")
+class WecomArticle(BaseModel):
     title: str = Field("AutoBangumi", description="title")
-    msg: str = Field(..., description="message")
+    description: str = Field(..., description="message")
     picurl: str = Field(..., description="picurl")
 
     @validator("picurl")
@@ -27,21 +24,31 @@ class WecomMessage(BaseModel):
         return v
 
 
+class WecomMessage(BaseModel):
+    # see: https://developer.work.weixin.qq.com/document/path/90236#%E5%9B%BE%E6%96%87%E6%B6%88%E6%81%AF
+    msgtype: str = Field("news", description="message type")
+    agentid: str = Field(..., description="agent id")
+    articles: List[WecomArticle] = Field(..., description="articles")
+
+
 class WecomService(NotifierAdapter):
-    token: str = Field(..., description="wecom token")
-    chat_id: str = Field(..., description="wecom chat id")
-    notification_url: str = Field(..., description="wecom notification url")
+    token: str = Field(..., description="wecom access token")
+    agentid: str = Field(..., description="wecom agent id")
+    base_url: str = Field(
+        "https://qyapi.weixin.qq.com/cgi-bin/message",
+        description="wecom notification url",
+    )
 
     async def _send(self, data: Dict[str, Any]) -> Any:
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(base_url=self.base_url) as session:
                 resp: aiohttp.ClientResponse = await session.post(
-                    self.notification_url, data=data
+                    "/send", params={"access_token": self.token}, data=data
                 )
 
                 res = await resp.json()
                 if not resp.ok:
-                    logger.error(f"Can't send to telegram because: {res}")
+                    logger.error(f"Can't send to wecom because: {res}")
                     return
 
         except Exception as e:
@@ -53,10 +60,14 @@ class WecomService(NotifierAdapter):
         title = "【番剧更新】" + notification.official_title
 
         data = WecomMessage(
-            key=self.token,
-            title=title,
-            msg=message,
-            picurl=notification.poster_path,
+            agentid=self.agentid,
+            articles=[
+                WecomArticle(
+                    title=title,
+                    description=message,
+                    picurl=notification.poster_path,
+                )
+            ],
         ).dict()
 
         loop = asyncio.get_event_loop()

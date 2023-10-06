@@ -35,7 +35,7 @@ class GotifyService(NotifierAdapter):
 
                 res = await resp.json()
                 if not resp.ok:
-                    logger.error(f"Can't send to bark because: {res}")
+                    logger.error(f"Can't send to gotify because: {res}")
                     return
 
         except Exception as e:

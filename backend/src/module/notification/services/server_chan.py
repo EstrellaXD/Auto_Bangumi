@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class ServerChanMessage(BaseModel):
     title: str = Field("AutoBangumi", description="title")
-    description: str = Field(..., description="description")
+    desp: str = Field(..., description="description")
 
 
 class ServerChanService(NotifierAdapter):
@@ -29,7 +29,7 @@ class ServerChanService(NotifierAdapter):
 
                 res = await resp.json()
                 if not resp.ok:
-                    logger.error(f"Can't send to telegram because: {res}")
+                    logger.error(f"Can't send to server chan because: {res}")
                     return
 
         except Exception as e:
@@ -40,7 +40,7 @@ class ServerChanService(NotifierAdapter):
 
         data = ServerChanMessage(
             title=notification.official_title,
-            description=message,
+            desp=message,
         ).dict()
 
         loop = asyncio.get_event_loop()
