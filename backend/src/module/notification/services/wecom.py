@@ -41,8 +41,8 @@ class WecomService(NotifierAdapter):
 
     async def _send(self, data: Dict[str, Any]) -> Any:
         try:
-            async with aiohttp.ClientSession(base_url=self.base_url) as session:
-                resp: aiohttp.ClientResponse = await session.post(
+            async with aiohttp.ClientSession(base_url=self.base_url) as req:
+                resp: aiohttp.ClientResponse = await req.post(
                     "/send", params={"access_token": self.token}, data=data
                 )
 
