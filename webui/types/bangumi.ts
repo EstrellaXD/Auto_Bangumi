@@ -23,16 +23,14 @@ export interface BangumiRule {
   year: string | null;
 }
 
-
-
 export interface BangumiAPI extends Omit<BangumiRule, 'filter' | 'rss_link'> {
-    filter: string;
-    rss_link: string;
+  filter: string;
+  rss_link: string;
 }
 
 export interface SearchResult {
-    order: number;
-    value: BangumiRule;
+  order: number;
+  value: BangumiRule;
 }
 
 export type BangumiUpdate = Omit<BangumiAPI, 'id'>;

@@ -1,6 +1,7 @@
 <script lang="ts" setup>
-const {rss, selectedRSS} = storeToRefs(useRSSStore());
-const {getAll, deleteSelected, disableSelected, enableSelected} = useRSSStore();
+const { rss, selectedRSS } = storeToRefs(useRSSStore());
+const { getAll, deleteSelected, disableSelected, enableSelected } =
+  useRSSStore();
 
 onActivated(() => {
   getAll();
@@ -16,7 +17,6 @@ function addSelected(checked: boolean, id: number) {
     selectedRSS.value = selectedRSS.value.filter((i) => i !== id);
   }
 }
-
 </script>
 
 <template>
@@ -37,15 +37,15 @@ function addSelected(checked: boolean, id: number) {
       <div line my-12px></div>
       <div space-y-12px>
         <ab-rss-item
-            v-for="i in rss"
-            :id="i.id"
-            :key="i.id"
-            :name="i.name"
-            :url="i.url"
-            :enable="i.enabled"
-            :parser="i.parser"
-            :aggregate="i.aggregate"
-            @on-select="addSelected"
+          v-for="i in rss"
+          :id="i.id"
+          :key="i.id"
+          :name="i.name"
+          :url="i.url"
+          :enable="i.enabled"
+          :parser="i.parser"
+          :aggregate="i.aggregate"
+          @on-select="addSelected"
         >
         </ab-rss-item>
       </div>
@@ -53,8 +53,12 @@ function addSelected(checked: boolean, id: number) {
         <div line my-12px></div>
         <div flex="~ justify-end" space-x-10px>
           <ab-button @click="enableSelected">{{ $t('rss.enable') }}</ab-button>
-          <ab-button @click="disableSelected">{{ $t('rss.disable') }}</ab-button>
-          <ab-button class="type-warn" @click="deleteSelected">{{ $t('rss.delete') }}</ab-button>
+          <ab-button @click="disableSelected">{{
+            $t('rss.disable')
+          }}</ab-button>
+          <ab-button class="type-warn" @click="deleteSelected">{{
+            $t('rss.delete')
+          }}</ab-button>
         </div>
       </div>
     </ab-container>
@@ -69,5 +73,4 @@ function addSelected(checked: boolean, id: number) {
 .spacer-2 {
   width: 200px;
 }
-
 </style>

@@ -1,6 +1,6 @@
 import type { BangumiAPI, BangumiRule } from '#/bangumi';
 import type { RSS } from '#/rss';
-import type { ApiError, ApiSuccess } from '#/api';
+import type { ApiSuccess } from '#/api';
 
 export const apiDownload = {
   /**
@@ -10,14 +10,14 @@ export const apiDownload = {
   async analysis(rss_item: RSS) {
     const { data } = await axios.post<BangumiAPI>(
       'api/v1/rss/analysis',
-        rss_item
+      rss_item
     );
 
     const result: BangumiRule = {
-        ...data,
-        filter: data.filter.split(','),
-        rss_link: data.rss_link.split(','),
-    }
+      ...data,
+      filter: data.filter.split(','),
+      rss_link: data.rss_link.split(','),
+    };
     return result;
   },
 
@@ -30,7 +30,7 @@ export const apiDownload = {
       ...bangumiData,
       filter: bangumiData.filter.join(','),
       rss_link: bangumiData.rss_link.join(','),
-    }
+    };
     const { data } = await axios.post<ApiSuccess>(
       'api/v1/rss/collect',
       postData
@@ -44,10 +44,10 @@ export const apiDownload = {
    */
   async subscribe(bangumiData: BangumiRule) {
     const postData: BangumiAPI = {
-        ...bangumiData,
-        filter: bangumiData.filter.join(','),
-        rss_link: bangumiData.rss_link.join(','),
-    }
+      ...bangumiData,
+      filter: bangumiData.filter.join(','),
+      rss_link: bangumiData.rss_link.join(','),
+    };
     const { data } = await axios.post<ApiSuccess>(
       'api/v1/rss/subscribe',
       postData
