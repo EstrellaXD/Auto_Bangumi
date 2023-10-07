@@ -45,23 +45,6 @@ class TestNotifier:
 
         assert exc.match("Invalid notifier config")
 
-    def test__get_poster(self):
-        with mock.patch("module.notification.Notifier._get_poster") as m:
-            expected = "https://mikanani.me"
-            m.return_value = expected
-
-            res = self.notifier._get_poster(name="test")
-            m.assert_called_once_with(name="test")
-            assert res == expected
-
-    def test__get_poster_failed(self):
-        with mock.patch("module.notification.Notifier._get_poster") as m:
-            m.return_value = ""
-
-            res = self.notifier._get_poster(name="")
-            m.assert_called_once_with(name="")
-            assert res == ""
-
     def test_send(self, fake_notification):
         with mock.patch("module.notification.Notifier.send") as m:
             m.return_value = True

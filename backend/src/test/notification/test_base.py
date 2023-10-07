@@ -5,6 +5,7 @@ from aioresponses import aioresponses
 from module.notification.base import (
     DEFAULT_LOG_TEMPLATE,
     DEFAULT_MESSAGE_TEMPLATE,
+    NotificationContent,
     NotifierAdapter,
     NotifierRequestMixin,
 )
@@ -72,3 +73,9 @@ async def test_NotifierRequestMixin_asend():
             data={"hello": "world"},
             headers={"Content-Type": "application/json"},
         )
+
+
+def test_NotificationContent():
+    content = NotificationContent(content="Test message")
+    assert content.content == "Test message"
+    assert content.dict() == {"content": "Test message"}

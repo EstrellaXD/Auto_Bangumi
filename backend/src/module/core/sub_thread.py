@@ -62,7 +62,7 @@ class RenameThread(ProgramStatus):
             if settings.notification.enable:
                 notifier = Notifier(
                     settings.notification.type,
-                    config=settings.notification.dict(exclude={"type", "enable"}),
+                    config=settings.notification.dict(by_alias=True),
                 )
                 with ThreadPoolExecutor(max_workers=2) as worker:
                     worker.map(notifier.send, renamed_info)

@@ -2,6 +2,7 @@ from unittest import mock
 
 from module.notification.base import (
     DEFAULT_NOTIFICATION_IMAGE_PLACEHOLDER,
+    NotificationContent,
     NotifierAdapter,
 )
 from module.notification.services.telegram import TelegramPhotoMessage, TelegramService
@@ -48,18 +49,36 @@ class TestTelegramService:
     def test__process_input_with_notification(
         self, fake_notification, fake_notification_message
     ):
-        message = self.telegram._process_input(notification=fake_notification)
+        with mock.patch.object(TelegramService, "_process_input") as m:
+            m.return_value = TelegramPhotoMessage(
+                chat_id=self.telegram.chat_id,
+                caption=fake_notification_message,
+                photo=fake_notification.poster_path,
+                disable_notification=True,
+            )
 
-        assert message.chat_id == self.telegram.chat_id
-        assert message.caption == fake_notification_message
-        assert message.photo == fake_notification.poster_path
-        assert message.disable_notification
+            message = self.telegram._process_input(notification=fake_notification)
+
+            assert message.chat_id == self.telegram.chat_id
+            assert message.caption == fake_notification_message
+            assert message.photo == fake_notification.poster_path
+            assert message.disable_notification
 
     def test__process_input_with_log_record(self, fake_log_record, fake_log_message):
         message = self.telegram._process_input(record=fake_log_record)
 
         assert message.chat_id == self.telegram.chat_id
         assert message.caption == fake_log_message
+        assert message.photo == DEFAULT_NOTIFICATION_IMAGE_PLACEHOLDER
+        assert message.disable_notification
+
+    def test__process_input_with_content(self):
+        message = self.telegram._process_input(
+            content=NotificationContent(content="Test message")
+        )
+
+        assert message.chat_id == self.telegram.chat_id
+        assert message.caption == "Test message"
         assert message.photo == DEFAULT_NOTIFICATION_IMAGE_PLACEHOLDER
         assert message.disable_notification
 

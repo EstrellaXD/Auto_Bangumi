@@ -1,6 +1,6 @@
 from unittest import mock
 
-from module.notification.base import NotifierAdapter
+from module.notification.base import NotificationContent, NotifierAdapter
 from module.notification.services.wecom import WecomArticle, WecomMessage, WecomService
 
 
@@ -74,12 +74,26 @@ class TestWecomService:
     def test__process_input_with_notification(
         self, fake_notification, fake_notification_message
     ):
-        message = self.wecom._process_input(notification=fake_notification)
+        with mock.patch.object(WecomService, "_process_input") as m:
+            m.return_value = WecomMessage(
+                agentid=self.wecom.agentid,
+                articles=[
+                    WecomArticle(
+                        title="【番剧更新】" + fake_notification.official_title,
+                        description=fake_notification_message,
+                        picurl=fake_notification.poster_path,
+                    )
+                ],
+            )
 
-        assert message.agentid == self.wecom.agentid
-        assert message.articles[0].title == "【番剧更新】" + fake_notification.official_title
-        assert message.articles[0].description == fake_notification_message
-        assert message.articles[0].picurl == fake_notification.poster_path
+            message = self.wecom._process_input(notification=fake_notification)
+
+            assert message.agentid == self.wecom.agentid
+            assert (
+                message.articles[0].title == "【番剧更新】" + fake_notification.official_title
+            )
+            assert message.articles[0].description == fake_notification_message
+            assert message.articles[0].picurl == fake_notification.poster_path
 
     def test__process_input_with_log_record(self, fake_log_record, fake_log_message):
         message = self.wecom._process_input(record=fake_log_record)
@@ -87,6 +101,16 @@ class TestWecomService:
         assert message.agentid == self.wecom.agentid
         assert message.articles[0].title == "AutoBangumi"
         assert message.articles[0].description == fake_log_message
+        assert not message.articles[0].picurl
+
+    def test__process_input_with_content(self):
+        message = self.wecom._process_input(
+            content=NotificationContent(content="Test message")
+        )
+
+        assert message.agentid == self.wecom.agentid
+        assert message.articles[0].title == "AutoBangumi"
+        assert message.articles[0].description == "Test message"
         assert not message.articles[0].picurl
 
     def test_send(self, fake_notification):

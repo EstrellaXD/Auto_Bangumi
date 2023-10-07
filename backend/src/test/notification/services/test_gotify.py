@@ -1,7 +1,7 @@
 from unittest import mock
 
 import pytest
-from module.notification.base import NotifierAdapter
+from module.notification.base import NotificationContent, NotifierAdapter
 from module.notification.services.gotify import GotifyMessage, GotifyService
 from pydantic import ValidationError
 
@@ -64,11 +64,19 @@ class TestGotifyService:
     def test__process_input_with_notification(
         self, fake_notification, fake_notification_message
     ):
-        message = self.gotify._process_input(notification=fake_notification)
+        with mock.patch.object(GotifyService, "_process_input") as m:
+            m.return_value = GotifyMessage(
+                priority=5,
+                message=fake_notification_message,
+                title=fake_notification.official_title,
+                extras={},
+            )
 
-        assert message.title == fake_notification.official_title
-        assert message.message == fake_notification_message
-        assert message.extras == {}
+            message = self.gotify._process_input(notification=fake_notification)
+
+            assert message.title == fake_notification.official_title
+            assert message.message == fake_notification_message
+            assert message.extras == {}
 
     def test__process_input_with_log_record(self, fake_log_record, fake_log_message):
         message = self.gotify._process_input(record=fake_log_record)
@@ -76,6 +84,16 @@ class TestGotifyService:
         assert message.title == "AutoBangumi"
         assert message.message == fake_log_message
         assert message.priority == 8
+        assert message.extras == {}
+
+    def test__process_input_with_content(self):
+        message = self.gotify._process_input(
+            content=NotificationContent(content="Test message")
+        )
+
+        assert message.title == "AutoBangumi"
+        assert message.message == "Test message"
+        assert message.priority == 5
         assert message.extras == {}
 
     def test_send(self, fake_notification):

@@ -27,37 +27,23 @@ class Notifier:
             NotificationType
         ), f"Invalid service name: {service_name}"
 
-        notifier_config = kwargs.get("config", {})
+        notifier_config = kwargs.pop("config", {})
         if not notifier_config:
             raise ValueError("Invalid notifier config")
 
         self.notifier = services[service_name](**notifier_config)
 
-    def _get_poster(self, name: str) -> str:
-        # avoid cyclic import
-        from module.database import Database
-
-        with Database() as db:
-            poster = db.bangumi.match_poster(name)
-            return poster
-
-    def send(self, **kwargs) -> bool:
-        notification: Optional[Notification] = kwargs.pop("notification", None)
-        record: Optional[logging.LogRecord] = kwargs.pop("record", None)
-        if notification:
-            poster = self._get_poster(notification.official_title)
-            notification.poster_path = poster
-            data = dict(notification=notification)
-        else:
-            data = dict(record=record)
-
+    async def asend(self, **kwargs):
         try:
-            self.notifier.send(**data)
-            logger.debug(f"Send notification: {data}")
-            return True
+            await self.notifier.asend(**kwargs)
         except Exception as e:
             logger.warning(f"Failed to send notification: {e}")
-            return False
+
+    def send(self, **kwargs) -> bool:
+        try:
+            self.notifier.send(**kwargs)
+        except Exception as e:
+            logger.warning(f"Failed to send notification: {e}")
 
     def __enter__(self):
         return self

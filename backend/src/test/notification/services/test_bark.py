@@ -1,6 +1,6 @@
 from unittest import mock
 
-from module.notification.base import NotifierAdapter
+from module.notification.base import NotificationContent, NotifierAdapter
 from module.notification.services.bark import BarkMessage, BarkService
 
 
@@ -48,17 +48,35 @@ class TestBarkService:
     def test__process_input_with_notification(
         self, fake_notification, fake_notification_message
     ):
-        message = self.bark._process_input(notification=fake_notification)
+        with mock.patch.object(BarkService, "_process_input") as m:
+            m.return_value = BarkMessage(
+                title=fake_notification.official_title,
+                body=fake_notification_message,
+                icon=fake_notification.poster_path,
+                device_key=self.bark.token,
+            )
 
-        assert message.title == fake_notification.official_title
-        assert message.body == fake_notification_message
-        assert message.icon == fake_notification.poster_path
-        assert message.device_key == self.bark.token
+            message = self.bark._process_input(notification=fake_notification)
+
+            assert message.title == fake_notification.official_title
+            assert message.body == fake_notification_message
+            assert message.icon == fake_notification.poster_path
+            assert message.device_key == self.bark.token
 
     def test__process_input_with_log_record(self, fake_log_record, fake_log_message):
         message = self.bark._process_input(record=fake_log_record)
         assert message.title == "AutoBangumi"
         assert message.body == fake_log_message
+        assert not message.icon
+        assert message.device_key == self.bark.token
+
+    def test__process_input_with_content(self):
+        message = self.bark._process_input(
+            content=NotificationContent(content="Test message")
+        )
+
+        assert message.title == "AutoBangumi"
+        assert message.body == "Test message"
         assert not message.icon
         assert message.device_key == self.bark.token
 

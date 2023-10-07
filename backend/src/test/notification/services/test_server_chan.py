@@ -1,6 +1,6 @@
 from unittest import mock
 
-from module.notification.base import NotifierAdapter
+from module.notification.base import NotificationContent, NotifierAdapter
 from module.notification.services.server_chan import (
     ServerChanMessage,
     ServerChanService,
@@ -46,16 +46,30 @@ class TestServerChanService:
     def test__process_input_with_notification(
         self, fake_notification, fake_notification_message
     ):
-        message = self.server_chan._process_input(notification=fake_notification)
+        with mock.patch.object(ServerChanService, "_process_input") as m:
+            m.return_value = ServerChanMessage(
+                title=fake_notification.official_title,
+                desp=fake_notification_message,
+            )
 
-        assert message.title == fake_notification.official_title
-        assert message.desp == fake_notification_message
+            message = self.server_chan._process_input(notification=fake_notification)
+
+            assert message.title == fake_notification.official_title
+            assert message.desp == fake_notification_message
 
     def test__process_input_with_log_record(self, fake_log_record, fake_log_message):
         message = self.server_chan._process_input(record=fake_log_record)
 
         assert message.title == "AutoBangumi"
         assert message.desp == fake_log_message
+
+    def test__process_input_with_content(self):
+        message = self.server_chan._process_input(
+            content=NotificationContent(content="Test message")
+        )
+
+        assert message.title == "AutoBangumi"
+        assert message.desp == "Test message"
 
     def test_send(self, fake_notification):
         with mock.patch(

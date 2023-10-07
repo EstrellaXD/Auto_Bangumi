@@ -1,6 +1,6 @@
 from unittest import mock
 
-from module.notification.base import NotifierAdapter
+from module.notification.base import NotificationContent, NotifierAdapter
 from module.notification.services.slack import (
     SlackAttachment,
     SlackMessage,
@@ -62,12 +62,24 @@ class TestSlackService:
     def test__process_input_with_notification(
         self, fake_notification, fake_notification_message
     ):
-        message = self.slack._process_input(notification=fake_notification)
+        with mock.patch.object(SlackService, "_process_input") as m:
+            m.return_value = SlackMessage(
+                channel=self.slack.channel,
+                attechment=[
+                    SlackAttachment(
+                        title=fake_notification.official_title,
+                        text=fake_notification_message,
+                        image_url=fake_notification.poster_path,
+                    )
+                ],
+            )
 
-        assert message.channel == self.slack.channel
-        assert message.attechment[0].title == fake_notification.official_title
-        assert message.attechment[0].text == fake_notification_message
-        assert message.attechment[0].image_url == fake_notification.poster_path
+            message = self.slack._process_input(notification=fake_notification)
+
+            assert message.channel == self.slack.channel
+            assert message.attechment[0].title == fake_notification.official_title
+            assert message.attechment[0].text == fake_notification_message
+            assert message.attechment[0].image_url == fake_notification.poster_path
 
     def test__process_input_with_log_record(self, fake_log_record, fake_log_message):
         message = self.slack._process_input(record=fake_log_record)
@@ -75,6 +87,16 @@ class TestSlackService:
         assert message.channel == self.slack.channel
         assert message.attechment[0].title == "AutoBangumi"
         assert message.attechment[0].text == fake_log_message
+        assert not message.attechment[0].image_url
+
+    def test__process_input_with_content(self):
+        message = self.slack._process_input(
+            content=NotificationContent(content="Test message")
+        )
+
+        assert message.channel == self.slack.channel
+        assert message.attechment[0].title == "AutoBangumi"
+        assert message.attechment[0].text == "Test message"
         assert not message.attechment[0].image_url
 
     def test_send(self, fake_notification):

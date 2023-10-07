@@ -4,8 +4,10 @@ from textwrap import dedent
 from typing import Any, Dict, Literal, Optional
 
 import aiohttp
+import requests
 from pydantic import BaseModel, Field
 from tenacity import after_log, retry, stop_after_attempt, wait_fixed
+from yarl import URL
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +39,10 @@ class NotifierAdapter(BaseModel, ABC):
     @abstractmethod
     def send(self, *args, **kwargs):
         raise NotImplementedError("send method is not implemented yet.")
+
+    @abstractmethod
+    async def asend(self, *args, **kwargs):
+        raise NotImplementedError("asend method is not implemented yet.")
 
 
 _Mapping = Dict[str, Any]
@@ -74,3 +80,43 @@ class NotifierRequestMixin:
             )
 
             return await resp.json()
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(5),
+        after=after_log(logger, logging.ERROR),
+    )
+    def send(
+        self,
+        entrypoint: str,
+        base_url: Optional[str] = None,
+        method: Literal["GET", "POST"] = "GET",
+        data: Optional[_Mapping] = None,
+        params: Optional[_Mapping] = None,
+        headers: Optional[_Mapping] = None,
+    ) -> Any:
+        """send is a sync send method."""
+
+        logger.debug(
+            f"send info: entrypoint={entrypoint}, "
+            f"base_url={base_url}, "
+            f"method={method}, "
+            f"data={data}, "
+            f"params={params}, "
+            f"headers={headers}"
+        )
+
+        with requests.Session() as req:
+            resp: requests.Response = req.request(
+                url=URL.joinpath(URL(base_url), entrypoint).human_repr(),
+                method=method,
+                data=data,
+                params=params,
+                headers=headers,
+            )
+
+            return resp.json()
+
+
+class NotificationContent(BaseModel):
+    content: str = Field("", description="notification content")
