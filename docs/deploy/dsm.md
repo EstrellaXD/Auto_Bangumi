@@ -4,7 +4,7 @@
 
 ## 创建配置和数据存储文件夹
 
-‼️在 `/volume1/docker/` 下创建 `ab` 文件夹，然后在 `ab` 文件夹下创建 `config` 和 `data` 文件夹。
+在 `/volume1/docker/` 下创建 `AutoBangumi` 文件夹，然后在 `AutoBangumi` 文件夹下创建 `config` 和 `data` 文件夹。
 
 ## 安装 Container Manager (Docker) 套件
 
@@ -20,7 +20,7 @@
 
 复制以下内容填入 **Docker Compose** 中。
 ```yaml
-version: "3.8"
+version: "3.4"
 
 services:
   ab:
@@ -30,8 +30,11 @@ services:
     ports:
       - "7892:7892"
     volumes:
-      - "/volume1/docker/ab/config:/app/config"
-      - "/volume1/docker/ab/data:/app/data"
+      - "./config:/app/config"
+      - "./data:/app/data"
+    network_mode: bridge
+    environment:
+      - AB_METHOD=Advance
 ```
 
 点击 **下一步**，然后点击 **完成**。
@@ -49,28 +52,21 @@ services:
 参考上一节的内容，将以下内容经过调整填入 **Docker Compose** 中。
 
 ```yaml
-version: "3.2"
-services:
   qbittorrent:
-    container_name: qBittorrent
+    container_name: qbittorrent
+    image: linuxserver/qbittorrent
+    hostname: qbittorrent
     environment:
-      - TZ=Asia/Shanghai
-      - TemPath=/downloads
-      - SavePath=/downloads
       - PGID=1000  #需要自行修改填入
       - PUID=1000  #需要自行修改填入
-      - WEBUI_PORT=8080  #建议自行修改端口号
+      - WEBUI_PORT=8989
+      - TZ=Asia/Shanghai
     volumes:
-      - /volume1/docker/qb/config:/config
-      - /volume1/docker/qb/downloads:/downloads # 填入下载路径
-    ports:
-      - 8080:8080  # 建议自行修改端口号
-      - "6881:6881"
-      - "6881:6881/udp"
-    network_mode:
-      host
+      - ./qb_config:/config
+      - your_anime_path:/downloads # 注意 修改此处为自己存放动漫的目录,ab 内下载路径填写downloads
+    networks:
+      - host
     restart: unless-stopped
-    image: superng6/qbittorrent
 
   auto_bangumi:
     container_name: AutoBangumi
@@ -78,19 +74,18 @@ services:
       - TZ=Asia/Shanghai
       - PGID=1000  #需要自行修改填入
       - PUID=1000  #需要自行修改填入
-      - AB_DOWNLOADER_HOST=127.0.0.1:8080  #建议自行修改端口号
+      - AB_DOWNLOADER_HOST=127.0.0.1:8989  #建议自行修改端口号
     volumes:
       - /volume1/docker/ab/config:/app/config
       - /volume1/docker/ab/data:/app/data
-    network_mode:
-      host
-    ports:
-      - '7892:7892'
+    network_mode: host
+    environment:
+      - AB_METHOD=Advance
     dns:
       - 8.8.8.8
       - 223.5.5.5
     restart: unless-stopped
-    image: estrellaxd/auto_bangumi:latest
+    image: "ghcr.io/estrellaxd/auto_bangumi:latest"
     depends_on:
       - qbittorrent
 
