@@ -60,7 +60,14 @@ class RenameThread(ProgramStatus):
                 renamed_info = renamer.rename()
 
             if settings.notification.enable:
-                notifier = Notifier()
+                notifier = Notifier(
+                    settings.notification.type,
+                    # TODO: replace with specific notification service configuration.
+                    config=dict(
+                        token=settings.notification.token,
+                        chat_id=settings.notification.chat_id,
+                    ),
+                )
                 with ThreadPoolExecutor(max_workers=2) as worker:
                     worker.map(notifier.send, renamed_info)
 
