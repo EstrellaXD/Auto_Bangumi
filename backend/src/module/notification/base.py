@@ -56,6 +56,16 @@ class NotifierRequestMixin:
         headers: Optional[_Mapping] = None,
     ) -> Any:
         """asend is a async send method."""
+
+        logger.debug(
+            f"asend info: entrypoint={entrypoint}, "
+            f"base_url={base_url}, "
+            f"method={method}, "
+            f"data={data}, "
+            f"params={params}, "
+            f"headers={headers}"
+        )
+
         async with aiohttp.ClientSession(base_url=base_url) as req:
             resp: aiohttp.ClientResponse = await req.request(
                 method, entrypoint, data=data, params=params, headers=headers
