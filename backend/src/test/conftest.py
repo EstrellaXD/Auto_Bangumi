@@ -2,6 +2,9 @@ import logging
 from datetime import datetime
 
 import pytest
+import pytest_asyncio
+from httpx import AsyncClient
+from main import app
 from module.models.bangumi import Notification
 from module.notification.base import DEFAULT_LOG_TEMPLATE, DEFAULT_MESSAGE_TEMPLATE
 
@@ -42,3 +45,9 @@ def fake_log_message(fake_log_record) -> str:
         levelname=fake_log_record.levelname,
         msg=fake_log_record.msg,
     )
+
+
+@pytest_asyncio.fixture
+async def aclient():
+    async with AsyncClient(app=app, base_url="http://localhost:7892/api") as client:
+        yield client
