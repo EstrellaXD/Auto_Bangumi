@@ -14,14 +14,16 @@ COPY backend/requirements.txt .
 RUN set -ex && \
     apk add --no-cache \
         bash \
+        busybox-suid \
         python3 \
+        py3-aiohttp \
         py3-bcrypt \
         py3-pip \
-        py3-aiohttp \
         su-exec \
         shadow \
         tini \
         openssl \
+        busybox-suid \
         tzdata && \
     python3 -m pip install --no-cache-dir --upgrade pip && \
     sed -i '/bcrypt/d' requirements.txt && \

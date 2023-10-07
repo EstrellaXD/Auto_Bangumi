@@ -6,7 +6,7 @@ def test_tmdb_parser():
     bangumi_year = "2019"
     bangumi_season = 2
 
-    tmdb_info = tmdb_parser(bangumi_title, "zh")
+    tmdb_info = tmdb_parser(bangumi_title, "zh", test=True)
 
     assert tmdb_info.title == "冰海战记"
     assert tmdb_info.year == bangumi_year

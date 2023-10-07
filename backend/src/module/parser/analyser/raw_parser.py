@@ -94,10 +94,11 @@ def name_process(name: str):
             split = re.split("-", name)
     if len(split) == 1:
         split_space = split[0].split(" ")
-        for idx, item in enumerate(split_space):
-            if re.search(r"^[\u4e00-\u9fa5]{2,}", item) is not None:
-                split_space.remove(item)
-                split = [item.strip(), " ".join(split_space).strip()]
+        for idx in [0, -1]:
+            if re.search(r"^[\u4e00-\u9fa5]{2,}", split_space[idx]) is not None:
+                chs = split_space[idx]
+                split_space.remove(chs)
+                split = [chs, " ".join(split_space)]
                 break
     for item in split:
         if re.search(r"[\u0800-\u4e00]{2,}", item) and not name_jp:

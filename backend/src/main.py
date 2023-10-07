@@ -38,6 +38,11 @@ def create_app() -> FastAPI:
 app = create_app()
 
 
+@app.get("/posters/{path:path}", tags=["posters"])
+def posters(path: str):
+    return FileResponse(f"data/posters/{path}")
+
+
 if VERSION != "DEV_VERSION":
     app.mount("/assets", StaticFiles(directory="dist/assets"), name="assets")
     app.mount("/images", StaticFiles(directory="dist/images"), name="images")

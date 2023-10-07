@@ -4,7 +4,7 @@ import type { BangumiRule } from '#/bangumi';
 import type { RSS } from '#/rss';
 import { rssTemplate } from '#/rss';
 import { ruleTemplate } from '#/bangumi';
-import type { ApiError } from "#/api";
+import type { ApiError } from '#/api';
 
 /** v-model show */
 const show = defineModel('show', { default: false });
@@ -13,7 +13,7 @@ const message = useMessage();
 const { getAll } = useBangumiStore();
 
 const rss = ref<RSS>(rssTemplate);
-const rule = defineModel<BangumiRule>('rule', { default: ruleTemplate })
+const rule = defineModel<BangumiRule>('rule', { default: ruleTemplate });
 const parserType = ['mikan', 'tmdb', 'parser'];
 
 const window = reactive({
@@ -147,12 +147,9 @@ async function subscribe() {
       ></ab-setting>
 
       <div flex="~ justify-end">
-        <ab-button
-          size="small"
-          :loading="window.loading"
-          @click="addRss"
-          >{{ $t('topbar.add.button') }}</ab-button
-        >
+        <ab-button size="small" :loading="window.loading" @click="addRss">{{
+          $t('topbar.add.button')
+        }}</ab-button>
       </div>
     </div>
 

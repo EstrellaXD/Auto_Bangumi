@@ -15,7 +15,7 @@ defineEmits(['click']);
 const buttonSize = computed(() => {
   switch (props.type) {
     case 'large':
-      return 'wh-36px'
+      return 'wh-36px';
     case 'medium':
       return 'wh-24px';
     case 'small':
@@ -33,7 +33,6 @@ const lineSize = computed(() => {
       return 'w-2px h-6px';
   }
 });
-
 </script>
 
 <template>
@@ -46,9 +45,7 @@ const lineSize = computed(() => {
     :class="[`type-${type}`, buttonSize]"
     @click="$emit('click')"
   >
-    <div
-      :class="[`type-${type}`, lineSize]"
-      class="line" abs/>
+    <div :class="[`type-${type}`, lineSize]" class="line" abs />
     <div :class="[`type-${type}`, lineSize]" class="line" abs rotate-90></div>
   </button>
 </template>

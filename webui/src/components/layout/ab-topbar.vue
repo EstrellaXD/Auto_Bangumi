@@ -7,18 +7,18 @@ import {
   Power,
   Refresh,
 } from '@icon-park/vue-next';
-import {ruleTemplate} from "#/bangumi";
-import type {BangumiRule} from "#/bangumi";
+import { ruleTemplate } from '#/bangumi';
+import type { BangumiRule } from '#/bangumi';
 
-const {t, changeLocale} = useMyI18n();
-const {running, onUpdate, offUpdate} = useAppInfo();
+const { t, changeLocale } = useMyI18n();
+const { running, onUpdate, offUpdate } = useAppInfo();
 
 const showAccount = ref(false);
 const showAddRSS = ref(false);
-const searchRule = ref<BangumiRule>()
+const searchRule = ref<BangumiRule>();
 
-const {start, pause, shutdown, restart, resetRule} = useProgramStore();
-const {refreshPoster} = useBangumiStore();
+const { start, pause, shutdown, restart, resetRule } = useProgramStore();
+const { refreshPoster } = useBangumiStore();
 
 const items = [
   {
@@ -49,7 +49,7 @@ const items = [
     id: 5,
     label: () => t('topbar.refresh_poster'),
     icon: Refresh,
-    handle: refreshPoster
+    handle: refreshPoster,
   },
   {
     id: 6,
@@ -97,22 +97,32 @@ onUnmounted(() => {
   <div h-60px bg-theme-row text-white rounded-16px fx-cer px-24px>
     <div flex space-x-16px>
       <div fx-cer space-x-16px>
-        <img src="/images/logo-light.svg" alt="favicon" wh-24px/>
-        <img v-show="onSearchFocus === false" src="/images/AutoBangumi.svg" alt="AutoBangumi" h-24px rel top-2px/>
+        <img src="/images/logo-light.svg" alt="favicon" wh-24px />
+        <img
+          v-show="onSearchFocus === false"
+          src="/images/AutoBangumi.svg"
+          alt="AutoBangumi"
+          h-24px
+          rel
+          top-2px
+        />
       </div>
 
-      <ab-search-bar @add-bangumi="addSearchResult"/>
+      <ab-search-bar @add-bangumi="addSearchResult" />
     </div>
 
     <div ml-auto>
       <ab-status-bar
-          :items="items"
-          :running="running"
-          @click-add="() => (showAddRSS = true)"
-          @change-lang="() => changeLocale()"
+        :items="items"
+        :running="running"
+        @click-add="() => (showAddRSS = true)"
+        @change-lang="() => changeLocale()"
       />
     </div>
     <ab-change-account v-model:show="showAccount"></ab-change-account>
-    <ab-add-rss v-model:show="showAddRSS" v-model:rule="searchRule"></ab-add-rss>
+    <ab-add-rss
+      v-model:show="showAddRSS"
+      v-model:rule="searchRule"
+    ></ab-add-rss>
   </div>
 </template>
