@@ -21,11 +21,13 @@ docker compose -v
 
 ## 部署 **AutoBangumi**
 
-### 创建 AutoBangumi 文件夹
+### 创建 AutoBangumi及数据 文件夹
 
 ```bash
 mkdir AutoBangumi
 cd AutoBangumi
+mkdir config # 如果不存在则会报错
+mkdir data
 ```
 
 ### 选项1: 自定义 Docker Compose 配置文件
@@ -45,12 +47,6 @@ services:
     restart: unless-stopped
     dns:
       - 223.5.5.5
-
-volumes:
-  AutoBangumi_config:
-    name: AutoBangumi_config
-  AutoBangumi_data:
-    name: AutoBangumi_data
 ```
 
 复制上面的内容到 `docker-compose.yml` 文件中。
