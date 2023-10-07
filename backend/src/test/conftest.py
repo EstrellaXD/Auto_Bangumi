@@ -1,5 +1,5 @@
-import datetime
 import logging
+from datetime import datetime
 
 import pytest
 from module.models.bangumi import Notification
@@ -38,7 +38,7 @@ def fake_log_record():
 @pytest.fixture
 def fake_log_message(fake_log_record) -> str:
     return DEFAULT_LOG_TEMPLATE.format(
-        dt="2022-01-01 00:00:00",
+        dt=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         levelname=fake_log_record.levelname,
         msg=fake_log_record.msg,
     )

@@ -63,6 +63,23 @@ class TestGotifyService:
         assert self.gotify.token == self.token
         assert self.gotify.base_url == self.base_url
 
+    def test__process_input_with_notification(
+        self, fake_notification, fake_notification_message
+    ):
+        message = self.gotify._process_input(notification=fake_notification)
+
+        assert message.title == fake_notification.official_title
+        assert message.message == fake_notification_message
+        assert message.extras == {}
+
+    def test__process_input_with_log_record(self, fake_log_record, fake_log_message):
+        message = self.gotify._process_input(record=fake_log_record)
+
+        assert message.title == "AutoBangumi"
+        assert message.message == fake_log_message
+        assert message.priority == 8
+        assert message.extras == {}
+
     def test_send(self, fake_notification):
         with mock.patch("module.notification.services.gotify.GotifyService.send") as m:
             return_value = {"errcode": 0, "errmsg": "ok"}

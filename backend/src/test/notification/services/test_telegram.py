@@ -2,7 +2,10 @@ from unittest import mock
 
 import pytest
 from aioresponses import aioresponses
-from module.notification.base import NotifierAdapter
+from module.notification.base import (
+    DEFAULT_NOTIFICATION_IMAGE_PLACEHOLDER,
+    NotifierAdapter,
+)
 from module.notification.services.telegram import TelegramPhotoMessage, TelegramService
 
 
@@ -40,6 +43,24 @@ class TestTelegramService:
         assert self.telegram.token == self.token
         assert self.telegram.chat_id == self.chat_id
         assert self.telegram.base_url == self.base_url
+
+    def test__process_input_with_notification(
+        self, fake_notification, fake_notification_message
+    ):
+        message = self.telegram._process_input(notification=fake_notification)
+
+        assert message.chat_id == self.telegram.chat_id
+        assert message.caption == fake_notification_message
+        assert message.photo == fake_notification.poster_path
+        assert message.disable_notification
+
+    def test__process_input_with_log_record(self, fake_log_record, fake_log_message):
+        message = self.telegram._process_input(record=fake_log_record)
+
+        assert message.chat_id == self.telegram.chat_id
+        assert message.caption == fake_log_message
+        assert message.photo == DEFAULT_NOTIFICATION_IMAGE_PLACEHOLDER
+        assert message.disable_notification
 
     def test_send(self, fake_notification):
         with mock.patch(

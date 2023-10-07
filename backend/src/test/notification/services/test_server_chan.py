@@ -42,6 +42,20 @@ class TestServerChanService:
         assert self.server_chan.token == self.token
         assert self.server_chan.base_url == self.base_url
 
+    def test__process_input_with_notification(
+        self, fake_notification, fake_notification_message
+    ):
+        message = self.server_chan._process_input(notification=fake_notification)
+
+        assert message.title == fake_notification.official_title
+        assert message.desp == fake_notification_message
+
+    def test__process_input_with_log_record(self, fake_log_record, fake_log_message):
+        message = self.server_chan._process_input(record=fake_log_record)
+
+        assert message.title == "AutoBangumi"
+        assert message.desp == fake_log_message
+
     def test_send(self, fake_notification):
         with mock.patch(
             "module.notification.services.server_chan.ServerChanService.send"

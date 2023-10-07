@@ -1,6 +1,9 @@
 from unittest import mock
 
-from module.notification.base import NotifierAdapter
+from module.notification.base import (
+    DEFAULT_NOTIFICATION_IMAGE_PLACEHOLDER,
+    NotifierAdapter,
+)
 from module.notification.services.wecom import WecomArticle, WecomMessage, WecomService
 
 
@@ -67,6 +70,24 @@ class TestWecomService:
         assert self.wecom.token == self.token
         assert self.wecom.agentid == self.agentid
         assert self.wecom.base_url == self.base_url
+
+    def test__process_input_with_notification(
+        self, fake_notification, fake_notification_message
+    ):
+        message = self.wecom._process_input(notification=fake_notification)
+
+        assert message.agentid == self.wecom.agentid
+        assert message.articles[0].title == "【番剧更新】" + fake_notification.official_title
+        assert message.articles[0].description == fake_notification_message
+        assert message.articles[0].picurl == fake_notification.poster_path
+
+    def test__process_input_with_log_record(self, fake_log_record, fake_log_message):
+        message = self.wecom._process_input(record=fake_log_record)
+
+        assert message.agentid == self.wecom.agentid
+        assert message.articles[0].title == "AutoBangumi"
+        assert message.articles[0].description == fake_log_message
+        assert not message.articles[0].picurl
 
     def test_send(self, fake_notification):
         with mock.patch("module.notification.services.wecom.WecomService.send") as m:

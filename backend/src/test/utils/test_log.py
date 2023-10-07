@@ -9,12 +9,12 @@ def test_make_template_with_asctime(fake_log_record, fake_log_message):
         "%Y-%m-%d %H:%M:%S"
     )
 
-    assert make_template(fake_log_record) == fake_log_message
-
-
-def test_make_template_without_asctime(fake_log_record):
     assert make_template(fake_log_record) == DEFAULT_LOG_TEMPLATE.format(
-        dt=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        dt=fake_log_record.asctime,
         levelname=fake_log_record.levelname,
         msg=fake_log_record.msg,
     )
+
+
+def test_make_template_without_asctime(fake_log_record, fake_log_message):
+    assert make_template(fake_log_record) == fake_log_message
