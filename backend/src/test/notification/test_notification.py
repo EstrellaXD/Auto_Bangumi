@@ -25,7 +25,6 @@ class TestNotifierHandler:
             m.return_value = True
             self.logger.warning("test warning")
             caplog.set_level(logging.DEBUG, logger=self.logger.name)
-            print(f"capture log: {caplog.text}")
             assert "test" in caplog.text
 
 

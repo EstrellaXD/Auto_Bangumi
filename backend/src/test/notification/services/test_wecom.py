@@ -1,7 +1,5 @@
 from unittest import mock
 
-import pytest
-from aioresponses import aioresponses
 from module.notification.base import NotifierAdapter
 from module.notification.services.wecom import WecomArticle, WecomMessage, WecomService
 

@@ -17,7 +17,7 @@ def test_default_message_template(fake_notification):
         番剧名称：AutoBangumi Test
         季度：第1季
         更新集数：第1集
-        https://mikanani.me
+        https://test.com
         """
     )
 
