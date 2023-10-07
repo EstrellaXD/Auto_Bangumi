@@ -8,23 +8,26 @@ from pydantic import BaseModel, Field, validator
 from module.models import Notification
 from module.notification.base import (
     DEFAULT_LOG_TEMPLATE,
+    DEFAULT_NOTIFICATION_IMAGE_PLACEHOLDER,
     NotifierAdapter,
     NotifierRequestMixin,
 )
+from module.utils.log import make_template
 
 logger = logging.getLogger(__name__)
 
 
 class WecomArticle(BaseModel):
+    # see: https://developer.work.weixin.qq.com/document/path/90236#%E5%9B%BE%E6%96%87%E6%B6%88%E6%81%AF
     title: str = Field("AutoBangumi", description="title")
     description: str = Field(..., description="message")
-    picurl: str = Field(..., description="picurl")
+    picurl: Optional[str] = Field(None, description="picurl")
 
     @validator("picurl")
     def set_placeholder_or_not(cls, v):
         # Default pic to avoid blank in message. Resolution:1068*455
         if v == "https://mikanani.me":
-            return "https://article.biliimg.com/bfs/article/d8bcd0408bf32594fd82f27de7d2c685829d1b2e.png"
+            return DEFAULT_NOTIFICATION_IMAGE_PLACEHOLDER
         return v
 
 
@@ -47,45 +50,19 @@ class WecomService(NotifierAdapter, NotifierRequestMixin):
         notification: Optional[Notification] = kwargs.pop("notification", None)
         record: Optional[logging.LogRecord] = kwargs.pop("record", None)
 
+        data = WecomArticle(description="")
+
         if notification:
-            message = self.template.format(**notification.dict())
-            title = "【番剧更新】" + notification.official_title
-            data = WecomMessage(
-                agentid=self.agentid,
-                articles=[
-                    WecomArticle(
-                        title=title,
-                        description=message,
-                        picurl=notification.poster_path,
-                    )
-                ],
-            )
-            return data
+            data.description = self.template.format(**notification.dict())
+            data.title = "【番剧更新】" + notification.official_title
+            data.picurl = notification.poster_path
 
-        if record:
-            if hasattr(record, "asctime"):
-                dt = record.asctime
-            else:
-                dt = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        elif record:
+            data.description = make_template(record)
+        else:
+            raise ValueError("Can't get notification or record input.")
 
-            message = DEFAULT_LOG_TEMPLATE.format(
-                dt=dt,
-                levelname=record.levelname,
-                msg=record.msg,
-            )
-
-            data = WecomMessage(
-                agentid=self.agentid,
-                articles=[
-                    WecomArticle(
-                        description=message,
-                        picurl="https://article.biliimg.com/bfs/article/d8bcd0408bf32594fd82f27de7d2c685829d1b2e.png",
-                    )
-                ],
-            )
-            return data
-
-        raise ValueError("Can't get notification or record input.")
+        return WecomMessage(agentid=self.agentid, articles=[data])
 
     def send(self, **kwargs):
         data = self._process_input(**kwargs)

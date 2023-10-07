@@ -8,9 +8,11 @@ from pydantic import BaseModel, Field
 from module.models import Notification
 from module.notification.base import (
     DEFAULT_LOG_TEMPLATE,
+    DEFAULT_NOTIFICATION_IMAGE_PLACEHOLDER,
     NotifierAdapter,
     NotifierRequestMixin,
 )
+from module.utils.log import make_template
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +21,9 @@ class TelegramPhotoMessage(BaseModel):
     # see: https://core.telegram.org/bots/api#sendphoto
     chat_id: str = Field(..., description="telegram channel name id")
     caption: str = Field(..., description="the caption for photo")
-    photo: str = Field(..., description="the photo url")
+    photo: str = Field(
+        DEFAULT_NOTIFICATION_IMAGE_PLACEHOLDER, description="the photo url"
+    )
     disable_notification: bool = True
 
 
@@ -36,35 +40,17 @@ class TelegramService(NotifierAdapter, NotifierRequestMixin):
     def _process_input(self, **kwargs):
         notification: Optional[Notification] = kwargs.pop("notification", None)
         record: Optional[logging.LogRecord] = kwargs.pop("record", None)
+        data = TelegramPhotoMessage(chat_id=self.chat_id, caption="")
 
         if notification:
-            message = self.template.format(**notification.dict())
-            data = TelegramPhotoMessage(
-                chat_id=self.chat_id,
-                caption=message,
-                photo=notification.poster_path,
-            )
-            return data
+            data.caption = self.template.format(**notification.dict())
+            data.photo = notification.poster_path
+        elif record:
+            data.caption = make_template(record)
+        else:
+            raise ValueError("Can't get notification or record input.")
 
-        if record:
-            if hasattr(record, "asctime"):
-                dt = record.asctime
-            else:
-                dt = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-            message = DEFAULT_LOG_TEMPLATE.format(
-                dt=dt,
-                levelname=record.levelname,
-                msg=record.msg,
-            )
-
-            data = TelegramPhotoMessage(
-                chat_id=self.chat_id,
-                caption=message,
-                photo="https://article.biliimg.com/bfs/article/d8bcd0408bf32594fd82f27de7d2c685829d1b2e.png",
-            )
-
-        raise ValueError("Can't get notification or record input.")
+        return data
 
     def send(self, **kwargs):
         data = self._process_input(**kwargs)

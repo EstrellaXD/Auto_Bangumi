@@ -1,16 +1,15 @@
 import asyncio
 import logging
-from datetime import datetime
 from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
 
 from module.models import Notification
 from module.notification.base import (
-    DEFAULT_LOG_TEMPLATE,
     NotifierAdapter,
     NotifierRequestMixin,
 )
+from module.utils.log import make_template
 
 logger = logging.getLogger(__name__)
 
@@ -35,26 +34,18 @@ class GotifyService(NotifierAdapter, NotifierRequestMixin):
         notification: Optional[Notification] = kwargs.pop("notification", None)
         record: Optional[logging.LogRecord] = kwargs.pop("record", None)
 
+        data = GotifyMessage(message="")
+
         if notification:
-            message = self.template.format(**notification.dict())
-            data = GotifyMessage(message=message)
-            return data
+            data.title = notification.official_title
+            data.message = self.template.format(**notification.dict())
+        elif record:
+            data.message = make_template(record)
+            data.priority = 8
+        else:
+            raise ValueError("Can't get notification or record input.")
 
-        if record:
-            if hasattr(record, "asctime"):
-                dt = record.asctime
-            else:
-                dt = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-            message = DEFAULT_LOG_TEMPLATE.format(
-                dt=dt,
-                levelname=record.levelname,
-                msg=record.msg,
-            )
-            data = GotifyMessage(message=message, priority=8)
-            return data
-
-        raise ValueError("Can't get notification or record input.")
+        return data
 
     def send(self, **kwargs) -> Any:
         data = self._process_input(**kwargs)

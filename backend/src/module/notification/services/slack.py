@@ -11,14 +11,15 @@ from module.notification.base import (
     NotifierAdapter,
     NotifierRequestMixin,
 )
+from module.utils.log import make_template
 
 logger = logging.getLogger(__name__)
 
 
 class SlackAttachment(BaseModel):
-    title: str = Field(..., description="title")
+    title: str = Field("AutoBangumi", description="title")
     text: str = Field(..., description="text")
-    image_url: str = Field(..., description="image url")
+    image_url: Optional[str] = Field(None, description="image url")
 
 
 class SlackMessage(BaseModel):
@@ -34,45 +35,19 @@ class SlackService(NotifierAdapter, NotifierRequestMixin):
     def _process_input(self, **kwargs):
         notification: Optional[Notification] = kwargs.pop("notification", None)
         record: Optional[logging.LogRecord] = kwargs.pop("record", None)
+        data = SlackAttachment(text="")
 
         if notification:
-            message = self.template.format(**notification.dict())
-            data = SlackMessage(
-                channel=self.channel,
-                attechment=[
-                    SlackAttachment(
-                        title=notification.official_title,
-                        text=message,
-                        image_url=notification.poster_path,
-                    )
-                ],
-            )
-            return data
+            data.title = notification.official_title
+            data.text = self.template.format(**notification.dict())
+            data.image_url = notification.poster_path
 
-        if record:
-            if hasattr(record, "asctime"):
-                dt = record.asctime
-            else:
-                dt = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        elif record:
+            data.text = make_template(record)
+        else:
+            raise ValueError("Can't get notification or record input.")
 
-            message = DEFAULT_LOG_TEMPLATE.format(
-                dt=dt,
-                levelname=record.levelname,
-                msg=record.msg,
-            )
-
-            data = SlackMessage(
-                channel=self.channel,
-                attechment=[
-                    SlackAttachment(
-                        title="AutoBangumi",
-                        text=message,
-                    )
-                ],
-            )
-            return data
-
-        raise ValueError("Can't get notification or record input.")
+        return SlackMessage(channel=self.channel, attechment=[data])
 
     def send(self, **kwargs):
         data = self._process_input(**kwargs)

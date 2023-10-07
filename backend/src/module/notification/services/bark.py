@@ -1,16 +1,15 @@
 import asyncio
 import logging
-from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field
 
 from module.models import Notification
 from module.notification.base import (
-    DEFAULT_LOG_TEMPLATE,
     NotifierAdapter,
     NotifierRequestMixin,
 )
+from module.utils.log import make_template
 
 logger = logging.getLogger(__name__)
 
@@ -30,31 +29,18 @@ class BarkService(NotifierAdapter, NotifierRequestMixin):
         notification: Optional[Notification] = kwargs.pop("notification", None)
         record: Optional[logging.LogRecord] = kwargs.pop("record", None)
 
+        data = BarkMessage(body="", device_key=self.token)
+
         if notification:
-            message = self.template.format(**notification.dict())
-            data = BarkMessage(
-                title=notification.official_title,
-                body=message,
-                icon=notification.poster_path,
-                device_key=self.token,
-            )
-            return data
+            data.title = notification.official_title
+            data.body = self.template.format(**notification.dict())
+            data.icon = notification.poster_path
+        elif record:
+            data.body = make_template(record)
+        else:
+            raise ValueError("Can't get notification or record input.")
 
-        if record:
-            if hasattr(record, "asctime"):
-                dt = record.asctime
-            else:
-                dt = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-            message = DEFAULT_LOG_TEMPLATE.format(
-                dt=dt,
-                levelname=record.levelname,
-                msg=record.msg,
-            )
-            data = BarkMessage(body=message, device_key=self.token)
-            return data
-
-        raise ValueError("Can't get notification or record input.")
+        return data
 
     def send(self, **kwargs):
         data = self._process_input(**kwargs)

@@ -26,6 +26,8 @@ DEFAULT_LOG_TEMPLATE = dedent(
     """
 )
 
+DEFAULT_NOTIFICATION_IMAGE_PLACEHOLDER = "https://article.biliimg.com/bfs/article/d8bcd0408bf32594fd82f27de7d2c685829d1b2e.png"
+
 
 class NotifierAdapter(BaseModel, ABC):
     """NotifierAdapter is a common class for specific notification service."""
