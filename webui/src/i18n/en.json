@@ -126,7 +126,9 @@
       "enable": "Enable",
       "type": "Type",
       "token": "Token",
-      "chat_id": "Chat ID"
+      "chat_id": "Chat ID",
+      "channel": "Slack Channel",
+      "base_url": "Notification Service Base URL"
     },
     "proxy_set": {
       "title": "Proxy Setting",

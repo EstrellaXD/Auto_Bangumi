@@ -1,8 +1,6 @@
 from unittest import mock
 
 import pytest
-from aioresponses import aioresponses
-from fastapi import params
 from module.notification.base import NotifierAdapter
 from module.notification.services.gotify import GotifyMessage, GotifyService
 from pydantic import ValidationError

@@ -1,7 +1,6 @@
 import logging
 from typing import Optional, get_args
 
-from module.database import Database
 from module.models.bangumi import Notification
 
 from .services import NotificationService, NotificationType, services
@@ -35,6 +34,9 @@ class Notifier:
         self.notifier = services[service_name](**notifier_config)
 
     def _get_poster(self, name: str) -> str:
+        # avoid cyclic import
+        from module.database import Database
+
         with Database() as db:
             poster = db.bangumi.match_poster(name)
             return poster

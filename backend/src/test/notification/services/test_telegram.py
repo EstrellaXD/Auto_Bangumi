@@ -1,7 +1,5 @@
 from unittest import mock
 
-import pytest
-from aioresponses import aioresponses
 from module.notification.base import (
     DEFAULT_NOTIFICATION_IMAGE_PLACEHOLDER,
     NotifierAdapter,
@@ -43,6 +41,9 @@ class TestTelegramService:
         assert self.telegram.token == self.token
         assert self.telegram.chat_id == self.chat_id
         assert self.telegram.base_url == self.base_url
+
+        telegram = TelegramService(token=self.token, chat_id=self.chat_id, base_url="")
+        assert telegram.base_url == "https://api.telegram.org/"
 
     def test__process_input_with_notification(
         self, fake_notification, fake_notification_message

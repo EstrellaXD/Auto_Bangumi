@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 from module.models import Notification
 from module.notification.base import (
@@ -36,6 +36,13 @@ class TelegramService(NotifierAdapter, NotifierRequestMixin):
         "https://api.telegram.org/",
         description="telegram bot base url",
     )
+
+    @validator("base_url", pre=True)
+    def set_default_base_url(cls, v):
+        # make sure empty string will be set to default value
+        if not v:
+            return "https://api.telegram.org/"
+        return v
 
     def _process_input(self, **kwargs):
         notification: Optional[Notification] = kwargs.pop("notification", None)

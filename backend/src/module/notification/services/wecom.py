@@ -1,13 +1,11 @@
 import asyncio
 import logging
-from datetime import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, validator
 
 from module.models import Notification
 from module.notification.base import (
-    DEFAULT_LOG_TEMPLATE,
     DEFAULT_NOTIFICATION_IMAGE_PLACEHOLDER,
     NotifierAdapter,
     NotifierRequestMixin,
@@ -45,6 +43,13 @@ class WecomService(NotifierAdapter, NotifierRequestMixin):
         "https://qyapi.weixin.qq.com",
         description="wecom notification url",
     )
+
+    @validator("base_url", pre=True)
+    def set_default_base_url(cls, v):
+        # make sure empty string will be set to default value
+        if not v:
+            return "https://qyapi.weixin.qq.com"
+        return v
 
     def _process_input(self, **kwargs):
         notification: Optional[Notification] = kwargs.pop("notification", None)

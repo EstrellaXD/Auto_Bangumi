@@ -1,7 +1,5 @@
 from unittest import mock
 
-import pytest
-from aioresponses import aioresponses
 from module.notification.base import NotifierAdapter
 from module.notification.services.server_chan import (
     ServerChanMessage,
@@ -41,6 +39,9 @@ class TestServerChanService:
     def test_init_properties(self):
         assert self.server_chan.token == self.token
         assert self.server_chan.base_url == self.base_url
+
+        server_chan = ServerChanService(token=self.token, base_url="")
+        assert server_chan.base_url == "https://sctapi.ftqq.com"
 
     def test__process_input_with_notification(
         self, fake_notification, fake_notification_message

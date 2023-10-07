@@ -1,7 +1,5 @@
 from unittest import mock
 
-import pytest
-from aioresponses import aioresponses
 from module.notification.base import NotifierAdapter
 from module.notification.services.slack import (
     SlackAttachment,
@@ -57,6 +55,9 @@ class TestSlackService:
         assert self.slack.token == self.token
         assert self.slack.channel == self.channel
         assert self.slack.base_url == self.base_url
+
+        slack = SlackService(token=self.token, channel=self.channel, base_url="")
+        assert slack.base_url == "https://slack.com"
 
     def test__process_input_with_notification(
         self, fake_notification, fake_notification_message

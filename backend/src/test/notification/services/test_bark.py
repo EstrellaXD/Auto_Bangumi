@@ -1,8 +1,6 @@
 from unittest import mock
 
-import pytest
-from aioresponses import aioresponses
-from module.notification.base import DEFAULT_LOG_TEMPLATE, NotifierAdapter
+from module.notification.base import NotifierAdapter
 from module.notification.services.bark import BarkMessage, BarkService
 
 
@@ -43,6 +41,9 @@ class TestBarkService:
     def test_init_properties(self):
         assert self.bark.token == self.token
         assert self.bark.base_url == "https://api.day.app"
+
+        bark = BarkService(token=self.token, base_url="")
+        assert bark.base_url == "https://api.day.app"
 
     def test__process_input_with_notification(
         self, fake_notification, fake_notification_message

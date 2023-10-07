@@ -1,9 +1,6 @@
 from unittest import mock
 
-from module.notification.base import (
-    DEFAULT_NOTIFICATION_IMAGE_PLACEHOLDER,
-    NotifierAdapter,
-)
+from module.notification.base import NotifierAdapter
 from module.notification.services.wecom import WecomArticle, WecomMessage, WecomService
 
 
@@ -70,6 +67,9 @@ class TestWecomService:
         assert self.wecom.token == self.token
         assert self.wecom.agentid == self.agentid
         assert self.wecom.base_url == self.base_url
+
+        wecom = WecomService(token=self.token, agentid=self.agentid, base_url="")
+        assert wecom.base_url == "https://qyapi.weixin.qq.com"
 
     def test__process_input_with_notification(
         self, fake_notification, fake_notification_message

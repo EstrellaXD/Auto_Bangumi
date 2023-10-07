@@ -126,7 +126,9 @@
       "enable": "启用",
       "type": "类型",
       "token": "Token",
-      "chat_id": "Chat ID"
+      "chat_id": "Chat ID",
+      "channel": "Slack 频道参数",
+      "base_url": "通知服务 Base URL"
     },
     "proxy_set": {
       "title": "代理设置",

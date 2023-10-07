@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import type { Notification, NotificationType } from '#/config';
 import type { SettingItem } from '#/components';
+import type { Notification, NotificationType } from '#/config';
 
 const { t } = useMyI18n();
 const { getSettingGroup } = useConfigStore();
@@ -11,6 +11,8 @@ const notificationType: NotificationType = [
   'server-chan',
   'bark',
   'wecom',
+  'gotify',
+  'slack',
 ];
 
 const items: SettingItem<Notification>[] = [
@@ -45,6 +47,24 @@ const items: SettingItem<Notification>[] = [
     prop: {
       type: 'text',
       placeholder: 'chat id',
+    },
+  },
+  {
+    configKey: 'base_url',
+    label: () => t('config.notification_set.base_url'),
+    type: 'input',
+    prop: {
+      type: 'text',
+      placeholder: 'e.g https://api.telegram.org',
+    },
+  },
+  {
+    configKey: 'channel',
+    label: () => t('config.notification_set.channel'),
+    type: 'input',
+    prop: {
+      type: 'text',
+      placeholder: 'slack channel',
     },
   },
 ];

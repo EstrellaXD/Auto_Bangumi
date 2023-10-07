@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 from module.models import Notification
 from module.notification.base import (
@@ -17,12 +17,20 @@ logger = logging.getLogger(__name__)
 
 
 class SlackAttachment(BaseModel):
+    """SlackAttachment is a model for slack attachment.
+    But this is a legacy model, it will be replace with block structure in the future.
+    See:
+        - https://api.slack.com/reference/messaging/attachments
+        - https://api.slack.com/reference/block-kit/blocks
+    """
+
     title: str = Field("AutoBangumi", description="title")
     text: str = Field(..., description="text")
     image_url: Optional[str] = Field(None, description="image url")
 
 
 class SlackMessage(BaseModel):
+    # see: https://api.slack.com/methods/chat.postMessage
     channel: str = Field(..., description="slack channel id")
     attechment: List[SlackAttachment] = Field(..., description="attechments")
 
@@ -31,6 +39,13 @@ class SlackService(NotifierAdapter, NotifierRequestMixin):
     token: str = Field(..., description="slack token")
     channel: str = Field(..., description="slack channel id")
     base_url: str = Field("https://slack.com", description="slack base url")
+
+    @validator("base_url", pre=True)
+    def set_default_base_url(cls, v):
+        # make sure empty string will be set to default value
+        if not v:
+            return "https://slack.com"
+        return v
 
     def _process_input(self, **kwargs):
         notification: Optional[Notification] = kwargs.pop("notification", None)
