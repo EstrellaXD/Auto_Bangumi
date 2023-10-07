@@ -41,26 +41,6 @@ class TestTelegramService:
         assert self.telegram.chat_id == self.chat_id
         assert self.telegram.base_url == self.base_url
 
-    @pytest.mark.asyncio
-    async def test__send(self, fake_notification):
-        # Create a mock response for the HTTP request
-        with aioresponses() as m:
-            data = TelegramPhotoMessage(
-                chat_id=self.chat_id,
-                caption="Test Caption",
-                photo=fake_notification.poster_path,
-            )
-            m.post(f"https://api.telegram.org/bot{self.token}/sendPhoto")
-
-            # Call the send method
-            await self.telegram._send(data.dict())
-
-            m.assert_called_once_with(
-                f"/bot{self.token}/sendPhoto",
-                method="POST",
-                data=data.dict(),
-            )
-
     def test_send(self, fake_notification):
         with mock.patch(
             "module.notification.services.telegram.TelegramService.send"

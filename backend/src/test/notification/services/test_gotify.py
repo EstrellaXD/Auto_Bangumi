@@ -63,28 +63,6 @@ class TestGotifyService:
         assert self.gotify.token == self.token
         assert self.gotify.base_url == self.base_url
 
-    @pytest.mark.asyncio
-    async def test__send(self, fake_notification):
-        # Create a mock response for the HTTP request
-        with aioresponses() as m:
-            m.post(f"https://example.com/message?token={self.token}")
-
-            data = GotifyMessage(
-                title=fake_notification.official_title,
-                message="test message",
-                priority=10,
-            )
-
-            # Call the send method
-            await self.gotify._send(data.dict())
-
-            m.assert_called_once_with(
-                "/message",
-                method="POST",
-                params={"token": self.token},
-                data=data.dict(),
-            )
-
     def test_send(self, fake_notification):
         with mock.patch("module.notification.services.gotify.GotifyService.send") as m:
             return_value = {"errcode": 0, "errmsg": "ok"}

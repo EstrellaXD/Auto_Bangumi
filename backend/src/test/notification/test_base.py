@@ -6,6 +6,7 @@ from module.notification.base import (
     DEFAULT_LOG_TEMPLATE,
     DEFAULT_MESSAGE_TEMPLATE,
     NotifierAdapter,
+    NotifierRequestMixin,
 )
 
 
@@ -45,3 +46,29 @@ def test_NotifierAdapter_non_implementation_raised(fake_notification):
         NotifierAdapter.send(fake_notification)
 
     assert exc.match("send method is not implemented yet.")
+
+
+@pytest.mark.asyncio
+async def test_NotifierRequestMixin_asend():
+    with aioresponses() as m:
+        m.post(
+            "https://example.com?foo=bar",
+            headers={"Content-Type": "application/json"},
+            payload={"hello": "world"},
+        )
+
+        await NotifierRequestMixin().asend(
+            entrypoint="https://example.com",
+            method="POST",
+            params={"foo": "bar"},
+            data={"hello": "world"},
+            headers={"Content-Type": "application/json"},
+        )
+
+        m.assert_called_once_with(
+            "https://example.com",
+            method="POST",
+            params={"foo": "bar"},
+            data={"hello": "world"},
+            headers={"Content-Type": "application/json"},
+        )

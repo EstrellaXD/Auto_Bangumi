@@ -70,33 +70,6 @@ class TestWecomService:
         assert self.wecom.agentid == self.agentid
         assert self.wecom.base_url == self.base_url
 
-    @pytest.mark.asyncio
-    async def test__send(self, fake_notification):
-        # Create a mock response for the HTTP request
-        with aioresponses() as m:
-            m.post("https://qyapi.weixin.qq.com/cgi-bin/message/send")
-
-            data = WecomMessage(
-                agentid=self.agentid,
-                articles=[
-                    WecomArticle(
-                        title="Test Title",
-                        description="<formatted message>",
-                        picurl="https://example.com/image.jpg",
-                    )
-                ],
-            )
-
-            # Call the send method
-            await self.wecom._send(data.dict())
-
-            m.assert_called_once_with(
-                "/cgi-bin/message/send",
-                method="POST",
-                data=data.dict(),
-                params={"access_token": "YOUR_TOKEN"},
-            )
-
     def test_send(self, fake_notification):
         with mock.patch("module.notification.services.wecom.WecomService.send") as m:
             return_value = {"errcode": 0, "errmsg": "ok"}

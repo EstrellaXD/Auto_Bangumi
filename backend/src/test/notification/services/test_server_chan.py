@@ -42,23 +42,6 @@ class TestServerChanService:
         assert self.server_chan.token == self.token
         assert self.server_chan.base_url == self.base_url
 
-    @pytest.mark.asyncio
-    async def test__send(self, fake_notification):
-        # Create a mock response for the HTTP request
-        with aioresponses() as m:
-            m.get(f"https://sctapi.ftqq.com/{self.token}.send")
-
-            data = ServerChanMessage(title=fake_notification.official_title, desp="foo")
-
-            # Call the send method
-            await self.server_chan._send(data.dict())
-
-            m.assert_called_once_with(
-                f"/{self.token}.send",
-                method="GET",
-                params=data.dict(),
-            )
-
     def test_send(self, fake_notification):
         with mock.patch(
             "module.notification.services.server_chan.ServerChanService.send"

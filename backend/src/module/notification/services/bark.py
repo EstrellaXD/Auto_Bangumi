@@ -1,12 +1,16 @@
 import asyncio
 import logging
-from typing import Any, Dict
+from datetime import datetime
+from typing import Optional
 
-import aiohttp
 from pydantic import BaseModel, Field
 
 from module.models import Notification
-from module.notification.base import NotifierAdapter
+from module.notification.base import (
+    DEFAULT_LOG_TEMPLATE,
+    NotifierAdapter,
+    NotifierRequestMixin,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -14,36 +18,54 @@ logger = logging.getLogger(__name__)
 class BarkMessage(BaseModel):
     title: str = Field("AutoBangumi", description="title")
     body: str = Field(..., description="body")
-    icon: str = Field(..., description="icon")
+    icon: Optional[str] = Field(None, description="icon")
     device_key: str = Field(..., description="device_key")
 
 
-class BarkService(NotifierAdapter):
+class BarkService(NotifierAdapter, NotifierRequestMixin):
     token: str = Field(..., description="device_key")
     base_url: str = Field("https://api.day.app", description="base_url")
 
-    async def _send(self, data: Dict[str, Any]) -> Any:
-        try:
-            async with aiohttp.ClientSession(base_url=self.base_url) as req:
-                resp: aiohttp.ClientResponse = await req.post("/push", data=data)
+    def _process_input(self, **kwargs):
+        notification: Optional[Notification] = kwargs.pop("notification", None)
+        record: Optional[logging.LogRecord] = kwargs.pop("record", None)
 
-                return await resp.json()
+        if notification:
+            message = self.template.format(**notification.dict())
+            data = BarkMessage(
+                title=notification.official_title,
+                body=message,
+                icon=notification.poster_path,
+                device_key=self.token,
+            )
+            return data
 
-        except Exception as e:
-            logger.error(f"Bark notification error: {e}")
+        if record:
+            if hasattr(record, "asctime"):
+                dt = record.asctime
+            else:
+                dt = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    def send(self, notification: Notification, *args, **kwargs):
-        message = self.template.format(**notification.dict())
+            message = DEFAULT_LOG_TEMPLATE.format(
+                dt=dt,
+                levelname=record.levelname,
+                msg=record.msg,
+            )
+            data = BarkMessage(body=message, device_key=self.token)
+            return data
 
-        data = BarkMessage(
-            title=notification.official_title,
-            body=message,
-            icon=notification.poster_path,
-            device_key=self.token,
-        ).dict()
+        raise ValueError("Can't get notification or record input.")
 
+    def send(self, **kwargs):
+        data = self._process_input(**kwargs)
         loop = asyncio.get_event_loop()
-        res = loop.run_until_complete(self._send(data=data))
+        req = self.asend(
+            entrypoint="/push",
+            base_url=self.base_url,
+            method="POST",
+            data=data.dict(),
+        )
+        res = loop.run_until_complete(req)
 
         if res:
             logger.debug(f"Bark notification: {res}")

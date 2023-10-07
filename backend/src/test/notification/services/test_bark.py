@@ -44,28 +44,6 @@ class TestBarkService:
         assert self.bark.token == self.token
         assert self.bark.base_url == "https://api.day.app"
 
-    @pytest.mark.asyncio
-    async def test__send(self, fake_notification):
-        # Create a mock response for the HTTP request
-        with aioresponses() as m:
-            m.post("https://api.day.app/push")
-
-            data = BarkMessage(
-                title=fake_notification.official_title,
-                body="test message",
-                icon=fake_notification.poster_path,
-                device_key=self.token,
-            )
-
-            # Call the send method
-            await self.bark._send(data.dict())
-
-            m.assert_called_once_with(
-                "/push",
-                method="POST",
-                data=data.dict(),
-            )
-
     def test_send(self, fake_notification):
         with mock.patch("module.notification.services.bark.BarkService.send") as m:
             return_value = {"errcode": 0, "errmsg": "ok"}

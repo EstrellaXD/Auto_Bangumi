@@ -1,12 +1,16 @@
 import asyncio
 import logging
-from typing import Any, Dict
+from datetime import datetime
+from typing import Optional
 
-import aiohttp
 from pydantic import BaseModel, Field
 
 from module.models import Notification
-from module.notification.base import NotifierAdapter
+from module.notification.base import (
+    DEFAULT_LOG_TEMPLATE,
+    NotifierAdapter,
+    NotifierRequestMixin,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +23,7 @@ class TelegramPhotoMessage(BaseModel):
     disable_notification: bool = True
 
 
-class TelegramService(NotifierAdapter):
+class TelegramService(NotifierAdapter, NotifierRequestMixin):
     """TelegramService is a class for telegram notification service"""
 
     token: str = Field(..., description="telegram bot token")
@@ -29,30 +33,49 @@ class TelegramService(NotifierAdapter):
         description="telegram bot base url",
     )
 
-    async def _send(self, data: Dict[str, Any], **kwargs) -> Any:
-        async with aiohttp.ClientSession(base_url=self.base_url) as req:
-            try:
-                resp: aiohttp.ClientResponse = await req.post(
-                    f"/bot{self.token}/sendPhoto", data=data
-                )
+    def _process_input(self, **kwargs):
+        notification: Optional[Notification] = kwargs.pop("notification", None)
+        record: Optional[logging.LogRecord] = kwargs.pop("record", None)
 
-                return await resp.json()
+        if notification:
+            message = self.template.format(**notification.dict())
+            data = TelegramPhotoMessage(
+                chat_id=self.chat_id,
+                caption=message,
+                photo=notification.poster_path,
+            )
+            return data
 
-            except Exception as e:
-                logger.error(f"Telegram notification error: {e}")
-                return
+        if record:
+            if hasattr(record, "asctime"):
+                dt = record.asctime
+            else:
+                dt = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    def send(self, notification: Notification, *args, **kwargs):
-        message = self.template.format(**notification.dict())
+            message = DEFAULT_LOG_TEMPLATE.format(
+                dt=dt,
+                levelname=record.levelname,
+                msg=record.msg,
+            )
 
-        data = TelegramPhotoMessage(
-            chat_id=self.chat_id,
-            caption=message,
-            photo=notification.poster_path,
-        ).dict()
+            data = TelegramPhotoMessage(
+                chat_id=self.chat_id,
+                caption=message,
+                photo="https://article.biliimg.com/bfs/article/d8bcd0408bf32594fd82f27de7d2c685829d1b2e.png",
+            )
 
+        raise ValueError("Can't get notification or record input.")
+
+    def send(self, **kwargs):
+        data = self._process_input(**kwargs)
         loop = asyncio.get_event_loop()
-        res = loop.run_until_complete(self._send(data))
+        req = self.asend(
+            entrypoint=f"/bot{self.token}/sendPhoto",
+            base_url=self.base_url,
+            method="POST",
+            data=data,
+        )
+        res = loop.run_until_complete(req)
 
         if res:
             logger.debug(f"Telegram notification: {res}")
