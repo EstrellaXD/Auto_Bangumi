@@ -68,6 +68,32 @@ const items: SettingItem<Notification>[] = [
     },
   },
 ];
+
+const isSending = ref(false);
+const message = useMessage();
+
+async function sendTestNotification() {
+  isSending.value = true;
+  const content = 'Hello! This is a test notification from AutoBangumi';
+
+  let data;
+  try {
+    const resp = await axios.post('api/v1/notification/send', {
+      content,
+    });
+    data = resp.data;
+  } catch (error) {
+    message.error(`发送失败，请检查网络和配置：${JSON.stringify(data)}`, {
+      closable: true,
+    });
+    isSending.value = false;
+
+    return;
+  }
+
+  message.success(`发送成功，请查验是否收到通知！`);
+  isSending.value = false;
+}
 </script>
 
 <template>
@@ -79,6 +105,9 @@ const items: SettingItem<Notification>[] = [
         v-bind="i"
         v-model:data="notification[i.configKey]"
       ></ab-setting>
+      <ab-button size="small" :loading="isSending" @click="sendTestNotification"
+        >测试发送通知</ab-button
+      >
     </div>
   </ab-fold-panel>
 </template>
