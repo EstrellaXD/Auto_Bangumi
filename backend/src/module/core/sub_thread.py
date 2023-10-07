@@ -1,5 +1,4 @@
 import threading
-import time
 from concurrent.futures import ThreadPoolExecutor
 
 from module.conf import settings
