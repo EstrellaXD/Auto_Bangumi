@@ -45,9 +45,42 @@ class TestNotifier:
 
         assert exc.match("Invalid notifier config")
 
+    @pytest.mark.asyncio
+    async def test_asend(self, fake_notification):
+        with mock.patch("module.notification.Notifier.asend") as m:
+            m.return_value = None
+            await self.notifier.asend(notification=fake_notification)
+
+            m.assert_called_once_with(notification=fake_notification)
+
+    @pytest.mark.asyncio
+    async def test_asend_with_side_effect(self, fake_notification):
+        with mock.patch("module.notification.Notifier.asend") as m:
+            m.side_effect = Exception("Unexpected error.")
+            with pytest.raises(Exception) as exc:
+                await self.notifier.asend(notification=fake_notification)
+
+            assert exc.match("Unexpected error.")
+
+    @pytest.mark.asyncio
+    async def test_asend_with_log_capture(
+        self,
+        fake_notification,
+        caplog: pytest.LogCaptureFixture,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        m = mock.MagicMock()
+        monkeypatch.setitem(self.notifier.notifier.__dict__, "asend", m)
+        m.side_effect = Exception("Request timeout")
+
+        with caplog.at_level(logging.DEBUG, logger="module.notification"):
+            await self.notifier.asend(notification=fake_notification)
+
+        assert "Request timeout" in caplog.text
+
     def test_send(self, fake_notification):
         with mock.patch("module.notification.Notifier.send") as m:
-            m.return_value = True
+            m.return_value = None
             assert self.notifier.send(notification=fake_notification)
 
             m.assert_called_once_with(notification=fake_notification)
@@ -59,3 +92,18 @@ class TestNotifier:
                 self.notifier.send(notification=fake_notification)
 
             assert exc.match("Unexpected error.")
+
+    def test_send_with_log_capture(
+        self,
+        fake_notification,
+        caplog: pytest.LogCaptureFixture,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        m = mock.MagicMock()
+        monkeypatch.setitem(self.notifier.notifier.__dict__, "send", m)
+        m.side_effect = Exception("Request timeout")
+
+        with caplog.at_level(logging.DEBUG, logger="module.notification"):
+            self.notifier.send(notification=fake_notification)
+
+        assert "Request timeout" in caplog.text

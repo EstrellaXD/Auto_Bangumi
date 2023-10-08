@@ -9,6 +9,8 @@ from module.notification.base import (
     NotifierAdapter,
     NotifierRequestMixin,
 )
+from pytest_mock import MockerFixture
+from tenacity import RetryError
 
 
 def test_default_message_template(fake_notification):
@@ -42,23 +44,70 @@ def test_default_log_template():
     assert content == expected
 
 
-def test_NotifierAdapter_non_implementation_raised(fake_notification):
-    with pytest.raises(NotImplementedError) as exc:
-        NotifierAdapter.send(fake_notification)
+class TestNotifierAdapter:
+    def test_not_implementation_send(self, fake_notification):
+        with pytest.raises(NotImplementedError) as exc:
+            NotifierAdapter.send(fake_notification)
 
-    assert exc.match("send method is not implemented yet.")
+        assert exc.match("send method is not implemented yet.")
+
+    @pytest.mark.asyncio
+    async def test_not_implementation_asend(self, fake_notification):
+        with pytest.raises(NotImplementedError) as exc:
+            await NotifierAdapter.asend(fake_notification)
+
+        assert exc.match("send method is not implemented yet.")
 
 
-@pytest.mark.asyncio
-async def test_NotifierRequestMixin_asend():
-    with aioresponses() as m:
-        m.post(
-            "https://example.com?foo=bar",
-            headers={"Content-Type": "application/json"},
-            payload={"hello": "world"},
-        )
+class TestNotifierRequestMixin:
+    @pytest.mark.asyncio
+    async def test_asend(self):
+        with aioresponses() as m:
+            m.post(
+                "https://example.com?foo=bar",
+                headers={"Content-Type": "application/json"},
+                payload={"hello": "world"},
+            )
 
-        await NotifierRequestMixin().asend(
+            await NotifierRequestMixin().asend(
+                entrypoint="https://example.com",
+                method="POST",
+                params={"foo": "bar"},
+                data={"hello": "world"},
+                headers={"Content-Type": "application/json"},
+            )
+
+            m.assert_called_once_with(
+                "https://example.com",
+                method="POST",
+                params={"foo": "bar"},
+                data={"hello": "world"},
+                headers={"Content-Type": "application/json"},
+            )
+
+    @pytest.mark.asyncio
+    async def test_asend_with_retry_error(self):
+        with aioresponses() as m:
+            m.post(
+                "https://example.com?foo=bar",
+                exception=Exception("Request Timeout"),
+            )
+
+            with pytest.raises(Exception) as exc:
+                await NotifierRequestMixin().asend(
+                    entrypoint="https://example.com",
+                    method="POST",
+                    params={"foo": "bar"},
+                    data={"hello": "world"},
+                    headers={"Content-Type": "application/json"},
+                )
+
+            assert exc.match("RetryError")
+
+    def test_send(self, mocker: MockerFixture):
+        m = mocker.patch.object(NotifierRequestMixin, "send", return_value="ok")
+
+        NotifierRequestMixin().send(
             entrypoint="https://example.com",
             method="POST",
             params={"foo": "bar"},
@@ -67,7 +116,33 @@ async def test_NotifierRequestMixin_asend():
         )
 
         m.assert_called_once_with(
-            "https://example.com",
+            entrypoint="https://example.com",
+            method="POST",
+            params={"foo": "bar"},
+            data={"hello": "world"},
+            headers={"Content-Type": "application/json"},
+        )
+
+    def test_send_with_retry_error(self, mocker: MockerFixture):
+        m = mocker.patch.object(
+            NotifierRequestMixin,
+            "send",
+            side_effect=RetryError("RetryError"),
+        )
+
+        with pytest.raises(RetryError) as exc:
+            NotifierRequestMixin().send(
+                entrypoint="https://example.com",
+                method="POST",
+                params={"foo": "bar"},
+                data={"hello": "world"},
+                headers={"Content-Type": "application/json"},
+            )
+
+        assert exc.match("RetryError")
+
+        m.assert_called_once_with(
+            entrypoint="https://example.com",
             method="POST",
             params={"foo": "bar"},
             data={"hello": "world"},

@@ -1,5 +1,6 @@
 from unittest import mock
 
+import pytest
 from module.notification.base import (
     DEFAULT_NOTIFICATION_IMAGE_PLACEHOLDER,
     NotificationContent,
@@ -98,7 +99,20 @@ class TestTelegramService:
         with mock.patch(
             "module.notification.services.telegram.TelegramService.send"
         ) as m:
-            m.return_value = None
-            res = self.telegram.send(fake_notification)
+            m.side_effect = Exception("Request Timeout")
+            with pytest.raises(Exception) as exc:
+                self.telegram.send(fake_notification)
 
-            assert res is None
+            assert exc.match("Request Timeout")
+
+    @pytest.mark.asyncio
+    async def test_asend(self, fake_notification):
+        with mock.patch(
+            "module.notification.services.telegram.TelegramService.asend"
+        ) as m:
+            return_value = {"errcode": 0, "errmsg": "ok"}
+            m.return_value = return_value
+            resp = await self.telegram.asend(fake_notification)
+
+            m.assert_awaited_once_with(fake_notification)
+            assert resp == return_value

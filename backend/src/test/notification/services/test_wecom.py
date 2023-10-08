@@ -1,5 +1,6 @@
 from unittest import mock
 
+import pytest
 from module.notification.base import NotificationContent, NotifierAdapter
 from module.notification.services.wecom import WecomArticle, WecomMessage, WecomService
 
@@ -125,7 +126,28 @@ class TestWecomService:
 
     def test_send_failed(self, fake_notification):
         with mock.patch("module.notification.services.wecom.WecomService.send") as m:
-            m.return_value = None
-            res = self.wecom.send(fake_notification)
+            m.side_effect = Exception("Request Timeout")
+            with pytest.raises(Exception) as exc:
+                self.wecom.send(fake_notification)
 
-            assert res is None
+            assert exc.match("Request Timeout")
+
+    @pytest.mark.asyncio
+    async def test_asend(self, fake_notification):
+        with mock.patch("module.notification.services.wecom.WecomService.asend") as m:
+            return_value = {"errcode": 0, "errmsg": "ok"}
+            m.return_value = return_value
+            resp = await self.wecom.asend(fake_notification)
+
+            m.assert_awaited_once_with(fake_notification)
+            assert resp == return_value
+
+    @pytest.mark.asyncio
+    async def test_asend_failed(self, fake_notification):
+        with mock.patch("module.notification.services.wecom.WecomService.asend") as m:
+            m.side_effect = Exception("Request Timeout")
+
+            with pytest.raises(Exception) as exc:
+                await self.wecom.asend(fake_notification)
+
+            assert exc.match("Request Timeout")

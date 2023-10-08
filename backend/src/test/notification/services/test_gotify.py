@@ -108,7 +108,30 @@ class TestGotifyService:
 
     def test_send_failed(self, fake_notification):
         with mock.patch("module.notification.services.gotify.GotifyService.send") as m:
-            m.return_value = None
-            res = self.gotify.send(fake_notification)
+            m.side_effect = Exception("Request Timeout")
 
-            assert res is None
+            with pytest.raises(Exception) as exc:
+                self.gotify.send(fake_notification)
+
+            assert exc.match("Request Timeout")
+
+    @pytest.mark.asyncio
+    async def test_asend(self, fake_notification):
+        with mock.patch("module.notification.services.gotify.GotifyService.asend") as m:
+            return_value = {"errcode": 0, "errmsg": "ok"}
+            m.return_value = return_value
+
+            res = await self.gotify.asend(fake_notification)
+
+            m.assert_called_with(fake_notification)
+            assert res == return_value
+
+    @pytest.mark.asyncio
+    async def test_asend_failed(self, fake_notification):
+        with mock.patch("module.notification.services.gotify.GotifyService.asend") as m:
+            m.side_effect = Exception("Request Timeout")
+
+            with pytest.raises(Exception) as exc:
+                await self.gotify.asend(fake_notification)
+
+            assert exc.match("Request Timeout")
