@@ -52,6 +52,10 @@ export interface Config {
     api_key: string;
     api_base: string;
     model: 'gpt-3.5-turbo';
+    // azure
+    api_type: 'openai' | 'azure';
+    api_version?: string;
+    deployment_id?: string;
   };
 }
 
@@ -107,6 +111,10 @@ export const initConfig: Config = {
     api_key: '',
     api_base: 'https://api.openai.com/v1/',
     model: 'gpt-3.5-turbo',
+    // azure
+    api_type: 'openai',
+    api_version: '2020-05-03',
+    deployment_id: '',
   },
 };
 
@@ -137,3 +145,5 @@ export type ProxyType = UnionToTuple<Proxy['type']>;
 export type NotificationType = UnionToTuple<Notification['type']>;
 /** OpenAI Model List */
 export type OpenAIModel = UnionToTuple<ExperimentalOpenAI['model']>;
+/** OpenAI API Type */
+export type OpenAIType = UnionToTuple<ExperimentalOpenAI['api_type']>;
