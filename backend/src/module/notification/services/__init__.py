@@ -27,7 +27,7 @@ NotificationService = TypeVar(
     GotifyService,
 )
 
-services: Dict[NotificationType, Type[NotificationService]] = MappingProxyType(
+services: dict[NotificationType, Type[NotificationService]] = MappingProxyType(
     {
         "bark": BarkService,
         "server-chan": ServerChanService,

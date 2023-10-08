@@ -1,6 +1,6 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field, validator
 
@@ -35,10 +35,10 @@ class WecomMessage(BaseModel):
     # see: https://developer.work.weixin.qq.com/document/path/90236#%E5%9B%BE%E6%96%87%E6%B6%88%E6%81%AF
     msgtype: str = Field("news", description="message type")
     agentid: str = Field(..., description="agent id")
-    articles: List[WecomArticle] = Field(..., description="articles")
+    articles: list[WecomArticle] = Field(..., description="articles")
 
 
-class WecomService(NotifierAdapter, NotifierRequestMixin):
+class WecomService(NotifierRequestMixin, NotifierAdapter):
     token: str = Field(..., description="wecom access token")
     agentid: str = Field(..., description="wecom agent id")
     base_url: str = Field(

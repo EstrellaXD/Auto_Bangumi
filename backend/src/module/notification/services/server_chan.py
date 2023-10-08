@@ -21,7 +21,7 @@ class ServerChanMessage(BaseModel):
     desp: str = Field(..., description="description")
 
 
-class ServerChanService(NotifierAdapter, NotifierRequestMixin):
+class ServerChanService(NotifierRequestMixin, NotifierAdapter):
     token: str = Field(..., description="server chan token")
     base_url: str = Field("https://sctapi.ftqq.com", description="server chan base url")
 

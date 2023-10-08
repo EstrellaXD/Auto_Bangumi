@@ -1,6 +1,6 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -21,7 +21,7 @@ class GotifyMessage(BaseModel):
     priority: int = Field(5, description="priority", ge=0, le=10)
     message: str = Field(..., description="message")
     title: str = Field("AutoBangumi", description="title")
-    extras: Dict[str, Any] = Field(
+    extras: dict[str, Any] = Field(
         default_factory=dict, description="extras information"
     )
 

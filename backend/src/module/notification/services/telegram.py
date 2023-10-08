@@ -27,7 +27,7 @@ class TelegramPhotoMessage(BaseModel):
     disable_notification: bool = True
 
 
-class TelegramService(NotifierAdapter, NotifierRequestMixin):
+class TelegramService(NotifierRequestMixin, NotifierAdapter):
     """TelegramService is a class for telegram notification service"""
 
     token: str = Field(..., description="telegram bot token")

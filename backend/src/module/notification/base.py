@@ -1,7 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 from textwrap import dedent
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Literal, Optional
 
 import aiohttp
 import requests
@@ -45,7 +45,7 @@ class NotifierAdapter(BaseModel, ABC):
         raise NotImplementedError("asend method is not implemented yet.")
 
 
-_Mapping = Dict[str, Any]
+_Mapping = dict[str, Any]
 
 
 class NotifierRequestMixin:

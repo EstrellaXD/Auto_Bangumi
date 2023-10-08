@@ -1,6 +1,6 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field, validator
 
@@ -32,10 +32,10 @@ class SlackAttachment(BaseModel):
 class SlackMessage(BaseModel):
     # see: https://api.slack.com/methods/chat.postMessage
     channel: str = Field(..., description="slack channel id")
-    attechment: List[SlackAttachment] = Field(..., description="attechments")
+    attechment: list[SlackAttachment] = Field(..., description="attechments")
 
 
-class SlackService(NotifierAdapter, NotifierRequestMixin):
+class SlackService(NotifierRequestMixin, NotifierAdapter):
     token: str = Field(..., description="slack token")
     channel: str = Field(..., description="slack channel id")
     base_url: str = Field("https://slack.com", description="slack base url")
