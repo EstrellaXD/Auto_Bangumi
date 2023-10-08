@@ -1,6 +1,6 @@
-import asyncio
 import json
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 import openai
 
@@ -98,8 +98,9 @@ class OpenAIParser:
         if not prompt:
             prompt = DEFAULT_PROMPT
 
-        async def complete() -> str:
-            resp = await openai.ChatCompletion.acreate(
+        with ThreadPoolExecutor(max_workers=1) as worker:
+            future = worker.submit(
+                openai.ChatCompletion.create,
                 api_key=self._api_key,
                 api_base=self.api_base,
                 model=self.model,
@@ -112,11 +113,9 @@ class OpenAIParser:
                 **self.openai_kwargs,
             )
 
-            result = resp["choices"][0]["message"]["content"]
-            return result
+            resp = future.result()
 
-        loop = asyncio.get_event_loop()
-        result = loop.run_until_complete(complete())
+            result = resp["choices"][0]["message"]["content"]
 
         if asdict:
             try:
