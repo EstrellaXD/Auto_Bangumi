@@ -1,5 +1,9 @@
 # Windows 本地部署
 
+::: warning 警告
+本地部署可能会产生一些不可预料的问题，我们强烈推荐您使用 Docker 部署。
+:::
+
 
 1. 克隆并进入 AutoBangumi 的 `git` 仓库：
 
@@ -8,7 +12,7 @@
    cd Auto_Bangumi
    ```
 
-2. 在 `backend\src` 目录下创建 `__version__.py` 文件并写入 `VERSION='local', 请注意文件编码格式为 `UTF-8`：
+2. 在 `backend\src\module` 目录下创建 `__version__.py` 文件并写入 `VERSION='local', 请注意文件编码格式为 `UTF-8`：
 
 3. 新建 `python` 虚拟环境、激活并安装依赖（需保证 `python -V` 打印的版本符合 `Dockerfile` 中的要求，如 `FROM python:3.11-alpine AS APP`）
 

@@ -1,4 +1,4 @@
-import type { ApiSuccess } from "#/api";
+import type { ApiSuccess } from '#/api';
 
 export const apiLog = {
   async getLog() {

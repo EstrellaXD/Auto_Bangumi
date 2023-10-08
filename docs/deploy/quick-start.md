@@ -5,13 +5,28 @@
 
 ## 创建数据和配置文件夹
 
-为了保证 AB 在每次更新之后数据和配置不丢失，推荐使用 Docker volume 进行数据和配置的持久化。
+为了保证 AB 在每次更新之后数据和配置不丢失，推荐使用 bind mount  或者 Docker volume 进行数据和配置的持久化。
+
 
 ```shell
+# 使用 bind mount
+mkdir "AutoBangumi"
+cd "AutoBangumi"
+mkdir -p ./config
+mkdir -p ./data
+```
+
+bind mount 与 Docker volume 二选一
+
+```shell
+# 使用 Docker volume
 docker volume create AutoBangumi_config
 docker volume create AutoBangumi_data
 ```
+
 ## 使用 Docker 部署 AutoBangumi
+
+使用以下命令时请确保处于AutoBangumi目录下。
 
 ### 选项1: 使用 Docker-cli 部署
 
@@ -20,14 +35,13 @@ docker volume create AutoBangumi_data
 ```shell
 docker run -d \
   --name=AutoBangumi \
-  -v AutoBangumi_config:/app/config \
-  -v AutoBangumi_data:/app/data \
+  -v ./config:/app/config \
+  -v ./data:/app/data \
   -p 7892:7892 \
   --network=bridge \
   --dns=8.8.8.8 \
   --restart unless-stopped \
-  estrellaxd/auto_bangumi:latest
-
+  ghcr.io/estrellaxd/auto_bangumi:latest
 ```
 
 ### 选项2: 使用 Docker-compose 部署
@@ -39,23 +53,19 @@ version: "3.8"
 
 services:
   AutoBangumi:
-    image: estrellaxd/auto_bangumi:latest
+    image: "ghcr.io/estrellaxd/auto_bangumi:latest"
     container_name: AutoBangumi
     volumes:
-      - AutoBangumi_config:/app/config
-      - AutoBangumi_data:/app/data
+      - ./config:/app/config
+      - ./data:/app/data
     ports:
       - "7892:7892"
+    network_mode: bridge
     restart: unless-stopped
     dns:
       - 223.5.5.5
-    network_mode: bridge
-
-volumes:
-  AutoBangumi_config:
-    name: AutoBangumi_config
-  AutoBangumi_data:
-    name: AutoBangumi_data
+    environment:
+      - AB_METHOD=Advance
 ```
 
 运行以下命令启动容器。
