@@ -21,9 +21,7 @@ BangumiJSON: TypeAlias = str
 
 class SearchTorrent(RequestContent, RSSAnalyser):
     def search_torrents(self, rss_item: RSSItem) -> list[Torrent]:
-        with RequestContent() as req:
-            torrents = self.get_torrents(rss_item.url)
-        return torrents
+        return self.get_torrents(rss_item.url)
         # torrents = self.get_torrents(rss_item.url)
         # return torrents
 
