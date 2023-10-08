@@ -1,7 +1,7 @@
 import json
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict
+from typing import Any
 
 import openai
 
@@ -117,7 +117,7 @@ class OpenAIParser:
 
         return result
 
-    def _prepare_params(self, text: str, prompt: str) -> Dict[str, Any]:
+    def _prepare_params(self, text: str, prompt: str) -> dict[str, Any]:
         """_prepare_params is a helper function to prepare params for openai library.
         There are some differences between openai and azure openai api, so we need to
         prepare params for them.
@@ -127,7 +127,7 @@ class OpenAIParser:
             prompt (str): the custom prompt
 
         Returns:
-            Dict[str, Any]: the prepared key value pairs.
+            dict[str, Any]: the prepared key value pairs.
         """
         params = dict(
             api_key=self._api_key,
