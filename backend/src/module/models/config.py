@@ -1,4 +1,5 @@
 from os.path import expandvars
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -88,7 +89,18 @@ class ExperimentalOpenAI(BaseModel):
     api_base: str = Field(
         "https://api.openai.com/v1", description="OpenAI api base url"
     )
-    model: str = Field("gpt-3.5-turbo", description="OpenAI model")
+    api_type: Literal["azure", "openai"] = Field(
+        "openai", description="OpenAI api type, usually for azure"
+    )
+    api_version: str = Field(
+        "2023-05-15", description="OpenAI api version, only for Azure"
+    )
+    model: str = Field(
+        "gpt-3.5-turbo", description="OpenAI model, ignored when api type is azure"
+    )
+    deployment_id: str = Field(
+        "", description="Azure OpenAI deployment id, ignored when api type is openai"
+    )
 
 
 class Config(BaseModel):

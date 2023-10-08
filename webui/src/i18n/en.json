@@ -142,8 +142,11 @@
       "warning": "Warning: Experimental feature is not yet stable. Please use with caution.",
       "enable": "Enable OpenAI",
       "api_key": "OpenAI API Key",
-      "api_base": "OpenAI API Base URL",
-      "model": "OpenAI Model"
+      "api_base": "OpenAI API Base URL (Azure entrypoint)",
+      "model": "OpenAI Model",
+      "api_type": "OpenAI API Type",
+      "api_version": "Azure OpenAI Version",
+      "deployment_id": "Azure OpenAI Deployment ID"
     },
     "media_player_set": {
       "title": "Media Player Setting",
