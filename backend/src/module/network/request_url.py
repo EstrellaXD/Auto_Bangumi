@@ -87,11 +87,20 @@ class RequestURL:
         self.session = requests.Session()
         if settings.proxy.enable:
             if "http" in settings.proxy.type:
-                url = f"{settings.proxy.type}://{settings.proxy.host}:{settings.proxy.port}"
-                self.session.proxies = {
-                    "https": url,
-                    "http": url,
-                }
+                if settings.proxy.username:
+                    username=settings.proxy.username
+                    password=settings.proxy.password
+                    url = f"http://{username}:{password}@{settings.proxy.host}:{settings.proxy.port}"
+                    self.session.proxies = {
+                        "http": url,
+                        "https": url,
+                    }
+                else:
+                    url = f"http://{settings.proxy.host}:{settings.proxy.port}"
+                    self.session.proxies = {
+                        "http": url,
+                        "https": url,
+                    }
             elif settings.proxy.type == "socks5":
                 self._socks5_proxy = True
                 socks.set_default_proxy(
