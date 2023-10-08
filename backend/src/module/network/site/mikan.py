@@ -2,16 +2,15 @@ def rss_parser(soup):
     torrent_titles = []
     torrent_urls = []
     torrent_homepage = []
-    if not len(soup.findall("./channel/item/enclosure")):
-        for item in soup.findall("./channel/item"):
-            torrent_titles.append(item.find("title").text)
-            torrent_urls.append(item.find("link").text)
-            torrent_homepage.append(item.find("guid").text)
-    else:
-        for item in soup.findall("./channel/item"):
-            torrent_titles.append(item.find("title").text)
-            torrent_urls.append(item.find("enclosure").attrib["url"])
+    for item in soup.findall("./channel/item"):
+        torrent_titles.append(item.find("title").text)
+        enclosure = item.find("enclosure")
+        if enclosure is not None:
             torrent_homepage.append(item.find("link").text)
+            torrent_urls.append(enclosure.attrib.get("url"))
+        else:
+            torrent_urls.append(item.find("link").text)
+            torrent_homepage.append("")
     return torrent_titles, torrent_urls, torrent_homepage
 
 
