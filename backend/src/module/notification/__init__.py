@@ -32,16 +32,20 @@ class Notifier:
             raise ValueError("Invalid notifier config")
 
         self.notifier = services[service_name](**notifier_config)
+        # TODO: add message queue delegate to notifier to send message in background
+        # self.q = queue.LifoQueue()
 
     async def asend(self, **kwargs):
         try:
             await self.notifier.asend(**kwargs)
+            # TODO: send message to queue
         except Exception as e:
             logger.warning(f"Failed to send notification: {e}")
 
     def send(self, **kwargs) -> bool:
         try:
             self.notifier.send(**kwargs)
+            # TODO: send message to queue
         except Exception as e:
             logger.warning(f"Failed to send notification: {e}")
 

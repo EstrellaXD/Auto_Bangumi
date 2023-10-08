@@ -1,4 +1,5 @@
 import logging
+import urllib.parse as urlparse
 from abc import ABC, abstractmethod
 from textwrap import dedent
 from typing import Any, Literal, Optional
@@ -7,7 +8,6 @@ import aiohttp
 import requests
 from pydantic import BaseModel, Field
 from tenacity import after_log, retry, stop_after_attempt, wait_fixed
-from yarl import URL
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +108,7 @@ class NotifierRequestMixin:
 
         with requests.Session() as req:
             resp: requests.Response = req.request(
-                url=URL.joinpath(URL(base_url), entrypoint).human_repr(),
+                url=urlparse.urljoin(base_url, entrypoint),
                 method=method,
                 data=data,
                 params=params,
