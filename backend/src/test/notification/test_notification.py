@@ -81,7 +81,7 @@ class TestNotifier:
     def test_send(self, fake_notification):
         with mock.patch("module.notification.Notifier.send") as m:
             m.return_value = None
-            assert self.notifier.send(notification=fake_notification)
+            self.notifier.send(notification=fake_notification)
 
             m.assert_called_once_with(notification=fake_notification)
 

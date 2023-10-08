@@ -8,3 +8,5 @@ pytest          # testing framework
 aioresponses    # aiohttp mock testing
 pytest-asyncio  # asyncio testing
 pytest-cov      # testing coverage
+pytest-mock     # mock wrapper for pytest
+httpx           # fastapi async http client
