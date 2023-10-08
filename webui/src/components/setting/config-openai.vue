@@ -63,7 +63,7 @@ const azureItems: SettingItem<ExperimentalOpenAI>[] = [
     type: 'input',
     prop: {
       type: 'text',
-      placeholder: 'e.g: 2023-05-17',
+      placeholder: 'e.g: 2023-05-15',
     },
   },
   {
