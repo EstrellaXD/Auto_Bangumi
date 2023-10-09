@@ -26,13 +26,12 @@ class TelegramNotification(RequestContent):
         data = {
             "chat_id": self.chat_id,
             "caption": text,
+            "text": text,
             "disable_notification": True,
         }
         photo = load_image(notify.poster_path)
         if photo:
-            resp = self.post_files(
-                self.photo_url, data, files={"photo": photo}
-            )
+            resp = self.post_files(self.photo_url, data, files={"photo": photo})
         else:
             resp = self.post_data(self.message_url, data)
         logger.debug(f"Telegram notification: {resp.status_code}")
