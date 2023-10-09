@@ -8,7 +8,7 @@
     "documate:upload": "documate upload"
   },
   "devDependencies": {
-    "@documate/documate": "^0.2.0",
+    "@documate/documate": "^0.2.1",
     "@vue/tsconfig": "^0.4.0",
     "medium-zoom": "^1.0.8",
     "typescript": "4.9.5",
@@ -18,6 +18,6 @@
   },
   "type": "module",
   "dependencies": {
-    "@documate/vue": "^0.3.0"
+    "@documate/vue": "^0.3.1"
   }
 }
