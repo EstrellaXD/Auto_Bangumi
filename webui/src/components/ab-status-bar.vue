@@ -57,6 +57,7 @@ function abLabel(label: string | (() => string)) {
           <System theme="outline" size="24" fill="#fff" />
         </MenuButton>
 
+        <ab-notification></ab-notification>
         <ab-status :running="running" />
       </div>
 
