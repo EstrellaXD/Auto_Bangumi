@@ -2,7 +2,7 @@
   "private": true,
   "scripts": {
     "docs:dev": "vitepress dev",
-    "docs:build": "vitepress build && mkdir -p .vitepress/dist/image && cp -rf image/icons .vitepress/dist/image/",
+    "docs:build": "vitepress build && mkdir -p .vitepress/dist/image && cp -rf image/icons .vitepress/dist/image/ && documate upload",
     "docs:preview": "vitepress preview",
     "deploy:preview": "vercel --cwd .vitepress/dist",
     "documate:upload": "documate upload"
