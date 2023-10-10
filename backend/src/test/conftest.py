@@ -6,7 +6,11 @@ import pytest_asyncio
 from httpx import AsyncClient
 from main import app
 from module.models.bangumi import Notification
-from module.notification.base import DEFAULT_LOG_TEMPLATE, DEFAULT_MESSAGE_TEMPLATE
+from module.notification.base import (
+    DEFAULT_LOG_TEMPLATE,
+    DEFAULT_MESSAGE_TEMPLATE,
+    NotificationContent,
+)
 
 
 @pytest.fixture
@@ -45,6 +49,11 @@ def fake_log_message(fake_log_record) -> str:
         levelname=fake_log_record.levelname,
         msg=fake_log_record.msg,
     )
+
+
+@pytest.fixture
+def fake_content():
+    return NotificationContent(content="test content")
 
 
 @pytest_asyncio.fixture

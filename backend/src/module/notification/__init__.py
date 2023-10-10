@@ -5,6 +5,9 @@ from typing import get_args
 from litequeue import SQLQueue
 from tenacity import RetryError
 
+from module.models.bangumi import Notification
+from module.notification.base import NotificationContent
+
 from .services import NotificationService, NotificationType, services
 
 logger = logging.getLogger(__name__)
@@ -43,27 +46,48 @@ class Notifier:
     def q(self) -> SQLQueue:
         return self._queue
 
+    def _get_json(self, **kwargs):
+        content: NotificationContent = kwargs.get("content")
+        notification: Notification = kwargs.get("notification")
+        record: logging.LogRecord = kwargs.get("record")
+
+        if notification:
+            return notification.json()
+
+        if record:
+            args = dict(
+                name=record.name,
+                level=record.levelname,
+                pathname=record.pathname,
+                lineno=record.lineno,
+                msg=record.msg,
+            )
+            return json.dumps(args)
+
+        if content:
+            return content.json()
+
+        raise ValueError(f"Invalid input data: {kwargs}")
+
     async def asend(self, **kwargs):
-        content = kwargs.get("content")
+        data = self._get_json(**kwargs)
         try:
             await self.notifier.asend(**kwargs)
+            self.q.put(data)
         except RetryError as e:
             e.reraise()
         except Exception as e:
             logger.warning(f"Failed to send notification: {e}")
-        finally:
-            self.q.put(content.json())
 
     def send(self, **kwargs) -> bool:
-        content = kwargs.get("content")
+        data = self._get_json(**kwargs)
         try:
             self.notifier.send(**kwargs)
+            self.q.put(data)
         except RetryError as e:
             e.reraise()
         except Exception as e:
             logger.warning(f"Failed to send notification: {e}")
-        finally:
-            self.q.put(content.json())
 
     def __enter__(self):
         return self

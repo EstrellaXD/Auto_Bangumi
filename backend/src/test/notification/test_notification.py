@@ -1,3 +1,4 @@
+import json
 import logging
 from unittest import mock
 
@@ -44,6 +45,33 @@ class TestNotifier:
             Notifier(service_name="gotify")
 
         assert exc.match("Invalid notifier config")
+
+    def test__get_json_with_notification(self, fake_notification):
+        assert (
+            self.notifier._get_json(notification=fake_notification)
+            == fake_notification.json()
+        )
+
+    def test__get_json_with_record(self, fake_log_record):
+        expected = dict(
+            name=fake_log_record.name,
+            level=fake_log_record.levelname,
+            pathname=fake_log_record.pathname,
+            lineno=fake_log_record.lineno,
+            msg=fake_log_record.msg,
+        )
+
+        assert self.notifier._get_json(record=fake_log_record) == json.dumps(expected)
+
+    def test__get_json_with_content(self, fake_content):
+        assert self.notifier._get_json(content=fake_content) == fake_content.json()
+
+    def test__get_json_with_invalid_args(self):
+        kwargs = dict(hello="world!")
+        with pytest.raises(ValueError) as exc:
+            self.notifier._get_json(**kwargs)
+
+        assert exc.match(f"Invalid input data: {kwargs}")
 
     @pytest.mark.asyncio
     async def test_asend(self, fake_notification):
