@@ -1,11 +1,13 @@
 import logging
+import asyncio
 import re
-from typing import Optional
+from typing import Optional, Callable
 
 from module.database import Database, engine
 from module.downloader import DownloadClient
 from module.models import Bangumi, ResponseModel, RSSItem, Torrent
 from module.network import RequestContent
+from module.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +16,23 @@ class RSSEngine(Database):
     def __init__(self, _engine=engine):
         super().__init__(_engine)
         self._to_refresh = False
+
+    async def rss_checker(self, callback: Callable[[list[Torrent]], None]):
+        torrent_pool = []
+        torrent_name_pool = []
+        while 1:
+            rss_items = self.rss.search_active()
+            if rss_items:
+                for item in rss_items:
+                    torrents = await self.pull_rss(item)
+                    for torrent in torrents:
+                        if torrent.name not in torrent_name_pool:
+                            torrent_pool.append(torrent)
+                            torrent_name_pool.append(torrent.name)
+                if torrent_pool:
+                    callback(torrent_pool)
+                    torrent_pool.clear()
+            await asyncio.sleep(settings.rss.interval)
 
     @staticmethod
     async def _get_torrents(rss: RSSItem) -> list[Torrent]:
@@ -94,8 +113,8 @@ class RSSEngine(Database):
             msg_zh="删除 RSS 成功。",
         )
 
-    def pull_rss(self, rss_item: RSSItem) -> list[Torrent]:
-        torrents = self._get_torrents(rss_item)
+    async def pull_rss(self, rss_item: RSSItem) -> list[Torrent]:
+        torrents = await self._get_torrents(rss_item)
         new_torrents = self.torrent.check_new(torrents)
         return new_torrents
 
@@ -110,22 +129,21 @@ class RSSEngine(Database):
                 return matched
         return None
 
-    def refresh_rss(self, client: DownloadClient, rss_id: Optional[int] = None):
+    async def refresh_rss(self, client: DownloadClient, rss_id: Optional[int] = None):
         # Get All RSS Items
         if not rss_id:
             rss_items: list[RSSItem] = self.rss.search_active()
         else:
-            rss_item = self.rss.search_id(rss_id)
-            rss_items = [rss_item] if rss_item else []
+            rss_items = [self.rss.search_id(rss_id)]
         # From RSS Items, get all torrents
         logger.debug(f"[Engine] Get {len(rss_items)} RSS items")
         for rss_item in rss_items:
-            new_torrents = self.pull_rss(rss_item)
+            new_torrents = await self.pull_rss(rss_item)
             # Get all enabled bangumi data
             for torrent in new_torrents:
                 matched_data = self.match_torrent(torrent)
                 if matched_data:
-                    if client.add_torrent(torrent, matched_data):
+                    if await client.add_torrent(torrent, matched_data):
                         logger.debug(f"[Engine] Add torrent {torrent.name} to client")
                     torrent.downloaded = True
             # Add all torrents to database
