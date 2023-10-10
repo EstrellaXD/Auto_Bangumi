@@ -172,7 +172,7 @@ cython_debug/
 
 /src/module/conf/config_dev.ini
 
-test.*
+
 .run
 /backend/src/templates/
 /backend/src/config/
@@ -190,6 +190,7 @@ lerna-debug.log*
 
 node_modules
 dist
+webui/.vite/deps/*
 dist.zip
 dist-ssr
 *.local
