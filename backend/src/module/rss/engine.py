@@ -16,9 +16,9 @@ class RSSEngine(Database):
         self._to_refresh = False
 
     @staticmethod
-    def _get_torrents(rss: RSSItem) -> list[Torrent]:
-        with RequestContent() as req:
-            torrents = req.get_torrents(rss.url)
+    async def _get_torrents(rss: RSSItem) -> list[Torrent]:
+        async with RequestContent() as req:
+            torrents = await req.get_torrents(rss.url)
             # Add RSS ID
             for torrent in torrents:
                 torrent.rss_id = rss.id
@@ -31,7 +31,7 @@ class RSSEngine(Database):
         else:
             return []
 
-    def add_rss(
+    async def add_rss(
         self,
         rss_link: str,
         name: str | None = None,
@@ -39,8 +39,8 @@ class RSSEngine(Database):
         parser: str = "mikan",
     ):
         if not name:
-            with RequestContent() as req:
-                name = req.get_rss_title(rss_link)
+            async with RequestContent() as req:
+                name = await req.get_rss_title(rss_link)
                 if not name:
                     return ResponseModel(
                         status=False,
@@ -131,14 +131,14 @@ class RSSEngine(Database):
             # Add all torrents to database
             self.torrent.add_all(new_torrents)
 
-    def download_bangumi(self, bangumi: Bangumi):
-        with RequestContent() as req:
-            torrents = req.get_torrents(
+    async def download_bangumi(self, bangumi: Bangumi):
+        async with RequestContent() as req:
+            torrents = await req.get_torrents(
                 bangumi.rss_link, bangumi.filter.replace(",", "|")
             )
             if torrents:
-                with DownloadClient() as client:
-                    client.add_torrent(torrents, bangumi)
+                async with DownloadClient() as client:
+                    await client.add_torrent(torrents, bangumi)
                     self.torrent.add_all(torrents)
                     return ResponseModel(
                         status=True,
