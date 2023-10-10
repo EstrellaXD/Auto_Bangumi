@@ -8,5 +8,6 @@ TMDB_API = "32b19d6a05b512190a056fa4e747cbbc"
 DATA_PATH = "sqlite:///data/data.db"
 LEGACY_DATA_PATH = Path("data/data.json")
 VERSION_PATH = Path("config/version.info")
+POSTERS_PATH = Path("data/posters")
 
 PLATFORM = "Windows" if "\\" in settings.downloader.path else "Unix"
