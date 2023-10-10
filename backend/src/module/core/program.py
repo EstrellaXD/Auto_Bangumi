@@ -36,6 +36,9 @@ class Program(RenameThread, RSSThread):
         if not self.database:
             first_run()
             logger.info("[Core] No db file exists, create database file.")
+            if not self.img_cache:
+                logger.info("[Core] No image cache exists, create image cache.")
+                cache_image()
             return {"status": "First run detected."}
         if self.legacy_data:
             logger.info(
