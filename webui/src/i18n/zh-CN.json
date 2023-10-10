@@ -15,7 +15,8 @@
     "logout": "退出",
     "calendar": "番剧日历",
     "downloader": "下载器",
-    "rss": "RSS 管理"
+    "rss": "RSS 管理",
+    "notification": "通知消息"
   },
   "topbar": {
     "start": "启动",
@@ -85,6 +86,9 @@
     "go": "访问",
     "join": "加入",
     "bug_repo": "Bug 反馈"
+  },
+  "notification": {
+    "title": "通知消息"
   },
   "config": {
     "normal_set": {

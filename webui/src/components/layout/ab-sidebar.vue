@@ -8,6 +8,7 @@ import {
   MenuUnfold,
   Play,
   SettingTwo,
+  ViewList,
 } from '@icon-park/vue-next';
 import InlineSvg from 'vue-inline-svg';
 
@@ -77,6 +78,12 @@ const items = [
     icon: SettingTwo,
     label: () => t('sidebar.config'),
     path: '/config',
+  },
+  {
+    id: 8,
+    icon: ViewList,
+    label: () => t('sidebar.notification'),
+    path: '/notification',
   },
 ];
 </script>

@@ -14,7 +14,7 @@ def get_notifier():
     )
 
 
-@router.get("/")
+@router.get("")
 async def get_notification(notifier: Notifier = Depends(get_notifier)):
     cursor = notifier.q.conn.cursor()
     stmt = r"""

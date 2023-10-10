@@ -1,6 +1,4 @@
-from ast import Tuple
 import sqlite3
-from unittest.mock import MagicMock
 
 import pytest
 from httpx import AsyncClient
@@ -29,7 +27,7 @@ class TestNotificationAPI:
         m = mocker.patch.object(Notifier, "q", return_value=object())
         m.conn = mocked_db
 
-        resp = await aclient.get("/v1/notification/")
+        resp = await aclient.get("/v1/notification")
         assert resp.status_code == 200
         assert resp.json() == dict(
             code=0,
@@ -51,7 +49,7 @@ class TestNotificationAPI:
         m = mocker.patch.object(Notifier, "q", return_value=object())
         m.conn = mocked_db
 
-        resp = await aclient.get("/v1/notification/")
+        resp = await aclient.get("/v1/notification")
         assert resp.json() == dict(
             code=0, msg="success", data=dict(total=0, messages=[])
         )
@@ -69,7 +67,7 @@ class TestNotificationAPI:
         m = mocker.patch.object(Notifier, "q", return_value=object())
         m.conn = mocked_conn
 
-        resp = await aclient.get("/v1/notification/")
+        resp = await aclient.get("/v1/notification")
         assert resp.status_code == 500
         assert resp.json() == dict(detail="unknown error")
 

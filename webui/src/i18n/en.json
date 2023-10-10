@@ -15,7 +15,8 @@
     "logout": "Logout",
     "downloader": "Downloader",
     "calendar": "Calendar",
-    "rss": "RSS Manager"
+    "rss": "RSS Manager",
+    "notification": "Notification"
   },
   "topbar": {
     "start": "Start",
@@ -85,6 +86,9 @@
     "go": "Go",
     "join": "Join",
     "bug_repo": "Bug Report"
+  },
+  "notification": {
+    "title": "Notification"
   },
   "config": {
     "normal_set": {
