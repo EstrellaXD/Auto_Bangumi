@@ -6,13 +6,13 @@ settings:
 
 dependencies:
   '@documate/vue':
-    specifier: ^0.3.0
-    version: 0.3.0(tailwindcss@3.3.3)(vue@3.3.4)
+    specifier: ^0.3.1
+    version: 0.3.1(tailwindcss@3.3.3)(vue@3.3.4)
 
 devDependencies:
   '@documate/documate':
-    specifier: ^0.2.0
-    version: 0.2.0
+    specifier: ^0.2.1
+    version: 0.2.1
   '@vue/tsconfig':
     specifier: ^0.4.0
     version: 0.4.0
@@ -1488,8 +1488,8 @@ packages:
       - search-insights
     dev: true
 
-  /@documate/documate@0.2.0:
-    resolution: {integrity: sha512-+vpoyF9r8XUi/CrQk/V4Be6G+YtKos7ZBXRMLpDGKX+3Du8g3gG2HaAzfJnaOpvV5QgrzacRuqIQH9MqHbiqGg==}
+  /@documate/documate@0.2.1:
+    resolution: {integrity: sha512-FhbDmWBNyezbzoSOwBpv8SdWEF/OtcSS3GYTcHvLS41IXLi0MZJNx3t+/m73S+CmYLE1M5WgEzcZsO1E8NqeyA==}
     hasBin: true
     dependencies:
       axios: 1.5.1
@@ -1503,8 +1503,8 @@ packages:
       - debug
     dev: true
 
-  /@documate/vue@0.3.0(tailwindcss@3.3.3)(vue@3.3.4):
-    resolution: {integrity: sha512-/5y6tJSW54BAV/0YFvzcBcvSOdVWPT6ElpxNxaHLHh3DVI+cLpQpJYD2JLS52cfdDgIfD9SE0REVZFV0fSxsYg==}
+  /@documate/vue@0.3.1(tailwindcss@3.3.3)(vue@3.3.4):
+    resolution: {integrity: sha512-SvVTrVQ1VS75JLxN9jPTaAR7FDIog456waScSCU41MtVwH4BNdCnWpy6kWWYOuant+c8A3cSJ9Yvq6Bpv+B5xQ==}
     peerDependencies:
       vue: ^3
     dependencies:
@@ -4242,7 +4242,7 @@ packages:
     engines: {node: '>=14'}
     dependencies:
       cross-spawn: 7.0.3
-      signal-exit: 4.0.2
+      signal-exit: 4.1.0
     dev: true
 
   /form-data@3.0.1:

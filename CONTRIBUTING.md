@@ -178,3 +178,13 @@ gitGraph:
 
 而新功能的发版时间则会更长而且不定，你可以在我们的 [GitHub Project](https://github.com/EstrellaXD/Auto_Bangumi/projects?query=is%3Aopen) 看板中看到开发进度，一个版本规划的新功能都开发完备后就会发版。
 
+## 贡献文档
+
+如果要为文档做贡献，请注意以下几点：
+
+- 更新分支为 `docs-update`，并基于它做修改.
+- 请确保你的 PR 标题和描述中包含了你的修改的目的和意图。
+
+撰写文档请尽量使用规范的书面化用语，遵照 Markdown 语法，以及 [中文文案排版指北](https://github.com/sparanoid/chinese-copywriting-guidelines) 中的规范。
+
+

@@ -86,21 +86,8 @@ export default defineConfig({
                         link: "/deploy/dsm",
                     },
                     {
-                        text: "WSL",
-                        link: "/deploy/wsl",
-                    },
-                ],
-            },
-            {
-                text: "源码运行",
-                items: [
-                    {
-                        text: "Windows 本地部署",
-                        link: "/deploy/windows",
-                    },
-                    {
-                        text: "Unix 本地部署",
-                        link: "/deploy/unix",
+                        text: "本地部署",
+                        link: "/deploy/local",
                     },
                 ],
             },
@@ -171,7 +158,7 @@ export default defineConfig({
                     },
                     {
                         text: "网络问题",
-                        link: "/faq/mikan-network",
+                        link: "/faq/network",
                     }
                 ],
             },

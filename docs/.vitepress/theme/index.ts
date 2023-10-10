@@ -21,7 +21,7 @@ export default {
             // https://vitepress.dev/guide/extending-default-theme#layout-slots
             'home-features-after': () => h(HomePreviewWebUI),
             'nav-bar-content-before': () => h(Documate, {
-                endpoint: '',
+                endpoint: 'https://kp35gyb313.us.aircode.run/ask',
             }),
         })
     },

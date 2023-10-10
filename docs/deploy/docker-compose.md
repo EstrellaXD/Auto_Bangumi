@@ -61,15 +61,11 @@ services:
 
 - 只安装 **AutoBangumi**
   ```bash
-  wget https://raw.githubusercontent.com/EstrellaXD/Auto_Bangumi/main/docs/docker-compose/AutoBangumi/docker-compose.yml
+  wget https://raw.githubusercontent.com/EstrellaXD/Auto_Bangumi/main/docs/resource/docker-compose/AutoBangumi/docker-compose.yml
   ```
 - 安装 **qBittorrent** 与 **AutoBangumi**
   ```bash
-  wget https://raw.githubusercontent.com/EstrellaXD/Auto_Bangumi/main/docs/docker-compose/qBittorrent+AutoBangumi/docker-compose.yml
-  ```
-- **qBittorrent** + **AutoBangumi** + **Plex**
-  ```bash
-  wget https://raw.githubusercontent.com/EstrellaXD/Auto_Bangumi/main/docs/docker-compose/All-in-one/docker-compose.yml
+  wget https://raw.githubusercontent.com/EstrellaXD/Auto_Bangumi/main/docs/resource/docker-compose/qBittorrent+AutoBangumi/docker-compose.yml
   ```
 
 首先选择你要安装的方式，**拷贝上面的命令运行即可**，这一步是下载 `docker-compose.yml` 配置文件，如果需要自定义可以使用文本编辑器对其中的参数进行自定义。
