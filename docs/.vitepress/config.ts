@@ -158,7 +158,7 @@ export default defineConfig({
                     },
                     {
                         text: "网络问题",
-                        link: "/faq/mikan-network",
+                        link: "/faq/network",
                     }
                 ],
             },
