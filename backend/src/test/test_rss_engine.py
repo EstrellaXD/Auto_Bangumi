@@ -3,11 +3,11 @@ from module.rss.engine import RSSEngine
 from .test_database import engine as e
 
 
-def test_rss_engine():
+async def test_rss_engine():
     with RSSEngine(e) as engine:
         rss_link = "https://mikanani.me/RSS/Bangumi?bangumiId=2353&subgroupid=552"
 
-        engine.add_rss(rss_link, aggregate=False)
+        await engine.add_rss(rss_link, aggregate=False)
 
         result = engine.rss.search_active()
         assert result[1].name == "Mikan Project - 无职转生～到了异世界就拿出真本事～"
