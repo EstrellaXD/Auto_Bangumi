@@ -1,31 +1,46 @@
 <script lang="ts" setup>
 import { NBadge, NButton, NIcon, NList, NListItem, NPopover } from 'naive-ui';
 import { Remind } from '@icon-park/vue-next';
-import type { Notification } from '#/notification';
 
-// TODO: use watchEffect to subscribe topic and update messageCount
-function generateNotifications(): Notification[] {
-  const notifications: Notification[] = [];
+const { data } = useWebSocket(
+  `ws://${window.location.host}/api/v1/notification/ws`,
+  {
+    autoReconnect: {
+      retries: 3,
+      delay: 2000,
+      onFailed() {
+        console.error('WebSocket connection failed!');
+      },
+    },
+  }
+);
 
-  for (let i = 1; i <= 10; i++) {
-    const notification: Notification = {
-      id: i.toString(),
-      title: `Notification ${i}`,
-      content: `This is notification ${i}.`,
-      datetime: new Date().toISOString().replace('T', ' ').slice(0, 19), // Get current datetime in YYYY-mm-dd HH:MM:SS format
-      hasRead: false,
-    };
-
-    notifications.push(notification);
+const unreadMessages = computed(() => {
+  if (!data.value) {
+    return [];
   }
 
-  return notifications;
-}
+  const json = JSON.parse(data.value);
 
-// Generate 10 fake notifications
-const messages = reactive<Notification[]>(generateNotifications());
-const unreadMessages = computed(() => messages.filter((m) => !m.hasRead));
-const messageCount = computed(() => unreadMessages.value.length);
+  const messages = json.messages.map((m: any) => {
+    const { title = 'AutoBangumi', content } = JSON.parse(m.data);
+    return {
+      id: m.message_id,
+      title,
+      content,
+      datetime: m.datetime.toString(),
+      hasRead: false,
+    };
+  });
+  return messages;
+});
+
+const messageCount = computed(() => {
+  if (!unreadMessages.value) {
+    return 0;
+  }
+  return unreadMessages.value.length;
+});
 </script>
 
 <template>

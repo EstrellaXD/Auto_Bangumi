@@ -1,7 +1,9 @@
+import json
 import logging
-from typing import Optional, get_args
+from typing import get_args
 
-from module.models.bangumi import Notification
+from litequeue import SQLQueue
+from tenacity import RetryError
 
 from .services import NotificationService, NotificationType, services
 
@@ -32,22 +34,36 @@ class Notifier:
             raise ValueError("Invalid notifier config")
 
         self.notifier = services[service_name](**notifier_config)
-        # TODO: add message queue delegate to notifier to send message in background
-        # self.q = queue.LifoQueue()
+
+        from module.conf.const import ROOT
+
+        self._queue = SQLQueue(filename_or_conn=ROOT.joinpath("data", "queue.db"))
+
+    @property
+    def q(self) -> SQLQueue:
+        return self._queue
 
     async def asend(self, **kwargs):
+        content = kwargs.get("content")
         try:
             await self.notifier.asend(**kwargs)
-            # TODO: send message to queue
+        except RetryError as e:
+            e.reraise()
         except Exception as e:
             logger.warning(f"Failed to send notification: {e}")
+        finally:
+            self.q.put(content.json())
 
     def send(self, **kwargs) -> bool:
+        content = kwargs.get("content")
         try:
             self.notifier.send(**kwargs)
-            # TODO: send message to queue
+        except RetryError as e:
+            e.reraise()
         except Exception as e:
             logger.warning(f"Failed to send notification: {e}")
+        finally:
+            self.q.put(content.json())
 
     def __enter__(self):
         return self

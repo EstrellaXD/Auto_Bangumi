@@ -1,8 +1,8 @@
 import logging
-import urllib.parse as urlparse
 from abc import ABC, abstractmethod
 from textwrap import dedent
 from typing import Any, Literal, Optional
+from urllib.parse import urljoin
 
 import aiohttp
 import requests
@@ -108,7 +108,7 @@ class NotifierRequestMixin:
 
         with requests.Session() as req:
             resp: requests.Response = req.request(
-                url=urlparse.urljoin(base_url, entrypoint),
+                url=urljoin(base_url, entrypoint),
                 method=method,
                 data=data,
                 params=params,
