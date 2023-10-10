@@ -1,151 +1,148 @@
 import logging
-import time
-
-from qbittorrentapi import Client, LoginFailed
-from qbittorrentapi.exceptions import (
-    APIConnectionError,
-    Conflict409Error,
-    Forbidden403Error,
-)
-
-from module.ab_decorator import qb_connect_failed_wait
+import httpx
 
 logger = logging.getLogger(__name__)
 
 
 class QbDownloader:
     def __init__(self, host: str, username: str, password: str, ssl: bool):
-        self._client: Client = Client(
-            host=host,
-            username=username,
-            password=password,
-            VERIFY_WEBUI_CERTIFICATE=ssl,
-            DISABLE_LOGGING_DEBUG_OUTPUT=True,
-            REQUESTS_ARGS={"timeout": (3.1, 10)},
-        )
-        self.host = host
+        self.host = host if "://" in host else "http://" + host
         self.username = username
+        self.password = password
+        self.ssl = ssl
 
-    def auth(self, retry=3):
-        times = 0
-        while times < retry:
-            try:
-                self._client.auth_log_in()
-                return True
-            except LoginFailed:
-                logger.error(
-                    f"Can't login qBittorrent Server {self.host} by {self.username}, retry in {5} seconds."
-                )
-                time.sleep(5)
-                times += 1
-            except Forbidden403Error:
-                logger.error("Login refused by qBittorrent Server")
-                logger.info("Please release the IP in qBittorrent Server")
-                break
-            except APIConnectionError:
-                logger.error("Cannot connect to qBittorrent Server")
-                logger.info("Please check the IP and port in WebUI settings")
-                time.sleep(10)
-                times += 1
-            except Exception as e:
-                logger.error(f"Unknown error: {e}")
-                break
-        return False
-
-    def logout(self):
-        self._client.auth_log_out()
-
-    def check_host(self):
-        try:
-            self._client.app_version()
-            return True
-        except APIConnectionError:
-            return False
-
-    def check_rss(self, rss_link: str):
-        pass
-
-    @qb_connect_failed_wait
-    def prefs_init(self, prefs):
-        return self._client.app_set_preferences(prefs=prefs)
-
-    @qb_connect_failed_wait
-    def get_app_prefs(self):
-        return self._client.app_preferences()
-
-    def add_category(self, category):
-        return self._client.torrents_createCategory(name=category)
-
-    @qb_connect_failed_wait
-    def torrents_info(self, status_filter, category, tag=None):
-        return self._client.torrents_info(
-            status_filter=status_filter, category=category, tag=tag
+    async def auth(self):
+        resp = await self._client.post(
+            url="/api/v2/auth/login",
+            data={"username": self.username, "password": self.password},
+            timeout=5,
         )
+        return resp.text
 
-    def add_torrents(self, torrent_urls, torrent_files, save_path, category):
-        resp = self._client.torrents_add(
-            is_paused=False,
-            urls=torrent_urls,
-            torrent_files=torrent_files,
-            save_path=save_path,
-            category=category,
-            use_auto_torrent_management=False,
-        )
-        return resp == "Ok."
+    async def logout(self):
+        logout_api = "/api/v2/auth/logout"
+        await self._client.post(url=logout_api, timeout=5)
 
-    def torrents_delete(self, hash):
-        return self._client.torrents_delete(delete_files=True, torrent_hashes=hash)
-
-    def torrents_rename_file(self, torrent_hash, old_path, new_path) -> bool:
+    async def check_host(self):
         try:
-            self._client.torrents_rename_file(
-                torrent_hash=torrent_hash, old_path=old_path, new_path=new_path
+            await self._client.get(
+                url="/api/v2/app/version",
+                timeout=5
             )
             return True
-        except Conflict409Error:
-            logger.debug(f"Conflict409Error: {old_path} >> {new_path}")
+        except httpx.RequestError:
             return False
 
-    def rss_add_feed(self, url, item_path):
+    async def prefs_init(self, prefs):
+        prefs_api = "/api/v2/app/setPreferences"
+        await self._client.post(url=prefs_api, data=prefs)
+
+    async def add_category(self, category):
+        await self._client.post(
+            url="/api/v2/torrents/createCategory",
+            data={"category": category},
+            timeout=5,
+        )
+
+    async def torrents_info(self, status_filter, category, tag=None):
+        data = {
+            "filter": status_filter,
+            "category": category,
+            "tag": tag,
+        }
+        torrent_info = await self._client.get(
+            url="/api/v2/torrents/info",
+            params=data,
+        )
+        return torrent_info.json()
+
+    async def add(self, torrent_urls, torrent_files, save_path, category):
+        data = {
+            "urls": torrent_urls,
+            "torrent_files": torrent_files,
+            "save_path": save_path,
+            "category": category,
+            "is_paused": False,
+            "use_auto_torrent_management": False,
+        }
+        resp = await self._client.post(
+            url="/api/v2/torrents/add",
+            data=data,
+        )
+        return resp.status_code == 200
+
+    async def delete(self, _hash):
+        data = {
+            "hashes": _hash,
+            "deleteFiles": True,
+        }
+        resp = await self._client.post(
+            url="/api/v2/torrents/delete",
+            data=data,
+        )
+        return resp.status_code == 200
+
+    async def rename(self, torrent_hash, old_path, new_path) -> bool:
+        data = {
+            "hash": torrent_hash,
+            "oldPath": old_path,
+            "newPath": new_path,
+        }
+        resp = await self._client.post(
+            url="/api/v2/torrents/renameFile",
+            data=data,
+        )
+        return resp.status_code == 200
+
+    async def move(self, hashes, new_location):
+        data = {
+            "hashes": hashes,
+            "location": new_location,
+        }
+        resp = await self._client.post(
+            url="/api/v2/torrents/setLocation",
+            data=data,
+        )
+        return resp.status_code == 200
+
+    async def set_category(self, _hash, category):
+        data = {
+            "category": category,
+            "hashes": _hash,
+        }
+        resp = await self._client.post(
+            url="/api/v2/torrents/setCategory",
+            data=data,
+        )
+        return resp.status_code == 200
+
+    async def add_tag(self, _hash, tag):
+        data = {
+            "hashes": _hash,
+            "tags": tag,
+        }
+        resp = await self._client.post(
+            url="/api/v2/torrents/addTags",
+            data=data,
+        )
+        return resp.status_code == 200
+
+    async def __aenter__(self):
+        self._client = httpx.AsyncClient(
+            base_url=self.host,
+        )
         try:
-            self._client.rss_add_feed(url, item_path)
-        except Conflict409Error:
-            logger.warning(f"[Downloader] RSS feed {url} already exists")
+            authed = await self.auth()
+            if not authed == "Ok.":
+                logger.error("[Downloader] Failed authing to qbittorrent.")
+                logger.warning("[Downloader] Please check username/password in settings.")
+                raise RuntimeError(authed)
+            return self
+        except httpx.ReadTimeout:
+            logger.error("[Downloader] Failed connecting to qbittorrent.")
+            logger.warning("[Downloader] Please check host in settings.")
+            raise RuntimeError("Failed connecting to qbittorrent.")
 
-    def rss_remove_item(self, item_path):
-        try:
-            self._client.rss_remove_item(item_path)
-        except Conflict409Error:
-            logger.warning(f"[Downloader] RSS item {item_path} does not exist")
-
-    def rss_get_feeds(self):
-        return self._client.rss_items()
-
-    def rss_set_rule(self, rule_name, rule_def):
-        self._client.rss_set_rule(rule_name, rule_def)
-
-    def move_torrent(self, hashes, new_location):
-        self._client.torrents_set_location(new_location, hashes)
-
-    def get_download_rule(self):
-        return self._client.rss_rules()
-
-    def get_torrent_path(self, _hash):
-        return self._client.torrents_info(hashes=_hash)[0].save_path
-
-    def set_category(self, _hash, category):
-        try:
-            self._client.torrents_set_category(category, hashes=_hash)
-        except Conflict409Error:
-            logger.warning(f"[Downloader] Category {category} does not exist")
-            self.add_category(category)
-            self._client.torrents_set_category(category, hashes=_hash)
-
-    def check_connection(self):
-        return self._client.app_version()
-
-    def remove_rule(self, rule_name):
-        self._client.rss_remove_rule(rule_name)
-
-    def add_tag(self, _hash, tag):
-        self._client.torrents_add_tags(tags=tag, hashes=_hash)
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.logout()
+        await self._client.aclose()
