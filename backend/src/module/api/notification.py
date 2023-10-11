@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from module.conf.config import settings
 from module.notification import Notifier
@@ -14,8 +14,25 @@ def get_notifier():
     )
 
 
+@router.get("/total")
+async def get_total_notification(notifier: Notifier = Depends(get_notifier)):
+    cursor = notifier.q.conn.cursor()
+    stmt = """SELECT COUNT(*) FROM Queue WHERE status=0"""
+
+    try:
+        total = cursor.execute(stmt).fetchone()[0]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return dict(code=0, msg="success", data=dict(total=total))
+
+
 @router.get("")
-async def get_notification(notifier: Notifier = Depends(get_notifier)):
+async def get_notification(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=10, le=20, description="max limit is 20 per page"),
+    notifier: Notifier = Depends(get_notifier),
+):
     cursor = notifier.q.conn.cursor()
     stmt = r"""
     SELECT message_id, data, in_time as datetime, status as has_read
@@ -23,6 +40,9 @@ async def get_notification(notifier: Notifier = Depends(get_notifier)):
     WHERE status=0
     ORDER BY in_time DESC
     """
+
+    offset = (page - 1) * limit
+    stmt += f"LIMIT {limit} OFFSET {offset}"
 
     try:
         rows = cursor.execute(stmt).fetchall()

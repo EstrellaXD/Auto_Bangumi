@@ -1,17 +1,18 @@
 <script setup lang="ts">
-import { NDataTable } from 'naive-ui';
-import type { PaginationProps } from 'naive-ui';
+import { NDataTable, NPagination } from 'naive-ui';
 
 definePage({
   name: 'Notification',
 });
 
-const { notifications } = useNotification();
+const router = useRouter();
+
+const { total, page, limit, notifications } = useNotificationPage();
 const columns = ref<{ title: string; key: string }[]>([]);
 
 watchEffect(() => {
   if (notifications.value && notifications.value.length > 0) {
-    columns.value = Object.keys(omit(notifications.value[0], ['hasRead'])).map(
+    columns.value = Object.keys(omit(notifications.value[0], ['has_read'])).map(
       (key) => ({
         title: key,
         key,
@@ -20,29 +21,28 @@ watchEffect(() => {
   }
 });
 
-const pagination = reactive<PaginationProps>({
-  page: 1,
-  pageSize: 20,
-  showSizePicker: false,
-  onChange: (page: number) => {
-    pagination.page = page;
-  },
-  onUpdatePageSize: (pageSize: number) => {
-    pagination.pageSize = pageSize;
-    pagination.page = 1;
-  },
-});
+function onUpdatePage(newPage: number) {
+  router.push({ query: { page: newPage } });
+  page.value = newPage;
+}
 </script>
 
 <template>
   <ab-container :title="$t('notification.title')" mt-12px>
-    <NDataTable
-      :columns="columns"
-      :data="notifications"
-      :pagination="pagination"
-      :row-key="(rowData) => rowData.id"
-      :max-height="600"
-      virtual-scroll
-    ></NDataTable>
+    <div fx-cer flex-col justify-center space-y-4>
+      <NDataTable
+        :columns="columns"
+        :data="notifications"
+        :row-key="(rowData) => rowData.id"
+        :max-height="600"
+        virtual-scroll
+      />
+      <NPagination
+        :page="page"
+        :item-count="total"
+        :page-size="limit"
+        @update:page="onUpdatePage"
+      />
+    </div>
   </ab-container>
 </template>

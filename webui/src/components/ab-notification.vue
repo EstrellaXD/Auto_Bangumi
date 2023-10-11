@@ -27,7 +27,7 @@ onUnmounted(() => {
     </template>
     <NList v-if="notifications.length > 0" hoverable clickable>
       <template v-for="m in notifications" :key="m.id">
-        <NListItem @click="m.hasRead = !m.hasRead">
+        <NListItem @click="m.has_read = !m.has_read">
           <ab-notification-item v-bind="m"></ab-notification-item>
         </NListItem>
       </template>

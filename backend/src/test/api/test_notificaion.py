@@ -13,6 +13,43 @@ class TestNotificationAPI:
         cls.content = NotificationContent(content="fooo")
 
     @pytest.mark.asyncio
+    async def test_get_total_notification(
+        self, aclient: AsyncClient, mocker: MockerFixture
+    ):
+        mocked_db = sqlite3.connect(":memory:")
+        mocked_db.execute(
+            "CREATE TABLE Queue (message_id TEXT, data TEXT, in_time INT, status INT)"
+        )
+        mocked_db.execute(
+            "INSERT INTO Queue (message_id, data, in_time, status) VALUES (?, ?, ?, ?)",
+            ("foo", "bar", 123, 0),
+        )
+        mocked_db.commit()
+
+        m = mocker.patch.object(Notifier, "q", return_value=object())
+        m.conn = mocked_db
+
+        resp = await aclient.get("/v1/notification/total")
+        assert resp.status_code == 200
+        assert resp.json() == dict(code=0, msg="success", data=dict(total=1))
+
+    @pytest.mark.asyncio
+    async def test_get_total_notification_with_exception(
+        self, aclient: AsyncClient, mocker: MockerFixture
+    ):
+        mocked_conn = mocker.MagicMock()
+        mocked_cursor = mocker.MagicMock()
+        mocked_conn.cursor.return_value = mocked_cursor
+        mocked_cursor.execute.side_effect = Exception("unknown error")
+
+        m = mocker.patch.object(Notifier, "q", return_value=object())
+        m.conn = mocked_conn
+
+        resp = await aclient.get("/v1/notification/total")
+        assert resp.status_code == 500
+        assert resp.json() == dict(detail="unknown error")
+
+    @pytest.mark.asyncio
     async def test_get_notification(self, aclient: AsyncClient, mocker: MockerFixture):
         mocked_db = sqlite3.connect(":memory:")
         mocked_db.execute(
@@ -27,7 +64,7 @@ class TestNotificationAPI:
         m = mocker.patch.object(Notifier, "q", return_value=object())
         m.conn = mocked_db
 
-        resp = await aclient.get("/v1/notification")
+        resp = await aclient.get("/v1/notification", params={"page": 1, "limit": 20})
         assert resp.status_code == 200
         assert resp.json() == dict(
             code=0,

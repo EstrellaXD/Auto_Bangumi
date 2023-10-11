@@ -4,5 +4,5 @@ export interface Notification {
   title: string;
   content: string;
   datetime: string;
-  hasRead: boolean;
+  has_read: boolean;
 }

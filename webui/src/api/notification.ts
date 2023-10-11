@@ -1,6 +1,16 @@
 export const apiNotification = {
-  async get() {
-    const { data } = await axios.get('api/v1/notification');
+  async getTotal() {
+    const { data } = await axios.get('api/v1/notification/total');
+    return data;
+  },
+
+  async get({ page, limit }: { page?: number; limit?: number }) {
+    const { data } = await axios.get('api/v1/notification', {
+      params: {
+        page,
+        limit,
+      },
+    });
     return data;
   },
 
