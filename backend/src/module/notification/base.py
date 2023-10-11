@@ -79,7 +79,7 @@ class NotifierRequestMixin:
                 method, entrypoint, data=data, params=params, headers=headers
             )
 
-            return await resp.json()
+            return resp.json()
 
     @retry(
         stop=stop_after_attempt(3),

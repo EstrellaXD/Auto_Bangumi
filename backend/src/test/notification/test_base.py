@@ -62,48 +62,46 @@ class TestNotifierAdapter:
 
 class TestNotifierRequestMixin:
     @pytest.mark.asyncio
-    async def test_asend(self, mocker: MockerFixture):
-        return_value = httpx.Response(
-            status_code=200,
-            json={"hello": "world"},
-        )
+    async def test_asend(self, httpx_mock: HTTPXMock):
+        def custom_response(request: httpx.Request):
+            return httpx.Response(status_code=200, json={"hello": "world"})
 
-        m = mocker.patch.object(
-            NotifierRequestMixin, "asend", return_value=return_value
-        )
+        httpx_mock.add_callback(custom_response)
 
         resp = await NotifierRequestMixin().asend(
-            entrypoint="https://example.com",
+            entrypoint="/send",
+            base_url="https://example.com",
             method="POST",
             params={"foo": "bar"},
             data={"hello": "world"},
             headers={"Content-Type": "application/json"},
         )
 
-        assert resp.status_code == 200
-        assert resp.json() == {"hello": "world"}
+        assert resp == {"hello": "world"}
 
-        m.assert_called_once_with(
-            entrypoint="https://example.com",
+        httpx_mock.get_request(
+            url="https://example.com",
             method="POST",
-            params={"foo": "bar"},
-            data={"hello": "world"},
-            headers={"Content-Type": "application/json"},
+            match_json={"hello": "world"},
+            match_headers={"Content-Type": "application/json"},
         )
 
     @pytest.mark.asyncio
     async def test_asend_with_retry_error(self, httpx_mock: HTTPXMock):
-        httpx_mock.add_exception(
-            Exception("Request Timeout"),
-            url="https://example.com",
-            method="POST",
-            match_headers={"Content-Type": "application/json"},
-        )
+        httpx_mock.add_exception(Exception("Request Timeout"))
 
         with pytest.raises(Exception) as exc:
             await NotifierRequestMixin().asend(
-                entrypoint="https://example.com",
+                entrypoint="/send",
+                base_url="https://example.com",
                 method="POST",
+                params={"foo": "bar"},
+                data={"hello": "world"},
+                headers={"Content-Type": "application/json"},
+            )
+
+            httpx_mock.get_request(
+                url="https://example.com/send",
                 params={"foo": "bar"},
                 data={"hello": "world"},
                 headers={"Content-Type": "application/json"},
@@ -115,7 +113,8 @@ class TestNotifierRequestMixin:
         m = mocker.patch.object(NotifierRequestMixin, "send", return_value="ok")
 
         NotifierRequestMixin().send(
-            entrypoint="https://example.com",
+            entrypoint="/send",
+            base_url="https://example.com",
             method="POST",
             params={"foo": "bar"},
             data={"hello": "world"},
@@ -123,7 +122,8 @@ class TestNotifierRequestMixin:
         )
 
         m.assert_called_once_with(
-            entrypoint="https://example.com",
+            entrypoint="/send",
+            base_url="https://example.com",
             method="POST",
             params={"foo": "bar"},
             data={"hello": "world"},
@@ -139,7 +139,8 @@ class TestNotifierRequestMixin:
 
         with pytest.raises(RetryError) as exc:
             NotifierRequestMixin().send(
-                entrypoint="https://example.com",
+                entrypoint="/send",
+                base_url="https://example.com",
                 method="POST",
                 params={"foo": "bar"},
                 data={"hello": "world"},
@@ -149,7 +150,8 @@ class TestNotifierRequestMixin:
         assert exc.match("RetryError")
 
         m.assert_called_once_with(
-            entrypoint="https://example.com",
+            entrypoint="/send",
+            base_url="https://example.com",
             method="POST",
             params={"foo": "bar"},
             data={"hello": "world"},
