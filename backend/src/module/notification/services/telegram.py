@@ -54,9 +54,12 @@ class TelegramService(NotifierRequestMixin, NotifierAdapter):
         if notification:
             data.caption = self.template.format(**notification.dict())
 
-            local_poster = load_image(notification.poster_path)
-            if local_poster:
-                data.photo = local_poster
+            try:
+                local_poster = load_image(notification.poster_path)
+                if local_poster:
+                    data.photo = local_poster
+            except Exception as e:
+                logger.warning(f"Failed to load poster: {e}")
 
         elif record:
             data.caption = make_template(record)
@@ -89,15 +92,19 @@ class TelegramService(NotifierRequestMixin, NotifierAdapter):
 
     def send(self, **kwargs) -> Any:
         data = self._process_input(**kwargs)
+        params = dict(
+            entrypoint=f"/bot{self.token}/sendPhoto",
+            base_url=self.base_url,
+            method="POST",
+        )
+        if not isinstance(data.photo, bytes):
+            params["data"] = data.dict()
+        else:
+            params["data"] = data.dict(exclude={"photo"})
+            params["files"] = dict(photo=data.photo)
 
         with ThreadPoolExecutor(max_workers=1) as worker:
-            future = worker.submit(
-                super().send,
-                entrypoint=f"/bot{self.token}/sendPhoto",
-                base_url=self.base_url,
-                method="POST",
-                data=data,
-            )
+            future = worker.submit(super().send, **params)
 
             res = future.result()
 
