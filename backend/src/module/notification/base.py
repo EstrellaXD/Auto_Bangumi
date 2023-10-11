@@ -4,7 +4,7 @@ from textwrap import dedent
 from typing import Any, Literal, Optional
 from urllib.parse import urljoin
 
-import aiohttp
+import httpx
 import requests
 from pydantic import BaseModel, Field
 from tenacity import after_log, retry, stop_after_attempt, wait_fixed
@@ -74,8 +74,8 @@ class NotifierRequestMixin:
             f"headers={headers}"
         )
 
-        async with aiohttp.ClientSession(base_url=base_url) as req:
-            resp: aiohttp.ClientResponse = await req.request(
+        async with httpx.AsyncClient(base_url=base_url) as req:
+            resp: httpx.Response = await req.request(
                 method, entrypoint, data=data, params=params, headers=headers
             )
 

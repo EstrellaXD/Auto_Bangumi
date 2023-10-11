@@ -29,3 +29,4 @@ semver==3.0.1
 openai==0.28.1
 tenacity==8.2.3
 litequeue==0.7
+httpx==0.25.0
