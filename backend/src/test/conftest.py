@@ -1,9 +1,13 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
+from unittest import mock
+from fastapi import Cookie
+import httpx
 
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
+from pytest_mock import MockerFixture
 from main import app
 from module.models.bangumi import Notification
 from module.notification.base import (
@@ -11,6 +15,8 @@ from module.notification.base import (
     DEFAULT_MESSAGE_TEMPLATE,
     NotificationContent,
 )
+from module.security.api import get_current_user
+from module.security.jwt import create_access_token
 
 
 @pytest.fixture
@@ -56,7 +62,20 @@ def fake_content():
     return NotificationContent(content="test content")
 
 
+@pytest.fixture
+def fake_token():
+    return create_access_token(data={"sub": "test"}, expires_delta=timedelta(days=1))
+
+
 @pytest_asyncio.fixture
-async def aclient():
+async def aclient(mocker: MockerFixture):
+    # mock get_current_user to avoid authorization
+    # see: https://github.com/tiangolo/fastapi/issues/3331
+    app.dependency_overrides[get_current_user] = lambda: mocker.MagicMock(
+        return_value="test"
+    )
+
     async with AsyncClient(app=app, base_url="http://localhost:7892/api") as client:
         yield client
+
+    app.dependency_overrides.clear()

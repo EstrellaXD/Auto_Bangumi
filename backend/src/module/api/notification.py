@@ -3,8 +3,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from module.conf.config import settings
 from module.notification import Notifier
 from module.notification.base import NotificationContent
+from module.security.api import get_current_user
 
-router = APIRouter(prefix="/notification", tags=["notification"])
+router = APIRouter(
+    prefix="/notification",
+    tags=["notification"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 def get_notifier():

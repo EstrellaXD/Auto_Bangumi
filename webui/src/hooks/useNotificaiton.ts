@@ -1,8 +1,7 @@
 import type { Notification } from '#/notification';
 
 export const useNotification = createSharedComposable(() => {
-  // TODO: add auth
-  // const { auth } = useAuth();
+  const { auth } = useAuth();
 
   const notifications = ref<Notification[]>([]);
   const total = ref(0);
@@ -13,7 +12,9 @@ export const useNotification = createSharedComposable(() => {
     onResult((res) => {
       total.value = res.data.total;
     });
-    execute();
+    if (auth.value !== '') {
+      execute();
+    }
   }
 
   function getNotification() {
@@ -33,11 +34,9 @@ export const useNotification = createSharedComposable(() => {
       });
     });
 
-    // TODO: add auth
-    // if (auth.value !== '') {
-    //     execute();
-    // }
-    execute({ page: 1, limit: 10 });
+    if (auth.value !== '') {
+      execute({ page: 1, limit: 10 });
+    }
   }
 
   const { pause: offUpdate, resume: onUpdate } = useIntervalFn(
@@ -61,8 +60,7 @@ export const useNotification = createSharedComposable(() => {
 });
 
 export const useNotificationPage = createSharedComposable(() => {
-  // TODO: add auth
-  // const { auth } = useAuth();
+  const { auth } = useAuth();
 
   const { total } = useNotification();
   const { execute, onResult } = useApi(apiNotification.get, {});
@@ -83,16 +81,13 @@ export const useNotificationPage = createSharedComposable(() => {
     });
   });
 
-  // TODO: add auth
-  // if (auth.value !== '') {
-  //     execute();
-  // }
+  if (auth.value !== '') {
+    execute({ page: page.value, limit: limit.value });
+  }
 
   watch([page, limit], () => {
     execute({ page: page.value, limit: limit.value });
   });
-
-  execute({ page: page.value, limit: limit.value });
 
   return {
     total,
