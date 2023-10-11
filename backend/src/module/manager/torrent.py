@@ -40,19 +40,16 @@ class TorrentManager(Database):
         data = self.bangumi.search_id(int(_id))
         if isinstance(data, Bangumi):
             with DownloadClient() as client:
-                # client.remove_rule(data.rule_name)
-                # client.remove_rss_feed(data.official_title)
                 self.rss.delete(data.official_title)
                 self.bangumi.delete_one(int(_id))
                 if file:
                     torrent_message = self.delete_torrents(data, client)
-                    return torrent_message
                 logger.info(f"[Manager] Delete rule for {data.official_title}")
                 return ResponseModel(
                     status_code=200,
                     status=True,
-                    msg_en=f"Delete rule for {data.official_title}",
-                    msg_zh=f"删除 {data.official_title} 规则",
+                    msg_en=f"Delete rule for {data.official_title}. {torrent_message.msg_en if file else ''}",
+                    msg_zh=f"删除 {data.official_title} 规则。{torrent_message.msg_zh if file else ''}",
                 )
         else:
             return ResponseModel(
