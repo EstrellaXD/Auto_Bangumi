@@ -11,7 +11,7 @@ from module.notification.base import (
     NotifierAdapter,
     NotifierRequestMixin,
 )
-from module.utils.bangumi_data import get_poster
+from module.utils.cache_image import load_image
 from module.utils.log import make_template
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ class TelegramPhotoMessage(BaseModel):
     # see: https://core.telegram.org/bots/api#sendphoto
     chat_id: str = Field(..., description="telegram channel name id")
     caption: str = Field(..., description="the caption for photo")
-    photo: str = Field(
+    photo: str | bytes = Field(
         DEFAULT_NOTIFICATION_IMAGE_PLACEHOLDER, description="the photo url"
     )
     disable_notification: bool = True
@@ -52,9 +52,12 @@ class TelegramService(NotifierRequestMixin, NotifierAdapter):
         data = TelegramPhotoMessage(chat_id=self.chat_id, caption="")
 
         if notification:
-            notification.poster_path = get_poster(notification.official_title)
             data.caption = self.template.format(**notification.dict())
-            data.photo = notification.poster_path
+
+            local_poster = load_image(notification.poster_path)
+            if local_poster:
+                data.photo = local_poster
+
         elif record:
             data.caption = make_template(record)
         elif content:
@@ -66,13 +69,18 @@ class TelegramService(NotifierRequestMixin, NotifierAdapter):
 
     async def asend(self, **kwargs) -> Any:
         data = self._process_input(**kwargs)
-
-        res = await super().asend(
+        params = dict(
             entrypoint=f"/bot{self.token}/sendPhoto",
             base_url=self.base_url,
             method="POST",
-            data=data,
         )
+        if not isinstance(data.photo, bytes):
+            params["data"] = data.dict()
+        else:
+            params["data"] = data.dict(exclude={"photo"})
+            params["files"] = dict(photo=data.photo)
+
+        res = await super().asend(**params)
 
         if res:
             logger.debug(f"Telegram notification: {res}")

@@ -6,11 +6,11 @@ from pydantic import BaseModel, Field, validator
 
 from module.models import Notification
 from module.notification.base import (
+    DEFAULT_NOTIFICATION_IMAGE_PLACEHOLDER,
     NotificationContent,
     NotifierAdapter,
     NotifierRequestMixin,
 )
-from module.utils.bangumi_data import get_poster
 from module.utils.log import make_template
 
 logger = logging.getLogger(__name__)
@@ -56,7 +56,9 @@ class SlackService(NotifierRequestMixin, NotifierAdapter):
 
         if notification:
             data.title = notification.official_title
-            notification.poster_path = get_poster(notification.official_title)
+            # TODO: get raw poster link
+            # notification.poster_path = get_poster(notification.official_title)
+            notification.poster_path = DEFAULT_NOTIFICATION_IMAGE_PLACEHOLDER
             data.text = self.template.format(**notification.dict())
             data.image_url = notification.poster_path
 

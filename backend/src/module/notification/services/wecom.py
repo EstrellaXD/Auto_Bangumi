@@ -63,7 +63,9 @@ class WecomService(NotifierRequestMixin, NotifierAdapter):
         if notification:
             data.description = self.template.format(**notification.dict())
             data.title = "【番剧更新】" + notification.official_title
-            notification.poster_path = get_poster(notification.official_title)
+            # TODO: get raw poster link
+            # notification.poster_path = get_poster(notification.official_title)
+            notification.poster_path = DEFAULT_NOTIFICATION_IMAGE_PLACEHOLDER
             data.picurl = notification.poster_path
 
         elif record:
