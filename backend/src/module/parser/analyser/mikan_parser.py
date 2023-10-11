@@ -1,3 +1,5 @@
+import re
+
 from bs4 import BeautifulSoup
 from urllib3.util import parse_url
 
@@ -14,6 +16,7 @@ def mikan_parser(homepage: str):
         official_title = soup.select_one(
             'p.bangumi-title a[href^="/Home/Bangumi/"]'
         ).text
+        official_title = re.sub(r"第.*季", "", official_title)
         if poster_div:
             poster_path = poster_div.split("url('")[1].split("')")[0]
             img = req.get_content(f"https://{root_path}{poster_path}")
