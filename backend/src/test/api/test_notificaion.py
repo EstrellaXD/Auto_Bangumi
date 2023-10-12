@@ -109,24 +109,28 @@ class TestNotificationAPI:
         assert resp.json() == dict(detail="unknown error")
 
     @pytest.mark.asyncio
-    async def test_done_notification(self, aclient: AsyncClient, mocker: MockerFixture):
+    async def test_set_notification_read(
+        self, aclient: AsyncClient, mocker: MockerFixture
+    ):
         m = mocker.patch.object(Notifier, "q", return_value=object())
         m.done = mocker.MagicMock()
 
-        resp = await aclient.get("/v1/notification/read", params={"message_id": "foo"})
+        resp = await aclient.post(
+            "/v1/notification/read", json={"message_ids": ["foo"]}
+        )
         assert resp.status_code == 200
         assert resp.json() == dict(code=0, msg="success")
         m.done.assert_called_once_with("foo")
 
     @pytest.mark.asyncio
-    async def test_done_notification_with_exception(
+    async def test_set_notification_read_with_exception(
         self, aclient: AsyncClient, mocker: MockerFixture
     ):
         mocked_done = mocker.MagicMock(side_effect=Exception("unknown error"))
         m = mocker.patch.object(Notifier, "q", return_value=object())
         m.done = mocked_done
 
-        resp = await aclient.get("/v1/notification/read", params={"message_id": "foo"})
+        resp = await aclient.post("/v1/notification/read", json={"message_id": "foo"})
         assert resp.status_code == 500
         assert resp.json() == dict(detail="unknown error")
         m.done.assert_called_once_with("foo")

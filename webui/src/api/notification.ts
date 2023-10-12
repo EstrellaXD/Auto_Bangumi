@@ -14,7 +14,7 @@ export const apiNotification = {
     return data;
   },
 
-  async getById({ message_id }: { message_id: String }) {
+  async getById({ message_id }: { message_id: string }) {
     const { data } = await axios.get('api/v1/notification/get', {
       params: {
         message_id,
@@ -23,7 +23,7 @@ export const apiNotification = {
     return data;
   },
 
-  async send({ content }: { content: String }) {
+  async send({ content }: { content: string }) {
     const { data } = await axios.post('api/v1/notification/send', {
       content,
     });
@@ -31,16 +31,14 @@ export const apiNotification = {
     return data;
   },
 
-  async read({ message_id }: { message_id: String }) {
-    const { data } = await axios.get('api/v1/notification/read', {
-      params: {
-        message_id,
-      },
+  async setRead({ message_ids }: { message_ids: string[] }) {
+    const { data } = await axios.post('api/v1/notification/read', {
+      message_ids,
     });
     return data;
   },
 
-  async cleanAllRead() {
+  async cleanAll() {
     const { data } = await axios.get('api/v1/notification/clean');
     return data;
   },

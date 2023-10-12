@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class RssLink(BaseModel):
@@ -16,3 +16,7 @@ class ChangeConfig(BaseModel):
 
 class ChangeRule(BaseModel):
     rule: dict
+
+
+class NotificationMessageIds(BaseModel):
+    message_ids: list[str] = Field(..., description="message ids to be set read")

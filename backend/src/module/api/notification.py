@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 
 from module.conf.config import settings
+from module.models.api import NotificationMessageIds
 from module.notification import Notifier
 from module.notification.base import NotificationContent
 from module.security.api import get_current_user
@@ -66,12 +67,14 @@ async def get_notification(
     )
 
 
-@router.get("/read")
-async def done_notification(
-    message_id: str, notifier: Notifier = Depends(get_notifier)
+@router.post("/read")
+async def set_notification_read(
+    body: NotificationMessageIds,
+    notifier: Notifier = Depends(get_notifier),
 ):
     try:
-        notifier.q.done(message_id)
+        for message_id in body.message_ids:
+            notifier.q.done(message_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
