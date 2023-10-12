@@ -31,7 +31,7 @@ const { logout } = useAuth();
 const RSS = h(
   'span',
   { class: ['rel', 'left-2px'] },
-  h(InlineSvg, { src: '/images/RSS.svg' })
+  h(InlineSvg, { src: './images/RSS.svg' })
 );
 
 const items = [

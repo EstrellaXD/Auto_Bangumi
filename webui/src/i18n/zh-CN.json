@@ -148,8 +148,11 @@
       "warning": "警告：实验功能尚未稳定，请谨慎使用",
       "enable": "启用 OpenAI",
       "api_key": "OpenAI API Key",
-      "api_base": "OpenAI API Base URL",
-      "model": "OpenAI 模型"
+      "api_base": "OpenAI API Base URL (Azure entrypoint)",
+      "model": "OpenAI 模型",
+      "api_type": "OpenAI API 类型",
+      "api_version": "Azure OpenAI 版本",
+      "deployment_id": "Azure OpenAI Deployment ID"
     },
     "media_player_set": {
       "title": "播放器设置",

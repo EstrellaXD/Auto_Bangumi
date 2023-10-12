@@ -28,7 +28,7 @@ services:
     restart: unless-stopped
 
   AutoBangumi:
-    image: estrellaxd/auto_bangumi:latest
+    image: "ghcr.io/estrellaxd/auto_bangumi:latest"
     container_name: AutoBangumi
     ports:
       - 7892:7892

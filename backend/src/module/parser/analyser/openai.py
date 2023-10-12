@@ -1,6 +1,7 @@
-import asyncio
 import json
 import logging
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any
 
 import openai
 
@@ -98,25 +99,13 @@ class OpenAIParser:
         if not prompt:
             prompt = DEFAULT_PROMPT
 
-        async def complete() -> str:
-            resp = await openai.ChatCompletion.acreate(
-                api_key=self._api_key,
-                api_base=self.api_base,
-                model=self.model,
-                messages=[
-                    dict(role="system", content=prompt),
-                    dict(role="user", content=text),
-                ],
-                # set temperature to 0 to make results be more stable and reproducible.
-                temperature=0,
-                **self.openai_kwargs,
-            )
+        params = self._prepare_params(text, prompt)
+
+        with ThreadPoolExecutor(max_workers=1) as worker:
+            future = worker.submit(openai.ChatCompletion.create, **params)
+            resp = future.result()
 
             result = resp["choices"][0]["message"]["content"]
-            return result
-
-        loop = asyncio.get_event_loop()
-        result = loop.run_until_complete(complete())
 
         if asdict:
             try:
@@ -127,3 +116,36 @@ class OpenAIParser:
         logger.debug(f"the parsed result is: {result}")
 
         return result
+
+    def _prepare_params(self, text: str, prompt: str) -> dict[str, Any]:
+        """_prepare_params is a helper function to prepare params for openai library.
+        There are some differences between openai and azure openai api, so we need to
+        prepare params for them.
+
+        Args:
+            text (str): the text to be parsed
+            prompt (str): the custom prompt
+
+        Returns:
+            dict[str, Any]: the prepared key value pairs.
+        """
+        params = dict(
+            api_key=self._api_key,
+            api_base=self.api_base,
+            messages=[
+                dict(role="system", content=prompt),
+                dict(role="user", content=text),
+            ],
+            # set temperature to 0 to make results be more stable and reproducible.
+            temperature=0,
+        )
+
+        api_type = self.openai_kwargs.get("api_type", "openai")
+        if api_type == "azure":
+            params["deployment_id"] = self.openai_kwargs.get("deployment_id", "")
+            params["api_version"] = self.openai_kwargs.get("api_version", "2023-05-15")
+            params["api_type"] = "azure"
+        else:
+            params["model"] = self.model
+
+        return params

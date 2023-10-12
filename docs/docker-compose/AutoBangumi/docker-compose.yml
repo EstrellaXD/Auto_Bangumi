@@ -1,0 +1,17 @@
+version: "3.4"
+
+services:
+  AutoBangumi:
+    image: "ghcr.io/estrellaxd/auto_bangumi:latest"
+    container_name: AutoBangumi
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data
+    network_mode: bridge
+    ports:
+      - "7892:7892"
+    restart: unless-stopped
+    dns:
+      - 223.5.5.5
+    environment:
+      - AB_METHOD=Advance
