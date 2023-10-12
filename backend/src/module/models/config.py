@@ -1,7 +1,9 @@
 from os.path import expandvars
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from module.notification.base import NotificationWebhook
 from module.notification.services import NotificationType
 
 
@@ -69,6 +71,10 @@ class Proxy(BaseModel):
         return expandvars(self.password_)
 
 
+class NotificationWebhookConfig(NotificationWebhook):
+    enable: bool = Field(False, description="Enable webhook")
+
+
 class Notification(BaseModel):
     enable: bool = Field(False, description="Enable notification")
     type: NotificationType = Field("telegram", description="Notification type")
@@ -76,6 +82,10 @@ class Notification(BaseModel):
     chat_id_: str = Field("", alias="chat_id", description="Notification chat id")
     base_url: str = Field("", description="Notification base url")
     channel: str = Field("", description="Notification channel")
+    webhook: NotificationWebhookConfig = Field(
+        default_factory=NotificationWebhookConfig,
+        description="webhook config for notification",
+    )
 
     @property
     def token(self):

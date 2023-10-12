@@ -6,7 +6,7 @@ from urllib.parse import urljoin
 
 import httpx
 import requests
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from tenacity import after_log, retry, stop_after_attempt, wait_fixed
 
 logger = logging.getLogger(__name__)
@@ -120,3 +120,33 @@ class NotifierRequestMixin:
 
 class NotificationContent(BaseModel):
     content: str = Field("", description="notification content")
+
+
+class NotificationWebhook(BaseModel):
+    method: str = Field(
+        "GET",
+        title="Method",
+        description="The method of webhook, it usually is GET or POST",
+    )
+    url: str = Field("", title="URL", description="The URL of webhook")
+    headers: Optional[dict] = Field(
+        default_factory=dict, title="Headers", description="The headers of webhook"
+    )
+    body: Optional[dict] = Field(
+        default_factory=dict,
+        title="Body",
+        alias="data",
+        description="The body of webhook",
+    )
+    query: Optional[dict] = Field(
+        default_factory=dict,
+        title="Query",
+        alias="params",
+        description="The query of webhook",
+    )
+
+    @validator("method")
+    def make_upper_case(cls, v) -> str:
+        upper_case = v.upper()
+        assert upper_case in ["GET", "POST"], "method must be GET or POST"
+        return upper_case

@@ -1,12 +1,14 @@
 import json
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from typing import get_args
 
+import httpx
 from litequeue import SQLQueue
 from tenacity import RetryError
 
 from module.models.bangumi import Notification
-from module.notification.base import NotificationContent
+from module.notification.base import NotificationContent, NotificationWebhook
 
 from .services import NotificationService, NotificationType, services
 
@@ -88,6 +90,17 @@ class Notifier:
             e.reraise()
         except Exception as e:
             logger.warning(f"Failed to send notification: {e}")
+
+    def send_webhook(self, webhook: NotificationWebhook, **kwargs):
+        with ThreadPoolExecutor(max_workers=1) as worker:
+            future = worker.submit(httpx.request, **webhook.dict(by_alias=True))
+
+        try:
+            ret = future.result()
+        except Exception as e:
+            logger.warning(f"Failed to send webhook: {e}")
+        else:
+            logger.debug(f"Webhook response: {ret}")
 
     def __enter__(self):
         return self

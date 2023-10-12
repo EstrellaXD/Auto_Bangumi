@@ -50,6 +50,14 @@ export interface Config {
     channel: string;
     // notification service base url
     base_url: string;
+    webhook: {
+      enable: boolean;
+      url: string;
+      method: 'GET' | 'POST';
+      query: Map<string, string>;
+      body: Map<string, string>;
+      headers: Map<string, string>;
+    };
   };
   experimental_openai: {
     enable: boolean;
@@ -107,6 +115,14 @@ export const initConfig: Config = {
     chat_id: '',
     channel: '',
     base_url: '',
+    webhook: {
+      enable: false,
+      url: '',
+      method: 'GET',
+      query: new Map(),
+      body: new Map(),
+      headers: new Map(),
+    },
   },
   experimental_openai: {
     enable: false,
@@ -125,6 +141,7 @@ export type BangumiManage = getItem<'bangumi_manage'>;
 export type Log = getItem<'log'>;
 export type Proxy = getItem<'proxy'>;
 export type Notification = getItem<'notification'>;
+export type NotificationWebhook = Notification['webhook'];
 export type ExperimentalOpenAI = getItem<'experimental_openai'>;
 
 /** 下载方式 */

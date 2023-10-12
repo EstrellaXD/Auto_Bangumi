@@ -3,7 +3,10 @@ import logging
 from unittest import mock
 
 import pytest
+from module.models.config import NotificationWebhookConfig
 from module.notification import Notifier, NotifierHandler
+from module.notification.base import NotificationWebhook
+from pytest_httpx import HTTPXMock
 
 
 class TestNotifierHandler:
@@ -135,3 +138,73 @@ class TestNotifier:
             self.notifier.send(notification=fake_notification)
 
         assert "Request timeout" in caplog.text
+
+    def test_send_webhook(
+        self, httpx_mock: HTTPXMock, caplog: pytest.LogCaptureFixture
+    ):
+        caplog.set_level("DEBUG")
+        httpx_mock.add_response(
+            status_code=200,
+            json={"message": "ok"},
+        )
+
+        webhook = NotificationWebhook(
+            url="https://example.com",
+            method="POST",
+            body={"hello": "world"},
+            headers={"Content-Type": "application/json"},
+        )
+        self.notifier.send_webhook(webhook=webhook)
+
+        httpx_mock.get_request(
+            url="https://example.com/send",
+            method="POST",
+            match_headers={"Content-Type": "application/json"},
+            match_json=b'{"hello": "world"}',
+        )
+        "Webhook response" in caplog.text
+
+    def test_webhook_with_Exception(
+        self, httpx_mock: HTTPXMock, caplog: pytest.LogCaptureFixture
+    ):
+        caplog.set_level("DEBUG")
+        httpx_mock.add_exception(Exception("Request timeout"))
+
+        webhook = NotificationWebhook(
+            url="https://example.com",
+            method="POST",
+            body={"hello": "world"},
+            headers={"Content-Type": "application/json"},
+        )
+        self.notifier.send_webhook(webhook=webhook)
+
+        httpx_mock.get_request(
+            url="https://example.com/send",
+            method="POST",
+            match_headers={"Content-Type": "application/json"},
+            match_json=b'{"hello": "world"}',
+        )
+        "Failed to send webhook" in caplog.text
+
+    def test_send_webhook_with_NotificationWebhookConfig(self, httpx_mock: HTTPXMock):
+        httpx_mock.add_response(
+            status_code=200,
+            json={"message": "ok"},
+        )
+
+        webhook_config = NotificationWebhookConfig(
+            enable=True,
+            url="https://example.com",
+            method="POST",
+            body={"hello": "world"},
+            headers={"Content-Type": "application/json"},
+        )
+
+        self.notifier.send_webhook(webhook=webhook_config)
+
+        httpx_mock.get_request(
+            url="https://example.com/send",
+            method="POST",
+            match_headers={"Content-Type": "application/json"},
+            match_json=b'{"hello": "world"}',
+        )

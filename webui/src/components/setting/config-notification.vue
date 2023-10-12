@@ -67,6 +67,11 @@ const items: SettingItem<Notification>[] = [
       placeholder: 'slack channel',
     },
   },
+  // {
+  //   configKey: 'webhook',
+  //   label: () => t('config.notification_set.webhook'),
+  //   type: 'dynamic-tags',
+  // },
 ];
 
 const isSending = ref(false);

@@ -6,9 +6,11 @@ from module.notification.base import (
     DEFAULT_LOG_TEMPLATE,
     DEFAULT_MESSAGE_TEMPLATE,
     NotificationContent,
+    NotificationWebhook,
     NotifierAdapter,
     NotifierRequestMixin,
 )
+from pydantic import ValidationError
 from pytest_httpx import HTTPXMock
 from pytest_mock import MockerFixture
 from tenacity import RetryError
@@ -163,3 +165,51 @@ def test_NotificationContent():
     content = NotificationContent(content="Test message")
     assert content.content == "Test message"
     assert content.dict() == {"content": "Test message"}
+
+
+class TestNotificationWebhook:
+    def test_init_property(self):
+        webhook = NotificationWebhook(
+            url="https://example.com",
+            method="POST",
+            params={"foo": "bar"},
+            data={"hello": "world"},
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert webhook.url == "https://example.com"
+        assert webhook.method == "POST"
+        assert webhook.query == {"foo": "bar"}
+        assert webhook.body == {"hello": "world"}
+        assert webhook.headers == {"Content-Type": "application/json"}
+        assert webhook.dict() == {
+            "url": "https://example.com",
+            "method": "POST",
+            "query": {"foo": "bar"},
+            "body": {"hello": "world"},
+            "headers": {"Content-Type": "application/json"},
+        }
+
+        assert webhook.dict(by_alias=True) == {
+            "url": "https://example.com",
+            "method": "POST",
+            "params": {"foo": "bar"},
+            "data": {"hello": "world"},
+            "headers": {"Content-Type": "application/json"},
+        }
+
+    def test_method_upper_case_validation(self):
+        webhook = NotificationWebhook(url="http://example.com", method="post")
+        assert webhook.method == "POST"
+
+    def test_method_with_unsupported_value(self):
+        with pytest.raises(ValidationError) as exc:
+            NotificationWebhook(url="http://example.com", method="put")
+
+        assert exc.match("method must be GET or POST")
+
+    def test_optional_properties(self):
+        webhook = NotificationWebhook(url="http://example.com", method="GET")
+        assert webhook.query == {}
+        assert webhook.body == {}
+        assert webhook.headers == {}

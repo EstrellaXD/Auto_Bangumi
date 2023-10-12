@@ -5,6 +5,7 @@ from module.conf import settings
 from module.downloader import DownloadClient
 from module.manager import Renamer, eps_complete
 from module.notification import Notifier
+from module.notification.base import NotificationWebhook
 from module.rss import RSSAnalyser, RSSEngine
 
 from .status import ProgramStatus
@@ -68,6 +69,10 @@ class RenameThread(ProgramStatus):
                     worker.map(
                         lambda info: notifier.send(notification=info), renamed_info
                     )
+
+                if settings.notification.webhook.enable:
+                    webhook = settings.notification.webhook.dict(exclude={"enable"})
+                    notifier.send_webhook(NotificationWebhook(**webhook))
 
             self.stop_event.wait(settings.program.rename_time)
 
