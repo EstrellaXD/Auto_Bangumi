@@ -116,6 +116,16 @@ async def refresh_poster():
         resp = manager.refresh_poster()
     return u_response(resp)
 
+@router.get(
+    path="/refresh/poster/{bangumi_id}",
+    response_model=APIResponse,
+    dependencies=[Depends(get_current_user)],
+)
+async def refresh_poster(bangumi_id: int):
+    with TorrentManager() as manager:
+        resp = manager.refind_poster(bangumi_id)
+    return u_response(resp)
+
 
 @router.get(
     "/reset/all", response_model=APIResponse, dependencies=[Depends(get_current_user)]
