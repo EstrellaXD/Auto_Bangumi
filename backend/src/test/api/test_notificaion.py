@@ -130,7 +130,9 @@ class TestNotificationAPI:
         m = mocker.patch.object(Notifier, "q", return_value=object())
         m.done = mocked_done
 
-        resp = await aclient.post("/v1/notification/read", json={"message_id": "foo"})
+        resp = await aclient.post(
+            "/v1/notification/read", json={"message_ids": ["foo"]}
+        )
         assert resp.status_code == 500
         assert resp.json() == dict(detail="unknown error")
         m.done.assert_called_once_with("foo")
