@@ -65,7 +65,9 @@ class RenameThread(ProgramStatus):
                     config=settings.notification.dict(by_alias=True),
                 )
                 with ThreadPoolExecutor(max_workers=2) as worker:
-                    worker.map(notifier.send, renamed_info)
+                    worker.map(
+                        lambda info: notifier.send(notification=info), renamed_info
+                    )
 
             self.stop_event.wait(settings.program.rename_time)
 
