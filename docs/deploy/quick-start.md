@@ -10,10 +10,8 @@
 
 ```shell
 # 使用 bind mount
-mkdir "AutoBangumi"
-cd "AutoBangumi"
-mkdir -p ./config
-mkdir -p ./data
+mkdir -p ${HOME}/AutoBangumi/{config,data}
+cd ${HOME}/AutoBangumi
 ```
 
 bind mount 与 Docker volume 二选一
@@ -35,8 +33,8 @@ docker volume create AutoBangumi_data
 ```shell
 docker run -d \
   --name=AutoBangumi \
-  -v ./config:/app/config \
-  -v ./data:/app/data \
+  -v ${HOME}/AutoBangumi/config:/app/config \
+  -v ${HOME}/AutoBangumi/data:/app/data \
   -p 7892:7892 \
   -e PUID=1000 \
   -e PGID=1000 \
