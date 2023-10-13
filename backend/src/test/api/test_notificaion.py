@@ -135,7 +135,7 @@ class TestNotificationAPI:
             "/v1/notification/read", json={"message_ids": ["foo"]}
         )
         assert resp.status_code == 200
-        assert resp.json() == dict(code=0, msg="success")
+        assert resp.json() == dict(code=0, msg="success", data=dict())
         m.done.assert_called_once_with("foo")
 
     @pytest.mark.asyncio
@@ -159,7 +159,7 @@ class TestNotificationAPI:
 
         resp = await aclient.post("/v1/notification/send", json=dict(content="fooo"))
         assert resp.status_code == 200
-        assert resp.json() == dict(code=0, msg="success")
+        assert resp.json() == dict(code=0, msg="success", data=dict())
         m.assert_awaited_once_with(content=self.content)
 
     @pytest.mark.asyncio
@@ -197,7 +197,7 @@ class TestNotificationAPI:
 
         resp = await aclient.get("/v1/notification/clean")
         assert resp.status_code == 200
-        assert resp.json() == dict(code=0, msg="success")
+        assert resp.json() == dict(code=0, msg="success", data=dict())
 
     @pytest.mark.asyncio
     async def test_clean_notification_with_exception(

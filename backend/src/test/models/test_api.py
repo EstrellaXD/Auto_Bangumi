@@ -1,5 +1,9 @@
 import pytest
-from module.models.api import APIResponse, NotificationData, NotificationMessageIds
+from module.models.api import (
+    NotificationReponse,
+    NotificationData,
+    NotificationMessageIds,
+)
 from pydantic import ValidationError
 
 
@@ -17,32 +21,32 @@ class TestNotificationMessageIds:
 
 class TestAPIResponse:
     def test_init_property(self):
-        response = APIResponse(code=200, message="Success", data={"key": "value"})
+        response = NotificationReponse(code=200, msg="Success", data={"key": "value"})
         assert response.code == 200
-        assert response.message == "Success"
+        assert response.msg == "Success"
         assert response.data == {"key": "value"}
 
     def test_default_values(self):
-        response = APIResponse(message="ok")
+        response = NotificationReponse(msg="ok")
         assert response.code == 200
-        assert response.message == "ok"
+        assert response.msg == "ok"
         assert response.data == {}
 
     def test_missing_message(self):
         with pytest.raises(ValidationError) as exc:
-            APIResponse(code=200, data={"key": "value"})
+            NotificationReponse(code=200, data={"key": "value"})
 
         assert exc.match("field required")
 
     def test_dict_method(self):
-        response = APIResponse(code=200, message="Success", data={"key": "value"})
+        response = NotificationReponse(code=200, msg="Success", data={"key": "value"})
         response_dict = response.dict()
         assert response_dict["code"] == 200
         assert response_dict["message"] == "Success"
         assert response_dict["data"] == {"key": "value"}
 
     def test_json_method(self):
-        response = APIResponse(code=200, message="Success", data={"key": "value"})
+        response = NotificationReponse(code=200, msg="Success", data={"key": "value"})
         response_json = response.json()
         assert (
             response_json
@@ -50,7 +54,7 @@ class TestAPIResponse:
         )
 
     def test_different_data(self):
-        response = APIResponse(code=200, message="Success", data={"key": "value"})
+        response = NotificationReponse(code=200, msg="Success", data={"key": "value"})
         response.data = "New Data"
         assert response.data == "New Data"
 

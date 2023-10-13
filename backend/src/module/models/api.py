@@ -37,9 +37,9 @@ class NotificationData(BaseModel):
         return datetime.strftime(datetime.fromtimestamp(v / 1e9), "%Y-%m-%d %H:%M:%S")
 
 
-class APIResponse(BaseModel):
+class NotificationReponse(BaseModel):
     code: int = Field(200, description="status of the request")
-    message: str = Field(..., description="message of the request")
+    msg: str = Field(..., description="message of the request")
     data: dict[str, Any] = Field(
         default_factory=dict, description="data of the request"
     )
