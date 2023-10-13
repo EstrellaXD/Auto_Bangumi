@@ -30,6 +30,7 @@ services:
       - 223.5.5.5
     restart: unless-stopped
     environment:
+      - TZ=Asia/Shanghai
       - AB_METHOD=Advance
       - PGID=1000 #需要自行修改填入
       - PUID=1000 #需要自行修改填入

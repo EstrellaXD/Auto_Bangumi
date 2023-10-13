@@ -34,6 +34,7 @@ services:
       - "./data:/app/data"
     network_mode: bridge
     environment:
+      - TZ=Asia/Shanghai
       - AB_METHOD=Advance
       - PGID=1000
       - PUID=1000

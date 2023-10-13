@@ -36,6 +36,7 @@ docker run -d \
   -v ${HOME}/AutoBangumi/config:/app/config \
   -v ${HOME}/AutoBangumi/data:/app/data \
   -p 7892:7892 \
+  -e TZ=Asia/Shanghai \
   -e PUID=1000 \
   -e PGID=1000 \
   -e UMASK=022 \
@@ -66,6 +67,7 @@ services:
     dns:
       - 223.5.5.5
     environment:
+      - TZ=Asia/Shanghai
       - AB_METHOD=Advance
       - PGID=1000
       - PUID=1000

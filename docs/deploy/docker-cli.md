@@ -33,6 +33,7 @@ docker run -d \
   -v ${HOME}/AutoBangumi/config:/app/config \
   -v ${HOME}/AutoBangumi/data:/app/data \
   -p 7892:7892 \
+  -e TZ=Asia/Shanghai \
   -e PUID=1000 \
   -e PGID=1000 \
   -e UMASK=022 \
