@@ -50,7 +50,13 @@ class TestNotificationAPI:
         assert resp.json() == dict(detail="unknown error")
 
     @pytest.mark.asyncio
-    async def test_get_notification(self, aclient: AsyncClient, mocker: MockerFixture):
+    async def test_get_notification(
+        self,
+        aclient: AsyncClient,
+        mocker: MockerFixture,
+        fake_nanoseconds,
+        fake_nanoseconds_datetime,
+    ):
         mocked_db = sqlite3.connect(":memory:")
         mocked_db.row_factory = sqlite3.Row
         mocked_db.execute(
@@ -58,7 +64,7 @@ class TestNotificationAPI:
         )
         mocked_db.execute(
             "INSERT INTO Queue (message_id, data, in_time, status) VALUES (?, ?, ?, ?)",
-            ("foo", "bar", 123, 0),
+            ("foo", "bar", fake_nanoseconds, 0),
         )
         mocked_db.commit()
 
@@ -76,7 +82,7 @@ class TestNotificationAPI:
                     dict(
                         id="foo",
                         content="bar",
-                        datetime="1970-01-01 08:00:00",
+                        datetime=fake_nanoseconds_datetime,
                         has_read=False,
                         title="AutoBangumi",
                     )
