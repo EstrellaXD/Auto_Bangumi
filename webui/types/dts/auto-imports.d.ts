@@ -221,8 +221,6 @@ declare global {
   const useMyI18n: typeof import('../../src/hooks/useMyI18n')['useMyI18n']
   const useNavigatorLanguage: typeof import('@vueuse/core')['useNavigatorLanguage']
   const useNetwork: typeof import('@vueuse/core')['useNetwork']
-  const useNotification: typeof import('../../src/hooks/useNotificaiton')['useNotification']
-  const useNotificationPage: typeof import('../../src/hooks/useNotificaiton')['useNotificationPage']
   const useNotificationStore: typeof import('../../src/store/notification')['useNotificationStore']
   const useNow: typeof import('@vueuse/core')['useNow']
   const useObjectUrl: typeof import('@vueuse/core')['useObjectUrl']

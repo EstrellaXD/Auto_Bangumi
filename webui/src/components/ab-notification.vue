@@ -4,8 +4,8 @@ import { Remind } from '@icon-park/vue-next';
 
 const router = useRouter();
 
-// Generate 20 notifications
-const { total, notifications, onUpdate, offUpdate } = useNotification();
+const { onUpdate, offUpdate } = useNotificationStore();
+const { total, top10Notifications } = storeToRefs(useNotificationStore());
 
 onBeforeMount(() => {
   onUpdate();
@@ -25,8 +25,8 @@ onUnmounted(() => {
         </NIcon>
       </NBadge>
     </template>
-    <NList v-if="notifications.length > 0" hoverable clickable>
-      <template v-for="m in notifications" :key="m.id">
+    <NList v-if="top10Notifications.length > 0" hoverable clickable>
+      <template v-for="m in top10Notifications" :key="m.id">
         <NListItem @click="m.has_read = !m.has_read">
           <ab-notification-item v-bind="m"></ab-notification-item>
         </NListItem>

@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import { NThing } from 'naive-ui';
-import type { Notification } from '#/notification';
+import type { NotificationData } from '#/notification';
 
-const props = defineProps<Notification>();
+const props = defineProps<NotificationData>();
 </script>
 
 <template>

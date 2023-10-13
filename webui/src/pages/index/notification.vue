@@ -1,19 +1,31 @@
 <script setup lang="ts">
 import { NButton, NDataTable, NPagination } from 'naive-ui';
 import type { DataTableColumns, DataTableRowKey } from 'naive-ui';
-import type { Notification } from '#/notification';
+import type { NotificationData } from '#/notification';
 
 definePage({
   name: 'Notification',
 });
 
 const router = useRouter();
-const { total, page, limit, notifications } = useNotificationPage();
-const { setRead } = useNotificationStore();
-const { setReadLoading } = storeToRefs(useNotificationStore());
+const { setRead, getNotification } = useNotificationStore();
+const { total, notifications } = storeToRefs(useNotificationStore());
 
-const columnsRef = ref<DataTableColumns<Notification>>([]);
+const columnsRef = ref<DataTableColumns<NotificationData>>([]);
 const checkedRowKeysRef = ref<DataTableRowKey[]>([]);
+const pageRef = ref<number>(1);
+const limitRef = ref<number>(10);
+
+onBeforeMount(() => {
+  getNotification({
+    page: pageRef.value,
+    limit: limitRef.value,
+  });
+});
+
+watch([pageRef, limitRef], () => {
+  getNotification({ page: pageRef.value, limit: limitRef.value });
+});
 
 watchEffect(() => {
   if (notifications.value && notifications.value.length > 0) {
@@ -34,15 +46,14 @@ watchEffect(() => {
 
 function handlePageChange(newPage: number) {
   router.push({ query: { page: newPage } });
-  page.value = newPage;
+  pageRef.value = newPage;
 }
 
-function handleCheck(rowKeys: DataTableRowKey[], rows: object[]) {
-  // filter the not null row keys
-  const checked = (rows as Notification[])
-    .filter((i) => i !== null)
-    .map((i) => i.id);
-
+function handleCheck(_: DataTableRowKey[], rows: object[]) {
+  // don't use first `rowKeys` parameter, maybe this is a bug of naive-ui
+  // see: https://github.com/tusen-ai/naive-ui/issues/3342
+  // solved: use second `rows` parameter to filter the not null row
+  const checked = (rows as NotificationData[]).filter((i) => i).map((i) => i.id);
   checkedRowKeysRef.value = checked;
 }
 
@@ -64,7 +75,6 @@ function handleSetRead() {
         :disabled="checkedRowKeysRef.length === 0"
         type="primary"
         tertiary
-        :loading="setReadLoading"
         self-start
         @click="handleSetRead"
       >
@@ -78,9 +88,9 @@ function handleSetRead() {
         @update:checked-row-keys="handleCheck"
       />
       <NPagination
-        :page="page"
+        :page="pageRef"
         :item-count="total"
-        :page-size="limit"
+        :page-size="limitRef"
         @update:page="handlePageChange"
       />
     </div>
