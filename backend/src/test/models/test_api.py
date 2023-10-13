@@ -1,8 +1,8 @@
 import pytest
 from module.models.api import (
-    NotificationReponse,
     NotificationData,
     NotificationMessageIds,
+    NotificationReponse,
 )
 from pydantic import ValidationError
 
@@ -42,15 +42,14 @@ class TestAPIResponse:
         response = NotificationReponse(code=200, msg="Success", data={"key": "value"})
         response_dict = response.dict()
         assert response_dict["code"] == 200
-        assert response_dict["message"] == "Success"
+        assert response_dict["msg"] == "Success"
         assert response_dict["data"] == {"key": "value"}
 
     def test_json_method(self):
         response = NotificationReponse(code=200, msg="Success", data={"key": "value"})
         response_json = response.json()
         assert (
-            response_json
-            == '{"code": 200, "message": "Success", "data": {"key": "value"}}'
+            response_json == '{"code": 200, "msg": "Success", "data": {"key": "value"}}'
         )
 
     def test_different_data(self):
