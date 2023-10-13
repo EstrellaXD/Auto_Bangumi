@@ -31,6 +31,9 @@ services:
     restart: unless-stopped
     environment:
       - AB_METHOD=Advance
+      - PGID=1000 #需要自行修改填入
+      - PUID=1000 #需要自行修改填入
+      - UMASK=022
       - AB_DOWNLOADER_HOST=127.0.0.1:8989 #如8989被修改,请修改为相应端口
       - AB_DOWNLOADER_USERNAME=admin
       - AB_DOWNLOADER_PASSWORD=adminadmin

@@ -38,6 +38,9 @@ docker run -d \
   -v ./config:/app/config \
   -v ./data:/app/data \
   -p 7892:7892 \
+  -e PUID=1000 \
+  -e PGID=1000 \
+  -e UMASK=022 \
   --network=bridge \
   --dns=8.8.8.8 \
   --restart unless-stopped \
@@ -66,6 +69,9 @@ services:
       - 223.5.5.5
     environment:
       - AB_METHOD=Advance
+      - PGID=1000
+      - PUID=1000
+      - UMASK=022
 ```
 
 运行以下命令启动容器。

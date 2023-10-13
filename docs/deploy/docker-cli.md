@@ -35,6 +35,9 @@ docker run -d \
   -v ./config:/app/config \
   -v ./data:/app/data \
   -p 7892:7892 \
+  -e PUID=1000 \
+  -e PGID=1000 \
+  -e UMASK=022 \
   --network=bridge \
   --dns=8.8.8.8 \
   --restart unless-stopped \

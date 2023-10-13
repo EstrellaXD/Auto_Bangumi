@@ -50,6 +50,9 @@ services:
     network_mode: bridge
     environment:
       - AB_METHOD=Advance
+      - PGID=1000
+      - PUID=1000
+      - UMASK=022
 ```
 
 复制上面的内容到 `docker-compose.yml` 文件中。
