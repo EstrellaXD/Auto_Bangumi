@@ -1,7 +1,9 @@
+from collections import namedtuple
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from datetime import datetime
 
 from module.conf.config import settings
-from module.models.api import NotificationMessageIds
+from module.models.api import NotificationData, NotificationMessageIds
 from module.notification import Notifier
 from module.notification.base import NotificationContent
 from module.security.api import get_current_user
@@ -41,7 +43,12 @@ async def get_notification(
 ):
     cursor = notifier.q.conn.cursor()
     stmt = r"""
-    SELECT message_id, data, in_time as datetime, status as has_read
+    SELECT 
+        message_id AS id, 
+        'AutoBangumi' AS title,
+        data AS content, 
+        in_time AS datetime, 
+        status AS has_read
     FROM Queue
     WHERE status=0
     ORDER BY in_time DESC
@@ -58,9 +65,7 @@ async def get_notification(
     if not rows:
         return dict(code=0, msg="success", data=dict(total=0, messages=[]))
 
-    messages = [
-        dict(message_id=data[0], data=data[1], datetime=data[2]) for data in rows
-    ]
+    messages = [NotificationData(**data) for data in rows]
 
     return dict(
         code=0, msg="success", data=dict(total=len(messages), messages=messages)

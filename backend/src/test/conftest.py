@@ -1,13 +1,10 @@
 import logging
+import time
 from datetime import datetime, timedelta
-from unittest import mock
-from fastapi import Cookie
-import httpx
 
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
-from pytest_mock import MockerFixture
 from main import app
 from module.models.bangumi import Notification
 from module.notification.base import (
@@ -17,6 +14,7 @@ from module.notification.base import (
 )
 from module.security.api import get_current_user
 from module.security.jwt import create_access_token
+from pytest_mock import MockerFixture
 
 
 @pytest.fixture
@@ -65,6 +63,18 @@ def fake_content():
 @pytest.fixture
 def fake_token():
     return create_access_token(data={"sub": "test"}, expires_delta=timedelta(days=1))
+
+
+@pytest.fixture
+def fake_nanoseconds():
+    return time.time_ns()
+
+
+@pytest.fixture
+def fake_nanoseconds_datetime(fake_nanoseconds):
+    return datetime.strftime(
+        datetime.fromtimestamp(fake_nanoseconds / 1e9), "%Y-%m-%d %H:%M:%S"
+    )
 
 
 @pytest_asyncio.fixture

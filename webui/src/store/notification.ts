@@ -1,4 +1,4 @@
-import type { NotificationData } from '#/notification';
+import type { NotificationData, WithTotalAndMessages } from '#/notification';
 
 export const useNotificationStore = defineStore('notification', () => {
   const { auth } = useAuth();
@@ -43,7 +43,7 @@ export const useNotificationStore = defineStore('notification', () => {
     const { execute, onResult } = useApi(apiNotification.getTotal, {});
 
     onResult((res) => {
-      total.value = res.data.total;
+      total.value = res.data?.total ?? 0;
     });
     if (auth.value !== '') {
       execute();
@@ -54,17 +54,7 @@ export const useNotificationStore = defineStore('notification', () => {
     const { execute, onResult } = useApi(apiNotification.get, {});
 
     onResult((res) => {
-      top10Notifications.value = res.data.messages.map((item) => {
-        const { content } = JSON.parse(item.data);
-        const value = {
-          id: item.message_id,
-          title: 'AutoBangumi',
-          has_read: Boolean(item.has_read),
-          datetime: `${item.datetime}`,
-          content,
-        };
-        return value;
-      });
+      top10Notifications.value = (res.data as WithTotalAndMessages).messages;
     });
 
     if (auth.value !== '') {
@@ -94,16 +84,18 @@ export const useNotificationStore = defineStore('notification', () => {
     const { execute, onResult } = useApi(apiNotification.get, {});
 
     onResult((res) => {
-      notifications.value = res.data.messages.map((item) => {
-        const { content } = JSON.parse(item.data);
-        const value = {
-          id: item.message_id,
-          title: 'AutoBangumi',
-          datetime: `${item.datetime}`,
-          content,
-        };
-        return value;
-      });
+      notifications.value = (res.data as WithTotalAndMessages).messages.map(
+        (item) => {
+          // make sure field order is correct.
+          return {
+            id: item.id,
+            title: item.title,
+            datetime: item.datetime,
+            content: item.content,
+            has_read: item.has_read,
+          };
+        }
+      );
     });
 
     if (auth.value !== '') {

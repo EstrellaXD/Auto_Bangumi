@@ -52,6 +52,7 @@ class TestNotificationAPI:
     @pytest.mark.asyncio
     async def test_get_notification(self, aclient: AsyncClient, mocker: MockerFixture):
         mocked_db = sqlite3.connect(":memory:")
+        mocked_db.row_factory = sqlite3.Row
         mocked_db.execute(
             "CREATE TABLE Queue (message_id TEXT, data TEXT, in_time INT, status INT)"
         )
@@ -70,7 +71,16 @@ class TestNotificationAPI:
             code=0,
             msg="success",
             data=dict(
-                total=1, messages=[dict(message_id="foo", data="bar", datetime=123)]
+                total=1,
+                messages=[
+                    dict(
+                        id="foo",
+                        content="bar",
+                        datetime="1970-01-01 08:00:00",
+                        has_read=False,
+                        title="AutoBangumi",
+                    )
+                ],
             ),
         )
 
