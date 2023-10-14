@@ -143,6 +143,17 @@ class TorrentManager(Database):
             msg_zh="刷新海报链接成功。",
         )
 
+    def refind_poster(self, bangumi_id: int):
+        bangumi = self.bangumi.search_id(bangumi_id)
+        TitleParser().tmdb_poster_parser(bangumi)
+        self.bangumi.update(bangumi)
+        return ResponseModel(
+            status_code=200,
+            status=True,
+            msg_en="Refresh poster link successfully.",
+            msg_zh="刷新海报链接成功。",
+        )
+
     def search_all_bangumi(self):
         datas = self.bangumi.search_all()
         if not datas:
