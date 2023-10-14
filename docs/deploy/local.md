@@ -27,6 +27,7 @@ cd AutoBangumi
 确认你的电脑本地已经安装了 `python3.10` 以上的版本，以及 `pip` 包管理工具。
 
 ```bash
+cd src
 python3 -m venv env
 python3 pip install -r requirements.txt
 ```
@@ -34,7 +35,6 @@ python3 pip install -r requirements.txt
 ## 运行 AutoBangumi
 
 ```bash
-cd src
 python3 main.py
 ```
 

@@ -24,10 +24,8 @@ docker compose -v
 ### 创建 AutoBangumi及数据 文件夹
 
 ```bash
-mkdir -p AutoBangumi
-cd AutoBangumi
-mkdir -p config # 如果不存在则会报错
-mkdir -p data
+mkdir -p ${HOME}/AutoBangumi/{config,data}
+cd ${HOME}/AutoBangumi
 ```
 
 ### 选项1: 自定义 Docker Compose 配置文件
@@ -49,7 +47,11 @@ services:
       - 223.5.5.5
     network_mode: bridge
     environment:
+      - TZ=Asia/Shanghai
       - AB_METHOD=Advance
+      - PGID=1000
+      - PUID=1000
+      - UMASK=022
 ```
 
 复制上面的内容到 `docker-compose.yml` 文件中。

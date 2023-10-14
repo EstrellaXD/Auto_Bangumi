@@ -10,10 +10,8 @@
 
 ```shell
 # 使用 bind mount
-mkdir "AutoBangumi"
-cd "AutoBangumi"
-mkdir -p ./config
-mkdir -p ./data
+mkdir -p ${HOME}/AutoBangumi/{config,data}
+cd ${HOME}/AutoBangumi
 ```
 
 bind mount 与 Docker volume 二选一
@@ -35,9 +33,13 @@ docker volume create AutoBangumi_data
 ```shell
 docker run -d \
   --name=AutoBangumi \
-  -v ./config:/app/config \
-  -v ./data:/app/data \
+  -v ${HOME}/AutoBangumi/config:/app/config \
+  -v ${HOME}/AutoBangumi/data:/app/data \
   -p 7892:7892 \
+  -e TZ=Asia/Shanghai \
+  -e PUID=1000 \
+  -e PGID=1000 \
+  -e UMASK=022 \
   --network=bridge \
   --dns=8.8.8.8 \
   --restart unless-stopped \
@@ -65,7 +67,11 @@ services:
     dns:
       - 223.5.5.5
     environment:
+      - TZ=Asia/Shanghai
       - AB_METHOD=Advance
+      - PGID=1000
+      - PUID=1000
+      - UMASK=022
 ```
 
 运行以下命令启动容器。
