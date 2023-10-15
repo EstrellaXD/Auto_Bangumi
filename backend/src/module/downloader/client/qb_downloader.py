@@ -1,5 +1,8 @@
 import logging
 import httpx
+import asyncio
+
+from ..exceptions import ConflictError, AuthorizationError
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +134,12 @@ class QbDownloader:
         self._client = httpx.AsyncClient(
             base_url=self.host,
         )
+        while not await self.check_host():
+            logger.warning(f"[Downloader] Failed to connect to {self.host}, retry in 30 seconds.")
+            await asyncio.sleep(30)
+        if not await self.auth():
+            await self._client.aclose()
+            raise AuthorizationError("Failed to login to qbittorrent.")
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
