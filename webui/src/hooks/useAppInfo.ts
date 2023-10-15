@@ -1,5 +1,5 @@
 export const useAppInfo = createSharedComposable(() => {
-  const { auth } = useAuth();
+  const { isLoggedin } = useAuth();
   const running = ref<boolean>(false);
   const version = ref<string>('');
 
@@ -11,7 +11,7 @@ export const useAppInfo = createSharedComposable(() => {
       version.value = res.version;
     });
 
-    if (auth.value !== '') {
+    if (isLoggedin.value !== false) {
       execute();
     }
   }
