@@ -7,8 +7,13 @@ const messages = {
   'zh-CN': zhCN,
 };
 
+type Languages = keyof typeof messages;
+
 export const useMyI18n = createSharedComposable(() => {
-  const lang = useLocalStorage('lang', navigator.language);
+  const lang = useLocalStorage<Languages>(
+    'lang',
+    navigator.language as Languages
+  );
 
   const i18n = createI18n({
     legacy: false,
@@ -17,14 +22,22 @@ export const useMyI18n = createSharedComposable(() => {
     messages,
   });
 
+  watch(lang, (val) => {
+    i18n.global.locale.value = val;
+  });
+
   function changeLocale() {
     if (lang.value === 'zh-CN') {
-      i18n.global.locale.value = 'en';
       lang.value = 'en';
     } else {
-      i18n.global.locale.value = 'zh-CN';
       lang.value = 'zh-CN';
     }
+  }
+
+  function returnUserLangText(texts: {
+    [k in Languages]: string;
+  }) {
+    return computed(() => texts[lang.value]);
   }
 
   return {
@@ -33,5 +46,6 @@ export const useMyI18n = createSharedComposable(() => {
     t: i18n.global.t,
     locale: i18n.global.locale,
     changeLocale,
+    getText: returnUserLangText,
   };
 });
