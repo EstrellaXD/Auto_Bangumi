@@ -47,5 +47,6 @@ export const useMyI18n = createSharedComposable(() => {
     locale: i18n.global.locale,
     changeLocale,
     getText: returnUserLangText,
+    returnUserLangText,
   };
 });
