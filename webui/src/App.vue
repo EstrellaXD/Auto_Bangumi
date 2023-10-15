@@ -11,8 +11,8 @@ const theme: GlobalThemeOverrides = {
   },
 };
 
-const { refresh, isLogin } = useAuth();
-if (isLogin.value) {
+const { refresh, isLoggedin } = useAuth();
+if (isLoggedin.value === true) {
   refresh();
 }
 </script>

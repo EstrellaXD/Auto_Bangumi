@@ -2,7 +2,7 @@ import type { User } from '#/auth';
 import type { ApiError } from '#/api';
 
 export const useAuth = createSharedComposable(() => {
-  const auth = useLocalStorage('auth', '');
+  const isLoggedin = useLocalStorage('isLoggedin', false);
   const message = useMessage();
 
   const user = reactive<User>({
@@ -10,7 +10,6 @@ export const useAuth = createSharedComposable(() => {
     password: '',
   });
 
-  const isLogin = computed(() => auth.value === '1');
 
   function clearUser() {
     user.username = '';
@@ -39,7 +38,7 @@ export const useAuth = createSharedComposable(() => {
     });
 
     onResult((res) => {
-      auth.value = `1`;
+      isLoggedin.value = true;
       clearUser();
     });
 
@@ -68,7 +67,7 @@ export const useAuth = createSharedComposable(() => {
 
   onLogoutResult(() => {
     clearUser();
-    auth.value = '';
+    isLoggedin.value = false;
   });
 
   const { execute: refresh, onResult: onRefreshResult } = useApi(
@@ -76,7 +75,7 @@ export const useAuth = createSharedComposable(() => {
   );
 
   onRefreshResult((res) => {
-    auth.value = `1`;
+    isLoggedin.value = true;
   });
 
   function update() {
@@ -90,7 +89,7 @@ export const useAuth = createSharedComposable(() => {
 
     onResult((res) => {
       if (res.message === 'update success') {
-        auth.value = ``;
+        isLoggedin.value = false;
         clearUser();
       } else {
         user.password = '';
@@ -107,9 +106,8 @@ export const useAuth = createSharedComposable(() => {
   }
 
   return {
-    auth,
+    isLoggedin,
     user,
-    isLogin,
 
     login,
     logout,
