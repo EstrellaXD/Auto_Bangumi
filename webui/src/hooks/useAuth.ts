@@ -10,7 +10,7 @@ export const useAuth = createSharedComposable(() => {
     password: '',
   });
 
-  const isLogin = computed(() => auth.value !== '');
+  const isLogin = computed(() => auth.value === '1');
 
   function clearUser() {
     user.username = '';
@@ -39,7 +39,7 @@ export const useAuth = createSharedComposable(() => {
     });
 
     onResult((res) => {
-      auth.value = `${res.token_type} ${res.access_token}`;
+      auth.value = `1`;
       clearUser();
     });
 
@@ -76,7 +76,7 @@ export const useAuth = createSharedComposable(() => {
   );
 
   onRefreshResult((res) => {
-    auth.value = `${res.token_type} ${res.access_token}`;
+    auth.value = `1`;
   });
 
   function update() {
@@ -90,7 +90,7 @@ export const useAuth = createSharedComposable(() => {
 
     onResult((res) => {
       if (res.message === 'update success') {
-        auth.value = `${res.token_type} ${res.access_token}`;
+        auth.value = ``;
         clearUser();
       } else {
         user.password = '';
