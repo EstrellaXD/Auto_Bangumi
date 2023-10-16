@@ -11,7 +11,9 @@ export const useAppInfo = createSharedComposable(() => {
       version.value = res.version;
     });
 
-    execute();
+    if (isLoggedin.value) {
+      execute();
+    }
   }
 
   const { pause: offUpdate, resume: onUpdate } = useIntervalFn(
