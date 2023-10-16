@@ -35,8 +35,8 @@ axios.interceptors.response.use(
 
     /** token 过期 */
     if (error.status === 401) {
-      const { auth } = useAuth();
-      auth.value = '';
+      const { isLoggedin } = useAuth();
+      isLoggedin.value = false;
     }
 
     /** 执行失败 */
