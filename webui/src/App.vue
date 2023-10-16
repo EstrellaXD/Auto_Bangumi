@@ -12,9 +12,9 @@ const theme: GlobalThemeOverrides = {
 };
 
 const { refresh, isLoggedin } = useAuth();
-if (isLoggedin.value === true) {
-  refresh();
-}
+
+refresh();
+
 </script>
 
 <template>
