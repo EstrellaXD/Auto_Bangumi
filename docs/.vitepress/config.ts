@@ -136,6 +136,10 @@ export default defineConfig({
                         link: "/feature/rss",
                     },
                     {
+                        text: "番剧管理",
+                        link: "/feature/bangumi",
+                    },
+                    {
                         text: "重命名",
                         link: "/feature/rename",
                     },
