@@ -33,7 +33,8 @@ def info_url(e, key):
 
 async def is_animation(tv_id, language, req) -> bool:
     url_info = info_url(tv_id, language)
-    type_id = await req.get_json(url_info)["genres"]
+    type_id = await req.get_json(url_info)
+    type_id = type_id.get("genres")
     for type in type_id:
         if type.get("id") == 16:
             return True
@@ -58,17 +59,18 @@ def get_season(seasons: list) -> tuple[int, str]:
 async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
     async with RequestContent() as req:
         url = search_url(title)
-        contents = await req.get_json(url).get("results")
+        contents = await req.get_json(url)
+        contents = contents.get("results")
         if contents.__len__() == 0:
             url = search_url(title.replace(" ", ""))
             contents = req.get_json(url).get("results")
         # 判断动画
         if contents:
             for content in contents:
-                id = content["id"]
-                if is_animation(id, language, req):
+                _id = content["id"]
+                if await is_animation(_id, language, req):
                     break
-            url_info = info_url(id, language)
+            url_info = info_url(_id, language)
             info_content = await req.get_json(url_info)
             season = [
                 {
@@ -93,7 +95,7 @@ async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
             else:
                 poster_link = None
             return TMDBInfo(
-                id,
+                _id,
                 official_title,
                 original_title,
                 season,
@@ -106,4 +108,12 @@ async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
 
 
 if __name__ == "__main__":
-    print(tmdb_parser("魔法禁书目录", "zh"))
+    import asyncio
+
+
+    async def parse(title, language):
+        info = await tmdb_parser(title, language)
+        for key, value in info.__dict__.items():
+            print(key, value)
+
+    asyncio.run(parse("葬送的芙莉莲", "jp"))
