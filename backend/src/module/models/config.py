@@ -1,5 +1,5 @@
 from os.path import expandvars
-from typing import Literal
+from typing import Literal, Union
 
 from pydantic import BaseModel, Field
 
@@ -10,7 +10,15 @@ class Program(BaseModel):
     webui_port: int = Field(7892, description="WebUI port")
 
 
-class Downloader(BaseModel):
+class BaseDownloader(BaseModel):
+    host_: str
+    username_: str
+    password_: str
+    path: str
+    ssl: bool
+
+
+class QbDownloader(BaseDownloader):
     type: str = Field("qbittorrent", description="Downloader type")
     host_: str = Field("172.17.0.1:8080", alias="host", description="Downloader host")
     username_: str = Field("admin", alias="username", description="Downloader username")
@@ -31,6 +39,17 @@ class Downloader(BaseModel):
     @property
     def password(self):
         return expandvars(self.password_)
+
+
+class TrDownloader(BaseDownloader):
+    type: str = Field("transmission", description="Downloader type")
+    host_: str = Field("172.17.0.1:9091", alias="host", description="Downloader host")
+    username_: str = Field("admin", alias="username", description="Downloader username")
+    password_: str = Field(
+        "admin", alias="password", description="Downloader password"
+    )
+    path: str = Field("/downloads/Bangumi", description="Downloader path")
+    ssl: bool = Field(False, description="Downloader ssl")  # USELESS for transmission
 
 
 class RSSParser(BaseModel):
@@ -105,7 +124,7 @@ class ExperimentalOpenAI(BaseModel):
 
 class Config(BaseModel):
     program: Program = Program()
-    downloader: Downloader = Downloader()
+    downloader: Union[QbDownloader, TrDownloader] = QbDownloader()
     rss_parser: RSSParser = RSSParser()
     bangumi_manage: BangumiManage = BangumiManage()
     log: Log = Log()
