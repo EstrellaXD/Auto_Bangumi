@@ -35,7 +35,6 @@ declare module '@vue/runtime-core' {
     AbTag: typeof import('./../../src/components/basic/ab-tag.vue')['default']
     AbTopbar: typeof import('./../../src/components/layout/ab-topbar.vue')['default']
     ConfigDownload: typeof import('./../../src/components/setting/config-download.vue')['default']
-    ConfigExperimental: typeof import('./../../src/components/setting/config-experimental.vue')['default']
     ConfigManage: typeof import('./../../src/components/setting/config-manage.vue')['default']
     ConfigNormal: typeof import('./../../src/components/setting/config-normal.vue')['default']
     ConfigNotification: typeof import('./../../src/components/setting/config-notification.vue')['default']
