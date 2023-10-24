@@ -27,6 +27,10 @@ class DownloadClient(TorrentPath):
             from .client.qb_downloader import QbDownloader
 
             return QbDownloader(host, username, password, ssl)
+        if type == "transmission":
+            from .client.tr_downloader import TrDownloader
+
+            return TrDownloader(host, username, password, ssl)
         else:
             logger.error(f"[Downloader] Unsupported downloader type: {type}")
             raise Exception(f"Unsupported downloader type: {type}")
