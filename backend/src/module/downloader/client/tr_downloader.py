@@ -1,6 +1,9 @@
 import logging
 import httpx
 import base64
+import asyncio
+
+from ..exceptions import AuthorizationError
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +25,14 @@ class TrDownloader:
     async def __aenter__(self):
         self._client = httpx.AsyncClient(
             base_url=self.host,
-            auth=(self.username, self.password),
-            timeout=5,
         )
+
+        while not await self.check_host():
+            logger.warning(f"[Downloader] Failed to connect to {self.host}, retry in 30 seconds.")
+            await asyncio.sleep(30)
+        if not await self.auth():
+            await self._client.aclose()
+            raise AuthorizationError("Failed to login to transmission.")
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -52,8 +60,8 @@ class TrDownloader:
 
     async def check_host(self):
         try:
-            resp = await self._client.get("/transmission/web/")
-            return resp.status_code == 200
+            await self._client.get("/transmission/web/")
+            return True
         except httpx.RequestError:
             return False
 
@@ -61,13 +69,13 @@ class TrDownloader:
 
         if not download_link and not torrent_path:
             # WARNING: Regard no torrent as success
-            return True  
+            return True
         request_data = {
             "method": "torrent-add",
             "arguments": {
                 "download-dir": save_path,
                 "paused": False,
-                **kwargs  
+                **kwargs
             }
         }
 
@@ -88,7 +96,7 @@ class TrDownloader:
 
         return resp.status_code == 200
 
-    async def add(self, torrent_urls, torrent_files, save_path, category): 
+    async def add(self, torrent_urls, torrent_files, save_path, category):
         result = True
         for torrent_url in torrent_urls:
             result = result and \
@@ -100,7 +108,7 @@ class TrDownloader:
 
         return result
 
-    async def delete(self, _hash): 
+    async def delete(self, _hash):
         request_data = {
             "method": "torrent-remove",
             "arguments": {
@@ -111,7 +119,7 @@ class TrDownloader:
         resp = await self._client.post("/transmission/rpc", json=request_data)
         return resp.status_code == 200
 
-    async def move(self, hashes, new_location): 
+    async def move(self, hashes, new_location):
         request_data = {
             "method": "torrent-set-location",
             "arguments": {
@@ -122,7 +130,7 @@ class TrDownloader:
         resp = await self._client.post("/transmission/rpc", json=request_data)
         return resp.status_code == 200
 
-    async def rename(self, torrent_hash, old_path, new_path) -> bool: 
+    async def rename(self, torrent_hash, old_path, new_path) -> bool:
         request_data = {
             "method": "torrent-rename-path",
             "arguments": {
@@ -159,7 +167,7 @@ class TrDownloader:
 
         return torrents_info
 
-    async def set_category(self, torrent_hashes, category): 
+    async def set_category(self, torrent_hashes, category):
         request_data = {
             "method": "torrent-set",
             "arguments": {
@@ -186,4 +194,3 @@ class TrDownloader:
             return [torrent for torrent in torrents_info if torrent['status'] <= 3]
 
         return torrents_info
-
