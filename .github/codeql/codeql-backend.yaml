@@ -1,0 +1,5 @@
+name: "Backend config"
+paths-ignore:
+  - .venv
+paths:
+  - backend 
