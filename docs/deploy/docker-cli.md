@@ -34,8 +34,8 @@ docker run -d \
   -v ${HOME}/AutoBangumi/data:/app/data \
   -p 7892:7892 \
   -e TZ=Asia/Shanghai \
-  -e PUID=1000 \
-  -e PGID=1000 \
+  -e PUID=$(id -u) \
+  -e PGID=$(id -g) \
   -e UMASK=022 \
   --network=bridge \
   --dns=8.8.8.8 \

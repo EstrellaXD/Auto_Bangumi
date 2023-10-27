@@ -5,15 +5,13 @@ services:
     image: linuxserver/qbittorrent
     hostname: qbittorrent
     environment:
-      - PGID=1000 #需要自行修改填入
-      - PUID=1000 #需要自行修改填入
-      - WEBUI_PORT=8989
+      - PGID=$(id -g)
+      - PUID=$(id -u)
       - TZ=Asia/Shanghai
     volumes:
       - ./qb_config:/config
-      - your_anime_path:/downloads # 注意 修改此处为自己存放动漫的目录,ab 内下载路径填写downloads
-    networks:
-      - host
+      - <your_anime_path>:/downloads # 注意 修改此处为自己存放动漫的目录,ab 内下载路径填写downloads
+    network_mode: bridge
     restart: unless-stopped
 
   AutoBangumi:
@@ -24,18 +22,12 @@ services:
     volumes:
       - ./config:/app/config
       - ./data:/app/data
-    networks:
-      - host
+    network_mode: bridge
     dns:
       - 223.5.5.5
     restart: unless-stopped
     environment:
       - TZ=Asia/Shanghai
-      - AB_METHOD=Advance
-      - PGID=1000 #需要自行修改填入
-      - PUID=1000 #需要自行修改填入
+      - PGID=$(id -g)
+      - PUID=$(id -u)
       - UMASK=022
-      - AB_DOWNLOADER_HOST=127.0.0.1:8989 #如8989被修改,请修改为相应端口
-      - AB_DOWNLOADER_USERNAME=admin
-      - AB_DOWNLOADER_PASSWORD=adminadmin
-      - AB_DOWNLOAD_PATH=/downloads #qbittorrent 映射的地址，否者可能提示下载失败
