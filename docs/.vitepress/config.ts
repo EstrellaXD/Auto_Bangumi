@@ -25,7 +25,7 @@ export default defineConfig({
         },
 
         editLink: {
-            pattern: 'https://github.com/vitejs/vite/blob/3.1-dev/docs/:path',
+            pattern: 'https://github.com/EstrellaXD/Auto_Bangumi/edit/main/docs/:path',
             text: 'Edit this page',
         },
 
