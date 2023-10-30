@@ -144,7 +144,9 @@ class BangumiDatabase:
         # Find eps_complete = False
         # use `false()` to avoid E712 checking
         # see: https://docs.astral.sh/ruff/rules/true-false-comparison/
-        condition = select(Bangumi).where(Bangumi.eps_collect == false())
+        condition = select(Bangumi).where(
+            and_(Bangumi.eps_collect == false(), Bangumi.deleted == false())
+        )
         datas = self.session.exec(condition).all()
         return datas
 
