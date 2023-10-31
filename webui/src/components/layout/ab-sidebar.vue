@@ -64,7 +64,6 @@ const items = [
     icon: Download,
     label: () => t('sidebar.downloader'),
     path: '/downloader',
-    hidden: true,
   },
   {
     id: 6,
