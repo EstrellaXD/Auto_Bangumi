@@ -32,6 +32,13 @@ python3 -m venv env
 python3 pip install -r requirements.txt
 ```
 
+## 创建配置和数据文件夹
+
+```bash
+mkdir config
+mkdir data
+```
+
 ## 运行 AutoBangumi
 
 ```bash
