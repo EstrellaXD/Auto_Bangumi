@@ -107,14 +107,15 @@ https://mikanime.tv/RSS/MyBangumi?token=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ## 配置 AutoBangumi
 
 安装好 AB 之后，AB 的 WebUI 会自动运行，但是主程序会处于暂停状态，可以进入 `http://abhost:7892` 进行配置。
-
-1. 填入下载器的地址，端口，用户名和密码。
+1. 打开网页后，默认用户名是`admin`默认密码是`adminadmin`。即可进入面板。
+    进入面板后请及时更改用户名和密码。
+2. 填入下载器的地址，端口，用户名和密码。
 
 ![ab-webui](../image/config/downloader.png){width=500}{class=ab-shadow-card}
 
-2. 点击 **Apply** 保存配置，此时 AB 会重启运行，当右上角的圆点变为绿色时，表示 AB 已经正常运行。
+3. 点击 **Apply** 保存配置，此时 AB 会重启运行，当右上角的圆点变为绿色时，表示 AB 已经正常运行。
 
-3. 点击右上角的添加按钮，勾选 **聚合 RSS**， 选择解析器类型，填入 Mikan RSS 的地址。
+4. 点击右上角的添加按钮，勾选 **聚合 RSS**， 选择解析器类型，填入 Mikan RSS 的地址。
 
 ![ab-rss](../image/config/add-rss.png){width=500}{class=ab-shadow-card}
 
