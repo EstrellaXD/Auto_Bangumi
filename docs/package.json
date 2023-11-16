@@ -18,6 +18,7 @@
   },
   "type": "module",
   "dependencies": {
-    "@documate/vue": "^0.3.1"
+    "@documate/vue": "^0.3.1",
+    "vitepress-plugin-google-analytics": "^1.0.2"
   }
 }

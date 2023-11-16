@@ -14,7 +14,6 @@ export default defineConfig({
         ['meta', {property: 'og:image', content: '/social.png'}],
         ['meta', {property: 'og:site_name', content: 'AutoBangumi'}],
         ['meta', {property: 'og:url', content: 'https://www.autobangumi.org'}],
-        ["script", {src: '/_vercel/insights/script.js'}]
     ],
 
     themeConfig: {
