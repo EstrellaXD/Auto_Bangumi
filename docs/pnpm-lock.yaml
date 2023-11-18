@@ -8,6 +8,9 @@ dependencies:
   '@documate/vue':
     specifier: ^0.3.1
     version: 0.3.1(tailwindcss@3.3.3)(vue@3.3.4)
+  vitepress-plugin-google-analytics:
+    specifier: ^1.0.2
+    version: 1.0.2
 
 devDependencies:
   '@documate/documate':
@@ -7459,6 +7462,10 @@ packages:
     optionalDependencies:
       fsevents: 2.3.2
     dev: true
+
+  /vitepress-plugin-google-analytics@1.0.2:
+    resolution: {integrity: sha512-ri8bFUAmt3c/DtPrALauGBIUr2gIJ11c1qNRhwd3/+aiuYZBfQpOosSxcO1AswgwRxP9FwBS6Z7jgdDVyXb2hA==}
+    dev: false
 
   /vitepress@1.0.0-rc.4(@algolia/client-search@4.18.0)(@types/node@14.18.33)(search-insights@2.6.0):
     resolution: {integrity: sha512-JCQ89Bm6ECUTnyzyas3JENo00UDJeK8q1SUQyJYou+4Yz5BKEc/F3O21cu++DnUT2zXc0kvQ2Aj4BZCc/nioXQ==}

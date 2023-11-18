@@ -11,6 +11,7 @@ import mediumZoom from 'medium-zoom'
 import Documate from '@documate/vue'
 import '@documate/vue/dist/style.css'
 import HomePreviewWebUI from './components/HomePreviewWebUI.vue'
+import googleAnalytics from 'vitepress-plugin-google-analytics'
 
 import './style.css'
 
@@ -44,7 +45,9 @@ export default {
             () => nextTick(initZoom),
         )
     },
-    enhanceApp({app, router, siteData}) {
-        // ...
-    }
+    enhanceApp: (ctx) => {
+    googleAnalytics({
+      id: 'G-3Z8W6WMN7J',
+    })
+  },
 }
