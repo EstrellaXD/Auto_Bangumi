@@ -24,10 +24,8 @@ docker compose -v
 ### 创建 AutoBangumi及数据 文件夹
 
 ```bash
-mkdir -p AutoBangumi
-cd AutoBangumi
-mkdir -p config # 如果不存在则会报错
-mkdir -p data
+mkdir -p ${HOME}/AutoBangumi/{config,data}
+cd ${HOME}/AutoBangumi
 ```
 
 ### 选项1: 自定义 Docker Compose 配置文件
@@ -49,7 +47,10 @@ services:
       - 223.5.5.5
     network_mode: bridge
     environment:
-      - AB_METHOD=Advance
+      - TZ=Asia/Shanghai
+      - PGID=$(id -g)
+      - PUID=$(id -u)
+      - UMASK=022
 ```
 
 复制上面的内容到 `docker-compose.yml` 文件中。
@@ -61,15 +62,11 @@ services:
 
 - 只安装 **AutoBangumi**
   ```bash
-  wget https://raw.githubusercontent.com/EstrellaXD/Auto_Bangumi/main/docs/docker-compose/AutoBangumi/docker-compose.yml
+  wget https://raw.githubusercontent.com/EstrellaXD/Auto_Bangumi/main/docs/resource/docker-compose/AutoBangumi/docker-compose.yml
   ```
 - 安装 **qBittorrent** 与 **AutoBangumi**
   ```bash
-  wget https://raw.githubusercontent.com/EstrellaXD/Auto_Bangumi/main/docs/docker-compose/qBittorrent+AutoBangumi/docker-compose.yml
-  ```
-- **qBittorrent** + **AutoBangumi** + **Plex**
-  ```bash
-  wget https://raw.githubusercontent.com/EstrellaXD/Auto_Bangumi/main/docs/docker-compose/All-in-one/docker-compose.yml
+  wget https://raw.githubusercontent.com/EstrellaXD/Auto_Bangumi/main/docs/resource/docker-compose/qBittorrent+AutoBangumi/docker-compose.yml
   ```
 
 首先选择你要安装的方式，**拷贝上面的命令运行即可**，这一步是下载 `docker-compose.yml` 配置文件，如果需要自定义可以使用文本编辑器对其中的参数进行自定义。

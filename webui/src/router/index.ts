@@ -5,14 +5,14 @@ const router = createRouter({
 });
 
 router.beforeEach((to) => {
-  const { isLogin } = useAuth();
+  const { isLoggedin } = useAuth();
   const { type, url } = storeToRefs(usePlayerStore());
 
-  if (!isLogin.value && to.path !== '/login') {
+  if (!isLoggedin.value && to.path !== '/login') {
     return { name: 'Login' };
   }
 
-  if (isLogin.value && to.path === '/login') {
+  if (isLoggedin.value && to.path === '/login') {
     return { name: 'Index' };
   }
 
@@ -21,7 +21,7 @@ router.beforeEach((to) => {
     return false;
   }
 
-  watch(isLogin, (val) => {
+  watch(isLoggedin, (val) => {
     if (to.path === '/login' && val) {
       router.replace({ name: 'Index' });
     }
