@@ -90,6 +90,7 @@ class QbDownloader:
             save_path=save_path,
             category=category,
             use_auto_torrent_management=False,
+            content_layout="NoSubFolder"
         )
         return resp == "Ok."
 
