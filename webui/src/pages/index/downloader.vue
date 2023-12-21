@@ -14,9 +14,10 @@ const isNull = computed(() => {
 
 const url = computed(() => {
   const downloader = config.value.downloader;
+  const host = downloader.host.replace(/http(s?)\:\/\//, '');
   const protocol = downloader.ssl ? 'https' : 'http';
 
-  return `${protocol}://${downloader.host}`;
+  return `${protocol}://${host}`;
 });
 </script>
 
