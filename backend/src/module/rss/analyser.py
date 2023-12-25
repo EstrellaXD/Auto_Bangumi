@@ -105,12 +105,26 @@ class DenseRSSAnalyser(RSSAnalyser):
     def fetch_dense(self, bangumi: Bangumi, parser: str = "kisssub") -> DenseInfo:
         if parser == "kisssub":
             return self.kisssub_parser(bangumi.rss_link)
+        
+    
+    def official_title_parser(self, bangumi: Bangumi, rss: RSSItem, torrent: Torrent):
+        tmdb_title, season, year, poster_link = self.tmdb_parser(
+            bangumi.official_title, bangumi.season, settings.rss_parser.language
+        )
+        bangumi.official_title = tmdb_title
+        bangumi.year = year
+        bangumi.season = season
+        bangumi.poster_link = poster_link
+        bangumi.official_title = re.sub(r"[/:.\\]", " ", bangumi.official_title)
+        
     
     def torrent_to_data(self, torrent: Torrent, rss: RSSItem) -> Bangumi:
-        bangumi, episode = self.raw_parser(raw=torrent.name, require_episode=True)
-        # to ensure the episode information is not found in the title (it's a dense).
-        if bangumi and episode and episode.episode == 0:
-            self.official_title_parser(bangumi=bangumi, rss=rss, torrent=torrent)
-            bangumi.rss_link = torrent.homepage # we have to keep track on homepage
-            if self.fetch_dense(bangumi, rss.parser, torrent):
-                return bangumi
+        parser_result = self.raw_parser(raw=torrent.name, require_episode=True)
+        if parser_result:
+            bangumi, episode = parser_result
+            # to ensure the episode information is not found in the title (it's a dense).
+            if episode.episode == 0:
+                self.official_title_parser(bangumi=bangumi, rss=rss, torrent=torrent)
+                bangumi.rss_link = torrent.homepage # we have to keep track on homepage
+                if self.fetch_dense(bangumi, rss.parser):
+                    return bangumi

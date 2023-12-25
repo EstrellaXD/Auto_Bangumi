@@ -56,7 +56,7 @@ class TitleParser:
             logger.warning("Please change bangumi info manually.")
 
     @staticmethod
-    def raw_parser(raw: str, require_episode: bool = False) -> Bangumi | (Bangumi, Episode) | None:
+    def raw_parser(raw: str, require_episode: bool = False):
         language = settings.rss_parser.language
         try:
             # use OpenAI ChatGPT to parse raw title and get structured data
@@ -66,7 +66,7 @@ class TitleParser:
                 episode_dict = gpt.parse(raw, asdict=True)
                 episode = Episode(**episode_dict)
             else:
-                episode = raw_parser(raw)
+                episode = raw_parser(raw, require_episode)
 
             titles = {
                 "zh": episode.title_zh,

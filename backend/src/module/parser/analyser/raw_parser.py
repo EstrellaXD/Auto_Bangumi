@@ -29,6 +29,9 @@ CHINESE_NUMBER_MAP = {
     "十": 10,
 }
 
+def safe_strip(raw: str | None) -> str:
+    return raw.strip() if raw else ""
+
 
 def get_group(name: str) -> str:
     return re.split(r"[\[\]]", name)[1]
@@ -138,11 +141,11 @@ def process(raw_title: str, loose=False):
     group = get_group(content_title)
     # 翻译组的名字
     match_obj = TITLE_RE.match(content_title)
-    if match_obj is None and loose:
+    if not match_obj and loose:
         match_obj = TITLE_LOOSE_RE.match(content_title)
     # 处理标题
     season_info, episode_info, other = list(
-        map(lambda x: x.strip(), match_obj.groups())
+        map(lambda x: safe_strip(x), match_obj.groups())
     )
     process_raw = prefix_process(season_info, group)
     # 处理 前缀

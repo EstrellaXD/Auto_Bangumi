@@ -94,4 +94,4 @@ class DenseInfo():
     episodes: int
     title_web: str
     homepage: str
-    torrent_url = str
+    torrent_url: str
