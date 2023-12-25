@@ -102,15 +102,15 @@ class RSSAnalyser(TitleParser):
 
 
 class DenseRSSAnalyser(RSSAnalyser):
-    def fetch_dense(self, bangumi: Bangumi, rss: RSSItem, torrent: Torrent) -> DenseInfo:
-        if rss.parser == "kisssub":
-            return self.kisssub_parser(torrent.homepage)
+    def fetch_dense(self, bangumi: Bangumi, parser: str = "kisssub") -> DenseInfo:
+        if parser == "kisssub":
+            return self.kisssub_parser(bangumi.rss_link)
     
     def torrent_to_data(self, torrent: Torrent, rss: RSSItem) -> Bangumi:
         bangumi, episode = self.raw_parser(raw=torrent.name, require_episode=True)
         # to ensure the episode information is not found in the title (it's a dense).
         if bangumi and episode and episode.episode == 0:
             self.official_title_parser(bangumi=bangumi, rss=rss, torrent=torrent)
-            bangumi.rss_link = rss.url
-            if self.fetch_dense(bangumi, rss, torrent):
+            bangumi.rss_link = torrent.homepage # we have to keep track on homepage
+            if self.fetch_dense(bangumi, rss.parser, torrent):
                 return bangumi

@@ -55,6 +55,10 @@ class SearchTorrent(RequestContent, RSSAnalyser):
         return [torrent for torrent in torrents if data.title_raw in torrent.name]
 
 class SearchDenseTorrent(RequestContent, DenseRSSAnalyser):
+    def get_torrent(self, bangumi: Bangumi, parser: str = "kisssub") -> Torrent:
+        dense_info = self.fetch_dense(bangumi, parser)
+        return Torrent(name=dense_info.title_web, url=dense_info.torrent_url, homepage=dense_info.homepage)
+    
     def analyse_keyword(
         self, keywords: list[str], site: str = "kisssub", limit: int = 5
     ) -> BangumiJSON:

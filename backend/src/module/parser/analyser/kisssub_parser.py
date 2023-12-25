@@ -6,6 +6,7 @@ from module.models.bangumi import Episode, DenseInfo
 
 from module.parser.analyser.raw_parser import raw_parser
 
+torrent_url_base = "https://v2.uploadbt.com/?r=down&hash="
 pattern = r"^(.+?)\((\d+(?:\.\d+)?)\s*([KMG]?B)\)$"
 video_formats = ["mp4", "mkv"]
 subtitle_formats = ["ass", "srt"]
@@ -39,4 +40,8 @@ def kisssub_parser(homepage: str) -> DenseInfo:
         torrent_files = soup.find("div", {"class": "torrent_files"})
         li_tags: list[Tag] = torrent_files.find_all("li")
         file_list, episode_num = process_file_list(li_tags)
-        return DenseInfo(file_list=file_list, episodes=episode_num)
+        *_, last_element = soup.find("div", {"class": "torrent_files"}).children
+        title_web = last_element.getText()
+        torrent_hash = soup.find("title").getText()[-40:]
+        torrent_url = torrent_url_base + torrent_hash
+        return DenseInfo(file_list=file_list, episodes=episode_num, homepage=homepage, title_web=title_web, torrent_url=torrent_url)

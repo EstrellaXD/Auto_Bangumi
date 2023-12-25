@@ -92,3 +92,6 @@ class SeasonInfo(dict):
 class DenseInfo():
     file_list: list[str]
     episodes: int
+    title_web: str
+    homepage: str
+    torrent_url = str
