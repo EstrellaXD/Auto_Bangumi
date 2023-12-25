@@ -9,6 +9,7 @@ EPISODE_RE = re.compile(r"\d+")
 TITLE_RE = re.compile(
     r"(.*|\[.*])( -? \d+|\[\d+]|\[\d+.?[vV]\d]|第\d+[话話集]|\[第?\d+[话話集]]|\[\d+.?END]|[Ee][Pp]?\d+)(.*)"
 )
+TITLE_LOOSE_RE = re.compile(r"(.*|\[.*])()(.*)")
 RESOLUTION_RE = re.compile(r"1080|720|2160|4K")
 SOURCE_RE = re.compile(r"B-Global|[Bb]aha|[Bb]ilibili|AT-X|Web")
 SUB_RE = re.compile(r"[简繁日字幕]|CH|BIG5|GB")
@@ -130,13 +131,15 @@ def clean_sub(sub: str | None) -> str | None:
     return re.sub(r"_MP4|_MKV", "", sub)
 
 
-def process(raw_title: str):
+def process(raw_title: str, loose=False):
     raw_title = raw_title.strip()
     content_title = pre_process(raw_title)
     # 预处理标题
     group = get_group(content_title)
     # 翻译组的名字
     match_obj = TITLE_RE.match(content_title)
+    if match_obj is None and loose:
+        match_obj = TITLE_LOOSE_RE.match(content_title)
     # 处理标题
     season_info, episode_info, other = list(
         map(lambda x: x.strip(), match_obj.groups())
@@ -171,8 +174,8 @@ def process(raw_title: str):
     )
 
 
-def raw_parser(raw: str) -> Episode | None:
-    ret = process(raw)
+def raw_parser(raw: str, loose=False) -> Episode | None:
+    ret = process(raw, loose)
     if ret is None:
         logger.error(f"Parser cannot analyse {raw}")
         return None

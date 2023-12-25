@@ -1,7 +1,7 @@
 import logging
 
 from module.conf import settings
-from module.models import Bangumi
+from module.models import Bangumi, DenseInfo
 from module.models.bangumi import Episode
 from module.parser.analyser import (
     OpenAIParser,
@@ -9,6 +9,7 @@ from module.parser.analyser import (
     raw_parser,
     tmdb_parser,
     torrent_parser,
+    kisssub_parser
 )
 
 logger = logging.getLogger(__name__)
@@ -55,7 +56,7 @@ class TitleParser:
             logger.warning("Please change bangumi info manually.")
 
     @staticmethod
-    def raw_parser(raw: str) -> Bangumi | None:
+    def raw_parser(raw: str, require_episode: bool = False) -> Bangumi | (Bangumi, Episode) | None:
         language = settings.rss_parser.language
         try:
             # use OpenAI ChatGPT to parse raw title and get structured data
@@ -85,7 +86,7 @@ class TitleParser:
                 official_title = title_raw
             _season = episode.season
             logger.debug(f"RAW:{raw} >> {title_raw}")
-            return Bangumi(
+            bangumi = Bangumi(
                 official_title=official_title,
                 title_raw=title_raw,
                 season=_season,
@@ -98,6 +99,7 @@ class TitleParser:
                 offset=0,
                 filter=",".join(settings.rss_parser.filter),
             )
+            return bangumi, episode if require_episode else bangumi
         except Exception as e:
             logger.debug(e)
             logger.warning(f"Cannot parse {raw}.")
@@ -106,3 +108,11 @@ class TitleParser:
     @staticmethod
     def mikan_parser(homepage: str) -> tuple[str, str]:
         return mikan_parser(homepage)
+    
+    @staticmethod
+    def kisssub_parser(homepage: str) -> DenseInfo | None:
+        dense_info = kisssub_parser(homepage)
+        if dense_info.episodes != 0:
+            return dense_info
+        logger.warning(f"No kisssub episodes matched: {homepage}.")
+            

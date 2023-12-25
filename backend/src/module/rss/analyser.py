@@ -2,7 +2,7 @@ import logging
 import re
 
 from module.conf import settings
-from module.models import Bangumi, ResponseModel, RSSItem, Torrent
+from module.models import Bangumi, DenseInfo, ResponseModel, RSSItem, Torrent
 from module.network import RequestContent
 from module.parser import TitleParser
 
@@ -100,3 +100,17 @@ class RSSAnalyser(TitleParser):
             msg_zh="无法解析此链接。",
         )
 
+
+class DenseRSSAnalyser(RSSAnalyser):
+    def fetch_dense(self, bangumi: Bangumi, rss: RSSItem, torrent: Torrent) -> DenseInfo:
+        if rss.parser == "kisssub":
+            return self.kisssub_parser(torrent.homepage)
+    
+    def torrent_to_data(self, torrent: Torrent, rss: RSSItem) -> Bangumi:
+        bangumi, episode = self.raw_parser(raw=torrent.name, require_episode=True)
+        # to ensure the episode information is not found in the title (it's a dense).
+        if bangumi and episode and episode.episode == 0:
+            self.official_title_parser(bangumi=bangumi, rss=rss, torrent=torrent)
+            bangumi.rss_link = rss.url
+            if self.fetch_dense(bangumi, rss, torrent):
+                return bangumi

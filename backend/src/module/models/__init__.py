@@ -1,4 +1,4 @@
-from .bangumi import Bangumi, BangumiUpdate, Episode, Notification
+from .bangumi import Bangumi, BangumiUpdate, Episode, Notification, DenseInfo
 from .config import Config
 from .response import APIResponse, ResponseModel
 from .rss import RSSItem, RSSUpdate
