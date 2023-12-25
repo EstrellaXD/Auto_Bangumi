@@ -3,7 +3,7 @@ from typing import TypeAlias
 
 from module.models import Bangumi, RSSItem, Torrent
 from module.network import RequestContent
-from module.rss import RSSAnalyser
+from module.rss import RSSAnalyser, DenseRSSAnalyser
 
 from .provider import search_url
 
@@ -53,3 +53,14 @@ class SearchTorrent(RequestContent, RSSAnalyser):
         rss_item = self.special_url(data, site)
         torrents = self.search_torrents(rss_item)
         return [torrent for torrent in torrents if data.title_raw in torrent.name]
+
+class SearchDenseTorrent(RequestContent, DenseRSSAnalyser):
+    def analyse_keyword(
+        self, keywords: list[str], site: str = "kisssub", limit: int = 5
+    ) -> BangumiJSON:
+        rss_item = search_url(site, keywords)
+        torrents = self.get_torrents(rss_item.url)
+        for torrent in torrents:
+            bangumi = self.torrent_to_data(torrent=torrent, rss=rss_item)
+            if bangumi:
+                yield json.dumps(bangumi.dict(), separators=(",", ":"))

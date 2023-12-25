@@ -1,2 +1,2 @@
-from .analyser import RSSAnalyser
+from .analyser import RSSAnalyser, DenseRSSAnalyser
 from .engine import RSSEngine

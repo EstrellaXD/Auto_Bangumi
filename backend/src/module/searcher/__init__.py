@@ -1,2 +1,2 @@
 from .provider import SEARCH_CONFIG
-from .searcher import SearchTorrent
+from .searcher import SearchTorrent, SearchDenseTorrent
