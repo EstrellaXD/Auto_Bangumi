@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sse_starlette.sse import EventSourceResponse
 
 from module.models import Bangumi
-from module.searcher import SEARCH_CONFIG, SearchTorrent, SearchDenseTorrent
+from module.searcher import SEARCH_CONFIG, SearchTorrent
 from module.security.api import UNAUTHORIZED, get_current_user
 
 router = APIRouter(prefix="/search", tags=["search"])
@@ -18,8 +18,7 @@ async def search_torrents(site: str = "mikan", keywords: str = Query(None)):
     if not keywords:
         return []
     keywords = keywords.split(" ")
-    SearchTorrentClass = SearchDenseTorrent if site in ["kisssub"] else SearchTorrent
-    with SearchTorrentClass() as st:
+    with SearchTorrent() as st:
         return EventSourceResponse(
             content=st.analyse_keyword(keywords=keywords, site=site),
         )

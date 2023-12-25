@@ -3,7 +3,7 @@ import logging
 from module.downloader import DownloadClient
 from module.models import Bangumi, ResponseModel
 from module.rss import RSSEngine
-from module.searcher import SearchTorrent, SearchDenseTorrent
+from module.searcher import SearchTorrent
 
 logger = logging.getLogger(__name__)
 
@@ -14,10 +14,11 @@ class SeasonCollector(DownloadClient):
             f"Start collecting {bangumi.official_title} Season {bangumi.season}..."
         )
         with SearchTorrent() as st, RSSEngine() as engine:
-            if not link:
-                torrents = st.search_season(bangumi)
+            torrent = st.get_dense_torrent(bangumi)
+            if torrent:
+                torrents = [torrent]
             else:
-                torrents = st.get_torrents(link, bangumi.filter.replace(",", "|"))
+                torrent = st.get_torrents(link, bangumi.filter.replace(",", "|")) if link else st.search_season(bangumi)
             if self.add_torrent(torrents, bangumi):
                 logger.info(
                     f"Collections of {bangumi.official_title} Season {bangumi.season} completed."
@@ -25,7 +26,7 @@ class SeasonCollector(DownloadClient):
                 for torrent in torrents:
                     torrent.downloaded = True
                 bangumi.eps_collect = True
-                if engine.bangumi.update(bangumi):
+                if not engine.bangumi.update(bangumi):
                     engine.bangumi.add(bangumi)
                 engine.torrent.add_all(torrents)
                 return ResponseModel(
@@ -56,34 +57,6 @@ class SeasonCollector(DownloadClient):
             result = engine.download_bangumi(data)
             engine.bangumi.add(data)
             return result
-
-
-class DenseCollector(DownloadClient):       
-    def collect_bangumi(self, bangumi: Bangumi):
-        with SearchDenseTorrent() as st, RSSEngine() as engine:
-            torrent = st.get_torrent(bangumi)
-            if self.add_torrent(torrent, bangumi):
-                torrent.downloaded = True
-                bangumi.eps_collect = True
-                if not engine.bangumi.update(bangumi):
-                    engine.bangumi.add(bangumi)
-                engine.torrent.add(torrent)
-                return ResponseModel(
-                    status=True,
-                    status_code=200,
-                    msg_en=f"Gethering of {torrent.name} completed.",
-                    msg_zh=f"收集 {torrent.name} 完成。",
-                )
-            else:
-                logger.warning(
-                    f"Already gethered {torrent.name}."
-                )
-                return ResponseModel(
-                    status=False,
-                    status_code=406,
-                    msg_en=f"Gethering of {torrent.name} failed.",
-                    msg_zh=f"收集 {torrent.name} 失败, 种子已经添加。",
-                )
                 
 
 def eps_complete():

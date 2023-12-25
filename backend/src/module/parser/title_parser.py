@@ -56,7 +56,7 @@ class TitleParser:
             logger.warning("Please change bangumi info manually.")
 
     @staticmethod
-    def raw_parser(raw: str, require_episode: bool = False):
+    def raw_parser(raw: str) -> (Bangumi, Episode):
         language = settings.rss_parser.language
         try:
             # use OpenAI ChatGPT to parse raw title and get structured data
@@ -66,7 +66,7 @@ class TitleParser:
                 episode_dict = gpt.parse(raw, asdict=True)
                 episode = Episode(**episode_dict)
             else:
-                episode = raw_parser(raw, require_episode)
+                episode = raw_parser(raw)
 
             titles = {
                 "zh": episode.title_zh,
@@ -99,11 +99,11 @@ class TitleParser:
                 offset=0,
                 filter=",".join(settings.rss_parser.filter),
             )
-            return bangumi, episode if require_episode else bangumi
+            return bangumi, episode
         except Exception as e:
             logger.debug(e)
             logger.warning(f"Cannot parse {raw}.")
-            return None
+            return (None, None)
 
     @staticmethod
     def mikan_parser(homepage: str) -> tuple[str, str]:
@@ -114,5 +114,4 @@ class TitleParser:
         dense_info = kisssub_parser(homepage)
         if dense_info.episodes != 0:
             return dense_info
-        logger.warning(f"No kisssub episodes matched: {homepage}.")
             

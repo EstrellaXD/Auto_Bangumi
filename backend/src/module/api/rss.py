@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
 from module.downloader import DownloadClient
-from module.manager import SeasonCollector, DenseCollector
+from module.manager import SeasonCollector
 from module.models import APIResponse, Bangumi, RSSItem, RSSUpdate, Torrent
 from module.rss import RSSAnalyser, RSSEngine
 from module.security.api import UNAUTHORIZED, get_current_user
@@ -186,13 +186,9 @@ async def analysis(rss: RSSItem):
     "/collect", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
 async def download_collection(data: Bangumi):
-    if "kisssub.org" in data.rss_link:
-        with DenseCollector() as collector:
-            resp = collector.collect_bangumi(data)
-    else:
-        with SeasonCollector() as collector:
-            resp = collector.collect_season(data, data.rss_link)
-    return u_response(resp)
+    with SeasonCollector() as collector:
+        resp = collector.collect_season(data, data.rss_link)
+        return u_response(resp)
 
 
 @router.post(

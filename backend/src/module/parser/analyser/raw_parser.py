@@ -134,14 +134,14 @@ def clean_sub(sub: str | None) -> str | None:
     return re.sub(r"_MP4|_MKV", "", sub)
 
 
-def process(raw_title: str, loose=False):
+def process(raw_title: str):
     raw_title = raw_title.strip()
     content_title = pre_process(raw_title)
     # 预处理标题
     group = get_group(content_title)
     # 翻译组的名字
     match_obj = TITLE_RE.match(content_title)
-    if not match_obj and loose:
+    if not match_obj:
         match_obj = TITLE_LOOSE_RE.match(content_title)
     # 处理标题
     season_info, episode_info, other = list(
@@ -177,8 +177,8 @@ def process(raw_title: str, loose=False):
     )
 
 
-def raw_parser(raw: str, loose=False) -> Episode | None:
-    ret = process(raw, loose)
+def raw_parser(raw: str) -> Episode | None:
+    ret = process(raw)
     if ret is None:
         logger.error(f"Parser cannot analyse {raw}")
         return None

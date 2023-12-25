@@ -2,7 +2,7 @@ import re
 
 from bs4 import BeautifulSoup, Tag
 from module.network.request_contents import RequestContent
-from module.models.bangumi import Episode, DenseInfo
+from module.models.bangumi import DenseInfo
 
 from module.parser.analyser.raw_parser import raw_parser
 
@@ -25,14 +25,10 @@ def process_file_list(tags: list[Tag]) -> (list[str], int):
         if match_objs:
             filename, size, unit = list(map(lambda x: x.strip(), match_objs.groups()))
             if any(filename.lower().endswith(f".{file_format}") for file_format in video_formats):
-                try:
-                    raw_parser(raw=filename, loose=False) # ensure we can parse the episode
-                    episode_num = episode_num + 1
-                    processed.append(filename)
-                except:
-                    continue
+                episode_num = episode_num + 1
+                processed.append(filename)
             if any(filename.lower().endswith(f".{file_format}") for file_format in subtitle_formats):
-                    processed.append(filename)
+                processed.append(filename)
     return processed, episode_num
 
 
