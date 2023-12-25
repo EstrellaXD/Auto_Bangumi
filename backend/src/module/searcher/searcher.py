@@ -63,7 +63,7 @@ class SearchDenseTorrent(RequestContent, DenseRSSAnalyser):
         self, keywords: list[str], site: str = "kisssub", limit: int = 5
     ) -> BangumiJSON:
         rss_item = search_url(site, keywords)
-        torrents = self.get_torrents(rss_item.url)
+        torrents = self.get_torrents(rss_item.url, _filter = r"^\s\S") # pass all files here
         for torrent in torrents:
             bangumi = self.torrent_to_data(torrent=torrent, rss=rss_item)
             if bangumi:

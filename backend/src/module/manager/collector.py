@@ -65,7 +65,7 @@ class DenseCollector(DownloadClient):
             if self.add_torrent(torrent, bangumi):
                 torrent.downloaded = True
                 bangumi.eps_collect = True
-                if engine.bangumi.update(bangumi):
+                if not engine.bangumi.update(bangumi):
                     engine.bangumi.add(bangumi)
                 engine.torrent.add(torrent)
                 return ResponseModel(
