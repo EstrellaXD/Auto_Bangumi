@@ -27,7 +27,10 @@ class SearchTorrent(RequestContent, RSSAnalyser):
             return Torrent(name=dense_info.title_web, url=dense_info.torrent_url, homepage=dense_info.homepage)
     
     def search_torrents(self, rss_item: RSSItem) -> list[Torrent]:
-        return self.get_torrents(rss_item.url)
+        kwargs = {}
+        if rss_item.parser == "kisssub":
+            kwargs["_filter"] = r"^\s\S"
+        return self.get_torrents(rss_item.url, **kwargs)
 
     def analyse_keyword(
         self, keywords: list[str], site: str = "mikan", limit: int = 5
