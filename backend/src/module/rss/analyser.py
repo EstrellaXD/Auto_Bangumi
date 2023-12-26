@@ -68,6 +68,8 @@ class RSSAnalyser(TitleParser):
             bangumi.rss_link = torrent.homepage # prepare for check dense
             dense = self.official_dense_parser(bangumi=bangumi, episode=episode)
             bangumi.rss_link = bangumi.rss_link if dense else rss.url
+            if rss.parser == "kisssub" and not dense:
+                return None # skip not dense torrent by kisssub
             return bangumi
 
     def rss_to_data(
