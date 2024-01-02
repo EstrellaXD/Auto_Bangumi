@@ -33,8 +33,8 @@ def info_url(e, key):
 
 async def is_animation(tv_id, language, req) -> bool:
     url_info = info_url(tv_id, language)
-    type_id = await req.get_json(url_info)["genres"]
-    for type in type_id:
+    type_ids = await req.get_json(url_info)
+    for type in type_ids["genres"]:
         if type.get("id") == 16:
             return True
     return False
@@ -58,7 +58,8 @@ def get_season(seasons: list) -> tuple[int, str]:
 async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
     async with RequestContent() as req:
         url = search_url(title)
-        contents = await req.get_json(url).get("results")
+        json_contents = await req.get_json(url)
+        contents = json_contents.get("results")
         if contents.__len__() == 0:
             url = search_url(title.replace(" ", ""))
             contents = req.get_json(url).get("results")
@@ -66,7 +67,7 @@ async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
         if contents:
             for content in contents:
                 id = content["id"]
-                if is_animation(id, language, req):
+                if await is_animation(id, language, req):
                     break
             url_info = info_url(id, language)
             info_content = await req.get_json(url_info)

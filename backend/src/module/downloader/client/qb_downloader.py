@@ -6,6 +6,21 @@ from ..exceptions import ConflictError, AuthorizationError
 
 logger = logging.getLogger(__name__)
 
+QB_API_URL = {
+    "login": "/api/v2/auth/login",
+    "logout": "/api/v2/auth/logout",
+    "version": "/api/v2/app/version",
+    "setPreferences": "/api/v2/app/setPreferences",
+    "createCategory": "/api/v2/torrents/createCategory",
+    "info": "/api/v2/torrents/info",
+    "add": "/api/v2/torrents/add",
+    "delete": "/api/v2/torrents/delete",
+    "renameFile": "/api/v2/torrents/renameFile",
+    "setLocation": "/api/v2/torrents/setLocation",
+    "setCategory": "/api/v2/torrents/setCategory",
+    "addTags": "/api/v2/torrents/addTags",
+}
+
 
 class QbDownloader:
     def __init__(self, host: str, username: str, password: str, ssl: bool):
@@ -16,33 +31,38 @@ class QbDownloader:
 
     async def auth(self):
         resp = await self._client.post(
-            url="/api/v2/auth/login",
+            url=QB_API_URL["login"],
             data={"username": self.username, "password": self.password},
             timeout=5,
         )
         return resp.text == "Ok."
 
     async def logout(self):
-        logout_api = "/api/v2/auth/logout"
-        await self._client.post(url=logout_api, timeout=5)
+        resp = await self._client.post(
+            url=QB_API_URL["logout"],
+            timeout=5
+        )
+        return resp.text
 
     async def check_host(self):
         try:
             await self._client.get(
-                url="/api/v2/app/version",
+                url=QB_API_URL["version"],
                 timeout=5
             )
             return True
-        except httpx.RequestError:
+        except httpx.RequestError or httpx.TimeoutException:
             return False
 
     async def prefs_init(self, prefs):
-        prefs_api = "/api/v2/app/setPreferences"
-        await self._client.post(url=prefs_api, data=prefs)
+        await self._client.post(
+            url=QB_API_URL["setPreferences"],
+            data=prefs
+        )
 
     async def add_category(self, category):
         await self._client.post(
-            url="/api/v2/torrents/createCategory",
+            url=QB_API_URL["createCategory"],
             data={"category": category},
             timeout=5,
         )
@@ -54,7 +74,7 @@ class QbDownloader:
             "tag": tag,
         }
         torrent_info = await self._client.get(
-            url="/api/v2/torrents/info",
+            url=QB_API_URL["info"],
             params=data,
         )
         return torrent_info.json()
@@ -69,7 +89,7 @@ class QbDownloader:
             "use_auto_torrent_management": False,
         }
         resp = await self._client.post(
-            url="/api/v2/torrents/add",
+            url=QB_API_URL["add"],
             data=data,
         )
         return resp.status_code == 200
@@ -80,7 +100,7 @@ class QbDownloader:
             "deleteFiles": True,
         }
         resp = await self._client.post(
-            url="/api/v2/torrents/delete",
+            url=QB_API_URL["delete"],
             data=data,
         )
         return resp.status_code == 200
@@ -92,7 +112,7 @@ class QbDownloader:
             "newPath": new_path,
         }
         resp = await self._client.post(
-            url="/api/v2/torrents/renameFile",
+            url=QB_API_URL["renameFile"],
             data=data,
         )
         return resp.status_code == 200
@@ -103,7 +123,7 @@ class QbDownloader:
             "location": new_location,
         }
         resp = await self._client.post(
-            url="/api/v2/torrents/setLocation",
+            url=QB_API_URL["setLocation"],
             data=data,
         )
         return resp.status_code == 200
@@ -114,7 +134,7 @@ class QbDownloader:
             "hashes": _hash,
         }
         resp = await self._client.post(
-            url="/api/v2/torrents/setCategory",
+            url=QB_API_URL["setCategory"],
             data=data,
         )
         return resp.status_code == 200
@@ -125,7 +145,7 @@ class QbDownloader:
             "tags": tag,
         }
         resp = await self._client.post(
-            url="/api/v2/torrents/addTags",
+            url=QB_API_URL["addTags"],
             data=data,
         )
         return resp.status_code == 200
@@ -133,12 +153,14 @@ class QbDownloader:
     async def __aenter__(self):
         self._client = httpx.AsyncClient(
             base_url=self.host,
+            trust_env=self.ssl,
         )
         while not await self.check_host():
             logger.warning(f"[Downloader] Failed to connect to {self.host}, retry in 30 seconds.")
             await asyncio.sleep(30)
         if not await self.auth():
             await self._client.aclose()
+            logger.error(f"[Downloader] Downloader authorize error. Please check your username/password.")
             raise AuthorizationError("Failed to login to qbittorrent.")
         return self
 

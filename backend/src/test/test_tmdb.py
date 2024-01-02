@@ -1,6 +1,9 @@
+import pytest
+
 from module.parser.analyser.tmdb_parser import tmdb_parser
 
 
+@pytest.mark.asyncio
 async def test_tmdb_parser():
     bangumi_title = "海盗战记"
     bangumi_year = "2019"
