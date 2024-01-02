@@ -3,3 +3,4 @@ ruff
 black
 pre-commit
 pytest
+pytest-asyncio
