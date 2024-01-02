@@ -11,17 +11,22 @@ from .site import rss_parser
 logger = logging.getLogger(__name__)
 
 
+@property
+def gen_filter():
+    return "|".join(settings.rss.filter)
+
+
 class RequestContent(RequestURL):
     async def get_torrents(
         self,
         _url: str,
-        _filter: str = "|".join(settings.rss_parser.filter),
+        _filter: str = gen_filter,
         limit: int = None,
         retry: int = 3,
     ) -> list[Torrent]:
-        soup = await self.get_xml(_url, retry)
-        if soup:
-            torrent_titles, torrent_urls, torrent_homepage = rss_parser(soup)
+        feeds = await self.get_xml(_url, retry)
+        if feeds:
+            torrent_titles, torrent_urls, torrent_homepage = rss_parser(feeds)
             torrents: list[Torrent] = []
             for _title, torrent_url, homepage in zip(
                 torrent_titles, torrent_urls, torrent_homepage
@@ -30,12 +35,9 @@ class RequestContent(RequestURL):
                     torrents.append(
                         Torrent(name=_title, url=torrent_url, homepage=homepage)
                     )
-                if isinstance(limit, int):
-                    if len(torrents) >= limit:
-                        break
-            return torrents
+            return torrents if limit is None else torrents[:limit]
         else:
-            logger.warning(f"[Network] Failed to get torrents: {_url}")
+            logger.error(f"[Network] Torrents list is empty: {_url}")
             return []
 
     async def get_xml(self, _url, retry: int = 3) -> xml.etree.ElementTree.Element:
@@ -49,14 +51,8 @@ class RequestContent(RequestURL):
         if req:
             return req.json()
 
-    async def post_json(self, _url, data: dict) -> dict:
-        return await self.post_url(_url, data)
-
-    async def post_data(self, _url, data: dict) -> dict:
-        return await self.post_json(_url, data)
-
-    async def post_files(self, _url, data: dict, files: dict) -> dict:
-        return await self.post_form(_url, data, files)
+    async def post_data(self, _url, data: dict, files: dict[str, bytes]) -> dict:
+        return await self.post_url(_url, data, files)
 
     async def get_html(self, _url):
         req = await self.get_url(_url)

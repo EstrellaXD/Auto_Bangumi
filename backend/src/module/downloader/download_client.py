@@ -11,10 +11,8 @@ logger = logging.getLogger(__name__)
 
 def getClient():
     # TODO 多下载器支持
-    type = settings.downloader.type
-    if type == "qbittorrent":
+    if settings.downloader.type == "qbittorrent":
         from .client.qb_downloader import QbDownloader
-
         return QbDownloader
     else:
         logger.error(f"[Downloader] Unsupported downloader type: {type}")

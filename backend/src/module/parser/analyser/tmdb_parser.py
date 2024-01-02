@@ -33,9 +33,8 @@ def info_url(e, key):
 
 async def is_animation(tv_id, language, req) -> bool:
     url_info = info_url(tv_id, language)
-    type_id = await req.get_json(url_info)
-    type_id = type_id.get("genres")
-    for type in type_id:
+    type_ids = await req.get_json(url_info)
+    for type in type_ids["genres"]:
         if type.get("id") == 16:
             return True
     return False
@@ -59,18 +58,18 @@ def get_season(seasons: list) -> tuple[int, str]:
 async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
     async with RequestContent() as req:
         url = search_url(title)
-        contents = await req.get_json(url)
-        contents = contents.get("results")
+        json_contents = await req.get_json(url)
+        contents = json_contents.get("results")
         if contents.__len__() == 0:
             url = search_url(title.replace(" ", ""))
             contents = req.get_json(url).get("results")
         # 判断动画
         if contents:
             for content in contents:
-                _id = content["id"]
-                if await is_animation(_id, language, req):
+                id = content["id"]
+                if await is_animation(id, language, req):
                     break
-            url_info = info_url(_id, language)
+            url_info = info_url(id, language)
             info_content = await req.get_json(url_info)
             season = [
                 {
@@ -95,7 +94,7 @@ async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
             else:
                 poster_link = None
             return TMDBInfo(
-                _id,
+                id,
                 official_title,
                 original_title,
                 season,
@@ -108,12 +107,4 @@ async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
 
 
 if __name__ == "__main__":
-    import asyncio
-
-
-    async def parse(title, language):
-        info = await tmdb_parser(title, language)
-        for key, value in info.__dict__.items():
-            print(key, value)
-
-    asyncio.run(parse("葬送的芙莉莲", "jp"))
+    print(tmdb_parser("魔法禁书目录", "zh"))

@@ -25,7 +25,7 @@ async def get_rss():
 )
 async def add_rss(rss: RSSItem):
     with RSSEngine() as engine:
-        result = engine.add_rss(rss.url, rss.name, rss.aggregate, rss.parser)
+        result = await engine.add_rss(rss.url, rss.name, rss.aggregate, rss.parser)
     return u_response(result)
 
 
