@@ -1,0 +1,33 @@
+version: "3.4"
+services:
+  qbittorrent:
+    container_name: qbittorrent
+    image: linuxserver/qbittorrent
+    hostname: qbittorrent
+    environment:
+      - PGID=$(id -g)
+      - PUID=$(id -u)
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./qb_config:/config
+      - <your_anime_path>:/downloads # 注意 修改此处为自己存放动漫的目录,ab 内下载路径填写downloads
+    network_mode: bridge
+    restart: unless-stopped
+
+  AutoBangumi:
+    image: "ghcr.io/estrellaxd/auto_bangumi:latest"
+    container_name: AutoBangumi
+    depends_on:
+      - qbittorrent
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data
+    network_mode: bridge
+    dns:
+      - 223.5.5.5
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Shanghai
+      - PGID=$(id -g)
+      - PUID=$(id -u)
+      - UMASK=022

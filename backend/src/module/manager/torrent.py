@@ -40,19 +40,16 @@ class TorrentManager(Database):
         data = self.bangumi.search_id(int(_id))
         if isinstance(data, Bangumi):
             with DownloadClient() as client:
-                # client.remove_rule(data.rule_name)
-                # client.remove_rss_feed(data.official_title)
                 self.rss.delete(data.official_title)
                 self.bangumi.delete_one(int(_id))
                 if file:
                     torrent_message = self.delete_torrents(data, client)
-                    return torrent_message
                 logger.info(f"[Manager] Delete rule for {data.official_title}")
                 return ResponseModel(
                     status_code=200,
                     status=True,
-                    msg_en=f"Delete rule for {data.official_title}",
-                    msg_zh=f"删除 {data.official_title} 规则",
+                    msg_en=f"Delete rule for {data.official_title}. {torrent_message.msg_en if file else ''}",
+                    msg_zh=f"删除 {data.official_title} 规则。{torrent_message.msg_zh if file else ''}",
                 )
         else:
             return ResponseModel(
@@ -139,6 +136,17 @@ class TorrentManager(Database):
             if not bangumi.poster_link:
                 TitleParser().tmdb_poster_parser(bangumi)
         self.bangumi.update_all(bangumis)
+        return ResponseModel(
+            status_code=200,
+            status=True,
+            msg_en="Refresh poster link successfully.",
+            msg_zh="刷新海报链接成功。",
+        )
+
+    def refind_poster(self, bangumi_id: int):
+        bangumi = self.bangumi.search_id(bangumi_id)
+        TitleParser().tmdb_poster_parser(bangumi)
+        self.bangumi.update(bangumi)
         return ResponseModel(
             status_code=200,
             status=True,

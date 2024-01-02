@@ -34,7 +34,11 @@ services:
       - "./data:/app/data"
     network_mode: bridge
     environment:
+      - TZ=Asia/Shanghai
       - AB_METHOD=Advance
+      - PGID=1000
+      - PUID=1000
+      - UMASK=022
 ```
 
 点击 **下一步**，然后点击 **完成**。
@@ -74,6 +78,7 @@ services:
       - TZ=Asia/Shanghai
       - PGID=1000  #需要自行修改填入
       - PUID=1000  #需要自行修改填入
+      - UMASK=022
       - AB_DOWNLOADER_HOST=127.0.0.1:8989  #建议自行修改端口号
     volumes:
       - /volume1/docker/ab/config:/app/config

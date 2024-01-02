@@ -247,6 +247,11 @@ jobs:
         run: |
           echo ${{ needs.version-info.outputs.version }}
           echo "VERSION='${{ needs.version-info.outputs.version }}'" >> module/__version__.py
+          
+      - name: Copy requirements.txt
+        working-directory: ./backend
+        run:
+          cp requirements.txt src/requirements.txt
 
       - name: Zip app
         run: |
@@ -262,6 +267,7 @@ jobs:
             echo "version=🌟${{ needs.version-info.outputs.version }}" >> $GITHUB_OUTPUT
             echo "pre_release=false" >> $GITHUB_OUTPUT
           fi
+          
       - name: Release
         id: release
         uses: softprops/action-gh-release@v1

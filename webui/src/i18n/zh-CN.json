@@ -77,6 +77,9 @@
   "player": {
     "hit": "请设置媒体播放器地址"
   },
+  "downloader": {
+    "hit": "请设置下载器"
+  },
   "log": {
     "title": "日志",
     "reset": "重置",

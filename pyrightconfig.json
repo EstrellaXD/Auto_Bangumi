@@ -1,8 +1,0 @@
-{
-  "pythonPath": "/opt/homebrew/Caskroom/miniforge/base/envs/auto_bangumi/bin/python",
-  "root": "backend/src",
-  "venvPath": "/opt/homebrew/Caskroom/miniforge/base/envs",
-  "venv": "auto_bangumi",
-  "typeCheckingMode": "basic",
-  "reportMissingImports": true
-}

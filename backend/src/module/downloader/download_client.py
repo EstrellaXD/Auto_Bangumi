@@ -14,6 +14,10 @@ def getClient():
     if settings.downloader.type == "qbittorrent":
         from .client.qb_downloader import QbDownloader
         return QbDownloader
+    elif type == "transmission":
+        from .client.tr_downloader import TrDownloader
+
+        return TrDownloader
     else:
         logger.error(f"[Downloader] Unsupported downloader type: {type}")
         raise Exception(f"Unsupported downloader type: {type}")
