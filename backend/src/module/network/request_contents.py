@@ -11,20 +11,16 @@ from .site import rss_parser
 logger = logging.getLogger(__name__)
 
 
-@property
-def gen_filter():
-    return "|".join(settings.rss.filter)
-
-
 class RequestContent(RequestURL):
     async def get_torrents(
         self,
         _url: str,
-        _filter: str = gen_filter,
+        _filter: str = None,
         limit: int = None,
         retry: int = 3,
     ) -> list[Torrent]:
         feeds = await self.get_xml(_url, retry)
+        _filter = _filter if _filter else "|".join(settings.rss_parser.filter)
         if feeds:
             torrent_titles, torrent_urls, torrent_homepage = rss_parser(feeds)
             torrents: list[Torrent] = []
