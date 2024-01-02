@@ -1,8 +1,9 @@
 import asyncio
 import logging
-import time
 
 import httpx
+
+from .proxy import set_proxy
 
 from module.conf import settings
 
@@ -23,13 +24,12 @@ def retry_async(times=3):
                 except httpx.RequestError:
                     if _ < times - 1:
                         await asyncio.sleep(5)  # 延迟5秒后重试
-                    logger.warning(
+                    logger.debug(
                         f"[Network] Cannot connect to {url}. Wait for 5 seconds."
                     )
                 except Exception as e:
                     logger.debug(e)
-                    logger.error(f"[Network] Failed connecting to {url}")
-                    logger.warning("[Network] Please check DNS/Connection settings")
+                    logger.error(f"[Network] Cannot connect to {url}")
                     break
             return None
 
@@ -41,6 +41,7 @@ def retry_async(times=3):
 class RequestURL:
     def __init__(self):
         self.header = {"user-agent": "Mozilla/5.0", "Accept": "application/xml"}
+        self.proxy = set_proxy if settings.proxy.enable else None
 
     @retry_async()
     async def get_url(self, url):
@@ -49,8 +50,8 @@ class RequestURL:
         return req
 
     @retry_async()
-    async def post_url(self, url: str, data: dict):
-        req = await self.client.post(url=url, data=data)
+    async def post_url(self, url: str, data: dict, files: dict[str, bytes] = None):
+        req = await self.client.post(url=url, data=data, files=files)
         req.raise_for_status()
         return req
 
@@ -65,31 +66,9 @@ class RequestURL:
             logger.debug(f"[Network] Cannot connect to {url}.")
             return False
 
-    async def post_form(self, url: str, data: dict, files):
-        try:
-            req = await self.client.post(url=url, data=data, files=files)
-            req.raise_for_status()
-            return req
-        except httpx.RequestError:
-            logger.warning(f"[Network] Cannot connect to {url}.")
-            return None
-
     async def __aenter__(self):
-        proxy = None
-        if settings.proxy.enable:
-            auth = (
-                f"{settings.proxy.username}:{settings.proxy.password}@"
-                if settings.proxy.username
-                else ""
-            )
-            if "http" in settings.proxy.type:
-                proxy = f"{settings.proxy.type}://{auth}{settings.proxy.host}:{settings.proxy.port}"
-            elif settings.proxy.type == "socks5":
-                proxy = f"socks5://{auth}{settings.proxy.host}:{settings.proxy.port}"
-            else:
-                logger.error(f"[Network] Unsupported proxy type: {settings.proxy.type}")
         self.client = httpx.AsyncClient(
-            http2=True, proxies=proxy, headers=self.header, timeout=5
+            http2=True, proxies=self.proxy, headers=self.header, timeout=5
         )
         return self
 
