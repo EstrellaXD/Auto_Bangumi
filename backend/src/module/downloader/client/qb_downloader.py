@@ -1,8 +1,10 @@
-import logging
-import httpx
 import asyncio
+import logging
 
-from ..exceptions import ConflictError, AuthorizationError
+import httpx
+from pydantic import main
+
+from ..exceptions import AuthorizationError, ConflictError
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +18,7 @@ QB_API_URL = {
     "add": "/api/v2/torrents/add",
     "delete": "/api/v2/torrents/delete",
     "renameFile": "/api/v2/torrents/renameFile",
+    "getFiles": "/api/v2/torrents/files",
     "setLocation": "/api/v2/torrents/setLocation",
     "setCategory": "/api/v2/torrents/setCategory",
     "addTags": "/api/v2/torrents/addTags",
@@ -40,7 +43,7 @@ class QbDownloader:
     async def logout(self):
         resp = await self._client.post(
             url=QB_API_URL["logout"],
-            timeout=5
+            timeout=5,
         )
         return resp.text
 
@@ -48,7 +51,7 @@ class QbDownloader:
         try:
             await self._client.get(
                 url=QB_API_URL["version"],
-                timeout=5
+                timeout=5,
             )
             return True
         except httpx.RequestError or httpx.TimeoutException:
@@ -57,17 +60,21 @@ class QbDownloader:
     async def prefs_init(self, prefs):
         await self._client.post(
             url=QB_API_URL["setPreferences"],
-            data=prefs
+            data=prefs,
         )
 
-    async def add_category(self, category):
+    async def add_category(self, category: str):
         await self._client.post(
             url=QB_API_URL["createCategory"],
             data={"category": category},
             timeout=5,
         )
 
-    async def torrents_info(self, status_filter, category, tag=None):
+    async def torrents_info(self, status_filter, category, tag=None) -> list[dict]:
+        """Get torrents info from qbittorrent.
+        :param status_filter: Filter torrents by status. Allowed values: all, stalled_downloading
+        completed, paused, active, inactive, resumed, stalled, stalled_uploading, stalled_downloading.
+        """
         data = {
             "filter": status_filter,
             "category": category,
@@ -78,6 +85,14 @@ class QbDownloader:
             params=data,
         )
         return torrent_info.json()
+
+    async def torrent_files(self, _hash) -> dict:
+        data = {"hash": _hash}
+        torrent_files = await self._client.get(
+            url=QB_API_URL["getFiles"],
+            params=data,
+        )
+        return torrent_files.json()
 
     async def add(self, torrent_urls, torrent_files, save_path, category):
         data = {
@@ -156,11 +171,15 @@ class QbDownloader:
             trust_env=self.ssl,
         )
         while not await self.check_host():
-            logger.warning(f"[Downloader] Failed to connect to {self.host}, retry in 30 seconds.")
+            logger.warning(
+                f"[Downloader] Failed to connect to {self.host}, retry in 30 seconds."
+            )
             await asyncio.sleep(30)
         if not await self.auth():
             await self._client.aclose()
-            logger.error(f"[Downloader] Downloader authorize error. Please check your username/password.")
+            logger.error(
+                f"[Downloader] Downloader authorize error. Please check your username/password."
+            )
             raise AuthorizationError("Failed to login to qbittorrent.")
         return self
 
