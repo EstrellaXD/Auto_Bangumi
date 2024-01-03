@@ -1,4 +1,5 @@
 import logging
+import asyncio
 
 from module.conf import settings
 from module.models import Bangumi, Torrent
@@ -51,29 +52,19 @@ class DownloadClient(getClient(), TorrentPath):
         logger.info("[Downloader] Remove torrents.")
         return resp
 
-    async def add_torrent(self, torrent: Torrent | list, bangumi: Bangumi) -> bool:
+    async def add_torrents(self, torrents: list[Torrent], bangumi: Bangumi) -> bool:
         if not bangumi.save_path:
             bangumi.save_path = self._gen_save_path(bangumi)
-        with RequestContent() as req:
-            if isinstance(torrent, list):
-                if len(torrent) == 0:
-                    logger.debug(
-                        f"[Downloader] No torrent found: {bangumi.official_title}"
-                    )
-                    return False
-                if "magnet" in torrent[0].url:
-                    torrent_url = [t.url for t in torrent]
-                    torrent_file = None
-                else:
-                    torrent_file = [await req.get_content(t.url) for t in torrent]
-                    torrent_url = None
+        async with RequestContent() as req:
+            if "magnet" in torrents[0].url:
+                torrent_url = [t.url for t in torrents]
+                torrent_file = None
             else:
-                if "magnet" in torrent.url:
-                    torrent_url = torrent.url
-                    torrent_file = None
-                else:
-                    torrent_file = await req.get_content(torrent.url)
-                    torrent_url = None
+                tasks = []
+                for t in torrents:
+                    tasks.append(req.get_content(t.url))
+                torrent_file = asyncio.gather(*tasks)
+                torrent_url = None
         result = await self.add(
             torrent_urls=torrent_url,
             torrent_files=torrent_file,

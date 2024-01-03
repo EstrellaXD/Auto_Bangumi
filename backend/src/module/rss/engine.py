@@ -101,7 +101,7 @@ class RSSEngine:
             )
             if torrents:
                 async with DownloadClient() as client:
-                    await client.add_torrent(torrents, bangumi)
+                    await client.add_torrents(torrents, bangumi)
                     database.torrent.add_all(torrents)
                     return ResponseModel(
                         status=True,
