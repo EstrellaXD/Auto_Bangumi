@@ -40,6 +40,3 @@ class Database(Session):
         self.bangumi.add_all(readd_bangumi)
         self.add(User(**user_data[0]))
         self.commit()
-
-    def close(self):
-        self.close()

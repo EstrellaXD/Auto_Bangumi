@@ -42,7 +42,8 @@ class RSSEngine:
     ) -> list[Torrent]:
         torrents = await self._get_torrents(rss_item)
         new_torrents = database.torrent.check_new(torrents)
-        callback(rss_item, new_torrents, **kwargs)
+        if callback:
+            await callback(rss_item, new_torrents, **kwargs)
         return new_torrents
 
     @staticmethod
