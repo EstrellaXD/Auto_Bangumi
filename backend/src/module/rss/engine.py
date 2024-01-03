@@ -17,16 +17,17 @@ class RSSEngine:
         self._to_refresh = False
         self.db_status = False
 
-    async def rss_checker(self, callback: Callable = None):
-        while 1:
+    async def rss_poller(self, callback: Callable = None):
+        # Main RSS Loop
+        while True:
             with Database() as database:
                 rss_items = database.rss.search_active()
                 if rss_items:
                     tasks = []
                     for item in rss_items:
                         tasks.append(self.pull_rss(item, database, callback))
-                        await asyncio.gather(*tasks)
-            await asyncio.sleep(settings.rss.interval)
+                    await asyncio.gather(*tasks)
+            await asyncio.sleep(settings.program.rss_time)
 
     @staticmethod
     async def _get_torrents(rss: RSSItem) -> list[Torrent]:
@@ -38,12 +39,13 @@ class RSSEngine:
             return torrents
 
     async def pull_rss(
-        self, rss_item: RSSItem, database: Database, callback: Callable = None, **kwargs
+        self, rss_item: RSSItem, database: Database = None, callback: Callable = None, **kwargs
     ) -> list[Torrent]:
         torrents = await self._get_torrents(rss_item)
         new_torrents = database.torrent.check_new(torrents)
         if callback:
             await callback(rss_item, new_torrents, **kwargs)
+        database.torrent.add_all(new_torrents)
         return new_torrents
 
     @staticmethod
@@ -118,3 +120,5 @@ class RSSEngine:
     @staticmethod
     def __connect_database():
         return Database(engine)
+
+

@@ -21,7 +21,7 @@ class RSSThread(ProgramStatus):
 
     async def __loop_mission(self):
         async with RSSEngine() as engine:
-            await engine.rss_checker(self.analyser, self.stop_event)
+            await engine.rss_poller(self.analyser, self.stop_event)
 
     def rss_loop(self):
         asyncio.run(self.__loop_mission())
