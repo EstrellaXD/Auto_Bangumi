@@ -4,4 +4,3 @@ class ConflictError(Exception):
 
 class AuthorizationError(Exception):
     pass
-

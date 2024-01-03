@@ -43,4 +43,3 @@ async def cache_image():
                 img_path = save_image(img, suffix)
                 bangumi.poster_link = img_path
         db.bangumi.update_all(bangumis)
-

@@ -43,8 +43,7 @@ class AsyncProgram:
         async with DownloadClient() as client:
             await self.check_downloader(client)
             await asyncio.gather(
-                self.rename_task(client),
-                self.rss_task(engine, client)
+                self.rename_task(client), self.rss_task(engine, client)
             )
 
 

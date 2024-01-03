@@ -99,4 +99,3 @@ class RSSAnalyser(TitleParser):
             msg_en="Cannot parse this link.",
             msg_zh="无法解析此链接。",
         )
-

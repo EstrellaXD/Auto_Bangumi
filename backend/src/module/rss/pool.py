@@ -21,4 +21,3 @@ async def rss_checker(rss: list[RSSItem], callback: Callable[[list[Torrent]], No
                 callback(torrent_pool)
                 torrent_pool.clear()
         await asyncio.sleep(settings.rss.interval)
-

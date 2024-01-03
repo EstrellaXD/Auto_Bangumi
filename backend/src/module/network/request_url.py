@@ -21,9 +21,7 @@ class RequestURL:
                 req = await self.client.get(url=url)
                 return req
             except httpx.RequestError:
-                logger.debug(
-                    f"[Network] Cannot connect to {url}. Wait for 5 seconds."
-                )
+                logger.debug(f"[Network] Cannot connect to {url}. Wait for 5 seconds.")
             except httpx.TimeoutException:
                 logger.debug(
                     f"[Network] Timeout. Cannot connect to {url}. Wait for 5 seconds."
@@ -34,15 +32,15 @@ class RequestURL:
                 break
             await asyncio.sleep(5)
 
-    async def post_url(self, url: str, data: dict, files: dict[str, bytes] = None, retry: int = 3):
+    async def post_url(
+        self, url: str, data: dict, files: dict[str, bytes] = None, retry: int = 3
+    ):
         for _ in range(retry):
             try:
                 req = await self.client.post(url=url, data=data, files=files)
                 return req
             except httpx.RequestError:
-                logger.debug(
-                    f"[Network] Cannot connect to {url}. Wait for 5 seconds."
-                )
+                logger.debug(f"[Network] Cannot connect to {url}. Wait for 5 seconds.")
             except httpx.TimeoutException:
                 logger.debug(
                     f"[Network] Timeout. Cannot connect to {url}. Wait for 5 seconds."

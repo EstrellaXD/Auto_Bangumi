@@ -116,6 +116,7 @@ async def refresh_poster():
         resp = manager.refresh_poster()
     return u_response(resp)
 
+
 @router.get(
     path="/refresh/poster/{bangumi_id}",
     response_model=APIResponse,

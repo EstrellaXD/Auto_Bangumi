@@ -57,7 +57,9 @@ if VERSION != "DEV_VERSION":
         else:
             context = {"request": request}
             return templates.TemplateResponse("index.html", context)
+
 else:
+
     @app.get("/", status_code=302, tags=["html"])
     def index():
         return RedirectResponse("/docs")

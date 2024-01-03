@@ -13,6 +13,7 @@ def getClient():
     # TODO 多下载器支持
     if settings.downloader.type == "qbittorrent":
         from .client.qb_downloader import QbDownloader
+
         return QbDownloader
     elif type == "transmission":
         from .client.tr_downloader import TrDownloader
@@ -29,10 +30,12 @@ class DownloadClient(getClient(), TorrentPath):
             host=settings.downloader.host,
             username=settings.downloader.username,
             password=settings.downloader.password,
-            ssl=settings.downloader.ssl
+            ssl=settings.downloader.ssl,
         )
 
-    async def get_torrent_info(self, category="Bangumi", status_filter="completed", tag=None):
+    async def get_torrent_info(
+        self, category="Bangumi", status_filter="completed", tag=None
+    ):
         return await self.torrents_info(
             status_filter=status_filter, category=category, tag=tag
         )
@@ -54,7 +57,9 @@ class DownloadClient(getClient(), TorrentPath):
         with RequestContent() as req:
             if isinstance(torrent, list):
                 if len(torrent) == 0:
-                    logger.debug(f"[Downloader] No torrent found: {bangumi.official_title}")
+                    logger.debug(
+                        f"[Downloader] No torrent found: {bangumi.official_title}"
+                    )
                     return False
                 if "magnet" in torrent[0].url:
                     torrent_url = [t.url for t in torrent]
@@ -87,4 +92,3 @@ class DownloadClient(getClient(), TorrentPath):
 
     async def set_category(self, hashes, category):
         await self.set_category(hashes, category)
-

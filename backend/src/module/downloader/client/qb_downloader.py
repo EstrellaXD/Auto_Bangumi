@@ -38,27 +38,18 @@ class QbDownloader:
         return resp.text == "Ok."
 
     async def logout(self):
-        resp = await self._client.post(
-            url=QB_API_URL["logout"],
-            timeout=5
-        )
+        resp = await self._client.post(url=QB_API_URL["logout"], timeout=5)
         return resp.text
 
     async def check_host(self):
         try:
-            await self._client.get(
-                url=QB_API_URL["version"],
-                timeout=5
-            )
+            await self._client.get(url=QB_API_URL["version"], timeout=5)
             return True
         except httpx.RequestError or httpx.TimeoutException:
             return False
 
     async def prefs_init(self, prefs):
-        await self._client.post(
-            url=QB_API_URL["setPreferences"],
-            data=prefs
-        )
+        await self._client.post(url=QB_API_URL["setPreferences"], data=prefs)
 
     async def add_category(self, category):
         await self._client.post(
@@ -156,11 +147,15 @@ class QbDownloader:
             trust_env=self.ssl,
         )
         while not await self.check_host():
-            logger.warning(f"[Downloader] Failed to connect to {self.host}, retry in 30 seconds.")
+            logger.warning(
+                f"[Downloader] Failed to connect to {self.host}, retry in 30 seconds."
+            )
             await asyncio.sleep(30)
         if not await self.auth():
             await self._client.aclose()
-            logger.error(f"[Downloader] Downloader authorize error. Please check your username/password.")
+            logger.error(
+                f"[Downloader] Downloader authorize error. Please check your username/password."
+            )
             raise AuthorizationError("Failed to login to qbittorrent.")
         return self
 

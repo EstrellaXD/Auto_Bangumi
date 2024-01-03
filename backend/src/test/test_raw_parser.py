@@ -70,7 +70,9 @@ def test_raw_parser():
     assert info.episode == 5
     assert info.season == 1
 
-    content = "【喵萌奶茶屋】★07月新番★[银砂糖师与黑妖精 ~ Sugar Apple Fairy Tale ~][13][1080p][简日双语][招募翻译]"
+    content = (
+        "【喵萌奶茶屋】★07月新番★[银砂糖师与黑妖精 ~ Sugar Apple Fairy Tale ~][13][1080p][简日双语][招募翻译]"
+    )
     info = raw_parser(content)
     assert info.group == "喵萌奶茶屋"
     assert info.title_zh == "银砂糖师与黑妖精"
@@ -79,13 +81,12 @@ def test_raw_parser():
     assert info.episode == 13
     assert info.season == 1
 
-    content = "[ANi]  16bit 的感动 ANOTHER LAYER - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+    content = (
+        "[ANi]  16bit 的感动 ANOTHER LAYER - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+    )
     info = raw_parser(content)
     assert info.group == "ANi"
     assert info.title_zh == "16bit 的感动 ANOTHER LAYER"
     assert info.resolution == "1080P"
     assert info.episode == 1
     assert info.season == 1
-
-
-

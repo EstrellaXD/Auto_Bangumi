@@ -48,9 +48,7 @@ class TrDownloader(Downloader):
     type: str = Field("transmission", description="Downloader type")
     host_: str = Field("172.17.0.1:9091", alias="host", description="Downloader host")
     username_: str = Field("admin", alias="username", description="Downloader username")
-    password_: str = Field(
-        "admin", alias="password", description="Downloader password"
-    )
+    password_: str = Field("admin", alias="password", description="Downloader password")
     path: str = Field("/downloads/Bangumi", description="Downloader path")
     ssl: bool = Field(False, description="Downloader ssl")
 

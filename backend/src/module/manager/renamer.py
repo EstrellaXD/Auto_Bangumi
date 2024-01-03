@@ -25,7 +25,7 @@ class Renamer(DownloadClient):
 
     @staticmethod
     def gen_path(
-            file_info: EpisodeFile | SubtitleFile, bangumi_name: str, method: str
+        file_info: EpisodeFile | SubtitleFile, bangumi_name: str, method: str
     ) -> str:
         season = f"0{file_info.season}" if file_info.season < 10 else file_info.season
         episode = (
@@ -49,14 +49,14 @@ class Renamer(DownloadClient):
             return file_info.media_path
 
     def rename_file(
-            self,
-            torrent_name: str,
-            media_path: str,
-            bangumi_name: str,
-            method: str,
-            season: int,
-            _hash: str,
-            **kwargs,
+        self,
+        torrent_name: str,
+        media_path: str,
+        bangumi_name: str,
+        method: str,
+        season: int,
+        _hash: str,
+        **kwargs,
     ):
         ep = self._parser.torrent_parser(
             torrent_name=torrent_name,
@@ -82,13 +82,13 @@ class Renamer(DownloadClient):
         return None
 
     def rename_collection(
-            self,
-            media_list: list[str],
-            bangumi_name: str,
-            season: int,
-            method: str,
-            _hash: str,
-            **kwargs,
+        self,
+        media_list: list[str],
+        bangumi_name: str,
+        season: int,
+        method: str,
+        _hash: str,
+        **kwargs,
     ):
         for media_path in media_list:
             if self.is_ep(media_path):
@@ -110,14 +110,14 @@ class Renamer(DownloadClient):
                                 break
 
     def rename_subtitles(
-            self,
-            subtitle_list: list[str],
-            torrent_name: str,
-            bangumi_name: str,
-            season: int,
-            method: str,
-            _hash,
-            **kwargs,
+        self,
+        subtitle_list: list[str],
+        torrent_name: str,
+        bangumi_name: str,
+        season: int,
+        method: str,
+        _hash,
+        **kwargs,
     ):
         method = "subtitle_" + method
         for subtitle_path in subtitle_list:

@@ -87,7 +87,9 @@ async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
             year_number = info_content.get("first_air_date").split("-")[0]
             if poster_path:
                 if not test:
-                    img = await req.get_content(f"https://image.tmdb.org/t/p/w780{poster_path}")
+                    img = await req.get_content(
+                        f"https://image.tmdb.org/t/p/w780{poster_path}"
+                    )
                     poster_link = save_image(img, "jpg")
                 else:
                     poster_link = "https://image.tmdb.org/t/p/w780" + poster_path
