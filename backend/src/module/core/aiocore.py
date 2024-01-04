@@ -16,34 +16,26 @@ class AsyncProgram:
     def __init__(self):
         self.renamer = Renamer()
         self.engine = RSSEngine()
+        self.event = asyncio.Event()
 
     async def run(self):
-        event = asyncio.Event()
-        event.clear()
+        self.event.clear()
         task = []
         if settings.bangumi_manage.enable:
             task.append(self.rename_task())
         if settings.rss_parser.enable:
-            task.append(self.rss_task(self.engine))
+            task.append(self.rss_task())
         await asyncio.gather(*task)
 
-    async def check_downloader(self, client: DownloadClient):
-        while 1:
-            connected = await client.auth()
-            if not connected:
-                await asyncio.sleep(30)
-            else:
-                break
-
     async def rename_task(self):
-        while True:
+        while not self.event.is_set():
             async with DownloadClient() as client:
                 await self.check_downloader(client)
-                await self.renamer.rename()
+                await self.renamer.rename(client)
                 await asyncio.sleep(settings.program.rename_time)
 
     async def rss_task(self):
-        while True:
+        while not self.event.is_set():
             await self.engine.rss_poller(process_rss)
             await asyncio.sleep(settings.program.rss_time)
 
