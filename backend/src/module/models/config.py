@@ -20,6 +20,17 @@ class Downloader(BaseModel):
     path: str = Field("/downloads/Bangumi", description="Downloader path")
     ssl: bool = Field(False, description="Downloader ssl")
 
+
+class QbDownloader(Downloader):
+    type: str = Field("qbittorrent", description="Downloader type")
+    host_: str = Field("172.17.0.1:8080", alias="host", description="Downloader host")
+    username_: str = Field("admin", alias="username", description="Downloader username")
+    password_: str = Field(
+        "adminadmin", alias="password", description="Downloader password"
+    )
+    path: str = Field("/downloads/Bangumi", description="Downloader path")
+    ssl: bool = Field(False, description="Downloader ssl")
+
     @property
     def host(self):
         return expandvars(self.host_)
@@ -31,6 +42,15 @@ class Downloader(BaseModel):
     @property
     def password(self):
         return expandvars(self.password_)
+
+
+class TrDownloader(Downloader):
+    type: str = Field("transmission", description="Downloader type")
+    host_: str = Field("172.17.0.1:9091", alias="host", description="Downloader host")
+    username_: str = Field("admin", alias="username", description="Downloader username")
+    password_: str = Field("admin", alias="password", description="Downloader password")
+    path: str = Field("/downloads/Bangumi", description="Downloader path")
+    ssl: bool = Field(False, description="Downloader ssl")
 
 
 class RSSParser(BaseModel):

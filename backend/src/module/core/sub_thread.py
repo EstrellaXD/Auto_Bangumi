@@ -1,5 +1,6 @@
 import threading
 import time
+import asyncio
 
 from module.conf import settings
 from module.downloader import DownloadClient
@@ -13,38 +14,11 @@ from .status import ProgramStatus
 class RSSThread(ProgramStatus):
     def __init__(self):
         super().__init__()
-        self._rss_thread = threading.Thread(
-            target=self.rss_loop,
-        )
+        self._rss_loop = asyncio.new_event_loop()
         self.analyser = RSSAnalyser()
 
-    def rss_loop(self):
-        while not self.stop_event.is_set():
-            with DownloadClient() as client, RSSEngine() as engine:
-                # Analyse RSS
-                rss_list = engine.rss.search_aggregate()
-                for rss in rss_list:
-                    self.analyser.rss_to_data(rss, engine)
-                # Run RSS Engine
-                engine.refresh_rss(client)
-            if settings.bangumi_manage.eps_complete:
-                eps_complete()
-            self.stop_event.wait(settings.program.rss_time)
-
-    def rss_start(self):
-        self.rss_thread.start()
-
-    def rss_stop(self):
-        if self._rss_thread.is_alive():
-            self._rss_thread.join()
-
-    @property
-    def rss_thread(self):
-        if not self._rss_thread.is_alive():
-            self._rss_thread = threading.Thread(
-                target=self.rss_loop,
-            )
-        return self._rss_thread
+    async def rss_loop(self):
+        pass
 
 
 class RenameThread(ProgramStatus):

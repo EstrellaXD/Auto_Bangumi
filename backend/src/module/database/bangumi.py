@@ -129,10 +129,11 @@ class BangumiDatabase:
                 i += 1
         return torrent_list
 
-    def match_torrent(self, torrent_name: str) -> Optional[Bangumi]:
+    def match_torrent(self, torrent_name: str, rss_link: str) -> Optional[Bangumi]:
         statement = select(Bangumi).where(
             and_(
                 func.instr(torrent_name, Bangumi.title_raw) > 0,
+                func.instr(Bangumi.rss_link, rss_link),
                 # use `false()` to avoid E712 checking
                 # see: https://docs.astral.sh/ruff/rules/true-false-comparison/
                 Bangumi.deleted == false(),

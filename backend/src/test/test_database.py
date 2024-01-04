@@ -46,7 +46,8 @@ def test_bangumi_database():
 
         # match torrent
         result = db.bangumi.match_torrent(
-            "[Lilith-Raws] 无职转生，到了异世界就拿出真本事 / Mushoku Tensei - 11 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
+            "[Lilith-Raws] 无职转生，到了异世界就拿出真本事 / Mushoku Tensei - 11 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]",
+            "test",
         )
         assert result.official_title == "无职转生，到了异世界就拿出真本事II"
 
