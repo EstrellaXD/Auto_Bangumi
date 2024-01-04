@@ -8,6 +8,7 @@ from module.database import Database
 from module.models import Bangumi, RSSItem, Torrent
 
 
+
 rss_item_pool = []
 torrent_pool: list[tuple[Bangumi, list[Torrent]]] = []
 

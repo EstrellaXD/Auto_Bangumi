@@ -5,12 +5,14 @@ from module.conf import settings
 from module.downloader import DownloadClient
 from module.models import EpisodeFile, Notification, SubtitleFile
 from module.parser import TitleParser
+from module.downloader.path import TorrentPath
 
 logger = logging.getLogger(__name__)
 
 
-class Renamer:
+class Renamer(TorrentPath):
     def __init__(self):
+        super().__init__()
         self._parser = TitleParser()
         self._check_pool = {}
 
@@ -65,16 +67,18 @@ class Renamer:
         )
         if ep:
             new_path = self.gen_path(ep, bangumi_name, method=method)
-            if media_path != new_path:
-                if new_path not in self.check_pool.keys():
-                    if await client.rename_torrent_file(
-                        _hash=_hash, old_path=media_path, new_path=new_path
-                    ):
-                        return Notification(
-                            official_title=bangumi_name,
-                            season=ep.season,
-                            episode=ep.episode,
-                        )
+            success = await self._rename_file_internal(
+                original_path=media_path,
+                new_path=new_path,
+                _hash=_hash,
+                client=client,
+            )
+            if success:
+                return Notification(
+                    official_title=bangumi_name,
+                    season=ep.season,
+                    episode=ep.episode,
+                )
         else:
             logger.warning(f"[Renamer] {media_path} parse failed")
             if settings.bangumi_manage.remove_bad_torrent:
@@ -92,23 +96,21 @@ class Renamer:
         **kwargs,
     ):
         for media_path in media_list:
-            if client.is_ep(media_path):
+            if self.is_ep(media_path):
                 ep = self._parser.torrent_parser(
                     torrent_path=media_path,
                     season=season,
                 )
                 if ep:
                     new_path = self.gen_path(ep, bangumi_name, method=method)
-                    if media_path != new_path:
-                        renamed = await client.rename_torrent_file(
-                            _hash=_hash, old_path=media_path, new_path=new_path
-                        )
-                        if not renamed:
-                            logger.warning(f"[Renamer] {media_path} rename failed")
-                            # Delete bad torrent.
-                            if settings.bangumi_manage.remove_bad_torrent:
-                                await client.delete_torrent(_hash)
-                                break
+                    success = await self._rename_file_internal(
+                        original_path=media_path,
+                        new_path=new_path,
+                        _hash=_hash,
+                        client=client,
+                    )
+                    if not success:
+                        break
 
     async def rename_subtitles(
         self,
@@ -131,12 +133,14 @@ class Renamer:
             )
             if sub:
                 new_path = self.gen_path(sub, bangumi_name, method=method)
-                if subtitle_path != new_path:
-                    renamed = await client.rename_torrent_file(
-                        _hash=_hash, old_path=subtitle_path, new_path=new_path
-                    )
-                    if not renamed:
-                        logger.warning(f"[Renamer] {subtitle_path} rename failed")
+                success = await self._rename_file_internal(
+                    original_path=subtitle_path,
+                    new_path=new_path,
+                    _hash=_hash,
+                    client=client,
+                )
+                if not success:
+                    break
 
     async def rename(self, client: DownloadClient) -> list[Notification]:
         # Get torrent info
@@ -180,6 +184,24 @@ class Renamer:
             pass
         else:
             await client.delete_torrent(hashes=torrent_hash)
+
+    @staticmethod
+    async def _rename_file_internal(
+            original_path: str,
+            new_path: str,
+            _hash: str,
+            client: DownloadClient,
+    ) -> bool:
+        if original_path != new_path:
+            renamed = await client.rename_torrent_file(
+                _hash=_hash, old_path=original_path, new_path=new_path
+            )
+            if not renamed:
+                logger.warning(f"[Renamer] {original_path} rename failed")
+                if settings.bangumi_manage.remove_bad_torrent:
+                    await client.delete_torrent(_hash)
+                return False
+        return True
 
 
 if __name__ == "__main__":
