@@ -15,6 +15,17 @@ torrent_pool: list[tuple[Bangumi, list[Torrent]]] = []
 class AsyncProgram:
     def __init__(self):
         self.renamer = Renamer()
+        self.engine = RSSEngine()
+
+    async def run(self):
+        event = asyncio.Event()
+        event.clear()
+        task = []
+        if settings.bangumi_manage.enable:
+            task.append(self.rename_task())
+        if settings.rss_parser.enable:
+            task.append(self.rss_task(self.engine))
+        await asyncio.gather(*task)
 
     async def check_downloader(self, client: DownloadClient):
         while 1:
@@ -25,26 +36,16 @@ class AsyncProgram:
                 break
 
     async def rename_task(self):
-        while 1:
+        while True:
             async with DownloadClient() as client:
                 await self.check_downloader(client)
-                self.renamer.rename(client)
+                await self.renamer.rename()
                 await asyncio.sleep(settings.program.rename_time)
 
-    async def rss_task(self, engine: RSSEngine):
+    async def rss_task(self):
         while True:
-            for rss_item in rss_item_pool:
-                torrents = engine.get_rss_torrents(rss_item.id)
-                if torrents:
-                    torrent_pool.append((rss_item, torrents))
+            await self.engine.rss_poller(process_rss)
             await asyncio.sleep(settings.program.rss_time)
-
-    async def main_tasks(self):
-        async with DownloadClient() as client:
-            await self.check_downloader(client)
-            await asyncio.gather(
-                self.rename_task(client), self.rss_task(engine, client)
-            )
 
 
 async def rename_task():

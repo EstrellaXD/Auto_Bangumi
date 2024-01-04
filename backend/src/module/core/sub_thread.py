@@ -14,32 +14,11 @@ from .status import ProgramStatus
 class RSSThread(ProgramStatus):
     def __init__(self):
         super().__init__()
-        self._rss_thread = threading.Thread(
-            target=self.rss_loop,
-        )
+        self._rss_loop = asyncio.new_event_loop()
         self.analyser = RSSAnalyser()
 
-    async def __loop_mission(self):
-        async with RSSEngine() as engine:
-            await engine.rss_poller(self.analyser, self.stop_event)
-
-    def rss_loop(self):
-        asyncio.run(self.__loop_mission())
-
-    def rss_start(self):
-        self.rss_thread.start()
-
-    def rss_stop(self):
-        if self._rss_thread.is_alive():
-            self._rss_thread.join()
-
-    @property
-    def rss_thread(self):
-        if not self._rss_thread.is_alive():
-            self._rss_thread = threading.Thread(
-                target=self.rss_loop,
-            )
-        return self._rss_thread
+    async def rss_loop(self):
+        pass
 
 
 class RenameThread(ProgramStatus):
