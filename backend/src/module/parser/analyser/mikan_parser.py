@@ -19,8 +19,14 @@ def mikan_parser(homepage: str):
         official_title = re.sub(r"第.*季", "", official_title).strip()
         if poster_div:
             poster_path = poster_div.split("url('")[1].split("')")[0]
+            poster_path = poster_path.split("?")[0]
             img = req.get_content(f"https://{root_path}{poster_path}")
             suffix = poster_path.split(".")[-1]
             poster_link = save_image(img, suffix)
             return poster_link, official_title
         return "", ""
+
+
+if __name__ == '__main__':
+    homepage = "https://mikanani.me/Home/Episode/c89b3c6f0c1c0567a618f5288b853823c87a9862"
+    print(mikan_parser(homepage))
