@@ -85,9 +85,9 @@ class RSSAnalyser(TitleParser):
         if not torrents:
             return ResponseModel(
                 status=False,
-                status_codes=406,
-                msg_en="Cannot find torrents",
-                msg_zh="无法找到种子"
+                status_code=406,
+                msg_en="Cannot find any torrent.",
+                msg_zh="无法找到种子。",
             )
         for torrent in torrents:
             data = self.torrent_to_data(torrent, rss)
@@ -99,3 +99,4 @@ class RSSAnalyser(TitleParser):
             msg_en="Cannot parse this link.",
             msg_zh="无法解析此链接。",
         )
+

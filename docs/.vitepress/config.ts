@@ -14,7 +14,6 @@ export default defineConfig({
         ['meta', {property: 'og:image', content: '/social.png'}],
         ['meta', {property: 'og:site_name', content: 'AutoBangumi'}],
         ['meta', {property: 'og:url', content: 'https://www.autobangumi.org'}],
-        ["script", {src: '/_vercel/insights/script.js'}]
     ],
 
     themeConfig: {
@@ -25,7 +24,7 @@ export default defineConfig({
         },
 
         editLink: {
-            pattern: 'https://github.com/vitejs/vite/blob/3.1-dev/docs/:path',
+            pattern: 'https://github.com/EstrellaXD/Auto_Bangumi/edit/main/docs/:path',
             text: 'Edit this page',
         },
 
@@ -86,21 +85,8 @@ export default defineConfig({
                         link: "/deploy/dsm",
                     },
                     {
-                        text: "WSL",
-                        link: "/deploy/wsl",
-                    },
-                ],
-            },
-            {
-                text: "源码运行",
-                items: [
-                    {
-                        text: "Windows 本地部署",
-                        link: "/deploy/windows",
-                    },
-                    {
-                        text: "Unix 本地部署",
-                        link: "/deploy/unix",
+                        text: "本地部署",
+                        link: "/deploy/local",
                     },
                 ],
             },
@@ -149,6 +135,10 @@ export default defineConfig({
                         link: "/feature/rss",
                     },
                     {
+                        text: "番剧管理",
+                        link: "/feature/bangumi",
+                    },
+                    {
                         text: "重命名",
                         link: "/feature/rename",
                     },
@@ -171,7 +161,7 @@ export default defineConfig({
                     },
                     {
                         text: "网络问题",
-                        link: "/faq/mikan-network",
+                        link: "/faq/network",
                     }
                 ],
             },

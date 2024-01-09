@@ -6,8 +6,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        描述问题前，请先更新到最新版本。2.5 之前的版本升级请参考 [升级指南](https://www.autobangumi.org/changelog/2.6.html#如何从老版本更新的注意事项)
-        请确认以下信息，如果你的问题可以直接在文档中找到，那么你的 issue 将会被直接关闭。
+        描述问题前，请先更新到最新版本。
+        请确认以下信息，如果你没有完成以下检查，那么你的 issue 将会被直接关闭。
         解析器问题请转到[专用模板](https://github.com/EstrellaXD/Auto_Bangumi/issues/new?assignees=&labels=bug&template=parser_bug.yml&title=%5B解析器错误%5D)，
         重命名问题请到[专用模板](https://github.com/EstrellaXD/Auto_Bangumi/issues/new?assignees=&labels=bug&template=rename_bug.yml&title=%5B重命名错误%5D)
   - type: checkboxes

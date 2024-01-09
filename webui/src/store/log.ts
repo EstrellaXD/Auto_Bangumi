@@ -1,6 +1,6 @@
 export const useLogStore = defineStore('log', () => {
   const log = ref('');
-  const { auth } = useAuth();
+  const { isLoggedin } = useAuth();
   const message = useMessage();
 
   function get() {
@@ -10,7 +10,7 @@ export const useLogStore = defineStore('log', () => {
       log.value = value;
     });
 
-    if (auth.value !== '') {
+    if (isLoggedin.value) {
       execute();
     }
   }

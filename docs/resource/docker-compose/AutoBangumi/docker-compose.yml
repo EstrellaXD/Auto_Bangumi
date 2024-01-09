@@ -14,4 +14,7 @@ services:
     dns:
       - 223.5.5.5
     environment:
-      - AB_METHOD=Advance
+      - TZ=Asia/Shanghai
+      - PGID=$(id -g)
+      - PUID=$(id -u)
+      - UMASK=022

@@ -27,4 +27,8 @@
   <Config Name="WebUI" Target="7892" Default="7892" Mode="tcp" Description="" Type="Port" Display="always" Required="false" Mask="false">7892</Config>
   <Config Name="Config" Target="/app/config" Default="" Mode="rw" Description="" Type="Path" Display="always" Required="false" Mask="false">/mnt/user/appdata/AutoBangumi/config</Config>
   <Config Name="Data" Target="/app/data" Default="" Mode="rw" Description="" Type="Path" Display="always" Required="false" Mask="false">/mnt/user/appdata/AutoBangumi/data</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="" Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="" Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="UMASK" Target="UMASK" Default="022" Mode="" Description="" Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="TZ" Target="TZ" Default="Asia/Shanghai" Mode="" Description="" Type="Variable" Display="always" Required="false" Mask="false"/>
 </Container>

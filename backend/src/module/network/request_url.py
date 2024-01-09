@@ -20,10 +20,11 @@ class RequestURL:
         while True:
             try:
                 req = self.session.get(url=url, headers=self.header, timeout=5)
+                logger.debug(f"[Network] Successfully connected to {url}. Status: {req.status_code}")
                 req.raise_for_status()
                 return req
             except requests.RequestException:
-                logger.warning(
+                logger.debug(
                     f"[Network] Cannot connect to {url}. Wait for 5 seconds."
                 )
                 try_time += 1
@@ -33,8 +34,7 @@ class RequestURL:
             except Exception as e:
                 logger.debug(e)
                 break
-        logger.error(f"[Network] Failed connecting to {url}")
-        logger.warning("[Network] Please check DNS/Connection settings")
+        logger.error(f"[Network] Unable to connect to {url}, Please check your network settings")
         return None
 
     def post_url(self, url: str, data: dict, retry=3):

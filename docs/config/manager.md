@@ -14,7 +14,8 @@
 - **Eps complete** 为是否补全当季番剧，如果开启，则会补全当季番剧，如果关闭，则不会补全当季番剧。
 - **Add group tag** 为是否在下载规则中添加番剧组标签，如果开启，则会在下载规则中添加番剧组标签。
 - **Delete bad torrent** 为是否删除错误的种子，如果开启，则会删除错误的种子。
-- [文件路径以及重命名相关][1]
+- [关于文件路径][1]
+- [关于重命名][2]
 
 ## `config.json` 中的配置选项
 
@@ -31,4 +32,5 @@
 | remove_bad_torrent | 是否删除错误的种子       | 布尔值  | 种子删除       | false |
 
 
-[1]:   https://www.autobangumi.org/use/%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E.html#%E6%96%87%E4%BB%B6%E8%B7%AF%E5%BE%84%E4%BB%A5%E5%8F%8A%E9%87%8D%E5%91%BD%E5%90%8D%E7%9B%B8%E5%85%B3
+[1]:   https://www.autobangumi.org/faq/#%E4%B8%8B%E8%BD%BD%E4%BB%A5%E5%8F%8A%E5%85%B3%E9%94%AE%E8%AF%8D%E8%BF%87%E6%BB%A4
+[2]:   https://www.autobangumi.org/faq/#%F0%9F%93%81-%E9%87%8D%E5%91%BD%E5%90%8D%E7%9B%B8%E5%85%B3
