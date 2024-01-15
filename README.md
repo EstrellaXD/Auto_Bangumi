@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://www.autobangumi.org">官方网站</a> | <a href="https://www.autobangumi.org/deploy/quick-start.html">快速开始</a> | <a href="https://www.autobangumi.org/changelog/3.0.html">更新日志</a> | <a href="https://t.me/autobangumi">TG 群组</a>
+  <a href="https://www.autobangumi.org">官方网站</a> | <a href="https://www.autobangumi.org/deploy/quick-start.html">快速开始</a> | <a href="https://www.autobangumi.org/changelog/3.0.html">更新日志</a> | <a href="https://t.me/autobangumi_update">更新推送</a> | <a href="https://t.me/autobangumi">TG 群组</a>
 </p>
 
 # 项目说明
@@ -59,11 +59,6 @@
 - 支持多种 RSS 站点，支持聚合 RSS 的解析。
 - 无需维护完全无感使用
 - 内置 TDMB 解析器，可以直接生成完整的 TMDB 格式的文件以及番剧信息。
-
-## 相关群组
-
-- 更新推送：[Telegram Channel](https://t.me/autobangumi_update)
-- Bug 反馈群：[Telegram](https://t.me/+yNisOnDGaX5jMTM9)
 
 ## [Roadmap](https://github.com/users/EstrellaXD/projects/2)
 
