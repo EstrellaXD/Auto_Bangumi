@@ -120,7 +120,9 @@ class DownloadClient(TorrentPath):
         with RequestContent() as req:
             if isinstance(torrent, list):
                 if len(torrent) == 0:
-                    logger.debug(f"[Downloader] No torrent found: {bangumi.official_title}")
+                    logger.debug(
+                        f"[Downloader] No torrent found: {bangumi.official_title}"
+                    )
                     return False
                 if "magnet" in torrent[0].url:
                     torrent_url = [t.url for t in torrent]
@@ -128,6 +130,8 @@ class DownloadClient(TorrentPath):
                 else:
                     torrent_file = [req.get_content(t.url) for t in torrent]
                     torrent_url = None
+                for t in torrent:
+                    t.bangumi_id = bangumi.id
             else:
                 if "magnet" in torrent.url:
                     torrent_url = torrent.url
@@ -135,6 +139,7 @@ class DownloadClient(TorrentPath):
                 else:
                     torrent_file = req.get_content(torrent.url)
                     torrent_url = None
+                torrent.bangumi_id = bangumi.id
         if self.client.add_torrents(
             torrent_urls=torrent_url,
             torrent_files=torrent_file,
