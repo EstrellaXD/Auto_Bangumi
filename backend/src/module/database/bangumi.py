@@ -171,3 +171,9 @@ class BangumiDatabase:
     def search_rss(self, rss_link: str) -> list[Bangumi]:
         statement = select(Bangumi).where(func.instr(rss_link, Bangumi.rss_link) > 0)
         return self.session.exec(statement).all()
+
+    def get_offset(self, _id: int) -> int:
+        offset = self.session.exec(
+            select(Bangumi.offset).where(Bangumi.id == _id)
+        ).first()
+        return 0 if offset is None else offset

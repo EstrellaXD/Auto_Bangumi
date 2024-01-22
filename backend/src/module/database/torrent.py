@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from sqlmodel import Session, select
 
@@ -55,3 +56,8 @@ class TorrentDatabase:
             if torrent.url not in old_urls:
                 new_torrents.append(torrent)
         return new_torrents
+
+    def get_bangumi_id(self, torrent_hash: str) -> Optional[int]:
+        return self.session.exec(
+            select(Torrent.bangumi_id).where(Torrent.hash == torrent_hash)
+        ).first()
