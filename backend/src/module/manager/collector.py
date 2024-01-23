@@ -14,10 +14,11 @@ class SeasonCollector(DownloadClient):
             f"Start collecting {bangumi.official_title} Season {bangumi.season}..."
         )
         with SearchTorrent() as st, RSSEngine() as engine:
-            if not link:
-                torrents = st.search_season(bangumi)
+            torrent = st.get_dense_torrent(bangumi)
+            if torrent:
+                torrents = [torrent]
             else:
-                torrents = st.get_torrents(link, bangumi.filter.replace(",", "|"))
+                torrent = st.get_torrents(link, bangumi.filter.replace(",", "|")) if link else st.search_season(bangumi)
             if self.add_torrent(torrents, bangumi):
                 logger.info(
                     f"Collections of {bangumi.official_title} Season {bangumi.season} completed."
@@ -25,7 +26,7 @@ class SeasonCollector(DownloadClient):
                 for torrent in torrents:
                     torrent.downloaded = True
                 bangumi.eps_collect = True
-                if engine.bangumi.update(bangumi):
+                if not engine.bangumi.update(bangumi):
                     engine.bangumi.add(bangumi)
                 engine.torrent.add_all(torrents)
                 return ResponseModel(
@@ -56,7 +57,7 @@ class SeasonCollector(DownloadClient):
             result = engine.download_bangumi(data)
             engine.bangumi.add(data)
             return result
-
+                
 
 def eps_complete():
     with RSSEngine() as engine:

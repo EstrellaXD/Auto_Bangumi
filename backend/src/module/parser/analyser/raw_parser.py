@@ -9,6 +9,7 @@ EPISODE_RE = re.compile(r"\d+")
 TITLE_RE = re.compile(
     r"(.*|\[.*])( -? \d+|\[\d+]|\[\d+.?[vV]\d]|第\d+[话話集]|\[第?\d+[话話集]]|\[\d+.?END]|[Ee][Pp]?\d+)(.*)"
 )
+TITLE_LOOSE_RE = re.compile(r"(.*|\[.*])()(.*)")
 RESOLUTION_RE = re.compile(r"1080|720|2160|4K")
 SOURCE_RE = re.compile(r"B-Global|[Bb]aha|[Bb]ilibili|AT-X|Web")
 SUB_RE = re.compile(r"[简繁日字幕]|CH|BIG5|GB")
@@ -27,6 +28,9 @@ CHINESE_NUMBER_MAP = {
     "九": 9,
     "十": 10,
 }
+
+def safe_strip(raw: str | None) -> str:
+    return raw.strip() if raw else ""
 
 
 def get_group(name: str) -> str:
@@ -137,9 +141,11 @@ def process(raw_title: str):
     group = get_group(content_title)
     # 翻译组的名字
     match_obj = TITLE_RE.match(content_title)
+    if not match_obj:
+        match_obj = TITLE_LOOSE_RE.match(content_title)
     # 处理标题
     season_info, episode_info, other = list(
-        map(lambda x: x.strip(), match_obj.groups())
+        map(lambda x: safe_strip(x), match_obj.groups())
     )
     process_raw = prefix_process(season_info, group)
     # 处理 前缀
