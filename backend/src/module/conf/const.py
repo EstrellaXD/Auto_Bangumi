@@ -1,4 +1,5 @@
 # -*- encoding: utf-8 -*-
+import pathlib
 from urllib.parse import parse_qs, urlparse
 
 DEFAULT_SETTINGS = {
@@ -116,3 +117,6 @@ class BCOLORS:
     ENDC = "\033[0m"
     BOLD = "\033[1m"
     UNDERLINE = "\033[4m"
+
+
+ROOT = pathlib.Path(__file__).parent.parent.parent.absolute()

@@ -15,7 +15,8 @@
     "logout": "退出",
     "calendar": "番剧日历",
     "downloader": "下载器",
-    "rss": "RSS 管理"
+    "rss": "RSS 管理",
+    "notification": "通知消息"
   },
   "topbar": {
     "start": "启动",
@@ -89,6 +90,9 @@
     "join": "加入",
     "bug_repo": "Bug 反馈"
   },
+  "notification": {
+    "title": "通知消息"
+  },
   "config": {
     "normal_set": {
       "title": "常规设置",
@@ -129,7 +133,9 @@
       "enable": "启用",
       "type": "类型",
       "token": "Token",
-      "chat_id": "Chat ID"
+      "chat_id": "Chat ID",
+      "channel": "Slack 频道参数",
+      "base_url": "通知服务 Base URL"
     },
     "proxy_set": {
       "title": "代理设置",

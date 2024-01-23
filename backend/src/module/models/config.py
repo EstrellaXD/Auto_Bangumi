@@ -3,6 +3,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from module.notification.services import NotificationType
+
 
 class Program(BaseModel):
     rss_time: int = Field(900, description="Sleep time")
@@ -70,9 +72,11 @@ class Proxy(BaseModel):
 
 class Notification(BaseModel):
     enable: bool = Field(False, description="Enable notification")
-    type: str = Field("telegram", description="Notification type")
+    type: NotificationType = Field("telegram", description="Notification type")
     token_: str = Field("", alias="token", description="Notification token")
     chat_id_: str = Field("", alias="chat_id", description="Notification chat id")
+    base_url: str = Field("", description="Notification base url")
+    channel: str = Field("", description="Notification channel")
 
     @property
     def token(self):

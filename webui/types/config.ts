@@ -43,9 +43,13 @@ export interface Config {
   };
   notification: {
     enable: boolean;
-    type: 'telegram' | 'server-chan' | 'bark' | 'wecom';
+    type: 'telegram' | 'server-chan' | 'bark' | 'wecom' | 'gotify' | 'slack';
     token: string;
     chat_id: string;
+    // slack channel
+    channel: string;
+    // notification service base url
+    base_url: string;
   };
   experimental_openai: {
     enable: boolean;
@@ -105,6 +109,8 @@ export const initConfig: Config = {
     type: 'telegram',
     token: '',
     chat_id: '',
+    channel: '',
+    base_url: '',
   },
   experimental_openai: {
     enable: false,

@@ -212,8 +212,3 @@ dev-dist
 
 # vitepress
 /docs/.vitepress/cache/
-
-
-# test file
-test.*
-test_*

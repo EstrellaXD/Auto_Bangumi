@@ -15,7 +15,8 @@
     "logout": "Logout",
     "downloader": "Downloader",
     "calendar": "Calendar",
-    "rss": "RSS Manager"
+    "rss": "RSS Manager",
+    "notification": "Notification"
   },
   "topbar": {
     "start": "Start",
@@ -89,6 +90,9 @@
     "join": "Join",
     "bug_repo": "Bug Report"
   },
+  "notification": {
+    "title": "Notification"
+  },
   "config": {
     "normal_set": {
       "title": "Normal Setting",
@@ -129,7 +133,9 @@
       "enable": "Enable",
       "type": "Type",
       "token": "Token",
-      "chat_id": "Chat ID"
+      "chat_id": "Chat ID",
+      "channel": "Slack Channel",
+      "base_url": "Notification Service Base URL"
     },
     "proxy_set": {
       "title": "Proxy Setting",

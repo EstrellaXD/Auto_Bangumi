@@ -1,10 +1,10 @@
 import threading
-import time
+from concurrent.futures import ThreadPoolExecutor
 
 from module.conf import settings
 from module.downloader import DownloadClient
 from module.manager import Renamer, eps_complete
-from module.notification import PostNotification
+from module.notification import Notifier
 from module.rss import RSSAnalyser, RSSEngine
 
 from .status import ProgramStatus
@@ -58,11 +58,17 @@ class RenameThread(ProgramStatus):
         while not self.stop_event.is_set():
             with Renamer() as renamer:
                 renamed_info = renamer.rename()
+
             if settings.notification.enable:
-                with PostNotification() as notifier:
-                    for info in renamed_info:
-                        notifier.send_msg(info)
-                        time.sleep(2)
+                notifier = Notifier(
+                    settings.notification.type,
+                    config=settings.notification.dict(by_alias=True),
+                )
+                with ThreadPoolExecutor(max_workers=2) as worker:
+                    worker.map(
+                        lambda info: notifier.send(notification=info), renamed_info
+                    )
+
             self.stop_event.wait(settings.program.rename_time)
 
     def rename_start(self):

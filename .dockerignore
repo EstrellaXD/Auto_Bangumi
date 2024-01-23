@@ -39,3 +39,4 @@ config
 test
 .env
 test.py
+/backend/src/test

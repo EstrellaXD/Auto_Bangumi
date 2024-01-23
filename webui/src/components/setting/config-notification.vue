@@ -1,9 +1,10 @@
 <script lang="ts" setup>
-import type { Notification, NotificationType } from '#/config';
 import type { SettingItem } from '#/components';
+import type { Notification, NotificationType } from '#/config';
 
 const { t } = useMyI18n();
 const { getSettingGroup } = useConfigStore();
+const { sendTestNotificaiton } = useNotificationStore();
 
 const notification = getSettingGroup('notification');
 const notificationType: NotificationType = [
@@ -11,6 +12,8 @@ const notificationType: NotificationType = [
   'server-chan',
   'bark',
   'wecom',
+  'gotify',
+  'slack',
 ];
 
 const items: SettingItem<Notification>[] = [
@@ -47,7 +50,30 @@ const items: SettingItem<Notification>[] = [
       placeholder: 'chat id',
     },
   },
+  {
+    configKey: 'base_url',
+    label: () => t('config.notification_set.base_url'),
+    type: 'input',
+    prop: {
+      type: 'text',
+      placeholder: 'e.g https://api.telegram.org',
+    },
+  },
+  {
+    configKey: 'channel',
+    label: () => t('config.notification_set.channel'),
+    type: 'input',
+    prop: {
+      type: 'text',
+      placeholder: 'slack channel',
+    },
+  },
 ];
+
+async function handleSendTestNotificaiton() {
+  const content = 'Hello! This is a test notification from AutoBangumi';
+  sendTestNotificaiton(content);
+}
 </script>
 
 <template>
@@ -59,6 +85,9 @@ const items: SettingItem<Notification>[] = [
         v-bind="i"
         v-model:data="notification[i.configKey]"
       ></ab-setting>
+      <ab-button size="small" @click="handleSendTestNotificaiton"
+        >测试发送通知</ab-button
+      >
     </div>
   </ab-fold-panel>
 </template>

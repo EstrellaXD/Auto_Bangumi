@@ -20,6 +20,8 @@ declare module '@vue/runtime-core' {
     AbEditRule: typeof import('./../../src/components/ab-edit-rule.vue')['default']
     AbFoldPanel: typeof import('./../../src/components/ab-fold-panel.vue')['default']
     AbLabel: typeof import('./../../src/components/ab-label.vue')['default']
+    AbNotification: typeof import('./../../src/components/ab-notification.vue')['default']
+    AbNotificationItem: typeof import('./../../src/components/ab-notification-item.vue')['default']
     AbPageTitle: typeof import('./../../src/components/basic/ab-page-title.vue')['default']
     AbPopup: typeof import('./../../src/components/ab-popup.vue')['default']
     AbRssItem: typeof import('./../../src/components/ab-rss-item.vue')['default']
