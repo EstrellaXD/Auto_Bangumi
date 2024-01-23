@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-from sqlmodel import Session, select
+from sqlmodel import Session, select, and_, desc
 
 from module.models import Torrent
 
@@ -59,5 +59,7 @@ class TorrentDatabase:
 
     def get_bangumi_id(self, torrent_hash: str) -> Optional[int]:
         return self.session.exec(
-            select(Torrent.bangumi_id).where(Torrent.hash == torrent_hash)
+            select(Torrent.bangumi_id)
+            .where(and_(Torrent.hash == torrent_hash, Torrent.bangumi_id.isnot(None)))
+            .order_by(desc(Torrent.id))
         ).first()
