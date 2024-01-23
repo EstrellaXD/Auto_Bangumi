@@ -63,3 +63,11 @@ class TorrentDatabase:
             .where(and_(Torrent.hash == torrent_hash, Torrent.bangumi_id.isnot(None)))
             .order_by(desc(Torrent.id))
         ).first()
+
+    def delete_by_bangumi_id(self, bangumi_id: int):
+        statement = select(Torrent).where(Torrent.bangumi_id == bangumi_id)
+        torrents = self.session.exec(statement).all()
+        for torrent in torrents:
+            logger.debug(f"[Database] Delete torrent name: {torrent.name}.")
+            self.session.delete(torrent)
+        self.session.commit()
