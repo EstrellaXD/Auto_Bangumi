@@ -17,6 +17,7 @@ class BangumiDatabase:
         statement = select(Bangumi).where(Bangumi.title_raw == data.title_raw)
         bangumi = self.session.exec(statement).first()
         if bangumi:
+            data.id = bangumi.id
             return False
         self.session.add(data)
         self.session.commit()
