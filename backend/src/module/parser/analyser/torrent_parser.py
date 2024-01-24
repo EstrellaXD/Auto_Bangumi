@@ -69,36 +69,37 @@ def torrent_parser(
     file_type: str = "media",
 ) -> EpisodeFile | SubtitleFile:
     media_path = get_path_basename(torrent_path)
-    for rule in RULES:
-        if torrent_name:
-            match_obj = re.match(rule, torrent_name, re.I)
-        else:
-            match_obj = re.match(rule, media_path, re.I)
-        if match_obj:
-            group, title = get_group(match_obj.group(1))
-            if not season:
-                title, season = get_season_and_title(title)
-            else:
-                title, _ = get_season_and_title(title)
-            episode = int(match_obj.group(2))
-            suffix = Path(torrent_path).suffix
-            if file_type == "media":
-                return EpisodeFile(
-                    media_path=torrent_path,
-                    group=group,
-                    title=title,
-                    season=season,
-                    episode=episode,
-                    suffix=suffix,
-                )
-            elif file_type == "subtitle":
-                language = get_subtitle_lang(media_path)
-                return SubtitleFile(
-                    media_path=torrent_path,
-                    group=group,
-                    title=title,
-                    season=season,
-                    language=language,
-                    episode=episode,
-                    suffix=suffix,
-                )
+    match_names = [torrent_name, media_path]
+    if torrent_name is None:
+        match_names = match_names[1:]
+    for match_name in match_names:
+        for rule in RULES:
+            match_obj = re.match(rule, match_name, re.I)
+            if match_obj:
+                group, title = get_group(match_obj.group(1))
+                if not season:
+                    title, season = get_season_and_title(title)
+                else:
+                    title, _ = get_season_and_title(title)
+                episode = int(match_obj.group(2))
+                suffix = Path(torrent_path).suffix
+                if file_type == "media":
+                    return EpisodeFile(
+                        media_path=torrent_path,
+                        group=group,
+                        title=title,
+                        season=season,
+                        episode=episode,
+                        suffix=suffix,
+                    )
+                elif file_type == "subtitle":
+                    language = get_subtitle_lang(media_path)
+                    return SubtitleFile(
+                        media_path=torrent_path,
+                        group=group,
+                        title=title,
+                        season=season,
+                        language=language,
+                        episode=episode,
+                        suffix=suffix,
+                    )
