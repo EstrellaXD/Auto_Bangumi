@@ -194,7 +194,7 @@ async def download_collection(data: Bangumi):
 @router.post(
     "/subscribe", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
-async def subscribe(data: Bangumi):
+async def subscribe(data: Bangumi, rss: RSSItem):
     with SeasonCollector() as collector:
-        resp = collector.subscribe_season(data)
+        resp = collector.subscribe_season(data, parser=rss.parser)
         return u_response(resp)
