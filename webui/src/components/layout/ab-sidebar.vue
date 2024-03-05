@@ -64,6 +64,7 @@ const items = [
     icon: Download,
     label: () => t('sidebar.downloader'),
     path: '/downloader',
+    hidden: localStorage.getItem('enable_downloader_iframe') !== '1',
   },
   {
     id: 6,
