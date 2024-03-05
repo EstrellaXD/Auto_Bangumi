@@ -8,11 +8,13 @@ import VueRouter from 'unplugin-vue-router/vite';
 import { VueRouterAutoImports } from 'unplugin-vue-router';
 import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import VueJsx from '@vitejs/plugin-vue-jsx';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   base: './',
   plugins: [
+    VueJsx(),
     VueRouter({
       dts: 'types/dts/router-type.d.ts',
     }),
