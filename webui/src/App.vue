@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import {
-  type GlobalThemeOverrides,
-  NConfigProvider,
-  NMessageProvider,
-} from 'naive-ui';
+import { type GlobalThemeOverrides, NConfigProvider } from 'naive-ui';
 
 const theme: GlobalThemeOverrides = {
   Spin: {
@@ -11,20 +7,17 @@ const theme: GlobalThemeOverrides = {
   },
 };
 
-const { refresh, isLoggedin } = useAuth();
+const { refresh, isLoggedIn } = useAuth();
 
-if(isLoggedin.value){
+if (isLoggedIn.value) {
   refresh();
 }
-
 </script>
 
 <template>
   <Suspense>
     <NConfigProvider :theme-overrides="theme">
-      <NMessageProvider>
-        <RouterView></RouterView>
-      </NMessageProvider>
+      <RouterView></RouterView>
     </NConfigProvider>
   </Suspense>
 </template>

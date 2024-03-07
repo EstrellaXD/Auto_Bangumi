@@ -1,4 +1,8 @@
 <script lang="ts" setup>
+definePage({
+  name: 'Log',
+});
+
 const { onUpdate, offUpdate, reset, copy } = useLogStore();
 const { log } = storeToRefs(useLogStore());
 const { version } = useAppInfo();
@@ -10,37 +14,30 @@ onActivated(() => {
 onDeactivated(() => {
   offUpdate();
 });
-
-definePage({
-  name: 'Log',
-});
 </script>
 
 <template>
-  <div overflow-auto mt-12px flex-grow>
-    <div flex="~ wrap" gap-12px>
-      <ab-container :title="$t('log.title')" w-660px grow>
-        <div
-          rounded-10px
-          border="1px solid black"
-          overflow-auto
-          p-10px
-          max-h-60vh
-        >
+  <div overflow-auto mt-12 flex-grow>
+    <div flex="~ wrap gap-12">
+      <ab-container :title="$t('log.title')" w-660 grow>
+        <div rounded-10 border="1 solid black" overflow-auto p-10 max-h-60vh>
           <pre text-main>{{ log }}</pre>
         </div>
 
-        <div flex="~ justify-end" space-x-10px mt-12px>
-          <ab-button type="warn" size="small" @click="reset">{{
-            $t('log.reset')
-          }}</ab-button>
-          <ab-button size="small" @click="copy">{{ $t('log.copy') }}</ab-button>
+        <div flex="~ justify-end gap-x-10" mt-12>
+          <ab-button type="warn" size="small" @click="reset">
+            {{ $t('log.reset') }}
+          </ab-button>
+
+          <ab-button size="small" @click="copy">
+            {{ $t('log.copy') }}
+          </ab-button>
         </div>
       </ab-container>
 
-      <div grow w-500px space-y-20px>
+      <div grow w-500 space-y-20>
         <ab-container :title="$t('log.contact_info')">
-          <div space-y-12px>
+          <div space-y-12>
             <ab-label label="Github">
               <ab-button
                 size="small"
@@ -86,20 +83,21 @@ definePage({
         </ab-container>
 
         <ab-container :title="$t('log.bug_repo')">
-          <div space-y-12px>
+          <div space-y-12>
             <ab-button
               mx-auto
-              text-16px
-              w-300px
-              h-46px
-              rounded-10px
+              text-16
+              w-300
+              h-46
+              rounded-10
               link="https://github.com/EstrellaXD/Auto_Bangumi/issues"
-              >Github Issue</ab-button
             >
+              Github Issues
+            </ab-button>
 
             <div line></div>
 
-            <div text-center text-primary text-h3>
+            <div text="center primary h3">
               <span>Version: </span>
               <span>{{ version }}</span>
             </div>

@@ -21,15 +21,15 @@ const props = withDefaults(
 );
 
 const { t } = useMyI18n();
+const { logout } = useAuth();
+const route = useRoute();
 
 const show = ref(props.open);
 const toggle = () => (show.value = !show.value);
-const route = useRoute();
-const { logout } = useAuth();
 
 const RSS = h(
   'span',
-  { class: ['rel', 'left-2px'] },
+  { class: ['rel', 'left-2'] },
   h(InlineSvg, { src: './images/RSS.svg' })
 );
 
@@ -83,20 +83,20 @@ const items = [
 
 <template>
   <div
-    :class="[show ? 'w-240px' : 'w-72px']"
+    :class="[show ? 'w-240' : 'w-72']"
     bg-theme-col
     text-white
     transition-width
-    pb-12px
-    rounded-16px
+    pb-12
+    rounded-16
   >
     <div overflow-hidden wh-full flex="~ col">
       <div
         w-full
-        h-60px
+        h-60
         is-btn
         f-cer
-        rounded-t-10px
+        rounded-t-10
         bg="#E7E7E7"
         text="#2A1C52"
         rel
@@ -111,7 +111,7 @@ const items = [
           size="24"
           fill="#2A1C52"
           abs
-          left="24px"
+          left-24
           :class="[show && 'rotate-y-180']"
         />
       </div>
@@ -123,13 +123,12 @@ const items = [
         replace
         :title="i.label()"
         fx-cer
-        px-24px
-        space-x-42px
-        h-48px
+        px-24
+        gap-x-42
+        h-48
         is-btn
         transition-colors
-        hover:bg="#F1F5FA"
-        hover:text="#2A1C52"
+        hover="bg-[#F1F5FA] text-[#2A1C52]"
         :class="[
           route.path === i.path && 'bg-[#F1F5FA] text-[#2A1C52]',
           i.hidden && 'hidden',
@@ -137,20 +136,19 @@ const items = [
       >
         <Component :is="i.icon" :size="24" />
 
-        <div text-h2>{{ i.label() }}</div>
+        <div text-h2 whitespace-nowrap>{{ i.label() }}</div>
       </RouterLink>
 
       <div
         title="logout"
         mt-auto
         fx-cer
-        px-24px
-        space-x-42px
-        h-48px
+        gap-x-42
+        px-24
+        h-48
         is-btn
         transition-colors
-        hover:bg="#F1F5FA"
-        hover:text="#2A1C52"
+        hover="bg-[#F1F5FA] text-[#2A1C52]"
         @click="logout"
       >
         <Logout :size="24" />
