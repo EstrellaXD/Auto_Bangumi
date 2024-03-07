@@ -1,7 +1,7 @@
 import type { RSS } from '#/rss';
 
 export const useRSSStore = defineStore('rss', () => {
-  const rss = ref<RSS[]>();
+  const rss = ref<RSS[]>([]);
   const selectedRSS = ref<number[]>([]);
 
   async function getAll() {
@@ -21,6 +21,7 @@ export const useRSSStore = defineStore('rss', () => {
     showMessage: true,
     onSuccess() {
       getAll();
+      selectedRSS.value = [];
     },
   };
 
