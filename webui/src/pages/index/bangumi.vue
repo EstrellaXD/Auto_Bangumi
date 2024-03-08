@@ -1,4 +1,8 @@
 <script lang="ts" setup>
+definePage({
+  name: 'Bangumi List',
+});
+
 const { bangumi, editRule } = storeToRefs(useBangumiStore());
 const { getAll, updateRule, enableRule, openEditPopup, ruleManage } =
   useBangumiStore();
@@ -6,22 +10,12 @@ const { getAll, updateRule, enableRule, openEditPopup, ruleManage } =
 onActivated(() => {
   getAll();
 });
-
-definePage({
-  name: 'Bangumi List',
-});
 </script>
 
 <template>
-  <div overflow-auto mt-12px flex-grow>
+  <div overflow-auto mt-12 flex-grow>
     <div>
-      <transition-group
-        name="bangumi"
-        tag="div"
-        flex="~ wrap"
-        gap-y-12px
-        gap-x-32px
-      >
+      <transition-group name="bangumi" tag="div" flex="~ wrap" gap="x-32 y-12">
         <ab-bangumi-card
           v-for="i in bangumi"
           :key="i.id"

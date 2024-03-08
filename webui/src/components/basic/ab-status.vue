@@ -10,12 +10,12 @@ withDefaults(
 </script>
 
 <template>
-  <div wh-24px f-cer>
-    <div rounded="1/2" f-cer border="2px solid white" wh-22px>
+  <div wh-24 f-cer>
+    <div rounded="1/2" f-cer border="2 solid white" wh-22>
       <div
         :class="[running ? 'bg-running' : 'bg-stopped']"
         rounded="1/2"
-        wh-10px
+        wh-10
         transition-colors
       ></div>
     </div>

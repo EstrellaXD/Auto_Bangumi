@@ -14,14 +14,14 @@ withDefaults(
 
 <template>
   <Disclosure v-slot="{ open }">
-    <div rounded-10px overflow-hidden h-max>
+    <div rounded-10 overflow-hidden h-max>
       <DisclosureButton
         bg-theme-row
         w-full
         text-white
         fx-cer
-        px-20px
-        h-45px
+        px-20
+        h-45
         justify-between
       >
         <div text-h2>{{ title }}</div>
@@ -29,8 +29,8 @@ withDefaults(
         <Component :is="open ? Up : Down" size="24" />
       </DisclosureButton>
 
-      <div bg-white py-20px :class="[open ? 'px-20px' : 'px-8px']">
-        <div v-show="!open" line my-12px></div>
+      <div bg-white py-20 :class="[open ? 'px-20' : 'px-8']">
+        <div v-show="!open" line my-12></div>
 
         <DisclosurePanel>
           <slot></slot>
