@@ -8,7 +8,7 @@ export const useConfigStore = defineStore('config', () => {
     config.value = res;
   }
 
-  const { execute: setConfig } = useApi(apiConfig.updateConfig, {
+  const { execute: set } = useApi(apiConfig.updateConfig, {
     showMessage: true,
     onSuccess() {
       // 保存 config 后重启，以应用最新配置
@@ -16,6 +16,8 @@ export const useConfigStore = defineStore('config', () => {
       restart();
     },
   });
+
+  const setConfig = () => set(config.value);
 
   function getSettingGroup<Tkey extends keyof Config>(key: Tkey) {
     return computed<Config[Tkey]>({
