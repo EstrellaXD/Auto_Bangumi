@@ -5,7 +5,7 @@ export const useLogStore = defineStore('log', () => {
 
   const log = ref('');
 
-  function get() {
+  function getLog() {
     if (isLoggedIn.value) {
       apiLog.getLog().then((res) => {
         log.value = res;
@@ -20,7 +20,7 @@ export const useLogStore = defineStore('log', () => {
     },
   });
 
-  const { pause: offUpdate, resume: onUpdate } = useIntervalFn(get, 3000, {
+  const { pause: offUpdate, resume: onUpdate } = useIntervalFn(getLog, 10000, {
     immediate: false,
     immediateCallback: true,
   });
@@ -37,7 +37,7 @@ export const useLogStore = defineStore('log', () => {
 
   return {
     log,
-    get,
+    getLog,
     reset,
     onUpdate,
     offUpdate,

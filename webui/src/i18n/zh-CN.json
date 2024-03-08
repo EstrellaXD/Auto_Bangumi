@@ -98,7 +98,8 @@
     "go": "访问",
     "join": "加入",
     "reset": "重置",
-    "title": "日志"
+    "title": "日志",
+    "update_now": "立即更新"
   },
   "login": {
     "login_btn": "登录",

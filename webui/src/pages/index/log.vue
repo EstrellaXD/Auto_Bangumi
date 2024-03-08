@@ -3,12 +3,57 @@ definePage({
   name: 'Log',
 });
 
-const { onUpdate, offUpdate, reset, copy } = useLogStore();
+const { onUpdate, offUpdate, reset, copy, getLog } = useLogStore();
 const { log } = storeToRefs(useLogStore());
 const { version } = useAppInfo();
 
+const formatLog = computed(() => {
+  const list = log.value
+    .trim()
+    .split('\n')
+    .filter((i) => i !== '');
+  const startIndex = list.findIndex((i) => /Version/.test(i));
+
+  return list.slice(startIndex === -1 ? 0 : startIndex).map((i, index) => {
+    const date = i.match(/\[\d+-\d+-\d+\ \d+:\d+:\d+\]/)?.[0] || '';
+    const type = i.match(/(INFO)|(WARNING)|(ERROR)|(DEBUG)/)?.[0] || '';
+    const content = i.replace(date, '').replace(`${type}:`, '').trim();
+
+    return {
+      index,
+      date,
+      type,
+      content,
+    };
+  });
+});
+
+function typeColor(type: string) {
+  const M = {
+    INFO: '#4e3c94',
+    WARNING: '#A76E18',
+    ERROR: '#C70E0E',
+    DEBUG: '#A0A0A0',
+  };
+  return M[type];
+}
+
+const logContainer = ref<HTMLElement | null>(null);
+
+function backToBottom() {
+  if (logContainer.value) {
+    logContainer.value.scrollTop = logContainer.value.scrollHeight;
+  }
+}
+
 onActivated(() => {
   onUpdate();
+
+  watchOnce(log, () => {
+    nextTick(() => {
+      backToBottom();
+    });
+  });
 });
 
 onDeactivated(() => {
@@ -20,11 +65,36 @@ onDeactivated(() => {
   <div overflow-auto mt-12 flex-grow>
     <div flex="~ wrap gap-12">
       <ab-container :title="$t('log.title')" w-660 grow>
-        <div rounded-10 border="1 solid black" overflow-auto p-10 max-h-60vh>
-          <pre text-main>{{ log }}</pre>
+        <div
+          ref="logContainer"
+          rounded-10
+          border="1 solid black"
+          overflow-auto
+          p-10
+          max-h-60vh
+        >
+          <template v-for="i in formatLog" :key="i.index">
+            <div
+              p="y-10"
+              leading="1.5em"
+              border="0 b-1 solid"
+              last:border-b-0
+              flex="~ gap-10"
+              :style="{ color: typeColor(i.type) }"
+            >
+              <span>{{ i.date }}</span>
+              <span w-6em text="center">{{ i.type }}</span>
+              <div flex-1 break-all>{{ i.content }}</div>
+            </div>
+          </template>
+          <!-- <pre text-main>{{ log }}</pre> -->
         </div>
 
         <div flex="~ justify-end gap-x-10" mt-12>
+          <ab-button size="small" @click="getLog">
+            {{ $t('log.update_now') }}
+          </ab-button>
+
           <ab-button type="warn" size="small" @click="reset">
             {{ $t('log.reset') }}
           </ab-button>

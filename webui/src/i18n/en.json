@@ -98,7 +98,8 @@
     "go": "Go",
     "join": "Join",
     "reset": "Reset",
-    "title": "Log"
+    "title": "Log",
+    "update_now": "Update Now"
   },
   "login": {
     "login_btn": "Login",
