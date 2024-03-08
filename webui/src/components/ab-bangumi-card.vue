@@ -56,7 +56,15 @@ defineEmits(['click']);
 
     <div py-4>
       <div text-h3 truncate>{{ bangumi.official_title }}</div>
-      <ab-tag :title="`Season ${bangumi.season}`" type="primary" />
+
+      <div space-x-5>
+        <ab-tag :title="`Season ${bangumi.season}`" type="primary" />
+        <ab-tag
+          v-if="bangumi.group_name"
+          :title="bangumi.group_name"
+          type="primary"
+        />
+      </div>
     </div>
   </div>
   <div
