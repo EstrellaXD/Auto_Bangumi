@@ -49,11 +49,15 @@ function backToBottom() {
 onActivated(() => {
   onUpdate();
 
-  watchOnce(log, () => {
-    nextTick(() => {
-      backToBottom();
+  if (log.value) {
+    backToBottom();
+  } else {
+    watchOnce(log, () => {
+      nextTick(() => {
+        backToBottom();
+      });
     });
-  });
+  }
 });
 
 onDeactivated(() => {
