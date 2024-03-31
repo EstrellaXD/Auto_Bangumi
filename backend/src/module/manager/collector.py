@@ -18,7 +18,17 @@ class SeasonCollector(DownloadClient):
                 torrents = st.search_season(bangumi)
             else:
                 torrents = st.get_torrents(link, bangumi.filter.replace(",", "|"))
-            if self.add_torrent(torrents, bangumi):
+            # 去除重复的种子
+            new_torrents = []
+            save_path_list = []
+            for item in torrents:
+                if(item.save_path in save_path_list):
+                    continue
+                torrents_info = engine.torrent.search_finished(item.save_path)
+                if(not torrents_info):
+                    new_torrents.append(item)
+                    save_path_list.append(item.save_path)
+            if self.add_torrent(new_torrents, bangumi):
                 logger.info(
                     f"Collections of {bangumi.official_title} Season {bangumi.season} completed."
                 )

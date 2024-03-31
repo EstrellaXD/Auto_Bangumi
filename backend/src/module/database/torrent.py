@@ -44,6 +44,9 @@ class TorrentDatabase:
     def search_all(self) -> list[Torrent]:
         return self.session.exec(select(Torrent)).all()
 
+    def search_finished(self, _save_path = "") -> list[Torrent]:
+        return self.session.exec(select(Torrent).where(Torrent.save_path == _save_path)).first()
+
     def search_rss(self, rss_id: int) -> list[Torrent]:
         return self.session.exec(select(Torrent).where(Torrent.rss_id == rss_id)).all()
 
