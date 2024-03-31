@@ -6,6 +6,7 @@ from module.database import Database, engine
 from module.downloader import DownloadClient
 from module.models import Bangumi, ResponseModel, RSSItem, Torrent
 from module.network import RequestContent
+from module.manager.torrent import TorrentManager
 
 logger = logging.getLogger(__name__)
 
@@ -122,14 +123,29 @@ class RSSEngine(Database):
         # From RSS Items, get all torrents
         logger.debug(f"[Engine] Get {len(rss_items)} RSS items")
         for rss_item in rss_items:
-            new_torrents = self.pull_rss(rss_item)
+            pulled_torrents = self.pull_rss(rss_item)
             # Get all enabled bangumi data
-            for torrent in new_torrents:
+            save_path_list = []
+            new_torrents = []
+            for torrent in pulled_torrents:
                 matched_data = self.match_torrent(torrent)
                 if matched_data:
-                    if client.add_torrent(torrent, matched_data):
-                        logger.debug(f"[Engine] Add torrent {torrent.name} to client")
-                    torrent.downloaded = True
+                    torrent = TorrentManager().refine_torrent(matched_data, torrent)
+                    if(torrent):
+                        if(torrent.save_path in save_path_list):
+                            logger.debug(f"[Engine] Ignore torrent {torrent.name}")
+                            continue
+                        save_path_list.append(torrent.save_path)
+                        new_torrents.append(torrent)
+                        torrents_info = self.torrent.search_finished(torrent.save_path)
+                        if(not torrents_info):
+                            if client.add_torrent(torrent, matched_data):
+                                logger.debug(f"[Engine] Add torrent {torrent.name} to client")
+                                torrent.downloaded = True
+                            else:
+                                logger.warning(f"[Engine] Torrent {torrent.name} has already been added")
+                        else:
+                            logger.debug(f"[Engine] Ignore torrent {torrent.name}")
             # Add all torrents to database
             self.torrent.add_all(new_torrents)
 
