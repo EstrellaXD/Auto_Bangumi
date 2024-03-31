@@ -52,24 +52,32 @@ class SearchTorrent(RequestContent, RSSAnalyser, TitleParser, Renamer):
         url = search_url(site, keywords)
         return url
 
+    def check_torrent_duplicate(self, bangumi: Bangumi, torrent: Torrent):
+        rename_method = settings.bangumi_manage.rename_method
+        # 查找视频是否包含关键字
+        keywords = ['内嵌','外挂','封装','MKV','内挂']
+        suffix = 'mp4'
+        for item1 in keywords:
+            if(item1 in torrent.name):
+                suffix = 'mkv'
+        # 解析视频
+        ep = self.torrent_parser(
+            torrent_path=f"{torrent.name}.{suffix}"
+        )
+        if(ep):
+            ep_name = self.gen_path(ep, bangumi.official_title, method=rename_method)
+            torrent.bangumi_id = bangumi.id
+            torrent.save_path = f'{bangumi.save_path}/{ep_name}'
+            return torrent
+        return False
+    
     def search_season(self, data: Bangumi, site: str = "mikan") -> list[Torrent]:
         rss_item = self.special_url(data, site)
         torrents = self.search_torrents(rss_item)
         new_torrents = []
-        rename_method = settings.bangumi_manage.rename_method
-        for item in torrents:
-            if data.title_raw in item.name:
-                a = ['内嵌','外挂','封装','MKV','内挂']
-                suffix = 'mp4'
-                for item1 in a:
-                    if(item1 in item.name):
-                        suffix = 'mkv'
-                ep = self.torrent_parser(
-                    torrent_path=f"{item.name}.{suffix}"
-                )
-                if(ep):
-                    ep_name = self.gen_path(ep, data.official_title, method=rename_method)
-                    item.bangumi_id = data.id
-                    item.save_path = f'{data.save_path}/{ep_name.replace(".mp4",".*")}'
-                    new_torrents.append(item)
+        for item1 in torrents:
+            if data.title_raw in item1.name:
+                res = self.check_torrent_duplicate(data, item1)
+                if(res):
+                    new_torrents.append(res)
         return new_torrents
