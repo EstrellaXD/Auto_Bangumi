@@ -6,7 +6,7 @@
   "scripts": {
     "prepare": "cd .. && husky install ./webui/.husky",
     "build": "vue-tsc --noEmit && vite build",
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
