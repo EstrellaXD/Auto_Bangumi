@@ -26,6 +26,7 @@ class Database(Session):
 
     def migrate_torrent(self):
         self.exec("ALTER TABLE torrent ADD COLUMN save_path varchar(255)")
+        self.exec("ALTER TABLE torrent ADD COLUMN finished int")
 
     def migrate(self):
         # Run migration online

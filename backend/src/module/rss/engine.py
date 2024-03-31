@@ -97,6 +97,8 @@ class RSSEngine(Database):
     def pull_rss(self, rss_item: RSSItem) -> list[Torrent]:
         torrents = self._get_torrents(rss_item)
         new_torrents = self.torrent.check_new(torrents)
+        # 检查相同视频是否已经呗下载过
+        #for torrent in new_torrents
         return new_torrents
 
     def match_torrent(self, torrent: Torrent) -> Optional[Bangumi]:
