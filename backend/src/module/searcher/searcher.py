@@ -63,7 +63,8 @@ class SearchTorrent(RequestContent, RSSAnalyser, TorrentManager):
         torrents = self.search_torrents(rss_item)
         new_torrents = []
         for item1 in torrents:
-            res = self.refine_torrent(data, item1)
-            if(res):
-                new_torrents.append(res)
+            if(str(data.season_raw) in item1.name or data.season_raw == None):
+                res = self.refine_torrent(data, item1)
+                if(res):
+                    new_torrents.append(res)
         return new_torrents
