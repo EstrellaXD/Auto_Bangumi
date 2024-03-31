@@ -68,8 +68,14 @@ class RSSAnalyser(TitleParser):
     ) -> list[Bangumi]:
         all_rss_torrents = self.get_rss_torrents(rss.url, full_parse)
         new_data = []
+        title_list = []
         for torrent in all_rss_torrents:
             bangumi = self.torrent_to_data(torrent, rss)
+            if(not bangumi):
+                continue
+            if(bangumi.official_title in title_list):
+                continue
+            title_list.append(bangumi.official_title)
             q_bangumi = engine.bangumi.search_official_title(bangumi.official_title)
             if(not q_bangumi):
                 new_data.append(bangumi)
