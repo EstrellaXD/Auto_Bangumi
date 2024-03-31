@@ -101,7 +101,7 @@ class BangumiDatabase:
         statement = select(Bangumi).where(Bangumi.official_title == _official_title)
         bangumi = self.session.exec(statement).first()
         if bangumi is None:
-            logger.warning(f"[Database] Cannot find bangumi title: {_official_title}.")
+            logger.debug(f"[Database] Cannot find bangumi title: {_official_title}.")
             return None
         else:
             logger.debug(f"[Database] Find bangumi title: {_official_title}.")
