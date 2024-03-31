@@ -66,13 +66,14 @@ class RSSAnalyser(TitleParser):
     def rss_to_data(
         self, rss: RSSItem, engine: RSSEngine, full_parse: bool = True
     ) -> list[Bangumi]:
-        rss_torrents = self.get_rss_torrents(rss.url, full_parse)
-        torrents_to_add = engine.bangumi.match_list(rss_torrents, rss.url)
-        if not torrents_to_add:
-            logger.debug("[RSS] No new title has been found.")
-            return []
+        all_rss_torrents = self.get_rss_torrents(rss.url, full_parse)
+        new_data = []
+        for torrent in all_rss_torrents:
+            bangumi = self.torrent_to_data(torrent, rss)
+            q_bangumi = engine.bangumi.search_official_title(bangumi.official_title)
+            if(not q_bangumi):
+                new_data.append(bangumi)
         # New List
-        new_data = self.torrents_to_data(torrents_to_add, rss, full_parse)
         if new_data:
             # Add to database
             engine.bangumi.add_all(new_data)
