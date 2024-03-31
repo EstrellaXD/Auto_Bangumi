@@ -54,7 +54,7 @@ class SearchTorrent(RequestContent, RSSAnalyser, TorrentManager):
         keywords = []
         keywords.append(data.official_title)
         if(int(data.season) != 1):
-            keywords.append(data.season)
+            keywords.append(data.season_raw)
         url = search_url(site, keywords)
         return url
 
