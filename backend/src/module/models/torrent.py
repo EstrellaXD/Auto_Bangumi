@@ -11,6 +11,7 @@ class Torrent(SQLModel, table=True):
     name: str = Field("", alias="name")
     url: str = Field("https://example.com/torrent", alias="url")
     homepage: Optional[str] = Field(None, alias="homepage")
+    save_path: Optional[str] = Field(None, alias="/downloads/auto-bangumi/我內心的糟糕念頭/Season 2")
     downloaded: bool = Field(False, alias="downloaded")
 
 
