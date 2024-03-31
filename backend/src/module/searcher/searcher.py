@@ -59,8 +59,13 @@ class SearchTorrent(RequestContent, RSSAnalyser, TitleParser, Renamer):
         rename_method = settings.bangumi_manage.rename_method
         for item in torrents:
             if data.title_raw in item.name:
+                a = ['内嵌','外挂','封装','MKV','内挂']
+                suffix = 'mp4'
+                for item1 in a:
+                    if(item1 in item.name):
+                        suffix = 'mkv'
                 ep = self.torrent_parser(
-                    torrent_path=f"{item.name}.mp4"
+                    torrent_path=f"{item.name}.{suffix}"
                 )
                 if(ep):
                     ep_name = self.gen_path(ep, data.official_title, method=rename_method)
