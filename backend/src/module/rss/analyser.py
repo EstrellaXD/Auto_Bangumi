@@ -73,9 +73,9 @@ class RSSAnalyser(TitleParser):
             bangumi = self.torrent_to_data(torrent, rss)
             if(not bangumi):
                 continue
-            if(bangumi.official_title in title_list):
+            if(f'{bangumi.official_title}{bangumi.season}' in title_list):
                 continue
-            title_list.append(bangumi.official_title)
+            title_list.append(f'{bangumi.official_title}{bangumi.season}')
             q_bangumi = engine.bangumi.search_official_title(bangumi.official_title)
             if(not q_bangumi):
                 bangumi.save_path = TorrentPath()._gen_save_path(bangumi)
