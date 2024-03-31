@@ -1,10 +1,13 @@
 import json
 from typing import TypeAlias
 
+from module.conf import settings
 from module.models import Bangumi, RSSItem, Torrent
 from module.network import RequestContent
 from module.rss import RSSAnalyser
 
+from module.manager.renamer import Renamer
+from module.parser import TitleParser
 from .provider import search_url
 
 SEARCH_KEY = [
@@ -19,7 +22,7 @@ SEARCH_KEY = [
 BangumiJSON: TypeAlias = str
 
 
-class SearchTorrent(RequestContent, RSSAnalyser):
+class SearchTorrent(RequestContent, RSSAnalyser, TitleParser, Renamer):
     def search_torrents(self, rss_item: RSSItem) -> list[Torrent]:
         return self.get_torrents(rss_item.url)
         # torrents = self.get_torrents(rss_item.url)
@@ -52,4 +55,16 @@ class SearchTorrent(RequestContent, RSSAnalyser):
     def search_season(self, data: Bangumi, site: str = "mikan") -> list[Torrent]:
         rss_item = self.special_url(data, site)
         torrents = self.search_torrents(rss_item)
-        return [torrent for torrent in torrents if data.title_raw in torrent.name]
+        new_torrents = []
+        rename_method = settings.bangumi_manage.rename_method
+        for item in torrents:
+            if data.title_raw in item.name:
+                ep = self.torrent_parser(
+                    torrent_path=f"{item.name}.mp4"
+                )
+                if(ep):
+                    ep_name = self.gen_path(ep, data.official_title, method=rename_method)
+                    item.bangumi_id = data.id
+                    item.save_path = f'{data.save_path}/{ep_name.replace(".mp4",".*")}'
+                    new_torrents.append(item)
+        return new_torrents
