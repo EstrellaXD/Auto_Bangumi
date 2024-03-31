@@ -132,13 +132,13 @@ class RSSEngine(Database):
                 if matched_data:
                     torrent = TorrentManager().refine_torrent(matched_data, torrent)
                     if(torrent):
-                        if(torrent.save_path in save_path_list):
-                            logger.debug(f"[Engine] Ignore torrent {torrent.name}")
-                            continue
-                        save_path_list.append(torrent.save_path)
-                        new_torrents.append(torrent)
                         torrents_info = self.torrent.search_finished(torrent.save_path)
                         if(not torrents_info):
+                            if(torrent.save_path in save_path_list):
+                                logger.debug(f"[Engine] Ignore torrent {torrent.name}")
+                                continue
+                            save_path_list.append(torrent.save_path)
+                            new_torrents.append(torrent)
                             if client.add_torrent(torrent, matched_data):
                                 logger.debug(f"[Engine] Add torrent {torrent.name} to client")
                                 torrent.downloaded = True
