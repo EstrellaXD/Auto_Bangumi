@@ -5,6 +5,7 @@ import requests
 
 from module.conf import VERSION, settings
 from module.downloader import DownloadClient
+from module.rss import RSSEngine
 from module.models import Config
 from module.update import version_check
 
@@ -83,3 +84,12 @@ class Checker:
         else:
             img_path.mkdir()
             return False
+
+    @staticmethod
+    def check_torrent_table() -> bool:
+        with RSSEngine() as engine:
+            table_info = engine.exec("PRAGMA table_info(torrent)").all()
+            for item in table_info:
+                if(item[1] == 'save_path'):
+                    return False
+        return True
