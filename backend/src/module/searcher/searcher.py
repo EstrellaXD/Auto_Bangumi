@@ -50,13 +50,20 @@ class SearchTorrent(RequestContent, RSSAnalyser, TorrentManager):
         url = search_url(site, keywords)
         return url
     
+    def build_search_url(self, data: Bangumi, site: str) -> RSSItem:
+        keywords = []
+        keywords.append(data.official_title)
+        if(int(data.season) != 1):
+            keywords.append(data.season)
+        url = search_url(site, keywords)
+        return url
+
     def search_season(self, data: Bangumi, site: str = "mikan") -> list[Torrent]:
-        rss_item = self.special_url(data, site)
+        rss_item = self.build_search_url(data, site)
         torrents = self.search_torrents(rss_item)
         new_torrents = []
         for item1 in torrents:
-            if data.title_raw in item1.name:
-                res = self.refine_torrent(data, item1)
-                if(res):
-                    new_torrents.append(res)
+            res = self.refine_torrent(data, item1)
+            if(res):
+                new_torrents.append(res)
         return new_torrents
