@@ -143,32 +143,35 @@ class Renamer(DownloadClient):
         torrents_info = self.get_torrent_info()
         renamed_info: list[Notification] = []
         for info in torrents_info:
-            media_list, subtitle_list = self.check_files(info)
-            bangumi_name, season = self._path_to_bangumi(info.save_path)
-            kwargs = {
-                "torrent_name": info.name,
-                "bangumi_name": bangumi_name,
-                "method": rename_method,
-                "season": season,
-                "_hash": info.hash,
-            }
-            # Rename single media file
-            if len(media_list) == 1:
-                notify_info = self.rename_file(media_path=media_list[0], **kwargs)
-                if notify_info:
-                    renamed_info.append(notify_info)
-                # Rename subtitle file
-                if len(subtitle_list) > 0:
-                    self.rename_subtitles(subtitle_list=subtitle_list, **kwargs)
-            # Rename collection
-            elif len(media_list) > 1:
-                logger.info("[Renamer] Start rename collection")
-                self.rename_collection(media_list=media_list, **kwargs)
-                if len(subtitle_list) > 0:
-                    self.rename_subtitles(subtitle_list=subtitle_list, **kwargs)
-                self.set_category(info.hash, "BangumiCollection")
-            else:
-                logger.warning(f"[Renamer] {info.name} has no media file")
+            try:
+                media_list, subtitle_list = self.check_files(info)
+                bangumi_name, season = self._path_to_bangumi(info.save_path)
+                kwargs = {
+                    "torrent_name": info.name,
+                    "bangumi_name": bangumi_name,
+                    "method": rename_method,
+                    "season": season,
+                    "_hash": info.hash,
+                }
+                # Rename single media file
+                if len(media_list) == 1:
+                    notify_info = self.rename_file(media_path=media_list[0], **kwargs)
+                    if notify_info:
+                        renamed_info.append(notify_info)
+                    # Rename subtitle file
+                    if len(subtitle_list) > 0:
+                        self.rename_subtitles(subtitle_list=subtitle_list, **kwargs)
+                # Rename collection
+                elif len(media_list) > 1:
+                    logger.info("[Renamer] Start rename collection")
+                    self.rename_collection(media_list=media_list, **kwargs)
+                    if len(subtitle_list) > 0:
+                        self.rename_subtitles(subtitle_list=subtitle_list, **kwargs)
+                    self.set_category(info.hash, "BangumiCollection")
+                else:
+                    logger.warning(f"[Renamer] {info.name} has no media file")
+            except Exception as e:
+                logger.error(f"[Renamer] error: {str(e)}")
         logger.debug("[Renamer] Rename process finished.")
         return renamed_info
 
