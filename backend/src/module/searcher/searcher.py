@@ -56,7 +56,7 @@ class SearchTorrent(RequestContent, RSSAnalyser, TorrentManager):
         new_torrents = []
         for item1 in torrents:
             if data.title_raw in item1.name:
-                res = self.check_torrent_duplicate(data, item1)
+                res = self.refine_torrent(data, item1)
                 if(res):
                     new_torrents.append(res)
         return new_torrents

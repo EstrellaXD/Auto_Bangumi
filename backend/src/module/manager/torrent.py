@@ -176,7 +176,7 @@ class TorrentManager(Database):
             return data
 
 
-    def check_torrent_duplicate(self, bangumi: Bangumi, torrent: Torrent):
+    def refine_torrent(self, bangumi: Bangumi, torrent: Torrent):
         rename_method = settings.bangumi_manage.rename_method
         # 查找视频是否包含关键字
         keywords = ['内嵌','外挂','封装','MKV','内挂']
