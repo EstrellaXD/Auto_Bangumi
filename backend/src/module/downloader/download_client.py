@@ -1,5 +1,7 @@
 import logging
 
+from module.manager.status import Status
+
 from module.conf import settings
 from module.models import Bangumi, Torrent
 from module.network import RequestContent
@@ -14,6 +16,7 @@ class DownloadClient(TorrentPath):
         super().__init__()
         self.client = self.__getClient()
         self.authed = False
+        self.lastStatus = Status.AuthFailed
 
     @staticmethod
     def __getClient():
@@ -48,6 +51,7 @@ class DownloadClient(TorrentPath):
         if self.authed:
             logger.debug("[Downloader] Authed.")
         else:
+            self.lastStatus = Status.AuthFailed
             logger.error("[Downloader] Auth failed.")
 
     def check_host(self):
@@ -64,6 +68,7 @@ class DownloadClient(TorrentPath):
         try:
             self.client.add_category("BangumiCollection")
         except Exception:
+            self.lastStatus = Status.AddedCategory
             logger.debug("[Downloader] Cannot add new category, maybe already exists.")
         if settings.downloader.path == "":
             prefs = self.client.get_app_prefs()
@@ -89,6 +94,7 @@ class DownloadClient(TorrentPath):
         }
         self.client.rss_set_rule(rule_name=data.rule_name, rule_def=rule)
         data.added = True
+        self.lastStatus = Status.Success
         logger.info(
             f"[Downloader] Add {data.official_title} Season {data.season} to auto download rules."
         )
@@ -97,6 +103,7 @@ class DownloadClient(TorrentPath):
         logger.debug("[Downloader] Start adding rules.")
         for info in bangumi_info:
             self.set_rule(info)
+        self.lastStatus = Status.Success
         logger.debug("[Downloader] Finished.")
 
     def get_torrent_info(self, category="Bangumi", status_filter="completed", tag=None):
@@ -112,6 +119,7 @@ class DownloadClient(TorrentPath):
 
     def delete_torrent(self, hashes):
         self.client.torrents_delete(hashes)
+        self.lastStatus = Status.Success
         logger.info("[Downloader] Remove torrents.")
 
     def add_torrent(self, torrent: Torrent | list, bangumi: Bangumi) -> bool:
@@ -120,6 +128,7 @@ class DownloadClient(TorrentPath):
         with RequestContent() as req:
             if isinstance(torrent, list):
                 if len(torrent) == 0:
+                    self.lastStatus = Status.NoTorrentFound
                     logger.debug(f"[Downloader] No torrent found: {bangumi.official_title}")
                     return False
                 if "magnet" in torrent[0].url:
@@ -141,9 +150,11 @@ class DownloadClient(TorrentPath):
             save_path=bangumi.save_path,
             category="Bangumi",
         ):
+            self.lastStatus = Status.Success
             logger.debug(f"[Downloader] Add torrent: {bangumi.official_title}")
             return True
         else:
+            self.lastStatus = Status.TorrentAddedBefore
             logger.debug(f"[Downloader] Torrent added before: {bangumi.official_title}")
             return False
 

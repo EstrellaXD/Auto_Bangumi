@@ -1,6 +1,7 @@
 import logging
 
 from module.downloader import DownloadClient
+from module.manager.status import *
 from module.models import Bangumi, ResponseModel
 from module.rss import RSSEngine
 from module.searcher import SearchTorrent
@@ -34,6 +35,16 @@ class SeasonCollector(DownloadClient):
                     msg_en=f"Collections of {bangumi.official_title} Season {bangumi.season} completed.",
                     msg_zh=f"收集 {bangumi.official_title} 第 {bangumi.season} 季完成。",
                 )
+            elif self.lastStatus == Status.NoTorrentFound:
+                logger.warning(
+                    f"Collection of {bangumi.official_title} Season {bangumi.season} has no torrent found. "
+                )
+                return ResponseModel(
+                    status=False,
+                    status_code=406,
+                    msg_en=f"Collection of {bangumi.official_title} Season {bangumi.season} failed, no torrent found. ",
+                    msg_zh=f"收集 {bangumi.official_title} 第 {bangumi.season} 季失败, 无法找到种子。",
+                )
             else:
                 logger.warning(
                     f"Already collected {bangumi.official_title} Season {bangumi.season}."
@@ -41,7 +52,8 @@ class SeasonCollector(DownloadClient):
                 return ResponseModel(
                     status=False,
                     status_code=406,
-                    msg_en=f"Collection of {bangumi.official_title} Season {bangumi.season} failed.",
+                    msg_en=f"Collection of {bangumi.official_title} Season {bangumi.season} failed, torrent already "
+                           f"added.",
                     msg_zh=f"收集 {bangumi.official_title} 第 {bangumi.season} 季失败, 种子已经添加。",
                 )
 
