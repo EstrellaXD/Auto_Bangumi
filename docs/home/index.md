@@ -25,7 +25,7 @@ title: 项目说明
 </p>
 
 **`AutoBangumi`** 是基于 RSS 的全自动追番整理下载工具。只需要在 [Mikan Project][mikan] 等网站上订阅番剧，就可以全自动追番。
-并且整理完成的名称和目录可以直接被 [Plex][plex]、[Jellyfin][plex] 等媒体库软件识别，无需二次刮削。
+并且整理完成的名称和目录可以直接被 [Plex][plex]、[Jellyfin][jellyfin] 等媒体库软件识别，无需二次刮削。
 
 ## 功能说明
 
