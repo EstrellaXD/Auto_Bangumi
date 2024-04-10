@@ -16,7 +16,7 @@ class DownloadClient(TorrentPath):
         super().__init__()
         self.client = self.__getClient()
         self.authed = False
-        self.lastStatus = Status.AuthFailed
+        self.lastStatus = Status.AuthFailed             # Status init. I don't know what to fill, so I choose this.
 
     @staticmethod
     def __getClient():
@@ -51,7 +51,7 @@ class DownloadClient(TorrentPath):
         if self.authed:
             logger.debug("[Downloader] Authed.")
         else:
-            self.lastStatus = Status.AuthFailed
+            self.lastStatus = Status.AuthFailed     # Added a state to pass the failure.
             logger.error("[Downloader] Auth failed.")
 
     def check_host(self):
@@ -68,7 +68,7 @@ class DownloadClient(TorrentPath):
         try:
             self.client.add_category("BangumiCollection")
         except Exception:
-            self.lastStatus = Status.AddedCategory
+            self.lastStatus = Status.AddedCategory                  # Added a state to pass the failure.
             logger.debug("[Downloader] Cannot add new category, maybe already exists.")
         if settings.downloader.path == "":
             prefs = self.client.get_app_prefs()
@@ -128,7 +128,7 @@ class DownloadClient(TorrentPath):
         with RequestContent() as req:
             if isinstance(torrent, list):
                 if len(torrent) == 0:
-                    self.lastStatus = Status.NoTorrentFound
+                    self.lastStatus = Status.NoTorrentFound             # Added a state to pass the failure.
                     logger.debug(f"[Downloader] No torrent found: {bangumi.official_title}")
                     return False
                 if "magnet" in torrent[0].url:
@@ -154,7 +154,7 @@ class DownloadClient(TorrentPath):
             logger.debug(f"[Downloader] Add torrent: {bangumi.official_title}")
             return True
         else:
-            self.lastStatus = Status.TorrentAddedBefore
+            self.lastStatus = Status.TorrentAddedBefore         # Added a state to pass the failure.
             logger.debug(f"[Downloader] Torrent added before: {bangumi.official_title}")
             return False
 

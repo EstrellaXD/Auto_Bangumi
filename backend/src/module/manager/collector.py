@@ -35,7 +35,8 @@ class SeasonCollector(DownloadClient):
                     msg_en=f"Collections of {bangumi.official_title} Season {bangumi.season} completed.",
                     msg_zh=f"收集 {bangumi.official_title} 第 {bangumi.season} 季完成。",
                 )
-            elif self.lastStatus == Status.NoTorrentFound:
+            elif self.lastStatus == Status.NoTorrentFound:          # This branch is to check if the status is
+                # NoTorrentFound. Else it goes to the next branch.
                 logger.warning(
                     f"Collection of {bangumi.official_title} Season {bangumi.season} has no torrent found. "
                 )
