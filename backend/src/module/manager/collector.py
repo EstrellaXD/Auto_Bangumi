@@ -46,12 +46,15 @@ class SeasonCollector(DownloadClient):
                 )
 
     @staticmethod
-    def subscribe_season(data: Bangumi):
+    def subscribe_season(data: Bangumi, parser: str = "mikan"):
         with RSSEngine() as engine:
             data.added = True
             data.eps_collect = True
             engine.add_rss(
-                rss_link=data.rss_link, name=data.official_title, aggregate=False
+                rss_link=data.rss_link,
+                name=data.official_title,
+                aggregate=False,
+                parser=parser,
             )
             result = engine.download_bangumi(data)
             engine.bangumi.add(data)

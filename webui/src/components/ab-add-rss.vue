@@ -96,7 +96,7 @@ async function subscribe() {
   if (rule.value) {
     try {
       loading.subscribe = true;
-      const res = await apiDownload.subscribe(rule.value);
+      const res = await apiDownload.subscribe(rule.value, rss.value);
       loading.subscribe = false;
       if (res) {
         message.success('Subscribe Success!');
