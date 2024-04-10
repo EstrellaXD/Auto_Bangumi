@@ -57,7 +57,8 @@ class Checker:
                 else f"{settings.downloader.host}"
             )
             response = requests.get(url, timeout=2)
-            if settings.downloader.type in response.text.lower():
+            # if settings.downloader.type in response.text.lower():
+            if "qbittorrent" in response.text.lower() or "vuetorrent" in response.text.lower():
                 with DownloadClient() as client:
                     if client.authed:
                         return True
