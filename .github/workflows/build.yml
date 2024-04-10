@@ -12,7 +12,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python 3.11
         uses: actions/setup-python@v3
         with:
@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: If release
         id: release
         run: |
@@ -86,7 +86,7 @@ jobs:
         node-version: [ 18 ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v2
         with:
@@ -117,7 +117,7 @@ jobs:
     needs: [ build-webui, version-info ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Create Version info via tag
         working-directory: ./backend/src
@@ -224,7 +224,7 @@ jobs:
       version: ${{ needs.version-info.outputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Download artifact webui
         uses: actions/download-artifact@v3

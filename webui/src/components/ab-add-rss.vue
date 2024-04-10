@@ -103,7 +103,7 @@ function subscribe() {
       onFinally() {
         loading.subscribe = false;
       },
-    }).execute(rule.value);
+    }).execute(rule.value, rss.value);
   }
 }
 </script>

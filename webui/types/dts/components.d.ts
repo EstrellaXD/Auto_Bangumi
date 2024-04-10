@@ -22,7 +22,6 @@ declare module '@vue/runtime-core' {
     AbLabel: typeof import('./../../src/components/ab-label.vue')['default']
     AbPageTitle: typeof import('./../../src/components/basic/ab-page-title.vue')['default']
     AbPopup: typeof import('./../../src/components/ab-popup.vue')['default']
-    AbRssItem: typeof import('./../../src/components/ab-rss-item.vue')['default']
     AbRule: typeof import('./../../src/components/ab-rule.vue')['default']
     AbSearch: typeof import('./../../src/components/basic/ab-search.vue')['default']
     AbSearchBar: typeof import('./../../src/components/ab-search-bar.vue')['default']
