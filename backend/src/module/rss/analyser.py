@@ -5,7 +5,7 @@ from module.conf import settings
 from module.models import Bangumi, ResponseModel, RSSItem, Torrent
 from module.network import RequestContent
 from module.parser import TitleParser
-
+from module.downloader.path import TorrentPath
 from .engine import RSSEngine
 
 logger = logging.getLogger(__name__)
@@ -66,13 +66,21 @@ class RSSAnalyser(TitleParser):
     def rss_to_data(
         self, rss: RSSItem, engine: RSSEngine, full_parse: bool = True
     ) -> list[Bangumi]:
-        rss_torrents = self.get_rss_torrents(rss.url, full_parse)
-        torrents_to_add = engine.bangumi.match_list(rss_torrents, rss.url)
-        if not torrents_to_add:
-            logger.debug("[RSS] No new title has been found.")
-            return []
+        all_rss_torrents = self.get_rss_torrents(rss.url, full_parse)
+        new_data = []
+        title_list = []
+        for torrent in all_rss_torrents:
+            bangumi = self.torrent_to_data(torrent, rss)
+            if(not bangumi):
+                continue
+            if(f'{bangumi.official_title}{bangumi.season}' in title_list):
+                continue
+            title_list.append(f'{bangumi.official_title}{bangumi.season}')
+            q_bangumi = engine.bangumi.search_official_title(bangumi.official_title)
+            if(not q_bangumi):
+                bangumi.save_path = TorrentPath()._gen_save_path(bangumi)
+                new_data.append(bangumi)
         # New List
-        new_data = self.torrents_to_data(torrents_to_add, rss, full_parse)
         if new_data:
             # Add to database
             engine.bangumi.add_all(new_data)

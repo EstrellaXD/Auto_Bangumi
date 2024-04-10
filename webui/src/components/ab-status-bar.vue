@@ -34,7 +34,7 @@ function abLabel(label: string | (() => string)) {
 <template>
   <Menu>
     <div rel>
-      <div fx-cer space-x-16px>
+      <div fx-cer space-x-16>
         <International
           theme="outline"
           size="24"
@@ -62,10 +62,10 @@ function abLabel(label: string | (() => string)) {
 
       <MenuItems
         abs
-        top-50px
-        left-32px
-        w-120px
-        rounded-8px
+        top-50
+        left-32
+        w-120
+        rounded-8
         bg-white
         overflow-hidden
         shadow
@@ -74,19 +74,18 @@ function abLabel(label: string | (() => string)) {
         <MenuItem v-for="i in items" :key="i.id" v-slot="{ active }">
           <div
             w-full
-            h-32px
-            px-12px
+            h-32
+            px-12
             fx-cer
-            space-x-8px
+            gap-x-8
             is-btn
-            hover:text-white
-            hover:bg-primary
+            hover="text-white bg-primary"
             class="group"
             :class="[active ? 'text-white bg-theme-row' : 'text-black']"
             @click="() => i.handle && i.handle()"
           >
             <div
-              class="group-hover:text-white"
+              group-hover="text-white"
               :class="[active ? 'text-white' : 'text-primary']"
             >
               <Component :is="i.icon" size="16"></Component>

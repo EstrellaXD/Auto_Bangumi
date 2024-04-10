@@ -1,9 +1,11 @@
 import logging
 
+from module.conf import settings
 from module.database import Database
 from module.downloader import DownloadClient
-from module.models import Bangumi, BangumiUpdate, ResponseModel
+from module.models import Torrent, Bangumi, BangumiUpdate, ResponseModel
 from module.parser import TitleParser
+from module.manager.renamer import Renamer
 
 logger = logging.getLogger(__name__)
 
@@ -173,6 +175,25 @@ class TorrentManager(Database):
         else:
             return data
 
+
+    def refine_torrent(self, bangumi: Bangumi, torrent: Torrent):
+        rename_method = settings.bangumi_manage.rename_method
+        # 查找视频是否包含关键字
+        keywords = ['内嵌','外挂','封装','MKV','内挂']
+        suffix = 'mp4'
+        for item1 in keywords:
+            if(item1 in torrent.name):
+                suffix = 'mkv'
+        # 解析视频
+        ep = TitleParser().torrent_parser(
+            torrent_path=f"{torrent.name}.{suffix}"
+        )
+        if(ep):
+            ep_name = Renamer().gen_path(ep, bangumi.official_title, method=rename_method)
+            torrent.bangumi_id = bangumi.id
+            torrent.save_path = f'{bangumi.save_path}/{ep_name}'
+            return torrent
+        return False
 
 if __name__ == "__main__":
     with TorrentManager() as manager:

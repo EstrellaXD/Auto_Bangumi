@@ -18,6 +18,9 @@ def data_migration():
         engine.add_rss(rss_link)
     LEGACY_DATA_PATH.unlink(missing_ok=True)
 
+def torrent_table_migration():
+    with RSSEngine() as engine:
+        engine.migrate_torrent()
 
 def database_migration():
     with RSSEngine() as engine:

@@ -135,17 +135,20 @@ class DownloadClient(TorrentPath):
                 else:
                     torrent_file = req.get_content(torrent.url)
                     torrent_url = None
-        if self.client.add_torrents(
-            torrent_urls=torrent_url,
-            torrent_files=torrent_file,
-            save_path=bangumi.save_path,
-            category="Bangumi",
-        ):
-            logger.debug(f"[Downloader] Add torrent: {bangumi.official_title}")
-            return True
-        else:
-            logger.debug(f"[Downloader] Torrent added before: {bangumi.official_title}")
-            return False
+        try:
+            if self.client.add_torrents(
+                torrent_urls=torrent_url,
+                torrent_files=torrent_file,
+                save_path=bangumi.save_path,
+                category="Bangumi",
+            ):
+                logger.debug(f"[Downloader] Add torrent: {bangumi.official_title}")
+                return True
+            else:
+                logger.debug(f"[Downloader] Torrent added before: {bangumi.official_title}")
+                return False
+        except Exception as e:
+            logger.debug(f"[Downloader] error: {str(e)}")
 
     def move_torrent(self, hashes, location):
         self.client.move_torrent(hashes=hashes, new_location=location)

@@ -12,6 +12,8 @@ class Torrent(SQLModel, table=True):
     url: str = Field("https://example.com/torrent", alias="url")
     homepage: Optional[str] = Field(None, alias="homepage")
     downloaded: bool = Field(False, alias="downloaded")
+    save_path: Optional[str] = Field(None, alias="save_path")
+    finished: bool = Field(False, alias="finished")
 
 
 class TorrentUpdate(SQLModel):

@@ -96,6 +96,16 @@ class BangumiDatabase:
         else:
             logger.debug(f"[Database] Find bangumi id: {_id}.")
             return self.session.exec(statement).first()
+        
+    def search_official_title(self, _official_title: str) -> Optional[Bangumi]:
+        statement = select(Bangumi).where(Bangumi.official_title == _official_title)
+        bangumi = self.session.exec(statement).first()
+        if bangumi is None:
+            logger.debug(f"[Database] Cannot find bangumi title: {_official_title}.")
+            return None
+        else:
+            logger.debug(f"[Database] Find bangumi title: {_official_title}.")
+            return self.session.exec(statement).first()
 
     def match_poster(self, bangumi_name: str) -> str:
         # Use like to match

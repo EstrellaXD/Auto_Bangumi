@@ -24,6 +24,10 @@ class Database(Session):
     def drop_table(self):
         SQLModel.metadata.drop_all(self.engine)
 
+    def migrate_torrent(self):
+        self.exec("ALTER TABLE torrent ADD COLUMN save_path varchar(255)")
+        self.exec("ALTER TABLE torrent ADD COLUMN finished int")
+
     def migrate(self):
         # Run migration online
         bangumi_data = self.bangumi.search_all()

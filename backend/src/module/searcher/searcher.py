@@ -3,6 +3,7 @@ from typing import TypeAlias
 
 from module.models import Bangumi, RSSItem, Torrent
 from module.network import RequestContent
+from module.manager.torrent import TorrentManager
 from module.rss import RSSAnalyser
 
 from .provider import search_url
@@ -19,7 +20,7 @@ SEARCH_KEY = [
 BangumiJSON: TypeAlias = str
 
 
-class SearchTorrent(RequestContent, RSSAnalyser):
+class SearchTorrent(RequestContent, RSSAnalyser, TorrentManager):
     def search_torrents(self, rss_item: RSSItem) -> list[Torrent]:
         return self.get_torrents(rss_item.url)
         # torrents = self.get_torrents(rss_item.url)
@@ -48,8 +49,22 @@ class SearchTorrent(RequestContent, RSSAnalyser):
         keywords = [getattr(data, key) for key in SEARCH_KEY if getattr(data, key)]
         url = search_url(site, keywords)
         return url
+    
+    def build_search_url(self, data: Bangumi, site: str) -> RSSItem:
+        keywords = []
+        keywords.append(data.official_title)
+        if(int(data.season) != 1):
+            keywords.append(data.season_raw)
+        url = search_url(site, keywords)
+        return url
 
     def search_season(self, data: Bangumi, site: str = "mikan") -> list[Torrent]:
-        rss_item = self.special_url(data, site)
+        rss_item = self.build_search_url(data, site)
         torrents = self.search_torrents(rss_item)
-        return [torrent for torrent in torrents if data.title_raw in torrent.name]
+        new_torrents = []
+        for item1 in torrents:
+            if(str(data.season_raw) in item1.name or data.season_raw == None):
+                res = self.refine_torrent(data, item1)
+                if(res):
+                    new_torrents.append(res)
+        return new_torrents

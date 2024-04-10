@@ -25,4 +25,4 @@ if [ ! -f "$VERSION_FILE" ]; then
 	echo "VERSION='DEV_VERSION'" >>"$VERSION_FILE"
 fi
 
-../venv/bin/uvicorn main:app --reload --port 7892
+../venv/bin/uvicorn main:app --reload --port 7892 --host 0.0.0.0

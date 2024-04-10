@@ -2,7 +2,7 @@ import logging
 
 from module.conf import VERSION, settings
 from module.models import ResponseModel
-from module.update import data_migration, first_run, from_30_to_31, start_up, cache_image
+from module.update import data_migration, torrent_table_migration, first_run, from_30_to_31, start_up, cache_image
 
 from .sub_thread import RenameThread, RSSThread
 
@@ -46,6 +46,9 @@ class Program(RenameThread, RSSThread):
             # Update database
             from_30_to_31()
             logger.info("[Core] Database updated.")
+        if self.update_torrent_table:
+            torrent_table_migration()
+            logger.info("[Core] Torrent table updated.")
         if not self.img_cache:
             logger.info("[Core] No image cache exists, create image cache.")
             cache_image()
