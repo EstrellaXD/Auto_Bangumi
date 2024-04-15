@@ -46,8 +46,9 @@ class PostNotification:
     def send_msg(self, notify: Notification) -> bool:
         self._get_poster(notify)
         try:
-            self.notifier.post_msg(notify)
+            resp = self.notifier.post_msg(notify)
             logger.debug(f"Send notification: {notify.official_title}")
+            return resp
         except Exception as e:
             logger.warning(f"Failed to send notification: {e}")
             return False
