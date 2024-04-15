@@ -9,6 +9,7 @@ from .plugin import (
     ServerChanNotification,
     TelegramNotification,
     WecomNotification,
+    WecomRobotNotification,
 )
 
 logger = logging.getLogger(__name__)
@@ -23,6 +24,8 @@ def getClient(type: str):
         return BarkNotification
     elif type.lower() == "wecom":
         return WecomNotification
+    elif type.lower() == "wecom-robot":
+        return WecomRobotNotification
     else:
         return None
 
