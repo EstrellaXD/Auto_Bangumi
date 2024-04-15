@@ -1,5 +1,5 @@
-from module.notification import PostNotification
 from module.models import Notification
+from module.notification import PostNotification
 
 
 def test_notification():
@@ -11,4 +11,3 @@ def test_notification():
     )
     with PostNotification() as notifier:
         assert notifier.send_msg(info) == True
-

@@ -1,4 +1,5 @@
 import logging
+
 import requests
 
 from module.models import Notification
@@ -13,7 +14,9 @@ class WecomRobotNotification(RequestContent):
     def __init__(self, token, chat_id, **kwargs):
         super().__init__()
         # token is wecom group robot webhook key
-        self.notification_url = f"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key={token}"
+        self.notification_url = (
+            f"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key={token}"
+        )
 
     @staticmethod
     def gen_message(notify: Notification) -> str:
@@ -29,17 +32,17 @@ class WecomRobotNotification(RequestContent):
         if picurl == "":
             picurl = "https://article.biliimg.com/bfs/article/d8bcd0408bf32594fd82f27de7d2c685829d1b2e.png"
         data = {
-          "msgtype": "news",
-          "news": {
-            "articles" : [
-              {
-                "title" : title,
-                "description" : msg,
-                "url" : "https://mikanime.tv",
-                "picurl" : picurl
-              }
-            ]
-          }
+            "msgtype": "news",
+            "news": {
+                "articles": [
+                    {
+                        "title": title,
+                        "description": msg,
+                        "url": "https://mikanime.tv",
+                        "picurl": picurl,
+                    }
+                ]
+            },
         }
         resp = requests.post(url=self.notification_url, json=data, timeout=3)
         logger.debug(f"Wecom-robot notification: {resp.status_code}")
