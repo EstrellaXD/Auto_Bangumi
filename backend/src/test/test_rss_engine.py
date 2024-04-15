@@ -5,7 +5,7 @@ from .test_database import engine as e
 
 def test_rss_engine():
     with RSSEngine(e) as engine:
-        rss_link = "https://mikanime.tv/RSS/Bangumi?bangumiId=2353&subgroupid=552"
+        rss_link = "https://mikanani.me/RSS/Bangumi?bangumiId=2353&subgroupid=552"
 
         engine.add_rss(rss_link, aggregate=False)
 
