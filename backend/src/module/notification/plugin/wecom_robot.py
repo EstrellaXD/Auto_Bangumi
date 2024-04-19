@@ -21,29 +21,31 @@ class WecomRobotNotification(RequestContent):
     @staticmethod
     def gen_message(notify: Notification) -> str:
         text = f"""
-        番剧名称：{notify.official_title}\n季度： 第{notify.season}季\n更新集数： 第{notify.episode}集\n{notify.poster_path}\n
+        番剧名称：{notify.official_title}\n季度： 第{notify.season}季\n更新集数： 第{notify.episode}集
         """
         return text.strip()
 
     def post_msg(self, notify: Notification) -> bool:
-        title = "【番剧更新】" + notify.official_title
+        title = "【番剧更新】"
         msg = self.gen_message(notify)
         picurl = notify.poster_path
-        if picurl == "":
-            picurl = "https://article.biliimg.com/bfs/article/d8bcd0408bf32594fd82f27de7d2c685829d1b2e.png"
-        data = {
-            "msgtype": "news",
-            "news": {
-                "articles": [
-                    {
-                        "title": title,
-                        "description": msg,
-                        "url": "https://mikanime.tv",
-                        "picurl": picurl,
-                    }
-                ]
-            },
-        }
+        if picurl.startswith("http"):
+            data = {
+                "msgtype": "news",
+                "news": {
+                    "articles": [
+                        {
+                            "title": title,
+                            "description": msg,
+                            "url": "https://mikanime.tv",
+                            "picurl": picurl,
+                        }
+                    ]
+                },
+            }
+        else:
+            msg = f"{title}\n{msg}"
+            data = {"msgtype": "text", "text": {"content": msg}}
         resp = requests.post(url=self.notification_url, json=data, timeout=3)
         logger.debug(f"Wecom-robot notification: {resp.status_code}")
         return resp.status_code == 200
