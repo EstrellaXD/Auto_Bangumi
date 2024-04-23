@@ -21,6 +21,9 @@ export default defineConfig({
         :root {
           font-size: 4px;
         }
+        body {
+          font-size: 4rem;
+        }
       `,
     },
   ],
