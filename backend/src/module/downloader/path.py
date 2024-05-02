@@ -54,10 +54,25 @@ class TorrentPath:
 
     @staticmethod
     def _gen_save_path(data: Bangumi | BangumiUpdate):
-        folder = (
-            f"{data.official_title} ({data.year})" if data.year else data.official_title
-        )
-        save_path = Path(settings.downloader.path) / folder / f"Season {data.season}"
+        download_path = settings.downloader.path
+        if settings.bangumi_manage.customize_path_pattern != "":
+            # save_path example: /${year}/${download_path}/${official_title}
+            save_path = settings.bangumi_manage.customize_path_pattern
+            fields = [k for k, v in data.__dict__.items() if not k.startswith("_")]
+            for field in fields:
+                attr = getattr(data, field)
+                if not attr:
+                    # if missing pattern, remove it from save_path
+                    save_path = save_path.replace(f"/${{{field}}}", "")
+                else:
+                    save_path = save_path.replace(f"${{{field}}}", str(attr))
+            # support `${download_path}` pattern
+            save_path = Path(save_path.replace("/${download_path}", download_path))
+        else:
+            folder = (
+                f"{data.official_title} ({data.year})" if data.year else data.official_title
+            )
+            save_path = Path(download_path) / folder / f"Season {data.season}"
         return str(save_path)
 
     @staticmethod

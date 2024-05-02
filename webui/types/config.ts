@@ -29,6 +29,7 @@ export interface Config {
     rename_method: 'normal' | 'pn' | 'advance' | 'none';
     group_tag: boolean;
     remove_bad_torrent: boolean;
+    customize_path_pattern: '';
   };
   log: {
     debug_enable: boolean;
@@ -88,6 +89,7 @@ export const initConfig: Config = {
     rename_method: 'normal',
     group_tag: true,
     remove_bad_torrent: true,
+    customize_path_pattern: '',
   },
   log: {
     debug_enable: false,
