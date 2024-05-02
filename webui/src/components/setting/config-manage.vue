@@ -21,6 +21,11 @@ const items: SettingItem<BangumiManage>[] = [
     prop: {
       items: renameMethod,
     },
+  },
+  {
+    configKey: 'customize_path_pattern',
+    label: () => t('config.manage_set.customize_path_pattern'),
+    type: 'input',
     bottomLine: true,
   },
   {
@@ -38,11 +43,6 @@ const items: SettingItem<BangumiManage>[] = [
     label: () => t('config.manage_set.delete_bad_torrent'),
     type: 'switch',
   },
-  {
-    configKey: 'customize_path_pattern',
-    label: () => t('config.manage_set.customize_path_pattern'),
-    type: 'input'
-  }
 ];
 </script>
 
