@@ -73,11 +73,12 @@ class TorrentPath:
                     index = customize_path.index(field_name)
                     customize_path[index] = str(attr)
             # support `${download_path}` pattern
-            index = customize_path.index("${download_path}")
-            customize_path.remove("${download_path}")
-            for path in Path(download_path).parts[1:]:
-                customize_path.insert(index, path)
-                index += 1
+            if "${download_path}" in customize_path:
+                index = customize_path.index("${download_path}")
+                customize_path.remove("${download_path}")
+                for path in Path(download_path).parts[1:]:
+                    customize_path.insert(index, path)
+                    index += 1
             save_path = Path(*customize_path)
         else:
             folder = (
