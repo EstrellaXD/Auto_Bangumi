@@ -57,17 +57,28 @@ class TorrentPath:
         download_path = settings.downloader.path
         if settings.bangumi_manage.customize_path_pattern != "":
             # save_path example: /${year}/${download_path}/${official_title}
-            save_path = settings.bangumi_manage.customize_path_pattern
+            # Path().parts: ('/', '${year}', '${download_path}', '${official_title}')
+            customize_path = list(Path(settings.bangumi_manage.customize_path_pattern).parts)
             fields = [k for k, v in data.__dict__.items() if not k.startswith("_")]
             for field in fields:
+                field_name = f'${{{field}}}'
+                if field_name not in customize_path:
+                    continue
+
                 attr = getattr(data, field)
                 if not attr:
                     # if missing pattern, remove it from save_path
-                    save_path = save_path.replace(f"/${{{field}}}", "")
+                    customize_path.remove(field_name)
                 else:
-                    save_path = save_path.replace(f"${{{field}}}", str(attr))
+                    index = customize_path.index(field_name)
+                    customize_path[index] = str(attr)
             # support `${download_path}` pattern
-            save_path = Path(save_path.replace("/${download_path}", download_path))
+            index = customize_path.index("${download_path}")
+            customize_path.remove("${download_path}")
+            for path in Path(download_path).parts[1:]:
+                customize_path.insert(index, path)
+                index += 1
+            save_path = Path(*customize_path)
         else:
             folder = (
                 f"{data.official_title} ({data.year})" if data.year else data.official_title
