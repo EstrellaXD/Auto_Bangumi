@@ -94,10 +94,3 @@ class RSSDatabase:
         condition = delete(RSSItem)
         self.session.exec(condition)
         self.session.commit()
-
-    def delete_by_name(self, name: str):
-        statement = select(RSSItem).where(RSSItem.name == name)
-        rss = self.session.exec(statement).first()
-        self.session.delete(rss)
-        self.session.commit()
-        logger.debug(f"[Database] Delete RSS Item name: {name}.")
