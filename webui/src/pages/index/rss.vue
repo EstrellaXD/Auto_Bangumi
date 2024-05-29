@@ -32,7 +32,7 @@ const RSSTableOptions = computed(() => {
       title: t('rss.url'),
       key: 'url',
       className: 'text-h3',
-      minWidth: 200,
+      minWidth: 400,
       align: 'center',
       ellipsis: {
         tooltip: true,

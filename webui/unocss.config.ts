@@ -28,6 +28,9 @@ export default defineConfig({
     },
   ],
   theme: {
+    breakpoints: {
+      pc: '1024px',
+    },
     colors: {
       primary: '#493475',
       running: '#A3D491',
