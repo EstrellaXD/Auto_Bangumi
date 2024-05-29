@@ -8,7 +8,7 @@ const { user, login } = useAuth();
 
 <template>
   <div wh-screen f-cer bg-page>
-    <ab-container :title="$t('login.title')" w-365>
+    <ab-container :title="$t('login.title')" w-365 max-w="90%">
       <div space-y-16>
         <ab-label :label="$t('login.username')">
           <input

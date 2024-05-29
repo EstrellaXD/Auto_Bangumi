@@ -6,7 +6,7 @@ import {
   ListboxOptions,
 } from '@headlessui/vue';
 import { Down, Up } from '@icon-park/vue-next';
-import { isObject, isString } from 'lodash';
+import { isObject, isString } from 'radash';
 import type { SelectItem } from '#/components';
 
 const props = withDefaults(

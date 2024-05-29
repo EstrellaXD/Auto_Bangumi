@@ -7,6 +7,8 @@ const { bangumi, editRule } = storeToRefs(useBangumiStore());
 const { getAll, updateRule, enableRule, openEditPopup, ruleManage } =
   useBangumiStore();
 
+const { isMobile } = useBreakpointQuery();
+
 onActivated(() => {
   getAll();
 });
@@ -15,7 +17,13 @@ onActivated(() => {
 <template>
   <div overflow-auto mt-12 flex-grow>
     <div>
-      <transition-group name="bangumi" tag="div" flex="~ wrap" gap="x-32 y-12">
+      <transition-group
+        name="bangumi"
+        tag="div"
+        flex="~ wrap"
+        gap="20"
+        :class="{ 'justify-center': isMobile }"
+      >
         <ab-bangumi-card
           v-for="i in bangumi"
           :key="i.id"

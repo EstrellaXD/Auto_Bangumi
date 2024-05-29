@@ -35,5 +35,6 @@ if (isLoggedIn.value) {
 
 <style lang="scss">
 @import './style/transition';
+@import './style/var';
 @import './style/global';
 </style>

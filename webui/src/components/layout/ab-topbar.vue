@@ -94,21 +94,30 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div h-60 bg-theme-row text-white rounded-16 fx-cer px-24>
+  <div
+    h="pc:60 50"
+    bg-theme-row
+    text-white
+    rounded="pc:16 10"
+    fx-cer
+    px="pc:24 15"
+  >
     <div flex="~ gap-x-16">
-      <div fx-cer gap-x-16>
-        <img src="/images/logo-light.svg" alt="favicon" wh-24 />
+      <div fx-cer gap-x="pc:16 10">
+        <img src="/images/logo-light.svg" alt="favicon" wh="pc:24 20" />
         <img
           v-show="onSearchFocus === false"
           src="/images/AutoBangumi.svg"
           alt="AutoBangumi"
-          h-24
           rel
-          top-2
+          h="18 pc:24"
+          pc:top-2
         />
       </div>
 
-      <ab-search-bar @add-bangumi="addSearchResult" />
+      <div hidden pc:block>
+        <ab-search-bar @add-bangumi="addSearchResult" />
+      </div>
     </div>
 
     <div ml-auto>
