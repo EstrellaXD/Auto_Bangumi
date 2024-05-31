@@ -36,15 +36,15 @@ const items: SettingItem<BangumiRule>[] = [
     },
     bottomLine: true,
   },
-  {
-    configKey: 'offset',
-    label: () => t('homepage.rule.offset'),
-    type: 'input',
-    css: 'w-72',
-    prop: {
-      type: 'number',
-    },
-  },
+  // {
+  //   configKey: 'offset',
+  //   label: () => t('homepage.rule.offset'),
+  //   type: 'input',
+  //   css: 'w-72',
+  //   prop: {
+  //     type: 'number',
+  //   },
+  // },
   {
     configKey: 'filter',
     label: () => t('homepage.rule.exclude'),

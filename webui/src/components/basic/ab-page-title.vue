@@ -11,7 +11,7 @@ withDefaults(
 
 <template>
   <div fx-cer gap-x-12>
-    <div text-h1>{{ title }}</div>
+    <div text="pc:h1 h2">{{ title }}</div>
     <div w-160 h-3 bg-theme-row rounded-full></div>
   </div>
 </template>

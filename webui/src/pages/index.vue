@@ -29,15 +29,24 @@ definePage({
 .layout-container {
   width: 100%;
   height: 100%;
-  min-width: 1024px;
-  min-height: 768px;
-  padding: 16px;
+
+  padding: var(--layout-padding);
+  gap: var(--layout-gap);
 
   display: flex;
   flex-direction: column;
-  gap: 12px;
 
   background: #f0f0f0;
+
+  @include forPC {
+    min-width: 1024px;
+    min-height: 768px;
+  }
+
+  @include forMobile {
+    overflow: hidden;
+    height: 100vh;
+  }
 }
 
 .layout-main {
@@ -45,7 +54,13 @@ definePage({
   gap: 20px;
 
   overflow: hidden;
-  height: calc(100vh - 2 * 16px - 60px - 12px);
+  height: calc(100vh - 2 * var(--layout-padding) - 60px - var(--layout-gap));
+
+  @include forMobile {
+    flex-direction: column-reverse;
+    height: calc(100vh - var(--layout-padding) * 2 - var(--layout-gap));
+    gap: var(--layout-gap);
+  }
 }
 
 .layout-content {
