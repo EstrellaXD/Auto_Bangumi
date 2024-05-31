@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "prepare": "cd .. && husky install ./webui/.husky",
-    "build": "vue-tsc --noEmit && vite build",
+    "test:build": "vue-tsc --noEmit",
+    "build": "vite build",
     "dev": "vite",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
