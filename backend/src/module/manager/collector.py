@@ -25,7 +25,7 @@ class SeasonCollector(DownloadClient):
                 for torrent in torrents:
                     torrent.downloaded = True
                 bangumi.eps_collect = True
-                if engine.bangumi.update(bangumi):
+                if not engine.bangumi.update(bangumi):
                     engine.bangumi.add(bangumi)
                 engine.torrent.add_all(torrents)
                 return ResponseModel(
