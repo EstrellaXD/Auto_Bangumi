@@ -58,7 +58,7 @@
 - 高度可自定义的功能选项，可以针对不同媒体库软件微调
 - 支持多种 RSS 站点，支持聚合 RSS 的解析。
 - 无需维护完全无感使用
-- 内置 TDMB 解析器，可以直接生成完整的 TMDB 格式的文件以及番剧信息。
+- 内置 TMDB 解析器，可以直接生成完整的 TMDB 格式的文件以及番剧信息。
 
 ## [Roadmap](https://github.com/users/EstrellaXD/projects/2)
 
