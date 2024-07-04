@@ -46,6 +46,8 @@ export interface Config {
     type: 'telegram' | 'server-chan' | 'bark' | 'wecom';
     token: string;
     chat_id: string;
+    bark_params: string;
+    bark_server: string;
   };
   experimental_openai: {
     enable: boolean;
