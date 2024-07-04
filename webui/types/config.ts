@@ -47,6 +47,7 @@ export interface Config {
     token: string;
     chat_id: string;
     bark_params: string;
+    bark_server: string;
   };
   experimental_openai: {
     enable: boolean;

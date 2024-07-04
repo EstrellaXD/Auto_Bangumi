@@ -8,11 +8,25 @@ logger = logging.getLogger(__name__)
 
 
 class BarkNotification(RequestContent):
-    def __init__(self, token: str, bark_params: Optional[dict], **kwargs) -> None:
+    def __init__(
+        self,
+        token: str,
+        bark_params: Optional[dict],
+        bark_server: Optional[str],
+        **kwargs,
+    ) -> None:
         super().__init__()
         self.token = token
         self.params = bark_params
-        self.notification_url = "https://api.day.app/push"
+        if bark_server is not None:
+            if not bark_server.startswith("http"):
+                bark_server = "https://" + bark_server
+            if not bark_server.endswith("push"):
+                bark_server = bark_server.rstrip("/") + "/push"
+
+            self.notification_url = bark_server
+        else:
+            self.notification_url = "https://api.day.app/push"
 
     @staticmethod
     def gen_message(notify: Notification) -> str:
