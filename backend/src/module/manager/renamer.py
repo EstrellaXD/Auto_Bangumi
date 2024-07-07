@@ -5,6 +5,7 @@ from module.conf import settings
 from module.downloader import DownloadClient
 from module.models import EpisodeFile, Notification, SubtitleFile
 from module.parser import TitleParser
+from module.database import Database
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +26,15 @@ class Renamer(DownloadClient):
 
     @staticmethod
     def gen_path(
-            file_info: EpisodeFile | SubtitleFile, bangumi_name: str, method: str
+            file_info: EpisodeFile | SubtitleFile, bangumi_name: str, method: str, **kwargs
     ) -> str:
+        
+        with Database() as db:
+            save_path = kwargs["save_path"]
+            data = db.bangumi.search_path(save_path=save_path)
+            if data and (file_info.episode + data.offset) > 0:
+                file_info.episode += data.offset
+
         season = f"0{file_info.season}" if file_info.season < 10 else file_info.season
         episode = (
             f"0{file_info.episode}" if file_info.episode < 10 else file_info.episode
@@ -63,8 +71,10 @@ class Renamer(DownloadClient):
             torrent_path=media_path,
             season=season,
         )
+        # with Database() as db:
+
         if ep:
-            new_path = self.gen_path(ep, bangumi_name, method=method)
+            new_path = self.gen_path(ep, bangumi_name, method=method, **kwargs)
             if media_path != new_path:
                 if new_path not in self.check_pool.keys():
                     if self.rename_torrent_file(
@@ -97,7 +107,7 @@ class Renamer(DownloadClient):
                     season=season,
                 )
                 if ep:
-                    new_path = self.gen_path(ep, bangumi_name, method=method)
+                    new_path = self.gen_path(ep, bangumi_name, method=method, **kwargs)
                     if media_path != new_path:
                         renamed = self.rename_torrent_file(
                             _hash=_hash, old_path=media_path, new_path=new_path
@@ -151,6 +161,7 @@ class Renamer(DownloadClient):
                 "method": rename_method,
                 "season": season,
                 "_hash": info.hash,
+                "save_path": info.save_path,
             }
             # Rename single media file
             if len(media_list) == 1:

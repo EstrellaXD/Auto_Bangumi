@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-from sqlalchemy.sql import func
+from sqlalchemy.sql import func, desc
 from sqlmodel import Session, and_, delete, false, or_, select
 
 from module.models import Bangumi, BangumiUpdate
@@ -86,6 +86,24 @@ class BangumiDatabase:
     def search_all(self) -> list[Bangumi]:
         statement = select(Bangumi)
         return self.session.exec(statement).all()
+
+    def search_path(self, save_path: str) -> Optional[Bangumi]:
+        statement = (select(Bangumi)
+            .where(
+                and_(
+                    Bangumi.save_path == save_path,
+                    Bangumi.deleted == false()
+                )
+            )
+            .order_by(desc(Bangumi.id))
+        )
+        bangumi = self.session.exec(statement).first()
+        if bangumi is None:
+            logger.warning(f"[Database] Cannot find save_path: {save_path}.")
+            return None
+        else:
+            logger.debug(f"[Database] Find bangumi save_path: {save_path}.")
+            return bangumi
 
     def search_id(self, _id: int) -> Optional[Bangumi]:
         statement = select(Bangumi).where(Bangumi.id == _id)
