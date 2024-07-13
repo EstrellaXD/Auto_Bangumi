@@ -66,7 +66,7 @@ class Checker:
                     )
             except requests.exceptions.RequestException as e:
                 logger.debug(
-                        f"[Health] Failed to update health status:", str(e)
+                        f"[Health] Failed to update health status: {str(e)}"
                     )
                       
         try:

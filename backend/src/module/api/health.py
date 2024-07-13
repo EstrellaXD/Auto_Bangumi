@@ -1,7 +1,5 @@
 import logging
-from module.api import program
 from fastapi import APIRouter
-from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 
 from module.models import APIResponse
@@ -25,18 +23,18 @@ async def health_check():
             content={"status": status},
         )
 
-@router.patch("")
+@router.patch("", response_model=APIResponse)
 async def update_health_status(status: str):
     global current_status
     try:
-        logger.error(f"[Health] Health status changed from {current_status} to {status}")
+        logger.info(f"[Health] Health status changed from {current_status} to {status}")
         current_status = status
         return JSONResponse(
             status_code=200,
             content={"msg_en": "Health status updated successfully.", "msg_zh": "健康状态更新成功。"},
         )
     except Exception as e:
-        logger.error(f"[Health] Health status updated failed: {str(e)}")
+        logger.warning(f"[Health] Health status updated failed: {str(e)}")
         return JSONResponse(
             status_code=406,
             content={"msg_en": "Health status updated failed.", "msg_zh": "健康状态更新失败。"},
