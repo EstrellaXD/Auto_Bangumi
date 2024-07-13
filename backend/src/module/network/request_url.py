@@ -14,6 +14,24 @@ class RequestURL:
     def __init__(self):
         self.header = {"user-agent": "Mozilla/5.0", "Accept": "application/xml"}
         self._socks5_proxy = False
+    
+    # Patch the health api endpoint if Network is unhealthy 
+    def change_health_status_to_unhealthy(self):
+        url = "http://localhost:7892/health"
+        payload = {
+            "status": "unhealthy"
+        }
+    
+        try:
+            response = requests.patch(url, json=payload)
+            response.raise_for_status()
+            logger.debug(
+                    f"[Health] Health status updated successfully."
+                )
+        except requests.exceptions.RequestException as e:
+            logger.debug(
+                    f"[Health] Failed to update health status:", str(e)
+                )           
 
     def get_url(self, url, retry=3):
         try_time = 0
@@ -35,6 +53,7 @@ class RequestURL:
                 logger.debug(e)
                 break
         logger.error(f"[Network] Unable to connect to {url}, Please check your network settings")
+        self.change_health_status_to_unhealthy()
         return None
 
     def post_url(self, url: str, data: dict, retry=3):
@@ -59,6 +78,7 @@ class RequestURL:
                 break
         logger.error(f"[Network] Failed connecting to {url}")
         logger.warning("[Network] Please check DNS/Connection settings")
+        self.change_health_status_to_unhealthy()
         return None
 
     def check_url(self, url: str):
