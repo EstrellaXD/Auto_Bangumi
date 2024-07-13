@@ -34,10 +34,10 @@ function abLabel(label: string | (() => string)) {
 <template>
   <Menu>
     <div rel>
-      <div fx-cer space-x-16>
+      <div fx-cer space-x="pc:16 10" text="pc:24 20">
         <International
           theme="outline"
-          size="24"
+          size="1em"
           fill="#fff"
           is-btn
           btn-click
@@ -46,7 +46,7 @@ function abLabel(label: string | (() => string)) {
 
         <AddOne
           theme="outline"
-          size="24"
+          size="1em"
           fill="#fff"
           is-btn
           btn-click
@@ -54,7 +54,7 @@ function abLabel(label: string | (() => string)) {
         />
 
         <MenuButton bg-transparent is-btn btn-click>
-          <System theme="outline" size="24" fill="#fff" />
+          <System theme="outline" size="1em" fill="#fff" />
         </MenuButton>
 
         <ab-status :running="running" />
@@ -62,8 +62,8 @@ function abLabel(label: string | (() => string)) {
 
       <MenuItems
         abs
-        top-50
-        left-32
+        top="pc:50 40"
+        left="pc:32 0"
         w-120
         rounded-8
         bg-white

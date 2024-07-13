@@ -21,10 +21,16 @@ export default defineConfig({
         :root {
           font-size: 4px;
         }
+        body {
+          font-size: 4rem;
+        }
       `,
     },
   ],
   theme: {
+    breakpoints: {
+      pc: '1024px',
+    },
     colors: {
       primary: '#493475',
       running: '#A3D491',

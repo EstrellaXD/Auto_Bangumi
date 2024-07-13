@@ -76,22 +76,27 @@ onDeactivated(() => {
           overflow-auto
           p-10
           max-h-60vh
+          min-h-20vh
         >
-          <template v-for="i in formatLog" :key="i.index">
-            <div
-              p="y-10"
-              leading="1.5em"
-              border="0 b-1 solid"
-              last:border-b-0
-              flex="~ gap-10"
-              :style="{ color: typeColor(i.type) }"
-            >
-              <span>{{ i.date }}</span>
-              <span w-6em text="center">{{ i.type }}</span>
-              <div flex-1 break-all>{{ i.content }}</div>
-            </div>
-          </template>
-          <!-- <pre text-main>{{ log }}</pre> -->
+          <div min-w-450>
+            <template v-for="i in formatLog" :key="i.index">
+              <div
+                p="y-10"
+                leading="1.5em"
+                border="0 b-1 solid"
+                last:border-b-0
+                flex="~ items-center gap-20"
+                :style="{ color: typeColor(i.type) }"
+              >
+                <div flex="~ col items-center gap-10" whitespace-nowrap>
+                  <div text="center">{{ i.type }}</div>
+                  <div>{{ i.date }}</div>
+                </div>
+
+                <div flex-1 break-all>{{ i.content }}</div>
+              </div>
+            </template>
+          </div>
         </div>
 
         <div flex="~ justify-end gap-x-10" mt-12>

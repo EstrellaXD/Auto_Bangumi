@@ -6,19 +6,6 @@ export const axios = Axios.create({
   withCredentials: true,
 });
 
-// axios.interceptors.request.use((config) => {
-//   const { auth } = useAuth();
-//
-//   // if (auth.value !== '' && config.headers) {
-//   //   config.headers.Authorization = auth.value;
-//   // }
-//
-//   return config;
-// });
-
-// axios.defaults.baseURL = '/api/v1';
-// axios.defaults.withCredentials = true;
-
 axios.interceptors.response.use(
   (res: AxiosResponse) => res,
   (err: AxiosError<ApiSuccess>) => {
@@ -47,6 +34,7 @@ axios.interceptors.response.use(
         if (errorMsg) message.error(errorMsg);
         break;
       case 500:
+        isLoggedIn.value = false;
         message.error(
           returnUserLangText({
             en: 'Server error!',
