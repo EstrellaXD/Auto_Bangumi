@@ -49,7 +49,7 @@ class Checker:
             return True
 
     @staticmethod
-    def check_downloader() -> bool:                     
+    def check_downloader() -> bool:
         try:
             url = (
                 f"http://{settings.downloader.host}"

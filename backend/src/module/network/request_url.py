@@ -30,7 +30,7 @@ class RequestURL:
                 )
         except requests.exceptions.RequestException as e:
             logger.debug(
-                    f"[Health] Failed to update health status: {str(e)}"
+                    f"[Health] Failed to update health status: {e}"
                 )           
 
     def get_url(self, url, retry=3):
