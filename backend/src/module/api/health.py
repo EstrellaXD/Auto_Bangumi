@@ -13,8 +13,7 @@ current_status = "healthy"
 
 @router.get("/", response_model=APIResponse)
 async def health_check():
-    is_healthy = program.check_downloader_status()
-    status = "unhealthy" if not is_healthy else current_status
+    status = current_status
     if status == "unhealthy":
       return JSONResponse(
             status_code=500,

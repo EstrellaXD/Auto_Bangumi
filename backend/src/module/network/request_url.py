@@ -15,9 +15,9 @@ class RequestURL:
         self.header = {"user-agent": "Mozilla/5.0", "Accept": "application/xml"}
         self._socks5_proxy = False
     
-    # Patch the health api endpoint if Network is unhealthy 
+    # Patch the health api endpoint if Network connection was failed
     def change_health_status_to_unhealthy(self):
-        url = "http://localhost:7892/health"
+        url = "http://localhost:7892/api/v1/health"
         payload = {
             "status": "unhealthy"
         }

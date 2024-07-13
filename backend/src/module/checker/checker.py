@@ -50,6 +50,25 @@ class Checker:
 
     @staticmethod
     def check_downloader() -> bool:
+
+        # Patch the health api endpoint if Downloader connection was failed
+        def change_health_status_to_unhealthy():
+            url = "http://localhost:7892/api/v1/health"
+            payload = {
+                "status": "unhealthy"
+            }
+        
+            try:
+                response = requests.patch(url, json=payload)
+                response.raise_for_status()
+                logger.debug(
+                        f"[Health] Health status updated successfully."
+                    )
+            except requests.exceptions.RequestException as e:
+                logger.debug(
+                        f"[Health] Failed to update health status:", str(e)
+                    )
+                      
         try:
             url = (
                 f"http://{settings.downloader.host}"
@@ -71,9 +90,11 @@ class Checker:
             return False
         except requests.exceptions.ConnectionError:
             logger.error("[Checker] Downloader connect failed.")
+            change_health_status_to_unhealthy()
             return False
         except Exception as e:
             logger.error(f"[Checker] Downloader connect failed: {e}")
+            change_health_status_to_unhealthy()
             return False
 
     @staticmethod
