@@ -21,10 +21,9 @@ async def health_check():
             content={"status": "healthy"},
         )
     else:
+      current_health_status = "unhealthy"
       return JSONResponse(
             status_code=500,
-            current_health_status = "unhealthy"
-            logger.debug(f"[Health] Health status is {current_health_status}.")
             content={"status": "unhealthy"},
         )
 
