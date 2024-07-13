@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
 from module.models import APIResponse
+from module.checker import Checker
 
 router = APIRouter(prefix="/health", tags=["health"])
 logger = logging.getLogger(__name__)
@@ -12,6 +13,8 @@ current_health_status = "healthy"
 @router.get("", response_model=APIResponse)
 async def health_check():
     global current_health_status
+    if not Checker.check_downloader():
+         current_health_status = "unhealthy"
     if current_health_status == "healthy":
       return JSONResponse(
             status_code=200,
