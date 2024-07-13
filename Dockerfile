@@ -22,6 +22,7 @@ RUN set -ex && \
         su-exec \
         shadow \
         tini \
+        curl \
         openssl \
         tzdata && \
     python3 -m pip install --no-cache-dir --upgrade pip && \
@@ -38,6 +39,9 @@ RUN set -ex && \
 
 COPY --chmod=755 backend/src/. .
 COPY --chmod=755 entrypoint.sh /entrypoint.sh
+
+# Add healthcheck endpoint
+HEALTHCHECK --interval=5s --timeout=10s --retries=3 CMD curl --silent --fail http://localhost:7892/api/v1/health || exit 1
 
 ENTRYPOINT ["tini", "-g", "--", "/entrypoint.sh"]
 
