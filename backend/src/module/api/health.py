@@ -1,5 +1,5 @@
 import logging
-from backend.src.module.api import program
+from module.api import program
 from fastapi import APIRouter
 from fastapi import HTTPException
 
