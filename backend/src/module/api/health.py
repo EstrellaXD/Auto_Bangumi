@@ -29,8 +29,15 @@ async def health_check():
 async def update_health_status(status: str):
     global current_status
     try:
-        logger.error(f"[Health] Health status changed to ",status)
+        logger.error(f"[Health] Health status changed from {current_status} to {status}")
         current_status = status
-        return {"status": status}
+        return JSONResponse(
+            status_code=200,
+            content={"msg_en": "Health status updated successfully.", "msg_zh": "健康状态更新成功。"},
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"[Health] Health status updated failed: {str(e)}")
+        return JSONResponse(
+            status_code=406,
+            content={"msg_en": "Health status updated failed.", "msg_zh": "健康状态更新失败。"},
+        )
