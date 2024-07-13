@@ -31,7 +31,7 @@ async def health_check():
 async def update_health_status(status: str):
     global current_health_status
     try:
-        logger.info(f"[Health] Health status changed from {current_health_status} to {status}")
+        logger.debug(f"[Health] Health status changed from {current_health_status} to {status}")
         current_health_status = status
         return JSONResponse(
             status_code=200,
