@@ -2,7 +2,6 @@ import logging
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
-from module.core.status import ProgramStatus
 from module.models import APIResponse
 
 router = APIRouter(prefix="/health", tags=["health"])
@@ -13,9 +12,7 @@ current_health_status = "healthy"
 @router.get("", response_model=APIResponse)
 async def health_check():
     global current_health_status
-    program_is_running = ProgramStatus.is_running
-    logger.debug(f"[Health] Health status is {current_health_status} , ProgramStatus is {program_is_running}")
-    if current_health_status == "healthy" and program_is_running:
+    if current_health_status == "healthy":
       return JSONResponse(
             status_code=200,
             content={"status": "healthy"},

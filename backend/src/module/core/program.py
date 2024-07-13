@@ -1,4 +1,5 @@
 import logging
+import requests
 
 from module.conf import VERSION, settings
 from module.models import ResponseModel
@@ -51,6 +52,24 @@ class Program(RenameThread, RSSThread):
             cache_image()
         self.start()
 
+    # Patch the health api endpoint
+    def change_health_status(self,health_status):
+        health_check_url = "http://localhost:7892/api/v1/health"
+        payload = {
+            "status": health_status
+        }
+    
+        try:
+            response = requests.patch(health_check_url, json=payload)
+            response.raise_for_status()
+            logger.debug(
+                    f"[Health] Health status changed to {health_status}."
+                )
+        except requests.exceptions.RequestException as e:
+            logger.debug(
+                    f"[Health] Failed to update health status: {e}"
+                )  
+
     def start(self):
         self.stop_event.clear()
         settings.load()
@@ -59,6 +78,7 @@ class Program(RenameThread, RSSThread):
                 self.rename_start()
             if self.enable_rss:
                 self.rss_start()
+            self.change_health_status("healthy")
             logger.info("Program running.")
             return ResponseModel(
                 status=True,
@@ -68,6 +88,7 @@ class Program(RenameThread, RSSThread):
             )
         else:
             self.stop_event.set()
+            self.change_health_status("unhealthy")
             logger.warning("Program failed to start.")
             return ResponseModel(
                 status=False,
