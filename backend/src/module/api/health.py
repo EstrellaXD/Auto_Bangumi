@@ -1,8 +1,8 @@
 import logging
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
-from core.status import ProgramStatus
 
+from module.core.status import ProgramStatus
 from module.models import APIResponse
 
 router = APIRouter(prefix="/health", tags=["health"])
