@@ -17,13 +17,13 @@ class RequestURL:
     
     # Patch the health api endpoint if Network connection was failed
     def change_health_status_to_unhealthy(self):
-        url = "http://localhost:7892/api/v1/health"
+        health_check_url = "http://localhost:7892/api/v1/health"
         payload = {
             "status": "unhealthy"
         }
     
         try:
-            response = requests.patch(url, json=payload)
+            response = requests.patch(health_check_url, json=payload)
             response.raise_for_status()
             logger.debug(
                     f"[Health] Health status updated successfully."
