@@ -12,24 +12,26 @@ current_health_status = "healthy"
 
 @router.get("", response_model=APIResponse)
 async def health_check():
+    global current_health_status
     program_is_running = ProgramStatus.is_running
+    logger.debug(f"[Health] Health status is {current_health_status} , ProgramStatus is {program_is_running}")
     if current_health_status == "healthy" and program_is_running:
       return JSONResponse(
             status_code=200,
-            content={"status": current_health_status},
+            content={"status": "healthy"},
         )
     else:
-      global current_health_status
       return JSONResponse(
             status_code=500,
             current_health_status = "unhealthy"
-            content={"status": current_health_status},
+            logger.debug(f"[Health] Health status is {current_health_status}.")
+            content={"status": "unhealthy"},
         )
 
 @router.patch("", response_model=APIResponse)
 async def update_health_status(status: str):
+    global current_health_status
     try:
-        global current_health_status
         logger.info(f"[Health] Health status changed from {current_health_status} to {status}")
         current_health_status = status
         return JSONResponse(
