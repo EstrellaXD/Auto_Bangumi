@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 current_status = "healthy"
 
-@router.get("/", response_model=APIResponse)
+@router.get("", response_model=APIResponse)
 async def health_check():
     status = current_status
     if status == "unhealthy":
@@ -25,7 +25,7 @@ async def health_check():
             content={"status": status},
         )
 
-@router.patch("/")
+@router.patch("")
 async def update_health_status(status: str):
     global current_status
     try:
