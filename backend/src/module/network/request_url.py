@@ -17,13 +17,10 @@ class RequestURL:
     
     # Patch the health api endpoint if Network connection was changed
     def change_health_status(self,health_status):
-        health_check_url = "http://localhost:7892/api/v1/health"
-        payload = {
-            "status": health_status
-        }
+        health_check_url = f"http://192.168.20.167:7892/api/v1/health?status={health_status}"
     
         try:
-            response = requests.patch(health_check_url, json=payload)
+            response = requests.patch(health_check_url)
             response.raise_for_status()
             logger.debug(
                     f"[Health] Health status changed to {health_status}."
