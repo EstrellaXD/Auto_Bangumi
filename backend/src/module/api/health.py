@@ -1,6 +1,7 @@
 import logging
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
+from typing import Literal
 
 from module.models import APIResponse
 from module.checker import Checker
@@ -28,7 +29,7 @@ async def health_check():
         )
 
 @router.patch("", response_model=APIResponse)
-async def update_health_status(status: str):
+async def update_health_status(status: Literal["healthy", "unhealthy"]):
     global current_health_status
     try:
         logger.debug(f"[Health] Health status changed from {current_health_status} to {status}")
