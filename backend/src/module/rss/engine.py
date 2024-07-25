@@ -123,7 +123,6 @@ class RSSEngine(Database):
             new_torrents = self.pull_rss(rss_item)
             # Get all enabled bangumi data
             add_torrents = []
-            # Get all enabled bangumi data
             for torrent in new_torrents:
                 matched_data = self.match_torrent(torrent)
                 if matched_data:
