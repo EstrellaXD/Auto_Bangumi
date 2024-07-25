@@ -75,8 +75,11 @@ def season_process(season_info: str):
             try:
                 season = int(season_pro)
             except ValueError:
-                season = CHINESE_NUMBER_MAP[season_pro]
-                break
+                if season_pro in CHINESE_NUMBER_MAP:
+                    season = CHINESE_NUMBER_MAP[season_pro]
+                    break
+    else:
+        return name_season, "", 1
     return name, season_raw, season
 
 
