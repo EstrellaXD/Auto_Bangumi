@@ -29,7 +29,8 @@ cd AutoBangumi
 ```bash
 cd src
 python3 -m venv env
-python3 pip install -r requirements.txt
+source env/bin/activate
+python3 -m pip install -r requirements.txt
 ```
 
 ## 创建配置和数据文件夹
