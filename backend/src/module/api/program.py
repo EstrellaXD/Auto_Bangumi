@@ -19,12 +19,12 @@ router = APIRouter(tags=["program"])
 
 @router.on_event("startup")
 async def startup():
-    program.startup()
+    await program.startup()
 
 
 @router.on_event("shutdown")
 async def shutdown():
-    program.stop()
+    await program.stop()
 
 
 @router.get(
@@ -32,7 +32,8 @@ async def shutdown():
 )
 async def restart():
     try:
-        resp = program.restart()
+        # resp = await program.restart()
+        resp = await program.restart()
         return u_response(resp)
     except Exception as e:
         logger.debug(e)
@@ -51,7 +52,7 @@ async def restart():
 )
 async def start():
     try:
-        resp = program.start()
+        resp = await program.start()
         return u_response(resp)
     except Exception as e:
         logger.debug(e)
@@ -69,22 +70,22 @@ async def start():
     "/stop", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
 async def stop():
-    return u_response(program.stop())
+    return u_response(await program.stop())
 
 
 @router.get("/status", response_model=dict, dependencies=[Depends(get_current_user)])
 async def program_status():
-    if not program.is_running:
+    if not program.program_status.is_running:
         return {
             "status": False,
             "version": VERSION,
-            "first_run": program.first_run,
+            "first_run": program.program_status.first_run,
         }
     else:
         return {
             "status": True,
             "version": VERSION,
-            "first_run": program.first_run,
+            "first_run": program.program_status.first_run,
         }
 
 
@@ -92,7 +93,7 @@ async def program_status():
     "/shutdown", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
 async def shutdown_program():
-    program.stop()
+    await program.stop()
     logger.info("Shutting down program...")
     os.kill(os.getpid(), signal.SIGINT)
     return JSONResponse(
@@ -109,4 +110,4 @@ async def shutdown_program():
     dependencies=[Depends(get_current_user)],
 )
 async def check_downloader_status():
-    return program.check_downloader()
+    return await program.program_status.check_downloader()
