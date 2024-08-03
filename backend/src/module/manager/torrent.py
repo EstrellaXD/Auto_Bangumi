@@ -129,8 +129,7 @@ class TorrentManager():
                         await client.move_torrent(hash_list, path)
                 data.save_path = path
                 torrent_list = db.torrent.search_bangumi(old_data.id)
-                # 有bug,这会累加 offset,故设为0
-                data.offset = 0
+                # 有bug,这会累加 offset
                 for torrent in torrent_list:
                     if get_hash(torrent.url) in hash_list:
                         torrent.downloaded = False
