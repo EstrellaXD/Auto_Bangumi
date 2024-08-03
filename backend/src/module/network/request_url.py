@@ -3,29 +3,31 @@ import logging
 
 import httpx
 
-from .proxy import set_proxy
-
 from module.conf import settings
 
+from .proxy import set_proxy, test_proxy
+
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 
 class RequestURL:
     def __init__(self):
         self.header = {"user-agent": "Mozilla/5.0", "Accept": "application/xml"}
-        self.proxy = set_proxy if settings.proxy.enable else None
+        self.proxy = set_proxy() if settings.proxy.enable and test_proxy() else None
+
 
     async def get_url(self, url, retry=3):
         for _ in range(retry):
             try:
                 req = await self.client.get(url=url)
                 return req
-            except httpx.RequestError:
-                logger.debug(f"[Network] Cannot connect to {url}. Wait for 5 seconds.")
             except httpx.TimeoutException:
                 logger.debug(
                     f"[Network] Timeout. Cannot connect to {url}. Wait for 5 seconds."
                 )
+            except httpx.RequestError:
+                logger.debug(f"[Network] Cannot connect to {url}. Wait for 5 seconds.")
             except Exception as e:
                 logger.debug(e)
                 logger.error(f"[Network] Cannot connect to {url}")
@@ -33,18 +35,18 @@ class RequestURL:
             await asyncio.sleep(5)
 
     async def post_url(
-        self, url: str, data: dict, files: dict[str, bytes] = None, retry: int = 3
+        self, url: str, data: dict, files: dict[str, bytes]|None = None, retry: int = 3
     ):
         for _ in range(retry):
             try:
                 req = await self.client.post(url=url, data=data, files=files)
                 return req
-            except httpx.RequestError:
-                logger.debug(f"[Network] Cannot connect to {url}. Wait for 5 seconds.")
             except httpx.TimeoutException:
                 logger.debug(
                     f"[Network] Timeout. Cannot connect to {url}. Wait for 5 seconds."
                 )
+            except httpx.RequestError:
+                logger.debug(f"[Network] Cannot connect to {url}. Wait for 5 seconds.")
             except Exception as e:
                 logger.debug(e)
                 logger.error(f"[Network] Cannot connect to {url}")
