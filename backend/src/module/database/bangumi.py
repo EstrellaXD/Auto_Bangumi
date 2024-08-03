@@ -1,10 +1,10 @@
 import logging
-from typing import Optional
 
 from sqlalchemy.sql import func
 from sqlmodel import Session, and_, delete, false, or_, select
 
 from module.models import Bangumi, BangumiUpdate
+from module.models.torrent import Torrent
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +17,11 @@ class BangumiDatabase:
         statement = select(Bangumi).where(Bangumi.title_raw == data.title_raw)
         bangumi = self.session.exec(statement).first()
         if bangumi:
+            logger.debug(f"[Database] {data.official_title} has inserted into database.")
             return False
         self.session.add(data)
         self.session.commit()
+        self.session.refresh(data)
         logger.debug(f"[Database] Insert {data.official_title} into database.")
         return True
 
@@ -54,13 +56,18 @@ class BangumiDatabase:
     def update_rss(self, title_raw, rss_set: str):
         # Update rss and added
         statement = select(Bangumi).where(Bangumi.title_raw == title_raw)
+
         bangumi = self.session.exec(statement).first()
-        bangumi.rss_link = rss_set
-        bangumi.added = False
-        self.session.add(bangumi)
-        self.session.commit()
-        self.session.refresh(bangumi)
-        logger.debug(f"[Database] Update {title_raw} rss_link to {rss_set}.")
+        if bangumi:
+            bangumi.rss_link = rss_set
+            bangumi.added = False
+            self.session.add(bangumi)
+            self.session.commit()
+            self.session.refresh(bangumi)
+            logger.debug(f"[Database] Update {title_raw} rss_link to {rss_set}.")
+            return True
+        logger.debug(f"[Database] Cannot update {title_raw} rss_link to {rss_set}.")
+        return False
 
     def update_poster(self, title_raw, poster_link: str):
         statement = select(Bangumi).where(Bangumi.title_raw == title_raw)
@@ -87,7 +94,17 @@ class BangumiDatabase:
         statement = select(Bangumi)
         return self.session.exec(statement).all()
 
-    def search_id(self, _id: int) -> Optional[Bangumi]:
+    def search_url(self, rss_link: str) -> Bangumi | None:
+        statement = select(Bangumi).where(Bangumi.rss_link == rss_link)
+        bangumi = self.session.exec(statement).first()
+        if bangumi is None:
+            logger.warning(f"[Database] Cannot find bangumi link: {rss_link}.")
+            return None
+        else:
+            logger.debug(f"[Database] Find bangumi id: {rss_link}.")
+            return self.session.exec(statement).first()
+
+    def search_id(self, _id: int) -> Bangumi | None:
         statement = select(Bangumi).where(Bangumi.id == _id)
         bangumi = self.session.exec(statement).first()
         if bangumi is None:
@@ -103,42 +120,55 @@ class BangumiDatabase:
             func.instr(bangumi_name, Bangumi.official_title) > 0
         )
         data = self.session.exec(statement).first()
-        if data:
+        if data and data.poster_link:
             return data.poster_link
         else:
             return ""
 
-    def match_list(self, torrent_list: list, rss_link: str) -> list:
+    def match_list(
+        self, torrent_list: list[Torrent], rss_link: str, aggrated: bool = True
+    ) -> list[Torrent]:
+        """
+        find new torrent in the list and update the rss link
+        """
+        new_torrents = []
         match_datas = self.search_all()
         if not match_datas:
             return torrent_list
-        # Match title
-        i = 0
-        while i < len(torrent_list):
-            torrent = torrent_list[i]
-            for match_data in match_datas:
-                if match_data.title_raw in torrent.name:
-                    if rss_link not in match_data.rss_link:
-                        match_data.rss_link += f",{rss_link}"
-                        self.update_rss(match_data.title_raw, match_data.rss_link)
-                    # if not match_data.poster_link:
-                    #     self.update_poster(match_data.title_raw, torrent.poster_link)
-                    torrent_list.pop(i)
-                    break
+        for torrent in torrent_list:
+            match_bangumi = self.match_torrent(torrent.name,rss_link,aggrated)
+            if match_bangumi:
+                if rss_link not in match_bangumi.rss_link:
+                    match_bangumi.rss_link += f",{rss_link}"
+                    self.update_rss(match_bangumi.title_raw, match_bangumi.rss_link)
             else:
-                i += 1
-        return torrent_list
+                new_torrents.append(torrent)
+        return new_torrents
 
-    def match_torrent(self, torrent_name: str, rss_link: str) -> Optional[Bangumi]:
-        statement = select(Bangumi).where(
-            and_(
-                func.instr(torrent_name, Bangumi.title_raw) > 0,
-                func.instr(Bangumi.rss_link, rss_link),
-                # use `false()` to avoid E712 checking
-                # see: https://docs.astral.sh/ruff/rules/true-false-comparison/
-                Bangumi.deleted == false(),
+    def match_torrent(
+        self, torrent_name: str, rss_link: str, aggrated=True
+    ) -> Bangumi | None:
+        # 对于聚合而言, link, title_raw,deleted 一致可认为是一个bangumi
+        # 对于非聚合, link 一致就可认为是一个
+        if aggrated:
+            statement = select(Bangumi).where(
+                and_(
+                    func.instr(torrent_name, Bangumi.title_raw) > 0,
+                    func.instr(rss_link, Bangumi.rss_link)>0,
+                    # use `false()` to avoid E712 checking
+                    # see: https://docs.astral.sh/ruff/rules/true-false-comparison/
+                    Bangumi.deleted == false(),
+                )
             )
-        )
+        else:
+            statement = select(Bangumi).where(
+                and_(
+                    func.instr(Bangumi.rss_link, rss_link),
+                    # use `false()` to avoid E712 checking
+                    # see: https://docs.astral.sh/ruff/rules/true-false-comparison/
+                    Bangumi.deleted == false(),
+                )
+            )
         return self.session.exec(statement).first()
 
     def not_complete(self) -> list[Bangumi]:
@@ -172,3 +202,20 @@ class BangumiDatabase:
     def search_rss(self, rss_link: str) -> list[Bangumi]:
         statement = select(Bangumi).where(func.instr(rss_link, Bangumi.rss_link) > 0)
         return self.session.exec(statement).all()
+
+
+if __name__ == "__main__":
+    from module.database import Database,engine
+    
+    from module.models.bangumi import Bangumi
+
+    with Database() as db:
+        test = BangumiDatabase(db)
+        bangumis = test.search_id(2)
+        bangumis.official_title = 12
+
+    # print(bangumis)
+    with Database() as db2:
+        test2 = BangumiDatabase(db2)
+        test2.add_all([bangumis])
+        # test.delete_one()

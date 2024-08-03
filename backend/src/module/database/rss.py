@@ -94,3 +94,9 @@ class RSSDatabase:
         condition = delete(RSSItem)
         self.session.exec(condition)
         self.session.commit()
+
+if __name__ == "__main__":
+    from module.database import Database
+
+    with Database() as db:
+        test = RSSDatabase(db)
