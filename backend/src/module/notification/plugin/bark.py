@@ -19,7 +19,7 @@ class BarkNotification(RequestContent):
         """
         return text.strip()
 
-    def post_msg(self, notify: Notification) -> bool:
+    async def post_msg(self, notify: Notification) -> bool:
         text = self.gen_message(notify)
         data = {
             "title": notify.official_title,
