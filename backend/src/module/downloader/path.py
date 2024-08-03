@@ -2,6 +2,7 @@ import logging
 import re
 from os import PathLike
 
+
 from module.conf import PLATFORM, settings
 from module.models import Bangumi, BangumiUpdate
 
@@ -18,11 +19,10 @@ class TorrentPath:
         pass
 
     @staticmethod
-    def check_files(info):
+    def check_files(files_name: list[str]):
         media_list = []
         subtitle_list = []
-        for f in info.files:
-            file_name = f.name
+        for file_name in files_name:
             suffix = Path(file_name).suffix
             if suffix.lower() in [".mp4", ".mkv"]:
                 media_list.append(file_name)
@@ -31,7 +31,8 @@ class TorrentPath:
         return media_list, subtitle_list
 
     @staticmethod
-    def _path_to_bangumi(save_path: PathLike[str] | str):
+    def path_to_bangumi(save_path: PathLike[str] | str):
+
         # Split save path and download path
         save_parts = Path(save_path).parts
         download_parts = Path(settings.downloader.path).parts
@@ -43,6 +44,7 @@ class TorrentPath:
                 season = int(re.findall(r"\d+", part)[0])
             elif part not in download_parts:
                 bangumi_name = part
+
         return bangumi_name, season
 
     @staticmethod
@@ -53,7 +55,7 @@ class TorrentPath:
         return self._file_depth(file_path) <= 2
 
     @staticmethod
-    def _gen_save_path(data: Bangumi | BangumiUpdate):
+    def gen_save_path(data: Bangumi | BangumiUpdate):
         folder = (
             f"{data.official_title} ({data.year})" if data.year else data.official_title
         )

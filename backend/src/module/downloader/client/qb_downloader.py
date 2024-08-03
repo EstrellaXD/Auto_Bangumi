@@ -1,24 +1,26 @@
-import logging
-import httpx
 import asyncio
+import logging
 
-from ..exceptions import ConflictError, AuthorizationError
+import httpx
+
+from ..exceptions import AuthorizationError
 
 logger = logging.getLogger(__name__)
 
 QB_API_URL = {
+    "add": "/api/v2/torrents/add",
+    "addTags": "/api/v2/torrents/addTags",
+    "createCategory": "/api/v2/torrents/createCategory",
+    "delete": "/api/v2/torrents/delete",
+    "getFiles": "/api/v2/torrents/files",
+    "info": "/api/v2/torrents/info",
     "login": "/api/v2/auth/login",
     "logout": "/api/v2/auth/logout",
-    "version": "/api/v2/app/version",
-    "setPreferences": "/api/v2/app/setPreferences",
-    "createCategory": "/api/v2/torrents/createCategory",
-    "info": "/api/v2/torrents/info",
-    "add": "/api/v2/torrents/add",
-    "delete": "/api/v2/torrents/delete",
     "renameFile": "/api/v2/torrents/renameFile",
-    "setLocation": "/api/v2/torrents/setLocation",
     "setCategory": "/api/v2/torrents/setCategory",
-    "addTags": "/api/v2/torrents/addTags",
+    "setLocation": "/api/v2/torrents/setLocation",
+    "setPreferences": "/api/v2/app/setPreferences",
+    "version": "/api/v2/app/version",
 }
 
 
@@ -58,31 +60,62 @@ class QbDownloader:
             timeout=5,
         )
 
-    async def torrents_info(self, status_filter, category, tag=None):
+    async def get_torrent_files(self, _hash: str) -> list[str]:
+        data = {"hash": _hash}
+        reps = await self._client.get(
+            url=QB_API_URL["getFiles"],
+            params=data,
+        )
+        if "Not Found" in reps.text:
+            logging.warning(f"Cannot found {_hash}")
+            return []
+        files_name = [file["name"] for file in reps.json()]
+        return files_name
+
+    async def torrents_info(self, status_filter, category, tag=None, limit=50):
         data = {
             "filter": status_filter,
             "category": category,
             "tag": tag,
         }
-        torrent_info = await self._client.get(
+        if limit:
+            data.update({"limit": limit})
+        torrent_infos = await self._client.get(
             url=QB_API_URL["info"],
             params=data,
         )
-        return torrent_info.json()
+        torrent_infos_list = []
+        for torrent_info in torrent_infos.json():
+            torrent_infos_list.append(
+                {
+                    "hash": torrent_info["hash"],
+                    "save_path": torrent_info["save_path"],
+                    "name": torrent_info["name"]
+                }
+            )
+        return torrent_infos.json()
 
     async def add(self, torrent_urls, torrent_files, save_path, category):
         data = {
             "urls": torrent_urls,
-            "torrent_files": torrent_files,
-            "save_path": save_path,
+            "savepath": save_path,
             "category": category,
-            "is_paused": False,
-            "use_auto_torrent_management": False,
+            "paused": False,
+            "autoTMM": False,
         }
+
+        file = None
+        if torrent_files:
+            file = {"torrents": torrent_files}
+
         resp = await self._client.post(
             url=QB_API_URL["add"],
             data=data,
+            files=file,
         )
+        if "fail"in resp.text.lower() :
+            logger.warning(f"[QbDownloader] A BAD TORRENT{save_path} , send torrent to download fail")
+            return False
         return resp.status_code == 200
 
     async def delete(self, _hash):
@@ -97,6 +130,9 @@ class QbDownloader:
         return resp.status_code == 200
 
     async def rename(self, torrent_hash, old_path, new_path) -> bool:
+        """
+        并不返回任何东西,所以不知道结果
+        """
         data = {
             "hash": torrent_hash,
             "oldPath": old_path,
@@ -109,6 +145,12 @@ class QbDownloader:
         return resp.status_code == 200
 
     async def move(self, hashes, new_location):
+        """
+        hashes: "hash1|hash2|..."
+        """
+
+        if isinstance(hashes,list):
+            hashes = "|".join(hashes)
         data = {
             "hashes": hashes,
             "location": new_location,
@@ -154,7 +196,7 @@ class QbDownloader:
         if not await self.auth():
             await self._client.aclose()
             logger.error(
-                f"[Downloader] Downloader authorize error. Please check your username/password."
+                "[Downloader] Downloader authorize error. Please check your username/password."
             )
             raise AuthorizationError("Failed to login to qbittorrent.")
         return self
