@@ -74,11 +74,15 @@ async def eps_complete():
             logger.info("Start collecting full season...")
             for data in datas:
                 if not data.eps_collect:
-                    # with SeasonCollector() as collector:
                     collector = SeasonCollector()
-                    await collector.collect_season(data)
-                data.eps_collect = True
+                    try:
+                        # 可能会连接太多了
+                        await collector.collect_season(data)
+                        data.eps_collect = True
+                    except Exception as e:
+                        logger.error(f"[eps_complete] {e}")
             db.bangumi.update_all(datas)
+
 
 if __name__ == "__main__":
     import asyncio

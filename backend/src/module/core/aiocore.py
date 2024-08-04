@@ -5,7 +5,7 @@ from abc import abstractmethod
 from module.conf import settings
 from module.database import Database
 from module.downloader import DownloadClient
-from module.manager import Renamer
+from module.manager import Renamer, eps_complete
 from module.models import Bangumi, Torrent
 from module.rss import RSSAnalyser, RSSEngine
 
@@ -87,6 +87,8 @@ class AsyncRSS(AsyncProgram):
 
         async with DownloadClient() as download_client:
             await rss_engine.refresh_all_rss(download_client)
+        if settings.bangumi_manage.eps_complete:
+            await eps_complete()
 
 
 if __name__ == "__main__":
