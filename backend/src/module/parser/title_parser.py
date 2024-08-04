@@ -27,7 +27,6 @@ class TmdbParser(RawParser):
             logger.debug(f"[Title Parser] TMDB Matched, official title is {tmdb_info.title}")
             tmdb_season = tmdb_info.last_season if tmdb_info.last_season else season
             # return tmdb_info.title, tmdb_season, tmdb_info.year, tmdb_info.poster_link
-            print(tmdb_info)
             return Bangumi(
                 official_title=tmdb_info.title,
                 title_raw=title,

@@ -303,7 +303,7 @@ class RawParser:
         self.token = [self.token[i] for i in range(max_len) if (len(self.token[i].strip())>1)]
 
         
-        self.token = self.token[:3]
+        self.token = self.token[:4]
         token_priority = [len(s) for s in self.token]
         if len(self.token) == 1:
             anime_title = self.token[0]
@@ -425,7 +425,9 @@ if __name__ == "__main__":
     title = "豌豆字幕组&风之圣殿字幕组】★04月新番[鬼灭之刃 柱训练篇 / Kimetsu_no_Yaiba-Hashira_Geiko_Hen][02(57)][简体][1080P][MP4]"
     title = "迷宮飯 08/[TOC] Delicious in Dungeon [08][1080P][AVC AAC][CHT][MP4].mp4"
     title = "[喵萌奶茶屋&LoliHouse] 葬送的芙莉莲 / Sousou no Frieren - 06 [WebRip 1080p HEVC-10bit AAC][简繁日内封字幕]"
-    # print(re.findall(RESOLUTION_RE,title))
+    title = "[LoliHouse] Ore wa Subete wo Parry suru - 05 [WebRip 1080p HEVC-10bit AAC SRTx2]"
+    title = " [LoliHouse] 我要【招架】一切 ～反误解的世界最强想成为冒险者～ / Ore wa Subete wo Parry suru - 05 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕] [复制磁连]"
+    print(re.findall(RESOLUTION_RE,title))
     # print(title)
     ret = RawParser(title)
     # #

@@ -58,7 +58,6 @@ class SearchTorrent:
     @staticmethod
     def special_url(data: Bangumi, site: str) -> RSSItem:
         keywords = [getattr(data, key) for key in SEARCH_KEY if getattr(data, key)]
-        print(f"{keywords=}")
         url = search_url(site, keywords)
         return url
 

@@ -92,7 +92,7 @@ class Renamer:
             post_path = renamer_info.bangumi.poster_link
         if ep:
             notification_info = Notification(
-                title=ep.title,
+                title=bangumi_name,
                 season=ep.season,
                 episode=ep.episode,
                 poster_path=post_path,
