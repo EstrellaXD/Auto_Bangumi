@@ -114,7 +114,7 @@ class QbDownloader:
             files=file,
         )
         if "fail"in resp.text.lower() :
-            logger.warning(f"[QbDownloader] A BAD TORRENT{save_path} , send torrent to download fail")
+            logger.debug(f"[QbDownloader] A BAD TORRENT{save_path} , send torrent to download fail.{resp.text.lower()}")
             return False
         return resp.status_code == 200
 

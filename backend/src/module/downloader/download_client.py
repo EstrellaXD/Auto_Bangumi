@@ -62,10 +62,10 @@ class DownloadClient(Downloader):
             logger.debug(f"[Downloader] Add torrent: {torrent.name}")
             return True
         else:
-            logger.debug(f"[Downloader] Torrent added failed: {torrent.name}")
+            logger.warning(f"[Downloader] Torrent added failed: {torrent.name},{torrent.url=}")
         return False
 
-    async def add_torrents(self, torrents: list[Torrent], bangumi: Bangumi) -> list[bool|BaseException]:
+    async def add_torrents(self, torrents: list[Torrent]|Torrent, bangumi: Bangumi) -> list[bool|BaseException]:
         tasks = []
         if isinstance(torrents,Torrent):
             torrents = [torrents]
@@ -74,30 +74,6 @@ class DownloadClient(Downloader):
 
         result = await asyncio.gather(*tasks,return_exceptions=True)
         return result
-
-        # if not bangumi.save_path:
-        #     bangumi.save_path = self._path_parser.gen_save_path(bangumi)
-        #     print("test",bangumi)
-        # if "magnet" in torrents[0].url:
-        #     torrent_url = [t.url for t in torrents]
-        #     torrent_file = None
-        # else:
-        #     async with RequestContent() as req:
-        #         tasks = [req.get_content(t.url) for t in torrents]
-        #         torrent_file = await asyncio.gather(*tasks,return_exceptions=True)
-        #         torrent_url = None
-        # result = await self.add(
-        #     torrent_urls=torrent_url,
-        #     torrent_files=torrent_file,
-        #     save_path=bangumi.save_path,
-        #     category="Bangumi",
-        # )
-        # if result:
-        #     logger.debug(f"[Downloader] Add torrent: {bangumi.official_title}")
-        #     return True
-        # else:
-        #     logger.debug(f"[Downloader] Torrent added before: {bangumi.official_title}")
-        #     return False
 
     async def move_torrent(self, hashes, location):
         await self.move(hashes=hashes, new_location=location)

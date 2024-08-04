@@ -119,17 +119,17 @@ class RSSEngine:
 
             logging.info(f"[Engine] {rss_item.url} parserd succeed, found {len(torrent_items)} new torrents ")
             download_tasks = []
+            bangumi_items = []
             for torrent in torrent_items:
                 bangumi_item = self.match_torrent(torrent,rss_item )
                 if bangumi_item:
+                    if bangumi_item not in bangumi_items:
+                        bangumi_items.append(bangumi_item)
                     logger.debug(f"[Engine] Add torrent {torrent.name} to client")
-                    download_tasks.append(download_client.add_torrents([torrent],bangumi=bangumi_item))
-            results = await asyncio.gather(*download_tasks,return_exceptions=True)
-
-            for torrent,result in zip(torrent_items[:],results):
-                if isinstance(result,Exception) or not result:
-                    torrent_items.remove(torrent)
-
+                    download_tasks.append(download_client.add_torrents(torrent,bangumi=bangumi_item))
+            await asyncio.gather(*download_tasks)
+            # # 这里会丢bangumi save path
+            database.bangumi.add_all(bangumi_items)
             database.torrent.add_all(torrent_items)
             # Close Database if not connected
         return torrent_items
