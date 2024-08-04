@@ -21,7 +21,7 @@ const items: SettingItem<BangumiRule>[] = [
     configKey: 'year',
     label: () => t('homepage.rule.year'),
     type: 'input',
-    css: 'w-72px',
+    css: 'w-72',
     prop: {
       type: 'text',
     },
@@ -30,21 +30,21 @@ const items: SettingItem<BangumiRule>[] = [
     configKey: 'season',
     label: () => t('homepage.rule.season'),
     type: 'input',
-    css: 'w-72px',
+    css: 'w-72',
     prop: {
       type: 'number',
     },
     bottomLine: true,
   },
-  {
-    configKey: 'offset',
-    label: () => t('homepage.rule.offset'),
-    type: 'input',
-    css: 'w-72px',
-    prop: {
-      type: 'number',
-    },
-  },
+  // {
+  //   configKey: 'offset',
+  //   label: () => t('homepage.rule.offset'),
+  //   type: 'input',
+  //   css: 'w-72',
+  //   prop: {
+  //     type: 'number',
+  //   },
+  // },
   {
     configKey: 'filter',
     label: () => t('homepage.rule.exclude'),
@@ -55,7 +55,7 @@ const items: SettingItem<BangumiRule>[] = [
 </script>
 
 <template>
-  <div space-y-12px>
+  <div space-y-12>
     <ab-setting
       v-for="i in items"
       :key="i.configKey"
