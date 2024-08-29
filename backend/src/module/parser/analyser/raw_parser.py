@@ -204,13 +204,13 @@ class RawParser:
         self.token = "[]".join(self.token)
         self.token = re.split(r"[\[\]]", self.token)
 
-        print(f"{episode_info=}")
-        print(f"{video_info=}")
-        print(f"{unuseful_info=}")
-        print(f"{audio_info=}")
-        print(f"{sub_info=}")
-        print(f"{self.title=}")
-        print(f"{self.token=}")
+        # print(f"{episode_info=}")
+        # print(f"{video_info=}")
+        # print(f"{unuseful_info=}")
+        # print(f"{audio_info=}")
+        # print(f"{sub_info=}")
+        # print(f"{self.title=}")
+        # print(f"{self.token=}")
         
         group = self.get_group() 
         if not season_info:

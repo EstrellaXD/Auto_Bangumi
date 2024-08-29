@@ -2,9 +2,9 @@ import re
 
 from urllib3.util import parse_url
 
+from module.network import RequestContent
 from module.rss import RSSManager
 from module.utils import save_image
-from module.network import RequestContent
 
 
 async def from_30_to_31():
