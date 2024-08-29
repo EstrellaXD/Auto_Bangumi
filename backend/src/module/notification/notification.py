@@ -12,9 +12,13 @@ logger = logging.getLogger(__name__)
 class PostNotification:
 
     def __init__(self) -> None:
-        self.notifier = Notifier(
-            token=settings.notification.token, chat_id=settings.notification.chat_id
-        )
+        chat_ids = settings.notification.chat_id.split(",")
+        self.notifier = [
+            Notifier(
+                token=settings.notification.token,
+                chat_id=chat_id,
+            ) for chat_id in chat_ids
+        ]
 
     def parse(self, notify: Notification):
         if notify.episode:
@@ -33,7 +37,8 @@ class PostNotification:
     async def send(self, notify: Notification):
         self.parse(notify)
         try:
-            await self.notifier.post_msg(notify)
+            for notifier in self.notifier:
+                await notifier.post_msg(notify)
             logger.debug(f"Send notification: {notify.title}")
         except Exception as e:
             logger.warning(f"Failed to send notification: {e}")
