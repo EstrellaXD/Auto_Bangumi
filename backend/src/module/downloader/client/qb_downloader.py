@@ -47,7 +47,7 @@ class QbDownloader:
         try:
             await self._client.get(url=QB_API_URL["version"], timeout=5)
             return True
-        except httpx.RequestError or httpx.TimeoutException:
+        except httpx.ConnectError or httpx.TimeoutException as e:
             return False
 
     async def prefs_init(self, prefs):

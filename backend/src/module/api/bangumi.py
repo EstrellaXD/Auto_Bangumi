@@ -4,7 +4,7 @@ from sqlalchemy.util.concurrency import asyncio
 
 from module.database import Database, engine
 from module.manager import TorrentManager
-from module.models import APIResponse, Bangumi, BangumiUpdate
+from module.models import APIResponse, Bangumi, BangumiUpdate, ResponseModel
 from module.security.api import get_current_user
 
 from .response import u_response
@@ -46,6 +46,21 @@ async def update_rule(
     data: BangumiUpdate,
 ):
     resp = await TorrentManager().update_rule(bangumi_id, data)
+    if resp:
+        resp = ResponseModel(
+            status_code=200,
+            status=True,
+            msg_en=f"Update rule for {data.official_title}",
+            msg_zh=f"更新 {data.official_title} 规则",
+        )
+
+    else:
+        resp = ResponseModel(
+            status_code=406,
+            status=False,
+            msg_en=f"Can't find data with {bangumi_id}",
+            msg_zh=f"无法找到 id {bangumi_id} 的数据",
+        )
     return u_response(resp)
 
 
@@ -55,7 +70,21 @@ async def update_rule(
     dependencies=[Depends(get_current_user)],
 )
 async def delete_rule(bangumi_id: str, file: bool = False):
-    resp = await TorrentManager().delete_rule(bangumi_id, file)
+    data,torrent_message = await TorrentManager().delete_rule(bangumi_id, file)
+    if data:
+        resp =  ResponseModel(
+            status_code=200,
+            status=True,
+            msg_en=f"Delete rule for {data.official_title}. {torrent_message.msg_en if file else ''}",
+            msg_zh=f"删除 {data.official_title} 规则。{torrent_message.msg_zh if file else ''}",
+        )
+    else:
+        resp = ResponseModel(
+                status_code=406,
+                status=False,
+                msg_en=f"Can't find id {bangumi_id}",
+                msg_zh=f"无法找到 id {bangumi_id}",
+            )
     return u_response(resp)
 
 
@@ -67,7 +96,7 @@ async def delete_rule(bangumi_id: str, file: bool = False):
 async def delete_many_rule(bangumi_id: list, file: bool = False):
     tasks = []
     for i in bangumi_id:
-        tasks.append(TorrentManager().delete_rule(i,file))
+        tasks.append(TorrentManager().delete_rule(i, file))
 
     resp = await asyncio.gather(*tasks)
     resp = resp[0]
@@ -136,5 +165,8 @@ async def reset_all():
         db.bangumi.delete_all()
         return JSONResponse(
             status_code=200,
-            content={"msg_en": "Reset all rules successfully.", "msg_zh": "重置所有规则成功。"},
+            content={
+                "msg_en": "Reset all rules successfully.",
+                "msg_zh": "重置所有规则成功。",
+            },
         )

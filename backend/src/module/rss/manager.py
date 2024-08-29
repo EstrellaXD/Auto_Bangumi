@@ -20,49 +20,31 @@ class RSSManager():
             async with RequestContent() as req:
                 name = await req.get_rss_title(rss_link)
                 if not name:
-                    return ResponseModel(
-                        status=False,
-                        status_code=406,
-                        msg_en="Failed to get RSS title.",
-                        msg_zh="无法获取 RSS 标题。",
-                    )
+                    return False
+
         rss_data = RSSItem(name=name, url=rss_link, aggregate=aggregate, parser=parser)
+
         with Database(self.engine) as db:
-            if db.rss.add(rss_data):
-                return ResponseModel(
-                    status=True,
-                    status_code=200,
-                    msg_en="RSS added successfully.",
-                    msg_zh="RSS 添加成功。",
-                )
-        return ResponseModel(
-            status=False,
-            status_code=406,
-            msg_en="RSS added failed.",
-            msg_zh="RSS 添加失败。",
-        )
+            db.rss.add(rss_data)
+            return True
+
+        # return ResponseModel(
+        #     status=False,
+        #     status_code=406,
+        #     msg_en="RSS added failed.",
+        #     msg_zh="RSS 添加失败。",
+        # )
 
     def disable_list(self, rss_id_list: list[int]):
         with Database(self.engine) as db:
             for rss_id in rss_id_list:
                 db.rss.disable(rss_id)
-        return ResponseModel(
-            status=True,
-            status_code=200,
-            msg_en="Disable RSS successfully.",
-            msg_zh="禁用 RSS 成功。",
-        )
+        return True
 
     def enable_list(self, rss_id_list: list[int]):
         with Database(self.engine) as db:
             for rss_id in rss_id_list:
                 db.rss.enable(rss_id)
-        return ResponseModel(
-            status=True,
-            status_code=200,
-            msg_en="Enable RSS successfully.",
-            msg_zh="启用 RSS 成功。",
-        )
 
     def delete_list(self, rss_id_list: list[int]):
 
@@ -105,6 +87,6 @@ if __name__ == "__main__":
     import asyncio
     test = RSSManager(engine)
     rss_link = "https://mikanani.me/RSS/Bangumi?bangumiId=3407&subgroupid=583"
-    # ans = asyncio.run(test.add_rss(rss_link))
+    ans = asyncio.run(test.add_rss(rss_link))
     ans = test.disable_list([1])
 

@@ -3,11 +3,9 @@ import logging
 from abc import abstractmethod
 
 from module.conf import settings
-from module.database import Database
-from module.downloader import DownloadClient
 from module.manager import Renamer, eps_complete
-from module.models import Bangumi, Torrent
-from module.rss import RSSAnalyser, RSSEngine
+from module.rss import RSSEngine
+from module.downloader import AsyncDownloadController
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +34,7 @@ class AsyncRenamer(AsyncProgram):
 
     async def run(self):
         await self.stop()
-        task = asyncio.create_task(self.rename_task_loop())
+        task = asyncio.create_task(self.rename_task_loop(),name="renamer_loop")
         self.tasks.append(task)
 
     async def rename_task(self):
@@ -61,7 +59,8 @@ class AsyncRSS(AsyncProgram):
 
     async def run(self):
         await self.stop()
-        task = asyncio.create_task(self.rss_task_loop())
+        task = asyncio.create_task(self.rss_task_loop(),name="rss_loop"
+                            )
         self.tasks.append(task)
 
     async def rss_task_loop(self):
@@ -73,23 +72,27 @@ class AsyncRSS(AsyncProgram):
 
     async def rss_task(self):
         rss_engine = RSSEngine()
-        rss_items = rss_engine.get_active_rss()
-        # # 拉取所有的rss
-        # 先更新一下database,看看有没有什么新的动漫
-        bangumi_database_update_tasks = []
-        for rss_item in rss_items:
-            bangumi_database_update_tasks.append(
-                RSSAnalyser().rss_to_data(rss_item)
-            )
-        await asyncio.gather(*bangumi_database_update_tasks)
-
-            # 重新拉取一遍 TODO: 要改一下
-
-        async with DownloadClient() as download_client:
-            await rss_engine.refresh_all_rss(download_client)
+        await rss_engine.refresh_all_rss()
         if settings.bangumi_manage.eps_complete:
             await eps_complete()
 
+class AsyncDownload(AsyncProgram):
+    def __init__(self) -> None:
+        super().__init__()
+        self.engine = RSSEngine()
+
+    async def run(self):
+        await self.stop()
+        task = asyncio.create_task(self.download_task_loop(),name="download_loop")
+        self.tasks.append(task)
+
+    async def download_task_loop(self):
+        while True:
+            await self.download_task()
+
+    async def download_task(self):
+        downloader = AsyncDownloadController()
+        await downloader.download()
 
 if __name__ == "__main__":
     import asyncio
