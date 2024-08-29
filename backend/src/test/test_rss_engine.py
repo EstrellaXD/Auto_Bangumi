@@ -13,8 +13,7 @@ async def test_rss_engine():
 
 
     resp = await manager.add_rss(rss_link, aggregate=False)
-    print(resp)
-    assert resp.status
+    assert resp
 
     with Database(e) as db:
         result = db.rss.search_active()
