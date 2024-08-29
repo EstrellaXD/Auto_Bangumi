@@ -41,6 +41,7 @@ class SeasonCollector():
                 return False
 
     @staticmethod
+
     async def subscribe_season(data: Bangumi,parser:str = "mikan"):
         data.added = True
         data.eps_collect = True

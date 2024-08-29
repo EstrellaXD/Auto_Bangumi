@@ -45,6 +45,7 @@ const items: SettingItem<BangumiRule>[] = [
       type: 'number',
     },
   },
+
   {
     configKey: 'filter',
     label: () => t('homepage.rule.exclude'),

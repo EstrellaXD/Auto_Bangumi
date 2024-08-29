@@ -258,6 +258,7 @@ async def download_collection(data: Bangumi):
     dependencies=[Depends(get_current_user)],
 )
 async def subscribe(data: Bangumi, rss: RSSItem):
+
     resp = await collector.subscribe_season(data, parser=rss.parser)
 
     if resp:
@@ -276,3 +277,4 @@ async def subscribe(data: Bangumi, rss: RSSItem):
             msg_zh=f"[Engine] 下载 {data.official_title} 失败。",
         )
     return u_response(resp)
+
