@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from module.conf import TMDB_API
 from module.network import RequestContent
-from module.utils import save_image,gen_poster_path
+from module.utils import gen_poster_path
 
 TMDB_URL = "https://api.themoviedb.org"
 

@@ -4,13 +4,18 @@ from .config import VERSION, settings
 from .log import LOG_PATH, setup_logger
 from .search_provider import SEARCH_CONFIG
 
+PLATFORM = "Windows" if "\\" in settings.downloader.path else "Unix"
 TMDB_API = "291237f90b24267380d6176c98f7619f"
 DATA_PATH = "sqlite:///data/data.db"
 LEGACY_DATA_PATH = Path("data/data.json")
 VERSION_PATH = Path("config/version.info")
 POSTERS_PATH = Path("data/posters")
 
-PLATFORM = "Windows" if "\\" in settings.downloader.path else "Unix"
+
+if PLATFORM == "Windows":
+    from pathlib import PureWindowsPath as Path
+else:
+    from pathlib import Path
 
 __all__ = [
     "VERSION",
