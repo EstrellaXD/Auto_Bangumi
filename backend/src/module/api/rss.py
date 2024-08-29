@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
-from module.downloader import DownloadClient
 from module.manager import SeasonCollector
 from module.models import (
     APIResponse,

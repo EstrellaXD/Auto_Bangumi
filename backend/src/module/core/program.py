@@ -56,7 +56,7 @@ class Program:
             logger.info(
                 "[Core] Legacy data detected, starting data migration, please wait patiently."
             )
-            data_migration()
+            await data_migration()
         elif self.program_status.version_update:
             # Update database
             await from_30_to_31()
