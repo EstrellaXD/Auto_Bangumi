@@ -1,6 +1,7 @@
 import sys
 
 import pytest
+
 from module.parser.analyser import torrent_parser
 from module.parser.analyser.torrent_parser import get_path_basename
 
@@ -62,7 +63,7 @@ def test_torrent_parser():
 
     file_name = "水星的魔女(2022) S00E19.mp4"
     bf = torrent_parser("",file_name)
-    assert bf.title == "水星的魔女"
+    assert bf.title == "水星的魔女(2022)"
     assert bf.season == 0
     assert bf.episode == 19
 

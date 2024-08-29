@@ -17,23 +17,25 @@ class RequestContent(RequestURL):
     async def get_torrents(
         self,
         _url: str,
-        _filter: str = "",
+        # _filter: str = "",
         limit: int = 0,
         retry: int = 3,
     ) -> list[Torrent]:
         feeds = await self.get_xml(_url, retry)
-        _filter = _filter if _filter else "|".join(settings.rss_parser.filter)
+        # 思考了一下，req还是不需要筛选，筛选交给后面去做，这里就有什么返回什么
+        # _filter = _filter if _filter else "|".join(settings.rss_parser.filter)
+        
         if feeds:
             torrent_titles, torrent_urls, torrent_homepage = rss_parser(feeds)
             torrents: list[Torrent] = []
             for _title, torrent_url, homepage in zip(
                 torrent_titles, torrent_urls, torrent_homepage
             ):
-                filter_flag = re.search(_filter, _title) is None
-                if filter_flag is True:
-                    torrents.append(
-                        Torrent(name=_title, url=torrent_url, homepage=homepage)
-                    )
+                # filter_flag = re.search(_filter, _title) is None
+                # if filter_flag is True:
+                torrents.append(
+                    Torrent(name=_title, url=torrent_url, homepage=homepage)
+                )
             return torrents if limit == 0 else torrents[:limit]
         else:
             logger.error(f"[Network] Torrents list is empty: {_url}")

@@ -1,5 +1,5 @@
-import logging
 import asyncio
+import logging
 
 from module.conf import VERSION, settings
 from module.models import ResponseModel
@@ -12,7 +12,7 @@ from module.update import (
 )
 
 # from .sub_thread import RenameTask, RSSTask
-from .aiocore import AsyncRenamer, AsyncRSS
+from .aiocore import AsyncDownload, AsyncRenamer, AsyncRSS
 from .status import ProgramStatus
 
 logger = logging.getLogger(__name__)
@@ -34,6 +34,7 @@ class Program:
         self.program_status = ProgramStatus()
         self.renamer = AsyncRenamer()
         self.rss = AsyncRSS()
+        self.download = AsyncDownload()
 
     @staticmethod
     def __start_info():
@@ -68,6 +69,7 @@ class Program:
     async def start(self):
         # self.stop_event.clear()
         settings.load()
+        await self.download.run()
         if self.program_status.enable_rss:
             await self.rss.run()
         if self.program_status.enable_renamer:
@@ -92,6 +94,7 @@ class Program:
     async def stop(self):
         if self.program_status.is_running:
             # self.program_status.stop_event.set()
+            await self.download.stop()
             await self.rss.stop()
             await self.renamer.stop()
             return ResponseModel(

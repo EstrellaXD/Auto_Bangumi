@@ -14,11 +14,29 @@ class BangumiDatabase:
         self.session = session
 
     def add(self, data: Bangumi):
-        statement = select(Bangumi).where(Bangumi.title_raw == data.title_raw)
+        # 如果official_title 一致,将title_raw,group,更新
+        statement = select(Bangumi).where(
+            and_(
+                data.official_title==Bangumi.official_title ,
+                func.instr(data.rss_link, Bangumi.rss_link) > 0,
+                # use `false()` to avoid E712 checking
+                # see: https://docs.astral.sh/ruff/rules/true-false-comparison/
+                Bangumi.deleted == false(),
+            )
+        )
         bangumi = self.session.exec(statement).first()
         if bangumi:
-            logger.debug(f"[Database] {data.official_title} has inserted into database.")
-            return False
+            if data.title_raw in bangumi.title_raw:
+                logger.debug(
+                    f"[Database] {data.official_title} has inserted into database."
+                )
+                return False
+            bangumi.title_raw += f",{data.title_raw}"
+            data = bangumi
+            logger.debug(
+                f"[Database] update {data.official_title}"
+            )
+         
         self.session.add(data)
         self.session.commit()
         self.session.refresh(data)
@@ -129,32 +147,29 @@ class BangumiDatabase:
         self, torrent_list: list[Torrent], rss_link: str, aggrated: bool = True
     ) -> list[Torrent]:
         """
-        find new torrent in the list and update the rss link
+        find torrent name not in bangumi
         """
         new_torrents = []
         match_datas = self.search_all()
         if not match_datas:
             return torrent_list
         for torrent in torrent_list:
-            match_bangumi = self.match_torrent(torrent.name,rss_link,aggrated)
-            if match_bangumi:
-                if rss_link not in match_bangumi.rss_link:
-                    match_bangumi.rss_link += f",{rss_link}"
-                    self.update_rss(match_bangumi.title_raw, match_bangumi.rss_link)
-            else:
+            match_bangumi = self.match_torrent(torrent.name, rss_link, aggrated)
+            # 同一个bangumi 但是却不是相同的 rss link, 这种情况将俩个bangumi分开更符合直觉
+            if not match_bangumi:
                 new_torrents.append(torrent)
         return new_torrents
 
     def match_torrent(
         self, torrent_name: str, rss_link: str, aggrated=True
     ) -> Bangumi | None:
-        # 对于聚合而言, link, title_raw,deleted 一致可认为是一个bangumi
+        # 对于聚合而言, link, title_raw一致可认为是一个bangumi
         # 对于非聚合, link 一致就可认为是一个
         if aggrated:
             statement = select(Bangumi).where(
                 and_(
                     func.instr(torrent_name, Bangumi.title_raw) > 0,
-                    func.instr(rss_link, Bangumi.rss_link)>0,
+                    func.instr(rss_link, Bangumi.rss_link) > 0,
                     # use `false()` to avoid E712 checking
                     # see: https://docs.astral.sh/ruff/rules/true-false-comparison/
                     Bangumi.deleted == false(),
@@ -193,11 +208,12 @@ class BangumiDatabase:
     def disable_rule(self, _id: int):
         statement = select(Bangumi).where(Bangumi.id == _id)
         bangumi = self.session.exec(statement).first()
-        bangumi.deleted = True
-        self.session.add(bangumi)
-        self.session.commit()
-        self.session.refresh(bangumi)
-        logger.debug(f"[Database] Disable rule {bangumi.title_raw}.")
+        if bangumi:
+            bangumi.deleted = True
+            self.session.add(bangumi)
+            self.session.commit()
+            self.session.refresh(bangumi)
+            logger.debug(f"[Database] Disable rule {bangumi.title_raw}.")
 
     def search_rss(self, rss_link: str) -> list[Bangumi]:
         statement = select(Bangumi).where(func.instr(rss_link, Bangumi.rss_link) > 0)
@@ -205,14 +221,15 @@ class BangumiDatabase:
 
 
 if __name__ == "__main__":
-    from module.database import Database,engine
-    
+    from module.database import Database, engine
+
     from module.models.bangumi import Bangumi
 
     with Database() as db:
         test = BangumiDatabase(db)
         bangumis = test.search_id(2)
-        bangumis.official_title = 12
+        if bangumis:
+            bangumis.official_title = "12"
 
     # print(bangumis)
     with Database() as db2:

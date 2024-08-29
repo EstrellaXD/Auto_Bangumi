@@ -121,12 +121,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
@@ -328,3 +326,4 @@ jobs:
             backend/app-v${{ needs.version-info.outputs.version }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+

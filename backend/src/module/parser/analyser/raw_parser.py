@@ -8,13 +8,17 @@ logger = logging.getLogger(__name__)
 
 LAST_BACKET_PATTERN = re.compile(r"[\(\（][^\(\)（）]*[\)\）](?!.*[\(\（][^\(\)（）]*[\)\）])")
 
+
 EPISODE_PATTERN = re.compile(
-    r"""(\[?第?(\d+?)[话話集]\]?
+    r"""
+    # (?=\b|\s|\+|\-|\[|\]|/|～)
+    (第?(\d+?)[话話集]
     |EP?(\d+)
-    |-\s(\d+\.?\d?)
+    |-\s(\d+)
     |(\d+).?v\d
-    |(\d+).?END)
-    |(\d+)pre
+    |(\d+).?END
+    |(\d+)pre)
+    (?=\s|_|\-|\[|\]|$|\.)
 """,
     re.VERBOSE | re.IGNORECASE,
 )
@@ -23,18 +27,17 @@ EPISODE_RE_UNTRUSTED = re.compile(r"[\b\s\[\]]((\d+))[\s\b\[\]]")
 
 SEASON_RE = re.compile(
     r"""
-    (?<=\s|\+|\-|\[|\]|/|～)  # 前置断言，确保前面是这些字符之一
-    (
-        第(.{1,3})季|        # 匹配"第...季"格式
-        第(.{1,3})期|        # 匹配"第...期"格式
-        第.{1,3}部分|      # 匹配"第...部分"格式
-        [Ss]eason\s(\d{1,2})|  # 匹配"Season X"格式
-        [Ss](\d{1,2})|         # 匹配"SX"格式
-        (\d+)[r|n]d(?:\sSeason)?  # 匹配"Xnd Season"格式
-        |part \d   #part 6
-        |(IV|III|II|I)            # 匹配罗马数字
+    (?=\b|\s|\+|\-|\[|\]|/|～)
+    ( 第(.{1,3})季       # 匹配"第...季"格式
+    |第(.{1,3})期        # 匹配"第...期"格式
+    |第.{1,3}部分      # 匹配"第...部分"格式
+    |[Ss]eason\s(\d{1,2})  # 匹配"Season X"格式
+    |[Ss](\d{1,2})         # 匹配"SX"格式
+    |(\d+)[r|n]d(?:\sSeason)?  # 匹配"Xnd Season"格式
+    |part \d   #part 6
+    |(IV|III|II|I)            # 匹配罗马数字
     )
-    (?=\b|\s|_|\-|\[|\]|$)  # 后置断言，确保后面是这些字符之一
+    (?=\b|\s|_|\-|\[|\]|$)  
     """,
     re.VERBOSE,
 )
@@ -110,7 +113,7 @@ SOURCE_RE = re.compile(
 )
 
 SUB_RE = re.compile(
-    r"""[\b\s_\+\-\[\]/]
+    r"""[\s_\+\-\[\]/]
     ((?:[(BIG5|CHS|CHT|GB|JP)_简中繁日英外字幕挂内封嵌双语文体]+)
     |CHT
     |CHS
@@ -119,7 +122,7 @@ SUB_RE = re.compile(
     |JA?P
     |GB
     |HardSub
-    ) (?=\b|\s|_|\-|\[|\]|$/) # 不能消耗掉后面的""",
+    ) (?=\s|_|\-|\[|\]|$/) # 不能消耗掉后面的""",
     re.VERBOSE,
 )
 PREFIX_RE = re.compile(r"[^\w\s\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff-]")
@@ -143,6 +146,7 @@ ROMAN_NUMBERS = {
     "IV": 4,
     "V": 5,
 }
+
 
 UNUSEFUL_RE = re.compile(
     r"""
@@ -172,10 +176,11 @@ class RawParser:
 
         self.title = self.title.replace("\n", " ")
 
-        self.title = re.sub(LAST_BACKET_PATTERN, "", self.title)
+        # self.title = re.sub(LAST_BACKET_PATTERN, "", self.title)
         #
 
-        translation_table = str.maketrans("【】()（）『』", "[][][][]")
+        translation_table = str.maketrans("【】", "[]")
+        # translation_table = str.maketrans("【】()（）『』", "[][][][]")
         self.title = self.title.translate(translation_table)
         self.title = self.title.strip()
 
@@ -199,12 +204,14 @@ class RawParser:
             self.token = self.token[:-1]
         self.token = "[]".join(self.token)
         self.token = re.split(r"[\[\]]", self.token)
-        # print(f"{episode_info=}")
-        # print(f"{video_info=}")
-        # print(f"{unuseful_info=}")
-        # print(f"{audio_info=}")
-        # print(self.title)
-        # print(f"{self.token=}")
+
+        print(f"{episode_info=}")
+        print(f"{video_info=}")
+        print(f"{unuseful_info=}")
+        print(f"{audio_info=}")
+        print(f"{sub_info=}")
+        print(f"{self.title=}")
+        print(f"{self.token=}")
         
         group = self.get_group() 
         if not season_info:
@@ -229,11 +236,11 @@ class RawParser:
 
     def get_episode_info(self):
         episode_info = self.findall_sub_title(EPISODE_PATTERN,sym="/[]")
+        print(self.title)
         episode_is_trusted = True
         season_info = self.findall_sub_title(SEASON_RE,sym = "/[]")
         season_is_trusted = True
         if not episode_info:
-
             episode_info = self.findall_sub_title(EPISODE_RE_UNTRUSTED)
             episode_is_trusted = False
         return episode_info, episode_is_trusted, season_info, season_is_trusted
@@ -298,12 +305,10 @@ class RawParser:
 
     def name_process(self):
 
-
         max_len = 10 if len(self.token) > 10 else len(self.token)
         self.token = [self.token[i] for i in range(max_len) if (len(self.token[i].strip())>1)]
 
-        
-        self.token = self.token[:3]
+        self.token = self.token[:5]
         token_priority = [len(s) for s in self.token]
         if len(self.token) == 1:
             anime_title = self.token[0]
@@ -316,7 +321,9 @@ class RawParser:
                 if "/" in token:
                     token_priority[idx] += 5
                 if "&" in token:
-                    token_priority[idx] -= 5
+                    token_priority[idx] -= 8
+                if "字幕" in token:
+                    token_priority[idx] -= 90
                 if re.search(r"[a-zA-Z]{3,}", token):
                     token_priority[idx] += 2
                 if re.search(r"[\u0800-\u4e00]{2,}", token):
@@ -410,23 +417,32 @@ def raw_parser(raw: str) -> Episode | None:
 if __name__ == "__main__":
 
     # title = get_raw()
-    # title = "赛马娘 (2018) S03E13.mp4"
+    title = "赛马娘 (2018) S03E13.mp4"
     title = "[SweetSub][鹿乃子大摇大摆虎视眈眈][Shikanoko Nokonoko Koshitantan][04][WebRip][1080P][AVC 8bit][繁日双语][462.01 MB]"
     title = "[ANi] Make Heroine ga Oosugiru /  败北女角太多了！ - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
     title = "【极影字幕社】★4月新番 天国大魔境 Tengoku Daimakyou 第05话 GB 720P MP4（字幕社招人内详）"
-    title = "海盗战记 (2019) S01E01.mp4"
-    title = "海盗战记 S01E01.zh-tw.ass"
-    title = "[百冬练习组&LoliHouse] BanG Dream! 少女乐团派对！☆PICO FEVER！ / Garupa Pico: Fever! - 26 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][END] [101.69 MB]"
-    title ="【喵萌奶茶屋】★04月新番★[夏日重现/Summer Time Rendering][11][1080p][繁日双语][招募翻译]"
-    title = "【失眠搬运组】放学后失眠的你-Kimi wa Houkago Insomnia - 06 [bilibili - 1080p AVC1 CHS-JP].mp4"
-    title = "[KitaujiSub] Shikanoko Nokonoko Koshitantan [01Pre][WebRip][HEVC_AAC][CHS_JP].mp4"
+    # title = "海盗战记 (2019) S01E01.mp4"
+    # title =  "[SBSUB][CONAN][1082][V2][1080P][AVC_AAC][CHS_JP](C1E4E331).mp4"
+    # title = "前辈是男孩子 (2024) S01E02.mp4"
+    # title = "[SBSUB][CONAN][1082][V2][1080P][AVC_AAC][CHS_JP](C1E4E331).mp4"
+    # title = "海盗战记 S01E01.zh-tw.ass"
+    # title = "[百冬练习组&LoliHouse] BanG Dream! 少女乐团派对！☆PICO FEVER！ / Garupa Pico: Fever! - 26 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][END] [101.69 MB]"
+    # title ="【喵萌奶茶屋】★04月新番★[夏日重现/Summer Time Rendering][11][1080p][繁日双语][招募翻译]"
+    # title = "【失眠搬运组】放学后失眠的你-Kimi wa Houkago Insomnia - 06 [bilibili - 1080p AVC1 CHS-JP].mp4"
+    # title = "[KitaujiSub] Shikanoko Nokonoko Koshitantan [01Pre][WebRip][HEVC_AAC][CHS_JP].mp4"
     title = "[Doomdos] - 白色闪电 - 第02话 - [1080P].mp4"
     title = "Doomdos] -凡人修仙传-第107话-[1080P].mp"
     title = "豌豆字幕组&风之圣殿字幕组】★04月新番[鬼灭之刃 柱训练篇 / Kimetsu_no_Yaiba-Hashira_Geiko_Hen][02(57)][简体][1080P][MP4]"
     title = "迷宮飯 08/[TOC] Delicious in Dungeon [08][1080P][AVC AAC][CHT][MP4].mp4"
     title = "[喵萌奶茶屋&LoliHouse] 葬送的芙莉莲 / Sousou no Frieren - 06 [WebRip 1080p HEVC-10bit AAC][简繁日内封字幕]"
+    # title = "[LoliHouse] Ore wa Subete wo Parry suru - 05 [WebRip 1080p HEVC-10bit AAC SRTx2]"
+    title = " [LoliHouse] 我要【招架】一切 ～反误解的世界最强想成为冒险者～ / Ore wa Subete wo Parry suru - 05 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕] [复制磁连]"
+    title = "北宇治字幕组] 夜晚的水母不会游泳 / Yoru no Kurage wa Oyogenai [01-12 修正合集][WebRip][HEVC_AAC][简繁日内封] [复制磁连]"
+    title = "[北宇治字幕组&霜庭云花Sub&氢气烤肉架]【我推的孩子】/【Oshi no Ko】[18][WebRip][HEVC_AAC][繁日内嵌]"
     # print(re.findall(RESOLUTION_RE,title))
-    # print(title)
+    title = "[织梦字幕组][尼尔：机械纪元 NieR Automata Ver1.1a][02集][1080P][AVC][简日双语]"
+    print(title)
+    
     ret = RawParser(title)
     # #
     print(ret.parser())

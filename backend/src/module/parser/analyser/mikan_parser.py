@@ -87,3 +87,4 @@ if __name__ == "__main__":
     parser = MikanParser(url)
 
     print(asyncio.run(parser.poster_parser()))
+

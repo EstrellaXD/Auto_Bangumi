@@ -18,7 +18,7 @@ class DownloadClient(Downloader):
             username=settings.downloader.username_,
             password=settings.downloader.password_,
             ssl=settings.downloader.ssl,
-        ),
+        )
         self._path_parser = TorrentPath
 
     async def get_torrent_info(
@@ -40,15 +40,12 @@ class DownloadClient(Downloader):
         return resp
 
     async def add_torrent(self,torrent:Torrent,bangumi)->bool:
-        if not bangumi.save_path:
-            bangumi.save_path = self._path_parser.gen_save_path(bangumi)
+        bangumi.save_path = self._path_parser.gen_save_path(bangumi)
         if "magnet" in torrent.url:
             torrent_url = torrent.url
             torrent_file = None
         else:
             async with RequestContent() as req:
-                # tasks = [req.get_content(t.url) for t in torrents]
-                # torrent_file = await asyncio.gather(*tasks,return_exceptions=True)
                 torrent_file = await req.get_content(torrent.url)
                 torrent_url = None
 

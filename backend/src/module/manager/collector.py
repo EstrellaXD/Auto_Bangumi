@@ -18,44 +18,30 @@ class SeasonCollector():
         logger.info(
             f"Start collecting {bangumi.official_title} Season {bangumi.season}..."
         )
-        # with SearchTorrent() as st, RSSEngine() as engine:
-
         if not link:
             torrents = await self.st.search_season(bangumi)
         else:
             async with self.st.req() as req:
-                torrents = await req.get_torrents(link, bangumi.filter.replace(",", "|"))
-
+                torrents = await req.get_torrents(link)
         async with DownloadClient() as client:
             if await client.add_torrents(torrents, bangumi):
                 logger.info(
                     f"Collections of {bangumi.official_title} Season {bangumi.season} completed."
                 )
-                # for torrent in torrents:
-                #     torrent.downloaded = True
                 bangumi.eps_collect = True
                 with Database(engine) as db:
                     if db.bangumi.update(bangumi):
                         db.bangumi.add(bangumi)
                     db.torrent.add_all(torrents)
-                return ResponseModel(
-                    status=True,
-                    status_code=200,
-                    msg_en=f"Collections of {bangumi.official_title} Season {bangumi.season} completed.",
-                    msg_zh=f"收集 {bangumi.official_title} 第 {bangumi.season} 季完成。",
-                )
+                return True
             else:
                 logger.warning(
                     f"Already collected {bangumi.official_title} Season {bangumi.season}."
                 )
-                return ResponseModel(
-                    status=False,
-                    status_code=406,
-                    msg_en=f"Collection of {bangumi.official_title} Season {bangumi.season} failed.",
-                    msg_zh=f"收集 {bangumi.official_title} 第 {bangumi.season} 季失败, 种子已经添加。",
-                )
+                return False
 
     @staticmethod
+
     async def subscribe_season(data: Bangumi,parser:str = "mikan"):
         data.added = True
         data.eps_collect = True
@@ -63,7 +49,9 @@ class SeasonCollector():
             rss_link=data.rss_link, name=data.official_title, aggregate=False
         )
         result = await RSSEngine().download_bangumi(data)
-        return result
+        if result:
+            return True
+        return False
 
 
 async def eps_complete():

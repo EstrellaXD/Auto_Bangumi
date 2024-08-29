@@ -1,7 +1,7 @@
 import logging
 import re
+from functools import lru_cache
 from os import PathLike
-
 
 from module.conf import PLATFORM, settings
 from module.models import Bangumi, BangumiUpdate
@@ -31,6 +31,7 @@ class TorrentPath:
         return media_list, subtitle_list
 
     @staticmethod
+    @lru_cache(maxsize=20)
     def path_to_bangumi(save_path: PathLike[str] | str):
 
         # Split save path and download path
@@ -44,7 +45,6 @@ class TorrentPath:
                 season = int(re.findall(r"\d+", part)[0])
             elif part not in download_parts:
                 bangumi_name = part
-
         return bangumi_name, season
 
     @staticmethod

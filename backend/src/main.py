@@ -3,14 +3,15 @@ import os
 
 import uvicorn
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+
 from module.api import v1
 from module.conf import VERSION, settings, setup_logger
 from module.utils import load_image
 
-setup_logger(reset=True)
+setup_logger()
 logger = logging.getLogger(__name__)
 uvicorn_logging_config = {
     "version": 1,
