@@ -42,7 +42,10 @@ class Renamer:
         file_info: EpisodeFile | SubtitleFile, bangumi_name: str, method: str
     ) -> str:
         season = f"{file_info.season:02d}"
-        episode = f"{file_info.episode:02d}"
+        if file_info.episode.is_integer():
+            episode = f"{int(file_info.episode):02d}"
+        else:
+            episode = f"{file_info.episode:04.1f}"
         method_dict = {
             "none": f"{file_info.media_path}",
             "subtitle_none": file_info.media_path,
@@ -71,15 +74,19 @@ class Renamer:
         # 对路径和filename简单的提取出season,title
         # 主要还是拿到集数,其他的并不重要,advance用不到
         if "sub" not in method:
-            ep = self._parser.torrent_parser(renamer_info.save_path, file)
+            ep = self._parser.torrent_parser(
+                renamer_info.save_path,
+                file,
+            )
         else:
             ep = self._parser.torrent_parser(
-                renamer_info.save_path, file, file_type="subtitle"
+                renamer_info.save_path,
+                file,
+                file_type="subtitle",
             )
         if ep and renamer_info.bangumi and renamer_info.bangumi.offset:
             # logging.info(f"[debug] {ep.episode=} {renamer_info.bangumi.offset}")
             ep.episode += renamer_info.bangumi.offset
-
 
         bangumi_name = bangumi_name
 
@@ -180,7 +187,11 @@ class Renamer:
             bangumi_name,
             client,
         )
-        if not isinstance(torrent_item, BaseException) and torrent_item and torrent_item.id:
+        if (
+            not isinstance(torrent_item, BaseException)
+            and torrent_item
+            and torrent_item.id
+        ):
             with Database() as db:
                 torrent_item = db.torrent.search(torrent_item.id)
                 torrent_item.downloaded = True
@@ -208,7 +219,7 @@ class Renamer:
                 torrent_hash = bangumi_torrent_info["hash"]
                 torrent_name = bangumi_torrent_info["name"]
                 # 部份torrent 的hash与mikan不一致
-                if torrent_hash in hash_list: 
+                if torrent_hash in hash_list:
                     torrent_idx = hash_list.index(torrent_hash)
                 elif torrent_name in name_list:
                     torrent_idx = name_list.index(torrent_name)
@@ -230,7 +241,7 @@ class Renamer:
             renamer_task = []
             for renamer_info in renamer_info_list:
                 # 从save_path和settings.download.path 对比拿到 bangumi_name,season
-                renamer_task.append(self.rename_by_info(client,renamer_info))
+                renamer_task.append(self.rename_by_info(client, renamer_info))
             torrents = await asyncio.gather(*renamer_task, return_exceptions=True)
             logging.info(f"[Renamer] have renamed {self.count}")
 

@@ -5,7 +5,7 @@ import httpx
 
 from module.conf import settings
 
-from .proxy import set_proxy, test_proxy
+from .proxy import set_proxy
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
@@ -14,7 +14,7 @@ logger.setLevel(logging.WARNING)
 class RequestURL:
     def __init__(self):
         self.header = {"user-agent": "Mozilla/5.0", "Accept": "application/xml"}
-        self.proxy = set_proxy() if settings.proxy.enable and test_proxy() else None
+        self.proxy = set_proxy() if settings.proxy.enable else None
 
 
     async def get_url(self, url, retry=3):
