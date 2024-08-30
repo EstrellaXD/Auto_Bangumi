@@ -94,15 +94,3 @@ class SearchTorrent:
         torrents = await self.search_torrents(rss_item)
         return [torrent for torrent in torrents if data.title_raw in torrent.name]
 
-
-if __name__ == "__main__":
-    test = Bangumi(
-        official_title="【我推的孩子】",
-        title_raw="Oshi No Ko",
-        group_name="ANi",
-        rss_link="https://mikanani.me/RSS/Bangumi?bangumiId=3407&subgroupid=583",
-    )
-    st = SearchTorrent()
-    ans = asyncio.run(st.analyse_keyword(["败犬","ANI"]))
-    for i in list(ans):
-        print(i)

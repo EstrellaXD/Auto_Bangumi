@@ -102,11 +102,9 @@ class RSSEngine:
         logging.info(
             f"[Engine] {rss_item.name}{rss_item.url} parserd succeed, found {len(torrent_items)} new torrents, add {len(new_torrent_items)} torrents"
         )
-        # with Database(self.engine) as database:
-        #     database.torrent.add_all(new_torrent_items)
         return torrent_items
 
-    async def download_bangumi(self, bangumi: Bangumi):
+    async def download_bangumi(self, bangumi: Bangumi,delete = False):
         """subscrib
 
         Args:
@@ -127,14 +125,13 @@ class RSSEngine:
         with Database(engine) as database:
             database.bangumi.add(bangumi)
             rss_item = database.rss.search_url(bangumi.rss_link)
-        # 还是要想想 subscrib 是有rss的
         if not rss_item:
             rss_item = RSSItem(name=bangumi.official_title, url=bangumi.rss_link)
         await self.refresh_rss(0, rss_item=rss_item)
-        # if delete:
-        #     with Database(engine) as database:
-        #         bangumi.deleted=True
-        #         database.bangumi.update(bangumi)
+        if delete:
+            with Database(engine) as database:
+                bangumi.deleted=True
+                database.bangumi.update(bangumi)
         return True
 
     async def torrents_to_data(

@@ -22,10 +22,10 @@ class DownloadClient(Downloader):
         self._path_parser = TorrentPath
 
     async def get_torrent_info(
-        self, category="Bangumi", status_filter="completed", tag=None
+        self, category="Bangumi", status_filter="completed", tag=None,limit = 0
     ):
         return await self.torrents_info(
-            status_filter=status_filter, category=category, tag=tag
+            status_filter=status_filter, category=category, tag=tag,limit=limit
         )
 
     async def rename_torrent_file(self, _hash, old_path, new_path) -> bool:

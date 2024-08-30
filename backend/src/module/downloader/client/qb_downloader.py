@@ -72,7 +72,7 @@ class QbDownloader:
         files_name = [file["name"] for file in reps.json()]
         return files_name
 
-    async def torrents_info(self, status_filter, category, tag=None, limit=50):
+    async def torrents_info(self, status_filter, category, tag=None, limit=0):
         data = {
             "filter": status_filter,
             "category": category,

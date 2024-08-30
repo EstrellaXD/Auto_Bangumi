@@ -1,8 +1,9 @@
 import logging
 
 from module.database import Database, engine
-from module.downloader import DownloadClient
-from module.models import Bangumi, ResponseModel
+from module.downloader import DownloadClient, DownloadQueue
+from module.models import Bangumi
+from module.models.rss import RSSItem
 from module.rss import RSSEngine, RSSManager
 from module.searcher import SearchTorrent
 
@@ -29,24 +30,23 @@ class SeasonCollector():
         if not link:
             torrents = await self.st.search_season(bangumi)
         else:
-            async with self.st.req() as req:
-                torrents = await req.get_torrents(link)
-        async with DownloadClient() as client:
-            if await client.add_torrents(torrents, bangumi):
-                logger.info(
-                    f"Collections of {bangumi.official_title} Season {bangumi.season} completed."
-                )
-                bangumi.eps_collect = True
-                with Database(engine) as db:
-                    if db.bangumi.update(bangumi):
-                        db.bangumi.add(bangumi)
-                    db.torrent.add_all(torrents)
-                return True
-            else:
-                logger.warning(
-                    f"Already collected {bangumi.official_title} Season {bangumi.season}."
-                )
-                return False
+            torrents = await self.st.search_torrents(RSSItem(url=link))
+
+        if torrents:
+            await DownloadQueue().add_torrents(torrents=torrents,bangumi=bangumi)
+            logger.info(
+                f"Collections of {bangumi.official_title} Season {bangumi.season} completed."
+            )
+            bangumi.eps_collect = True
+            with Database(engine) as db:
+                if db.bangumi.update(bangumi):
+                    db.bangumi.add(bangumi)
+            return True
+        else:
+            logger.warning(
+                f"Already collected {bangumi.official_title} Season {bangumi.season}."
+            )
+            return False
 
     @staticmethod
     async def subscribe_season(data: Bangumi,parser:str = "mikan"):

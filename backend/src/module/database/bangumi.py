@@ -131,6 +131,7 @@ class BangumiDatabase:
             logger.debug(f"[Database] Find bangumi id: {rss_link}.")
             return self.session.exec(statement).first()
 
+
     def search_id(self, _id: int) -> Bangumi | None:
         statement = select(Bangumi).where(Bangumi.id == _id)
         bangumi = self.session.exec(statement).first()
