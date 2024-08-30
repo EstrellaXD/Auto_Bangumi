@@ -108,4 +108,3 @@ def test_raw_parser():
     assert info.title_en == "Shuumatsu Torein Dokoe Iku"
     assert info.episode == 12
     assert info.season == 1
-test_raw_parser()

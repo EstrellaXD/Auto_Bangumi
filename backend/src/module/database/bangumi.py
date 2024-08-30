@@ -14,6 +14,15 @@ class BangumiDatabase:
         self.session = session
 
     def add(self, data: Bangumi):
+        """link 相同, official_title相同,就只补充,主要是为了
+        一些会改名的
+
+        Args:
+            data: [TODO:description]
+
+        Returns:
+            [TODO:return]
+        """
         # 如果official_title 一致,将title_raw,group,更新
         statement = select(Bangumi).where(
             and_(

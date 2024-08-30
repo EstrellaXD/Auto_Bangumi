@@ -11,7 +11,7 @@ from module.api import v1
 from module.conf import VERSION, settings, setup_logger
 from module.utils import load_image
 
-setup_logger()
+setup_logger(reset=True)
 logger = logging.getLogger(__name__)
 uvicorn_logging_config = {
     "version": 1,

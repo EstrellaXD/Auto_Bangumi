@@ -15,6 +15,14 @@ class SeasonCollector():
         self.rss_engine = RSSEngine() 
 
     async def collect_season(self, bangumi: Bangumi, link: str = None):
+        """download bangumi at once
+            collect or eps
+        Args:
+            bangumi: [TODO:description]
+            link: [TODO:description]
+        Returns:
+            [TODO:return]
+        """
         logger.info(
             f"Start collecting {bangumi.official_title} Season {bangumi.season}..."
         )

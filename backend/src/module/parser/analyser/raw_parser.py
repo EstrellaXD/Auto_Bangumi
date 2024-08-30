@@ -12,18 +12,18 @@ LAST_BACKET_PATTERN = re.compile(r"[\(\（][^\(\)（）]*[\)\）](?!.*[\(\（][^
 EPISODE_PATTERN = re.compile(
     r"""
     # (?=\b|\s|\+|\-|\[|\]|/|～)
-    (第?(\d+?)[话話集]
-    |EP?(\d+)
-    |-\s(\d+)
-    |(\d+).?v\d
-    |(\d+).?END
-    |(\d+)pre)
+    (第?(\d+?(?:\.\d)?)[话話集]
+    |EP?(\d+(?:\.\d)?)
+    |-\s(\d+(?:\.\d)?)
+    |(\d+(?:\.\d)?).?v\d
+    |(\d+(?:\.\d)?).?END
+    |(\d+(?:\.\d)?)pre)
     (?=\s|_|\-|\[|\]|$|\.)
 """,
     re.VERBOSE | re.IGNORECASE,
 )
 
-EPISODE_RE_UNTRUSTED = re.compile(r"[\b\s\[\]]((\d+))[\s\b\[\]]")
+EPISODE_RE_UNTRUSTED = re.compile(r"[\b\s\[\]]((\d+(?:\.\d)?))[\s\b\[\]]")
 
 SEASON_RE = re.compile(
     r"""
@@ -235,7 +235,6 @@ class RawParser:
 
     def get_episode_info(self):
         episode_info = self.findall_sub_title(EPISODE_PATTERN,sym="/[]")
-        print(self.title)
         episode_is_trusted = True
         season_info = self.findall_sub_title(SEASON_RE,sym = "/[]")
         season_is_trusted = True
@@ -405,7 +404,6 @@ def get_raw():
         lines = file.readlines()
         line = random.choice(lines).strip()
     raw_name = json.loads(line).get("raw")
-    # print(raw_name)
     return raw_name
 
 
@@ -440,6 +438,10 @@ if __name__ == "__main__":
     title = "[北宇治字幕组&霜庭云花Sub&氢气烤肉架]【我推的孩子】/【Oshi no Ko】[18][WebRip][HEVC_AAC][繁日内嵌]"
     # print(re.findall(RESOLUTION_RE,title))
     title = "[织梦字幕组][尼尔：机械纪元 NieR Automata Ver1.1a][02集][1080P][AVC][简日双语]"
+    title = "[ANi] Bakemonogatari / 物语系列 第外季＆第怪季 - 06.5 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4][ANi] Bakemonogatari / 物语系列 第外季＆第怪季 - 06.5 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4][217.2 MB]"
+    title = "ANi] 我獨自升級 - 07.5 [1080P][Baha][WEB-DL][AAC AVC][CHT].mp4"
+    title = "[NEO·QSW]古莲泰沙U グレンダイザーU Grendizer U 02[WEBRIP AVC 1080P]（搜索用：巨灵神/克雷飞天神）"
+    # title = "[LoliHouse] 2.5次元的诱惑 / 2.5-jigen no Ririsa - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][LoliHouse] 2.5次元的诱惑 / 2.5-jigen no Ririsa - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][609.59 MB]"
     print(title)
     
     ret = RawParser(title)
