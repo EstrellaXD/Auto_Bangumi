@@ -168,10 +168,6 @@ class TorrentManager:
                         if temp_data.offset != 0:
                             temp_data.offset = 10000 + temp_data.offset
                         #
-                        logging.info(f"{hash_list=}")
-                        logging.info(f"{old_data=}")
-                        logging.info(f"{data=}")
-                        logging.info(f"{temp_data=}")
                         if hash_list:
                             await client.move_torrent(hash_list, path)
                         # save_path改动后名命名一次
