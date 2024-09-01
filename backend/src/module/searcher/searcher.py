@@ -4,7 +4,7 @@ from collections.abc import Iterable
 from typing import TypeAlias
 
 from module.conf import settings
-from module.models import Bangumi, RSSItem, Torrent
+from module.models import Bangumi, RSSItem, Torrent, bangumi
 from module.network import RequestContent
 from module.parser.title_parser import RawParser
 from module.rss.engine import RSSEngine
@@ -27,13 +27,14 @@ class SearchTorrent:
     def __init__(self) -> None:
         self.req = RequestContent
 
-    async def search_torrents(self, rss_item: RSSItem) -> list[Torrent]:
+    async def search_torrents(self, rss_item: RSSItem,bangumi_item:Bangumi|None=None) -> list[Torrent]:
         async with self.req() as req:
             torrents = await req.get_torrents(rss_item.url)
-
         new_torrents = []
-
-        filter = "|".join(settings.rss_parser.filter)
+        if bangumi_item:
+            filter = "|".join(bangumi_item.filter.split(","))
+        else:
+            filter = "|".join(settings.rss_parser.filter)
         for torrent in torrents:
             if RSSEngine().match_torrent(torrent, bangumi=Bangumi(filter=filter)):
                 new_torrents.append(torrent)
@@ -90,7 +91,16 @@ class SearchTorrent:
         return url
 
     async def search_season(self, data: Bangumi, site: str = "mikan") -> list[Torrent]:
+        """for eps
+
+        Args:
+            data: [TODO:description]
+            site: [TODO:description]
+
+        Returns:
+            [TODO:return]
+        """
         rss_item = self.special_url(data, site)
-        torrents = await self.search_torrents(rss_item)
+        torrents = await self.search_torrents(rss_item,data)
         return [torrent for torrent in torrents if data.title_raw in torrent.name]
 
