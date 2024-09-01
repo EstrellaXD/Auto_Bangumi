@@ -35,6 +35,11 @@ class TorrentManager:
         hash_list = await self.__match_torrents_list(data)
         if hash_list:
             await client.delete_torrent(hash_list)
+            with Database() as database:
+                for _hash in hash_list:
+                    if torrent_item:=database.torrent.search_hash(_hash):
+                        database.torrent.delete(torrent_item.id)
+
             logger.info(f"Delete rule and torrents for {data.official_title}")
             return ResponseModel(
                 status_code=200,
@@ -122,7 +127,7 @@ class TorrentManager:
         renamer = Renamer()
         # data.offset = data.offset - 20000
         if data.offset<-2000:
-            await asyncio.sleep(30)
+            await asyncio.sleep(5)
         renamer_task = []
         async with DownloadClient() as client:
             for torrent_hash in hash_list:
@@ -144,7 +149,6 @@ class TorrentManager:
     async def update_rule(self, bangumi_id: int, data: BangumiUpdate):
         with Database() as db:
             old_data: Bangumi | None = db.bangumi.search_id(bangumi_id)
-            renamer = Renamer()
             if old_data:
                 # 当只改Filter的时候只改database
                 # 当offset 的时候 只改torrent
@@ -163,7 +167,11 @@ class TorrentManager:
                         temp_data = Bangumi(offset=data.offset - old_data.offset)
                         if temp_data.offset != 0:
                             temp_data.offset = 10000 + temp_data.offset
-
+                        #
+                        logging.info(f"{hash_list=}")
+                        logging.info(f"{old_data=}")
+                        logging.info(f"{data=}")
+                        logging.info(f"{temp_data=}")
                         if hash_list:
                             await client.move_torrent(hash_list, path)
                         # save_path改动后名命名一次

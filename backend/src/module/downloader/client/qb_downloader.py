@@ -119,6 +119,9 @@ class QbDownloader:
         return resp.status_code == 200
 
     async def delete(self, _hash):
+
+        if isinstance(_hash,list):
+            _hash = "|".join(_hash)
         data = {
             "hashes": _hash,
             "deleteFiles": True,

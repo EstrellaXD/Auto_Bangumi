@@ -1,8 +1,9 @@
 import logging
 
-from sqlmodel import Session, false, select, true
+from sqlalchemy.sql import func
+from sqlmodel import Session, delete, false, select, true
 
-from module.models import Torrent, bangumi
+from module.models import Torrent
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +47,24 @@ class TorrentDatabase:
     def search(self, _id: int) -> Torrent:
         return self.session.exec(select(Torrent).where(Torrent.id == _id)).first()
 
-    def search_bangumi(self,bangumi_id:int):
-        return self.session.exec(select(Torrent).where(Torrent.bangumi_id == bangumi_id)).all()
+    def search_hash(self, _hash: str) -> Torrent | None:
+        statement = select(Torrent).where(func.instr(Torrent.url, _hash) > 0)
+        return self.session.exec(statement).first()
+
+    def search_torrent(self, _hash,_name=None):
+        torrent_item = self.search_hash(_hash)
+        if not torrent_item and _name:
+            torrent_item = self.search_name(_name)
+        return torrent_item
+
+    def search_name(self, name: str):
+        statement = select(Torrent).where(Torrent.name == name)
+        return self.session.exec(statement).first()
+
+    def search_bangumi(self, bangumi_id: int):
+        return self.session.exec(
+            select(Torrent).where(Torrent.bangumi_id == bangumi_id)
+        ).all()
 
     def search_all(self) -> list[Torrent]:
         return self.session.exec(select(Torrent)).all()
@@ -67,28 +84,31 @@ class TorrentDatabase:
 
     def check_new(self, torrents_list: list[Torrent]) -> list[Torrent]:
         new_torrents = []
-        old_torrents = self.search_all_downloaded()
-        old_urls = [t.url for t in old_torrents]
         for torrent in torrents_list:
-            if torrent.url not in old_urls:
+            torrent_item = self.search_torrent(torrent.url,torrent.name)
+            if torrent_item and not torrent_item.downloaded:
                 new_torrents.append(torrent)
         return new_torrents
 
-
+    def delete(self, _id: int) -> bool:
+        condition = delete(Torrent).where(Torrent.id == _id)
+        try:
+            self.session.exec(condition)
+            self.session.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Delete RSS Item failed. Because: {e}")
+            return False
 
 if __name__ == "__main__":
-    from module.database import Database,engine
-    
+    from module.database import Database, engine
     from module.models.bangumi import Bangumi
 
+    name = "[ANi] 物语系列 第外季＆第怪季 - 06 [1080P][Baha][WEB-DL][AAC AVC][CHT].mp4"
+    hash = "1ae27b047005e097b74b66e27c37610aa5a0f5a2"
     with Database() as db:
-        test = TorrentDatabase(db)
-        bangumis = test.search (2)
-        bangumis.downloaded = True
-        test = bangumis
-
-    print(bangumis)
-    with Database() as db2:
-        test2 = TorrentDatabase(db2)
-        test2.add_all([bangumis])
-        # test.delete_one()
+        t_name = db.torrent.search_name(name)
+        t_hash = db.torrent.search_hash(hash)
+        db.torrent.delete(t_hash.id)
+        # print(f"{t_name=}")
+        # print(f"{t_hash=}")

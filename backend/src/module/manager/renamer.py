@@ -7,19 +7,11 @@ from module.database import Database
 from module.downloader import DownloadClient
 from module.downloader.path import TorrentPath
 from module.models import EpisodeFile, Notification, SubtitleFile
-from module.models.torrent import RenamerInfo
+from module.models.torrent import RenamerInfo, Torrent
 from module.notification import PostNotification
 from module.parser import TitleParser
-from module.utils.bangumi_data import get_hash
 
 logger = logging.getLogger(__name__)
-
-
-def torrent_to_bangumi(id):
-    if id:
-        with Database() as database:
-            torrent_bangumi = database.bangumi.search_id(id)
-            return torrent_bangumi
 
 
 class Renamer:
@@ -108,7 +100,6 @@ class Renamer:
             )
             asyncio.create_task(PostNotification().send(notify=notification_info))
         self.count += 1
-        # logger.info(f"[Renamer] {old_path} -> {new_path}")
         return result
 
     async def rename_files(
@@ -137,6 +128,8 @@ class Renamer:
                 logger.debug(f"[Renamer] Task {media_list[i]} returned: {result}")
                 logger.debug(f"[Renamer] {media_list[i]} rename succeed")
         # TODO: remove bad torrent
+        with Database() as db:
+            pass
         return renamer_info.torrent
 
     async def gen_renamer_info(
@@ -208,34 +201,30 @@ class Renamer:
         async with DownloadClient() as client:
             # 获取AB 下载的种子详细信息,主要是获取下载进度和save_path
             bangumi_torrent_infos: list[dict] = await client.get_torrent_info(limit=50)
-            with Database() as database:
-                torrent_items = database.torrent.search_all_unrenamed()
-                hash_list = [get_hash(link_hash.url) for link_hash in torrent_items]
-                name_list = [torrent_item.name for torrent_item in torrent_items]
-
             renamer_info_list: list[RenamerInfo] = []
 
             for bangumi_torrent_info in bangumi_torrent_infos:
                 torrent_hash = bangumi_torrent_info["hash"]
                 torrent_name = bangumi_torrent_info["name"]
-                # 部份torrent 的hash与mikan不一致
-                if torrent_hash in hash_list:
-                    torrent_idx = hash_list.index(torrent_hash)
-                elif torrent_name in name_list:
-                    torrent_idx = name_list.index(torrent_name)
-                else:
-                    continue
-                torrent_item = torrent_items[torrent_idx]
-                bangumi = torrent_to_bangumi(torrent_item.bangumi_id)
-                renamer_info = await self.gen_renamer_info(
-                    client,
-                    torrent_hash,
-                    bangumi,
-                    torrent_item,
-                    save_path=bangumi_torrent_info["save_path"],
-                )
+                with Database() as database:
+                    if not (torrent_item := database.torrent.search_torrent(torrent_hash,torrent_name)):
+                        print(torrent_item)
+                        torrent_item= Torrent(name=torrent_name,url=torrent_hash)
+                        database.torrent.add(torrent_item)
+                    if not torrent_item.downloaded:
+                        bangumi = None
+                        if torrent_item.bangumi_id:
+                            bangumi = database.bangumi.search_id(torrent_item.bangumi_id)
 
-                renamer_info_list.append(renamer_info)
+                        renamer_info = await self.gen_renamer_info(
+                            client,
+                            torrent_hash,
+                            bangumi,
+                            torrent_item,
+                            save_path=bangumi_torrent_info["save_path"],
+                        )
+
+                        renamer_info_list.append(renamer_info)
 
             renamer_task = []
             for renamer_info in renamer_info_list:
@@ -255,16 +244,16 @@ class Renamer:
 
 if __name__ == "__main__":
 
-    from module.conf import setup_logger
-
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[logging.StreamHandler()],
-    )
-
-    settings.log.debug_enable = True
-    setup_logger()
+    # from module.conf import setup_logger
+    #
+    # logger = logging.getLogger(__name__)
+    # logger.setLevel(logging.DEBUG)
+    # logging.basicConfig(
+    #     level=logging.INFO,
+    #     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    #     handlers=[logging.StreamHandler()],
+    # )
+    #
+    # settings.log.debug_enable = True
+    # setup_logger()
     asyncio.run(Renamer().rename())
