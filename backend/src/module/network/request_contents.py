@@ -1,10 +1,8 @@
 import logging
-import re
 import xml.etree.ElementTree
 
 from httpx import Response
 
-from module.conf import settings
 from module.models import Torrent
 
 from .request_url import RequestURL

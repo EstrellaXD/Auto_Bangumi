@@ -227,7 +227,6 @@ class Renamer:
                     continue
                 torrent_item = torrent_items[torrent_idx]
                 bangumi = torrent_to_bangumi(torrent_item.bangumi_id)
-
                 renamer_info = await self.gen_renamer_info(
                     client,
                     torrent_hash,
@@ -242,7 +241,7 @@ class Renamer:
             for renamer_info in renamer_info_list:
                 # 从save_path和settings.download.path 对比拿到 bangumi_name,season
                 renamer_task.append(self.rename_by_info(client, renamer_info))
-            torrents = await asyncio.gather(*renamer_task, return_exceptions=True)
+            await asyncio.gather(*renamer_task, return_exceptions=True)
             logging.info(f"[Renamer] have renamed {self.count}")
 
     async def compare_ep_version(

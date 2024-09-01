@@ -94,8 +94,7 @@ class RSSEngine:
         torrent_items = await self.rss_to_data(rss_item)
         new_torrent_items: list[Torrent] = []
         for torrent in torrent_items:
-            bangumi_item = self.match_torrent(torrent, rss_item)
-            if bangumi_item:
+            if bangumi_item := self.match_torrent(torrent, rss_item):
                 logger.debug(f"[Engine] Add torrent {torrent.name} to client")
                 self.queue.add(torrent=torrent, bangumi=bangumi_item)
                 new_torrent_items.append(torrent)
@@ -104,7 +103,7 @@ class RSSEngine:
         )
         return torrent_items
 
-    async def download_bangumi(self, bangumi: Bangumi,delete = False):
+    async def download_bangumi(self, bangumi: Bangumi, delete=False):
         """subscrib
 
         Args:
@@ -130,7 +129,7 @@ class RSSEngine:
         await self.refresh_rss(0, rss_item=rss_item)
         if delete:
             with Database(engine) as database:
-                bangumi.deleted=True
+                bangumi.deleted = True
                 database.bangumi.update(bangumi)
         return True
 
@@ -143,12 +142,15 @@ class RSSEngine:
         new_data = []
         tasks = []
         for torrent in torrents:
-            bangumi = RawParser().parser(raw=torrent.name)
             # 对torrents进行一个去重, 重复的raw_name就不转了
-            if bangumi and bangumi.title_raw not in [_.title_raw for _ in new_data]:
+            if (
+                bangumi := RawParser().parser(raw=torrent.name)
+            ) and bangumi.title_raw not in [_.title_raw for _ in new_data]:
                 tasks.append(
                     RSSAnalyser.official_title_parser(
-                        bangumi=bangumi, rss=rss, torrent=torrent
+                        bangumi=bangumi,
+                        rss=rss,
+                        torrent=torrent,
                     )
                 )
                 bangumi.rss_link = rss.url
@@ -159,8 +161,9 @@ class RSSEngine:
         return new_data
 
     async def torrent_to_data(self, torrent: Torrent, rss: RSSItem) -> Bangumi | None:
-        bangumi = RawParser().parser(raw=torrent.name)
-        if bangumi and bangumi.official_title != "official_title":
+        if (
+            bangumi := RawParser().parser(raw=torrent.name)
+        ) and bangumi.official_title != "official_title":
             await RSSAnalyser.official_title_parser(
                 bangumi=bangumi, rss=rss, torrent=torrent
             )

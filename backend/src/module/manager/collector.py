@@ -1,7 +1,7 @@
 import logging
 
 from module.database import Database, engine
-from module.downloader import DownloadClient, DownloadQueue
+from module.downloader import DownloadQueue
 from module.models import Bangumi
 from module.models.rss import RSSItem
 from module.rss import RSSEngine, RSSManager

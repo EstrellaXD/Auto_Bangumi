@@ -42,6 +42,7 @@ app = create_app()
 
 @app.get("/posters/{path:path}", tags=["posters"])
 async def posters(path: str):
+    #FIX: windown path
     post_path = f"data/posters/{path}"
     if not os.path.exists(post_path):
         await load_image(path)

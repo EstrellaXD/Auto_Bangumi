@@ -35,15 +35,21 @@ class TorrentPath:
     def path_to_bangumi(save_path: PathLike[str] | str):
 
         # Split save path and download path
-        save_parts = Path(save_path).parts
-        download_parts = Path(settings.downloader.path).parts
+        save_path = Path(save_path)
+        download_path = Path(settings.downloader.path)
+        try:
+            bangumi_path = save_path.relative_to(download_path)
+            bangumi_parts = bangumi_path.parts
+        except ValueError as e:
+            logging.warning(f"[Path] {e}")
+            bangumi_parts = save_path.parts
         # Get bangumi name and season
         bangumi_name = ""
         season = 1
-        for part in save_parts:
+        for part in bangumi_parts:
             if re.match(r"S\d+|[Ss]eason \d+", part):
                 season = int(re.findall(r"\d+", part)[0])
-            elif part not in download_parts:
+            else:
                 bangumi_name = part
         return bangumi_name, season
 
