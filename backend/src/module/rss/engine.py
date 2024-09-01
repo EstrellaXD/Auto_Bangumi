@@ -40,6 +40,7 @@ class RSSEngine:
         Retrieve all torrents that haven’t been renamed or downloaded.
         """
         torrents = await self._get_torrents(rss_item)
+        logging.debug( f"[RSS ENGINE] from {rss_item.url} get {len(torrents)}")
         with Database(self.engine) as database:
             new_torrents = database.torrent.check_new(torrents)
             return new_torrents
@@ -219,5 +220,5 @@ if __name__ == "__main__":
         rss_link="https://mikanani.me/RSS/Bangumi?bangumiId=3388&subgroupid=370",
         poster_link="1",
     )
-    ans = asyncio.run(t.download_bangumi(tb))
-    print(ans)
+    ans = asyncio.run(t.refresh_rss(1))
+    # print(ans)

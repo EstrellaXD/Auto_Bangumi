@@ -4,6 +4,7 @@ from sqlalchemy.sql import func
 from sqlmodel import Session, delete, false, select, true
 
 from module.models import Torrent
+from module.utils import get_hash
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,10 @@ class TorrentDatabase:
         statement = select(Torrent).where(func.instr(Torrent.url, _hash) > 0)
         return self.session.exec(statement).first()
 
-    def search_torrent(self, _hash,_name=None):
+    def search_torrent(self, _hash, _name=None):
+        if plain_hash := get_hash(_hash):
+            _hash = plain_hash
+
         torrent_item = self.search_hash(_hash)
         if not torrent_item and _name:
             torrent_item = self.search_name(_name)
@@ -85,8 +89,8 @@ class TorrentDatabase:
     def check_new(self, torrents_list: list[Torrent]) -> list[Torrent]:
         new_torrents = []
         for torrent in torrents_list:
-            torrent_item = self.search_torrent(torrent.url,torrent.name)
-            if torrent_item and not torrent_item.downloaded:
+            torrent_item = self.search_torrent(torrent.url, torrent.name)
+            if not torrent_item or not torrent_item.downloaded:
                 new_torrents.append(torrent)
         return new_torrents
 
@@ -99,6 +103,7 @@ class TorrentDatabase:
         except Exception as e:
             logger.error(f"Delete RSS Item failed. Because: {e}")
             return False
+
 
 if __name__ == "__main__":
     from module.database import Database, engine

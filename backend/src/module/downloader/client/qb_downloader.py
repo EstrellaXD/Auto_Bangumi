@@ -105,13 +105,13 @@ class QbDownloader:
         }
 
         file = None
-        if torrent_files:
-            file = {"torrents": torrent_files}
+        # if torrent_files:
+        #     file = {"torrents": torrent_files}
 
         resp = await self._client.post(
             url=QB_API_URL["add"],
             data=data,
-            files=file,
+            # files=file,
         )
         if "fail"in resp.text.lower() :
             logger.debug(f"[QbDownloader] A BAD TORRENT{save_path} , send torrent to download fail.{resp.text.lower()}")
