@@ -3,11 +3,13 @@ import os
 
 import uvicorn
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+
 from module.api import v1
 from module.conf import VERSION, settings, setup_logger
+from module.utils import load_image
 
 setup_logger(reset=True)
 logger = logging.getLogger(__name__)
@@ -39,8 +41,12 @@ app = create_app()
 
 
 @app.get("/posters/{path:path}", tags=["posters"])
-def posters(path: str):
-    return FileResponse(f"data/posters/{path}")
+async def posters(path: str):
+    #FIX: windown path
+    post_path = f"data/posters/{path}"
+    if not os.path.exists(post_path):
+        await load_image(path)
+    return FileResponse(post_path)
 
 
 if VERSION != "DEV_VERSION":

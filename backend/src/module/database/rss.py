@@ -80,6 +80,16 @@ class RSSDatabase:
             select(RSSItem).where(and_(RSSItem.aggregate, RSSItem.enabled))
         ).all()
 
+    def search_url(self, rss_link: str) -> RSSItem | None:
+        statement = select(RSSItem).where(RSSItem.url == rss_link)
+        rssitem = self.session.exec(statement).first()
+        if rssitem is None:
+            logger.warning(f"[Database] Cannot find rssitem link: {rss_link}.")
+            return None
+        else:
+            logger.debug(f"[Database] Find bangumi id: {rss_link}.")
+            return self.session.exec(statement).first()
+
     def delete(self, _id: int) -> bool:
         condition = delete(RSSItem).where(RSSItem.id == _id)
         try:
@@ -94,3 +104,9 @@ class RSSDatabase:
         condition = delete(RSSItem)
         self.session.exec(condition)
         self.session.commit()
+
+if __name__ == "__main__":
+    from module.database import Database
+
+    with Database() as db:
+        test = RSSDatabase(db)

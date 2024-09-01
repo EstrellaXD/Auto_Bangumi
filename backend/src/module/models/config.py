@@ -125,7 +125,7 @@ class ExperimentalOpenAI(BaseModel):
 
 class Config(BaseModel):
     program: Program = Program()
-    downloader: Downloader = Downloader()
+    downloader: Downloader = QbDownloader()
     rss_parser: RSSParser = RSSParser()
     bangumi_manage: BangumiManage = BangumiManage()
     log: Log = Log()

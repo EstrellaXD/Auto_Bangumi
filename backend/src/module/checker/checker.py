@@ -1,11 +1,12 @@
 import logging
 from pathlib import Path
 
-import requests
+import httpx
 
 from module.conf import VERSION, settings
 from module.downloader import DownloadClient
 from module.models import Config
+from module.network import RequestContent
 from module.update import version_check
 
 logger = logging.getLogger(__name__)
@@ -49,26 +50,27 @@ class Checker:
             return True
 
     @staticmethod
-    def check_downloader() -> bool:
+    async def check_downloader() -> bool:
         try:
             url = (
-                f"http://{settings.downloader.host}"
-                if "://" not in settings.downloader.host
-                else f"{settings.downloader.host}"
+                f"http://{settings.downloader.host_}"
+                if "://" not in settings.downloader.host_
+                else f"{settings.downloader.host_}"
             )
-            response = requests.get(url, timeout=2)
-            if settings.downloader.type in response.text.lower():
-                with DownloadClient() as client:
-                    if client.authed:
-                        return True
-                    else:
-                        return False
-            else:
-                return False
-        except requests.exceptions.ReadTimeout:
+
+            # response = await RequestContent().get(url, timeout=2)
+            # if settings.downloader.type in response.text.lower():
+            # 能auth 就算正确, 类型判断无用
+            async with DownloadClient() as client:
+                if await client.auth():
+                    return True
+            return False
+            # else:
+            #     return False
+        except httpx.ReadTimeout:
             logger.error("[Checker] Downloader connect timeout.")
             return False
-        except requests.exceptions.ConnectionError:
+        except httpx.ConnectError:
             logger.error("[Checker] Downloader connect failed.")
             return False
         except Exception as e:
@@ -83,3 +85,7 @@ class Checker:
         else:
             img_path.mkdir()
             return False
+
+if __name__ =="__main__":
+    import asyncio
+    # print(asyncio.run(Checker().check_downloader()))

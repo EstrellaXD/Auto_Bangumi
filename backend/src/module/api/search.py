@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Depends, Query
 from sse_starlette.sse import EventSourceResponse
 
@@ -17,11 +19,12 @@ async def search_torrents(site: str = "mikan", keywords: str = Query(None)):
     """
     if not keywords:
         return []
-    keywords = keywords.split(" ")
-    with SearchTorrent() as st:
-        return EventSourceResponse(
-            content=st.analyse_keyword(keywords=keywords, site=site),
-        )
+    keywords:list[str] = keywords.split(" ")
+
+    # return await SearchTorrent().analyse_keyword(keywords=keywords, site=site)
+    return EventSourceResponse(
+        await SearchTorrent().analyse_keyword(keywords=keywords, site=site)
+    )
 
 
 @router.get(
@@ -29,3 +32,14 @@ async def search_torrents(site: str = "mikan", keywords: str = Query(None)):
 )
 async def search_provider():
     return list(SEARCH_CONFIG.keys())
+
+
+if __name__ == "__main__":
+    import json
+
+    ans = asyncio.run(search_torrents(keywords="败北 ANI"))
+    for i in list(ans):
+        i = json.loads(i)
+        print(i)
+    # decoded_objects = []
+    # for json_str in next(ans):

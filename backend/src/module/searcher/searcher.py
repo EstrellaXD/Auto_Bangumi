@@ -1,11 +1,15 @@
+import asyncio
 import json
+from collections.abc import Iterable
 from typing import TypeAlias
 
-from module.models import Bangumi, RSSItem, Torrent
+from module.conf import settings
+from module.models import Bangumi, RSSItem, Torrent, bangumi
 from module.network import RequestContent
-from module.rss import RSSAnalyser
-
-from .provider import search_url
+from module.parser.title_parser import RawParser
+from module.rss.engine import RSSEngine
+from module.searcher.provider import search_url
+from module.utils import bangumi_data
 
 SEARCH_KEY = [
     "group_name",
@@ -19,29 +23,66 @@ SEARCH_KEY = [
 BangumiJSON: TypeAlias = str
 
 
-class SearchTorrent(RequestContent, RSSAnalyser):
-    def search_torrents(self, rss_item: RSSItem) -> list[Torrent]:
-        return self.get_torrents(rss_item.url)
-        # torrents = self.get_torrents(rss_item.url)
-        # return torrents
+class SearchTorrent:
+    def __init__(self) -> None:
+        self.req = RequestContent
 
-    def analyse_keyword(
-        self, keywords: list[str], site: str = "mikan", limit: int = 5
-    ) -> BangumiJSON:
-        rss_item = search_url(site, keywords)
-        torrents = self.search_torrents(rss_item)
-        # yield for EventSourceResponse (Server Send)
-        exist_list = []
+    async def search_torrents(self, rss_item: RSSItem,bangumi_item:Bangumi|None=None) -> list[Torrent]:
+        async with self.req() as req:
+            torrents = await req.get_torrents(rss_item.url)
+        new_torrents = []
+        if bangumi_item:
+            filter = "|".join(bangumi_item.filter.split(","))
+        else:
+            filter = "|".join(settings.rss_parser.filter)
         for torrent in torrents:
-            if len(exist_list) >= limit:
-                break
-            bangumi = self.torrent_to_data(torrent=torrent, rss=rss_item)
-            if bangumi:
+            if RSSEngine().match_torrent(torrent, bangumi=Bangumi(filter=filter)):
+                new_torrents.append(torrent)
+        return new_torrents
+
+    async def analyse_keyword(
+        self, keywords: list[str], site: str = "mikan", limit: int = 5
+    ) -> Iterable[BangumiJSON]:
+        rss_item = search_url(site, keywords)
+        torrents = await self.search_torrents(rss_item)
+        # yield for EventSourceResponse (Server Send)
+        exist_bangumi_list: list[Bangumi] = []
+        exist_list = []
+        tasks = []
+        bangumi_list: list[BangumiJSON] = []
+
+        for torrent in torrents:
+            new_bangumi = RawParser().parser(torrent.name)
+            if new_bangumi:
+                exist_str = f"{new_bangumi.title_raw}{new_bangumi.group_name}"
+                if exist_str not in [
+                    f"{_.title_raw}{_.group_name}" for _ in exist_bangumi_list
+                ]:
+                    tasks.append(
+                        RSSEngine().torrent_to_data(torrent=torrent, rss=rss_item)
+                    )
+                    exist_bangumi_list.append(new_bangumi)
+
+        bangumis: list[Bangumi | BaseException] = await asyncio.gather(
+            *tasks, return_exceptions=True
+        )
+        for bangumi in bangumis:
+            if not isinstance(bangumi, BaseException):
+
                 special_link = self.special_url(bangumi, site).url
+
                 if special_link not in exist_list:
                     bangumi.rss_link = special_link
                     exist_list.append(special_link)
-                    yield json.dumps(bangumi.dict(), separators=(",", ":"))
+                    bangumi_list.append(
+                        json.dumps(
+                            bangumi.dict(),
+                            separators=(",", ":"),
+                        )
+                    )
+            if len(exist_list) == 5:
+                break
+        return iter(bangumi_list)
 
     @staticmethod
     def special_url(data: Bangumi, site: str) -> RSSItem:
@@ -49,7 +90,17 @@ class SearchTorrent(RequestContent, RSSAnalyser):
         url = search_url(site, keywords)
         return url
 
-    def search_season(self, data: Bangumi, site: str = "mikan") -> list[Torrent]:
+    async def search_season(self, data: Bangumi, site: str = "mikan") -> list[Torrent]:
+        """for eps
+
+        Args:
+            data: [TODO:description]
+            site: [TODO:description]
+
+        Returns:
+            [TODO:return]
+        """
         rss_item = self.special_url(data, site)
-        torrents = self.search_torrents(rss_item)
+        torrents = await self.search_torrents(rss_item,data)
         return [torrent for torrent in torrents if data.title_raw in torrent.name]
+

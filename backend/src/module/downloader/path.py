@@ -1,5 +1,6 @@
 import logging
 import re
+from functools import lru_cache
 from os import PathLike
 
 from module.conf import PLATFORM, settings
@@ -18,11 +19,10 @@ class TorrentPath:
         pass
 
     @staticmethod
-    def check_files(info):
+    def check_files(files_name: list[str]):
         media_list = []
         subtitle_list = []
-        for f in info.files:
-            file_name = f.name
+        for file_name in files_name:
             suffix = Path(file_name).suffix
             if suffix.lower() in [".mp4", ".mkv"]:
                 media_list.append(file_name)
@@ -31,17 +31,25 @@ class TorrentPath:
         return media_list, subtitle_list
 
     @staticmethod
-    def _path_to_bangumi(save_path: PathLike[str] | str):
+    @lru_cache(maxsize=20)
+    def path_to_bangumi(save_path: PathLike[str] | str):
+
         # Split save path and download path
-        save_parts = Path(save_path).parts
-        download_parts = Path(settings.downloader.path).parts
+        save_path = Path(save_path)
+        download_path = Path(settings.downloader.path)
+        try:
+            bangumi_path = save_path.relative_to(download_path)
+            bangumi_parts = bangumi_path.parts
+        except ValueError as e:
+            logging.warning(f"[Path] {e}")
+            bangumi_parts = save_path.parts
         # Get bangumi name and season
         bangumi_name = ""
         season = 1
-        for part in save_parts:
+        for part in bangumi_parts:
             if re.match(r"S\d+|[Ss]eason \d+", part):
                 season = int(re.findall(r"\d+", part)[0])
-            elif part not in download_parts:
+            else:
                 bangumi_name = part
         return bangumi_name, season
 
@@ -53,7 +61,7 @@ class TorrentPath:
         return self._file_depth(file_path) <= 2
 
     @staticmethod
-    def _gen_save_path(data: Bangumi | BangumiUpdate):
+    def gen_save_path(data: Bangumi | BangumiUpdate):
         folder = (
             f"{data.official_title} ({data.year})" if data.year else data.official_title
         )
