@@ -38,9 +38,10 @@ class SeasonCollector():
                 f"Collections of {bangumi.official_title} Season {bangumi.season} completed."
             )
             bangumi.eps_collect = True
-            with Database(engine) as db:
-                if db.bangumi.update(bangumi):
-                    db.bangumi.add(bangumi)
+            with Database() as db:
+                db.bangumi.update(bangumi)
+                # if db.bangumi.update(bangumi):
+                #     db.bangumi.add(bangumi)
             return True
         else:
             logger.warning(
@@ -76,7 +77,7 @@ async def eps_complete():
                         data.eps_collect = True
                     except Exception as e:
                         logger.error(f"[eps_complete] {e}")
-            db.bangumi.update_all(datas)
+            # db.bangumi.update_all(datas)
 
 
 if __name__ == "__main__":
@@ -88,5 +89,5 @@ if __name__ == "__main__":
     official_title = "败犬女主太多了！"
     rss_link = "https://mikanani.me/RSS/Bangumi?bangumiId=3391&subgroupid=583"
     t = Bangumi(official_title=official_title,rss_link=rss_link)
-    ans = asyncio.run(SeasonCollector().subscribe_season(t))
+    ans = asyncio.run(eps_complete())
     # print(ans)

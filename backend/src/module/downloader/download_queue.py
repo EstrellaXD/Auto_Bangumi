@@ -1,9 +1,9 @@
 import asyncio
 import logging
 
+from module.database import Database, engine
 from module.downloader.download_client import DownloadClient
 from module.models import Bangumi, Torrent
-from module.database import Database, engine
 
 MIN_SIZE = 10
 logger = logging.getLogger(__name__)
@@ -49,9 +49,10 @@ class AsyncDownloadController:
             torrents = []
             while not queue.empty():
                 torrent, bangumi = queue.get_nowait()
+                logging.debug(f"[Download Queue] start download {torrent.name}")
                 torrents.append(torrent)
                 tasks.append(client.add_torrent(torrent, bangumi))
                 queue.task_done()
-            await asyncio.gather(*tasks)
+            await asyncio.gather(*tasks,return_exceptions=True)
             with Database() as database:
                 database.torrent.add_all(torrents)

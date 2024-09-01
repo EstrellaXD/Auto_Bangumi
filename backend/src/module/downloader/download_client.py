@@ -42,7 +42,7 @@ class DownloadClient(Downloader):
 
     async def delete_torrent(self, hashes):
         resp = await self.delete(hashes)
-        logger.info("[Downloader] Remove torrents.")
+        logger.info(f"[Downloader] Remove torrents {hashes}.")
         return resp
 
     async def add_torrent(self, torrent: Torrent, bangumi) -> bool:
@@ -60,6 +60,7 @@ class DownloadClient(Downloader):
                     torrent_hash = get_hash(torrent_url)
                     if torrent_hash != torrent_url_hash:
                         torrent.url = f"{torrent.url},{torrent_hash}"
+        logging.debug(f"[Downloader] send url {torrent_url}to downloader ")
 
         result = await self.add(
             torrent_urls=torrent_url,
