@@ -19,7 +19,7 @@ router = APIRouter(tags=["program"])
 
 @router.on_event("startup")
 async def startup():
-    program.startup()
+    await program.startup()
 
 
 @router.on_event("shutdown")
