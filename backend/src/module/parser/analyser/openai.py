@@ -132,6 +132,7 @@ class OpenAIParser:
         params = dict(
             api_key=self._api_key,
             api_base=self.api_base,
+            response_format={"type": "json_object"},
             messages=[
                 dict(role="system", content=prompt),
                 dict(role="user", content=text),
