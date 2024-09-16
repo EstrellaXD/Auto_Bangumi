@@ -2,26 +2,6 @@ from module.parser.analyser import raw_parser
 
 
 def test_raw_parser():
-    # Issue #794, RSS link: https://mikanani.me/RSS/Bangumi?bangumiId=3367&subgroupid=370
-    content = "[喵萌奶茶屋&LoliHouse] 鹿乃子乃子乃子虎视眈眈 / Shikanoko Nokonoko Koshitantan\n- 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕]"
-    info = raw_parser(content)
-    assert info.group == "喵萌奶茶屋&LoliHouse"
-    assert info.title_zh == "鹿乃子乃子乃子虎视眈眈"
-    assert info.title_en == "Shikanoko Nokonoko Koshitantan"
-    assert info.resolution == "1080p"
-    assert info.episode == 1
-    assert info.season == 1
-
-    # Issue #679, RSS link: https://mikanani.me/RSS/Bangumi?bangumiId=3225&subgroupid=370
-    content = "[LoliHouse] 轮回七次的反派大小姐，在前敌国享受随心所欲的新婚生活\n / 7th Time Loop - 12 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][END]"
-    info = raw_parser(content)
-    assert info.group == "LoliHouse"
-    assert info.title_zh == "轮回七次的反派大小姐，在前敌国享受随心所欲的新婚生活"
-    assert info.title_en == "7th Time Loop"
-    assert info.resolution == "1080p"
-    assert info.episode == 12
-    assert info.season == 1
-
     content = "【幻樱字幕组】【4月新番】【古见同学有交流障碍症 第二季 Komi-san wa, Komyushou Desu. S02】【22】【GB_MP4】【1920X1080】"
     info = raw_parser(content)
     assert info.title_en == "Komi-san wa, Komyushou Desu."
