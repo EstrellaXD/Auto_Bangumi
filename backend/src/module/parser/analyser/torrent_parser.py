@@ -9,11 +9,11 @@ logger = logging.getLogger(__name__)
 PLATFORM = "Unix"
 
 RULES = [
-    r"(.*) - (\d{1,4}(?:\.\d{1,2})?(?!\d|p))(?:v\d{1,2})?(?: )?(?:END)?(.*)",
-    r"(.*)[\[\ E](\d{1,4}(?:\.\d{1,2})?)(?:v\d{1,2})?(?: )?(?:END)?[\]\ ](.*)",
-    r"(.*)\[(?:第)?(\d{1,4}(?:\.\d{1,2})?)[话集話](?:END)?\](.*)",
-    r"(.*)第?(\d{1,4}(?:\.\d{1,2})?)[话話集](?:END)?(.*)",
-    r"(.*)(?:S\d{2})?EP?(\d{1,4}(?:\.\d{1,2})?)(.*)",
+    r"(.*) - (\d{1,4}(?!\d|p)|\d{1,4}\.\d{1,2}(?!\d|p))(?:v\d{1,2})?(?: )?(?:END)?(.*)",
+    r"(.*)[\[\ E](\d{1,4}|\d{1,4}\.\d{1,2})(?:v\d{1,2})?(?: )?(?:END)?[\]\ ](.*)",
+    r"(.*)\[(?:第)?(\d*\.*\d*)[话集話](?:END)?\](.*)",
+    r"(.*)第?(\d*\.*\d*)[话話集](?:END)?(.*)",
+    r"(.*)(?:S\d{2})?EP?(\d+)(.*)",
 ]
 
 SUBTITLE_LANG = {
@@ -81,7 +81,7 @@ def torrent_parser(
                     title, season = get_season_and_title(title)
                 else:
                     title, _ = get_season_and_title(title)
-                episode = match_obj.group(2)
+                episode = int(match_obj.group(2))
                 suffix = Path(torrent_path).suffix
                 if file_type == "media":
                     return EpisodeFile(
@@ -103,21 +103,3 @@ def torrent_parser(
                         episode=episode,
                         suffix=suffix,
                     )
-
-
-if __name__ == "__main__":
-    ep = torrent_parser(
-        "/不时用俄语小声说真心话的邻桌艾莉同学/Season 1/不时用俄语小声说真心话的邻桌艾莉同学 S01E02.mp4"
-    )
-    print(ep)
-
-    ep = torrent_parser(
-        "/downloads/Bangumi/关于我转生变成史莱姆这档事 (2018)/Season 3/[ANi] 關於我轉生變成史萊姆這檔事 第三季 - 48.5 [1080P][Baha][WEB-DL][AAC AVC][CHT].mp4"
-    )
-    print(ep)
-
-    ep = torrent_parser(
-        "/downloads/Bangumi/关于我转生变成史莱姆这档事 (2018)/Season 3/[ANi] 關於我轉生變成史萊姆這檔事 第三季 - 48.5 [1080P][Baha][WEB-DL][AAC AVC][CHT].srt",
-        file_type="subtitle",
-    )
-    print(ep)

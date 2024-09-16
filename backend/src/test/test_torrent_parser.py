@@ -72,25 +72,6 @@ def test_torrent_parser():
     assert bf.season == 1
     assert bf.episode == 6
 
-    file_name = "不时用俄语小声说真心话的邻桌艾莉同学 S01E02.mp4"
-    bf = torrent_parser(file_name)
-    assert bf.title == "不时用俄语小声说真心话的邻桌艾莉同学"
-    assert bf.season == 1
-    assert bf.episode == 2
-
-    file_name = "[ANi] 關於我轉生變成史萊姆這檔事 第三季 - 48.5 [1080P][Baha][WEB-DL][AAC AVC][CHT].mp4"
-    bf = torrent_parser(file_name, season=3)
-    assert bf.title == "關於我轉生變成史萊姆這檔事 第三季"
-    assert bf.season == 3
-    assert bf.episode == 48.5
-
-    file_name = "[ANi] 關於我轉生變成史萊姆這檔事 第三季 - 48.5 [1080P][Baha][WEB-DL][AAC AVC][CHT].srt"
-    sf = torrent_parser(file_name, season=3, file_type="subtitle")
-    assert sf.title == "關於我轉生變成史萊姆這檔事 第三季"
-    assert sf.episode == 48.5
-    assert sf.season == 3
-    assert sf.language == "zh-tw"
-
 
 class TestGetPathBasename:
     def test_regular_path(self):
