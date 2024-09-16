@@ -15,7 +15,7 @@ class RequestContent(RequestURL):
     def get_torrents(
         self,
         _url: str,
-        _filter: str = "|".join(settings.rss_parser.filter),
+        _filter: str = None,
         limit: int = None,
         retry: int = 3,
     ) -> list[Torrent]:
@@ -23,6 +23,8 @@ class RequestContent(RequestURL):
         if soup:
             torrent_titles, torrent_urls, torrent_homepage = rss_parser(soup)
             torrents: list[Torrent] = []
+            if _filter is None:
+                _filter = "|".join(settings.rss_parser.filter)
             for _title, torrent_url, homepage in zip(
                 torrent_titles, torrent_urls, torrent_homepage
             ):
