@@ -52,6 +52,15 @@ class Program(RenameThread, RSSThread):
         self.start()
 
     def start(self):
+        if self.is_running:
+            logger.info("Program is already running.")
+            return ResponseModel(
+                status=True,
+                status_code=200,
+                msg_en="Program is already running.",
+                msg_zh="程序已启动。",
+            )
+
         self.stop_event.clear()
         settings.load()
         if self.downloader_status:
