@@ -81,8 +81,8 @@ services:
       - UMASK=022
       - AB_DOWNLOADER_HOST=127.0.0.1:8989  #建议自行修改端口号
     volumes:
-      - /volume1/docker/ab/config:/app/config
-      - /volume1/docker/ab/data:/app/data
+      - /volume1/docker/AutoBangumi/config:/app/config
+      - /volume1/docker/AutoBangumi/data:/app/data
     network_mode: host
     environment:
       - AB_METHOD=Advance
