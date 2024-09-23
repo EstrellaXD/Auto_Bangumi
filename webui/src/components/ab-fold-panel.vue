@@ -20,7 +20,7 @@ withDefaults(
         w-full
         text-white
         fx-cer
-        px-20
+        px="10 pc:20"
         h="38 pc:45"
         justify-between
       >
