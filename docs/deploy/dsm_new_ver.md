@@ -1,6 +1,6 @@
 # 群晖通过 Container Manager 注册表部署AB教程
 
-在 DSM 7.2 中支持了 Docker Compose，但对于从群晖 Docker 开始接触的用户而言，使用传统的注册表安装方式更便于直观地进行安装及接受更新提醒。
+群晖在 DSM 7.2 中支持了 Docker Compose，但对于从群晖 Docker 开始接触的用户而言，使用传统的注册表安装方式更便于直观地进行安装及接受更新提醒。
 
 虽然群晖 docker 的 IPv6 比较复杂，但实测在 Bridge 显示 IPv6 已停用的情况下依旧可以通过设置反向代理加强安全性的同时进行 IPv6 连接。
 
