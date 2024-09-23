@@ -13,10 +13,10 @@ defineEmits<{
   (e: 'add-bangumi', bangumiRule: BangumiRule): void;
 }>();
 
-const { providers, provider, loading, inputValue, bangumiList } = storeToRefs(
+const { providers, provider, loading, keyword, searchData } = storeToRefs(
   useSearchStore()
 );
-const { getProviders, onSearch, clearSearch } = useSearchStore();
+const { getProviders, clearSearch, openSearch } = useSearchStore();
 
 onMounted(() => {
   getProviders();
@@ -54,20 +54,20 @@ onMounted(() => {
         z-5
       >
         <ab-search
-          v-model:inputValue="inputValue"
+          v-model:input-value="keyword"
           v-model:provider="provider"
           :providers="providers"
           :loading="loading"
-          @search="onSearch"
+          @search="openSearch"
         />
 
         <div class="search-list" space-y-10 overflow-auto>
           <transition-group name="fade-list">
-            <template v-for="bangumi in bangumiList" :key="bangumi.order">
+            <template v-for="i in searchData" :key="i.rss_link">
               <ab-bangumi-card
-                :bangumi="bangumi.value"
+                :bangumi="i"
                 type="search"
-                @click="() => $emit('add-bangumi', bangumi.value)"
+                @click="() => $emit('add-bangumi', i)"
               />
             </template>
           </transition-group>
