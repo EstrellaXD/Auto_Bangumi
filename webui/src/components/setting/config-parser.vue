@@ -7,7 +7,6 @@ const { getSettingGroup } = useConfigStore();
 
 const parser = getSettingGroup('rss_parser');
 
-/** @ts-expect-error Incorrect order */
 const langs: RssParserLang = ['zh', 'en', 'jp'];
 
 const items: SettingItem<RssParser>[] = [
