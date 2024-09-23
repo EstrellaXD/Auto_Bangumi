@@ -3,6 +3,8 @@ definePage({
   name: 'Index',
   redirect: '/bangumi',
 });
+
+const title = computed(() => useRoute().name);
 </script>
 
 <template>
@@ -13,7 +15,7 @@ definePage({
       <ab-sidebar />
 
       <div class="layout-content">
-        <ab-page-title :title="$route.name"></ab-page-title>
+        <ab-page-title :title="title"></ab-page-title>
 
         <RouterView v-slot="{ Component }">
           <KeepAlive>
