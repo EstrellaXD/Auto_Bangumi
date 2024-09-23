@@ -1,91 +1,62 @@
-import type { TupleToUnion } from './utils';
-
-/** 下载方式 */
-export type DownloaderType = ['qbittorrent'];
-/** rss parser 源 */
-export type RssParserType = ['mikan'];
-/** rss parser 方法 */
-export type RssParserMethodType = ['tmdb', 'mikan', 'parser'];
-/** rss parser 语言 */
-export type RssParserLang = ['zh', 'en', 'jp'];
-/** 重命名方式 */
-export type RenameMethod = ['normal', 'pn', 'advance', 'none'];
-/** 代理类型 */
-export type ProxyType = ['http', 'https', 'socks5'];
-/** 通知类型 */
-export type NotificationType = ['telegram', 'server-chan', 'bark', 'wecom'];
-/** OpenAI Model List */
-export type OpenAIModel = ['gpt-3.5-turbo'];
-/** OpenAI API Type */
-export type OpenAIType = ['openai', 'azure'];
-
-export interface Program {
-  rss_time: number;
-  rename_time: number;
-  webui_port: number;
-}
-
-export interface Downloader {
-  type: TupleToUnion<DownloaderType>;
-  host: string;
-  username: string;
-  password: string;
-  path: string;
-  ssl: boolean;
-}
-export interface RssParser {
-  enable: boolean;
-  type: TupleToUnion<RssParserType>;
-  token: string;
-  custom_url: string;
-  filter: Array<string>;
-  language: TupleToUnion<RssParserLang>;
-  parser_type: TupleToUnion<RssParserMethodType>;
-}
-export interface BangumiManage {
-  enable: boolean;
-  eps_complete: boolean;
-  rename_method: TupleToUnion<RenameMethod>;
-  group_tag: boolean;
-  remove_bad_torrent: boolean;
-}
-export interface Log {
-  debug_enable: boolean;
-}
-export interface Proxy {
-  enable: boolean;
-  type: TupleToUnion<ProxyType>;
-  host: string;
-  port: number;
-  username: string;
-  password: string;
-}
-export interface Notification {
-  enable: boolean;
-  type: 'telegram' | 'server-chan' | 'bark' | 'wecom';
-  token: string;
-  chat_id: string;
-}
-export interface ExperimentalOpenAI {
-  enable: boolean;
-  api_key: string;
-  api_base: string;
-  model: TupleToUnion<OpenAIModel>;
-  // azure
-  api_type: TupleToUnion<OpenAIType>;
-  api_version?: string;
-  deployment_id?: string;
-}
+import type { UnionToTuple } from '#/utils';
 
 export interface Config {
-  program: Program;
-  downloader: Downloader;
-  rss_parser: RssParser;
-  bangumi_manage: BangumiManage;
-  log: Log;
-  proxy: Proxy;
-  notification: Notification;
-  experimental_openai: ExperimentalOpenAI;
+  program: {
+    rss_time: number;
+    rename_time: number;
+    webui_port: number;
+  };
+  downloader: {
+    type: 'qbittorrent';
+    host: string;
+    username: string;
+    password: string;
+    path: string;
+    ssl: boolean;
+  };
+  rss_parser: {
+    enable: boolean;
+    type: 'mikan';
+    token: string;
+    custom_url: string;
+    filter: Array<string>;
+    language: 'zh' | 'en' | 'jp';
+    parser_type: 'tmdb' | 'mikan' | 'parser';
+  };
+  bangumi_manage: {
+    enable: boolean;
+    eps_complete: boolean;
+    rename_method: 'normal' | 'pn' | 'advance' | 'none';
+    group_tag: boolean;
+    remove_bad_torrent: boolean;
+  };
+  log: {
+    debug_enable: boolean;
+  };
+  proxy: {
+    enable: boolean;
+    type: 'http' | 'https' | 'socks5';
+    host: string;
+    port: number;
+    username: string;
+    password: string;
+  };
+  notification: {
+    enable: boolean;
+    type: 'telegram' | 'server-chan' | 'bark' | 'wecom';
+    token: string;
+    chat_id: string;
+  };
+  experimental_openai: {
+    enable: boolean;
+    api_key: string;
+    api_base: string;
+    model: 'gpt-3.5-turbo';
+    // azure
+    api_type: 'openai' | 'azure';
+    api_version?: string;
+    deployment_id?: string;
+  };
 }
 
 export const initConfig: Config = {
@@ -146,3 +117,33 @@ export const initConfig: Config = {
     deployment_id: '',
   },
 };
+
+type getItem<T extends keyof Config> = Pick<Config, T>[T];
+
+export type Program = getItem<'program'>;
+export type Downloader = getItem<'downloader'>;
+export type RssParser = getItem<'rss_parser'>;
+export type BangumiManage = getItem<'bangumi_manage'>;
+export type Log = getItem<'log'>;
+export type Proxy = getItem<'proxy'>;
+export type Notification = getItem<'notification'>;
+export type ExperimentalOpenAI = getItem<'experimental_openai'>;
+
+/** 下载方式 */
+export type DownloaderType = UnionToTuple<Downloader['type']>;
+/** rss parser 源 */
+export type RssParserType = UnionToTuple<RssParser['type']>;
+/** rss parser 方法 */
+export type RssParserMethodType = UnionToTuple<RssParser['parser_type']>;
+/** rss parser 语言 */
+export type RssParserLang = UnionToTuple<RssParser['language']>;
+/** 重命名方式 */
+export type RenameMethod = UnionToTuple<BangumiManage['rename_method']>;
+/** 代理类型 */
+export type ProxyType = UnionToTuple<Proxy['type']>;
+/** 通知类型 */
+export type NotificationType = UnionToTuple<Notification['type']>;
+/** OpenAI Model List */
+export type OpenAIModel = UnionToTuple<ExperimentalOpenAI['model']>;
+/** OpenAI API Type */
+export type OpenAIType = UnionToTuple<ExperimentalOpenAI['api_type']>;

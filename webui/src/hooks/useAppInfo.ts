@@ -1,5 +1,3 @@
-import { createSharedComposable, useIntervalFn } from '@vueuse/core';
-
 export const useAppInfo = createSharedComposable(() => {
   const { isLoggedIn } = useAuth();
   const running = ref<boolean>(false);

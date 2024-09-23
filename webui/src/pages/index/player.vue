@@ -8,7 +8,7 @@ const { url } = storeToRefs(usePlayerStore());
 
 <template>
   <div overflow-auto mt-12 flex-grow>
-    <template v-if="url.length === 0">
+    <template v-if="url === ''">
       <div wh-full f-cer text-h1 text-primary>
         <RouterLink to="/config" hover:underline>{{
           $t('player.hit')

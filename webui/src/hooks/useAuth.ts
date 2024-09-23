@@ -1,4 +1,3 @@
-import { createSharedComposable, useLocalStorage } from '@vueuse/core';
 import type { User } from '#/auth';
 import type { ApiError } from '#/api';
 import { router } from '@/router';

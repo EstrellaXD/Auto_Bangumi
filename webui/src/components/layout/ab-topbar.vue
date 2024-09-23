@@ -114,11 +114,13 @@ onUnmounted(() => {
           pc:top-2
         />
       </div>
+
+      <div hidden pc:block>
+        <ab-search-bar @add-bangumi="addSearchResult" />
+      </div>
     </div>
 
-    <div ml-auto fx-cer>
-      <ab-search-bar mr="pc:16 10" fx-cer @add-bangumi="addSearchResult" />
-
+    <div ml-auto>
       <ab-status-bar
         :items="items"
         :running="running"
@@ -126,8 +128,10 @@ onUnmounted(() => {
         @change-lang="changeLocale"
       />
     </div>
+    <ab-change-account v-model:show="showAccount"></ab-change-account>
+    <ab-add-rss
+      v-model:show="showAddRSS"
+      v-model:rule="searchRule"
+    ></ab-add-rss>
   </div>
-
-  <ab-change-account v-model:show="showAccount"></ab-change-account>
-  <ab-add-rss v-model:show="showAddRSS" v-model:rule="searchRule"></ab-add-rss>
 </template>
