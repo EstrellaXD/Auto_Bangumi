@@ -15,14 +15,17 @@ onActivated(() => {
 </script>
 
 <template>
-  <div overflow-auto mt-12 flex-grow>
+  <div overflow-auto pr-10 mt-12 flex-grow>
     <div>
       <transition-group
         name="bangumi"
         tag="div"
-        flex="~ wrap"
-        gap="20"
-        :class="{ 'justify-center': isMobile }"
+        gap="10"
+        pc:gap="20"
+        :class="[
+          { 'justify-center': isMobile },
+          isMobile ? 'grid grid-cols-3' : 'flex flex-wrap',
+        ]"
       >
         <ab-bangumi-card
           v-for="i in bangumi"

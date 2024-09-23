@@ -1,4 +1,5 @@
 import logging
+import asyncio
 
 from module.conf import VERSION, settings
 from module.models import ResponseModel
@@ -31,7 +32,7 @@ class Program(RenameThread, RSSThread):
         logger.info("GitHub: https://github.com/EstrellaXD/Auto_Bangumi/")
         logger.info("Starting AutoBangumi...")
 
-    def startup(self):
+    async def startup(self):
         self.__start_info()
         if not self.database:
             first_run()
@@ -49,32 +50,27 @@ class Program(RenameThread, RSSThread):
         if not self.img_cache:
             logger.info("[Core] No image cache exists, create image cache.")
             cache_image()
-        self.start()
+        await self.start()
 
-    def start(self):
+    async def start(self):
         self.stop_event.clear()
         settings.load()
-        if self.downloader_status:
-            if self.enable_renamer:
-                self.rename_start()
-            if self.enable_rss:
-                self.rss_start()
-            logger.info("Program running.")
-            return ResponseModel(
-                status=True,
-                status_code=200,
-                msg_en="Program started.",
-                msg_zh="程序启动成功。",
-            )
-        else:
-            self.stop_event.set()
-            logger.warning("Program failed to start.")
-            return ResponseModel(
-                status=False,
-                status_code=406,
-                msg_en="Program failed to start.",
-                msg_zh="程序启动失败。",
-            )
+        while not self.downloader_status:
+            logger.warning("Downloader is not running.")
+            logger.info("Waiting for downloader to start.")
+            await asyncio.sleep(30)
+        if self.enable_renamer:
+            self.rename_start()
+        if self.enable_rss:
+            self.rss_start()
+        logger.info("Program running.")
+        return ResponseModel(
+            status=True,
+            status_code=200,
+            msg_en="Program started.",
+            msg_zh="程序启动成功。",
+        )
+
 
     def stop(self):
         if self.is_running:

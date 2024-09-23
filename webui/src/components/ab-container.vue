@@ -15,7 +15,7 @@ withDefaults(
       bg-theme-row
       w-full
       text-white
-      px-20
+      px="10 pc:20"
       h="38 pc:45"
       fx-cer
       justify-between

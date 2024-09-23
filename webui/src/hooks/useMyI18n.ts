@@ -1,4 +1,5 @@
 import { createI18n } from 'vue-i18n';
+import { createSharedComposable, useLocalStorage } from '@vueuse/core';
 import enUS from '@/i18n/en.json';
 import zhCN from '@/i18n/zh-CN.json';
 import type { ApiSuccess } from '#/api';
@@ -24,7 +25,7 @@ export const useMyI18n = createSharedComposable(() => {
   });
 
   watch(lang, (val) => {
-    i18n.global.locale.value = val;
+    i18n.global.locale.value = val as unknown as Languages;
   });
 
   function changeLocale() {

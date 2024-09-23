@@ -136,6 +136,7 @@ class OpenAIParser:
                 dict(role="system", content=prompt),
                 dict(role="user", content=text),
             ],
+
             # set temperature to 0 to make results be more stable and reproducible.
             temperature=0,
         )
