@@ -3,7 +3,7 @@ import { ErrorPicture } from '@icon-park/vue-next';
 
 withDefaults(
   defineProps<{
-    src?: string;
+    src?: string | null;
     aspectRatio?: number;
     objectFit?: 'fill' | 'contain' | 'cover' | 'none' | 'scale-down';
   }>(),
