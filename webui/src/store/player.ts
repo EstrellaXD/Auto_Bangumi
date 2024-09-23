@@ -1,3 +1,5 @@
+import { useLocalStorage } from '@vueuse/core';
+
 type MediaPlayerType = 'jump' | 'iframe';
 
 export const usePlayerStore = defineStore('player', () => {
