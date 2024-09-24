@@ -1,5 +1,6 @@
 import type { Ref } from 'vue';
-import type { BangumiRule } from '#/bangumi';
+import { omit } from 'radash';
+import type { BangumiAPI, BangumiRule } from '#/bangumi';
 
 type EventSourceStatus = 'OPEN' | 'CONNECTING' | 'CLOSED';
 
@@ -33,7 +34,12 @@ export const apiSearch = {
         status.value = 'OPEN';
       };
       es.onmessage = (e) => {
-        const newData = JSON.parse(e.data) as BangumiRule;
+        const _data = JSON.parse(e.data) as BangumiAPI;
+        const newData: BangumiRule = {
+          ...omit(_data, ['filter', 'rss_link']),
+          filter: _data.filter.split(','),
+          rss_link: _data.rss_link.split(','),
+        };
         data.value = [...data.value, newData];
       };
       es.onerror = (err) => {
