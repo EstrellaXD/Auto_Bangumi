@@ -51,7 +51,7 @@ async def restart():
 )
 async def start():
     try:
-        resp = program.start()
+        resp = await program.start()
         return u_response(resp)
     except Exception as e:
         logger.debug(e)
