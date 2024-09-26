@@ -2,6 +2,8 @@ import logging
 import re
 import xml.etree.ElementTree
 
+from lxml import etree
+
 from module.conf import settings
 from module.models import Torrent
 
@@ -75,3 +77,9 @@ class RequestContent(RequestURL):
         soup = self.get_xml(_url)
         if soup:
             return soup.find("./channel/title").text
+
+    def get_magnet(self, _url) -> str | None:
+        html = etree.HTML(self.get_html(_url))
+        magnet = html.xpath('//a[starts-with(@href, "magnet")]/@href')
+        if magnet:
+            return magnet[0]
