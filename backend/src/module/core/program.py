@@ -3,7 +3,13 @@ import asyncio
 
 from module.conf import VERSION, settings
 from module.models import ResponseModel
-from module.update import data_migration, first_run, from_30_to_31, start_up, cache_image
+from module.update import (
+    data_migration,
+    first_run,
+    from_30_to_31,
+    start_up,
+    cache_image,
+)
 
 from .sub_thread import RenameThread, RSSThread
 
@@ -71,7 +77,6 @@ class Program(RenameThread, RSSThread):
             msg_zh="程序启动成功。",
         )
 
-
     def stop(self):
         if self.is_running:
             self.stop_event.set()
@@ -91,9 +96,9 @@ class Program(RenameThread, RSSThread):
                 msg_zh="程序未运行。",
             )
 
-    def restart(self):
+    async def restart(self):
         self.stop()
-        self.start()
+        await self.start()
         return ResponseModel(
             status=True,
             status_code=200,

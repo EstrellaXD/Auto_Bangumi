@@ -32,7 +32,7 @@ async def shutdown():
 )
 async def restart():
     try:
-        resp = program.restart()
+        resp = await program.restart()
         return u_response(resp)
     except Exception as e:
         logger.debug(e)
@@ -97,7 +97,10 @@ async def shutdown_program():
     os.kill(os.getpid(), signal.SIGINT)
     return JSONResponse(
         status_code=200,
-        content={"msg_en": "Shutdown program successfully.", "msg_zh": "关闭程序成功。"},
+        content={
+            "msg_en": "Shutdown program successfully.",
+            "msg_zh": "关闭程序成功。",
+        },
     )
 
 
