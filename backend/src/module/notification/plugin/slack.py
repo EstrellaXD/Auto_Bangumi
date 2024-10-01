@@ -23,5 +23,5 @@ class SlackNotification(RequestContent):
         text = self.gen_message(notify)
         data = {"title": notify.official_title, "body": text, "device_key": self.token}
         resp = self.post_data(self.notification_url, data)
-        logger.debug(f"Bark notification: {resp.status_code}")
+        logger.debug(f"Slack notification: {resp.status_code}")
         return resp.status_code == 200

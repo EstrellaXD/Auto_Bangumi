@@ -12,8 +12,10 @@
   - Wecom
   - Bark
   - ServerChan
+  - Gotify
 - **Chat ID** 仅在使用 `telegram` 通知时需要填写。[Telegram Bot 获取 Chat ID][1]
 - **Wecom**，chat_id参数框填写自建推送的url地址，同时需要在服务端增加[图文消息][2]类型。[Wecom酱配置说明][3]
+- **Gotify**，chat_id参数框填写自建推送的url地址。
 
 ## `config.json` 中的配置选项
 

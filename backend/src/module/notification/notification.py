@@ -6,6 +6,7 @@ from module.models import Notification
 
 from .plugin import (
     BarkNotification,
+    GotifyNotification,
     ServerChanNotification,
     TelegramNotification,
     WecomNotification,
@@ -23,6 +24,8 @@ def getClient(type: str):
         return BarkNotification
     elif type.lower() == "wecom":
         return WecomNotification
+    elif type.lower() == "gotify":
+        return GotifyNotification
     else:
         return None
 
