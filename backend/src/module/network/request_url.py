@@ -14,6 +14,21 @@ class RequestURL:
     def __init__(self):
         self.header = {"user-agent": "Mozilla/5.0", "Accept": "application/xml"}
         self._socks5_proxy = False
+    
+    # Patch the health api endpoint if Network connection was changed
+    def change_health_status(self,health_status):
+        health_check_url = f"http://localhost:7892/api/v1/health?status={health_status}"
+    
+        try:
+            response = requests.patch(health_check_url)
+            response.raise_for_status()
+            logger.debug(
+                    f"[Health] Health status changed to {health_status}."
+                )
+        except requests.exceptions.RequestException as e:
+            logger.debug(
+                    f"[Health] Failed to update health status: {e}"
+                )           
 
     def get_url(self, url, retry=3):
         try_time = 0
@@ -22,6 +37,7 @@ class RequestURL:
                 req = self.session.get(url=url, headers=self.header, timeout=5)
                 logger.debug(f"[Network] Successfully connected to {url}. Status: {req.status_code}")
                 req.raise_for_status()
+                self.change_health_status("healthy")
                 return req
             except requests.RequestException:
                 logger.debug(
@@ -35,6 +51,7 @@ class RequestURL:
                 logger.debug(e)
                 break
         logger.error(f"[Network] Unable to connect to {url}, Please check your network settings")
+        self.change_health_status("unhealthy")
         return None
 
     def post_url(self, url: str, data: dict, retry=3):
@@ -45,6 +62,7 @@ class RequestURL:
                     url=url, headers=self.header, data=data, timeout=5
                 )
                 req.raise_for_status()
+                self.change_health_status("healthy")
                 return req
             except requests.RequestException:
                 logger.warning(
@@ -59,6 +77,7 @@ class RequestURL:
                 break
         logger.error(f"[Network] Failed connecting to {url}")
         logger.warning("[Network] Please check DNS/Connection settings")
+        self.change_health_status("unhealthy")
         return None
 
     def check_url(self, url: str):
