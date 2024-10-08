@@ -48,6 +48,7 @@ export interface BangumiManage {
   rename_method: TupleToUnion<RenameMethod>;
   group_tag: boolean;
   remove_bad_torrent: boolean;
+  customize_path_pattern: string;
 }
 export interface Log {
   debug_enable: boolean;
@@ -117,6 +118,7 @@ export const initConfig: Config = {
     rename_method: 'normal',
     group_tag: true,
     remove_bad_torrent: true,
+    customize_path_pattern: '',
   },
   log: {
     debug_enable: false,

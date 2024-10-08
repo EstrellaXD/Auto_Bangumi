@@ -21,6 +21,11 @@ const items: SettingItem<BangumiManage>[] = [
     prop: {
       items: renameMethod,
     },
+  },
+  {
+    configKey: 'customize_path_pattern',
+    label: () => t('config.manage_set.customize_path_pattern'),
+    type: 'input',
     bottomLine: true,
   },
   {

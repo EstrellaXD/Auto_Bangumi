@@ -23,12 +23,13 @@
       "warning": "警告：实验功能尚未稳定，请谨慎使用"
     },
     "manage_set": {
-      "delete_bad_torrent": "删除坏种",
       "enable": "启用",
       "eps": "番剧补全",
       "group_tag": "添加组标签",
       "method": "重命名方式",
-      "title": "番剧管理设置"
+      "title": "番剧管理设置",
+      "delete_bad_torrent": "删除坏种",
+      "customize_path_pattern": "自定义保存路径格式"
     },
     "media_player_set": {
       "title": "播放器设置",

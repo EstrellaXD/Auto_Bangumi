@@ -54,10 +54,37 @@ class TorrentPath:
 
     @staticmethod
     def _gen_save_path(data: Bangumi | BangumiUpdate):
-        folder = (
-            f"{data.official_title} ({data.year})" if data.year else data.official_title
-        )
-        save_path = Path(settings.downloader.path) / folder / f"Season {data.season}"
+        download_path = settings.downloader.path
+        if settings.bangumi_manage.customize_path_pattern != "":
+            # save_path example: /${year}/${download_path}/${official_title}
+            # Path().parts: ('/', '${year}', '${download_path}', '${official_title}')
+            customize_path = list(Path(settings.bangumi_manage.customize_path_pattern).parts)
+            fields = [k for k, v in data.__dict__.items() if not k.startswith("_")]
+            for field in fields:
+                field_name = f'${{{field}}}'
+                if field_name not in customize_path:
+                    continue
+
+                attr = getattr(data, field)
+                if not attr:
+                    # if missing pattern, remove it from save_path
+                    customize_path.remove(field_name)
+                else:
+                    index = customize_path.index(field_name)
+                    customize_path[index] = str(attr)
+            # support `${download_path}` pattern
+            if "${download_path}" in customize_path:
+                index = customize_path.index("${download_path}")
+                customize_path.remove("${download_path}")
+                for path in Path(download_path).parts[1:]:
+                    customize_path.insert(index, path)
+                    index += 1
+            save_path = Path(*customize_path)
+        else:
+            folder = (
+                f"{data.official_title} ({data.year})" if data.year else data.official_title
+            )
+            save_path = Path(download_path) / folder / f"Season {data.season}"
         return str(save_path)
 
     @staticmethod

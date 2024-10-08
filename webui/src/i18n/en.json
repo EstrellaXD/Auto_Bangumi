@@ -23,12 +23,13 @@
       "warning": "Warning: Experimental feature is not yet stable. Please use with caution."
     },
     "manage_set": {
-      "delete_bad_torrent": "Delete Bad Torrent",
       "enable": "Enable",
       "eps": "EPS complete",
       "group_tag": "Add Group Tag",
       "method": "Rename Method",
-      "title": "Manage Setting"
+      "title": "Manage Setting",
+      "delete_bad_torrent": "Delete Bad Torrent",
+      "customize_path_pattern": "Customize Save Path Pattern"
     },
     "media_player_set": {
       "title": "Media Player Setting",
