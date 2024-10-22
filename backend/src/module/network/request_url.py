@@ -84,33 +84,23 @@ class RequestURL:
         self.session = requests.Session()
         if settings.proxy.enable:
             if "http" in settings.proxy.type:
-                if settings.proxy.username:
-                    username=settings.proxy.username
-                    password=settings.proxy.password
-                    url = f"http://{username}:{password}@{settings.proxy.host}:{settings.proxy.port}"
-                    self.session.proxies = {
-                        "http": url,
-                        "https": url,
-                    }
-                else:
-                    url = f"http://{settings.proxy.host}:{settings.proxy.port}"
-                    self.session.proxies = {
-                        "http": url,
-                        "https": url,
-                    }
+                protocol = "http"
             elif settings.proxy.type == "socks5":
-                if settings.proxy.username:
-                    self.session.proxies = {
-                        "http": f"socks5://{username}:{password}@{settings.proxy.host}:{settings.proxy.port}",
-                        "https": f"socks5://{username}:{password}@{settings.proxy.host}:{settings.proxy.port}",
-                    }
-                else:
-                    self.session.proxies = {
-                        "http": f"socks5://{settings.proxy.host}:{settings.proxy.port}",
-                        "https": f"socks5://{settings.proxy.host}:{settings.proxy.port}",
-                    }
+                protocol = "socks5"
             else:
                 logger.error(f"[Network] Unsupported proxy type: {settings.proxy.type}")
+                return self
+
+            username = settings.proxy.username
+            password = settings.proxy.password
+            if username:
+                url = f"{protocol}://{username}:{password}@{settings.proxy.host}:{settings.proxy.port}"
+            else:
+                url = f"{protocol}://{settings.proxy.host}:{settings.proxy.port}"
+            self.session.proxies = {
+                "http": url,
+                "https": url,
+            }
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
