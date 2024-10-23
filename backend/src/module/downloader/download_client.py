@@ -4,8 +4,6 @@ import hashlib
 import logging
 from urllib.parse import quote
 
-import bencodepy
-
 from module.conf import settings
 from module.downloader.client import Downloader
 from module.models import Bangumi, Torrent
@@ -53,9 +51,8 @@ class DownloadClient(Downloader):
             torrent_url = torrent.url
         else:
             async with RequestContent() as req:
-                torrent_file = await req.get_content(torrent.url)
-                torrent_url_hash = get_hash(torrent_url)
-                if torrent_file:
+                if torrent_file:=await req.get_content(torrent.url):
+                    torrent_url_hash = get_hash(torrent_url)
                     torrent_url = await self.torrent_to_link(torrent_file)
                     torrent_hash = get_hash(torrent_url)
                     if torrent_hash != torrent_url_hash:

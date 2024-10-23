@@ -267,7 +267,6 @@ async def subscribe(data: Bangumi, rss: RSSItem):
             msg_zh=f"下载 {data.official_title} 成功。",
         )
     else:
-
         resp = ResponseModel(
             status=False,
             status_code=406,
