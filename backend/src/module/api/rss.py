@@ -10,7 +10,7 @@ from module.models import (
     RSSUpdate,
     Torrent,
 )
-from module.rss import RSSAnalyser, RSSEngine, RSSManager
+from module.rss import RSSAnalyser, RSSEngine, RSSManager, RSSRefresh
 from module.security.api import UNAUTHORIZED, get_current_user
 
 from .response import u_response
@@ -221,18 +221,45 @@ async def get_torrent(
     "/analysis", response_model=Bangumi, dependencies=[Depends(get_current_user)]
 )
 async def analysis(rss: RSSItem):
-    data = await engine.link_to_data(rss)
-    if isinstance(data, Bangumi):
-        return data
-    else:
-        return u_response(data)
+    torrents = await RSSRefresh(rss).pull_rss()
+    if not torrents:
+        return u_response(
+            ResponseModel(
+                status=False,
+                status_code=406,
+                msg_en="Cannot find any torrent.",
+                msg_zh="无法找到种子。",
+            )
+        )
+    # 只有非聚合才会用
+    for torrent in torrents:
+        data = await analyser.torrent_to_data(torrent, rss)
+        if data:
+            return data
+
+    return u_response(
+        ResponseModel(
+            status=False,
+            status_code=406,
+            msg_en="Cannot parse this link.",
+            msg_zh="无法解析此链接。",
+        )
+    )
+    # data = await analyser.link_to_data(rss)
+    # if isinstance(data, Bangumi):
+    #     return data
+    # else:
+    #     return u_response(data)
 
 
 @router.post(
     "/collect", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
 async def download_collection(data: Bangumi):
-    resp = await collector.collect_season(data, data.rss_link)
+    # resp = await collector.collect_season(data, data.rss_link)
+    await engine.refresh_rss(bangumi=data)
+    # TODO: resp 要等后面统一改
+    resp = True
 
     if resp:
         resp = ResponseModel(

@@ -1,6 +1,12 @@
 import asyncio
 import base64
+import sys
 from os.path import isfile
+
+if sys.platform == "win32":
+    from pathlib import PureWindowsPath as Path
+else:
+    from pathlib import Path
 
 
 def url_to_str(url):
@@ -10,6 +16,7 @@ def url_to_str(url):
     encoded_url = base64.urlsafe_b64encode(url.encode()).decode()
     return encoded_url
 
+
 def str_to_url(encoded_str):
     """
     将编码字符串解码为URL
@@ -17,16 +24,18 @@ def str_to_url(encoded_str):
     decoded_url = base64.urlsafe_b64decode(encoded_str.encode()).decode()
     return decoded_url
 
-def gen_poster_path(link:str):
+
+def gen_poster_path(link: str):
+    # 这是给 parser 用的, 对 url 进行编码,返回即可
     return f"posters/{url_to_str(link)}"
 
 
-async def save_image(link:str):
+async def save_image(link: str):
 
     from module.network import RequestContent
 
     img_hash = url_to_str(link)
-    image_path = f"data/posters/{img_hash}"
+    image_path = Path("data/posters") / img_hash
     async with RequestContent() as req:
         img = await req.get_content(link)
         if img:
@@ -35,9 +44,10 @@ async def save_image(link:str):
     return img
 
 
-async def load_image(img_path:str):
-    if img_path and isfile(img_path):
-        with open(f"data/{img_path}", "rb") as f:
+async def load_image(img_path: str):
+    image_path = Path("data") / img_path
+    if img_path and isfile(image_path):
+        with open(image_path, "rb") as f:
             return f.read()
     elif img_path:
         link = img_path.split("/")[-1]
@@ -50,5 +60,3 @@ async def load_image(img_path:str):
 if __name__ == "__main__":
     img_path = "posters/aHR0cHM6Ly9taWthbmFuaS5tZS9pbWFnZXMvQmFuZ3VtaS8yMDIzMDkvYTQ2ZWVhYzcuanBnP3dpZHRoP TQwMCZoZWlnaHQ9NTYwJmZvcm1hdD13ZWJw"
     asyncio.run(load_image(img_path))
-
-

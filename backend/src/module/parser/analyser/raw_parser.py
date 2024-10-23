@@ -6,7 +6,9 @@ from module.models import Episode
 logger = logging.getLogger(__name__)
 
 
-LAST_BACKET_PATTERN = re.compile(r"[\(\（][^\(\)（）]*[\)\）](?!.*[\(\（][^\(\)（）]*[\)\）])")
+LAST_BACKET_PATTERN = re.compile(
+    r"[\(\（][^\(\)（）]*[\)\）](?!.*[\(\（][^\(\)（）]*[\)\）])"
+)
 
 
 EPISODE_PATTERN = re.compile(
@@ -165,8 +167,9 @@ UNUSEFUL_RE = re.compile(
     re.VERBOSE,
 )
 
+
 class RawParser:
-    def __init__(self, title:str) -> None:
+    def __init__(self, title: str) -> None:
         self.raw_title = title
         self.title = title
         self.process_title()
@@ -199,7 +202,7 @@ class RawParser:
         unuseful_info = self.get_unuseful_info()
         audio_info = self.get_audio_info()
         self.token = re.split(r"/\[\]", self.title)
-        if len(self.token)>1:
+        if len(self.token) > 1:
             self.token = self.token[:-1]
         self.token = "[]".join(self.token)
         self.token = re.split(r"[\[\]]", self.token)
@@ -211,32 +214,44 @@ class RawParser:
         # print(f"{sub_info=}")
         # print(f"{self.title=}")
         # print(f"{self.token=}")
-        
-        group = self.get_group() 
+
+        group = self.get_group()
         if not season_info:
             season_info, season_is_trusted = self.get_season_info()
-        name_en, name_zh, name_jp, = self.name_process()
+        (
+            name_en,
+            name_zh,
+            name_jp,
+        ) = self.name_process()
         episode = self.parser_episode(episode_info, episode_is_trusted)
-        season,season_raw = self.parse_season(season_info, season_is_trusted)
+        season, season_raw = self.parse_season(season_info, season_is_trusted)
 
         source = source_info[0] if source_info else ""
-        sub =  sub_info[0] if sub_info else ""
+        sub = sub_info[0] if sub_info else ""
         resolution = resolution_info[0] if resolution_info else ""
 
         return Episode(
-        name_en, name_zh, name_jp, season, season_raw, episode, sub, group, resolution, source
-    )
+            name_en,
+            name_zh,
+            name_jp,
+            season,
+            season_raw,
+            episode,
+            sub,
+            group,
+            resolution,
+            source,
+        )
 
-
-    def findall_sub_title(self, pattern,sym = "[]"):
+    def findall_sub_title(self, pattern, sym="[]"):
         ans = re.findall(pattern, self.title)
         self.title = re.sub(pattern, sym, self.title)
         return ans
 
     def get_episode_info(self):
-        episode_info = self.findall_sub_title(EPISODE_PATTERN,sym="/[]")
+        episode_info = self.findall_sub_title(EPISODE_PATTERN, sym="/[]")
         episode_is_trusted = True
-        season_info = self.findall_sub_title(SEASON_RE,sym = "/[]")
+        season_info = self.findall_sub_title(SEASON_RE, sym="/[]")
         season_is_trusted = True
         if not episode_info:
             episode_info = self.findall_sub_title(EPISODE_RE_UNTRUSTED)
@@ -269,16 +284,16 @@ class RawParser:
 
     def parse_season(
         self, season_info: list[tuple[str]], season_is_trusted: bool
-    ) -> tuple[int,str]:
+    ) -> tuple[int, str]:
         if len(season_info):
             season_list = [self.season_info_to_season(s) for s in season_info]
             if season_is_trusted:
-                return season_list[0],season_info[0][0]
-        return 1,""
+                return season_list[0], season_info[0][0]
+        return 1, ""
 
     def episode_info_to_episode(self, episode_info: tuple[str]) -> int | float:
         for episode in episode_info[1:]:
-            if episode :
+            if episode:
                 if "." in episode:
                     return float(episode)
                 else:
@@ -304,7 +319,9 @@ class RawParser:
     def name_process(self):
 
         max_len = 10 if len(self.token) > 10 else len(self.token)
-        self.token = [self.token[i] for i in range(max_len) if (len(self.token[i].strip())>1)]
+        self.token = [
+            self.token[i] for i in range(max_len) if (len(self.token[i].strip()) > 1)
+        ]
 
         self.token = self.token[:5]
         token_priority = [len(s) for s in self.token]
@@ -314,7 +331,7 @@ class RawParser:
         elif len(self.token) == 2:
             anime_title = self.token[1]
         else:
-            token_priority[1]+=4
+            token_priority[1] += 4
             for token, idx in zip(self.token, range(3)):
                 if "/" in token:
                     token_priority[idx] += 10
@@ -329,10 +346,10 @@ class RawParser:
                 if re.search(r"[\u4e00-\u9fa5]{2,}", token):
                     token_priority[idx] += 2
             # print(token_priority)
-            idx =token_priority.index( max(token_priority))
+            idx = token_priority.index(max(token_priority))
             anime_title = self.token[idx]
             anime_title = anime_title.strip()
-        anime_title = re.sub(r"^\\|\\$","",anime_title)
+        anime_title = re.sub(r"^\\|\\$", "", anime_title)
         anime_title = anime_title.strip()
 
         name_en, name_zh, name_jp = None, None, None
@@ -363,9 +380,8 @@ class RawParser:
 
     def get_group(self):
         for group in self.token:
-            group = group.strip()
-            if group:
-                group.replace("/","")
+            if group := group.strip():
+                group.replace("/", "")
                 group.strip()
                 return group
         return ""
@@ -395,8 +411,6 @@ class RawParser:
         return audio_info
 
 
-
-
 def get_raw():
     import json
     import random
@@ -411,6 +425,7 @@ def get_raw():
 def raw_parser(raw: str) -> Episode | None:
     ret = RawParser(raw).parser()
     return ret
+
 
 if __name__ == "__main__":
 
@@ -447,8 +462,11 @@ if __name__ == "__main__":
     # title = "物语系列 S05E06.5.mp4 "
     # title = " 【幻月字幕组】【24年日剧】【直到破坏了丈夫的家庭】【第7话】【1080P】【中日双语】.mp4"
     # title = "[LoliHouse] 2.5次元的诱惑 / 2.5-jigen no Ririsa - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][LoliHouse] 2.5次元的诱惑 / 2.5-jigen no Ririsa - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][609.59 MB]"
+    title = "[ANi] Re：从零开始的异世界生活 第三季 - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4] [复制磁连]"
+    title = "[AnimeRep] 蓝箱 / 青之箱 / Blue Box / Ao no Hako- 02 [1080p][简中内嵌]"
+    title = "[ANi] Kekkon Surutte Hontou desu ka /  听说你们要结婚！？ - 03 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
     print(title)
-    
+
     ret = RawParser(title)
     # #
     print(ret.parser())

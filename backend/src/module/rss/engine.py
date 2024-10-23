@@ -124,8 +124,11 @@ class RSSRefresh(RssBase):
                         pass
                     self.bangumi_torrents[title].append(torrent)
             else:
-                # 当 解析失败的时候, 会没有海报
                 # 先抓一下poster_link, 然后save, refresh_rss
+                if self.bangumi.official_title not in self.bangumi_torrents:
+                    self.bangumi_torrents[self.bangumi.official_title] = TorrentBangumi(
+                        self.bangumi
+                    )
                 self.bangumi_torrents[self.bangumi.official_title].append(torrent)
 
 
@@ -217,6 +220,7 @@ class RSSEngine:
         for rss_item in rss_items:
             tasks.append(self.refresh_rss(rss_item))
         await asyncio.gather(*tasks)
+
 
 
 async def test():

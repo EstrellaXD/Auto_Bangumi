@@ -26,7 +26,7 @@ class BangumiDatabase:
         # 如果official_title 一致,将title_raw,group,更新
         statement = select(Bangumi).where(
             and_(
-                data.official_title==Bangumi.official_title ,
+                data.official_title == Bangumi.official_title,
                 func.instr(data.rss_link, Bangumi.rss_link) > 0,
                 # use `false()` to avoid E712 checking
                 # see: https://docs.astral.sh/ruff/rules/true-false-comparison/
@@ -42,10 +42,8 @@ class BangumiDatabase:
                 return False
             bangumi.title_raw += f",{data.title_raw}"
             data = bangumi
-            logger.debug(
-                f"[Database] update {data.official_title}"
-            )
-         
+            logger.debug(f"[Database] update {data.official_title}")
+
         self.session.add(data)
         self.session.commit()
         self.session.refresh(data)
@@ -131,7 +129,6 @@ class BangumiDatabase:
             logger.debug(f"[Database] Find bangumi id: {rss_link}.")
             return self.session.exec(statement).first()
 
-
     def search_id(self, _id: int) -> Bangumi | None:
         statement = select(Bangumi).where(Bangumi.id == _id)
         bangumi = self.session.exec(statement).first()
@@ -176,15 +173,17 @@ class BangumiDatabase:
         # 对于聚合而言, link, title_raw一致可认为是一个bangumi
         # 对于非聚合, link 一致就可认为是一个
         if aggrated:
-            statement = select(Bangumi).where(
-                and_(
-                    func.instr(torrent_name, Bangumi.title_raw) > 0,
-                    func.instr(rss_link, Bangumi.rss_link) > 0,
-                    # use `false()` to avoid E712 checking
-                    # see: https://docs.astral.sh/ruff/rules/true-false-comparison/
-                    Bangumi.deleted == false(),
-                )
-            )
+            # 首先，在 Python 中将 title_raw 拆分为多个部分
+            # TODO: 太吃内存了,要优化一下
+            bangumis = self.session.exec(
+                select(Bangumi).where(Bangumi.deleted == false())
+            ).all()
+            for bangumi in bangumis:
+                # 假设 title_raw 是以逗号分隔的字符串
+                title_parts = bangumi.title_raw.split(",")
+                for title_part in title_parts:
+                    if title_part in torrent_name:
+                        return bangumi
         else:
             statement = select(Bangumi).where(
                 and_(
@@ -194,7 +193,7 @@ class BangumiDatabase:
                     Bangumi.deleted == false(),
                 )
             )
-        return self.session.exec(statement).first()
+            return self.session.exec(statement).first()
 
     def not_complete(self) -> list[Bangumi]:
         # Find eps_complete = False

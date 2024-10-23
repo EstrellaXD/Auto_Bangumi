@@ -125,9 +125,6 @@ class TorrentManager:
 
     async def offset_rename(self,data:Bangumi,path,hash_list):
         renamer = Renamer()
-        # data.offset = data.offset - 20000
-        if data.offset<-2000:
-            await asyncio.sleep(5)
         renamer_task = []
         async with DownloadClient() as client:
             for torrent_hash in hash_list:
@@ -150,8 +147,7 @@ class TorrentManager:
         with Database() as db:
             old_data: Bangumi | None = db.bangumi.search_id(bangumi_id)
             if old_data:
-                # 当只改Filter的时候只改database
-                # 当offset 的时候 只改torrent
+                # 当只改Filter,offset的时候只改database
                 if (
                     old_data.official_title != data.official_title
                     or old_data.year != data.year
@@ -172,10 +168,6 @@ class TorrentManager:
                             await client.move_torrent(hash_list, path)
                         # save_path改动后名命名一次
                         await self.offset_rename(temp_data,path,hash_list)
-                        if temp_data.offset != 0:
-                            temp_data.offset = -10000
-                            # 太快了会导致renamer 的数据是之前的
-                            asyncio.create_task(self.offset_rename(temp_data,path,hash_list))
 
                 db.bangumi.update(data, bangumi_id)
                 return True

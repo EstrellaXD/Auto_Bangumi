@@ -18,9 +18,9 @@ logger = logging.getLogger(__name__)
 class DownloadClient(Downloader):
     def __init__(self):
         super().__init__(
-            host=settings.downloader.host_,
-            username=settings.downloader.username_,
-            password=settings.downloader.password_,
+            host=settings.downloader.host,
+            username=settings.downloader.username,
+            password=settings.downloader.password,
             ssl=settings.downloader.ssl,
         )
         self._path_parser = TorrentPath
@@ -51,7 +51,7 @@ class DownloadClient(Downloader):
             torrent_url = torrent.url
         else:
             async with RequestContent() as req:
-                if torrent_file:=await req.get_content(torrent.url):
+                if torrent_file := await req.get_content(torrent.url):
                     torrent_url_hash = get_hash(torrent_url)
                     torrent_url = await self.torrent_to_link(torrent_file)
                     torrent_hash = get_hash(torrent_url)

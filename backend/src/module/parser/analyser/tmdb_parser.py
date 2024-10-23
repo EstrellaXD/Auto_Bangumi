@@ -59,7 +59,7 @@ async def tmdb_parser(title:str, language:str, test: bool = False) -> TMDBInfo |
     async with RequestContent() as req:
         url = search_url(title)
         json_contents = await req.get_json(url)
-        contents:list[dict[str,int|float|list[int|float|str]]] = json_contents.get("results", "")
+        contents= json_contents.get("results", "")
         # TODO: 还是怪怪的
         if contents.__len__() == 0:
             url = search_url(title.replace(" ", ""))

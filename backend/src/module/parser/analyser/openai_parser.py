@@ -17,9 +17,9 @@ the python structured data type is:
 ```python
 @dataclass
 class Episode:
-    title_en: Optional[str]
-    title_zh: Optional[str]
-    title_jp: Optional[str]
+    title_en: str|None
+    title_zh: str|None
+    title_jp: str|None
     season: int
     season_raw: str
     episode: int

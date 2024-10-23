@@ -4,12 +4,11 @@ from collections.abc import Iterable
 from typing import TypeAlias
 
 from module.conf import settings
-from module.models import Bangumi, RSSItem, Torrent, bangumi
+from module.models import Bangumi, RSSItem, Torrent
 from module.network import RequestContent
 from module.parser.title_parser import RawParser
-from module.rss.engine import RSSEngine
+from module.rss import RSSAnalyser, RSSEngine, RSSRefresh
 from module.searcher.provider import search_url
-from module.utils import bangumi_data
 
 SEARCH_KEY = [
     "group_name",
@@ -27,18 +26,17 @@ class SearchTorrent:
     def __init__(self) -> None:
         self.req = RequestContent
 
-    async def search_torrents(self, rss_item: RSSItem,bangumi_item:Bangumi|None=None) -> list[Torrent]:
-        async with self.req() as req:
-            torrents = await req.get_torrents(rss_item.url)
-        new_torrents = []
-        if bangumi_item:
-            filter = "|".join(bangumi_item.filter.split(","))
-        else:
-            filter = "|".join(settings.rss_parser.filter)
-        for torrent in torrents:
-            if RSSEngine().match_torrent(torrent, bangumi=Bangumi(filter=filter)):
-                new_torrents.append(torrent)
-        return new_torrents
+    async def search_torrents(self, rss_item: RSSItem) -> list[Torrent]:
+        bangumi = Bangumi(
+            # filter=settings.rss_parser.filter,
+            filter="|".join(settings.rss_parser.filter),
+            rss_link=rss_item.url,
+        )
+        bangumi_torrents = RSSRefresh(bangumi=bangumi)
+        await bangumi_torrents.refresh()
+        if bangumi.official_title in bangumi_torrents.bangumi_torrents:
+            return bangumi_torrents.bangumi_torrents[bangumi.official_title].torrents
+        return []
 
     async def analyse_keyword(
         self, keywords: list[str], site: str = "mikan", limit: int = 5
@@ -52,14 +50,13 @@ class SearchTorrent:
         bangumi_list: list[BangumiJSON] = []
 
         for torrent in torrents:
-            new_bangumi = RawParser().parser(torrent.name)
-            if new_bangumi:
+            if new_bangumi := RawParser().parser(torrent.name):
                 exist_str = f"{new_bangumi.title_raw}{new_bangumi.group_name}"
                 if exist_str not in [
                     f"{_.title_raw}{_.group_name}" for _ in exist_bangumi_list
                 ]:
                     tasks.append(
-                        RSSEngine().torrent_to_data(torrent=torrent, rss=rss_item)
+                        RSSAnalyser().torrent_to_data(torrent=torrent, rss=rss_item)
                     )
                     exist_bangumi_list.append(new_bangumi)
 
@@ -76,7 +73,7 @@ class SearchTorrent:
                     exist_list.append(special_link)
                     bangumi_list.append(
                         json.dumps(
-                            bangumi.dict(),
+                            bangumi.model_dump(),
                             separators=(",", ":"),
                         )
                     )
@@ -90,17 +87,24 @@ class SearchTorrent:
         url = search_url(site, keywords)
         return url
 
-    async def search_season(self, data: Bangumi, site: str = "mikan") -> list[Torrent]:
-        """for eps
+    # async def search_season(self, data: Bangumi, site: str = "mikan") -> list[Torrent]:
+    #     """for eps
+    #
+    #     Args:
+    #         data: [TODO:description]
+    #         site: [TODO:description]
+    #
+    #     Returns:
+    #         [TODO:return]
+    #     """
+    #     rss_item = self.special_url(data, site)
+    #     torrents = await self.search_torrents(rss_item, data)
+    #     return [torrent for torrent in torrents if data.title_raw in torrent.name]
 
-        Args:
-            data: [TODO:description]
-            site: [TODO:description]
 
-        Returns:
-            [TODO:return]
-        """
-        rss_item = self.special_url(data, site)
-        torrents = await self.search_torrents(rss_item,data)
-        return [torrent for torrent in torrents if data.title_raw in torrent.name]
+if __name__ == "__main__":
+    import asyncio
 
+    ans = asyncio.run(SearchTorrent().analyse_keyword(["败犬女主"]))
+    for _ in ans:
+        print(json.loads(_))
