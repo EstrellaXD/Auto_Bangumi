@@ -3,7 +3,10 @@ import logging
 
 import httpx
 
-from ..exceptions import AuthorizationError
+from module.conf import get_plugin_config
+from module.downloader.client.qbittorrent.config import Config as DownloaderConfig
+
+# from ..exceptions import AuthorizationError
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +27,13 @@ QB_API_URL = {
 }
 
 
-class QbDownloader:
-    def __init__(self, host: str, username: str, password: str, ssl: bool):
-        self.host = host if "://" in host else "http://" + host
-        self.username = username
-        self.password = password
-        self.ssl = ssl
+class Downloader:
+    def __init__(self):  # , host: str, username: str, password: str, ssl: bool
+        self.config = get_plugin_config(DownloaderConfig(), "downloader")
+        self.host = self.config.host
+        self.username = self.config.username
+        self.password = self.config.password
+        self.ssl = self.config.ssl
 
     async def auth(self):
         resp = await self._client.post(
@@ -90,7 +94,7 @@ class QbDownloader:
                 {
                     "hash": torrent_info["hash"],
                     "save_path": torrent_info["save_path"],
-                    "name": torrent_info["name"]
+                    "name": torrent_info["name"],
                 }
             )
         return torrent_infos.json()
@@ -113,14 +117,16 @@ class QbDownloader:
             data=data,
             # files=file,
         )
-        if "fail"in resp.text.lower() :
-            logger.debug(f"[QbDownloader] A BAD TORRENT{save_path} , send torrent to download fail.{resp.text.lower()}")
+        if "fail" in resp.text.lower():
+            logger.debug(
+                f"[QbDownloader] A BAD TORRENT{save_path} , send torrent to download fail.{resp.text.lower()}"
+            )
             return False
         return resp.status_code == 200
 
     async def delete(self, _hash):
 
-        if isinstance(_hash,list):
+        if isinstance(_hash, list):
             _hash = "|".join(_hash)
         data = {
             "hashes": _hash,
@@ -152,7 +158,7 @@ class QbDownloader:
         hashes: "hash1|hash2|..."
         """
 
-        if isinstance(hashes,list):
+        if isinstance(hashes, list):
             hashes = "|".join(hashes)
         data = {
             "hashes": hashes,
@@ -201,7 +207,7 @@ class QbDownloader:
             logger.error(
                 "[Downloader] Downloader authorize error. Please check your username/password."
             )
-            raise AuthorizationError("Failed to login to qbittorrent.")
+            # raise AuthorizationError("Failed to login to qbittorrent.")
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
