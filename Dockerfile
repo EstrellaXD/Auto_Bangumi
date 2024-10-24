@@ -23,6 +23,9 @@ RUN set -ex && \
         shadow \
         tini \
         openssl \
+        curl \              # 用于下载 Rust 安装脚本
+        build-base \       # 安装构建工具，包含 gcc 和其他编译工具
+        rust \             # 安装 Rust 和 Cargo
         tzdata && \
     python3 -m pip install --no-cache-dir --upgrade pip && \
     sed -i '/bcrypt/d' requirements.txt && \
