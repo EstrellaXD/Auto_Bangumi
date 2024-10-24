@@ -25,7 +25,7 @@ RUN set -ex && \
         openssl \
         curl \
         tzdata && \
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh && \
     export PATH="/root/.cargo/bin:${PATH}" && \
     python3 -m pip install --no-cache-dir --upgrade pip && \
     sed -i '/bcrypt/d' requirements.txt && \
