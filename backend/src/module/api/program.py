@@ -1,8 +1,9 @@
 import logging
 import os
 import signal
+from contextlib import asynccontextmanager
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
 from module.conf import VERSION
@@ -17,14 +18,23 @@ program = Program()
 router = APIRouter(tags=["program"])
 
 
-@router.on_event("startup")
-async def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 启动事件
     await program.startup()
-
-
-@router.on_event("shutdown")
-async def shutdown():
+    yield
+    # 关闭事件
     await program.stop()
+
+
+# @router.on_event("startup")
+# async def startup():
+#     await program.startup()
+#
+#
+# @router.on_event("shutdown")
+# async def shutdown():
+#     await program.stop()
 
 
 @router.get(
@@ -98,7 +108,10 @@ async def shutdown_program():
     os.kill(os.getpid(), signal.SIGINT)
     return JSONResponse(
         status_code=200,
-        content={"msg_en": "Shutdown program successfully.", "msg_zh": "关闭程序成功。"},
+        content={
+            "msg_en": "Shutdown program successfully.",
+            "msg_zh": "关闭程序成功。",
+        },
     )
 
 

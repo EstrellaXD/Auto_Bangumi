@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from module.api import v1
+from module.api import lifespan, v1
 from module.conf import VERSION, settings, setup_logger
 from module.utils import load_image
 
@@ -34,7 +34,7 @@ uvicorn_logging_config = {
 
 
 def create_app() -> FastAPI:
-    app = FastAPI()
+    app = FastAPI(lifespan=lifespan)
 
     # mount routers
     app.include_router(v1, prefix="/api")
