@@ -19,14 +19,22 @@ class TorrentPath:
         pass
 
     @staticmethod
+    def check_file(file_path: PathLike[str] | str):
+        suffix = Path(file_path).suffix
+        if suffix.lower() in [".mp4", ".mkv"]:
+            return "media"
+        elif suffix.lower() in [".ass", ".srt"]:
+            return "subtitle"
+
+    @staticmethod
     def check_files(files_name: list[str]):
         media_list = []
         subtitle_list = []
         for file_name in files_name:
-            suffix = Path(file_name).suffix
-            if suffix.lower() in [".mp4", ".mkv"]:
+            file_type = TorrentPath.check_file(file_name)
+            if file_type == "media":
                 media_list.append(file_name)
-            elif suffix.lower() in [".ass", ".srt"]:
+            elif file_type == "subtitle":
                 subtitle_list.append(file_name)
         return media_list, subtitle_list
 

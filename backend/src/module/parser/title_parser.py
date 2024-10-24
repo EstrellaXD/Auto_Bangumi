@@ -10,21 +10,23 @@ from module.parser import analyser
 logger = logging.getLogger(__name__)
 
 
-class RawParser():
+class RawParser:
 
     @staticmethod
     @abstractmethod
-    def parser(title:str,**kwargs)->Bangumi:
+    def parser(title: str, **kwargs) -> Bangumi:
         pass
 
 
 class TmdbParser(RawParser):
 
     @staticmethod
-    async def parser(title: str, season: int=1, language: str="zh"):
+    async def parser(title: str, season: int = 1, language: str = "zh"):
         tmdb_info = await analyser.tmdb_parser(title, language)
         if tmdb_info:
-            logger.debug(f"[Title Parser] TMDB Matched, official title is {tmdb_info.title}")
+            logger.debug(
+                f"[Title Parser] TMDB Matched, official title is {tmdb_info.title}"
+            )
             tmdb_season = tmdb_info.last_season if tmdb_info.last_season else season
             # return tmdb_info.title, tmdb_season, tmdb_info.year, tmdb_info.poster_link
             return Bangumi(
@@ -32,11 +34,13 @@ class TmdbParser(RawParser):
                 title_raw=title,
                 year=tmdb_info.year,
                 season=tmdb_season,
-                poster_link=tmdb_info.poster_link
+                poster_link=tmdb_info.poster_link,
             )
 
         else:
-            logger.warning(f"[Title Parser]Cannot match {title} in TMDB. Use raw title instead.")
+            logger.warning(
+                f"[Title Parser]Cannot match {title} in TMDB. Use raw title instead."
+            )
             logger.warning("[Title Parser]Please change bangumi info manually.")
 
             return Bangumi(
@@ -51,7 +55,9 @@ class TmdbParser(RawParser):
             bangumi.official_title, settings.rss_parser.language
         )
         if tmdb_info:
-            logger.debug(f"[Title Parser] TMDB Matched, official title is {tmdb_info.title}")
+            logger.debug(
+                f"[Title Parser] TMDB Matched, official title is {tmdb_info.title}"
+            )
             bangumi.poster_link = tmdb_info.poster_link
         else:
             logger.warning(
@@ -60,17 +66,18 @@ class TmdbParser(RawParser):
             logger.warning("[Title Parser] Please change bangumi info manually.")
 
 
-
 class MikanParser(RawParser):
     @staticmethod
     async def parser(homepage: str) -> tuple[str, str]:
 
         mikan_parser = analyser.MikanParser(homepage)
-        tasks = [mikan_parser.parser(),mikan_parser.poster_parser()]
-        official_title,poster_link= await asyncio.gather(*tasks)
+        tasks = [mikan_parser.parser(), mikan_parser.poster_parser()]
+        official_title, poster_link = await asyncio.gather(*tasks)
 
-        return Bangumi(official_title=official_title,
-                       poster_link=poster_link,)
+        return Bangumi(
+            official_title=official_title,
+            poster_link=poster_link,
+        )
 
 
 class RawParser(RawParser):
@@ -85,7 +92,7 @@ class RawParser(RawParser):
             #     episode_dict = gpt.parse(raw, asdict=True)
             #     episode = Episode(**episode_dict)
             # else:
-            episode:Episode = analyser.RawParser(raw).parser()
+            episode: Episode = analyser.RawParser(raw).parser()
 
             titles = {
                 "zh": episode.title_zh,
@@ -125,8 +132,6 @@ class RawParser(RawParser):
             return None
 
 
-
-
 class TitleParser:
     def __init__(self):
         pass
@@ -140,19 +145,22 @@ class TitleParser:
     ):
         try:
             return analyser.torrent_parser(
-                torrent_path, torrent_name, file_type
+                torrent_path,
+                torrent_name,
+                file_type,
+                season,
             )
         except Exception as e:
             logger.warning(f"Cannot parse {torrent_path} with error {e}")
 
 
-
-
 if __name__ == "__main__":
     import asyncio
+
     async def test(title):
         tb = RawParser().parser(title)
         return RawParser.parser(tb.title_raw)
+
     # parser = TmdbParser()
 
     title = "/Volumes/gtx/download/qb/动漫/物语系列/Season 5"

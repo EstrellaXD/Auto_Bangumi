@@ -6,7 +6,9 @@ from .bangumi import Bangumi
 
 class Torrent(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True, alias="id")
-    bangumi_id: int | None = Field(default=None, alias="refer_id", foreign_key="bangumi.id")
+    bangumi_id: int | None = Field(
+        default=None, alias="refer_id", foreign_key="bangumi.id"
+    )
     rss_id: int | None = Field(default=None, alias="rss_id", foreign_key="rssitem.id")
     name: str = Field(default="", alias="name")
     url: str = Field("https://example.com/torrent", alias="url", unique=True)
@@ -37,9 +39,9 @@ class SubtitleFile(BaseModel):
     suffix: str = Field(..., regex=r"(?i)\.(ass|srt)$")
 
 
-class RenamerInfo(BaseModel): 
-    torrent: Torrent
-    bangumi: Bangumi|None
+class RenamerInfo(BaseModel):
+    torrent: Torrent | str
+    bangumi: Bangumi | None
     hash: str
-    content: list[str] = Field(default = [])
+    content: list[str] = Field(default=[])
     save_path: str = Field("")

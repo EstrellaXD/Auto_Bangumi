@@ -37,7 +37,7 @@ class TorrentManager:
             await client.delete_torrent(hash_list)
             with Database() as database:
                 for _hash in hash_list:
-                    if torrent_item:=database.torrent.search_hash(_hash):
+                    if torrent_item := database.torrent.search_hash(_hash):
                         database.torrent.delete(torrent_item.id)
 
             logger.info(f"Delete rule and torrents for {data.official_title}")
@@ -123,22 +123,18 @@ class TorrentManager:
                     msg_zh=f"无法找到 id {_id}",
                 )
 
-    async def offset_rename(self,data:Bangumi,path,hash_list):
+    async def rename(self, data: Bangumi, save_path, hash_list):
         renamer = Renamer()
         renamer_task = []
         async with DownloadClient() as client:
             for torrent_hash in hash_list:
-                renamer_info = await renamer.gen_renamer_info(
-                    client=client,
-                    torrent_hash=torrent_hash,
-                    bangumi=data,
-                    torrent_item="",
-                    save_path=path,
-                )
+                file_contents = await renamer.gen_file_path(client, torrent_hash)
                 renamer_task.append(
-                    renamer.rename_by_info(
+                    renamer.rename_files(
                         client,
-                        renamer_info,
+                        torrent_hash,
+                        files_path=file_contents,
+                        save_path=save_path,
                     )
                 )
             await asyncio.gather(*renamer_task, return_exceptions=True)
@@ -152,22 +148,19 @@ class TorrentManager:
                     old_data.official_title != data.official_title
                     or old_data.year != data.year
                     or old_data.season != data.season
-                    or old_data.offset != data.offset
                 ):
+                    # 名字改了, 年份改了, 季改了
                     # Move torrent
                     async with DownloadClient() as client:
                         old_data.save_path = client._path_parser.gen_save_path(old_data)
                         hash_list = await self.__match_torrents_list(old_data)
-                        path = client._path_parser.gen_save_path(data)
-                        data.save_path = path
-                        temp_data = Bangumi(offset=data.offset - old_data.offset)
-                        if temp_data.offset != 0:
-                            temp_data.offset = 10000 + temp_data.offset
-                        #
+                        new_save_path = client._path_parser.gen_save_path(data)
+
                         if hash_list:
-                            await client.move_torrent(hash_list, path)
+                            await client.move_torrent(hash_list, new_save_path)
                         # save_path改动后名命名一次
-                        await self.offset_rename(temp_data,path,hash_list)
+                        await self.rename(data, new_save_path, hash_list)
+                        await asyncio.sleep(1)
 
                 db.bangumi.update(data, bangumi_id)
                 return True

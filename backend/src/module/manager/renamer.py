@@ -7,6 +7,7 @@ from module.database import Database
 from module.downloader import DownloadClient
 from module.downloader.path import TorrentPath
 from module.models import EpisodeFile, Notification, SubtitleFile
+from module.models.bangumi import Bangumi
 from module.models.torrent import RenamerInfo, Torrent
 from module.notification import PostNotification
 from module.parser import TitleParser
@@ -15,6 +16,18 @@ logger = logging.getLogger(__name__)
 
 
 class Renamer:
+    """
+    重命名模块
+    renamer 有俩个地方用,一个是日常的循环,一个是 bangumi 更新后
+    1. 日常循环中, 需要对下载的种子进行重命名, 重命名后需要更新 database
+    2. bangumi 更新后, 需要对 bangumi 关联的种子进行重命名, 无需更新 database
+    命名要的数据
+    1. hash 这是唯一标识
+    2. 文件名,这是声名要改的文件
+    3. save_path 这是最终路径
+    4. content 这是文件列表
+    """
+
     def __init__(self):
         self._path_parser = TorrentPath()
         self._parser = TitleParser()
@@ -28,6 +41,19 @@ class Renamer:
                 f"Finished checking {torrent_count} files' name, renamed {rename_count} files."
             )
         logger.debug(f"Checked {torrent_count} files")
+
+    @staticmethod
+    async def gen_file_path(
+        client: DownloadClient,
+        torrent_hash: str,
+    ):
+        """
+        获取种子文件列表
+        文件夹举例
+        LKSUB][Make Heroine ga Oosugiru!][01-12][720P]/[LKSUB][Make Heroine ga Oosugiru!][01][720P].mp4
+        """
+        torrent_contents: list[str] = await client.get_torrent_files(torrent_hash)
+        return torrent_contents
 
     @staticmethod
     def gen_path(
@@ -56,42 +82,83 @@ class Renamer:
 
     async def rename_file(
         self,
-        renamer_info: RenamerInfo,
-        file: str,
-        method: str,
-        bangumi_name: str,
         client: DownloadClient,
+        hash: str,
+        file_path: str,
+        save_path: str,
+        torrent: Torrent | None = None,
+        bangumi: Bangumi | None = None,
+        method: str | None = None,
     ):
-        logger.debug(f"[Renamer] Start rename {renamer_info.torrent.name}.")
-        # 对路径和filename简单的提取出season,title
-        # 主要还是拿到集数,其他的并不重要,advance用不到
-        if "sub" not in method:
-            ep = self._parser.torrent_parser(
-                renamer_info.save_path,
-                file,
-            )
-        else:
-            ep = self._parser.torrent_parser(
-                renamer_info.save_path,
-                file,
-                file_type="subtitle",
-            )
-        if ep and renamer_info.bangumi and renamer_info.bangumi.offset:
-            # logging.info(f"[debug] {ep.episode=} {renamer_info.bangumi.offset}")
-            ep.episode += renamer_info.bangumi.offset
+        """
+        重命名文件
+        当是 update 导致的更新时,有 bangumi,hash,无torrent,无需更新
+        当有 hash, file_path, save_path 时, 足够重命名
+        Args:
+            hash (str): 种子hash
+            file_path (str): 文件路径
+            save_path (str): 保存路径 与 file path 相比,是 file path 更长
+            method (str): 重命名方法
+            bangumi_name (str): 番剧名称
+            client (DownloadClient): 下载客户端
+            torrent (Torrent | None, optional): 种子. Defaults to None.
+            bangumi (Bangumi | None, optional): 番剧. Defaults to None.
 
-        bangumi_name = bangumi_name
+        Returns:
+            bool: 重命名是否成功
+        """
+        # 检查文件类型
+        # 当文件类型不是 media 或 subtitle 时, 返回 False
+        file_type = TorrentPath.check_file(file_path)
+        if not file_type:
+            logger.debug(f"[Renamer] {file_path} is not a media or subtitle")
+            return False
+
+        if torrent:
+            logger.debug(f"[Renamer] Start rename {torrent.name}.")
+        else:
+            logger.debug(f"[Renamer] Start rename {hash}.")
+
+        rename_method = settings.bangumi_manage.rename_method
+        if method is None:
+            method = (
+                rename_method if file_type == "media" else "subtitle_" + rename_method
+            )
+
+        # 从save_path中提取番剧名称和season
+        bangumi_name, season = self._path_parser.path_to_bangumi(save_path)
+
+        if season == 0:
+            logger.warning(f"[Renamer] {save_path} is not a bangumi path")
+            # TODO: 处理路径是随意路径
+            # pass
+
+        file_type = "media" if "sub" not in method else "subtitle"
+
+        # 主要是找集数, 当 season 是 0 时, 会从 file_path 中提取
+        # torrent_parser 会对 file_path 进行处理, 所以不用担心太长的问题
+        ep = self._parser.torrent_parser(
+            save_path,
+            file_path,
+            file_type=file_type,
+            season=season,
+        )
+        # 番剧偏移
+        ep.episode += bangumi.offset if bangumi else 0
 
         new_path = self.gen_path(ep, bangumi_name, method)
-        old_path = file
+        old_path = file_path
 
-        result = await client.rename_torrent_file(renamer_info.hash, old_path, new_path)
+        result = await client.rename_torrent_file(hash, old_path, new_path)
+        # 并不会返回什么有用的信息
 
         logger.debug(f"[Renamer] {ep=} ")
+        # 以下为通知用
         post_path = None
-        if renamer_info.bangumi and renamer_info.bangumi.poster_link:
-            post_path = renamer_info.bangumi.poster_link
-        if ep and renamer_info.torrent.id:
+
+        if bangumi and bangumi.poster_link:
+            post_path = bangumi.poster_link
+        if ep and torrent and torrent.id:
             notification_info = Notification(
                 title=bangumi_name,
                 season=ep.season,
@@ -104,132 +171,107 @@ class Renamer:
 
     async def rename_files(
         self,
-        renamer_info: RenamerInfo,
-        media_list: list[str],
-        method: str,
-        bangumi_name: str,
         client: DownloadClient,
+        hash: str,
+        files_path: list[str],
+        save_path: str,
+        torrent: Torrent | None = None,
+        bangumi: Bangumi | None = None,
+        method: str | None = None,
     ):
+        """
+        处理 一个种子, 多个文件的重命名
+        """
 
-        logger.debug(f"[Renamer] Start rename {renamer_info.torrent.name}.")
+        if torrent:
+            logger.debug(f"[Renamer] Start rename {torrent.name}.")
+        else:
+            logger.debug(f"[Renamer] Start rename {hash}.")
         tasks = []
-        for file in media_list:
-            task = self.rename_file(renamer_info, file, method, bangumi_name, client)
+        for file in files_path:
+            task = self.rename_file(
+                client, hash, file, save_path, torrent, bangumi, method
+            )
             tasks.append(task)
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         for i, result in enumerate(results):
-            if isinstance(result, BaseException):
-                logger.warning(f"[Renamer] {media_list[i]} rename failed")
-                return result
+            if isinstance(result, BaseException) and result:
+                logger.warning(f"[Renamer] {files_path[i]} rename failed")
             else:
                 # 处理成功的结果
-                logger.debug(f"[Renamer] Task {media_list[i]} returned: {result}")
-                logger.debug(f"[Renamer] {media_list[i]} rename succeed")
-        # TODO: remove bad torrent
-        with Database() as db:
-            pass
-        return renamer_info.torrent
+                logger.debug(f"[Renamer] Task {files_path[i]} returned: {result}")
+                logger.debug(f"[Renamer] {files_path[i]} rename succeed")
+                return result
+        return False
 
-    async def gen_renamer_info(
+    async def rename_by_info(
         self,
-        client: DownloadClient,
-        torrent_hash: str,
-        bangumi,
-        torrent_item,
-        save_path,
+        client,
+        hash: str,
+        files_path: list[str],
+        save_path: str,
+        torrent: Torrent,
+        bangumi: Bangumi | None = None,
     ):
-        torrent_contents: list[str] = await client.get_torrent_files(torrent_hash)
-        if torrent_contents:
-            # 获取最浅一层的文件,若一层无文件才会到下一层,并只会穿一层
-            torrent_content_len = [
-                self._path_parser._file_depth(f) for f in torrent_contents
-            ]
-            torrent_contents = [
-                f
-                for f, f_len in zip(torrent_contents, torrent_content_len)
-                if f_len == min(torrent_content_len)
-            ]
-
-        return RenamerInfo(
-            torrent=torrent_item,
-            bangumi=bangumi,
-            hash=torrent_hash,
-            save_path=save_path,
-            content=torrent_contents,
+        # 这里的 torrent 不允许为 None, 困为这个要更新
+        result = await self.rename_files(
+            client, hash, files_path, save_path, torrent, bangumi
         )
-
-    async def rename_by_info(self, client, renamer_info: RenamerInfo):
-        rename_method = settings.bangumi_manage.rename_method
-
-        # 从save_path和settings.download.path 对比拿到 bangumi_name,season
-        bangumi_name, _ = self._path_parser.path_to_bangumi(renamer_info.save_path)
-        media_list, subtitle_list = self._path_parser.check_files(renamer_info.content)
-        torrent_item = await self.rename_files(
-            renamer_info,
-            media_list,
-            rename_method,
-            bangumi_name,
-            client,
-        )
-        await self.rename_files(
-            renamer_info,
-            subtitle_list,
-            f"subtitle_{rename_method}",
-            bangumi_name,
-            client,
-        )
-        if (
-            not isinstance(torrent_item, BaseException)
-            and torrent_item
-            and torrent_item.id
-        ):
+        if not isinstance(result, BaseException) and torrent.id:
             with Database() as db:
-                torrent_item = db.torrent.search(torrent_item.id)
+                torrent_item = db.torrent.search(torrent.id)
                 torrent_item.downloaded = True
                 db.torrent.update(torrent_item)
 
     async def rename(self):
-        """
-        每个 RenamerInfo 对应一个种子,包含种子,对应的bangumi, save_path,hash,content
-        """
-        # 从数据库中获取downloaded=0的种子,也就不在管理非AB下载的种子
-        # 与其管理非AB下载的种子,不如AB提供下载的方法
-        # 现有的管理效果也并不好,所以放弃
+        """ """
         logger.debug("[Renamer] Start rename process.")
         async with DownloadClient() as client:
-            # 获取AB 下载的种子详细信息,主要是获取下载进度和save_path
+            # 获取AB 下载的种子详细信息,主要是获取 save_path
+            # save_path 以 download 查询的为准
             bangumi_torrent_infos: list[dict] = await client.get_torrent_info(limit=50)
-            renamer_info_list: list[RenamerInfo] = []
+            renamer_info_list: list[tuple[Torrent, Bangumi, list[str]]] = []
 
             for bangumi_torrent_info in bangumi_torrent_infos:
                 torrent_hash = bangumi_torrent_info["hash"]
                 torrent_name = bangumi_torrent_info["name"]
                 with Database() as database:
-                    if not (torrent_item := database.torrent.search_torrent(torrent_hash,torrent_name)):
-                        print(torrent_item)
-                        torrent_item= Torrent(name=torrent_name,url=torrent_hash)
+                    if not (
+                        torrent_item := database.torrent.search_torrent(torrent_hash)
+                    ):
+                        # 如果没有在数据库中,则添加
+                        torrent_item = Torrent(name=torrent_name, url=torrent_hash)
                         database.torrent.add(torrent_item)
                     if not torrent_item.downloaded:
+                        # 找 Bangumi , 主要用 offset 和 poster_link
                         bangumi = None
                         if torrent_item.bangumi_id:
-                            bangumi = database.bangumi.search_id(torrent_item.bangumi_id)
+                            bangumi = database.bangumi.search_id(
+                                torrent_item.bangumi_id
+                            )
+                            if not bangumi:
+                                # Todo: 尝试从 save_path 拿 official 配
+                                pass
 
-                        renamer_info = await self.gen_renamer_info(
-                            client,
-                            torrent_hash,
-                            bangumi,
-                            torrent_item,
-                            save_path=bangumi_torrent_info["save_path"],
+                        # 拿到种子对应的文件列表
+                        torrent_contents = await self.gen_file_path(
+                            client, torrent_hash
                         )
-
-                        renamer_info_list.append(renamer_info)
+                        renamer_info_list.append(
+                            (
+                                torrent_hash,
+                                torrent_contents,
+                                bangumi_torrent_info["save_path"],
+                                torrent_item,
+                                bangumi,
+                            )
+                        )
 
             renamer_task = []
             for renamer_info in renamer_info_list:
-                # 从save_path和settings.download.path 对比拿到 bangumi_name,season
-                renamer_task.append(self.rename_by_info(client, renamer_info))
+                renamer_task.append(self.rename_by_info(client, *renamer_info))
             await asyncio.gather(*renamer_task, return_exceptions=True)
             logging.info(f"[Renamer] have renamed {self.count}")
 
@@ -240,6 +282,15 @@ class Renamer:
             pass
         else:
             await client.delete_torrent(hashes=torrent_hash)
+
+
+async def main():
+    async with DownloadClient() as client:
+        print(
+            await Renamer().gen_file_path(
+                client, "a2e27be69f41cc445548bb22834a279635e57e65"
+            )
+        )
 
 
 if __name__ == "__main__":
@@ -256,4 +307,6 @@ if __name__ == "__main__":
     #
     # settings.log.debug_enable = True
     # setup_logger()
+    # asyncio.run(main())
+
     asyncio.run(Renamer().rename())
