@@ -4,6 +4,8 @@ import hashlib
 import logging
 from urllib.parse import quote
 
+import bencodepy
+
 from module.conf import settings
 from module.downloader.client import Downloader
 from module.models import Bangumi, Torrent
@@ -17,12 +19,7 @@ logger = logging.getLogger(__name__)
 
 class DownloadClient(Downloader):
     def __init__(self):
-        super().__init__(
-            host=settings.downloader.host,
-            username=settings.downloader.username,
-            password=settings.downloader.password,
-            ssl=settings.downloader.ssl,
-        )
+        super().__init__()
         self._path_parser = TorrentPath
 
     async def get_torrent_info(
@@ -47,10 +44,12 @@ class DownloadClient(Downloader):
         bangumi.save_path = self._path_parser.gen_save_path(bangumi)
         torrent_file = None
         torrent_url = torrent.url
+        print(f"add torrent {torrent.url}")
         if "magnet" in torrent.url:
             torrent_url = torrent.url
         else:
             async with RequestContent() as req:
+                # 下载种子文件,处理 hash 与 url 不一致的情况
                 if torrent_file := await req.get_content(torrent.url):
                     torrent_url_hash = get_hash(torrent_url)
                     torrent_url = await self.torrent_to_link(torrent_file)
@@ -61,7 +60,7 @@ class DownloadClient(Downloader):
 
         result = await self.add(
             torrent_urls=torrent_url,
-            torrent_files=None,
+            torrent_files=torrent_file,
             save_path=bangumi.save_path,
             category="Bangumi",
         )

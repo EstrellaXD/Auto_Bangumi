@@ -75,8 +75,7 @@ class AsyncRSS(AsyncProgram):
         self.tasks.append(task)
 
     async def rss_task(self):
-        rss_engine = RSSEngine()
-        await rss_engine.refresh_all_rss()
+        await self.engine.refresh_all()
         if settings.bangumi_manage.eps_complete:
             await eps_complete()
 
@@ -115,17 +114,18 @@ if __name__ == "__main__":
 
     from module.conf import setup_logger
 
-    if settings.bangumi_manage.eps_complete:
-        print(1)
-    # logger = logging.getLogger(__name__)
-    # logger.setLevel(logging.DEBUG)
-    # logging.basicConfig(
-    #     level=logging.INFO,
-    #     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    #     handlers=[logging.StreamHandler()],
-    # )
-    #
-    # settings.log.debug_enable = True
-    # setup_logger()
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[logging.StreamHandler()],
+    )
+
+    settings.log.debug_enable = True
+    setup_logger()
+    asyncio.run(AsyncDownload().download_task_loop())
+    # if settings.bangumi_manage.eps_complete:
+    #     print(1)
     #
     # asyncio.run(AsyncRenamer().rename_task_loop())

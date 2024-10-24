@@ -76,6 +76,7 @@ class SeasonCollector:
 
         with Database() as db:
             db.bangumi.add(data)
+        # TODO: 有一点小问题是, 这里的 torrent 没有 rss_id
         result = await RSSEngine().refresh_rss(bangumi=data)
         if result:
             return True

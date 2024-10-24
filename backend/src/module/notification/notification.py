@@ -4,7 +4,7 @@ import logging
 from module.conf import settings
 from module.database import Database
 from module.models import Notification
-from module.notification.plugin import Notifier
+from module.notification.plugin import Notification as Notifier
 
 logger = logging.getLogger(__name__)
 
@@ -17,13 +17,16 @@ class PostNotification:
             Notifier(
                 token=settings.notification.token,
                 chat_id=chat_id,
-            ) for chat_id in chat_ids
+            )
+            for chat_id in chat_ids
         ]
 
     def parse(self, notify: Notification):
         if notify.episode:
             if not notify.poster_path:
                 self._get_poster(notify)
+            if isinstance(notify.episode, float) and notify.episode.is_integer():
+                notify.episode = int(notify.episode)
             notify.message = f"""
             番剧名称：{notify.title}\n季度： 第{notify.season}季\n更新集数： 第{notify.episode}集
             """.strip()

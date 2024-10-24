@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import platform
 import re
@@ -9,7 +10,6 @@ from module.database import Database, engine
 from module.downloader import DownloadClient, DownloadQueue
 from module.models import Bangumi, ResponseModel, RSSItem, Torrent
 from module.network import RequestContent
-from module.parser import RawParser, TmdbParser
 from module.rss.analyser import RSSAnalyser
 
 logger = logging.getLogger(__name__)
@@ -79,19 +79,6 @@ class RSSRefresh(RssBase):
     刷新 rss 的 torrent
     """
 
-    async def filter_bangumi(self, torrent):
-        """
-        判断 一个 torrent 是否属于 bangumi
-        没有 bangumi 的时候别用
-        """
-        if self.bangumi.filter == "":
-            torrent.bangumi_id = self.bangumi.id
-            return self.bangumi
-        _filter = self.bangumi.filter.replace(",", "|")
-        if not re.search(_filter, torrent.name, re.IGNORECASE):
-            torrent.bangumi_id = self.bangumi.id
-            return self.bangumi
-
     async def refresh(self):
         # 对一个 rss_item 做一个假设, 认为一个 rss_link 里面 一部动漫只有一季
         # 这样 相同的 official_title 就可以认为是一个动漫, 用 official_title 作为 key
@@ -102,7 +89,6 @@ class RSSRefresh(RssBase):
                 # 先从数据库中找, 如果数据库中没有, 更新一下 database
                 bangumi = self.analyser.torrent_to_bangumi(torrent, self.rss_item)
                 if not bangumi:
-                    print(f"not find bangumi {torrent.name}")
                     # 如果数据库中没有, 进行一次解析
                     bangumi = await self.analyser.torrent_to_data(
                         torrent, self.rss_item
@@ -111,7 +97,6 @@ class RSSRefresh(RssBase):
                     with Database(engine) as database:
                         database.bangumi.add(bangumi)
                 if bangumi:
-                    print(f"find bangumi {bangumi.official_title}")
                     if not self.rss_item.aggregate:
                         # 如果 不是聚合的, 则更新 bangumi
                         # 这样就可以避免多余的请求
@@ -148,6 +133,7 @@ class TorrentBangumi:
 
     def append(self, torrent_item: Torrent):
         if not self.filter or not re.search(self.filter, torrent_item.name):
+            torrent_item.bangumi_id = self.bangumi.id
             self.torrents.append(torrent_item)
 
     def __len__(self) -> int:
@@ -192,7 +178,6 @@ class RSSEngine:
 
     def __init__(self, _engine=engine) -> None:
         """主要是维护一个url->torrent_item的cache"""
-        self.torrent_cache = {}
         self.engine = _engine
         self.queue = DownloadQueue()
 
@@ -220,7 +205,6 @@ class RSSEngine:
         for rss_item in rss_items:
             tasks.append(self.refresh_rss(rss_item))
         await asyncio.gather(*tasks)
-
 
 
 async def test():

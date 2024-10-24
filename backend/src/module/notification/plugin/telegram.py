@@ -8,13 +8,13 @@ from module.utils import load_image
 logger = logging.getLogger(__name__)
 
 
-class TelegramNotification(BaseNotification):
+class Notification(BaseNotification):
     def __init__(self, token, chat_id):
         self.photo_url = f"https://api.telegram.org/bot{token}/sendPhoto"
         self.message_url = f"https://api.telegram.org/bot{token}/sendMessage"
         self.chat_id = chat_id
 
-    def gen_message(self,notify: Notification) :
+    def gen_message(self, notify: Notification):
         # notify.message+="\nhello"
         pass
 

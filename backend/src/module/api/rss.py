@@ -284,8 +284,8 @@ async def download_collection(data: Bangumi):
     dependencies=[Depends(get_current_user)],
 )
 async def subscribe(data: Bangumi, rss: RSSItem):
-    resp = await collector.subscribe_season(data, parser=rss.parser)
-
+    await collector.subscribe_season(data, parser=rss.parser)
+    resp = True
     if resp:
         resp = ResponseModel(
             status=True,

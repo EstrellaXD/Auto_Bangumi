@@ -24,7 +24,8 @@ class RSSAnalyser:
                 )
             except AttributeError:
                 logger.warning("[Parser] Mikan torrent has no homepage info.")
-        elif rss.parser == "tmdb":
+        # else rss.parser == "tmdb":
+        else:
             parsered_bangumi = await TmdbParser.parser(
                 bangumi.official_title, bangumi.season, settings.rss_parser.language
             )
@@ -34,13 +35,14 @@ class RSSAnalyser:
             bangumi.year = parsered_bangumi.year
             bangumi.season = parsered_bangumi.season
             bangumi.poster_link = parsered_bangumi.poster_link
-        else:
-            pass
+        # else:
+        #     pass
         bangumi.official_title = re.sub(r"[/:.\\]", " ", bangumi.official_title)
 
     async def torrent_to_data(self, torrent: Torrent, rss: RSSItem) -> Bangumi | None:
         """
         parse torrent name to bangumi
+        filter 在 RawParser 中设置
         """
         if (
             bangumi := RawParser().parser(raw=torrent.name)

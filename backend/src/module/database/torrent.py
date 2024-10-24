@@ -52,18 +52,20 @@ class TorrentDatabase:
         statement = select(Torrent).where(func.instr(Torrent.url, _hash) > 0)
         return self.session.exec(statement).first()
 
-    def search_torrent(self, _hash, _name=None):
+    def search_torrent(self, _hash):
+        # 之前由于 hash 可能不一致, 所以需要搜索 name
+        # 现在会更新种子的 hash,所以只需要搜索 hash 即可
         if plain_hash := get_hash(_hash):
             _hash = plain_hash
 
         torrent_item = self.search_hash(_hash)
-        if not torrent_item and _name:
-            torrent_item = self.search_name(_name)
+        # if not torrent_item and _name:
+        #     torrent_item = self.search_name(_name)
         return torrent_item
 
-    def search_name(self, name: str):
-        statement = select(Torrent).where(Torrent.name == name)
-        return self.session.exec(statement).first()
+    # def search_name(self, name: str):
+    #     statement = select(Torrent).where(Torrent.name == name)
+    #     return self.session.exec(statement).first()
 
     def search_bangumi(self, bangumi_id: int):
         return self.session.exec(
@@ -89,7 +91,7 @@ class TorrentDatabase:
     def check_new(self, torrents_list: list[Torrent]) -> list[Torrent]:
         new_torrents = []
         for torrent in torrents_list:
-            torrent_item = self.search_torrent(torrent.url, torrent.name)
+            torrent_item = self.search_torrent(torrent.url)
             if not torrent_item or not torrent_item.downloaded:
                 new_torrents.append(torrent)
         return new_torrents

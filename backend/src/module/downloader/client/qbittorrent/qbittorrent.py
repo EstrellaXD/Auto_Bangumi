@@ -4,11 +4,11 @@ import logging
 import httpx
 
 from module.conf import get_plugin_config
+from module.downloader.client.expection import AuthorizationError
 from module.downloader.client.qbittorrent.config import Config as DownloaderConfig
 
-# from ..exceptions import AuthorizationError
-
 logger = logging.getLogger(__name__)
+
 
 QB_API_URL = {
     "add": "/api/v2/torrents/add",
@@ -34,24 +34,37 @@ class Downloader:
         self.username = self.config.username
         self.password = self.config.password
         self.ssl = self.config.ssl
+        self._client = httpx.AsyncClient(
+            base_url=self.host,
+            trust_env=self.ssl,
+        )
 
     async def auth(self):
-        resp = await self._client.post(
-            url=QB_API_URL["login"],
-            data={"username": self.username, "password": self.password},
-            timeout=5,
-        )
-        return resp.text == "Ok."
+        try:
+            resp = await self._client.post(
+                url=QB_API_URL["login"],
+                data={"username": self.username, "password": self.password},
+                timeout=5,
+            )
+            return resp.text == "Ok."
+        except httpx.ConnectError or httpx.TimeoutException as e:
+            logger.error(f"[qbittorrent] Auth error: {e}")
+            return False
 
     async def logout(self):
-        resp = await self._client.post(url=QB_API_URL["logout"], timeout=5)
-        return resp.text
+        try:
+            resp = await self._client.post(url=QB_API_URL["logout"], timeout=5)
+            return resp.text
+        except httpx.ConnectError or httpx.TimeoutException as e:
+            logger.error(f"[qbittorrent] Logout error: {e}")
+            return False
 
     async def check_host(self):
         try:
             await self._client.get(url=QB_API_URL["version"], timeout=5)
             return True
         except httpx.ConnectError or httpx.TimeoutException as e:
+            logger.error(f"Check host error: {e}")
             return False
 
     async def prefs_init(self, prefs):
@@ -109,13 +122,13 @@ class Downloader:
         }
 
         file = None
-        # if torrent_files:
-        #     file = {"torrents": torrent_files}
+        if torrent_files:
+            file = {"torrents": torrent_files}
 
         resp = await self._client.post(
             url=QB_API_URL["add"],
             data=data,
-            # files=file,
+            files=file,
         )
         if "fail" in resp.text.lower():
             logger.debug(
@@ -193,21 +206,19 @@ class Downloader:
         return resp.status_code == 200
 
     async def __aenter__(self):
-        self._client = httpx.AsyncClient(
-            base_url=self.host,
-            trust_env=self.ssl,
-        )
-        while not await self.check_host():
+        if not await self.check_host():
             logger.warning(
-                f"[Downloader] Failed to connect to {self.host}, retry in 30 seconds."
+                f"[qbittorrent] Failed to connect to {self.host}, retry in 30 seconds."
             )
             await asyncio.sleep(30)
         if not await self.auth():
             await self._client.aclose()
             logger.error(
-                "[Downloader] Downloader authorize error. Please check your username/password."
+                "[qbittorrent] Downloader authorize error. Please check your username/password."
             )
-            # raise AuthorizationError("Failed to login to qbittorrent.")
+            raise AuthorizationError(
+                f"Failed to login to qbittorrent. my host  {self.host} is error or username/password {self.username}/{self.password} is error"
+            )
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):

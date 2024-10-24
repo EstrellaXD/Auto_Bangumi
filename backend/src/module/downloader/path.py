@@ -3,12 +3,12 @@ import re
 from functools import lru_cache
 from os import PathLike
 
-from module.conf import PLATFORM, settings
+from module.conf import settings
 from module.models import Bangumi, BangumiUpdate
 
 logger = logging.getLogger(__name__)
 
-if PLATFORM == "Windows":
+if r"//" in settings.downloader.path:
     from pathlib import PureWindowsPath as Path
 else:
     from pathlib import Path
@@ -37,15 +37,17 @@ class TorrentPath:
         # Split save path and download path
         save_path = Path(save_path)
         download_path = Path(settings.downloader.path)
+        bangumi_name = ""
+        season = 0
         try:
+            # 理论上 save_path 是 download_path 的子路径
+            # 会 返回 形如 "物语系列/Season 5"
             bangumi_path = save_path.relative_to(download_path)
             bangumi_parts = bangumi_path.parts
         except ValueError as e:
-            logging.warning(f"[Path] {e}")
-            bangumi_parts = save_path.parts
+            logger.warning(f"[Path] {e}")
+            return "", 0
         # Get bangumi name and season
-        bangumi_name = ""
-        season = 1
         for part in bangumi_parts:
             if re.match(r"S\d+|[Ss]eason \d+", part):
                 season = int(re.findall(r"\d+", part)[0])
