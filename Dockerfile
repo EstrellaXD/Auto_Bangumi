@@ -27,7 +27,8 @@ RUN set -ex && \
         tzdata && \
     python3 -m pip install --no-cache-dir --upgrade pip && \
     sed -i '/bcrypt/d' requirements.txt && \
-    pip install --no-cache-dir -r requirements.txt && \
+    # pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir --only-binary :all: -r requirements.txt && \
     # Add user
     mkdir -p /home/ab && \
     addgroup -S ab -g 911 && \
