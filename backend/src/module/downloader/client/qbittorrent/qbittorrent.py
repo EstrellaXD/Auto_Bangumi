@@ -31,7 +31,7 @@ QB_API_URL = {
 
 class Downloader:
     def __init__(self):  # , host: str, username: str, password: str, ssl: bool
-        self.config = config
+        self.config = get_plugin_config(DownloaderConfig(), "downloader")
         self.host = self.config.host
         self.username = self.config.username
         self.password = self.config.password

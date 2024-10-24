@@ -13,7 +13,7 @@ class Config(BaseModel):
     password: str = Field(
         default="adminadmin", alias="password", description="Downloader password"
     )
-    path: str = Field(default="/downloads/Bangumi", description="Downloader path")
+    path: str = Field(default="/Downloads/Bangumi", description="Downloader path")
     ssl: bool = Field(default=False, description="Downloader ssl")
 
     @field_validator("host", mode="before")
