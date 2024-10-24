@@ -9,12 +9,10 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, Callable
 
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from pydantic import TypeAdapter as TypeAdapter
-from typing_extensions import Callable
 
 from module.models.config import Config
 from module.utils.config import deep_update
@@ -32,10 +30,6 @@ except ImportError:
 CONFIG_ROOT = Path("config")
 CONFIX_NAME = "config.json" if VERSION != "DEV_VERSION" else "config_dev.json"
 CONFIG_PATH = (CONFIG_ROOT / CONFIX_NAME).resolve()
-
-
-C = TypeVar("C", bound=BaseModel)
-T = TypeVar("T")
 
 
 def model_dump(
@@ -57,7 +51,7 @@ def model_dump(
     )
 
 
-def get_plugin_config(config: BaseModel, config_name: str) -> T:
+def get_plugin_config(config: BaseModel, config_name: str) -> BaseModel:
     """从全局配置获取当前插件需要的配置项，更新 data 中的缺失项。"""
     globel_data = model_dump(settings)
     data = globel_data.get(config_name, {})
@@ -70,9 +64,9 @@ def get_plugin_config(config: BaseModel, config_name: str) -> T:
     return type_validate_python(config, updated_data)
 
 
-def type_validate_python(type_: BaseModel, data: Any) -> T:
+def type_validate_python(type_: BaseModel, data: Any) -> BaseModel:
     """Validate data with given type, checking required fields exist."""
-    validated_data = TypeAdapter(type_).validate_python(data)
+    validated_data = type_.__class__.model_validate(data)
 
     return validated_data
 
