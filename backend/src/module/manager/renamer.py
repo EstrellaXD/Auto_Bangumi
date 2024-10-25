@@ -8,9 +8,11 @@ from module.downloader import DownloadClient
 from module.downloader.path import TorrentPath
 from module.models import EpisodeFile, Notification, SubtitleFile
 from module.models.bangumi import Bangumi
-from module.models.torrent import RenamerInfo, Torrent
+from module.models.rss import RSSItem
+from module.models.torrent import Torrent
 from module.notification import PostNotification
-from module.parser import TitleParser
+from module.parser import TitleParser, TmdbParser
+from module.rss import RSSAnalyser
 
 logger = logging.getLogger(__name__)
 
@@ -60,8 +62,8 @@ class Renamer:
         file_info: EpisodeFile | SubtitleFile, bangumi_name: str, method: str
     ) -> str:
         season = f"{file_info.season:02d}"
-        if file_info.episode.is_integer():
-            episode = f"{int(file_info.episode):02d}"
+        if isinstance(file_info.episode, int):
+            episode = f"{file_info.episode:02d}"
         else:
             episode = f"{file_info.episode:04.1f}"
         method_dict = {
@@ -109,7 +111,7 @@ class Renamer:
         """
         # 检查文件类型
         # 当文件类型不是 media 或 subtitle 时, 返回 False
-        file_type = TorrentPath.check_file(file_path)
+        file_type = self._path_parser.check_file(file_path)
         if not file_type:
             logger.debug(f"[Renamer] {file_path} is not a media or subtitle")
             return False
@@ -143,12 +145,20 @@ class Renamer:
             file_type=file_type,
             season=season,
         )
+        print(ep)
+        if ep.episode and isinstance(ep.episode, float):
+            # and isinstance(ep.episode, float) and ep.episode.is_integer():
+            print("--------------")
+            ep.episode = int(ep.episode)
+            return False
         # 番剧偏移
         ep.episode += bangumi.offset if bangumi else 0
 
         new_path = self.gen_path(ep, bangumi_name, method)
+        print("start ep")
         old_path = file_path
 
+        logger.debug(f"[Renamer] {old_path=} ->{new_path=}")
         result = await client.rename_torrent_file(hash, old_path, new_path)
         # 并不会返回什么有用的信息
 
@@ -158,7 +168,12 @@ class Renamer:
 
         if bangumi and bangumi.poster_link:
             post_path = bangumi.poster_link
-        if ep and torrent and torrent.id:
+        logger.debug(f"[Renamer] {post_path=}")
+        logger.debug(f"[Renamer] {torrent=}")
+        if ep and torrent:
+            logger.debug(
+                f"[Renamer] send notification {bangumi_name} {ep.season} {ep.episode}"
+            )
             notification_info = Notification(
                 title=bangumi_name,
                 season=ep.season,
@@ -183,10 +198,6 @@ class Renamer:
         处理 一个种子, 多个文件的重命名
         """
 
-        if torrent:
-            logger.debug(f"[Renamer] Start rename {torrent.name}.")
-        else:
-            logger.debug(f"[Renamer] Start rename {hash}.")
         tasks = []
         for file in files_path:
             task = self.rename_file(
@@ -197,7 +208,7 @@ class Renamer:
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         for i, result in enumerate(results):
-            if isinstance(result, BaseException) and result:
+            if isinstance(result, BaseException) or not result:
                 logger.warning(f"[Renamer] {files_path[i]} rename failed")
             else:
                 # 处理成功的结果
@@ -219,7 +230,8 @@ class Renamer:
         result = await self.rename_files(
             client, hash, files_path, save_path, torrent, bangumi
         )
-        if not isinstance(result, BaseException) and torrent.id:
+        if not isinstance(result, BaseException) and result and torrent.id:
+            logger.debug(f"[Renamer] {torrent.name} rename succeed")
             with Database() as db:
                 torrent_item = db.torrent.search(torrent.id)
                 torrent_item.downloaded = True
@@ -251,9 +263,36 @@ class Renamer:
                             bangumi = database.bangumi.search_id(
                                 torrent_item.bangumi_id
                             )
-                            if not bangumi:
-                                # Todo: 尝试从 save_path 拿 official 配
-                                pass
+                        if not bangumi:
+                            bangumi_name, season = self._path_parser.path_to_bangumi(
+                                bangumi_torrent_info["save_path"]
+                            )
+                            if season != 0:
+                                logger.debug(
+                                    f"[Renamer] start rename collection {bangumi_name}"
+                                )
+                                # 是一个 AB 下载的,如 collect,
+                                # 抓一个 poster
+                                bangumi = Bangumi(
+                                    official_title=bangumi_name,
+                                )
+                                await TmdbParser().poster_parser(bangumi)
+
+                            else:
+                                # 随意的,要自己解析
+                                logger.debug(
+                                    f"[Renamer] start rename random {torrent_name}"
+                                )
+                                bangumi = await RSSAnalyser().torrent_to_data(
+                                    torrent=Torrent(name=torrent_name),
+                                    rss=RSSItem(parser="tmdb"),
+                                )
+                                save_path = self._path_parser.gen_save_path(bangumi)
+                                await client.move_torrent(
+                                    hashes=torrent_hash,
+                                    location=save_path,
+                                )
+                                bangumi_torrent_info["save_path"] = save_path
 
                         # 拿到种子对应的文件列表
                         torrent_contents = await self.gen_file_path(
@@ -295,15 +334,15 @@ async def main():
 
 if __name__ == "__main__":
 
-    # from module.conf import setup_logger
-    #
-    # logger = logging.getLogger(__name__)
-    # logger.setLevel(logging.DEBUG)
-    # logging.basicConfig(
-    #     level=logging.INFO,
-    #     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    #     handlers=[logging.StreamHandler()],
-    # )
+    from module.conf import setup_logger
+
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[logging.StreamHandler()],
+    )
     #
     # settings.log.debug_enable = True
     # setup_logger()
