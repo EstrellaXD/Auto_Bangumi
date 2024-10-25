@@ -1,4 +1,5 @@
 import logging
+from logging import NullHandler
 from pathlib import Path
 
 from .config import settings
@@ -10,9 +11,6 @@ LOG_PATH = LOG_ROOT / "log.txt"
 def setup_logger(level: int = logging.INFO, reset: bool = False):
     level = logging.DEBUG if settings.log.debug_enable else level
     LOG_ROOT.mkdir(exist_ok=True)
-    if not settings.log.debug_enable:
-        httpx_logger = logging.getLogger("httpx")
-        httpx_logger.setLevel(logging.WARNING)
     if reset and LOG_PATH.exists():
         LOG_PATH.unlink(missing_ok=True)
 
@@ -31,3 +29,20 @@ def setup_logger(level: int = logging.INFO, reset: bool = False):
             logging.StreamHandler(),
         ],
     )
+    # 全部无效
+    for logger_name in ["httpx", "httpcore"]:
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(logging.WARNING)
+        logger.propagate = False
+        logger.addHandler(logging.NullHandler())
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("requests").setLevel(logging.WARNING)
+    # 完全抑制 httpx 的日志输出
+    # httpx_logger = logging.getLogger("httpx")
+    # http_coro_logger = logging.getLogger("httpcore")
+    # httpx_logger.setLevel(logging.WARNING)
+    # http_coro_logger.setLevel(logging.WARNING)
+    # httpx_logger.addHandler(NullHandler())
+    # http_coro_logger.addHandler(NullHandler())
+    # httpx_logger.propagate = False
+    # http_coro_logger.propagate = False

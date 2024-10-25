@@ -6,7 +6,6 @@ from urllib.parse import quote
 
 import bencodepy
 
-from module.conf import settings
 from module.downloader.client import Downloader
 from module.models import Bangumi, Torrent
 from module.network import RequestContent
@@ -20,7 +19,7 @@ logger = logging.getLogger(__name__)
 class DownloadClient(Downloader):
     def __init__(self):
         super().__init__()
-        self._path_parser = TorrentPath
+        self._path_parser = TorrentPath()
 
     async def get_torrent_info(
         self, category="Bangumi", status_filter="completed", tag=None, limit=0
@@ -30,7 +29,7 @@ class DownloadClient(Downloader):
         )
 
     async def rename_torrent_file(self, _hash, old_path, new_path) -> bool:
-        logger.info(f"{old_path} >> {new_path}")
+        logger.info(f"[Downloader] rename {old_path} >> {new_path}")
         return await self.rename(
             torrent_hash=_hash, old_path=old_path, new_path=new_path
         )
@@ -44,7 +43,7 @@ class DownloadClient(Downloader):
         bangumi.save_path = self._path_parser.gen_save_path(bangumi)
         torrent_file = None
         torrent_url = torrent.url
-        print(f"add torrent {torrent.url}")
+        # print(f"add torrent {torrent.url}")
         if "magnet" in torrent.url:
             torrent_url = torrent.url
         else:

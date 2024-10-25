@@ -1,16 +1,7 @@
-import dataclasses
-from collections import deque
-from collections.abc import Mapping, Sequence
-from os.path import expandvars
-from typing import Any, Literal, get_origin
+from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, validator
 from pydantic import ConfigDict as ConfigDict
-from pydantic_core import PydanticUndefined as PydanticUndefined
-from pydantic_core import PydanticUndefinedType as PydanticUndefinedType
-from typing_extensions import override
-
-from module.utils.config import deep_update
 
 
 class Program(BaseModel):
@@ -20,13 +11,13 @@ class Program(BaseModel):
     rename_time: int = Field(default=60, description="Rename times in one loop")
     webui_port: int = Field(default=7892, description="WebUI port")
 
-    @field_validator("rss_time")
+    @validator("rss_time")
     def validate_rss_time(cls, v: int) -> int:
         if v < 300:
             return 300
         return v
 
-    @field_validator("rename_time")
+    @validator("rename_time")
     def validate_rename_time(cls, v: int) -> int:
         if v < 30:
             return 30
@@ -35,7 +26,10 @@ class Program(BaseModel):
 
 class Downloader(BaseModel):
     type: str = Field(default="qbittorrent", description="Downloader type")
-    model_config = ConfigDict(extra="allow")
+
+    class Config:
+        extra = "allow"  # This allows extra fields not defined in the model
+
     # host: str = Field("172.17.0.1:8080", alias="host", description="Downloader host")
     # username: str = Field("admin", alias="username", description="Downloader username")
     # password: str = Field(
@@ -155,7 +149,10 @@ class Config(BaseModel):
     log: Log = Log()
     proxy: Proxy = Proxy()
     notification: Notification = Notification()
-    model_config = ConfigDict(extra="allow")
+
+    class Config:
+        extra = "allow"  # This allows extra fields not defined in the model
+
     # experimental_openai: ExperimentalOpenAI = ExperimentalOpenAI()
 
     # @override
@@ -164,5 +161,5 @@ class Config(BaseModel):
 
 
 if __name__ == "__main__":
-    t = Program(rss_time="a")
-    print(t)
+    t = Program(rss_time="1")
+    print(t.keys)

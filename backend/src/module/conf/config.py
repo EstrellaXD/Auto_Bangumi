@@ -41,7 +41,7 @@ def model_dump(
     exclude_defaults: bool = False,
     exclude_none: bool = False,
 ) -> dict[str, Any]:
-    return model.model_dump(
+    return model.dict(
         include=include,
         exclude=exclude,
         by_alias=by_alias,
@@ -51,14 +51,29 @@ def model_dump(
     )
 
 
+# 判断给定的 data 的 key 是否在 setting 中
+def check_config_key(
+    data: dict | BaseModel, updated_data: BaseModel, config_name: str
+) -> bool:
+    if isinstance(data, BaseModel):
+        data = data.dict()
+    updated_data = updated_data.dict()
+    if set(updated_data.keys()) != set(data.keys()):
+        return False
+    return True
+
+
 def get_plugin_config(config: BaseModel, config_name: str) -> BaseModel:
     """从全局配置获取当前插件需要的配置项，更新 data 中的缺失项。"""
     globel_data = model_dump(settings)
+    # print(f"globel_data: {globel_data}")
     data = globel_data.get(config_name, {})
+    # data 可能是 dict 和 BaseModel 的实例
+    # print(f"data: {data}")
     updated_data = update_config(config, data)
     # 如果更新后的数据是默认的，更新settings
-    if not updated_data.model_dump(exclude_defaults=True):
-        update_config(settings, {config_name: updated_data.model_dump()})
+    if not check_config_key(data, updated_data, config_name):
+        update_config(settings, {config_name: updated_data})
         settings.save()
 
     return type_validate_python(config, updated_data)
@@ -66,7 +81,7 @@ def get_plugin_config(config: BaseModel, config_name: str) -> BaseModel:
 
 def type_validate_python(type_: BaseModel, data: Any) -> BaseModel:
     """Validate data with given type, checking required fields exist."""
-    validated_data = type_.__class__.model_validate(data)
+    validated_data = type_.__class__.validate(data)
 
     return validated_data
 
@@ -77,15 +92,17 @@ def update_config(baseconfig: BaseModel | dict, data: dict):
     BaseModel 类型的是 settings 的配置, dict 类型的是插件的配置
     """
     # 部份更新 Config
-    # 获取 baseconfig 的当前字段数据
+    # # 获取 baseconfig 的当前字段数据
     # print("--------------------------------")
     # print("baseconfig", baseconfig)
     # print("data", data)
+    # print(f"type(baseconfig): {type(baseconfig)}")
+    # print(f"type(data): {type(data)}")
     if isinstance(baseconfig, BaseModel):
-        updated_data = baseconfig.model_dump()
+        updated_data = baseconfig.dict()
         updated_data = deep_update(updated_data, data)
-        updated_instance = baseconfig.__class__.model_validate(updated_data)
-        updata_dict = updated_instance.model_dump()
+        updated_instance = baseconfig.__class__.validate(updated_data)
+        updata_dict = updated_instance.dict()
     else:
         # 当 baseconfig 是 dict 类型时, 直接更新
         updated_data = baseconfig
@@ -157,9 +174,12 @@ class Settings(Config):
                     else:
                         attr_name = attr[0] if isinstance(attr, tuple) else attr
                         config_dict[key][attr_name] = self.__val_from_env(env, attr)
-        config_obj = Config.model_validate(config_dict)
+        config_obj = Config.validate(config_dict)
         self.__dict__.update(config_obj.__dict__)
         logger.info("Config loaded from env")
+
+    def model_dump(self, **kwargs):
+        return self.dict()
 
     @staticmethod
     def __val_from_env(env: str, attr: tuple[str, Callable[..., Any]] | str):

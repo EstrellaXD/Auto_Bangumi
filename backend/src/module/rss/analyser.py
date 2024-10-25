@@ -14,8 +14,8 @@ class RSSAnalyser:
         self.engine = _engine
 
     @staticmethod
-    async def official_title_parser(bangumi: Bangumi, rss: RSSItem, torrent: Torrent):
-        if rss.parser == "mikan":
+    async def official_title_parser(bangumi: Bangumi, parser: str, torrent: Torrent):
+        if parser == "mikan":
             try:
                 parsered_bangumi = await MikanParser().parser(torrent.homepage)
                 bangumi.poster_link, bangumi.official_title = (
@@ -47,7 +47,9 @@ class RSSAnalyser:
         if (
             bangumi := RawParser().parser(raw=torrent.name)
         ) and bangumi.official_title != "official_title":
-            await self.official_title_parser(bangumi=bangumi, rss=rss, torrent=torrent)
+            await self.official_title_parser(
+                bangumi=bangumi, parser=rss.parser, torrent=torrent
+            )
             bangumi.rss_link = rss.url
             return bangumi
 

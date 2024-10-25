@@ -96,6 +96,7 @@ class AsyncDownload(AsyncProgram):
         await self.stop()
         task = asyncio.create_task(self.download_task_loop(), name="download_loop")
         self.tasks.append(task)
+        logger.info("[AsyncDownload] Downloader start")
 
     async def download_task_loop(self):
         while True:

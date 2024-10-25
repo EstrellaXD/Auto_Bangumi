@@ -10,8 +10,6 @@ from module.downloader.client.qbittorrent.config import Config as DownloaderConf
 logger = logging.getLogger(__name__)
 
 
-config = get_plugin_config(DownloaderConfig(), "downloader")
-
 QB_API_URL = {
     "add": "/api/v2/torrents/add",
     "addTags": "/api/v2/torrents/addTags",
@@ -30,8 +28,9 @@ QB_API_URL = {
 
 
 class Downloader:
+    config = get_plugin_config(DownloaderConfig(), "downloader")
+
     def __init__(self):  # , host: str, username: str, password: str, ssl: bool
-        self.config = get_plugin_config(DownloaderConfig(), "downloader")
         self.host = self.config.host
         self.username = self.config.username
         self.password = self.config.password

@@ -8,14 +8,12 @@ from module.conf import settings
 from .proxy import set_proxy
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARNING)
 
 
 class RequestURL:
     def __init__(self):
         self.header = {"user-agent": "Mozilla/5.0", "Accept": "application/xml"}
         self.proxy = set_proxy() if settings.proxy.enable else None
-
 
     async def get_url(self, url, retry=3):
         for _ in range(retry):
@@ -29,13 +27,17 @@ class RequestURL:
             except httpx.RequestError:
                 logger.debug(f"[Network] Cannot connect to {url}. Wait for 5 seconds.")
             except Exception as e:
-                logger.debug(e)
+                logger.debug(f"[Network] {e}")
                 logger.error(f"[Network] Cannot connect to {url}")
                 break
             await asyncio.sleep(5)
 
     async def post_url(
-        self, url: str, data: dict, files: dict[str, bytes]|None = None, retry: int = 3
+        self,
+        url: str,
+        data: dict,
+        files: dict[str, bytes] | None = None,
+        retry: int = 3,
     ):
         for _ in range(retry):
             try:
@@ -48,7 +50,7 @@ class RequestURL:
             except httpx.RequestError:
                 logger.debug(f"[Network] Cannot connect to {url}. Wait for 5 seconds.")
             except Exception as e:
-                logger.debug(e)
+                logger.debug(f"[Network] {e}")
                 logger.error(f"[Network] Cannot connect to {url}")
                 break
             await asyncio.sleep(5)

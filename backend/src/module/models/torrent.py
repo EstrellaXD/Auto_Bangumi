@@ -25,7 +25,7 @@ class EpisodeFile(BaseModel):
     group: str | None = Field(default=None)
     title: str = Field(...)
     season: int = Field(...)
-    episode: float = Field(default=None)
+    episode: int | float = Field(default=0)
     suffix: str = Field(..., regex=r"(?i)\.(mkv|mp4)$")
 
 
@@ -34,7 +34,7 @@ class SubtitleFile(BaseModel):
     group: str | None = Field(default=None)
     title: str = Field(...)
     season: int = Field(...)
-    episode: float = Field(default=None)
+    episode: int | float = Field(default=0)
     language: str = Field(..., regex=r"(zh|zh-tw)")
     suffix: str = Field(..., regex=r"(?i)\.(ass|srt)$")
 

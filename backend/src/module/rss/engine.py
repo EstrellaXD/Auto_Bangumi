@@ -195,6 +195,10 @@ class RSSEngine:
         """刷新一个rss"""
         refresh = RSSRefresh(rss_item, bangumi)
         await refresh.refresh()
+        if rss_item:
+            logger.info(f"[RSS] refresh {rss_item.url}")
+        if bangumi:
+            logger.info(f"[RSS] refresh {bangumi.official_title}")
         for value in refresh.bangumi_torrents.values():
             await self.queue.add_torrents(value.torrents, value.bangumi)
 

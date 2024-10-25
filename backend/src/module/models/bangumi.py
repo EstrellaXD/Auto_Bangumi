@@ -105,9 +105,3 @@ class SeasonInfo(dict):
     subtitle: str
     added: bool
     eps_collect: bool
-
-
-a = Bangumi()
-# print(dir(a))
-# print(a.__hash__)
-# print(hash(a))

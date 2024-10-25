@@ -56,9 +56,11 @@ class TorrentDatabase:
         # 之前由于 hash 可能不一致, 所以需要搜索 name
         # 现在会更新种子的 hash,所以只需要搜索 hash 即可
         if plain_hash := get_hash(_hash):
+            logger.debug(f"[TorrentDatabase] search_torrent {plain_hash}")
             _hash = plain_hash
 
         torrent_item = self.search_hash(_hash)
+        logger.debug(f"[TorrentDatabase] search_torrent result {torrent_item}")
         # if not torrent_item and _name:
         #     torrent_item = self.search_name(_name)
         return torrent_item

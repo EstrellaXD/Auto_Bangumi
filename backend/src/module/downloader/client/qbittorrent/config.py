@@ -1,5 +1,4 @@
-from pydantic import BaseModel, Field, HttpUrl, field_validator
-from pydantic_core.core_schema import ValidatorFunctionWrapHandler
+from pydantic import BaseModel, Field, validator
 
 
 class Config(BaseModel):
@@ -16,7 +15,7 @@ class Config(BaseModel):
     path: str = Field(default="/Downloads/Bangumi", description="Downloader path")
     ssl: bool = Field(default=False, description="Downloader ssl")
 
-    @field_validator("host", mode="before")
+    @validator("host", pre=True)
     def validate_host(cls, value: str) -> str:
         # 如果输入值没有以 http:// 或 https:// 开头，自动加上 http://
         if not value.startswith(("http://", "https://")):

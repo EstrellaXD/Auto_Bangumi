@@ -26,7 +26,7 @@ class DownloadQueue:
     def add(self, torrent: Torrent, bangumi: Bangumi):
         self.queue.put_nowait((torrent, bangumi))
         logger.debug(
-            f"[Download Queue] add {bangumi.official_title}, torrent url = {torrent.name}"
+            f"[Download Queue] add {bangumi.official_title}, torrent name = {torrent.name} ,torrent url = {torrent.url}"
         )
         download_add_event.set()
 

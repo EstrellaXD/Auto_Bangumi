@@ -9,7 +9,7 @@ from .request_url import RequestURL
 from .site import rss_parser
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARNING)
+
 
 class RequestContent(RequestURL):
     async def get_torrents(
@@ -22,7 +22,7 @@ class RequestContent(RequestURL):
         feeds = await self.get_xml(_url, retry)
         # 思考了一下，req还是不需要筛选，筛选交给后面去做，这里就有什么返回什么
         # _filter = _filter if _filter else "|".join(settings.rss_parser.filter)
-        
+
         if feeds:
             torrent_titles, torrent_urls, torrent_homepage = rss_parser(feeds)
             torrents: list[Torrent] = []
@@ -47,8 +47,11 @@ class RequestContent(RequestURL):
             try:
                 return xml.etree.ElementTree.fromstring(req.text)
             except xml.etree.ElementTree.ParseError:
-                logging.warning(f"[Network] Cannot parser {_url}, please check the url is right")
+                logging.warning(
+                    f"[Network] Cannot parser {_url}, please check the url is right"
+                )
                 return None
+
     # API JSON
     async def get_json(self, _url) -> dict:
         req = await self.get_url(_url)
@@ -57,7 +60,9 @@ class RequestContent(RequestURL):
         else:
             return {}
 
-    async def post_data(self, _url, data: dict[str,str], files: dict[str, bytes]) ->Response|None:
+    async def post_data(
+        self, _url, data: dict[str, str], files: dict[str, bytes]
+    ) -> Response | None:
         req = await self.post_url(_url, data, files)
 
         return req
