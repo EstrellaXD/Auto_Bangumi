@@ -25,10 +25,7 @@ def from_30_to_31():
                     bangumi.poster_link = f"https://{root_path}{bangumi.poster_link}"
         db.bangumi.update_all(bangumis)
         for rss in rss_pool:
-            if "mybangumi" in rss.lower():
-                aggregate = True
-            else:
-                aggregate = False
+            aggregate = "mybangumi" in rss.lower()
             db.add_rss(rss_link=rss, aggregate=aggregate)
 
 

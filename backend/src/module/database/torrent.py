@@ -48,10 +48,6 @@ class TorrentDatabase:
         return self.session.exec(select(Torrent).where(Torrent.rss_id == rss_id)).all()
 
     def check_new(self, torrents_list: list[Torrent]) -> list[Torrent]:
-        new_torrents = []
         old_torrents = self.search_all()
         old_urls = [t.url for t in old_torrents]
-        for torrent in torrents_list:
-            if torrent.url not in old_urls:
-                new_torrents.append(torrent)
-        return new_torrents
+        return [torrent for torrent in torrents_list if torrent.url not in old_urls]

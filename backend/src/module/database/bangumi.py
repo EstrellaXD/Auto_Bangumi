@@ -103,10 +103,7 @@ class BangumiDatabase:
             func.instr(bangumi_name, Bangumi.official_title) > 0
         )
         data = self.session.exec(statement).first()
-        if data:
-            return data.poster_link
-        else:
-            return ""
+        return data.poster_link if data else ""
 
     def match_list(self, torrent_list: list, rss_link: str) -> list:
         match_datas = self.search_all()
@@ -147,8 +144,7 @@ class BangumiDatabase:
         condition = select(Bangumi).where(
             and_(Bangumi.eps_collect == false(), Bangumi.deleted == false())
         )
-        datas = self.session.exec(condition).all()
-        return datas
+        return self.session.exec(condition).all()
 
     def not_added(self) -> list[Bangumi]:
         conditions = select(Bangumi).where(
@@ -156,8 +152,7 @@ class BangumiDatabase:
                 Bangumi.added == 0, Bangumi.rule_name is None, Bangumi.save_path is None
             )
         )
-        datas = self.session.exec(conditions).all()
-        return datas
+        return self.session.exec(conditions).all()
 
     def disable_rule(self, _id: int):
         statement = select(Bangumi).where(Bangumi.id == _id)

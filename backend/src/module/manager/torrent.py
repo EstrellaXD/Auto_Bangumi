@@ -38,25 +38,24 @@ class TorrentManager(Database):
 
     def delete_rule(self, _id: int | str, file: bool = False):
         data = self.bangumi.search_id(int(_id))
-        if isinstance(data, Bangumi):
-            with DownloadClient() as client:
-                self.rss.delete(data.official_title)
-                self.bangumi.delete_one(int(_id))
-                if file:
-                    torrent_message = self.delete_torrents(data, client)
-                logger.info(f"[Manager] Delete rule for {data.official_title}")
-                return ResponseModel(
-                    status_code=200,
-                    status=True,
-                    msg_en=f"Delete rule for {data.official_title}. {torrent_message.msg_en if file else ''}",
-                    msg_zh=f"删除 {data.official_title} 规则。{torrent_message.msg_zh if file else ''}",
-                )
-        else:
+        if not isinstance(data, Bangumi):
             return ResponseModel(
                 status_code=406,
                 status=False,
                 msg_en=f"Can't find id {_id}",
                 msg_zh=f"无法找到 id {_id}",
+            )
+        with DownloadClient() as client:
+            self.rss.delete(data.official_title)
+            self.bangumi.delete_one(int(_id))
+            if file:
+                torrent_message = self.delete_torrents(data, client)
+            logger.info(f"[Manager] Delete rule for {data.official_title}")
+            return ResponseModel(
+                status_code=200,
+                status=True,
+                msg_en=f"Delete rule for {data.official_title}. {torrent_message.msg_en if file else ''}",
+                msg_zh=f"删除 {data.official_title} 规则。{torrent_message.msg_zh if file else ''}",
             )
 
     def disable_rule(self, _id: str | int, file: bool = False):
@@ -67,8 +66,7 @@ class TorrentManager(Database):
                 data.deleted = True
                 self.bangumi.update(data)
                 if file:
-                    torrent_message = self.delete_torrents(data, client)
-                    return torrent_message
+                    return self.delete_torrents(data, client)
                 logger.info(f"[Manager] Disable rule for {data.official_title}")
                 return ResponseModel(
                     status_code=200,
@@ -156,22 +154,19 @@ class TorrentManager(Database):
 
     def search_all_bangumi(self):
         datas = self.bangumi.search_all()
-        if not datas:
-            return []
-        return [data for data in datas if not data.deleted]
-
+        return [data for data in datas if not data.deleted] if datas else []
     def search_one(self, _id: int | str):
         data = self.bangumi.search_id(int(_id))
-        if not data:
-            logger.error(f"[Manager] Can't find data with {_id}")
-            return ResponseModel(
-                status_code=406,
-                status=False,
-                msg_en=f"Can't find data with {_id}",
-                msg_zh=f"无法找到 id {_id} 的数据",
-            )
-        else:
+        if data:
             return data
+        logger.error(f"[Manager] Can't find data with {_id}")
+        return ResponseModel(
+            status_code=406,
+            status=False,
+            msg_en=f"Can't find data with {_id}",
+            msg_zh=f"无法找到 id {_id} 的数据",
+        )
+    
 
 
 if __name__ == "__main__":

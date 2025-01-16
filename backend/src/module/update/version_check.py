@@ -19,11 +19,11 @@ def version_check() -> bool:
             last_version = versions[-1]
             last_ver = semver.VersionInfo.parse(last_version)
             now_ver = semver.VersionInfo.parse(VERSION)
-            if now_ver.minor == last_ver.minor:
-                return True
+            if (
+                now_ver.minor != last_ver.minor
+                and now_ver.minor > last_ver.minor
+            ):
+                f.write(VERSION + "\n")
+                return False
             else:
-                if now_ver.minor > last_ver.minor:
-                    f.write(VERSION + "\n")
-                    return False
-                else:
-                    return True
+                return True

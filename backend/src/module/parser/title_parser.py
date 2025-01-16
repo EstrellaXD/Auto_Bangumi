@@ -35,7 +35,7 @@ class TitleParser:
         tmdb_info = tmdb_parser(title, language)
         if tmdb_info:
             logger.debug(f"TMDB Matched, official title is {tmdb_info.title}")
-            tmdb_season = tmdb_info.last_season if tmdb_info.last_season else season
+            tmdb_season = tmdb_info.last_season or season
             return tmdb_info.title, tmdb_season, tmdb_info.year, tmdb_info.poster_link
         else:
             logger.warning(f"Cannot match {title} in TMDB. Use raw title instead.")
@@ -72,7 +72,7 @@ class TitleParser:
                 "en": episode.title_en,
                 "jp": episode.title_jp,
             }
-            title_raw = episode.title_en if episode.title_en else episode.title_zh
+            title_raw = episode.title_en or episode.title_zh
             if titles[language]:
                 official_title = titles[language]
             elif titles["zh"]:
@@ -94,7 +94,7 @@ class TitleParser:
                 dpi=episode.resolution,
                 source=episode.source,
                 subtitle=episode.sub,
-                eps_collect=False if episode.episode > 1 else True,
+                eps_collect=episode.episode <= 1,
                 offset=0,
                 filter=",".join(settings.rss_parser.filter),
             )

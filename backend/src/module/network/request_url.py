@@ -91,16 +91,12 @@ class RequestURL:
                     username=settings.proxy.username
                     password=settings.proxy.password
                     url = f"http://{username}:{password}@{settings.proxy.host}:{settings.proxy.port}"
-                    self.session.proxies = {
-                        "http": url,
-                        "https": url,
-                    }
                 else:
                     url = f"http://{settings.proxy.host}:{settings.proxy.port}"
-                    self.session.proxies = {
-                        "http": url,
-                        "https": url,
-                    }
+                self.session.proxies = {
+                    "http": url,
+                    "https": url,
+                }
             elif settings.proxy.type == "socks5":
                 self._socks5_proxy = True
                 socks.set_default_proxy(

@@ -109,6 +109,5 @@ class Program(RenameThread, RSSThread):
     def update_database(self):
         if not self.version_update:
             return {"status": "No update found."}
-        else:
-            start_up()
-            return {"status": "Database updated."}
+        start_up()
+        return {"status": "Database updated."}

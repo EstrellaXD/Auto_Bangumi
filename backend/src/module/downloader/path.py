@@ -62,12 +62,11 @@ class TorrentPath:
 
     @staticmethod
     def _rule_name(data: Bangumi):
-        rule_name = (
+        return (
             f"[{data.group_name}] {data.official_title} S{data.season}"
             if settings.bangumi_manage.group_tag
             else f"{data.official_title} S{data.season}"
         )
-        return rule_name
 
     @staticmethod
     def _join_path(*args):

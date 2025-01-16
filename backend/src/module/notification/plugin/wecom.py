@@ -24,7 +24,7 @@ class WecomNotification(RequestContent):
 
     def post_msg(self, notify: Notification) -> bool:
         ##Change message format to match Wecom push better
-        title = "【番剧更新】" + notify.official_title
+        title = f"【番剧更新】{notify.official_title}"
         msg = self.gen_message(notify)
         picurl = notify.poster_path
         # Default pic to avoid blank in message. Resolution:1068*455

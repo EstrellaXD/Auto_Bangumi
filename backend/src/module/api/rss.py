@@ -176,10 +176,7 @@ analyser = RSSAnalyser()
 )
 async def analysis(rss: RSSItem):
     data = analyser.link_to_data(rss)
-    if isinstance(data, Bangumi):
-        return data
-    else:
-        return u_response(data)
+    return data if isinstance(data, Bangumi) else u_response(data)
 
 
 @router.post(

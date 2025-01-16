@@ -17,24 +17,15 @@ class Checker:
 
     @staticmethod
     def check_renamer() -> bool:
-        if settings.bangumi_manage.enable:
-            return True
-        else:
-            return False
+        return bool(settings.bangumi_manage.enable)
 
     @staticmethod
     def check_analyser() -> bool:
-        if settings.rss_parser.enable:
-            return True
-        else:
-            return False
+        return bool(settings.rss_parser.enable)
 
     @staticmethod
     def check_first_run() -> bool:
-        if settings.dict() == Config().dict():
-            return True
-        else:
-            return False
+        return settings.dict() == Config().dict()
 
     @staticmethod
     def check_version() -> bool:
@@ -43,10 +34,7 @@ class Checker:
     @staticmethod
     def check_database() -> bool:
         db_path = Path("data/data.db")
-        if not db_path.exists():
-            return False
-        else:
-            return True
+        return db_path.exists()
 
     @staticmethod
     def check_downloader() -> bool:
@@ -57,15 +45,13 @@ class Checker:
                 else f"{settings.downloader.host}"
             )
             response = requests.get(url, timeout=2)
-            # if settings.downloader.type in response.text.lower():
-            if "qbittorrent" in response.text.lower() or "vuetorrent" in response.text.lower():
-                with DownloadClient() as client:
-                    if client.authed:
-                        return True
-                    else:
-                        return False
-            else:
+            if (
+                "qbittorrent" not in response.text.lower()
+                and "vuetorrent" not in response.text.lower()
+            ):
                 return False
+            with DownloadClient() as client:
+                return bool(client.authed)
         except requests.exceptions.ReadTimeout:
             logger.error("[Checker] Downloader connect timeout.")
             return False
@@ -81,6 +67,5 @@ class Checker:
         img_path = Path("data/posters")
         if img_path.exists():
             return True
-        else:
-            img_path.mkdir()
-            return False
+        img_path.mkdir()
+        return False

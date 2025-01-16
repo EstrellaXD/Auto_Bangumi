@@ -34,7 +34,7 @@ class QbDownloader:
                 return True
             except LoginFailed:
                 logger.error(
-                    f"Can't login qBittorrent Server {self.host} by {self.username}, retry in {5} seconds."
+                    f"Can't login qBittorrent Server {self.host} by {self.username}, retry in 5 seconds."
                 )
                 time.sleep(5)
                 times += 1

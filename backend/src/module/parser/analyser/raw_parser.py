@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import re
 
@@ -125,9 +126,7 @@ def find_tags(other):
 
 
 def clean_sub(sub: str | None) -> str | None:
-    if sub is None:
-        return sub
-    return re.sub(r"_MP4|_MKV", "", sub)
+    return sub if sub is None else re.sub(r"_MP4|_MKV", "", sub)
 
 
 def process(raw_title: str):
@@ -145,17 +144,11 @@ def process(raw_title: str):
     # 处理 前缀
     raw_name, season_raw, season = season_process(process_raw)
     # 处理 第n季
-    name_en, name_zh, name_jp = "", "", ""
-    try:
+    with contextlib.suppress(ValueError):
         name_en, name_zh, name_jp = name_process(raw_name)
-        # 处理 名字
-    except ValueError:
-        pass
     # 处理 集数
     raw_episode = EPISODE_RE.search(episode_info)
-    episode = 0
-    if raw_episode is not None:
-        episode = int(raw_episode.group())
+    episode = int(raw_episode.group()) if raw_episode is not None else 0
     sub, dpi, source = find_tags(other)  # 剩余信息处理
     return (
         name_en,

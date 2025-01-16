@@ -14,9 +14,8 @@ PROVIDER_PATH = Path("config/search_provider.json")
 def load_provider():
     if PROVIDER_PATH.exists():
         return json_config.load(PROVIDER_PATH)
-    else:
-        json_config.save(PROVIDER_PATH, DEFAULT_PROVIDER)
-        return DEFAULT_PROVIDER
+    json_config.save(PROVIDER_PATH, DEFAULT_PROVIDER)
+    return DEFAULT_PROVIDER
 
 
 SEARCH_CONFIG = load_provider()

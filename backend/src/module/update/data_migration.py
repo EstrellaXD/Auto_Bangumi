@@ -11,8 +11,7 @@ def data_migration():
     infos = old_data["bangumi_info"]
     rss_link = old_data["rss_link"]
     new_data = []
-    for info in infos:
-        new_data.append(Bangumi(**info, rss_link=rss_link))
+    new_data.extend(Bangumi(**info, rss_link=rss_link) for info in infos)
     with RSSEngine() as engine:
         engine.bangumi.add_all(new_data)
         engine.add_rss(rss_link)

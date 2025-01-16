@@ -54,9 +54,8 @@ if VERSION != "DEV_VERSION":
         files = os.listdir("dist")
         if path in files:
             return FileResponse(f"dist/{path}")
-        else:
-            context = {"request": request}
-            return templates.TemplateResponse("index.html", context)
+        context = {"request": request}
+        return templates.TemplateResponse("index.html", context)
 else:
     @app.get("/", status_code=302, tags=["html"])
     def index():
@@ -64,10 +63,7 @@ else:
 
 
 if __name__ == "__main__":
-    if os.getenv("IPV6"):
-        host = "::"
-    else:
-        host = os.getenv("HOST", "0.0.0.0")
+    host = "::" if os.getenv("IPV6") else os.getenv("HOST", "0.0.0.0")
     uvicorn.run(
         app,
         host=host,

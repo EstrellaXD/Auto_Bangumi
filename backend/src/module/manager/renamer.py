@@ -31,7 +31,7 @@ class Renamer(DownloadClient):
         episode = (
             f"0{file_info.episode}" if file_info.episode < 10 else file_info.episode
         )
-        if method == "none" or method == "subtitle_none":
+        if method in {"none", "subtitle_none"}:
             return file_info.media_path
         elif method == "pn":
             return f"{file_info.title} S{season}E{episode}{file_info.suffix}"
@@ -65,16 +65,15 @@ class Renamer(DownloadClient):
         )
         if ep:
             new_path = self.gen_path(ep, bangumi_name, method=method)
-            if media_path != new_path:
-                if new_path not in self.check_pool.keys():
-                    if self.rename_torrent_file(
-                        _hash=_hash, old_path=media_path, new_path=new_path
-                    ):
-                        return Notification(
-                            official_title=bangumi_name,
-                            season=ep.season,
-                            episode=ep.episode,
-                        )
+            if media_path != new_path and new_path not in self.check_pool.keys():
+                if self.rename_torrent_file(
+                    _hash=_hash, old_path=media_path, new_path=new_path
+                ):
+                    return Notification(
+                        official_title=bangumi_name,
+                        season=ep.season,
+                        episode=ep.episode,
+                    )
         else:
             logger.warning(f"[Renamer] {media_path} parse failed")
             if settings.bangumi_manage.remove_bad_torrent:
@@ -119,7 +118,7 @@ class Renamer(DownloadClient):
             _hash,
             **kwargs,
     ):
-        method = "subtitle_" + method
+        method = f"subtitle_{method}"
         for subtitle_path in subtitle_list:
             sub = self._parser.torrent_parser(
                 torrent_path=subtitle_path,
@@ -173,9 +172,7 @@ class Renamer(DownloadClient):
         return renamed_info
 
     def compare_ep_version(self, torrent_name: str, torrent_hash: str):
-        if re.search(r"v\d.", torrent_name):
-            pass
-        else:
+        if not re.search(r"v\d.", torrent_name):
             self.delete_torrent(hashes=torrent_hash)
 
 
