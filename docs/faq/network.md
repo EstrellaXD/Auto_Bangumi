@@ -4,9 +4,12 @@
 
 由于蜜柑计划本站: `https://mikanani.me` 目前被 GFW 封锁，因此可能会导致 AB 无法正确连接蜜柑计划的情况，建议使用如下方法解决。
 
-- [使用蜜柑计划国内域名](#蜜柑计划国内域名)
-- [使用代理](#代理)
-- [使用 CloudFlare Worker 进行反代](#cloudflare-workers)
+- [网络问题](#网络问题)
+  - [无法连接蜜柑计划](#无法连接蜜柑计划)
+    - [蜜柑计划国内域名](#蜜柑计划国内域名)
+    - [配置代理](#配置代理)
+    - [CloudFlare Workers 反代](#cloudflare-workers-反代)
+  - [无法连接到 qBittorrent](#无法连接到-qbittorrent)
 
 ### 蜜柑计划国内域名
 
