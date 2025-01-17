@@ -1,4 +1,5 @@
 import logging
+import re
 
 from module.models import Notification
 from module.network import RequestContent
@@ -11,7 +12,13 @@ class ServerChanNotification(RequestContent):
 
     def __init__(self, token, **kwargs):
         super().__init__()
-        self.notification_url = f"https://sctapi.ftqq.com/{token}.send"
+        match = re.match(r"sctp(\d+)t", token)
+        if match:
+            num = match.group(1)
+            url = f'https://{num}.push.ft07.com/send/{token}.send'
+        else:
+            url = f'https://sctapi.ftqq.com/{token}.send'
+        self.notification_url = url
 
     @staticmethod
     def gen_message(notify: Notification) -> str:

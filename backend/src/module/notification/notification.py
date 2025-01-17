@@ -15,16 +15,14 @@ logger = logging.getLogger(__name__)
 
 
 def getClient(type: str):
-    if type.lower() == "telegram":
-        return TelegramNotification
-    elif type.lower() == "server-chan":
-        return ServerChanNotification
-    elif type.lower() == "bark":
-        return BarkNotification
-    elif type.lower() == "wecom":
-        return WecomNotification
-    else:
-        return None
+    type_lower = type.lower()
+    client_map = {
+        "telegram": TelegramNotification,
+        "server-chan": ServerChanNotification,
+        "bark": BarkNotification,
+        "wecom": WecomNotification
+    }
+    return client_map.get(type_lower)
 
 
 class PostNotification:
