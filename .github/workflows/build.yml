@@ -154,7 +154,7 @@ jobs:
           cd webui && pnpm build
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dist
           path: webui/dist
@@ -185,7 +185,7 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: |
-            estrellaxd/auto_bangumi
+            jumploop/auto_bangumi
             ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=${{ needs.version-info.outputs.version }}
@@ -197,7 +197,7 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: |
-            estrellaxd/auto_bangumi
+            jumploop/auto_bangumi
             ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=${{ needs.version-info.outputs.version }}
@@ -216,10 +216,10 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.ACCESS_TOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dist
           path: backend/src/dist
@@ -258,7 +258,7 @@ jobs:
           builder: ${{ steps.buildx.output.name }}
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: false
-          tags: estrellaxd/auto_bangumi:test
+          tags: jumploop/auto_bangumi:test
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}
 
@@ -274,7 +274,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download artifact webui
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dist
           path: webui/dist
@@ -284,7 +284,7 @@ jobs:
           cd webui && ls -al && tree && zip -r dist.zip dist
 
       - name: Download artifact app
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dist
           path: backend/src/dist
