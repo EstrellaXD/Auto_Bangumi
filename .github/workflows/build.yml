@@ -161,6 +161,11 @@ jobs:
 
   build-docker:
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+      attestations: write
+      id-token: write
     needs: [build-webui, version-info]
     steps:
       - name: Checkout
