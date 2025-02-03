@@ -88,8 +88,7 @@ class Program(RenameThread, RSSThread):
                 msg_en="Program stopped.",
                 msg_zh="程序停止成功。",
             )
-        else:
-            return ResponseModel(
+        return ResponseModel(
                 status=False,
                 status_code=406,
                 msg_en="Program is not running.",
@@ -109,6 +108,5 @@ class Program(RenameThread, RSSThread):
     def update_database(self):
         if not self.version_update:
             return {"status": "No update found."}
-        else:
-            start_up()
-            return {"status": "Database updated."}
+        start_up()
+        return {"status": "Database updated."}
