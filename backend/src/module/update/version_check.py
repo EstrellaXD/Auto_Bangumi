@@ -22,8 +22,20 @@ def version_check() -> bool:
             if now_ver.minor == last_ver.minor:
                 return True
             else:
-                if now_ver.minor > last_ver.minor:
+                # check 3.1.1 < version < 3.1.18
+                if last_version >= semver.VersionInfo.parse(
+                    "3.1.1"
+                ) and last_version <= semver.VersionInfo.parse("3.1.18"):
                     f.write(VERSION + "\n")
                     return False
-                else:
-                    return True
+                return True
+
+                # if now_ver.minor > last_ver.minor:
+                #     f.write(VERSION + "\n")
+                #     return False
+                # else:
+                #     return True
+
+
+if __name__ == "__main__":
+    print(version_check())

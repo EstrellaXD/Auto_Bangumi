@@ -1,6 +1,4 @@
 import logging
-import os
-import signal
 from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException

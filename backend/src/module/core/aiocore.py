@@ -3,7 +3,7 @@ import logging
 from abc import abstractmethod
 
 from module.conf import settings
-from module.downloader import AsyncDownloadController
+from module.downloader import AsyncDownloadController, Client
 from module.manager import Renamer, eps_complete
 from module.rss import RSSEngine
 
@@ -97,6 +97,10 @@ class AsyncDownload(AsyncProgram):
         task = asyncio.create_task(self.download_task_loop(), name="download_loop")
         self.tasks.append(task)
         logger.info("[AsyncDownload] Downloader start")
+
+    async def stop(self):
+        await super().stop()
+        await Client.restart()
 
     async def download_task_loop(self):
         while True:

@@ -23,8 +23,8 @@ class DownloadClient:
 
     def __init__(self):
         self.downloader: BaseDownloader = self.get_downloader()
+        print(self.downloader.host)
         self._path_parser: TorrentPath = TorrentPath()
-        self.tasks: list[Task[Any]] = []
         self.is_logining: bool = False
         self.is_running: bool = True
         # 用于等待登陆完成
@@ -32,11 +32,13 @@ class DownloadClient:
         self.login_event: asyncio.Event = asyncio.Event()
         self.login_success_event: asyncio.Event = asyncio.Event()
         self.login_timeout = 30  # 登录超时时间(秒)
+        self.login_task: asyncio.Task | None = None
 
     async def __aenter__(self):
         if not self.is_login:
             self.login_event.set()
-        if not self.is_logining:
+        # if not self.is_logining:
+        if not self.login_task or self.login_task.done():
             self.start_login()
         return self
 
@@ -199,8 +201,8 @@ class DownloadClient:
     def start_login(self):
         self.is_login = False
         self.login_event.set()
-        if not self.is_logining:
-            asyncio.create_task(self.login(), name="login")
+        if not self.login_task or self.login_task.done():
+            self.login_task = asyncio.create_task(self.login(), name="login")
 
     def start(self):
         self.downloader = self.get_downloader()
@@ -208,9 +210,9 @@ class DownloadClient:
         self.start_login()
 
     async def stop(self):
-        for task in self.tasks:
-            task.cancel()
         await self.downloader.logout()
+        if self.login_task:
+            self.login_task.cancel()
 
     async def restart(self):
         await self.stop()

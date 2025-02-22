@@ -136,7 +136,7 @@ class Renamer:
         if season == 0:
             # 奇奇怪怪的路径, 不处理
             logger.warning(f"[Renamer][rename_file] {save_path} is not a bangumi path")
-            return True
+            return False
 
         file_type = "media" if "sub" not in method else "subtitle"
         # 主要是找集数, 当 season 是 0 时, 会从 file_path 中提取
@@ -274,32 +274,33 @@ class Renamer:
                             else:
                                 if await TmdbParser().poster_parser(bangumi):
                                     self.bangumi_cache[bangumi_name] = bangumi
-                        else:
-                            # 不是AB 下载的,但是想要重命名
-                            logger.debug(
-                                f"[Renamer] start rename {torrent_name} not downloaded by AutoBangumi"
-                            )
-                            if self.bangumi_cache.get(torrent_name):
-                                bangumi = self.bangumi_cache[torrent_name]
-                            else:
-                                bangumi = await RSSAnalyser().torrent_to_data(
-                                    torrent=Torrent(name=torrent_name),
-                                    rss=RSSItem(parser="tmdb"),
-                                )
-                                self.bangumi_cache[torrent_name] = bangumi
+                        # 有点问题,因为是第一次安装, 是默认的 download path, 这时候会移到奇怪的地方
+                        # else:
+                        #     # 不是AB 下载的,但是想要重命名
+                        #     logger.debug(
+                        #         f"[Renamer] start rename {torrent_name} not downloaded by AutoBangumi"
+                        #     )
+                        #     if self.bangumi_cache.get(torrent_name):
+                        #         bangumi = self.bangumi_cache[torrent_name]
+                        #     else:
+                        #         bangumi = await RSSAnalyser().torrent_to_data(
+                        #             torrent=Torrent(name=torrent_name),
+                        #             rss=RSSItem(parser="tmdb"),
+                        #         )
+                        #         self.bangumi_cache[torrent_name] = bangumi
 
-                            save_path = self._path_parser.gen_save_path(bangumi)
-                            async with download_client as client:
-                                await client.move_torrent(
-                                    hashes=torrent_hash,
-                                    location=save_path,
-                                )
-                                logger.debug(
-                                    [
-                                        f"[Renamer][rename] {torrent_name} moved to {save_path}"
-                                    ]
-                                )
-                            bangumi_torrent_info["save_path"] = save_path
+                        #     save_path = self._path_parser.gen_save_path(bangumi)
+                        #     async with download_client as client:
+                        #         await client.move_torrent(
+                        #             hashes=torrent_hash,
+                        #             location=save_path,
+                        #         )
+                        #         logger.debug(
+                        #             [
+                        #                 f"[Renamer][rename] {torrent_name} moved to {save_path}"
+                        #             ]
+                        #         )
+                        #     bangumi_torrent_info["save_path"] = save_path
 
                     # 拿到种子对应的文件列表
 
