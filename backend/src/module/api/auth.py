@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse, Response
 from fastapi.security import OAuth2PasswordRequestForm
 
-from module.models import APIResponse
+from module.models import APIResponse, ResponseModel
 from module.models.user import User, UserUpdate
 from module.security.api import (
     active_user,
@@ -12,7 +12,7 @@ from module.security.api import (
     get_current_user,
     update_user_info,
 )
-from module.security.jwt import create_access_token
+from module.security.jwt import create_access_token, verify_password
 
 from .response import u_response
 
@@ -23,6 +23,26 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 async def login(response: Response, form_data=Depends(OAuth2PasswordRequestForm)):
     user = User(username=form_data.username, password=form_data.password)
     resp = auth_user(user)
+    if not resp:
+        if not verify_password(user.password, resp.password):
+            resp = ResponseModel(
+                status_code=401,
+                status=False,
+                msg_en="Incorrect password",
+                msg_zh="密码错误",
+            )
+        else:
+            resp = ResponseModel(
+                status_code=401,
+                status=False,
+                msg_en="User not found",
+                msg_zh="用户不存在",
+            )
+    else:
+        resp = ResponseModel(
+            status_code=200, status=True, msg_en="Login successfully", msg_zh="登录成功"
+        )
+
     if resp.status:
         token = create_access_token(
             data={"sub": user.username}, expires_delta=timedelta(days=1)

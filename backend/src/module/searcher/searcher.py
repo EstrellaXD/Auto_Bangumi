@@ -28,6 +28,7 @@ class SearchTorrent:
         self.analyser = RSSAnalyser()
 
     async def search_torrents(self, rss_item: RSSItem) -> list[Torrent]:
+        # 想了想 search 没必要有一个 Filter, 下载的时候也不会有
         # 主要是想借用一下 filter, 从 rss 拿 torrents
         bangumi = Bangumi(
             filter="|".join(settings.rss_parser.filter),
@@ -41,7 +42,7 @@ class SearchTorrent:
 
     async def analyse_keyword(
         self, keywords: list[str], site: str = "mikan", limit: int = 7
-    ) -> AsyncGenerator[BangumiJSON, None]:
+    ) -> AsyncGenerator[dict[str, str], None]:
         rss_item = search_url(site, keywords)
         torrents = await self.search_torrents(rss_item)
         exist_list = []
@@ -51,8 +52,8 @@ class SearchTorrent:
             if len(exist_list) >= limit:
                 break
             if new_bangumi := RawParser().parser(torrent.name):
-                # 检查是否已经存在, 对于一个 bangumi 来说, 组和动漫一致就可以认为是一个
-                new_str = f"{new_bangumi.title_raw}{new_bangumi.group_name}"
+                # 检查是否已经存在, 对于一个 bangumi 来说, 组,动漫,季一致就可以认为是一个
+                new_str = f"{new_bangumi.title_raw}{new_bangumi.group_name}{new_bangumi.season_raw}"
                 if new_str not in exist_list:
                     task = asyncio.create_task(
                         self.analyser.torrent_to_data(torrent=torrent, rss=rss_item)
@@ -92,6 +93,8 @@ class SearchTorrent:
 if __name__ == "__main__":
     import asyncio
 
-    ans = asyncio.run(SearchTorrent().analyse_keyword(["败犬女主"]))
-    for _ in ans:
-        print(json.loads(_))
+    async def main():
+        async for result in SearchTorrent().analyse_keyword(["期待在地下城邂逅有错吗"]):
+            print(json.loads(result["data"]))
+
+    asyncio.run(main())

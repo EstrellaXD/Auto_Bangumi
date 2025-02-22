@@ -2,7 +2,6 @@ import asyncio
 import logging
 
 from module.conf import VERSION, settings
-from module.models import ResponseModel
 from module.update import (
     cache_image,
     data_migration,
@@ -67,7 +66,6 @@ class Program:
         await self.start()
 
     async def start(self):
-        # self.stop_event.clear()
         settings.load()
         await self.download.run()
         if self.program_status.enable_rss:
@@ -75,51 +73,19 @@ class Program:
         if self.program_status.enable_renamer:
             await self.renamer.run()
         logger.info("Program running.")
-        return ResponseModel(
-            status=True,
-            status_code=200,
-            msg_en="Program started.",
-            msg_zh="程序启动成功。",
-        )
-        # else:
-        #     self.stop_event.set()
-        #     logger.warning("Program failed to start.")
-        #     return ResponseModel(
-        #         status=False,
-        #         status_code=406,
-        #         msg_en="Program failed to start.",
-        #         msg_zh="程序启动失败。",
-        #     )
+        return True
 
     async def stop(self):
         if self.program_status.is_running:
-            # self.program_status.stop_event.set()
             await self.download.stop()
             await self.rss.stop()
             await self.renamer.stop()
-            return ResponseModel(
-                status=True,
-                status_code=200,
-                msg_en="Program stopped.",
-                msg_zh="程序停止成功。",
-            )
-        else:
-            return ResponseModel(
-                status=False,
-                status_code=406,
-                msg_en="Program is not running.",
-                msg_zh="程序未运行。",
-            )
+            return True
 
-    async def restart(self):
+    async def restart(self) -> bool:
         await self.stop()
         await self.start()
-        return ResponseModel(
-            status=True,
-            status_code=200,
-            msg_en="Program restarted.",
-            msg_zh="程序重启成功。",
-        )
+        return True
 
     def update_database(self):
         if not self.program_status.version_update:

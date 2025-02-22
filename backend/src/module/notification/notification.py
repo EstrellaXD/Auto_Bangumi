@@ -29,8 +29,6 @@ class PostNotification:
         if notify.episode:
             if not notify.poster_path:
                 self._get_poster(notify)
-            if isinstance(notify.episode, float) and notify.episode.is_integer():
-                notify.episode = int(notify.episode)
             notify.message = f"""
             番剧名称：{notify.title}\n季度： 第{notify.season}季\n更新集数： 第{notify.episode}集
             """.strip()

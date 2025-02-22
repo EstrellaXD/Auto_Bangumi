@@ -26,6 +26,7 @@ class BangumiDatabase:
     #ERROR : 这就会导致一个sb 的动漫是 S2 但是 TMDB 分到了 S1, 导致多加一个
     有大选大, 没有大再看看 mikan/tmdb 给的是什么
     """
+
     def __init__(self, session: Session):
         self.session = session
 
@@ -148,6 +149,16 @@ class BangumiDatabase:
         else:
             logger.debug(f"[Database] Find bangumi id: {_id}.")
             return self.session.exec(statement).first()
+
+    def search_official_title(self, official_title: str) -> Bangumi | None:
+        statement = select(Bangumi).where(Bangumi.official_title == official_title)
+        bangumi = self.session.exec(statement).first()
+        if bangumi is None:
+            logger.warning(
+                f"[Database] Cannot find bangumi official_title: {official_title}."
+            )
+            return None
+        return self.session.exec(statement).first()
 
     def match_poster(self, bangumi_name: str) -> str:
         # Use like to match

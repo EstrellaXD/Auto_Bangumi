@@ -9,23 +9,24 @@ logger = logging.getLogger(__name__)
 LAST_BACKET_PATTERN = re.compile(
     r"[\(\（][^\(\)（）]*[\)\）](?!.*[\(\（][^\(\)（）]*[\)\）])"
 )
+BOUNDARY_START = r"[\s_\-\[\]/\)\(]"
+BOUNDARY_END = r"(?=[\s_\-\[\]/\)\($])"  # 结束边界（不消耗）
 
 
 EPISODE_PATTERN = re.compile(
     r"""
-    # (?=\b|\s|\+|\-|\[|\]|/|～)
-    (第?(\d+?(?:\.\d)?)[话話集]
-    |EP?(\d+(?:\.\d)?)
-    |-\s(\d+(?:\.\d)?)
-    |(\d+(?:\.\d)?).?v\d
-    |(\d+(?:\.\d)?).?END
-    |(\d+(?:\.\d)?)pre)
-    (?=\s|_|\-|\[|\]|$|\.)
+    (第?(\d+?)[话話集]
+    |EP?(\d+?)
+    |-\s(\d+?)
+    |(\d+?).?v\d
+    |(\d+?).?END
+    |(\d+?)pre)
+    (?=[\s_\-\[\]$\.])
 """,
     re.VERBOSE | re.IGNORECASE,
 )
 
-EPISODE_RE_UNTRUSTED = re.compile(r"[\b\s\[\]]((\d+(?:\.\d)?))[\s\b\[\]]")
+EPISODE_RE_UNTRUSTED = re.compile(r"[\b\s\[\]]((\d+?))[\s\b\[\]]")
 
 SEASON_RE = re.compile(
     r"""
@@ -47,8 +48,8 @@ SEASON_RE = re.compile(
 SEASON_PATTERN_UNTRUSTED = re.compile(r"\d+")
 
 VIDEO_TYPE_PATTERN = re.compile(
-    r"""
-    [\b\s\._\+\-\[\]]# Frame rate
+    rf"""
+    {BOUNDARY_START}# Frame rate
     (23.976FPS
     |24FPS
     |29.97FPS
@@ -73,49 +74,58 @@ VIDEO_TYPE_PATTERN = re.compile(
     |ASS[x2].? # AAAx2
     |PGS
     |V[123]
-    |OVA)(?=\b|\s|_|\-|\+|\[|\]|$) # 不能消耗掉后面的""",
+    |OVA)
+    {BOUNDARY_END}
+    """,
     re.VERBOSE | re.IGNORECASE,
 )
 
 AUDIO_INFO = re.compile(
-    r"""
-    [\b\s_\-\[\]]# Frame rate
+    f"""
+    {BOUNDARY_START}# Frame rate
     (AAC(?:x2)?
     |FLAC
     |DDP
-    )(?=\b|\s|_|\-|\[|\]|$) # 不能消耗掉后面的""",
+    )
+    {BOUNDARY_END}
+    """,
     re.VERBOSE | re.IGNORECASE,
 )
 
 RESOLUTION_RE = re.compile(
-    r"""
-    (?=\s|\b|\[|\]])
-    (\d{3,4}[×X]\d{3,4}
+    rf"""
+    {BOUNDARY_START}
+    (\d{{3,4}}[×xX]\d{{3,4}}
     |1080p?
     |720p?
     |480p?
     |2160p?
     |4K
     )
-    (?=\b|\s|_|\-|\[|\]|$) # 不能消耗掉后面的""",
+    {BOUNDARY_END}
+    """,
     re.IGNORECASE | re.VERBOSE,
 )
 
 SOURCE_RE = re.compile(
-    r"""[\s\b\[\]]([Bb]-[Gg]lobal
-    |[Bb]aha
-    |[Bb]ilibili
+    rf"""
+    {BOUNDARY_START}
+    (B-Global
+    |Baha
+    |Bilibili
     |AT-X
-    |W[eE][Bb]-?(?:Rip)?(?:DL)?
+    |W[eE][Bb]-?(?:Rip)?(?:DL)? # WEBRIP 和 WEBDL
     |CR
     |ABEMA
     |viutv[粤语]*?)
-    [\s\b\[\]]""",
+    {BOUNDARY_END}
+    """,
     re.VERBOSE | re.IGNORECASE,
 )
 
 SUB_RE = re.compile(
-    r"""[\s_\+\-\[\]/]
+    rf"""
+    {BOUNDARY_START}
     ((?:[(BIG5|CHS|CHT|GB|JP)_简中繁日英外字幕挂内封嵌双语文体]+)
     |CHT
     |CHS
@@ -124,7 +134,9 @@ SUB_RE = re.compile(
     |JA?P
     |GB
     |HardSub
-    ) (?=\s|_|\-|\[|\]|$/) # 不能消耗掉后面的""",
+    )
+    {BOUNDARY_END}
+    """,
     re.VERBOSE,
 )
 PREFIX_RE = re.compile(r"[^\w\s\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff-]")
@@ -150,39 +162,30 @@ ROMAN_NUMBERS = {
 }
 
 UNUSEFUL_RE = re.compile(
-    r"""
     # 匹配无用的片段
-    (?<=\s|_|\-|\[|\])   # 前置断言，确保前面是这些字符之一
-    (.?[\d一四七十春夏秋冬季]{1,2}月(?:新番|短剧).*?  # 匹配日期和类型
+    rf"""(?<={BOUNDARY_START})   
+        ( .?[\d一四七十春夏秋冬季]{{1,2}}月(新番|短剧).*?
         | 港澳台地区
         | 国漫
         | END
         | 招募.*?
-        | \d{4}年\d{1,2}月.*?
-        | \d{4}\.\d{1,2}\.\d{1,2}
-        |[网盘无水印高清下载迅雷]{4,10}
-    )
-    (?=\s|_|\-|\[|\]|$)  # 后置断言，确保后面是这些字符之一
-    """,
+        | \d{{4}}年\d{{1,2}}月.*? # 2024年1月
+        | \d{{4}}\.\d{{1,2}}\.\d{{1,2}}
+        |[网盘无水印高清下载迅雷]{{4,10}})
+        {BOUNDARY_END}""",
     re.VERBOSE,
 )
 
 
 class RawParser:
-    def __init__(self, title: str) -> None:
-        self.raw_title = title
-        self.title = title
-        self.process_title()
+    def __init__(self) -> None:
+        pass
 
     def process_title(self):
 
         self.title = self.title.replace("\n", " ")
 
-        # self.title = re.sub(LAST_BACKET_PATTERN, "", self.title)
-        #
-
         translation_table = str.maketrans("【】", "[]")
-        # translation_table = str.maketrans("【】()（）『』", "[][][][]")
         self.title = self.title.translate(translation_table)
         self.title = self.title.strip()
 
@@ -190,17 +193,19 @@ class RawParser:
     # self.title = replace_chars(self.title)
     # self.title = self.title.replace("【", "[").replace("】", "]").replace("(","[").replace(")","]")
 
-    def parser(self):
+    def parser(self, title: str):
+        self.raw_title = title
+        self.title = title
+        self.process_title()
+        source_info = self.get_source_info()
+        resolution_info = self.get_resolution_info()
+        audio_info = self.get_audio_info()
+        video_info = self.get_video_info()
+        sub_info = self.get_sub_info()
+        unuseful_info = self.get_unuseful_info()
         episode_info, episode_is_trusted, season_info, season_is_trusted = (
             self.get_episode_info()
         )
-        # season_info = self.get_season_info()
-        video_info = self.get_video_info()
-        source_info = self.get_source_info()
-        sub_info = self.get_sub_info()
-        resolution_info = self.get_resolution_info()
-        unuseful_info = self.get_unuseful_info()
-        audio_info = self.get_audio_info()
         self.token = re.split(r"/\[\]", self.title)
         if len(self.token) > 1:
             self.token = self.token[:-1]
@@ -241,11 +246,16 @@ class RawParser:
             group,
             resolution,
             source,
+            audio_info,
+            video_info,
         )
 
     def findall_sub_title(self, pattern, sym="[]"):
         ans = re.findall(pattern, self.title)
-        self.title = re.sub(pattern, sym, self.title)
+        if ans:
+            self.title = re.sub(pattern, sym, self.title)
+        else:
+            ans = re.findall(pattern, self.raw_title)
         return ans
 
     def get_episode_info(self):
@@ -423,17 +433,18 @@ def get_raw():
 
 
 def raw_parser(raw: str) -> Episode | None:
-    ret = RawParser(raw).parser()
+    ret = RawParser().parser(raw)
     return ret
 
 
 if __name__ == "__main__":
 
     # title = get_raw()
-    title = "赛马娘 (2018) S03E13.mp4"
+    # title = "赛马娘 (2018) S03E13.mp4"
     title = "[SweetSub][鹿乃子大摇大摆虎视眈眈][Shikanoko Nokonoko Koshitantan][04][WebRip][1080P][AVC 8bit][繁日双语][462.01 MB]"
-    title = "[ANi] Make Heroine ga Oosugiru /  败北女角太多了！ - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
-    title = "【极影字幕社】★4月新番 天国大魔境 Tengoku Daimakyou 第05话 GB 720P MP4（字幕社招人内详）"
+    # title = "[ANi] Make Heroine ga Oosugiru /  败北女角太多了！ - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+    # title = "[极影字幕社]★4月新番 天国大魔境 Tengoku Daimakyou 第05话 GB 720P MP4（字幕社招人内详）"
+    # title = "hello[2023.1.2]hell"
     # title = "海盗战记 (2019) S01E01.mp4"
     # title =  "[SBSUB][CONAN][1082][V2][1080P][AVC_AAC][CHS_JP](C1E4E331).mp4"
     # title = "前辈是男孩子 (2024) S01E02.mp4"
@@ -443,8 +454,8 @@ if __name__ == "__main__":
     # title ="【喵萌奶茶屋】★04月新番★[夏日重现/Summer Time Rendering][11][1080p][繁日双语][招募翻译]"
     # title = "【失眠搬运组】放学后失眠的你-Kimi wa Houkago Insomnia - 06 [bilibili - 1080p AVC1 CHS-JP].mp4"
     # title = "[KitaujiSub] Shikanoko Nokonoko Koshitantan [01Pre][WebRip][HEVC_AAC][CHS_JP].mp4"
-    title = "[Doomdos] - 白色闪电 - 第02话 - [1080P].mp4"
-    title = "Doomdos] -凡人修仙传-第107话-[1080P].mp"
+    # title = "[Doomdos] - 白色闪电 - 第02话 - [1080P].mp4"
+    # title = "Doomdos] -凡人修仙传-第107话-[1080P].mp"
     # title = "[豌豆字幕组&风之圣殿字幕组】★04月新番[鬼灭之刃 柱训练篇 / Kimetsu_no_Yaiba-Hashira_Geiko_Hen][02(57)][简体][1080P][MP4]"
     # title = "迷宮飯 08/[TOC] Delicious in Dungeon [08][1080P][AVC AAC][CHT][MP4].mp4"
     # title = "[喵萌奶茶屋&LoliHouse] 葬送的芙莉莲 / Sousou no Frieren - 06 [WebRip 1080p HEVC-10bit AAC][简繁日内封字幕]"
@@ -458,18 +469,23 @@ if __name__ == "__main__":
     # title = "ANi] 我獨自升級 - 07.5 [1080P][Baha][WEB-DL][AAC AVC][CHT].mp4"
     # title = "[NEO·QSW]古莲泰沙U グレンダイザーU Grendizer U 02[WEBRIP AVC 1080P]（搜索用：巨灵神/克雷飞天神）"
     # title ="地下城里的人们 (2024) S02E10005.mp4"
-    # title = "[ANi] 物語系列 第外季＆第怪季 - 06.5 [1080P][Baha][WEB-DL][AAC AVC][CHT].mp4 "
+    title = (
+        "[ANi] 物語系列 第外季＆第怪季 - 06.5 [1080P][Baha][WEB-DL][AAC AVC][CHT].mp4 "
+    )
     # title = "物语系列 S05E06.5.mp4 "
     # title = " 【幻月字幕组】【24年日剧】【直到破坏了丈夫的家庭】【第7话】【1080P】【中日双语】.mp4"
     # title = "[LoliHouse] 2.5次元的诱惑 / 2.5-jigen no Ririsa - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][LoliHouse] 2.5次元的诱惑 / 2.5-jigen no Ririsa - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][609.59 MB]"
-    title = "[ANi] Re：从零开始的异世界生活 第三季 - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4] [复制磁连]"
-    title = "[AnimeRep] 蓝箱 / 青之箱 / Blue Box / Ao no Hako- 02 [1080p][简中内嵌]"
-    title = "[ANi] Kekkon Surutte Hontou desu ka /  听说你们要结婚！？ - 03 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
-    title = "[北宇治字幕组&LoliHouse] 地。-关于地球的运动- / Chi. Chikyuu no Undou ni Tsuite 03 [WebRip 1080p HEVC-10bit AAC ASSx2][简繁日内封字幕] [复制磁连]"
+    # title = "[ANi] Re：从零开始的异世界生活 第三季 - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4] [复制磁连]"
+    # title = "[AnimeRep] 蓝箱 / 青之箱 / Blue Box / Ao no Hako- 02 [1080p][简中内嵌]"
+    # title = "[ANi] Kekkon Surutte Hontou desu ka /  听说你们要结婚！？ - 03 [1080P][baha][WEB-DL][AAC AVC][CHT][MP4]"
+    # title = "[DBD-Raws][败犬女主太多了！/Make Heroine ga Oosugiru!/负けヒロインが多すぎる!][07-08TV+特典映像][BOX4][1080P][BDRip][HEVC-10bit][FLACx2][MKV] [复制磁连]"
+    # title = "[漫猫字幕组&猫恋汉化组] 败犬女主太多了/Make Heroine ga Oosugiru (01-12Fin WEBRIP 1080p AVC AAC MP4 2024年7月 简中) [复制磁连]"
+    # title = "[北宇治字幕组&LoliHouse] 地。-关于地球的运动- / Chi. Chikyuu no Undou ni Tsuite 03 [WebRip 1080p HEVC-10bit AAC ASSx2][简繁日内封字幕] [复制磁连]"
+    title = "[Lilith-Raws] Boku no Kokoro no Yabai Yatsu - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4].mp4"
     print(title)
-
-    ret = RawParser(title)
     # #
-    print(ret.parser())
+    res = raw_parser(title)
+    for k, v in res.__dict__.items():
+        print(f"{k}: {v}")
     # print(ret.token)
     # print(raw_parser(title))

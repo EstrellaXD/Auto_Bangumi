@@ -15,6 +15,9 @@ logger = logging.getLogger(__name__)
 
 class TorrentPath:
 
+    def __init__(self):
+        self.download_path = Path(settings.downloader.path)
+
     def check_file(self, file_path: PathLike[str] | str):
         suffix = Path(file_path).suffix
         if suffix.lower() in [".mp4", ".mkv"]:
@@ -34,11 +37,16 @@ class TorrentPath:
         return media_list, subtitle_list
 
     @lru_cache(maxsize=20)
-    def path_to_bangumi(self, save_path: PathLike[str] | str):
+    def path_to_bangumi(
+        self, save_path: PathLike[str] | str, download_path: PathLike[str] | str = ""
+    ) -> tuple[str, int]:
 
         # Split save path and download path
         save_path = Path(save_path)
-        download_path = Path(settings.downloader.path)
+        if not download_path:
+            download_path = self.download_path
+        else:
+            download_path = Path(download_path)
         bangumi_name = ""
         season = 0
         try:
@@ -47,14 +55,13 @@ class TorrentPath:
             bangumi_path = save_path.relative_to(download_path)
             bangumi_parts = bangumi_path.parts
         except ValueError as e:
-            logger.warning(f"[Path] {e}")
-            return "", 0
+            logger.warning(f"[Path] {e} is not a subpath of {download_path}")
+            return bangumi_name, season
         # Get bangumi name and season
-        for part in bangumi_parts:
-            if re.match(r"S\d+|[Ss]eason \d+", part):
-                season = int(re.findall(r"\d+", part)[0])
-            else:
-                bangumi_name = part
+        # bangumi_parts 只会是[bangumi_name,Season]
+        bangumi_name = bangumi_parts[0]
+        if re.match(r"S\d+|[Ss]eason \d+", bangumi_parts[-1]):
+            season = int(re.findall(r"\d+", bangumi_parts[-1])[0])
         return bangumi_name, season
 
     def _file_depth(self, file_path: PathLike[str] | str):
@@ -67,9 +74,7 @@ class TorrentPath:
         folder = (
             f"{data.official_title} ({data.year})" if data.year else data.official_title
         )
-        save_path = (
-            Path(settings.downloader.path) / folder / f"Season {data.season}"
-        )
+        save_path = Path(settings.downloader.path) / folder / f"Season {data.season}"
         return str(save_path)
 
     @staticmethod
@@ -83,3 +88,9 @@ class TorrentPath:
 
     def _join_path(self, *args):
         return str(Path(*args))
+
+
+if __name__ == "__main__":
+
+    path = "/Downloads/Bangumi/Kono Subarashii Sekai ni Shukufuku wo!/Season 2/"
+    print(TorrentPath().path_to_bangumi(path, "/Downloads/Bangumi"))

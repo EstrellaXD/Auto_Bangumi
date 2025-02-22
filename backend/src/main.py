@@ -10,7 +10,7 @@ from fastapi.templating import Jinja2Templates
 
 from module.api import lifespan, v1
 from module.conf import VERSION, settings, setup_logger
-from module.utils import load_image
+from module.network import load_image
 
 setup_logger(reset=True)
 logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ app = create_app()
 
 @app.get("/posters/{path:path}", tags=["posters"])
 async def posters(path: str):
-    # TODO: 肯定在这里是不合适的
+    # TODO: 由于只有取的时候才会下载,所以会导致第一次请求的时候没有图片
     post_path = Path("data/posters") / path
     if not post_path.exists():
         await load_image(path)
@@ -64,7 +64,9 @@ if VERSION != "DEV_VERSION":
         else:
             context = {"request": request}
             return templates.TemplateResponse("index.html", context)
+
 else:
+
     @app.get("/", status_code=302, tags=["html"])
     def index():
         return RedirectResponse("/docs")

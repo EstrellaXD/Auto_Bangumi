@@ -46,7 +46,7 @@ def update_user_info(user_data: UserUpdate, current_user):
 def auth_user(user: User):
     with Database() as db:
         resp = db.user.auth_user(user)
-        if resp.status:
+        if resp:
             active_user.append(user.username)
         return resp
 

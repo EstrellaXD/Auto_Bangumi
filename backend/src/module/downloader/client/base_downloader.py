@@ -12,35 +12,35 @@ from abc import ABCMeta, abstractmethod
 #
 class BaseDownloader(metaclass=ABCMeta):
     @abstractmethod
-    async def auth(self):
+    async def auth(self)->bool:
         pass
 
     @abstractmethod
-    async def check_host(self):
+    async def check_host(self)->bool:
         pass
 
     @abstractmethod
-    async def logout(self):
+    async def logout(self)->bool:
         pass
 
     @abstractmethod
-    async def get_torrent_files(self, hash):
+    async def get_torrent_files(self, hash)->list[str]:
         pass
     @abstractmethod
     async def torrents_info(self, status_filter , category , tag, limit):
         pass
 
     @abstractmethod
-    async def rename(self, torrent_hash,old_path, new_path):
+    async def rename(self, torrent_hash:str,old_path:str, new_path:str)->bool:
         pass
     @abstractmethod
-    async def move(self, hashes, new_location):
+    async def move(self, hashes:str, new_location:str)->bool:
         pass
     @abstractmethod
-    async def add(self, torrent_urls, torrent_files, save_path, category):
+    async def add(self, torrent_urls, torrent_files, save_path, category)->bool:
         pass
     @abstractmethod
-    async def delete(self, hashes):
+    async def delete(self, hashes:list[str]|str)->bool:
         pass
 
 

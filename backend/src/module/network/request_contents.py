@@ -1,5 +1,6 @@
 import logging
 import xml.etree.ElementTree
+from typing import Any
 
 from httpx import Response
 
@@ -15,22 +16,16 @@ class RequestContent(RequestURL):
     async def get_torrents(
         self,
         _url: str,
-        # _filter: str = "",
         limit: int = 0,
         retry: int = 3,
     ) -> list[Torrent]:
         feeds = await self.get_xml(_url, retry)
-        # 思考了一下，req还是不需要筛选，筛选交给后面去做，这里就有什么返回什么
-        # _filter = _filter if _filter else "|".join(settings.rss_parser.filter)
-
         if feeds:
             torrent_titles, torrent_urls, torrent_homepage = rss_parser(feeds)
             torrents: list[Torrent] = []
             for _title, torrent_url, homepage in zip(
                 torrent_titles, torrent_urls, torrent_homepage
             ):
-                # filter_flag = re.search(_filter, _title) is None
-                # if filter_flag is True:
                 torrents.append(
                     Torrent(name=_title, url=torrent_url, homepage=homepage)
                 )
@@ -53,7 +48,7 @@ class RequestContent(RequestURL):
                 return None
 
     # API JSON
-    async def get_json(self, _url) -> dict:
+    async def get_json(self, _url) -> dict[str, Any]:
         req = await self.get_url(_url)
         if req:
             return req.json()
@@ -85,6 +80,8 @@ class RequestContent(RequestURL):
         return await self.check_url(_url)
 
     async def get_rss_title(self, _url):
+        # 有一说一,不该在这里,放在 rss_parser 里面
         soup = await self.get_xml(_url)
         if soup:
-            return soup.find("./channel/title").text
+            if soup := soup.find("./channel/title"):
+                return soup.text

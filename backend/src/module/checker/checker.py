@@ -4,7 +4,7 @@ from pathlib import Path
 import httpx
 
 from module.conf import VERSION, settings
-from module.downloader import Client
+from module.downloader import Client as DownloadClient
 from module.models import Config
 from module.network import RequestContent
 from module.update import version_check
@@ -50,22 +50,8 @@ class Checker:
             return True
 
     @staticmethod
-    async def check_downloader() -> bool:
-        # 改动说明: 之前是要能连上, 现在只要检测到 host 就好了
-        try:
-            client = Client
-            if await client.downloader.check_host():
-                return True
-            return False
-        except httpx.ReadTimeout:
-            logger.error("[Checker] Downloader connect timeout.")
-            return False
-        except httpx.ConnectError:
-            logger.error("[Checker] Downloader connect failed.")
-            return False
-        except Exception as e:
-            logger.error(f"[Checker] Downloader connect failed: {e}")
-            return False
+    def check_downloader() -> bool:
+        return DownloadClient.is_login
 
     @staticmethod
     def check_img_cache() -> bool:

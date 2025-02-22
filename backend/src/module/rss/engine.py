@@ -39,14 +39,14 @@ class RssBase:
     ) -> None:
         if not rss_item and not bangumi:
             raise ValueError("rss_item and bangumi can't be None at the same time")
-        self.analyser:RSSAnalyser = RSSAnalyser(_engine)
+        self.analyser: RSSAnalyser = RSSAnalyser(_engine)
         self.rss_item = rss_item
         self.bangumi = bangumi
         self.bangumi_torrents = {}
         if self.bangumi:
-            self.url:str = self.bangumi.rss_link
+            self.url: str = self.bangumi.rss_link
         elif self.rss_item:
-            self.url:str = self.rss_item.url
+            self.url: str = self.rss_item.url
 
     async def _get_torrents(self, url: str) -> list[Torrent]:
         async with RequestContent() as req:
@@ -77,7 +77,7 @@ class RSSRefresh(RssBase):
     刷新 rss 的 torrent
     """
 
-    async def refresh(self):
+    async def refresh(self) -> bool:
         # 对一个 rss_item 做一个假设, 认为一个 rss_link 里面 一部动漫只有一季
         # 由于无法知道当前的 rss 里面是否 bangumi 是否在,所以单个 rss 中能线性处理
         # 这样 相同的 official_title 就可以认为是一个动漫, 用 official_title 作为 key
@@ -196,7 +196,7 @@ class RSSEngine:
         self,
         rss_item: RSSItem | None = None,
         bangumi: Bangumi | None = None,
-    ):
+    ) -> bool:
         """刷新一个rss"""
         refresh = RSSRefresh(rss_item, bangumi)
         await refresh.refresh()
@@ -206,6 +206,7 @@ class RSSEngine:
             logger.info(f"[RSS] refresh {bangumi.official_title}")
         for value in refresh.bangumi_torrents.values():
             await self.queue.add_torrents(value.torrents, value.bangumi)
+        return True
 
     async def refresh_all(self):
         """刷新所有rss"""

@@ -52,20 +52,23 @@ async def eps_complete():
     # with RSSEngine() as engine:
     with Database(engine) as db:
         datas = db.bangumi.not_complete()
-        if datas:
-            logger.info("Start collecting full season...")
-            for data in datas:
-                if not data.eps_collect:
-                    # collector = SeasonCollector()
-                    original_rss_link = data.rss_link
-                    data.rss_link = SearchTorrent().special_url(data, "mikan")
-                    try:
-                        await RSSEngine().refresh_rss(bangumi=data)
-                        data.eps_collect = True
-                        data.rss_link = original_rss_link
-                        db.bangumi.update(data)
-                    except Exception as e:
-                        logger.error(f"[eps_complete] {e}")
+        if not datas:
+            logger.debug("[eps] there is no bangumi need to be completed")
+            return True
+        logger.info("Start collecting full season...")
+        data = datas[0]
+        # for data in datas:
+        if not data.eps_collect:
+            # collector = SeasonCollector()
+            original_rss_link = data.rss_link
+            data.rss_link = SearchTorrent().special_url(data, "mikan").url
+            try:
+                await RSSEngine().refresh_rss(bangumi=data)
+                data.eps_collect = True
+                data.rss_link = original_rss_link
+                db.bangumi.update(data)
+            except Exception as e:
+                logger.error(f"[eps_complete] {e}")
             # db.bangumi.update_all(datas)
 
 

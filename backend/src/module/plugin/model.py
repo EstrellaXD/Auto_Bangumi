@@ -14,8 +14,6 @@ from nonebot.utils import resolve_dot_notation
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
-    from nonebot.adapters import Adapter
-
     from .manager import PluginManager
 
 

@@ -32,16 +32,11 @@ def get_subtitle_lang(subtitle_name: str) -> str:
 
 
 def torrent_parser(
-    torrent_path: str,
     torrent_name: str,
     file_type: str = "media",
-    season=0,
 ) -> EpisodeFile | SubtitleFile:
-
     torrent_name = get_path_basename(torrent_name)
-    if not season and torrent_path:
-        season = RawParser(torrent_path).parser().season
-    media_info = RawParser(torrent_name).parser()
+    media_info = RawParser().parser(torrent_name)
     suffix = Path(torrent_name).suffix
     title = media_info.title_en
     if media_info.title_zh:
@@ -49,15 +44,12 @@ def torrent_parser(
     if media_info.title_jp:
         title = media_info.title_jp
 
-    if not season:
-        season = media_info.season
-
     if file_type == "media":
         return EpisodeFile(
             media_path=torrent_name,
             group=media_info.group,
             title=title,
-            season=season,
+            season=media_info.season,
             episode=media_info.episode,
             suffix=suffix,
         )
@@ -67,7 +59,7 @@ def torrent_parser(
             media_path=torrent_name,
             group=media_info.group,
             title=title,
-            season=season,
+            season=media_info.season,
             episode=media_info.episode,
             language=language,
             suffix=suffix,
@@ -77,16 +69,3 @@ def torrent_parser(
 if __name__ == "__main__":
     path = "LKSUB][Make Heroine ga Oosugiru!][01-12][720P]/[LKSUB][Make Heroine ga Oosugiru!][01][720P].mp4'"
     print(get_path_basename(path))
-    # base = torrent_parser(torrent_path=path, torrent_name="物语系列 S05E06.5.mp4")
-    # file_info = EpisodeFile(
-    #     title="test", season=1, episode=6.5, suffix=".mp4", media_path="."
-    # )
-    # if file_info.episode.is_integer():
-    #     print(file_info.episode)
-    #     episode = f"{int(file_info.episode):02d}"
-    #     print(episode)
-    # else:
-    #     episode = f"{file_info.episode:04.1f}"
-    #     print(episode)
-
-    # lang = get_subtitle_lang(base)

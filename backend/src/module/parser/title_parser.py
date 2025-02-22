@@ -9,6 +9,20 @@ from module.parser import analyser
 
 logger = logging.getLogger(__name__)
 
+"""
+重命名用到的地方
+1. rss 拉取的时候会调用一个 raw parser, 然后检查有没有bangumi,最后是用mikan or tmdb parser
+2. 重命名的时候会调用一个 raw parser, 现在也会在之后调用 tmdb parser
+目前看起来 都是先用的 raw parser, 然后再用 另外一个 parser
+所以 raw_parser 单独出来, 会返回一个 bangumi 
+然后再用其他的 parser 来处理这个 bangumi
+
+抽象出来一个 API 类, 主要是对网络请求的封装, 用来处理网络请求, 这样可以test的时候mock
+对于 TMDB, 是先用名字去查, 然后再去拿详细信息, tmdb 要用到 title, season, language,id
+对于 Mikan, 是要拿到homepage,然后拿到页面, 然后解析
+主要的东西是要 official_title, poster_link, season
+"""
+
 
 class RawParser:
 
@@ -92,7 +106,7 @@ class RawParser(RawParser):
             #     episode_dict = gpt.parse(raw, asdict=True)
             #     episode = Episode(**episode_dict)
             # else:
-            episode: Episode = analyser.RawParser(raw).parser()
+            episode: Episode = analyser.RawParser().parser(raw)
 
             titles = {
                 "zh": episode.title_zh,
@@ -138,20 +152,16 @@ class TitleParser:
 
     @staticmethod
     def torrent_parser(
-        torrent_path: str,
         torrent_name: str,
-        season: int | None = None,
         file_type: str = "media",
     ):
         try:
             return analyser.torrent_parser(
-                torrent_path,
                 torrent_name,
                 file_type,
-                season,
             )
         except Exception as e:
-            logger.warning(f"Cannot parse {torrent_path} with error {e}")
+            logger.warning(f"Cannot parse {torrent_name} with error {e}")
 
 
 if __name__ == "__main__":

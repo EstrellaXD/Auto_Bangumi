@@ -16,11 +16,7 @@ class ProgramStatus(Checker):
 
     @property
     def is_running(self):
-        # FIX: no event
-        # if self.stop_event.is_set() or self.check_first_run():
-        #     return False
-        # else:
-            return True
+        return self.check_downloader()
 
     @property
     def is_stopped(self):
@@ -28,9 +24,7 @@ class ProgramStatus(Checker):
 
     @property
     def downloader_status(self):
-        if not self._downloader_status:
-            self._downloader_status = self.check_downloader()
-        return self._downloader_status
+        return self.check_downloader()
 
     @property
     def enable_rss(self):

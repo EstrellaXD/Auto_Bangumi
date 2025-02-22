@@ -34,16 +34,6 @@ class RemoteMikan(WebPage):
                 self.content = await req.get_html(self.url)
 
 
-class BaseParser(ABC):
-
-    @abstractmethod
-    async def parser(self):
-        pass
-
-    @abstractmethod
-    async def poster_parser(self):
-        pass
-
 
 class MikanParser:
 
@@ -72,11 +62,6 @@ class MikanParser:
             poster_path = poster_div.split("url('")[1].split("')")[0]
             poster_link = f"https://{self.root_path}{poster_path}"
             poster_link = gen_poster_path(poster_link)
-
-            # async with RequestContent() as req:
-            #     img = await req.get_content(f"https://{self.root_path}{poster_path}")
-            # suffix = poster_path.split(".")[-1]
-            # poster_link = save_image(img, suffix)
         return poster_link
 
 

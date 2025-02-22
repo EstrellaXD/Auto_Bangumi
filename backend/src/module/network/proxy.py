@@ -1,27 +1,26 @@
 import logging
+
 import httpx
+
 from module.conf import settings
 
 logger = logging.getLogger(__name__)
 
 
-def set_proxy():
-    auth = (
-        f"{settings.proxy.username}:{settings.proxy.password}@"
-        if settings.proxy.username
-        else ""
-    )
-    if "http" in settings.proxy.type:
-        proxy = (
-            f"{settings.proxy.type}://{auth}{settings.proxy.host}:{settings.proxy.port}"
-        )
-    elif settings.proxy.type == "socks5":
-        proxy = f"socks5://{auth}{settings.proxy.host}:{settings.proxy.port}"
+def set_proxy()->str|None:
+    if not settings.proxy.enable :
+        return None
+    auth = ""
+    host = settings.proxy.host
+    if host.startswith("http://"):
+        host = host[7:]
+    if settings.proxy.username:
+        auth = f"{settings.proxy.username}:{settings.proxy.password}@"
+    if settings.proxy.type in ["http", "socks5"]:
+        return f"{settings.proxy.type}://{auth}{host}:{settings.proxy.port}"
     else:
-        proxy = None
         logger.error(f"[Network] Unsupported proxy type: {settings.proxy.type}")
-    return proxy
-
+        return None
 
 def test_proxy() -> bool:
     with httpx.Client(proxies=set_proxy()) as client:
@@ -46,10 +45,11 @@ def test_proxy() -> bool:
 
 
 if __name__ == "__main__":
-    if test_proxy():
-        with httpx.Client(proxies=set_proxy()) as client:
-            client.headers["User-Agent"] = (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36"
-            )
-            httpx.get("https://www.baidu.com")
-            client.get("https://www.baidu.com")
+    print(set_proxy())
+    with httpx.Client(proxies=set_proxy()) as client:
+        client.headers["User-Agent"] = (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36"
+        )
+        res = client.get("https://www.baidu.com")
+        print(res.content)
+        print(res)

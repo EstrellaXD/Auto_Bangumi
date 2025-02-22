@@ -33,6 +33,13 @@ async def get_all_data():
 )
 async def get_data(bangumi_id: str):
     resp = TorrentManager().search_one(bangumi_id)
+    if resp is None:
+        return ResponseModel(
+            status_code=406,
+            status=False,
+            msg_en=f"Can't find id {bangumi_id}",
+            msg_zh=f"无法找到 id {bangumi_id}",
+        )
     return resp
 
 
@@ -70,9 +77,9 @@ async def update_rule(
     dependencies=[Depends(get_current_user)],
 )
 async def delete_rule(bangumi_id: str, file: bool = False):
-    data,torrent_message = await TorrentManager().delete_rule(bangumi_id, file)
+    data, torrent_message = await TorrentManager().delete_rule(bangumi_id, file)
     if data:
-        resp =  ResponseModel(
+        resp = ResponseModel(
             status_code=200,
             status=True,
             msg_en=f"Delete rule for {data.official_title}. {torrent_message.msg_en if file else ''}",
@@ -80,11 +87,11 @@ async def delete_rule(bangumi_id: str, file: bool = False):
         )
     else:
         resp = ResponseModel(
-                status_code=406,
-                status=False,
-                msg_en=f"Can't find id {bangumi_id}",
-                msg_zh=f"无法找到 id {bangumi_id}",
-            )
+            status_code=406,
+            status=False,
+            msg_en=f"Can't find id {bangumi_id}",
+            msg_zh=f"无法找到 id {bangumi_id}",
+        )
     return u_response(resp)
 
 
@@ -110,6 +117,20 @@ async def delete_many_rule(bangumi_id: list, file: bool = False):
 )
 async def disable_rule(bangumi_id: str, file: bool = False):
     resp = await TorrentManager().disable_rule(bangumi_id, file)
+    if resp:
+        resp = ResponseModel(
+            status_code=200,
+            status=True,
+            msg_en=f"Disable rule for {bangumi_id}",
+            msg_zh=f"禁用 {bangumi_id} 规则",
+        )
+    else:
+        resp = ResponseModel(
+            status_code=406,
+            status=False,
+            msg_en=f"Can't find id {bangumi_id}",
+            msg_zh=f"无法找到 id {bangumi_id}",
+        )
     return u_response(resp)
 
 
@@ -134,6 +155,20 @@ async def disable_many_rule(bangumi_id: list, file: bool = False):
 )
 async def enable_rule(bangumi_id: str):
     resp = await TorrentManager().enable_rule(bangumi_id)
+    if resp:
+        resp = ResponseModel(
+            status_code=200,
+            status=True,
+            msg_en=f"Enable rule for {bangumi_id}",
+            msg_zh=f"启用 {bangumi_id} 规则",
+        )
+    else:
+        resp = ResponseModel(
+            status_code=406,
+            status=False,
+            msg_en=f"Can't find id {bangumi_id}",
+            msg_zh=f"无法找到 id {bangumi_id}",
+        )
     return u_response(resp)
 
 
@@ -144,6 +179,12 @@ async def enable_rule(bangumi_id: str):
 )
 async def refresh_poster():
     resp = await TorrentManager().refresh_poster()
+    resp = ResponseModel(
+        status_code=200,
+        status=True,
+        msg_en="Refresh poster link successfully.",
+        msg_zh="刷新海报链接成功。",
+    )
     return u_response(resp)
 
 
@@ -154,6 +195,20 @@ async def refresh_poster():
 )
 async def refresh_single_poster(bangumi_id: int):
     resp = await TorrentManager().refind_poster(bangumi_id)
+    if resp:
+        resp = ResponseModel(
+            status_code=200,
+            status=True,
+            msg_en="Refresh poster link successfully.",
+            msg_zh="刷新海报链接成功。",
+        )
+    else:
+        resp = ResponseModel(
+            status_code=406,
+            status=False,
+            msg_en=f"Can't find id {bangumi_id}",
+            msg_zh=f"无法找到 id {bangumi_id}",
+        )
     return u_response(resp)
 
 

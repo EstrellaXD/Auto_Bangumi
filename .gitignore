@@ -202,6 +202,8 @@ dev-dist
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+backend/.vscode/
+backend/src/.vscode/
 .DS_Store
 *.suo
 *.ntvs*

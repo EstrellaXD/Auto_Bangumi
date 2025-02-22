@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing_extensions import override
 
 from pydantic import BaseModel
 from sqlmodel import Field, SQLModel
@@ -72,10 +71,8 @@ class Notification(BaseModel):
     title: str = Field(..., alias="title", title="标题")
     message: str = Field(default=None, alias="message", title="消息")
     season: int = Field(default=0, alias="season", title="番剧季度")
-    episode: int | float = Field(default=0, alias="episode", title="番剧集数")
-    poster_path: str | None = Field(
-        default=None, alias="poster_path", title="番剧海报路径"
-    )
+    episode: str = Field(default="0", alias="episode", title="番剧集数")
+    poster_path: str = Field(default="", alias="poster_path", title="番剧海报路径")
 
 
 @dataclass
@@ -85,11 +82,13 @@ class Episode:
     title_jp: str | None
     season: int
     season_raw: str
-    episode: int | float
+    episode: int
     sub: str
     group: str
     resolution: str
     source: str
+    audio_info: list[str]
+    video_info: list[str]
 
 
 @dataclass
