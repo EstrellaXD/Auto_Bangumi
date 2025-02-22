@@ -22,7 +22,6 @@ python-jose==3.3.0
 passlib==1.7.4
 bcrypt==4.0.1
 python-multipart==0.0.6
-sqlmodel==0.0.8
+sqlmodel==0.0.22
 sse-starlette==1.6.5
 semver==3.0.1
-openai==0.28.1

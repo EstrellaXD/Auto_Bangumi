@@ -4,10 +4,12 @@ from module.models import Notification
 from module.network import RequestContent
 from module.utils.cache_image import str_to_url
 
+from .base_notifier import Notifier as BaseNotifier
+
 logger = logging.getLogger(__name__)
 
 
-class WecomNotification(RequestContent):
+class Notifier(BaseNotifier):
     """企业微信推送 基于图文消息"""
 
     def __init__(self, token, chat_id, **kwargs):

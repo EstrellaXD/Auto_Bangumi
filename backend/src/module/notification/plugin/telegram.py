@@ -2,16 +2,17 @@ import logging
 
 from module.models import Notification
 from module.network import RequestContent, load_image
-from module.notification.plugin.base_notification import BaseNotification
+
+from .base_notifier import Notifier as BaseNotifier
 
 logger = logging.getLogger(__name__)
 
 
-class Notification(BaseNotification):
-    def __init__(self, token:str, chat_id:str):
-        self.photo_url:str = f"https://api.telegram.org/bot{token}/sendPhoto"
-        self.message_url:str = f"https://api.telegram.org/bot{token}/sendMessage"
-        self.chat_id:str = chat_id
+class Notifier(BaseNotifier):
+    def __init__(self, token: str, chat_id: str):
+        self.photo_url: str = f"https://api.telegram.org/bot{token}/sendPhoto"
+        self.message_url: str = f"https://api.telegram.org/bot{token}/sendMessage"
+        self.chat_id: str = chat_id
 
     def gen_message(self, notify: Notification):
         # notify.message+="\nhello"

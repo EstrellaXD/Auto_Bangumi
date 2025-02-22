@@ -10,18 +10,19 @@ LAST_BACKET_PATTERN = re.compile(
     r"[\(\（][^\(\)（）]*[\)\）](?!.*[\(\（][^\(\)（）]*[\)\）])"
 )
 BOUNDARY_START = r"[\s_\-\[\]/\)\(]"
-BOUNDARY_END = r"(?=[\s_\-\[\]/\)\($])"  # 结束边界（不消耗）
+BOUNDARY_END = r"(?=[\s_\.\-\[\]/\)\($])"  # 结束边界（不消耗）
 
 
 EPISODE_PATTERN = re.compile(
-    r"""
+    rf""" {BOUNDARY_START}
     (第?(\d+?)[话話集]
+    |S\d+?(?:EP?(\d+?))
     |EP?(\d+?)
     |-\s(\d+?)
     |(\d+?).?v\d
     |(\d+?).?END
     |(\d+?)pre)
-    (?=[\s_\-\[\]$\.])
+    {BOUNDARY_END}
 """,
     re.VERBOSE | re.IGNORECASE,
 )
@@ -29,18 +30,17 @@ EPISODE_PATTERN = re.compile(
 EPISODE_RE_UNTRUSTED = re.compile(r"[\b\s\[\]]((\d+?))[\s\b\[\]]")
 
 SEASON_RE = re.compile(
-    r"""
-    (?=\b|\s|\+|\-|\[|\]|/|～)
-    ( 第(.{1,3})季       # 匹配"第...季"格式
-    |第(.{1,3})期        # 匹配"第...期"格式
-    |第.{1,3}部分      # 匹配"第...部分"格式
-    |[Ss]eason\s(\d{1,2})  # 匹配"Season X"格式
-    |[Ss](\d{1,2})         # 匹配"SX"格式
+    rf"""
+    {BOUNDARY_START}
+    (第(.{{1,3}})季       # 匹配"第...季"格式
+    |第(.{{1,3}})期        # 匹配"第...期"格式
+    |第.{{1,3}}部分      # 匹配"第...部分"格式
+    |[Ss]eason\s(\d{{1,2}})  # 匹配"Season X"格式
+    |[Ss](\d{{1,2}})         # 匹配"SX"格式
     |(\d+)[r|n]d(?:\sSeason)?  # 匹配"Xnd Season"格式
     |part \d   #part 6
     |(IV|III|II|I)            # 匹配罗马数字
-    )
-    (?=\b|\s|_|\-|\[|\]|$)  
+    ) (?=[\s_\.\-\[\]/\)\($E])  # 结束边界（不消耗）
     """,
     re.VERBOSE,
 )
@@ -176,6 +176,28 @@ UNUSEFUL_RE = re.compile(
     re.VERBOSE,
 )
 
+V1_RE = re.compile(
+    rf"""
+    {BOUNDARY_START}
+    (V1
+    )
+    {BOUNDARY_END}
+    """,
+    re.VERBOSE | re.IGNORECASE,
+)
+
+POINT_5_RE = re.compile(
+    r"""(第?\d+?\.\d+?[话話集]
+    |EP?\d+?\.\d+?
+    |-\s\d+?\.\d+?
+    |\d+?\.\d+?v\d+?
+    |\d+?\.\d+?(END|pre)
+    )
+    (?=[\s_\-\[\]$\.\(\)])
+""",
+    re.VERBOSE | re.IGNORECASE,
+)
+
 
 class RawParser:
     def __init__(self) -> None:
@@ -188,10 +210,6 @@ class RawParser:
         translation_table = str.maketrans("【】", "[]")
         self.title = self.title.translate(translation_table)
         self.title = self.title.strip()
-
-    # 示例
-    # self.title = replace_chars(self.title)
-    # self.title = self.title.replace("【", "[").replace("】", "]").replace("(","[").replace(")","]")
 
     def parser(self, title: str):
         self.raw_title = title
@@ -206,6 +224,7 @@ class RawParser:
         episode_info, episode_is_trusted, season_info, season_is_trusted = (
             self.get_episode_info()
         )
+        print(self.title)
         self.token = re.split(r"/\[\]", self.title)
         if len(self.token) > 1:
             self.token = self.token[:-1]
@@ -261,6 +280,8 @@ class RawParser:
     def get_episode_info(self):
         episode_info = self.findall_sub_title(EPISODE_PATTERN, sym="/[]")
         episode_is_trusted = True
+        # print(self.title)
+        # print(episode_info)
         season_info = self.findall_sub_title(SEASON_RE, sym="/[]")
         season_is_trusted = True
         if not episode_info:
@@ -437,6 +458,24 @@ def raw_parser(raw: str) -> Episode | None:
     return ret
 
 
+def is_vd(title: str) -> bool:
+    """
+    判断是否是 v1 番剧
+    """
+    if V1_RE.findall(title):
+        return True
+    return False
+
+
+def is_point_5(title: str) -> bool:
+    """
+    判断是否是 .5 番剧
+    """
+    if POINT_5_RE.findall(title):
+        return True
+    return False
+
+
 if __name__ == "__main__":
 
     # title = get_raw()
@@ -462,16 +501,18 @@ if __name__ == "__main__":
     # title = "[LoliHouse] Ore wa Subete wo Parry suru - 05 [WebRip 1080p HEVC-10bit AAC SRTx2]"
     # title = " [LoliHouse] 我要【招架】一切 ～反误解的世界最强想成为冒险者～ / Ore wa Subete wo Parry suru - 05 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕] [复制磁连]"
     # title = "北宇治字幕组] 夜晚的水母不会游泳 / Yoru no Kurage wa Oyogenai [01-12 修正合集][WebRip][HEVC_AAC][简繁日内封] [复制磁连]"
-    title = "[北宇治字组&霜庭云花Sub&氢气烤肉架]【我推的孩子】/【Oshi no Ko】[18][WebRip][HEVC_AAC][繁日内嵌]"
+    # title = "[北宇治字组&霜庭云花Sub&氢气烤肉架]【我推的孩子】/【Oshi no Ko】[18][WebRip][HEVC_AAC][繁日内嵌]"
     # # print(re.findall(RESOLUTION_RE,title))
-    # title = "[织梦字幕组][尼尔：机械纪元 NieR Automata Ver1.1a][02集][1080P][AVC][简日双语]"
+    title = (
+        "[织梦字幕组][尼尔：机械纪元 NieR Automata Ver1.1a][02集][1080P][AVC][简日双语]"
+    )
     # title = "[ANi] Bakemonogatari / 物语系列 第外季＆第怪季 - 06.5 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4][ANi] Bakemonogatari / 物语系列 第外季＆第怪季 - 06.5 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4][217.2 MB]"
     # title = "ANi] 我獨自升級 - 07.5 [1080P][Baha][WEB-DL][AAC AVC][CHT].mp4"
     # title = "[NEO·QSW]古莲泰沙U グレンダイザーU Grendizer U 02[WEBRIP AVC 1080P]（搜索用：巨灵神/克雷飞天神）"
     # title ="地下城里的人们 (2024) S02E10005.mp4"
-    title = (
-        "[ANi] 物語系列 第外季＆第怪季 - 06.5 [1080P][Baha][WEB-DL][AAC AVC][CHT].mp4 "
-    )
+    # title = (
+    #     "[ANi] 物語系列 第外季＆第怪季 - 06.5 [1080P][Baha][WEB-DL][AAC AVC][CHT].mp4 "
+    # )
     # title = "物语系列 S05E06.5.mp4 "
     # title = " 【幻月字幕组】【24年日剧】【直到破坏了丈夫的家庭】【第7话】【1080P】【中日双语】.mp4"
     # title = "[LoliHouse] 2.5次元的诱惑 / 2.5-jigen no Ririsa - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][LoliHouse] 2.5次元的诱惑 / 2.5-jigen no Ririsa - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][609.59 MB]"
@@ -481,9 +522,18 @@ if __name__ == "__main__":
     # title = "[DBD-Raws][败犬女主太多了！/Make Heroine ga Oosugiru!/负けヒロインが多すぎる!][07-08TV+特典映像][BOX4][1080P][BDRip][HEVC-10bit][FLACx2][MKV] [复制磁连]"
     # title = "[漫猫字幕组&猫恋汉化组] 败犬女主太多了/Make Heroine ga Oosugiru (01-12Fin WEBRIP 1080p AVC AAC MP4 2024年7月 简中) [复制磁连]"
     # title = "[北宇治字幕组&LoliHouse] 地。-关于地球的运动- / Chi. Chikyuu no Undou ni Tsuite 03 [WebRip 1080p HEVC-10bit AAC ASSx2][简繁日内封字幕] [复制磁连]"
-    title = "[Lilith-Raws] Boku no Kokoro no Yabai Yatsu - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4].mp4"
+    # title = "[Lilith-Raws] Boku no Kokoro no Yabai Yatsu - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4].mp4"
+    # title = "[LoliHouse] 关于我转生变成史莱姆这档事 第三季 / Tensei Shitara Slime Datta Ken 3rd Season - 17.5(65.5) [WebRip 1080p HEVC-10bit AAC][简繁内封字幕] [复制磁连]"
+    # title = "海盗战记 (2019) S01E01.mp4"
+    # title = "水星的魔女(2022) S00E19.mp4"
+    title = "[Billion Meta Lab] 终末列车寻往何方 Shuumatsu Torein Dokoe Iku [12][1080][HEVC 10bit][简繁日内封][END]"
+    title = " 幻樱字幕组】【4月新番】【古见同学有交流障碍症 第二季 Komi-san wa, Komyushou Desu. S02】【22】【GB_MP4】【1920X1080】"
+    # print(is_vd(title))
+    # print(is_point_5(title))
     print(title)
-    # #
+    print(re.findall(EPISODE_PATTERN, title))
+    print(re.findall(SEASON_RE, title))
+    # # #
     res = raw_parser(title)
     for k, v in res.__dict__.items():
         print(f"{k}: {v}")

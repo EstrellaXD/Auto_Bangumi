@@ -4,10 +4,12 @@ from module.models import Notification
 from module.network import RequestContent
 from module.utils.cache_image import str_to_url
 
+from .base_notifier import Notifier as BaseNotifier
+
 logger = logging.getLogger(__name__)
 
 
-class ServerChanNotification(RequestContent):
+class Notifier(BaseNotifier):
     """Server酱推送"""
 
     def __init__(self, token, **kwargs):

@@ -64,7 +64,7 @@ class TmdbParser(RawParser):
             )
 
     @staticmethod
-    async def poster_parser(bangumi: Bangumi):
+    async def poster_parser(bangumi: Bangumi) -> bool:
         tmdb_info = await analyser.tmdb_parser(
             bangumi.official_title, settings.rss_parser.language
         )
@@ -73,11 +73,13 @@ class TmdbParser(RawParser):
                 f"[Title Parser] TMDB Matched, official title is {tmdb_info.title}"
             )
             bangumi.poster_link = tmdb_info.poster_link
+            return True
         else:
             logger.warning(
                 f"[Title Parser] Cannot match {bangumi.official_title} in TMDB. Use raw title instead."
             )
             logger.warning("[Title Parser] Please change bangumi info manually.")
+            return False
 
 
 class MikanParser(RawParser):

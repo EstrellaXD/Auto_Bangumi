@@ -1,15 +1,16 @@
 import logging
 
 from module.models import Notification
-from module.notification.plugin.base_notification import BaseNotification
+
+from .base_notifier import Notifier as BaseNotifier
 
 logger = logging.getLogger(__name__)
 
 
-class LogNotification(BaseNotification):
+class Notifier(BaseNotifier):
 
     def __init__(self, token, **kwargs):
-        super().__init__()
+        pass
 
     async def post_msg(self, notify: Notification) -> bool:
         logger.info(f"[Notification] {notify.message}")

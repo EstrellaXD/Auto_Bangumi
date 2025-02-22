@@ -12,6 +12,7 @@ from module.models.rss import RSSItem
 from module.models.torrent import Torrent
 from module.notification import PostNotification
 from module.parser import TitleParser, TmdbParser
+from module.parser.analyser.raw_parser import is_point_5, is_vd
 from module.rss import RSSAnalyser
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,15 @@ class Renamer:
         self._parser = TitleParser()
         self._check_pool = {}
         self.count = 0
+        self.notify_dict = {}
+        self.bangumi_cache = {}
+
+    async def send_notification(self):
+        """
+        发送通知
+        """
+        for notify_info in self.notify_dict.values():
+            await PostNotification().send(notify_info)
 
     @staticmethod
     async def get_torrent_files(
@@ -151,23 +161,21 @@ class Renamer:
             result = await client.rename_torrent_file(hash, old_path, new_path)
         logger.debug(f"[Renamer] {ep=} ")
         # 以下为通知用
-        # post_path = None
-        # if bangumi and bangumi.poster_link:
-        #     post_path = bangumi.poster_link
-        # logger.debug(f"[Renamer] {post_path=}")
-        # # logger.debug(f"[Renamer] {torrent=}")
-        # if ep:
-        #     logger.debug(
-        #         f"[Renamer] send notification {bangumi_name} {ep.season} {ep.episode}"
-        #     )
-        #     notification_info = Notification(
-        #         title=bangumi_name,
-        #         season=ep.season,
-        #         episode=ep.episode,
-        #         poster_path=post_path,
-        #     )
-        # asyncio.create_task(PostNotification().send(notify=notification_info))
-        self.count += 1
+        if result:
+            notify_info = self.notify_dict.get(bangumi_name, None)
+            # 当有相同的动漫时, 将集数进行累加
+            if notify_info:
+                notify_info.episode += "," + str(ep.episode)
+            else:
+                notify_info = Notification(
+                    title=bangumi_name,
+                    season=ep.season,
+                    episode=str(ep.episode),
+                    poster_path=bangumi.poster_link if bangumi else None,
+                )
+            self.notify_dict[bangumi_name] = notify_info
+
+            self.count += 1
         return result
 
     async def rename_files(
@@ -251,26 +259,35 @@ class Renamer:
                                 bangumi_name
                             )
                     if not bangumi:
-                        print(season)
+                        # TODO: 这个的请求还是太多了, 需要优化
                         if season != 0:
+                            # 是一个 AB 下载的,如 collect,或其他原因没有记录的
                             logger.debug(
                                 f"[Renamer] start rename collection {bangumi_name}"
                             )
-                            # 是一个 AB 下载的,如 collect,或其他原因没有的,
                             # 抓一个 poster
                             bangumi = Bangumi(
                                 official_title=bangumi_name,
                             )
-                            await TmdbParser().poster_parser(bangumi)
+                            if self.bangumi_cache.get(bangumi_name):
+                                bangumi = self.bangumi_cache[bangumi_name]
+                            else:
+                                if await TmdbParser().poster_parser(bangumi):
+                                    self.bangumi_cache[bangumi_name] = bangumi
                         else:
                             # 不是AB 下载的,但是想要重命名
                             logger.debug(
                                 f"[Renamer] start rename {torrent_name} not downloaded by AutoBangumi"
                             )
-                            bangumi = await RSSAnalyser().torrent_to_data(
-                                torrent=Torrent(name=torrent_name),
-                                rss=RSSItem(parser="tmdb"),
-                            )
+                            if self.bangumi_cache.get(torrent_name):
+                                bangumi = self.bangumi_cache[torrent_name]
+                            else:
+                                bangumi = await RSSAnalyser().torrent_to_data(
+                                    torrent=Torrent(name=torrent_name),
+                                    rss=RSSItem(parser="tmdb"),
+                                )
+                                self.bangumi_cache[torrent_name] = bangumi
+
                             save_path = self._path_parser.gen_save_path(bangumi)
                             async with download_client as client:
                                 await client.move_torrent(
@@ -286,11 +303,6 @@ class Renamer:
 
                     # 拿到种子对应的文件列表
 
-                    # """
-                    # 获取种子文件列表
-                    # 文件夹举例
-                    # LKSUB][Make Heroine ga Oosugiru!][01-12][720P]/[LKSUB][Make Heroine ga Oosugiru!][01][720P].mp4
-                    # """
                     async with download_client as client:
                         torrent_contents: list[str] = await client.get_torrent_files(
                             torrent_hash
@@ -310,6 +322,7 @@ class Renamer:
             renamer_task.append(self.rename_by_info(*renamer_info))
         logging.debug("[Renamer] Start rename task.")
         await asyncio.gather(*renamer_task)
+        await self.send_notification()
         if self.count:
             logging.info(f"[Renamer] have renamed {self.count}")
         else:
@@ -321,16 +334,5 @@ if __name__ == "__main__":
     from module.conf import setup_logger
 
     setup_logger("DEBUG", reset=True)
-    # logger = logging.getLogger(__name__)
-    # logger.setLevel(logging.DEBUG)
-    # logging.basicConfig(
-    #     level=logging.INFO,
-    #     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    #     handlers=[logging.StreamHandler()],
-    # )
-    #
-    # settings.log.debug_enable = True
-    # setup_logger()
-    # asyncio.run(main())
 
     asyncio.run(Renamer().rename())

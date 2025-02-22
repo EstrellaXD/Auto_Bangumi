@@ -75,7 +75,7 @@ class BangumiDatabase:
             return False
         if not db_data:
             return False
-        bangumi_data = data.dict(exclude_unset=True)
+        bangumi_data = data.model_dump(exclude_unset=True)
         for key, value in bangumi_data.items():
             setattr(db_data, key, value)
         self.session.add(db_data)
@@ -160,16 +160,16 @@ class BangumiDatabase:
             return None
         return self.session.exec(statement).first()
 
-    def match_poster(self, bangumi_name: str) -> str:
-        # Use like to match
-        statement = select(Bangumi).where(
-            func.instr(bangumi_name, Bangumi.official_title) > 0
-        )
-        data = self.session.exec(statement).first()
-        if data and data.poster_link:
-            return data.poster_link
-        else:
-            return ""
+    # def match_poster(self, bangumi_name: str) -> str:
+    #     # Use like to match
+    #     statement = select(Bangumi).where(
+    #         func.instr(bangumi_name, Bangumi.official_title) > 0
+    #     )
+    #     data = self.session.exec(statement).first()
+    #     if data and data.poster_link:
+    #         return data.poster_link
+    #     else:
+    #         return ""
 
     def match_list(
         self, torrent_list: list[Torrent], rss_link: str, aggrated: bool = True

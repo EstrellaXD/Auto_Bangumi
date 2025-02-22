@@ -4,10 +4,12 @@ from module.models import Notification
 from module.network import RequestContent
 from module.utils.cache_image import str_to_url
 
+from .base_notifier import Notifier as BaseNotifier
+
 logger = logging.getLogger(__name__)
 
 
-class SlackNotification(RequestContent):
+class Notifier(BaseNotifier):
     def __init__(self, token, **kwargs):
         super().__init__()
         self.token = token
@@ -18,7 +20,6 @@ class SlackNotification(RequestContent):
         if notify.episode:
             if notify.poster_path:
                 notify.poster_path = str_to_url(notify.poster_path.split("/")[-1])
-
 
     async def post_msg(self, notify: Notification) -> bool:
         self.gen_message(notify)

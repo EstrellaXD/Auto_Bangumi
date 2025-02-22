@@ -15,18 +15,16 @@ from .path import TorrentPath
 logger = logging.getLogger(__name__)
 
 
-# 想了想还是直接报错就好了, 也不用想什么重试了
-# 开一个登陆任务, 登陆成功后, 执行其他任务
 class DownloadClient:
-    """ """
+    """
+    下载器客户端
+    处理所有下载器相关操作, 对错误进行重试, 不对外暴露错误,看起来是正常运行
+    """
 
-    # 自动获取下载器
-    # 下载器登陆错误时自动重试
     def __init__(self):
         self.downloader: BaseDownloader = self.get_downloader()
         self._path_parser: TorrentPath = TorrentPath()
         self.tasks: list[Task[Any]] = []
-        self.login_lock: asyncio.Lock = asyncio.Lock()
         self.is_logining: bool = False
         self.is_running: bool = True
         # 用于等待登陆完成
@@ -188,6 +186,9 @@ class DownloadClient:
         return False
 
     async def get_torrent_files(self, _hash: str) -> list[str]:
+        # 获取种子文件列表
+        # 文件夹举例
+        # LKSUB][Make Heroine ga Oosugiru!][01-12][720P]/[LKSUB][Make Heroine ga Oosugiru!][01][720P].mp4
         try:
             await self.wait_for_login()
             return await self.downloader.get_torrent_files(_hash)
