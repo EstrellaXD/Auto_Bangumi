@@ -4,7 +4,7 @@ from module.models.rss import RSSUpdate
 from module.network import RequestContent
 
 
-class RSSManager():
+class RSSManager:
     def __init__(self, _engine=engine):
         self.engine = _engine
 
@@ -57,16 +57,15 @@ class RSSManager():
             msg_zh="删除 RSS 成功。",
         )
 
-    def delete(self,rss_id:int):
+    def delete(self, rss_id: int):
         with Database(self.engine) as db:
             return db.rss.delete(rss_id)
 
-    def disable(self,rss_id:int):
+    def disable(self, rss_id: int):
         with Database(self.engine) as db:
             return db.rss.disable(rss_id)
 
-
-    def update(self,rss_id:int,data:RSSUpdate):
+    def update(self, rss_id: int, data: RSSUpdate):
         with Database(self.engine) as manager:
             return manager.rss.update(rss_id, data)
 
@@ -82,10 +81,12 @@ class RSSManager():
             else:
                 return []
 
+
 if __name__ == "__main__":
     import asyncio
-    test = RSSManager(engine)
-    rss_link = "https://mikanani.me/RSS/Bangumi?bangumiId=3407&subgroupid=583"
-    ans = asyncio.run(test.add_rss(rss_link))
-    ans = test.disable_list([1])
 
+    test = RSSManager(engine)
+    rss_link = "https://mikanani.me/RSS/Bangumi?bangumiId=2353&subgroupid=552"
+    ans = asyncio.run(test.add_rss(rss_link))
+    print(ans)
+    ans = test.disable_list([1])

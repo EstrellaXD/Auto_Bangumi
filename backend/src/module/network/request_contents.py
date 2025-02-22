@@ -35,7 +35,7 @@ class RequestContent(RequestURL):
             return []
 
     async def get_xml(
-        self, _url, retry: int = 3
+        self, _url: str, retry: int = 3
     ) -> xml.etree.ElementTree.Element | None:
         req = await self.get_url(_url, retry)
         if req:
@@ -48,7 +48,7 @@ class RequestContent(RequestURL):
                 return None
 
     # API JSON
-    async def get_json(self, _url) -> dict[str, Any]:
+    async def get_json(self, _url: str) -> dict[str, Any]:
         req = await self.get_url(_url)
         if req:
             return req.json()
@@ -56,7 +56,7 @@ class RequestContent(RequestURL):
             return {}
 
     async def post_data(
-        self, _url, data: dict[str, str], files: dict[str, bytes]
+        self, _url: str, data: dict[str, str], files: dict[str, bytes]
     ) -> Response | None:
         req = await self.post_url(_url, data, files)
 
@@ -66,7 +66,7 @@ class RequestContent(RequestURL):
         # else:
         #     return {}
 
-    async def get_html(self, _url):
+    async def get_html(self, _url: str) -> str | None:
         req = await self.get_url(_url)
         if req:
             return req.text
@@ -76,12 +76,16 @@ class RequestContent(RequestURL):
         if req:
             return req.content
 
-    async def check_connection(self, _url):
+    async def check_connection(self, _url: str) -> bool:
         return await self.check_url(_url)
 
-    async def get_rss_title(self, _url):
+    async def get_rss_title(self, _url: str) -> str | None:
         # 有一说一,不该在这里,放在 rss_parser 里面
         soup = await self.get_xml(_url)
         if soup:
-            if soup := soup.find("./channel/title"):
-                return soup.text
+            title = soup.find("./channel/title")
+            logger.debug(
+                f"XML structure: {xml.etree.ElementTree.tostring(title, encoding='unicode')}"
+            )
+            if title is not None:
+                return title.text
