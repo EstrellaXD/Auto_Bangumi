@@ -1,4 +1,5 @@
 from bs4 import BeautifulSoup
+import re
 from urllib3.util import parse_url
 
 from module.parser import LocalMikan, MikanParser, RawParser, RemoteMikan
@@ -13,13 +14,16 @@ class MikanSearch:
 
     async def search(self):
         content = await self.page.get_content(self.homepage)
+        if not content:
+            return []
 
-        bangumi = await self.mikan_parser.parser(self.homepage)
-        poster_link = bangumi.poster_link
+        poster_link = await self.mikan_parser.poster_parser(self.homepage)
         # print(official_title, poster_link)
         soup = BeautifulSoup(content, "html.parser")
         # title bangumi-title
         title = soup.select_one("p.bangumi-title")
+        title = re.sub(r"第.*季", "", title.text).strip()
+        # find group from soup <a href="/Home/PublishGroup/991" target="_blank" style="color: #3bc0c3;">TensoRaws</a>
         # find group from soup <a href="/Home/PublishGroup/991" target="_blank" style="color: #3bc0c3;">TensoRaws</a>
         # a 在subgroup-text 下
         # group = soup.find_all("a", href=re.compile(r"/Home/PublishGroup/\d+"))
@@ -31,7 +35,7 @@ class MikanSearch:
             bangumi = t.select(".magnet-link-wrap")
             for b in bangumi:
                 bangumi = RawParser().parser(b.text)
-                bangumi.official_title = title.text
+                bangumi.official_title = title
                 bangumi.group_name = g.text
                 bangumi.rss_link = f"https://{self.root_path}{r.get('href')}"
                 bangumi_list.append(bangumi)

@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class RequestContent(RequestURL):
+    # 对错误包裹, 所有网络的错误到这里就结束了
     async def get_torrents(
         self,
         _url: str,
@@ -37,44 +38,55 @@ class RequestContent(RequestURL):
     async def get_xml(
         self, _url: str, retry: int = 3
     ) -> xml.etree.ElementTree.Element | None:
-        req = await self.get_url(_url, retry)
-        if req:
-            try:
+        try:
+            req = await self.get_url(_url, retry)
+            if req:
                 return xml.etree.ElementTree.fromstring(req.text)
-            except xml.etree.ElementTree.ParseError:
-                logging.warning(
-                    f"[Network] Cannot parser {_url}, please check the url is right"
-                )
-                return None
+        except xml.etree.ElementTree.ParseError:
+            logger.warning(
+                f"[Network] Cannot parser {_url}, please check the url is right"
+            )
+        except Exception as e:
+            logger.error(f"[Network] Cannot get xml from {_url}: {e}")
+        return None
 
     # API JSON
     async def get_json(self, _url: str) -> dict[str, Any]:
-        req = await self.get_url(_url)
-        if req:
-            return req.json()
-        else:
-            return {}
+        try:
+            req = await self.get_url(_url)
+            if req:
+                return req.json()
+        except Exception as e:
+            logger.error(f"[Network] Cannot get json from {_url}: {e}")
+        return {}
 
     async def post_data(
         self, _url: str, data: dict[str, str], files: dict[str, bytes]
-    ) -> Response | None:
-        req = await self.post_url(_url, data, files)
+    ) -> Response:
+        try:
+            req = await self.post_url(_url, data, files)
+            return req
+        except Exception as e:
+            logger.error(f"[Network] Cannot post data to {_url}: {e}")
+        return Response(status_code=400)
 
-        return req
-        # if req:
-        #     return req.json()
-        # else:
-        #     return {}
+    async def get_html(self, _url: str) -> str:
+        try:
+            req = await self.get_url(_url)
+            if req:
+                return req.text
+        except Exception as e:
+            logger.error(f"[Network] Cannot get html from {_url}: {e}")
+        return ""
 
-    async def get_html(self, _url: str) -> str | None:
-        req = await self.get_url(_url)
-        if req:
-            return req.text
-
-    async def get_content(self, _url):
-        req = await self.get_url(_url)
-        if req:
-            return req.content
+    async def get_content(self, _url: str) -> bytes:
+        try:
+            req = await self.get_url(_url)
+            if req:
+                return req.content
+        except Exception as e:
+            logger.error(f"[Network] Cannot get content from {_url}: {e}")
+        return b""
 
     async def check_connection(self, _url: str) -> bool:
         return await self.check_url(_url)

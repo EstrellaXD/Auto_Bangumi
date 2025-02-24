@@ -17,8 +17,10 @@ class MikanWebParser:
         self.homepage = url
         self.root_path = parse_url(self.homepage).host
 
-    async def parser(self):
+    async def parser(self) -> str:
         content = await self.page.get_content(self.homepage)
+        if not content:
+            return ""
         soup = BeautifulSoup(content, "html.parser")
         official_title = soup.select_one('p.bangumi-title a[href^="/Home/Bangumi/"]')
         if official_title:
@@ -28,9 +30,11 @@ class MikanWebParser:
             official_title = ""
         return official_title
 
-    async def poster_parser(self):
+    async def poster_parser(self) -> str:
         poster_link = ""
         content = await self.page.get_content(self.homepage)
+        if not content:
+            return ""
         soup = BeautifulSoup(content, "html.parser")
         poster_div = soup.find("div", {"class": "bangumi-poster"}).get("style")
         if poster_div:
@@ -39,8 +43,10 @@ class MikanWebParser:
             poster_link = gen_poster_path(poster_link)
         return poster_link
 
-    async def bangumi_link_parser(self):
+    async def bangumi_link_parser(self) -> str:
         content = await self.page.get_content(self.homepage)
+        if not content:
+            return ""
         soup = BeautifulSoup(content, "html.parser")
         bangumi_link = soup.select_one('p.bangumi-title a[href^="/Home/Bangumi/"]')
         if bangumi_link:

@@ -44,7 +44,9 @@ class RequestURL:
         retry: int = 3,
     ):
         self.retry = retry
-        return await self._request_with_retry("POST", url, data=data, files=files)
+        resp = await self._request_with_retry("POST", url, data=data, files=files)
+        resp.raise_for_status()
+        return resp
 
     async def check_url(self, url: str):
         if not url.startswith("http"):

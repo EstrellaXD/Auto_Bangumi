@@ -16,7 +16,7 @@ from .path import TorrentPath
 logger = logging.getLogger(__name__)
 
 
-class DownloadClient():
+class DownloadClient:
     # 对下载器的封装,提供下载器的基本操作,将一些封装为对象
     # 检查下载器是否可用,下载器的基本操作,下载器的基本信息
     #
@@ -24,7 +24,6 @@ class DownloadClient():
         super().__init__()
         self._path_parser = TorrentPath()
         self._client = Downloader()
-
 
     async def __aenter__(self):
         await self._client.auth()
@@ -40,12 +39,14 @@ class DownloadClient():
             status_filter=status_filter, category=category, tag=tag, limit=limit
         )
         return resp
+
     async def rename_torrent_file(self, _hash, old_path, new_path) -> bool:
         resp = await self.rename(
             torrent_hash=_hash, old_path=old_path, new_path=new_path
         )
         logger.info(f"[Downloader] rename {old_path} >> {new_path}")
         return resp
+
     async def delete_torrent(self, hashes):
         resp = await self.delete(hashes)
         logger.info(f"[Downloader] Remove torrents {hashes}.")
@@ -67,7 +68,7 @@ class DownloadClient():
                     torrent_hash = get_hash(torrent_url)
                     if torrent_hash != torrent_url_hash:
                         torrent.url = f"{torrent.url},{torrent_hash}"
-        logging.debug(f"[Downloader] send url {torrent_url}to downloader ")
+        logger.debug(f"[Downloader] send url {torrent_url}to downloader ")
 
         result = await self.add(
             torrent_urls=torrent_url,

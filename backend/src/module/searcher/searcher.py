@@ -1,7 +1,6 @@
 import asyncio
 import json
 from collections.abc import AsyncGenerator
-from typing import TypeAlias
 
 from module.conf import settings
 from module.models import Bangumi, RSSItem, Torrent
@@ -20,8 +19,6 @@ SEARCH_KEY = [
     "source",
     "dpi",
 ]
-
-BangumiJSON: TypeAlias = str
 
 
 class SearchTorrent:
@@ -129,14 +126,20 @@ class SearchTorrent:
                     continue
         # 上面花了 5s
 
-    @staticmethod
-    def special_url(data: Bangumi, site: str) -> RSSItem:
+    def special_url(self, data: Bangumi, site: str) -> RSSItem:
         """
         根据 bangumi 的属性, 生成一个 rss_item
         """
-        keywords = [getattr(data, key) for key in SEARCH_KEY if getattr(data, key)]
+        keywords = self.special_keyword(data)
         url = search_url(site, keywords)
         return url
+
+    def special_keyword(self, data: Bangumi) -> list[str]:
+        """
+        根据 bangumi 的属性, 生成一个关键字列表
+        """
+        keywords = [getattr(data, key) for key in SEARCH_KEY if getattr(data, key)]
+        return keywords
 
 
 if __name__ == "__main__":
@@ -146,7 +149,7 @@ if __name__ == "__main__":
     async def main():
         p = pyinstrument.Profiler()
         with p:
-            async for result in SearchTorrent().analyse_keyword(["败犬"], site="nyaa"):
+            async for result in SearchTorrent().analyse_keyword(["败犬"], site="mikan"):
                 print(json.loads(result["data"]))
         p.print()
 

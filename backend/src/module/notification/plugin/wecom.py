@@ -41,6 +41,6 @@ class Notifier(BaseNotifier):
             "picurl": notify.poster_path,
         }
         async with RequestContent() as req:
-            resp = req.post_url(self.notification_url, data)
+            resp = await req.post_data(self.notification_url, data)
             logger.debug(f"Wecom notification: {resp.status_code}")
             return resp.status_code == 200

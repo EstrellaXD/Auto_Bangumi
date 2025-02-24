@@ -120,11 +120,7 @@ class TMDBSearchAPI:
         self.content = {}
 
     async def get_content(self, key_word: str) -> list[ShowInfo]:
-        async with RequestContent() as req:
-            url = search_url(key_word)
-            json_contents = await req.get_json(url)
-            contents: list[ShowInfo] = json_contents.get("results", [])
-            return contents if contents else []
+        return await self.get_cached_content(key_word)
 
     async def get_cached_content(self, key_word: str) -> list[ShowInfo]:
         if self.content.get(key_word, None):
@@ -133,9 +129,11 @@ class TMDBSearchAPI:
         async with RequestContent() as req:
             url = search_url(key_word)
             json_contents = await req.get_json(url)
-            contents: list[ShowInfo] = json_contents.get("results", [])
-            if contents:
-                self.content[key_word] = contents
+            print(json_contents)
+            if json_contents:
+                contents: list[ShowInfo] = json_contents.get("results", [])
+                if contents:
+                    self.content[key_word] = contents
             else:
                 contents = []
             return contents

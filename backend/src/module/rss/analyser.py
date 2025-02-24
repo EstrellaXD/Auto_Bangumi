@@ -22,11 +22,13 @@ class RSSAnalyser:
 
     async def official_title_parser(
         self, bangumi: Bangumi, parser: str, torrent: Torrent
-    ):
+    ) -> bool:
         if parser == "mikan":
             # TODO: MikanParser 要是没有homepage, 降级为 TmdbParser
             try:
                 parsered_bangumi = await self.mikan_parser.parser(torrent.homepage)
+                if not parsered_bangumi:
+                    return False
                 bangumi.poster_link, bangumi.official_title = (
                     parsered_bangumi.poster_link,
                     parsered_bangumi.official_title,
@@ -38,6 +40,8 @@ class RSSAnalyser:
             parsered_bangumi = await self.tmdb_parser.parser(
                 bangumi.official_title, bangumi.season, settings.rss_parser.language
             )
+            if not parsered_bangumi:
+                return False
             # if parsered_bangumi porperty is not default value, update bangumi
             # FIXME: 如果解析出来的属性是默认值，则不更新
             bangumi.official_title = parsered_bangumi.official_title
@@ -47,18 +51,21 @@ class RSSAnalyser:
         # else:
         #     pass
         bangumi.official_title = re.sub(r"[/:.\\]", " ", bangumi.official_title)
+        return True
 
     async def torrent_to_data(self, torrent: Torrent, rss: RSSItem) -> Bangumi | None:
         """
         parse torrent name to bangumi
         filter 在 RawParser 中设置
+        如果只有 rawparser, 则返回 None
         """
         if (
             bangumi := RawParser().parser(raw=torrent.name)
         ) and bangumi.official_title != "official_title":
-            await self.official_title_parser(
+            if not await self.official_title_parser(
                 bangumi=bangumi, parser=rss.parser, torrent=torrent
-            )
+            ):
+                return None
             bangumi.rss_link = rss.url
             return bangumi
 

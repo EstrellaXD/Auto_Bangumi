@@ -63,12 +63,12 @@ class TmdbParser(RawParser):
                 f"[Title Parser]Cannot match {title} in TMDB. Use raw title instead."
             )
             logger.warning("[Title Parser]Please change bangumi info manually.")
-
-            return Bangumi(
-                official_title=title,
-                title_raw=title,
-                season=season,
-            )
+            return None
+            # return Bangumi(
+            #     official_title=title,
+            #     title_raw=title,
+            #     season=season,
+            # )
 
     async def poster_parser(self, bangumi: Bangumi) -> bool:
         tmdb_info = await tmdb_parser(
@@ -99,11 +99,20 @@ class MikanParser(RawParser):
         mikan_parser = MikanWebParser(homepage, self.page)
         tasks = [mikan_parser.parser(), mikan_parser.poster_parser()]
         official_title, poster_link = await asyncio.gather(*tasks)
+        if not official_title or not poster_link:
+            return None
 
         return Bangumi(
             official_title=official_title,
             poster_link=poster_link,
         )
+
+    async def poster_parser(self, homepage: str) -> str:
+        mikan_parser = MikanWebParser(homepage, self.page)
+        poster_link = await mikan_parser.poster_parser()
+        if not poster_link:
+            return ""
+        return poster_link
 
     async def bangumi_link_parser(self, homepage: str) -> str:
         mikan_parser = MikanWebParser(homepage, self.page)
@@ -186,7 +195,7 @@ if __name__ == "__main__":
 
     async def test(title):
         start = time.time()
-        tb = TmdbParser()
+        tb = MikanParser()
         ans = await tb.parser(title)
         end = time.time()
         print(f"Time taken: {end - start} seconds")
@@ -206,5 +215,5 @@ if __name__ == "__main__":
         "https://mikanani.me/Home/Episode/33fbab8f53fe4bad12f07afa5abdb7c4afa5956c"
     )
 
-    ans = asyncio.run(test(official_title))
+    ans = asyncio.run(test(homepage))
     print(ans)

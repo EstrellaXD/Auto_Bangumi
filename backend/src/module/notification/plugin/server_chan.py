@@ -30,6 +30,6 @@ class Notifier(BaseNotifier):
             "desp": notify.message,
         }
         async with RequestContent() as req:
-            resp = await req.post_url(self.notification_url, data)
+            resp = await req.post_data(self.notification_url, data)
             logger.debug(f"ServerChan notification: {resp.status_code}")
             return resp.status_code == 200

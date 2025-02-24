@@ -77,13 +77,13 @@ async def update_rule(
     dependencies=[Depends(get_current_user)],
 )
 async def delete_rule(bangumi_id: str, file: bool = False):
-    data, torrent_message = await TorrentManager().delete_rule(bangumi_id, file)
+    data = await TorrentManager().delete_rule(bangumi_id, file)
     if data:
         resp = ResponseModel(
             status_code=200,
             status=True,
-            msg_en=f"Delete rule for {data.official_title}. {torrent_message.msg_en if file else ''}",
-            msg_zh=f"删除 {data.official_title} 规则。{torrent_message.msg_zh if file else ''}",
+            msg_en=f"Delete rule for {data.official_title}. ",
+            msg_zh=f"删除 {data.official_title} 规则。",
         )
     else:
         resp = ResponseModel(

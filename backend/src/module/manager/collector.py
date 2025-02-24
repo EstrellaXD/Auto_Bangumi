@@ -1,10 +1,7 @@
 import logging
 
-from module.conf import settings
 from module.database import Database, engine
-from module.downloader import DownloadQueue
 from module.models import Bangumi
-from module.models.rss import RSSItem
 from module.parser import TmdbParser
 from module.rss import RSSEngine, RSSManager
 from module.searcher import SearchTorrent
@@ -47,7 +44,8 @@ class SeasonCollector:
 
 
 async def eps_complete():
-    # with RSSEngine() as engine:
+    # 一次只补一个,不然会炸 qb
+    temp_bangumi = Bangumi()
     with Database(engine) as db:
         datas = db.bangumi.not_complete()
         if not datas:
@@ -55,19 +53,19 @@ async def eps_complete():
             return True
         logger.info("Start collecting full season...")
         data = datas[0]
-        # for data in datas:
+        # 复制 data 到 temp_bangumi
+        temp_bangumi.__dict__.update(data.__dict__)
+        temp_bangumi.title_raw = temp_bangumi.title_raw.split(",")[0]
         if not data.eps_collect:
-            # collector = SeasonCollector()
-            original_rss_link = data.rss_link
-            data.rss_link = SearchTorrent().special_url(data, "mikan").url
+            temp_bangumi.rss_link = (
+                SearchTorrent().special_url(temp_bangumi, "mikan").url
+            )
             try:
-                await RSSEngine().refresh_rss(bangumi=data)
+                await RSSEngine().refresh_rss(bangumi=temp_bangumi)
                 data.eps_collect = True
-                data.rss_link = original_rss_link
                 db.bangumi.update(data)
             except Exception as e:
                 logger.error(f"[eps_complete] {e}")
-            # db.bangumi.update_all(datas)
 
 
 if __name__ == "__main__":

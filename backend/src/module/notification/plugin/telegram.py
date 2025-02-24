@@ -32,10 +32,9 @@ class Notifier(BaseNotifier):
 
         if photo:
             async with RequestContent() as req:
-                resp = await req.post_url(self.photo_url, data, files={"photo": photo})
+                resp = await req.post_data(self.photo_url, data, files={"photo": photo})
         else:
             async with RequestContent() as req:
-                resp = await req.post_url(self.message_url, data)
-            # resp = await self.post_data(self.message_url, data)
+                resp = await req.post_data(self.message_url, data)
         logger.debug(f"Telegram notification: {resp.status_code}")
         return resp and resp.status_code == 200

@@ -8,12 +8,10 @@ from module.downloader import Client as download_client
 from module.downloader.path import TorrentPath
 from module.models import EpisodeFile, Notification, SubtitleFile
 from module.models.bangumi import Bangumi
-from module.models.rss import RSSItem
 from module.models.torrent import Torrent
 from module.notification import PostNotification
 from module.parser import TitleParser, TmdbParser
 from module.parser.analyser.raw_parser import is_point_5, is_v1
-from module.rss import RSSAnalyser
 
 logger = logging.getLogger(__name__)
 

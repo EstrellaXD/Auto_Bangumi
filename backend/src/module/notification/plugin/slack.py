@@ -25,6 +25,6 @@ class Notifier(BaseNotifier):
         self.gen_message(notify)
         data = {"title": notify.title, "body": notify.message, "device_key": self.token}
         async with RequestContent() as req:
-            resp = await req.post_url(self.notification_url, data)
+            resp = await req.post_data(self.notification_url, data)
             logger.debug(f"Bark notification: {resp.status_code}")
             return resp.status_code == 200

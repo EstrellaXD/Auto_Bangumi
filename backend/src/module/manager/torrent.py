@@ -46,19 +46,21 @@ class TorrentManager:
             data.save_path = DownlondClient._path_parser.gen_save_path(data)
             hash_list = await self.__match_torrents_list(data)
             if hash_list:
-                await DownlondClient.delete_torrent(hash_list)
-                with Database() as database:
-                    for _hash in hash_list:
-                        if torrent_item := database.torrent.search_hash(_hash):
-                            database.torrent.delete(torrent_item.id)
+                res = await DownlondClient.delete_torrent(hash_list)
+                if res:
+                    with Database() as database:
+                        for _hash in hash_list:
+                            if torrent_item := database.torrent.search_hash(_hash):
+                                database.torrent.delete(torrent_item.id)
 
                 logger.info(f"Delete rule and torrents for {data.official_title}")
-            return True
+                return True
+            else:
+                return False
 
     async def delete_rule(self, _id: int | str, file: bool = False):
         with Database(engine) as db:
             data = db.bangumi.search_id(int(_id))
-            torrent_message = None
         if data:
             async with DownlondClient:
                 with Database(engine) as db:
@@ -68,10 +70,10 @@ class TorrentManager:
                     if rss_item and rss_item.aggregate is False:
                         db.rss.delete(rss_item.id)
                 if file:
-                    torrent_message = await self.delete_torrents(data)
+                    await self.delete_torrents(data)
                 logger.info(f"[Manager] Delete rule for {data.official_title}")
-            return data, torrent_message
-        return None, None
+            return data
+        return None
 
     async def disable_rule(self, _id: str | int, file: bool = False) -> bool:
         with Database() as db:
