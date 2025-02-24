@@ -17,8 +17,6 @@ class SeasonCollector:
         self.st = SearchTorrent()
         self.rss_engine = RSSEngine()
 
-    
-
     @staticmethod
     async def subscribe_season(data: Bangumi, parser: str = "mikan"):
         """
@@ -35,7 +33,7 @@ class SeasonCollector:
         # 当 解析失败的时候, 会没有海报
         if data.poster_link is None:
             try:
-                await TmdbParser.poster_parser(data)
+                await TmdbParser().poster_parser(data)
             except Exception:
                 logging.warning(f"[Engine] Fail to pull poster {data.official_title} ")
 

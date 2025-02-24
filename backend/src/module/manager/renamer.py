@@ -12,7 +12,7 @@ from module.models.rss import RSSItem
 from module.models.torrent import Torrent
 from module.notification import PostNotification
 from module.parser import TitleParser, TmdbParser
-from module.parser.analyser.raw_parser import is_point_5, is_vd
+from module.parser.analyser.raw_parser import is_point_5, is_v1
 from module.rss import RSSAnalyser
 
 logger = logging.getLogger(__name__)
@@ -45,6 +45,7 @@ class Renamer:
         self.count = 0
         self.notify_dict = {}
         self.bangumi_cache = {}
+        self.tmdb_parser = TmdbParser()
 
     async def send_notification(self):
         """
@@ -149,6 +150,12 @@ class Renamer:
         # 番剧偏移
         ep.episode += bangumi.offset if bangumi else 0
         # TODO: 对.5 文件进行处理
+        if is_point_5(ep.title):
+            logger.debug(f"[Renamer][rename_file] {ep.title} is a point 5 file")
+            return True
+        if is_v1(ep.title):
+            logger.debug(f"[Renamer][rename_file] {ep.title} is a vd file")
+            return True
         new_path = self.gen_path(ep, bangumi_name, method)
         old_path = file_path
         if new_path == old_path:
@@ -272,7 +279,7 @@ class Renamer:
                             if self.bangumi_cache.get(bangumi_name):
                                 bangumi = self.bangumi_cache[bangumi_name]
                             else:
-                                if await TmdbParser().poster_parser(bangumi):
+                                if await self.tmdb_parser.poster_parser(bangumi):
                                     self.bangumi_cache[bangumi_name] = bangumi
                         # 有点问题,因为是第一次安装, 是默认的 download path, 这时候会移到奇怪的地方
                         # else:

@@ -23,7 +23,6 @@ class DownloadClient:
 
     def __init__(self):
         self.downloader: BaseDownloader = self.get_downloader()
-        print(self.downloader.host)
         self._path_parser: TorrentPath = TorrentPath()
         self.is_logining: bool = False
         self.is_running: bool = True
@@ -103,7 +102,6 @@ class DownloadClient:
             bangumi.save_path = self._path_parser.gen_save_path(bangumi)
             torrent_file = None
             torrent_url = torrent.url
-            # print(f"add torrent {torrent.url}")
             if torrent.url.startswith("magnet"):
                 torrent_url = torrent.url
             else:

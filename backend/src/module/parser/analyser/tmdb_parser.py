@@ -1,7 +1,6 @@
 import time
 from dataclasses import dataclass
 
-from module.network import RequestContent
 from module.parser.api.tmdb import (
     TMDB_IMG_URL,
     ShowInfo,
@@ -56,16 +55,21 @@ async def find_animation(contents: list[ShowInfo]) -> ShowInfo | None:
     return None
 
 
-async def tmdb_parser(title: str, language: str) -> TMDBInfo | None:
-    contents = await TMDBSearchAPI().get_content(title)
+async def tmdb_parser(
+    title: str,
+    language: str,
+    search_api: TMDBSearchAPI = TMDBSearchAPI(),
+    info_api: TMDBInfoAPI = TMDBInfoAPI(),
+) -> TMDBInfo | None:
+    contents = await search_api.get_content(title)
     if not contents:
-        contents = await TMDBSearchAPI().get_content(title.replace(" ", ""))
+        contents = await search_api.get_content(title.replace(" ", ""))
     if not contents:
         return None
     # # 判断动画
     content = await find_animation(contents)
     if content := await find_animation(contents):
-        url_info = await TMDBInfoAPI().get_content(content["id"], language)
+        url_info = await info_api.get_content(content["id"], language)
         info_content: TVShow = url_info
         season = [
             {

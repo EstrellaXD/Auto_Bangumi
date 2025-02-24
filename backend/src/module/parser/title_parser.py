@@ -5,7 +5,9 @@ from abc import abstractmethod
 from module.conf import settings
 from module.models import Bangumi
 from module.models.bangumi import Episode
-from module.parser import analyser
+from module.parser.analyser import MikanWebParser, tmdb_parser, torrent_parser
+from module.parser.analyser import RawParser as rawparser
+from module.parser.api import BaseWebPage, TMDBInfoAPI, TMDBSearchAPI
 
 logger = logging.getLogger(__name__)
 
@@ -26,17 +28,22 @@ logger = logging.getLogger(__name__)
 
 class RawParser:
 
-    @staticmethod
     @abstractmethod
     def parser(title: str, **kwargs) -> Bangumi:
         pass
 
 
 class TmdbParser(RawParser):
+    def __init__(
+        self,
+        search_api: TMDBSearchAPI = TMDBSearchAPI(),
+        info_api: TMDBInfoAPI = TMDBInfoAPI(),
+    ):
+        self.search_api = search_api
+        self.info_api = info_api
 
-    @staticmethod
-    async def parser(title: str, season: int = 1, language: str = "zh"):
-        tmdb_info = await analyser.tmdb_parser(title, language)
+    async def parser(self, title: str, season: int = 1, language: str = "zh"):
+        tmdb_info = await tmdb_parser(title, language, self.search_api, self.info_api)
         if tmdb_info:
             logger.debug(
                 f"[Title Parser] TMDB Matched, official title is {tmdb_info.title}"
@@ -63,10 +70,12 @@ class TmdbParser(RawParser):
                 season=season,
             )
 
-    @staticmethod
-    async def poster_parser(bangumi: Bangumi) -> bool:
-        tmdb_info = await analyser.tmdb_parser(
-            bangumi.official_title, settings.rss_parser.language
+    async def poster_parser(self, bangumi: Bangumi) -> bool:
+        tmdb_info = await tmdb_parser(
+            bangumi.official_title,
+            settings.rss_parser.language,
+            self.search_api,
+            self.info_api,
         )
         if tmdb_info:
             logger.debug(
@@ -83,10 +92,11 @@ class TmdbParser(RawParser):
 
 
 class MikanParser(RawParser):
-    @staticmethod
-    async def parser(homepage: str) -> tuple[str, str]:
+    def __init__(self, page: BaseWebPage = BaseWebPage()):
+        self.page = page
 
-        mikan_parser = analyser.MikanParser(homepage)
+    async def parser(self, homepage: str) -> Bangumi:
+        mikan_parser = MikanWebParser(homepage, self.page)
         tasks = [mikan_parser.parser(), mikan_parser.poster_parser()]
         official_title, poster_link = await asyncio.gather(*tasks)
 
@@ -94,6 +104,10 @@ class MikanParser(RawParser):
             official_title=official_title,
             poster_link=poster_link,
         )
+
+    async def bangumi_link_parser(self, homepage: str) -> str:
+        mikan_parser = MikanWebParser(homepage, self.page)
+        return await mikan_parser.bangumi_link_parser()
 
 
 class RawParser(RawParser):
@@ -108,7 +122,7 @@ class RawParser(RawParser):
             #     episode_dict = gpt.parse(raw, asdict=True)
             #     episode = Episode(**episode_dict)
             # else:
-            episode: Episode = analyser.RawParser().parser(raw)
+            episode: Episode = rawparser().parser(raw)
 
             titles = {
                 "zh": episode.title_zh,
@@ -158,7 +172,7 @@ class TitleParser:
         file_type: str = "media",
     ):
         try:
-            return analyser.torrent_parser(
+            return torrent_parser(
                 torrent_name,
                 file_type,
             )
@@ -168,10 +182,19 @@ class TitleParser:
 
 if __name__ == "__main__":
     import asyncio
+    import time
 
     async def test(title):
-        tb = RawParser().parser(title)
-        return RawParser.parser(tb.title_raw)
+        start = time.time()
+        tb = TmdbParser()
+        ans = await tb.parser(title)
+        end = time.time()
+        print(f"Time taken: {end - start} seconds")
+        start = time.time()
+        ans = await tb.parser(title)
+        end = time.time()
+        print(f"Time taken: {end - start} seconds")
+        return ans
 
     # parser = TmdbParser()
 
@@ -179,6 +202,9 @@ if __name__ == "__main__":
     language = "zh"
     season = 1
     official_title = "败犬女主太多了！"
+    homepage = (
+        "https://mikanani.me/Home/Episode/33fbab8f53fe4bad12f07afa5abdb7c4afa5956c"
+    )
 
-    ans = asyncio.run(test(title))
+    ans = asyncio.run(test(official_title))
     print(ans)

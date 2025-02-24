@@ -1,4 +1,4 @@
-from module.parser.analyser import RawParser
+from module.parser.analyser import RawParser, is_v1, is_point_5
 
 
 def test_raw_parser():
@@ -110,5 +110,18 @@ def test_raw_parser():
     assert info.season == 1
 
 
+def test_is_point_5():
+    content = "[LoliHouse] 2.5次元的诱惑 / 2.5-jigen no Ririsa [01-24 合集][WebRip 1080p HEVC-10bit AAC][简繁内封字幕][Fin] [复制磁连]"
+    assert not is_point_5(content)
+    content = "[LoliHouse] 关于我转生变成史莱姆这档事 第三季 / Tensei Shitara Slime Datta Ken 3rd Season - 17.5(65.5) [WebRip 1080p HEVC-10bit AAC][简繁内封字幕] [复制磁连]"
+    assert is_point_5(content)
+
+
+def test_is_v1():
+    content = "[桜都字幕组&7³ACG] 摇曳露营 第3季/ゆるキャン△ SEASON3/Yuru Camp S03 | 01-12+New Anime 01-03 [简繁字幕] BDrip 1080p AV1 OPUS 2.0 [复制磁连]"
+    assert not is_v1(content)
+
+
 if __name__ == "__main__":
-    test_raw_parser()
+    test_is_point_5()
+    test_is_v1()

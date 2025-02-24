@@ -11,6 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 class TorrentManager:
+    def __init__(self) -> None:
+        self.tmdb_parser = TmdbParser()
+
     @staticmethod
     async def __match_torrents_list(data: Bangumi | BangumiUpdate) -> list[str]:
         """find torrent save in same path
@@ -151,7 +154,7 @@ class TorrentManager:
             tasks = []
             for bangumi in bangumis:
                 if not bangumi.poster_link:
-                    tasks.append(TmdbParser().poster_parser(bangumi))
+                    tasks.append(self.tmdb_parser.poster_parser(bangumi))
             await asyncio.gather(*tasks)
             db.bangumi.update_all(bangumis)
         return True
@@ -160,7 +163,7 @@ class TorrentManager:
         with Database() as db:
             bangumi = db.bangumi.search_id(bangumi_id)
             if bangumi:
-                await TmdbParser().poster_parser(bangumi)
+                await self.tmdb_parser.poster_parser(bangumi)
                 db.bangumi.update(bangumi)
                 return True
         return False

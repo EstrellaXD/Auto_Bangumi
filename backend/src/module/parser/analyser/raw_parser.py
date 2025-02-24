@@ -224,20 +224,13 @@ class RawParser:
         episode_info, episode_is_trusted, season_info, season_is_trusted = (
             self.get_episode_info()
         )
-        print(self.title)
         self.token = re.split(r"/\[\]", self.title)
         if len(self.token) > 1:
             self.token = self.token[:-1]
         self.token = "[]".join(self.token)
         self.token = re.split(r"[\[\]]", self.token)
 
-        # print(f"{episode_info=}")
-        # print(f"{video_info=}")
-        # print(f"{unuseful_info=}")
-        # print(f"{audio_info=}")
-        # print(f"{sub_info=}")
-        # print(f"{self.title=}")
-        # print(f"{self.token=}")
+        group = self.get_group()
 
         group = self.get_group()
         if not season_info:
@@ -280,8 +273,6 @@ class RawParser:
     def get_episode_info(self):
         episode_info = self.findall_sub_title(EPISODE_PATTERN, sym="/[]")
         episode_is_trusted = True
-        # print(self.title)
-        # print(episode_info)
         season_info = self.findall_sub_title(SEASON_RE, sym="/[]")
         season_is_trusted = True
         if not episode_info:
@@ -376,7 +367,6 @@ class RawParser:
                     token_priority[idx] += 2
                 if re.search(r"[\u4e00-\u9fa5]{2,}", token):
                     token_priority[idx] += 2
-            # print(token_priority)
             idx = token_priority.index(max(token_priority))
             anime_title = self.token[idx]
             anime_title = anime_title.strip()
@@ -458,7 +448,7 @@ def raw_parser(raw: str) -> Episode | None:
     return ret
 
 
-def is_vd(title: str) -> bool:
+def is_v1(title: str) -> bool:
     """
     判断是否是 v1 番剧
     """

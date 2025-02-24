@@ -115,6 +115,10 @@ def info_url(id: str, language: str) -> str:
 
 
 class TMDBSearchAPI:
+    def __init__(self) -> None:
+        # 对搜索结果进行缓存
+        self.content = {}
+
     async def get_content(self, key_word: str) -> list[ShowInfo]:
         async with RequestContent() as req:
             url = search_url(key_word)
@@ -122,10 +126,36 @@ class TMDBSearchAPI:
             contents: list[ShowInfo] = json_contents.get("results", [])
             return contents if contents else []
 
+    async def get_cached_content(self, key_word: str) -> list[ShowInfo]:
+        if self.content.get(key_word, None):
+            return self.content.get(key_word)
+
+        async with RequestContent() as req:
+            url = search_url(key_word)
+            json_contents = await req.get_json(url)
+            contents: list[ShowInfo] = json_contents.get("results", [])
+            if contents:
+                self.content[key_word] = contents
+            else:
+                contents = []
+            return contents
+
 
 class TMDBInfoAPI:
+    def __init__(self) -> None:
+        self.content = {}
+
     async def get_content(self, id: str, language: str) -> TVShow:
+        return await self.get_cached_content(id, language)
+
+    async def get_cached_content(self, id: str, language: str) -> TVShow:
+        if self.content.get(id, None):
+            return self.content.get(id)
+
         async with RequestContent() as req:
             url = info_url(id, language)
             json_contents = await req.get_json(url)
+            if json_contents:
+                self.content[id] = json_contents
+
             return json_contents
