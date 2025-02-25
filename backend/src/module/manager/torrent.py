@@ -130,6 +130,9 @@ class TorrentManager:
                     or old_data.season != data.season
                 ):
                     # 名字改了, 年份改了, 季改了
+                    # 名字改的时候,刷新一下海报
+                    if old_data.official_title != data.official_title:
+                        await self.tmdb_parser.poster_parser(data)
                     # Move torrent
                     async with DownlondClient:
                         old_data.save_path = DownlondClient._path_parser.gen_save_path(
@@ -143,6 +146,7 @@ class TorrentManager:
                         # save_path改动后名命名一次
                         await self.rename(new_save_path, hash_list)
                         await asyncio.sleep(1)
+
 
                 db.bangumi.update(data, bangumi_id)
                 return True

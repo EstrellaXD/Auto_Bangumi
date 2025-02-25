@@ -105,6 +105,6 @@ async def tmdb_parser(
 if __name__ == "__main__":
     import asyncio
 
-    ans = asyncio.run(tmdb_parser("狼与香辛料", "zh"))
+    ans = asyncio.run(tmdb_parser("Re：从零开始的异世界生活 袭击篇", "zh"))
     # ans = asyncio.run(tmdb_parser("物语系列", "zh"))
     print(ans)

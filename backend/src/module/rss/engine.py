@@ -98,10 +98,12 @@ class RSSRefresh(RssBase):
                     bangumi = await self.analyser.torrent_to_data(
                         torrent, self.rss_item
                     )
+                    if bangumi:
+                        with Database(engine) as database:
+                            database.bangumi.add(bangumi)
                 if bangumi:
                     # TODO: 不一定在这更新
-                    with Database(engine) as database:
-                        database.bangumi.add(bangumi)
+                    # 这个还是要想想怎么弄, 要是没有的话就不加可能就没机会加了
                     if not self.rss_item.aggregate:
                         # 如果 不是聚合的, 则更新 bangumi
                         # 这样就可以避免多余的请求
@@ -218,29 +220,20 @@ class RSSEngine:
 
 
 if __name__ == "__main__":
+    from module.conf import setup_logger
+    setup_logger("DEBUG")
 
     async def test():
         test_rss = RSSItem(
-            url="https://mikanani.me/RSS/Bangumi?bangumiId=3439&subgroupid=1207"
+            url="https://mikanani.me/RSS/Bangumi?bangumiId=3464&subgroupid=639"
+            ,parser="tmdb"
+            ,aggregate=True
         )
         test_refresh = RSSRefresh(rss_item=test_rss)
         await test_refresh.refresh()
-        print(test_refresh.bangumi_torrents)
 
     async def test_engine():
         test_engine = RSSEngine()
         await test_engine.refresh_all()
 
-    asyncio.run(test_engine())
-    # asyncio.run(test())
-    # test_bangumi = Bangumi(official_title="test")
-    # test_dict = {test_bangumi: []}
-    # test_bangumi2 = Bangumi(official_title="test", rule_name="2")
-    # test_dict[test_bangumi2].append(Torrent(url="testlink"))
-    # print(test_dict)
-    # test_bangumi = Bangumi(official_title="test")
-    # test_torrent = Torrent(url="testlin")
-    # test_class = TorrentBangumi(test_bangumi)
-    # test_class.append(test_torrent)
-    # print( len(test_class))
-    # print(platform.system())
+    asyncio.run(test())

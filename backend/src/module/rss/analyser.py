@@ -22,13 +22,14 @@ class RSSAnalyser:
 
     async def official_title_parser(
         self, bangumi: Bangumi, parser: str, torrent: Torrent
-    ) -> bool:
+    ) -> Bangumi:
         if parser == "mikan":
             # TODO: MikanParser 要是没有homepage, 降级为 TmdbParser
             try:
                 parsered_bangumi = await self.mikan_parser.parser(torrent.homepage)
                 if not parsered_bangumi:
-                    return False
+                    logger.debug("[Parser] Mikan torrent has no homepage info.")
+                    return bangumi
                 bangumi.poster_link, bangumi.official_title = (
                     parsered_bangumi.poster_link,
                     parsered_bangumi.official_title,
@@ -41,7 +42,7 @@ class RSSAnalyser:
                 bangumi.official_title, bangumi.season, settings.rss_parser.language
             )
             if not parsered_bangumi:
-                return False
+                return bangumi
             # if parsered_bangumi porperty is not default value, update bangumi
             # FIXME: 如果解析出来的属性是默认值，则不更新
             bangumi.official_title = parsered_bangumi.official_title
@@ -51,7 +52,7 @@ class RSSAnalyser:
         # else:
         #     pass
         bangumi.official_title = re.sub(r"[/:.\\]", " ", bangumi.official_title)
-        return True
+        return bangumi
 
     async def torrent_to_data(self, torrent: Torrent, rss: RSSItem) -> Bangumi | None:
         """
@@ -73,7 +74,6 @@ class RSSAnalyser:
         """
         find bangumi from database by torrent name and rss link
         """
-        # print(f"torrent_to_bangumi {torrent.name} {rss_item.url}")
         with Database(self.engine) as database:
             matched_bangumi = database.bangumi.match_torrent(
                 torrent_name=torrent.name,
@@ -94,11 +94,9 @@ if __name__ == "__main__":
         start = time.time()
         res = await analyser.torrent_to_data(test_torrent, rss_item)
         end = time.time()
-        print(f"Time taken: {end - start} seconds")
         start = time.time()
         res = await analyser.torrent_to_data(test_torrent, rss_item)
         end = time.time()
-        print(f"Time taken: {end - start} seconds")
         return res
 
     test_bangumi = Bangumi(official_title="败犬女主太多了！", season=1)
@@ -109,4 +107,3 @@ if __name__ == "__main__":
     rss_item = RSSItem(url="https://mikanani.me/RSS/Bangumi/100000", parser="mikan")
 
     res = asyncio.run(test())
-    print(res)

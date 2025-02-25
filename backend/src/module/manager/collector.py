@@ -79,4 +79,3 @@ if __name__ == "__main__":
     rss_link = "https://mikanani.me/RSS/Bangumi?bangumiId=3391&subgroupid=583"
     t = Bangumi(official_title=official_title, rss_link=rss_link)
     ans = asyncio.run(eps_complete())
-    # print(ans)

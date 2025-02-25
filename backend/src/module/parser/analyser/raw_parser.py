@@ -523,6 +523,7 @@ if __name__ == "__main__":
     # title = "【1月】超超超超超喜欢你的100个女朋友 第二季 07.mp4"
     # print(is_vd(title))
     # print(is_point_5(title))
+    title = "[云歌字幕组][Re:从零开始的异世界生活 第三季 袭击篇][01][HEVC][x265 10bit][1080p][简日双语][招募校对] [复制磁连]"
     print(title)
     print(re.findall(EPISODE_PATTERN, title))
     print(re.findall(SEASON_RE, title))

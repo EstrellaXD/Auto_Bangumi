@@ -66,4 +66,3 @@ class Checker:
 if __name__ == "__main__":
     import asyncio
 
-    print(asyncio.run(Checker().check_downloader()))

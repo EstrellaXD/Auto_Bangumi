@@ -132,6 +132,5 @@ if __name__ == "__main__":
     setup_logger()
     asyncio.run(AsyncDownload().download_task_loop())
     # if settings.bangumi_manage.eps_complete:
-    #     print(1)
     #
     # asyncio.run(AsyncRenamer().rename_task_loop())

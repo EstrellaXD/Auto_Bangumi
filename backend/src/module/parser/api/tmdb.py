@@ -129,7 +129,6 @@ class TMDBSearchAPI:
         async with RequestContent() as req:
             url = search_url(key_word)
             json_contents = await req.get_json(url)
-            print(json_contents)
             if json_contents:
                 contents: list[ShowInfo] = json_contents.get("results", [])
                 if contents:
