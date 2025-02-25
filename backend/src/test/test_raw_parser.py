@@ -109,6 +109,14 @@ def test_raw_parser():
     assert info.episode == 12
     assert info.season == 1
 
+    content = "【1月】超超超超超喜欢你的100个女朋友 第二季 07.mp4"
+    info = RawParser().parser(content)
+    assert info is not None
+    assert info.group == "1月"
+    assert info.title_zh == "超超超超超喜欢你的100个女朋友"
+    assert info.episode == 7
+    assert info.season == 2
+
 
 def test_is_point_5():
     content = "[LoliHouse] 2.5次元的诱惑 / 2.5-jigen no Ririsa [01-24 合集][WebRip 1080p HEVC-10bit AAC][简繁内封字幕][Fin] [复制磁连]"

@@ -27,7 +27,13 @@ EPISODE_PATTERN = re.compile(
     re.VERBOSE | re.IGNORECASE,
 )
 
-EPISODE_RE_UNTRUSTED = re.compile(r"[\b\s\[\]]((\d+?))[\s\b\[\]]")
+EPISODE_RE_UNTRUSTED = re.compile(
+    rf"""{BOUNDARY_START}
+        ((\d+?))
+        {BOUNDARY_END}
+        """,
+    re.VERBOSE,
+)
 
 SEASON_RE = re.compile(
     rf"""
@@ -179,8 +185,7 @@ UNUSEFUL_RE = re.compile(
 V1_RE = re.compile(
     rf"""
     {BOUNDARY_START}
-    (V1
-    )
+    (V1)
     {BOUNDARY_END}
     """,
     re.VERBOSE | re.IGNORECASE,
@@ -316,10 +321,7 @@ class RawParser:
     def episode_info_to_episode(self, episode_info: tuple[str]) -> int | float:
         for episode in episode_info[1:]:
             if episode:
-                if "." in episode:
-                    return float(episode)
-                else:
-                    return int(episode)
+                return int(episode)
         # 并不会走到这里
         return 0
 
@@ -475,7 +477,7 @@ if __name__ == "__main__":
     # title = "[极影字幕社]★4月新番 天国大魔境 Tengoku Daimakyou 第05话 GB 720P MP4（字幕社招人内详）"
     # title = "hello[2023.1.2]hell"
     # title = "海盗战记 (2019) S01E01.mp4"
-    # title =  "[SBSUB][CONAN][1082][V2][1080P][AVC_AAC][CHS_JP](C1E4E331).mp4"
+    title = "[SBSUB][CONAN][1082][V2][1080P][AVC_AAC][CHS_JP](C1E4E331).mp4"
     # title = "前辈是男孩子 (2024) S01E02.mp4"
     # title = "[SBSUB][CONAN][1082][V2][1080P][AVC_AAC][CHS_JP](C1E4E331).mp4"
     # title = "海盗战记 S01E01.zh-tw.ass"
@@ -493,9 +495,9 @@ if __name__ == "__main__":
     # title = "北宇治字幕组] 夜晚的水母不会游泳 / Yoru no Kurage wa Oyogenai [01-12 修正合集][WebRip][HEVC_AAC][简繁日内封] [复制磁连]"
     # title = "[北宇治字组&霜庭云花Sub&氢气烤肉架]【我推的孩子】/【Oshi no Ko】[18][WebRip][HEVC_AAC][繁日内嵌]"
     # # print(re.findall(RESOLUTION_RE,title))
-    title = (
-        "[织梦字幕组][尼尔：机械纪元 NieR Automata Ver1.1a][02集][1080P][AVC][简日双语]"
-    )
+    # title = (
+    #     "[织梦字幕组][尼尔：机械纪元 NieR Automata Ver1.1a][02集][1080P][AVC][简日双语]"
+    # )
     # title = "[ANi] Bakemonogatari / 物语系列 第外季＆第怪季 - 06.5 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4][ANi] Bakemonogatari / 物语系列 第外季＆第怪季 - 06.5 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4][217.2 MB]"
     # title = "ANi] 我獨自升級 - 07.5 [1080P][Baha][WEB-DL][AAC AVC][CHT].mp4"
     # title = "[NEO·QSW]古莲泰沙U グレンダイザーU Grendizer U 02[WEBRIP AVC 1080P]（搜索用：巨灵神/克雷飞天神）"
@@ -516,13 +518,15 @@ if __name__ == "__main__":
     # title = "[LoliHouse] 关于我转生变成史莱姆这档事 第三季 / Tensei Shitara Slime Datta Ken 3rd Season - 17.5(65.5) [WebRip 1080p HEVC-10bit AAC][简繁内封字幕] [复制磁连]"
     # title = "海盗战记 (2019) S01E01.mp4"
     # title = "水星的魔女(2022) S00E19.mp4"
-    title = "[Billion Meta Lab] 终末列车寻往何方 Shuumatsu Torein Dokoe Iku [12][1080][HEVC 10bit][简繁日内封][END]"
-    title = " 幻樱字幕组】【4月新番】【古见同学有交流障碍症 第二季 Komi-san wa, Komyushou Desu. S02】【22】【GB_MP4】【1920X1080】"
+    # title = "[Billion Meta Lab] 终末列车寻往何方 Shuumatsu Torein Dokoe Iku [12][1080][HEVC 10bit][简繁日内封][END]"
+    # title = " 幻樱字幕组】【4月新番】【古见同学有交流障碍症 第二季 Komi-san wa, Komyushou Desu. S02】【22】【GB_MP4】【1920X1080】"
+    # title = "【1月】超超超超超喜欢你的100个女朋友 第二季 07.mp4"
     # print(is_vd(title))
     # print(is_point_5(title))
     print(title)
     print(re.findall(EPISODE_PATTERN, title))
     print(re.findall(SEASON_RE, title))
+    print(re.findall(EPISODE_RE_UNTRUSTED, title))
     # # #
     res = raw_parser(title)
     for k, v in res.__dict__.items():
