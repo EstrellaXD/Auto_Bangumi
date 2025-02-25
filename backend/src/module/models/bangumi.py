@@ -24,9 +24,7 @@ class Bangumi(SQLModel, table=True):
     filter: str = Field(default="", alias="filter", title="番剧过滤器")
     # 感觉是不是与 rss 表用外键关联更好
     rss_link: str = Field(default="", alias="rss_link", title="番剧RSS链接")
-    poster_link: str | None = Field(
-        default=None, alias="poster_link", title="番剧海报链接"
-    )
+    poster_link: str = Field(default="", alias="poster_link", title="番剧海报链接")
     added: bool = Field(default=False, alias="added", title="是否已添加")
     rule_name: str | None = Field(default=None, alias="rule_name", title="番剧规则名")
     save_path: str | None = Field(default=None, alias="save_path", title="番剧保存路径")
@@ -60,7 +58,7 @@ class BangumiUpdate(SQLModel):
     offset: int = Field(default=0, alias="offset", title="番剧偏移量")
     filter: str = Field(default="720,\\d+-\\d+", alias="filter", title="番剧过滤器")
     rss_link: str = Field(default="", alias="rss_link", title="番剧RSS链接")
-    poster_link: str | None = Field(alias="poster_link", title="番剧海报链接")
+    poster_link: str = Field(default="", alias="poster_link", title="番剧海报链接")
     added: bool = Field(default=False, alias="added", title="是否已添加")
     rule_name: str | None = Field(alias="rule_name", title="番剧规则名")
     save_path: str | None = Field(alias="save_path", title="番剧保存路径")
