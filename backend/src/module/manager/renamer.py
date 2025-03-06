@@ -150,9 +150,14 @@ class Renamer:
         # TODO: 对.5 文件进行处理
         if is_point_5(ep.title):
             logger.debug(f"[Renamer][rename_file] {ep.title} is a point 5 file")
+            # Notify = Notification()
             return True
         if is_v1(ep.title):
             logger.debug(f"[Renamer][rename_file] {ep.title} is a vd file")
+            return True
+        # 当 episode 是 0 时, 不处理
+        if ep and ep.episode == 0:
+            logger.debug(f"[Renamer][rename_file] {ep.title} is parser episode failed")
             return True
         new_path = self.gen_path(ep, bangumi_name, method)
         old_path = file_path
