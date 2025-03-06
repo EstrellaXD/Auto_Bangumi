@@ -71,7 +71,7 @@ class PostNotification:
         """
         with Database() as db:
             bangumi = db.bangumi.search_official_title(notify.title)
-        if bangumi:
+        if bangumi and bangumi.poster_link:
             notify.poster_path = bangumi.poster_link
         else:
             notify.poster_path = ""
@@ -106,6 +106,6 @@ if __name__ == "__main__":
     setup_logger("DEBUG", reset=True)
 
     title = "败犬"
-    # link = "posters/aHR0cHM6Ly9pbWFnZS50bWRiLm9yZy90L3Avdzc4MC9wYWRSbWJrMkxkTGd1ZGg1Y0xZMG85VEZ6aEkuanBn"
+    link = "posters/aHR0cHM6Ly9pbWFnZS50bWRiLm9yZy90L3Avdzc4MC9wYWRSbWJrMkxkTGd1ZGg1Y0xZMG85VEZ6aEkuanBn"
     nt = Notification(title=title, season=1, episode="1,2,4,5,8", poster_path="")
     asyncio.run(PostNotification().send(nt))

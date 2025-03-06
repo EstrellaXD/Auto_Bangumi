@@ -61,7 +61,7 @@ class RequestContent(RequestURL):
         return {}
 
     async def post_data(
-        self, _url: str, data: dict[str, str], files: dict[str, bytes]
+        self, _url: str, data: dict[str, str], files: dict[str, bytes]|None=None
     ) -> Response:
         try:
             req = await self.post_url(_url, data, files)

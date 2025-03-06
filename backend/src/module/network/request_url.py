@@ -21,7 +21,7 @@ class RequestURL:
     async def _request_with_retry(self, method: str, url: str, **kwargs):
         for attempt in range(self.retry):
             try:
-                response = await self.client.request(method, url, **kwargs)
+                response = await self.client.request(method, url,follow_redirects=True, **kwargs)
                 response.raise_for_status()
                 return response
             except httpx.RequestError as e:

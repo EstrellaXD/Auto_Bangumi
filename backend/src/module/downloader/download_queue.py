@@ -1,8 +1,9 @@
 import asyncio
 import logging
 
-from module.database import Database, engine
-from module.downloader.client.expection import AuthorizationError
+from module.database import Database
+
+# from module.downloader.client.expection import AuthorizationError
 from module.downloader.download_client import Client as client
 from module.models import Bangumi, Torrent
 
@@ -10,7 +11,6 @@ MIN_SIZE = 5
 logger = logging.getLogger(__name__)
 queue: asyncio.Queue[tuple[Torrent, Bangumi]] = asyncio.Queue()
 download_add_event = asyncio.Event()
-download_len_event = asyncio.Event()
 
 
 class DownloadQueue:
@@ -24,7 +24,7 @@ class DownloadQueue:
     def add(self, torrent: Torrent, bangumi: Bangumi):
         self.queue.put_nowait((torrent, bangumi))
         logger.debug(
-            f"[Download Queue] add {bangumi.official_title}, torrent name = {torrent.name} ,torrent url = {torrent.url}"
+            f"[Download Queue] add to queue {bangumi.official_title}, torrent name = {torrent.name} ,torrent url = {torrent.url}"
         )
         download_add_event.set()
 
@@ -40,18 +40,16 @@ class AsyncDownloadController:
         # 一次取五个torrent
         for _ in range(5):
             if queue.empty():
+                logger.debug("[Download Controller] queue is empty")
                 download_add_event.clear()  # 重置事件
                 # 为空时退出
                 break
             torrent, bangumi = queue.get_nowait()
             queue.task_done()
-            logging.debug(f"[Download Queue] start download {torrent.name}")
+            logging.debug(f"[Download Controller] start download {torrent.name}")
             torrents.append(torrent)
             tasks.append(client.add_torrent(torrent, bangumi))
         await asyncio.gather(*tasks)
         with Database() as database:
             database.torrent.add_all(torrents)
 
-
-if __name__ == "__main__":
-    asyncio.run(AsyncDownloadController().download())
