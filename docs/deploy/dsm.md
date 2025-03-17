@@ -16,6 +16,8 @@
 
 点击 **项目**，然后点击 **新建**，选择 **Docker Compose**。
 
+在路径中选择 `/volume1/docker/AutoBangumi`
+
 ![new-compose](../image/dsm/new-compose.png){data-zoomable}
 
 复制以下内容填入 **Docker Compose** 中。
