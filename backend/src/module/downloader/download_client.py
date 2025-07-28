@@ -1,18 +1,113 @@
 import asyncio
 import importlib
 import logging
-from asyncio import Task
+import time
+from functools import wraps
 from typing import Any
 
+from module.conf import settings
+from module.downloader.client import AuthorizationError, BaseDownloader, Downloader
 from module.models import Torrent, TorrentDownloadInfo
-from module.network import RequestContent
-from module.utils import get_hash, torrent_to_link
-
-from ..conf import settings
-from .client import AuthorizationError, BaseDownloader
 from module.utils import gen_save_path
 
 logger = logging.getLogger(__name__)
+
+
+def api_rate_limit(func):
+    """API速率限制装饰器，支持任务取消"""
+
+    @wraps(func)
+    async def wrapper(self, *args, **kwargs):
+        task_id = id(asyncio.current_task())
+
+        # 先添加到等待任务集合，确保能被追踪和取消
+        self._waiting_api_tasks.add(task_id)
+
+        try:
+            # 在获取锁前先检查是否已被取消
+            if self._api_cancel_event.is_set():
+                logger.info(f"[API Rate Limit] {func.__name__} cancelled before lock")
+                raise asyncio.CancelledError("API call cancelled")
+
+            # 可取消的锁获取 - 等待锁或取消信号
+            while True:
+                lock_task = asyncio.create_task(self._api_lock.acquire())
+                cancel_task = asyncio.create_task(self._api_cancel_event.wait())
+
+                done, pending = await asyncio.wait(
+                    [lock_task, cancel_task], return_when=asyncio.FIRST_COMPLETED
+                )
+
+                # 取消未完成的任务
+                for task in pending:
+                    task.cancel()
+
+                # 检查是否被取消
+                if self._api_cancel_event.is_set():
+                    # 如果锁已经获取，需要释放
+                    if lock_task.done() and not lock_task.cancelled():
+                        self._api_lock.release()
+                    logger.info(
+                        f"[API Rate Limit] {func.__name__} cancelled while waiting for lock"
+                    )
+                    raise asyncio.CancelledError("API call cancelled")
+
+                # 成功获取锁
+                break
+
+            try:
+                current_time = time.time()
+                time_since_last = current_time - self._last_api_call
+
+                if self.api_interval >= 0 and time_since_last < self.api_interval:
+                    wait_time = self.api_interval - time_since_last
+                    logger.debug(
+                        f"[API Rate Limit] {func.__name__} waiting {wait_time:.2f}s"
+                    )
+
+                    # 可中断的等待
+                    done, pending = await asyncio.wait(
+                        [
+                            asyncio.create_task(asyncio.sleep(wait_time)),
+                            asyncio.create_task(self._api_cancel_event.wait()),
+                        ],
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+
+                    # 取消未完成的任务
+                    for task in pending:
+                        task.cancel()
+
+                    # 检查是否被取消
+                    if self._api_cancel_event.is_set():
+                        logger.info(
+                            f"[API Rate Limit] {func.__name__} cancelled during sleep"
+                        )
+                        raise asyncio.CancelledError("API call cancelled")
+
+                # 调用原函数
+                result = await func(self, *args, **kwargs)
+
+                # 更新最后调用时间
+                self._last_api_call = time.time()
+
+                return result
+
+            finally:
+                # 释放锁
+                self._api_lock.release()
+
+        except asyncio.CancelledError:
+            logger.info(f"[API Rate Limit] {func.__name__} was cancelled")
+            raise
+        except Exception as e:
+            logger.error(f"[API Rate Limit] {func.__name__} error: {e}")
+            raise
+        finally:
+            # 确保从等待任务集合中移除
+            self._waiting_api_tasks.discard(task_id)
+
+    return wrapper
 
 
 class DownloadClient:
@@ -22,61 +117,76 @@ class DownloadClient:
     """
 
     def __init__(self):
-        self.downloader: BaseDownloader = self.get_downloader()
+        self.downloader: BaseDownloader = Downloader()
         # 用于等待登陆完成
+        self.login_success_event: asyncio.Event = asyncio.Event()
+        self.login_timeout: int = 30  # 30秒超时
+        self.login_task: asyncio.Task | None = None
 
-    async def __aenter__(self):
-        if not self.is_login:
-            self.login_event.set()
-        # if not self.is_logining:
-        if not self.login_task or self.login_task.done():
-            self.start_login()
-        return self
-
-    async def __aexit__(self, exc_type, exc, tb):
-        pass
+        # API 限流和任务控制
+        self._api_lock: asyncio.Lock = asyncio.Lock()
+        self._last_api_call: float = 0
+        self._api_cancel_event: asyncio.Event = asyncio.Event()
+        self._waiting_api_tasks: set[int] = set()  # 追踪等待中的API任务
+        self.api_interval: float = 1.0  # 默认1秒间隔
+        self.is_authenticating:bool = False  # 重置认证状态
 
     async def login(self):
-        # 当没有登陆,并且没有登陆事件时
+        """一次性登录尝试，不重试"""
         try:
-            self.is_logining = True
-            times = 0
-            while True:
-                logger.debug("[Downloader Client] login")
-                await self.login_event.wait()
-                self.login_success_event.clear()
-                if await self.downloader.auth():
-                    self.login_success_event.set()
-                    self.login_event.clear()
-                    self.is_login = True
-                    logger.info("[Downloader Client] login success")
-                else:
-                    times += 1
-                    # 最大为 5 分钟
-                    if times > 10:
-                        times = 10
-                    logger.info(
-                        f"[Downloader Client] login failed, retry after {30*times}s"
-                    )
-                    await asyncio.sleep(times * 30)
+            self.login_success_event.clear()  # 重置事件状态
+            self.is_authenticating = True  # 设置正在认证状态
+            logger.debug("[Downloader Client] attempting authentication")
+
+            if await self.downloader.auth():
+                self.login_success_event.set()  # 设置认证成功事件
+                logger.info("[Downloader Client] authentication success")
+            else:
+                # 保持 login_success_event 为 clear 状态，表示认证失败
+                logger.warning("[Downloader Client] authentication failed")
+
         except Exception as e:
-            logger.error(f"[Downloader Client] login error: {e}")
-            self.is_logining = False
+            logger.error(f"[Downloader Client] authentication error: {e}")
+            # 保持 login_success_event 为 clear 状态，表示认证失败
+        finally:
+            self.is_authenticating = False
 
     async def wait_for_login(self) -> bool:
-        """等待登录完成，超时返回False"""
+        """等待认证完成，返回是否可以继续API调用"""
+        # 如果已认证成功，直接返回True  
+        if self.login_success_event.is_set():
+            return True
+
+        # 如果正在认证中（login_task存在且未完成），等待认证完成
+        if self.is_authenticating:
+            try:
+                await asyncio.wait_for(
+                    self.login_success_event.wait(), self.login_timeout
+                )
+                return self.login_success_event.is_set()
+            except asyncio.TimeoutError:
+                logger.warning("[Downloader Client] Authentication wait timeout")
+                return False
+
+        # 如果未认证且未在认证中，启动认证
+        self.start_login()
+
+        # 等待这次认证完成
         try:
             await asyncio.wait_for(self.login_success_event.wait(), self.login_timeout)
-            return True
+            return self.login_success_event.is_set()
         except asyncio.TimeoutError:
-            logger.warning("[Downloader Client] Login wait timeout")
-            raise AuthorizationError("login")
+            logger.warning("[Downloader Client] Authentication timeout")
+            return False
 
+    @api_rate_limit
     async def get_torrents_info(
         self, category="Bangumi", status_filter="completed", tag=None, limit=0
     ) -> list[dict[str, Any]]:
+        if not await self.wait_for_login():
+            return []  # 登录失败时返回空列表
+
         try:
-            await self.wait_for_login()
             resp = await self.downloader.torrents_info(
                 category=category,
                 status_filter=status_filter,
@@ -88,10 +198,13 @@ class DownloadClient:
             self.start_login()
             return []
 
+    @api_rate_limit
     async def add_torrent(self, torrent: Torrent, bangumi) -> bool:
+        if not await self.wait_for_login():
+            return False  # 登录失败时返回False
+
         try:
-            await self.wait_for_login()
-            bangumi.save_path = gen_save_path(bangumi)
+            bangumi.save_path = gen_save_path(settings.downloader.path, bangumi)
             torrent_file = None
             torrent_url = torrent.url
             logging.debug(f"[Downloader] send url {torrent_url}to downloader ")
@@ -114,9 +227,12 @@ class DownloadClient:
             self.start_login()
         return False
 
+    @api_rate_limit
     async def move_torrent(self, hashes: list[str] | str, location: str) -> bool:
+        if not await self.wait_for_login():
+            return False  # 登录失败时返回False
+
         try:
-            await self.wait_for_login()
             result = await self.downloader.move(hashes=hashes, new_location=location)
             if result:
                 logger.info(f"[Downloader] Move torrents {hashes} to {location}")
@@ -133,11 +249,14 @@ class DownloadClient:
     # async def set_category(self, hashes, category):
     #     await self.downloader.set_category(hashes, category)
 
+    @api_rate_limit
     async def rename_torrent_file(
         self, torrent_hash: str, old_path: str, new_path: str
     ) -> bool:
+        if not await self.wait_for_login():
+            return False  # 登录失败时返回False
+
         try:
-            await self.wait_for_login()
             result = await self.downloader.rename(
                 torrent_hash=torrent_hash,
                 old_path=old_path,
@@ -153,9 +272,12 @@ class DownloadClient:
             self.start_login()
         return False
 
+    @api_rate_limit
     async def delete_torrent(self, hashes: list[str] | str) -> bool:
+        if not await self.wait_for_login():
+            return False  # 登录失败时返回False
+
         try:
-            await self.wait_for_login()
             result = await self.downloader.delete(hashes)
             if result:
                 logger.debug(f"[Downloader] Remove torrents {hashes}.")
@@ -167,9 +289,12 @@ class DownloadClient:
             self.start_login()
         return False
 
+    @api_rate_limit
     async def get_torrent_info(self, hash: str) -> TorrentDownloadInfo | None:
+        if not await self.wait_for_login():
+            return TorrentDownloadInfo()  # 登录失败时返回空对象
+
         try:
-            await self.wait_for_login()
             result = await self.downloader.torrent_info(hash)
             if result:
                 # print(result)
@@ -182,50 +307,125 @@ class DownloadClient:
             self.start_login()
         return TorrentDownloadInfo()
 
+    @api_rate_limit
     async def get_torrent_files(self, _hash: str) -> list[str] | None:
         # 获取种子文件列表
         # 文件夹举例
         # LKSUB][Make Heroine ga Oosugiru!][01-12][720P]/[LKSUB][Make Heroine ga Oosugiru!][01][720P].mp4
-        try:
-            await self.wait_for_login()
+        if not await self.wait_for_login():
+            return []  # 登录失败时返回空列表
 
+        try:
             return await self.downloader.get_torrent_files(_hash)
         except AuthorizationError:
             self.start_login()
         return []
 
     def start_login(self):
-        self.is_login = False
-        self.login_event.set()
-        if not self.login_task or self.login_task.done():
-            self.login_task = asyncio.create_task(self.login(), name="login")
+        self.login_task = asyncio.create_task(self.login(), name="login")
 
     def start(self):
-        self.downloader = self.get_downloader()
         # 判断有没有 login task
         self.start_login()
 
+    def cancel_all_api_calls(self):
+        """取消所有等待中的API调用"""
+        logger.info(
+            f"[Download Client] Cancelling {len(self._waiting_api_tasks)} waiting API calls"
+        )
+        self._api_cancel_event.set()
+
+    def reset_api_cancel(self):
+        """重置API取消状态，允许新的API调用"""
+        self._api_cancel_event.clear()
+
+    def get_waiting_api_count(self) -> int:
+        """获取等待中的API任务数量"""
+        return len(self._waiting_api_tasks)
+
     async def stop(self):
+        self.cancel_all_api_calls()  # 先取消所有API调用
         await self.downloader.logout()
         if self.login_task:
             self.login_task.cancel()
 
     async def restart(self):
         await self.stop()
+        self.reset_api_cancel()  # 重置API取消状态
+        # 重置认证状态，允许重新尝试认证
         self.start()
 
-    def get_downloader(self) -> BaseDownloader:
-        download_type = settings.downloader.type
-        package_path = f".client.{download_type}"
-        downloader = importlib.import_module(package_path, package=__package__)
-        return downloader.Downloader()
-
     async def check_host(self) -> bool:
-        try:
-            return await self.downloader.check_host()
-        except AuthorizationError:
-            self.start_login()
-            return False
+        return await self.downloader.check_host()
 
 
 Client = DownloadClient()
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    from module.conf import setup_logger
+
+    # setup_logger("DEBUG", reset=True)
+
+    async def test_one_time_login():
+        print("Testing DownloadClient one-time login functionality...")
+        client = DownloadClient()
+        print(f"Downloader type: {client.downloader.__class__.__name__}")
+
+        # 测试初始状态
+        print("\nInitial state:")
+        print(f"login_success_event.is_set(): {client.login_success_event.is_set()}")
+
+        # 测试API调用（会触发一次性登录）
+        print("\n--- Testing One-time Login ---")
+        print("Calling get_torrents_info() (should trigger login attempt)...")
+
+        start_time = time.time()
+        result = await client.get_torrents_info()
+        elapsed = time.time() - start_time
+
+        print(f"API call completed in {elapsed:.2f} seconds")
+        print(
+            f"Result: {type(result)} with {len(result) if isinstance(result, list) else 'N/A'} items"
+        )
+
+        # 检查认证状态
+        print("\nAfter first API call:")
+        print(f"login_success_event.is_set(): {client.login_success_event.is_set()}")
+
+        # 测试后续API调用（应该直接返回默认值或正常执行）
+        print("\n--- Testing Subsequent API Calls ---")
+
+        api_tests = [
+            ("get_torrents_info", client.get_torrents_info, []),
+            ("add_torrent", lambda: client.add_torrent(None, None), False),
+            (
+                "get_torrent_info",
+                lambda: client.get_torrent_info("test"),
+                "TorrentDownloadInfo",
+            ),
+            ("get_torrent_files", lambda: client.get_torrent_files("test"), []),
+        ]
+
+        for name, func, expected_type in api_tests:
+            try:
+                start_time = time.time()
+                result = await func()
+                elapsed = time.time() - start_time
+                print(f"{name}: {type(result).__name__} in {elapsed:.3f}s")
+            except Exception as e:
+                print(f"{name}: Exception - {e}")
+
+        # 测试重启功能
+        print("\n--- Testing Restart ---")
+        print("Calling restart()...")
+        await client.restart()
+
+        print("After restart:")
+        print(f"login_success_event.is_set(): {client.login_success_event.is_set()}")
+
+        print("\nOne-time login test completed")
+
+    asyncio.run(test_one_time_login())

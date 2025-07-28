@@ -37,7 +37,6 @@ class Renamer:
     """
 
     def __init__(self):
-        self._path_parser = TorrentPath()
         self._parser = TitleParser()
         self._check_pool = {}
         self.count = 0

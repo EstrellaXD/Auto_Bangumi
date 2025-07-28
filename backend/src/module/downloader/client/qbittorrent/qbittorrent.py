@@ -36,24 +36,25 @@ QB_API_URL = {
 class Downloader(BaseDownloader):
 
     def __init__(self):  # , host: str, username: str, password: str, ssl: bool
-        self.config: DownloaderConfig = get_plugin_config(
+        self._client: httpx.AsyncClient = httpx.AsyncClient(
+            base_url=self.config.host,
+            trust_env=settings.downloader.ssl
+        )
+
+
+    @property
+    def config(self):
+       return get_plugin_config(
             DownloaderConfig(), "downloader"
         )
-        self.host: str = self.config.host
-        self.username: str = self.config.username
-        self.password: str = self.config.password
-        self.ssl: bool = settings.downloader.ssl
-        self._client: httpx.AsyncClient = httpx.AsyncClient(
-            base_url=self.host,
-            trust_env=self.ssl,
-        )
+
 
     @override
     async def auth(self):
         try:
             resp = await self._client.post(
                 url=QB_API_URL["login"],
-                data={"username": self.username, "password": self.password},
+                data={"username": self.config.username, "password": self.config.password},
                 timeout=5,
             )
             resp.raise_for_status()
@@ -62,7 +63,7 @@ class Downloader(BaseDownloader):
                 return True
             if resp.status_code == 200 and resp.text == "Fails.":
                 logger.error(
-                    f"[qbittorrent] login failed, please check your username/password {self.username}/{self.password}"
+                    f"[qbittorrent] login failed, please check your username/password {self.config.username}/{self.config.password}"
                 )
                 return False
         except httpx.HTTPStatusError as e:
@@ -72,7 +73,7 @@ class Downloader(BaseDownloader):
                 )
         except (httpx.ConnectError, httpx.TimeoutException, httpx.ReadTimeout) as e:
             logger.error(
-                f"[qbittorrent] connect to qbittorrent error, please check your host {self.host}"
+                f"[qbittorrent] connect to qbittorrent error, please check your host {self.config.host}"
             )
         return False
 
@@ -98,7 +99,7 @@ class Downloader(BaseDownloader):
             return False
         except (httpx.ConnectError, httpx.TimeoutException, httpx.ReadTimeout) as e:
             logger.error(
-                f"[qbittorrent] Check host error,please check your host {self.host}"
+                f"[qbittorrent] Check host error,please check your host {self.config.host}"
             )
             logger.debug(f"[qbittorrent] Check host error: {e}")
         return False
@@ -150,6 +151,8 @@ class Downloader(BaseDownloader):
             else:
                 logger.debug(f"[qbittorrent] Torrent info: {hash}")
                 reps = reps.json()
+                if reps["completion_on"] == -1:
+                    reps["completion_date"] = 0
                 res = TorrentDownloadInfo(eta = reps["eta"], save_path=reps["save_path"],completed=reps["completion_date"])
                 return res
         except Exception as e:
@@ -336,7 +339,12 @@ class Downloader(BaseDownloader):
         if isinstance(e, httpx.HTTPStatusError):
             if e.response.status_code == 403:
                 logger.error(f"[qbittorrent] {funtion_name} need login first")
-                raise AuthorizationError(funtion_name)
+                raise AuthorizationError(
+                    function_name=funtion_name,
+                    message=f"{funtion_name} requires authentication",
+                    status_code=e.response.status_code,
+                    response_text=e.response.text[:200]
+                )
             else:
                 logger.error(f"[qbittorrent] {funtion_name} error: {e}")
         else:

@@ -19,10 +19,10 @@ class BaseService(ABC):
     def __init__(self, name: str = None):
         # 如果没有指定名称，使用类名自动生成
         if name is None:
-            name = self.__class__.__name__.lower().replace('service', '')
+            name = self.__class__.__name__.lower().replace("service", "")
         self.name = name
         self._initialized = False
-        
+
         # 将服务实例注册到服务注册表
         service_registry.set_service_instance(self.name, self)
 
@@ -141,17 +141,16 @@ class RSSService(BaseService):
 
 @register_service(priority=10, name="download", dependencies=["rss"])
 class DownloadService(BaseService):
-    def __init__(self, download_monitor=None):
+    def __init__(self):
         super().__init__()
         self._download_controller = None
 
     async def _setup(self) -> None:
         # 预检查下载模块是否可用
         try:
-            from module.downloader import AsyncDownloadController
+            from module.downloader import DownloadController
 
-            self._download_controller = AsyncDownloadController()
-
+            self._download_controller = DownloadController()
 
         except ImportError as e:
             logger.error(f"[DownloadService] 下载模块导入失败: {e}")
@@ -192,46 +191,3 @@ class DownloadService(BaseService):
         except Exception as e:
             logger.error(f"[DownloadService] 清理失败: {e}")
             raise ServiceException("download", f"清理失败: {e}")
-
-
-# 做一个 logging service, 通过 event 和 DownloadClient 进行交互
-
-# Event 类要抽象出去,做一个更底层的
-# 这是触发生效的
-
-
-class LoginService:
-    def __init__(self, downloader):
-        self.downloader = downloader.downloader
-        self.is_logining: bool = False
-        self.is_running: bool = True
-        # 用于等待登陆完成
-        self.is_login: bool = False
-        self.login_event: asyncio.Event = asyncio.Event()
-        self.login_success_event: asyncio.Event = asyncio.Event()
-        self.login_timeout: int = 30
-
-    async def login(self):
-        # 当没有登陆,并且没有登陆事件时
-        try:
-            self.is_logining = True
-            times = 0
-            logger.debug("[Downloader Client] login")
-            await self.login_event.wait()
-            self.login_success_event.clear()
-            if await self.downloader.auth():
-                self.login_success_event.set()
-                self.login_event.clear()
-                self.is_login = True
-                logger.info("[Downloader Client] login success")
-            else:
-                times += 1
-                # 最大为 5 分钟
-                if times > 10:
-                    times = 10
-                logger.info(
-                    f"[Downloader Client] login failed, retry after {30*times}s"
-                )
-        except Exception as e:
-            logger.error(f"[Downloader Client] login error: {e}")
-            self.is_logining = False

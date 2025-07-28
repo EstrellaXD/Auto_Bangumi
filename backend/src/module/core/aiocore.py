@@ -35,17 +35,25 @@ class AsyncApplicationCore:
         try:
             # 确保服务已注册（导入服务模块）
             from .services import RSSService, DownloadService
-            
+
             # 从服务注册表获取服务实例
             self.services = service_registry.create_service_instances()
-            
+
             # 初始化所有服务
             for service in self.services:
                 await service.initialize()
                 logger.debug(f"[AsyncCore] 服务 {service.name} 初始化完成")
+            ## download服务需要特殊处理,要注入event_bus
+            download_service = service_registry.get_service_instance("download")
+            if download_service:
+                download_service.set_event_bus(self.event_bus)
+                logger.debug("[AsyncCore] 已为下载服务注入事件总线")
 
             # 注册任务到任务管理器
             await self._register_tasks()
+
+            # 注册事件处理器
+            await self._register_event_handlers()
 
             self._initialized = True
             logger.info("[AsyncCore] 初始化完成")
@@ -67,6 +75,35 @@ class AsyncApplicationCore:
                     max_retries=config["max_retries"],
                 )
                 logger.debug(f"[AsyncCore] 注册任务: {config['name']}")
+
+    async def _register_event_handlers(self) -> None:
+        """注册事件处理器"""
+        try:
+            from module.downloader.download_monitor import DownloadMonitor
+            from module.core.events import EventType
+
+            # 创建并注册 DownloadMonitor，注入 event_bus
+            self._download_monitor = DownloadMonitor(event_bus=self.event_bus)
+            self.event_bus.subscribe(
+                EventType.DOWNLOAD_STARTED,
+                self._download_monitor.handle_download_started,
+            )
+            logger.info("[AsyncCore] 已注册 DownloadMonitor 事件处理器")
+
+            # 为下载服务设置监控器和事件总线
+            for service in self.services:
+                if service.name == "download" and hasattr(
+                    service, "_download_controller"
+                ):
+                    service._download_controller.set_download_monitor(
+                        self._download_monitor
+                    )
+                    service._download_controller.set_event_bus(self.event_bus)
+                    logger.debug("[AsyncCore] 已为下载服务设置监控器和事件总线")
+
+        except Exception as e:
+            logger.error(f"[AsyncCore] 注册事件处理器失败: {e}")
+            raise
 
     async def start(self) -> None:
         """启动应用核心"""
@@ -102,6 +139,14 @@ class AsyncApplicationCore:
             await self.task_manager.shutdown()
         except Exception as e:
             logger.error(f"[AsyncCore] 任务管理器关闭失败: {e}")
+
+        # 关闭下载监控器
+        try:
+            if hasattr(self, "_download_monitor") and self._download_monitor:
+                await self._download_monitor.shutdown()
+                logger.debug("[AsyncCore] 下载监控器已关闭")
+        except Exception as e:
+            logger.error(f"[AsyncCore] 下载监控器关闭失败: {e}")
 
         # 清理服务资源
         await self._cleanup_services()

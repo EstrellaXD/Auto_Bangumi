@@ -73,11 +73,11 @@ async def eps_complete():
 if __name__ == "__main__":
     import asyncio
     from module.conf import setup_logger
-    from module.downloader import AsyncDownloadController
+    from module.downloader import DownloadController
     setup_logger("DEBUG")
     async def test():
         t = Bangumi(official_title=official_title, rss_link=rss_link)
-        asyncio.create_task(AsyncDownloadController().download())
+        asyncio.create_task(DownloadController().download())
         await eps_complete()
         await asyncio.sleep(20)
     official_title = "败犬女主太多了！"

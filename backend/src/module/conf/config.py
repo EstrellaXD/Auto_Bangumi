@@ -9,7 +9,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, TypeVar
 
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -18,6 +18,8 @@ from module.models.config import Config
 from module.utils.config import deep_update
 
 from .const import ENV_TO_ATTR
+
+T_BaseModel = TypeVar('T_BaseModel', bound=BaseModel)
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +66,7 @@ def check_config_key(
     return True
 
 
-def get_plugin_config(config: BaseModel, config_name: str) -> BaseModel:
+def get_plugin_config(config: T_BaseModel, config_name: str) -> T_BaseModel:
     """从全局配置获取当前插件需要的配置项，更新 data 中的缺失项。"""
     global_data = model_dump(settings)
     data = global_data.get(config_name, {})
