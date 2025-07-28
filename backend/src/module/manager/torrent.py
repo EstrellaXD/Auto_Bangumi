@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class TorrentManager:
     def __init__(self) -> None:
-        self.tmdb_parser = TmdbParser()
+        self.tmdb_parser:TmdbParser = TmdbParser()
 
     @staticmethod
     async def __match_torrents_list(data: Bangumi | BangumiUpdate) -> list[str]:

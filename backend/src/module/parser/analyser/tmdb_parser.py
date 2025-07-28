@@ -19,7 +19,7 @@ class TMDBInfo:
     season: int
     last_season: int
     year: str
-    poster_link: str | None = None
+    poster_link: str = ""
 
 
 async def is_animation(genre_ids: list[int]) -> bool:
@@ -84,7 +84,7 @@ async def tmdb_parser(
         official_title: str = info_content.get("name")
         year_number = info_content.get("first_air_date").split("-")[0]
         id = info_content.get("id")
-        poster_link = None
+        poster_link = ""
         if poster_path:
             poster_link = f"{TMDB_IMG_URL}{poster_path}"
             poster_link = gen_poster_path(poster_link)

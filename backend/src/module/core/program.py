@@ -1,4 +1,3 @@
-import asyncio
 import logging
 
 from module.conf import VERSION, settings
@@ -9,8 +8,7 @@ from module.update import (
     start_up,
 )
 
-# from .sub_thread import RenameTask, RSSTask
-from .aiocore import AsyncDownload, AsyncRenamer, AsyncRSS
+from .aiocore import app_core
 from .status import ProgramStatus
 
 logger = logging.getLogger(__name__)
@@ -30,9 +28,7 @@ figlet = r"""
 class Program:
     def __init__(self):
         self.program_status = ProgramStatus()
-        self.renamer = AsyncRenamer()
-        self.rss = AsyncRSS()
-        self.download = AsyncDownload()
+        self.app_core = app_core
 
     @staticmethod
     def __start_info():
@@ -64,19 +60,14 @@ class Program:
 
     async def start(self):
         settings.load()
-        await self.download.run()
-        if self.program_status.enable_rss:
-            await self.rss.run()
-        if self.program_status.enable_renamer:
-            await self.renamer.run()
+        await self.app_core.initialize()
+        await self.app_core.start()
         logger.info("Program running.")
         return True
 
     async def stop(self):
         if self.program_status.is_running:
-            await self.download.stop()
-            await self.rss.stop()
-            await self.renamer.stop()
+            await self.app_core.stop()
             return True
 
     async def restart(self) -> bool:

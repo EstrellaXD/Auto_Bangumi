@@ -54,6 +54,7 @@ async def eps_complete():
         logger.info("Start collecting full season...")
         data = datas[0]
         # 复制 data 到 temp_bangumi
+        logger.debug(f"[eps_complete] {data.official_title} eps start to complete")
         temp_bangumi.__dict__.update(data.__dict__)
         temp_bangumi.title_raw = temp_bangumi.title_raw.split(",")[0]
         if not data.eps_collect:
@@ -63,19 +64,22 @@ async def eps_complete():
             try:
                 await RSSEngine().refresh_rss(bangumi=temp_bangumi)
                 data.eps_collect = True
-                db.bangumi.update(data)
+                # db.bangumi.update(data)
+                logger.debug(f"[eps_complete] {temp_bangumi.official_title} eps is completed")
             except Exception as e:
                 logger.error(f"[eps_complete] {e}")
 
 
 if __name__ == "__main__":
     import asyncio
-
-    # async def subscrib_s():
-    #     # t = RSSItem(url=link)
-    #     return await analysis(t)
-
+    from module.conf import setup_logger
+    from module.downloader import AsyncDownloadController
+    setup_logger("DEBUG")
+    async def test():
+        t = Bangumi(official_title=official_title, rss_link=rss_link)
+        asyncio.create_task(AsyncDownloadController().download())
+        await eps_complete()
+        await asyncio.sleep(20)
     official_title = "败犬女主太多了！"
     rss_link = "https://mikanani.me/RSS/Bangumi?bangumiId=3391&subgroupid=583"
-    t = Bangumi(official_title=official_title, rss_link=rss_link)
-    ans = asyncio.run(eps_complete())
+    ans = asyncio.run(test())

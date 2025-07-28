@@ -1,4 +1,5 @@
-from typing import TypedDict
+from typing import TypedDict,Any
+
 
 from module.conf import TMDB_API
 from module.network import RequestContent
@@ -117,7 +118,7 @@ def info_url(id: str, language: str) -> str:
 class TMDBSearchAPI:
     def __init__(self) -> None:
         # 对搜索结果进行缓存
-        self.content = {}
+        self.content:dict[Any,Any] = {}
 
     async def get_content(self, key_word: str) -> list[ShowInfo]:
         return await self.get_cached_content(key_word)

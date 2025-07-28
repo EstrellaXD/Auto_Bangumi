@@ -21,7 +21,8 @@ export const apiSearch = {
           const apiData: BangumiAPI = JSON.parse(ev.data);
           const data: BangumiRule = {
             ...apiData,
-            filter: apiData.filter.split(','),
+            exclude_filter: apiData.exclude_filter.split(','),
+            include_filter: apiData.include_filter.split(','),
             rss_link: apiData.rss_link.split(','),
           };
           observer.next(data);

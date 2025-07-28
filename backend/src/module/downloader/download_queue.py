@@ -3,14 +3,11 @@ import logging
 
 from module.database import Database
 
-# from module.downloader.client.expection import AuthorizationError
 from module.downloader.download_client import Client as client
 from module.models import Bangumi, Torrent
 
-MIN_SIZE = 5
 logger = logging.getLogger(__name__)
 queue: asyncio.Queue[tuple[Torrent, Bangumi]] = asyncio.Queue()
-download_add_event = asyncio.Event()
 
 
 class DownloadQueue:
@@ -26,30 +23,55 @@ class DownloadQueue:
         logger.debug(
             f"[Download Queue] add to queue {bangumi.official_title}, torrent name = {torrent.name} ,torrent url = {torrent.url}"
         )
-        download_add_event.set()
 
 
 class AsyncDownloadController:
+    def __init__(self):
+        self._download_monitor = None
+
+    def set_download_monitor(self, monitor):
+        """设置下载监控器"""
+        self._download_monitor = monitor
+
     # 10秒拿5个
     async def download(self):
         logger.debug("[Download Controller] start download")
-        await download_add_event.wait()  # 等待事件被设置
-        # 等待足够数量的元素或超时
         tasks = []
         torrents = []
+        torrent_bangumi_pairs = []
+
         # 一次取五个torrent
-        for _ in range(5):
-            if queue.empty():
-                logger.debug("[Download Controller] queue is empty")
-                download_add_event.clear()  # 重置事件
-                # 为空时退出
-                break
+        for _ in range(min(queue.qsize(), 5)):
             torrent, bangumi = queue.get_nowait()
             queue.task_done()
             logging.debug(f"[Download Controller] start download {torrent.name}")
             torrents.append(torrent)
+            torrent_bangumi_pairs.append((torrent, bangumi))
             tasks.append(client.add_torrent(torrent, bangumi))
-        await asyncio.gather(*tasks)
+
+        # 执行下载任务
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # 处理下载结果并启动监控
+        for i, result in enumerate(results):
+            if result is True and self._download_monitor:  # 下载成功
+                torrent, bangumi = torrent_bangumi_pairs[i]
+                if torrent.download_guid:  # 有下载哈希
+                    try:
+                        await self._download_monitor.start_monitoring(
+                            torrent.download_guid, bangumi, torrent
+                        )
+                        logger.debug(
+                            f"[Download Controller] 已启动监控: {torrent.name}"
+                        )
+                    except Exception as e:
+                        logger.error(
+                            f"[Download Controller] 启动监控失败: {torrent.name} - {e}"
+                        )
+            elif isinstance(result, Exception):
+                logger.error(
+                    f"[Download Controller] 下载失败: {torrents[i].name} - {result}"
+                )
+        # 保存到数据库
         with Database() as database:
             database.torrent.add_all(torrents)
-

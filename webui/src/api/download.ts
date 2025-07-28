@@ -15,7 +15,8 @@ export const apiDownload = {
 
     const result: BangumiRule = {
       ...data,
-      filter: data.filter.split(','),
+      exclude_filter: data.exclude_filter.split(','),
+      include_filter: data.include_filter.split(','),
       rss_link: data.rss_link.split(','),
     };
     return result;
@@ -28,7 +29,8 @@ export const apiDownload = {
   async collection(bangumiData: BangumiRule) {
     const postData: BangumiAPI = {
       ...bangumiData,
-      filter: bangumiData.filter.join(','),
+      exclude_filter: bangumiData.exclude_filter.join(','),
+      include_filter: bangumiData.include_filter.join(','),
       rss_link: bangumiData.rss_link.join(','),
     };
     const { data } = await axios.post<ApiSuccess>(
@@ -45,7 +47,8 @@ export const apiDownload = {
   async subscribe(bangumiData: BangumiRule, rss: RSS) {
     const bangumi: BangumiAPI = {
       ...bangumiData,
-      filter: bangumiData.filter.join(','),
+      exclude_filter: bangumiData.exclude_filter.join(','),
+      include_filter: bangumiData.include_filter.join(','),
       rss_link: bangumiData.rss_link.join(','),
     };
     const postData = {

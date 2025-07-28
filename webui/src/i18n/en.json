@@ -52,6 +52,7 @@
     "parser_set": {
       "enable": "Enable",
       "exclude": "Exclude",
+      "include": "Include",
       "language": "Language",
       "source": "Source",
       "title": "Parser Setting",
@@ -83,6 +84,7 @@
       "enable_hit": "Do you want to enable this rule?",
       "enable_rule": "Enable Rule",
       "exclude": "Exclude",
+      "include": "Include",
       "no_btn": "No",
       "official_title": "Official Title",
       "offset": "Offset",

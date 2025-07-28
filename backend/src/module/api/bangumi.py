@@ -12,10 +12,11 @@ from .response import u_response
 router = APIRouter(prefix="/bangumi", tags=["bangumi"])
 
 
-def str_to_list(data: Bangumi):
-    data.filter = data.filter.split(",")
-    data.rss_link = data.rss_link.split(",")
-    return data
+# def str_to_list(data: Bangumi):
+#     data.exclude_filter = data.exclude_filter.split(",") if data.exclude_filter else []
+#     data.include_filter = data.include_filter.split(",") if data.include_filter else []
+#     data.rss_link = data.rss_link.split(",") if data.rss_link else []
+#     return data
 
 
 @router.get(

@@ -2,9 +2,11 @@ import asyncio
 import logging
 from abc import abstractmethod
 
+from typing_extensions import override
+
 from module.conf import settings
-from module.models import Bangumi
-from module.models.bangumi import Episode
+from module.models import Bangumi, EpisodeFile, SubtitleFile
+from module.models.bangumi import BangumiUpdate, Episode
 from module.parser.analyser import MikanWebParser, tmdb_parser, torrent_parser
 from module.parser.analyser import RawParser as rawparser
 from module.parser.api import BaseWebPage, TMDBInfoAPI, TMDBSearchAPI
@@ -39,9 +41,10 @@ class TmdbParser(RawParser):
         search_api: TMDBSearchAPI = TMDBSearchAPI(),
         info_api: TMDBInfoAPI = TMDBInfoAPI(),
     ):
-        self.search_api = search_api
-        self.info_api = info_api
+        self.search_api: TMDBSearchAPI = search_api
+        self.info_api: TMDBInfoAPI = info_api
 
+    @override
     async def parser(self, title: str, season: int = 1, language: str = "zh"):
         tmdb_info = await tmdb_parser(title, language, self.search_api, self.info_api)
         if tmdb_info:
@@ -70,7 +73,7 @@ class TmdbParser(RawParser):
             #     season=season,
             # )
 
-    async def poster_parser(self, bangumi: Bangumi) -> bool:
+    async def poster_parser(self, bangumi: Bangumi | BangumiUpdate) -> bool:
         tmdb_info = await tmdb_parser(
             bangumi.official_title,
             settings.rss_parser.language,
@@ -163,7 +166,7 @@ class RawParser(RawParser):
                 subtitle=episode.sub,
                 eps_collect=False if episode.episode > 1 else True,
                 offset=0,
-                filter=",".join(settings.rss_parser.filter),
+                exclude_filter=",".join(settings.rss_parser.filter),
             )
         except Exception as e:
             logger.debug(e)
@@ -178,13 +181,9 @@ class TitleParser:
     @staticmethod
     def torrent_parser(
         torrent_name: str,
-        file_type: str = "media",
-    ):
+    ) -> EpisodeFile | SubtitleFile | None:
         try:
-            return torrent_parser(
-                torrent_name,
-                file_type,
-            )
+            return torrent_parser(torrent_name)
         except Exception as e:
             logger.warning(f"Cannot parse {torrent_name} with error {e}")
 

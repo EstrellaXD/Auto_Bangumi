@@ -33,7 +33,7 @@ class SearchTorrent:
         # TODO: 思考这里要不要用 filter
         # 主要是想借用一下 filter, 从 rss 拿 torrents
         bangumi = Bangumi(
-            filter="|".join(settings.rss_parser.filter),
+            exclude_filter="|".join(settings.rss_parser.filter),
             rss_link=rss_item.url,
         )
         bangumi_torrents = RSSRefresh(bangumi=bangumi)

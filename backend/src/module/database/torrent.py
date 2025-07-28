@@ -78,14 +78,10 @@ class TorrentDatabase:
         return self.session.exec(select(Torrent)).all()
 
     def search_all_unrenamed(self) -> list[Torrent]:
-        return self.session.exec(
-            select(Torrent).where(Torrent.downloaded == false())
-        ).all()
+        return list(self.session.exec( select(Torrent).where(Torrent.renamed == false())).all())
 
     def search_all_downloaded(self) -> list[Torrent]:
-        return self.session.exec(
-            select(Torrent).where(Torrent.downloaded == true())
-        ).all()
+        return self.session.exec( select(Torrent).where(Torrent.downloaded == true())).all()
 
     def search_rss(self, rss_id: int) -> list[Torrent]:
         return self.session.exec(select(Torrent).where(Torrent.rss_id == rss_id)).all()

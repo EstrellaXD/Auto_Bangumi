@@ -2,7 +2,13 @@ from .bangumi import Bangumi, BangumiUpdate, Episode, Notification
 from .config import Config
 from .response import APIResponse, ResponseModel
 from .rss import RSSItem, RSSUpdate
-from .torrent import EpisodeFile, SubtitleFile, Torrent, TorrentUpdate
+from .torrent import (
+    EpisodeFile,
+    SubtitleFile,
+    Torrent,
+    TorrentDownloadInfo,
+    TorrentUpdate,
+)
 from .user import User, UserLogin, UserUpdate
 
 __all__ = [
@@ -17,6 +23,7 @@ __all__ = [
     "RSSUpdate",
     "Torrent",
     "TorrentUpdate",
+    "TorrentDownloadInfo",
     "User",
     "UserLogin",
     "UserUpdate",

@@ -3,6 +3,7 @@ from pathlib import Path
 
 from module.models import EpisodeFile, SubtitleFile
 from module.parser.analyser.raw_parser import RawParser
+from module.utils import check_file
 
 logger = logging.getLogger(__name__)
 
@@ -12,30 +13,23 @@ SUBTITLE_LANG = {
 }
 
 
-def get_path_basename(torrent_path: str) -> str:
-    """
-    返回路径的basename
-
-    :param torrent_path: A string representing a path to a file.
-    :type torrent_path: str
-    :return: A string representing the basename of the given path.
-    :rtype: str
-    """
-    return Path(torrent_path).name
-
-
 def get_subtitle_lang(subtitle_name: str) -> str:
     for key, value in SUBTITLE_LANG.items():
         for v in value:
             if v in subtitle_name.lower():
                 return key
+    return "zh"
 
 
 def torrent_parser(
     torrent_name: str,
-    file_type: str = "media",
 ) -> EpisodeFile | SubtitleFile:
-    torrent_name = get_path_basename(torrent_name)
+    """
+    [LKSUB][Make Heroine ga Oosugiru!][01-12][720P]/[LKSUB][Make Heroine ga Oosugiru!][01][720P].mp4
+    将 torrent 文件名解析为 EpisodeFile 或 SubtitleFile 对象
+    """
+    torrent_name = Path(torrent_name).name
+    file_type = check_file(torrent_name)
     media_info = RawParser().parser(torrent_name)
     suffix = Path(torrent_name).suffix
     title = media_info.title_en
@@ -53,7 +47,7 @@ def torrent_parser(
             episode=media_info.episode,
             suffix=suffix,
         )
-    if file_type == "subtitle":
+    else:
         language = get_subtitle_lang(torrent_name)
         return SubtitleFile(
             media_path=torrent_name,
@@ -67,5 +61,5 @@ def torrent_parser(
 
 
 if __name__ == "__main__":
-    path = "LKSUB][Make Heroine ga Oosugiru!][01-12][720P]/[LKSUB][Make Heroine ga Oosugiru!][01][720P].mp4'"
-    print(get_path_basename(path))
+    path = "LKSUB][Make Heroine ga Oosugiru!][01-12][720P]/[LKSUB][Make Heroine ga Oosugiru!][01][720P].mp4"
+    print(torrent_parser(path))

@@ -42,7 +42,7 @@ class RequestURL:
         data: dict[str, str] | None = None,
         files: dict[str, bytes] | None = None,
         retry: int = 3,
-    ):
+    )-> httpx.Response|None:
         self.retry = retry
         resp = await self._request_with_retry("POST", url, data=data, files=files)
         resp.raise_for_status()

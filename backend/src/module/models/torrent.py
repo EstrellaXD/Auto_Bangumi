@@ -12,10 +12,21 @@ class Torrent(SQLModel, table=True):
     )
     # FIXME: rss_id 会不停的变化，每改一次都要改这里, 所以考虑用 rss_link 作为主码
     rss_id: int | None = Field(default=None, alias="rss_id", foreign_key="rssitem.id")
+    # 一个是 rss 用来判断的,一个是下载器用来判断的
+    rss_guid: str | None = Field(default=None, alias="ruid")
+    download_guid: str | None = Field(default=None, alias="duid")
     name: str = Field(default="", alias="name")
     url: str = Field(default="https://example.com/torrent", alias="url", unique=True)
+    save_path: str = Field(default="", alias="save_path")
     homepage: str | None = Field(default=None, alias="homepage")
     downloaded: bool = Field(default=False, alias="downloaded")
+    renamed: bool = Field(default=False, alias="renamed")
+
+class TorrentDownloadInfo(BaseModel):
+    eta:int | None = Field(default=60, alias="eta")
+    save_path: str = Field(default="", alias="save_path")
+    completed: int = Field(default=0, alias="completed")
+
 
 
 class TorrentUpdate(SQLModel):

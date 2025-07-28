@@ -83,6 +83,7 @@
       "enable_hit": "确定启用该规则？",
       "enable_rule": "启用规则",
       "exclude": "排除",
+      "include": "包含",
       "no_btn": "否",
       "official_title": "官方名称",
       "offset": "剧集偏移",

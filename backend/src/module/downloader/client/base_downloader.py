@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from typing import Any
 
 
 # 主要实现以下 个功能
@@ -27,7 +28,7 @@ class BaseDownloader(metaclass=ABCMeta):
     async def get_torrent_files(self, hash)->list[str]:
         pass
     @abstractmethod
-    async def torrents_info(self, status_filter , category , tag, limit):
+    async def torrents_info(self, status_filter , category , tag, limit)->list[dict[str, Any]]:
         pass
 
     @abstractmethod
@@ -37,7 +38,7 @@ class BaseDownloader(metaclass=ABCMeta):
     async def move(self, hashes:str, new_location:str)->bool:
         pass
     @abstractmethod
-    async def add(self, torrent_urls, torrent_files, save_path, category)->bool:
+    async def add(self, torrent_urls, torrent_file, save_path, category)->str|None:
         pass
     @abstractmethod
     async def delete(self, hashes:list[str]|str)->bool:

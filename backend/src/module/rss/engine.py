@@ -88,6 +88,7 @@ class RSSRefresh(RssBase):
         # 如果 self.bangumi 不为空, 则将 torrents 放到 bangumi_torrents 中, 对应为 搜索, 订阅, 收集, 非聚合
 
         torrents = await self.pull_rss()
+        # 有点问题,如果下载了,但没有新的,导致一直无法刷新
         for torrent in torrents:
             # 如果 bangumi 为空, 更新 bangumi
             if not self.bangumi:
@@ -136,12 +137,20 @@ class TorrentBangumi:
     def __init__(self, bangumi_item: Bangumi) -> None:
         self.torrents = []
         self.bangumi = bangumi_item
-        self.filter = self.bangumi.filter.replace(",", "|")
+        self.exclude_filter = self.bangumi.exclude_filter.replace(",", "|") if self.bangumi.exclude_filter else ""
+        self.include_filter = self.bangumi.include_filter.replace(",", "|") if self.bangumi.include_filter else ""
 
     def append(self, torrent_item: Torrent):
-        if not self.filter or not re.search(self.filter, torrent_item.name):
-            torrent_item.bangumi_id = self.bangumi.id
-            self.torrents.append(torrent_item)
+        # Check include filter first (if set, torrent must match)
+        if self.include_filter and not re.search(self.include_filter, torrent_item.name):
+            return
+        
+        # Check exclude filter (if matches, reject torrent)
+        if self.exclude_filter and re.search(self.exclude_filter, torrent_item.name):
+            return
+        
+        torrent_item.bangumi_id = self.bangumi.id
+        self.torrents.append(torrent_item)
 
     def __len__(self) -> int:
         return len(self.torrents)
@@ -151,7 +160,7 @@ class TorrentBangumi:
 
     def __str__(self) -> str:
         torrents_str = [torrent.name for torrent in self.torrents]
-        return f"{self.bangumi.official_title} \n{self.filter}\n{torrents_str}"
+        return f"{self.bangumi.official_title} \nInclude: {self.include_filter}\nExclude: {self.exclude_filter}\n{torrents_str}"
 
     def __repr__(self) -> str:
         return self.__str__()

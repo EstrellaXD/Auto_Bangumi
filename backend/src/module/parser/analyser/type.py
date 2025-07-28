@@ -39,7 +39,7 @@ class ProductionCompany(TypedDict):
     id: int
     name: str
     origin_country: str
-    logo_path: str | None = None
+    logo_path: str | None
 
 
 @dataclass
@@ -51,7 +51,7 @@ class Season(TypedDict):
     overview: str
     season_number: int
     vote_average: float
-    poster_path: str | None = None
+    poster_path: str | None
 
 
 class TVShow(TypedDict):
@@ -80,4 +80,4 @@ class TVShow(TypedDict):
     production_companies: list[ProductionCompany]
     production_countries: list[dict[str, str]]
     seasons: list[Season]
-    next_episode_to_air: str | None = None
+    next_episode_to_air: str | None

@@ -72,19 +72,8 @@ def test_torrent_parser():
     assert bf.title == "放学后失眠的你-Kimi"
     assert bf.season == 1
     assert bf.episode == 6
-    #
 
 
-class TestGetPathBasename:
-    def test_regular_path(self):
-        assert get_path_basename("/path/to/file.txt") == "file.txt"
 
-    def test_empty_path(self):
-        assert get_path_basename("") == ""
 
-    def test_path_with_trailing_slash(self):
-        assert get_path_basename("/path/to/folder/") == "folder"
 
-    @pytest.mark.skipif(not sys.platform.startswith("win"), reason="Windows specific")
-    def test_windows_path(self):
-        assert get_path_basename("C:\\path\\to\\file.txt") == "file.txt"

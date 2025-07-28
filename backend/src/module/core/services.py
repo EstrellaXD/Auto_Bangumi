@@ -1,0 +1,237 @@
+import logging
+from module.conf import settings
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any
+from typing_extensions import override
+
+from .events import ServiceException
+from .service_registry import service_registry, register_service
+
+if TYPE_CHECKING:
+    from module.rss import RSSEngine
+
+logger = logging.getLogger(__name__)
+
+
+class BaseService(ABC):
+    """服务基类"""
+
+    def __init__(self, name: str = None):
+        # 如果没有指定名称，使用类名自动生成
+        if name is None:
+            name = self.__class__.__name__.lower().replace('service', '')
+        self.name = name
+        self._initialized = False
+        
+        # 将服务实例注册到服务注册表
+        service_registry.set_service_instance(self.name, self)
+
+    async def initialize(self) -> None:
+        """初始化服务"""
+        if not self._initialized:
+            try:
+                await self._setup()
+                self._initialized = True
+                logger.info(f"[{self.name}Service] 初始化完成")
+            except Exception as e:
+                logger.error(f"[{self.name}Service] 初始化失败: {e}")
+                raise ServiceException(self.name, f"初始化失败: {e}")
+
+    @abstractmethod
+    async def _setup(self) -> None:
+        """子类实现具体初始化逻辑"""
+        pass
+
+    @abstractmethod
+    async def execute(self) -> None:
+        """执行服务逻辑"""
+        pass
+
+    @abstractmethod
+    def get_task_config(self) -> dict[str, Any]:
+        """获取任务配置"""
+        pass
+
+    async def cleanup(self) -> None:
+        """清理资源"""
+        pass
+
+    def is_initialized(self) -> bool:
+        """检查是否已初始化"""
+        return self._initialized
+
+
+# class RenamerService(BaseService):
+#     def __init__(self):
+#         super().__init__("renamer")
+#         self._renamer: Renamer | None = None
+#
+#     async def _setup(self) -> None:
+#         from module.manager import Renamer
+#
+#         self._renamer = Renamer()
+#
+#     def get_task_config(self) -> dict[str, Any]:
+#         """获取重命名任务配置"""
+#
+#         return {
+#             "name": "rename_process",
+#             "interval": settings.program.rename_time,
+#             "max_retries": 3,
+#             "enabled": settings.rss_parser.enable,
+#         }
+#
+#     async def execute(self) -> None:
+#         """执行重命名任务"""
+#         if not self._renamer:
+#             raise ServiceException("renamer", "服务未初始化")
+#
+#         try:
+#             await self._renamer.rename()
+#             logger.debug("[RenamerService] 重命名任务完成")
+#         except TimeoutError:
+#             logger.error("[RenamerService] 无法连接到下载器")
+#             raise
+#         except Exception as e:
+#             logger.error(f"[RenamerService] 执行失败: {e}")
+#             raise ServiceException("renamer", f"执行失败: {e}")
+
+
+@register_service(priority=20, name="rss")
+class RSSService(BaseService):
+    def __init__(self):
+        super().__init__()
+        self._engine: RSSEngine | None = None
+        self._eps_complete_enabled: bool = False
+
+    async def _setup(self) -> None:
+        from module.rss import RSSEngine
+
+        self._engine = RSSEngine()
+        self._eps_complete_enabled = settings.bangumi_manage.eps_complete
+
+    def get_task_config(self) -> dict[str, Any]:
+        """获取RSS任务配置"""
+
+        return {
+            "name": "rss_refresh",
+            "interval": settings.program.rss_time,
+            "max_retries": 0,
+            "enabled": True,
+        }
+
+    async def execute(self) -> None:
+        """执行RSS刷新任务"""
+        if not self._engine:
+            raise ServiceException("rss", "服务未初始化")
+
+        try:
+            await self._engine.refresh_all()
+
+            if self._eps_complete_enabled:
+                from module.manager import eps_complete
+
+                await eps_complete()
+
+            logger.debug("[RSSService] RSS刷新完成")
+        except Exception as e:
+            logger.error(f"[RSSService] 执行失败: {e}")
+            raise ServiceException("rss", f"执行失败: {e}")
+
+
+@register_service(priority=10, name="download", dependencies=["rss"])
+class DownloadService(BaseService):
+    def __init__(self, download_monitor=None):
+        super().__init__()
+        self._download_controller = None
+
+    async def _setup(self) -> None:
+        # 预检查下载模块是否可用
+        try:
+            from module.downloader import AsyncDownloadController
+
+            self._download_controller = AsyncDownloadController()
+
+
+        except ImportError as e:
+            logger.error(f"[DownloadService] 下载模块导入失败: {e}")
+            raise
+
+    def get_task_config(self) -> dict[str, Any]:
+        """获取下载任务配置"""
+        return {
+            "name": "download_process",
+            "interval": 10,
+            "max_retries": 5,
+            "enabled": True,
+        }
+
+    @override
+    async def execute(self) -> None:
+        """执行下载任务"""
+        try:
+            if not self._download_controller:
+                raise ServiceException("download", "下载控制器未初始化")
+
+            await self._download_controller.download()
+            logger.debug("[DownloadService] 下载任务完成")
+        except TimeoutError:
+            logger.error("[DownloadService] 无法连接到下载器")
+            raise
+        except Exception as e:
+            logger.error(f"[DownloadService] 执行失败: {e}")
+            raise ServiceException("download", f"执行失败: {e}")
+
+    async def cleanup(self) -> None:
+        """清理下载客户端"""
+        try:
+            from module.downloader import Client
+
+            await Client.restart()
+            logger.debug("[DownloadService] 下载客户端已重启")
+        except Exception as e:
+            logger.error(f"[DownloadService] 清理失败: {e}")
+            raise ServiceException("download", f"清理失败: {e}")
+
+
+# 做一个 logging service, 通过 event 和 DownloadClient 进行交互
+
+# Event 类要抽象出去,做一个更底层的
+# 这是触发生效的
+
+
+class LoginService:
+    def __init__(self, downloader):
+        self.downloader = downloader.downloader
+        self.is_logining: bool = False
+        self.is_running: bool = True
+        # 用于等待登陆完成
+        self.is_login: bool = False
+        self.login_event: asyncio.Event = asyncio.Event()
+        self.login_success_event: asyncio.Event = asyncio.Event()
+        self.login_timeout: int = 30
+
+    async def login(self):
+        # 当没有登陆,并且没有登陆事件时
+        try:
+            self.is_logining = True
+            times = 0
+            logger.debug("[Downloader Client] login")
+            await self.login_event.wait()
+            self.login_success_event.clear()
+            if await self.downloader.auth():
+                self.login_success_event.set()
+                self.login_event.clear()
+                self.is_login = True
+                logger.info("[Downloader Client] login success")
+            else:
+                times += 1
+                # 最大为 5 分钟
+                if times > 10:
+                    times = 10
+                logger.info(
+                    f"[Downloader Client] login failed, retry after {30*times}s"
+                )
+        except Exception as e:
+            logger.error(f"[Downloader Client] login error: {e}")
+            self.is_logining = False

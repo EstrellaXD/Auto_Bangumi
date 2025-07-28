@@ -8,6 +8,7 @@ from module.models import Torrent
 
 from .request_url import RequestURL
 from .site import rss_parser
+from module.utils import get_hash, torrent_to_link
 
 logger = logging.getLogger(__name__)
 
@@ -101,3 +102,13 @@ class RequestContent(RequestURL):
             )
             if title is not None:
                 return title.text
+
+    async def get_torrent_hash(self, _url: str) -> str:
+        # 下载种子文件,处理 hash 与 url 不一致的情况
+        if torrent_file := await self.get_content( _url):
+            torrent_url = await torrent_to_link(torrent_file)
+            torrent_hash = get_hash(torrent_url)
+            return torrent_hash
+        return ""
+
+

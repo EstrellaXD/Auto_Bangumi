@@ -4,13 +4,13 @@ import logging
 from asyncio import Task
 from typing import Any
 
-from module.models import Torrent
+from module.models import Torrent, TorrentDownloadInfo
 from module.network import RequestContent
 from module.utils import get_hash, torrent_to_link
 
 from ..conf import settings
 from .client import AuthorizationError, BaseDownloader
-from .path import TorrentPath
+from module.utils import gen_save_path
 
 logger = logging.getLogger(__name__)
 
@@ -23,15 +23,7 @@ class DownloadClient:
 
     def __init__(self):
         self.downloader: BaseDownloader = self.get_downloader()
-        self._path_parser: TorrentPath = TorrentPath()
-        self.is_logining: bool = False
-        self.is_running: bool = True
         # 用于等待登陆完成
-        self.is_login: bool = False
-        self.login_event: asyncio.Event = asyncio.Event()
-        self.login_success_event: asyncio.Event = asyncio.Event()
-        self.login_timeout = 30  # 登录超时时间(秒)
-        self.login_task: asyncio.Task | None = None
 
     async def __aenter__(self):
         if not self.is_login:
@@ -80,9 +72,9 @@ class DownloadClient:
             logger.warning("[Downloader Client] Login wait timeout")
             raise AuthorizationError("login")
 
-    async def get_torrent_info(
+    async def get_torrents_info(
         self, category="Bangumi", status_filter="completed", tag=None, limit=0
-    ):
+    ) -> list[dict[str, Any]]:
         try:
             await self.wait_for_login()
             resp = await self.downloader.torrents_info(
@@ -99,29 +91,19 @@ class DownloadClient:
     async def add_torrent(self, torrent: Torrent, bangumi) -> bool:
         try:
             await self.wait_for_login()
-            bangumi.save_path = self._path_parser.gen_save_path(bangumi)
+            bangumi.save_path = gen_save_path(bangumi)
             torrent_file = None
             torrent_url = torrent.url
-            if torrent.url.startswith("magnet"):
-                torrent_url = torrent.url
-            else:
-                async with RequestContent() as req:
-                    # 下载种子文件,处理 hash 与 url 不一致的情况
-                    if torrent_file := await req.get_content(torrent.url):
-                        torrent_url_hash = get_hash(torrent_url)
-                        torrent_url = await torrent_to_link(torrent_file)
-                        torrent_hash = get_hash(torrent_url)
-                        if torrent_hash != torrent_url_hash:
-                            torrent.url = f"{torrent.url},{torrent_hash}"
             logging.debug(f"[Downloader] send url {torrent_url}to downloader ")
 
             result = await self.downloader.add(
                 torrent_urls=torrent_url,
-                torrent_files=torrent_file,
+                torrent_file=torrent_file,
                 save_path=bangumi.save_path,
                 category="Bangumi",
             )
             if result:
+                torrent.download_guid = result
                 logger.debug(f"[Downloader] Add torrent: {torrent.name}")
                 return True
             else:
@@ -185,12 +167,28 @@ class DownloadClient:
             self.start_login()
         return False
 
-    async def get_torrent_files(self, _hash: str) -> list[str]:
+    async def get_torrent_info(self, hash: str) -> TorrentDownloadInfo | None:
+        try:
+            await self.wait_for_login()
+            result = await self.downloader.torrent_info(hash)
+            if result:
+                # print(result)
+                # logger.debug(f"[Downloader] find torrents {hash} info.")
+                return result
+            else:
+                logger.warning(f"[Downloader] find torrents {hash} info failed")
+                return None
+        except AuthorizationError:
+            self.start_login()
+        return TorrentDownloadInfo()
+
+    async def get_torrent_files(self, _hash: str) -> list[str] | None:
         # 获取种子文件列表
         # 文件夹举例
         # LKSUB][Make Heroine ga Oosugiru!][01-12][720P]/[LKSUB][Make Heroine ga Oosugiru!][01][720P].mp4
         try:
             await self.wait_for_login()
+
             return await self.downloader.get_torrent_files(_hash)
         except AuthorizationError:
             self.start_login()

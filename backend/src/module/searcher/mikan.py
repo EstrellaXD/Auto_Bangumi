@@ -18,6 +18,9 @@ class MikanSearch:
             return []
 
         poster_link = await self.mikan_parser.poster_parser(self.homepage)
+        #TODO: 对poster_link 进行处理
+        # https://mikanani.me/images/Bangumi/202407/7572c0f6.jpg?width=400&height=400&format=webp
+        # 因为不同的图片大小可能会解析失败, 所以直接去掉 width 和 height
         # print(official_title, poster_link)
         soup = BeautifulSoup(content, "html.parser")
         # title bangumi-title

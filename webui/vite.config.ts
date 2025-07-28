@@ -107,8 +107,8 @@ export default defineConfig(({ mode }) => ({
   },
   server: {
     proxy: {
-      '^/api/.*': 'http://192.168.0.100:7892',
-      '^/posters/.*': 'http://192.168.0.100:7892',
+      '^/api/.*': 'http://localhost:7892',
+      '^/posters/.*': 'http://localhost:7892',
     },
   },
 }));

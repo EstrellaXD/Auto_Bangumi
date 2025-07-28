@@ -2,6 +2,7 @@ import logging
 
 import httpx
 from typing_extensions import override
+from module.models import TorrentDownloadInfo
 
 from module.conf import get_plugin_config
 
@@ -9,6 +10,7 @@ from ....conf import settings
 from ..base_downloader import BaseDownloader
 from ..expection import AuthorizationError
 from .config import Config as DownloaderConfig
+from module.network import RequestContent
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +22,7 @@ QB_API_URL = {
     "delete": "/api/v2/torrents/delete",
     "getFiles": "/api/v2/torrents/files",
     "info": "/api/v2/torrents/info",
+    "properties": "/api/v2/torrents/properties",
     "login": "/api/v2/auth/login",
     "logout": "/api/v2/auth/logout",
     "renameFile": "/api/v2/torrents/renameFile",
@@ -115,7 +118,7 @@ class Downloader(BaseDownloader):
         return False
 
     @override
-    async def get_torrent_files(self, hash: str) -> list[str]:
+    async def get_torrent_files(self, hash: str) -> list[str] | None:
         try:
             data = {"hash": hash}
             reps = await self._client.get(
@@ -125,12 +128,33 @@ class Downloader(BaseDownloader):
             reps.raise_for_status()
             if "Not Found" in reps.text:
                 logger.warning(f"[qbittorrent] Cannot found {hash}")
+                return None
             else:
                 files_name = [file["name"] for file in reps.json()]
                 return files_name
         except Exception as e:
             self.handle_exception(e, "add_category")
         return []
+
+    async def torrent_info(self, hash: str)-> TorrentDownloadInfo | None:
+        try:
+            data = {"hash": hash}
+            reps = await self._client.get(
+                url=QB_API_URL["properties"],
+                params=data,
+            )
+            reps.raise_for_status()
+            if "404" in reps.text:
+                logger.warning(f"[qbittorrent] Cannot found {hash}")
+                return None
+            else:
+                logger.debug(f"[qbittorrent] Torrent info: {hash}")
+                reps = reps.json()
+                res = TorrentDownloadInfo(eta = reps["eta"], save_path=reps["save_path"],completed=reps["completion_date"])
+                return res
+        except Exception as e:
+            self.handle_exception(e, "torrent_info")
+        return None
 
     @override
     async def torrents_info(
@@ -170,7 +194,10 @@ class Downloader(BaseDownloader):
             return []
 
     @override
-    async def add(self, torrent_urls, torrent_files, save_path, category):
+    async def add(self, torrent_urls, torrent_file, save_path, category) -> str | None:
+        """
+        会收到 downloader 的标识,qbittorretn 是 hash, alist 是一个标识
+        """
         data = {
             "urls": torrent_urls,
             "savepath": save_path,
@@ -178,10 +205,12 @@ class Downloader(BaseDownloader):
             "paused": False,
             "autoTMM": False,
         }
-
         file = None
-        if torrent_files:
-            file = {"torrents": torrent_files}
+        torrent_link = ""
+        async with RequestContent() as req:
+            if torrent_file := await req.get_content(torrent_urls):
+                torrent_link = await req.get_torrent_hash(torrent_urls)
+                file = {"torrents": torrent_file}
         try:
             resp = await self._client.post(
                 url=QB_API_URL["add"],
@@ -193,11 +222,10 @@ class Downloader(BaseDownloader):
                 logger.debug(
                     f"[QbDownloader] A BAD TORRENT{save_path} , send torrent to download fail.{resp.text.lower()}"
                 )
-                return False
-            return resp.status_code == 200
+            if resp.status_code == 200:
+                return torrent_link
         except Exception as e:
             self.handle_exception(e, "add")
-            return False
 
     @override
     async def delete(self, hashes: list[str] | str) -> bool:

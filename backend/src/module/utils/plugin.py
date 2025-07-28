@@ -1,6 +1,7 @@
 from pathlib import Path
 
 
+
 def path_to_module_name(path: Path) -> str:
     """转换路径为模块名"""
     rel_path = path.resolve().relative_to(Path.cwd().resolve())

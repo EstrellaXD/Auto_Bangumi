@@ -46,8 +46,13 @@ const items: SettingItem<BangumiRule>[] = [
     },
   },
   {
-    configKey: 'filter',
+    configKey: 'exclude_filter',
     label: () => t('homepage.rule.exclude'),
+    type: 'dynamic-tags',
+  },
+  {
+    configKey: 'include_filter',
+    label: () => t('homepage.rule.include'),
     type: 'dynamic-tags',
     bottomLine: true,
   },

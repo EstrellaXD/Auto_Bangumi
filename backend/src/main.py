@@ -42,11 +42,18 @@ app = create_app()
 
 @app.get("/posters/{path:path}", tags=["posters"])
 async def posters(path: str):
+
+    # FIX: 有严重的安全问题, 需要修复
+    # 例: "../index.html" 可以访问到根目录的文件"
     # TODO: 由于只有取的时候才会下载,所以会导致第一次请求的时候没有图片
     post_path = Path("data/posters") / path
     if not post_path.exists():
         await load_image(path)
-    return FileResponse(post_path)
+    if post_path.exists():
+        return FileResponse(post_path)
+    else:
+        # TODO: 404
+        return FileResponse("")
 
 
 if VERSION != "DEV_VERSION":
