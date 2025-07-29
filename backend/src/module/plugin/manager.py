@@ -128,7 +128,7 @@ class PluginManager:
 
         return self.available_plugins
 
-    def load_plugin(self, name: str) -> Optional[Plugin]:
+    def load_plugin(self, name: str) -> Plugin | None:
         """加载指定插件。
 
         可以使用完整插件模块名或者插件标识符加载。

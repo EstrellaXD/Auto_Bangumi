@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 from module.database import Database
-from module.core.events import Event, EventType, EventBus
+from module.utils.events import Event, EventType, EventBus
 from module.downloader.download_client import Client as client
 from module.models import Bangumi, Torrent
 
@@ -27,13 +27,8 @@ class DownloadQueue:
 
 class DownloadController:
     def __init__(self):
-        self._download_monitor = None
         self._event_bus = None
 
-    def set_download_monitor(self, monitor):
-        """设置下载监控器"""
-        self._download_monitor = monitor
-    
     def set_event_bus(self, event_bus: EventBus):
         """设置事件总线"""
         self._event_bus = event_bus
@@ -60,31 +55,25 @@ class DownloadController:
         # 处理下载结果并发布事件
         for i, result in enumerate(results):
             torrent, bangumi = torrent_bangumi_pairs[i]
-            
+
             if result is True:  # 下载成功
                 if torrent.download_guid:  # 有下载哈希
-                    try:
-                        # 发布下载开始事件
-                        await self._publish_download_started(torrent, bangumi)
-                        logger.debug(f"[Download Controller] 已发布下载开始事件: {torrent.name}")
-                        
-                        # 启动监控（如果有监控器）
-                        if self._download_monitor:
-                            await self._download_monitor.start_monitoring(
-                                torrent.download_guid, bangumi, torrent
-                            )
-                            logger.debug(f"[Download Controller] 已启动监控: {torrent.name}")
-                    except Exception as e:
-                        logger.error(f"[Download Controller] 处理下载成功事件失败: {torrent.name} - {e}")
+                    # 发布下载开始事件
+                    await self._publish_download_started(torrent, bangumi)
+
             elif isinstance(result, Exception):
-                logger.error(f"[Download Controller] 下载失败: {torrent.name} - {result}")
+                logger.error(
+                    f"[Download Controller] 下载失败: {torrent.name} - {result}"
+                )
         # 保存到数据库
         with Database() as database:
             database.torrent.add_all(torrents)
 
-    async def _publish_download_started(self, torrent: Torrent, bangumi: Bangumi) -> None:
+    async def _publish_download_started(
+        self, torrent: Torrent, bangumi: Bangumi
+    ) -> None:
         """发布下载开始事件
-        
+
         Args:
             torrent: 种子信息
             bangumi: 番剧信息
@@ -92,15 +81,33 @@ class DownloadController:
         if not self._event_bus:
             logger.warning("[Download Controller] EventBus 未设置，无法发布事件")
             return
-            
+
         try:
             event = Event(
                 type=EventType.DOWNLOAD_STARTED,
-                data={'torrent': torrent, 'bangumi': bangumi}
+                data={"torrent": torrent, "bangumi": bangumi},
             )
-            
+
             await self._event_bus.publish(event)
             logger.debug(f"[Download Controller] 已发布下载开始事件: {torrent.name}")
-            
+
         except Exception as e:
             logger.error(f"[Download Controller] 发布下载开始事件失败: {e}")
+
+
+if __name__ == "__main__":
+    # 测试代码
+    async def main():
+        controller = DownloadController()
+        controller.set_event_bus(EventBus())
+
+        # 添加测试数据
+        bangumi = Bangumi(official_title="测试番剧")
+        torrent = Torrent(name="测试种子", url="http://example.com/torrent")
+
+        download_queue = DownloadQueue()
+        download_queue.add(torrent, bangumi)
+
+        await controller.download()
+
+    asyncio.run(main())

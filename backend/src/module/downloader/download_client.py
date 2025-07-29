@@ -205,6 +205,7 @@ class DownloadClient:
 
         try:
             bangumi.save_path = gen_save_path(settings.downloader.path, bangumi)
+            torrent.save_path = bangumi.save_path
             torrent_file = None
             torrent_url = torrent.url
             logging.debug(f"[Downloader] send url {torrent_url}to downloader ")
@@ -290,22 +291,21 @@ class DownloadClient:
         return False
 
     @api_rate_limit
-    async def get_torrent_info(self, hash: str) -> TorrentDownloadInfo | None:
+    async def get_torrent_info(self, hash: str) -> TorrentDownloadInfo|None:
         if not await self.wait_for_login():
-            return TorrentDownloadInfo()  # 登录失败时返回空对象
+            return None
 
         try:
             result = await self.downloader.torrent_info(hash)
             if result:
                 # print(result)
-                # logger.debug(f"[Downloader] find torrents {hash} info.")
+                logger.debug(f"[Downloader] find torrents {hash} info.")
                 return result
             else:
                 logger.warning(f"[Downloader] find torrents {hash} info failed")
-                return None
         except AuthorizationError:
             self.start_login()
-        return TorrentDownloadInfo()
+        return None
 
     @api_rate_limit
     async def get_torrent_files(self, _hash: str) -> list[str] | None:
@@ -359,7 +359,7 @@ class DownloadClient:
         return await self.downloader.check_host()
 
 
-Client = DownloadClient()
+Client = DownloadClient()  # 兼容旧代码
 
 
 if __name__ == "__main__":
@@ -369,63 +369,10 @@ if __name__ == "__main__":
 
     # setup_logger("DEBUG", reset=True)
 
+    download_client = Client
+    torrent_hash = "e4d2134ff46ee5b8d729318def73fa19993c36d6"
     async def test_one_time_login():
-        print("Testing DownloadClient one-time login functionality...")
-        client = DownloadClient()
-        print(f"Downloader type: {client.downloader.__class__.__name__}")
-
-        # 测试初始状态
-        print("\nInitial state:")
-        print(f"login_success_event.is_set(): {client.login_success_event.is_set()}")
-
-        # 测试API调用（会触发一次性登录）
-        print("\n--- Testing One-time Login ---")
-        print("Calling get_torrents_info() (should trigger login attempt)...")
-
-        start_time = time.time()
-        result = await client.get_torrents_info()
-        elapsed = time.time() - start_time
-
-        print(f"API call completed in {elapsed:.2f} seconds")
-        print(
-            f"Result: {type(result)} with {len(result) if isinstance(result, list) else 'N/A'} items"
-        )
-
-        # 检查认证状态
-        print("\nAfter first API call:")
-        print(f"login_success_event.is_set(): {client.login_success_event.is_set()}")
-
-        # 测试后续API调用（应该直接返回默认值或正常执行）
-        print("\n--- Testing Subsequent API Calls ---")
-
-        api_tests = [
-            ("get_torrents_info", client.get_torrents_info, []),
-            ("add_torrent", lambda: client.add_torrent(None, None), False),
-            (
-                "get_torrent_info",
-                lambda: client.get_torrent_info("test"),
-                "TorrentDownloadInfo",
-            ),
-            ("get_torrent_files", lambda: client.get_torrent_files("test"), []),
-        ]
-
-        for name, func, expected_type in api_tests:
-            try:
-                start_time = time.time()
-                result = await func()
-                elapsed = time.time() - start_time
-                print(f"{name}: {type(result).__name__} in {elapsed:.3f}s")
-            except Exception as e:
-                print(f"{name}: Exception - {e}")
-
-        # 测试重启功能
-        print("\n--- Testing Restart ---")
-        print("Calling restart()...")
-        await client.restart()
-
-        print("After restart:")
-        print(f"login_success_event.is_set(): {client.login_success_event.is_set()}")
-
-        print("\nOne-time login test completed")
+        info = await download_client.get_torrent_info(torrent_hash)
+        print(info)
 
     asyncio.run(test_one_time_login())

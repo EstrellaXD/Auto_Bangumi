@@ -51,7 +51,7 @@ class Checker:
 
     @staticmethod
     def check_downloader() -> bool:
-        return DownloadClient.is_login
+        return DownloadClient.login_success_event.is_set()
 
     @staticmethod
     def check_img_cache() -> bool:
@@ -65,4 +65,5 @@ class Checker:
 
 if __name__ == "__main__":
     import asyncio
+    pass
 

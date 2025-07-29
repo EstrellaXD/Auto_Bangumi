@@ -2,7 +2,8 @@ import asyncio
 import logging
 from typing import Dict, Optional
 
-from module.core.events import Event, EventType, EventBus
+from module.utils.events import Event, EventType, EventBus
+from module.database import Database
 from module.downloader.download_client import Client as download_client
 from module.models import Bangumi, Torrent
 
@@ -58,6 +59,9 @@ class DownloadMonitor:
             logger.warning(f"[DownloadMonitor] 种子 {torrent.name} 没有下载GUID")
             return
 
+        # 等待30秒让种子准备好，避免过早删除
+        logger.debug(f"[DownloadMonitor] 等待30秒让种子准备: {torrent.name}")
+        await asyncio.sleep(5)
         await self.start_monitoring(torrent.download_guid, bangumi, torrent)
 
     async def start_monitoring(
@@ -76,7 +80,7 @@ class DownloadMonitor:
 
         # 创建监控任务
         task = asyncio.create_task(
-            self.monitor_torrent(torrent_hash, bangumi, torrent),
+            self.monitor_torrent( bangumi, torrent),
             name=f"monitor_{torrent_hash[:8]}",
         )
 
@@ -84,7 +88,7 @@ class DownloadMonitor:
         logger.info(f"[DownloadMonitor] 开始监控种子: {torrent.name}")
 
     async def monitor_torrent(
-        self, torrent_hash: str, bangumi: Bangumi, torrent: Torrent
+        self, bangumi: Bangumi, torrent: Torrent
     ) -> None:
         """监控单个种子的下载状态
 
@@ -94,18 +98,45 @@ class DownloadMonitor:
             torrent: 种子信息
         """
         try:
+            torrent_hash = torrent.download_guid
+            if not torrent_hash:
+                logger.warning(f"[DownloadMonitor] 种子 {torrent.name} 没有下载GUID")
+                return
+            
             while not self._shutdown:
                 # 获取种子信息
                 info = await download_client.get_torrent_info(torrent_hash)
 
                 if not info:
                     logger.warning(
-                        f"[DownloadMonitor] 无法获取种子信息: {torrent_hash}"
+                        f"[DownloadMonitor] 无法获取种子信息: {torrent_hash}，将从数据库删除对应记录"
                     )
+                    # 从数据库删除对应的torrent记录
+                    try:
+                        with Database() as db:
+                            if torrent_item := db.torrent.search_hash(torrent_hash):
+                                db.torrent.delete(torrent_item.id)
+                                logger.info(f"[DownloadMonitor] 已从数据库删除种子记录: {torrent.name}")
+                    except Exception as e:
+                        logger.error(f"[DownloadMonitor] 删除数据库记录失败: {e}")
                     break
+
+                # 更新数据库中torrent的downloaded状态
+                elif not torrent.downloaded:
+                    logger.debug(f"[DownloadMonitor] 种子 {torrent.name} 下载状态: 未下载")
+                    try:
+                        with Database() as db:
+                            if torrent_item := db.torrent.search_hash(torrent_hash):
+                                if not torrent_item.downloaded:
+                                    torrent_item.downloaded = True
+                                    db.torrent.update(torrent_item)
+                                    logger.debug(f"[DownloadMonitor] 已更新种子下载状态: {torrent.name}")
+                    except Exception as e:
+                        logger.error(f"[DownloadMonitor] 更新种子下载状态失败: {e}")
 
                 # 检查是否下载完成
                 if info.completed != 0:
+                    logger.debug(f"[DownloadMonitor] 种子 {torrent.name} 下载状态: 已完成 {info.completed}")
                     logger.info(f"[DownloadMonitor] 种子下载完成: {torrent.name}")
 
                     # 发布下载完成事件
@@ -121,6 +152,7 @@ class DownloadMonitor:
                 else:
                     sleep_time = 60  # 默认1分钟
 
+                logger.debug(f"[DownloadMonitor] 监控种子 {torrent.name}，下次检查将在 {sleep_time} 秒后进行")
                 await asyncio.sleep(sleep_time)
 
         except asyncio.CancelledError:

@@ -165,22 +165,6 @@ class Renamer:
         logger.debug(f"[Renamer][rename_file] {old_path=} ->{new_path=}")
         result = await download_client.rename_torrent_file(hash, old_path, new_path)
         logger.debug(f"[Renamer] {ep=} ")
-        # 以下为通知用
-        # if result:
-        #     notify_info = self.notify_dict.get(bangumi_name, None)
-        #     # 当有相同的动漫时, 将集数进行累加
-        #     if notify_info:
-        #         notify_info.episode += "," + str(ep.episode)
-        #     else:
-        #         notify_info = Notification(
-        #             title=bangumi_name,
-        #             season=ep.season,
-        #             episode=str(ep.episode),
-        #             poster_path=bangumi.poster_link if bangumi else None,
-        #         )
-        # self.notify_dict[bangumi_name] = notify_info
-
-        # self.count += 1
         return result
 
     async def rename_files(
@@ -216,6 +200,7 @@ class Renamer:
         return False
 
     async def rename_torrent(self, torrent: Torrent, bangumi: Bangumi):
+        # 要torrent 的 save_path,download_guid,name
         files = []
         if not torrent.download_guid:
             logger.debug(f"[Renamer] {torrent.name} has no download guid, skip")
@@ -224,7 +209,7 @@ class Renamer:
         if not files:
             logger.debug(f"[Renamer] {torrent.name} has no files, skip")
             return
-        result = await self.rename_files(torrent, bangumi)
+        result = await self.rename_files(files, torrent, bangumi)
         logger.debug(f"[Renamer] {torrent.name} rename result: {result}")
         if result and torrent.id:
             logger.debug(f"[Renamer] {torrent.name} rename succeed")
@@ -243,4 +228,6 @@ if __name__ == "__main__":
 
     setup_logger("DEBUG", reset=True)
 
-    asyncio.run(Renamer().rename())
+    torrent = Torrent()
+    bangumi = Bangumi()
+    asyncio.run(Renamer().rename_torrent())

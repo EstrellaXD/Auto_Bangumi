@@ -120,7 +120,7 @@ def load_from_toml(file_path: str, encoding: str = "utf-8") -> set[Plugin]:
     return load_all_plugins(plugins, plugin_dirs)
 
 
-def load_builtin_plugin(name: str) -> Optional[Plugin]:
+def load_builtin_plugin(name: str) -> Plugin | None:
     """导入 NoneBot 内置插件。
 
     参数:
@@ -138,7 +138,7 @@ def load_builtin_plugins(*plugins: str) -> set[Plugin]:
     return load_all_plugins([f"nonebot.plugins.{p}" for p in plugins], [])
 
 
-def _find_manager_by_name(name: str) -> Optional[PluginManager]:
+def _find_manager_by_name(name: str) -> PluginManager | None:
     for manager in reversed(_managers):
         if (
             name in manager.controlled_modules
@@ -178,7 +178,7 @@ def require(name: str) -> ModuleType:
     return plugin.module
 
 
-def inherit_supported_adapters(*names: str) -> Optional[set[str]]:
+def inherit_supported_adapters(*names: str) -> set[str] | None:
     """获取已加载插件的适配器支持状态集合。
 
     如果传入了多个插件名称，返回值会自动取交集。
@@ -190,7 +190,7 @@ def inherit_supported_adapters(*names: str) -> Optional[set[str]]:
         RuntimeError: 插件未加载
         ValueError: 插件缺少元数据
     """
-    final_supported: Optional[set[str]] = None
+    final_supported: set[str] | None = None
 
     for name in names:
         plugin = get_plugin(_module_name_to_plugin_id(name))

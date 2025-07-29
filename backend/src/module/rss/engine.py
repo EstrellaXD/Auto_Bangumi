@@ -59,6 +59,7 @@ class RssBase:
     async def pull_rss(self) -> list[Torrent]:
         """拉取 rss_item 对应的 torrents"""
         torrents = await self._get_torrents(self.url)
+        logger.debug(f"[RSS] pull {len(torrents)} torrents from {self.url}")
         # Add RSS ID
         if self.rss_item:
             for torrent in torrents:
@@ -96,10 +97,12 @@ class RSSRefresh(RssBase):
                 bangumi = self.analyser.torrent_to_bangumi(torrent, self.rss_item)
                 if not bangumi:
                     # 如果数据库中没有, 进行一次解析
+                    logger.debug(f"[RSS] No bangumi found for torrent {torrent.name}, parsing...")
                     bangumi = await self.analyser.torrent_to_data(
                         torrent, self.rss_item
                     )
                     if bangumi:
+                        logger.debug(f"[RSS] Parsed bangumi: {bangumi.official_title}")
                         with Database(engine) as database:
                             database.bangumi.add(bangumi)
                 if bangumi:
@@ -141,14 +144,16 @@ class TorrentBangumi:
         self.include_filter = self.bangumi.include_filter.replace(",", "|") if self.bangumi.include_filter else ""
 
     def append(self, torrent_item: Torrent):
-        # Check include filter first (if set, torrent must match)
-        if self.include_filter and not re.search(self.include_filter, torrent_item.name):
-            return
         
         # Check exclude filter (if matches, reject torrent)
         if self.exclude_filter and re.search(self.exclude_filter, torrent_item.name):
+            logger.debug(f"[RSS] Exclude torrent {torrent_item.name} for {self.bangumi.official_title},regex: {self.exclude_filter}")
             return
         
+        # Check include filter first (if set, torrent must match)
+        if self.include_filter and not re.search(self.include_filter, torrent_item.name):
+            return
+
         torrent_item.bangumi_id = self.bangumi.id
         self.torrents.append(torrent_item)
 
@@ -201,6 +206,7 @@ class RSSEngine:
         """获取所有活跃的rss"""
         with Database(self.engine) as database:
             rss_items = database.rss.search_active()
+            logger.debug(f"[RSS] get {len(rss_items)} active rss items")
         return rss_items
 
     async def refresh_rss(
@@ -216,6 +222,7 @@ class RSSEngine:
         if bangumi:
             logger.info(f"[RSS] refresh {bangumi.official_title}")
         for value in refresh.bangumi_torrents.values():
+            logger.debug(f"[RSS] refresh send {len(value.torrents)} torrents for {value.bangumi.official_title}")
             await self.queue.add_torrents(value.torrents, value.bangumi)
         return True
 

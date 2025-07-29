@@ -37,6 +37,7 @@ class EventType(Enum):
     DOWNLOAD_COMPLETED = "download_completed"
     DOWNLOAD_STARTED = "download_started"
     RENAME_COMPLETED = "rename_completed"
+    NOTIFICATION_REQUIRED = "notification_required"
     TORRENT_ADDED = "torrent_added"
 
 
@@ -104,5 +105,3 @@ class EventBus:
             event_type.value: len(handlers) 
             for event_type, handlers in self._subscribers.items()
         }
-
-

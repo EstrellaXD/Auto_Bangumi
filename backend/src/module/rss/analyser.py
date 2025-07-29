@@ -81,6 +81,7 @@ class RSSAnalyser:
                 aggrated=rss_item.aggregate,
             )
         if matched_bangumi:
+            logger.debug("[RSSAnalyser] Found bangumi in database: %s", matched_bangumi.official_title)
             return matched_bangumi
         return None
 

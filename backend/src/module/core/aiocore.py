@@ -3,8 +3,7 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Any
 
-from .events import EventBus
-from .service_registry import service_registry
+from module.utils.events import EventBus
 from .task_manager import TaskManager
 
 logger = logging.getLogger(__name__)
@@ -21,6 +20,8 @@ class AsyncApplicationCore:
         self.event_bus = EventBus()
         self.services = []
         self._download_monitor = None
+        self._rename_monitor = None
+        self._notification_monitor = None
         self._running: bool = False
         self._initialized: bool = False
 
@@ -33,21 +34,18 @@ class AsyncApplicationCore:
         logger.info("[AsyncCore] 开始初始化...")
 
         try:
-            # 确保服务已注册（导入服务模块）
+            # 创建服务实例
             from .services import RSSService, DownloadService
-
-            # 从服务注册表获取服务实例
-            self.services = service_registry.create_service_instances()
+            
+            self.services = [
+                DownloadService(),
+                RSSService(), 
+            ]
 
             # 初始化所有服务
             for service in self.services:
                 await service.initialize()
                 logger.debug(f"[AsyncCore] 服务 {service.name} 初始化完成")
-            ## download服务需要特殊处理,要注入event_bus
-            download_service = service_registry.get_service_instance("download")
-            if download_service:
-                download_service.set_event_bus(self.event_bus)
-                logger.debug("[AsyncCore] 已为下载服务注入事件总线")
 
             # 注册任务到任务管理器
             await self._register_tasks()
@@ -80,9 +78,11 @@ class AsyncApplicationCore:
         """注册事件处理器"""
         try:
             from module.downloader.download_monitor import DownloadMonitor
-            from module.core.events import EventType
+            from module.manager.rename_monitor import RenameMonitor
+            from module.notification.notification_monitor import NotificationMonitor
+            from module.utils.events import EventType
 
-            # 创建并注册 DownloadMonitor，注入 event_bus
+            # 创建并注册 DownloadMonitor
             self._download_monitor = DownloadMonitor(event_bus=self.event_bus)
             self.event_bus.subscribe(
                 EventType.DOWNLOAD_STARTED,
@@ -90,16 +90,31 @@ class AsyncApplicationCore:
             )
             logger.info("[AsyncCore] 已注册 DownloadMonitor 事件处理器")
 
-            # 为下载服务设置监控器和事件总线
+            # 创建并注册 RenameMonitor
+            self._rename_monitor = RenameMonitor(event_bus=self.event_bus)
+            await self._rename_monitor.initialize()
+            self.event_bus.subscribe(
+                EventType.DOWNLOAD_COMPLETED,
+                self._rename_monitor.handle_download_completed,
+            )
+            logger.info("[AsyncCore] 已注册 RenameMonitor 事件处理器")
+
+            # 创建并注册 NotificationMonitor
+            self._notification_monitor = NotificationMonitor(event_bus=self.event_bus)
+            await self._notification_monitor.initialize()
+            self.event_bus.subscribe(
+                EventType.RENAME_COMPLETED,
+                self._notification_monitor.handle_rename_completed,
+            )
+            logger.info("[AsyncCore] 已注册 NotificationMonitor 事件处理器")
+
+            # 为下载服务设置事件总线
             for service in self.services:
                 if service.name == "download" and hasattr(
                     service, "_download_controller"
                 ):
-                    service._download_controller.set_download_monitor(
-                        self._download_monitor
-                    )
                     service._download_controller.set_event_bus(self.event_bus)
-                    logger.debug("[AsyncCore] 已为下载服务设置监控器和事件总线")
+                    logger.debug("[AsyncCore] 已为下载服务设置事件总线")
 
         except Exception as e:
             logger.error(f"[AsyncCore] 注册事件处理器失败: {e}")
@@ -140,13 +155,27 @@ class AsyncApplicationCore:
         except Exception as e:
             logger.error(f"[AsyncCore] 任务管理器关闭失败: {e}")
 
-        # 关闭下载监控器
+        # 关闭监控器
         try:
             if hasattr(self, "_download_monitor") and self._download_monitor:
                 await self._download_monitor.shutdown()
                 logger.debug("[AsyncCore] 下载监控器已关闭")
         except Exception as e:
             logger.error(f"[AsyncCore] 下载监控器关闭失败: {e}")
+
+        try:
+            if hasattr(self, "_rename_monitor") and self._rename_monitor:
+                await self._rename_monitor.shutdown()
+                logger.debug("[AsyncCore] 重命名监控器已关闭")
+        except Exception as e:
+            logger.error(f"[AsyncCore] 重命名监控器关闭失败: {e}")
+
+        try:
+            if hasattr(self, "_notification_monitor") and self._notification_monitor:
+                await self._notification_monitor.shutdown()
+                logger.debug("[AsyncCore] 通知监控器已关闭")
+        except Exception as e:
+            logger.error(f"[AsyncCore] 通知监控器关闭失败: {e}")
 
         # 清理服务资源
         await self._cleanup_services()
@@ -176,9 +205,15 @@ class AsyncApplicationCore:
             "event_bus": self.event_bus.get_subscribers_count(),
         }
 
-        # 添加下载监控器状态
+        # 添加监控器状态
         if self._download_monitor:
             status["download_monitor"] = self._download_monitor.get_monitoring_status()
+        
+        status["monitors"] = {
+            "download_monitor": bool(self._download_monitor),
+            "rename_monitor": bool(self._rename_monitor), 
+            "notification_monitor": bool(self._notification_monitor),
+        }
 
         return status
 

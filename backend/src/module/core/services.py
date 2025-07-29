@@ -4,8 +4,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 from typing_extensions import override
 
-from .events import ServiceException
-from .service_registry import service_registry, register_service
+from module.utils.events import ServiceException
 
 if TYPE_CHECKING:
     from module.rss import RSSEngine
@@ -22,9 +21,6 @@ class BaseService(ABC):
             name = self.__class__.__name__.lower().replace("service", "")
         self.name = name
         self._initialized = False
-
-        # 将服务实例注册到服务注册表
-        service_registry.set_service_instance(self.name, self)
 
     async def initialize(self) -> None:
         """初始化服务"""
@@ -61,43 +57,6 @@ class BaseService(ABC):
         return self._initialized
 
 
-# class RenamerService(BaseService):
-#     def __init__(self):
-#         super().__init__("renamer")
-#         self._renamer: Renamer | None = None
-#
-#     async def _setup(self) -> None:
-#         from module.manager import Renamer
-#
-#         self._renamer = Renamer()
-#
-#     def get_task_config(self) -> dict[str, Any]:
-#         """获取重命名任务配置"""
-#
-#         return {
-#             "name": "rename_process",
-#             "interval": settings.program.rename_time,
-#             "max_retries": 3,
-#             "enabled": settings.rss_parser.enable,
-#         }
-#
-#     async def execute(self) -> None:
-#         """执行重命名任务"""
-#         if not self._renamer:
-#             raise ServiceException("renamer", "服务未初始化")
-#
-#         try:
-#             await self._renamer.rename()
-#             logger.debug("[RenamerService] 重命名任务完成")
-#         except TimeoutError:
-#             logger.error("[RenamerService] 无法连接到下载器")
-#             raise
-#         except Exception as e:
-#             logger.error(f"[RenamerService] 执行失败: {e}")
-#             raise ServiceException("renamer", f"执行失败: {e}")
-
-
-@register_service(priority=20, name="rss")
 class RSSService(BaseService):
     def __init__(self):
         super().__init__()
@@ -120,6 +79,7 @@ class RSSService(BaseService):
             "enabled": True,
         }
 
+
     async def execute(self) -> None:
         """执行RSS刷新任务"""
         if not self._engine:
@@ -139,7 +99,6 @@ class RSSService(BaseService):
             raise ServiceException("rss", f"执行失败: {e}")
 
 
-@register_service(priority=10, name="download", dependencies=["rss"])
 class DownloadService(BaseService):
     def __init__(self):
         super().__init__()
@@ -181,6 +140,10 @@ class DownloadService(BaseService):
             logger.error(f"[DownloadService] 执行失败: {e}")
             raise ServiceException("download", f"执行失败: {e}")
 
+    def set_event_bus(self,event_bus):
+        if not self._download_controller:
+            raise ServiceException("download", "下载控制器未初始化")
+        self._download_controller.set_event_bus(event_bus)
     async def cleanup(self) -> None:
         """清理下载客户端"""
         try:
