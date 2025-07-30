@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel
 from sqlmodel import Field, SQLModel
 
@@ -5,27 +6,28 @@ from .bangumi import Bangumi
 
 
 class Torrent(SQLModel, table=True):
-    id: int = Field(default=None, primary_key=True, alias="id")
-    # # FIXME: bangumi_id 会不停的变化，每改一次都要改这里, 所以考虑用 official_title 作为主码
-    bangumi_id: int | None = Field(
-        default=None, alias="refer_id", foreign_key="bangumi.id"
-    )
-    rss_url: str | None = Field(default=None, alias="ruid")
-    download_guid: str | None = Field(default=None, alias="duid",index=True)
+    url: str = Field(primary_key=True, alias="url")
     name: str = Field(default="", alias="name")
-    url: str = Field(default="https://example.com/torrent", alias="url", unique=True, index=True)
-    homepage: str | None = Field(default=None, alias="homepage")
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
     downloaded: bool = Field(default=False, alias="downloaded")
     renamed: bool = Field(default=False, alias="renamed")
+    download_uid: str | None = Field(default=None, alias="duid", index=True)
+    bangumi_official_title: str | None = Field(
+        default=None, index=True, alias="bangumi_title"
+    )
+    bangumi_season: int | None = Field(default=None, index=True, alias="bangumi_season")
+    rss_url: str | None = Field(default=None, alias="ruid", index=True)
+    # TODO: 添加外键字段 rss_id 和 bangumi_id 替代当前的字符串引用
+    homepage: str | None = Field(default=None, alias="homepage")
+
 
 class TorrentDownloadInfo(BaseModel):
-    eta:int | None = Field(default=60, alias="eta")
+    eta: int | None = Field(default=60, alias="eta")
     save_path: str = Field(default="", alias="save_path")
     completed: int = Field(default=0, alias="completed")
 
 
-
-class TorrentUpdate(SQLModel):
+class TorrentUpdate(BaseModel):
     downloaded: bool = Field(default=False, alias="downloaded")
 
 
@@ -48,9 +50,3 @@ class SubtitleFile(BaseModel):
     suffix: str = Field(..., regex=r"(?i)\.(ass|srt)$")
 
 
-class RenamerInfo(BaseModel):
-    torrent: Torrent | str
-    bangumi: Bangumi | None
-    hash: str
-    content: list[str] = Field(default=[])
-    save_path: str = Field("")

@@ -25,18 +25,18 @@ class BangumiBase(SQLModel):
     # 感觉是不是与 rss 表用外键关联更好
     rss_link: str = Field(default="", alias="rss_link", title="番剧RSS链接")
     poster_link: str = Field(default="", alias="poster_link", title="番剧海报链接")
-    added: bool = Field(default=False, alias="added", title="是否已添加")
     rule_name: str | None = Field(default=None, alias="rule_name", title="番剧规则名")
+    added: bool = Field(default=False, alias="added", title="是否已添加")
     deleted: bool = Field(default=False, alias="deleted", title="是否已删除")
 
 
 class Bangumi(BangumiBase, table=True):
     id: int = Field(default=None, primary_key=True)
 
-class BangumiUpdate(BangumiBase):
-    # 覆盖特定字段的默认值
-    exclude_filter: str = Field(default="720,\\d+-\\d+", alias="exclude_filter", title="番剧排除过滤器")
-    deleted: bool = Field(default=False, alias="deleted", title="是否已删除")
+# class BangumiUpdate(BangumiBase):
+#     # 覆盖特定字段的默认值
+#     exclude_filter: str = Field(default="720,\\d+-\\d+", alias="exclude_filter", title="番剧排除过滤器")
+#     deleted: bool = Field(default=False, alias="deleted", title="是否已删除")
 
 
 class Notification(BaseModel):

@@ -35,7 +35,8 @@ export interface SearchResult {
   value: BangumiRule;
 }
 
-export type BangumiUpdate = Omit<BangumiAPI, 'id'>;
+// export type BangumiUpdate = Omit<BangumiAPI, 'id'>;
+export type BangumiUpdate = BangumiAPI
 
 export const ruleTemplate: BangumiRule = {
   added: false,

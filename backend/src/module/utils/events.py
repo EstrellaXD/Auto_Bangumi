@@ -104,3 +104,5 @@ class EventBus:
             event_type.value: len(handlers) 
             for event_type, handlers in self._subscribers.items()
         }
+
+event_bus = EventBus()

@@ -59,7 +59,7 @@ class DownloadController:
             for torrent in torrents:
                 database.torrent.add(torrent)
                 logger.debug(
-                    f"[Download Controller] Torrent {torrent.name} {torrent.id=} 已保存到数据库"
+                    f"[Download Controller] Torrent {torrent.name} {torrent.url=} 已保存到数据库"
                 )
         for i, result in enumerate(results):
             torrent, bangumi = torrent_bangumi_pairs[i]

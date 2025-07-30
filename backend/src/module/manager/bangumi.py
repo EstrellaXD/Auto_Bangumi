@@ -3,58 +3,79 @@ import logging
 
 from module.database import Database, engine
 from module.downloader import Client as DownlondClient
-from module.manager.renamer import Renamer
-from module.models import Bangumi, BangumiUpdate
+from module.models import Bangumi, BangumiUpdate, Torrent
 from module.parser import TmdbParser
-from module.utils import gen_save_path,event_bus
+from module.utils import gen_save_path
 from module.conf import settings
+from module.manager.torrent import TorrentManager
+from module.utils.events import Event, EventType, event_bus
 
 logger = logging.getLogger(__name__)
 
 
-class TorrentManager:
+class BangumiManager:
     def __init__(self) -> None:
         self.tmdb_parser: TmdbParser = TmdbParser()
+        self.torrent_manager: TorrentManager = TorrentManager()
 
-    async def delete_torrents(self, data: Bangumi) -> bool:
-        """删除和 bangumi 相同路径的种子
-
-        Args:
-            data: Bangumi
-
-        Returns:
-            [TODO:return]
-        """
-        # 删除 bangumi
-        # data.save_path = DownlondClient._path_parser.gen_save_path(data)
+    async def delete_rule(self, _id: int | str, file: bool = False):
         with Database(engine) as db:
-            torrent_list = db.find_torrent_by_bangumi(data)
-            hash_list = [torrent.download_guid for torrent in torrent_list]
-        if hash_list:
-            res = await DownlondClient.delete_torrent(hash_list)
-            if res:
-                with Database() as database:
-                    for _hash in hash_list:
-                        database.torrent.delete_by_duid(_hash)
-            logger.info(f"Delete rule and torrents for {data.official_title}")
-            return True
-        return False
+            data = db.bangumi.search_id(int(_id))
+        if data:
+            with Database(engine) as db:
+                db.bangumi.delete_one(int(_id))
+                # 当 bangumi 不是聚合的时候删除 rss
+                rss_item = db.bangumi_to_rss(data)
+                if rss_item and rss_item.aggregate is False:
+                    db.rss.delete(rss_item.id)
+            if file:
+                await self.torrent_manager.delete_torrents(data)
+            logger.info(f"[Manager] Delete rule for {data.official_title}")
+            return data
+        return None
 
-    # async def rename(self, save_path: str, hash_list: list[str]):
-    #     renamer = Renamer()
-    #     renamer_task = []
-    #     async with DownlondClient:
-    #         for torrent_hash in hash_list:
-    #
-    #             file_contents = await renamer.get_torrent_files(torrent_hash)
-    #             renamer_task.append(
-    #                 renamer.rename_files(
-    #                     torrent_hash,
-    #                     files_path=file_contents,
-    #                     save_path=save_path,
-    #                 )
-    #             )
-    #         await asyncio.gather(*renamer_task)
+    async def disable_rule(self, _id: str | int, file: bool = False) -> bool:
+        with Database() as db:
+            data = db.bangumi.search_id(int(_id))
+        if isinstance(data, Bangumi):
+            data.deleted = True
+            db.bangumi.update(data)
+            if file:
+                torrent_message = await self.torrent_manager.delete_torrents(data)
+                return torrent_message
+            logger.info(f"[Manager] Disable rule for {data.official_title}")
+            return True
+        else:
+            return False
+
+    async def rename(self, torrent:Torrent,bangumi:Bangumi|BangumiUpdate):
+        """重命名种子文件
+        Args:
+            torrent: 种子信息
+            bangumi: 番剧信息
+        """
+        try:
+            event = Event(
+                type=EventType.DOWNLOAD_COMPLETED,
+                data={"torrent": torrent, "bangumi": bangumi},
+            )
+            await event_bus.publish(event)
+            logger.debug(f"[Download Controller] 已发布下载开始事件: {torrent.name}")
+
+        except Exception as e:
+            logger.error(f"[Download Controller] 发布下载开始事件失败: {e}")
+
+    async def enable_rule(self, _id: str | int):
+
+        with Database() as db:
+            data = db.bangumi.search_id(int(_id))
+            if data:
+                data.deleted = False
+                db.bangumi.update(data)
+                logger.info(f"[Manager] Enable rule for {data.official_title}")
+                return True
+            else:
+                return False
 
     async def update_rule(self, bangumi_id: int, data: BangumiUpdate):
         with Database() as db:
@@ -80,9 +101,8 @@ class TorrentManager:
                     new_save_path = gen_save_path(settings.downloader.path, data)
                     if hash_list:
                         await DownlondClient.move_torrent(hash_list, new_save_path)
-                    # save_path改动后名命名一次
-                    await self.rename(new_save_path, hash_list)
-                    await asyncio.sleep(1)
+                    for torrent in torrent_list:
+                        await self.rename(torrent, data)
 
                 db.bangumi.update(data, bangumi_id)
                 return True

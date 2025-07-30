@@ -3,7 +3,7 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Any
 
-from module.utils.events import EventBus
+from module.utils.events import event_bus
 from .task_manager import TaskManager
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ class AsyncApplicationCore:
 
     def __init__(self):
         self.task_manager = TaskManager()
-        self.event_bus = EventBus()
+        self.event_bus = event_bus
         self.services = []
         self._download_monitor = None
         self._rename_monitor = None

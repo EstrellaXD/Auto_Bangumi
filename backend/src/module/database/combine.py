@@ -4,11 +4,11 @@ from module.models import Bangumi, User
 from module.models.rss import RSSItem
 from module.models.torrent import Torrent
 
-from .bangumi import BangumiDatabase
-from .engine import engine as e
-from .rss import RSSDatabase
-from .torrent import TorrentDatabase
-from .user import UserDatabase
+from module.database.bangumi import BangumiDatabase
+from module.database.engine import engine as e
+from module.database.rss import RSSDatabase
+from module.database.torrent import TorrentDatabase
+from module.database.user import UserDatabase
 
 
 class Database(Session):
@@ -26,6 +26,17 @@ class Database(Session):
 
     def bangumi_to_rss(self, bangumi: Bangumi) -> RSSItem | None:
         return self.rss.search_url(bangumi.rss_link)
+
+    def add_bangumi(self, bangumi: Bangumi):
+        pass
+
+    def find_torrent_by_bangumi(self, bangumi: Bangumi) -> list[Torrent]:
+        """根据 Bangumi 查找相关的 Torrent"""
+        "依据 official_title, seasion, rss_link"
+        return self.torrent.filter_by_bangumi(bangumi.official_title, bangumi.season, bangumi.rss_link)
+
+    def find_bangumi_by_torrent(self, torrent: Torrent) -> Bangumi | None:
+        pass
 
     def create_table(self):
         SQLModel.metadata.create_all(self.engine)
@@ -202,3 +213,12 @@ class Database(Session):
 
         self.commit()
         print("数据库迁移完成!")
+
+if __name__ == "__main__":
+    url = "https://mikanani.me/Download/20250531/fb338d0c51c01c2494a9fb1642dd97769416b5c2.torrent"
+    with Database() as db:
+        torrent = db.torrent.search_by_url(url)
+        if torrent:
+            print(type(torrent))
+        else:
+            print("未找到种子")

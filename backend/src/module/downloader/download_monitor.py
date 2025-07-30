@@ -114,8 +114,7 @@ class DownloadMonitor:
                     # 从数据库删除对应的torrent记录
                     try:
                         with Database() as db:
-                            if torrent_item := db.torrent.search_hash(torrent_hash):
-                                db.torrent.delete(torrent_item.id)
+                                db.torrent.delete_by_url(torrent.url)
                                 logger.info(f"[DownloadMonitor] 已从数据库删除种子记录: {torrent.name}")
                     except Exception as e:
                         logger.error(f"[DownloadMonitor] 删除数据库记录失败: {e}")
@@ -126,7 +125,7 @@ class DownloadMonitor:
                     logger.debug(f"[DownloadMonitor] 种子 {torrent.name} 下载状态: 未下载")
                     try:
                         with Database() as db:
-                            if torrent_item := db.torrent.search_hash(torrent_hash):
+                            if torrent_item := db.torrent.search_by_duid(torrent_hash):
                                 if not torrent_item.downloaded:
                                     torrent_item.downloaded = True
                                     db.torrent.add(torrent_item)
