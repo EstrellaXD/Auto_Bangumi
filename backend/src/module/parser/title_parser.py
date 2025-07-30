@@ -101,12 +101,13 @@ class MikanParser(RawParser):
     async def parser(self, homepage: str) -> Bangumi:
         mikan_parser = MikanWebParser(homepage, self.page)
         tasks = [mikan_parser.parser(), mikan_parser.poster_parser()]
-        official_title, poster_link = await asyncio.gather(*tasks)
+        (official_title, mikan_id), poster_link = await asyncio.gather(*tasks)
         if not official_title or not poster_link:
             return None
 
         return Bangumi(
             official_title=official_title,
+            mikan_id=mikan_id,
             poster_link=poster_link,
         )
 

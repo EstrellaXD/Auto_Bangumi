@@ -17,18 +17,28 @@ class MikanWebParser:
         self.homepage = url
         self.root_path = parse_url(self.homepage).host
 
-    async def parser(self) -> str:
+    async def parser(self) -> tuple[str, str]:
         content = await self.page.get_content(self.homepage)
         if not content:
-            return ""
+            return "", ""
         soup = BeautifulSoup(content, "html.parser")
         official_title = soup.select_one('p.bangumi-title a[href^="/Home/Bangumi/"]')
+        print(f"official_title: {official_title}")
         if official_title:
+            # official_title: <a class="w-other-c" href="/Home/Bangumi/3391#583" style="color:#555" target="_blank">败犬女主太多了！</a>
+            # mikan_id = re.search(r".*/Home/Bangumi/(\d+(#\d+)?)", str(official_title))
+            mikan_id = re.search(r"/Home/Bangumi/(\d+)(#\d+)?", str(official_title))
+            if mikan_id:
+                mikan_id = mikan_id.group(1) + (mikan_id.group(2) or "")
+            else:
+                mikan_id = ""
             official_title = official_title.text
+            print(f"official_title: {official_title}")
             official_title = re.sub(r"第.*季", "", official_title).strip()
+            print(f"mikan_id: {mikan_id}")
         else:
             official_title = ""
-        return official_title
+        return official_title, mikan_id
 
     async def poster_parser(self) -> str:
         poster_link = ""

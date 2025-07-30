@@ -108,6 +108,11 @@ class RSSRefresh(RssBase):
                 if bangumi:
                     # TODO: 不一定在这更新
                     # 这个还是要想想怎么弄, 要是没有的话就不加可能就没机会加了
+                    id_list = ["bangumi_id", "tmdb_id", "mikan_id"]
+                    # for id_field in id_list:
+                    #     if bangumi[id_field]:
+                    #         torrent.id
+
                     if not self.rss_item.aggregate:
                         # 如果 不是聚合的, 则更新 bangumi
                         # 这样就可以避免多余的请求

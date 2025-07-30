@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from module.database import Database
+from module.database import Database,engine
 from module.utils.events import Event, EventType, EventBus
 from module.downloader.download_client import Client as client
 from module.models import Bangumi, Torrent
@@ -53,6 +53,14 @@ class DownloadController:
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # 处理下载结果并发布事件
+        # 保存到数据库
+
+        with Database(engine) as database:
+            for torrent in torrents:
+                database.torrent.add(torrent)
+                logger.debug(
+                    f"[Download Controller] Torrent {torrent.name} {torrent.id=} 已保存到数据库"
+                )
         for i, result in enumerate(results):
             torrent, bangumi = torrent_bangumi_pairs[i]
 
@@ -60,14 +68,10 @@ class DownloadController:
                 if torrent.download_guid:  # 有下载哈希
                     # 发布下载开始事件
                     await self._publish_download_started(torrent, bangumi)
-
             elif isinstance(result, Exception):
                 logger.error(
                     f"[Download Controller] 下载失败: {torrent.name} - {result}"
                 )
-        # 保存到数据库
-        with Database() as database:
-            database.torrent.add_all(torrents)
 
     async def _publish_download_started(
         self, torrent: Torrent, bangumi: Bangumi

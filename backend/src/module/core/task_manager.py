@@ -50,7 +50,10 @@ class TaskManager:
 
         for name, task_info in self._tasks.items():
             if task_info.state == TaskState.PENDING:
+                logger.info(f"[TaskManager] 准备启动任务: {name}")
                 await self._start_task(name)
+            else:
+                logger.warning(f"[TaskManager] 任务 {name} 已经在运行或已完成，跳过启动")
 
     async def _start_task(self, name: str):
         """启动单个任务"""
@@ -102,6 +105,13 @@ class TaskManager:
                 # await asyncio.gather(*pending_tasks, return_exceptions=True)
 
         logger.info("[TaskManager] 所有任务已关闭")
+
+    def reset_tasks_state(self):
+        """重置所有任务状态为 PENDING，用于重启"""
+        for task_info in self._tasks.values():
+            task_info.state = TaskState.PENDING
+            task_info.task = None
+        logger.info("[TaskManager] 已重置所有任务状态为 PENDING")
 
     def get_status(self) -> dict[str, dict]:
         """获取所有任务状态"""

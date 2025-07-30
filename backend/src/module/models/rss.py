@@ -8,7 +8,7 @@ class RSSItem(SQLModel, table=True):
     """
     id: int = Field(default=None, primary_key=True, alias="id")
     name: str|None = Field(default=None, alias="name")
-    url: str = Field(default="https://mikanani.me", alias="url")
+    url: str = Field(default="https://mikanani.me", alias="url",index=True)
     aggregate: bool = Field(default=False, alias="aggregate")
     parser: str = Field(default="mikan", alias="parser")
     enabled: bool = Field(default=True, alias="enabled")

@@ -108,6 +108,9 @@ class DownloadService(BaseService):
         # 预检查下载模块是否可用
         try:
             from module.downloader import DownloadController
+            from module.downloader import Client
+
+            Client.start_login()
 
             self._download_controller = DownloadController()
 
@@ -149,7 +152,8 @@ class DownloadService(BaseService):
         try:
             from module.downloader import Client
 
-            await Client.restart()
+            await Client.stop()
+            self._initialized = False
             logger.debug("[DownloadService] 下载客户端已重启")
         except Exception as e:
             logger.error(f"[DownloadService] 清理失败: {e}")

@@ -128,7 +128,7 @@ class DownloadClient:
         self._last_api_call: float = 0
         self._api_cancel_event: asyncio.Event = asyncio.Event()
         self._waiting_api_tasks: set[int] = set()  # 追踪等待中的API任务
-        self.api_interval: float = 1.0  # 默认1秒间隔
+        self.api_interval: float = -1  # 默认1秒间隔
         self.is_authenticating:bool = False  # 重置认证状态
 
     async def login(self):
@@ -204,8 +204,6 @@ class DownloadClient:
             return False  # 登录失败时返回False
 
         try:
-            bangumi.save_path = gen_save_path(settings.downloader.path, bangumi)
-            torrent.save_path = bangumi.save_path
             torrent_file = None
             torrent_url = torrent.url
             logging.debug(f"[Downloader] send url {torrent_url}to downloader ")
@@ -213,7 +211,7 @@ class DownloadClient:
             result = await self.downloader.add(
                 torrent_urls=torrent_url,
                 torrent_file=torrent_file,
-                save_path=bangumi.save_path,
+                save_path= gen_save_path(settings.downloader.path, bangumi),
                 category="Bangumi",
             )
             if result:
@@ -344,12 +342,14 @@ class DownloadClient:
         return len(self._waiting_api_tasks)
 
     async def stop(self):
+        logger.info("[Download Client] Stopping download client")
         self.cancel_all_api_calls()  # 先取消所有API调用
         await self.downloader.logout()
         if self.login_task:
             self.login_task.cancel()
 
     async def restart(self):
+        logger.info("[Download Client] Restarting download client")
         await self.stop()
         self.reset_api_cancel()  # 重置API取消状态
         # 重置认证状态，允许重新尝试认证

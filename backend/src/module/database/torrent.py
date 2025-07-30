@@ -3,7 +3,7 @@ import logging
 from sqlalchemy.sql import func
 from sqlmodel import Session, delete, false, select, true
 
-from module.models import Torrent
+from module.models import Torrent, torrent
 from module.utils import get_hash
 
 logger = logging.getLogger(__name__)
@@ -14,9 +14,17 @@ class TorrentDatabase:
         self.session = session
 
     def add(self, data: Torrent):
-        self.session.add(data)
+        # 找一下是否已经存在相同的种子
+        existing_torrent = self.session.query(Torrent).filter_by(url=data.url).first()
+        # 有的话就更新一下
+        if existing_torrent:
+            data.id = existing_torrent.id
+        ins = self.session.merge(data)
         self.session.commit()
-        self.session.refresh(data)
+        self.session.refresh(ins)  # 刷新对象以获取最新的数据库状态
+        data.id = ins.id  # 确保 data.id 被更新为数据库中的 ID
+        logger.debug(f"[TorrentDatabase] {ins.id=}, {ins.name=}, {ins.url=}")
+        logger.debug(f"[TorrentDatabase] Insert {data.name=} {data.id=} in database.")
         logger.debug(f"Insert {data.name} in database.")
 
     def add_all(self, datas: list[Torrent]):
@@ -27,12 +35,17 @@ class TorrentDatabase:
         ]
         self.session.add_all(unique_torrent)
         self.session.commit()
+        # 对所有的 Torrent 对象进行刷新
+        for data in unique_torrent:
+            self.session.refresh(data)
         logger.debug(f"Insert {len(datas)} torrents in database.")
 
     def update(self, data: Torrent):
-        self.session.add(data)
+        logger.debug(f"[TorrentDatabase] update {data.name} in database.")
+        self.session.merge(data)
         self.session.commit()
         self.session.refresh(data)
+        logger.debug(f"[TorrentDatabase] Update {data.name} in database success.")
         logger.debug(f"Update {data.name} in database.")
 
     def update_all(self, datas: list[Torrent]):

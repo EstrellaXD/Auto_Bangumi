@@ -5,6 +5,7 @@ from module.conf import settings
 from module.database import Database, engine
 from module.models import Bangumi, RSSItem, Torrent
 from module.parser import MikanParser, RawParser, TmdbParser
+from module.utils import gen_save_path
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +82,10 @@ class RSSAnalyser:
                 aggrated=rss_item.aggregate,
             )
         if matched_bangumi:
-            logger.debug("[RSSAnalyser] Found bangumi in database: %s", matched_bangumi.official_title)
+            logger.debug(
+                "[RSSAnalyser] Found bangumi in database: %s",
+                matched_bangumi.official_title,
+            )
             return matched_bangumi
         return None
 

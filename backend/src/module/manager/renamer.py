@@ -123,18 +123,18 @@ class Renamer:
         #TODO: 后面支持剧场版的时个这要 改一下
         if ep and ep.episode == 0:
             logger.debug(f"[Renamer][rename_file] {ep.title} is parser episode failed")
-            return False
+            return True
 
         # .5 的也处理不了, 直接返回 True
         if is_point_5(ep.title):
             logger.debug(f"[Renamer][rename_file] {ep.title} is a point 5 file")
             # Notify = Notification()
-            return False
+            return True
 
         # v1 的没必要处理, 直接返回 True
         if is_v1(ep.title):
             logger.debug(f"[Renamer][rename_file] {ep.title} is a vd file")
-            return False
+            return True
 
         if bangumi is None:
             # 从save_path中提取番剧名称和season
@@ -160,7 +160,7 @@ class Renamer:
         if new_path == old_path:
             logger.debug(f"[Renamer][rename_file] {old_path=} == {new_path=}")
             logging.debug(f"[Renamer][rename_file] have renamed {old_path}")
-            return False
+            return True
 
         logger.debug(f"[Renamer][rename_file] {old_path=} ->{new_path=}")
         result = await download_client.rename_torrent_file(hash, old_path, new_path)
@@ -211,12 +211,14 @@ class Renamer:
             return
         result = await self.rename_files(files, torrent, bangumi)
         logger.debug(f"[Renamer] {torrent.name} rename result: {result}")
-        if result and torrent.id:
+
+        if result:
             logger.debug(f"[Renamer] {torrent.name} rename succeed")
             with Database() as db:
-                torrent_item = db.torrent.search(torrent.id)
-                torrent_item.downloaded = True
-                db.torrent.update(torrent_item)
+                torrent.renamed = True
+                torrent.save_path = bangumi.save_path  # 更新保存路径
+                torrent.downloaded = True
+                db.torrent.add(torrent)
 
 
 

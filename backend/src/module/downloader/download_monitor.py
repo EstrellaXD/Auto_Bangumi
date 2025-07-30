@@ -129,7 +129,7 @@ class DownloadMonitor:
                             if torrent_item := db.torrent.search_hash(torrent_hash):
                                 if not torrent_item.downloaded:
                                     torrent_item.downloaded = True
-                                    db.torrent.update(torrent_item)
+                                    db.torrent.add(torrent_item)
                                     logger.debug(f"[DownloadMonitor] 已更新种子下载状态: {torrent.name}")
                     except Exception as e:
                         logger.error(f"[DownloadMonitor] 更新种子下载状态失败: {e}")

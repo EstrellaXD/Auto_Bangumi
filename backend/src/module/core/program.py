@@ -72,6 +72,8 @@ class Program:
 
     async def restart(self) -> bool:
         await self.stop()
+        # 重置任务状态，确保重启时能重新启动任务
+        self.app_core.task_manager.reset_tasks_state()
         await self.start()
         return True
 

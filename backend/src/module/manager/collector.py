@@ -28,7 +28,7 @@ class SeasonCollector:
             parser=parser,
         )
         # 当 解析失败的时候, 会没有海报
-        if data.poster_link is None:
+        if not data.poster_link:
             try:
                 await TmdbParser().poster_parser(data)
             except Exception:
@@ -54,6 +54,7 @@ async def eps_complete():
         logger.info("Start collecting full season...")
         data = datas[0]
         # 复制 data 到 temp_bangumi
+        # TODO: bangumi 加了 Mikanid, 可以直接取用来做eps
         logger.debug(f"[eps_complete] {data.official_title} eps start to complete")
         temp_bangumi.__dict__.update(data.__dict__)
         temp_bangumi.title_raw = temp_bangumi.title_raw.split(",")[0]

@@ -48,11 +48,6 @@ class RenameMonitor:
 
             # 执行重命名
             await self._renamer.rename_torrent(torrent, bangumi)
-            # 更新种子状态为已重命名
-            torrent.renamed = True
-            torrent.save_path = bangumi.save_path  # 更新保存路径
-            with Database() as db:
-                db.torrent.update(torrent)
 
             # 发布重命名完成事件
             await self._publish_rename_completed(torrent, bangumi)
