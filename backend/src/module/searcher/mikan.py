@@ -1,19 +1,20 @@
 from bs4 import BeautifulSoup
+from module.network import RequestContent
 import re
 from urllib3.util import parse_url
 
-from module.parser import LocalMikan, MikanParser, RawParser, RemoteMikan
+from module.parser import  MikanParser, RawParser
 
 
 class MikanSearch:
-    def __init__(self, url: str, page: RemoteMikan | LocalMikan):
-        self.page = page
+    def __init__(self, url: str):
         self.homepage = url
         self.root_path = parse_url(self.homepage).host
-        self.mikan_parser = MikanParser(page=self.page)
+        self.mikan_parser = MikanParser()
 
     async def search(self):
-        content = await self.page.get_content(self.homepage)
+        async with RequestContent() as req:
+            content = await req.get_html(self.homepage)
         if not content:
             return []
 

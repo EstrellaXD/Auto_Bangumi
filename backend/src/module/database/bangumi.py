@@ -37,7 +37,8 @@ class BangumiDatabase:
         statement = select(Bangumi).where(
             and_(
                 data.official_title == Bangumi.official_title,
-                func.instr(data.rss_link, Bangumi.rss_link) > 0,
+                data.rss_link == Bangumi.rss_link,
+                # func.instr(data.rss_link, Bangumi.rss_link) > 0,
                 # use `false()` to avoid E712 checking
                 # see: https://docs.astral.sh/ruff/rules/true-false-comparison/
                 Bangumi.deleted == false(),

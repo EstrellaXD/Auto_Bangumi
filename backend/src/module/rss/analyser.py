@@ -58,11 +58,6 @@ class RSSAnalyser:
         如果只有 rawparser, 则返回 None
         """
 
-        with Database(engine) as database:
-            bangumi = database.find_bangumi_by_torrent(torrent,rss.aggregate)
-            if bangumi:
-                logger.debug(f"[RSS analyser] Find bangumi {bangumi.official_title} by torrent {torrent.name}")
-                return bangumi
         if (
             bangumi :=RawParser().parser(raw=torrent.name)
         ) and bangumi.official_title != "official_title":
@@ -73,6 +68,7 @@ class RSSAnalyser:
                     f"[RSS analyser] Fail to parse official title for {torrent.name}."
                 )
                 return None
+            # 这里是最早加入 bangumi.rss_link, bangumi.parser 的地方
             bangumi.rss_link = rss.url
             bangumi.parser = rss.parser
             logger.debug(f"[RSS analyser] Parsed bangumi: {bangumi.official_title} from torrent {torrent.name}")

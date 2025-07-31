@@ -5,7 +5,6 @@ from collections.abc import AsyncGenerator
 from module.conf import settings
 from module.models import Bangumi, RSSItem, Torrent
 from module.network import RequestContent
-from module.parser.api import RemoteMikan
 from module.parser.title_parser import MikanParser, RawParser
 from module.rss import RSSAnalyser, RSSRefresh
 from module.searcher.mikan import MikanSearch
@@ -25,8 +24,7 @@ class SearchTorrent:
     def __init__(self) -> None:
         self.req = RequestContent()
         self.analyser = RSSAnalyser()
-        self.page = RemoteMikan()
-        self.mikan_parser = MikanParser(page=self.page)
+        self.mikan_parser = MikanParser()
 
     async def search_torrents(self, rss_item: RSSItem) -> list[Torrent]:
         # 想了想 search 没必要有一个 Filter, 下载的时候也不会有
@@ -54,7 +52,7 @@ class SearchTorrent:
         for torrent in torrents:
             if len(exist_list) >= limit:
                 break
-            if new_bangumi := BParser().parser(torrent.name):
+            if new_bangumi := RawParser().parser(torrent.name):
                 # 检查是否已经存在, 对于一个 bangumi 来说, 组,动漫,季一致就可以认为是一个
                 new_str = f"{new_bangumi.title_raw}{new_bangumi.group_name}{new_bangumi.season_raw}"
                 if new_str not in exist_list:
@@ -90,7 +88,7 @@ class SearchTorrent:
                         homepage_list.append(homepage)
                         tasks.append(
                             asyncio.create_task(
-                                MikanSearch(url=homepage, page=self.page).search()
+                                MikanSearch(url=homepage).search()
                             )
                         )
                     else:  # 有两个相同的主页, 就停止
