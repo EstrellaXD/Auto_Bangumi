@@ -43,7 +43,6 @@ class Downloader(BaseDownloader):
         self.host: str = self.config.host
         self.username: str = self.config.username
         self.password: str = self.config.password
-        print(f"[alist] Downloader config: {self.config}")
         self.headers = {
             "Authorization": f"{self.password}",
         }       

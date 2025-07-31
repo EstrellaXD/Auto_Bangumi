@@ -296,7 +296,6 @@ class DownloadClient:
         try:
             result = await self.downloader.torrent_info(hash)
             if result:
-                # print(result)
                 logger.debug(f"[Downloader] find torrents {hash} info.")
                 return result
             else:

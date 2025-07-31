@@ -2,26 +2,18 @@
 数据库版本管理和迁移系统
 """
 from pathlib import Path
-from typing import Dict, List, Callable
+from typing import  Callable
 import logging
 from datetime import datetime
 
-from sqlmodel import Session, SQLModel, text, Field
+from sqlmodel import Session, SQLModel, text
 from module.conf import DATA_PATH, VERSION_PATH
 from module.database.engine import engine
-from module.models import Bangumi, User
+from module.models import Bangumi, User, DatabaseVersion
 from module.models.rss import RSSItem
 from module.models.torrent import Torrent
 
 logger = logging.getLogger(__name__)
-
-
-class DatabaseVersion(SQLModel, table=True):
-    """数据库版本记录表"""
-    id: int = Field(default=None, primary_key=True)
-    version: str = Field(index=True, title="数据库版本")
-    applied_at: datetime = Field(default_factory=datetime.utcnow, title="应用时间")
-    description: str = Field(default="", title="版本描述")
 
 
 class DatabaseMigration:
@@ -30,7 +22,7 @@ class DatabaseMigration:
     def __init__(self, engine=engine):
         self.engine = engine
         self.current_app_version = self._get_app_version()
-        self.migration_history: Dict[str, Callable] = {
+        self.migration_history: dict[str, Callable] = {
             "3.2.0": self._migrate_to_3_2_0,
             # 在这里添加新版本的迁移函数
         }
@@ -85,7 +77,7 @@ class DatabaseMigration:
                 logger.warning(f"获取数据库版本失败: {e}")
                 return "unknown"
     
-    def check_compatibility(self) -> Dict[str, any]:
+    def check_compatibility(self) -> dict[str, any]:
         """检查数据库兼容性"""
         db_version = self.get_current_db_version()
         app_version = self.current_app_version
@@ -119,7 +111,7 @@ class DatabaseMigration:
         
         return result
     
-    def _get_migration_path(self, from_version: str, to_version: str) -> List[str]:
+    def _get_migration_path(self, from_version: str, to_version: str) -> list[str]:
         """获取迁移路径"""
         available_versions = list(self.migration_history.keys())
         
@@ -235,6 +227,41 @@ class DatabaseMigration:
             except Exception as e:
                 logger.warning(f"清理Bangumi rss_link字段时出错: {e}")
             
+            # 更新Bangumi表的parser字段，从RSS表获取
+            logger.info("更新Bangumi表的parser字段...")
+            try:
+                # 获取所有bangumi记录
+                bangumis = db.bangumi.search_all()
+                
+                updated_count = 0
+                for bangumi in bangumis:
+                    try:
+                        if bangumi.rss_link:
+                            # 从RSS表中查找对应的parser
+                            rss_item = db.rss.search_url(bangumi.rss_link)
+                            if rss_item and rss_item.parser:
+                                if bangumi.parser != rss_item.parser:
+                                    bangumi.parser = rss_item.parser
+                                    db.merge(bangumi)
+                                    updated_count += 1
+                                    logger.debug(f"更新bangumi {bangumi.official_title} 的parser: {rss_item.parser}")
+                            elif not bangumi.parser or bangumi.parser == "":
+                                # 如果RSS表中没有找到对应记录，设置默认parser
+                                bangumi.parser = "mikan"
+                                db.merge(bangumi)
+                                updated_count += 1
+                                logger.debug(f"设置bangumi {bangumi.official_title} 默认parser: mikan")
+                        
+                    except Exception as e:
+                        logger.warning(f"更新bangumi parser记录失败: {e}")
+                        continue
+                
+                db.commit()
+                logger.info(f"成功更新 {updated_count} 个bangumi的parser记录")
+                
+            except Exception as e:
+                logger.warning(f"更新Bangumi parser字段时出错: {e}")
+            
             logger.info("成功迁移到版本 3.2.0")
         except Exception as e:
             logger.error(f"迁移到版本 3.2.0 失败: {e}")
@@ -312,7 +339,7 @@ class DatabaseMigration:
     
     
     
-    def _rebuild_tables_if_needed(self, session: Session, existing_tables: Dict):
+    def _rebuild_tables_if_needed(self, session: Session, existing_tables: dict):
         """根据需要重建表结构"""
         from module.database.combine import Database
         

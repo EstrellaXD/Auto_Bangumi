@@ -27,7 +27,6 @@ def get_path_basename(torrent_path: str) -> str:
 
 def check_file(file_path: str):
     file_path = get_path_basename(file_path)
-    print(f"[check_file] {file_path=}")
     suffix = Path(file_path).suffix
     if suffix.lower() in [".mp4", ".mkv"]:
         return "media"

@@ -18,6 +18,7 @@ class BangumiBase(SQLModel):
     offset: int = Field(default=0, alias="offset", title="番剧偏移量")
     include_filter: str = Field(default="", alias="include_filter", title="番剧包含过滤器")
     exclude_filter: str = Field(default="", alias="exclude_filter", title="番剧排除过滤器")
+    parser: str = Field(default="mikan", alias="parser", title="番剧解析器")
     tmdb_id: str | None = Field(default=None, alias="tmdb_id", title="番剧TMDB ID")
     bangumi_id: str | None = Field(default=None, alias="bangumi_id", title="番剧Bangumi ID")
     mikan_id: str | None = Field(default=None, alias="mikan_id", title="番剧Mikan ID")

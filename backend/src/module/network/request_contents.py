@@ -1,4 +1,5 @@
 import logging
+import time
 import xml.etree.ElementTree
 from typing import Any
 
@@ -12,8 +13,43 @@ from module.utils import get_hash, torrent_to_link
 
 logger = logging.getLogger(__name__)
 
+_cache = {}
+_max_cache_size = 1000
 
 class RequestContent(RequestURL):
+
+    def __init__(self):
+        super().__init__()
+    
+    def _check_cache(self, url: str):
+        if url in _cache:
+            data, timestamp = _cache[url]['data'], _cache[url]['timestamp']
+            if time.time() - timestamp < 60:  # 未过期
+                return data
+            else:
+                del _cache[url]  # 过期就删除
+        return None
+    
+    def _save_cache(self, url: str, data):
+        if len(_cache) >= _max_cache_size:
+            # 批量清理所有过期的缓存
+            current_time = time.time()
+            expired_keys = [
+                key for key, value in _cache.items() 
+                if current_time - value['timestamp'] > 60
+            ]
+            for key in expired_keys:
+                del _cache[key]
+            
+            # 如果清理后还是达到上限，删除最老的一条
+            if len(_cache) >= _max_cache_size:
+                first_key = next(iter(_cache))
+                del _cache[first_key]
+        
+        _cache[url] = {
+            'data': data,
+            'timestamp': time.time()
+        }
     # 对错误包裹, 所有网络的错误到这里就结束了
     async def get_torrents(
         self,
@@ -39,10 +75,17 @@ class RequestContent(RequestURL):
     async def get_xml(
         self, _url: str, retry: int = 3
     ) -> xml.etree.ElementTree.Element | None:
+        # 检查缓存
+        cached = self._check_cache(_url)
+        if cached is not None:
+            return cached
+        
         try:
             req = await self.get_url(_url, retry)
             if req:
-                return xml.etree.ElementTree.fromstring(req.text)
+                result = xml.etree.ElementTree.fromstring(req.text)
+                self._save_cache(_url, result)
+                return result
         except xml.etree.ElementTree.ParseError:
             logger.warning(
                 f"[Network] Cannot parser {_url}, please check the url is right"
@@ -53,10 +96,17 @@ class RequestContent(RequestURL):
 
     # API JSON
     async def get_json(self, _url: str) -> dict[str, Any]:
+        # 检查缓存
+        cached = self._check_cache(_url)
+        if cached is not None:
+            return cached
+        
         try:
             req = await self.get_url(_url)
             if req:
-                return req.json()
+                result = req.json()
+                self._save_cache(_url, result)
+                return result
         except Exception as e:
             logger.error(f"[Network] Cannot get json from {_url}: {e}")
         return {}
@@ -72,19 +122,33 @@ class RequestContent(RequestURL):
         return Response(status_code=400)
 
     async def get_html(self, _url: str) -> str:
+        # 检查缓存
+        cached = self._check_cache(_url)
+        if cached is not None:
+            return cached
+        
         try:
             req = await self.get_url(_url)
             if req:
-                return req.text
+                result = req.text
+                self._save_cache(_url, result)
+                return result
         except Exception as e:
             logger.error(f"[Network] Cannot get html from {_url}: {e}")
         return ""
 
     async def get_content(self, _url: str) -> bytes:
+        # 检查缓存
+        cached = self._check_cache(_url)
+        if cached is not None:
+            return cached
+        
         try:
             req = await self.get_url(_url)
             if req:
-                return req.content
+                result = req.content
+                self._save_cache(_url, result)
+                return result
         except Exception as e:
             logger.error(f"[Network] Cannot get content from {_url}: {e}")
         return b""

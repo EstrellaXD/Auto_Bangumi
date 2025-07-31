@@ -2,6 +2,8 @@ from module.database import Database, engine
 from module.models import ResponseModel, RSSItem, Torrent
 from module.models.rss import RSSUpdate
 from module.network import RequestContent
+import logging
+logger = logging.getLogger(__name__)
 
 
 class RSSManager:
@@ -21,18 +23,14 @@ class RSSManager:
                 if not name:
                     return False
 
+
         rss_data = RSSItem(name=name, url=rss_link, aggregate=aggregate, parser=parser)
+        logger.debug(f"[RSSManager] Adding RSS: {rss_data}")
 
         with Database(self.engine) as db:
             db.rss.add(rss_data)
             return True
 
-        # return ResponseModel(
-        #     status=False,
-        #     status_code=406,
-        #     msg_en="RSS added failed.",
-        #     msg_zh="RSS 添加失败。",
-        # )
 
     def disable_list(self, rss_id_list: list[int]):
         with Database(self.engine) as db:

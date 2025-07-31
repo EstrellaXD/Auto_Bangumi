@@ -22,12 +22,7 @@ async def lifespan(app: FastAPI):
     # 启动事件
     # 首先检查数据库版本并升级
     logger.info("检查数据库版本兼容性...")
-    from module.database import check_and_upgrade_database
-    
-    if not check_and_upgrade_database():
-        logger.error("数据库升级失败，程序无法启动")
-        raise RuntimeError("数据库升级失败")
-    
+
     await program.startup()
     yield
     # 关闭事件

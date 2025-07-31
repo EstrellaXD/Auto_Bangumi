@@ -21,16 +21,16 @@ class RSSDatabase:
         # Check if exists
         if data.id is None:
             statement = select(RSSItem).where(RSSItem.url == data.url)
+            logger.debug(f"[RSSDatabase] Searching for RSS Item: {data.url}")
             db_data = self.session.exec(statement).first()
             if db_data:
+                logger.debug(f"RSS Item {data.url} already exists, updating...")
                 data.id = db_data.id
-                logger.debug(f"RSS Item {data.url} already exists.")
                 return False
-        else:
-            logger.debug(f"RSS Item {data.url} not exists, adding...")
-            self.session.merge(data)
-            self.session.commit()
-            return True
+        logger.debug(f"[RSSDatabase] updating RSS Item: {data.url}")
+        self.session.merge(data)
+        self.session.commit()
+        return True
 
     def add_all(self, data: list[RSSItem]):
         for item in data:

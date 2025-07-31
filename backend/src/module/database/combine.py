@@ -5,9 +5,11 @@ from module.database.engine import engine as e
 from module.database.rss import RSSDatabase
 from module.database.torrent import TorrentDatabase
 from module.database.user import UserDatabase
+from module.database.database_version import VersionDatabase
 from module.models import Bangumi, User
-from module.models.rss import RSSItem
-from module.models.torrent import Torrent
+from module.models import RSSItem
+from module.models import Torrent
+from module.models import DatabaseVersion
 
 
 class Database(Session):
@@ -22,6 +24,7 @@ class Database(Session):
         self.torrent: TorrentDatabase = TorrentDatabase(self)
         self.bangumi: BangumiDatabase = BangumiDatabase(self)
         self.user: UserDatabase = UserDatabase(self)
+        self.databaseversion: VersionDatabase = VersionDatabase(self)
 
     def bangumi_to_rss(self, bangumi: Bangumi) -> RSSItem | None:
         return self.rss.search_url(bangumi.rss_link)
@@ -89,7 +92,7 @@ class Database(Session):
                     Bangumi.deleted == false(),
                 )
             )
-            return self.session.exec(statement).first()
+            return self.exec(statement).first()
 
     def _migrate_table_data(self, table_name: str, model_class, existing_data: list):
         """通用的表数据迁移方法"""

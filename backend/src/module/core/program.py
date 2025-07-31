@@ -2,9 +2,7 @@ import logging
 
 from module.conf import VERSION, settings
 from module.update import (
-    data_migration,
     first_run,
-    from_30_to_31,
     start_up,
 )
 
@@ -46,15 +44,13 @@ class Program:
             first_run()
             logger.info("[Core] No db file exists, create database file.")
             return {"status": "First run detected."}
-        if self.program_status.legacy_data:
-            logger.info(
-                "[Core] Legacy data detected, starting data migration, please wait patiently."
-            )
-            await data_migration()
-        elif self.program_status.version_update:
-            # Update database
-            await from_30_to_31()
-            logger.info("[Core] Database updated.")
+
+        from module.database import check_and_upgrade_database
+
+        if not check_and_upgrade_database():
+            logger.error("数据库升级失败，程序无法启动")
+            raise RuntimeError("数据库升级失败")
+
         self.program_status.img_cache
         await self.start()
 

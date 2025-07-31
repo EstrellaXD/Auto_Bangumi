@@ -11,6 +11,17 @@ from .torrent import (
 )
 from .user import User, UserLogin, UserUpdate
 from .mikan import MikanInfo
+from .database_version import DatabaseVersion
+from .tmdb import (
+    Genre,
+    LastEpisodeToAir,
+    Network,
+    ProductionCompany,
+    Season,
+    ShowInfo,
+    TMDBInfo,
+    TVShow,
+)
 
 __all__ = [
     "Bangumi",
@@ -31,4 +42,13 @@ __all__ = [
     "EpisodeFile",
     "SubtitleFile",
     "MikanInfo",
+    "DatabaseVersion",
+    "Genre",
+    "LastEpisodeToAir", 
+    "Network",
+    "ProductionCompany",
+    "Season",
+    "ShowInfo",
+    "TMDBInfo",
+    "TVShow",
 ]

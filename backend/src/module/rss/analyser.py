@@ -48,8 +48,6 @@ class RSSAnalyser:
             bangumi.year = parsered_bangumi.year
             bangumi.season = parsered_bangumi.season
             bangumi.poster_link = parsered_bangumi.poster_link
-        # else:
-        #     pass
         bangumi.official_title = re.sub(r"[/:.\\]", " ", bangumi.official_title)
         return bangumi
 
@@ -76,6 +74,7 @@ class RSSAnalyser:
                 )
                 return None
             bangumi.rss_link = rss.url
+            bangumi.parser = rss.parser
             logger.debug(f"[RSS analyser] Parsed bangumi: {bangumi.official_title} from torrent {torrent.name}")
             return bangumi
 

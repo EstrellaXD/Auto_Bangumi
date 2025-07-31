@@ -9,7 +9,6 @@ from module.models import Bangumi, EpisodeFile, SubtitleFile
 from module.models import BangumiUpdate, Episode, MikanInfo
 from module.parser.analyser import MikanWebParser, tmdb_parser, torrent_parser
 from module.parser.analyser import RawParser as rawparser
-from module.parser.api import BaseWebPage, TMDBInfoAPI, TMDBSearchAPI
 
 logger = logging.getLogger(__name__)
 
@@ -36,17 +35,12 @@ class BaseParser:
 
 
 class TmdbParser(BaseParser):
-    def __init__(
-        self,
-        search_api: TMDBSearchAPI = TMDBSearchAPI(),
-        info_api: TMDBInfoAPI = TMDBInfoAPI(),
-    ):
-        self.search_api: TMDBSearchAPI = search_api
-        self.info_api: TMDBInfoAPI = info_api
+    def __init__(self):
+        pass
 
     @override
     async def parser(self, title: str, season: int = 1, language: str = "zh"):
-        tmdb_info = await tmdb_parser(title, language, self.search_api, self.info_api)
+        tmdb_info = await tmdb_parser(title, language)
         if tmdb_info:
             logger.debug(
                 f"[Title Parser] TMDB Matched, official title is {tmdb_info.title}"
@@ -59,6 +53,7 @@ class TmdbParser(BaseParser):
                 year=tmdb_info.year,
                 season=tmdb_season,
                 poster_link=tmdb_info.poster_link,
+                tmdb_id=str(tmdb_info.id),
             )
 
         else:
@@ -67,24 +62,18 @@ class TmdbParser(BaseParser):
             )
             logger.warning("[Title Parser]Please change bangumi info manually.")
             return None
-            # return Bangumi(
-            #     official_title=title,
-            #     title_raw=title,
-            #     season=season,
-            # )
 
     async def poster_parser(self, bangumi: Bangumi | BangumiUpdate) -> bool:
         tmdb_info = await tmdb_parser(
             bangumi.official_title,
             settings.rss_parser.language,
-            self.search_api,
-            self.info_api,
         )
         if tmdb_info:
             logger.debug(
                 f"[Title Parser] TMDB Matched, official title is {tmdb_info.title}"
             )
             bangumi.poster_link = tmdb_info.poster_link
+            bangumi.tmdb_id = str(tmdb_info.id)
             return True
         else:
             logger.warning(
@@ -95,12 +84,12 @@ class TmdbParser(BaseParser):
 
 
 class MikanParser(BaseParser):
-    def __init__(self, page: BaseWebPage = BaseWebPage()):
-        self.page = page
+    def __init__(self):
+        pass
 
     async def parser(self, homepage: str) -> Bangumi| None:
-        mikan_parser = MikanWebParser(homepage, self.page)
-        mikan_info:MikanInfo = await mikan_parser.parser()
+        mikan_parser = MikanWebParser()
+        mikan_info:MikanInfo = await mikan_parser.parser(homepage)
         if not mikan_info.official_title or not mikan_info.poster_link:
             logger.debug(f"[MikanParser] No official title or poster link found for {homepage}")
             return None
@@ -112,15 +101,15 @@ class MikanParser(BaseParser):
         )
 
     async def poster_parser(self, homepage: str) -> str:
-        mikan_parser = MikanWebParser(homepage, self.page)
-        poster_link = await mikan_parser.poster_parser()
+        mikan_parser = MikanWebParser()
+        poster_link = await mikan_parser.poster_parser(homepage)
         if not poster_link:
             return ""
         return poster_link
 
     async def bangumi_link_parser(self, homepage: str) -> str:
-        mikan_parser = MikanWebParser(homepage, self.page)
-        return await mikan_parser.bangumi_link_parser()
+        mikan_parser = MikanWebParser()
+        return await mikan_parser.bangumi_link_parser(homepage)
 
 
 class RawParser(BaseParser):
@@ -188,7 +177,7 @@ if __name__ == "__main__":
 
     async def test(title):
         start = time.time()
-        tb = MikanParser()
+        tb = TmdbParser()
         ans = await tb.parser(title)
         end = time.time()
         print(f"Time taken: {end - start} seconds")
@@ -208,5 +197,5 @@ if __name__ == "__main__":
         "https://mikanani.me/Home/Episode/33fbab8f53fe4bad12f07afa5abdb7c4afa5956c"
     )
 
-    ans = asyncio.run(test(homepage))
+    ans = asyncio.run(test(official_title))
     print(ans)

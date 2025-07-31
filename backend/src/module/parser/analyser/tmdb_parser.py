@@ -1,25 +1,37 @@
 import time
-from dataclasses import dataclass
 
-from module.parser.api.tmdb import (
-    TMDB_IMG_URL,
+from module.conf.tmdb import search_url, info_url, TMDB_IMG_URL
+from module.models import (
     ShowInfo,
-    TMDBInfoAPI,
-    TMDBSearchAPI,
+    TMDBInfo,
     TVShow,
 )
 from module.utils import gen_poster_path
+from module.network import RequestContent
 
 
-@dataclass
-class TMDBInfo:
-    id: int
-    title: str
-    original_title: str
-    season: int
-    last_season: int
-    year: str
-    poster_link: str = ""
+async def tmdb_search(key_word: str) -> list[ShowInfo]:
+    """
+    Search for TV shows on TMDB by keyword.
+    Returns a list of ShowInfo objects.
+    """
+    url = search_url(key_word)
+    async with RequestContent() as req:
+        json_contents = await req.get_json(url)
+        if json_contents:
+            contents: list[ShowInfo] = json_contents.get("results", [])
+            return contents
+        return []
+
+async def tmdb_info(id: str, language: str) -> TVShow:
+    url = info_url(id, language)
+    async with RequestContent() as req:
+        json_contents = await req.get_json(url)
+        if json_contents:
+            return json_contents
+        return {}
+
+
 
 
 async def is_animation(genre_ids: list[int]) -> bool:
@@ -58,18 +70,16 @@ async def find_animation(contents: list[ShowInfo]) -> ShowInfo | None:
 async def tmdb_parser(
     title: str,
     language: str,
-    search_api: TMDBSearchAPI = TMDBSearchAPI(),
-    info_api: TMDBInfoAPI = TMDBInfoAPI(),
 ) -> TMDBInfo | None:
-    contents = await search_api.get_content(title)
+    contents = await tmdb_search(title)
     if not contents:
-        contents = await search_api.get_content(title.replace(" ", ""))
+        contents = await tmdb_search(title.replace(" ", ""))
     if not contents:
         return None
     # # 判断动画
     content = await find_animation(contents)
     if content := await find_animation(contents):
-        url_info = await info_api.get_content(content["id"], language)
+        url_info = await tmdb_info(str(content["id"]), language)
         info_content: TVShow = url_info
         season = [
             {
@@ -98,13 +108,12 @@ async def tmdb_parser(
                 str(year_number),
                 poster_link,
             )
-        else:
-            return None
+        return None
 
 
 if __name__ == "__main__":
     import asyncio
 
-    ans = asyncio.run(tmdb_parser("Re：从零开始的异世界生活 袭击篇", "zh"))
+    ans = asyncio.run(tmdb_parser("Re：从零开始的异世界生活", "zh"))
     # ans = asyncio.run(tmdb_parser("物语系列", "zh"))
     print(ans)
