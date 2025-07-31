@@ -21,6 +21,7 @@ class AsyncApplicationCore:
         self.services = []
         self._download_monitor = None
         self._rename_monitor = None
+        self._notification_monitor = None
         self._running: bool = False
 
     async def initialize(self) -> None:
@@ -73,6 +74,7 @@ class AsyncApplicationCore:
         try:
             from module.downloader.download_monitor import DownloadMonitor
             from module.manager.rename_monitor import RenameMonitor
+            from module.notification.notification_monitor import NotificationMonitor
             from module.utils.events import EventType
 
             # 创建并注册 DownloadMonitor
@@ -91,6 +93,15 @@ class AsyncApplicationCore:
                 self._rename_monitor.handle_download_completed,
             )
             logger.info("[AsyncCore] 已注册 RenameMonitor 事件处理器")
+
+            # 创建并注册 NotificationMonitor
+            self._notification_monitor = NotificationMonitor(event_bus=self.event_bus)
+            await self._notification_monitor.initialize()
+            self.event_bus.subscribe(
+                EventType.NOTIFICATION_REQUEST,
+                self._notification_monitor.handle_notification_request,
+            )
+            logger.info("[AsyncCore] 已注册 NotificationMonitor 事件处理器")
 
             # 为下载服务设置事件总线
             for service in self.services:
@@ -154,6 +165,10 @@ class AsyncApplicationCore:
         except Exception as e:
             logger.error(f"[AsyncCore] 重命名监控器关闭失败: {e}")
 
+        try:
+            if hasattr(self, "_notification_monitor") and self._notification_monitor:
+                await self._notification_monitor.shutdown()
+                logger.debug("[AsyncCore] 通知监控器已关闭")
         except Exception as e:
             logger.error(f"[AsyncCore] 通知监控器关闭失败: {e}")
 
@@ -192,6 +207,7 @@ class AsyncApplicationCore:
         status["monitors"] = {
             "download_monitor": bool(self._download_monitor),
             "rename_monitor": bool(self._rename_monitor),
+            "notification_monitor": bool(self._notification_monitor),
         }
 
         return status

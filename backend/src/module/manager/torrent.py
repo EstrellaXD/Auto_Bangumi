@@ -1,20 +1,15 @@
-import asyncio
 import logging
 
 from module.database import Database, engine
 from module.downloader import Client as DownlondClient
-from module.manager.renamer import Renamer
-from module.models import Bangumi, BangumiUpdate
-from module.parser import TmdbParser
-from module.utils import gen_save_path,event_bus
-from module.conf import settings
+from module.models import Bangumi
 
 logger = logging.getLogger(__name__)
 
 
 class TorrentManager:
-    def __init__(self) -> None:
-        self.tmdb_parser: TmdbParser = TmdbParser()
+    # def __init__(self) -> None:
+    #     self.tmdb_parser: TmdbParser = TmdbParser()
 
     async def delete_torrents(self, data: Bangumi) -> bool:
         """删除和 bangumi 相同路径的种子
@@ -29,7 +24,7 @@ class TorrentManager:
         # data.save_path = DownlondClient._path_parser.gen_save_path(data)
         with Database(engine) as db:
             torrent_list = db.find_torrent_by_bangumi(data)
-            hash_list = [torrent.download_guid for torrent in torrent_list]
+            hash_list = [torrent.download_uid for torrent in torrent_list if torrent.download_uid]
         if hash_list:
             res = await DownlondClient.delete_torrent(hash_list)
             if res:
@@ -39,95 +34,3 @@ class TorrentManager:
             logger.info(f"Delete rule and torrents for {data.official_title}")
             return True
         return False
-
-    # async def rename(self, save_path: str, hash_list: list[str]):
-    #     renamer = Renamer()
-    #     renamer_task = []
-    #     async with DownlondClient:
-    #         for torrent_hash in hash_list:
-    #
-    #             file_contents = await renamer.get_torrent_files(torrent_hash)
-    #             renamer_task.append(
-    #                 renamer.rename_files(
-    #                     torrent_hash,
-    #                     files_path=file_contents,
-    #                     save_path=save_path,
-    #                 )
-    #             )
-    #         await asyncio.gather(*renamer_task)
-
-    async def update_rule(self, bangumi_id: int, data: BangumiUpdate):
-        with Database() as db:
-            old_data: Bangumi | None = db.bangumi.search_id(bangumi_id)
-            if old_data:
-                # 当只改Filter,offset的时候只改database
-                if (
-                    old_data.official_title != data.official_title
-                    or old_data.year != data.year
-                    or old_data.season != data.season
-                ):
-                    # 名字改了, 年份改了, 季改了
-                    # 名字改的时候,刷新一下海报
-                    if old_data.official_title != data.official_title:
-                        await self.tmdb_parser.poster_parser(data)
-                    # Move torrent
-                    # old_data.save_path = gen_save_path(old_data)
-                    # hash_list = await self.__match_torrents_list(old_data)
-                    with Database(engine) as db:
-                        torrent_list = db.find_torrent_by_bangumi(old_data)
-
-                    hash_list = [torrent.download_guid for torrent in torrent_list]
-                    new_save_path = gen_save_path(settings.downloader.path, data)
-                    if hash_list:
-                        await DownlondClient.move_torrent(hash_list, new_save_path)
-                    # save_path改动后名命名一次
-                    await self.rename(new_save_path, hash_list)
-                    await asyncio.sleep(1)
-
-                db.bangumi.update(data, bangumi_id)
-                return True
-            else:
-                logger.error(f"[Manager] Can't find data with {bangumi_id}")
-                return False
-
-    async def refresh_poster(self):
-        with Database() as db:
-            bangumis = db.bangumi.search_all()
-            tasks = []
-            for bangumi in bangumis:
-                if not bangumi.poster_link:
-                    tasks.append(self.tmdb_parser.poster_parser(bangumi))
-            await asyncio.gather(*tasks)
-            db.bangumi.update_all(bangumis)
-        return True
-
-    async def refind_poster(self, bangumi_id: int) -> bool:
-        with Database() as db:
-            bangumi = db.bangumi.search_id(bangumi_id)
-            if bangumi:
-                await self.tmdb_parser.poster_parser(bangumi)
-                db.bangumi.update(bangumi)
-                return True
-        return False
-
-    def search_all_bangumi(self):
-        with Database() as db:
-            datas = db.bangumi.search_all()
-            if not datas:
-                return []
-            return [data for data in datas if not data.deleted]
-
-    def search_one(self, _id: int | str):
-
-        with Database() as db:
-            data = db.bangumi.search_id(int(_id))
-            if not data:
-                logger.error(f"[Manager] Can't find data with {_id}")
-                return None
-            else:
-                return data
-
-
-if __name__ == "__main__":
-    manager = TorrentManager()
-    asyncio.run(manager.refresh_poster())

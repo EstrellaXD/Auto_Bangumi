@@ -1,12 +1,12 @@
 import pytest
 from module.conf import settings
-from module.parser.title_parser import RawParser
+from module.parser.title_parser import BParser
 
 
 class TestTitleParser:
     def test_parse_without_openai(self):
         text = "[梦蓝字幕组]New Doraemon 哆啦A梦新番[747][2023.02.25][AVC][1080P][GB_JP][MP4]"
-        result = RawParser.parser(text)
+        result = BParser.parser(text)
         assert result is not None
         assert result.group_name == "梦蓝字幕组"
         assert result.title_raw == "New Doraemon"

@@ -6,7 +6,7 @@ from typing_extensions import override
 
 from module.conf import settings
 from module.models import Bangumi, EpisodeFile, SubtitleFile
-from module.models.bangumi import BangumiUpdate, Episode
+from module.models import BangumiUpdate, Episode, MikanInfo
 from module.parser.analyser import MikanWebParser, tmdb_parser, torrent_parser
 from module.parser.analyser import RawParser as rawparser
 from module.parser.api import BaseWebPage, TMDBInfoAPI, TMDBSearchAPI
@@ -28,14 +28,14 @@ logger = logging.getLogger(__name__)
 """
 
 
-class RawParser:
+class BaseParser:
 
     @abstractmethod
-    def parser(title: str, **kwargs) -> Bangumi:
+    def parser(self,title: str, **kwargs) -> Bangumi|None:
         pass
 
 
-class TmdbParser(RawParser):
+class TmdbParser(BaseParser):
     def __init__(
         self,
         search_api: TMDBSearchAPI = TMDBSearchAPI(),
@@ -94,21 +94,21 @@ class TmdbParser(RawParser):
             return False
 
 
-class MikanParser(RawParser):
+class MikanParser(BaseParser):
     def __init__(self, page: BaseWebPage = BaseWebPage()):
         self.page = page
 
-    async def parser(self, homepage: str) -> Bangumi:
+    async def parser(self, homepage: str) -> Bangumi| None:
         mikan_parser = MikanWebParser(homepage, self.page)
-        tasks = [mikan_parser.parser(), mikan_parser.poster_parser()]
-        (official_title, mikan_id), poster_link = await asyncio.gather(*tasks)
-        if not official_title or not poster_link:
+        mikan_info:MikanInfo = await mikan_parser.parser()
+        if not mikan_info.official_title or not mikan_info.poster_link:
+            logger.debug(f"[MikanParser] No official title or poster link found for {homepage}")
             return None
 
         return Bangumi(
-            official_title=official_title,
-            mikan_id=mikan_id,
-            poster_link=poster_link,
+            official_title= mikan_info.official_title,
+            mikan_id= mikan_info.id,
+            poster_link= mikan_info.poster_link,
         )
 
     async def poster_parser(self, homepage: str) -> str:
@@ -123,18 +123,11 @@ class MikanParser(RawParser):
         return await mikan_parser.bangumi_link_parser()
 
 
-class RawParser(RawParser):
+class RawParser(BaseParser):
     @staticmethod
     def parser(raw: str) -> Bangumi | None:
         language = settings.rss_parser.language
         try:
-            # use OpenAI ChatGPT to parse raw title and get structured data
-            # if settings.experimental_openai.enable:
-            #     kwargs = settings.experimental_openai.dict(exclude={"enable"})
-            #     gpt = analyser.OpenAIParser(**kwargs)
-            #     episode_dict = gpt.parse(raw, asdict=True)
-            #     episode = Episode(**episode_dict)
-            # else:
             episode: Episode = rawparser().parser(raw)
 
             titles = {

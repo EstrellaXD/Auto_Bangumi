@@ -92,12 +92,10 @@ class BangumiManager:
                     if old_data.official_title != data.official_title:
                         await self.tmdb_parser.poster_parser(data)
                     # Move torrent
-                    # old_data.save_path = gen_save_path(old_data)
-                    # hash_list = await self.__match_torrents_list(old_data)
                     with Database(engine) as db:
                         torrent_list = db.find_torrent_by_bangumi(old_data)
 
-                    hash_list = [torrent.download_guid for torrent in torrent_list]
+                    hash_list = [torrent.download_uid for torrent in torrent_list]
                     new_save_path = gen_save_path(settings.downloader.path, data)
                     if hash_list:
                         await DownlondClient.move_torrent(hash_list, new_save_path)

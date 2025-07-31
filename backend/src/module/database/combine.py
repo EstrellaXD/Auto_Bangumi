@@ -1,14 +1,13 @@
-from sqlmodel import Session, SQLModel, text
-
-from module.models import Bangumi, User
-from module.models.rss import RSSItem
-from module.models.torrent import Torrent
+from sqlmodel import Session, SQLModel, and_, delete, false, or_, select, text
 
 from module.database.bangumi import BangumiDatabase
 from module.database.engine import engine as e
 from module.database.rss import RSSDatabase
 from module.database.torrent import TorrentDatabase
 from module.database.user import UserDatabase
+from module.models import Bangumi, User
+from module.models.rss import RSSItem
+from module.models.torrent import Torrent
 
 
 class Database(Session):
@@ -30,13 +29,20 @@ class Database(Session):
     def add_bangumi(self, bangumi: Bangumi):
         pass
 
+    def torrent_to_bangumi(self, torrent: Torrent) -> Bangumi | None:
+        """根据 Torrent 查找相关的 Bangumi"""
+        "依据 official_title, seasion, rss_link"
+        return self.bangumi.search(
+            torrent.bangumi_official_title, torrent.bangumi_season, torrent.rss_link
+        )
+
     def find_torrent_by_bangumi(self, bangumi: Bangumi) -> list[Torrent]:
         """根据 Bangumi 查找相关的 Torrent"""
         "依据 official_title, seasion, rss_link"
-        return self.torrent.filter_by_bangumi(bangumi.official_title, bangumi.season, bangumi.rss_link)
+        return self.torrent.filter_by_bangumi(
+            bangumi.official_title, bangumi.season, bangumi.rss_link
+        )
 
-    def find_bangumi_by_torrent(self, torrent: Torrent) -> Bangumi | None:
-        pass
 
     def create_table(self):
         SQLModel.metadata.create_all(self.engine)
@@ -53,66 +59,108 @@ class Database(Session):
         """获取所有未重命名的种子"""
         return self.torrent.search_all_unrenamed()
 
+    def find_bangumi_by_torrent(self, torrent: Torrent,aggrated:bool) -> Bangumi | None:
+        # 现在是一个更新过的种子, 各种原因要查找 bangumi
+        if torrent.bangumi_official_title and torrent.bangumi_season:
+            return self.bangumi.search(
+                torrent.bangumi_official_title, torrent.bangumi_season, torrent.rss_link
+            )
+        # 对于聚合而言, link, title_raw一致可认为是一个bangumi
+        # 对于非聚合, link 一致就可认为是一个
+        # 对于一个种子要找 bangumi, 主要是在 刷新 rss 的时候,
+        if aggrated:
+            # 首先，在 Python 中将 title_raw 拆分为多个部分
+            # TODO: 太吃内存了,要优化一下
+            bangumis = self.exec(
+                select(Bangumi).where(Bangumi.deleted == false())
+            ).all()
+            for bangumi in bangumis:
+                # 假设 title_raw 是以逗号分隔的字符串
+                title_parts = bangumi.title_raw.split(",")
+                for title_part in title_parts:
+                    if title_part in torrent.name:
+                        return bangumi
+        else:
+            statement = select(Bangumi).where(
+                and_(
+                    (Bangumi.rss_link==torrent.rss_link),
+                    # use `false()` to avoid E712 checking
+                    # see: https://docs.astral.sh/ruff/rules/true-false-comparison/
+                    Bangumi.deleted == false(),
+                )
+            )
+            return self.session.exec(statement).first()
+
     def _migrate_table_data(self, table_name: str, model_class, existing_data: list):
         """通用的表数据迁移方法"""
         if not existing_data:
             return []
 
-        # 获取当前表的列名
-        existing_columns = self._get_table_columns(table_name)
+        migrated_data = []
 
         # 获取新模型的字段名
         model_fields = set(model_class.__fields__.keys())
 
-        # 找出共同的字段
-        common_fields = set(existing_columns) & model_fields
-
-        migrated_data = []
         for item in existing_data:
-            if hasattr(item, "model_dump"):
-                # 如果是 SQLModel 对象
-                item_dict = item.model_dump()
-            else:
-                # 如果是原始行数据，转换为字典
-                item_dict = {
-                    existing_columns[i]: item[i] for i in range(len(existing_columns))
-                }
-
-            # 只保留共同字段，为新字段设置默认值
-            migrated_dict = {}
-            for field_name in model_fields:
-                if field_name == "id":
-                    continue  # 跳过主键，让数据库自动生成
-                elif field_name in common_fields:
-                    migrated_dict[field_name] = item_dict.get(field_name)
-                else:
-                    # 为新字段设置默认值
-                    field_info = model_class.__fields__[field_name]
-                    if (
-                        hasattr(field_info, "default")
-                        and field_info.default is not None
-                    ):
-                        migrated_dict[field_name] = field_info.default
-                    else:
-                        # 根据类型设置默认值
-                        field_type = field_info.annotation
-                        if field_type == str or field_type == str | None:
-                            migrated_dict[field_name] = (
-                                "" if "str | None" not in str(field_type) else None
-                            )
-                        elif field_type == bool:
-                            migrated_dict[field_name] = False
-                        elif field_type == int or field_type == int | None:
-                            migrated_dict[field_name] = (
-                                0 if "int | None" not in str(field_type) else None
-                            )
-                        else:
-                            migrated_dict[field_name] = None
-
             try:
+                # 如果已经是字典格式
+                if isinstance(item, dict):
+                    item_dict = item
+                elif hasattr(item, "model_dump"):
+                    # 如果是 SQLModel 对象
+                    item_dict = item.model_dump()
+                elif hasattr(item, "_mapping"):
+                    # 如果是数据库行对象
+                    item_dict = dict(item._mapping)
+                else:
+                    # 如果是原始行数据，需要先获取列名
+                    existing_columns = self._get_table_columns(table_name)
+                    item_dict = {
+                        existing_columns[i]: item[i]
+                        for i in range(min(len(existing_columns), len(item)))
+                    }
+
+                # 只保留模型中存在的字段，为新字段设置默认值
+                migrated_dict = {}
+                for field_name in model_fields:
+                    if field_name == "id":
+                        # 保留原有ID，如果没有则让数据库自动生成
+                        if (
+                            field_name in item_dict
+                            and item_dict[field_name] is not None
+                        ):
+                            migrated_dict[field_name] = item_dict[field_name]
+                        continue
+                    elif field_name in item_dict:
+                        migrated_dict[field_name] = item_dict[field_name]
+                    else:
+                        # 为新字段设置默认值
+                        field_info = model_class.__fields__[field_name]
+                        if (
+                            hasattr(field_info, "default")
+                            and field_info.default is not None
+                        ):
+                            migrated_dict[field_name] = field_info.default
+                        else:
+                            # 根据类型设置默认值
+                            field_type = field_info.annotation
+                            if field_type == str or field_type == str | None:
+                                migrated_dict[field_name] = (
+                                    "" if "str | None" not in str(field_type) else None
+                                )
+                            elif field_type == bool:
+                                migrated_dict[field_name] = False
+                            elif field_type == int or field_type == int | None:
+                                migrated_dict[field_name] = (
+                                    0 if "int | None" not in str(field_type) else None
+                                )
+                            else:
+                                migrated_dict[field_name] = None
+
                 migrated_data.append(model_class(**migrated_dict))
             except Exception as e:
                 print(f"Error migrating {table_name} record: {e}")
+                print(f"Problematic data: {item}")
                 continue
 
         return migrated_data
@@ -121,7 +169,7 @@ class Database(Session):
         """自动识别和迁移数据库结构"""
         print("开始数据库迁移...")
 
-        # 获取现有数据
+        # 获取现有数据并立即转换为字典，避免对象引用问题
         tables_data = {}
 
         # 尝试获取各表数据
@@ -143,15 +191,32 @@ class Database(Session):
                     tables_data[table_name] = []
                     continue
 
-                # 尝试用模型查询
+                # 尝试用模型查询并立即转换为字典
+                raw_data = []
                 if table_name == "bangumi":
-                    raw_data = self.bangumi.search_all()
+                    orm_data = self.bangumi.search_all()
+                    raw_data = [
+                        item.model_dump() if hasattr(item, "model_dump") else item
+                        for item in orm_data
+                    ]
                 elif table_name == "torrent":
-                    raw_data = self.torrent.search_all()
+                    orm_data = self.torrent.search_all()
+                    raw_data = [
+                        item.model_dump() if hasattr(item, "model_dump") else item
+                        for item in orm_data
+                    ]
                 elif table_name == "rssitem":
-                    raw_data = self.rss.search_all()
+                    orm_data = self.rss.search_all()
+                    raw_data = [
+                        item.model_dump() if hasattr(item, "model_dump") else item
+                        for item in orm_data
+                    ]
                 elif table_name == "user":
-                    raw_data = self.exec(text(f"SELECT * FROM {table_name}")).all()
+                    orm_data = self.exec(text(f"SELECT * FROM {table_name}")).all()
+                    raw_data = [
+                        dict(row._mapping) if hasattr(row, "_mapping") else row
+                        for row in orm_data
+                    ]
 
                 tables_data[table_name] = raw_data
                 print(f"成功获取 {table_name} 表数据: {len(raw_data)} 条记录")
@@ -159,7 +224,11 @@ class Database(Session):
             except Exception as e:
                 print(f"获取 {table_name} 表数据失败，使用原始SQL查询: {e}")
                 try:
-                    raw_data = self.exec(text(f"SELECT * FROM {table_name}")).all()
+                    orm_data = self.exec(text(f"SELECT * FROM {table_name}")).all()
+                    raw_data = [
+                        dict(row._mapping) if hasattr(row, "_mapping") else row
+                        for row in orm_data
+                    ]
                     tables_data[table_name] = raw_data
                     print(
                         f"使用原始SQL获取 {table_name} 表数据: {len(raw_data)} 条记录"
@@ -191,34 +260,62 @@ class Database(Session):
 
         # 重新插入数据
         print("重新插入数据...")
-        for table_name in ["bangumi", "torrent", "rssitem"]:
-            data = migrated_data[table_name]
-            if data:
-                if table_name == "bangumi":
-                    self.bangumi.add_all(data)
-                elif table_name == "torrent":
-                    self.torrent.add_all(data)
-                elif table_name == "rssitem":
-                    self.rss.add_all(data)
-                print(f"插入 {table_name} 数据: {len(data)} 条记录")
+        try:
+            for table_name in ["bangumi", "torrent", "rssitem"]:
+                data = migrated_data[table_name]
+                if data:
+                    try:
+                        if table_name == "bangumi":
+                            for item in data:
+                                self.merge(item)
+                        elif table_name == "torrent":
+                            for item in data:
+                                self.merge(item)
+                        elif table_name == "rssitem":
+                            for item in data:
+                                self.merge(item)
+                        self.commit()
+                        print(f"插入 {table_name} 数据: {len(data)} 条记录")
+                    except Exception as e:
+                        print(f"插入 {table_name} 数据失败: {e}")
+                        self.rollback()
+                        continue
 
-        # 处理 user 数据
-        if user_data:
-            if hasattr(user_data[0], "__len__") and len(user_data[0]) >= 3:
-                # 原始行数据
-                user_row = user_data[0]
-                user_dict = {"username": user_row[1], "password": user_row[2]}
-                self.add(User(**user_dict))
-                print("插入 user 数据: 1 条记录")
+            # 处理 user 数据
+            if user_data:
+                try:
+                    for user_item in user_data:
+                        if isinstance(user_item, dict):
+                            user_dict = user_item
+                        elif hasattr(user_item, "__len__") and len(user_item) >= 3:
+                            # 原始行数据
+                            user_dict = {
+                                "username": user_item[1],
+                                "password": user_item[2],
+                            }
+                        else:
+                            continue
 
-        self.commit()
-        print("数据库迁移完成!")
+                        self.merge(User(**user_dict))
+                    self.commit()
+                    print(f"插入 user 数据: {len(user_data)} 条记录")
+                except Exception as e:
+                    print(f"插入 user 数据失败: {e}")
+                    self.rollback()
+
+            print("数据库迁移完成!")
+        except Exception as e:
+            print(f"数据迁移过程中发生错误: {e}")
+            self.rollback()
+            raise
+
 
 if __name__ == "__main__":
     url = "https://mikanani.me/Download/20250531/fb338d0c51c01c2494a9fb1642dd97769416b5c2.torrent"
     with Database() as db:
-        torrent = db.torrent.search_by_url(url)
-        if torrent:
-            print(type(torrent))
-        else:
-            print("未找到种子")
+        db.migrate()
+        # torrent = db.torrent.search_by_url(url)
+        # if torrent:
+        #     print(type(torrent))
+        # else:
+        #     print("未找到种子")

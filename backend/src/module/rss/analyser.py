@@ -31,10 +31,8 @@ class RSSAnalyser:
                 if not parsered_bangumi:
                     logger.debug("[Parser] Mikan torrent has no homepage info.")
                     return bangumi
-                bangumi.poster_link, bangumi.official_title = (
-                    parsered_bangumi.poster_link,
-                    parsered_bangumi.official_title,
-                )
+                bangumi.poster_link = parsered_bangumi.poster_link
+                bangumi.official_title = parsered_bangumi.official_title
             except AttributeError:
                 logger.warning("[Parser] Mikan torrent has no homepage info.")
         # else rss.parser == "tmdb":
@@ -55,39 +53,32 @@ class RSSAnalyser:
         bangumi.official_title = re.sub(r"[/:.\\]", " ", bangumi.official_title)
         return bangumi
 
-    async def torrent_to_data(self, torrent: Torrent, rss: RSSItem) -> Bangumi | None:
+    async def torrent_to_bangumi(self, torrent: Torrent, rss: RSSItem) -> Bangumi | None:
         """
         parse torrent name to bangumi
         filter 在 RawParser 中设置
         如果只有 rawparser, 则返回 None
         """
+
+        with Database(engine) as database:
+            bangumi = database.find_bangumi_by_torrent(torrent,rss.aggregate)
+            if bangumi:
+                logger.debug(f"[RSS analyser] Find bangumi {bangumi.official_title} by torrent {torrent.name}")
+                return bangumi
         if (
-            bangumi := RawParser().parser(raw=torrent.name)
+            bangumi :=RawParser().parser(raw=torrent.name)
         ) and bangumi.official_title != "official_title":
             if not await self.official_title_parser(
                 bangumi=bangumi, parser=rss.parser, torrent=torrent
             ):
+                logger.debug(
+                    f"[RSS analyser] Fail to parse official title for {torrent.name}."
+                )
                 return None
             bangumi.rss_link = rss.url
+            logger.debug(f"[RSS analyser] Parsed bangumi: {bangumi.official_title} from torrent {torrent.name}")
             return bangumi
 
-    def torrent_to_bangumi(self, torrent: Torrent, rss_item: RSSItem) -> Bangumi | None:
-        """
-        find bangumi from database by torrent name and rss link
-        """
-        with Database(self.engine) as database:
-            matched_bangumi = database.bangumi.match_torrent(
-                torrent_name=torrent.name,
-                rss_link=rss_item.url,
-                aggrated=rss_item.aggregate,
-            )
-        if matched_bangumi:
-            logger.debug(
-                "[RSSAnalyser] Found bangumi in database: %s",
-                matched_bangumi.official_title,
-            )
-            return matched_bangumi
-        return None
 
 
 if __name__ == "__main__":
@@ -97,10 +88,10 @@ if __name__ == "__main__":
     async def test():
         analyser = RSSAnalyser()
         start = time.time()
-        res = await analyser.torrent_to_data(test_torrent, rss_item)
+        res = await analyser.torrent_to_bangumi(test_torrent, rss_item)
         end = time.time()
         start = time.time()
-        res = await analyser.torrent_to_data(test_torrent, rss_item)
+        res = await analyser.torrent_to_bangumi(test_torrent, rss_item)
         end = time.time()
         return res
 

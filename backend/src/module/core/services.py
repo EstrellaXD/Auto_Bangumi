@@ -1,9 +1,10 @@
 import logging
-from module.conf import settings
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
+
 from typing_extensions import override
 
+from module.conf import settings
 from module.utils.events import ServiceException
 
 if TYPE_CHECKING:
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 class BaseService(ABC):
     """服务基类"""
 
-    def __init__(self, name: str = None):
+    def __init__(self, name: str|None = None):
         # 如果没有指定名称，使用类名自动生成
         if name is None:
             name = self.__class__.__name__.lower().replace("service", "")
@@ -79,7 +80,6 @@ class RSSService(BaseService):
             "enabled": True,
         }
 
-
     async def execute(self) -> None:
         """执行RSS刷新任务"""
         if not self._engine:
@@ -107,8 +107,7 @@ class DownloadService(BaseService):
     async def _setup(self) -> None:
         # 预检查下载模块是否可用
         try:
-            from module.downloader import DownloadController
-            from module.downloader import Client
+            from module.downloader import Client, DownloadController
 
             Client.start_login()
 
@@ -143,10 +142,11 @@ class DownloadService(BaseService):
             logger.error(f"[DownloadService] 执行失败: {e}")
             raise ServiceException("download", f"执行失败: {e}")
 
-    def set_event_bus(self,event_bus):
+    def set_event_bus(self, event_bus):
         if not self._download_controller:
             raise ServiceException("download", "下载控制器未初始化")
         self._download_controller.set_event_bus(event_bus)
+
     async def cleanup(self) -> None:
         """清理下载客户端"""
         try:

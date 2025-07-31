@@ -1,46 +1,69 @@
-import logging
+from typing import Dict, Any
 
 from module.models import Notification
 from module.network import RequestContent
 from module.utils.cache_image import str_to_url
 
-from .base_notifier import Notifier as BaseNotifier
-
-logger = logging.getLogger(__name__)
+from .base_notifier import BaseNotifier
 
 
 class Notifier(BaseNotifier):
-    """企业微信推送 基于图文消息"""
-
-    def __init__(self, token, chat_id, **kwargs):
-        super().__init__()
-        # Chat_id is used as noti_url in this push tunnel
-        self.notification_url = f"{chat_id}"
-        self.token = token
-
-    @staticmethod
-    def gen_message(notify: Notification):
-
+    """企业微信通知器 - 基于图文消息"""
+    
+    def __init__(self, token: str, chat_id: str, **kwargs):
+        super().__init__(token, **kwargs)
+        # chat_id 用作通知URL
+        self.notification_url = chat_id
+    
+    def format_message(self, notify: Notification) -> Dict[str, Any]:
+        """格式化企业微信通知消息"""
+        data = super().format_message(notify)
+        
+        # 处理海报路径
+        poster_path = notify.poster_path
+        if poster_path and "/" in poster_path:
+            poster_path = str_to_url(poster_path.split("/")[-1])
+        
+        # 如果没有海报，使用默认图片 (分辨率: 1068*455)
+        if poster_path == "https://mikanani.me" or not poster_path:
+            poster_path = "https://article.biliimg.com/bfs/article/d8bcd0408bf32594fd82f27de7d2c685829d1b2e.png"
+        
+        # 企业微信标题格式
+        title = data["title"]
         if notify.episode:
-            if notify.poster_path:
-                notify.poster_path = str_to_url(notify.poster_path.split("/")[-1])
-            notify.title = "【番剧更新】" + notify.title
-            # Default pic to avoid blank in message. Resolution:1068*455
-            if notify.poster_path == "https://mikanani.me":
-                notify.poster_path = "https://article.biliimg.com/bfs/article/d8bcd0408bf32594fd82f27de7d2c685829d1b2e.png"
-            notify.message += f"\n{notify.poster_path}\n".strip()
-
-    async def post_msg(self, notify: Notification) -> bool:
-        ##Change message format to match Wecom push better
-        self.gen_message(notify)
-        data = {
-            "key": self.token,
-            "type": "news",
-            "title": notify.title,
-            "msg": notify.message,
-            "picurl": notify.poster_path,
+            title = "【番剧更新】" + title
+        
+        # 企业微信消息格式
+        message = data["message"]
+        if poster_path:
+            message += f"\n{poster_path}\n".strip()
+        
+        return {
+            **data,
+            "title": title,
+            "message": message,
+            "poster_path": poster_path
         }
-        async with RequestContent() as req:
-            resp = await req.post_data(self.notification_url, data)
-            logger.debug(f"Wecom notification: {resp.status_code}")
-            return resp.status_code == 200
+    
+    async def post_msg(self, notify: Notification) -> bool:
+        """发送企业微信通知"""
+        try:
+            message_data = self.format_message(notify)
+            
+            data = {
+                "key": self.token,
+                "type": "news",
+                "title": message_data["title"],
+                "msg": message_data["message"],
+                "picurl": message_data["poster_path"],
+            }
+            
+            async with RequestContent() as req:
+                resp = await req.post_data(self.notification_url, data)
+                
+            self.logger.debug(f"Wecom notification response: {resp.status_code}")
+            return resp and resp.status_code == 200
+            
+        except Exception as e:
+            self.logger.error(f"企业微信通知发送失败: {e}")
+            return False

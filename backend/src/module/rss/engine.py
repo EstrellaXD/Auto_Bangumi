@@ -45,8 +45,16 @@ class RssBase:
         self.bangumi_torrents = {}
         if self.bangumi:
             self.url: str = self.bangumi.rss_link
-        elif self.rss_item:
+        if self.rss_item:
             self.url: str = self.rss_item.url
+        else:
+            # 如果有 bangumi 找 rss, 对应 subscribe
+            if self.bangumi and not self.rss_item:
+                # 从 database 中找 rss_item
+                with Database(engine) as database:
+                    self.rss_item = database.bangumi_to_rss(self.bangumi)
+                    if not self.rss_item:
+                        logger.debug(f"[RSS] No RSS found for bangumi {self.bangumi.official_title}, cannot refresh.")
 
     async def _get_torrents(self, url: str) -> list[Torrent]:
         async with RequestContent() as req:
@@ -60,10 +68,10 @@ class RssBase:
         """拉取 rss_item 对应的 torrents"""
         torrents = await self._get_torrents(self.url)
         logger.debug(f"[RSS] pull {len(torrents)} torrents from {self.url}")
-        # Add RSS ID
+        # 这里是最早加入 torrent.rss_link 的地方
         if self.rss_item:
             for torrent in torrents:
-                torrent.rss_id = self.rss_item.id
+                torrent.rss_link = self.rss_item.url
         return torrents
 
     async def refresh(self):
@@ -88,35 +96,32 @@ class RSSRefresh(RssBase):
         # 如果 self.bangumi 为空, 则去 database 中找, 如果 database 中没有, 则进行一次解析
         # 如果 self.bangumi 不为空, 则将 torrents 放到 bangumi_torrents 中, 对应为 搜索, 订阅, 收集, 非聚合
 
+
+        # 到这就一定有 rss_item 了
+        if not self.rss_item:
+            logger.error("[RSS] No RSS item found, cannot refresh.")
+            return False
+
         torrents = await self.pull_rss()
         # 有点问题,如果下载了,但没有新的,导致一直无法刷新
         for torrent in torrents:
             # 如果 bangumi 为空, 更新 bangumi
             if not self.bangumi:
                 # 先从数据库中找, 如果数据库中没有, 更新一下 database
-                bangumi = self.analyser.torrent_to_bangumi(torrent, self.rss_item)
-                if not bangumi:
-                    # 如果数据库中没有, 进行一次解析
-                    logger.debug(f"[RSS] No bangumi found for torrent {torrent.name}, parsing...")
-                    bangumi = await self.analyser.torrent_to_data(
-                        torrent, self.rss_item
-                    )
-                    if bangumi:
-                        logger.debug(f"[RSS] Parsed bangumi: {bangumi.official_title}")
-                        with Database(engine) as database:
-                            database.bangumi.add(bangumi)
+                bangumi = await self.analyser.torrent_to_bangumi(
+                    torrent, self.rss_item
+                )
+                if bangumi:
+                    logger.debug(f"[RSS] Parsed bangumi: {bangumi.official_title}")
+                    with Database(engine) as database:
+                        database.bangumi.add(bangumi)
                 if bangumi:
                     # TODO: 不一定在这更新
                     # 这个还是要想想怎么弄, 要是没有的话就不加可能就没机会加了
-                    id_list = ["bangumi_id", "tmdb_id", "mikan_id"]
-                    # for id_field in id_list:
-                    #     if bangumi[id_field]:
-                    #         torrent.id
-
                     if not self.rss_item.aggregate:
                         # 如果 不是聚合的, 则更新 bangumi
                         # 这样就可以避免多余的请求
-                        self.bangumi = bangumi
+                        self.bangumi:Bangumi = bangumi
                     title = bangumi.official_title
                     if title not in self.bangumi_torrents:
                         self.bangumi_torrents[title] = TorrentBangumi(bangumi)
@@ -131,6 +136,7 @@ class RSSRefresh(RssBase):
                         self.bangumi
                     )
                 self.bangumi_torrents[self.bangumi.official_title].append(torrent)
+
 
 
 class TorrentBangumi:
@@ -158,8 +164,6 @@ class TorrentBangumi:
         # Check include filter first (if set, torrent must match)
         if self.include_filter and not re.search(self.include_filter, torrent_item.name):
             return
-
-        torrent_item.bangumi_id = self.bangumi.id
         self.torrents.append(torrent_item)
 
     def __len__(self) -> int:

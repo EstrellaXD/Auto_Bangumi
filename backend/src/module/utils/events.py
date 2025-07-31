@@ -38,6 +38,7 @@ class EventType(Enum):
     DOWNLOAD_STARTED = "download_started"
     RENAME_COMPLETED = "rename_completed"
     TORRENT_ADDED = "torrent_added"
+    NOTIFICATION_REQUEST = "notification_request"
 
 
 @dataclass

@@ -12,11 +12,9 @@ class Torrent(SQLModel, table=True):
     downloaded: bool = Field(default=False, alias="downloaded")
     renamed: bool = Field(default=False, alias="renamed")
     download_uid: str | None = Field(default=None, alias="duid", index=True)
-    bangumi_official_title: str | None = Field(
-        default=None, index=True, alias="bangumi_title"
-    )
-    bangumi_season: int | None = Field(default=None, index=True, alias="bangumi_season")
-    rss_url: str | None = Field(default=None, alias="ruid", index=True)
+    bangumi_official_title: str = Field(default="", index=True, alias="bangumi_title")
+    bangumi_season: int = Field(default=1, index=True, alias="bangumi_season")
+    rss_link: str = Field(default="", alias="ruid", index=True)
     # TODO: 添加外键字段 rss_id 和 bangumi_id 替代当前的字符串引用
     homepage: str | None = Field(default=None, alias="homepage")
 
@@ -48,5 +46,3 @@ class SubtitleFile(BaseModel):
     episode: int = Field(default=0)
     language: str = Field(..., regex=r"(zh|zh-tw)")
     suffix: str = Field(..., regex=r"(?i)\.(ass|srt)$")
-
-

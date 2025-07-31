@@ -43,11 +43,16 @@ class DownloadController:
         # 一次取五个torrent
         for _ in range(min(queue.qsize(), 5)):
             torrent, bangumi = queue.get_nowait()
+
+            torrent.bangumi_official_title = bangumi.official_title
+            torrent.bangumi_season = bangumi.season
+            torrent.rss_link = bangumi.rss_link
             queue.task_done()
             logging.debug(f"[Download Controller] start download {torrent.name}")
             torrents.append(torrent)
             torrent_bangumi_pairs.append((torrent, bangumi))
             tasks.append(client.add_torrent(torrent, bangumi))
+            # 更新种子信息
 
         # 执行下载任务
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -65,7 +70,7 @@ class DownloadController:
             torrent, bangumi = torrent_bangumi_pairs[i]
 
             if result is True:  # 下载成功
-                if torrent.download_guid:  # 有下载哈希
+                if torrent.download_uid:  # 有下载哈希
                     # 发布下载开始事件
                     await self._publish_download_started(torrent, bangumi)
             elif isinstance(result, Exception):

@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.util.concurrency import asyncio
 
 from module.database import Database, engine
-from module.manager import TorrentManager
+from module.manager import BangumiManager
 from module.models import APIResponse, Bangumi, BangumiUpdate, ResponseModel
 from module.security.api import get_current_user
 
@@ -33,7 +33,7 @@ async def get_all_data():
     dependencies=[Depends(get_current_user)],
 )
 async def get_data(bangumi_id: str):
-    resp = TorrentManager().search_one(bangumi_id)
+    resp = BangumiManager().search_one(bangumi_id)
     if resp is None:
         return ResponseModel(
             status_code=406,
@@ -53,7 +53,7 @@ async def update_rule(
     bangumi_id: int,
     data: BangumiUpdate,
 ):
-    resp = await TorrentManager().update_rule(bangumi_id, data)
+    resp = await BangumiManager().update_rule(bangumi_id, data)
     if resp:
         resp = ResponseModel(
             status_code=200,
@@ -78,7 +78,7 @@ async def update_rule(
     dependencies=[Depends(get_current_user)],
 )
 async def delete_rule(bangumi_id: str, file: bool = False):
-    data = await TorrentManager().delete_rule(bangumi_id, file)
+    data = await BangumiManager().delete_rule(bangumi_id, file)
     if data:
         resp = ResponseModel(
             status_code=200,
@@ -104,7 +104,7 @@ async def delete_rule(bangumi_id: str, file: bool = False):
 async def delete_many_rule(bangumi_id: list, file: bool = False):
     tasks = []
     for i in bangumi_id:
-        tasks.append(TorrentManager().delete_rule(i, file))
+        tasks.append(BangumiManager().delete_rule(i, file))
 
     resp = await asyncio.gather(*tasks)
     resp = resp[0]
@@ -117,7 +117,7 @@ async def delete_many_rule(bangumi_id: list, file: bool = False):
     dependencies=[Depends(get_current_user)],
 )
 async def disable_rule(bangumi_id: str, file: bool = False):
-    resp = await TorrentManager().disable_rule(bangumi_id, file)
+    resp = await BangumiManager().disable_rule(bangumi_id, file)
     if resp:
         resp = ResponseModel(
             status_code=200,
@@ -140,10 +140,10 @@ async def disable_rule(bangumi_id: str, file: bool = False):
     response_model=APIResponse,
     dependencies=[Depends(get_current_user)],
 )
-async def disable_many_rule(bangumi_id: list, file: bool = False):
+async def disable_many_rule(bangumi_id: list[int], file: bool = False):
     tasks = []
     for i in bangumi_id:
-        tasks.append(TorrentManager().disable_rule(i, file))
+        tasks.append(BangumiManager().disable_rule(i, file))
     resp = await asyncio.gather(*tasks)
     resp = resp[-1]
     return u_response(resp)
@@ -155,7 +155,7 @@ async def disable_many_rule(bangumi_id: list, file: bool = False):
     dependencies=[Depends(get_current_user)],
 )
 async def enable_rule(bangumi_id: str):
-    resp = await TorrentManager().enable_rule(bangumi_id)
+    resp = await BangumiManager().enable_rule(bangumi_id)
     if resp:
         resp = ResponseModel(
             status_code=200,
@@ -179,7 +179,7 @@ async def enable_rule(bangumi_id: str):
     dependencies=[Depends(get_current_user)],
 )
 async def refresh_poster():
-    resp = await TorrentManager().refresh_poster()
+    resp = await BangumiManager().refresh_poster()
     resp = ResponseModel(
         status_code=200,
         status=True,
@@ -195,7 +195,7 @@ async def refresh_poster():
     dependencies=[Depends(get_current_user)],
 )
 async def refresh_single_poster(bangumi_id: int):
-    resp = await TorrentManager().refind_poster(bangumi_id)
+    resp = await BangumiManager().refind_poster(bangumi_id)
     if resp:
         resp = ResponseModel(
             status_code=200,

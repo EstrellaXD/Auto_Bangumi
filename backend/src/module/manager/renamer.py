@@ -1,17 +1,23 @@
 import asyncio
-
 import logging
 
 from module.conf import settings
 from module.database import Database
 from module.downloader import Client as download_client
 from module.models import EpisodeFile, Notification, SubtitleFile
-from module.models.bangumi import Bangumi
+from module.models.bangumi import Bangumi, Episode
 from module.models.torrent import Torrent
 from module.notification import PostNotification
 from module.parser import TitleParser, TmdbParser
 from module.parser.analyser.raw_parser import is_point_5, is_v1
-from module.utils import check_file, path_to_bangumi
+from module.utils import (
+    Event,
+    check_file,
+    event_bus,
+    gen_save_path,
+    path_to_bangumi,
+    EventType,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +49,7 @@ class Renamer:
         self.notify_dict = {}
         self.bangumi_cache = {}
         self.tmdb_parser = TmdbParser()
+        self._event_bus = event_bus
 
     async def send_notification(self):
         """
@@ -109,9 +116,7 @@ class Renamer:
         logger.debug(f"[Renamer][rename_file] Start rename {hash}.")
 
         rename_method = settings.bangumi_manage.rename_method
-        method = (
-            rename_method if file_type == "media" else "subtitle_" + rename_method
-        )
+        method = rename_method if file_type == "media" else "subtitle_" + rename_method
 
         # 主要是找集数, 当 season 是 0 时, 会从 file_path 中提取
         # torrent_parser 会对 file_path 进行处理, 所以不用担心太长的问题
@@ -120,7 +125,7 @@ class Renamer:
             logger.debug(f"[Renamer][rename_file] {file_path} is not a valid file")
             return False
 
-        #TODO: 后面支持剧场版的时个这要 改一下
+        # TODO: 后面支持剧场版的时个这要 改一下
         if ep and ep.episode == 0:
             logger.debug(f"[Renamer][rename_file] {ep.title} is parser episode failed")
             return True
@@ -140,10 +145,11 @@ class Renamer:
             # 从save_path中提取番剧名称和season
             bangumi_name, season = path_to_bangumi(save_path, settings.downloader.path)
 
-
             if season == 0:
                 # 奇奇怪怪的路径, 不处理
-                logger.warning(f"[Renamer][rename_file] {save_path} is not a bangumi path")
+                logger.warning(
+                    f"[Renamer][rename_file] {save_path} is not a bangumi path"
+                )
                 return False
         else:
             bangumi_name = bangumi.official_title
@@ -165,23 +171,56 @@ class Renamer:
         logger.debug(f"[Renamer][rename_file] {old_path=} ->{new_path=}")
         result = await download_client.rename_torrent_file(hash, old_path, new_path)
         logger.debug(f"[Renamer] {ep=} ")
+        if result and file_type == "media":
+            # 重命名成功, 发送通知
+            notify_info = Notification(
+                title=bangumi_name,
+                season=season,
+                episode=str(ep.episode),
+                poster_path=bangumi.poster_link if bangumi else "",
+            )
+            await self._publish_notification_request(notify_info)
+
         return result
+
+    async def _publish_notification_request(self, notify_info: Notification) -> None:
+        """发布下载开始事件
+
+        Args:
+            torrent: 种子信息
+            bangumi: 番剧信息
+        """
+        if not self._event_bus:
+            logger.warning("[Download Controller] EventBus 未设置，无法发布事件")
+            return
+
+        try:
+            event = Event(
+                type=EventType.NOTIFICATION_REQUEST,
+                data={"notify_info": notify_info},
+            )
+
+            await self._event_bus.publish(event)
+            logger.debug(f"[Download Controller] 已发布通知请求事件: {notify_info.title}")
+
+        except Exception as e:
+            logger.error(f"[Download Controller] 发布通知请求事件失败: {e}")
 
     async def rename_files(
         self,
         files_path: list[str],
         torrent: Torrent,
-        bangumi: Bangumi | None = None,
+        bangumi: Bangumi,
     ) -> bool:
         """
         处理 一个种子, 多个文件的重命名
         """
         tasks = []
-        hash = torrent.download_guid
+        hash = torrent.download_uid
         if not hash:
-            logger.warning(f"[Renamer] {torrent.name} has no download guid, skip")
+            logger.warning(f"[Renamer] {torrent.name} has no download uid, skip")
             return False
-        save_path = torrent.save_path
+        save_path = gen_save_path(settings.downloader.path, bangumi)
         for file in files_path:
             task = self.rename_file(hash, file, save_path, bangumi)
             logger.debug(f"[Renamer] rename_files {file} rename task added")
@@ -190,22 +229,31 @@ class Renamer:
         results = await asyncio.gather(*tasks)
 
         for i, result in enumerate(results):
+            logger.debug(f"[Renamer] Task {files_path[i]} returned: {result}")
             if result:
                 # 处理成功的结果
-                logger.debug(f"[Renamer] Task {files_path[i]} returned: {result}")
                 logger.debug(f"[Renamer] {files_path[i]} rename succeed")
                 return result
             else:
                 logger.warning(f"[Renamer] {files_path[i]} rename failed")
         return False
 
-    async def rename_torrent(self, torrent: Torrent, bangumi: Bangumi):
-        # 要torrent 的 save_path,download_guid,name
+    async def rename_torrent(self, torrent: Torrent, bangumi: Bangumi | None = None):
+        # 要torrent 的 save_path,download_uid,name
         files = []
-        if not torrent.download_guid:
-            logger.debug(f"[Renamer] {torrent.name} has no download guid, skip")
+        if not torrent.download_uid:
+            logger.debug(f"[Renamer] {torrent.name} has no download uid, skip")
             return
-        files = await download_client.get_torrent_files(torrent.download_guid)
+        if bangumi is None:
+            with Database() as db:
+                bangumi = db.torrent_to_bangumi(torrent)
+                if not bangumi:
+                    bangumi = Bangumi(
+                        official_title=torrent.bangumi_official_title,
+                        season=torrent.bangumi_season,
+                        rss_link=torrent.rss_link,
+                    )
+        files = await download_client.get_torrent_files(torrent.download_uid)
         if not files:
             logger.debug(f"[Renamer] {torrent.name} has no files, skip")
             return
@@ -216,19 +264,17 @@ class Renamer:
             logger.debug(f"[Renamer] {torrent.name} rename succeed")
             with Database() as db:
                 torrent.renamed = True
-                torrent.save_path = bangumi.save_path  # 更新保存路径
                 torrent.downloaded = True
+                torrent.bangumi_official_title = bangumi.official_title
+                torrent.bangumi_season = bangumi.season
                 db.torrent.add(torrent)
-
-
-
 
 
 if __name__ == "__main__":
 
     from module.conf import setup_logger
 
-    setup_logger("DEBUG", reset=True)
+    setup_logger(level=logging.DEBUG, reset=True)
 
     torrent = Torrent()
     bangumi = Bangumi()

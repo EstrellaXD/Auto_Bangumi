@@ -55,14 +55,14 @@ class DownloadMonitor:
             logger.warning("[DownloadMonitor] 事件数据不完整")
             return
 
-        if not torrent.download_guid:
-            logger.warning(f"[DownloadMonitor] 种子 {torrent.name} 没有下载GUID")
+        if not torrent.download_uid:
+            logger.warning(f"[DownloadMonitor] 种子 {torrent.name} 没有下载UID")
             return
 
         # 等待30秒让种子准备好，避免过早删除
         logger.debug(f"[DownloadMonitor] 等待30秒让种子准备: {torrent.name}")
         await asyncio.sleep(5)
-        await self.start_monitoring(torrent.download_guid, bangumi, torrent)
+        await self.start_monitoring(torrent.download_uid, bangumi, torrent)
 
     async def start_monitoring(
         self, torrent_hash: str, bangumi: Bangumi, torrent: Torrent
@@ -98,9 +98,9 @@ class DownloadMonitor:
             torrent: 种子信息
         """
         try:
-            torrent_hash = torrent.download_guid
+            torrent_hash = torrent.download_uid
             if not torrent_hash:
-                logger.warning(f"[DownloadMonitor] 种子 {torrent.name} 没有下载GUID")
+                logger.warning(f"[DownloadMonitor] 种子 {torrent.name} 没有下载UID")
                 return
             
             while not self._shutdown:

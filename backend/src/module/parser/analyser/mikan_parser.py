@@ -5,8 +5,15 @@ from urllib3.util import parse_url
 
 from module.parser.api.baseapi import BaseWebPage
 from module.utils import gen_poster_path
+# from .raw_parser import RawParser
+from module.parser.analyser.raw_parser import RawParser
+from module.models import MikanInfo
+import logging
 
 # TODO:改进official_title 作为标识, tmdb有id, mikan也有bangumi id
+
+logger = logging.getLogger("mikan_parser")
+
 
 
 class MikanWebParser:
@@ -17,13 +24,14 @@ class MikanWebParser:
         self.homepage = url
         self.root_path = parse_url(self.homepage).host
 
-    async def parser(self) -> tuple[str, str]:
+    async def parser(self) -> MikanInfo:
         content = await self.page.get_content(self.homepage)
+        mikan_info = MikanInfo()
         if not content:
-            return "", ""
+            logger.debug(f"[MikanWebParser] No content found for {self.homepage}")
+            return mikan_info
         soup = BeautifulSoup(content, "html.parser")
         official_title = soup.select_one('p.bangumi-title a[href^="/Home/Bangumi/"]')
-        print(f"official_title: {official_title}")
         if official_title:
             # official_title: <a class="w-other-c" href="/Home/Bangumi/3391#583" style="color:#555" target="_blank">败犬女主太多了！</a>
             # mikan_id = re.search(r".*/Home/Bangumi/(\d+(#\d+)?)", str(official_title))
@@ -32,13 +40,15 @@ class MikanWebParser:
                 mikan_id = mikan_id.group(1) + (mikan_id.group(2) or "")
             else:
                 mikan_id = ""
-            official_title = official_title.text
-            print(f"official_title: {official_title}")
-            official_title = re.sub(r"第.*季", "", official_title).strip()
-            print(f"mikan_id: {mikan_id}")
-        else:
-            official_title = ""
-        return official_title, mikan_id
+
+            official_title = official_title.text+"_"
+            eps_info = RawParser().parser(official_title)
+            print(eps_info)
+            mikan_info.id = mikan_id
+            mikan_info.official_title = eps_info.get_title()
+            mikan_info.season = eps_info.season
+            mikan_info.poster_link = await self.poster_parser()
+        return mikan_info
 
     async def poster_parser(self) -> str:
         poster_link = ""
@@ -72,15 +82,19 @@ if __name__ == "__main__":
     import asyncio
     import time
 
-    url = "https://mikanani.me/Home/Episode/b42bf9c357beffe9ed24a36a39190983b7dec40a"
+    url = "https://mikanani.me/Home/Episode/635fd8a64aa507849fe7df7742858ecd3e8f559b"
     page = BaseWebPage(url)
     parser = MikanWebParser(url, page)
     start = time.time()
-    result = asyncio.run(parser.bangumi_link_parser())
-    end = time.time()
-    print(f"Time taken: {end - start} seconds")
-    start = time.time()
     result = asyncio.run(parser.parser())
+    print(result)
     end = time.time()
     print(f"Time taken: {end - start} seconds")
-    print(result)
+    # result = asyncio.run(parser.bangumi_link_parser())
+    # end = time.time()
+    # print(f"Time taken: {end - start} seconds")
+    # start = time.time()
+    # result = asyncio.run(parser.parser())
+    # end = time.time()
+    # print(f"Time taken: {end - start} seconds")
+    # print(result)

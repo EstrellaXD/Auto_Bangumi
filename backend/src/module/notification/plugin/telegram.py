@@ -1,40 +1,55 @@
-import logging
+from typing import Dict, Any
 
 from module.models import Notification
 from module.network import RequestContent, load_image
 
-from .base_notifier import Notifier as BaseNotifier
-
-logger = logging.getLogger(__name__)
+from .base_notifier import BaseNotifier
 
 
 class Notifier(BaseNotifier):
-    def __init__(self, token: str, chat_id: str):
-        self.photo_url: str = f"https://api.telegram.org/bot{token}/sendPhoto"
-        self.message_url: str = f"https://api.telegram.org/bot{token}/sendMessage"
-        self.chat_id: str = chat_id
+    """Telegram 通知器"""
 
-    def gen_message(self, notify: Notification):
-        # notify.message+="\nhello"
-        pass
+    def __init__(self, token: str, chat_id: str, **kwargs):
+        super().__init__(token, **kwargs)
+        self.chat_id:str = chat_id
+        self.photo_url:str = f"https://api.telegram.org/bot{token}/sendPhoto"
+        self.message_url:str = f"https://api.telegram.org/bot{token}/sendMessage"
 
     async def post_msg(self, notify: Notification) -> bool:
-        self.gen_message(notify)
+        """发送 Telegram 通知"""
+        try:
+            message = notify.message
+            
+            photo = notify.file
+            async with RequestContent() as req:
+                if photo:
+                    # 发送带图片的消息
+                    resp = await self._send_photo(req, message, photo)
+                else:
+                    # 发送纯文本消息
+                    resp = await self._send_text(req, message)
+
+            self.logger.debug(f"Telegram notification response: {resp.status_code}")
+            return resp and resp.status_code == 200
+
+        except Exception as e:
+            self.logger.error(f"Telegram 通知发送失败: {e}")
+            return False
+
+    async def _send_photo(self, req, message: str, photo) -> Any:
+        """发送带图片的消息"""
         data = {
             "chat_id": self.chat_id,
-            "caption": notify.message,
-            "text": notify.message,
+            "caption": message,
             "disable_notification": True,
         }
-        photo = None
-        if notify.poster_path:
-            photo = await load_image(notify.poster_path)
+        return await req.post_data(self.photo_url, data, files={"photo": photo})
 
-        if photo:
-            async with RequestContent() as req:
-                resp = await req.post_data(self.photo_url, data, files={"photo": photo})
-        else:
-            async with RequestContent() as req:
-                resp = await req.post_data(self.message_url, data)
-        logger.debug(f"Telegram notification: {resp.status_code}")
-        return resp and resp.status_code == 200
+    async def _send_text(self, req, message: str) -> Any:
+        """发送纯文本消息"""
+        data = {
+            "chat_id": self.chat_id,
+            "text": message,
+            "disable_notification": True,
+        }
+        return await req.post_data(self.message_url, data)

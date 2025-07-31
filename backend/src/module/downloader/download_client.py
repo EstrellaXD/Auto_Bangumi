@@ -215,7 +215,7 @@ class DownloadClient:
                 category="Bangumi",
             )
             if result:
-                torrent.download_guid = result
+                torrent.download_uid = result
                 logger.debug(f"[Downloader] Add torrent: {torrent.name}")
                 return True
             else:

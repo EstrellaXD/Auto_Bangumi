@@ -45,8 +45,8 @@ class TorrentDatabase:
     def filter_by_bangumi(self, official_title: str, season: int, rss_link: str) -> list[Torrent]:
         """根据 Bangumi 的官方标题、季节和 RSS 链接过滤种子"""
         statement = select(Torrent).where(
-            Torrent.official_title == official_title,
-            Torrent.season == season,
+            Torrent.bangumi_official_title == official_title,
+            Torrent.bangumi_season == season,
             Torrent.rss_link == rss_link,
         )
         return list(self.session.exec(statement).all())
@@ -56,7 +56,7 @@ class TorrentDatabase:
         # return self.session.exec(select(Torrent).where(Torrent.url == url)).first()
 
     def search_by_duid(self, duid: str) -> Torrent | None:
-        statement = select(Torrent).where(Torrent.download_guid == duid)
+        statement = select(Torrent).where(Torrent.download_uid == duid)
         return self.session.exec(statement).first()
 
     def search_bangumi(self, bangumi_id: int):
@@ -108,7 +108,7 @@ class TorrentDatabase:
             return True
 
     def delete_by_duid(self, duid: str) -> bool:
-        stmt = select(Torrent).where(Torrent.download_guid == duid)
+        stmt = select(Torrent).where(Torrent.download_uid == duid)
         torrent_item = self.session.exec(stmt).first()
         if torrent_item:
             self.session.delete(torrent_item)

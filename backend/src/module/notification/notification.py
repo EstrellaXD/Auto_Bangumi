@@ -1,111 +1,177 @@
-import asyncio
-import importlib
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 from module.conf import settings
 from module.database import Database
 from module.models import Notification
-from module.notification.plugin.base_notifier import Notifier as BaseNotifier
+from module.notification.manager import (
+    NotificationManager,
+    NotificationConfig,
+    NotificationType,
+)
+from module.network import load_image
+
+if TYPE_CHECKING:
+    pass
 
 logger = logging.getLogger(__name__)
 
 
+class NotificationProcessor:
+    """
+    通知处理器 - 负责通知数据的解析和格式化
+    分离了数据处理逻辑，不直接负责发送
+    """
+
+    @staticmethod
+    def get_poster_from_db(title: str) -> str:
+        """
+        从数据库获取番剧海报
+        """
+        try:
+            with Database() as db:
+                bangumi = db.bangumi.search_official_title(title)
+            return bangumi.poster_link if bangumi and bangumi.poster_link else ""
+        except Exception as e:
+            logger.error(f"获取海报失败: {title} - {e}")
+            return ""
+
+    async def process_notification(self, notify: Notification) -> Notification:
+        """
+        处理通知对象，进行必要的数据解析和补充
+        """
+        # 创建副本，避免修改原对象
+        processed = Notification(
+            title=notify.title,
+            season=notify.season,
+            episode=notify.episode,
+            poster_path=notify.poster_path,
+            message=notify.message,
+        )
+        # 想了想,对每个通知直接传file和post_link, 这样就可以直接用来发送了
+
+        # 生成默认消息
+        if processed.episode:
+            processed.message = f"番剧名称：{processed.title}\n季度：第{processed.season}季\n更新集数：第{processed.episode}集"
+        # 获取海报
+            if not processed.poster_path and processed.title:
+                logger.debug(f"[NotificationProcessor] 获取海报: {processed.title}")
+                processed.poster_path = self.get_poster_from_db(processed.title)
+
+        processed.file = await load_image(processed.poster_path) if processed.poster_path else None
+
+
+        return processed
+
+
 class PostNotification:
     """
-    对通知进行处理, 调用 setting 的 notification
+    现代化的通知发送类
+    使用新的 NotificationManager 进行管理
+    保持向后兼容的接口
     """
 
     def __init__(self) -> None:
-        chat_ids = settings.notification.chat_id.split(",")
-        Notifier = self.get_notifier()
-        # 支持 多通知帐户
-        self.notifier = [
-            Notifier(
-                token=settings.notification.token,
-                chat_id=chat_id,
-            )
-            for chat_id in chat_ids
-        ]
+        self.processor = NotificationProcessor()
+        self.manager = self._create_manager_from_settings()
+        self.logger = logging.getLogger(self.__class__.__name__)
 
-    def parse(self, notify: Notification):
-        if notify.episode:
-            # Convert episode string to sorted list of integers
-            episode_list = sorted(
-                [int(e) for e in notify.episode.split(",") if int(e) > 0]
-            )
+    def _create_manager_from_settings(self) -> NotificationManager:
+        """根据设置创建通知管理器"""
+        configs = []
 
-            if not episode_list:
-                notify.episode = ""
-            else:
-                # Build ranges
-                ranges = []
-                range_start = episode_list[0]
-                prev = episode_list[0]
-
-                for num in episode_list[1:] + [None]:
-                    if num is None or num != prev + 1:
-                        # End of a range
-                        range_end = prev
-                        if range_start == range_end:
-                            ranges.append(str(range_start))
-                        else:
-                            ranges.append(f"{range_start}-{range_end}")
-                        if num is not None:
-                            range_start = num
-                    prev = num if num is not None else prev
-
-                notify.episode = ",".join(ranges)
-
-            if not notify.poster_path:
-                self._get_poster(notify)
-            notify.message = f"""
-            番剧名称：{notify.title}\n季度： 第{notify.season}季\n更新集数： 第{notify.episode}集
-            """.strip()
-
-    @staticmethod
-    def _get_poster(notify: Notification):
-        """
-        有可能传过来的是没有海报的番剧
-        比如 collection 的番剧
-        获取番剧海报
-        """
-        with Database() as db:
-            bangumi = db.bangumi.search_official_title(notify.title)
-        if bangumi and bangumi.poster_link:
-            notify.poster_path = bangumi.poster_link
-        else:
-            notify.poster_path = ""
-
-    async def send(self, notify: Notification):
-        self.parse(notify)
-        try:
-            for notifier in self.notifier:
-                await notifier.post_msg(notify)
-            logger.debug(f"Send notification: {notify.title}")
-        except Exception as e:
-            logger.warning(f"Failed to send notification: {e}")
-            return False
-
-    def get_notifier(self):
         if settings.notification.enable:
-            notification_type = settings.notification.type
-            package_path = f"module.notification.plugin.{notification_type}"
-        else:
-            package_path = "module.notification.plugin.log"
+            # 解析多个chat_id
+            chat_ids = [
+                cid.strip()
+                for cid in settings.notification.chat_id.split(",")
+                if cid.strip()
+            ]
 
-        notification: BaseNotifier = importlib.import_module(package_path)
-        Notifier = notification.Notifier
-        return Notifier
+            # 确定通知类型
+            try:
+                notification_type = NotificationType(settings.notification.type)
+            except ValueError:
+                logger.warning(
+                    f"未知的通知类型: {settings.notification.type}，回退到log"
+                )
+                notification_type = NotificationType.LOG
+
+            # 为每个chat_id创建配置
+            if chat_ids and notification_type in [
+                NotificationType.TELEGRAM,
+                NotificationType.WECOM,
+            ]:
+                for chat_id in chat_ids:
+                    config = NotificationConfig(
+                        type=notification_type,
+                        token=settings.notification.token,
+                        chat_id=chat_id,
+                        enabled=True,
+                    )
+                    configs.append(config)
+            else:
+                # 单个配置
+                config = NotificationConfig(
+                    type=notification_type,
+                    token=settings.notification.token,
+                    enabled=True,
+                )
+                configs.append(config)
+        else:
+            # 禁用时使用日志通知
+            config = NotificationConfig(
+                type=NotificationType.LOG, token="", enabled=True
+            )
+            configs.append(config)
+
+        return NotificationManager(configs)
+
+    async def send(self, notify: Notification) -> bool:
+        """
+        发送通知
+
+        Args:
+            notify: 通知对象
+
+        Returns:
+            bool: 是否发送成功（至少一个通知器成功）
+        """
+        # 处理通知数据
+        processed_notify = await self.processor.process_notification(notify)
+
+        # 发送通知
+        results = await self.manager.send_notification(processed_notify)
+
+        # 只要有一个成功就返回True（保持向后兼容）
+        return any(results.values()) if results else False
+
+    def get_status(self) -> dict:
+        """获取通知系统状态"""
+        return self.manager.get_status()
+
+
+# 为了向后兼容，保留旧的类名
+NotificationSender = PostNotification
 
 
 if __name__ == "__main__":
     import asyncio
-
     from module.conf import setup_logger
 
     setup_logger("DEBUG", reset=True)
 
+    # 测试用例
     title = "败犬"
     link = "posters/aHR0cHM6Ly9pbWFnZS50bWRiLm9yZy90L3Avdzc4MC9wYWRSbWJrMkxkTGd1ZGg1Y0xZMG85VEZ6aEkuanBn"
-    nt = Notification(title=title, season=1, episode="1,2,4,5,8", poster_path="")
-    asyncio.run(PostNotification().send(nt))
+    nt = Notification(title=title, season=1, episode="1", poster_path=link)
+
+    async def test():
+        sender = PostNotification()
+        success = await sender.send(nt)
+        print(f"发送结果: {success}")
+        print(f"系统状态: {sender.get_status()}")
+
+    asyncio.run(test())

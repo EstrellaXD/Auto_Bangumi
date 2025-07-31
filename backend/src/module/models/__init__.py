@@ -10,6 +10,7 @@ from .torrent import (
     TorrentUpdate,
 )
 from .user import User, UserLogin, UserUpdate
+from .mikan import MikanInfo
 
 __all__ = [
     "Bangumi",
@@ -29,4 +30,5 @@ __all__ = [
     "UserUpdate",
     "EpisodeFile",
     "SubtitleFile",
+    "MikanInfo",
 ]

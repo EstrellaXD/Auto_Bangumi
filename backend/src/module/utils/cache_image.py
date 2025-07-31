@@ -10,10 +10,11 @@ def url_to_str(url):
     return encoded_url
 
 
-def str_to_url(encoded_str):
+def str_to_url(encoded_str:str)->str:
     """
     将编码字符串解码为URL
     """
+    print(f"[str_to_url] {encoded_str=}")
     decoded_url = base64.urlsafe_b64decode(encoded_str.encode()).decode()
     return decoded_url
 

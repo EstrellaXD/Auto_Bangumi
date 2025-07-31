@@ -5,7 +5,7 @@ from sqlmodel import Field, SQLModel
 
 
 class BangumiBase(SQLModel):
-    official_title: str = Field(default="official_title", alias="official_title", title="番剧中文名")
+    official_title: str = Field(default="", alias="official_title", title="番剧中文名")
     year: str | None = Field(default=None, alias="year", title="番剧年份")
     title_raw: str = Field(default="title_raw", alias="title_raw", title="番剧原名")
     season: int = Field(default=1, alias="season", title="番剧季度")
@@ -33,18 +33,18 @@ class BangumiBase(SQLModel):
 class Bangumi(BangumiBase, table=True):
     id: int = Field(default=None, primary_key=True)
 
-# class BangumiUpdate(BangumiBase):
-#     # 覆盖特定字段的默认值
-#     exclude_filter: str = Field(default="720,\\d+-\\d+", alias="exclude_filter", title="番剧排除过滤器")
-#     deleted: bool = Field(default=False, alias="deleted", title="是否已删除")
+class BangumiUpdate(BangumiBase):
+    id: int = Field(default=None)
+    pass
 
 
 class Notification(BaseModel):
     title: str = Field(..., alias="title", title="标题")
-    message: str = Field(default=None, alias="message", title="消息")
-    season: int = Field(default=0, alias="season", title="番剧季度")
-    episode: str = Field(default="0", alias="episode", title="番剧集数")
+    message: str = Field(default="", alias="message", title="消息")
+    season: int = Field(default=1, ge=1, alias="season", title="番剧季度")
+    episode: str = Field(default="", alias="episode", title="番剧集数")
     poster_path: str = Field(default="", alias="poster_path", title="番剧海报路径")
+    file: bytes | None = Field(default=None, alias="file", title="文件内容")
 
 @dataclass
 class Episode():
@@ -60,5 +60,14 @@ class Episode():
     source: str
     audio_info: list[str]
     video_info: list[str]
+    def get_title(self) -> str:
+        if self.title_zh:
+            return self.title_zh
+        if self.title_en:
+            return self.title_en
+        if self.title_jp:
+            return self.title_jp
+        return ""
+
 
 

@@ -6,7 +6,7 @@ class RSSItem(SQLModel, table=True):
         主码是 rss_link
         id 是前端用的
     """
-    id: int = Field(default=None, primary_key=True, alias="id")
+    id: int|None = Field(default=None, primary_key=True, alias="id")
     name: str|None = Field(default=None, alias="name")
     url: str = Field(default="https://mikanani.me", alias="url",index=True)
     aggregate: bool = Field(default=False, alias="aggregate")

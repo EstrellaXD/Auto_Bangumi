@@ -171,6 +171,8 @@ class RawParser:
         """从季度信息元组中提取季度号"""
         # 从元组中找到第一个有效的季度数据
         for season in season_info:
+            if("部分" in season):
+                return 1
             if season and season.isdigit():
                 try:
                     return int(season)
@@ -397,6 +399,8 @@ if __name__ == "__main__":
     #     "[梦蓝字幕组]New Doraemon 哆啦A梦新番[747][2023.02.25][AVC][1080P][GB_JP][MP4]"
     # )
     # # #
+    title = "碧蓝之海 第二季.mp4"
+    title = "坂本日常 第2部分_"
     res = raw_parser(title)
     for k, v in res.__dict__.items():
         print(f"{k}: {v}")

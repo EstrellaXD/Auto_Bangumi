@@ -180,7 +180,7 @@ async def update_rss(
     dependencies=[Depends(get_current_user)],
 )
 async def refresh_all():
-    await engine.refresh_all_rss()
+    await engine.refresh_all()
     return JSONResponse(
         status_code=200,
         content={
@@ -196,6 +196,7 @@ async def refresh_all():
     dependencies=[Depends(get_current_user)],
 )
 async def refresh_rss(rss_id: int):
+    # TODO: 还没做
     await engine.refresh_rss(rss_id=rss_id)
     return JSONResponse(
         status_code=200,
@@ -233,7 +234,7 @@ async def analysis(rss: RSSItem):
         )
     # 只有非聚合才会用
     for torrent in torrents:
-        data = await analyser.torrent_to_data(torrent, rss)
+        data = await analyser.torrent_to_bangumi(torrent, rss)
         if data:
             return data
 
@@ -245,11 +246,6 @@ async def analysis(rss: RSSItem):
             msg_zh="无法解析此链接。",
         )
     )
-    # data = await analyser.link_to_data(rss)
-    # if isinstance(data, Bangumi):
-    #     return data
-    # else:
-    #     return u_response(data)
 
 
 @router.post(
