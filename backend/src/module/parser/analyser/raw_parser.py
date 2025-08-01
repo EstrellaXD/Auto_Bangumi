@@ -66,7 +66,6 @@ class RawParser:
             self.get_episode_info()
         )
 
-        print(self.title)
         if not season_info:
             season_info, season_is_trusted = self.get_season_info()
         episode = self.parser_episode(episode_info, episode_is_trusted)
@@ -122,8 +121,6 @@ class RawParser:
         if not episode_info:
             episode_info = self.findall_sub_title(p.EPISODE_RE_UNTRUSTED)
             episode_is_trusted = False
-        # print(f"episode_info: {episode_info}, episode_is_trusted: {episode_is_trusted}")
-        # print(f"season_info: {season_info}, season_is_trusted: {season_is_trusted}")
         return episode_info, episode_is_trusted, season_info, season_is_trusted
 
     def parser_episode(self, episode_info: Any, episode_is_trusted: bool) -> int:
@@ -155,15 +152,12 @@ class RawParser:
     ) -> tuple[int, str]:
         if season_info:
             season_list = [self.season_info_to_season(s) for s in season_info]
-            print(f"season_list: {season_list}")
-            print(f"season_info: {season_info}, season_is_trusted: {season_is_trusted}")
             if season_is_trusted:
                 return season_list[0], season_info[0][0]
             # 如果是非可信季度信息，返回第一个有效的季度
             else:
                 if len(season_info[0]) ==1 and season_list[0] > 1:
                     re.sub(p.SEASON_PATTERN_UNTRUSTED,"/[]" , self.title)
-                    print(self.title)
                     return season_list[0], season_info[0]
 
         return 1, ""

@@ -21,7 +21,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           if [ -f backend/requirements.txt ]; then pip install -r backend/requirements.txt; fi
-          pip install pytest
+          pip install pytest pytest-asyncio
       - name: Test
         working-directory: ./backend/src
         run: |

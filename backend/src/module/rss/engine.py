@@ -146,7 +146,6 @@ class RSSRefresh(BaseRefresh):
         for bangumi in bangumis:
             with Database(engine) as db:
                 if bangumi:
-                    print(bangumi)
                     logger.debug(
                         f"[RSSRefresh] Parsed bangumi: {bangumi.official_title} add to database"
                     )
