@@ -1,11 +1,10 @@
 import asyncio
 import logging
-from typing import Dict, Optional
-
 from module.utils.events import Event, EventType, EventBus
 from module.database import Database
 from module.downloader.download_client import Client as download_client
 from module.models import Bangumi, Torrent
+from module.utils import event_bus
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +17,7 @@ class DownloadMonitor:
 
     def __init__(self, event_bus: EventBus | None = None):
         # 存储活跃的监控任务 {torrent_hash: asyncio.Task}
-        self.monitoring_tasks: Dict[str, asyncio.Task] = {}
+        self.monitoring_tasks: dict[str, asyncio.Task] = {}
         self._shutdown: bool = False
         self._event_bus: EventBus | None = event_bus
 
@@ -61,7 +60,7 @@ class DownloadMonitor:
 
         # 等待30秒让种子准备好，避免过早删除
         logger.debug(f"[DownloadMonitor] 等待30秒让种子准备: {torrent.name}")
-        await asyncio.sleep(5)
+        await asyncio.sleep(30)
         await self.start_monitoring(torrent.download_uid, bangumi, torrent)
 
     async def start_monitoring(
@@ -229,7 +228,7 @@ class DownloadMonitor:
         self.monitoring_tasks.clear()
         logger.info("[DownloadMonitor] 监控器已关闭")
 
-    def get_monitoring_status(self) -> Dict:
+    def get_monitoring_status(self) -> dict:
         """获取监控状态
 
         Returns:
@@ -240,3 +239,4 @@ class DownloadMonitor:
             "monitoring_hashes": list(self.monitoring_tasks.keys()),
             "shutdown": self._shutdown,
         }
+download_monitor = DownloadMonitor(event_bus=event_bus)

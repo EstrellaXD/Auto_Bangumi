@@ -1,6 +1,6 @@
 from .download_client import Client, DownloadClient
 from .download_queue import DownloadController, DownloadQueue
-from .download_monitor import DownloadMonitor
+from .download_monitor import DownloadMonitor, download_monitor
 
 __all__ = [
     "DownloadClient",
@@ -8,4 +8,5 @@ __all__ = [
     "DownloadController",
     "Client",
     "DownloadMonitor",
+    "download_monitor",
 ]

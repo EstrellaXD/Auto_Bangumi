@@ -75,6 +75,5 @@ def test_torrent_database():
 
 def test_rss_database():
     rss_url = "https://test.com/test.xml"
-
     with Database(engine) as db:
         db.rss.add(RSSItem(url=rss_url))

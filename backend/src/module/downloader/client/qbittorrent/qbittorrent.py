@@ -152,6 +152,7 @@ class Downloader(BaseDownloader):
                 logger.debug(f"[qbittorrent] Torrent info: {hash}")
                 reps = reps.json()
                 # print(reps)
+                logger.debug(f"[qbittorrent] Torrent info: {reps['eta']=}, {reps['save_path']=}, {reps['completion_date']=}")
                 if reps["completion_date"] == -1:
                     reps["completion_date"] = 0
                 res = TorrentDownloadInfo(eta = reps["eta"], save_path=reps["save_path"],completed=reps["completion_date"])

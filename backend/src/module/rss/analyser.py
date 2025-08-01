@@ -51,7 +51,9 @@ class RSSAnalyser:
         bangumi.official_title = re.sub(r"[/:.\\]", " ", bangumi.official_title)
         return bangumi
 
-    async def torrent_to_bangumi(self, torrent: Torrent, rss: RSSItem) -> Bangumi | None:
+    async def torrent_to_bangumi(
+        self, torrent: Torrent, rss: RSSItem
+    ) -> Bangumi | None:
         """
         parse torrent name to bangumi
         filter 在 RawParser 中设置
@@ -59,7 +61,7 @@ class RSSAnalyser:
         """
 
         if (
-            bangumi :=RawParser().parser(raw=torrent.name)
+            bangumi := RawParser().parser(raw=torrent.name)
         ) and bangumi.official_title != "official_title":
             if not await self.official_title_parser(
                 bangumi=bangumi, parser=rss.parser, torrent=torrent
@@ -71,9 +73,34 @@ class RSSAnalyser:
             # 这里是最早加入 bangumi.rss_link, bangumi.parser 的地方
             bangumi.rss_link = rss.url
             bangumi.parser = rss.parser
-            logger.debug(f"[RSS analyser] Parsed bangumi: {bangumi.official_title} from torrent {torrent.name}")
+            logger.debug(
+                f"[RSS analyser] Parsed bangumi: {bangumi.official_title} from torrent {torrent.name}"
+            )
             return bangumi
 
+    def filer_torrent(self, torrent: Torrent, bangumi: Bangumi) -> bool:
+        """
+        filter torrent by bangumi
+        """
+        exclude_filter = (
+            bangumi.exclude_filter.replace(",", "|") if bangumi.exclude_filter else ""
+        )
+        include_filter = (
+            bangumi.include_filter.replace(",", "|") if bangumi.include_filter else ""
+        )
+        if exclude_filter and re.search(exclude_filter, torrent.name):
+            logger.debug(
+                f"[RSS] Exclude torrent {torrent.name} for {bangumi.official_title},regex: {exclude_filter}"
+            )
+            return False
+
+        # Check include filter first (if set, torrent must match)
+        if include_filter and not re.search(include_filter, torrent.name):
+            logger.debug(
+                f"[RSS] Include filter not matched for {torrent.name}, regex: {include_filter}"
+            )
+            return False
+        return True
 
 
 if __name__ == "__main__":

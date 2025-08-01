@@ -19,6 +19,11 @@ class DownloadQueue:
             self.add(torrent, bangumi)
 
     def add(self, torrent: Torrent, bangumi: Bangumi):
+
+        # 这是最早加入 torrent.bangumi_official_title, torrent.bangumi_season, torrent.rss_link 的地方
+        torrent.bangumi_official_title = bangumi.official_title
+        torrent.bangumi_season = bangumi.season
+        torrent.rss_link = bangumi.rss_link
         self.queue.put_nowait((torrent, bangumi))
         logger.debug(
             f"[Download Queue] add to queue {bangumi.official_title}, torrent name = {torrent.name} ,torrent url = {torrent.url}"
@@ -44,9 +49,9 @@ class DownloadController:
         for _ in range(min(queue.qsize(), 5)):
             torrent, bangumi = queue.get_nowait()
 
-            torrent.bangumi_official_title = bangumi.official_title
-            torrent.bangumi_season = bangumi.season
-            torrent.rss_link = bangumi.rss_link
+            # torrent.bangumi_official_title = bangumi.official_title
+            # torrent.bangumi_season = bangumi.season
+            # torrent.rss_link = bangumi.rss_link
             queue.task_done()
             logging.debug(f"[Download Controller] start download {torrent.name}")
             torrents.append(torrent)

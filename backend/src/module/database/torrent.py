@@ -1,9 +1,8 @@
 import logging
 
-from sqlalchemy.sql import func
 from sqlmodel import Session, delete, false, select, true
 
-from module.models import Torrent, torrent
+from module.models import Torrent
 from module.utils import get_hash
 
 logger = logging.getLogger(__name__)

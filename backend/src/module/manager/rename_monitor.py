@@ -42,6 +42,8 @@ class RenameMonitor:
         torrent = event.data.get("torrent")
         bangumi = event.data.get("bangumi")
 
+        # 检查是否已经重命名了
+        # TODO: 如果用户在下载完之前改了番剧信息，可能会导致重命名错误
         if not torrent or not bangumi:
             logger.warning("[RenameMonitor] 事件数据不完整")
             return

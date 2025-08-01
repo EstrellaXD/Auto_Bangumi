@@ -6,7 +6,7 @@ from module.conf import settings
 from module.models import Bangumi, RSSItem, Torrent
 from module.network import RequestContent
 from module.parser.title_parser import MikanParser, RawParser
-from module.rss import RSSAnalyser, RSSRefresh
+from module.rss import RSSAnalyser, RSSEngine
 from module.searcher.mikan import MikanSearch
 from module.searcher.provider import search_url
 
@@ -27,18 +27,19 @@ class SearchTorrent:
         self.mikan_parser = MikanParser()
 
     async def search_torrents(self, rss_item: RSSItem) -> list[Torrent]:
-        # 想了想 search 没必要有一个 Filter, 下载的时候也不会有
-        # TODO: 思考这里要不要用 filter
-        # 主要是想借用一下 filter, 从 rss 拿 torrents
-        bangumi = Bangumi(
-            exclude_filter="|".join(settings.rss_parser.filter),
-            rss_link=rss_item.url,
-        )
-        bangumi_torrents = RSSRefresh(bangumi=bangumi)
-        await bangumi_torrents.refresh()
-        if bangumi.official_title in bangumi_torrents.bangumi_torrents:
-            return bangumi_torrents.bangumi_torrents[bangumi.official_title].torrents
-        return []
+        async with RequestContent() as req:
+            new_torrents = await req.get_torrents(rss_item.url)
+
+        torrents = []
+        if not new_torrents:
+            return []
+        bangumi = RawParser().parser(new_torrents[0].name)
+        if not bangumi:
+            return []
+        for torrent in new_torrents:
+            if self.analyser.filer_torrent(torrent, bangumi):
+                torrents.append(torrent)
+        return torrents
 
     async def analyse_keyword(
         self, keywords: list[str], site: str = "mikan", limit: int = 7

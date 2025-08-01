@@ -55,9 +55,13 @@ class Program:
         await self.start()
 
     async def start(self):
+        logger.debug("[Program] loading settings...")
         settings.load()
+        logger.debug("[Program] settings loaded.")
+        logger.debug("[Program] starting application core...")
         await self.app_core.initialize()
         await self.app_core.start()
+        logger.debug("[Program] application core started.")
         logger.info("Program running.")
         return True
 

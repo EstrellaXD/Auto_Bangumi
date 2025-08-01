@@ -64,6 +64,11 @@ class RawParser:
         episode_info, episode_is_trusted, season_info, season_is_trusted = (
             self.get_episode_info()
         )
+
+        if not season_info:
+            season_info, season_is_trusted = self.get_season_info()
+        episode = self.parser_episode(episode_info, episode_is_trusted)
+        season, season_raw = self.parse_season(season_info, season_is_trusted)
         # 优化 token 处理逻辑
         temp_title = self.title
         if "/[]" in temp_title:
@@ -71,18 +76,13 @@ class RawParser:
             if len(parts) > 1:
                 temp_title = "[]".join(parts[:-1])
         self.token = re.split(r"[\[\]]", temp_title)
-
-        group = self.get_group()
-        if not season_info:
-            season_info, season_is_trusted = self.get_season_info()
         (
             name_en,
             name_zh,
             name_jp,
         ) = self.name_process()
-        episode = self.parser_episode(episode_info, episode_is_trusted)
-        season, season_raw = self.parse_season(season_info, season_is_trusted)
 
+        group = self.get_group()
         source = source_info[0] if source_info else ""
         sub = sub_info[0] if sub_info else ""
         resolution = resolution_info[0] if resolution_info else ""
@@ -120,6 +120,8 @@ class RawParser:
         if not episode_info:
             episode_info = self.findall_sub_title(p.EPISODE_RE_UNTRUSTED)
             episode_is_trusted = False
+        # print(f"episode_info: {episode_info}, episode_is_trusted: {episode_is_trusted}")
+        # print(f"season_info: {season_info}, season_is_trusted: {season_is_trusted}")
         return episode_info, episode_is_trusted, season_info, season_is_trusted
 
     def parser_episode(self, episode_info: Any, episode_is_trusted: bool) -> int:
@@ -151,8 +153,17 @@ class RawParser:
     ) -> tuple[int, str]:
         if season_info:
             season_list = [self.season_info_to_season(s) for s in season_info]
+            print(f"season_list: {season_list}")
+            print(f"season_info: {season_info}, season_is_trusted: {season_is_trusted}")
             if season_is_trusted:
                 return season_list[0], season_info[0][0]
+            # 如果是非可信季度信息，返回第一个有效的季度
+            else:
+                if len(season_info[0]) ==1 and season_list[0] > 1:
+                    re.sub(p.SEASON_PATTERN_UNTRUSTED,"/[]" , self.title)
+                    print(self.title)
+                    return season_list[0], season_info[0]
+
         return 1, ""
 
     def episode_info_to_episode(self, episode_info: Any) -> int:
@@ -186,7 +197,7 @@ class RawParser:
 
     def get_season_info(self) -> tuple[Any, bool]:
         """获取不可信的季度信息"""
-        season_info = self.findall_sub_title(p.SEASON_PATTERN_UNTRUSTED)
+        season_info = re.findall(p.SEASON_PATTERN_UNTRUSTED,self.title)
         is_trusted = False
         return season_info, is_trusted
 
@@ -343,7 +354,7 @@ if __name__ == "__main__":
     # title = "前辈是男孩子 (2024) S01E02.mp4"
     # title = "[SBSUB][CONAN][1082][V2][1080P][AVC_AAC][CHS_JP](C1E4E331).mp4"
     # title = "海盗战记 S01E01.zh-tw.ass"
-    # title = "[百冬练习组&LoliHouse] BanG Dream! 少女乐团派对！☆PICO FEVER！ / Garupa Pico: Fever! - 26 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][END] [101.69 MB]"
+    title = "[百冬练习组&LoliHouse] BanG Dream! 少女乐团派对！☆PICO FEVER！ / Garupa Pico: Fever! - 26 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][END] [101.69 MB]"
     # title ="【喵萌奶茶屋】★04月新番★[夏日重现/Summer Time Rendering][11][1080p][繁日双语][招募翻译]"
     # title = "【失眠搬运组】放学后失眠的你-Kimi wa Houkago Insomnia - 06 [bilibili - 1080p AVC1 CHS-JP].mp4"
     # title = "[KitaujiSub] Shikanoko Nokonoko Koshitantan [01Pre][WebRip][HEVC_AAC][CHS_JP].mp4"
@@ -353,13 +364,13 @@ if __name__ == "__main__":
     # title = "迷宮飯 08/[TOC] Delicious in Dungeon [08][1080P][AVC AAC][CHT][MP4].mp4"
     # title = "[喵萌奶茶屋&LoliHouse] 葬送的芙莉莲 / Sousou no Frieren - 06 [WebRip 1080p HEVC-10bit AAC][简繁日内封字幕]"
     # title = "[LoliHouse] Ore wa Subete wo Parry suru - 05 [WebRip 1080p HEVC-10bit AAC SRTx2]"
-    title = " [LoliHouse] 我要【招架】一切 ～反误解的世界最强想成为冒险者～ / Ore wa Subete wo Parry suru - 05 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕] [复制磁连]"
+    # title = " [LoliHouse] 我要【招架】一切 ～反误解的世界最强想成为冒险者～ / Ore wa Subete wo Parry suru - 05 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕] [复制磁连]"
     # title = "北宇治字幕组] 夜晚的水母不会游泳 / Yoru no Kurage wa Oyogenai [01-12 修正合集][WebRip][HEVC_AAC][简繁日内封] [复制磁连]"
     # title = "[北宇治字组&霜庭云花Sub&氢气烤肉架]【我推的孩子】/【Oshi no Ko】[18][WebRip][HEVC_AAC][繁日内嵌]"
     # # print(re.findall(RESOLUTION_RE,title))
-    # title = (
-    #     "[织梦字幕组][尼尔：机械纪元 NieR Automata Ver1.1a][02集][1080P][AVC][简日双语]"
-    # )
+    title = (
+        "[织梦字幕组][尼尔：机械纪元 NieR Automata Ver1.1a][02集][1080P][AVC][简日双语]"
+    )
     # title = "[ANi] Bakemonogatari / 物语系列 第外季＆第怪季 - 06.5 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4][ANi] Bakemonogatari / 物语系列 第外季＆第怪季 - 06.5 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4][217.2 MB]"
     # title = "ANi] 我獨自升級 - 07.5 [1080P][Baha][WEB-DL][AAC AVC][CHT].mp4"
     # title = "[NEO·QSW]古莲泰沙U グレンダイザーU Grendizer U 02[WEBRIP AVC 1080P]（搜索用：巨灵神/克雷飞天神）"
@@ -399,8 +410,9 @@ if __name__ == "__main__":
     #     "[梦蓝字幕组]New Doraemon 哆啦A梦新番[747][2023.02.25][AVC][1080P][GB_JP][MP4]"
     # )
     # # #
-    title = "碧蓝之海 第二季.mp4"
-    title = "坂本日常 第2部分_"
+    # title = "碧蓝之海 第二季.mp4"
+    # title = "坂本日常 第2部分_"
+    # title = "[ANi] Grand Blue Dreaming /  GRAND BLUE 碧蓝之海 2 - 04 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
     res = raw_parser(title)
     for k, v in res.__dict__.items():
         print(f"{k}: {v}")

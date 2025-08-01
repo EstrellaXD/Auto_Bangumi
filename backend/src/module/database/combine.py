@@ -9,7 +9,9 @@ from module.database.database_version import VersionDatabase
 from module.models import Bangumi, User
 from module.models import RSSItem
 from module.models import Torrent
-from module.models import DatabaseVersion
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Database(Session):
@@ -46,7 +48,6 @@ class Database(Session):
             bangumi.official_title, bangumi.season, bangumi.rss_link
         )
 
-
     def create_table(self):
         SQLModel.metadata.create_all(self.engine)
 
@@ -62,31 +63,26 @@ class Database(Session):
         """获取所有未重命名的种子"""
         return self.torrent.search_all_unrenamed()
 
-    def find_bangumi_by_torrent(self, torrent: Torrent,aggrated:bool) -> Bangumi | None:
+    def find_bangumi_by_name(
+        self, name: str, rss_link: str, aggrated: bool
+    ) -> Bangumi | None:
         # 现在是一个更新过的种子, 各种原因要查找 bangumi
-        if torrent.bangumi_official_title and torrent.bangumi_season:
-            return self.bangumi.search(
-                torrent.bangumi_official_title, torrent.bangumi_season, torrent.rss_link
-            )
         # 对于聚合而言, link, title_raw一致可认为是一个bangumi
         # 对于非聚合, link 一致就可认为是一个
         # 对于一个种子要找 bangumi, 主要是在 刷新 rss 的时候,
         if aggrated:
-            # 首先，在 Python 中将 title_raw 拆分为多个部分
-            # TODO: 太吃内存了,要优化一下
-            bangumis = self.exec(
-                select(Bangumi).where(Bangumi.deleted == false())
-            ).all()
-            for bangumi in bangumis:
-                # 假设 title_raw 是以逗号分隔的字符串
-                title_parts = bangumi.title_raw.split(",")
-                for title_part in title_parts:
-                    if title_part in torrent.name:
-                        return bangumi
+            logger.debug(f"[Database Combine] 查找聚合 Bangumi: {name}, {rss_link}")
+            statement = select(Bangumi).where(Bangumi.title_raw.contains(name))
+            bangumi = self.exec(
+                statement
+                # select(Bangumi).where(Bangumi.deleted == false())
+            ).first()
+            logger.debug(f"[Database Combine] 找到聚合 Bangumi: {bangumi.official_title if bangumi else 'None'}")
+            return bangumi
         else:
             statement = select(Bangumi).where(
                 and_(
-                    (Bangumi.rss_link==torrent.rss_link),
+                    (Bangumi.rss_link == rss_link),
                     # use `false()` to avoid E712 checking
                     # see: https://docs.astral.sh/ruff/rules/true-false-comparison/
                     Bangumi.deleted == false(),
@@ -316,9 +312,15 @@ class Database(Session):
 if __name__ == "__main__":
     url = "https://mikanani.me/Download/20250531/fb338d0c51c01c2494a9fb1642dd97769416b5c2.torrent"
     with Database() as db:
-        db.migrate()
-        # torrent = db.torrent.search_by_url(url)
-        # if torrent:
-        #     print(type(torrent))
-        # else:
-        #     print("未找到种子")
+        ans = db.find_bangumi_by_name(
+            name="Spice and Wolf",
+            rss_link="https://mikanani.me/rss/12345",
+            aggrated=True,
+        )
+        print(ans)
+    #     db.migrate()
+    # torrent = db.torrent.search_by_url(url)
+    # if torrent:
+    #     print(type(torrent))
+    # else:
+    #     print("未找到种子")

@@ -3,7 +3,6 @@ import sys
 import pytest
 
 from module.parser.analyser import torrent_parser
-from module.parser.analyser.torrent_parser import get_path_basename
 
 
 def test_torrent_parser():
@@ -48,14 +47,14 @@ def test_torrent_parser():
     assert bf.season == 1
 
     file_name = "海盗战记 S01E01.zh-tw.ass"
-    sf = torrent_parser(file_name, file_type="subtitle")
+    sf = torrent_parser(file_name)
     assert sf.title == "海盗战记"
     assert sf.episode == 1
     assert sf.season == 1
     assert sf.language == "zh-tw"
 
     file_name = "海盗战记 S01E01.SC.ass"
-    sf = torrent_parser(file_name, file_type="subtitle")
+    sf = torrent_parser(file_name)
     assert sf.title == "海盗战记"
     assert sf.season == 1
     assert sf.episode == 1
