@@ -151,8 +151,10 @@ class DatabaseMigration:
     def _version_to_tuple(self, version: str) -> tuple:
         """将版本字符串转换为可比较的元组"""
         try:
-            # 处理类似 "3.2.0" 的版本号
-            parts = version.split(".")
+            # 处理类似 "3.2.0" 或 "3.2.0-beta" 的版本号
+            # 先移除后缀 (如 -beta, -alpha, -dev 等)
+            base_version = version.split("-")[0]
+            parts = base_version.split(".")
             return tuple(int(part) for part in parts)
         except (ValueError, AttributeError):
             # 如果解析失败，返回一个默认值
