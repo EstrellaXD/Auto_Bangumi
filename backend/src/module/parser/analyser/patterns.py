@@ -3,8 +3,8 @@ import re
 LAST_BACKET_PATTERN = re.compile(
     r"[\(\（][^\(\)（）]*[\)\）](?!.*[\(\（][^\(\)（）]*[\)\）])"
 )
-BOUNDARY_START = r"[\s_\-\[\]/\)\(]"
-BOUNDARY_END = r"(?=[\s_\.\-\[\]/\)\($])"  # 结束边界（不消耗）
+BOUNDARY_START = r"[\s_\-\.\[\]/\)\(（）]"
+BOUNDARY_END = r"(?=[\s_\.\-\[\]/\)\(（）])"  # 结束边界（不消耗）
 
 
 EPISODE_PATTERN = re.compile(

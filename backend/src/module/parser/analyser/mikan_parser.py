@@ -37,7 +37,7 @@ class MikanWebParser:
             else:
                 mikan_id = ""
 
-            official_title = official_title.text+"_"
+            official_title = official_title.text
             eps_info = RawParser().parser(official_title)
             mikan_info.id = mikan_id
             mikan_info.official_title = eps_info.get_title()

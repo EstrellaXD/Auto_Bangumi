@@ -50,6 +50,7 @@ class RawParser:
             translation_table = str.maketrans("【】", "[]")
             self.title = self.title.translate(translation_table)
         self.title = self.title.strip()
+        self.title += "_"
 
     def parser(self, title: str) -> Episode:
         self.raw_title = title
@@ -65,6 +66,7 @@ class RawParser:
             self.get_episode_info()
         )
 
+        print(self.title)
         if not season_info:
             season_info, season_is_trusted = self.get_season_info()
         episode = self.parser_episode(episode_info, episode_is_trusted)
@@ -411,8 +413,10 @@ if __name__ == "__main__":
     # )
     # # #
     # title = "碧蓝之海 第二季.mp4"
-    # title = "坂本日常 第2部分_"
+    # title = "坂本日常 第2部分"
     # title = "[ANi] Grand Blue Dreaming /  GRAND BLUE 碧蓝之海 2 - 04 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+    title =  "[Lilith-Raws] Boku no Kokoro no Yabai Yatsu - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT].mp4"
+    title = "【极影字幕社】★4月新番 天国大魔境 Tengoku Daimakyou 第05话 GB 720P MP4（字幕社招人内详）"
     res = raw_parser(title)
     for k, v in res.__dict__.items():
         print(f"{k}: {v}")

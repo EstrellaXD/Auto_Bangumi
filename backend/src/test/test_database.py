@@ -1,5 +1,6 @@
 from module.database.combine import Database
 from module.models import Bangumi, RSSItem, Torrent
+from module.parser import RawParser
 from sqlmodel import create_engine
 from sqlmodel.pool import StaticPool
 
@@ -46,9 +47,13 @@ def test_bangumi_database():
         assert data.poster_link == "/test/test.jpg"
 
         # match torrent
-        result = db.bangumi.match_torrent(
-            "[Lilith-Raws] 无职转生，到了异世界就拿出真本事 / Mushoku Tensei - 11 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]",
+        title = RawParser().parser(
+            "[Lilith-Raws] 无职转生，到了异世界就拿出真本事 / Mushoku Tensei - 11 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
+        ).title_raw
+        result = db.find_bangumi_by_name(
+            title,
             "test",
+            True,
         )
         assert result.official_title == "无职转生，到了异世界就拿出真本事II"
 
@@ -65,12 +70,12 @@ def test_torrent_database():
     with Database(engine) as db:
         # insert
         db.torrent.add(test_data)
-        assert db.torrent.search(1) == test_data
+        assert db.torrent.search_by_url(test_data.url) == test_data
 
         # update
         test_data.downloaded = True
-        db.torrent.update(test_data)
-        assert db.torrent.search(1) == test_data
+        db.torrent.add(test_data)
+        assert db.torrent.search_by_url(test_data.url) == test_data
 
 
 def test_rss_database():
