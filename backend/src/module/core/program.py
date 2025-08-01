@@ -1,10 +1,6 @@
 import logging
 
 from module.conf import VERSION, settings
-from module.update import (
-    first_run,
-    start_up,
-)
 
 from .aiocore import app_core
 from .status import ProgramStatus
@@ -41,9 +37,10 @@ class Program:
     async def startup(self):
         self.__start_info()
         if not self.program_status.database:
+            from module.update import first_run
+
             first_run()
             logger.info("[Core] No db file exists, create database file.")
-            return {"status": "First run detected."}
 
         from module.database import check_and_upgrade_database
 
@@ -51,6 +48,7 @@ class Program:
             logger.error("数据库升级失败，程序无法启动")
             raise RuntimeError("数据库升级失败")
 
+        # 检查是否需要创建图片缓存目录
         self.program_status.img_cache
         await self.start()
 
@@ -81,5 +79,6 @@ class Program:
         if not self.program_status.version_update:
             return {"status": "No update found."}
         else:
+            from module.update import start_up
             start_up()
             return {"status": "Database updated."}
