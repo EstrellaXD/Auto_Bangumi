@@ -30,14 +30,15 @@ logger = logging.getLogger(__name__)
 #
 
 class BaseRefresh:
-    def __init__(self):
+    def __init__(self, _engine=engine):
+        self.engine = _engine
         self.url: str = ""
 
     async def _get_torrents(self) -> list[Torrent]:
         async with RequestContent() as req:
             torrents = await req.get_torrents(self.url)
         logging.debug(f"[RSS ENGINE] from {self.url} get {len(torrents)}")
-        with Database() as database:
+        with Database(self.engine) as database:
             new_torrents = database.torrent.check_new(torrents)
         return new_torrents
 
@@ -53,7 +54,8 @@ class BaseRefresh:
 
 
 class RSSRefresh(BaseRefresh):
-    def __init__(self, rss_item: RSSItem):
+    def __init__(self, rss_item: RSSItem, _engine=engine):
+        super().__init__(_engine)
         self.rss_item: RSSItem = rss_item
         self.bangumis: list[Bangumi] = []
         self.url: str = rss_item.url
@@ -69,7 +71,7 @@ class RSSRefresh(BaseRefresh):
             if raw_bangumi:
                 logger.debug(f"[RSSRefresh download_rss] raw bangumi {raw_bangumi.title_raw}")
                 # 这里可以直接用 raw_bangumi.title_raw 来查找 bangumi
-                with Database(engine) as database:
+                with Database(self.engine) as database:
                     bangumi = database.find_bangumi_by_name(
                         raw_bangumi.title_raw,
                         self.rss_item.url,
@@ -153,7 +155,8 @@ class RSSRefresh(BaseRefresh):
 
 
 class BangumiRefresher(BaseRefresh):
-    def __init__(self, bangumi: Bangumi):
+    def __init__(self, bangumi: Bangumi, _engine=engine):
+        super().__init__(_engine)
         self.bangumi: Bangumi = bangumi
         self.url: str = bangumi.rss_link
         self.analyser = RSSAnalyser()

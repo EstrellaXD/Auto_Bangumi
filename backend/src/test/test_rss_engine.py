@@ -8,6 +8,10 @@ from .test_database import engine as e
 
 @pytest.mark.asyncio
 async def test_rss_engine():
+    # Create tables first
+    with Database(e) as db:
+        db.create_table()
+    
     engine = RSSEngine(e)
     manager = RSSManager(e)
     rss_link = "https://mikanani.me/RSS/Bangumi?bangumiId=2353&subgroupid=552"
@@ -20,7 +24,7 @@ async def test_rss_engine():
 
     assert result[1].name == "Mikan Project - 无职转生～到了异世界就拿出真本事～"
 
-    new_torrents = await RSSRefresh(result[1]).pull_rss()
+    new_torrents = await RSSRefresh(result[1],e).pull_rss()
 
     torrent = new_torrents[0]
     assert (
