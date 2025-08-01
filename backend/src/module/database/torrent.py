@@ -77,6 +77,16 @@ class TorrentDatabase:
         ).all()
         return list(torrents)
 
+    def search_downloaded_unrenamed(self) -> list[Torrent]:
+        """查询已下载但未重命名的种子"""
+        torrents = self.session.exec(
+            select(Torrent).where(
+                Torrent.downloaded == true(),
+                Torrent.renamed == false()
+            )
+        ).all()
+        return list(torrents)
+
     # def search_rss(self, rss_url: int) -> list[Torrent]:
     #     """根据RSS url查询所有种子"""
     #     torrents = self.session.exec(select(Torrent).where(Torrent.rss_link == rss_url)).all()

@@ -113,7 +113,7 @@ class RSSRefresh(BaseRefresh):
                 continue
             # 先从数据库中找, 如果数据库中没有, 更新一下 database
             raw_bangumi = RawParser().parser(raw=torrent.name)
-            logger.debug(f"[RSSRefresh] raw bangumi {raw_bangumi}")
+            logger.debug(f"[RSSRefresh] raw bangumi {raw_bangumi.title_raw if raw_bangumi else 'None'}")
             if raw_bangumi:
                 if new_torrents.get(raw_bangumi.title_raw):
                     # 如果已经有了, 则跳过
@@ -258,17 +258,18 @@ if __name__ == "__main__":
 
     setup_logger("DEBUG")
 
-    # async def test():
-    #     test_rss = RSSItem(
-    #         url="https://mikanani.me/RSS/Bangumi?bangumiId=3661&subgroupid=583",
-    #         parser="mikan",
-    #         aggregate=True,
-    #     )
-    #     test_refresh = RssRefresh(rss_item=test_rss)
-    #     await test_refresh.download_rss()
+    async def test():
+        test_rss = RSSItem(
+            url="https://mikanani.me/RSS/Bangumi?bangumiId=3661&subgroupid=583",
+            parser="mikan",
+            aggregate=True,
+        )
+        test_refresh = RSSRefresh(rss_item=test_rss)
+        # await test_refresh.download_rss()
+        await test_refresh.find_new_bangumi()
 
-    async def test_engine():
-        test_engine = RSSEngine()
-        await test_engine.refresh_all()
+    # async def test_engine():
+    #     test_engine = RSSEngine()
+    #     await test_engine.refresh_all()
 
-    asyncio.run(test_engine())
+    asyncio.run(test())

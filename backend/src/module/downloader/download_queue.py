@@ -49,9 +49,6 @@ class DownloadController:
         for _ in range(min(queue.qsize(), 5)):
             torrent, bangumi = queue.get_nowait()
 
-            # torrent.bangumi_official_title = bangumi.official_title
-            # torrent.bangumi_season = bangumi.season
-            # torrent.rss_link = bangumi.rss_link
             queue.task_done()
             logging.debug(f"[Download Controller] start download {torrent.name}")
             torrents.append(torrent)
@@ -102,7 +99,7 @@ class DownloadController:
                 data={"torrent": torrent, "bangumi": bangumi},
             )
 
-            await self._event_bus.publish(event)
+            asyncio.create_task( self._event_bus.publish(event))
             logger.debug(f"[Download Controller] 已发布下载开始事件: {torrent.name}")
 
         except Exception as e:

@@ -200,7 +200,7 @@ class Renamer:
                 data={"notify_info": notify_info},
             )
 
-            await self._event_bus.publish(event)
+            asyncio.create_task(self._event_bus.publish(event))
             logger.debug(f"[Download Controller] 已发布通知请求事件: {notify_info.title}")
 
         except Exception as e:

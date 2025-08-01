@@ -1,6 +1,7 @@
 import asyncio
 import logging
 
+from module.conf import settings
 from module.utils.events import Event, EventType, EventBus
 from module.manager import Renamer
 from module.models import Bangumi, Torrent
@@ -122,7 +123,7 @@ class RenameMonitor:
                 data={"torrent": torrent, "bangumi": bangumi},
             )
 
-            await self._event_bus.publish(event)
+            asyncio.create_task(self._event_bus.publish(event))
             logger.info(f"[RenameMonitor] 已发布重命名完成事件: {torrent.name}")
 
         except Exception as e:

@@ -4,6 +4,8 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from module.utils.events import event_bus
+from module.conf import settings
+
 from .task_manager import TaskManager
 
 logger = logging.getLogger(__name__)
@@ -30,11 +32,13 @@ class AsyncApplicationCore:
 
         try:
             # 创建服务实例
-            from .services import RSSService, DownloadService
+            from .renamer_service import RenamerService
+            from .services import DownloadService, RSSService
 
             self.services = [
                 DownloadService(),
                 RSSService(),
+                RenamerService(),
             ]
 
             # 初始化所有服务
@@ -65,7 +69,6 @@ class AsyncApplicationCore:
                     name=config["name"],
                     coro_func=service.execute,
                     interval=config["interval"],
-                    max_retries=config["max_retries"],
                 )
                 logger.debug(f"[AsyncCore] 注册任务: {config['name']}")
 
@@ -85,14 +88,18 @@ class AsyncApplicationCore:
             )
             logger.info("[AsyncCore] 已注册 DownloadMonitor 事件处理器")
 
-            # 创建并注册 RenameMonitor
-            self._rename_monitor = RenameMonitor(event_bus=self.event_bus)
-            await self._rename_monitor.initialize()
-            self.event_bus.subscribe(
-                EventType.DOWNLOAD_COMPLETED,
-                self._rename_monitor.handle_download_completed,
-            )
-            logger.info("[AsyncCore] 已注册 RenameMonitor 事件处理器")
+            # 创建并注册 RenameMonitor (仅在启用重命名功能时)
+            if settings.bangumi_manage.enable:
+                self._rename_monitor = RenameMonitor(event_bus=self.event_bus)
+                await self._rename_monitor.initialize()
+                self.event_bus.subscribe(
+                    EventType.DOWNLOAD_COMPLETED,
+                    self._rename_monitor.handle_download_completed,
+                )
+                logger.info("[AsyncCore] 已注册 RenameMonitor 事件处理器")
+            else:
+                self._rename_monitor = None
+                logger.info("[AsyncCore] 重命名功能已禁用，跳过 RenameMonitor 注册")
 
             # 创建并注册 NotificationMonitor
             self._notification_monitor = NotificationMonitor(event_bus=self.event_bus)

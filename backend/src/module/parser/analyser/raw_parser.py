@@ -157,7 +157,7 @@ class RawParser:
             # 如果是非可信季度信息，返回第一个有效的季度
             else:
                 if len(season_info[0]) ==1 and season_list[0] > 1:
-                    re.sub(p.SEASON_PATTERN_UNTRUSTED,"/[]" , self.title)
+                    self.findall_sub_title(p.SEASON_PATTERN_UNTRUSTED)
                     return season_list[0], season_info[0]
 
         return 1, ""
@@ -408,9 +408,9 @@ if __name__ == "__main__":
     # # #
     # title = "碧蓝之海 第二季.mp4"
     # title = "坂本日常 第2部分"
-    # title = "[ANi] Grand Blue Dreaming /  GRAND BLUE 碧蓝之海 2 - 04 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
-    title =  "[Lilith-Raws] Boku no Kokoro no Yabai Yatsu - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT].mp4"
-    title = "【极影字幕社】★4月新番 天国大魔境 Tengoku Daimakyou 第05话 GB 720P MP4（字幕社招人内详）"
+    title = "[ANi] Grand Blue Dreaming /  GRAND BLUE 碧蓝之海 2 - 04 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+    # title =  "[Lilith-Raws] Boku no Kokoro no Yabai Yatsu - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT].mp4"
+    # title = "【极影字幕社】★4月新番 天国大魔境 Tengoku Daimakyou 第05话 GB 720P MP4（字幕社招人内详）"
     res = raw_parser(title)
     for k, v in res.__dict__.items():
         print(f"{k}: {v}")

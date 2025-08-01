@@ -181,7 +181,7 @@ class DownloadMonitor:
                 data={"torrent": torrent, "bangumi": bangumi},
             )
 
-            await self._event_bus.publish(event)
+            asyncio.create_task(self._event_bus.publish(event))
             logger.debug(f"[DownloadMonitor] 已发布下载完成事件: {torrent.name}")
 
         except Exception as e:
