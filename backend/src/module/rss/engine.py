@@ -58,7 +58,7 @@ class RSSRefresh(BaseRefresh):
                         self.rss_item.url,
                         self.rss_item.aggregate,
                     )
-                    if bangumi and self.analyser.filer_torrent(torrent, bangumi):
+                    if bangumi and not bangumi.deleted and self.analyser.filer_torrent(torrent, bangumi):
                             ## 如果不符合过滤条件, 则跳过
                             self.download_queue.add(torrent, bangumi)
                             logger.debug(
