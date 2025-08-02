@@ -101,12 +101,20 @@ class MikanParser(BaseParser):
             poster_link= mikan_info.poster_link,
         )
 
-    async def poster_parser(self, homepage: str) -> str:
+    async def poster_parser(self, bangumi:Bangumi|BangumiUpdate) -> bool:
+        # 这是给 Bangumi 刷新用的
+        # https://mikanani.me/Home/Bangumi/
+        if not bangumi.mikan_id:
+            logger.debug(f"[MikanParser] No Mikan ID found for {bangumi.official_title}")
+            return False
+        homepage = f"https://{settings.rss_parser.mikan_custom_url}/Home/Bangumi/{bangumi.mikan_id}"
+        logger.debug(f"[MikanParser] Parsing poster link from {homepage}")
         mikan_parser = MikanWebParser()
         poster_link = await mikan_parser.poster_parser(homepage)
         if not poster_link:
-            return ""
-        return poster_link
+            return False
+        bangumi.poster_link = poster_link
+        return True
 
     async def bangumi_link_parser(self, homepage: str) -> str:
         mikan_parser = MikanWebParser()
@@ -137,7 +145,7 @@ class RawParser(BaseParser):
             else:
                 official_title = title_raw
             _season = episode.season
-            logger.debug(f"RAW:{raw} >> {title_raw}")
+            logger.debug(f"[RawParser] RAW:{raw} >> {title_raw}")
             return Bangumi(
                 official_title=official_title,
                 title_raw=title_raw,
@@ -176,10 +184,16 @@ class TitleParser:
 if __name__ == "__main__":
     import asyncio
     import time
+    mikan_id = "3649#357"
+    from module.conf import setup_logger
+    setup_logger(logging.DEBUG, reset=True)
+
+    mikan_url = settings.rss_parser.mikan_custom_url
+    homepage = f"https://{mikan_url}/Home/Bangumi/{mikan_id}"
 
     async def test(title):
         start = time.time()
-        tb = TmdbParser()
+        tb = MikanParser()
         ans = await tb.parser(title)
         end = time.time()
         print(f"Time taken: {end - start} seconds")
@@ -189,15 +203,23 @@ if __name__ == "__main__":
         print(f"Time taken: {end - start} seconds")
         return ans
 
+
+    async def test_mikan_poster(homepage):
+        start = time.time()
+        tb = MikanParser()
+        ans = await tb.poster_parser(homepage)
+        end = time.time()
+        print(f"Time taken: {end - start} seconds")
+        return ans
     # parser = TmdbParser()
 
     title = "/Volumes/gtx/download/qb/动漫/物语系列/Season 5"
     language = "zh"
     season = 1
     official_title = "败犬女主太多了！"
-    homepage = (
-        "https://mikanani.me/Home/Episode/33fbab8f53fe4bad12f07afa5abdb7c4afa5956c"
-    )
+    # homepage = (
+    #     "https://mikanani.me/Home/Episode/33fbab8f53fe4bad12f07afa5abdb7c4afa5956c"
+    # )
 
-    ans = asyncio.run(test(official_title))
+    ans = asyncio.run(test_mikan_poster(homepage))
     print(ans)

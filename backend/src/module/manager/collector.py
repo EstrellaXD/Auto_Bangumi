@@ -5,6 +5,7 @@ from module.models import Bangumi
 from module.parser import TmdbParser
 from module.rss import RSSEngine, RSSManager
 from module.searcher import SearchTorrent
+from .bangumi import BangumiManager
 
 logger = logging.getLogger(__name__)
 
@@ -31,12 +32,11 @@ class SeasonCollector:
         if not data.poster_link:
             try:
                 # 有mikan id,但 mikan 是不会失败的
-                await TmdbParser().poster_parser(data)
+                await BangumiManager().refind_poster(data)
             except Exception:
                 logging.warning(f"[Engine] Fail to pull poster {data.official_title} ")
         with Database() as db:
             db.bangumi.add(data)
-        # TODO: 有一点小问题是, 这里的 torrent 没有 rss_id
         result = await RSSEngine().refresh_bangumi(data)
         if result:
             return True

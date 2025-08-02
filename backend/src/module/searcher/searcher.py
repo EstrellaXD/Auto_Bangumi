@@ -9,6 +9,10 @@ from module.parser.title_parser import MikanParser, RawParser
 from module.rss import RSSAnalyser, RSSEngine
 from module.searcher.mikan import MikanSearch
 from module.searcher.provider import search_url
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 SEARCH_KEY = [
     "group_name",
@@ -39,6 +43,7 @@ class SearchTorrent:
         for torrent in new_torrents:
             if self.analyser.filer_torrent(torrent, bangumi):
                 torrents.append(torrent)
+        logger.debug(f"[SearchTorrent] Found {len(torrents)} torrents for {rss_item.url}")
         return torrents
 
     async def analyse_keyword(
@@ -67,6 +72,7 @@ class SearchTorrent:
                         tasks.append(task)
                     exist_list.append(new_str)
 
+        logger.debug(f"[SearchTorrent] Found {len(single_torrent)} single torrents for {rss_item.url}")
         homepage_list = []
         page_task = []
         for torrent in single_torrent:
@@ -78,6 +84,7 @@ class SearchTorrent:
             )
             if len(page_task) >= 3:
                 break
+        logger.debug(f"[SearchTorrent] Found {len(page_task)} homepage tasks for {rss_item.url}")
         while page_task:
             done, page_task = await asyncio.wait(
                 page_task, return_when=asyncio.FIRST_COMPLETED
@@ -94,6 +101,7 @@ class SearchTorrent:
                         )
                     else:  # 有两个相同的主页, 就停止
                         break
+        logger.debug(f"[SearchTorrent] Found {len(tasks)} tasks for {rss_item.url}")
         # 上面花了3s
         while tasks:
             done, tasks = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
@@ -103,6 +111,7 @@ class SearchTorrent:
                     if isinstance(bangumi, list):
                         # 逆序
                         for b in bangumi[::-1]:
+                            logger.debug(f"[SearchTorrent] Found bangumi: {b}")
                             yield {
                                 "event": "message",
                                 "data": json.dumps(
@@ -122,7 +131,9 @@ class SearchTorrent:
                                 ),
                             }
                 except Exception:
-                    continue
+                    logger.exception(
+                        "[SearchTorrent] Error occurred while processing task"
+                    )
         # 上面花了 5s
 
     def special_url(self, data: Bangumi, site: str) -> RSSItem:

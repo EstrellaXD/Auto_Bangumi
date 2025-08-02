@@ -1,15 +1,15 @@
+import logging
 import re
 
 from bs4 import BeautifulSoup
 from urllib3.util import parse_url
 
-from module.utils import gen_poster_path
-from module.network import RequestContent
-from .raw_parser import RawParser
-from . import patterns
 from module.models import MikanInfo
-import logging
+from module.network import RequestContent
+from module.utils import gen_poster_path
 
+from . import patterns
+from .raw_parser import RawParser
 
 logger = logging.getLogger("mikan_parser")
 
@@ -39,7 +39,9 @@ class MikanWebParser:
 
             official_title = official_title.text
             eps_info = RawParser().parser(official_title)
-            title  = re.sub(patterns.SEASON_RE,"",official_title)
+            title  = re.sub(patterns.SEASON_RE,"",official_title+" ")
+            title = title.strip()
+            logger.debug(f"[MikanWebParser] Parsed title: {title}, mikan_id: {mikan_id}")
             mikan_info.id = mikan_id
             mikan_info.official_title = title
             mikan_info.season = eps_info.season
@@ -84,7 +86,7 @@ if __name__ == "__main__":
     import asyncio
     import time
 
-    url = "https://mikanani.me/Home/Episode/635fd8a64aa507849fe7df7742858ecd3e8f559b"
+    url = "https://mikanani.me/RSS/Bangumi?bangumiId=3661&subgroupid=370"
     # page = BaseWebPage(url)
     parser = MikanWebParser()
     start = time.time()

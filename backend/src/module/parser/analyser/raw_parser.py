@@ -156,7 +156,7 @@ class RawParser:
                 return season_list[0], season_info[0][0]
             # 如果是非可信季度信息，返回第一个有效的季度
             else:
-                if len(season_info[0]) ==1 and season_list[0] > 1:
+                if len(season_info[0]) ==1 and season_list[0] > 1 and season_list[0] < 5:
                     self.findall_sub_title(p.SEASON_PATTERN_UNTRUSTED)
                     return season_list[0], season_info[0]
 

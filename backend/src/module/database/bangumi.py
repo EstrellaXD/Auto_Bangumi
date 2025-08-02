@@ -66,7 +66,7 @@ class BangumiDatabase:
         self.session.commit()
         logger.debug(f"[Database] Insert {len(datas)} bangumi into database.")
 
-    def update(self, data: Bangumi, _id: int = None) -> bool:
+    def update(self, data: Bangumi|BangumiUpdate, _id: int = None) -> bool:
         if _id and isinstance(data, BangumiUpdate):
             db_data = self.session.get(Bangumi, _id)
         elif isinstance(data, Bangumi):

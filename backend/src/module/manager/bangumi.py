@@ -4,7 +4,7 @@ import logging
 from module.database import Database, engine
 from module.downloader import Client as DownlondClient
 from module.models import Bangumi, BangumiUpdate, Torrent
-from module.parser import TmdbParser,MikanParser
+from module.parser import TmdbParser, MikanParser
 from module.utils import gen_save_path
 from module.conf import settings
 from module.manager.torrent import TorrentManager
@@ -48,7 +48,7 @@ class BangumiManager:
         else:
             return False
 
-    async def rename(self, torrent:Torrent,bangumi:Bangumi|BangumiUpdate):
+    async def rename(self, torrent: Torrent, bangumi: Bangumi | BangumiUpdate):
         """重命名种子文件
         Args:
             torrent: 种子信息
@@ -89,13 +89,20 @@ class BangumiManager:
                 ):
                     # 名字改了, 年份改了, 季改了
                     # 名字改的时候,刷新一下海报
-                    if old_data.official_title != data.official_title:
-                        await self.tmdb_parser.poster_parser(data)
+                    if (
+                        old_data.official_title != data.official_title
+                        and data.parser == "tmdb"
+                    ):
+                        await self.refind_poster(data)
                     # Move torrent
                     with Database(engine) as db:
                         torrent_list = db.find_torrent_by_bangumi(old_data)
 
-                    hash_list = [torrent.download_uid for torrent in torrent_list]
+                    hash_list = [
+                        torrent.download_uid
+                        for torrent in torrent_list
+                        if torrent.download_uid
+                    ]
                     new_save_path = gen_save_path(settings.downloader.path, data)
                     if hash_list:
                         await DownlondClient.move_torrent(hash_list, new_save_path)
@@ -114,19 +121,26 @@ class BangumiManager:
             tasks = []
             for bangumi in bangumis:
                 if not bangumi.poster_link:
-                    tasks.append(self.tmdb_parser.poster_parser(bangumi))
+                    tasks.append(self.refind_poster(bangumi))
             await asyncio.gather(*tasks)
             db.bangumi.update_all(bangumis)
         return True
 
-    async def refind_poster(self, bangumi_id: int) -> bool:
+    async def refind_poster(self, bangumi: Bangumi | BangumiUpdate) -> bool:
+        poster_link = None
+        if bangumi.mikan_id and bangumi.parser == "mikan":
+            mikan_parser = MikanParser()
+            await mikan_parser.poster_parser(bangumi)
+        else:
+            poster_link = await self.tmdb_parser.poster_parser(bangumi)
+        if not poster_link:
+            logger.warning(
+                f"[Manager] Can't find poster for {bangumi.official_title}, please change it manually."
+            )
+            return False
         with Database() as db:
-            bangumi = db.bangumi.search_id(bangumi_id)
-            if bangumi:
-                await self.tmdb_parser.poster_parser(bangumi)
-                db.bangumi.update(bangumi)
-                return True
-        return False
+            db.bangumi.update(bangumi)
+        return True
 
     def search_all_bangumi(self):
         with Database() as db:

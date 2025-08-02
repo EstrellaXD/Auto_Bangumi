@@ -4,6 +4,9 @@ from sse_starlette.sse import EventSourceResponse
 from module.models import Bangumi
 from module.searcher import SEARCH_CONFIG, SearchTorrent
 from module.security.api import UNAUTHORIZED, get_current_user
+import logging
+
+logger = logging.getLogger("api.search")
 
 router = APIRouter(prefix="/search", tags=["search"])
 
@@ -17,6 +20,7 @@ async def search_torrents(site: str = "mikan", keywords: str = Query(None)):
     """
     # TODO: 是否要大于一定才开始
     if not keywords or len(keywords) < 2:
+        logger.warning(f"[API search_torrents] keywords too short: {keywords}")
         return []
     keywords: list[str] = keywords.split(" ")
 
@@ -25,8 +29,9 @@ async def search_torrents(site: str = "mikan", keywords: str = Query(None)):
     )
 
 
-@router.get( "/provider", response_model=list[str], dependencies=[Depends(get_current_user)])
-async def search_provider()->list[str]:
-    """从配置文件中获取支持的搜索引擎
-    """
+@router.get(
+    "/provider", response_model=list[str], dependencies=[Depends(get_current_user)]
+)
+async def search_provider() -> list[str]:
+    """从配置文件中获取支持的搜索引擎"""
     return list(SEARCH_CONFIG.keys())

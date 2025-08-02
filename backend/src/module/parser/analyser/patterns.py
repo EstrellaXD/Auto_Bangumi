@@ -133,8 +133,7 @@ SUB_RE = re.compile(
     |CHI
     |JA?P
     |GB
-    |HardSub
-    )
+    |HardSub)
     {BOUNDARY_END}
     """,
     re.VERBOSE,

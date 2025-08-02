@@ -3,14 +3,15 @@ from module.network import RequestContent
 import re
 from urllib3.util import parse_url
 
-from module.parser import  MikanParser, RawParser
+from module.parser import RawParser
+from module.parser.analyser import MikanWebParser
 
 
 class MikanSearch:
     def __init__(self, url: str):
         self.homepage = url
         self.root_path = parse_url(self.homepage).host
-        self.mikan_parser = MikanParser()
+        self.mikan_parser = MikanWebParser()
 
     async def search(self):
         async with RequestContent() as req:
@@ -19,7 +20,7 @@ class MikanSearch:
             return []
 
         poster_link = await self.mikan_parser.poster_parser(self.homepage)
-        #TODO: 对poster_link 进行处理
+        # TODO: 对poster_link 进行处理
         # https://mikanani.me/images/Bangumi/202407/7572c0f6.jpg?width=400&height=400&format=webp
         # 因为不同的图片大小可能会解析失败, 所以直接去掉 width 和 height
         soup = BeautifulSoup(content, "html.parser")
