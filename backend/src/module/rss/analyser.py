@@ -33,6 +33,7 @@ class RSSAnalyser:
                     return bangumi
                 bangumi.poster_link = parsered_bangumi.poster_link
                 bangumi.official_title = parsered_bangumi.official_title
+                bangumi.mikan_id = parsered_bangumi.mikan_id
             except AttributeError:
                 logger.warning("[Parser] Mikan torrent has no homepage info.")
         # else rss.parser == "tmdb":
@@ -48,6 +49,7 @@ class RSSAnalyser:
             bangumi.year = parsered_bangumi.year
             bangumi.season = parsered_bangumi.season
             bangumi.poster_link = parsered_bangumi.poster_link
+            bangumi.tmdb_id = parsered_bangumi.tmdb_id
         bangumi.official_title = re.sub(r"[/:.\\]", " ", bangumi.official_title)
         return bangumi
 

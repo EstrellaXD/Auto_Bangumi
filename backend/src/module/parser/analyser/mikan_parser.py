@@ -5,11 +5,11 @@ from urllib3.util import parse_url
 
 from module.utils import gen_poster_path
 from module.network import RequestContent
-from module.parser.analyser.raw_parser import RawParser
+from .raw_parser import RawParser
+from . import patterns
 from module.models import MikanInfo
 import logging
 
-# TODO:改进official_title 作为标识, tmdb有id, mikan也有bangumi id
 
 logger = logging.getLogger("mikan_parser")
 
@@ -39,10 +39,12 @@ class MikanWebParser:
 
             official_title = official_title.text
             eps_info = RawParser().parser(official_title)
+            title  = re.sub(patterns.SEASON_RE,"",official_title)
             mikan_info.id = mikan_id
-            mikan_info.official_title = eps_info.get_title()
+            mikan_info.official_title = title
             mikan_info.season = eps_info.season
             mikan_info.poster_link = await self.poster_parser(url)
+            logger.debug(f"[MikanWebParser] Parsed mikan info: {mikan_info}")
         return mikan_info
 
     async def poster_parser(self,url) -> str:
