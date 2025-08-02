@@ -90,16 +90,19 @@ class RSSAnalyser:
         )
         if exclude_filter and re.search(exclude_filter, torrent.name):
             logger.debug(
-                f"[RSS] Exclude torrent {torrent.name} for {bangumi.official_title},regex: {exclude_filter}"
+                f"[RSS Filter] Exclude torrent {torrent.name} for {bangumi.official_title},regex: {exclude_filter}"
             )
             return False
 
         # Check include filter first (if set, torrent must match)
         if include_filter and not re.search(include_filter, torrent.name):
             logger.debug(
-                f"[RSS] Include filter not matched for {torrent.name}, regex: {include_filter}"
+                f"[RSS Filter] Include filter not matched for {torrent.name}, regex: {include_filter}"
             )
             return False
+        logger.debug(
+            f"[RSS Filter] Torrent {torrent.name} passed filters for {bangumi.official_title}. include_filter: {include_filter}, exclude_filter: {exclude_filter}"
+        )
         return True
 
 

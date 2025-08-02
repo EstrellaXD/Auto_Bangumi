@@ -23,6 +23,7 @@ DEFAULT_SETTINGS = {
         "token": "",
         "enable_tmdb": False,
         "filter": ["720", "\\d+-\\d+"],
+        "include": [],
         "language": "zh",
     },
     "bangumi_manage": {
@@ -66,6 +67,7 @@ ENV_TO_ATTR = {
             ("custom_url", lambda e: urlparse(e).netloc),
         ],
         "AB_NOT_CONTAIN": ("filter", lambda e: e.split("|")),
+        "AB_CONTAIN": ("include", lambda e: e.split("|")),
         "AB_LANGUAGE": "language",
         "AB_ENABLE_TMDB": ("enable_tmdb", lambda e: e.lower() in ("true", "1", "t")),
     },

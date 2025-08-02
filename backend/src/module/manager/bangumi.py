@@ -4,7 +4,7 @@ import logging
 from module.database import Database, engine
 from module.downloader import Client as DownlondClient
 from module.models import Bangumi, BangumiUpdate, Torrent
-from module.parser import TmdbParser
+from module.parser import TmdbParser,MikanParser
 from module.utils import gen_save_path
 from module.conf import settings
 from module.manager.torrent import TorrentManager

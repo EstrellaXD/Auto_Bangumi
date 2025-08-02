@@ -52,7 +52,9 @@
     "parser_set": {
       "enable": "启用",
       "exclude": "排除",
+      "include": "包含",
       "language": "语言",
+      "mikan_custom_url": "自定义 Mikan 网址",
       "source": "数据源",
       "title": "解析设置",
       "token": "Token",

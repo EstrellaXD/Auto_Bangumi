@@ -78,7 +78,11 @@ class TrDownloader(Downloader):
 class RSSParser(BaseModel):
     enable: bool = Field(default=True, description="Enable RSS parser")
     filter: list[str] = Field(default=["720", r"\d+-\d"], description="Filter")
+    include: list[str] = Field(default=[], description="Include")
     language: str = "zh"
+    mikan_custom_url: str = Field(
+        default="mikanani.me", description="Mikan custom url"
+    )
 
 
 class BangumiManage(BaseModel):

@@ -135,31 +135,6 @@ i.moe%3a6969%2fannounce&tr=http%3a%2f%2fopen.acgtracker.com%3a1096%2fannounce&tr
                 filtered_tasks = []
                 for task in tasks:
                     print(task)
-                #     if status_filter == "completed" and task.get("state") == 2:
-                #         filtered_tasks.append(
-                #             {
-                #                 "hash": task.get("id"),
-                #                 "save_path": os.path.join(
-                #                     "/", category, task.get("name", "")
-                #                 ),
-                #                 "name": task.get("name", ""),
-                #                 "state": task.get("state"),
-                #                 "progress": task.get("progress", 0),
-                #             }
-                #         )
-                #     elif status_filter == "all":
-                #         filtered_tasks.append(
-                #             {
-                #                 "hash": task.get("id"),
-                #                 "save_path": os.path.join(
-                #                     "/", category, task.get("name", "")
-                #                 ),
-                #                 "name": task.get("name", ""),
-                #                 "state": task.get("state"),
-                #                 "progress": task.get("progress", 0),
-                #             }
-                #         )
-                # return filtered_tasks
             return []
         except Exception as e:
             self.handle_exception(e, "torrents_info")
@@ -180,7 +155,7 @@ i.moe%3a6969%2fannounce&tr=http%3a%2f%2fopen.acgtracker.com%3a1096%2fannounce&tr
             for url in urls:
                 data = {
                     "urls": [url],
-                    "path": os.path.join("/", category) if category else "/",
+                    "path": save_path,
                     "tool": "aria2",
                 }
 

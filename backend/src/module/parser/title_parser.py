@@ -96,6 +96,7 @@ class MikanParser(BaseParser):
 
         return Bangumi(
             official_title= mikan_info.official_title,
+            season= mikan_info.season,
             mikan_id= mikan_info.id,
             poster_link= mikan_info.poster_link,
         )
@@ -150,6 +151,7 @@ class RawParser(BaseParser):
                 eps_collect=False if episode.episode > 1 else True,
                 offset=0,
                 exclude_filter=",".join(settings.rss_parser.filter),
+                include_filter=",".join(settings.rss_parser.include),
             )
         except Exception as e:
             logger.debug(e)

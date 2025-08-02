@@ -121,6 +121,18 @@ class Database(Session):
 
                 # 只保留模型中存在的字段，为新字段设置默认值
                 migrated_dict = {}
+                
+                # 特殊处理 bangumi 表的字段映射
+                if table_name == "bangumi":
+                    # 处理 filter 字段到 exclude_filter 的映射
+                    if "filter" in item_dict and "exclude_filter" not in item_dict:
+                        item_dict["exclude_filter"] = item_dict["filter"]
+                        logger.debug(f"映射 filter 到 exclude_filter: {item_dict['filter']}")
+                    elif "filter" in item_dict and item_dict.get("exclude_filter", "") == "":
+                        # 如果 exclude_filter 为空，用 filter 的值
+                        item_dict["exclude_filter"] = item_dict["filter"]
+                        logger.debug(f"用 filter 覆盖空的 exclude_filter: {item_dict['filter']}")
+                
                 for field_name in model_fields:
                     if field_name == "id":
                         # 保留原有ID，如果没有则让数据库自动生成

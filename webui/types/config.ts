@@ -20,8 +20,10 @@ export interface Config {
     token: string;
     custom_url: string;
     filter: Array<string>;
+    include: Array<string>;
     language: 'zh' | 'en' | 'jp';
     parser_type: 'tmdb' | 'mikan' | 'parser';
+    mikan_custom_url: string;
   };
   bangumi_manage: {
     enable: boolean;
@@ -79,8 +81,10 @@ export const initConfig: Config = {
     token: '',
     custom_url: '',
     filter: [],
+    include: [],
     language: 'zh',
     parser_type: 'parser',
+    mikan_custom_url: 'mikanani.me',
   },
   bangumi_manage: {
     enable: true,

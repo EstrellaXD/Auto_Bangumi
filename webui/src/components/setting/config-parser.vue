@@ -29,6 +29,16 @@ const items: SettingItem<RssParser>[] = [
     label: () => t('config.parser_set.exclude'),
     type: 'dynamic-tags',
   },
+  {
+    configKey: 'include',
+    label: () => t('config.parser_set.include'),
+    type: 'dynamic-tags',
+  },
+  {
+    configKey: 'mikan_custom_url',
+    label: () => t('config.parser_set.mikan_custom_url'),
+    type: 'input',
+  },
 ];
 </script>
 

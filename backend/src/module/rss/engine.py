@@ -10,25 +10,6 @@ from module.parser import RawParser
 
 logger = logging.getLogger(__name__)
 
-
-# class RssBase:
-#     """
-#     实现一些 rss 的通用方法, 获取 rss url 对应的 torrents
-#     当传入 bangumi 时, 会使用 bangumi 的 rss_link 作为 url
-#     Attributes:
-#         torrent_cache (list[Torrent]): The cache of torrents.
-#         rss_item (RSSItem): The rss item.
-#         bangumi (Bangumi | None): The bangumi item.
-#     会用到 rss 的地方一共有 3 个
-#     1. 日常的刷新, 这时候只有 rss_item, 没有 bangumi
-#     2. 订阅, 这时候没有 rss_item, 有 bangumi
-#     3. 收集, 这时候没有 rss_item, 有 bangumi,但 不把 bangumi 放到 database 中
-#     4. eps, 有 rss_item, 有 bangumi
-#     5. 搜索, 有 rss_item
-#     当有 bangumi 时, 会使用 bangumi 的 rss_link 作为 url
-#     """
-#
-
 class BaseRefresh:
     def __init__(self, _engine=engine):
         self.engine = _engine
@@ -77,14 +58,12 @@ class RSSRefresh(BaseRefresh):
                         self.rss_item.url,
                         self.rss_item.aggregate,
                     )
-                    if bangumi:
-                        if not self.analyser.filer_torrent(torrent, bangumi):
+                    if bangumi and self.analyser.filer_torrent(torrent, bangumi):
                             ## 如果不符合过滤条件, 则跳过
-                            continue
-                        self.download_queue.add(torrent, bangumi)
-                        logger.debug(
-                            f"[RSS download_rss] Find bangumi {bangumi.official_title} by torrent {torrent.name}"
-                        )
+                            self.download_queue.add(torrent, bangumi)
+                            logger.debug(
+                                f"[RSS download_rss] Find bangumi {bangumi.official_title} by torrent {torrent.name}"
+                            )
 
                     else:
                         logger.debug(
@@ -172,22 +151,28 @@ class BangumiRefresher(BaseRefresh):
             if self.analyser.filer_torrent(torrent, self.bangumi):
                 # 订阅时可加入信息
                 # self.download_queue.add(torrent,self.bangumi)
+                logger.debug(f"[BangumiRefresher] Add torrent {torrent.name} to download queue for bangumi {self.bangumi.official_title}")
+                # 这里是最早加入 torrent.bang
                 new_torrents.append(torrent)
 
 
         return new_torrents
 
 
-#         # 对一个 rss_item 做一个假设, 认为一个 rss_link 里面 一部动漫只有一季
-#         # 由于无法知道当前的 rss 里面是否 bangumi 是否在,所以单个 rss 中能线性处理
-#         # 这样 相同的 official_title 就可以认为是一个动漫, 用 official_title 作为 key
-#         # 对于 collect and subscribe , 只有 bangumi, 唯一的区别是 subscribe 会 add 到 database
-#         # 日常的是只有 rss_item, 没有 bangumi
-#         # 整体流程是, 先拉取 rss_item 对应的 torrents
-#         # 如果 self.bangumi 为空, 则去 database 中找, 如果 database 中没有, 则进行一次解析
-#         # 如果 self.bangumi 不为空, 则将 torrents 放到 bangumi_torrents 中, 对应为 搜索, 订阅, 收集, 非聚合
-#
-#
+# 对一个 rss_item 做一个假设, 认为一个 rss_link 里面 一部动漫只有一季
+# 由于无法知道当前的 rss 里面是否 bangumi 是否在,所以单个 rss 中能线性处理
+# 这样 相同的 official_title 就可以认为是一个动漫, 用 official_title 作为 key
+# 对于 collect and subscribe , 只有 bangumi, 唯一的区别是 subscribe 会 add 到 database
+# 日常的是只有 rss_item, 没有 bangumi
+# 整体流程是, 先拉取 rss_item 对应的 torrents
+# 如果 self.bangumi 为空, 则去 database 中找, 如果 database 中没有, 则进行一次解析
+# 如果 self.bangumi 不为空, 则将 torrents 放到 bangumi_torrents 中, 对应为 搜索, 订阅, 收集, 非聚合
+#     会用到 rss 的地方一共有 3 个
+#     1. 日常的刷新, 这时候只有 rss_item, 没有 bangumi
+#     2. 订阅, 这时候没有 rss_item, 有 bangumi
+#     3. 收集, 这时候没有 rss_item, 有 bangumi,但 不把 bangumi 放到 database 中
+#     4. eps, 有 rss_item, 有 bangumi
+#     5. 搜索, 有 rss_item
 
 
 class RSSEngine:
@@ -206,10 +191,6 @@ class RSSEngine:
 
     7. eps 有 rss_item,有bangumi
     eps 是没有 保存rss_item的,主要是eps的rss和保存的rss不一致,不好找bangumi
-
-    放弃
-    8. 一个 rss cache , dict[rss_link,list[torrent_item], 到也不用太复杂, RSS都从 Engine 拿
-    内部维护一个就好了,如果有就说明这段时间请求过,
 
     9. 主要是用于整体刷新, 小的 eps 之类的用 RssRefresh
 
@@ -260,13 +241,13 @@ if __name__ == "__main__":
 
     async def test():
         test_rss = RSSItem(
-            url="https://mikanani.me/RSS/Bangumi?bangumiId=3661&subgroupid=583",
+            url="https://mikanani.me/RSS/Bangumi?bangumiId=3659&subgroupid=382",
             parser="mikan",
             aggregate=True,
         )
         test_refresh = RSSRefresh(rss_item=test_rss)
-        # await test_refresh.download_rss()
         await test_refresh.find_new_bangumi()
+        await test_refresh.download_rss()
 
     # async def test_engine():
     #     test_engine = RSSEngine()
