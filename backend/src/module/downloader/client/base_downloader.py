@@ -12,36 +12,43 @@ from typing import Any
 # 7. logout,用以登出
 #
 class BaseDownloader(metaclass=ABCMeta):
+    def __init__(self):
+        self.api_interval: float = 0.2
+
     @abstractmethod
-    async def auth(self)->bool:
+    async def auth(self) -> bool:
         pass
 
     @abstractmethod
-    async def check_host(self)->bool:
+    async def check_host(self) -> bool:
         pass
 
     @abstractmethod
-    async def logout(self)->bool:
+    async def logout(self) -> bool:
         pass
 
     @abstractmethod
-    async def get_torrent_files(self, hash)->list[str]:
-        pass
-    @abstractmethod
-    async def torrents_info(self, status_filter , category , tag, limit)->list[dict[str, Any]]:
+    async def get_torrent_files(self, hash) -> list[str]:
         pass
 
     @abstractmethod
-    async def rename(self, torrent_hash:str,old_path:str, new_path:str)->bool:
-        pass
-    @abstractmethod
-    async def move(self, hashes:str, new_location:str)->bool:
-        pass
-    @abstractmethod
-    async def add(self, torrent_urls, torrent_file, save_path, category)->str|None:
-        pass
-    @abstractmethod
-    async def delete(self, hashes:list[str]|str)->bool:
+    async def torrents_info(
+        self, status_filter, category, tag, limit
+    ) -> list[dict[str, Any]]:
         pass
 
+    @abstractmethod
+    async def rename(self, torrent_hash: str, old_path: str, new_path: str) -> bool:
+        pass
 
+    @abstractmethod
+    async def move(self, hashes: str, new_location: str) -> bool:
+        pass
+
+    @abstractmethod
+    async def add(self, torrent_url, save_path, category) -> str | None:
+        pass
+
+    @abstractmethod
+    async def delete(self, hashes: list[str] | str) -> bool:
+        pass

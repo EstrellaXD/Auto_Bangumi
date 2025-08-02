@@ -25,6 +25,7 @@ class AsyncApplicationCore:
         self._rename_monitor = None
         self._notification_monitor = None
         self._running: bool = False
+        self._initialized: bool = False
 
     async def initialize(self) -> None:
         """初始化应用核心"""
@@ -89,8 +90,8 @@ class AsyncApplicationCore:
             logger.info("[AsyncCore] 已注册 DownloadMonitor 事件处理器")
 
             # 创建并注册 RenameMonitor (仅在启用重命名功能时)
-            if settings.bangumi_manage.enable:
-                self._rename_monitor = RenameMonitor(event_bus=self.event_bus)
+            self._rename_monitor = RenameMonitor()
+            if self._rename_monitor.enabled:
                 await self._rename_monitor.initialize()
                 self.event_bus.subscribe(
                     EventType.DOWNLOAD_COMPLETED,
@@ -103,20 +104,16 @@ class AsyncApplicationCore:
 
             # 创建并注册 NotificationMonitor
             self._notification_monitor = NotificationMonitor(event_bus=self.event_bus)
-            await self._notification_monitor.initialize()
-            self.event_bus.subscribe(
-                EventType.NOTIFICATION_REQUEST,
-                self._notification_monitor.handle_notification_request,
-            )
-            logger.info("[AsyncCore] 已注册 NotificationMonitor 事件处理器")
-
-            # 为下载服务设置事件总线
-            for service in self.services:
-                if service.name == "download" and hasattr(
-                    service, "_download_controller"
-                ):
-                    service._download_controller.set_event_bus(self.event_bus)
-                    logger.debug("[AsyncCore] 已为下载服务设置事件总线")
+            if self._notification_monitor.enabled:
+                await self._notification_monitor.initialize()
+                self.event_bus.subscribe(
+                    EventType.NOTIFICATION_REQUEST,
+                    self._notification_monitor.handle_notification_request,
+                )
+                logger.info("[AsyncCore] 已注册 NotificationMonitor 事件处理器")
+            else:
+                logger.info("[AsyncCore] 通知功能已禁用，跳过 NotificationMonitor 注册")
+                return
 
         except Exception as e:
             logger.error(f"[AsyncCore] 注册事件处理器失败: {e}")

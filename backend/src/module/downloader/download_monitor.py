@@ -59,8 +59,8 @@ class DownloadMonitor:
             return
 
         # 等待30秒让种子准备好，避免过早删除
-        logger.debug(f"[DownloadMonitor] 等待30秒让种子准备: {torrent.name}")
-        await asyncio.sleep(30)
+        logger.debug(f"[DownloadMonitor] 等待60秒让种子准备: {torrent.name}")
+        await asyncio.sleep(60)
         await self.start_monitoring(torrent.download_uid, bangumi, torrent)
 
     async def start_monitoring(
@@ -80,11 +80,11 @@ class DownloadMonitor:
         # 创建监控任务
         task = asyncio.create_task(
             self.monitor_torrent( bangumi, torrent),
-            name=f"monitor_{torrent_hash[:8]}",
+            name=f"monitor_{torrent_hash}",
         )
 
         self.monitoring_tasks[torrent_hash] = task
-        logger.info(f"[DownloadMonitor] 开始监控种子: {torrent.name}")
+        logger.debug(f"[DownloadMonitor] 开始监控种子: {torrent.name}")
 
     async def monitor_torrent(
         self, bangumi: Bangumi, torrent: Torrent
@@ -114,7 +114,7 @@ class DownloadMonitor:
                     try:
                         with Database() as db:
                                 db.torrent.delete_by_url(torrent.url)
-                                logger.info(f"[DownloadMonitor] 已从数据库删除种子记录: {torrent.name}")
+                                logger.debug(f"[DownloadMonitor] 已从数据库删除种子记录: {torrent.name}")
                     except Exception as e:
                         logger.error(f"[DownloadMonitor] 删除数据库记录失败: {e}")
                     break
@@ -135,7 +135,7 @@ class DownloadMonitor:
                 # 检查是否下载完成
                 if info.completed != 0:
                     logger.debug(f"[DownloadMonitor] 种子 {torrent.name} 下载状态: 已完成 {info.completed}")
-                    logger.info(f"[DownloadMonitor] 种子下载完成: {torrent.name}")
+                    logger.debug(f"[DownloadMonitor] 种子下载完成: {torrent.name}")
 
                     # 发布下载完成事件
                     await self._publish_download_completed(torrent, bangumi)
@@ -199,7 +199,7 @@ class DownloadMonitor:
         task = self.monitoring_tasks.get(torrent_hash)
         if task:
             task.cancel()
-            logger.info(f"[DownloadMonitor] 停止监控种子: {torrent_hash}")
+            logger.debug(f"[DownloadMonitor] 停止监控种子: {torrent_hash}")
             return True
         return False
 

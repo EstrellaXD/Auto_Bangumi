@@ -76,7 +76,6 @@ class RSSService(BaseService):
         return {
             "name": "rss_refresh",
             "interval": settings.program.rss_time,
-            "max_retries": 0,
             "enabled": True,
         }
 
@@ -109,7 +108,7 @@ class DownloadService(BaseService):
         try:
             from module.downloader import Client, DownloadController
 
-            Client.start_login()
+            Client.start()
 
             self._download_controller = DownloadController()
 
@@ -142,10 +141,6 @@ class DownloadService(BaseService):
             logger.error(f"[DownloadService] 执行失败: {e}")
             raise ServiceException("download", f"执行失败: {e}")
 
-    def set_event_bus(self, event_bus):
-        if not self._download_controller:
-            raise ServiceException("download", "下载控制器未初始化")
-        self._download_controller.set_event_bus(event_bus)
 
     async def cleanup(self) -> None:
         """清理下载客户端"""

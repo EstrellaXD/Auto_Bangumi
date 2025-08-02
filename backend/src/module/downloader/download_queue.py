@@ -4,6 +4,7 @@ import logging
 from module.database import Database,engine
 from module.utils.events import Event, EventType, EventBus
 from module.downloader.download_client import Client as client
+from module.utils import event_bus
 from module.models import Bangumi, Torrent
 
 logger = logging.getLogger(__name__)
@@ -32,11 +33,8 @@ class DownloadQueue:
 
 class DownloadController:
     def __init__(self):
-        self._event_bus = None
-
-    def set_event_bus(self, event_bus: EventBus):
-        """设置事件总线"""
         self._event_bus = event_bus
+
 
     # 10秒拿5个
     async def download(self):

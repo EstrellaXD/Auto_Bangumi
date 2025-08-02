@@ -11,6 +11,7 @@ class Config(BaseModel):
     password: str = Field(
         default="adminadmin", alias="password", description="Downloader password"
     )
+    api_interval: int = Field( default=-1, alias="api_interval", description="Downloader API interval in seconds")
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ from module.utils.events import Event, EventType, EventBus
 from module.manager import Renamer
 from module.models import Bangumi, Torrent
 from module.database import Database
+from module.utils import event_bus
 
 logger = logging.getLogger(__name__)
 
@@ -16,17 +17,20 @@ class RenameMonitor:
     监听下载完成事件，触发重命名操作，并在完成后发布重命名完成事件
     """
 
-    def __init__(self, event_bus: EventBus | None = None):
-        self._event_bus: EventBus | None = event_bus
-        self._renamer: Renamer | None = None
+    def __init__(self):
+        self._event_bus: EventBus  = event_bus
         self._initialized:bool = False
         # 存储活跃的重命名任务 {torrent_hash: asyncio.Task}
         self.active_rename_tasks: dict[str, asyncio.Task] = {}
 
+    @property
+    def enabled(self) -> bool:
+        """检查重命名监控器是否启用"""
+        return settings.bangumi_manage.enable
+
     async def initialize(self) -> None:
         """初始化重命名器"""
         if not self._initialized:
-            self._renamer = Renamer()
             self._initialized = True
             logger.info("[RenameMonitor] 初始化完成")
 
@@ -36,7 +40,7 @@ class RenameMonitor:
         Args:
             event: 下载完成事件，包含torrent和bangumi信息
         """
-        if not self._initialized or not self._renamer:
+        if not self._initialized :
             logger.error("[RenameMonitor] 服务未初始化")
             return
 
@@ -82,16 +86,13 @@ class RenameMonitor:
             torrent: 种子信息
             bangumi: 番剧信息
         """
-        if self._renamer is None:
-            logger.error("[RenameMonitor] 重命名器未初始化")
-            return
 
         torrent_hash = torrent.download_uid
         try:
             logger.info(f"[RenameMonitor] 执行重命名: {torrent.name}")
 
             # 执行重命名
-            await self._renamer.rename_torrent(torrent, bangumi)
+            await Renamer().rename_torrent(torrent, bangumi)
 
         except asyncio.CancelledError:
             logger.info(f"[RenameMonitor] 重命名任务被取消: {torrent.name}")

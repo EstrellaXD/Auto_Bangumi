@@ -97,6 +97,9 @@ class TorrentDatabase:
         for torrent in torrents_list:
             torrent_item = self.search_by_url(torrent.url)
             if not torrent_item or not torrent_item.downloaded:
+                logger.debug(
+                    f"[TorrentDatabase] New torrent found: {torrent.name} with url: {torrent.url}"
+                )
                 new_torrents.append(torrent)
         return new_torrents
 

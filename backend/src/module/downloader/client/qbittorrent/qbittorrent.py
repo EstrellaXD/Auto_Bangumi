@@ -40,6 +40,7 @@ class Downloader(BaseDownloader):
             base_url=self.config.host,
             trust_env=settings.downloader.ssl
         )
+        self.api_interval = 0.2
 
 
     @property
@@ -199,12 +200,12 @@ class Downloader(BaseDownloader):
             return []
 
     @override
-    async def add(self, torrent_urls, torrent_file, save_path, category) -> str | None:
+    async def add(self, torrent_url, save_path, category) -> str | None:
         """
         会收到 downloader 的标识,qbittorretn 是 hash, alist 是一个标识
         """
         data = {
-            "urls": torrent_urls,
+            "urls": torrent_url,
             "savepath": save_path,
             "category": category,
             "paused": False,
@@ -213,8 +214,8 @@ class Downloader(BaseDownloader):
         file = None
         torrent_link = ""
         async with RequestContent() as req:
-            if torrent_file := await req.get_content(torrent_urls):
-                torrent_link = await req.get_torrent_hash(torrent_urls)
+            if torrent_file := await req.get_content(torrent_url):
+                torrent_link = await req.get_torrent_hash(torrent_url)
                 file = {"torrents": torrent_file}
         try:
             resp = await self._client.post(

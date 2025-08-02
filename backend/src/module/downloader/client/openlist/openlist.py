@@ -1,16 +1,19 @@
+import datetime
 import logging
 import os
 
 import httpx
 from typing_extensions import override
-import datetime
 
 from module.conf import get_plugin_config
+from module.models import TorrentDownloadInfo
 
 from ....conf import settings
 from ..base_downloader import BaseDownloader
 from ..expection import AuthorizationError
 from .config import Config as DownloaderConfig
+from module.utils import get_hash
+
 
 logger = logging.getLogger(__name__)
 
@@ -45,14 +48,14 @@ class Downloader(BaseDownloader):
         self.password: str = self.config.password
         self.headers = {
             "Authorization": f"{self.password}",
-        }       
+        }
+        self.api_interval: int = 1
         self.ssl: bool = settings.downloader.ssl
         self._client: httpx.AsyncClient = httpx.AsyncClient(
             base_url=self.host,
             # trust_env=self.ssl,
             headers=self.headers,
         )
-
 
     @override
     async def auth(self) -> bool:
@@ -71,32 +74,37 @@ class Downloader(BaseDownloader):
             )
             resp.raise_for_status()
             if resp.status_code == 200:
-                logger.debug(f"[alist] Successfully connected to {self.host}")
+                logger.debug(f"[openlist] Successfully connected to {self.host}")
                 return True
         except (httpx.ConnectError, httpx.TimeoutException, httpx.ReadTimeout) as e:
             logger.error(
-                f"[alist] Check host error, please check your host {self.host}"
+                f"[openlist] Check host error, please check your host {self.host}"
             )
-            logger.debug(f"[alist] Check host error: {e}")
+            logger.debug(f"[openlist] Check host error: {e}")
 
         return False
 
-    async def torrent_info(self, hash: str) -> list[str]:
+    async def torrent_info(self, hash: str) -> TorrentDownloadInfo:
+
+        # TODO:
+        #
+        res = TorrentDownloadInfo(eta = 0, save_path=settings.downloader.path,completed=1)
+        return res
         """
-            {'id': 'CImUQ9ZzMsBc5JB3G4EyH', 
-         'name': 'download magnet:?xt=urn:btih:96733a847f1de1c01f524ad6983a4f8b39ee5bfb&tr=http%3a%2f%2ft.nyaatracker.com%2fannounce&t
-r=http%3a%2f%2ftracker.kamigami.org%3a2710%2fannounce&tr=http%3a%2f%2fshare.camoe.cn%3a8080%2fannounce&tr=http%3a%2f%2fopentracker.acgnx.se%2fannounce&tr=htt
-p%3a%2f%2fanidex.moe%3a6969%2fannounce&tr=http%3a%2f%2ft.acg.rip%3a6699%2fannounce&tr=https%3a%2f%2ftr.bangumi.moe%3a9696%2fannounce&tr=udp%3a%2f%2ftr.bangum
-i.moe%3a6969%2fannounce&tr=http%3a%2f%2fopen.acgtracker.com%3a1096%2fannounce&tr=udp%3a%2f%2ftracker.opentrackr.org%3a1337%2fannounce to (/115/游戏)',
-         'creat or': 'shino',
-         'creator_role': 2,
-         'state': 2,
-         'status': '[115 Cloud]: 离线下载完成',
-         'progress': 100,
-         'start_time': '2025-06-27T01:48:31.5065372Z',
-         'end_time' : '2025-06-27T01:48:48.514764101Z',
-         'total_bytes': 238636042,
-         'error': ''}
+                    {'id': 'CImUQ9ZzMsBc5JB3G4EyH',
+                 'name': 'download magnet:?xt=urn:btih:96733a847f1de1c01f524ad6983a4f8b39ee5bfb&tr=http%3a%2f%2ft.nyaatracker.com%2fannounce&t
+        r=http%3a%2f%2ftracker.kamigami.org%3a2710%2fannounce&tr=http%3a%2f%2fshare.camoe.cn%3a8080%2fannounce&tr=http%3a%2f%2fopentracker.acgnx.se%2fannounce&tr=htt
+        p%3a%2f%2fanidex.moe%3a6969%2fannounce&tr=http%3a%2f%2ft.acg.rip%3a6699%2fannounce&tr=https%3a%2f%2ftr.bangumi.moe%3a9696%2fannounce&tr=udp%3a%2f%2ftr.bangum
+        i.moe%3a6969%2fannounce&tr=http%3a%2f%2fopen.acgtracker.com%3a1096%2fannounce&tr=udp%3a%2f%2ftracker.opentrackr.org%3a1337%2fannounce to (/115/游戏)',
+                 'creat or': 'shino',
+                 'creator_role': 2,
+                 'state': 2,
+                 'status': '[115 Cloud]: 离线下载完成',
+                 'progress': 100,
+                 'start_time': '2025-06-27T01:48:31.5065372Z',
+                 'end_time' : '2025-06-27T01:48:48.514764101Z',
+                 'total_bytes': 238636042,
+                 'error': ''}
         """
         parmas = {"tid": hash}
         try:
@@ -116,6 +124,11 @@ i.moe%3a6969%2fannounce&tr=http%3a%2f%2fopen.acgtracker.com%3a1096%2fannounce&tr
             return []
 
     @override
+    async def get_torrent_files(self, hash: str) -> list[str] | None:
+        # TODO:
+        return []
+
+    @override
     async def torrents_info(
         self,
         status_filter: str = "completed",
@@ -123,6 +136,7 @@ i.moe%3a6969%2fannounce&tr=http%3a%2f%2fopen.acgtracker.com%3a1096%2fannounce&tr
         tag: str | None = None,
         limit: int = 0,
     ):
+        return []
         try:
             data = {"page": 1, "per_page": limit if limit > 0 else 100}
             resp = await self._client.get(
@@ -141,45 +155,65 @@ i.moe%3a6969%2fannounce&tr=http%3a%2f%2fopen.acgtracker.com%3a1096%2fannounce&tr
             return []
 
     @override
-    async def add(self, torrent_urls, torrent_files, save_path, category) -> bool:
+    async def add(self, torrent_url: str, save_path, category) -> str | bool:
         try:
-            if not torrent_urls and not torrent_files:
+            save_path = settings.downloader.path
+            if not torrent_url:
                 return False
 
-            urls = (
-                torrent_urls
-                if isinstance(torrent_urls, list)
-                else [torrent_urls] if torrent_urls else []
+            torrent_hash = get_hash(torrent_url)
+            torrent_url = f"magnet:?xt=urn:btih:{torrent_hash}"
+            data = {
+                "urls": [torrent_url],
+                "path": save_path,
+                "tool": "115 Cloud",
+            }
+
+            resp = await self._client.post(
+                url=ALIST_API_URL["add_offline"],
+                json=data,
             )
+            resp.raise_for_status()
+            result = resp.json()
+            #         {
+            #     "code": 200,
+            #     "message": "success",
+            #     "data": {
+            #         "tasks": [
+            #             {
+            #                 "id": "KYIDxrZZJ9fiympt2m-CE",
+            #                 "name": "download magnet:?xt=urn:btih:9060b224735b3d152772f253c6b22b9f20fa158b\u0026tr=http%3a%2f%2ft.nyaatracker.com%2fannounce\u0026tr=http%3a%2f%2ftracker.kamigami.org%3a2710%2fannounce\u0026tr=http%3a%2f%2fshare.camoe.cn%3a8080%2fannounce\u0026tr=http%3a%2f%2fopentracker.acgnx.se%2fannounce\u0026tr=http%3a%2f%2fanidex.moe%3a6969%2fannounce\u0026tr=http%3a%2f%2ft.acg.rip%3a6699%2fannounce\u0026tr=https%3a%2f%2ftr.bangumi.moe%3a9696%2fannounce\u0026tr=udp%3a%2f%2ftr.bangumi.moe%3a6969%2fannounce\u0026tr=http%3a%2f%2fopen.acgtracker.com%3a1096%2fannounce\u0026tr=udp%3a%2f%2ftracker.opentrackr.org%3a1337%2fannounce to (/115/视频/缓冲)",
+            #                 "creator": "shino",
+            #                 "creator_role": 2,
+            #                 "state": 0,
+            #                 "status": "",
+            #                 "progress": 0,
+            #                 "start_time": null,
+            #                 "end_time": null,
+            #                 "total_bytes": 0,
+            #                 "error": ""
+            #             }
+            #         ]
+            #     }
+            # }
+            logger.debug(f"[openlist] add torrent result: {result['data']['tasks']}")
 
-            for url in urls:
-                data = {
-                    "urls": [url],
-                    "path": save_path,
-                    "tool": "aria2",
-                }
-
-                resp = await self._client.post(
-                    url=ALIST_API_URL["add_offline"],
-                    json=data,
+            if result.get("code") != 200:
+                logger.error(
+                    f"[openlist] add torrent failed: {result.get('message', 'Unknown error')}"
                 )
-                resp.raise_for_status()
-                result = resp.json()
+                return False
 
-                if result.get("code") != 200:
-                    logger.error(
-                        f"[alist] add torrent failed: {result.get('message', 'Unknown error')}"
-                    )
-                    return False
-
-            logger.debug(f"[alist] Successfully added {len(urls)} torrent(s)")
-            return True
+            logger.debug(f"[openlist] Successfully added torrent: {torrent_url}")
+            return result["data"]["tasks"][0]["id"] if result["data"]["tasks"] else False
         except Exception as e:
             self.handle_exception(e, "add")
             return False
 
     @override
     async def delete(self, hashes: list[str] | str) -> bool:
+        # TODO:
+        return True
         try:
             if isinstance(hashes, str):
                 hashes = [hashes]
@@ -194,7 +228,7 @@ i.moe%3a6969%2fannounce&tr=http%3a%2f%2fopen.acgtracker.com%3a1096%2fannounce&tr
 
                 if result.get("code") != 200:
                     logger.error(
-                        f"[alist] delete torrent {hash_id} failed: {result.get('message', 'Unknown error')}"
+                        f"[openlist] delete torrent {hash_id} failed: {result.get('message', 'Unknown error')}"
                     )
                     return False
 
@@ -205,6 +239,8 @@ i.moe%3a6969%2fannounce&tr=http%3a%2f%2fopen.acgtracker.com%3a1096%2fannounce&tr
 
     @override
     async def rename(self, torrent_hash: str, old_path: str, new_path: str) -> bool:
+        #TODO:
+        return True
         try:
             data = {
                 "path": old_path,
@@ -218,11 +254,13 @@ i.moe%3a6969%2fannounce&tr=http%3a%2f%2fopen.acgtracker.com%3a1096%2fannounce&tr
             result = resp.json()
 
             if result.get("code") == 200:
-                logger.debug(f"[alist] Successfully renamed {old_path} to {new_path}")
+                logger.debug(
+                    f"[openlist] Successfully renamed {old_path} to {new_path}"
+                )
                 return True
             else:
                 logger.error(
-                    f"[alist] rename failed: {result.get('message', 'Unknown error')}"
+                    f"[openlist] rename failed: {result.get('message', 'Unknown error')}"
                 )
                 return False
         except Exception as e:
@@ -231,6 +269,8 @@ i.moe%3a6969%2fannounce&tr=http%3a%2f%2fopen.acgtracker.com%3a1096%2fannounce&tr
 
     @override
     async def move(self, hashes, new_location) -> bool:
+        #TODO:
+        return True
         try:
             if isinstance(hashes, list):
                 hashes = "|".join(hashes)
@@ -256,7 +296,7 @@ i.moe%3a6969%2fannounce&tr=http%3a%2f%2fopen.acgtracker.com%3a1096%2fannounce&tr
 
                     if result.get("code") != 200:
                         logger.error(
-                            f"[alist] move {old_path} to {new_location} failed: {result.get('message', 'Unknown error')}"
+                            f"[openlist] move {old_path} to {new_location} failed: {result.get('message', 'Unknown error')}"
                         )
                         return False
 
@@ -266,6 +306,8 @@ i.moe%3a6969%2fannounce&tr=http%3a%2f%2fopen.acgtracker.com%3a1096%2fannounce&tr
             return False
 
     async def create_folder(self, path: str) -> bool:
+        # TODO:
+        return True
         try:
             data = {"path": path}
             resp = await self._client.post(
@@ -276,11 +318,11 @@ i.moe%3a6969%2fannounce&tr=http%3a%2f%2fopen.acgtracker.com%3a1096%2fannounce&tr
             result = resp.json()
 
             if result.get("code") == 200:
-                logger.debug(f"[alist] Successfully created folder {path}")
+                logger.debug(f"[openlist] Successfully created folder {path}")
                 return True
             else:
                 logger.error(
-                    f"[alist] create folder failed: {result.get('message', 'Unknown error')}"
+                    f"[openlist] create folder failed: {result.get('message', 'Unknown error')}"
                 )
                 return False
         except Exception as e:
@@ -290,12 +332,12 @@ i.moe%3a6969%2fannounce&tr=http%3a%2f%2fopen.acgtracker.com%3a1096%2fannounce&tr
     def handle_exception(self, e, function_name):
         if isinstance(e, httpx.HTTPStatusError):
             if e.response.status_code == 401:
-                logger.error(f"[alist] {function_name} need authentication")
+                logger.error(f"[openlist] {function_name} need authentication")
                 raise AuthorizationError(function_name)
             elif e.response.status_code == 403:
-                logger.error(f"[alist] {function_name} forbidden")
+                logger.error(f"[openlist] {function_name} forbidden")
                 raise AuthorizationError(function_name)
             else:
-                logger.error(f"[alist] {function_name} error: {e}")
+                logger.error(f"[openlist] {function_name} error: {e}")
         else:
-            logger.error(f"[alist] {function_name} error: {e}")
+            logger.error(f"[openlist] {function_name} error: {e}")

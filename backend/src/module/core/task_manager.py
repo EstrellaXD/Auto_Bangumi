@@ -75,7 +75,6 @@ class TaskManager:
             try:
                 # 执行任务
                 await coro_func()
-                task_info.error_count = 0  # 重置错误计数
                 task_info.last_run = asyncio.get_event_loop().time()
 
             except Exception as e:

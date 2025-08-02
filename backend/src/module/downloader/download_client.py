@@ -128,7 +128,7 @@ class DownloadClient:
         self._last_api_call: float = 0
         self._api_cancel_event: asyncio.Event = asyncio.Event()
         self._waiting_api_tasks: set[int] = set()  # 追踪等待中的API任务
-        self.api_interval: float = -1  # 默认1秒间隔
+        self.api_interval: float = self.downloader.api_interval  # 默认1秒间隔
         self.is_authenticating:bool = False  # 重置认证状态
 
     async def login(self):
@@ -204,13 +204,11 @@ class DownloadClient:
             return False  # 登录失败时返回False
 
         try:
-            torrent_file = None
             torrent_url = torrent.url
             logging.debug(f"[Downloader] send url {torrent_url}to downloader ")
 
             result = await self.downloader.add(
-                torrent_urls=torrent_url,
-                torrent_file=torrent_file,
+                torrent_url=torrent_url,
                 save_path= gen_save_path(settings.downloader.path, bangumi),
                 category="Bangumi",
             )
@@ -323,6 +321,7 @@ class DownloadClient:
 
     def start(self):
         # 判断有没有 login task
+        self.reset_api_cancel()  # 重置API取消状态
         self.start_login()
 
     def cancel_all_api_calls(self):
@@ -347,13 +346,6 @@ class DownloadClient:
         if self.login_task:
             self.login_task.cancel()
 
-    async def restart(self):
-        logger.info("[Download Client] Restarting download client")
-        await self.stop()
-        self.reset_api_cancel()  # 重置API取消状态
-        # 重置认证状态，允许重新尝试认证
-        self.start()
-
     async def check_host(self) -> bool:
         return await self.downloader.check_host()
 
@@ -365,8 +357,9 @@ if __name__ == "__main__":
     import asyncio
 
     from module.conf import setup_logger
+    from module.models import Bangumi
 
-    # setup_logger("DEBUG", reset=True)
+    setup_logger("DEBUG", reset=True)
 
     download_client = Client
     torrent_hash = "e4d2134ff46ee5b8d729318def73fa19993c36d6"
@@ -374,4 +367,9 @@ if __name__ == "__main__":
         info = await download_client.get_torrent_info(torrent_hash)
         print(info)
 
-    asyncio.run(test_one_time_login())
+    async def test_add_torrent():
+        torrent = Torrent(name="Test Torrent", url="magnet:?xt=urn:btih:35c8bb80d15877040c7d2e94223fd57fa2f3504b&tr=http%3a%2f%2ft.nyaatracker.com%2fannounce&tr=http%3a%2f%2ftracker.kamigami.org%3a2710%2fannounce&tr=http%3a%2f%2fshare.camoe.cn%3a8080%2fannounce&tr=http%3a%2f%2fopentracker.acgnx.se%2fannounce&tr=http%3a%2f%2fanidex.moe%3a6969%2fannounce&tr=http%3a%2f%2ft.acg.rip%3a6699%2fannounce&tr=https%3a%2f%2ftr.bangumi.moe%3a9696%2fannounce&tr=udp%3a%2f%2ftr.bangumi.moe%3a6969%2fannounce&tr=http%3a%2f%2fopen.acgtracker.com%3a1096%2fannounce&tr=udp%3a%2f%2ftracker.opentrackr.org%3a1337%2fannounce")
+        result = await download_client.add_torrent(torrent, Bangumi())
+        print(f"Add torrent result: {result}")
+
+    asyncio.run(test_add_torrent())

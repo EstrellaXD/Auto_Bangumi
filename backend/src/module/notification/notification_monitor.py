@@ -4,6 +4,7 @@ from typing import Any
 from collections import defaultdict
 
 from module.models import Notification
+from module.conf import settings
 from module.notification import PostNotification
 from module.utils.events import Event, EventType, EventBus
 
@@ -20,6 +21,12 @@ class NotificationMonitor:
         self._event_bus: EventBus | None = event_bus
         self._notification_sender = PostNotification()
         self._running = False
+
+
+    @property
+    def enabled(self) -> bool:
+        """检查通知监控器是否启用"""
+        return settings.notification.enable
 
     async def initialize(self):
         """初始化通知监控器"""

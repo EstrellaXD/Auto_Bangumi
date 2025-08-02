@@ -65,11 +65,15 @@ class Program:
 
     async def stop(self):
         if self.program_status.is_running:
+            logger.info("[Program] stopping application core...")
             await self.app_core.stop()
+            logger.info("[Program] application core stopped.")
             return True
 
     async def restart(self) -> bool:
+        logger.info("[Program] waiting for application  stop...")
         await self.stop()
+        logger.info("[Program] application stopped, starting again...")
         # 重置任务状态，确保重启时能重新启动任务
         self.app_core.task_manager.reset_tasks_state()
         await self.start()

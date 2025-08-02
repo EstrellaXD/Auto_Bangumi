@@ -23,7 +23,6 @@ class RSSManager:
                 if not name:
                     return False
 
-
         rss_data = RSSItem(name=name, url=rss_link, aggregate=aggregate, parser=parser)
         logger.debug(f"[RSSManager] Adding RSS: {rss_data}")
 
