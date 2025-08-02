@@ -47,24 +47,24 @@ class BangumiDatabase:
         bangumi = self.session.exec(statement).first()
         if bangumi:
             if data.title_raw in bangumi.title_raw:
-                logger.debug(
-                    f"[Database] {data.official_title} has inserted into database."
-                )
+                # logger.debug(
+                #     f"[Database] {data.official_title} has inserted into database."
+                # )
                 return False
             bangumi.title_raw += f",{data.title_raw}"
             data = bangumi
-            logger.debug(f"[Database] update {data.official_title}")
+            # logger.debug(f"[Database] update {data.official_title}")
 
         self.session.add(data)
         self.session.commit()
         self.session.refresh(data)
-        logger.debug(f"[Database] Insert {data.official_title} into database.")
+        # logger.debug(f"[Database] Insert {data.official_title} into database.")
         return True
 
     def add_all(self, datas: list[Bangumi]):
         self.session.add_all(datas)
         self.session.commit()
-        logger.debug(f"[Database] Insert {len(datas)} bangumi into database.")
+        # logger.debug(f"[Database] Insert {len(datas)} bangumi into database.")
 
     def update(self, data: Bangumi|BangumiUpdate, _id: int = None) -> bool:
         if _id and isinstance(data, BangumiUpdate):
@@ -81,13 +81,13 @@ class BangumiDatabase:
         self.session.add(db_data)
         self.session.commit()
         self.session.refresh(db_data)
-        logger.debug(f"[Database] Update {data.official_title}")
+        # logger.debug(f"[Database] Update {data.official_title}")
         return True
 
     def update_all(self, datas: list[Bangumi]):
         self.session.add_all(datas)
         self.session.commit()
-        logger.debug(f"[Database] Update {len(datas)} bangumi.")
+        # logger.debug(f"[Database] Update {len(datas)} bangumi.")
 
 
 
@@ -96,7 +96,7 @@ class BangumiDatabase:
         bangumi = self.session.exec(statement).first()
         self.session.delete(bangumi)
         self.session.commit()
-        logger.debug(f"[Database] Delete bangumi id: {_id}.")
+        # logger.debug(f"[Database] Delete bangumi id: {_id}.")
 
     def delete_all(self):
         statement = delete(Bangumi)
@@ -129,19 +129,19 @@ class BangumiDatabase:
         statement = select(Bangumi).where(Bangumi.id == _id)
         bangumi = self.session.exec(statement).first()
         if bangumi is None:
-            logger.warning(f"[Database] Cannot find bangumi id: {_id}.")
+            # logger.warning(f"[Database] Cannot find bangumi id: {_id}.")
             return None
         else:
-            logger.debug(f"[Database] Find bangumi id: {_id}.")
+            # logger.debug(f"[Database] Find bangumi id: {_id}.")
             return self.session.exec(statement).first()
 
     def search_official_title(self, official_title: str) -> Bangumi | None:
         statement = select(Bangumi).where(Bangumi.official_title == official_title)
         bangumi = self.session.exec(statement).first()
         if bangumi is None:
-            logger.warning(
-                f"[Database] Cannot find bangumi official_title: {official_title}."
-            )
+            # logger.warning(
+            #     f"[Database] Cannot find bangumi official_title: {official_title}."
+            # )
             return None
         return self.session.exec(statement).first()
 

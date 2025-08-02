@@ -26,7 +26,6 @@ def api_rate_limit(func):
         try:
             # 在获取锁前先检查是否已被取消
             if self._api_cancel_event.is_set():
-                logger.info(f"[API Rate Limit] {func.__name__} cancelled before lock")
                 raise asyncio.CancelledError("API call cancelled")
 
             # 可取消的锁获取 - 等待锁或取消信号
@@ -47,9 +46,6 @@ def api_rate_limit(func):
                     # 如果锁已经获取，需要释放
                     if lock_task.done() and not lock_task.cancelled():
                         self._api_lock.release()
-                    logger.info(
-                        f"[API Rate Limit] {func.__name__} cancelled while waiting for lock"
-                    )
                     raise asyncio.CancelledError("API call cancelled")
 
                 # 成功获取锁
@@ -61,16 +57,13 @@ def api_rate_limit(func):
 
                 if self.api_interval >= 0 and time_since_last < self.api_interval:
                     wait_time = self.api_interval - time_since_last
-                    logger.debug(
-                        f"[API Rate Limit] {func.__name__} waiting {wait_time:.2f}s"
-                    )
 
                     # 可中断的等待
+                    sleep_task = asyncio.create_task(asyncio.sleep(wait_time))
+                    cancel_task = asyncio.create_task(self._api_cancel_event.wait())
+                    
                     done, pending = await asyncio.wait(
-                        [
-                            asyncio.create_task(asyncio.sleep(wait_time)),
-                            asyncio.create_task(self._api_cancel_event.wait()),
-                        ],
+                        [sleep_task, cancel_task],
                         return_when=asyncio.FIRST_COMPLETED,
                     )
 
@@ -80,9 +73,6 @@ def api_rate_limit(func):
 
                     # 检查是否被取消
                     if self._api_cancel_event.is_set():
-                        logger.info(
-                            f"[API Rate Limit] {func.__name__} cancelled during sleep"
-                        )
                         raise asyncio.CancelledError("API call cancelled")
 
                 # 调用原函数
@@ -98,7 +88,6 @@ def api_rate_limit(func):
                 self._api_lock.release()
 
         except asyncio.CancelledError:
-            logger.info(f"[API Rate Limit] {func.__name__} was cancelled")
             raise
         except Exception as e:
             logger.error(f"[API Rate Limit] {func.__name__} error: {e}")
@@ -191,14 +180,20 @@ class DownloadClient:
 
         # 如果未认证且未在认证中，启动认证
         self.start_login()
-
-        # 等待这次认证完成
-        try:
-            await asyncio.wait_for(self.login_success_event.wait(), self.login_timeout)
-            return self.login_success_event.is_set()
-        except asyncio.TimeoutError:
-            logger.warning("[Downloader Client] Authentication timeout")
-            return False
+        
+        # 现在认证已经启动，等待认证完成
+        if self.is_authenticating:
+            try:
+                await asyncio.wait_for(
+                    self.login_success_event.wait(), self.login_timeout
+                )
+                return self.login_success_event.is_set()
+            except asyncio.TimeoutError:
+                logger.warning("[Downloader Client] Authentication timeout after starting login")
+                return False
+        
+        # 如果因为某种原因认证没有启动，返回False
+        return False
 
     @api_rate_limit
     async def get_torrents_info(
@@ -338,11 +333,24 @@ class DownloadClient:
         return []
 
     def start_login(self):
-        self.login_task = asyncio.create_task(self.login(), name="login")
+        if not self.is_authenticating:
+            self.is_authenticating = True  # 设置认证状态
+            self.login_task = asyncio.create_task(self.login(), name="login")
 
     def start(self):
         # 判断有没有 login task
         self.reset_api_cancel()  # 重置API取消状态
+        
+        # 重置所有相关状态，确保重启后正常工作
+        self._waiting_api_tasks.clear()
+        self._last_api_call = 0
+        self.login_success_event.clear()
+        self.is_authenticating = False
+        
+        # 重新创建锁，确保锁状态正确
+        self._api_lock = asyncio.Lock()
+        
+        logger.debug("[Download Client] 所有状态已重置")
         self.start_login()
 
     def cancel_all_api_calls(self):

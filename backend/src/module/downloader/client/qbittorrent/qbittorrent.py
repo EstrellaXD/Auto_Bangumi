@@ -217,10 +217,17 @@ class Downloader(BaseDownloader):
         }
         file = None
         torrent_link = ""
+        logger.debug(f"[QbDownloader] Starting to get torrent content from {torrent_url}")
         async with RequestContent() as req:
+            logger.debug(f"[QbDownloader] Calling get_content for {torrent_url}")
             if torrent_file := await req.get_content(torrent_url):
+                logger.debug(f"[QbDownloader] Got torrent content, getting hash for {torrent_url}")
                 torrent_link = await req.get_torrent_hash(torrent_url)
+                logger.debug(f"[QbDownloader] Got torrent hash: {torrent_link}")
                 file = {"torrents": torrent_file}
+            else:
+                logger.warning(f"[QbDownloader] Failed to get torrent content from {torrent_url}")
+        logger.debug(f"[QbDownloader] Finished getting torrent content, proceeding to add torrent")
         try:
             resp = await self._client.post(
                 url=QB_API_URL["add"],

@@ -22,6 +22,7 @@ class RenameMonitor:
         self._initialized:bool = False
         # 存储活跃的重命名任务 {torrent_hash: asyncio.Task}
         self.active_rename_tasks: dict[str, asyncio.Task] = {}
+        self.event_bus = event_bus
 
     @property
     def enabled(self) -> bool:
@@ -30,6 +31,11 @@ class RenameMonitor:
 
     async def initialize(self) -> None:
         """初始化重命名器"""
+
+        event_bus.subscribe(
+            EventType.DOWNLOAD_COMPLETED,
+            self.handle_download_completed,
+        )
         if not self._initialized:
             self._initialized = True
             logger.info("[RenameMonitor] 初始化完成")
@@ -155,6 +161,10 @@ class RenameMonitor:
 
         # 清空任务字典
         self.active_rename_tasks.clear()
+        self.event_bus.unsubscribe(
+            EventType.DOWNLOAD_COMPLETED,
+            self.handle_download_completed,
+        )
         logger.info("[RenameMonitor] 重命名监控器已关闭")
 
     def get_active_tasks_count(self) -> int:

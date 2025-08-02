@@ -115,8 +115,6 @@ class RawParser:
     def get_episode_info(self) -> tuple[Any, bool, Any, bool]:
         """获取剧集和季度信息"""
         episode_info = self.findall_sub_title(p.EPISODE_PATTERN, sym="/[]")
-        print(episode_info)
-        print(self.title)
         episode_is_trusted = True
         season_info = self.findall_sub_title(p.SEASON_RE, sym="/[]")
         season_is_trusted = True

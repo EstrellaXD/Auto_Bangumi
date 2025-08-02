@@ -83,33 +83,22 @@ class AsyncApplicationCore:
 
             # 使用全局 DownloadMonitor 实例
             self._download_monitor = download_monitor
-            self.event_bus.subscribe(
-                EventType.DOWNLOAD_STARTED,
-                self._download_monitor.handle_download_started,
-            )
+            self._download_monitor.initialize()
             logger.info("[AsyncCore] 已注册 DownloadMonitor 事件处理器")
 
             # 创建并注册 RenameMonitor (仅在启用重命名功能时)
             self._rename_monitor = RenameMonitor()
             if self._rename_monitor.enabled:
                 await self._rename_monitor.initialize()
-                self.event_bus.subscribe(
-                    EventType.DOWNLOAD_COMPLETED,
-                    self._rename_monitor.handle_download_completed,
-                )
                 logger.info("[AsyncCore] 已注册 RenameMonitor 事件处理器")
             else:
                 self._rename_monitor = None
                 logger.info("[AsyncCore] 重命名功能已禁用，跳过 RenameMonitor 注册")
 
             # 创建并注册 NotificationMonitor
-            self._notification_monitor = NotificationMonitor(event_bus=self.event_bus)
+            self._notification_monitor = NotificationMonitor()
             if self._notification_monitor.enabled:
                 await self._notification_monitor.initialize()
-                self.event_bus.subscribe(
-                    EventType.NOTIFICATION_REQUEST,
-                    self._notification_monitor.handle_notification_request,
-                )
                 logger.info("[AsyncCore] 已注册 NotificationMonitor 事件处理器")
             else:
                 logger.info("[AsyncCore] 通知功能已禁用，跳过 NotificationMonitor 注册")

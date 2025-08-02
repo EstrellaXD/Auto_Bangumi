@@ -40,13 +40,21 @@ class DownloadController:
 
     # 10秒拿5个
     async def download(self):
-        logger.debug("[Download Controller] start download")
+        queue_size = queue.qsize()
+        logger.debug(f"[Download Controller] start download, queue size: {queue_size}")
+        
+        if queue_size == 0:
+            logger.debug("[Download Controller] queue is empty, nothing to download")
+            return
+            
         tasks = []
         torrents = []
         torrent_bangumi_pairs = []
 
         # 一次取五个torrent
-        for _ in range(min(queue.qsize(), 5)):
+        batch_size = min(queue_size, 5)
+        
+        for i in range(batch_size):
             torrent, bangumi = queue.get_nowait()
 
             queue.task_done()
@@ -57,7 +65,7 @@ class DownloadController:
             # 更新种子信息
 
         # 执行下载任务
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        results = await asyncio.gather(*tasks)
 
         # 处理下载结果并发布事件
         # 保存到数据库

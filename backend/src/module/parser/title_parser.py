@@ -145,7 +145,7 @@ class RawParser(BaseParser):
             else:
                 official_title = title_raw
             _season = episode.season
-            logger.debug(f"[RawParser] RAW:{raw} >> {title_raw}")
+            # logger.debug(f"[RawParser] RAW:{raw} >> {title_raw}")
             return Bangumi(
                 official_title=official_title,
                 title_raw=title_raw,

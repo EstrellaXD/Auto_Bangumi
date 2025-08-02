@@ -114,8 +114,10 @@ class DownloadService(BaseService):
             from module.downloader import Client, DownloadController
 
             # 初始化下载客户端
+            logger.debug(f"[DownloadService] start initialize")
             Client.initialize()
             Client.start()
+            logger.debug(f"[DownloadService] 下载客户端已启动")
 
             self._download_controller = DownloadController()
 
