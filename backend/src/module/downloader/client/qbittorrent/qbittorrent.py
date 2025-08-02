@@ -36,17 +36,21 @@ QB_API_URL = {
 class Downloader(BaseDownloader):
 
     def __init__(self):  # , host: str, username: str, password: str, ssl: bool
-        self._client: httpx.AsyncClient = httpx.AsyncClient(
-            base_url=self.config.host,
-            trust_env=settings.downloader.ssl
-        )
+        super().__init__()
+        self._client: httpx.AsyncClient | None = None
+        self.config: DownloaderConfig | None = None
         self.api_interval = 0.2
 
-
-    @property
-    def config(self):
-       return get_plugin_config(
-            DownloaderConfig(), "downloader"
+    @override
+    def initialize(self) -> None:
+        """初始化下载器"""
+        # 加载配置
+        self.config = get_plugin_config(DownloaderConfig(), "downloader")
+        
+        # 初始化 HTTP 客户端
+        self._client = httpx.AsyncClient(
+            base_url=self.config.host,
+            trust_env=settings.downloader.ssl
         )
 
 

@@ -117,7 +117,7 @@ class DownloadClient:
     """
 
     def __init__(self):
-        self.downloader: BaseDownloader = Downloader()
+        self.downloader: BaseDownloader | None = None
         # 用于等待登陆完成
         self.login_success_event: asyncio.Event = asyncio.Event()
         self.login_timeout: int = 30  # 30秒超时
@@ -128,9 +128,30 @@ class DownloadClient:
         self._last_api_call: float = 0
         self._api_cancel_event: asyncio.Event = asyncio.Event()
         self._waiting_api_tasks: set[int] = set()  # 追踪等待中的API任务
-        self.api_interval: float = self.downloader.api_interval  # 默认1秒间隔
+        self.api_interval: float = 0.2  # 默认间隔，将在initialize后更新
         self.is_authenticating:bool = False  # 重置认证状态
 
+    def initialize(self):
+        # 根据设置动态获取下载器
+        downloader_type = settings.downloader.type
+        package_path = f"module.downloader.client.{downloader_type}"
+        downloader_module = importlib.import_module(package_path)
+        DownloaderClass = downloader_module.Downloader
+        print(f"[Downloader Client] Using downloader: {downloader_type}")
+        self.downloader = DownloaderClass()
+        
+        # 初始化下载器
+        self.downloader.initialize()
+        
+        # 更新API间隔
+        self.api_interval = self.downloader.api_interval
+
+
+    def get_downloader(self) -> BaseDownloader:
+        """获取下载器实例"""
+        downloader_type = settings.downloader.type
+        
+        return self.downloader
     async def login(self):
         """一次性登录尝试，不重试"""
         try:
@@ -362,6 +383,7 @@ if __name__ == "__main__":
     setup_logger("DEBUG", reset=True)
 
     download_client = Client
+    download_client.initialize()  # 初始化下载器
     torrent_hash = "e4d2134ff46ee5b8d729318def73fa19993c36d6"
     async def test_one_time_login():
         info = await download_client.get_torrent_info(torrent_hash)

@@ -16,6 +16,11 @@ class BaseDownloader(metaclass=ABCMeta):
         self.api_interval: float = 0.2
 
     @abstractmethod
+    def initialize(self) -> None:
+        """初始化下载器"""
+        pass
+
+    @abstractmethod
     async def auth(self) -> bool:
         pass
 

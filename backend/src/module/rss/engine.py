@@ -142,7 +142,7 @@ class BangumiRefresher(BaseRefresh):
         self.download_queue = DownloadQueue()
 
 
-    async def refresh(self) -> list[Torrent]:
+    async def refresh(self) -> bool:
         """刷新 bangumi 的 rss"""
         torrents = await self.pull_rss()
         new_torrents = []
@@ -155,8 +155,12 @@ class BangumiRefresher(BaseRefresh):
                 # 这里是最早加入 torrent.bang
                 new_torrents.append(torrent)
 
+        if not new_torrents:
+            logger.debug(f"[BangumiRefresher] No new torrents found for {self.bangumi.official_title}")
+            return False
 
-        return new_torrents
+        await self.download_queue.add_torrents(new_torrents, self.bangumi)
+        return True
 
 
 # 对一个 rss_item 做一个假设, 认为一个 rss_link 里面 一部动漫只有一季

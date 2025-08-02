@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
@@ -88,8 +89,12 @@ class RSSService(BaseService):
             await self._engine.refresh_all()
 
             if self._eps_complete_enabled:
+                from module.downloader import DownloadQueue
                 from module.manager import eps_complete
 
+                # 要等到 download queue 空了后再做这个,不然会重复下载
+                # 等太久了就说明现在挺重的, 就先不 eps 了
+                await asyncio.wait_for( DownloadQueue().queue.join(), timeout=60)
                 await eps_complete()
 
             logger.debug("[RSSService] RSS刷新完成")
@@ -108,6 +113,8 @@ class DownloadService(BaseService):
         try:
             from module.downloader import Client, DownloadController
 
+            # 初始化下载客户端
+            Client.initialize()
             Client.start()
 
             self._download_controller = DownloadController()

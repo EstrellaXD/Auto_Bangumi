@@ -15,6 +15,8 @@ class DownloadQueue:
     def __init__(self) -> None:
         self.queue: asyncio.Queue[tuple[Torrent, Bangumi]] = queue
 
+
+
     async def add_torrents(self, torrents: list[Torrent], bangumi: Bangumi):
         for torrent in torrents:
             self.add(torrent, bangumi)
