@@ -13,7 +13,7 @@ EPISODE_PATTERN = re.compile(
     |S\d+?(?:EP?(\d+?))
     |EP?(\d+?)
     |-\s(\d+?)
-    |(\d+?).?v\d
+    |(\d+?)v\d
     |(\d+?).?END
     |(\d+?)pre)
     {BOUNDARY_END}

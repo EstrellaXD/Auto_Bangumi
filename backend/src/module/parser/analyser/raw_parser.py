@@ -115,6 +115,8 @@ class RawParser:
     def get_episode_info(self) -> tuple[Any, bool, Any, bool]:
         """获取剧集和季度信息"""
         episode_info = self.findall_sub_title(p.EPISODE_PATTERN, sym="/[]")
+        print(episode_info)
+        print(self.title)
         episode_is_trusted = True
         season_info = self.findall_sub_title(p.SEASON_RE, sym="/[]")
         season_is_trusted = True
@@ -409,6 +411,7 @@ if __name__ == "__main__":
     # title = "碧蓝之海 第二季.mp4"
     # title = "坂本日常 第2部分"
     title = "[ANi] Grand Blue Dreaming /  GRAND BLUE 碧蓝之海 2 - 04 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+    title = "Hibi wa Sugiredo Meshi Umashi - 11v2/"
     # title =  "[Lilith-Raws] Boku no Kokoro no Yabai Yatsu - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT].mp4"
     # title = "【极影字幕社】★4月新番 天国大魔境 Tengoku Daimakyou 第05话 GB 720P MP4（字幕社招人内详）"
     res = raw_parser(title)

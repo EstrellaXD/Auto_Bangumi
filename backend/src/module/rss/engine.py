@@ -142,7 +142,7 @@ class BangumiRefresher(BaseRefresh):
         self.download_queue = DownloadQueue()
 
 
-    async def refresh(self) -> bool:
+    async def refresh(self) -> list[Torrent]:
         """刷新 bangumi 的 rss"""
         torrents = await self.pull_rss()
         new_torrents = []
@@ -155,12 +155,8 @@ class BangumiRefresher(BaseRefresh):
                 # 这里是最早加入 torrent.bang
                 new_torrents.append(torrent)
 
-        if not new_torrents:
-            logger.debug(f"[BangumiRefresher] No new torrents found for {self.bangumi.official_title}")
-            return False
-
-        await self.download_queue.add_torrents(new_torrents, self.bangumi)
-        return True
+        logger.debug(f"[BangumiRefresher] Found {len(new_torrents)} new torrents for {self.bangumi.official_title}")
+        return new_torrents
 
 
 # 对一个 rss_item 做一个假设, 认为一个 rss_link 里面 一部动漫只有一季
@@ -234,10 +230,18 @@ class RSSEngine:
         if not torrents:
             logger.debug(f"[RSSEngine] No torrents found for {bangumi.official_title}")
             return []
-        # 将 torrents 放到下载队列中
-        # for torrent in torrents:
-        await self.queue.add_torrents(torrents, bangumi)
         return torrents
+
+    async def download_bangumi(self, bangumi: Bangumi) -> bool:
+        """下载一个bangumi的rss, 并将其放入下载队列中"""
+        logger.debug(f"[RSSEngine] download bangumi {bangumi.official_title}")
+        torrents = await self.refresh_bangumi(bangumi)
+        if not torrents:
+            logger.debug(f"[RSSEngine] No torrents found for {bangumi.official_title}")
+            return False
+        await self.queue.add_torrents(torrents, bangumi)
+        return True
+
 if __name__ == "__main__":
     from module.conf import setup_logger
 

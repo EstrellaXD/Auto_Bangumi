@@ -151,7 +151,7 @@ class Downloader(BaseDownloader):
             )
             reps.raise_for_status()
             if "404" in reps.text:
-                logger.warning(f"[qbittorrent] Cannot found {hash}")
+                logger.warning(f"[qbittorrent] Cannot found {hash},{reps.text}")
                 return None
             else:
                 logger.debug(f"[qbittorrent] Torrent info: {hash}")

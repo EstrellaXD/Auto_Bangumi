@@ -2,7 +2,8 @@ import logging
 
 from module.conf import settings
 from module.database import Database, engine
-from module.models import Bangumi
+from module.downloader import DownloadQueue
+from module.models import Bangumi, Torrent
 from module.rss import RSSEngine, RSSManager
 from module.rss.engine import BangumiRefresher
 from module.searcher import SearchTorrent
@@ -39,12 +40,12 @@ class SeasonCollector:
                 logging.warning(f"[Engine] Fail to pull poster {data.official_title} ")
         with Database() as db:
             db.bangumi.add(data)
-        result = await RSSEngine().refresh_bangumi(data)
+        result = await RSSEngine().download_bangumi(data)
         if result:
             return True
         return False
 
-async def complete_season(data: Bangumi):
+async def complete_season(data: Bangumi)->list[Torrent] | None:
     if data.mikan_id and "#" in data.mikan_id:
         # https://mikanani.me/RSS/Bangumi?bangumiId=3649&subgroupid=370
         mikan_id = data.mikan_id.split("#")[0]
@@ -58,10 +59,10 @@ async def complete_season(data: Bangumi):
     ans = await BangumiRefresher(data)._get_torrents()
     if not ans:
         logger.warning(f"[eps_complete] {data.official_title} no torrents found")
-        return False
+        return None
     ans = await BangumiRefresher(data).refresh()
     data.rss_link = url
-    return True
+    return ans
 
     
 
@@ -78,7 +79,8 @@ async def eps_complete():
         # 复制 data 到 temp_bangumi
         logger.debug(f"[eps_complete] {data.official_title} eps start to complete")
         try:
-            if await complete_season(data):
+            if ans:=await complete_season(data):
+                await DownloadQueue().add_torrents(ans, data)
                 data.eps_collect = True
                 db.bangumi.update(data)
                 logger.debug(
