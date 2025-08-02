@@ -25,14 +25,7 @@ export default defineConfig(({ mode }) => ({
     }),
     UnoCSS(),
     AutoImport({
-      imports: [
-        'vue',
-        'vitest',
-        'pinia',
-        '@vueuse/core',
-        VueRouterAutoImports,
-        'vue-i18n',
-      ],
+      imports: ['vue', 'vitest', 'pinia', VueRouterAutoImports, 'vue-i18n'],
       dts: 'types/dts/auto-imports.d.ts',
       dirs: ['src/api', 'src/store', 'src/hooks', 'src/utils'],
     }),
@@ -88,6 +81,7 @@ export default defineConfig(({ mode }) => ({
   css: {
     preprocessorOptions: {
       scss: {
+        api: 'modern-compiler',
         additionalData: '@import "./src/style/mixin.scss";',
       },
     },
@@ -107,8 +101,8 @@ export default defineConfig(({ mode }) => ({
   },
   server: {
     proxy: {
-      '^/api/.*': 'http://localhost:7892',
-      '^/posters/.*': 'http://localhost:7892',
+      '^/api/.*': 'http://192.168.0.100:7892',
+      '^/posters/.*': 'http://192.168.0.100:7892',
     },
   },
 }));

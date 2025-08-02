@@ -11,8 +11,8 @@ export const apiBangumi = {
     const { data } = await axios.get<BangumiAPI[]>('api/v1/bangumi/get/all');
     const result: BangumiRule[] = data.map((bangumi) => ({
       ...bangumi,
-      exclude_filter: bangumi.exclude_filter.split(','),
       include_filter: bangumi.include_filter.split(','),
+      exclude_filter: bangumi.exclude_filter.split(','),
       rss_link: bangumi.rss_link.split(','),
     }));
     return result;
@@ -29,8 +29,8 @@ export const apiBangumi = {
     );
     const result: BangumiRule = {
       ...data,
-      exclude_filter: data.exclude_filter.split(','),
       include_filter: data.include_filter.split(','),
+      exclude_filter: data.exclude_filter.split(','),
       rss_link: data.rss_link.split(','),
     };
     return result;
@@ -45,8 +45,8 @@ export const apiBangumi = {
   async updateRule(bangumiId: number, bangumiRule: BangumiRule) {
     const rule: BangumiAPI = {
       ...bangumiRule,
-      exclude_filter: bangumiRule.exclude_filter.join(','),
       include_filter: bangumiRule.include_filter.join(','),
+      exclude_filter: bangumiRule.exclude_filter.join(','),
       rss_link: bangumiRule.rss_link.join(','),
     };
     const post = omit(rule, ['id']);

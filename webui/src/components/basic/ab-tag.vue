@@ -16,8 +16,8 @@ const InnerStyle = computed(() => {
 </script>
 
 <template>
-  <div p-1 rounded-16 inline-flex :class="type">
-    <div bg-white rounded-12 px-8 text-10 truncate max-w-72 :class="InnerStyle">
+  <div p-1 rounded-16 inline-flex w-max :class="type">
+    <div w-full bg-white rounded-12 px-8 text-10 truncate :class="InnerStyle">
       {{ title }}
     </div>
   </div>

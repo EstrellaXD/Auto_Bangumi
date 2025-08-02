@@ -1,58 +1,67 @@
-import { Observable } from 'rxjs';
-
+import type { Ref } from 'vue';
+import { omit } from 'radash';
 import type { BangumiAPI, BangumiRule } from '#/bangumi';
 
+type EventSourceStatus = 'OPEN' | 'CONNECTING' | 'CLOSED';
+
 export const apiSearch = {
-  /**
-   * 番剧搜索接口是 Server Send 流式数据，每条是一个 Bangumi JSON 字符串，
-   * 使用接口方式是监听连接消息后，转为 Observable 配合外层调用时 switchMap 订阅使用
-   */
-  get(keyword: string, site = 'mikan'): Observable<BangumiRule> {
-    const bangumiInfo$ = new Observable<BangumiRule>((observer) => {
-      const eventSource = new EventSource(
-        `api/v1/search/bangumi?site=${site}&keywords=${encodeURIComponent(
-          keyword
-        )}`,
-        { withCredentials: true }
-      );
+  get() {
+    const eventSource = ref(null) as Ref<EventSource | null>;
+    const status = ref<EventSourceStatus>('CLOSED');
+    const data = ref<BangumiRule[]>([]);
 
-      eventSource.onmessage = (ev) => {
-        try {
-          const apiData: BangumiAPI = JSON.parse(ev.data);
-          const data: BangumiRule = {
-            ...apiData,
-            exclude_filter: apiData.exclude_filter.split(','),
-            include_filter: apiData.include_filter.split(','),
-            rss_link: apiData.rss_link.split(','),
-          };
-          observer.next(data);
-        } catch (error) {
-          console.error(
-            '[/search/bangumi] Parse Error |',
-            { keyword },
-            'response:',
-            ev.data
-          );
-        }
+    const keyword = ref('');
+    const provider = ref('');
+
+    const close = () => {
+      if (eventSource.value) {
+        eventSource.value.close();
+        eventSource.value = null;
+        status.value = 'CLOSED';
+      }
+    };
+
+    const _init = () => {
+      status.value = 'CONNECTING';
+
+      const url = `api/v1/search/bangumi?site=${
+        provider.value
+      }&keywords=${encodeURIComponent(keyword.value)}`;
+
+      const es = new EventSource(url, { withCredentials: true });
+      eventSource.value = es;
+      es.onopen = () => {
+        status.value = 'OPEN';
       };
-
-      eventSource.onerror = (ev) => {
-        console.error(
-          '[/search/bangumi] Server Error |',
-          { keyword },
-          'error:',
-          ev
-        );
-        // 目前后端搜索完成关闭连接时会触发 error 事件，前端手动调用 close 不再自动重连
-        eventSource.close();
+      es.onmessage = (e) => {
+        const _data = JSON.parse(e.data) as BangumiAPI;
+        const newData: BangumiRule = {
+          ...omit(_data, ['include_filter', 'exclude_filter', 'rss_link']),
+          include_filter: _data.include_filter.split(','),
+          exclude_filter: _data.exclude_filter.split(','),
+          rss_link: _data.rss_link.split(','),
+        };
+        data.value = [...data.value, newData];
       };
-
-      return () => {
-        eventSource.close();
+      es.onerror = (err) => {
+        console.error('EventSource error:', err);
+        close();
       };
-    });
+    };
 
-    return bangumiInfo$;
+    const open = () => {
+      data.value = [];
+      _init();
+    };
+
+    return {
+      keyword,
+      provider,
+      status,
+      data,
+      open,
+      close,
+    };
   },
 
   async getProvider() {

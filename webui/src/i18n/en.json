@@ -54,6 +54,7 @@
       "exclude": "Exclude",
       "include": "Include",
       "language": "Language",
+      "mikan_custom_url": "Custom Mikan URL",
       "source": "Source",
       "title": "Parser Setting",
       "token": "Token",

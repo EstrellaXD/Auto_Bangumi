@@ -6,8 +6,8 @@ export interface BangumiRule {
   deleted: boolean;
   dpi: string;
   eps_collect: boolean;
-  exclude_filter: string[];
   include_filter: string[];
+  exclude_filter: string[];
   group_name: string;
   id: number;
   official_title: string;
@@ -24,9 +24,9 @@ export interface BangumiRule {
   year: string | null;
 }
 
-export interface BangumiAPI extends Omit<BangumiRule, 'exclude_filter' | 'include_filter' | 'rss_link'> {
-  exclude_filter: string;
+export interface BangumiAPI extends Omit<BangumiRule, 'include_filter' | 'exclude_filter' | 'rss_link'> {
   include_filter: string;
+  exclude_filter: string;
   rss_link: string;
 }
 
@@ -35,16 +35,15 @@ export interface SearchResult {
   value: BangumiRule;
 }
 
-// export type BangumiUpdate = Omit<BangumiAPI, 'id'>;
-export type BangumiUpdate = BangumiAPI
+export type BangumiUpdate = Omit<BangumiAPI, 'id'>;
 
 export const ruleTemplate: BangumiRule = {
   added: false,
   deleted: false,
   dpi: '',
   eps_collect: false,
-  exclude_filter: [],
   include_filter: [],
+  exclude_filter: [],
   group_name: '',
   id: 0,
   official_title: '',

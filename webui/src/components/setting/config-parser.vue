@@ -7,7 +7,6 @@ const { getSettingGroup } = useConfigStore();
 
 const parser = getSettingGroup('rss_parser');
 
-/** @ts-expect-error Incorrect order */
 const langs: RssParserLang = ['zh', 'en', 'jp'];
 
 const items: SettingItem<RssParser>[] = [
@@ -25,9 +24,9 @@ const items: SettingItem<RssParser>[] = [
     },
   },
   {
-    configKey: 'filter',
-    label: () => t('config.parser_set.exclude'),
-    type: 'dynamic-tags',
+    configKey: 'mikan_custom_url',
+    label: () => t('config.parser_set.mikan_custom_url'),
+    type: 'input',
   },
   {
     configKey: 'include',
@@ -35,9 +34,9 @@ const items: SettingItem<RssParser>[] = [
     type: 'dynamic-tags',
   },
   {
-    configKey: 'mikan_custom_url',
-    label: () => t('config.parser_set.mikan_custom_url'),
-    type: 'input',
+    configKey: 'filter',
+    label: () => t('config.parser_set.exclude'),
+    type: 'dynamic-tags',
   },
 ];
 </script>
