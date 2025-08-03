@@ -1,7 +1,9 @@
 import json
 import logging
 from typing import Any
+
 from module.conf import settings
+
 # from openai import AsyncOpenAI
 # TODO: 再说吧TVT
 logger = logging.getLogger(__name__)
@@ -107,7 +109,6 @@ class OpenAIParser:
         #
         #     result = resp["choices"][0]["message"]["content"]
 
-        
         # async with RequestContent() as req:
         #     json_contents = await req.post_data(url)
         #     print(json_contents)
@@ -158,9 +159,8 @@ class OpenAIParser:
 
 if __name__ == "__main__":
     import asyncio
+
     test = OpenAIParser()
     asyncio.run(test.parse("2"))
 
-
     test = OpenAIParser()
-

@@ -14,11 +14,10 @@ from .raw_parser import RawParser
 logger = logging.getLogger("mikan_parser")
 
 
-
 class MikanWebParser:
     # 对 mikan 的网页进行解析
 
-    async def parser(self,url) -> MikanInfo:
+    async def parser(self, url) -> MikanInfo:
         async with RequestContent() as req:
             content = await req.get_html(url)
 
@@ -39,9 +38,11 @@ class MikanWebParser:
 
             official_title = official_title.text
             eps_info = RawParser().parser(official_title)
-            title  = re.sub(patterns.SEASON_RE,"",official_title+" ")
+            title = re.sub(patterns.SEASON_RE, "", official_title + " ")
             title = title.strip()
-            logger.debug(f"[MikanWebParser] Parsed title: {title}, mikan_id: {mikan_id}")
+            logger.debug(
+                f"[MikanWebParser] Parsed title: {title}, mikan_id: {mikan_id}"
+            )
             mikan_info.id = mikan_id
             mikan_info.official_title = title
             mikan_info.season = eps_info.season
@@ -49,7 +50,7 @@ class MikanWebParser:
             logger.debug(f"[MikanWebParser] Parsed mikan info: {mikan_info}")
         return mikan_info
 
-    async def poster_parser(self,url) -> str:
+    async def poster_parser(self, url) -> str:
         poster_link = ""
         # content = await self.page.get_content(self.homepage)
         async with RequestContent() as req:
@@ -65,7 +66,7 @@ class MikanWebParser:
             poster_link = gen_poster_path(poster_link)
         return poster_link
 
-    async def bangumi_link_parser(self,url) -> str:
+    async def bangumi_link_parser(self, url) -> str:
         async with RequestContent() as req:
             content = await req.get_html(url)
         if not content:

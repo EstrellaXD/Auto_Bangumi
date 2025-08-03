@@ -22,8 +22,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/login", response_model=dict)
 async def login(response: Response, form_data=Depends(OAuth2PasswordRequestForm)):
     user = User(username=form_data.username, password=form_data.password)
-    
+
     from module.database import Database
+
     with Database() as db:
         try:
             stored_user = db.user.get_user(user.username)
@@ -45,7 +46,10 @@ async def login(response: Response, form_data=Depends(OAuth2PasswordRequestForm)
             else:
                 active_user.append(user.username)
                 resp = ResponseModel(
-                    status_code=200, status=True, msg_en="Login successfully", msg_zh="登录成功"
+                    status_code=200,
+                    status=True,
+                    msg_en="Login successfully",
+                    msg_zh="登录成功",
                 )
 
     if resp.status:

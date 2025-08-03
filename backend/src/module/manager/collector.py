@@ -45,7 +45,8 @@ class SeasonCollector:
             return True
         return False
 
-async def complete_season(data: Bangumi)->list[Torrent] | None:
+
+async def complete_season(data: Bangumi) -> list[Torrent] | None:
     if data.mikan_id and "#" in data.mikan_id:
         # https://mikanani.me/RSS/Bangumi?bangumiId=3649&subgroupid=370
         mikan_id = data.mikan_id.split("#")[0]
@@ -64,8 +65,6 @@ async def complete_season(data: Bangumi)->list[Torrent] | None:
     data.rss_link = url
     return ans
 
-    
-
 
 async def eps_complete():
     # 一次只补一个,不然会炸 qb
@@ -79,13 +78,11 @@ async def eps_complete():
         # 复制 data 到 temp_bangumi
         logger.debug(f"[eps_complete] {data.official_title} eps start to complete")
         try:
-            if ans:=await complete_season(data):
+            if ans := await complete_season(data):
                 await DownloadQueue().add_torrents(ans, data)
                 data.eps_collect = True
                 db.bangumi.update(data)
-                logger.debug(
-                    f"[eps_complete] {data.official_title} eps is completed"
-                )
+                logger.debug(f"[eps_complete] {data.official_title} eps is completed")
             else:
                 logger.debug(
                     f"[eps_complete] {data.official_title} eps is not completed"

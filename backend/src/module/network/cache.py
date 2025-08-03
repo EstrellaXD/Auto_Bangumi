@@ -1,6 +1,6 @@
+import logging
 from os.path import isfile
 from pathlib import Path
-import logging
 
 from module.utils import str_to_url, url_to_str
 
@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 async def save_image(link: str) -> bytes:
-
     img_hash = url_to_str(link)
     image_path = Path("data/posters") / img_hash
     async with RequestContent() as req:

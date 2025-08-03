@@ -9,18 +9,26 @@ class BangumiBase(SQLModel):
     year: str | None = Field(default=None, alias="year", title="番剧年份")
     title_raw: str = Field(default="title_raw", alias="title_raw", title="番剧原名")
     season: int = Field(default=1, alias="season", title="番剧季度")
-    season_raw: str | None = Field(default=None, alias="season_raw", title="番剧季度原名")
+    season_raw: str | None = Field(
+        default=None, alias="season_raw", title="番剧季度原名"
+    )
     group_name: str | None = Field(default=None, alias="group_name", title="字幕组")
     dpi: str | None = Field(default=None, alias="dpi", title="分辨率")
     source: str | None = Field(default=None, alias="source", title="来源")
     subtitle: str | None = Field(default=None, alias="subtitle", title="字幕")
     eps_collect: bool = Field(default=False, alias="eps_collect", title="是否已收集")
     offset: int = Field(default=0, alias="offset", title="番剧偏移量")
-    include_filter: str = Field(default="", alias="include_filter", title="番剧包含过滤器")
-    exclude_filter: str = Field(default="", alias="exclude_filter", title="番剧排除过滤器")
+    include_filter: str = Field(
+        default="", alias="include_filter", title="番剧包含过滤器"
+    )
+    exclude_filter: str = Field(
+        default="", alias="exclude_filter", title="番剧排除过滤器"
+    )
     parser: str = Field(default="mikan", alias="parser", title="番剧解析器")
     tmdb_id: str | None = Field(default=None, alias="tmdb_id", title="番剧TMDB ID")
-    bangumi_id: str | None = Field(default=None, alias="bangumi_id", title="番剧Bangumi ID")
+    bangumi_id: str | None = Field(
+        default=None, alias="bangumi_id", title="番剧Bangumi ID"
+    )
     mikan_id: str | None = Field(default=None, alias="mikan_id", title="番剧Mikan ID")
     # filter: str = Field(default="", alias="filter", title="番剧过滤器")
     # 感觉是不是与 rss 表用外键关联更好
@@ -33,6 +41,7 @@ class BangumiBase(SQLModel):
 
 class Bangumi(BangumiBase, table=True):
     id: int = Field(default=None, primary_key=True)
+
 
 class BangumiUpdate(BangumiBase):
     id: int = Field(default=None)
@@ -47,8 +56,9 @@ class Notification(BaseModel):
     poster_path: str = Field(default="", alias="poster_path", title="番剧海报路径")
     file: bytes | None = Field(default=None, alias="file", title="文件内容")
 
+
 @dataclass
-class Episode():
+class Episode:
     title_en: str
     title_zh: str
     title_jp: str
@@ -61,6 +71,7 @@ class Episode():
     source: str
     audio_info: list[str]
     video_info: list[str]
+
     def get_title(self) -> str:
         if self.title_zh:
             return self.title_zh
@@ -69,6 +80,3 @@ class Episode():
         if self.title_jp:
             return self.title_jp
         return ""
-
-
-

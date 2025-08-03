@@ -1,11 +1,11 @@
 import asyncio
 import logging
 
-from module.database import Database,engine
-from module.utils.events import Event, EventType, EventBus
+from module.database import Database, engine
 from module.downloader.download_client import Client as client
-from module.utils import event_bus
 from module.models import Bangumi, Torrent
+from module.utils import event_bus
+from module.utils.events import Event, EventBus, EventType
 
 logger = logging.getLogger(__name__)
 queue: asyncio.Queue[tuple[Torrent, Bangumi]] = asyncio.Queue()
@@ -15,14 +15,11 @@ class DownloadQueue:
     def __init__(self) -> None:
         self.queue: asyncio.Queue[tuple[Torrent, Bangumi]] = queue
 
-
-
     async def add_torrents(self, torrents: list[Torrent], bangumi: Bangumi):
         for torrent in torrents:
             self.add(torrent, bangumi)
 
     def add(self, torrent: Torrent, bangumi: Bangumi):
-
         # 这是最早加入 torrent.bangumi_official_title, torrent.bangumi_season, torrent.rss_link 的地方
         torrent.bangumi_official_title = bangumi.official_title
         torrent.bangumi_season = bangumi.season
@@ -37,23 +34,20 @@ class DownloadController:
     def __init__(self):
         self._event_bus = event_bus
 
-
     # 10秒拿5个
     async def download(self):
         queue_size = queue.qsize()
-        logger.debug(f"[Download Controller] start download, queue size: {queue_size}")
-        
+
         if queue_size == 0:
-            logger.debug("[Download Controller] queue is empty, nothing to download")
             return
-            
+
         tasks = []
         torrents = []
         torrent_bangumi_pairs = []
 
         # 一次取五个torrent
         batch_size = min(queue_size, 5)
-        
+
         for i in range(batch_size):
             torrent, bangumi = queue.get_nowait()
 
@@ -107,26 +101,8 @@ class DownloadController:
                 data={"torrent": torrent, "bangumi": bangumi},
             )
 
-            asyncio.create_task( self._event_bus.publish(event))
+            asyncio.create_task(self._event_bus.publish(event))
             logger.debug(f"[Download Controller] 已发布下载开始事件: {torrent.name}")
 
         except Exception as e:
             logger.error(f"[Download Controller] 发布下载开始事件失败: {e}")
-
-
-if __name__ == "__main__":
-    # 测试代码
-    async def main():
-        controller = DownloadController()
-        controller.set_event_bus(EventBus())
-
-        # 添加测试数据
-        bangumi = Bangumi(official_title="测试番剧")
-        torrent = Torrent(name="测试种子", url="http://example.com/torrent")
-
-        download_queue = DownloadQueue()
-        download_queue.add(torrent, bangumi)
-
-        await controller.download()
-
-    asyncio.run(main())

@@ -1,7 +1,7 @@
+import re
+import time
 from datetime import datetime, timezone
 from pickletools import read_string1
-import time
-import re
 
 
 def extract_and_calculate_time_diff(text: str) -> float:

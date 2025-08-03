@@ -1,8 +1,10 @@
+import logging
+
 from module.database import Database, engine
 from module.models import ResponseModel, RSSItem, Torrent
 from module.models.rss import RSSUpdate
 from module.network import RequestContent
-import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,7 +32,6 @@ class RSSManager:
             db.rss.add(rss_data)
             return True
 
-
     def disable_list(self, rss_id_list: list[int]):
         with Database(self.engine) as db:
             for rss_id in rss_id_list:
@@ -43,7 +44,6 @@ class RSSManager:
                 db.rss.enable(rss_id)
 
     def delete_list(self, rss_id_list: list[int]):
-
         with Database(self.engine) as db:
             for rss_id in rss_id_list:
                 db.rss.delete(rss_id)

@@ -24,7 +24,9 @@ class TorrentManager:
         # data.save_path = DownlondClient._path_parser.gen_save_path(data)
         with Database(engine) as db:
             torrent_list = db.find_torrent_by_bangumi(data)
-            hash_list = [torrent.download_uid for torrent in torrent_list if torrent.download_uid]
+            hash_list = [
+                torrent.download_uid for torrent in torrent_list if torrent.download_uid
+            ]
         if hash_list:
             res = await DownlondClient.delete_torrent(hash_list)
             if res:

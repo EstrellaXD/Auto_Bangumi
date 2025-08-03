@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 
 from sqlmodel import Session, select
+
 from module.models import DatabaseVersion
 
 logger = logging.getLogger(__name__)
@@ -97,4 +98,3 @@ class VersionDatabase:
             logger.error(f"[Database] Failed to delete version {version}: {e}")
             self.session.rollback()
             return False
-

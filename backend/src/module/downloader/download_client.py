@@ -61,7 +61,7 @@ def api_rate_limit(func):
                     # 可中断的等待
                     sleep_task = asyncio.create_task(asyncio.sleep(wait_time))
                     cancel_task = asyncio.create_task(self._api_cancel_event.wait())
-                    
+
                     done, pending = await asyncio.wait(
                         [sleep_task, cancel_task],
                         return_when=asyncio.FIRST_COMPLETED,
@@ -118,7 +118,7 @@ class DownloadClient:
         self._api_cancel_event: asyncio.Event = asyncio.Event()
         self._waiting_api_tasks: set[int] = set()  # 追踪等待中的API任务
         self.api_interval: float = 0.2  # 默认间隔，将在initialize后更新
-        self.is_authenticating:bool = False  # 重置认证状态
+        self.is_authenticating: bool = False  # 重置认证状态
 
     def initialize(self):
         # 根据设置动态获取下载器
@@ -128,19 +128,19 @@ class DownloadClient:
         DownloaderClass = downloader_module.Downloader
         print(f"[Downloader Client] Using downloader: {downloader_type}")
         self.downloader = DownloaderClass()
-        
+
         # 初始化下载器
         self.downloader.initialize()
-        
+
         # 更新API间隔
         self.api_interval = self.downloader.api_interval
-
 
     def get_downloader(self) -> BaseDownloader:
         """获取下载器实例"""
         downloader_type = settings.downloader.type
-        
+
         return self.downloader
+
     async def login(self):
         """一次性登录尝试，不重试"""
         try:
@@ -163,7 +163,7 @@ class DownloadClient:
 
     async def wait_for_login(self) -> bool:
         """等待认证完成，返回是否可以继续API调用"""
-        # 如果已认证成功，直接返回True  
+        # 如果已认证成功，直接返回True
         if self.login_success_event.is_set():
             return True
 
@@ -180,7 +180,7 @@ class DownloadClient:
 
         # 如果未认证且未在认证中，启动认证
         self.start_login()
-        
+
         # 现在认证已经启动，等待认证完成
         if self.is_authenticating:
             try:
@@ -189,9 +189,11 @@ class DownloadClient:
                 )
                 return self.login_success_event.is_set()
             except asyncio.TimeoutError:
-                logger.warning("[Downloader Client] Authentication timeout after starting login")
+                logger.warning(
+                    "[Downloader Client] Authentication timeout after starting login"
+                )
                 return False
-        
+
         # 如果因为某种原因认证没有启动，返回False
         return False
 
@@ -225,7 +227,7 @@ class DownloadClient:
 
             result = await self.downloader.add(
                 torrent_url=torrent_url,
-                save_path= gen_save_path(settings.downloader.path, bangumi),
+                save_path=gen_save_path(settings.downloader.path, bangumi),
                 category="Bangumi",
             )
             if result:
@@ -303,7 +305,7 @@ class DownloadClient:
         return False
 
     @api_rate_limit
-    async def get_torrent_info(self, hash: str) -> TorrentDownloadInfo|None:
+    async def get_torrent_info(self, hash: str) -> TorrentDownloadInfo | None:
         if not await self.wait_for_login():
             return None
 
@@ -340,16 +342,16 @@ class DownloadClient:
     def start(self):
         # 判断有没有 login task
         self.reset_api_cancel()  # 重置API取消状态
-        
+
         # 重置所有相关状态，确保重启后正常工作
         self._waiting_api_tasks.clear()
         self._last_api_call = 0
         self.login_success_event.clear()
         self.is_authenticating = False
-        
+
         # 重新创建锁，确保锁状态正确
         self._api_lock = asyncio.Lock()
-        
+
         logger.debug("[Download Client] 所有状态已重置")
         self.start_login()
 
@@ -393,12 +395,16 @@ if __name__ == "__main__":
     download_client = Client
     download_client.initialize()  # 初始化下载器
     torrent_hash = "e4d2134ff46ee5b8d729318def73fa19993c36d6"
+
     async def test_one_time_login():
         info = await download_client.get_torrent_info(torrent_hash)
         print(info)
 
     async def test_add_torrent():
-        torrent = Torrent(name="Test Torrent", url="magnet:?xt=urn:btih:35c8bb80d15877040c7d2e94223fd57fa2f3504b&tr=http%3a%2f%2ft.nyaatracker.com%2fannounce&tr=http%3a%2f%2ftracker.kamigami.org%3a2710%2fannounce&tr=http%3a%2f%2fshare.camoe.cn%3a8080%2fannounce&tr=http%3a%2f%2fopentracker.acgnx.se%2fannounce&tr=http%3a%2f%2fanidex.moe%3a6969%2fannounce&tr=http%3a%2f%2ft.acg.rip%3a6699%2fannounce&tr=https%3a%2f%2ftr.bangumi.moe%3a9696%2fannounce&tr=udp%3a%2f%2ftr.bangumi.moe%3a6969%2fannounce&tr=http%3a%2f%2fopen.acgtracker.com%3a1096%2fannounce&tr=udp%3a%2f%2ftracker.opentrackr.org%3a1337%2fannounce")
+        torrent = Torrent(
+            name="Test Torrent",
+            url="magnet:?xt=urn:btih:35c8bb80d15877040c7d2e94223fd57fa2f3504b&tr=http%3a%2f%2ft.nyaatracker.com%2fannounce&tr=http%3a%2f%2ftracker.kamigami.org%3a2710%2fannounce&tr=http%3a%2f%2fshare.camoe.cn%3a8080%2fannounce&tr=http%3a%2f%2fopentracker.acgnx.se%2fannounce&tr=http%3a%2f%2fanidex.moe%3a6969%2fannounce&tr=http%3a%2f%2ft.acg.rip%3a6699%2fannounce&tr=https%3a%2f%2ftr.bangumi.moe%3a9696%2fannounce&tr=udp%3a%2f%2ftr.bangumi.moe%3a6969%2fannounce&tr=http%3a%2f%2fopen.acgtracker.com%3a1096%2fannounce&tr=udp%3a%2f%2ftracker.opentrackr.org%3a1337%2fannounce",
+        )
         result = await download_client.add_torrent(torrent, Bangumi())
         print(f"Add torrent result: {result}")
 

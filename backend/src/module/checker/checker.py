@@ -65,5 +65,5 @@ class Checker:
 
 if __name__ == "__main__":
     import asyncio
-    pass
 
+    pass

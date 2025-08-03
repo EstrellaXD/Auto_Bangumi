@@ -254,7 +254,6 @@ async def analysis(rss: RSSItem):
 async def download_collection(data: Bangumi):
     resp = await engine.download_bangumi(bangumi=data)
 
-    
     # TODO: resp 要等后面统一改
 
     if resp:

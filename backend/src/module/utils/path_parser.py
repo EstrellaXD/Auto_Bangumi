@@ -3,10 +3,11 @@
 和 linux 上解析 windows 路径的工具函数
 """
 
-import re
 import logging
+import re
 from os import PathLike
 from pathlib import Path
+
 from module.models import Bangumi, BangumiUpdate
 
 # TODO: 暂时放弃 Windows 路径解析,也就是 ab 和 qb 不在一个系统上, 这时候整个复杂度太高了,后面再说了
@@ -49,7 +50,6 @@ def check_files(files_name: list[str]):
 def path_to_bangumi(
     save_path: PathLike[str] | str, download_path: PathLike[str] | str
 ) -> tuple[str, int]:
-
     # Split save path and download path
     save_path = Path(save_path)
     download_path = Path(download_path)
@@ -72,7 +72,7 @@ def path_to_bangumi(
 
 
 def gen_save_path(save_path: str, data: Bangumi | BangumiUpdate) -> str:
-    #TODO: official_title 可能会有特殊字符,需要处理
+    # TODO: official_title 可能会有特殊字符,需要处理
     folder = data.official_title
     if data.year:
         folder += f" ({data.year})"
@@ -82,7 +82,6 @@ def gen_save_path(save_path: str, data: Bangumi | BangumiUpdate) -> str:
 
 
 if __name__ == "__main__":
-
     path = "/Downloads/Bangumi/Kono Subarashii Sekai ni Shukufuku wo!/Season 2/"
     # bangumi_name = "[整理搬运] 乱马 1/2 (らんま½) (Ranma ½)：TV动画 (1989年首播版)+剧场版+OVA+CD+漫画+其他；日语音轨; 外挂简中字幕 (整理时间：2023.11.mp4"
     # bangumi_name = bangumi_name.replace("/", ":")

@@ -14,13 +14,13 @@ async def get_log():
         try:
             with open(LOG_PATH, "r", encoding="utf-8") as f:
                 lines = f.readlines()
-            
+
             # 只返回最后200行
             last_lines = lines[-200:] if len(lines) > 200 else lines
             content = "".join(last_lines)
-            
+
             return Response(content, media_type="text/plain; charset=utf-8")
-            
+
         except Exception as e:
             return Response(f"Error reading log file: {str(e)}", status_code=500)
     else:

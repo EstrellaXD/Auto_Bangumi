@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class BaseService(ABC):
     """服务基类"""
 
-    def __init__(self, name: str|None = None):
+    def __init__(self, name: str | None = None):
         # 如果没有指定名称，使用类名自动生成
         if name is None:
             name = self.__class__.__name__.lower().replace("service", "")
@@ -94,7 +94,7 @@ class RSSService(BaseService):
 
                 # 要等到 download queue 空了后再做这个,不然会重复下载
                 # 等太久了就说明现在挺重的, 就先不 eps 了
-                await asyncio.wait_for( DownloadQueue().queue.join(), timeout=60)
+                await asyncio.wait_for(DownloadQueue().queue.join(), timeout=60)
                 await eps_complete()
 
             logger.debug("[RSSService] RSS刷新完成")
@@ -114,10 +114,10 @@ class DownloadService(BaseService):
             from module.downloader import Client, DownloadController
 
             # 初始化下载客户端
-            logger.debug(f"[DownloadService] start initialize")
+            logger.debug("[DownloadService] start initialize")
             Client.initialize()
             Client.start()
-            logger.debug(f"[DownloadService] 下载客户端已启动")
+            logger.debug("[DownloadService] 下载客户端已启动")
 
             self._download_controller = DownloadController()
 
@@ -149,7 +149,6 @@ class DownloadService(BaseService):
         except Exception as e:
             logger.error(f"[DownloadService] 执行失败: {e}")
             raise ServiceException("download", f"执行失败: {e}")
-
 
     async def cleanup(self) -> None:
         """清理下载客户端"""

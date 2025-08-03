@@ -1,10 +1,7 @@
-import asyncio
 import logging
-from collections import defaultdict
 from typing import Any
 
 from module.conf import settings
-from module.models import Notification
 from module.notification import PostNotification
 from module.utils.events import Event, EventBus, EventType, event_bus
 
@@ -18,33 +15,34 @@ class NotificationMonitor:
     """
 
     def __init__(self):
-        self._event_bus: EventBus | None = event_bus
+        self._event_bus: EventBus = event_bus
         self._notification_sender = PostNotification()
-        self._running = False
-        self.event_bus = event_bus
-
-    @property
-    def enabled(self) -> bool:
-        """检查通知监控器是否启用"""
-        return settings.notification.enable
+        self._running: bool = False
+        self.enable: bool = settings.notification.enable
 
     async def initialize(self):
         """初始化通知监控器"""
         logger.info("[NotificationMonitor] 初始化通知监控器")
+        self.enable = settings.notification.enable
+        if not self.enable:
+            logger.warning("[NotificationMonitor] 通知功能未启用")
+            return
         self._running = True
-        self.event_bus.subscribe(
+        self._event_bus.subscribe(
             EventType.NOTIFICATION_REQUEST,
             self.handle_notification_request,
         )
+        logger.info("[NotificationMonitor] 已注册 NotificationMonitor 事件处理器")
 
     async def shutdown(self):
         """关闭通知监控器"""
         logger.info("[NotificationMonitor] 关闭通知监控器")
         self._running = False
-        self.event_bus.unsubscribe(
+        self._event_bus.unsubscribe(
             EventType.NOTIFICATION_REQUEST,
             self.handle_notification_request,
         )
+        logger.info("[NotificationMonitor] 已取消注册 NotificationMonitor 事件处理器")
 
     async def handle_notification_request(self, event: Event) -> None:
         """处理重命名完成事件"""

@@ -1,13 +1,13 @@
 import asyncio
 import logging
 
+from module.conf import settings
 from module.database import Database, engine
 from module.downloader import Client as DownlondClient
-from module.models import Bangumi, BangumiUpdate, Torrent
-from module.parser import TmdbParser, MikanParser
-from module.utils import gen_save_path
-from module.conf import settings
 from module.manager.torrent import TorrentManager
+from module.models import Bangumi, BangumiUpdate, Torrent
+from module.parser import MikanParser, TmdbParser
+from module.utils import gen_save_path
 from module.utils.events import Event, EventType, event_bus
 
 logger = logging.getLogger(__name__)
@@ -66,7 +66,6 @@ class BangumiManager:
             logger.error(f"[Download Controller] 发布下载开始事件失败: {e}")
 
     async def enable_rule(self, _id: str | int):
-
         with Database() as db:
             data = db.bangumi.search_id(int(_id))
             if data:
@@ -150,7 +149,6 @@ class BangumiManager:
             return [data for data in datas if not data.deleted]
 
     def search_one(self, _id: int | str):
-
         with Database() as db:
             data = db.bangumi.search_id(int(_id))
             if not data:

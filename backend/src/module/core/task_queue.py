@@ -4,6 +4,7 @@ from asyncio import Queue, create_task
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable
+
 # 想想现在要几个 services
 # 1. RSSService 用来定期刷新 rss
 # 2. DownloadService 用来定期下载任务

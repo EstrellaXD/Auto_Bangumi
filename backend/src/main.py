@@ -1,6 +1,5 @@
 import logging
 import os
-from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, Request
@@ -9,7 +8,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from module.api import lifespan, v1
 from module.conf import VERSION, settings, setup_logger
-from module.network import load_image
 
 setup_logger(reset=True)
 logger = logging.getLogger(__name__)
@@ -40,26 +38,9 @@ def create_app() -> FastAPI:
 app = create_app()
 
 
-@app.get("/posters/{path:path}", tags=["posters"])
-async def posters(path: str):
-
-    # FIX: 有严重的安全问题, 需要修复
-    # 例: "../index.html" 可以访问到根目录的文件"
-    # TODO: 由于只有取的时候才会下载,所以会导致第一次请求的时候没有图片
-    post_path = Path("data/posters") / path
-    if not post_path.exists():
-        await load_image(path)
-    if post_path.exists():
-        return FileResponse(post_path)
-    else:
-        # TODO: 404
-        return FileResponse("")
-
-
 if VERSION != "DEV_VERSION":
     app.mount("/assets", StaticFiles(directory="dist/assets"), name="assets")
     app.mount("/images", StaticFiles(directory="dist/images"), name="images")
-    # app.mount("/icons", StaticFiles(directory="dist/icons"), name="icons")
     templates = Jinja2Templates(directory="dist")
 
     @app.get("/{path:path}")
@@ -89,4 +70,3 @@ if __name__ == "__main__":
         port=settings.program.webui_port,
         log_config=uvicorn_logging_config,
     )
-    

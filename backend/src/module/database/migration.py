@@ -400,56 +400,60 @@ def check_and_upgrade_database() -> bool:
     """检查并升级数据库的主入口函数"""
     try:
         migration = DatabaseMigration()
-        
+
         # 获取当前数据库版本和应用版本
         db_version = migration.get_current_db_version()
         app_version = migration.current_app_version
-        
+
         logger.info(f"数据库版本: {db_version}, 应用版本: {app_version}")
-        
+
         # 先检查应用版本是否大于数据库版本，如果不是则什么都不做
         version_comparison = migration._version_compare(app_version, db_version)
         if version_comparison <= 0:
-            logger.info(f"应用版本 {app_version} 不大于数据库版本 {db_version}，无需升级")
+            logger.info(
+                f"应用版本 {app_version} 不大于数据库版本 {db_version}，无需升级"
+            )
             return True
-        
+
         # 应用版本更大，需要升级，获取完整的迁移路径
         migration_path = migration._get_migration_path(db_version, app_version)
-        
+
         if not migration_path:
-            logger.info(f"从 {db_version} 到 {app_version} 没有可用的迁移路径，但版本兼容")
+            logger.info(
+                f"从 {db_version} 到 {app_version} 没有可用的迁移路径，但版本兼容"
+            )
             return True
-            
+
         logger.info(f"检测到需要数据库升级，迁移路径: {migration_path}")
-        
+
         # 执行所有迁移路径
         with Session(migration.engine) as session:
             try:
                 # 创建备份
                 migration._create_backup()
-                
+
                 # 逐个执行迁移
                 for version in migration_path:
                     logger.info(f"应用迁移: {version}")
-                    
+
                     if version in migration.migration_history:
                         migration_func = migration.migration_history[version]
                         migration_func(session)
-                        
+
                         # 记录迁移历史
                         version_record = DatabaseVersion(
                             version=version, description=f"迁移到版本 {version}"
                         )
                         session.add(version_record)
                         session.commit()
-                        
+
                         logger.info(f"成功应用迁移: {version}")
                     else:
                         logger.warning(f"跳过未定义的迁移: {version}")
-                
+
                 logger.info("数据库迁移完成")
                 return True
-                
+
             except Exception as e:
                 logger.error(f"迁移失败: {e}")
                 session.rollback()

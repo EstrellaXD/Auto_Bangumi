@@ -3,6 +3,7 @@ import logging
 
 from module.conf import settings
 from module.downloader.client.expection import AuthorizationError
+
 from .base_downloader import BaseDownloader
 
 download_type = settings.downloader.type

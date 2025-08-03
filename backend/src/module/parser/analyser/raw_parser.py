@@ -124,7 +124,6 @@ class RawParser:
         return episode_info, episode_is_trusted, season_info, season_is_trusted
 
     def parser_episode(self, episode_info: Any, episode_is_trusted: bool) -> int:
-
         un_trusted_episode_list = []
         if not episode_info:
             # 实在没找到,返回0
@@ -156,7 +155,11 @@ class RawParser:
                 return season_list[0], season_info[0][0]
             # 如果是非可信季度信息，返回第一个有效的季度
             else:
-                if len(season_info[0]) ==1 and season_list[0] > 1 and season_list[0] < 5:
+                if (
+                    len(season_info[0]) == 1
+                    and season_list[0] > 1
+                    and season_list[0] < 5
+                ):
                     self.findall_sub_title(p.SEASON_PATTERN_UNTRUSTED)
                     return season_list[0], season_info[0]
 
@@ -178,7 +181,7 @@ class RawParser:
         """从季度信息元组中提取季度号"""
         # 从元组中找到第一个有效的季度数据
         for season in season_info:
-            if("部分" in season):
+            if "部分" in season:
                 return 1
             if season and season.isdigit():
                 try:
@@ -193,7 +196,7 @@ class RawParser:
 
     def get_season_info(self) -> tuple[Any, bool]:
         """获取不可信的季度信息"""
-        season_info = re.findall(p.SEASON_PATTERN_UNTRUSTED,self.title)
+        season_info = re.findall(p.SEASON_PATTERN_UNTRUSTED, self.title)
         is_trusted = False
         return season_info, is_trusted
 
@@ -338,7 +341,6 @@ def is_point_5(title: str) -> bool:
 
 
 if __name__ == "__main__":
-
     # title = get_raw()
     # title = "赛马娘 (2018) S03E13.mp4"
     # title = "[SweetSub][鹿乃子大摇大摆虎视眈眈][Shikanoko Nokonoko Koshitantan][04][WebRip][1080P][AVC 8bit][繁日双语][462.01 MB]"

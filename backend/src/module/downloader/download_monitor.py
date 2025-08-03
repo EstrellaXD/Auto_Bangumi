@@ -1,10 +1,11 @@
 import asyncio
 import logging
-from module.utils.events import Event, EventType, EventBus
+
 from module.database import Database
 from module.downloader.download_client import Client as download_client
 from module.models import Bangumi, Torrent
 from module.utils import event_bus
+from module.utils.events import Event, EventBus, EventType
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,8 @@ class DownloadMonitor:
         self._event_bus.subscribe(
             EventType.DOWNLOAD_STARTED, self.handle_download_started
         )
+
+        logger.info("[DownloadMonitor] 已注册 DownloadMonitor 事件处理器")
         logger.info("[DownloadMonitor] 下载监控器已初始化")
 
     def calculate_sleep_time(self, eta: int) -> int:
@@ -108,6 +111,7 @@ class DownloadMonitor:
                 logger.warning(f"[DownloadMonitor] 种子 {torrent.name} 没有下载UID")
                 return
 
+            retry_count = 0
             while not self._shutdown:
                 # 获取种子信息
                 info = await download_client.get_torrent_info(torrent_hash)
@@ -117,23 +121,37 @@ class DownloadMonitor:
                         f"[DownloadMonitor] 无法获取种子信息: {torrent_hash}，将从数据库删除对应记录"
                     )
                     # 从数据库删除对应的torrent记录
-                    try:
-                        with Database() as db:
-                            db.torrent.delete_by_url(torrent.url)
-                            logger.debug(
-                                f"[DownloadMonitor] 已从数据库删除种子记录: {torrent.name}"
-                            )
-                    except Exception as e:
-                        logger.error(f"[DownloadMonitor] 删除数据库记录失败: {e}")
-                    break
+                    if retry_count < 3:
+                        retry_count += 1
+                        logger.debug(
+                            f"[DownloadMonitor] 获取种子信息失败，将等待60秒后重试: {torrent.name} ({retry_count}/3)"
+                        )
+                        await asyncio.sleep(60)  # 等待60秒后重试
+                        continue
+                    else:
+                        logger.debug(
+                            f"[DownloadMonitor] 重试次数超过3次，删除种子记录: {torrent.name}"
+                        )
+                        try:
+                            with Database() as db:
+                                db.torrent.delete_by_url(torrent.url)
+                                logger.debug(
+                                    f"[DownloadMonitor] 已从数据库删除种子记录: {torrent.name}"
+                                )
+                        except Exception as e:
+                            logger.error(f"[DownloadMonitor] 删除数据库记录失败: {e}")
+                        break
 
                 # 更新数据库中torrent的downloaded状态
                 elif not torrent.downloaded:
                     logger.debug(
-                        f"[DownloadMonitor] 种子 {torrent.name} 下载状态: 未下载"
+                        f"[DownloadMonitor] 种子 {torrent.name} 下载状态: 下载中"
                     )
                     try:
                         with Database() as db:
+                            logger.debug(
+                                f"[DownloadMonitor] 更新种子下载状态: {torrent.name} - {torrent_hash}"
+                            )
                             if torrent_item := db.torrent.search_by_duid(torrent_hash):
                                 if not torrent_item.downloaded:
                                     torrent_item.downloaded = True
@@ -164,9 +182,6 @@ class DownloadMonitor:
                 else:
                     sleep_time = 60  # 默认1分钟
 
-                logger.debug(
-                    f"[DownloadMonitor] 监控种子 {torrent.name}，下次检查将在 {sleep_time} 秒后进行"
-                )
                 await asyncio.sleep(sleep_time)
 
         except asyncio.CancelledError:
@@ -227,6 +242,7 @@ class DownloadMonitor:
         self._event_bus.unsubscribe(
             EventType.DOWNLOAD_STARTED, self.handle_download_started
         )
+        logger.info("[DownloadMonitor] 取消对下载开始事件的订阅")
         if not self.monitoring_tasks:
             return
 

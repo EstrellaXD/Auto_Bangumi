@@ -66,13 +66,15 @@ class RenamerService(BaseService):
             # 获取对应的番剧信息
             with Database() as db:
                 bangumi = db.torrent_to_bangumi(torrent)
-            
+
             if not bangumi:
-                logger.warning(f"[RenamerService] 无法找到种子 {torrent.name} 对应的番剧信息")
+                logger.warning(
+                    f"[RenamerService] 无法找到种子 {torrent.name} 对应的番剧信息"
+                )
                 return
 
             event = Event(
-                type=EventType.DOWNLOAD_COMPLETED,
+                type=EventType.DOWNLOAD_STARTED,
                 data={
                     "torrent": torrent,
                     "bangumi": bangumi,

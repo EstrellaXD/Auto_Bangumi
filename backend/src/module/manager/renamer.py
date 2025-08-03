@@ -12,11 +12,11 @@ from module.parser import TitleParser, TmdbParser
 from module.parser.analyser.raw_parser import is_point_5, is_v1
 from module.utils import (
     Event,
+    EventType,
     check_file,
     event_bus,
     gen_save_path,
     path_to_bangumi,
-    EventType,
 )
 
 logger = logging.getLogger(__name__)
@@ -201,7 +201,9 @@ class Renamer:
             )
 
             asyncio.create_task(self._event_bus.publish(event))
-            logger.debug(f"[Download Controller] 已发布通知请求事件: {notify_info.title}")
+            logger.debug(
+                f"[Download Controller] 已发布通知请求事件: {notify_info.title}"
+            )
 
         except Exception as e:
             logger.error(f"[Download Controller] 发布通知请求事件失败: {e}")
@@ -271,7 +273,6 @@ class Renamer:
 
 
 if __name__ == "__main__":
-
     from module.conf import setup_logger
 
     setup_logger(level=logging.DEBUG, reset=True)

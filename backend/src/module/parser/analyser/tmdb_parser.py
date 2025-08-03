@@ -1,13 +1,13 @@
 import time
 
-from module.conf.tmdb import search_url, info_url, TMDB_IMG_URL
+from module.conf.tmdb import TMDB_IMG_URL, info_url, search_url
 from module.models import (
     ShowInfo,
     TMDBInfo,
     TVShow,
 )
-from module.utils import gen_poster_path
 from module.network import RequestContent
+from module.utils import gen_poster_path
 
 
 async def tmdb_search(key_word: str) -> list[ShowInfo]:
@@ -23,6 +23,7 @@ async def tmdb_search(key_word: str) -> list[ShowInfo]:
             return contents
         return []
 
+
 async def tmdb_info(id: str, language: str) -> TVShow:
     url = info_url(id, language)
     async with RequestContent() as req:
@@ -30,8 +31,6 @@ async def tmdb_info(id: str, language: str) -> TVShow:
         if json_contents:
             return json_contents
         return {}
-
-
 
 
 async def is_animation(genre_ids: list[int]) -> bool:

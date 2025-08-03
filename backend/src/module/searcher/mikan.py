@@ -1,8 +1,9 @@
-from bs4 import BeautifulSoup
-from module.network import RequestContent
 import re
+
+from bs4 import BeautifulSoup
 from urllib3.util import parse_url
 
+from module.network import RequestContent
 from module.parser import RawParser
 from module.parser.analyser import MikanWebParser
 

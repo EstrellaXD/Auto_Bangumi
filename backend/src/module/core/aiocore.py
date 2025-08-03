@@ -3,8 +3,8 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Any
 
-from module.utils.events import event_bus
 from module.conf import settings
+from module.utils.events import event_bus
 
 from .task_manager import TaskManager
 
@@ -84,25 +84,13 @@ class AsyncApplicationCore:
             # 使用全局 DownloadMonitor 实例
             self._download_monitor = download_monitor
             self._download_monitor.initialize()
-            logger.info("[AsyncCore] 已注册 DownloadMonitor 事件处理器")
-
             # 创建并注册 RenameMonitor (仅在启用重命名功能时)
             self._rename_monitor = RenameMonitor()
-            if self._rename_monitor.enabled:
-                await self._rename_monitor.initialize()
-                logger.info("[AsyncCore] 已注册 RenameMonitor 事件处理器")
-            else:
-                self._rename_monitor = None
-                logger.info("[AsyncCore] 重命名功能已禁用，跳过 RenameMonitor 注册")
+            await self._rename_monitor.initialize()
 
             # 创建并注册 NotificationMonitor
             self._notification_monitor = NotificationMonitor()
-            if self._notification_monitor.enabled:
-                await self._notification_monitor.initialize()
-                logger.info("[AsyncCore] 已注册 NotificationMonitor 事件处理器")
-            else:
-                logger.info("[AsyncCore] 通知功能已禁用，跳过 NotificationMonitor 注册")
-                return
+            await self._notification_monitor.initialize()
 
         except Exception as e:
             logger.error(f"[AsyncCore] 注册事件处理器失败: {e}")

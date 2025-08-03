@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING
 from module.conf import settings
 from module.database import Database
 from module.models import Notification
+from module.network import load_image
 from module.notification.manager import (
-    NotificationManager,
     NotificationConfig,
+    NotificationManager,
     NotificationType,
 )
-from module.network import load_image
 
 if TYPE_CHECKING:
     pass
@@ -55,13 +55,14 @@ class NotificationProcessor:
         # 生成默认消息
         if processed.episode:
             processed.message = f"番剧名称：{processed.title}\n季度：第{processed.season}季\n更新集数：第{processed.episode}集"
-        # 获取海报
+            # 获取海报
             if not processed.poster_path and processed.title:
                 logger.debug(f"[NotificationProcessor] 获取海报: {processed.title}")
                 processed.poster_path = self.get_poster_from_db(processed.title)
 
-        processed.file = await load_image(processed.poster_path) if processed.poster_path else None
-
+        processed.file = (
+            await load_image(processed.poster_path) if processed.poster_path else None
+        )
 
         return processed
 
@@ -159,6 +160,7 @@ NotificationSender = PostNotification
 
 if __name__ == "__main__":
     import asyncio
+
     from module.conf import setup_logger
 
     setup_logger("DEBUG", reset=True)

@@ -5,8 +5,14 @@ from abc import abstractmethod
 from typing_extensions import override
 
 from module.conf import settings
-from module.models import Bangumi, EpisodeFile, SubtitleFile
-from module.models import BangumiUpdate, Episode, MikanInfo
+from module.models import (
+    Bangumi,
+    BangumiUpdate,
+    Episode,
+    EpisodeFile,
+    MikanInfo,
+    SubtitleFile,
+)
 from module.parser.analyser import MikanWebParser, tmdb_parser, torrent_parser
 from module.parser.analyser import RawParser as rawparser
 
@@ -28,9 +34,8 @@ logger = logging.getLogger(__name__)
 
 
 class BaseParser:
-
     @abstractmethod
-    def parser(self,title: str, **kwargs) -> Bangumi|None:
+    def parser(self, title: str, **kwargs) -> Bangumi | None:
         pass
 
 
@@ -87,25 +92,29 @@ class MikanParser(BaseParser):
     def __init__(self):
         pass
 
-    async def parser(self, homepage: str) -> Bangumi| None:
+    async def parser(self, homepage: str) -> Bangumi | None:
         mikan_parser = MikanWebParser()
-        mikan_info:MikanInfo = await mikan_parser.parser(homepage)
+        mikan_info: MikanInfo = await mikan_parser.parser(homepage)
         if not mikan_info.official_title or not mikan_info.poster_link:
-            logger.debug(f"[MikanParser] No official title or poster link found for {homepage}")
+            logger.debug(
+                f"[MikanParser] No official title or poster link found for {homepage}"
+            )
             return None
 
         return Bangumi(
-            official_title= mikan_info.official_title,
-            season= mikan_info.season,
-            mikan_id= mikan_info.id,
-            poster_link= mikan_info.poster_link,
+            official_title=mikan_info.official_title,
+            season=mikan_info.season,
+            mikan_id=mikan_info.id,
+            poster_link=mikan_info.poster_link,
         )
 
-    async def poster_parser(self, bangumi:Bangumi|BangumiUpdate) -> bool:
+    async def poster_parser(self, bangumi: Bangumi | BangumiUpdate) -> bool:
         # 这是给 Bangumi 刷新用的
         # https://mikanani.me/Home/Bangumi/
         if not bangumi.mikan_id:
-            logger.debug(f"[MikanParser] No Mikan ID found for {bangumi.official_title}")
+            logger.debug(
+                f"[MikanParser] No Mikan ID found for {bangumi.official_title}"
+            )
             return False
         homepage = f"https://{settings.rss_parser.mikan_custom_url}/Home/Bangumi/{bangumi.mikan_id}"
         logger.debug(f"[MikanParser] Parsing poster link from {homepage}")
@@ -184,8 +193,10 @@ class TitleParser:
 if __name__ == "__main__":
     import asyncio
     import time
+
     mikan_id = "3649#357"
     from module.conf import setup_logger
+
     setup_logger(logging.DEBUG, reset=True)
 
     mikan_url = settings.rss_parser.mikan_custom_url
@@ -203,7 +214,6 @@ if __name__ == "__main__":
         print(f"Time taken: {end - start} seconds")
         return ans
 
-
     async def test_mikan_poster(homepage):
         start = time.time()
         tb = MikanParser()
@@ -211,6 +221,7 @@ if __name__ == "__main__":
         end = time.time()
         print(f"Time taken: {end - start} seconds")
         return ans
+
     # parser = TmdbParser()
 
     title = "/Volumes/gtx/download/qb/动漫/物语系列/Season 5"

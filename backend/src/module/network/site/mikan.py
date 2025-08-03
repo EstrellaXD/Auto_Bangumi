@@ -1,7 +1,7 @@
 from xml.etree import ElementTree
 
 
-def rss_parser(soup: ElementTree.Element)->tuple[list[str], list[str], list[str]]:
+def rss_parser(soup: ElementTree.Element) -> tuple[list[str], list[str], list[str]]:
     torrent_titles = []
     torrent_urls = []
     torrent_homepage = []

@@ -2,11 +2,11 @@ import asyncio
 import logging
 
 from module.conf import settings
-from module.utils.events import Event, EventType, EventBus
+from module.database import Database
 from module.manager import Renamer
 from module.models import Bangumi, Torrent
-from module.database import Database
 from module.utils import event_bus
+from module.utils.events import Event, EventBus, EventType
 
 logger = logging.getLogger(__name__)
 
@@ -18,24 +18,25 @@ class RenameMonitor:
     """
 
     def __init__(self):
-        self._event_bus: EventBus  = event_bus
-        self._initialized:bool = False
+        self._event_bus: EventBus = event_bus
+        self._initialized: bool = False
         # 存储活跃的重命名任务 {torrent_hash: asyncio.Task}
         self.active_rename_tasks: dict[str, asyncio.Task] = {}
-        self.event_bus = event_bus
-
-    @property
-    def enabled(self) -> bool:
-        """检查重命名监控器是否启用"""
-        return settings.bangumi_manage.enable
+        self.enable: bool = settings.bangumi_manage.enable
 
     async def initialize(self) -> None:
         """初始化重命名器"""
+        self.enable = settings.bangumi_manage.enable
+        if not self.enable:
+            logger.warning("[RenameMonitor] 重命名功能未启用")
+            return
 
-        event_bus.subscribe(
+        self._event_bus.subscribe(
             EventType.DOWNLOAD_COMPLETED,
             self.handle_download_completed,
         )
+
+        logger.info("[RenameMonitor] 已注册 RenameMonitor 事件处理器")
         if not self._initialized:
             self._initialized = True
             logger.info("[RenameMonitor] 初始化完成")
@@ -46,7 +47,7 @@ class RenameMonitor:
         Args:
             event: 下载完成事件，包含torrent和bangumi信息
         """
-        if not self._initialized :
+        if not self._initialized:
             logger.error("[RenameMonitor] 服务未初始化")
             return
 
@@ -74,14 +75,15 @@ class RenameMonitor:
                 try:
                     await old_task
                 except asyncio.CancelledError:
-                    logger.debug(f"[RenameMonitor] 之前的重命名任务已取消: {torrent.name}")
+                    logger.debug(
+                        f"[RenameMonitor] 之前的重命名任务已取消: {torrent.name}"
+                    )
 
         # 创建新的重命名任务
         task = asyncio.create_task(
-            self._execute_rename(torrent, bangumi),
-            name=f"rename_{torrent_hash}"
+            self._execute_rename(torrent, bangumi), name=f"rename_{torrent_hash}"
         )
-        
+
         self.active_rename_tasks[torrent_hash] = task
         logger.info(f"[RenameMonitor] 开始新的重命名任务: {torrent.name}")
 
@@ -111,39 +113,20 @@ class RenameMonitor:
                 self.active_rename_tasks.pop(torrent_hash, None)
                 logger.debug(f"[RenameMonitor] 清理重命名任务: {torrent.name}")
 
-    async def _publish_rename_completed(
-        self, torrent: Torrent, bangumi: Bangumi
-    ) -> None:
-        """发布重命名完成事件
-
-        Args:
-            torrent: 种子信息
-            bangumi: 番剧信息
-        """
-        if not self._event_bus:
-            logger.warning("[RenameMonitor] EventBus 未设置，无法发布事件")
-            return
-
-        try:
-            event = Event(
-                type=EventType.RENAME_COMPLETED,
-                data={"torrent": torrent, "bangumi": bangumi},
-            )
-
-            asyncio.create_task(self._event_bus.publish(event))
-            logger.info(f"[RenameMonitor] 已发布重命名完成事件: {torrent.name}")
-
-        except Exception as e:
-            logger.error(f"[RenameMonitor] 发布事件失败: {e}")
-
     async def shutdown(self) -> None:
         """关闭重命名监控器，取消所有活跃的重命名任务"""
+        self._event_bus.unsubscribe(
+            EventType.DOWNLOAD_COMPLETED,
+            self.handle_download_completed,
+        )
         if not self.active_rename_tasks:
             logger.info("[RenameMonitor] 重命名监控器已关闭")
             return
 
-        logger.info(f"[RenameMonitor] 关闭监控器，取消 {len(self.active_rename_tasks)} 个活跃任务")
-        
+        logger.info(
+            f"[RenameMonitor] 关闭监控器，取消 {len(self.active_rename_tasks)} 个活跃任务"
+        )
+
         # 取消所有活跃任务
         for task in self.active_rename_tasks.values():
             if not task.done():
@@ -153,18 +136,13 @@ class RenameMonitor:
         if self.active_rename_tasks:
             try:
                 await asyncio.gather(
-                    *self.active_rename_tasks.values(), 
-                    return_exceptions=True
+                    *self.active_rename_tasks.values(), return_exceptions=True
                 )
             except Exception as e:
                 logger.error(f"[RenameMonitor] 等待任务完成失败: {e}")
 
         # 清空任务字典
         self.active_rename_tasks.clear()
-        self.event_bus.unsubscribe(
-            EventType.DOWNLOAD_COMPLETED,
-            self.handle_download_completed,
-        )
         logger.info("[RenameMonitor] 重命名监控器已关闭")
 
     def get_active_tasks_count(self) -> int:
@@ -174,7 +152,7 @@ class RenameMonitor:
     def get_active_tasks_info(self) -> dict[str, str]:
         """获取活跃任务信息"""
         return {
-            torrent_hash: f"Task-{task.get_name()}" 
+            torrent_hash: f"Task-{task.get_name()}"
             for torrent_hash, task in self.active_rename_tasks.items()
             if not task.done()
         }

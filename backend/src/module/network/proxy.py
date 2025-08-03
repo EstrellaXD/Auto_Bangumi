@@ -7,8 +7,8 @@ from module.conf import settings
 logger = logging.getLogger(__name__)
 
 
-def set_proxy()->str|None:
-    if not settings.proxy.enable :
+def set_proxy() -> str | None:
+    if not settings.proxy.enable:
         return None
     auth = ""
     host = settings.proxy.host
@@ -21,6 +21,7 @@ def set_proxy()->str|None:
     else:
         logger.error(f"[Network] Unsupported proxy type: {settings.proxy.type}")
         return None
+
 
 def test_proxy() -> bool:
     with httpx.Client(proxies=set_proxy()) as client:

@@ -6,50 +6,49 @@ from typing import Any
 from httpx import Response
 
 from module.models import Torrent
+from module.utils import get_hash, torrent_to_link
 
 from .request_url import RequestURL
 from .site import rss_parser
-from module.utils import get_hash, torrent_to_link
 
 logger = logging.getLogger(__name__)
 
 _cache = {}
 _max_cache_size = 1000
 
-class RequestContent(RequestURL):
 
+class RequestContent(RequestURL):
     def __init__(self):
         super().__init__()
-    
+
     def _check_cache(self, url: str):
         if url in _cache:
-            data, timestamp = _cache[url]['data'], _cache[url]['timestamp']
+            data, timestamp = _cache[url]["data"], _cache[url]["timestamp"]
             if time.time() - timestamp < 60:  # 未过期
                 return data
             else:
                 del _cache[url]  # 过期就删除
         return None
-    
+
     def _save_cache(self, url: str, data):
         if len(_cache) >= _max_cache_size:
             # 批量清理所有过期的缓存
             current_time = time.time()
             expired_keys = [
-                key for key, value in _cache.items() 
-                if current_time - value['timestamp'] > 60
+                key
+                for key, value in _cache.items()
+                if current_time - value["timestamp"] > 60
             ]
             for key in expired_keys:
                 del _cache[key]
-            
+
             # 如果清理后还是达到上限，删除最老的一条
             if len(_cache) >= _max_cache_size:
                 first_key = next(iter(_cache))
                 del _cache[first_key]
-        
-        _cache[url] = {
-            'data': data,
-            'timestamp': time.time()
-        }
+
+        _cache[url] = {"data": data, "timestamp": time.time()}
+
     # 对错误包裹, 所有网络的错误到这里就结束了
     async def get_torrents(
         self,
@@ -79,7 +78,7 @@ class RequestContent(RequestURL):
         cached = self._check_cache(_url)
         if cached is not None:
             return cached
-        
+
         try:
             req = await self.get_url(_url, retry)
             if req:
@@ -100,7 +99,7 @@ class RequestContent(RequestURL):
         cached = self._check_cache(_url)
         if cached is not None:
             return cached
-        
+
         try:
             req = await self.get_url(_url)
             if req:
@@ -112,7 +111,7 @@ class RequestContent(RequestURL):
         return {}
 
     async def post_data(
-        self, _url: str, data: dict[str, str], files: dict[str, bytes]|None=None
+        self, _url: str, data: dict[str, str], files: dict[str, bytes] | None = None
     ) -> Response:
         try:
             req = await self.post_url(_url, data, files)
@@ -126,7 +125,7 @@ class RequestContent(RequestURL):
         cached = self._check_cache(_url)
         if cached is not None:
             return cached
-        
+
         try:
             req = await self.get_url(_url)
             if req:
@@ -142,7 +141,7 @@ class RequestContent(RequestURL):
         cached = self._check_cache(_url)
         if cached is not None:
             return cached
-        
+
         try:
             req = await self.get_url(_url)
             if req:
@@ -169,10 +168,8 @@ class RequestContent(RequestURL):
 
     async def get_torrent_hash(self, _url: str) -> str:
         # 下载种子文件,处理 hash 与 url 不一致的情况
-        if torrent_file := await self.get_content( _url):
+        if torrent_file := await self.get_content(_url):
             torrent_url = await torrent_to_link(torrent_file)
             torrent_hash = get_hash(torrent_url)
             return torrent_hash
         return ""
-
-

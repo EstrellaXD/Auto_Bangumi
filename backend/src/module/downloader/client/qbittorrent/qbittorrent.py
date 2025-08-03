@@ -2,15 +2,15 @@ import logging
 
 import httpx
 from typing_extensions import override
-from module.models import TorrentDownloadInfo
 
 from module.conf import get_plugin_config
+from module.models import TorrentDownloadInfo
+from module.network import RequestContent
 
 from ....conf import settings
 from ..base_downloader import BaseDownloader
 from ..expection import AuthorizationError
 from .config import Config as DownloaderConfig
-from module.network import RequestContent
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,6 @@ QB_API_URL = {
 
 
 class Downloader(BaseDownloader):
-
     def __init__(self):  # , host: str, username: str, password: str, ssl: bool
         super().__init__()
         self._client: httpx.AsyncClient | None = None
@@ -46,20 +45,21 @@ class Downloader(BaseDownloader):
         """初始化下载器"""
         # 加载配置
         self.config = get_plugin_config(DownloaderConfig(), "downloader")
-        
+
         # 初始化 HTTP 客户端
         self._client = httpx.AsyncClient(
-            base_url=self.config.host,
-            trust_env=settings.downloader.ssl
+            base_url=self.config.host, trust_env=settings.downloader.ssl
         )
-
 
     @override
     async def auth(self):
         try:
             resp = await self._client.post(
                 url=QB_API_URL["login"],
-                data={"username": self.config.username, "password": self.config.password},
+                data={
+                    "username": self.config.username,
+                    "password": self.config.password,
+                },
                 timeout=5,
             )
             resp.raise_for_status()
@@ -76,7 +76,7 @@ class Downloader(BaseDownloader):
                 logger.error(
                     "[qbittorrent] your ip has been banned by qbittorrent, please remove the ban(or restart qbittorrent) and try again."
                 )
-        except (httpx.ConnectError, httpx.TimeoutException, httpx.ReadTimeout) as e:
+        except (httpx.ConnectError, httpx.TimeoutException, httpx.ReadTimeout):
             logger.error(
                 f"[qbittorrent] connect to qbittorrent error, please check your host {self.config.host}"
             )
@@ -142,7 +142,7 @@ class Downloader(BaseDownloader):
             self.handle_exception(e, "add_category")
         return []
 
-    async def torrent_info(self, hash: str)-> TorrentDownloadInfo | None:
+    async def torrent_info(self, hash: str) -> TorrentDownloadInfo | None:
         try:
             data = {"hash": hash}
             reps = await self._client.get(
@@ -157,10 +157,16 @@ class Downloader(BaseDownloader):
                 logger.debug(f"[qbittorrent] Torrent info: {hash}")
                 reps = reps.json()
                 # print(reps)
-                logger.debug(f"[qbittorrent] Torrent info: {reps['eta']=}, {reps['save_path']=}, {reps['completion_date']=}")
+                logger.debug(
+                    f"[qbittorrent] Torrent info: {reps['eta']=}, {reps['save_path']=}, {reps['completion_date']=}"
+                )
                 if reps["completion_date"] == -1:
                     reps["completion_date"] = 0
-                res = TorrentDownloadInfo(eta = reps["eta"], save_path=reps["save_path"],completed=reps["completion_date"])
+                res = TorrentDownloadInfo(
+                    eta=reps["eta"],
+                    save_path=reps["save_path"],
+                    completed=reps["completion_date"],
+                )
                 return res
         except Exception as e:
             self.handle_exception(e, "torrent_info")
@@ -217,17 +223,25 @@ class Downloader(BaseDownloader):
         }
         file = None
         torrent_link = ""
-        logger.debug(f"[QbDownloader] Starting to get torrent content from {torrent_url}")
+        logger.debug(
+            f"[QbDownloader] Starting to get torrent content from {torrent_url}"
+        )
         async with RequestContent() as req:
             logger.debug(f"[QbDownloader] Calling get_content for {torrent_url}")
             if torrent_file := await req.get_content(torrent_url):
-                logger.debug(f"[QbDownloader] Got torrent content, getting hash for {torrent_url}")
+                logger.debug(
+                    f"[QbDownloader] Got torrent content, getting hash for {torrent_url}"
+                )
                 torrent_link = await req.get_torrent_hash(torrent_url)
                 logger.debug(f"[QbDownloader] Got torrent hash: {torrent_link}")
                 file = {"torrents": torrent_file}
             else:
-                logger.warning(f"[QbDownloader] Failed to get torrent content from {torrent_url}")
-        logger.debug(f"[QbDownloader] Finished getting torrent content, proceeding to add torrent")
+                logger.warning(
+                    f"[QbDownloader] Failed to get torrent content from {torrent_url}"
+                )
+        logger.debug(
+            "[QbDownloader] Finished getting torrent content, proceeding to add torrent"
+        )
         try:
             resp = await self._client.post(
                 url=QB_API_URL["add"],
@@ -357,7 +371,7 @@ class Downloader(BaseDownloader):
                     function_name=funtion_name,
                     message=f"{funtion_name} requires authentication",
                     status_code=e.response.status_code,
-                    response_text=e.response.text[:200]
+                    response_text=e.response.text[:200],
                 )
             else:
                 logger.error(f"[qbittorrent] {funtion_name} error: {e}")

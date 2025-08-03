@@ -31,7 +31,7 @@ class Downloader(BaseModel):
     ssl: bool = Field(False, description="Downloader ssl")
 
     class Config:
-        extra:str = "allow"  # This allows extra fields not defined in the model
+        extra: str = "allow"  # This allows extra fields not defined in the model
 
     @validator("host", pre=True)
     def validate_host(cls, value: str) -> str:
@@ -39,6 +39,7 @@ class Downloader(BaseModel):
         if not value.startswith(("http://", "https://")):
             value = f"http://{value}"
         return value
+
     # username: str = Field("admin", alias="username", description="Downloader username")
     # password: str = Field(
     #     "adminadmin", alias="password", description="Downloader password"
@@ -80,9 +81,7 @@ class RSSParser(BaseModel):
     filter: list[str] = Field(default=["720", r"\d+-\d"], description="Filter")
     include: list[str] = Field(default=[], description="Include")
     language: str = "zh"
-    mikan_custom_url: str = Field(
-        default="mikanani.me", description="Mikan custom url"
-    )
+    mikan_custom_url: str = Field(default="mikanani.me", description="Mikan custom url")
 
 
 class BangumiManage(BaseModel):

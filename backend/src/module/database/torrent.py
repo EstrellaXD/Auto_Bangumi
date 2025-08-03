@@ -41,7 +41,9 @@ class TorrentDatabase:
     #     self.session.refresh(data)
     #     logger.debug(f"Update {data.name} in database.")
     #
-    def filter_by_bangumi(self, official_title: str, season: int, rss_link: str) -> list[Torrent]:
+    def filter_by_bangumi(
+        self, official_title: str, season: int, rss_link: str
+    ) -> list[Torrent]:
         """根据 Bangumi 的官方标题、季节和 RSS 链接过滤种子"""
         statement = select(Torrent).where(
             Torrent.bangumi_official_title == official_title,
@@ -81,8 +83,7 @@ class TorrentDatabase:
         """查询已下载但未重命名的种子"""
         torrents = self.session.exec(
             select(Torrent).where(
-                Torrent.downloaded == true(),
-                Torrent.renamed == false()
+                Torrent.downloaded == true(), Torrent.renamed == false()
             )
         ).all()
         return list(torrents)

@@ -1,7 +1,8 @@
-import logging
-import httpx
-import base64
 import asyncio
+import base64
+import logging
+
+import httpx
 
 from ..exceptions import AuthorizationError
 

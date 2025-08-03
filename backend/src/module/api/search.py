@@ -1,10 +1,11 @@
+import logging
+
 from fastapi import APIRouter, Depends, Query
 from sse_starlette.sse import EventSourceResponse
 
 from module.models import Bangumi
 from module.searcher import SEARCH_CONFIG, SearchTorrent
 from module.security.api import UNAUTHORIZED, get_current_user
-import logging
 
 logger = logging.getLogger("api.search")
 

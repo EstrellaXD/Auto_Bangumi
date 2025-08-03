@@ -19,7 +19,7 @@ from module.utils.config import deep_update
 
 from .const import ENV_TO_ATTR
 
-T_BaseModel = TypeVar('T_BaseModel', bound=BaseModel)
+T_BaseModel = TypeVar("T_BaseModel", bound=BaseModel)
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +123,6 @@ def update_config(base_config: BaseModel | dict, data: dict):
 
 
 class Settings(Config):
-
     # def __init__(self):
     #     super().__init__()
     def __init__(self, **data):

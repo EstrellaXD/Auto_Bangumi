@@ -5,10 +5,11 @@ from module.database import Database, engine
 from module.downloader import DownloadQueue
 from module.models import Bangumi, RSSItem, Torrent
 from module.network import RequestContent
-from module.rss.analyser import RSSAnalyser
 from module.parser import RawParser
+from module.rss.analyser import RSSAnalyser
 
 logger = logging.getLogger(__name__)
+
 
 class BaseRefresh:
     def __init__(self, _engine=engine):
@@ -50,7 +51,6 @@ class RSSRefresh(BaseRefresh):
         for torrent in torrents:
             raw_bangumi = RawParser().parser(raw=torrent.name)
             if raw_bangumi:
-                logger.debug(f"[RSSRefresh download_rss] raw bangumi {raw_bangumi.title_raw}")
                 # 这里可以直接用 raw_bangumi.title_raw 来查找 bangumi
                 with Database(self.engine) as database:
                     bangumi = database.find_bangumi_by_name(
@@ -58,19 +58,25 @@ class RSSRefresh(BaseRefresh):
                         self.rss_item.url,
                         self.rss_item.aggregate,
                     )
-                    if bangumi and not bangumi.deleted and self.analyser.filer_torrent(torrent, bangumi):
-                            ## 如果不符合过滤条件, 则跳过
-                            self.download_queue.add(torrent, bangumi)
-                            logger.debug(
-                                f"[RSS download_rss] Find bangumi {bangumi.official_title} by torrent {torrent.name}"
-                            )
+                    if (
+                        bangumi
+                        and not bangumi.deleted
+                        and self.analyser.filer_torrent(torrent, bangumi)
+                    ):
+                        ## 如果不符合过滤条件, 则跳过
+                        self.download_queue.add(torrent, bangumi)
+                        logger.debug(
+                            f"[RSS download_rss] Find bangumi {bangumi.official_title} by torrent {torrent.name}"
+                        )
 
                     else:
                         logger.debug(
                             f"[RSS download_rss] No bangumi found for {raw_bangumi.title_raw}"
                         )
 
-        logger.debug(f"[RSS download_rss] pull {len(torrents)} torrents from {self.rss_item.url}")
+        logger.debug(
+            f"[RSS download_rss] pull {len(torrents)} torrents from {self.rss_item.url}"
+        )
         return torrents
 
     async def find_new_bangumi(self, add_to_db: bool = True) -> list[Bangumi]:
@@ -92,7 +98,9 @@ class RSSRefresh(BaseRefresh):
                 continue
             # 先从数据库中找, 如果数据库中没有, 更新一下 database
             raw_bangumi = RawParser().parser(raw=torrent.name)
-            logger.debug(f"[RSSRefresh] raw bangumi {raw_bangumi.title_raw if raw_bangumi else 'None'}")
+            logger.debug(
+                f"[RSSRefresh] raw bangumi {raw_bangumi.title_raw if raw_bangumi else 'None'}"
+            )
             if raw_bangumi:
                 if new_torrents.get(raw_bangumi.title_raw):
                     # 如果已经有了, 则跳过
@@ -141,7 +149,6 @@ class BangumiRefresher(BaseRefresh):
         self.analyser = RSSAnalyser()
         self.download_queue = DownloadQueue()
 
-
     async def refresh(self) -> list[Torrent]:
         """刷新 bangumi 的 rss"""
         torrents = await self.pull_rss()
@@ -151,11 +158,15 @@ class BangumiRefresher(BaseRefresh):
             if self.analyser.filer_torrent(torrent, self.bangumi):
                 # 订阅时可加入信息
                 # self.download_queue.add(torrent,self.bangumi)
-                logger.debug(f"[BangumiRefresher] Add torrent {torrent.name} to download queue for bangumi {self.bangumi.official_title}")
+                logger.debug(
+                    f"[BangumiRefresher] Add torrent {torrent.name} to download queue for bangumi {self.bangumi.official_title}"
+                )
                 # 这里是最早加入 torrent.bang
                 new_torrents.append(torrent)
 
-        logger.debug(f"[BangumiRefresher] Found {len(new_torrents)} new torrents for {self.bangumi.official_title}")
+        logger.debug(
+            f"[BangumiRefresher] Found {len(new_torrents)} new torrents for {self.bangumi.official_title}"
+        )
         return new_torrents
 
 
@@ -209,10 +220,10 @@ class RSSEngine:
             logger.debug(f"[RSS] get {len(rss_items)} active rss items")
         return rss_items
 
-    async def refresh_rss(self, rss_item:RSSItem) -> list[Torrent]:
-            rssrefresh = RSSRefresh(rss_item=rss_item)
-            await rssrefresh.find_new_bangumi()
-            await rssrefresh.download_rss()
+    async def refresh_rss(self, rss_item: RSSItem) -> list[Torrent]:
+        rssrefresh = RSSRefresh(rss_item=rss_item)
+        await rssrefresh.find_new_bangumi()
+        await rssrefresh.download_rss()
 
     async def refresh_all(self):
         """刷新所有rss"""
@@ -242,6 +253,7 @@ class RSSEngine:
         await self.queue.add_torrents(torrents, bangumi)
         return True
 
+
 if __name__ == "__main__":
     from module.conf import setup_logger
 
@@ -256,9 +268,5 @@ if __name__ == "__main__":
         test_refresh = RSSRefresh(rss_item=test_rss)
         await test_refresh.find_new_bangumi()
         await test_refresh.download_rss()
-
-    # async def test_engine():
-    #     test_engine = RSSEngine()
-    #     await test_engine.refresh_all()
 
     asyncio.run(test())

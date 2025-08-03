@@ -1,8 +1,8 @@
 from .bangumi_data import get_hash
 from .cache_image import gen_poster_path, str_to_url, url_to_str
+from .events import Event, EventBus, EventType, event_bus
+from .path_parser import check_file, gen_save_path, get_path_basename, path_to_bangumi
 from .torrent import torrent_to_link
-from .path_parser import get_path_basename, check_file, path_to_bangumi, gen_save_path
-from .events import Event, EventType, EventBus, event_bus
 
 __all__ = [
     "check_file",

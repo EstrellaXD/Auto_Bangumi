@@ -66,7 +66,7 @@ class BangumiDatabase:
         self.session.commit()
         # logger.debug(f"[Database] Insert {len(datas)} bangumi into database.")
 
-    def update(self, data: Bangumi|BangumiUpdate, _id: int = None) -> bool:
+    def update(self, data: Bangumi | BangumiUpdate, _id: int = None) -> bool:
         if _id and isinstance(data, BangumiUpdate):
             db_data = self.session.get(Bangumi, _id)
         elif isinstance(data, Bangumi):
@@ -89,8 +89,6 @@ class BangumiDatabase:
         self.session.commit()
         # logger.debug(f"[Database] Update {len(datas)} bangumi.")
 
-
-
     def delete_one(self, _id: int):
         statement = select(Bangumi).where(Bangumi.id == _id)
         bangumi = self.session.exec(statement).first()
@@ -103,7 +101,7 @@ class BangumiDatabase:
         self.session.exec(statement)
         self.session.commit()
 
-    def search(self,title,season, rss_link) -> Bangumi | None:
+    def search(self, title, season, rss_link) -> Bangumi | None:
         """
         根据官方标题、季节和 RSS 链接查找 Bangumi
         :param title: 官方标题
@@ -123,7 +121,6 @@ class BangumiDatabase:
     def search_all(self) -> list[Bangumi]:
         statement = select(Bangumi)
         return self.session.exec(statement).all()
-
 
     def search_id(self, _id: int) -> Bangumi | None:
         statement = select(Bangumi).where(Bangumi.id == _id)
@@ -145,7 +142,6 @@ class BangumiDatabase:
             return None
         return self.session.exec(statement).first()
 
-
     def not_complete(self) -> list[Bangumi]:
         # Find eps_complete = False
         # use `false()` to avoid E712 checking
@@ -157,12 +153,8 @@ class BangumiDatabase:
         return datas
 
 
-
-
-
 if __name__ == "__main__":
     from module.database import Database, engine
-
     from module.models.bangumi import Bangumi
 
     with Database() as db:

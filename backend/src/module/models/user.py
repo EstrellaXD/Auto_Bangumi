@@ -11,10 +11,10 @@ class User(SQLModel, table=True):
 
 
 class UserUpdate(SQLModel):
-    username: str|None = Field(
+    username: str | None = Field(
         None, min_length=4, max_length=20, regex=r"^[a-zA-Z0-9_]+$"
     )
-    password: str|None = Field(None, min_length=8)
+    password: str | None = Field(None, min_length=8)
 
 
 class UserLogin(SQLModel):

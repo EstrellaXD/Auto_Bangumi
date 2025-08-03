@@ -7,13 +7,12 @@ from typing_extensions import override
 
 from module.conf import get_plugin_config
 from module.models import TorrentDownloadInfo
+from module.utils import get_hash
 
 from ....conf import settings
 from ..base_downloader import BaseDownloader
 from ..expection import AuthorizationError
 from .config import Config as DownloaderConfig
-from module.utils import get_hash
-
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +37,6 @@ ALIST_API_URL = {
 
 
 class Downloader(BaseDownloader):
-
     def __init__(self):
         self.config: DownloaderConfig = get_plugin_config(
             DownloaderConfig(), "downloader"
@@ -85,10 +83,11 @@ class Downloader(BaseDownloader):
         return False
 
     async def torrent_info(self, hash: str) -> TorrentDownloadInfo:
-
         # TODO:
         #
-        res = TorrentDownloadInfo(eta = 0, save_path=settings.downloader.path,completed=1)
+        res = TorrentDownloadInfo(
+            eta=0, save_path=settings.downloader.path, completed=1
+        )
         return res
         """
                     {'id': 'CImUQ9ZzMsBc5JB3G4EyH',
@@ -205,7 +204,9 @@ class Downloader(BaseDownloader):
                 return False
 
             logger.debug(f"[openlist] Successfully added torrent: {torrent_url}")
-            return result["data"]["tasks"][0]["id"] if result["data"]["tasks"] else False
+            return (
+                result["data"]["tasks"][0]["id"] if result["data"]["tasks"] else False
+            )
         except Exception as e:
             self.handle_exception(e, "add")
             return False
@@ -239,7 +240,7 @@ class Downloader(BaseDownloader):
 
     @override
     async def rename(self, torrent_hash: str, old_path: str, new_path: str) -> bool:
-        #TODO:
+        # TODO:
         return True
         try:
             data = {
@@ -269,7 +270,7 @@ class Downloader(BaseDownloader):
 
     @override
     async def move(self, hashes, new_location) -> bool:
-        #TODO:
+        # TODO:
         return True
         try:
             if isinstance(hashes, list):

@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Any, Dict
 
 from module.models import Notification
 from module.network import RequestContent, load_image
@@ -11,15 +11,15 @@ class Notifier(BaseNotifier):
 
     def __init__(self, token: str, chat_id: str, **kwargs):
         super().__init__(token, **kwargs)
-        self.chat_id:str = chat_id
-        self.photo_url:str = f"https://api.telegram.org/bot{token}/sendPhoto"
-        self.message_url:str = f"https://api.telegram.org/bot{token}/sendMessage"
+        self.chat_id: str = chat_id
+        self.photo_url: str = f"https://api.telegram.org/bot{token}/sendPhoto"
+        self.message_url: str = f"https://api.telegram.org/bot{token}/sendMessage"
 
     async def post_msg(self, notify: Notification) -> bool:
         """发送 Telegram 通知"""
         try:
             message = notify.message
-            
+
             photo = notify.file
             async with RequestContent() as req:
                 if photo:

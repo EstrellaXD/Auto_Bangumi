@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from collections.abc import AsyncGenerator
 
 from module.conf import settings
@@ -9,7 +10,6 @@ from module.parser.title_parser import MikanParser, RawParser
 from module.rss import RSSAnalyser, RSSEngine
 from module.searcher.mikan import MikanSearch
 from module.searcher.provider import search_url
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,9 @@ class SearchTorrent:
         for torrent in new_torrents:
             if self.analyser.filer_torrent(torrent, bangumi):
                 torrents.append(torrent)
-        logger.debug(f"[SearchTorrent] Found {len(torrents)} torrents for {rss_item.url}")
+        logger.debug(
+            f"[SearchTorrent] Found {len(torrents)} torrents for {rss_item.url}"
+        )
         return torrents
 
     async def analyse_keyword(
@@ -72,7 +74,9 @@ class SearchTorrent:
                         tasks.append(task)
                     exist_list.append(new_str)
 
-        logger.debug(f"[SearchTorrent] Found {len(single_torrent)} single torrents for {rss_item.url}")
+        logger.debug(
+            f"[SearchTorrent] Found {len(single_torrent)} single torrents for {rss_item.url}"
+        )
         homepage_list = []
         page_task = []
         for torrent in single_torrent:
@@ -84,7 +88,9 @@ class SearchTorrent:
             )
             if len(page_task) >= 3:
                 break
-        logger.debug(f"[SearchTorrent] Found {len(page_task)} homepage tasks for {rss_item.url}")
+        logger.debug(
+            f"[SearchTorrent] Found {len(page_task)} homepage tasks for {rss_item.url}"
+        )
         while page_task:
             done, page_task = await asyncio.wait(
                 page_task, return_when=asyncio.FIRST_COMPLETED
@@ -95,9 +101,7 @@ class SearchTorrent:
                     if homepage not in homepage_list:
                         homepage_list.append(homepage)
                         tasks.append(
-                            asyncio.create_task(
-                                MikanSearch(url=homepage).search()
-                            )
+                            asyncio.create_task(MikanSearch(url=homepage).search())
                         )
                     else:  # 有两个相同的主页, 就停止
                         break
@@ -154,6 +158,7 @@ class SearchTorrent:
 
 if __name__ == "__main__":
     import asyncio
+
     import pyinstrument
 
     async def main():

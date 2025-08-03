@@ -84,5 +84,6 @@ class Program:
             return {"status": "No update found."}
         else:
             from module.update import start_up
+
             start_up()
             return {"status": "Database updated."}

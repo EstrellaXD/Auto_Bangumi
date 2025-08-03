@@ -19,8 +19,8 @@ class TaskState(Enum):
 class TaskInfo:
     name: str
     state: TaskState = TaskState.PENDING
-    task: asyncio.Task[Any]|None = None
-    last_run:float|None = None
+    task: asyncio.Task[Any] | None = None
+    last_run: float | None = None
     error_count: int = 0
     max_retries: int = 3
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -29,8 +29,8 @@ class TaskInfo:
 class TaskManager:
     def __init__(self):
         self._tasks: dict[str, TaskInfo] = {}
-        self._running:bool = False
-        self._shutdown_event:asyncio.Event = asyncio.Event()
+        self._running: bool = False
+        self._shutdown_event: asyncio.Event = asyncio.Event()
 
     async def register_task(
         self, name: str, coro_func: Callable, interval: int, max_retries: int = 3
@@ -53,7 +53,9 @@ class TaskManager:
                 logger.info(f"[TaskManager] 准备启动任务: {name}")
                 await self._start_task(name)
             else:
-                logger.warning(f"[TaskManager] 任务 {name} 已经在运行或已完成，跳过启动")
+                logger.warning(
+                    f"[TaskManager] 任务 {name} 已经在运行或已完成，跳过启动"
+                )
 
     async def _start_task(self, name: str):
         """启动单个任务"""

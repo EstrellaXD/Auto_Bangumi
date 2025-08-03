@@ -1,17 +1,9 @@
 from .bangumi import Bangumi, BangumiUpdate, Episode, Notification
 from .config import Config
+from .database_version import DatabaseVersion
+from .mikan import MikanInfo
 from .response import APIResponse, ResponseModel
 from .rss import RSSItem, RSSUpdate
-from .torrent import (
-    EpisodeFile,
-    SubtitleFile,
-    Torrent,
-    TorrentDownloadInfo,
-    TorrentUpdate,
-)
-from .user import User, UserLogin, UserUpdate
-from .mikan import MikanInfo
-from .database_version import DatabaseVersion
 from .tmdb import (
     Genre,
     LastEpisodeToAir,
@@ -22,6 +14,14 @@ from .tmdb import (
     TMDBInfo,
     TVShow,
 )
+from .torrent import (
+    EpisodeFile,
+    SubtitleFile,
+    Torrent,
+    TorrentDownloadInfo,
+    TorrentUpdate,
+)
+from .user import User, UserLogin, UserUpdate
 
 __all__ = [
     "Bangumi",
@@ -44,7 +44,7 @@ __all__ = [
     "MikanInfo",
     "DatabaseVersion",
     "Genre",
-    "LastEpisodeToAir", 
+    "LastEpisodeToAir",
     "Network",
     "ProductionCompany",
     "Season",
