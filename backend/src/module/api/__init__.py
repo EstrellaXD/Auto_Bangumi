@@ -9,7 +9,7 @@ from .program import router as program_router
 from .rss import router as rss_router
 from .search import router as search_router
 
-__all__ = ["v1"]
+__all__ = ["v1","lifespan"]
 
 # API 1.0
 v1 = APIRouter(prefix="/v1")

@@ -5,7 +5,7 @@ on:
     types:
       - closed
     branches:
-      - aio_test
+      - main
   push:
 
 jobs:
@@ -14,14 +14,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v3
         with:
           python-version: "3.11"
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           if [ -f backend/requirements.txt ]; then pip install -r backend/requirements.txt; fi
-          pip install pytest pytest-asyncio
+          pip install pytest
       - name: Test
         working-directory: ./backend/src
         run: |
@@ -121,10 +121,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
@@ -152,7 +154,7 @@ jobs:
           cd webui && pnpm build
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: dist
           path: webui/dist
@@ -183,7 +185,7 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: |
-            shinonomeow/auto_bangumi
+            estrellaxd/auto_bangumi
             ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=${{ needs.version-info.outputs.version }}
@@ -195,7 +197,7 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: |
-            shinonomeow/auto_bangumi
+            estrellaxd/auto_bangumi
             ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=${{ needs.version-info.outputs.version }}
@@ -217,7 +219,7 @@ jobs:
           password: ${{ secrets.ACCESS_TOKEN }}
 
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
         with:
           name: dist
           path: backend/src/dist
@@ -256,7 +258,7 @@ jobs:
           builder: ${{ steps.buildx.output.name }}
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: false
-          tags: shinonomeow/auto_bangumi:test
+          tags: estrellaxd/auto_bangumi:test
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}
 
@@ -272,7 +274,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download artifact webui
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
         with:
           name: dist
           path: webui/dist
@@ -282,7 +284,7 @@ jobs:
           cd webui && ls -al && tree && zip -r dist.zip dist
 
       - name: Download artifact app
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
         with:
           name: dist
           path: backend/src/dist
@@ -326,3 +328,16 @@ jobs:
             backend/app-v${{ needs.version-info.outputs.version }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+
+  telegram:
+    runs-on: ubuntu-latest
+    needs: [release]
+    steps:
+      - name: send telegram message on push
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          message: |
+            New release: ${{ needs.release.outputs.version }}
+            Link: ${{ needs.release.outputs.url }}
