@@ -1,6 +1,6 @@
 import logging
 
-from module.conf import VERSION, settings
+from module.conf import VERSION, settings, setup_logger
 
 from .aiocore import app_core
 from .status import ProgramStatus
@@ -56,6 +56,10 @@ class Program:
         logger.debug("[Program] loading settings...")
         settings.load()
         logger.debug("[Program] settings loaded.")
+        logger.debug("[Program] applying log configuration...")
+        # 重新应用日志配置以反映设置更改
+        setup_logger(level=logging.DEBUG if settings.log.debug_enable else logging.INFO)
+        logger.debug("[Program] log configuration applied.")
         logger.debug("[Program] starting application core...")
         await self.app_core.initialize()
         await self.app_core.start()
