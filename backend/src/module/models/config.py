@@ -27,8 +27,8 @@ class Program(BaseModel):
 class Downloader(BaseModel):
     type: str = Field(default="qbittorrent", description="Downloader type")
     path: str = Field(default="/downloads/Bangumi", description="Downloader path")
-    host: str = Field("172.17.0.1:8080", alias="host", description="Downloader host")
-    ssl: bool = Field(False, description="Downloader ssl")
+    host: str = Field(default="172.17.0.1:8080", alias="host", description="Downloader host")
+    ssl: bool = Field(default=False, description="Downloader ssl")
 
     class Config:
         extra: str = "allow"  # This allows extra fields not defined in the model
@@ -82,6 +82,10 @@ class RSSParser(BaseModel):
     include: list[str] = Field(default=[], description="Include")
     language: str = "zh"
     mikan_custom_url: str = Field(default="mikanani.me", description="Mikan custom url")
+    tmdb_api_key: str = Field(
+        default="",
+        description="TMDB API key, used for TMDB integration",
+    )
 
 
 class BangumiManage(BaseModel):

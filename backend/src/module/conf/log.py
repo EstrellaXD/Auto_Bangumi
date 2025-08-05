@@ -1,5 +1,5 @@
 import logging
-from logging import NullHandler
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from .config import settings
@@ -38,7 +38,12 @@ def setup_logger(level: int = logging.INFO, reset: bool = False):
             datefmt=TIME_FORMAT,
             encoding="utf-8",
             handlers=[
-                logging.FileHandler(LOG_PATH, encoding="utf-8"),
+                RotatingFileHandler(
+                    LOG_PATH, 
+                    maxBytes=10*1024*1024,  # 10MB
+                    backupCount=5,
+                    encoding="utf-8"
+                ),
                 logging.StreamHandler(),
             ],
             force=reset,  # 强制重新配置如果是重置模式
