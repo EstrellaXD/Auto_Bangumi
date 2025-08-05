@@ -150,24 +150,20 @@ class Downloader(BaseDownloader):
                 params=data,
             )
             reps.raise_for_status()
-            if "404" in reps.text:
-                logger.warning(f"[qbittorrent] Cannot found {hash},{reps.text}")
-                return None
-            else:
-                logger.debug(f"[qbittorrent] Torrent info: {hash}")
-                reps = reps.json()
-                # print(reps)
-                logger.debug(
-                    f"[qbittorrent] Torrent info: {reps['eta']=}, {reps['save_path']=}, {reps['completion_date']=}"
-                )
-                if reps["completion_date"] == -1:
-                    reps["completion_date"] = 0
-                res = TorrentDownloadInfo(
-                    eta=reps["eta"],
-                    save_path=reps["save_path"],
-                    completed=reps["completion_date"],
-                )
-                return res
+            logger.debug(f"[qbittorrent] Torrent info: {hash}")
+            reps = reps.json()
+            # print(reps)
+            logger.debug(
+                f"[qbittorrent] Torrent info: {reps['eta']=}, {reps['save_path']=}, {reps['completion_date']=}"
+            )
+            if reps["completion_date"] == -1:
+                reps["completion_date"] = 0
+            res = TorrentDownloadInfo(
+                eta=reps["eta"],
+                save_path=reps["save_path"],
+                completed=reps["completion_date"],
+            )
+            return res
         except Exception as e:
             self.handle_exception(e, "torrent_info")
         return None
