@@ -52,25 +52,29 @@ class Notification(BaseModel):
     title: str = Field(..., alias="title", title="标题")
     message: str = Field(default="", alias="message", title="消息")
     season: int = Field(default=1, ge=1, alias="season", title="番剧季度")
-    episode: str = Field(default="", alias="episode", title="番剧集数")
+    episode: int = Field(default="", alias="episode", title="番剧集数")
     poster_path: str = Field(default="", alias="poster_path", title="番剧海报路径")
     file: bytes | None = Field(default=None, alias="file", title="文件内容")
 
 
-@dataclass
-class Episode:
-    title_en: str
-    title_zh: str
-    title_jp: str
-    season: int
-    season_raw: str
-    episode: int
-    sub: str
-    group: str
-    resolution: str
-    source: str
-    audio_info: list[str]
-    video_info: list[str]
+class Episode(BaseModel):
+    title_en: str = Field(default="", alias="title_en", title="英文标题")
+    title_zh: str = Field(default="", alias="title_zh", title="中文标题")
+    title_jp: str = Field(default="", alias="title_jp", title="日文标题")
+    season: int = Field(default=1, ge=0, alias="season", title="番剧季度")
+    season_raw: str = Field(default="", alias="season_raw", title="番剧季度原名")
+    episode: int = Field(default=0, ge=0, alias="episode", title="番剧集数")
+    sub: str = Field(default="", alias="sub", title="字幕语言")
+    sub_type: str = Field(default="", alias="sub_type", title="字幕类型")
+    group: str = Field(default="", alias="group", title="字幕组")
+    resolution: str = Field(default="", alias="resolution", title="分辨率")
+    source: str = Field(default="", alias="source", title="来源")
+    audio_info: list[str] = Field(
+        default_factory=list, alias="audio_info", title="音频信息"
+    )
+    video_info: list[str] = Field(
+        default_factory=list, alias="video_info", title="视频信息"
+    )
 
     def get_title(self) -> str:
         if self.title_zh:

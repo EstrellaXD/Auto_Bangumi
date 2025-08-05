@@ -3,7 +3,6 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Any
 
-from module.conf import settings
 from module.utils.events import event_bus
 
 from .task_manager import TaskManager

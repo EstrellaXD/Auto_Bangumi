@@ -11,7 +11,7 @@ class TestTitleParser:
         assert result.title_raw == "New Doraemon"
         assert result.dpi == "1080P"
         assert result.season == 1
-        assert result.subtitle == "GB_JP"
+        assert result.subtitle == "简日"
 
     # @pytest.mark.skipif(
     #     not settings.experimental_openai.enable,

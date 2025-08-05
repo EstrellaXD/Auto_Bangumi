@@ -2,8 +2,9 @@ import logging
 from pathlib import Path
 
 from module.models import EpisodeFile, SubtitleFile
-from module.parser.analyser.raw_parser import RawParser
 from module.utils import check_file
+
+from .meta_parser import TitleMetaParser
 
 logger = logging.getLogger(__name__)
 
@@ -28,34 +29,26 @@ def torrent_parser(
     [LKSUB][Make Heroine ga Oosugiru!][01-12][720P]/[LKSUB][Make Heroine ga Oosugiru!][01][720P].mp4
     将 torrent 文件名解析为 EpisodeFile 或 SubtitleFile 对象
     """
+    # 这是去掉路径中的目录部分,只保留文件名部分
     torrent_name = Path(torrent_name).name
     file_type = check_file(torrent_name)
-    media_info = RawParser().parser(torrent_name)
+    media_info = TitleMetaParser().parser(torrent_name)
     suffix = Path(torrent_name).suffix
-    title = media_info.title_en
-    if media_info.title_zh:
-        title = media_info.title_zh
-    if media_info.title_jp:
-        title = media_info.title_jp
-
     if file_type == "media":
         return EpisodeFile(
+            **media_info.dict(),
             media_path=torrent_name,
-            group=media_info.group,
-            title=title,
-            season=media_info.season,
-            episode=media_info.episode,
+            title=media_info.get_title(),
             suffix=suffix,
         )
     else:
         language = get_subtitle_lang(torrent_name)
         return SubtitleFile(
+            **media_info.dict(),
             media_path=torrent_name,
-            group=media_info.group,
-            title=title,
-            season=media_info.season,
-            episode=media_info.episode,
             language=language,
+            title=media_info.get_title(),
+            name=torrent_name,
             suffix=suffix,
         )
 

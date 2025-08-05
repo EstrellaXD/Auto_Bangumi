@@ -13,8 +13,8 @@ from module.models import (
     MikanInfo,
     SubtitleFile,
 )
-from module.parser.analyser import MikanWebParser, tmdb_parser, torrent_parser
-from module.parser.analyser import RawParser as rawparser
+from .analyser import MikanWebParser, tmdb_parser, torrent_parser
+from .analyser import TitleMetaParser
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,7 @@ class MikanParser(BaseParser):
     async def parser(self, homepage: str) -> Bangumi | None:
         mikan_parser = MikanWebParser()
         mikan_info: MikanInfo = await mikan_parser.parser(homepage)
-        if not mikan_info.official_title or not mikan_info.poster_link:
+        if not mikan_info.official_title or not mikan_info.poster_link or not mikan_info.id:
             logger.debug(
                 f"[MikanParser] No official title or poster link found for {homepage}"
             )
@@ -132,48 +132,48 @@ class MikanParser(BaseParser):
 
 class RawParser(BaseParser):
     @staticmethod
-    def parser(raw: str) -> Bangumi | None:
+    def parser(raw: str) -> Bangumi:
         language = settings.rss_parser.language
-        try:
-            episode: Episode = rawparser().parser(raw)
+        # try:
+        episode: Episode = TitleMetaParser().parser(raw)
 
-            titles = {
-                "zh": episode.title_zh,
-                "en": episode.title_en,
-                "jp": episode.title_jp,
-            }
-            title_raw = episode.title_en if episode.title_en else episode.title_zh
-            if titles[language]:
-                official_title = titles[language]
-            elif titles["zh"]:
-                official_title = titles["zh"]
-            elif titles["en"]:
-                official_title = titles["en"]
-            elif titles["jp"]:
-                official_title = titles["jp"]
-            else:
-                official_title = title_raw
-            _season = episode.season
-            # logger.debug(f"[RawParser] RAW:{raw} >> {title_raw}")
-            return Bangumi(
-                official_title=official_title,
-                title_raw=title_raw,
-                year=None,
-                season=_season,
-                season_raw=episode.season_raw,
-                group_name=episode.group,
-                dpi=episode.resolution,
-                source=episode.source,
-                subtitle=episode.sub,
-                eps_collect=False if episode.episode > 1 else True,
-                offset=0,
-                exclude_filter=",".join(settings.rss_parser.filter),
-                include_filter=",".join(settings.rss_parser.include),
-            )
-        except Exception as e:
-            logger.debug(e)
-            logger.warning(f"Cannot parse {raw}.")
-            return None
+        titles = {
+            "zh": episode.title_zh,
+            "en": episode.title_en,
+            "jp": episode.title_jp,
+        }
+        title_raw = episode.title_en if episode.title_en else episode.title_zh
+        if titles[language]:
+            official_title = titles[language]
+        elif titles["zh"]:
+            official_title = titles["zh"]
+        elif titles["en"]:
+            official_title = titles["en"]
+        elif titles["jp"]:
+            official_title = titles["jp"]
+        else:
+            official_title = title_raw
+        _season = episode.season
+        # logger.debug(f"[RawParser] RAW:{raw} >> {title_raw}")
+        return Bangumi(
+            official_title=official_title,
+            title_raw=title_raw,
+            year=None,
+            season=_season,
+            season_raw=episode.season_raw,
+            group_name=episode.group,
+            dpi=episode.resolution,
+            source=episode.source,
+            subtitle=episode.sub,
+            eps_collect=False if episode.episode > 1 else True,
+            offset=0,
+            exclude_filter=",".join(settings.rss_parser.filter),
+            include_filter=",".join(settings.rss_parser.include),
+        )
+        # except Exception as e:
+        #     logger.debug(e)
+        #     logger.warning(f"Cannot parse {raw}.")
+        #     return None
 
 
 class TitleParser:

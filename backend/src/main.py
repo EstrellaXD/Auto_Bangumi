@@ -29,6 +29,7 @@ uvicorn_logging_config = {
 }
 
 
+
 def create_app() -> FastAPI:
     app = FastAPI(lifespan=lifespan)
 

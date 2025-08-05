@@ -1,9 +1,9 @@
-from module.parser.analyser import RawParser, is_v1, is_point_5
+from module.parser.analyser import TitleMetaParser, is_v1, is_point_5
 
 
 def test_raw_parser():
     content = "【幻樱字幕组】【4月新番】【古见同学有交流障碍症 第二季 Komi-san wa, Komyushou Desu. S02】【22】【GB_MP4】【1920X1080】"
-    info = RawParser().parser(content)
+    info = TitleMetaParser().parser(content)
     assert info is not None
     assert info.title_en == "Komi-san wa, Komyushou Desu."
     assert info.resolution == "1920X1080"
@@ -11,7 +11,7 @@ def test_raw_parser():
     assert info.season == 2
 
     content = "[百冬练习组&LoliHouse] BanG Dream! 少女乐团派对！☆PICO FEVER！ / Garupa Pico: Fever! - 26 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][END] [101.69 MB]"
-    info = RawParser().parser(content)
+    info = TitleMetaParser().parser(content)
     assert info is not None
     assert info.group == "百冬练习组&LoliHouse"
     assert info.title_zh == "BanG Dream! 少女乐团派对！☆PICO FEVER！"
@@ -20,7 +20,7 @@ def test_raw_parser():
     assert info.season == 1
 
     content = "【喵萌奶茶屋】★04月新番★[夏日重现/Summer Time Rendering][11][1080p][繁日双语][招募翻译]"
-    info = RawParser().parser(content)
+    info = TitleMetaParser().parser(content)
     assert info is not None
     assert info.group == "喵萌奶茶屋"
     assert info.title_en == "Summer Time Rendering"
@@ -29,7 +29,7 @@ def test_raw_parser():
     assert info.season == 1
 
     content = "[Lilith-Raws] 关于我在无意间被隔壁的天使变成废柴这件事 / Otonari no Tenshi-sama - 09 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
-    info = RawParser().parser(content)
+    info = TitleMetaParser().parser(content)
     assert info is not None
     assert info.group == "Lilith-Raws"
     assert info.title_zh == "关于我在无意间被隔壁的天使变成废柴这件事"
@@ -41,7 +41,7 @@ def test_raw_parser():
     content = (
         "[梦蓝字幕组]New Doraemon 哆啦A梦新番[747][2023.02.25][AVC][1080P][GB_JP][MP4]"
     )
-    info = RawParser().parser(content)
+    info = TitleMetaParser().parser(content)
     assert info is not None
     assert info.group == "梦蓝字幕组"
     assert info.title_zh == "哆啦A梦新番"
@@ -53,7 +53,7 @@ def test_raw_parser():
     content = (
         "[织梦字幕组][尼尔：机械纪元 NieR Automata Ver1.1a][02集][1080P][AVC][简日双语]"
     )
-    info = RawParser().parser(content)
+    info = TitleMetaParser().parser(content)
     assert info is not None
     assert info.group == "织梦字幕组"
     assert info.title_zh == "尼尔：机械纪元"
@@ -63,7 +63,7 @@ def test_raw_parser():
     assert info.season == 1
 
     content = "[MagicStar] 假面骑士Geats / 仮面ライダーギーツ EP33 [WEBDL] [1080p] [TTFC]【生】"
-    info = RawParser().parser(content)
+    info = TitleMetaParser().parser(content)
     assert info is not None
     assert info.group == "MagicStar"
     assert info.title_zh == "假面骑士Geats"
@@ -73,7 +73,7 @@ def test_raw_parser():
     assert info.season == 1
 
     content = "【极影字幕社】★4月新番 天国大魔境 Tengoku Daimakyou 第05话 GB 720P MP4（字幕社招人内详）"
-    info = RawParser().parser(content)
+    info = TitleMetaParser().parser(content)
     assert info is not None
     assert info.title_zh == "天国大魔境"
     assert info.title_en == "Tengoku Daimakyou"
@@ -82,7 +82,7 @@ def test_raw_parser():
     assert info.season == 1
 
     content = "【喵萌奶茶屋】★07月新番★[银砂糖师与黑妖精 ~ Sugar Apple Fairy Tale ~][13][1080p][简日双语][招募翻译]"
-    info = RawParser().parser(content)
+    info = TitleMetaParser().parser(content)
     assert info is not None
     assert info.group == "喵萌奶茶屋"
     assert info.title_zh == "银砂糖师与黑妖精"
@@ -92,7 +92,7 @@ def test_raw_parser():
     assert info.season == 1
 
     content = "[ANi]  16bit 的感动 ANOTHER LAYER - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
-    info = RawParser().parser(content)
+    info = TitleMetaParser().parser(content)
     assert info is not None
     assert info.group == "ANi"
     assert info.title_zh == "16bit 的感动 ANOTHER LAYER"
@@ -101,7 +101,7 @@ def test_raw_parser():
     assert info.season == 1
 
     content = "[Billion Meta Lab] 终末列车寻往何方 Shuumatsu Torein Dokoe Iku [12][1080][HEVC 10bit][简繁日内封][END]"
-    info = RawParser().parser(content)
+    info = TitleMetaParser().parser(content)
     assert info is not None
     assert info.group == "Billion Meta Lab"
     assert info.title_zh == "终末列车寻往何方"
@@ -110,12 +110,23 @@ def test_raw_parser():
     assert info.season == 1
 
     content = "【1月】超超超超超喜欢你的100个女朋友 第二季 07.mp4"
-    info = RawParser().parser(content)
+    info = TitleMetaParser().parser(content)
     assert info is not None
     assert info.group == "1月"
     assert info.title_zh == "超超超超超喜欢你的100个女朋友"
     assert info.episode == 7
     assert info.season == 2
+
+    content = "[LoliHouse] 2.5次元的诱惑 / 2.5-jigen no Ririsa - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][LoliHouse] 2.5次元的诱惑 / 2.5-jigen no Ririsa - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][609.59 MB]"
+    info = TitleMetaParser().parser(content)
+    assert info is not None
+    assert info.group == "LoliHouse"
+    assert info.title_zh == "2.5次元的诱惑"
+    assert info.title_en == "2.5-jigen no Ririsa"
+    assert info.resolution == "1080p"
+    assert info.episode == 1
+
+
 
 
 def test_is_point_5():

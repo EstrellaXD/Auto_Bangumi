@@ -7,10 +7,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
+from packaging import version
 from sqlmodel import Session, text
 
 from module.conf import DATA_PATH
-from module.database.engine import engine
+from .engine import engine
 from module.models import DatabaseVersion
 
 logger = logging.getLogger(__name__)
@@ -130,7 +131,7 @@ class DatabaseMigration:
                 migrations_needed.append(version)
 
         # 按版本号排序
-        migrations_needed.sort(key=lambda v: self._version_to_tuple(v))
+        migrations_needed.sort(key=lambda v: version.parse(v))
 
         return migrations_needed
 
@@ -138,27 +139,26 @@ class DatabaseMigration:
         """比较两个版本号
         返回值: 1 表示 version1 > version2, 0 表示相等, -1 表示 version1 < version2
         """
-        v1_tuple = self._version_to_tuple(version1)
-        v2_tuple = self._version_to_tuple(version2)
-
-        if v1_tuple > v2_tuple:
-            return 1
-        elif v1_tuple < v2_tuple:
-            return -1
-        else:
-            return 0
-
-    def _version_to_tuple(self, version: str) -> tuple:
-        """将版本字符串转换为可比较的元组"""
         try:
-            # 处理类似 "3.2.0" 或 "3.2.0-beta" 的版本号
-            # 先移除后缀 (如 -beta, -alpha, -dev 等)
-            base_version = version.split("-")[0]
-            parts = base_version.split(".")
-            return tuple(int(part) for part in parts)
-        except (ValueError, AttributeError):
-            # 如果解析失败，返回一个默认值
-            return (0, 0, 0)
+            v1 = version.parse(version1)
+            v2 = version.parse(version2)
+            
+            if v1 > v2:
+                return 1
+            elif v1 < v2:
+                return -1
+            else:
+                return 0
+        except Exception as e:
+            logger.warning(f"版本比较失败 {version1} vs {version2}: {e}")
+            # 降级到字符串比较
+            if version1 > version2:
+                return 1
+            elif version1 < version2:
+                return -1
+            else:
+                return 0
+
 
     def _migrate_to_3_2_0(self, session: Session):
         """迁移到版本 3.2.0"""

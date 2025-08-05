@@ -5,29 +5,33 @@ from urllib3.util import parse_url
 
 from module.network import RequestContent
 from module.parser import RawParser
-from module.parser.analyser import MikanWebParser
+from module.parser import MikanParser
+import logging
+logger = logging.getLogger(__name__)
 
 
 class MikanSearch:
     def __init__(self, url: str):
         self.homepage = url
         self.root_path = parse_url(self.homepage).host
-        self.mikan_parser = MikanWebParser()
 
     async def search(self):
+        raw_bangumi = await MikanParser().parser(self.homepage)
+        if not raw_bangumi:
+            logger.debug(
+                f"[MikanSearch] No bangumi found for {self.homepage}, maybe the page is not a valid bangumi page."
+            )
+            return []
         async with RequestContent() as req:
             content = await req.get_html(self.homepage)
         if not content:
             return []
 
-        poster_link = await self.mikan_parser.poster_parser(self.homepage)
         # TODO: 对poster_link 进行处理
         # https://mikanani.me/images/Bangumi/202407/7572c0f6.jpg?width=400&height=400&format=webp
         # 因为不同的图片大小可能会解析失败, 所以直接去掉 width 和 height
         soup = BeautifulSoup(content, "html.parser")
         # title bangumi-title
-        title = soup.select_one("p.bangumi-title")
-        title = re.sub(r"第.*季", "", title.text).strip()
         # find group from soup <a href="/Home/PublishGroup/991" target="_blank" style="color: #3bc0c3;">TensoRaws</a>
         # find group from soup <a href="/Home/PublishGroup/991" target="_blank" style="color: #3bc0c3;">TensoRaws</a>
         # a 在subgroup-text 下
@@ -40,11 +44,11 @@ class MikanSearch:
             bangumi = t.select(".magnet-link-wrap")
             for b in bangumi:
                 bangumi = RawParser().parser(b.text)
-                bangumi.official_title = title
+                bangumi.official_title = raw_bangumi.official_title
                 bangumi.group_name = g.text
                 bangumi.rss_link = f"https://{self.root_path}{r.get('href')}"
                 bangumi_list.append(bangumi)
-                bangumi.poster_link = poster_link
+                bangumi.poster_link = raw_bangumi.poster_link
                 break
         return bangumi_list
         # # 从 homepage 提取季度 , 字幕组, rsslink
@@ -62,7 +66,7 @@ if __name__ == "__main__":
         p = pyinstrument.Profiler()
         with p:
             url = "https://mikanani.me/Home/Bangumi/3519"
-            parser = MikanSearch(url=url, page=RemoteMikan())
+            parser = MikanSearch(url=url)
             result = await parser.search()
         p.print()
         return result

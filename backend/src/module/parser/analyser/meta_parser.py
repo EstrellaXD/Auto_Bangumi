@@ -3,7 +3,8 @@ import re
 from typing import Any
 
 from module.models import Episode
-from module.parser.analyser import patterns as p
+
+from . import patterns as p
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ ROMAN_NUMBERS = {
 }
 
 
-class RawParser:
+class TitleMetaParser:
     """
     原始视频标题解析器
 
@@ -60,7 +61,8 @@ class RawParser:
         resolution_info = self.get_resolution_info()
         audio_info = self.get_audio_info()
         video_info = self.get_video_info()
-        sub_info = self.get_sub_info()
+        sub_language = self.get_subtitle_language()
+        sub_type = self.get_subtitle_type()
         _ = self.get_unuseful_info()  # 清理无用信息，但不使用结果
         episode_info, episode_is_trusted, season_info, season_is_trusted = (
             self.get_episode_info()
@@ -85,22 +87,23 @@ class RawParser:
 
         group = self.get_group()
         source = source_info[0] if source_info else ""
-        sub = sub_info[0] if sub_info else ""
+        sub = sub_language
         resolution = resolution_info[0] if resolution_info else ""
 
         return Episode(
-            name_en,
-            name_zh,
-            name_jp,
-            season,
-            season_raw,
-            episode,
-            sub,
-            group,
-            resolution,
-            source,
-            audio_info,
-            video_info,
+            title_en=name_en,
+            title_zh=name_zh,
+            title_jp=name_jp,
+            season=season,
+            season_raw=season_raw,
+            episode=episode,
+            sub=sub,
+            sub_type=sub_type,
+            group=group,
+            resolution=resolution,
+            source=source,
+            audio_info=audio_info,
+            video_info=video_info,
         )
 
     def findall_sub_title(self, pattern: re.Pattern, sym: str = "[]") -> Any:
@@ -248,7 +251,6 @@ class RawParser:
             # 主要的思想就是从头或者尾部找出一个中文名
             chinese_chars = len(p.CHINESE_PATTERN.findall(split[0]))
             chinese_ratio = chinese_chars / len(split[0]) if len(split[0]) > 0 else 0
-            # 移除调试 print 语句
             if chinese_ratio <= 0.7:
                 split_space = split[0].split(" ")
 
@@ -292,30 +294,41 @@ class RawParser:
         """获取无用信息"""
         return self.findall_sub_title(p.UNUSEFUL_RE)
 
-    def get_sub_info(self) -> Any:
+    def get_subtitle_type(self) -> str:
+        """获取字幕类型"""
+        sub_type = self.findall_sub_title(p.SUB_RE_TYPE)
+        s = ""
+        for sub in sub_type:
+            if sub not in s:
+                s += sub
+
+        return s
+
+    def get_subtitle_language(self) -> str:
         """获取字幕信息"""
-        return self.findall_sub_title(p.SUB_RE)
+        sub = ""
+        if self.findall_sub_title(p.SUB_RE_CHS):
+            sub += "简"
+
+        if self.findall_sub_title(p.SUB_RE_CHT):
+            sub += "繁"
+
+        if self.findall_sub_title(p.SUB_RE_JP):
+            sub += "日"
+
+        if self.findall_sub_title(p.SUB_RE_ENGLISH):
+            sub += "英"
+        return sub
 
     def get_audio_info(self) -> Any:
         """获取音频信息"""
         return self.findall_sub_title(p.AUDIO_INFO)
 
 
-def get_raw():
-    import json
-    import random
-
-    with open("./data.jsonl", "r", encoding="utf-8") as file:
-        lines = file.readlines()
-        line = random.choice(lines).strip()
-    raw_name = json.loads(line).get("raw")
-    return raw_name
-
-
 def raw_parser(raw: str) -> Episode | None:
     """解析原始视频标题，提取剧集信息"""
     try:
-        parser = RawParser()
+        parser = TitleMetaParser()
         return parser.parser(raw)
     except Exception as e:
         logger.error(f"解析标题失败: {raw}, 错误: {e}")
@@ -378,13 +391,13 @@ if __name__ == "__main__":
     # )
     # title = "物语系列 S05E06.5.mp4 "
     # title = " 【幻月字幕组】【24年日剧】【直到破坏了丈夫的家庭】【第7话】【1080P】【中日双语】.mp4"
-    # title = "[LoliHouse] 2.5次元的诱惑 / 2.5-jigen no Ririsa - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][LoliHouse] 2.5次元的诱惑 / 2.5-jigen no Ririsa - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][609.59 MB]"
+    title = "[LoliHouse] 2.5次元的诱惑 / 2.5-jigen no Ririsa - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][LoliHouse] 2.5次元的诱惑 / 2.5-jigen no Ririsa - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][609.59 MB]"
     # title = "[ANi] Re：从零开始的异世界生活 第三季 - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4] [复制磁连]"
     # title = "[AnimeRep] 蓝箱 / 青之箱 / Blue Box / Ao no Hako- 02 [1080p][简中内嵌]"
     # title = "[ANi] Kekkon Surutte Hontou desu ka /  听说你们要结婚！？ - 03 [1080P][baha][WEB-DL][AAC AVC][CHT][MP4]"
     # title = "[DBD-Raws][败犬女主太多了！/Make Heroine ga Oosugiru!/负けヒロインが多すぎる!][07-08TV+特典映像][BOX4][1080P][BDRip][HEVC-10bit][FLACx2][MKV] [复制磁连]"
     # title = "[漫猫字幕组&猫恋汉化组] 败犬女主太多了/Make Heroine ga Oosugiru (01-12Fin WEBRIP 1080p AVC AAC MP4 2024年7月 简中) [复制磁连]"
-    # title = "[北宇治字幕组&LoliHouse] 地。-关于地球的运动- / Chi. Chikyuu no Undou ni Tsuite 03 [WebRip 1080p HEVC-10bit AAC ASSx2][简繁日内封字幕] [复制磁连]"
+    title = "[北宇治字幕组&LoliHouse] 地。-关于地球的运动- / Chi. Chikyuu no Undou ni Tsuite 03 [WebRip 1080p HEVC-10bit AAC ASSx2][简繁日内封字幕] [复制磁连]"
     # title = "[Lilith-Raws] Boku no Kokoro no Yabai Yatsu - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4].mp4"
     # title = "[LoliHouse] 关于我转生变成史莱姆这档事 第三季 / Tensei Shitara Slime Datta Ken 3rd Season - 17.5(65.5) [WebRip 1080p HEVC-10bit AAC][简繁内封字幕] [复制磁连]"
     # title = "水星的魔女(2022) S00E19.mp4"
@@ -410,10 +423,19 @@ if __name__ == "__main__":
     # # #
     # title = "碧蓝之海 第二季.mp4"
     # title = "坂本日常 第2部分"
-    title = "[ANi] Grand Blue Dreaming /  GRAND BLUE 碧蓝之海 2 - 04 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
-    title = "Hibi wa Sugiredo Meshi Umashi - 11v2/"
+    # title = "[ANi] Grand Blue Dreaming /  GRAND BLUE 碧蓝之海 2 - 04 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+    # title = "Hibi wa Sugiredo Meshi Umashi - 11v2"
+    # title = "[H-Enc] 败犬女主太多了！ / Make Heroine ga Oosugiru! (BDRip 1080p HEVC FLAC) [复制磁连]"
+    # title = "[雪飘工作室][ひみつのアイプリ/Himitsu_no_Aipri/秘密的美妙公主][720P][S2E18][繁](检索:/美妙旋律/美妙天堂/美妙频道/美妙魔法) [复制磁连]"
     # title =  "[Lilith-Raws] Boku no Kokoro no Yabai Yatsu - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT].mp4"
+    #
     # title = "【极影字幕社】★4月新番 天国大魔境 Tengoku Daimakyou 第05话 GB 720P MP4（字幕社招人内详）"
+    # title = (
+    #     "[梦蓝字幕组]New Doraemon 哆啦A梦新番[747][2023.02.25][AVC][1080P][GB_JP][MP4]"
+    # )
+    title = "负けヒロインが多すぎる！ (JPBD Vol.1-6 Remux) 败犬女主太多了！ 败北女角太多了！ Make Heroine ga Oosugiru! Toooooo Many Losing Heroines! [复制磁连]"
+    title = "海盗战记 S01E01.SC.ass"
+    title = "[LoliHouse] 2.5次元的诱惑 / 2.5-jigen no Ririsa - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕].mkv"
     res = raw_parser(title)
     for k, v in res.__dict__.items():
         print(f"{k}: {v}")

@@ -79,15 +79,13 @@ class SearchTorrent:
         )
         homepage_list = []
         page_task = []
-        for torrent in single_torrent:
+        for torrent in single_torrent[:3]:
             # 取前三个 torrent 分析主页
             page_task.append(
                 asyncio.create_task(
                     self.mikan_parser.bangumi_link_parser(torrent.homepage)
                 )
             )
-            if len(page_task) >= 3:
-                break
         logger.debug(
             f"[SearchTorrent] Found {len(page_task)} homepage tasks for {rss_item.url}"
         )

@@ -1,6 +1,5 @@
 import logging
 
-from sqlalchemy.sql import func
 from sqlmodel import Session, and_, delete, false, or_, select
 
 from module.models import Bangumi, BangumiUpdate

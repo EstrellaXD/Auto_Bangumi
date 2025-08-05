@@ -2,13 +2,14 @@ import logging
 
 from sqlmodel import Session, SQLModel, and_, delete, false, or_, select, text
 
-from module.database.bangumi import BangumiDatabase
-from module.database.database_version import VersionDatabase
-from module.database.engine import engine as e
-from module.database.rss import RSSDatabase
-from module.database.torrent import TorrentDatabase
-from module.database.user import UserDatabase
 from module.models import Bangumi, RSSItem, Torrent, User
+
+from .bangumi import BangumiDatabase
+from .database_version import VersionDatabase
+from .engine import engine as e
+from .rss import RSSDatabase
+from .torrent import TorrentDatabase
+from .user import UserDatabase
 
 logger = logging.getLogger(__name__)
 
