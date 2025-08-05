@@ -6,9 +6,10 @@ from functools import wraps
 from typing import Any
 
 from module.conf import settings
-from module.downloader.client import AuthorizationError, BaseDownloader, Downloader
 from module.models import Torrent, TorrentDownloadInfo
 from module.utils import gen_save_path
+
+from .client import AuthorizationError, BaseDownloader
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +107,7 @@ class DownloadClient:
     """
 
     def __init__(self):
-        self.downloader: BaseDownloader | None = None
+        self.downloader: BaseDownloader = self.get_downloader()
         # 用于等待登陆完成
         self.login_success_event: asyncio.Event = asyncio.Event()
         self.login_timeout: int = 30  # 30秒超时
@@ -122,12 +123,7 @@ class DownloadClient:
 
     def initialize(self):
         # 根据设置动态获取下载器
-        downloader_type = settings.downloader.type
-        package_path = f"module.downloader.client.{downloader_type}"
-        downloader_module = importlib.import_module(package_path)
-        DownloaderClass = downloader_module.Downloader
-        print(f"[Downloader Client] Using downloader: {downloader_type}")
-        self.downloader = DownloaderClass()
+        self.get_downloader()
 
         # 初始化下载器
         self.downloader.initialize()
@@ -138,8 +134,11 @@ class DownloadClient:
     def get_downloader(self) -> BaseDownloader:
         """获取下载器实例"""
         downloader_type = settings.downloader.type
-
-        return self.downloader
+        package_path = f"module.downloader.client.{downloader_type}"
+        downloader_module = importlib.import_module(package_path)
+        DownloaderClass = downloader_module.Downloader
+        logger.debug(f"[Downloader Client] Using downloader: {downloader_type}")
+        return DownloaderClass()
 
     async def login(self):
         """一次性登录尝试，不重试"""
