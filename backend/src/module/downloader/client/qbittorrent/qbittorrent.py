@@ -149,6 +149,7 @@ class Downloader(BaseDownloader):
                 url=QB_API_URL["properties"],
                 params=data,
             )
+            print(reps.json())
             reps.raise_for_status()
             logger.debug(f"[qbittorrent] Torrent info: {hash}")
             reps = reps.json()
@@ -228,8 +229,11 @@ class Downloader(BaseDownloader):
                 logger.debug(
                     f"[QbDownloader] Got torrent content, getting hash for {torrent_url}"
                 )
-                torrent_link = await req.get_torrent_hash(torrent_url)
-                logger.debug(f"[QbDownloader] Got torrent hash: {torrent_link}")
+                torrent_hashes = await req.get_torrent_hash(torrent_url)
+                # 优先使用v2 hash，如果没有则使用v1 hash
+                torrent_link = torrent_hashes.get("v2", torrent_hashes.get("v1", ""))
+                logger.debug(f"[QbDownloader] Got torrent hashes: {torrent_hashes}")
+                logger.debug(f"[QbDownloader] Using hash: {torrent_link}")
                 file = {"torrents": torrent_file}
             else:
                 logger.warning(
@@ -250,7 +254,8 @@ class Downloader(BaseDownloader):
                     f"[QbDownloader] A BAD TORRENT{save_path} , send torrent to download fail.{resp.text.lower()}"
                 )
             if resp.status_code == 200:
-                return torrent_link
+                # 只取前40个字符作为hash
+                return torrent_link[:40]
         except Exception as e:
             self.handle_exception(e, "add")
 

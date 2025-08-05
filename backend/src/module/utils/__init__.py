@@ -2,7 +2,7 @@ from .bangumi_data import get_hash
 from .cache_image import gen_poster_path, str_to_url, url_to_str
 from .events import Event, EventBus, EventType, event_bus
 from .path_parser import check_file, gen_save_path, get_path_basename, path_to_bangumi
-from .torrent import torrent_to_link
+from .torrent import torrent_to_link, get_torrent_hashes
 
 __all__ = [
     "check_file",
@@ -10,6 +10,7 @@ __all__ = [
     "get_path_basename",
     "url_to_str",
     "torrent_to_link",
+    "get_torrent_hashes",
     "str_to_url",
     "path_to_bangumi",
     "get_hash",

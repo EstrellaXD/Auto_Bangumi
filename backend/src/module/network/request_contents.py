@@ -6,7 +6,7 @@ from typing import Any
 from httpx import Response
 
 from module.models import Torrent
-from module.utils import get_hash, torrent_to_link
+from module.utils import get_torrent_hashes
 
 from .request_url import RequestURL
 from .site import rss_parser
@@ -166,10 +166,9 @@ class RequestContent(RequestURL):
             if title is not None:
                 return title.text
 
-    async def get_torrent_hash(self, _url: str) -> str:
+    async def get_torrent_hash(self, _url: str) -> dict[str, str]:
         # 下载种子文件,处理 hash 与 url 不一致的情况
         if torrent_file := await self.get_content(_url):
-            torrent_url = await torrent_to_link(torrent_file)
-            torrent_hash = get_hash(torrent_url)
+            torrent_hash = await get_torrent_hashes(torrent_file)
             return torrent_hash
-        return ""
+        return {"v1": "", "v2": ""}
