@@ -9,13 +9,13 @@ TMDB_IMG_URL = "https://image.tmdb.org/t/p/w780"
 # Default TMDB API key, replace with your own key if needed
 # Note: Using a public key is not recommended for production use.
 # It is better to set your own key in the configuration.
-TMDB_API_KEY = "291237f90b24267380d6176c98f7619f"
+t = "291237f90b24267380d6176c98f7619f"
 
 LANGUAGE = {"zh": "zh-CN", "jp": "ja-JP", "en": "en-US"}
 
 def get_api_key():
     """Get the TMDB API key from settings."""
-    return settings.rss_parser.tmdb_api_key or TMDB_API_KEY
+    return settings.rss_parser.tmdb_api_key or t
 
 
 def search_url(keyword: str) -> str:
