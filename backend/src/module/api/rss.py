@@ -31,9 +31,11 @@ async def get_rss():
 @router.post(
     path="/add", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
+# 此为聚合用
 async def add_rss(rss: RSSItem):
     manager = RSSManager()
     res = await manager.add_rss(rss.url, rss.name, rss.aggregate, rss.parser)
+    await RSSEngine().refresh_rss(rss)
     if res:
         result = ResponseModel(
             status=True,

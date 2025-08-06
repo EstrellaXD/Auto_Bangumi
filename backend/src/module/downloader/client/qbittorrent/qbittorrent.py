@@ -221,25 +221,23 @@ class Downloader(BaseDownloader):
         logger.debug(
             f"[QbDownloader] Starting to get torrent content from {torrent_url}"
         )
-        async with RequestContent() as req:
-            logger.debug(f"[QbDownloader] Calling get_content for {torrent_url}")
-            if torrent_file := await req.get_content(torrent_url):
-                logger.debug(
-                    f"[QbDownloader] Got torrent content, getting hash for {torrent_url}"
-                )
-                torrent_hashes = await req.get_torrent_hash(torrent_url)
-                # 优先使用v2 hash，如果没有则使用v1 hash
-                torrent_link = torrent_hashes.get("v2", torrent_hashes.get("v1", ""))
-                logger.debug(f"[QbDownloader] Got torrent hashes: {torrent_hashes}")
-                logger.debug(f"[QbDownloader] Using hash: {torrent_link}")
-                file = {"torrents": torrent_file}
-            else:
-                logger.warning(
-                    f"[QbDownloader] Failed to get torrent content from {torrent_url}"
-                )
-        logger.debug(
-            "[QbDownloader] Finished getting torrent content, proceeding to add torrent"
-        )
+        if not torrent_url.startswith("magnet:"):
+            async with RequestContent() as req:
+                logger.debug(f"[QbDownloader] Calling get_content for {torrent_url}")
+                if torrent_file := await req.get_content(torrent_url):
+                    logger.debug(
+                        f"[QbDownloader] Got torrent content, getting hash for {torrent_url}"
+                    )
+                    torrent_hashes = await req.get_torrent_hash(torrent_url)
+                    # 优先使用v2 hash，如果没有则使用v1 hash
+                    torrent_link = torrent_hashes.get("v2", torrent_hashes.get("v1", ""))
+                    logger.debug(f"[QbDownloader] Got torrent hashes: {torrent_hashes}")
+                    logger.debug(f"[QbDownloader] Using hash: {torrent_link}")
+                    file = {"torrents": torrent_file}
+                else:
+                    logger.warning(
+                        f"[QbDownloader] Failed to get torrent content from {torrent_url}"
+                    )
         try:
             resp = await self._client.post(
                 url=QB_API_URL["add"],

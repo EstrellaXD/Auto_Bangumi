@@ -122,11 +122,17 @@ if __name__ == "__main__":
         end = time.time()
         return res
 
-    test_bangumi = Bangumi(official_title="败犬女主太多了！", season=1)
+    test_bangumi = Bangumi(official_title="败犬女主太多了！", season=1,exclude_filter="720|\d+-\d|BIG5|繁日双语|先行版|繁體|繁体|Bilibili|繁日内嵌|简体内嵌|繁中",)
     test_torrent = Torrent(
-        name="败犬女主太多了！ S01E01",
+        url = "1",
+        name="[BangumiRefresher] Add torrent [MingY] 不良少女 / Bad Girl [01][1080p][简繁日内封]（坏女孩 / 壞女孩）",
         homepage="https://mikanani.me/Home/Episode/33fbab8f53fe4bad12f07afa5abdb7c4afa5956c",
     )
+    print("hello")
     rss_item = RSSItem(url="https://mikanani.me/RSS/Bangumi/100000", parser="mikan")
+    ans = RSSAnalyser().filer_torrent(
+        torrent=test_torrent, bangumi=test_bangumi
+    )  # Should return True
+    print(ans)
 
-    res = asyncio.run(test())
+    # res = asyncio.run(test())
