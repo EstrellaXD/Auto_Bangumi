@@ -2,6 +2,7 @@ import base64
 import hashlib
 from urllib.parse import quote
 import logging
+import re
 
 import bencodepy
 
@@ -119,3 +120,103 @@ async def get_torrent_hashes(torrent_file):
     except Exception as e:
         logger.error(f"get_torrent_hashes: Error processing torrent file: {e}")
         return {"v1": ""}
+
+
+def base32_to_hex(base32_hash: str) -> str:
+    """将Base32格式的hash转换为十六进制
+    
+    Args:
+        base32_hash: 32字符的Base32编码hash
+        
+    Returns:
+        40字符的小写十六进制hash，转换失败返回空字符串
+    """
+    try:
+        # Base32解码
+        decoded = base64.b32decode(base32_hash)
+        return decoded.hex().lower()
+    except Exception as e:
+        logger.warning(f"Base32转换失败: {base32_hash}, error: {e}")
+        return ""
+
+
+def hex_to_base32(hex_hash: str) -> str:
+    """将十六进制hash转换为Base32格式
+    
+    Args:
+        hex_hash: 40字符的十六进制hash
+        
+    Returns:
+        32字符的Base32编码hash，转换失败返回空字符串
+    """
+    try:
+        # 十六进制转字节
+        hex_bytes = bytes.fromhex(hex_hash)
+        # 编码为Base32，去掉填充符
+        return base64.b32encode(hex_bytes).decode().rstrip('=')
+    except Exception as e:
+        logger.warning(f"十六进制转Base32失败: {hex_hash}, error: {e}")
+        return ""
+
+
+def normalize_hash(hash_value: str) -> str:
+    """标准化hash格式，统一转换为40字符小写十六进制
+    
+    Args:
+        hash_value: 输入的hash值，可能是40字符十六进制或32字符Base32
+        
+    Returns:
+        标准化的40字符小写十六进制hash
+    """
+    if not hash_value:
+        return ""
+    
+    hash_value = hash_value.strip()
+    
+    # 40字符十六进制格式
+    if len(hash_value) == 40 and re.match(r'^[a-fA-F0-9]{40}$', hash_value):
+        return hash_value.lower()
+    
+    # 32字符Base32格式 (DMHY等站点常用)
+    if len(hash_value) == 32 and re.match(r'^[A-Z0-9]{32}$', hash_value):
+        hex_hash = base32_to_hex(hash_value)
+        if hex_hash:
+            logger.debug(f"将Base32 hash {hash_value} 转换为十六进制: {hex_hash}")
+            return hex_hash
+    
+    # 其他情况，尝试转小写
+    normalized = hash_value.lower()
+    logger.debug(f"hash标准化: {hash_value} -> {normalized}")
+    return normalized
+
+
+def get_hash(torrent_url: str) -> str | None:
+    """从torrent URL或magnet链接中提取hash
+    
+    Args:
+        torrent_url: torrent文件URL或magnet链接
+        
+    Returns:
+        提取的hash值，提取失败返回空字符串
+    """
+    hash_pattern_dict = {
+        "magnet_hash_pattern": re.compile(r"\b([a-fA-F0-9]{40})\b"),
+        "torrent_hash_pattern": re.compile(r"/([a-fA-F0-9]{7,40})\.torrent"),
+        "dmhy_hash_pattern": re.compile(r"urn:btih:([A-Z0-9]{32})"),
+    }
+    
+    for pattern_name, hash_pattern in hash_pattern_dict.items():
+        ans = re.search(hash_pattern, torrent_url)
+        if ans:
+            extracted_hash = ans[1]
+            logger.debug(f"使用{pattern_name}提取hash: {extracted_hash}")
+            
+            # 使用normalize_hash标准化hash格式
+            normalized_hash = normalize_hash(extracted_hash)
+            if normalized_hash != extracted_hash:
+                logger.debug(f"hash已标准化: {extracted_hash} -> {normalized_hash}")
+            
+            return normalized_hash
+    
+    logger.warning(f"[Utils] Cannot find hash in {torrent_url}")
+    return ""

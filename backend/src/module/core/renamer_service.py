@@ -1,5 +1,6 @@
 import logging
 from typing import Any
+import asyncio
 
 from module.conf import settings
 from module.core.services import BaseService
@@ -25,7 +26,6 @@ class RenamerService(BaseService):
     async def initialize(self) -> None:
         await super().initialize()
         self.enable = settings.bangumi_manage.enable
-
 
     def get_task_config(self) -> dict[str, Any]:
         """获取重命名任务配置"""
@@ -89,7 +89,9 @@ class RenamerService(BaseService):
                 },
             )
 
-            await event_bus.publish(event)
+            asyncio.create_task(
+                event_bus.publish(event)  # 异步执行事件发布
+            )  # 异步执行重命名
             logger.debug(f"[RenamerService] 已发布重命名事件: {torrent.name}")
 
         except Exception as e:

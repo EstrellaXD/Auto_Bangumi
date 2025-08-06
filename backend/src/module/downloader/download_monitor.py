@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from datetime import datetime, timedelta
 
 from module.database import Database
 from module.downloader.download_client import Client as download_client
@@ -108,13 +109,37 @@ class DownloadMonitor:
         """
         try:
             torrent_hash = torrent.download_uid
-            logger.debug(f"[DownloadMonitor] 开始监控种子: {torrent.name} ({torrent_hash})")
+            logger.debug(
+                f"[DownloadMonitor] 开始监控种子: {torrent.name} ({torrent_hash})"
+            )
             if not torrent_hash:
                 logger.warning(f"[DownloadMonitor] 种子 {torrent.name} 没有下载UID")
                 return
 
             retry_count = 0
+            start_time = datetime.now()
+            timeout_limit = timedelta(hours=4)
+
             while not self._shutdown:
+                # 检查是否超过4小时超时限制
+                current_time = datetime.now()
+                if current_time - start_time > timeout_limit:
+                    logger.warning(
+                        f"[DownloadMonitor] 种子 {torrent.name} 超过4小时未完成下载，标记为已下载和已重命名"
+                    )
+                    try:
+                        with Database() as db:
+                            if torrent_item := db.torrent.search_by_duid(torrent_hash):
+                                torrent_item.downloaded = True
+                                torrent_item.renamed = True
+                                db.torrent.add(torrent_item)
+                                logger.info(
+                                    f"[DownloadMonitor] 已将超时种子标记为完成: {torrent.name}"
+                                )
+                    except Exception as e:
+                        logger.error(f"[DownloadMonitor] 更新超时种子状态失败: {e}")
+                    break
+
                 # 获取种子信息
                 info = await download_client.get_torrent_info(torrent_hash)
                 logger.debug(

@@ -6,6 +6,7 @@ from typing_extensions import override
 from module.conf import get_plugin_config
 from module.models import TorrentDownloadInfo
 from module.network import RequestContent
+from module.utils import get_hash, base32_to_hex
 
 from ....conf import settings
 from ..base_downloader import BaseDownloader
@@ -230,7 +231,9 @@ class Downloader(BaseDownloader):
                     )
                     torrent_hashes = await req.get_torrent_hash(torrent_url)
                     # 优先使用v2 hash，如果没有则使用v1 hash
-                    torrent_link = torrent_hashes.get("v2", torrent_hashes.get("v1", ""))
+                    torrent_link = torrent_hashes.get(
+                        "v2", torrent_hashes.get("v1", "")
+                    )
                     logger.debug(f"[QbDownloader] Got torrent hashes: {torrent_hashes}")
                     logger.debug(f"[QbDownloader] Using hash: {torrent_link}")
                     file = {"torrents": torrent_file}
@@ -238,6 +241,20 @@ class Downloader(BaseDownloader):
                     logger.warning(
                         f"[QbDownloader] Failed to get torrent content from {torrent_url}"
                     )
+        else:
+            # 如果是 magnet 链接，直接使用
+            torrent_link = get_hash(torrent_url)
+            if torrent_link:
+                # 判断是否为32字符的Base32格式（DMHY等站点使用）
+                if len(torrent_link) == 32:
+                    # 转换Base32格式为40字符小写十六进制
+                    hex_hash = base32_to_hex(torrent_link)
+                    if hex_hash:
+                        torrent_link = hex_hash
+                        logger.debug(
+                            f"[QbDownloader] 转换Base32 hash为十六进制: {torrent_link}"
+                        )
+            logger.debug(f"[QbDownloader] Using magnet link: {torrent_url}")
         try:
             resp = await self._client.post(
                 url=QB_API_URL["add"],
