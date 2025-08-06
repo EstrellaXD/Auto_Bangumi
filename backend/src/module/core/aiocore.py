@@ -5,8 +5,7 @@ from typing import Any
 
 from module.utils.events import event_bus
 
-from .task_manager import TaskManager
-
+from .task_manager import TaskManager 
 logger = logging.getLogger(__name__)
 
 
@@ -71,6 +70,8 @@ class AsyncApplicationCore:
                     interval=config["interval"],
                 )
                 logger.debug(f"[AsyncCore] 注册任务: {config['name']}")
+            else:
+                logger.debug(f"[AsyncCore] 跳过未启用的任务: {config['name']}")
 
     async def _register_event_handlers(self) -> None:
         """注册事件处理器"""
@@ -121,6 +122,7 @@ class AsyncApplicationCore:
         if not self._running:
             return
 
+        self._initialized = False
         logger.info("[AsyncCore] 开始停止应用...")
         self._running = False
 

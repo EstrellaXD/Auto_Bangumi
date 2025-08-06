@@ -101,7 +101,6 @@ class OpenAIParser:
             prompt = DEFAULT_PROMPT
 
         params = self._prepare_params(text, prompt)
-        print(params)
 
         # with ThreadPoolExecutor(max_workers=1) as worker:
         #     future = worker.submit(openai.ChatCompletion.create, **params)

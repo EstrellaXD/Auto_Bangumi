@@ -20,8 +20,12 @@ class BaseRefresh:
         async with RequestContent() as req:
             torrents = await req.get_torrents(self.url)
         logging.debug(f"[RSS ENGINE] from {self.url} get {len(torrents)}")
+        for torrent in torrents:
+            # 去掉内部的 "\n"
+            torrent.name = torrent.name.replace("\n", "")
         with Database(self.engine) as database:
             new_torrents = database.torrent.check_new(torrents)
+
         return new_torrents
 
     async def pull_rss(self) -> list[Torrent]:

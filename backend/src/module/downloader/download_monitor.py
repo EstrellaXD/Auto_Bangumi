@@ -25,6 +25,7 @@ class DownloadMonitor:
     def initialize(self) -> None:
         """初始化下载监控器，订阅下载开始事件"""
         # 订阅下载开始事件
+        self._shutdown = False
         self._event_bus.subscribe(
             EventType.DOWNLOAD_STARTED, self.handle_download_started
         )
@@ -75,7 +76,7 @@ class DownloadMonitor:
         await self.start_monitoring(torrent.download_uid, bangumi, torrent)
 
     async def start_monitoring(
-        self, torrent_hash: str, bangumi: Bangumi, torrent: Torrent
+        self, torrent_duid: str, bangumi: Bangumi, torrent: Torrent
     ) -> None:
         """开始监控指定种子的下载状态
 
@@ -84,18 +85,18 @@ class DownloadMonitor:
             bangumi: 番剧信息
             torrent: 种子信息
         """
-        if torrent_hash in self.monitoring_tasks:
-            logger.debug(f"[DownloadMonitor] 种子 {torrent_hash} 已在监控中")
+        if torrent_duid in self.monitoring_tasks:
+            logger.debug(f"[DownloadMonitor] 种子 {torrent_duid} 已在监控中")
             return
 
         # 创建监控任务
         task = asyncio.create_task(
             self.monitor_torrent(bangumi, torrent),
-            name=f"monitor_{torrent_hash}",
+            name=f"monitor_{torrent_duid}",
         )
 
-        self.monitoring_tasks[torrent_hash] = task
-        logger.debug(f"[DownloadMonitor] 开始监控种子: {torrent.name}")
+        self.monitoring_tasks[torrent_duid] = task
+        # logger.debug(f"[DownloadMonitor] 开始监控种子: {torrent.name}")
 
     async def monitor_torrent(self, bangumi: Bangumi, torrent: Torrent) -> None:
         """监控单个种子的下载状态
@@ -107,6 +108,7 @@ class DownloadMonitor:
         """
         try:
             torrent_hash = torrent.download_uid
+            logger.debug(f"[DownloadMonitor] 开始监控种子: {torrent.name} ({torrent_hash})")
             if not torrent_hash:
                 logger.warning(f"[DownloadMonitor] 种子 {torrent.name} 没有下载UID")
                 return
@@ -115,6 +117,9 @@ class DownloadMonitor:
             while not self._shutdown:
                 # 获取种子信息
                 info = await download_client.get_torrent_info(torrent_hash)
+                logger.debug(
+                    f"[DownloadMonitor] 获取种子信息: {torrent.name} - {torrent_hash}"
+                )
 
                 if not info:
                     logger.warning(
@@ -167,7 +172,6 @@ class DownloadMonitor:
                     logger.debug(
                         f"[DownloadMonitor] 种子 {torrent.name} 下载状态: 已完成 {info.completed}"
                     )
-                    logger.debug(f"[DownloadMonitor] 种子下载完成: {torrent.name}")
 
                     # 发布下载完成事件
                     await self._publish_download_completed(torrent, bangumi)
@@ -190,8 +194,9 @@ class DownloadMonitor:
             logger.error(f"[DownloadMonitor] 监控种子失败: {torrent.name} - {e}")
         finally:
             # 清理任务
-            self.monitoring_tasks.pop(torrent_hash, None)
-            logger.debug(f"[DownloadMonitor] 清理监控任务: {torrent.name}")
+            if torrent_hash:
+                self.monitoring_tasks.pop(torrent_hash, None)
+                logger.debug(f"[DownloadMonitor] 清理监控任务: {torrent.name}")
 
     async def _publish_download_completed(
         self, torrent: Torrent, bangumi: Bangumi

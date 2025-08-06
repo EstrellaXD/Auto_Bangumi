@@ -59,7 +59,6 @@ class Renamer:
     ) -> str:
         render = TemplateRenderer()
         params = render.get_available_params(file_info,bangumi_name)
-        print(params)
 
 
         default_method = "${torrent_name}"
@@ -142,7 +141,9 @@ class Renamer:
 
         if bangumi is None:
             # 从save_path中提取番剧名称和season
+            logger.debug(f"[Renamer][rename_file] bangumi is None, try to extract from save_path")
             bangumi_name, season = path_to_bangumi(save_path, settings.downloader.path)
+            logger.debug(f"[Renamer][rename_file] {bangumi_name=}, {season=}")
 
             if season == 0:
                 # 奇奇怪怪的路径, 不处理
@@ -160,6 +161,7 @@ class Renamer:
 
         file_type = "media" if "sub" not in method else "subtitle"
         # 当 episode 是 0 时, 不处理
+        logger.debug(f"[Renamer][rename_file] {bangumi_name=}, {season=}, {file_type=}, {method=}")
         new_path = self.gen_path(ep, bangumi_name, method)
         old_path = file_path
         if new_path == old_path:
@@ -276,9 +278,10 @@ if __name__ == "__main__":
 
     setup_logger(level=logging.DEBUG, reset=True)
     title = "[LoliHouse] 2.5次元的诱惑  - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕].mkv"
-    bangumi_name = "2.5次元的"
+    title = "[LoliHouse] 鬼人幻灯抄 / Kijin Gentoushou - 17 (幕末篇)[WebRip 1080p HEVC-10bit AAC][简繁内封字幕].mkv"
+    bangumi_name = "鬼人幻灯抄"
     r = Renamer()
     file_info = TitleParser().torrent_parser(title)
     print(file_info)
-    print(r.gen_path(file_info, bangumi_name,"custom"))
+    print(r.gen_path(file_info, bangumi_name,"advance"))
     # asyncio.run(Renamer().rename_torrent())

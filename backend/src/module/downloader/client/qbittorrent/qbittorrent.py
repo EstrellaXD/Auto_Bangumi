@@ -149,11 +149,9 @@ class Downloader(BaseDownloader):
                 url=QB_API_URL["properties"],
                 params=data,
             )
-            print(reps.json())
             reps.raise_for_status()
             logger.debug(f"[qbittorrent] Torrent info: {hash}")
             reps = reps.json()
-            # print(reps)
             logger.debug(
                 f"[qbittorrent] Torrent info: {reps['eta']=}, {reps['save_path']=}, {reps['completion_date']=}"
             )

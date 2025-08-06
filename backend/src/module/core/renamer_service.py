@@ -15,18 +15,24 @@ class RenamerService(BaseService):
 
     def __init__(self):
         super().__init__()
-        self._renamer: Renamer | None = None
+        self._renamer: Renamer = Renamer()
+        self.enable = settings.bangumi_manage.enable
 
     async def _setup(self) -> None:
         """初始化重命名器"""
         self._renamer = Renamer()
+
+    async def initialize(self) -> None:
+        await super().initialize()
+        self.enable = settings.bangumi_manage.enable
+
 
     def get_task_config(self) -> dict[str, Any]:
         """获取重命名任务配置"""
         return {
             "name": "renamer_check",
             "interval": 600,  # 转换为秒
-            "enabled": settings.bangumi_manage.enable,
+            "enabled": self.enable,
         }
 
     async def execute(self) -> None:

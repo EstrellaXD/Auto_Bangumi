@@ -130,7 +130,6 @@ class DownloadService(BaseService):
         return {
             "name": "download_process",
             "interval": 10,
-            "max_retries": 5,
             "enabled": True,
         }
 

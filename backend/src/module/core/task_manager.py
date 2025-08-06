@@ -22,7 +22,6 @@ class TaskInfo:
     task: asyncio.Task[Any] | None = None
     last_run: float | None = None
     error_count: int = 0
-    max_retries: int = 3
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -33,12 +32,11 @@ class TaskManager:
         self._shutdown_event: asyncio.Event = asyncio.Event()
 
     async def register_task(
-        self, name: str, coro_func: Callable, interval: int, max_retries: int = 3
+        self, name: str, coro_func: Callable, interval: int
     ) -> None:
         """注册任务"""
         self._tasks[name] = TaskInfo(
             name=name,
-            max_retries=max_retries,
             metadata={"coro_func": coro_func, "interval": interval},
         )
         logger.info(f"[TaskManager] 已注册任务: {name}")
