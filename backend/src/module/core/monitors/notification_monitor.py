@@ -27,6 +27,7 @@ class NotificationMonitor:
         if not self.enable:
             logger.warning("[NotificationMonitor] 通知功能未启用")
             return
+        self._notification_sender.initialize()
         self._running = True
         self._event_bus.subscribe(
             EventType.NOTIFICATION_REQUEST,

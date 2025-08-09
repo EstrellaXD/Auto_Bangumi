@@ -1,5 +1,8 @@
-from typing import Any, Dict
+from typing import Any
 
+from pydantic import BaseModel, Field
+
+from module.conf import get_plugin_config
 from module.models import Notification
 from module.network import RequestContent
 from module.utils.cache_image import str_to_url
@@ -7,18 +10,35 @@ from module.utils.cache_image import str_to_url
 from .base_notifier import BaseNotifier
 
 
+class Config(BaseModel):
+    chat_id: str = Field(
+        default="",
+        alias="chat_id",
+        description="Telegram chat ID, can be a single ID or comma-separated list",
+    )
+    token: str = Field(
+        default="",
+        alias="token",
+        description="Telegram bot token, can be obtained from BotFather",
+    )
+
 class Notifier(BaseNotifier):
     """企业微信通知器 - 基于图文消息"""
 
-    def __init__(self, token: str, chat_id: str, **kwargs):
-        super().__init__(token, **kwargs)
+    def __init__(self):
+        super().__init__()
         # chat_id 用作通知URL
-        self.notification_url = chat_id
 
-    def format_message(self, notify: Notification) -> Dict[str, Any]:
+    def initialize(self) -> None:
+            """初始化下载器"""
+            # 加载配置
+            self.config: Config = get_plugin_config(Config(), "notification")
+            self.notification_url = self.config.chat_id
+            self.token = self.config.token
+
+
+    def format_message(self, notify: Notification) -> dict[str, Any]:
         """格式化企业微信通知消息"""
-        data = super().format_message(notify)
-
         # 处理海报路径
         poster_path = notify.poster_path
         if poster_path and "/" in poster_path:
@@ -29,16 +49,15 @@ class Notifier(BaseNotifier):
             poster_path = "https://article.biliimg.com/bfs/article/d8bcd0408bf32594fd82f27de7d2c685829d1b2e.png"
 
         # 企业微信标题格式
-        title = data["title"]
+        title = notify.title
         if notify.episode:
             title = "【番剧更新】" + title
 
         # 企业微信消息格式
-        message = data["message"]
+        message = notify.message
         if poster_path:
             message += f"\n{poster_path}\n".strip()
 
-        return {**data, "title": title, "message": message, "poster_path": poster_path}
 
     async def post_msg(self, notify: Notification) -> bool:
         """发送企业微信通知"""
@@ -57,8 +76,9 @@ class Notifier(BaseNotifier):
                 resp = await req.post_data(self.notification_url, data)
 
             self.logger.debug(f"Wecom notification response: {resp.status_code}")
-            return resp and resp.status_code == 200
+            resp.raise_for_status()  # 确保响应状态码是200
 
         except Exception as e:
             self.logger.error(f"企业微信通知发送失败: {e}")
             return False
+        return True

@@ -112,13 +112,3 @@ class TaskManager:
             task_info.task = None
         logger.info("[TaskManager] 已重置所有任务状态为 PENDING")
 
-    def get_status(self) -> dict[str, dict]:
-        """获取所有任务状态"""
-        return {
-            name: {
-                "state": task_info.state.value,
-                "error_count": task_info.error_count,
-                "last_run": task_info.last_run,
-            }
-            for name, task_info in self._tasks.items()
-        }

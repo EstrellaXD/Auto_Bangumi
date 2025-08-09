@@ -5,7 +5,8 @@ from typing import Any
 
 from module.utils.events import event_bus
 
-from .task_manager import TaskManager 
+from .task_manager import TaskManager
+
 logger = logging.getLogger(__name__)
 
 
@@ -22,6 +23,7 @@ class AsyncApplicationCore:
         self._download_monitor = None
         self._rename_monitor = None
         self._notification_monitor = None
+        self.monitors:list = []
         self._running: bool = False
         self._initialized: bool = False
 
@@ -31,8 +33,7 @@ class AsyncApplicationCore:
 
         try:
             # 创建服务实例
-            from .renamer_service import RenamerService
-            from .services import DownloadService, RSSService
+            from .services import DownloadService, RenamerService, RSSService
 
             self.services = [
                 DownloadService(),
@@ -76,10 +77,16 @@ class AsyncApplicationCore:
     async def _register_event_handlers(self) -> None:
         """注册事件处理器"""
         try:
-            from module.downloader.download_monitor import download_monitor
-            from module.manager.rename_monitor import RenameMonitor
-            from module.notification.notification_monitor import NotificationMonitor
+            # from module.downloader.download_monitor import download_monitor
+            # from module.manager.rename_monitor import RenameMonitor
+            # from module.notification import NotificationMonitor
             from module.utils.events import EventType
+
+            from .monitors import (
+                NotificationMonitor,
+                RenameMonitor,
+                download_monitor,
+            )
 
             # 使用全局 DownloadMonitor 实例
             self._download_monitor = download_monitor
@@ -168,31 +175,6 @@ class AsyncApplicationCore:
                 logger.debug(f"[AsyncCore] 服务 {service.name} 清理完成")
             except Exception as e:
                 logger.error(f"[AsyncCore] 服务 {service.name} 清理失败: {e}")
-
-    def get_status(self) -> dict[str, Any]:
-        """获取应用状态"""
-        status = {
-            "running": self._running,
-            "initialized": self._initialized,
-            "tasks": self.task_manager.get_status(),
-            "services": [
-                {"name": s.name, "initialized": getattr(s, "_initialized", False)}
-                for s in self.services
-            ],
-            "event_bus": self.event_bus.get_subscribers_count(),
-        }
-
-        # 添加监控器状态
-        if self._download_monitor:
-            status["download_monitor"] = self._download_monitor.get_monitoring_status()
-
-        status["monitors"] = {
-            "download_monitor": bool(self._download_monitor),
-            "rename_monitor": bool(self._rename_monitor),
-            "notification_monitor": bool(self._notification_monitor),
-        }
-
-        return status
 
     @asynccontextmanager
     async def lifespan(self):

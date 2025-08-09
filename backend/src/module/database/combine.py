@@ -71,15 +71,11 @@ class Database(Session):
         # 对于非聚合, link 一致就可认为是一个
         # 对于一个种子要找 bangumi, 主要是在 刷新 rss 的时候,
         if aggrated:
-            logger.debug(f"[Database Combine] 查找聚合 Bangumi: {name}, {rss_link}")
             statement = select(Bangumi).where(Bangumi.title_raw.contains(name))
             bangumi = self.exec(
                 statement
                 # select(Bangumi).where(Bangumi.deleted == false())
             ).first()
-            logger.debug(
-                f"[Database Combine] 找到聚合 Bangumi: {bangumi.official_title if bangumi else 'None'}"
-            )
             return bangumi
         else:
             statement = select(Bangumi).where(

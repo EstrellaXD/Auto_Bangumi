@@ -2,7 +2,6 @@ import asyncio
 import logging
 
 from module.conf import settings
-from module.database import Database
 from module.manager import Renamer
 from module.models import Bangumi, Torrent
 from module.utils import event_bus
