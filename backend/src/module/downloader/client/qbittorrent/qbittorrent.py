@@ -381,6 +381,7 @@ class Downloader(BaseDownloader):
         if isinstance(e, httpx.HTTPStatusError):
             if e.response.status_code == 403:
                 logger.error(f"[qbittorrent] {funtion_name} need login first")
+                logger.debug(f"[qbittorrent] {funtion_name} error: {e}")
                 raise AuthorizationError(
                     function_name=funtion_name,
                     message=f"{funtion_name} requires authentication",
