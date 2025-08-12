@@ -21,8 +21,8 @@ class BaseService(ABC):
         # 如果没有指定名称，使用类名自动生成
         if name is None:
             name = self.__class__.__name__.lower().replace("service", "")
-        self.name = name
-        self._initialized = False
+        self.name:str = name
+        self._initialized:bool = False
 
     async def initialize(self) -> None:
         """初始化服务"""

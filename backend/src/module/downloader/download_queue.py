@@ -32,7 +32,7 @@ class DownloadQueue:
 
 class DownloadController:
     def __init__(self):
-        self._event_bus = event_bus
+        self._event_bus:EventBus = event_bus
 
     # 10秒拿5个
     async def download(self):
@@ -67,9 +67,6 @@ class DownloadController:
         with Database(engine) as database:
             for torrent in torrents:
                 database.torrent.add(torrent)
-                logger.debug(
-                    f"[Download Controller] Torrent {torrent.name} {torrent.url=} 已保存到数据库"
-                )
         for i, result in enumerate(results):
             torrent, bangumi = torrent_bangumi_pairs[i]
 

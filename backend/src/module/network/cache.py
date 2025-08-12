@@ -26,7 +26,6 @@ async def load_image(img_path: str) -> bytes | None:
         img_path = url_to_str(img_path)
     image_path = Path("data") / img_path
     if img_path and isfile(image_path):
-        logger.debug(f"[load_image] Found image in cache: {image_path}")
         with open(image_path, "rb") as f:
             return f.read()
     elif img_path:

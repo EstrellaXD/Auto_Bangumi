@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from module.rss import RSSEngine
 logger = logging.getLogger(__name__)
 
+
 class RSSService(BaseService):
     def __init__(self):
         super().__init__()

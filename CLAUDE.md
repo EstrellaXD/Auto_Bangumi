@@ -15,17 +15,28 @@ This sets up a Python virtual environment, installs dependencies with Tsinghua m
 cd backend/src && python main.py
 ```
 
+**Frontend Development:**
+```bash
+cd webui && pnpm install && pnpm run dev  # Development server
+cd webui && pnpm run build               # Production build
+./build-frontend.sh                      # Build and move to backend/src/dist
+```
+
 **Linting and Formatting:**
 ```bash
 cd backend && ./venv/bin/ruff check .
 cd backend && ./venv/bin/ruff format .
 cd backend && ./venv/bin/black .
+cd webui && pnpm run lint                # Frontend linting
+cd webui && pnpm run format              # Frontend formatting
 ```
 
 **Testing:**
 ```bash
 cd backend && ./venv/bin/pytest
 cd backend && ./venv/bin/pytest test/test_specific_module.py  # Run specific test
+cd webui && pnpm run test                # Frontend tests
+cd webui && pnpm run test:build          # TypeScript type checking
 ```
 
 ## Architecture
@@ -36,9 +47,9 @@ Auto_Bangumi is an RSS-based automatic anime downloading and organization tool w
 - `main.py`: FastAPI application entry point with poster serving and static file mounting
 - `module/core/`: Core async application framework
   - `aiocore.py`: AsyncApplicationCore manages service lifecycle and task scheduling
-  - `services.py`: BaseService abstract class and service implementations (RSS, Download, Renamer)
+  - `services/`: Service implementations extending BaseService (RSS, Download, Renamer)
+  - `monitors/`: Background monitors for downloads, notifications, and renaming
   - `task_manager.py`: TaskManager handles async task scheduling and execution
-  - `events.py`: Event system for inter-service communication
 - `module/api/`: REST API endpoints organized by feature (auth, bangumi, config, etc.)
 - `module/parser/`: Content parsing system for RSS feeds, torrents, and metadata
 - `module/downloader/`: Download client abstractions (qBittorrent, Aria2, Transmission)
@@ -48,9 +59,12 @@ Auto_Bangumi is an RSS-based automatic anime downloading and organization tool w
 - `module/network/`: HTTP client abstractions with proxy and caching support
 
 **Frontend Structure (Vue.js + TypeScript):**
-- Located in `webui/` with standard Vue project structure
+- Located in `webui/` with Vite build system
+- Uses UnoCSS for styling, Naive UI for components
+- Auto-import configuration for Vue Composition API
 - API client in `src/api/` matching backend endpoints
-- Component-based UI with reusable elements in `src/components/`
+- Pinia for state management
+- Vue Router with file-based routing
 
 **Key Data Flow:**
 1. RSS feeds are parsed and analyzed for anime information
@@ -65,8 +79,22 @@ The application uses an async service-based architecture where:
 - AsyncApplicationCore manages service lifecycle
 - TaskManager schedules periodic service execution
 - Services communicate via events system
+- Monitors handle background tasks like download tracking
 
 **Configuration:**
 - Main config in `config/config.json`
 - Search providers in `config/search_provider.json`
 - Environment variables for runtime settings
+
+## Development Guidelines
+
+**Branch Strategy:**
+- `main`: Stable releases only
+- `<version>-dev`: Development branches for each minor version (e.g., `3.1-dev`)
+- Bug fixes go to current version dev branch
+- New features go to next version dev branch
+
+**Code Style:**
+- Backend: Ruff + Black formatting, Python 3.10+ target
+- Frontend: ESLint + Prettier, TypeScript strict mode
+- Pre-commit hooks enforce formatting

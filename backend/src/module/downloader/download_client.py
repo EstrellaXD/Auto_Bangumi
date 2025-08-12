@@ -127,7 +127,6 @@ class DownloadClient:
 
         # 初始化下载器
         self.downloader.initialize()
-
         # 更新API间隔
         self.api_interval = self.downloader.api_interval
 

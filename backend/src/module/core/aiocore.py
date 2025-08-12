@@ -77,11 +77,6 @@ class AsyncApplicationCore:
     async def _register_event_handlers(self) -> None:
         """注册事件处理器"""
         try:
-            # from module.downloader.download_monitor import download_monitor
-            # from module.manager.rename_monitor import RenameMonitor
-            # from module.notification import NotificationMonitor
-            from module.utils.events import EventType
-
             from .monitors import (
                 NotificationMonitor,
                 RenameMonitor,
