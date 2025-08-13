@@ -5,6 +5,7 @@ def test_raw_parser():
     content = "【幻樱字幕组】【4月新番】【古见同学有交流障碍症 第二季 Komi-san wa, Komyushou Desu. S02】【22】【GB_MP4】【1920X1080】"
     info = TitleMetaParser().parser(content)
     assert info is not None
+    assert info.group == "幻樱字幕组"
     assert info.title_en == "Komi-san wa, Komyushou Desu."
     assert info.resolution == "1920X1080"
     assert info.episode == 22
@@ -117,7 +118,7 @@ def test_raw_parser():
     assert info.episode == 7
     assert info.season == 2
 
-    content = "[LoliHouse] 2.5次元的诱惑 / 2.5-jigen no Ririsa - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][LoliHouse] 2.5次元的诱惑 / 2.5-jigen no Ririsa - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][609.59 MB]"
+    content = "[LoliHouse] 2.5次元的诱惑 / 2.5-jigen no Ririsa - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][609.59 MB]"
     info = TitleMetaParser().parser(content)
     assert info is not None
     assert info.group == "LoliHouse"
@@ -126,6 +127,12 @@ def test_raw_parser():
     assert info.resolution == "1080p"
     assert info.episode == 1
 
+    content = "[桜都字幕组&7³ACG] 摇曳露营 第3季/ゆるキャン△ SEASON3/Yuru Camp S03 | 01-12+New Anime 01-03 [简繁字幕] BDrip 1080p AV1 OPUS 2.0 [复制磁连]"
+    info = TitleMetaParser().parser(content)
+    assert info is not None
+    assert info.group == "桜都字幕组&7³ACG"
+    assert info.title_jp == "ゆるキャン△"
+    assert info.sub == "简繁"
 
 
 

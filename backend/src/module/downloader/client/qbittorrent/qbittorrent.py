@@ -42,8 +42,6 @@ class Downloader(BaseDownloader):
             DownloaderConfig(), "downloader"
         )
         self.api_interval: float = 0.2
-        self.ssl: bool = False
-        self.host: str = ""
 
     @override
     def initialize(self) -> None:

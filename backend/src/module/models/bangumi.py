@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 from pydantic import BaseModel
 from sqlmodel import Field, SQLModel
 
@@ -30,8 +28,6 @@ class BangumiBase(SQLModel):
         default=None, alias="bangumi_id", title="番剧Bangumi ID"
     )
     mikan_id: str | None = Field(default=None, alias="mikan_id", title="番剧Mikan ID")
-    # filter: str = Field(default="", alias="filter", title="番剧过滤器")
-    # 感觉是不是与 rss 表用外键关联更好
     rss_link: str = Field(default="", alias="rss_link", title="番剧RSS链接")
     poster_link: str = Field(default="", alias="poster_link", title="番剧海报链接")
     rule_name: str | None = Field(default=None, alias="rule_name", title="番剧规则名")
@@ -61,6 +57,7 @@ class Episode(BaseModel):
     title_en: str = Field(default="", alias="title_en", title="英文标题")
     title_zh: str = Field(default="", alias="title_zh", title="中文标题")
     title_jp: str = Field(default="", alias="title_jp", title="日文标题")
+    title_romaji: str = Field(default="", alias="title_romaji", title="罗马音标题")
     season: int = Field(default=1, ge=0, alias="season", title="番剧季度")
     season_raw: str = Field(default="", alias="season_raw", title="番剧季度原名")
     episode: int = Field(default=0, ge=0, alias="episode", title="番剧集数")
@@ -68,7 +65,7 @@ class Episode(BaseModel):
     sub_type: str = Field(default="", alias="sub_type", title="字幕类型")
     group: str = Field(default="", alias="group", title="字幕组")
     resolution: str = Field(default="", alias="resolution", title="分辨率")
-    source: str = Field(default="", alias="source", title="来源")
+    source: str = Field(default="", alias="source", title="视频来源")
     audio_info: list[str] = Field(
         default_factory=list, alias="audio_info", title="音频信息"
     )

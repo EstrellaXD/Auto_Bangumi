@@ -38,21 +38,23 @@ ALIST_API_URL = {
 
 class Downloader(BaseDownloader):
     def __init__(self):
+        super().__init__()
+        self._client: httpx.AsyncClient | None = None
         self.config: DownloaderConfig = get_plugin_config(
             DownloaderConfig(), "downloader"
         )
-        self.host: str = self.config.host
-        self.username: str = self.config.username
-        self.password: str = self.config.password
-        self.headers = {
-            "Authorization": f"{self.password}",
+        self.api_interval: float = 1.0
+
+    @override
+    def initialize(self) -> None:
+        """初始化下载器"""
+        # 加载配置
+        self.config = get_plugin_config(DownloaderConfig(), "downloader")
+        self.headers: dict[str, str] = {
+            "Authorization": f"{self.config.password}",
         }
-        self.api_interval: int = 1
-        self.ssl: bool = settings.downloader.ssl
-        self._client: httpx.AsyncClient = httpx.AsyncClient(
-            base_url=self.host,
-            # trust_env=self.ssl,
-            headers=self.headers,
+        self._client = httpx.AsyncClient(
+            base_url=self.config.host, verify=settings.downloader.ssl
         )
 
     @override
@@ -72,11 +74,11 @@ class Downloader(BaseDownloader):
             )
             resp.raise_for_status()
             if resp.status_code == 200:
-                logger.debug(f"[openlist] Successfully connected to {self.host}")
+                logger.debug(f"[openlist] Successfully connected to {self.config.host}")
                 return True
         except (httpx.ConnectError, httpx.TimeoutException, httpx.ReadTimeout) as e:
             logger.error(
-                f"[openlist] Check host error, please check your host {self.host}"
+                f"[openlist] Check host error, please check your host {self.config.host}"
             )
             logger.debug(f"[openlist] Check host error: {e}")
 
@@ -136,22 +138,6 @@ class Downloader(BaseDownloader):
         limit: int = 0,
     ):
         return []
-        try:
-            data = {"page": 1, "per_page": limit if limit > 0 else 100}
-            resp = await self._client.get(
-                url=ALIST_API_URL["offline_list_done"],
-            )
-            resp.raise_for_status()
-            result = resp.json()
-            if result.get("code") == 200:
-                tasks = result.get("data", [])
-                filtered_tasks = []
-                for task in tasks:
-                    print(task)
-            return []
-        except Exception as e:
-            self.handle_exception(e, "torrents_info")
-            return []
 
     @override
     async def add(self, torrent_url: str, save_path, category) -> str | bool:
