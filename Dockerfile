@@ -6,7 +6,8 @@ ENV LANG="C.UTF-8" \
     TZ=Asia/Shanghai \
     PUID=1000 \
     PGID=1000 \
-    UMASK=022
+    UMASK=022 \
+    PATH="/root/.local/bin:$PATH"
 
 WORKDIR /app
 
@@ -18,19 +19,36 @@ RUN set -ex && \
         bash \
         busybox-suid \
         python3 \
+        python3-dev \
         py3-aiohttp \
         py3-bcrypt \
         curl \
+        gcc \
+        musl-dev \
+        libffi-dev \
         su-exec \
         shadow \
         tini \
         openssl \
-        tzdata && \
+        tzdata \
+        rust \
+        cargo && \
     # Install uv
     curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    . $HOME/.cargo/env && \
+    # Verify uv installation and show version
+    uv --version && \
+    # Check if lock file exists and is readable
+    ls -la uv.lock && \
     # Install dependencies using uv
     uv sync --frozen --no-dev && \
+    # Remove build dependencies to reduce image size
+    apk del \
+        rust \
+        cargo \
+        gcc \
+        musl-dev \
+        libffi-dev \
+        python3-dev && \
     # Add user
     mkdir -p /home/ab && \
     addgroup -S ab -g 911 && \
@@ -38,7 +56,7 @@ RUN set -ex && \
     # Clear
     rm -rf \
         /root/.cache \
-        /root/.cargo \
+        /root/.local \
         /tmp/*
 
 COPY --chmod=755 backend/src/. .
