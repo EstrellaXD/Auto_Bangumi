@@ -55,6 +55,7 @@ def setup_logger(level: int = logging.INFO, reset: bool = False):
         "hpack.hpack",
         "passlib",
         "multipart",
+        "multipart.multipart",
     ]
     for logger_name in loggers_to_silence:
         logger = logging.getLogger(logger_name)

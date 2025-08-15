@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordBearer
 from module.database import Database
 from module.models.user import User, UserUpdate
 
-from .jwt import verify_token
+from .jwt import verify_token,verify_password
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
@@ -43,12 +43,18 @@ def update_user_info(user_data: UserUpdate, current_user):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-def auth_user(user: User):
+def auth_user(user: User)->bool:
     with Database() as db:
-        resp = db.user.auth_user(user)
-        if resp:
+        resp = db.user.get_user(user.username)
+
+    if not resp:
+        return False
+    if user.username == resp.username:
+        res = verify_password(user.password, resp.password)
+        if res:
             active_user.append(user.username)
-        return resp
+        return res
+    return False
 
 
 UNAUTHORIZED = HTTPException(

@@ -13,14 +13,14 @@ class UserDatabase:
     def __init__(self, session: Session):
         self.session = session
 
-    def get_user(self, username):
+    def get_user(self, username) -> User | None:
         statement = select(User).where(User.username == username)
         result = self.session.exec(statement).first()
-        if not result:
-            raise HTTPException(status_code=404, detail="User not found")
+        # if not result:
+        #     raise HTTPException(status_code=404, detail="User not found")
         return result
 
-    def auth_user(self, user: User):
+    def auth_user(self, user: User) -> bool:
         statement = select(User).where(User.username == user.username)
         result = self.session.exec(statement).first()
         if not result:

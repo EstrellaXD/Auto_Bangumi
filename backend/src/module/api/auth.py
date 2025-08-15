@@ -22,37 +22,15 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/login", response_model=dict)
 async def login(response: Response, form_data=Depends(OAuth2PasswordRequestForm)):
     user = User(username=form_data.username, password=form_data.password)
-
-    from module.database import Database
-
-    with Database() as db:
-        try:
-            stored_user = db.user.get_user(user.username)
-        except HTTPException:
-            resp = ResponseModel(
-                status_code=401,
-                status=False,
-                msg_en="User not found",
-                msg_zh="用户不存在",
-            )
-        else:
-            if not verify_password(user.password, stored_user.password):
-                resp = ResponseModel(
-                    status_code=401,
-                    status=False,
-                    msg_en="Incorrect password",
-                    msg_zh="密码错误",
-                )
-            else:
-                active_user.append(user.username)
-                resp = ResponseModel(
-                    status_code=200,
-                    status=True,
-                    msg_en="Login successfully",
-                    msg_zh="登录成功",
-                )
-
-    if resp.status:
+    resp = auth_user(user)
+    if not resp:
+        resp = ResponseModel(
+            status_code=401,
+            status=False,
+            msg_en="Incorrect username or password",
+            msg_zh="用户名或密码错误",
+        )
+    else:
         token = create_access_token(
             data={"sub": user.username}, expires_delta=timedelta(days=1)
         )
