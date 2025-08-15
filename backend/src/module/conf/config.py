@@ -34,32 +34,12 @@ CONFIX_NAME = "config.json" if VERSION != "DEV_VERSION" else "config_dev.json"
 CONFIG_PATH = (CONFIG_ROOT / CONFIX_NAME).resolve()
 
 
-def model_dump(
-    model: BaseModel,
-    include: set[str] | None = None,
-    exclude: set[str] | None = None,
-    by_alias: bool = False,
-    exclude_unset: bool = False,
-    exclude_defaults: bool = False,
-    exclude_none: bool = False,
-) -> dict[str, Any]:
-    return model.dict(
-        include=include,
-        exclude=exclude,
-        by_alias=by_alias,
-        exclude_unset=exclude_unset,
-        exclude_defaults=exclude_defaults,
-        exclude_none=exclude_none,
-    )
-
-
 # 判断给定的 data 的 key 是否在 setting 中
 def check_config_key(
     data: dict | BaseModel, updated_data: BaseModel, config_name: str
 ) -> bool:
     if isinstance(data, BaseModel):
         data = data.model_dump()
-        # data = data.dict()
 
     updated_data = updated_data.model_dump()
     for key in updated_data.keys():
@@ -70,7 +50,7 @@ def check_config_key(
 
 def get_plugin_config(config: T_BaseModel, config_name: str) -> T_BaseModel:
     """从全局配置获取当前插件需要的配置项，更新 data 中的缺失项。"""
-    global_data = model_dump(settings)
+    global_data = settings.model_dump()
     data = global_data.get(config_name, {})
     # data 可能是 dict 和 BaseModel 的实例
     # 尝试从配置文件中读取配置, 如果不足则使用默认配置
@@ -85,8 +65,7 @@ def get_plugin_config(config: T_BaseModel, config_name: str) -> T_BaseModel:
 
 def type_validate_python(type_: BaseModel, data: Any) -> BaseModel:
     """Validate data with given type, checking required fields exist."""
-    validated_data = type_.__class__.validate(data)
-
+    validated_data = type_.__class__.model_validate(data)
     return validated_data
 
 
@@ -99,11 +78,9 @@ def update_config(base_config: BaseModel | dict, data: dict):
     # # 获取 baseconfig 的当前字段数据
     if isinstance(base_config, BaseModel):
         updated_data = base_config.model_dump()
-        # updated_data = base_config.dict()
         updated_data = deep_update(updated_data, data)
-        updated_instance = base_config.__class__.validate(updated_data)
+        updated_instance = base_config.__class__.model_validate(updated_data)
         updata_dict = updated_instance.model_dump()
-        # updata_dict = updated_instance.dict()
     else:
         # 当 baseconfig 是 dict 类型时, 直接更新
         updated_data = base_config
@@ -170,7 +147,7 @@ class Settings(Config):
                     else:
                         attr_name = attr[0] if isinstance(attr, tuple) else attr
                         config_dict[key][attr_name] = self.__val_from_env(env, attr)
-        config_obj = Config.validate(config_dict)
+        config_obj = Config.model_validate(config_dict)
         self.__dict__.update(config_obj.__dict__)
         logger.info("Config loaded from env")
 
@@ -181,10 +158,6 @@ class Settings(Config):
             return conv_func(os.environ[env])
         else:
             return os.environ[env]
-
-    @property
-    def group_rules(self):
-        return self.__dict__["group_rules"]
 
 
 settings = Settings()

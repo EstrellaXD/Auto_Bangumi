@@ -59,17 +59,6 @@ def setup_logger(level: int = logging.INFO, reset: bool = False):
     for logger_name in loggers_to_silence:
         logger = logging.getLogger(logger_name)
         logger.setLevel(logging.WARNING)
-        # logger.propagate = False
-        # logger.handlers = [NullHandler()]
 
     # 对于 bcrypt 有一个 适配的问题,就藏起来吧
     logging.getLogger("passlib").setLevel(logging.ERROR)
-    # 完全抑制 httpx 的日志输出
-    # httpx_logger = logging.getLogger("httpx")
-    # http_coro_logger = logging.getLogger("httpcore")
-    # httpx_logger.setLevel(logging.WARNING)
-    # http_coro_logger.setLevel(logging.WARNING)
-    # httpx_logger.addHandler(NullHandler())
-    # http_coro_logger.addHandler(NullHandler())
-    # httpx_logger.propagate = False
-    # http_coro_logger.propagate = False

@@ -36,7 +36,7 @@ def torrent_parser(
     suffix = Path(torrent_name).suffix
     if file_type == "media":
         return EpisodeFile(
-            **media_info.dict(),
+            **media_info.model_dump(),
             media_path=torrent_name,
             title=media_info.get_title(),
             suffix=suffix,
@@ -44,7 +44,7 @@ def torrent_parser(
     else:
         language = get_subtitle_lang(torrent_name)
         return SubtitleFile(
-            **media_info.dict(),
+            **media_info.model_dump(),
             media_path=torrent_name,
             language=language,
             title=media_info.get_title(),
