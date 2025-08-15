@@ -10,7 +10,9 @@ ENV LANG="C.UTF-8" \
 
 WORKDIR /app
 
-COPY backend/requirements.txt .
+# Copy Python project files
+COPY backend/pyproject.toml backend/uv.lock ./
+
 RUN set -ex && \
     apk add --no-cache \
         bash \
@@ -18,15 +20,17 @@ RUN set -ex && \
         python3 \
         py3-aiohttp \
         py3-bcrypt \
-        py3-pip \
+        curl \
         su-exec \
         shadow \
         tini \
         openssl \
         tzdata && \
-    python3 -m pip install --no-cache-dir --upgrade pip && \
-    sed -i '/bcrypt/d' requirements.txt && \
-    pip install --no-cache-dir -r requirements.txt && \
+    # Install uv
+    curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    . $HOME/.cargo/env && \
+    # Install dependencies using uv
+    uv sync --frozen --no-dev && \
     # Add user
     mkdir -p /home/ab && \
     addgroup -S ab -g 911 && \
@@ -34,6 +38,7 @@ RUN set -ex && \
     # Clear
     rm -rf \
         /root/.cache \
+        /root/.cargo \
         /tmp/*
 
 COPY --chmod=755 backend/src/. .

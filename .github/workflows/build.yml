@@ -295,9 +295,6 @@ jobs:
           echo ${{ needs.version-info.outputs.version }}
           echo "VERSION='${{ needs.version-info.outputs.version }}'" >> module/__version__.py
 
-      - name: Copy requirements.txt
-        working-directory: ./backend
-        run: cp requirements.txt src/requirements.txt
 
       - name: Zip app
         run: |
