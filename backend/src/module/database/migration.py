@@ -11,8 +11,9 @@ from packaging import version
 from sqlmodel import Session, text
 
 from module.conf import DATA_PATH
-from .engine import engine
 from module.models import DatabaseVersion
+
+from .engine import engine
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +119,7 @@ class DatabaseMigration:
 
     def _get_migration_path(self, from_version: str, to_version: str) -> list[str]:
         """获取迁移路径"""
+
         available_versions = list(self.migration_history.keys())
 
         # 找出所有需要升级的版本（大于from_version且小于等于to_version）
@@ -131,7 +133,7 @@ class DatabaseMigration:
                 migrations_needed.append(version)
 
         # 按版本号排序
-        migrations_needed.sort(key=lambda v: version.parse(v))
+        # migrations_needed.sort(key=lambda v: version.parse(v))
 
         return migrations_needed
 
@@ -142,7 +144,7 @@ class DatabaseMigration:
         try:
             v1 = version.parse(version1)
             v2 = version.parse(version2)
-            
+
             if v1 > v2:
                 return 1
             elif v1 < v2:
@@ -158,7 +160,6 @@ class DatabaseMigration:
                 return -1
             else:
                 return 0
-
 
     def _migrate_to_3_2_0(self, session: Session):
         """迁移到版本 3.2.0"""

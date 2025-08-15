@@ -29,7 +29,6 @@ uvicorn_logging_config = {
 }
 
 
-
 def create_app() -> FastAPI:
     app = FastAPI(lifespan=lifespan)
 
@@ -66,7 +65,6 @@ async def get_poster(path: str):
         logger.warning(f"[Poster] Path outside allowed directory: {path}")
         raise HTTPException(status_code=400, detail="Path outside allowed directory")
 
-
     # 如果文件不存在，尝试下载
     if not post_path.exists():
         try:
@@ -101,6 +99,7 @@ if VERSION != "DEV_VERSION":
             return templates.TemplateResponse("index.html", context)
 
 else:
+
     @app.get("/", status_code=302, tags=["html"])
     def index():
         return RedirectResponse("/docs")

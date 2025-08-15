@@ -63,7 +63,7 @@ class RequestURL:
 
     async def __aenter__(self):
         self.client: httpx.AsyncClient = httpx.AsyncClient(
-            http2=True, proxies=self.proxy, headers=self.header, timeout=self.timeout
+            http2=True, proxy=self.proxy, headers=self.header, timeout=self.timeout
         )
         return self
 

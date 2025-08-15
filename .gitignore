@@ -5,6 +5,7 @@ __pycache__/
 
 # C extensions
 *.so
+.python-version
 
 # Distribution / packaging
 .Python
@@ -176,6 +177,8 @@ cython_debug/
 .run
 /backend/src/templates/
 /backend/src/config/
+/backend/config/
+/backend/data/
 /src/debuger.py
 /backend/src/dist.zip
 /pyrightconfig.json

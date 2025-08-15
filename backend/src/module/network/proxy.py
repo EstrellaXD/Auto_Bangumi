@@ -24,7 +24,7 @@ def set_proxy() -> str | None:
 
 
 def test_proxy() -> bool:
-    with httpx.Client(proxies=set_proxy()) as client:
+    with httpx.Client(proxy=set_proxy()) as client:
         try:
             client.get("https://www.baidu.com")
             return True
@@ -47,7 +47,7 @@ def test_proxy() -> bool:
 
 if __name__ == "__main__":
     print(set_proxy())
-    with httpx.Client(proxies=set_proxy()) as client:
+    with httpx.Client(proxy=set_proxy()) as client:
         client.headers["User-Agent"] = (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36"
         )
