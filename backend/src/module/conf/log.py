@@ -19,10 +19,10 @@ def setup_logger(level: int = logging.INFO, reset: bool = False):
     logging.addLevelName(logging.WARNING, "WARNING:")
     LOGGING_FORMAT = "[%(asctime)s] %(levelname)-8s %(message)s"
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-    
+
     # 获取根日志器
     root_logger = logging.getLogger()
-    
+
     # 如果已经有处理器且不是重置模式，则更新现有配置
     if root_logger.handlers and not reset:
         # 更新根日志器的等级
@@ -39,10 +39,10 @@ def setup_logger(level: int = logging.INFO, reset: bool = False):
             encoding="utf-8",
             handlers=[
                 RotatingFileHandler(
-                    LOG_PATH, 
-                    maxBytes=10*1024*1024,  # 10MB
+                    LOG_PATH,
+                    maxBytes=10 * 1024 * 1024,  # 10MB
                     backupCount=5,
-                    encoding="utf-8"
+                    encoding="utf-8",
                 ),
                 logging.StreamHandler(),
             ],
@@ -62,6 +62,8 @@ def setup_logger(level: int = logging.INFO, reset: bool = False):
         # logger.propagate = False
         # logger.handlers = [NullHandler()]
 
+    # 对于 bcrypt 有一个 适配的问题,就藏起来吧
+    logging.getLogger("passlib").setLevel(logging.ERROR)
     # 完全抑制 httpx 的日志输出
     # httpx_logger = logging.getLogger("httpx")
     # http_coro_logger = logging.getLogger("httpcore")

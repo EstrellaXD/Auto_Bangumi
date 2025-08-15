@@ -58,8 +58,10 @@ def check_config_key(
     data: dict | BaseModel, updated_data: BaseModel, config_name: str
 ) -> bool:
     if isinstance(data, BaseModel):
-        data = data.dict()
-    updated_data = updated_data.dict()
+        data = data.model_dump()
+        # data = data.dict()
+
+    updated_data = updated_data.model_dump()
     for key in updated_data.keys():
         if key not in data:
             return False
@@ -96,10 +98,12 @@ def update_config(base_config: BaseModel | dict, data: dict):
     # 部份更新 Config
     # # 获取 baseconfig 的当前字段数据
     if isinstance(base_config, BaseModel):
-        updated_data = base_config.dict()
+        updated_data = base_config.model_dump()
+        # updated_data = base_config.dict()
         updated_data = deep_update(updated_data, data)
         updated_instance = base_config.__class__.validate(updated_data)
-        updata_dict = updated_instance.dict()
+        updata_dict = updated_instance.model_dump()
+        # updata_dict = updated_instance.dict()
     else:
         # 当 baseconfig 是 dict 类型时, 直接更新
         updated_data = base_config
@@ -142,7 +146,7 @@ class Settings(Config):
 
     def save(self, config_dict: dict | None = None):
         if not config_dict:
-            config_dict = self.dict()
+            config_dict = self.model_dump()
         with open(CONFIG_PATH, "w", encoding="utf-8") as f:
             json.dump(config_dict, f, indent=4, ensure_ascii=False)
 
@@ -152,7 +156,7 @@ class Settings(Config):
         self.save()
 
     def __load_from_env(self):
-        config_dict = self.dict()
+        config_dict = self.model_dump()
         for key, section in ENV_TO_ATTR.items():
             for env, attr in section.items():
                 if env in os.environ:
@@ -169,9 +173,6 @@ class Settings(Config):
         config_obj = Config.validate(config_dict)
         self.__dict__.update(config_obj.__dict__)
         logger.info("Config loaded from env")
-
-    def model_dump(self, **kwargs):
-        return self.dict()
 
     @staticmethod
     def __val_from_env(env: str, attr: tuple[str, Callable[..., Any]] | str):
