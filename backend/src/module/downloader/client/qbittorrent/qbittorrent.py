@@ -53,7 +53,7 @@ class Downloader(BaseDownloader):
         )
 
     @override
-    async def auth(self):
+    async def auth(self)->bool:
         try:
             resp = await self._client.post(
                 url=QB_API_URL["login"],
@@ -98,14 +98,16 @@ class Downloader(BaseDownloader):
         return False
 
     @override
-    async def check_host(self):
+    async def check_host(self)->bool:
         try:
+            logger.debug(f"[qbittorrent] Check host: {self.config.host}")
             resp = await self._client.get(url=QB_API_URL["version"], timeout=5)
-            resp.raise_for_status()
-            if resp.status_code == 200:
+            if resp.status_code == 200 or resp.status_code == 403:
+                logger.debug(f"[qbittorrent] Check host success: {self.config.host}")
+                # 检查
                 return True
-            return False
-        except (httpx.ConnectError, httpx.TimeoutException, httpx.ReadTimeout) as e:
+            resp.raise_for_status()
+        except (httpx.RemoteProtocolError,httpx.ConnectError, httpx.TimeoutException, httpx.ReadTimeout) as e:
             logger.error(
                 f"[qbittorrent] Check host error,please check your host {self.config.host}"
             )
@@ -239,23 +241,31 @@ class Downloader(BaseDownloader):
                     logger.debug(f"[QbDownloader] Got torrent hashes: {torrent_hashes}")
                     logger.debug(f"[QbDownloader] Using hash: {torrent_link}")
                     file = {"torrents": torrent_file}
+                    data.pop("urls", None)  # 移除urls字段
                 else:
+                    # 没有拿到的话就拿 hash
+                    torrent_link = get_hash(torrent_url)
+                    if not torrent_link:
+                        logger.error(
+                            f"[QbDownloader] Failed to get torrent hash from {torrent_url}"
+                        )
+                        return None
                     logger.warning(
                         f"[QbDownloader] Failed to get torrent content from {torrent_url}"
                     )
         else:
             # 如果是 magnet 链接，直接使用
             torrent_link = get_hash(torrent_url)
-            if torrent_link:
-                # 判断是否为32字符的Base32格式（DMHY等站点使用）
-                if len(torrent_link) == 32:
-                    # 转换Base32格式为40字符小写十六进制
-                    hex_hash = base32_to_hex(torrent_link)
-                    if hex_hash:
-                        torrent_link = hex_hash
-                        logger.debug(
-                            f"[QbDownloader] 转换Base32 hash为十六进制: {torrent_link}"
-                        )
+            # if torrent_link:
+            #     # 判断是否为32字符的Base32格式（DMHY等站点使用）
+            #     if len(torrent_link) == 32:
+            #         # 转换Base32格式为40字符小写十六进制
+            #         hex_hash = base32_to_hex(torrent_link)
+            #         if hex_hash:
+            #             torrent_link = hex_hash
+            #             logger.debug(
+            #                 f"[QbDownloader] 转换Base32 hash为十六进制: {torrent_link}"
+            #             )
             logger.debug(f"[QbDownloader] Using magnet link: {torrent_url}")
         try:
             resp = await self._client.post(

@@ -201,7 +201,7 @@ def get_hash(torrent_url: str) -> str | None:
     """
     hash_pattern_dict = {
         "magnet_hash_pattern": re.compile(r"\b([a-fA-F0-9]{40})\b"),
-        "torrent_hash_pattern": re.compile(r"/([a-fA-F0-9]{7,40})\.torrent"),
+        # "torrent_hash_pattern": re.compile(r"/([a-fA-F0-9]{7,40})\.torrent"),
         "dmhy_hash_pattern": re.compile(r"urn:btih:([A-Z0-9]{32})"),
     }
     
@@ -210,7 +210,6 @@ def get_hash(torrent_url: str) -> str | None:
         if ans:
             extracted_hash = ans[1]
             logger.debug(f"使用{pattern_name}提取hash: {extracted_hash}")
-            
             # 使用normalize_hash标准化hash格式
             normalized_hash = normalize_hash(extracted_hash)
             if normalized_hash != extracted_hash:

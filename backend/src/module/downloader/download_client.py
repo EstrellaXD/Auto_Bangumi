@@ -10,6 +10,7 @@ from module.models import Torrent, TorrentDownloadInfo
 from module.utils import gen_save_path
 
 from .client import AuthorizationError, BaseDownloader
+from .download_queue import  download_queue
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,6 @@ def api_rate_limit(func):
                     if lock_task.done() and not lock_task.cancelled():
                         self._api_lock.release()
                     raise asyncio.CancelledError("API call cancelled")
-
                 # 成功获取锁
                 break
 
@@ -145,19 +145,19 @@ class DownloadClient:
             self.login_success_event.clear()  # 重置事件状态
             self.is_authenticating = True  # 设置正在认证状态
             logger.debug("[Downloader Client] attempting authentication")
-
+            if not await self.check_host():
+                logger.error("[Downloader Client] Downloader host check failed")
+                return
+            logger.debug("[Downloader Client] Downloader host check passed")
             if await self.downloader.auth():
                 self.login_success_event.set()  # 设置认证成功事件
-                logger.info("[Downloader Client] authentication success")
-            else:
-                # 保持 login_success_event 为 clear 状态，表示认证失败
-                logger.warning("[Downloader Client] authentication failed")
 
         except Exception as e:
             logger.error(f"[Downloader Client] authentication error: {e}")
             # 保持 login_success_event 为 clear 状态，表示认证失败
         finally:
             self.is_authenticating = False
+            self.login_task = None
 
     async def wait_for_login(self) -> bool:
         """等待认证完成，返回是否可以继续API调用"""
@@ -238,14 +238,18 @@ class DownloadClient:
                 )
         except AuthorizationError:
             self.start_login()
+            #TODO: 重试太多了怎么办?
+            # https://mikanani.me/Home/Episode/4294fd53bcd1bfe2ff3b5796004ee3ccb1ba0d0e  这是个死种
+            download_queue.add(torrent, bangumi)  # 重新放回队列
+            logger.debug( f"[Downloader] Add torrent failed, re-adding to queue: {torrent.name}")
         return False
 
     @api_rate_limit
     async def move_torrent(self, hashes: list[str] | str, location: str) -> bool:
         if not await self.wait_for_login():
             return False  # 登录失败时返回False
-
         try:
+            #TODO: 好像是用 | 连起来就行,但现在好像用不上了
             result = await self.downloader.move(hashes=hashes, new_location=location)
             if result:
                 logger.info(f"[Downloader] Move torrents {hashes} to {location}")
@@ -333,7 +337,7 @@ class DownloadClient:
         return []
 
     def start_login(self):
-        if not self.is_authenticating:
+        if not self.is_authenticating and self.login_task is None:
             self.is_authenticating = True  # 设置认证状态
             self.login_task = asyncio.create_task(self.login(), name="login")
 
@@ -371,7 +375,8 @@ class DownloadClient:
     async def stop(self):
         logger.info("[Download Client] Stopping download client")
         self.cancel_all_api_calls()  # 先取消所有API调用
-        await self.downloader.logout()
+        if self.login_success_event.is_set():
+            await self.downloader.logout()
         if self.login_task:
             self.login_task.cancel()
 

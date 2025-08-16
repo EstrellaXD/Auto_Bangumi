@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 from module.database import Database, engine
-from module.downloader import DownloadQueue
+from module.downloader import DownloadQueue, download_queue
 from module.models import Bangumi, RSSItem, Torrent
 from module.network import RequestContent
 from module.parser import RawParser
@@ -47,7 +47,7 @@ class RSSRefresh(BaseRefresh):
         self.url: str = rss_item.url
         self.bangumi: Bangumi | None = None
         self.analyser = RSSAnalyser()
-        self.download_queue = DownloadQueue()
+        self.download_queue = download_queue
 
     async def download_rss(self) -> list[Torrent]:
         """下载 rss_item 对应的 torrents"""
@@ -151,7 +151,7 @@ class BangumiRefresher(BaseRefresh):
         self.bangumi: Bangumi = bangumi
         self.url: str = bangumi.rss_link
         self.analyser = RSSAnalyser()
-        self.download_queue = DownloadQueue()
+        self.download_queue:DownloadQueue = download_queue
 
     async def refresh(self) -> list[Torrent]:
         """刷新 bangumi 的 rss"""
@@ -215,7 +215,7 @@ class RSSEngine:
 
     def __init__(self, _engine=engine) -> None:
         self.engine = _engine
-        self.queue = DownloadQueue()
+        self.queue:DownloadQueue = download_queue
 
     def get_active_rss(self) -> list[RSSItem]:
         """获取所有活跃的rss"""

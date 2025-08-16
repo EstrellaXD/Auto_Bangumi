@@ -3,7 +3,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 from typing_extensions import override
 
-from module.downloader.download_queue import DownloadController
+from module.downloader import DownloadController
 from module.utils.events import ServiceException
 from .base_services import BaseService
 

@@ -2,7 +2,7 @@ import logging
 
 from module.conf import settings
 from module.database import Database, engine
-from module.downloader import DownloadQueue
+from module.downloader import download_queue
 from module.models import Bangumi, Torrent
 from module.rss import RSSEngine, RSSManager
 from module.rss.engine import BangumiRefresher
@@ -79,7 +79,7 @@ async def eps_complete():
         logger.debug(f"[eps_complete] {data.official_title} eps start to complete")
         try:
             if ans := await complete_season(data):
-                await DownloadQueue().add_torrents(ans, data)
+                await download_queue.add_torrents(ans, data)
                 data.eps_collect = True
                 db.bangumi.update(data)
                 logger.debug(f"[eps_complete] {data.official_title} eps is completed")
