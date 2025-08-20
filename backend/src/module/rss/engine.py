@@ -1,6 +1,8 @@
 import asyncio
 import logging
 
+from sqlalchemy import Engine
+
 from module.database import Database, engine
 from module.downloader import DownloadQueue, download_queue
 from module.models import Bangumi, RSSItem, Torrent
@@ -40,14 +42,15 @@ class BaseRefresh:
 
 
 class RSSRefresh(BaseRefresh):
+
     def __init__(self, rss_item: RSSItem, _engine=engine):
         super().__init__(_engine)
         self.rss_item: RSSItem = rss_item
         self.bangumis: list[Bangumi] = []
         self.url: str = rss_item.url
         self.bangumi: Bangumi | None = None
-        self.analyser = RSSAnalyser()
-        self.download_queue = download_queue
+        self.analyser: RSSAnalyser = RSSAnalyser()
+        self.download_queue: DownloadQueue = download_queue
 
     async def download_rss(self) -> list[Torrent]:
         """下载 rss_item 对应的 torrents"""
@@ -151,7 +154,7 @@ class BangumiRefresher(BaseRefresh):
         self.bangumi: Bangumi = bangumi
         self.url: str = bangumi.rss_link
         self.analyser = RSSAnalyser()
-        self.download_queue:DownloadQueue = download_queue
+        self.download_queue: DownloadQueue = download_queue
 
     async def refresh(self) -> list[Torrent]:
         """刷新 bangumi 的 rss"""
@@ -214,8 +217,8 @@ class RSSEngine:
     """
 
     def __init__(self, _engine=engine) -> None:
-        self.engine = _engine
-        self.queue:DownloadQueue = download_queue
+        self.engine: Engine = _engine
+        self.queue: DownloadQueue = download_queue
 
     def get_active_rss(self) -> list[RSSItem]:
         """获取所有活跃的rss"""
@@ -224,7 +227,7 @@ class RSSEngine:
             logger.debug(f"[RSS] get {len(rss_items)} active rss items")
         return rss_items
 
-    async def refresh_rss(self, rss_item: RSSItem) -> list[Torrent]:
+    async def refresh_rss(self, rss_item: RSSItem) -> None:
         rssrefresh = RSSRefresh(rss_item=rss_item)
         await rssrefresh.find_new_bangumi()
         await rssrefresh.download_rss()

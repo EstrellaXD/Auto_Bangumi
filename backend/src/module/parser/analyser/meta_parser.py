@@ -451,10 +451,12 @@ if __name__ == "__main__":
     # title = "海盗战记 S01E01.SC.ass"
     # title = "[LoliHouse] 2.5次元的诱惑 / 2.5-jigen no Ririsa - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕].mkv"
     # title = "[桜都字幕组&7³ACG] 摇曳露营 第3季/ゆるキャン△ SEASON3/Yuru Camp S03 | 01-12+New Anime 01-03 [简繁字幕] BDrip 1080p AV1 OPUS 2.0 [复制磁连]"
+    title = "[三明治摆烂组&Pre-S] 与游戏中心的少女异文化交流的故事 / Game Center Shoujo to Ibunka Kouryuu - 06.5 总集篇 - [简日内嵌][H264 1080P](检索：游乐场少女的异文化交流)"
     #
     #
     # print(re.findall(p.GROUP_RE, title))
     res = raw_parser(title)
+    print(is_point_5(title))
     for k, v in res.__dict__.items():
         print(f"{k}: {v}")
     # print(ret.token)

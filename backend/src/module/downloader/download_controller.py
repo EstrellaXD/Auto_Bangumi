@@ -10,9 +10,11 @@ from module.models import Bangumi, Torrent
 from .download_queue import download_queue
 
 logger = logging.getLogger(__name__)
+
+
 class DownloadController:
     def __init__(self):
-        self._event_bus:EventBus = event_bus
+        self._event_bus: EventBus = event_bus
 
     # 10秒拿5个
     async def download(self):
@@ -52,7 +54,8 @@ class DownloadController:
 
         with Database(engine) as database:
             for torrent in torrents:
-                database.torrent.add(torrent)
+                if torrent.download_uid:  # 有下载哈希
+                    database.torrent.add(torrent)
         for i, result in enumerate(results):
             torrent, bangumi = torrent_bangumi_pairs[i]
 

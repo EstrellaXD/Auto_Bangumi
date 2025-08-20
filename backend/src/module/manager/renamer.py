@@ -129,13 +129,13 @@ class Renamer:
             return True
 
         # .5 的也处理不了, 直接返回 True
-        if is_point_5(ep.title):
+        if is_point_5(ep.media_path):
             logger.debug(f"[Renamer][rename_file] {ep.title} is a point 5 file")
             # Notify = Notification()
             return True
 
         # v1 的没必要处理, 直接返回 True
-        if is_v1(ep.title):
+        if is_v1(ep.media_path):
             logger.debug(f"[Renamer][rename_file] {ep.title} is a vd file")
             return True
 
