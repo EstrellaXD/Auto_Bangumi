@@ -43,11 +43,9 @@
       "web_port": "网页端口"
     },
     "notification_set": {
-      "chat_id": "Chat ID",
       "enable": "启用",
       "title": "通知设置",
-      "token": "Token",
-      "type": "类型"
+      "entry": "通知服务地址"
     },
     "parser_set": {
       "enable": "启用",

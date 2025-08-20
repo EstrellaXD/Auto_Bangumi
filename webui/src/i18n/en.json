@@ -43,11 +43,9 @@
       "web_port": "WebUI Port"
     },
     "notification_set": {
-      "chat_id": "Chat ID",
       "enable": "Enable",
       "title": "Notification Setting",
-      "token": "Token",
-      "type": "Type"
+      "entry": "Notification service entry"
     },
     "parser_set": {
       "enable": "Enable",

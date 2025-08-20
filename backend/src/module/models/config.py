@@ -70,17 +70,11 @@ class Proxy(BaseModel):
 
 class Notification(BaseModel):
     enable: bool = Field(False, description="Enable notification")
-    type: str = Field("telegram", description="Notification type")
-    token_: str = Field("", alias="token", description="Notification token")
-    chat_id_: str = Field("", alias="chat_id", description="Notification chat id")
+    entry_: str = Field("", alias="entry", description="Notification entry(check https://github.com/caronc/apprise/wiki for details)")
 
     @property
-    def token(self):
-        return expandvars(self.token_)
-
-    @property
-    def chat_id(self):
-        return expandvars(self.chat_id_)
+    def entry(self):
+        return expandvars(self.entry_)
 
 
 class ExperimentalOpenAI(BaseModel):

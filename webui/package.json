@@ -55,6 +55,7 @@
     "husky": "^8.0.3",
     "prettier": "^2.8.8",
     "radash": "^12.1.0",
+    "sass": "^1.90.0",
     "sass-embedded": "^1.79.3",
     "storybook": "^7.6.20",
     "typescript": "^4.9.5",
