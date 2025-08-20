@@ -1,17 +1,11 @@
 <script lang="ts" setup>
-import type { Notification, NotificationType } from '#/config';
+import type { Notification } from '#/config';
 import type { SettingItem } from '#/components';
 
 const { t } = useMyI18n();
 const { getSettingGroup } = useConfigStore();
 
 const notification = getSettingGroup('notification');
-const notificationType: NotificationType = [
-  'telegram',
-  'server-chan',
-  'bark',
-  'wecom',
-];
 
 const items: SettingItem<Notification>[] = [
   {
@@ -21,30 +15,12 @@ const items: SettingItem<Notification>[] = [
     bottomLine: true,
   },
   {
-    configKey: 'type',
-    label: () => t('config.notification_set.type'),
-    type: 'select',
-    css: 'w-140',
-    prop: {
-      items: notificationType,
-    },
-  },
-  {
-    configKey: 'token',
-    label: () => t('config.notification_set.token'),
+    configKey: 'entry',
+    label: () => t('config.notification_set.entry'),
     type: 'input',
     prop: {
       type: 'text',
-      placeholder: 'token',
-    },
-  },
-  {
-    configKey: 'chat_id',
-    label: () => t('config.notification_set.chat_id'),
-    type: 'input',
-    prop: {
-      type: 'text',
-      placeholder: 'chat id',
+      placeholder: 'entry',
     },
   },
 ];

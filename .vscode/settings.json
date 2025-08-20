@@ -16,4 +16,7 @@
     "mikan",
     "starlette"
   ],
+  "python.analysis.extraPaths": [
+    "backend/src"
+  ],
 }

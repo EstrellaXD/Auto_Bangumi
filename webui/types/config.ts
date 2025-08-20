@@ -12,8 +12,6 @@ export type RssParserLang = ['zh', 'en', 'jp'];
 export type RenameMethod = ['normal', 'pn', 'advance', 'none'];
 /** 代理类型 */
 export type ProxyType = ['http', 'https', 'socks5'];
-/** 通知类型 */
-export type NotificationType = ['telegram', 'server-chan', 'bark', 'wecom'];
 /** OpenAI Model List */
 export type OpenAIModel = ['gpt-3.5-turbo'];
 /** OpenAI API Type */
@@ -62,9 +60,7 @@ export interface Proxy {
 }
 export interface Notification {
   enable: boolean;
-  type: 'telegram' | 'server-chan' | 'bark' | 'wecom';
-  token: string;
-  chat_id: string;
+  entry: string;
 }
 export interface ExperimentalOpenAI {
   enable: boolean;
@@ -131,9 +127,7 @@ export const initConfig: Config = {
   },
   notification: {
     enable: false,
-    type: 'telegram',
-    token: '',
-    chat_id: '',
+    entry: '',
   },
   experimental_openai: {
     enable: false,
