@@ -2,7 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
-from module.models import Notification
+from module.models import Message
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class BaseNotifier(ABC):
         self.logger = logging.getLogger(self.__class__.__name__)
 
     @abstractmethod
-    async def post_msg(self, notify: Notification) -> bool:
+    async def post_msg(self, notify: Message) -> bool:
         """
         发送通知消息
 
@@ -29,7 +29,7 @@ class BaseNotifier(ABC):
         """
         pass
 
-    async def send_with_retry(self, notify: Notification, max_retries: int = 3) -> bool:
+    async def send_with_retry(self, notify: Message, max_retries: int = 3) -> bool:
         """
         带重试机制的发送
 

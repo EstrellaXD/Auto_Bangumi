@@ -408,6 +408,11 @@ def check_and_upgrade_database() -> bool:
 
         logger.info(f"数据库版本: {db_version}, 应用版本: {app_version}")
 
+        # 对 dev 版本进行特殊处理
+        if app_version == "DEV_VERSION":
+            logger.info("当前应用版本为开发版本，跳过数据库升级")
+            return True
+
         # 先检查应用版本是否大于数据库版本，如果不是则什么都不做
         version_comparison = migration._version_compare(app_version, db_version)
         if version_comparison <= 0:

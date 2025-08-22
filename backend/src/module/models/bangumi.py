@@ -44,11 +44,11 @@ class BangumiUpdate(BangumiBase):
     pass
 
 
-class Notification(BaseModel):
+class Message(BaseModel):
     title: str = Field(..., alias="title", title="标题")
     message: str = Field(default="", alias="message", title="消息")
-    season: int = Field(default=1, ge=1, alias="season", title="番剧季度")
-    episode: int = Field(default="", alias="episode", title="番剧集数")
+    season: str = Field(default="",  alias="season", title="番剧季度")
+    episode: str = Field(default="", alias="episode", title="番剧集数")
     poster_path: str = Field(default="", alias="poster_path", title="番剧海报路径")
     file: bytes | None = Field(default=None, alias="file", title="文件内容")
 

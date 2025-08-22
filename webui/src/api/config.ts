@@ -1,4 +1,4 @@
-import type { Config } from '#/config';
+import type { Config, Notification } from '#/config';
 import type { ApiSuccess } from '#/api';
 
 export const apiConfig = {
@@ -18,6 +18,18 @@ export const apiConfig = {
     const { data } = await axios.patch<ApiSuccess>(
       'api/v1/config/update',
       newConfig
+    );
+    return data;
+  },
+
+  /**
+   * 测试通知配置
+   * @param notification - 通知配置
+   */
+  async testNotification(notification: Notification) {
+    const { data } = await axios.post<ApiSuccess>(
+      'api/v1/config/test_notify',
+      notification
     );
     return data;
   },

@@ -45,6 +45,8 @@
     "notification_set": {
       "chat_id": "Chat ID",
       "enable": "启用",
+      "test_button": "测试通知",
+      "test_disabled": "请先启用通知功能",
       "title": "通知设置",
       "token": "Token",
       "type": "类型"

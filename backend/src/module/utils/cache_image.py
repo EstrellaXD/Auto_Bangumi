@@ -1,6 +1,5 @@
 import base64
 
-# TODO: 移动到 network 模块下, 这里要用到 setting.proxy, 但是这里用到 network 会导致循环引用
 
 
 def url_to_str(url):
@@ -15,8 +14,12 @@ def str_to_url(encoded_str: str) -> str:
     """
     将编码字符串解码为URL
     """
-    decoded_url = base64.urlsafe_b64decode(encoded_str.encode()).decode()
-    return decoded_url
+    try:
+        decoded_url = base64.urlsafe_b64decode(encoded_str.encode()).decode()
+        return decoded_url
+    except Exception:
+        # 如果不是有效的base64，直接返回原字符串
+        return encoded_str
 
 
 def gen_poster_path(link: str):

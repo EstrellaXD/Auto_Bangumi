@@ -1,14 +1,11 @@
-from __future__ import annotations
-
+import importlib
 import logging
-from enum import Enum
 
 from module.conf import settings
 from module.database import Database
-from module.models import Notification
+from module.models import Message
+from module.models.config import Notification
 from module.network import load_image
-import importlib
-
 from module.notification.plugin.log import Notifier
 
 logger = logging.getLogger(__name__)
@@ -36,12 +33,12 @@ class NotificationProcessor:
             logger.error(f"获取海报失败: {title} - {e}")
             return ""
 
-    async def process_notification(self, notify: Notification) -> Notification:
+    async def process_notification(self, notify: Message) -> Message:
         """
         处理通知对象，进行必要的数据解析和补充
         """
         # 创建副本，避免修改原对象
-        processed = Notification(
+        processed = Message(
             title=notify.title,
             season=notify.season,
             episode=notify.episode,
@@ -70,17 +67,25 @@ class PostNotification:
     """
 
     def __init__(self) -> None:
-        self.processor = NotificationProcessor()
+        self.processor: NotificationProcessor = NotificationProcessor()
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.notifier = None
+        self.config: Notification = settings.notification
+        self.notifier = Notifier(**self.config.model_dump())
 
-    def initialize(self) -> None:
+    def initialize(self,config:Notification|None = None) -> None:
         """根据设置创建通知管理器"""
-        self.notifier = self._get_notifier()
-        self.notifier.initialize()
+        self.config = settings.notification
+        if not self.config.enable:
+            logger.info("通知功能已禁用")
+            return
+        self.notifier = self._get_notifier(config)
+        # self.notifier.initialize()
 
-    def _get_notifier(self):
-        notification_type = settings.notification.type
+    def _get_notifier(self, config: Notification | None = None) -> Notifier:
+        print(f"获取通知器: {config}")
+        if config is None:
+            config = self.config
+        notification_type = config.type
         package_path = f"module.notification.plugin.{notification_type}"
         try:
             notification_module = importlib.import_module(package_path)
@@ -93,10 +98,10 @@ class PostNotification:
                 f"使用默认日志通知器: {notification_module.Notifier.__name__}"
             )
         Notifier = notification_module.Notifier
-        logger.debug(f"加载通知器: {Notifier.__name__}")
-        return Notifier()
+        logger.debug(f"加载通知器: {config.type}")
+        return Notifier(**config.model_dump())
 
-    async def send(self, notify: Notification) -> bool:
+    async def send(self, notify: Message) -> bool:
         """
         发送通知
 
@@ -125,7 +130,10 @@ if __name__ == "__main__":
     # 测试用例
     title = "败犬"
     link = "posters/aHR0cHM6Ly9pbWFnZS50bWRiLm9yZy90L3Avdzc4MC9wYWRSbWJrMkxkTGd1ZGg1Y0xZMG85VEZ6aEkuanBn"
-    nt = Notification(title=title, season=1, episode="1", poster_path=link)
+
+    title = "AB通知测试"
+    link = "https://mikanani.me/images/Bangumi/202507/8a6beaff.jpg"
+    nt = Message(title=title, season="1", episode="1", poster_path=link)
     sender = PostNotification()
     sender.initialize()
 

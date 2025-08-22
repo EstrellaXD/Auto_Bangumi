@@ -1,4 +1,4 @@
-from .bangumi import Bangumi, BangumiUpdate, Episode, Notification
+from .bangumi import Bangumi, BangumiUpdate, Episode, Message
 from .config import Config
 from .database_version import DatabaseVersion
 from .mikan import MikanInfo
@@ -28,7 +28,7 @@ __all__ = [
     "BangumiUpdate",
     "Config",
     "Episode",
-    "Notification",
+    "Message",
     "APIResponse",
     "ResponseModel",
     "RSSItem",

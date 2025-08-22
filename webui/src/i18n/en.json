@@ -45,6 +45,8 @@
     "notification_set": {
       "chat_id": "Chat ID",
       "enable": "Enable",
+      "test_button": "Test Notification",
+      "test_disabled": "Please enable notification first",
       "title": "Notification Setting",
       "token": "Token",
       "type": "Type"

@@ -1,4 +1,4 @@
-from module.models import Notification
+from module.models import Message
 
 from .base_notifier import BaseNotifier
 
@@ -6,11 +6,14 @@ from .base_notifier import BaseNotifier
 class Notifier(BaseNotifier):
     """日志通知器 - 将通知输出到日志"""
 
-    def __init__(self, token: str = "", **kwargs):
-        # 日志通知器不需要token，但保持接口一致
+    def __init__(self, **kwargs):
         super().__init__()
 
-    async def post_msg(self, notify: Notification) -> bool:
+    def initialize(self) -> None:
+        """初始化通知器"""
+        pass
+
+    async def post_msg(self, notify: Message) -> bool:
         """输出通知到日志"""
         try:
             message = notify.message

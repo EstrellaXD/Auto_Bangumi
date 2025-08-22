@@ -1,40 +1,23 @@
 from typing import Any
 
-from pydantic import BaseModel, Field
-
-from module.conf import get_plugin_config
-from module.models import Notification
+from module.models import Message
 from module.network import RequestContent
 from module.utils.cache_image import str_to_url
 
 from .base_notifier import BaseNotifier
-
-
-class Config(BaseModel):
-    chat_id: str = Field(
-        default="",
-        alias="chat_id",
-        description="Telegram chat ID, can be a single ID or comma-separated list",
-    )
-    token: str = Field(
-        default="",
-        alias="token",
-        description="Telegram bot token, can be obtained from BotFather",
-    )
 class Notifier(BaseNotifier):
     """Server酱通知器"""
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__()
+        self.token: str = kwargs.get("token", "")
+        self.notification_url = f"https://sctapi.ftqq.com/{self.token}.send"
 
     def initialize(self) -> None:
-            """初始化下载器"""
-            # 加载配置
-            self.config: Config = get_plugin_config(Config(), "notification")
-            self.token:str = self.config.token
-            self.notification_url = f"https://sctapi.ftqq.com/{self.token}.send"
+        """初始化通知器"""
+        pass
 
-    def format_message(self, notify: Notification) ->None:
+    def format_message(self, notify: Message) ->None:
         """格式化 Server酱 通知消息"""
 
         # 处理海报路径
@@ -49,7 +32,7 @@ class Notifier(BaseNotifier):
         notify.message = message
 
 
-    async def post_msg(self, notify: Notification) -> bool:
+    async def post_msg(self, notify: Message) -> bool:
         """发送 Server酱 通知"""
         try:
             self.format_message(notify)

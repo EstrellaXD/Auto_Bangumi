@@ -1,43 +1,25 @@
 from typing import Any
 
-from pydantic import BaseModel, Field
-
-from module.conf import get_plugin_config
-from module.models import Notification
+from module.models import Message
 from module.network import RequestContent
 from module.utils.cache_image import str_to_url
 
 from .base_notifier import BaseNotifier
 
-
-class Config(BaseModel):
-    chat_id: str = Field(
-        default="",
-        alias="chat_id",
-        description="Telegram chat ID, can be a single ID or comma-separated list",
-    )
-    token: str = Field(
-        default="",
-        alias="token",
-        description="Telegram bot token, can be obtained from BotFather",
-    )
-
 class Notifier(BaseNotifier):
     """企业微信通知器 - 基于图文消息"""
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__()
-        # chat_id 用作通知URL
+        self.notification_url = kwargs.get("chat_id", "")
+        self.token = kwargs.get("token", "")
 
     def initialize(self) -> None:
-            """初始化下载器"""
-            # 加载配置
-            self.config: Config = get_plugin_config(Config(), "notification")
-            self.notification_url = self.config.chat_id
-            self.token = self.config.token
+        """初始化通知器"""
+        pass
 
 
-    def format_message(self, notify: Notification) -> dict[str, Any]:
+    def format_message(self, notify: Message) -> dict[str, Any]:
         """格式化企业微信通知消息"""
         # 处理海报路径
         poster_path = notify.poster_path
@@ -58,8 +40,14 @@ class Notifier(BaseNotifier):
         if poster_path:
             message += f"\n{poster_path}\n".strip()
 
+        return {
+            "title": title,
+            "message": message,
+            "poster_path": poster_path
+        }
 
-    async def post_msg(self, notify: Notification) -> bool:
+
+    async def post_msg(self, notify: Message) -> bool:
         """发送企业微信通知"""
         try:
             message_data = self.format_message(notify)
