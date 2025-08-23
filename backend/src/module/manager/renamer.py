@@ -248,6 +248,8 @@ class Renamer:
             return
         if bangumi is None:
             with Database() as db:
+                #NOTE: 这里会更新一下 season 和 official_title
+                # 可能是因为更新了番剧信息导致的
                 bangumi = db.torrent_to_bangumi(torrent)
                 if not bangumi:
                     bangumi = Bangumi(

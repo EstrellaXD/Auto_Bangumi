@@ -6,7 +6,7 @@ from sqlalchemy.util.concurrency import asyncio
 
 from module.database import Database, engine
 from module.manager import BangumiManager
-from module.models import APIResponse, Bangumi, BangumiUpdate, ResponseModel
+from module.models import APIResponse, Bangumi, BangumiUpdate, ResponseModel,Torrent
 from module.security.api import get_current_user
 
 from .response import u_response
@@ -217,12 +217,37 @@ async def refresh_single_poster(bangumi_id: int):
 async def reset_all():
     with Database(engine) as db:
         db.bangumi.delete_all()
-        return JSONResponse(
-            status_code=200,
-            content={
-                "msg_en": "Reset all rules successfully.",
-                "msg_zh": "重置所有规则成功。",
-            },
-        )
+    return JSONResponse(
+        status_code=200,
+        content={
+            "msg_en": "Reset all rules successfully.",
+            "msg_zh": "重置所有规则成功。",
+        },
+    )
+
+
+# @router.get("/get_torrent", response_model=list[Torrent], dependencies=[Depends(get_current_user)])
+# async def manage_bangumi(_id:int):
+#     """
+#     管理对应 Bangumi 的规则
+#     """
+#     try:
+#         resp = await BangumiManager().fetch_all_bangumi_torrents(_id)
+#         return resp
+#     except Exception as e:
+#         logger.error(f"[Bangumi] Error managing bangumi: {e}")
+#         return []
+#
+# @router.get("/download_torrent", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+# async def download_bangumi(_id:int, torrent:Torrent):
+#     """
+#     手动下载对应 Bangumi 的种子
+#     """
+#     try:
+#         resp = BangumiManager().download_torrent(_id,torrent)
+#         return resp
+#     except Exception as e:
+#         logger.error(f"[Bangumi] Error downloading bangumi: {e}")
+#         return []
 
 

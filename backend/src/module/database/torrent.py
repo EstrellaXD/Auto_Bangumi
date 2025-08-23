@@ -119,6 +119,7 @@ class TorrentDatabase:
             )
             self.session.commit()
             return True
+        return False
 
     def delete_by_duid(self, duid: str) -> bool:
         stmt = select(Torrent).where(Torrent.download_uid == duid)

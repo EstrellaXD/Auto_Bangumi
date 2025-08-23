@@ -1,6 +1,6 @@
 import logging
 
-from sqlmodel import Session, SQLModel, and_, delete, false, or_, select, text
+from sqlmodel import Session, SQLModel, and_, false, select, text
 
 from module.models import Bangumi, RSSItem, Torrent, User
 

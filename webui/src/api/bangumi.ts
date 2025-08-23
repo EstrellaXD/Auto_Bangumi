@@ -1,6 +1,7 @@
 import { omit } from 'radash';
 import type { BangumiAPI, BangumiRule } from '#/bangumi';
 import type { ApiSuccess } from '#/api';
+import type { Torrent } from '#/torrent';
 
 export const apiBangumi = {
   /**
@@ -134,6 +135,54 @@ export const apiBangumi = {
   async refreshPoster() {
     const { data } = await axios.get<ApiSuccess>(
       'api/v1/bangumi/refresh/poster/all'
+    );
+    return data;
+  },
+
+  /**
+   * 获取指定 bangumi 的所有 torrents
+   * @param bangumiId - bangumi id
+   * @returns 该 bangumi 相关的 torrent 列表
+   */
+  async getTorrents(bangumiId: number) {
+    const { data } = await axios.get<Torrent[]>(
+      `api/v1/torrent/get_all`,
+      {
+        params: { _id: bangumiId }
+      }
+    );
+    return data;
+  },
+
+  /**
+   * 下载指定的 torrent
+   * @param bangumiId - bangumi id
+   * @param torrent - torrent 对象
+   * @returns axios 请求返回的数据
+   */
+  async downloadTorrent(bangumiId: number, torrent: Torrent) {
+    const { data } = await axios.post<ApiSuccess>(
+      `api/v1/torrent/download`,
+      torrent,
+      {
+        params: { _id: bangumiId }
+      }
+    );
+    return data;
+  },
+
+  /**
+   * 删除指定的 torrent
+   * @param url - torrent url
+   * @returns axios 请求返回的数据
+   */
+  async deleteTorrent(url: string) {
+    const { data } = await axios.post<ApiSuccess>(
+      `api/v1/torrent/delete`,
+      null,
+      {
+        params: { url }
+      }
     );
     return data;
   },

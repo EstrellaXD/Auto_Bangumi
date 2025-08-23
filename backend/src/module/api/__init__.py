@@ -8,6 +8,7 @@ from .program import lifespan
 from .program import router as program_router
 from .rss import router as rss_router
 from .search import router as search_router
+from .torrent import router as torrent_router
 
 __all__ = ["v1","lifespan"]
 
@@ -20,3 +21,4 @@ v1.include_router(bangumi_router)
 v1.include_router(config_router)
 v1.include_router(rss_router)
 v1.include_router(search_router)
+v1.include_router(torrent_router)

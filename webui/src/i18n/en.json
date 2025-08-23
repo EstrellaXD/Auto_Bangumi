@@ -177,5 +177,13 @@
     },
     "shutdown": "Shutdown",
     "start": "Start"
+  },
+  "torrent": {
+    "count": "{count} Torrents",
+    "name": "Name",
+    "downloaded": "Downloaded",
+    "renamed": "Renamed",
+    "actions": "Actions",
+    "refresh": "Refresh"
   }
 }

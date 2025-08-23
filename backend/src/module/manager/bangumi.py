@@ -4,8 +4,10 @@ import logging
 from module.conf import settings
 from module.database import Database, engine
 from module.downloader import Client as DownlondClient
+from module.downloader import download_queue
 from module.manager.torrent import TorrentManager
 from module.models import Bangumi, BangumiUpdate, Torrent
+from module.network import RequestContent
 from module.parser import MikanParser, TmdbParser
 from module.utils import gen_save_path
 from module.utils.events import Event, EventType, event_bus
@@ -158,6 +160,10 @@ class BangumiManager:
                 return data
 
 
+
+
+
 if __name__ == "__main__":
     manager = TorrentManager()
-    asyncio.run(manager.refresh_poster())
+    manager = BangumiManager()
+    asyncio.run(manager.fetch_all_bangumi_torrents(1))

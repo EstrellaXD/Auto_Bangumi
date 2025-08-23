@@ -65,9 +65,12 @@ class RSSRefresh(BaseRefresh):
                         self.rss_item.url,
                         self.rss_item.aggregate,
                     )
-                    if (
-                        bangumi
-                        and not bangumi.deleted
+                    if not bangumi:
+                        logger.debug(
+                            f"[RSS download_rss] No bangumi found for {raw_bangumi.title_raw}"
+                        )
+                    elif(
+                        not bangumi.deleted
                         and self.analyser.filer_torrent(torrent, bangumi)
                     ):
                         ## 如果不符合过滤条件, 则跳过
@@ -76,10 +79,6 @@ class RSSRefresh(BaseRefresh):
                             f"[RSS download_rss] Find bangumi {bangumi.official_title} by torrent {torrent.name}"
                         )
 
-                    else:
-                        logger.debug(
-                            f"[RSS download_rss] No bangumi found for {raw_bangumi.title_raw}"
-                        )
 
         logger.debug(
             f"[RSS download_rss] pull {len(torrents)} torrents from {self.rss_item.url}"

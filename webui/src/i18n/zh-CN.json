@@ -177,5 +177,13 @@
     },
     "shutdown": "关闭",
     "start": "启动"
+  },
+  "torrent": {
+    "count": "共 {count} 个种子",
+    "name": "名称",
+    "downloaded": "下载",
+    "renamed": "重命名",
+    "actions": "操作",
+    "refresh": "刷新"
   }
 }

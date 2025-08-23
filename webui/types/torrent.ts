@@ -4,4 +4,5 @@ export interface Torrent {
   url: string;
   homepage: string;
   downloaded: boolean;
+  renamed: boolean;
 }

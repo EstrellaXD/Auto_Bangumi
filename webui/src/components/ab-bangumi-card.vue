@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Write } from '@icon-park/vue-next';
+import { Write, List } from '@icon-park/vue-next';
 import type { BangumiRule } from '#/bangumi';
 
 withDefaults(
@@ -12,12 +12,12 @@ withDefaults(
   }
 );
 
-defineEmits(['click']);
+defineEmits(['click', 'manage-torrents']);
 </script>
 
 <template>
   <template v-if="type === 'primary'">
-    <div w="full pc:150" is-btn @click="() => $emit('click')">
+    <div w="full pc:150" is-btn>
       <div rounded-4 overflow-hidden poster-shandow rel>
         <ab-image
           :src="bangumi.poster_link"
@@ -36,15 +36,29 @@ defineEmits(['click']);
           active="duration-0 bg-opacity-60"
           class="group"
         >
-          <div
-            text-white
-            rounded="1/2"
-            wh-44
-            f-cer
-            bg-theme-row
-            group-active="poster-pen-active"
-          >
-            <Write size="20" />
+          <div class="flex gap-3">
+            <div
+              text-white
+              rounded="1/2"
+              wh-44
+              f-cer
+              bg-theme-row
+              group-active="poster-pen-active"
+              @click.stop="() => $emit('click')"
+            >
+              <Write size="20" />
+            </div>
+            <div
+              text-white
+              rounded="1/2"
+              wh-44
+              f-cer
+              bg-theme-row
+              group-active="poster-pen-active"
+              @click.stop="() => $emit('manage-torrents', bangumi)"
+            >
+              <List size="20" />
+            </div>
           </div>
         </div>
       </div>

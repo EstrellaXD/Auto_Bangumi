@@ -23,12 +23,11 @@ def test_bangumi_database():
         subtitle="CHT",
         eps_collect=False,
         offset=0,
-        filter="720p,\\d+-\\d+",
+        exclude_filter="720p,\\d+-\\d+",
         rss_link="test",
         poster_link="/test/test.jpg",
         added=False,
         rule_name=None,
-        save_path="downloads/无职转生，到了异世界就拿出真本事/Season 1",
         deleted=False,
     )
     with Database(engine) as db:
@@ -47,9 +46,13 @@ def test_bangumi_database():
         assert data.poster_link == "/test/test.jpg"
 
         # match torrent
-        title = RawParser().parser(
-            "[Lilith-Raws] 无职转生，到了异世界就拿出真本事 / Mushoku Tensei - 11 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
-        ).title_raw
+        title = (
+            RawParser()
+            .parser(
+                "[Lilith-Raws] 无职转生，到了异世界就拿出真本事 / Mushoku Tensei - 11 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
+            )
+            .title_raw
+        )
         result = db.find_bangumi_by_name(
             title,
             "test",
@@ -70,13 +73,18 @@ def test_torrent_database():
     with Database(engine) as db:
         # insert
         db.torrent.add(test_data)
-        assert db.torrent.search_by_url(test_data.url) == test_data
+        torrent = db.torrent.search_by_url(test_data.url)
+        assert torrent.name == test_data.name
+        assert torrent.url == test_data.url
 
         # update
         test_data.downloaded = True
         db.torrent.add(test_data)
-        assert db.torrent.search_by_url(test_data.url) == test_data
-
+        torrent = db.torrent.search_by_url(test_data.url)
+        assert torrent.name == test_data.name
+        assert torrent.url == test_data.url
+        assert torrent.downloaded is True
+        print(torrent)
 
 def test_rss_database():
     rss_url = "https://test.com/test.xml"

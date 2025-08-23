@@ -249,7 +249,6 @@ class DownloadClient:
         if not await self.wait_for_login():
             return False  # 登录失败时返回False
         try:
-            #TODO: 好像是用 | 连起来就行,但现在好像用不上了
             result = await self.downloader.move(hashes=hashes, new_location=location)
             if result:
                 logger.info(f"[Downloader] Move torrents {hashes} to {location}")

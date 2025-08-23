@@ -34,6 +34,7 @@ declare module '@vue/runtime-core' {
     AbSwitch: typeof import('./../../src/components/basic/ab-switch.vue')['default']
     AbTag: typeof import('./../../src/components/basic/ab-tag.vue')['default']
     AbTopbar: typeof import('./../../src/components/layout/ab-topbar.vue')['default']
+    AbTorrentManage: typeof import('./../../src/components/ab-torrent-manage.vue')['default']
     ConfigDownload: typeof import('./../../src/components/setting/config-download.vue')['default']
     ConfigManage: typeof import('./../../src/components/setting/config-manage.vue')['default']
     ConfigNormal: typeof import('./../../src/components/setting/config-normal.vue')['default']
