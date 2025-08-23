@@ -91,3 +91,19 @@ class TorrentManager:
                     break
         exist_torrents.sort(key=lambda x: x.name, reverse=True)
         return exist_torrents
+
+    async def disable_torrent(self,url,name,_id:int)->bool:
+        with Database(engine) as db:
+            bangumi = db.bangumi.search_id(_id)
+            if not bangumi:
+                return False
+            torrent = db.torrent.search_by_url(url)
+            if not torrent:
+                torrent = Torrent(url=url,name=name)
+            torrent.downloaded = True
+            torrent.renamed = True
+            torrent.bangumi_official_title = bangumi.official_title
+            torrent.bangumi_season = bangumi.season
+            torrent.rss_link = bangumi.rss_link
+            db.torrent.add(torrent)
+            return True

@@ -68,6 +68,29 @@ async def delete_torrent(url: str):
         )
 
 
+@router.post("/disable",response_model=APIResponse,dependencies=[Depends(get_current_user)])
+async def disable_torrent(url:str,name,_id:int):
+    """
+    禁用对应的种子
+    """
+    try:
+        await TorrentManager().disable_torrent(url,name, _id)
+        return ResponseModel(
+            status_code=200,
+            status=True,
+            msg_en=f"Successfully disabled torrent with url {url}",
+            msg_zh=f"成功禁用 url 为 {url} 的种子",
+        )
+    except Exception as e:
+        logger.error(f"[Bangumi] Error disabling torrent: {e}")
+        return ResponseModel(
+            status_code=500,
+            status=False,
+            msg_en="Internal server error",
+            msg_zh="服务器内部错误",
+        )
+
+
 @router.post(
     "/download",
     response_model=APIResponse,

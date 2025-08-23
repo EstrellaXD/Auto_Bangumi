@@ -186,4 +186,22 @@ export const apiBangumi = {
     );
     return data;
   },
+
+  /**
+   * 禁用指定的 torrent（将其标记为已下载和已重命名）
+   * @param url - torrent url
+   * @param name - torrent name
+   * @param bangumiId - bangumi id
+   * @returns axios 请求返回的数据
+   */
+  async disableTorrent(url: string, name: string, bangumiId: number) {
+    const { data } = await axios.post<ApiSuccess>(
+      `api/v1/torrent/disable`,
+      null,
+      {
+        params: { url, name, _id: bangumiId }
+      }
+    );
+    return data;
+  },
 };

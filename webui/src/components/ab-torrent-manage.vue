@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Download, Delete, Refresh } from '@icon-park/vue-next';
+import { Download, Delete, Refresh, Forbid } from '@icon-park/vue-next';
 import { NModal, NButton, NDataTable, NTag } from 'naive-ui';
 import type { DataTableColumns } from 'naive-ui';
 import type { BangumiRule } from '#/bangumi';
@@ -65,7 +65,7 @@ const columns = computed((): DataTableColumns<Torrent> => [
   {
     title: t('torrent.actions'),
     key: 'actions',
-    width: 140,
+    width: 180,
     align: 'center',
     render(row: Torrent) {
       return h(
@@ -81,6 +81,16 @@ const columns = computed((): DataTableColumns<Torrent> => [
               onClick: () => handleDownload(row),
             },
             { default: () => h(Download, { size: 16 }) }
+          ),
+          h(
+            NButton,
+            {
+              size: 'small',
+              type: 'warning',
+              disabled: row.downloaded && row.renamed,
+              onClick: () => handleDisable(row),
+            },
+            { default: () => h(Forbid, { size: 16 }) }
           ),
           h(
             NButton,
@@ -119,6 +129,17 @@ function handleDownload(torrent: Torrent) {
       fetchTorrents(); // 刷新列表
     },
   }).execute(props.bangumi.id, torrent);
+}
+
+function handleDisable(torrent: Torrent) {
+  if (!props.bangumi?.id) return;
+  
+  useApi(apiBangumi.disableTorrent, {
+    showMessage: true,
+    onSuccess() {
+      fetchTorrents(); // 刷新列表
+    },
+  }).execute(torrent.url, torrent.name, props.bangumi.id);
 }
 
 function handleDelete(torrent: Torrent) {
