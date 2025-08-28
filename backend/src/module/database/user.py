@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class UserDatabase:
     def __init__(self, session: Session):
-        self.session = session
+        self.session:Session = session
 
     def get_user(self, username) -> User | None:
         statement = select(User).where(User.username == username)

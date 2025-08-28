@@ -12,7 +12,7 @@ class VersionDatabase:
     """数据库版本管理类"""
 
     def __init__(self, session: Session):
-        self.session = session
+        self.session:Session = session
 
     def add(self, version: str, description: str = "") -> bool:
         """添加新的数据库版本记录"""

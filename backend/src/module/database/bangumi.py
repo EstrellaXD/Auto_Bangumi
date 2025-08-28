@@ -26,25 +26,23 @@ class BangumiDatabase:
     """
 
     def __init__(self, session: Session):
-        self.session = session
+        self.session:Session = session
 
     def add(self, data: Bangumi):
         """link 相同, official_title相同,就只补充,主要是为了
         一些会改名的
         """
         statement = select(Bangumi).where(
-                data.official_title == Bangumi.official_title,
-                data.rss_link == Bangumi.rss_link,
+            data.official_title == Bangumi.official_title,
+            data.rss_link == Bangumi.rss_link,
         )
         bangumi = self.session.exec(statement).first()
         if bangumi:
-            # TODO: 如果official_title 一致,将title_raw,group,更新
             if data.title_raw in bangumi.title_raw:
-                logger.debug(
-                    f"[Database] {data.official_title} | {data.title_raw} has inserted into database."
-                )
+                logger.debug(f"[Database] {data.official_title} | {data.title_raw} has inserted into database.")
                 return False
             bangumi.title_raw += f",{data.title_raw}"
+            # TODO: 如果official_title 一致,将title_raw,group,更新
             if bangumi.group_name and data.group_name and data.group_name not in bangumi.group_name:
                 bangumi.group_name += f"&{data.group_name}"
             data = bangumi
@@ -61,7 +59,7 @@ class BangumiDatabase:
         # logger.debug(f"[Database] Update {data.official_title}")
         return True
 
-    def update_all(self, datas: list[Bangumi])->None:
+    def update_all(self, datas: list[Bangumi]) -> None:
         # 目前只在 refresh poster 的时候用到, 后面要用的话要注意会 detach
         self.session.add_all(datas)
         self.session.commit()
@@ -76,10 +74,10 @@ class BangumiDatabase:
     def delete_all(self):
         # https://github.com/fastapi/sqlmodel/issues/909
         statement = delete(Bangumi)
-        self.session.execute(statement) # type: ignore
+        self.session.execute(statement)  # type: ignore
         self.session.commit()
 
-    def search(self, title:str, season:int, rss_link:str) -> Bangumi | None:
+    def search(self, title: str, season: int, rss_link: str) -> Bangumi | None:
         """
         根据官方标题、季节和 RSS 链接查找 Bangumi
         :param title: 官方标题

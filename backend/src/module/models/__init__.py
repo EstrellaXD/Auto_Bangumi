@@ -3,7 +3,7 @@ from .config import Config
 from .database_version import DatabaseVersion
 from .mikan import MikanInfo
 from .response import APIResponse, ResponseModel
-from .rss import RSSItem, RSSUpdate
+from .rss import RSSItem
 from .tmdb import (
     Genre,
     LastEpisodeToAir,
@@ -31,7 +31,6 @@ __all__ = [
     "APIResponse",
     "ResponseModel",
     "RSSItem",
-    "RSSUpdate",
     "Torrent",
     "TorrentUpdate",
     "TorrentDownloadInfo",

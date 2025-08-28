@@ -7,7 +7,6 @@ from module.models import (
     Bangumi,
     ResponseModel,
     RSSItem,
-    RSSUpdate,
     Torrent,
 )
 from module.rss import RSSAnalyser, RSSEngine, RSSManager, RSSRefresh
@@ -152,10 +151,8 @@ async def disable_many_rss(rss_ids: list[int]):
     response_model=APIResponse,
     dependencies=[Depends(get_current_user)],
 )
-async def update_rss(rss_id: int, data: RSSUpdate, current_user=Depends(get_current_user)):
-    if not current_user:
-        raise UNAUTHORIZED
-    if RSSManager().update(rss_id, data):
+async def update_rss(rss_id: int, data: RSSItem):
+    if RSSManager().update(data):
         return JSONResponse(
             status_code=200,
             content={
@@ -186,21 +183,21 @@ async def refresh_all():
     )
 
 
-@router.get(
-    path="/refresh/{rss_id}",
-    response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
-)
-async def refresh_rss(rss_id: int):
-    # TODO: 还没做
-    await engine.refresh_rss(rss_id=rss_id)
-    return JSONResponse(
-        status_code=200,
-        content={
-            "msg_en": "Refresh RSS successfully.",
-            "msg_zh": "刷新 RSS 成功。",
-        },
-    )
+# @router.get(
+#     path="/refresh/{rss_id}",
+#     response_model=APIResponse,
+#     dependencies=[Depends(get_current_user)],
+# )
+# async def refresh_rss(rss_id: int):
+#     # TODO: 还没做
+#     await engine.refresh_rss(rss_id=rss_id)
+#     return JSONResponse(
+#         status_code=200,
+#         content={
+#             "msg_en": "Refresh RSS successfully.",
+#             "msg_zh": "刷新 RSS 成功。",
+#         },
+#     )
 
 
 @router.get(

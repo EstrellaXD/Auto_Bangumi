@@ -2,7 +2,7 @@ import logging
 
 from sqlmodel import Session, and_, delete, select
 
-from module.models import RSSItem, RSSUpdate
+from module.models import RSSItem
 
 logger = logging.getLogger(__name__)
 
@@ -36,24 +36,13 @@ class RSSDatabase:
         for item in data:
             self.add(item)
 
-    def update(self, _id: int, data: RSSUpdate):
-        # Check if exists
-        statement = select(RSSItem).where(RSSItem.id == _id)
-        db_data = self.session.exec(statement).first()
-        if not db_data:
-            return False
-        # Update
-        dict_data = data.dict(exclude_unset=True)
-        for key, value in dict_data.items():
-            setattr(db_data, key, value)
-        self.session.add(db_data)
+    def update(self, data: RSSItem):
+        self.session.merge(data)
         self.session.commit()
-        self.session.refresh(db_data)
         return True
 
     def enable(self, _id: int):
-        statement = select(RSSItem).where(RSSItem.id == _id)
-        db_data = self.session.exec(statement).first()
+        db_data = self.session.get(RSSItem, _id)
         if not db_data:
             return False
         db_data.enabled = True
@@ -63,8 +52,7 @@ class RSSDatabase:
         return True
 
     def disable(self, _id: int):
-        statement = select(RSSItem).where(RSSItem.id == _id)
-        db_data = self.session.exec(statement).first()
+        db_data = self.session.get(RSSItem, _id)
         if not db_data:
             return False
         db_data.enabled = False
@@ -73,17 +61,14 @@ class RSSDatabase:
         self.session.refresh(db_data)
         return True
 
-    def search_id(self, _id: int) -> RSSItem:
+    def search_id(self, _id: int) -> RSSItem|None:
         return self.session.get(RSSItem, _id)
 
     def search_all(self) -> list[RSSItem]:
-        return self.session.exec(select(RSSItem)).all()
+        return list(self.session.exec(select(RSSItem)).all())
 
     def search_active(self) -> list[RSSItem]:
-        return self.session.exec(select(RSSItem).where(RSSItem.enabled)).all()
-
-    def search_aggregate(self) -> list[RSSItem]:
-        return self.session.exec(select(RSSItem).where(and_(RSSItem.aggregate, RSSItem.enabled))).all()
+        return list(self.session.exec(select(RSSItem).where(RSSItem.enabled)).all())
 
     def search_url(self, rss_link: str) -> RSSItem | None:
         statement = select(RSSItem).where(RSSItem.url == rss_link)
@@ -96,19 +81,23 @@ class RSSDatabase:
             return self.session.exec(statement).first()
 
     def delete(self, _id: int) -> bool:
-        condition = delete(RSSItem).where(RSSItem.id == _id)
+        # condition = delete(RSSItem).where(RSSItem.id == _id)
+        rss_item = self.session.get(RSSItem, _id)
+        if not rss_item:
+            logger.error(f"Delete RSS Item failed. Can't find id: {_id}")
+            return False
         try:
-            self.session.exec(condition)
+            self.session.delete(rss_item)
             self.session.commit()
             return True
         except Exception as e:
             logger.error(f"Delete RSS Item failed. Because: {e}")
             return False
 
-    def delete_all(self):
-        condition = delete(RSSItem)
-        self.session.exec(condition)
-        self.session.commit()
+    # def delete_all(self):
+    #     condition = delete(RSSItem)
+    #     self.session.exec(condition)
+    #     self.session.commit()
 
 
 if __name__ == "__main__":

@@ -14,10 +14,3 @@ class RSSItem(SQLModel, table=True):
     parser: str = Field(default="mikan", alias="parser")
     enabled: bool = Field(default=True, alias="enabled")
 
-
-class RSSUpdate(SQLModel):
-    name: str | None = Field(default=None, alias="name")
-    url: str | None = Field(default="https://mikanani.me", alias="url")
-    aggregate: bool | None = Field(default=True, alias="aggregate")
-    parser: str | None = Field(default="mikan", alias="parser")
-    enabled: bool | None = Field(default=True, alias="enabled")

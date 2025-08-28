@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class TorrentDatabase:
     def __init__(self, session: Session):
-        self.session = session
+        self.session:Session = session
 
     def add(self, data: Torrent):
         self.session.merge(data)

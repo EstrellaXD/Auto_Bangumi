@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from sqlmodel import Field, SQLModel
 
 
-class BangumiBase(SQLModel):
+class Bangumi(SQLModel, table=True):
     official_title: str = Field(default="", alias="official_title", title="番剧中文名")
     year: str | None = Field(default=None, alias="year", title="番剧年份")
     title_raw: str = Field(default="title_raw", alias="title_raw", title="番剧原名")
@@ -25,9 +25,6 @@ class BangumiBase(SQLModel):
     rule_name: str | None = Field(default=None, alias="rule_name", title="番剧规则名")
     added: bool = Field(default=False, alias="added", title="是否已添加")
     deleted: bool = Field(default=False, alias="deleted", title="是否已删除")
-
-
-class Bangumi(BangumiBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
 
 

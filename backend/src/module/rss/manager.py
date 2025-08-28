@@ -2,7 +2,6 @@ import logging
 
 from module.database import Database, engine
 from module.models import ResponseModel, RSSItem, Torrent
-from module.models.rss import RSSUpdate
 from module.network import RequestContent
 
 logger = logging.getLogger(__name__)
@@ -62,9 +61,9 @@ class RSSManager:
         with Database(self.engine) as db:
             return db.rss.disable(rss_id)
 
-    def update(self, rss_id: int, data: RSSUpdate):
+    def update(self,  data: RSSItem):
         with Database(self.engine) as manager:
-            return manager.rss.update(rss_id, data)
+            return manager.rss.update(data)
 
     def search_all(self):
         with Database(self.engine) as db:
