@@ -17,33 +17,8 @@ class TorrentDatabase:
         self.session.commit()
         logger.debug(f"[TorrentDatabase] Insert {data.name=} {data.url=} in database.")
 
-    def add_all(self, datas: list[Torrent]):
-        for data in datas:
-            self.session.merge(data)
-        self.session.commit()
-        logger.debug(f"Insert {len(datas)} torrents in database.")
 
-    def update(self, data: Torrent):
-        logger.debug(f"[TorrentDatabase] update {data.name} in database.")
-        self.session.merge(data)
-        self.session.commit()
-        self.session.refresh(data)
-        logger.debug(f"[TorrentDatabase] Update {data.name} in database success.")
-        logger.debug(f"Update {data.name} in database.")
-
-    # def update_all(self, datas: list[Torrent]):
-    #     self.session.add_all(datas)
-    #     self.session.commit()
-    #
-    # def update_one_user(self, data: Torrent):
-    #     self.session.add(data)
-    #     self.session.commit()
-    #     self.session.refresh(data)
-    #     logger.debug(f"Update {data.name} in database.")
-    #
-    def filter_by_bangumi(
-        self, official_title: str, season: int, rss_link: str
-    ) -> list[Torrent]:
+    def filter_by_bangumi(self, official_title: str, season: int, rss_link: str) -> list[Torrent]:
         """根据 Bangumi 的官方标题、季节和 RSS 链接过滤种子"""
         statement = select(Torrent).where(
             Torrent.bangumi_official_title == official_title,
@@ -60,47 +35,27 @@ class TorrentDatabase:
         statement = select(Torrent).where(Torrent.download_uid == duid)
         return self.session.exec(statement).first()
 
-    def search_bangumi(self, bangumi_id: int):
-        return self.session.exec(
-            select(Torrent).where(Torrent.bangumi_id == bangumi_id)
-        ).all()
-
     def search_all(self) -> list[Torrent]:
         return list(self.session.exec(select(Torrent)).all())
 
     def search_all_unrenamed(self) -> list[Torrent]:
         return list(
-            self.session.exec(select(Torrent).where(Torrent.renamed == false())).all()
+            self.session.exec(select(Torrent).where(Torrent.downloaded == true(), Torrent.renamed == false())).all()
         )
-
-    def search_all_downloaded(self) -> list[Torrent]:
-        torrents = self.session.exec(
-            select(Torrent).where(Torrent.downloaded == true())
-        ).all()
-        return list(torrents)
 
     def search_downloaded_unrenamed(self) -> list[Torrent]:
         """查询已下载但未重命名的种子"""
         torrents = self.session.exec(
-            select(Torrent).where(
-                Torrent.downloaded == true(), Torrent.renamed == false()
-            )
+            select(Torrent).where(Torrent.downloaded == true(), Torrent.renamed == false())
         ).all()
         return list(torrents)
-
-    # def search_rss(self, rss_url: int) -> list[Torrent]:
-    #     """根据RSS url查询所有种子"""
-    #     torrents = self.session.exec(select(Torrent).where(Torrent.rss_link == rss_url)).all()
-    #     return list(torrents)
 
     def check_new(self, torrents_list: list[Torrent]) -> list[Torrent]:
         new_torrents = []
         for torrent in torrents_list:
             torrent_item = self.search_by_url(torrent.url)
             if not torrent_item or not torrent_item.downloaded:
-                logger.debug(
-                    f"[TorrentDatabase] New torrent found: {torrent.name} with url: {torrent.url}"
-                )
+                logger.debug(f"[TorrentDatabase] New torrent found: {torrent.name} with url: {torrent.url}")
                 new_torrents.append(torrent)
         return new_torrents
 
@@ -110,13 +65,10 @@ class TorrentDatabase:
         # 2. 当种子也删除时, 不会再次添加
         # 3. bangumi 删除有几种情况: 1. 有一个全清, 会刷新一次 2. 用户自已删除, 如果是聚合的, 会在下次
         # 刷新时再次添加, 如果是单独的, 会连着rss 一起删除
-        stmt = select(Torrent).where(Torrent.url == url)
-        torrent_item = self.session.exec(stmt).first()
-        if torrent_item:
-            self.session.delete(torrent_item)
-            logger.debug(
-                f"[TorrentDatabase] Delete torrent {torrent_item.name} by url: {url}."
-            )
+        torrent = self.session.get(Torrent, ident=url)
+        if torrent:
+            self.session.delete(torrent)
+            logger.debug(f"[TorrentDatabase] Delete torrent {torrent.name} by url: {url}.")
             self.session.commit()
             return True
         return False
@@ -126,13 +78,24 @@ class TorrentDatabase:
         torrent_item = self.session.exec(stmt).first()
         if torrent_item:
             self.session.delete(torrent_item)
-            logger.debug(
-                f"[TorrentDatabase] Delete torrent {torrent_item.name} by duid: {duid}."
-            )
+            logger.debug(f"[TorrentDatabase] Delete torrent {torrent_item.name} by duid: {duid}.")
             self.session.commit()
             return True
         return False
 
+    # def add_all(self, datas: list[Torrent]):
+    #     for data in datas:
+    #         self.session.merge(data)
+    #     self.session.commit()
+    #     logger.debug(f"Insert {len(datas)} torrents in database.")
+
+    # def update(self, data: Torrent):
+    #     logger.debug(f"[TorrentDatabase] update {data.name} in database.")
+    #     self.session.merge(data)
+    #     self.session.commit()
+    #     self.session.refresh(data)
+    #     logger.debug(f"[TorrentDatabase] Update {data.name} in database success.")
+    #     logger.debug(f"Update {data.name} in database.")
 
 if __name__ == "__main__":
     from module.database import Database, engine

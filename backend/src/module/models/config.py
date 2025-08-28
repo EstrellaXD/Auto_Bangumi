@@ -17,9 +17,7 @@ class Program(BaseModel):
 class Downloader(BaseModel):
     type: str = Field(default="qbittorrent", description="Downloader type")
     path: str = Field(default="/downloads/Bangumi", description="Downloader path")
-    host: str = Field(
-        default="172.17.0.1:8080", alias="host", description="Downloader host"
-    )
+    host: str = Field(default="172.17.0.1:8080", alias="host", description="Downloader host")
     ssl: bool = Field(default=False, description="Downloader ssl")
 
     model_config = ConfigDict(extra="allow")
@@ -69,9 +67,7 @@ class Notification(BaseModel):
     enable: bool = Field(default=False, description="Enable notification")
     type: str = Field(default="telegram", description="Notification type")
     token: str = Field(default="", alias="token", description="Notification token")
-    chat_id: str = Field(
-        default="", alias="chat_id", description="Notification chat id"
-    )
+    chat_id: str = Field(default="", alias="chat_id", description="Notification chat id")
 
 
 # class ExperimentalOpenAI(BaseModel):

@@ -27,9 +27,7 @@ class DownloadMonitor:
         """初始化下载监控器，订阅下载开始事件"""
         # 订阅下载开始事件
         self._shutdown = False
-        self._event_bus.subscribe(
-            EventType.DOWNLOAD_STARTED, self.handle_download_started
-        )
+        self._event_bus.subscribe(EventType.DOWNLOAD_STARTED, self.handle_download_started)
 
         logger.info("[DownloadMonitor] 已注册 DownloadMonitor 事件处理器")
         logger.info("[DownloadMonitor] 下载监控器已初始化")
@@ -76,9 +74,7 @@ class DownloadMonitor:
         await asyncio.sleep(60)
         await self.start_monitoring(torrent.download_uid, bangumi, torrent)
 
-    async def start_monitoring(
-        self, torrent_duid: str, bangumi: Bangumi, torrent: Torrent
-    ) -> None:
+    async def start_monitoring(self, torrent_duid: str, bangumi: Bangumi, torrent: Torrent) -> None:
         """开始监控指定种子的下载状态
 
         Args:
@@ -109,9 +105,7 @@ class DownloadMonitor:
         """
         try:
             torrent_hash = torrent.download_uid
-            logger.debug(
-                f"[DownloadMonitor] 开始监控种子: {torrent.name} ({torrent_hash})"
-            )
+            logger.debug(f"[DownloadMonitor] 开始监控种子: {torrent.name} ({torrent_hash})")
             if not torrent_hash:
                 logger.warning(f"[DownloadMonitor] 种子 {torrent.name} 没有下载UID")
                 return
@@ -124,32 +118,24 @@ class DownloadMonitor:
                 # 检查是否超过4小时超时限制
                 current_time = datetime.now()
                 if current_time - start_time > timeout_limit:
-                    logger.warning(
-                        f"[DownloadMonitor] 种子 {torrent.name} 超过4小时未完成下载，标记为已下载和已重命名"
-                    )
+                    logger.warning(f"[DownloadMonitor] 种子 {torrent.name} 超过4小时未完成下载，标记为已下载和已重命名")
                     try:
                         with Database() as db:
                             if torrent_item := db.torrent.search_by_duid(torrent_hash):
                                 torrent_item.downloaded = True
                                 torrent_item.renamed = True
                                 db.torrent.add(torrent_item)
-                                logger.info(
-                                    f"[DownloadMonitor] 已将超时种子标记为完成: {torrent.name}"
-                                )
+                                logger.info(f"[DownloadMonitor] 已将超时种子标记为完成: {torrent.name}")
                     except Exception as e:
                         logger.error(f"[DownloadMonitor] 更新超时种子状态失败: {e}")
                     break
 
                 # 获取种子信息
                 info = await download_client.get_torrent_info(torrent_hash)
-                logger.debug(
-                    f"[DownloadMonitor] 获取种子信息: {torrent.name} - {torrent_hash}"
-                )
+                logger.debug(f"[DownloadMonitor] 获取种子信息: {torrent.name} - {torrent_hash}")
 
                 if not info:
-                    logger.warning(
-                        f"[DownloadMonitor] 无法获取种子信息: {torrent_hash}，将从数据库删除对应记录"
-                    )
+                    logger.warning(f"[DownloadMonitor] 无法获取种子信息: {torrent_hash}，将从数据库删除对应记录")
                     # 从数据库删除对应的torrent记录
                     if retry_count < 3:
                         retry_count += 1
@@ -159,44 +145,33 @@ class DownloadMonitor:
                         await asyncio.sleep(60)  # 等待60秒后重试
                         continue
                     else:
-                        logger.debug(
-                            f"[DownloadMonitor] 重试次数超过3次，删除种子记录: {torrent.name}"
-                        )
+                        logger.debug(f"[DownloadMonitor] 重试次数超过3次，删除种子记录: {torrent.name}")
                         try:
                             with Database() as db:
                                 db.torrent.delete_by_url(torrent.url)
-                                logger.debug(
-                                    f"[DownloadMonitor] 已从数据库删除种子记录: {torrent.name}"
-                                )
+                                logger.debug(f"[DownloadMonitor] 已从数据库删除种子记录: {torrent.name}")
                         except Exception as e:
                             logger.error(f"[DownloadMonitor] 删除数据库记录失败: {e}")
                         break
 
                 # 更新数据库中torrent的downloaded状态
                 elif not torrent.downloaded:
-                    logger.debug(
-                        f"[DownloadMonitor] 种子 {torrent.name} 下载状态: 下载中"
-                    )
+                    logger.debug(f"[DownloadMonitor] 种子 {torrent.name} 下载状态: 下载中")
                     try:
                         with Database() as db:
-                            logger.debug(
-                                f"[DownloadMonitor] 更新种子下载状态: {torrent.name} - {torrent_hash}"
-                            )
-                            if torrent_item := db.torrent.search_by_duid(torrent_hash):
+                            logger.debug(f"[DownloadMonitor] 更新种子下载状态: {torrent.name} - {torrent_hash}")
+                            if torrent_item := db.torrent.search_by_url(torrent.url):
+                                # search_by_duid(torrent_hash):
                                 if not torrent_item.downloaded:
                                     torrent_item.downloaded = True
                                     db.torrent.add(torrent_item)
-                                    logger.debug(
-                                        f"[DownloadMonitor] 已更新种子下载状态: {torrent.name}"
-                                    )
+                                    logger.debug(f"[DownloadMonitor] 已更新种子下载状态: {torrent.name}")
                     except Exception as e:
                         logger.error(f"[DownloadMonitor] 更新种子下载状态失败: {e}")
 
                 # 检查是否下载完成
                 if info.completed != 0:
-                    logger.debug(
-                        f"[DownloadMonitor] 种子 {torrent.name} 下载状态: 已完成 {info.completed}"
-                    )
+                    logger.debug(f"[DownloadMonitor] 种子 {torrent.name} 下载状态: 已完成 {info.completed}")
 
                     # 发布下载完成事件
                     await self._publish_download_completed(torrent, bangumi)
@@ -205,9 +180,7 @@ class DownloadMonitor:
                 # 根据ETA智能睡眠
                 if info.eta is not None:
                     sleep_time = self.calculate_sleep_time(info.eta)
-                    logger.debug(
-                        f"[DownloadMonitor] 种子 {torrent.name} ETA: {info.eta}s, 下次检查: {sleep_time}s"
-                    )
+                    logger.debug(f"[DownloadMonitor] 种子 {torrent.name} ETA: {info.eta}s, 下次检查: {sleep_time}s")
                 else:
                     sleep_time = 60  # 默认1分钟
 
@@ -223,9 +196,7 @@ class DownloadMonitor:
                 self.monitoring_tasks.pop(torrent_hash, None)
                 logger.debug(f"[DownloadMonitor] 清理监控任务: {torrent.name}")
 
-    async def _publish_download_completed(
-        self, torrent: Torrent, bangumi: Bangumi
-    ) -> None:
+    async def _publish_download_completed(self, torrent: Torrent, bangumi: Bangumi) -> None:
         """发布下载完成事件
 
         Args:
@@ -269,16 +240,12 @@ class DownloadMonitor:
         self._shutdown = True
 
         # 取消对事件总线的订阅
-        self._event_bus.unsubscribe(
-            EventType.DOWNLOAD_STARTED, self.handle_download_started
-        )
+        self._event_bus.unsubscribe(EventType.DOWNLOAD_STARTED, self.handle_download_started)
         logger.info("[DownloadMonitor] 取消对下载开始事件的订阅")
         if not self.monitoring_tasks:
             return
 
-        logger.info(
-            f"[DownloadMonitor] 关闭监控器，取消 {len(self.monitoring_tasks)} 个任务"
-        )
+        logger.info(f"[DownloadMonitor] 关闭监控器，取消 {len(self.monitoring_tasks)} 个任务")
 
         # 取消所有任务
         for task in self.monitoring_tasks.values():
@@ -287,9 +254,7 @@ class DownloadMonitor:
 
         # 等待所有任务完成
         if self.monitoring_tasks:
-            await asyncio.gather(
-                *self.monitoring_tasks.values(), return_exceptions=True
-            )
+            await asyncio.gather(*self.monitoring_tasks.values(), return_exceptions=True)
 
         self.monitoring_tasks.clear()
         logger.info("[DownloadMonitor] 监控器已关闭")

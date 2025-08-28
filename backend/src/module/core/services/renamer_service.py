@@ -47,9 +47,7 @@ class RenamerService(BaseService):
                 logger.debug("[RenamerService] 没有需要重命名的种子")
                 return
 
-            logger.info(
-                f"[RenamerService] 发现 {len(unrenamed_torrents)} 个需要重命名的种子"
-            )
+            logger.info(f"[RenamerService] 发现 {len(unrenamed_torrents)} 个需要重命名的种子")
 
             # 为每个种子发布下载完成事件，触发重命名流程
             for torrent in unrenamed_torrents:
@@ -71,9 +69,7 @@ class RenamerService(BaseService):
                 bangumi = db.torrent_to_bangumi(torrent)
 
             if not bangumi:
-                logger.warning(
-                    f"[RenamerService] 无法找到种子 {torrent.name} 对应的番剧信息"
-                )
+                logger.warning(f"[RenamerService] 无法找到种子 {torrent.name} 对应的番剧信息")
                 return
 
             event = Event(

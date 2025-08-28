@@ -80,9 +80,7 @@ class OpenAIParser:
         self.model = settings.experimental_openai.model
         self.openai_kwargs = kwargs
 
-    async def parse(
-        self, text: str, prompt: str | None = None, asdict: bool = True
-    ) -> dict | str:
+    async def parse(self, text: str, prompt: str | None = None, asdict: bool = True) -> dict | str:
         """parse text with openai
 
         Args:

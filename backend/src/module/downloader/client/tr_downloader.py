@@ -15,9 +15,7 @@ class TrDownloader:
         self.username = username
         self.password = password
         self.ssl = ssl
-        self.authkey = base64.b64encode(
-            f"{self.username}:{self.password}".encode()
-        ).decode()
+        self.authkey = base64.b64encode(f"{self.username}:{self.password}".encode()).decode()
 
         self._client = httpx.AsyncClient(
             base_url=self.host,
@@ -31,9 +29,7 @@ class TrDownloader:
         )
 
         while not await self.check_host():
-            logger.warning(
-                f"[Downloader] Failed to connect to {self.host}, retry in 30 seconds."
-            )
+            logger.warning(f"[Downloader] Failed to connect to {self.host}, retry in 30 seconds.")
             await asyncio.sleep(30)
         if not await self.auth():
             await self._client.aclose()
@@ -52,9 +48,7 @@ class TrDownloader:
         resp = await self._client.post("/transmission/rpc")
 
         if resp.status_code == 409 and "X-Transmission-Session-Id" in resp.headers:
-            self._client.headers.update(
-                {"X-Transmission-Session-Id": resp.headers["X-Transmission-Session-Id"]}
-            )
+            self._client.headers.update({"X-Transmission-Session-Id": resp.headers["X-Transmission-Session-Id"]})
             resp = await self._client.post("/transmission/rpc")
         elif resp.status_code == 401:
             logger.error("Transmission: Authentication failed")
@@ -72,9 +66,7 @@ class TrDownloader:
         except httpx.RequestError:
             return False
 
-    async def add_torrent(
-        self, download_link=None, torrent_path=None, save_path=None, **kwargs
-    ):
+    async def add_torrent(self, download_link=None, torrent_path=None, save_path=None, **kwargs):
         if not download_link and not torrent_path:
             # WARNING: Regard no torrent as success
             return True
@@ -108,9 +100,7 @@ class TrDownloader:
             )
 
         for torrent_file in torrent_files:
-            result = result and await self.add_torrent(
-                torrent_path=torrent_file, save_path=save_path
-            )
+            result = result and await self.add_torrent(torrent_path=torrent_file, save_path=save_path)
 
         return result
 
@@ -165,9 +155,7 @@ class TrDownloader:
 
         torrents_info = self._filter_status(torrents_info, status_filter)
         if category:
-            torrents_info = [
-                torrent for torrent in torrents_info if category in torrent["labels"]
-            ]
+            torrents_info = [torrent for torrent in torrents_info if category in torrent["labels"]]
         # NOTE: To compatible with qbittorrent api we use category as label
 
         return torrents_info

@@ -35,9 +35,7 @@ CONFIG_PATH = (CONFIG_ROOT / CONFIX_NAME).resolve()
 
 
 # 判断给定的 data 的 key 是否在 setting 中
-def check_config_key(
-    data: dict | BaseModel, updated_data: BaseModel, config_name: str
-) -> bool:
+def check_config_key(data: dict | BaseModel, updated_data: BaseModel, config_name: str) -> bool:
     if isinstance(data, BaseModel):
         data = data.model_dump()
 
@@ -141,9 +139,7 @@ class Settings(Config):
                         for _attr in attr:
                             # TODO: 这里会永远是 True,之后看看删了 if
                             attr_name = _attr[0] if isinstance(_attr, tuple) else _attr
-                            config_dict[key][attr_name] = self.__val_from_env(
-                                env, _attr
-                            )
+                            config_dict[key][attr_name] = self.__val_from_env(env, _attr)
                     else:
                         attr_name = attr[0] if isinstance(attr, tuple) else attr
                         config_dict[key][attr_name] = self.__val_from_env(env, attr)

@@ -48,15 +48,15 @@ class NotificationProcessor:
         # 想了想,对每个通知直接传file和post_link, 这样就可以直接用来发送了
         # 生成默认消息
         if processed.episode:
-            processed.message = f"番剧名称：{processed.title}\n季度：第{processed.season}季\n更新集数：第{processed.episode}集"
+            processed.message = (
+                f"番剧名称：{processed.title}\n季度：第{processed.season}季\n更新集数：第{processed.episode}集"
+            )
             # 获取海报
             if not processed.poster_path and processed.title:
                 logger.debug(f"[NotificationProcessor] 获取海报: {processed.title}")
                 processed.poster_path = self.get_poster_from_db(processed.title)
 
-        processed.file = (
-            await load_image(processed.poster_path) if processed.poster_path else None
-        )
+        processed.file = await load_image(processed.poster_path) if processed.poster_path else None
 
         return processed
 
@@ -72,7 +72,7 @@ class PostNotification:
         self.config: Notification = settings.notification
         self.notifier = Notifier(**self.config.model_dump())
 
-    def initialize(self,config:Notification|None = None) -> None:
+    def initialize(self, config: Notification | None = None) -> None:
         """根据设置创建通知管理器"""
         self.config = settings.notification
         if not self.config.enable:
@@ -91,12 +91,8 @@ class PostNotification:
             notification_module = importlib.import_module(package_path)
         except ImportError as e:
             logger.error(f"加载通知器失败: {notification_type} - {e}")
-            notification_module = importlib.import_module(
-                "module.notification.plugin.log"
-            )
-            logger.warning(
-                f"使用默认日志通知器: {notification_module.Notifier.__name__}"
-            )
+            notification_module = importlib.import_module("module.notification.plugin.log")
+            logger.warning(f"使用默认日志通知器: {notification_module.Notifier.__name__}")
         Notifier = notification_module.Notifier
         logger.debug(f"加载通知器: {config.type}")
         return Notifier(**config.model_dump())

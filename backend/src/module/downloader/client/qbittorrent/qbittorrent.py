@@ -38,9 +38,7 @@ class Downloader(BaseDownloader):
     def __init__(self):  # , host: str, username: str, password: str, ssl: bool
         super().__init__()
         self._client: httpx.AsyncClient | None = None
-        self.config: DownloaderConfig = get_plugin_config(
-            DownloaderConfig(), "downloader"
-        )
+        self.config: DownloaderConfig = get_plugin_config(DownloaderConfig(), "downloader")
         self.api_interval: float = 0.2
 
     @override
@@ -48,12 +46,10 @@ class Downloader(BaseDownloader):
         """初始化下载器"""
         # 加载配置
         self.config = get_plugin_config(DownloaderConfig(), "downloader")
-        self._client = httpx.AsyncClient(
-            base_url=self.config.host, verify=settings.downloader.ssl
-        )
+        self._client = httpx.AsyncClient(base_url=self.config.host, verify=settings.downloader.ssl)
 
     @override
-    async def auth(self)->bool:
+    async def auth(self) -> bool:
         try:
             resp = await self._client.post(
                 url=QB_API_URL["login"],
@@ -78,9 +74,7 @@ class Downloader(BaseDownloader):
                     "[qbittorrent] your ip has been banned by qbittorrent, please remove the ban(or restart qbittorrent) and try again."
                 )
         except (httpx.ConnectError, httpx.TimeoutException, httpx.ReadTimeout):
-            logger.error(
-                f"[qbittorrent] connect to qbittorrent error, please check your host {self.config.host}"
-            )
+            logger.error(f"[qbittorrent] connect to qbittorrent error, please check your host {self.config.host}")
         return False
 
     @override
@@ -98,7 +92,7 @@ class Downloader(BaseDownloader):
         return False
 
     @override
-    async def check_host(self)->bool:
+    async def check_host(self) -> bool:
         try:
             logger.debug(f"[qbittorrent] Check host: {self.config.host}")
             resp = await self._client.get(url=QB_API_URL["version"], timeout=5)
@@ -107,10 +101,8 @@ class Downloader(BaseDownloader):
                 # 检查
                 return True
             resp.raise_for_status()
-        except (httpx.RemoteProtocolError,httpx.ConnectError, httpx.TimeoutException, httpx.ReadTimeout) as e:
-            logger.error(
-                f"[qbittorrent] Check host error,please check your host {self.config.host}"
-            )
+        except (httpx.RemoteProtocolError, httpx.ConnectError, httpx.TimeoutException, httpx.ReadTimeout) as e:
+            logger.error(f"[qbittorrent] Check host error,please check your host {self.config.host}")
             logger.debug(f"[qbittorrent] Check host error: {e}")
         return False
 
@@ -223,21 +215,15 @@ class Downloader(BaseDownloader):
         }
         file = None
         torrent_link = ""
-        logger.debug(
-            f"[QbDownloader] Starting to get torrent content from {torrent_url}"
-        )
+        logger.debug(f"[QbDownloader] Starting to get torrent content from {torrent_url}")
         if not torrent_url.startswith("magnet:"):
             async with RequestContent() as req:
                 logger.debug(f"[QbDownloader] Calling get_content for {torrent_url}")
                 if torrent_file := await req.get_content(torrent_url):
-                    logger.debug(
-                        f"[QbDownloader] Got torrent content, getting hash for {torrent_url}"
-                    )
+                    logger.debug(f"[QbDownloader] Got torrent content, getting hash for {torrent_url}")
                     torrent_hashes = await req.get_torrent_hash(torrent_url)
                     # 优先使用v2 hash，如果没有则使用v1 hash
-                    torrent_link = torrent_hashes.get(
-                        "v2", torrent_hashes.get("v1", "")
-                    )
+                    torrent_link = torrent_hashes.get("v2", torrent_hashes.get("v1", ""))
                     logger.debug(f"[QbDownloader] Got torrent hashes: {torrent_hashes}")
                     logger.debug(f"[QbDownloader] Using hash: {torrent_link}")
                     file = {"torrents": torrent_file}
@@ -246,13 +232,9 @@ class Downloader(BaseDownloader):
                     # 没有拿到的话就拿 hash
                     torrent_link = get_hash(torrent_url)
                     if not torrent_link:
-                        logger.error(
-                            f"[QbDownloader] Failed to get torrent hash from {torrent_url}"
-                        )
+                        logger.error(f"[QbDownloader] Failed to get torrent hash from {torrent_url}")
                         return None
-                    logger.warning(
-                        f"[QbDownloader] Failed to get torrent content from {torrent_url}"
-                    )
+                    logger.warning(f"[QbDownloader] Failed to get torrent content from {torrent_url}")
         else:
             # 如果是 magnet 链接，直接使用
             torrent_link = get_hash(torrent_url)
@@ -327,9 +309,7 @@ class Downloader(BaseDownloader):
         except Exception as e:
             if isinstance(e, httpx.HTTPStatusError):
                 if e.response.status_code == 409:
-                    logger.error(
-                        f"[qbittorrent] rename error, the file already exists: {old_path} -> {new_path}"
-                    )
+                    logger.error(f"[qbittorrent] rename error, the file already exists: {old_path} -> {new_path}")
             else:
                 self.handle_exception(e, "rename")
             return False

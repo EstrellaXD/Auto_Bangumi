@@ -51,7 +51,9 @@ async def complete_season(data: Bangumi) -> list[Torrent] | None:
         # https://mikanani.me/RSS/Bangumi?bangumiId=3649&subgroupid=370
         mikan_id = data.mikan_id.split("#")[0]
         group_id = data.mikan_id.split("#")[1]
-        mikan_url = f"https://{settings.rss_parser.mikan_custom_url}/RSS/Bangumi?bangumiId={mikan_id}&subgroupid={group_id}"
+        mikan_url = (
+            f"https://{settings.rss_parser.mikan_custom_url}/RSS/Bangumi?bangumiId={mikan_id}&subgroupid={group_id}"
+        )
     else:
         data.title_raw = data.title_raw.split(",")[0]
         mikan_url = SearchTorrent().special_url(data, "mikan").url
@@ -84,9 +86,7 @@ async def eps_complete():
                 db.bangumi.update(data)
                 logger.debug(f"[eps_complete] {data.official_title} eps is completed")
             else:
-                logger.debug(
-                    f"[eps_complete] {data.official_title} eps is not completed"
-                )
+                logger.debug(f"[eps_complete] {data.official_title} eps is not completed")
         except Exception as e:
             logger.error(f"[eps_complete] {e}")
 

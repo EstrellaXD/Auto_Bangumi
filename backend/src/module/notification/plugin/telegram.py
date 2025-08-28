@@ -12,7 +12,7 @@ class Notifier(BaseNotifier):
     def __init__(self, **kwargs):
         super().__init__()
         """初始化 Telegram 通知器"""
-        self.token:str = kwargs.get("token", "")
+        self.token: str = kwargs.get("token", "")
         self.chat_id: str = kwargs.get("chat_id", "")
         self.base_url: str = "https://api.telegram.org/bot{token}/"
 
@@ -51,7 +51,7 @@ class Notifier(BaseNotifier):
             return False
         return True
 
-    async def _send_photo(self,chat_id, req, message: str, photo) -> Any:
+    async def _send_photo(self, chat_id, req, message: str, photo) -> Any:
         """发送带图片的消息"""
         url = f"{self.base_url}sendPhoto".format(token=self.token)
         data = {
@@ -61,7 +61,7 @@ class Notifier(BaseNotifier):
         }
         return await req.post_data(url, data, files={"photo": photo})
 
-    async def _send_text(self, chat_id,req, message: str) -> Any:
+    async def _send_text(self, chat_id, req, message: str) -> Any:
         """发送纯文本消息"""
         url = f"{self.base_url}sendMessage".format(token=self.token)
         data = {

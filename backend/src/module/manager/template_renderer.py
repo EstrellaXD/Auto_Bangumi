@@ -45,9 +45,7 @@ class TemplateRenderer:
 
             if param_value is not None and param_value != "":
                 # 对于数字参数进行格式化
-                if param_name in ["season", "episode"] and isinstance(
-                    param_value, (int, str)
-                ):
+                if param_name in ["season", "episode"] and isinstance(param_value, (int, str)):
                     try:
                         param_value = f"{int(param_value):02d}"
                     except (ValueError, TypeError):
@@ -90,8 +88,8 @@ class TemplateRenderer:
         params = {
             "torrent_name": getattr(file_info, "media_path", ""),
             "official_title": bangumi_name,
-            "title":getattr(file_info, "title_raw", ""),
-            "season": f"{season:02d}" ,
+            "title": getattr(file_info, "title_raw", ""),
+            "season": f"{season:02d}",
             "episode": f"{episode:02d}",
             "suffix": getattr(file_info, "suffix", ""),
             "title": getattr(file_info, "title", ""),
@@ -110,6 +108,7 @@ class TemplateRenderer:
 if __name__ == "__main__":
     # 测试用例
     from module.parser import TitleParser, TmdbParser
+
     renderer = TemplateRenderer()
     title = "[LoliHouse] 2.5次元的诱惑  - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕].mkv"
     file_info = TitleParser().torrent_parser(title)
@@ -132,4 +131,3 @@ if __name__ == "__main__":
     template3 = "${name} S${season}E${episode}${torrent_name}"
     result3 = renderer.render_template(template3, file_info.dict())
     print(f"测试3: {result3}")  # 应该输出: [字幕组] 番剧名称 第02话.mkv
-

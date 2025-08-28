@@ -7,7 +7,6 @@ from typing_extensions import override
 from module.conf import settings
 from module.models import (
     Bangumi,
-    BangumiUpdate,
     Episode,
     EpisodeFile,
     MikanInfo,
@@ -47,9 +46,7 @@ class TmdbParser(BaseParser):
     async def parser(self, title: str, season: int = 1, language: str = "zh"):
         tmdb_info = await tmdb_parser(title, language)
         if tmdb_info:
-            logger.debug(
-                f"[Title Parser] TMDB Matched, official title is {tmdb_info.title}"
-            )
+            logger.debug(f"[Title Parser] TMDB Matched, official title is {tmdb_info.title}")
             tmdb_season = tmdb_info.last_season if tmdb_info.last_season else season
             # return tmdb_info.title, tmdb_season, tmdb_info.year, tmdb_info.poster_link
             return Bangumi(
@@ -62,28 +59,22 @@ class TmdbParser(BaseParser):
             )
 
         else:
-            logger.warning(
-                f"[Title Parser]Cannot match {title} in TMDB. Use raw title instead."
-            )
+            logger.warning(f"[Title Parser]Cannot match {title} in TMDB. Use raw title instead.")
             logger.warning("[Title Parser]Please change bangumi info manually.")
             return None
 
-    async def poster_parser(self, bangumi: Bangumi | BangumiUpdate) -> bool:
+    async def poster_parser(self, bangumi: Bangumi) -> bool:
         tmdb_info = await tmdb_parser(
             bangumi.official_title,
             settings.rss_parser.language,
         )
         if tmdb_info:
-            logger.debug(
-                f"[Title Parser] TMDB Matched, official title is {tmdb_info.title}"
-            )
+            logger.debug(f"[Title Parser] TMDB Matched, official title is {tmdb_info.title}")
             bangumi.poster_link = tmdb_info.poster_link
             bangumi.tmdb_id = str(tmdb_info.id)
             return True
         else:
-            logger.warning(
-                f"[Title Parser] Cannot match {bangumi.official_title} in TMDB. Use raw title instead."
-            )
+            logger.warning(f"[Title Parser] Cannot match {bangumi.official_title} in TMDB. Use raw title instead.")
             logger.warning("[Title Parser] Please change bangumi info manually.")
             return False
 
@@ -96,9 +87,7 @@ class MikanParser(BaseParser):
         mikan_parser = MikanWebParser()
         mikan_info: MikanInfo = await mikan_parser.parser(homepage)
         if not mikan_info.official_title or not mikan_info.poster_link or not mikan_info.id:
-            logger.debug(
-                f"[MikanParser] No official title or poster link found for {homepage}"
-            )
+            logger.debug(f"[MikanParser] No official title or poster link found for {homepage}")
             return None
 
         return Bangumi(
@@ -108,13 +97,11 @@ class MikanParser(BaseParser):
             poster_link=mikan_info.poster_link,
         )
 
-    async def poster_parser(self, bangumi: Bangumi | BangumiUpdate) -> bool:
+    async def poster_parser(self, bangumi: Bangumi) -> bool:
         # 这是给 Bangumi 刷新用的
         # https://mikanani.me/Home/Bangumi/
         if not bangumi.mikan_id:
-            logger.debug(
-                f"[MikanParser] No Mikan ID found for {bangumi.official_title}"
-            )
+            logger.debug(f"[MikanParser] No Mikan ID found for {bangumi.official_title}")
             return False
         homepage = f"https://{settings.rss_parser.mikan_custom_url}/Home/Bangumi/{bangumi.mikan_id}"
         logger.debug(f"[MikanParser] Parsing poster link from {homepage}")

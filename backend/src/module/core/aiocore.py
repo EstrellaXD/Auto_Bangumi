@@ -23,7 +23,7 @@ class AsyncApplicationCore:
         self._download_monitor = None
         self._rename_monitor = None
         self._notification_monitor = None
-        self.monitors:list = []
+        self.monitors: list = []
         self._running: bool = False
         self._initialized: bool = False
 

@@ -34,14 +34,10 @@ def test_proxy() -> bool:
             )
             return False
         except httpx.ConnectError:
-            logger.error(
-                f"host is down, please check your proxy host {settings.proxy.host}"
-            )
+            logger.error(f"host is down, please check your proxy host {settings.proxy.host}")
             return False
         except httpx.ConnectTimeout:
-            logger.error(
-                f"[Network] Cannot connect to proxy {settings.proxy.host}:{settings.proxy.port}"
-            )
+            logger.error(f"[Network] Cannot connect to proxy {settings.proxy.host}:{settings.proxy.port}")
             return False
 
 

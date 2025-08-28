@@ -12,9 +12,7 @@ logger = logging.getLogger("api.search")
 router = APIRouter(prefix="/search", tags=["search"])
 
 
-@router.get(
-    "/bangumi", response_model=list[Bangumi], dependencies=[Depends(get_current_user)]
-)
+@router.get("/bangumi", response_model=list[Bangumi], dependencies=[Depends(get_current_user)])
 async def search_torrents(site: str = "mikan", keywords: str = Query(None)):
     """
     Server Send Event for per Bangumi item
@@ -25,14 +23,10 @@ async def search_torrents(site: str = "mikan", keywords: str = Query(None)):
         return []
     keywords: list[str] = keywords.split(" ")
 
-    return EventSourceResponse(
-        SearchTorrent().analyse_keyword(keywords=keywords, site=site)
-    )
+    return EventSourceResponse(SearchTorrent().analyse_keyword(keywords=keywords, site=site))
 
 
-@router.get(
-    "/provider", response_model=list[str], dependencies=[Depends(get_current_user)]
-)
+@router.get("/provider", response_model=list[str], dependencies=[Depends(get_current_user)])
 async def search_provider() -> list[str]:
     """从配置文件中获取支持的搜索引擎"""
     return list(SEARCH_CONFIG.keys())

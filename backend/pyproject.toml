@@ -1,6 +1,6 @@
 [project]
-name = "backend"
-version = "0.1.0"
+name = "Auto_Bangumi"
+version = "3.2.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -113,7 +113,7 @@ exclude = [
 per-file-ignores = {}
 
 # Same as Black.
-line-length = 88
+line-length = 120
 
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
@@ -126,11 +126,8 @@ target-version = "py311"
 max-complexity = 10
 
 [tool.black]
-line-length = 88
+line-length = 120
 target-version = ['py311']
 
 [dependency-groups]
-dev = [
- "pytest>=8.4.1",
- "pytest-asyncio>=1.1.0",
-]
+dev = ["pytest>=8.4.1", "pytest-asyncio>=1.1.0"]

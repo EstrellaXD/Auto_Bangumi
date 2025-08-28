@@ -13,6 +13,7 @@ t = "291237f90b24267380d6176c98f7619f"
 
 LANGUAGE = {"zh": "zh-CN", "jp": "ja-JP", "en": "en-US"}
 
+
 def get_api_key():
     """Get the TMDB API key from settings."""
     return settings.rss_parser.tmdb_api_key or t

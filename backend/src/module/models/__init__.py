@@ -1,4 +1,4 @@
-from .bangumi import Bangumi, BangumiUpdate, Episode, Message
+from .bangumi import Bangumi, Episode, Message
 from .config import Config
 from .database_version import DatabaseVersion
 from .mikan import MikanInfo
@@ -25,7 +25,6 @@ from .user import User, UserLogin, UserUpdate
 
 __all__ = [
     "Bangumi",
-    "BangumiUpdate",
     "Config",
     "Episode",
     "Message",

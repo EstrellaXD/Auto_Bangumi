@@ -31,9 +31,7 @@ class TaskManager:
         self._running: bool = False
         self._shutdown_event: asyncio.Event = asyncio.Event()
 
-    async def register_task(
-        self, name: str, coro_func: Callable, interval: int
-    ) -> None:
+    async def register_task(self, name: str, coro_func: Callable, interval: int) -> None:
         """注册任务"""
         self._tasks[name] = TaskInfo(
             name=name,
@@ -51,9 +49,7 @@ class TaskManager:
                 logger.info(f"[TaskManager] 准备启动任务: {name}")
                 await self._start_task(name)
             else:
-                logger.warning(
-                    f"[TaskManager] 任务 {name} 已经在运行或已完成，跳过启动"
-                )
+                logger.warning(f"[TaskManager] 任务 {name} 已经在运行或已完成，跳过启动")
 
     async def _start_task(self, name: str):
         """启动单个任务"""
@@ -111,4 +107,3 @@ class TaskManager:
             task_info.state = TaskState.PENDING
             task_info.task = None
         logger.info("[TaskManager] 已重置所有任务状态为 PENDING")
-

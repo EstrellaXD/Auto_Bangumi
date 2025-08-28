@@ -11,7 +11,7 @@ __all__ = [
     "torrent_to_link",
     "get_torrent_hashes",
     "normalize_hash",
-    "base32_to_hex", 
+    "base32_to_hex",
     "hex_to_base32",
     "str_to_url",
     "path_to_bangumi",

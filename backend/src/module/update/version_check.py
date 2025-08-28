@@ -20,7 +20,7 @@ def version_check() -> bool:
             try:
                 last_ver = version.parse(last_version)
                 now_ver = version.parse(VERSION)
-                
+
                 # 比较minor版本号
                 if now_ver.release[:2] == last_ver.release[:2]:  # major.minor相同
                     return True

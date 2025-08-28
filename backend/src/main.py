@@ -31,10 +31,8 @@ uvicorn_logging_config = {
 
 def create_app() -> FastAPI:
     app = FastAPI(lifespan=lifespan)
-
     # mount routers
     app.include_router(v1, prefix="/api")
-
     return app
 
 

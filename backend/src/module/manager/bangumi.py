@@ -6,7 +6,7 @@ from module.database import Database, engine
 from module.downloader import Client as DownlondClient
 from module.downloader import download_queue
 from module.manager.torrent import TorrentManager
-from module.models import Bangumi, BangumiUpdate, Torrent
+from module.models import Bangumi, Torrent
 from module.network import RequestContent
 from module.parser import MikanParser, TmdbParser
 from module.utils import gen_save_path
@@ -41,16 +41,16 @@ class BangumiManager:
             data = db.bangumi.search_id(int(_id))
         if isinstance(data, Bangumi):
             data.deleted = True
-            db.bangumi.update(data)
             if file:
                 torrent_message = await self.torrent_manager.delete_torrents(data)
                 return torrent_message
+            db.bangumi.update(data)
             logger.info(f"[Manager] Disable rule for {data.official_title}")
             return True
         else:
             return False
 
-    async def rename(self, torrent: Torrent, bangumi: Bangumi | BangumiUpdate):
+    async def rename(self, torrent: Torrent, bangumi: Bangumi):
         """重命名种子文件
         Args:
             torrent: 种子信息
@@ -78,9 +78,15 @@ class BangumiManager:
             else:
                 return False
 
-    async def update_rule(self, bangumi_id: int, data: BangumiUpdate):
+    async def update_rule(self,  data: Bangumi):
+        """更新番剧规则
+        web ui 会调用这个接口, 所有传过来的 data 是一定有 id 的
+        """
         with Database() as db:
-            old_data: Bangumi | None = db.bangumi.search_id(bangumi_id)
+            if not data.id:
+                logger.error(f"[Manager] Bangumi id is required for update.")
+                return False
+            old_data: Bangumi | None = db.bangumi.search_id(data.id)
             if old_data:
                 # 当只改Filter,offset的时候只改database
                 if (
@@ -90,30 +96,26 @@ class BangumiManager:
                 ):
                     # 名字改了, 年份改了, 季改了
                     # 名字改的时候,刷新一下海报
-                    if (
-                        old_data.official_title != data.official_title
-                        and data.parser == "tmdb"
-                    ):
+                    if old_data.official_title != data.official_title:
                         await self.refind_poster(data)
                     # Move torrent
                     with Database(engine) as db:
                         torrent_list = db.find_torrent_by_bangumi(old_data)
 
-                    hash_list = [
-                        torrent.download_uid
-                        for torrent in torrent_list
-                        if torrent.download_uid
-                    ]
+                    hash_list = [torrent.download_uid for torrent in torrent_list if torrent.download_uid]
                     new_save_path = gen_save_path(settings.downloader.path, data)
                     if hash_list:
                         await DownlondClient.move_torrent(hash_list, new_save_path)
+                    # offset 要改为 0 ,不然会重复应用 offset
+                    temp_data = data.model_copy()
+                    temp_data.offset = 0
                     for torrent in torrent_list:
-                        await self.rename(torrent, data)
+                        await self.rename(torrent, temp_data)
 
-                db.bangumi.update(data, bangumi_id)
+                db.bangumi.update(data)
                 return True
             else:
-                logger.error(f"[Manager] Can't find data with {bangumi_id}")
+                logger.error(f"[Manager] Can't find data with {data.official_title} {data.id}")
                 return False
 
     async def refresh_poster(self):
@@ -127,7 +129,7 @@ class BangumiManager:
             db.bangumi.update_all(bangumis)
         return True
 
-    async def refind_poster(self, bangumi: Bangumi | BangumiUpdate) -> bool:
+    async def refind_poster(self, bangumi: Bangumi) -> bool:
         poster_link = None
         if bangumi.mikan_id and bangumi.parser == "mikan":
             mikan_parser = MikanParser()
@@ -135,9 +137,7 @@ class BangumiManager:
         else:
             poster_link = await self.tmdb_parser.poster_parser(bangumi)
         if not poster_link:
-            logger.warning(
-                f"[Manager] Can't find poster for {bangumi.official_title}, please change it manually."
-            )
+            logger.warning(f"[Manager] Can't find poster for {bangumi.official_title}, please change it manually.")
             return False
         with Database() as db:
             db.bangumi.update(bangumi)
@@ -158,9 +158,6 @@ class BangumiManager:
                 return None
             else:
                 return data
-
-
-
 
 
 if __name__ == "__main__":

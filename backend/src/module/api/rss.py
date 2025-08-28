@@ -21,16 +21,12 @@ analyser = RSSAnalyser()
 collector = SeasonCollector()
 
 
-@router.get(
-    path="", response_model=list[RSSItem], dependencies=[Depends(get_current_user)]
-)
+@router.get(path="", response_model=list[RSSItem], dependencies=[Depends(get_current_user)])
 async def get_rss():
     return RSSManager().search_all()
 
 
-@router.post(
-    path="/add", response_model=APIResponse, dependencies=[Depends(get_current_user)]
-)
+@router.post(path="/add", response_model=APIResponse, dependencies=[Depends(get_current_user)])
 # 此为聚合用
 async def add_rss(rss: RSSItem):
     manager = RSSManager()
@@ -156,9 +152,7 @@ async def disable_many_rss(rss_ids: list[int]):
     response_model=APIResponse,
     dependencies=[Depends(get_current_user)],
 )
-async def update_rss(
-    rss_id: int, data: RSSUpdate, current_user=Depends(get_current_user)
-):
+async def update_rss(rss_id: int, data: RSSUpdate, current_user=Depends(get_current_user)):
     if not current_user:
         raise UNAUTHORIZED
     if RSSManager().update(rss_id, data):
@@ -220,9 +214,7 @@ async def get_torrent(
     return RSSManager().get_rss_torrents(rss_id)
 
 
-@router.post(
-    "/analysis", response_model=Bangumi, dependencies=[Depends(get_current_user)]
-)
+@router.post("/analysis", response_model=Bangumi, dependencies=[Depends(get_current_user)])
 async def analysis(rss: RSSItem):
     torrents = await RSSRefresh(rss).pull_rss()
     if not torrents:
@@ -250,9 +242,7 @@ async def analysis(rss: RSSItem):
     )
 
 
-@router.post(
-    "/collect", response_model=APIResponse, dependencies=[Depends(get_current_user)]
-)
+@router.post("/collect", response_model=APIResponse, dependencies=[Depends(get_current_user)])
 async def download_collection(data: Bangumi):
     resp = await engine.download_bangumi(bangumi=data)
 

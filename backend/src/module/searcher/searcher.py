@@ -43,9 +43,7 @@ class SearchTorrent:
         for torrent in new_torrents:
             if self.analyser.filer_torrent(torrent, bangumi):
                 torrents.append(torrent)
-        logger.debug(
-            f"[SearchTorrent] Found {len(torrents)} torrents for {rss_item.url}"
-        )
+        logger.debug(f"[SearchTorrent] Found {len(torrents)} torrents for {rss_item.url}")
         return torrents
 
     async def analyse_keyword(
@@ -68,39 +66,25 @@ class SearchTorrent:
                         # 对于 mikan , 有一个 homepage, 有的话改用 mikan 的 homepage 搜索
                         single_torrent.append(torrent)
                     else:
-                        task = asyncio.create_task(
-                            self.analyser.torrent_to_bangumi(torrent, rss_item)
-                        )
+                        task = asyncio.create_task(self.analyser.torrent_to_bangumi(torrent, rss_item))
                         tasks.append(task)
                     exist_list.append(new_str)
 
-        logger.debug(
-            f"[SearchTorrent] Found {len(single_torrent)} single torrents for {rss_item.url}"
-        )
+        logger.debug(f"[SearchTorrent] Found {len(single_torrent)} single torrents for {rss_item.url}")
         homepage_list = []
         page_task = []
         for torrent in single_torrent[:3]:
             # 取前三个 torrent 分析主页
-            page_task.append(
-                asyncio.create_task(
-                    self.mikan_parser.bangumi_link_parser(torrent.homepage)
-                )
-            )
-        logger.debug(
-            f"[SearchTorrent] Found {len(page_task)} homepage tasks for {rss_item.url}"
-        )
+            page_task.append(asyncio.create_task(self.mikan_parser.bangumi_link_parser(torrent.homepage)))
+        logger.debug(f"[SearchTorrent] Found {len(page_task)} homepage tasks for {rss_item.url}")
         while page_task:
-            done, page_task = await asyncio.wait(
-                page_task, return_when=asyncio.FIRST_COMPLETED
-            )
+            done, page_task = await asyncio.wait(page_task, return_when=asyncio.FIRST_COMPLETED)
             for task in done:
                 homepage = await task
                 if homepage:
                     if homepage not in homepage_list:
                         homepage_list.append(homepage)
-                        tasks.append(
-                            asyncio.create_task(MikanSearch(url=homepage).search())
-                        )
+                        tasks.append(asyncio.create_task(MikanSearch(url=homepage).search()))
                     else:  # 有两个相同的主页, 就停止
                         break
         logger.debug(f"[SearchTorrent] Found {len(tasks)} tasks for {rss_item.url}")
@@ -116,9 +100,7 @@ class SearchTorrent:
                             logger.debug(f"[SearchTorrent] Found bangumi: {b}")
                             yield {
                                 "event": "message",
-                                "data": json.dumps(
-                                    b.model_dump(), separators=(",", ":")
-                                ),
+                                "data": json.dumps(b.model_dump(), separators=(",", ":")),
                             }
                     else:
                         special_link = self.special_url(bangumi, site).url
@@ -128,14 +110,10 @@ class SearchTorrent:
 
                             yield {
                                 "event": "message",
-                                "data": json.dumps(
-                                    bangumi.model_dump(), separators=(",", ":")
-                                ),
+                                "data": json.dumps(bangumi.model_dump(), separators=(",", ":")),
                             }
                 except Exception:
-                    logger.exception(
-                        "[SearchTorrent] Error occurred while processing task"
-                    )
+                    logger.exception("[SearchTorrent] Error occurred while processing task")
         # 上面花了 5s
 
     def special_url(self, data: Bangumi, site: str) -> RSSItem:

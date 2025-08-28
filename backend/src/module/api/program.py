@@ -29,9 +29,7 @@ async def lifespan(app: FastAPI):
     await program.stop()
 
 
-@router.get(
-    "/restart", response_model=APIResponse, dependencies=[Depends(get_current_user)]
-)
+@router.get("/restart", response_model=APIResponse, dependencies=[Depends(get_current_user)])
 async def restart():
     try:
         await program.restart()
@@ -55,9 +53,7 @@ async def restart():
         )
 
 
-@router.get(
-    "/start", response_model=APIResponse, dependencies=[Depends(get_current_user)]
-)
+@router.get("/start", response_model=APIResponse, dependencies=[Depends(get_current_user)])
 async def start():
     try:
         await program.start()
@@ -81,9 +77,7 @@ async def start():
         )
 
 
-@router.get(
-    "/stop", response_model=APIResponse, dependencies=[Depends(get_current_user)]
-)
+@router.get("/stop", response_model=APIResponse, dependencies=[Depends(get_current_user)])
 async def stop():
     await program.stop()
     return u_response(
@@ -112,9 +106,7 @@ async def program_status():
         }
 
 
-@router.get(
-    "/shutdown", response_model=APIResponse, dependencies=[Depends(get_current_user)]
-)
+@router.get("/shutdown", response_model=APIResponse, dependencies=[Depends(get_current_user)])
 async def shutdown_program():
     await program.stop()
     logger.info("Shutting down program...")

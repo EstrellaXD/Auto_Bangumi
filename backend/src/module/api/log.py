@@ -27,9 +27,7 @@ async def get_log():
         return Response("Log file not found", status_code=404)
 
 
-@router.get(
-    "/clear", response_model=APIResponse, dependencies=[Depends(get_current_user)]
-)
+@router.get("/clear", response_model=APIResponse, dependencies=[Depends(get_current_user)])
 async def clear_log():
     if LOG_PATH.exists():
         LOG_PATH.write_text("")

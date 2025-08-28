@@ -13,7 +13,7 @@ export interface BangumiRule {
   official_title: string;
   offset: number;
   poster_link: string | null;
-  rss_link: string[];
+  rss_link: string;
   rule_name: string;
   save_path: string;
   season: number;
@@ -24,10 +24,9 @@ export interface BangumiRule {
   year: string | null;
 }
 
-export interface BangumiAPI extends Omit<BangumiRule, 'include_filter' | 'exclude_filter' | 'rss_link'> {
+export interface BangumiAPI extends Omit<BangumiRule, 'include_filter' | 'exclude_filter'> {
   include_filter: string;
   exclude_filter: string;
-  rss_link: string;
 }
 
 export interface SearchResult {
@@ -35,7 +34,6 @@ export interface SearchResult {
   value: BangumiRule;
 }
 
-export type BangumiUpdate = Omit<BangumiAPI, 'id'>;
 
 export const ruleTemplate: BangumiRule = {
   added: false,
@@ -49,7 +47,7 @@ export const ruleTemplate: BangumiRule = {
   official_title: '',
   offset: 0,
   poster_link: '',
-  rss_link: [],
+  rss_link: '',
   rule_name: '',
   save_path: '',
   season: 1,

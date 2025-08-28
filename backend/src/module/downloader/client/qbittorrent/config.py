@@ -2,15 +2,9 @@ from pydantic import BaseModel, Field
 
 
 class Config(BaseModel):
-    host: str = Field(
-        default="http://172.17.0.1:8080", alias="host", description="Downloader host"
-    )
-    username: str = Field(
-        default="admin", alias="username", description="Downloader username"
-    )
-    password: str = Field(
-        default="adminadmin", alias="password", description="Downloader password"
-    )
+    host: str = Field(default="http://172.17.0.1:8080", alias="host", description="Downloader host")
+    username: str = Field(default="admin", alias="username", description="Downloader username")
+    password: str = Field(default="adminadmin", alias="password", description="Downloader password")
 
 
 if __name__ == "__main__":

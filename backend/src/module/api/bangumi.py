@@ -6,7 +6,7 @@ from sqlalchemy.util.concurrency import asyncio
 
 from module.database import Database, engine
 from module.manager import BangumiManager
-from module.models import APIResponse, Bangumi, BangumiUpdate, ResponseModel,Torrent
+from module.models import APIResponse, Bangumi, ResponseModel
 from module.security.api import get_current_user
 
 from .response import u_response
@@ -15,11 +15,7 @@ router = APIRouter(prefix="/bangumi", tags=["bangumi"])
 logger = logging.getLogger(__name__)
 
 
-
-
-@router.get(
-    "/get/all", response_model=list[Bangumi], dependencies=[Depends(get_current_user)]
-)
+@router.get("/get/all", response_model=list[Bangumi], dependencies=[Depends(get_current_user)])
 async def get_all_data():
     with Database() as db:
         return db.bangumi.search_all()
@@ -49,9 +45,9 @@ async def get_data(bangumi_id: str):
 )
 async def update_rule(
     bangumi_id: int,
-    data: BangumiUpdate,
+    data: Bangumi,
 ):
-    resp = await BangumiManager().update_rule(bangumi_id, data)
+    resp = await BangumiManager().update_rule(data)
     if resp:
         resp = ResponseModel(
             status_code=200,
@@ -211,9 +207,7 @@ async def refresh_single_poster(bangumi_id: int):
     return u_response(resp)
 
 
-@router.get(
-    "/reset/all", response_model=APIResponse, dependencies=[Depends(get_current_user)]
-)
+@router.get("/reset/all", response_model=APIResponse, dependencies=[Depends(get_current_user)])
 async def reset_all():
     with Database(engine) as db:
         db.bangumi.delete_all()
@@ -224,30 +218,3 @@ async def reset_all():
             "msg_zh": "重置所有规则成功。",
         },
     )
-
-
-# @router.get("/get_torrent", response_model=list[Torrent], dependencies=[Depends(get_current_user)])
-# async def manage_bangumi(_id:int):
-#     """
-#     管理对应 Bangumi 的规则
-#     """
-#     try:
-#         resp = await BangumiManager().fetch_all_bangumi_torrents(_id)
-#         return resp
-#     except Exception as e:
-#         logger.error(f"[Bangumi] Error managing bangumi: {e}")
-#         return []
-#
-# @router.get("/download_torrent", response_model=APIResponse, dependencies=[Depends(get_current_user)])
-# async def download_bangumi(_id:int, torrent:Torrent):
-#     """
-#     手动下载对应 Bangumi 的种子
-#     """
-#     try:
-#         resp = BangumiManager().download_torrent(_id,torrent)
-#         return resp
-#     except Exception as e:
-#         logger.error(f"[Bangumi] Error downloading bangumi: {e}")
-#         return []
-
-

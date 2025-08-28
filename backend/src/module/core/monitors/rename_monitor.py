@@ -74,14 +74,10 @@ class RenameMonitor:
                 try:
                     await old_task
                 except asyncio.CancelledError:
-                    logger.debug(
-                        f"[RenameMonitor] 之前的重命名任务已取消: {torrent.name}"
-                    )
+                    logger.debug(f"[RenameMonitor] 之前的重命名任务已取消: {torrent.name}")
 
         # 创建新的重命名任务
-        task = asyncio.create_task(
-            self._execute_rename(torrent, bangumi), name=f"rename_{torrent_hash}"
-        )
+        task = asyncio.create_task(self._execute_rename(torrent, bangumi), name=f"rename_{torrent_hash}")
 
         self.active_rename_tasks[torrent_hash] = task
         logger.info(f"[RenameMonitor] 开始新的重命名任务: {torrent.name}")
@@ -122,9 +118,7 @@ class RenameMonitor:
             logger.info("[RenameMonitor] 重命名监控器已关闭")
             return
 
-        logger.info(
-            f"[RenameMonitor] 关闭监控器，取消 {len(self.active_rename_tasks)} 个活跃任务"
-        )
+        logger.info(f"[RenameMonitor] 关闭监控器，取消 {len(self.active_rename_tasks)} 个活跃任务")
 
         # 取消所有活跃任务
         for task in self.active_rename_tasks.values():
@@ -134,9 +128,7 @@ class RenameMonitor:
         # 等待所有任务完成
         if self.active_rename_tasks:
             try:
-                await asyncio.gather(
-                    *self.active_rename_tasks.values(), return_exceptions=True
-                )
+                await asyncio.gather(*self.active_rename_tasks.values(), return_exceptions=True)
             except Exception as e:
                 logger.error(f"[RenameMonitor] 等待任务完成失败: {e}")
 

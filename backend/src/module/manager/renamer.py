@@ -47,26 +47,23 @@ class Renamer:
     """
 
     def __init__(self):
-        self._parser:TitleParser = TitleParser()
+        self._parser: TitleParser = TitleParser()
         self.tmdb_parser = TmdbParser()
-        self.count:int = 0
+        self.count: int = 0
         self._event_bus = event_bus
 
-
     @staticmethod
-    def gen_path(
-        file_info: EpisodeFile | SubtitleFile, bangumi_name,method: str
-    ) -> str:
+    def gen_path(file_info: EpisodeFile | SubtitleFile, bangumi_name, method: str) -> str:
         render = TemplateRenderer()
-        params = render.get_available_params(file_info,bangumi_name)
+        params = render.get_available_params(file_info, bangumi_name)
 
-
+        # TODO:日语支持
         default_method = "${torrent_name}"
         method_dict = {
             "subtitle_none": "${torrent_name}",
             "pn": "${title} S${season}E${episode}${suffix}",
             "advance": "${official_title} S${season}E${episode}${suffix}",
-            "custom": "${official_title} S${season}E${episode} - ${group}${suffix}"
+            "custom": "${official_title} S${season}E${episode} - ${group}${suffix}",
         }
         if isinstance(file_info, SubtitleFile):
             method_dict = {
@@ -147,9 +144,7 @@ class Renamer:
 
             if season == 0:
                 # 奇奇怪怪的路径, 不处理
-                logger.warning(
-                    f"[Renamer][rename_file] {save_path} is not a bangumi path"
-                )
+                logger.warning(f"[Renamer][rename_file] {save_path} is not a bangumi path")
                 return False
         else:
             bangumi_name = bangumi.official_title
@@ -201,9 +196,7 @@ class Renamer:
             )
 
             asyncio.create_task(self._event_bus.publish(event))
-            logger.debug(
-                f"[Download Controller] 已发布通知请求事件: {notify_info.title}"
-            )
+            logger.debug(f"[Download Controller] 已发布通知请求事件: {notify_info.title}")
 
         except Exception as e:
             logger.error(f"[Download Controller] 发布通知请求事件失败: {e}")
@@ -248,7 +241,7 @@ class Renamer:
             return
         if bangumi is None:
             with Database() as db:
-                #NOTE: 这里会更新一下 season 和 official_title
+                # NOTE: 这里会更新一下 season 和 official_title
                 # 可能是因为更新了番剧信息导致的
                 bangumi = db.torrent_to_bangumi(torrent)
                 if not bangumi:
@@ -277,7 +270,6 @@ class Renamer:
 if __name__ == "__main__":
     from module.conf import setup_logger
 
-
     setup_logger(level=logging.DEBUG, reset=True)
     title = "[LoliHouse] 2.5次元的诱惑  - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕].mkv"
     title = "[LoliHouse] 鬼人幻灯抄 / Kijin Gentoushou - 17 (幕末篇)[WebRip 1080p HEVC-10bit AAC][简繁内封字幕].mkv"
@@ -285,5 +277,5 @@ if __name__ == "__main__":
     r = Renamer()
     file_info = TitleParser().torrent_parser(title)
     print(file_info)
-    print(r.gen_path(file_info, bangumi_name,"advance"))
+    print(r.gen_path(file_info, bangumi_name, "advance"))
     # asyncio.run(Renamer().rename_torrent())

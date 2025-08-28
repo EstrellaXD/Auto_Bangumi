@@ -83,9 +83,7 @@ class RSSDatabase:
         return self.session.exec(select(RSSItem).where(RSSItem.enabled)).all()
 
     def search_aggregate(self) -> list[RSSItem]:
-        return self.session.exec(
-            select(RSSItem).where(and_(RSSItem.aggregate, RSSItem.enabled))
-        ).all()
+        return self.session.exec(select(RSSItem).where(and_(RSSItem.aggregate, RSSItem.enabled))).all()
 
     def search_url(self, rss_link: str) -> RSSItem | None:
         statement = select(RSSItem).where(RSSItem.url == rss_link)

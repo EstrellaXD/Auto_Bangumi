@@ -44,9 +44,7 @@ class DatabaseMigration:
         try:
             # 检查版本表是否存在
             result = session.exec(
-                text(
-                    "SELECT name FROM sqlite_master WHERE type='table' AND name='databaseversion'"
-                )
+                text("SELECT name FROM sqlite_master WHERE type='table' AND name='databaseversion'")
             ).first()
 
             if not result:
@@ -54,9 +52,7 @@ class DatabaseMigration:
                 DatabaseVersion.metadata.create_all(self.engine)
 
                 # 记录当前版本作为基础版本
-                initial_version = DatabaseVersion(
-                    version="3.1.18", description="初始数据库版本"
-                )
+                initial_version = DatabaseVersion(version="3.1.18", description="初始数据库版本")
                 session.add(initial_version)
                 session.commit()
                 logger.info(f"初始化数据库版本: {self.current_app_version}")
@@ -73,9 +69,7 @@ class DatabaseMigration:
             try:
                 # 获取最新的数据库版本
                 result = session.exec(
-                    text(
-                        "SELECT version FROM databaseversion ORDER BY applied_at DESC LIMIT 1"
-                    )
+                    text("SELECT version FROM databaseversion ORDER BY applied_at DESC LIMIT 1")
                 ).first()
 
                 return result[0] if result else "3.1.18"
@@ -126,10 +120,7 @@ class DatabaseMigration:
         migrations_needed = []
 
         for version in available_versions:
-            if (
-                self._version_compare(version, from_version) > 0
-                and self._version_compare(version, to_version) <= 0
-            ):
+            if self._version_compare(version, from_version) > 0 and self._version_compare(version, to_version) <= 0:
                 migrations_needed.append(version)
 
         # 按版本号排序
@@ -191,9 +182,7 @@ class DatabaseMigration:
                         if torrent.url:
                             hash_value = get_hash(torrent.url)
                             torrent.download_uid = hash_value
-                            logger.debug(
-                                f"为torrent {torrent.url} 设置download_uid: {hash_value}"
-                            )
+                            logger.debug(f"为torrent {torrent.url} 设置download_uid: {hash_value}")
 
                         db.merge(torrent)
                         updated_count += 1
@@ -258,17 +247,13 @@ class DatabaseMigration:
                                     bangumi.parser = rss_item.parser
                                     db.merge(bangumi)
                                     updated_count += 1
-                                    logger.debug(
-                                        f"更新bangumi {bangumi.official_title} 的parser: {rss_item.parser}"
-                                    )
+                                    logger.debug(f"更新bangumi {bangumi.official_title} 的parser: {rss_item.parser}")
                             elif not bangumi.parser or bangumi.parser == "":
                                 # 如果RSS表中没有找到对应记录，设置默认parser
                                 bangumi.parser = "mikan"
                                 db.merge(bangumi)
                                 updated_count += 1
-                                logger.debug(
-                                    f"设置bangumi {bangumi.official_title} 默认parser: mikan"
-                                )
+                                logger.debug(f"设置bangumi {bangumi.official_title} 默认parser: mikan")
 
                     except Exception as e:
                         logger.warning(f"更新bangumi parser记录失败: {e}")
@@ -305,9 +290,7 @@ class DatabaseMigration:
             logger.error("没有可用的迁移路径")
             return False
 
-        logger.info(
-            f"开始数据库迁移: {compatibility['db_version']} -> {target_version}"
-        )
+        logger.info(f"开始数据库迁移: {compatibility['db_version']} -> {target_version}")
 
         with Session(self.engine) as session:
             try:
@@ -323,9 +306,7 @@ class DatabaseMigration:
                         migration_func(session)
 
                         # 记录迁移历史
-                        version_record = DatabaseVersion(
-                            version=version, description=f"迁移到版本 {version}"
-                        )
+                        version_record = DatabaseVersion(version=version, description=f"迁移到版本 {version}")
                         session.add(version_record)
                         session.commit()
 
@@ -347,10 +328,7 @@ class DatabaseMigration:
         try:
             db_path = Path(DATA_PATH.replace("sqlite:///", ""))
             if db_path.exists():
-                backup_path = (
-                    db_path.parent
-                    / f"data_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
-                )
+                backup_path = db_path.parent / f"data_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
                 import shutil
 
                 shutil.copy2(db_path, backup_path)
@@ -383,9 +361,7 @@ class DatabaseMigration:
 
                 # 更新版本记录
                 self._ensure_version_table(session)
-                version_record = DatabaseVersion(
-                    version=self.current_app_version, description="强制重建数据库"
-                )
+                version_record = DatabaseVersion(version=self.current_app_version, description="强制重建数据库")
                 session.add(version_record)
                 session.commit()
 
@@ -416,18 +392,14 @@ def check_and_upgrade_database() -> bool:
         # 先检查应用版本是否大于数据库版本，如果不是则什么都不做
         version_comparison = migration._version_compare(app_version, db_version)
         if version_comparison <= 0:
-            logger.info(
-                f"应用版本 {app_version} 不大于数据库版本 {db_version}，无需升级"
-            )
+            logger.info(f"应用版本 {app_version} 不大于数据库版本 {db_version}，无需升级")
             return True
 
         # 应用版本更大，需要升级，获取完整的迁移路径
         migration_path = migration._get_migration_path(db_version, app_version)
 
         if not migration_path:
-            logger.info(
-                f"从 {db_version} 到 {app_version} 没有可用的迁移路径，但版本兼容"
-            )
+            logger.info(f"从 {db_version} 到 {app_version} 没有可用的迁移路径，但版本兼容")
             return True
 
         logger.info(f"检测到需要数据库升级，迁移路径: {migration_path}")
@@ -447,9 +419,7 @@ def check_and_upgrade_database() -> bool:
                         migration_func(session)
 
                         # 记录迁移历史
-                        version_record = DatabaseVersion(
-                            version=version, description=f"迁移到版本 {version}"
-                        )
+                        version_record = DatabaseVersion(version=version, description=f"迁移到版本 {version}")
                         session.add(version_record)
                         session.commit()
 

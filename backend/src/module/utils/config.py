@@ -5,9 +5,7 @@ from pydantic import BaseModel
 K = TypeVar("K")
 
 
-def deep_update(
-    mapping: dict[K, Any], *updating_mappings: dict[K, Any]
-) -> dict[K, Any]:
+def deep_update(mapping: dict[K, Any], *updating_mappings: dict[K, Any]) -> dict[K, Any]:
     """深度更新合并字典"""
     updated_mapping = mapping.copy()
     for updating_mapping in updating_mappings:

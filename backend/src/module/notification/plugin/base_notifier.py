@@ -13,7 +13,7 @@ class BaseNotifier(ABC):
     """
 
     def __init__(self):
-        self.chat_id:str = ""
+        self.chat_id: str = ""
         self.logger = logging.getLogger(self.__class__.__name__)
 
     @abstractmethod
@@ -45,13 +45,9 @@ class BaseNotifier(ABC):
                 result = await self.post_msg(notify)
                 if result:
                     return True
-                self.logger.warning(
-                    f"通知发送失败，尝试次数: {attempt + 1}/{max_retries}"
-                )
+                self.logger.warning(f"通知发送失败，尝试次数: {attempt + 1}/{max_retries}")
             except Exception as e:
-                self.logger.error(
-                    f"通知发送异常，尝试次数: {attempt + 1}/{max_retries} - {e}"
-                )
+                self.logger.error(f"通知发送异常，尝试次数: {attempt + 1}/{max_retries} - {e}")
 
             if attempt < max_retries - 1:
                 import asyncio

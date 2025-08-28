@@ -28,7 +28,7 @@ class MikanWebParser:
             return mikan_info
         soup = BeautifulSoup(content, "html.parser")
         # logger.debug("[MikanWebParser] Content fetched successfully")
-        official_title = soup.select_one('p.bangumi-title')
+        official_title = soup.select_one("p.bangumi-title")
         # logger.debug(f"[MikanWebParser] Official title found: {official_title}")
         if official_title:
             # official_title: <a class="w-other-c" href="/Home/Bangumi/3391#583" style="color:#555" target="_blank">败犬女主太多了！</a>
@@ -36,7 +36,7 @@ class MikanWebParser:
             # https://mikanani.me/RSS/Bangumi?bangumiId=3060&subgroupid=583
             # mikan_id = re.search(r"Bangumi?bangumiId=(\d+)(&subgroupid=(\d+))?,
             rss = soup.select_one('a[href^="/RSS/Bangumi?bangumiId="]')
-                                 # (#\d+)?", str(official_title))
+            # (#\d+)?", str(official_title))
             if not rss:
                 logger.debug(f"[MikanWebParser] No RSS link found for {url}")
                 return mikan_info
@@ -54,15 +54,11 @@ class MikanWebParser:
                     if subgroup_id:
                         mikan_id += "#" + subgroup_id.group(1)
 
-
-
             official_title = official_title.text
             eps_info = TitleMetaParser().parser(official_title)
             title = re.sub(patterns.SEASON_RE, "", official_title + " ")
             title = title.strip()
-            logger.debug(
-                f"[MikanWebParser] Parsed title: {title}, mikan_id: {mikan_id}"
-            )
+            logger.debug(f"[MikanWebParser] Parsed title: {title}, mikan_id: {mikan_id}")
             mikan_info.id = mikan_id
             mikan_info.official_title = title
             mikan_info.season = eps_info.season

@@ -5,6 +5,8 @@ from module.network import RequestContent
 from module.utils.cache_image import str_to_url
 
 from .base_notifier import BaseNotifier
+
+
 class Notifier(BaseNotifier):
     """Server酱通知器"""
 
@@ -17,7 +19,7 @@ class Notifier(BaseNotifier):
         """初始化通知器"""
         pass
 
-    def format_message(self, notify: Message) ->None:
+    def format_message(self, notify: Message) -> None:
         """格式化 Server酱 通知消息"""
 
         # 处理海报路径
@@ -30,7 +32,6 @@ class Notifier(BaseNotifier):
         if poster_path:
             message += f"\n{poster_path}\n".strip()
         notify.message = message
-
 
     async def post_msg(self, notify: Message) -> bool:
         """发送 Server酱 通知"""

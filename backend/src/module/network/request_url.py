@@ -17,13 +17,12 @@ class RequestURL:
         self.proxy: str | None = set_proxy()
         self.retry: int = 3
         self.timeout: int = 5
+        self.client: httpx.AsyncClient
 
-    async def _request_with_retry(self, method: str, url: str, **kwargs):
+    async def _request_with_retry(self, method: str, url: str, **kwargs) -> httpx.Response:
         for attempt in range(self.retry):
             try:
-                response = await self.client.request(
-                    method, url, follow_redirects=True, **kwargs
-                )
+                response = await self.client.request(method, url, follow_redirects=True, **kwargs)
                 response.raise_for_status()
                 return response
             except httpx.RequestError as e:
@@ -32,7 +31,8 @@ class RequestURL:
                     await asyncio.sleep(5)
                 else:
                     raise e
-                # response.raise_for_status()
+        # 这里永远不应该执行到，但为了类型安全添加
+        raise httpx.RequestError(f"Failed to complete request to {url} after {self.retry} attempts")
 
     async def get_url(self, url, retry=3):
         self.retry = retry
@@ -44,7 +44,7 @@ class RequestURL:
         data: dict[str, str] | None = None,
         files: dict[str, bytes] | None = None,
         retry: int = 3,
-    ) -> httpx.Response | None:
+    ) -> httpx.Response:
         self.retry = retry
         resp = await self._request_with_retry("POST", url, data=data, files=files)
         resp.raise_for_status()
@@ -62,9 +62,7 @@ class RequestURL:
             return False
 
     async def __aenter__(self):
-        self.client: httpx.AsyncClient = httpx.AsyncClient(
-            http2=True, proxy=self.proxy, headers=self.header, timeout=self.timeout
-        )
+        self.client = httpx.AsyncClient(http2=True, proxy=self.proxy, headers=self.header, timeout=self.timeout)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):

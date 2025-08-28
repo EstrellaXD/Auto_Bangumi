@@ -1,4 +1,3 @@
-
 import logging
 from typing import TYPE_CHECKING, Any
 from typing_extensions import override
@@ -13,7 +12,7 @@ logger = logging.getLogger(__name__)
 class DownloadService(BaseService):
     def __init__(self):
         super().__init__()
-        self._download_controller:DownloadController|None = None
+        self._download_controller: DownloadController | None = None
 
     async def _setup(self) -> None:
         # 预检查下载模块是否可用
@@ -62,7 +61,7 @@ class DownloadService(BaseService):
             from module.downloader import Client
 
             await Client.stop()
-            self._initialized:bool = False
+            self._initialized: bool = False
             logger.debug("[DownloadService] 下载客户端已重启")
         except Exception as e:
             logger.error(f"[DownloadService] 清理失败: {e}")

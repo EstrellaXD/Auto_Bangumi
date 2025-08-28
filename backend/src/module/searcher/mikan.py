@@ -7,6 +7,7 @@ from module.network import RequestContent
 from module.parser import RawParser
 from module.parser import MikanParser
 import logging
+
 logger = logging.getLogger(__name__)
 
 

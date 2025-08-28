@@ -37,9 +37,7 @@ class BaseDownloader(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    async def torrents_info(
-        self, status_filter, category, tag, limit
-    ) -> list[dict[str, Any]]:
+    async def torrents_info(self, status_filter, category, tag, limit) -> list[dict[str, Any]]:
         pass
 
     @abstractmethod

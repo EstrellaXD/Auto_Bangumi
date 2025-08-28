@@ -1,8 +1,6 @@
 import re
 
-LAST_BACKET_PATTERN = re.compile(
-    r"[\(\（][^\(\)（）]*[\)\）](?!.*[\(\（][^\(\)（）]*[\)\）])"
-)
+LAST_BACKET_PATTERN = re.compile(r"[\(\（][^\(\)（）]*[\)\）](?!.*[\(\（][^\(\)（）]*[\)\）])")
 
 split_pattern = r"/_&（）\s\-\.\[\]\(\)"
 BOUNDARY_START = rf"[{split_pattern}]"  # 开始边界（不消耗）
@@ -203,7 +201,7 @@ SOURCE_RE = re.compile(
 
 
 # SUB_BOUNDARY_START = f"(?=[{split_pattern+'简繁中日英体'}])"  # 开始边界
-SUB_BOUNDARY_START = f"[{split_pattern+'简繁中日英体内外字'}]"  # 开始边界
+SUB_BOUNDARY_START = f"[{split_pattern + '简繁中日英体内外字'}]"  # 开始边界
 SUB_BOUNDARY_END = rf"(?={SUB_BOUNDARY_START})"  # 结束
 SUB_RE_CHT = re.compile(
     rf"""
@@ -318,7 +316,6 @@ if __name__ == "__main__":
     else:
         print("CHS not found")
     if SUB_RE_CHT.search(title):
-
         print("CHS:", SUB_RE_CHT.search(title))
         print("Cht:", SUB_RE_CHT.search(title)[1])
     else:

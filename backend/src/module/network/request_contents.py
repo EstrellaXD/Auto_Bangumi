@@ -34,11 +34,7 @@ class RequestContent(RequestURL):
         if len(_cache) >= _max_cache_size:
             # 批量清理所有过期的缓存
             current_time = time.time()
-            expired_keys = [
-                key
-                for key, value in _cache.items()
-                if current_time - value["timestamp"] > 60
-            ]
+            expired_keys = [key for key, value in _cache.items() if current_time - value["timestamp"] > 60]
             for key in expired_keys:
                 del _cache[key]
 
@@ -60,20 +56,14 @@ class RequestContent(RequestURL):
         if feeds:
             torrent_titles, torrent_urls, torrent_homepage = rss_parser(feeds)
             torrents: list[Torrent] = []
-            for _title, torrent_url, homepage in zip(
-                torrent_titles, torrent_urls, torrent_homepage
-            ):
-                torrents.append(
-                    Torrent(name=_title, url=torrent_url, homepage=homepage)
-                )
+            for _title, torrent_url, homepage in zip(torrent_titles, torrent_urls, torrent_homepage):
+                torrents.append(Torrent(name=_title, url=torrent_url, homepage=homepage))
             return torrents if limit == 0 else torrents[:limit]
         else:
             logger.error(f"[Network] Torrents list is empty: {_url}")
             return []
 
-    async def get_xml(
-        self, _url: str, retry: int = 3
-    ) -> xml.etree.ElementTree.Element | None:
+    async def get_xml(self, _url: str, retry: int = 3) -> xml.etree.ElementTree.Element | None:
         # 检查缓存
         cached = self._check_cache(_url)
         if cached is not None:
@@ -86,9 +76,7 @@ class RequestContent(RequestURL):
                 self._save_cache(_url, result)
                 return result
         except xml.etree.ElementTree.ParseError:
-            logger.warning(
-                f"[Network] Cannot parser {_url}, please check the url is right"
-            )
+            logger.warning(f"[Network] Cannot parser {_url}, please check the url is right")
         except Exception as e:
             logger.error(f"[Network] Cannot get xml from {_url}: {e}")
         return None
@@ -110,9 +98,7 @@ class RequestContent(RequestURL):
             logger.error(f"[Network] Cannot get json from {_url}: {e}")
         return {}
 
-    async def post_data(
-        self, _url: str, data: dict[str, str], files: dict[str, bytes] | None = None
-    ) -> Response:
+    async def post_data(self, _url: str, data: dict[str, str], files: dict[str, bytes] | None = None) -> Response:
         try:
             req = await self.post_url(_url, data, files)
             return req
@@ -157,14 +143,16 @@ class RequestContent(RequestURL):
 
     async def get_rss_title(self, _url: str) -> str | None:
         # 有一说一,不该在这里,放在 rss_parser 里面
-        soup = await self.get_xml(_url)
-        if soup:
-            title = soup.find("./channel/title")
-            logger.debug(
-                f"XML structure: {xml.etree.ElementTree.tostring(title, encoding='unicode')}"
-            )
-            if title is not None:
-                return title.text
+        try:
+            soup = await self.get_xml(_url)
+            if soup is not None:
+                title = soup.find("./channel/title")
+                # logger.debug(f"XML structure: {xml.etree.ElementTree.tostring(title, encoding='unicode')}")
+                if title is not None:
+                    return title.text
+        except Exception as e:
+            logger.error(f"[Network] Cannot get rss title from {_url}: {e}")
+        return None
 
     async def get_torrent_hash(self, _url: str) -> dict[str, str]:
         # 下载种子文件,处理 hash 与 url 不一致的情况

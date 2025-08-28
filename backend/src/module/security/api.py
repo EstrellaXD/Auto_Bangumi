@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordBearer
 from module.database import Database
 from module.models.user import User, UserUpdate
 
-from .jwt import verify_token,verify_password
+from .jwt import verify_token, verify_password
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
@@ -28,9 +28,7 @@ async def get_current_user(token: str = Cookie(None)):
 async def get_token_data(token: str = Depends(oauth2_scheme)):
     payload = verify_token(token)
     if not payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
     return payload
 
 
@@ -43,7 +41,7 @@ def update_user_info(user_data: UserUpdate, current_user):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-def auth_user(user: User)->bool:
+def auth_user(user: User) -> bool:
     with Database() as db:
         resp = db.user.get_user(user.username)
 
@@ -57,6 +55,4 @@ def auth_user(user: User)->bool:
     return False
 
 
-UNAUTHORIZED = HTTPException(
-    status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized"
-)
+UNAUTHORIZED = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")

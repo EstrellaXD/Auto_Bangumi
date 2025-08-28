@@ -85,9 +85,7 @@ class EventBus:
             logger.debug(f"[EventBus] 没有订阅者处理事件: {event.type.value}")
             return
 
-        logger.debug(
-            f"[EventBus] 发布事件: {event.type.value} -> {len(handlers)} 个处理器"
-        )
+        logger.debug(f"[EventBus] 发布事件: {event.type.value} -> {len(handlers)} 个处理器")
 
         # 并发执行所有处理器
         tasks = []
@@ -107,10 +105,7 @@ class EventBus:
 
     def get_subscribers_count(self) -> dict[str, int]:
         """获取订阅者数量"""
-        return {
-            event_type.value: len(handlers)
-            for event_type, handlers in self._subscribers.items()
-        }
+        return {event_type.value: len(handlers) for event_type, handlers in self._subscribers.items()}
 
 
 event_bus = EventBus()

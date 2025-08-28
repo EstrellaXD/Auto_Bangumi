@@ -14,7 +14,6 @@ export const apiBangumi = {
       ...bangumi,
       include_filter: bangumi.include_filter.split(','),
       exclude_filter: bangumi.exclude_filter.split(','),
-      rss_link: bangumi.rss_link.split(','),
     }));
     return result;
   },
@@ -32,7 +31,6 @@ export const apiBangumi = {
       ...data,
       include_filter: data.include_filter.split(','),
       exclude_filter: data.exclude_filter.split(','),
-      rss_link: data.rss_link.split(','),
     };
     return result;
   },
@@ -48,12 +46,10 @@ export const apiBangumi = {
       ...bangumiRule,
       include_filter: bangumiRule.include_filter.join(','),
       exclude_filter: bangumiRule.exclude_filter.join(','),
-      rss_link: bangumiRule.rss_link.join(','),
     };
-    const post = omit(rule, ['id']);
     const { data } = await axios.patch<ApiSuccess>(
       `api/v1/bangumi/update/${bangumiId}`,
-      post
+      rule
     );
     return data;
   },

@@ -31,28 +31,20 @@ async def login(response: Response, form_data=Depends(OAuth2PasswordRequestForm)
             msg_zh="用户名或密码错误",
         )
     else:
-        token = create_access_token(
-            data={"sub": user.username}, expires_delta=timedelta(days=1)
-        )
+        token = create_access_token(data={"sub": user.username}, expires_delta=timedelta(days=1))
         response.set_cookie(key="token", value=token, httponly=True, max_age=86400)
         return {"access_token": token, "token_type": "bearer"}
     return u_response(resp)
 
 
-@router.get(
-    "/refresh_token", response_model=dict, dependencies=[Depends(get_current_user)]
-)
+@router.get("/refresh_token", response_model=dict, dependencies=[Depends(get_current_user)])
 async def refresh(response: Response):
-    token = create_access_token(
-        data={"sub": active_user[0]}, expires_delta=timedelta(days=1)
-    )
+    token = create_access_token(data={"sub": active_user[0]}, expires_delta=timedelta(days=1))
     response.set_cookie(key="token", value=token, httponly=True, max_age=86400)
     return {"access_token": token, "token_type": "bearer"}
 
 
-@router.get(
-    "/logout", response_model=APIResponse, dependencies=[Depends(get_current_user)]
-)
+@router.get("/logout", response_model=APIResponse, dependencies=[Depends(get_current_user)])
 async def logout(response: Response):
     active_user.clear()
     response.delete_cookie(key="token")
@@ -66,9 +58,7 @@ async def logout(response: Response):
 async def update_user(user_data: UserUpdate, response: Response):
     old_user = active_user[0]
     if update_user_info(user_data, old_user):
-        token = create_access_token(
-            data={"sub": old_user}, expires_delta=timedelta(days=1)
-        )
+        token = create_access_token(data={"sub": old_user}, expires_delta=timedelta(days=1))
         response.set_cookie(
             key="token",
             value=token,

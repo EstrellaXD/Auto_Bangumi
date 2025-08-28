@@ -20,9 +20,7 @@ class DownloadController:
     async def download(self):
         if client.login_success_event.is_set() is False:
             if client.login_task is None:
-                logger.warning(
-                    "[Download Controller] 正在尝试登录下载客户端，请稍候..."
-                )
+                logger.warning("[Download Controller] 正在尝试登录下载客户端，请稍候...")
                 client.login_task = asyncio.create_task(client.login())
             return
         queue_size = download_queue.qsize()
@@ -64,13 +62,9 @@ class DownloadController:
                     # 发布下载开始事件
                     await self._publish_download_started(torrent, bangumi)
             elif isinstance(result, Exception):
-                logger.error(
-                    f"[Download Controller] 下载失败: {torrent.name} - {result}"
-                )
+                logger.error(f"[Download Controller] 下载失败: {torrent.name} - {result}")
 
-    async def _publish_download_started(
-        self, torrent: Torrent, bangumi: Bangumi
-    ) -> None:
+    async def _publish_download_started(self, torrent: Torrent, bangumi: Bangumi) -> None:
         """发布下载开始事件
 
         Args:

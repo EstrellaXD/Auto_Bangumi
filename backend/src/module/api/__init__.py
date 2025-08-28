@@ -10,7 +10,7 @@ from .rss import router as rss_router
 from .search import router as search_router
 from .torrent import router as torrent_router
 
-__all__ = ["v1","lifespan"]
+__all__ = ["v1", "lifespan"]
 
 # API 1.0
 v1 = APIRouter(prefix="/v1")

@@ -10,7 +10,7 @@ from module.models import Torrent, TorrentDownloadInfo
 from module.utils import gen_save_path
 
 from .client import AuthorizationError, BaseDownloader
-from .download_queue import  download_queue
+from .download_queue import download_queue
 
 logger = logging.getLogger(__name__)
 
@@ -35,9 +35,7 @@ def api_rate_limit(func):
                 lock_task = asyncio.create_task(self._api_lock.acquire())
                 cancel_task = asyncio.create_task(self._api_cancel_event.wait())
 
-                done, pending = await asyncio.wait(
-                    [lock_task, cancel_task], return_when=asyncio.FIRST_COMPLETED
-                )
+                done, pending = await asyncio.wait([lock_task, cancel_task], return_when=asyncio.FIRST_COMPLETED)
 
                 # 取消未完成的任务
                 for task in pending:
@@ -168,9 +166,7 @@ class DownloadClient:
         # 如果正在认证中（login_task存在且未完成），等待认证完成
         if self.is_authenticating:
             try:
-                await asyncio.wait_for(
-                    self.login_success_event.wait(), self.login_timeout
-                )
+                await asyncio.wait_for(self.login_success_event.wait(), self.login_timeout)
                 return self.login_success_event.is_set()
             except asyncio.TimeoutError:
                 logger.warning("[Downloader Client] Authentication wait timeout")
@@ -182,14 +178,10 @@ class DownloadClient:
         # 现在认证已经启动，等待认证完成
         if self.is_authenticating:
             try:
-                await asyncio.wait_for(
-                    self.login_success_event.wait(), self.login_timeout
-                )
+                await asyncio.wait_for(self.login_success_event.wait(), self.login_timeout)
                 return self.login_success_event.is_set()
             except asyncio.TimeoutError:
-                logger.warning(
-                    "[Downloader Client] Authentication timeout after starting login"
-                )
+                logger.warning("[Downloader Client] Authentication timeout after starting login")
                 return False
 
         # 如果因为某种原因认证没有启动，返回False
@@ -233,15 +225,13 @@ class DownloadClient:
                 logger.debug(f"[Downloader] Add torrent: {torrent.name}")
                 return True
             else:
-                logger.warning(
-                    f"[Downloader] Torrent added failed: {torrent.name},{torrent.url=}"
-                )
+                logger.warning(f"[Downloader] Torrent added failed: {torrent.name},{torrent.url=}")
         except AuthorizationError:
             self.start_login()
-            #TODO: 重试太多了怎么办?
+            # TODO: 重试太多了怎么办?
             # https://mikanani.me/Home/Episode/4294fd53bcd1bfe2ff3b5796004ee3ccb1ba0d0e  这是个死种
             download_queue.add(torrent, bangumi)  # 重新放回队列
-            logger.debug( f"[Downloader] Add torrent failed, re-adding to queue: {torrent.name}")
+            logger.debug(f"[Downloader] Add torrent failed, re-adding to queue: {torrent.name}")
         return False
 
     @api_rate_limit
@@ -254,9 +244,7 @@ class DownloadClient:
                 logger.info(f"[Downloader] Move torrents {hashes} to {location}")
                 return True
             else:
-                logger.warning(
-                    f"[Downloader] Move torrents {hashes} to {location} failed"
-                )
+                logger.warning(f"[Downloader] Move torrents {hashes} to {location} failed")
                 return False
         except AuthorizationError:
             self.start_login()
@@ -266,9 +254,7 @@ class DownloadClient:
     #     await self.downloader.set_category(hashes, category)
 
     @api_rate_limit
-    async def rename_torrent_file(
-        self, torrent_hash: str, old_path: str, new_path: str
-    ) -> bool:
+    async def rename_torrent_file(self, torrent_hash: str, old_path: str, new_path: str) -> bool:
         if not await self.wait_for_login():
             return False  # 登录失败时返回False
 
@@ -358,9 +344,7 @@ class DownloadClient:
 
     def cancel_all_api_calls(self):
         """取消所有等待中的API调用"""
-        logger.info(
-            f"[Download Client] Cancelling {len(self._waiting_api_tasks)} waiting API calls"
-        )
+        logger.info(f"[Download Client] Cancelling {len(self._waiting_api_tasks)} waiting API calls")
         self._api_cancel_event.set()
 
     def reset_api_cancel(self):

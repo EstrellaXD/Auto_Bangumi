@@ -39,9 +39,7 @@ class Downloader(BaseDownloader):
     def __init__(self):
         super().__init__()
         self._client: httpx.AsyncClient | None = None
-        self.config: DownloaderConfig = get_plugin_config(
-            DownloaderConfig(), "downloader"
-        )
+        self.config: DownloaderConfig = get_plugin_config(DownloaderConfig(), "downloader")
         self.api_interval: float = 1.0
 
     @override
@@ -52,9 +50,7 @@ class Downloader(BaseDownloader):
         self.headers: dict[str, str] = {
             "Authorization": f"{self.config.password}",
         }
-        self._client = httpx.AsyncClient(
-            base_url=self.config.host, verify=settings.downloader.ssl
-        )
+        self._client = httpx.AsyncClient(base_url=self.config.host, verify=settings.downloader.ssl)
 
     @override
     async def auth(self) -> bool:
@@ -76,9 +72,7 @@ class Downloader(BaseDownloader):
                 logger.debug(f"[openlist] Successfully connected to {self.config.host}")
                 return True
         except (httpx.ConnectError, httpx.TimeoutException, httpx.ReadTimeout) as e:
-            logger.error(
-                f"[openlist] Check host error, please check your host {self.config.host}"
-            )
+            logger.error(f"[openlist] Check host error, please check your host {self.config.host}")
             logger.debug(f"[openlist] Check host error: {e}")
 
         return False
@@ -86,9 +80,7 @@ class Downloader(BaseDownloader):
     async def torrent_info(self, hash: str) -> TorrentDownloadInfo:
         # TODO:
         #
-        res = TorrentDownloadInfo(
-            eta=0, save_path=settings.downloader.path, completed=1
-        )
+        res = TorrentDownloadInfo(eta=0, save_path=settings.downloader.path, completed=1)
         return res
         """
                     {'id': 'CImUQ9ZzMsBc5JB3G4EyH',
@@ -183,15 +175,11 @@ class Downloader(BaseDownloader):
             logger.debug(f"[openlist] add torrent result: {result['data']['tasks']}")
 
             if result.get("code") != 200:
-                logger.error(
-                    f"[openlist] add torrent failed: {result.get('message', 'Unknown error')}"
-                )
+                logger.error(f"[openlist] add torrent failed: {result.get('message', 'Unknown error')}")
                 return False
 
             logger.debug(f"[openlist] Successfully added torrent: {torrent_url}")
-            return (
-                result["data"]["tasks"][0]["id"] if result["data"]["tasks"] else False
-            )
+            return result["data"]["tasks"][0]["id"] if result["data"]["tasks"] else False
         except Exception as e:
             self.handle_exception(e, "add")
             return False
@@ -240,14 +228,10 @@ class Downloader(BaseDownloader):
             result = resp.json()
 
             if result.get("code") == 200:
-                logger.debug(
-                    f"[openlist] Successfully renamed {old_path} to {new_path}"
-                )
+                logger.debug(f"[openlist] Successfully renamed {old_path} to {new_path}")
                 return True
             else:
-                logger.error(
-                    f"[openlist] rename failed: {result.get('message', 'Unknown error')}"
-                )
+                logger.error(f"[openlist] rename failed: {result.get('message', 'Unknown error')}")
                 return False
         except Exception as e:
             self.handle_exception(e, "rename")
@@ -307,9 +291,7 @@ class Downloader(BaseDownloader):
                 logger.debug(f"[openlist] Successfully created folder {path}")
                 return True
             else:
-                logger.error(
-                    f"[openlist] create folder failed: {result.get('message', 'Unknown error')}"
-                )
+                logger.error(f"[openlist] create folder failed: {result.get('message', 'Unknown error')}")
                 return False
         except Exception as e:
             self.handle_exception(e, "create_folder")

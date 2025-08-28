@@ -49,14 +49,10 @@ class RSSService(BaseService):
                 # 要等到 download queue 空了后再做这个,不然会重复下载
                 # 等太久了就说明现在挺重的, 就先不 eps 了
                 try:
-                    await asyncio.wait_for(
-                        download_queue.join(), timeout=30
-                    )
+                    await asyncio.wait_for(download_queue.join(), timeout=20)
                     await eps_complete()
                 except asyncio.TimeoutError:
-                    logger.warning(
-                        "[RSSService] 当前任务过多，跳过Eps Complete处理"
-                    )
+                    logger.warning("[RSSService] 当前任务过多，跳过Eps Complete处理")
 
             logger.debug("[RSSService] RSS刷新完成")
         except Exception as e:

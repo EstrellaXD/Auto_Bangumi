@@ -16,12 +16,14 @@ logger = logging.getLogger(__name__)
 async def get_config():
     return settings
 
+
 # 测试通知的是否生效
 @router.post("/test_notify", response_model=APIResponse, dependencies=[Depends(get_current_user)])
 async def test_notify(config: Notification):
     try:
         from module.notification.notification import PostNotification
         from module.models import Message
+
         print(config)
 
         title = "AB通知测试"
@@ -47,9 +49,7 @@ async def test_notify(config: Notification):
         )
 
 
-@router.patch(
-    "/update", response_model=APIResponse, dependencies=[Depends(get_current_user)]
-)
+@router.patch("/update", response_model=APIResponse, dependencies=[Depends(get_current_user)])
 async def update_config(config: Config):
     try:
         settings.save(config_dict=config.model_dump())

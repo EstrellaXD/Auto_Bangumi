@@ -1,7 +1,6 @@
 import base64
 
 
-
 def url_to_str(url):
     """
     将URL编码为字符串

@@ -66,9 +66,7 @@ class TitleMetaParser:
         sub_language = self.get_subtitle_language()
         sub_type = self.get_subtitle_type()
         _ = self.get_unuseful_info()  # 清理无用信息，但不使用结果
-        episode_info, episode_is_trusted, season_info, season_is_trusted = (
-            self.get_episode_info()
-        )
+        episode_info, episode_is_trusted, season_info, season_is_trusted = self.get_episode_info()
 
         if not season_info:
             season_info, season_is_trusted = self.get_season_info()
@@ -149,9 +147,7 @@ class TitleMetaParser:
             return self.episode_info_to_episode(episode_info[0])
 
         for un_trusted_episode in episode_info:
-            un_trusted_episode_list.append(
-                self.episode_info_to_episode(un_trusted_episode)
-            )
+            un_trusted_episode_list.append(self.episode_info_to_episode(un_trusted_episode))
         # 所有的集数一致
         if all(x == un_trusted_episode_list[0] for x in un_trusted_episode_list):
             return un_trusted_episode_list[0]
@@ -160,20 +156,14 @@ class TitleMetaParser:
             return un_trusted_episode_list[1]
         return un_trusted_episode_list[0]
 
-    def parse_season(
-        self, season_info: Any, season_is_trusted: bool
-    ) -> tuple[int, str]:
+    def parse_season(self, season_info: Any, season_is_trusted: bool) -> tuple[int, str]:
         if season_info:
             season_list = [self.season_info_to_season(s) for s in season_info]
             if season_is_trusted:
                 return season_list[0], season_info[0][0]
             # 如果是非可信季度信息，返回第一个有效的季度
             else:
-                if (
-                    len(season_info[0]) == 1
-                    and season_list[0] > 1
-                    and season_list[0] < 5
-                ):
+                if len(season_info[0]) == 1 and season_list[0] > 1 and season_list[0] < 5:
                     self.findall_sub_title(p.SEASON_PATTERN_UNTRUSTED)
                     return season_list[0], season_info[0]
 
@@ -219,9 +209,7 @@ class TitleMetaParser:
 
         # 简化 token 过滤逻辑
         max_len = min(10, len(self.token))
-        self.token = [
-            token.strip() for token in self.token[:max_len] if len(token.strip()) > 1
-        ]
+        self.token = [token.strip() for token in self.token[:max_len] if len(token.strip()) > 1]
 
         self.token = self.token[:5]
         token_priority = [len(s) for s in self.token]

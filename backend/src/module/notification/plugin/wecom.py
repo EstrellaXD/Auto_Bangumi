@@ -6,6 +6,7 @@ from module.utils.cache_image import str_to_url
 
 from .base_notifier import BaseNotifier
 
+
 class Notifier(BaseNotifier):
     """企业微信通知器 - 基于图文消息"""
 
@@ -17,7 +18,6 @@ class Notifier(BaseNotifier):
     def initialize(self) -> None:
         """初始化通知器"""
         pass
-
 
     def format_message(self, notify: Message) -> dict[str, Any]:
         """格式化企业微信通知消息"""
@@ -40,12 +40,7 @@ class Notifier(BaseNotifier):
         if poster_path:
             message += f"\n{poster_path}\n".strip()
 
-        return {
-            "title": title,
-            "message": message,
-            "poster_path": poster_path
-        }
-
+        return {"title": title, "message": message, "poster_path": poster_path}
 
     async def post_msg(self, notify: Message) -> bool:
         """发送企业微信通知"""

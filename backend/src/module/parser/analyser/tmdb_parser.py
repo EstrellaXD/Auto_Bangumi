@@ -56,9 +56,7 @@ def get_season(seasons: list[dict[str, str]]) -> tuple[int, str]:
 
 async def find_animation(contents: list[ShowInfo]) -> ShowInfo | None:
     # 类似狼与香辛料, 会存在多个结果,但动画前面的就覆盖了
-    sorted_contents = sorted(
-        contents, key=lambda e: e.get("first_air_date"), reverse=True
-    )
+    sorted_contents = sorted(contents, key=lambda e: e.get("first_air_date"), reverse=True)
     for content in sorted_contents:
         genre_ids: list[int] = content["genre_ids"]
         if await is_animation(genre_ids):

@@ -24,7 +24,7 @@ async def load_image(img_path: str) -> bytes | None:
     # is http or https
     if img_path.startswith("http"):
         img_path = url_to_str(img_path)
-    image_path = Path("data") / Path("posters")/ img_path
+    image_path = Path("data") / Path("posters") / img_path
     if img_path and isfile(image_path):
         with open(image_path, "rb") as f:
             return f.read()

@@ -6,7 +6,7 @@ from sqlalchemy.util.concurrency import asyncio
 
 from module.database import Database, engine
 from module.manager import BangumiManager, TorrentManager
-from module.models import APIResponse, Bangumi, BangumiUpdate, ResponseModel, Torrent
+from module.models import APIResponse, Bangumi, ResponseModel, Torrent
 from module.security.api import get_current_user
 
 from .response import u_response
@@ -68,13 +68,13 @@ async def delete_torrent(url: str):
         )
 
 
-@router.post("/disable",response_model=APIResponse,dependencies=[Depends(get_current_user)])
-async def disable_torrent(url:str,name,_id:int):
+@router.post("/disable", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+async def disable_torrent(url: str, name, _id: int):
     """
     禁用对应的种子
     """
     try:
-        await TorrentManager().disable_torrent(url,name, _id)
+        await TorrentManager().disable_torrent(url, name, _id)
         return ResponseModel(
             status_code=200,
             status=True,

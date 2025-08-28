@@ -8,7 +8,7 @@ import re
 from os import PathLike
 from pathlib import Path
 
-from module.models import Bangumi, BangumiUpdate
+from module.models import Bangumi
 
 # TODO: 暂时放弃 Windows 路径解析,也就是 ab 和 qb 不在一个系统上, 这时候整个复杂度太高了,后面再说了
 logger = logging.getLogger(__name__)
@@ -47,9 +47,7 @@ def check_files(files_name: list[str]):
     return media_list, subtitle_list
 
 
-def path_to_bangumi(
-    save_path: PathLike[str] | str, download_path: PathLike[str] | str
-) -> tuple[str, int]:
+def path_to_bangumi(save_path: PathLike[str] | str, download_path: PathLike[str] | str) -> tuple[str, int]:
     # Split save path and download path
     save_path = Path(save_path)
     download_path = Path(download_path)
@@ -71,7 +69,7 @@ def path_to_bangumi(
     return bangumi_name, season
 
 
-def gen_save_path(save_path: str, data: Bangumi | BangumiUpdate) -> str:
+def gen_save_path(save_path: str, data: Bangumi) -> str:
     # TODO: official_title 可能会有特殊字符,需要处理
     folder = data.official_title
     if data.year:
@@ -87,6 +85,6 @@ if __name__ == "__main__":
     # bangumi_name = bangumi_name.replace("/", ":")
     # print(bangumi_name)
     # a = Path(bangumi_name)
-    print(a.name)
+    # print(a.name)
 
     # print(path_to_bangumi(path, "/Downloads/Bangumi"))

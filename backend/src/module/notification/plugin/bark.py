@@ -6,10 +6,11 @@ from module.utils.cache_image import str_to_url
 
 from .base_notifier import BaseNotifier
 
+
 class Notifier(BaseNotifier):
     """Bark 通知器"""
 
-    def __init__(self,**kwargs):
+    def __init__(self, **kwargs):
         super().__init__()
         self.notification_url = "https://api.day.app/push"
         self.token: str = kwargs.get("token", "")
@@ -51,14 +52,12 @@ class Notifier(BaseNotifier):
         except Exception as e:
             self.logger.error(f"Bark 通知发送失败: {e}")
             return False
+
+
 if __name__ == "__main__":
     # 示例用法
-    #https://api.day.app/sG7GDikc5iEu5c5iXEuDa4/Icon?icon=https://day.app/assets/images/avatar.jpg
+    # https://api.day.app/sG7GDikc5iEu5c5iXEuDa4/Icon?icon=https://day.app/assets/images/avatar.jpg
     notifier = Notifier(token="sG7GDikc5iEu5c5iXEuDa4")
-    notification = Message(
-        title="测试通知",
-        message="这是一个测试消息",
-        poster_path="/path/to/poster.jpg"
-    )
+    notification = Message(title="测试通知", message="这是一个测试消息", poster_path="/path/to/poster.jpg")
     success = notifier.post_msg(notification)
     print(f"通知发送成功: {success}")

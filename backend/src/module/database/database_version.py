@@ -17,9 +17,7 @@ class VersionDatabase:
     def add(self, version: str, description: str = "") -> bool:
         """添加新的数据库版本记录"""
         try:
-            version_record = DatabaseVersion(
-                version=version, description=description, applied_at=datetime.utcnow()
-            )
+            version_record = DatabaseVersion(version=version, description=description, applied_at=datetime.utcnow())
             self.session.add(version_record)
             self.session.commit()
             self.session.refresh(version_record)
@@ -33,9 +31,7 @@ class VersionDatabase:
     def get_current_version(self) -> str | None:
         """获取当前最新的数据库版本"""
         try:
-            statement = select(DatabaseVersion).order_by(
-                DatabaseVersion.applied_at.desc()
-            )
+            statement = select(DatabaseVersion).order_by(DatabaseVersion.applied_at.desc())
             latest_version = self.session.exec(statement).first()
             if latest_version:
                 logger.debug(f"[Database] Current version: {latest_version.version}")
@@ -50,9 +46,7 @@ class VersionDatabase:
     def search_all(self) -> list[DatabaseVersion]:
         """获取所有版本记录"""
         try:
-            statement = select(DatabaseVersion).order_by(
-                DatabaseVersion.applied_at.desc()
-            )
+            statement = select(DatabaseVersion).order_by(DatabaseVersion.applied_at.desc())
             versions = self.session.exec(statement).all()
             logger.debug(f"[Database] Found {len(versions)} version records.")
             return versions
@@ -63,9 +57,7 @@ class VersionDatabase:
     def search_by_version(self, version: str) -> DatabaseVersion | None:
         """根据版本号查找版本记录"""
         try:
-            statement = select(DatabaseVersion).where(
-                DatabaseVersion.version == version
-            )
+            statement = select(DatabaseVersion).where(DatabaseVersion.version == version)
             version_record = self.session.exec(statement).first()
             if version_record:
                 logger.debug(f"[Database] Found version record: {version}")
@@ -80,9 +72,7 @@ class VersionDatabase:
     def delete_version(self, version: str) -> bool:
         """删除指定版本记录"""
         try:
-            statement = select(DatabaseVersion).where(
-                DatabaseVersion.version == version
-            )
+            statement = select(DatabaseVersion).where(DatabaseVersion.version == version)
             version_record = self.session.exec(statement).first()
             if version_record:
                 self.session.delete(version_record)
@@ -90,9 +80,7 @@ class VersionDatabase:
                 logger.debug(f"[Database] Deleted version record: {version}")
                 return True
             else:
-                logger.warning(
-                    f"[Database] Version record not found for deletion: {version}"
-                )
+                logger.warning(f"[Database] Version record not found for deletion: {version}")
                 return False
         except Exception as e:
             logger.error(f"[Database] Failed to delete version {version}: {e}")
