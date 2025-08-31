@@ -24,9 +24,8 @@ export const apiSearch = {
     const _init = () => {
       status.value = 'CONNECTING';
 
-      const url = `api/v1/search/bangumi?site=${
-        provider.value
-      }&keywords=${encodeURIComponent(keyword.value)}`;
+      const url = `api/v1/search/bangumi?site=${provider.value
+        }&keywords=${encodeURIComponent(keyword.value)}`;
 
       const es = new EventSource(url, { withCredentials: true });
       eventSource.value = es;
@@ -36,10 +35,9 @@ export const apiSearch = {
       es.onmessage = (e) => {
         const _data = JSON.parse(e.data) as BangumiAPI;
         const newData: BangumiRule = {
-          ...omit(_data, ['include_filter', 'exclude_filter', 'rss_link']),
+          ...omit(_data, ['include_filter', 'exclude_filter']),
           include_filter: _data.include_filter.split(','),
           exclude_filter: _data.exclude_filter.split(','),
-          rss_link: _data.rss_link.split(','),
         };
         data.value = [...data.value, newData];
       };

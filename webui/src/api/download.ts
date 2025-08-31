@@ -17,7 +17,6 @@ export const apiDownload = {
       ...data,
       include_filter: data.include_filter.split(','),
       exclude_filter: data.exclude_filter.split(','),
-      rss_link: data.rss_link.split(','),
     };
     return result;
   },
@@ -31,7 +30,6 @@ export const apiDownload = {
       ...bangumiData,
       include_filter: bangumiData.include_filter.join(','),
       exclude_filter: bangumiData.exclude_filter.join(','),
-      rss_link: bangumiData.rss_link.join(','),
     };
     const { data } = await axios.post<ApiSuccess>(
       'api/v1/rss/collect',
@@ -49,7 +47,6 @@ export const apiDownload = {
       ...bangumiData,
       include_filter: bangumiData.include_filter.join(','),
       exclude_filter: bangumiData.exclude_filter.join(','),
-      rss_link: bangumiData.rss_link.join(','),
     };
     const postData = {
       data: bangumi,
