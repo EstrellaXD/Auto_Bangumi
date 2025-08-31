@@ -58,7 +58,7 @@ class SearchTorrent:
         for torrent in torrents:
             if len(exist_list) >= limit:
                 break
-            if new_bangumi := RawParser().parser(torrent.name):
+            if new_bangumi := RawParser().parser(torrent.name,True):
                 # 检查是否已经存在, 对于一个 bangumi 来说, 组,动漫,季一致就可以认为是一个
                 new_str = f"{new_bangumi.title_raw}{new_bangumi.group_name}{new_bangumi.season_raw}"
                 if new_str not in exist_list:

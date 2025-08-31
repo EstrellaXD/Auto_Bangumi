@@ -1,6 +1,3 @@
-import sys
-
-import pytest
 
 from module.parser.analyser import torrent_parser
 
@@ -62,7 +59,7 @@ def test_torrent_parser():
 
     file_name = "水星的魔女(2022) S00E19.mp4"
     bf = torrent_parser(file_name)
-    assert bf.title == "水星的魔女(2022)"
+    assert bf.title == "水星的魔女"
     assert bf.season == 0
     assert bf.episode == 19
 
@@ -71,8 +68,3 @@ def test_torrent_parser():
     assert bf.title == "放学后失眠的你-Kimi"
     assert bf.season == 1
     assert bf.episode == 6
-
-
-
-
-

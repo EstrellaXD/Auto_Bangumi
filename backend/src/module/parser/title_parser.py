@@ -119,10 +119,12 @@ class MikanParser(BaseParser):
 
 class RawParser(BaseParser):
     @staticmethod
-    def parser(raw: str) -> Bangumi:
+    def parser(raw: str,exclude_collection:bool = False) -> Bangumi|None:
         language = settings.rss_parser.language
         # try:
         episode: Episode = TitleMetaParser().parser(raw)
+        if exclude_collection and episode.episode == -1:
+            return None
 
         titles = {
             "zh": episode.title_zh,

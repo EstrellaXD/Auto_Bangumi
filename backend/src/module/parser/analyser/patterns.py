@@ -1,24 +1,48 @@
 import re
 
-LAST_BACKET_PATTERN = re.compile(r"[\(\（][^\(\)（）]*[\)\）](?!.*[\(\（][^\(\)（）]*[\)\）])")
+# LAST_BACKET_PATTERN = re.compile(r"[\(\（][^\(\)（）]*[\)\）](?!.*[\(\（][^\(\)（）]*[\)\）])")
 
-split_pattern = r"/_&（）\s\-\.\[\]\(\)"
+split_pattern = r"★／/_&（）\s\-\.\[\]\(\)"
 BOUNDARY_START = rf"[{split_pattern}]"  # 开始边界（不消耗）
 BOUNDARY_END = rf"(?={BOUNDARY_START})"  # 结束边界（不消耗）
 
 
-EPISODE_PATTERN = re.compile(
+EPISODE_PATTERN_TRUEST_WITH_BOUNDARY = re.compile(
     rf""" {BOUNDARY_START}
-    (第?(\d+?)[话話集]
-    |S\d+?(?:EP?(\d+?))
-    |EP?(\d+?)
-    |-\s(\d+?)
-    |(\d+?)v\d
+    (
+    E(\d+?)
     |(\d+?).?END
-    |(\d+?)Fin # -12Fin
     |(\d+?)pre)
     {BOUNDARY_END}
 """,
+    re.VERBOSE | re.IGNORECASE,
+)
+
+# 可信的集数 Pattern, 主要是没有边界的
+EPISODE_PATTERN_TRUEST = re.compile(
+    rf"""
+    (第?(\d+)[话話集]
+    |EP(\d+)
+    |S\d+(?:EP?(\d+))
+    |-\s(\d+)
+    |(\d+)v\d
+    |(\d+?)Fin # -12Fin
+    )
+""",
+    re.VERBOSE | re.IGNORECASE,
+)
+# 全**集, 这种就直接反回 -1, 表示全集, 这种也不用处理, 实际的时候是改单集
+COLLECTION_PATTERN = re.compile(
+        r"""
+        [^sS]([\d]{2,})\s?[-~]\s?([\d]{2,})
+        |\[(\d+)-(\d+)]
+        |[第]([\d]{2,})\s?[-~]\s?([\d]{2,})\s?[話话集]
+        |[全]([\d-]*?)[話话集]
+        |第?(\d*)\s?[-~]\s(\d*)[話话集]
+        |vol\.\d
+        |vol\.\d[-~_]\d
+        |S\d[-~+]S\d #  S1-+S2
+        """,
     re.VERBOSE | re.IGNORECASE,
 )
 
@@ -30,15 +54,22 @@ EPISODE_RE_UNTRUSTED = re.compile(
     re.VERBOSE,
 )
 
-SEASON_RE = re.compile(
-    rf"""
-    {BOUNDARY_START}
-    (第(.{{1,3}})季       # 匹配"第...季"格式
-    |第(.{{1,3}})期        # 匹配"第...期"格式
-    |第.{{1,3}}部分      # 匹配"第...部分"格式
+SEASON_PATTERN_TRUEST = re.compile(
+    r"""
+    (第(.{1,3})季       # 匹配"第...季"格式
+    |第(.{1,3})期        # 匹配"第...期"格式
+    |第.{1,3}部分      # 匹配"第...部分"格式
     |[Ss]eason\s?(\d{{1,2}})  # 匹配"Season X"格式
     |SEASON\s?(\d{{1,2}})  # 匹配"SEASON X"格式
-    |[Ss](\d{{1,2}})         # 匹配"SX"格式
+    )
+    """,
+    re.VERBOSE
+)
+
+SEASON_PATTERN = re.compile(
+    rf"""
+    {BOUNDARY_START}
+    ([Ss](\d{{1,2}})         # 匹配"SX"格式
     |(\d+)[r|n]d(?:\sSeason)?  # 匹配"Xnd Season"格式
     |part \d   #part 6
     |(IV|III|II|I)            # 匹配罗马数字
@@ -47,11 +78,13 @@ SEASON_RE = re.compile(
     re.VERBOSE,
 )
 
+SEASON_PATTERN_UNTRUSTED = re.compile(r"(\s\d\s)")
+
 # TODO: 后期放出去单独更新
 GROUP_RE = re.compile(
     rf"""
     {BOUNDARY_START}
-    (ANI
+    (ANi
     |LoliHouse
     |SweetSub
     |Pre-S
@@ -85,6 +118,8 @@ GROUP_RE = re.compile(
     |霜庭云花Sub
     |氢气烤肉架
     |豌豆字幕组
+    |豌豆
+    |DBD
     |风之圣殿字幕组
     |黒ネズミたち
     |桜都字幕组
@@ -121,13 +156,10 @@ SEASON_PATTERN_UNTRUSTED = re.compile(r"\d+(?!\.)")
 
 VIDEO_TYPE_PATTERN = re.compile(
     rf"""
-    {BOUNDARY_START}# Frame rate
-    (23.976FPS
-    |24FPS
-    |29.97FPS
-    |[30|60|120]FPS
-    # Video codec
-    |8-?BITS?
+    # {BOUNDARY_START}
+    # Frame rate
+    ( # Video codec
+    8-?BITS?
     |10-?BITS?
     |HI10P?
     |[HX].?26[4|5]
@@ -148,17 +180,43 @@ VIDEO_TYPE_PATTERN = re.compile(
     |V[123]
     |Remux
     |OVA)
-    {BOUNDARY_END}
+    # {BOUNDARY_END}
+    """,
+    re.VERBOSE | re.IGNORECASE,
+)
+
+FRAME_RATE = re.compile(
+    rf"""
+    (23.976FPS
+    |24FPS
+    |29.97FPS
+    |[30|60|120]FPS
+    )
+    """,
+    re.VERBOSE | re.IGNORECASE,
+)
+
+DECODE_INFO = re.compile(
+    rf"""
+    (HEVC(?:-10bit)?
+    |AVC
+    |H[\.|x]?264
+    |H[\.|x]?265
+    |X264
+    |X265
+    |AV1
+    )
     """,
     re.VERBOSE | re.IGNORECASE,
 )
 
 AUDIO_INFO = re.compile(
-    f"""
+    rf"""
     {BOUNDARY_START}# Frame rate
     (AAC(?:x2)?
+    |AAC(?:2\.0)?
     |FLAC(?:x2)?
-    |DDP
+    |DDP(?:2\.0)?
     |OPUS
     )
     {BOUNDARY_END}
@@ -166,17 +224,28 @@ AUDIO_INFO = re.compile(
     re.VERBOSE | re.IGNORECASE,
 )
 
-RESOLUTION_RE = re.compile(
+YEAR_PATTERN = re.compile(
+    r"""
+    (
+    \(19\d{2}\)
+    |\(20\d{2}\) # (1900) (2000)
+    |\[20\d{2}\] # [2020] 对 GM-Team 特化
+    )
+    """,
+    re.VERBOSE,
+)
+
+
+# 可信的分辨率 Pattern, 与之对应不可信的主要是没有 p 的
+RESOLUTION_PATTERN_TRUST = re.compile(
     rf"""
-    {BOUNDARY_START}
     (\d{{3,4}}[×xX]\d{{3,4}}
-    |1080p?
-    |720p?
-    |480p?
-    |2160p?
+    |1080p
+    |720p
+    |480p
+    |2160p
     |4K
     )
-    {BOUNDARY_END}
     """,
     re.IGNORECASE | re.VERBOSE,
 )
@@ -201,13 +270,15 @@ SOURCE_RE = re.compile(
 
 
 # SUB_BOUNDARY_START = f"(?=[{split_pattern+'简繁中日英体'}])"  # 开始边界
-SUB_BOUNDARY_START = f"[{split_pattern + '简繁中日英体内外字'}]"  # 开始边界
+SUB_BOUNDARY_START = f"[{split_pattern + '简繁中日英体字體'}]"  # 开始边界
 SUB_BOUNDARY_END = rf"(?={SUB_BOUNDARY_START})"  # 结束
 SUB_RE_CHT = re.compile(
     rf"""
     {SUB_BOUNDARY_START}
     (CHT
-    |繁)
+    |繁
+    |BIG5
+    )
     {SUB_BOUNDARY_END}
     """,
     re.VERBOSE | re.IGNORECASE,
@@ -218,7 +289,8 @@ SUB_RE_CHS = re.compile(
     (CHS
     |SC
     |简
-    |GB)
+    |GB
+    |GBJP)
     {SUB_BOUNDARY_END}
     """,
     re.VERBOSE | re.IGNORECASE,
@@ -227,6 +299,7 @@ SUB_RE_JP = re.compile(
     rf"""
     {SUB_BOUNDARY_START}
     (JP
+    |GBJP
     |日)
     {SUB_BOUNDARY_END}
     """,
@@ -244,15 +317,15 @@ SUB_RE_ENGLISH = re.compile(
 )
 
 SUB_RE_TYPE = re.compile(
-    rf"""
-    {SUB_BOUNDARY_START}
+    r"""
     (外挂
     |内封
     |内嵌
     |硬字幕
     |软字幕
     |ASS
-    |SRT)
+    |SRT
+    |双语)
     """,
     re.VERBOSE | re.IGNORECASE,
 )

@@ -10,6 +10,7 @@ def test_raw_parser():
     assert info.resolution == "1920X1080"
     assert info.episode == 22
     assert info.season == 2
+    assert info.sub == "简"
 
     content = "[百冬练习组&LoliHouse] BanG Dream! 少女乐团派对！☆PICO FEVER！ / Garupa Pico: Fever! - 26 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][END] [101.69 MB]"
     info = TitleMetaParser().parser(content)
@@ -19,6 +20,7 @@ def test_raw_parser():
     assert info.resolution == "1080p"
     assert info.episode == 26
     assert info.season == 1
+    assert info.sub == "简繁"
 
     content = "【喵萌奶茶屋】★04月新番★[夏日重现/Summer Time Rendering][11][1080p][繁日双语][招募翻译]"
     info = TitleMetaParser().parser(content)
@@ -28,6 +30,7 @@ def test_raw_parser():
     assert info.resolution == "1080p"
     assert info.episode == 11
     assert info.season == 1
+    assert info.sub == "繁日"
 
     content = "[Lilith-Raws] 关于我在无意间被隔壁的天使变成废柴这件事 / Otonari no Tenshi-sama - 09 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
     info = TitleMetaParser().parser(content)
@@ -38,6 +41,7 @@ def test_raw_parser():
     assert info.resolution == "1080p"
     assert info.episode == 9
     assert info.season == 1
+    assert info.sub == "繁"
 
     content = (
         "[梦蓝字幕组]New Doraemon 哆啦A梦新番[747][2023.02.25][AVC][1080P][GB_JP][MP4]"
@@ -50,6 +54,7 @@ def test_raw_parser():
     assert info.resolution == "1080P"
     assert info.episode == 747
     assert info.season == 1
+    assert info.sub == "简日"
 
     content = (
         "[织梦字幕组][尼尔：机械纪元 NieR Automata Ver1.1a][02集][1080P][AVC][简日双语]"
@@ -62,6 +67,7 @@ def test_raw_parser():
     assert info.resolution == "1080P"
     assert info.episode == 2
     assert info.season == 1
+    assert info.sub == "简日"
 
     content = "[MagicStar] 假面骑士Geats / 仮面ライダーギーツ EP33 [WEBDL] [1080p] [TTFC]【生】"
     info = TitleMetaParser().parser(content)
@@ -81,6 +87,8 @@ def test_raw_parser():
     assert info.resolution == "720P"
     assert info.episode == 5
     assert info.season == 1
+    assert info.group == "极影字幕社"
+    assert info.sub == "简"
 
     content = "【喵萌奶茶屋】★07月新番★[银砂糖师与黑妖精 ~ Sugar Apple Fairy Tale ~][13][1080p][简日双语][招募翻译]"
     info = TitleMetaParser().parser(content)
@@ -91,6 +99,7 @@ def test_raw_parser():
     assert info.resolution == "1080p"
     assert info.episode == 13
     assert info.season == 1
+    assert info.sub == "简日"
 
     content = "[ANi]  16bit 的感动 ANOTHER LAYER - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
     info = TitleMetaParser().parser(content)
@@ -100,6 +109,7 @@ def test_raw_parser():
     assert info.resolution == "1080P"
     assert info.episode == 1
     assert info.season == 1
+    assert info.sub == "繁"
 
     content = "[Billion Meta Lab] 终末列车寻往何方 Shuumatsu Torein Dokoe Iku [12][1080][HEVC 10bit][简繁日内封][END]"
     info = TitleMetaParser().parser(content)
@@ -109,6 +119,7 @@ def test_raw_parser():
     assert info.title_en == "Shuumatsu Torein Dokoe Iku"
     assert info.episode == 12
     assert info.season == 1
+    # assert info.resolution == "1080"
 
     content = "【1月】超超超超超喜欢你的100个女朋友 第二季 07.mp4"
     info = TitleMetaParser().parser(content)
@@ -126,6 +137,7 @@ def test_raw_parser():
     assert info.title_en == "2.5-jigen no Ririsa"
     assert info.resolution == "1080p"
     assert info.episode == 1
+    assert info.sub == "简繁"
 
     content = "[桜都字幕组&7³ACG] 摇曳露营 第3季/ゆるキャン△ SEASON3/Yuru Camp S03 | 01-12+New Anime 01-03 [简繁字幕] BDrip 1080p AV1 OPUS 2.0 [复制磁连]"
     info = TitleMetaParser().parser(content)
@@ -134,6 +146,30 @@ def test_raw_parser():
     assert info.title_jp == "ゆるキャン△"
     assert info.sub == "简繁"
 
+    content = "[ANi] Grand Blue Dreaming /  GRAND BLUE 碧蓝之海 2 - 04 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+    info = TitleMetaParser().parser(content)
+    assert info is not None
+    assert info.group == "ANi"
+    assert info.title_en == "Grand Blue Dreaming"
+    assert info.title_zh == "GRAND BLUE 碧蓝之海"
+    assert info.season == 2
+    assert info.episode == 4
+    assert info.sub == "繁"
+    
+    content = "[银色子弹字幕组][名侦探柯南][第1071集 工藤优作的推理秀（前篇）][简日双语MP4][1080P]"
+    info = TitleMetaParser().parser(content)
+    assert info is not None
+    assert info.group == "银色子弹字幕组"
+    assert info.title_zh == "名侦探柯南"
+    assert info.episode == 1071
+    assert info.video_info == ["MP4"]
+    assert info.sub == "简日"
+
+    content = "[全遮版&修正版&无修版] NUKITASHI住在拔作岛上的我该如何是好？ - EP06 [简／繁] (1080p&720p H.264 AAC SRTx2) {住在拔作岛上的我该如何是好？ | ぬきたし THE ANIMATION} [复制磁连]"
+    info = TitleMetaParser().parser(content)
+    assert info is not None
+    assert info.group == "全遮版&修正版&无修版"
+    assert info.sub == "简繁"
 
 
 def test_is_point_5():

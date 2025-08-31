@@ -57,6 +57,8 @@ class RequestContent(RequestURL):
             torrent_titles, torrent_urls, torrent_homepage = rss_parser(feeds)
             torrents: list[Torrent] = []
             for _title, torrent_url, homepage in zip(torrent_titles, torrent_urls, torrent_homepage):
+                # 去掉内部的 "\n"
+                _title = _title.replace("\n", "")
                 torrents.append(Torrent(name=_title, url=torrent_url, homepage=homepage))
             return torrents if limit == 0 else torrents[:limit]
         else:
