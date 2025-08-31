@@ -92,7 +92,7 @@ class TitleMetaParser:
         if episode is None:
             episode = self.get_untrusted_episode()
 
-        if not self.episode_trusted:
+        if not self.season_trusted:
             season, season_raw = self.get_untrusted_season()
 
 
@@ -104,6 +104,7 @@ class TitleMetaParser:
             # 暂时没有哪个组把集数放前面
             if len(parts) > 1:
                 temp_title = "[]".join(parts[:-1])
+        print(temp_title)
         self.token = re.split(r"[\[\]]", temp_title)
         (
             name_en,
@@ -116,7 +117,7 @@ class TitleMetaParser:
         source = source_info[0] if source_info else ""
         sub = sub_language
         resolution = resolution_info[0] if resolution_info else ""
-        logger.debug(f"[meta parser] {self.raw_title} >> S{season}E{episode} {name_zh}/{name_en}/{name_jp} {sub} {sub_type} {group} {year} {resolution} {source} {audio_info} {video_info}")
+        # logger.debug(f"[meta parser] {self.raw_title} >> S{season}E{episode} {name_zh}/{name_en}/{name_jp} {sub} {sub_type} {group} {year} {resolution} {source} {audio_info} {video_info}")
 
         return Episode(
             title_en=name_en,
@@ -235,18 +236,21 @@ class TitleMetaParser:
     def get_trusted_season(self) -> tuple[int, str]:
         """获取可信的季度信息"""
         season_info = self.findall_sub_title(p.SEASON_PATTERN_TRUEST, sym="/[]")
+        print(f"trusted season info: {season_info}")
         if not season_info:
             season_info = self.findall_sub_title(p.SEASON_PATTERN, sym="/[]")
+
 
         if season_info:
             self.season_trusted = True
             return self.parse_season(season_info, True)
             # return season_info[0][0], season
-        return 0, ""
+        return 1, ""
 
     def get_untrusted_season(self) -> tuple[int, str]:
         """获取不可信的季度信息"""
         season_info = re.findall(p.SEASON_PATTERN_UNTRUSTED, self.title)
+        print(f"untrusted season info: {season_info}")
         if season_info:
             return self.parse_season(season_info, False)
         return 1, ""
@@ -290,6 +294,7 @@ class TitleMetaParser:
         self.token = [token.strip() for token in self.token[:max_len] if len(token.strip()) > 1]
 
         self.token = self.token[:5]
+        print(f"tokens: {self.token}")
         token_priority = [len(s) for s in self.token]
         if len(self.token) == 1:
             anime_title = self.token[0]
@@ -307,10 +312,11 @@ class TitleMetaParser:
                     token_priority[idx] -= 90
                 if re.search(r"[a-zA-Z]{3,}", token):
                     token_priority[idx] += 2
-                if re.search(r"[\u0800-\u4e00]{2,}", token):
-                    token_priority[idx] += 2
-                if re.search(r"[\u4e00-\u9fa5]{2,}", token):
-                    token_priority[idx] += 2
+                if l:=re.search(r"[\u0800-\u4e00]{2,}", token):
+                    token_priority[idx] += len(l.group(0))*2
+                if l:=re.search(r"[\u4e00-\u9fa5]{2,}", token):
+                    token_priority[idx] += len(l.group(0))*2
+            print(token_priority)
             idx = token_priority.index(max(token_priority))
             anime_title = self.token[idx]
             anime_title = anime_title.strip()

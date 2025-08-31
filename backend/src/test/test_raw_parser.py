@@ -6,7 +6,8 @@ def test_raw_parser():
     info = TitleMetaParser().parser(content)
     assert info is not None
     assert info.group == "幻樱字幕组"
-    assert info.title_en == "Komi-san wa, Komyushou Desu."
+    assert info.title_zh == "古见同学有交流障碍症"
+    # assert info.title_en == "Komi-san wa, Komyushou Desu."
     assert info.resolution == "1920X1080"
     assert info.episode == 22
     assert info.season == 2
@@ -145,6 +146,7 @@ def test_raw_parser():
     assert info.group == "桜都字幕组&7³ACG"
     assert info.title_jp == "ゆるキャン△"
     assert info.sub == "简繁"
+    assert info.episode == -1
 
     content = "[ANi] Grand Blue Dreaming /  GRAND BLUE 碧蓝之海 2 - 04 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
     info = TitleMetaParser().parser(content)

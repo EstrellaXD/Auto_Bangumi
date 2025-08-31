@@ -59,8 +59,8 @@ SEASON_PATTERN_TRUEST = re.compile(
     (第(.{1,3})季       # 匹配"第...季"格式
     |第(.{1,3})期        # 匹配"第...期"格式
     |第.{1,3}部分      # 匹配"第...部分"格式
-    |[Ss]eason\s?(\d{{1,2}})  # 匹配"Season X"格式
-    |SEASON\s?(\d{{1,2}})  # 匹配"SEASON X"格式
+    |[Ss]eason\s?(\d{1,2})  # 匹配"Season X"格式
+    |SEASON\s?(\d{1,2})  # 匹配"SEASON X"格式
     )
     """,
     re.VERBOSE
