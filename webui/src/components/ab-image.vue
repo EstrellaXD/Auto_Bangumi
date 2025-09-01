@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ErrorPicture } from '@icon-park/vue-next';
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     src?: string | null;
     aspectRatio?: number;
@@ -11,6 +11,15 @@ withDefaults(
     objectFit: 'cover',
   }
 );
+
+const transformedSrc = computed(() => {
+  if (!props.src) return null;
+  // Transform posters/ URLs to the new API endpoint
+  if (props.src.startsWith('posters/')) {
+    return props.src.replace('posters/', '/api/v1/bangumi/posters/');
+  }
+  return props.src;
+});
 </script>
 
 <template>
@@ -22,8 +31,8 @@ withDefaults(
       ></div>
 
       <img
-        v-if="src"
-        :src="src"
+        v-if="transformedSrc"
+        :src="transformedSrc"
         alt="poster"
         abs
         top-0
@@ -34,7 +43,7 @@ withDefaults(
     </template>
 
     <template v-else>
-      <img v-if="src" :src="src" alt="poster" :style="{ objectFit }" wh-full />
+      <img v-if="transformedSrc" :src="transformedSrc" alt="poster" :style="{ objectFit }" wh-full />
 
       <div v-else wh-full f-cer border="1 white">
         <ErrorPicture theme="outline" size="24" fill="#333" />
