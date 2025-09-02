@@ -64,7 +64,7 @@ class RSSRefresh(BaseRefresh):
                     )
                     if not bangumi:
                         logger.debug(f"[RSS download_rss] No bangumi found for {raw_bangumi.title_raw}")
-                    elif not bangumi.deleted and self.analyser.filer_torrent(torrent, bangumi):
+                    elif not bangumi.deleted and self.analyser.filter_torrent(torrent, bangumi):
                         ## 如果不符合过滤条件, 则跳过
                         self.download_queue.add(torrent, bangumi)
                         logger.debug(
@@ -142,7 +142,7 @@ class BangumiRefresher(BaseRefresh):
         torrents = await self.pull_rss()
         new_torrents = []
         for torrent in torrents:
-            if self.analyser.filer_torrent(torrent, self.bangumi):
+            if self.analyser.filter_torrent(torrent, self.bangumi):
                 logger.debug(
                     f"[BangumiRefresher] Add torrent {torrent.name} to download queue for bangumi {self.bangumi.official_title}"
                 )

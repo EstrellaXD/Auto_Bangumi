@@ -296,9 +296,6 @@ class TitleMetaParser:
             if self.token[i].strip():
                 vaild_tokens.append(self.token[i].strip())
         self.token = vaild_tokens
-        print( self.token)
-        print("="*20)
-
         self.token = self.token[:5]
         token_priority = [len(s) for s in self.token]
         if len(self.token) == 1:

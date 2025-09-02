@@ -157,6 +157,16 @@ def test_raw_parser():
     assert info.season == 2
     assert info.episode == 4
     assert info.sub == "繁"
+
+    content = "[萌樱字幕组][简日双语][碧蓝之海][第二季][06][Webrip][1080p][简繁日内封]"
+    info = TitleMetaParser().parser(content)
+    assert info is not None
+    assert info.group == "萌樱字幕组"
+    assert info.title_zh == "碧蓝之海"
+    assert info.season == 2
+    assert info.episode == 6
+    assert info.resolution == "1080p"
+    assert info.sub == "简繁日"
     
     content = "[银色子弹字幕组][名侦探柯南][第1071集 工藤优作的推理秀（前篇）][简日双语MP4][1080P]"
     info = TitleMetaParser().parser(content)

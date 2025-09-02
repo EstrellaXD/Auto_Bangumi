@@ -56,10 +56,11 @@ class Renamer:
     def gen_path(file_info: EpisodeFile | SubtitleFile, bangumi_name, method: str) -> str:
         render = TemplateRenderer()
         params = render.get_available_params(file_info, bangumi_name)
+        print(params)
 
         # TODO:日语支持
         # TODO: year 的支持还没写
-        default_method = "${torrent_name}"
+        default_method = "${torrent_name}${suffix}"
         method_dict = {
             "subtitle_none": "${torrent_name}${suffix}",
             "pn": "${title} S${season}E${episode}${suffix}",
