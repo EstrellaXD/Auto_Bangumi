@@ -63,7 +63,7 @@ class RSSAnalyser:
             logger.debug(f"[RSS analyser] Parsed bangumi: {bangumi.official_title} from torrent {torrent.name}")
             return bangumi
 
-    def filer_torrent(self, torrent: Torrent, bangumi: Bangumi) -> bool:
+    def filter_torrent(self, torrent: Torrent, bangumi: Bangumi) -> bool:
         """
         filter torrent by bangumi
         """

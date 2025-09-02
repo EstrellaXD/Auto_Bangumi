@@ -30,7 +30,7 @@ class TorrentUpdate(BaseModel):
 
 
 class EpisodeFile(Episode):
-    media_path: str = Field(...)
+    torrent_name: str = Field(...)
     title: str = Field(...)
     suffix: str = Field(..., regex=r"(?i)\.(mkv|mp4)$")
 

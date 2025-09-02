@@ -16,8 +16,6 @@ class UserDatabase:
     def get_user(self, username) -> User | None:
         statement = select(User).where(User.username == username)
         result = self.session.exec(statement).first()
-        # if not result:
-        #     raise HTTPException(status_code=404, detail="User not found")
         return result
 
     def auth_user(self, user: User) -> bool:

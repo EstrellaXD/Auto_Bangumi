@@ -48,7 +48,7 @@ class Renamer:
 
     def __init__(self):
         self._parser: TitleParser = TitleParser()
-        self.tmdb_parser = TmdbParser()
+        self.tmdb_parser:TmdbParser = TmdbParser()
         self.count: int = 0
         self._event_bus = event_bus
 
@@ -58,9 +58,10 @@ class Renamer:
         params = render.get_available_params(file_info, bangumi_name)
 
         # TODO:日语支持
+        # TODO: year 的支持还没写
         default_method = "${torrent_name}"
         method_dict = {
-            "subtitle_none": "${torrent_name}",
+            "subtitle_none": "${torrent_name}${suffix}",
             "pn": "${title} S${season}E${episode}${suffix}",
             "advance": "${official_title} S${season}E${episode}${suffix}",
             "custom": "${official_title} S${season}E${episode} - ${group}${suffix}",
@@ -121,18 +122,18 @@ class Renamer:
             return False
 
         # TODO: 后面支持剧场版的时个这要 改一下
-        if ep and ep.episode == 0:
+        if ep and ep.episode == 0 or ep.episode == -1:
             logger.debug(f"[Renamer][rename_file] {ep.title} is parser episode failed")
             return True
 
         # .5 的也处理不了, 直接返回 True
-        if is_point_5(ep.media_path):
+        if is_point_5(ep.torrent_name):
             logger.debug(f"[Renamer][rename_file] {ep.title} is a point 5 file")
             # Notify = Notification()
             return True
 
         # v1 的没必要处理, 直接返回 True
-        if is_v1(ep.media_path):
+        if is_v1(ep.torrent_name):
             logger.debug(f"[Renamer][rename_file] {ep.title} is a vd file")
             return True
 

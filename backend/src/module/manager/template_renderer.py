@@ -96,6 +96,7 @@ class TemplateRenderer:
             "group": getattr(file_info, "group", ""),
             "resolution": getattr(file_info, "resolution", ""),
             "source": getattr(file_info, "source", ""),
+            "year": getattr(file_info, "year", ""),
         }
 
         # 对于字幕文件，添加语言参数

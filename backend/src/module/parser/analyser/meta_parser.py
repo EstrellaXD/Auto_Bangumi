@@ -104,7 +104,6 @@ class TitleMetaParser:
             # 暂时没有哪个组把集数放前面
             if len(parts) > 1:
                 temp_title = "[]".join(parts[:-1])
-        print(temp_title)
         self.token = re.split(r"[\[\]]", temp_title)
         (
             name_en,
@@ -236,7 +235,6 @@ class TitleMetaParser:
     def get_trusted_season(self) -> tuple[int, str]:
         """获取可信的季度信息"""
         season_info = self.findall_sub_title(p.SEASON_PATTERN_TRUEST, sym="/[]")
-        print(f"trusted season info: {season_info}")
         if not season_info:
             season_info = self.findall_sub_title(p.SEASON_PATTERN, sym="/[]")
 
@@ -250,7 +248,6 @@ class TitleMetaParser:
     def get_untrusted_season(self) -> tuple[int, str]:
         """获取不可信的季度信息"""
         season_info = re.findall(p.SEASON_PATTERN_UNTRUSTED, self.title)
-        print(f"untrusted season info: {season_info}")
         if season_info:
             return self.parse_season(season_info, False)
         return 1, ""
@@ -291,10 +288,18 @@ class TitleMetaParser:
 
         # 简化 token 过滤逻辑
         max_len = min(10, len(self.token))
-        self.token = [token.strip() for token in self.token[:max_len] if len(token.strip()) > 1]
+        # self.token = [token.strip() for token in self.token[:max_len] if len(token.strip()) > 1]
+        vaild_tokens = []
+        for i in range(len(self.token)):
+            if i > max_len and vaild_tokens:
+                break
+            if self.token[i].strip():
+                vaild_tokens.append(self.token[i].strip())
+        self.token = vaild_tokens
+        print( self.token)
+        print("="*20)
 
         self.token = self.token[:5]
-        print(f"tokens: {self.token}")
         token_priority = [len(s) for s in self.token]
         if len(self.token) == 1:
             anime_title = self.token[0]
@@ -316,7 +321,6 @@ class TitleMetaParser:
                     token_priority[idx] += len(l.group(0))*2
                 if l:=re.search(r"[\u4e00-\u9fa5]{2,}", token):
                     token_priority[idx] += len(l.group(0))*2
-            print(token_priority)
             idx = token_priority.index(max(token_priority))
             anime_title = self.token[idx]
             anime_title = anime_title.strip()

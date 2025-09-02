@@ -44,15 +44,12 @@ def update_user_info(user_data: UserUpdate, current_user):
 def auth_user(user: User) -> bool:
     with Database() as db:
         resp = db.user.get_user(user.username)
-
-    if not resp:
+    if resp is None:
         return False
-    if user.username == resp.username:
-        res = verify_password(user.password, resp.password)
-        if res:
-            active_user.append(user.username)
-        return res
-    return False
+    res = verify_password(user.password, resp.password)
+    if res:
+        active_user.append(user.username)
+    return res
 
 
 UNAUTHORIZED = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")

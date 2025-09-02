@@ -96,7 +96,7 @@ class RSSRefresh(BaseRefresh):
             raw_bangumi = RawParser().parser(raw=torrent.name,exclude_collection=True)
             logger.debug(f"[RSSRefresh] raw bangumi {raw_bangumi.title_raw if raw_bangumi else 'None'}")
 
-            if raw_bangumi and self.analyser.filer_torrent(torrent, raw_bangumi):
+            if raw_bangumi and self.analyser.filter_torrent(torrent, raw_bangumi):
                 if new_torrents.get(raw_bangumi.title_raw):
                     # 如果已经有了, 则跳过
                     logger.debug(f"[RSSRefresh] {raw_bangumi.title_raw} already in new_torrents")

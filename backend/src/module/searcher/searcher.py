@@ -41,7 +41,7 @@ class SearchTorrent:
         if not bangumi:
             return []
         for torrent in new_torrents:
-            if self.analyser.filer_torrent(torrent, bangumi):
+            if self.analyser.filter_torrent(torrent, bangumi):
                 torrents.append(torrent)
         logger.debug(f"[SearchTorrent] Found {len(torrents)} torrents for {rss_item.url}")
         return torrents
