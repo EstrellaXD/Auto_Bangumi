@@ -169,6 +169,20 @@
       "update_btn": "Update",
       "username": "Username"
     },
+    "check_update": "Check Update",
+    "update": {
+      "title": "Check Update",
+      "current_version": "Current Version",
+      "latest_version": "Latest Version",
+      "has_update": "New Version Available",
+      "no_update": "Already Latest Version",
+      "checking": "Checking...",
+      "update_btn": "Update Now",
+      "cancel_btn": "Cancel",
+      "confirm_title": "Confirm Update",
+      "confirm_message": "Are you sure you want to update to version {version}? This will restart the application.",
+      "include_prerelease": "Include Pre-release"
+    },
     "refresh_poster": "Refresh Poster",
     "reset_rule": "Reset Rule",
     "restart": "Restart",

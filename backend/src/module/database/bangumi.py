@@ -53,9 +53,9 @@ class BangumiDatabase:
         return True
 
     def update(self, data: Bangumi) -> bool:
-        self.session.merge(data)
+        merge_data = self.session.merge(data)
         self.session.commit()
-        self.session.refresh(data)
+        self.session.refresh(merge_data)
         # logger.debug(f"[Database] Update {data.official_title}")
         return True
 

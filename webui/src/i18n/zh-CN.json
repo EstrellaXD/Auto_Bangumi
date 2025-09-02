@@ -169,6 +169,20 @@
       "update_btn": "更新",
       "username": "用户名"
     },
+    "check_update": "检查更新",
+    "update": {
+      "title": "检查更新",
+      "current_version": "当前版本",
+      "latest_version": "最新版本",
+      "has_update": "发现新版本",
+      "no_update": "已是最新版本",
+      "checking": "检查中...",
+      "update_btn": "立即更新",
+      "cancel_btn": "取消",
+      "confirm_title": "确认更新",
+      "confirm_message": "确定要更新到版本 {version} 吗？这将重启应用程序。",
+      "include_prerelease": "包含预发布版本"
+    },
     "refresh_poster": "刷新海报",
     "reset_rule": "重置规则",
     "restart": "重启",

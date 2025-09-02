@@ -43,4 +43,30 @@ export const apiProgram = {
     const { data } = await axios.get<ApiSuccess>('api/v1/shutdown');
     return data;
   },
+
+  /**
+   * 检查更新
+   */
+  async checkUpdate(includePrerelease = false) {
+    const { data } = await axios.get<{
+      current_version: string;
+      latest_version: string;
+      has_update: boolean;
+      release_info: {
+        name: string;
+        html_url: string;
+        published_at: string;
+        prerelease: boolean;
+      };
+    }>(`api/v1/check/update?include_prerelease=${includePrerelease}`);
+    return data;
+  },
+
+  /**
+   * 执行更新
+   */
+  async update() {
+    const { data } = await axios.get<ApiSuccess>('api/v1/update');
+    return data;
+  },
 };

@@ -295,6 +295,10 @@ jobs:
           echo ${{ needs.version-info.outputs.version }}
           echo "VERSION='${{ needs.version-info.outputs.version }}'" >> module/__version__.py
 
+      - name: Copy uv files
+        run: |
+          cp backend/uv.lock backend/src/
+          cp backend/pyproject.toml backend/src/
 
       - name: Zip app
         run: |

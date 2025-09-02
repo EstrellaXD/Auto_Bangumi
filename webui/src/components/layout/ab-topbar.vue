@@ -6,6 +6,7 @@ import {
   PlayOne,
   Power,
   Refresh,
+  UpdateRotation,
 } from '@icon-park/vue-next';
 import { ruleTemplate } from '#/bangumi';
 import type { BangumiRule } from '#/bangumi';
@@ -15,6 +16,7 @@ const { running, onUpdate, offUpdate } = useAppInfo();
 
 const showAccount = ref(false);
 const showAddRSS = ref(false);
+const showUpdate = ref(false);
 const searchRule = ref<BangumiRule>();
 
 const { start, pause, shutdown, restart, resetRule } = useProgramStore();
@@ -59,6 +61,14 @@ const items = [
   },
   {
     id: 7,
+    label: () => t('topbar.check_update'),
+    icon: UpdateRotation,
+    handle: () => {
+      showUpdate.value = true;
+    },
+  },
+  {
+    id: 8,
     label: () => t('topbar.profile.title'),
     icon: Me,
     handle: () => {
@@ -130,4 +140,5 @@ onUnmounted(() => {
 
   <ab-change-account v-model:show="showAccount"></ab-change-account>
   <ab-add-rss v-model:show="showAddRSS" v-model:rule="searchRule"></ab-add-rss>
+  <ab-check-update v-model:show="showUpdate"></ab-check-update>
 </template>

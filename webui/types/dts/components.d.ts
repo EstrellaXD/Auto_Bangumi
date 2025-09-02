@@ -16,6 +16,7 @@ declare module '@vue/runtime-core' {
     AbButtonMulti: typeof import('./../../src/components/basic/ab-button-multi.vue')['default']
     AbChangeAccount: typeof import('./../../src/components/ab-change-account.vue')['default']
     AbCheckbox: typeof import('./../../src/components/basic/ab-checkbox.vue')['default']
+    AbCheckUpdate: typeof import('./../../src/components/ab-check-update.vue')['default']
     AbContainer: typeof import('./../../src/components/ab-container.vue')['default']
     AbEditRule: typeof import('./../../src/components/ab-edit-rule.vue')['default']
     AbFoldPanel: typeof import('./../../src/components/ab-fold-panel.vue')['default']
