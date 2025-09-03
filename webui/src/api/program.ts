@@ -67,9 +67,13 @@ export const apiProgram = {
    * 执行更新
    */
   async update(downloadUrl: string) {
-    const { data } = await axios.post<ApiSuccess>('api/v1/program/update', {
-      download_url: downloadUrl,
-    });
+    const { data } = await axios.post<ApiSuccess>(
+      'api/v1/program/update',
+      null,
+      {
+        params: { download_url: downloadUrl }
+      }
+    );
     return data;
   },
 };

@@ -6,9 +6,11 @@ Docker 环境更新器
 """
 
 import asyncio
+import json
 import logging
 import os
 import shutil
+import sys
 import tempfile
 import zipfile
 from pathlib import Path
@@ -18,8 +20,9 @@ from module.network.request_url import RequestURL
 
 logger = logging.getLogger(__name__)
 
-# 更新锁文件路径
+# 更新相关文件路径
 UPDATE_LOCK_FILE = "/tmp/auto_bangumi_update.lock"
+UPDATE_FLAG_FILE = "/tmp/auto_bangumi_update_ready.flag"
 
 # 允许的下载域名白名单
 ALLOWED_DOMAINS = ["github.com", "codeload.github.com"]  # GitHub 的文件下载域名
@@ -33,8 +36,7 @@ class DockerUpdater:
 
     def __init__(self):
         self.temp_dir: Path | None = None
-        self.backup_dir: Path = Path("/app/backup")
-        self.app_dir: Path = Path("/app")
+        self.app_dir = Path("/app")
 
     def _is_url_allowed(self, url: str) -> bool:
         """检查 URL 是否在允许的白名单中
@@ -137,6 +139,29 @@ class DockerUpdater:
             self._cleanup_temp_files()
             raise
 
+    def _create_update_flag(self, download_url: str, extract_path: Path) -> None:
+        """创建更新标志文件，供shell脚本检测
+        
+        Args:
+            download_url: 原始下载URL
+            extract_path: 解压后的目录路径
+        """
+        try:
+            flag_data = {
+                "download_url": download_url,
+                "extract_path": str(extract_path),
+                "timestamp": asyncio.get_event_loop().time()
+            }
+            
+            with open(UPDATE_FLAG_FILE, "w") as f:
+                json.dump(flag_data, f, indent=2)
+                
+            logger.info(f"[DockerUpdater] Created update flag file: {UPDATE_FLAG_FILE}")
+            
+        except Exception as e:
+            logger.error(f"[DockerUpdater] Failed to create update flag: {e}")
+            raise
+
     def _extract_zip(self, zip_path: Path) -> Path:
         """解压 ZIP 文件
 
@@ -172,102 +197,8 @@ class DockerUpdater:
             logger.error(f"[DockerUpdater] Extract failed: {e}")
             raise
 
-    def _backup_current_app(self):
-        """备份当前应用的 src 和 dist 目录"""
-        try:
-            # 删除旧的备份
-            if self.backup_dir.exists():
-                shutil.rmtree(self.backup_dir)
 
-            # 创建备份目录
-            self.backup_dir.mkdir(exist_ok=True)
 
-            # 只备份 src 和 dist 目录
-            src_dir = self.app_dir / "src"
-            dist_dir = self.app_dir / "dist"
-
-            if src_dir.exists():
-                shutil.copytree(src_dir, self.backup_dir / "src")
-                logger.info(f"[DockerUpdater] Backed up src directory to {self.backup_dir / 'src'}")
-
-            if dist_dir.exists():
-                shutil.copytree(dist_dir, self.backup_dir / "dist")
-                logger.info(f"[DockerUpdater] Backed up dist directory to {self.backup_dir / 'dist'}")
-
-        except Exception as e:
-            logger.error(f"[DockerUpdater] Backup failed: {e}")
-            raise
-
-    def _install_new_app(self, source_dir: Path):
-        """安装新应用的 src 和 dist 目录
-
-        Args:
-            source_dir: 新应用源目录
-        """
-        try:
-            # 更新 src 目录
-            new_src = source_dir / "src"
-            if new_src.exists():
-                target_src = self.app_dir / "src"
-                if target_src.exists():
-                    shutil.rmtree(target_src)
-                shutil.copytree(new_src, target_src)
-                logger.info(f"[DockerUpdater] Installed new src directory from {new_src}")
-
-            # 更新 dist 目录
-            new_dist = source_dir / "dist"
-            if new_dist.exists():
-                target_dist = self.app_dir / "dist"
-                if target_dist.exists():
-                    shutil.rmtree(target_dist)
-                shutil.copytree(new_dist, target_dist)
-                logger.info(f"[DockerUpdater] Installed new dist directory from {new_dist}")
-
-        except Exception as e:
-            logger.error(f"[DockerUpdater] Installation failed: {e}")
-            raise
-
-    
-
-    def _fix_permissions(self):
-        """修复文件权限"""
-        try:
-            # 在 Docker 环境中，使用 chown 命令修复权限
-            os.system(f"chown -R ab:ab {self.app_dir}")
-            logger.info("[DockerUpdater] Fixed file permissions")
-
-        except Exception as e:
-            logger.error(f"[DockerUpdater] Failed to fix permissions: {e}")
-
-    def _rollback(self):
-        """回滚到备份版本"""
-        try:
-            if not self.backup_dir.exists():
-                logger.error("[DockerUpdater] No backup found for rollback")
-                return
-
-            # 回滚 src 目录
-            backup_src = self.backup_dir / "src"
-            if backup_src.exists():
-                target_src = self.app_dir / "src"
-                if target_src.exists():
-                    shutil.rmtree(target_src)
-                shutil.copytree(backup_src, target_src)
-                logger.info("[DockerUpdater] Rolled back src directory")
-
-            # 回滚 dist 目录
-            backup_dist = self.backup_dir / "dist"
-            if backup_dist.exists():
-                target_dist = self.app_dir / "dist"
-                if target_dist.exists():
-                    shutil.rmtree(target_dist)
-                shutil.copytree(backup_dist, target_dist)
-                logger.info("[DockerUpdater] Rolled back dist directory")
-
-            logger.info("[DockerUpdater] Rollback completed")
-
-        except Exception as e:
-            logger.error(f"[DockerUpdater] Rollback failed: {e}")
 
     def _cleanup_temp_files(self):
         """清理临时文件"""
@@ -278,14 +209,14 @@ class DockerUpdater:
         except Exception as e:
             logger.error(f"[DockerUpdater] Failed to cleanup temp files: {e}")
 
-    async def update(self, download_url: str) -> dict:
-        """执行更新
+    async def prepare_update(self, download_url: str) -> dict:
+        """准备更新：下载、解压、创建标志文件
 
         Args:
             download_url: 更新包下载 URL
 
         Returns:
-            dict: 更新结果
+            dict: 准备结果
         """
         # 检查 URL
         if not self._is_url_allowed(download_url):
@@ -294,8 +225,9 @@ class DockerUpdater:
         # 创建更新锁
         if not self._create_update_lock():
             raise Exception("Another update is already in progress")
+            
         try:
-            logger.info("[DockerUpdater] Starting Docker update process")
+            logger.info("[DockerUpdater] Preparing update package")
 
             # 1. 下载更新包
             zip_path = await self._download_file(download_url)
@@ -303,41 +235,27 @@ class DockerUpdater:
             # 2. 解压更新包
             source_dir = self._extract_zip(zip_path)
 
-            # 3. 备份当前应用
-            self._backup_current_app()
+            # 3. 验证解压结果
+            if not (source_dir / "src").exists():
+                raise Exception("Invalid update package: missing src directory")
 
-            # 4. 安装新应用
-            self._install_new_app(source_dir)
+            # 4. 创建更新标志文件
+            self._create_update_flag(download_url, source_dir)
 
-            # 6. 修复权限
-            self._fix_permissions()
-
-            logger.info("[DockerUpdater] Update completed successfully")
-
-            return {"status": "success", "message": "Update completed, container will restart"}
+            logger.info("[DockerUpdater] Update preparation completed")
+            return {"status": "success", "message": "Update prepared, process will restart for file replacement"}
 
         except Exception as e:
-            logger.error(f"[DockerUpdater] Update failed: {e}")
-
-            # 尝试回滚
-            try:
-                self._rollback()
-            except Exception as rollback_error:
-                logger.error(f"[DockerUpdater] Rollback also failed: {rollback_error}")
-
-            raise
-
-        finally:
+            logger.error(f"[DockerUpdater] Update preparation failed: {e}")
             # 清理资源
             self._cleanup_temp_files()
             self._remove_update_lock()
+            raise
 
-    def force_restart(self):
-        """强制重启容器（退出进程让 Docker 重启）"""
-        logger.info("[DockerUpdater] Forcing container restart")
-        # 在 Docker 环境中，.sh 有监控进程会自动重启
-        import sys
-
+    def trigger_graceful_restart(self):
+        """触发优雅重启：让 Python 进程退出，shell 脚本会检测更新标志并处理"""
+        logger.info("[DockerUpdater] Triggering graceful restart for update")
+        # 使用退出码 0 让 entrypoint.sh 知道这是正常的重启（热更新）
         sys.exit(0)
 
 

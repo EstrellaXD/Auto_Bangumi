@@ -161,7 +161,7 @@ async def check_for_update(include_prerelease: bool = False):
         )
 
 
-@router.post("program/update", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+@router.post("/program/update", response_model=APIResponse, dependencies=[Depends(get_current_user)])
 async def update_program(download_url: str):
     """Docker 环境更新接口
 
@@ -194,19 +194,19 @@ async def update_program(download_url: str):
                 # 等待一小段时间让 API 响应返回
                 await asyncio.sleep(1)
 
-                logger.info(f"[Program] Starting update from URL: {download_url}")
+                logger.info(f"[Program] Starting update preparation from URL: {download_url}")
 
                 # 停止应用核心
                 await program.stop()
 
-                # 执行更新
-                await docker_updater.update(download_url)
+                # 准备更新：下载、解压、创建标志文件
+                await docker_updater.prepare_update(download_url)
 
-                # 强制重启容器
-                docker_updater.force_restart()
+                # 触发优雅重启，shell脚本会检测更新标志并执行替换
+                docker_updater.trigger_graceful_restart()
 
             except Exception as e:
-                logger.error(f"[Program] Update failed: {e}")
+                logger.error(f"[Program] Update preparation failed: {e}")
                 # 尝试重启应用核心
                 try:
                     await program.start()
