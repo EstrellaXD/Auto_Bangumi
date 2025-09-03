@@ -12,4 +12,4 @@ usermod -o -u "${PUID}" ab
 
 chown ab:ab -R /app /home/ab
 
-exec su-exec "${PUID}:${PGID}" /app/.venv/bin/python main.py
+exec su-exec "${PUID}:${PGID}" ${VENV_PATH}/bin/python main.py
