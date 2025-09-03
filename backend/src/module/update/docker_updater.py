@@ -12,7 +12,6 @@ import shutil
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import Optional
 from urllib.parse import urlparse
 
 from module.network.request_url import RequestURL
@@ -25,17 +24,17 @@ UPDATE_LOCK_FILE = "/tmp/auto_bangumi_update.lock"
 # 允许的下载域名白名单
 ALLOWED_DOMAINS = ["github.com", "codeload.github.com"]  # GitHub 的文件下载域名
 
-# 最大下载文件大小 (100MB)
-MAX_DOWNLOAD_SIZE = 100 * 1024 * 1024
+# 最大下载文件大小 (10MB)
+MAX_DOWNLOAD_SIZE = 10 * 1024 * 1024
 
 
 class DockerUpdater:
     """Docker 环境更新器"""
 
     def __init__(self):
-        self.temp_dir: Optional[Path] = None
-        self.backup_dir = Path("/app.bak")
-        self.app_dir = Path("/app")
+        self.temp_dir: Path | None = None
+        self.backup_dir: Path = Path("/app/backup")
+        self.app_dir: Path = Path("/app")
 
     def _is_url_allowed(self, url: str) -> bool:
         """检查 URL 是否在允许的白名单中
@@ -114,23 +113,23 @@ class DockerUpdater:
                 # 设置用户代理
                 client.header["User-Agent"] = "Auto_Bangumi Docker Updater"
 
-                response = await client.get_url(url, stream=True)
+                response = await client.get_url(url)
 
                 # 检查文件大小
                 content_length = response.headers.get("content-length")
                 if content_length and int(content_length) > MAX_DOWNLOAD_SIZE:
                     raise Exception(f"File too large: {content_length} bytes")
 
-                # 下载文件
-                downloaded_size = 0
-                with open(download_path, "wb") as f:
-                    async for chunk in response.aiter_bytes(8192):
-                        downloaded_size += len(chunk)
-                        if downloaded_size > MAX_DOWNLOAD_SIZE:
-                            raise Exception("Downloaded file exceeds size limit")
-                        f.write(chunk)
+                # 直接获取文件内容
+                content = response.content
+                if len(content) > MAX_DOWNLOAD_SIZE:
+                    raise Exception("Downloaded file exceeds size limit")
 
-                logger.info(f"[DockerUpdater] Downloaded {downloaded_size} bytes to {download_path}")
+                # 写入文件
+                with open(download_path, "wb") as f:
+                    f.write(content)
+
+                logger.info(f"[DockerUpdater] Downloaded {len(content)} bytes to {download_path}")
                 return download_path
 
         except Exception as e:
@@ -163,6 +162,7 @@ class DockerUpdater:
 
             # 找到实际的程序目录（通常是解压后的第一个子目录）
             extracted_items = list(extract_path.iterdir())
+            logger.debug(f"[DockerUpdater] Extracted items: {extracted_items}")
             if len(extracted_items) == 1 and extracted_items[0].is_dir():
                 return extracted_items[0]
             else:
@@ -173,61 +173,61 @@ class DockerUpdater:
             raise
 
     def _backup_current_app(self):
-        """备份当前应用"""
+        """备份当前应用的 src 和 dist 目录"""
         try:
             # 删除旧的备份
             if self.backup_dir.exists():
                 shutil.rmtree(self.backup_dir)
 
-            # 创建新备份
-            shutil.move(str(self.app_dir), str(self.backup_dir))
-            logger.info(f"[DockerUpdater] Backed up current app to {self.backup_dir}")
+            # 创建备份目录
+            self.backup_dir.mkdir(exist_ok=True)
+
+            # 只备份 src 和 dist 目录
+            src_dir = self.app_dir / "src"
+            dist_dir = self.app_dir / "dist"
+
+            if src_dir.exists():
+                shutil.copytree(src_dir, self.backup_dir / "src")
+                logger.info(f"[DockerUpdater] Backed up src directory to {self.backup_dir / 'src'}")
+
+            if dist_dir.exists():
+                shutil.copytree(dist_dir, self.backup_dir / "dist")
+                logger.info(f"[DockerUpdater] Backed up dist directory to {self.backup_dir / 'dist'}")
 
         except Exception as e:
             logger.error(f"[DockerUpdater] Backup failed: {e}")
             raise
 
     def _install_new_app(self, source_dir: Path):
-        """安装新应用
+        """安装新应用的 src 和 dist 目录
 
         Args:
             source_dir: 新应用源目录
         """
         try:
-            # 移动新应用到目标位置
-            shutil.move(str(source_dir), str(self.app_dir))
-            logger.info(f"[DockerUpdater] Installed new app from {source_dir}")
+            # 更新 src 目录
+            new_src = source_dir / "src"
+            if new_src.exists():
+                target_src = self.app_dir / "src"
+                if target_src.exists():
+                    shutil.rmtree(target_src)
+                shutil.copytree(new_src, target_src)
+                logger.info(f"[DockerUpdater] Installed new src directory from {new_src}")
+
+            # 更新 dist 目录
+            new_dist = source_dir / "dist"
+            if new_dist.exists():
+                target_dist = self.app_dir / "dist"
+                if target_dist.exists():
+                    shutil.rmtree(target_dist)
+                shutil.copytree(new_dist, target_dist)
+                logger.info(f"[DockerUpdater] Installed new dist directory from {new_dist}")
 
         except Exception as e:
             logger.error(f"[DockerUpdater] Installation failed: {e}")
             raise
 
-    def _restore_user_data(self):
-        """恢复用户配置和数据"""
-        try:
-            # 恢复 config 目录
-            backup_config = self.backup_dir / "config"
-            new_config = self.app_dir / "config"
-
-            if backup_config.exists():
-                if new_config.exists():
-                    shutil.rmtree(new_config)
-                shutil.copytree(backup_config, new_config)
-                logger.info("[DockerUpdater] Restored config directory")
-
-            # 恢复 data 目录
-            backup_data = self.backup_dir / "data"
-            new_data = self.app_dir / "data"
-
-            if backup_data.exists():
-                if new_data.exists():
-                    shutil.rmtree(new_data)
-                shutil.copytree(backup_data, new_data)
-                logger.info("[DockerUpdater] Restored data directory")
-
-        except Exception as e:
-            logger.error(f"[DockerUpdater] Failed to restore user data: {e}")
-            raise
+    
 
     def _fix_permissions(self):
         """修复文件权限"""
@@ -242,13 +242,29 @@ class DockerUpdater:
     def _rollback(self):
         """回滚到备份版本"""
         try:
-            if self.backup_dir.exists():
-                if self.app_dir.exists():
-                    shutil.rmtree(self.app_dir)
-                shutil.move(str(self.backup_dir), str(self.app_dir))
-                logger.info("[DockerUpdater] Rolled back to backup version")
-            else:
+            if not self.backup_dir.exists():
                 logger.error("[DockerUpdater] No backup found for rollback")
+                return
+
+            # 回滚 src 目录
+            backup_src = self.backup_dir / "src"
+            if backup_src.exists():
+                target_src = self.app_dir / "src"
+                if target_src.exists():
+                    shutil.rmtree(target_src)
+                shutil.copytree(backup_src, target_src)
+                logger.info("[DockerUpdater] Rolled back src directory")
+
+            # 回滚 dist 目录
+            backup_dist = self.backup_dir / "dist"
+            if backup_dist.exists():
+                target_dist = self.app_dir / "dist"
+                if target_dist.exists():
+                    shutil.rmtree(target_dist)
+                shutil.copytree(backup_dist, target_dist)
+                logger.info("[DockerUpdater] Rolled back dist directory")
+
+            logger.info("[DockerUpdater] Rollback completed")
 
         except Exception as e:
             logger.error(f"[DockerUpdater] Rollback failed: {e}")
@@ -278,7 +294,6 @@ class DockerUpdater:
         # 创建更新锁
         if not self._create_update_lock():
             raise Exception("Another update is already in progress")
-
         try:
             logger.info("[DockerUpdater] Starting Docker update process")
 
@@ -293,9 +308,6 @@ class DockerUpdater:
 
             # 4. 安装新应用
             self._install_new_app(source_dir)
-
-            # 5. 恢复用户数据
-            self._restore_user_data()
 
             # 6. 修复权限
             self._fix_permissions()
@@ -325,9 +337,9 @@ class DockerUpdater:
         logger.info("[DockerUpdater] Forcing container restart")
         # 在 Docker 环境中，.sh 有监控进程会自动重启
         import sys
+
         sys.exit(0)
 
 
 # 全局实例
 docker_updater = DockerUpdater()
-

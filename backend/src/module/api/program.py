@@ -161,7 +161,7 @@ async def check_for_update(include_prerelease: bool = False):
         )
 
 
-@router.post("/update", response_model=APIResponse, dependencies=[Depends(get_current_user)])
+@router.post("program/update", response_model=APIResponse, dependencies=[Depends(get_current_user)])
 async def update_program(download_url: str):
     """Docker 环境更新接口
 
@@ -223,7 +223,6 @@ async def update_program(download_url: str):
                 status_code=200,
                 msg_en="Update started successfully. Container will restart shortly.",
                 msg_zh="更新已开始。容器将很快重启。",
-                data={"download_url": download_url},
             )
         )
 

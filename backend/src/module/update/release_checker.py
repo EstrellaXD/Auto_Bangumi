@@ -23,6 +23,7 @@ class ReleaseInfo:
     published_at: str
     prerelease: bool
     draft: bool
+    download_url: str | None = None  # GitHub releases assets 下载链接
 
 
 class ReleaseChecker:
@@ -73,7 +74,7 @@ class ReleaseChecker:
                         continue
 
                     href = link_elem.get("href", "")
-                    if f"/releases/tag/" not in href:
+                    if "/releases/tag/" not in href:
                         continue
 
                     tag_name = href.split("/releases/tag/")[-1]
@@ -104,6 +105,9 @@ class ReleaseChecker:
                         published_elem.text.strip() if published_elem is not None and published_elem.text else ""
                     )
 
+                    # 构建 GitHub releases assets 下载链接
+                    download_url = f"https://github.com/{self.repo_owner}/{self.repo_name}/releases/download/{tag_name}/app-v{tag_name}.zip"
+                    
                     release_info = ReleaseInfo(
                         tag_name=tag_name,
                         name=title,
@@ -116,6 +120,7 @@ class ReleaseChecker:
                             keyword in tag_name.lower() for keyword in ["alpha", "beta", "rc", "pre", "dev"]
                         ),
                         draft=False,
+                        download_url=download_url,
                     )
                     releases.append(release_info)
 
@@ -175,6 +180,7 @@ class ReleaseChecker:
                     "html_url": latest_release.html_url,
                     "published_at": latest_release.published_at,
                     "prerelease": latest_release.prerelease,
+                    "download_url": latest_release.download_url,
                 },
             }
 

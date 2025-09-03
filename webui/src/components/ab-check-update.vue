@@ -16,6 +16,7 @@ const updateInfo = ref<{
     html_url: string;
     published_at: string;
     prerelease: boolean;
+    download_url: string;
   };
 } | null>(null);
 
@@ -58,7 +59,11 @@ async function checkUpdate() {
 
 // 执行更新
 async function performUpdate() {
-  await executeUpdate();
+  if (!updateInfo.value?.release_info.download_url) {
+    message.error(t('notify.update_failed'));
+    return;
+  }
+  await executeUpdate(updateInfo.value.release_info.download_url);
 }
 
 // 确认更新

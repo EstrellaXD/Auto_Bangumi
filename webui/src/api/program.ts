@@ -57,6 +57,7 @@ export const apiProgram = {
         html_url: string;
         published_at: string;
         prerelease: boolean;
+        download_url: string;
       };
     }>(`api/v1/check/update?include_prerelease=${includePrerelease}`);
     return data;
@@ -65,8 +66,10 @@ export const apiProgram = {
   /**
    * 执行更新
    */
-  async update() {
-    const { data } = await axios.get<ApiSuccess>('api/v1/update');
+  async update(downloadUrl: string) {
+    const { data } = await axios.post<ApiSuccess>('api/v1/program/update', {
+      download_url: downloadUrl,
+    });
     return data;
   },
 };
