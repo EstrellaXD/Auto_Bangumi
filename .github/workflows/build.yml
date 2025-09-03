@@ -273,6 +273,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Prepare package folder
+        run: |
+          mkdir -p backend/AutoBangumi
+          cp -r backend/src backend/AutoBangumi/
+
       - name: Download artifact webui
         uses: actions/download-artifact@v4
         with:
@@ -287,22 +292,23 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: dist
-          path: backend/src/dist
+          path: backend/AutoBangumi/dist
+
+      - name: Copy uv file and requirements.txt
+        run: |
+          cp backend/uv.lock backend/AutoBangumi/
+          cp backend/requirements.txt backend/AutoBangumi/
+          cp backend/pyproject.toml backend/AutoBangumi/
 
       - name: Create Version info via tag
-        working-directory: ./backend/src
+        working-directory: ./backend/AutoBangumi/src
         run: |
           echo ${{ needs.version-info.outputs.version }}
           echo "VERSION='${{ needs.version-info.outputs.version }}'" >> module/__version__.py
 
-      - name: Copy uv files
-        run: |
-          cp backend/uv.lock backend/src/
-          cp backend/pyproject.toml backend/src/
-
       - name: Zip app
         run: |
-          cd backend && zip -r app-v${{ needs.version-info.outputs.version }}.zip src
+          cd backend && zip -r app-v${{ needs.version-info.outputs.version }}.zip AutoBangumi
 
       - name: Generate Release info
         id: release-info

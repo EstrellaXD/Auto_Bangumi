@@ -176,12 +176,13 @@ async def update_program(download_url: str):
         from module.utils.environment import is_docker_environment
 
         if not is_docker_environment():
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "msg_en": "Update only supported in Docker environment.",
-                    "msg_zh": "更新功能仅支持 Docker 环境。",
-                },
+            return u_response(
+                ResponseModel(
+                    status=False,
+                    status_code=400,
+                    msg_en="Update only supported in Docker environment.",
+                    msg_zh="更新功能仅支持 Docker 环境。",
+                )
             )
 
         # 导入更新器

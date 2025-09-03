@@ -323,10 +323,8 @@ class DockerUpdater:
     def force_restart(self):
         """强制重启容器（退出进程让 Docker 重启）"""
         logger.info("[DockerUpdater] Forcing container restart")
-
-        # 在 Docker 环境中，退出主进程会让 Docker 重启容器
+        # 在 Docker 环境中，.sh 有监控进程会自动重启
         import sys
-
         sys.exit(0)
 
 
