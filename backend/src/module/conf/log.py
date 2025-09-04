@@ -17,14 +17,14 @@ def setup_logger(level: int = logging.INFO, reset: bool = False):
     logging.addLevelName(logging.DEBUG, "DEBUG:")
     logging.addLevelName(logging.INFO, "INFO:")
     logging.addLevelName(logging.WARNING, "WARNING:")
-    LOGGING_FORMAT = "[%(asctime)s] %(levelname)-8s %(message)s"
+    LOGGING_FORMAT = "[%(asctime)s] %(levelname)-8s [%(name)s] %(message)s"
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
     # 获取根日志器
     root_logger = logging.getLogger()
 
-    # 如果已经有处理器且不是重置模式，则更新现有配置
-    if root_logger.handlers and not reset:
+    # 如果已经有处理器，则更新现有配置
+    if root_logger.handlers:
         # 更新根日志器的等级
         root_logger.setLevel(level)
         # 更新所有处理器的等级
@@ -56,6 +56,7 @@ def setup_logger(level: int = logging.INFO, reset: bool = False):
         "passlib",
         "multipart",
         "multipart.multipart",
+        "python_multipart.multipart",
     ]
     for logger_name in loggers_to_silence:
         logger = logging.getLogger(logger_name)

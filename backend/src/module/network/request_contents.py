@@ -53,7 +53,7 @@ class RequestContent(RequestURL):
         retry: int = 3,
     ) -> list[Torrent]:
         feeds = await self.get_xml(_url, retry)
-        if feeds:
+        if feeds is not None:
             torrent_titles, torrent_urls, torrent_homepage = rss_parser(feeds)
             torrents: list[Torrent] = []
             for _title, torrent_url, homepage in zip(torrent_titles, torrent_urls, torrent_homepage):

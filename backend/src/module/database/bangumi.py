@@ -1,6 +1,6 @@
 import logging
 
-from sqlmodel import Session, and_, delete, false, or_, select
+from sqlmodel import Session, and_, delete, false,  select
 
 from module.models import Bangumi
 
