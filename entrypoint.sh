@@ -11,6 +11,11 @@ PID_FILE="/tmp/autobangumi.pid"
 cleanup() {
   echo "收到停止信号，正在清理..."
   SHOULD_STOP=true
+  
+  # 清理更新相关标志文件
+  rm -f "/tmp/auto_bangumi_update_ready.flag"
+  rm -f "/tmp/auto_bangumi_update.lock"
+  
   if [ -f "$PID_FILE" ]; then
     pid=$(cat "$PID_FILE")
     if [ -n "$pid" ]; then
@@ -58,11 +63,11 @@ while [ "$SHOULD_STOP" != "true" ]; do
   elif [ $exit_code -eq 0 ]; then
     echo "应用正常退出，2秒后重启（热更新）..."
     sleep 2
-    
+
     # 在Python进程完全退出后检查更新标志
     if [ -f "/tmp/auto_bangumi_update_ready.flag" ]; then
       echo "检测到更新标志，执行文件替换..."
-      
+
       # 读取更新信息
       extract_path=$(python3 -c "
 import json
@@ -73,10 +78,10 @@ try:
 except:
     print('')
 " 2>/dev/null || echo "")
-      
+
       if [ -n "$extract_path" ] && [ -d "$extract_path" ]; then
         echo "从 $extract_path 更新应用文件..."
-        
+
         # 更新 src 目录
         if [ -d "$extract_path/src" ]; then
           echo "更新 src 目录..."
@@ -84,29 +89,32 @@ except:
           [ -d "/app/src" ] && mv /app/src /app/src.old
           cp -r "$extract_path/src" /app/src && echo "src 目录更新成功"
         fi
-        
-        # 更新 dist 目录  
+
+        # 更新 dist 目录
         if [ -d "$extract_path/dist" ]; then
           echo "更新 dist 目录..."
           rm -rf /app/dist.old 2>/dev/null || true
-          [ -d "/app/dist" ] && mv /app/dist /app/dist.old  
+          [ -d "/app/dist" ] && mv /app/dist /app/dist.old
           cp -r "$extract_path/dist" /app/dist && echo "dist 目录更新成功"
         fi
-        
+
         # 修复权限并清理
         chown -R ab:ab /app/src /app/dist 2>/dev/null || true
         rm -rf /app/src.old /app/dist.old "$extract_path" 2>/dev/null || true
         echo "文件替换完成！"
       else
-        echo "无效的更新路径: $extract_path"  
+        echo "无效的更新路径: $extract_path"
       fi
-      
+
       # 删除更新标志文件
       rm -f "/tmp/auto_bangumi_update_ready.flag"
       echo "更新处理完成，启动新版本..."
     fi
   else
     echo "应用异常退出 (退出码: $exit_code)，停止容器"
+    # 手动清理更新标志文件
+    rm -f "/tmp/auto_bangumi_update_ready.flag"
+    rm -f "/tmp/auto_bangumi_update.lock"
     exit $exit_code
   fi
 done
