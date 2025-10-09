@@ -56,7 +56,8 @@ class MikanWebParser:
 
             official_title = official_title.text
             eps_info = TitleMetaParser().parser(official_title)
-            title = re.sub(patterns.SEASON_PATTERN, "", official_title + " ")
+            title = re.sub(patterns.SEASON_PATTERN_TRUEST, "", official_title)
+            title = re.sub(patterns.SEASON_PATTERN, "", title + " ")
             title = title.strip()
             logger.debug(f"[MikanWebParser] Parsed title: {title}, mikan_id: {mikan_id}")
             mikan_info.id = mikan_id
