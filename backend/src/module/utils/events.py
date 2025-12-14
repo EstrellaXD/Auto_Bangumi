@@ -40,6 +40,7 @@ class QueueException(CoreException):
 class EventType(Enum):
     DOWNLOAD_COMPLETED = "download_completed"
     DOWNLOAD_STARTED = "download_started"
+    DOWNLOAD_CHECK = "download_check"
     RENAME_COMPLETED = "rename_completed"
     TORRENT_ADDED = "torrent_added"
     NOTIFICATION_REQUEST = "notification_request"

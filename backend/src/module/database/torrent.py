@@ -2,7 +2,7 @@ import logging
 
 from sqlmodel import Session, delete, false, select, true
 
-from module.models import Torrent
+from models import Torrent
 from module.utils import get_hash
 
 logger = logging.getLogger(__name__)
@@ -83,30 +83,3 @@ class TorrentDatabase:
             return True
         return False
 
-    # def add_all(self, datas: list[Torrent]):
-    #     for data in datas:
-    #         self.session.merge(data)
-    #     self.session.commit()
-    #     logger.debug(f"Insert {len(datas)} torrents in database.")
-
-    # def update(self, data: Torrent):
-    #     logger.debug(f"[TorrentDatabase] update {data.name} in database.")
-    #     self.session.merge(data)
-    #     self.session.commit()
-    #     self.session.refresh(data)
-    #     logger.debug(f"[TorrentDatabase] Update {data.name} in database success.")
-    #     logger.debug(f"Update {data.name} in database.")
-
-if __name__ == "__main__":
-    from module.database import Database, engine
-    from module.models.bangumi import Bangumi
-
-    name = "[ANi] 物语系列 第外季＆第怪季 - 06 [1080P][Baha][WEB-DL][AAC AVC][CHT].mp4"
-    hash = "1ae27b047005e097b74b66e27c37610aa5a0f5a2"
-    with Database() as db:
-        # t_name = db.torrent.search_name(name)
-        t_hash = db.torrent.search_by_duid(hash)
-        if t_hash:
-            db.torrent.delete_by_url(t_hash.url)
-        # print(f"{t_name=}")
-        # print(f"{t_hash=}")

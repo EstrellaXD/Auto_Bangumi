@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from packaging import version
 
-from module.conf import VERSION
+from version import APP_VERSION
 from module.network.request_url import RequestURL
 
 logger = logging.getLogger(__name__)
@@ -139,7 +139,7 @@ class ReleaseChecker:
         Returns:
             dict: 包含更新检查结果的字典
         """
-        current_version = VERSION
+        current_version = APP_VERSION
 
         # 如果是开发版本，跳过更新检查
         if current_version in ["DEV_VERSION", "local"]:

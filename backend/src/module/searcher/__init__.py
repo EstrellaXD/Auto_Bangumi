@@ -1,4 +1,4 @@
-from module.conf import SEARCH_CONFIG
+from conf import SEARCH_CONFIG
 
 from .searcher import SearchTorrent
 

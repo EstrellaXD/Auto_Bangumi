@@ -3,7 +3,7 @@ import logging
 from module.database import Database, engine
 from module.downloader import Client as DownlondClient
 from module.downloader import download_queue
-from module.models import Bangumi, Torrent
+from models import Bangumi, Torrent
 from module.network import RequestContent
 
 logger = logging.getLogger(__name__)
@@ -71,17 +71,20 @@ class TorrentManager:
             exist_torrents: list[Torrent] = db.find_torrent_by_bangumi(bangumi)
             url = bangumi.rss_link
         existing_urls = {torrent.url for torrent in exist_torrents}
-        async with RequestContent() as req:
-            torrents = await req.get_torrents(url)
-        title_raws = bangumi.title_raw.split(",")
-        for torrent in torrents:
-            if torrent.url in existing_urls:
-                continue
-            for title in title_raws:
-                if title in torrent.name:
-                    exist_torrents.append(torrent)
-                    existing_urls.add(torrent.url)
-                    break
+        try:
+            async with RequestContent() as req:
+                torrents = await req.get_torrents(url)
+            title_raws = bangumi.title_raw.split(",")
+            for torrent in torrents:
+                if torrent.url in existing_urls:
+                    continue
+                for title in title_raws:
+                    if title in torrent.name:
+                        exist_torrents.append(torrent)
+                        existing_urls.add(torrent.url)
+                        break
+        except Exception as e:
+            logger.error(f"[TorrentManager] Error fetching torrents from {url}: {e}")
         exist_torrents.sort(key=lambda x: x.name, reverse=True)
         return exist_torrents
 

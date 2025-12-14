@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from module.models import Bangumi, Torrent
+from models import Bangumi, Torrent
 
 logger = logging.getLogger(__name__)
 

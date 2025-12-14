@@ -1,6 +1,11 @@
-from abc import ABCMeta, abstractmethod
-from typing import Any
+from __future__ import annotations
 
+from abc import ABCMeta, abstractmethod
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from models import TorrentDownloadInfo
+    from models.config import Downloader as DownloaderConfig
 
 # 主要实现以下 个功能
 # 1. renamer,用以实现重命名功能 hash, old name, new name
@@ -16,7 +21,7 @@ class BaseDownloader(metaclass=ABCMeta):
         self.api_interval: float = 0.2
 
     @abstractmethod
-    def initialize(self) -> None:
+    def initialize(self,config:DownloaderConfig) -> None:
         """初始化下载器"""
         pass
 
@@ -41,6 +46,10 @@ class BaseDownloader(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    async def torrent_info(self, hash: str) -> TorrentDownloadInfo | None:
+        pass
+
+    @abstractmethod
     async def rename(self, torrent_hash: str, old_path: str, new_path: str) -> bool:
         pass
 
@@ -49,7 +58,7 @@ class BaseDownloader(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    async def add(self, torrent_url, save_path, category) -> str | None:
+    async def add(self, hashs:list[str], torrent_content:bytes|None, save_path) -> list[str] :
         pass
 
     @abstractmethod

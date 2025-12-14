@@ -8,7 +8,7 @@ import re
 from os import PathLike
 from pathlib import Path
 
-from module.models import Bangumi
+from models import Bangumi
 
 # TODO: 暂时放弃 Windows 路径解析,也就是 ab 和 qb 不在一个系统上, 这时候整个复杂度太高了,后面再说了
 logger = logging.getLogger(__name__)

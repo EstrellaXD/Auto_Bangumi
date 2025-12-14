@@ -1,7 +1,7 @@
 import logging
 
 from module.database import Database, engine
-from module.models import ResponseModel, RSSItem, Torrent
+from models import ResponseModel, RSSItem, Torrent
 from module.network import RequestContent
 
 logger = logging.getLogger(__name__)

@@ -1,5 +1,4 @@
-from module.downloader.client.expection import AuthorizationError
-
 from .base_downloader import BaseDownloader
+from .qbittorrent import Downloader as QbittorrentDownloader
 
-__all__ = ["AuthorizationError", "BaseDownloader"]
+__all__ = ["BaseDownloader", "QbittorrentDownloader"]

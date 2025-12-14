@@ -2,10 +2,9 @@ import logging
 
 from sqlmodel import Session, SQLModel, and_, false, select, text
 
-from module.models import Bangumi, RSSItem, Torrent, User
+from models import Bangumi, RSSItem, Torrent, User
 
 from .bangumi import BangumiDatabase
-from .database_version import VersionDatabase
 from .engine import engine as e
 from .rss import RSSDatabase
 from .torrent import TorrentDatabase
@@ -26,7 +25,6 @@ class Database(Session):
         self.torrent: TorrentDatabase = TorrentDatabase(self)
         self.bangumi: BangumiDatabase = BangumiDatabase(self)
         self.user: UserDatabase = UserDatabase(self)
-        self.databaseversion: VersionDatabase = VersionDatabase(self)
 
     def bangumi_to_rss(self, bangumi: Bangumi) -> RSSItem | None:
         return self.rss.search_url(bangumi.rss_link)
@@ -82,201 +80,6 @@ class Database(Session):
             )
             return self.exec(statement).first()
 
-    def _migrate_table_data(self, table_name: str, model_class, existing_data: list):
-        """通用的表数据迁移方法"""
-        if not existing_data:
-            return []
-
-        migrated_data = []
-
-        # 获取新模型的字段名
-        model_fields = set(model_class.__fields__.keys())
-
-        for item in existing_data:
-            try:
-                # 如果已经是字典格式
-                if isinstance(item, dict):
-                    item_dict = item
-                elif hasattr(item, "model_dump"):
-                    # 如果是 SQLModel 对象
-                    item_dict = item.model_dump()
-                elif hasattr(item, "_mapping"):
-                    # 如果是数据库行对象
-                    item_dict = dict(item._mapping)
-                else:
-                    # 如果是原始行数据，需要先获取列名
-                    existing_columns = self._get_table_columns(table_name)
-                    item_dict = {existing_columns[i]: item[i] for i in range(min(len(existing_columns), len(item)))}
-
-                # 只保留模型中存在的字段，为新字段设置默认值
-                migrated_dict = {}
-
-                # 特殊处理 bangumi 表的字段映射
-                if table_name == "bangumi":
-                    # 处理 filter 字段到 exclude_filter 的映射
-                    if "filter" in item_dict and "exclude_filter" not in item_dict:
-                        item_dict["exclude_filter"] = item_dict["filter"]
-                        logger.debug(f"映射 filter 到 exclude_filter: {item_dict['filter']}")
-                    elif "filter" in item_dict and item_dict.get("exclude_filter", "") == "":
-                        # 如果 exclude_filter 为空，用 filter 的值
-                        item_dict["exclude_filter"] = item_dict["filter"]
-                        logger.debug(f"用 filter 覆盖空的 exclude_filter: {item_dict['filter']}")
-
-                for field_name in model_fields:
-                    if field_name == "id":
-                        # 保留原有ID，如果没有则让数据库自动生成
-                        if field_name in item_dict and item_dict[field_name] is not None:
-                            migrated_dict[field_name] = item_dict[field_name]
-                        continue
-                    elif field_name in item_dict:
-                        migrated_dict[field_name] = item_dict[field_name]
-                    else:
-                        # 为新字段设置默认值
-                        field_info = model_class.__fields__[field_name]
-                        if hasattr(field_info, "default") and field_info.default is not None:
-                            migrated_dict[field_name] = field_info.default
-                        else:
-                            # 根据类型设置默认值
-                            field_type = field_info.annotation
-                            if field_type == str or field_type == str | None:
-                                migrated_dict[field_name] = "" if "str | None" not in str(field_type) else None
-                            elif field_type == bool:
-                                migrated_dict[field_name] = False
-                            elif field_type == int or field_type == int | None:
-                                migrated_dict[field_name] = 0 if "int | None" not in str(field_type) else None
-                            else:
-                                migrated_dict[field_name] = None
-
-                migrated_data.append(model_class(**migrated_dict))
-            except Exception as e:
-                print(f"Error migrating {table_name} record: {e}")
-                print(f"Problematic data: {item}")
-                continue
-
-        return migrated_data
-
-    def migrate(self):
-        """自动识别和迁移数据库结构"""
-        print("开始数据库迁移...")
-
-        # 获取现有数据并立即转换为字典，避免对象引用问题
-        tables_data = {}
-
-        # 尝试获取各表数据
-        for table_name, model_class in [
-            ("bangumi", Bangumi),
-            ("torrent", Torrent),
-            ("rssitem", RSSItem),
-            ("user", User),
-        ]:
-            try:
-                # 检查表是否存在
-                table_exists = self.exec(
-                    text(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'")
-                ).first()
-                if not table_exists:
-                    print(f"表 {table_name} 不存在，跳过")
-                    tables_data[table_name] = []
-                    continue
-
-                # 尝试用模型查询并立即转换为字典
-                raw_data = []
-                if table_name == "bangumi":
-                    orm_data = self.bangumi.search_all()
-                    raw_data = [item.model_dump() if hasattr(item, "model_dump") else item for item in orm_data]
-                elif table_name == "torrent":
-                    orm_data = self.torrent.search_all()
-                    raw_data = [item.model_dump() if hasattr(item, "model_dump") else item for item in orm_data]
-                elif table_name == "rssitem":
-                    orm_data = self.rss.search_all()
-                    raw_data = [item.model_dump() if hasattr(item, "model_dump") else item for item in orm_data]
-                elif table_name == "user":
-                    orm_data = self.exec(text(f"SELECT * FROM {table_name}")).all()
-                    raw_data = [dict(row._mapping) if hasattr(row, "_mapping") else row for row in orm_data]
-
-                tables_data[table_name] = raw_data
-                print(f"成功获取 {table_name} 表数据: {len(raw_data)} 条记录")
-
-            except Exception as e:
-                print(f"获取 {table_name} 表数据失败，使用原始SQL查询: {e}")
-                try:
-                    orm_data = self.exec(text(f"SELECT * FROM {table_name}")).all()
-                    raw_data = [dict(row._mapping) if hasattr(row, "_mapping") else row for row in orm_data]
-                    tables_data[table_name] = raw_data
-                    print(f"使用原始SQL获取 {table_name} 表数据: {len(raw_data)} 条记录")
-                except Exception as e2:
-                    print(f"完全无法获取 {table_name} 表数据: {e2}")
-                    tables_data[table_name] = []
-
-        # 迁移数据
-        migrated_data = {}
-        for table_name, model_class in [
-            ("bangumi", Bangumi),
-            ("torrent", Torrent),
-            ("rssitem", RSSItem),
-        ]:
-            migrated_data[table_name] = self._migrate_table_data(table_name, model_class, tables_data[table_name])
-            print(f"迁移 {table_name} 数据: {len(migrated_data[table_name])} 条记录")
-
-        # 特殊处理 user 表（原始数据）
-        user_data = tables_data.get("user", [])
-
-        # 重建表结构
-        print("重建表结构...")
-        self.drop_table()
-        self.create_table()
-        self.commit()
-
-        # 重新插入数据
-        print("重新插入数据...")
-        try:
-            for table_name in ["bangumi", "torrent", "rssitem"]:
-                data = migrated_data[table_name]
-                if data:
-                    try:
-                        if table_name == "bangumi":
-                            for item in data:
-                                self.merge(item)
-                        elif table_name == "torrent":
-                            for item in data:
-                                self.merge(item)
-                        elif table_name == "rssitem":
-                            for item in data:
-                                self.merge(item)
-                        self.commit()
-                        print(f"插入 {table_name} 数据: {len(data)} 条记录")
-                    except Exception as e:
-                        print(f"插入 {table_name} 数据失败: {e}")
-                        self.rollback()
-                        continue
-
-            # 处理 user 数据
-            if user_data:
-                try:
-                    for user_item in user_data:
-                        if isinstance(user_item, dict):
-                            user_dict = user_item
-                        elif hasattr(user_item, "__len__") and len(user_item) >= 3:
-                            # 原始行数据
-                            user_dict = {
-                                "username": user_item[1],
-                                "password": user_item[2],
-                            }
-                        else:
-                            continue
-
-                        self.merge(User(**user_dict))
-                    self.commit()
-                    print(f"插入 user 数据: {len(user_data)} 条记录")
-                except Exception as e:
-                    print(f"插入 user 数据失败: {e}")
-                    self.rollback()
-
-            print("数据库迁移完成!")
-        except Exception as e:
-            print(f"数据迁移过程中发生错误: {e}")
-            self.rollback()
-            raise
 
 
 if __name__ == "__main__":

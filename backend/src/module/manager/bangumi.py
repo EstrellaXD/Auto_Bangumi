@@ -1,14 +1,11 @@
 import asyncio
 import logging
 
-from module.conf import settings
 from module.database import Database, engine
 from module.downloader import Client as DownlondClient
-from module.downloader import download_queue
 from module.manager.torrent import TorrentManager
-from module.models import Bangumi, Torrent
-from module.network import RequestContent
-from module.parser import MikanParser, TmdbParser
+from models import Bangumi, Torrent
+from module.parser import MikanParser,tmdb_parser
 from module.utils import gen_save_path
 from module.utils.events import Event, EventType, event_bus
 
@@ -17,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 class BangumiManager:
     def __init__(self) -> None:
-        self.tmdb_parser: TmdbParser = TmdbParser()
         self.torrent_manager: TorrentManager = TorrentManager()
 
     async def delete_rule(self, _id: int | str, file: bool = False):
@@ -28,7 +24,7 @@ class BangumiManager:
                 db.bangumi.delete_one(int(_id))
                 # 当 bangumi 不是聚合的时候删除 rss
                 rss_item = db.bangumi_to_rss(data)
-                if rss_item and rss_item.aggregate is False:
+                if rss_item and rss_item.aggregate is False and rss_item.id:
                     db.rss.delete(rss_item.id)
             if file:
                 await self.torrent_manager.delete_torrents(data)
@@ -103,7 +99,7 @@ class BangumiManager:
                         torrent_list = db.find_torrent_by_bangumi(old_data)
 
                     hash_list = [torrent.download_uid for torrent in torrent_list if torrent.download_uid]
-                    new_save_path = gen_save_path(settings.downloader.path, data)
+                    new_save_path = gen_save_path(DownlondClient.config.path, data)
                     if hash_list:
                         await DownlondClient.move_torrent(hash_list, new_save_path)
                     # offset 要改为 0 ,不然会重复应用 offset
@@ -135,7 +131,7 @@ class BangumiManager:
             mikan_parser = MikanParser()
             await mikan_parser.poster_parser(bangumi)
         else:
-            poster_link = await self.tmdb_parser.poster_parser(bangumi)
+            poster_link = await tmdb_parser(bangumi.official_title, "zh")
         if not poster_link:
             logger.warning(f"[Manager] Can't find poster for {bangumi.official_title}, please change it manually.")
             return False
@@ -158,9 +154,3 @@ class BangumiManager:
                 return None
             else:
                 return data
-
-
-if __name__ == "__main__":
-    manager = TorrentManager()
-    manager = BangumiManager()
-    asyncio.run(manager.fetch_all_bangumi_torrents(1))

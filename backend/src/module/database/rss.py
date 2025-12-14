@@ -2,7 +2,7 @@ import logging
 
 from sqlmodel import Session, and_, delete, select
 
-from module.models import RSSItem
+from models import RSSItem
 
 logger = logging.getLogger(__name__)
 
@@ -93,15 +93,3 @@ class RSSDatabase:
         except Exception as e:
             logger.error(f"Delete RSS Item failed. Because: {e}")
             return False
-
-    # def delete_all(self):
-    #     condition = delete(RSSItem)
-    #     self.session.exec(condition)
-    #     self.session.commit()
-
-
-if __name__ == "__main__":
-    from module.database import Database
-
-    with Database() as db:
-        test = RSSDatabase(db)

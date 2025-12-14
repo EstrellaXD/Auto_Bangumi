@@ -1,4 +1,4 @@
-from module.models import Message
+from models import Message
 
 from .base_notifier import BaseNotifier
 

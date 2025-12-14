@@ -1,10 +1,9 @@
 import importlib
 import logging
 
-from module.conf import settings
 from module.database import Database
-from module.models import Message
-from module.models.config import Notification
+from models import Message
+from models.config import Notification
 from module.network import load_image
 from module.notification.plugin.log import Notifier
 
@@ -12,6 +11,22 @@ logger = logging.getLogger(__name__)
 
 
 NOTIFICATON_TYPE = ["tetegram", "bark", "server_chan", "wecom", "log"]
+
+_notification_config: Notification | None = None
+
+
+def get_notification_config() -> Notification:
+    """获取通知配置，如果未初始化则返回默认配置"""
+    if _notification_config is None:
+        return Notification()
+    return _notification_config
+
+
+def set_notification_config(config: Notification):
+    """设置通知配置"""
+    global _notification_config
+    _notification_config = config
+
 
 
 class NotificationProcessor:
@@ -68,13 +83,14 @@ class PostNotification:
 
     def __init__(self) -> None:
         self.processor: NotificationProcessor = NotificationProcessor()
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self.config: Notification = settings.notification
-        self.notifier = Notifier(**self.config.model_dump())
+        self.notifier:Notifier = Notifier(**self.config.model_dump())
+
+    @property
+    def config(self) -> Notification:
+        return get_notification_config()
 
     def initialize(self, config: Notification | None = None) -> None:
         """根据设置创建通知管理器"""
-        self.config = settings.notification
         if not self.config.enable:
             logger.info("通知功能已禁用")
             return
@@ -119,9 +135,9 @@ class PostNotification:
 if __name__ == "__main__":
     import asyncio
 
-    from module.conf import setup_logger
+    from log import setup_logger
 
-    setup_logger("DEBUG", reset=True)
+    setup_logger(2, reset=True)
 
     # 测试用例
     title = "败犬"

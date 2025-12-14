@@ -1,7 +1,7 @@
 import re
 
-from module.conf import SEARCH_CONFIG
-from module.models import RSSItem
+from conf import SEARCH_CONFIG
+from models import RSSItem
 
 
 def search_url(site: str, keywords: list[str]) -> RSSItem:

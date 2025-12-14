@@ -1,6 +1,6 @@
 from typing import Any
 
-from module.models import Message
+from models import Message
 from module.network import RequestContent
 from module.utils.cache_image import str_to_url
 

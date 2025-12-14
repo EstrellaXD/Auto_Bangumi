@@ -4,8 +4,8 @@ import os
 import httpx
 from typing_extensions import override
 
-from module.conf import get_plugin_config
-from module.models import TorrentDownloadInfo
+from conf import get_plugin_config
+from models import TorrentDownloadInfo
 from module.utils import get_hash
 
 from ....conf import settings
@@ -252,7 +252,7 @@ class Downloader(BaseDownloader):
                     old_path = torrent_info["save_path"]
 
                     data = {
-                        "src_dir": os.path.dirname(old_path),
+                        "dir": os.path.dirname(old_path),
                         "dst_dir": new_location,
                         "names": [os.path.basename(old_path)],
                     }

@@ -2,7 +2,7 @@ import logging
 
 from sqlmodel import Session, and_, delete, false,  select
 
-from module.models import Bangumi
+from models import Bangumi
 
 logger = logging.getLogger(__name__)
 

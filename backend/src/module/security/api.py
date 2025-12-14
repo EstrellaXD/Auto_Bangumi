@@ -2,7 +2,7 @@ from fastapi import Cookie, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
 from module.database import Database
-from module.models.user import User, UserUpdate
+from models.user import User, UserUpdate
 
 from .jwt import verify_token, verify_password
 

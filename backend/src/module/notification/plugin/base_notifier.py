@@ -2,7 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
-from module.models import Message
+from models import Message
 
 logger = logging.getLogger(__name__)
 

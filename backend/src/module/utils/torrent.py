@@ -9,6 +9,21 @@ import bencodepy
 logger = logging.getLogger(__name__)
 
 
+def process_title(title:str) -> str:
+    """预处理标题，统一格式"""
+    # title 里面可能有"\n"
+    title = title.replace("\n", " ")
+    # 如果以【开头
+    #
+    if title.startswith("【"):
+        translation_table = str.maketrans("【】", "[]")
+        title = title.translate(translation_table)
+    title = title.strip()
+    # 末尾加一个 / 处理边界
+    title += "/"
+    return title
+
+
 def calculate_v2_hash(info_dict):
     """计算BitTorrent v2 hash"""
     # 检查是否为v2种子或混合种子
@@ -26,7 +41,12 @@ def calculate_v2_hash(info_dict):
     return None
 
 
-async def torrent_to_link(torrent_file):
+def torrent_to_link(torrent_file)-> list[str]:
+    """将种子文件转换为磁力链接
+
+    Returns:
+        list[str]: 包含 v1 和 v2 (如果存在) 磁力链接的列表
+    """
     try:
         logger.debug(
             f"torrent_to_link: Processing torrent file, type: {type(torrent_file)}, size: {len(torrent_file) if hasattr(torrent_file, '__len__') else 'unknown'}"
@@ -44,37 +64,35 @@ async def torrent_to_link(torrent_file):
         info_hash_hex_v1 = base64.b16encode(info_hash_v1).decode("utf-8").lower()
         logger.debug(f"torrent_to_link: V1 hash calculated: {info_hash_hex_v1}")
 
-        # 尝试计算v2 hash
-        info_hash_v2 = calculate_v2_hash(info)
-
-        # 如果是混合种子或v2种子，优先使用v2 hash
-        if info_hash_v2:
-            info_hash_hex_v2 = base64.b16encode(info_hash_v2).decode("utf-8").lower()
-            # V2 hash 使用 btmh (BitTorrent Meta Hash) 格式，1220表示SHA256
-            magnet_link = f"magnet:?xt=urn:btmh:1220{info_hash_hex_v2}"
-            logger.debug(f"torrent_to_link: Using V2 hash: {info_hash_hex_v2}")
-        else:
-            # 使用v1 hash
-            magnet_link = f"magnet:?xt=urn:btih:{info_hash_hex_v1}"
-            logger.debug(f"torrent_to_link: Using V1 hash: {info_hash_hex_v1}")
-
-        # # 获取文件名
-        # name = torrent_info.get(b"info", {}).get(b"name", b"").decode("utf-8")
-        # if name:
-        #     magnet_link += f"&dn={quote(name)}"
-
-        # 添加 trackers (可选)
+        # 构建tracker列表
+        tracker_params = ""
         if b"announce" in torrent_info:
             tracker = torrent_info[b"announce"].decode("utf-8")
-            magnet_link += f"&tr={quote(tracker)}"
+            tracker_params += f"&tr={quote(tracker)}"
 
         if b"announce-list" in torrent_info:
             for tracker_list in torrent_info[b"announce-list"]:
                 tracker = tracker_list[0].decode("utf-8")
-                magnet_link += f"&tr={quote(tracker)}"
+                tracker_params += f"&tr={quote(tracker)}"
 
-        logger.debug(f"torrent_to_link: Generated magnet link: {magnet_link}")
-        return magnet_link
+        # 构建 v1 magnet 链接
+        magnet_link_v1 = f"magnet:?xt=urn:btih:{info_hash_hex_v1}{tracker_params}"
+        logger.debug(f"torrent_to_link: Generated V1 magnet link: {magnet_link_v1}")
+
+        magnet_links = [magnet_link_v1]
+
+        # 尝试计算v2 hash
+        info_hash_v2 = calculate_v2_hash(info)
+        if info_hash_v2:
+            info_hash_hex_v2 = base64.b16encode(info_hash_v2).decode("utf-8").lower()
+            # V2 hash 使用 btmh (BitTorrent Meta Hash) 格式，1220表示SHA256
+            magnet_link_v2 = f"magnet:?xt=urn:btmh:1220{info_hash_hex_v2}{tracker_params}"
+            logger.debug(f"torrent_to_link: Generated V2 magnet link: {magnet_link_v2}")
+            magnet_links.append(magnet_link_v2)
+        else:
+            logger.debug(f"torrent_to_link: No V2 hash available, returning V1 only")
+
+        return magnet_links
 
     except Exception as e:
         logger.error(f"torrent_to_link: Error processing torrent file: {e}")
@@ -83,10 +101,10 @@ async def torrent_to_link(torrent_file):
             logger.error(f"torrent_to_link: Torrent file size: {len(torrent_file)}")
         if isinstance(torrent_file, bytes) and len(torrent_file) > 0:
             logger.error(f"torrent_to_link: First 50 bytes: {torrent_file[:50]}")
-        return ""
+        return []
 
 
-async def get_torrent_hashes(torrent_file):
+def get_torrent_hashes(torrent_file)-> list[str]:
     """获取种子的所有可能hash (v1和v2)"""
     try:
         logger.debug(f"get_torrent_hashes: Processing torrent file")
@@ -100,13 +118,13 @@ async def get_torrent_hashes(torrent_file):
         v1_hash_hex = base64.b16encode(v1_hash).decode("utf-8").lower()
         logger.debug(f"get_torrent_hashes: V1 hash: {v1_hash_hex}")
 
-        hashes = {"v1": v1_hash_hex}
+        hashes = [v1_hash_hex]
 
         # V2 hash (SHA256)
         v2_hash = calculate_v2_hash(info)
         if v2_hash:
             v2_hash_hex = base64.b16encode(v2_hash).decode("utf-8").lower()
-            hashes["v2"] = v2_hash_hex
+            hashes.append(v2_hash_hex)
             logger.debug(f"get_torrent_hashes: V2 hash: {v2_hash_hex}")
         else:
             logger.debug("get_torrent_hashes: No V2 hash found, this is a V1-only torrent")
@@ -114,91 +132,24 @@ async def get_torrent_hashes(torrent_file):
         return hashes
 
     except Exception as e:
-        logger.error(f"get_torrent_hashes: Error processing torrent file: {e}")
-        return {"v1": ""}
+        logger.error(f"[get_torrent_hashes]: Error processing torrent file: {e}")
+        return []
 
 
-def base32_to_hex(base32_hash: str) -> str:
-    """将Base32格式的hash转换为十六进制
-
-    Args:
-        base32_hash: 32字符的Base32编码hash
-
-    Returns:
-        40字符的小写十六进制hash，转换失败返回空字符串
-    """
-    try:
-        # Base32解码
-        decoded = base64.b32decode(base32_hash)
-        return decoded.hex().lower()
-    except Exception as e:
-        logger.warning(f"Base32转换失败: {base32_hash}, error: {e}")
-        return ""
-
-
-def hex_to_base32(hex_hash: str) -> str:
-    """将十六进制hash转换为Base32格式
-
-    Args:
-        hex_hash: 40字符的十六进制hash
-
-    Returns:
-        32字符的Base32编码hash，转换失败返回空字符串
-    """
-    try:
-        # 十六进制转字节
-        hex_bytes = bytes.fromhex(hex_hash)
-        # 编码为Base32，去掉填充符
-        return base64.b32encode(hex_bytes).decode().rstrip("=")
-    except Exception as e:
-        logger.warning(f"十六进制转Base32失败: {hex_hash}, error: {e}")
-        return ""
-
-
-def normalize_hash(hash_value: str) -> str:
-    """标准化hash格式，统一转换为40字符小写十六进制
-
-    Args:
-        hash_value: 输入的hash值，可能是40字符十六进制或32字符Base32
-
-    Returns:
-        标准化的40字符小写十六进制hash
-    """
-    if not hash_value:
-        return ""
-
-    hash_value = hash_value.strip()
-
-    # 40字符十六进制格式
-    if len(hash_value) == 40 and re.match(r"^[a-fA-F0-9]{40}$", hash_value):
-        return hash_value.lower()
-
-    # 32字符Base32格式 (DMHY等站点常用)
-    if len(hash_value) == 32 and re.match(r"^[A-Z0-9]{32}$", hash_value):
-        hex_hash = base32_to_hex(hash_value)
-        if hex_hash:
-            logger.debug(f"将Base32 hash {hash_value} 转换为十六进制: {hex_hash}")
-            return hex_hash
-
-    # 其他情况，尝试转小写
-    normalized = hash_value.lower()
-    logger.debug(f"hash标准化: {hash_value} -> {normalized}")
-    return normalized
-
-
-def get_hash(torrent_url: str) -> str | None:
-    """从torrent URL或magnet链接中提取hash
+def get_hash(torrent_url: str) -> str:
+    """从torrent URL或magnet链接中提取hash (支持v1和v2)
 
     Args:
         torrent_url: torrent文件URL或magnet链接
 
     Returns:
-        提取的hash值，提取失败返回空字符串
+        提取的hash值，优先返回v1，如果没有v1则返回v2，提取失败返回空字符串
     """
     hash_pattern_dict = {
-        "magnet_hash_pattern": re.compile(r"\b([a-fA-F0-9]{40})\b"),
-        # "torrent_hash_pattern": re.compile(r"/([a-fA-F0-9]{7,40})\.torrent"),
-        "dmhy_hash_pattern": re.compile(r"urn:btih:([A-Z0-9]{32})"),
+        # V1 hash pattern: urn:btih: + 40字符十六进制
+        "magnet_v1_hex": re.compile(r"urn:btih:([a-fA-F0-9]{40})"),
+        # V2 hash pattern: urn:btmh:1220 + 64字符十六进制SHA256
+        "magnet_v2": re.compile(r"urn:btmh:1220([a-fA-F0-9]{64})"),
     }
 
     for pattern_name, hash_pattern in hash_pattern_dict.items():
@@ -206,12 +157,8 @@ def get_hash(torrent_url: str) -> str | None:
         if ans:
             extracted_hash = ans[1]
             logger.debug(f"使用{pattern_name}提取hash: {extracted_hash}")
-            # 使用normalize_hash标准化hash格式
-            normalized_hash = normalize_hash(extracted_hash)
-            if normalized_hash != extracted_hash:
-                logger.debug(f"hash已标准化: {extracted_hash} -> {normalized_hash}")
-
-            return normalized_hash
+            # 直接返回小写十六进制
+            return extracted_hash.lower()
 
     logger.warning(f"[Utils] Cannot find hash in {torrent_url}")
     return ""

@@ -3,7 +3,7 @@ import time
 
 from aria2p import API, Client, ClientException
 
-from module.conf import settings
+from conf import settings
 
 logger = logging.getLogger(__name__)
 

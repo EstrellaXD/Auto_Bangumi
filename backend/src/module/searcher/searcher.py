@@ -3,11 +3,10 @@ import json
 import logging
 from collections.abc import AsyncGenerator
 
-from module.conf import settings
-from module.models import Bangumi, RSSItem, Torrent
+from models import Bangumi, RSSItem, Torrent
 from module.network import RequestContent
-from module.parser.title_parser import MikanParser, RawParser
-from module.rss import RSSAnalyser, RSSEngine
+from module.parser import MikanParser, RawParser
+from module.rss.analyser import filter_torrent, torrent_to_bangumi
 from module.searcher.mikan import MikanSearch
 from module.searcher.provider import search_url
 
@@ -27,7 +26,6 @@ SEARCH_KEY = [
 class SearchTorrent:
     def __init__(self) -> None:
         self.req = RequestContent()
-        self.analyser = RSSAnalyser()
         self.mikan_parser = MikanParser()
 
     async def search_torrents(self, rss_item: RSSItem) -> list[Torrent]:
@@ -41,7 +39,7 @@ class SearchTorrent:
         if not bangumi:
             return []
         for torrent in new_torrents:
-            if self.analyser.filter_torrent(torrent, bangumi):
+            if filter_torrent(torrent, bangumi):
                 torrents.append(torrent)
         logger.debug(f"[SearchTorrent] Found {len(torrents)} torrents for {rss_item.url}")
         return torrents
@@ -66,7 +64,7 @@ class SearchTorrent:
                         # 对于 mikan , 有一个 homepage, 有的话改用 mikan 的 homepage 搜索
                         single_torrent.append(torrent)
                     else:
-                        task = asyncio.create_task(self.analyser.torrent_to_bangumi(torrent, rss_item))
+                        task = asyncio.create_task(torrent_to_bangumi(torrent, rss_item))
                         tasks.append(task)
                     exist_list.append(new_str)
 
@@ -132,16 +130,3 @@ class SearchTorrent:
         return keywords
 
 
-if __name__ == "__main__":
-    import asyncio
-
-    import pyinstrument
-
-    async def main():
-        p = pyinstrument.Profiler()
-        with p:
-            async for result in SearchTorrent().analyse_keyword(["败犬"], site="mikan"):
-                print(json.loads(result["data"]))
-        p.print()
-
-    asyncio.run(main())

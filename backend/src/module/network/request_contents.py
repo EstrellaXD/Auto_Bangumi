@@ -3,10 +3,12 @@ import time
 import xml.etree.ElementTree
 from typing import Any
 
+import httpx
 from httpx import Response
 
-from module.models import Torrent
-from module.utils import get_torrent_hashes
+from module.exceptions import XMLParseError
+from models import Torrent
+from module.utils import get_torrent_hashes, process_title
 
 from .request_url import RequestURL
 from .site import rss_parser
@@ -26,8 +28,7 @@ class RequestContent(RequestURL):
             data, timestamp = _cache[url]["data"], _cache[url]["timestamp"]
             if time.time() - timestamp < 60:  # 未过期
                 return data
-            else:
-                del _cache[url]  # 过期就删除
+            del _cache[url]  # 过期就删除
         return None
 
     def _save_cache(self, url: str, data):
@@ -45,51 +46,41 @@ class RequestContent(RequestURL):
 
         _cache[url] = {"data": data, "timestamp": time.time()}
 
-    # 对错误包裹, 所有网络的错误到这里就结束了
     async def get_torrents(
         self,
         _url: str,
         limit: int = 0,
         retry: int = 3,
     ) -> list[Torrent]:
-        feeds = await self.get_xml(_url, retry)
-        if feeds is not None:
+        try:
+            feeds = await self.get_xml(_url, retry)
             torrent_titles, torrent_urls, torrent_homepage = rss_parser(feeds)
             torrents: list[Torrent] = []
             for _title, torrent_url, homepage in zip(torrent_titles, torrent_urls, torrent_homepage):
-                # 去掉内部的 "\n"
-                _title = _title.replace("\n", "")
+                _title = process_title(_title)
                 torrents.append(Torrent(name=_title, url=torrent_url, homepage=homepage))
             return torrents if limit == 0 else torrents[:limit]
-        else:
-            logger.error(f"[Network] Torrents list is empty: {_url}")
-            return []
+        except Exception:
+            raise
 
-    async def get_xml(self, _url: str, retry: int = 3) -> xml.etree.ElementTree.Element | None:
-        # 检查缓存
-        cached = self._check_cache(_url)
-        if cached is not None:
+    async def get_xml(self, _url: str, retry: int = 3) -> xml.etree.ElementTree.Element:
+        if cached := self._check_cache(_url):
             return cached
-
         try:
             req = await self.get_url(_url, retry)
-            if req:
-                result = xml.etree.ElementTree.fromstring(req.text)
-                self._save_cache(_url, result)
-                return result
+            result = xml.etree.ElementTree.fromstring(req.text)
+            self._save_cache(_url, result)
+            return result
         except xml.etree.ElementTree.ParseError:
-            logger.warning(f"[Network] Cannot parser {_url}, please check the url is right")
-        except Exception as e:
+            raise XMLParseError(url=_url)
+        except httpx.RequestError as e:
             logger.error(f"[Network] Cannot get xml from {_url}: {e}")
-        return None
+            raise
 
     # API JSON
     async def get_json(self, _url: str) -> dict[str, Any]:
-        # 检查缓存
-        cached = self._check_cache(_url)
-        if cached is not None:
+        if cached := self._check_cache(_url):
             return cached
-
         try:
             req = await self.get_url(_url)
             if req:
@@ -101,64 +92,42 @@ class RequestContent(RequestURL):
         return {}
 
     async def post_data(self, _url: str, data: dict[str, str], files: dict[str, bytes] | None = None) -> Response:
-        try:
-            req = await self.post_url(_url, data, files)
-            return req
-        except Exception as e:
-            logger.error(f"[Network] Cannot post data to {_url}: {e}")
-        return Response(status_code=400)
+        req = await self.post_url(_url, data, files)
+        return req
 
     async def get_html(self, _url: str) -> str:
-        # 检查缓存
-        cached = self._check_cache(_url)
-        if cached is not None:
+        if cached := self._check_cache(_url):
             return cached
-
-        try:
-            req = await self.get_url(_url)
-            if req:
-                result = req.text
-                self._save_cache(_url, result)
-                return result
-        except Exception as e:
-            logger.error(f"[Network] Cannot get html from {_url}: {e}")
-        return ""
+        req = await self.get_url(_url)
+        result = req.text
+        self._save_cache(_url, result)
+        return result
 
     async def get_content(self, _url: str) -> bytes:
-        # 检查缓存
-        cached = self._check_cache(_url)
-        if cached is not None:
+        if cached := self._check_cache(_url):
             return cached
-
         try:
             req = await self.get_url(_url)
-            if req:
-                result = req.content
-                self._save_cache(_url, result)
-                return result
-        except Exception as e:
+            result = req.content
+            self._save_cache(_url, result)
+            return result
+        except httpx.RequestError as e:
             logger.error(f"[Network] Cannot get content from {_url}: {e}")
-        return b""
-
-    async def check_connection(self, _url: str) -> bool:
-        return await self.check_url(_url)
+            raise
 
     async def get_rss_title(self, _url: str) -> str | None:
         # 有一说一,不该在这里,放在 rss_parser 里面
         try:
             soup = await self.get_xml(_url)
-            if soup is not None:
-                title = soup.find("./channel/title")
-                # logger.debug(f"XML structure: {xml.etree.ElementTree.tostring(title, encoding='unicode')}")
-                if title is not None:
-                    return title.text
+            title = soup.find("./channel/title")
+            if title is not None:
+                return title.text
         except Exception as e:
             logger.error(f"[Network] Cannot get rss title from {_url}: {e}")
         return None
 
-    async def get_torrent_hash(self, _url: str) -> dict[str, str]:
+    async def get_torrent_hash(self, _url: str) -> tuple[bytes,list[str]]:
         # 下载种子文件,处理 hash 与 url 不一致的情况
-        if torrent_file := await self.get_content(_url):
-            torrent_hash = await get_torrent_hashes(torrent_file)
-            return torrent_hash
-        return {"v1": "", "v2": ""}
+        torrent_file = await self.get_content(_url)
+        torrent_hash = get_torrent_hashes(torrent_file)
+        return torrent_file,torrent_hash

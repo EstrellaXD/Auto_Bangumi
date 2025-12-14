@@ -1,6 +1,6 @@
 from typing import Any, Dict
 
-from module.models import Message
+from models import Message
 from module.network import RequestContent, load_image
 
 from .base_notifier import BaseNotifier

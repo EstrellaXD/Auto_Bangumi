@@ -1,5 +1,19 @@
 from .combine import Database
 from .engine import engine
-from .migration import DatabaseMigration, check_and_upgrade_database
+from .migration import (
+    check_and_upgrade_database,
+    create_backup,
+    downgrade_database,
+    get_current_revision,
+    get_migration_history,
+)
 
-__all__ = ["engine", "Database", "DatabaseMigration", "check_and_upgrade_database"]
+__all__ = [
+    "engine",
+    "Database",
+    "check_and_upgrade_database",
+    "create_backup",
+    "downgrade_database",
+    "get_current_revision",
+    "get_migration_history",
+]

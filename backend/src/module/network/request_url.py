@@ -15,28 +15,33 @@ class RequestURL:
             "Accept": "application/xml",
         }
         self.proxy: str | None = set_proxy()
-        self.retry: int = 3
         self.timeout: int = 5
         self.client: httpx.AsyncClient
 
-    async def _request_with_retry(self, method: str, url: str, **kwargs) -> httpx.Response:
-        for attempt in range(self.retry):
+    async def _request_with_retry(self, method: str, url: str, retry: int = 3, **kwargs) -> httpx.Response:
+        last_exception: Exception | None = None
+        for attempt in range(retry):
             try:
                 response = await self.client.request(method, url, follow_redirects=True, **kwargs)
                 response.raise_for_status()
                 return response
             except httpx.RequestError as e:
+                if isinstance(e, httpx.HTTPStatusError) and 400 <= e.response.status_code < 500:
+                    logger.debug(f"[Network] HTTP error {e.response.status_code} for {url}. Not retrying.")
+                    raise
                 logger.debug(f"[Network] Cannot connect to {url}. Wait for 5 seconds.")
-                if attempt < self.retry - 1:
-                    await asyncio.sleep(5)
-                else:
-                    raise e
-        # 这里永远不应该执行到，但为了类型安全添加
-        raise httpx.RequestError(f"Failed to complete request to {url} after {self.retry} attempts")
+                last_exception = e
 
-    async def get_url(self, url, retry=3):
-        self.retry = retry
-        return await self._request_with_retry("GET", url)
+            if attempt < retry - 1:
+                logger.debug(f"[Network] Retry {attempt + 1} for {url}.")
+                await asyncio.sleep(5)
+        if last_exception:
+            raise last_exception
+
+        raise httpx.RequestError(f"Failed after {retry} attempts")
+
+    async def get_url(self, url, retry: int = 3) -> httpx.Response:
+        return await self._request_with_retry("GET", url, retry=retry)
 
     async def post_url(
         self,
@@ -45,21 +50,7 @@ class RequestURL:
         files: dict[str, bytes] | None = None,
         retry: int = 3,
     ) -> httpx.Response:
-        self.retry = retry
-        resp = await self._request_with_retry("POST", url, data=data, files=files)
-        resp.raise_for_status()
-        return resp
-
-    async def check_url(self, url: str):
-        if not url.startswith("http"):
-            url = f"http://{url}"
-        try:
-            req = await self.client.get(url=url)
-            req.raise_for_status()
-            return True
-        except httpx.RequestError:
-            logger.debug(f"[Network] Cannot connect to {url}.")
-            return False
+        return await self._request_with_retry("POST", url, retry=retry, data=data, files=files)
 
     async def __aenter__(self):
         self.client = httpx.AsyncClient(http2=True, proxy=self.proxy, headers=self.header, timeout=self.timeout)

@@ -1,43 +1,60 @@
 import logging
 
 import httpx
+from models.config import Proxy
 
-from module.conf import settings
 
 logger = logging.getLogger(__name__)
 
+_proxy_config: Proxy | None = None
+
+
+def get_proxy_config() -> Proxy:
+    """获取代理配置，如果未初始化则返回默认配置"""
+    if _proxy_config is None:
+        return Proxy()
+    return _proxy_config
+
+
+def set_proxy_config(config: Proxy):
+    """设置代理配置"""
+    global _proxy_config
+    _proxy_config = config
+
 
 def set_proxy() -> str | None:
-    if not settings.proxy.enable:
+    config = get_proxy_config()
+    if not config.enable:
         return None
     auth = ""
-    host = settings.proxy.host
+    host = config.host
     if host.startswith("http://"):
         host = host[7:]
-    if settings.proxy.username:
-        auth = f"{settings.proxy.username}:{settings.proxy.password}@"
-    if settings.proxy.type in ["http", "socks5"]:
-        return f"{settings.proxy.type}://{auth}{host}:{settings.proxy.port}"
+    if config.username:
+        auth = f"{config.username}:{config.password}@"
+    if config.type in ["http", "socks5"]:
+        return f"{config.type}://{auth}{host}:{config.port}"
     else:
-        logger.error(f"[Network] Unsupported proxy type: {settings.proxy.type}")
+        logger.error(f"[Network] Unsupported proxy type: {config.type}")
         return None
 
 
 def test_proxy() -> bool:
+    config = get_proxy_config()
     with httpx.Client(proxy=set_proxy()) as client:
         try:
             client.get("https://www.baidu.com")
             return True
         except httpx.ProxyError:
             logger.error(
-                f"[Network] Cannot connect to proxy, please check your proxy username{settings.proxy.username} and password {settings.proxy.password}"
+                f"[Network] Cannot connect to proxy, please check your proxy username {config.username} and password {config.password}"
             )
             return False
         except httpx.ConnectError:
-            logger.error(f"host is down, please check your proxy host {settings.proxy.host}")
+            logger.error(f"host is down, please check your proxy host {config.host}")
             return False
         except httpx.ConnectTimeout:
-            logger.error(f"[Network] Cannot connect to proxy {settings.proxy.host}:{settings.proxy.port}")
+            logger.error(f"[Network] Cannot connect to proxy {config.host}:{config.port}")
             return False
 
 

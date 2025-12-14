@@ -1,9 +1,8 @@
 import logging
 
-from module.conf import settings
 from module.database import Database, engine
 from module.downloader import download_queue
-from module.models import Bangumi, Torrent
+from models import Bangumi, Torrent
 from module.rss import RSSEngine, RSSManager
 from module.rss.engine import BangumiRefresher
 from module.searcher import SearchTorrent
@@ -89,22 +88,3 @@ async def eps_complete():
                 logger.debug(f"[eps_complete] {data.official_title} eps is not completed")
         except Exception as e:
             logger.error(f"[eps_complete] {e}")
-
-
-if __name__ == "__main__":
-    import asyncio
-
-    from module.conf import setup_logger
-    from module.downloader import DownloadController
-
-    setup_logger("DEBUG")
-
-    async def test():
-        t = Bangumi(official_title=official_title, rss_link=rss_link)
-        asyncio.create_task(DownloadController().download())
-        await eps_complete()
-        await asyncio.sleep(20)
-
-    official_title = "败犬女主太多了！"
-    rss_link = "https://mikanani.me/RSS/Bangumi?bangumiId=3391&subgroupid=583"
-    ans = asyncio.run(test())
