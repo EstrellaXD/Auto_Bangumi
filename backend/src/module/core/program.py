@@ -28,6 +28,10 @@ figlet = r"""
 
 
 class Program(RenameThread, RSSThread):
+    def __init__(self):
+        super().__init__()
+        self._start_task = None
+
     @staticmethod
     def __start_info():
         for line in figlet.splitlines():
@@ -61,14 +65,9 @@ class Program(RenameThread, RSSThread):
     async def start(self):
         self.stop_event.clear()
         settings.load()
-        while not self.downloader_status:
-            logger.warning("Downloader is not running.")
-            logger.info("Waiting for downloader to start.")
-            await asyncio.sleep(30)
-        if self.enable_renamer:
-            self.rename_start()
-        if self.enable_rss:
-            self.rss_start()
+        if self._start_task and not self._start_task.done():
+            self._start_task.cancel()
+        self._start_task = asyncio.create_task(self.start_service())
         logger.info("Program running.")
         return ResponseModel(
             status=True,
@@ -77,9 +76,39 @@ class Program(RenameThread, RSSThread):
             msg_zh="程序启动成功。",
         )
 
+    async def start_service(self):
+        try:
+            retry_count = 0
+            # max_retries = settings.program.max_retries if hasattr(settings, "program") and hasattr(settings.program, "max_retries") else 5
+            max_retries = 5
+            while not self.downloader_status:
+                if self.stop_event.is_set():
+                    return
+                retry_count += 1
+                if retry_count > max_retries:
+                    logger.error("Downloader connection failed after maximum retries.")
+                    return
+                logger.warning(f"Downloader is not running. Retry {retry_count}/{max_retries}")
+                logger.info("Waiting for downloader to start.")
+                await asyncio.sleep(30)
+            
+            if self.stop_event.is_set():
+                return
+
+            if self.enable_renamer and not self.rename_thread.is_alive():
+                self.rename_start()
+            if self.enable_rss and not self.rss_thread.is_alive():
+                self.rss_start()
+        except asyncio.CancelledError:
+            logger.debug("Start service task cancelled.")
+        except Exception as e:
+            logger.error(f"Error in start service: {e}", exc_info=True)
+
     def stop(self):
         if self.is_running:
             self.stop_event.set()
+            if self._start_task and not self._start_task.done():
+                self._start_task.cancel()
             self.rename_stop()
             self.rss_stop()
             return ResponseModel(
