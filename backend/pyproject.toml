@@ -1,15 +1,64 @@
+[project]
+name = "auto-bangumi"
+version = "3.1.0"
+description = "AutoBangumi - Automated anime download manager"
+requires-python = ">=3.10"
+dependencies = [
+    "anyio>=4.0.0",
+    "beautifulsoup4>=4.12.0",
+    "certifi>=2023.5.7",
+    "charset-normalizer>=3.1.0",
+    "click>=8.1.3",
+    "fastapi>=0.109.0",
+    "h11>=0.14.0",
+    "idna>=3.4",
+    "pydantic>=2.0.0",
+    "sniffio>=1.3.0",
+    "soupsieve>=2.4.1",
+    "typing_extensions>=4.0.0",
+    "urllib3>=2.0.3",
+    "uvicorn>=0.27.0",
+    "Jinja2>=3.1.2",
+    "python-dotenv>=1.0.0",
+    "python-jose>=3.3.0",
+    "passlib>=1.7.4",
+    "bcrypt>=4.0.1,<4.1",
+    "python-multipart>=0.0.6",
+    "sqlmodel>=0.0.14",
+    "sse-starlette>=1.6.5",
+    "semver>=3.0.1",
+    "openai>=1.54.3",
+    "httpx>=0.25.0",
+    "httpx-socks>=0.9.0",
+    "aiosqlite>=0.19.0",
+    "sqlalchemy[asyncio]>=2.0.0",
+    "webauthn>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.1.0",
+    "black>=24.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["src/test"]
+asyncio_mode = "auto"
+
 [tool.ruff]
 select = [
     # pycodestyle(E): https://beta.ruff.rs/docs/rules/#pycodestyle-e-w
-    "E", 
+    "E",
     # Pyflakes(F): https://beta.ruff.rs/docs/rules/#pyflakes-f
-    "F", 
+    "F",
     # isort(I): https://beta.ruff.rs/docs/rules/#isort-i
     "I"
 ]
 ignore = [
     # E501: https://beta.ruff.rs/docs/rules/line-too-long/
-    'E501', 
+    'E501',
     # F401: https://beta.ruff.rs/docs/rules/unused-import/
     # avoid unused imports lint in `__init__.py`
     'F401',

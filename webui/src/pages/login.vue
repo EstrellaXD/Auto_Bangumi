@@ -1,9 +1,30 @@
 <script lang="ts" setup>
+import { Fingerprint } from '@icon-park/vue-next';
+
 definePage({
   name: 'Login',
 });
 
 const { user, login } = useAuth();
+const { isSupported, loginWithPasskey } = usePasskey();
+
+const isPasskeyLoading = ref(false);
+
+async function handlePasskeyLogin() {
+  if (!user.username) {
+    const message = useMessage();
+    const { t } = useMyI18n();
+    message.warning(t('notify.please_enter', [t('login.username')]));
+    return;
+  }
+
+  isPasskeyLoading.value = true;
+  try {
+    await loginWithPasskey(user.username);
+  } finally {
+    isPasskeyLoading.value = false;
+  }
+}
 </script>
 
 <template>
@@ -31,7 +52,18 @@ const { user, login } = useAuth();
 
         <div line></div>
 
-        <div flex="~ justify-end">
+        <div flex="~ justify-between items-center">
+          <ab-button
+            v-if="isSupported"
+            size="small"
+            type="secondary"
+            :disabled="isPasskeyLoading"
+            @click="handlePasskeyLogin"
+          >
+            <Fingerprint size="16" mr-4 />
+            {{ $t('login.passkey_btn') }}
+          </ab-button>
+          <div v-else></div>
           <ab-button size="small" @click="login">
             {{ $t('login.login_btn') }}
           </ab-button>
