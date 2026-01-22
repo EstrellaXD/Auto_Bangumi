@@ -24,7 +24,7 @@ async def startup():
 
 @router.on_event("shutdown")
 async def shutdown():
-    program.stop()
+    await program.stop()
 
 
 @router.get(
@@ -69,7 +69,8 @@ async def start():
     "/stop", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
 async def stop():
-    return u_response(program.stop())
+    resp = await program.stop()
+    return u_response(resp)
 
 
 @router.get("/status", response_model=dict, dependencies=[Depends(get_current_user)])
@@ -92,7 +93,7 @@ async def program_status():
     "/shutdown", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
 async def shutdown_program():
-    program.stop()
+    await program.stop()
     logger.info("Shutting down program...")
     os.kill(os.getpid(), signal.SIGINT)
     return JSONResponse(
@@ -112,4 +113,4 @@ async def shutdown_program():
     dependencies=[Depends(get_current_user)],
 )
 async def check_downloader_status():
-    return program.check_downloader()
+    return await program.check_downloader()

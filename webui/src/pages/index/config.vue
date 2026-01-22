@@ -33,6 +33,8 @@ onActivated(() => {
           <config-player></config-player>
 
           <config-openai></config-openai>
+
+          <config-passkey></config-passkey>
         </div>
       </div>
 

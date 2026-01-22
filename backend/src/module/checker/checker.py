@@ -1,10 +1,9 @@
 import logging
 from pathlib import Path
 
-import requests
+import httpx
 
 from module.conf import VERSION, settings
-from module.downloader import DownloadClient
 from module.models import Config
 from module.update import version_check
 
@@ -49,27 +48,28 @@ class Checker:
             return True
 
     @staticmethod
-    def check_downloader() -> bool:
+    async def check_downloader() -> bool:
+        from module.downloader import DownloadClient
         try:
             url = (
                 f"http://{settings.downloader.host}"
                 if "://" not in settings.downloader.host
                 else f"{settings.downloader.host}"
             )
-            response = requests.get(url, timeout=2)
-            # if settings.downloader.type in response.text.lower():
+            async with httpx.AsyncClient(timeout=2.0) as client:
+                response = await client.get(url)
             if "qbittorrent" in response.text.lower() or "vuetorrent" in response.text.lower():
-                with DownloadClient() as client:
-                    if client.authed:
+                async with DownloadClient() as dl_client:
+                    if dl_client.authed:
                         return True
                     else:
                         return False
             else:
                 return False
-        except requests.exceptions.ReadTimeout:
+        except httpx.TimeoutException:
             logger.error("[Checker] Downloader connect timeout.")
             return False
-        except requests.exceptions.ConnectionError:
+        except httpx.ConnectError:
             logger.error("[Checker] Downloader connect failed.")
             return False
         except Exception as e:
