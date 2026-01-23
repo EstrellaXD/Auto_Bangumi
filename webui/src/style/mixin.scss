@@ -14,7 +14,7 @@ $min-pc: 1024px;
 
 @mixin bg-mouse-event($normal, $hover, $active) {
   background: $normal;
-  transition: background 0.3s;
+  transition: background-color var(--transition-normal);
 
   &:hover {
     background: $hover;

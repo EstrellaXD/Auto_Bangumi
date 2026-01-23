@@ -33,67 +33,152 @@ function abLabel(label: string | (() => string)) {
 
 <template>
   <Menu>
-    <div rel>
-      <div fx-cer space-x="pc:16 10" text="pc:24 20">
-        <International
-          theme="outline"
-          size="1em"
-          fill="#fff"
-          is-btn
-          btn-click
+    <div class="status-bar">
+      <div class="status-bar-actions">
+        <button
+          class="status-bar-btn"
+          aria-label="Switch language"
           @click="() => $emit('changeLang')"
-        />
+        >
+          <International theme="outline" size="1em" />
+        </button>
 
-        <AddOne
-          theme="outline"
-          size="1em"
-          fill="#fff"
-          is-btn
-          btn-click
+        <button
+          class="status-bar-btn"
+          aria-label="Add RSS subscription"
           @click="() => $emit('clickAdd')"
-        />
+        >
+          <AddOne theme="outline" size="1em" />
+        </button>
 
-        <MenuButton bg-transparent is-btn btn-click>
-          <System theme="outline" size="1em" fill="#fff" />
+        <MenuButton class="status-bar-btn" aria-label="System menu">
+          <System theme="outline" size="1em" />
         </MenuButton>
 
         <ab-status :running="running" />
       </div>
 
-      <MenuItems
-        abs
-        top="pc:50 40"
-        left="pc:32 0"
-        w-120
-        rounded-8
-        bg-white
-        overflow-hidden
-        shadow
-        z-99
-      >
+      <MenuItems class="status-menu">
         <MenuItem v-for="i in items" :key="i.id" v-slot="{ active }">
           <div
-            w-full
-            h-32
-            px-12
-            fx-cer
-            gap-x-8
-            is-btn
-            hover="text-white bg-primary"
-            class="group"
-            :class="[active ? 'text-white bg-theme-row' : 'text-black']"
+            class="status-menu-item"
+            :class="[active && 'status-menu-item--active']"
             @click="() => i.handle && i.handle()"
           >
-            <div
-              group-hover="text-white"
-              :class="[active ? 'text-white' : 'text-primary']"
-            >
+            <div class="status-menu-item-icon">
               <Component :is="i.icon" size="16"></Component>
             </div>
-            <div text-main>{{ abLabel(i.label) }}</div>
+            <div class="status-menu-item-label">{{ abLabel(i.label) }}</div>
           </div>
         </MenuItem>
       </MenuItems>
     </div>
   </Menu>
 </template>
+
+<style lang="scss" scoped>
+.status-bar {
+  position: relative;
+}
+
+.status-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 20px;
+
+  @include forMobile {
+    gap: 8px;
+    font-size: 18px;
+  }
+}
+
+.status-bar-btn {
+  cursor: pointer;
+  user-select: none;
+  color: var(--color-text-secondary);
+  transition: color var(--transition-fast), transform var(--transition-fast);
+  display: flex;
+  align-items: center;
+  background: transparent;
+  border: none;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+
+  &:hover {
+    color: var(--color-primary);
+    transform: scale(1.1);
+  }
+
+  &:active {
+    transform: scale(1);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+.status-menu {
+  position: absolute;
+  top: 40px;
+  right: 0;
+  width: 160px;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+  overflow: hidden;
+  animation: dropdown-in 150ms ease-out;
+  transform-origin: top right;
+  transition: background-color var(--transition-normal),
+              border-color var(--transition-normal);
+
+  @include forPC {
+    top: 44px;
+  }
+}
+
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.status-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--color-text);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+
+  &:hover,
+  &--active {
+    color: var(--color-primary);
+    background: var(--color-primary-light);
+  }
+}
+
+.status-menu-item-icon {
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+}
+
+.status-menu-item-label {
+  font-size: 12px;
+}
+</style>

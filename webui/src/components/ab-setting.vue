@@ -40,6 +40,6 @@ const data = defineModel<any>('data');
       </div>
     </ab-label>
 
-    <div v-if="bottomLine" line my-12></div>
+    <div v-if="bottomLine" line my-6></div>
   </div>
 </template>

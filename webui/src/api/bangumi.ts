@@ -13,6 +13,7 @@ export const apiBangumi = {
       ...bangumi,
       filter: bangumi.filter.split(','),
       rss_link: bangumi.rss_link.split(','),
+      air_weekday: bangumi.air_weekday ?? null,
     }));
     return result;
   },
@@ -30,6 +31,7 @@ export const apiBangumi = {
       ...data,
       filter: data.filter.split(','),
       rss_link: data.rss_link.split(','),
+      air_weekday: data.air_weekday ?? null,
     };
     return result;
   },
@@ -131,6 +133,16 @@ export const apiBangumi = {
   async refreshPoster() {
     const { data } = await axios.get<ApiSuccess>(
       'api/v1/bangumi/refresh/poster/all'
+    );
+    return data;
+  },
+
+  /**
+   * 从 Bangumi.tv 刷新放送日历数据
+   */
+  async refreshCalendar() {
+    const { data } = await axios.get<ApiSuccess>(
+      'api/v1/bangumi/refresh/calendar'
     );
     return data;
   },

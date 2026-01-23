@@ -30,7 +30,7 @@ function close() {
 
 <template>
   <TransitionRoot appear :show="show" as="template">
-    <Dialog as="div" class="relative z-10" @close="close">
+    <Dialog as="div" class="popup-dialog" @close="close">
       <TransitionChild
         as="template"
         enter="duration-300 ease-out"
@@ -40,11 +40,11 @@ function close() {
         leave-from="opacity-100"
         leave-to="opacity-0"
       >
-        <div fixed inset-0 bg="black opacity-25" />
+        <div class="popup-backdrop" />
       </TransitionChild>
 
-      <div fixed inset-0 overflow-y-auto>
-        <div flex="~ items-center justify-center" min-h-full p-4 text-center>
+      <div class="popup-wrapper">
+        <div class="popup-center">
           <TransitionChild
             as="template"
             enter="duration-300 ease-out"
@@ -65,3 +65,50 @@ function close() {
     </Dialog>
   </TransitionRoot>
 </template>
+
+<style lang="scss" scoped>
+.popup-dialog {
+  position: relative;
+  z-index: 40;
+}
+
+.popup-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(108, 74, 182, 0.15);
+  backdrop-filter: blur(4px);
+}
+
+.popup-wrapper {
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+}
+
+.popup-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 16px;
+  text-align: center;
+}
+
+:deep(.container-card) {
+  border: 1px solid var(--color-primary);
+  box-shadow: 0 8px 32px rgba(108, 74, 182, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+:deep(.container-header) {
+  background: var(--color-primary);
+  color: #fff;
+  border-bottom: none;
+  height: 38px;
+}
+
+:deep(.container-body) {
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+</style>

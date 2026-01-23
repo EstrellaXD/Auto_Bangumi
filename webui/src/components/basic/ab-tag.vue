@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-const props = withDefaults(
+withDefaults(
   defineProps<{
     type: 'primary' | 'warn' | 'inactive' | 'active' | 'notify';
     title: string;
@@ -9,67 +9,59 @@ const props = withDefaults(
     title: 'title',
   }
 );
-
-const InnerStyle = computed(() => {
-  return `${props.type}-inner`;
-});
 </script>
 
 <template>
-  <div p-1 rounded-16 inline-flex w-max :class="type">
-    <div w-full bg-white rounded-12 px-8 text-10 truncate :class="InnerStyle">
-      {{ title }}
-    </div>
-  </div>
+  <span class="tag" :class="`tag--${type}`">
+    {{ title }}
+  </span>
 </template>
 
 <style lang="scss" scoped>
-$primary-map: (
-  border: linear-gradient(90.5deg, #492897 1.53%, #783674 96.48%),
-  inner: #eee5f4,
-  font: #000000,
-);
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 500;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid;
+  transition: background-color var(--transition-fast),
+              border-color var(--transition-fast),
+              color var(--transition-fast);
 
-$warn-map: (
-  border: #892f2f,
-  inner: #ffdfdf,
-  font: #892f2f,
-);
+  &--primary {
+    background: var(--color-primary-light);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
 
-$inactive-map: (
-  border: #797979,
-  inner: #e0e0e0,
-  font: #3f3f3f,
-);
+  &--warn {
+    background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+    border-color: var(--color-danger);
+    color: var(--color-danger);
+  }
 
-$active-map: (
-  border: #104931,
-  inner: #e5f4e0,
-  font: #4c6643,
-);
+  &--inactive {
+    background: var(--color-surface-hover);
+    border-color: var(--color-border);
+    color: var(--color-text-muted);
+  }
 
-$notify-map: (
-  border: #f5c451,
-  inner: #fff4db,
-  font: #a76e18,
-);
+  &--active {
+    background: color-mix(in srgb, var(--color-success) 10%, transparent);
+    border-color: var(--color-success);
+    color: var(--color-success);
+  }
 
-$types-map: (
-  primary: $primary-map,
-  warn: $warn-map,
-  inactive: $inactive-map,
-  active: $active-map,
-  notify: $notify-map,
-);
-
-@each $type, $colors in $types-map {
-  .#{$type} {
-    background: map-get($colors, border);
-
-    &-inner {
-      background: map-get($colors, inner);
-      color: map-get($colors, font);
-    }
+  &--notify {
+    background: color-mix(in srgb, var(--color-warning) 10%, transparent);
+    border-color: var(--color-warning);
+    color: var(--color-warning);
   }
 }
 </style>

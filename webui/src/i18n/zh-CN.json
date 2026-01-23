@@ -70,9 +70,29 @@
     }
   },
   "downloader": {
-    "hit": "请设置下载器"
+    "hit": "请设置下载器",
+    "empty": {
+      "title": "下载器未配置",
+      "subtitle": "连接下载客户端以在此管理种子",
+      "step1_title": "打开设置",
+      "step1_desc": "前往设置页面，找到下载器设置部分。",
+      "step2_title": "输入连接信息",
+      "step2_desc": "设置 qBittorrent 的地址、用户名和密码。",
+      "step3_title": "访问下载器",
+      "step3_desc": "配置完成后，下载器界面将直接嵌入此处。"
+    }
   },
   "homepage": {
+    "empty": {
+      "title": "暂无订阅",
+      "subtitle": "添加你的第一个 RSS 订阅开始使用",
+      "step1_title": "添加 RSS 订阅",
+      "step1_desc": "点击顶部栏的「添加」按钮，粘贴来自番剧源的 RSS 链接。",
+      "step2_title": "配置下载器",
+      "step2_desc": "前往设置页面，配置你的下载器（如 qBittorrent）连接信息。",
+      "step3_title": "坐享其成",
+      "step3_desc": "AutoBangumi 将自动下载并重命名新剧集。"
+    },
     "rule": {
       "apply": "应用",
       "delete": "删除",
@@ -103,9 +123,30 @@
   },
   "login": {
     "login_btn": "登录",
+    "passkey_btn": "通行密钥",
     "password": "密码",
     "title": "登录",
     "username": "用户名"
+  },
+  "passkey": {
+    "add_new": "添加 Passkey",
+    "created_at": "创建于",
+    "delete_confirm": "确定删除此 Passkey？",
+    "delete_failed": "删除失败",
+    "delete_success": "Passkey 已删除",
+    "device_name": "设备名称",
+    "device_name_placeholder": "例如：iPhone 15, MacBook Pro",
+    "last_used": "最后使用",
+    "loading": "加载中...",
+    "login_failed": "Passkey 登录失败",
+    "no_passkeys": "尚未注册任何 Passkey",
+    "not_supported": "您的浏览器不支持 Passkey",
+    "register_failed": "注册失败",
+    "register_hint": "点击确认后，请按照浏览器提示完成身份验证。",
+    "register_success": "Passkey 注册成功",
+    "register_title": "添加新的 Passkey",
+    "synced": "已同步到多设备",
+    "title": "Passkey 设置"
   },
   "notify": {
     "copy_failed": "您的浏览器不支持剪贴板操作!",
@@ -120,7 +161,17 @@
     "update_success": "更新成功!"
   },
   "player": {
-    "hit": "请设置媒体播放器地址"
+    "hit": "请设置媒体播放器地址",
+    "empty": {
+      "title": "播放器未配置",
+      "subtitle": "连接媒体服务器以在此直接播放",
+      "step1_title": "打开设置",
+      "step1_desc": "前往设置页面，找到播放器设置部分。",
+      "step2_title": "设置播放器地址",
+      "step2_desc": "输入媒体服务器的 URL（Jellyfin、Emby、Plex 等）。",
+      "step3_title": "开始观看",
+      "step3_desc": "播放器将嵌入此处，方便随时访问。"
+    }
   },
   "rss": {
     "delete": "删除",
@@ -131,6 +182,37 @@
     "status": "状态",
     "title": "RSS 条目",
     "url": "链接"
+  },
+  "calendar": {
+    "title": "放送表",
+    "subtitle": "本季度放送时间表",
+    "days": {
+      "mon": "周一",
+      "tue": "周二",
+      "wed": "周三",
+      "thu": "周四",
+      "fri": "周五",
+      "sat": "周六",
+      "sun": "周日"
+    },
+    "days_short": {
+      "mon": "一",
+      "tue": "二",
+      "wed": "三",
+      "thu": "四",
+      "fri": "五",
+      "sat": "六",
+      "sun": "日"
+    },
+    "unknown": "未知",
+    "today": "今天",
+    "empty": "今日无番",
+    "refresh": "刷新放送表",
+    "no_data": "暂无放送数据",
+    "empty_state": {
+      "title": "暂无放送表",
+      "subtitle": "从 RSS 添加番剧后即可查看每周放送时间"
+    }
   },
   "sidebar": {
     "calendar": "番剧日历",

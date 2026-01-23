@@ -70,9 +70,29 @@
     }
   },
   "downloader": {
-    "hit": "Please set up the downloader"
+    "hit": "Please set up the downloader",
+    "empty": {
+      "title": "Downloader not configured",
+      "subtitle": "Connect your download client to manage torrents here",
+      "step1_title": "Open Config",
+      "step1_desc": "Navigate to the Config page and find the Downloader section.",
+      "step2_title": "Enter Connection Details",
+      "step2_desc": "Set your qBittorrent host address, username, and password.",
+      "step3_title": "Access Downloader",
+      "step3_desc": "Once configured, the downloader web UI will be embedded right here."
+    }
   },
   "homepage": {
+    "empty": {
+      "title": "No subscriptions yet",
+      "subtitle": "Get started by adding your first RSS feed",
+      "step1_title": "Add RSS Feed",
+      "step1_desc": "Click the \"Add\" button in the top bar and paste an RSS link from your anime source.",
+      "step2_title": "Configure Downloader",
+      "step2_desc": "Go to Config and set up your downloader (e.g. qBittorrent) connection.",
+      "step3_title": "Sit Back & Enjoy",
+      "step3_desc": "AutoBangumi will automatically download and rename new episodes for you."
+    },
     "rule": {
       "apply": "Apply",
       "delete": "Delete",
@@ -103,9 +123,30 @@
   },
   "login": {
     "login_btn": "Login",
+    "passkey_btn": "Passkey",
     "password": "Password",
     "title": "Login",
     "username": "Username"
+  },
+  "passkey": {
+    "add_new": "Add Passkey",
+    "created_at": "Created",
+    "delete_confirm": "Are you sure you want to delete this passkey?",
+    "delete_failed": "Delete failed",
+    "delete_success": "Passkey deleted",
+    "device_name": "Device Name",
+    "device_name_placeholder": "e.g., iPhone 15, MacBook Pro",
+    "last_used": "Last used",
+    "loading": "Loading...",
+    "login_failed": "Passkey login failed",
+    "no_passkeys": "No passkeys registered yet",
+    "not_supported": "Your browser does not support Passkeys",
+    "register_failed": "Registration failed",
+    "register_hint": "After clicking confirm, follow your browser's prompts to complete authentication.",
+    "register_success": "Passkey registered successfully",
+    "register_title": "Add New Passkey",
+    "synced": "Synced across devices",
+    "title": "Passkey Settings"
   },
   "notify": {
     "copy_failed": "Your browser does not support Clipboard API!",
@@ -120,7 +161,17 @@
     "update_success": "Update Success!"
   },
   "player": {
-    "hit": "Please set up the media player"
+    "hit": "Please set up the media player",
+    "empty": {
+      "title": "Media player not configured",
+      "subtitle": "Connect your media server to stream directly from here",
+      "step1_title": "Open Config",
+      "step1_desc": "Navigate to the Config page and find the Media Player section.",
+      "step2_title": "Set Player URL",
+      "step2_desc": "Enter the URL of your media server (Jellyfin, Emby, Plex, etc.).",
+      "step3_title": "Start Watching",
+      "step3_desc": "Your media player will be embedded here for easy access."
+    }
   },
   "rss": {
     "delete": "Delete",
@@ -131,6 +182,37 @@
     "status": "Status",
     "title": "RSS Item",
     "url": "Url"
+  },
+  "calendar": {
+    "title": "Schedule",
+    "subtitle": "This season's broadcast schedule",
+    "days": {
+      "mon": "Monday",
+      "tue": "Tuesday",
+      "wed": "Wednesday",
+      "thu": "Thursday",
+      "fri": "Friday",
+      "sat": "Saturday",
+      "sun": "Sunday"
+    },
+    "days_short": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
+    },
+    "unknown": "Unknown",
+    "today": "Today",
+    "empty": "No anime",
+    "refresh": "Refresh schedule",
+    "no_data": "No schedule data available",
+    "empty_state": {
+      "title": "No Schedule Yet",
+      "subtitle": "Add anime from RSS to see your weekly schedule"
+    }
   },
   "sidebar": {
     "calendar": "Calendar",

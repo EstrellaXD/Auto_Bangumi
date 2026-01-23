@@ -1,20 +1,36 @@
+// Base styles
+
+html {
+  color-scheme: light;
+
+  &.dark {
+    color-scheme: dark;
+  }
+}
+
+body {
+  font-family: var(--font-family);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  transition: color var(--transition-normal), background-color var(--transition-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// Scrollbar
 ::-webkit-scrollbar {
   width: var(--scrollbar-size);
   height: var(--scrollbar-size);
 }
 
-/* 滚动槽--外层轨道 */
 ::-webkit-scrollbar-track {
   background: var(--scrollbar-color);
 }
 
-/* 内层轨道（不包含滚动块部分） */
-/* 透明度设置为全透明，使得滚动条背景色为网页颜色 */
 ::-webkit-scrollbar-track-piece {
   opacity: 0;
 }
 
-/* 滚动条滑块 */
 ::-webkit-scrollbar-thumb {
   border-radius: calc(var(--scrollbar-size) / 2);
   background: var(--scrollbar-thumb-color);
@@ -24,18 +40,36 @@
   }
 }
 
-/* 滚动条按钮 */
 ::-webkit-scrollbar-button {
   display: none;
 }
 
-/* 横向滚动条和纵向滚动条相交处尖角的颜色 */
 ::-webkit-scrollbar-corner {
   background-color: transparent;
 }
 
+// Remove number input spinners
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}
+
+// Reduced motion
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+// Focus visible ring
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }

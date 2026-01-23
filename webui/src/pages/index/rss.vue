@@ -74,7 +74,7 @@ const RSSTableOptions = computed(() => {
 </script>
 
 <template>
-  <div overflow-auto mt-12 flex-grow>
+  <div class="page-rss">
     <ab-container :title="$t('rss.title')">
       <NDataTable
         v-bind="RSSTableOptions"
@@ -82,13 +82,13 @@ const RSSTableOptions = computed(() => {
       ></NDataTable>
 
       <div v-if="selectedRSS.length > 0">
-        <div line my-12></div>
-        <div flex="~ justify-end gap-x-10">
+        <div class="divider"></div>
+        <div class="rss-actions">
           <ab-button @click="enableSelected">{{ $t('rss.enable') }}</ab-button>
           <ab-button @click="disableSelected">{{
             $t('rss.disable')
           }}</ab-button>
-          <ab-button class="type-warn" @click="deleteSelected">{{
+          <ab-button type="warn" @click="deleteSelected">{{
             $t('rss.delete')
           }}</ab-button>
         </div>
@@ -96,3 +96,23 @@ const RSSTableOptions = computed(() => {
     </ab-container>
   </div>
 </template>
+
+<style lang="scss" scoped>
+.page-rss {
+  overflow: auto;
+  flex-grow: 1;
+}
+
+.divider {
+  width: 100%;
+  height: 1px;
+  background: var(--color-border);
+  margin: 12px 0;
+}
+
+.rss-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+</style>

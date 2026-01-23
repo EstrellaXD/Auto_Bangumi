@@ -16,14 +16,14 @@ from .sub_thread import RenameThread, RSSThread
 logger = logging.getLogger(__name__)
 
 figlet = r"""
-                _        ____                                    _
-     /\        | |      |  _ \                                  (_)
-    /  \  _   _| |_ ___ | |_) | __ _ _ __   __ _ _   _ _ __ ___  _
-   / /\ \| | | | __/ _ \|  _ < / _` | '_ \ / _` | | | | '_ ` _ \| |
-  / ____ \ |_| | || (_) | |_) | (_| | | | | (_| | |_| | | | | | | |
- /_/    \_\__,_|\__\___/|____/ \__,_|_| |_|\__, |\__,_|_| |_| |_|_|
-                                            __/ |
-                                           |___/
+               _        ____                                    _
+    /\        | |      |  _ \                                  (_)
+   /  \  _   _| |_ ___ | |_) | __ _ _ __   __ _ _   _ _ __ ___  _
+  / /\ \| | | | __/ _ \|  _ < / _` | '_ \ / _` | | | | '_ ` _ \| |
+ / ____ \ |_| | || (_) | |_) | (_| | | | | (_| | |_| | | | | | | |
+/_/    \_\__,_|\__\___/|____/ \__,_|_| |_|\__, |\__,_|_| |_| |_|_|
+                                           __/ |
+                                          |___/
 """
 
 
@@ -61,7 +61,7 @@ class Program(RenameThread, RSSThread):
     async def start(self):
         self.stop_event.clear()
         settings.load()
-        while not self.downloader_status:
+        while not await self.check_downloader_status():
             logger.warning("Downloader is not running.")
             logger.info("Waiting for downloader to start.")
             await asyncio.sleep(30)
@@ -77,11 +77,11 @@ class Program(RenameThread, RSSThread):
             msg_zh="程序启动成功。",
         )
 
-    def stop(self):
+    async def stop(self):
         if self.is_running:
             self.stop_event.set()
-            self.rename_stop()
-            self.rss_stop()
+            await self.rename_stop()
+            await self.rss_stop()
             return ResponseModel(
                 status=True,
                 status_code=200,
@@ -97,7 +97,7 @@ class Program(RenameThread, RSSThread):
             )
 
     async def restart(self):
-        self.stop()
+        await self.stop()
         await self.start()
         return ResponseModel(
             status=True,

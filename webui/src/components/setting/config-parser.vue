@@ -33,7 +33,7 @@ const items: SettingItem<RssParser>[] = [
 
 <template>
   <ab-fold-panel :title="$t('config.parser_set.title')">
-    <div space-y-12>
+    <div space-y-8>
       <ab-setting
         v-for="i in items"
         :key="i.configKey"

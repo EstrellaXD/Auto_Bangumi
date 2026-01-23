@@ -1,10 +1,10 @@
 <script lang="ts" setup>
-import { Write } from '@icon-park/vue-next';
+import { ErrorPicture, Write } from '@icon-park/vue-next';
 import type { BangumiRule } from '#/bangumi';
 
 withDefaults(
   defineProps<{
-    type?: 'primary' | 'search';
+    type?: 'primary' | 'search' | 'mobile';
     bangumi: BangumiRule;
   }>(),
   {
@@ -16,81 +16,64 @@ defineEmits(['click']);
 </script>
 
 <template>
-  <template v-if="type === 'primary'">
-    <div w="full pc:150" is-btn @click="() => $emit('click')">
-      <div rounded-4 overflow-hidden poster-shandow rel>
-        <ab-image
-          :src="bangumi.poster_link"
-          :aspect-ratio="1 / 1.5"
-          w-full
-        ></ab-image>
-
-        <div
-          abs
-          f-cer
-          z-1
-          inset-0
-          opacity-0
-          transition="all duration-300"
-          hover="backdrop-blur-2 bg-white bg-opacity-30 opacity-100"
-          active="duration-0 bg-opacity-60"
-          class="group"
-        >
-          <div
-            text-white
-            rounded="1/2"
-            wh-44
-            f-cer
-            bg-theme-row
-            group-active="poster-pen-active"
-          >
-            <Write size="20" />
-          </div>
+  <!-- Grid poster card -->
+  <div
+    v-if="type === 'primary'"
+    class="card"
+    role="button"
+    tabindex="0"
+    :aria-label="`Edit ${bangumi.official_title}`"
+    @click="() => $emit('click')"
+    @keydown.enter="() => $emit('click')"
+  >
+    <div class="card-poster">
+      <template v-if="bangumi.poster_link">
+        <img :src="bangumi.poster_link" :alt="bangumi.official_title" class="card-img" />
+      </template>
+      <template v-else>
+        <div class="card-placeholder">
+          <ErrorPicture theme="outline" size="24" />
         </div>
-      </div>
+      </template>
 
-      <div py-4>
-        <div text-h3 truncate>{{ bangumi.official_title }}</div>
-
-        <div flex="~ wrap col" pc:flex-row gap-5>
-          <template v-for="i in ['season', 'group_name']" :key="i">
-            <ab-tag
-              v-if="bangumi[i]"
-              :title="i === 'season' ? `Season ${bangumi[i]}` : bangumi[i]"
-              type="primary"
-              pc:max-w="1/2"
-            />
-          </template>
+      <div class="card-overlay">
+        <div class="card-edit-btn">
+          <Write size="18" />
         </div>
       </div>
     </div>
-  </template>
 
-  <template v-else-if="type === 'search'">
-    <div
-      w-480
-      max-w-90vw
-      rounded-12
-      p-4
-      shadow
-      bg="#eee5f4"
-      transition="opacity ease-in-out duration-300"
-    >
-      <div w-full bg-white rounded-8 p-12 flex gap-x-14>
-        <div w-72 rounded-6 overflow-hidden>
-          <ab-image :src="bangumi.poster_link" w-full></ab-image>
+    <div class="card-info">
+      <div class="card-title">{{ bangumi.official_title }}</div>
+      <div class="card-tags">
+        <ab-tag :title="`Season ${bangumi.season}`" type="primary" />
+        <ab-tag
+          v-if="bangumi.group_name"
+          :title="bangumi.group_name"
+          type="primary"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- Search result card -->
+  <div v-else-if="type === 'search'" class="search-card">
+    <div class="search-card-inner">
+      <div class="search-card-content">
+        <div class="search-card-thumb">
+          <template v-if="bangumi.poster_link">
+            <img :src="bangumi.poster_link" :alt="bangumi.official_title" class="search-card-img" />
+          </template>
+          <template v-else>
+            <div class="card-placeholder card-placeholder--small">
+              <ErrorPicture theme="outline" size="20" />
+            </div>
+          </template>
         </div>
-
-        <div flex="~ col 1 gap-y-4 justify-between">
-          <div text="h3 primary">
-            {{ bangumi.official_title }}
-          </div>
-
-          <div flex="~ wrap gap-8">
-            <template
-              v-for="i in ['season', 'group_name', 'subtitle']"
-              :key="i"
-            >
+        <div class="search-card-meta">
+          <div class="search-card-title">{{ bangumi.official_title }}</div>
+          <div class="card-tags">
+            <template v-for="i in ['season', 'group_name', 'subtitle']" :key="i">
               <ab-tag
                 v-if="bangumi[i]"
                 :title="i === 'season' ? `Season ${bangumi[i]}` : bangumi[i]"
@@ -99,14 +82,170 @@ defineEmits(['click']);
             </template>
           </div>
         </div>
-
-        <ab-add
-          my-auto
-          :round="true"
-          type="medium"
-          @click="() => $emit('click')"
-        />
       </div>
+      <ab-add :round="true" type="medium" @click="() => $emit('click')" />
     </div>
-  </template>
+  </div>
 </template>
+
+<style lang="scss" scoped>
+// Grid poster card
+.card {
+  width: 150px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.card-poster {
+  position: relative;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+
+  .card:hover & {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+  }
+}
+
+.card-img {
+  width: 100%;
+  height: 210px;
+  object-fit: cover;
+  display: block;
+}
+
+.card-placeholder {
+  width: 100%;
+  height: 210px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-hover);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  transition: background-color var(--transition-normal);
+
+  &--small {
+    height: 44px;
+  }
+}
+
+.card-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(2px);
+  transition: opacity var(--transition-normal);
+
+  .card:hover & {
+    opacity: 1;
+  }
+
+  .card:active & {
+    background: rgba(0, 0, 0, 0.5);
+  }
+}
+
+.card-edit-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: var(--shadow-md);
+  transition: transform var(--transition-fast);
+
+  .card:active & {
+    transform: scale(0.9);
+  }
+}
+
+.card-info {
+  padding: 8px 2px 4px;
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 4px;
+  transition: color var(--transition-normal);
+}
+
+.card-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+// Search result card
+.search-card {
+  width: 480px;
+  border-radius: var(--radius-lg);
+  padding: 4px;
+  background: var(--color-primary-light);
+  box-shadow: var(--shadow-sm);
+  transition: background-color var(--transition-normal);
+}
+
+.search-card-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  transition: background-color var(--transition-normal);
+}
+
+.search-card-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.search-card-thumb {
+  width: 72px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.search-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.search-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.search-card-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>
