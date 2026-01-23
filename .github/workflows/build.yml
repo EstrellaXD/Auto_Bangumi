@@ -69,12 +69,12 @@ jobs:
         id: release
         run: |
           if [[ '${{ github.event_name }}' == 'pull_request' && '${{ github.event.pull_request.head.ref }}' == *'dev'* ]]; then
-            if [ ${{ github.event.pull_request.merged }} == true ]; then
+            if [ '${{ github.event.pull_request.merged }}' == 'true' ]; then
               echo "release=1" >> $GITHUB_OUTPUT
             else
               echo "release=0" >> $GITHUB_OUTPUT
             fi
-          elif [[ '${{ github.event_name }}' == 'push' && (${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'*) ]]; then
+          elif [[ '${{ github.event_name }}' == 'push' && ('${{ github.ref }}' == *'alpha'* || '${{ github.ref }}' == *'beta'*) ]]; then
             echo "release=1" >> $GITHUB_OUTPUT
           else
             echo "release=0" >> $GITHUB_OUTPUT
@@ -82,7 +82,7 @@ jobs:
       - name: If dev
         id: dev
         run: |
-          if [[ '${{ github.event_name }}' == 'push' && (${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'*) ]]; then
+          if [[ '${{ github.event_name }}' == 'push' && ('${{ github.ref }}' == *'alpha'* || '${{ github.ref }}' == *'beta'*) ]]; then
             echo "dev=1" >> $GITHUB_OUTPUT
           else
             echo "dev=0" >> $GITHUB_OUTPUT
@@ -91,10 +91,10 @@ jobs:
         id: version
         run: |
           if [ '${{ github.event_name }}' == 'pull_request' ]; then
-            if [ ${{ github.event.pull_request.merged }} == true ]; then
+            if [ '${{ github.event.pull_request.merged }}' == 'true' ]; then
               echo "version=${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
             fi
-          elif [[ ${{ github.event_name }} == 'push' && (${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'*) ]]; then
+          elif [[ '${{ github.event_name }}' == 'push' && ('${{ github.ref }}' == *'alpha'* || '${{ github.ref }}' == *'beta'*) ]]; then
             echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           else
             echo "version=Test" >> $GITHUB_OUTPUT
@@ -149,7 +149,7 @@ jobs:
           cd webui && pnpm build
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dist
           path: webui/dist
@@ -168,16 +168,16 @@ jobs:
           echo "VERSION='${{ needs.version-info.outputs.version }}'" >> module/__version__.py
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Docker metadata main
         if: ${{ needs.version-info.outputs.release == 1 && needs.version-info.outputs.dev != 1 }}
         id: meta
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: |
             estrellaxd/auto_bangumi
@@ -189,7 +189,7 @@ jobs:
       - name: Docker metadata dev
         if: ${{ needs.version-info.outputs.dev == 1 }}
         id: meta-dev
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: |
             estrellaxd/auto_bangumi
@@ -200,28 +200,28 @@ jobs:
 
       - name: Login to DockerHub
         if: ${{ needs.version-info.outputs.release == 1 }}
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
       - name: Login to ghcr.io
         if: ${{ needs.version-info.outputs.release == 1 }}
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.ACCESS_TOKEN }}
 
       - name: Download artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dist
           path: backend/src/dist
 
       - name: Build and push
         if: ${{ needs.version-info.outputs.release == 1 && needs.version-info.outputs.dev != 1 }}
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
           builder: ${{ steps.buildx.output.name }}
@@ -234,7 +234,7 @@ jobs:
 
       - name: Build and push dev
         if: ${{ needs.version-info.outputs.dev == 1 }}
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
           builder: ${{ steps.buildx.output.name }}
@@ -247,7 +247,7 @@ jobs:
 
       - name: Build test
         if: ${{ needs.version-info.outputs.release == 0 }}
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
           builder: ${{ steps.buildx.output.name }}
@@ -269,17 +269,17 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download artifact webui
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dist
           path: webui/dist
 
       - name: Zip webui
         run: |
-          cd webui && ls -al && tree && zip -r dist.zip dist
+          cd webui && ls -al && zip -r dist.zip dist
 
       - name: Download artifact app
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dist
           path: backend/src/dist
@@ -307,7 +307,7 @@ jobs:
 
       - name: Release
         id: release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.version-info.outputs.version }}
           name: ${{ steps.release-info.outputs.version }}
