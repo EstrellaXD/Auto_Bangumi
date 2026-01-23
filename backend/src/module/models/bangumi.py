@@ -27,6 +27,7 @@ class Bangumi(SQLModel, table=True):
     rule_name: Optional[str] = Field(alias="rule_name", title="番剧规则名")
     save_path: Optional[str] = Field(alias="save_path", title="番剧保存路径")
     deleted: bool = Field(False, alias="deleted", title="是否已删除")
+    air_weekday: Optional[int] = Field(default=None, alias="air_weekday", title="放送星期")
 
 
 class BangumiUpdate(SQLModel):
@@ -50,6 +51,7 @@ class BangumiUpdate(SQLModel):
     rule_name: Optional[str] = Field(alias="rule_name", title="番剧规则名")
     save_path: Optional[str] = Field(alias="save_path", title="番剧保存路径")
     deleted: bool = Field(False, alias="deleted", title="是否已删除")
+    air_weekday: Optional[int] = Field(default=None, alias="air_weekday", title="放送星期")
 
 
 class Notification(BaseModel):

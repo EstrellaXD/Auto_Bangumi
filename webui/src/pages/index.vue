@@ -3,6 +3,9 @@ definePage({
   name: 'Index',
   redirect: '/bangumi',
 });
+
+const { editRule } = storeToRefs(useBangumiStore());
+const { updateRule, enableRule, ruleManage } = useBangumiStore();
 </script>
 
 <template>
@@ -26,6 +29,14 @@ definePage({
         </RouterView>
       </div>
     </main>
+
+    <ab-edit-rule
+      v-model:show="editRule.show"
+      v-model:rule="editRule.item"
+      @enable="(id) => enableRule(id)"
+      @delete-file="(type, { id, deleteFile }) => ruleManage(type, id, deleteFile)"
+      @apply="(rule) => updateRule(rule.id, rule)"
+    />
   </div>
 </template>
 

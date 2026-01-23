@@ -4,6 +4,7 @@ from module.database import Database
 from module.downloader import DownloadClient
 from module.models import Bangumi, BangumiUpdate, ResponseModel
 from module.parser import TitleParser
+from module.parser.analyser.bgm_calendar import fetch_bgm_calendar, match_weekday
 
 logger = logging.getLogger(__name__)
 
@@ -152,6 +153,37 @@ class TorrentManager(Database):
             status=True,
             msg_en="Refresh poster link successfully.",
             msg_zh="刷新海报链接成功。",
+        )
+
+    def refresh_calendar(self):
+        """Fetch Bangumi.tv calendar and update air_weekday for all bangumi."""
+        calendar_items = fetch_bgm_calendar()
+        if not calendar_items:
+            return ResponseModel(
+                status_code=500,
+                status=False,
+                msg_en="Failed to fetch calendar data from Bangumi.tv.",
+                msg_zh="从 Bangumi.tv 获取放送表失败。",
+            )
+        bangumis = self.bangumi.search_all()
+        updated = 0
+        for bangumi in bangumis:
+            if bangumi.deleted:
+                continue
+            weekday = match_weekday(
+                bangumi.official_title, bangumi.title_raw, calendar_items
+            )
+            if weekday is not None and weekday != bangumi.air_weekday:
+                bangumi.air_weekday = weekday
+                updated += 1
+        if updated > 0:
+            self.bangumi.update_all(bangumis)
+        logger.info(f"[Manager] Calendar refresh: updated {updated} bangumi.")
+        return ResponseModel(
+            status_code=200,
+            status=True,
+            msg_en=f"Calendar refreshed. Updated {updated} anime.",
+            msg_zh=f"放送表已刷新，更新了 {updated} 部番剧。",
         )
 
     def search_all_bangumi(self):

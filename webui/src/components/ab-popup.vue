@@ -75,8 +75,8 @@ function close() {
 .popup-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(2px);
+  background: rgba(108, 74, 182, 0.15);
+  backdrop-filter: blur(4px);
 }
 
 .popup-wrapper {
@@ -92,5 +92,23 @@ function close() {
   min-height: 100%;
   padding: 16px;
   text-align: center;
+}
+
+:deep(.container-card) {
+  border: 1px solid var(--color-primary);
+  box-shadow: 0 8px 32px rgba(108, 74, 182, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+:deep(.container-header) {
+  background: var(--color-primary);
+  color: #fff;
+  border-bottom: none;
+  height: 38px;
+}
+
+:deep(.container-body) {
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 </style>

@@ -1,3 +1,6 @@
+import logging
+
+from sqlalchemy import inspect, text
 from sqlmodel import Session, SQLModel
 
 from module.models import Bangumi, User
@@ -8,6 +11,8 @@ from .engine import engine as e
 from .rss import RSSDatabase
 from .torrent import TorrentDatabase
 from .user import UserDatabase
+
+logger = logging.getLogger(__name__)
 
 
 class Database(Session):
@@ -21,6 +26,20 @@ class Database(Session):
 
     def create_table(self):
         SQLModel.metadata.create_all(self.engine)
+        self._migrate_columns()
+
+    def _migrate_columns(self):
+        """Add new columns to existing tables if they don't exist."""
+        inspector = inspect(self.engine)
+        if "bangumi" in inspector.get_table_names():
+            columns = [col["name"] for col in inspector.get_columns("bangumi")]
+            if "air_weekday" not in columns:
+                with self.engine.connect() as conn:
+                    conn.execute(
+                        text("ALTER TABLE bangumi ADD COLUMN air_weekday INTEGER")
+                    )
+                    conn.commit()
+                logger.info("[Database] Migrated: added air_weekday column to bangumi table.")
 
     def drop_table(self):
         SQLModel.metadata.drop_all(self.engine)

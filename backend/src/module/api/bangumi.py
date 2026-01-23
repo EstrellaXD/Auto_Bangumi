@@ -128,6 +128,17 @@ async def refresh_poster(bangumi_id: int):
 
 
 @router.get(
+    path="/refresh/calendar",
+    response_model=APIResponse,
+    dependencies=[Depends(get_current_user)],
+)
+async def refresh_calendar():
+    with TorrentManager() as manager:
+        resp = manager.refresh_calendar()
+    return u_response(resp)
+
+
+@router.get(
     "/reset/all", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
 async def reset_all():

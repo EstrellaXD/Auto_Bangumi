@@ -21,6 +21,7 @@ export interface BangumiRule {
   subtitle: string;
   title_raw: string;
   year: string | null;
+  air_weekday: number | null; // 0=Mon, 1=Tue, ..., 6=Sun, null=Unknown
 }
 
 export interface BangumiAPI extends Omit<BangumiRule, 'filter' | 'rss_link'> {
@@ -55,4 +56,5 @@ export const ruleTemplate: BangumiRule = {
   subtitle: '',
   title_raw: '',
   year: null,
+  air_weekday: null,
 };
