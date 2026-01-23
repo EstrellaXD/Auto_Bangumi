@@ -44,6 +44,10 @@ export const usePasskey = createSharedComposable(() => {
       await loadPasskeys();
       return true;
     } catch (error: unknown) {
+      // Don't show duplicate message if axios interceptor already handled it
+      if (error && typeof error === 'object' && 'status' in error) {
+        return false;
+      }
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       message.error(`${t('passkey.register_failed')}: ${errorMessage}`);
@@ -59,6 +63,9 @@ export const usePasskey = createSharedComposable(() => {
       message.success(t('notify.login_success'));
       return true;
     } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'status' in error) {
+        return false;
+      }
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       message.error(`${t('passkey.login_failed')}: ${errorMessage}`);

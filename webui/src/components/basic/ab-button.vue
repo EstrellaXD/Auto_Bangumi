@@ -3,7 +3,7 @@ import { NSpin } from 'naive-ui';
 
 const props = withDefaults(
   defineProps<{
-    type?: 'primary' | 'warn';
+    type?: 'primary' | 'secondary' | 'warn';
     size?: 'big' | 'normal' | 'small';
     link?: string | null;
     loading?: boolean;
@@ -39,7 +39,9 @@ const buttonSize = computed(() => {
     @click="$emit('click')"
   >
     <NSpin :show="loading" :size="size === 'big' ? 'large' : 'small'">
-      <slot></slot>
+      <span class="btn-content">
+        <slot></slot>
+      </span>
     </NSpin>
   </Component>
 </template>
@@ -81,8 +83,11 @@ const buttonSize = computed(() => {
   &--small {
     border-radius: var(--radius-sm);
     font-size: 12px;
-    width: 86px;
+    min-width: 86px;
     height: 28px;
+    padding: 0 12px;
+    gap: 4px;
+    white-space: nowrap;
   }
 
   // Types
@@ -92,6 +97,23 @@ const buttonSize = computed(() => {
     &:hover {
       background: var(--color-primary-hover);
       box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 30%, transparent);
+    }
+  }
+
+  &-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &--secondary {
+    background: var(--color-surface);
+    color: var(--color-primary);
+    border: 1px solid var(--color-border);
+
+    &:hover {
+      background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+      border-color: var(--color-primary);
     }
   }
 

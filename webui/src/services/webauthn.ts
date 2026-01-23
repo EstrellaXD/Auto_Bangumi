@@ -63,12 +63,26 @@ export async function registerPasskey(deviceName: string): Promise<void> {
   };
 
   // 3. 调用浏览器 WebAuthn API
-  const credential = (await navigator.credentials.create({
-    publicKey: createOptions,
-  })) as PublicKeyCredential;
-
-  if (!credential) {
-    throw new Error('Failed to create credential');
+  let credential: PublicKeyCredential;
+  try {
+    const result = await navigator.credentials.create({
+      publicKey: createOptions,
+    });
+    if (!result) {
+      throw new Error('No credential returned');
+    }
+    credential = result as PublicKeyCredential;
+  } catch (e: unknown) {
+    if (e instanceof DOMException) {
+      if (e.name === 'NotAllowedError') {
+        throw new Error('Authentication was cancelled or timed out');
+      }
+      if (e.name === 'SecurityError') {
+        throw new Error('WebAuthn requires a secure context (HTTPS or localhost)');
+      }
+      throw new Error(`Browser rejected the request: ${e.message}`);
+    }
+    throw e;
   }
 
   // 4. 序列化 credential 为 JSON

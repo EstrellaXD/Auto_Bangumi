@@ -116,7 +116,10 @@ export default defineConfig(({ mode }) => ({
   },
   server: {
     proxy: {
-      '^/api/.*': 'http://localhost:7892',
+      '^/api/.*': {
+        target: 'http://localhost:7892',
+        changeOrigin: false,
+      },
       '^/posters/.*': 'http://localhost:7892',
     },
   },
