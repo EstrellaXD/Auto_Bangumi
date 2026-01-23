@@ -15,60 +15,95 @@ defineEmits(['click']);
 const buttonSize = computed(() => {
   switch (props.type) {
     case 'large':
-      return 'wh-36';
+      return 'add-btn--large';
     case 'medium':
-      return 'wh-24';
+      return 'add-btn--medium';
     case 'small':
-      return 'wh-12';
-  }
-});
-
-const lineSize = computed(() => {
-  switch (props.type) {
-    case 'large':
-      return 'w-18 h-4';
-    case 'medium':
-      return 'w-3 h-12';
-    case 'small':
-      return 'w-2 h-6';
+      return 'add-btn--small';
   }
 });
 </script>
 
 <template>
   <button
-    :rounded="round ? '1/2' : '8'"
-    f-cer
-    rel
-    transition-colors
-    class="box"
-    :class="[`type-${type}`, buttonSize]"
+    class="add-btn"
+    :class="[buttonSize, round && 'add-btn--round']"
+    aria-label="Add"
     @click="$emit('click')"
   >
-    <div :class="[`type-${type}`, lineSize]" class="line" abs />
-    <div :class="[`type-${type}`, lineSize]" class="line" abs rotate-90></div>
+    <svg viewBox="0 0 24 24" fill="none" class="add-btn-icon">
+      <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+    </svg>
   </button>
 </template>
 
 <style lang="scss" scoped>
-$normal: #4e3c94;
-$hover: #281e52;
-$active: #8e8a9c;
-
-.box {
-  background: $normal;
+.add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background-color var(--transition-fast),
+              transform var(--transition-fast);
 
   &:hover {
-    background: $hover;
+    background: var(--color-primary-hover);
   }
 
   &:active {
-    background: $normal;
+    transform: scale(0.92);
   }
-}
 
-.line {
-  border-radius: 1px;
-  background: #fff;
+  &--round {
+    border-radius: 50%;
+  }
+
+  &--large {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+
+    .add-btn-icon {
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  &--medium {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+
+    .add-btn-icon {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  &--small {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+
+    .add-btn-icon {
+      width: 10px;
+      height: 10px;
+    }
+  }
+
+  &--round.add-btn--large {
+    border-radius: 50%;
+  }
+
+  &--round.add-btn--medium {
+    border-radius: 50%;
+  }
+
+  &--round.add-btn--small {
+    border-radius: 50%;
+  }
 }
 </style>

@@ -67,12 +67,12 @@ const items = [
   },
 ];
 
+const { isDark } = useDarkMode();
 const onSearchFocus = ref(false);
 
 function addSearchResult(bangumi: BangumiRule) {
   showAddRSS.value = true;
   searchRule.value = bangumi;
-  console.log('searchRule', searchRule.value);
 }
 
 watch(showAddRSS, (val) => {
@@ -94,33 +94,28 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div
-    h="pc:60 50"
-    bg-theme-row
-    text-white
-    rounded="pc:16 10"
-    fx-cer
-    px="pc:24 15"
-  >
-    <div flex="~ gap-x-16">
-      <div fx-cer gap-x="pc:16 10">
-        <img src="/images/logo-light.svg" alt="favicon" wh="pc:24 20" />
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-brand">
+        <img
+          :src="isDark ? '/images/logo-light.svg' : '/images/logo.svg'"
+          alt="favicon"
+          class="topbar-logo"
+        />
         <img
           v-show="onSearchFocus === false"
-          src="/images/AutoBangumi.svg"
+          :src="isDark ? '/images/AutoBangumi.svg' : '/images/AutoBangumi-dark.svg'"
           alt="AutoBangumi"
-          rel
-          h="18 pc:24"
-          pc:top-2
+          class="topbar-wordmark"
         />
       </div>
 
-      <div hidden pc:block>
+      <div class="topbar-search">
         <ab-search-bar @add-bangumi="addSearchResult" />
       </div>
     </div>
 
-    <div ml-auto>
+    <div class="topbar-right">
       <ab-status-bar
         :items="items"
         :running="running"
@@ -128,6 +123,7 @@ onUnmounted(() => {
         @change-lang="changeLocale"
       />
     </div>
+
     <ab-change-account v-model:show="showAccount"></ab-change-account>
     <ab-add-rss
       v-model:show="showAddRSS"
@@ -135,3 +131,69 @@ onUnmounted(() => {
     ></ab-add-rss>
   </div>
 </template>
+
+<style lang="scss" scoped>
+.topbar {
+  display: flex;
+  align-items: center;
+  height: 56px;
+  padding: 0 20px;
+
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: background-color var(--transition-normal),
+              border-color var(--transition-normal),
+              box-shadow var(--transition-normal);
+
+  @include forMobile {
+    height: 48px;
+    padding: 0 12px;
+    border-radius: var(--radius-md);
+  }
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.topbar-logo {
+  width: 24px;
+  height: 24px;
+
+  @include forMobile {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.topbar-wordmark {
+  height: 20px;
+  position: relative;
+
+  @include forMobile {
+    height: 16px;
+  }
+}
+
+.topbar-search {
+  display: none;
+
+  @include forPC {
+    display: block;
+  }
+}
+
+.topbar-right {
+  margin-left: auto;
+}
+</style>

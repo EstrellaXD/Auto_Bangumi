@@ -24,22 +24,58 @@ onActivated(() => {
 </script>
 
 <template>
-  <div overflow-auto mt-12 flex-grow>
+  <div class="page-embed">
     <template v-if="isNull">
-      <div wh-full f-cer text-h1 text-primary>
-        <RouterLink to="/config" hover:underline>{{
-          $t('downloader.hit')
-        }}</RouterLink>
+      <div class="embed-empty">
+        <RouterLink to="/config" class="embed-link">
+          {{ $t('downloader.hit') }}
+        </RouterLink>
       </div>
     </template>
 
     <iframe
+      v-else
       :src="url"
       frameborder="0"
       allowfullscreen="true"
-      wh-full
-      flex-1
-      rounded-12
+      class="embed-frame"
     ></iframe>
   </div>
 </template>
+
+<style lang="scss" scoped>
+.page-embed {
+  overflow: auto;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.embed-empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.embed-link {
+  font-size: 24px;
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+
+  &:hover {
+    text-decoration: underline;
+    color: var(--color-primary-hover);
+  }
+}
+
+.embed-frame {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+</style>

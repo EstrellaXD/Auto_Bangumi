@@ -6,8 +6,10 @@ import {
   Log,
   Logout,
   MenuUnfold,
+  Moon,
   Play,
   SettingTwo,
+  Sun,
 } from '@icon-park/vue-next';
 import InlineSvg from 'vue-inline-svg';
 
@@ -24,14 +26,15 @@ const { t } = useMyI18n();
 const { logout } = useAuth();
 const route = useRoute();
 const { isMobile } = useBreakpointQuery();
+const { isDark, toggle: toggleDark } = useDarkMode();
 
 const show = ref(props.open);
 const toggle = () => (show.value = !show.value);
 
 const RSS = h(
   'span',
-  { class: ['rel', 'left-2'] },
-  h(InlineSvg, { src: './images/RSS.svg' })
+  { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px' } },
+  h(InlineSvg, { src: './images/RSS.svg', width: '16', height: '16' })
 );
 
 const items = [
@@ -86,21 +89,13 @@ function Exit() {
     <div
       title="logout"
       class={[
-        `
-        mt-auto
-        fx-cer
-        gap-x-42
-        px-24
-        is-btn
-        transition-colors
-      `,
-        isMobile.value ? 'h-40' : 'h-48',
+        'sidebar-item sidebar-item--action',
+        isMobile.value ? 'h-40' : '',
       ]}
-      hover="bg-[#F1F5FA] text-[#2A1C52]"
       onClick={logout}
     >
-      <Logout size={24} />
-      {!isMobile.value && <div class="text-h2">{t('sidebar.logout')}</div>}
+      <Logout size={20} />
+      {!isMobile.value && show.value && <div class="sidebar-item-label">{t('sidebar.logout')}</div>}
     </div>
   );
 }
@@ -111,91 +106,261 @@ const mobileItems = computed(() => items.filter((i) => i.id !== 4));
 <template>
   <media-query>
     <div
-      :class="[show ? 'w-240' : 'w-72']"
-      bg-theme-col
-      text-white
-      transition-width
-      pb-12
-      rounded="pc:16 10"
+      class="sidebar"
+      :class="[show ? 'sidebar--expanded' : 'sidebar--collapsed']"
     >
-      <div overflow-hidden wh-full flex="~ col">
-        <div
-          w-full
-          h-60
-          is-btn
-          f-cer
-          rounded-t-10
-          bg="#E7E7E7"
-          text="#2A1C52"
-          rel
+      <div class="sidebar-inner">
+        <!-- Toggle header -->
+        <button
+          class="sidebar-header"
+          :aria-label="show ? 'Collapse sidebar' : 'Expand sidebar'"
+          :aria-expanded="show"
           @click="toggle"
         >
-          <div :class="[!show && 'abs opacity-0']" transition-opacity>
-            <div text-h1>{{ $t('sidebar.title') }}</div>
+          <div v-show="show" class="sidebar-title">
+            {{ $t('sidebar.title') }}
           </div>
-
           <MenuUnfold
             theme="outline"
-            size="24"
-            fill="#2A1C52"
-            abs
-            left-24
-            :class="[show && 'rotate-y-180']"
+            size="20"
+            class="sidebar-toggle-icon"
+            :class="[show && 'sidebar-toggle-icon--open']"
           />
+        </button>
+
+        <!-- Navigation -->
+        <nav class="sidebar-nav">
+          <RouterLink
+            v-for="i in items"
+            :key="i.id"
+            :to="i.path"
+            replace
+            :title="i.label()"
+            class="sidebar-item"
+            :class="[
+              route.path === i.path && 'sidebar-item--active',
+              i.hidden && 'hidden',
+            ]"
+          >
+            <Component :is="i.icon" :size="20" />
+            <div v-show="show" class="sidebar-item-label">{{ i.label() }}</div>
+          </RouterLink>
+        </nav>
+
+        <!-- Bottom actions -->
+        <div class="sidebar-footer">
+          <button
+            class="sidebar-item sidebar-item--action sidebar-item--theme"
+            :title="isDark ? 'Light mode' : 'Dark mode'"
+            :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+            @click="toggleDark"
+          >
+            <Moon v-if="!isDark" :size="20" />
+            <Sun v-else :size="20" />
+            <div v-show="show" class="sidebar-item-label">
+              {{ isDark ? 'Light' : 'Dark' }}
+            </div>
+          </button>
+          <Exit />
         </div>
-
-        <RouterLink
-          v-for="i in items"
-          :key="i.id"
-          :to="i.path"
-          replace
-          :title="i.label()"
-          fx-cer
-          px-24
-          gap-x-42
-          h-48
-          is-btn
-          transition-colors
-          hover="bg-[#F1F5FA] text-[#2A1C52]"
-          :class="[
-            route.path === i.path && 'bg-[#F1F5FA] text-[#2A1C52]',
-            i.hidden && 'hidden',
-          ]"
-        >
-          <Component :is="i.icon" :size="24" />
-
-          <div text-h2 whitespace-nowrap>{{ i.label() }}</div>
-        </RouterLink>
-
-        <Exit />
       </div>
     </div>
 
     <template #mobile>
-      <div bg-white flex rounded-10 overflow-hidden>
+      <div class="mobile-nav">
         <RouterLink
           v-for="i in mobileItems"
           :key="i.id"
           :to="i.path"
           replace
-          flex-1
-          fx-cer
-          px-24
-          gap-x-42
-          h-40
-          is-btn
-          transition-colors
-          rounded-10
+          class="mobile-nav-item"
           :class="[
-            route.path === i.path && 'bg-theme-row text-white',
+            route.path === i.path && 'mobile-nav-item--active',
             i.hidden && 'hidden',
           ]"
         >
-          <Component :is="i.icon" :size="24" />
+          <Component :is="i.icon" :size="20" />
         </RouterLink>
+
+        <div
+          class="mobile-nav-item"
+          @click="toggleDark"
+        >
+          <Moon v-if="!isDark" :size="20" />
+          <Sun v-else :size="20" />
+        </div>
 
         <Exit />
       </div>
     </template>
   </media-query>
 </template>
+
+<style lang="scss" scoped>
+.sidebar {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: width var(--transition-normal),
+              background-color var(--transition-normal),
+              border-color var(--transition-normal);
+  overflow: hidden;
+
+  &--expanded {
+    width: 200px;
+  }
+
+  &--collapsed {
+    width: 64px;
+  }
+}
+
+.sidebar-inner {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 52px;
+  padding: 0 20px;
+  cursor: pointer;
+  position: relative;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  background: transparent;
+  transition: border-color var(--transition-normal),
+              background-color var(--transition-fast);
+
+  &:hover {
+    background: var(--color-surface-hover);
+  }
+}
+
+.sidebar-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  transition: opacity var(--transition-fast);
+}
+
+.sidebar-toggle-icon {
+  position: absolute;
+  left: 20px;
+  color: var(--color-text-secondary);
+  transition: transform var(--transition-normal);
+
+  &--open {
+    transform: rotateY(180deg);
+  }
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  gap: 2px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  user-select: none;
+  color: var(--color-text-secondary);
+  transition: color var(--transition-fast),
+              background-color var(--transition-fast);
+  white-space: nowrap;
+
+  &:hover {
+    color: var(--color-primary);
+    background: var(--color-primary-light);
+  }
+
+  &--active {
+    color: var(--color-primary);
+    background: var(--color-primary-light);
+    font-weight: 500;
+  }
+
+  &--action {
+    color: var(--color-text-muted);
+    border: none;
+    background: transparent;
+    width: 100%;
+    font: inherit;
+
+    &:hover {
+      color: var(--color-danger);
+      background: rgba(239, 68, 68, 0.08);
+    }
+  }
+
+  &--theme:hover {
+    color: var(--color-primary);
+    background: var(--color-primary-light);
+  }
+}
+
+.sidebar-item-label {
+  font-size: 14px;
+}
+
+.sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  gap: 2px;
+  border-top: 1px solid var(--color-border);
+  margin-top: auto;
+  transition: border-color var(--transition-normal);
+}
+
+// Mobile bottom nav
+.mobile-nav {
+  display: flex;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: background-color var(--transition-normal),
+              border-color var(--transition-normal);
+}
+
+.mobile-nav-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--color-text-muted);
+  border-radius: var(--radius-md);
+  transition: color var(--transition-fast),
+              background-color var(--transition-fast);
+
+  &:hover {
+    color: var(--color-primary);
+  }
+
+  &--active {
+    color: var(--color-primary);
+    background: var(--color-primary-light);
+  }
+}
+</style>

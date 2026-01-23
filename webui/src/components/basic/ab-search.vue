@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { Down, Search } from '@icon-park/vue-next';
 import { NSpin } from 'naive-ui';
-import { watch } from 'vue';
 
 withDefaults(
   defineProps<{
@@ -17,65 +16,119 @@ withDefaults(
 defineEmits(['select', 'search']);
 
 const inputValue = defineModel<string>('inputValue');
-
-watch(inputValue, (val) => {
-  console.log(val);
-});
 </script>
 
 <template>
-  <div
-    bg="#7752B4"
-    text-white
-    fx-cer
-    rounded-12
-    h-36
-    pl-12
-    gap-x-12
-    w-400
-    overflow-hidden
-    shadow-inner
-  >
-    <Search
+  <div class="search-input" role="search">
+    <button
       v-if="!loading"
-      theme="outline"
-      size="24"
-      fill="#fff"
-      is-btn
-      btn-click
+      class="search-icon-btn"
+      aria-label="Search"
       @click="$emit('search')"
-    />
-    <NSpin v-else :size="20" />
+    >
+      <Search theme="outline" size="20" class="search-icon" />
+    </button>
+    <NSpin v-else :size="18" />
 
     <input
       v-model="inputValue"
       type="text"
       :placeholder="$t('topbar.search.placeholder')"
-      input-reset
+      class="search-field"
+      aria-label="Search anime"
       @keyup.enter="$emit('search')"
     />
-    <div
-      h-full
-      f-cer
-      justify-between
-      px-12
-      w-100
-      class="provider"
-      is-btn
+
+    <button
+      class="search-provider"
+      aria-label="Select search provider"
       @click="$emit('select')"
     >
-      <div text-h3 truncate>
-        {{ provider }}
-      </div>
-      <div class="provider">
-        <Down />
-      </div>
-    </div>
+      <div class="search-provider-label">{{ provider }}</div>
+      <Down :size="14" />
+    </button>
   </div>
 </template>
 
 <style lang="scss" scoped>
-.provider {
-  background: #4e2a94;
+.search-input {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding-left: 12px;
+  gap: 10px;
+  width: 360px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-hover);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  transition: border-color var(--transition-fast),
+              background-color var(--transition-normal);
+
+  &:focus-within {
+    border-color: var(--color-primary);
+    background: var(--color-surface);
+  }
+}
+
+.search-icon-btn {
+  display: flex;
+  align-items: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.search-icon {
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast);
+
+  .search-icon-btn:hover & {
+    color: var(--color-primary);
+  }
+}
+
+.search-field {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  color: var(--color-text);
+
+  &::placeholder {
+    color: var(--color-text-muted);
+  }
+}
+
+.search-provider {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  height: 100%;
+  padding: 0 12px;
+  min-width: 80px;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  font-family: inherit;
+  transition: background-color var(--transition-fast);
+
+  &:hover {
+    background: var(--color-primary-hover);
+  }
+}
+
+.search-provider-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

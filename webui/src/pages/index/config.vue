@@ -12,46 +12,70 @@ onActivated(() => {
 </script>
 
 <template>
-  <div overflow-auto mt-12 flex-grow>
-    <div h-full>
-      <div grid="~ pc:cols-2 gap-20" mb-auto>
-        <div space-y-20>
-          <config-normal></config-normal>
-
-          <config-parser></config-parser>
-
-          <config-download></config-download>
-
-          <config-manage></config-manage>
-        </div>
-
-        <div space-y-20>
-          <config-notification></config-notification>
-
-          <config-proxy></config-proxy>
-
-          <config-player></config-player>
-
-          <config-openai></config-openai>
-        </div>
+  <div class="page-config">
+    <div class="config-grid">
+      <div class="config-col">
+        <config-normal></config-normal>
+        <config-parser></config-parser>
+        <config-download></config-download>
+        <config-manage></config-manage>
       </div>
 
-      <div fx-cer justify-end gap-8 mt-20>
-        <ab-button
-          :class="[{ 'flex-1': isMobile }]"
-          type="warn"
-          @click="getConfig"
-        >
-          {{ $t('config.cancel') }}
-        </ab-button>
-        <ab-button
-          :class="[{ 'flex-1': isMobile }]"
-          type="primary"
-          @click="setConfig"
-        >
-          {{ $t('config.apply') }}
-        </ab-button>
+      <div class="config-col">
+        <config-notification></config-notification>
+        <config-proxy></config-proxy>
+        <config-player></config-player>
+        <config-openai></config-openai>
       </div>
+    </div>
+
+    <div class="config-actions">
+      <ab-button
+        :class="[{ 'flex-1': isMobile }]"
+        type="warn"
+        @click="getConfig"
+      >
+        {{ $t('config.cancel') }}
+      </ab-button>
+      <ab-button
+        :class="[{ 'flex-1': isMobile }]"
+        type="primary"
+        @click="setConfig"
+      >
+        {{ $t('config.apply') }}
+      </ab-button>
     </div>
   </div>
 </template>
+
+<style lang="scss" scoped>
+.page-config {
+  overflow: auto;
+  flex-grow: 1;
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  margin-bottom: auto;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.config-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.config-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+</style>

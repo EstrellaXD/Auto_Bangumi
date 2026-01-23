@@ -15,9 +15,23 @@ const abLabel = computed(() => {
 </script>
 
 <template>
-  <div flex="~ items-start justify-between">
-    <div>{{ abLabel }}</div>
-
+  <div class="label-row">
+    <div class="label-text">{{ abLabel }}</div>
     <slot></slot>
   </div>
 </template>
+
+<style lang="scss" scoped>
+.label-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.label-text {
+  font-size: 14px;
+  color: var(--color-text);
+  padding-top: 4px;
+  transition: color var(--transition-normal);
+}
+</style>

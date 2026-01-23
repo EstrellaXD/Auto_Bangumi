@@ -21,22 +21,11 @@ defineEmits(['click']);
 const buttonSize = computed(() => {
   switch (props.size) {
     case 'big':
-      return 'rounded-10 text-h1 w-276 h-55 text-h1';
+      return 'btn--big';
     case 'normal':
-      return 'rounded-6 w-170 h-36';
+      return 'btn--normal';
     case 'small':
-      return 'rounded-6 w-86 h-28 text-main';
-  }
-});
-
-const loadingSize = computed(() => {
-  switch (props.size) {
-    case 'big':
-      return 'large';
-    case 'normal':
-      return 'small';
-    case 'small':
-      return 18;
+      return 'btn--small';
   }
 });
 </script>
@@ -45,26 +34,74 @@ const loadingSize = computed(() => {
   <Component
     :is="link !== null ? 'a' : 'button'"
     :href="link"
-    text-white
-    outline-none
-    f-cer
-    :class="[`type-${type}`, buttonSize]"
+    class="btn"
+    :class="[`btn--${type}`, buttonSize]"
     @click="$emit('click')"
   >
-    <NSpin :show="loading" :size="loadingSize">
+    <NSpin :show="loading" :size="size === 'big' ? 'large' : 'small'">
       <slot></slot>
     </NSpin>
   </Component>
 </template>
 
 <style lang="scss" scoped>
-.type {
-  &-primary {
-    @include bg-mouse-event(#4e3c94, #281e52, #8e8a9c);
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--transition-fast),
+              transform var(--transition-fast),
+              box-shadow var(--transition-fast);
+
+  &:active {
+    transform: scale(0.97);
   }
 
-  &-warn {
-    @include bg-mouse-event(#943c61, #521e2a, #9c8a93);
+  // Sizes
+  &--big {
+    border-radius: var(--radius-md);
+    font-size: 18px;
+    width: 276px;
+    height: 55px;
+  }
+
+  &--normal {
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    width: 170px;
+    height: 36px;
+  }
+
+  &--small {
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    width: 86px;
+    height: 28px;
+  }
+
+  // Types
+  &--primary {
+    background: var(--color-primary);
+
+    &:hover {
+      background: var(--color-primary-hover);
+      box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 30%, transparent);
+    }
+  }
+
+  &--warn {
+    background: var(--color-danger);
+
+    &:hover {
+      filter: brightness(0.9);
+      box-shadow: 0 2px 8px color-mix(in srgb, var(--color-danger) 30%, transparent);
+    }
   }
 }
 </style>

@@ -15,28 +15,22 @@ const checked = defineModel<boolean>({ default: false });
 
 <template>
   <Switch v-model="checked" as="template">
-    <div flex="~ items-center gap-x-8" is-btn>
+    <div class="checkbox-wrapper">
       <slot name="before"></slot>
 
       <div
-        rel
-        f-cer
-        bg-white
-        border="solid #3c239f"
+        class="checkbox"
         :class="[
-          small ? 'wh-16 border-2 rounded-4' : 'wh-32 border-4 rounded-6',
-          !checked && 'group',
+          small ? 'checkbox--small' : 'checkbox--normal',
+          checked && 'checkbox--checked',
         ]"
       >
         <div
-          rounded-2
-          transition="all duration-300"
+          class="checkbox-inner"
           :class="[
-            small ? 'wh-8' : 'wh-16',
-            checked ? 'bg-[#3c239f]' : 'bg-transparent',
+            small ? 'checkbox-inner--small' : 'checkbox-inner--normal',
+            checked && 'checkbox-inner--checked',
           ]"
-          group-hover:bg="#cccad4"
-          group-active:bg="#3c239f"
         ></div>
       </div>
 
@@ -44,3 +38,68 @@ const checked = defineModel<boolean>({ default: false });
     </div>
   </Switch>
 </template>
+
+<style lang="scss" scoped>
+.checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface);
+  border: 2px solid var(--color-primary);
+  transition: border-color var(--transition-fast),
+              background-color var(--transition-fast);
+
+  &--normal {
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-sm);
+    border-width: 2px;
+  }
+
+  &--small {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border-width: 2px;
+  }
+
+  &--checked {
+    border-color: var(--color-primary);
+  }
+
+  &:hover:not(.checkbox--checked) {
+    .checkbox-inner {
+      background: var(--color-border-hover);
+    }
+  }
+}
+
+.checkbox-inner {
+  border-radius: 2px;
+  transition: background-color var(--transition-fast);
+  background: transparent;
+
+  &--normal {
+    width: 12px;
+    height: 12px;
+  }
+
+  &--small {
+    width: 8px;
+    height: 8px;
+  }
+
+  &--checked {
+    background: var(--color-primary);
+  }
+}
+</style>

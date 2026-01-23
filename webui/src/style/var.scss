@@ -1,16 +1,92 @@
-$scrollbar-color: #372a87;
+// Design System Variables
+// Light theme (default) + Dark theme (.dark class on html)
 
 :root {
+  // --- Colors ---
+  --color-primary: #6C4AB6;
+  --color-primary-hover: #563A92;
+  --color-primary-light: #E8DEF8;
+  --color-accent: #F97316;
+  --color-success: #22C55E;
+  --color-danger: #EF4444;
+  --color-warning: #F59E0B;
+
+  --color-bg: #FAFAFA;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F5F5F5;
+
+  --color-text: #1E293B;
+  --color-text-secondary: #64748B;
+  --color-text-muted: #94A3B8;
+
+  --color-border: #E2E8F0;
+  --color-border-hover: #CBD5E1;
+
+  // --- Shadows ---
+  --shadow-color: rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+
+  // --- Radius ---
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  // --- Transitions ---
+  --transition-fast: 150ms ease-out;
+  --transition-normal: 200ms ease-out;
+  --transition-slow: 300ms ease-out;
+
+  // --- Scrollbar ---
   --scrollbar-size: 6px;
   --scrollbar-color: transparent;
-  --scrollbar-thumb-color: #{rgba($scrollbar-color, 0.5)};
-  --scrollbar-thumb-hover-color: #{rgba($scrollbar-color, 1)};
+  --scrollbar-thumb-color: rgba(108, 74, 182, 0.3);
+  --scrollbar-thumb-hover-color: rgba(108, 74, 182, 0.6);
 
+  // --- Layout ---
   --layout-padding: 16px;
   --layout-gap: 12px;
 
+  // --- Typography ---
+  --font-family: 'Inter', -apple-system, 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
+
   @include forMobile {
-    --layout-padding: 10px;
+    --layout-padding: 12px;
     --layout-gap: 10px;
   }
+}
+
+// Dark theme
+.dark {
+  --color-primary: #8B6CC7;
+  --color-primary-hover: #A78BDB;
+  --color-primary-light: #2D2250;
+  --color-accent: #FB923C;
+  --color-success: #4ADE80;
+  --color-danger: #F87171;
+  --color-warning: #FBBF24;
+
+  --color-bg: #0F172A;
+  --color-surface: #1E293B;
+  --color-surface-hover: #334155;
+
+  --color-text: #F1F5F9;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted: #64748B;
+
+  --color-border: #334155;
+  --color-border-hover: #475569;
+
+  // --- Shadows (darker for dark mode) ---
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+
+  // --- Scrollbar ---
+  --scrollbar-thumb-color: rgba(139, 108, 199, 0.3);
+  --scrollbar-thumb-hover-color: rgba(139, 108, 199, 0.6);
 }
