@@ -12,15 +12,15 @@
       "username": "Username"
     },
     "experimental_openai_set": {
-      "api_base": "OpenAI API Base URL (Azure entrypoint)",
-      "api_key": "OpenAI API Key",
-      "api_type": "OpenAI API Type",
-      "api_version": "Azure OpenAI Version",
-      "deployment_id": "Azure OpenAI Deployment ID",
-      "enable": "Enable OpenAI",
-      "model": "OpenAI Model",
-      "title": "Experimental Setting",
-      "warning": "Warning: Experimental feature is not yet stable. Please use with caution."
+      "api_base": "API Base URL",
+      "api_key": "API Key",
+      "api_type": "Provider",
+      "api_version": "API Version",
+      "deployment_id": "Deployment ID",
+      "enable": "Enable LLM Parsing",
+      "model": "Model",
+      "title": "LLM Settings",
+      "warning": "Experimental: LLM-based anime title parsing may produce inaccurate results."
     },
     "manage_set": {
       "delete_bad_torrent": "Delete Bad Torrent",

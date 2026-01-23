@@ -12,15 +12,15 @@
       "username": "用户名"
     },
     "experimental_openai_set": {
-      "api_base": "OpenAI API Base URL (Azure entrypoint)",
-      "api_key": "OpenAI API Key",
-      "api_type": "OpenAI API 类型",
-      "api_version": "Azure OpenAI 版本",
-      "deployment_id": "Azure OpenAI Deployment ID",
-      "enable": "启用 OpenAI",
-      "model": "OpenAI 模型",
-      "title": "实验功能设置",
-      "warning": "警告：实验功能尚未稳定，请谨慎使用"
+      "api_base": "API 地址",
+      "api_key": "API 密钥",
+      "api_type": "服务商",
+      "api_version": "API 版本",
+      "deployment_id": "部署 ID",
+      "enable": "启用 LLM 解析",
+      "model": "模型",
+      "title": "LLM 设置",
+      "warning": "实验功能：基于 LLM 的番剧标题解析可能产生不准确的结果。"
     },
     "manage_set": {
       "delete_bad_torrent": "删除坏种",

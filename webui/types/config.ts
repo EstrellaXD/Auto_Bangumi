@@ -15,7 +15,7 @@ export type ProxyType = ['http', 'https', 'socks5'];
 /** 通知类型 */
 export type NotificationType = ['telegram', 'server-chan', 'bark', 'wecom'];
 /** OpenAI Model List */
-export type OpenAIModel = ['gpt-3.5-turbo'];
+export type OpenAIModel = ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'];
 /** OpenAI API Type */
 export type OpenAIType = ['openai', 'azure'];
 
