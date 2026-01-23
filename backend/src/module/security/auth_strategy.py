@@ -2,10 +2,12 @@
 认证策略抽象层
 将密码认证和 Passkey 认证统一为策略模式
 """
-import base64
 from abc import ABC, abstractmethod
 
-from module.database import Database
+from sqlmodel import select
+
+from module.database.engine import async_session_factory
+from module.database.passkey import PasskeyDatabase
 from module.models import ResponseModel
 from module.models.user import User
 
@@ -28,25 +30,6 @@ class AuthStrategy(ABC):
         pass
 
 
-class PasswordAuthStrategy(AuthStrategy):
-    """密码认证策略（保持向后兼容）"""
-
-    async def authenticate(self, username: str, credential: dict) -> ResponseModel:
-        """使用密码认证"""
-        password = credential.get("password")
-        if not password:
-            return ResponseModel(
-                status_code=401,
-                status=False,
-                msg_en="Password is required",
-                msg_zh="密码不能为空",
-            )
-
-        user = User(username=username, password=password)
-        async with Database() as db:
-            return await db.user.auth_user(user)
-
-
 class PasskeyAuthStrategy(AuthStrategy):
     """Passkey 认证策略"""
 
@@ -55,11 +38,16 @@ class PasskeyAuthStrategy(AuthStrategy):
 
     async def authenticate(self, username: str, credential: dict) -> ResponseModel:
         """使用 WebAuthn Passkey 认证"""
-        async with Database() as db:
+        async with async_session_factory() as session:
             # 1. 查找用户
             try:
-                user = await db.user.get_user(username)
-            except Exception:
+                result = await session.execute(
+                    select(User).where(User.username == username)
+                )
+                user = result.scalar_one_or_none()
+                if not user:
+                    raise ValueError("User not found")
+            except ValueError:
                 return ResponseModel(
                     status_code=401,
                     status=False,
@@ -78,11 +66,12 @@ class PasskeyAuthStrategy(AuthStrategy):
                     self.webauthn_service.base64url_decode(raw_id)
                 )
 
-                passkey = await db.passkey.get_passkey_by_credential_id(credential_id_str)
+                passkey_db = PasskeyDatabase(session)
+                passkey = await passkey_db.get_passkey_by_credential_id(credential_id_str)
                 if not passkey or passkey.user_id != user.id:
                     raise ValueError("Passkey not found or not owned by user")
 
-            except Exception as e:
+            except Exception:
                 return ResponseModel(
                     status_code=401,
                     status=False,
@@ -97,7 +86,7 @@ class PasskeyAuthStrategy(AuthStrategy):
                 )
 
                 # 4. 更新使用记录
-                await db.passkey.update_passkey_usage(passkey, new_sign_count)
+                await passkey_db.update_passkey_usage(passkey, new_sign_count)
 
                 return ResponseModel(
                     status_code=200,

@@ -7,8 +7,10 @@ from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
+from sqlmodel import select
 
-from module.database import Database
+from module.database.engine import async_session_factory
+from module.database.passkey import PasskeyDatabase
 from module.models import APIResponse
 from module.models.passkey import (
     PasskeyAuthFinish,
@@ -17,6 +19,7 @@ from module.models.passkey import (
     PasskeyDelete,
     PasskeyList,
 )
+from module.models.user import User
 from module.security.api import active_user, get_current_user
 from module.security.auth_strategy import PasskeyAuthStrategy
 from module.security.jwt import create_access_token
@@ -66,10 +69,19 @@ async def get_registration_options(
     """
     webauthn = _get_webauthn_from_request(request)
 
-    async with Database() as db:
+    async with async_session_factory() as session:
         try:
-            user = await db.user.get_user(username)
-            existing_passkeys = await db.passkey.get_passkeys_by_user_id(user.id)
+            # Get user
+            result = await session.execute(
+                select(User).where(User.username == username)
+            )
+            user = result.scalar_one_or_none()
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+
+            # Get existing passkeys
+            passkey_db = PasskeyDatabase(session)
+            existing_passkeys = await passkey_db.get_passkeys_by_user_id(user.id)
 
             options = webauthn.generate_registration_options(
                 username=username,
@@ -79,6 +91,8 @@ async def get_registration_options(
 
             return options
 
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Failed to generate registration options: {e}")
             raise HTTPException(status_code=500, detail=str(e))
@@ -95,9 +109,15 @@ async def verify_registration(
     """
     webauthn = _get_webauthn_from_request(request)
 
-    async with Database() as db:
+    async with async_session_factory() as session:
         try:
-            user = await db.user.get_user(username)
+            # Get user
+            result = await session.execute(
+                select(User).where(User.username == username)
+            )
+            user = result.scalar_one_or_none()
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
 
             # 验证 WebAuthn 响应
             passkey = webauthn.verify_registration(
@@ -108,7 +128,8 @@ async def verify_registration(
 
             # 设置 user_id 并保存
             passkey.user_id = user.id
-            await db.passkey.create_passkey(passkey)
+            passkey_db = PasskeyDatabase(session)
+            await passkey_db.create_passkey(passkey)
 
             return JSONResponse(
                 status_code=200,
@@ -121,6 +142,8 @@ async def verify_registration(
         except ValueError as e:
             logger.warning(f"Registration verification failed for {username}: {e}")
             raise HTTPException(status_code=400, detail=str(e))
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Failed to register passkey: {e}")
             raise HTTPException(status_code=500, detail=str(e))
@@ -140,10 +163,18 @@ async def get_passkey_login_options(
     """
     webauthn = _get_webauthn_from_request(request)
 
-    async with Database() as db:
+    async with async_session_factory() as session:
         try:
-            user = await db.user.get_user(auth_data.username)
-            passkeys = await db.passkey.get_passkeys_by_user_id(user.id)
+            # Get user
+            result = await session.execute(
+                select(User).where(User.username == auth_data.username)
+            )
+            user = result.scalar_one_or_none()
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+
+            passkey_db = PasskeyDatabase(session)
+            passkeys = await passkey_db.get_passkeys_by_user_id(user.id)
 
             if not passkeys:
                 raise HTTPException(
@@ -194,13 +225,23 @@ async def login_with_passkey(
 @router.get("/list", response_model=list[PasskeyList])
 async def list_passkeys(username: str = Depends(get_current_user)):
     """获取用户的所有 Passkey"""
-    async with Database() as db:
+    async with async_session_factory() as session:
         try:
-            user = await db.user.get_user(username)
-            passkeys = await db.passkey.get_passkeys_by_user_id(user.id)
+            # Get user
+            result = await session.execute(
+                select(User).where(User.username == username)
+            )
+            user = result.scalar_one_or_none()
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
 
-            return [db.passkey.to_list_model(pk) for pk in passkeys]
+            passkey_db = PasskeyDatabase(session)
+            passkeys = await passkey_db.get_passkeys_by_user_id(user.id)
 
+            return [passkey_db.to_list_model(pk) for pk in passkeys]
+
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Failed to list passkeys: {e}")
             raise HTTPException(status_code=500, detail=str(e))
@@ -212,10 +253,18 @@ async def delete_passkey(
     username: str = Depends(get_current_user),
 ):
     """删除 Passkey"""
-    async with Database() as db:
+    async with async_session_factory() as session:
         try:
-            user = await db.user.get_user(username)
-            await db.passkey.delete_passkey(delete_data.passkey_id, user.id)
+            # Get user
+            result = await session.execute(
+                select(User).where(User.username == username)
+            )
+            user = result.scalar_one_or_none()
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+
+            passkey_db = PasskeyDatabase(session)
+            await passkey_db.delete_passkey(delete_data.passkey_id, user.id)
 
             return JSONResponse(
                 status_code=200,
