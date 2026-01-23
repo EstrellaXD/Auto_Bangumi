@@ -45,7 +45,7 @@ async def update_rule(
     data: BangumiUpdate,
 ):
     with TorrentManager() as manager:
-        resp = manager.update_rule(bangumi_id, data)
+        resp = await manager.update_rule(bangumi_id, data)
     return u_response(resp)
 
 
@@ -56,7 +56,7 @@ async def update_rule(
 )
 async def delete_rule(bangumi_id: str, file: bool = False):
     with TorrentManager() as manager:
-        resp = manager.delete_rule(bangumi_id, file)
+        resp = await manager.delete_rule(bangumi_id, file)
     return u_response(resp)
 
 
@@ -68,7 +68,7 @@ async def delete_rule(bangumi_id: str, file: bool = False):
 async def delete_many_rule(bangumi_id: list, file: bool = False):
     with TorrentManager() as manager:
         for i in bangumi_id:
-            resp = manager.delete_rule(i, file)
+            resp = await manager.delete_rule(i, file)
     return u_response(resp)
 
 
@@ -79,7 +79,7 @@ async def delete_many_rule(bangumi_id: list, file: bool = False):
 )
 async def disable_rule(bangumi_id: str, file: bool = False):
     with TorrentManager() as manager:
-        resp = manager.disable_rule(bangumi_id, file)
+        resp = await manager.disable_rule(bangumi_id, file)
     return u_response(resp)
 
 
@@ -91,7 +91,7 @@ async def disable_rule(bangumi_id: str, file: bool = False):
 async def disable_many_rule(bangumi_id: list, file: bool = False):
     with TorrentManager() as manager:
         for i in bangumi_id:
-            resp = manager.disable_rule(i, file)
+            resp = await manager.disable_rule(i, file)
     return u_response(resp)
 
 
@@ -111,9 +111,9 @@ async def enable_rule(bangumi_id: str):
     response_model=APIResponse,
     dependencies=[Depends(get_current_user)],
 )
-async def refresh_poster():
+async def refresh_poster_all():
     with TorrentManager() as manager:
-        resp = manager.refresh_poster()
+        resp = await manager.refresh_poster()
     return u_response(resp)
 
 @router.get(
@@ -121,9 +121,9 @@ async def refresh_poster():
     response_model=APIResponse,
     dependencies=[Depends(get_current_user)],
 )
-async def refresh_poster(bangumi_id: int):
+async def refresh_poster_one(bangumi_id: int):
     with TorrentManager() as manager:
-        resp = manager.refind_poster(bangumi_id)
+        resp = await manager.refind_poster(bangumi_id)
     return u_response(resp)
 
 
@@ -134,7 +134,7 @@ async def refresh_poster(bangumi_id: int):
 )
 async def refresh_calendar():
     with TorrentManager() as manager:
-        resp = manager.refresh_calendar()
+        resp = await manager.refresh_calendar()
     return u_response(resp)
 
 

@@ -31,11 +31,11 @@ def info_url(e, key):
     return f"{TMDB_URL}/3/tv/{e}?api_key={TMDB_API}&language={LANGUAGE[key]}"
 
 
-def is_animation(tv_id, language) -> bool:
+async def is_animation(tv_id, language, req: RequestContent) -> bool:
     url_info = info_url(tv_id, language)
-    with RequestContent() as req:
-        type_id = req.get_json(url_info)["genres"]
-        for type in type_id:
+    type_id = await req.get_json(url_info)
+    if type_id:
+        for type in type_id.get("genres", []):
             if type.get("id") == 16:
                 return True
     return False
@@ -56,21 +56,27 @@ def get_season(seasons: list) -> tuple[int, str]:
     return len(ss), ss[-1].get("poster_path")
 
 
-def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
-    with RequestContent() as req:
+async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
+    async with RequestContent() as req:
         url = search_url(title)
-        contents = req.get_json(url).get("results")
+        contents = await req.get_json(url)
+        if not contents:
+            return None
+        contents = contents.get("results")
         if contents.__len__() == 0:
             url = search_url(title.replace(" ", ""))
-            contents = req.get_json(url).get("results")
+            contents_resp = await req.get_json(url)
+            if not contents_resp:
+                return None
+            contents = contents_resp.get("results")
         # 判断动画
         if contents:
             for content in contents:
                 id = content["id"]
-                if is_animation(id, language):
+                if await is_animation(id, language, req):
                     break
             url_info = info_url(id, language)
-            info_content = req.get_json(url_info)
+            info_content = await req.get_json(url_info)
             season = [
                 {
                     "season": s.get("name"),
@@ -87,7 +93,7 @@ def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
             year_number = info_content.get("first_air_date").split("-")[0]
             if poster_path:
                 if not test:
-                    img = req.get_content(f"https://image.tmdb.org/t/p/w780{poster_path}")
+                    img = await req.get_content(f"https://image.tmdb.org/t/p/w780{poster_path}")
                     poster_link = save_image(img, "jpg")
                 else:
                     poster_link = "https://image.tmdb.org/t/p/w780" + poster_path
@@ -107,4 +113,5 @@ def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
 
 
 if __name__ == "__main__":
-    print(tmdb_parser("魔法禁书目录", "zh"))
+    import asyncio
+    print(asyncio.run(tmdb_parser("魔法禁书目录", "zh")))

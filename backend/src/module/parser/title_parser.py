@@ -31,8 +31,8 @@ class TitleParser:
             logger.warning(f"Cannot parse {torrent_path} with error {e}")
 
     @staticmethod
-    def tmdb_parser(title: str, season: int, language: str):
-        tmdb_info = tmdb_parser(title, language)
+    async def tmdb_parser(title: str, season: int, language: str):
+        tmdb_info = await tmdb_parser(title, language)
         if tmdb_info:
             logger.debug(f"TMDB Matched, official title is {tmdb_info.title}")
             tmdb_season = tmdb_info.last_season if tmdb_info.last_season else season
@@ -43,8 +43,8 @@ class TitleParser:
             return title, season, None, None
 
     @staticmethod
-    def tmdb_poster_parser(bangumi: Bangumi):
-        tmdb_info = tmdb_parser(bangumi.official_title, settings.rss_parser.language)
+    async def tmdb_poster_parser(bangumi: Bangumi):
+        tmdb_info = await tmdb_parser(bangumi.official_title, settings.rss_parser.language)
         if tmdb_info:
             logger.debug(f"TMDB Matched, official title is {tmdb_info.title}")
             bangumi.poster_link = tmdb_info.poster_link
@@ -104,5 +104,5 @@ class TitleParser:
             return None
 
     @staticmethod
-    def mikan_parser(homepage: str) -> tuple[str, str]:
-        return mikan_parser(homepage)
+    async def mikan_parser(homepage: str) -> tuple[str, str]:
+        return await mikan_parser(homepage)

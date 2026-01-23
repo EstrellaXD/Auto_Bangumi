@@ -11,17 +11,19 @@ logger = logging.getLogger(__name__)
 
 class TorrentManager(Database):
     @staticmethod
-    def __match_torrents_list(data: Bangumi | BangumiUpdate) -> list:
-        with DownloadClient() as client:
-            torrents = client.get_torrent_info(status_filter=None)
+    async def __match_torrents_list(data: Bangumi | BangumiUpdate) -> list:
+        async with DownloadClient() as client:
+            torrents = await client.get_torrent_info(status_filter=None)
         return [
-            torrent.hash for torrent in torrents if torrent.save_path == data.save_path
+            torrent.get("hash", torrent.get("infohash_v1", ""))
+            for torrent in torrents
+            if torrent.get("save_path") == data.save_path
         ]
 
-    def delete_torrents(self, data: Bangumi, client: DownloadClient):
-        hash_list = self.__match_torrents_list(data)
+    async def delete_torrents(self, data: Bangumi, client: DownloadClient):
+        hash_list = await self.__match_torrents_list(data)
         if hash_list:
-            client.delete_torrent(hash_list)
+            await client.delete_torrent(hash_list)
             logger.info(f"Delete rule and torrents for {data.official_title}")
             return ResponseModel(
                 status_code=200,
@@ -37,20 +39,21 @@ class TorrentManager(Database):
                 msg_zh=f"无法找到 {data.official_title} 的种子",
             )
 
-    def delete_rule(self, _id: int | str, file: bool = False):
+    async def delete_rule(self, _id: int | str, file: bool = False):
         data = self.bangumi.search_id(int(_id))
         if isinstance(data, Bangumi):
-            with DownloadClient() as client:
+            async with DownloadClient() as client:
                 self.rss.delete(data.official_title)
                 self.bangumi.delete_one(int(_id))
+                torrent_message = None
                 if file:
-                    torrent_message = self.delete_torrents(data, client)
+                    torrent_message = await self.delete_torrents(data, client)
                 logger.info(f"[Manager] Delete rule for {data.official_title}")
                 return ResponseModel(
                     status_code=200,
                     status=True,
-                    msg_en=f"Delete rule for {data.official_title}. {torrent_message.msg_en if file else ''}",
-                    msg_zh=f"删除 {data.official_title} 规则。{torrent_message.msg_zh if file else ''}",
+                    msg_en=f"Delete rule for {data.official_title}. {torrent_message.msg_en if file and torrent_message else ''}",
+                    msg_zh=f"删除 {data.official_title} 规则。{torrent_message.msg_zh if file and torrent_message else ''}",
                 )
         else:
             return ResponseModel(
@@ -60,15 +63,14 @@ class TorrentManager(Database):
                 msg_zh=f"无法找到 id {_id}",
             )
 
-    def disable_rule(self, _id: str | int, file: bool = False):
+    async def disable_rule(self, _id: str | int, file: bool = False):
         data = self.bangumi.search_id(int(_id))
         if isinstance(data, Bangumi):
-            with DownloadClient() as client:
-                # client.remove_rule(data.rule_name)
+            async with DownloadClient() as client:
                 data.deleted = True
                 self.bangumi.update(data)
                 if file:
-                    torrent_message = self.delete_torrents(data, client)
+                    torrent_message = await self.delete_torrents(data, client)
                     return torrent_message
                 logger.info(f"[Manager] Disable rule for {data.official_title}")
                 return ResponseModel(
@@ -105,15 +107,15 @@ class TorrentManager(Database):
                 msg_zh=f"无法找到 id {_id}",
             )
 
-    def update_rule(self, bangumi_id, data: BangumiUpdate):
+    async def update_rule(self, bangumi_id, data: BangumiUpdate):
         old_data: Bangumi = self.bangumi.search_id(bangumi_id)
         if old_data:
             # Move torrent
-            match_list = self.__match_torrents_list(old_data)
-            with DownloadClient() as client:
+            match_list = await self.__match_torrents_list(old_data)
+            async with DownloadClient() as client:
                 path = client._gen_save_path(data)
                 if match_list:
-                    client.move_torrent(match_list, path)
+                    await client.move_torrent(match_list, path)
             data.save_path = path
             self.bangumi.update(data, bangumi_id)
             return ResponseModel(
@@ -131,11 +133,11 @@ class TorrentManager(Database):
                 msg_zh=f"无法找到 id {bangumi_id} 的数据",
             )
 
-    def refresh_poster(self):
+    async def refresh_poster(self):
         bangumis = self.bangumi.search_all()
         for bangumi in bangumis:
             if not bangumi.poster_link:
-                TitleParser().tmdb_poster_parser(bangumi)
+                await TitleParser().tmdb_poster_parser(bangumi)
         self.bangumi.update_all(bangumis)
         return ResponseModel(
             status_code=200,
@@ -144,9 +146,9 @@ class TorrentManager(Database):
             msg_zh="刷新海报链接成功。",
         )
 
-    def refind_poster(self, bangumi_id: int):
+    async def refind_poster(self, bangumi_id: int):
         bangumi = self.bangumi.search_id(bangumi_id)
-        TitleParser().tmdb_poster_parser(bangumi)
+        await TitleParser().tmdb_poster_parser(bangumi)
         self.bangumi.update(bangumi)
         return ResponseModel(
             status_code=200,
@@ -155,9 +157,9 @@ class TorrentManager(Database):
             msg_zh="刷新海报链接成功。",
         )
 
-    def refresh_calendar(self):
+    async def refresh_calendar(self):
         """Fetch Bangumi.tv calendar and update air_weekday for all bangumi."""
-        calendar_items = fetch_bgm_calendar()
+        calendar_items = await fetch_bgm_calendar()
         if not calendar_items:
             return ResponseModel(
                 status_code=500,
@@ -204,8 +206,3 @@ class TorrentManager(Database):
             )
         else:
             return data
-
-
-if __name__ == "__main__":
-    with TorrentManager() as manager:
-        manager.refresh_poster()

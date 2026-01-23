@@ -1,30 +1,197 @@
-<script lang="ts" setup>
+<script lang="tsx" setup>
+import { NDataTable, NProgress, type DataTableColumns } from 'naive-ui';
+import type { QbTorrentInfo, TorrentGroup } from '#/downloader';
+
 definePage({
   name: 'Downloader',
 });
 
+const { t } = useMyI18n();
 const { config } = storeToRefs(useConfigStore());
 const { getConfig } = useConfigStore();
+const { groups, selectedHashes, loading } = storeToRefs(useDownloaderStore());
+const {
+  getAll,
+  pauseSelected,
+  resumeSelected,
+  deleteSelected,
+  toggleHash,
+  toggleGroup,
+  clearSelection,
+} = useDownloaderStore();
 
 const isNull = computed(() => {
   return config.value.downloader.host === '';
 });
 
-const url = computed(() => {
-  const downloader = config.value.downloader;
-  const host = downloader.host.replace(/http(s?)\:\/\//, '');
-  const protocol = downloader.ssl ? 'https' : 'http';
-
-  return `${protocol}://${host}`;
-});
+let timer: ReturnType<typeof setInterval> | null = null;
 
 onActivated(() => {
   getConfig();
+  if (!isNull.value) {
+    getAll();
+    timer = setInterval(getAll, 5000);
+  }
 });
+
+onDeactivated(() => {
+  if (timer) {
+    clearInterval(timer);
+    timer = null;
+  }
+  clearSelection();
+});
+
+function formatSize(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return (bytes / Math.pow(1024, i)).toFixed(1) + ' ' + units[i];
+}
+
+function formatSpeed(bytesPerSec: number): string {
+  if (bytesPerSec === 0) return '-';
+  return formatSize(bytesPerSec) + '/s';
+}
+
+function formatEta(seconds: number): string {
+  if (seconds <= 0 || seconds === 8640000) return '-';
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return `${h}h${m}m`;
+}
+
+function stateLabel(state: string): string {
+  const map: Record<string, string> = {
+    downloading: t('downloader.state.downloading'),
+    uploading: t('downloader.state.seeding'),
+    pausedDL: t('downloader.state.paused'),
+    pausedUP: t('downloader.state.paused'),
+    stalledDL: t('downloader.state.stalled'),
+    stalledUP: t('downloader.state.seeding'),
+    queuedDL: t('downloader.state.queued'),
+    queuedUP: t('downloader.state.queued'),
+    checkingDL: t('downloader.state.checking'),
+    checkingUP: t('downloader.state.checking'),
+    error: t('downloader.state.error'),
+    missingFiles: t('downloader.state.error'),
+    metaDL: t('downloader.state.metadata'),
+  };
+  return map[state] || state;
+}
+
+function stateType(state: string): string {
+  if (state.includes('paused')) return 'inactive';
+  if (state === 'downloading' || state === 'forcedDL') return 'active';
+  if (state.includes('UP') || state === 'uploading') return 'primary';
+  if (state === 'error' || state === 'missingFiles') return 'warn';
+  return 'primary';
+}
+
+function isGroupAllSelected(group: TorrentGroup): boolean {
+  return group.torrents.every((t) => selectedHashes.value.includes(t.hash));
+}
+
+function tableColumns(): DataTableColumns<QbTorrentInfo> {
+  return [
+    {
+      type: 'selection',
+    },
+    {
+      title: t('downloader.torrent.name'),
+      key: 'name',
+      ellipsis: { tooltip: true },
+      minWidth: 200,
+    },
+    {
+      title: t('downloader.torrent.progress'),
+      key: 'progress',
+      width: 160,
+      render(row: QbTorrentInfo) {
+        return (
+          <NProgress
+            type="line"
+            percentage={Math.round(row.progress * 100)}
+            indicator-placement="inside"
+            processing={row.state === 'downloading' || row.state === 'forcedDL'}
+          />
+        );
+      },
+    },
+    {
+      title: t('downloader.torrent.status'),
+      key: 'state',
+      width: 100,
+      render(row: QbTorrentInfo) {
+        return <ab-tag type={stateType(row.state)} title={stateLabel(row.state)} />;
+      },
+    },
+    {
+      title: t('downloader.torrent.size'),
+      key: 'size',
+      width: 100,
+      render(row: QbTorrentInfo) {
+        return formatSize(row.size);
+      },
+    },
+    {
+      title: t('downloader.torrent.dlspeed'),
+      key: 'dlspeed',
+      width: 110,
+      render(row: QbTorrentInfo) {
+        return formatSpeed(row.dlspeed);
+      },
+    },
+    {
+      title: t('downloader.torrent.upspeed'),
+      key: 'upspeed',
+      width: 110,
+      render(row: QbTorrentInfo) {
+        return formatSpeed(row.upspeed);
+      },
+    },
+    {
+      title: 'ETA',
+      key: 'eta',
+      width: 80,
+      render(row: QbTorrentInfo) {
+        return formatEta(row.eta);
+      },
+    },
+    {
+      title: t('downloader.torrent.peers'),
+      key: 'peers',
+      width: 90,
+      render(row: QbTorrentInfo) {
+        return `${row.num_seeds} / ${row.num_leechs}`;
+      },
+    },
+  ];
+}
+
+function tableRowKey(row: QbTorrentInfo) {
+  return row.hash;
+}
+
+function onCheckedChange(group: TorrentGroup, keys: string[]) {
+  const groupHashes = group.torrents.map((t) => t.hash);
+  const otherSelected = selectedHashes.value.filter(
+    (h) => !groupHashes.includes(h)
+  );
+  selectedHashes.value = [...otherSelected, ...keys];
+}
+
+function groupCheckedKeys(group: TorrentGroup): string[] {
+  return group.torrents
+    .filter((t) => selectedHashes.value.includes(t.hash))
+    .map((t) => t.hash);
+}
 </script>
 
 <template>
-  <div class="page-embed">
+  <div class="page-downloader">
     <div v-if="isNull" class="empty-guide">
       <div class="empty-guide-header anim-fade-in">
         <div class="empty-guide-title">{{ $t('downloader.empty.title') }}</div>
@@ -62,30 +229,114 @@ onActivated(() => {
       </RouterLink>
     </div>
 
-    <iframe
-      v-else
-      :src="url"
-      frameborder="0"
-      allowfullscreen="true"
-      class="embed-frame"
-    ></iframe>
+    <div v-else class="downloader-content">
+      <div v-if="groups.length === 0 && !loading" class="downloader-empty">
+        {{ $t('downloader.empty_torrents') }}
+      </div>
+
+      <div v-else class="downloader-groups">
+        <ab-fold-panel
+          v-for="group in groups"
+          :key="group.savePath"
+          :title="`${group.name} (${group.count})`"
+          :default-open="true"
+        >
+          <NDataTable
+            :columns="tableColumns()"
+            :data="group.torrents"
+            :row-key="tableRowKey"
+            :pagination="false"
+            :bordered="false"
+            :checked-row-keys="groupCheckedKeys(group)"
+            size="small"
+            @update:checked-row-keys="(keys: any) => onCheckedChange(group, keys as string[])"
+          />
+        </ab-fold-panel>
+      </div>
+
+      <Transition name="fade">
+        <div v-if="selectedHashes.length > 0" class="action-bar">
+          <span class="action-bar-count">
+            {{ selectedHashes.length }} {{ $t('downloader.selected') }}
+          </span>
+          <div class="action-bar-buttons">
+            <ab-button @click="resumeSelected">{{ $t('downloader.action.resume') }}</ab-button>
+            <ab-button @click="pauseSelected">{{ $t('downloader.action.pause') }}</ab-button>
+            <ab-button type="warn" @click="deleteSelected(false)">{{ $t('downloader.action.delete') }}</ab-button>
+          </div>
+        </div>
+      </Transition>
+    </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-.page-embed {
+.page-downloader {
   overflow: auto;
   flex-grow: 1;
   display: flex;
   flex-direction: column;
 }
 
-.embed-frame {
-  width: 100%;
-  height: 100%;
+.downloader-content {
+  display: flex;
+  flex-direction: column;
   flex: 1;
+  gap: 12px;
+  padding-bottom: 60px;
+}
+
+.downloader-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.downloader-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.action-bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 20px;
   border-radius: var(--radius-md);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+}
+
+.action-bar-count {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.action-bar-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
 }
 
 .empty-guide {

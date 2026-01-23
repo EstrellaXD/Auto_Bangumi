@@ -2,7 +2,7 @@
 import { ErrorPicture, Write } from '@icon-park/vue-next';
 import type { BangumiRule } from '#/bangumi';
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     type?: 'primary' | 'search' | 'mobile';
     bangumi: BangumiRule;
@@ -13,6 +13,8 @@ withDefaults(
 );
 
 defineEmits(['click']);
+
+const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
 </script>
 
 <template>
@@ -28,7 +30,7 @@ defineEmits(['click']);
   >
     <div class="card-poster">
       <template v-if="bangumi.poster_link">
-        <img :src="bangumi.poster_link" :alt="bangumi.official_title" class="card-img" />
+        <img :src="posterSrc" :alt="bangumi.official_title" class="card-img" />
       </template>
       <template v-else>
         <div class="card-placeholder">
@@ -37,6 +39,14 @@ defineEmits(['click']);
       </template>
 
       <div class="card-overlay">
+        <div class="card-overlay-tags">
+          <ab-tag :title="`Season ${bangumi.season}`" type="primary" />
+          <ab-tag
+            v-if="bangumi.group_name"
+            :title="bangumi.group_name"
+            type="primary"
+          />
+        </div>
         <div class="card-edit-btn">
           <Write size="18" />
         </div>
@@ -45,14 +55,6 @@ defineEmits(['click']);
 
     <div class="card-info">
       <div class="card-title">{{ bangumi.official_title }}</div>
-      <div class="card-tags">
-        <ab-tag :title="`Season ${bangumi.season}`" type="primary" />
-        <ab-tag
-          v-if="bangumi.group_name"
-          :title="bangumi.group_name"
-          type="primary"
-        />
-      </div>
     </div>
   </div>
 
@@ -62,7 +64,7 @@ defineEmits(['click']);
       <div class="search-card-content">
         <div class="search-card-thumb">
           <template v-if="bangumi.poster_link">
-            <img :src="bangumi.poster_link" :alt="bangumi.official_title" class="search-card-img" />
+            <img :src="posterSrc" :alt="bangumi.official_title" class="search-card-img" />
           </template>
           <template v-else>
             <div class="card-placeholder card-placeholder--small">
@@ -136,6 +138,7 @@ defineEmits(['click']);
   position: absolute;
   inset: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   opacity: 0;
@@ -149,6 +152,24 @@ defineEmits(['click']);
 
   .card:active & {
     background: rgba(0, 0, 0, 0.5);
+  }
+}
+
+.card-overlay-tags {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  right: 6px;
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+
+  :deep(.tag) {
+    background: rgba(0, 0, 0, 0.5);
+    border-color: rgba(255, 255, 255, 0.4);
+    color: #fff;
+    font-size: 9px;
+    padding: 1px 6px;
   }
 }
 
@@ -180,7 +201,6 @@ defineEmits(['click']);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  margin-bottom: 4px;
   transition: color var(--transition-normal);
 }
 

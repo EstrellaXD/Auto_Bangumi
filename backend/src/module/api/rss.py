@@ -25,7 +25,7 @@ async def get_rss():
 )
 async def add_rss(rss: RSSItem):
     with RSSEngine() as engine:
-        result = engine.add_rss(rss.url, rss.name, rss.aggregate, rss.parser)
+        result = await engine.add_rss(rss.url, rss.name, rss.aggregate, rss.parser)
     return u_response(result)
 
 
@@ -133,12 +133,13 @@ async def update_rss(
     dependencies=[Depends(get_current_user)],
 )
 async def refresh_all():
-    with RSSEngine() as engine, DownloadClient() as client:
-        engine.refresh_rss(client)
-        return JSONResponse(
-            status_code=200,
-            content={"msg_en": "Refresh all RSS successfully.", "msg_zh": "刷新 RSS 成功。"},
-        )
+    async with DownloadClient() as client:
+        with RSSEngine() as engine:
+            await engine.refresh_rss(client)
+    return JSONResponse(
+        status_code=200,
+        content={"msg_en": "Refresh all RSS successfully.", "msg_zh": "刷新 RSS 成功。"},
+    )
 
 
 @router.get(
@@ -147,12 +148,13 @@ async def refresh_all():
     dependencies=[Depends(get_current_user)],
 )
 async def refresh_rss(rss_id: int):
-    with RSSEngine() as engine, DownloadClient() as client:
-        engine.refresh_rss(client, rss_id)
-        return JSONResponse(
-            status_code=200,
-            content={"msg_en": "Refresh RSS successfully.", "msg_zh": "刷新 RSS 成功。"},
-        )
+    async with DownloadClient() as client:
+        with RSSEngine() as engine:
+            await engine.refresh_rss(client, rss_id)
+    return JSONResponse(
+        status_code=200,
+        content={"msg_en": "Refresh RSS successfully.", "msg_zh": "刷新 RSS 成功。"},
+    )
 
 
 @router.get(
@@ -175,7 +177,7 @@ analyser = RSSAnalyser()
     "/analysis", response_model=Bangumi, dependencies=[Depends(get_current_user)]
 )
 async def analysis(rss: RSSItem):
-    data = analyser.link_to_data(rss)
+    data = await analyser.link_to_data(rss)
     if isinstance(data, Bangumi):
         return data
     else:
@@ -186,8 +188,8 @@ async def analysis(rss: RSSItem):
     "/collect", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
 async def download_collection(data: Bangumi):
-    with SeasonCollector() as collector:
-        resp = collector.collect_season(data, data.rss_link)
+    async with SeasonCollector() as collector:
+        resp = await collector.collect_season(data, data.rss_link)
         return u_response(resp)
 
 
@@ -195,6 +197,5 @@ async def download_collection(data: Bangumi):
     "/subscribe", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
 async def subscribe(data: Bangumi, rss: RSSItem):
-    with SeasonCollector() as collector:
-        resp = collector.subscribe_season(data, parser=rss.parser)
-        return u_response(resp)
+    resp = await SeasonCollector.subscribe_season(data, parser=rss.parser)
+    return u_response(resp)

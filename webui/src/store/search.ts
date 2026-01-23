@@ -14,6 +14,10 @@ export const useSearchStore = defineStore('search', () => {
 
   const loading = computed(() => status.value !== 'CLOSED');
 
+  const bangumiList = computed(() =>
+    searchData.value.map((item, index) => ({ order: index, value: item }))
+  );
+
   async function getProviders() {
     providers.value = await apiSearch.getProvider();
     provider.value = providers.value[0];
@@ -21,18 +25,20 @@ export const useSearchStore = defineStore('search', () => {
 
   function clearSearch() {
     keyword.value = '';
+    searchData.value = [];
+    closeSearch();
   }
 
   return {
-    keyword,
+    inputValue: keyword,
     loading,
     provider,
     providers,
-    searchData,
+    bangumiList,
 
     clearSearch,
     getProviders,
-    openSearch,
+    onSearch: openSearch,
     closeSearch,
   };
 });

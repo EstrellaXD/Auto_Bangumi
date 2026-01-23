@@ -80,6 +80,32 @@
       "step2_desc": "设置 qBittorrent 的地址、用户名和密码。",
       "step3_title": "访问下载器",
       "step3_desc": "配置完成后，下载器界面将直接嵌入此处。"
+    },
+    "empty_torrents": "Bangumi 分类中暂无种子",
+    "selected": "已选择",
+    "torrent": {
+      "name": "名称",
+      "progress": "进度",
+      "status": "状态",
+      "size": "大小",
+      "dlspeed": "下载速度",
+      "upspeed": "上传速度",
+      "peers": "做种/下载"
+    },
+    "state": {
+      "downloading": "下载中",
+      "seeding": "做种中",
+      "paused": "已暂停",
+      "stalled": "等待中",
+      "queued": "排队中",
+      "checking": "校验中",
+      "error": "错误",
+      "metadata": "获取元数据"
+    },
+    "action": {
+      "pause": "暂停",
+      "resume": "恢复",
+      "delete": "删除"
     }
   },
   "homepage": {

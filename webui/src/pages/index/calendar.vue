@@ -7,6 +7,7 @@ definePage({
 });
 
 const { t } = useMyI18n();
+const posterSrc = (link: string | null | undefined) => resolvePosterUrl(link);
 const { bangumi } = storeToRefs(useBangumiStore());
 const { getAll, openEditPopup } = useBangumiStore();
 const { isMobile } = useBreakpointQuery();
@@ -136,23 +137,23 @@ function isToday(index: number): boolean {
             <div class="calendar-card-poster">
               <img
                 v-if="item.poster_link"
-                :src="item.poster_link"
+                :src="posterSrc(item.poster_link)"
                 :alt="item.official_title"
                 class="calendar-card-img"
               />
               <div v-else class="calendar-card-placeholder">
                 <ErrorPicture theme="outline" size="20" />
               </div>
-            </div>
-            <div class="calendar-card-info">
-              <div class="calendar-card-title">{{ item.official_title }}</div>
-              <div class="calendar-card-meta">
-                <ab-tag :title="`S${item.season}`" type="primary" />
-                <ab-tag
-                  v-if="item.group_name"
-                  :title="item.group_name"
-                  type="primary"
-                />
+              <div class="calendar-card-overlay">
+                <div class="calendar-card-overlay-tags">
+                  <ab-tag :title="`S${item.season}`" type="primary" />
+                  <ab-tag
+                    v-if="item.group_name"
+                    :title="item.group_name"
+                    type="primary"
+                  />
+                </div>
+                <div class="calendar-card-overlay-title">{{ item.official_title }}</div>
               </div>
             </div>
           </div>
@@ -202,7 +203,7 @@ function isToday(index: number): boolean {
               <div class="calendar-row-poster">
                 <img
                   v-if="item.poster_link"
-                  :src="item.poster_link"
+                  :src="posterSrc(item.poster_link)"
                   :alt="item.official_title"
                   class="calendar-row-img"
                 />
@@ -394,6 +395,7 @@ function isToday(index: number): boolean {
 }
 
 .calendar-card-poster {
+  position: relative;
   border-radius: var(--radius-sm);
   overflow: hidden;
   aspect-ratio: 2 / 3;
@@ -417,25 +419,49 @@ function isToday(index: number): boolean {
   transition: background-color var(--transition-normal);
 }
 
-.calendar-card-info {
-  padding: 6px 2px 2px;
+.calendar-card-overlay {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(2px);
+  transition: opacity var(--transition-normal);
+
+  .calendar-card:hover & {
+    opacity: 1;
+  }
 }
 
-.calendar-card-title {
-  font-size: 12px;
+.calendar-card-overlay-title {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  right: 6px;
+  font-size: 11px;
   font-weight: 500;
-  color: var(--color-text);
+  color: #fff;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  margin-bottom: 4px;
-  transition: color var(--transition-normal);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
-.calendar-card-meta {
+.calendar-card-overlay-tags {
+  position: absolute;
+  bottom: 5px;
+  left: 5px;
+  right: 5px;
   display: flex;
   gap: 3px;
   flex-wrap: wrap;
+
+  :deep(.tag) {
+    background: rgba(0, 0, 0, 0.5);
+    border-color: rgba(255, 255, 255, 0.4);
+    color: #fff;
+    font-size: 9px;
+    padding: 1px 5px;
+  }
 }
 
 // Empty day

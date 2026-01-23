@@ -1,14 +1,14 @@
-import logging
 import asyncio
+import logging
 
 from module.conf import VERSION, settings
 from module.models import ResponseModel
 from module.update import (
+    cache_image,
     data_migration,
     first_run,
     from_30_to_31,
     start_up,
-    cache_image,
 )
 
 from .sub_thread import RenameThread, RSSThread
@@ -51,11 +51,11 @@ class Program(RenameThread, RSSThread):
             data_migration()
         elif self.version_update:
             # Update database
-            from_30_to_31()
+            await from_30_to_31()
             logger.info("[Core] Database updated.")
         if not self.img_cache:
             logger.info("[Core] No image cache exists, create image cache.")
-            cache_image()
+            await cache_image()
         await self.start()
 
     async def start(self):

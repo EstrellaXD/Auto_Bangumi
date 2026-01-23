@@ -19,9 +19,9 @@ class SlackNotification(RequestContent):
         """
         return text.strip()
 
-    def post_msg(self, notify: Notification) -> bool:
+    async def post_msg(self, notify: Notification) -> bool:
         text = self.gen_message(notify)
         data = {"title": notify.official_title, "body": text, "device_key": self.token}
-        resp = self.post_data(self.notification_url, data)
+        resp = await self.post_data(self.notification_url, data)
         logger.debug(f"Bark notification: {resp.status_code}")
         return resp.status_code == 200

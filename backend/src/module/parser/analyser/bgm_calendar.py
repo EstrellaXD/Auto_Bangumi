@@ -7,13 +7,13 @@ logger = logging.getLogger(__name__)
 BGM_CALENDAR_URL = "https://api.bgm.tv/calendar"
 
 
-def fetch_bgm_calendar() -> list[dict]:
+async def fetch_bgm_calendar() -> list[dict]:
     """Fetch the current season's broadcast calendar from Bangumi.tv API.
 
     Returns a flat list of anime items with their air_weekday (0=Mon, ..., 6=Sun).
     """
-    with RequestContent() as req:
-        data = req.get_json(BGM_CALENDAR_URL)
+    async with RequestContent() as req:
+        data = await req.get_json(BGM_CALENDAR_URL)
 
     if not data:
         logger.warning("[BGM Calendar] Failed to fetch calendar data.")

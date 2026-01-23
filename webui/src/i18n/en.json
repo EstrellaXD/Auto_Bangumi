@@ -80,6 +80,32 @@
       "step2_desc": "Set your qBittorrent host address, username, and password.",
       "step3_title": "Access Downloader",
       "step3_desc": "Once configured, the downloader web UI will be embedded right here."
+    },
+    "empty_torrents": "No torrents in Bangumi category",
+    "selected": "selected",
+    "torrent": {
+      "name": "Name",
+      "progress": "Progress",
+      "status": "Status",
+      "size": "Size",
+      "dlspeed": "DL Speed",
+      "upspeed": "UP Speed",
+      "peers": "Seeds/Peers"
+    },
+    "state": {
+      "downloading": "Downloading",
+      "seeding": "Seeding",
+      "paused": "Paused",
+      "stalled": "Stalled",
+      "queued": "Queued",
+      "checking": "Checking",
+      "error": "Error",
+      "metadata": "Metadata"
+    },
+    "action": {
+      "pause": "Pause",
+      "resume": "Resume",
+      "delete": "Delete"
     }
   },
   "homepage": {
