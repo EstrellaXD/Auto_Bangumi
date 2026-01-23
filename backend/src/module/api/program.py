@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import signal
@@ -19,7 +20,7 @@ router = APIRouter(tags=["program"])
 
 @router.on_event("startup")
 async def startup():
-    await program.startup()
+    asyncio.create_task(program.startup())
 
 
 @router.on_event("shutdown")
