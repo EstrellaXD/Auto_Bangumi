@@ -1,3 +1,5 @@
+import { useClipboard, useIntervalFn } from '@vueuse/core';
+
 export const useLogStore = defineStore('log', () => {
   const message = useMessage();
   const { isLoggedIn } = useAuth();
@@ -26,8 +28,12 @@ export const useLogStore = defineStore('log', () => {
   });
 
   function copy() {
-    const { copy: copyLog, isSupported } = useClipboard({ source: log });
-    if (isSupported) {
+    const { copy: copyLog, isSupported } = useClipboard({
+      source: log.value,
+      legacy: true,
+    });
+
+    if (isSupported.value) {
       copyLog();
       message.success(t('notify.copy_success'));
     } else {

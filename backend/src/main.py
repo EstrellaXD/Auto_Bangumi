@@ -40,6 +40,9 @@ app = create_app()
 
 @app.get("/posters/{path:path}", tags=["posters"])
 def posters(path: str):
+    # only allow access to files in the posters directory
+    if not path.startswith("posters/"):
+        return HTMLResponse(status_code=403)
     return FileResponse(f"data/posters/{path}")
 
 

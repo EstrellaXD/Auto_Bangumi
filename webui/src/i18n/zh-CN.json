@@ -103,9 +103,30 @@
   },
   "login": {
     "login_btn": "登录",
+    "passkey_btn": "通行密钥",
     "password": "密码",
     "title": "登录",
     "username": "用户名"
+  },
+  "passkey": {
+    "add_new": "添加 Passkey",
+    "created_at": "创建于",
+    "delete_confirm": "确定删除此 Passkey？",
+    "delete_failed": "删除失败",
+    "delete_success": "Passkey 已删除",
+    "device_name": "设备名称",
+    "device_name_placeholder": "例如：iPhone 15, MacBook Pro",
+    "last_used": "最后使用",
+    "loading": "加载中...",
+    "login_failed": "Passkey 登录失败",
+    "no_passkeys": "尚未注册任何 Passkey",
+    "not_supported": "您的浏览器不支持 Passkey",
+    "register_failed": "注册失败",
+    "register_hint": "点击确认后，请按照浏览器提示完成身份验证。",
+    "register_success": "Passkey 注册成功",
+    "register_title": "添加新的 Passkey",
+    "synced": "已同步到多设备",
+    "title": "Passkey 设置"
   },
   "notify": {
     "copy_failed": "您的浏览器不支持剪贴板操作!",

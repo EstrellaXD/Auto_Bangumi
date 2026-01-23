@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { watchOnce } from '@vueuse/core';
+
 definePage({
   name: 'Log',
 });
@@ -52,11 +54,14 @@ onActivated(() => {
   if (log.value) {
     backToBottom();
   } else {
-    watchOnce(log, () => {
-      nextTick(() => {
-        backToBottom();
-      });
-    });
+    watchOnce(
+      () => log.value,
+      () => {
+        nextTick(() => {
+          backToBottom();
+        });
+      }
+    );
   }
 });
 

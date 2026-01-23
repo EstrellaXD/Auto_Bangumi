@@ -1,5 +1,4 @@
 import asyncio
-import threading
 
 from module.checker import Checker
 from module.conf import LEGACY_DATA_PATH
@@ -8,8 +7,8 @@ from module.conf import LEGACY_DATA_PATH
 class ProgramStatus(Checker):
     def __init__(self):
         super().__init__()
-        self.stop_event = threading.Event()
-        self.lock = threading.Lock()
+        self.stop_event = asyncio.Event()
+        self.lock = asyncio.Lock()
         self._downloader_status = False
         self._torrents_status = False
         self.event = asyncio.Event()
@@ -27,8 +26,11 @@ class ProgramStatus(Checker):
 
     @property
     def downloader_status(self):
+        return self._downloader_status
+
+    async def check_downloader_status(self) -> bool:
         if not self._downloader_status:
-            self._downloader_status = self.check_downloader()
+            self._downloader_status = await self.check_downloader()
         return self._downloader_status
 
     @property

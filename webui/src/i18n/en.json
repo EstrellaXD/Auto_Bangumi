@@ -103,9 +103,30 @@
   },
   "login": {
     "login_btn": "Login",
+    "passkey_btn": "Passkey",
     "password": "Password",
     "title": "Login",
     "username": "Username"
+  },
+  "passkey": {
+    "add_new": "Add Passkey",
+    "created_at": "Created",
+    "delete_confirm": "Are you sure you want to delete this passkey?",
+    "delete_failed": "Delete failed",
+    "delete_success": "Passkey deleted",
+    "device_name": "Device Name",
+    "device_name_placeholder": "e.g., iPhone 15, MacBook Pro",
+    "last_used": "Last used",
+    "loading": "Loading...",
+    "login_failed": "Passkey login failed",
+    "no_passkeys": "No passkeys registered yet",
+    "not_supported": "Your browser does not support Passkeys",
+    "register_failed": "Registration failed",
+    "register_hint": "After clicking confirm, follow your browser's prompts to complete authentication.",
+    "register_success": "Passkey registered successfully",
+    "register_title": "Add New Passkey",
+    "synced": "Synced across devices",
+    "title": "Passkey Settings"
   },
   "notify": {
     "copy_failed": "Your browser does not support Clipboard API!",

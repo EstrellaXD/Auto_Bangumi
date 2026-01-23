@@ -2,46 +2,33 @@ import json
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
+from pydantic import BaseModel
+from typing import Optional
 
-import openai
+from openai import OpenAI, AzureOpenAI
+
+from module.models import Bangumi
 
 logger = logging.getLogger(__name__)
+
+class Episode(BaseModel):
+    title_en: Optional[str]
+    title_zh: Optional[str]
+    title_jp: Optional[str]
+    season: str
+    season_raw: str
+    episode: str
+    sub: str
+    group: str
+    resolution: str
+    source: str
+
 
 DEFAULT_PROMPT = """\
 You will now play the role of a super assistant. 
 Your task is to extract structured data from unstructured text content and output it in JSON format. 
 If you are unable to extract any information, please keep all fields and leave the field empty or default value like `''`, `None`.
 But Do not fabricate data!
-
-the python structured data type is:
-
-```python
-@dataclass
-class Episode:
-    title_en: Optional[str]
-    title_zh: Optional[str]
-    title_jp: Optional[str]
-    season: int
-    season_raw: str
-    episode: int
-    sub: str
-    group: str
-    resolution: str
-    source: str
-```
-
-Example:
-
-```
-input: "【喵萌奶茶屋】★04月新番★[夏日重现/Summer Time Rendering][11][1080p][繁日双语][招募翻译]"
-output: '{"group": "喵萌奶茶屋", "title_en": "Summer Time Rendering", "resolution": "1080p", "episode": 11, "season": 1, "title_zh": "夏日重现", "sub": "", "title_jp": "", "season_raw": "", "source": ""}'
-
-input: "【幻樱字幕组】【4月新番】【古见同学有交流障碍症 第二季 Komi-san wa, Komyushou Desu. S02】【22】【GB_MP4】【1920X1080】"
-output: '{"group": "幻樱字幕组", "title_en": "Komi-san wa, Komyushou Desu.", "resolution": "1920X1080", "episode": 22, "season": 2, "title_zh": "古见同学有交流障碍症", "sub": "", "title_jp": "", "season_raw": "", "source": ""}'
-
-input: "[Lilith-Raws] 关于我在无意间被隔壁的天使变成废柴这件事 / Otonari no Tenshi-sama - 09 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
-output: '{"group": "Lilith-Raws", "title_en": "Otonari no Tenshi-sama", "resolution": "1080p", "episode": 9, "season": 1, "source": "WEB-DL", "title_zh": "关于我在无意间被隔壁的天使变成废柴这件事", "sub": "CHT", "title_jp": ""}'
-```
 """
 
 
@@ -50,7 +37,8 @@ class OpenAIParser:
         self,
         api_key: str,
         api_base: str = "https://api.openai.com/v1",
-        model: str = "gpt-3.5-turbo",
+        model: str = "gpt-4o-mini",
+        api_type: str = "openai",
         **kwargs,
     ) -> None:
         """OpenAIParser is a class to parse text with openai
@@ -63,7 +51,7 @@ class OpenAIParser:
             model (str):
                 the ChatGPT model parameter, you can get more details from \
                 https://platform.openai.com/docs/api-reference/chat/create. \
-                Defaults to "gpt-3.5-turbo".
+                Defaults to "gpt-4o-mini".
             kwargs (dict):
                 the OpenAI ChatGPT parameters, you can get more details from \
                 https://platform.openai.com/docs/api-reference/chat/create.
@@ -73,9 +61,16 @@ class OpenAIParser:
         """
         if not api_key:
             raise ValueError("API key is required.")
+        if api_type == "azure":
+            self.client = AzureOpenAI(
+                api_key=api_key,
+                base_url=api_base,
+                azure_deployment=kwargs.get("deployment_id", ""),
+                api_version=kwargs.get("api_version", "2023-05-15"),
+            )
+        else:
+            self.client = OpenAI(api_key=api_key, base_url=api_base)
 
-        self._api_key = api_key
-        self.api_base = api_base
         self.model = model
         self.openai_kwargs = kwargs
 
@@ -102,10 +97,10 @@ class OpenAIParser:
         params = self._prepare_params(text, prompt)
 
         with ThreadPoolExecutor(max_workers=1) as worker:
-            future = worker.submit(openai.ChatCompletion.create, **params)
+            future = worker.submit(self.client.beta.chat.completions.parse, **params)
             resp = future.result()
 
-            result = resp["choices"][0]["message"]["content"]
+            result = resp.choices[0].message.parsed
 
         if asdict:
             try:
@@ -130,12 +125,13 @@ class OpenAIParser:
             dict[str, Any]: the prepared key value pairs.
         """
         params = dict(
-            api_key=self._api_key,
-            api_base=self.api_base,
+            model=self.model,
             messages=[
                 dict(role="system", content=prompt),
                 dict(role="user", content=text),
             ],
+            response_format=Episode,
+
             # set temperature to 0 to make results be more stable and reproducible.
             temperature=0,
         )
