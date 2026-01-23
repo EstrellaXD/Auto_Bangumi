@@ -85,7 +85,7 @@ const azureItems: SettingItem<ExperimentalOpenAI>[] = [
       <span>{{ $t('config.experimental_openai_set.warning') }}</span>
     </div>
 
-    <div space-y-12>
+    <div space-y-8>
       <ab-setting
         v-for="i in openAI.api_type === 'azure' ? azureItems : openAIItems"
         :key="i.configKey"

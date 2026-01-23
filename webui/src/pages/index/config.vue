@@ -58,7 +58,7 @@ onActivated(() => {
 .config-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 20px;
+  gap: 12px;
   margin-bottom: auto;
 
   @media (min-width: 1024px) {
@@ -69,14 +69,19 @@ onActivated(() => {
 .config-col {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
 }
 
 .config-actions {
+  position: sticky;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 20px;
+  margin-top: 16px;
+  padding: 12px 0;
+  backdrop-filter: blur(8px);
+  background: color-mix(in srgb, var(--color-background) 80%, transparent);
 }
 </style>

@@ -182,18 +182,18 @@ onDeactivated(() => {
 }
 
 .log-layout {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 12px;
+  align-items: start;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 3fr 2fr;
+  }
 }
 
 .log-main {
-  flex-grow: 1;
   min-width: 0;
-
-  @media (min-width: 1024px) {
-    min-width: 660px;
-  }
 }
 
 .log-viewer {
@@ -202,16 +202,11 @@ onDeactivated(() => {
   overflow: auto;
   padding: 10px;
   max-height: 60vh;
-  min-height: 20vh;
   transition: border-color var(--transition-normal);
 }
 
 .log-content {
   min-width: 0;
-
-  @media (min-width: 1024px) {
-    min-width: 450px;
-  }
 }
 
 .log-entry {
@@ -265,15 +260,10 @@ onDeactivated(() => {
 }
 
 .log-sidebar {
-  flex-grow: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-
-  @media (min-width: 1024px) {
-    min-width: 400px;
-  }
+  gap: 12px;
 }
 
 .contact-list {

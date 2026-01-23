@@ -51,7 +51,7 @@ const logItems: SettingItem<Log> = {
 
 <template>
   <ab-fold-panel :title="$t('config.normal_set.title')">
-    <div space-y-12>
+    <div space-y-8>
       <ab-setting
         v-for="i in programItems"
         :key="i.configKey"

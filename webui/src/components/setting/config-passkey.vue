@@ -64,7 +64,7 @@ function formatDate(dateString: string | null): string {
 
 <template>
   <ab-fold-panel :title="$t('passkey.title')">
-    <div space-y-12>
+    <div space-y-8>
       <!-- 不支持提示 -->
       <div v-if="!isSupported" text-orange-500 text-14>
         {{ $t('passkey.not_supported') }}

@@ -24,14 +24,14 @@ const abLabel = computed(() => {
 <style lang="scss" scoped>
 .label-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
+  min-height: 32px;
 }
 
 .label-text {
   font-size: 14px;
   color: var(--color-text);
-  padding-top: 4px;
   transition: color var(--transition-normal);
 }
 </style>

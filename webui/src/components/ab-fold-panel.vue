@@ -5,28 +5,28 @@ import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/vue';
 withDefaults(
   defineProps<{
     title: string;
+    defaultOpen?: boolean;
   }>(),
   {
     title: 'title',
+    defaultOpen: true,
   }
 );
 </script>
 
 <template>
-  <Disclosure v-slot="{ open }">
+  <Disclosure v-slot="{ open }" :default-open="defaultOpen">
     <div class="fold-panel">
       <DisclosureButton class="fold-panel-header">
         <div class="fold-panel-title">{{ title }}</div>
-        <Component :is="open ? Up : Down" :size="18" />
+        <Component :is="open ? Up : Down" :size="14" />
       </DisclosureButton>
 
-      <div class="fold-panel-body" :class="[open && 'fold-panel-body--open']">
-        <div v-show="!open" class="fold-panel-divider"></div>
-
-        <DisclosurePanel>
+      <DisclosurePanel>
+        <div class="fold-panel-body">
           <slot></slot>
-        </DisclosurePanel>
-      </div>
+        </div>
+      </DisclosurePanel>
     </div>
   </Disclosure>
 </template>
@@ -34,7 +34,6 @@ withDefaults(
 <style lang="scss" scoped>
 .fold-panel {
   border-radius: var(--radius-md);
-  overflow: hidden;
   border: 1px solid var(--color-border);
   transition: border-color var(--transition-normal);
 }
@@ -44,50 +43,28 @@ withDefaults(
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 0 20px;
-  height: 42px;
-  background: var(--color-primary);
-  color: #fff;
+  padding: 0 14px;
+  height: 34px;
+  background: transparent;
+  color: var(--color-text-secondary);
   border: none;
+  border-bottom: 1px solid var(--color-border);
   cursor: pointer;
-
-  @include forPC {
-    height: 48px;
-  }
+  transition: color var(--transition-normal),
+              border-color var(--transition-normal);
 }
 
 .fold-panel-title {
-  font-size: 16px;
-  font-weight: 500;
-
-  @include forPC {
-    font-size: 18px;
-  }
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .fold-panel-body {
   background: var(--color-surface);
-  padding: 10px 8px;
+  padding: 12px 14px;
   font-size: 14px;
   color: var(--color-text);
   transition: background-color var(--transition-normal),
               color var(--transition-normal);
-
-  &--open {
-    padding: 16px 20px;
-  }
-
-  @include forPC {
-    &--open {
-      padding: 20px;
-    }
-  }
-}
-
-.fold-panel-divider {
-  width: 100%;
-  height: 1px;
-  background: var(--color-border);
-  margin: 12px 0;
 }
 </style>

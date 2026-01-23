@@ -25,47 +25,35 @@ withDefaults(
 <style lang="scss" scoped>
 .container-card {
   border-radius: var(--radius-md);
-  overflow: hidden;
   border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
-  transition: border-color var(--transition-normal),
-              box-shadow var(--transition-normal);
+  transition: border-color var(--transition-normal);
 }
 
 .container-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  height: 42px;
-  background: var(--color-primary);
-  color: #fff;
+  padding: 0 14px;
+  height: 34px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border);
   user-select: none;
-
-  @include forPC {
-    height: 48px;
-  }
+  transition: color var(--transition-normal),
+              border-color var(--transition-normal);
 }
 
 .container-title {
-  font-size: 16px;
-  font-weight: 500;
-
-  @include forPC {
-    font-size: 18px;
-  }
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .container-body {
-  padding: 14px;
+  padding: 12px 14px;
   background: var(--color-surface);
   color: var(--color-text);
   font-size: 14px;
   transition: background-color var(--transition-normal),
               color var(--transition-normal);
-
-  @include forPC {
-    padding: 20px;
-  }
 }
 </style>
