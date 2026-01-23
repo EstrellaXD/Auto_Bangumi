@@ -22,7 +22,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/login", response_model=dict)
 async def login(response: Response, form_data=Depends(OAuth2PasswordRequestForm)):
     user = User(username=form_data.username, password=form_data.password)
-    resp = auth_user(user)
+    resp = await auth_user(user)
     if resp.status:
         token = create_access_token(
             data={"sub": user.username}, expires_delta=timedelta(days=1)
@@ -58,7 +58,7 @@ async def logout(response: Response):
 @router.post("/update", response_model=dict, dependencies=[Depends(get_current_user)])
 async def update_user(user_data: UserUpdate, response: Response):
     old_user = active_user[0]
-    if update_user_info(user_data, old_user):
+    if await update_user_info(user_data, old_user):
         token = create_access_token(
             data={"sub": old_user}, expires_delta=timedelta(days=1)
         )

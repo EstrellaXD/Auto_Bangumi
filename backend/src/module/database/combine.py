@@ -4,7 +4,7 @@ from sqlmodel import SQLModel
 from module.models import Bangumi, Passkey, User
 
 from .bangumi import BangumiDatabase
-from .engine import async_session_factory, engine as e
+from .engine import async_engine, async_session_factory, engine as e
 from .passkey import PasskeyDatabase
 from .rss import RSSDatabase
 from .torrent import TorrentDatabase
@@ -13,13 +13,28 @@ from .user import UserDatabase
 
 class Database:
     def __init__(self):
-        self._session: AsyncSession | None = None
+        self._session = None
         self.rss: RSSDatabase | None = None
         self.torrent: TorrentDatabase | None = None
         self.bangumi: BangumiDatabase | None = None
         self.user: UserDatabase | None = None
         self.passkey: PasskeyDatabase | None = None
 
+    # Sync context manager (for legacy code)
+    def __enter__(self):
+        from .engine import db_session
+
+        self._session = db_session
+        self.rss = RSSDatabase(self._session)
+        self.torrent = TorrentDatabase(self._session)
+        self.bangumi = BangumiDatabase(self._session)
+        self.user = UserDatabase(self._session)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+    # Async context manager (for passkey and new async code)
     async def __aenter__(self):
         self._session = async_session_factory()
         self.rss = RSSDatabase(self._session)
@@ -30,25 +45,31 @@ class Database:
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        if self._session:
+        if self._session and isinstance(self._session, AsyncSession):
             await self._session.close()
 
     async def create_table(self):
-        async with e.begin() as conn:
+        async with async_engine.begin() as conn:
             await conn.run_sync(SQLModel.metadata.create_all)
 
     async def drop_table(self):
-        async with e.begin() as conn:
+        async with async_engine.begin() as conn:
             await conn.run_sync(SQLModel.metadata.drop_all)
 
     async def commit(self):
         if self._session:
-            await self._session.commit()
+            if isinstance(self._session, AsyncSession):
+                await self._session.commit()
+            else:
+                self._session.commit()
 
     async def add(self, obj):
         if self._session:
             self._session.add(obj)
-            await self._session.commit()
+            if isinstance(self._session, AsyncSession):
+                await self._session.commit()
+            else:
+                self._session.commit()
 
     async def migrate(self):
         # Run migration online

@@ -29,22 +29,25 @@ router = APIRouter(prefix="/passkey", tags=["passkey"])
 def _get_webauthn_from_request(request: Request):
     """
     从请求中构造 WebAuthnService
-    根据 Host header 动态确定 RP ID 和 origin
+    优先使用浏览器的 Origin header（与 clientDataJSON 中的 origin 一致）
     """
-    host = request.headers.get("host", "localhost:7892")
-    rp_id = host.split(":")[0]  # 去掉端口
+    from urllib.parse import urlparse
 
-    # 判断协议
-    forwarded_proto = request.headers.get("x-forwarded-proto")
-    if forwarded_proto:
-        scheme = forwarded_proto
-    else:
-        scheme = request.url.scheme
+    origin = request.headers.get("origin")
+    if not origin:
+        # Fallback: 从 Referer 或 Host 推断
+        referer = request.headers.get("referer", "")
+        if referer:
+            parsed = urlparse(referer)
+            origin = f"{parsed.scheme}://{parsed.netloc}"
+        else:
+            host = request.headers.get("host", "localhost:7892")
+            forwarded_proto = request.headers.get("x-forwarded-proto")
+            scheme = forwarded_proto if forwarded_proto else request.url.scheme
+            origin = f"{scheme}://{host}"
 
-    if scheme == "https":
-        origin = f"https://{host}"
-    else:
-        origin = f"http://{host}"
+    parsed_origin = urlparse(origin)
+    rp_id = parsed_origin.hostname or "localhost"
 
     return get_webauthn_service(rp_id, "AutoBangumi", origin)
 

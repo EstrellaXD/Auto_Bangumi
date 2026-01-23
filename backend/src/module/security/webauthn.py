@@ -18,6 +18,7 @@ from webauthn.helpers.cose import COSEAlgorithmIdentifier
 from webauthn.helpers.structs import (
     AuthenticatorSelectionCriteria,
     AuthenticatorTransport,
+    CredentialDeviceType,
     PublicKeyCredentialDescriptor,
     PublicKeyCredentialType,
     ResidentKeyRequirement,
@@ -135,8 +136,9 @@ class WebAuthnService:
                     "utf-8"
                 ),
                 sign_count=verification.sign_count,
-                aaguid=verification.aaguid.hex() if verification.aaguid else None,
-                backup_eligible=verification.credential_backup_eligible,
+                aaguid=verification.aaguid if verification.aaguid else None,
+                backup_eligible=verification.credential_device_type
+                == CredentialDeviceType.MULTI_DEVICE,
                 backup_state=verification.credential_backed_up,
             )
 
@@ -214,7 +216,6 @@ class WebAuthnService:
         try:
             # 解码 public key
             credential_public_key = base64.b64decode(passkey.public_key)
-            credential_id = self.base64url_decode(passkey.credential_id)
 
             verification = verify_authentication_response(
                 credential=credential,
@@ -223,7 +224,6 @@ class WebAuthnService:
                 expected_origin=self.origin,
                 credential_public_key=credential_public_key,
                 credential_current_sign_count=passkey.sign_count,
-                credential_id=credential_id,
             )
 
             logger.info(f"Successfully verified authentication for {username}")
