@@ -36,7 +36,7 @@ class Checker:
             return False
 
     @staticmethod
-    def check_version() -> bool:
+    def check_version() -> tuple[bool, int | None]:
         return version_check()
 
     @staticmethod

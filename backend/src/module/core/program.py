@@ -8,6 +8,7 @@ from module.update import (
     data_migration,
     first_run,
     from_30_to_31,
+    from_31_to_32,
     start_up,
 )
 
@@ -49,10 +50,14 @@ class Program(RenameThread, RSSThread):
                 "[Core] Legacy data detected, starting data migration, please wait patiently."
             )
             data_migration()
-        elif self.version_update:
-            # Update database
-            await from_30_to_31()
-            logger.info("[Core] Database updated.")
+        else:
+            need_update, last_minor = self.version_update
+            if need_update:
+                if last_minor is not None and last_minor == 0:
+                    await from_30_to_31()
+                    logger.info("[Core] Database migrated from 3.0 to 3.1.")
+                await from_31_to_32()
+                logger.info("[Core] Database updated.")
         if not self.img_cache:
             logger.info("[Core] No image cache exists, create image cache.")
             await cache_image()
@@ -107,7 +112,8 @@ class Program(RenameThread, RSSThread):
         )
 
     def update_database(self):
-        if not self.version_update:
+        need_update, _ = self.version_update
+        if not need_update:
             return {"status": "No update found."}
         else:
             start_up()

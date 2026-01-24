@@ -1,16 +1,13 @@
 # -*- encoding: utf-8 -*-
-from urllib.parse import parse_qs, urlparse
-
 DEFAULT_SETTINGS = {
     "program": {
-        "sleep_time": 7200,
-        "times": 20,
+        "rss_time": 900,
+        "rename_time": 60,
         "webui_port": 7892,
-        "data_version": 4.0,
     },
     "downloader": {
         "type": "qbittorrent",
-        "host": "127.0.0.1:8080",
+        "host": "172.17.0.1:8080",
         "username": "admin",
         "password": "adminadmin",
         "path": "/downloads/Bangumi",
@@ -18,10 +15,6 @@ DEFAULT_SETTINGS = {
     },
     "rss_parser": {
         "enable": True,
-        "type": "mikan",
-        "custom_url": "mikanani.me",
-        "token": "",
-        "enable_tmdb": False,
         "filter": ["720", "\\d+-\\d+"],
         "language": "zh",
     },
@@ -39,18 +32,27 @@ DEFAULT_SETTINGS = {
         "enable": False,
         "type": "http",
         "host": "",
-        "port": 1080,
+        "port": 0,
         "username": "",
         "password": "",
     },
     "notification": {"enable": False, "type": "telegram", "token": "", "chat_id": ""},
+    "experimental_openai": {
+        "enable": False,
+        "api_key": "",
+        "api_base": "https://api.openai.com/v1",
+        "api_type": "openai",
+        "api_version": "2023-05-15",
+        "model": "gpt-3.5-turbo",
+        "deployment_id": "",
+    },
 }
 
 
 ENV_TO_ATTR = {
     "program": {
-        "AB_INTERVAL_TIME": ("sleep_time", lambda e: int(e)),
-        "AB_RENAME_FREQ": ("times", lambda e: int(e)),
+        "AB_INTERVAL_TIME": ("rss_time", lambda e: int(e)),
+        "AB_RENAME_FREQ": ("rename_time", lambda e: int(e)),
         "AB_WEBUI_PORT": ("webui_port", lambda e: int(e)),
     },
     "downloader": {
@@ -61,13 +63,8 @@ ENV_TO_ATTR = {
     },
     "rss_parser": {
         "AB_RSS_COLLECTOR": ("enable", lambda e: e.lower() in ("true", "1", "t")),
-        "AB_RSS": [
-            ("token", lambda e: parse_qs(urlparse(e).query).get("token", [None])[0]),
-            ("custom_url", lambda e: urlparse(e).netloc),
-        ],
         "AB_NOT_CONTAIN": ("filter", lambda e: e.split("|")),
         "AB_LANGUAGE": "language",
-        "AB_ENABLE_TMDB": ("enable_tmdb", lambda e: e.lower() in ("true", "1", "t")),
     },
     "bangumi_manage": {
         "AB_RENAME": ("enable", lambda e: e.lower() in ("true", "1", "t")),

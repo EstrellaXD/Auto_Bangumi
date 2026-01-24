@@ -50,8 +50,9 @@ class ProgramStatus(Checker):
         return LEGACY_DATA_PATH.exists()
 
     @property
-    def version_update(self):
-        return not self.check_version()
+    def version_update(self) -> tuple[bool, int | None]:
+        is_same, last_minor = self.check_version()
+        return not is_same, last_minor
 
     @property
     def database(self):

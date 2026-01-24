@@ -38,9 +38,34 @@ class Settings(Config):
     def load(self):
         with open(CONFIG_PATH, "r", encoding="utf-8") as f:
             config = json.load(f)
+        config = self._migrate_old_config(config)
         config_obj = Config.parse_obj(config)
         self.__dict__.update(config_obj.__dict__)
         logger.info("Config loaded")
+
+    @staticmethod
+    def _migrate_old_config(config: dict) -> dict:
+        """Migrate old config field names (3.1.x) to current format (3.2.x)."""
+        program = config.get("program", {})
+        # Rename sleep_time -> rss_time
+        if "sleep_time" in program and "rss_time" not in program:
+            program["rss_time"] = program.pop("sleep_time")
+        elif "sleep_time" in program:
+            program.pop("sleep_time")
+        # Rename times -> rename_time
+        if "times" in program and "rename_time" not in program:
+            program["rename_time"] = program.pop("times")
+        elif "times" in program:
+            program.pop("times")
+        # Remove deprecated data_version field
+        program.pop("data_version", None)
+
+        # Remove deprecated rss_parser fields
+        rss_parser = config.get("rss_parser", {})
+        for key in ("type", "custom_url", "token", "enable_tmdb"):
+            rss_parser.pop(key, None)
+
+        return config
 
     def save(self, config_dict: dict | None = None):
         if not config_dict:

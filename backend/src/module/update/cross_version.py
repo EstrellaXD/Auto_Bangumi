@@ -1,3 +1,4 @@
+import logging
 import re
 
 from urllib3.util import parse_url
@@ -5,6 +6,8 @@ from urllib3.util import parse_url
 from module.network import RequestContent
 from module.rss import RSSEngine
 from module.utils import save_image
+
+logger = logging.getLogger(__name__)
 
 
 async def from_30_to_31():
@@ -30,6 +33,13 @@ async def from_30_to_31():
             else:
                 aggregate = False
             await db.add_rss(rss_link=rss, aggregate=aggregate)
+
+
+async def from_31_to_32():
+    """Migrate database schema from 3.1.x to 3.2.x."""
+    with RSSEngine() as db:
+        db.create_table()  # Handles adding new columns (e.g., air_weekday)
+    logger.info("[Migration] 3.1 -> 3.2 migration completed.")
 
 
 async def cache_image():
