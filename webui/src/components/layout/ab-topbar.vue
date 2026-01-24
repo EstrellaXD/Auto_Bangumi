@@ -136,21 +136,24 @@ onUnmounted(() => {
 .topbar {
   display: flex;
   align-items: center;
-  height: 56px;
-  padding: 0 20px;
+  height: var(--topbar-height);
+  padding: 0 12px;
 
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   transition: background-color var(--transition-normal),
               border-color var(--transition-normal),
               box-shadow var(--transition-normal);
 
-  @include forMobile {
-    height: 48px;
-    padding: 0 12px;
-    border-radius: var(--radius-md);
+  @include forTablet {
+    padding: 0 16px;
+  }
+
+  @include forDesktop {
+    padding: 0 20px;
+    border-radius: var(--radius-lg);
   }
 }
 
@@ -167,28 +170,28 @@ onUnmounted(() => {
 }
 
 .topbar-logo {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 
-  @include forMobile {
-    width: 20px;
-    height: 20px;
+  @include forDesktop {
+    width: 24px;
+    height: 24px;
   }
 }
 
 .topbar-wordmark {
-  height: 20px;
+  height: 16px;
   position: relative;
 
-  @include forMobile {
-    height: 16px;
+  @include forDesktop {
+    height: 20px;
   }
 }
 
 .topbar-search {
   display: none;
 
-  @include forPC {
+  @include forTablet {
     display: block;
   }
 }

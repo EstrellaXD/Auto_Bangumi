@@ -81,3 +81,69 @@
     transform: translateY(-4px) scale(0.97);
   }
 }
+
+// Bottom sheet slide-up
+.sheet {
+  &-enter-active,
+  &-leave-active {
+    transition: transform var(--transition-slow), opacity var(--transition-normal);
+  }
+
+  &-enter-from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+
+  &-leave-to {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+// Backdrop overlay fade
+.overlay {
+  &-enter-active,
+  &-leave-active {
+    transition: opacity var(--transition-normal);
+  }
+
+  &-enter-from,
+  &-leave-to {
+    opacity: 0;
+  }
+}
+
+// Horizontal swipe
+.swipe-left {
+  &-enter-active,
+  &-leave-active {
+    transition: transform var(--transition-normal), opacity var(--transition-normal);
+  }
+
+  &-enter-from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  &-leave-to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+.swipe-right {
+  &-enter-active,
+  &-leave-active {
+    transition: transform var(--transition-normal), opacity var(--transition-normal);
+  }
+
+  &-enter-from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+
+  &-leave-to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}

@@ -4,7 +4,7 @@ definePage({
 });
 
 const { getConfig, setConfig } = useConfigStore();
-const { isMobile } = useBreakpointQuery();
+const { isMobile, isMobileOrTablet } = useBreakpointQuery();
 
 onActivated(() => {
   getConfig();
@@ -32,14 +32,14 @@ onActivated(() => {
 
     <div class="config-actions">
       <ab-button
-        :class="[{ 'flex-1': isMobile }]"
+        :class="[{ 'flex-1': isMobileOrTablet }]"
         type="warn"
         @click="getConfig"
       >
         {{ $t('config.cancel') }}
       </ab-button>
       <ab-button
-        :class="[{ 'flex-1': isMobile }]"
+        :class="[{ 'flex-1': isMobileOrTablet }]"
         type="primary"
         @click="setConfig"
       >
@@ -61,7 +61,7 @@ onActivated(() => {
   gap: 12px;
   margin-bottom: auto;
 
-  @media (min-width: 1024px) {
+  @include forDesktop {
     grid-template-columns: 1fr 1fr;
   }
 }
@@ -82,6 +82,7 @@ onActivated(() => {
   margin-top: 16px;
   padding: 12px 0;
   backdrop-filter: blur(8px);
-  background: color-mix(in srgb, var(--color-background) 80%, transparent);
+  background: color-mix(in srgb, var(--color-bg) 80%, transparent);
+  @include safeAreaBottom(padding-bottom, 12px);
 }
 </style>

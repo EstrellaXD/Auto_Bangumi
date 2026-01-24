@@ -6,7 +6,16 @@ definePage({
 const { bangumi } = storeToRefs(useBangumiStore());
 const { getAll, openEditPopup } = useBangumiStore();
 
-const { isMobile } = useBreakpointQuery();
+const refreshing = ref(false);
+
+async function onRefresh() {
+  refreshing.value = true;
+  try {
+    await getAll();
+  } finally {
+    refreshing.value = false;
+  }
+}
 
 onActivated(() => {
   getAll();
@@ -14,6 +23,7 @@ onActivated(() => {
 </script>
 
 <template>
+  <ab-pull-refresh :loading="refreshing" @refresh="onRefresh">
   <div class="page-bangumi">
     <!-- Empty state guide -->
     <div v-if="!bangumi || bangumi.length === 0" class="empty-guide">
@@ -55,7 +65,6 @@ onActivated(() => {
       name="bangumi"
       tag="div"
       class="bangumi-grid"
-      :class="{ 'bangumi-grid--centered': isMobile }"
     >
       <ab-bangumi-card
         v-for="i in bangumi"
@@ -68,6 +77,7 @@ onActivated(() => {
     </transition-group>
 
   </div>
+  </ab-pull-refresh>
 </template>
 
 <style lang="scss" scoped>
@@ -77,12 +87,18 @@ onActivated(() => {
 }
 
 .bangumi-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
 
-  &--centered {
-    justify-content: center;
+  @include forTablet {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 16px;
+  }
+
+  @include forDesktop {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 20px;
   }
 }
 

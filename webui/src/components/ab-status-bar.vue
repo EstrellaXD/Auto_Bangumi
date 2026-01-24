@@ -84,12 +84,12 @@ function abLabel(label: string | (() => string)) {
 .status-bar-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 20px;
+  gap: 6px;
+  font-size: 18px;
 
-  @include forMobile {
-    gap: 8px;
-    font-size: 18px;
+  @include forTablet {
+    gap: 10px;
+    font-size: 20px;
   }
 }
 
@@ -100,9 +100,13 @@ function abLabel(label: string | (() => string)) {
   transition: color var(--transition-fast), transform var(--transition-fast);
   display: flex;
   align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
-  padding: 4px;
+  // Ensure minimum touch target
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+  padding: 8px;
   border-radius: var(--radius-sm);
 
   &:hover {
@@ -111,7 +115,7 @@ function abLabel(label: string | (() => string)) {
   }
 
   &:active {
-    transform: scale(1);
+    transform: scale(0.95);
   }
 
   &:focus-visible {
@@ -122,9 +126,9 @@ function abLabel(label: string | (() => string)) {
 
 .status-menu {
   position: absolute;
-  top: 40px;
+  top: 44px;
   right: 0;
-  width: 160px;
+  width: 180px;
   padding: 4px;
   border-radius: var(--radius-md);
   background: var(--color-surface);
@@ -136,10 +140,6 @@ function abLabel(label: string | (() => string)) {
   transform-origin: top right;
   transition: background-color var(--transition-normal),
               border-color var(--transition-normal);
-
-  @include forPC {
-    top: 44px;
-  }
 }
 
 @keyframes dropdown-in {
@@ -158,8 +158,8 @@ function abLabel(label: string | (() => string)) {
   align-items: center;
   gap: 8px;
   width: 100%;
-  height: 32px;
-  padding: 0 10px;
+  min-height: var(--touch-target);
+  padding: 0 12px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   color: var(--color-text);
@@ -169,6 +169,10 @@ function abLabel(label: string | (() => string)) {
   &--active {
     color: var(--color-primary);
     background: var(--color-primary-light);
+  }
+
+  &:active {
+    transform: scale(0.98);
   }
 }
 

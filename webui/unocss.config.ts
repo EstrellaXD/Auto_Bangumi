@@ -31,6 +31,7 @@ export default defineConfig({
   ],
   theme: {
     breakpoints: {
+      sm: '640px',
       pc: '1024px',
     },
     colors: {
@@ -116,7 +117,7 @@ export default defineConfig({
 
     // input
     {
-      'ab-input': `outline-none min-w-0 w-200 h-28
+      'ab-input': `outline-none min-w-0 w-full sm:w-200 h-36 sm:h-28
                      px-12 text-main text-right
                      rounded-6
                      border-1 border-border

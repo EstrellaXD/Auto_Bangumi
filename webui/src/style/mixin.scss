@@ -1,15 +1,50 @@
-$min-pc: 1024px;
+// Breakpoints
+$bp-tablet: 640px;
+$bp-desktop: 1024px;
 
+// Legacy alias
+$min-pc: $bp-desktop;
+
+// Mobile-first breakpoint mixins
+@mixin forTablet {
+  @media screen and (min-width: $bp-tablet) {
+    @content;
+  }
+}
+
+@mixin forDesktop {
+  @media screen and (min-width: $bp-desktop) {
+    @content;
+  }
+}
+
+// Legacy aliases (backward compat)
 @mixin forMobile {
-  @media screen and (max-width: ($min-pc - 1)) {
+  @media screen and (max-width: ($bp-desktop - 1)) {
     @content;
   }
 }
 
 @mixin forPC {
-  @media screen and (min-width: $min-pc) {
+  @media screen and (min-width: $bp-desktop) {
     @content;
   }
+}
+
+// Touch device detection
+@mixin forTouch {
+  @media (hover: none) and (pointer: coarse) {
+    @content;
+  }
+}
+
+// Safe area support for notched devices
+@mixin safeAreaBottom($property: padding-bottom, $extra: 0px) {
+  #{$property}: calc(#{$extra} + env(safe-area-inset-bottom, 0px));
+}
+
+@mixin safeAreaTop($property: padding-top, $extra: 0px) {
+  #{$property}: calc(#{$extra} + env(safe-area-inset-top, 0px));
 }
 
 @mixin bg-mouse-event($normal, $hover, $active) {

@@ -111,6 +111,7 @@ declare global {
   const useRSSStore: typeof import('../../src/store/rss')['useRSSStore']
   const useRoute: typeof import('vue-router/auto')['useRoute']
   const useRouter: typeof import('vue-router/auto')['useRouter']
+  const useSafeArea: typeof import('../../src/hooks/useSafeArea')['useSafeArea']
   const useSearchStore: typeof import('../../src/store/search')['useSearchStore']
   const useSlots: typeof import('vue')['useSlots']
   const vi: typeof import('vitest')['vi']

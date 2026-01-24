@@ -20,6 +20,7 @@ const props = withDefaults(
 );
 
 const show = defineModel('show', { default: false });
+const { isMobile } = useBreakpointQuery();
 
 function close() {
   if (props.maskClick) {
@@ -29,7 +30,19 @@ function close() {
 </script>
 
 <template>
-  <TransitionRoot appear :show="show" as="template">
+  <!-- Mobile: bottom sheet -->
+  <ab-bottom-sheet
+    v-if="isMobile"
+    :show="show"
+    :title="title"
+    :closeable="maskClick"
+    @update:show="show = $event"
+  >
+    <slot></slot>
+  </ab-bottom-sheet>
+
+  <!-- Desktop/Tablet: centered dialog -->
+  <TransitionRoot v-else appear :show="show" as="template">
     <Dialog as="div" class="popup-dialog" @close="close">
       <TransitionChild
         as="template"

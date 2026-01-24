@@ -25,7 +25,7 @@ const props = withDefaults(
 const { t } = useMyI18n();
 const { logout } = useAuth();
 const route = useRoute();
-const { isMobile } = useBreakpointQuery();
+const { isMobile, isTablet, isMobileOrTablet } = useBreakpointQuery();
 const { isDark, toggle: toggleDark } = useDarkMode();
 
 const show = ref(props.open);
@@ -89,17 +89,15 @@ function Exit() {
       title="logout"
       class={[
         'sidebar-item sidebar-item--action',
-        isMobile.value ? 'h-40' : '',
+        isMobileOrTablet.value ? 'h-40' : '',
       ]}
       onClick={logout}
     >
       <Logout size={20} />
-      {!isMobile.value && show.value && <div class="sidebar-item-label">{t('sidebar.logout')}</div>}
+      {!isMobileOrTablet.value && show.value && <div class="sidebar-item-label">{t('sidebar.logout')}</div>}
     </div>
   );
 }
-
-const mobileItems = computed(() => items.filter((i) => i.id !== 4));
 </script>
 
 <template>
@@ -165,32 +163,45 @@ const mobileItems = computed(() => items.filter((i) => i.id !== 4));
       </div>
     </div>
 
-    <template #mobile>
-      <div class="mobile-nav">
-        <RouterLink
-          v-for="i in mobileItems"
-          :key="i.id"
-          :to="i.path"
-          replace
-          class="mobile-nav-item"
-          :class="[
-            route.path === i.path && 'mobile-nav-item--active',
-            i.hidden && 'hidden',
-          ]"
-        >
-          <Component :is="i.icon" :size="20" />
-        </RouterLink>
+    <!-- Tablet: mini sidebar (icons only, no toggle) -->
+    <template #tablet>
+      <div class="sidebar sidebar--collapsed sidebar--tablet">
+        <div class="sidebar-inner">
+          <nav class="sidebar-nav">
+            <RouterLink
+              v-for="i in items"
+              :key="i.id"
+              :to="i.path"
+              replace
+              :title="i.label()"
+              class="sidebar-item"
+              :class="[
+                route.path === i.path && 'sidebar-item--active',
+                i.hidden && 'hidden',
+              ]"
+            >
+              <Component :is="i.icon" :size="20" />
+            </RouterLink>
+          </nav>
 
-        <div
-          class="mobile-nav-item"
-          @click="toggleDark"
-        >
-          <Moon v-if="!isDark" :size="20" />
-          <Sun v-else :size="20" />
+          <div class="sidebar-footer">
+            <button
+              class="sidebar-item sidebar-item--action sidebar-item--theme"
+              :title="isDark ? 'Light mode' : 'Dark mode'"
+              @click="toggleDark"
+            >
+              <Moon v-if="!isDark" :size="20" />
+              <Sun v-else :size="20" />
+            </button>
+            <Exit />
+          </div>
         </div>
-
-        <Exit />
       </div>
+    </template>
+
+    <!-- Mobile: enhanced bottom navigation with labels -->
+    <template #mobile>
+      <ab-mobile-nav />
     </template>
   </media-query>
 </template>
@@ -328,38 +339,21 @@ const mobileItems = computed(() => items.filter((i) => i.id !== 4));
   transition: border-color var(--transition-normal);
 }
 
-// Mobile bottom nav
-.mobile-nav {
-  display: flex;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  transition: background-color var(--transition-normal),
-              border-color var(--transition-normal);
-}
+// Tablet: fixed mini sidebar
+.sidebar--tablet {
+  width: 56px;
 
-.mobile-nav-item {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 44px;
-  cursor: pointer;
-  user-select: none;
-  color: var(--color-text-muted);
-  border-radius: var(--radius-md);
-  transition: color var(--transition-fast),
-              background-color var(--transition-fast);
-
-  &:hover {
-    color: var(--color-primary);
+  .sidebar-nav {
+    padding: 4px;
   }
 
-  &--active {
-    color: var(--color-primary);
-    background: var(--color-primary-light);
+  .sidebar-item {
+    justify-content: center;
+    padding: 10px;
+  }
+
+  .sidebar-footer {
+    padding: 4px;
   }
 }
 </style>

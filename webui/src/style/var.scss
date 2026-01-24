@@ -46,16 +46,25 @@
   --scrollbar-thumb-color: rgba(108, 74, 182, 0.3);
   --scrollbar-thumb-hover-color: rgba(108, 74, 182, 0.6);
 
-  // --- Layout ---
-  --layout-padding: 16px;
-  --layout-gap: 12px;
+  // --- Layout (mobile-first) ---
+  --layout-padding: 12px;
+  --layout-gap: 10px;
+  --topbar-height: 48px;
+  --nav-height: 56px;
+  --touch-target: 44px;
 
   // --- Typography ---
   --font-family: 'Inter', -apple-system, 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
 
-  @include forMobile {
-    --layout-padding: 12px;
-    --layout-gap: 10px;
+  @include forTablet {
+    --layout-padding: 14px;
+    --layout-gap: 12px;
+  }
+
+  @include forDesktop {
+    --layout-padding: 16px;
+    --layout-gap: 12px;
+    --topbar-height: 56px;
   }
 }
 
