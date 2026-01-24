@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import re
+from datetime import datetime, timezone
 from typing import Optional
 
 from module.database import Database, engine
@@ -98,6 +99,16 @@ class RSSEngine(Database):
         new_torrents = self.torrent.check_new(torrents)
         return new_torrents
 
+    async def _pull_rss_with_status(
+        self, rss_item: RSSItem
+    ) -> tuple[list[Torrent], Optional[str]]:
+        try:
+            torrents = await self.pull_rss(rss_item)
+            return torrents, None
+        except Exception as e:
+            logger.warning(f"[Engine] Failed to fetch RSS {rss_item.name}: {e}")
+            return [], str(e)
+
     _filter_cache: dict[str, re.Pattern] = {}
 
     def _get_filter_pattern(self, filter_str: str) -> re.Pattern:
@@ -127,11 +138,17 @@ class RSSEngine(Database):
             rss_items = [rss_item] if rss_item else []
         # From RSS Items, fetch all torrents concurrently
         logger.debug(f"[Engine] Get {len(rss_items)} RSS items")
-        all_torrents = await asyncio.gather(
-            *[self.pull_rss(rss_item) for rss_item in rss_items]
+        results = await asyncio.gather(
+            *[self._pull_rss_with_status(rss_item) for rss_item in rss_items]
         )
+        now = datetime.now(timezone.utc).isoformat()
         # Process results sequentially (DB operations)
-        for rss_item, new_torrents in zip(rss_items, all_torrents):
+        for rss_item, (new_torrents, error) in zip(rss_items, results):
+            # Update connection status
+            rss_item.connection_status = "error" if error else "healthy"
+            rss_item.last_checked_at = now
+            rss_item.last_error = error
+            self.add(rss_item)
             for torrent in new_torrents:
                 matched_data = self.match_torrent(torrent)
                 if matched_data:
@@ -140,6 +157,7 @@ class RSSEngine(Database):
                     torrent.downloaded = True
             # Add all torrents to database
             self.torrent.add_all(new_torrents)
+        self.commit()
 
     async def download_bangumi(self, bangumi: Bangumi):
         async with RequestContent() as req:

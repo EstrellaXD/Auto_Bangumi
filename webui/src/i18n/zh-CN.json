@@ -200,9 +200,11 @@
     }
   },
   "rss": {
+    "connected": "已连接",
     "delete": "删除",
     "disable": "禁用",
     "enable": "启用",
+    "error": "错误",
     "name": "名称",
     "selectbox": "选择",
     "status": "状态",

@@ -1,5 +1,5 @@
 <script lang="tsx" setup>
-import { NDataTable, type DataTableColumns } from 'naive-ui';
+import { NDataTable, NTooltip, type DataTableColumns } from 'naive-ui';
 import type { RSS } from '#/rss';
 
 definePage({
@@ -49,6 +49,17 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
         <div flex="~ justify-end gap-x-8">
           {rss.parser && <ab-tag type="primary" title={rss.parser} />}
           {rss.aggregate && <ab-tag type="primary" title="aggregate" />}
+          {rss.connection_status === 'healthy' && (
+            <ab-tag type="active" title={t('rss.connected')} />
+          )}
+          {rss.connection_status === 'error' && (
+            <NTooltip>
+              {{
+                trigger: () => <ab-tag type="warn" title={t('rss.error')} />,
+                default: () => rss.last_error || 'Unknown error',
+              }}
+            </NTooltip>
+          )}
           {rss.enabled ? (
             <ab-tag type="active" title="active" />
           ) : (
@@ -85,6 +96,17 @@ const rssRowKey = (row: RSS) => row.id;
             <div class="rss-card-tags">
               <ab-tag v-if="item.parser" type="primary" :title="item.parser" />
               <ab-tag v-if="item.aggregate" type="primary" title="aggregate" />
+              <ab-tag
+                v-if="item.connection_status === 'healthy'"
+                type="active"
+                :title="$t('rss.connected')"
+              />
+              <NTooltip v-if="item.connection_status === 'error'">
+                <template #trigger>
+                  <ab-tag type="warn" :title="$t('rss.error')" />
+                </template>
+                {{ item.last_error || 'Unknown error' }}
+              </NTooltip>
               <ab-tag
                 :type="item.enabled ? 'active' : 'inactive'"
                 :title="item.enabled ? 'active' : 'inactive'"

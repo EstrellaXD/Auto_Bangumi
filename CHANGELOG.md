@@ -2,6 +2,11 @@
 
 ## Backend
 
+### Features
+
+- RSS 订阅源新增连接状态追踪：每次刷新后记录 `connection_status`（healthy/error）、`last_checked_at` 和 `last_error`
+- 新增数据库迁移 v2：为 `rssitem` 表添加连接状态相关字段
+
 ### Performance
 
 - 新增共享 HTTP 客户端连接池，复用 TCP/SSL 连接，减少每次请求的握手开销
@@ -23,6 +28,10 @@
 - qBittorrent 规则设置改为并发执行
 
 ## Frontend
+
+### Features
+
+- RSS 管理页面新增连接状态标签：健康时显示绿色「已连接」，错误时显示红色「错误」并通过 tooltip 显示错误详情
 
 ### Performance
 

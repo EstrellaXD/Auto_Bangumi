@@ -10,6 +10,9 @@ class RSSItem(SQLModel, table=True):
     aggregate: bool = Field(False, alias="aggregate")
     parser: str = Field("mikan", alias="parser")
     enabled: bool = Field(True, alias="enabled")
+    connection_status: Optional[str] = Field(None, alias="connection_status")
+    last_checked_at: Optional[str] = Field(None, alias="last_checked_at")
+    last_error: Optional[str] = Field(None, alias="last_error")
 
 
 class RSSUpdate(SQLModel):

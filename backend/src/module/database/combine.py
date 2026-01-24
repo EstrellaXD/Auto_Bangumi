@@ -15,7 +15,7 @@ from .user import UserDatabase
 logger = logging.getLogger(__name__)
 
 # Increment this when adding new migrations to MIGRATIONS list.
-CURRENT_SCHEMA_VERSION = 1
+CURRENT_SCHEMA_VERSION = 2
 
 # Each migration is a tuple of (version, description, list of SQL statements).
 # Migrations are applied in order. A migration at index i brings the schema
@@ -25,6 +25,15 @@ MIGRATIONS = [
         1,
         "add air_weekday column to bangumi",
         ["ALTER TABLE bangumi ADD COLUMN air_weekday INTEGER"],
+    ),
+    (
+        2,
+        "add connection status columns to rssitem",
+        [
+            "ALTER TABLE rssitem ADD COLUMN connection_status TEXT",
+            "ALTER TABLE rssitem ADD COLUMN last_checked_at TEXT",
+            "ALTER TABLE rssitem ADD COLUMN last_error TEXT",
+        ],
     ),
 ]
 
@@ -87,6 +96,10 @@ class Database(Session):
             if "bangumi" in tables and version == 1:
                 columns = [col["name"] for col in inspector.get_columns("bangumi")]
                 if "air_weekday" in columns:
+                    needs_run = False
+            if "rssitem" in tables and version == 2:
+                columns = [col["name"] for col in inspector.get_columns("rssitem")]
+                if "connection_status" in columns:
                     needs_run = False
             if needs_run:
                 with self.engine.connect() as conn:

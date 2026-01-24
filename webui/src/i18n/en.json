@@ -200,9 +200,11 @@
     }
   },
   "rss": {
+    "connected": "Connected",
     "delete": "Delete",
     "disable": "Disable",
     "enable": "Enable",
+    "error": "Error",
     "name": "Name",
     "selectbox": "Select",
     "status": "Status",
