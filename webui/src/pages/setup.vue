@@ -4,7 +4,8 @@ definePage({
 });
 
 const setupStore = useSetupStore();
-const { currentStep, currentStepIndex, steps } = storeToRefs(setupStore);
+const { currentStep, currentStepIndex } = storeToRefs(setupStore);
+const { steps } = setupStore;
 </script>
 
 <template>
