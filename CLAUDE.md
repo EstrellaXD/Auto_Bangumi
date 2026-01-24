@@ -123,13 +123,35 @@ webui/src/
 ## Git Branching
 
 - `main`: Stable releases only
-- `X.Y-dev` branches: Active development (e.g., `3.1-dev`)
+- `X.Y-dev` branches: Active development (e.g., `3.2-dev`)
 - Bug fixes → PR to current released version's `-dev` branch
 - New features → PR to next version's `-dev` branch
+
+## Releasing a Beta Version
+
+1. Update version in `backend/pyproject.toml`
+2. Update `CHANGELOG.md` with the new version heading
+3. Commit and push to the dev branch
+4. Create and push a tag with the version name (e.g., `3.2.0-beta.4`):
+   ```bash
+   git tag 3.2.0-beta.4
+   git push origin 3.2.0-beta.4
+   ```
+5. The CI/CD workflow (`.github/workflows/build.yml`) detects the tag contains "beta", uses the tag name as the VERSION string, generates `module/__version__.py`, and builds the Docker image
+
+The VERSION is injected at build time via CI — `module/__version__.py` does not exist in the repo. At runtime, `module/conf/config.py` imports it or falls back to `"DEV_VERSION"`.
+
+## Database Migrations
+
+Schema migrations are tracked via a `schema_version` table in SQLite. To add a new migration:
+
+1. Increment `CURRENT_SCHEMA_VERSION` in `backend/src/module/database/combine.py`
+2. Append a new entry to the `MIGRATIONS` list: `(version, "description", ["SQL statements"])`
+3. Migrations run automatically on startup via `run_migrations()`
 
 ## Notes
 
 - Documentation and comments are in Chinese
 - Uses SQLModel (hybrid Pydantic + SQLAlchemy ORM)
 - External integrations: qBittorrent API, TMDB API, OpenAI API
-- Version tracked in `/config/version.info`
+- Version tracked in `/config/version.info` (for cross-version upgrade detection)
