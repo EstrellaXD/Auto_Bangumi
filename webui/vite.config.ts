@@ -52,6 +52,7 @@ export default defineConfig(({ mode }) => ({
         'src/components/basic',
         'src/components/layout',
         'src/components/setting',
+        'src/components/setup',
       ],
     }),
     VueI18nPlugin({
