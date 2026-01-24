@@ -1,37 +1,37 @@
-# 准备 Mikan RSS 订阅链接
+# RSS Feed Setup
 
-AutoBangumi 可以自动解析番剧聚合 RSS，根据字幕组以及番剧名称生成下载规则， 从而实现自动追番。
-以下以 [Mikan Project][mikan-site] 为例，介绍如何获取 RSS 订阅地址。
+AutoBangumi can automatically parse aggregated anime RSS feeds and generate download rules based on subtitle groups and anime names, enabling fully automatic anime tracking.
+The following uses [Mikan Project][mikan-site] as an example to explain how to get an RSS subscription URL.
 
-需要注意的是，目前 Mikan Project 主站已经被墙，当你不知道如何使用代理时请使用如下链接进行访问订阅：
+Note that the main Mikan Project site may be blocked in some regions. If you cannot access it without a proxy, use the following alternative domain:
 
-[Mikan Project CN][mikan-cn-site]
+[Mikan Project (Alternative)][mikan-cn-site]
 
-## 获取订阅地址
+## Get Subscription URL
 
-本项目基于解析 Mikan Project 提供的 RSS 地址，因此如果要实现自动追番，需要注册并且获得 Mikan Project 的 RSS 地址：
+This project is based on parsing RSS URLs provided by Mikan Project. To enable automatic anime tracking, you need to register and obtain a Mikan Project RSS URL:
 
 ![image](../image/rss/rss-token.png){data-zoomable}
 
-获取的 RSS 地址如下：
+The RSS URL will look like:
 
 ```txt
 https://mikanani.me/RSS/MyBangumi?token=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-# 或者
+# or
 https://mikanime.tv/RSS/MyBangumi?token=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-## Mikan Project 订阅贴士
+## Mikan Project Subscription Tips
 
-由于 AutoBangumi 会解析所有获得的 RSS 信息，因此在订阅番剧的时候需要注意以下几点：
+Since AutoBangumi parses all RSS entries it receives, keep the following in mind when subscribing:
 
 ![image](../image/rss/advanced-subscription.png){data-zoomable}
 
-- 在个人设置中打开高级设置。
-- 一部番剧只订阅一个字幕组，点击 Mikan Project 的番剧图片即可呼出二级菜单，选择一个字幕组订阅即可。
-- 如果字幕组有简体繁体不同的字幕，Mikan Project 大多时候提供了选择订阅的方式，选择一种字幕订阅。
-- 如果不提供简繁选择，那么可以在 AutoBangumi 中设置 `filter` 进行过滤，也可以在规则生成之后进入 qBittorrent 中手动过滤。
-- 目前不支持 OVA 以及 剧场版 的订阅解析。
+- Enable advanced settings in your profile settings.
+- Subscribe to only one subtitle group per anime. Click the anime poster on Mikan Project to open the submenu and select a single subtitle group.
+- If a subtitle group offers both Simplified and Traditional Chinese subtitles, Mikan Project usually provides a way to choose. Select one subtitle type.
+- If no subtitle type selection is available, you can set up a `filter` in AutoBangumi to filter them, or manually filter in qBittorrent after the rule is generated.
+- OVA and movie subscriptions are currently not supported for parsing.
 
 
 [mikan-site]: https://mikanani.me/

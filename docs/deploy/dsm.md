@@ -1,24 +1,24 @@
-# 群晖 (DSM 7.2) 部署说明（ QNAP 同理）
+# Synology NAS (DSM 7.2) Deployment (QNAP Similar)
 
-在 DSM 7.2 中，已经支持了 Docker Compose，推荐使用 Docker Compose 一键部署本项目。
+DSM 7.2 supports Docker Compose, so we recommend using Docker Compose for one-click deployment.
 
-## 创建配置和数据存储文件夹
+## Create Configuration and Data Directories
 
-在 `/volume1/docker/` 下创建 `AutoBangumi` 文件夹，然后在 `AutoBangumi` 文件夹下创建 `config` 和 `data` 文件夹。
+Create an `AutoBangumi` folder under `/volume1/docker/`, then create `config` and `data` subfolders inside it.
 
-## 安装 Container Manager (Docker) 套件
+## Install Container Manager (Docker) Package
 
-进入套件中心，安装 Container Manager (Docker) 套件。
+Open Package Center and install the Container Manager (Docker) package.
 
 ![install-docker](../image/dsm/install-docker.png){data-zoomable}
 
-## 通过 Docker compose 安装配置 AB
+## Install AB via Docker Compose
 
-点击 **项目**，然后点击 **新建**，选择 **Docker Compose**。
+Click **Project**, then click **Create**, and select **Docker Compose**.
 
 ![new-compose](../image/dsm/new-compose.png){data-zoomable}
 
-复制以下内容填入 **Docker Compose** 中。
+Copy and paste the following content into **Docker Compose**:
 ```yaml
 version: "3.4"
 
@@ -41,19 +41,19 @@ services:
       - UMASK=022
 ```
 
-点击 **下一步**，然后点击 **完成**。
+Click **Next**, then click **Done**.
 
 ![create](../image/dsm/create.png){data-zoomable}
 
-完成创建之后进入 `http://<NAS IP>:7892` 即可进入 AB 并进行配置。
+After creation, access `http://<NAS IP>:7892` to enter AB and configure it.
 
-## 通过 Docker compose 安装配置 AB 和 qBittorrent
+## Install AB and qBittorrent via Docker Compose
 
-在同时拥有代理和ipv6的情况下，群晖nas提供的docker配置ipv6极为复杂，推荐直接将AB和qBittorrent安装到host网络下，降低工作量。
+When you have both a proxy and IPv6, configuring IPv6 in Docker on Synology NAS can be complex. We recommend installing both AB and qBittorrent on the host network to reduce complexity.
 
-以下内容的使用条件为：在docker上已经部署好了一个clash代理，并能够通过本地ip的指定端口进行访问。
+The following configuration assumes you have a Clash proxy deployed in Docker that is accessible via a local IP at a specified port.
 
-参考上一节的内容，将以下内容经过调整填入 **Docker Compose** 中。
+Following the previous section, adjust and paste the following content into **Docker Compose**:
 
 ```yaml
   qbittorrent:
@@ -61,13 +61,13 @@ services:
     image: linuxserver/qbittorrent
     hostname: qbittorrent
     environment:
-      - PGID=1000  #需要自行修改填入
-      - PUID=1000  #需要自行修改填入
+      - PGID=1000  # Modify as needed
+      - PUID=1000  # Modify as needed
       - WEBUI_PORT=8989
       - TZ=Asia/Shanghai
     volumes:
       - ./qb_config:/config
-      - your_anime_path:/downloads # 注意 修改此处为自己存放动漫的目录,ab 内下载路径填写downloads
+      - your_anime_path:/downloads # Change this to your anime storage directory. Set download path in AB as /downloads
     networks:
       - host
     restart: unless-stopped
@@ -76,10 +76,10 @@ services:
     container_name: AutoBangumi
     environment:
       - TZ=Asia/Shanghai
-      - PGID=1000  #需要自行修改填入
-      - PUID=1000  #需要自行修改填入
+      - PGID=1000  # Modify as needed
+      - PUID=1000  # Modify as needed
       - UMASK=022
-      - AB_DOWNLOADER_HOST=127.0.0.1:8989  #建议自行修改端口号
+      - AB_DOWNLOADER_HOST=127.0.0.1:8989  # Modify port as needed
     volumes:
       - /volume1/docker/ab/config:/app/config
       - /volume1/docker/ab/data:/app/data
@@ -88,7 +88,6 @@ services:
       - AB_METHOD=Advance
     dns:
       - 8.8.8.8
-      - 223.5.5.5
     restart: unless-stopped
     image: "ghcr.io/estrellaxd/auto_bangumi:latest"
     depends_on:
@@ -96,28 +95,27 @@ services:
 
 ```
 
-## 补充说明
+## Additional Notes
 
-其中的 PGID 与 PUID 需要自行寻找，群晖的新 NAS 通常应该是：`PUID=1026,PGID=100`，qBittorrent 对应的端口号在修改时注意保证所有位置全部修改完成。
+The PGID and PUID values need to be determined for your system. For newer Synology NAS devices, they are typically: `PUID=1026, PGID=100`. When modifying the qBittorrent port, make sure to update it in all locations.
 
-如果需要设置代理，请参考: [设置代理](../config/proxy)
+For proxy setup, refer to: [Proxy Settings](../config/proxy)
 
-如果使用较低性能的机器，默认的配置有概率会大量占用 **CPU**，使得 AB 无法链接 qB 且 qB 的 WebUI 无法正常登陆的情况。
+On lower-performance machines, the default configuration may heavily use the CPU, causing AB to fail connecting to qB and the qB WebUI to become inaccessible.
 
-以 220+ 为例，qB 参考配置如下，减少下载与上传的连接数，降低 CPU 占用。
+For devices like the 220+, recommended qBittorrent settings to reduce CPU usage:
 
-- 设置 -> 链接 -> 链接限制
-  - 全局最大连接数: 300
-  - 每torrent最大连接数: 60
-  - 全局上传窗口数上限: 15
-  - 每个torrent上传窗口数上限: 4
+- Settings -> Connections -> Connection Limits
+  - Global maximum number of connections: 300
+  - Maximum number of connections per torrent: 60
+  - Global upload slots limit: 15
+  - Upload slots per torrent: 4
 - BitTorrent
-  - 最大活跃检查种子数 1
-  - Torrent排队
-    - 最大活动的下载数: 3
-    - 最大活动的上传数: 5
-    - 最大活动的torrent数: 10
+  - Maximum active checking torrents: 1
+  - Torrent Queueing
+    - Maximum active downloads: 3
+    - Maximum active uploads: 5
+    - Maximum active torrents: 10
 - RSS
-- RSS阅读器
-  - 每个订阅源文章数目最大值: 50
-
+  - RSS Reader
+    - Maximum number of articles per feed: 50

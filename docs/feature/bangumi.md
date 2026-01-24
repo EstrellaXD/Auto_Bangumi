@@ -1,13 +1,13 @@
-# 番剧管理
+# Bangumi Management
 
-在首页点击番剧海报即可对番剧进行精细化管理。
+Click an anime poster on the homepage to manage individual anime entries.
 
-![编辑番剧](../image/feature/edit.png)
+![Edit Bangumi](../image/feature/edit.png)
 
-## 禁用/删除番剧
+## Disable / Delete Anime
 
-由于 AB 会不断解析**聚合 RSS**，因此对于聚合 RSS 的下载规则，如果不需要下载可以选择：
-- 禁用番剧：番剧不会被下载，也不会被重新解析
-- 在聚合 RSS 中删除订阅
+Since AB continuously parses **aggregated RSS** feeds, for download rules from aggregated RSS that you no longer need:
+- Disable anime: The anime won't be downloaded or re-parsed
+- Remove the subscription from the aggregated RSS
 
-如果删除番剧将会在下次解析重建规则。
+If you delete the anime entry, it will be recreated on the next parse cycle.

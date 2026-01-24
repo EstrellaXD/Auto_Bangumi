@@ -1,50 +1,49 @@
 ---
-title: RSS 管理
+title: RSS Management
 ---
 
-# RSS 管理使用说明
+# RSS Management
 
-## 添加合集
+## Adding Collections
 
-AB 提供了两种手动下载的方式：
-**Collect** 和 **Subscribe**。
-其中 **Collect** 为手动下载全部剧集，适用于下载已经完结的番剧。
-**Subscribe** 为手动添加自动下载规则以及对应的 RSS 链接，适用于下载尚未完结的番剧。
+AB provides two manual download methods:
+**Collect** and **Subscribe**.
+- **Collect** downloads all episodes at once, suitable for completed anime.
+- **Subscribe** adds an automatic download rule with the corresponding RSS link, suitable for ongoing anime.
 
-### 解析 RSS 链接
+### Parsing RSS Links
 
-AB 支持解析所有资源站的合集 RSS 链接，在对应的资源站找到对应番剧合集 RSS，点击 AB 右上角的 **+** 号，在弹出的窗口中粘贴 RSS 链接即可。
+AB supports parsing collection RSS links from all resource sites. Find the collection RSS for your desired anime on the corresponding site, click the **+** button in the upper right corner of AB, and paste the RSS link in the popup window.
 
-### 添加下载
+### Adding Downloads
 
-如果正常解析，则会弹出一个窗口，显示解析到的番剧信息，点击 **Collect** 或者 **Subscribe** 即可添加到下载队列。
+If parsing succeeds, a window will appear showing the parsed anime information. Click **Collect** or **Subscribe** to add it to the download queue.
 
-### 常见问题
+### Common Issues
 
-如果出现解析错误，可能是由于 RSS 链接不正确，或者 RSS 中字幕组的命名不支持解析。
+If a parsing error occurs, it may be due to an incorrect RSS link or an unsupported subtitle group naming format.
 
-## 管理番剧
+## Managing Bangumi
 
-3.0 版本之后 AB 在 WebUI 中提供了手动管理番剧的功能，可以手动调整解析不正确的番剧信息。
+Since v3.0, AB provides manual anime management in the WebUI, allowing you to manually adjust incorrectly parsed anime information.
 
-### 修改番剧信息
+### Editing Anime Information
 
-在番剧列表中，点击番剧海报，即可进入番剧信息页面。
-修改番剧信息后，点击 **Apply** 即可。
-此时 AB 会根据你修改的信息重新调整目录并自动重命名。
+In the anime list, click the anime poster to enter the anime information page.
+After modifying the information, click **Apply**.
+AB will readjust the directory and automatically rename files based on your changes.
 
 
-### 删除番剧
+### Deleting Anime
 
-在 3.0 之后 AB 可以手动删除番剧，点击番剧海报，进入番剧信息页面，点击 **Delete** 即可删除番剧。
+Since v3.0, you can manually delete anime. Click the anime poster, enter the information page, and click **Delete**.
 
 ::: warning
-删除番剧之后，如果 RSS 中没有取消订阅，AB 仍然会重新解析，如果想禁用下载规则请使用[禁用番剧](#禁用番剧)
+After deleting anime, if the RSS subscription hasn't been cancelled, AB will still re-parse it. To disable the download rule, use [Disable Anime](#disabling-anime).
 :::
 
-### 禁用番剧
+### Disabling Anime
 
-在 3.0 之后 AB 可以手动禁用番剧，点击番剧海报，进入番剧信息页面，点击 **Disable** 即可禁用番剧。
+Since v3.0, you can manually disable anime. Click the anime poster, enter the information page, and click **Disable**.
 
-禁用之后番剧海报会变灰，并且排列在最后。如果想要重新启用下载规则，请点击 **Enable**。
-
+Once disabled, the anime poster will be grayed out and sorted to the end. To re-enable the download rule, click **Enable**.
