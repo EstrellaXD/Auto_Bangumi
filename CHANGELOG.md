@@ -14,6 +14,23 @@
 - 数据库迁移机制重构：使用 `schema_version` 表替代仅依赖应用版本号的迁移策略
 - 启动时始终检查并执行未完成的迁移，防止迁移中断后无法恢复
 
+### Tests
+
+- 新增全面的测试套件，覆盖核心业务逻辑：
+  - RSS 引擎测试：pull_rss、match_torrent、refresh_rss、add_rss 全流程
+  - 下载客户端测试：init_downloader、set_rule、add_torrent（磁力/文件）、rename
+  - 路径工具测试：save_path 生成、文件分类、is_ep 深度检查
+  - 重命名器测试：gen_path 命名方法（pn/advance/none/subtitle）、单文件/集合重命名
+  - 认证测试：JWT 创建/解码/验证、密码哈希、get_current_user
+  - 通知测试：getClient 工厂、send_msg 成功/失败、poster 查询
+  - 搜索测试：URL 构建、关键词清洗、special_url
+  - 配置测试：默认值、序列化、迁移、环境变量覆盖
+  - Bangumi API 测试：CRUD 端点 + 认证要求
+  - RSS API 测试：CRUD/批量端点 + 刷新
+  - 集成测试：RSS→下载全流程、重命名全流程、数据库一致性
+- 新增 `pytest-mock` 开发依赖
+- 新增共享测试 fixtures（`conftest.py`）和数据工厂（`factories.py`）
+
 ---
 
 # [3.1] - 2023-08
