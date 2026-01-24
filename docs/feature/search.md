@@ -1,25 +1,26 @@
-# 搜索功能
+# Torrent Search
 
-在 3.1 版本之后 AB 添加了搜索功能，可以通过搜索功能快速找到想要的番剧。
+Since v3.1, AB includes a search feature for quickly finding anime.
 
-## 使用搜索功能
+## Using the Search Feature
 
 ::: warning
-搜索功能依赖主程序的解析器，当前版本不允许解析合集。解析合集提示 `warning` 为正常现象。
+The search feature relies on the main program's parser. The current version does not support parsing collections. A `warning` when parsing collections is normal behavior.
 :::
 
-搜索栏位于 AB 顶栏，可以在搜索栏右侧选择想要搜索的源站，比如：蜜柑计划、nyaa 等
+The search bar is located in the AB top bar. You can select the source site on the right side of the search bar, such as: Mikan Project, Nyaa, etc.
 
-选择对应的源站输入关键词，AB 即可自动解析搜索结果并展示。如果想要添加对应的番剧，点击卡片右侧的添加按钮即可。
+Select the source site, enter keywords, and AB will automatically parse and display search results. To add an anime, click the add button on the right side of the card.
 
 ::: tip
-源站为 **Mikan** 是 AB 默认使用 `mikan` 解析器，如果使用其他源站，默认使用 TMDB 解析器。
+When the source is **Mikan**, AB uses the `mikan` parser by default. For other sources, the TMDB parser is used.
 :::
 
-## 增加源站
+## Adding Custom Sources
 
-用户可以手动增加源站列表，只需要更改 `config/search_provider.json` 即可。
-默认为
+Users can manually add source sites by editing `config/search_provider.json`.
+
+Default configuration:
 ```json
 {
   "mikan": "https://mikanani.me/RSS/Search?searchstr=%s",

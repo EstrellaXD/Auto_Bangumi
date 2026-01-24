@@ -1,27 +1,25 @@
-# 主程序运行配置
+# Program Settings
 
-## WebUI 配置
+## WebUI Configuration
 
 ![program](../image/config/program.png){width=500}{class=ab-shadow-card}
 
 <br/>
 
-- Interval Time 参数的单位为秒，如果你需要设置为分钟，请自行转换为秒。
-- RSS 为 RSS 检查时间间隔，这个参数影响自动下载规则生成的周期间隔。
-- Rename 为重命名检查时间间隔，如果你需要修改重命名检查时间间隔，请修改此参数。
-- WebUI Port 为端口，请注意如果你使用 Docker 部署，修改后需要在 Docker 中重新映射端口。
+- Interval Time parameters are in seconds. Convert to seconds if you need to set minutes.
+- RSS is the RSS check interval, which affects how often automatic download rules are generated.
+- Rename is the rename check interval. Modify this if you need to change how often renaming is checked.
+- WebUI Port is the port number. Note that if you're using Docker, you need to remap the port in Docker after changing it.
 
 
-## `config.json` 中的配置选项
+## `config.json` Configuration Options
 
-在配置文件中对应选项如下：
+The corresponding options in the configuration file are:
 
-配置文件部分：`program`
+Configuration section: `program`
 
-| 参数名         | 参数说明       | 参数类型     | WebUI 对应选项 | 默认值  |
-|-------------|------------|----------|------------|------|
-| rss_time    | RSS 检查时间间隔 | 以秒为单位的整数 | RSS 检查时间间隔 | 7200 |
-| rename_time | 重命名检查时间间隔  | 以秒为单位的整数 | 重命名检查时间间隔  | 60   |
-| webui_port  | WebUI 端口   | 以整数为单位   | WebUI 端口   | 7892 |
-
-
+| Parameter   | Description          | Type            | WebUI Option         | Default |
+|-------------|---------------------|-----------------|---------------------|---------|
+| rss_time    | RSS check interval  | Integer (seconds) | RSS check interval  | 7200    |
+| rename_time | Rename check interval | Integer (seconds) | Rename check interval | 60    |
+| webui_port  | WebUI port          | Integer         | WebUI port          | 7892    |

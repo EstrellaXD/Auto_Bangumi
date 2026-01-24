@@ -1,46 +1,46 @@
-# 网络问题
+# Network Issues
 
-## 无法连接蜜柑计划
+## Cannot Connect to Mikan Project
 
-由于蜜柑计划本站: `https://mikanani.me` 目前被 GFW 封锁，因此可能会导致 AB 无法正确连接蜜柑计划的情况，建议使用如下方法解决。
+Since the main Mikan Project site (`https://mikanani.me`) may be blocked in some regions, AB may fail to connect. Use the following solutions:
 
-- [使用蜜柑计划国内域名](#蜜柑计划国内域名)
-- [使用代理](#代理)
-- [使用 CloudFlare Worker 进行反代](#cloudflare-workers)
+- [Use Mikan Project alternative domain](#mikan-project-alternative-domain)
+- [Use a proxy](#configuring-a-proxy)
+- [Use a Cloudflare Worker reverse proxy](#cloudflare-workers-reverse-proxy)
 
-### 蜜柑计划国内域名
+### Mikan Project Alternative Domain
 
-蜜柑计划更新了新的域名 `https://mikanime.tv`，请在不打开代理的情况下配合 AB 使用。
+Mikan Project has a new domain `https://mikanime.tv`. Use this domain with AB without enabling a proxy.
 
-如果出现  
+If you see:
 ```
 DNS/Connect ERROR
 ```
 
-- 请检查网络连接，如果网络连接正常，请检查 DNS 解析。
-- 可以给 AB 添加一个 `dns=8.8.8.8`，如果是 HOST 模式可以忽略。
+- Check your network connection. If it's fine, check DNS resolution.
+- Add `dns=8.8.8.8` to AB. If using Host network mode, this can be ignored.
 
-如果你是用代理，一般配置正确不会出现类似错误。
+If you're using a proxy, this error typically won't occur with correct configuration.
 
-### 配置代理
+### Configuring a Proxy
 
 ::: tip
-在 AB 3.1 中，AB 已经接管了 RSS 更新以及推送，因此在使用代理的时候，只需要在 AB 中配置代理。
+In AB 3.1+, AB handles RSS updates and notifications itself, so you only need to configure the proxy in AB.
 :::
 
-AB 中自带了代理配置，如果要配置代理请按照 [配置代理](../config/proxy) 中的方式正确配置 HTTP 或者 Socks 代理。配置完成可以规避墙的问题。
+AB has built-in proxy configuration. To configure a proxy, follow the instructions in [Proxy Settings](../config/proxy) to set up HTTP or SOCKS proxy correctly. This resolves access issues.
 
-**3.1 以前版本需要对 QB 进行代理配置**
+**For versions before 3.1, qBittorrent proxy configuration is also needed**
 
-请按照如下截图对 QB 中进行代理设置 （Socks 同理）
+Configure the proxy in QB as shown below (same approach for SOCKS):
 
 <img width="483" alt="image" src="https://user-images.githubusercontent.com/33726646/233681562-cca3957a-a5de-40e2-8fb3-4cc7f57cc139.png">
 
 
-### CloudFlare Workers 反代
+### Cloudflare Workers Reverse Proxy
 
-根据 OpenAI 被墙的经验，我们也可以通过反向代理的方式解决。具体如何申请域名绑定 CloudFlare 在此不再赘述。
-在 Workers 中添加如下代码即可以用你自己的域名访问蜜柑计划并且解析下载 RSS 链接中的种子。
+You can also use a reverse proxy approach via Cloudflare Workers. Setting up a domain and binding it to Cloudflare is beyond the scope of this guide.
+Add the following code in Workers to use your own domain to access Mikan Project and download torrents from RSS links:
 
 ```javascript
 const TELEGRAPH_URL = 'https://mikanani.me';
@@ -64,20 +64,20 @@ async function handleRequest(request) {
   const response = await fetch(modifiedRequest);
   const contentType = response.headers.get('Content-Type') || '';
 
-  // 如果内容类型是 RSS，才进行替换操作
+  // Only perform replacement if content type is RSS
   if (contentType.includes('application/xml')) {
     const text = await response.text();
     const replacedText = text.replace(/https?:\/\/mikanani\.me/g, MY_DOMAIN);
     const modifiedResponse = new Response(replacedText, response);
 
-    // 添加允许跨域访问的响应头
+    // Add CORS headers
     modifiedResponse.headers.set('Access-Control-Allow-Origin', '*');
 
     return modifiedResponse;
   } else {
     const modifiedResponse = new Response(response.body, response);
 
-    // 添加允许跨域访问的响应头
+    // Add CORS headers
     modifiedResponse.headers.set('Access-Control-Allow-Origin', '*');
 
     return modifiedResponse;
@@ -85,14 +85,13 @@ async function handleRequest(request) {
 }
 ```
 
-完成上述配置之后，使用你的域名替换 `https://mikanani.me` **添加 RSS** 即可。
+After completing the configuration, replace `https://mikanani.me` with your domain when **adding RSS**.
 
-## 无法连接到 qBittorrent
+## Cannot Connect to qBittorrent
 
-首先，检查 AB 中的 **下载器地址** 参数是否正确。
-- 如果你的 AB 和 QB 在同一个 Docker 网络中，可以尝试使用容器名称进行寻址，如：`http://qbittorrent:8080`。
-- 如果你的 AB 和 QB 在同一个 Docker 服务器中，可以尝试使用 Docker 网关地址进行访问，如：`http://172.17.0.1:8080`。
-- 如果 AB 网络模式不是 `host` 请不要使用 `127.0.0.1` 来访问 QB
+First, check if the **downloader address** parameter in AB is correct.
+- If AB and QB are on the same Docker network, try using the container name for addressing, e.g., `http://qbittorrent:8080`.
+- If AB and QB are on the same Docker server, try using the Docker gateway address, e.g., `http://172.17.0.1:8080`.
+- If AB's network mode is not `host`, do not use `127.0.0.1` to access QB.
 
-在 Docker 中不同容器中无法互相访问，可以在 QB 的网络连接的链接中，设定链接 AB， 如果 qBittorrent 使用 HTTPS 模式，请在 **下载器地址** 参数中添加 `https://` 前缀。
-
+If containers in Docker cannot access each other, set up a network link between QB and AB in QB's network connection settings. If qBittorrent uses HTTPS, add the `https://` prefix to the **downloader address**.

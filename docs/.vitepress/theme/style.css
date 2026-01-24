@@ -7,14 +7,11 @@
  * Colors
  * -------------------------------------------------------------------------- */
 
- :root {
-  --vp-c-brand: #7B65D6;
-  --vp-c-brand-light: #7162AE;
-  --vp-c-brand-lighter: #8D7FC2;
-  --vp-c-brand-lightest: #8E8A9C;
-  --vp-c-brand-dark: #4E3C94;
-  --vp-c-brand-darker: #281E52;
-  --vp-c-brand-dimm: rgba(100, 108, 255, 0.08);
+:root {
+  --vp-c-brand-1: #7B65D6;
+  --vp-c-brand-2: #7162AE;
+  --vp-c-brand-3: #8D7FC2;
+  --vp-c-brand-soft: rgba(100, 108, 255, 0.08);
 }
 
 /**
@@ -22,15 +19,15 @@
  * -------------------------------------------------------------------------- */
 
 :root {
-  --vp-button-brand-border: var(--vp-c-brand-light);
+  --vp-button-brand-border: transparent;
   --vp-button-brand-text: var(--vp-c-white);
-  --vp-button-brand-bg: var(--vp-c-brand);
-  --vp-button-brand-hover-border: var(--vp-c-brand-light);
+  --vp-button-brand-bg: var(--vp-c-brand-1);
+  --vp-button-brand-hover-border: transparent;
   --vp-button-brand-hover-text: var(--vp-c-white);
-  --vp-button-brand-hover-bg: var(--vp-c-brand-light);
-  --vp-button-brand-active-border: var(--vp-c-brand-light);
+  --vp-button-brand-hover-bg: var(--vp-c-brand-2);
+  --vp-button-brand-active-border: transparent;
   --vp-button-brand-active-text: var(--vp-c-white);
-  --vp-button-brand-active-bg: var(--vp-button-brand-bg);
+  --vp-button-brand-active-bg: var(--vp-c-brand-1);
 }
 
 /**
@@ -50,7 +47,7 @@
     #b42ff1bb 50%,
     #4794ffbb 50%
   );
-  --vp-home-hero-image-filter: blur(40px);
+  --vp-home-hero-image-filter: blur(44px);
 }
 
 @media (min-width: 640px) {
@@ -70,41 +67,27 @@
  * -------------------------------------------------------------------------- */
 
 :root {
-  --vp-custom-block-tip-border: var(--vp-c-brand);
-  --vp-custom-block-tip-text: var(--vp-c-brand-darker);
-  --vp-custom-block-tip-bg: var(--vp-c-brand-dimm);
-}
-
-.dark {
-  --vp-custom-block-tip-border: var(--vp-c-brand);
-  --vp-custom-block-tip-text: var(--vp-c-brand-lightest);
-  --vp-custom-block-tip-bg: var(--vp-c-brand-dimm);
-}
-
-/**
- * Component: Algolia
- * -------------------------------------------------------------------------- */
-
-.DocSearch {
-  --docsearch-primary-color: var(--vp-c-brand) !important;
+  --vp-custom-block-tip-border: transparent;
+  --vp-custom-block-tip-text: var(--vp-c-text-1);
+  --vp-custom-block-tip-bg: var(--vp-c-brand-soft);
+  --vp-custom-block-tip-code-bg: var(--vp-c-brand-soft);
 }
 
 /**
  * Component: medium-zoom
  * -------------------------------------------------------------------------- */
 
-
 .medium-zoom--opened .medium-zoom-overlay {
   z-index: 20;
 }
-  
+
 .medium-zoom--opened .medium-zoom-image {
   z-index: 21;
 }
 
 .vp-doc .ab-shadow-card {
-  box-shadow: 0 10px 30px -10px rgba(0,0,0,0.2), 
-              0 0 2px rgba(0,0,0,0.2), 
+  box-shadow: 0 10px 30px -10px rgba(0,0,0,0.2),
+              0 0 2px rgba(0,0,0,0.2),
               0 20px 30px -20px rgba(0,0,0,0.4);
   border-radius: 10px;
 }
