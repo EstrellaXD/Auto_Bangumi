@@ -13,6 +13,10 @@ else:
     from pathlib import Path
 
 
+_MEDIA_SUFFIXES = frozenset({".mp4", ".mkv"})
+_SUBTITLE_SUFFIXES = frozenset({".ass", ".srt"})
+
+
 class TorrentPath:
     def __init__(self):
         pass
@@ -23,10 +27,10 @@ class TorrentPath:
         subtitle_list = []
         for f in files:
             file_name = f["name"]
-            suffix = Path(file_name).suffix
-            if suffix.lower() in [".mp4", ".mkv"]:
+            suffix = Path(file_name).suffix.lower()
+            if suffix in _MEDIA_SUFFIXES:
                 media_list.append(file_name)
-            elif suffix.lower() in [".ass", ".srt"]:
+            elif suffix in _SUBTITLE_SUFFIXES:
                 subtitle_list.append(file_name)
         return media_list, subtitle_list
 

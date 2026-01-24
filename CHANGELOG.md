@@ -1,3 +1,56 @@
+# [3.2.0-beta.5] - 2026-01-24
+
+## Backend
+
+### Performance
+
+- 新增共享 HTTP 客户端连接池，复用 TCP/SSL 连接，减少每次请求的握手开销
+- RSS 刷新改为并发拉取所有订阅源（`asyncio.gather`），多源场景下速度提升约 10 倍
+- 种子文件下载改为并发获取，下载多个种子时速度提升约 5 倍
+- 重命名模块并发获取所有种子文件列表，速度提升约 20 倍
+- 通知发送改为并发执行，移除 2 秒硬编码延迟
+- 新增 TMDB 和 Mikan 解析结果的内存缓存，避免重复 API 调用
+- 为 `Torrent.url`、`Torrent.rss_id`、`Bangumi.title_raw`、`Bangumi.deleted`、`RSSItem.url` 添加数据库索引
+- RSS 批量启用/禁用改为单次事务操作，替代逐条提交
+- 预编译正则表达式（种子名解析规则、过滤器匹配），避免运行时重复编译
+- `SeasonCollector` 在循环外创建，复用单次认证
+- `check_first_run` 缓存默认配置字典，避免每次创建新对象
+- 通知模块中的同步数据库调用改为 `asyncio.to_thread`，避免阻塞事件循环
+- RSS 解析去重从 O(n²) 列表查找改为 O(1) 集合查找
+- 文件后缀判断使用 `frozenset` 替代列表，提升查找效率
+- `Episode`/`SeasonInfo` 数据类添加 `__slots__`，减少内存占用
+- RSS XML 解析返回元组列表，替代三个独立列表再 zip 的模式
+- qBittorrent 规则设置改为并发执行
+
+## Frontend
+
+### Performance
+
+- 下载器 store 使用 `shallowRef` 替代 `ref`，避免大数组的深层响应式代理
+- 表格列定义改为 `computed`，避免每次渲染重建
+- RSS 表格列与数据分离，数据变化时不重建列配置
+- 日历页移除重复的 `getAll()` 调用
+- `ab-select` 的 `watchEffect` 改为 `watch`，消除挂载时的无效 emit
+- `useClipboard` 提升到 store 顶层，避免每次 `copy()` 创建新实例
+- `setInterval` 替换为 `useIntervalFn`，自动生命周期管理，防止内存泄漏
+- 共享 `ruleTemplate` 对象改为浅拷贝，避免意外的引用共变
+- `ab-add-rss` 移除不必要的 `setTimeout` 延迟
+
+### Fixes
+
+- 修复 `ab-image.vue` 中 `<style scope>` 的拼写错误（应为 `scoped`）
+- 修复 `ab-edit-rule.vue` 中 `String` 类型应为 `string`
+- `bangumi` ref 初始化为 `[]` 而非 `undefined`，减少下游空值检查
+- `ab-bangumi-card` 模板类型安全：动态属性访问改为显式枚举
+- 启用 `noImplicitAny: true` 提升类型安全
+
+### Types
+
+- `ab-button`、`ab-search` 的 `defineEmits` 改为类型化声明
+- `ab-data-list` 使用明确的 `DataItem` 类型替代 `any`
+
+---
+
 # [3.2.0-beta.4] - 2026-01-24
 
 ## Backend

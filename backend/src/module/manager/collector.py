@@ -67,9 +67,9 @@ async def eps_complete():
         datas = engine.bangumi.not_complete()
         if datas:
             logger.info("Start collecting full season...")
-            for data in datas:
-                if not data.eps_collect:
-                    async with SeasonCollector() as collector:
+            async with SeasonCollector() as collector:
+                for data in datas:
+                    if not data.eps_collect:
                         await collector.collect_season(data)
-                data.eps_collect = True
+                    data.eps_collect = True
             engine.bangumi.update_all(datas)

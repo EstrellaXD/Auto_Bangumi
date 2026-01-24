@@ -2,13 +2,13 @@ import type { BangumiRule } from '#/bangumi';
 import { ruleTemplate } from '#/bangumi';
 
 export const useBangumiStore = defineStore('bangumi', () => {
-  const bangumi = ref<BangumiRule[]>();
+  const bangumi = ref<BangumiRule[]>([]);
   const editRule = reactive<{
     show: boolean;
     item: BangumiRule;
   }>({
     show: false,
-    item: ruleTemplate,
+    item: { ...ruleTemplate },
   });
 
   async function getAll() {

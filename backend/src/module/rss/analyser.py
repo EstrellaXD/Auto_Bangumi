@@ -46,12 +46,14 @@ class RSSAnalyser(TitleParser):
         self, torrents: list[Torrent], rss: RSSItem, full_parse: bool = True
     ) -> list:
         new_data = []
+        seen_titles: set[str] = set()
         for torrent in torrents:
             bangumi = self.raw_parser(raw=torrent.name)
-            if bangumi and bangumi.title_raw not in [i.title_raw for i in new_data]:
+            if bangumi and bangumi.title_raw not in seen_titles:
                 await self.official_title_parser(bangumi=bangumi, rss=rss, torrent=torrent)
                 if not full_parse:
                     return [bangumi]
+                seen_titles.add(bangumi.title_raw)
                 new_data.append(bangumi)
                 logger.info(f"[RSS] New bangumi founded: {bangumi.official_title}")
         return new_data

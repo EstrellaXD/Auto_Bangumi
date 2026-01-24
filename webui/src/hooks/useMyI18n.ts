@@ -11,10 +11,15 @@ const messages = {
 
 type Languages = keyof typeof messages;
 
+function normalizeLocale(locale: string): Languages {
+  if (locale.startsWith('zh')) return 'zh-CN';
+  return 'en';
+}
+
 export const useMyI18n = createSharedComposable(() => {
   const lang = useLocalStorage<Languages>(
     'lang',
-    navigator.language as Languages
+    normalizeLocale(navigator.language)
   );
 
   const i18n = createI18n({
@@ -39,7 +44,7 @@ export const useMyI18n = createSharedComposable(() => {
   function returnUserLangText(texts: {
     [k in Languages]: string;
   }) {
-    return texts[lang.value];
+    return texts[lang.value] ?? texts['en'];
   }
 
   function returnUserLangMsg(res: ApiSuccess) {

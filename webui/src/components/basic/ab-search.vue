@@ -13,7 +13,7 @@ withDefaults(
   }
 );
 
-defineEmits(['select', 'search']);
+defineEmits<{ select: []; search: [] }>();
 
 const inputValue = defineModel<string>('inputValue');
 </script>

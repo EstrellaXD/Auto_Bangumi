@@ -75,13 +75,21 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
         <div class="search-card-meta">
           <div class="search-card-title">{{ bangumi.official_title }}</div>
           <div class="card-tags">
-            <template v-for="i in ['season', 'group_name', 'subtitle']" :key="i">
-              <ab-tag
-                v-if="bangumi[i]"
-                :title="i === 'season' ? `Season ${bangumi[i]}` : bangumi[i]"
-                type="primary"
-              />
-            </template>
+            <ab-tag
+              v-if="bangumi.season"
+              :title="`Season ${bangumi.season}`"
+              type="primary"
+            />
+            <ab-tag
+              v-if="bangumi.group_name"
+              :title="bangumi.group_name"
+              type="primary"
+            />
+            <ab-tag
+              v-if="bangumi.subtitle"
+              :title="bangumi.subtitle"
+              type="primary"
+            />
           </div>
         </div>
       </div>

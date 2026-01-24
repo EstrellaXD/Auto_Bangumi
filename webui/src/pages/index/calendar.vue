@@ -25,7 +25,6 @@ async function refreshCalendar() {
 }
 
 onActivated(() => {
-  getAll();
   refreshCalendar();
 });
 

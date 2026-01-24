@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from module.conf import settings
@@ -98,8 +99,7 @@ class DownloadClient(TorrentPath):
 
     async def set_rules(self, bangumi_info: list[Bangumi]):
         logger.debug("[Downloader] Start adding rules.")
-        for info in bangumi_info:
-            await self.set_rule(info)
+        await asyncio.gather(*[self.set_rule(info) for info in bangumi_info])
         logger.debug("[Downloader] Finished.")
 
     async def get_torrent_info(self, category="Bangumi", status_filter="completed", tag=None):
@@ -138,7 +138,9 @@ class DownloadClient(TorrentPath):
                     torrent_url = [t.url for t in torrent]
                     torrent_file = None
                 else:
-                    torrent_file = [await req.get_content(t.url) for t in torrent]
+                    torrent_file = await asyncio.gather(
+                        *[req.get_content(t.url) for t in torrent]
+                    )
                     torrent_url = None
             else:
                 if "magnet" in torrent.url:

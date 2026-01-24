@@ -16,6 +16,8 @@ RULES = [
     r"(.*)(?:S\d{2})?EP?(\d{1,4}(?:\.\d{1,2})?)(.*)",
 ]
 
+COMPILED_RULES = [re.compile(rule, re.I) for rule in RULES]
+
 SUBTITLE_LANG = {
     "zh-tw": ["tc", "cht", "繁", "zh-tw"],
     "zh": ["sc", "chs", "简", "zh"],
@@ -34,10 +36,11 @@ def get_path_basename(torrent_path: str) -> str:
     return Path(torrent_path).name
 
 
+_GROUP_SPLIT_RE = re.compile(r"[\[\]()【】（）]")
+
+
 def get_group(group_and_title) -> tuple[str | None, str]:
-    n = re.split(r"[\[\]()【】（）]", group_and_title)
-    while "" in n:
-        n.remove("")
+    n = [x for x in _GROUP_SPLIT_RE.split(group_and_title) if x]
     if len(n) > 1:
         if re.match(r"\d+", n[1]):
             return None, group_and_title
@@ -73,8 +76,8 @@ def torrent_parser(
     if torrent_name is None:
         match_names = match_names[1:]
     for match_name in match_names:
-        for rule in RULES:
-            match_obj = re.match(rule, match_name, re.I)
+        for compiled_rule in COMPILED_RULES:
+            match_obj = compiled_rule.match(match_name)
             if match_obj:
                 group, title = get_group(match_obj.group(1))
                 if not season:

@@ -62,6 +62,13 @@ class RSSDatabase:
         self.session.commit()
         return True
 
+    def enable_batch(self, ids: list[int]):
+        statement = select(RSSItem).where(RSSItem.id.in_(ids))
+        result = self.session.execute(statement)
+        for item in result.scalars().all():
+            item.enabled = True
+        self.session.commit()
+
     def disable(self, _id: int) -> bool:
         statement = select(RSSItem).where(RSSItem.id == _id)
         result = self.session.execute(statement)
@@ -72,6 +79,13 @@ class RSSDatabase:
         self.session.add(db_data)
         self.session.commit()
         return True
+
+    def disable_batch(self, ids: list[int]):
+        statement = select(RSSItem).where(RSSItem.id.in_(ids))
+        result = self.session.execute(statement)
+        for item in result.scalars().all():
+            item.enabled = False
+        self.session.commit()
 
     def search_id(self, _id: int) -> RSSItem | None:
         return self.session.get(RSSItem, _id)

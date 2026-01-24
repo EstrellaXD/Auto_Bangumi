@@ -28,9 +28,7 @@ const loading = reactive({
 watch(show, (val) => {
   if (!val) {
     rss.value = rssTemplate;
-    setTimeout(() => {
-      windowState.next = false;
-    }, 300);
+    windowState.next = false;
   } else if (val && rule.value.official_title !== '') {
     windowState.next = true;
     windowState.rule = true;

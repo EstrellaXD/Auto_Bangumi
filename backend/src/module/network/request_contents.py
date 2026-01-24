@@ -21,13 +21,11 @@ class RequestContent(RequestURL):
     ) -> list[Torrent]:
         soup = await self.get_xml(_url, retry)
         if soup:
-            torrent_titles, torrent_urls, torrent_homepage = rss_parser(soup)
+            parsed_items = rss_parser(soup)
             torrents: list[Torrent] = []
             if _filter is None:
                 _filter = "|".join(settings.rss_parser.filter)
-            for _title, torrent_url, homepage in zip(
-                torrent_titles, torrent_urls, torrent_homepage
-            ):
+            for _title, torrent_url, homepage in parsed_items:
                 if re.search(_filter, _title) is None:
                     torrents.append(
                         Torrent(name=_title, url=torrent_url, homepage=homepage)

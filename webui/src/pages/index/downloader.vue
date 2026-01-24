@@ -24,21 +24,18 @@ const isNull = computed(() => {
   return config.value.downloader.host === '';
 });
 
-let timer: ReturnType<typeof setInterval> | null = null;
+const { pause, resume } = useIntervalFn(getAll, 5000, { immediate: false });
 
-onActivated(() => {
-  getConfig();
+onActivated(async () => {
+  await getConfig();
   if (!isNull.value) {
     getAll();
-    timer = setInterval(getAll, 5000);
+    resume();
   }
 });
 
 onDeactivated(() => {
-  if (timer) {
-    clearInterval(timer);
-    timer = null;
-  }
+  pause();
   clearSelection();
 });
 
@@ -94,82 +91,80 @@ function isGroupAllSelected(group: TorrentGroup): boolean {
   return group.torrents.every((t) => selectedHashes.value.includes(t.hash));
 }
 
-function tableColumns(): DataTableColumns<QbTorrentInfo> {
-  return [
-    {
-      type: 'selection',
+const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
+  {
+    type: 'selection',
+  },
+  {
+    title: t('downloader.torrent.name'),
+    key: 'name',
+    ellipsis: { tooltip: true },
+    minWidth: 200,
+  },
+  {
+    title: t('downloader.torrent.progress'),
+    key: 'progress',
+    width: 160,
+    render(row: QbTorrentInfo) {
+      return (
+        <NProgress
+          type="line"
+          percentage={Math.round(row.progress * 100)}
+          indicator-placement="inside"
+          processing={row.state === 'downloading' || row.state === 'forcedDL'}
+        />
+      );
     },
-    {
-      title: t('downloader.torrent.name'),
-      key: 'name',
-      ellipsis: { tooltip: true },
-      minWidth: 200,
+  },
+  {
+    title: t('downloader.torrent.status'),
+    key: 'state',
+    width: 100,
+    render(row: QbTorrentInfo) {
+      return <ab-tag type={stateType(row.state)} title={stateLabel(row.state)} />;
     },
-    {
-      title: t('downloader.torrent.progress'),
-      key: 'progress',
-      width: 160,
-      render(row: QbTorrentInfo) {
-        return (
-          <NProgress
-            type="line"
-            percentage={Math.round(row.progress * 100)}
-            indicator-placement="inside"
-            processing={row.state === 'downloading' || row.state === 'forcedDL'}
-          />
-        );
-      },
+  },
+  {
+    title: t('downloader.torrent.size'),
+    key: 'size',
+    width: 100,
+    render(row: QbTorrentInfo) {
+      return formatSize(row.size);
     },
-    {
-      title: t('downloader.torrent.status'),
-      key: 'state',
-      width: 100,
-      render(row: QbTorrentInfo) {
-        return <ab-tag type={stateType(row.state)} title={stateLabel(row.state)} />;
-      },
+  },
+  {
+    title: t('downloader.torrent.dlspeed'),
+    key: 'dlspeed',
+    width: 110,
+    render(row: QbTorrentInfo) {
+      return formatSpeed(row.dlspeed);
     },
-    {
-      title: t('downloader.torrent.size'),
-      key: 'size',
-      width: 100,
-      render(row: QbTorrentInfo) {
-        return formatSize(row.size);
-      },
+  },
+  {
+    title: t('downloader.torrent.upspeed'),
+    key: 'upspeed',
+    width: 110,
+    render(row: QbTorrentInfo) {
+      return formatSpeed(row.upspeed);
     },
-    {
-      title: t('downloader.torrent.dlspeed'),
-      key: 'dlspeed',
-      width: 110,
-      render(row: QbTorrentInfo) {
-        return formatSpeed(row.dlspeed);
-      },
+  },
+  {
+    title: 'ETA',
+    key: 'eta',
+    width: 80,
+    render(row: QbTorrentInfo) {
+      return formatEta(row.eta);
     },
-    {
-      title: t('downloader.torrent.upspeed'),
-      key: 'upspeed',
-      width: 110,
-      render(row: QbTorrentInfo) {
-        return formatSpeed(row.upspeed);
-      },
+  },
+  {
+    title: t('downloader.torrent.peers'),
+    key: 'peers',
+    width: 90,
+    render(row: QbTorrentInfo) {
+      return `${row.num_seeds} / ${row.num_leechs}`;
     },
-    {
-      title: 'ETA',
-      key: 'eta',
-      width: 80,
-      render(row: QbTorrentInfo) {
-        return formatEta(row.eta);
-      },
-    },
-    {
-      title: t('downloader.torrent.peers'),
-      key: 'peers',
-      width: 90,
-      render(row: QbTorrentInfo) {
-        return `${row.num_seeds} / ${row.num_leechs}`;
-      },
-    },
-  ];
-}
+  },
+]);
 
 function tableRowKey(row: QbTorrentInfo) {
   return row.hash;
@@ -242,7 +237,7 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
           :default-open="true"
         >
           <NDataTable
-            :columns="tableColumns()"
+            :columns="tableColumnsValue"
             :data="group.torrents"
             :row-key="tableRowKey"
             :pagination="false"

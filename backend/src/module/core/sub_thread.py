@@ -58,11 +58,11 @@ class RenameThread(ProgramStatus):
         while not self.stop_event.is_set():
             async with Renamer() as renamer:
                 renamed_info = await renamer.rename()
-            if settings.notification.enable:
+            if settings.notification.enable and renamed_info:
                 async with PostNotification() as notifier:
-                    for info in renamed_info:
-                        await notifier.send_msg(info)
-                        await asyncio.sleep(2)
+                    await asyncio.gather(
+                        *[notifier.send_msg(info) for info in renamed_info]
+                    )
             try:
                 await asyncio.wait_for(
                     self.stop_event.wait(),

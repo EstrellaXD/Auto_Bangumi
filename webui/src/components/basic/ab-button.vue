@@ -16,7 +16,7 @@ const props = withDefaults(
   }
 );
 
-defineEmits(['click']);
+defineEmits<{ click: [] }>();
 
 const buttonSize = computed(() => {
   switch (props.size) {

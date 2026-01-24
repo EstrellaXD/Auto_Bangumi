@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import re
 from typing import Optional
@@ -65,8 +66,7 @@ class RSSEngine(Database):
             )
 
     def disable_list(self, rss_id_list: list[int]):
-        for rss_id in rss_id_list:
-            self.rss.disable(rss_id)
+        self.rss.disable_batch(rss_id_list)
         return ResponseModel(
             status=True,
             status_code=200,
@@ -75,8 +75,7 @@ class RSSEngine(Database):
         )
 
     def enable_list(self, rss_id_list: list[int]):
-        for rss_id in rss_id_list:
-            self.rss.enable(rss_id)
+        self.rss.enable_batch(rss_id_list)
         return ResponseModel(
             status=True,
             status_code=200,
@@ -99,13 +98,22 @@ class RSSEngine(Database):
         new_torrents = self.torrent.check_new(torrents)
         return new_torrents
 
+    _filter_cache: dict[str, re.Pattern] = {}
+
+    def _get_filter_pattern(self, filter_str: str) -> re.Pattern:
+        if filter_str not in self._filter_cache:
+            self._filter_cache[filter_str] = re.compile(
+                filter_str.replace(",", "|"), re.IGNORECASE
+            )
+        return self._filter_cache[filter_str]
+
     def match_torrent(self, torrent: Torrent) -> Optional[Bangumi]:
         matched: Bangumi = self.bangumi.match_torrent(torrent.name)
         if matched:
             if matched.filter == "":
                 return matched
-            _filter = matched.filter.replace(",", "|")
-            if not re.search(_filter, torrent.name, re.IGNORECASE):
+            pattern = self._get_filter_pattern(matched.filter)
+            if not pattern.search(torrent.name):
                 torrent.bangumi_id = matched.id
                 return matched
         return None
@@ -117,11 +125,13 @@ class RSSEngine(Database):
         else:
             rss_item = self.rss.search_id(rss_id)
             rss_items = [rss_item] if rss_item else []
-        # From RSS Items, get all torrents
+        # From RSS Items, fetch all torrents concurrently
         logger.debug(f"[Engine] Get {len(rss_items)} RSS items")
-        for rss_item in rss_items:
-            new_torrents = await self.pull_rss(rss_item)
-            # Get all enabled bangumi data
+        all_torrents = await asyncio.gather(
+            *[self.pull_rss(rss_item) for rss_item in rss_items]
+        )
+        # Process results sequentially (DB operations)
+        for rss_item, new_torrents in zip(rss_items, all_torrents):
             for torrent in new_torrents:
                 matched_data = self.match_torrent(torrent)
                 if matched_data:

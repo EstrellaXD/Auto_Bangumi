@@ -11,7 +11,7 @@ class Bangumi(SQLModel, table=True):
         default="official_title", alias="official_title", title="番剧中文名"
     )
     year: Optional[str] = Field(alias="year", title="番剧年份")
-    title_raw: str = Field(default="title_raw", alias="title_raw", title="番剧原名")
+    title_raw: str = Field(default="title_raw", alias="title_raw", title="番剧原名", index=True)
     season: int = Field(default=1, alias="season", title="番剧季度")
     season_raw: Optional[str] = Field(alias="season_raw", title="番剧季度原名")
     group_name: Optional[str] = Field(alias="group_name", title="字幕组")
@@ -26,7 +26,7 @@ class Bangumi(SQLModel, table=True):
     added: bool = Field(default=False, alias="added", title="是否已添加")
     rule_name: Optional[str] = Field(alias="rule_name", title="番剧规则名")
     save_path: Optional[str] = Field(alias="save_path", title="番剧保存路径")
-    deleted: bool = Field(False, alias="deleted", title="是否已删除")
+    deleted: bool = Field(False, alias="deleted", title="是否已删除", index=True)
     air_weekday: Optional[int] = Field(default=None, alias="air_weekday", title="放送星期")
 
 
@@ -61,7 +61,7 @@ class Notification(BaseModel):
     poster_path: Optional[str] = Field(None, alias="poster_path", title="番剧海报路径")
 
 
-@dataclass
+@dataclass(slots=True)
 class Episode:
     title_en: Optional[str]
     title_zh: Optional[str]
@@ -75,8 +75,8 @@ class Episode:
     source: str
 
 
-@dataclass
-class SeasonInfo(dict):
+@dataclass(slots=True)
+class SeasonInfo:
     official_title: str
     title_raw: str
     season: int

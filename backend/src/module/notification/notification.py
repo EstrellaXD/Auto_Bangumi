@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from module.conf import settings
@@ -35,13 +36,13 @@ class PostNotification:
         )
 
     @staticmethod
-    def _get_poster(notify: Notification):
+    def _get_poster_sync(notify: Notification):
         with Database() as db:
             poster_path = db.bangumi.match_poster(notify.official_title)
         notify.poster_path = poster_path
 
     async def send_msg(self, notify: Notification) -> bool:
-        self._get_poster(notify)
+        await asyncio.to_thread(self._get_poster_sync, notify)
         try:
             await self.notifier.post_msg(notify)
             logger.debug(f"Send notification: {notify.official_title}")

@@ -1,3 +1,4 @@
+import logging
 import re
 import time
 from dataclasses import dataclass
@@ -6,7 +7,12 @@ from module.conf import TMDB_API
 from module.network import RequestContent
 from module.utils import save_image
 
+logger = logging.getLogger(__name__)
+
 TMDB_URL = "https://api.themoviedb.org"
+
+# In-memory cache for TMDB lookups to avoid repeated API calls
+_tmdb_cache: dict[str, "TMDBInfo | None"] = {}
 
 
 @dataclass
@@ -57,6 +63,11 @@ def get_season(seasons: list) -> tuple[int, str]:
 
 
 async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
+    cache_key = f"{title}:{language}"
+    if cache_key in _tmdb_cache:
+        logger.debug(f"[TMDB] Cache hit for {title}")
+        return _tmdb_cache[cache_key]
+
     async with RequestContent() as req:
         url = search_url(title)
         contents = await req.get_json(url)
@@ -99,7 +110,7 @@ async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
                     poster_link = "https://image.tmdb.org/t/p/w780" + poster_path
             else:
                 poster_link = None
-            return TMDBInfo(
+            result = TMDBInfo(
                 id,
                 official_title,
                 original_title,
@@ -108,7 +119,10 @@ async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
                 str(year_number),
                 poster_link,
             )
+            _tmdb_cache[cache_key] = result
+            return result
         else:
+            _tmdb_cache[cache_key] = None
             return None
 
 

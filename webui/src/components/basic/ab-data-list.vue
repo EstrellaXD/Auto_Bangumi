@@ -4,13 +4,16 @@ import { ref, computed } from 'vue';
 export interface DataListColumn {
   key: string;
   title: string;
-  render?: (row: any) => string;
+  render?: (row: Record<string, unknown>) => string;
   hidden?: boolean;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DataItem = Record<string, any>;
+
 const props = withDefaults(
   defineProps<{
-    items: any[];
+    items: DataItem[];
     columns: DataListColumn[];
     selectable?: boolean;
     keyField?: string;
@@ -22,18 +25,18 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-  (e: 'select', keys: any[]): void;
-  (e: 'action', action: string, item: any): void;
-  (e: 'item-click', item: any): void;
+  (e: 'select', keys: unknown[]): void;
+  (e: 'action', action: string, item: DataItem): void;
+  (e: 'item-click', item: DataItem): void;
 }>();
 
-const selectedKeys = ref<Set<any>>(new Set());
+const selectedKeys = ref<Set<unknown>>(new Set());
 
 const visibleColumns = computed(() =>
   props.columns.filter((col) => !col.hidden)
 );
 
-function toggleSelect(key: any) {
+function toggleSelect(key: unknown) {
   if (selectedKeys.value.has(key)) {
     selectedKeys.value.delete(key);
   } else {
@@ -51,7 +54,7 @@ function toggleSelectAll() {
   emit('select', Array.from(selectedKeys.value));
 }
 
-function getCellValue(item: any, column: DataListColumn): string {
+function getCellValue(item: DataItem, column: DataListColumn): string {
   if (column.render) {
     return column.render(item);
   }

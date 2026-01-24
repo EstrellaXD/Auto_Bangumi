@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import re
 
@@ -142,11 +143,14 @@ class Renamer(DownloadClient):
         rename_method = settings.bangumi_manage.rename_method
         torrents_info = await self.get_torrent_info()
         renamed_info: list[Notification] = []
-        for info in torrents_info:
+        # Fetch all torrent files concurrently
+        all_files = await asyncio.gather(
+            *[self.get_torrent_files(info["hash"]) for info in torrents_info]
+        )
+        for info, files in zip(torrents_info, all_files):
             torrent_hash = info["hash"]
             torrent_name = info["name"]
             save_path = info["save_path"]
-            files = await self.get_torrent_files(torrent_hash)
             media_list, subtitle_list = self.check_files(files)
             bangumi_name, season = self._path_to_bangumi(save_path)
             kwargs = {

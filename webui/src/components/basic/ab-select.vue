@@ -57,8 +57,8 @@ function getDisabled(item: SelectItem | string) {
   return isString(item) ? false : item.disabled;
 }
 
-watchEffect(() => {
-  emit('update:modelValue', selected.value);
+watch(selected, (val) => {
+  emit('update:modelValue', val);
 });
 </script>
 

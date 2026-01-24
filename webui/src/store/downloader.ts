@@ -1,7 +1,7 @@
 import type { QbTorrentInfo, TorrentGroup } from '#/downloader';
 
 export const useDownloaderStore = defineStore('downloader', () => {
-  const torrents = ref<QbTorrentInfo[]>([]);
+  const torrents = shallowRef<QbTorrentInfo[]>([]);
   const selectedHashes = ref<string[]>([]);
   const loading = ref(false);
 

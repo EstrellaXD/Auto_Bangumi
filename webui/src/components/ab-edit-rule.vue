@@ -31,7 +31,7 @@ watch(show, (val) => {
   }
 });
 
-function showDeleteFileDialog(type: String) {
+function showDeleteFileDialog(type: string) {
   deleteFileDialog.show = true;
   if (type === 'disable' || type === '禁用') {
     deleteFileDialog.type = 'disable';
