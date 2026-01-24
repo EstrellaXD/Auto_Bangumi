@@ -303,7 +303,7 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
 
 .action-bar {
   position: fixed;
-  bottom: 24px;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -315,6 +315,17 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
   border: 1px solid var(--color-border);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   z-index: 100;
+  max-width: calc(100vw - 32px);
+
+  @include forMobile {
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    left: 16px;
+    right: 16px;
+    transform: none;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 16px;
+  }
 }
 
 .action-bar-count {
@@ -326,6 +337,14 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
 .action-bar-buttons {
   display: flex;
   gap: 8px;
+
+  @include forMobile {
+    width: 100%;
+
+    :deep(.btn) {
+      flex: 1;
+    }
+  }
 }
 
 .fade-enter-active,

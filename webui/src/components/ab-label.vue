@@ -24,14 +24,35 @@ const abLabel = computed(() => {
 <style lang="scss" scoped>
 .label-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   min-height: 32px;
+
+  @include forTablet {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  // Make inputs full-width on mobile
+  :deep(input[ab-input]),
+  :deep(.ab-select),
+  :deep(.n-dynamic-tags) {
+    width: 100%;
+
+    @include forTablet {
+      width: auto;
+      min-width: 200px;
+    }
+  }
 }
 
 .label-text {
   font-size: 14px;
   color: var(--color-text);
   transition: color var(--transition-normal);
+  flex-shrink: 0;
 }
 </style>

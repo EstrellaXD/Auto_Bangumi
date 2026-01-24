@@ -7,6 +7,7 @@ definePage({
 });
 
 const { t } = useMyI18n();
+const { isMobile } = useBreakpointQuery();
 const { rss, selectedRSS } = storeToRefs(useRSSStore());
 const { getAll, deleteSelected, disableSelected, enableSelected } =
   useRSSStore();
@@ -76,7 +77,37 @@ const RSSTableOptions = computed(() => {
 <template>
   <div class="page-rss">
     <ab-container :title="$t('rss.title')">
+      <!-- Mobile: Card-based list -->
+      <ab-data-list
+        v-if="isMobile"
+        :items="rss || []"
+        :columns="[
+          { key: 'name', title: t('rss.name') },
+          { key: 'url', title: t('rss.url') },
+        ]"
+        :selectable="true"
+        key-field="id"
+        @select="(keys) => (selectedRSS = keys as number[])"
+      >
+        <template #item="{ item }">
+          <div class="rss-card-content">
+            <div class="rss-card-name">{{ item.name }}</div>
+            <div class="rss-card-url">{{ item.url }}</div>
+            <div class="rss-card-tags">
+              <ab-tag v-if="item.parser" type="primary" :title="item.parser" />
+              <ab-tag v-if="item.aggregate" type="primary" title="aggregate" />
+              <ab-tag
+                :type="item.enabled ? 'active' : 'inactive'"
+                :title="item.enabled ? 'active' : 'inactive'"
+              />
+            </div>
+          </div>
+        </template>
+      </ab-data-list>
+
+      <!-- Desktop: Data table -->
       <NDataTable
+        v-else
         v-bind="RSSTableOptions"
         @update:checked-row-keys="(e) => (selectedRSS = (e as number[]))"
       ></NDataTable>
@@ -112,7 +143,43 @@ const RSSTableOptions = computed(() => {
 
 .rss-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 8px;
+
+  @include forTablet {
+    gap: 10px;
+  }
+}
+
+// Mobile RSS card styles
+.rss-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rss-card-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rss-card-url {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rss-card-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 4px;
 }
 </style>

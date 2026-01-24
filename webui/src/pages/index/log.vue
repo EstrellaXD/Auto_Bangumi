@@ -187,7 +187,7 @@ onDeactivated(() => {
   gap: 12px;
   align-items: start;
 
-  @media (min-width: 1024px) {
+  @include forDesktop {
     grid-template-columns: 3fr 2fr;
   }
 }
@@ -217,7 +217,7 @@ onDeactivated(() => {
   align-items: flex-start;
   gap: 12px;
 
-  @media (min-width: 1024px) {
+  @include forDesktop {
     align-items: center;
     gap: 20px;
   }

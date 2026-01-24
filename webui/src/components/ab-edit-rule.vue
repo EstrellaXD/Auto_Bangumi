@@ -78,7 +78,7 @@ const boxSize = computed(() => {
   <ab-popup
     v-model:show="show"
     :title="popupTitle"
-    :css="`${boxSize} max-w-90vw`"
+    :css="`${boxSize} max-w-[90vw]`"
   >
     <div v-if="rule.deleted">
       <div>{{ $t('homepage.rule.enable_hit') }}</div>
