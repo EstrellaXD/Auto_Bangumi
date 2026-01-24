@@ -3,6 +3,8 @@ name: Build Docker
 on:
   pull_request:
     types:
+      - opened
+      - synchronize
       - closed
     branches:
       - main
@@ -99,20 +101,30 @@ jobs:
           else
             echo "version=Test" >> $GITHUB_OUTPUT
           fi
+      - name: If build test
+        id: build_test
+        run: |
+          if [[ '${{ github.event_name }}' == 'pull_request' && '${{ github.event.pull_request.merged }}' != 'true' && '${{ github.event.pull_request.head.ref }}' == *'dev'* ]]; then
+            echo "build_test=1" >> $GITHUB_OUTPUT
+          else
+            echo "build_test=0" >> $GITHUB_OUTPUT
+          fi
       - name: Check result
         run: |
           echo "release: ${{ steps.release.outputs.release }}"
           echo "dev: ${{ steps.dev.outputs.dev }}"
+          echo "build_test: ${{ steps.build_test.outputs.build_test }}"
           echo "version: ${{ steps.version.outputs.version }}"
     outputs:
       release: ${{ steps.release.outputs.release }}
       dev: ${{ steps.dev.outputs.dev }}
+      build_test: ${{ steps.build_test.outputs.build_test }}
       version: ${{ steps.version.outputs.version }}
 
   build-webui:
     runs-on: ubuntu-latest
     needs: [test, webui-test, version-info]
-    if: ${{ needs.version-info.outputs.release == 1 || needs.version-info.outputs.dev == 1 }}
+    if: ${{ needs.version-info.outputs.release == 1 || needs.version-info.outputs.dev == 1 || needs.version-info.outputs.build_test == 1 }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -157,6 +169,7 @@ jobs:
   build-docker:
     runs-on: ubuntu-latest
     needs: [build-webui, version-info]
+    if: ${{ needs.version-info.outputs.release == 1 || needs.version-info.outputs.dev == 1 || needs.version-info.outputs.build_test == 1 }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
