@@ -52,5 +52,13 @@ declare module '@vue/runtime-core' {
     MediaQuery: typeof import('./../../src/components/media-query.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    WizardContainer: typeof import('./../../src/components/setup/wizard-container.vue')['default']
+    WizardStepAccount: typeof import('./../../src/components/setup/wizard-step-account.vue')['default']
+    WizardStepDownloader: typeof import('./../../src/components/setup/wizard-step-downloader.vue')['default']
+    WizardStepMedia: typeof import('./../../src/components/setup/wizard-step-media.vue')['default']
+    WizardStepNotification: typeof import('./../../src/components/setup/wizard-step-notification.vue')['default']
+    WizardStepReview: typeof import('./../../src/components/setup/wizard-step-review.vue')['default']
+    WizardStepRss: typeof import('./../../src/components/setup/wizard-step-rss.vue')['default']
+    WizardStepWelcome: typeof import('./../../src/components/setup/wizard-step-welcome.vue')['default']
   }
 }

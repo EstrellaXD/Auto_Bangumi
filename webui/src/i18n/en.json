@@ -240,6 +240,67 @@
       "subtitle": "Add anime from RSS to see your weekly schedule"
     }
   },
+  "setup": {
+    "welcome": {
+      "title": "Welcome to AutoBangumi",
+      "subtitle": "Let's set up your anime downloading system.",
+      "description": "This wizard will guide you through the initial configuration. You can skip optional steps and configure them later.",
+      "start": "Get Started"
+    },
+    "account": {
+      "title": "Create Your Account",
+      "subtitle": "Change the default credentials for security.",
+      "username": "Username",
+      "password": "Password",
+      "confirm_password": "Confirm Password",
+      "password_mismatch": "Passwords do not match",
+      "password_too_short": "Password must be at least 8 characters"
+    },
+    "downloader": {
+      "title": "Download Client",
+      "subtitle": "Connect to your qBittorrent instance.",
+      "test": "Test Connection",
+      "testing": "Testing...",
+      "test_success": "Connection successful",
+      "test_failed": "Connection failed"
+    },
+    "rss": {
+      "title": "RSS Source",
+      "subtitle": "Add your first anime RSS feed.",
+      "url": "RSS Feed URL",
+      "feed_name": "Feed Name",
+      "test": "Test Feed",
+      "test_failed": "Failed to fetch feed",
+      "feed_title": "Feed Title",
+      "item_count": "Items Found"
+    },
+    "media": {
+      "title": "Media Library",
+      "subtitle": "Configure the download and organization path.",
+      "path": "Download Path",
+      "path_hint": "Episodes will be organized into subdirectories automatically."
+    },
+    "notification": {
+      "title": "Notifications",
+      "subtitle": "Get notified about new episodes (optional).",
+      "test": "Send Test",
+      "test_failed": "Notification test failed"
+    },
+    "review": {
+      "title": "Review Settings",
+      "subtitle": "Confirm your configuration before completing setup.",
+      "complete": "Complete Setup",
+      "completing": "Setting up...",
+      "success": "Setup complete! Please log in with your new credentials.",
+      "failed": "Setup failed. Please try again."
+    },
+    "nav": {
+      "next": "Next",
+      "previous": "Previous",
+      "skip": "Skip",
+      "step": "Step {current} of {total}"
+    }
+  },
   "sidebar": {
     "calendar": "Calendar",
     "config": "Config",

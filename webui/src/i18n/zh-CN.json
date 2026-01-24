@@ -240,6 +240,67 @@
       "subtitle": "从 RSS 添加番剧后即可查看每周放送时间"
     }
   },
+  "setup": {
+    "welcome": {
+      "title": "欢迎使用 AutoBangumi",
+      "subtitle": "让我们来设置你的自动追番系统。",
+      "description": "本向导将引导你完成初始配置。你可以跳过可选步骤，稍后再进行配置。",
+      "start": "开始设置"
+    },
+    "account": {
+      "title": "创建账户",
+      "subtitle": "为了安全，请修改默认登录凭证。",
+      "username": "用户名",
+      "password": "密码",
+      "confirm_password": "确认密码",
+      "password_mismatch": "两次输入的密码不一致",
+      "password_too_short": "密码长度不能少于 8 个字符"
+    },
+    "downloader": {
+      "title": "下载客户端",
+      "subtitle": "连接到你的 qBittorrent 实例。",
+      "test": "测试连接",
+      "testing": "测试中...",
+      "test_success": "连接成功",
+      "test_failed": "连接失败"
+    },
+    "rss": {
+      "title": "RSS 订阅源",
+      "subtitle": "添加你的第一个番剧 RSS 源。",
+      "url": "RSS 源地址",
+      "feed_name": "源名称",
+      "test": "测试订阅源",
+      "test_failed": "获取订阅源失败",
+      "feed_title": "源标题",
+      "item_count": "条目数量"
+    },
+    "media": {
+      "title": "媒体库",
+      "subtitle": "配置下载和整理路径。",
+      "path": "下载路径",
+      "path_hint": "剧集将自动整理到子目录中。"
+    },
+    "notification": {
+      "title": "通知设置",
+      "subtitle": "获取新集数的通知推送（可选）。",
+      "test": "发送测试",
+      "test_failed": "通知测试失败"
+    },
+    "review": {
+      "title": "确认设置",
+      "subtitle": "在完成设置前确认你的配置。",
+      "complete": "完成设置",
+      "completing": "设置中...",
+      "success": "设置完成！请使用新凭证登录。",
+      "failed": "设置失败，请重试。"
+    },
+    "nav": {
+      "next": "下一步",
+      "previous": "上一步",
+      "skip": "跳过",
+      "step": "第 {current} 步，共 {total} 步"
+    }
+  },
   "sidebar": {
     "calendar": "番剧日历",
     "config": "设置",

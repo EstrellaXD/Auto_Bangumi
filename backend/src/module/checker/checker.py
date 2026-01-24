@@ -30,10 +30,9 @@ class Checker:
 
     @staticmethod
     def check_first_run() -> bool:
-        if settings.dict() == Config().dict():
-            return True
-        else:
+        if Path("config/.setup_complete").exists():
             return False
+        return settings.dict() == Config().dict()
 
     @staticmethod
     def check_version() -> tuple[bool, int | None]:
