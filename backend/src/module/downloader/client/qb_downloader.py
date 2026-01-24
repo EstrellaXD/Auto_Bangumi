@@ -107,6 +107,13 @@ class QbDownloader:
         resp = await self._client.get(self._url("torrents/info"), params=params)
         return resp.json()
 
+    @qb_connect_failed_wait
+    async def torrents_files(self, torrent_hash: str):
+        resp = await self._client.get(
+            self._url("torrents/files"), params={"hash": torrent_hash}
+        )
+        return resp.json()
+
     async def add_torrents(self, torrent_urls, torrent_files, save_path, category):
         data = {
             "savepath": save_path,

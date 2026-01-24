@@ -9,9 +9,8 @@ from sqlalchemy import inspect, text
 from sqlmodel import Session, SQLModel, create_engine
 
 from module.conf.config import Settings
-from module.database.combine import Database
+from module.database.combine import CURRENT_SCHEMA_VERSION, Database
 from module.models import Bangumi, RSSItem, Torrent, User
-
 
 # --- Mock old 3.1.x config (as stored in config.json) ---
 OLD_31X_CONFIG = {
@@ -313,6 +312,7 @@ class TestDatabaseMigration:
         # Run migration
         db = Database(engine)
         db.create_table()
+        db.run_migrations()
 
         # Verify air_weekday now exists
         inspector = inspect(engine)
@@ -330,6 +330,7 @@ class TestDatabaseMigration:
         # Run migration
         db = Database(engine)
         db.create_table()
+        db.run_migrations()
 
         # Check data is preserved
         bangumis = db.bangumi.search_all()
@@ -354,6 +355,7 @@ class TestDatabaseMigration:
 
         db = Database(engine)
         db.create_table()
+        db.run_migrations()
 
         users = db.user.get_user("admin")
         assert users is not None
@@ -369,6 +371,7 @@ class TestDatabaseMigration:
 
         db = Database(engine)
         db.create_table()
+        db.run_migrations()
 
         rss = db.rss.search_id(1)
         assert rss is not None
@@ -385,6 +388,7 @@ class TestDatabaseMigration:
 
         db = Database(engine)
         db.create_table()
+        db.run_migrations()
 
         torrent = db.torrent.search(1)
         assert torrent is not None
@@ -402,7 +406,8 @@ class TestDatabaseMigration:
         # Run migration twice
         db = Database(engine)
         db.create_table()
-        db.create_table()  # Should not fail
+        db.run_migrations()
+        db.run_migrations()  # Should not fail
 
         bangumis = db.bangumi.search_all()
         assert len(bangumis) == 2
@@ -417,6 +422,7 @@ class TestDatabaseMigration:
 
         db = Database(engine)
         db.create_table()
+        db.run_migrations()
 
         new_bangumi = Bangumi(
             official_title="葬送的芙莉莲",
@@ -447,9 +453,56 @@ class TestDatabaseMigration:
 
         db = Database(engine)
         db.create_table()
+        db.run_migrations()
 
         inspector = inspect(engine)
         tables = inspector.get_table_names()
         assert "passkey" in tables
+
+        db.close()
+
+    def test_schema_version_tracked(self):
+        """After migration, schema_version table should store current version."""
+        engine = create_engine("sqlite://", echo=False)
+        self._create_old_31x_database(engine)
+        self._insert_old_data(engine)
+
+        db = Database(engine)
+        db.create_table()
+        db.run_migrations()
+
+        # Verify schema_version table exists and has correct version
+        inspector = inspect(engine)
+        assert "schema_version" in inspector.get_table_names()
+        assert db._get_schema_version() == CURRENT_SCHEMA_VERSION
+
+        db.close()
+
+    def test_schema_version_skips_applied_migrations(self):
+        """If schema version is current, run_migrations should be a no-op."""
+        engine = create_engine("sqlite://", echo=False)
+        self._create_old_31x_database(engine)
+        self._insert_old_data(engine)
+
+        db = Database(engine)
+        db.create_table()
+        db.run_migrations()
+
+        # Set version to current - second run should skip
+        version_before = db._get_schema_version()
+        db.run_migrations()
+        version_after = db._get_schema_version()
+        assert version_before == version_after == CURRENT_SCHEMA_VERSION
+
+        db.close()
+
+    def test_schema_version_zero_for_old_db(self):
+        """Old database without schema_version table should report version 0."""
+        engine = create_engine("sqlite://", echo=False)
+        self._create_old_31x_database(engine)
+        self._insert_old_data(engine)
+
+        db = Database(engine)
+        assert db._get_schema_version() == 0
 
         db.close()

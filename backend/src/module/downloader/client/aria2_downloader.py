@@ -54,6 +54,9 @@ class Aria2Downloader:
             await self._client.aclose()
             self._client = None
 
+    async def torrents_files(self, torrent_hash: str):
+        return []
+
     async def add_torrents(self, torrent_urls, torrent_files, save_path, category):
         import base64
         options = {"dir": save_path}

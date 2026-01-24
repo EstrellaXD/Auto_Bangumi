@@ -38,8 +38,15 @@ async def from_30_to_31():
 async def from_31_to_32():
     """Migrate database schema from 3.1.x to 3.2.x."""
     with RSSEngine() as db:
-        db.create_table()  # Handles adding new columns (e.g., air_weekday)
+        db.create_table()
+        db.run_migrations()
     logger.info("[Migration] 3.1 -> 3.2 migration completed.")
+
+
+def run_migrations():
+    """Check schema version and run any pending migrations."""
+    with RSSEngine() as db:
+        db.run_migrations()
 
 
 async def cache_image():

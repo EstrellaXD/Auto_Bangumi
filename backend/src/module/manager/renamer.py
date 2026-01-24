@@ -143,14 +143,18 @@ class Renamer(DownloadClient):
         torrents_info = await self.get_torrent_info()
         renamed_info: list[Notification] = []
         for info in torrents_info:
-            media_list, subtitle_list = self.check_files(info)
-            bangumi_name, season = self._path_to_bangumi(info.save_path)
+            torrent_hash = info["hash"]
+            torrent_name = info["name"]
+            save_path = info["save_path"]
+            files = await self.get_torrent_files(torrent_hash)
+            media_list, subtitle_list = self.check_files(files)
+            bangumi_name, season = self._path_to_bangumi(save_path)
             kwargs = {
-                "torrent_name": info.name,
+                "torrent_name": torrent_name,
                 "bangumi_name": bangumi_name,
                 "method": rename_method,
                 "season": season,
-                "_hash": info.hash,
+                "_hash": torrent_hash,
             }
             # Rename single media file
             if len(media_list) == 1:
@@ -166,9 +170,9 @@ class Renamer(DownloadClient):
                 await self.rename_collection(media_list=media_list, **kwargs)
                 if len(subtitle_list) > 0:
                     await self.rename_subtitles(subtitle_list=subtitle_list, **kwargs)
-                await self.set_category(info.hash, "BangumiCollection")
+                await self.set_category(torrent_hash, "BangumiCollection")
             else:
-                logger.warning(f"[Renamer] {info.name} has no media file")
+                logger.warning(f"[Renamer] {torrent_name} has no media file")
         logger.debug("[Renamer] Rename process finished.")
         return renamed_info
 

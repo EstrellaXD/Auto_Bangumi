@@ -1,3 +1,21 @@
+# [3.2.0-beta.2] - 2026-01-24
+
+## Backend
+
+### Bugfixes
+
+- 修复从 3.1.x 升级后数据库缺少 `air_weekday` 列导致服务器错误的问题 (#956)
+- 修复重命名模块中 `'dict' object has no attribute 'files'` 的错误
+- 新增 `schema_version` 表追踪数据库版本，确保迁移可靠执行
+- 修复 qBittorrent 下载器中缺少 `torrents_files` API 调用的问题
+
+### Changes
+
+- 数据库迁移机制重构：使用 `schema_version` 表替代仅依赖应用版本号的迁移策略
+- 启动时始终检查并执行未完成的迁移，防止迁移中断后无法恢复
+
+---
+
 # [3.1] - 2023-08
 
 - 合并了后端和前端仓库，优化了项目目录

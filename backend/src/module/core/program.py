@@ -9,6 +9,7 @@ from module.update import (
     first_run,
     from_30_to_31,
     from_31_to_32,
+    run_migrations,
     start_up,
 )
 
@@ -58,6 +59,10 @@ class Program(RenameThread, RSSThread):
                     logger.info("[Core] Database migrated from 3.0 to 3.1.")
                 await from_31_to_32()
                 logger.info("[Core] Database updated.")
+            else:
+                # Always check schema version and run pending migrations,
+                # in case a previous migration was interrupted or failed.
+                run_migrations()
         if not self.img_cache:
             logger.info("[Core] No image cache exists, create image cache.")
             await cache_image()

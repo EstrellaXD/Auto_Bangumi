@@ -107,6 +107,9 @@ class DownloadClient(TorrentPath):
             status_filter=status_filter, category=category, tag=tag
         )
 
+    async def get_torrent_files(self, torrent_hash: str):
+        return await self.client.torrents_files(torrent_hash=torrent_hash)
+
     async def rename_torrent_file(self, _hash, old_path, new_path) -> bool:
         logger.info(f"{old_path} >> {new_path}")
         return await self.client.torrents_rename_file(
