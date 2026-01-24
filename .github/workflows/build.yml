@@ -318,13 +318,22 @@ jobs:
             echo "pre_release=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Read changelog
+        id: changelog
+        run: |
+          if [ -f docs/changelog/3.2.md ]; then
+            echo "body<<EOF" >> $GITHUB_OUTPUT
+            cat docs/changelog/3.2.md >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
       - name: Release
         id: release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ needs.version-info.outputs.version }}
           name: ${{ steps.release-info.outputs.version }}
-          body: ${{ github.event.pull_request.body }}
+          body: ${{ github.event.pull_request.body || steps.changelog.outputs.body }}
           draft: false
           prerelease: ${{ steps.release-info.outputs.pre_release == 'true' }}
           files: |
