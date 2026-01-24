@@ -8,7 +8,7 @@ ENV UV_LINK_MODE=copy
 
 # Install dependencies (cached layer)
 COPY backend/pyproject.toml backend/uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
+RUN uv sync --frozen --no-dev
 
 # Copy application source
 COPY backend/src ./src
