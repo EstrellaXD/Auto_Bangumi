@@ -1,5 +1,5 @@
 <script lang="tsx" setup>
-import { NDataTable, NProgress, type DataTableColumns } from 'naive-ui';
+import { type DataTableColumns, NDataTable, NProgress } from 'naive-ui';
 import type { QbTorrentInfo, TorrentGroup } from '#/downloader';
 
 definePage({
@@ -43,12 +43,12 @@ function formatSize(bytes: number): string {
   if (bytes === 0) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return (bytes / Math.pow(1024, i)).toFixed(1) + ' ' + units[i];
+  return `${(bytes / 1024**i).toFixed(1)  } ${  units[i]}`;
 }
 
 function formatSpeed(bytesPerSec: number): string {
   if (bytesPerSec === 0) return '-';
-  return formatSize(bytesPerSec) + '/s';
+  return `${formatSize(bytesPerSec)  }/s`;
 }
 
 function formatEta(seconds: number): string {
@@ -255,9 +255,9 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
             {{ selectedHashes.length }} {{ $t('downloader.selected') }}
           </span>
           <div class="action-bar-buttons">
-            <ab-button @click="resumeSelected">{{ $t('downloader.action.resume') }}</ab-button>
-            <ab-button @click="pauseSelected">{{ $t('downloader.action.pause') }}</ab-button>
-            <ab-button type="warn" @click="deleteSelected(false)">{{ $t('downloader.action.delete') }}</ab-button>
+            <ab-button size="small" @click="resumeSelected">{{ $t('downloader.action.resume') }}</ab-button>
+            <ab-button size="small" @click="pauseSelected">{{ $t('downloader.action.pause') }}</ab-button>
+            <ab-button size="small" type="warn" @click="deleteSelected(false)">{{ $t('downloader.action.delete') }}</ab-button>
           </div>
         </div>
       </Transition>
