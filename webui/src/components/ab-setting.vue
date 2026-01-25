@@ -7,12 +7,12 @@ withDefaults(defineProps<AbSettingProps>(), {
   bottomLine: false,
 });
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const data = defineModel<any>('data');
 </script>
 
 <template>
-  <div>
+  <div class="setting-item">
     <ab-label :label="label">
       <AbSwitch
         v-if="type === 'switch'"
@@ -36,11 +36,33 @@ const data = defineModel<any>('data');
         v-bind="prop"
       />
 
-      <div v-else-if="type === 'dynamic-tags'" w-full sm:max-w-200 overflow-auto pb-1>
+      <div v-else-if="type === 'dynamic-tags'" class="dynamic-tags-wrapper">
         <NDynamicTags v-model:value="data" size="small"></NDynamicTags>
       </div>
     </ab-label>
 
-    <div v-if="bottomLine" line my-6></div>
+    <div v-if="bottomLine" class="setting-divider"></div>
   </div>
 </template>
+
+<style lang="scss" scoped>
+.setting-item {
+  width: 100%;
+}
+
+.setting-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin-top: 12px;
+}
+
+.dynamic-tags-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  padding-bottom: 2px;
+
+  @include forTablet {
+    max-width: 220px;
+  }
+}
+</style>

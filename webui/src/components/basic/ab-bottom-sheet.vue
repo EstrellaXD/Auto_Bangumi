@@ -1,11 +1,11 @@
 <script lang="ts" setup>
-import { ref, watch, computed } from 'vue';
+import { computed, ref } from 'vue';
 import { usePointerSwipe } from '@vueuse/core';
 import {
-  TransitionRoot,
-  TransitionChild,
   Dialog,
   DialogPanel,
+  TransitionChild,
+  TransitionRoot,
 } from '@headlessui/vue';
 
 const props = withDefaults(
@@ -69,7 +69,7 @@ function close() {
 
 <template>
   <TransitionRoot :show="show" as="template">
-    <Dialog @close="close" class="ab-bottom-sheet">
+    <Dialog class="ab-bottom-sheet" @close="close">
       <!-- Backdrop -->
       <TransitionChild
         enter="overlay-enter-active"
@@ -125,6 +125,7 @@ function close() {
   &__backdrop {
     position: fixed;
     inset: 0;
+    z-index: 100;
     background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(4px);
   }
@@ -132,6 +133,7 @@ function close() {
   &__container {
     position: fixed;
     inset: 0;
+    z-index: 101;
     display: flex;
     align-items: flex-end;
     justify-content: center;
@@ -140,6 +142,7 @@ function close() {
 
   &__panel {
     position: relative;
+    z-index: 102;
     width: 100%;
     max-width: 640px;
     background: var(--color-surface);

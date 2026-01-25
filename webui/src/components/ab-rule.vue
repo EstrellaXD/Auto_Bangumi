@@ -52,19 +52,17 @@ const items: SettingItem<BangumiRule>[] = [
     prop: {
       type: 'number',
     },
-    bottomLine: true,
   },
   {
     configKey: 'filter',
     label: () => t('homepage.rule.exclude'),
     type: 'dynamic-tags',
-    bottomLine: true,
   },
 ];
 </script>
 
 <template>
-  <div space-y-12>
+  <div class="rule-form">
     <ab-setting
       v-for="i in items"
       :key="i.configKey"
@@ -73,12 +71,12 @@ const items: SettingItem<BangumiRule>[] = [
     ></ab-setting>
 
     <!-- Offset field with auto-detect button -->
-    <div class="offset-row">
-      <div class="offset-label">{{ $t('homepage.rule.offset') }}</div>
+    <ab-label :label="() => $t('homepage.rule.offset')">
       <div class="offset-controls">
         <input
           v-model.number="rule.offset"
           type="number"
+          ab-input
           class="offset-input"
         />
         <ab-button
@@ -89,47 +87,50 @@ const items: SettingItem<BangumiRule>[] = [
           {{ $t('homepage.rule.auto_detect') }}
         </ab-button>
       </div>
-      <div v-if="offsetReason" class="offset-reason">{{ offsetReason }}</div>
-    </div>
+    </ab-label>
+
+    <div v-if="offsetReason" class="offset-reason">{{ offsetReason }}</div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-.offset-row {
+.rule-form {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-
-.offset-label {
-  font-size: 14px;
-  color: var(--color-text);
+  gap: 16px;
 }
 
 .offset-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  width: 100%;
+
+  @include forTablet {
+    width: auto;
+    min-width: 220px;
+  }
+
+  :deep(.ab-button) {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
 }
 
 .offset-input {
-  width: 72px;
-  padding: 6px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-size: 14px;
-  outline: none;
-  transition: border-color var(--transition-fast);
+  width: 80px;
+  flex-shrink: 0;
 
-  &:focus {
-    border-color: var(--color-primary);
+  @include forMobile {
+    flex: 1;
+    min-width: 60px;
   }
 }
 
 .offset-reason {
   font-size: 12px;
   color: var(--color-text-secondary);
+  padding-left: 2px;
+  margin-top: -8px;
 }
 </style>

@@ -80,13 +80,13 @@ const buttonSize = computed(() => {
     cursor: not-allowed;
   }
 
-  // Sizes - all meet 44px minimum touch target
+  // Sizes
   &--big {
     border-radius: var(--radius-md);
-    font-size: 18px;
+    font-size: 16px;
     width: 100%;
     max-width: 276px;
-    height: 55px;
+    height: 44px;
   }
 
   &--normal {
@@ -94,17 +94,15 @@ const buttonSize = computed(() => {
     font-size: 14px;
     width: 100%;
     max-width: 170px;
-    min-height: var(--touch-target);
-    height: 44px;
+    height: 36px;
   }
 
   &--small {
     border-radius: var(--radius-sm);
     font-size: 13px;
-    min-width: 86px;
-    min-height: var(--touch-target);
-    height: 44px;
-    padding: 0 16px;
+    min-width: 80px;
+    height: 32px;
+    padding: 0 14px;
     gap: 6px;
     white-space: nowrap;
   }

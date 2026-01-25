@@ -70,22 +70,22 @@ const showSelections = ref<boolean>(false);
   &--big {
     border-radius: var(--radius-md);
     width: 276px;
-    height: 55px;
-    font-size: 24px;
+    height: 44px;
+    font-size: 16px;
   }
 
   &--normal {
     border-radius: var(--radius-sm);
-    width: 170px;
+    min-width: 100px;
     height: 36px;
     font-size: 14px;
   }
 
   &--small {
     border-radius: var(--radius-sm);
-    width: 86px;
-    height: 28px;
-    font-size: 12px;
+    min-width: 80px;
+    height: 32px;
+    font-size: 13px;
   }
 
   &--primary {

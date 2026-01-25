@@ -79,7 +79,7 @@ const boxSize = computed(() => {
   if (rule.value.deleted) {
     return 'w-300';
   } else {
-    return 'w-380';
+    return 'w-460';
   }
 });
 </script>
@@ -105,10 +105,10 @@ const boxSize = computed(() => {
       </div>
     </div>
 
-    <div v-else space-y-12>
+    <div v-else class="edit-rule-content">
       <ab-rule v-model:rule="rule"></ab-rule>
 
-      <div fx-cer justify-end gap-x-10>
+      <div class="edit-rule-actions">
         <ab-button
           v-if="rule.archived"
           size="small"
@@ -153,3 +153,22 @@ const boxSize = computed(() => {
     </ab-popup>
   </ab-popup>
 </template>
+
+<style lang="scss" scoped>
+.edit-rule-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.edit-rule-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 4px;
+  border-top: 1px solid var(--color-border);
+  padding-top: 16px;
+  flex-wrap: wrap;
+}
+</style>
