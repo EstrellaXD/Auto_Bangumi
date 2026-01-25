@@ -15,7 +15,7 @@ from .user import UserDatabase
 logger = logging.getLogger(__name__)
 
 # Increment this when adding new migrations to MIGRATIONS list.
-CURRENT_SCHEMA_VERSION = 2
+CURRENT_SCHEMA_VERSION = 3
 
 # Each migration is a tuple of (version, description, list of SQL statements).
 # Migrations are applied in order. A migration at index i brings the schema
@@ -33,6 +33,28 @@ MIGRATIONS = [
             "ALTER TABLE rssitem ADD COLUMN connection_status TEXT",
             "ALTER TABLE rssitem ADD COLUMN last_checked_at TEXT",
             "ALTER TABLE rssitem ADD COLUMN last_error TEXT",
+        ],
+    ),
+    (
+        3,
+        "create passkey table for WebAuthn support",
+        [
+            """CREATE TABLE IF NOT EXISTS passkey (
+                id INTEGER PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES user(id),
+                name VARCHAR(64) NOT NULL,
+                credential_id VARCHAR NOT NULL UNIQUE,
+                public_key VARCHAR NOT NULL,
+                sign_count INTEGER DEFAULT 0,
+                aaguid VARCHAR,
+                transports VARCHAR,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_used_at TIMESTAMP,
+                backup_eligible BOOLEAN DEFAULT 0,
+                backup_state BOOLEAN DEFAULT 0
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_passkey_user_id ON passkey(user_id)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_passkey_credential_id ON passkey(credential_id)",
         ],
     ),
 ]
@@ -101,6 +123,8 @@ class Database(Session):
                 columns = [col["name"] for col in inspector.get_columns("rssitem")]
                 if "connection_status" in columns:
                     needs_run = False
+            if version == 3 and "passkey" in tables:
+                needs_run = False
             if needs_run:
                 with self.engine.connect() as conn:
                     for stmt in statements:

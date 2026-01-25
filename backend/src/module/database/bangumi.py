@@ -113,7 +113,12 @@ class BangumiDatabase:
             return _bangumi_cache
         statement = select(Bangumi)
         result = self.session.execute(statement)
-        _bangumi_cache = list(result.scalars().all())
+        bangumis = list(result.scalars().all())
+        # Expunge objects from session to prevent DetachedInstanceError when
+        # cached objects are accessed from a different session/request context
+        for b in bangumis:
+            self.session.expunge(b)
+        _bangumi_cache = bangumis
         _bangumi_cache_time = now
         return _bangumi_cache
 
