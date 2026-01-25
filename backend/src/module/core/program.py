@@ -71,9 +71,21 @@ class Program(RenameThread, RSSThread):
     async def start(self):
         self.stop_event.clear()
         settings.load()
+        max_retries = 10
+        retry_count = 0
         while not await self.check_downloader_status():
-            logger.warning("Downloader is not running.")
-            logger.info("Waiting for downloader to start.")
+            retry_count += 1
+            logger.warning(
+                f"Downloader is not running. (attempt {retry_count}/{max_retries})"
+            )
+            if retry_count >= max_retries:
+                logger.error(
+                    "Failed to connect to downloader after maximum retries. "
+                    "Please check downloader settings and network/proxy configuration. "
+                    "Program will continue but download functions will not work."
+                )
+                break
+            logger.info("Waiting for downloader to start...")
             await asyncio.sleep(30)
         if self.enable_renamer:
             self.rename_start()
