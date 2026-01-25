@@ -294,3 +294,51 @@ class BangumiDatabase:
         statement = select(Bangumi).where(Bangumi.save_path == save_path)
         result = self.session.execute(statement)
         return result.scalar_one_or_none()
+
+    def get_needs_review(self) -> list[Bangumi]:
+        """Get all bangumi that need review for offset mismatch."""
+        statement = select(Bangumi).where(
+            and_(
+                Bangumi.needs_review == True,  # noqa: E712
+                Bangumi.deleted == false(),
+            )
+        )
+        result = self.session.execute(statement)
+        return list(result.scalars().all())
+
+    def get_active_for_scan(self) -> list[Bangumi]:
+        """Get all active (non-deleted, non-archived) bangumi for offset scanning."""
+        statement = select(Bangumi).where(
+            and_(
+                Bangumi.deleted == false(),
+                Bangumi.archived == false(),
+            )
+        )
+        result = self.session.execute(statement)
+        return list(result.scalars().all())
+
+    def set_needs_review(self, _id: int, reason: str) -> bool:
+        """Mark a bangumi as needing review."""
+        bangumi = self.session.get(Bangumi, _id)
+        if not bangumi:
+            return False
+        bangumi.needs_review = True
+        bangumi.needs_review_reason = reason
+        self.session.add(bangumi)
+        self.session.commit()
+        _invalidate_bangumi_cache()
+        logger.debug(f"[Database] Marked bangumi id {_id} as needs_review: {reason}")
+        return True
+
+    def clear_needs_review(self, _id: int) -> bool:
+        """Clear the needs_review flag for a bangumi."""
+        bangumi = self.session.get(Bangumi, _id)
+        if not bangumi:
+            return False
+        bangumi.needs_review = False
+        bangumi.needs_review_reason = None
+        self.session.add(bangumi)
+        self.session.commit()
+        _invalidate_bangumi_cache()
+        logger.debug(f"[Database] Cleared needs_review for bangumi id {_id}")
+        return True

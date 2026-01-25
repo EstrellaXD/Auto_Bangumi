@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { CheckOne, Close, Copy, Down, ErrorPicture, Right } from '@icon-park/vue-next';
 import { NDynamicTags, NSpin, useMessage } from 'naive-ui';
-import type { BangumiRule } from '#/bangumi';
+import type { BangumiRule, DetectOffsetResponse } from '#/bangumi';
 
 const emit = defineEmits<{
   (e: 'apply', rule: BangumiRule): void;
@@ -37,6 +37,7 @@ const showAdvanced = ref(true);
 const copied = ref(false);
 const offsetLoading = ref(false);
 const offsetReason = ref('');
+const dismissingReview = ref(false);
 
 // Delete file dialog state
 const deleteFileDialog = reactive<{
@@ -92,20 +93,55 @@ async function copyRssLink() {
   }
 }
 
-// Auto detect offset
+// Auto detect offset using the new detectOffset API
 async function autoDetectOffset() {
-  if (!localRule.value.id) return;
+  if (!localRule.value.official_title || !localRule.value.season) return;
   offsetLoading.value = true;
   offsetReason.value = '';
   try {
-    const result = await apiBangumi.suggestOffset(localRule.value.id);
-    localRule.value.offset = result.suggested_offset;
-    offsetReason.value = result.reason;
+    const result: DetectOffsetResponse = await apiBangumi.detectOffset({
+      title: localRule.value.official_title,
+      parsed_season: localRule.value.season,
+      parsed_episode: 1,
+    });
+
+    if (result.has_mismatch && result.suggestion) {
+      localRule.value.season_offset = result.suggestion.season_offset;
+      localRule.value.episode_offset = result.suggestion.episode_offset;
+      offsetReason.value = result.suggestion.reason;
+      // Clear needs_review after applying offset
+      localRule.value.needs_review = false;
+      localRule.value.needs_review_reason = null;
+      message.success(t('offset.suggestion_applied'));
+    } else {
+      offsetReason.value = t('offset.no_mismatch');
+      // Clear needs_review if no mismatch detected
+      localRule.value.needs_review = false;
+      localRule.value.needs_review_reason = null;
+      message.info(t('offset.no_mismatch'));
+    }
   } catch (e) {
     console.error('Failed to detect offset:', e);
     message.error('Failed to detect offset');
   } finally {
     offsetLoading.value = false;
+  }
+}
+
+// Dismiss the needs_review warning
+async function dismissReview() {
+  if (!localRule.value.id) return;
+  dismissingReview.value = true;
+  try {
+    await apiBangumi.dismissReview(localRule.value.id);
+    localRule.value.needs_review = false;
+    localRule.value.needs_review_reason = null;
+    message.success(t('offset.review_dismissed'));
+  } catch (e) {
+    console.error('Failed to dismiss review:', e);
+    message.error('Failed to dismiss review');
+  } finally {
+    dismissingReview.value = false;
   }
 }
 
@@ -174,6 +210,37 @@ function emitUnarchive() {
               <Close theme="outline" size="18" />
             </button>
           </header>
+
+          <!-- Needs Review Warning Banner -->
+          <div v-if="localRule.needs_review" class="review-warning">
+            <div class="review-warning-main">
+              <span class="review-warning-emoji">⚠️</span>
+              <div class="review-warning-content">
+                <div class="review-warning-title">{{ $t('offset.needs_review') }}</div>
+                <div v-if="localRule.needs_review_reason" class="review-warning-reason">
+                  {{ localRule.needs_review_reason }}
+                </div>
+              </div>
+            </div>
+            <div class="review-warning-actions">
+              <button
+                class="detect-btn"
+                :disabled="offsetLoading"
+                @click="autoDetectOffset"
+              >
+                <NSpin v-if="offsetLoading" :size="12" />
+                <span v-else>{{ $t('homepage.rule.auto_detect') }}</span>
+              </button>
+              <button
+                class="dismiss-btn"
+                :disabled="dismissingReview"
+                @click="dismissReview"
+              >
+                <NSpin v-if="dismissingReview" :size="12" />
+                <span v-else>{{ $t('offset.dismiss') }}</span>
+              </button>
+            </div>
+          </div>
 
           <!-- Content -->
           <div class="edit-content">
@@ -261,27 +328,31 @@ function emitUnarchive() {
                     </div>
                   </div>
 
-                  <!-- Offset row -->
+                  <!-- Season Offset row -->
                   <div class="advanced-row">
-                    <label class="advanced-label">{{ $t('homepage.rule.offset') }}</label>
+                    <label class="advanced-label">{{ $t('homepage.rule.season_offset') }}</label>
                     <div class="advanced-control offset-controls">
                       <input
-                        v-model.number="localRule.offset"
+                        v-model.number="localRule.season_offset"
                         type="number"
                         ab-input
                         class="offset-input"
                       />
-                      <button
-                        class="detect-btn"
-                        :disabled="offsetLoading"
-                        @click="autoDetectOffset"
-                      >
-                        <NSpin v-if="offsetLoading" :size="14" />
-                        <span v-else>{{ $t('homepage.rule.auto_detect') }}</span>
-                      </button>
                     </div>
                   </div>
-                  <div v-if="offsetReason" class="offset-reason">{{ offsetReason }}</div>
+
+                  <!-- Episode Offset row -->
+                  <div class="advanced-row">
+                    <label class="advanced-label">{{ $t('homepage.rule.episode_offset') }}</label>
+                    <div class="advanced-control offset-controls">
+                      <input
+                        v-model.number="localRule.episode_offset"
+                        type="number"
+                        ab-input
+                        class="offset-input"
+                      />
+                    </div>
+                  </div>
                 </div>
               </Transition>
             </div>
@@ -396,6 +467,100 @@ function emitUnarchive() {
 
   &:hover {
     background: var(--color-surface-hover);
+    color: var(--color-text);
+  }
+}
+
+// Review warning banner
+.review-warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  margin: 12px 20px;
+  background: #fef9ed;
+  border: 1px solid #fde68a;
+  border-radius: var(--radius-md);
+}
+
+.review-warning-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.review-warning-emoji {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.review-warning-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.review-warning-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #92400e;
+}
+
+.review-warning-reason {
+  font-size: 12px;
+  color: #a16207;
+  line-height: 1.3;
+  margin-top: 2px;
+}
+
+.review-warning-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.review-warning-actions .detect-btn,
+.review-warning-actions .dismiss-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+
+  &:disabled {
+    cursor: wait;
+  }
+}
+
+.review-warning-actions .detect-btn {
+  min-width: 90px;
+  color: #fff;
+  background: var(--color-primary);
+  border: none;
+
+  &:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+  }
+}
+
+.review-warning-actions .dismiss-btn {
+  min-width: 70px;
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+
+  &:hover:not(:disabled) {
+    border-color: var(--color-text-muted);
     color: var(--color-text);
   }
 }
@@ -781,12 +946,6 @@ function emitUnarchive() {
   &:disabled {
     cursor: wait;
   }
-}
-
-.offset-reason {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  margin-top: -4px;
 }
 
 // Expand transition

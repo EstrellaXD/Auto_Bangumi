@@ -25,6 +25,7 @@ declare module '@vue/runtime-core' {
     AbImage: typeof import('./../../src/components/ab-image.vue')['default']
     AbLabel: typeof import('./../../src/components/ab-label.vue')['default']
     AbMobileNav: typeof import('./../../src/components/layout/ab-mobile-nav.vue')['default']
+    AbOffsetMismatchDialog: typeof import('./../../src/components/basic/ab-offset-mismatch-dialog.vue')['default']
     AbPageTitle: typeof import('./../../src/components/basic/ab-page-title.vue')['default']
     AbPopup: typeof import('./../../src/components/ab-popup.vue')['default']
     AbPullRefresh: typeof import('./../../src/components/basic/ab-pull-refresh.vue')['default']

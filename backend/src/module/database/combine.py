@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 TABLE_MODELS: list[type[SQLModel]] = [Bangumi, RSSItem, Torrent, User, Passkey]
 
 # Increment this when adding new migrations to MIGRATIONS list.
-CURRENT_SCHEMA_VERSION = 4
+CURRENT_SCHEMA_VERSION = 5
 
 # Each migration is a tuple of (version, description, list of SQL statements).
 # Migrations are applied in order. A migration at index i brings the schema
@@ -69,6 +69,16 @@ MIGRATIONS = [
         4,
         "add archived column to bangumi",
         ["ALTER TABLE bangumi ADD COLUMN archived BOOLEAN DEFAULT 0"],
+    ),
+    (
+        5,
+        "rename offset to episode_offset, add season_offset and review fields",
+        [
+            "ALTER TABLE bangumi RENAME COLUMN offset TO episode_offset",
+            "ALTER TABLE bangumi ADD COLUMN season_offset INTEGER DEFAULT 0",
+            "ALTER TABLE bangumi ADD COLUMN needs_review INTEGER DEFAULT 0",
+            "ALTER TABLE bangumi ADD COLUMN needs_review_reason TEXT DEFAULT NULL",
+        ],
     ),
 ]
 
@@ -148,6 +158,10 @@ class Database(Session):
             if "bangumi" in tables and version == 4:
                 columns = [col["name"] for col in inspector.get_columns("bangumi")]
                 if "archived" in columns:
+                    needs_run = False
+            if "bangumi" in tables and version == 5:
+                columns = [col["name"] for col in inspector.get_columns("bangumi")]
+                if "episode_offset" in columns:
                     needs_run = False
             if needs_run:
                 with self.engine.connect() as conn:

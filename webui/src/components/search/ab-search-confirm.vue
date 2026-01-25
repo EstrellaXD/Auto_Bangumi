@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { CheckOne, Close, Copy, Down, ErrorPicture, Right } from '@icon-park/vue-next';
 import { NDynamicTags, NSpin, useMessage } from 'naive-ui';
-import type { BangumiRule } from '#/bangumi';
+import type { BangumiRule, DetectOffsetResponse, OffsetSuggestionDetail, TMDBSummary } from '#/bangumi';
 
 const props = defineProps<{
   bangumi: BangumiRule;
@@ -20,12 +20,62 @@ const localBangumi = ref<BangumiRule>(JSON.parse(JSON.stringify(props.bangumi)))
 // Sync when props change
 watch(() => props.bangumi, (newVal) => {
   localBangumi.value = JSON.parse(JSON.stringify(newVal));
+  // Re-detect offset when bangumi changes
+  detectOffsetMismatch();
 }, { deep: true });
 
 const posterSrc = computed(() => resolvePosterUrl(localBangumi.value.poster_link));
 const showAdvanced = ref(false);
 const copied = ref(false);
 const offsetLoading = ref(false);
+
+// Offset mismatch detection state
+const showOffsetDialog = ref(false);
+const offsetSuggestion = ref<OffsetSuggestionDetail | null>(null);
+const tmdbInfo = ref<TMDBSummary | null>(null);
+
+// Detect offset mismatch on mount
+async function detectOffsetMismatch() {
+  if (!localBangumi.value.official_title || !localBangumi.value.season) return;
+
+  try {
+    const result: DetectOffsetResponse = await apiBangumi.detectOffset({
+      title: localBangumi.value.official_title,
+      parsed_season: localBangumi.value.season,
+      parsed_episode: 1, // Use episode 1 as baseline for detection
+    });
+
+    if (result.has_mismatch && result.suggestion) {
+      offsetSuggestion.value = result.suggestion;
+      tmdbInfo.value = result.tmdb_info;
+      showOffsetDialog.value = true;
+    }
+  } catch (e) {
+    console.error('Failed to detect offset mismatch:', e);
+  }
+}
+
+// Handle offset dialog apply
+function handleOffsetApply(offsets: { seasonOffset: number; episodeOffset: number }) {
+  localBangumi.value.season_offset = offsets.seasonOffset;
+  localBangumi.value.episode_offset = offsets.episodeOffset;
+  showOffsetDialog.value = false;
+}
+
+// Handle offset dialog keep (no change)
+function handleOffsetKeep() {
+  showOffsetDialog.value = false;
+}
+
+// Handle offset dialog cancel
+function handleOffsetCancel() {
+  showOffsetDialog.value = false;
+}
+
+// Run detection on mount
+onMounted(() => {
+  detectOffsetMismatch();
+});
 
 // Info tags for display (just values, no labels)
 const infoTags = computed(() => {
@@ -70,7 +120,7 @@ async function autoDetectOffset() {
   offsetLoading.value = true;
   try {
     const result = await apiBangumi.suggestOffset(localBangumi.value.id);
-    localBangumi.value.offset = result.suggested_offset;
+    localBangumi.value.episode_offset = result.suggested_offset;
   } catch (e) {
     console.error('Failed to detect offset:', e);
     message.error('Failed to detect offset');
@@ -159,12 +209,25 @@ function handleConfirm() {
                 </div>
               </div>
 
-              <!-- Offset row -->
+              <!-- Season Offset row -->
               <div class="advanced-row">
-                <label class="advanced-label">{{ $t('homepage.rule.offset') }}</label>
+                <label class="advanced-label">{{ $t('homepage.rule.season_offset') }}</label>
                 <div class="advanced-control offset-controls">
                   <input
-                    v-model.number="localBangumi.offset"
+                    v-model.number="localBangumi.season_offset"
+                    type="number"
+                    ab-input
+                    class="offset-input"
+                  />
+                </div>
+              </div>
+
+              <!-- Episode Offset row -->
+              <div class="advanced-row">
+                <label class="advanced-label">{{ $t('homepage.rule.episode_offset') }}</label>
+                <div class="advanced-control offset-controls">
+                  <input
+                    v-model.number="localBangumi.episode_offset"
                     type="number"
                     ab-input
                     class="offset-input"
@@ -194,6 +257,19 @@ function handleConfirm() {
         </button>
       </footer>
     </div>
+
+    <!-- Offset Mismatch Dialog -->
+    <ab-offset-mismatch-dialog
+      v-model:show="showOffsetDialog"
+      :bangumi-title="localBangumi.official_title"
+      :parsed-season="localBangumi.season"
+      :parsed-episode="1"
+      :tmdb-info="tmdbInfo"
+      :suggestion="offsetSuggestion"
+      @apply="handleOffsetApply"
+      @keep="handleOffsetKeep"
+      @cancel="handleOffsetCancel"
+    />
   </div>
 </template>
 

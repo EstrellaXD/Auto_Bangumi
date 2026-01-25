@@ -76,6 +76,11 @@ function onRuleSelect(rule: BangumiRule) {
   ruleListPopup.show = false;
   openEditPopup(rule);
 }
+
+// Check if any rule in group needs review
+function groupNeedsReview(group: BangumiGroup): boolean {
+  return group.rules.some(r => r.needs_review);
+}
 </script>
 
 <template>
@@ -145,8 +150,22 @@ function onRuleSelect(rule: BangumiRule) {
             type="primary"
             @click="() => onCardClick(group)"
           />
-          <div v-if="group.rules.length > 1" class="group-badge">
-            {{ group.rules.length }}
+          <!-- Combined notification badge -->
+          <div
+            v-if="groupNeedsReview(group) || group.rules.length > 1"
+            class="group-badge"
+            :class="{ 'group-badge--warning': groupNeedsReview(group) }"
+          >
+            <template v-if="groupNeedsReview(group)">
+              <span class="badge-icon">!</span>
+              <template v-if="group.rules.length > 1">
+                <span class="badge-divider"></span>
+                <span class="badge-count">{{ group.rules.length }}</span>
+              </template>
+            </template>
+            <template v-else>
+              {{ group.rules.length }}
+            </template>
           </div>
         </div>
       </transition-group>
@@ -181,8 +200,22 @@ function onRuleSelect(rule: BangumiRule) {
               type="primary"
               @click="() => onCardClick(group)"
             />
-            <div v-if="group.rules.length > 1" class="group-badge">
-              {{ group.rules.length }}
+            <!-- Combined notification badge -->
+            <div
+              v-if="groupNeedsReview(group) || group.rules.length > 1"
+              class="group-badge"
+              :class="{ 'group-badge--warning': groupNeedsReview(group) }"
+            >
+              <template v-if="groupNeedsReview(group)">
+                <span class="badge-icon">!</span>
+                <template v-if="group.rules.length > 1">
+                  <span class="badge-divider"></span>
+                  <span class="badge-count">{{ group.rules.length }}</span>
+                </template>
+              </template>
+              <template v-else>
+                {{ group.rules.length }}
+              </template>
             </div>
             <div class="archived-badge">{{ $t('homepage.rule.archived') }}</div>
           </div>
@@ -201,12 +234,15 @@ function onRuleSelect(rule: BangumiRule) {
           v-for="rule in ruleListPopup.group.rules"
           :key="rule.id"
           class="rule-list-item"
-          :class="[rule.deleted && 'rule-list-item--disabled']"
+          :class="[
+            rule.deleted && 'rule-list-item--disabled',
+            rule.needs_review && 'rule-list-item--warning'
+          ]"
           @click="onRuleSelect(rule)"
         >
           <div class="rule-list-item-info">
             <div class="rule-list-item-title">
-              {{ rule.group_name || rule.rule_name || $t('homepage.rule.unnamed') }}
+              <span v-if="rule.needs_review" class="warning-text">! </span>{{ rule.group_name || rule.rule_name || $t('homepage.rule.unnamed') }}
             </div>
             <div class="rule-list-item-tags">
               <ab-tag v-if="rule.dpi" :title="rule.dpi" type="primary" />
@@ -305,22 +341,46 @@ function onRuleSelect(rule: BangumiRule) {
 
 .group-badge {
   position: absolute;
-  top: -10px;
-  right: -10px;
-  min-width: 22px;
-  height: 22px;
+  top: -8px;
+  right: -8px;
+  min-width: 20px;
+  height: 20px;
   padding: 0 6px;
-  border-radius: 11px;
+  border-radius: 10px;
   background: var(--color-primary);
   color: #fff;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 3px;
   z-index: 10;
   pointer-events: none;
   box-shadow: 0 2px 6px rgba(124, 77, 255, 0.4);
+
+  // Warning variant - yellow with purple border
+  &--warning {
+    background: #fbbf24;
+    border: 2px solid var(--color-primary);
+    color: var(--color-primary);
+    box-shadow: 0 2px 8px rgba(251, 191, 36, 0.5);
+  }
+
+  .badge-icon {
+    font-weight: 800;
+  }
+
+  .badge-divider {
+    width: 1px;
+    height: 10px;
+    background: currentColor;
+    opacity: 0.5;
+  }
+
+  .badge-count {
+    font-weight: 700;
+  }
 }
 
 .archived-section {
@@ -425,6 +485,26 @@ function onRuleSelect(rule: BangumiRule) {
   &--disabled {
     opacity: 0.5;
   }
+
+  // Warning variant - needs review
+  &--warning {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(251, 191, 36, 0.08) 100%);
+    border-left: 3px solid #fbbf24;
+
+    &:hover {
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.22) 0%, rgba(251, 191, 36, 0.12) 100%);
+    }
+  }
+
+  // Add spacing between items
+  & + & {
+    margin-top: 8px;
+  }
+}
+
+.warning-text {
+  color: #d97706;
+  font-weight: 700;
 }
 
 .rule-list-item-info {

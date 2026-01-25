@@ -28,7 +28,7 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
     @click="() => $emit('click')"
     @keydown.enter="() => $emit('click')"
   >
-    <div class="card-poster">
+    <div class="card-poster" :class="{ 'card-poster--needs-review': bangumi.needs_review }">
       <template v-if="bangumi.poster_link">
         <img :src="posterSrc" :alt="bangumi.official_title" class="card-img" />
       </template>
@@ -144,6 +144,20 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+// Card glow animation when needs review - yellow
+.card-poster--needs-review {
+  animation: card-glow 2.5s ease-in-out infinite;
+}
+
+@keyframes card-glow {
+  0%, 100% {
+    box-shadow: var(--shadow-md), 0 0 0 0 rgba(251, 191, 36, 0);
+  }
+  50% {
+    box-shadow: var(--shadow-md), 0 0 16px 4px rgba(251, 191, 36, 0.6);
+  }
 }
 
 .card-placeholder {

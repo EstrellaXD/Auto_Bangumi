@@ -19,7 +19,8 @@ class Bangumi(SQLModel, table=True):
     source: Optional[str] = Field(alias="source", title="来源")
     subtitle: Optional[str] = Field(alias="subtitle", title="字幕")
     eps_collect: bool = Field(default=False, alias="eps_collect", title="是否已收集")
-    offset: int = Field(default=0, alias="offset", title="番剧偏移量")
+    episode_offset: int = Field(default=0, alias="episode_offset", title="集数偏移量")
+    season_offset: int = Field(default=0, alias="season_offset", title="季度偏移量")
     filter: str = Field(default="720,\\d+-\\d+", alias="filter", title="番剧过滤器")
     rss_link: str = Field(default="", alias="rss_link", title="番剧RSS链接")
     poster_link: Optional[str] = Field(alias="poster_link", title="番剧海报链接")
@@ -29,6 +30,8 @@ class Bangumi(SQLModel, table=True):
     deleted: bool = Field(False, alias="deleted", title="是否已删除", index=True)
     archived: bool = Field(default=False, alias="archived", title="是否已归档", index=True)
     air_weekday: Optional[int] = Field(default=None, alias="air_weekday", title="放送星期")
+    needs_review: bool = Field(default=False, alias="needs_review", title="需要检查")
+    needs_review_reason: Optional[str] = Field(default=None, alias="needs_review_reason", title="检查原因")
 
 
 class BangumiUpdate(SQLModel):
@@ -44,7 +47,8 @@ class BangumiUpdate(SQLModel):
     source: Optional[str] = Field(alias="source", title="来源")
     subtitle: Optional[str] = Field(alias="subtitle", title="字幕")
     eps_collect: bool = Field(default=False, alias="eps_collect", title="是否已收集")
-    offset: int = Field(default=0, alias="offset", title="番剧偏移量")
+    episode_offset: int = Field(default=0, alias="episode_offset", title="集数偏移量")
+    season_offset: int = Field(default=0, alias="season_offset", title="季度偏移量")
     filter: str = Field(default="720,\\d+-\\d+", alias="filter", title="番剧过滤器")
     rss_link: str = Field(default="", alias="rss_link", title="番剧RSS链接")
     poster_link: Optional[str] = Field(alias="poster_link", title="番剧海报链接")
@@ -54,6 +58,8 @@ class BangumiUpdate(SQLModel):
     deleted: bool = Field(False, alias="deleted", title="是否已删除")
     archived: bool = Field(default=False, alias="archived", title="是否已归档")
     air_weekday: Optional[int] = Field(default=None, alias="air_weekday", title="放送星期")
+    needs_review: bool = Field(default=False, alias="needs_review", title="需要检查")
+    needs_review_reason: Optional[str] = Field(default=None, alias="needs_review_reason", title="检查原因")
 
 
 class Notification(BaseModel):
@@ -85,7 +91,8 @@ class SeasonInfo:
     season_raw: str
     group: str
     filter: list | None
-    offset: int | None
+    episode_offset: int | None
+    season_offset: int | None
     dpi: str
     source: str
     subtitle: str
