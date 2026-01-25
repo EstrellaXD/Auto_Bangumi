@@ -81,7 +81,7 @@ class WebAuthnService:
             user_display_name=username,
             exclude_credentials=exclude_credentials if exclude_credentials else None,
             authenticator_selection=AuthenticatorSelectionCriteria(
-                resident_key=ResidentKeyRequirement.PREFERRED,
+                resident_key=ResidentKeyRequirement.REQUIRED,  # Required for usernameless login
                 user_verification=UserVerificationRequirement.PREFERRED,
             ),
             supported_pub_key_algs=[
@@ -191,6 +191,26 @@ class WebAuthnService:
 
         return json.loads(options_to_json(options))
 
+    def generate_discoverable_authentication_options(self) -> dict:
+        """
+        生成可发现凭证的认证选项（无需用户名）
+
+        Returns:
+            JSON-serializable authentication options without allowCredentials
+        """
+        options = generate_authentication_options(
+            rp_id=self.rp_id,
+            allow_credentials=None,  # Empty = discoverable credentials mode
+            user_verification=UserVerificationRequirement.PREFERRED,
+        )
+
+        # Store challenge with a unique key for discoverable auth
+        challenge_key = f"auth_discoverable_{self.base64url_encode(options.challenge)[:16]}"
+        self._challenges[challenge_key] = options.challenge
+        logger.debug("Generated discoverable authentication challenge")
+
+        return json.loads(options_to_json(options))
+
     def verify_authentication(
         self, username: str, credential: dict, passkey: Passkey
     ) -> int:
@@ -235,6 +255,56 @@ class WebAuthnService:
         finally:
             # 清理 challenge（无论成功或失败都清理，防止重放攻击）
             self._challenges.pop(challenge_key, None)
+
+    def verify_discoverable_authentication(
+        self, credential: dict, passkey: Passkey
+    ) -> int:
+        """
+        验证可发现凭证的认证响应（无需用户名）
+
+        Args:
+            credential: 来自前端的 credential 响应
+            passkey: 通过 credential_id 查找到的 Passkey 对象
+
+        Returns:
+            新的 sign_count
+
+        Raises:
+            ValueError: 验证失败
+        """
+        # Find the challenge by checking all discoverable challenges
+        expected_challenge = None
+        challenge_key = None
+        for key, challenge in list(self._challenges.items()):
+            if key.startswith("auth_discoverable_"):
+                expected_challenge = challenge
+                challenge_key = key
+                break
+
+        if not expected_challenge:
+            raise ValueError("Challenge not found or expired")
+
+        try:
+            credential_public_key = base64.b64decode(passkey.public_key)
+
+            verification = verify_authentication_response(
+                credential=credential,
+                expected_challenge=expected_challenge,
+                expected_rp_id=self.rp_id,
+                expected_origin=self.origin,
+                credential_public_key=credential_public_key,
+                credential_current_sign_count=passkey.sign_count,
+            )
+
+            logger.info("Successfully verified discoverable authentication")
+            return verification.new_sign_count
+
+        except Exception as e:
+            logger.error(f"Discoverable authentication verification failed: {e}")
+            raise ValueError(f"Invalid authentication response: {str(e)}")
+        finally:
+            if challenge_key:
+                self._challenges.pop(challenge_key, None)
 
     # ============ 辅助方法 ============
 

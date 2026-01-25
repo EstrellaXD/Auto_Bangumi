@@ -108,17 +108,20 @@ export async function registerPasskey(deviceName: string): Promise<void> {
 
 /**
  * 使用 Passkey 登录
- * @param username 用户名
+ * @param username 用户名（可选，不提供时使用可发现凭证模式）
  */
-export async function loginWithPasskey(username: string): Promise<void> {
+export async function loginWithPasskey(username?: string): Promise<void> {
   // 1. 获取认证选项
-  const options = await apiPasskey.getLoginOptions({ username });
+  const options = await apiPasskey.getLoginOptions(
+    username ? { username } : {}
+  );
 
   // 2. 转换选项
   const getOptions: PublicKeyCredentialRequestOptions = {
     challenge: base64UrlToBuffer(options.challenge),
     timeout: options.timeout || 60000,
     rpId: options.rpId,
+    // allowCredentials is undefined for discoverable credentials mode
     allowCredentials: options.allowCredentials?.map((cred) => ({
       type: cred.type as PublicKeyCredentialType,
       id: base64UrlToBuffer(cred.id),
@@ -154,7 +157,7 @@ export async function loginWithPasskey(username: string): Promise<void> {
 
   // 5. 提交到后端验证并登录
   await apiPasskey.loginWithPasskey({
-    username,
+    ...(username && { username }),
     credential: assertionResponse,
   });
 }

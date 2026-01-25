@@ -65,11 +65,11 @@ class PasskeyDelete(BaseModel):
 class PasskeyAuthStart(BaseModel):
     """Passkey 认证开始请求"""
 
-    username: str
+    username: Optional[str] = None  # Optional for discoverable credentials
 
 
 class PasskeyAuthFinish(BaseModel):
     """Passkey 认证完成请求"""
 
-    username: str
+    username: Optional[str] = None  # Optional for discoverable credentials
     credential: dict

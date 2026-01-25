@@ -160,9 +160,22 @@ async def get_passkey_login_options(
     """
     生成 Passkey 登录选项（challenge）
     前端先调用此接口，再调用 navigator.credentials.get()
+
+    如果提供 username，返回该用户的 passkey 列表（allowCredentials）
+    如果不提供 username，返回可发现凭证选项（浏览器显示所有可用 passkey）
     """
     webauthn = _get_webauthn_from_request(request)
 
+    # Discoverable credentials mode (no username)
+    if not auth_data.username:
+        try:
+            options = webauthn.generate_discoverable_authentication_options()
+            return options
+        except Exception as e:
+            logger.error(f"Failed to generate discoverable login options: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    # Username-based mode
     async with async_session_factory() as session:
         try:
             # Get user
@@ -201,6 +214,9 @@ async def login_with_passkey(
 ):
     """
     使用 Passkey 登录（替代密码登录）
+
+    如果提供 username，验证 passkey 属于该用户
+    如果不提供 username（可发现凭证模式），从 credential 中提取用户信息
     """
     webauthn = _get_webauthn_from_request(request)
 
@@ -208,12 +224,17 @@ async def login_with_passkey(
     resp = await strategy.authenticate(auth_data.username, auth_data.credential)
 
     if resp.status:
+        # Get username from response (may be discovered from credential)
+        username = resp.data.get("username") if resp.data else auth_data.username
+        if not username:
+            raise HTTPException(status_code=500, detail="Failed to determine username")
+
         token = create_access_token(
-            data={"sub": auth_data.username}, expires_delta=timedelta(days=1)
+            data={"sub": username}, expires_delta=timedelta(days=1)
         )
         response.set_cookie(key="token", value=token, httponly=True, max_age=86400)
-        if auth_data.username not in active_user:
-            active_user.append(auth_data.username)
+        if username not in active_user:
+            active_user.append(username)
         return {"access_token": token, "token_type": "bearer"}
 
     raise HTTPException(status_code=resp.status_code, detail=resp.msg_en)

@@ -1,9 +1,9 @@
 import { createSharedComposable } from '@vueuse/core';
 import { apiPasskey } from '@/api/passkey';
 import {
+  isWebAuthnSupported,
   registerPasskey,
   loginWithPasskey as webauthnLogin,
-  isWebAuthnSupported,
 } from '@/services/webauthn';
 import type { PasskeyItem } from '#/passkey';
 
@@ -56,7 +56,7 @@ export const usePasskey = createSharedComposable(() => {
   }
 
   // 使用 Passkey 登录
-  async function loginWithPasskey(username: string): Promise<boolean> {
+  async function loginWithPasskey(username?: string): Promise<boolean> {
     try {
       await webauthnLogin(username);
       isLoggedIn.value = true;

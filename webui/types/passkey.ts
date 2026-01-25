@@ -60,11 +60,11 @@ export interface PasskeyDeleteRequest {
 
 // 认证开始请求
 export interface PasskeyAuthStartRequest {
-  username: string;
+  username?: string; // Optional for discoverable credentials
 }
 
 // 认证完成请求
 export interface PasskeyAuthFinishRequest {
-  username: string;
+  username?: string; // Optional for discoverable credentials
   credential: unknown;
 }
