@@ -172,11 +172,17 @@ class BangumiDatabase:
         return unmatched
 
     def match_torrent(self, torrent_name: str) -> Optional[Bangumi]:
-        statement = select(Bangumi).where(
-            and_(
-                func.instr(torrent_name, Bangumi.title_raw) > 0,
-                Bangumi.deleted == false(),
+        statement = (
+            select(Bangumi)
+            .where(
+                and_(
+                    func.instr(torrent_name, Bangumi.title_raw) > 0,
+                    Bangumi.deleted == false(),
+                )
             )
+            # Prefer longer title_raw matches (more specific)
+            .order_by(func.length(Bangumi.title_raw).desc())
+            .limit(1)
         )
         result = self.session.execute(statement)
         return result.scalar_one_or_none()
@@ -213,3 +219,35 @@ class BangumiDatabase:
         statement = select(Bangumi).where(func.instr(rss_link, Bangumi.rss_link) > 0)
         result = self.session.execute(statement)
         return list(result.scalars().all())
+
+    def archive_one(self, _id: int) -> bool:
+        """Set archived=True for the given bangumi."""
+        bangumi = self.session.get(Bangumi, _id)
+        if not bangumi:
+            logger.warning(f"[Database] Cannot archive bangumi id: {_id}, not found.")
+            return False
+        bangumi.archived = True
+        self.session.add(bangumi)
+        self.session.commit()
+        _invalidate_bangumi_cache()
+        logger.debug(f"[Database] Archived bangumi id: {_id}.")
+        return True
+
+    def unarchive_one(self, _id: int) -> bool:
+        """Set archived=False for the given bangumi."""
+        bangumi = self.session.get(Bangumi, _id)
+        if not bangumi:
+            logger.warning(f"[Database] Cannot unarchive bangumi id: {_id}, not found.")
+            return False
+        bangumi.archived = False
+        self.session.add(bangumi)
+        self.session.commit()
+        _invalidate_bangumi_cache()
+        logger.debug(f"[Database] Unarchived bangumi id: {_id}.")
+        return True
+
+    def match_by_save_path(self, save_path: str) -> Optional[Bangumi]:
+        """Find bangumi by save_path to get offset."""
+        statement = select(Bangumi).where(Bangumi.save_path == save_path)
+        result = self.session.execute(statement)
+        return result.scalar_one_or_none()

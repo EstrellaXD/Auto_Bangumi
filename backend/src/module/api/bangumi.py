@@ -1,11 +1,17 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from module.manager import TorrentManager
 from module.models import APIResponse, Bangumi, BangumiUpdate
 from module.security.api import UNAUTHORIZED, get_current_user
 
 from .response import u_response
+
+
+class OffsetSuggestion(BaseModel):
+    suggested_offset: int
+    reason: str
 
 router = APIRouter(prefix="/bangumi", tags=["bangumi"])
 
@@ -148,3 +154,51 @@ async def reset_all():
             status_code=200,
             content={"msg_en": "Reset all rules successfully.", "msg_zh": "重置所有规则成功。"},
         )
+
+
+@router.patch(
+    path="/archive/{bangumi_id}",
+    response_model=APIResponse,
+    dependencies=[Depends(get_current_user)],
+)
+async def archive_rule(bangumi_id: int):
+    """Archive a bangumi."""
+    with TorrentManager() as manager:
+        resp = manager.archive_rule(bangumi_id)
+    return u_response(resp)
+
+
+@router.patch(
+    path="/unarchive/{bangumi_id}",
+    response_model=APIResponse,
+    dependencies=[Depends(get_current_user)],
+)
+async def unarchive_rule(bangumi_id: int):
+    """Unarchive a bangumi."""
+    with TorrentManager() as manager:
+        resp = manager.unarchive_rule(bangumi_id)
+    return u_response(resp)
+
+
+@router.get(
+    path="/refresh/metadata",
+    response_model=APIResponse,
+    dependencies=[Depends(get_current_user)],
+)
+async def refresh_metadata():
+    """Refresh TMDB metadata and auto-archive ended series."""
+    with TorrentManager() as manager:
+        resp = await manager.refresh_metadata()
+    return u_response(resp)
+
+
+@router.get(
+    path="/suggest-offset/{bangumi_id}",
+    response_model=OffsetSuggestion,
+    dependencies=[Depends(get_current_user)],
+)
+async def suggest_offset(bangumi_id: int):
+    """Suggest offset based on TMDB episode counts."""
+    with TorrentManager() as manager:
+        resp = await manager.suggest_offset(bangumi_id)
+    return resp

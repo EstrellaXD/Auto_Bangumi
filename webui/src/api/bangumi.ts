@@ -1,5 +1,5 @@
 import { omit } from 'radash';
-import type { BangumiAPI, BangumiRule } from '#/bangumi';
+import type { BangumiAPI, BangumiRule, OffsetSuggestion } from '#/bangumi';
 import type { ApiSuccess } from '#/api';
 
 export const apiBangumi = {
@@ -143,6 +143,49 @@ export const apiBangumi = {
   async refreshCalendar() {
     const { data } = await axios.get<ApiSuccess>(
       'api/v1/bangumi/refresh/calendar'
+    );
+    return data;
+  },
+
+  /**
+   * 归档指定 bangumi
+   * @param bangumiId - 需要归档的 bangumi 的 id
+   */
+  async archiveRule(bangumiId: number) {
+    const { data } = await axios.patch<ApiSuccess>(
+      `api/v1/bangumi/archive/${bangumiId}`
+    );
+    return data;
+  },
+
+  /**
+   * 取消归档指定 bangumi
+   * @param bangumiId - 需要取消归档的 bangumi 的 id
+   */
+  async unarchiveRule(bangumiId: number) {
+    const { data } = await axios.patch<ApiSuccess>(
+      `api/v1/bangumi/unarchive/${bangumiId}`
+    );
+    return data;
+  },
+
+  /**
+   * 刷新 TMDB 元数据并自动归档已完结番剧
+   */
+  async refreshMetadata() {
+    const { data } = await axios.get<ApiSuccess>(
+      'api/v1/bangumi/refresh/metadata'
+    );
+    return data;
+  },
+
+  /**
+   * 获取自动检测的剧集偏移量建议
+   * @param bangumiId - bangumi 的 id
+   */
+  async suggestOffset(bangumiId: number) {
+    const { data } = await axios.get<OffsetSuggestion>(
+      `api/v1/bangumi/suggest-offset/${bangumiId}`
     );
     return data;
   },

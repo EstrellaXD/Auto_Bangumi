@@ -132,6 +132,11 @@
       "no_btn": "否",
       "official_title": "官方名称",
       "offset": "剧集偏移",
+      "auto_detect": "自动检测",
+      "archive": "归档",
+      "unarchive": "取消归档",
+      "archived": "已归档",
+      "archived_section": "已归档 ({count})",
       "season": "季度",
       "year": "年份",
       "yes_btn": "是"

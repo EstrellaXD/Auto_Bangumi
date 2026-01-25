@@ -131,7 +131,12 @@
       "exclude": "Exclude",
       "no_btn": "No",
       "official_title": "Official Title",
-      "offset": "Offset",
+      "offset": "Episode Offset",
+      "auto_detect": "Auto Detect",
+      "archive": "Archive",
+      "unarchive": "Unarchive",
+      "archived": "Archived",
+      "archived_section": "Archived ({count})",
       "season": "Season",
       "year": "Year",
       "yes_btn": "Yes"

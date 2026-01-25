@@ -15,7 +15,7 @@ from .user import UserDatabase
 logger = logging.getLogger(__name__)
 
 # Increment this when adding new migrations to MIGRATIONS list.
-CURRENT_SCHEMA_VERSION = 3
+CURRENT_SCHEMA_VERSION = 4
 
 # Each migration is a tuple of (version, description, list of SQL statements).
 # Migrations are applied in order. A migration at index i brings the schema
@@ -56,6 +56,11 @@ MIGRATIONS = [
             "CREATE INDEX IF NOT EXISTS ix_passkey_user_id ON passkey(user_id)",
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_passkey_credential_id ON passkey(credential_id)",
         ],
+    ),
+    (
+        4,
+        "add archived column to bangumi",
+        ["ALTER TABLE bangumi ADD COLUMN archived BOOLEAN DEFAULT 0"],
     ),
 ]
 
@@ -125,6 +130,10 @@ class Database(Session):
                     needs_run = False
             if version == 3 and "passkey" in tables:
                 needs_run = False
+            if "bangumi" in tables and version == 4:
+                columns = [col["name"] for col in inspector.get_columns("bangumi")]
+                if "archived" in columns:
+                    needs_run = False
             if needs_run:
                 with self.engine.connect() as conn:
                     for stmt in statements:

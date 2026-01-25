@@ -24,6 +24,18 @@ class TMDBInfo:
     last_season: int
     year: str
     poster_link: str = None
+    series_status: str = None  # "Ended", "Returning Series", etc.
+    season_episode_counts: dict[int, int] = None  # {1: 13, 2: 12, ...}
+
+    def get_offset_for_season(self, season: int) -> int:
+        """Calculate offset for a season (negative sum of all previous seasons' episodes).
+
+        Used when RSS episode numbers are absolute (e.g., S02E18 should be S02E05).
+        Returns the offset to subtract from the parsed episode number.
+        """
+        if not self.season_episode_counts or season <= 1:
+            return 0
+        return -sum(self.season_episode_counts.get(s, 0) for s in range(1, season))
 
 
 LANGUAGE = {"zh": "zh-CN", "jp": "ja-JP", "en": "en-US"}
@@ -97,6 +109,14 @@ async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
                 for s in info_content.get("seasons")
             ]
             last_season, poster_path = get_season(season)
+            # Extract series status (e.g., "Ended", "Returning Series")
+            series_status = info_content.get("status")
+            # Extract episode counts per season (exclude specials at season 0)
+            season_episode_counts = {
+                s.get("season_number"): s.get("episode_count", 0)
+                for s in info_content.get("seasons", [])
+                if s.get("season_number", 0) > 0
+            }
             if poster_path is None:
                 poster_path = info_content.get("poster_path")
             original_title = info_content.get("original_name")
@@ -111,13 +131,15 @@ async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
             else:
                 poster_link = None
             result = TMDBInfo(
-                id,
-                official_title,
-                original_title,
-                season,
-                last_season,
-                str(year_number),
-                poster_link,
+                id=id,
+                title=official_title,
+                original_title=original_title,
+                season=season,
+                last_season=last_season,
+                year=str(year_number),
+                poster_link=poster_link,
+                series_status=series_status,
+                season_episode_counts=season_episode_counts,
             )
             _tmdb_cache[cache_key] = result
             return result
