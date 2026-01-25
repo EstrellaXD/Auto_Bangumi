@@ -147,8 +147,10 @@
   },
   "log": {
     "bug_repo": "Bug Report",
+    "clear_filters": "Clear",
     "contact_info": "Contact Infomation",
     "copy": "Copy",
+    "filter_level": "Level",
     "go": "Go",
     "join": "Join",
     "reset": "Reset",
@@ -241,13 +243,20 @@
       "sun": "Sun"
     },
     "unknown": "Unknown",
+    "unknown_title": "Unknown Title",
     "today": "Today",
     "empty": "No anime",
     "refresh": "Refresh schedule",
     "no_data": "No schedule data available",
+    "loading": "Loading...",
+    "tracked": "Tracked",
+    "tracked_count": "{count} tracked",
+    "total_count": "{count} total",
+    "search_title": "Search and Add Anime",
+    "no_search_results": "No results found. Try different keywords.",
     "empty_state": {
       "title": "No Schedule Yet",
-      "subtitle": "Add anime from RSS to see your weekly schedule"
+      "subtitle": "Click refresh to fetch this season's broadcast data"
     }
   },
   "setup": {

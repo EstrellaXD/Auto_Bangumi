@@ -9,6 +9,12 @@ const { onUpdate, offUpdate, reset, copy, getLog } = useLogStore();
 const { log } = storeToRefs(useLogStore());
 const { version } = useAppInfo();
 
+// Filter states
+const selectedLevels = ref<string[]>([]);
+
+// Log levels
+const logLevels = ['INFO', 'WARNING', 'ERROR', 'DEBUG'];
+
 const formatLog = computed(() => {
   const list = log.value
     .trim()
@@ -29,6 +35,31 @@ const formatLog = computed(() => {
     };
   });
 });
+
+// Filtered logs based on selected levels
+const filteredLog = computed(() => {
+  if (selectedLevels.value.length === 0) {
+    return formatLog.value;
+  }
+  return formatLog.value.filter((entry) =>
+    selectedLevels.value.includes(entry.type)
+  );
+});
+
+// Toggle level filter
+function toggleLevel(level: string) {
+  const index = selectedLevels.value.indexOf(level);
+  if (index === -1) {
+    selectedLevels.value.push(level);
+  } else {
+    selectedLevels.value.splice(index, 1);
+  }
+}
+
+// Clear all filters
+function clearFilters() {
+  selectedLevels.value = [];
+}
 
 function typeColor(type: string) {
   const M: Record<string, string> = {
@@ -74,9 +105,38 @@ onDeactivated(() => {
   <div class="page-log">
     <div class="log-layout">
       <ab-container :title="$t('log.title')" class="log-main">
+        <!-- Level Filter Section -->
+        <div class="log-filters">
+          <div class="filter-group">
+            <span class="filter-label">{{ $t('log.filter_level') }}</span>
+            <div class="filter-chips">
+              <button
+                v-for="level in logLevels"
+                :key="level"
+                class="filter-chip"
+                :class="{
+                  active: selectedLevels.includes(level),
+                  [`level-${level.toLowerCase()}`]: true,
+                }"
+                @click="toggleLevel(level)"
+              >
+                {{ level }}
+              </button>
+            </div>
+          </div>
+
+          <button
+            v-if="selectedLevels.length > 0"
+            class="clear-filters"
+            @click="clearFilters"
+          >
+            {{ $t('log.clear_filters') }}
+          </button>
+        </div>
+
         <div ref="logContainer" class="log-viewer">
           <div class="log-content">
-            <template v-for="i in formatLog" :key="i.index">
+            <template v-for="i in filteredLog" :key="i.index">
               <div
                 class="log-entry"
                 :style="{ color: typeColor(i.type) }"
@@ -250,6 +310,117 @@ onDeactivated(() => {
   flex: 1;
   word-break: break-all;
   font-size: 13px;
+}
+
+.log-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  @include forDesktop {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.filter-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  min-width: 60px;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.filter-chip {
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: var(--color-text);
+
+  &:hover {
+    border-color: var(--color-primary);
+  }
+
+  &.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+  }
+
+  &.level-info {
+    &:hover,
+    &.active {
+      border-color: var(--color-primary);
+    }
+    &.active {
+      background: var(--color-primary);
+    }
+  }
+
+  &.level-warning {
+    &:hover,
+    &.active {
+      border-color: var(--color-warning);
+    }
+    &.active {
+      background: var(--color-warning);
+    }
+  }
+
+  &.level-error {
+    &:hover,
+    &.active {
+      border-color: var(--color-danger);
+    }
+    &.active {
+      background: var(--color-danger);
+    }
+  }
+
+  &.level-debug {
+    &:hover,
+    &.active {
+      border-color: var(--color-text-muted);
+    }
+    &.active {
+      background: var(--color-text-muted);
+    }
+  }
+}
+
+.clear-filters {
+  align-self: flex-start;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background: var(--color-danger);
+    color: white;
+  }
 }
 
 .log-actions {

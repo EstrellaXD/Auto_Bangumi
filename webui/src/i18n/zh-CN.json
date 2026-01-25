@@ -147,8 +147,10 @@
   },
   "log": {
     "bug_repo": "Bug 反馈",
+    "clear_filters": "清除",
     "contact_info": "联系方式",
     "copy": "复制",
+    "filter_level": "级别",
     "go": "访问",
     "join": "加入",
     "reset": "重置",
@@ -241,13 +243,20 @@
       "sun": "日"
     },
     "unknown": "未知",
+    "unknown_title": "未知标题",
     "today": "今天",
     "empty": "今日无番",
     "refresh": "刷新放送表",
     "no_data": "暂无放送数据",
+    "loading": "加载中...",
+    "tracked": "已追踪",
+    "tracked_count": "已追踪 {count} 部",
+    "total_count": "共 {count} 部",
+    "search_title": "搜索并添加番剧",
+    "no_search_results": "未找到搜索结果，请尝试其他关键词",
     "empty_state": {
       "title": "暂无放送表",
-      "subtitle": "从 RSS 添加番剧后即可查看每周放送时间"
+      "subtitle": "点击刷新按钮获取本季度放送数据"
     }
   },
   "setup": {
