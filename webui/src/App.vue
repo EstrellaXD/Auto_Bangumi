@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { type GlobalThemeOverrides, NConfigProvider, darkTheme } from 'naive-ui';
+import { type GlobalThemeOverrides, NConfigProvider, NMessageProvider, darkTheme } from 'naive-ui';
 
 const { isDark } = useDarkMode();
 const { refresh, isLoggedIn } = useAuth();
@@ -76,7 +76,9 @@ const naiveTheme = computed(() => isDark.value ? darkTheme : null);
 <template>
   <Suspense>
     <NConfigProvider :theme="naiveTheme" :theme-overrides="themeOverrides">
-      <RouterView></RouterView>
+      <NMessageProvider>
+        <RouterView></RouterView>
+      </NMessageProvider>
     </NConfigProvider>
   </Suspense>
 </template>

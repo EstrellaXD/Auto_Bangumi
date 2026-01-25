@@ -1,6 +1,9 @@
 <script lang="ts" setup>
 import { CheckOne, Close, Copy, Down, ErrorPicture, Right } from '@icon-park/vue-next';
+import { NDynamicTags, NSpin, useMessage } from 'naive-ui';
 import type { BangumiRule } from '#/bangumi';
+
+const message = useMessage();
 
 const props = defineProps<{
   bangumi: BangumiRule;
@@ -11,21 +14,47 @@ const emit = defineEmits<{
   (e: 'cancel'): void;
 }>();
 
-const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
+// Local deep copy of bangumi for editing (prevents mutation of original prop)
+const localBangumi = ref<BangumiRule>(JSON.parse(JSON.stringify(props.bangumi)));
+
+// Sync when props change
+watch(() => props.bangumi, (newVal) => {
+  localBangumi.value = JSON.parse(JSON.stringify(newVal));
+}, { deep: true });
+
+const posterSrc = computed(() => resolvePosterUrl(localBangumi.value.poster_link));
 const showAdvanced = ref(false);
 const copied = ref(false);
+const offsetLoading = ref(false);
 
-// Format season display
-const seasonDisplay = computed(() => {
-  if (props.bangumi.season_raw) {
-    return props.bangumi.season_raw;
+// Info tags for display (just values, no labels)
+const infoTags = computed(() => {
+  const tags: { value: string; type: string }[] = [];
+  const { season, season_raw, dpi, subtitle, group_name } = localBangumi.value;
+
+  if (season || season_raw) {
+    const seasonDisplay = season_raw || (season ? `第${season}季` : '');
+    tags.push({ value: seasonDisplay, type: 'season' });
   }
-  return props.bangumi.season ? `Season ${props.bangumi.season}` : '';
+
+  if (dpi) {
+    tags.push({ value: dpi, type: 'resolution' });
+  }
+
+  if (subtitle) {
+    tags.push({ value: subtitle, type: 'subtitle' });
+  }
+
+  if (group_name) {
+    tags.push({ value: group_name, type: 'group' });
+  }
+
+  return tags;
 });
 
 // Copy RSS link
 async function copyRssLink() {
-  const rssLink = props.bangumi.rss_link?.[0] || '';
+  const rssLink = localBangumi.value.rss_link?.[0] || '';
   if (rssLink) {
     await navigator.clipboard.writeText(rssLink);
     copied.value = true;
@@ -35,8 +64,23 @@ async function copyRssLink() {
   }
 }
 
+// Auto detect offset
+async function autoDetectOffset() {
+  if (!localBangumi.value.id) return;
+  offsetLoading.value = true;
+  try {
+    const result = await apiBangumi.suggestOffset(localBangumi.value.id);
+    localBangumi.value.offset = result.suggested_offset;
+  } catch (e) {
+    console.error('Failed to detect offset:', e);
+    message.error('Failed to detect offset');
+  } finally {
+    offsetLoading.value = false;
+  }
+}
+
 function handleConfirm() {
-  emit('confirm', props.bangumi);
+  emit('confirm', localBangumi.value);
 }
 </script>
 
@@ -56,8 +100,8 @@ function handleConfirm() {
         <!-- Bangumi Info -->
         <div class="bangumi-info">
           <div class="bangumi-poster">
-            <template v-if="bangumi.poster_link">
-              <img :src="posterSrc" :alt="bangumi.official_title" />
+            <template v-if="localBangumi.poster_link">
+              <img :src="posterSrc" :alt="localBangumi.official_title" />
             </template>
             <template v-else>
               <div class="poster-placeholder">
@@ -66,41 +110,35 @@ function handleConfirm() {
             </template>
           </div>
           <div class="bangumi-meta">
-            <h3 class="bangumi-title">{{ bangumi.official_title }}</h3>
-            <p v-if="bangumi.title_raw" class="bangumi-subtitle">{{ bangumi.title_raw }}</p>
-            <div class="bangumi-details">
-              <span v-if="bangumi.year">{{ bangumi.year }}</span>
-              <span v-if="seasonDisplay">{{ seasonDisplay }}</span>
-            </div>
+            <h3 class="bangumi-title">{{ localBangumi.official_title }}</h3>
+            <p v-if="localBangumi.title_raw" class="bangumi-subtitle">{{ localBangumi.title_raw }}</p>
+            <p v-if="localBangumi.year" class="bangumi-year">{{ localBangumi.year }}</p>
           </div>
         </div>
 
-        <!-- Info rows -->
-        <div class="info-section">
+        <!-- Info Tags -->
+        <div v-if="infoTags.length > 0" class="info-tags">
+          <div
+            v-for="tag in infoTags"
+            :key="tag.type"
+            class="info-tag"
+            :class="`info-tag--${tag.type}`"
+          >
+            {{ tag.value }}
+          </div>
+        </div>
+
+        <!-- RSS Link -->
+        <div class="rss-section">
           <div class="info-row">
             <span class="info-label">{{ $t('search.confirm.rss') }}:</span>
             <span class="info-value info-value--link">
-              {{ bangumi.rss_link?.[0] || '-' }}
+              {{ localBangumi.rss_link?.[0] || '-' }}
             </span>
             <button class="copy-btn" :class="{ copied }" @click="copyRssLink">
               <CheckOne v-if="copied" theme="outline" size="14" />
               <Copy v-else theme="outline" size="14" />
             </button>
-          </div>
-
-          <div class="info-row">
-            <span class="info-label">{{ $t('search.confirm.group') }}:</span>
-            <span class="info-value">{{ bangumi.group_name || '-' }}</span>
-          </div>
-
-          <div class="info-row">
-            <span class="info-label">{{ $t('search.confirm.resolution') }}:</span>
-            <span class="info-value">{{ bangumi.dpi || '-' }}</span>
-          </div>
-
-          <div class="info-row">
-            <span class="info-label">{{ $t('search.confirm.subtitle') }}:</span>
-            <span class="info-value">{{ bangumi.subtitle || '-' }}</span>
           </div>
         </div>
 
@@ -113,18 +151,33 @@ function handleConfirm() {
 
           <transition name="expand">
             <div v-show="showAdvanced" class="advanced-content">
-              <div class="info-row">
-                <span class="info-label">{{ $t('search.confirm.filter') }}:</span>
-                <span class="info-value info-value--code">
-                  {{ bangumi.filter?.join(', ') || '-' }}
-                </span>
+              <!-- Filter rules row -->
+              <div class="advanced-row advanced-row--tags">
+                <label class="advanced-label">{{ $t('search.confirm.filter') }}</label>
+                <div class="advanced-control filter-tags">
+                  <NDynamicTags v-model:value="localBangumi.filter" size="small" />
+                </div>
               </div>
 
-              <div class="info-row">
-                <span class="info-label">{{ $t('search.confirm.save_path') }}:</span>
-                <span class="info-value info-value--code">
-                  {{ bangumi.save_path || '-' }}
-                </span>
+              <!-- Offset row -->
+              <div class="advanced-row">
+                <label class="advanced-label">{{ $t('homepage.rule.offset') }}</label>
+                <div class="advanced-control offset-controls">
+                  <input
+                    v-model.number="localBangumi.offset"
+                    type="number"
+                    ab-input
+                    class="offset-input"
+                  />
+                  <button
+                    class="detect-btn"
+                    :disabled="offsetLoading"
+                    @click="autoDetectOffset"
+                  >
+                    <NSpin v-if="offsetLoading" :size="14" />
+                    <span v-else>{{ $t('homepage.rule.auto_detect') }}</span>
+                  </button>
+                </div>
               </div>
             </div>
           </transition>
@@ -275,23 +328,51 @@ function handleConfirm() {
   white-space: nowrap;
 }
 
-.bangumi-details {
-  display: flex;
-  gap: 8px;
+.bangumi-year {
   font-size: 13px;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
+  margin: 4px 0 0;
+}
 
-  span {
-    &:not(:last-child)::after {
-      content: '·';
-      margin-left: 8px;
-      color: var(--color-text-muted);
-    }
+// Info Tags
+.info-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.info-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 600;
+
+  &--season {
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    color: var(--color-primary);
+  }
+
+  &--resolution {
+    background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+    color: var(--color-accent);
+  }
+
+  &--subtitle {
+    background: color-mix(in srgb, var(--color-success) 12%, transparent);
+    color: var(--color-success);
+  }
+
+  &--group {
+    background: color-mix(in srgb, var(--color-warning) 12%, transparent);
+    color: var(--color-warning);
   }
 }
 
-// Info section
-.info-section {
+// RSS section
+.rss-section {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -327,14 +408,6 @@ function handleConfirm() {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  &--code {
-    font-family: 'Fira Code', monospace;
-    font-size: 12px;
-    background: var(--color-surface);
-    padding: 4px 8px;
-    border-radius: var(--radius-sm);
   }
 }
 
@@ -396,6 +469,86 @@ function handleConfirm() {
   background: var(--color-surface-hover);
   border-radius: var(--radius-md);
   margin-top: 8px;
+}
+
+.advanced-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+
+  &--tags {
+    align-items: flex-start;
+  }
+}
+
+.advanced-label {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  line-height: 32px;
+}
+
+.advanced-control {
+  display: flex;
+  justify-content: flex-end;
+
+  :deep(.n-dynamic-tags) {
+    justify-content: flex-end;
+    min-height: 32px;
+
+    .n-tag {
+      height: 28px;
+      margin: 2px 0 2px 6px !important;
+    }
+
+    .n-button {
+      height: 28px;
+    }
+  }
+}
+
+.offset-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  height: 32px;
+}
+
+.offset-input {
+  width: 70px;
+  height: 32px;
+  text-align: center;
+}
+
+.detect-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  height: 32px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 500;
+  color: #fff;
+  background: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast);
+
+  &:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+  }
+
+  &:disabled {
+    cursor: wait;
+  }
 }
 
 // Expand transition

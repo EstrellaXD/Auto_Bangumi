@@ -41,7 +41,11 @@ class RequestContent(RequestURL):
     async def get_xml(self, _url, retry: int = 3) -> xml.etree.ElementTree.Element:
         req = await self.get_url(_url, retry)
         if req:
-            return xml.etree.ElementTree.fromstring(req.text)
+            try:
+                return xml.etree.ElementTree.fromstring(req.text)
+            except xml.etree.ElementTree.ParseError as e:
+                logger.warning(f"[Network] Failed to parse XML from {_url}: {e}")
+                return None
 
     # API JSON
     async def get_json(self, _url) -> dict:

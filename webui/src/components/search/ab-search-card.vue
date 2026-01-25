@@ -6,7 +6,9 @@ const props = defineProps<{
   bangumi: BangumiRule;
 }>();
 
-defineEmits(['click']);
+const emit = defineEmits<{
+  (e: 'select', bangumi: BangumiRule): void;
+}>();
 
 const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
 
@@ -25,8 +27,8 @@ const seasonDisplay = computed(() => {
     role="button"
     tabindex="0"
     :aria-label="`Add ${bangumi.official_title}`"
-    @click="$emit('click')"
-    @keydown.enter="$emit('click')"
+    @click="emit('select', bangumi)"
+    @keydown.enter="emit('select', bangumi)"
   >
     <!-- Poster -->
     <div class="card-poster">

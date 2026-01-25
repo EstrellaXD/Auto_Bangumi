@@ -10,8 +10,8 @@ axios.interceptors.response.use(
   (res: AxiosResponse) => res,
   (err: AxiosError<ApiSuccess>) => {
     const status = err.response?.status as StatusCode;
-    const msg_en = err.response?.data.msg_en ?? '';
-    const msg_zh = err.response?.data.msg_zh ?? '';
+    const msg_en = err.response?.data?.msg_en ?? '';
+    const msg_zh = err.response?.data?.msg_zh ?? '';
 
     const message = useMessage();
     const { returnUserLangText } = useMyI18n();

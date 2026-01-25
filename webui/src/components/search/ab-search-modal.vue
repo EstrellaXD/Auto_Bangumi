@@ -9,8 +9,10 @@ import type { BangumiRule } from '#/bangumi';
 
 const emit = defineEmits<{
   (e: 'close'): void;
-  (e: 'add-bangumi', bangumi: BangumiRule): void;
 }>();
+
+const message = useMessage();
+const { getAll } = useBangumiStore();
 
 const {
   providers,
@@ -34,6 +36,8 @@ const {
   selectResult,
   clearSelectedResult,
 } = useSearchStore();
+
+const subscribing = ref(false);
 
 const showProvider = ref(false);
 const searchInputRef = ref<HTMLInputElement | null>(null);
@@ -64,10 +68,32 @@ function handleCardClick(bangumi: BangumiRule) {
   selectResult(bangumi);
 }
 
-function handleConfirm(bangumi: BangumiRule) {
-  emit('add-bangumi', bangumi);
-  clearSelectedResult();
-  emit('close');
+async function handleConfirm(bangumi: BangumiRule) {
+  subscribing.value = true;
+  try {
+    // Create RSS object from bangumi data
+    const rss = {
+      id: 0,
+      name: bangumi.official_title,
+      url: bangumi.rss_link?.[0] || '',
+      aggregate: false,
+      parser: 'mikan',
+      enabled: true,
+      connection_status: null,
+      last_checked_at: null,
+      last_error: null,
+    };
+    await apiDownload.subscribe(bangumi, rss);
+    message.success('订阅成功');
+    getAll();
+    clearSelectedResult();
+    emit('close');
+  } catch (e) {
+    console.error('Subscribe failed:', e);
+    message.error('订阅失败');
+  } finally {
+    subscribing.value = false;
+  }
 }
 
 function handleClose() {
@@ -175,7 +201,7 @@ function handleClose() {
                 :key="result.order"
                 :bangumi="result.value"
                 :style="{ '--stagger-index': index }"
-                @click="handleCardClick(result.value)"
+                @select="handleCardClick"
               />
             </transition-group>
           </div>
