@@ -3,6 +3,7 @@ import { ruleTemplate } from '#/bangumi';
 
 export const useBangumiStore = defineStore('bangumi', () => {
   const bangumi = ref<BangumiRule[]>([]);
+  const showArchived = ref(false);
   const editRule = reactive<{
     show: boolean;
     item: BangumiRule;
@@ -10,6 +11,16 @@ export const useBangumiStore = defineStore('bangumi', () => {
     show: false,
     item: { ...ruleTemplate },
   });
+
+  // Computed: active bangumi (not deleted, not archived)
+  const activeBangumi = computed(() =>
+    bangumi.value.filter((b) => !b.deleted && !b.archived)
+  );
+
+  // Computed: archived bangumi (not deleted, archived)
+  const archivedBangumi = computed(() =>
+    bangumi.value.filter((b) => !b.deleted && b.archived)
+  );
 
   async function getAll() {
     const res = await apiBangumi.getAll();
@@ -38,6 +49,9 @@ export const useBangumiStore = defineStore('bangumi', () => {
   const { execute: disableRule } = useApi(apiBangumi.disableRule, opts);
   const { execute: deleteRule } = useApi(apiBangumi.deleteRule, opts);
   const { execute: refreshPoster } = useApi(apiBangumi.refreshPoster, opts);
+  const { execute: archiveRule } = useApi(apiBangumi.archiveRule, opts);
+  const { execute: unarchiveRule } = useApi(apiBangumi.unarchiveRule, opts);
+  const { execute: refreshMetadata } = useApi(apiBangumi.refreshMetadata, opts);
 
   function openEditPopup(data: BangumiRule) {
     editRule.show = true;
@@ -62,6 +76,9 @@ export const useBangumiStore = defineStore('bangumi', () => {
 
   return {
     bangumi,
+    showArchived,
+    activeBangumi,
+    archivedBangumi,
     editRule,
 
     getAll,
@@ -70,6 +87,9 @@ export const useBangumiStore = defineStore('bangumi', () => {
     disableRule,
     deleteRule,
     refreshPoster,
+    archiveRule,
+    unarchiveRule,
+    refreshMetadata,
     openEditPopup,
     ruleManage,
   };

@@ -1,9 +1,11 @@
 <script lang="ts" setup>
+import type { BangumiRule } from '#/bangumi';
+
 definePage({
   name: 'Bangumi List',
 });
 
-const { bangumi } = storeToRefs(useBangumiStore());
+const { bangumi, showArchived, activeBangumi, archivedBangumi } = storeToRefs(useBangumiStore());
 const { getAll, openEditPopup } = useBangumiStore();
 
 const refreshing = ref(false);
@@ -20,6 +22,56 @@ async function onRefresh() {
 onActivated(() => {
   getAll();
 });
+
+// Group bangumi by official_title + season
+interface BangumiGroup {
+  key: string;
+  primary: BangumiRule;
+  rules: BangumiRule[];
+}
+
+function groupBangumi(items: BangumiRule[]): BangumiGroup[] {
+  if (!items) return [];
+  const map = new Map<string, BangumiRule[]>();
+  for (const item of items) {
+    const key = `${item.official_title}::${item.season}`;
+    if (!map.has(key)) {
+      map.set(key, []);
+    }
+    map.get(key)!.push(item);
+  }
+  const groups: BangumiGroup[] = [];
+  for (const [key, rules] of map) {
+    groups.push({ key, primary: rules[0], rules });
+  }
+  return groups;
+}
+
+const groupedBangumi = computed<BangumiGroup[]>(() => groupBangumi(activeBangumi.value));
+const groupedArchivedBangumi = computed<BangumiGroup[]>(() => groupBangumi(archivedBangumi.value));
+
+// Rule list popup state
+const ruleListPopup = reactive<{
+  show: boolean;
+  group: BangumiGroup | null;
+}>({
+  show: false,
+  group: null,
+});
+
+function onCardClick(group: BangumiGroup) {
+  if (group.rules.length === 1) {
+    openEditPopup(group.primary);
+  } else {
+    ruleListPopup.group = group;
+    ruleListPopup.show = true;
+  }
+}
+
+function onRuleSelect(rule: BangumiRule) {
+  ruleListPopup.show = false;
+  openEditPopup(rule);
+}
 </script>
 
 <template>
@@ -60,21 +112,93 @@ onActivated(() => {
     </div>
 
     <!-- Bangumi grid -->
-    <transition-group
-      v-else
-      name="bangumi"
-      tag="div"
-      class="bangumi-grid"
+    <template v-else>
+      <transition-group
+        name="bangumi"
+        tag="div"
+        class="bangumi-grid"
+      >
+        <div
+          v-for="group in groupedBangumi"
+          :key="group.key"
+          class="bangumi-group-wrapper"
+          :class="[group.rules.every(r => r.deleted) && 'grayscale']"
+        >
+          <ab-bangumi-card
+            :bangumi="group.primary"
+            type="primary"
+            @click="() => onCardClick(group)"
+          />
+          <div v-if="group.rules.length > 1" class="group-badge">
+            {{ group.rules.length }}
+          </div>
+        </div>
+      </transition-group>
+
+      <!-- Archived section -->
+      <div v-if="groupedArchivedBangumi.length > 0" class="archived-section">
+        <div
+          class="archived-header"
+          @click="showArchived = !showArchived"
+        >
+          <span class="archived-title">
+            {{ $t('homepage.rule.archived_section', { count: archivedBangumi.length }) }}
+          </span>
+          <span class="archived-toggle">{{ showArchived ? '−' : '+' }}</span>
+        </div>
+
+        <transition-group
+          v-show="showArchived"
+          name="bangumi"
+          tag="div"
+          class="bangumi-grid archived-grid"
+        >
+          <div
+            v-for="group in groupedArchivedBangumi"
+            :key="group.key"
+            class="bangumi-group-wrapper archived-item"
+          >
+            <ab-bangumi-card
+              :bangumi="group.primary"
+              type="primary"
+              @click="() => onCardClick(group)"
+            />
+            <div v-if="group.rules.length > 1" class="group-badge">
+              {{ group.rules.length }}
+            </div>
+            <div class="archived-badge">{{ $t('homepage.rule.archived') }}</div>
+          </div>
+        </transition-group>
+      </div>
+    </template>
+
+    <!-- Rule list popup for grouped items -->
+    <ab-popup
+      v-model:show="ruleListPopup.show"
+      :title="ruleListPopup.group?.primary.official_title || ''"
     >
-      <ab-bangumi-card
-        v-for="i in bangumi"
-        :key="i.id"
-        :class="[i.deleted && 'grayscale']"
-        :bangumi="i"
-        type="primary"
-        @click="() => openEditPopup(i)"
-      ></ab-bangumi-card>
-    </transition-group>
+      <div v-if="ruleListPopup.group" class="rule-list">
+        <div
+          v-for="rule in ruleListPopup.group.rules"
+          :key="rule.id"
+          class="rule-list-item"
+          :class="[rule.deleted && 'rule-list-item--disabled']"
+          @click="onRuleSelect(rule)"
+        >
+          <div class="rule-list-item-info">
+            <div class="rule-list-item-title">
+              {{ rule.group_name || rule.rule_name || `Rule #${rule.id}` }}
+            </div>
+            <div class="rule-list-item-meta">
+              <span v-if="rule.dpi">{{ rule.dpi }}</span>
+              <span v-if="rule.subtitle">{{ rule.subtitle }}</span>
+              <span v-if="rule.source">{{ rule.source }}</span>
+            </div>
+          </div>
+          <div class="rule-list-item-arrow">›</div>
+        </div>
+      </div>
+    </ab-popup>
 
   </div>
   </ab-pull-refresh>
@@ -90,6 +214,7 @@ onActivated(() => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 12px;
+  padding: 8px;
 
   @include forTablet {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -100,6 +225,149 @@ onActivated(() => {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 20px;
   }
+}
+
+.bangumi-group-wrapper {
+  position: relative;
+  overflow: visible;
+  width: fit-content;
+  justify-self: center;
+}
+
+.group-badge {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: #ff3b30;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(255, 59, 48, 0.4);
+}
+
+.archived-section {
+  margin-top: 24px;
+  padding: 0 8px;
+}
+
+.archived-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 8px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: background-color var(--transition-fast);
+
+  &:hover {
+    background: var(--color-surface-hover);
+  }
+}
+
+.archived-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.archived-toggle {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.archived-grid {
+  opacity: 0.7;
+}
+
+.archived-item {
+  filter: grayscale(30%);
+}
+
+.archived-badge {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.rule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  min-width: 280px;
+}
+
+.rule-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+
+  &:hover {
+    background: var(--color-surface-hover);
+  }
+
+  &--disabled {
+    opacity: 0.5;
+  }
+}
+
+.rule-list-item-info {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.rule-list-item-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rule-list-item-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+
+  span + span::before {
+    content: '·';
+    margin-right: 8px;
+    color: var(--color-text-muted);
+  }
+}
+
+.rule-list-item-arrow {
+  font-size: 18px;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
 }
 
 .empty-guide {

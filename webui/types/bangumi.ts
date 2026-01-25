@@ -4,6 +4,7 @@
 export interface BangumiRule {
   added: boolean;
   deleted: boolean;
+  archived: boolean;
   dpi: string;
   eps_collect: boolean;
   filter: string[];
@@ -39,6 +40,7 @@ export type BangumiUpdate = Omit<BangumiAPI, 'id'>;
 export const ruleTemplate: BangumiRule = {
   added: false,
   deleted: false,
+  archived: false,
   dpi: '',
   eps_collect: false,
   filter: [],
@@ -58,3 +60,8 @@ export const ruleTemplate: BangumiRule = {
   year: null,
   air_weekday: null,
 };
+
+export interface OffsetSuggestion {
+  suggested_offset: number;
+  reason: string;
+}
