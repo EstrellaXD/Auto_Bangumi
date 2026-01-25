@@ -331,6 +331,33 @@
     "rss": "RSS Manager",
     "title": "Menu"
   },
+  "common": {
+    "cancel": "Cancel",
+    "confirm": "Confirm"
+  },
+  "search": {
+    "no_results": "No results found. Try different keywords.",
+    "start_typing": "Enter keywords to start searching",
+    "filter": {
+      "group": "Group",
+      "resolution": "Resolution",
+      "subtitle_type": "Subtitle",
+      "season": "Season",
+      "clear": "Clear",
+      "results": "results"
+    },
+    "confirm": {
+      "title": "Add Subscription",
+      "rss": "RSS Feed",
+      "group": "Subtitle Group",
+      "resolution": "Resolution",
+      "subtitle": "Subtitle Type",
+      "filter": "Filter Rules",
+      "save_path": "Save Path",
+      "advanced": "Advanced Settings",
+      "subscribe": "Subscribe"
+    }
+  },
   "topbar": {
     "add": {
       "aggregate": "Aggregate RSS",

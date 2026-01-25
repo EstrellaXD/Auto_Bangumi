@@ -331,6 +331,33 @@
     "rss": "RSS 管理",
     "title": "菜单"
   },
+  "common": {
+    "cancel": "取消",
+    "confirm": "确认"
+  },
+  "search": {
+    "no_results": "未找到相关结果，试试其他关键词",
+    "start_typing": "输入关键词开始搜索",
+    "filter": {
+      "group": "字幕组",
+      "resolution": "分辨率",
+      "subtitle_type": "字幕语言",
+      "season": "季度",
+      "clear": "清除筛选",
+      "results": "个结果"
+    },
+    "confirm": {
+      "title": "添加订阅",
+      "rss": "RSS 源",
+      "group": "字幕组",
+      "resolution": "分辨率",
+      "subtitle": "字幕类型",
+      "filter": "过滤规则",
+      "save_path": "保存路径",
+      "advanced": "高级设置",
+      "subscribe": "确认订阅"
+    }
+  },
   "topbar": {
     "add": {
       "aggregate": "聚合 RSS",

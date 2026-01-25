@@ -13,7 +13,7 @@ withDefaults(
   }
 );
 
-defineEmits<{ select: []; search: [] }>();
+defineEmits<{ select: []; search: []; click: [] }>();
 
 const inputValue = defineModel<string>('inputValue');
 </script>
@@ -36,6 +36,7 @@ const inputValue = defineModel<string>('inputValue');
       :placeholder="$t('topbar.search.placeholder')"
       class="search-field"
       aria-label="Search anime"
+      @click="$emit('click')"
       @keyup.enter="$emit('search')"
     />
 
