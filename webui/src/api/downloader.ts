@@ -25,7 +25,7 @@ export const apiDownloader = {
     return data!;
   },
 
-  async deleteTorrents(hashes: string[], deleteFiles: boolean = false) {
+  async deleteTorrents(hashes: string[], deleteFiles = false) {
     const { data } = await axios.post<ApiSuccess>(
       'api/v1/downloader/torrents/delete',
       { hashes, delete_files: deleteFiles }

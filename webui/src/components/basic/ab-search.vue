@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Down, Search } from '@icon-park/vue-next';
+import { Search } from '@icon-park/vue-next';
 import { NSpin } from 'naive-ui';
 
 withDefaults(
@@ -13,123 +13,94 @@ withDefaults(
   }
 );
 
-defineEmits<{ select: []; search: []; click: [] }>();
-
-const inputValue = defineModel<string>('inputValue');
+defineEmits<{ click: [] }>();
 </script>
 
 <template>
-  <div class="search-input" role="search">
-    <button
-      v-if="!loading"
-      class="search-icon-btn"
-      aria-label="Search"
-      @click="$emit('search')"
-    >
-      <Search theme="outline" size="20" class="search-icon" />
-    </button>
-    <NSpin v-else :size="18" />
+  <button
+    class="search-trigger"
+    role="search"
+    aria-label="Open search"
+    @click="$emit('click')"
+  >
+    <NSpin v-if="loading" :size="16" class="search-spinner" />
+    <Search v-else theme="outline" size="18" class="search-icon" />
 
-    <input
-      v-model="inputValue"
-      type="text"
-      :placeholder="$t('topbar.search.placeholder')"
-      class="search-field"
-      aria-label="Search anime"
-      @click="$emit('click')"
-      @keyup.enter="$emit('search')"
-    />
+    <span class="search-placeholder">{{ $t('topbar.search.placeholder') }}</span>
 
-    <button
-      class="search-provider"
-      aria-label="Select search provider"
-      @click="$emit('select')"
-    >
-      <div class="search-provider-label">{{ provider }}</div>
-      <Down :size="14" />
-    </button>
-  </div>
+    <span class="search-provider">{{ provider }}</span>
+  </button>
 </template>
 
 <style lang="scss" scoped>
-.search-input {
+.search-trigger {
   display: flex;
   align-items: center;
   height: 36px;
-  padding-left: 12px;
+  padding: 0 6px 0 12px;
   gap: 10px;
-  width: 360px;
+  min-width: 240px;
   border-radius: var(--radius-md);
   background: var(--color-surface-hover);
   border: 1px solid var(--color-border);
-  overflow: hidden;
+  cursor: pointer;
+  font-family: inherit;
   transition: border-color var(--transition-fast),
-              background-color var(--transition-normal);
+              background-color var(--transition-normal),
+              box-shadow var(--transition-fast);
 
-  &:focus-within {
+  &:hover {
     border-color: var(--color-primary);
     background: var(--color-surface);
   }
-}
 
-.search-icon-btn {
-  display: flex;
-  align-items: center;
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  flex-shrink: 0;
+  &:focus-visible {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary-alpha);
+  }
+
+  @include forDesktop {
+    min-width: 320px;
+  }
 }
 
 .search-icon {
+  flex-shrink: 0;
   color: var(--color-text-muted);
   transition: color var(--transition-fast);
 
-  .search-icon-btn:hover & {
+  .search-trigger:hover & {
     color: var(--color-primary);
   }
 }
 
-.search-field {
+.search-spinner {
+  flex-shrink: 0;
+}
+
+.search-placeholder {
   flex: 1;
-  min-width: 0;
-  background: transparent;
-  border: none;
-  outline: none;
+  text-align: left;
   font-size: 14px;
-  color: var(--color-text);
-
-  &::placeholder {
-    color: var(--color-text-muted);
-  }
-}
-
-.search-provider {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  height: 100%;
-  padding: 0 12px;
-  min-width: 80px;
-  background: var(--color-primary);
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  user-select: none;
-  font-size: 13px;
-  font-family: inherit;
-  transition: background-color var(--transition-fast);
-
-  &:hover {
-    background: var(--color-primary-hover);
-  }
-}
-
-.search-provider-label {
+  color: var(--color-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.search-provider {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background-color var(--transition-fast);
+
+  .search-trigger:hover & {
+    background: var(--color-primary-hover);
+  }
 }
 </style>

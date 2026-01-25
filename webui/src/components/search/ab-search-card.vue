@@ -1,24 +1,19 @@
 <script lang="ts" setup>
-import { ErrorPicture, Plus } from '@icon-park/vue-next';
-import type { BangumiRule } from '#/bangumi';
+import { ErrorPicture } from '@icon-park/vue-next';
+import type { GroupedBangumi } from '@/store/search';
 
 const props = defineProps<{
-  bangumi: BangumiRule;
+  group: GroupedBangumi;
 }>();
 
 const emit = defineEmits<{
-  (e: 'select', bangumi: BangumiRule): void;
+  (e: 'select', group: GroupedBangumi): void;
 }>();
 
-const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
+const posterSrc = computed(() => resolvePosterUrl(props.group.poster_link));
 
-// Format season display
-const seasonDisplay = computed(() => {
-  if (props.bangumi.season_raw) {
-    return props.bangumi.season_raw;
-  }
-  return props.bangumi.season ? `S${props.bangumi.season}` : '';
-});
+// Count of variants
+const variantCount = computed(() => props.group.variants.length);
 </script>
 
 <template>
@@ -26,48 +21,29 @@ const seasonDisplay = computed(() => {
     class="search-card"
     role="button"
     tabindex="0"
-    :aria-label="`Add ${bangumi.official_title}`"
-    @click="emit('select', bangumi)"
-    @keydown.enter="emit('select', bangumi)"
+    :aria-label="`View ${group.official_title}`"
+    @click="emit('select', group)"
+    @keydown.enter="emit('select', group)"
   >
     <!-- Poster -->
     <div class="card-poster">
-      <template v-if="bangumi.poster_link">
-        <img :src="posterSrc" :alt="bangumi.official_title" loading="lazy" />
+      <template v-if="group.poster_link">
+        <img :src="posterSrc" :alt="group.official_title" loading="lazy" />
       </template>
       <template v-else>
         <div class="card-placeholder">
-          <ErrorPicture theme="outline" size="24" />
+          <ErrorPicture theme="outline" size="32" />
         </div>
       </template>
+      <!-- Variant count badge -->
+      <div v-if="variantCount > 1" class="variant-badge">
+        {{ variantCount }}
+      </div>
     </div>
 
     <!-- Info -->
     <div class="card-info">
-      <h3 class="card-title">{{ bangumi.official_title }}</h3>
-      <p v-if="bangumi.title_raw" class="card-subtitle">{{ bangumi.title_raw }}</p>
-
-      <div class="card-tags">
-        <span v-if="bangumi.group_name" class="tag tag-group">
-          {{ bangumi.group_name }}
-        </span>
-        <span v-if="bangumi.dpi" class="tag tag-resolution">
-          {{ bangumi.dpi }}
-        </span>
-        <span v-if="bangumi.subtitle" class="tag tag-subtitle">
-          {{ bangumi.subtitle }}
-        </span>
-        <span v-if="seasonDisplay" class="tag tag-season">
-          {{ seasonDisplay }}
-        </span>
-      </div>
-    </div>
-
-    <!-- Add button -->
-    <div class="card-action">
-      <div class="add-btn">
-        <Plus theme="outline" size="18" />
-      </div>
+      <h3 class="card-title">{{ group.official_title }}</h3>
     </div>
   </div>
 </template>
@@ -75,23 +51,26 @@ const seasonDisplay = computed(() => {
 <style lang="scss" scoped>
 .search-card {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
+  flex-direction: column;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   cursor: pointer;
   user-select: none;
+  overflow: hidden;
   transition: all var(--transition-fast);
 
   &:hover {
     border-color: var(--color-primary);
-    background: var(--color-surface-hover);
+    box-shadow: var(--shadow-md);
 
-    .add-btn {
+    .select-btn {
       background: var(--color-primary);
       color: #fff;
+    }
+
+    .card-poster img {
+      transform: scale(1.03);
     }
   }
 
@@ -106,10 +85,10 @@ const seasonDisplay = computed(() => {
 }
 
 .card-poster {
-  width: 60px;
-  height: 84px;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 5 / 7;
   flex-shrink: 0;
-  border-radius: var(--radius-sm);
   overflow: hidden;
   background: var(--color-surface-hover);
 
@@ -117,6 +96,7 @@ const seasonDisplay = computed(() => {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform var(--transition-normal);
   }
 }
 
@@ -127,92 +107,41 @@ const seasonDisplay = computed(() => {
   align-items: center;
   justify-content: center;
   color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+}
+
+.variant-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-md);
 }
 
 .card-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  padding: 10px;
 }
 
 .card-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.4;
   margin: 0;
   transition: color var(--transition-normal);
-}
-
-.card-subtitle {
-  font-size: 12px;
-  color: var(--color-text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  margin: 0;
-  line-height: 1.4;
-}
-
-.card-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.tag {
-  display: inline-flex;
-  align-items: center;
-  height: 20px;
-  padding: 0 8px;
-  font-size: 11px;
-  font-weight: 500;
-  border-radius: var(--radius-full);
-  white-space: nowrap;
-}
-
-.tag-group {
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-}
-
-.tag-resolution {
-  background: rgba(34, 197, 94, 0.15);
-  color: var(--color-success);
-}
-
-.tag-subtitle {
-  background: rgba(249, 115, 22, 0.15);
-  color: var(--color-accent);
-}
-
-.tag-season {
-  background: var(--color-surface-hover);
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-}
-
-.card-action {
-  flex-shrink: 0;
-}
-
-.add-btn {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--color-surface-hover);
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  transition: all var(--transition-fast);
 }
 </style>

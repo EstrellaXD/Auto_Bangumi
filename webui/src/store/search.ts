@@ -15,6 +15,15 @@ export interface FilterOptions {
   season: string[];
 }
 
+// Grouped bangumi result
+export interface GroupedBangumi {
+  key: string;
+  official_title: string;
+  poster_link: string;
+  year?: string | null;
+  variants: BangumiRule[];
+}
+
 // Helper to parse metadata from title/bangumi
 function parseResolution(bangumi: BangumiRule): string {
   // Check dpi field first
@@ -81,9 +90,10 @@ export const useSearchStore = defineStore('search', () => {
   // Modal state
   const showModal = ref(false);
   const selectedResult = ref<BangumiRule | null>(null);
+  const selectedGroup = ref<GroupedBangumi | null>(null);
 
-  // Filter state
-  const filters = ref<SearchFilters>({
+  // Filter state for selected group variants
+  const variantFilters = ref<SearchFilters>({
     group: [],
     resolution: [],
     subtitleType: [],
@@ -97,14 +107,46 @@ export const useSearchStore = defineStore('search', () => {
     searchData.value.map((item, index) => ({ order: index, value: item }))
   );
 
-  // Extract filter options from results
-  const filterOptions = computed<FilterOptions>(() => {
+  // Group results by official_title
+  const groupedResults = computed<GroupedBangumi[]>(() => {
+    const map = new Map<string, BangumiRule[]>();
+
+    for (const item of searchData.value) {
+      const key = item.official_title || item.title_raw || '';
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key)!.push(item);
+    }
+
+    const groups: GroupedBangumi[] = [];
+    for (const [key, variants] of map) {
+      // Use the first variant's poster and info
+      const first = variants[0];
+      groups.push({
+        key,
+        official_title: first.official_title || first.title_raw || '',
+        poster_link: first.poster_link || '',
+        year: first.year,
+        variants,
+      });
+    }
+
+    return groups;
+  });
+
+  // Extract filter options from selected group's variants
+  const variantFilterOptions = computed<FilterOptions>(() => {
+    if (!selectedGroup.value) {
+      return { group: [], resolution: [], subtitleType: [], season: [] };
+    }
+
     const groups = new Set<string>();
     const resolutions = new Set<string>();
     const subtitleTypes = new Set<string>();
     const seasons = new Set<string>();
 
-    for (const item of searchData.value) {
+    for (const item of selectedGroup.value.variants) {
       if (item.group_name) groups.add(item.group_name);
 
       const res = parseResolution(item);
@@ -120,7 +162,6 @@ export const useSearchStore = defineStore('search', () => {
     return {
       group: Array.from(groups).sort(),
       resolution: Array.from(resolutions).sort((a, b) => {
-        // Sort by resolution quality descending
         const order = ['4k', '2160p', '1080p', '720p', '480p'];
         return order.indexOf(a.toLowerCase()) - order.indexOf(b.toLowerCase());
       }),
@@ -129,43 +170,43 @@ export const useSearchStore = defineStore('search', () => {
     };
   });
 
-  // Filtered results
-  const filteredResults = computed<SearchResult[]>(() => {
-    const hasFilters = Object.values(filters.value).some((arr) => arr.length > 0);
+  // Filtered variants based on selected filters
+  const filteredVariants = computed<BangumiRule[]>(() => {
+    if (!selectedGroup.value) return [];
+
+    const hasFilters = Object.values(variantFilters.value).some((arr) => arr.length > 0);
     if (!hasFilters) {
-      return bangumiList.value;
+      return selectedGroup.value.variants;
     }
 
-    return bangumiList.value.filter((item) => {
-      const bangumi = item.value;
-
+    return selectedGroup.value.variants.filter((bangumi) => {
       // Group filter
-      if (filters.value.group.length > 0) {
-        if (!bangumi.group_name || !filters.value.group.includes(bangumi.group_name)) {
+      if (variantFilters.value.group.length > 0) {
+        if (!bangumi.group_name || !variantFilters.value.group.includes(bangumi.group_name)) {
           return false;
         }
       }
 
       // Resolution filter
-      if (filters.value.resolution.length > 0) {
+      if (variantFilters.value.resolution.length > 0) {
         const res = parseResolution(bangumi);
-        if (!res || !filters.value.resolution.includes(res)) {
+        if (!res || !variantFilters.value.resolution.includes(res)) {
           return false;
         }
       }
 
       // Subtitle type filter
-      if (filters.value.subtitleType.length > 0) {
+      if (variantFilters.value.subtitleType.length > 0) {
         const subType = parseSubtitleType(bangumi);
-        if (!subType || !filters.value.subtitleType.includes(subType)) {
+        if (!subType || !variantFilters.value.subtitleType.includes(subType)) {
           return false;
         }
       }
 
       // Season filter
-      if (filters.value.season.length > 0) {
+      if (variantFilters.value.season.length > 0) {
         const season = parseSeason(bangumi);
-        if (!season || !filters.value.season.includes(season)) {
+        if (!season || !variantFilters.value.season.includes(season)) {
           return false;
         }
       }
@@ -199,12 +240,13 @@ export const useSearchStore = defineStore('search', () => {
   function clearSearch() {
     keyword.value = '';
     searchData.value = [];
-    filters.value = { group: [], resolution: [], subtitleType: [], season: [] };
+    variantFilters.value = { group: [], resolution: [], subtitleType: [], season: [] };
+    selectedGroup.value = null;
     closeSearch();
   }
 
-  function toggleFilter(category: keyof SearchFilters, value: string) {
-    const arr = filters.value[category];
+  function toggleVariantFilter(category: keyof SearchFilters, value: string) {
+    const arr = variantFilters.value[category];
     const index = arr.indexOf(value);
     if (index === -1) {
       arr.push(value);
@@ -213,8 +255,18 @@ export const useSearchStore = defineStore('search', () => {
     }
   }
 
-  function clearFilters() {
-    filters.value = { group: [], resolution: [], subtitleType: [], season: [] };
+  function clearVariantFilters() {
+    variantFilters.value = { group: [], resolution: [], subtitleType: [], season: [] };
+  }
+
+  function selectGroup(group: GroupedBangumi) {
+    selectedGroup.value = group;
+    variantFilters.value = { group: [], resolution: [], subtitleType: [], season: [] };
+  }
+
+  function clearSelectedGroup() {
+    selectedGroup.value = null;
+    variantFilters.value = { group: [], resolution: [], subtitleType: [], season: [] };
   }
 
   function selectResult(bangumi: BangumiRule) {
@@ -232,9 +284,11 @@ export const useSearchStore = defineStore('search', () => {
     provider,
     providers,
     bangumiList,
-    filteredResults,
-    filters,
-    filterOptions,
+    groupedResults,
+    selectedGroup,
+    variantFilters,
+    variantFilterOptions,
+    filteredVariants,
     showModal,
     selectedResult,
 
@@ -246,8 +300,10 @@ export const useSearchStore = defineStore('search', () => {
     openModal,
     closeModal,
     toggleModal,
-    toggleFilter,
-    clearFilters,
+    toggleVariantFilter,
+    clearVariantFilters,
+    selectGroup,
+    clearSelectedGroup,
     selectResult,
     clearSelectedResult,
   };

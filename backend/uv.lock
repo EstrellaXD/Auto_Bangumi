@@ -54,7 +54,7 @@ wheels = [
 
 [[package]]
 name = "auto-bangumi"
-version = "3.2.0b4"
+version = "3.2.0b7"
 source = { virtual = "." }
 dependencies = [
     { name = "aiosqlite" },

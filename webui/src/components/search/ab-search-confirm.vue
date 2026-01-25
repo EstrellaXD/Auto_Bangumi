@@ -3,8 +3,6 @@ import { CheckOne, Close, Copy, Down, ErrorPicture, Right } from '@icon-park/vue
 import { NDynamicTags, NSpin, useMessage } from 'naive-ui';
 import type { BangumiRule } from '#/bangumi';
 
-const message = useMessage();
-
 const props = defineProps<{
   bangumi: BangumiRule;
 }>();
@@ -13,6 +11,8 @@ const emit = defineEmits<{
   (e: 'confirm', bangumi: BangumiRule): void;
   (e: 'cancel'): void;
 }>();
+
+const message = useMessage();
 
 // Local deep copy of bangumi for editing (prevents mutation of original prop)
 const localBangumi = ref<BangumiRule>(JSON.parse(JSON.stringify(props.bangumi)));

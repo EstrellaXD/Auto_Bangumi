@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed } from 'vue';
+import { computed, ref } from 'vue';
 
 export interface DataListColumn {
   key: string;
@@ -8,7 +8,7 @@ export interface DataListColumn {
   hidden?: boolean;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type DataItem = Record<string, any>;
 
 const props = withDefaults(

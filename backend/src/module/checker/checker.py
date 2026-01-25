@@ -59,6 +59,12 @@ class Checker:
     @staticmethod
     async def check_downloader() -> bool:
         from module.downloader import DownloadClient
+
+        # Mock downloader always succeeds
+        if settings.downloader.type == "mock":
+            logger.info("[Checker] Using MockDownloader - skipping connection check")
+            return True
+
         try:
             url = (
                 f"http://{settings.downloader.host}"

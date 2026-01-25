@@ -44,7 +44,7 @@ export const useMyI18n = createSharedComposable(() => {
   function returnUserLangText(texts: {
     [k in Languages]: string;
   }) {
-    return texts[lang.value] ?? texts['en'];
+    return texts[lang.value] ?? texts.en;
   }
 
   function returnUserLangMsg(res: ApiSuccess) {

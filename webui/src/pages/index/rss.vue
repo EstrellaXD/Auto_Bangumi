@@ -1,5 +1,5 @@
 <script lang="tsx" setup>
-import { NDataTable, NTooltip, type DataTableColumns } from 'naive-ui';
+import { type DataTableColumns, NDataTable, NTooltip } from 'naive-ui';
 import type { RSS } from '#/rss';
 
 definePage({

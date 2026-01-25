@@ -333,9 +333,11 @@
   },
   "common": {
     "cancel": "取消",
-    "confirm": "确认"
+    "confirm": "确认",
+    "select": "选择"
   },
   "search": {
+    "subscribe": "订阅",
     "no_results": "未找到相关结果，试试其他关键词",
     "start_typing": "输入关键词开始搜索",
     "filter": {
@@ -344,7 +346,8 @@
       "subtitle_type": "字幕语言",
       "season": "季度",
       "clear": "清除筛选",
-      "results": "个结果"
+      "results": "个结果",
+      "active": "筛选中"
     },
     "confirm": {
       "title": "添加订阅",
@@ -352,8 +355,11 @@
       "group": "字幕组",
       "resolution": "分辨率",
       "subtitle": "字幕类型",
+      "season": "季度",
       "filter": "过滤规则",
+      "filter_hint": "用于排除不需要的种子，支持正则表达式",
       "save_path": "保存路径",
+      "save_path_placeholder": "留空使用默认路径",
       "advanced": "高级设置",
       "subscribe": "确认订阅"
     }

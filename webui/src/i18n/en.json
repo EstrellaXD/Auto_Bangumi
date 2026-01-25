@@ -333,9 +333,11 @@
   },
   "common": {
     "cancel": "Cancel",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "select": "Select"
   },
   "search": {
+    "subscribe": "Subscribe",
     "no_results": "No results found. Try different keywords.",
     "start_typing": "Enter keywords to start searching",
     "filter": {
@@ -344,7 +346,8 @@
       "subtitle_type": "Subtitle",
       "season": "Season",
       "clear": "Clear",
-      "results": "results"
+      "results": "results",
+      "active": "Filtering"
     },
     "confirm": {
       "title": "Add Subscription",
@@ -352,8 +355,11 @@
       "group": "Subtitle Group",
       "resolution": "Resolution",
       "subtitle": "Subtitle Type",
+      "season": "Season",
       "filter": "Filter Rules",
+      "filter_hint": "Regex patterns to exclude unwanted torrents",
       "save_path": "Save Path",
+      "save_path_placeholder": "Leave empty for default path",
       "advanced": "Advanced Settings",
       "subscribe": "Subscribe"
     }

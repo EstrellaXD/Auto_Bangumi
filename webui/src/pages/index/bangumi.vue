@@ -374,7 +374,7 @@ function onRuleSelect(rule: BangumiRule) {
 
 .archived-badge {
   position: absolute;
-  bottom: 4px;
+  bottom: 36px; // Above the card title area
   left: 4px;
   padding: 2px 6px;
   border-radius: 4px;

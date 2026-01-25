@@ -8,14 +8,13 @@ import {
   Refresh,
 } from '@icon-park/vue-next';
 import { ruleTemplate } from '#/bangumi';
-import type { BangumiRule } from '#/bangumi';
 
 const { t, changeLocale } = useMyI18n();
 const { running, onUpdate, offUpdate } = useAppInfo();
 
 const showAccount = ref(false);
 const showAddRSS = ref(false);
-const searchRule = ref<BangumiRule>();
+const rssRule = ref(ruleTemplate);
 
 const { start, pause, shutdown, restart, resetRule } = useProgramStore();
 const { refreshPoster } = useBangumiStore();
@@ -70,17 +69,9 @@ const items = [
 const { isDark } = useDarkMode();
 const onSearchFocus = ref(false);
 
-function addSearchResult(bangumi: BangumiRule) {
-  showAddRSS.value = true;
-  searchRule.value = bangumi;
-}
-
 watch(showAddRSS, (val) => {
   if (!val) {
-    searchRule.value = ruleTemplate;
-    setTimeout(() => {
-      onSearchFocus.value = false;
-    }, 300);
+    rssRule.value = ruleTemplate;
   }
 });
 
@@ -111,7 +102,7 @@ onUnmounted(() => {
       </div>
 
       <div class="topbar-search">
-        <ab-search-bar @add-bangumi="addSearchResult" />
+        <ab-search-bar />
       </div>
     </div>
 
@@ -127,7 +118,7 @@ onUnmounted(() => {
     <ab-change-account v-model:show="showAccount"></ab-change-account>
     <ab-add-rss
       v-model:show="showAddRSS"
-      v-model:rule="searchRule"
+      v-model:rule="rssRule"
     ></ab-add-rss>
   </div>
 </template>

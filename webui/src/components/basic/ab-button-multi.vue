@@ -25,42 +25,49 @@ const showSelections = ref<boolean>(false);
 </script>
 
 <template>
-  <div class="btn-multi" :class="[`btn-multi--${size}`, `btn-multi--${type}`]">
-    <Component
-      :is="link !== null ? 'a' : 'button'"
-      :href="link"
-      class="btn-multi-main"
-      @click="$emit('click', selected)"
-    >
-      <NSpin :show="loading" :size="size === 'big' ? 'large' : 'small'">
-        <div class="btn-multi-label">{{ selected }}</div>
-      </NSpin>
-    </Component>
-    <div
-      class="btn-multi-arrow"
-      @click="() => (showSelections = !showSelections)"
-    >
-      <Down fill="white" />
+  <div class="btn-multi-container">
+    <div class="btn-multi" :class="[`btn-multi--${size}`, `btn-multi--${type}`]">
+      <Component
+        :is="link !== null ? 'a' : 'button'"
+        :href="link"
+        class="btn-multi-main"
+        @click="$emit('click', selected)"
+      >
+        <NSpin :show="loading" :size="size === 'big' ? 'large' : 'small'">
+          <div class="btn-multi-label">{{ selected }}</div>
+        </NSpin>
+      </Component>
+      <div
+        class="btn-multi-arrow"
+        @click="() => (showSelections = !showSelections)"
+      >
+        <Down fill="white" />
+      </div>
     </div>
-  </div>
 
-  <div
-    v-if="showSelections"
-    class="btn-multi-dropdown"
-    :class="[`btn-multi--${size}`, `btn-multi--${type}`]"
-  >
     <div
-      v-for="selection in selections"
-      :key="selection"
-      class="btn-multi-option"
-      @click="() => { selected = selection; showSelections = false; }"
+      v-if="showSelections"
+      class="btn-multi-dropdown"
+      :class="[`btn-multi--${size}`, `btn-multi--${type}`]"
     >
-      {{ selection }}
+      <div
+        v-for="selection in selections"
+        :key="selection"
+        class="btn-multi-option"
+        @click="() => { selected = selection; showSelections = false; }"
+      >
+        {{ selection }}
+      </div>
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
+.btn-multi-container {
+  position: relative;
+  display: inline-flex;
+}
+
 .btn-multi {
   display: flex;
   align-items: center;
@@ -90,26 +97,22 @@ const showSelections = ref<boolean>(false);
 
   &--primary {
     .btn-multi-main,
-    .btn-multi-arrow,
-    .btn-multi-option {
+    .btn-multi-arrow {
       background: var(--color-primary);
     }
     .btn-multi-main:hover,
-    .btn-multi-arrow:hover,
-    .btn-multi-option:hover {
+    .btn-multi-arrow:hover {
       background: var(--color-primary-hover);
     }
   }
 
   &--warn {
     .btn-multi-main,
-    .btn-multi-arrow,
-    .btn-multi-option {
+    .btn-multi-arrow {
       background: var(--color-danger);
     }
     .btn-multi-main:hover,
-    .btn-multi-arrow:hover,
-    .btn-multi-option:hover {
+    .btn-multi-arrow:hover {
       filter: brightness(0.9);
     }
   }
@@ -146,11 +149,32 @@ const showSelections = ref<boolean>(false);
 
 .btn-multi-dropdown {
   position: absolute;
-  z-index: 70;
+  left: 0;
+  bottom: 100%;
+  margin-bottom: 4px;
+  z-index: 100;
   overflow: hidden;
-  transform: translateY(80%) translateX(-111%);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-lg);
+  min-width: 100%;
+
+  &.btn-multi--primary {
+    .btn-multi-option {
+      background: var(--color-primary);
+      &:hover {
+        background: var(--color-primary-hover);
+      }
+    }
+  }
+
+  &.btn-multi--warn {
+    .btn-multi-option {
+      background: var(--color-danger);
+      &:hover {
+        filter: brightness(0.9);
+      }
+    }
+  }
 }
 
 .btn-multi-option {
@@ -158,11 +182,12 @@ const showSelections = ref<boolean>(false);
   align-items: center;
   justify-content: center;
   width: 100%;
-  padding: 8px 0;
+  padding: 8px 12px;
   cursor: pointer;
   user-select: none;
   color: #fff;
   font-size: inherit;
   transition: background-color var(--transition-fast);
+  white-space: nowrap;
 }
 </style>

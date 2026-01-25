@@ -2,10 +2,9 @@
 import { Close, Down, Search } from '@icon-park/vue-next';
 import { NSpin } from 'naive-ui';
 import { onKeyStroke } from '@vueuse/core';
-import AbSearchFilters from './ab-search-filters.vue';
-import AbSearchCard from './ab-search-card.vue';
 import AbSearchConfirm from './ab-search-confirm.vue';
 import type { BangumiRule } from '#/bangumi';
+import type { GroupedBangumi } from '@/store/search';
 
 const emit = defineEmits<{
   (e: 'close'): void;
@@ -19,10 +18,7 @@ const {
   provider,
   loading,
   inputValue,
-  bangumiList,
-  filteredResults,
-  filters,
-  filterOptions,
+  groupedResults,
   showModal,
   selectedResult,
 } = storeToRefs(useSearchStore());
@@ -31,8 +27,6 @@ const {
   getProviders,
   onSearch,
   clearSearch,
-  toggleFilter,
-  clearFilters,
   selectResult,
   clearSelectedResult,
 } = useSearchStore();
@@ -41,6 +35,19 @@ const subscribing = ref(false);
 
 const showProvider = ref(false);
 const searchInputRef = ref<HTMLInputElement | null>(null);
+
+// Tag filter state
+const activeFilters = ref<{
+  group: string | null;
+  resolution: string | null;
+  subtitle: string | null;
+  season: string | null;
+}>({
+  group: null,
+  resolution: null,
+  subtitle: null,
+  season: null,
+});
 
 // Close on Escape
 onKeyStroke('Escape', () => {
@@ -59,12 +66,17 @@ onMounted(() => {
   });
 });
 
+// Clear filters when search changes
+watch(inputValue, () => {
+  activeFilters.value = { group: null, resolution: null, subtitle: null, season: null };
+});
+
 function onSelectProvider(site: string) {
   provider.value = site;
   showProvider.value = false;
 }
 
-function handleCardClick(bangumi: BangumiRule) {
+function handleVariantSelect(bangumi: BangumiRule) {
   selectResult(bangumi);
 }
 
@@ -98,7 +110,71 @@ async function handleConfirm(bangumi: BangumiRule) {
 
 function handleClose() {
   clearSearch();
+  activeFilters.value = { group: null, resolution: null, subtitle: null, season: null };
   emit('close');
+}
+
+// Get resolution display for variant
+function getResolution(bangumi: BangumiRule): string {
+  return bangumi.dpi || '';
+}
+
+// Get subtitle display for variant
+function getSubtitle(bangumi: BangumiRule): string {
+  return bangumi.subtitle || '';
+}
+
+// Get season display for variant
+function getSeason(bangumi: BangumiRule): string {
+  if (bangumi.season_raw) return bangumi.season_raw;
+  if (bangumi.season) return `S${bangumi.season}`;
+  return '';
+}
+
+// Resolve poster URL for template
+function getPosterUrl(link: string | null | undefined): string {
+  return resolvePosterUrl(link);
+}
+
+// Toggle filter
+function toggleFilter(type: 'group' | 'resolution' | 'subtitle' | 'season', value: string) {
+  if (activeFilters.value[type] === value) {
+    activeFilters.value[type] = null;
+  } else {
+    activeFilters.value[type] = value;
+  }
+}
+
+// Check if variant matches active filters
+function variantMatchesFilters(variant: BangumiRule): boolean {
+  const { group, resolution, subtitle, season } = activeFilters.value;
+
+  if (group && variant.group_name !== group) return false;
+  if (resolution && getResolution(variant) !== resolution) return false;
+  if (subtitle && getSubtitle(variant) !== subtitle) return false;
+  if (season && getSeason(variant) !== season) return false;
+
+  return true;
+}
+
+// Get filtered variants for a group
+function getFilteredVariants(group: GroupedBangumi): BangumiRule[] {
+  const hasActiveFilter = Object.values(activeFilters.value).some(v => v !== null);
+  if (!hasActiveFilter) return group.variants;
+  return group.variants.filter(variantMatchesFilters);
+}
+
+// Check if tag is active
+function isTagActive(type: 'group' | 'resolution' | 'subtitle' | 'season', value: string): boolean {
+  return activeFilters.value[type] === value;
+}
+
+// Check if any filter is active
+const hasActiveFilters = computed(() => Object.values(activeFilters.value).some(v => v !== null));
+
+// Clear all filters
+function clearFilters() {
+  activeFilters.value = { group: null, resolution: null, subtitle: null, season: null };
 }
 </script>
 
@@ -167,43 +243,92 @@ function handleClose() {
             </button>
           </header>
 
-          <!-- Filters -->
-          <AbSearchFilters
-            :filters="filters"
-            :filter-options="filterOptions"
-            :filtered-count="filteredResults.length"
-            :total-count="bangumiList.length"
-            @toggle-filter="toggleFilter"
-            @clear-filters="clearFilters"
-          />
+          <!-- Active Filters Bar -->
+          <div v-if="hasActiveFilters" class="active-filters">
+            <span class="filter-label">{{ $t('search.filter.active') }}:</span>
+            <span v-if="activeFilters.group" class="filter-tag filter-tag-group" @click="toggleFilter('group', activeFilters.group)">
+              {{ activeFilters.group }} ×
+            </span>
+            <span v-if="activeFilters.resolution" class="filter-tag filter-tag-res" @click="toggleFilter('resolution', activeFilters.resolution)">
+              {{ activeFilters.resolution }} ×
+            </span>
+            <span v-if="activeFilters.subtitle" class="filter-tag filter-tag-sub" @click="toggleFilter('subtitle', activeFilters.subtitle)">
+              {{ activeFilters.subtitle }} ×
+            </span>
+            <span v-if="activeFilters.season" class="filter-tag filter-tag-season" @click="toggleFilter('season', activeFilters.season)">
+              {{ activeFilters.season }} ×
+            </span>
+            <button class="clear-filters-btn" @click="clearFilters">{{ $t('search.filter.clear') }}</button>
+          </div>
 
-          <!-- Results Grid -->
+          <!-- Results List -->
           <div class="results-container">
             <!-- Empty state -->
-            <div v-if="!loading && filteredResults.length === 0 && inputValue" class="empty-state">
+            <div v-if="!loading && groupedResults.length === 0 && inputValue" class="empty-state">
               <p>{{ $t('search.no_results') }}</p>
             </div>
 
             <!-- Initial state -->
-            <div v-else-if="!inputValue && filteredResults.length === 0" class="empty-state">
+            <div v-else-if="!inputValue && groupedResults.length === 0" class="empty-state">
               <p>{{ $t('search.start_typing') }}</p>
             </div>
 
-            <!-- Results grid -->
-            <transition-group
-              v-else
-              name="card"
-              tag="div"
-              class="results-grid"
-            >
-              <AbSearchCard
-                v-for="(result, index) in filteredResults"
-                :key="result.order"
-                :bangumi="result.value"
-                :style="{ '--stagger-index': index }"
-                @select="handleCardClick"
-              />
-            </transition-group>
+            <!-- Bangumi list -->
+            <div v-else class="bangumi-list">
+              <template v-for="group in groupedResults" :key="group.key">
+                <div
+                  v-if="getFilteredVariants(group).length > 0"
+                  class="bangumi-row"
+                >
+                  <!-- Left: Poster -->
+                  <div class="bangumi-poster">
+                    <img
+                      v-if="group.poster_link"
+                      :src="getPosterUrl(group.poster_link)"
+                      :alt="group.official_title"
+                    />
+                    <div v-else class="bangumi-poster-placeholder">
+                      <span class="placeholder-title">{{ group.official_title }}</span>
+                    </div>
+                  </div>
+
+                  <!-- Right: Variant Grid -->
+                  <div class="bangumi-variants">
+                    <div
+                      v-for="variant in getFilteredVariants(group)"
+                      :key="variant.rss_link?.[0] || variant.title_raw"
+                      class="variant-chip"
+                      @click.stop="handleVariantSelect(variant)"
+                    >
+                      <span
+                        v-if="variant.group_name"
+                        class="chip-tag chip-tag-group"
+                        :class="{ active: isTagActive('group', variant.group_name) }"
+                        @click.stop="toggleFilter('group', variant.group_name)"
+                      >{{ variant.group_name }}</span>
+                      <span
+                        v-if="getResolution(variant)"
+                        class="chip-tag chip-tag-res"
+                        :class="{ active: isTagActive('resolution', getResolution(variant)) }"
+                        @click.stop="toggleFilter('resolution', getResolution(variant))"
+                      >{{ getResolution(variant) }}</span>
+                      <span
+                        v-if="getSubtitle(variant)"
+                        class="chip-tag chip-tag-sub"
+                        :class="{ active: isTagActive('subtitle', getSubtitle(variant)) }"
+                        @click.stop="toggleFilter('subtitle', getSubtitle(variant))"
+                      >{{ getSubtitle(variant) }}</span>
+                      <span
+                        v-if="getSeason(variant)"
+                        class="chip-tag chip-tag-season"
+                        :class="{ active: isTagActive('season', getSeason(variant)) }"
+                        @click.stop="toggleFilter('season', getSeason(variant))"
+                      >{{ getSeason(variant) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
           </div>
         </div>
 
@@ -414,24 +539,6 @@ function handleClose() {
   padding: 16px;
 }
 
-.results-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: 1fr;
-
-  @include forTablet {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  @include forDesktop {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  @media screen and (min-width: 1200px) {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
 .empty-state {
   display: flex;
   align-items: center;
@@ -460,22 +567,201 @@ function handleClose() {
   transform: scale(0.95) translateY(-10px);
 }
 
-// Card stagger animation
-.card-enter-active {
-  transition: opacity var(--transition-slow), transform var(--transition-slow);
-  transition-delay: calc(var(--stagger-index, 0) * 40ms);
+// Bangumi list
+.bangumi-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.card-leave-active {
-  transition: opacity 150ms ease-in;
+.bangumi-row {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
 }
 
-.card-enter-from {
-  opacity: 0;
-  transform: translateY(8px);
+.bangumi-poster {
+  width: 100px;
+  flex-shrink: 0;
+
+  @include forDesktop {
+    width: 120px;
+  }
+
+  img {
+    width: 100%;
+    aspect-ratio: 5 / 7;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+    background: var(--color-surface-hover);
+  }
 }
 
-.card-leave-to {
-  opacity: 0;
+.bangumi-poster-placeholder {
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-hover);
+  border: 1px solid var(--color-border);
+}
+
+.placeholder-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  line-height: 1.3;
+}
+
+.bangumi-variants {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-content: flex-start;
+}
+
+.variant-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  background: var(--color-surface-hover);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+
+    .chip-tag {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+  }
+}
+
+.chip-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.chip-tag-group {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.chip-tag-res {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--color-success);
+}
+
+.chip-tag-sub {
+  background: rgba(249, 115, 22, 0.15);
+  color: var(--color-accent);
+}
+
+.chip-tag-season {
+  background: rgba(139, 92, 246, 0.15);
+  color: rgb(139, 92, 246);
+}
+
+// Active filters bar
+.active-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--color-surface-hover);
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.filter-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.filter-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+.filter-tag-group {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.filter-tag-res {
+  background: var(--color-success);
+  color: #fff;
+}
+
+.filter-tag-sub {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.filter-tag-season {
+  background: rgb(139, 92, 246);
+  color: #fff;
+}
+
+.clear-filters-btn {
+  margin-left: auto;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    border-color: var(--color-danger);
+    color: var(--color-danger);
+  }
+}
+
+// Active tag highlight
+.chip-tag.active {
+  box-shadow: 0 0 0 2px var(--color-primary);
 }
 </style>

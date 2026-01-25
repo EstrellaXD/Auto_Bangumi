@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed, watch, onMounted, nextTick } from 'vue';
+import { nextTick, onMounted, ref, watch } from 'vue';
 
 const props = withDefaults(
   defineProps<{
@@ -91,8 +91,8 @@ defineExpose({ goTo });
         :key="i"
         class="ab-swipe-container__dot"
         :class="{ 'ab-swipe-container__dot--active': currentIndex === i - 1 }"
-        @click="goTo(i - 1)"
         :aria-label="`Go to slide ${i}`"
+        @click="goTo(i - 1)"
       />
     </div>
   </div>

@@ -81,10 +81,10 @@ const azureItems: SettingItem<ExperimentalOpenAI>[] = [
       </div>
 
       <ab-setting
+        v-model:data="openAI.enable"
         config-key="enable"
         :label="() => t('config.experimental_openai_set.enable')"
         type="switch"
-        v-model:data="openAI.enable"
       />
 
       <transition name="slide-fade">
