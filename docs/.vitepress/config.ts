@@ -87,6 +87,7 @@ export default defineConfig({
         items: [
           { text: 'RSS Management', link: '/feature/rss' },
           { text: 'Bangumi Management', link: '/feature/bangumi' },
+          { text: 'Calendar View', link: '/feature/calendar' },
           { text: 'File Renaming', link: '/feature/rename' },
           { text: 'Torrent Search', link: '/feature/search' },
         ],

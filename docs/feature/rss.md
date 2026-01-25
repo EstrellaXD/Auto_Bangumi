@@ -4,6 +4,25 @@ title: RSS Management
 
 # RSS Management
 
+## RSS Manager Page
+
+The RSS Manager page displays all your RSS subscriptions with their connection status.
+
+![RSS Manager](../image/feature/rss-manager.png)
+
+### Connection Status
+
+Since v3.2, AB tracks the connection status of each RSS source:
+
+| Status | Description |
+|--------|-------------|
+| **Connected** (green) | RSS source is reachable and returning valid data |
+| **Error** (red) | RSS source failed to respond or returned invalid data |
+
+When a source shows an error, hover over the status label to see the error details in a tooltip.
+
+AB automatically updates the connection status on each RSS refresh cycle.
+
 ## Adding Collections
 
 AB provides two manual download methods:

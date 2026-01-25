@@ -38,3 +38,24 @@ AB can also rename subtitle files in the first-level directory.
 After renaming, episodes and directories are placed in the `Season` folder.
 
 Renamed collections are moved and categorized under `BangumiCollection`.
+
+## Episode Offset
+
+Since v3.2, AB supports episode offset for renaming. This is useful when:
+- RSS shows different episode numbers than expected (e.g., S2E01 should be S1E29)
+- Anime has "virtual seasons" due to broadcast gaps
+
+When an offset is configured for a bangumi, AB automatically applies it during renaming:
+
+```
+Original: S02E01.mkv
+With offset (season: -1, episode: +28): S01E29.mkv
+```
+
+To configure offset:
+1. Click on the anime poster
+2. Open Advanced Settings
+3. Set Season Offset and/or Episode Offset values
+4. Or use "Auto Detect" to let AB suggest the correct offset
+
+See [Bangumi Management](./bangumi.md#episode-offset-auto-detection) for more details on auto-detection.
