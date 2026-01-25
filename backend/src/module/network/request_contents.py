@@ -67,6 +67,8 @@ class RequestContent(RequestURL):
         req = await self.get_url(_url)
         if req:
             return req.content
+        logger.warning(f"[Network] Failed to get content from {_url}")
+        return None
 
     async def check_connection(self, _url):
         return await self.check_url(_url)

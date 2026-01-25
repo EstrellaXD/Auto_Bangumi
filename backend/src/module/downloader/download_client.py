@@ -31,6 +31,11 @@ class DownloadClient(TorrentPath):
             from .client.aria2_downloader import Aria2Downloader
 
             return Aria2Downloader(host, username, password)
+        elif type == "mock":
+            from .client.mock_downloader import MockDownloader
+
+            logger.info("[Downloader] Using MockDownloader for local development")
+            return MockDownloader()
         else:
             logger.error(f"[Downloader] Unsupported downloader type: {type}")
             raise Exception(f"Unsupported downloader type: {type}")
@@ -141,6 +146,11 @@ class DownloadClient(TorrentPath):
                     torrent_file = await asyncio.gather(
                         *[req.get_content(t.url) for t in torrent]
                     )
+                    # Filter out None values (failed fetches)
+                    torrent_file = [f for f in torrent_file if f is not None]
+                    if not torrent_file:
+                        logger.warning(f"[Downloader] Failed to fetch torrent files for: {bangumi.official_title}")
+                        return False
                     torrent_url = None
             else:
                 if "magnet" in torrent.url:
@@ -148,17 +158,24 @@ class DownloadClient(TorrentPath):
                     torrent_file = None
                 else:
                     torrent_file = await req.get_content(torrent.url)
+                    if torrent_file is None:
+                        logger.warning(f"[Downloader] Failed to fetch torrent file for: {bangumi.official_title}")
+                        return False
                     torrent_url = None
-        if await self.client.add_torrents(
-            torrent_urls=torrent_url,
-            torrent_files=torrent_file,
-            save_path=bangumi.save_path,
-            category="Bangumi",
-        ):
-            logger.debug(f"[Downloader] Add torrent: {bangumi.official_title}")
-            return True
-        else:
-            logger.debug(f"[Downloader] Torrent added before: {bangumi.official_title}")
+        try:
+            if await self.client.add_torrents(
+                torrent_urls=torrent_url,
+                torrent_files=torrent_file,
+                save_path=bangumi.save_path,
+                category="Bangumi",
+            ):
+                logger.debug(f"[Downloader] Add torrent: {bangumi.official_title}")
+                return True
+            else:
+                logger.debug(f"[Downloader] Torrent added before: {bangumi.official_title}")
+                return False
+        except Exception as e:
+            logger.error(f"[Downloader] Failed to add torrent for {bangumi.official_title}: {e}")
             return False
 
     async def move_torrent(self, hashes, location):

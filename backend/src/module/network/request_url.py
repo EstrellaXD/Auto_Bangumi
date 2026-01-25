@@ -26,7 +26,7 @@ async def get_shared_client() -> httpx.AsyncClient:
         return _shared_client
     if _shared_client is not None:
         await _shared_client.aclose()
-    timeout = httpx.Timeout(connect=5.0, read=10.0, write=10.0, pool=10.0)
+    timeout = httpx.Timeout(connect=10.0, read=30.0, write=10.0, pool=10.0)
     if settings.proxy.enable:
         if "http" in settings.proxy.type:
             if settings.proxy.username:
@@ -50,31 +50,50 @@ async def get_shared_client() -> httpx.AsyncClient:
 
 
 class RequestURL:
+    # More complete User-Agent to avoid Cloudflare blocking
+    DEFAULT_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
     def __init__(self):
-        self.header = {"user-agent": "Mozilla/5.0", "Accept": "application/xml"}
+        self.header = {"User-Agent": self.DEFAULT_UA, "Accept": "application/xml"}
         self._client: httpx.AsyncClient | None = None
+
+    def _get_headers(self, url: str) -> dict:
+        """Get appropriate headers based on URL type."""
+        base_headers = {
+            "User-Agent": self.DEFAULT_UA,
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+        }
+        # For torrent files, use different Accept header
+        if url.endswith(".torrent") or "/download/" in url:
+            base_headers["Accept"] = "application/x-bittorrent, application/octet-stream, */*"
+        else:
+            base_headers["Accept"] = "application/xml, text/xml, */*"
+        return base_headers
 
     async def get_url(self, url, retry=3):
         try_time = 0
+        headers = self._get_headers(url)
         while True:
             try:
-                req = await self._client.get(url=url, headers=self.header)
+                req = await self._client.get(url=url, headers=headers)
                 logger.debug(f"[Network] Successfully connected to {url}. Status: {req.status_code}")
                 req.raise_for_status()
                 return req
-            except httpx.HTTPStatusError:
-                logger.debug(f"[Network] HTTP error from {url}.")
+            except httpx.HTTPStatusError as e:
+                logger.warning(f"[Network] HTTP {e.response.status_code} from {url}")
                 break
-            except httpx.RequestError:
-                logger.debug(
-                    f"[Network] Cannot connect to {url}. Wait for 5 seconds."
+            except httpx.RequestError as e:
+                logger.warning(
+                    f"[Network] Request error for {url}: {type(e).__name__}. Retry {try_time + 1}/{retry}"
                 )
                 try_time += 1
                 if try_time >= retry:
                     break
                 await asyncio.sleep(5)
             except Exception as e:
-                logger.debug(e)
+                logger.warning(f"[Network] Unexpected error for {url}: {e}")
                 break
         logger.error(f"[Network] Unable to connect to {url}, Please check your network settings")
         return None
