@@ -135,12 +135,24 @@ class QbDownloader:
             else:
                 files["torrents"] = ("torrent.torrent", torrent_files, "application/x-bittorrent")
 
-        resp = await self._client.post(
-            self._url("torrents/add"),
-            data=data,
-            files=files if files else None,
-        )
-        return resp.text == "Ok."
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                resp = await self._client.post(
+                    self._url("torrents/add"),
+                    data=data,
+                    files=files if files else None,
+                )
+                return resp.text == "Ok."
+            except (httpx.ReadError, httpx.ConnectError, httpx.RequestError) as e:
+                if attempt < max_retries - 1:
+                    logger.warning(
+                        f"[Downloader] Network error adding torrent (attempt {attempt + 1}/{max_retries}): {e}"
+                    )
+                    await asyncio.sleep(2)
+                else:
+                    logger.error(f"[Downloader] Failed to add torrent after {max_retries} attempts: {e}")
+                    raise
 
     async def torrents_delete(self, hash, delete_files: bool = True):
         await self._client.post(
