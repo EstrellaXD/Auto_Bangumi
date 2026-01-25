@@ -25,11 +25,20 @@ class BangumiDatabase:
     def __init__(self, session: Session):
         self.session = session
 
-    def add(self, data: Bangumi) -> bool:
-        statement = select(Bangumi).where(Bangumi.title_raw == data.title_raw)
+    def _is_duplicate(self, data: Bangumi) -> bool:
+        """Check if a bangumi rule already exists based on title_raw and group_name."""
+        statement = select(Bangumi).where(
+            and_(
+                Bangumi.title_raw == data.title_raw,
+                Bangumi.group_name == data.group_name,
+            )
+        )
         result = self.session.execute(statement)
-        bangumi = result.scalar_one_or_none()
-        if bangumi:
+        return result.scalar_one_or_none() is not None
+
+    def add(self, data: Bangumi) -> bool:
+        if self._is_duplicate(data):
+            logger.debug(f"[Database] Skipping duplicate: {data.official_title} ({data.group_name})")
             return False
         self.session.add(data)
         self.session.commit()
@@ -37,11 +46,45 @@ class BangumiDatabase:
         logger.debug(f"[Database] Insert {data.official_title} into database.")
         return True
 
-    def add_all(self, datas: list[Bangumi]):
-        self.session.add_all(datas)
+    def add_all(self, datas: list[Bangumi]) -> int:
+        """Add multiple bangumi, skipping duplicates. Returns count of added items."""
+        if not datas:
+            return 0
+
+        # Get existing title_raw + group_name combinations
+        existing = set()
+        for data in datas:
+            if self._is_duplicate(data):
+                existing.add((data.title_raw, data.group_name))
+
+        # Filter out duplicates
+        to_add = [
+            d for d in datas
+            if (d.title_raw, d.group_name) not in existing
+        ]
+
+        # Also deduplicate within the batch itself
+        seen = set()
+        unique_to_add = []
+        for d in to_add:
+            key = (d.title_raw, d.group_name)
+            if key not in seen:
+                seen.add(key)
+                unique_to_add.append(d)
+
+        if not unique_to_add:
+            logger.debug(f"[Database] All {len(datas)} bangumi already exist, skipping.")
+            return 0
+
+        self.session.add_all(unique_to_add)
         self.session.commit()
         _invalidate_bangumi_cache()
-        logger.debug(f"[Database] Insert {len(datas)} bangumi into database.")
+        skipped = len(datas) - len(unique_to_add)
+        if skipped > 0:
+            logger.debug(f"[Database] Insert {len(unique_to_add)} bangumi, skipped {skipped} duplicates.")
+        else:
+            logger.debug(f"[Database] Insert {len(unique_to_add)} bangumi into database.")
+        return len(unique_to_add)
 
     def update(self, data: Bangumi | BangumiUpdate, _id: int = None) -> bool:
         if _id and isinstance(data, BangumiUpdate):

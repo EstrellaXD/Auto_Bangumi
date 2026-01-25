@@ -286,11 +286,13 @@ function Exit() {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-height: var(--touch-target);
   padding: 10px 14px;
   border-radius: var(--radius-md);
   cursor: pointer;
   user-select: none;
   color: var(--color-text-secondary);
+  text-decoration: none;
   transition: color var(--transition-fast),
               background-color var(--transition-fast);
   white-space: nowrap;
@@ -298,6 +300,11 @@ function Exit() {
   &:hover {
     color: var(--color-primary);
     background: var(--color-primary-light);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -2px;
   }
 
   &--active {
@@ -315,7 +322,11 @@ function Exit() {
 
     &:hover {
       color: var(--color-danger);
-      background: rgba(239, 68, 68, 0.08);
+      background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+    }
+
+    &:focus-visible {
+      outline-color: var(--color-danger);
     }
   }
 

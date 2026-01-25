@@ -47,7 +47,11 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
             type="primary"
           />
         </div>
-        <div class="card-edit-btn">
+        <div
+          class="card-edit-btn"
+          role="img"
+          :aria-label="$t('homepage.rule.edit')"
+        >
           <Write size="18" />
         </div>
       </div>
@@ -104,31 +108,48 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
   width: 150px;
   cursor: pointer;
   user-select: none;
+
+  // Focus ring for keyboard navigation
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 4px;
+    border-radius: var(--radius-md);
+  }
 }
 
 .card-poster {
   position: relative;
+  aspect-ratio: 5 / 7;
   border-radius: var(--radius-md);
   overflow: hidden;
   box-shadow: var(--shadow-md);
   transition: box-shadow var(--transition-fast), transform var(--transition-fast);
 
-  .card:hover & {
+  .card:hover &,
+  .card:focus-visible & {
     box-shadow: var(--shadow-lg);
     transform: translateY(-2px);
+  }
+
+  // On touch devices, don't lift on hover
+  @include forTouch {
+    .card:hover & {
+      transform: none;
+    }
   }
 }
 
 .card-img {
   width: 100%;
-  height: 210px;
+  height: 100%;
   object-fit: cover;
   display: block;
 }
 
 .card-placeholder {
   width: 100%;
-  height: 210px;
+  height: 100%;
+  min-height: 210px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -138,6 +159,7 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
   transition: background-color var(--transition-normal);
 
   &--small {
+    min-height: 44px;
     height: 44px;
   }
 }
@@ -150,16 +172,32 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
   align-items: center;
   justify-content: center;
   opacity: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--color-overlay-light);
   backdrop-filter: blur(2px);
   transition: opacity var(--transition-normal);
 
-  .card:hover & {
+  .card:hover &,
+  .card:focus-visible & {
     opacity: 1;
   }
 
   .card:active & {
-    background: rgba(0, 0, 0, 0.5);
+    background: var(--color-overlay);
+  }
+
+  // On touch devices, always show a subtle indicator
+  @include forTouch {
+    opacity: 1;
+    background: linear-gradient(to top, var(--color-overlay) 0%, transparent 50%);
+    backdrop-filter: none;
+
+    .card-edit-btn {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      width: 32px;
+      height: 32px;
+    }
   }
 }
 
@@ -173,28 +211,38 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
   flex-wrap: wrap;
 
   :deep(.tag) {
-    background: rgba(0, 0, 0, 0.5);
+    background: var(--color-overlay);
     border-color: rgba(255, 255, 255, 0.4);
-    color: #fff;
+    color: var(--color-white);
     font-size: 9px;
     padding: 1px 6px;
+  }
+
+  // On touch, move tags to avoid overlap with edit button
+  @include forTouch {
+    right: 44px;
   }
 }
 
 .card-edit-btn {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-white);
   box-shadow: var(--shadow-md);
-  transition: transform var(--transition-fast);
+  transition: transform var(--transition-fast), background-color var(--transition-fast);
 
   .card:active & {
     transform: scale(0.9);
+  }
+
+  .card:hover &,
+  .card:focus-visible & {
+    background: var(--color-primary-hover);
   }
 }
 
@@ -205,6 +253,7 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
 .card-title {
   font-size: 14px;
   font-weight: 500;
+  line-height: 1.4;
   color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -220,7 +269,8 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
 
 // Search result card
 .search-card {
-  width: 480px;
+  width: 100%;
+  max-width: 480px;
   border-radius: var(--radius-lg);
   padding: 4px;
   background: var(--color-primary-light);

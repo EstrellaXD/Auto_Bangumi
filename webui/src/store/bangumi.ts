@@ -4,6 +4,8 @@ import { ruleTemplate } from '#/bangumi';
 export const useBangumiStore = defineStore('bangumi', () => {
   const bangumi = ref<BangumiRule[]>([]);
   const showArchived = ref(false);
+  const isLoading = ref(false);
+  const hasLoaded = ref(false);
   const editRule = reactive<{
     show: boolean;
     item: BangumiRule;
@@ -23,13 +25,19 @@ export const useBangumiStore = defineStore('bangumi', () => {
   );
 
   async function getAll() {
-    const res = await apiBangumi.getAll();
-    const sort = (arr: BangumiRule[]) => arr.sort((a, b) => b.id - a.id);
+    isLoading.value = true;
+    try {
+      const res = await apiBangumi.getAll();
+      const sort = (arr: BangumiRule[]) => arr.sort((a, b) => b.id - a.id);
 
-    const enabled = sort(res.filter((e) => !e.deleted));
-    const disabled = sort(res.filter((e) => e.deleted));
+      const enabled = sort(res.filter((e) => !e.deleted));
+      const disabled = sort(res.filter((e) => e.deleted));
 
-    bangumi.value = [...enabled, ...disabled];
+      bangumi.value = [...enabled, ...disabled];
+      hasLoaded.value = true;
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   function refreshData() {
@@ -77,6 +85,8 @@ export const useBangumiStore = defineStore('bangumi', () => {
   return {
     bangumi,
     showArchived,
+    isLoading,
+    hasLoaded,
     activeBangumi,
     archivedBangumi,
     editRule,

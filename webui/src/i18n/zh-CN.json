@@ -137,6 +137,9 @@
       "unarchive": "取消归档",
       "archived": "已归档",
       "archived_section": "已归档 ({count})",
+      "select_hint": "该番剧有多个规则，请选择要编辑的规则：",
+      "filter": "过滤",
+      "unnamed": "未命名规则",
       "season": "季度",
       "year": "年份",
       "yes_btn": "是"

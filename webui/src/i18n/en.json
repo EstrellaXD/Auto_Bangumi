@@ -137,6 +137,9 @@
       "unarchive": "Unarchive",
       "archived": "Archived",
       "archived_section": "Archived ({count})",
+      "select_hint": "Multiple rules found for this anime. Select one to edit:",
+      "filter": "Filter",
+      "unnamed": "Unnamed Rule",
       "season": "Season",
       "year": "Year",
       "yes_btn": "Yes"

@@ -56,6 +56,22 @@
   // --- Typography ---
   --font-family: 'Inter', -apple-system, 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
 
+  // --- Z-Index Scale ---
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-fixed: 30;
+  --z-modal-backdrop: 40;
+  --z-modal: 50;
+  --z-popover: 60;
+  --z-tooltip: 70;
+
+  // --- Overlay Colors ---
+  --color-overlay: rgba(0, 0, 0, 0.5);
+  --color-overlay-light: rgba(0, 0, 0, 0.3);
+  --color-badge-bg: #ff3b30;
+  --color-badge-shadow: rgba(255, 59, 48, 0.4);
+  --color-white: #ffffff;
+
   @include forTablet {
     --layout-padding: 14px;
     --layout-gap: 12px;
@@ -98,4 +114,11 @@
   // --- Scrollbar ---
   --scrollbar-thumb-color: rgba(139, 108, 199, 0.3);
   --scrollbar-thumb-hover-color: rgba(139, 108, 199, 0.6);
+
+  // --- Overlay Colors (dark) ---
+  --color-overlay: rgba(0, 0, 0, 0.7);
+  --color-overlay-light: rgba(0, 0, 0, 0.5);
+  --color-badge-bg: #ff453a;
+  --color-badge-shadow: rgba(255, 69, 58, 0.5);
+  --color-white: #ffffff;
 }

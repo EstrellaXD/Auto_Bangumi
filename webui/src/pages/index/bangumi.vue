@@ -196,6 +196,7 @@ function onRuleSelect(rule: BangumiRule) {
       :title="ruleListPopup.group?.primary.official_title || ''"
     >
       <div v-if="ruleListPopup.group" class="rule-list">
+        <div class="rule-list-hint">{{ $t('homepage.rule.select_hint') }}</div>
         <div
           v-for="rule in ruleListPopup.group.rules"
           :key="rule.id"
@@ -205,12 +206,19 @@ function onRuleSelect(rule: BangumiRule) {
         >
           <div class="rule-list-item-info">
             <div class="rule-list-item-title">
-              {{ rule.group_name || rule.rule_name || `Rule #${rule.id}` }}
+              {{ rule.group_name || rule.rule_name || $t('homepage.rule.unnamed') }}
             </div>
-            <div class="rule-list-item-meta">
-              <span v-if="rule.dpi">{{ rule.dpi }}</span>
-              <span v-if="rule.subtitle">{{ rule.subtitle }}</span>
-              <span v-if="rule.source">{{ rule.source }}</span>
+            <div class="rule-list-item-tags">
+              <ab-tag v-if="rule.dpi" :title="rule.dpi" type="primary" />
+              <ab-tag v-if="rule.subtitle" :title="rule.subtitle" type="primary" />
+              <ab-tag v-if="rule.source" :title="rule.source" type="primary" />
+            </div>
+            <div v-if="rule.filter && rule.filter.length > 0" class="rule-list-item-filter">
+              <span class="rule-list-item-filter-label">{{ $t('homepage.rule.filter') }}:</span>
+              <span class="rule-list-item-filter-value">{{ rule.filter.join(', ') }}</span>
+            </div>
+            <div v-if="rule.title_raw" class="rule-list-item-raw">
+              {{ rule.title_raw }}
             </div>
           </div>
           <div class="rule-list-item-arrow">›</div>
@@ -381,18 +389,26 @@ function onRuleSelect(rule: BangumiRule) {
 .rule-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   padding: 8px;
-  min-width: 280px;
+  min-width: 300px;
+}
+
+.rule-list-hint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  padding: 4px 12px 8px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 4px;
 }
 
 .rule-list-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   min-height: var(--touch-target);
-  padding: 10px 12px;
+  padding: 12px;
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: background-color var(--transition-fast);
@@ -419,31 +435,52 @@ function onRuleSelect(rule: BangumiRule) {
 
 .rule-list-item-title {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.rule-list-item-meta {
+.rule-list-item-tags {
   display: flex;
-  gap: 8px;
-  margin-top: 2px;
-  font-size: 12px;
-  color: var(--color-text-secondary);
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
 
-  span + span::before {
-    content: '·';
-    margin-right: 8px;
-    color: var(--color-text-muted);
-  }
+.rule-list-item-filter {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rule-list-item-filter-label {
+  color: var(--color-text-secondary);
+}
+
+.rule-list-item-filter-value {
+  font-family: var(--font-mono, monospace);
+}
+
+.rule-list-item-raw {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: italic;
 }
 
 .rule-list-item-arrow {
   font-size: 18px;
   color: var(--color-text-muted);
   flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .empty-guide {

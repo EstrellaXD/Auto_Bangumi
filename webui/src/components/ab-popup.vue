@@ -82,12 +82,13 @@ function close() {
 <style lang="scss" scoped>
 .popup-dialog {
   position: relative;
-  z-index: 40;
+  z-index: var(--z-modal, 50);
 }
 
 .popup-backdrop {
   position: fixed;
   inset: 0;
+  z-index: var(--z-modal-backdrop, 40);
   background: rgba(108, 74, 182, 0.15);
   backdrop-filter: blur(4px);
 }
@@ -95,6 +96,7 @@ function close() {
 .popup-wrapper {
   position: fixed;
   inset: 0;
+  z-index: var(--z-modal, 50);
   overflow-y: auto;
 }
 
