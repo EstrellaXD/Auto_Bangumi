@@ -18,10 +18,14 @@ withDefaults(
 
 <style lang="scss" scoped>
 .page-title {
-  display: flex;
+  display: none;
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
+
+  @include forTablet {
+    display: flex;
+  }
 }
 
 .page-title-text {

@@ -5,8 +5,12 @@ definePage({
   name: 'Bangumi List',
 });
 
-const { bangumi, showArchived, activeBangumi, archivedBangumi } = storeToRefs(useBangumiStore());
+const { bangumi, showArchived, isLoading, hasLoaded, activeBangumi, archivedBangumi } = storeToRefs(useBangumiStore());
 const { getAll, openEditPopup } = useBangumiStore();
+
+// Show skeleton when initially loading (not yet loaded and loading)
+const showSkeleton = computed(() => !hasLoaded.value && isLoading.value);
+const skeletonCount = 8; // Number of skeleton cards to show
 
 const refreshing = ref(false);
 
@@ -77,8 +81,20 @@ function onRuleSelect(rule: BangumiRule) {
 <template>
   <ab-pull-refresh :loading="refreshing" @refresh="onRefresh">
   <div class="page-bangumi">
+    <!-- Skeleton loading state -->
+    <div v-if="showSkeleton" class="bangumi-grid">
+      <div
+        v-for="i in skeletonCount"
+        :key="`skeleton-${i}`"
+        class="skeleton-card"
+      >
+        <div class="skeleton-poster"></div>
+        <div class="skeleton-title"></div>
+      </div>
+    </div>
+
     <!-- Empty state guide -->
-    <div v-if="!bangumi || bangumi.length === 0" class="empty-guide">
+    <div v-else-if="!bangumi || bangumi.length === 0" class="empty-guide">
       <div class="empty-guide-header anim-fade-in">
         <div class="empty-guide-title">{{ $t('homepage.empty.title') }}</div>
         <div class="empty-guide-subtitle">{{ $t('homepage.empty.subtitle') }}</div>
@@ -137,15 +153,17 @@ function onRuleSelect(rule: BangumiRule) {
 
       <!-- Archived section -->
       <div v-if="groupedArchivedBangumi.length > 0" class="archived-section">
-        <div
+        <button
+          type="button"
           class="archived-header"
+          :aria-expanded="showArchived"
           @click="showArchived = !showArchived"
         >
           <span class="archived-title">
             {{ $t('homepage.rule.archived_section', { count: archivedBangumi.length }) }}
           </span>
-          <span class="archived-toggle">{{ showArchived ? '−' : '+' }}</span>
-        </div>
+          <span class="archived-toggle" aria-hidden="true">{{ showArchived ? '−' : '+' }}</span>
+        </button>
 
         <transition-group
           v-show="showArchived"
@@ -214,7 +232,8 @@ function onRuleSelect(rule: BangumiRule) {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 12px;
-  padding: 8px;
+  padding: 12px;
+  justify-items: center;
 
   @include forTablet {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -227,11 +246,53 @@ function onRuleSelect(rule: BangumiRule) {
   }
 }
 
+// Skeleton loading cards
+.skeleton-card {
+  width: 150px;
+}
+
+.skeleton-poster {
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-hover) 25%,
+    var(--color-border) 50%,
+    var(--color-surface-hover) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+.skeleton-title {
+  height: 16px;
+  margin-top: 8px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-hover) 25%,
+    var(--color-border) 50%,
+    var(--color-surface-hover) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  animation-delay: 0.1s;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 .bangumi-group-wrapper {
   position: relative;
   overflow: visible;
   width: fit-content;
-  justify-self: center;
 }
 
 .group-badge {
@@ -242,7 +303,7 @@ function onRuleSelect(rule: BangumiRule) {
   height: 22px;
   padding: 0 6px;
   border-radius: 11px;
-  background: #ff3b30;
+  background: var(--color-primary);
   color: #fff;
   font-size: 13px;
   font-weight: 600;
@@ -251,7 +312,7 @@ function onRuleSelect(rule: BangumiRule) {
   justify-content: center;
   z-index: 10;
   pointer-events: none;
-  box-shadow: 0 2px 6px rgba(255, 59, 48, 0.4);
+  box-shadow: 0 2px 6px rgba(124, 77, 255, 0.4);
 }
 
 .archived-section {
@@ -263,14 +324,23 @@ function onRuleSelect(rule: BangumiRule) {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
   padding: 12px 8px;
   margin-bottom: 12px;
   cursor: pointer;
+  border: none;
   border-radius: var(--radius-md);
+  background: transparent;
+  font: inherit;
   transition: background-color var(--transition-fast);
 
   &:hover {
     background: var(--color-surface-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
   }
 }
 
@@ -300,9 +370,9 @@ function onRuleSelect(rule: BangumiRule) {
   left: 4px;
   padding: 2px 6px;
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--color-overlay);
   backdrop-filter: blur(4px);
-  color: #fff;
+  color: var(--color-white);
   font-size: 10px;
   font-weight: 500;
   pointer-events: none;
@@ -321,6 +391,7 @@ function onRuleSelect(rule: BangumiRule) {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-height: var(--touch-target);
   padding: 10px 12px;
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -328,6 +399,11 @@ function onRuleSelect(rule: BangumiRule) {
 
   &:hover {
     background: var(--color-surface-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -2px;
   }
 
   &--disabled {
@@ -422,7 +498,7 @@ function onRuleSelect(rule: BangumiRule) {
   height: 24px;
   border-radius: 50%;
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-white);
   font-size: 13px;
   font-weight: 600;
   display: flex;
