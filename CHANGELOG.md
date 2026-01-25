@@ -1,3 +1,39 @@
+# [3.2.0-beta.10] - 2026-01-25
+
+## Backend
+
+### Features
+
+- 新增季度/集数偏移自动检测功能
+  - 通过分析 TMDB 剧集播出日期检测「虚拟季度」（如芙莉莲第一季分两部分播出）
+  - 当播出间隔超过6个月时自动识别为不同部分
+  - 自动计算集数偏移量（如 RSS 显示 S2E1 → TMDB S1E29）
+- 新增后台扫描线程，自动检测已有订阅的偏移问题
+- 新增搜索源配置 API 端点：
+  - `GET /search/provider/config` - 获取搜索源配置
+  - `PUT /search/provider/config` - 更新搜索源配置
+- 新增 API 端点：
+  - `POST /bangumi/detect-offset` - 检测季度/集数偏移
+  - `PATCH /bangumi/dismiss-review/{id}` - 忽略偏移检查提醒
+- 数据库新增 `needs_review` 和 `needs_review_reason` 字段
+
+## Frontend
+
+### Features
+
+- 新增搜索源设置面板
+  - 支持查看、添加、编辑、删除搜索源
+  - 默认搜索源（mikan、nyaa、dmhy）不可删除
+  - URL 模板验证，确保包含 `%s` 占位符
+- 新增 iOS 风格通知角标系统
+  - 黄色角标 + 紫色边框显示需要检查的订阅
+  - 支持组合显示（如 `! | 2` 表示有警告且有多个规则）
+  - 卡片黄色发光动画提示需要注意
+- 编辑弹窗新增警告横幅，支持一键自动检测和忽略
+- 规则选择弹窗高亮显示有警告的规则
+
+---
+
 # [3.2.0-beta.8] - 2026-01-25
 
 ## Backend

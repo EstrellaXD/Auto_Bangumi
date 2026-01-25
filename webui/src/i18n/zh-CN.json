@@ -67,6 +67,21 @@
       "title": "代理设置",
       "type": "类型",
       "username": "用户名"
+    },
+    "search_provider_set": {
+      "title": "搜索源设置",
+      "add_new": "添加搜索源",
+      "add_title": "添加搜索源",
+      "edit_title": "编辑搜索源",
+      "name": "名称",
+      "name_placeholder": "例如：mikan",
+      "url": "URL 模板",
+      "url_placeholder": "https://example.com/search?q=%s",
+      "url_hint": "URL 中使用 %s 作为搜索关键词的占位符",
+      "url_missing_placeholder": "URL 必须包含 %s 作为搜索关键词占位符",
+      "default": "默认",
+      "no_providers": "暂无搜索源",
+      "delete_confirm": "确定删除此搜索源？"
     }
   },
   "downloader": {

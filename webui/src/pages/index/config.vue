@@ -24,6 +24,7 @@ onActivated(() => {
       <div class="config-col">
         <config-notification></config-notification>
         <config-proxy></config-proxy>
+        <config-search-provider></config-search-provider>
         <config-player></config-player>
         <config-openai></config-openai>
         <config-passkey></config-passkey>
