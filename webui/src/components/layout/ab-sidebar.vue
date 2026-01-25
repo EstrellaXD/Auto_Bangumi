@@ -269,7 +269,7 @@ function Exit() {
   transition: transform var(--transition-normal);
 
   &--open {
-    transform: rotateY(180deg);
+    transform: rotate(180deg);
   }
 }
 

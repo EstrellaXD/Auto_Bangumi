@@ -7,6 +7,7 @@ definePage({
 
 const { bangumi, showArchived, isLoading, hasLoaded, activeBangumi, archivedBangumi } = storeToRefs(useBangumiStore());
 const { getAll, openEditPopup } = useBangumiStore();
+const { openAddRss } = useAddRss();
 
 // Show skeleton when initially loading (not yet loaded and loading)
 const showSkeleton = computed(() => !hasLoaded.value && isLoading.value);
@@ -129,6 +130,12 @@ function groupNeedsReview(group: BangumiGroup): boolean {
             <div class="empty-guide-step-desc">{{ $t('homepage.empty.step3_desc') }}</div>
           </div>
         </div>
+      </div>
+
+      <div class="empty-guide-action anim-slide-up" style="--delay: 0.6s">
+        <ab-button type="primary" size="big" @click="openAddRss">
+          {{ $t('homepage.empty.add_rss_btn') }}
+        </ab-button>
       </div>
     </div>
 
@@ -595,6 +602,10 @@ function groupNeedsReview(group: BangumiGroup): boolean {
   gap: 16px;
   max-width: 400px;
   width: 100%;
+}
+
+.empty-guide-action {
+  margin-top: 24px;
 }
 
 .empty-guide-step {

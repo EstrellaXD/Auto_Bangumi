@@ -48,6 +48,14 @@ const data = defineModel<any>('data');
 <style lang="scss" scoped>
 .setting-item {
   width: 100%;
+
+  // Prevent fixed-width inputs from causing horizontal overflow on mobile
+  :deep(input),
+  :deep(select),
+  :deep(.n-select),
+  :deep(.n-input) {
+    max-width: 100%;
+  }
 }
 
 .setting-divider {

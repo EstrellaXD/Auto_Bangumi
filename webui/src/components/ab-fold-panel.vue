@@ -36,6 +36,8 @@ withDefaults(
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   transition: border-color var(--transition-normal);
+  min-width: 0; // Allow panel to shrink below content size
+  max-width: 100%;
 }
 
 .fold-panel-header {
@@ -64,6 +66,7 @@ withDefaults(
   padding: 12px 14px;
   font-size: 14px;
   color: var(--color-text);
+  overflow-x: hidden;
   transition: background-color var(--transition-normal),
               color var(--transition-normal);
 }

@@ -123,7 +123,7 @@ const visibleItems = computed(() => navItems.filter((i) => !i.hidden));
   }
 
   &__label {
-    font-size: 10px;
+    font-size: 11px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

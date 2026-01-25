@@ -132,7 +132,8 @@
       "step2_title": "配置下载器",
       "step2_desc": "前往设置页面，配置你的下载器（如 qBittorrent）连接信息。",
       "step3_title": "坐享其成",
-      "step3_desc": "AutoBangumi 将自动下载并重命名新剧集。"
+      "step3_desc": "AutoBangumi 将自动下载并重命名新剧集。",
+      "add_rss_btn": "添加 RSS 订阅"
     },
     "rule": {
       "apply": "应用",
@@ -430,7 +431,8 @@
     "reset_rule": "重置规则",
     "restart": "重启",
     "search": {
-      "placeholder": "输入关键字搜索"
+      "placeholder": "输入关键字搜索",
+      "click_to_search": "点击搜索"
     },
     "shutdown": "关闭",
     "start": "启动"

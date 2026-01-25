@@ -4,7 +4,28 @@ definePage({
 });
 
 const { getConfig, setConfig } = useConfigStore();
-const { isMobile, isMobileOrTablet } = useBreakpointQuery();
+const { isMobileOrTablet } = useBreakpointQuery();
+
+const isSaving = ref(false);
+const isResetting = ref(false);
+
+async function handleSave() {
+  isSaving.value = true;
+  try {
+    await setConfig();
+  } finally {
+    isSaving.value = false;
+  }
+}
+
+async function handleReset() {
+  isResetting.value = true;
+  try {
+    await getConfig();
+  } finally {
+    isResetting.value = false;
+  }
+}
 
 onActivated(() => {
   getConfig();
@@ -33,16 +54,22 @@ onActivated(() => {
 
     <div class="config-actions">
       <ab-button
+        :size="isMobileOrTablet ? 'big' : 'normal'"
         :class="[{ 'flex-1': isMobileOrTablet }]"
-        type="warn"
-        @click="getConfig"
+        type="secondary"
+        :loading="isResetting"
+        :disabled="isResetting || isSaving"
+        @click="handleReset"
       >
         {{ $t('config.cancel') }}
       </ab-button>
       <ab-button
+        :size="isMobileOrTablet ? 'big' : 'normal'"
         :class="[{ 'flex-1': isMobileOrTablet }]"
         type="primary"
-        @click="setConfig"
+        :loading="isSaving"
+        :disabled="isResetting || isSaving"
+        @click="handleSave"
       >
         {{ $t('config.apply') }}
       </ab-button>
@@ -52,15 +79,20 @@ onActivated(() => {
 
 <style lang="scss" scoped>
 .page-config {
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   flex-grow: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .config-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
-  margin-bottom: auto;
+  flex: 1;
+  min-width: 0; // Allow grid to shrink below content size
+  width: 100%;
 
   @include forDesktop {
     grid-template-columns: 1fr 1fr;
@@ -71,6 +103,8 @@ onActivated(() => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0; // Allow column to shrink below content size
+  width: 100%;
 }
 
 .config-actions {
@@ -78,12 +112,35 @@ onActivated(() => {
   bottom: 0;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
+  justify-content: center;
+  gap: 12px;
   margin-top: 16px;
-  padding: 12px 0;
-  backdrop-filter: blur(8px);
-  background: color-mix(in srgb, var(--color-bg) 80%, transparent);
-  @include safeAreaBottom(padding-bottom, 12px);
+  padding: 12px;
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  border: 1px solid var(--color-border);
+
+  // Override button max-width on mobile to allow flex grow
+  :deep(.btn) {
+    max-width: none;
+  }
+
+  @include forTablet {
+    justify-content: flex-end;
+    padding: 12px 0;
+    border-radius: 0;
+    border: none;
+    background: color-mix(in srgb, var(--color-bg) 80%, transparent);
+
+    // Restore button max-width on tablet+
+    :deep(.btn) {
+      max-width: 170px;
+
+      &.btn--big {
+        max-width: 276px;
+      }
+    }
+  }
 }
 </style>

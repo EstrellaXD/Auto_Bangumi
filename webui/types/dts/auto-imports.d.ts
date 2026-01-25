@@ -86,6 +86,7 @@ declare global {
   const toRefs: typeof import('vue')['toRefs']
   const triggerRef: typeof import('vue')['triggerRef']
   const unref: typeof import('vue')['unref']
+  const useAddRss: typeof import('../../src/hooks/useAddRss')['useAddRss']
   const useApi: typeof import('../../src/hooks/useApi')['useApi']
   const useAppInfo: typeof import('../../src/hooks/useAppInfo')['useAppInfo']
   const useAttrs: typeof import('vue')['useAttrs']

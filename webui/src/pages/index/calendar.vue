@@ -156,35 +156,95 @@ function onRuleSelect(rule: BangumiRule) {
     </div>
 
     <!-- Desktop: Grid columns -->
-    <div v-else-if="!isMobile" class="calendar-grid">
-      <div
-        v-for="(key, index) in [...DAY_KEYS, 'unknown']"
-        :key="key"
-        class="calendar-column anim-slide-up"
-        :class="{
-          'calendar-column--today': key !== 'unknown' && isToday(index),
-          'calendar-column--unknown': key === 'unknown'
-        }"
-        :style="{ '--delay': `${index * 0.05}s` }"
-      >
-        <!-- Day header -->
+    <div v-else-if="!isMobile" class="calendar-desktop">
+      <div class="calendar-grid">
         <div
-          class="calendar-day-header"
-          :class="{ 'calendar-day-header--today': key !== 'unknown' && isToday(index) }"
+          v-for="(key, index) in DAY_KEYS"
+          :key="key"
+          class="calendar-column anim-slide-up"
+          :class="{
+            'calendar-column--today': isToday(index),
+          }"
+          :style="{ '--delay': `${index * 0.05}s` }"
         >
-          <span class="calendar-day-label">{{ getDayLabel(key) }}</span>
-          <span
-            v-if="key !== 'unknown' && isToday(index)"
-            class="calendar-today-badge"
-          >
-            {{ $t('calendar.today') }}
-          </span>
-        </div>
-
-        <!-- Anime cards (grouped) -->
-        <div class="calendar-column-items">
+          <!-- Day header -->
           <div
-            v-for="group in groupedBangumiByDay[key]"
+            class="calendar-day-header"
+            :class="{ 'calendar-day-header--today': isToday(index) }"
+          >
+            <span class="calendar-day-label">{{ getDayLabel(key) }}</span>
+            <span
+              v-if="isToday(index)"
+              class="calendar-today-badge"
+            >
+              {{ $t('calendar.today') }}
+            </span>
+          </div>
+
+          <!-- Anime cards (grouped) -->
+          <div class="calendar-column-items">
+            <div
+              v-for="group in groupedBangumiByDay[key]"
+              :key="group.key"
+              class="calendar-card-wrapper"
+            >
+              <div
+                class="calendar-card"
+                role="button"
+                tabindex="0"
+                :aria-label="`Edit ${group.primary.official_title}`"
+                @click="onCardClick(group)"
+                @keydown.enter="onCardClick(group)"
+              >
+                <div class="calendar-card-poster">
+                  <img
+                    v-if="group.primary.poster_link"
+                    :src="posterSrc(group.primary.poster_link)"
+                    :alt="group.primary.official_title"
+                    class="calendar-card-img"
+                    loading="lazy"
+                  />
+                  <div v-else class="calendar-card-placeholder">
+                    <ErrorPicture theme="outline" size="20" />
+                  </div>
+                  <div class="calendar-card-overlay">
+                    <div class="calendar-card-overlay-tags">
+                      <ab-tag :title="`S${group.primary.season}`" type="primary" />
+                      <ab-tag
+                        v-if="group.primary.group_name"
+                        :title="group.primary.group_name"
+                        type="primary"
+                      />
+                    </div>
+                    <div class="calendar-card-overlay-title">{{ group.primary.official_title }}</div>
+                  </div>
+                </div>
+              </div>
+              <div v-if="group.rules.length > 1" class="group-badge">
+                {{ group.rules.length }}
+              </div>
+            </div>
+
+            <!-- Empty day -->
+            <div v-if="groupedBangumiByDay[key].length === 0" class="calendar-empty-day">
+              {{ $t('calendar.empty') }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Unknown air day section (separate from main grid) -->
+      <div
+        v-if="groupedBangumiByDay.unknown.length > 0"
+        class="calendar-unknown-section anim-slide-up"
+        :style="{ '--delay': '0.4s' }"
+      >
+        <div class="calendar-unknown-header">
+          <span class="calendar-day-label">{{ getDayLabel('unknown') }}</span>
+        </div>
+        <div class="calendar-unknown-items">
+          <div
+            v-for="group in groupedBangumiByDay.unknown"
             :key="group.key"
             class="calendar-card-wrapper"
           >
@@ -202,6 +262,7 @@ function onRuleSelect(rule: BangumiRule) {
                   :src="posterSrc(group.primary.poster_link)"
                   :alt="group.primary.official_title"
                   class="calendar-card-img"
+                  loading="lazy"
                 />
                 <div v-else class="calendar-card-placeholder">
                   <ErrorPicture theme="outline" size="20" />
@@ -222,11 +283,6 @@ function onRuleSelect(rule: BangumiRule) {
             <div v-if="group.rules.length > 1" class="group-badge">
               {{ group.rules.length }}
             </div>
-          </div>
-
-          <!-- Empty day -->
-          <div v-if="groupedBangumiByDay[key].length === 0" class="calendar-empty-day">
-            {{ $t('calendar.empty') }}
           </div>
         </div>
       </div>
@@ -272,6 +328,7 @@ function onRuleSelect(rule: BangumiRule) {
                   :src="posterSrc(group.primary.poster_link)"
                   :alt="group.primary.official_title"
                   class="calendar-row-img"
+                  loading="lazy"
                 />
                 <div v-else class="calendar-row-placeholder">
                   <ErrorPicture theme="outline" size="16" />
@@ -412,12 +469,19 @@ function onRuleSelect(rule: BangumiRule) {
   to { transform: rotate(360deg); }
 }
 
+// Desktop layout
+.calendar-desktop {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+}
+
 // Desktop grid
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(7, 1fr);
   gap: 10px;
-  flex: 1;
 }
 
 .calendar-column {
@@ -435,11 +499,28 @@ function onRuleSelect(rule: BangumiRule) {
     border-color: var(--color-primary);
     box-shadow: 0 0 0 1px var(--color-primary-light);
   }
+}
 
-  &--unknown {
-    grid-column: span 2;
-    background: var(--color-surface-hover);
-  }
+// Unknown air day section
+.calendar-unknown-section {
+  background: var(--color-surface-hover);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+}
+
+.calendar-unknown-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  margin-bottom: 10px;
+}
+
+.calendar-unknown-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
 }
 
 .calendar-day-header {
@@ -485,12 +566,6 @@ function onRuleSelect(rule: BangumiRule) {
   flex-direction: column;
   gap: 8px;
   flex: 1;
-
-  .calendar-column--unknown & {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 10px;
-  }
 }
 
 // Card wrapper for badge positioning

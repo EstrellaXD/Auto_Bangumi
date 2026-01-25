@@ -84,11 +84,11 @@ function abLabel(label: string | (() => string)) {
 .status-bar-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
   font-size: 18px;
 
   @include forTablet {
-    gap: 10px;
+    gap: 6px;
     font-size: 20px;
   }
 }
@@ -104,10 +104,16 @@ function abLabel(label: string | (() => string)) {
   background: transparent;
   border: none;
   // Ensure minimum touch target
-  min-width: var(--touch-target);
-  min-height: var(--touch-target);
-  padding: 8px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 6px;
   border-radius: var(--radius-sm);
+
+  @include forTablet {
+    min-width: var(--touch-target);
+    min-height: var(--touch-target);
+    padding: 8px;
+  }
 
   &:hover {
     color: var(--color-primary);

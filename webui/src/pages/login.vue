@@ -153,6 +153,7 @@ async function handleLogin() {
     filter: blur(100px);
     opacity: 0.6;
     animation: float 20s ease-in-out infinite;
+    will-change: transform;
   }
 
   &::before {

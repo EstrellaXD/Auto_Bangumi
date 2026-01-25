@@ -388,24 +388,36 @@ function clearFilters() {
 .modal-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px;
+  gap: 8px;
+  padding: 12px;
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
   transition: border-color var(--transition-normal);
+
+  @include forTablet {
+    gap: 12px;
+    padding: 16px;
+  }
 }
 
 .search-input-wrapper {
   flex: 1;
+  min-width: 0; // Allow shrinking
   display: flex;
   align-items: center;
-  gap: 10px;
-  height: 44px;
-  padding-left: 14px;
+  gap: 8px;
+  height: 40px;
+  padding-left: 12px;
   background: var(--color-surface-hover);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   transition: border-color var(--transition-fast), background-color var(--transition-normal);
+
+  @include forTablet {
+    gap: 10px;
+    height: 44px;
+    padding-left: 14px;
+  }
 
   &:focus-within {
     border-color: var(--color-primary);
@@ -451,18 +463,25 @@ function clearFilters() {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   height: 100%;
-  padding: 0 14px;
-  min-width: 90px;
+  padding: 0 10px;
+  min-width: 70px;
   background: var(--color-primary);
   color: #fff;
   border: none;
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   font-family: inherit;
   transition: background-color var(--transition-fast);
+
+  @include forTablet {
+    gap: 6px;
+    padding: 0 14px;
+    min-width: 90px;
+    font-size: 13px;
+  }
 
   &:hover {
     background: var(--color-primary-hover);
@@ -515,8 +534,8 @@ function clearFilters() {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   background: var(--color-surface-hover);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -524,6 +543,11 @@ function clearFilters() {
   color: var(--color-text-muted);
   flex-shrink: 0;
   transition: all var(--transition-fast);
+
+  @include forTablet {
+    width: 44px;
+    height: 44px;
+  }
 
   &:hover {
     background: var(--color-danger);

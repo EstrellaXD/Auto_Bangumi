@@ -132,7 +132,8 @@
       "step2_title": "Configure Downloader",
       "step2_desc": "Go to Config and set up your downloader (e.g. qBittorrent) connection.",
       "step3_title": "Sit Back & Enjoy",
-      "step3_desc": "AutoBangumi will automatically download and rename new episodes for you."
+      "step3_desc": "AutoBangumi will automatically download and rename new episodes for you.",
+      "add_rss_btn": "Add RSS Feed"
     },
     "rule": {
       "apply": "Apply",
@@ -430,7 +431,8 @@
     "reset_rule": "Reset Rule",
     "restart": "Restart",
     "search": {
-      "placeholder": "Type to search"
+      "placeholder": "Type to search",
+      "click_to_search": "Click to search"
     },
     "shutdown": "Shutdown",
     "start": "Start"
