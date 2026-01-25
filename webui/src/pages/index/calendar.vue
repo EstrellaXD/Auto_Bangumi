@@ -161,7 +161,10 @@ function onRuleSelect(rule: BangumiRule) {
         v-for="(key, index) in [...DAY_KEYS, 'unknown']"
         :key="key"
         class="calendar-column anim-slide-up"
-        :class="{ 'calendar-column--today': key !== 'unknown' && isToday(index) }"
+        :class="{
+          'calendar-column--today': key !== 'unknown' && isToday(index),
+          'calendar-column--unknown': key === 'unknown'
+        }"
         :style="{ '--delay': `${index * 0.05}s` }"
       >
         <!-- Day header -->
@@ -432,6 +435,11 @@ function onRuleSelect(rule: BangumiRule) {
     border-color: var(--color-primary);
     box-shadow: 0 0 0 1px var(--color-primary-light);
   }
+
+  &--unknown {
+    grid-column: span 2;
+    background: var(--color-surface-hover);
+  }
 }
 
 .calendar-day-header {
@@ -477,6 +485,12 @@ function onRuleSelect(rule: BangumiRule) {
   flex-direction: column;
   gap: 8px;
   flex: 1;
+
+  .calendar-column--unknown & {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+  }
 }
 
 // Card wrapper for badge positioning
