@@ -16,9 +16,16 @@ export const useDownloaderStore = defineStore('downloader', () => {
     }
 
     const result: TorrentGroup[] = [];
+    // Regex to detect season-only folder names like "Season 1", "S01", "第1季", etc.
+    const seasonOnlyRegex = /^(Season\s*\d+|S\d+|第\d+季)$/i;
+
     for (const [savePath, items] of map) {
-      const parts = savePath.replace(/\/$/, '').split('/');
-      const name = parts[parts.length - 1] || savePath;
+      const parts = savePath.replace(/\/$/, '').split('/').filter(Boolean);
+      let name = parts[parts.length - 1] || savePath;
+      // If the last part is just a season folder, include the parent folder too
+      if (parts.length >= 2 && seasonOnlyRegex.test(name)) {
+        name = `${parts[parts.length - 2]} / ${name}`;
+      }
       const totalSize = items.reduce((sum, t) => sum + t.size, 0);
       const overallProgress =
         totalSize > 0
@@ -65,7 +72,7 @@ export const useDownloaderStore = defineStore('downloader', () => {
     opts
   );
   const { execute: deleteSelected } = useApi(
-    (deleteFiles: boolean = false) =>
+    (deleteFiles = false) =>
       apiDownloader.deleteTorrents(selectedHashes.value, deleteFiles),
     opts
   );
