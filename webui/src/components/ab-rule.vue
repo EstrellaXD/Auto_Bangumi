@@ -17,7 +17,7 @@ async function autoDetectOffset() {
   offsetReason.value = '';
   try {
     const result = await apiBangumi.suggestOffset(rule.value.id);
-    rule.value.offset = result.suggested_offset;
+    rule.value.episode_offset = result.suggested_offset;
     offsetReason.value = result.reason;
   } catch (e) {
     console.error('Failed to detect offset:', e);
@@ -74,7 +74,7 @@ const items: SettingItem<BangumiRule>[] = [
     <ab-label :label="() => $t('homepage.rule.offset')">
       <div class="offset-controls">
         <input
-          v-model.number="rule.offset"
+          v-model.number="rule.episode_offset"
           type="number"
           ab-input
           class="offset-input"
