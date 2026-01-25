@@ -1,3 +1,31 @@
+# [3.2.0-beta.6] - 2026-01-25
+
+## Backend
+
+### Features
+
+- 新增番剧归档功能：支持手动归档/取消归档，已完结番剧自动归档
+- 新增剧集偏移自动检测：根据 TMDB 季度集数自动计算偏移量（如 S02E18 → S02E05）
+- TMDB 解析器新增 `series_status` 和 `season_episode_counts` 字段提取
+- 新增数据库迁移 v4：为 `bangumi` 表添加 `archived` 字段
+- 新增 API 端点：
+  - `PATCH /bangumi/archive/{id}` - 归档番剧
+  - `PATCH /bangumi/unarchive/{id}` - 取消归档
+  - `GET /bangumi/refresh/metadata` - 刷新元数据并自动归档已完结番剧
+  - `GET /bangumi/suggest-offset/{id}` - 获取建议的剧集偏移量
+- 重命名模块支持从数据库查询偏移量并应用到文件名
+
+## Frontend
+
+### Features
+
+- 番剧列表页新增可折叠的「已归档」分区
+- 规则编辑弹窗新增归档/取消归档按钮
+- 规则编辑器新增剧集偏移字段和「自动检测」按钮
+- 新增 i18n 翻译（中文/英文）
+
+---
+
 # [3.2.0-beta.5] - 2026-01-24
 
 ## Backend
