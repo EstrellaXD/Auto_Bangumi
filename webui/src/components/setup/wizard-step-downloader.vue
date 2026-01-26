@@ -34,7 +34,6 @@ async function testConnection() {
 }
 
 function handleNext() {
-  setupStore.syncMediaPath();
   setupStore.nextStep();
 }
 
