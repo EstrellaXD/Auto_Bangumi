@@ -73,10 +73,15 @@ class UserDatabase:
         try:
             result = self.session.exec(statement)
             users = list(result.all())
-        except Exception:
+        except Exception as e:
+            # Table may not exist yet during initial setup
+            logger.debug(
+                f"[Database] Could not query users table (may not exist yet): {e}"
+            )
             users = []
         if len(users) != 0:
             return
         user = User(username="admin", password=get_password_hash("adminadmin"))
         self.session.add(user)
         self.session.commit()
+        logger.info("[Database] Created default admin user")

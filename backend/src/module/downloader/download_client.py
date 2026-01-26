@@ -70,10 +70,13 @@ class DownloadClient(TorrentPath):
             "rss_refresh_interval": 30,
         }
         await self.client.prefs_init(prefs=prefs)
+        # Category creation may fail if it already exists (HTTP 409) or network issues
         try:
             await self.client.add_category("BangumiCollection")
-        except Exception:
-            logger.debug("[Downloader] Cannot add new category, maybe already exists.")
+        except Exception as e:
+            logger.debug(
+                f"[Downloader] Could not add category (may already exist): {e}"
+            )
         if settings.downloader.path == "":
             prefs = await self.client.get_app_prefs()
             settings.downloader.path = self._join_path(prefs["save_path"], "Bangumi")
@@ -107,7 +110,9 @@ class DownloadClient(TorrentPath):
         await asyncio.gather(*[self.set_rule(info) for info in bangumi_info])
         logger.debug("[Downloader] Finished.")
 
-    async def get_torrent_info(self, category="Bangumi", status_filter="completed", tag=None):
+    async def get_torrent_info(
+        self, category="Bangumi", status_filter="completed", tag=None
+    ):
         return await self.client.torrents_info(
             status_filter=status_filter, category=category, tag=tag
         )
@@ -137,7 +142,9 @@ class DownloadClient(TorrentPath):
         async with RequestContent() as req:
             if isinstance(torrent, list):
                 if len(torrent) == 0:
-                    logger.debug(f"[Downloader] No torrent found: {bangumi.official_title}")
+                    logger.debug(
+                        f"[Downloader] No torrent found: {bangumi.official_title}"
+                    )
                     return False
                 if "magnet" in torrent[0].url:
                     torrent_url = [t.url for t in torrent]
@@ -149,7 +156,9 @@ class DownloadClient(TorrentPath):
                     # Filter out None values (failed fetches)
                     torrent_file = [f for f in torrent_file if f is not None]
                     if not torrent_file:
-                        logger.warning(f"[Downloader] Failed to fetch torrent files for: {bangumi.official_title}")
+                        logger.warning(
+                            f"[Downloader] Failed to fetch torrent files for: {bangumi.official_title}"
+                        )
                         return False
                     torrent_url = None
             else:
@@ -159,7 +168,9 @@ class DownloadClient(TorrentPath):
                 else:
                     torrent_file = await req.get_content(torrent.url)
                     if torrent_file is None:
-                        logger.warning(f"[Downloader] Failed to fetch torrent file for: {bangumi.official_title}")
+                        logger.warning(
+                            f"[Downloader] Failed to fetch torrent file for: {bangumi.official_title}"
+                        )
                         return False
                     torrent_url = None
         # Create tag with bangumi_id for offset lookup during rename
@@ -175,10 +186,14 @@ class DownloadClient(TorrentPath):
                 logger.debug(f"[Downloader] Add torrent: {bangumi.official_title}")
                 return True
             else:
-                logger.debug(f"[Downloader] Torrent added before: {bangumi.official_title}")
+                logger.debug(
+                    f"[Downloader] Torrent added before: {bangumi.official_title}"
+                )
                 return False
         except Exception as e:
-            logger.error(f"[Downloader] Failed to add torrent for {bangumi.official_title}: {e}")
+            logger.error(
+                f"[Downloader] Failed to add torrent for {bangumi.official_title}: {e}"
+            )
             return False
 
     async def move_torrent(self, hashes, location):

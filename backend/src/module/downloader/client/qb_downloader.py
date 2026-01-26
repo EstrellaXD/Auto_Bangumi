@@ -26,9 +26,7 @@ class QbDownloader:
     async def auth(self, retry=3):
         times = 0
         timeout = httpx.Timeout(connect=3.1, read=10.0, write=10.0, pool=10.0)
-        self._client = httpx.AsyncClient(
-            timeout=timeout, verify=self.ssl
-        )
+        self._client = httpx.AsyncClient(timeout=timeout, verify=self.ssl)
         while times < retry:
             try:
                 resp = await self._client.post(
@@ -61,8 +59,12 @@ class QbDownloader:
         if self._client:
             try:
                 await self._client.post(self._url("auth/logout"))
-            except Exception:
-                pass
+            except (
+                httpx.ConnectError,
+                httpx.RequestError,
+                httpx.TimeoutException,
+            ) as e:
+                logger.debug(f"[Downloader] Logout request failed (non-critical): {e}")
             await self._client.aclose()
             self._client = None
 
@@ -114,7 +116,9 @@ class QbDownloader:
         )
         return resp.json()
 
-    async def add_torrents(self, torrent_urls, torrent_files, save_path, category, tags=None):
+    async def add_torrents(
+        self, torrent_urls, torrent_files, save_path, category, tags=None
+    ):
         data = {
             "savepath": save_path,
             "category": category,
@@ -133,9 +137,17 @@ class QbDownloader:
         if torrent_files:
             if isinstance(torrent_files, list):
                 for i, f in enumerate(torrent_files):
-                    files[f"torrents_{i}"] = (f"torrent_{i}.torrent", f, "application/x-bittorrent")
+                    files[f"torrents_{i}"] = (
+                        f"torrent_{i}.torrent",
+                        f,
+                        "application/x-bittorrent",
+                    )
             else:
-                files["torrents"] = ("torrent.torrent", torrent_files, "application/x-bittorrent")
+                files["torrents"] = (
+                    "torrent.torrent",
+                    torrent_files,
+                    "application/x-bittorrent",
+                )
 
         max_retries = 3
         for attempt in range(max_retries):
@@ -153,14 +165,14 @@ class QbDownloader:
                     )
                     await asyncio.sleep(2)
                 else:
-                    logger.error(f"[Downloader] Failed to add torrent after {max_retries} attempts: {e}")
+                    logger.error(
+                        f"[Downloader] Failed to add torrent after {max_retries} attempts: {e}"
+                    )
                     raise
 
     async def get_torrents_by_tag(self, tag: str) -> list[dict]:
         """Get all torrents with a specific tag."""
-        resp = await self._client.get(
-            self._url("torrents/info"), params={"tag": tag}
-        )
+        resp = await self._client.get(self._url("torrents/info"), params={"tag": tag})
         return resp.json()
 
     async def torrents_delete(self, hash, delete_files: bool = True):
@@ -191,7 +203,8 @@ class QbDownloader:
                 logger.debug(f"Conflict409Error: {old_path} >> {new_path}")
                 return False
             return resp.status_code == 200
-        except Exception:
+        except (httpx.ConnectError, httpx.RequestError, httpx.TimeoutException) as e:
+            logger.warning(f"[Downloader] Failed to rename file {old_path}: {e}")
             return False
 
     async def rss_add_feed(self, url, item_path):
@@ -216,6 +229,7 @@ class QbDownloader:
 
     async def rss_set_rule(self, rule_name, rule_def):
         import json
+
         await self._client.post(
             self._url("rss/setRule"),
             data={"ruleName": rule_name, "ruleDef": json.dumps(rule_def)},

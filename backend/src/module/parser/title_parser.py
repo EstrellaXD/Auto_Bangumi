@@ -44,7 +44,9 @@ class TitleParser:
 
     @staticmethod
     async def tmdb_poster_parser(bangumi: Bangumi):
-        tmdb_info = await tmdb_parser(bangumi.official_title, settings.rss_parser.language)
+        tmdb_info = await tmdb_parser(
+            bangumi.official_title, settings.rss_parser.language
+        )
         if tmdb_info:
             logger.debug(f"TMDB Matched, official title is {tmdb_info.title}")
             bangumi.poster_link = tmdb_info.poster_link
@@ -98,9 +100,8 @@ class TitleParser:
                 offset=0,
                 filter=",".join(settings.rss_parser.filter),
             )
-        except Exception as e:
-            logger.debug(e)
-            logger.warning(f"Cannot parse {raw}.")
+        except (ValueError, AttributeError, TypeError) as e:
+            logger.warning(f"Cannot parse '{raw}': {type(e).__name__}: {e}")
             return None
 
     @staticmethod
