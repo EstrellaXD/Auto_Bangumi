@@ -46,6 +46,9 @@ class Bangumi(SQLModel, table=True):
     suggested_episode_offset: Optional[int] = Field(
         default=None, alias="suggested_episode_offset", title="建议集数偏移"
     )
+    title_aliases: Optional[str] = Field(
+        default=None, alias="title_aliases", title="标题别名"
+    )  # JSON list: ["alt_title_1", "alt_title_2"]
 
 
 class BangumiUpdate(SQLModel):
@@ -77,6 +80,9 @@ class BangumiUpdate(SQLModel):
     needs_review: bool = Field(default=False, alias="needs_review", title="需要检查")
     needs_review_reason: Optional[str] = Field(
         default=None, alias="needs_review_reason", title="检查原因"
+    )
+    title_aliases: Optional[str] = Field(
+        default=None, alias="title_aliases", title="标题别名"
     )
 
 

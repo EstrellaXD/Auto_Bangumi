@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from sqlmodel import Session, SQLModel, create_engine
 
@@ -208,7 +210,9 @@ def test_torrent_qb_hash_index_efficient(db_session):
 
     # Add multiple torrents
     torrents = [
-        Torrent(name=f"Torrent {i}", url=f"https://example.com/{i}", qb_hash=f"hash_{i}")
+        Torrent(
+            name=f"Torrent {i}", url=f"https://example.com/{i}", qb_hash=f"hash_{i}"
+        )
         for i in range(10)
     ]
     db.add_all(torrents)
@@ -225,3 +229,293 @@ def test_torrent_qb_hash_index_efficient(db_session):
     # Non-existent hash
     result = db.search_by_qb_hash("hash_100")
     assert result is None
+
+
+# ============================================================
+# Title Alias Tests - for mid-season naming change handling
+# ============================================================
+
+
+def test_add_title_alias(db_session):
+    """Test adding a title alias to an existing bangumi."""
+    db = BangumiDatabase(db_session)
+
+    bangumi = Bangumi(
+        official_title="Test Anime",
+        title_raw="Test Anime S1",
+        group_name="TestGroup",
+        dpi="1080p",
+        source="Web",
+        subtitle="CHT",
+        rss_link="test",
+    )
+    db.add(bangumi)
+    bangumi_id = db.search_all()[0].id
+
+    # Add an alias
+    result = db.add_title_alias(bangumi_id, "Test Anime Season 1")
+    assert result is True
+
+    # Verify alias was added
+    updated = db.search_id(bangumi_id)
+    assert updated.title_aliases is not None
+    aliases = json.loads(updated.title_aliases)
+    assert "Test Anime Season 1" in aliases
+
+
+def test_add_title_alias_duplicate(db_session):
+    """Test that adding the same alias twice is a no-op."""
+    db = BangumiDatabase(db_session)
+
+    bangumi = Bangumi(
+        official_title="Test Anime",
+        title_raw="Test Anime S1",
+        group_name="TestGroup",
+        dpi="1080p",
+        source="Web",
+        subtitle="CHT",
+        rss_link="test",
+    )
+    db.add(bangumi)
+    bangumi_id = db.search_all()[0].id
+
+    # Add same alias twice
+    db.add_title_alias(bangumi_id, "Test Anime Season 1")
+    result = db.add_title_alias(bangumi_id, "Test Anime Season 1")
+    assert result is False  # Second add should be a no-op
+
+
+def test_add_title_alias_same_as_title_raw(db_session):
+    """Test that adding title_raw as alias is a no-op."""
+    db = BangumiDatabase(db_session)
+
+    bangumi = Bangumi(
+        official_title="Test Anime",
+        title_raw="Test Anime S1",
+        group_name="TestGroup",
+        dpi="1080p",
+        source="Web",
+        subtitle="CHT",
+        rss_link="test",
+    )
+    db.add(bangumi)
+    bangumi_id = db.search_all()[0].id
+
+    result = db.add_title_alias(bangumi_id, "Test Anime S1")
+    assert result is False
+
+
+def test_match_torrent_with_alias(db_session):
+    """Test that match_torrent finds bangumi using aliases."""
+    db = BangumiDatabase(db_session)
+
+    bangumi = Bangumi(
+        official_title="Test Anime",
+        title_raw="Test Anime S1",
+        group_name="TestGroup",
+        dpi="1080p",
+        source="Web",
+        subtitle="CHT",
+        rss_link="test",
+        deleted=False,
+    )
+    db.add(bangumi)
+    bangumi_id = db.search_all()[0].id
+
+    # Add alias
+    db.add_title_alias(bangumi_id, "Test Anime Season 1")
+
+    # Match using title_raw
+    result = db.match_torrent("[TestGroup] Test Anime S1 - 01.mkv")
+    assert result is not None
+    assert result.official_title == "Test Anime"
+
+    # Match using alias
+    result = db.match_torrent("[TestGroup] Test Anime Season 1 - 01.mkv")
+    assert result is not None
+    assert result.official_title == "Test Anime"
+
+
+def test_find_semantic_duplicate_same_official_title(db_session):
+    """Test finding semantic duplicates with same official title."""
+    db = BangumiDatabase(db_session)
+
+    # Add first bangumi
+    bangumi1 = Bangumi(
+        official_title="Frieren",
+        title_raw="Sousou no Frieren",
+        group_name="LoliHouse",
+        dpi="1080p",
+        source="Web",
+        subtitle="CHT",
+        rss_link="test1",
+    )
+    db.add(bangumi1)
+
+    # Create a semantically similar bangumi (same anime, group changed naming)
+    bangumi2 = Bangumi(
+        official_title="Frieren",
+        title_raw="Frieren Beyond Journey's End",  # Different title_raw
+        group_name="LoliHouse&动漫国",  # Group changed mid-season
+        dpi="1080p",
+        source="Web",
+        subtitle="CHT",
+        rss_link="test2",
+    )
+
+    # Should find semantic duplicate
+    result = db.find_semantic_duplicate(bangumi2)
+    assert result is not None
+    assert result.title_raw == "Sousou no Frieren"
+
+
+def test_find_semantic_duplicate_no_match_different_resolution(db_session):
+    """Test that different resolution is NOT a semantic match."""
+    db = BangumiDatabase(db_session)
+
+    bangumi1 = Bangumi(
+        official_title="Frieren",
+        title_raw="Sousou no Frieren",
+        group_name="LoliHouse",
+        dpi="1080p",
+        source="Web",
+        subtitle="CHT",
+        rss_link="test1",
+    )
+    db.add(bangumi1)
+
+    # Same anime but different resolution - should NOT be semantic duplicate
+    bangumi2 = Bangumi(
+        official_title="Frieren",
+        title_raw="Sousou no Frieren 4K",
+        group_name="LoliHouse",
+        dpi="2160p",  # Different resolution
+        source="Web",
+        subtitle="CHT",
+        rss_link="test2",
+    )
+
+    result = db.find_semantic_duplicate(bangumi2)
+    assert result is None
+
+
+def test_add_with_semantic_duplicate_creates_alias(db_session):
+    """Test that adding a semantic duplicate creates an alias instead."""
+    db = BangumiDatabase(db_session)
+
+    # Add first bangumi
+    bangumi1 = Bangumi(
+        official_title="Frieren",
+        title_raw="Sousou no Frieren",
+        group_name="LoliHouse",
+        dpi="1080p",
+        source="Web",
+        subtitle="CHT",
+        rss_link="test1",
+    )
+    db.add(bangumi1)
+    initial_count = len(db.search_all())
+    assert initial_count == 1
+
+    # Try to add semantic duplicate
+    bangumi2 = Bangumi(
+        official_title="Frieren",
+        title_raw="Frieren Beyond Journey's End",
+        group_name="LoliHouse&动漫国",
+        dpi="1080p",
+        source="Web",
+        subtitle="CHT",
+        rss_link="test2",
+    )
+    result = db.add(bangumi2)
+    assert result is False  # Should not add new entry
+
+    # Count should still be 1
+    final_count = len(db.search_all())
+    assert final_count == 1
+
+    # But the new title_raw should be an alias
+    original = db.search_all()[0]
+    aliases = json.loads(original.title_aliases) if original.title_aliases else []
+    assert "Frieren Beyond Journey's End" in aliases
+
+
+def test_groups_are_similar():
+    """Test group name similarity detection."""
+    from module.database.bangumi import _groups_are_similar
+
+    # Exact match
+    assert _groups_are_similar("LoliHouse", "LoliHouse") is True
+
+    # Substring match (one contains the other)
+    assert _groups_are_similar("LoliHouse", "LoliHouse&动漫国字幕组") is True
+    assert _groups_are_similar("LoliHouse&动漫国字幕组", "LoliHouse") is True
+
+    # Completely different groups
+    assert _groups_are_similar("LoliHouse", "Sakurato") is False
+    assert _groups_are_similar("字幕组A", "字幕组B") is False
+
+    # Edge cases
+    assert _groups_are_similar(None, "LoliHouse") is False
+    assert _groups_are_similar("LoliHouse", None) is False
+    assert _groups_are_similar(None, None) is False
+
+
+def test_get_all_title_patterns(db_session):
+    """Test getting all title patterns for a bangumi."""
+    db = BangumiDatabase(db_session)
+
+    bangumi = Bangumi(
+        official_title="Test Anime",
+        title_raw="Test Anime S1",
+        group_name="TestGroup",
+        dpi="1080p",
+        source="Web",
+        subtitle="CHT",
+        rss_link="test",
+    )
+    db.add(bangumi)
+    bangumi_id = db.search_all()[0].id
+
+    # Add aliases
+    db.add_title_alias(bangumi_id, "Test Anime Season 1")
+    db.add_title_alias(bangumi_id, "TA S1")
+
+    # Get all patterns
+    updated = db.search_id(bangumi_id)
+    patterns = db.get_all_title_patterns(updated)
+
+    assert len(patterns) == 3
+    assert "Test Anime S1" in patterns
+    assert "Test Anime Season 1" in patterns
+    assert "TA S1" in patterns
+
+
+def test_match_list_with_aliases(db_session):
+    """Test match_list works with aliases."""
+    db = BangumiDatabase(db_session)
+
+    bangumi = Bangumi(
+        official_title="Test Anime",
+        title_raw="Test Anime S1",
+        group_name="TestGroup",
+        dpi="1080p",
+        source="Web",
+        subtitle="CHT",
+        rss_link="rss1",
+    )
+    db.add(bangumi)
+    bangumi_id = db.search_all()[0].id
+    db.add_title_alias(bangumi_id, "Test Anime Season 1")
+
+    # Create torrents with different naming patterns
+    torrents = [
+        Torrent(name="[TestGroup] Test Anime S1 - 01.mkv", url="url1"),
+        Torrent(name="[TestGroup] Test Anime Season 1 - 02.mkv", url="url2"),
+        Torrent(name="[OtherGroup] Different Anime - 01.mkv", url="url3"),
+    ]
+
+    # Only the third torrent should be unmatched
+    unmatched = db.match_list(torrents, "rss2")
+    assert len(unmatched) == 1
+    assert unmatched[0].name == "[OtherGroup] Different Anime - 01.mkv"
