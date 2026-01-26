@@ -2,7 +2,7 @@
 name = "auto-bangumi"
 version = "3.2.0-beta.13"
 description = "AutoBangumi - Automated anime download manager"
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.109.0",
     "uvicorn>=0.27.0",
@@ -43,7 +43,7 @@ asyncio_mode = "auto"
 
 [tool.ruff]
 line-length = 88
-target-version = "py310"
+target-version = "py313"
 exclude = [".venv", "venv", "build", "dist"]
 
 [tool.ruff.lint]
@@ -60,4 +60,4 @@ package = false
 
 [tool.black]
 line-length = 88
-target-version = ['py310', 'py311']
+target-version = ['py313']
