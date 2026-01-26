@@ -51,6 +51,5 @@ export type WizardStep =
   | 'account'
   | 'downloader'
   | 'rss'
-  | 'media'
   | 'notification'
   | 'review';

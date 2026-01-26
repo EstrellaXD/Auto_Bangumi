@@ -6,7 +6,6 @@ export const useSetupStore = defineStore('setup', () => {
     'account',
     'downloader',
     'rss',
-    'media',
     'notification',
     'review',
   ];
@@ -35,10 +34,6 @@ export const useSetupStore = defineStore('setup', () => {
     url: '',
     name: '',
     skipped: false,
-  });
-
-  const mediaData = reactive({
-    path: '/downloads/Bangumi',
   });
 
   const notificationData = reactive({
@@ -75,11 +70,6 @@ export const useSetupStore = defineStore('setup', () => {
     }
   }
 
-  // Sync media path with downloader path
-  function syncMediaPath() {
-    mediaData.path = downloaderData.path;
-  }
-
   // Build final request
   function buildCompleteRequest(): SetupCompleteRequest {
     return {
@@ -89,7 +79,7 @@ export const useSetupStore = defineStore('setup', () => {
       downloader_host: downloaderData.host,
       downloader_username: downloaderData.username,
       downloader_password: downloaderData.password,
-      downloader_path: mediaData.path,
+      downloader_path: downloaderData.path,
       downloader_ssl: downloaderData.ssl,
       rss_url: rssData.skipped ? '' : rssData.url,
       rss_name: rssData.skipped ? '' : rssData.name,
@@ -113,7 +103,6 @@ export const useSetupStore = defineStore('setup', () => {
       ssl: false,
     });
     Object.assign(rssData, { url: '', name: '', skipped: false });
-    Object.assign(mediaData, { path: '/downloads/Bangumi' });
     Object.assign(notificationData, {
       enable: false,
       type: 'telegram',
@@ -136,13 +125,11 @@ export const useSetupStore = defineStore('setup', () => {
     accountData,
     downloaderData,
     rssData,
-    mediaData,
     notificationData,
     validation,
     nextStep,
     prevStep,
     goToStep,
-    syncMediaPath,
     buildCompleteRequest,
     $reset,
   };

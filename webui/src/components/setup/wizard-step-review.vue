@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 const { t } = useMyI18n();
 const setupStore = useSetupStore();
-const { accountData, downloaderData, rssData, mediaData, notificationData, isLoading } =
+const { accountData, downloaderData, rssData, notificationData, isLoading } =
   storeToRefs(setupStore);
 const router = useRouter();
 const message = useMessage();
@@ -54,14 +54,6 @@ function maskPassword(pwd: string): string {
           <div class="review-item">
             <span class="review-label">{{ t('config.downloader_set.username') }}</span>
             <span class="review-value">{{ downloaderData.username }}</span>
-          </div>
-        </div>
-
-        <div class="review-section">
-          <h4>{{ t('setup.media.title') }}</h4>
-          <div class="review-item">
-            <span class="review-label">{{ t('setup.media.path') }}</span>
-            <span class="review-value">{{ mediaData.path }}</span>
           </div>
         </div>
 

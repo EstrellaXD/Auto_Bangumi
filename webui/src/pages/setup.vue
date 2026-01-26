@@ -18,7 +18,6 @@ const { steps } = setupStore;
       <wizard-step-account v-else-if="currentStep === 'account'" />
       <wizard-step-downloader v-else-if="currentStep === 'downloader'" />
       <wizard-step-rss v-else-if="currentStep === 'rss'" />
-      <wizard-step-media v-else-if="currentStep === 'media'" />
       <wizard-step-notification v-else-if="currentStep === 'notification'" />
       <wizard-step-review v-else-if="currentStep === 'review'" />
     </wizard-container>
