@@ -1,10 +1,15 @@
 import logging
 import re
+from collections import OrderedDict
 from pathlib import Path
 
 from module.models import EpisodeFile, SubtitleFile
 
 logger = logging.getLogger(__name__)
+
+# LRU cache for torrent_parser results to avoid repeated regex parsing
+_PARSER_CACHE_MAX_SIZE = 512
+_parser_cache: OrderedDict[tuple, EpisodeFile | SubtitleFile | None] = OrderedDict()
 
 PLATFORM = "Unix"
 
@@ -70,7 +75,31 @@ def torrent_parser(
     torrent_name: str | None = None,
     season: int | None = None,
     file_type: str = "media",
-) -> EpisodeFile | SubtitleFile:
+) -> EpisodeFile | SubtitleFile | None:
+    # Check cache first to avoid repeated regex parsing
+    cache_key = (torrent_path, torrent_name, season, file_type)
+    if cache_key in _parser_cache:
+        # Move to end to mark as recently used
+        _parser_cache.move_to_end(cache_key)
+        return _parser_cache[cache_key]
+
+    result = _torrent_parser_impl(torrent_path, torrent_name, season, file_type)
+
+    # Store in cache with LRU eviction
+    _parser_cache[cache_key] = result
+    if len(_parser_cache) > _PARSER_CACHE_MAX_SIZE:
+        _parser_cache.popitem(last=False)  # Remove oldest item
+
+    return result
+
+
+def _torrent_parser_impl(
+    torrent_path: str,
+    torrent_name: str | None = None,
+    season: int | None = None,
+    file_type: str = "media",
+) -> EpisodeFile | SubtitleFile | None:
+    """Internal implementation of torrent_parser without caching."""
     media_path = get_path_basename(torrent_path)
     match_names = [torrent_name, media_path]
     if torrent_name is None:
@@ -106,6 +135,7 @@ def torrent_parser(
                         episode=episode,
                         suffix=suffix,
                     )
+    return None
 
 
 if __name__ == "__main__":

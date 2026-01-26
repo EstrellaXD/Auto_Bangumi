@@ -1,4 +1,5 @@
 import logging
+import re
 import time
 from typing import Optional
 
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 # Module-level TTL cache for search_all results
 _bangumi_cache: list[Bangumi] | None = None
 _bangumi_cache_time: float = 0
-_BANGUMI_CACHE_TTL: float = 60.0  # seconds
+_BANGUMI_CACHE_TTL: float = 300.0  # 5 minutes - extended from 60s to reduce DB queries
 
 
 def _invalidate_bangumi_cache():
@@ -53,11 +54,21 @@ class BangumiDatabase:
         if not datas:
             return 0
 
-        # Get existing title_raw + group_name combinations
-        existing = set()
-        for data in datas:
-            if self._is_duplicate(data):
-                existing.add((data.title_raw, data.group_name))
+        # Batch query: get all existing (title_raw, group_name) combinations in one query
+        # This replaces N individual _is_duplicate() calls with a single SELECT
+        keys_to_check = [(d.title_raw, d.group_name) for d in datas]
+        conditions = [
+            and_(Bangumi.title_raw == tr, Bangumi.group_name == gn)
+            for tr, gn in keys_to_check
+        ]
+        if conditions:
+            statement = select(Bangumi.title_raw, Bangumi.group_name).where(
+                or_(*conditions)
+            )
+            result = self.session.execute(statement)
+            existing = set(result.all())
+        else:
+            existing = set()
 
         # Filter out duplicates
         to_add = [d for d in datas if (d.title_raw, d.group_name) not in existing]
@@ -199,24 +210,29 @@ class BangumiDatabase:
         match_datas = self.search_all()
         if not match_datas:
             return torrent_list
-        # Build index for faster lookup
+
+        # Build index for O(1) lookup after regex match
         title_index = {m.title_raw: m for m in match_datas}
+
+        # Build compiled regex pattern for fast substring matching
+        # Sort by length descending so longer (more specific) matches are found first
+        sorted_titles = sorted(title_index.keys(), key=len, reverse=True)
+        # Escape special regex characters and join with alternation
+        pattern = "|".join(re.escape(title) for title in sorted_titles)
+        title_regex = re.compile(pattern)
+
         unmatched = []
         rss_updated = set()
         for torrent in torrent_list:
-            matched = False
-            for title_raw, match_data in title_index.items():
-                if title_raw in torrent.name:
-                    if (
-                        rss_link not in match_data.rss_link
-                        and title_raw not in rss_updated
-                    ):
-                        match_data.rss_link += f",{rss_link}"
-                        match_data.added = False
-                        rss_updated.add(title_raw)
-                    matched = True
-                    break
-            if not matched:
+            match = title_regex.search(torrent.name)
+            if match:
+                title_raw = match.group(0)
+                match_data = title_index[title_raw]
+                if rss_link not in match_data.rss_link and title_raw not in rss_updated:
+                    match_data.rss_link += f",{rss_link}"
+                    match_data.added = False
+                    rss_updated.add(title_raw)
+            else:
                 unmatched.append(torrent)
         # Batch commit all rss_link updates
         if rss_updated:
