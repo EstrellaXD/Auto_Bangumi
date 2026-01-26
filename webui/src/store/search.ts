@@ -227,6 +227,7 @@ export const useSearchStore = defineStore('search', () => {
   function closeModal() {
     showModal.value = false;
     selectedResult.value = null;
+    closeSearch();
   }
 
   function toggleModal() {
@@ -277,6 +278,13 @@ export const useSearchStore = defineStore('search', () => {
     selectedResult.value = null;
   }
 
+  function onSearch() {
+    if (!keyword.value.trim()) {
+      return;
+    }
+    openSearch();
+  }
+
   return {
     // State
     inputValue: keyword,
@@ -295,7 +303,7 @@ export const useSearchStore = defineStore('search', () => {
     // Actions
     clearSearch,
     getProviders,
-    onSearch: openSearch,
+    onSearch,
     closeSearch,
     openModal,
     closeModal,
