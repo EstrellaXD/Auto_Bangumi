@@ -308,9 +308,9 @@ async function handleLogin() {
 
 .login-input {
   width: 100%;
-  height: 48px;
+  height: 44px;
   padding: 0 14px 0 44px;
-  font-size: 16px;
+  font-size: 14px;
   color: var(--color-text);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
