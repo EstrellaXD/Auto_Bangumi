@@ -470,3 +470,425 @@ class TestRenameFlow:
 
         assert result == []
         renamer.client.torrents_rename_file.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# _parse_bangumi_id_from_tags
+# ---------------------------------------------------------------------------
+
+
+class TestParseBangumiIdFromTags:
+    """Tests for Renamer._parse_bangumi_id_from_tags static method."""
+
+    def test_single_ab_tag(self):
+        """Parses 'ab:123' format correctly."""
+        result = Renamer._parse_bangumi_id_from_tags("ab:123")
+        assert result == 123
+
+    def test_ab_tag_with_other_tags(self):
+        """Extracts ab tag from comma-separated list."""
+        result = Renamer._parse_bangumi_id_from_tags("anime,ab:456,downloaded")
+        assert result == 456
+
+    def test_ab_tag_with_spaces(self):
+        """Handles whitespace around tags."""
+        result = Renamer._parse_bangumi_id_from_tags("  ab:789 , other_tag ")
+        assert result == 789
+
+    def test_empty_string(self):
+        """Returns None for empty string."""
+        result = Renamer._parse_bangumi_id_from_tags("")
+        assert result is None
+
+    def test_none_input(self):
+        """Returns None for None input."""
+        result = Renamer._parse_bangumi_id_from_tags(None)
+        assert result is None
+
+    def test_no_ab_tag(self):
+        """Returns None when no ab: tag present."""
+        result = Renamer._parse_bangumi_id_from_tags("anime,downloaded,HD")
+        assert result is None
+
+    def test_invalid_ab_tag_non_numeric(self):
+        """Returns None when ab: tag has non-numeric value."""
+        result = Renamer._parse_bangumi_id_from_tags("ab:not_a_number")
+        assert result is None
+
+    def test_ab_tag_first_match(self):
+        """Returns first ab: tag if multiple present."""
+        result = Renamer._parse_bangumi_id_from_tags("ab:111,ab:222")
+        assert result == 111
+
+    def test_ab_tag_zero(self):
+        """Handles ab:0 correctly."""
+        result = Renamer._parse_bangumi_id_from_tags("ab:0")
+        assert result == 0
+
+    def test_ab_tag_large_number(self):
+        """Handles large bangumi IDs."""
+        result = Renamer._parse_bangumi_id_from_tags("ab:999999")
+        assert result == 999999
+
+
+# ---------------------------------------------------------------------------
+# gen_path with offsets
+# ---------------------------------------------------------------------------
+
+
+class TestGenPathWithOffsets:
+    """Tests for gen_path with episode_offset and season_offset parameters."""
+
+    def test_episode_offset_positive(self):
+        """Episode offset adds to episode number."""
+        ep = EpisodeFile(
+            media_path="old.mkv", title="My Anime", season=1, episode=5, suffix=".mkv"
+        )
+        result = Renamer.gen_path(ep, "Bangumi", method="pn", episode_offset=12)
+        assert "E17" in result  # 5 + 12 = 17
+
+    def test_episode_offset_negative(self):
+        """Negative episode offset subtracts from episode number."""
+        ep = EpisodeFile(
+            media_path="old.mkv", title="My Anime", season=1, episode=15, suffix=".mkv"
+        )
+        result = Renamer.gen_path(ep, "Bangumi", method="pn", episode_offset=-12)
+        assert "E03" in result  # 15 - 12 = 3
+
+    def test_episode_offset_negative_below_one_ignored(self):
+        """Negative offset that would go below 1 is ignored."""
+        ep = EpisodeFile(
+            media_path="old.mkv", title="My Anime", season=1, episode=5, suffix=".mkv"
+        )
+        result = Renamer.gen_path(ep, "Bangumi", method="pn", episode_offset=-10)
+        assert "E05" in result  # Would be -5, so offset ignored
+
+    def test_season_offset_positive(self):
+        """Season offset adds to season number."""
+        ep = EpisodeFile(
+            media_path="old.mkv", title="My Anime", season=1, episode=5, suffix=".mkv"
+        )
+        result = Renamer.gen_path(ep, "Bangumi", method="pn", season_offset=1)
+        assert "S02" in result  # 1 + 1 = 2
+
+    def test_season_offset_negative(self):
+        """Negative season offset subtracts from season number."""
+        ep = EpisodeFile(
+            media_path="old.mkv", title="My Anime", season=3, episode=5, suffix=".mkv"
+        )
+        result = Renamer.gen_path(ep, "Bangumi", method="pn", season_offset=-1)
+        assert "S02" in result  # 3 - 1 = 2
+
+    def test_season_offset_negative_below_one_ignored(self):
+        """Negative season offset that would go below 1 is ignored."""
+        ep = EpisodeFile(
+            media_path="old.mkv", title="My Anime", season=1, episode=5, suffix=".mkv"
+        )
+        result = Renamer.gen_path(ep, "Bangumi", method="pn", season_offset=-5)
+        assert "S01" in result  # Would be -4, so offset ignored
+
+    def test_both_offsets_combined(self):
+        """Both episode and season offset applied together."""
+        ep = EpisodeFile(
+            media_path="old.mkv", title="My Anime", season=1, episode=13, suffix=".mkv"
+        )
+        result = Renamer.gen_path(
+            ep, "Bangumi", method="pn", episode_offset=-12, season_offset=1
+        )
+        assert "S02E01" in result  # Season 1+1=2, Episode 13-12=1
+
+    def test_offset_with_advance_method(self):
+        """Offset works with advance rename method."""
+        ep = EpisodeFile(
+            media_path="old.mkv", title="My Anime", season=1, episode=25, suffix=".mkv"
+        )
+        result = Renamer.gen_path(
+            ep, "Bangumi Name", method="advance", episode_offset=-12
+        )
+        assert result == "Bangumi Name S01E13.mkv"
+
+    def test_offset_with_subtitle_method(self):
+        """Offset works with subtitle rename methods."""
+        sub = SubtitleFile(
+            media_path="sub.ass",
+            title="My Anime",
+            season=1,
+            episode=25,
+            language="zh",
+            suffix=".ass",
+        )
+        result = Renamer.gen_path(
+            sub, "Bangumi", method="subtitle_pn", episode_offset=-12
+        )
+        assert "E13" in result  # 25 - 12 = 13
+
+    def test_offset_none_method_unchanged(self):
+        """None method returns original path regardless of offset."""
+        ep = EpisodeFile(
+            media_path="original/path/file.mkv",
+            title="Test",
+            season=1,
+            episode=1,
+            suffix=".mkv",
+        )
+        result = Renamer.gen_path(ep, "Bangumi", method="none", episode_offset=100)
+        assert result == "original/path/file.mkv"
+
+
+# ---------------------------------------------------------------------------
+# _lookup_offsets
+# ---------------------------------------------------------------------------
+
+
+class TestLookupOffsets:
+    """Tests for Renamer._lookup_offsets method with multi-tier lookup."""
+
+    @pytest.fixture
+    def renamer(self, mock_qb_client):
+        """Create Renamer with mocked internals."""
+        with patch("module.downloader.download_client.settings") as mock_settings:
+            mock_settings.downloader.type = "qbittorrent"
+            mock_settings.downloader.host = "localhost:8080"
+            mock_settings.downloader.username = "admin"
+            mock_settings.downloader.password = "admin"
+            mock_settings.downloader.ssl = False
+            mock_settings.downloader.path = "/downloads/Bangumi"
+            mock_settings.bangumi_manage.group_tag = False
+            with patch(
+                "module.downloader.download_client.DownloadClient._DownloadClient__getClient",
+                return_value=mock_qb_client,
+            ):
+                r = Renamer()
+        r.client = mock_qb_client
+        return r
+
+    def test_lookup_by_qb_hash(self, renamer, db_session):
+        """First priority: lookup by qb_hash in Torrent table."""
+        from module.database.bangumi import BangumiDatabase
+        from module.database.torrent import TorrentDatabase
+        from module.models import Bangumi, Torrent
+
+        # Create bangumi with offsets
+        bangumi_db = BangumiDatabase(db_session)
+        bangumi = Bangumi(
+            official_title="Test Anime",
+            year="2024",
+            title_raw="test_raw",
+            season=1,
+            episode_offset=-12,
+            season_offset=1,
+        )
+        bangumi_db.add(bangumi)
+
+        # Create torrent linked to bangumi
+        torrent_db = TorrentDatabase(db_session)
+        torrent = Torrent(
+            name="Test Torrent",
+            url="https://example.com/torrent",
+            bangumi_id=bangumi.id,
+            qb_hash="abc123hash",
+        )
+        torrent_db.add(torrent)
+
+        with patch("module.manager.renamer.Database") as MockDatabase:
+            mock_db = MagicMock()
+            mock_db.__enter__ = MagicMock(return_value=mock_db)
+            mock_db.__exit__ = MagicMock(return_value=False)
+            mock_db.torrent = TorrentDatabase(db_session)
+            mock_db.bangumi = BangumiDatabase(db_session)
+            MockDatabase.return_value = mock_db
+
+            episode_offset, season_offset = renamer._lookup_offsets(
+                torrent_hash="abc123hash",
+                torrent_name="irrelevant",
+                save_path="/irrelevant/path",
+                tags="",
+            )
+
+        assert episode_offset == -12
+        assert season_offset == 1
+
+    def test_lookup_by_tag_when_hash_not_found(self, renamer, db_session):
+        """Second priority: lookup by ab:ID tag when qb_hash not found."""
+        from module.database.bangumi import BangumiDatabase
+        from module.database.torrent import TorrentDatabase
+        from module.models import Bangumi
+
+        # Create bangumi with offsets
+        bangumi_db = BangumiDatabase(db_session)
+        bangumi = Bangumi(
+            official_title="Tagged Anime",
+            year="2024",
+            title_raw="tagged_raw",
+            season=1,
+            episode_offset=5,
+            season_offset=0,
+        )
+        bangumi_db.add(bangumi)
+
+        with patch("module.manager.renamer.Database") as MockDatabase:
+            mock_db = MagicMock()
+            mock_db.__enter__ = MagicMock(return_value=mock_db)
+            mock_db.__exit__ = MagicMock(return_value=False)
+            mock_db.torrent = TorrentDatabase(db_session)
+            mock_db.bangumi = BangumiDatabase(db_session)
+            MockDatabase.return_value = mock_db
+
+            episode_offset, season_offset = renamer._lookup_offsets(
+                torrent_hash="nonexistent_hash",
+                torrent_name="irrelevant",
+                save_path="/irrelevant/path",
+                tags=f"ab:{bangumi.id}",
+            )
+
+        assert episode_offset == 5
+        assert season_offset == 0
+
+    def test_lookup_by_torrent_name(self, renamer, db_session):
+        """Third priority: lookup by torrent name matching title_raw."""
+        from module.database.bangumi import BangumiDatabase
+        from module.database.torrent import TorrentDatabase
+        from module.models import Bangumi
+
+        # Create bangumi with offsets
+        bangumi_db = BangumiDatabase(db_session)
+        bangumi = Bangumi(
+            official_title="Name Match Anime",
+            year="2024",
+            title_raw="[SubGroup] Name Match",
+            season=1,
+            episode_offset=-6,
+            season_offset=2,
+        )
+        bangumi_db.add(bangumi)
+
+        with patch("module.manager.renamer.Database") as MockDatabase:
+            mock_db = MagicMock()
+            mock_db.__enter__ = MagicMock(return_value=mock_db)
+            mock_db.__exit__ = MagicMock(return_value=False)
+            mock_db.torrent = TorrentDatabase(db_session)
+            mock_db.bangumi = BangumiDatabase(db_session)
+            MockDatabase.return_value = mock_db
+
+            episode_offset, season_offset = renamer._lookup_offsets(
+                torrent_hash="nonexistent_hash",
+                torrent_name="[SubGroup] Name Match - 01 [1080p].mkv",
+                save_path="/irrelevant/path",
+                tags="",
+            )
+
+        assert episode_offset == -6
+        assert season_offset == 2
+
+    def test_lookup_by_save_path_fallback(self, renamer, db_session):
+        """Fourth priority: lookup by save_path when other methods fail."""
+        from module.database.bangumi import BangumiDatabase
+        from module.database.torrent import TorrentDatabase
+        from module.models import Bangumi
+
+        # Create bangumi with offsets and save_path
+        bangumi_db = BangumiDatabase(db_session)
+        bangumi = Bangumi(
+            official_title="Path Match Anime",
+            year="2024",
+            title_raw="unique_raw_that_wont_match",
+            season=1,
+            save_path="/downloads/Bangumi/Path Match Anime (2024)/Season 1",
+            episode_offset=10,
+            season_offset=-1,
+        )
+        bangumi_db.add(bangumi)
+
+        with patch("module.manager.renamer.Database") as MockDatabase:
+            mock_db = MagicMock()
+            mock_db.__enter__ = MagicMock(return_value=mock_db)
+            mock_db.__exit__ = MagicMock(return_value=False)
+            mock_db.torrent = TorrentDatabase(db_session)
+            mock_db.bangumi = BangumiDatabase(db_session)
+            MockDatabase.return_value = mock_db
+
+            episode_offset, season_offset = renamer._lookup_offsets(
+                torrent_hash="nonexistent_hash",
+                torrent_name="completely_different_name.mkv",
+                save_path="/downloads/Bangumi/Path Match Anime (2024)/Season 1",
+                tags="",
+            )
+
+        assert episode_offset == 10
+        assert season_offset == -1
+
+    def test_lookup_returns_zero_when_not_found(self, renamer, db_session):
+        """Returns (0, 0) when no matching bangumi found."""
+        from module.database.bangumi import BangumiDatabase
+        from module.database.torrent import TorrentDatabase
+
+        with patch("module.manager.renamer.Database") as MockDatabase:
+            mock_db = MagicMock()
+            mock_db.__enter__ = MagicMock(return_value=mock_db)
+            mock_db.__exit__ = MagicMock(return_value=False)
+            mock_db.torrent = TorrentDatabase(db_session)
+            mock_db.bangumi = BangumiDatabase(db_session)
+            MockDatabase.return_value = mock_db
+
+            episode_offset, season_offset = renamer._lookup_offsets(
+                torrent_hash="nonexistent",
+                torrent_name="no_match",
+                save_path="/no/match/path",
+                tags="",
+            )
+
+        assert episode_offset == 0
+        assert season_offset == 0
+
+    def test_lookup_skips_deleted_bangumi(self, renamer, db_session):
+        """Skips deleted bangumi even if hash/tag matches."""
+        from module.database.bangumi import BangumiDatabase
+        from module.database.torrent import TorrentDatabase
+        from module.models import Bangumi
+
+        # Create deleted bangumi
+        bangumi_db = BangumiDatabase(db_session)
+        bangumi = Bangumi(
+            official_title="Deleted Anime",
+            year="2024",
+            title_raw="deleted_raw",
+            season=1,
+            episode_offset=99,
+            season_offset=99,
+            deleted=True,
+        )
+        bangumi_db.add(bangumi)
+
+        with patch("module.manager.renamer.Database") as MockDatabase:
+            mock_db = MagicMock()
+            mock_db.__enter__ = MagicMock(return_value=mock_db)
+            mock_db.__exit__ = MagicMock(return_value=False)
+            mock_db.torrent = TorrentDatabase(db_session)
+            mock_db.bangumi = BangumiDatabase(db_session)
+            MockDatabase.return_value = mock_db
+
+            episode_offset, season_offset = renamer._lookup_offsets(
+                torrent_hash="nonexistent",
+                torrent_name="no_match",
+                save_path="/no/match",
+                tags=f"ab:{bangumi.id}",
+            )
+
+        # Should return (0, 0) because bangumi is deleted
+        assert episode_offset == 0
+        assert season_offset == 0
+
+    def test_lookup_handles_database_exception(self, renamer):
+        """Returns (0, 0) when database throws exception."""
+        with patch("module.manager.renamer.Database") as MockDatabase:
+            MockDatabase.side_effect = Exception("Database connection failed")
+
+            episode_offset, season_offset = renamer._lookup_offsets(
+                torrent_hash="any",
+                torrent_name="any",
+                save_path="/any",
+                tags="",
+            )
+
+        assert episode_offset == 0
+        assert season_offset == 0

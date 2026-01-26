@@ -94,3 +94,134 @@ def test_rss_database(db_session):
     db.add(RSSItem(url=rss_url, name="Test RSS"))
     result = db.search_id(1)
     assert result.url == rss_url
+
+
+# ---------------------------------------------------------------------------
+# TorrentDatabase qb_hash methods
+# ---------------------------------------------------------------------------
+
+
+def test_torrent_search_by_qb_hash(db_session):
+    """Test searching torrent by qBittorrent hash."""
+    db = TorrentDatabase(db_session)
+
+    # Create torrent with qb_hash
+    torrent = Torrent(
+        name="[SubGroup] Test Anime - 01 [1080p].mkv",
+        url="https://example.com/torrent1",
+        qb_hash="abc123def456",
+    )
+    db.add(torrent)
+
+    # Search by qb_hash
+    result = db.search_by_qb_hash("abc123def456")
+    assert result is not None
+    assert result.name == torrent.name
+    assert result.qb_hash == "abc123def456"
+
+
+def test_torrent_search_by_qb_hash_not_found(db_session):
+    """Test searching non-existent qb_hash returns None."""
+    db = TorrentDatabase(db_session)
+
+    result = db.search_by_qb_hash("nonexistent_hash")
+    assert result is None
+
+
+def test_torrent_search_by_url(db_session):
+    """Test searching torrent by URL."""
+    db = TorrentDatabase(db_session)
+
+    url = "https://mikanani.me/Download/torrent123.torrent"
+    torrent = Torrent(
+        name="[SubGroup] Test Anime - 02 [1080p].mkv",
+        url=url,
+    )
+    db.add(torrent)
+
+    # Search by URL
+    result = db.search_by_url(url)
+    assert result is not None
+    assert result.url == url
+    assert result.name == torrent.name
+
+
+def test_torrent_search_by_url_not_found(db_session):
+    """Test searching non-existent URL returns None."""
+    db = TorrentDatabase(db_session)
+
+    result = db.search_by_url("https://nonexistent.com/torrent.torrent")
+    assert result is None
+
+
+def test_torrent_update_qb_hash(db_session):
+    """Test updating qb_hash for existing torrent."""
+    db = TorrentDatabase(db_session)
+
+    # Create torrent without qb_hash
+    torrent = Torrent(
+        name="[SubGroup] Test Anime - 03 [1080p].mkv",
+        url="https://example.com/torrent3",
+    )
+    db.add(torrent)
+    assert torrent.qb_hash is None
+
+    # Update qb_hash
+    success = db.update_qb_hash(torrent.id, "new_hash_value")
+    assert success is True
+
+    # Verify update
+    result = db.search(torrent.id)
+    assert result.qb_hash == "new_hash_value"
+
+
+def test_torrent_update_qb_hash_nonexistent(db_session):
+    """Test updating qb_hash for non-existent torrent returns False."""
+    db = TorrentDatabase(db_session)
+
+    success = db.update_qb_hash(99999, "some_hash")
+    assert success is False
+
+
+def test_torrent_with_bangumi_id(db_session):
+    """Test torrent with bangumi_id for offset lookup."""
+    db = TorrentDatabase(db_session)
+
+    # Create torrent linked to a bangumi
+    torrent = Torrent(
+        name="[SubGroup] Test Anime - 04 [1080p].mkv",
+        url="https://example.com/torrent4",
+        bangumi_id=42,
+        qb_hash="hash_for_bangumi_42",
+    )
+    db.add(torrent)
+
+    # Search and verify bangumi_id is preserved
+    result = db.search_by_qb_hash("hash_for_bangumi_42")
+    assert result is not None
+    assert result.bangumi_id == 42
+
+
+def test_torrent_qb_hash_index_efficient(db_session):
+    """Test that qb_hash lookups work correctly with multiple torrents."""
+    db = TorrentDatabase(db_session)
+
+    # Add multiple torrents
+    torrents = [
+        Torrent(name=f"Torrent {i}", url=f"https://example.com/{i}", qb_hash=f"hash_{i}")
+        for i in range(10)
+    ]
+    db.add_all(torrents)
+
+    # Verify we can find specific torrents by hash
+    result = db.search_by_qb_hash("hash_5")
+    assert result is not None
+    assert result.name == "Torrent 5"
+
+    result = db.search_by_qb_hash("hash_9")
+    assert result is not None
+    assert result.name == "Torrent 9"
+
+    # Non-existent hash
+    result = db.search_by_qb_hash("hash_100")
+    assert result is None
