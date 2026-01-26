@@ -370,7 +370,7 @@ function clearFilters() {
 .modal-content {
   width: 100%;
   max-width: 1100px;
-  max-height: calc(100vh - 100px);
+  max-height: calc(100dvh - 100px); // Use dynamic viewport height for iOS Safari keyboard support
   display: flex;
   flex-direction: column;
   background: var(--color-surface);
@@ -379,8 +379,17 @@ function clearFilters() {
   overflow: hidden;
   transition: background-color var(--transition-normal);
 
+  // Fallback for browsers that don't support dvh
+  @supports not (max-height: 1dvh) {
+    max-height: calc(100vh - 100px);
+  }
+
   @include forDesktop {
-    max-height: calc(100vh - 120px);
+    max-height: calc(100dvh - 120px);
+
+    @supports not (max-height: 1dvh) {
+      max-height: calc(100vh - 120px);
+    }
   }
 }
 

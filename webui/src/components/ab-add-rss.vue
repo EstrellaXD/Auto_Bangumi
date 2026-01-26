@@ -402,13 +402,18 @@ function subscribe() {
 .add-modal {
   width: 100%;
   max-width: 480px;
-  max-height: 90vh;
+  max-height: 90dvh; // Use dynamic viewport height for iOS Safari keyboard support
   display: flex;
   flex-direction: column;
   background: var(--color-surface);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
+
+  // Fallback for browsers that don't support dvh
+  @supports not (max-height: 1dvh) {
+    max-height: 90vh;
+  }
 }
 
 .add-header {

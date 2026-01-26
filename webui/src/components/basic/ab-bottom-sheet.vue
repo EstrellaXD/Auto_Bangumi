@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
 import { usePointerSwipe } from '@vueuse/core';
 import {
   Dialog,
@@ -17,7 +17,7 @@ const props = withDefaults(
   }>(),
   {
     closeable: true,
-    maxHeight: '85vh',
+    maxHeight: '85dvh',
   }
 );
 
@@ -30,15 +30,54 @@ const sheetRef = ref<HTMLElement | null>(null);
 const dragHandleRef = ref<HTMLElement | null>(null);
 const translateY = ref(0);
 const isDragging = ref(false);
+const keyboardHeight = ref(0);
+
+// Handle iOS Safari virtual keyboard using visualViewport API
+function handleViewportResize() {
+  if (window.visualViewport) {
+    const viewport = window.visualViewport;
+    // Calculate keyboard height as the difference between window height and viewport height
+    const newKeyboardHeight = window.innerHeight - viewport.height;
+    keyboardHeight.value = Math.max(0, newKeyboardHeight);
+  }
+}
+
+// Set up visualViewport listeners when sheet is shown
+watch(() => props.show, (isVisible) => {
+  if (isVisible && window.visualViewport) {
+    window.visualViewport.addEventListener('resize', handleViewportResize);
+    window.visualViewport.addEventListener('scroll', handleViewportResize);
+    handleViewportResize();
+  } else if (window.visualViewport) {
+    window.visualViewport.removeEventListener('resize', handleViewportResize);
+    window.visualViewport.removeEventListener('scroll', handleViewportResize);
+    keyboardHeight.value = 0;
+  }
+}, { immediate: true });
+
+onUnmounted(() => {
+  if (window.visualViewport) {
+    window.visualViewport.removeEventListener('resize', handleViewportResize);
+    window.visualViewport.removeEventListener('scroll', handleViewportResize);
+  }
+});
 
 const sheetStyle = computed(() => {
-  if (isDragging.value && translateY.value > 0) {
-    return {
-      transform: `translateY(${translateY.value}px)`,
-      transition: 'none',
-    };
+  const style: Record<string, string> = {};
+
+  // Apply keyboard offset for iOS Safari
+  if (keyboardHeight.value > 0) {
+    style.transform = `translateY(-${keyboardHeight.value}px)`;
+    style.transition = 'transform 0.25s ease-out';
   }
-  return {};
+
+  // Apply drag offset
+  if (isDragging.value && translateY.value > 0) {
+    style.transform = `translateY(${translateY.value}px)`;
+    style.transition = 'none';
+  }
+
+  return style;
 });
 
 const { distanceY } = usePointerSwipe(dragHandleRef, {
@@ -145,6 +184,7 @@ function close() {
     z-index: 102;
     width: 100%;
     max-width: 640px;
+    max-height: 85dvh; // Use dynamic viewport height for iOS Safari keyboard support
     background: var(--color-surface);
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
     box-shadow: var(--shadow-lg);
@@ -153,6 +193,11 @@ function close() {
     flex-direction: column;
     pointer-events: auto;
     @include safeAreaBottom(padding-bottom);
+
+    // Fallback for browsers that don't support dvh
+    @supports not (max-height: 1dvh) {
+      max-height: 85vh;
+    }
   }
 
   &__handle {
@@ -191,6 +236,13 @@ function close() {
     overflow-y: auto;
     padding: 16px 20px;
     -webkit-overflow-scrolling: touch;
+
+    // Ensure inputs scroll into view when focused on iOS Safari
+    :deep(input),
+    :deep(textarea),
+    :deep(select) {
+      scroll-margin-bottom: 20px;
+    }
   }
 }
 </style>

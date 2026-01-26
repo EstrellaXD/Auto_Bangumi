@@ -73,3 +73,14 @@ input::-webkit-inner-spin-button {
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
+
+// iOS Safari auto-zoom prevention
+// iOS Safari zooms in when focusing inputs with font-size < 16px
+// This rule ensures all form inputs are at least 16px on touch devices
+@media (hover: none) and (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
