@@ -30,6 +30,10 @@ figlet = r"""
 
 
 class Program(RenameThread, RSSThread, OffsetScanThread):
+    def __init__(self):
+        super().__init__()
+        self._startup_done = False
+
     @staticmethod
     def __start_info():
         for line in figlet.splitlines():
@@ -41,6 +45,10 @@ class Program(RenameThread, RSSThread, OffsetScanThread):
         logger.info("Starting AutoBangumi...")
 
     async def startup(self):
+        # Prevent duplicate startup due to nested router lifespan events
+        if self._startup_done:
+            return
+        self._startup_done = True
         self.__start_info()
         if not self.database:
             first_run()
