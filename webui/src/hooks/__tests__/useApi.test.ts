@@ -14,20 +14,21 @@ interface Options<T = unknown> {
   onFinally?: () => void;
 }
 
-type AnyAsyncFunction<TData = unknown> = (...args: unknown[]) => Promise<TData>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyAsyncFunction = (...args: any[]) => Promise<any>;
 
 function createUseApi<TApi extends AnyAsyncFunction>(
   api: TApi,
-  options: Options = {}
+  options: Options<Awaited<ReturnType<TApi>>> = {}
 ) {
   let data: Awaited<ReturnType<TApi>> | undefined;
   let isLoading = false;
 
-  const execute = async (...params: Parameters<TApi>) => {
+  const execute = async (...params: Parameters<TApi>): Promise<void> => {
     options.onBeforeExecute?.();
     isLoading = true;
     try {
-      const res = await api(...params);
+      const res: Awaited<ReturnType<TApi>> = await api(...params);
       data = res;
       options.onSuccess?.(res);
     } catch (err) {

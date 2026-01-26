@@ -12,7 +12,7 @@ import {
 describe('Bangumi API Logic', () => {
   describe('getAll transformation (string to array)', () => {
     // This transformation happens when receiving data from API
-    const transformApiResponse = (item: { filter: string; rss_link: string }) => ({
+    const transformApiResponse = <T extends { filter: string; rss_link: string }>(item: T) => ({
       ...item,
       filter: item.filter.split(','),
       rss_link: item.rss_link.split(','),

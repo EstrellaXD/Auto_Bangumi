@@ -3,7 +3,7 @@
  */
 
 import type { BangumiAPI, BangumiRule } from '#/bangumi';
-import type { RSSItem, RSSResponse } from '#/rss';
+import type { RSS } from '#/rss';
 import type { ApiSuccess } from '#/api';
 import type { LoginSuccess } from '#/auth';
 
@@ -14,6 +14,7 @@ import type { LoginSuccess } from '#/auth';
 export const mockLoginSuccess: LoginSuccess = {
   access_token: 'mock_access_token_123',
   token_type: 'bearer',
+  expire: Date.now() + 86400000, // 24 hours from now
 };
 
 export const mockApiSuccess: ApiSuccess = {
@@ -37,7 +38,8 @@ export const mockBangumiAPI: BangumiAPI = {
   source: 'Web',
   subtitle: 'CHT',
   eps_collect: false,
-  offset: 0,
+  episode_offset: 0,
+  season_offset: 0,
   filter: '720',
   rss_link: 'https://mikanani.me/RSS/test',
   poster_link: '/posters/test.jpg',
@@ -48,13 +50,13 @@ export const mockBangumiAPI: BangumiAPI = {
   archived: false,
   air_weekday: 3,
   needs_review: false,
+  needs_review_reason: null,
 };
 
 export const mockBangumiRule: BangumiRule = {
   ...mockBangumiAPI,
   filter: ['720'],
   rss_link: ['https://mikanani.me/RSS/test'],
-  air_weekday: 3,
 };
 
 export const mockBangumiList: BangumiAPI[] = [
@@ -81,16 +83,19 @@ export const mockBangumiList: BangumiAPI[] = [
 // RSS Mocks
 // ============================================================================
 
-export const mockRSSItem: RSSItem = {
+export const mockRSSItem: RSS = {
   id: 1,
   name: 'Test RSS Feed',
   url: 'https://mikanani.me/RSS/MyBangumi?token=test',
   aggregate: true,
   parser: 'mikan',
   enabled: true,
+  connection_status: null,
+  last_checked_at: null,
+  last_error: null,
 };
 
-export const mockRSSList: RSSItem[] = [
+export const mockRSSList: RSS[] = [
   mockRSSItem,
   {
     ...mockRSSItem,
@@ -99,10 +104,6 @@ export const mockRSSList: RSSItem[] = [
     enabled: false,
   },
 ];
-
-export const mockRSSResponse: RSSResponse = {
-  items: mockRSSList,
-};
 
 // ============================================================================
 // Config Mocks
