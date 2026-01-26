@@ -22,7 +22,7 @@ class WecomNotification(RequestContent):
         """
         return text.strip()
 
-    def post_msg(self, notify: Notification) -> bool:
+    async def post_msg(self, notify: Notification) -> bool:
         ##Change message format to match Wecom push better
         title = "【番剧更新】" + notify.official_title
         msg = self.gen_message(notify)
@@ -37,6 +37,6 @@ class WecomNotification(RequestContent):
             "msg": msg,
             "picurl": picurl,
         }
-        resp = self.post_data(self.notification_url, data)
+        resp = await self.post_data(self.notification_url, data)
         logger.debug(f"Wecom notification: {resp.status_code}")
         return resp.status_code == 200

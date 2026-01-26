@@ -8,54 +8,44 @@ const checked = defineModel<boolean>('checked', {
 
 <template>
   <Switch v-model="checked" as="template">
-    <div
-      is-btn
-      w-48
-      h-28
-      rounded-full
-      rel
-      flex="inline items-center"
-      transition-colors
-      duration-300
-      p-3
-      shadow="~ inset"
-      class="box"
-      :class="{ checked }"
-    >
+    <div class="switch-track" :class="{ 'switch-track--checked': checked }">
       <div
-        wh-22
-        rounded="1/2"
-        transition-all
-        duration-300
-        class="slider"
-        :class="{ checked, 'translate-x-20': checked }"
+        class="switch-thumb"
+        :class="{ 'switch-thumb--checked': checked }"
       ></div>
     </div>
   </Switch>
 </template>
 
-<style lang="scss" scope>
-$bg-unchecked: #929292;
-$bg-checked: #1c1259;
+<style lang="scss" scoped>
+.switch-track {
+  width: 44px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--color-border-hover);
+  transition: background-color var(--transition-fast);
 
-$slider-unchecked: #ececef;
-$slider-checked: #fff;
-
-.box {
-  background: $bg-unchecked;
-
-  &.checked {
-    background: $bg-checked;
+  &--checked {
+    background: var(--color-primary);
   }
 }
 
-.slider {
-  &:not(.checked) {
-    background: $slider-unchecked;
-  }
+.switch-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: transform var(--transition-fast);
 
-  &.checked {
-    background: $slider-checked;
+  &--checked {
+    transform: translateX(20px);
   }
 }
 </style>

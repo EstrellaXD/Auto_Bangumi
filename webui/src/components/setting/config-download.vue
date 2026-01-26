@@ -65,7 +65,7 @@ const items: SettingItem<Downloader>[] = [
 
 <template>
   <ab-fold-panel :title="$t('config.downloader_set.title')">
-    <div space-y-12>
+    <div space-y-8>
       <ab-setting
         v-for="i in items"
         :key="i.configKey"

@@ -25,7 +25,23 @@ export default defineConfig(({ mode }) => ({
     }),
     UnoCSS(),
     AutoImport({
-      imports: ['vue', 'vitest', 'pinia', VueRouterAutoImports, 'vue-i18n'],
+      imports: [
+        'vue',
+        'vitest',
+        'pinia',
+        {
+          '@vueuse/core': [
+            'createSharedComposable',
+            'useBreakpoints',
+            'usePreferredDark',
+            'useClipboard',
+            'useLocalStorage',
+            'useIntervalFn',
+          ],
+        },
+        VueRouterAutoImports,
+        'vue-i18n',
+      ],
       dts: 'types/dts/auto-imports.d.ts',
       dirs: ['src/api', 'src/store', 'src/hooks', 'src/utils'],
     }),
@@ -36,6 +52,7 @@ export default defineConfig(({ mode }) => ({
         'src/components/basic',
         'src/components/layout',
         'src/components/setting',
+        'src/components/setup',
       ],
     }),
     VueI18nPlugin({
@@ -81,7 +98,6 @@ export default defineConfig(({ mode }) => ({
   css: {
     preprocessorOptions: {
       scss: {
-        api: 'modern-compiler',
         additionalData: '@import "./src/style/mixin.scss";',
       },
     },
@@ -101,8 +117,11 @@ export default defineConfig(({ mode }) => ({
   },
   server: {
     proxy: {
-      '^/api/.*': 'http://192.168.0.100:7892',
-      '^/posters/.*': 'http://192.168.0.100:7892',
+      '^/api/.*': {
+        target: 'http://localhost:7892',
+        changeOrigin: false,
+      },
+      '^/posters/.*': 'http://localhost:7892',
     },
   },
 }));

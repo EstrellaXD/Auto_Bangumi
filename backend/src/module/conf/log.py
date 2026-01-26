@@ -29,3 +29,6 @@ def setup_logger(level: int = logging.INFO, reset: bool = False):
             logging.StreamHandler(),
         ],
     )
+
+    # Suppress verbose HTTP request logs from httpx
+    logging.getLogger("httpx").setLevel(logging.WARNING)

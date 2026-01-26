@@ -13,20 +13,24 @@ else:
     from pathlib import Path
 
 
+_MEDIA_SUFFIXES = frozenset({".mp4", ".mkv"})
+_SUBTITLE_SUFFIXES = frozenset({".ass", ".srt"})
+
+
 class TorrentPath:
     def __init__(self):
         pass
 
     @staticmethod
-    def check_files(info):
+    def check_files(files: list[dict]):
         media_list = []
         subtitle_list = []
-        for f in info.files:
-            file_name = f.name
-            suffix = Path(file_name).suffix
-            if suffix.lower() in [".mp4", ".mkv"]:
+        for f in files:
+            file_name = f["name"]
+            suffix = Path(file_name).suffix.lower()
+            if suffix in _MEDIA_SUFFIXES:
                 media_list.append(file_name)
-            elif suffix.lower() in [".ass", ".srt"]:
+            elif suffix in _SUBTITLE_SUFFIXES:
                 subtitle_list.append(file_name)
         return media_list, subtitle_list
 
@@ -54,10 +58,24 @@ class TorrentPath:
 
     @staticmethod
     def _gen_save_path(data: Bangumi | BangumiUpdate):
+        """Generate save path for a bangumi.
+
+        The save path uses the adjusted season number (season + season_offset)
+        so files are saved directly to the correct season folder.
+        """
         folder = (
             f"{data.official_title} ({data.year})" if data.year else data.official_title
         )
-        save_path = Path(settings.downloader.path) / folder / f"Season {data.season}"
+        # Apply season_offset to get the adjusted season number for the folder
+        adjusted_season = data.season + getattr(data, "season_offset", 0)
+        if adjusted_season < 1:
+            adjusted_season = data.season  # Safety: don't go below 1
+            logger.warning(
+                f"[Path] Season offset would result in invalid season for {data.official_title}, using original season"
+            )
+        save_path = (
+            Path(settings.downloader.path) / folder / f"Season {adjusted_season}"
+        )
         return str(save_path)
 
     @staticmethod

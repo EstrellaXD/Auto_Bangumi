@@ -1,12 +1,12 @@
-# 实验功能配置
+# Experimental Features
 
-::: warning 警告
-实验功能尚处于测试阶段，开启后可能会导致预料之外的问题并且在未来某些版本中很可能被移除，请谨慎使用！
+::: warning
+Experimental features are still in testing. Enabling them may cause unexpected issues and they may be removed in future versions. Use with caution!
 :::
 
 ## OpenAI ChatGPT
 
-使用 OpenAI ChatGPT 以获得更好的标题结构化解析效果，例如：
+Use OpenAI ChatGPT for better structured title parsing. For example:
 
 ```
 input: "【喵萌奶茶屋】★04月新番★[夏日重现/Summer Time Rendering][11][1080p][繁日双语][招募翻译]"
@@ -15,43 +15,43 @@ output: '{"group": "喵萌奶茶屋", "title_en": "Summer Time Rendering", "reso
 
 ![experimental OpenAI](../image/config/experimental-openai.png){width=500}{class=ab-shadow-card}
 
-- **Enable OpenAI** 为是否开启 OpenAI 并使用 ChatGPT 用于标题解析。
-- **OpenAI API Type** 默认为 OpenAI。
-- **OpenAI API Key** 为 OpenAI 账户的 API Key。
-- **OpenAI API Base URL** 为 OpenAI 接口地址，默认情况下为 OpenAI 官方地址；你也可以根据自己的需要修改成其他兼容 OpenAI 服务的第三方地址。
-- **OpenAI Model** 为 ChatGPT 的 `model` 模型参数，目前仅提供了 `gpt-3.5-turbo`，因为它足够便宜并且在 Prompt 的加持下可以得到相当不错的效果。
+- **Enable OpenAI** enables OpenAI and uses ChatGPT for title parsing.
+- **OpenAI API Type** defaults to OpenAI.
+- **OpenAI API Key** is your OpenAI account API key.
+- **OpenAI API Base URL** is the OpenAI endpoint. Defaults to the official OpenAI URL; you can change it to a compatible third-party endpoint.
+- **OpenAI Model** is the ChatGPT model parameter. Currently provides `gpt-3.5-turbo`, which is affordable and produces excellent results with the right prompts.
 
 ## Microsoft Azure OpenAI
 
 
-![experimental Microsoft Azure Openai](../image/config/experimental-azure-openai.png){width=500}{class=ab-shadow-card}
+![experimental Microsoft Azure OpenAI](../image/config/experimental-azure-openai.png){width=500}{class=ab-shadow-card}
 
-除了原始的 OpenAI 之外，在 [3.18 版本](https://github.com/EstrellaXD/Auto_Bangumi/releases/tag/3.1.8) 中我们还加入了 Microsoft Azure OpenAI 的支持，它的使用方法与原始的 OpenAI 一致，部分参数共用，但是在填写参数时可能有几个地方需要注意：
+In addition to standard OpenAI, [version 3.1.8](https://github.com/EstrellaXD/Auto_Bangumi/releases/tag/3.1.8) added Microsoft Azure OpenAI support. Usage is similar to standard OpenAI with some shared parameters, but note the following:
 
-- **Enable OpenAI** 为是否开启 OpenAI 并使用 ChatGPT 用于标题解析。
-- **OpenAI API Type** 选择 `azure` 之后才会出现对应的参数选项。
-- **OpenAI API Key** 为 Microsoft Azure OpenAI 账户的 API Key。
-- **OpenAI API Base URL** 对应 Microsoft Azure OpenAI 的 Entrypoint，**需要你手动填写**。
-- **Azure OpenAI Version** 对应 Microsoft Azure OpenAI 的 API 版本，默认为 `2023-05-15`，可参考 [所支持的版本](https://learn.microsoft.com/en-us/azure/ai-services/openai/reference#completions)。
-- **Azure OpenAI Deployment ID** 对应 Microsoft Azure OpenAI 的 Deployment ID，通常与模型名称相同，需要注意的是 Microsoft Azure OpenAI 不支持除 `_-` 之外的符号，因此原始 OpenAI 中的 `gpt-3.5-turbo` 在 Microsoft Azure OpenAI 中实际为 `gpt-35-turbo`，此处**需要你手动填写**。
+- **Enable OpenAI** enables OpenAI and uses ChatGPT for title parsing.
+- **OpenAI API Type** — Select `azure` to show Azure-specific options.
+- **OpenAI API Key** is your Microsoft Azure OpenAI API key.
+- **OpenAI API Base URL** corresponds to the Microsoft Azure OpenAI Entrypoint. **Must be filled in manually**.
+- **Azure OpenAI Version** is the API version. Defaults to `2023-05-15`. See [supported versions](https://learn.microsoft.com/en-us/azure/ai-services/openai/reference#completions).
+- **Azure OpenAI Deployment ID** is your deployment ID, usually the same as the model name. Note that Azure OpenAI doesn't support symbols other than `_-`, so `gpt-3.5-turbo` becomes `gpt-35-turbo` in Azure. **Must be filled in manually**.
 
-参考文档：
+Reference documentation:
 
 - [Quickstart: Get started using GPT-35-Turbo and GPT-4 with Azure OpenAI Service](https://learn.microsoft.com/en-us/azure/ai-services/openai/chatgpt-quickstart?tabs=command-line&pivots=programming-language-python)
 - [Learn how to work with the GPT-35-Turbo and GPT-4 models](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/chatgpt?pivots=programming-language-chat-completions)
 
-## `config.json` 中的配置选项
+## `config.json` Configuration Options
 
-在配置文件中对应选项如下：
+The corresponding options in the configuration file are:
 
-配置文件部分：`experimental_openai`
+Configuration section: `experimental_openai`
 
-| 参数名     | 参数说明       | 参数类型 | WebUI 对应选项 | 默认值      |
-|---------|------------|------|------------|----------|
-| enable  | 是否启用 OpenAI 解析器    | 布尔值  | 启用 OpenAI         | false    |
-| api_type   | OpenAI API 类型       | 字符串  | OpenAI API 类型，可选 `openai` 和 `azure`       | openai |
-| api_key    | OpenAI API Key       | 字符串  | OpenAI API Key       | |
-| api_base   | OpenAI API Base URL(Azure entrypoint)   | 字符串  | OpenAI API Base URL   | https://api.openai.com/v1 |
-| model | OpenAI 模型 | 字符串  | OpenAI 模型 | gpt-3.5-turbo |
-| api_version | Azure OpenAI API 版本 | 字符串  | Azure OpenAI API 版本 | 2023-05-15 |
-| deployment_id | Azure OpenAI Deployment ID | 字符串  | Azure OpenAI Deployment ID |  |
+| Parameter     | Description              | Type    | WebUI Option               | Default                    |
+|---------------|--------------------------|---------|---------------------------|---------------------------|
+| enable        | Enable OpenAI parser     | Boolean | Enable OpenAI             | false                     |
+| api_type      | OpenAI API type          | String  | API type (`openai`/`azure`) | openai                  |
+| api_key       | OpenAI API key           | String  | OpenAI API Key            |                           |
+| api_base      | API Base URL (Azure entrypoint) | String | OpenAI API Base URL  | https://api.openai.com/v1 |
+| model         | OpenAI model             | String  | OpenAI Model              | gpt-3.5-turbo             |
+| api_version   | Azure OpenAI API version | String  | Azure API Version         | 2023-05-15                |
+| deployment_id | Azure Deployment ID      | String  | Azure Deployment ID       |                           |

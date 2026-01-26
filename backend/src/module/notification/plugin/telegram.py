@@ -21,7 +21,7 @@ class TelegramNotification(RequestContent):
         """
         return text.strip()
 
-    def post_msg(self, notify: Notification) -> bool:
+    async def post_msg(self, notify: Notification) -> bool:
         text = self.gen_message(notify)
         data = {
             "chat_id": self.chat_id,
@@ -31,8 +31,8 @@ class TelegramNotification(RequestContent):
         }
         photo = load_image(notify.poster_path)
         if photo:
-            resp = self.post_files(self.photo_url, data, files={"photo": photo})
+            resp = await self.post_files(self.photo_url, data, files={"photo": photo})
         else:
-            resp = self.post_data(self.message_url, data)
+            resp = await self.post_data(self.message_url, data)
         logger.debug(f"Telegram notification: {resp.status_code}")
         return resp.status_code == 200

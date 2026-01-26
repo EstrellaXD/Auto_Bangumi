@@ -22,119 +22,172 @@ defineEmits(['click']);
 
 const selected = ref<string>(props.selections[0]);
 const showSelections = ref<boolean>(false);
-
-const buttonSize = computed(() => {
-  switch (props.size) {
-    case 'big':
-      return 'rounded-10 text-h1 w-276 h-55 text-h1';
-    case 'normal':
-      return 'rounded-6 w-170 h-36';
-    case 'small':
-      return 'rounded-6 w-86 h-28 text-main';
-  }
-});
-
-const selectboxSize = computed(() => {
-  switch (props.size) {
-    case 'big':
-      return 'w-276 rounded-10 text-h1';
-    case 'normal':
-      return 'w-170 rounded-6';
-    case 'small':
-      return 'w-86 rounded-6 text-main';
-  }
-});
-
-const loadingSize = computed(() => {
-  switch (props.size) {
-    case 'big':
-      return 'large';
-    case 'normal':
-      return 'small';
-    case 'small':
-      return 18;
-  }
-});
-
-function onSelect(selection: string) {
-  selected.value = selection;
-  showSelections.value = false;
-  console.log(selected.value);
-}
 </script>
 
 <template>
-  <div :class="buttonSize" f-cer overflow-hidden>
-    <Component
-      :is="link !== null ? 'a' : 'button'"
-      :href="link"
-      text-white
-      outline-none
-      wh-full
-      pl-12
-      :class="[`type-${type}`]"
-      @click="$emit('click', selected)"
-    >
-      <NSpin :show="loading" :size="loadingSize">
-        <div text-main>{{ selected }}</div>
-      </NSpin>
-    </Component>
-    <div
-      is-btn
-      px-12
-      h-full
-      f-cer
-      :class="[`selector-${type}`]"
-      @click="() => (showSelections = !showSelections)"
-    >
-      <Down fill="white" />
+  <div class="btn-multi-container">
+    <div class="btn-multi" :class="[`btn-multi--${size}`, `btn-multi--${type}`]">
+      <Component
+        :is="link !== null ? 'a' : 'button'"
+        :href="link"
+        class="btn-multi-main"
+        @click="$emit('click', selected)"
+      >
+        <NSpin :show="loading" :size="size === 'big' ? 'large' : 'small'">
+          <div class="btn-multi-label">{{ selected }}</div>
+        </NSpin>
+      </Component>
+      <div
+        class="btn-multi-arrow"
+        @click="() => (showSelections = !showSelections)"
+      >
+        <Down fill="white" />
+      </div>
     </div>
-  </div>
-  <div
-    v-if="showSelections"
-    abs
-    z-70
-    :class="selectboxSize"
-    overflow-hidden
-    class="select-box"
-  >
+
     <div
-      v-for="selection in selections"
-      :key="selection"
-      is-btn
-      wh-full
-      f-cer
-      text-main
-      py-8
-      text-white
-      :class="[`type-${type}`]"
-      @click="onSelect(selection)"
+      v-if="showSelections"
+      class="btn-multi-dropdown"
+      :class="[`btn-multi--${size}`, `btn-multi--${type}`]"
     >
-      {{ selection }}
+      <div
+        v-for="selection in selections"
+        :key="selection"
+        class="btn-multi-option"
+        @click="() => { selected = selection; showSelections = false; }"
+      >
+        {{ selection }}
+      </div>
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-.type {
-  &-primary {
-    @include bg-mouse-event(#4e3c94, #281e52, #8e8a9c);
-  }
-
-  &-warn {
-    @include bg-mouse-event(#943c61, #521e2a, #9c8a93);
-  }
-}
-.selector {
-  &-primary {
-    @include bg-mouse-event(#4e3c94, #281e52, #8e8a9c);
-  }
-  &-warn {
-    @include bg-mouse-event(#943c61, #521e2a, #9c8a93);
-  }
+.btn-multi-container {
+  position: relative;
+  display: inline-flex;
 }
 
-.select-box {
-  transform: TranslateY(80%) TranslateX(-111%);
+.btn-multi {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  color: #fff;
+
+  &--big {
+    border-radius: var(--radius-md);
+    width: 276px;
+    height: 44px;
+    font-size: 16px;
+  }
+
+  &--normal {
+    border-radius: var(--radius-sm);
+    min-width: 100px;
+    height: 36px;
+    font-size: 14px;
+  }
+
+  &--small {
+    border-radius: var(--radius-sm);
+    min-width: 80px;
+    height: 32px;
+    font-size: 13px;
+  }
+
+  &--primary {
+    .btn-multi-main,
+    .btn-multi-arrow {
+      background: var(--color-primary);
+    }
+    .btn-multi-main:hover,
+    .btn-multi-arrow:hover {
+      background: var(--color-primary-hover);
+    }
+  }
+
+  &--warn {
+    .btn-multi-main,
+    .btn-multi-arrow {
+      background: var(--color-danger);
+    }
+    .btn-multi-main:hover,
+    .btn-multi-arrow:hover {
+      filter: brightness(0.9);
+    }
+  }
+}
+
+.btn-multi-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding-left: 12px;
+  border: none;
+  outline: none;
+  color: inherit;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.btn-multi-label {
+  font-size: inherit;
+}
+
+.btn-multi-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  height: 100%;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--transition-fast);
+}
+
+.btn-multi-dropdown {
+  position: absolute;
+  left: 0;
+  bottom: 100%;
+  margin-bottom: 4px;
+  z-index: 100;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  min-width: 100%;
+
+  &.btn-multi--primary {
+    .btn-multi-option {
+      background: var(--color-primary);
+      &:hover {
+        background: var(--color-primary-hover);
+      }
+    }
+  }
+
+  &.btn-multi--warn {
+    .btn-multi-option {
+      background: var(--color-danger);
+      &:hover {
+        filter: brightness(0.9);
+      }
+    }
+  }
+}
+
+.btn-multi-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 8px 12px;
+  cursor: pointer;
+  user-select: none;
+  color: #fff;
+  font-size: inherit;
+  transition: background-color var(--transition-fast);
+  white-space: nowrap;
 }
 </style>

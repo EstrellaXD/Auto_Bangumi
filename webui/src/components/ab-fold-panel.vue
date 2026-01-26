@@ -5,42 +5,69 @@ import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/vue';
 withDefaults(
   defineProps<{
     title: string;
+    defaultOpen?: boolean;
   }>(),
   {
     title: 'title',
+    defaultOpen: true,
   }
 );
 </script>
 
 <template>
-  <Disclosure v-slot="{ open }">
-    <div rounded-10 overflow-hidden h-max>
-      <DisclosureButton
-        bg-theme-row
-        w-full
-        text-white
-        fx-cer
-        px="10 pc:20"
-        h="38 pc:45"
-        justify-between
-      >
-        <div text="h3 pc:h2">{{ title }}</div>
-
-        <Component :is="open ? Up : Down" size="24" />
+  <Disclosure v-slot="{ open }" :default-open="defaultOpen">
+    <div class="fold-panel">
+      <DisclosureButton class="fold-panel-header">
+        <div class="fold-panel-title">{{ title }}</div>
+        <Component :is="open ? Up : Down" :size="14" />
       </DisclosureButton>
 
-      <div
-        bg-white
-        py="10 pc:20"
-        text="14 inherit"
-        :class="[open ? 'px-20' : 'px-8']"
-      >
-        <div v-show="!open" line my-12></div>
-
-        <DisclosurePanel>
+      <DisclosurePanel>
+        <div class="fold-panel-body">
           <slot></slot>
-        </DisclosurePanel>
-      </div>
+        </div>
+      </DisclosurePanel>
     </div>
   </Disclosure>
 </template>
+
+<style lang="scss" scoped>
+.fold-panel {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  transition: border-color var(--transition-normal);
+  min-width: 0; // Allow panel to shrink below content size
+  max-width: 100%;
+}
+
+.fold-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 14px;
+  height: 34px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: color var(--transition-normal),
+              border-color var(--transition-normal);
+}
+
+.fold-panel-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.fold-panel-body {
+  background: var(--color-surface);
+  padding: 12px 14px;
+  font-size: 14px;
+  color: var(--color-text);
+  overflow-x: hidden;
+  transition: background-color var(--transition-normal),
+              color var(--transition-normal);
+}
+</style>

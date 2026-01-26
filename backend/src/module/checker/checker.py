@@ -1,14 +1,23 @@
 import logging
 from pathlib import Path
 
-import requests
+import httpx
 
 from module.conf import VERSION, settings
-from module.downloader import DownloadClient
 from module.models import Config
 from module.update import version_check
 
 logger = logging.getLogger(__name__)
+
+
+_default_config_dict: dict | None = None
+
+
+def _get_default_config_dict() -> dict:
+    global _default_config_dict
+    if _default_config_dict is None:
+        _default_config_dict = Config().dict()
+    return _default_config_dict
 
 
 class Checker:
@@ -31,13 +40,12 @@ class Checker:
 
     @staticmethod
     def check_first_run() -> bool:
-        if settings.dict() == Config().dict():
-            return True
-        else:
+        if Path("config/.setup_complete").exists():
             return False
+        return settings.dict() == _get_default_config_dict()
 
     @staticmethod
-    def check_version() -> bool:
+    def check_version() -> tuple[bool, int | None]:
         return version_check()
 
     @staticmethod
@@ -49,27 +57,34 @@ class Checker:
             return True
 
     @staticmethod
-    def check_downloader() -> bool:
+    async def check_downloader() -> bool:
+        from module.downloader import DownloadClient
+
+        # Mock downloader always succeeds
+        if settings.downloader.type == "mock":
+            logger.info("[Checker] Using MockDownloader - skipping connection check")
+            return True
+
         try:
             url = (
                 f"http://{settings.downloader.host}"
                 if "://" not in settings.downloader.host
                 else f"{settings.downloader.host}"
             )
-            response = requests.get(url, timeout=2)
-            # if settings.downloader.type in response.text.lower():
+            async with httpx.AsyncClient(timeout=2.0) as client:
+                response = await client.get(url)
             if "qbittorrent" in response.text.lower() or "vuetorrent" in response.text.lower():
-                with DownloadClient() as client:
-                    if client.authed:
+                async with DownloadClient() as dl_client:
+                    if dl_client.authed:
                         return True
                     else:
                         return False
             else:
                 return False
-        except requests.exceptions.ReadTimeout:
+        except httpx.TimeoutException:
             logger.error("[Checker] Downloader connect timeout.")
             return False
-        except requests.exceptions.ConnectionError:
+        except httpx.ConnectError:
             logger.error("[Checker] Downloader connect failed.")
             return False
         except Exception as e:

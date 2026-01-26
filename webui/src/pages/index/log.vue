@@ -9,6 +9,12 @@ const { onUpdate, offUpdate, reset, copy, getLog } = useLogStore();
 const { log } = storeToRefs(useLogStore());
 const { version } = useAppInfo();
 
+// Filter states
+const selectedLevels = ref<string[]>([]);
+
+// Log levels
+const logLevels = ['INFO', 'WARNING', 'ERROR', 'DEBUG'];
+
 const formatLog = computed(() => {
   const list = log.value
     .trim()
@@ -30,14 +36,39 @@ const formatLog = computed(() => {
   });
 });
 
+// Filtered logs based on selected levels
+const filteredLog = computed(() => {
+  if (selectedLevels.value.length === 0) {
+    return formatLog.value;
+  }
+  return formatLog.value.filter((entry) =>
+    selectedLevels.value.includes(entry.type)
+  );
+});
+
+// Toggle level filter
+function toggleLevel(level: string) {
+  const index = selectedLevels.value.indexOf(level);
+  if (index === -1) {
+    selectedLevels.value.push(level);
+  } else {
+    selectedLevels.value.splice(index, 1);
+  }
+}
+
+// Clear all filters
+function clearFilters() {
+  selectedLevels.value = [];
+}
+
 function typeColor(type: string) {
-  const M = {
-    INFO: '#4e3c94',
-    WARNING: '#A76E18',
-    ERROR: '#C70E0E',
-    DEBUG: '#A0A0A0',
+  const M: Record<string, string> = {
+    INFO: 'var(--color-primary)',
+    WARNING: 'var(--color-warning)',
+    ERROR: 'var(--color-danger)',
+    DEBUG: 'var(--color-text-muted)',
   };
-  return M[type];
+  return M[type] || 'var(--color-text)';
 }
 
 const logContainer = ref<HTMLElement | null>(null);
@@ -71,40 +102,56 @@ onDeactivated(() => {
 </script>
 
 <template>
-  <div overflow-auto mt-12 flex-grow>
-    <div flex="~ wrap gap-12">
-      <ab-container :title="$t('log.title')" w-660 grow>
-        <div
-          ref="logContainer"
-          rounded-10
-          border="1 solid black"
-          overflow-auto
-          p-10
-          max-h-60vh
-          min-h-20vh
-        >
-          <div min-w-450>
-            <template v-for="i in formatLog" :key="i.index">
+  <div class="page-log">
+    <div class="log-layout">
+      <ab-container :title="$t('log.title')" class="log-main">
+        <!-- Level Filter Section -->
+        <div class="log-filters">
+          <div class="filter-group">
+            <span class="filter-label">{{ $t('log.filter_level') }}</span>
+            <div class="filter-chips">
+              <button
+                v-for="level in logLevels"
+                :key="level"
+                class="filter-chip"
+                :class="{
+                  active: selectedLevels.includes(level),
+                  [`level-${level.toLowerCase()}`]: true,
+                }"
+                @click="toggleLevel(level)"
+              >
+                {{ level }}
+              </button>
+            </div>
+          </div>
+
+          <button
+            v-if="selectedLevels.length > 0"
+            class="clear-filters"
+            @click="clearFilters"
+          >
+            {{ $t('log.clear_filters') }}
+          </button>
+        </div>
+
+        <div ref="logContainer" class="log-viewer">
+          <div class="log-content">
+            <template v-for="i in filteredLog" :key="i.index">
               <div
-                p="y-10"
-                leading="1.5em"
-                border="0 b-1 solid"
-                last:border-b-0
-                flex="~ items-center gap-20"
+                class="log-entry"
                 :style="{ color: typeColor(i.type) }"
               >
-                <div flex="~ col items-center gap-10" whitespace-nowrap>
-                  <div text="center">{{ i.type }}</div>
-                  <div>{{ i.date }}</div>
+                <div class="log-meta">
+                  <div class="log-type">{{ i.type }}</div>
+                  <div class="log-date">{{ i.date }}</div>
                 </div>
-
-                <div flex-1 break-all>{{ i.content }}</div>
+                <div class="log-message">{{ i.content }}</div>
               </div>
             </template>
           </div>
         </div>
 
-        <div flex="~ justify-end gap-x-10" mt-12>
+        <div class="log-actions">
           <ab-button size="small" @click="getLog">
             {{ $t('log.update_now') }}
           </ab-button>
@@ -119,9 +166,9 @@ onDeactivated(() => {
         </div>
       </ab-container>
 
-      <div grow w-500 space-y-20>
+      <div class="log-sidebar">
         <ab-container :title="$t('log.contact_info')">
-          <div space-y-12>
+          <div class="contact-list">
             <ab-label label="Github">
               <ab-button
                 size="small"
@@ -142,7 +189,7 @@ onDeactivated(() => {
               </ab-button>
             </ab-label>
 
-            <div line></div>
+            <div class="divider"></div>
 
             <ab-label label="X">
               <ab-button
@@ -167,21 +214,17 @@ onDeactivated(() => {
         </ab-container>
 
         <ab-container :title="$t('log.bug_repo')">
-          <div space-y-12>
+          <div class="bug-section">
             <ab-button
-              mx-auto
-              text-16
-              w-300
-              h-46
-              rounded-10
+              class="issues-btn"
               link="https://github.com/EstrellaXD/Auto_Bangumi/issues"
             >
               Github Issues
             </ab-button>
 
-            <div line></div>
+            <div class="divider"></div>
 
-            <div text="center primary h3">
+            <div class="version-info">
               <span>Version: </span>
               <span>{{ version }}</span>
             </div>
@@ -191,3 +234,239 @@ onDeactivated(() => {
     </div>
   </div>
 </template>
+
+<style lang="scss" scoped>
+.page-log {
+  overflow: auto;
+  flex-grow: 1;
+}
+
+.log-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  align-items: start;
+
+  @include forDesktop {
+    grid-template-columns: 3fr 2fr;
+  }
+}
+
+.log-main {
+  min-width: 0;
+}
+
+.log-viewer {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  overflow: auto;
+  padding: 10px;
+  max-height: 60vh;
+  transition: border-color var(--transition-normal);
+}
+
+.log-content {
+  min-width: 0;
+}
+
+.log-entry {
+  padding: 10px 0;
+  line-height: 1.5;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  @include forDesktop {
+    align-items: center;
+    gap: 20px;
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.log-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.log-type {
+  text-align: center;
+  font-weight: 500;
+  font-size: 12px;
+}
+
+.log-date {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.log-message {
+  flex: 1;
+  word-break: break-all;
+  font-size: 13px;
+}
+
+.log-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  @include forDesktop {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.filter-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  min-width: 60px;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.filter-chip {
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: var(--color-text);
+
+  &:hover {
+    border-color: var(--color-primary);
+  }
+
+  &.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+  }
+
+  &.level-info {
+    &:hover,
+    &.active {
+      border-color: var(--color-primary);
+    }
+    &.active {
+      background: var(--color-primary);
+    }
+  }
+
+  &.level-warning {
+    &:hover,
+    &.active {
+      border-color: var(--color-warning);
+    }
+    &.active {
+      background: var(--color-warning);
+    }
+  }
+
+  &.level-error {
+    &:hover,
+    &.active {
+      border-color: var(--color-danger);
+    }
+    &.active {
+      background: var(--color-danger);
+    }
+  }
+
+  &.level-debug {
+    &:hover,
+    &.active {
+      border-color: var(--color-text-muted);
+    }
+    &.active {
+      background: var(--color-text-muted);
+    }
+  }
+}
+
+.clear-filters {
+  align-self: flex-start;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background: var(--color-danger);
+    color: white;
+  }
+}
+
+.log-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.log-sidebar {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.contact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.divider {
+  width: 100%;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.bug-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.issues-btn {
+  width: 100%;
+  max-width: 300px;
+  height: 46px;
+  font-size: 16px;
+  border-radius: var(--radius-md);
+}
+
+.version-info {
+  text-align: center;
+  color: var(--color-primary);
+  font-size: 16px;
+}
+</style>

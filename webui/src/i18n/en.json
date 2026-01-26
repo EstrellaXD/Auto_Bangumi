@@ -12,15 +12,15 @@
       "username": "Username"
     },
     "experimental_openai_set": {
-      "api_base": "OpenAI API Base URL (Azure entrypoint)",
-      "api_key": "OpenAI API Key",
-      "api_type": "OpenAI API Type",
-      "api_version": "Azure OpenAI Version",
-      "deployment_id": "Azure OpenAI Deployment ID",
-      "enable": "Enable OpenAI",
-      "model": "OpenAI Model",
-      "title": "Experimental Setting",
-      "warning": "Warning: Experimental feature is not yet stable. Please use with caution."
+      "api_base": "API Base URL",
+      "api_key": "API Key",
+      "api_type": "Provider",
+      "api_version": "API Version",
+      "deployment_id": "Deployment ID",
+      "enable": "Enable LLM Parsing",
+      "model": "Model",
+      "title": "LLM Settings",
+      "warning": "Experimental: LLM-based anime title parsing may produce inaccurate results."
     },
     "manage_set": {
       "delete_bad_torrent": "Delete Bad Torrent",
@@ -67,12 +67,74 @@
       "title": "Proxy Setting",
       "type": "Proxy Type",
       "username": "Username"
+    },
+    "search_provider_set": {
+      "title": "Search Provider",
+      "add_new": "Add Provider",
+      "add_title": "Add Search Provider",
+      "edit_title": "Edit Search Provider",
+      "name": "Name",
+      "name_placeholder": "e.g., mikan",
+      "url": "URL Template",
+      "url_placeholder": "https://example.com/search?q=%s",
+      "url_hint": "Use %s as placeholder for search keywords in the URL",
+      "url_missing_placeholder": "URL must contain %s as search keyword placeholder",
+      "default": "Default",
+      "no_providers": "No search providers configured",
+      "delete_confirm": "Are you sure you want to delete this provider?"
     }
   },
   "downloader": {
-    "hit": "Please set up the downloader"
+    "hit": "Please set up the downloader",
+    "empty": {
+      "title": "Downloader not configured",
+      "subtitle": "Connect your download client to manage torrents here",
+      "step1_title": "Open Config",
+      "step1_desc": "Navigate to the Config page and find the Downloader section.",
+      "step2_title": "Enter Connection Details",
+      "step2_desc": "Set your qBittorrent host address, username, and password.",
+      "step3_title": "Access Downloader",
+      "step3_desc": "Once configured, the downloader web UI will be embedded right here."
+    },
+    "empty_torrents": "No torrents in Bangumi category",
+    "selected": "selected",
+    "torrent": {
+      "name": "Name",
+      "progress": "Progress",
+      "status": "Status",
+      "size": "Size",
+      "dlspeed": "DL Speed",
+      "upspeed": "UP Speed",
+      "peers": "Seeds/Peers"
+    },
+    "state": {
+      "downloading": "Downloading",
+      "seeding": "Seeding",
+      "paused": "Paused",
+      "stalled": "Stalled",
+      "queued": "Queued",
+      "checking": "Checking",
+      "error": "Error",
+      "metadata": "Metadata"
+    },
+    "action": {
+      "pause": "Pause",
+      "resume": "Resume",
+      "delete": "Delete"
+    }
   },
   "homepage": {
+    "empty": {
+      "title": "No subscriptions yet",
+      "subtitle": "Get started by adding your first RSS feed",
+      "step1_title": "Add RSS Feed",
+      "step1_desc": "Click the \"Add\" button in the top bar and paste an RSS link from your anime source.",
+      "step2_title": "Configure Downloader",
+      "step2_desc": "Go to Config and set up your downloader (e.g. qBittorrent) connection.",
+      "step3_title": "Sit Back & Enjoy",
+      "step3_desc": "AutoBangumi will automatically download and rename new episodes for you.",
+      "add_rss_btn": "Add RSS Feed"
+    },
     "rule": {
       "apply": "Apply",
       "delete": "Delete",
@@ -85,7 +147,17 @@
       "exclude": "Exclude",
       "no_btn": "No",
       "official_title": "Official Title",
-      "offset": "Offset",
+      "episode_offset": "Episode Offset",
+      "season_offset": "Season Offset",
+      "auto_detect": "Auto Detect",
+      "needs_review": "Needs Review",
+      "archive": "Archive",
+      "unarchive": "Unarchive",
+      "archived": "Archived",
+      "archived_section": "Archived ({count})",
+      "select_hint": "Multiple rules found for this anime. Select one to edit:",
+      "filter": "Filter",
+      "unnamed": "Unnamed Rule",
       "season": "Season",
       "year": "Year",
       "yes_btn": "Yes"
@@ -93,8 +165,10 @@
   },
   "log": {
     "bug_repo": "Bug Report",
+    "clear_filters": "Clear",
     "contact_info": "Contact Infomation",
     "copy": "Copy",
+    "filter_level": "Level",
     "go": "Go",
     "join": "Join",
     "reset": "Reset",
@@ -103,9 +177,30 @@
   },
   "login": {
     "login_btn": "Login",
+    "passkey_btn": "Passkey",
     "password": "Password",
     "title": "Login",
     "username": "Username"
+  },
+  "passkey": {
+    "add_new": "Add Passkey",
+    "created_at": "Created",
+    "delete_confirm": "Are you sure you want to delete this passkey?",
+    "delete_failed": "Delete failed",
+    "delete_success": "Passkey deleted",
+    "device_name": "Device Name",
+    "device_name_placeholder": "e.g., iPhone 15, MacBook Pro",
+    "last_used": "Last used",
+    "loading": "Loading...",
+    "login_failed": "Passkey login failed",
+    "no_passkeys": "No passkeys registered yet",
+    "not_supported": "Your browser does not support Passkeys",
+    "register_failed": "Registration failed",
+    "register_hint": "After clicking confirm, follow your browser's prompts to complete authentication.",
+    "register_success": "Passkey registered successfully",
+    "register_title": "Add New Passkey",
+    "synced": "Synced across devices",
+    "title": "Passkey Settings"
   },
   "notify": {
     "copy_failed": "Your browser does not support Clipboard API!",
@@ -120,17 +215,128 @@
     "update_success": "Update Success!"
   },
   "player": {
-    "hit": "Please set up the media player"
+    "hit": "Please set up the media player",
+    "empty": {
+      "title": "Media player not configured",
+      "subtitle": "Connect your media server to stream directly from here",
+      "step1_title": "Open Config",
+      "step1_desc": "Navigate to the Config page and find the Media Player section.",
+      "step2_title": "Set Player URL",
+      "step2_desc": "Enter the URL of your media server (Jellyfin, Emby, Plex, etc.).",
+      "step3_title": "Start Watching",
+      "step3_desc": "Your media player will be embedded here for easy access."
+    }
   },
   "rss": {
+    "connected": "Connected",
     "delete": "Delete",
     "disable": "Disable",
     "enable": "Enable",
+    "error": "Error",
     "name": "Name",
     "selectbox": "Select",
     "status": "Status",
     "title": "RSS Item",
     "url": "Url"
+  },
+  "calendar": {
+    "title": "Schedule",
+    "subtitle": "This season's broadcast schedule",
+    "days": {
+      "mon": "Monday",
+      "tue": "Tuesday",
+      "wed": "Wednesday",
+      "thu": "Thursday",
+      "fri": "Friday",
+      "sat": "Saturday",
+      "sun": "Sunday"
+    },
+    "days_short": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
+    },
+    "unknown": "Unknown",
+    "unknown_title": "Unknown Title",
+    "today": "Today",
+    "empty": "No anime",
+    "refresh": "Refresh schedule",
+    "no_data": "No schedule data available",
+    "loading": "Loading...",
+    "tracked": "Tracked",
+    "tracked_count": "{count} tracked",
+    "total_count": "{count} total",
+    "search_title": "Search and Add Anime",
+    "no_search_results": "No results found. Try different keywords.",
+    "empty_state": {
+      "title": "No Schedule Yet",
+      "subtitle": "Click refresh to fetch this season's broadcast data"
+    }
+  },
+  "setup": {
+    "welcome": {
+      "title": "Welcome to AutoBangumi",
+      "subtitle": "Let's set up your anime downloading system.",
+      "description": "This wizard will guide you through the initial configuration. You can skip optional steps and configure them later.",
+      "start": "Get Started"
+    },
+    "account": {
+      "title": "Create Your Account",
+      "subtitle": "Change the default credentials for security.",
+      "username": "Username",
+      "password": "Password",
+      "confirm_password": "Confirm Password",
+      "password_mismatch": "Passwords do not match",
+      "password_too_short": "Password must be at least 8 characters"
+    },
+    "downloader": {
+      "title": "Download Client",
+      "subtitle": "Connect to your qBittorrent instance.",
+      "test": "Test Connection",
+      "testing": "Testing...",
+      "test_success": "Connection successful",
+      "test_failed": "Connection failed"
+    },
+    "rss": {
+      "title": "RSS Source",
+      "subtitle": "Add your first anime RSS feed.",
+      "url": "RSS Feed URL",
+      "feed_name": "Feed Name",
+      "test": "Test Feed",
+      "test_failed": "Failed to fetch feed",
+      "feed_title": "Feed Title",
+      "item_count": "Items Found"
+    },
+    "media": {
+      "title": "Media Library",
+      "subtitle": "Configure the download and organization path.",
+      "path": "Download Path",
+      "path_hint": "Episodes will be organized into subdirectories automatically."
+    },
+    "notification": {
+      "title": "Notifications",
+      "subtitle": "Get notified about new episodes (optional).",
+      "test": "Send Test",
+      "test_failed": "Notification test failed"
+    },
+    "review": {
+      "title": "Review Settings",
+      "subtitle": "Confirm your configuration before completing setup.",
+      "complete": "Complete Setup",
+      "completing": "Setting up...",
+      "success": "Setup complete! Please log in with your new credentials.",
+      "failed": "Setup failed. Please try again."
+    },
+    "nav": {
+      "next": "Next",
+      "previous": "Previous",
+      "skip": "Skip",
+      "step": "Step {current} of {total}"
+    }
   },
   "sidebar": {
     "calendar": "Calendar",
@@ -142,6 +348,70 @@
     "player": "Player",
     "rss": "RSS Manager",
     "title": "Menu"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "select": "Select",
+    "selectAll": "Select All",
+    "items": "items"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "offset": {
+    "dialog_title": "Season/Episode Mismatch Detected",
+    "parsed_result": "RSS Parsed Result",
+    "tmdb_data": "TMDB Data",
+    "season": "Season",
+    "episode": "Episode",
+    "total_seasons": "Total Seasons",
+    "season_episodes": "S{season} Episodes",
+    "suggested_offset": "Suggested Offset",
+    "season_offset": "Season Offset",
+    "episode_offset": "Episode Offset",
+    "preview": "Preview",
+    "apply": "Apply Suggestion",
+    "keep": "Keep Original",
+    "cancel": "Cancel",
+    "badge_tooltip": "Review needed: {reason}",
+    "reason_season_mismatch": "RSS shows S{parsed}, but TMDB only has {total} season(s)",
+    "reason_episode_exceeded": "Episode {ep} exceeds TMDB count of {count} for this season",
+    "needs_review": "Offset Review Needed",
+    "dismiss": "Dismiss",
+    "suggestion_applied": "Offset suggestion applied",
+    "no_mismatch": "No season/episode mismatch detected",
+    "review_dismissed": "Review reminder dismissed"
+  },
+  "search": {
+    "subscribe": "Subscribe",
+    "no_results": "No results found. Try different keywords.",
+    "start_typing": "Enter keywords to start searching",
+    "filter": {
+      "group": "Group",
+      "resolution": "Resolution",
+      "subtitle_type": "Subtitle",
+      "season": "Season",
+      "clear": "Clear",
+      "results": "results",
+      "active": "Filtering",
+      "collapse": "Less"
+    },
+    "confirm": {
+      "title": "Add Subscription",
+      "rss": "RSS Feed",
+      "group": "Subtitle Group",
+      "resolution": "Resolution",
+      "subtitle": "Subtitle Type",
+      "season": "Season",
+      "filter": "Filter Rules",
+      "filter_hint": "Regex patterns to exclude unwanted torrents",
+      "save_path": "Save Path",
+      "save_path_placeholder": "Leave empty for default path",
+      "advanced": "Advanced Settings",
+      "subscribe": "Subscribe"
+    }
   },
   "topbar": {
     "add": {
@@ -168,7 +438,8 @@
     "reset_rule": "Reset Rule",
     "restart": "Restart",
     "search": {
-      "placeholder": "Type to search"
+      "placeholder": "Type to search",
+      "click_to_search": "Click to search"
     },
     "shutdown": "Shutdown",
     "start": "Start"

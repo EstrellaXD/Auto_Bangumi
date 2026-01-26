@@ -1,31 +1,31 @@
-# 使用 Docker-cli 部署
+# Deploy with Docker CLI
 
-## 新版本提醒
+## Note on New Versions
 
-AutoBangumi 2.6 版本后支持直接在 WebUI 中配置，你可以选择直接拉起容器再在 WebUI 中配置。老版本的环境变量配置参数会自动迁移，环境变量配置方式仍然可用，但是仅在第一次启动时生效。
+Since AutoBangumi 2.6, you can configure everything directly in the WebUI. You can start the container first and then configure it in the WebUI. Environment variable configuration from older versions will be automatically migrated. Environment variables still work but only take effect on the first startup.
 
-## 创建数据和配置文件夹
+## Create Data and Configuration Directories
 
-为了保证 AB 在每次更新之后数据和配置不丢失，推荐使用 Docker volume 或者 bind mount 进行数据和配置的持久化。
+To ensure AB's data and configuration persist across updates, we recommend using Docker volumes or bind mounts.
 
 ```shell
-# 使用 bind mount
+# Using bind mount
 mkdir -p ${HOME}/AutoBangumi/{config,data}
 cd ${HOME}/AutoBangumi
 ```
 
-Bind mount 与 Docker volume 二选一
+Choose either bind mount or Docker volume:
 ```shell
-# 使用 Docker volume
+# Using Docker volume
 docker volume create AutoBangumi_config
 docker volume create AutoBangumi_data
 ```
 
-## 使用 Docker-cli 部署 AutoBangumi
+## Deploy AutoBangumi with Docker CLI
 
-复制以下命令运行即可。
+Copy and run the following command.
 
-请确保运行时目录处于AutoBangumi。
+Make sure your working directory is AutoBangumi.
 
 ```shell
 docker run -d \
@@ -43,14 +43,14 @@ docker run -d \
   ghcr.io/estrellaxd/auto_bangumi:latest
 ```
 
-如果使用 Docker volume，可以自行替换绑定路径。
+If using Docker volumes, replace the bind paths accordingly:
 ```shell
   -v AutoBangumi_config:/app/config \
   -v AutoBangumi_data:/app/data \
 ```
 
-此时 AB 的 WebUI 会自动运行，但是主程序会处于暂停状态，可以进入 `http://abhost:7892` 进行配置。
+The AB WebUI will start automatically, but the main program will be paused. Access `http://abhost:7892` to configure it.
 
-此时 AB 会自动把环境变量写入 `config.json` 文件中然后自动运行。
+AB will automatically write environment variables to `config.json` and start running.
 
-推荐使用 _[Portainer](https://www.portainer.io)_ 等带有 UI 的 Docker 管理器进行进阶部署
+We recommend using _[Portainer](https://www.portainer.io)_ or similar Docker management UIs for advanced deployment.

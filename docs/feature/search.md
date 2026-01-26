@@ -1,25 +1,64 @@
-# 搜索功能
+# Torrent Search
 
-在 3.1 版本之后 AB 添加了搜索功能，可以通过搜索功能快速找到想要的番剧。
+Since v3.1, AB includes a search feature for quickly finding anime.
 
-## 使用搜索功能
+## Using the Search Feature
 
 ::: warning
-搜索功能依赖主程序的解析器，当前版本不允许解析合集。解析合集提示 `warning` 为正常现象。
+The search feature relies on the main program's parser. The current version does not support parsing collections. A `warning` when parsing collections is normal behavior.
 :::
 
-搜索栏位于 AB 顶栏，可以在搜索栏右侧选择想要搜索的源站，比如：蜜柑计划、nyaa 等
+The search bar is located in the AB top bar. Click to open the search panel.
 
-选择对应的源站输入关键词，AB 即可自动解析搜索结果并展示。如果想要添加对应的番剧，点击卡片右侧的添加按钮即可。
+![Search Panel](../image/feature/search-panel.png)
+
+Select the source site, enter keywords, and AB will automatically parse and display search results. To add an anime, click the add button on the right side of the card.
 
 ::: tip
-源站为 **Mikan** 是 AB 默认使用 `mikan` 解析器，如果使用其他源站，默认使用 TMDB 解析器。
+When the source is **Mikan**, AB uses the `mikan` parser by default. For other sources, the TMDB parser is used.
 :::
 
-## 增加源站
+## Managing Search Sources
 
-用户可以手动增加源站列表，只需要更改 `config/search_provider.json` 即可。
-默认为
+Since v3.2, you can manage search sources directly in the Settings page without editing JSON files.
+
+### Search Provider Settings Panel
+
+Navigate to **Config** → **Search Provider** to access the settings panel.
+
+![Search Provider Settings](../image/feature/search-provider.png)
+
+From here you can:
+- **View** all configured search sources
+- **Add** new search sources with the "Add Provider" button
+- **Edit** existing source URLs
+- **Delete** custom sources (default sources mikan, nyaa, dmhy cannot be deleted)
+
+### URL Template Format
+
+When adding a custom source, the URL must contain `%s` as a placeholder for the search keyword.
+
+Example:
+```
+https://example.com/rss/search?q=%s
+```
+
+The `%s` will be replaced with the user's search query.
+
+### Default Sources
+
+The following sources are built-in and cannot be deleted:
+
+| Source | URL Template |
+|--------|--------------|
+| mikan | `https://mikanani.me/RSS/Search?searchstr=%s` |
+| nyaa | `https://nyaa.si/?page=rss&q=%s&c=0_0&f=0` |
+| dmhy | `http://dmhy.org/topics/rss/rss.xml?keyword=%s` |
+
+### Adding Sources via Config File
+
+You can also manually add sources by editing `config/search_provider.json`:
+
 ```json
 {
   "mikan": "https://mikanani.me/RSS/Search?searchstr=%s",

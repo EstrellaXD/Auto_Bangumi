@@ -1,10 +1,15 @@
 import logging
 import re
+from collections import OrderedDict
 from pathlib import Path
 
 from module.models import EpisodeFile, SubtitleFile
 
 logger = logging.getLogger(__name__)
+
+# LRU cache for torrent_parser results to avoid repeated regex parsing
+_PARSER_CACHE_MAX_SIZE = 512
+_parser_cache: OrderedDict[tuple, EpisodeFile | SubtitleFile | None] = OrderedDict()
 
 PLATFORM = "Unix"
 
@@ -15,6 +20,8 @@ RULES = [
     r"(.*)第?(\d{1,4}(?:\.\d{1,2})?)[话話集](?:END)?(.*)",
     r"(.*)(?:S\d{2})?EP?(\d{1,4}(?:\.\d{1,2})?)(.*)",
 ]
+
+COMPILED_RULES = [re.compile(rule, re.I) for rule in RULES]
 
 SUBTITLE_LANG = {
     "zh-tw": ["tc", "cht", "繁", "zh-tw"],
@@ -34,10 +41,11 @@ def get_path_basename(torrent_path: str) -> str:
     return Path(torrent_path).name
 
 
+_GROUP_SPLIT_RE = re.compile(r"[\[\]()【】（）]")
+
+
 def get_group(group_and_title) -> tuple[str | None, str]:
-    n = re.split(r"[\[\]()【】（）]", group_and_title)
-    while "" in n:
-        n.remove("")
+    n = [x for x in _GROUP_SPLIT_RE.split(group_and_title) if x]
     if len(n) > 1:
         if re.match(r"\d+", n[1]):
             return None, group_and_title
@@ -67,14 +75,38 @@ def torrent_parser(
     torrent_name: str | None = None,
     season: int | None = None,
     file_type: str = "media",
-) -> EpisodeFile | SubtitleFile:
+) -> EpisodeFile | SubtitleFile | None:
+    # Check cache first to avoid repeated regex parsing
+    cache_key = (torrent_path, torrent_name, season, file_type)
+    if cache_key in _parser_cache:
+        # Move to end to mark as recently used
+        _parser_cache.move_to_end(cache_key)
+        return _parser_cache[cache_key]
+
+    result = _torrent_parser_impl(torrent_path, torrent_name, season, file_type)
+
+    # Store in cache with LRU eviction
+    _parser_cache[cache_key] = result
+    if len(_parser_cache) > _PARSER_CACHE_MAX_SIZE:
+        _parser_cache.popitem(last=False)  # Remove oldest item
+
+    return result
+
+
+def _torrent_parser_impl(
+    torrent_path: str,
+    torrent_name: str | None = None,
+    season: int | None = None,
+    file_type: str = "media",
+) -> EpisodeFile | SubtitleFile | None:
+    """Internal implementation of torrent_parser without caching."""
     media_path = get_path_basename(torrent_path)
     match_names = [torrent_name, media_path]
     if torrent_name is None:
         match_names = match_names[1:]
     for match_name in match_names:
-        for rule in RULES:
-            match_obj = re.match(rule, match_name, re.I)
+        for compiled_rule in COMPILED_RULES:
+            match_obj = compiled_rule.match(match_name)
             if match_obj:
                 group, title = get_group(match_obj.group(1))
                 if not season:
@@ -103,6 +135,7 @@ def torrent_parser(
                         episode=episode,
                         suffix=suffix,
                     )
+    return None
 
 
 if __name__ == "__main__":

@@ -27,14 +27,13 @@ export const useLogStore = defineStore('log', () => {
     immediateCallback: true,
   });
 
-  function copy() {
-    const { copy: copyLog, isSupported } = useClipboard({
-      source: log.value,
-      legacy: true,
-    });
+  const { copy: clipboardCopy, isSupported: clipboardSupported } = useClipboard({
+    legacy: true,
+  });
 
-    if (isSupported.value) {
-      copyLog();
+  function copy() {
+    if (clipboardSupported.value) {
+      clipboardCopy(log.value);
       message.success(t('notify.copy_success'));
     } else {
       message.error(t('notify.copy_failed'));

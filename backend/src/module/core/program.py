@@ -1,33 +1,39 @@
-import logging
 import asyncio
+import logging
 
 from module.conf import VERSION, settings
 from module.models import ResponseModel
 from module.update import (
+    cache_image,
     data_migration,
     first_run,
     from_30_to_31,
+    from_31_to_32,
+    run_migrations,
     start_up,
-    cache_image,
 )
 
-from .sub_thread import RenameThread, RSSThread
+from .sub_thread import OffsetScanThread, RenameThread, RSSThread
 
 logger = logging.getLogger(__name__)
 
 figlet = r"""
-                _        ____                                    _
-     /\        | |      |  _ \                                  (_)
-    /  \  _   _| |_ ___ | |_) | __ _ _ __   __ _ _   _ _ __ ___  _
-   / /\ \| | | | __/ _ \|  _ < / _` | '_ \ / _` | | | | '_ ` _ \| |
-  / ____ \ |_| | || (_) | |_) | (_| | | | | (_| | |_| | | | | | | |
- /_/    \_\__,_|\__\___/|____/ \__,_|_| |_|\__, |\__,_|_| |_| |_|_|
-                                            __/ |
-                                           |___/
+               _        ____                                    _
+    /\        | |      |  _ \                                  (_)
+   /  \  _   _| |_ ___ | |_) | __ _ _ __   __ _ _   _ _ __ ___  _
+  / /\ \| | | | __/ _ \|  _ < / _` | '_ \ / _` | | | | '_ ` _ \| |
+ / ____ \ |_| | || (_) | |_) | (_| | | | | (_| | |_| | | | | | | |
+/_/    \_\__,_|\__\___/|____/ \__,_|_| |_|\__, |\__,_|_| |_| |_|_|
+                                           __/ |
+                                          |___/
 """
 
 
-class Program(RenameThread, RSSThread):
+class Program(RenameThread, RSSThread, OffsetScanThread):
+    def __init__(self):
+        super().__init__()
+        self._startup_done = False
+
     @staticmethod
     def __start_info():
         for line in figlet.splitlines():
@@ -39,6 +45,10 @@ class Program(RenameThread, RSSThread):
         logger.info("Starting AutoBangumi...")
 
     async def startup(self):
+        # Prevent duplicate startup due to nested router lifespan events
+        if self._startup_done:
+            return
+        self._startup_done = True
         self.__start_info()
         if not self.database:
             first_run()
@@ -49,26 +59,48 @@ class Program(RenameThread, RSSThread):
                 "[Core] Legacy data detected, starting data migration, please wait patiently."
             )
             data_migration()
-        elif self.version_update:
-            # Update database
-            from_30_to_31()
-            logger.info("[Core] Database updated.")
+        else:
+            need_update, last_minor = self.version_update
+            if need_update:
+                if last_minor is not None and last_minor == 0:
+                    await from_30_to_31()
+                    logger.info("[Core] Database migrated from 3.0 to 3.1.")
+                await from_31_to_32()
+                logger.info("[Core] Database updated.")
+            else:
+                # Always check schema version and run pending migrations,
+                # in case a previous migration was interrupted or failed.
+                run_migrations()
         if not self.img_cache:
             logger.info("[Core] No image cache exists, create image cache.")
-            cache_image()
+            await cache_image()
         await self.start()
 
     async def start(self):
         self.stop_event.clear()
         settings.load()
-        while not self.downloader_status:
-            logger.warning("Downloader is not running.")
-            logger.info("Waiting for downloader to start.")
+        max_retries = 10
+        retry_count = 0
+        while not await self.check_downloader_status():
+            retry_count += 1
+            logger.warning(
+                f"Downloader is not running. (attempt {retry_count}/{max_retries})"
+            )
+            if retry_count >= max_retries:
+                logger.error(
+                    "Failed to connect to downloader after maximum retries. "
+                    "Please check downloader settings and network/proxy configuration. "
+                    "Program will continue but download functions will not work."
+                )
+                break
+            logger.info("Waiting for downloader to start...")
             await asyncio.sleep(30)
         if self.enable_renamer:
             self.rename_start()
         if self.enable_rss:
             self.rss_start()
+        # Start offset scanner for background mismatch detection
+        self.scan_start()
         logger.info("Program running.")
         return ResponseModel(
             status=True,
@@ -77,11 +109,12 @@ class Program(RenameThread, RSSThread):
             msg_zh="程序启动成功。",
         )
 
-    def stop(self):
+    async def stop(self):
         if self.is_running:
             self.stop_event.set()
-            self.rename_stop()
-            self.rss_stop()
+            await self.rename_stop()
+            await self.rss_stop()
+            await self.scan_stop()
             return ResponseModel(
                 status=True,
                 status_code=200,
@@ -97,7 +130,7 @@ class Program(RenameThread, RSSThread):
             )
 
     async def restart(self):
-        self.stop()
+        await self.stop()
         await self.start()
         return ResponseModel(
             status=True,
@@ -107,7 +140,8 @@ class Program(RenameThread, RSSThread):
         )
 
     def update_database(self):
-        if not self.version_update:
+        need_update, _ = self.version_update
+        if not need_update:
             return {"status": "No update found."}
         else:
             start_up()

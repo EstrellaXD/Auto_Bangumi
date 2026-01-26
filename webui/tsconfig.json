@@ -13,7 +13,7 @@
     "esModuleInterop": true,
     "lib": ["ESNext", "DOM"],
     "skipLibCheck": true,
-    "noImplicitAny": false,
+    "noImplicitAny": true,
     "baseUrl": "./",
     "types": ["vite-plugin-pwa/client"],
     "paths": {

@@ -1,9 +1,9 @@
-// transition
+// Transitions
 
 .fade {
   &-enter-active,
   &-leave-active {
-    transition: opacity 0.2s ease;
+    transition: opacity var(--transition-normal);
   }
 
   &-enter-from,
@@ -13,14 +13,137 @@
   }
 }
 
-// transition-group
-
 .fade-list-enter-active,
 .fade-list-leave-active {
-  transition: all 0.3s ease;
+  transition: all var(--transition-slow);
 }
 
 .fade-list-enter-from,
 .fade-list-leave-to {
   opacity: 0;
+}
+
+// Slide transitions for sidebar/panels
+.slide {
+  &-enter-active,
+  &-leave-active {
+    transition: transform var(--transition-normal), opacity var(--transition-normal);
+  }
+
+  &-enter-from {
+    transform: translateX(-8px);
+    opacity: 0;
+  }
+
+  &-leave-to {
+    transform: translateX(8px);
+    opacity: 0;
+  }
+}
+
+// Page route transition
+.page {
+  &-enter-active {
+    transition: opacity var(--transition-normal), transform var(--transition-normal);
+  }
+
+  &-leave-active {
+    transition: opacity 100ms ease-in;
+  }
+
+  &-enter-from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  &-leave-to {
+    opacity: 0;
+  }
+}
+
+// Scale-fade for dropdowns/menus
+.dropdown {
+  &-enter-active {
+    transition: opacity var(--transition-fast), transform var(--transition-fast);
+  }
+
+  &-leave-active {
+    transition: opacity 100ms ease-in, transform 100ms ease-in;
+  }
+
+  &-enter-from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+
+  &-leave-to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
+
+// Bottom sheet slide-up
+.sheet {
+  &-enter-active,
+  &-leave-active {
+    transition: transform var(--transition-slow), opacity var(--transition-normal);
+  }
+
+  &-enter-from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+
+  &-leave-to {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+// Backdrop overlay fade
+.overlay {
+  &-enter-active,
+  &-leave-active {
+    transition: opacity var(--transition-normal);
+  }
+
+  &-enter-from,
+  &-leave-to {
+    opacity: 0;
+  }
+}
+
+// Horizontal swipe
+.swipe-left {
+  &-enter-active,
+  &-leave-active {
+    transition: transform var(--transition-normal), opacity var(--transition-normal);
+  }
+
+  &-enter-from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  &-leave-to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+.swipe-right {
+  &-enter-active,
+  &-leave-active {
+    transition: transform var(--transition-normal), opacity var(--transition-normal);
+  }
+
+  &-enter-from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+
+  &-leave-to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
 }

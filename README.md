@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://www.autobangumi.org">官方网站</a> | <a href="https://www.autobangumi.org/deploy/quick-start.html">快速开始</a> | <a href="https://www.autobangumi.org/changelog/3.0.html">更新日志</a> | <a href="https://t.me/autobangumi_update">更新推送</a> | <a href="https://t.me/autobangumi">TG 群组</a>
+  <a href="https://www.autobangumi.org">官方网站</a> | <a href="https://www.autobangumi.org/deploy/quick-start.html">快速开始</a> | <a href="https://www.autobangumi.org/changelog/3.2.html">更新日志</a> | <a href="https://t.me/autobangumi_update">更新推送</a> | <a href="https://t.me/autobangumi">TG 群组</a>
 </p>
 
 # 项目说明
@@ -24,8 +24,11 @@
 
 ## AutoBangumi 功能说明
 
+### 核心功能
+
 - 简易单次配置就能持续使用
-- 无需介入的 `RSS` 解析器，解析番组信息并且自动生成下载规则。
+- 无需介入的 `RSS` 解析器，解析番组信息并且自动生成下载规则
+- 首次运行设置向导，7 步引导完成配置
 - 番剧文件整理:
 
     ```
@@ -56,16 +59,29 @@
 - 自定义重命名，可以根据上级文件夹对所有子文件重命名。
 - 季中追番可以补全当季遗漏的所有剧集
 - 高度可自定义的功能选项，可以针对不同媒体库软件微调
-- 支持多种 RSS 站点，支持聚合 RSS 的解析。
+- 支持多种 RSS 站点，支持聚合 RSS 的解析
 - 无需维护完全无感使用
-- 内置 TDMB 解析器，可以直接生成完整的 TMDB 格式的文件以及番剧信息。
+- 内置 TMDB 解析器，可以直接生成完整的 TMDB 格式的文件以及番剧信息
+
+### 3.2 新功能
+
+- **日历视图**：按播出日期查看订阅番剧，集成 Bangumi.tv 放送时间表
+- **Passkey 无密码登录**：支持 WebAuthn 指纹/面容登录，支持无用户名登录
+- **季度/集数偏移自动检测**：自动识别「虚拟季度」并计算正确的集数偏移
+- **番剧归档**：手动或自动归档已完结番剧，保持列表整洁
+- **搜索源设置面板**：在 UI 中直接管理搜索源，无需编辑配置文件
+- **RSS 连接状态**：实时显示订阅源健康状态，快速定位问题
+- **iOS 风格通知徽章**：直观显示需要关注的订阅
+- **全新 UI 设计**：深色/浅色主题、移动端适配、毛玻璃登录页
+- **性能优化**：并发 RSS 刷新提速 10 倍、并发下载提速 5 倍
 
 ## [Roadmap](https://github.com/users/EstrellaXD/projects/2)
 
+***已支持的下载器：***
 
-***计划开发的功能：***
-
-- Transmission 的支持。
+- qBittorrent
+- Aria2
+- Transmission
 
 ## Star History
 

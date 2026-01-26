@@ -1,13 +1,16 @@
+import logging
 import re
 
 from urllib3.util import parse_url
 
+from module.network import RequestContent
 from module.rss import RSSEngine
 from module.utils import save_image
-from module.network import RequestContent
+
+logger = logging.getLogger(__name__)
 
 
-def from_30_to_31():
+async def from_30_to_31():
     with RSSEngine() as db:
         db.migrate()
         # Update poster link
@@ -29,18 +32,32 @@ def from_30_to_31():
                 aggregate = True
             else:
                 aggregate = False
-            db.add_rss(rss_link=rss, aggregate=aggregate)
+            await db.add_rss(rss_link=rss, aggregate=aggregate)
 
 
-def cache_image():
-    with RSSEngine() as db, RequestContent() as req:
+async def from_31_to_32():
+    """Migrate database schema from 3.1.x to 3.2.x."""
+    with RSSEngine() as db:
+        db.create_table()
+        db.run_migrations()
+    logger.info("[Migration] 3.1 -> 3.2 migration completed.")
+
+
+def run_migrations():
+    """Check schema version and run any pending migrations."""
+    with RSSEngine() as db:
+        db.run_migrations()
+
+
+async def cache_image():
+    with RSSEngine() as db:
         bangumis = db.bangumi.search_all()
-        for bangumi in bangumis:
-            if bangumi.poster_link:
-                # Hash local path
-                img = req.get_content(bangumi.poster_link)
-                suffix = bangumi.poster_link.split(".")[-1]
-                img_path = save_image(img, suffix)
-                bangumi.poster_link = img_path
+        async with RequestContent() as req:
+            for bangumi in bangumis:
+                if bangumi.poster_link:
+                    # Hash local path
+                    img = await req.get_content(bangumi.poster_link)
+                    suffix = bangumi.poster_link.split(".")[-1]
+                    img_path = save_image(img, suffix)
+                    bangumi.poster_link = img_path
         db.bangumi.update_all(bangumis)
-

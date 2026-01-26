@@ -19,4 +19,16 @@ def load_provider():
         return DEFAULT_PROVIDER
 
 
+def save_provider(providers: dict[str, str]):
+    """Save search providers to config file and update SEARCH_CONFIG."""
+    global SEARCH_CONFIG
+    json_config.save(PROVIDER_PATH, providers)
+    SEARCH_CONFIG = providers
+
+
+def get_provider():
+    """Get current search providers config."""
+    return SEARCH_CONFIG
+
+
 SEARCH_CONFIG = load_provider()

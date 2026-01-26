@@ -1,13 +1,12 @@
-# 重命名使用说明
+# File Renaming
 
-AB 现在提供了三种重命名方式，分别为 `pn`、`advance` 和 `none`。
+AB currently provides three renaming methods: `pn`, `advance`, and `none`.
 
 ### pn
 
-全称为 `pure name`，即纯番剧名，这种方式会把番剧名作为文件名，不会添加任何前缀。
+Short for `pure name`. This method uses the torrent download name for renaming.
 
-pn 根据种子文件的下载名称进行重命名。
-如：
+Example:
 ```
 [Lilith-Raws] 86 - Eighty Six - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT][MKV].mkv
 >>
@@ -16,7 +15,7 @@ pn 根据种子文件的下载名称进行重命名。
 
 ### advance
 
-高级重命名，这种方式会把文件夹名用于重命名。
+Advanced renaming. This method uses the parent folder name for renaming.
 
 ```
 /downloads/Bangumi/86 - Eighty Six(2023)/Season 1/[Lilith-Raws] 86 - Eighty Six - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT][MKV].mkv
@@ -26,16 +25,37 @@ pn 根据种子文件的下载名称进行重命名。
 
 ### none
 
-不重命名，这种方式不会对文件进行重命名。
+No renaming. Files are left as-is.
 
-## 合集重命名
+## Collection Renaming
 
-AB 支持对合集进行重命名，合集重命名需要满足以下条件：
-- 剧集都在合集的一级目录下
-- 可以解析出剧集的集数
+AB supports renaming collections. Collection renaming requires:
+- Episodes are in the collection's first-level directory
+- Episode numbers can be parsed from file names
 
-同时 AB 也可以对在一级目录下的字幕文件进行重命名。
+AB can also rename subtitle files in the first-level directory.
 
-重命名之后的剧集和目录都会被放到 `Season` 文件夹下。
+After renaming, episodes and directories are placed in the `Season` folder.
 
-重命名的合集会被移动分类至 `BangumiCollection`。
+Renamed collections are moved and categorized under `BangumiCollection`.
+
+## Episode Offset
+
+Since v3.2, AB supports episode offset for renaming. This is useful when:
+- RSS shows different episode numbers than expected (e.g., S2E01 should be S1E29)
+- Anime has "virtual seasons" due to broadcast gaps
+
+When an offset is configured for a bangumi, AB automatically applies it during renaming:
+
+```
+Original: S02E01.mkv
+With offset (season: -1, episode: +28): S01E29.mkv
+```
+
+To configure offset:
+1. Click on the anime poster
+2. Open Advanced Settings
+3. Set Season Offset and/or Episode Offset values
+4. Or use "Auto Detect" to let AB suggest the correct offset
+
+See [Bangumi Management](./bangumi.md#episode-offset-auto-detection) for more details on auto-detection.

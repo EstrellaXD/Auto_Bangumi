@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from module.conf import settings
@@ -35,23 +36,23 @@ class PostNotification:
         )
 
     @staticmethod
-    def _get_poster(notify: Notification):
+    def _get_poster_sync(notify: Notification):
         with Database() as db:
             poster_path = db.bangumi.match_poster(notify.official_title)
         notify.poster_path = poster_path
 
-    def send_msg(self, notify: Notification) -> bool:
-        self._get_poster(notify)
+    async def send_msg(self, notify: Notification) -> bool:
+        await asyncio.to_thread(self._get_poster_sync, notify)
         try:
-            self.notifier.post_msg(notify)
+            await self.notifier.post_msg(notify)
             logger.debug(f"Send notification: {notify.official_title}")
         except Exception as e:
             logger.warning(f"Failed to send notification: {e}")
             return False
 
-    def __enter__(self):
-        self.notifier.__enter__()
+    async def __aenter__(self):
+        await self.notifier.__aenter__()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.notifier.__exit__(exc_type, exc_val, exc_tb)
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.notifier.__aexit__(exc_type, exc_val, exc_tb)

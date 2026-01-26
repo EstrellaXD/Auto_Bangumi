@@ -5,6 +5,9 @@ export interface RSS {
   aggregate: boolean;
   parser: string;
   enabled: boolean;
+  connection_status: string | null;
+  last_checked_at: string | null;
+  last_error: string | null;
 }
 
 export const rssTemplate: RSS = {
@@ -12,6 +15,9 @@ export const rssTemplate: RSS = {
   name: '',
   url: '',
   aggregate: false,
-  parser: '',
+  parser: 'tmdb',
   enabled: false,
+  connection_status: null,
+  last_checked_at: null,
+  last_error: null,
 };

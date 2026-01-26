@@ -1,5 +1,6 @@
 import logging
 import os
+from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI, Request
@@ -7,6 +8,7 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from module.api import v1
+from module.api.program import program
 from module.conf import VERSION, settings, setup_logger
 
 setup_logger(reset=True)
@@ -26,8 +28,19 @@ uvicorn_logging_config = {
 }
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    import asyncio
+
+    # Startup
+    asyncio.create_task(program.startup())
+    yield
+    # Shutdown
+    await program.stop()
+
+
 def create_app() -> FastAPI:
-    app = FastAPI()
+    app = FastAPI(lifespan=lifespan)
 
     # mount routers
     app.include_router(v1, prefix="/api")
@@ -40,6 +53,9 @@ app = create_app()
 
 @app.get("/posters/{path:path}", tags=["posters"])
 def posters(path: str):
+    # prevent path traversal
+    if ".." in path:
+        return HTMLResponse(status_code=403)
     return FileResponse(f"data/posters/{path}")
 
 
@@ -58,6 +74,7 @@ if VERSION != "DEV_VERSION":
             context = {"request": request}
             return templates.TemplateResponse("index.html", context)
 else:
+
     @app.get("/", status_code=302, tags=["html"])
     def index():
         return RedirectResponse("/docs")

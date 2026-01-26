@@ -7,11 +7,12 @@ from sqlmodel import Field, SQLModel
 class Torrent(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True, alias="id")
     bangumi_id: Optional[int] = Field(None, alias="refer_id", foreign_key="bangumi.id")
-    rss_id: Optional[int] = Field(None, alias="rss_id", foreign_key="rssitem.id")
+    rss_id: Optional[int] = Field(None, alias="rss_id", foreign_key="rssitem.id", index=True)
     name: str = Field("", alias="name")
-    url: str = Field("https://example.com/torrent", alias="url")
+    url: str = Field("https://example.com/torrent", alias="url", index=True)
     homepage: Optional[str] = Field(None, alias="homepage")
     downloaded: bool = Field(False, alias="downloaded")
+    qb_hash: Optional[str] = Field(None, alias="qb_hash", index=True)
 
 
 class TorrentUpdate(SQLModel):

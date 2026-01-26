@@ -6,16 +6,18 @@ import {
   PlayOne,
   Power,
   Refresh,
+  Search,
 } from '@icon-park/vue-next';
 import { ruleTemplate } from '#/bangumi';
-import type { BangumiRule } from '#/bangumi';
 
 const { t, changeLocale } = useMyI18n();
 const { running, onUpdate, offUpdate } = useAppInfo();
+const { showAddRss: showAddRSS, closeAddRss } = useAddRss();
+const { toggleModal: openSearch } = useSearchStore();
+const { isMobile } = useBreakpointQuery();
 
 const showAccount = ref(false);
-const showAddRSS = ref(false);
-const searchRule = ref<BangumiRule>();
+const rssRule = ref(ruleTemplate);
 
 const { start, pause, shutdown, restart, resetRule } = useProgramStore();
 const { refreshPoster } = useBangumiStore();
@@ -67,20 +69,13 @@ const items = [
   },
 ];
 
+const { isDark } = useDarkMode();
 const onSearchFocus = ref(false);
-
-function addSearchResult(bangumi: BangumiRule) {
-  showAddRSS.value = true;
-  searchRule.value = bangumi;
-  console.log('searchRule', searchRule.value);
-}
 
 watch(showAddRSS, (val) => {
   if (!val) {
-    searchRule.value = ruleTemplate;
-    setTimeout(() => {
-      onSearchFocus.value = false;
-    }, 300);
+    rssRule.value = ruleTemplate;
+    closeAddRss();
   }
 });
 
@@ -94,31 +89,41 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div
-    h="pc:60 50"
-    bg-theme-row
-    text-white
-    rounded="pc:16 10"
-    fx-cer
-    px="pc:24 15"
-  >
-    <div flex="~ gap-x-16">
-      <div fx-cer gap-x="pc:16 10">
-        <img src="/images/logo-light.svg" alt="favicon" wh="pc:24 20" />
-        <img
-          v-show="onSearchFocus === false"
-          src="/images/AutoBangumi.svg"
-          alt="AutoBangumi"
-          rel
-          h="18 pc:24"
-          pc:top-2
-        />
-      </div>
+  <div class="topbar">
+    <!-- Logo -->
+    <div class="topbar-brand">
+      <img
+        :src="isDark ? '/images/logo-light.svg' : '/images/logo.svg'"
+        alt="favicon"
+        class="topbar-logo"
+      />
+      <img
+        v-if="!isMobile"
+        v-show="onSearchFocus === false"
+        :src="isDark ? '/images/AutoBangumi.svg' : '/images/AutoBangumi-dark.svg'"
+        alt="AutoBangumi"
+        class="topbar-wordmark"
+      />
     </div>
 
-    <div ml-auto fx-cer>
-      <ab-search-bar mr="pc:16 10" fx-cer @add-bangumi="addSearchResult" />
+    <!-- Desktop search bar -->
+    <div class="topbar-search">
+      <ab-search-bar />
+    </div>
 
+    <!-- Mobile search button (fills space) -->
+    <button
+      v-if="isMobile"
+      class="topbar-mobile-search"
+      :aria-label="$t('topbar.search.click_to_search')"
+      @click="openSearch"
+    >
+      <Search theme="outline" size="18" />
+      <span class="topbar-mobile-search-text">{{ $t('topbar.search.click_to_search') }}</span>
+    </button>
+
+    <!-- Right side actions -->
+    <div class="topbar-right">
       <ab-status-bar
         :items="items"
         :running="running"
@@ -126,8 +131,123 @@ onUnmounted(() => {
         @change-lang="changeLocale"
       />
     </div>
-  </div>
 
-  <ab-change-account v-model:show="showAccount"></ab-change-account>
-  <ab-add-rss v-model:show="showAddRSS" v-model:rule="searchRule"></ab-add-rss>
+    <ab-change-account v-model:show="showAccount"></ab-change-account>
+    <ab-add-rss
+      v-model:show="showAddRSS"
+      v-model:rule="rssRule"
+    ></ab-add-rss>
+  </div>
 </template>
+
+<style lang="scss" scoped>
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--topbar-height);
+  padding: 0 8px;
+
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition: background-color var(--transition-normal),
+              border-color var(--transition-normal),
+              box-shadow var(--transition-normal);
+
+  @include forTablet {
+    gap: 12px;
+    padding: 0 12px;
+  }
+
+  @include forDesktop {
+    gap: 16px;
+    padding: 0 20px;
+    border-radius: var(--radius-lg);
+  }
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+
+  @include forTablet {
+    gap: 10px;
+  }
+}
+
+.topbar-logo {
+  width: 20px;
+  height: 20px;
+
+  @include forDesktop {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.topbar-wordmark {
+  height: 16px;
+  position: relative;
+
+  @include forDesktop {
+    height: 20px;
+  }
+}
+
+.topbar-search {
+  display: none;
+
+  @include forTablet {
+    display: block;
+    flex: 1;
+    max-width: 400px;
+  }
+}
+
+.topbar-mobile-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-hover);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color var(--transition-fast),
+              border-color var(--transition-fast),
+              background-color var(--transition-fast);
+
+  &:hover {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+.topbar-mobile-search-text {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-right {
+  flex-shrink: 0;
+}
+
+.topbar-right {
+  margin-left: auto;
+}
+</style>

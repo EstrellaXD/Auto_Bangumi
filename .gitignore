@@ -216,3 +216,7 @@ dev-dist
 
 # test file
 test.*
+
+# local config
+/backend/config/
+.claude/settings.local.json

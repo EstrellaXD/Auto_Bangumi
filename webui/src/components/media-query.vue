@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-const { isMobile } = useBreakpointQuery();
+const { isMobile, isTablet } = useBreakpointQuery();
 </script>
 
 <template>
@@ -7,9 +7,16 @@ const { isMobile } = useBreakpointQuery();
     <slot name="mobile"></slot>
   </template>
 
+  <template v-else-if="isTablet">
+    <slot name="tablet">
+      <!-- Fallback: if no tablet slot provided, use mobile -->
+      <slot name="mobile"></slot>
+    </slot>
+  </template>
+
   <template v-else>
     <slot></slot>
   </template>
 </template>
 
-<style lang="scss" scope></style>
+<style lang="scss" scoped></style>

@@ -57,33 +57,24 @@ function getDisabled(item: SelectItem | string) {
   return isString(item) ? false : item.disabled;
 }
 
-watchEffect(() => {
-  emit('update:modelValue', selected.value);
+watch(selected, (val) => {
+  emit('update:modelValue', val);
 });
 </script>
 
 <template>
   <Listbox v-slot="{ open }" v-model="selected">
-    <div
-      rel
-      flex="inline col"
-      rounded-6
-      border="1 black"
-      text-main
-      p="y-4 x-12"
-    >
-      <ListboxButton bg-transparent fx-cer justify-between gap-x-24>
-        <div>
-          {{ label }}
-        </div>
+    <div class="select-wrapper">
+      <ListboxButton class="select-button">
+        <div class="select-value">{{ label }}</div>
         <div :class="[{ hidden: open }]">
-          <Down />
+          <Down :size="14" />
         </div>
       </ListboxButton>
 
-      <ListboxOptions mt-8>
-        <div flex="~ items-end justify-between gap-x-24">
-          <div flex="~ col gap-y-8">
+      <ListboxOptions class="select-options">
+        <div class="select-options-inner">
+          <div class="select-options-list">
             <ListboxOption
               v-for="item in otherItems"
               v-slot="{ active }"
@@ -92,9 +83,10 @@ watchEffect(() => {
               :disabled="getDisabled(item)"
             >
               <div
+                class="select-option"
                 :class="[
-                  { 'text-primary': active },
-                  getDisabled(item) ? 'is-disabled' : 'is-btn',
+                  active && 'select-option--active',
+                  getDisabled(item) && 'select-option--disabled',
                 ]"
               >
                 {{ getLabel(item) }}
@@ -102,9 +94,75 @@ watchEffect(() => {
             </ListboxOption>
           </div>
 
-          <div :class="[{ hidden: !open }]"><Up /></div>
+          <div :class="[{ hidden: !open }]"><Up :size="14" /></div>
         </div>
       </ListboxOptions>
     </div>
   </Listbox>
 </template>
+
+<style lang="scss" scoped>
+.select-wrapper {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  font-size: 12px;
+  padding: 4px 12px;
+  transition: border-color var(--transition-fast);
+
+  &:hover {
+    border-color: var(--color-primary);
+  }
+}
+
+.select-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text);
+  padding: 0;
+}
+
+.select-value {
+  color: var(--color-text);
+}
+
+.select-options {
+  margin-top: 8px;
+}
+
+.select-options-inner {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.select-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.select-option {
+  cursor: pointer;
+  user-select: none;
+  color: var(--color-text-secondary);
+  transition: color var(--transition-fast);
+
+  &--active {
+    color: var(--color-primary);
+  }
+
+  &--disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+</style>

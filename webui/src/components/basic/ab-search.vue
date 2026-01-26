@@ -1,106 +1,106 @@
 <script lang="ts" setup>
-import { Down, Search } from '@icon-park/vue-next';
+import { Search } from '@icon-park/vue-next';
 import { NSpin } from 'naive-ui';
 
 withDefaults(
   defineProps<{
-    providers: string[];
+    provider: string;
     loading: boolean;
   }>(),
   {
+    provider: '',
     loading: false,
   }
 );
 
-defineEmits(['search']);
-
-const provider = defineModel<string>('provider');
-const inputValue = defineModel<string>('inputValue');
-
-const showProvider = ref(false);
-
-function onSelect(site: string) {
-  provider.value = site;
-  showProvider.value = false;
-}
+defineEmits<{ click: [] }>();
 </script>
 
 <template>
-  <div
-    bg="#7752B4"
-    text-white
-    fx-cer
-    rounded-12
-    h-36
-    pl-12
-    gap-x-12
-    w-400
-    max-w-90vw
-    shadow-inner
+  <button
+    class="search-trigger"
+    role="search"
+    aria-label="Open search"
+    @click="$emit('click')"
   >
-    <Search
-      v-if="!loading"
-      theme="outline"
-      size="24"
-      fill="#fff"
-      is-btn
-      btn-click
-      @click="$emit('search')"
-    />
-    <NSpin v-else :size="20" />
+    <NSpin v-if="loading" :size="16" class="search-spinner" />
+    <Search v-else theme="outline" size="18" class="search-icon" />
 
-    <input
-      v-model="inputValue"
-      type="text"
-      :placeholder="$t('topbar.search.placeholder')"
-      input-reset
-      @keyup.enter="$emit('search')"
-    />
+    <span class="search-placeholder">{{ $t('topbar.search.placeholder') }}</span>
 
-    <div rel w-100 h-full px-12 rounded-inherit class="provider" is-btn>
-      <div
-        fx-cer
-        wh-full
-        justify-between
-        @click="() => (showProvider = !showProvider)"
-      >
-        <div text-h3 truncate>
-          {{ provider }}
-        </div>
-
-        <Down />
-      </div>
-
-      <div
-        v-show="showProvider"
-        abs
-        top="100%"
-        left-0
-        w-100
-        rounded-12
-        shadow
-        bg-white
-        z-1
-        overflow-hidden
-      >
-        <div
-          v-for="site in providers"
-          :key="site"
-          hover:bg-theme-row
-          is-btn
-          @click="() => onSelect(site)"
-        >
-          <div text="h3 primary" hover="text-white" p-12 truncate>
-            {{ site }}
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+    <span class="search-provider">{{ provider }}</span>
+  </button>
 </template>
 
 <style lang="scss" scoped>
-.provider {
-  background: #4e2a94;
+.search-trigger {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 6px 0 12px;
+  gap: 10px;
+  min-width: 240px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-hover);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color var(--transition-fast),
+              background-color var(--transition-normal),
+              box-shadow var(--transition-fast);
+
+  &:hover {
+    border-color: var(--color-primary);
+    background: var(--color-surface);
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary-alpha);
+  }
+
+  @include forDesktop {
+    min-width: 320px;
+  }
+}
+
+.search-icon {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast);
+
+  .search-trigger:hover & {
+    color: var(--color-primary);
+  }
+}
+
+.search-spinner {
+  flex-shrink: 0;
+}
+
+.search-placeholder {
+  flex: 1;
+  text-align: left;
+  font-size: 14px;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-provider {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background-color var(--transition-fast);
+
+  .search-trigger:hover & {
+    background: var(--color-primary-hover);
+  }
 }
 </style>

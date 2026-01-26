@@ -1,6 +1,27 @@
 # syntax=docker/dockerfile:1
 
-FROM alpine:3.18
+FROM ghcr.io/astral-sh/uv:0.5-python3.13-alpine AS builder
+
+WORKDIR /app
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
+
+# Install dependencies (cached layer)
+COPY backend/pyproject.toml backend/uv.lock ./
+RUN uv sync --frozen --no-dev
+
+# Copy application source
+COPY backend/src ./src
+
+
+FROM python:3.13-alpine AS runtime
+
+RUN apk add --no-cache \
+    bash \
+    su-exec \
+    shadow \
+    tini \
+    tzdata
 
 ENV LANG="C.UTF-8" \
     TZ=Asia/Shanghai \
@@ -10,36 +31,19 @@ ENV LANG="C.UTF-8" \
 
 WORKDIR /app
 
-COPY backend/requirements.txt .
-RUN set -ex && \
-    apk add --no-cache \
-        bash \
-        busybox-suid \
-        python3 \
-        py3-aiohttp \
-        py3-bcrypt \
-        py3-pip \
-        su-exec \
-        shadow \
-        tini \
-        openssl \
-        tzdata && \
-    python3 -m pip install --no-cache-dir --upgrade pip && \
-    sed -i '/bcrypt/d' requirements.txt && \
-    pip install --no-cache-dir -r requirements.txt && \
-    # Add user
-    mkdir -p /home/ab && \
-    addgroup -S ab -g 911 && \
-    adduser -S ab -G ab -h /home/ab -s /sbin/nologin -u 911 && \
-    # Clear
-    rm -rf \
-        /root/.cache \
-        /tmp/*
-
-COPY --chmod=755 backend/src/. .
+# Copy venv and source from builder
+COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /app/src .
 COPY --chmod=755 entrypoint.sh /entrypoint.sh
 
-ENTRYPOINT ["tini", "-g", "--", "/entrypoint.sh"]
+# Add user
+RUN mkdir -p /home/ab && \
+    addgroup -S ab -g 911 && \
+    adduser -S ab -G ab -h /home/ab -s /sbin/nologin -u 911
+
+ENV PATH="/app/.venv/bin:$PATH"
 
 EXPOSE 7892
-VOLUME [ "/app/config" , "/app/data" ]
+VOLUME ["/app/config", "/app/data"]
+
+ENTRYPOINT ["tini", "-g", "--", "/entrypoint.sh"]

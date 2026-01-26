@@ -3,61 +3,57 @@
 layout: home
 
 title: AutoBangumi
-titleTemplate: 自动追番，解放双手！
+titleTemplate: Automatic anime tracking, hands-free!
 
 hero:
   name: AutoBangumi
-  text: 自动追番，解放双手！
-  tagline: 从 RSS 全自动 订阅解析、下载管理、重命名整理
-#  image:
-#    dark: /image/icons/dark-logo.svg
-#    light: /image/icons/light-logo.svg
-#    alt: AutoBangumi WebUI
+  text: Automatic anime tracking, hands-free!
+  tagline: Fully automated RSS subscription parsing, download management, and file organization
   actions:
     - theme: brand
-      text: 快速开始
+      text: Quick Start
       link: /deploy/quick-start
     - theme: alt
-      text: 项目说明
+      text: About
       link: /home/
     - theme: alt
-      text: 更新日志
-      link: /changelog/3.0
+      text: Changelog
+      link: /changelog/3.2
 
 features:
   - icon:
       src: /image/icons/rss.png
-    title: RSS 订阅解析
-    details: 自动识别解析各种番剧 RSS，无需手动输入番剧，仅需订阅即可自动解析、下载、整理。
+    title: RSS Subscription Parsing
+    details: Automatically identifies and parses anime RSS feeds. No manual input needed — just subscribe and it handles parsing, downloading, and organizing.
   - icon:
       src: /image/icons/qbittorrent-logo.svg
-    title: qBitTorrent 下载器
-    details: 使用 qBitTorrent 共享下载番剧资源，在 AutoBangumi 中可管理已有番剧、下载旧番、删除番剧。
+    title: qBittorrent Downloader
+    details: Uses qBittorrent to download anime resources. Manage existing anime, download older series, and delete entries all within AutoBangumi.
   - icon:
       src: /image/icons/tmdb-icon.png
-    title: The Movie DB 解析匹配
-    details: 可根据 TMDB 最大程度匹配对应番剧信息，保证对多个字幕组的资源也能正确匹配与解析。
+    title: TMDB Metadata Matching
+    details: Matches anime information via TMDB for accurate metadata, ensuring correct parsing even across multiple subtitle groups.
   - icon:
       src: /image/icons/plex-icon.png
     title: Plex / Jellyfin / Infuse ...
-    details: 根据番剧匹配结果自动整理资源文件名，统一目录结构，保证各类媒体库元信息刮削成功率。
+    details: Automatically organizes file names and directory structure based on match results, ensuring high success rates for media library metadata scraping.
 ---
 
 
 <div class="container">
 <div class="vp-doc">
 
-## 致谢声明
+## Credits
 
-### Credits
-Thanks to 
-- [Mikan Project](https://mikanani.me) for providing the so great anime resource.
+### Acknowledgments
+Thanks to
+- [Mikan Project](https://mikanani.me) for providing such a great anime resource.
 - [VitePress](https://vitepress.dev) for providing a great documentation framework.
-- [qBitTorrent](https://www.qbittorrent.org) for providing a great downloader.
-- [Plex](https://www.plex.tv) / [Jellyfin](https://jellyfin.org) for providing some great self-host media libraries.
+- [qBittorrent](https://www.qbittorrent.org) for providing a great downloader.
+- [Plex](https://www.plex.tv) / [Jellyfin](https://jellyfin.org) for providing great self-hosted media libraries.
 - [Infuse](https://firecore.com/infuse) for providing an elegant video player.
 - [DanDan Play](https://www.dandanplay.com) for providing a great danmaku player.
-- Every bangumi production team / translator team / fans.
+- Every anime production team / translator team / fans.
 
 ### Contributors
 
@@ -65,13 +61,13 @@ Thanks to
   ![](https://contrib.rocks/image?repo=EstrellaXD/Auto_Bangumi){class=contributors-avatar}
 ](https://github.com/EstrellaXD/Auto_Bangumi/graphs/contributors)
 
-## 传播声明
+## Disclaimer
 
-由于 AutoBangumi 为非正规版权渠道获取番剧，因此：
+Since AutoBangumi obtains anime through unofficial copyright channels:
 
-- **请勿**将 AutoBangumi 用于商业用途。
-- **请勿**将 AutoBangumi 制作为视频内容，于境内视频网站(版权利益方)传播。
-- **请勿**将 AutoBangumi 用于任何违反法律法规的行为。
+- **Do not** use AutoBangumi for commercial purposes.
+- **Do not** create video content featuring AutoBangumi for distribution on domestic video platforms (copyright stakeholders).
+- **Do not** use AutoBangumi for any activity that violates laws or regulations.
 
 </div>
 </div>
@@ -82,10 +78,6 @@ Thanks to
   position: relative;
   margin: 0 auto;
   padding: 0 24px;
-  /**
-   * same as VPHero.vue
-   * https://github.com/vuejs/vitepress/blob/v1.0.0-beta.5/src/client/theme-default/components/VPHero.vue#L83
-   */
   max-width: 1280px;
 }
 
@@ -106,6 +98,3 @@ Thanks to
   width: 600px;
 }
 </style>
-
-
-

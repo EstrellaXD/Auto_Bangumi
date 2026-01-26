@@ -3,6 +3,8 @@ name: Build Docker
 on:
   pull_request:
     types:
+      - opened
+      - synchronize
       - closed
     branches:
       - main
@@ -13,20 +15,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v3
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          if [ -f backend/requirements.txt ]; then pip install -r backend/requirements.txt; fi
-          pip install pytest
+        run: cd backend && uv sync --group dev
       - name: Test
-        working-directory: ./backend/src
         run: |
-          mkdir -p config
-          pytest
+          mkdir -p backend/config
+          cd backend && uv run pytest src/test -v
 
   webui-test:
     runs-on: ubuntu-latest
@@ -104,20 +105,30 @@ jobs:
           else
             echo "version=Test" >> $GITHUB_OUTPUT
           fi
+      - name: If build test
+        id: build_test
+        run: |
+          if [[ '${{ github.event_name }}' == 'pull_request' && '${{ github.event.pull_request.merged }}' != 'true' && '${{ github.event.pull_request.head.ref }}' == *'dev'* ]]; then
+            echo "build_test=1" >> $GITHUB_OUTPUT
+          else
+            echo "build_test=0" >> $GITHUB_OUTPUT
+          fi
       - name: Check result
         run: |
           echo "release: ${{ steps.release.outputs.release }}"
           echo "dev: ${{ steps.dev.outputs.dev }}"
+          echo "build_test: ${{ steps.build_test.outputs.build_test }}"
           echo "version: ${{ steps.version.outputs.version }}"
     outputs:
       release: ${{ steps.release.outputs.release }}
       dev: ${{ steps.dev.outputs.dev }}
+      build_test: ${{ steps.build_test.outputs.build_test }}
       version: ${{ steps.version.outputs.version }}
 
   build-webui:
     runs-on: ubuntu-latest
     needs: [test, webui-test, version-info]
-    if: ${{ needs.version-info.outputs.release == 1 || needs.version-info.outputs.dev == 1 }}
+    if: ${{ needs.version-info.outputs.release == 1 || needs.version-info.outputs.dev == 1 || needs.version-info.outputs.build_test == 1 }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -154,7 +165,7 @@ jobs:
           cd webui && pnpm build
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dist
           path: webui/dist
@@ -162,6 +173,7 @@ jobs:
   build-docker:
     runs-on: ubuntu-latest
     needs: [build-webui, version-info]
+    if: ${{ needs.version-info.outputs.release == 1 || needs.version-info.outputs.dev == 1 || needs.version-info.outputs.build_test == 1 }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -219,7 +231,7 @@ jobs:
           password: ${{ secrets.ACCESS_TOKEN }}
 
       - name: Download artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dist
           path: backend/src/dist
@@ -230,7 +242,7 @@ jobs:
         with:
           context: .
           builder: ${{ steps.buildx.output.name }}
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          platforms: linux/amd64,linux/arm64
           push: True
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -243,7 +255,7 @@ jobs:
         with:
           context: .
           builder: ${{ steps.buildx.output.name }}
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name == 'push' }}
           tags: ${{ steps.meta-dev.outputs.tags }}
           labels: ${{ steps.meta-dev.outputs.labels }}
@@ -256,7 +268,7 @@ jobs:
         with:
           context: .
           builder: ${{ steps.buildx.output.name }}
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          platforms: linux/amd64,linux/arm64
           push: false
           tags: estrellaxd/auto_bangumi:test
           cache-from: type=gha, scope=${{ github.workflow }}
@@ -274,7 +286,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download artifact webui
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dist
           path: webui/dist
@@ -284,7 +296,7 @@ jobs:
           cd webui && ls -al && tree && zip -r dist.zip dist
 
       - name: Download artifact app
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dist
           path: backend/src/dist
@@ -294,10 +306,6 @@ jobs:
         run: |
           echo ${{ needs.version-info.outputs.version }}
           echo "VERSION='${{ needs.version-info.outputs.version }}'" >> module/__version__.py
-
-      - name: Copy requirements.txt
-        working-directory: ./backend
-        run: cp requirements.txt src/requirements.txt
 
       - name: Zip app
         run: |
@@ -314,13 +322,22 @@ jobs:
             echo "pre_release=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Read changelog
+        id: changelog
+        run: |
+          if [ -f docs/changelog/3.2.md ]; then
+            echo "body<<EOF" >> $GITHUB_OUTPUT
+            cat docs/changelog/3.2.md >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
       - name: Release
         id: release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ needs.version-info.outputs.version }}
           name: ${{ steps.release-info.outputs.version }}
-          body: ${{ github.event.pull_request.body }}
+          body: ${{ github.event.pull_request.body || steps.changelog.outputs.body }}
           draft: false
           prerelease: ${{ steps.release-info.outputs.pre_release == 'true' }}
           files: |
