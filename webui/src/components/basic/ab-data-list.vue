@@ -75,9 +75,9 @@ defineExpose({ selectedKeys, toggleSelectAll });
           :indeterminate="selectedKeys.size > 0 && selectedKeys.size < items.length"
           @change="toggleSelectAll"
         />
-        <span>{{ $t('common.selectAll') || 'Select All' }}</span>
+        <span>{{ $t('common.selectAll') }}</span>
       </label>
-      <span class="ab-data-list__count">{{ items.length }} items</span>
+      <span class="ab-data-list__count">{{ items.length }} {{ $t('common.items') }}</span>
     </div>
 
     <!-- Items -->

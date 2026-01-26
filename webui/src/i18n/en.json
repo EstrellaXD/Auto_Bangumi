@@ -352,7 +352,13 @@
   "common": {
     "cancel": "Cancel",
     "confirm": "Confirm",
-    "select": "Select"
+    "select": "Select",
+    "selectAll": "Select All",
+    "items": "items"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark"
   },
   "offset": {
     "dialog_title": "Season/Episode Mismatch Detected",

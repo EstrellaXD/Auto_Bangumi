@@ -55,7 +55,7 @@ const visibleItems = computed(() => navItems.filter((i) => !i.hidden));
     >
       <Moon v-if="!isDark" :size="18" class="mobile-nav__icon" />
       <Sun v-else :size="18" class="mobile-nav__icon" />
-      <span class="mobile-nav__label">{{ isDark ? 'Light' : 'Dark' }}</span>
+      <span class="mobile-nav__label">{{ isDark ? t('theme.light') : t('theme.dark') }}</span>
     </button>
   </nav>
 </template>

@@ -352,7 +352,13 @@
   "common": {
     "cancel": "取消",
     "confirm": "确认",
-    "select": "选择"
+    "select": "选择",
+    "selectAll": "全选",
+    "items": "项"
+  },
+  "theme": {
+    "light": "浅色",
+    "dark": "深色"
   },
   "offset": {
     "dialog_title": "检测到季度/集数不匹配",
