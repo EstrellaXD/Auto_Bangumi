@@ -22,7 +22,8 @@ def _require_setup_needed():
     """Guard: raise 403 if setup is already completed."""
     if SENTINEL_PATH.exists():
         raise HTTPException(status_code=403, detail="Setup already completed.")
-    if settings.dict() != Config().dict():
+    # Allow setup in dev mode even if settings differ
+    if VERSION != "DEV_VERSION" and settings.dict() != Config().dict():
         raise HTTPException(status_code=403, detail="Setup already completed.")
 
 
@@ -83,7 +84,11 @@ class SetupCompleteRequest(BaseModel):
 @router.get("/status", response_model=SetupStatusResponse)
 async def get_setup_status():
     """Check whether the setup wizard is needed."""
-    need_setup = not SENTINEL_PATH.exists() and settings.dict() == Config().dict()
+    # In dev mode, always allow setup wizard for testing
+    if VERSION == "DEV_VERSION":
+        need_setup = not SENTINEL_PATH.exists()
+    else:
+        need_setup = not SENTINEL_PATH.exists() and settings.dict() == Config().dict()
     return SetupStatusResponse(need_setup=need_setup, version=VERSION)
 
 
@@ -91,6 +96,14 @@ async def get_setup_status():
 async def test_downloader(req: TestDownloaderRequest):
     """Test connection to the download client."""
     _require_setup_needed()
+
+    # Support mock mode for development
+    if req.type == "mock":
+        return TestResultResponse(
+            success=True,
+            message_en="Mock downloader enabled.",
+            message_zh="已启用模拟下载器。",
+        )
 
     scheme = "https" if req.ssl else "http"
     host = req.host if "://" in req.host else f"{scheme}://{req.host}"
