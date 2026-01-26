@@ -114,7 +114,7 @@ class QbDownloader:
         )
         return resp.json()
 
-    async def add_torrents(self, torrent_urls, torrent_files, save_path, category):
+    async def add_torrents(self, torrent_urls, torrent_files, save_path, category, tags=None):
         data = {
             "savepath": save_path,
             "category": category,
@@ -122,6 +122,8 @@ class QbDownloader:
             "autoTMM": "false",
             "contentLayout": "NoSubfolder",
         }
+        if tags:
+            data["tags"] = tags
         files = {}
         if torrent_urls:
             if isinstance(torrent_urls, list):
@@ -153,6 +155,13 @@ class QbDownloader:
                 else:
                     logger.error(f"[Downloader] Failed to add torrent after {max_retries} attempts: {e}")
                     raise
+
+    async def get_torrents_by_tag(self, tag: str) -> list[dict]:
+        """Get all torrents with a specific tag."""
+        resp = await self._client.get(
+            self._url("torrents/info"), params={"tag": tag}
+        )
+        return resp.json()
 
     async def torrents_delete(self, hash, delete_files: bool = True):
         await self._client.post(

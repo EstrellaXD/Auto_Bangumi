@@ -47,11 +47,13 @@ def unauthed_client(app):
 
 
 class TestAuthRequired:
+    @patch("module.security.api.DEV_AUTH_BYPASS", False)
     def test_get_rss_unauthorized(self, unauthed_client):
         """GET /rss without auth returns 401."""
         response = unauthed_client.get("/api/v1/rss")
         assert response.status_code == 401
 
+    @patch("module.security.api.DEV_AUTH_BYPASS", False)
     def test_add_rss_unauthorized(self, unauthed_client):
         """POST /rss/add without auth returns 401."""
         response = unauthed_client.post(

@@ -59,3 +59,28 @@ class TorrentDatabase:
         result = self.session.execute(statement)
         existing_urls = set(result.scalars().all())
         return [t for t in torrents_list if t.url not in existing_urls]
+
+    def search_by_qb_hash(self, qb_hash: str) -> Torrent | None:
+        """Find torrent by qBittorrent hash."""
+        result = self.session.execute(
+            select(Torrent).where(Torrent.qb_hash == qb_hash)
+        )
+        return result.scalar_one_or_none()
+
+    def search_by_url(self, url: str) -> Torrent | None:
+        """Find torrent by URL."""
+        result = self.session.execute(
+            select(Torrent).where(Torrent.url == url)
+        )
+        return result.scalar_one_or_none()
+
+    def update_qb_hash(self, torrent_id: int, qb_hash: str) -> bool:
+        """Update the qb_hash for a torrent."""
+        torrent = self.search(torrent_id)
+        if torrent:
+            torrent.qb_hash = qb_hash
+            self.session.add(torrent)
+            self.session.commit()
+            logger.debug(f"Updated qb_hash for torrent {torrent_id}: {qb_hash}")
+            return True
+        return False

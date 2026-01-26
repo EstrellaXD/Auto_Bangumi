@@ -152,6 +152,7 @@ class TestPasswordHashing:
 
 
 class TestGetCurrentUser:
+    @patch("module.security.api.DEV_AUTH_BYPASS", False)
     async def test_no_cookie_raises_401(self):
         """get_current_user raises 401 when no token cookie."""
         from module.security.api import get_current_user
@@ -161,6 +162,7 @@ class TestGetCurrentUser:
             await get_current_user(token=None)
         assert exc_info.value.status_code == 401
 
+    @patch("module.security.api.DEV_AUTH_BYPASS", False)
     async def test_invalid_token_raises_401(self):
         """get_current_user raises 401 for invalid token."""
         from module.security.api import get_current_user
@@ -170,6 +172,7 @@ class TestGetCurrentUser:
             await get_current_user(token="invalid.jwt.token")
         assert exc_info.value.status_code == 401
 
+    @patch("module.security.api.DEV_AUTH_BYPASS", False)
     async def test_valid_token_user_not_active(self):
         """get_current_user raises 401 when user not in active_user list."""
         from module.security.api import get_current_user, active_user
@@ -184,6 +187,7 @@ class TestGetCurrentUser:
             await get_current_user(token=token)
         assert exc_info.value.status_code == 401
 
+    @patch("module.security.api.DEV_AUTH_BYPASS", False)
     async def test_valid_token_active_user_succeeds(self):
         """get_current_user returns username for valid token + active user."""
         from module.security.api import get_current_user, active_user

@@ -162,12 +162,15 @@ class DownloadClient(TorrentPath):
                         logger.warning(f"[Downloader] Failed to fetch torrent file for: {bangumi.official_title}")
                         return False
                     torrent_url = None
+        # Create tag with bangumi_id for offset lookup during rename
+        tags = f"ab:{bangumi.id}" if bangumi.id else None
         try:
             if await self.client.add_torrents(
                 torrent_urls=torrent_url,
                 torrent_files=torrent_file,
                 save_path=bangumi.save_path,
                 category="Bangumi",
+                tags=tags,
             ):
                 logger.debug(f"[Downloader] Add torrent: {bangumi.official_title}")
                 return True
@@ -203,3 +206,9 @@ class DownloadClient(TorrentPath):
     async def remove_rule(self, rule_name):
         await self.client.remove_rule(rule_name)
         logger.info(f"[Downloader] Delete rule: {rule_name}")
+
+    async def get_torrents_by_tag(self, tag: str) -> list[dict]:
+        """Get all torrents with a specific tag."""
+        if hasattr(self.client, "get_torrents_by_tag"):
+            return await self.client.get_torrents_by_tag(tag)
+        return []

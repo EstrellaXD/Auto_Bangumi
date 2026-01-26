@@ -38,7 +38,9 @@ class BangumiDatabase:
 
     def add(self, data: Bangumi) -> bool:
         if self._is_duplicate(data):
-            logger.debug(f"[Database] Skipping duplicate: {data.official_title} ({data.group_name})")
+            logger.debug(
+                f"[Database] Skipping duplicate: {data.official_title} ({data.group_name})"
+            )
             return False
         self.session.add(data)
         self.session.commit()
@@ -58,10 +60,7 @@ class BangumiDatabase:
                 existing.add((data.title_raw, data.group_name))
 
         # Filter out duplicates
-        to_add = [
-            d for d in datas
-            if (d.title_raw, d.group_name) not in existing
-        ]
+        to_add = [d for d in datas if (d.title_raw, d.group_name) not in existing]
 
         # Also deduplicate within the batch itself
         seen = set()
@@ -73,7 +72,9 @@ class BangumiDatabase:
                 unique_to_add.append(d)
 
         if not unique_to_add:
-            logger.debug(f"[Database] All {len(datas)} bangumi already exist, skipping.")
+            logger.debug(
+                f"[Database] All {len(datas)} bangumi already exist, skipping."
+            )
             return 0
 
         self.session.add_all(unique_to_add)
@@ -81,9 +82,13 @@ class BangumiDatabase:
         _invalidate_bangumi_cache()
         skipped = len(datas) - len(unique_to_add)
         if skipped > 0:
-            logger.debug(f"[Database] Insert {len(unique_to_add)} bangumi, skipped {skipped} duplicates.")
+            logger.debug(
+                f"[Database] Insert {len(unique_to_add)} bangumi, skipped {skipped} duplicates."
+            )
         else:
-            logger.debug(f"[Database] Insert {len(unique_to_add)} bangumi into database.")
+            logger.debug(
+                f"[Database] Insert {len(unique_to_add)} bangumi into database."
+            )
         return len(unique_to_add)
 
     def update(self, data: Bangumi | BangumiUpdate, _id: int = None) -> bool:
@@ -152,7 +157,10 @@ class BangumiDatabase:
     def search_all(self) -> list[Bangumi]:
         global _bangumi_cache, _bangumi_cache_time
         now = time.time()
-        if _bangumi_cache is not None and (now - _bangumi_cache_time) < _BANGUMI_CACHE_TTL:
+        if (
+            _bangumi_cache is not None
+            and (now - _bangumi_cache_time) < _BANGUMI_CACHE_TTL
+        ):
             return _bangumi_cache
         statement = select(Bangumi)
         result = self.session.execute(statement)
@@ -199,7 +207,10 @@ class BangumiDatabase:
             matched = False
             for title_raw, match_data in title_index.items():
                 if title_raw in torrent.name:
-                    if rss_link not in match_data.rss_link and title_raw not in rss_updated:
+                    if (
+                        rss_link not in match_data.rss_link
+                        and title_raw not in rss_updated
+                    ):
                         match_data.rss_link += f",{rss_link}"
                         match_data.added = False
                         rss_updated.add(title_raw)
@@ -211,7 +222,9 @@ class BangumiDatabase:
         if rss_updated:
             self.session.commit()
             _invalidate_bangumi_cache()
-            logger.debug(f"[Database] Batch updated rss_link for {len(rss_updated)} bangumi.")
+            logger.debug(
+                f"[Database] Batch updated rss_link for {len(rss_updated)} bangumi."
+            )
         return unmatched
 
     def match_torrent(self, torrent_name: str) -> Optional[Bangumi]:
@@ -290,10 +303,17 @@ class BangumiDatabase:
         return True
 
     def match_by_save_path(self, save_path: str) -> Optional[Bangumi]:
-        """Find bangumi by save_path to get offset."""
-        statement = select(Bangumi).where(Bangumi.save_path == save_path)
+        """Find bangumi by save_path to get offset.
+
+        Note: When multiple subscriptions share the same save_path (e.g., different RSS
+        sources for the same anime), this returns the first match. Use match_torrent()
+        for more accurate matching when torrent_name is available.
+        """
+        statement = select(Bangumi).where(
+            and_(Bangumi.save_path == save_path, Bangumi.deleted == false())
+        )
         result = self.session.execute(statement)
-        return result.scalar_one_or_none()
+        return result.scalars().first()
 
     def get_needs_review(self) -> list[Bangumi]:
         """Get all bangumi that need review for offset mismatch."""

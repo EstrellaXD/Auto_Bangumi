@@ -52,16 +52,19 @@ def unauthed_client(app):
 
 
 class TestAuthRequired:
+    @patch("module.security.api.DEV_AUTH_BYPASS", False)
     def test_get_all_unauthorized(self, unauthed_client):
         """GET /bangumi/get/all without auth returns 401."""
         response = unauthed_client.get("/api/v1/bangumi/get/all")
         assert response.status_code == 401
 
+    @patch("module.security.api.DEV_AUTH_BYPASS", False)
     def test_get_by_id_unauthorized(self, unauthed_client):
         """GET /bangumi/get/1 without auth returns 401."""
         response = unauthed_client.get("/api/v1/bangumi/get/1")
         assert response.status_code == 401
 
+    @patch("module.security.api.DEV_AUTH_BYPASS", False)
     def test_delete_unauthorized(self, unauthed_client):
         """DELETE /bangumi/delete/1 without auth returns 401."""
         response = unauthed_client.delete("/api/v1/bangumi/delete/1")

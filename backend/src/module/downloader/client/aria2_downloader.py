@@ -57,7 +57,7 @@ class Aria2Downloader:
     async def torrents_files(self, torrent_hash: str):
         return []
 
-    async def add_torrents(self, torrent_urls, torrent_files, save_path, category):
+    async def add_torrents(self, torrent_urls, torrent_files, save_path, category, tags=None):
         import base64
         options = {"dir": save_path}
         if torrent_urls:
