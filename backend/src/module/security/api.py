@@ -10,8 +10,13 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 active_user = []
 
+# Set to True to bypass authentication (for development/testing only)
+DEV_AUTH_BYPASS = False
+
 
 async def get_current_user(token: str = Cookie(None)):
+    if DEV_AUTH_BYPASS:
+        return "dev_user"
     if not token:
         raise UNAUTHORIZED
     payload = verify_token(token)
