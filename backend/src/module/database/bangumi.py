@@ -373,26 +373,46 @@ class BangumiDatabase:
         result = self.session.execute(statement)
         return list(result.scalars().all())
 
-    def set_needs_review(self, _id: int, reason: str) -> bool:
-        """Mark a bangumi as needing review."""
+    def set_needs_review(
+        self,
+        _id: int,
+        reason: str,
+        suggested_season_offset: int | None = None,
+        suggested_episode_offset: int | None = None,
+    ) -> bool:
+        """Mark a bangumi as needing review with suggested offsets.
+
+        Args:
+            _id: The bangumi ID
+            reason: Human-readable reason for the review
+            suggested_season_offset: Suggested season offset value
+            suggested_episode_offset: Suggested episode offset value
+        """
         bangumi = self.session.get(Bangumi, _id)
         if not bangumi:
             return False
         bangumi.needs_review = True
         bangumi.needs_review_reason = reason
+        bangumi.suggested_season_offset = suggested_season_offset
+        bangumi.suggested_episode_offset = suggested_episode_offset
         self.session.add(bangumi)
         self.session.commit()
         _invalidate_bangumi_cache()
-        logger.debug(f"[Database] Marked bangumi id {_id} as needs_review: {reason}")
+        logger.debug(
+            f"[Database] Marked bangumi id {_id} as needs_review: {reason} "
+            f"(suggested: season={suggested_season_offset}, episode={suggested_episode_offset})"
+        )
         return True
 
     def clear_needs_review(self, _id: int) -> bool:
-        """Clear the needs_review flag for a bangumi."""
+        """Clear the needs_review flag and suggested offsets for a bangumi."""
         bangumi = self.session.get(Bangumi, _id)
         if not bangumi:
             return False
         bangumi.needs_review = False
         bangumi.needs_review_reason = None
+        bangumi.suggested_season_offset = None
+        bangumi.suggested_episode_offset = None
         self.session.add(bangumi)
         self.session.commit()
         _invalidate_bangumi_cache()

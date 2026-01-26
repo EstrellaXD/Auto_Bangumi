@@ -88,6 +88,14 @@ MIGRATIONS = [
             "CREATE INDEX IF NOT EXISTS ix_torrent_qb_hash ON torrent(qb_hash)",
         ],
     ),
+    (
+        7,
+        "add suggested offset columns for offset review",
+        [
+            "ALTER TABLE bangumi ADD COLUMN suggested_season_offset INTEGER DEFAULT NULL",
+            "ALTER TABLE bangumi ADD COLUMN suggested_episode_offset INTEGER DEFAULT NULL",
+        ],
+    ),
 ]
 
 

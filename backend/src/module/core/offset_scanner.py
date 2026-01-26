@@ -90,9 +90,15 @@ class OffsetScanner:
 
         if suggestion and suggestion.confidence in ("high", "medium"):
             with Database() as db:
-                db.bangumi.set_needs_review(bangumi.id, suggestion.reason)
+                db.bangumi.set_needs_review(
+                    bangumi.id,
+                    suggestion.reason,
+                    suggested_season_offset=suggestion.season_offset,
+                    suggested_episode_offset=suggestion.episode_offset,
+                )
             logger.info(
-                f"[OffsetScanner] Flagged {bangumi.official_title} for review: {suggestion.reason}"
+                f"[OffsetScanner] Flagged {bangumi.official_title} for review: {suggestion.reason} "
+                f"(suggested: season={suggestion.season_offset}, episode={suggestion.episode_offset})"
             )
             return True
 
