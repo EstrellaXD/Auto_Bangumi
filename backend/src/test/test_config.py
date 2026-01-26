@@ -92,7 +92,7 @@ class TestConfigSerialization:
         with open(json_path, "r") as f:
             loaded = json.load(f)
 
-        loaded_config = Config.parse_obj(loaded)
+        loaded_config = Config.model_validate(loaded)
         assert loaded_config.program.rss_time == config.program.rss_time
         assert loaded_config.downloader.type == config.downloader.type
 

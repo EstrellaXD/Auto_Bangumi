@@ -283,7 +283,7 @@ class BangumiDatabase:
             return False
         if not db_data:
             return False
-        bangumi_data = data.dict(exclude_unset=True)
+        bangumi_data = data.model_dump(exclude_unset=True)
         for key, value in bangumi_data.items():
             setattr(db_data, key, value)
         self.session.add(db_data)

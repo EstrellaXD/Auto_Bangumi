@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import os
 import signal
@@ -18,14 +17,7 @@ program = Program()
 router = APIRouter(tags=["program"])
 
 
-@router.on_event("startup")
-async def startup():
-    asyncio.create_task(program.startup())
-
-
-@router.on_event("shutdown")
-async def shutdown():
-    await program.stop()
+# Note: Lifespan events (startup/shutdown) are now handled in main.py via lifespan context manager
 
 
 @router.get(

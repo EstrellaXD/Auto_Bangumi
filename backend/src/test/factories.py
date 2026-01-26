@@ -1,6 +1,6 @@
 """Test data factories for creating model instances with sensible defaults."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from module.models import Bangumi, RSSItem, Torrent
 from module.models.config import Config
@@ -78,7 +78,7 @@ def make_passkey(**overrides) -> Passkey:
         sign_count=0,
         aaguid="00000000-0000-0000-0000-000000000000",
         transports='["internal"]',
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
         last_used_at=None,
         backup_eligible=False,
         backup_state=False,
