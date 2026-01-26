@@ -16,7 +16,7 @@
 # 项目说明
 
 <p align="center">
-    <img title="AutoBangumi" src="docs/image/preview/window.png" alt="" width=75%>
+    <img title="AutoBangumi" src="docs/image/feature/bangumi-list.png" alt="" width=75%>
 </p>
 
 本项目是基于 RSS 的全自动追番整理下载工具。只需要在 [Mikan Project][mikan] 等网站上订阅番剧，就可以全自动追番。
