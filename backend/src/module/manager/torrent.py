@@ -115,10 +115,46 @@ class TorrentManager(Database):
             # Move torrent
             match_list = await self.__match_torrents_list(old_data)
             async with DownloadClient() as client:
-                path = client._gen_save_path(data)
-                if match_list:
-                    await client.move_torrent(match_list, path)
-            data.save_path = path
+                new_path = client._gen_save_path(data)
+                old_path = old_data.save_path
+
+                # Move existing torrents to new location if path changed
+                if match_list and new_path != old_path:
+                    await client.move_torrent(match_list, new_path)
+                    logger.info(
+                        f"[Manager] Moved torrents from {old_path} to {new_path}"
+                    )
+
+                # Update qBittorrent RSS rule if save_path changed
+                if new_path != old_path and old_data.rule_name:
+                    # Recreate the rule with the new save_path
+                    rule = {
+                        "enable": True,
+                        "mustContain": data.title_raw,
+                        "mustNotContain": "|".join(data.filter)
+                        if isinstance(data.filter, list)
+                        else data.filter,
+                        "useRegex": True,
+                        "episodeFilter": "",
+                        "smartFilter": False,
+                        "previouslyMatchedEpisodes": [],
+                        "affectedFeeds": data.rss_link
+                        if isinstance(data.rss_link, str)
+                        else ",".join(data.rss_link),
+                        "ignoreDays": 0,
+                        "lastMatch": "",
+                        "addPaused": False,
+                        "assignedCategory": "Bangumi",
+                        "savePath": new_path,
+                    }
+                    await client.client.rss_set_rule(
+                        rule_name=old_data.rule_name, rule_def=rule
+                    )
+                    logger.info(
+                        f"[Manager] Updated RSS rule {old_data.rule_name} with new save_path"
+                    )
+
+            data.save_path = new_path
             self.bangumi.update(data, bangumi_id)
             return ResponseModel(
                 status_code=200,
@@ -279,12 +315,16 @@ class TorrentManager(Database):
                 if tmdb_info.series_status == "Ended" and not bangumi.archived:
                     bangumi.archived = True
                     archived_count += 1
-                    logger.info(f"[Manager] Auto-archived ended series: {bangumi.official_title}")
+                    logger.info(
+                        f"[Manager] Auto-archived ended series: {bangumi.official_title}"
+                    )
 
         if archived_count > 0 or poster_count > 0:
             self.bangumi.update_all(bangumis)
 
-        logger.info(f"[Manager] Metadata refresh: archived {archived_count}, updated posters {poster_count}")
+        logger.info(
+            f"[Manager] Metadata refresh: archived {archived_count}, updated posters {poster_count}"
+        )
         return ResponseModel(
             status_code=200,
             status=True,
@@ -296,13 +336,19 @@ class TorrentManager(Database):
         """Suggest offset based on TMDB episode counts."""
         data = self.bangumi.search_id(bangumi_id)
         if not data:
-            return {"suggested_offset": 0, "reason": f"Bangumi id {bangumi_id} not found"}
+            return {
+                "suggested_offset": 0,
+                "reason": f"Bangumi id {bangumi_id} not found",
+            }
 
         language = settings.rss_parser.language
         tmdb_info = await tmdb_parser(data.official_title, language)
 
         if not tmdb_info or not tmdb_info.season_episode_counts:
-            return {"suggested_offset": 0, "reason": "Unable to fetch TMDB episode data"}
+            return {
+                "suggested_offset": 0,
+                "reason": "Unable to fetch TMDB episode data",
+            }
 
         season = data.season
         if season <= 1:

@@ -31,16 +31,13 @@ class Renamer(DownloadClient):
         bangumi_name: str,
         method: str,
         episode_offset: int = 0,
-        season_offset: int = 0,
+        season_offset: int = 0,  # Kept for API compatibility, but no longer used
     ) -> str:
-        # Apply season offset
-        adjusted_season = file_info.season + season_offset
-        if adjusted_season < 1:
-            adjusted_season = file_info.season  # Safety: don't go below 1
-            logger.warning(
-                f"[Renamer] Season offset {season_offset} would result in invalid season, ignoring"
-            )
-        season = f"0{adjusted_season}" if adjusted_season < 10 else adjusted_season
+        # Season comes from the folder name which already includes the offset
+        # (folder is now "Season {season + season_offset}")
+        # So we use file_info.season directly without applying offset again
+        season_num = file_info.season
+        season = f"0{season_num}" if season_num < 10 else season_num
         # Apply episode offset
         adjusted_episode = int(file_info.episode) + episode_offset
         if adjusted_episode < 1:
@@ -96,16 +93,14 @@ class Renamer(DownloadClient):
                     if await self.rename_torrent_file(
                         _hash=_hash, old_path=media_path, new_path=new_path
                     ):
-                        # Return adjusted season and episode numbers for notification
-                        adjusted_season = ep.season + season_offset
-                        if adjusted_season < 1:
-                            adjusted_season = ep.season
+                        # Season comes from folder which already has offset applied
+                        # Only apply episode offset
                         adjusted_episode = int(ep.episode) + episode_offset
                         if adjusted_episode < 1:
                             adjusted_episode = int(ep.episode)
                         return Notification(
                             official_title=bangumi_name,
-                            season=adjusted_season,
+                            season=ep.season,
                             episode=adjusted_episode,
                         )
         else:
@@ -202,6 +197,16 @@ class Renamer(DownloadClient):
                     pass
         return None
 
+    @staticmethod
+    def _normalize_path(path: str) -> str:
+        """Normalize path by removing trailing slashes and standardizing separators."""
+        if not path:
+            return path
+        # Replace backslashes with forward slashes for consistency
+        normalized = path.replace("\\", "/")
+        # Remove trailing slashes
+        return normalized.rstrip("/")
+
     def _lookup_offsets(
         self, torrent_hash: str, torrent_name: str, save_path: str, tags: str = ""
     ) -> tuple[int, int]:
@@ -229,6 +234,9 @@ class Renamer(DownloadClient):
                 if torrent_record and torrent_record.bangumi_id:
                     bangumi = db.bangumi.search_id(torrent_record.bangumi_id)
                     if bangumi and not bangumi.deleted:
+                        logger.debug(
+                            f"[Renamer] Found offsets via qb_hash: ep={bangumi.episode_offset}, season={bangumi.season_offset}"
+                        )
                         return bangumi.episode_offset, bangumi.season_offset
 
                 # Then try by bangumi_id from tags (for newly added torrents)
@@ -236,17 +244,35 @@ class Renamer(DownloadClient):
                 if bangumi_id:
                     bangumi = db.bangumi.search_id(bangumi_id)
                     if bangumi and not bangumi.deleted:
+                        logger.debug(
+                            f"[Renamer] Found offsets via tag ab:{bangumi_id}: ep={bangumi.episode_offset}, season={bangumi.season_offset}"
+                        )
                         return bangumi.episode_offset, bangumi.season_offset
 
                 # Then try matching by torrent name
                 bangumi = db.bangumi.match_torrent(torrent_name)
                 if bangumi:
+                    logger.debug(
+                        f"[Renamer] Found offsets via torrent name match: ep={bangumi.episode_offset}, season={bangumi.season_offset}"
+                    )
                     return bangumi.episode_offset, bangumi.season_offset
 
-                # Finally fall back to save_path matching (may fail with multiple subscriptions)
+                # Finally fall back to save_path matching with normalization
+                normalized_save_path = self._normalize_path(save_path)
                 bangumi = db.bangumi.match_by_save_path(save_path)
+                if not bangumi:
+                    # Try with normalized path if exact match failed
+                    bangumi = db.bangumi.match_by_save_path(normalized_save_path)
                 if bangumi:
+                    logger.debug(
+                        f"[Renamer] Found offsets via save_path match: ep={bangumi.episode_offset}, season={bangumi.season_offset}"
+                    )
                     return bangumi.episode_offset, bangumi.season_offset
+
+                logger.debug(
+                    f"[Renamer] No bangumi found for torrent: hash={torrent_hash[:8] if torrent_hash else 'N/A'}, "
+                    f"name={torrent_name[:50] if torrent_name else 'N/A'}..., path={save_path}"
+                )
         except Exception as e:
             logger.debug(f"[Renamer] Could not lookup offsets for {save_path}: {e}")
         return 0, 0

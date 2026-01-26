@@ -58,10 +58,24 @@ class TorrentPath:
 
     @staticmethod
     def _gen_save_path(data: Bangumi | BangumiUpdate):
+        """Generate save path for a bangumi.
+
+        The save path uses the adjusted season number (season + season_offset)
+        so files are saved directly to the correct season folder.
+        """
         folder = (
             f"{data.official_title} ({data.year})" if data.year else data.official_title
         )
-        save_path = Path(settings.downloader.path) / folder / f"Season {data.season}"
+        # Apply season_offset to get the adjusted season number for the folder
+        adjusted_season = data.season + getattr(data, "season_offset", 0)
+        if adjusted_season < 1:
+            adjusted_season = data.season  # Safety: don't go below 1
+            logger.warning(
+                f"[Path] Season offset would result in invalid season for {data.official_title}, using original season"
+            )
+        save_path = (
+            Path(settings.downloader.path) / folder / f"Season {adjusted_season}"
+        )
         return str(save_path)
 
     @staticmethod

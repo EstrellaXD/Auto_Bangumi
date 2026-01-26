@@ -305,15 +305,51 @@ class BangumiDatabase:
     def match_by_save_path(self, save_path: str) -> Optional[Bangumi]:
         """Find bangumi by save_path to get offset.
 
+        Tries exact match first, then falls back to matching with/without trailing slashes
+        and different path separators.
+
         Note: When multiple subscriptions share the same save_path (e.g., different RSS
         sources for the same anime), this returns the first match. Use match_torrent()
         for more accurate matching when torrent_name is available.
         """
+        if not save_path:
+            return None
+
+        # Try exact match first
         statement = select(Bangumi).where(
             and_(Bangumi.save_path == save_path, Bangumi.deleted == false())
         )
         result = self.session.execute(statement)
-        return result.scalars().first()
+        bangumi = result.scalars().first()
+        if bangumi:
+            return bangumi
+
+        # Normalize the input path and try variations
+        normalized = save_path.replace("\\", "/").rstrip("/")
+        variations = [
+            normalized,
+            normalized + "/",
+            save_path.rstrip("/"),
+            save_path.rstrip("\\"),
+        ]
+        # Remove duplicates while preserving order
+        seen = {save_path}
+        unique_variations = []
+        for v in variations:
+            if v not in seen:
+                seen.add(v)
+                unique_variations.append(v)
+
+        for variant in unique_variations:
+            statement = select(Bangumi).where(
+                and_(Bangumi.save_path == variant, Bangumi.deleted == false())
+            )
+            result = self.session.execute(statement)
+            bangumi = result.scalars().first()
+            if bangumi:
+                return bangumi
+
+        return None
 
     def get_needs_review(self) -> list[Bangumi]:
         """Get all bangumi that need review for offset mismatch."""
