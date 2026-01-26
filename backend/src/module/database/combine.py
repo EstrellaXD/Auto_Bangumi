@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 TABLE_MODELS: list[type[SQLModel]] = [Bangumi, RSSItem, Torrent, User, Passkey]
 
 # Increment this when adding new migrations to MIGRATIONS list.
-CURRENT_SCHEMA_VERSION = 6
+CURRENT_SCHEMA_VERSION = 7
 
 # Each migration is a tuple of (version, description, list of SQL statements).
 # Migrations are applied in order. A migration at index i brings the schema
@@ -182,6 +182,10 @@ class Database(Session):
             if "torrent" in tables and version == 6:
                 columns = [col["name"] for col in inspector.get_columns("torrent")]
                 if "qb_hash" in columns:
+                    needs_run = False
+            if "bangumi" in tables and version == 7:
+                columns = [col["name"] for col in inspector.get_columns("bangumi")]
+                if "suggested_season_offset" in columns:
                     needs_run = False
             if needs_run:
                 with self.engine.connect() as conn:

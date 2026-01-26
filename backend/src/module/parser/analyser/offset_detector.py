@@ -14,7 +14,7 @@ class OffsetSuggestion:
     """Suggested offsets to align RSS parsed data with TMDB."""
 
     season_offset: int
-    episode_offset: int
+    episode_offset: int | None  # None means no episode offset needed
     reason: str
     confidence: Literal["high", "medium", "low"]
 
@@ -36,12 +36,17 @@ def detect_offset_mismatch(
 
     Returns:
         OffsetSuggestion if a mismatch is detected, None otherwise
+
+    Note:
+        When only season_offset is needed (simple season mismatch), episode_offset
+        will be None. Episode offset is only set when there's a virtual season split
+        where episodes need to be renumbered (e.g., RSS S2E01 → TMDB S1E25).
     """
     if not tmdb_info or not tmdb_info.last_season:
         return None
 
     suggested_season_offset = 0
-    suggested_episode_offset = 0
+    suggested_episode_offset: int | None = None  # Only set when virtual season detected
     reasons = []
     confidence: Literal["high", "medium", "low"] = "high"
 
@@ -52,27 +57,42 @@ def detect_offset_mismatch(
         target_season = parsed_season + suggested_season_offset
 
         # Check if this season has virtual season breakpoints (detected from air date gaps)
-        if tmdb_info.virtual_season_starts and target_season in tmdb_info.virtual_season_starts:
+        if (
+            tmdb_info.virtual_season_starts
+            and target_season in tmdb_info.virtual_season_starts
+        ):
             vs_starts = tmdb_info.virtual_season_starts[target_season]
             # Calculate which virtual season the parsed_season maps to
             # e.g., if vs_starts = [1, 29] and parsed_season = 2, we're in the 2nd virtual season
-            virtual_season_index = parsed_season - target_season  # 0-indexed from target
+            virtual_season_index = (
+                parsed_season - target_season
+            )  # 0-indexed from target
 
-            if virtual_season_index < len(vs_starts):
-                # Episode offset is the start of this virtual season minus 1
+            if virtual_season_index > 0 and virtual_season_index < len(vs_starts):
+                # Only set episode offset for 2nd+ virtual season (index > 0)
+                # First virtual season (index 0) starts at episode 1, no offset needed
                 suggested_episode_offset = vs_starts[virtual_season_index] - 1
                 reasons.append(
                     f"RSS显示S{parsed_season}，但TMDB只有{tmdb_info.last_season}季"
-                    f"（检测到第{virtual_season_index + 1}部分从第{vs_starts[virtual_season_index]}集开始）"
+                    f"（检测到第{virtual_season_index + 1}部分从第{vs_starts[virtual_season_index]}集开始，"
+                    f"建议集数偏移+{suggested_episode_offset}）"
                 )
                 logger.debug(
                     f"[OffsetDetector] Virtual season detected: S{parsed_season} maps to "
                     f"TMDB S{target_season} starting at episode {vs_starts[virtual_season_index]}"
                 )
             else:
-                reasons.append(f"RSS显示S{parsed_season}，但TMDB只有{tmdb_info.last_season}季")
+                # Simple season mismatch, no episode offset needed
+                reasons.append(
+                    f"RSS显示S{parsed_season}，但TMDB只有{tmdb_info.last_season}季"
+                    f"（建议季度偏移{suggested_season_offset}，无需调整集数）"
+                )
         else:
-            reasons.append(f"RSS显示S{parsed_season}，但TMDB只有{tmdb_info.last_season}季")
+            # Simple season mismatch, no episode offset needed
+            reasons.append(
+                f"RSS显示S{parsed_season}，但TMDB只有{tmdb_info.last_season}季"
+                f"（建议季度偏移{suggested_season_offset}，无需调整集数）"
+            )
 
         logger.debug(
             f"[OffsetDetector] Season mismatch: parsed S{parsed_season}, "
@@ -83,7 +103,7 @@ def detect_offset_mismatch(
     target_season = parsed_season + suggested_season_offset
     if tmdb_info.season_episode_counts:
         season_ep_count = tmdb_info.season_episode_counts.get(target_season, 0)
-        adjusted_episode = parsed_episode + suggested_episode_offset
+        adjusted_episode = parsed_episode + (suggested_episode_offset or 0)
 
         if season_ep_count > 0 and adjusted_episode > season_ep_count:
             # Episode exceeds the count for this season
