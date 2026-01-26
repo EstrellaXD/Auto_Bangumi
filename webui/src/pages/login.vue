@@ -12,16 +12,10 @@ const isPasskeyLoading = ref(false);
 const isLoginLoading = ref(false);
 
 async function handlePasskeyLogin() {
-  if (!user.username) {
-    const message = useMessage();
-    const { t } = useMyI18n();
-    message.warning(t('notify.please_enter', [t('login.username')]));
-    return;
-  }
-
   isPasskeyLoading.value = true;
   try {
-    await loginWithPasskey(user.username);
+    // Pass username if provided, otherwise use discoverable credentials mode
+    await loginWithPasskey(user.username || undefined);
   } finally {
     isPasskeyLoading.value = false;
   }
