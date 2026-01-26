@@ -59,6 +59,7 @@ class TestSetupStatus:
             patch("module.api.setup.SENTINEL_PATH") as mock_sentinel,
             patch("module.api.setup.settings") as mock_settings,
             patch("module.api.setup.Config") as mock_config,
+            patch("module.api.setup.VERSION", "3.2.0"),  # Non-dev version to test config check
         ):
             mock_sentinel.exists.return_value = False
             mock_settings.dict.return_value = {"test": "changed"}
