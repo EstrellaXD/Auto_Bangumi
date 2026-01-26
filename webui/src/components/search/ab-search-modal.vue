@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Close, Down, Search } from '@icon-park/vue-next';
+import { Calendar, Down, Monitor, PeoplesTwo, Search, Translate } from '@icon-park/vue-next';
 import { NSpin } from 'naive-ui';
 import { onKeyStroke } from '@vueuse/core';
 import AbSearchConfirm from './ab-search-confirm.vue';
@@ -36,18 +36,30 @@ const subscribing = ref(false);
 const showProvider = ref(false);
 const searchInputRef = ref<HTMLInputElement | null>(null);
 
-// Tag filter state
+// Multi-select filter state
 const activeFilters = ref<{
-  group: string | null;
-  resolution: string | null;
-  subtitle: string | null;
-  season: string | null;
+  group: string[];
+  resolution: string[];
+  subtitle: string[];
+  season: string[];
 }>({
-  group: null,
-  resolution: null,
-  subtitle: null,
-  season: null,
+  group: [],
+  resolution: [],
+  subtitle: [],
+  season: [],
 });
+
+// Max visible chips per category
+const MAX_VISIBLE_CHIPS = 6;
+
+// Max visible variants per bangumi (fits ~4 rows, ~3 items per row)
+const MAX_VISIBLE_VARIANTS = 12;
+
+// Track which categories are expanded
+const expandedCategories = ref<Set<'group' | 'resolution' | 'subtitle' | 'season'>>(new Set());
+
+// Track which bangumi groups have expanded variants
+const expandedVariants = ref<Set<string>>(new Set());
 
 // Close on Escape
 onKeyStroke('Escape', () => {
@@ -68,7 +80,9 @@ onMounted(() => {
 
 // Clear filters when search changes
 watch(inputValue, () => {
-  activeFilters.value = { group: null, resolution: null, subtitle: null, season: null };
+  activeFilters.value = { group: [], resolution: [], subtitle: [], season: [] };
+  expandedCategories.value.clear();
+  expandedVariants.value.clear();
 });
 
 function onSelectProvider(site: string) {
@@ -110,23 +124,124 @@ async function handleConfirm(bangumi: BangumiRule) {
 
 function handleClose() {
   clearSearch();
-  activeFilters.value = { group: null, resolution: null, subtitle: null, season: null };
+  activeFilters.value = { group: [], resolution: [], subtitle: [], season: [] };
   emit('close');
 }
 
-// Get resolution display for variant
+// Normalize resolution to standard format
+function normalizeResolution(raw: string): string {
+  if (!raw) return '';
+  const lower = raw.toLowerCase();
+
+  // 4K variants
+  if (lower.includes('4k') || lower.includes('2160') || lower.includes('uhd')) {
+    return '4K';
+  }
+  // 1080p variants
+  if (lower.includes('1080') || lower.includes('fhd') || lower.includes('1920')) {
+    return 'FHD';
+  }
+  // 720p variants
+  if (lower.includes('720') || lower === 'hd') {
+    return 'HD';
+  }
+  // 480p/SD
+  if (lower.includes('480') || lower === 'sd') {
+    return 'SD';
+  }
+
+  return raw; // Return original if no match
+}
+
+// Normalize subtitle to standard format
+function normalizeSubtitle(raw: string): string {
+  if (!raw) return '';
+  const lower = raw.toLowerCase();
+
+  // Check for dual/bilingual first
+  if (lower.includes('双语') || lower.includes('dual') ||
+      (lower.includes('简') && lower.includes('繁')) ||
+      (lower.includes('chs') && lower.includes('cht'))) {
+    return '双语';
+  }
+
+  // Simplified Chinese
+  if (lower.includes('简') || lower.includes('chs') || lower === 'sc') {
+    if (lower.includes('内嵌') || lower.includes('内封')) {
+      return '简/内嵌';
+    }
+    return '简';
+  }
+
+  // Traditional Chinese
+  if (lower.includes('繁') || lower.includes('cht') || lower === 'tc') {
+    if (lower.includes('内嵌') || lower.includes('内封')) {
+      return '繁/内嵌';
+    }
+    return '繁';
+  }
+
+  // Japanese
+  if (lower.includes('日') || lower.includes('jp') || lower.includes('ja')) {
+    return '日';
+  }
+
+  // Embedded/Internal subs
+  if (lower.includes('内嵌') || lower.includes('内封')) {
+    return '内嵌';
+  }
+
+  // External subs
+  if (lower.includes('外挂') || lower.includes('ass') || lower.includes('srt')) {
+    return '外挂';
+  }
+
+  return raw; // Return original if no match
+}
+
+// Normalize season to standard format
+function normalizeSeason(raw: string): string {
+  if (!raw) return '';
+
+  // Already in S1/S2 format
+  if (/^S\d+$/i.test(raw)) {
+    return raw.toUpperCase();
+  }
+
+  // Extract season number
+  const match = raw.match(/(\d+)/);
+  if (match) {
+    return `S${match[1]}`;
+  }
+
+  // Special types
+  const lower = raw.toLowerCase();
+  if (lower.includes('剧场') || lower.includes('movie') || lower.includes('劇場')) {
+    return '剧场版';
+  }
+  if (lower.includes('ova')) {
+    return 'OVA';
+  }
+  if (lower.includes('sp') || lower.includes('special')) {
+    return 'SP';
+  }
+
+  return raw;
+}
+
+// Get resolution display for variant (normalized)
 function getResolution(bangumi: BangumiRule): string {
-  return bangumi.dpi || '';
+  return normalizeResolution(bangumi.dpi || '');
 }
 
-// Get subtitle display for variant
+// Get subtitle display for variant (normalized)
 function getSubtitle(bangumi: BangumiRule): string {
-  return bangumi.subtitle || '';
+  return normalizeSubtitle(bangumi.subtitle || '');
 }
 
-// Get season display for variant
+// Get season display for variant (normalized)
 function getSeason(bangumi: BangumiRule): string {
-  if (bangumi.season_raw) return bangumi.season_raw;
+  if (bangumi.season_raw) return normalizeSeason(bangumi.season_raw);
   if (bangumi.season) return `S${bangumi.season}`;
   return '';
 }
@@ -136,45 +251,279 @@ function getPosterUrl(link: string | null | undefined): string {
   return resolvePosterUrl(link);
 }
 
-// Toggle filter
-function toggleFilter(type: 'group' | 'resolution' | 'subtitle' | 'season', value: string) {
-  if (activeFilters.value[type] === value) {
-    activeFilters.value[type] = null;
-  } else {
-    activeFilters.value[type] = value;
+// Extract all filter options from grouped results
+const filterOptions = computed(() => {
+  const groups = new Set<string>();
+  const resolutions = new Set<string>();
+  const subtitles = new Set<string>();
+  const seasons = new Set<string>();
+
+  for (const group of groupedResults.value) {
+    for (const variant of group.variants) {
+      if (variant.group_name) groups.add(variant.group_name);
+      const res = getResolution(variant);
+      if (res) resolutions.add(res);
+      const sub = getSubtitle(variant);
+      if (sub) subtitles.add(sub);
+      const season = getSeason(variant);
+      if (season) seasons.add(season);
+    }
   }
+
+  return {
+    group: Array.from(groups).sort(),
+    resolution: Array.from(resolutions).sort((a, b) => {
+      const order = ['4K', 'FHD', 'HD', 'SD'];
+      const aIndex = order.indexOf(a);
+      const bIndex = order.indexOf(b);
+      // Put unknown resolutions at the end
+      if (aIndex === -1 && bIndex === -1) return a.localeCompare(b);
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+      return aIndex - bIndex;
+    }),
+    subtitle: Array.from(subtitles).sort((a, b) => {
+      const order = ['简', '繁', '双语', '简/内嵌', '繁/内嵌', '内嵌', '外挂', '日'];
+      const aIndex = order.indexOf(a);
+      const bIndex = order.indexOf(b);
+      if (aIndex === -1 && bIndex === -1) return a.localeCompare(b);
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+      return aIndex - bIndex;
+    }),
+    season: Array.from(seasons).sort((a, b) => {
+      // Sort S1, S2, S3... then special types
+      const aMatch = a.match(/^S(\d+)$/);
+      const bMatch = b.match(/^S(\d+)$/);
+      if (aMatch && bMatch) {
+        return parseInt(aMatch[1]) - parseInt(bMatch[1]);
+      }
+      if (aMatch) return -1;
+      if (bMatch) return 1;
+      return a.localeCompare(b);
+    }),
+  };
+});
+
+// Check if filter section should be visible
+const showFilters = computed(() => {
+  return groupedResults.value.length > 0 && (
+    filterOptions.value.group.length > 0 ||
+    filterOptions.value.resolution.length > 0 ||
+    filterOptions.value.subtitle.length > 0 ||
+    filterOptions.value.season.length > 0
+  );
+});
+
+// Toggle filter (multi-select)
+function toggleFilter(type: 'group' | 'resolution' | 'subtitle' | 'season', value: string) {
+  const index = activeFilters.value[type].indexOf(value);
+  if (index === -1) {
+    activeFilters.value[type].push(value);
+  } else {
+    activeFilters.value[type].splice(index, 1);
+  }
+}
+
+// Check if filter chip is active
+function isFilterActive(type: 'group' | 'resolution' | 'subtitle' | 'season', value: string): boolean {
+  return activeFilters.value[type].includes(value);
 }
 
 // Check if variant matches active filters
 function variantMatchesFilters(variant: BangumiRule): boolean {
   const { group, resolution, subtitle, season } = activeFilters.value;
 
-  if (group && variant.group_name !== group) return false;
-  if (resolution && getResolution(variant) !== resolution) return false;
-  if (subtitle && getSubtitle(variant) !== subtitle) return false;
-  if (season && getSeason(variant) !== season) return false;
+  if (group.length > 0 && (!variant.group_name || !group.includes(variant.group_name))) {
+    return false;
+  }
+  if (resolution.length > 0) {
+    const res = getResolution(variant);
+    if (!res || !resolution.includes(res)) return false;
+  }
+  if (subtitle.length > 0) {
+    const sub = getSubtitle(variant);
+    if (!sub || !subtitle.includes(sub)) return false;
+  }
+  if (season.length > 0) {
+    const s = getSeason(variant);
+    if (!s || !season.includes(s)) return false;
+  }
 
   return true;
 }
 
 // Get filtered variants for a group
 function getFilteredVariants(group: GroupedBangumi): BangumiRule[] {
-  const hasActiveFilter = Object.values(activeFilters.value).some(v => v !== null);
+  const hasActiveFilter = Object.values(activeFilters.value).some(arr => arr.length > 0);
   if (!hasActiveFilter) return group.variants;
   return group.variants.filter(variantMatchesFilters);
 }
 
-// Check if tag is active
-function isTagActive(type: 'group' | 'resolution' | 'subtitle' | 'season', value: string): boolean {
-  return activeFilters.value[type] === value;
-}
-
 // Check if any filter is active
-const hasActiveFilters = computed(() => Object.values(activeFilters.value).some(v => v !== null));
+const hasActiveFilters = computed(() => Object.values(activeFilters.value).some(arr => arr.length > 0));
+
+// Get all selected filter tags for display
+const selectedFilterTags = computed(() => {
+  const tags: { type: 'group' | 'resolution' | 'subtitle' | 'season'; value: string }[] = [];
+  for (const value of activeFilters.value.group) {
+    tags.push({ type: 'group', value });
+  }
+  for (const value of activeFilters.value.resolution) {
+    tags.push({ type: 'resolution', value });
+  }
+  for (const value of activeFilters.value.subtitle) {
+    tags.push({ type: 'subtitle', value });
+  }
+  for (const value of activeFilters.value.season) {
+    tags.push({ type: 'season', value });
+  }
+  return tags;
+});
 
 // Clear all filters
 function clearFilters() {
-  activeFilters.value = { group: null, resolution: null, subtitle: null, season: null };
+  activeFilters.value = { group: [], resolution: [], subtitle: [], season: [] };
+}
+
+// Count total and filtered results
+const totalVariantCount = computed(() => {
+  return groupedResults.value.reduce((sum, group) => sum + group.variants.length, 0);
+});
+
+const filteredVariantCount = computed(() => {
+  if (!hasActiveFilters.value) return totalVariantCount.value;
+  return groupedResults.value.reduce((sum, group) => sum + getFilteredVariants(group).length, 0);
+});
+
+// Get visible options (limited or all if expanded)
+function getVisibleOptions(category: 'group' | 'resolution' | 'subtitle' | 'season', options: string[]) {
+  if (expandedCategories.value.has(category)) {
+    return options;
+  }
+  return options.slice(0, MAX_VISIBLE_CHIPS);
+}
+
+function getOverflowCount(options: string[]) {
+  return Math.max(0, options.length - MAX_VISIBLE_CHIPS);
+}
+
+function hasOverflow(options: string[]) {
+  return options.length > MAX_VISIBLE_CHIPS;
+}
+
+function isExpanded(category: 'group' | 'resolution' | 'subtitle' | 'season') {
+  return expandedCategories.value.has(category);
+}
+
+function toggleExpand(category: 'group' | 'resolution' | 'subtitle' | 'season') {
+  if (expandedCategories.value.has(category)) {
+    expandedCategories.value.delete(category);
+  } else {
+    expandedCategories.value.add(category);
+  }
+}
+
+// Variant expansion functions
+function getVisibleVariants(group: GroupedBangumi): BangumiRule[] {
+  const filtered = getFilteredVariants(group);
+  if (expandedVariants.value.has(group.key)) {
+    return filtered;
+  }
+  return filtered.slice(0, MAX_VISIBLE_VARIANTS);
+}
+
+function getVariantOverflowCount(group: GroupedBangumi): number {
+  const filtered = getFilteredVariants(group);
+  return Math.max(0, filtered.length - MAX_VISIBLE_VARIANTS);
+}
+
+function hasVariantOverflow(group: GroupedBangumi): boolean {
+  return getFilteredVariants(group).length > MAX_VISIBLE_VARIANTS;
+}
+
+function isVariantsExpanded(groupKey: string): boolean {
+  return expandedVariants.value.has(groupKey);
+}
+
+function toggleVariantsExpand(groupKey: string) {
+  if (expandedVariants.value.has(groupKey)) {
+    expandedVariants.value.delete(groupKey);
+  } else {
+    expandedVariants.value.add(groupKey);
+  }
+}
+
+// Get all variants as a flat list
+const allVariants = computed(() => {
+  const variants: BangumiRule[] = [];
+  for (const group of groupedResults.value) {
+    variants.push(...group.variants);
+  }
+  return variants;
+});
+
+// Check if adding a filter value would produce any results
+// This checks if the value is compatible with current selections in OTHER categories
+function wouldProduceResults(
+  type: 'group' | 'resolution' | 'subtitle' | 'season',
+  value: string
+): boolean {
+  const { group, resolution, subtitle, season } = activeFilters.value;
+
+  // If this filter is already active, it's selectable (to allow deselection)
+  if (activeFilters.value[type].includes(value)) {
+    return true;
+  }
+
+  // Check if any variant matches the hypothetical filter combination
+  return allVariants.value.some((variant) => {
+    // Check group constraint
+    const groupMatch = type === 'group'
+      ? variant.group_name === value
+      : group.length === 0 || (variant.group_name && group.includes(variant.group_name));
+
+    if (!groupMatch) return false;
+
+    // Check resolution constraint
+    const res = getResolution(variant);
+    const resMatch = type === 'resolution'
+      ? res === value
+      : resolution.length === 0 || (res && resolution.includes(res));
+
+    if (!resMatch) return false;
+
+    // Check subtitle constraint
+    const sub = getSubtitle(variant);
+    const subMatch = type === 'subtitle'
+      ? sub === value
+      : subtitle.length === 0 || (sub && subtitle.includes(sub));
+
+    if (!subMatch) return false;
+
+    // Check season constraint
+    const s = getSeason(variant);
+    const seasonMatch = type === 'season'
+      ? s === value
+      : season.length === 0 || (s && season.includes(s));
+
+    if (!seasonMatch) return false;
+
+    return true;
+  });
+}
+
+// Check if a filter option is disabled (would produce no results)
+function isFilterDisabled(type: 'group' | 'resolution' | 'subtitle' | 'season', value: string): boolean {
+  // Only disable when there are active filters
+  if (!hasActiveFilters.value) return false;
+  return !wouldProduceResults(type, value);
+}
+
+// Handle filter click - only toggle if not disabled
+function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season', value: string) {
+  if (isFilterDisabled(type, value)) return;
+  toggleFilter(type, value);
 }
 </script>
 
@@ -187,7 +536,13 @@ function clearFilters() {
 
     <!-- Modal -->
     <transition name="modal">
-      <div v-if="showModal" class="modal-container" role="dialog" aria-modal="true">
+      <div
+        v-if="showModal"
+        class="modal-container"
+        role="dialog"
+        aria-modal="true"
+        @mousedown.self="handleClose"
+      >
         <div class="modal-content">
           <!-- Header -->
           <header class="modal-header">
@@ -237,29 +592,155 @@ function clearFilters() {
                 </transition>
               </div>
             </div>
-
-            <button class="close-btn" aria-label="Close search" @click="handleClose">
-              <Close theme="outline" size="20" />
-            </button>
           </header>
 
-          <!-- Active Filters Bar -->
-          <div v-if="hasActiveFilters" class="active-filters">
-            <span class="filter-label">{{ $t('search.filter.active') }}:</span>
-            <span v-if="activeFilters.group" class="filter-tag filter-tag-group" @click="toggleFilter('group', activeFilters.group)">
-              {{ activeFilters.group }} ×
-            </span>
-            <span v-if="activeFilters.resolution" class="filter-tag filter-tag-res" @click="toggleFilter('resolution', activeFilters.resolution)">
-              {{ activeFilters.resolution }} ×
-            </span>
-            <span v-if="activeFilters.subtitle" class="filter-tag filter-tag-sub" @click="toggleFilter('subtitle', activeFilters.subtitle)">
-              {{ activeFilters.subtitle }} ×
-            </span>
-            <span v-if="activeFilters.season" class="filter-tag filter-tag-season" @click="toggleFilter('season', activeFilters.season)">
-              {{ activeFilters.season }} ×
-            </span>
-            <button class="clear-filters-btn" @click="clearFilters">{{ $t('search.filter.clear') }}</button>
-          </div>
+          <!-- Filter Section - Chip Cloud -->
+          <section v-if="showFilters" class="filter-section">
+            <!-- Group Filters -->
+            <div v-if="filterOptions.group.length > 0" class="filter-category">
+              <span class="category-icon">
+                <PeoplesTwo theme="outline" :size="16" />
+              </span>
+              <div class="filter-chips">
+                <button
+                  v-for="option in getVisibleOptions('group', filterOptions.group)"
+                  :key="option"
+                  class="filter-chip chip-group"
+                  :class="{
+                    active: isFilterActive('group', option),
+                    disabled: isFilterDisabled('group', option)
+                  }"
+                  :disabled="isFilterDisabled('group', option)"
+                  @click="handleFilterClick('group', option)"
+                >
+                  {{ option }}
+                </button>
+                <button
+                  v-if="hasOverflow(filterOptions.group)"
+                  class="expand-btn"
+                  @click="toggleExpand('group')"
+                >
+                  {{ isExpanded('group') ? $t('search.filter.collapse') : `+${getOverflowCount(filterOptions.group)}` }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Resolution Filters -->
+            <div v-if="filterOptions.resolution.length > 0" class="filter-category">
+              <span class="category-icon">
+                <Monitor theme="outline" :size="16" />
+              </span>
+              <div class="filter-chips">
+                <button
+                  v-for="option in getVisibleOptions('resolution', filterOptions.resolution)"
+                  :key="option"
+                  class="filter-chip chip-resolution"
+                  :class="{
+                    active: isFilterActive('resolution', option),
+                    disabled: isFilterDisabled('resolution', option)
+                  }"
+                  :disabled="isFilterDisabled('resolution', option)"
+                  @click="handleFilterClick('resolution', option)"
+                >
+                  {{ option }}
+                </button>
+                <button
+                  v-if="hasOverflow(filterOptions.resolution)"
+                  class="expand-btn"
+                  @click="toggleExpand('resolution')"
+                >
+                  {{ isExpanded('resolution') ? $t('search.filter.collapse') : `+${getOverflowCount(filterOptions.resolution)}` }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Subtitle Filters -->
+            <div v-if="filterOptions.subtitle.length > 0" class="filter-category">
+              <span class="category-icon">
+                <Translate theme="outline" :size="16" />
+              </span>
+              <div class="filter-chips">
+                <button
+                  v-for="option in getVisibleOptions('subtitle', filterOptions.subtitle)"
+                  :key="option"
+                  class="filter-chip chip-subtitle"
+                  :class="{
+                    active: isFilterActive('subtitle', option),
+                    disabled: isFilterDisabled('subtitle', option)
+                  }"
+                  :disabled="isFilterDisabled('subtitle', option)"
+                  @click="handleFilterClick('subtitle', option)"
+                >
+                  {{ option }}
+                </button>
+                <button
+                  v-if="hasOverflow(filterOptions.subtitle)"
+                  class="expand-btn"
+                  @click="toggleExpand('subtitle')"
+                >
+                  {{ isExpanded('subtitle') ? $t('search.filter.collapse') : `+${getOverflowCount(filterOptions.subtitle)}` }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Season Filters -->
+            <div v-if="filterOptions.season.length > 0" class="filter-category">
+              <span class="category-icon">
+                <Calendar theme="outline" :size="16" />
+              </span>
+              <div class="filter-chips">
+                <button
+                  v-for="option in getVisibleOptions('season', filterOptions.season)"
+                  :key="option"
+                  class="filter-chip chip-season"
+                  :class="{
+                    active: isFilterActive('season', option),
+                    disabled: isFilterDisabled('season', option)
+                  }"
+                  :disabled="isFilterDisabled('season', option)"
+                  @click="handleFilterClick('season', option)"
+                >
+                  {{ option }}
+                </button>
+                <button
+                  v-if="hasOverflow(filterOptions.season)"
+                  class="expand-btn"
+                  @click="toggleExpand('season')"
+                >
+                  {{ isExpanded('season') ? $t('search.filter.collapse') : `+${getOverflowCount(filterOptions.season)}` }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Selected Filters Summary -->
+            <div class="filter-summary">
+              <div v-if="hasActiveFilters" class="selected-filters">
+                <span class="selected-label">{{ $t('search.filter.active') }}:</span>
+                <div class="selected-chips">
+                  <span
+                    v-for="tag in selectedFilterTags"
+                    :key="`${tag.type}-${tag.value}`"
+                    class="selected-chip"
+                    :class="`chip-${tag.type}`"
+                    @click="toggleFilter(tag.type, tag.value)"
+                  >
+                    {{ tag.value }} &times;
+                  </span>
+                </div>
+                <button class="clear-all-btn" @click="clearFilters">
+                  {{ $t('search.filter.clear') }}
+                </button>
+              </div>
+              <span class="results-count">
+                <template v-if="hasActiveFilters">
+                  {{ filteredVariantCount }} / {{ totalVariantCount }} {{ $t('search.filter.results') }}
+                </template>
+                <template v-else>
+                  {{ totalVariantCount }} {{ $t('search.filter.results') }}
+                </template>
+              </span>
+            </div>
+          </section>
 
           <!-- Results List -->
           <div class="results-container">
@@ -292,39 +773,32 @@ function clearFilters() {
                     </div>
                   </div>
 
-                  <!-- Right: Variant Grid -->
+                  <!-- Right: Variant Chips (Original Prototype 4) -->
                   <div class="bangumi-variants">
                     <div
-                      v-for="variant in getFilteredVariants(group)"
+                      v-for="variant in getVisibleVariants(group)"
                       :key="variant.rss_link?.[0] || variant.title_raw"
                       class="variant-chip"
-                      @click.stop="handleVariantSelect(variant)"
+                      @click="handleVariantSelect(variant)"
                     >
-                      <span
-                        v-if="variant.group_name"
-                        class="chip-tag chip-tag-group"
-                        :class="{ active: isTagActive('group', variant.group_name) }"
-                        @click.stop="toggleFilter('group', variant.group_name)"
-                      >{{ variant.group_name }}</span>
-                      <span
-                        v-if="getResolution(variant)"
-                        class="chip-tag chip-tag-res"
-                        :class="{ active: isTagActive('resolution', getResolution(variant)) }"
-                        @click.stop="toggleFilter('resolution', getResolution(variant))"
-                      >{{ getResolution(variant) }}</span>
-                      <span
-                        v-if="getSubtitle(variant)"
-                        class="chip-tag chip-tag-sub"
-                        :class="{ active: isTagActive('subtitle', getSubtitle(variant)) }"
-                        @click.stop="toggleFilter('subtitle', getSubtitle(variant))"
-                      >{{ getSubtitle(variant) }}</span>
-                      <span
-                        v-if="getSeason(variant)"
-                        class="chip-tag chip-tag-season"
-                        :class="{ active: isTagActive('season', getSeason(variant)) }"
-                        @click.stop="toggleFilter('season', getSeason(variant))"
-                      >{{ getSeason(variant) }}</span>
+                      <span class="tag tag-group">{{ variant.group_name || 'Unknown' }}</span>
+                      <span v-if="getResolution(variant)" class="tag tag-res">
+                        {{ getResolution(variant) }}
+                      </span>
+                      <span v-if="getSubtitle(variant)" class="tag tag-sub">
+                        {{ getSubtitle(variant) }}
+                      </span>
+                      <span v-if="getSeason(variant)" class="tag tag-season">
+                        {{ getSeason(variant) }}
+                      </span>
                     </div>
+                    <button
+                      v-if="hasVariantOverflow(group)"
+                      class="variant-expand-btn"
+                      @click="toggleVariantsExpand(group.key)"
+                    >
+                      {{ isVariantsExpanded(group.key) ? $t('search.filter.collapse') : `+${getVariantOverflowCount(group)}` }}
+                    </button>
                   </div>
                 </div>
               </template>
@@ -370,7 +844,7 @@ function clearFilters() {
 .modal-content {
   width: 100%;
   max-width: 1100px;
-  max-height: calc(100dvh - 100px); // Use dynamic viewport height for iOS Safari keyboard support
+  max-height: calc(100dvh - 100px);
   display: flex;
   flex-direction: column;
   background: var(--color-surface);
@@ -379,7 +853,6 @@ function clearFilters() {
   overflow: hidden;
   transition: background-color var(--transition-normal);
 
-  // Fallback for browsers that don't support dvh
   @supports not (max-height: 1dvh) {
     max-height: calc(100vh - 100px);
   }
@@ -411,7 +884,7 @@ function clearFilters() {
 
 .search-input-wrapper {
   flex: 1;
-  min-width: 0; // Allow shrinking
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -539,30 +1012,245 @@ function clearFilters() {
   }
 }
 
-.close-btn {
+// Filter Section - Chip Cloud
+.filter-section {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-hover);
+  flex-shrink: 0;
+  transition: background-color var(--transition-normal), border-color var(--transition-normal);
+}
+
+.filter-category {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+
+  &:last-of-type {
+    margin-bottom: 0;
+  }
+}
+
+.category-icon {
+  width: 24px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: var(--color-surface-hover);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  cursor: pointer;
   color: var(--color-text-muted);
   flex-shrink: 0;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.filter-chip {
+  height: 28px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  border-radius: var(--radius-full);
+  border: 1px solid transparent;
+  cursor: pointer;
+  user-select: none;
   transition: all var(--transition-fast);
 
-  @include forTablet {
-    width: 44px;
-    height: 44px;
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
   }
+}
 
-  &:hover {
-    background: var(--color-danger);
-    border-color: var(--color-danger);
+// Group chips - Blue/Primary
+.chip-group {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+
+  &:hover:not(.disabled),
+  &.active {
+    background: var(--color-primary);
     color: #fff;
   }
+
+  &.disabled {
+    background: var(--color-surface-hover);
+    color: var(--color-text-muted);
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Resolution chips - Green
+.chip-resolution {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--color-success);
+
+  &:hover:not(.disabled),
+  &.active {
+    background: var(--color-success);
+    color: #fff;
+  }
+
+  &.disabled {
+    background: var(--color-surface-hover);
+    color: var(--color-text-muted);
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Subtitle chips - Orange
+.chip-subtitle {
+  background: rgba(249, 115, 22, 0.15);
+  color: var(--color-accent);
+
+  &:hover:not(.disabled),
+  &.active {
+    background: var(--color-accent);
+    color: #fff;
+  }
+
+  &.disabled {
+    background: var(--color-surface-hover);
+    color: var(--color-text-muted);
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Season chips - Purple
+.chip-season {
+  background: rgba(139, 92, 246, 0.15);
+  color: rgb(139, 92, 246);
+
+  &:hover:not(.disabled),
+  &.active {
+    background: rgb(139, 92, 246);
+    color: #fff;
+  }
+
+  &.disabled {
+    background: var(--color-surface-hover);
+    color: var(--color-text-muted);
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.expand-btn {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+  }
+}
+
+// Filter Summary
+.filter-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.selected-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.selected-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.selected-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.selected-chip {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  color: #fff;
+  transition: opacity var(--transition-fast);
+
+  &:hover {
+    opacity: 0.8;
+  }
+
+  &.chip-group {
+    background: var(--color-primary);
+  }
+
+  &.chip-resolution {
+    background: var(--color-success);
+  }
+
+  &.chip-subtitle {
+    background: var(--color-accent);
+  }
+
+  &.chip-season {
+    background: rgb(139, 92, 246);
+  }
+}
+
+.clear-all-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+
+  &:hover {
+    border-color: var(--color-danger);
+    color: var(--color-danger);
+  }
+}
+
+.results-count {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
 }
 
 // Results
@@ -600,64 +1288,65 @@ function clearFilters() {
   transform: scale(0.95) translateY(-10px);
 }
 
-// Bangumi list
+// Bangumi list - Compact
 .bangumi-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .bangumi-row {
   display: flex;
-  gap: 16px;
-  padding: 16px;
+  gap: 12px;
+  padding: 12px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
+  transition: border-color var(--transition-fast);
 }
 
 .bangumi-poster {
-  width: 100px;
+  // Height = 4 rows: 4 * 36px + 3 * 8px = 168px
+  // Width = 168px * 5/7 = 120px
+  width: 120px;
+  height: 168px;
   flex-shrink: 0;
-
-  @include forDesktop {
-    width: 120px;
-  }
 
   img {
     width: 100%;
-    aspect-ratio: 5 / 7;
+    height: 100%;
     object-fit: cover;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     background: var(--color-surface-hover);
   }
 }
 
 .bangumi-poster-placeholder {
   width: 100%;
-  aspect-ratio: 5 / 7;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px;
-  border-radius: var(--radius-md);
+  padding: 6px;
+  border-radius: var(--radius-sm);
   background: var(--color-surface-hover);
   border: 1px solid var(--color-border);
 }
 
 .placeholder-title {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
   color: var(--color-text-muted);
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
-  -webkit-line-clamp: 4;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   line-height: 1.3;
 }
 
+// Variant chips - flex wrap flow layout
 .bangumi-variants {
   flex: 1;
   min-width: 0;
@@ -670,12 +1359,12 @@ function clearFilters() {
 .variant-chip {
   display: flex;
   align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 10px;
+  gap: 8px;
+  height: 36px;
+  padding: 0 6px;
   background: var(--color-surface-hover);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   cursor: pointer;
   transition: all var(--transition-fast);
 
@@ -683,118 +1372,63 @@ function clearFilters() {
     border-color: var(--color-primary);
     background: var(--color-primary);
 
-    .chip-tag {
+    .tag {
       background: rgba(255, 255, 255, 0.2);
       color: #fff;
     }
   }
 }
 
-.chip-tag {
+// Display-only tags (non-clickable) - unified with filter chips
+.tag {
   display: inline-flex;
   align-items: center;
-  height: 20px;
-  padding: 0 6px;
-  font-size: 11px;
+  height: 24px;
+  padding: 0 10px;
+  font-size: 12px;
   font-weight: 500;
-  border-radius: var(--radius-sm);
-  white-space: nowrap;
+  border-radius: var(--radius-full);
+  pointer-events: none;
   transition: all var(--transition-fast);
 }
 
-.chip-tag-group {
+.tag-group {
   background: var(--color-primary-light);
   color: var(--color-primary);
 }
 
-.chip-tag-res {
+.tag-res {
   background: rgba(34, 197, 94, 0.15);
   color: var(--color-success);
 }
 
-.chip-tag-sub {
+.tag-sub {
   background: rgba(249, 115, 22, 0.15);
   color: var(--color-accent);
 }
 
-.chip-tag-season {
+.tag-season {
   background: rgba(139, 92, 246, 0.15);
   color: rgb(139, 92, 246);
 }
 
-// Active filters bar
-.active-filters {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: var(--color-surface-hover);
-  border-bottom: 1px solid var(--color-border);
-  flex-wrap: wrap;
-}
-
-.filter-label {
+.variant-expand-btn {
+  height: 36px;
+  padding: 0 14px;
   font-size: 12px;
   font-weight: 500;
-  color: var(--color-text-secondary);
-}
-
-.filter-tag {
-  display: inline-flex;
-  align-items: center;
-  height: 24px;
-  padding: 0 8px;
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: opacity var(--transition-fast);
-
-  &:hover {
-    opacity: 0.8;
-  }
-}
-
-.filter-tag-group {
-  background: var(--color-primary);
-  color: #fff;
-}
-
-.filter-tag-res {
-  background: var(--color-success);
-  color: #fff;
-}
-
-.filter-tag-sub {
-  background: var(--color-accent);
-  color: #fff;
-}
-
-.filter-tag-season {
-  background: rgb(139, 92, 246);
-  color: #fff;
-}
-
-.clear-filters-btn {
-  margin-left: auto;
-  padding: 4px 10px;
-  font-size: 12px;
   font-family: inherit;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-full);
   cursor: pointer;
   transition: all var(--transition-fast);
 
   &:hover {
-    border-color: var(--color-danger);
-    color: var(--color-danger);
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
   }
-}
-
-// Active tag highlight
-.chip-tag.active {
-  box-shadow: 0 0 0 2px var(--color-primary);
 }
 </style>

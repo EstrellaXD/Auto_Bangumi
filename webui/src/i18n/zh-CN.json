@@ -395,7 +395,8 @@
       "season": "季度",
       "clear": "清除筛选",
       "results": "个结果",
-      "active": "筛选中"
+      "active": "筛选中",
+      "collapse": "收起"
     },
     "confirm": {
       "title": "添加订阅",

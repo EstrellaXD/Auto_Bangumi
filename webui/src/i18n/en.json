@@ -395,7 +395,8 @@
       "season": "Season",
       "clear": "Clear",
       "results": "results",
-      "active": "Filtering"
+      "active": "Filtering",
+      "collapse": "Less"
     },
     "confirm": {
       "title": "Add Subscription",
