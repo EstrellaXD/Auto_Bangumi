@@ -97,7 +97,7 @@ AutoBangumi 使用"分支开发，主干发布"模式。
 
 > 提交时间线从左到右 --->
 
-![dev-branch](../image/dev/branch.png)
+![dev-branch](/image/dev/branch.png)
 
 
 ## Pull Request

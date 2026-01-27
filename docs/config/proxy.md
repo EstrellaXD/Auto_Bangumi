@@ -2,7 +2,7 @@
 
 ## 代理
 
-![proxy](../image/config/proxy.png){width=500}{class=ab-shadow-card}
+![proxy](/image/config/proxy.png){width=500}{class=ab-shadow-card}
 
 <br/>
 

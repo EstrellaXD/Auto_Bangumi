@@ -2,7 +2,7 @@
 
 ## WebUI 配置
 
-![downloader](../image/config/downloader.png){width=500}{class=ab-shadow-card}
+![downloader](/image/config/downloader.png){width=500}{class=ab-shadow-card}
 
 <br/>
 

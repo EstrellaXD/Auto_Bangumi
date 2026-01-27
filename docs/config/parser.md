@@ -8,7 +8,7 @@ AB 的解析器用于解析聚合 RSS 链接。当 RSS 订阅中出现新条目�
 
 ## WebUI 中的解析器设置
 
-![parser](../image/config/parser.png){width=500}{class=ab-shadow-card}
+![parser](/image/config/parser.png){width=500}{class=ab-shadow-card}
 
 <br/>
 

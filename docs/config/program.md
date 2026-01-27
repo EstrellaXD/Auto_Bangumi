@@ -2,7 +2,7 @@
 
 ## WebUI 配置
 
-![program](../image/config/program.png){width=500}{class=ab-shadow-card}
+![program](/image/config/program.png){width=500}{class=ab-shadow-card}
 
 <br/>
 

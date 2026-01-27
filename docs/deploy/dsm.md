@@ -10,13 +10,13 @@ DSM 7.2 支持 Docker Compose，因此我们建议使用 Docker Compose 进行�
 
 打开套件中心，安装 Container Manager（Docker）套件。
 
-![install-docker](../image/dsm/install-docker.png){data-zoomable}
+![install-docker](/image/dsm/install-docker.png){data-zoomable}
 
 ## 通过 Docker Compose 安装 AB
 
 点击**项目**，然后点击**新增**，选择 **Docker Compose**。
 
-![new-compose](../image/dsm/new-compose.png){data-zoomable}
+![new-compose](/image/dsm/new-compose.png){data-zoomable}
 
 将以下内容复制粘贴到 **Docker Compose** 中：
 ```yaml
@@ -43,7 +43,7 @@ services:
 
 点击**下一步**，然后点击**完成**。
 
-![create](../image/dsm/create.png){data-zoomable}
+![create](/image/dsm/create.png){data-zoomable}
 
 创建完成后，访问 `http://<NAS IP>:7892` 进入 AB 并进行配置。
 
