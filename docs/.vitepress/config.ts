@@ -105,6 +105,78 @@ const zhSidebar = [
   },
 ]
 
+// Japanese sidebar
+const jaSidebar = [
+  {
+    items: [
+      { text: '概要', link: '/ja/home/' },
+      { text: 'クイックスタート', link: '/ja/deploy/quick-start' },
+      { text: '仕組み', link: '/ja/home/pipline' },
+    ],
+  },
+  {
+    text: 'デプロイ',
+    items: [
+      { text: 'Docker CLI', link: '/ja/deploy/docker-cli' },
+      { text: 'Docker Compose', link: '/ja/deploy/docker-compose' },
+      { text: 'Synology NAS (DSM)', link: '/ja/deploy/dsm' },
+      { text: 'ローカルデプロイ', link: '/ja/deploy/local' },
+    ],
+  },
+  {
+    text: '設定',
+    items: [
+      { text: 'RSS購読設定', link: '/ja/config/rss' },
+      { text: 'プログラム設定', link: '/ja/config/program' },
+      { text: 'ダウンローダー設定', link: '/ja/config/downloader' },
+      { text: 'パーサー設定', link: '/ja/config/parser' },
+      { text: '通知設定', link: '/ja/config/notifier' },
+      { text: 'アニメ管理設定', link: '/ja/config/manager' },
+      { text: 'プロキシ設定', link: '/ja/config/proxy' },
+      { text: '実験的機能', link: '/ja/config/experimental' },
+    ],
+  },
+  {
+    text: '機能',
+    items: [
+      { text: 'RSS管理', link: '/ja/feature/rss' },
+      { text: 'アニメ管理', link: '/ja/feature/bangumi' },
+      { text: 'カレンダー表示', link: '/ja/feature/calendar' },
+      { text: 'ファイルリネーム', link: '/ja/feature/rename' },
+      { text: 'トレント検索', link: '/ja/feature/search' },
+    ],
+  },
+  {
+    text: 'FAQ',
+    items: [
+      { text: 'よくある質問', link: '/ja/faq/' },
+      { text: 'トラブルシューティング', link: '/ja/faq/troubleshooting' },
+      { text: 'ネットワーク問題', link: '/ja/faq/network' },
+    ],
+  },
+  {
+    text: 'APIリファレンス',
+    items: [
+      { text: 'REST API', link: '/ja/api/' },
+    ],
+  },
+  {
+    text: '更新履歴',
+    items: [
+      { text: '3.2 リリースノート', link: '/ja/changelog/3.2' },
+      { text: '3.1 リリースノート', link: '/ja/changelog/3.1' },
+      { text: '3.0 リリースノート', link: '/ja/changelog/3.0' },
+      { text: '2.6 リリースノート', link: '/ja/changelog/2.6' },
+    ],
+  },
+  {
+    text: '開発者ガイド',
+    items: [
+      { text: 'コントリビュート', link: '/ja/dev/' },
+    ],
+  },
+]
+
 // English sidebar
 const enSidebar = [
   {
@@ -238,6 +310,42 @@ export default defineConfig({
           message: `AutoBangumi is released under the MIT License. (latest: ${version})`,
           copyright: 'Copyright © 2021-present @EstrellaXD & AutoBangumi Contributors',
         },
+      },
+    },
+    ja: {
+      label: '日本語',
+      lang: 'ja-JP',
+      link: '/ja/',
+      themeConfig: {
+        nav: [
+          { text: '概要', link: '/ja/home/' },
+          { text: 'クイックスタート', link: '/ja/deploy/quick-start' },
+          { text: 'FAQ', link: '/ja/faq/' },
+          { text: 'API', link: '/ja/api/' },
+        ],
+        sidebar: jaSidebar,
+        editLink: {
+          pattern: 'https://github.com/EstrellaXD/Auto_Bangumi/edit/main/docs/:path',
+          text: 'GitHubでこのページを編集',
+        },
+        footer: {
+          message: `AutoBangumiはMITライセンスの下で公開されています。(最新版: ${version})`,
+          copyright: 'Copyright © 2021-present @EstrellaXD & AutoBangumi Contributors',
+        },
+        docFooter: {
+          prev: '前のページ',
+          next: '次のページ',
+        },
+        outline: {
+          label: '目次',
+        },
+        lastUpdated: {
+          text: '最終更新',
+        },
+        returnToTopLabel: 'トップに戻る',
+        sidebarMenuLabel: 'メニュー',
+        darkModeSwitchLabel: 'テーマ',
+        langMenuLabel: '言語を切り替え',
       },
     },
   },
