@@ -1,135 +1,135 @@
-# Contributing Guide
+# 贡献指南
 
-We welcome contributors to help make AutoBangumi better at solving issues encountered by users.
+我们欢迎贡献者帮助改进 AutoBangumi，更好地解决用户遇到的问题。
 
-This guide will walk you through how to contribute code to AutoBangumi. Please take a few minutes to read through before submitting a Pull Request.
+本指南将引导您了解如何向 AutoBangumi 贡献代码。请在提交 Pull Request 之前花几分钟阅读。
 
-This article covers:
+本文涵盖：
 
-- [Project Roadmap](#project-roadmap)
-  - [Request for Comments (RFC)](#request-for-comments-rfc)
-- [Git Branch Management](#git-branch-management)
-  - [Version Numbering](#version-numbering)
-  - [Branch Development, Trunk Release](#branch-development-trunk-release)
-  - [Branch Lifecycle](#branch-lifecycle)
-  - [Git Workflow Overview](#git-workflow-overview)
+- [项目路线图](#项目路线图)
+  - [征求意见稿 (RFC)](#征求意见稿-rfc)
+- [Git 分支管理](#git-分支管理)
+  - [版本号规则](#版本号规则)
+  - [分支开发，主干发布](#分支开发主干发布)
+  - [分支生命周期](#分支生命周期)
+  - [Git 工作流程概述](#git-工作流程概述)
 - [Pull Request](#pull-request)
-- [Release Process](#release-process)
+- [发布流程](#发布流程)
 
 
-## Project Roadmap
+## 项目路线图
 
-The AutoBangumi development team uses [GitHub Project](https://github.com/EstrellaXD/Auto_Bangumi/projects?query=is%3Aopen) boards to manage planned development, ongoing fixes, and their progress.
+AutoBangumi 开发团队使用 [GitHub Project](https://github.com/EstrellaXD/Auto_Bangumi/projects?query=is%3Aopen) 看板来管理计划中的开发、正在进行的修复及其进度。
 
-This helps you understand:
-- What the development team is working on
-- What aligns with your intended contribution, so you can participate directly
-- What's already in progress, to avoid duplicate work
+这可以帮助您了解：
+- 开发团队正在做什么
+- 哪些内容与您想要的贡献一致，以便您直接参与
+- 哪些工作已经在进行中，避免重复工作
 
-In [Project](https://github.com/EstrellaXD/Auto_Bangumi/projects?query=is%3Aopen), beyond the usual `[Feature Request]`, `[BUG]`, and small improvements, you'll find **`[RFC]`** items.
+在 [Project](https://github.com/EstrellaXD/Auto_Bangumi/projects?query=is%3Aopen) 中，除了常见的 `[Feature Request]`、`[BUG]` 和小改进外，您还会看到 **`[RFC]`** 条目。
 
-### Request for Comments (RFC)
+### 征求意见稿 (RFC)
 
-> Find existing [AutoBangumi RFCs](https://github.com/EstrellaXD/Auto_Bangumi/issues?q=is%3Aissue+label%3ARFC) via the `RFC` label in issues.
+> 通过 issues 中的 `RFC` 标签查找现有的 [AutoBangumi RFC](https://github.com/EstrellaXD/Auto_Bangumi/issues?q=is%3Aissue+label%3ARFC)。
 
-For small improvements or bug fixes, feel free to adjust the code and submit a Pull Request. Just read the [Branch Management](#git-branch-management) section to base your work on the correct branch, and the [Pull Request](#pull-request) section to understand how PRs are merged.
-
-<br/>
-
-For **larger** feature refactors with broad scope, please first write an RFC proposal via [Issue: Feature Proposal](https://github.com/EstrellaXD/Auto_Bangumi/issues/new?assignees=&labels=RFC&projects=&template=rfc.yml&title=%5BRFC%5D%3A+) to briefly describe your approach and seek developer discussion and consensus.
-
-Some proposals may conflict with decisions the development team has already made, and this step helps avoid wasted effort.
-
-> If you only want to discuss whether to add or improve a feature (not "how to implement it"), use -> [Issue: Feature Request](https://github.com/EstrellaXD/Auto_Bangumi/issues/new?labels=feature+request&template=feature_request.yml&title=%5BFeature+Request%5D+)
-
+对于小改进或 bug 修复，可以直接调整代码并提交 Pull Request。只需阅读[分支管理](#git-分支管理)部分以确保基于正确的分支进行工作，以及 [Pull Request](#pull-request) 部分了解 PR 如何被合并。
 
 <br/>
 
-An [RFC Proposal](https://github.com/EstrellaXD/Auto_Bangumi/issues?q=is%3Aissue+is%3Aopen+label%3ARFC) is **"a document for developers to review technical design/approach before concrete development of a feature/refactor"**.
+对于涉及范围较广的**较大**功能重构，请首先通过 [Issue: Feature Proposal](https://github.com/EstrellaXD/Auto_Bangumi/issues/new?assignees=&labels=RFC&projects=&template=rfc.yml&title=%5BRFC%5D%3A+) 编写 RFC 提案，简要描述您的方法并寻求开发者讨论和共识。
 
-The purpose is to ensure collaborating developers clearly know "what to do" and "how it will be done", with all developers able to participate in open discussion.
+某些提案可能与开发团队已经做出的决定冲突，此步骤有助于避免浪费精力。
 
-This helps evaluate impacts (overlooked considerations, backward compatibility, conflicts with existing features).
-
-Therefore, proposals focus on describing the **approach, design, and steps** for solving the problem.
+> 如果您只是想讨论是否添加或改进某个功能（而不是"如何实现"），请使用 -> [Issue: Feature Request](https://github.com/EstrellaXD/Auto_Bangumi/issues/new?labels=feature+request&template=feature_request.yml&title=%5BFeature+Request%5D+)
 
 
-## Git Branch Management
+<br/>
 
-### Version Numbering
+[RFC 提案](https://github.com/EstrellaXD/Auto_Bangumi/issues?q=is%3Aissue+is%3Aopen+label%3ARFC)是**"在功能/重构的具体开发之前，供开发者审查技术设计/方法的文档"**。
 
-Git branches in the AutoBangumi project are closely related to release version rules.
+其目的是确保协作的开发者清楚地知道"要做什么"和"如何完成"，所有开发者都可以参与公开讨论。
 
-AutoBangumi follows [Semantic Versioning (SemVer)](https://semver.org/) with a `<Major>.<Minor>.<Patch>` format:
+这有助于评估影响（被忽略的考虑因素、向后兼容性、与现有功能的冲突）。
 
-- **Major**: Major version update, likely with incompatible configuration/API changes
-- **Minor**: Backward-compatible new functionality
-- **Patch**: Backward-compatible bug fixes / minor improvements
-
-### Branch Development, Trunk Release
-
-AutoBangumi uses a "branch development, trunk release" model.
-
-[**`main`**](https://github.com/EstrellaXD/Auto_Bangumi/commits/main) is the stable **trunk branch**, used only for releases, not for direct development.
-
-Each Minor version has a corresponding **development branch** for new features and post-release maintenance.
-
-Development branches are named `<Major>.<Minor>-dev`, e.g., `3.1-dev`, `3.0-dev`, `2.6-dev`. Find them in [All Branches](https://github.com/EstrellaXD/Auto_Bangumi/branches/all?query=-dev).
+因此，提案重点描述解决问题的**方法、设计和步骤**。
 
 
-### Branch Lifecycle
+## Git 分支管理
 
-When a Minor development branch (e.g., `3.1-dev`) completes feature development and **first** merges into main:
-- Release the Minor version (e.g., `3.1.0`)
-- Create the **next** Minor development branch (`3.2-dev`) for next version features
-  - The **previous** version's branch (`3.0-dev`) is archived
-- This Minor branch (`3.1-dev`) enters maintenance — no new features/refactors, only bug fixes
-  - Bug fixes are merged to the maintenance branch, then to main for `Patch` releases
+### 版本号规则
 
-For contributors choosing Git branches:
-- **Bug fixes** — base on the **current released version's** Minor branch, PR to that branch
-- **New features/refactors** — base on the **next unreleased version's** Minor branch, PR to that branch
+AutoBangumi 项目中的 Git 分支与发布版本规则密切相关。
 
-> "Current released version" is the latest version on the [[Releases page]](https://github.com/EstrellaXD/Auto_Bangumi/releases)
+AutoBangumi 遵循[语义化版本控制 (SemVer)](https://semver.org/)，使用 `<Major>.<Minor>.<Patch>` 格式：
+
+- **Major**：主版本更新，可能包含不兼容的配置/API 变更
+- **Minor**：向后兼容的新功能
+- **Patch**：向后兼容的 bug 修复/小改进
+
+### 分支开发，主干发布
+
+AutoBangumi 使用"分支开发，主干发布"模式。
+
+[**`main`**](https://github.com/EstrellaXD/Auto_Bangumi/commits/main) 是稳定的**主干分支**，仅用于发布，不直接用于开发。
+
+每个 Minor 版本都有对应的**开发分支**，用于新功能和发布后的维护。
+
+开发分支命名为 `<Major>.<Minor>-dev`，例如 `3.1-dev`、`3.0-dev`、`2.6-dev`。在[所有分支](https://github.com/EstrellaXD/Auto_Bangumi/branches/all?query=-dev)中查找它们。
 
 
-### Git Workflow Overview
+### 分支生命周期
 
-> Commit timeline goes from left to right --->
+当一个 Minor 开发分支（如 `3.1-dev`）完成功能开发并**首次**合并到 main 时：
+- 发布 Minor 版本（如 `3.1.0`）
+- 创建**下一个** Minor 开发分支（`3.2-dev`）用于下个版本的功能
+  - **上一个**版本的分支（`3.0-dev`）将被归档
+- 当前 Minor 分支（`3.1-dev`）进入维护期——不再添加新功能/重构，只修复 bug
+  - Bug 修复先合并到维护分支，然后合并到 main 进行 `Patch` 发布
+
+对于选择 Git 分支的贡献者：
+- **Bug 修复** — 基于**当前已发布版本**的 Minor 分支，向该分支提交 PR
+- **新功能/重构** — 基于**下一个未发布版本**的 Minor 分支，向该分支提交 PR
+
+> "当前已发布版本"是 [[Releases 页面]](https://github.com/EstrellaXD/Auto_Bangumi/releases) 上的最新版本
+
+
+### Git 工作流程概述
+
+> 提交时间线从左到右 --->
 
 ![dev-branch](../image/dev/branch.png)
 
 
 ## Pull Request
 
-Ensure you've selected the correct PR target branch per the Git Branch Management section above:
-> - **Bug fixes** → PR to the **current released version's** Minor maintenance branch
-> - **New features/refactors** → PR to the **next version's** Minor development branch
+请确保按照上述 Git 分支管理部分选择正确的 PR 目标分支：
+> - **Bug 修复** → 向**当前已发布版本**的 Minor 维护分支提交 PR
+> - **新功能/重构** → 向**下一版本**的 Minor 开发分支提交 PR
 
 <br/>
 
-- A PR should correspond to a single concern and not introduce unrelated changes.
+- 一个 PR 应该对应单一关注点，不要引入无关的更改。
 
-  Split different concerns into multiple PRs to help the team focus on one issue per review.
+  将不同的关注点拆分为多个 PR，以帮助团队在每次审查中专注于一个问题。
 
-- In the PR title and description, briefly explain the changes including reasons and intent.
+- 在 PR 标题和描述中，简要说明更改内容，包括原因和意图。
 
-  Link related issues or RFCs in the PR description.
+  在 PR 描述中链接相关的 issues 或 RFC。
 
-  This helps the team understand context quickly during code review.
+  这有助于团队在代码审查时快速了解上下文。
 
-- Ensure "Allow edits from maintainers" is checked. This allows direct minor edits/refactors and saves time.
+- 确保勾选"允许维护者编辑"。这允许直接进行小的编辑/重构，节省时间。
 
-- Ensure local tests and linting pass. These are also checked in PR CI.
-  - For bug fixes and new features, the team may request corresponding unit test coverage.
+- 确保本地测试和代码检查通过。这些也会在 PR CI 中检查。
+  - 对于 bug 修复和新功能，团队可能会要求相应的单元测试覆盖。
 
 
-The development team will review contributor PRs and discuss or approve merging as soon as possible.
+开发团队将尽快审查贡献者的 PR，进行讨论或批准合并。
 
-## Release Process
+## 发布流程
 
-Releases are currently triggered automatically after the development team manually merges a specific "release PR".
+目前，发布是在开发团队手动合并特定的"发布 PR"后自动触发的。
 
-Bug fix PRs are typically released quickly, usually within a week.
+Bug 修复 PR 通常会快速发布，一般在一周内。
 
-New feature releases take longer and are less predictable. Check the [GitHub Project](https://github.com/EstrellaXD/Auto_Bangumi/projects?query=is%3Aopen) board for development progress — a version is released when all planned features are complete.
+新功能发布需要更长时间，时间不太可预测。查看 [GitHub Project](https://github.com/EstrellaXD/Auto_Bangumi/projects?query=is%3Aopen) 看板了解开发进度——当所有计划功能完成时发布版本。

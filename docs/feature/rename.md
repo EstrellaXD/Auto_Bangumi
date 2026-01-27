@@ -1,12 +1,12 @@
-# File Renaming
+# 文件重命名
 
-AB currently provides three renaming methods: `pn`, `advance`, and `none`.
+AB 目前提供三种重命名方式：`pn`、`advance` 和 `none`。
 
 ### pn
 
-Short for `pure name`. This method uses the torrent download name for renaming.
+`pure name` 的缩写。此方法使用种子下载名称进行重命名。
 
-Example:
+示例：
 ```
 [Lilith-Raws] 86 - Eighty Six - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT][MKV].mkv
 >>
@@ -15,7 +15,7 @@ Example:
 
 ### advance
 
-Advanced renaming. This method uses the parent folder name for renaming.
+高级重命名。此方法使用父文件夹名称进行重命名。
 
 ```
 /downloads/Bangumi/86 - Eighty Six(2023)/Season 1/[Lilith-Raws] 86 - Eighty Six - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT][MKV].mkv
@@ -25,37 +25,37 @@ Advanced renaming. This method uses the parent folder name for renaming.
 
 ### none
 
-No renaming. Files are left as-is.
+不重命名。文件保持原样。
 
-## Collection Renaming
+## 收藏重命名
 
-AB supports renaming collections. Collection renaming requires:
-- Episodes are in the collection's first-level directory
-- Episode numbers can be parsed from file names
+AB 支持收藏重命名。收藏重命名需要：
+- 剧集位于收藏的一级目录中
+- 可以从文件名解析出剧集编号
 
-AB can also rename subtitle files in the first-level directory.
+AB 还可以重命名一级目录中的字幕文件。
 
-After renaming, episodes and directories are placed in the `Season` folder.
+重命名后，剧集和目录将放置在 `Season` 文件夹中。
 
-Renamed collections are moved and categorized under `BangumiCollection`.
+重命名后的收藏将被移动并归类到 `BangumiCollection` 下。
 
-## Episode Offset
+## 剧集偏移
 
-Since v3.2, AB supports episode offset for renaming. This is useful when:
-- RSS shows different episode numbers than expected (e.g., S2E01 should be S1E29)
-- Anime has "virtual seasons" due to broadcast gaps
+从 v3.2 开始，AB 支持重命名时的剧集偏移。在以下情况下很有用：
+- RSS 显示的剧集编号与预期不同（例如 S2E01 应该是 S1E29）
+- 番剧因播出间隔而产生"虚拟季度"
 
-When an offset is configured for a bangumi, AB automatically applies it during renaming:
+当为番剧配置偏移后，AB 会在重命名时自动应用：
 
 ```
-Original: S02E01.mkv
-With offset (season: -1, episode: +28): S01E29.mkv
+原始：S02E01.mkv
+应用偏移（季度：-1，剧集：+28）：S01E29.mkv
 ```
 
-To configure offset:
-1. Click on the anime poster
-2. Open Advanced Settings
-3. Set Season Offset and/or Episode Offset values
-4. Or use "Auto Detect" to let AB suggest the correct offset
+配置偏移：
+1. 点击番剧海报
+2. 打开高级设置
+3. 设置季度偏移和/或剧集偏移值
+4. 或使用"自动检测"让 AB 建议正确的偏移
 
-See [Bangumi Management](./bangumi.md#episode-offset-auto-detection) for more details on auto-detection.
+有关自动检测的更多详情，请参阅[番剧管理](./bangumi.md#episode-offset-auto-detection)。

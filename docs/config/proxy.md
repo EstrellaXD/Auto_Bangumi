@@ -1,45 +1,45 @@
-# Proxy and Reverse Proxy
+# 代理与反向代理
 
-## Proxy
+## 代理
 
 ![proxy](../image/config/proxy.png){width=500}{class=ab-shadow-card}
 
 <br/>
 
-AB supports HTTP and SOCKS5 proxies to help resolve network issues.
+AB 支持 HTTP 和 SOCKS5 代理，以帮助解决网络问题。
 
-- **Enable**: Whether to enable the proxy.
-- **Type** is the proxy type.
-- **Host** is the proxy address.
-- **Port** is the proxy port.
+- **启用**：是否启用代理。
+- **类型** 为代理类型。
+- **地址** 为代理地址。
+- **端口** 为代理端口。
 
 ::: tip
-In **SOCKS5** mode, username and password are required.
+在 **SOCKS5** 模式下，需要填写用户名和密码。
 :::
 
-## `config.json` Configuration Options
+## `config.json` 配置选项
 
-The corresponding options in the configuration file are:
+配置文件中的对应选项如下：
 
-Configuration section: `proxy`
+配置节：`proxy`
 
-| Parameter | Description    | Type    | WebUI Option   | Default |
-|-----------|---------------|---------|---------------|---------|
-| enable    | Enable proxy  | Boolean | Proxy         | false   |
-| type      | Proxy type    | String  | Proxy type    | http    |
-| host      | Proxy address | String  | Proxy address |         |
-| port      | Proxy port    | Integer | Proxy port    |         |
-| username  | Proxy username | String | Proxy username |        |
-| password  | Proxy password | String | Proxy password |        |
+| 参数     | 说明       | 类型    | WebUI 选项   | 默认值 |
+|----------|------------|---------|--------------|--------|
+| enable   | 启用代理   | 布尔值  | 代理         | false  |
+| type     | 代理类型   | 字符串  | 代理类型     | http   |
+| host     | 代理地址   | 字符串  | 代理地址     |        |
+| port     | 代理端口   | 整数    | 代理端口     |        |
+| username | 代理用户名 | 字符串  | 代理用户名   |        |
+| password | 代理密码   | 字符串  | 代理密码     |        |
 
-## Reverse Proxy
+## 反向代理
 
-- Use the Mikan Project alternative domain `mikanime.tv` to replace `mikanani.me` in your RSS subscription URL.
-- Use a Cloudflare Worker as a reverse proxy and replace all `mikanani.me` domains in the RSS feed.
+- 使用 Mikan Project 备用域名 `mikanime.tv` 替换 RSS 订阅链接中的 `mikanani.me`。
+- 使用 Cloudflare Worker 作为反向代理，替换 RSS 订阅中所有的 `mikanani.me` 域名。
 
 ## Cloudflare Workers
 
-Based on the approach used to bypass blocks on other services, you can set up a reverse proxy using Cloudflare Workers. How to register a domain and bind it to Cloudflare is beyond the scope of this guide. Add the following code in Workers to use your own domain to access Mikan Project and download torrents from RSS links:
+参考绕过其他服务封锁的方法，您可以使用 Cloudflare Workers 搭建反向代理。如何注册域名并绑定到 Cloudflare 不在本指南范围内。在 Workers 中添加以下代码，即可使用自己的域名访问 Mikan Project 并从 RSS 链接下载种子：
 
 ```js
 const TELEGRAPH_URL = 'https://mikanani.me';
