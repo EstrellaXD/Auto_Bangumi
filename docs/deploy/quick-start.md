@@ -110,13 +110,13 @@ https://mikanime.tv/RSS/MyBangumi?token=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 1. 打开网页。默认用户名为 `admin`，默认密码为 `adminadmin`。首次登录后请立即修改。
 2. 输入下载器的地址、端口、用户名和密码。
 
-![ab-webui](../image/config/downloader.png){width=500}{class=ab-shadow-card}
+![ab-webui](/image/config/downloader.png){width=500}{class=ab-shadow-card}
 
 3. 点击**应用**保存配置。AB 将重启，当右上角的圆点变为绿色时，表示 AB 正常运行。
 
 4. 点击右上角的 **+** 按钮，勾选**聚合 RSS**，选择解析器类型，然后输入您的 Mikan RSS 链接。
 
-![ab-rss](../image/config/add-rss.png){width=500}{class=ab-shadow-card}
+![ab-rss](/image/config/add-rss.png){width=500}{class=ab-shadow-card}
 
 等待 AB 解析聚合 RSS。解析完成后，将自动添加番剧并管理下载。
 
