@@ -98,7 +98,14 @@ jobs:
         run: |
           if [ '${{ github.event_name }}' == 'pull_request' ]; then
             if [ ${{ github.event.pull_request.merged }} == true ]; then
-              echo "version=${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
+              # Extract version from PR title (handles "Release X.Y.Z", "vX.Y.Z", or "X.Y.Z")
+              PR_TITLE="${{ github.event.pull_request.title }}"
+              VERSION=$(echo "$PR_TITLE" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1)
+              if [ -n "$VERSION" ]; then
+                echo "version=$VERSION" >> $GITHUB_OUTPUT
+              else
+                echo "version=$PR_TITLE" >> $GITHUB_OUTPUT
+              fi
             fi
           elif [[ ${{ github.event_name }} == 'push' && (${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'*) ]]; then
             echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
