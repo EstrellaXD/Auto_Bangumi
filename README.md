@@ -1,6 +1,6 @@
 <p align="center">
-    <img src="docs/image/icons/light-icon.svg#gh-light-mode-only" width=50%/ alt="">
-    <img src="docs/image/icons/dark-icon.svg#gh-dark-mode-only" width=50%/ alt="">
+    <img src="docs/public/image/icons/light-icon.svg#gh-light-mode-only" width=50%/ alt="">
+    <img src="docs/public/image/icons/dark-icon.svg#gh-dark-mode-only" width=50%/ alt="">
 </p>
 <p align="center">
     <img title="docker build version" src="https://img.shields.io/docker/v/estrellaxd/auto_bangumi" alt="">
@@ -16,7 +16,7 @@
 # 项目说明
 
 <p align="center">
-    <img title="AutoBangumi" src="docs/image/feature/bangumi-list.png" alt="" width=75%>
+    <img title="AutoBangumi" src="docs/public/image/feature/bangumi-list.png" alt="" width=75%>
 </p>
 
 本项目是基于 RSS 的全自动追番整理下载工具。只需要在 [Mikan Project][mikan] 等网站上订阅番剧，就可以全自动追番。
