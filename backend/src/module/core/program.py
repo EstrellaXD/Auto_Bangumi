@@ -13,7 +13,7 @@ from module.update import (
     start_up,
 )
 
-from .sub_thread import OffsetScanThread, RenameThread, RSSThread
+from .sub_thread import CalendarRefreshThread, OffsetScanThread, RenameThread, RSSThread
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ figlet = r"""
 """
 
 
-class Program(RenameThread, RSSThread, OffsetScanThread):
+class Program(RenameThread, RSSThread, OffsetScanThread, CalendarRefreshThread):
     def __init__(self):
         super().__init__()
         self._startup_done = False
@@ -101,6 +101,8 @@ class Program(RenameThread, RSSThread, OffsetScanThread):
             self.rss_start()
         # Start offset scanner for background mismatch detection
         self.scan_start()
+        # Start calendar refresh (every 24 hours)
+        self.calendar_start()
         logger.info("Program running.")
         return ResponseModel(
             status=True,
@@ -115,6 +117,7 @@ class Program(RenameThread, RSSThread, OffsetScanThread):
             await self.rename_stop()
             await self.rss_stop()
             await self.scan_stop()
+            await self.calendar_stop()
             return ResponseModel(
                 status=True,
                 status_code=200,

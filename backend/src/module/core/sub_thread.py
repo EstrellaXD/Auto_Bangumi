@@ -3,7 +3,7 @@ import logging
 
 from module.conf import settings
 from module.downloader import DownloadClient
-from module.manager import Renamer, eps_complete
+from module.manager import Renamer, TorrentManager, eps_complete
 from module.notification import PostNotification
 from module.rss import RSSAnalyser, RSSEngine
 
@@ -11,6 +11,9 @@ from .offset_scanner import OffsetScanner
 from .status import ProgramStatus
 
 logger = logging.getLogger(__name__)
+
+# Calendar refresh interval in seconds (24 hours)
+CALENDAR_REFRESH_INTERVAL = 24 * 60 * 60
 
 
 class RSSThread(ProgramStatus):
@@ -134,3 +137,51 @@ class OffsetScanThread(ProgramStatus):
                 pass
             self._scan_task = None
             logger.info("[OffsetScanThread] Stopped offset scanner")
+
+
+class CalendarRefreshThread(ProgramStatus):
+    """Background thread for refreshing bangumi calendar data every 24 hours."""
+
+    def __init__(self):
+        super().__init__()
+        self._calendar_task: asyncio.Task | None = None
+
+    async def calendar_loop(self):
+        # Initial delay to let the system stabilize
+        await asyncio.sleep(120)
+
+        while not self.stop_event.is_set():
+            try:
+                with TorrentManager() as manager:
+                    resp = await manager.refresh_calendar()
+                    if resp.status:
+                        logger.info("[CalendarRefreshThread] Calendar refresh completed")
+                    else:
+                        logger.warning(
+                            f"[CalendarRefreshThread] Calendar refresh failed: {resp.msg_en}"
+                        )
+            except Exception as e:
+                logger.error(f"[CalendarRefreshThread] Error during refresh: {e}")
+
+            try:
+                await asyncio.wait_for(
+                    self.stop_event.wait(),
+                    timeout=CALENDAR_REFRESH_INTERVAL,
+                )
+            except asyncio.TimeoutError:
+                pass
+
+    def calendar_start(self):
+        self._calendar_task = asyncio.create_task(self.calendar_loop())
+        logger.info("[CalendarRefreshThread] Started calendar refresh (every 24h)")
+
+    async def calendar_stop(self):
+        if self._calendar_task and not self._calendar_task.done():
+            self.stop_event.set()
+            self._calendar_task.cancel()
+            try:
+                await self._calendar_task
+            except asyncio.CancelledError:
+                pass
+            self._calendar_task = None
+            logger.info("[CalendarRefreshThread] Stopped calendar refresh")

@@ -23,8 +23,24 @@ axios.interceptors.response.use(
 
     const { isLoggedIn } = useAuth();
 
+    // Handle network errors (no response from server)
+    if (!err.response) {
+      message.error(
+        returnUserLangText({
+          en: 'Network error. Please check your connection.',
+          'zh-CN': '网络错误，请检查连接。',
+        })
+      );
+      const error = {
+        status: 0,
+        msg_en: 'Network error',
+        msg_zh: '网络错误',
+      };
+      return Promise.reject(error);
+    }
+
     switch (status) {
-      /** token 过期 */
+      /** token 过期 - only logout on auth errors */
       case 401:
         isLoggedIn.value = false;
         if (errorMsg) message.error(errorMsg);
@@ -33,13 +49,14 @@ axios.interceptors.response.use(
       case 406:
         if (errorMsg) message.error(errorMsg);
         break;
+      /** 服务器错误 - don't logout, just show error */
       case 500:
-        isLoggedIn.value = false;
         message.error(
-          returnUserLangText({
-            en: 'Server error!',
-            'zh-CN': '服务器错误！',
-          })
+          errorMsg ||
+            returnUserLangText({
+              en: 'Server error. Please try again later.',
+              'zh-CN': '服务器错误，请稍后重试。',
+            })
         );
         break;
     }

@@ -231,3 +231,8 @@ class DownloadClient(TorrentPath):
         if hasattr(self.client, "get_torrents_by_tag"):
             return await self.client.get_torrents_by_tag(tag)
         return []
+
+    async def add_tag(self, torrent_hash: str, tag: str):
+        """Add a tag to a torrent."""
+        await self.client.add_tag(torrent_hash, tag)
+        logger.debug(f"[Downloader] Added tag '{tag}' to torrent {torrent_hash[:8]}...")
