@@ -1,159 +1,159 @@
-# Frequently Asked Questions
+# 常见问题
 
 ## WebUI
 
-### WebUI Address
+### WebUI 地址
 
-The default port is 7892. For server deployments, access `http://serverhost:7892`. For local deployments, access `http://localhost:7892`. If you changed the port, remember to also update the Docker port mapping.
+默认端口为 7892。服务器部署时访问 `http://serverhost:7892`，本地部署时访问 `http://localhost:7892`。如果修改了端口，请记得同时修改 Docker 端口映射。
 
-### Default Username and Password
+### 默认用户名和密码
 
-- Default username: `admin`, default password: `adminadmin`.
-- Please change your password after first login.
+- 默认用户名：`admin`，默认密码：`adminadmin`。
+- 请在首次登录后修改密码。
 
-### Changing or Resetting Password
+### 修改或重置密码
 
-- Change password: After logging in, click `···` in the upper right, click `Profile`, and modify your username and password.
-- There is currently no simple password reset method. If you forget your password, delete the `data/data.db` file and restart.
+- 修改密码：登录后，点击右上角的 `···`，点击 `个人资料`，即可修改用户名和密码。
+- 目前没有简便的密码重置方法。如果忘记密码，请删除 `data/data.db` 文件后重启。
 
-### Why don't my configuration changes take effect?
+### 为什么配置修改不生效？
 
-- After changing configuration, click the **Apply** button, then click **Restart** in the `···` menu to restart the main process.
-- If Debug mode is enabled, click **Shutdown** in the `···` menu to restart the container.
+- 修改配置后，点击 **应用** 按钮，然后在 `···` 菜单中点击 **重启** 来重启主程序。
+- 如果启用了调试模式，请在 `···` 菜单中点击 **关闭** 来重启容器。
 
-### How to check if the program is running normally
+### 如何检查程序是否正常运行
 
-The new WebUI has a small dot in the upper right corner. Green means running normally, red means an error occurred and the program is paused.
+新版 WebUI 右上角有一个小圆点。绿色表示程序正常运行，红色表示发生错误且程序已暂停。
 
-### Poster wall not showing images
+### 海报墙不显示图片
 
-- If your version is 3.0:
-    AB uses `mikanani.me` addresses as poster image sources by default. If images aren't showing, your network cannot access these images.
-- If your version is 3.1 or later:
-  - If posters show an error icon, the images are missing. Click the refresh poster button in the upper right menu to fetch TMDB posters.
-  - If posters fail to load, clear your browser cache.
-  - When using `mikanime.tv` as the RSS address, client-side proxies may prevent poster loading. Add a `direct` rule for it.
+- 如果您的版本是 3.0：
+    AB 默认使用 `mikanani.me` 地址作为海报图片来源。如果图片不显示，说明您的网络无法访问这些图片。
+- 如果您的版本是 3.1 或更高版本：
+  - 如果海报显示错误图标，说明图片缺失。请点击右上角菜单中的刷新海报按钮来获取 TMDB 海报。
+  - 如果海报加载失败，请清除浏览器缓存。
+  - 使用 `mikanime.tv` 作为 RSS 地址时，客户端代理可能会阻止海报加载。请为其添加 `direct` 规则。
 
-## How Does v3.0 Manage Bangumi
+## v3.0 如何管理番剧
 
-After upgrading to v3.0, AB can manage anime torrents and download rules in the WebUI. It relies on the torrent download path and rule name.
-If you manually change torrent download paths in QB, you may encounter issues like notifications missing posters or failed torrent deletion.
-Please manage anime and torrents within AB as much as possible.
+升级到 v3.0 后，AB 可以在 WebUI 中管理番剧种子和下载规则。这依赖于种子下载路径和规则名称。
+如果您在 QB 中手动修改了种子下载路径，可能会遇到通知缺少海报或种子删除失败等问题。
+请尽量在 AB 内管理番剧和种子。
 
-## Downloads and Keyword Filtering
+## 下载与关键词过滤
 
-### Download Path
+### 下载路径
 
-**What should I put for the download path?**
-- This parameter just needs to match your qBittorrent configuration:
-  - Docker: If qB uses `/downloads`, then set `/downloads/Bangumi`. You can change `Bangumi` to anything.
-  - Linux/macOS: If it's `/home/usr/downloads` or `/User/UserName/Downloads`, just append `/Bangumi` at the end.
-  - Windows: Change `D:\Media\` to `D:\Media\Bangumi`
+**下载路径应该填什么？**
+- 这个参数只需要与您的 qBittorrent 配置匹配即可：
+  - Docker：如果 qB 使用 `/downloads`，则设置为 `/downloads/Bangumi`。您可以将 `Bangumi` 改为任何名称。
+  - Linux/macOS：如果是 `/home/usr/downloads` 或 `/User/UserName/Downloads`，只需在末尾添加 `/Bangumi`。
+  - Windows：将 `D:\Media\` 改为 `D:\Media\Bangumi`
 
-### Downloads not starting automatically
+### 下载没有自动开始
 
-Check AutoBangumi's logs for any torrent-related entries.
-- If none exist, check if your subscription is correct.
+检查 AutoBangumi 的日志中是否有种子相关的条目。
+- 如果没有，请检查您的订阅是否正确。
 
-### Downloads not saved in the correct directory
+### 下载没有保存到正确的目录
 
-- Check if the [download path](#download-path) is correct.
-- Check qBittorrent's PGID and PUID configuration for folder creation permissions. Try manually downloading any torrent to a specified directory — if errors occur or the directory isn't created, it's a permissions issue.
-- Check qBittorrent's default settings: Saving Management should be set to Manual (Saving Management >> Default Torrent Management Mode >> Manual).
+- 检查[下载路径](#下载路径)是否正确。
+- 检查 qBittorrent 的 PGID 和 PUID 配置是否有创建文件夹的权限。尝试手动下载任意种子到指定目录——如果出错或目录未创建，则是权限问题。
+- 检查 qBittorrent 的默认设置：保存管理应设置为手动（保存管理 >> 默认 Torrent 管理模式 >> 手动）。
 
-### Downloading many unsubscribed anime
+### 下载了很多未订阅的番剧
 
-- Check if your Mikan subscription includes all subtitle groups for a single anime. Subscribe to only one group per anime, and enable advanced subscriptions.
-  - Advanced subscriptions can be enabled in Mikan Project's user settings.
-- Regex filtering may be insufficient — see the next section for expanding regex.
-- If neither applies, report with logs at [Issues][ISSUE].
+- 检查您的 Mikan 订阅是否包含了同一番剧的所有字幕组。每个番剧只订阅一个字幕组，并启用高级订阅。
+  - 高级订阅可以在 Mikan Project 的用户设置中启用。
+- 正则表达式过滤可能不够——请参阅下一节来扩展正则表达式。
+- 如果以上都不适用，请携带日志在 [Issues][ISSUE] 报告。
 
-### How to write filter keywords
+### 如何编写过滤关键词
 
-Filter keywords in AB are regular expressions, added only when rules are created. To expand rules after creation, use the WebUI (v3.0+) to configure each anime individually.
-- Filter keywords are regex — separate unwanted keywords with `|`.
-- The default `720|\d+-\d+` rule filters out all collections and 720P anime. Add filters before deploying AB; subsequent environment variable changes only affect new rules.
-- Common regex keywords (separated by `|`):
-  - `720` — filters 720, 720P, 720p, etc.
-  - `\d+-\d+` — filters collections like [1-12]
-  - `[Bb]aha` — filters Baha releases
-  - `[Bb]ilibili`, `[Bb]-Global` — filters Bilibili releases
-  - `繁`, `CHT` — filters Traditional Chinese subtitles
-- To match specific keywords, add in QB's include field: `XXXXX+1080P\+` where `1080P\+` matches 1080P+ releases.
+AB 中的过滤关键词是正则表达式，仅在创建规则时添加。要在创建后扩展规则，请使用 WebUI（v3.0+）单独配置每个番剧。
+- 过滤关键词是正则表达式——用 `|` 分隔不需要的关键词。
+- 默认的 `720|\d+-\d+` 规则会过滤掉所有合集和 720P 番剧。在部署 AB 前添加过滤器；之后的环境变量修改只影响新规则。
+- 常用正则表达式关键词（用 `|` 分隔）：
+  - `720` — 过滤 720、720P、720p 等。
+  - `\d+-\d+` — 过滤 [1-12] 等合集
+  - `[Bb]aha` — 过滤 Baha 发布
+  - `[Bb]ilibili`、`[Bb]-Global` — 过滤 Bilibili 发布
+  - `繁`、`CHT` — 过滤繁体中文字幕
+- 要匹配特定关键词，请在 QB 的包含字段中添加：`XXXXX+1080P\+`，其中 `1080P\+` 匹配 1080P+ 发布。
 
-### First deployment downloaded unwanted anime
+### 首次部署时下载了不想要的番剧
 
-1. Delete extra automatic download rules and files in QB.
-2. Check subscriptions and filter rules.
-3. Visit the resetRule API in your browser: `http://localhost:7892/api/v1/resetRule` to reset rules.
-4. Restart AB.
+1. 删除 QB 中多余的自动下载规则和文件。
+2. 检查订阅和过滤规则。
+3. 在浏览器中访问 resetRule API：`http://localhost:7892/api/v1/resetRule` 来重置规则。
+4. 重启 AB。
 
-### AB identifies fewer RSS entries than subscribed
+### AB 识别的 RSS 条目比订阅的少
 
-In newer versions, AB's filter also filters all RSS entries by default. Don't add all filters at once. For fine-grained control, configure each anime individually in the WebUI.
+在较新版本中，AB 的过滤器默认也会过滤所有 RSS 条目。不要一次添加所有过滤器。要进行细粒度控制，请在 WebUI 中单独配置每个番剧。
 
-### Filter keywords not working
+### 过滤关键词不生效
 
-- Check if the **global filter** parameter is set correctly.
-- Check QB's RSS auto-download rules — you can see matched RSS on the right side, adjust download rules, and click save to identify which keyword is causing issues.
+- 检查 **全局过滤器** 参数是否设置正确。
+- 检查 QB 的 RSS 自动下载规则——您可以在右侧看到匹配的 RSS，调整下载规则并点击保存来确定是哪个关键词导致问题。
 
-## Episode Completion
+## 剧集补全
 
-### Episode completion not working
+### 剧集补全不生效
 
-Check if the **Episode completion** parameter is correctly configured.
+检查 **剧集补全** 参数是否配置正确。
 
-## File Renaming
+## 文件重命名
 
-### Parse error `Cannot parse XXX`
+### 解析错误 `Cannot parse XXX`
 
-- AB does not currently support parsing collections.
-- If it's not a collection, report the issue on GitHub Issues.
+- AB 目前不支持解析合集。
+- 如果不是合集，请在 GitHub Issues 上报告问题。
 
-### `Rename failed` or renaming errors
+### `Rename failed` 或重命名错误
 
-- Check file paths. Standard storage path should be `/title/Season/Episode.mp4`. Non-standard paths cause naming errors — check your qBittorrent configuration.
-- Check if the `download path` is filled in correctly. Incorrect paths prevent proper renaming.
-- For other issues, report on GitHub Issues.
+- 检查文件路径。标准存储路径应为 `/title/Season/Episode.mp4`。非标准路径会导致命名错误——请检查您的 qBittorrent 配置。
+- 检查 `下载路径` 是否填写正确。路径不正确会导致无法正确重命名。
+- 其他问题请在 GitHub Issues 上报告。
 
-### No automatic renaming
+### 没有自动重命名
 
-- Check if the torrent category in QB is `Bangumi`.
-- AB only renames downloaded files.
+- 检查 QB 中的种子分类是否为 `Bangumi`。
+- AB 只会重命名已下载的文件。
 
-### How to rename non-AB anime with AB
+### 如何使用 AB 重命名非 AB 下载的番剧
 
-- Simply change the torrent's category to `Bangumi`.
-- Note: The torrent must be stored in a `Title/Season X/` folder to trigger renaming.
+- 只需将种子的分类改为 `Bangumi`。
+- 注意：种子必须存储在 `Title/Season X/` 文件夹中才能触发重命名。
 
-### How to rename collections
+### 如何重命名合集
 
-1. Change the collection's category to `Bangumi`.
-2. Change the collection's storage path to `Title/Season X/`.
-3. Wait for the collection to finish downloading, and renaming will complete.
+1. 将合集的分类改为 `Bangumi`。
+2. 将合集的存储路径改为 `Title/Season X/`。
+3. 等待合集下载完成，重命名将自动完成。
 
 ## Docker
 
-### How to auto-update
+### 如何自动更新
 
-Run a `watchtower` daemon in Docker to automatically update your containers.
+在 Docker 中运行 `watchtower` 守护进程来自动更新您的容器。
 
-[watchtower](https://containrrr.dev/watchtower) official documentation
+[watchtower](https://containrrr.dev/watchtower) 官方文档
 
-### Updating with Docker Compose
+### 使用 Docker Compose 更新
 
-If your AB is deployed with Docker Compose, use `docker compose pull` to update.
-After pulling the new image, use `docker compose up -d` to restart.
+如果您的 AB 是使用 Docker Compose 部署的，请使用 `docker compose pull` 来更新。
+拉取新镜像后，使用 `docker compose up -d` 来重启。
 
-You can also add `pull_policy: always` to your `docker-compose.yml` to pull the latest image on every start.
+您也可以在 `docker-compose.yml` 中添加 `pull_policy: always` 来在每次启动时拉取最新镜像。
 
-### What to do if an upgrade causes issues
+### 升级导致问题怎么办
 
-Since configurations may vary, upgrades might cause the program to fail. In this case, delete all previous data and generated configuration files, then restart the container.
-Then reconfigure in the WebUI.
-If upgrading from an older version, first refer to the [upgrade guide](/changelog/2.6).
+由于配置可能各不相同，升级可能会导致程序失败。在这种情况下，删除所有之前的数据和生成的配置文件，然后重启容器。
+然后在 WebUI 中重新配置。
+如果从旧版本升级，请先参阅[升级指南](/changelog/2.6)。
 
-If you encounter issues not covered above, report them at [Issues][ISSUE] using the bug template.
+如果您遇到上述未涵盖的问题，请使用 bug 模板在 [Issues][ISSUE] 报告。
 
 
 [ISSUE]: https://github.com/EstrellaXD/Auto_Bangumi/issues

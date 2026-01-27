@@ -1,40 +1,40 @@
-# Calendar View
+# 日历视图
 
-Since v3.2, AB includes a calendar view that shows your subscribed anime organized by broadcast day.
+从 v3.2 开始，AB 包含日历视图，按播出日期显示您订阅的番剧。
 
 ![Calendar](../image/feature/calendar.png)
 
-## Features
+## 功能
 
-### Weekly Schedule
+### 每周时间表
 
-The calendar displays anime organized by their broadcast weekday (Monday through Sunday), plus an "Unknown" column for anime without broadcast schedule data.
+日历按播出日期（周一至周日）组织显示番剧，另有"未知"列显示没有播出时间数据的番剧。
 
-### Bangumi.tv Integration
+### Bangumi.tv 集成
 
-AB fetches broadcast schedule data from Bangumi.tv to accurately display when each anime airs.
+AB 从 Bangumi.tv 获取播出时间数据，以准确显示每部番剧的播出时间。
 
-Click the **Refresh schedule** button to update the broadcast data.
+点击 **刷新时间表** 按钮更新播出数据。
 
-### Grouped Display
+### 分组显示
 
-Since v3.2, anime with multiple download rules are grouped together:
+从 v3.2 开始，具有多个下载规则的番剧会被分组显示：
 
-- Same anime appears once, even with multiple subtitle group rules
-- Click on a grouped anime to see all available rules
-- Select a specific rule to edit
+- 同一番剧只显示一次，即使有多个字幕组规则
+- 点击分组番剧可查看所有可用规则
+- 选择特定规则进行编辑
 
-This keeps the calendar clean while still providing access to all your rules.
+这样可以保持日历整洁，同时仍能访问所有规则。
 
-## Navigation
+## 导航
 
-Click on any anime poster in the calendar to:
-- View anime details
-- Edit download rules
-- Access archive/disable options
+点击日历中的任意番剧海报可：
+- 查看番剧详情
+- 编辑下载规则
+- 访问归档/禁用选项
 
-## Tips
+## 提示
 
 ::: tip
-If an anime appears in the "Unknown" column, it may not have broadcast data on Bangumi.tv, or the anime title couldn't be matched.
+如果番剧出现在"未知"列，可能是 Bangumi.tv 上没有播出数据，或番剧标题无法匹配。
 :::

@@ -1,21 +1,21 @@
-# Local Deployment
+# 本地部署
 
 ::: warning
-Local deployment may cause unexpected issues. We strongly recommend using Docker instead.
+本地部署可能会导致意外问题。我们强烈建议使用 Docker 代替。
 
-This documentation may have update delays. If you have questions, please raise them in [Issues](https://github.com/EstrellaXD/Auto_Bangumi/issues).
+此文档可能存在更新延迟。如有问题，请在 [Issues](https://github.com/EstrellaXD/Auto_Bangumi/issues) 中提出。
 :::
 
-## Download the Latest Release
+## 下载最新版本
 
 ```bash
 VERSION=$(curl -s "https://api.github.com/repos/EstrellaXD/Auto_Bangumi/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 curl -L -O "https://github.com/EstrellaXD/Auto_Bangumi/releases/download/$VERSION/app-v$VERSION.zip"
 ```
 
-## Extract the Archive
+## 解压压缩包
 
-On Unix/WSL systems, use the following command. On Windows, extract manually.
+在 Unix/WSL 系统上，使用以下命令。在 Windows 上，请手动解压。
 
 ```bash
 unzip app-v$VERSION.zip -d AutoBangumi
@@ -23,9 +23,9 @@ cd AutoBangumi
 ```
 
 
-## Create Virtual Environment and Install Dependencies
+## 创建虚拟环境并安装依赖
 
-Ensure you have Python 3.10+ and pip installed locally.
+确保本地已安装 Python 3.10+ 和 pip。
 
 ```bash
 cd src
@@ -33,23 +33,23 @@ python3 -m venv env
 python3 pip install -r requirements.txt
 ```
 
-## Create Configuration and Data Directories
+## 创建配置和数据目录
 
 ```bash
 mkdir config
 mkdir data
 ```
 
-## Run AutoBangumi
+## 运行 AutoBangumi
 
 ```bash
 python3 main.py
 ```
 
 
-## Windows Auto-Start on Boot
+## Windows 开机自启
 
-You can use `nssm` for auto-start on boot. Example with `nssm`:
+可以使用 `nssm` 实现开机自启。使用 `nssm` 的示例：
 
 ```powershell
 nssm install AutoBangumi (Get-Command python).Source

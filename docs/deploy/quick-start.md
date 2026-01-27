@@ -1,33 +1,33 @@
-# Quick Start
+# 快速开始
 
-We recommend deploying AutoBangumi in Docker.
-Before deployment, make sure you have [Docker Engine][docker-engine] or [Docker Desktop][docker-desktop] installed.
+我们推荐使用 Docker 部署 AutoBangumi。
+部署前，请确保已安装 [Docker Engine][docker-engine] 或 [Docker Desktop][docker-desktop]。
 
-## Create Data and Configuration Directories
+## 创建数据和配置目录
 
-To ensure AB's data and configuration persist across updates, we recommend using bind mounts or Docker volumes.
+为确保 AB 的数据和配置在更新时持久化，我们建议使用绑定挂载或 Docker 卷。
 
 ```shell
-# Using bind mount
+# 使用绑定挂载
 mkdir -p ${HOME}/AutoBangumi/{config,data}
 cd ${HOME}/AutoBangumi
 ```
 
-Choose either bind mount or Docker volume:
+选择绑定挂载或 Docker 卷：
 
 ```shell
-# Using Docker volume
+# 使用 Docker 卷
 docker volume create AutoBangumi_config
 docker volume create AutoBangumi_data
 ```
 
-## Deploy AutoBangumi with Docker
+## 使用 Docker 部署 AutoBangumi
 
-Make sure you are in the AutoBangumi directory when running these commands.
+运行这些命令时，请确保您在 AutoBangumi 目录中。
 
-### Option 1: Deploy with Docker CLI
+### 方式一：使用 Docker CLI 部署
 
-Copy and run the following command:
+复制并运行以下命令：
 
 ```shell
 docker run -d \
@@ -45,9 +45,9 @@ docker run -d \
   ghcr.io/estrellaxd/auto_bangumi:latest
 ```
 
-### Option 2: Deploy with Docker Compose
+### 方式二：使用 Docker Compose 部署
 
-Copy the following content into a `docker-compose.yml` file:
+将以下内容复制到 `docker-compose.yml` 文件中：
 
 ```yaml
 version: "3.8"
@@ -72,53 +72,53 @@ services:
       - UMASK=022
 ```
 
-Run the following command to start the container:
+运行以下命令启动容器：
 
 ```shell
 docker compose up -d
 ```
 
-## Install qBittorrent
+## 安装 qBittorrent
 
-If you haven't installed qBittorrent, please install it first:
+如果您尚未安装 qBittorrent，请先安装：
 
-- [Install qBittorrent in Docker][qbittorrent-docker]
-- [Install qBittorrent on Windows/macOS][qbittorrent-desktop]
-- [Install qBittorrent-nox on Linux][qbittorrent-nox]
+- [在 Docker 中安装 qBittorrent][qbittorrent-docker]
+- [在 Windows/macOS 上安装 qBittorrent][qbittorrent-desktop]
+- [在 Linux 上安装 qBittorrent-nox][qbittorrent-nox]
 
-## Get an Aggregated RSS Link (Using Mikan Project as an Example)
+## 获取聚合 RSS 链接（以 Mikan Project 为例）
 
-Visit [Mikan Project][mikan-project], register an account and log in, then click the **RSS** button in the bottom right corner and copy the link.
+访问 [Mikan Project][mikan-project]，注册账号并登录，然后点击右下角的 **RSS** 按钮并复制链接。
 
 ![mikan-rss](../image/rss/rss-token.png){data-zoomable}
 
-The RSS URL will look like:
+RSS 链接格式如下：
 
 ```txt
 https://mikanani.me/RSS/MyBangumi?token=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-# or
+# 或
 https://mikanime.tv/RSS/MyBangumi?token=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-For detailed steps, see [Mikan RSS Setup][config-rss].
+详细步骤请参阅 [Mikan RSS 设置][config-rss]。
 
 
-## Configure AutoBangumi
+## 配置 AutoBangumi
 
-After installing AB, the WebUI will start automatically, but the main program will be paused. You can access `http://abhost:7892` to configure it.
+安装 AB 后，WebUI 将自动启动，但主程序处于暂停状态。您可以访问 `http://abhost:7892` 进行配置。
 
-1. Open the webpage. The default username is `admin` and the default password is `adminadmin`. Change these immediately after first login.
-2. Enter your downloader's address, port, username, and password.
+1. 打开网页。默认用户名为 `admin`，默认密码为 `adminadmin`。首次登录后请立即修改。
+2. 输入下载器的地址、端口、用户名和密码。
 
 ![ab-webui](../image/config/downloader.png){width=500}{class=ab-shadow-card}
 
-3. Click **Apply** to save the configuration. AB will restart, and when the dot in the upper right corner turns green, it indicates AB is running normally.
+3. 点击**应用**保存配置。AB 将重启，当右上角的圆点变为绿色时，表示 AB 正常运行。
 
-4. Click the **+** button in the upper right corner, check **Aggregated RSS**, select the parser type, and enter your Mikan RSS URL.
+4. 点击右上角的 **+** 按钮，勾选**聚合 RSS**，选择解析器类型，然后输入您的 Mikan RSS 链接。
 
 ![ab-rss](../image/config/add-rss.png){width=500}{class=ab-shadow-card}
 
-Wait for AB to parse the aggregated RSS. Once parsing is complete, it will automatically add anime and manage downloads.
+等待 AB 解析聚合 RSS。解析完成后，将自动添加番剧并管理下载。
 
 
 

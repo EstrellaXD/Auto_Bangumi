@@ -1,12 +1,12 @@
-# How AutoBangumi Works
+# AutoBangumi 工作原理
 
-AutoBangumi (AB for short) is essentially an RSS parser. It parses RSS feeds from anime torrent sites, extracts metadata from torrent titles, generates download rules, and sends them to qBittorrent for downloading. After downloading, it organizes files into a standard media library directory structure.
+AutoBangumi（简称 AB）本质上是一个 RSS 解析器。它从番剧种子站点解析 RSS 订阅源，从种子标题中提取元数据，生成下载规则并发送给 qBittorrent 进行下载。下载完成后，将文件整理成标准的媒体库目录结构。
 
-## Pipeline Overview
+## 流程概览
 
-1. **RSS Parsing** — AB periodically fetches and parses your subscribed RSS feeds
-2. **Title Analysis** — Torrent titles are parsed to extract anime name, episode number, season, subtitle group, and resolution
-3. **Rule Generation** — Download rules are created in qBittorrent based on the parsed information
-4. **Download Management** — qBittorrent handles the actual downloading of torrents
-5. **File Organization** — Downloaded files are renamed and moved into a standardized directory structure
-6. **Media Library Ready** — The organized files can be directly recognized by Plex, Jellyfin, and other media servers
+1. **RSS 解析** — AB 定期获取并解析您订阅的 RSS 源
+2. **标题分析** — 解析种子标题以提取番剧名称、集数、季度、字幕组和分辨率
+3. **规则生成** — 根据解析的信息在 qBittorrent 中创建下载规则
+4. **下载管理** — qBittorrent 负责实际的种子下载
+5. **文件整理** — 下载的文件被重命名并移动到标准化的目录结构中
+6. **媒体库就绪** — 整理后的文件可直接被 Plex、Jellyfin 等媒体服务器识别
