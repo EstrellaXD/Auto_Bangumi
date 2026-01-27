@@ -1,56 +1,56 @@
-# Downloader Settings
+# 下载器设置
 
-## WebUI Configuration
+## WebUI 配置
 
 ![downloader](../image/config/downloader.png){width=500}{class=ab-shadow-card}
 
 <br/>
 
-- **Downloader Type** is the downloader type. Currently only qBittorrent is supported.
-- **Host** is the downloader address. [See below](#downloader-address)
-- **Download path** is the mapped download path for the downloader. [See below](#download-path-issues)
-- **SSL** enables SSL for the downloader connection.
+- **下载器类型** 为下载器类型。目前仅支持 qBittorrent。
+- **地址** 为下载器地址。[详见下方说明](#下载器地址)
+- **下载路径** 为下载器的映射下载路径。[详见下方说明](#下载路径问题)
+- **SSL** 启用下载器连接的 SSL。
 
-## Common Issues
+## 常见问题
 
-### Downloader Address
+### 下载器地址
 
-::: warning Note
-Do not use 127.0.0.1 or localhost as the downloader address.
+::: warning 注意
+请勿使用 127.0.0.1 或 localhost 作为下载器地址。
 :::
 
-Since AB runs in Docker with **Bridge** mode in the official tutorial, using 127.0.0.1 or localhost will resolve to AB itself, not the downloader.
-- If your qBittorrent also runs in Docker, we recommend using the Docker **gateway address: 172.17.0.1**.
-- If your qBittorrent runs on the host machine, use the host machine's IP address.
+由于官方教程中 AB 在 Docker 的 **Bridge** 模式下运行，使用 127.0.0.1 或 localhost 会解析到 AB 自身，而非下载器。
+- 如果 qBittorrent 也在 Docker 中运行，建议使用 Docker **网关地址：172.17.0.1**。
+- 如果 qBittorrent 运行在宿主机上，请使用宿主机的 IP 地址。
 
-If you run AB in **Host** mode, you can use 127.0.0.1 instead of the Docker gateway address.
+如果 AB 以 **Host** 模式运行，则可以使用 127.0.0.1 代替 Docker 网关地址。
 
-::: warning Note
-Macvlan isolates container networks. Without additional bridge configuration, containers cannot access other containers or the host itself.
+::: warning 注意
+Macvlan 会隔离容器网络。如果没有额外的网桥配置，容器无法访问其他容器或宿主机本身。
 :::
 
-### Download Path Issues
+### 下载路径问题
 
-The path configured in AB is only used to generate the corresponding anime file path. AB itself does not directly manage files at that path.
+AB 中配置的路径仅用于生成对应的番剧文件路径。AB 本身不会直接管理该路径下的文件。
 
-**What should I put for the download path?**
+**下载路径应该填什么？**
 
-This parameter just needs to match your **downloader's** configuration:
-- Docker: If qB uses `/downloads`, then set `/downloads/Bangumi`. You can change `Bangumi` to anything.
-- Linux/macOS: If it's `/home/usr/downloads` or `/User/UserName/Downloads`, just append `/Bangumi` at the end.
-- Windows: Change `D:\Media\` to `D:\Media\Bangumi`
+此参数只需与**下载器**的配置匹配：
+- Docker：如果 qB 使用 `/downloads`，则设置为 `/downloads/Bangumi`。`Bangumi` 可以改为任意名称。
+- Linux/macOS：如果是 `/home/usr/downloads` 或 `/User/UserName/Downloads`，只需在末尾添加 `/Bangumi`。
+- Windows：将 `D:\Media\` 改为 `D:\Media\Bangumi`
 
-## `config.json` Configuration Options
+## `config.json` 配置选项
 
-The corresponding options in the configuration file are:
+配置文件中的对应选项如下：
 
-Configuration section: `downloader`
+配置节：`downloader`
 
-| Parameter | Description          | Type    | WebUI Option          | Default              |
-|-----------|---------------------|---------|----------------------|---------------------|
-| type      | Downloader type     | String  | Downloader type      | qbittorrent         |
-| host      | Downloader address  | String  | Downloader address   | 172.17.0.1:8080     |
-| username  | Downloader username | String  | Downloader username  | admin               |
-| password  | Downloader password | String  | Downloader password  | adminadmin          |
-| path      | Download path       | String  | Download path        | /downloads/Bangumi  |
-| ssl       | Enable SSL          | Boolean | Enable SSL           | false               |
+| 参数     | 说明         | 类型    | WebUI 选项      | 默认值              |
+|----------|--------------|---------|-----------------|---------------------|
+| type     | 下载器类型   | 字符串  | 下载器类型      | qbittorrent         |
+| host     | 下载器地址   | 字符串  | 下载器地址      | 172.17.0.1:8080     |
+| username | 下载器用户名 | 字符串  | 下载器用户名    | admin               |
+| password | 下载器密码   | 字符串  | 下载器密码      | adminadmin          |
+| path     | 下载路径     | 字符串  | 下载路径        | /downloads/Bangumi  |
+| ssl      | 启用 SSL     | 布尔值  | 启用 SSL        | false               |

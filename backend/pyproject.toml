@@ -1,12 +1,12 @@
 [project]
 name = "auto-bangumi"
-version = "3.2.0-beta.13"
+version = "3.2.1"
 description = "AutoBangumi - Automated anime download manager"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.109.0",
     "uvicorn>=0.27.0",
-    "httpx>=0.25.0",
+    "httpx[socks]>=0.25.0",
     "httpx-socks>=0.9.0",
     "beautifulsoup4>=4.12.0",
     "sqlmodel>=0.0.14",

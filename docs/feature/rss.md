@@ -1,68 +1,68 @@
 ---
-title: RSS Management
+title: RSS 管理
 ---
 
-# RSS Management
+# RSS 管理
 
-## RSS Manager Page
+## RSS 管理页面
 
-The RSS Manager page displays all your RSS subscriptions with their connection status.
+RSS 管理页面显示您所有的 RSS 订阅及其连接状态。
 
 ![RSS Manager](../image/feature/rss-manager.png)
 
-### Connection Status
+### 连接状态
 
-Since v3.2, AB tracks the connection status of each RSS source:
+从 v3.2 开始，AB 会跟踪每个 RSS 源的连接状态：
 
-| Status | Description |
-|--------|-------------|
-| **Connected** (green) | RSS source is reachable and returning valid data |
-| **Error** (red) | RSS source failed to respond or returned invalid data |
+| 状态 | 说明 |
+|------|------|
+| **已连接**（绿色） | RSS 源可访问且返回有效数据 |
+| **错误**（红色） | RSS 源无法响应或返回无效数据 |
 
-When a source shows an error, hover over the status label to see the error details in a tooltip.
+当源显示错误时，将鼠标悬停在状态标签上可在提示框中查看错误详情。
 
-AB automatically updates the connection status on each RSS refresh cycle.
+AB 会在每次 RSS 刷新周期自动更新连接状态。
 
-## Adding Collections
+## 添加收藏
 
-AB provides two manual download methods:
-**Collect** and **Subscribe**.
-- **Collect** downloads all episodes at once, suitable for completed anime.
-- **Subscribe** adds an automatic download rule with the corresponding RSS link, suitable for ongoing anime.
+AB 提供两种手动下载方式：
+**收藏** 和 **订阅**。
+- **收藏** 一次性下载所有剧集，适用于已完结番剧。
+- **订阅** 添加带有对应 RSS 链接的自动下载规则，适用于连载番剧。
 
-### Parsing RSS Links
+### 解析 RSS 链接
 
-AB supports parsing collection RSS links from all resource sites. Find the collection RSS for your desired anime on the corresponding site, click the **+** button in the upper right corner of AB, and paste the RSS link in the popup window.
+AB 支持解析所有资源站的收藏 RSS 链接。在对应网站找到您想要的番剧收藏 RSS，点击 AB 右上角的 **+** 按钮，在弹出窗口中粘贴 RSS 链接。
 
-### Adding Downloads
+### 添加下载
 
-If parsing succeeds, a window will appear showing the parsed anime information. Click **Collect** or **Subscribe** to add it to the download queue.
+如果解析成功，将出现一个窗口显示解析后的番剧信息。点击 **收藏** 或 **订阅** 将其添加到下载队列。
 
-### Common Issues
+### 常见问题
 
-If a parsing error occurs, it may be due to an incorrect RSS link or an unsupported subtitle group naming format.
+如果出现解析错误，可能是由于 RSS 链接不正确或字幕组命名格式不支持。
 
-## Managing Bangumi
+## 管理番剧
 
-Since v3.0, AB provides manual anime management in the WebUI, allowing you to manually adjust incorrectly parsed anime information.
+从 v3.0 开始，AB 在 WebUI 中提供手动番剧管理功能，允许您手动调整解析错误的番剧信息。
 
-### Editing Anime Information
+### 编辑番剧信息
 
-In the anime list, click the anime poster to enter the anime information page.
-After modifying the information, click **Apply**.
-AB will readjust the directory and automatically rename files based on your changes.
+在番剧列表中，点击番剧海报进入番剧信息页面。
+修改信息后，点击 **应用**。
+AB 将根据您的更改重新调整目录并自动重命名文件。
 
 
-### Deleting Anime
+### 删除番剧
 
-Since v3.0, you can manually delete anime. Click the anime poster, enter the information page, and click **Delete**.
+从 v3.0 开始，您可以手动删除番剧。点击番剧海报，进入信息页面，点击 **删除**。
 
 ::: warning
-After deleting anime, if the RSS subscription hasn't been cancelled, AB will still re-parse it. To disable the download rule, use [Disable Anime](#disabling-anime).
+删除番剧后，如果 RSS 订阅未取消，AB 仍会重新解析。要禁用下载规则，请使用[禁用番剧](#禁用番剧)。
 :::
 
-### Disabling Anime
+### 禁用番剧
 
-Since v3.0, you can manually disable anime. Click the anime poster, enter the information page, and click **Disable**.
+从 v3.0 开始，您可以手动禁用番剧。点击番剧海报，进入信息页面，点击 **禁用**。
 
-Once disabled, the anime poster will be grayed out and sorted to the end. To re-enable the download rule, click **Enable**.
+禁用后，番剧海报将变灰并排序到末尾。要重新启用下载规则，点击 **启用**。

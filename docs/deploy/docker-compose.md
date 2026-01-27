@@ -1,32 +1,32 @@
-# Deploy with Docker Compose
+# 使用 Docker Compose 部署
 
-A one-click deployment method for **AutoBangumi** using a `docker-compose.yml` file.
+使用 `docker-compose.yml` 文件一键部署 **AutoBangumi**。
 
-## Install Docker Compose
+## 安装 Docker Compose
 
-Docker Compose usually comes bundled with Docker. Check with:
+Docker Compose 通常与 Docker 捆绑安装。使用以下命令检查：
 
 ```bash
 docker compose -v
 ```
 
-If not installed, install it with:
+如果未安装，请使用以下命令安装：
 
 ```bash
 $ sudo apt-get update
 $ sudo apt-get install docker-compose-plugin
 ```
 
-## Deploy **AutoBangumi**
+## 部署 **AutoBangumi**
 
-### Create AutoBangumi and Data Directories
+### 创建 AutoBangumi 和数据目录
 
 ```bash
 mkdir -p ${HOME}/AutoBangumi/{config,data}
 cd ${HOME}/AutoBangumi
 ```
 
-### Option 1: Custom Docker Compose Configuration
+### 方式一：自定义 Docker Compose 配置
 
 ```yaml
 version: "3.8"
@@ -51,35 +51,35 @@ services:
       - UMASK=022
 ```
 
-Copy the above content into a `docker-compose.yml` file.
+将以上内容复制到 `docker-compose.yml` 文件中。
 
-### Option 2: Download Docker Compose Configuration File
+### 方式二：下载 Docker Compose 配置文件
 
-If you don't want to create the `docker-compose.yml` file manually, the project provides pre-made configurations:
+如果您不想手动创建 `docker-compose.yml` 文件，项目提供了预制的配置：
 
-- Install **AutoBangumi** only:
+- 仅安装 **AutoBangumi**：
   ```bash
   wget https://raw.githubusercontent.com/EstrellaXD/Auto_Bangumi/main/docs/resource/docker-compose/AutoBangumi/docker-compose.yml
   ```
-- Install **qBittorrent** and **AutoBangumi**:
+- 安装 **qBittorrent** 和 **AutoBangumi**：
   ```bash
   wget https://raw.githubusercontent.com/EstrellaXD/Auto_Bangumi/main/docs/resource/docker-compose/qBittorrent+AutoBangumi/docker-compose.yml
   ```
 
-Choose your installation method and run the command to download the `docker-compose.yml` file. You can customize parameters with a text editor if needed.
+选择您的安装方式并运行命令下载 `docker-compose.yml` 文件。如有需要，可以使用文本编辑器自定义参数。
 
-### Define Environment Variables
+### 定义环境变量
 
-If you're using the downloaded AB+QB Docker Compose file, you need to define the following environment variables:
+如果您使用的是下载的 AB+QB Docker Compose 文件，需要定义以下环境变量：
 
 ```shell
 export \
 QB_PORT=<YOUR_PORT>
 ```
 
-- `QB_PORT`: Enter your existing qBittorrent port or your desired custom port, e.g., `8080`
+- `QB_PORT`：输入您现有的 qBittorrent 端口或您想要的自定义端口，例如 `8080`
 
-### Start Docker Compose
+### 启动 Docker Compose
 
 ```bash
 docker compose up -d

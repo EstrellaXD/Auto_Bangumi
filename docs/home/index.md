@@ -1,5 +1,5 @@
 ---
-title: About
+title: 关于
 ---
 
 <p align="center">
@@ -11,7 +11,7 @@ title: About
 </p>
 
 
-## About AutoBangumi
+## 关于 AutoBangumi
 
 
 <p align="center">
@@ -24,15 +24,15 @@ title: About
   >
 </p>
 
-**`AutoBangumi`** is a fully automated anime downloading and organizing tool based on RSS feeds. Simply subscribe to anime on [Mikan Project][mikan] or similar sites, and it will automatically track and download new episodes.
+**`AutoBangumi`** 是一款基于 RSS 订阅的全自动番剧下载和整理工具。只需在 [Mikan Project][mikan] 或类似网站订阅番剧，即可自动追踪和下载最新剧集。
 
-The organized file names and directory structure are directly compatible with [Plex][plex], [Jellyfin][jellyfin], and other media library software without requiring additional metadata scraping.
+整理后的文件名和目录结构可直接兼容 [Plex][plex]、[Jellyfin][jellyfin] 等媒体库软件，无需额外的元数据刮削。
 
-## Features
+## 功能特性
 
-- Simple one-time configuration for continuous use
-- Hands-free RSS parser that extracts anime information and automatically generates download rules
-- Anime file organization:
+- 简单的一次性配置，持续使用
+- 无需操心的 RSS 解析器，可提取番剧信息并自动生成下载规则
+- 番剧文件整理：
 
   ```
   Bangumi
@@ -51,7 +51,7 @@ The organized file names and directory structure are directly compatible with [P
   │   └─── Season 1
   ```
 
-- Fully automatic renaming — over 99% of anime files can be directly scraped by media library software after renaming
+- 全自动重命名——超过 99% 的番剧文件在重命名后可被媒体库软件直接刮削
 
   ```
   [Lilith-Raws] Kakkou no Iinazuke - 07 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4].mp4
@@ -59,41 +59,41 @@ The organized file names and directory structure are directly compatible with [P
   Kakkou no Iinazuke S01E07.mp4
   ```
 
-- Custom renaming based on parent folder names for all child files
-- Mid-season catch-up to fill in all missed episodes of the current season
-- Highly customizable options that can be fine-tuned for different media library software
-- Zero maintenance, completely transparent operation
-- Built-in TMDB parser for generating complete TMDB-formatted files and anime metadata
-- Reverse proxy support for Mikan RSS feeds
+- 基于父文件夹名称自定义重命名所有子文件
+- 季中追番补全当季所有缺失剧集
+- 高度自定义选项，可针对不同媒体库软件进行微调
+- 零维护，完全透明运行
+- 内置 TMDB 解析器，可生成完整的 TMDB 格式文件和番剧元数据
+- 支持 Mikan RSS 订阅的反向代理
 
-## Community
+## 社区
 
-- Update notifications: [Telegram Channel](https://t.me/autobangumi_update)
-- Bug reports: [Telegram](https://t.me/+yNisOnDGaX5jMTM9)
+- 更新通知：[Telegram 频道](https://t.me/autobangumi_update)
+- Bug 反馈：[Telegram](https://t.me/+yNisOnDGaX5jMTM9)
 
-## Acknowledgments
+## 致谢
 
-Thanks to [Sean](https://github.com/findix) for extensive help with the project.
+感谢 [Sean](https://github.com/findix) 对项目的大力帮助。
 
-## Contributing
+## 参与贡献
 
-Issues and Pull Requests are welcome!
+欢迎提交 Issues 和 Pull Requests！
 
 <a href="https://github.com/EstrellaXD/Auto_Bangumi/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=EstrellaXD/Auto_Bangumi" />
 </a>
 
-## Disclaimer
+## 免责声明
 
-Since AutoBangumi obtains anime through unofficial copyright channels:
+由于 AutoBangumi 通过非官方版权渠道获取番剧：
 
-- **Do not** use AutoBangumi for commercial purposes.
-- **Do not** create video content featuring AutoBangumi for distribution on domestic video platforms (copyright stakeholders).
-- **Do not** use AutoBangumi for any activity that violates laws or regulations.
+- **请勿**将 AutoBangumi 用于商业用途。
+- **请勿**制作包含 AutoBangumi 的视频内容并在国内视频平台（版权相关方）上发布。
+- **请勿**将 AutoBangumi 用于任何违反法律法规的活动。
 
-AutoBangumi is for educational and personal use only.
+AutoBangumi 仅供学习和个人使用。
 
-## License
+## 许可证
 
 [MIT License](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/LICENSE)
 

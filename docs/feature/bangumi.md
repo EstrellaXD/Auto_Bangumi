@@ -1,83 +1,83 @@
-# Bangumi Management
+# 番剧管理
 
-Click an anime poster on the homepage to manage individual anime entries.
+点击首页的番剧海报可管理单个番剧条目。
 
 ![Bangumi List](../image/feature/bangumi-list.png)
 
-If an anime has multiple download rules (e.g., different subtitle groups), a rule selection popup will appear:
+如果一部番剧有多个下载规则（例如不同字幕组），将出现规则选择弹窗：
 
 ![Rule Selection](../image/feature/rule-select.png)
 
-After selecting a rule, the edit modal opens:
+选择规则后，编辑弹窗打开：
 
 ![Edit Bangumi](../image/feature/bangumi-edit.png)
 
-## Notification Badges
+## 通知徽章
 
-Since v3.2, bangumi cards display iOS-style notification badges to indicate status:
+从 v3.2 开始，番剧卡片显示 iOS 风格的通知徽章来指示状态：
 
-- **Yellow badge with `!`**: Subscription needs review (e.g., offset issues detected)
-- **Number badge**: Multiple rules exist for this anime
-- **Combined badge** (e.g., `! | 2`): Has warning and multiple rules
+- **黄色徽章带 `!`**：订阅需要审核（例如检测到偏移问题）
+- **数字徽章**：该番剧存在多个规则
+- **组合徽章**（例如 `! | 2`）：有警告且有多个规则
 
-Cards with warnings also display a yellow glow animation to draw attention.
+带有警告的卡片还会显示黄色发光动画以引起注意。
 
-## Episode Offset Auto-Detection
+## 剧集偏移自动检测
 
-Some anime have complex season structures that cause mismatches between RSS episode numbers and TMDB data. For example:
-- "Frieren: Beyond Journey's End" Season 1 was broadcast in two parts with a 6-month gap
-- RSS may show "S2E01" while TMDB considers it "S1E29"
+某些番剧具有复杂的季度结构，导致 RSS 剧集编号与 TMDB 数据不匹配。例如：
+- "葬送的芙莉莲" 第一季分两部分播出，中间隔了 6 个月
+- RSS 可能显示 "S2E01"，而 TMDB 认为是 "S1E29"
 
-AB v3.2 can automatically detect these issues:
+AB v3.2 可以自动检测这些问题：
 
-1. Click the **Auto Detect** button in the edit modal
-2. AB analyzes TMDB episode air dates to identify "virtual seasons"
-3. If a mismatch is found, AB suggests the correct offset values
-4. Click **Apply** to save the offset
+1. 点击编辑弹窗中的 **自动检测** 按钮
+2. AB 分析 TMDB 剧集播出日期以识别"虚拟季度"
+3. 如果发现不匹配，AB 会建议正确的偏移值
+4. 点击 **应用** 保存偏移
 
-The background scan thread also periodically checks existing subscriptions for offset issues and marks them for review.
+后台扫描线程还会定期检查现有订阅的偏移问题，并标记需要审核的项目。
 
-## Archive / Unarchive Anime
+## 归档 / 取消归档番剧
 
-Since v3.2, you can archive completed or inactive anime to keep your list organized.
+从 v3.2 开始，您可以归档已完结或不活跃的番剧，以保持列表整洁。
 
-### Manual Archive
+### 手动归档
 
-1. Click on an anime poster
-2. In the edit modal, click the **Archive** button
-3. The anime moves to the "Archived" section at the bottom of the list
+1. 点击番剧海报
+2. 在编辑弹窗中，点击 **归档** 按钮
+3. 番剧移至列表底部的"已归档"区域
 
-### Automatic Archive
+### 自动归档
 
-AB can automatically archive anime when:
-- The series status on TMDB shows as "Ended" or "Canceled"
-- Use **Config** → refresh metadata to trigger auto-archive
+AB 可以在以下情况自动归档番剧：
+- TMDB 上的系列状态显示为"已完结"或"已取消"
+- 使用 **配置** → 刷新元数据触发自动归档
 
-### Viewing Archived Anime
+### 查看已归档番剧
 
-Archived anime appear in a collapsible "Archived" section at the bottom of the bangumi list. Click to expand and view archived items.
+已归档番剧出现在番剧列表底部的可折叠"已归档"区域。点击展开查看已归档项目。
 
-### Unarchive
+### 取消归档
 
-To restore an archived anime:
-1. Expand the "Archived" section
-2. Click on the anime poster
-3. Click the **Unarchive** button
+要恢复已归档番剧：
+1. 展开"已归档"区域
+2. 点击番剧海报
+3. 点击 **取消归档** 按钮
 
-## Disable / Delete Anime
+## 禁用 / 删除番剧
 
-Since AB continuously parses **aggregated RSS** feeds, for download rules from aggregated RSS that you no longer need:
-- Disable anime: The anime won't be downloaded or re-parsed
-- Remove the subscription from the aggregated RSS
+由于 AB 会持续解析**聚合 RSS** 订阅，对于来自聚合 RSS 中不再需要的下载规则：
+- 禁用番剧：番剧不会被下载或重新解析
+- 从聚合 RSS 中移除订阅
 
-If you delete the anime entry, it will be recreated on the next parse cycle.
+如果您删除番剧条目，它将在下次解析周期被重新创建。
 
-## Advanced Settings
+## 高级设置
 
-Click **Advanced Settings** in the edit modal to access additional options:
+点击编辑弹窗中的 **高级设置** 访问更多选项：
 
 ![Advanced Settings](../image/feature/bangumi-edit-advanced.png)
 
-- **Season Offset**: Adjust the season number offset
-- **Episode Offset**: Adjust the episode number offset
-- **Filter**: Custom regex filter for torrent matching
+- **季度偏移**：调整季度编号偏移
+- **剧集偏移**：调整剧集编号偏移
+- **过滤**：用于种子匹配的自定义正则表达式过滤器
