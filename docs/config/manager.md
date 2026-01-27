@@ -2,7 +2,7 @@
 
 ## WebUI 配置
 
-![proxy](../image/config/manager.png){width=500}{class=ab-shadow-card}
+![proxy](/image/config/manager.png){width=500}{class=ab-shadow-card}
 
 <br/>
 

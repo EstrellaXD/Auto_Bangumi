@@ -13,7 +13,7 @@ input: "【喵萌奶茶屋】★04月新番★[夏日重现/Summer Time Renderin
 output: '{"group": "喵萌奶茶屋", "title_en": "Summer Time Rendering", "resolution": "1080p", "episode": 11, "season": 1, "title_zh": "夏日重现", "sub": "", "title_jp": "", "season_raw": "", "source": ""}'
 ```
 
-![experimental OpenAI](../image/config/experimental-openai.png){width=500}{class=ab-shadow-card}
+![experimental OpenAI](/image/config/experimental-openai.png){width=500}{class=ab-shadow-card}
 
 - **启用 OpenAI** 启用 OpenAI 并使用 ChatGPT 进行标题解析。
 - **OpenAI API 类型** 默认为 OpenAI。
@@ -24,7 +24,7 @@ output: '{"group": "喵萌奶茶屋", "title_en": "Summer Time Rendering", "reso
 ## Microsoft Azure OpenAI
 
 
-![experimental Microsoft Azure OpenAI](../image/config/experimental-azure-openai.png){width=500}{class=ab-shadow-card}
+![experimental Microsoft Azure OpenAI](/image/config/experimental-azure-openai.png){width=500}{class=ab-shadow-card}
 
 除了标准 OpenAI 外，[版本 3.1.8](https://github.com/EstrellaXD/Auto_Bangumi/releases/tag/3.1.8) 添加了 Microsoft Azure OpenAI 支持。使用方式与标准 OpenAI 类似，共享部分参数，但请注意以下几点：
 

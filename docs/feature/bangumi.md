@@ -2,15 +2,15 @@
 
 点击首页的番剧海报可管理单个番剧条目。
 
-![Bangumi List](../image/feature/bangumi-list.png)
+![Bangumi List](/image/feature/bangumi-list.png)
 
 如果一部番剧有多个下载规则（例如不同字幕组），将出现规则选择弹窗：
 
-![Rule Selection](../image/feature/rule-select.png)
+![Rule Selection](/image/feature/rule-select.png)
 
 选择规则后，编辑弹窗打开：
 
-![Edit Bangumi](../image/feature/bangumi-edit.png)
+![Edit Bangumi](/image/feature/bangumi-edit.png)
 
 ## 通知徽章
 
@@ -76,7 +76,7 @@ AB 可以在以下情况自动归档番剧：
 
 点击编辑弹窗中的 **高级设置** 访问更多选项：
 
-![Advanced Settings](../image/feature/bangumi-edit-advanced.png)
+![Advanced Settings](/image/feature/bangumi-edit-advanced.png)
 
 - **季度偏移**：调整季度编号偏移
 - **剧集偏移**：调整剧集编号偏移

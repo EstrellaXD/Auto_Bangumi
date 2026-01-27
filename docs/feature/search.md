@@ -10,7 +10,7 @@
 
 搜索栏位于 AB 顶栏。点击打开搜索面板。
 
-![Search Panel](../image/feature/search-panel.png)
+![Search Panel](/image/feature/search-panel.png)
 
 选择资源站，输入关键词，AB 将自动解析并显示搜索结果。要添加番剧，点击卡片右侧的添加按钮。
 
@@ -26,7 +26,7 @@
 
 导航至 **配置** → **搜索源** 访问设置面板。
 
-![Search Provider Settings](../image/feature/search-provider.png)
+![Search Provider Settings](/image/feature/search-provider.png)
 
 在这里您可以：
 - **查看** 所有已配置的搜索源

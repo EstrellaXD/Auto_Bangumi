@@ -11,7 +11,7 @@ AutoBangumi 可以自动解析聚合 RSS 订阅源，并根据字幕组和番剧
 
 本项目基于 Mikan Project 提供的 RSS 链接进行解析。要启用自动追番功能，您需要注册并获取 Mikan Project 的 RSS 链接：
 
-![image](../image/rss/rss-token.png){data-zoomable}
+![image](/image/rss/rss-token.png){data-zoomable}
 
 RSS 链接格式如下：
 
@@ -25,7 +25,7 @@ https://mikanime.tv/RSS/MyBangumi?token=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 由于 AutoBangumi 会解析接收到的所有 RSS 条目，订阅时请注意以下几点：
 
-![image](../image/rss/advanced-subscription.png){data-zoomable}
+![image](/image/rss/advanced-subscription.png){data-zoomable}
 
 - 在个人设置中启用高级选项。
 - 每部番剧只订阅一个字幕组。点击 Mikan Project 上的番剧海报打开子菜单，选择单个字幕组。

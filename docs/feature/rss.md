@@ -8,7 +8,7 @@ title: RSS 管理
 
 RSS 管理页面显示您所有的 RSS 订阅及其连接状态。
 
-![RSS Manager](../image/feature/rss-manager.png)
+![RSS Manager](/image/feature/rss-manager.png)
 
 ### 连接状态
 
