@@ -90,7 +90,7 @@ docker compose up -d
 
 访问 [Mikan Project][mikan-project]，注册账号并登录，然后点击右下角的 **RSS** 按钮并复制链接。
 
-![mikan-rss](../image/rss/rss-token.png){data-zoomable}
+![mikan-rss](/image/rss/rss-token.png){data-zoomable}
 
 RSS 链接格式如下：
 

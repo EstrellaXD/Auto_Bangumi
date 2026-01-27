@@ -2,7 +2,7 @@
 
 从 v3.2 开始，AB 包含日历视图，按播出日期显示您订阅的番剧。
 
-![Calendar](../image/feature/calendar.png)
+![Calendar](/image/feature/calendar.png)
 
 ## 功能
 

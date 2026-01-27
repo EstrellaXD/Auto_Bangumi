@@ -2,7 +2,7 @@
 
 ## WebUI 配置
 
-![notification](../image/config/notifier.png){width=500}{class=ab-shadow-card}
+![notification](/image/config/notifier.png){width=500}{class=ab-shadow-card}
 
 <br/>
 

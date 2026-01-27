@@ -4,9 +4,9 @@ title: 关于
 
 <p align="center">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../image/icons/dark-icon.svg">
-  <source media="(prefers-color-scheme: light)" srcset="../image/icons/light-icon.svg">
-  <img src="../image/icons/light-icon.svg" width=50%>
+  <source media="(prefers-color-scheme: dark)" srcset="/image/icons/dark-icon.svg">
+  <source media="(prefers-color-scheme: light)" srcset="/image/icons/light-icon.svg">
+  <img src="/image/icons/light-icon.svg" width=50%>
 </picture>
 </p>
 
@@ -18,7 +18,7 @@ title: 关于
   <img
     title="AutoBangumi WebUI"
     alt="AutoBangumi WebUI"
-    src="../image/preview/window.png"
+    src="/image/preview/window.png"
     width=85%
     data-zoomable
   >
