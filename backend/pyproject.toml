@@ -1,6 +1,6 @@
 [project]
 name = "auto-bangumi"
-version = "3.2.0-beta.13"
+version = "3.2.1"
 description = "AutoBangumi - Automated anime download manager"
 requires-python = ">=3.13"
 dependencies = [
