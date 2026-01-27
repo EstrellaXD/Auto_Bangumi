@@ -121,10 +121,14 @@ class DownloadClient(TorrentPath):
         return await self.client.torrents_files(torrent_hash=torrent_hash)
 
     async def rename_torrent_file(self, _hash, old_path, new_path) -> bool:
-        logger.info(f"{old_path} >> {new_path}")
-        return await self.client.torrents_rename_file(
+        result = await self.client.torrents_rename_file(
             torrent_hash=_hash, old_path=old_path, new_path=new_path
         )
+        if result:
+            logger.info(f"{old_path} >> {new_path}")
+        else:
+            logger.debug(f"[Downloader] Rename failed: {old_path} >> {new_path}")
+        return result
 
     async def delete_torrent(self, hashes, delete_files: bool = True):
         await self.client.torrents_delete(hashes, delete_files=delete_files)
