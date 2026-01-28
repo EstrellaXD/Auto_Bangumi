@@ -30,7 +30,10 @@ CHINESE_NUMBER_MAP = {
 
 
 def get_group(name: str) -> str:
-    return re.split(r"[\[\]]", name)[1]
+    parts = re.split(r"[\[\]]", name)
+    if len(parts) > 1:
+        return parts[1]
+    return ""
 
 
 def pre_process(raw_name: str) -> str:
