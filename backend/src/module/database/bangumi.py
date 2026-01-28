@@ -365,6 +365,14 @@ class BangumiDatabase:
         logger.debug(f"[Database] Find bangumi id: {_id}.")
         return bangumi
 
+    def search_ids(self, ids: list[int]) -> list[Bangumi]:
+        """Batch lookup multiple bangumi by their IDs."""
+        if not ids:
+            return []
+        statement = select(Bangumi).where(Bangumi.id.in_(ids))
+        result = self.session.execute(statement)
+        return list(result.scalars().all())
+
     def match_poster(self, bangumi_name: str) -> str:
         statement = select(Bangumi).where(
             func.instr(bangumi_name, Bangumi.official_title) > 0

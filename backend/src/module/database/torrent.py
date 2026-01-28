@@ -36,9 +36,7 @@ class TorrentDatabase:
         logger.debug(f"Update {data.name} in database.")
 
     def search(self, _id: int) -> Torrent | None:
-        result = self.session.execute(
-            select(Torrent).where(Torrent.id == _id)
-        )
+        result = self.session.execute(select(Torrent).where(Torrent.id == _id))
         return result.scalar_one_or_none()
 
     def search_all(self) -> list[Torrent]:
@@ -46,9 +44,7 @@ class TorrentDatabase:
         return list(result.scalars().all())
 
     def search_rss(self, rss_id: int) -> list[Torrent]:
-        result = self.session.execute(
-            select(Torrent).where(Torrent.rss_id == rss_id)
-        )
+        result = self.session.execute(select(Torrent).where(Torrent.rss_id == rss_id))
         return list(result.scalars().all())
 
     def check_new(self, torrents_list: list[Torrent]) -> list[Torrent]:
@@ -62,16 +58,21 @@ class TorrentDatabase:
 
     def search_by_qb_hash(self, qb_hash: str) -> Torrent | None:
         """Find torrent by qBittorrent hash."""
-        result = self.session.execute(
-            select(Torrent).where(Torrent.qb_hash == qb_hash)
-        )
+        result = self.session.execute(select(Torrent).where(Torrent.qb_hash == qb_hash))
         return result.scalar_one_or_none()
+
+    def search_by_qb_hashes(self, qb_hashes: list[str]) -> list[Torrent]:
+        """Find torrents by multiple qBittorrent hashes (batch query)."""
+        if not qb_hashes:
+            return []
+        result = self.session.execute(
+            select(Torrent).where(Torrent.qb_hash.in_(qb_hashes))
+        )
+        return list(result.scalars().all())
 
     def search_by_url(self, url: str) -> Torrent | None:
         """Find torrent by URL."""
-        result = self.session.execute(
-            select(Torrent).where(Torrent.url == url)
-        )
+        result = self.session.execute(select(Torrent).where(Torrent.url == url))
         return result.scalar_one_or_none()
 
     def update_qb_hash(self, torrent_id: int, qb_hash: str) -> bool:
