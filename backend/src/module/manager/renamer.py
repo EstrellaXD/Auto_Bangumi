@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import re
+import time
 
 from module.conf import settings
 from module.database import Database
@@ -9,6 +10,12 @@ from module.models import EpisodeFile, Notification, SubtitleFile
 from module.parser import TitleParser
 
 logger = logging.getLogger(__name__)
+
+# Module-level cache to track pending renames that qBittorrent hasn't processed yet
+# Key: (torrent_hash, old_path, new_path), Value: timestamp of last attempt
+# This prevents spamming the same rename when qBittorrent returns 200 but doesn't actually rename
+_pending_renames: dict[tuple[str, str, str], float] = {}
+_PENDING_RENAME_COOLDOWN = 300  # 5 minutes cooldown before retrying same rename
 
 
 class Renamer(DownloadClient):
@@ -100,9 +107,21 @@ class Renamer(DownloadClient):
             )
             if media_path != new_path:
                 if new_path not in self.check_pool.keys():
+                    # Check if this rename was recently attempted but didn't take effect
+                    # (qBittorrent can return 200 but delay actual rename while seeding)
+                    pending_key = (_hash, media_path, new_path)
+                    last_attempt = _pending_renames.get(pending_key)
+                    if last_attempt and (time.time() - last_attempt) < _PENDING_RENAME_COOLDOWN:
+                        logger.debug(
+                            f"[Renamer] Skipping rename (pending cooldown): {media_path}"
+                        )
+                        return None
+
                     if await self.rename_torrent_file(
                         _hash=_hash, old_path=media_path, new_path=new_path
                     ):
+                        # Rename verified successful, remove from pending cache
+                        _pending_renames.pop(pending_key, None)
                         # Season comes from folder which already has offset applied
                         # Only apply episode offset
                         original_ep = int(ep.episode)
@@ -114,6 +133,18 @@ class Renamer(DownloadClient):
                             season=ep.season,
                             episode=adjusted_episode,
                         )
+                    else:
+                        # Rename API returned success but file wasn't actually renamed
+                        # Add to pending cache to avoid spamming
+                        _pending_renames[pending_key] = time.time()
+                        # Clean up old entries from cache
+                        current_time = time.time()
+                        expired_keys = [
+                            k for k, v in _pending_renames.items()
+                            if current_time - v > _PENDING_RENAME_COOLDOWN * 2
+                        ]
+                        for k in expired_keys:
+                            _pending_renames.pop(k, None)
         else:
             logger.warning(f"[Renamer] {media_path} parse failed")
             if settings.bangumi_manage.remove_bad_torrent:
@@ -263,8 +294,9 @@ class Renamer(DownloadClient):
                 # Then try matching by torrent name
                 bangumi = db.bangumi.match_torrent(torrent_name)
                 if bangumi:
-                    logger.debug(
-                        f"[Renamer] Found offsets via torrent name match: ep={bangumi.episode_offset}, season={bangumi.season_offset}"
+                    logger.info(
+                        f"[Renamer] Matched bangumi '{bangumi.official_title}' (id={bangumi.id}) via name, "
+                        f"offsets: ep={bangumi.episode_offset}, season={bangumi.season_offset}"
                     )
                     return bangumi.episode_offset, bangumi.season_offset
 
@@ -275,14 +307,15 @@ class Renamer(DownloadClient):
                     # Try with normalized path if exact match failed
                     bangumi = db.bangumi.match_by_save_path(normalized_save_path)
                 if bangumi:
-                    logger.debug(
-                        f"[Renamer] Found offsets via save_path match: ep={bangumi.episode_offset}, season={bangumi.season_offset}"
+                    logger.info(
+                        f"[Renamer] Matched bangumi '{bangumi.official_title}' (id={bangumi.id}) via save_path, "
+                        f"offsets: ep={bangumi.episode_offset}, season={bangumi.season_offset}"
                     )
                     return bangumi.episode_offset, bangumi.season_offset
 
-                logger.debug(
-                    f"[Renamer] No bangumi found for torrent: hash={torrent_hash[:8] if torrent_hash else 'N/A'}, "
-                    f"name={torrent_name[:50] if torrent_name else 'N/A'}..., path={save_path}"
+                logger.info(
+                    f"[Renamer] No bangumi match for torrent (using offset=0): "
+                    f"name={torrent_name[:60] if torrent_name else 'N/A'}..."
                 )
         except Exception as e:
             logger.debug(f"[Renamer] Could not lookup offsets for {save_path}: {e}")

@@ -202,7 +202,23 @@ class QbDownloader:
             if resp.status_code == 409:
                 logger.debug(f"Conflict409Error: {old_path} >> {new_path}")
                 return False
-            return resp.status_code == 200
+            if resp.status_code != 200:
+                return False
+
+            # Verify the rename actually happened by checking file list
+            # qBittorrent can return 200 but delay the actual rename (e.g., while seeding)
+            await asyncio.sleep(0.5)  # Brief delay to allow qBittorrent to process
+            files = await self.torrents_files(torrent_hash)
+            for f in files:
+                if f.get("name") == new_path:
+                    return True
+                if f.get("name") == old_path:
+                    # File still has old name - rename didn't actually happen
+                    logger.debug(
+                        f"[Downloader] Rename API returned 200 but file unchanged: {old_path}"
+                    )
+                    return False
+            return True  # new_path found or old_path not found
         except (httpx.ConnectError, httpx.RequestError, httpx.TimeoutException) as e:
             logger.warning(f"[Downloader] Failed to rename file {old_path}: {e}")
             return False
