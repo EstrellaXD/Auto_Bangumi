@@ -36,7 +36,7 @@ DEFAULT_SETTINGS = {
         "username": "",
         "password": "",
     },
-    "notification": {"enable": False, "type": "telegram", "token": "", "chat_id": ""},
+    "notification": {"enable": False, "providers": []},
     "experimental_openai": {
         "enable": False,
         "api_key": "",

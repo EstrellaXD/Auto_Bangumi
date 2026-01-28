@@ -10,6 +10,7 @@ from .program import router as program_router
 from .rss import router as rss_router
 from .search import router as search_router
 from .setup import router as setup_router
+from .notification import router as notification_router
 
 __all__ = "v1"
 
@@ -25,3 +26,4 @@ v1.include_router(downloader_router)
 v1.include_router(rss_router)
 v1.include_router(search_router)
 v1.include_router(setup_router)
+v1.include_router(notification_router)

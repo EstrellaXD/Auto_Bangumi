@@ -13,7 +13,16 @@ export type RenameMethod = ['normal', 'pn', 'advance', 'none'];
 /** 代理类型 */
 export type ProxyType = ['http', 'https', 'socks5'];
 /** 通知类型 */
-export type NotificationType = ['telegram', 'server-chan', 'bark', 'wecom'];
+export type NotificationType = [
+  'telegram',
+  'discord',
+  'bark',
+  'server-chan',
+  'wecom',
+  'gotify',
+  'pushover',
+  'webhook',
+];
 /** OpenAI Model List */
 export type OpenAIModel = ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'];
 /** OpenAI API Type */
@@ -60,11 +69,30 @@ export interface Proxy {
   username: string;
   password: string;
 }
+/** Notification provider configuration */
+export interface NotificationProviderConfig {
+  type: TupleToUnion<NotificationType>;
+  enabled: boolean;
+  // Common fields
+  token?: string;
+  chat_id?: string;
+  // Provider-specific fields
+  webhook_url?: string;
+  server_url?: string;
+  device_key?: string;
+  user_key?: string;
+  api_token?: string;
+  template?: string;
+  url?: string;
+}
+
 export interface Notification {
   enable: boolean;
-  type: 'telegram' | 'server-chan' | 'bark' | 'wecom';
-  token: string;
-  chat_id: string;
+  providers: NotificationProviderConfig[];
+  // Legacy fields (deprecated, for backward compatibility)
+  type?: 'telegram' | 'server-chan' | 'bark' | 'wecom';
+  token?: string;
+  chat_id?: string;
 }
 export interface ExperimentalOpenAI {
   enable: boolean;
@@ -131,9 +159,7 @@ export const initConfig: Config = {
   },
   notification: {
     enable: false,
-    type: 'telegram',
-    token: '',
-    chat_id: '',
+    providers: [],
   },
   experimental_openai: {
     enable: false,

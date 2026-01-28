@@ -4,7 +4,7 @@ import logging
 from module.conf import settings
 from module.downloader import DownloadClient
 from module.manager import Renamer, TorrentManager, eps_complete
-from module.notification import PostNotification
+from module.notification import NotificationManager
 from module.rss import RSSAnalyser, RSSEngine
 
 from .offset_scanner import OffsetScanner
@@ -66,10 +66,9 @@ class RenameThread(ProgramStatus):
             async with Renamer() as renamer:
                 renamed_info = await renamer.rename()
             if settings.notification.enable and renamed_info:
-                async with PostNotification() as notifier:
-                    await asyncio.gather(
-                        *[notifier.send_msg(info) for info in renamed_info]
-                    )
+                manager = NotificationManager()
+                for info in renamed_info:
+                    await manager.send_all(info)
             try:
                 await asyncio.wait_for(
                     self.stop_event.wait(),

@@ -43,11 +43,22 @@
       "web_port": "网页端口"
     },
     "notification_set": {
-      "chat_id": "Chat ID",
-      "enable": "启用",
       "title": "通知设置",
+      "enable": "启用",
+      "enabled": "已启用",
+      "disabled": "已禁用",
+      "type": "类型",
       "token": "Token",
-      "type": "类型"
+      "chat_id": "Chat ID",
+      "add_provider": "添加通知服务",
+      "edit_provider": "编辑通知服务",
+      "remove": "删除",
+      "edit": "编辑",
+      "test": "测试",
+      "enable_provider": "启用",
+      "disable": "禁用",
+      "test_success": "测试成功",
+      "test_failed": "测试失败"
     },
     "parser_set": {
       "enable": "启用",

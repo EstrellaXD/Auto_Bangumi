@@ -61,10 +61,10 @@ class TestConfigDefaults:
         assert config.proxy.type == "http"
 
     def test_notification_defaults(self):
-        """Notification is disabled by default."""
+        """Notification is disabled by default with empty providers."""
         config = Config()
         assert config.notification.enable is False
-        assert config.notification.type == "telegram"
+        assert config.notification.providers == []
 
 
 # ---------------------------------------------------------------------------

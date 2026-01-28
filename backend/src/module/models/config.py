@@ -1,7 +1,7 @@
 from os.path import expandvars
-from typing import Literal
+from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class Program(BaseModel):
@@ -68,19 +68,106 @@ class Proxy(BaseModel):
         return expandvars(self.password_)
 
 
+class NotificationProvider(BaseModel):
+    """Configuration for a single notification provider."""
+
+    type: str = Field(..., description="Provider type (telegram, discord, bark, etc.)")
+    enabled: bool = Field(True, description="Whether this provider is enabled")
+
+    # Common fields (with env var expansion)
+    token_: Optional[str] = Field(None, alias="token", description="Auth token")
+    chat_id_: Optional[str] = Field(None, alias="chat_id", description="Chat/channel ID")
+
+    # Provider-specific fields
+    webhook_url_: Optional[str] = Field(
+        None, alias="webhook_url", description="Webhook URL for discord/wecom"
+    )
+    server_url_: Optional[str] = Field(
+        None, alias="server_url", description="Server URL for gotify/bark"
+    )
+    device_key_: Optional[str] = Field(
+        None, alias="device_key", description="Device key for bark"
+    )
+    user_key_: Optional[str] = Field(
+        None, alias="user_key", description="User key for pushover"
+    )
+    api_token_: Optional[str] = Field(
+        None, alias="api_token", description="API token for pushover"
+    )
+    template: Optional[str] = Field(
+        None, description="Custom template for webhook provider"
+    )
+    url_: Optional[str] = Field(
+        None, alias="url", description="URL for generic webhook provider"
+    )
+
+    @property
+    def token(self) -> str:
+        return expandvars(self.token_) if self.token_ else ""
+
+    @property
+    def chat_id(self) -> str:
+        return expandvars(self.chat_id_) if self.chat_id_ else ""
+
+    @property
+    def webhook_url(self) -> str:
+        return expandvars(self.webhook_url_) if self.webhook_url_ else ""
+
+    @property
+    def server_url(self) -> str:
+        return expandvars(self.server_url_) if self.server_url_ else ""
+
+    @property
+    def device_key(self) -> str:
+        return expandvars(self.device_key_) if self.device_key_ else ""
+
+    @property
+    def user_key(self) -> str:
+        return expandvars(self.user_key_) if self.user_key_ else ""
+
+    @property
+    def api_token(self) -> str:
+        return expandvars(self.api_token_) if self.api_token_ else ""
+
+    @property
+    def url(self) -> str:
+        return expandvars(self.url_) if self.url_ else ""
+
+
 class Notification(BaseModel):
-    enable: bool = Field(False, description="Enable notification")
-    type: str = Field("telegram", description="Notification type")
-    token_: str = Field("", alias="token", description="Notification token")
-    chat_id_: str = Field("", alias="chat_id", description="Notification chat id")
+    """Notification configuration supporting multiple providers."""
+
+    enable: bool = Field(False, description="Enable notification system")
+    providers: list[NotificationProvider] = Field(
+        default_factory=list, description="List of notification providers"
+    )
+
+    # Legacy fields for backward compatibility (deprecated)
+    type: Optional[str] = Field(None, description="[Deprecated] Use providers instead")
+    token_: Optional[str] = Field(None, alias="token", description="[Deprecated]")
+    chat_id_: Optional[str] = Field(None, alias="chat_id", description="[Deprecated]")
 
     @property
-    def token(self):
-        return expandvars(self.token_)
+    def token(self) -> str:
+        return expandvars(self.token_) if self.token_ else ""
 
     @property
-    def chat_id(self):
-        return expandvars(self.chat_id_)
+    def chat_id(self) -> str:
+        return expandvars(self.chat_id_) if self.chat_id_ else ""
+
+    @model_validator(mode="after")
+    def migrate_legacy_config(self) -> "Notification":
+        """Auto-migrate old single-provider config to new format."""
+        if self.type and not self.providers:
+            # Old format detected, migrate to new format
+            legacy_provider = NotificationProvider(
+                type=self.type,
+                enabled=True,
+                token=self.token_ or "",
+                chat_id=self.chat_id_ or "",
+            )
+            self.providers = [legacy_provider]
+        return self
 
 
 class ExperimentalOpenAI(BaseModel):

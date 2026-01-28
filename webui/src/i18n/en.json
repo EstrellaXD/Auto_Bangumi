@@ -43,11 +43,22 @@
       "web_port": "WebUI Port"
     },
     "notification_set": {
-      "chat_id": "Chat ID",
-      "enable": "Enable",
       "title": "Notification Setting",
+      "enable": "Enable",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "type": "Type",
       "token": "Token",
-      "type": "Type"
+      "chat_id": "Chat ID",
+      "add_provider": "Add Provider",
+      "edit_provider": "Edit Provider",
+      "remove": "Remove",
+      "edit": "Edit",
+      "test": "Test",
+      "enable_provider": "Enable",
+      "disable": "Disable",
+      "test_success": "Test successful",
+      "test_failed": "Test failed"
     },
     "parser_set": {
       "enable": "Enable",
