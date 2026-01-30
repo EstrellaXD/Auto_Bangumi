@@ -67,20 +67,13 @@ class Renamer(DownloadClient):
         # Apply episode offset
         original_episode = int(file_info.episode)
         adjusted_episode = original_episode + episode_offset
-        if adjusted_episode < 1:
-            if original_episode < 1:
-                # Parsed episode is 0 or negative - likely a parsing issue or special episode
-                # Use episode 1 as fallback to avoid invalid filenames
-                adjusted_episode = 1
-                logger.debug(
-                    f"[Renamer] Parsed episode {original_episode} is invalid, using episode 1"
-                )
-            else:
-                # Offset would make episode negative - ignore the offset
-                adjusted_episode = original_episode
-                logger.warning(
-                    f"[Renamer] Episode offset {episode_offset} would make episode {original_episode} negative, ignoring offset"
-                )
+        # Episode 0 is valid (specials, OVAs, etc.) - only handle truly negative results
+        if adjusted_episode < 0:
+            # Offset would make episode negative - ignore the offset
+            adjusted_episode = original_episode
+            logger.warning(
+                f"[Renamer] Episode offset {episode_offset} would make episode {original_episode} negative, ignoring offset"
+            )
         episode = f"0{adjusted_episode}" if adjusted_episode < 10 else adjusted_episode
         if method == "none" or method == "subtitle_none":
             return file_info.media_path
@@ -148,8 +141,9 @@ class Renamer(DownloadClient):
                         # Only apply episode offset
                         original_ep = int(ep.episode)
                         adjusted_episode = original_ep + episode_offset
-                        if adjusted_episode < 1:
-                            adjusted_episode = 1 if original_ep < 1 else original_ep
+                        # Episode 0 is valid - only handle truly negative results
+                        if adjusted_episode < 0:
+                            adjusted_episode = original_ep
                         return Notification(
                             official_title=bangumi_name,
                             season=ep.season,

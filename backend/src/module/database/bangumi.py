@@ -389,11 +389,13 @@ class BangumiDatabase:
         # Include both title_raw and all aliases
         title_index: dict[str, Bangumi] = {}
         for m in match_datas:
-            # Add main title_raw
-            title_index[m.title_raw] = m
+            # Add main title_raw (skip if None to avoid TypeError in sorted())
+            if m.title_raw:
+                title_index[m.title_raw] = m
             # Add all aliases
             for alias in _get_aliases_list(m):
-                title_index[alias] = m
+                if alias:
+                    title_index[alias] = m
 
         # Build compiled regex pattern for fast substring matching
         # Sort by length descending so longer (more specific) matches are found first
