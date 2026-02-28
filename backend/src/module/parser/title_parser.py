@@ -3,7 +3,7 @@ import logging
 import time
 
 from module.conf import settings
-from module.models import Bangumi
+from module.models import Bangumi, Movie
 from module.models.bangumi import Episode
 from module.models.config import LLM
 from module.parser.analyser import (
@@ -254,8 +254,62 @@ class TitleParser:
             logger.warning("Please change bangumi info manually.")
 
     @staticmethod
-    async def raw_parser(raw: str) -> Bangumi | None:
+    def _resolve_titles(episode: Episode) -> tuple[str | None, str | None]:
+        """Extract official_title and title_raw from an Episode."""
         language = settings.rss_parser.language
+        titles = {
+            "zh": episode.title_zh,
+            "en": episode.title_en,
+            "jp": episode.title_jp,
+        }
+        title_raw = episode.title_en or episode.title_zh or episode.title_jp
+        if titles[language]:
+            official_title = titles[language]
+        elif titles["zh"]:
+            official_title = titles["zh"]
+        elif titles["en"]:
+            official_title = titles["en"]
+        elif titles["jp"]:
+            official_title = titles["jp"]
+        else:
+            official_title = title_raw
+        return official_title, title_raw
+
+    @staticmethod
+    def _episode_to_bangumi(
+        episode: Episode, official_title: str, title_raw: str
+    ) -> Bangumi:
+        return Bangumi(
+            official_title=official_title,
+            title_raw=title_raw,
+            season=episode.season,
+            season_raw=episode.season_raw,
+            group_name=episode.group,
+            dpi=episode.resolution,
+            source=episode.source,
+            subtitle=episode.sub,
+            eps_collect=False if episode.episode > 1 else True,
+            episode_offset=0,
+            filter=",".join(settings.rss_parser.filter),
+            episode_type=episode.episode_type,
+        )
+
+    @staticmethod
+    def _episode_to_movie(
+        episode: Episode, official_title: str, title_raw: str
+    ) -> Movie:
+        return Movie(
+            official_title=official_title,
+            title_raw=title_raw,
+            group_name=episode.group,
+            dpi=episode.resolution,
+            source=episode.source,
+            subtitle=episode.sub,
+            filter=",".join(settings.rss_parser.filter),
+        )
+
+    @staticmethod
+    async def raw_parser(raw: str) -> Bangumi | Movie | None:
         try:
             llm_conf = _llm_config()
             episode = None
@@ -280,41 +334,21 @@ class TitleParser:
                 if detected_episode_type is not None:
                     episode.episode_type = detected_episode_type
 
-            titles = {
-                "zh": episode.title_zh,
-                "en": episode.title_en,
-                "jp": episode.title_jp,
-            }
-            title_raw = episode.title_en or episode.title_zh or episode.title_jp
-            if titles[language]:
-                official_title = titles[language]
-            elif titles["zh"]:
-                official_title = titles["zh"]
-            elif titles["en"]:
-                official_title = titles["en"]
-            elif titles["jp"]:
-                official_title = titles["jp"]
-            else:
-                official_title = title_raw
+            official_title, title_raw = TitleParser._resolve_titles(episode)
             if not title_raw:
                 logger.warning("Cannot extract title_raw from '%s', skipping", raw)
                 return None
-            _season = episode.season
+            if not official_title:
+                logger.warning("Cannot extract official_title from '%s', skipping", raw)
+                return None
             logger.debug("RAW:%s >> %s", raw, title_raw)
-            return Bangumi(
-                official_title=official_title,
-                title_raw=title_raw,
-                season=_season,
-                season_raw=episode.season_raw,
-                group_name=episode.group,
-                dpi=episode.resolution,
-                source=episode.source,
-                subtitle=episode.sub,
-                eps_collect=False if episode.episode > 1 else True,
-                offset=0,
-                filter=",".join(settings.rss_parser.filter),
-                episode_type=episode.episode_type,
-            )
+
+            # The upstream LLM path exposes its inferred non-episodic type on a
+            # Bangumi.  Keep that contract while routing deterministically parsed
+            # movie markers into the dedicated local Movie table.
+            if episode.episode_type == "movie" and not from_llm:
+                return TitleParser._episode_to_movie(episode, official_title, title_raw)
+            return TitleParser._episode_to_bangumi(episode, official_title, title_raw)
         except (ValueError, AttributeError, TypeError) as e:
             logger.warning(f"Cannot parse '{raw}': {type(e).__name__}: {e}")
             return None

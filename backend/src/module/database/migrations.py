@@ -17,7 +17,7 @@ from pydantic_core import PydanticUndefined
 from sqlalchemy import Connection, Engine, inspect, text
 from sqlmodel import SQLModel
 
-from module.models import ApiToken, AuthSession, Bangumi, User
+from module.models import ApiToken, AuthSession, Bangumi, Movie, User
 from module.models.inbox import InboxMessage
 from module.models.llm_credential import LLMCredential
 from module.models.passkey import Passkey
@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 # 所有需要进行空值填充的表模型
 TABLE_MODELS: list[type[SQLModel]] = [
     Bangumi,
+    Movie,
     RSSItem,
     Torrent,
     User,
@@ -511,6 +512,110 @@ MIGRATIONS: tuple[Migration, ...] = (
         # the composite index. The schema_version gate makes this one-time, so
         # every database still below v20 must run the transactional rebuild.
         lambda _inspector: False,
+    ),
+    Migration(
+        21,
+        "create movie table for standalone movie subscriptions",
+        (
+            """CREATE TABLE IF NOT EXISTS movie (
+                id INTEGER PRIMARY KEY,
+                official_title VARCHAR NOT NULL,
+                title_raw VARCHAR,
+                year INTEGER,
+                group_name VARCHAR,
+                dpi VARCHAR,
+                source VARCHAR,
+                subtitle VARCHAR,
+                poster_link VARCHAR,
+                rss_link VARCHAR,
+                added BOOLEAN NOT NULL DEFAULT 0,
+                deleted BOOLEAN NOT NULL DEFAULT 0,
+                save_path VARCHAR,
+                rule_name VARCHAR,
+                filter VARCHAR NOT NULL DEFAULT ''
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_movie_title_raw ON movie(title_raw)",
+            "CREATE INDEX IF NOT EXISTS ix_movie_deleted ON movie(deleted)",
+        ),
+        all_checks(
+            table_exists("movie"),
+            index_exists("movie", "ix_movie_title_raw"),
+            index_exists("movie", "ix_movie_deleted"),
+        ),
+        (
+            (
+                """CREATE TABLE IF NOT EXISTS movie (
+                    id INTEGER PRIMARY KEY,
+                    official_title VARCHAR NOT NULL,
+                    title_raw VARCHAR,
+                    year INTEGER,
+                    group_name VARCHAR,
+                    dpi VARCHAR,
+                    source VARCHAR,
+                    subtitle VARCHAR,
+                    poster_link VARCHAR,
+                    rss_link VARCHAR,
+                    added BOOLEAN NOT NULL DEFAULT 0,
+                    deleted BOOLEAN NOT NULL DEFAULT 0,
+                    save_path VARCHAR,
+                    rule_name VARCHAR,
+                    filter VARCHAR NOT NULL DEFAULT ''
+                )""",
+                table_exists("movie"),
+            ),
+            (
+                "CREATE INDEX IF NOT EXISTS ix_movie_title_raw ON movie(title_raw)",
+                index_exists("movie", "ix_movie_title_raw"),
+            ),
+            (
+                "CREATE INDEX IF NOT EXISTS ix_movie_deleted ON movie(deleted)",
+                index_exists("movie", "ix_movie_deleted"),
+            ),
+        ),
+    ),
+    Migration(
+        22,
+        "repair multi-user v18 fields after the divergent movie development schema",
+        (
+            "ALTER TABLE user ADD COLUMN enabled BOOLEAN NOT NULL DEFAULT 1",
+            "ALTER TABLE user ADD COLUMN created_at TIMESTAMP NOT NULL "
+            "DEFAULT '1970-01-01 00:00:00'",
+            "ALTER TABLE user ADD COLUMN updated_at TIMESTAMP NOT NULL "
+            "DEFAULT '1970-01-01 00:00:00'",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_user_username ON user(username)",
+            "CREATE INDEX IF NOT EXISTS ix_user_enabled ON user(enabled)",
+        ),
+        all_checks(
+            column_exists("user", "enabled"),
+            column_exists("user", "created_at"),
+            column_exists("user", "updated_at"),
+            index_exists("user", "ix_user_username"),
+            index_exists("user", "ix_user_enabled"),
+        ),
+        (
+            (
+                "ALTER TABLE user ADD COLUMN enabled BOOLEAN NOT NULL DEFAULT 1",
+                column_exists("user", "enabled"),
+            ),
+            (
+                "ALTER TABLE user ADD COLUMN created_at TIMESTAMP NOT NULL "
+                "DEFAULT '1970-01-01 00:00:00'",
+                column_exists("user", "created_at"),
+            ),
+            (
+                "ALTER TABLE user ADD COLUMN updated_at TIMESTAMP NOT NULL "
+                "DEFAULT '1970-01-01 00:00:00'",
+                column_exists("user", "updated_at"),
+            ),
+            (
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_user_username ON user(username)",
+                index_exists("user", "ix_user_username"),
+            ),
+            (
+                "CREATE INDEX IF NOT EXISTS ix_user_enabled ON user(enabled)",
+                index_exists("user", "ix_user_enabled"),
+            ),
+        ),
     ),
 )
 

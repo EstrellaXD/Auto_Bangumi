@@ -86,6 +86,16 @@ class Renamer:
         return f"0{episode}" if episode < 10 else str(episode)
 
     @staticmethod
+    def gen_movie_path(
+        file_info: EpisodeFile | SubtitleFile,
+        movie_name: str,
+        method: str,
+    ) -> str:
+        if method in ("none", "subtitle_none"):
+            return file_info.media_path
+        return f"{movie_name}{file_info.suffix}"
+
+    @staticmethod
     def gen_path(
         file_info: EpisodeFile | SubtitleFile,
         bangumi_name: str,
@@ -236,6 +246,35 @@ class Renamer:
         if stem.startswith(prefix):
             stem = stem[len(prefix) :]
         return f"{base} - {stem}{suffix}"
+
+    async def rename_movie_file(
+        self,
+        torrent_name: str,
+        media_path: str,
+        movie_name: str,
+        method: str,
+        _hash: str,
+        **kwargs,
+    ):
+        ep = self._parser.torrent_parser(
+            torrent_name=torrent_name,
+            torrent_path=media_path,
+            episode_type="movie",
+        )
+        if ep:
+            new_path = self.gen_movie_path(ep, movie_name, method=method)
+            if media_path != new_path:
+                if await self.client.rename_torrent_file(
+                    _hash=_hash, old_path=media_path, new_path=new_path
+                ):
+                    return Notification(
+                        official_title=movie_name,
+                        season=0,
+                        episode=0,
+                    )
+        else:
+            logger.warning(f"{media_path} parse failed (movie)")
+        return None
 
     async def rename_collection(
         self,

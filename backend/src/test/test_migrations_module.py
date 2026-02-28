@@ -244,6 +244,60 @@ def _columns(engine, table: str) -> set[str]:
     return {c["name"] for c in inspect(engine).get_columns(table)}
 
 
+def _run_through_version(
+    engine: Engine,
+    version: int,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Run the real migration table only through one historical version."""
+    historical = tuple(item for item in MIGRATIONS if item.version <= version)
+    with monkeypatch.context() as patch:
+        patch.setattr(migration_module, "MIGRATIONS", historical)
+        patch.setattr(migration_module, "CURRENT_SCHEMA_VERSION", version)
+        run_migrations(engine)
+
+
+def _make_v18_movie_engine(monkeypatch: pytest.MonkeyPatch) -> Engine:
+    """A database produced by the divergent tokenizer dev branch where v18=Movie."""
+    engine = _make_v0_engine()
+    _run_through_version(engine, 17, monkeypatch)
+    with engine.begin() as conn:
+        conn.execute(text("""CREATE TABLE movie (
+                    id INTEGER PRIMARY KEY,
+                    official_title VARCHAR NOT NULL,
+                    title_raw VARCHAR,
+                    year INTEGER,
+                    group_name VARCHAR,
+                    dpi VARCHAR,
+                    source VARCHAR,
+                    subtitle VARCHAR,
+                    poster_link VARCHAR,
+                    rss_link VARCHAR,
+                    added BOOLEAN NOT NULL DEFAULT 0,
+                    deleted BOOLEAN NOT NULL DEFAULT 0,
+                    save_path VARCHAR,
+                    rule_name VARCHAR,
+                    filter VARCHAR NOT NULL DEFAULT ''
+                )"""))
+        conn.execute(text("CREATE INDEX ix_movie_title_raw ON movie(title_raw)"))
+        conn.execute(text("CREATE INDEX ix_movie_deleted ON movie(deleted)"))
+        conn.execute(
+            text(
+                "INSERT INTO movie "
+                "(id, official_title, title_raw, year, filter) VALUES "
+                "(9, 'Preserved Movie', 'Preserved Movie', 2026, '')"
+            )
+        )
+        conn.execute(
+            text(
+                "INSERT INTO user (id, username, password) VALUES "
+                "(7, 'movie_dev_user', 'hashed-password')"
+            )
+        )
+        set_schema_version(conn, 18)
+    return engine
+
+
 class TestMigrationTable:
     def test_every_migration_has_an_already_applied_guard(self):
         """No migration may rely on the old hardcoded if-ladder."""
@@ -277,6 +331,7 @@ class TestRunMigrations:
         assert {"enabled", "created_at", "updated_at"} <= _columns(engine, "user")
         assert "auth_session" in inspector.get_table_names()
         assert "api_token" in inspector.get_table_names()
+        assert "movie" in inspector.get_table_names()
         user_indexes = {ix["name"] for ix in inspector.get_indexes("user")}
         assert "ix_user_username" in user_indexes
 
@@ -344,6 +399,59 @@ class TestRunMigrations:
         indexes = {ix["name"]: ix for ix in inspector.get_indexes("llmcredential")}
         assert indexes["ix_llmcredential_provider_id"]["unique"]
 
+    def test_upgrades_auth_beta_v20_without_losing_tokens(self, monkeypatch):
+        engine = _make_v19_auth_engine()
+        _run_through_version(engine, 20, monkeypatch)
+        with engine.connect() as conn:
+            before = conn.execute(
+                text("SELECT id, token_hash, scope, prefix FROM api_token ORDER BY id")
+            ).all()
+
+        run_migrations(engine)
+
+        inspector = inspect(engine)
+        assert "movie" in inspector.get_table_names()
+        assert {"enabled", "created_at", "updated_at"} <= _columns(engine, "user")
+        with engine.connect() as conn:
+            after = conn.execute(
+                text("SELECT id, token_hash, scope, prefix FROM api_token ORDER BY id")
+            ).all()
+            assert get_schema_version(conn) == CURRENT_SCHEMA_VERSION
+        assert after == before
+
+    def test_repairs_divergent_movie_v18_database(self, monkeypatch):
+        engine = _make_v18_movie_engine(monkeypatch)
+
+        run_migrations(engine)
+
+        inspector = inspect(engine)
+        assert {"movie", "auth_session", "api_token"} <= set(
+            inspector.get_table_names()
+        )
+        assert {"enabled", "created_at", "updated_at"} <= _columns(engine, "user")
+        user_indexes = {index["name"] for index in inspector.get_indexes("user")}
+        assert {"ix_user_username", "ix_user_enabled"} <= user_indexes
+        token_indexes = {index["name"] for index in inspector.get_indexes("api_token")}
+        assert "ix_api_token_token_hash_scope" in token_indexes
+        with engine.connect() as conn:
+            assert (
+                conn.execute(
+                    text("SELECT official_title FROM movie WHERE id = 9")
+                ).scalar_one()
+                == "Preserved Movie"
+            )
+            user = conn.execute(
+                text(
+                    "SELECT username, enabled, created_at, updated_at "
+                    "FROM user WHERE id = 7"
+                )
+            ).one()
+            assert user[0] == "movie_dev_user"
+            assert user[1] == 1
+            assert user[2] is not None
+            assert user[3] is not None
+            assert get_schema_version(conn) == CURRENT_SCHEMA_VERSION
+
     def test_v20_rebuilds_v19_api_tokens_without_losing_data(self):
         engine = _make_v19_auth_engine()
         # Production upgrade paths may call metadata.create_all before the
@@ -378,7 +486,7 @@ class TestRunMigrations:
                 .mappings()
                 .all()
             )
-            assert get_schema_version(conn) == 20
+            assert get_schema_version(conn) == CURRENT_SCHEMA_VERSION
 
         assert len(after) == len(before) == 2
         for old, new in zip(before, after):
@@ -420,7 +528,7 @@ class TestRunMigrations:
 
     def test_v20_rebuild_rolls_back_if_a_late_statement_fails(self, monkeypatch):
         engine = _make_v19_auth_engine()
-        v20 = MIGRATIONS[-1]
+        v20 = next(item for item in MIGRATIONS if item.version == 20)
         broken_v20 = replace(
             v20,
             statements=(
@@ -432,7 +540,7 @@ class TestRunMigrations:
         monkeypatch.setattr(
             migration_module,
             "MIGRATIONS",
-            (*MIGRATIONS[:-1], broken_v20),
+            tuple(broken_v20 if item.version == 20 else item for item in MIGRATIONS),
         )
 
         with pytest.raises(OperationalError):
@@ -481,7 +589,7 @@ class TestRunMigrations:
             prefix = conn.execute(
                 text("SELECT prefix FROM api_token WHERE id = 1")
             ).scalar_one()
-            assert get_schema_version(conn) == 20
+            assert get_schema_version(conn) == CURRENT_SCHEMA_VERSION
         assert prefix == "legacy_cccccccc"
 
     def test_is_idempotent(self):

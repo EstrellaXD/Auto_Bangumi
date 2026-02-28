@@ -10,7 +10,7 @@ from module.conf import settings
 from module.database import Database
 from module.database.bangumi import _groups_are_similar, match_bangumi_in_list
 from module.downloader import AddResult, DownloadClient
-from module.models import Bangumi, Episode, ResponseModel, RSSItem, Torrent
+from module.models import Bangumi, Episode, Movie, ResponseModel, RSSItem, Torrent
 from module.network import RequestContent
 from module.notification.events import (
     DownloadFailureEvent,
@@ -382,6 +382,46 @@ class RSSEngine:
             await self.db.torrent.add_all(to_persist)
         await self.db.commit()
         return events
+
+    async def download_movie(self, movie: Movie):
+        if not movie.rss_link:
+            return ResponseModel(
+                status=False,
+                status_code=406,
+                msg_en=f"Download movie {movie.official_title} failed: no RSS link.",
+                msg_zh=f"下载剧场版 {movie.official_title} 失败：缺少 RSS 链接。",
+            )
+        async with RequestContent() as req:
+            filter_pattern = movie.filter.replace(",", "|") if movie.filter else ""
+            torrents = await req.get_torrents(movie.rss_link, filter_pattern)
+            if torrents:
+                async with DownloadClient() as client:
+                    result = await client.add_torrent(
+                        torrents, movie  # type: ignore[arg-type]
+                    )
+                    if result is AddResult.FAILED:
+                        return ResponseModel(
+                            status=False,
+                            status_code=502,
+                            msg_en=f"Download movie {movie.official_title} failed.",
+                            msg_zh=f"下载剧场版 {movie.official_title} 失败。",
+                        )
+                    for torrent in torrents:
+                        torrent.downloaded = True
+                    await self.db.torrent.add_all(torrents)
+                    return ResponseModel(
+                        status=True,
+                        status_code=200,
+                        msg_en=f"Download movie {movie.official_title} successfully.",
+                        msg_zh=f"下载剧场版 {movie.official_title} 成功。",
+                    )
+            else:
+                return ResponseModel(
+                    status=False,
+                    status_code=406,
+                    msg_en=f"[Engine] Download movie {movie.official_title} failed.",
+                    msg_zh=f"下载剧场版 {movie.official_title} 失败。",
+                )
 
     async def download_bangumi(self, bangumi: Bangumi):
         async with RequestContent() as req:

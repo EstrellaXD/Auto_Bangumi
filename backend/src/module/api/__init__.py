@@ -7,6 +7,7 @@ from .downloader import router as downloader_router
 from .events import router as events_router
 from .llm import router as llm_router
 from .log import router as log_router
+from .movie import router as movie_router
 from .notification import router as notification_router
 from .passkey import router as passkey_router
 from .program import router as program_router
@@ -28,6 +29,7 @@ v1.include_router(passkey_router)
 v1.include_router(log_router)
 v1.include_router(program_router)
 v1.include_router(bangumi_router)
+v1.include_router(movie_router)
 v1.include_router(config_router)
 v1.include_router(downloader_router)
 v1.include_router(events_router)

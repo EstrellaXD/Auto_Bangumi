@@ -19,6 +19,7 @@ from .migrations import (  # noqa: F401  (re-exported for existing importers)
     create_tables_async,
     run_migrations_async,
 )
+from .movie import MovieDatabase
 from .rss import RSSDatabase
 from .torrent import TorrentDatabase
 from .user import UserDatabase
@@ -44,6 +45,7 @@ class Database:
         self.rss = RSSDatabase(self.session)
         self.torrent = TorrentDatabase(self.session)
         self.bangumi = BangumiDatabase(self.session)
+        self.movie = MovieDatabase(self.session)
         self.user = UserDatabase(self.session)
         self.aria2 = Aria2GidDatabase(self.session)
         self.auth = AuthDatabase(self.session)
