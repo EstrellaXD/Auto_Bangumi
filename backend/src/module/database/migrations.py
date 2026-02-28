@@ -17,7 +17,7 @@ from pydantic_core import PydanticUndefined
 from sqlalchemy import Connection, Engine, inspect, text
 from sqlmodel import SQLModel
 
-from module.models import Bangumi, User
+from module.models import Bangumi, Movie, User
 from module.models.inbox import InboxMessage
 from module.models.llm_credential import LLMCredential
 from module.models.passkey import Passkey
@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 # 所有需要进行空值填充的表模型
 TABLE_MODELS: list[type[SQLModel]] = [
     Bangumi,
+    Movie,
     RSSItem,
     Torrent,
     User,
@@ -382,6 +383,66 @@ MIGRATIONS: tuple[Migration, ...] = (
             "ON llmcredential(provider_id)",
         ),
         table_exists("llmcredential"),
+    ),
+    Migration(
+        18,
+        "create movie table for standalone movie subscriptions",
+        (
+            """CREATE TABLE IF NOT EXISTS movie (
+                id INTEGER PRIMARY KEY,
+                official_title VARCHAR NOT NULL,
+                title_raw VARCHAR,
+                year INTEGER,
+                group_name VARCHAR,
+                dpi VARCHAR,
+                source VARCHAR,
+                subtitle VARCHAR,
+                poster_link VARCHAR,
+                rss_link VARCHAR,
+                added BOOLEAN NOT NULL DEFAULT 0,
+                deleted BOOLEAN NOT NULL DEFAULT 0,
+                save_path VARCHAR,
+                rule_name VARCHAR,
+                filter VARCHAR NOT NULL DEFAULT ''
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_movie_title_raw ON movie(title_raw)",
+            "CREATE INDEX IF NOT EXISTS ix_movie_deleted ON movie(deleted)",
+        ),
+        all_checks(
+            table_exists("movie"),
+            index_exists("movie", "ix_movie_title_raw"),
+            index_exists("movie", "ix_movie_deleted"),
+        ),
+        (
+            (
+                """CREATE TABLE IF NOT EXISTS movie (
+                    id INTEGER PRIMARY KEY,
+                    official_title VARCHAR NOT NULL,
+                    title_raw VARCHAR,
+                    year INTEGER,
+                    group_name VARCHAR,
+                    dpi VARCHAR,
+                    source VARCHAR,
+                    subtitle VARCHAR,
+                    poster_link VARCHAR,
+                    rss_link VARCHAR,
+                    added BOOLEAN NOT NULL DEFAULT 0,
+                    deleted BOOLEAN NOT NULL DEFAULT 0,
+                    save_path VARCHAR,
+                    rule_name VARCHAR,
+                    filter VARCHAR NOT NULL DEFAULT ''
+                )""",
+                table_exists("movie"),
+            ),
+            (
+                "CREATE INDEX IF NOT EXISTS ix_movie_title_raw ON movie(title_raw)",
+                index_exists("movie", "ix_movie_title_raw"),
+            ),
+            (
+                "CREATE INDEX IF NOT EXISTS ix_movie_deleted ON movie(deleted)",
+                index_exists("movie", "ix_movie_deleted"),
+            ),
+        ),
     ),
 )
 

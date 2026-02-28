@@ -131,6 +131,14 @@ class Episode:
     resolution: str
     source: str
     episode_type: str = "episode"  # "episode" | "movie" | "special"
+    is_movie: bool = False
+
+    def __post_init__(self) -> None:
+        """Keep the legacy movie flag and the typed classifier in sync."""
+        if self.is_movie:
+            self.episode_type = "movie"
+        elif self.episode_type == "movie":
+            self.is_movie = True
 
 
 @dataclass(slots=True)
