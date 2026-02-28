@@ -10,11 +10,7 @@ import pytest
 
 from module.manager.renamer import Renamer
 from module.models import EpisodeFile
-from module.parser.analyser.raw_parser import (
-    get_group,
-    process,
-    raw_parser,
-)
+from module.parser.analyser.raw_parser import get_group, raw_parser
 
 # ---------------------------------------------------------------------------
 # Issue #986: Parser fails on [group][title][episode_text] format
@@ -27,7 +23,7 @@ from module.parser.analyser.raw_parser import (
 
 
 class TestIssue986AtlasSubGroupFormat:
-    """Issue #986: Parser crashes on Atlas subtitle group naming convention."""
+    """Issue #986: Parser now handles Atlas subtitle group naming convention."""
 
     ATLAS_TITLES = [
         "[阿特拉斯字幕组·雪原市出差所][命运-奇异赝品_Fate／strange Fake][04_半神们的卡农曲][简繁日内封PGS][日语配音版_Japanese Dub][Web-DL Remux][1080p AVC AAC].mkv",
@@ -35,44 +31,28 @@ class TestIssue986AtlasSubGroupFormat:
         "[阿特拉斯字幕组·雪原市出差所][命运-奇异赝品_Fate／strange Fake][03_无英灵的战斗][简繁日内封PGS][日语配音版_Japanese Dub][Web-DL Remux][1080p AVC AAC].mkv",
     ]
 
-    def test_get_group_extracts_atlas_group(self):
-        """get_group should extract the group name from [group][title][ep] format."""
-        name = "[阿特拉斯字幕组·雪原市出差所][命运-奇异赝品_Fate／strange Fake][04_半神们的卡农曲]"
-        group = get_group(name)
-        assert group == "阿特拉斯字幕组·雪原市出差所"
-
-    def test_process_returns_none_for_atlas_format(self):
-        """process() currently returns None for Atlas format (bug demonstration)."""
-        title = self.ATLAS_TITLES[0]
-        result = process(title)
-        # BUG: process returns None because TITLE_RE doesn't match this format
-        assert result is None, (
-            "If this passes, the parser still can't handle Atlas format. "
-            "If it fails (result is not None), the bug may have been fixed!"
-        )
-
-    def test_raw_parser_returns_none_for_atlas_format(self):
-        """raw_parser returns None for Atlas format, causing AttributeError downstream."""
-        title = self.ATLAS_TITLES[0]
+    @pytest.mark.parametrize(
+        "title,expected_ep",
+        [
+            (ATLAS_TITLES[0], 4),
+            (ATLAS_TITLES[1], 7),
+            (ATLAS_TITLES[2], 3),
+        ],
+    )
+    def test_atlas_titles_parse_successfully(self, title, expected_ep):
+        """All Atlas format titles now parse correctly."""
         result = raw_parser(title)
-        # BUG: returns None → downstream code does .groups() on None → AttributeError
-        assert result is None
+        assert result is not None
+        assert result.group == "阿特拉斯字幕组·雪原市出差所"
+        assert result.title_zh == "命运-奇异赝品"
+        assert result.episode == expected_ep
+        assert result.resolution == "1080p"
 
-    @pytest.mark.parametrize("title", ATLAS_TITLES)
-    def test_atlas_titles_all_fail_to_parse(self, title):
-        """All Atlas format titles fail to parse."""
-        result = raw_parser(title)
-        assert result is None
-
-    def test_get_group_returns_empty_for_no_brackets(self):
-        """get_group returns empty string for title without brackets (regression guard)."""
-        result = get_group("No Brackets Title")
-        assert result == ""
-
-    def test_get_group_does_not_crash_on_empty_string(self):
-        """get_group handles empty string without crashing."""
-        result = get_group("")
-        assert result == ""
+    def test_atlas_title_en_extracted(self):
+        """Atlas format extracts English title from underscore-separated text."""
+        result = raw_parser(self.ATLAS_TITLES[0])
+        assert result is not None
+        assert result.title_en == "Fate\uff0fstrange Fake"
 
 
 # ---------------------------------------------------------------------------
@@ -213,20 +193,20 @@ class TestIssue976NoneInMatchList:
 
     def test_get_group_no_brackets_returns_empty(self):
         """get_group handles names without brackets (regression for IndexError)."""
-        # The original code did: re.split(r"[\[\]]", name)[1]
-        # which crashes with IndexError when there are no brackets
-        result = get_group("No Brackets At All")
-        assert result == ""
+        assert get_group("No Brackets At All") == ""
 
     def test_get_group_single_bracket_pair(self):
-        """get_group extracts group from single bracket pair."""
-        result = get_group("[GroupName] Some Title")
-        assert result == "GroupName"
+        """get_group extracts the first square-bracket group."""
+        assert get_group("[GroupName] Some Title") == "GroupName"
 
     def test_get_group_empty_brackets(self):
-        """get_group handles empty brackets."""
-        result = get_group("[] empty")
-        assert result == ""
+        """get_group handles an empty bracket pair."""
+        assert get_group("[] empty") == ""
+
+    def test_raw_parser_extracts_group_from_brackets(self):
+        result = raw_parser("[GroupName] Some Title - 01")
+        assert result is not None
+        assert result.group == "GroupName"
 
 
 # ---------------------------------------------------------------------------
@@ -496,25 +476,42 @@ class TestIssue990NumberPrefixTitle:
 
 
 class TestIssue992NonEpisodicAttributeError:
-    """Issue #992: title_parser crashes on non-episodic resources."""
+    """Issue #992: parser failures must not escape as AttributeError."""
 
-    # Titles that raw_parser cannot parse (returns None)
-    NON_EPISODIC_TITLES = [
-        "[阿特拉斯字幕组·雪原市出差所][命运-奇异赝品_Fate／strange Fake][04_半神们的卡农曲][简繁日内封PGS][日语配音版_Japanese Dub][Web-DL Remux][1080p AVC AAC]",
-        "[KitaujiSub] Shikanoko Nokonoko Koshitantan [01Pre][WebRip][HEVC_AAC][CHS_JP].mp4",
+    # These formats triggered the original crash. The tokenizer now parses
+    # both successfully, so keep an integration-level guard for that behavior.
+    FORMERLY_UNPARSEABLE_TITLES = [
+        (
+            "[阿特拉斯字幕组·雪原市出差所][命运-奇异赝品_Fate／strange Fake][04_半神们的卡农曲][简繁日内封PGS][日语配音版_Japanese Dub][Web-DL Remux][1080p AVC AAC]",
+            "Fate／strange Fake",
+        ),
+        (
+            "[KitaujiSub] Shikanoko Nokonoko Koshitantan [01Pre][WebRip][HEVC_AAC][CHS_JP].mp4",
+            "Shikanoko Nokonoko Koshitantan",
+        ),
     ]
 
-    @pytest.mark.parametrize("title", NON_EPISODIC_TITLES)
-    async def test_title_parser_returns_none_for_non_episodic(self, title):
-        """TitleParser.raw_parser should return None instead of crashing."""
+    @pytest.mark.parametrize("title,expected_title", FORMERLY_UNPARSEABLE_TITLES)
+    async def test_title_parser_handles_nonstandard_titles(self, title, expected_title):
+        """Previously crashing formats now produce a valid parsed model."""
+        from module.parser.title_parser import TitleParser
+
+        result = await TitleParser.raw_parser(title)
+        assert result is not None
+        assert result.title_raw == expected_title
+
+    @pytest.mark.parametrize("title", ["", "[]"])
+    async def test_title_parser_returns_none_for_unparseable(self, title):
+        """A genuine parser miss returns None instead of raising AttributeError."""
         from module.parser.title_parser import TitleParser
 
         result = await TitleParser.raw_parser(title)
         assert result is None
 
-    def test_raw_parser_returns_none_for_unparseable(self):
-        """raw_parser returns None for resources it cannot parse."""
-        result = raw_parser(self.NON_EPISODIC_TITLES[0])
+    @pytest.mark.parametrize("title", ["", "[]"])
+    def test_raw_parser_returns_none_for_unparseable(self, title):
+        """raw_parser still returns None when tokenization yields no content."""
+        result = raw_parser(title)
         assert result is None
 
 

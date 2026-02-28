@@ -12,6 +12,7 @@ _SEASON_NUM = re.compile(r"[Ss](\d+)|Season\s+(\d+)", re.I)
 _CHINESE_SEASON = re.compile(r"第([一二三四五六七八九十\d]+)[季期]")
 _SUB_CLEAN = re.compile(r"_MP4|_MKV", re.I)
 _CJK_SUB = re.compile(r"[简繁日字幕]")
+_NON_EPISODIC_EXTRA = re.compile(r"合集|总集篇|總集篇|特典")
 
 
 def compose(tokens: list[Token]) -> Episode | None:
@@ -26,7 +27,9 @@ def compose(tokens: list[Token]) -> Episode | None:
     resolution: str | None = None
     source: str | None = None
 
-    is_movie = False
+    episode_type = "episode"
+    has_episode_marker = False
+    has_non_episodic_extra = False
 
     # Collect all subtitles, prefer CJK ones
     all_subs: list[str] = []
@@ -46,6 +49,7 @@ def compose(tokens: list[Token]) -> Episode | None:
         elif kind == TokenKind.TITLE_JP:
             title_jp = text.strip()
         elif kind == TokenKind.EPISODE:
+            has_episode_marker = True
             ep_digits = re.search(r"\d+", text)
             if ep_digits:
                 episode = int(ep_digits.group())
@@ -74,7 +78,15 @@ def compose(tokens: list[Token]) -> Episode | None:
             if source is None:
                 source = text
         elif kind == TokenKind.MOVIE:
-            is_movie = True
+            episode_type = "movie"
+        elif kind == TokenKind.SPECIAL:
+            episode_type = "special"
+            season = 0
+            special_digits = re.search(r"\d+", text)
+            if special_digits:
+                episode = int(special_digits.group())
+        elif kind == TokenKind.EXTRA and _NON_EPISODIC_EXTRA.search(text):
+            has_non_episodic_extra = True
         elif kind == TokenKind.SUBTITLE:
             cleaned = _SUB_CLEAN.sub("", text)
             if cleaned:
@@ -84,6 +96,13 @@ def compose(tokens: list[Token]) -> Episode | None:
     if all_subs:
         cjk_subs = [s for s in all_subs if _CJK_SUB.search(s)]
         sub = cjk_subs[0] if cjk_subs else all_subs[0]
+
+    if (
+        episode_type == "episode"
+        and not has_episode_marker
+        and not has_non_episodic_extra
+    ):
+        return None
 
     return Episode(
         title_en=title_en,
@@ -96,5 +115,5 @@ def compose(tokens: list[Token]) -> Episode | None:
         group=group,
         resolution=resolution,
         source=source,
-        is_movie=is_movie,
+        episode_type=episode_type,
     )

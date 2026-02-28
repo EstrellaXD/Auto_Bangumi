@@ -136,7 +136,7 @@ def test_raw_parser():
     assert info.episode == 1
     assert info.season == 2
 
-    # 4K resolution (2160p) — RESOLUTION_RE covers 2160 but untested
+    # 4K resolution (2160p)
     content = "[NC-Raws] 葬送的芙莉莲 / Sousou no Frieren - 03 [B-Global][WEB-DL][2160p][AVC AAC][Multi Sub][MKV]"
     info = raw_parser(content)
     assert info is not None
@@ -147,7 +147,7 @@ def test_raw_parser():
     assert info.episode == 3
     assert info.season == 1
 
-    # English "Season N" format (bracketed) — season_rule "Season \d{1,2}" branch
+    # English "Season N" format (bracketed)
     content = "[LoliHouse] 狼与香辛料 [Season 2] / Spice and Wolf - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕]"
     info = raw_parser(content)
     assert info is not None
@@ -158,7 +158,7 @@ def test_raw_parser():
     assert info.episode == 1
     assert info.season == 2
 
-    # Multi-group, Chinese punctuation in title, single-letter Latin prefix in EN title
+    # Multi-group, Chinese punctuation in title
     content = "[北宇治字幕组&LoliHouse] 地。-关于地球的运动- / Chi. Chikyuu no Undou ni Tsuite - 03 [WebRip 1080p HEVC-10bit AAC ASSx2][简繁日内封字幕]"
     info = raw_parser(content)
     assert info is not None
@@ -169,7 +169,7 @@ def test_raw_parser():
     assert info.episode == 3
     assert info.season == 1
 
-    # English-only title — name_process returns title_zh=None when no CJK chars
+    # English-only title
     content = "[动漫国字幕组&LoliHouse] THE MARGINAL SERVICE - 08 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕]"
     info = raw_parser(content)
     assert info is not None
@@ -205,7 +205,6 @@ class TestIssue924SpecialPunctuation:
         content = "[御坂字幕组] 男女之间存在纯友情吗？（不，不存在!!）-01 [WebRip 1080p HEVC10-bit AAC] [简繁日内封] [急招翻校轴]"
         info = raw_parser(content)
         assert info is not None
-        assert info is not None
         assert info.group == "御坂字幕组"
         assert info.title_zh == "男女之间存在纯友情吗？（不，不存在!!）"
         assert info.episode == 1
@@ -222,23 +221,17 @@ class TestIssue910NeoQswFormat:
     def test_parse_neo_qsw_format(self):
         info = raw_parser(self.TITLE)
         assert info is not None
-        assert info is not None
         assert info.title_zh == "想星的阿克艾利昂"
         assert info.episode == 2
 
 
 class TestIssue876NoSeparator:
-    """Issue #876: Episode number without dash separator.
-
-    Note: the dash-separated variant "- 03" already works (tested in test_raw_parser).
-    This tests the space-only variant "Tsuite 03" which the fallback parser handles.
-    """
+    """Issue #876: Episode number without dash separator."""
 
     TITLE = "[北宇治字幕组&LoliHouse] 地。-关于地球的运动- / Chi. Chikyuu no Undou ni Tsuite 03 [WebRip 1080p HEVC-10bit AAC ASSx2][简繁日内封字幕]"
 
     def test_parse_without_dash(self):
         info = raw_parser(self.TITLE)
-        assert info is not None
         assert info is not None
         assert info.title_zh == "地。-关于地球的运动-"
         assert info.title_en == "Chi. Chikyuu no Undou ni Tsuite"
@@ -246,18 +239,21 @@ class TestIssue876NoSeparator:
 
 
 class TestIssue819ChineseEpisodeMarker:
-    """Issue #819: [Doomdos] format with 第N话 episode marker."""
+    """Issue #819: [Doomdos] format with 第N话 episode marker.
+
+    Previously: title_zh included leading/trailing dashes from separators.
+    Fixed: tokenizer strips separator dashes correctly.
+    """
 
     def test_parse_chinese_episode_marker(self):
         content = "[Doomdos] - 白色闪电 - 第02话 - [1080P].mp4"
         info = raw_parser(content)
         assert info is not None
-        assert info is not None
         assert info.group == "Doomdos"
         assert info.episode == 2
         assert info.resolution == "1080P"
-        # BUG: title_zh includes leading/trailing dashes from the separator
-        assert info.title_zh == "- 白色闪电 -"
+        # Fixed: title no longer has leading/trailing separator dashes
+        assert info.title_zh == "白色闪电"
 
 
 class TestIssue811ColonInTitle:
@@ -267,7 +263,6 @@ class TestIssue811ColonInTitle:
         content = "[Up to 21°C] 鬼灭之刃 柱训练篇 / Kimetsu no Yaiba: Hashira Geiko-hen - 03 (CR 1920x1080 AVC AAC MKV)"
         info = raw_parser(content)
         assert info is not None
-        assert info is not None
         assert info.group == "Up to 21°C"
         assert info.title_zh == "鬼灭之刃 柱训练篇"
         assert info.title_en == "Kimetsu no Yaiba: Hashira Geiko-hen"
@@ -276,67 +271,78 @@ class TestIssue811ColonInTitle:
 
 
 class TestIssue798VTuberTitle:
-    """Issue #798: Title with 'VTuber' split incorrectly by name_process."""
+    """Issue #798: Title with 'VTuber' — previously split incorrectly.
+
+    Fixed: tokenizer keeps the full CJK+Latin title together when
+    languages are interleaved (not a clean CJK/Latin boundary).
+    """
 
     def test_parse_vtuber_title(self):
         content = "[ANi] 身为 VTuber 的我因为忘记关台而成了传说 - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4][379.34 MB]"
         info = raw_parser(content)
         assert info is not None
-        assert info is not None
         assert info.group == "ANi"
         assert info.episode == 1
         assert info.resolution == "1080P"
         assert info.source == "Baha"
-        # BUG: name_process splits on space and only keeps first Chinese word
-        assert info.title_zh == "身为"
-        assert info.title_en == "VTuber 的我因为忘记关台而成了传说"
+        # Fixed: full title preserved (VTuber interleaved in CJK text)
+        assert info.title_zh == "身为 VTuber 的我因为忘记关台而成了传说"
 
 
 class TestIssue794PreEpisodeFormat:
-    """Issue #794/#800: [01Pre] episode format not recognized."""
+    """Issue #794/#800: [01Pre] episode format.
+
+    Fixed: tokenizer handles Pre-episode format correctly.
+    """
 
     TITLES = [
         "[KitaujiSub] Shikanoko Nokonoko Koshitantan [01Pre][WebRip][HEVC_AAC][CHS_JP].mp4",
         "[KitaujiSub] Shikanoko Nokonoko Koshitantan [01Pre][WebRip][HEVC_AAC][CHT_JP].mp4",
     ]
 
-    @pytest.mark.xfail(reason="[01Pre] episode format not supported by TITLE_RE")
     def test_parse_pre_episode(self):
         info = raw_parser(self.TITLES[0])
-        assert info is not None
         assert info is not None
         assert info.title_en == "Shikanoko Nokonoko Koshitantan"
         assert info.episode == 1
 
     @pytest.mark.parametrize("title", TITLES)
-    def test_returns_none(self, title):
-        """Parser cannot handle [01Pre] format currently."""
-        assert raw_parser(title) is None
+    def test_all_variants_parse(self, title):
+        """All Pre-episode variants now parse successfully."""
+        info = raw_parser(title)
+        assert info is not None
+        assert info.episode == 1
 
 
 class TestIssue766Lv2InTitle:
-    """Issue #766: Title with 'Lv2' causing incorrect name split."""
+    """Issue #766: Title with 'Lv2' — previously split incorrectly.
+
+    Fixed: tokenizer keeps the full title together when CJK/Latin
+    are interleaved.
+    """
 
     def test_parse_lv2_title(self):
         content = "[ANi]  从 Lv2 开始开外挂的前勇者候补过著悠哉异世界生活 - 04 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
         info = raw_parser(content)
         assert info is not None
-        assert info is not None
         assert info.group == "ANi"
         assert info.episode == 4
         assert info.resolution == "1080P"
         assert info.source == "Baha"
-        # BUG: name_process splits on space, loses the "从 Lv2" prefix
-        assert info.title_zh == "开始开外挂的前勇者候补过著悠哉异世界生活"
+        # Fixed: full title preserved (Lv2 interleaved in CJK text)
+        assert info.title_zh == "从 Lv2 开始开外挂的前勇者候补过著悠哉异世界生活"
 
 
 class TestIssue764WesternFormat:
-    """Issue #764: Western release format without group brackets."""
+    """Issue #764: Western release format without group brackets.
+
+    Fixed: tokenizer correctly extracts title, season, and episode
+    from S01E05 format.
+    """
 
     def test_parse_western_format(self):
         content = "Girls Band Cry S01E05 VOSTFR 1080p WEB x264 AAC -Tsundere-Raws (ADN)"
         info = raw_parser(content)
-        assert info is not None
         assert info is not None
         assert info.episode == 5
         assert info.season == 1
@@ -350,27 +356,30 @@ class TestIssue764WesternFormat:
 
 
 class TestIssue986AtlasFormat:
-    """Issue #986: Atlas subtitle group bracket-delimited format."""
+    """Issue #986: Atlas subtitle group bracket-delimited format.
+
+    Fixed: tokenizer handles all-bracket format with underscore-separated
+    episode numbers.
+    """
 
     TITLES = [
         "[阿特拉斯字幕组·雪原市出差所][命运-奇异赝品_Fate／strange Fake][04_半神们的卡农曲][简繁日内封PGS][日语配音版_Japanese Dub][Web-DL Remux][1080p AVC AAC]",
         "[阿特拉斯字幕组·雪原市出差所][命运-奇异赝品_Fate／strange Fake][07_神自黄昏归来][简繁日内封PGS][日语配音版_Japanese Dub][Web-DL Remux][1080p AVC AAC]",
     ]
 
-    @pytest.mark.xfail(
-        reason="Atlas bracket-delimited format not supported by TITLE_RE"
-    )
     def test_parse_atlas_format(self):
         info = raw_parser(self.TITLES[0])
-        assert info is not None
         assert info is not None
         assert info.title_zh == "命运-奇异赝品"
         assert info.episode == 4
 
     @pytest.mark.parametrize("title", TITLES)
-    def test_returns_none(self, title):
-        """Parser cannot handle Atlas format currently."""
-        assert raw_parser(title) is None
+    def test_all_atlas_variants(self, title):
+        """All Atlas format variants now parse successfully."""
+        info = raw_parser(title)
+        assert info is not None
+        assert info.episode > 0
+        assert info.group == "阿特拉斯字幕组·雪原市出差所"
 
 
 class TestIssue773CompoundEpisode:
@@ -380,7 +389,6 @@ class TestIssue773CompoundEpisode:
 
     def test_parse_compound_episode(self):
         info = raw_parser(self.TITLE)
-        assert info is not None
         assert info is not None
         assert info.title_zh == "鬼灭之刃 柱训练篇"
         assert info.episode == 2
@@ -455,7 +463,6 @@ class TestIssue805TitleWithCht:
         content = "[ANi] 不時輕聲地以俄語遮羞的鄰座艾莉同學 - 02 [1080P][Baha][WEB-DL][AAC AVC][CHT].mp4"
         info = raw_parser(content)
         assert info is not None
-        assert info is not None
         assert info.group == "ANi"
         assert info.title_zh == "不時輕聲地以俄語遮羞的鄰座艾莉同學"
         assert info.episode == 2
@@ -478,7 +485,6 @@ class TestIssue1025NoGroupPrefix:
             "冰之城墙「氷の城壁」The Ramparts of Ice S01E02 1080p 日英双语-多国字幕"
         )
         info = raw_parser(content)
-        assert info is not None
         assert info is not None
         assert info.episode == 2
         assert info.season == 1
