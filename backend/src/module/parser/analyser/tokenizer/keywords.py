@@ -46,6 +46,7 @@ KEYWORDS: dict[str, TokenKind] = {
     "mp3": TokenKind.AUDIO,
     "ac3": TokenKind.AUDIO,
     "dts": TokenKind.AUDIO,
+    "opus": TokenKind.AUDIO,
     # Container
     "mp4": TokenKind.CONTAINER,
     "mkv": TokenKind.CONTAINER,
@@ -62,9 +63,18 @@ KEYWORDS: dict[str, TokenKind] = {
     "movie": TokenKind.MOVIE,
     "gekijouban": TokenKind.MOVIE,
     "the movie": TokenKind.MOVIE,
+    # Special/bonus episode markers
+    "ova": TokenKind.SPECIAL,
+    "oad": TokenKind.SPECIAL,
+    "sp": TokenKind.SPECIAL,
+    "special": TokenKind.SPECIAL,
     # Version
     "v2": TokenKind.VERSION,
     "v3": TokenKind.VERSION,
+    # Prefix tags
+    "整理搬运": TokenKind.PREFIX_TAG,
+    "画质增强": TokenKind.PREFIX_TAG,
+    "极致画质": TokenKind.PREFIX_TAG,
     # End marker
     "end": TokenKind.END_MARKER,
 }
@@ -99,11 +109,24 @@ PATTERN_CHECKS: list[tuple[re.Pattern, TokenKind]] = [
     (re.compile(r"^[剧劇][场場][版]?$|^劇場版?$"), TokenKind.MOVIE),
     (re.compile(r"^Movie$", re.I), TokenKind.MOVIE),
     (re.compile(r"^Gekijou-?ban$", re.I), TokenKind.MOVIE),
+    (re.compile(r"^(?:OVA|OAD|SP)\s*[-_]?\s*\d*$", re.I), TokenKind.SPECIAL),
+    (re.compile(r"^Special$", re.I), TokenKind.SPECIAL),
     # Date pattern
     (re.compile(r"^\d{4}\.\d{2}\.\d{2}$"), TokenKind.EXTRA),
     # File size
     (re.compile(r"^\d+\.\d+ [KMGT]B$", re.I), TokenKind.EXTRA),
 ]
+
+CJK_SUBWORDS: dict[str, TokenKind] = {
+    "剧场版": TokenKind.MOVIE,
+    "劇場版": TokenKind.MOVIE,
+    "劇場": TokenKind.MOVIE,
+    "剧场": TokenKind.MOVIE,
+    "合集": TokenKind.EXTRA,
+    "总集篇": TokenKind.EXTRA,
+    "總集篇": TokenKind.EXTRA,
+    "特典": TokenKind.EXTRA,
+}
 
 CHINESE_NUMBER_MAP: dict[str, int] = {
     "一": 1,

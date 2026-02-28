@@ -21,6 +21,7 @@ class TokenKind(Enum):
     END_MARKER = auto()
     HASH = auto()
     MOVIE = auto()  # movie/gekijouban marker
+    SPECIAL = auto()  # OVA/OAD/SP/Special marker
     EXTRA = auto()
 
 
