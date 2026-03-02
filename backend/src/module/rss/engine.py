@@ -135,12 +135,41 @@ class RSSEngine(Database):
         matched: Bangumi = self.bangumi.match_torrent(torrent.name)
         if matched:
             if matched.filter == "":
+                torrent.bangumi_id = matched.id
                 return matched
             pattern = self._get_filter_pattern(matched.filter)
             if not pattern.search(torrent.name):
                 torrent.bangumi_id = matched.id
                 return matched
         return None
+
+    @staticmethod
+    async def _add_torrent_with_compat(
+        client: DownloadClient, torrent: Torrent, matched_data: Bangumi
+    ) -> str:
+        """Add torrent with compatibility fallback.
+
+        Preferred path uses add_torrent_with_status() and expects one of:
+        - "added": accepted by downloader
+        - "exists": already exists in downloader
+        - "failed": add failed
+
+        If the client does not implement that API (or returns unexpected data),
+        fallback to legacy add_torrent() bool semantics.
+        """
+        add_with_status = getattr(client, "add_torrent_with_status", None)
+        if callable(add_with_status):
+            status = await add_with_status(torrent, matched_data)
+            if status in ("added", "exists", "failed"):
+                return status
+            logger.debug(
+                "[Engine] add_torrent_with_status returned unexpected value %r, "
+                "falling back to add_torrent().",
+                status,
+            )
+
+        added = await client.add_torrent(torrent, matched_data)
+        return "added" if added else "failed"
 
     async def refresh_rss(self, client: DownloadClient, rss_id: Optional[int] = None):
         # Get All RSS Items
@@ -162,14 +191,35 @@ class RSSEngine(Database):
             rss_item.last_checked_at = now
             rss_item.last_error = error
             self.add(rss_item)
+            torrents_to_persist: list[Torrent] = []
             for torrent in new_torrents:
                 matched_data = self.match_torrent(torrent)
-                if matched_data:
-                    if await client.add_torrent(torrent, matched_data):
-                        logger.debug("[Engine] Add torrent %s to client", torrent.name)
+                if not matched_data:
+                    torrents_to_persist.append(torrent)
+                    continue
+
+                add_status = await self._add_torrent_with_compat(
+                    client, torrent, matched_data
+                )
+                if add_status == "added":
+                    logger.debug("[Engine] Add torrent %s to client", torrent.name)
                     torrent.downloaded = True
+                    torrents_to_persist.append(torrent)
+                elif add_status == "exists":
+                    logger.debug(
+                        "[Engine] Torrent %s already exists in client", torrent.name
+                    )
+                    torrent.downloaded = True
+                    torrents_to_persist.append(torrent)
+                else:
+                    # Do not persist failed matched torrents.
+                    # They should remain "new" and be retried on next refresh.
+                    logger.warning(
+                        "[Engine] Failed to add matched torrent %s, will retry later.",
+                        torrent.name,
+                    )
             # Add all torrents to database
-            self.torrent.add_all(new_torrents)
+            self.torrent.add_all(torrents_to_persist)
         self.commit()
 
     async def download_bangumi(self, bangumi: Bangumi):
