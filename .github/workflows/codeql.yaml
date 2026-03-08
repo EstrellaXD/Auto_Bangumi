@@ -1,0 +1,51 @@
+name: CodeQL Analysis
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 12 * * 0'
+
+jobs:
+  analyze_python:
+    name: Analyze Python
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+      
+    - name: Install Python dependencies
+      run: pip install -r backend/requirements.txt
+
+    - name: Initialize CodeQL for Python
+      uses: github/codeql-action/init@v2
+      with:
+          languages: 'python'
+          config-file: ./.github/codeql/codeql-backend.yaml
+
+    - name: Perform CodeQL Analysis for Python
+      uses: github/codeql-action/analyze@v2
+
+  analyze_javascript:
+    name: Analyze Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Initialize CodeQL for JavaScript
+      uses: github/codeql-action/init@v2
+      with:
+          languages: 'javascript'
+          config-file: ./.github/codeql/codeql-frontend.yaml
+
+    - name: Perform CodeQL Analysis for JavaScript
+      uses: github/codeql-action/analyze@v2
