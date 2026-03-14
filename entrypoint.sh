@@ -10,6 +10,6 @@ fi
 groupmod -o -g "${PGID}" ab
 usermod -o -u "${PUID}" ab
 
-chown ab:ab -R /app /home/ab
+chown ab:ab -R /app/data /app/config /home/ab
 
 exec su-exec "${PUID}:${PGID}" python main.py
