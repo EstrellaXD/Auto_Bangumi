@@ -1,5 +1,7 @@
 """Tests for RSS engine: pull_rss, match_torrent, refresh_rss, add_rss."""
 
+import asyncio
+
 import pytest
 from unittest.mock import AsyncMock, patch
 
@@ -332,3 +334,36 @@ class TestAddRss:
 
         assert result.status is False
         assert result.status_code == 406
+
+
+class TestRefreshRssConcurrency:
+    async def test_concurrent_requests_limited(self, rss_engine):
+        """refresh_rss should limit concurrent requests via semaphore."""
+        rss_items = [
+            make_rss_item(name=f"Feed {i}", url=f"https://feed{i}.com/rss")
+            for i in range(10)
+        ]
+        for item in rss_items:
+            rss_engine.rss.add(item)
+
+        active_count = 0
+        max_active = 0
+        lock = asyncio.Lock()
+
+        async def track_concurrency(rss_item):
+            nonlocal active_count, max_active
+            async with lock:
+                active_count += 1
+                max_active = max(max_active, active_count)
+            await asyncio.sleep(0.01)
+            async with lock:
+                active_count -= 1
+            return [], None
+
+        with patch.object(
+            rss_engine, "_pull_rss_with_status", side_effect=track_concurrency
+        ):
+            client = AsyncMock()
+            await rss_engine.refresh_rss(client)
+
+        assert max_active <= 5
