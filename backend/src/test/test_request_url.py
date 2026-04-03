@@ -81,12 +81,13 @@ class TestRetryWithReset:
             resp.raise_for_status = MagicMock()
             return resp
 
-        with patch(
-            "module.network.request_url.get_shared_client"
-        ) as mock_get_client, patch(
-            "module.network.request_url.reset_shared_client",
-            new_callable=AsyncMock,
-        ) as mock_reset:
+        with (
+            patch("module.network.request_url.get_shared_client") as mock_get_client,
+            patch(
+                "module.network.request_url.reset_shared_client",
+                new_callable=AsyncMock,
+            ) as mock_reset,
+        ):
             mock_client = AsyncMock()
             mock_client.get = mock_get
             mock_get_client.return_value = mock_client

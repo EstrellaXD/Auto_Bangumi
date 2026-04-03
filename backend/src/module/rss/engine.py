@@ -114,17 +114,13 @@ class RSSEngine(Database):
         if filter_str not in self._filter_cache:
             raw_pattern = filter_str.replace(",", "|")
             try:
-                self._filter_cache[filter_str] = re.compile(
-                    raw_pattern, re.IGNORECASE
-                )
+                self._filter_cache[filter_str] = re.compile(raw_pattern, re.IGNORECASE)
             except re.error:
                 # Filter contains invalid regex chars (e.g. unmatched '[')
                 # Fall back to escaping each term for literal matching
                 terms = filter_str.split(",")
                 escaped = "|".join(re.escape(t) for t in terms)
-                self._filter_cache[filter_str] = re.compile(
-                    escaped, re.IGNORECASE
-                )
+                self._filter_cache[filter_str] = re.compile(escaped, re.IGNORECASE)
                 logger.warning(
                     f"[Engine] Filter '{filter_str}' contains invalid regex, "
                     f"using literal matching"
@@ -157,9 +153,7 @@ class RSSEngine(Database):
             async with semaphore:
                 return await self._pull_rss_with_status(item)
 
-        results = await asyncio.gather(
-            *[_limited_pull(item) for item in rss_items]
-        )
+        results = await asyncio.gather(*[_limited_pull(item) for item in rss_items])
         now = datetime.now(timezone.utc).isoformat()
         # Process results sequentially (DB operations)
         for rss_item, (new_torrents, error) in zip(rss_items, results):
