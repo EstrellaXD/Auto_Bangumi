@@ -12,6 +12,15 @@ logger = logging.getLogger(__name__)
 _shared_client: httpx.AsyncClient | None = None
 _shared_client_proxy_key: str | None = None
 
+# RSS 循环间隔 900s， 远超服务端 keep-alive 超时（60-120s）
+# keepalive_expiry=60 让空闲连接在过期前主动丢弃，避免复用过期连接
+# max_connections=20 足够覆盖典型订阅数量
+_CONNECTION_LIMITS = httpx.Limits(
+    max_keepalive_connections=5,
+    max_connections=20,
+    keepalive_expiry=60.0,
+)
+
 
 def _proxy_config_key() -> str:
     if settings.proxy.enable:
@@ -33,20 +42,29 @@ async def get_shared_client() -> httpx.AsyncClient:
                 proxy_url = f"http://{settings.proxy.username}:{settings.proxy.password}@{settings.proxy.host}:{settings.proxy.port}"
             else:
                 proxy_url = f"http://{settings.proxy.host}:{settings.proxy.port}"
-            _shared_client = httpx.AsyncClient(proxy=proxy_url, timeout=timeout)
+            _shared_client = httpx.AsyncClient(proxy=proxy_url, timeout=timeout, limits=_CONNECTION_LIMITS)
         elif settings.proxy.type == "socks5":
             if settings.proxy.username:
                 socks_url = f"socks5://{settings.proxy.username}:{settings.proxy.password}@{settings.proxy.host}:{settings.proxy.port}"
             else:
                 socks_url = f"socks5://{settings.proxy.host}:{settings.proxy.port}"
             transport = AsyncProxyTransport.from_url(socks_url, rdns=True)
-            _shared_client = httpx.AsyncClient(transport=transport, timeout=timeout)
+            _shared_client = httpx.AsyncClient(transport=transport, timeout=timeout, limits=_CONNECTION_LIMITS)
         else:
-            _shared_client = httpx.AsyncClient(timeout=timeout)
+            _shared_client = httpx.AsyncClient(timeout=timeout, limits=_CONNECTION_LIMITS)
     else:
-        _shared_client = httpx.AsyncClient(timeout=timeout)
+        _shared_client = httpx.AsyncClient(timeout=timeout, limits=_CONNECTION_LIMITS)
     _shared_client_proxy_key = current_key
     return _shared_client
+
+
+async def reset_shared_client():
+    """关闭并清除共享客户端，下次请求时自动创建新连接池。"""
+    global _shared_client, _shared_client_proxy_key
+    if _shared_client is not None:
+        await _shared_client.aclose()
+    _shared_client = None
+    _shared_client_proxy_key = None
 
 
 class RequestURL:
@@ -91,6 +109,9 @@ class RequestURL:
                 try_time += 1
                 if try_time >= retry:
                     break
+                # 连接错误时重建客户端以清除过期连接
+                await reset_shared_client()
+                self._client = await get_shared_client()
                 await asyncio.sleep(5)
             except Exception as e:
                 logger.warning(f"[Network] Unexpected error for {url}: {e}")
@@ -114,6 +135,9 @@ class RequestURL:
                 try_time += 1
                 if try_time >= retry:
                     break
+                # 连接错误时重建客户端，清除过期连接
+                await reset_shared_client()
+                self._client = await get_shared_client()
                 await asyncio.sleep(5)
             except Exception as e:
                 logger.debug(e)
