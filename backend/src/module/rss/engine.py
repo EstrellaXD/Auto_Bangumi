@@ -114,13 +114,17 @@ class RSSEngine(Database):
         if filter_str not in self._filter_cache:
             raw_pattern = filter_str.replace(",", "|")
             try:
-                self._filter_cache[filter_str] = re.compile(raw_pattern, re.IGNORECASE)
+                self._filter_cache[filter_str] = re.compile(
+                    raw_pattern, re.IGNORECASE
+                )
             except re.error:
                 # Filter contains invalid regex chars (e.g. unmatched '[')
                 # Fall back to escaping each term for literal matching
                 terms = filter_str.split(",")
                 escaped = "|".join(re.escape(t) for t in terms)
-                self._filter_cache[filter_str] = re.compile(escaped, re.IGNORECASE)
+                self._filter_cache[filter_str] = re.compile(
+                    escaped, re.IGNORECASE
+                )
                 logger.warning(
                     f"[Engine] Filter '{filter_str}' contains invalid regex, "
                     f"using literal matching"

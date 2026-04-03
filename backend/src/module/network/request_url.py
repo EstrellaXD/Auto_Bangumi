@@ -91,9 +91,7 @@ class RequestURL:
         }
         # For torrent files, use different Accept header
         if url.endswith(".torrent") or "/download/" in url:
-            base_headers["Accept"] = (
-                "application/x-bittorrent, application/octet-stream, */*"
-            )
+            base_headers["Accept"] = "application/x-bittorrent, application/octet-stream, */*"
         else:
             base_headers["Accept"] = "application/xml, text/xml, */*"
         return base_headers
@@ -104,11 +102,7 @@ class RequestURL:
         while True:
             try:
                 req = await self._client.get(url=url, headers=headers)
-                logger.debug(
-                    "[Network] Successfully connected to %s. Status: %s",
-                    url,
-                    req.status_code,
-                )
+                logger.debug("[Network] Successfully connected to %s. Status: %s", url, req.status_code)
                 req.raise_for_status()
                 return req
             except httpx.HTTPStatusError as e:
@@ -128,16 +122,16 @@ class RequestURL:
             except Exception as e:
                 logger.warning(f"[Network] Unexpected error for {url}: {e}")
                 break
-        logger.error(
-            f"[Network] Unable to connect to {url}, Please check your network settings"
-        )
+        logger.error(f"[Network] Unable to connect to {url}, Please check your network settings")
         return None
 
     async def post_url(self, url: str, data: dict, retry=3):
         try_time = 0
         while True:
             try:
-                req = await self._client.post(url=url, headers=self.header, data=data)
+                req = await self._client.post(
+                    url=url, headers=self.header, data=data
+                )
                 req.raise_for_status()
                 return req
             except httpx.RequestError:
