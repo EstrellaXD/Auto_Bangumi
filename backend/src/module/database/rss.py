@@ -2,7 +2,7 @@ import logging
 
 from sqlmodel import Session, and_, delete, select
 
-from module.models import RSSItem, RSSUpdate
+from module.models import RSSItem, RSSUpdate, Torrent
 
 logger = logging.getLogger(__name__)
 
@@ -107,16 +107,19 @@ class RSSDatabase:
         return list(result.scalars().all())
 
     def delete(self, _id: int) -> bool:
-        condition = delete(RSSItem).where(RSSItem.id == _id)
         try:
-            self.session.execute(condition)
+            # 先删除引用该 RSS 的 torrent，避免外键约束报错
+            self.session.execute(delete(Torrent).where(Torrent.rss_id == _id))
+            self.session.execute(delete(RSSItem).where(RSSItem.id == _id))
             self.session.commit()
             return True
         except Exception as e:
+            self.session.rollback()
             logger.error(f"Delete RSS Item failed. Because: {e}")
             return False
 
     def delete_all(self):
-        condition = delete(RSSItem)
-        self.session.execute(condition)
+        # 先删除所有引用 RSS 的 torrent，避免外键约束报错
+        self.session.execute(delete(Torrent).where(Torrent.rss_id != None))  # noqa: E711
+        self.session.execute(delete(RSSItem))
         self.session.commit()
