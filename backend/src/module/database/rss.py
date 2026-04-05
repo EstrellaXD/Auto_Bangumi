@@ -119,7 +119,11 @@ class RSSDatabase:
             return False
 
     def delete_all(self):
-        # 先删除所有引用 RSS 的 torrent，避免外键约束报错
-        self.session.execute(delete(Torrent).where(Torrent.rss_id != None))  # noqa: E711
-        self.session.execute(delete(RSSItem))
-        self.session.commit()
+        try:
+            # 先删除所有引用 RSS 的 torrent，避免外键约束报错
+            self.session.execute(delete(Torrent).where(Torrent.rss_id != None))  # noqa: E711
+            self.session.execute(delete(RSSItem))
+            self.session.commit()
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"Delete all RSS Items failed. Because: {e}")
