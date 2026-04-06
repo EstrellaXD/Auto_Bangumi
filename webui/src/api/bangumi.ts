@@ -278,6 +278,13 @@ export const apiBangumi = {
     return data;
   },
 
+  async getOrphanTorrentCount() {
+    const { data } = await axios.get<number>(
+      'api/v1/bangumi/torrents/orphans/count'
+    );
+    return data;
+  },
+
   async deleteOrphanTorrents() {
     const { data } = await axios.delete<ApiSuccess>(
       'api/v1/bangumi/torrents/orphans'

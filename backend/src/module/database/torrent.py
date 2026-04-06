@@ -114,6 +114,13 @@ class TorrentDatabase:
         )
         return list(result.scalars().all())
 
+    def count_orphans(self) -> int:
+        from sqlalchemy import func
+        result = self.session.execute(
+            select(func.count()).select_from(Torrent).where(Torrent.bangumi_id == None)  # noqa: E711
+        )
+        return result.scalar_one()
+
     def delete_one(self, torrent_id: int) -> bool:
         torrent = self.search(torrent_id)
         if torrent is None:

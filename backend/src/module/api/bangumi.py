@@ -396,6 +396,16 @@ async def get_orphan_torrents():
         return manager.torrent.search_orphans()
 
 
+@router.get(
+    "/torrents/orphans/count",
+    response_model=int,
+    dependencies=[Depends(get_current_user)],
+)
+async def get_orphan_torrent_count():
+    with TorrentManager() as manager:
+        return manager.torrent.count_orphans()
+
+
 @router.delete(
     "/torrents/orphans",
     response_model=APIResponse,

@@ -191,6 +191,7 @@
       "deleteAll": "Delete All",
       "downloaded": "Downloaded",
       "empty": "No torrents",
+      "confirm_clear": "Are you sure you want to delete all torrents? This cannot be undone.",
       "source": {
         "manual": "Manual"
       }

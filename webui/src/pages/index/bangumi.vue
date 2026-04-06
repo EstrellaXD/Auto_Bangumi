@@ -20,8 +20,7 @@ const orphanCount = ref(0);
 
 async function loadOrphanCount() {
   try {
-    const orphans = await apiBangumi.getOrphanTorrents();
-    orphanCount.value = orphans.length;
+    orphanCount.value = await apiBangumi.getOrphanTorrentCount();
   } catch {
     orphanCount.value = 0;
   }
@@ -395,7 +394,7 @@ function groupNeedsReview(group: BangumiGroup): boolean {
   position: relative;
   aspect-ratio: 5 / 7;
   border-radius: var(--radius-md);
-  overflow: hidden;
+  overflow: visible;
   box-shadow: var(--shadow-md);
   display: flex;
   align-items: center;
