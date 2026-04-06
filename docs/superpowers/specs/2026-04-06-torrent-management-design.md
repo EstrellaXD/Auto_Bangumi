@@ -22,13 +22,16 @@ torrent 表是高频故障表（8 个相关 issue 中 4 个直接涉及）。当
 
 #### 新增端点
 
+> **路由注册顺序**：orphans 端点必须在 `{id}/torrents` 之前注册。
+> FastAPI 按注册顺序匹配，如果 `{id}/torrents` 先注册，`"torrents"` 会被当作 `id` 参数导致 404。
+
 | 端点 | 方法 | 说明 |
 |------|------|------|
+| `/api/v1/bangumi/torrents/orphans` | GET | 获取孤儿种子列表 |
+| `/api/v1/bangumi/torrents/orphans` | DELETE | 清理所有孤儿种子 |
 | `/api/v1/bangumi/{id}/torrents` | GET | 获取某番剧下的种子列表 |
 | `/api/v1/bangumi/{id}/torrents` | DELETE | 清空该番剧下所有种子 |
 | `/api/v1/bangumi/{id}/torrents/{torrent_id}` | DELETE | 删除单条种子 |
-| `/api/v1/bangumi/torrents/orphans` | GET | 获取孤儿种子列表 |
-| `/api/v1/bangumi/torrents/orphans` | DELETE | 清理所有孤儿种子 |
 
 #### 为什么不用 id=-1 复用？
 
@@ -47,14 +50,18 @@ def search_by_bangumi_id(self, bangumi_id: int) -> list[Torrent]:
     """查询某番剧下的所有种子"""
 
 def search_orphans(self) -> list[Torrent]:
-    """查询 bangumi_id 为 NULL 的孤儿种子"""
+    """查询 bangumi_id IS NULL 的孤儿种子"""
 
 def delete_one(self, torrent_id: int) -> bool:
-    """删除单条种子记录，返回是否成功"""
+    """删除单条种子记录，返回是否成功。
+    torrent_id 不存在时返回 False。"""
 
 def delete_orphans(self) -> int:
     """删除所有孤儿种子，返回删除数量"""
 ```
+
+> **归属校验**：`DELETE /{id}/torrents/{torrent_id}` 需要校验 `torrent.bangumi_id == id`，
+> 防止通过一个番剧的端点删除另一个番剧的种子。不匹配时返回 404。
 
 已有 `delete_by_bangumi_id(bangumi_id)` 可直接复用于清空某番下所有种子。
 
@@ -67,9 +74,11 @@ def delete_orphans(self) -> int:
 - 标题："Others" / "未匹配种子"
 - 副标题：显示孤儿种子数量 badge
 - 无海报，使用占位图标
-- 点击后展开/跳转到种子列表
+- 点击后**路由跳转**到 `/bangumi/others/torrents`（独立页面，非内联展开）
 
-#### 种子列表
+#### 种子列表页（`/bangumi/others/torrents` 或 `/bangumi/{id}/torrents`）
+
+独立路由页面，复用同一个种子列表组件。
 
 每个种子项显示：
 - 种子名称
@@ -80,6 +89,8 @@ def delete_orphans(self) -> int:
 
 底部有"清理所有"按钮，带确认对话框。
 
+> **不需要分页**——当前最多几百条种子记录，一次性加载即可。如果未来数据量增大再加。
+
 #### 前端 API 调用（`webui/src/api/bangumi.ts` 新增）
 
 ```typescript
@@ -89,6 +100,31 @@ deleteAllTorrents(bangumiId: number): Promise<APIResponse>
 getOrphanTorrents(): Promise<Torrent[]>
 deleteOrphanTorrents(): Promise<APIResponse>
 ```
+
+#### 前端 Torrent 类型扩展（`webui/types/torrent.ts`）
+
+现有 `Torrent` 接口缺少 `bangumi_id` 和 `rss_id` 字段，需要补充：
+
+```typescript
+export interface Torrent {
+  id: number;
+  name: string;
+  url: string;
+  homepage: string | null;
+  downloaded: boolean;
+  bangumi_id: number | null;  // 新增：匹配状态
+  rss_id: number | null;       // 新增：来源
+  qb_hash: string | null;
+}
+```
+
+#### API 响应格式
+
+所有 API 使用项目现有的 `ResponseModel` 统一格式：
+- 列表端点：`{"status": true, "data": [...]}`
+- 删除端点：`{"status": true, "msg_en": "...", "msg_zh": "Deleted N records"}`
+- 资源不存在：`{"status": false, "status_code": 404, "msg_en": "...", "msg_zh": "..."}`
+- 无孤儿种子时：返回空列表 `[]`，不报错
 
 #### i18n 新增 key
 
@@ -127,13 +163,27 @@ bangumi.torrents.source.manual — "Manual" / "手动/订阅"
 | 文件 | 改动 |
 |------|------|
 | `backend/src/module/database/torrent.py` | 新增 search_by_bangumi_id, search_orphans, delete_one, delete_orphans |
-| `backend/src/module/api/bangumi.py` | 新增 5 个端点 |
+| `backend/src/module/api/bangumi.py` | 新增 5 个端点（orphans 在前，{id} 在后） |
 | `webui/src/api/bangumi.ts` | 新增 5 个 API 调用函数 |
-| `webui/src/pages/` 或 `webui/src/components/` | Others 卡片 + 种子列表组件 |
+| `webui/src/types/torrent.ts` | 扩展 Torrent 接口，添加 bangumi_id, rss_id |
+| `webui/src/pages/` 或 `webui/src/components/` | Others 卡片 + 种子列表页组件 |
 | `webui/src/i18n/` | 新增翻译 key |
+| `webui/src/router/` | 新增 /bangumi/others/torrents 路由 |
 
 ## 不涉及
 
-- 不修改现有 delete_rule 的级联逻辑
+- 不修改现有 delete_rule 的级联逻辑（删番剧仍自动删种子）
 - 不修改 refresh_rss 的匹配逻辑
 - 不创建实际的 "Others" bangumi 数据库记录
+- 删除种子时不删下载器中的实际文件
+- 删除种子时不删关联的 bangumi 记录
+
+## 路由注册顺序
+
+FastAPI 按注册顺序匹配。orphans 端点**必须**在 `{id}/torrents` 之前注册，否则 FastAPI 会把字符串 `"torrents"` 解析为 `{id}` 参数：
+
+```python
+# 正确顺序
+router.get("/torrents/orphans", ...)   # 先注册
+router.get("/{id}/torrents", ...)      # 后注册
+```
