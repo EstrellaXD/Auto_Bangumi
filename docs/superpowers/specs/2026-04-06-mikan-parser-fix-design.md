@@ -30,6 +30,9 @@ async def mikan_parser(homepage: str) -> tuple[str, str]:
     if homepage in _mikan_cache:
         return _mikan_cache[homepage]
     root_path = parse_url(homepage).host
+    if not root_path:
+        logger.warning("[Mikan] Invalid homepage URL: %s", homepage)
+        return ("", "")
     async with RequestContent() as req:
         content = await req.get_html(homepage)
         if not content:
@@ -43,17 +46,20 @@ async def mikan_parser(homepage: str) -> tuple[str, str]:
             logger.warning("[Mikan] No poster div found on: %s", homepage)
         else:
             poster_style = poster_div.get("style")
-            if poster_style:
-                poster_path = poster_style.split("url('")[1].split("')")[0]
-                poster_path = poster_path.split("?")[0]
-                img = await req.get_content(f"https://{root_path}{poster_path}")
-                if img:
-                    suffix = poster_path.split(".")[-1]
-                    poster_link = save_image(img, suffix)
-                else:
-                    logger.warning("[Mikan] Failed to download poster from: %s", homepage)
+            if poster_style and "url('" in poster_style:
+                try:
+                    poster_path = poster_style.split("url('")[1].split("')")[0]
+                    poster_path = poster_path.split("?")[0]
+                    img = await req.get_content(f"https://{root_path}{poster_path}")
+                    if img:
+                        suffix = poster_path.rsplit(".", 1)[-1] if "." in poster_path else "jpg"
+                        poster_link = save_image(img, suffix)
+                    else:
+                        logger.warning("[Mikan] Failed to download poster from: %s", homepage)
+                except (IndexError, ValueError) as e:
+                    logger.warning("[Mikan] Failed to parse poster style on %s: %s", homepage, e)
             else:
-                logger.warning("[Mikan] Poster div has no style attribute on: %s", homepage)
+                logger.warning("[Mikan] Poster div has no style or url() on: %s", homepage)
 
         official_title = ""
         title_elem = soup.select_one('p.bangumi-title a[href^="/Home/Bangumi/"]')
@@ -62,18 +68,20 @@ async def mikan_parser(homepage: str) -> tuple[str, str]:
         else:
             official_title = re.sub(r"第.*季", "", title_elem.text).strip()
 
-        # 只缓存成功结果
+        # 只缓存成功结果（不缓存失败，下次 rss_loop 会重试）
         if poster_link and official_title:
             _mikan_cache[homepage] = (poster_link, official_title)
         return (poster_link, official_title)
 ```
+
+> 注：`_mikan_cache` 无上限增长的问题不在本次修复范围内（原代码就有），后续可考虑加 LRU。
 
 ### 修改 2：analyser.py — 不覆盖降级值
 
 `official_title_parser` 中，只在 mikan_parser 返回非空值时才覆盖 bangumi 的字段：
 
 ```python
-async def official_title_parser(self, bangumi, rss, torrent):
+async def official_title_parser(self, bangumi: Bangumi, rss: RSSItem, torrent: Torrent):
     if rss.parser == "mikan":
         try:
             poster_link, official_title = await self.mikan_parser(torrent.homepage)
@@ -84,10 +92,23 @@ async def official_title_parser(self, bangumi, rss, torrent):
         except AttributeError:
             logger.warning("[Parser] Mikan torrent has no homepage info.")
     elif rss.parser == "tmdb":
-        ...
+        tmdb_title, season, year, poster_link = await self.tmdb_parser(
+            bangumi.official_title, bangumi.season, settings.rss_parser.language
+        )
+        bangumi.official_title = tmdb_title
+        bangumi.year = year
+        bangumi.season = season
+        bangumi.poster_link = poster_link
+    else:
+        pass
+    # 以下清理逻辑在 if/elif/else 块之外，对所有 parser 路径都生效
+    if bangumi.official_title:
+        bangumi.official_title = re.sub(r"[/:.\\]", " ", bangumi.official_title)
 ```
 
 **保留外层 try/except AttributeError** 作为防御层——虽然修复后不应触发，但防御式编程是合理的。
+
+**`else` 分支和 `re.sub` 清理逻辑不变**，mikan 分支的改动不影响 tmdb/else 路径。
 
 ## 影响分析
 
