@@ -96,17 +96,20 @@ from module.models import APIResponse, Bangumi, BangumiUpdate
 ```
 改为：
 ```python
-from module.models import APIResponse, Bangumi, BangumiUpdate, ResponseModel, Torrent
+from module.models import APIResponse, Bangumi, BangumiUpdate, Torrent
 ```
 
 - [ ] **Step 2: 在文件末尾添加端点**
 
 **路由注册顺序关键**：orphans 端点必须在 `{id}/torrents` 之前，否则 FastAPI 把字符串 `"torrents"` 当作 `{id}` 参数。
 
+> **关于响应格式**：项目 `u_response()` 只返回 `{msg_en, msg_zh}`，不含 `status` 字段。
+> 这与现有所有端点（delete_rule、disable_rule 等）一致，前端 `useApi` 通过 `msg_en in res` 判断成功。
+> 所以此处也使用 `u_response`，保持一致。
+
 ```python
 # ── Torrent Management ──
 # orphans 端点必须在 {id}/torrents 之前注册，避免路由冲突
-
 
 @router.get(
     "/torrents/orphans",
@@ -126,6 +129,7 @@ async def get_orphan_torrents():
 async def delete_orphan_torrents():
     with TorrentManager() as manager:
         count = manager.torrent.delete_orphans()
+    from module.models import ResponseModel
     return u_response(
         ResponseModel(
             status=True,
@@ -145,6 +149,7 @@ async def delete_single_orphan_torrent(torrent_id: int):
     with TorrentManager() as manager:
         torrent = manager.torrent.search(torrent_id)
         if torrent is None or torrent.bangumi_id is not None:
+            from module.models import ResponseModel
             return u_response(
                 ResponseModel(
                     status=False,
@@ -154,6 +159,7 @@ async def delete_single_orphan_torrent(torrent_id: int):
                 )
             )
         manager.torrent.delete_one(torrent_id)
+    from module.models import ResponseModel
     return u_response(
         ResponseModel(
             status=True,
@@ -182,6 +188,7 @@ async def get_bangumi_torrents(bangumi_id: int):
 async def delete_bangumi_torrents(bangumi_id: int):
     with TorrentManager() as manager:
         count = manager.torrent.delete_by_bangumi_id(bangumi_id)
+    from module.models import ResponseModel
     return u_response(
         ResponseModel(
             status=True,
@@ -201,6 +208,7 @@ async def delete_single_torrent(bangumi_id: int, torrent_id: int):
     with TorrentManager() as manager:
         torrent = manager.torrent.search(torrent_id)
         if torrent is None or torrent.bangumi_id != bangumi_id:
+            from module.models import ResponseModel
             return u_response(
                 ResponseModel(
                     status=False,
@@ -210,6 +218,7 @@ async def delete_single_torrent(bangumi_id: int, torrent_id: int):
                 )
             )
         manager.torrent.delete_one(torrent_id)
+    from module.models import ResponseModel
     return u_response(
         ResponseModel(
             status=True,
@@ -519,7 +528,9 @@ git commit -m "feat(webui): add torrent list component"
 - Create: `webui/src/pages/index/bangumi/[id]/torrents.vue`
 - Create: `webui/src/pages/index/bangumi/others/torrents.vue`
 
-项目使用 `unplugin-vue-router` file-based routing。创建页面文件即自动注册路由。
+> **路由注意**：项目使用 `unplugin-vue-router` file-based routing。
+> `bangumi.vue` 和 `bangumi/[id]/` 目录同时存在时，`bangumi.vue` 是 index route，
+> `bangumi/[id]/*.vue` 是子路由。这是 unplugin-vue-router 的标准行为，不会冲突。
 
 - [ ] **Step 1: 创建番剧种子列表页**
 
@@ -532,6 +543,10 @@ import { useRoute } from 'vue-router';
 import { apiBangumi } from '@/api/bangumi';
 import AbTorrentList from '@/components/ab-torrent-list.vue';
 import type { Torrent } from '#/torrent';
+
+definePage({
+  name: 'Bangumi Torrents',
+});
 
 const route = useRoute();
 const bangumiId = Number(route.params.id);
@@ -546,7 +561,7 @@ onMounted(load);
 
 <template>
   <div class="page-container">
-    <h2>{{ $t('bangumi.torrents.title') }} #{{ bangumiId }}</h2>
+    <h2>{{ $t('homepage.torrents.title') }} #{{ bangumiId }}</h2>
     <AbTorrentList
       :torrents="torrents"
       :bangumi-id="bangumiId"
@@ -567,6 +582,10 @@ import { apiBangumi } from '@/api/bangumi';
 import AbTorrentList from '@/components/ab-torrent-list.vue';
 import type { Torrent } from '#/torrent';
 
+definePage({
+  name: 'Orphan Torrents',
+});
+
 const torrents = ref<Torrent[]>([]);
 
 async function load() {
@@ -578,7 +597,7 @@ onMounted(load);
 
 <template>
   <div class="page-container">
-    <h2>{{ $t('bangumi.others.title') }}</h2>
+    <h2>{{ $t('homepage.others.title') }}</h2>
     <AbTorrentList
       :torrents="torrents"
       :is-orphan="true"
@@ -606,17 +625,21 @@ git commit -m "feat(webui): add torrent list pages for bangumi and orphans"
 **Files:**
 - Modify: `webui/src/pages/index/bangumi.vue`
 
-> **注意**：此 task 需要读取 `bangumi.vue` 和 `ab-bangumi-card.vue` 的完整代码来确定插入位置和方式。以下为指导性描述。
-
 - [ ] **Step 1: 读取 bangumi.vue 和 ab-bangumi-card.vue**
 
-了解番剧列表的渲染逻辑和卡片组件的 props 接口。
+读取两个文件，了解：
+- 番剧列表的渲染循环位置
+- `ab-bangumi-card` 的 props 接口和点击处理
+- 网格容器的 CSS class
 
-- [ ] **Step 2: 添加孤儿数量状态**
+- [ ] **Step 2: 添加孤儿数量状态和 Others 卡片**
 
-在 bangumi.vue 的 `<script setup>` 中添加获取孤儿种子数量的逻辑：
+在 bangumi.vue 的 `<script setup>` 中添加：
 
 ```typescript
+import { apiBangumi } from '@/api/bangumi';
+import type { Torrent } from '#/torrent';
+
 const orphanCount = ref(0);
 
 async function loadOrphanCount() {
@@ -625,26 +648,74 @@ async function loadOrphanCount() {
 }
 
 onMounted(loadOrphanCount);
+
+function goToOrphans() {
+  router.push('/bangumi/others/torrents');
+}
 ```
 
-- [ ] **Step 3: 在番剧网格末尾添加 Others 卡片**
+在番剧网格容器（`.bangumi-grid`）末尾、`</div>` 闭合标签前添加 Others 卡片：
 
-如果现有卡片组件 `ab-bangumi-card` 可以接收一个虚拟 bangumi 对象，则构造一个：
-
-```typescript
-const othersBangumi = computed(() => ({
-  id: -1,
-  official_title: 'Others',
-  poster_link: null,
-  // ... 其他必要字段用默认值填充
-}));
+```vue
+<!-- Others card for orphan torrents -->
+<div v-if="orphanCount > 0" class="bangumi-card others-card" @click="goToOrphans">
+  <div class="others-poster">
+    <span class="others-icon">?</span>
+  </div>
+  <div class="others-title">{{ $t('homepage.others.title') }}</div>
+  <div class="others-badge">{{ orphanCount }}</div>
+</div>
 ```
 
-在网格中最后一个卡片后渲染 Others 卡片，点击时 `router.push('/bangumi/others/torrents')`。
+样式（参考现有 `.bangumi-card` 的尺寸和布局）：
 
-如果 `ab-bangumi-card` 的 props 要求太多必填字段，则单独渲染一个自定义卡片。
+```css
+.others-card {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 
-- [ ] **Step 4: Commit**
+.others-poster {
+  aspect-ratio: 5 / 7;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+}
+
+.others-icon {
+  font-size: 48px;
+  color: var(--text-secondary);
+}
+
+.others-title {
+  margin-top: 6px;
+  font-size: 13px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.others-badge {
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 8px;
+  background: #f44336;
+  color: white;
+  margin-top: 4px;
+}
+```
+
+> **实现注意**：如果现有卡片使用 `ab-bangumi-card` 组件且无法接受虚拟对象，则直接在网格中插入一个自定义 div 即可。
+> CSS 变量名参考项目中实际使用的变量。如项目使用 UnoCSS class，需改用对应 class。
+
+- [ ] **Step 3: Commit**
 
 ```bash
 git add webui/src/pages/index/bangumi.vue
@@ -665,17 +736,17 @@ git commit -m "feat(webui): add Others card to bangumi list for orphan torrents"
 
 - [ ] **Step 2: 在两个文件中添加翻译 key**
 
-需要添加的 key（插入到 `bangumi` 或 `homepage` 节点下，按现有层级）：
+需要添加的 key（插入到 `homepage` 节点下，与现有 key 保持一致）：
 
 | Key | zh-CN | en |
 |-----|-------|-----|
-| `bangumi.others.title` | 未匹配种子 | Others |
-| `bangumi.torrents.title` | 种子列表 | Torrents |
-| `bangumi.torrents.delete` | 删除 | Delete |
-| `bangumi.torrents.deleteAll` | 清空所有 | Delete All |
-| `bangumi.torrents.downloaded` | 已下载 | Downloaded |
-| `bangumi.torrents.empty` | 暂无种子 | No torrents |
-| `bangumi.torrents.source.manual` | 手动/订阅 | Manual |
+| `homepage.others.title` | 未匹配种子 | Others |
+| `homepage.torrents.title` | 种子列表 | Torrents |
+| `homepage.torrents.delete` | 删除 | Delete |
+| `homepage.torrents.deleteAll` | 清空所有 | Delete All |
+| `homepage.torrents.downloaded` | 已下载 | Downloaded |
+| `homepage.torrents.empty` | 暂无种子 | No torrents |
+| `homepage.torrents.source.manual` | 手动/订阅 | Manual |
 
 - [ ] **Step 3: Commit**
 
