@@ -30,7 +30,7 @@ async function loadOrphanCount() {
 const router = useRouter();
 
 function goToOrphans() {
-  router.push('/bangumi/others/torrents');
+  router.push('/bangumi-torrents/orphans');
 }
 
 async function onRefresh() {
