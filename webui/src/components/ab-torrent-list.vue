@@ -27,6 +27,11 @@ const { execute: execDeleteOne, isLoading: deletingOne } = useApi(
   }
 );
 
+async function handleDeleteAll() {
+  if (!confirm('确认清空所有种子？')) return;
+  await execDeleteAll();
+}
+
 const { execute: execDeleteAll, isLoading: deletingAll } = useApi(
   async () => {
     if (props.isOrphan) {
@@ -75,7 +80,7 @@ const { execute: execDeleteAll, isLoading: deletingAll } = useApi(
         <button
           class="btn-delete-all"
           :disabled="deletingAll"
-          @click="execDeleteAll()"
+          @click="handleDeleteAll()"
         >
           <Delete :size="14" />
           {{ $t('homepage.torrents.deleteAll') }}

@@ -12,7 +12,7 @@ async function load() {
   torrents.value = await apiBangumi.getOrphanTorrents();
 }
 
-onMounted(load);
+onActivated(load);
 </script>
 
 <template>

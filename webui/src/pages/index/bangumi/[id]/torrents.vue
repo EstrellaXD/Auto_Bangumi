@@ -14,7 +14,7 @@ async function load() {
   torrents.value = await apiBangumi.getTorrents(bangumiId);
 }
 
-onMounted(load);
+onActivated(load);
 </script>
 
 <template>

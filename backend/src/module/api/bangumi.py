@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from module.conf import settings
 from module.database import Database
 from module.manager import TorrentManager
-from module.models import APIResponse, Bangumi, BangumiUpdate, Torrent
+from module.models import APIResponse, Bangumi, BangumiUpdate, ResponseModel, Torrent
 from module.parser.analyser.offset_detector import (
     OffsetSuggestion as DetectorSuggestion,
 )
@@ -404,7 +404,6 @@ async def get_orphan_torrents():
 async def delete_orphan_torrents():
     with TorrentManager() as manager:
         count = manager.torrent.delete_orphans()
-    from module.models import ResponseModel
     return u_response(
         ResponseModel(
             status=True,
@@ -424,17 +423,15 @@ async def delete_single_orphan_torrent(torrent_id: int):
     with TorrentManager() as manager:
         torrent = manager.torrent.search(torrent_id)
         if torrent is None or torrent.bangumi_id is not None:
-            from module.models import ResponseModel
-            return u_response(
-                ResponseModel(
-                    status=False,
-                    status_code=404,
-                    msg_en=f"Orphan torrent {torrent_id} not found.",
-                    msg_zh=f"未找到孤儿种子 {torrent_id}。",
-                )
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "status": False,
+                    "msg_en": f"Orphan torrent {torrent_id} not found.",
+                    "msg_zh": f"未找到孤儿种子 {torrent_id}。",
+                },
             )
         manager.torrent.delete_one(torrent_id)
-    from module.models import ResponseModel
     return u_response(
         ResponseModel(
             status=True,
@@ -463,7 +460,6 @@ async def get_bangumi_torrents(bangumi_id: int):
 async def delete_bangumi_torrents(bangumi_id: int):
     with TorrentManager() as manager:
         count = manager.torrent.delete_by_bangumi_id(bangumi_id)
-    from module.models import ResponseModel
     return u_response(
         ResponseModel(
             status=True,
@@ -483,17 +479,15 @@ async def delete_single_torrent(bangumi_id: int, torrent_id: int):
     with TorrentManager() as manager:
         torrent = manager.torrent.search(torrent_id)
         if torrent is None or torrent.bangumi_id != bangumi_id:
-            from module.models import ResponseModel
-            return u_response(
-                ResponseModel(
-                    status=False,
-                    status_code=404,
-                    msg_en=f"Torrent {torrent_id} not found under bangumi {bangumi_id}.",
-                    msg_zh=f"番剧 {bangumi_id} 下未找到种子 {torrent_id}。",
-                )
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "status": False,
+                    "msg_en": f"Torrent {torrent_id} not found under bangumi {bangumi_id}.",
+                    "msg_zh": f"番剧 {bangumi_id} 下未找到种子 {torrent_id}。",
+                },
             )
         manager.torrent.delete_one(torrent_id)
-    from module.models import ResponseModel
     return u_response(
         ResponseModel(
             status=True,
