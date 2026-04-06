@@ -154,6 +154,9 @@
       "step3_desc": "AutoBangumi 将自动下载并重命名新剧集。",
       "add_rss_btn": "添加 RSS 订阅"
     },
+    "others": {
+      "title": "未匹配种子"
+    },
     "rule": {
       "apply": "应用",
       "delete": "删除",
@@ -181,6 +184,16 @@
       "season": "季度",
       "year": "年份",
       "yes_btn": "是"
+    },
+    "torrents": {
+      "title": "种子列表",
+      "delete": "删除",
+      "deleteAll": "清空所有",
+      "downloaded": "已下载",
+      "empty": "暂无种子",
+      "source": {
+        "manual": "手动/订阅"
+      }
     }
   },
   "log": {
