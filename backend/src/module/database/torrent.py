@@ -101,3 +101,37 @@ class TorrentDatabase:
             logger.debug("Updated qb_hash for torrent %s: %s", torrent_id, qb_hash)
             return True
         return False
+
+    def search_by_bangumi_id(self, bangumi_id: int) -> list[Torrent]:
+        result = self.session.execute(
+            select(Torrent).where(Torrent.bangumi_id == bangumi_id)
+        )
+        return list(result.scalars().all())
+
+    def search_orphans(self) -> list[Torrent]:
+        result = self.session.execute(
+            select(Torrent).where(Torrent.bangumi_id == None)  # noqa: E711
+        )
+        return list(result.scalars().all())
+
+    def delete_one(self, torrent_id: int) -> bool:
+        torrent = self.search(torrent_id)
+        if torrent is None:
+            return False
+        self.session.delete(torrent)
+        self.session.commit()
+        logger.debug("Deleted torrent %s.", torrent_id)
+        return True
+
+    def delete_orphans(self) -> int:
+        result = self.session.execute(
+            select(Torrent).where(Torrent.bangumi_id == None)  # noqa: E711
+        )
+        torrents = list(result.scalars().all())
+        count = len(torrents)
+        for t in torrents:
+            self.session.delete(t)
+        if count > 0:
+            self.session.commit()
+            logger.debug("Deleted %s orphan torrents.", count)
+        return count
