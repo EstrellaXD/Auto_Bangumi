@@ -1,5 +1,6 @@
 import logging
 
+from sqlalchemy import delete, func
 from sqlmodel import Session, select
 
 from module.models import Torrent
@@ -110,14 +111,13 @@ class TorrentDatabase:
 
     def search_orphans(self) -> list[Torrent]:
         result = self.session.execute(
-            select(Torrent).where(Torrent.bangumi_id == None)  # noqa: E711
+            select(Torrent).where(Torrent.bangumi_id.is_(None))
         )
         return list(result.scalars().all())
 
     def count_orphans(self) -> int:
-        from sqlalchemy import func
         result = self.session.execute(
-            select(func.count()).select_from(Torrent).where(Torrent.bangumi_id == None)  # noqa: E711
+            select(func.count()).select_from(Torrent).where(Torrent.bangumi_id.is_(None))
         )
         return result.scalar_one()
 
@@ -130,15 +130,17 @@ class TorrentDatabase:
         logger.debug("Deleted torrent %s.", torrent_id)
         return True
 
+    def delete_obj(self, torrent: Torrent) -> None:
+        self.session.delete(torrent)
+        self.session.commit()
+        logger.debug("Deleted torrent %s.", torrent.id)
+
     def delete_orphans(self) -> int:
         result = self.session.execute(
-            select(Torrent).where(Torrent.bangumi_id == None)  # noqa: E711
+            delete(Torrent).where(Torrent.bangumi_id.is_(None))
         )
-        torrents = list(result.scalars().all())
-        count = len(torrents)
-        for t in torrents:
-            self.session.delete(t)
+        self.session.commit()
+        count = result.rowcount
         if count > 0:
-            self.session.commit()
             logger.debug("Deleted %s orphan torrents.", count)
         return count

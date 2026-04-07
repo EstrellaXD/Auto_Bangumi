@@ -441,7 +441,7 @@ async def delete_single_orphan_torrent(torrent_id: int):
                     "msg_zh": f"未找到孤儿种子 {torrent_id}。",
                 },
             )
-        manager.torrent.delete_one(torrent_id)
+        manager.torrent.delete_obj(torrent)
     return u_response(
         ResponseModel(
             status=True,
@@ -497,7 +497,7 @@ async def delete_single_torrent(bangumi_id: int, torrent_id: int):
                     "msg_zh": f"番剧 {bangumi_id} 下未找到种子 {torrent_id}。",
                 },
             )
-        manager.torrent.delete_one(torrent_id)
+        manager.torrent.delete_obj(torrent)
     return u_response(
         ResponseModel(
             status=True,

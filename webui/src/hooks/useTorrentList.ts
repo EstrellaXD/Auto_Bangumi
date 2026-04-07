@@ -1,7 +1,7 @@
-import { useMessage } from 'naive-ui';
 import type { Torrent } from '#/torrent';
 
 export function useTorrentList(loadFn: () => Promise<Torrent[]>) {
+  const { t } = useI18n();
   const message = useMessage();
   const torrents = ref<Torrent[]>([]);
   const selectedIds = ref<Set<number>>(new Set());
@@ -12,7 +12,7 @@ export function useTorrentList(loadFn: () => Promise<Torrent[]>) {
       torrents.value = await loadFn();
     } catch {
       torrents.value = [];
-      message.error('加载种子列表失败');
+      message.error(t('homepage.torrents.load_failed'));
     }
     selectedIds.value = new Set();
   }
@@ -43,7 +43,7 @@ export function useTorrentList(loadFn: () => Promise<Torrent[]>) {
       message.success(label);
       await load();
     } catch {
-      message.error('删除失败');
+      message.error(t('homepage.torrents.delete_failed'));
     }
   }
 
@@ -56,6 +56,5 @@ export function useTorrentList(loadFn: () => Promise<Torrent[]>) {
     toggleAll,
     toggleOne,
     runDelete,
-    message,
   };
 }
