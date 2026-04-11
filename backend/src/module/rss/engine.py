@@ -162,14 +162,15 @@ class RSSEngine(Database):
             rss_item.last_checked_at = now
             rss_item.last_error = error
             self.add(rss_item)
+            downloaded_torrents = []
             for torrent in new_torrents:
                 matched_data = self.match_torrent(torrent)
                 if matched_data:
                     if await client.add_torrent(torrent, matched_data):
                         logger.debug("[Engine] Add torrent %s to client", torrent.name)
-                    torrent.downloaded = True
-            # Add all torrents to database
-            self.torrent.add_all(new_torrents)
+                        torrent.downloaded = True
+                        downloaded_torrents.append(torrent)
+            self.torrent.add_all(downloaded_torrents)
         self.commit()
 
     async def download_bangumi(self, bangumi: Bangumi):

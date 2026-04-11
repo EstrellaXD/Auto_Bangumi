@@ -36,13 +36,15 @@ def clear_bangumi_cache():
 
 class TestPullRss:
     async def test_returns_only_new_torrents(self, rss_engine):
-        """pull_rss filters out torrents already in the database."""
+        """pull_rss filters out torrents already in the database with downloaded=True."""
         rss_item = make_rss_item()
         rss_engine.rss.add(rss_item)
         rss_item = rss_engine.rss.search_id(1)
 
-        # Pre-insert one torrent into DB
-        existing = make_torrent(url="https://example.com/existing.torrent", rss_id=1)
+        # Pre-insert one torrent into DB (must be downloaded=True to be filtered)
+        existing = make_torrent(
+            url="https://example.com/existing.torrent", rss_id=1, downloaded=True
+        )
         rss_engine.torrent.add(existing)
 
         # Mock _get_torrents to return 3 torrents (1 existing + 2 new)
@@ -59,12 +61,14 @@ class TestPullRss:
         assert all(t.url != "https://example.com/existing.torrent" for t in result)
 
     async def test_all_existing_returns_empty(self, rss_engine):
-        """When all torrents already exist, returns empty list."""
+        """When all torrents already exist with downloaded=True, returns empty list."""
         rss_item = make_rss_item()
         rss_engine.rss.add(rss_item)
         rss_item = rss_engine.rss.search_id(1)
 
-        existing = make_torrent(url="https://example.com/only.torrent", rss_id=1)
+        existing = make_torrent(
+            url="https://example.com/only.torrent", rss_id=1, downloaded=True
+        )
         rss_engine.torrent.add(existing)
 
         with patch.object(RSSEngine, "_get_torrents", new_callable=AsyncMock) as mock_get:
@@ -86,6 +90,7 @@ class TestPullRss:
             result = await rss_engine.pull_rss(rss_item)
 
         assert result == []
+
 
 
 # ---------------------------------------------------------------------------
@@ -217,25 +222,6 @@ class TestRefreshRss:
         assert len(all_torrents) == 1
         assert all_torrents[0].downloaded is True
 
-    async def test_unmatched_torrents_stored_not_downloaded(self, rss_engine):
-        """Unmatched torrents are stored in DB but not marked downloaded."""
-        rss_item = make_rss_item(enabled=True)
-        rss_engine.rss.add(rss_item)
-        # No bangumi in DB to match
-
-        unmatched = Torrent(
-            name="[Sub] Unknown Anime - 01 [1080p].mkv",
-            url="https://example.com/unknown.torrent",
-        )
-        with patch.object(RSSEngine, "_get_torrents", new_callable=AsyncMock) as mock_get:
-            mock_get.return_value = [unmatched]
-            client = AsyncMock()
-            await rss_engine.refresh_rss(client)
-
-        client.add_torrent.assert_not_called()
-        all_torrents = rss_engine.torrent.search_all()
-        assert len(all_torrents) == 1
-        assert all_torrents[0].downloaded is False
 
     async def test_refresh_specific_rss_id(self, rss_engine):
         """refresh_rss with rss_id only processes that specific feed."""
@@ -257,6 +243,7 @@ class TestRefreshRss:
         with patch.object(RSSEngine, "_get_torrents", new_callable=AsyncMock) as mock_get:
             client = AsyncMock()
             await rss_engine.refresh_rss(client, rss_id=999)
+
 
         mock_get.assert_not_called()
 
