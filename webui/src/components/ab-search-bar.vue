@@ -1,7 +1,11 @@
 <script lang="ts" setup>
 import AbSearchModal from './search/ab-search-modal.vue';
 
-const { showModal, provider, loading } = storeToRefs(useSearchStore());
+const {
+  showModal: _showModal,
+  provider,
+  loading,
+} = storeToRefs(useSearchStore());
 const { toggleModal, getProviders } = useSearchStore();
 
 onMounted(() => {
@@ -11,11 +15,7 @@ onMounted(() => {
 
 <template>
   <!-- Search trigger button -->
-  <ab-search
-    :provider="provider"
-    :loading="loading"
-    @click="toggleModal"
-  />
+  <ab-search :provider="provider" :loading="loading" @click="toggleModal" />
 
   <!-- Search Modal -->
   <AbSearchModal @close="toggleModal" />

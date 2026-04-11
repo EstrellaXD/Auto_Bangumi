@@ -1,5 +1,13 @@
 <script lang="ts" setup>
-import { CheckOne, Close, Copy, Down, ErrorPicture, Link, Right } from '@icon-park/vue-next';
+import {
+  CheckOne,
+  Close,
+  Copy,
+  Down,
+  ErrorPicture,
+  Link,
+  Right,
+} from '@icon-park/vue-next';
 import { NDynamicTags, NSpin } from 'naive-ui';
 import type { BangumiRule } from '#/bangumi';
 import type { RSS } from '#/rss';
@@ -11,10 +19,13 @@ const show = defineModel('show', { default: false });
 
 const message = useMessage();
 const { getAll } = useBangumiStore();
+const { getAll: getAllRSS } = useRSSStore();
 const { t } = useMyI18n();
 
 const rss = ref<RSS>({ ...rssTemplate });
-const rule = defineModel<BangumiRule>('rule', { default: () => ({ ...ruleTemplate }) });
+const rule = defineModel<BangumiRule>('rule', {
+  default: () => ({ ...ruleTemplate }),
+});
 const parserTypes = ['tmdb', 'mikan', 'parser'] as const;
 
 // UI state
@@ -36,6 +47,7 @@ const { execute: addRssAggregate } = useApi(apiRSS.add, {
     loading.analyze = true;
   },
   onSuccess() {
+    getAllRSS();
     show.value = false;
   },
   onFinally() {
@@ -210,7 +222,9 @@ function subscribe() {
             <div class="form-section">
               <!-- RSS Link -->
               <div class="form-group">
-                <label class="form-label">{{ $t('topbar.add.rss_link') }}</label>
+                <label class="form-label">{{
+                  $t('topbar.add.rss_link')
+                }}</label>
                 <div class="input-wrapper">
                   <Link theme="outline" size="16" class="input-icon" />
                   <input
@@ -237,7 +251,9 @@ function subscribe() {
               <div class="options-row">
                 <!-- Aggregate Switch -->
                 <div class="option-item">
-                  <label class="option-label">{{ $t('topbar.add.aggregate') }}</label>
+                  <label class="option-label">{{
+                    $t('topbar.add.aggregate')
+                  }}</label>
                   <label class="switch">
                     <input v-model="rss.aggregate" type="checkbox" />
                     <span class="switch-slider"></span>
@@ -246,9 +262,15 @@ function subscribe() {
 
                 <!-- Parser Select -->
                 <div class="option-item">
-                  <label class="option-label">{{ $t('topbar.add.parser') }}</label>
+                  <label class="option-label">{{
+                    $t('topbar.add.parser')
+                  }}</label>
                   <select v-model="rss.parser" class="form-select">
-                    <option v-for="type in parserTypes" :key="type" :value="type">
+                    <option
+                      v-for="type in parserTypes"
+                      :key="type"
+                      :value="type"
+                    >
                       {{ type }}
                     </option>
                   </select>
@@ -258,7 +280,11 @@ function subscribe() {
 
             <!-- Footer -->
             <footer class="add-footer">
-              <ab-button size="small" :loading="loading.analyze" @click="addRss">
+              <ab-button
+                size="small"
+                :loading="loading.analyze"
+                @click="addRss"
+              >
                 {{ $t('topbar.add.button') }}
               </ab-button>
             </footer>
@@ -286,7 +312,9 @@ function subscribe() {
                     class="title-input"
                     :placeholder="$t('homepage.rule.official_title')"
                   />
-                  <p v-if="rule.title_raw" class="bangumi-subtitle">{{ rule.title_raw }}</p>
+                  <p v-if="rule.title_raw" class="bangumi-subtitle">
+                    {{ rule.title_raw }}
+                  </p>
                   <div class="meta-row">
                     <input
                       :value="rule.year ?? ''"
@@ -323,11 +351,17 @@ function subscribe() {
               <!-- RSS Link Display -->
               <div v-if="rule.rss_link?.[0] || rss.url" class="rss-section">
                 <div class="info-row">
-                  <span class="info-label">{{ $t('search.confirm.rss') }}:</span>
+                  <span class="info-label"
+                    >{{ $t('search.confirm.rss') }}:</span
+                  >
                   <span class="info-value info-value--link">
                     {{ rule.rss_link?.[0] || rss.url || '-' }}
                   </span>
-                  <button class="copy-btn" :class="{ copied }" @click="copyRssLink">
+                  <button
+                    class="copy-btn"
+                    :class="{ copied }"
+                    @click="copyRssLink"
+                  >
                     <CheckOne v-if="copied" theme="outline" size="14" />
                     <Copy v-else theme="outline" size="14" />
                   </button>
@@ -336,8 +370,15 @@ function subscribe() {
 
               <!-- Advanced settings -->
               <div class="advanced-section">
-                <button class="advanced-toggle" @click="showAdvanced = !showAdvanced">
-                  <component :is="showAdvanced ? Down : Right" theme="outline" size="14" />
+                <button
+                  class="advanced-toggle"
+                  @click="showAdvanced = !showAdvanced"
+                >
+                  <component
+                    :is="showAdvanced ? Down : Right"
+                    theme="outline"
+                    size="14"
+                  />
                   {{ $t('search.confirm.advanced') }}
                 </button>
 
@@ -345,15 +386,22 @@ function subscribe() {
                   <div v-show="showAdvanced" class="advanced-content">
                     <!-- Filter rules row -->
                     <div class="advanced-row advanced-row--tags">
-                      <label class="advanced-label">{{ $t('homepage.rule.filter') }}</label>
+                      <label class="advanced-label">{{
+                        $t('homepage.rule.filter')
+                      }}</label>
                       <div class="advanced-control filter-tags">
-                        <NDynamicTags v-model:value="rule.filter" size="small" />
+                        <NDynamicTags
+                          v-model:value="rule.filter"
+                          size="small"
+                        />
                       </div>
                     </div>
 
                     <!-- Offset row -->
                     <div class="advanced-row">
-                      <label class="advanced-label">{{ $t('homepage.rule.offset') }}</label>
+                      <label class="advanced-label">{{
+                        $t('homepage.rule.offset')
+                      }}</label>
                       <div class="advanced-control offset-controls">
                         <input
                           v-model.number="rule.episode_offset"
@@ -367,11 +415,15 @@ function subscribe() {
                           @click="autoDetectOffset"
                         >
                           <NSpin v-if="offsetLoading" :size="14" />
-                          <span v-else>{{ $t('homepage.rule.auto_detect') }}</span>
+                          <span v-else>{{
+                            $t('homepage.rule.auto_detect')
+                          }}</span>
                         </button>
                       </div>
                     </div>
-                    <div v-if="offsetReason" class="offset-reason">{{ offsetReason }}</div>
+                    <div v-if="offsetReason" class="offset-reason">
+                      {{ offsetReason }}
+                    </div>
                   </div>
                 </Transition>
               </div>
@@ -385,10 +437,18 @@ function subscribe() {
                 </ab-button>
               </div>
               <div class="footer-right">
-                <ab-button size="small" :loading="loading.collect" @click="collect">
+                <ab-button
+                  size="small"
+                  :loading="loading.collect"
+                  @click="collect"
+                >
                   {{ $t('topbar.add.collect') }}
                 </ab-button>
-                <ab-button size="small" :loading="loading.subscribe" @click="subscribe">
+                <ab-button
+                  size="small"
+                  :loading="loading.subscribe"
+                  @click="subscribe"
+                >
                   {{ $t('topbar.add.subscribe') }}
                 </ab-button>
               </div>
@@ -512,11 +572,13 @@ function subscribe() {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   outline: none;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 
   &:focus {
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+    box-shadow: 0 0 0 3px
+      color-mix(in srgb, var(--color-primary) 15%, transparent);
   }
 
   &::placeholder {
@@ -734,7 +796,8 @@ function subscribe() {
   border-bottom: 1px solid transparent;
   padding: 2px 0;
   outline: none;
-  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+  transition: border-color var(--transition-fast),
+    background-color var(--transition-fast);
 
   &:hover,
   &:focus {

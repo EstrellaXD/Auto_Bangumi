@@ -8,7 +8,6 @@ export interface DataListColumn {
   hidden?: boolean;
 }
 
- 
 type DataItem = Record<string, any>;
 
 const props = withDefaults(
@@ -72,12 +71,16 @@ defineExpose({ selectedKeys, toggleSelectAll });
         <input
           type="checkbox"
           :checked="selectedKeys.size === items.length && items.length > 0"
-          :indeterminate="selectedKeys.size > 0 && selectedKeys.size < items.length"
+          :indeterminate="
+            selectedKeys.size > 0 && selectedKeys.size < items.length
+          "
           @change="toggleSelectAll"
         />
         <span>{{ $t('common.selectAll') }}</span>
       </label>
-      <span class="ab-data-list__count">{{ items.length }} {{ $t('common.items') }}</span>
+      <span class="ab-data-list__count"
+        >{{ items.length }} {{ $t('common.items') }}</span
+      >
     </div>
 
     <!-- Items -->
@@ -106,7 +109,9 @@ defineExpose({ selectedKeys, toggleSelectAll });
             class="ab-data-list__field"
           >
             <span class="ab-data-list__label">{{ col.title }}</span>
-            <span class="ab-data-list__value">{{ getCellValue(item, col) }}</span>
+            <span class="ab-data-list__value">{{
+              getCellValue(item, col)
+            }}</span>
           </div>
         </slot>
       </div>
@@ -162,7 +167,8 @@ defineExpose({ selectedKeys, toggleSelectAll });
     border-radius: var(--radius-md);
     overflow: hidden;
     cursor: pointer;
-    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    transition: border-color var(--transition-fast),
+      box-shadow var(--transition-fast);
 
     &:active {
       border-color: var(--color-primary);

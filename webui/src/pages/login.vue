@@ -46,7 +46,11 @@ async function handleLogin() {
         <div class="login-logo">
           <!-- Light mode: colored logo, Dark mode: light logo -->
           <img src="/images/logo.svg" alt="AutoBangumi" class="logo-dark" />
-          <img src="/images/logo-light.svg" alt="AutoBangumi" class="logo-light" />
+          <img
+            src="/images/logo-light.svg"
+            alt="AutoBangumi"
+            class="logo-light"
+          />
         </div>
         <h1 class="login-title">AutoBangumi</h1>
         <p class="login-subtitle">{{ $t('login.title') }}</p>
@@ -179,7 +183,8 @@ async function handleLogin() {
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(0, 0) scale(1);
   }
   33% {
@@ -211,7 +216,7 @@ async function handleLogin() {
   border-radius: var(--radius-xl);
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-lg),
-              0 0 0 1px color-mix(in srgb, var(--color-white) 5%, transparent) inset;
+    0 0 0 1px color-mix(in srgb, var(--color-white) 5%, transparent) inset;
 
   @media (max-width: 480px) {
     padding: 32px 24px;
@@ -317,8 +322,7 @@ async function handleLogin() {
   border-radius: var(--radius-md);
   outline: none;
   transition: border-color var(--transition-fast),
-              box-shadow var(--transition-fast),
-              background-color var(--transition-fast);
+    box-shadow var(--transition-fast), background-color var(--transition-fast);
 
   &::placeholder {
     color: var(--color-text-muted);
@@ -330,7 +334,8 @@ async function handleLogin() {
 
   &:focus {
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+    box-shadow: 0 0 0 3px
+      color-mix(in srgb, var(--color-primary) 15%, transparent);
     background: var(--color-surface);
 
     ~ .input-icon,

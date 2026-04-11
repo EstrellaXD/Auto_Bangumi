@@ -91,9 +91,17 @@ const canTest = computed(() => {
           :disabled="!canTest || isTesting"
           @click="testNotification"
         >
-          {{ isTesting ? t('setup.downloader.testing') : t('setup.notification.test') }}
+          {{
+            isTesting
+              ? t('setup.downloader.testing')
+              : t('setup.notification.test')
+          }}
         </ab-button>
-        <p v-if="testMessage" class="test-message" :class="{ success: testSuccess }">
+        <p
+          v-if="testMessage"
+          class="test-message"
+          :class="{ success: testSuccess }"
+        >
           {{ testMessage }}
         </p>
       </div>
@@ -154,7 +162,8 @@ const canTest = computed(() => {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 
   &:hover {
     border-color: var(--color-primary);

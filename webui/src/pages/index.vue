@@ -5,7 +5,8 @@ definePage({
 });
 
 const { editRule } = storeToRefs(useBangumiStore());
-const { updateRule, enableRule, archiveRule, unarchiveRule, ruleManage } = useBangumiStore();
+const { updateRule, enableRule, archiveRule, unarchiveRule, ruleManage } =
+  useBangumiStore();
 </script>
 
 <template>
@@ -36,7 +37,9 @@ const { updateRule, enableRule, archiveRule, unarchiveRule, ruleManage } = useBa
       @enable="(id) => enableRule(id)"
       @archive="(id) => archiveRule(id)"
       @unarchive="(id) => unarchiveRule(id)"
-      @delete-file="(type, { id, deleteFile }) => ruleManage(type, id, deleteFile)"
+      @delete-file="
+        (type, { id, deleteFile }) => ruleManage(type, id, deleteFile)
+      "
       @apply="(rule) => updateRule(rule.id, rule)"
     />
   </div>

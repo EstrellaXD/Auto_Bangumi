@@ -3,16 +3,17 @@
  * Note: These tests focus on the filter/rss_link string<->array transformations
  */
 
-import { describe, it, expect } from 'vitest';
-import {
-  mockBangumiAPI,
-  mockBangumiRule,
-} from '@/test/mocks/api';
+import { describe, expect, it } from 'vitest';
+import { mockBangumiAPI, mockBangumiRule } from '@/test/mocks/api';
 
 describe('Bangumi API Logic', () => {
   describe('getAll transformation (string to array)', () => {
     // This transformation happens when receiving data from API
-    const transformApiResponse = <T extends { filter: string; rss_link: string }>(item: T) => ({
+    const transformApiResponse = <
+      T extends { filter: string; rss_link: string }
+    >(
+      item: T
+    ) => ({
       ...item,
       filter: item.filter.split(','),
       rss_link: item.rss_link.split(','),
@@ -63,8 +64,12 @@ describe('Bangumi API Logic', () => {
 
   describe('updateRule transformation (array to string)', () => {
     // This transformation happens when sending data to API
-    const transformForUpdate = (rule: { id: number; filter: string[]; rss_link: string[] }) => {
-      const { id, ...rest } = rule;
+    const transformForUpdate = (rule: {
+      id: number;
+      filter: string[];
+      rss_link: string[];
+    }) => {
+      const { id: _id, ...rest } = rule;
       return {
         ...rest,
         filter: rule.filter.join(','),

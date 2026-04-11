@@ -165,7 +165,10 @@ function validateUrl(url: string): boolean {
           <div class="provider-info">
             <div class="provider-name">
               {{ provider.name }}
-              <span v-if="isDefaultProvider(provider.name)" class="default-badge">
+              <span
+                v-if="isDefaultProvider(provider.name)"
+                class="default-badge"
+              >
                 {{ $t('config.search_provider_set.default') }}
               </span>
             </div>
@@ -236,10 +239,7 @@ function validateUrl(url: string): boolean {
           />
         </ab-label>
 
-        <div
-          v-if="formUrl && !validateUrl(formUrl)"
-          class="validation-warning"
-        >
+        <div v-if="formUrl && !validateUrl(formUrl)" class="validation-warning">
           {{ $t('config.search_provider_set.url_missing_placeholder') }}
         </div>
 
@@ -252,7 +252,9 @@ function validateUrl(url: string): boolean {
           <ab-button
             size="small"
             type="primary"
-            :disabled="!formName.trim() || !formUrl.trim() || !validateUrl(formUrl)"
+            :disabled="
+              !formName.trim() || !formUrl.trim() || !validateUrl(formUrl)
+            "
             @click="handleAdd"
           >
             {{ $t('config.apply') }}
@@ -275,7 +277,10 @@ function validateUrl(url: string): boolean {
             :placeholder="$t('config.search_provider_set.name_placeholder')"
             ab-input
             maxlength="32"
-            :disabled="editingProvider !== null && isDefaultProvider(editingProvider.name)"
+            :disabled="
+              editingProvider !== null &&
+              isDefaultProvider(editingProvider.name)
+            "
           />
         </ab-label>
 
@@ -289,10 +294,7 @@ function validateUrl(url: string): boolean {
           />
         </ab-label>
 
-        <div
-          v-if="formUrl && !validateUrl(formUrl)"
-          class="validation-warning"
-        >
+        <div v-if="formUrl && !validateUrl(formUrl)" class="validation-warning">
           {{ $t('config.search_provider_set.url_missing_placeholder') }}
         </div>
 
@@ -305,7 +307,9 @@ function validateUrl(url: string): boolean {
           <ab-button
             size="small"
             type="primary"
-            :disabled="!formName.trim() || !formUrl.trim() || !validateUrl(formUrl)"
+            :disabled="
+              !formName.trim() || !formUrl.trim() || !validateUrl(formUrl)
+            "
             @click="handleEdit"
           >
             {{ $t('config.apply') }}
@@ -363,7 +367,8 @@ function validateUrl(url: string): boolean {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+    monospace;
 }
 
 .provider-actions {

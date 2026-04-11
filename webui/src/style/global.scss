@@ -12,7 +12,8 @@ body {
   font-family: var(--font-family);
   color: var(--color-text);
   background-color: var(--color-bg);
-  transition: color var(--transition-normal), background-color var(--transition-normal);
+  transition: color var(--transition-normal),
+    background-color var(--transition-normal);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -78,7 +79,7 @@ input::-webkit-inner-spin-button {
 // iOS Safari zooms in when focusing inputs with font-size < 16px
 // This rule ensures all form inputs are at least 16px on touch devices
 @media (hover: none) and (pointer: coarse) {
-  input:not([type="checkbox"]):not([type="radio"]),
+  input:not([type='checkbox']):not([type='radio']),
   textarea,
   select {
     font-size: 16px !important;

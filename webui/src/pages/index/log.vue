@@ -137,10 +137,7 @@ onDeactivated(() => {
         <div ref="logContainer" class="log-viewer">
           <div class="log-content">
             <template v-for="i in filteredLog" :key="i.index">
-              <div
-                class="log-entry"
-                :style="{ color: typeColor(i.type) }"
-              >
+              <div class="log-entry" :style="{ color: typeColor(i.type) }">
                 <div class="log-meta">
                   <div class="log-type">{{ i.type }}</div>
                   <div class="log-date">{{ i.date }}</div>

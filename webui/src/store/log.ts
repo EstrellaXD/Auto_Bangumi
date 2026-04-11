@@ -33,9 +33,11 @@ export const useLogStore = defineStore('log', () => {
     }
   });
 
-  const { copy: clipboardCopy, isSupported: clipboardSupported } = useClipboard({
-    legacy: true,
-  });
+  const { copy: clipboardCopy, isSupported: clipboardSupported } = useClipboard(
+    {
+      legacy: true,
+    }
+  );
 
   function copy() {
     if (clipboardSupported.value) {

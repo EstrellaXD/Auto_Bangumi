@@ -3,8 +3,14 @@ import { Delete } from '@icon-park/vue-next';
 import type { PasskeyItem } from '#/passkey';
 
 const { t } = useMyI18n();
-const { passkeys, loading, isSupported, loadPasskeys, addPasskey, deletePasskey } =
-  usePasskey();
+const {
+  passkeys,
+  loading,
+  isSupported,
+  loadPasskeys,
+  addPasskey,
+  deletePasskey,
+} = usePasskey();
 
 const showAddDialog = ref(false);
 const deviceName = ref('');
@@ -93,20 +99,18 @@ function formatDate(dateString: string | null): string {
           <div>
             <div font-medium>{{ passkey.name }}</div>
             <div text-12 text-gray-500>
-              {{ $t('passkey.created_at') }}: {{ formatDate(passkey.created_at) }}
+              {{ $t('passkey.created_at') }}:
+              {{ formatDate(passkey.created_at) }}
             </div>
             <div v-if="passkey.last_used_at" text-12 text-gray-500>
-              {{ $t('passkey.last_used') }}: {{ formatDate(passkey.last_used_at) }}
+              {{ $t('passkey.last_used') }}:
+              {{ formatDate(passkey.last_used_at) }}
             </div>
             <div v-if="passkey.backup_eligible" text-12 text-green-600>
               {{ $t('passkey.synced') }}
             </div>
           </div>
-          <ab-button
-            size="small"
-            type="warn"
-            @click="handleDelete(passkey)"
-          >
+          <ab-button size="small" type="warn" @click="handleDelete(passkey)">
             <Delete size="16" />
           </ab-button>
         </div>
@@ -152,11 +156,7 @@ function formatDate(dateString: string | null): string {
         <div line></div>
 
         <div flex="~ justify-end gap-8">
-          <ab-button
-            size="small"
-            type="warn"
-            @click="showAddDialog = false"
-          >
+          <ab-button size="small" type="warn" @click="showAddDialog = false">
             {{ $t('config.cancel') }}
           </ab-button>
           <ab-button

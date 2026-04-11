@@ -3,7 +3,7 @@
  * Note: These tests focus on testable aspects of the auth flow logic
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 // Test the core auth validation and state logic without the full composable dependencies
 
@@ -15,7 +15,10 @@ describe('Auth Logic', () => {
     const validateForm = (
       username: string,
       password: string
-    ): { valid: boolean; error: 'empty_username' | 'empty_password' | 'short_password' | null } => {
+    ): {
+      valid: boolean;
+      error: 'empty_username' | 'empty_password' | 'short_password' | null;
+    } => {
       if (!username) {
         return { valid: false, error: 'empty_username' };
       }

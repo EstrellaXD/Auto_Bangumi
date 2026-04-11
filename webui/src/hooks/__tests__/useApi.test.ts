@@ -3,7 +3,7 @@
  * Note: These tests focus on testable aspects of the hook's behavior
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 // Simplified useApi implementation for testing
 interface Options<T = unknown> {
@@ -14,7 +14,6 @@ interface Options<T = unknown> {
   onFinally?: () => void;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyAsyncFunction = (...args: any[]) => Promise<any>;
 
 function createUseApi<TApi extends AnyAsyncFunction>(
@@ -113,8 +112,11 @@ describe('useApi logic', () => {
 
     it('should call onFinally after error', async () => {
       const onFinally = vi.fn();
-      const mockApi = vi.fn().mockRejectedValue(new Error());
-      const { execute } = createUseApi(mockApi, { onFinally, onError: vi.fn() });
+      const mockApi = vi.fn().mockRejectedValue(new Error('something wrong'));
+      const { execute } = createUseApi(mockApi, {
+        onFinally,
+        onError: vi.fn(),
+      });
 
       await execute();
 
@@ -125,7 +127,9 @@ describe('useApi logic', () => {
   describe('error handling', () => {
     it('should set isLoading to false after error', async () => {
       const mockApi = vi.fn().mockRejectedValue(new Error('API Error'));
-      const { execute, getIsLoading } = createUseApi(mockApi, { onError: vi.fn() });
+      const { execute, getIsLoading } = createUseApi(mockApi, {
+        onError: vi.fn(),
+      });
 
       await execute();
 

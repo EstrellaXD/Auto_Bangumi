@@ -38,7 +38,11 @@ function handleNext() {
 }
 
 const canTest = computed(() => {
-  return downloaderData.value.host && downloaderData.value.username && downloaderData.value.password;
+  return (
+    downloaderData.value.host &&
+    downloaderData.value.username &&
+    downloaderData.value.password
+  );
 });
 </script>
 
@@ -95,9 +99,17 @@ const canTest = computed(() => {
           :disabled="!canTest || isTesting"
           @click="testConnection"
         >
-          {{ isTesting ? t('setup.downloader.testing') : t('setup.downloader.test') }}
+          {{
+            isTesting
+              ? t('setup.downloader.testing')
+              : t('setup.downloader.test')
+          }}
         </ab-button>
-        <p v-if="testMessage" class="test-message" :class="{ success: testSuccess }">
+        <p
+          v-if="testMessage"
+          class="test-message"
+          :class="{ success: testSuccess }"
+        >
           {{ testMessage }}
         </p>
       </div>
@@ -153,7 +165,8 @@ const canTest = computed(() => {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 
   &:hover {
     border-color: var(--color-primary);

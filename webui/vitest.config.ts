@@ -20,12 +20,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       include: ['src/**/*.{ts,vue}'],
-      exclude: [
-        'src/test/**',
-        'src/**/*.d.ts',
-        'src/main.ts',
-        'src/router/**',
-      ],
+      exclude: ['src/test/**', 'src/**/*.d.ts', 'src/main.ts', 'src/router/**'],
     },
   },
   resolve: {

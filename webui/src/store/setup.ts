@@ -93,7 +93,11 @@ export const useSetupStore = defineStore('setup', () => {
   function $reset() {
     currentStepIndex.value = 0;
     isLoading.value = false;
-    Object.assign(accountData, { username: '', password: '', confirmPassword: '' });
+    Object.assign(accountData, {
+      username: '',
+      password: '',
+      confirmPassword: '',
+    });
     Object.assign(downloaderData, {
       type: 'qbittorrent',
       host: '',

@@ -44,7 +44,11 @@ withDefaults(
   width: 120px;
   height: 3px;
   border-radius: var(--radius-full);
-  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-hover));
+  background: linear-gradient(
+    90deg,
+    var(--color-primary),
+    var(--color-primary-hover)
+  );
   opacity: 0.6;
 
   @include forMobile {

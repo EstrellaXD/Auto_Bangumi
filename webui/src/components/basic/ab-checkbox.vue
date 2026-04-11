@@ -56,7 +56,7 @@ const checked = defineModel<boolean>({ default: false });
   background: var(--color-surface);
   border: 2px solid var(--color-primary);
   transition: border-color var(--transition-fast),
-              background-color var(--transition-fast);
+    background-color var(--transition-fast);
 
   &--normal {
     width: 24px;

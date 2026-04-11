@@ -26,7 +26,9 @@ defineEmits<{ click: [] }>();
     <NSpin v-if="loading" :size="16" class="search-spinner" />
     <Search v-else theme="outline" size="18" class="search-icon" />
 
-    <span class="search-placeholder">{{ $t('topbar.search.placeholder') }}</span>
+    <span class="search-placeholder">{{
+      $t('topbar.search.placeholder')
+    }}</span>
 
     <span class="search-provider">{{ provider }}</span>
   </button>
@@ -46,8 +48,7 @@ defineEmits<{ click: [] }>();
   cursor: pointer;
   font-family: inherit;
   transition: border-color var(--transition-fast),
-              background-color var(--transition-normal),
-              box-shadow var(--transition-fast);
+    background-color var(--transition-normal), box-shadow var(--transition-fast);
 
   &:hover {
     border-color: var(--color-primary);

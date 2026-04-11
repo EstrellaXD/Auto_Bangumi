@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { type GlobalThemeOverrides, NConfigProvider, NMessageProvider, darkTheme } from 'naive-ui';
+import {
+  type GlobalThemeOverrides,
+  NConfigProvider,
+  NMessageProvider,
+  darkTheme,
+} from 'naive-ui';
 
 const { isDark } = useDarkMode();
 const { refresh, isLoggedIn } = useAuth();
@@ -69,8 +74,10 @@ const darkOverrides: GlobalThemeOverrides = {
   },
 };
 
-const themeOverrides = computed(() => isDark.value ? darkOverrides : lightOverrides);
-const naiveTheme = computed(() => isDark.value ? darkTheme : null);
+const themeOverrides = computed(() =>
+  isDark.value ? darkOverrides : lightOverrides
+);
+const naiveTheme = computed(() => (isDark.value ? darkTheme : null));
 </script>
 
 <template>

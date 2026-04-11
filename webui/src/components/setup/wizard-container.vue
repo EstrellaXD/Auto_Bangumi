@@ -17,7 +17,9 @@ const { t } = useMyI18n();
         />
       </div>
       <div class="wizard-step-indicator">
-        {{ t('setup.nav.step', { current: currentStep + 1, total: totalSteps }) }}
+        {{
+          t('setup.nav.step', { current: currentStep + 1, total: totalSteps })
+        }}
       </div>
     </div>
 
