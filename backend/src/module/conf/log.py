@@ -48,5 +48,6 @@ def setup_logger(level: int = logging.INFO, reset: bool = False):
         handlers=[queue_handler],
     )
 
-    # Suppress verbose HTTP request logs from httpx
+    # Suppress verbose HTTP request logs from httpx and httpcore
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
