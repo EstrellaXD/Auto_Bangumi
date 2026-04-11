@@ -21,6 +21,7 @@ const providerTypes: {
   { value: 'gotify', label: 'Gotify' },
   { value: 'pushover', label: 'Pushover' },
   { value: 'webhook', label: 'Webhook' },
+  { value: 'ntfy', label: 'ntfy' },
 ];
 
 // Provider field configurations
@@ -80,6 +81,14 @@ const providerFields: Record<
       placeholder: '{"title": "{{title}}", "episode": {{episode}}}',
     },
   ],
+  ntfy: [
+    {
+      key: 'server_url',
+      label: 'Server URL',
+      placeholder: 'https://ntfy.sh',
+    },
+    { key: 'token', label: 'Topic', placeholder: 'your-topic-name' },
+  ],
 };
 
 // Dialog state
@@ -129,6 +138,7 @@ function getProviderIcon(type: string): string {
     gotify: 'i-carbon-notification-filled',
     pushover: 'i-carbon-mobile',
     webhook: 'i-carbon-webhook',
+    ntfy: 'i-carbon-notification',
   };
   return icons[type] || 'i-carbon-notification';
 }

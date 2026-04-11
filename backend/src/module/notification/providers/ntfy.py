@@ -41,6 +41,8 @@ class NtfyProvider(NotificationProvider):
 
         try:
             resp = await self.post_json_data(self.notification_url, data)
+            if resp is None:
+                return False
             logger.debug("ntfy notification: %s", resp.status_code)
             return resp.status_code == 200
         except Exception as e:
@@ -59,6 +61,8 @@ class NtfyProvider(NotificationProvider):
 
         try:
             resp = await self.post_json_data(self.notification_url, data)
+            if resp is None:
+                return False, "ntfy request failed: connection error"
             if resp.status_code == 200:
                 return True, "ntfy test message sent successfully"
             else:
@@ -70,11 +74,15 @@ class NtfyProvider(NotificationProvider):
         """Post JSON data to ntfy."""
         import httpx
 
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                url,
-                json=data,
-                headers={"Content-Type": "application/json"},
-                timeout=10.0
-            )
-            return response
+        try:
+            async with httpx.AsyncClient(verify=False) as client:
+                response = await client.post(
+                    url,
+                    json=data,
+                    headers={"Content-Type": "application/json"},
+                    timeout=10.0
+                )
+                return response
+        except httpx.RequestError as e:
+            logger.warning(f"ntfy request error: {e}")
+            return None
