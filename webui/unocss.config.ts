@@ -61,19 +61,22 @@ export default defineConfig({
     [
       'bg-theme-row',
       {
-        background: 'linear-gradient(90.5deg, var(--color-primary) 1.53%, var(--color-primary-hover) 96.48%)',
+        background:
+          'linear-gradient(90.5deg, var(--color-primary) 1.53%, var(--color-primary-hover) 96.48%)',
       },
     ],
     [
       'bg-theme-col',
       {
-        background: 'linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-hover) 100%)',
+        background:
+          'linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-hover) 100%)',
       },
     ],
     [
       'poster-shandow',
       {
-        filter: 'drop-shadow(2px 2px 2px var(--shadow-color, rgba(0, 0, 0, 0.1)))',
+        filter:
+          'drop-shadow(2px 2px 2px var(--shadow-color, rgba(0, 0, 0, 0.1)))',
       },
     ],
     [

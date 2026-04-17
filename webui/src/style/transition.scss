@@ -27,7 +27,8 @@
 .slide {
   &-enter-active,
   &-leave-active {
-    transition: transform var(--transition-normal), opacity var(--transition-normal);
+    transition: transform var(--transition-normal),
+      opacity var(--transition-normal);
   }
 
   &-enter-from {
@@ -44,7 +45,8 @@
 // Page route transition
 .page {
   &-enter-active {
-    transition: opacity var(--transition-normal), transform var(--transition-normal);
+    transition: opacity var(--transition-normal),
+      transform var(--transition-normal);
   }
 
   &-leave-active {
@@ -86,7 +88,8 @@
 .sheet {
   &-enter-active,
   &-leave-active {
-    transition: transform var(--transition-slow), opacity var(--transition-normal);
+    transition: transform var(--transition-slow),
+      opacity var(--transition-normal);
   }
 
   &-enter-from {
@@ -117,7 +120,8 @@
 .swipe-left {
   &-enter-active,
   &-leave-active {
-    transition: transform var(--transition-normal), opacity var(--transition-normal);
+    transition: transform var(--transition-normal),
+      opacity var(--transition-normal);
   }
 
   &-enter-from {
@@ -134,7 +138,8 @@
 .swipe-right {
   &-enter-active,
   &-leave-active {
-    transition: transform var(--transition-normal), opacity var(--transition-normal);
+    transition: transform var(--transition-normal),
+      opacity var(--transition-normal);
   }
 
   &-enter-from {

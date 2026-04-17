@@ -1,5 +1,12 @@
 <script lang="ts" setup>
-import { CheckOne, Close, Copy, Down, ErrorPicture, Right } from '@icon-park/vue-next';
+import {
+  CheckOne,
+  Close,
+  Copy,
+  Down,
+  ErrorPicture,
+  Right,
+} from '@icon-park/vue-next';
 import { NDynamicTags, NSpin, useMessage } from 'naive-ui';
 import type { BangumiRule, DetectOffsetResponse } from '#/bangumi';
 
@@ -28,9 +35,13 @@ const message = useMessage();
 const localRule = ref<BangumiRule>(JSON.parse(JSON.stringify(rule.value)));
 
 // Sync when rule changes (e.g., opening different item)
-watch(rule, (newVal) => {
-  localRule.value = JSON.parse(JSON.stringify(newVal));
-}, { deep: true });
+watch(
+  rule,
+  (newVal) => {
+    localRule.value = JSON.parse(JSON.stringify(newVal));
+  },
+  { deep: true }
+);
 
 const posterSrc = computed(() => resolvePosterUrl(localRule.value.poster_link));
 const showAdvanced = ref(true);
@@ -223,8 +234,13 @@ function emitUnarchive() {
             <div class="review-warning-main">
               <span class="review-warning-emoji">⚠️</span>
               <div class="review-warning-content">
-                <div class="review-warning-title">{{ $t('offset.needs_review') }}</div>
-                <div v-if="localRule.needs_review_reason" class="review-warning-reason">
+                <div class="review-warning-title">
+                  {{ $t('offset.needs_review') }}
+                </div>
+                <div
+                  v-if="localRule.needs_review_reason"
+                  class="review-warning-reason"
+                >
                   {{ localRule.needs_review_reason }}
                 </div>
               </div>
@@ -270,7 +286,9 @@ function emitUnarchive() {
                   class="title-input"
                   :placeholder="$t('homepage.rule.official_title')"
                 />
-                <p v-if="localRule.title_raw" class="bangumi-subtitle">{{ localRule.title_raw }}</p>
+                <p v-if="localRule.title_raw" class="bangumi-subtitle">
+                  {{ localRule.title_raw }}
+                </p>
                 <div class="meta-row">
                   <input
                     :value="localRule.year ?? ''"
@@ -311,7 +329,11 @@ function emitUnarchive() {
                 <span class="info-value info-value--link">
                   {{ localRule.rss_link?.[0] || '-' }}
                 </span>
-                <button class="copy-btn" :class="{ copied }" @click="copyRssLink">
+                <button
+                  class="copy-btn"
+                  :class="{ copied }"
+                  @click="copyRssLink"
+                >
                   <CheckOne v-if="copied" theme="outline" size="14" />
                   <Copy v-else theme="outline" size="14" />
                 </button>
@@ -320,8 +342,15 @@ function emitUnarchive() {
 
             <!-- Advanced settings -->
             <div class="advanced-section">
-              <button class="advanced-toggle" @click="showAdvanced = !showAdvanced">
-                <component :is="showAdvanced ? Down : Right" theme="outline" size="14" />
+              <button
+                class="advanced-toggle"
+                @click="showAdvanced = !showAdvanced"
+              >
+                <component
+                  :is="showAdvanced ? Down : Right"
+                  theme="outline"
+                  size="14"
+                />
                 {{ $t('search.confirm.advanced') }}
               </button>
 
@@ -329,15 +358,22 @@ function emitUnarchive() {
                 <div v-show="showAdvanced" class="advanced-content">
                   <!-- Filter rules row -->
                   <div class="advanced-row advanced-row--tags">
-                    <label class="advanced-label">{{ $t('homepage.rule.filter') }}</label>
+                    <label class="advanced-label">{{
+                      $t('homepage.rule.filter')
+                    }}</label>
                     <div class="advanced-control filter-tags">
-                      <NDynamicTags v-model:value="localRule.filter" size="small" />
+                      <NDynamicTags
+                        v-model:value="localRule.filter"
+                        size="small"
+                      />
                     </div>
                   </div>
 
                   <!-- Season Offset row -->
                   <div class="advanced-row">
-                    <label class="advanced-label">{{ $t('homepage.rule.season_offset') }}</label>
+                    <label class="advanced-label">{{
+                      $t('homepage.rule.season_offset')
+                    }}</label>
                     <div class="advanced-control offset-controls">
                       <input
                         v-model.number="localRule.season_offset"
@@ -350,7 +386,9 @@ function emitUnarchive() {
 
                   <!-- Episode Offset row -->
                   <div class="advanced-row">
-                    <label class="advanced-label">{{ $t('homepage.rule.episode_offset') }}</label>
+                    <label class="advanced-label">{{
+                      $t('homepage.rule.episode_offset')
+                    }}</label>
                     <div class="advanced-control offset-controls">
                       <input
                         v-model.number="localRule.episode_offset"
@@ -375,18 +413,10 @@ function emitUnarchive() {
               >
                 {{ $t('homepage.rule.unarchive') }}
               </ab-button>
-              <ab-button
-                v-else
-                size="small"
-                @click="emitArchive"
-              >
+              <ab-button v-else size="small" @click="emitArchive">
                 {{ $t('homepage.rule.archive') }}
               </ab-button>
-              <ab-button
-                size="small"
-                type="warn"
-                @click="showDeleteFileDialog"
-              >
+              <ab-button size="small" type="warn" @click="showDeleteFileDialog">
                 {{ $t('homepage.rule.delete') }}
               </ab-button>
             </div>
@@ -400,15 +430,27 @@ function emitUnarchive() {
 
         <!-- Delete confirmation dialog -->
         <Transition name="modal">
-          <div v-if="deleteFileDialog.show" class="delete-dialog-backdrop" @click.self="deleteFileDialog.show = false">
+          <div
+            v-if="deleteFileDialog.show"
+            class="delete-dialog-backdrop"
+            @click.self="deleteFileDialog.show = false"
+          >
             <div class="delete-dialog">
               <h3 class="delete-title">{{ $t('homepage.rule.delete') }}</h3>
               <p class="delete-message">{{ $t('homepage.rule.delete_hit') }}</p>
               <div class="delete-actions">
-                <ab-button size="small" type="secondary" @click="emitDeleteFile(false)">
+                <ab-button
+                  size="small"
+                  type="secondary"
+                  @click="emitDeleteFile(false)"
+                >
                   {{ $t('homepage.rule.no_btn') }}
                 </ab-button>
-                <ab-button size="small" type="warn" @click="emitDeleteFile(true)">
+                <ab-button
+                  size="small"
+                  type="warn"
+                  @click="emitDeleteFile(true)"
+                >
                   {{ $t('homepage.rule.yes_btn') }}
                 </ab-button>
               </div>
@@ -671,7 +713,8 @@ function emitUnarchive() {
   border-bottom: 1px solid transparent;
   padding: 2px 0;
   outline: none;
-  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+  transition: border-color var(--transition-fast),
+    background-color var(--transition-fast);
 
   &:hover,
   &:focus {

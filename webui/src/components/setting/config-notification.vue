@@ -9,7 +9,10 @@ const { getSettingGroup } = useConfigStore();
 const notificationRef = getSettingGroup('notification');
 
 // Provider types with display names
-const providerTypes: { value: TupleToUnion<NotificationType>; label: string }[] = [
+const providerTypes: {
+  value: TupleToUnion<NotificationType>;
+  label: string;
+}[] = [
   { value: 'telegram', label: 'Telegram' },
   { value: 'discord', label: 'Discord' },
   { value: 'bark', label: 'Bark' },
@@ -18,12 +21,17 @@ const providerTypes: { value: TupleToUnion<NotificationType>; label: string }[] 
   { value: 'gotify', label: 'Gotify' },
   { value: 'pushover', label: 'Pushover' },
   { value: 'webhook', label: 'Webhook' },
+  { value: 'ntfy', label: 'ntfy' },
 ];
 
 // Provider field configurations
 const providerFields: Record<
   string,
-  { key: keyof NotificationProviderConfig; label: string; placeholder: string }[]
+  {
+    key: keyof NotificationProviderConfig;
+    label: string;
+    placeholder: string;
+  }[]
 > = {
   telegram: [
     { key: 'token', label: 'Bot Token', placeholder: 'bot token' },
@@ -72,6 +80,14 @@ const providerFields: Record<
       label: 'Template (JSON)',
       placeholder: '{"title": "{{title}}", "episode": {{episode}}}',
     },
+  ],
+  ntfy: [
+    {
+      key: 'server_url',
+      label: 'Server URL',
+      placeholder: 'https://ntfy.sh',
+    },
+    { key: 'token', label: 'Topic', placeholder: 'your-topic-name' },
   ],
 };
 
@@ -122,6 +138,7 @@ function getProviderIcon(type: string): string {
     gotify: 'i-carbon-notification-filled',
     pushover: 'i-carbon-mobile',
     webhook: 'i-carbon-webhook',
+    ntfy: 'i-carbon-notification',
   };
   return icons[type] || 'i-carbon-notification';
 }
@@ -176,7 +193,9 @@ async function testProvider(index: number) {
   testingIndex.value = index;
   testResult.value = null;
   try {
-    const response = await apiNotification.testProvider({ provider_index: index });
+    const response = await apiNotification.testProvider({
+      provider_index: index,
+    });
     testResult.value = {
       success: response.data.success,
       message: response.data.message_zh || response.data.message,
@@ -222,10 +241,10 @@ function getFieldsForType(type: string) {
     <div space-y-8>
       <!-- Global enable switch -->
       <ab-setting
+        v-model:data="notificationEnabled"
         config-key="enable"
         :label="() => t('config.notification_set.enable')"
         type="switch"
-        v-model:data="notificationEnabled"
         bottom-line
       />
 
@@ -280,7 +299,9 @@ function getFieldsForType(type: string) {
               @click="toggleProvider(index)"
             >
               <div
-                :class="provider.enabled ? 'i-carbon-view' : 'i-carbon-view-off'"
+                :class="
+                  provider.enabled ? 'i-carbon-view' : 'i-carbon-view-off'
+                "
               />
             </ab-button>
             <ab-button
@@ -324,7 +345,11 @@ function getFieldsForType(type: string) {
       <div space-y-16>
         <ab-label :label="$t('config.notification_set.type')">
           <select v-model="newProvider.type" ab-input>
-            <option v-for="pt in providerTypes" :key="pt.value" :value="pt.value">
+            <option
+              v-for="pt in providerTypes"
+              :key="pt.value"
+              :value="pt.value"
+            >
               {{ pt.label }}
             </option>
           </select>
@@ -397,7 +422,11 @@ function getFieldsForType(type: string) {
       <div space-y-16>
         <ab-label :label="$t('config.notification_set.type')">
           <select v-model="newProvider.type" ab-input disabled>
-            <option v-for="pt in providerTypes" :key="pt.value" :value="pt.value">
+            <option
+              v-for="pt in providerTypes"
+              :key="pt.value"
+              :value="pt.value"
+            >
               {{ pt.label }}
             </option>
           </select>
@@ -472,7 +501,8 @@ function getFieldsForType(type: string) {
   padding: 12px;
   background: var(--color-surface-elevated, #f9fafb);
   border-radius: 8px;
-  transition: background-color var(--transition-normal), opacity var(--transition-normal);
+  transition: background-color var(--transition-normal),
+    opacity var(--transition-normal);
 
   :root.dark & {
     background: var(--color-surface-elevated, #1f2937);
@@ -532,7 +562,8 @@ function getFieldsForType(type: string) {
 
 .field-textarea {
   resize: none;
-  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+    monospace;
   font-size: 13px;
 }
 
@@ -544,7 +575,11 @@ function getFieldsForType(type: string) {
 
 .test-success {
   color: var(--color-success, #22c55e);
-  background: color-mix(in srgb, var(--color-success, #22c55e) 10%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--color-success, #22c55e) 10%,
+    transparent
+  );
 }
 
 .test-error {

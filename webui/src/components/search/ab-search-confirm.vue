@@ -1,7 +1,19 @@
 <script lang="ts" setup>
-import { CheckOne, Close, Copy, Down, ErrorPicture, Right } from '@icon-park/vue-next';
+import {
+  CheckOne,
+  Close,
+  Copy,
+  Down,
+  ErrorPicture,
+  Right,
+} from '@icon-park/vue-next';
 import { NDynamicTags, NSpin, useMessage } from 'naive-ui';
-import type { BangumiRule, DetectOffsetResponse, OffsetSuggestionDetail, TMDBSummary } from '#/bangumi';
+import type {
+  BangumiRule,
+  DetectOffsetResponse,
+  OffsetSuggestionDetail,
+  TMDBSummary,
+} from '#/bangumi';
 
 const props = defineProps<{
   bangumi: BangumiRule;
@@ -15,16 +27,24 @@ const emit = defineEmits<{
 const message = useMessage();
 
 // Local deep copy of bangumi for editing (prevents mutation of original prop)
-const localBangumi = ref<BangumiRule>(JSON.parse(JSON.stringify(props.bangumi)));
+const localBangumi = ref<BangumiRule>(
+  JSON.parse(JSON.stringify(props.bangumi))
+);
 
 // Sync when props change
-watch(() => props.bangumi, (newVal) => {
-  localBangumi.value = JSON.parse(JSON.stringify(newVal));
-  // Re-detect offset when bangumi changes
-  detectOffsetMismatch();
-}, { deep: true });
+watch(
+  () => props.bangumi,
+  (newVal) => {
+    localBangumi.value = JSON.parse(JSON.stringify(newVal));
+    // Re-detect offset when bangumi changes
+    detectOffsetMismatch();
+  },
+  { deep: true }
+);
 
-const posterSrc = computed(() => resolvePosterUrl(localBangumi.value.poster_link));
+const posterSrc = computed(() =>
+  resolvePosterUrl(localBangumi.value.poster_link)
+);
 const showAdvanced = ref(false);
 const copied = ref(false);
 const offsetLoading = ref(false);
@@ -56,7 +76,10 @@ async function detectOffsetMismatch() {
 }
 
 // Handle offset dialog apply
-function handleOffsetApply(offsets: { seasonOffset: number; episodeOffset: number }) {
+function handleOffsetApply(offsets: {
+  seasonOffset: number;
+  episodeOffset: number;
+}) {
   localBangumi.value.season_offset = offsets.seasonOffset;
   localBangumi.value.episode_offset = offsets.episodeOffset;
   showOffsetDialog.value = false;
@@ -168,8 +191,12 @@ function handleConfirm() {
           </div>
           <div class="bangumi-meta">
             <h3 class="bangumi-title">{{ localBangumi.official_title }}</h3>
-            <p v-if="localBangumi.title_raw" class="bangumi-subtitle">{{ localBangumi.title_raw }}</p>
-            <p v-if="localBangumi.year" class="bangumi-year">{{ localBangumi.year }}</p>
+            <p v-if="localBangumi.title_raw" class="bangumi-subtitle">
+              {{ localBangumi.title_raw }}
+            </p>
+            <p v-if="localBangumi.year" class="bangumi-year">
+              {{ localBangumi.year }}
+            </p>
           </div>
         </div>
 
@@ -202,7 +229,11 @@ function handleConfirm() {
         <!-- Advanced settings -->
         <div class="advanced-section">
           <button class="advanced-toggle" @click="showAdvanced = !showAdvanced">
-            <component :is="showAdvanced ? Down : Right" theme="outline" size="14" />
+            <component
+              :is="showAdvanced ? Down : Right"
+              theme="outline"
+              size="14"
+            />
             {{ $t('search.confirm.advanced') }}
           </button>
 
@@ -210,15 +241,22 @@ function handleConfirm() {
             <div v-show="showAdvanced" class="advanced-content">
               <!-- Filter rules row -->
               <div class="advanced-row advanced-row--tags">
-                <label class="advanced-label">{{ $t('search.confirm.filter') }}</label>
+                <label class="advanced-label">{{
+                  $t('search.confirm.filter')
+                }}</label>
                 <div class="advanced-control filter-tags">
-                  <NDynamicTags v-model:value="localBangumi.filter" size="small" />
+                  <NDynamicTags
+                    v-model:value="localBangumi.filter"
+                    size="small"
+                  />
                 </div>
               </div>
 
               <!-- Season Offset row -->
               <div class="advanced-row">
-                <label class="advanced-label">{{ $t('homepage.rule.season_offset') }}</label>
+                <label class="advanced-label">{{
+                  $t('homepage.rule.season_offset')
+                }}</label>
                 <div class="advanced-control offset-controls">
                   <input
                     v-model.number="localBangumi.season_offset"
@@ -231,7 +269,9 @@ function handleConfirm() {
 
               <!-- Episode Offset row -->
               <div class="advanced-row">
-                <label class="advanced-label">{{ $t('homepage.rule.episode_offset') }}</label>
+                <label class="advanced-label">{{
+                  $t('homepage.rule.episode_offset')
+                }}</label>
                 <div class="advanced-control offset-controls">
                   <input
                     v-model.number="localBangumi.episode_offset"

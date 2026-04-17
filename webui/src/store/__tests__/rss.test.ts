@@ -3,8 +3,8 @@
  * Note: These tests focus on pure logic that can be tested without full Vue/Pinia setup
  */
 
-import { describe, it, expect } from 'vitest';
-import { mockRSSList } from '@/test/mocks/api';
+import { describe, expect, it } from 'vitest';
+import type { mockRSSList } from '@/test/mocks/api';
 
 describe('RSS Store Logic', () => {
   describe('sort and filter functions', () => {
@@ -17,8 +17,12 @@ describe('RSS Store Logic', () => {
       ];
 
       // Apply the same sorting logic as the store
-      const enabled = mixedList.filter((e) => e.enabled).sort((a, b) => b.id - a.id);
-      const disabled = mixedList.filter((e) => !e.enabled).sort((a, b) => b.id - a.id);
+      const enabled = mixedList
+        .filter((e) => e.enabled)
+        .sort((a, b) => b.id - a.id);
+      const disabled = mixedList
+        .filter((e) => !e.enabled)
+        .sort((a, b) => b.id - a.id);
       const sorted = [...enabled, ...disabled];
 
       // Enabled should come first (sorted by id desc)
@@ -36,8 +40,12 @@ describe('RSS Store Logic', () => {
         { id: 2, name: 'Feed 2', url: 'url2', enabled: true },
       ];
 
-      const enabled = allEnabled.filter((e) => e.enabled).sort((a, b) => b.id - a.id);
-      const disabled = allEnabled.filter((e) => !e.enabled).sort((a, b) => b.id - a.id);
+      const enabled = allEnabled
+        .filter((e) => e.enabled)
+        .sort((a, b) => b.id - a.id);
+      const disabled = allEnabled
+        .filter((e) => !e.enabled)
+        .sort((a, b) => b.id - a.id);
       const sorted = [...enabled, ...disabled];
 
       expect(sorted.map((s) => s.id)).toEqual([3, 2, 1]);
@@ -50,8 +58,12 @@ describe('RSS Store Logic', () => {
         { id: 2, name: 'Feed 2', url: 'url2', enabled: false },
       ];
 
-      const enabled = allDisabled.filter((e) => e.enabled).sort((a, b) => b.id - a.id);
-      const disabled = allDisabled.filter((e) => !e.enabled).sort((a, b) => b.id - a.id);
+      const enabled = allDisabled
+        .filter((e) => e.enabled)
+        .sort((a, b) => b.id - a.id);
+      const disabled = allDisabled
+        .filter((e) => !e.enabled)
+        .sort((a, b) => b.id - a.id);
       const sorted = [...enabled, ...disabled];
 
       expect(sorted.map((s) => s.id)).toEqual([3, 2, 1]);
@@ -60,8 +72,12 @@ describe('RSS Store Logic', () => {
     it('should handle empty list', () => {
       const emptyList: typeof mockRSSList = [];
 
-      const enabled = emptyList.filter((e) => e.enabled).sort((a, b) => b.id - a.id);
-      const disabled = emptyList.filter((e) => !e.enabled).sort((a, b) => b.id - a.id);
+      const enabled = emptyList
+        .filter((e) => e.enabled)
+        .sort((a, b) => b.id - a.id);
+      const disabled = emptyList
+        .filter((e) => !e.enabled)
+        .sort((a, b) => b.id - a.id);
       const sorted = [...enabled, ...disabled];
 
       expect(sorted).toEqual([]);

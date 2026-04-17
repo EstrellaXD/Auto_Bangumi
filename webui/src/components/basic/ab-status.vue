@@ -53,7 +53,8 @@ withDefaults(
 
   &--running {
     background: var(--color-success);
-    box-shadow: 0 0 6px color-mix(in srgb, var(--color-success) 40%, transparent);
+    box-shadow: 0 0 6px
+      color-mix(in srgb, var(--color-success) 40%, transparent);
     animation: pulse 2s ease-in-out infinite;
   }
 
@@ -64,7 +65,12 @@ withDefaults(
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 </style>

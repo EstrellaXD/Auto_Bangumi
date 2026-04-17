@@ -182,8 +182,12 @@ function getDayGroups(key: string) {
     <!-- Empty state -->
     <div v-if="!hasBangumi" class="empty-guide">
       <div class="empty-guide-header anim-fade-in">
-        <div class="empty-guide-title">{{ $t('calendar.empty_state.title') }}</div>
-        <div class="empty-guide-subtitle">{{ $t('calendar.empty_state.subtitle') }}</div>
+        <div class="empty-guide-title">
+          {{ $t('calendar.empty_state.title') }}
+        </div>
+        <div class="empty-guide-subtitle">
+          {{ $t('calendar.empty_state.subtitle') }}
+        </div>
       </div>
     </div>
 
@@ -206,10 +210,7 @@ function getDayGroups(key: string) {
             :class="{ 'calendar-day-header--today': isToday(index) }"
           >
             <span class="calendar-day-label">{{ getDayLabel(key) }}</span>
-            <span
-              v-if="isToday(index)"
-              class="calendar-today-badge"
-            >
+            <span v-if="isToday(index)" class="calendar-today-badge">
               {{ $t('calendar.today') }}
             </span>
           </div>
@@ -229,7 +230,9 @@ function getDayGroups(key: string) {
               <div class="calendar-card-wrapper">
                 <div
                   class="calendar-card"
-                  :class="{ 'calendar-card--pinned': group.primary.weekday_locked }"
+                  :class="{
+                    'calendar-card--pinned': group.primary.weekday_locked,
+                  }"
                   role="button"
                   tabindex="0"
                   :aria-label="`Edit ${group.primary.official_title}`"
@@ -249,17 +252,25 @@ function getDayGroups(key: string) {
                     </div>
                     <div class="calendar-card-overlay">
                       <div class="calendar-card-overlay-tags">
-                        <ab-tag :title="`S${group.primary.season}`" type="primary" />
+                        <ab-tag
+                          :title="`S${group.primary.season}`"
+                          type="primary"
+                        />
                         <ab-tag
                           v-if="group.primary.group_name"
                           :title="group.primary.group_name"
                           type="primary"
                         />
                       </div>
-                      <div class="calendar-card-overlay-title">{{ group.primary.official_title }}</div>
+                      <div class="calendar-card-overlay-title">
+                        {{ group.primary.official_title }}
+                      </div>
                     </div>
                     <!-- Pin indicator for manually assigned -->
-                    <div v-if="group.primary.weekday_locked" class="calendar-card-pin">
+                    <div
+                      v-if="group.primary.weekday_locked"
+                      class="calendar-card-pin"
+                    >
                       <Pin theme="filled" size="12" />
                     </div>
                   </div>
@@ -280,8 +291,13 @@ function getDayGroups(key: string) {
             </template>
 
             <template #footer>
-              <div v-if="getDayGroups(key).length === 0" class="calendar-empty-day">
-                {{ isDragging ? $t('calendar.drop_here') : $t('calendar.empty') }}
+              <div
+                v-if="getDayGroups(key).length === 0"
+                class="calendar-empty-day"
+              >
+                {{
+                  isDragging ? $t('calendar.drop_here') : $t('calendar.empty')
+                }}
               </div>
             </template>
           </draggable>
@@ -332,14 +348,19 @@ function getDayGroups(key: string) {
                   </div>
                   <div class="calendar-card-overlay">
                     <div class="calendar-card-overlay-tags">
-                      <ab-tag :title="`S${group.primary.season}`" type="primary" />
+                      <ab-tag
+                        :title="`S${group.primary.season}`"
+                        type="primary"
+                      />
                       <ab-tag
                         v-if="group.primary.group_name"
                         :title="group.primary.group_name"
                         type="primary"
                       />
                     </div>
-                    <div class="calendar-card-overlay-title">{{ group.primary.official_title }}</div>
+                    <div class="calendar-card-overlay-title">
+                      {{ group.primary.official_title }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -363,7 +384,10 @@ function getDayGroups(key: string) {
           <!-- Day divider -->
           <div
             class="calendar-section-header"
-            :class="{ 'calendar-section-header--today': key !== 'unknown' && isToday(index) }"
+            :class="{
+              'calendar-section-header--today':
+                key !== 'unknown' && isToday(index),
+            }"
           >
             <span class="calendar-section-label">{{ getDayLabel(key) }}</span>
             <span
@@ -401,7 +425,10 @@ function getDayGroups(key: string) {
               <div class="calendar-row-info">
                 <div class="calendar-row-title">
                   {{ group.primary.official_title }}
-                  <span v-if="group.rules.length > 1" class="calendar-row-badge">
+                  <span
+                    v-if="group.rules.length > 1"
+                    class="calendar-row-badge"
+                  >
                     {{ group.rules.length }}
                   </span>
                 </div>
@@ -420,7 +447,10 @@ function getDayGroups(key: string) {
       </template>
 
       <!-- All days empty on mobile -->
-      <div v-if="!hasBangumi" class="calendar-empty-day calendar-empty-day--mobile">
+      <div
+        v-if="!hasBangumi"
+        class="calendar-empty-day calendar-empty-day--mobile"
+      >
         {{ $t('calendar.no_data') }}
       </div>
     </div>
@@ -441,16 +471,29 @@ function getDayGroups(key: string) {
         >
           <div class="rule-list-item-info">
             <div class="rule-list-item-title">
-              {{ rule.group_name || rule.rule_name || $t('homepage.rule.unnamed') }}
+              {{
+                rule.group_name || rule.rule_name || $t('homepage.rule.unnamed')
+              }}
             </div>
             <div class="rule-list-item-tags">
               <ab-tag v-if="rule.dpi" :title="rule.dpi" type="primary" />
-              <ab-tag v-if="rule.subtitle" :title="rule.subtitle" type="primary" />
+              <ab-tag
+                v-if="rule.subtitle"
+                :title="rule.subtitle"
+                type="primary"
+              />
               <ab-tag v-if="rule.source" :title="rule.source" type="primary" />
             </div>
-            <div v-if="rule.filter && rule.filter.length > 0" class="rule-list-item-filter">
-              <span class="rule-list-item-filter-label">{{ $t('homepage.rule.filter') }}:</span>
-              <span class="rule-list-item-filter-value">{{ rule.filter.join(', ') }}</span>
+            <div
+              v-if="rule.filter && rule.filter.length > 0"
+              class="rule-list-item-filter"
+            >
+              <span class="rule-list-item-filter-label"
+                >{{ $t('homepage.rule.filter') }}:</span
+              >
+              <span class="rule-list-item-filter-value">{{
+                rule.filter.join(', ')
+              }}</span>
             </div>
             <div v-if="rule.title_raw" class="rule-list-item-raw">
               {{ rule.title_raw }}
@@ -460,7 +503,6 @@ function getDayGroups(key: string) {
         </div>
       </div>
     </ab-popup>
-
   </div>
 </template>
 
@@ -506,9 +548,8 @@ function getDayGroups(key: string) {
   background: var(--color-surface);
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: color var(--transition-fast),
-              border-color var(--transition-fast),
-              background-color var(--transition-fast);
+  transition: color var(--transition-fast), border-color var(--transition-fast),
+    background-color var(--transition-fast);
 
   &:hover:not(:disabled) {
     color: var(--color-primary);
@@ -529,8 +570,12 @@ function getDayGroups(key: string) {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 // Desktop layout
@@ -557,7 +602,7 @@ function getDayGroups(key: string) {
   flex-direction: column;
   gap: 8px;
   transition: background-color var(--transition-normal),
-              border-color var(--transition-normal);
+    border-color var(--transition-normal);
 
   &--today {
     border-color: var(--color-primary);
@@ -663,7 +708,7 @@ function getDayGroups(key: string) {
   user-select: none;
   border-radius: var(--radius-md);
   transition: transform var(--transition-fast),
-              box-shadow var(--transition-fast);
+    box-shadow var(--transition-fast);
 
   &:hover {
     transform: translateY(-2px);

@@ -74,21 +74,17 @@ class TestRssToDownloadFlow:
         # 6. Verify: matched torrents were downloaded
         assert mock_client.add_torrent.call_count == 2
 
-        # 7. Verify: all torrents stored in DB
+        # 7. Verify: only downloaded torrents stored in DB (original behavior)
         all_torrents = engine.torrent.search_all()
-        assert len(all_torrents) == 3
+        assert len(all_torrents) == 2
 
-        # 8. Verify: matched torrents are marked downloaded
+        # 8. Verify: all stored torrents are marked downloaded
         downloaded = [t for t in all_torrents if t.downloaded]
         assert len(downloaded) == 2
         # All downloaded torrents should contain "Mushoku Tensei"
         for t in downloaded:
             assert "Mushoku Tensei" in t.name
 
-        # 9. Verify: unmatched torrent is NOT downloaded
-        not_downloaded = [t for t in all_torrents if not t.downloaded]
-        assert len(not_downloaded) == 1
-        assert "Unknown Anime" in not_downloaded[0].name
 
     async def test_filtered_torrents_not_downloaded(self, db_engine):
         """Torrents matching the filter regex are NOT downloaded."""

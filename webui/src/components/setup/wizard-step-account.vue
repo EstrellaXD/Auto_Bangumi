@@ -63,7 +63,11 @@ const passwordError = computed(() => {
         <ab-button size="small" type="secondary" @click="setupStore.prevStep()">
           {{ t('setup.nav.previous') }}
         </ab-button>
-        <ab-button size="small" :disabled="!isValid" @click="setupStore.nextStep()">
+        <ab-button
+          size="small"
+          :disabled="!isValid"
+          @click="setupStore.nextStep()"
+        >
           {{ t('setup.nav.next') }}
         </ab-button>
       </div>
@@ -106,7 +110,8 @@ const passwordError = computed(() => {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 
   &:hover {
     border-color: var(--color-primary);

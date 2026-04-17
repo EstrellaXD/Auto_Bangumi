@@ -25,7 +25,7 @@ const props = withDefaults(
 const { t } = useMyI18n();
 const { logout } = useAuth();
 const route = useRoute();
-const { isMobile, isTablet, isMobileOrTablet } = useBreakpointQuery();
+const { isMobileOrTablet } = useBreakpointQuery();
 const { isDark, toggle: toggleDark } = useDarkMode();
 
 const show = ref(props.open);
@@ -33,7 +33,15 @@ const toggle = () => (show.value = !show.value);
 
 const RSS = h(
   'span',
-  { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px' } },
+  {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '20px',
+      height: '20px',
+    },
+  },
   h(InlineSvg, { src: './images/RSS.svg', width: '16', height: '16' })
 );
 
@@ -94,7 +102,9 @@ function Exit() {
       onClick={logout}
     >
       <Logout size={20} />
-      {!isMobileOrTablet.value && show.value && <div class="sidebar-item-label">{t('sidebar.logout')}</div>}
+      {!isMobileOrTablet.value && show.value && (
+        <div class="sidebar-item-label">{t('sidebar.logout')}</div>
+      )}
     </div>
   );
 }
@@ -149,7 +159,9 @@ function Exit() {
           <button
             class="sidebar-item sidebar-item--action sidebar-item--theme"
             :title="isDark ? 'Light mode' : 'Dark mode'"
-            :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+            :aria-label="
+              isDark ? 'Switch to light mode' : 'Switch to dark mode'
+            "
             @click="toggleDark"
           >
             <Moon v-if="!isDark" :size="20" />
@@ -213,8 +225,8 @@ function Exit() {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   transition: width var(--transition-normal),
-              background-color var(--transition-normal),
-              border-color var(--transition-normal);
+    background-color var(--transition-normal),
+    border-color var(--transition-normal);
   overflow: hidden;
 
   &--expanded {
@@ -247,7 +259,7 @@ function Exit() {
   border-bottom: 1px solid var(--color-border);
   background: transparent;
   transition: border-color var(--transition-normal),
-              background-color var(--transition-fast);
+    background-color var(--transition-fast);
 
   &:hover {
     background: var(--color-surface-hover);
@@ -294,7 +306,7 @@ function Exit() {
   color: var(--color-text-secondary);
   text-decoration: none;
   transition: color var(--transition-fast),
-              background-color var(--transition-fast);
+    background-color var(--transition-fast);
   white-space: nowrap;
 
   &:hover {

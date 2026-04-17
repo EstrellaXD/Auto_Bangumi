@@ -53,7 +53,7 @@ withDefaults(
   border-bottom: 1px solid var(--color-border);
   cursor: pointer;
   transition: color var(--transition-normal),
-              border-color var(--transition-normal);
+    border-color var(--transition-normal);
 }
 
 .fold-panel-title {
@@ -68,6 +68,6 @@ withDefaults(
   color: var(--color-text);
   overflow-x: hidden;
   transition: background-color var(--transition-normal),
-              color var(--transition-normal);
+    color var(--transition-normal);
 }
 </style>

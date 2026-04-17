@@ -23,10 +23,8 @@ class RequestContent(RequestURL):
         if soup:
             parsed_items = rss_parser(soup)
             torrents: list[Torrent] = []
-            if _filter is None:
-                _filter = "|".join(settings.rss_parser.filter)
             for _title, torrent_url, homepage in parsed_items:
-                if re.search(_filter, _title) is None:
+                if _filter is None or re.search(_filter, _title) is None:
                     torrents.append(
                         Torrent(name=_title, url=torrent_url, homepage=homepage)
                     )
@@ -78,6 +76,15 @@ class RequestContent(RequestURL):
         return await self.check_url(_url)
 
     async def get_rss_title(self, _url):
+        logger.debug(f"[Network] Getting RSS title from: {_url}")
         soup = await self.get_xml(_url)
         if soup:
-            return soup.find("./channel/title").text
+            title_elem = soup.find("./channel/title")
+            if title_elem is not None:
+                logger.debug(f"[Network] RSS title: {title_elem.text}")
+                return title_elem.text
+            else:
+                logger.warning(f"[Network] RSS title element not found in: {_url}")
+        else:
+            logger.warning(f"[Network] Failed to get XML from: {_url}")
+        return None

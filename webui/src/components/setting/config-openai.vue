@@ -126,7 +126,7 @@ const azureItems: SettingItem<ExperimentalOpenAI>[] = [
   color: var(--color-warning);
   font-size: 12px;
   transition: background-color var(--transition-normal),
-              border-color var(--transition-normal);
+    border-color var(--transition-normal);
 }
 
 .openai-config {

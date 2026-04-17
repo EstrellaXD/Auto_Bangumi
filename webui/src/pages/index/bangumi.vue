@@ -5,7 +5,14 @@ definePage({
   name: 'Bangumi List',
 });
 
-const { bangumi, showArchived, isLoading, hasLoaded, activeBangumi, archivedBangumi } = storeToRefs(useBangumiStore());
+const {
+  bangumi,
+  showArchived,
+  isLoading,
+  hasLoaded,
+  activeBangumi,
+  archivedBangumi,
+} = storeToRefs(useBangumiStore());
 const { getAll, openEditPopup } = useBangumiStore();
 const { openAddRss } = useAddRss();
 
@@ -52,8 +59,12 @@ function groupBangumi(items: BangumiRule[]): BangumiGroup[] {
   return groups;
 }
 
-const groupedBangumi = computed<BangumiGroup[]>(() => groupBangumi(activeBangumi.value));
-const groupedArchivedBangumi = computed<BangumiGroup[]>(() => groupBangumi(archivedBangumi.value));
+const groupedBangumi = computed<BangumiGroup[]>(() =>
+  groupBangumi(activeBangumi.value)
+);
+const groupedArchivedBangumi = computed<BangumiGroup[]>(() =>
+  groupBangumi(archivedBangumi.value)
+);
 
 // Rule list popup state
 const ruleListPopup = reactive<{
@@ -80,127 +91,87 @@ function onRuleSelect(rule: BangumiRule) {
 
 // Check if any rule in group needs review
 function groupNeedsReview(group: BangumiGroup): boolean {
-  return group.rules.some(r => r.needs_review);
+  return group.rules.some((r) => r.needs_review);
 }
 </script>
 
 <template>
   <ab-pull-refresh :loading="refreshing" @refresh="onRefresh">
-  <div class="page-bangumi">
-    <!-- Skeleton loading state -->
-    <div v-if="showSkeleton" class="bangumi-grid">
-      <div
-        v-for="i in skeletonCount"
-        :key="`skeleton-${i}`"
-        class="skeleton-card"
-      >
-        <div class="skeleton-poster"></div>
-        <div class="skeleton-title"></div>
-      </div>
-    </div>
-
-    <!-- Empty state guide -->
-    <div v-else-if="!bangumi || bangumi.length === 0" class="empty-guide">
-      <div class="empty-guide-header anim-fade-in">
-        <div class="empty-guide-title">{{ $t('homepage.empty.title') }}</div>
-        <div class="empty-guide-subtitle">{{ $t('homepage.empty.subtitle') }}</div>
-      </div>
-
-      <div class="empty-guide-steps">
-        <div class="empty-guide-step anim-slide-up" style="--delay: 0.15s">
-          <div class="empty-guide-step-number">1</div>
-          <div class="empty-guide-step-content">
-            <div class="empty-guide-step-title">{{ $t('homepage.empty.step1_title') }}</div>
-            <div class="empty-guide-step-desc">{{ $t('homepage.empty.step1_desc') }}</div>
-          </div>
-        </div>
-
-        <div class="empty-guide-step anim-slide-up" style="--delay: 0.3s">
-          <div class="empty-guide-step-number">2</div>
-          <div class="empty-guide-step-content">
-            <div class="empty-guide-step-title">{{ $t('homepage.empty.step2_title') }}</div>
-            <div class="empty-guide-step-desc">{{ $t('homepage.empty.step2_desc') }}</div>
-          </div>
-        </div>
-
-        <div class="empty-guide-step anim-slide-up" style="--delay: 0.45s">
-          <div class="empty-guide-step-number">3</div>
-          <div class="empty-guide-step-content">
-            <div class="empty-guide-step-title">{{ $t('homepage.empty.step3_title') }}</div>
-            <div class="empty-guide-step-desc">{{ $t('homepage.empty.step3_desc') }}</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="empty-guide-action anim-slide-up" style="--delay: 0.6s">
-        <ab-button type="primary" size="big" @click="openAddRss">
-          {{ $t('homepage.empty.add_rss_btn') }}
-        </ab-button>
-      </div>
-    </div>
-
-    <!-- Bangumi grid -->
-    <template v-else>
-      <transition-group
-        name="bangumi"
-        tag="div"
-        class="bangumi-grid"
-      >
+    <div class="page-bangumi">
+      <!-- Skeleton loading state -->
+      <div v-if="showSkeleton" class="bangumi-grid">
         <div
-          v-for="group in groupedBangumi"
-          :key="group.key"
-          class="bangumi-group-wrapper"
-          :class="[group.rules.every(r => r.deleted) && 'grayscale']"
+          v-for="i in skeletonCount"
+          :key="`skeleton-${i}`"
+          class="skeleton-card"
         >
-          <ab-bangumi-card
-            :bangumi="group.primary"
-            type="primary"
-            @click="() => onCardClick(group)"
-          />
-          <!-- Combined notification badge -->
-          <div
-            v-if="groupNeedsReview(group) || group.rules.length > 1"
-            class="group-badge"
-            :class="{ 'group-badge--warning': groupNeedsReview(group) }"
-          >
-            <template v-if="groupNeedsReview(group)">
-              <span class="badge-icon">!</span>
-              <template v-if="group.rules.length > 1">
-                <span class="badge-divider"></span>
-                <span class="badge-count">{{ group.rules.length }}</span>
-              </template>
-            </template>
-            <template v-else>
-              {{ group.rules.length }}
-            </template>
+          <div class="skeleton-poster"></div>
+          <div class="skeleton-title"></div>
+        </div>
+      </div>
+
+      <!-- Empty state guide -->
+      <div v-else-if="!bangumi || bangumi.length === 0" class="empty-guide">
+        <div class="empty-guide-header anim-fade-in">
+          <div class="empty-guide-title">{{ $t('homepage.empty.title') }}</div>
+          <div class="empty-guide-subtitle">
+            {{ $t('homepage.empty.subtitle') }}
           </div>
         </div>
-      </transition-group>
 
-      <!-- Archived section -->
-      <div v-if="groupedArchivedBangumi.length > 0" class="archived-section">
-        <button
-          type="button"
-          class="archived-header"
-          :aria-expanded="showArchived"
-          @click="showArchived = !showArchived"
-        >
-          <span class="archived-title">
-            {{ $t('homepage.rule.archived_section', { count: archivedBangumi.length }) }}
-          </span>
-          <span class="archived-toggle" aria-hidden="true">{{ showArchived ? '−' : '+' }}</span>
-        </button>
+        <div class="empty-guide-steps">
+          <div class="empty-guide-step anim-slide-up" style="--delay: 0.15s">
+            <div class="empty-guide-step-number">1</div>
+            <div class="empty-guide-step-content">
+              <div class="empty-guide-step-title">
+                {{ $t('homepage.empty.step1_title') }}
+              </div>
+              <div class="empty-guide-step-desc">
+                {{ $t('homepage.empty.step1_desc') }}
+              </div>
+            </div>
+          </div>
 
-        <transition-group
-          v-show="showArchived"
-          name="bangumi"
-          tag="div"
-          class="bangumi-grid archived-grid"
-        >
+          <div class="empty-guide-step anim-slide-up" style="--delay: 0.3s">
+            <div class="empty-guide-step-number">2</div>
+            <div class="empty-guide-step-content">
+              <div class="empty-guide-step-title">
+                {{ $t('homepage.empty.step2_title') }}
+              </div>
+              <div class="empty-guide-step-desc">
+                {{ $t('homepage.empty.step2_desc') }}
+              </div>
+            </div>
+          </div>
+
+          <div class="empty-guide-step anim-slide-up" style="--delay: 0.45s">
+            <div class="empty-guide-step-number">3</div>
+            <div class="empty-guide-step-content">
+              <div class="empty-guide-step-title">
+                {{ $t('homepage.empty.step3_title') }}
+              </div>
+              <div class="empty-guide-step-desc">
+                {{ $t('homepage.empty.step3_desc') }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="empty-guide-action anim-slide-up" style="--delay: 0.6s">
+          <ab-button type="primary" size="big" @click="openAddRss">
+            {{ $t('homepage.empty.add_rss_btn') }}
+          </ab-button>
+        </div>
+      </div>
+
+      <!-- Bangumi grid -->
+      <template v-else>
+        <transition-group name="bangumi" tag="div" class="bangumi-grid">
           <div
-            v-for="group in groupedArchivedBangumi"
+            v-for="group in groupedBangumi"
             :key="group.key"
-            class="bangumi-group-wrapper archived-item"
+            class="bangumi-group-wrapper"
+            :class="[group.rules.every((r) => r.deleted) && 'grayscale']"
           >
             <ab-bangumi-card
               :bangumi="group.primary"
@@ -224,52 +195,131 @@ function groupNeedsReview(group: BangumiGroup): boolean {
                 {{ group.rules.length }}
               </template>
             </div>
-            <div class="archived-badge">{{ $t('homepage.rule.archived') }}</div>
           </div>
         </transition-group>
-      </div>
-    </template>
 
-    <!-- Rule list popup for grouped items -->
-    <ab-popup
-      v-model:show="ruleListPopup.show"
-      :title="ruleListPopup.group?.primary.official_title || ''"
-    >
-      <div v-if="ruleListPopup.group" class="rule-list">
-        <div class="rule-list-hint">{{ $t('homepage.rule.select_hint') }}</div>
-        <div
-          v-for="rule in ruleListPopup.group.rules"
-          :key="rule.id"
-          class="rule-list-item"
-          :class="[
-            rule.deleted && 'rule-list-item--disabled',
-            rule.needs_review && 'rule-list-item--warning'
-          ]"
-          @click="onRuleSelect(rule)"
-        >
-          <div class="rule-list-item-info">
-            <div class="rule-list-item-title">
-              <span v-if="rule.needs_review" class="warning-text">! </span>{{ rule.group_name || rule.rule_name || $t('homepage.rule.unnamed') }}
+        <!-- Archived section -->
+        <div v-if="groupedArchivedBangumi.length > 0" class="archived-section">
+          <button
+            type="button"
+            class="archived-header"
+            :aria-expanded="showArchived"
+            @click="showArchived = !showArchived"
+          >
+            <span class="archived-title">
+              {{
+                $t('homepage.rule.archived_section', {
+                  count: archivedBangumi.length,
+                })
+              }}
+            </span>
+            <span class="archived-toggle" aria-hidden="true">{{
+              showArchived ? '−' : '+'
+            }}</span>
+          </button>
+
+          <transition-group
+            v-show="showArchived"
+            name="bangumi"
+            tag="div"
+            class="bangumi-grid archived-grid"
+          >
+            <div
+              v-for="group in groupedArchivedBangumi"
+              :key="group.key"
+              class="bangumi-group-wrapper archived-item"
+            >
+              <ab-bangumi-card
+                :bangumi="group.primary"
+                type="primary"
+                @click="() => onCardClick(group)"
+              />
+              <!-- Combined notification badge -->
+              <div
+                v-if="groupNeedsReview(group) || group.rules.length > 1"
+                class="group-badge"
+                :class="{ 'group-badge--warning': groupNeedsReview(group) }"
+              >
+                <template v-if="groupNeedsReview(group)">
+                  <span class="badge-icon">!</span>
+                  <template v-if="group.rules.length > 1">
+                    <span class="badge-divider"></span>
+                    <span class="badge-count">{{ group.rules.length }}</span>
+                  </template>
+                </template>
+                <template v-else>
+                  {{ group.rules.length }}
+                </template>
+              </div>
+              <div class="archived-badge">
+                {{ $t('homepage.rule.archived') }}
+              </div>
             </div>
-            <div class="rule-list-item-tags">
-              <ab-tag v-if="rule.dpi" :title="rule.dpi" type="primary" />
-              <ab-tag v-if="rule.subtitle" :title="rule.subtitle" type="primary" />
-              <ab-tag v-if="rule.source" :title="rule.source" type="primary" />
-            </div>
-            <div v-if="rule.filter && rule.filter.length > 0" class="rule-list-item-filter">
-              <span class="rule-list-item-filter-label">{{ $t('homepage.rule.filter') }}:</span>
-              <span class="rule-list-item-filter-value">{{ rule.filter.join(', ') }}</span>
-            </div>
-            <div v-if="rule.title_raw" class="rule-list-item-raw">
-              {{ rule.title_raw }}
-            </div>
-          </div>
-          <div class="rule-list-item-arrow">›</div>
+          </transition-group>
         </div>
-      </div>
-    </ab-popup>
+      </template>
 
-  </div>
+      <!-- Rule list popup for grouped items -->
+      <ab-popup
+        v-model:show="ruleListPopup.show"
+        :title="ruleListPopup.group?.primary.official_title || ''"
+      >
+        <div v-if="ruleListPopup.group" class="rule-list">
+          <div class="rule-list-hint">
+            {{ $t('homepage.rule.select_hint') }}
+          </div>
+          <div
+            v-for="rule in ruleListPopup.group.rules"
+            :key="rule.id"
+            class="rule-list-item"
+            :class="[
+              rule.deleted && 'rule-list-item--disabled',
+              rule.needs_review && 'rule-list-item--warning',
+            ]"
+            @click="onRuleSelect(rule)"
+          >
+            <div class="rule-list-item-info">
+              <div class="rule-list-item-title">
+                <span v-if="rule.needs_review" class="warning-text">! </span
+                >{{
+                  rule.group_name ||
+                  rule.rule_name ||
+                  $t('homepage.rule.unnamed')
+                }}
+              </div>
+              <div class="rule-list-item-tags">
+                <ab-tag v-if="rule.dpi" :title="rule.dpi" type="primary" />
+                <ab-tag
+                  v-if="rule.subtitle"
+                  :title="rule.subtitle"
+                  type="primary"
+                />
+                <ab-tag
+                  v-if="rule.source"
+                  :title="rule.source"
+                  type="primary"
+                />
+              </div>
+              <div
+                v-if="rule.filter && rule.filter.length > 0"
+                class="rule-list-item-filter"
+              >
+                <span class="rule-list-item-filter-label"
+                  >{{ $t('homepage.rule.filter') }}:</span
+                >
+                <span class="rule-list-item-filter-value">{{
+                  rule.filter.join(', ')
+                }}</span>
+              </div>
+              <div v-if="rule.title_raw" class="rule-list-item-raw">
+                {{ rule.title_raw }}
+              </div>
+            </div>
+            <div class="rule-list-item-arrow">›</div>
+          </div>
+        </div>
+      </ab-popup>
+    </div>
   </ab-pull-refresh>
 </template>
 
@@ -495,11 +545,19 @@ function groupNeedsReview(group: BangumiGroup): boolean {
 
   // Warning variant - needs review
   &--warning {
-    background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(251, 191, 36, 0.08) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(251, 191, 36, 0.15) 0%,
+      rgba(251, 191, 36, 0.08) 100%
+    );
     border-left: 3px solid #fbbf24;
 
     &:hover {
-      background: linear-gradient(135deg, rgba(251, 191, 36, 0.22) 0%, rgba(251, 191, 36, 0.12) 100%);
+      background: linear-gradient(
+        135deg,
+        rgba(251, 191, 36, 0.22) 0%,
+        rgba(251, 191, 36, 0.12) 100%
+      );
     }
   }
 
@@ -617,7 +675,7 @@ function groupNeedsReview(group: BangumiGroup): boolean {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   transition: background-color var(--transition-normal),
-              border-color var(--transition-normal);
+    border-color var(--transition-normal);
 }
 
 .empty-guide-step-number {
@@ -687,7 +745,8 @@ function groupNeedsReview(group: BangumiGroup): boolean {
 <style>
 .bangumi-enter-active,
 .bangumi-leave-active {
-  transition: opacity var(--transition-normal), transform var(--transition-normal);
+  transition: opacity var(--transition-normal),
+    transform var(--transition-normal);
 }
 .bangumi-enter-from,
 .bangumi-leave-to {

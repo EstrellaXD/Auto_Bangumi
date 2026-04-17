@@ -40,8 +40,10 @@ function parseSubtitleType(bangumi: BangumiRule): string {
   // Check subtitle field first
   if (bangumi.subtitle) {
     const sub = bangumi.subtitle.toLowerCase();
-    if (sub.includes('简') || sub.includes('chs') || sub.includes('sc')) return '简中';
-    if (sub.includes('繁') || sub.includes('cht') || sub.includes('tc')) return '繁中';
+    if (sub.includes('简') || sub.includes('chs') || sub.includes('sc'))
+      return '简中';
+    if (sub.includes('繁') || sub.includes('cht') || sub.includes('tc'))
+      return '繁中';
     if (sub.includes('双语') || sub.includes('dual')) return '双语';
   }
   // Parse from title_raw
@@ -174,7 +176,9 @@ export const useSearchStore = defineStore('search', () => {
   const filteredVariants = computed<BangumiRule[]>(() => {
     if (!selectedGroup.value) return [];
 
-    const hasFilters = Object.values(variantFilters.value).some((arr) => arr.length > 0);
+    const hasFilters = Object.values(variantFilters.value).some(
+      (arr) => arr.length > 0
+    );
     if (!hasFilters) {
       return selectedGroup.value.variants;
     }
@@ -182,7 +186,10 @@ export const useSearchStore = defineStore('search', () => {
     return selectedGroup.value.variants.filter((bangumi) => {
       // Group filter
       if (variantFilters.value.group.length > 0) {
-        if (!bangumi.group_name || !variantFilters.value.group.includes(bangumi.group_name)) {
+        if (
+          !bangumi.group_name ||
+          !variantFilters.value.group.includes(bangumi.group_name)
+        ) {
           return false;
         }
       }
@@ -241,7 +248,12 @@ export const useSearchStore = defineStore('search', () => {
   function clearSearch() {
     keyword.value = '';
     searchData.value = [];
-    variantFilters.value = { group: [], resolution: [], subtitleType: [], season: [] };
+    variantFilters.value = {
+      group: [],
+      resolution: [],
+      subtitleType: [],
+      season: [],
+    };
     selectedGroup.value = null;
     closeSearch();
   }
@@ -257,17 +269,32 @@ export const useSearchStore = defineStore('search', () => {
   }
 
   function clearVariantFilters() {
-    variantFilters.value = { group: [], resolution: [], subtitleType: [], season: [] };
+    variantFilters.value = {
+      group: [],
+      resolution: [],
+      subtitleType: [],
+      season: [],
+    };
   }
 
   function selectGroup(group: GroupedBangumi) {
     selectedGroup.value = group;
-    variantFilters.value = { group: [], resolution: [], subtitleType: [], season: [] };
+    variantFilters.value = {
+      group: [],
+      resolution: [],
+      subtitleType: [],
+      season: [],
+    };
   }
 
   function clearSelectedGroup() {
     selectedGroup.value = null;
-    variantFilters.value = { group: [], resolution: [], subtitleType: [], season: [] };
+    variantFilters.value = {
+      group: [],
+      resolution: [],
+      subtitleType: [],
+      season: [],
+    };
   }
 
   function selectResult(bangumi: BangumiRule) {

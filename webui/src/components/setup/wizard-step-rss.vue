@@ -65,11 +65,7 @@ function handleNext() {
         </ab-label>
 
         <ab-label v-if="rssData.name" :label="t('setup.rss.feed_name')">
-          <input
-            v-model="rssData.name"
-            type="text"
-            class="setup-input"
-          />
+          <input v-model="rssData.name" type="text" class="setup-input" />
         </ab-label>
       </div>
 
@@ -82,14 +78,22 @@ function handleNext() {
         >
           {{ isTesting ? t('setup.downloader.testing') : t('setup.rss.test') }}
         </ab-button>
-        <p v-if="testMessage" class="test-message" :class="{ success: testSuccess }">
+        <p
+          v-if="testMessage"
+          class="test-message"
+          :class="{ success: testSuccess }"
+        >
           {{ testMessage }}
         </p>
       </div>
 
       <div v-if="feedTitle" class="feed-info">
-        <p><strong>{{ t('setup.rss.feed_title') }}:</strong> {{ feedTitle }}</p>
-        <p><strong>{{ t('setup.rss.item_count') }}:</strong> {{ itemCount }}</p>
+        <p>
+          <strong>{{ t('setup.rss.feed_title') }}:</strong> {{ feedTitle }}
+        </p>
+        <p>
+          <strong>{{ t('setup.rss.item_count') }}:</strong> {{ itemCount }}
+        </p>
       </div>
 
       <div class="wizard-actions">
@@ -148,7 +152,8 @@ function handleNext() {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 
   &:hover {
     border-color: var(--color-primary);
@@ -189,7 +194,9 @@ function handleNext() {
 
   p {
     margin: 0 0 4px;
-    &:last-child { margin: 0; }
+    &:last-child {
+      margin: 0;
+    }
   }
 }
 

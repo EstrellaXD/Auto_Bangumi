@@ -1,4 +1,4 @@
-import type { NotificationProviderConfig, NotificationType } from '#/config';
+import type { NotificationType } from '#/config';
 import type { TupleToUnion } from '#/utils';
 
 export interface TestProviderRequest {

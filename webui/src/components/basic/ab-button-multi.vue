@@ -26,7 +26,10 @@ const showSelections = ref<boolean>(false);
 
 <template>
   <div class="btn-multi-container">
-    <div class="btn-multi" :class="[`btn-multi--${size}`, `btn-multi--${type}`]">
+    <div
+      class="btn-multi"
+      :class="[`btn-multi--${size}`, `btn-multi--${type}`]"
+    >
       <Component
         :is="link !== null ? 'a' : 'button'"
         :href="link"
@@ -54,7 +57,12 @@ const showSelections = ref<boolean>(false);
         v-for="selection in selections"
         :key="selection"
         class="btn-multi-option"
-        @click="() => { selected = selection; showSelections = false; }"
+        @click="
+          () => {
+            selected = selection;
+            showSelections = false;
+          }
+        "
       >
         {{ selection }}
       </div>

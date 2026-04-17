@@ -18,6 +18,7 @@ export type NotificationType = [
   'gotify',
   'pushover',
   'webhook',
+  'ntfy'
 ];
 /** OpenAI Model List */
 export type OpenAIModel = ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'];

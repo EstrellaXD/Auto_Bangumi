@@ -32,7 +32,12 @@ const buttonSize = computed(() => {
     @click="$emit('click')"
   >
     <svg viewBox="0 0 24 24" fill="none" class="add-btn-icon">
-      <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+      <path
+        d="M12 5v14M5 12h14"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+      />
     </svg>
   </button>
 </template>
@@ -47,7 +52,7 @@ const buttonSize = computed(() => {
   border: none;
   cursor: pointer;
   transition: background-color var(--transition-fast),
-              transform var(--transition-fast);
+    transform var(--transition-fast);
 
   &:hover {
     background: var(--color-primary-hover);

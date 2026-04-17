@@ -41,7 +41,11 @@ export const useDownloaderStore = defineStore('downloader', () => {
       });
     }
 
-    return result.sort((a, b) => a.name.localeCompare(b.name));
+    return result.sort((a, b) => {
+      const aLatest = a.torrents[0]?.added_on ?? 0;
+      const bLatest = b.torrents[0]?.added_on ?? 0;
+      return bLatest - aLatest;
+    });
   });
 
   async function getAll() {

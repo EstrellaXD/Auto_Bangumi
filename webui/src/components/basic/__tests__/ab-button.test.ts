@@ -2,9 +2,9 @@
  * Tests for AbButton component
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
-import { h, defineComponent } from 'vue';
+import { defineComponent, h } from 'vue';
 import AbButton from '../ab-button.vue';
 
 // Mock naive-ui NSpin component

@@ -138,7 +138,8 @@ defineExpose({ goTo });
     background: var(--color-border);
     cursor: pointer;
     padding: 0;
-    transition: background var(--transition-fast), transform var(--transition-fast);
+    transition: background var(--transition-fast),
+      transform var(--transition-fast);
 
     &--active {
       background: var(--color-primary);

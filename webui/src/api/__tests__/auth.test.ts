@@ -3,7 +3,7 @@
  * Note: These tests focus on the data structures and transformations
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { mockLoginSuccess } from '@/test/mocks/api';
 
 describe('Auth API Data Structures', () => {

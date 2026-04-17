@@ -15,6 +15,7 @@ from module.notification.providers import (
     GotifyProvider,
     PushoverProvider,
     WebhookProvider,
+    NtfyProvider,
 )
 
 
@@ -56,6 +57,10 @@ class TestProviderRegistry:
     def test_webhook(self):
         """Registry contains WebhookProvider for 'webhook' type."""
         assert PROVIDER_REGISTRY["webhook"] is WebhookProvider
+
+    def test_ntfy(self):
+        """Registry contains NtfyProvider for 'ntfy' type."""
+        assert PROVIDER_REGISTRY["ntfy"] is NtfyProvider
 
     def test_unknown_type(self):
         """Returns None for unknown notification type."""

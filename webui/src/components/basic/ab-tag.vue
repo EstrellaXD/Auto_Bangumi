@@ -31,8 +31,7 @@ withDefaults(
   white-space: nowrap;
   border: 1px solid;
   transition: background-color var(--transition-fast),
-              border-color var(--transition-fast),
-              color var(--transition-fast);
+    border-color var(--transition-fast), color var(--transition-fast);
 
   &--primary {
     background: var(--color-primary-light);

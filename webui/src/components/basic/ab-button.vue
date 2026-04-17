@@ -58,8 +58,7 @@ const buttonSize = computed(() => {
   user-select: none;
   text-decoration: none;
   transition: background-color var(--transition-fast),
-              transform var(--transition-fast),
-              box-shadow var(--transition-fast);
+    transform var(--transition-fast), box-shadow var(--transition-fast);
 
   // Focus ring for keyboard navigation
   &:focus {
@@ -113,7 +112,8 @@ const buttonSize = computed(() => {
 
     &:hover:not(:disabled) {
       background: var(--color-primary-hover);
-      box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 30%, transparent);
+      box-shadow: 0 2px 8px
+        color-mix(in srgb, var(--color-primary) 30%, transparent);
     }
 
     &:focus-visible {
@@ -133,7 +133,11 @@ const buttonSize = computed(() => {
     border: 1px solid var(--color-border);
 
     &:hover:not(:disabled) {
-      background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+      background: color-mix(
+        in srgb,
+        var(--color-primary) 8%,
+        var(--color-surface)
+      );
       border-color: var(--color-primary);
     }
 
@@ -147,7 +151,8 @@ const buttonSize = computed(() => {
 
     &:hover:not(:disabled) {
       filter: brightness(0.9);
-      box-shadow: 0 2px 8px color-mix(in srgb, var(--color-danger) 30%, transparent);
+      box-shadow: 0 2px 8px
+        color-mix(in srgb, var(--color-danger) 30%, transparent);
     }
 
     &:focus-visible {

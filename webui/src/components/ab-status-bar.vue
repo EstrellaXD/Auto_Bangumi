@@ -145,7 +145,7 @@ function abLabel(label: string | (() => string)) {
   animation: dropdown-in 150ms ease-out;
   transform-origin: top right;
   transition: background-color var(--transition-normal),
-              border-color var(--transition-normal);
+    border-color var(--transition-normal);
 }
 
 @keyframes dropdown-in {
@@ -169,7 +169,8 @@ function abLabel(label: string | (() => string)) {
   border-radius: var(--radius-sm);
   cursor: pointer;
   color: var(--color-text);
-  transition: color var(--transition-fast), background-color var(--transition-fast);
+  transition: color var(--transition-fast),
+    background-color var(--transition-fast);
 
   &:hover,
   &--active {
