@@ -59,7 +59,11 @@ def pre_process(raw_name: str) -> str:
 
 
 def prefix_process(raw: str, group: str) -> str:
-    raw = re.sub(f".{re.escape(group)}.", "", raw)
+    # Guard against empty group: without this, the pattern degenerates to ".."
+    # and every pair of characters gets deleted, destroying titles that lack a
+    # [group] prefix (#1025).
+    if group:
+        raw = re.sub(f".{re.escape(group)}.", "", raw)
     raw_process = PREFIX_RE.sub("/", raw)
     arg_group = raw_process.split("/")
     while "" in arg_group:

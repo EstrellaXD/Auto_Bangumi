@@ -314,9 +314,18 @@ jobs:
           echo ${{ needs.version-info.outputs.version }}
           echo "VERSION='${{ needs.version-info.outputs.version }}'" >> module/__version__.py
 
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Generate requirements.txt for non-uv consumers (#994)
+        run: |
+          cd backend && uv export --format requirements-txt --no-hashes --no-dev -o requirements.txt
+
       - name: Zip app
         run: |
-          cd backend && zip -r app-v${{ needs.version-info.outputs.version }}.zip src
+          cd backend && zip -r app-v${{ needs.version-info.outputs.version }}.zip \
+            src pyproject.toml uv.lock requirements.txt
 
       - name: Generate Release info
         id: release-info

@@ -1,6 +1,7 @@
 import logging
 import re
 from os import PathLike
+from pathlib import PureWindowsPath
 
 from module.conf import PLATFORM, settings
 from module.models import Bangumi, BangumiUpdate
@@ -36,9 +37,11 @@ class TorrentPath:
 
     @staticmethod
     def _path_to_bangumi(save_path: PathLike[str] | str, torrent_name: str = ""):
-        # Split save path and download path
-        save_parts = Path(save_path).parts
-        download_parts = Path(settings.downloader.path).parts
+        # Use PureWindowsPath regardless of the host AB runs on: it accepts
+        # both "\" and "/" separators, so a qBittorrent-on-Windows save_path
+        # reaching a Linux AB still splits into segments correctly (#1016).
+        save_parts = PureWindowsPath(save_path).parts
+        download_parts = PureWindowsPath(settings.downloader.path).parts
         # Get bangumi name and season
         bangumi_name = ""
         season = 1

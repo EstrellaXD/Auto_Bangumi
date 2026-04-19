@@ -13,6 +13,34 @@ def test_path_to_bangumi():
     assert season == 2
 
 
+def test_path_to_bangumi_windows_style_save_path():
+    """Regression for #1016: when qBittorrent runs on Windows and AB runs on
+    Linux, qB returns backslash paths. PurePosixPath treats the whole string
+    as one segment, leaving season stuck at 1."""
+    from module.downloader.path import TorrentPath
+
+    with patch("module.downloader.path.settings") as mock_settings:
+        mock_settings.downloader.path = r"D:\video\Bangumis"
+        path = r"D:\video\Bangumis\小书痴的下克上\Season 4"
+        bangumi_name, season = TorrentPath._path_to_bangumi(path)
+
+    assert bangumi_name == "小书痴的下克上"
+    assert season == 4
+
+
+def test_path_to_bangumi_posix_path_on_linux_ab():
+    """Regression guard: POSIX paths still parse correctly after the fix."""
+    from module.downloader.path import TorrentPath
+
+    with patch("module.downloader.path.settings") as mock_settings:
+        mock_settings.downloader.path = "/downloads/Bangumi"
+        path = "/downloads/Bangumi/葬送的芙莉莲/Season 2"
+        bangumi_name, season = TorrentPath._path_to_bangumi(path)
+
+    assert bangumi_name == "葬送的芙莉莲"
+    assert season == 2
+
+
 class TestGenSavePath:
     """Tests for TorrentPath._gen_save_path with season_offset."""
 

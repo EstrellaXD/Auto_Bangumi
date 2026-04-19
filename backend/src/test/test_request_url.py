@@ -33,6 +33,12 @@ class TestSharedClientLimits:
         assert pool._max_connections is not None
         assert pool._max_connections > 0
 
+    async def test_client_follows_redirects(self):
+        """Regression for #983: mikanime mirror returns 302 to the canonical
+        URL but httpx refuses to follow by default, so the RSS fetch fails."""
+        client = await get_shared_client()
+        assert client.follow_redirects is True
+
 
 class TestResetSharedClient:
     async def test_reset_closes_existing_client(self):
