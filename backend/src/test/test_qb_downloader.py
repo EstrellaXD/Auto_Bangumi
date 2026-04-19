@@ -24,12 +24,16 @@ class TestQbDownloaderConstructor:
 
     def test_ssl_true_no_scheme_uses_https(self):
         """ssl=True with bare host prepends https://."""
-        qb = QbDownloader(host="192.168.1.10:8080", username="admin", password="pass", ssl=True)
+        qb = QbDownloader(
+            host="192.168.1.10:8080", username="admin", password="pass", ssl=True
+        )
         assert qb.host == "https://192.168.1.10:8080"
 
     def test_ssl_false_no_scheme_uses_http(self):
         """ssl=False with bare host prepends http://."""
-        qb = QbDownloader(host="192.168.1.10:8080", username="admin", password="pass", ssl=False)
+        qb = QbDownloader(
+            host="192.168.1.10:8080", username="admin", password="pass", ssl=False
+        )
         assert qb.host == "http://192.168.1.10:8080"
 
     def test_explicit_http_scheme_preserved_when_ssl_true(self):
@@ -42,18 +46,25 @@ class TestQbDownloaderConstructor:
     def test_explicit_https_scheme_preserved_when_ssl_false(self):
         """Explicit https:// scheme is kept even if ssl=False."""
         qb = QbDownloader(
-            host="https://192.168.1.10:8080", username="admin", password="pass", ssl=False
+            host="https://192.168.1.10:8080",
+            username="admin",
+            password="pass",
+            ssl=False,
         )
         assert qb.host == "https://192.168.1.10:8080"
 
     def test_explicit_http_scheme_preserved_ssl_false(self):
         """Explicit http:// URL with ssl=False stays as http://."""
-        qb = QbDownloader(host="http://nas.local:8080", username="u", password="p", ssl=False)
+        qb = QbDownloader(
+            host="http://nas.local:8080", username="u", password="p", ssl=False
+        )
         assert qb.host == "http://nas.local:8080"
 
     def test_explicit_https_scheme_preserved_ssl_true(self):
         """Explicit https:// URL with ssl=True stays as https://."""
-        qb = QbDownloader(host="https://nas.local:8080", username="u", password="p", ssl=True)
+        qb = QbDownloader(
+            host="https://nas.local:8080", username="u", password="p", ssl=True
+        )
         assert qb.host == "https://nas.local:8080"
 
     def test_credentials_stored(self):
@@ -67,7 +78,9 @@ class TestQbDownloaderConstructor:
 
     def test_client_initially_none(self):
         """_client starts as None before any auth call."""
-        qb = QbDownloader(host="localhost:8080", username="admin", password="pass", ssl=False)
+        qb = QbDownloader(
+            host="localhost:8080", username="admin", password="pass", ssl=False
+        )
         assert qb._client is None
 
 
@@ -110,7 +123,9 @@ class TestAuthClientCreation:
 
     async def test_auth_creates_client_with_verify_false_when_ssl_true(self):
         """verify=False is used even when ssl=True (self-signed certs are common)."""
-        qb = QbDownloader(host="192.168.1.10:8080", username="admin", password="pass", ssl=True)
+        qb = QbDownloader(
+            host="192.168.1.10:8080", username="admin", password="pass", ssl=True
+        )
 
         captured: list[dict] = []
 
@@ -127,7 +142,9 @@ class TestAuthClientCreation:
             async def aclose(self):
                 pass
 
-        with patch("module.downloader.client.qb_downloader.httpx.AsyncClient", _FakeClient):
+        with patch(
+            "module.downloader.client.qb_downloader.httpx.AsyncClient", _FakeClient
+        ):
             result = await qb.auth()
 
         assert result is True
@@ -136,7 +153,9 @@ class TestAuthClientCreation:
 
     async def test_auth_creates_client_with_verify_false_when_ssl_false(self):
         """verify=False is used even when ssl=False."""
-        qb = QbDownloader(host="192.168.1.10:8080", username="admin", password="pass", ssl=False)
+        qb = QbDownloader(
+            host="192.168.1.10:8080", username="admin", password="pass", ssl=False
+        )
 
         captured: list[dict] = []
 
@@ -153,7 +172,9 @@ class TestAuthClientCreation:
             async def aclose(self):
                 pass
 
-        with patch("module.downloader.client.qb_downloader.httpx.AsyncClient", _FakeClient):
+        with patch(
+            "module.downloader.client.qb_downloader.httpx.AsyncClient", _FakeClient
+        ):
             result = await qb.auth()
 
         assert result is True
@@ -178,11 +199,45 @@ class TestAuthClientCreation:
             async def aclose(self):
                 pass
 
-        with patch("module.downloader.client.qb_downloader.httpx.AsyncClient", _FakeClient):
+        with patch(
+            "module.downloader.client.qb_downloader.httpx.AsyncClient", _FakeClient
+        ):
             await qb.auth()
 
         assert len(captured_timeouts) == 1
         assert captured_timeouts[0].connect == pytest.approx(5.0)
+
+    async def test_auth_sets_connection_limits_for_keepalive(self):
+        """Regression for #984: qB client must cap keepalive so idle TCP
+        sockets don't linger past proxy / NAS idle-reap timeouts, otherwise
+        parallel renamer calls cascade into 'Server disconnected' errors."""
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+
+        captured: list[dict] = []
+
+        class _FakeClient:
+            def __init__(self, **kwargs):
+                captured.append(kwargs)
+
+            async def post(self, url, data=None):
+                resp = MagicMock()
+                resp.status_code = 200
+                resp.text = "Ok."
+                return resp
+
+            async def aclose(self):
+                pass
+
+        with patch(
+            "module.downloader.client.qb_downloader.httpx.AsyncClient", _FakeClient
+        ):
+            await qb.auth()
+
+        limits = captured[0].get("limits")
+        assert limits is not None
+        assert limits.keepalive_expiry is not None
+        assert limits.keepalive_expiry > 0
+        assert limits.max_connections is not None
 
 
 # ---------------------------------------------------------------------------
@@ -195,7 +250,9 @@ class TestAuthSuccessFailure:
 
     async def test_auth_returns_true_on_ok_response(self):
         """Returns True when server responds 200 + 'Ok.'."""
-        qb = QbDownloader(host="localhost:8080", username="admin", password="pass", ssl=False)
+        qb = QbDownloader(
+            host="localhost:8080", username="admin", password="pass", ssl=False
+        )
 
         mock_client = AsyncMock()
         mock_resp = MagicMock()
@@ -213,7 +270,9 @@ class TestAuthSuccessFailure:
 
     async def test_auth_returns_false_on_403(self):
         """Returns False and stops retrying immediately on 403 Forbidden."""
-        qb = QbDownloader(host="localhost:8080", username="admin", password="pass", ssl=False)
+        qb = QbDownloader(
+            host="localhost:8080", username="admin", password="pass", ssl=False
+        )
 
         mock_client = AsyncMock()
         mock_resp = MagicMock()
@@ -233,7 +292,9 @@ class TestAuthSuccessFailure:
 
     async def test_auth_retries_up_to_limit_on_server_error(self):
         """Retries up to the retry limit on non-200/non-403 responses."""
-        qb = QbDownloader(host="localhost:8080", username="admin", password="pass", ssl=False)
+        qb = QbDownloader(
+            host="localhost:8080", username="admin", password="pass", ssl=False
+        )
 
         mock_client = AsyncMock()
         mock_resp = MagicMock()
@@ -271,7 +332,9 @@ class TestAuthConnectErrorLogging:
         )
 
         mock_client = AsyncMock()
-        mock_client.post = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
+        mock_client.post = AsyncMock(
+            side_effect=httpx.ConnectError("Connection refused")
+        )
 
         with patch(
             "module.downloader.client.qb_downloader.httpx.AsyncClient",
@@ -287,7 +350,9 @@ class TestAuthConnectErrorLogging:
                     result = await qb.auth(retry=1)
 
         assert result is False
-        error_messages = [r.message for r in caplog.records if r.levelno == logging.ERROR]
+        error_messages = [
+            r.message for r in caplog.records if r.levelno == logging.ERROR
+        ]
         assert any("HTTPS" in msg for msg in error_messages)
         assert any(
             "disable SSL" in msg or "plain HTTP" in msg for msg in error_messages
@@ -296,7 +361,9 @@ class TestAuthConnectErrorLogging:
     async def test_https_url_derived_from_ssl_flag_logs_https_guidance(self, caplog):
         """HTTPS guidance also fires when scheme comes from ssl=True (bare host)."""
         # Bare host + ssl=True -> self.host becomes https://... -> use_https=True in auth()
-        qb = QbDownloader(host="192.168.1.10:8080", username="u", password="p", ssl=True)
+        qb = QbDownloader(
+            host="192.168.1.10:8080", username="u", password="p", ssl=True
+        )
         assert qb.host.startswith("https://")
 
         mock_client = AsyncMock()
@@ -315,7 +382,9 @@ class TestAuthConnectErrorLogging:
                 ):
                     await qb.auth(retry=1)
 
-        error_messages = [r.message for r in caplog.records if r.levelno == logging.ERROR]
+        error_messages = [
+            r.message for r in caplog.records if r.levelno == logging.ERROR
+        ]
         assert any("HTTPS" in msg for msg in error_messages)
 
     async def test_http_url_logs_generic_message_without_ssl_hint(self, caplog):
@@ -325,7 +394,9 @@ class TestAuthConnectErrorLogging:
         )
 
         mock_client = AsyncMock()
-        mock_client.post = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
+        mock_client.post = AsyncMock(
+            side_effect=httpx.ConnectError("Connection refused")
+        )
 
         with patch(
             "module.downloader.client.qb_downloader.httpx.AsyncClient",
@@ -341,14 +412,20 @@ class TestAuthConnectErrorLogging:
                     result = await qb.auth(retry=1)
 
         assert result is False
-        error_messages = [r.message for r in caplog.records if r.levelno == logging.ERROR]
-        assert any("Cannot connect to qBittorrent Server" in msg for msg in error_messages)
+        error_messages = [
+            r.message for r in caplog.records if r.levelno == logging.ERROR
+        ]
+        assert any(
+            "Cannot connect to qBittorrent Server" in msg for msg in error_messages
+        )
         # SSL-disable hint must NOT appear for plain HTTP connections
         assert not any("disable SSL" in msg for msg in error_messages)
 
     async def test_http_url_derived_from_ssl_flag_false_no_ssl_hint(self, caplog):
         """SSL-disable hint is absent when scheme comes from ssl=False (bare host)."""
-        qb = QbDownloader(host="192.168.1.10:8080", username="u", password="p", ssl=False)
+        qb = QbDownloader(
+            host="192.168.1.10:8080", username="u", password="p", ssl=False
+        )
         assert qb.host.startswith("http://")
 
         mock_client = AsyncMock()
@@ -420,7 +497,9 @@ class TestAuthConnectErrorLogging:
                 ):
                     await qb.auth(retry=1)
 
-        error_messages = [r.message for r in caplog.records if r.levelno == logging.ERROR]
+        error_messages = [
+            r.message for r in caplog.records if r.levelno == logging.ERROR
+        ]
         assert not any("disable SSL" in msg for msg in error_messages)
         assert not any("HTTPS" in msg for msg in error_messages)
 
@@ -445,5 +524,7 @@ class TestUrlHelper:
 
     def test_url_with_explicit_http_scheme_overriding_ssl_true(self):
         """_url works correctly when explicit http:// scheme overrides ssl=True."""
-        qb = QbDownloader(host="http://nas.local:8080", username="u", password="p", ssl=True)
+        qb = QbDownloader(
+            host="http://nas.local:8080", username="u", password="p", ssl=True
+        )
         assert qb._url("torrents/info") == "http://nas.local:8080/api/v2/torrents/info"
