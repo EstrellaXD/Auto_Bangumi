@@ -15,12 +15,15 @@ class RSSAnalyser(TitleParser):
     async def official_title_parser(self, bangumi: Bangumi, rss: RSSItem, torrent: Torrent):
         if rss.parser == "mikan":
             try:
-                bangumi.poster_link, bangumi.official_title = await self.mikan_parser(
+                poster_link, official_title = await self.mikan_parser(
                     torrent.homepage
                 )
+                if official_title:
+                    bangumi.official_title = official_title
+                if poster_link:
+                    bangumi.poster_link = poster_link
             except AttributeError:
                 logger.warning("[Parser] Mikan torrent has no homepage info.")
-                pass
         elif rss.parser == "tmdb":
             tmdb_title, season, year, poster_link = await self.tmdb_parser(
                 bangumi.official_title, bangumi.season, settings.rss_parser.language

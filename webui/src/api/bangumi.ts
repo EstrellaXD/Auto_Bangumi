@@ -7,6 +7,7 @@ import type {
   OffsetSuggestion,
 } from '#/bangumi';
 import type { ApiSuccess } from '#/api';
+import type { Torrent } from '#/torrent';
 
 export const apiBangumi = {
   /**
@@ -245,5 +246,56 @@ export const apiBangumi = {
       rss_link: bangumi.rss_link.split(','),
       air_weekday: bangumi.air_weekday ?? null,
     })) as BangumiRule[];
+  },
+
+  // ── Torrent Management ──
+
+  async getTorrents(bangumiId: number) {
+    const { data } = await axios.get<Torrent[]>(
+      `api/v1/bangumi/${bangumiId}/torrents`
+    );
+    return data;
+  },
+
+  async deleteAllTorrents(bangumiId: number) {
+    const { data } = await axios.delete<ApiSuccess>(
+      `api/v1/bangumi/${bangumiId}/torrents`
+    );
+    return data;
+  },
+
+  async deleteTorrent(bangumiId: number, torrentId: number) {
+    const { data } = await axios.delete<ApiSuccess>(
+      `api/v1/bangumi/${bangumiId}/torrents/${torrentId}`
+    );
+    return data;
+  },
+
+  async getOrphanTorrents() {
+    const { data } = await axios.get<Torrent[]>(
+      'api/v1/bangumi/torrents/orphans'
+    );
+    return data;
+  },
+
+  async getOrphanTorrentCount() {
+    const { data } = await axios.get<number>(
+      'api/v1/bangumi/torrents/orphans/count'
+    );
+    return data;
+  },
+
+  async deleteOrphanTorrents() {
+    const { data } = await axios.delete<ApiSuccess>(
+      'api/v1/bangumi/torrents/orphans'
+    );
+    return data;
+  },
+
+  async deleteOrphanTorrent(torrentId: number) {
+    const { data } = await axios.delete<ApiSuccess>(
+      `api/v1/bangumi/torrents/orphans/${torrentId}`
+    );
+    return data;
   },
 };

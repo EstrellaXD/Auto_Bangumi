@@ -154,6 +154,9 @@
       "step3_desc": "AutoBangumi will automatically download and rename new episodes for you.",
       "add_rss_btn": "Add RSS Feed"
     },
+    "others": {
+      "title": "Others"
+    },
     "rule": {
       "apply": "Apply",
       "delete": "Delete",
@@ -181,6 +184,25 @@
       "season": "Season",
       "year": "Year",
       "yes_btn": "Yes"
+    },
+    "torrents": {
+      "title": "Torrents",
+      "delete": "Delete",
+      "deleteAll": "Delete All",
+      "downloaded": "Downloaded",
+      "empty": "No torrents",
+      "confirm_clear": "Are you sure you want to delete all torrents? This cannot be undone.",
+      "select_all": "Select All",
+      "deselect_all": "Deselect All",
+      "delete_selected": "Delete ({count})",
+      "deleted_one": "Deleted torrent {id}",
+      "deleted_count": "Deleted {count} torrents",
+      "cleared_all": "Cleared all torrents",
+      "load_failed": "Failed to load torrent list",
+      "delete_failed": "Failed to delete",
+      "source": {
+        "manual": "Manual"
+      }
     }
   },
   "log": {
