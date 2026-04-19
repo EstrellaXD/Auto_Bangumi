@@ -247,6 +247,69 @@ class TestAddTorrent:
 
         assert result is False
 
+    async def test_client_rejects_status_is_failed(self, download_client, mock_qb_client):
+        """When client.add_torrents returns False, tri-state API reports failed."""
+        mock_qb_client.add_torrents.return_value = False
+        mock_qb_client.torrents_info.return_value = []
+        torrent = make_torrent(url="magnet:?xt=urn:btih:def")
+        bangumi = make_bangumi()
+
+        with patch("module.downloader.download_client.RequestContent") as MockReq:
+            mock_req = AsyncMock()
+            MockReq.return_value.__aenter__ = AsyncMock(return_value=mock_req)
+            MockReq.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            status = await download_client.add_torrent_with_status(torrent, bangumi)
+
+        assert status == "failed"
+
+    async def test_client_rejects_but_hash_exists_reports_exists(
+        self, download_client, mock_qb_client
+    ):
+        """Falsy add result with matching info-hash should be treated as exists."""
+        mock_qb_client.add_torrents.return_value = False
+        mock_qb_client.torrents_info.return_value = [
+            {"hash": "0123456789abcdef0123456789abcdef01234567", "name": "Other Name"}
+        ]
+        torrent = make_torrent(
+            name="[Sub] Test Anime - 01 [1080p].mkv",
+            url="magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567",
+        )
+        bangumi = make_bangumi()
+
+        with patch("module.downloader.download_client.RequestContent") as MockReq:
+            mock_req = AsyncMock()
+            MockReq.return_value.__aenter__ = AsyncMock(return_value=mock_req)
+            MockReq.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            status = await download_client.add_torrent_with_status(torrent, bangumi)
+
+        assert status == "exists"
+
+    async def test_client_rejects_but_name_exists_reports_exists(
+        self, download_client, mock_qb_client
+    ):
+        """Falsy add result with matching torrent name should be treated as exists."""
+        mock_qb_client.add_torrents.return_value = False
+        mock_qb_client.torrents_info.return_value = [
+            {"hash": "deadbeef", "name": "[Sub] Test Anime - 01 [1080p].mkv"}
+        ]
+        torrent = make_torrent(
+            name="[Sub] Test Anime - 01 [1080p].mkv",
+            url="https://example.com/test-anime-01.torrent",
+        )
+        bangumi = make_bangumi()
+
+        with patch("module.downloader.download_client.RequestContent") as MockReq:
+            mock_req = AsyncMock()
+            mock_req.get_content = AsyncMock(return_value=b"torrent-file-data")
+            MockReq.return_value.__aenter__ = AsyncMock(return_value=mock_req)
+            MockReq.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            status = await download_client.add_torrent_with_status(torrent, bangumi)
+
+        assert status == "exists"
+
     async def test_generates_save_path_if_missing(self, download_client, mock_qb_client):
         """When bangumi.save_path is empty, generates one."""
         torrent = make_torrent(url="magnet:?xt=urn:btih:abc")

@@ -66,13 +66,13 @@ class TestRssToDownloadFlow:
 
             # 4. Mock download client
             mock_client = AsyncMock()
-            mock_client.add_torrent = AsyncMock(return_value=True)
+            mock_client.add_torrent_with_status = AsyncMock(return_value="added")
 
             # 5. Execute refresh_rss
             await engine.refresh_rss(mock_client)
 
         # 6. Verify: matched torrents were downloaded
-        assert mock_client.add_torrent.call_count == 2
+        assert mock_client.add_torrent_with_status.call_count == 2
 
         # 7. Verify: all torrents stored in DB
         all_torrents = engine.torrent.search_all()
@@ -117,11 +117,11 @@ class TestRssToDownloadFlow:
         with patch.object(RSSEngine, "_get_torrents", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = torrents
             mock_client = AsyncMock()
-            mock_client.add_torrent = AsyncMock(return_value=True)
+            mock_client.add_torrent_with_status = AsyncMock(return_value="added")
             await engine.refresh_rss(mock_client)
 
         # Only 1080p should be downloaded (720p is filtered)
-        assert mock_client.add_torrent.call_count == 1
+        assert mock_client.add_torrent_with_status.call_count == 1
 
     async def test_duplicate_torrents_not_reprocessed(self, db_engine):
         """Torrents already in the DB are not processed again."""
@@ -155,13 +155,91 @@ class TestRssToDownloadFlow:
         with patch.object(RSSEngine, "_get_torrents", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = torrents
             mock_client = AsyncMock()
-            mock_client.add_torrent = AsyncMock(return_value=True)
+            mock_client.add_torrent_with_status = AsyncMock(return_value="added")
             await engine.refresh_rss(mock_client)
 
         # Only ep02 should be downloaded (ep01 already exists)
-        assert mock_client.add_torrent.call_count == 1
+        assert mock_client.add_torrent_with_status.call_count == 1
         all_torrents = engine.torrent.search_all()
         assert len(all_torrents) == 2  # original + new one
+
+    async def test_failed_add_torrent_is_retried_next_refresh(self, db_engine):
+        """Matched torrents that fail to add are retried in the next refresh cycle."""
+        engine = RSSEngine(_engine=db_engine)
+
+        rss_item = make_rss_item()
+        engine.rss.add(rss_item)
+
+        bangumi = make_bangumi(
+            title_raw="Retry Anime", official_title="Retry Anime", filter=""
+        )
+        engine.bangumi.add(bangumi)
+
+        torrents = [
+            Torrent(
+                name="[Sub] Retry Anime - 01 [1080p].mkv",
+                url="https://example.com/retry-ep01.torrent",
+            )
+        ]
+        with patch.object(
+            RSSEngine, "_get_torrents", new_callable=AsyncMock
+        ) as mock_get:
+            mock_get.return_value = torrents
+            mock_client = AsyncMock()
+            # First cycle fails to add; second cycle succeeds.
+            mock_client.add_torrent_with_status = AsyncMock(
+                side_effect=["failed", "added"]
+            )
+
+            await engine.refresh_rss(mock_client)
+
+            # Failed matched torrent should not be persisted yet.
+            assert mock_client.add_torrent_with_status.call_count == 1
+            assert engine.torrent.search_all() == []
+
+            await engine.refresh_rss(mock_client)
+
+        # The same torrent is retried and eventually persisted as downloaded.
+        assert mock_client.add_torrent_with_status.call_count == 2
+        stored = engine.torrent.search_all()
+        assert len(stored) == 1
+        assert stored[0].url == "https://example.com/retry-ep01.torrent"
+        assert stored[0].downloaded is True
+
+    async def test_existing_in_client_is_persisted_without_retry(self, db_engine):
+        """If downloader reports torrent already exists, persist and avoid retry loops."""
+        engine = RSSEngine(_engine=db_engine)
+
+        rss_item = make_rss_item()
+        engine.rss.add(rss_item)
+
+        bangumi = make_bangumi(
+            title_raw="Exists Anime", official_title="Exists Anime", filter=""
+        )
+        engine.bangumi.add(bangumi)
+
+        torrents = [
+            Torrent(
+                name="[Sub] Exists Anime - 01 [1080p].mkv",
+                url="https://example.com/exists-ep01.torrent",
+            )
+        ]
+        with patch.object(
+            RSSEngine, "_get_torrents", new_callable=AsyncMock
+        ) as mock_get:
+            mock_get.return_value = torrents
+            mock_client = AsyncMock()
+            mock_client.add_torrent_with_status = AsyncMock(return_value="exists")
+
+            await engine.refresh_rss(mock_client)
+            await engine.refresh_rss(mock_client)
+
+        # Persisted on first cycle, so second cycle should not retry same URL.
+        assert mock_client.add_torrent_with_status.call_count == 1
+        stored = engine.torrent.search_all()
+        assert len(stored) == 1
+        assert stored[0].url == "https://example.com/exists-ep01.torrent"
+        assert stored[0].downloaded is True
 
 
 # ---------------------------------------------------------------------------

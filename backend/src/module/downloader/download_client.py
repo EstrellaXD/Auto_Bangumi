@@ -1,5 +1,10 @@
 import asyncio
+import base64
+import binascii
 import logging
+import re
+from typing import Literal
+from urllib.parse import parse_qs, urlparse
 
 from module.conf import settings
 from module.models import Bangumi, Torrent
@@ -155,6 +160,77 @@ class DownloadClient(TorrentPath):
         await self.client.torrents_resume(hashes)
 
     async def add_torrent(self, torrent: Torrent | list, bangumi: Bangumi) -> bool:
+        status = await self.add_torrent_with_status(torrent, bangumi)
+        return status == "added"
+
+    @staticmethod
+    def _extract_btih_hex(magnet_url: str) -> str | None:
+        """Extract BTIH hash from magnet URL and normalize to 40-char lowercase hex."""
+        if not magnet_url or not magnet_url.startswith("magnet:?"):
+            return None
+
+        query = parse_qs(urlparse(magnet_url).query)
+        xt_values = query.get("xt", [])
+        btih_value = next(
+            (
+                xt.removeprefix("urn:btih:")
+                for xt in xt_values
+                if xt.startswith("urn:btih:")
+            ),
+            None,
+        )
+        if not btih_value:
+            return None
+
+        btih_value = btih_value.strip()
+        if re.fullmatch(r"[0-9a-fA-F]{40}", btih_value):
+            return btih_value.lower()
+
+        # Some magnet links use 32-char base32 info-hash.
+        if re.fullmatch(r"[A-Z2-7a-z2-7]{32}", btih_value):
+            try:
+                return base64.b32decode(btih_value.upper()).hex()
+            except (binascii.Error, ValueError):
+                return None
+
+        return None
+
+    async def _torrent_exists_in_client(self, torrent: Torrent) -> bool:
+        """Best-effort duplicate detection when add_torrents returns falsy."""
+        try:
+            existing = await self.client.torrents_info(
+                status_filter=None,
+                category=None,
+                tag=None,
+            )
+        except Exception as e:
+            logger.debug(
+                "[Downloader] Could not verify existing torrent for %s: %s",
+                torrent.name,
+                e,
+            )
+            return False
+
+        if not isinstance(existing, list) or not existing:
+            return False
+
+        target_hash = self._extract_btih_hex(torrent.url)
+        if target_hash:
+            for item in existing:
+                if str(item.get("hash", "")).lower() == target_hash:
+                    return True
+
+        target_name = (torrent.name or "").strip()
+        if target_name:
+            for item in existing:
+                if str(item.get("name", "")).strip() == target_name:
+                    return True
+
+        return False
+
+    async def add_torrent_with_status(
+        self, torrent: Torrent | list, bangumi: Bangumi
+    ) -> Literal["added", "exists", "failed"]:
         """Download a torrent (or list of torrents) for the given bangumi entry.
 
         Handles both magnet links and .torrent file URLs, fetching file bytes
@@ -169,7 +245,7 @@ class DownloadClient(TorrentPath):
                     logger.debug(
                         "[Downloader] No torrent found: %s", bangumi.official_title
                     )
-                    return False
+                    return "failed"
                 if "magnet" in torrent[0].url:
                     torrent_url = [t.url for t in torrent]
                     torrent_file = None
@@ -183,7 +259,7 @@ class DownloadClient(TorrentPath):
                         logger.warning(
                             f"[Downloader] Failed to fetch torrent files for: {bangumi.official_title}"
                         )
-                        return False
+                        return "failed"
                     torrent_url = None
             else:
                 if "magnet" in torrent.url:
@@ -195,30 +271,53 @@ class DownloadClient(TorrentPath):
                         logger.warning(
                             f"[Downloader] Failed to fetch torrent file for: {bangumi.official_title}"
                         )
-                        return False
+                        return "failed"
                     torrent_url = None
         # Create tag with bangumi_id for offset lookup during rename
         tags = f"ab:{bangumi.id}" if bangumi.id else None
         try:
-            if await self.client.add_torrents(
+            result = await self.client.add_torrents(
                 torrent_urls=torrent_url,
                 torrent_files=torrent_file,
                 save_path=bangumi.save_path,
                 category="Bangumi",
                 tags=tags,
-            ):
-                logger.debug("[Downloader] Add torrent: %s", bangumi.official_title)
-                return True
-            else:
+            )
+
+            # Optional tri-state return from downstream client.
+            if isinstance(result, str):
+                if result in ("added", "exists", "failed"):
+                    return result
                 logger.debug(
-                    "[Downloader] Torrent added before: %s", bangumi.official_title
+                    "[Downloader] Unexpected add_torrents status %r, treating as failed",
+                    result,
                 )
-                return False
+                return "failed"
+
+            if result is True:
+                logger.debug("[Downloader] Add torrent: %s", bangumi.official_title)
+                return "added"
+
+            if isinstance(torrent, Torrent) and await self._torrent_exists_in_client(
+                torrent
+            ):
+                logger.debug(
+                    "[Downloader] Torrent already exists in client: %s",
+                    torrent.name,
+                )
+                return "exists"
+
+            # Keep retries for unknown falsy results.
+            logger.warning(
+                "[Downloader] add_torrents returned falsy for %s, treating as failed",
+                bangumi.official_title,
+            )
+            return "failed"
         except Exception as e:
             logger.error(
                 f"[Downloader] Failed to add torrent for {bangumi.official_title}: {e}"
             )
-            return False
+            return "failed"
 
     async def move_torrent(self, hashes, location):
         await self.client.move_torrent(hashes=hashes, new_location=location)
