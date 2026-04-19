@@ -1,6 +1,7 @@
 import json
 
 import pytest
+from sqlalchemy import event
 from sqlmodel import Session, SQLModel, create_engine
 
 from module.database.bangumi import BangumiDatabase
@@ -10,6 +11,30 @@ from module.models import Bangumi, RSSItem, Torrent
 
 # sqlite sync engine for testing
 engine = create_engine("sqlite://", echo=False)
+
+
+@event.listens_for(engine, "connect")
+def _enable_foreign_keys(dbapi_conn, connection_record):
+    """匹配生产环境行为：启用 SQLite 外键约束。"""
+    cursor = dbapi_conn.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
+
+def _ensure_bangumi(session, bangumi_id: int):
+    """确保 bangumi 表中存在指定 id 的记录，满足外键约束。"""
+    if session.get(Bangumi, bangumi_id) is None:
+        session.add(Bangumi(
+            id=bangumi_id,
+            official_title=f"Stub Anime {bangumi_id}",
+            title_raw=f"Stub {bangumi_id}",
+            group_name="TestGroup",
+            dpi="1080p",
+            source="Web",
+            subtitle="CHT",
+            rss_link=f"stub_{bangumi_id}",
+        ))
+        session.commit()
 
 
 @pytest.fixture
@@ -188,6 +213,9 @@ def test_torrent_update_qb_hash_nonexistent(db_session):
 def test_torrent_with_bangumi_id(db_session):
     """Test torrent with bangumi_id for offset lookup."""
     db = TorrentDatabase(db_session)
+
+    # 父记录满足外键约束
+    _ensure_bangumi(db_session, 42)
 
     # Create torrent linked to a bangumi
     torrent = Torrent(
@@ -445,6 +473,7 @@ class TestDeleteByBangumiId:
 
     def test_deletes_matching_torrents(self, db_session):
         db = TorrentDatabase(db_session)
+        _ensure_bangumi(db_session, 10)
         for i in range(3):
             db.add(Torrent(name=f"torrent_{i}", url=f"https://example.com/{i}", bangumi_id=10))
         assert len(db.search_all()) == 3
@@ -455,6 +484,8 @@ class TestDeleteByBangumiId:
 
     def test_leaves_other_bangumi_torrents(self, db_session):
         db = TorrentDatabase(db_session)
+        _ensure_bangumi(db_session, 20)
+        _ensure_bangumi(db_session, 30)
         db.add(Torrent(name="keep", url="https://example.com/keep", bangumi_id=20))
         db.add(Torrent(name="delete", url="https://example.com/delete", bangumi_id=30))
 
@@ -466,6 +497,7 @@ class TestDeleteByBangumiId:
 
     def test_no_match_returns_zero(self, db_session):
         db = TorrentDatabase(db_session)
+        _ensure_bangumi(db_session, 5)
         db.add(Torrent(name="unrelated", url="https://example.com/1", bangumi_id=5))
 
         count = db.delete_by_bangumi_id(999)
@@ -474,6 +506,7 @@ class TestDeleteByBangumiId:
 
     def test_skips_null_bangumi_id(self, db_session):
         db = TorrentDatabase(db_session)
+        _ensure_bangumi(db_session, 7)
         db.add(Torrent(name="orphan", url="https://example.com/orphan", bangumi_id=None))
         db.add(Torrent(name="target", url="https://example.com/target", bangumi_id=7))
 
@@ -486,6 +519,7 @@ class TestDeleteByBangumiId:
     def test_check_new_finds_urls_after_cleanup(self, db_session):
         """Core scenario: after deleting torrent records, check_new should treat those URLs as new."""
         db = TorrentDatabase(db_session)
+        _ensure_bangumi(db_session, 42)
         db.add(Torrent(name="ep01", url="https://mikan.me/t/001", bangumi_id=42))
         db.add(Torrent(name="ep02", url="https://mikan.me/t/002", bangumi_id=42))
 
@@ -579,3 +613,99 @@ def test_match_list_with_aliases(db_session):
     unmatched = db.match_list(torrents, "rss2")
     assert len(unmatched) == 1
     assert unmatched[0].name == "[OtherGroup] Different Anime - 01.mkv"
+
+
+# ============================================================
+# RSS Foreign Key Constraint Tests
+# ============================================================
+
+
+class TestRSSDeleteWithTorrents:
+    """Regression tests: deleting RSSItem must cascade-delete referencing torrents."""
+
+    def test_delete_rss_with_torrents(self, db_session):
+        """删除 RSSItem 时应自动清除引用它的 torrent 记录。"""
+        rss_db = RSSDatabase(db_session)
+        torrent_db = TorrentDatabase(db_session)
+
+        # 创建 RSS 和关联的 torrent
+        rss = RSSItem(url="https://mikanani.me/RSS/test", name="Test RSS")
+        rss_db.add(rss)
+
+        torrent_db.add(Torrent(name="ep01", url="https://example.com/1", rss_id=rss.id))
+        torrent_db.add(Torrent(name="ep02", url="https://example.com/2", rss_id=rss.id))
+        # 不关联此 RSS 的 torrent
+        torrent_db.add(Torrent(name="other", url="https://example.com/3", rss_id=None))
+
+        assert len(torrent_db.search_rss(rss.id)) == 2
+
+        # 删除 RSS（不应报外键错误）
+        result = rss_db.delete(rss.id)
+        assert result is True
+
+        # RSS 和关联 torrent 都应被删除
+        assert rss_db.search_id(rss.id) is None
+        assert len(torrent_db.search_rss(rss.id)) == 0
+        # 无关 torrent 不受影响
+        assert len(torrent_db.search_all()) == 1
+
+    def test_delete_rss_without_torrents(self, db_session):
+        """删除没有关联 torrent 的 RSSItem 应正常工作。"""
+        rss_db = RSSDatabase(db_session)
+
+        rss = RSSItem(url="https://mikanani.me/RSS/empty", name="Empty RSS")
+        rss_db.add(rss)
+
+        result = rss_db.delete(rss.id)
+        assert result is True
+        assert rss_db.search_id(rss.id) is None
+
+    def test_delete_rss_cascades_in_transaction(self, db_session):
+        """验证删除操作在同一事务中完成，要么全成功要么全回滚。"""
+        rss_db = RSSDatabase(db_session)
+        torrent_db = TorrentDatabase(db_session)
+
+        rss = RSSItem(url="https://mikanani.me/RSS/tx", name="TX Test")
+        rss_db.add(rss)
+
+        for i in range(5):
+            torrent_db.add(
+                Torrent(name=f"ep{i:02d}", url=f"https://example.com/{i}", rss_id=rss.id)
+            )
+
+        assert len(torrent_db.search_rss(rss.id)) == 5
+
+        rss_db.delete(rss.id)
+
+        # 全部清理干净
+        assert rss_db.search_id(rss.id) is None
+        assert len(torrent_db.search_rss(rss.id)) == 0
+
+    def test_delete_all_rss_with_torrents(self, db_session):
+        """delete_all 应删除所有 RSS 及其关联 torrent。"""
+        rss_db = RSSDatabase(db_session)
+        torrent_db = TorrentDatabase(db_session)
+
+        rss1 = RSSItem(url="https://mikanani.me/RSS/a", name="RSS A")
+        rss2 = RSSItem(url="https://mikanani.me/RSS/b", name="RSS B")
+        rss_db.add(rss1)
+        rss_db.add(rss2)
+
+        torrent_db.add(Torrent(name="t1", url="https://example.com/1", rss_id=rss1.id))
+        torrent_db.add(Torrent(name="t2", url="https://example.com/2", rss_id=rss2.id))
+        # rss_id 为 None 的 torrent 应不受影响
+        torrent_db.add(Torrent(name="orphan", url="https://example.com/3", rss_id=None))
+
+        rss_db.delete_all()
+
+        assert len(rss_db.search_all()) == 0
+        # 只剩 rss_id 为 None 的
+        remaining = torrent_db.search_all()
+        assert len(remaining) == 1
+        assert remaining[0].name == "orphan"
+
+    def test_delete_nonexistent_rss(self, db_session):
+        """删除不存在的 RSS 不应报错。"""
+        rss_db = RSSDatabase(db_session)
+        result = rss_db.delete(999)
+        assert result is True

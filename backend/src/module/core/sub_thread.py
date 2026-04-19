@@ -31,7 +31,14 @@ class RSSThread(ProgramStatus):
                         # Analyse RSS
                         rss_list = engine.rss.search_aggregate()
                         for rss in rss_list:
-                            await self.analyser.rss_to_data(rss, engine)
+                            try:
+                                await self.analyser.rss_to_data(rss, engine)
+                            except Exception:
+                                # RSS 可能在遍历期间被 API 删除，跳过即可
+                                logger.debug(
+                                    "[RSSThread] Skipping RSS id=%s, likely deleted",
+                                    rss.id if hasattr(rss, "id") else "?",
+                                )
                         # Run RSS Engine
                         await engine.refresh_rss(client)
                 if settings.bangumi_manage.eps_complete:
