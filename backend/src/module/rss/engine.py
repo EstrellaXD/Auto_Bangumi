@@ -149,11 +149,15 @@ class RSSEngine(Database):
         else:
             rss_item = self.rss.search_id(rss_id)
             rss_items = [rss_item] if rss_item else []
-        # From RSS Items, fetch all torrents concurrently
+        # From RSS Items, fetch all torrents with concurrency limit
         logger.debug("[Engine] Get %s RSS items", len(rss_items))
-        results = await asyncio.gather(
-            *[self._pull_rss_with_status(rss_item) for rss_item in rss_items]
-        )
+        semaphore = asyncio.Semaphore(5)
+
+        async def _limited_pull(item):
+            async with semaphore:
+                return await self._pull_rss_with_status(item)
+
+        results = await asyncio.gather(*[_limited_pull(item) for item in rss_items])
         now = datetime.now(timezone.utc).isoformat()
         # Process results sequentially (DB operations)
         for rss_item, (new_torrents, error) in zip(rss_items, results):

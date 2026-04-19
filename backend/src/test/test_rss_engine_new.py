@@ -1,5 +1,7 @@
 """Tests for RSS engine: pull_rss, match_torrent, refresh_rss, add_rss."""
 
+import asyncio
+
 import pytest
 from unittest.mock import AsyncMock, patch
 
@@ -51,7 +53,9 @@ class TestPullRss:
             Torrent(name="new1", url="https://example.com/new1.torrent"),
             Torrent(name="new2", url="https://example.com/new2.torrent"),
         ]
-        with patch.object(RSSEngine, "_get_torrents", new_callable=AsyncMock) as mock_get:
+        with patch.object(
+            RSSEngine, "_get_torrents", new_callable=AsyncMock
+        ) as mock_get:
             mock_get.return_value = all_torrents
             result = await rss_engine.pull_rss(rss_item)
 
@@ -67,7 +71,9 @@ class TestPullRss:
         existing = make_torrent(url="https://example.com/only.torrent", rss_id=1)
         rss_engine.torrent.add(existing)
 
-        with patch.object(RSSEngine, "_get_torrents", new_callable=AsyncMock) as mock_get:
+        with patch.object(
+            RSSEngine, "_get_torrents", new_callable=AsyncMock
+        ) as mock_get:
             mock_get.return_value = [
                 Torrent(name="only", url="https://example.com/only.torrent")
             ]
@@ -81,7 +87,9 @@ class TestPullRss:
         rss_engine.rss.add(rss_item)
         rss_item = rss_engine.rss.search_id(1)
 
-        with patch.object(RSSEngine, "_get_torrents", new_callable=AsyncMock) as mock_get:
+        with patch.object(
+            RSSEngine, "_get_torrents", new_callable=AsyncMock
+        ) as mock_get:
             mock_get.return_value = []
             result = await rss_engine.pull_rss(rss_item)
 
@@ -99,9 +107,7 @@ class TestMatchTorrent:
         bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="")
         rss_engine.bangumi.add(bangumi)
 
-        torrent = make_torrent(
-            name="[Lilith-Raws] Mushoku Tensei - 11 [1080p].mkv"
-        )
+        torrent = make_torrent(name="[Lilith-Raws] Mushoku Tensei - 11 [1080p].mkv")
         result = rss_engine.match_torrent(torrent)
 
         assert result is not None
@@ -122,9 +128,7 @@ class TestMatchTorrent:
         bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="720")
         rss_engine.bangumi.add(bangumi)
 
-        torrent = make_torrent(
-            name="[Sub] Mushoku Tensei - 01 [720p].mkv"
-        )
+        torrent = make_torrent(name="[Sub] Mushoku Tensei - 01 [720p].mkv")
         result = rss_engine.match_torrent(torrent)
 
         assert result is None
@@ -134,9 +138,7 @@ class TestMatchTorrent:
         bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="")
         rss_engine.bangumi.add(bangumi)
 
-        torrent = make_torrent(
-            name="[Sub] Mushoku Tensei - 01 [720p].mkv"
-        )
+        torrent = make_torrent(name="[Sub] Mushoku Tensei - 01 [720p].mkv")
         result = rss_engine.match_torrent(torrent)
 
         assert result is not None
@@ -147,9 +149,7 @@ class TestMatchTorrent:
         rss_engine.bangumi.add(bangumi)
 
         # Torrent has "hevc" in lowercase - should still be filtered
-        torrent = make_torrent(
-            name="[Sub] Mushoku Tensei - 01 [1080p][hevc].mkv"
-        )
+        torrent = make_torrent(name="[Sub] Mushoku Tensei - 01 [1080p][hevc].mkv")
         result = rss_engine.match_torrent(torrent)
 
         assert result is None
@@ -201,7 +201,9 @@ class TestRefreshRss:
             name="[Sub] Mushoku Tensei - 12 [1080p].mkv",
             url="https://example.com/ep12.torrent",
         )
-        with patch.object(RSSEngine, "_get_torrents", new_callable=AsyncMock) as mock_get:
+        with patch.object(
+            RSSEngine, "_get_torrents", new_callable=AsyncMock
+        ) as mock_get:
             mock_get.return_value = [new_torrent]
 
             # Create a mock client
@@ -227,7 +229,9 @@ class TestRefreshRss:
             name="[Sub] Unknown Anime - 01 [1080p].mkv",
             url="https://example.com/unknown.torrent",
         )
-        with patch.object(RSSEngine, "_get_torrents", new_callable=AsyncMock) as mock_get:
+        with patch.object(
+            RSSEngine, "_get_torrents", new_callable=AsyncMock
+        ) as mock_get:
             mock_get.return_value = [unmatched]
             client = AsyncMock()
             await rss_engine.refresh_rss(client)
@@ -244,7 +248,9 @@ class TestRefreshRss:
         rss_engine.rss.add(rss1)
         rss_engine.rss.add(rss2)
 
-        with patch.object(RSSEngine, "_get_torrents", new_callable=AsyncMock) as mock_get:
+        with patch.object(
+            RSSEngine, "_get_torrents", new_callable=AsyncMock
+        ) as mock_get:
             mock_get.return_value = []
             client = AsyncMock()
             await rss_engine.refresh_rss(client, rss_id=2)
@@ -254,7 +260,9 @@ class TestRefreshRss:
 
     async def test_refresh_nonexistent_rss_id(self, rss_engine):
         """refresh_rss with non-existent rss_id does nothing."""
-        with patch.object(RSSEngine, "_get_torrents", new_callable=AsyncMock) as mock_get:
+        with patch.object(
+            RSSEngine, "_get_torrents", new_callable=AsyncMock
+        ) as mock_get:
             client = AsyncMock()
             await rss_engine.refresh_rss(client, rss_id=999)
 
@@ -284,9 +292,7 @@ class TestAddRss:
 
     async def test_add_without_name_fetches_title(self, rss_engine):
         """add_rss without name calls get_rss_title to auto-discover title."""
-        with patch(
-            "module.rss.engine.RequestContent"
-        ) as MockReq:
+        with patch("module.rss.engine.RequestContent") as MockReq:
             mock_instance = AsyncMock()
             mock_instance.get_rss_title = AsyncMock(return_value="Fetched Title")
             MockReq.return_value.__aenter__ = AsyncMock(return_value=mock_instance)
@@ -303,9 +309,7 @@ class TestAddRss:
 
     async def test_add_without_name_fetch_fails(self, rss_engine):
         """add_rss returns error when title fetch fails."""
-        with patch(
-            "module.rss.engine.RequestContent"
-        ) as MockReq:
+        with patch("module.rss.engine.RequestContent") as MockReq:
             mock_instance = AsyncMock()
             mock_instance.get_rss_title = AsyncMock(return_value=None)
             MockReq.return_value.__aenter__ = AsyncMock(return_value=mock_instance)
@@ -332,3 +336,36 @@ class TestAddRss:
 
         assert result.status is False
         assert result.status_code == 406
+
+
+class TestRefreshRssConcurrency:
+    async def test_concurrent_requests_limited(self, rss_engine):
+        """refresh_rss should limit concurrent requests via semaphore."""
+        rss_items = [
+            make_rss_item(name=f"Feed {i}", url=f"https://feed{i}.com/rss")
+            for i in range(10)
+        ]
+        for item in rss_items:
+            rss_engine.rss.add(item)
+
+        active_count = 0
+        max_active = 0
+        lock = asyncio.Lock()
+
+        async def track_concurrency(rss_item):
+            nonlocal active_count, max_active
+            async with lock:
+                active_count += 1
+                max_active = max(max_active, active_count)
+            await asyncio.sleep(0.01)
+            async with lock:
+                active_count -= 1
+            return [], None
+
+        with patch.object(
+            rss_engine, "_pull_rss_with_status", side_effect=track_concurrency
+        ):
+            client = AsyncMock()
+            await rss_engine.refresh_rss(client)
+
+        assert max_active <= 5
