@@ -18,6 +18,7 @@ const providerTypes: { value: TupleToUnion<NotificationType>; label: string }[] 
   { value: 'gotify', label: 'Gotify' },
   { value: 'pushover', label: 'Pushover' },
   { value: 'webhook', label: 'Webhook' },
+  { value: 'onebot', label: 'OneBot v11' },
 ];
 
 // Provider field configurations
@@ -73,6 +74,28 @@ const providerFields: Record<
       placeholder: '{"title": "{{title}}", "episode": {{episode}}}',
     },
   ],
+  onebot: [
+    {
+      key: 'url',
+      label: 'API URL',
+      placeholder: 'http://localhost:5700',
+    },
+    {
+      key: 'token',
+      label: 'Access Token (optional)',
+      placeholder: 'access token',
+    },
+    {
+      key: 'chat_id',
+      label: 'Target ID (QQ/Group)',
+      placeholder: '123456789',
+    },
+    {
+      key: 'message_type',
+      label: 'Message Type',
+      placeholder: 'private',
+    },
+  ],
 };
 
 // Dialog state
@@ -122,6 +145,7 @@ function getProviderIcon(type: string): string {
     gotify: 'i-carbon-notification-filled',
     pushover: 'i-carbon-mobile',
     webhook: 'i-carbon-webhook',
+    onebot: 'i-carbon-qq'
   };
   return icons[type] || 'i-carbon-notification';
 }
@@ -552,3 +576,7 @@ function getFieldsForType(type: string) {
   background: color-mix(in srgb, var(--color-danger, #ef4444) 10%, transparent);
 }
 </style>
+
+
+
+

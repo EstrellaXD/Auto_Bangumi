@@ -120,7 +120,10 @@ class NotificationProvider(BaseModel):
         None, description="Custom template for webhook provider"
     )
     url_: Optional[str] = Field(
-        None, alias="url", description="URL for generic webhook provider"
+        None, alias="url", description="URL for generic webhook/onebot provider"
+    )
+    message_type: Optional[str] = Field(
+        "private", description="Message type for onebot: 'private' or 'group'"
     )
 
     @property
