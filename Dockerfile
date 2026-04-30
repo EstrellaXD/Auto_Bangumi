@@ -43,7 +43,7 @@ RUN mkdir -p /home/ab && \
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-EXPOSE 7892
+EXPOSE 37892
 VOLUME ["/app/config", "/app/data"]
 
 ENTRYPOINT ["tini", "-g", "--", "/entrypoint.sh"]

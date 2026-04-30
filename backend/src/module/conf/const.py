@@ -7,7 +7,7 @@ DEFAULT_SETTINGS = {
     "program": {
         "rss_time": 900,
         "rename_time": 60,
-        "webui_port": 7892,
+        "webui_port": 37892,
     },
     "downloader": {
         "type": "qbittorrent",
