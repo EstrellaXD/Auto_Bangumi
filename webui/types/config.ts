@@ -1,14 +1,14 @@
-import type { TupleToUnion } from './utils';
+﻿import type { TupleToUnion } from './utils';
 
-/** 下载方式 */
+/** 涓嬭浇鏂瑰紡 */
 export type DownloaderType = ['qbittorrent'];
-/** rss parser 语言 */
+/** rss parser 璇█ */
 export type RssParserLang = ['zh', 'en', 'jp'];
-/** 重命名方式 */
+/** 閲嶅懡鍚嶆柟寮?*/
 export type RenameMethod = ['normal', 'pn', 'advance', 'none'];
-/** 代理类型 */
+/** 浠ｇ悊绫诲瀷 */
 export type ProxyType = ['http', 'https', 'socks5'];
-/** 通知类型 */
+/** 閫氱煡绫诲瀷 */
 export type NotificationType = [
   'telegram',
   'discord',
@@ -18,6 +18,7 @@ export type NotificationType = [
   'gotify',
   'pushover',
   'webhook',
+  'onebot',
 ];
 /** OpenAI Model List */
 export type OpenAIModel = ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'];
@@ -76,6 +77,7 @@ export interface NotificationProviderConfig {
   api_token?: string;
   template?: string;
   url?: string;
+  message_type?: string;
 }
 
 export interface Notification {
@@ -178,3 +180,4 @@ export const initConfig: Config = {
     mcp_tokens: [],
   },
 };
+
