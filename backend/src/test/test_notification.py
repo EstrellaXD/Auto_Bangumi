@@ -317,7 +317,7 @@ class TestOneBotProvider:
             official_title="Test Anime", season=1, episode=5, poster_path="https://example.com/poster.jpg"
         )
 
-        with patch.object(provider, "post_data", new_callable=AsyncMock) as mock_post:
+        with patch.object(provider, "_post_json", new_callable=AsyncMock) as mock_post:
             mock_response = MagicMock(status_code=200)
             mock_response.json.return_value = {"status": "ok", "retcode": 0}
             mock_post.return_value = mock_response
@@ -335,7 +335,7 @@ class TestOneBotProvider:
             official_title="Test Anime", season=1, episode=5
         )
 
-        with patch.object(provider, "post_data", new_callable=AsyncMock) as mock_post:
+        with patch.object(provider, "_post_json", new_callable=AsyncMock) as mock_post:
             mock_response = MagicMock(status_code=200)
             mock_response.json.return_value = {"status": "ok", "retcode": 0}
             mock_post.return_value = mock_response
@@ -350,7 +350,7 @@ class TestOneBotProvider:
         """Handles OneBot API error response."""
         notify = Notification(official_title="Test Anime", season=1, episode=5)
 
-        with patch.object(provider, "post_data", new_callable=AsyncMock) as mock_post:
+        with patch.object(provider, "_post_json", new_callable=AsyncMock) as mock_post:
             mock_response = MagicMock(status_code=200)
             mock_response.json.return_value = {"status": "failed", "retcode": 100, "msg": "bad request"}
             mock_post.return_value = mock_response
@@ -362,7 +362,7 @@ class TestOneBotProvider:
         """Handles HTTP error."""
         notify = Notification(official_title="Test Anime", season=1, episode=5)
 
-        with patch.object(provider, "post_data", new_callable=AsyncMock) as mock_post:
+        with patch.object(provider, "_post_json", new_callable=AsyncMock) as mock_post:
             mock_post.return_value = MagicMock(status_code=401)
             result = await provider.send(notify)
 
@@ -370,7 +370,7 @@ class TestOneBotProvider:
 
     async def test_test_success(self, provider):
         """Test method sends test message successfully."""
-        with patch.object(provider, "post_data", new_callable=AsyncMock) as mock_post:
+        with patch.object(provider, "_post_json", new_callable=AsyncMock) as mock_post:
             mock_response = MagicMock(status_code=200)
             mock_response.json.return_value = {"status": "ok", "retcode": 0}
             mock_post.return_value = mock_response
@@ -381,7 +381,7 @@ class TestOneBotProvider:
 
     async def test_test_failure(self, provider):
         """Test method handles API error."""
-        with patch.object(provider, "post_data", new_callable=AsyncMock) as mock_post:
+        with patch.object(provider, "_post_json", new_callable=AsyncMock) as mock_post:
             mock_response = MagicMock(status_code=200)
             mock_response.json.return_value = {"status": "failed", "retcode": 100, "wording": "invalid target"}
             mock_post.return_value = mock_response
