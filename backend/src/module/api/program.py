@@ -1,6 +1,7 @@
 import logging
 import os
 import signal
+import sys
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
@@ -68,18 +69,14 @@ async def stop():
 
 @router.get("/status", response_model=dict, dependencies=[Depends(get_current_user)])
 async def program_status():
-    if not program.is_running:
-        return {
-            "status": False,
-            "version": VERSION,
-            "first_run": program.first_run,
-        }
-    else:
-        return {
-            "status": True,
-            "version": VERSION,
-            "first_run": program.first_run,
-        }
+    is_linux = sys.platform == "linux"
+    base = {
+        "status": program.is_running,
+        "version": VERSION,
+        "first_run": program.first_run,
+        "platform": "linux" if is_linux else "windows",
+    }
+    return base
 
 
 @router.get(
