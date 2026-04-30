@@ -10,6 +10,7 @@ from module.notification.providers.wecom import WecomProvider
 from module.notification.providers.gotify import GotifyProvider
 from module.notification.providers.pushover import PushoverProvider
 from module.notification.providers.webhook import WebhookProvider
+from module.notification.providers.onebot import OneBotProvider
 
 if TYPE_CHECKING:
     from module.notification.base import NotificationProvider
@@ -25,6 +26,7 @@ PROVIDER_REGISTRY: dict[str, type["NotificationProvider"]] = {
     "gotify": GotifyProvider,
     "pushover": PushoverProvider,
     "webhook": WebhookProvider,
+    "onebot": OneBotProvider,
 }
 
 __all__ = [
@@ -37,4 +39,5 @@ __all__ = [
     "GotifyProvider",
     "PushoverProvider",
     "WebhookProvider",
+    "OneBotProvider",
 ]

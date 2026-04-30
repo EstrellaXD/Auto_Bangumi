@@ -1,4 +1,4 @@
-import type { NotificationProviderConfig, NotificationType } from '#/config';
+﻿import type { NotificationProviderConfig, NotificationType } from '#/config';
 import type { TupleToUnion } from '#/utils';
 
 export interface TestProviderRequest {
@@ -17,6 +17,7 @@ export interface TestProviderConfigRequest {
   api_token?: string;
   template?: string;
   url?: string;
+  message_type?: string;
 }
 
 export interface TestResponse {
@@ -49,3 +50,4 @@ export const apiNotification = {
     return { data };
   },
 };
+
