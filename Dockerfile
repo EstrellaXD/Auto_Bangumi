@@ -1,4 +1,6 @@
-﻿FROM ghcr.io/astral-sh/uv:0.5-python3.13-alpine AS builder
+# syntax=docker/dockerfile:1
+
+FROM ghcr.io/astral-sh/uv:0.5-python3.13-alpine AS builder
 
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1
@@ -12,7 +14,7 @@ RUN uv sync --frozen --no-dev
 COPY backend/src ./src
 
 
-FROM ghcr.io/astral-sh/uv:0.5-python3.13-alpine AS runtime
+FROM python:3.13-alpine AS runtime
 
 RUN apk add --no-cache \
     bash \
@@ -32,10 +34,6 @@ WORKDIR /app
 # Copy venv and source from builder
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/src .
-
-# Copy pre-built frontend from host
-COPY webui/dist ./dist
-
 COPY --chmod=755 entrypoint.sh /entrypoint.sh
 
 # Add user
@@ -45,7 +43,7 @@ RUN mkdir -p /home/ab && \
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-EXPOSE 37892
+EXPOSE 7892
 VOLUME ["/app/config", "/app/data"]
 
 ENTRYPOINT ["tini", "-g", "--", "/entrypoint.sh"]

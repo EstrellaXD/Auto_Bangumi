@@ -29,7 +29,7 @@ export const apiProgram = {
    * 状态
    */
   async status() {
-    const { data } = await axios.get<{ status: boolean; version: string; platform: string; first_run: boolean }>(
+    const { data } = await axios.get<{ status: boolean; version: string }>(
       'api/v1/status'
     );
 
