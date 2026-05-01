@@ -18,22 +18,17 @@ from .sub_thread import CalendarRefreshThread, OffsetScanThread, RenameThread, R
 logger = logging.getLogger(__name__)
 
 figlet = r"""
-$$$$$$\  $$\      $$\ $$\     $$\
-$$  __$$\ $$$\    $$$ |\$$\   $$  |
-$$ /  $$ |$$$$\  $$$$ | \$$\ $$  /
-$$$$$$$$ |$$\$$\$$ $$ |  \$$$$  /
-$$  __$$ |$$ \$$$  $$ |   \$$  /
-$$ |  $$ |$$ |\$  /$$ |    $$ |
-$$ |  $$ |$$ | \_/ $$ |    $$ |
-\__|  \__|\__|     \__|    \__|
-
-    ___         __        __                                      _
-   /   | __  __/ /_____  / /_  ____ _____  ____ ___  ______ ___  (_)
-  / /| |/ / / / __/ __ \/ __ \/ __ `/ __ \/ __ `/ / / / __ `__ \/ /
- / ___ / /_/ / /_/ /_/ / /_/ / /_/ / / / / /_/ / /_/ / / / / / / /
-/_/  |_\__,_/\__/\____/_.___/\__,_/_/ /_/\__, /\__,_/_/ /_/ /_/_/
-                                        /____/
+               _        ____                                    _
+    /\        | |      |  _ \                                  (_)
+   /  \  _   _| |_ ___ | |_) | __ _ _ __   __ _ _   _ _ __ ___  _
+  / /\ \| | | | __/ _ \|  _ < / _` | '_ \ / _` | | | | '_ ` _ \| |
+ / ____ \ |_| | || (_) | |_) | (_| | | | | (_| | |_| | | | | | | |
+/_/    \_\__,_|\__\___/|____/ \__,_|_| |_|\__, |\__,_|_| |_| |_|_|
+                                           __/ |
+                                          |___/
 """
+
+
 class Program(RenameThread, RSSThread, OffsetScanThread, CalendarRefreshThread):
     def __init__(self):
         super().__init__()
@@ -44,10 +39,10 @@ class Program(RenameThread, RSSThread, OffsetScanThread, CalendarRefreshThread):
         for line in figlet.splitlines():
             logger.info(line.strip("\n"))
         logger.info(
-            f"Version {VERSION}  Author: AMYdd00 | Amy 自建修复版"
+            f"Version {VERSION}  Author: EstrellaXD Twitter: https://twitter.com/Estrella_Pan"
         )
-        logger.info("GitHub: https://github.com/AMYdd00/Auto_Bangumi/")
-        logger.info("Starting...")
+        logger.info("GitHub: https://github.com/EstrellaXD/Auto_Bangumi/")
+        logger.info("Starting AutoBangumi...")
 
     async def startup(self):
         # Prevent duplicate startup due to nested router lifespan events
