@@ -6,8 +6,10 @@ notifications via the OneBot v11 HTTP API.
 Documentation: https://github.com/botuniverse/onebot-11
 """
 
+import base64
 import json
 import logging
+import os
 from typing import TYPE_CHECKING
 
 from module.models.bangumi import Notification
@@ -78,6 +80,53 @@ class OneBotProvider(NotificationProvider):
             logger.warning(f"[OneBot] Request failed: {e}")
             return None
 
+    def _get_image_file(self, poster_path: str) -> str | None:
+        """Convert poster_path to a OneBot-compatible image file reference.
+
+        Handles three cases:
+        1. Remote URL (contains ://) - use as-is
+        2. Local file path - read and convert to base64
+        3. Invalid/missing - return None
+
+        Args:
+            poster_path: The poster path or URL from the database.
+
+        Returns:
+            A OneBot-compatible file string (URL or base64), or None.
+        """
+        if not poster_path or poster_path in ("", "https://mikanani.me"):
+            return None
+
+        # If it's a remote URL, use it directly
+        if "://" in poster_path:
+            return poster_path
+
+        # Otherwise, try to read it as a local file
+        # The path is relative to the data directory (e.g. "posters/xxx.jpg")
+        local_path = os.path.join("data", poster_path.lstrip("/"))
+        if os.path.exists(local_path):
+            try:
+                with open(local_path, "rb") as f:
+                    img_data = f.read()
+                img_b64 = base64.b64encode(img_data).decode("ascii")
+                # Determine MIME type from extension
+                ext = os.path.splitext(local_path)[1].lower()
+                mime_map = {
+                    ".jpg": "image/jpeg",
+                    ".jpeg": "image/jpeg",
+                    ".png": "image/png",
+                    ".gif": "image/gif",
+                    ".webp": "image/webp",
+                }
+                mime = mime_map.get(ext, "image/jpeg")
+                return f"base64://{img_b64}"
+            except Exception as e:
+                logger.warning(f"[OneBot] Failed to read local image {local_path}: {e}")
+                return None
+        else:
+            logger.warning(f"[OneBot] Local image not found: {local_path}")
+            return None
+
     def _build_payload(
         self, text: str, poster_path: str = None
     ) -> str | list:
@@ -89,14 +138,15 @@ class OneBotProvider(NotificationProvider):
 
         Args:
             text: The text message content.
-            poster_path: Optional URL to a poster image.
+            poster_path: Optional URL or local path to a poster image.
 
         Returns:
             A string (plain text) or list (message segments).
         """
-        if poster_path and poster_path not in ("", "https://mikanani.me"):
+        image_file = self._get_image_file(poster_path) if poster_path else None
+        if image_file:
             return [
-                {"type": "image", "data": {"file": poster_path}},
+                {"type": "image", "data": {"file": image_file}},
                 {"type": "text", "data": {"text": text}},
             ]
         return text
