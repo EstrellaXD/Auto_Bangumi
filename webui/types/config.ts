@@ -1,14 +1,14 @@
 ﻿import type { TupleToUnion } from './utils';
 
-/** 涓嬭浇鏂瑰紡 */
+/** 下载方式 */
 export type DownloaderType = ['qbittorrent'];
-/** rss parser 璇█ */
+/** rss parser 语言 */
 export type RssParserLang = ['zh', 'en', 'jp'];
-/** 閲嶅懡鍚嶆柟寮?*/
+/** 重命名方式 */
 export type RenameMethod = ['normal', 'pn', 'advance', 'none'];
-/** 浠ｇ悊绫诲瀷 */
+/** 代理类型 */
 export type ProxyType = ['http', 'https', 'socks5'];
-/** 閫氱煡绫诲瀷 */
+/** 通知类型 */
 export type NotificationType = [
   'telegram',
   'discord',
@@ -180,4 +180,3 @@ export const initConfig: Config = {
     mcp_tokens: [],
   },
 };
-
