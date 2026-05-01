@@ -33,7 +33,8 @@ class TestProviderConfigRequest(BaseModel):
     user_key: Optional[str] = Field(None, description="User key")
     api_token: Optional[str] = Field(None, description="API token")
     template: Optional[str] = Field(None, description="Custom template")
-    url: Optional[str] = Field(None, description="URL for generic webhook")
+    url: Optional[str] = Field(None, description="URL for generic webhook/onebot")
+    message_type: Optional[str] = Field(None, description="Message type for onebot: private or group")
 
 
 class TestResponse(BaseModel):
@@ -105,6 +106,7 @@ async def test_provider_config(request: TestProviderConfigRequest):
             api_token=request.api_token or "",
             template=request.template,
             url=request.url or "",
+            message_type=request.message_type or "private",
         )
 
         success, message = await NotificationManager.test_provider_config(config)

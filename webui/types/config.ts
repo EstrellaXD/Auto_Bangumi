@@ -1,4 +1,4 @@
-import type { TupleToUnion } from './utils';
+﻿import type { TupleToUnion } from './utils';
 
 /** 下载方式 */
 export type DownloaderType = ['qbittorrent'];
@@ -18,6 +18,7 @@ export type NotificationType = [
   'gotify',
   'pushover',
   'webhook',
+  'onebot',
 ];
 /** OpenAI Model List */
 export type OpenAIModel = ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'];
@@ -76,6 +77,7 @@ export interface NotificationProviderConfig {
   api_token?: string;
   template?: string;
   url?: string;
+  message_type?: string;
 }
 
 export interface Notification {
