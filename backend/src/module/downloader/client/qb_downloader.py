@@ -37,7 +37,7 @@ class QbDownloader:
                     self._url("auth/login"),
                     data={"username": self.username, "password": self.password},
                 )
-                if resp.status_code == 200 and resp.text == "Ok.":
+                if resp.status_code in (200, 204):
                     return True
                 elif resp.status_code == 403:
                     logger.error("Login refused by qBittorrent Server")
