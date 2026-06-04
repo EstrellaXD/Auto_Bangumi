@@ -53,6 +53,16 @@ class RSSParser(BaseModel):
     enable: bool = Field(True, description="Enable RSS parser")
     filter: list[str] = Field(["720", r"\d+-\d+"], description="Filter")
     language: str = "zh"
+    group_priority: list[str] = Field(
+        default=[],
+        description=(
+            "Subtitle-group priority, highest first. When non-empty, the same "
+            "(bangumi, season, episode) offered by multiple groups is collapsed "
+            "to a single best source, and an episode already downloaded from any "
+            "source is not downloaded again. Empty (default) = download every "
+            "matched torrent (legacy behaviour)."
+        ),
+    )
 
 
 class BangumiManage(BaseModel):

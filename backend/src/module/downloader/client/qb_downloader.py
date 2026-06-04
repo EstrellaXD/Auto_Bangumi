@@ -226,28 +226,27 @@ class QbDownloader:
             if not verify:
                 return True
 
-            # Verify the rename actually happened by checking file list
-            # qBittorrent can return 200 but delay the actual rename (e.g., while seeding)
-            # Use exponential backoff: 0.1s, 0.2s, 0.4s (max 3 attempts)
+            # Verify the rename actually happened by checking the file list.
+            # qBittorrent can return 200 but delay/refuse the actual rename (e.g.
+            # while seeding, or when the target path already exists from another
+            # source). Only trust the rename when ``new_path`` actually appears;
+            # otherwise report failure so the caller backs off via the pending
+            # cooldown. The previous loop fell through to ``return True`` after a
+            # ``break`` (old name still present) and when neither name was found,
+            # which made AB re-rename + notify every cycle (upstream #754/#749).
+            # Use exponential backoff: 0.1s, 0.2s, 0.4s (max 3 attempts).
             for attempt in range(3):
                 delay = 0.1 * (2**attempt)
                 await asyncio.sleep(delay)
-                files = await self.torrents_files(torrent_hash)
-                for f in files:
-                    if f.get("name") == new_path:
-                        return True
-                    if f.get("name") == old_path:
-                        # File still has old name - break inner loop and retry
-                        if attempt < 2:
-                            break
-                        # Final attempt failed
-                        logger.debug(
-                            "[Downloader] Rename API returned 200 but file unchanged: %s", old_path
-                        )
-                        return False
-                # new_path found or old_path not found
-                return True
-            return True
+                names = {f.get("name") for f in await self.torrents_files(torrent_hash)}
+                if new_path in names:
+                    return True
+                # new_path not present yet: retry (covers both "old name still
+                # there" and the ambiguous "neither found" case).
+            logger.debug(
+                "[Downloader] Rename API returned 200 but file unchanged: %s", old_path
+            )
+            return False
         except (httpx.ConnectError, httpx.RequestError, httpx.TimeoutException) as e:
             logger.warning(f"[Downloader] Failed to rename file {old_path}: {e}")
             return False

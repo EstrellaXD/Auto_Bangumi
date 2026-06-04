@@ -47,6 +47,20 @@ class TorrentDatabase:
         result = self.session.execute(select(Torrent).where(Torrent.rss_id == rss_id))
         return list(result.scalars().all())
 
+    def search_downloaded(self, bangumi_ids: set[int]) -> list[Torrent]:
+        """Torrents already marked downloaded for the given bangumi ids.
+
+        Used by the RSS priority-source selection to skip an episode that was
+        already fetched from any source in a previous cycle.
+        """
+        if not bangumi_ids:
+            return []
+        statement = select(Torrent).where(
+            Torrent.bangumi_id.in_(bangumi_ids), Torrent.downloaded == True  # noqa: E712
+        )
+        result = self.session.execute(statement)
+        return list(result.scalars().all())
+
     def check_new(self, torrents_list: list[Torrent]) -> list[Torrent]:
         if not torrents_list:
             return []

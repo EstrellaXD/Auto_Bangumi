@@ -1,13 +1,16 @@
 import asyncio
 import logging
 import re
+from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Optional
 
+from module.conf import settings
 from module.database import Database, engine
 from module.downloader import DownloadClient
 from module.models import Bangumi, ResponseModel, RSSItem, Torrent
 from module.network import RequestContent
+from module.parser.analyser.raw_parser import raw_parser
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +158,11 @@ class RSSEngine(Database):
             *[self._pull_rss_with_status(rss_item) for rss_item in rss_items]
         )
         now = datetime.now(timezone.utc).isoformat()
-        # Process results sequentially (DB operations)
+        # Process results sequentially (DB operations). First pass: persist every
+        # new torrent and collect the matched ones; the actual download decision
+        # is deferred so we can de-duplicate the same episode arriving from
+        # multiple subtitle groups across all feeds in this cycle.
+        candidates: list[tuple[Torrent, Bangumi]] = []
         for rss_item, (new_torrents, error) in zip(rss_items, results):
             # Update connection status
             rss_item.connection_status = "error" if error else "healthy"
@@ -165,12 +172,75 @@ class RSSEngine(Database):
             for torrent in new_torrents:
                 matched_data = self.match_torrent(torrent)
                 if matched_data:
-                    if await client.add_torrent(torrent, matched_data):
-                        logger.debug("[Engine] Add torrent %s to client", torrent.name)
-                    torrent.downloaded = True
+                    candidates.append((torrent, matched_data))
             # Add all torrents to database
             self.torrent.add_all(new_torrents)
+        # Second pass: download the selected torrents (dedup + priority source).
+        for torrent, matched_data in self._select_downloads(candidates):
+            if await client.add_torrent(torrent, matched_data):
+                logger.debug("[Engine] Add torrent %s to client", torrent.name)
+            torrent.downloaded = True
         self.commit()
+
+    def _select_downloads(
+        self, candidates: list[tuple[Torrent, Bangumi]]
+    ) -> list[tuple[Torrent, Bangumi]]:
+        """Decide which matched torrents to actually download.
+
+        With ``rss_parser.group_priority`` empty (default) every matched torrent
+        is downloaded (legacy behaviour). When a priority list is configured,
+        the same ``(bangumi, season, episode)`` coming from multiple subtitle
+        groups is collapsed to a single best source, and an episode already
+        downloaded from any source in a previous cycle is skipped. Torrents
+        whose episode cannot be parsed are always kept (fail-open).
+
+        Fixes upstream #660 (no dedup / no priority source) and starves the
+        #754/#749 rename storm at the source by never fetching the duplicates
+        that collide on the same rename target.
+        """
+        priority = settings.rss_parser.group_priority
+        if not priority:
+            return candidates
+
+        buckets: dict[tuple[int, int, int], list[tuple[Torrent, Bangumi, str]]] = (
+            defaultdict(list)
+        )
+        keep: list[tuple[Torrent, Bangumi]] = []
+        for torrent, matched in candidates:
+            ep = raw_parser(torrent.name)
+            if ep is None or matched.id is None:
+                keep.append((torrent, matched))  # un-parseable → fail-open
+                continue
+            buckets[(matched.id, ep.season, ep.episode)].append(
+                (torrent, matched, ep.group or "")
+            )
+
+        already = self._downloaded_episode_keys({m.id for _, m in candidates if m.id})
+        for key, items in buckets.items():
+            if key in already:
+                logger.debug("[Engine] Episode %s already downloaded, skipping", key)
+                continue
+            best = min(items, key=lambda it: self._group_rank(it[2], priority))
+            keep.append((best[0], best[1]))
+        return keep
+
+    @staticmethod
+    def _group_rank(group: str, priority: list[str]) -> int:
+        g = (group or "").lower()
+        for i, name in enumerate(priority):
+            if name.lower() in g:
+                return i
+        return len(priority)  # unknown group ranks last
+
+    def _downloaded_episode_keys(
+        self, bangumi_ids: set[int]
+    ) -> set[tuple[int, int, int]]:
+        keys: set[tuple[int, int, int]] = set()
+        for t in self.torrent.search_downloaded(bangumi_ids):
+            ep = raw_parser(t.name)
+            if ep is not None and t.bangumi_id is not None:
+                keys.add((t.bangumi_id, ep.season, ep.episode))
+        return keys
 
     async def download_bangumi(self, bangumi: Bangumi):
         async with RequestContent() as req:
