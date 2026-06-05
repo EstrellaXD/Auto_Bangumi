@@ -52,6 +52,9 @@ class Bangumi(SQLModel, table=True):
     title_aliases: Optional[str] = Field(
         default=None, alias="title_aliases", title="标题别名"
     )  # JSON list: ["alt_title_1", "alt_title_2"]
+    group_priority: Optional[str] = Field(
+        default=None, alias="group_priority", title="字幕组优先级"
+    )  # JSON list: ["group_1", "group_2"]; overrides global rss_parser.group_priority
 
 
 class BangumiUpdate(SQLModel):
@@ -89,6 +92,9 @@ class BangumiUpdate(SQLModel):
     )
     title_aliases: Optional[str] = Field(
         default=None, alias="title_aliases", title="标题别名"
+    )
+    group_priority: Optional[str] = Field(
+        default=None, alias="group_priority", title="字幕组优先级"
     )
 
 

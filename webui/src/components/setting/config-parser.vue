@@ -28,6 +28,11 @@ const items: SettingItem<RssParser>[] = [
     label: () => t('config.parser_set.exclude'),
     type: 'dynamic-tags',
   },
+  {
+    configKey: 'group_priority',
+    label: () => t('config.parser_set.group_priority'),
+    type: 'dynamic-tags',
+  },
 ];
 </script>
 

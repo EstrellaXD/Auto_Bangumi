@@ -27,6 +27,7 @@ export interface BangumiRule {
   weekday_locked: boolean;
   needs_review: boolean;
   needs_review_reason: string | null;
+  group_priority: string | null; // JSON list e.g. '["LoliHouse"]'; overrides global
 }
 
 export interface BangumiAPI extends Omit<BangumiRule, 'filter' | 'rss_link'> {

@@ -33,6 +33,22 @@ watch(rule, (newVal) => {
 }, { deep: true });
 
 const posterSrc = computed(() => resolvePosterUrl(localRule.value.poster_link));
+
+// per-bangumi group_priority is stored as a JSON string on the backend; expose
+// it as a string[] for the tag editor and serialise back on change.
+const groupPriorityList = computed<string[]>({
+  get: () => {
+    try {
+      const v = JSON.parse(localRule.value.group_priority || '[]');
+      return Array.isArray(v) ? v : [];
+    } catch {
+      return [];
+    }
+  },
+  set: (v) => {
+    localRule.value.group_priority = v.length ? JSON.stringify(v) : null;
+  },
+});
 const showAdvanced = ref(true);
 const copied = ref(false);
 const offsetLoading = ref(false);
@@ -332,6 +348,14 @@ function emitUnarchive() {
                     <label class="advanced-label">{{ $t('homepage.rule.filter') }}</label>
                     <div class="advanced-control filter-tags">
                       <NDynamicTags v-model:value="localRule.filter" size="small" />
+                    </div>
+                  </div>
+
+                  <!-- Group priority row (per-bangumi; overrides global) -->
+                  <div class="advanced-row advanced-row--tags">
+                    <label class="advanced-label">{{ $t('homepage.rule.group_priority') }}</label>
+                    <div class="advanced-control filter-tags">
+                      <NDynamicTags v-model:value="groupPriorityList" size="small" />
                     </div>
                   </div>
 

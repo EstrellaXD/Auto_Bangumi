@@ -102,3 +102,39 @@ def test_unparseable_is_fail_open(eng, monkeypatch):
     _set_priority(monkeypatch, ["LoliHouse"])
     cands = [(_torrent("RandomFileNoEpisode.mkv"), _bgm(42))]
     assert len(eng._select_downloads(cands)) == 1  # kept, not dropped
+
+
+def test_per_bangumi_priority_overrides_global(eng, monkeypatch):
+    _set_priority(monkeypatch, ["TSDM"])  # global prefers TSDM
+    bgm = NS(id=42, group_priority='["LoliHouse"]')  # but this sub prefers LoliHouse
+    cands = [
+        (_torrent("[TSDM] X - 05 [x].mp4"), bgm),
+        (_torrent("[LoliHouse] X - 05 [x].mkv"), bgm),
+    ]
+    out = eng._select_downloads(cands)
+    assert len(out) == 1
+    assert "LoliHouse" in out[0][0].name  # per-bangumi wins over global
+
+
+def test_per_bangumi_empty_falls_back_to_global(eng, monkeypatch):
+    _set_priority(monkeypatch, ["LoliHouse"])
+    bgm = NS(id=42, group_priority=None)  # no per-bangumi → use global
+    cands = [
+        (_torrent("[TSDM] X - 05 [x].mp4"), bgm),
+        (_torrent("[LoliHouse] X - 05 [x].mkv"), bgm),
+    ]
+    out = eng._select_downloads(cands)
+    assert len(out) == 1
+    assert "LoliHouse" in out[0][0].name
+
+
+def test_per_bangumi_priority_with_no_global(eng, monkeypatch):
+    _set_priority(monkeypatch, [])  # global dedup off
+    bgm = NS(id=42, group_priority='["LoliHouse"]')  # but this sub enables it
+    cands = [
+        (_torrent("[TSDM] X - 05 [x].mp4"), bgm),
+        (_torrent("[LoliHouse] X - 05 [x].mkv"), bgm),
+    ]
+    out = eng._select_downloads(cands)
+    assert len(out) == 1
+    assert "LoliHouse" in out[0][0].name  # per-bangumi dedups even when global is off

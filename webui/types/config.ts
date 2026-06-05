@@ -42,6 +42,7 @@ export interface RssParser {
   enable: boolean;
   filter: Array<string>;
   language: TupleToUnion<RssParserLang>;
+  group_priority: Array<string>;
 }
 export interface BangumiManage {
   enable: boolean;
@@ -138,6 +139,7 @@ export const initConfig: Config = {
     enable: true,
     filter: [],
     language: 'zh',
+    group_priority: [],
   },
   bangumi_manage: {
     enable: true,

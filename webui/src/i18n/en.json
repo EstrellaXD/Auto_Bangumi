@@ -63,6 +63,7 @@
     "parser_set": {
       "enable": "Enable",
       "exclude": "Exclude",
+      "group_priority": "Group Priority",
       "language": "Language",
       "source": "Source",
       "title": "Parser Setting",
@@ -177,6 +178,7 @@
       "archived_section": "Archived ({count})",
       "select_hint": "Multiple rules found for this anime. Select one to edit:",
       "filter": "Filter",
+      "group_priority": "Group Priority",
       "unnamed": "Unnamed Rule",
       "season": "Season",
       "year": "Year",

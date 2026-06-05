@@ -63,6 +63,7 @@
     "parser_set": {
       "enable": "启用",
       "exclude": "排除",
+      "group_priority": "字幕组优先级",
       "language": "语言",
       "source": "数据源",
       "title": "解析设置",
@@ -177,6 +178,7 @@
       "archived_section": "已归档 ({count})",
       "select_hint": "该番剧有多个规则，请选择要编辑的规则：",
       "filter": "过滤",
+      "group_priority": "字幕组优先级",
       "unnamed": "未命名规则",
       "season": "季度",
       "year": "年份",

@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import re
 from collections import defaultdict
@@ -187,9 +188,11 @@ class RSSEngine(Database):
     ) -> list[tuple[Torrent, Bangumi]]:
         """Decide which matched torrents to actually download.
 
-        With ``rss_parser.group_priority`` empty (default) every matched torrent
-        is downloaded (legacy behaviour). When a priority list is configured,
-        the same ``(bangumi, season, episode)`` coming from multiple subtitle
+        Priority is resolved per-bangumi: a subscription's own
+        ``group_priority`` (JSON list) overrides the global
+        ``rss_parser.group_priority``; if neither is set for a bangumi, every
+        source of it is kept (legacy behaviour). When a priority applies, the
+        same ``(bangumi, season, episode)`` coming from multiple subtitle
         groups is collapsed to a single best source, and an episode already
         downloaded from any source in a previous cycle is skipped. Torrents
         whose episode cannot be parsed are always kept (fail-open).
@@ -198,9 +201,7 @@ class RSSEngine(Database):
         #754/#749 rename storm at the source by never fetching the duplicates
         that collide on the same rename target.
         """
-        priority = settings.rss_parser.group_priority
-        if not priority:
-            return candidates
+        global_priority = settings.rss_parser.group_priority
 
         buckets: dict[tuple[int, int, int], list[tuple[Torrent, Bangumi, str]]] = (
             defaultdict(list)
@@ -215,14 +216,38 @@ class RSSEngine(Database):
                 (torrent, matched, ep.group or "")
             )
 
-        already = self._downloaded_episode_keys({m.id for _, m in candidates if m.id})
+        already: Optional[set[tuple[int, int, int]]] = None
         for key, items in buckets.items():
+            priority = self._effective_priority(items[0][1], global_priority)
+            if not priority:
+                # no priority for this bangumi → keep every source (legacy)
+                keep.extend((t, m) for t, m, _ in items)
+                continue
+            if already is None:  # compute lazily, only when dedup is in play
+                already = self._downloaded_episode_keys(
+                    {m.id for _, m in candidates if m.id}
+                )
             if key in already:
                 logger.debug("[Engine] Episode %s already downloaded, skipping", key)
                 continue
             best = min(items, key=lambda it: self._group_rank(it[2], priority))
             keep.append((best[0], best[1]))
         return keep
+
+    @staticmethod
+    def _effective_priority(
+        bangumi: Bangumi, global_priority: list[str]
+    ) -> list[str]:
+        """Per-bangumi group_priority (JSON list) overrides the global list."""
+        raw = getattr(bangumi, "group_priority", None)
+        if raw:
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, list) and parsed:
+                    return parsed
+            except (ValueError, TypeError):
+                pass
+        return global_priority
 
     @staticmethod
     def _group_rank(group: str, priority: list[str]) -> int:
