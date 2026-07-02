@@ -23,15 +23,32 @@ def _make_response(status: bool = True, msg: str = "OK") -> ResponseModel:
     return ResponseModel(status=status, status_code=200, msg_en=msg, msg_zh=msg)
 
 
+def _mock_db(bangumi_list=None, feeds=None, single=None):
+    """Build an async-context-manager mock standing in for ``Database()``.
+
+    The MCP handlers open ``async with Database() as db`` and read repos off
+    ``db`` directly, so tests configure the repo AsyncMocks here.
+    """
+    db = MagicMock()
+    if bangumi_list is not None:
+        db.bangumi.search_all = AsyncMock(return_value=bangumi_list)
+    if feeds is not None:
+        db.rss.search_all = AsyncMock(return_value=feeds)
+    if single is not None:
+        db.bangumi.search_id = AsyncMock(return_value=single)
+    cm = MagicMock()
+    cm.__aenter__ = AsyncMock(return_value=db)
+    cm.__aexit__ = AsyncMock(return_value=False)
+    return cm
+
+
 def _mock_sync_manager(bangumi_list=None, single=None):
     """Return a MagicMock standing in for a TorrentManager service.
 
-    The service is now constructed as ``TorrentManager(db)`` (the Database is the
-    context manager), so the mock is returned directly rather than wrapped in a
-    context manager. Both return slots are the same object for call-site symmetry.
+    Used by handlers that call domain methods (search_all_bangumi, search_one,
+    update_rule, delete_rule, disable_rule) rather than reaching repos off db.
     """
     mock_mgr = MagicMock()
-    # Repo/service methods the handlers now `await`.
     mock_mgr.bangumi.search_all = AsyncMock(return_value=bangumi_list or [])
     mock_mgr.search_all_bangumi = AsyncMock(return_value=bangumi_list or [])
     mock_mgr.search_one = AsyncMock(return_value=single)
@@ -201,9 +218,9 @@ class TestDispatch:
     async def test_dispatch_list_anime_all(self):
         """list_anime without active_only returns all bangumi."""
         bangumi = [make_bangumi(id=1), make_bangumi(id=2, title_raw="Another")]
-        ctx, _ = _mock_sync_manager(bangumi_list=bangumi)
+        ctx = _mock_db(bangumi_list=bangumi)
 
-        with patch("module.mcp.tools.TorrentManager", return_value=ctx):
+        with patch("module.mcp.tools.Database", return_value=ctx):
             result = await _dispatch("list_anime", {})
 
         assert isinstance(result, list)
@@ -450,10 +467,9 @@ class TestDispatch:
         fake_feed.last_checked_at = "2024-01-01T00:00:00"
         fake_feed.last_error = None
 
-        mock_engine = MagicMock()
-        mock_engine.rss.search_all = AsyncMock(return_value=[fake_feed])
+        ctx = _mock_db(feeds=[fake_feed])
 
-        with patch("module.mcp.tools.RSSEngine", return_value=mock_engine):
+        with patch("module.mcp.tools.Database", return_value=ctx):
             result = await _dispatch("list_rss_feeds", {})
 
         assert isinstance(result, list)
@@ -510,11 +526,14 @@ class TestDispatch:
         existing = make_bangumi(id=7, episode_offset=0, season_offset=0, season=1)
         resp = _make_response(True, "Updated")
 
-        ctx, mock_mgr = _mock_sync_manager(single=existing)
-        mock_mgr.bangumi.search_id.return_value = existing
+        db_ctx = _mock_db(single=existing)
+        ctx, mock_mgr = _mock_sync_manager()
         mock_mgr.update_rule = AsyncMock(return_value=resp)
 
-        with patch("module.mcp.tools.TorrentManager", return_value=ctx):
+        with (
+            patch("module.mcp.tools.Database", return_value=db_ctx),
+            patch("module.mcp.tools.TorrentManager", return_value=ctx),
+        ):
             result = await _dispatch(
                 "update_anime",
                 {"id": 7, "episode_offset": 12, "season": 2},
@@ -556,9 +575,9 @@ class TestHandleTool:
         from mcp import types
 
         bangumi = [make_bangumi(id=1)]
-        ctx, _ = _mock_sync_manager(bangumi_list=bangumi)
+        ctx = _mock_db(bangumi_list=bangumi)
 
-        with patch("module.mcp.tools.TorrentManager", return_value=ctx):
+        with patch("module.mcp.tools.Database", return_value=ctx):
             result = await handle_tool("list_anime", {})
 
         assert isinstance(result, list)
@@ -567,9 +586,9 @@ class TestHandleTool:
     async def test_handle_tool_result_is_valid_json(self):
         """The text in TextContent is valid JSON."""
         bangumi = [make_bangumi(id=1)]
-        ctx, _ = _mock_sync_manager(bangumi_list=bangumi)
+        ctx = _mock_db(bangumi_list=bangumi)
 
-        with patch("module.mcp.tools.TorrentManager", return_value=ctx):
+        with patch("module.mcp.tools.Database", return_value=ctx):
             result = await handle_tool("list_anime", {})
 
         parsed = json.loads(result[0].text)

@@ -19,11 +19,30 @@ from test.factories import make_bangumi
 # ---------------------------------------------------------------------------
 
 
+def _mock_db(bangumi_list=None, feeds=None, single=None):
+    """Build an async-context-manager mock standing in for ``Database()``.
+
+    The MCP handlers open ``async with Database() as db`` and read repos off
+    ``db`` directly, so tests configure the repo AsyncMocks here.
+    """
+    db = MagicMock()
+    if bangumi_list is not None:
+        db.bangumi.search_all = AsyncMock(return_value=bangumi_list)
+    if feeds is not None:
+        db.rss.search_all = AsyncMock(return_value=feeds)
+    if single is not None:
+        db.bangumi.search_id = AsyncMock(return_value=single)
+    cm = MagicMock()
+    cm.__aenter__ = AsyncMock(return_value=db)
+    cm.__aexit__ = AsyncMock(return_value=False)
+    return cm
+
+
 def _mock_sync_manager(bangumi_list=None, single=None):
     """Build a MagicMock standing in for a TorrentManager service.
 
-    The service is now constructed as ``TorrentManager(db)`` (the Database is the
-    context manager), so the mock is returned directly.
+    Used by handlers that call domain methods (e.g. ``search_one``) rather
+    than reaching repos off the Database.
     """
     mock_mgr = MagicMock()
     if bangumi_list is not None:
@@ -32,14 +51,6 @@ def _mock_sync_manager(bangumi_list=None, single=None):
         mock_mgr.search_one = AsyncMock(return_value=single)
 
     return mock_mgr, mock_mgr
-
-
-def _mock_rss_engine(feeds):
-    """Build a MagicMock standing in for an RSSEngine service."""
-    mock_eng = MagicMock()
-    mock_eng.rss.search_all = AsyncMock(return_value=feeds)
-
-    return mock_eng
 
 
 def _parse(raw: str) -> dict | list:
@@ -151,32 +162,32 @@ class TestHandleResourceAnimeList:
 
     async def test_returns_json_string(self):
         """Result is a valid JSON string."""
-        ctx, _ = _mock_sync_manager(bangumi_list=[])
-        with patch("module.mcp.resources.TorrentManager", return_value=ctx):
+        ctx = _mock_db(bangumi_list=[])
+        with patch("module.mcp.resources.Database", return_value=ctx):
             raw = await handle_resource("autobangumi://anime/list")
         assert isinstance(raw, str)
         _parse(raw)  # must not raise
 
     async def test_empty_database_returns_empty_list(self):
         """Empty DB produces an empty JSON array."""
-        ctx, _ = _mock_sync_manager(bangumi_list=[])
-        with patch("module.mcp.resources.TorrentManager", return_value=ctx):
+        ctx = _mock_db(bangumi_list=[])
+        with patch("module.mcp.resources.Database", return_value=ctx):
             result = _parse(await handle_resource("autobangumi://anime/list"))
         assert result == []
 
     async def test_multiple_bangumi_serialised(self):
         """Multiple Bangumi entries all appear in the output list."""
         bangumi = [make_bangumi(id=1), make_bangumi(id=2, title_raw="Other")]
-        ctx, _ = _mock_sync_manager(bangumi_list=bangumi)
-        with patch("module.mcp.resources.TorrentManager", return_value=ctx):
+        ctx = _mock_db(bangumi_list=bangumi)
+        with patch("module.mcp.resources.Database", return_value=ctx):
             result = _parse(await handle_resource("autobangumi://anime/list"))
         assert len(result) == 2
 
     async def test_ids_are_in_output(self):
         """Each serialised entry contains its correct id."""
         bangumi = [make_bangumi(id=7), make_bangumi(id=8, title_raw="B")]
-        ctx, _ = _mock_sync_manager(bangumi_list=bangumi)
-        with patch("module.mcp.resources.TorrentManager", return_value=ctx):
+        ctx = _mock_db(bangumi_list=bangumi)
+        with patch("module.mcp.resources.Database", return_value=ctx):
             result = _parse(await handle_resource("autobangumi://anime/list"))
         ids = {item["id"] for item in result}
         assert {7, 8}.issubset(ids)
@@ -184,8 +195,8 @@ class TestHandleResourceAnimeList:
     async def test_non_ascii_titles_preserved(self):
         """Japanese/Chinese titles survive JSON serialisation."""
         bangumi = [make_bangumi(id=1, official_title="進撃の巨人")]
-        ctx, _ = _mock_sync_manager(bangumi_list=bangumi)
-        with patch("module.mcp.resources.TorrentManager", return_value=ctx):
+        ctx = _mock_db(bangumi_list=bangumi)
+        with patch("module.mcp.resources.Database", return_value=ctx):
             raw = await handle_resource("autobangumi://anime/list")
         # ensure_ascii=False means the characters appear verbatim
         assert "進撃の巨人" in raw
@@ -259,22 +270,22 @@ class TestHandleResourceRssFeeds:
         return f
 
     async def test_returns_json_string(self):
-        ctx = _mock_rss_engine([])
-        with patch("module.mcp.resources.RSSEngine", return_value=ctx):
+        ctx = _mock_db(feeds=[])
+        with patch("module.mcp.resources.Database", return_value=ctx):
             raw = await handle_resource("autobangumi://rss/feeds")
         assert isinstance(raw, str)
         _parse(raw)
 
     async def test_empty_feeds_returns_empty_list(self):
-        ctx = _mock_rss_engine([])
-        with patch("module.mcp.resources.RSSEngine", return_value=ctx):
+        ctx = _mock_db(feeds=[])
+        with patch("module.mcp.resources.Database", return_value=ctx):
             result = _parse(await handle_resource("autobangumi://rss/feeds"))
         assert result == []
 
     async def test_feed_fields_present(self):
         feed = self._make_feed(feed_id=2, name="Mikan", url="https://mikanani.me/rss")
-        ctx = _mock_rss_engine([feed])
-        with patch("module.mcp.resources.RSSEngine", return_value=ctx):
+        ctx = _mock_db(feeds=[feed])
+        with patch("module.mcp.resources.Database", return_value=ctx):
             result = _parse(await handle_resource("autobangumi://rss/feeds"))
         entry = result[0]
         assert entry["id"] == 2
@@ -289,8 +300,8 @@ class TestHandleResourceRssFeeds:
             self._make_feed(1, "Feed A", "https://a.example.com/rss"),
             self._make_feed(2, "Feed B", "https://b.example.com/rss"),
         ]
-        ctx = _mock_rss_engine(feeds)
-        with patch("module.mcp.resources.RSSEngine", return_value=ctx):
+        ctx = _mock_db(feeds=feeds)
+        with patch("module.mcp.resources.Database", return_value=ctx):
             result = _parse(await handle_resource("autobangumi://rss/feeds"))
         assert len(result) == 2
 
@@ -374,5 +385,7 @@ class TestHandleResourceUnknown:
 
     async def test_completely_different_scheme_returns_error(self):
         """A URI with a wrong scheme returns a JSON error."""
-        result = _parse(await handle_resource("https://autobangumi.example.com/anime/list"))
+        result = _parse(
+            await handle_resource("https://autobangumi.example.com/anime/list")
+        )
         assert "error" in result

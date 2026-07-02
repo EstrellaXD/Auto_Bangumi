@@ -18,12 +18,18 @@ from test.factories import make_bangumi, make_rss_item, make_torrent
 
 
 @pytest.fixture
-def app():
+def mock_db():
+    """A stand-in Database whose repos can be configured with AsyncMocks."""
+    return MagicMock()
+
+
+@pytest.fixture
+def app(mock_db):
     app = FastAPI()
     app.include_router(v1, prefix="/api")
 
     async def _override_get_db():
-        yield MagicMock()
+        yield mock_db
 
     app.dependency_overrides[get_db] = _override_get_db
     return app
@@ -72,17 +78,15 @@ class TestAuthRequired:
 
 
 class TestGetRss:
-    def test_get_all(self, authed_client):
+    def test_get_all(self, authed_client, mock_db):
         """GET /rss returns list of RSSItems."""
         items = [
             make_rss_item(id=1, name="Feed 1"),
             make_rss_item(id=2, name="Feed 2"),
         ]
-        with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MockEngine.return_value
-            mock_eng.rss.search_all = AsyncMock(return_value=items)
+        mock_db.rss.search_all = AsyncMock(return_value=items)
 
-            response = authed_client.get("/api/v1/rss")
+        response = authed_client.get("/api/v1/rss")
 
         assert response.status_code == 200
         data = response.json()
@@ -123,23 +127,19 @@ class TestAddRss:
 
 
 class TestDeleteRss:
-    def test_delete_success(self, authed_client):
+    def test_delete_success(self, authed_client, mock_db):
         """DELETE /rss/delete/{id} removes the feed."""
-        with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MockEngine.return_value
-            mock_eng.rss.delete = AsyncMock(return_value=True)
+        mock_db.rss.delete = AsyncMock(return_value=True)
 
-            response = authed_client.delete("/api/v1/rss/delete/1")
+        response = authed_client.delete("/api/v1/rss/delete/1")
 
         assert response.status_code == 200
 
-    def test_delete_failure(self, authed_client):
+    def test_delete_failure(self, authed_client, mock_db):
         """DELETE /rss/delete/{id} returns 406 when feed not found."""
-        with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MockEngine.return_value
-            mock_eng.rss.delete = AsyncMock(return_value=False)
+        mock_db.rss.delete = AsyncMock(return_value=False)
 
-            response = authed_client.delete("/api/v1/rss/delete/999")
+        response = authed_client.delete("/api/v1/rss/delete/999")
 
         assert response.status_code == 406
 
@@ -150,23 +150,19 @@ class TestDeleteRss:
 
 
 class TestDisableRss:
-    def test_disable_success(self, authed_client):
+    def test_disable_success(self, authed_client, mock_db):
         """PATCH /rss/disable/{id} disables the feed."""
-        with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MockEngine.return_value
-            mock_eng.rss.disable = AsyncMock(return_value=True)
+        mock_db.rss.disable = AsyncMock(return_value=True)
 
-            response = authed_client.patch("/api/v1/rss/disable/1")
+        response = authed_client.patch("/api/v1/rss/disable/1")
 
         assert response.status_code == 200
 
-    def test_disable_failure(self, authed_client):
+    def test_disable_failure(self, authed_client, mock_db):
         """PATCH /rss/disable/{id} returns 406 when feed not found."""
-        with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MockEngine.return_value
-            mock_eng.rss.disable = AsyncMock(return_value=False)
+        mock_db.rss.disable = AsyncMock(return_value=False)
 
-            response = authed_client.patch("/api/v1/rss/disable/999")
+        response = authed_client.patch("/api/v1/rss/disable/999")
 
         assert response.status_code == 406
 
@@ -223,16 +219,14 @@ class TestBatchOperations:
 
 
 class TestUpdateRss:
-    def test_update_success(self, authed_client):
+    def test_update_success(self, authed_client, mock_db):
         """PATCH /rss/update/{id} updates feed."""
-        with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MockEngine.return_value
-            mock_eng.rss.update = AsyncMock(return_value=True)
+        mock_db.rss.update = AsyncMock(return_value=True)
 
-            response = authed_client.patch(
-                "/api/v1/rss/update/1",
-                json={"name": "Updated Name", "aggregate": False},
-            )
+        response = authed_client.patch(
+            "/api/v1/rss/update/1",
+            json={"name": "Updated Name", "aggregate": False},
+        )
 
         assert response.status_code == 200
 

@@ -24,7 +24,7 @@ async def rss_tick(analyser: RSSAnalyser) -> None:
         async with Database() as db:
             engine = RSSEngine(db)
             # Analyse RSS
-            rss_list = await engine.rss.search_aggregate()
+            rss_list = await db.rss.search_aggregate()
             for rss in rss_list:
                 try:
                     await analyser.rss_to_data(rss, engine)

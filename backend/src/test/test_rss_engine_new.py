@@ -27,12 +27,12 @@ class TestPullRss:
     async def test_returns_only_new_torrents(self, rss_engine):
         """pull_rss filters out torrents already in the database."""
         rss_item = make_rss_item()
-        await rss_engine.rss.add(rss_item)
-        rss_item = await rss_engine.rss.search_id(1)
+        await rss_engine.db.rss.add(rss_item)
+        rss_item = await rss_engine.db.rss.search_id(1)
 
         # Pre-insert one torrent into DB
         existing = make_torrent(url="https://example.com/existing.torrent", rss_id=1)
-        await rss_engine.torrent.add(existing)
+        await rss_engine.db.torrent.add(existing)
 
         # Mock _get_torrents to return 3 torrents (1 existing + 2 new)
         all_torrents = [
@@ -52,11 +52,11 @@ class TestPullRss:
     async def test_all_existing_returns_empty(self, rss_engine):
         """When all torrents already exist, returns empty list."""
         rss_item = make_rss_item()
-        await rss_engine.rss.add(rss_item)
-        rss_item = await rss_engine.rss.search_id(1)
+        await rss_engine.db.rss.add(rss_item)
+        rss_item = await rss_engine.db.rss.search_id(1)
 
         existing = make_torrent(url="https://example.com/only.torrent", rss_id=1)
-        await rss_engine.torrent.add(existing)
+        await rss_engine.db.torrent.add(existing)
 
         with patch.object(
             RSSEngine, "_get_torrents", new_callable=AsyncMock
@@ -71,8 +71,8 @@ class TestPullRss:
     async def test_empty_feed_returns_empty(self, rss_engine):
         """When RSS feed has no torrents, returns empty list."""
         rss_item = make_rss_item()
-        await rss_engine.rss.add(rss_item)
-        rss_item = await rss_engine.rss.search_id(1)
+        await rss_engine.db.rss.add(rss_item)
+        rss_item = await rss_engine.db.rss.search_id(1)
 
         with patch.object(
             RSSEngine, "_get_torrents", new_callable=AsyncMock
@@ -92,11 +92,11 @@ class TestMatchTorrent:
     async def test_matches_by_title_raw_substring(self, rss_engine):
         """match_torrent finds Bangumi when title_raw is a substring of torrent name."""
         bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="")
-        await rss_engine.bangumi.add(bangumi)
+        await rss_engine.db.bangumi.add(bangumi)
 
         torrent = make_torrent(name="[Lilith-Raws] Mushoku Tensei - 11 [1080p].mkv")
         result = rss_engine.match_torrent(
-            torrent, await rss_engine.bangumi.search_all()
+            torrent, await rss_engine.db.bangumi.search_all()
         )
 
         assert result is not None
@@ -105,11 +105,11 @@ class TestMatchTorrent:
     async def test_no_match_returns_none(self, rss_engine):
         """Returns None when no Bangumi matches the torrent name."""
         bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="")
-        await rss_engine.bangumi.add(bangumi)
+        await rss_engine.db.bangumi.add(bangumi)
 
         torrent = make_torrent(name="[Sub] Completely Different Anime - 01.mkv")
         result = rss_engine.match_torrent(
-            torrent, await rss_engine.bangumi.search_all()
+            torrent, await rss_engine.db.bangumi.search_all()
         )
 
         assert result is None
@@ -117,11 +117,11 @@ class TestMatchTorrent:
     async def test_filter_excludes_matching_torrent(self, rss_engine):
         """When torrent name matches the filter regex, returns None."""
         bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="720")
-        await rss_engine.bangumi.add(bangumi)
+        await rss_engine.db.bangumi.add(bangumi)
 
         torrent = make_torrent(name="[Sub] Mushoku Tensei - 01 [720p].mkv")
         result = rss_engine.match_torrent(
-            torrent, await rss_engine.bangumi.search_all()
+            torrent, await rss_engine.db.bangumi.search_all()
         )
 
         assert result is None
@@ -129,11 +129,11 @@ class TestMatchTorrent:
     async def test_empty_filter_allows_match(self, rss_engine):
         """When filter is empty string, all matching torrents pass."""
         bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="")
-        await rss_engine.bangumi.add(bangumi)
+        await rss_engine.db.bangumi.add(bangumi)
 
         torrent = make_torrent(name="[Sub] Mushoku Tensei - 01 [720p].mkv")
         result = rss_engine.match_torrent(
-            torrent, await rss_engine.bangumi.search_all()
+            torrent, await rss_engine.db.bangumi.search_all()
         )
 
         assert result is not None
@@ -141,12 +141,12 @@ class TestMatchTorrent:
     async def test_filter_case_insensitive(self, rss_engine):
         """Filter regex matching is case-insensitive."""
         bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="HEVC")
-        await rss_engine.bangumi.add(bangumi)
+        await rss_engine.db.bangumi.add(bangumi)
 
         # Torrent has "hevc" in lowercase - should still be filtered
         torrent = make_torrent(name="[Sub] Mushoku Tensei - 01 [1080p][hevc].mkv")
         result = rss_engine.match_torrent(
-            torrent, await rss_engine.bangumi.search_all()
+            torrent, await rss_engine.db.bangumi.search_all()
         )
 
         assert result is None
@@ -154,11 +154,11 @@ class TestMatchTorrent:
     async def test_deleted_bangumi_not_matched(self, rss_engine):
         """Bangumi with deleted=True should not match."""
         bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="", deleted=True)
-        await rss_engine.bangumi.add(bangumi)
+        await rss_engine.db.bangumi.add(bangumi)
 
         torrent = make_torrent(name="[Sub] Mushoku Tensei - 01 [1080p].mkv")
         result = rss_engine.match_torrent(
-            torrent, await rss_engine.bangumi.search_all()
+            torrent, await rss_engine.db.bangumi.search_all()
         )
 
         assert result is None
@@ -166,12 +166,12 @@ class TestMatchTorrent:
     async def test_comma_separated_filters(self, rss_engine):
         """Multiple comma-separated filters are joined with | for OR matching."""
         bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="720,480")
-        await rss_engine.bangumi.add(bangumi)
+        await rss_engine.db.bangumi.add(bangumi)
 
         # Matches one of the filters
         torrent = make_torrent(name="[Sub] Mushoku Tensei - 01 [480p].mkv")
         result = rss_engine.match_torrent(
-            torrent, await rss_engine.bangumi.search_all()
+            torrent, await rss_engine.db.bangumi.search_all()
         )
 
         assert result is None
@@ -179,7 +179,7 @@ class TestMatchTorrent:
         # Doesn't match any filter
         torrent2 = make_torrent(name="[Sub] Mushoku Tensei - 01 [1080p].mkv")
         result2 = rss_engine.match_torrent(
-            torrent2, await rss_engine.bangumi.search_all()
+            torrent2, await rss_engine.db.bangumi.search_all()
         )
 
         assert result2 is not None
@@ -195,9 +195,9 @@ class TestRefreshRss:
         """refresh_rss downloads torrents that match a bangumi rule."""
         # Setup DB
         rss_item = make_rss_item(enabled=True)
-        await rss_engine.rss.add(rss_item)
+        await rss_engine.db.rss.add(rss_item)
         bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="")
-        await rss_engine.bangumi.add(bangumi)
+        await rss_engine.db.bangumi.add(bangumi)
 
         # Mock network
         new_torrent = Torrent(
@@ -218,14 +218,14 @@ class TestRefreshRss:
         # Verify download was attempted
         client.add_torrent.assert_called_once()
         # Verify torrent stored in DB
-        all_torrents = await rss_engine.torrent.search_all()
+        all_torrents = await rss_engine.db.torrent.search_all()
         assert len(all_torrents) == 1
         assert all_torrents[0].downloaded is True
 
     async def test_unmatched_torrents_stored_not_downloaded(self, rss_engine):
         """Unmatched torrents are stored in DB but not marked downloaded."""
         rss_item = make_rss_item(enabled=True)
-        await rss_engine.rss.add(rss_item)
+        await rss_engine.db.rss.add(rss_item)
         # No bangumi in DB to match
 
         unmatched = Torrent(
@@ -240,7 +240,7 @@ class TestRefreshRss:
             await rss_engine.refresh_rss(client)
 
         client.add_torrent.assert_not_called()
-        all_torrents = await rss_engine.torrent.search_all()
+        all_torrents = await rss_engine.db.torrent.search_all()
         assert len(all_torrents) == 1
         assert all_torrents[0].downloaded is False
 
@@ -248,8 +248,8 @@ class TestRefreshRss:
         """refresh_rss with rss_id only processes that specific feed."""
         rss1 = make_rss_item(name="Feed 1", url="https://feed1.com/rss")
         rss2 = make_rss_item(name="Feed 2", url="https://feed2.com/rss")
-        await rss_engine.rss.add(rss1)
-        await rss_engine.rss.add(rss2)
+        await rss_engine.db.rss.add(rss1)
+        await rss_engine.db.rss.add(rss2)
 
         with patch.object(
             RSSEngine, "_get_torrents", new_callable=AsyncMock
@@ -289,7 +289,7 @@ class TestAddRss:
 
         assert result.status is True
         assert result.status_code == 200
-        rss = await rss_engine.rss.search_id(1)
+        rss = await rss_engine.db.rss.search_id(1)
         assert rss.name == "My Feed"
         assert rss.url == "https://mikanani.me/RSS/test"
 
@@ -307,7 +307,7 @@ class TestAddRss:
             )
 
         assert result.status is True
-        rss = await rss_engine.rss.search_id(1)
+        rss = await rss_engine.db.rss.search_id(1)
         assert rss.name == "Fetched Title"
 
     async def test_add_without_name_fetch_fails(self, rss_engine):
@@ -349,7 +349,7 @@ class TestRefreshRssConcurrency:
             for i in range(10)
         ]
         for item in rss_items:
-            await rss_engine.rss.add(item)
+            await rss_engine.db.rss.add(item)
 
         active_count = 0
         max_active = 0
@@ -383,10 +383,10 @@ class TestRefreshRssPerHostThrottle:
     async def test_same_host_requests_never_overlap(self, rss_engine):
         """Feeds on the same host are fetched serially; other hosts stay parallel."""
         for i in range(3):
-            await rss_engine.rss.add(
+            await rss_engine.db.rss.add(
                 make_rss_item(url=f"https://nyaa.example/rss/{i}", name=f"nyaa{i}")
             )
-        await rss_engine.rss.add(
+        await rss_engine.db.rss.add(
             make_rss_item(url="https://mikan.example/rss", name="mikan")
         )
 
@@ -420,8 +420,12 @@ class TestRefreshRssPerHostThrottle:
 
     async def test_all_feeds_still_processed(self, rss_engine):
         """Grouping by host must not drop any feed's status update."""
-        await rss_engine.rss.add(make_rss_item(url="https://a.example/rss", name="a"))
-        await rss_engine.rss.add(make_rss_item(url="https://b.example/rss", name="b"))
+        await rss_engine.db.rss.add(
+            make_rss_item(url="https://a.example/rss", name="a")
+        )
+        await rss_engine.db.rss.add(
+            make_rss_item(url="https://b.example/rss", name="b")
+        )
 
         client = AsyncMock()
         with (
@@ -435,5 +439,5 @@ class TestRefreshRssPerHostThrottle:
             await rss_engine.refresh_rss(client)
 
         for rss_id in (1, 2):
-            item = await rss_engine.rss.search_id(rss_id)
+            item = await rss_engine.db.rss.search_id(rss_id)
             assert item.connection_status == "healthy"

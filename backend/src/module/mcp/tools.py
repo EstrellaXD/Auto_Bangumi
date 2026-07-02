@@ -244,7 +244,7 @@ async def _list_anime(active_only: bool) -> list[dict]:
         if active_only:
             items = await manager.search_all_bangumi()
         else:
-            items = await manager.bangumi.search_all()
+            items = await db.bangumi.search_all()
     return [_bangumi_to_dict(b) for b in items]
 
 
@@ -310,8 +310,7 @@ async def _list_downloads(status: str) -> list[dict]:
 
 async def _list_rss_feeds() -> list[dict]:
     async with Database() as db:
-        engine = RSSEngine(db)
-        feeds = await engine.rss.search_all()
+        feeds = await db.rss.search_all()
     return [
         {
             "id": f.id,
@@ -349,7 +348,7 @@ async def _update_anime(args: dict) -> dict:
     bangumi_id = args["id"]
     async with Database() as db:
         manager = TorrentManager(db)
-        existing = await manager.bangumi.search_id(bangumi_id)
+        existing = await db.bangumi.search_id(bangumi_id)
         if not existing:
             return {"error": f"Anime with id {bangumi_id} not found"}
 

@@ -25,18 +25,6 @@ class RSSEngine:
         self._to_refresh = False
         self._filter_cache: dict[str, re.Pattern] = {}
 
-    @property
-    def rss(self):
-        return self.db.rss
-
-    @property
-    def torrent(self):
-        return self.db.torrent
-
-    @property
-    def bangumi(self):
-        return self.db.bangumi
-
     @staticmethod
     async def _get_torrents(rss: RSSItem) -> list[Torrent]:
         async with RequestContent() as req:
@@ -47,9 +35,9 @@ class RSSEngine:
         return torrents
 
     async def get_rss_torrents(self, rss_id: int) -> list[Torrent]:
-        rss = await self.rss.search_id(rss_id)
+        rss = await self.db.rss.search_id(rss_id)
         if rss:
-            return await self.torrent.search_rss(rss_id)
+            return await self.db.torrent.search_rss(rss_id)
         else:
             return []
 
@@ -71,7 +59,7 @@ class RSSEngine:
                         msg_zh="无法获取 RSS 标题。",
                     )
         rss_data = RSSItem(name=name, url=rss_link, aggregate=aggregate, parser=parser)
-        if await self.rss.add(rss_data):
+        if await self.db.rss.add(rss_data):
             return ResponseModel(
                 status=True,
                 status_code=200,
@@ -87,7 +75,7 @@ class RSSEngine:
             )
 
     async def disable_list(self, rss_id_list: list[int]):
-        await self.rss.disable_batch(rss_id_list)
+        await self.db.rss.disable_batch(rss_id_list)
         return ResponseModel(
             status=True,
             status_code=200,
@@ -96,7 +84,7 @@ class RSSEngine:
         )
 
     async def enable_list(self, rss_id_list: list[int]):
-        await self.rss.enable_batch(rss_id_list)
+        await self.db.rss.enable_batch(rss_id_list)
         return ResponseModel(
             status=True,
             status_code=200,
@@ -106,7 +94,7 @@ class RSSEngine:
 
     async def delete_list(self, rss_id_list: list[int]):
         for rss_id in rss_id_list:
-            await self.rss.delete(rss_id)
+            await self.db.rss.delete(rss_id)
         return ResponseModel(
             status=True,
             status_code=200,
@@ -116,7 +104,7 @@ class RSSEngine:
 
     async def pull_rss(self, rss_item: RSSItem) -> list[Torrent]:
         torrents = await self._get_torrents(rss_item)
-        new_torrents = await self.torrent.check_new(torrents)
+        new_torrents = await self.db.torrent.check_new(torrents)
         return new_torrents
 
     async def _pull_rss_with_status(
@@ -162,9 +150,9 @@ class RSSEngine:
     async def refresh_rss(self, client: DownloadClient, rss_id: Optional[int] = None):
         # Get All RSS Items
         if not rss_id:
-            rss_items: list[RSSItem] = await self.rss.search_active()
+            rss_items: list[RSSItem] = await self.db.rss.search_active()
         else:
-            rss_item = await self.rss.search_id(rss_id)
+            rss_item = await self.db.rss.search_id(rss_id)
             rss_items = [rss_item] if rss_item else []
         # From RSS Items, fetch all torrents: parallel across hosts, serial
         # (with a delay) within one host so the site never sees a burst (#1026).
@@ -196,7 +184,7 @@ class RSSEngine:
         # Load the active bangumi list once per refresh cycle and match every
         # torrent against it in memory (this is the job the old module-level
         # TTL cache existed to do).
-        bangumi_list = await self.bangumi.search_all()
+        bangumi_list = await self.db.bangumi.search_all()
         # Process results sequentially (DB operations)
         for rss_item, (new_torrents, error) in item_results:
             # Update connection status
@@ -211,7 +199,7 @@ class RSSEngine:
                         logger.debug("[Engine] Add torrent %s to client", torrent.name)
                     torrent.downloaded = True
             # Add all torrents to database
-            await self.torrent.add_all(new_torrents)
+            await self.db.torrent.add_all(new_torrents)
         await self.db.commit()
 
     async def download_bangumi(self, bangumi: Bangumi):
@@ -222,7 +210,7 @@ class RSSEngine:
             if torrents:
                 async with DownloadClient() as client:
                     await client.add_torrent(torrents, bangumi)
-                    await self.torrent.add_all(torrents)
+                    await self.db.torrent.add_all(torrents)
                     return ResponseModel(
                         status=True,
                         status_code=200,

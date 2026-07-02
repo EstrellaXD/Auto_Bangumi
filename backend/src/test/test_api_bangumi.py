@@ -18,13 +18,19 @@ from test.factories import make_bangumi
 
 
 @pytest.fixture
-def app():
+def mock_db():
+    """A stand-in Database whose repos can be configured with AsyncMocks."""
+    return MagicMock()
+
+
+@pytest.fixture
+def app(mock_db):
     """Create a FastAPI app with v1 routes for testing."""
     app = FastAPI()
     app.include_router(v1, prefix="/api")
 
     async def _override_get_db():
-        yield MagicMock()
+        yield mock_db
 
     app.dependency_overrides[get_db] = _override_get_db
     return app
@@ -80,14 +86,12 @@ class TestAuthRequired:
 
 
 class TestGetBangumi:
-    def test_get_all(self, authed_client):
+    def test_get_all(self, authed_client, mock_db):
         """GET /bangumi/get/all returns list of Bangumi."""
         mock_bangumi = [make_bangumi(id=1), make_bangumi(id=2, title_raw="Other")]
-        with patch("module.api.bangumi.TorrentManager") as MockManager:
-            mock_mgr = MockManager.return_value
-            mock_mgr.bangumi.search_all = AsyncMock(return_value=mock_bangumi)
+        mock_db.bangumi.search_all = AsyncMock(return_value=mock_bangumi)
 
-            response = authed_client.get("/api/v1/bangumi/get/all")
+        response = authed_client.get("/api/v1/bangumi/get/all")
 
         assert response.status_code == 200
         data = response.json()
@@ -201,12 +205,10 @@ class TestDeleteBangumi:
 
 
 class TestResetBangumi:
-    def test_reset_all(self, authed_client):
+    def test_reset_all(self, authed_client, mock_db):
         """GET /bangumi/reset/all deletes all bangumi."""
-        with patch("module.api.bangumi.TorrentManager") as MockManager:
-            mock_mgr = MockManager.return_value
-            mock_mgr.bangumi.delete_all = AsyncMock(return_value=None)
+        mock_db.bangumi.delete_all = AsyncMock(return_value=None)
 
-            response = authed_client.get("/api/v1/bangumi/reset/all")
+        response = authed_client.get("/api/v1/bangumi/reset/all")
 
         assert response.status_code == 200

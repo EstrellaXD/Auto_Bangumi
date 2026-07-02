@@ -27,7 +27,6 @@ class SeasonCollector:
                     link, bangumi.filter.replace(",", "|")
                 )
         async with Database() as db:
-            engine = RSSEngine(db)
             if await self.client.add_torrent(torrents, bangumi):
                 logger.info(
                     f"Collections of {bangumi.official_title} Season {bangumi.season} completed."
@@ -35,9 +34,9 @@ class SeasonCollector:
                 for torrent in torrents:
                     torrent.downloaded = True
                 bangumi.eps_collect = True
-                if await engine.bangumi.update(bangumi):
-                    await engine.bangumi.add(bangumi)
-                await engine.torrent.add_all(torrents)
+                if await db.bangumi.update(bangumi):
+                    await db.bangumi.add(bangumi)
+                await db.torrent.add_all(torrents)
                 return ResponseModel(
                     status=True,
                     status_code=200,
@@ -68,14 +67,13 @@ class SeasonCollector:
                 parser=parser,
             )
             result = await engine.download_bangumi(data)
-            await engine.bangumi.add(data)
+            await db.bangumi.add(data)
             return result
 
 
 async def eps_complete():
     async with Database() as db:
-        engine = RSSEngine(db)
-        datas = await engine.bangumi.not_complete()
+        datas = await db.bangumi.not_complete()
         if datas:
             logger.info("Start collecting full season...")
             async with DownloadClient() as client:
@@ -84,4 +82,4 @@ async def eps_complete():
                     if not data.eps_collect:
                         await collector.collect_season(data)
                     data.eps_collect = True
-            await engine.bangumi.update_all(datas)
+            await db.bangumi.update_all(datas)

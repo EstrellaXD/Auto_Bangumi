@@ -63,8 +63,7 @@ async def handle_resource(uri: str) -> str:
     """
     if uri == "autobangumi://anime/list":
         async with Database() as db:
-            manager = TorrentManager(db)
-            items = await manager.bangumi.search_all()
+            items = await db.bangumi.search_all()
         return json.dumps([_bangumi_to_dict(b) for b in items], ensure_ascii=False)
 
     elif uri == "autobangumi://status":
@@ -79,8 +78,7 @@ async def handle_resource(uri: str) -> str:
 
     elif uri == "autobangumi://rss/feeds":
         async with Database() as db:
-            engine = RSSEngine(db)
-            feeds = await engine.rss.search_all()
+            feeds = await db.rss.search_all()
         return json.dumps(
             [
                 {

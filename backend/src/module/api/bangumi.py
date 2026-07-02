@@ -20,12 +20,14 @@ from .response import u_response
 
 class OffsetSuggestion(BaseModel):
     """Legacy offset suggestion model."""
+
     suggested_offset: int
     reason: str
 
 
 class TMDBSummary(BaseModel):
     """Summary of TMDB data for display."""
+
     title: str
     total_seasons: int
     season_episode_counts: dict[int, int]
@@ -35,6 +37,7 @@ class TMDBSummary(BaseModel):
 
 class OffsetSuggestionDetail(BaseModel):
     """Detailed offset suggestion from detector."""
+
     season_offset: int
     episode_offset: int
     reason: str
@@ -47,6 +50,7 @@ class SetWeekdayRequest(BaseModel):
 
 class DetectOffsetRequest(BaseModel):
     """Request body for detect-offset endpoint."""
+
     title: str
     parsed_season: int
     parsed_episode: int
@@ -54,9 +58,11 @@ class DetectOffsetRequest(BaseModel):
 
 class DetectOffsetResponse(BaseModel):
     """Response for detect-offset endpoint."""
+
     has_mismatch: bool
     suggestion: Optional[OffsetSuggestionDetail]
     tmdb_info: Optional[TMDBSummary]
+
 
 router = APIRouter(prefix="/bangumi", tags=["bangumi"])
 
@@ -71,8 +77,7 @@ def str_to_list(data: Bangumi):
     "/get/all", response_model=list[Bangumi], dependencies=[Depends(get_current_user)]
 )
 async def get_all_data(db: Database = Depends(get_db)):
-    manager = TorrentManager(db)
-    return await manager.bangumi.search_all()
+    return await db.bangumi.search_all()
 
 
 @router.get(
@@ -176,6 +181,7 @@ async def refresh_poster_all(db: Database = Depends(get_db)):
     resp = await manager.refresh_poster()
     return u_response(resp)
 
+
 @router.get(
     path="/refresh/poster/{bangumi_id}",
     response_model=APIResponse,
@@ -202,11 +208,13 @@ async def refresh_calendar(db: Database = Depends(get_db)):
     "/reset/all", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
 async def reset_all(db: Database = Depends(get_db)):
-    manager = TorrentManager(db)
-    await manager.bangumi.delete_all()
+    await db.bangumi.delete_all()
     return JSONResponse(
         status_code=200,
-        content={"msg_en": "Reset all rules successfully.", "msg_zh": "重置所有规则成功。"},
+        content={
+            "msg_en": "Reset all rules successfully.",
+            "msg_zh": "重置所有规则成功。",
+        },
     )
 
 
@@ -373,7 +381,9 @@ async def set_weekday(bangumi_id: int, request: SetWeekdayRequest):
     async with Database() as db:
         success = await db.bangumi.set_weekday(bangumi_id, request.weekday)
     if success:
-        action = f"weekday {request.weekday}" if request.weekday is not None else "unknown"
+        action = (
+            f"weekday {request.weekday}" if request.weekday is not None else "unknown"
+        )
         return JSONResponse(
             status_code=200,
             content={
