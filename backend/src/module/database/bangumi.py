@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+import threading
 import time
 from typing import Optional
 
@@ -64,16 +65,24 @@ def _set_aliases_list(bangumi: Bangumi, aliases: list[str]) -> None:
         bangumi.title_aliases = json.dumps(unique_aliases, ensure_ascii=False)
 
 
-# Module-level TTL cache for search_all results
+# Module-level TTL cache for search_all results.
+# Guarded by a lock: notification paths read/write it from asyncio.to_thread
+# worker threads while the event loop uses it concurrently.
 _bangumi_cache: list[Bangumi] | None = None
 _bangumi_cache_time: float = 0
 _BANGUMI_CACHE_TTL: float = 300.0  # 5 minutes - extended from 60s to reduce DB queries
+_bangumi_cache_lock = threading.Lock()
+# Bumped on every invalidation so a search_all() that was already past the
+# cache check cannot overwrite a newer invalidation with its stale snapshot.
+_bangumi_cache_gen = 0
 
 
 def _invalidate_bangumi_cache():
-    global _bangumi_cache, _bangumi_cache_time
-    _bangumi_cache = None
-    _bangumi_cache_time = 0
+    global _bangumi_cache, _bangumi_cache_time, _bangumi_cache_gen
+    with _bangumi_cache_lock:
+        _bangumi_cache = None
+        _bangumi_cache_time = 0
+        _bangumi_cache_gen += 1
 
 
 class BangumiDatabase:
@@ -365,11 +374,13 @@ class BangumiDatabase:
     def search_all(self) -> list[Bangumi]:
         global _bangumi_cache, _bangumi_cache_time
         now = time.time()
-        if (
-            _bangumi_cache is not None
-            and (now - _bangumi_cache_time) < _BANGUMI_CACHE_TTL
-        ):
-            return _bangumi_cache
+        with _bangumi_cache_lock:
+            if (
+                _bangumi_cache is not None
+                and (now - _bangumi_cache_time) < _BANGUMI_CACHE_TTL
+            ):
+                return _bangumi_cache
+            gen_at_query = _bangumi_cache_gen
         statement = select(Bangumi)
         result = self.session.execute(statement)
         bangumis = list(result.scalars().all())
@@ -377,9 +388,11 @@ class BangumiDatabase:
         # cached objects are accessed from a different session/request context
         for b in bangumis:
             self.session.expunge(b)
-        _bangumi_cache = bangumis
-        _bangumi_cache_time = now
-        return _bangumi_cache
+        with _bangumi_cache_lock:
+            if _bangumi_cache_gen == gen_at_query:
+                _bangumi_cache = bangumis
+                _bangumi_cache_time = now
+        return bangumis
 
     def search_id(self, _id: int) -> Optional[Bangumi]:
         statement = select(Bangumi).where(Bangumi.id == _id)

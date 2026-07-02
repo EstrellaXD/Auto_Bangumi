@@ -83,10 +83,13 @@ if VERSION != "DEV_VERSION":
     # app.mount("/icons", StaticFiles(directory="dist/icons"), name="icons")
     templates = Jinja2Templates(directory="dist")
 
+    # dist/ is immutable inside the container — snapshot once instead of
+    # hitting the filesystem on every request.
+    _DIST_FILES = frozenset(os.listdir("dist"))
+
     @app.get("/{path:path}")
     def html(request: Request, path: str):
-        files = os.listdir("dist")
-        if path in files:
+        if path in _DIST_FILES:
             return FileResponse(f"dist/{path}")
         else:
             context = {"request": request}

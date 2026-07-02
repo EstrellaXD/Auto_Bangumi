@@ -12,6 +12,15 @@ logger = logging.getLogger(__name__)
 _shared_client: httpx.AsyncClient | None = None
 _shared_client_proxy_key: str | None = None
 
+# RSS 循环间隔 900s， 远超服务端 keep-alive 超时（60-120s）
+# keepalive_expiry=60 让空闲连接在过期前主动丢弃，避免复用过期连接
+# max_connections=20 足够覆盖典型订阅数量
+_CONNECTION_LIMITS = httpx.Limits(
+    max_keepalive_connections=5,
+    max_connections=20,
+    keepalive_expiry=60.0,
+)
+
 
 def _proxy_config_key() -> str:
     if settings.proxy.enable:
@@ -27,26 +36,43 @@ async def get_shared_client() -> httpx.AsyncClient:
     if _shared_client is not None:
         await _shared_client.aclose()
     timeout = httpx.Timeout(connect=10.0, read=30.0, write=10.0, pool=10.0)
+    # follow_redirects=True: Mikan mirrors and some CDNs respond with 302 to the
+    # canonical host; without this, raise_for_status treats the redirect as an
+    # error and the RSS pull fails (#983).
+    common_kwargs = {
+        "timeout": timeout,
+        "limits": _CONNECTION_LIMITS,
+        "follow_redirects": True,
+    }
     if settings.proxy.enable:
         if "http" in settings.proxy.type:
             if settings.proxy.username:
                 proxy_url = f"http://{settings.proxy.username}:{settings.proxy.password}@{settings.proxy.host}:{settings.proxy.port}"
             else:
                 proxy_url = f"http://{settings.proxy.host}:{settings.proxy.port}"
-            _shared_client = httpx.AsyncClient(proxy=proxy_url, timeout=timeout)
+            _shared_client = httpx.AsyncClient(proxy=proxy_url, **common_kwargs)
         elif settings.proxy.type == "socks5":
             if settings.proxy.username:
                 socks_url = f"socks5://{settings.proxy.username}:{settings.proxy.password}@{settings.proxy.host}:{settings.proxy.port}"
             else:
                 socks_url = f"socks5://{settings.proxy.host}:{settings.proxy.port}"
             transport = AsyncProxyTransport.from_url(socks_url, rdns=True)
-            _shared_client = httpx.AsyncClient(transport=transport, timeout=timeout)
+            _shared_client = httpx.AsyncClient(transport=transport, **common_kwargs)
         else:
-            _shared_client = httpx.AsyncClient(timeout=timeout)
+            _shared_client = httpx.AsyncClient(**common_kwargs)
     else:
-        _shared_client = httpx.AsyncClient(timeout=timeout)
+        _shared_client = httpx.AsyncClient(**common_kwargs)
     _shared_client_proxy_key = current_key
     return _shared_client
+
+
+async def reset_shared_client():
+    """关闭并清除共享客户端，下次请求时自动创建新连接池。"""
+    global _shared_client, _shared_client_proxy_key
+    if _shared_client is not None:
+        await _shared_client.aclose()
+    _shared_client = None
+    _shared_client_proxy_key = None
 
 
 class RequestURL:
@@ -67,7 +93,9 @@ class RequestURL:
         }
         # For torrent files, use different Accept header
         if url.endswith(".torrent") or "/download/" in url:
-            base_headers["Accept"] = "application/x-bittorrent, application/octet-stream, */*"
+            base_headers["Accept"] = (
+                "application/x-bittorrent, application/octet-stream, */*"
+            )
         else:
             base_headers["Accept"] = "application/xml, text/xml, */*"
         return base_headers
@@ -78,7 +106,11 @@ class RequestURL:
         while True:
             try:
                 req = await self._client.get(url=url, headers=headers)
-                logger.debug("[Network] Successfully connected to %s. Status: %s", url, req.status_code)
+                logger.debug(
+                    "[Network] Successfully connected to %s. Status: %s",
+                    url,
+                    req.status_code,
+                )
                 req.raise_for_status()
                 return req
             except httpx.HTTPStatusError as e:
@@ -91,20 +123,23 @@ class RequestURL:
                 try_time += 1
                 if try_time >= retry:
                     break
+                # 连接错误时重建客户端以清除过期连接
+                await reset_shared_client()
+                self._client = await get_shared_client()
                 await asyncio.sleep(5)
             except Exception as e:
                 logger.warning(f"[Network] Unexpected error for {url}: {e}")
                 break
-        logger.error(f"[Network] Unable to connect to {url}, Please check your network settings")
+        logger.error(
+            f"[Network] Unable to connect to {url}, Please check your network settings"
+        )
         return None
 
     async def post_url(self, url: str, data: dict, retry=3):
         try_time = 0
         while True:
             try:
-                req = await self._client.post(
-                    url=url, headers=self.header, data=data
-                )
+                req = await self._client.post(url=url, headers=self.header, data=data)
                 req.raise_for_status()
                 return req
             except httpx.RequestError:
@@ -114,6 +149,9 @@ class RequestURL:
                 try_time += 1
                 if try_time >= retry:
                     break
+                # 连接错误时重建客户端，清除过期连接
+                await reset_shared_client()
+                self._client = await get_shared_client()
                 await asyncio.sleep(5)
             except Exception as e:
                 logger.debug(e)

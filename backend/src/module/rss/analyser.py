@@ -49,7 +49,7 @@ class RSSAnalyser(TitleParser):
         new_data = []
         seen_titles: set[str] = set()
         for torrent in torrents:
-            bangumi = self.raw_parser(raw=torrent.name)
+            bangumi = await self.raw_parser(raw=torrent.name)
             if bangumi and bangumi.title_raw not in seen_titles:
                 await self.official_title_parser(bangumi=bangumi, rss=rss, torrent=torrent)
                 if not full_parse:
@@ -60,7 +60,7 @@ class RSSAnalyser(TitleParser):
         return new_data
 
     async def torrent_to_data(self, torrent: Torrent, rss: RSSItem) -> Bangumi:
-        bangumi = self.raw_parser(raw=torrent.name)
+        bangumi = await self.raw_parser(raw=torrent.name)
         if bangumi:
             await self.official_title_parser(bangumi=bangumi, rss=rss, torrent=torrent)
             bangumi.rss_link = rss.url

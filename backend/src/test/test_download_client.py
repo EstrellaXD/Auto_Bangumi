@@ -48,6 +48,19 @@ class TestAuth:
         await download_client.auth()
         assert download_client.authed is False
 
+    async def test_aenter_closes_client_on_failed_auth(
+        self, download_client, mock_qb_client
+    ):
+        """__aenter__ must close the concrete client's pool before raising,
+        because __aexit__ never runs on a failed connect (leak fix, #1043)."""
+        mock_qb_client.auth.return_value = False
+
+        with pytest.raises(ConnectionError):
+            async with download_client:
+                pass
+
+        mock_qb_client.logout.assert_awaited_once()
+
 
 # ---------------------------------------------------------------------------
 # init_downloader

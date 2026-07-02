@@ -56,7 +56,9 @@ def test_raw_parser():
     assert info.episode == 9
     assert info.season == 1
 
-    content = "[梦蓝字幕组]New Doraemon 哆啦A梦新番[747][2023.02.25][AVC][1080P][GB_JP][MP4]"
+    content = (
+        "[梦蓝字幕组]New Doraemon 哆啦A梦新番[747][2023.02.25][AVC][1080P][GB_JP][MP4]"
+    )
     info = raw_parser(content)
     assert info.group == "梦蓝字幕组"
     assert info.title_zh == "哆啦A梦新番"
@@ -65,7 +67,9 @@ def test_raw_parser():
     assert info.episode == 747
     assert info.season == 1
 
-    content = "[织梦字幕组][尼尔：机械纪元 NieR Automata Ver1.1a][02集][1080P][AVC][简日双语]"
+    content = (
+        "[织梦字幕组][尼尔：机械纪元 NieR Automata Ver1.1a][02集][1080P][AVC][简日双语]"
+    )
     info = raw_parser(content)
     assert info.group == "织梦字幕组"
     assert info.title_zh == "尼尔：机械纪元"
@@ -160,7 +164,9 @@ def test_raw_parser():
     assert info.season == 1
 
     # Issue #990: Title starting with number — should not misparse "29" as episode
-    content = "[ANi] 29 岁单身中坚冒险家的日常 - 07 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+    content = (
+        "[ANi] 29 岁单身中坚冒险家的日常 - 07 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+    )
     info = raw_parser(content)
     assert info.group == "ANi"
     assert info.title_zh == "29 岁单身中坚冒险家的日常"
@@ -310,8 +316,9 @@ class TestIssue764WesternFormat:
         assert info.resolution == "1080p"
         # No brackets → group detection fails
         assert info.group == ""
-        # No CJK chars → no title_zh/jp; EN detection also fails (short segments)
-        assert info.title_en is None
+        # After the #1025 fix, prefix_process no longer destroys titles without
+        # a [group] prefix, so the English title is now extracted correctly.
+        assert info.title_en == "Girls Band Cry"
         assert info.title_zh is None
 
 
@@ -323,7 +330,9 @@ class TestIssue986AtlasFormat:
         "[阿特拉斯字幕组·雪原市出差所][命运-奇异赝品_Fate／strange Fake][07_神自黄昏归来][简繁日内封PGS][日语配音版_Japanese Dub][Web-DL Remux][1080p AVC AAC]",
     ]
 
-    @pytest.mark.xfail(reason="Atlas bracket-delimited format not supported by TITLE_RE")
+    @pytest.mark.xfail(
+        reason="Atlas bracket-delimited format not supported by TITLE_RE"
+    )
     def test_parse_atlas_format(self):
         info = raw_parser(self.TITLES[0])
         assert info is not None
@@ -362,3 +371,24 @@ class TestIssue805TitleWithCht:
         assert info.source == "Baha"
         assert info.sub == "CHT"
 
+
+class TestIssue1025NoGroupPrefix:
+    """Issue #1025: Titles without a [group] prefix must still parse.
+
+    prefix_process was calling re.sub(f".{group}.", "", raw) even when
+    group was empty, which reduced the pattern to `..` and deleted every
+    pair of characters, leaving a stub like `1` that name_process couldn't
+    split into en/zh/jp.
+    """
+
+    def test_mixed_cjk_and_en_without_group(self):
+        content = (
+            "冰之城墙「氷の城壁」The Ramparts of Ice S01E02 1080p 日英双语-多国字幕"
+        )
+        info = raw_parser(content)
+        assert info is not None
+        assert info.episode == 2
+        assert info.season == 1
+        # Before the fix all three title fields were None and title_parser
+        # raised "Cannot extract title_raw". At least one must now be set.
+        assert any([info.title_en, info.title_zh, info.title_jp])

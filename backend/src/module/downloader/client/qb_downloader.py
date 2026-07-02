@@ -28,16 +28,33 @@ class QbDownloader:
         times = 0
         use_https = self.host.startswith("https://")
         timeout = httpx.Timeout(connect=5.0, read=10.0, write=10.0, pool=10.0)
+        # Keepalive_expiry keeps idle TCP sockets short-lived so they can't
+        # outlive a proxy / NAS idle-reap, which would otherwise surface as
+        # "Server disconnected without sending a response" when the next
+        # renamer cycle reuses the pool (#984). max_connections caps parallel
+        # load on the downloader and anything fronting it.
+        limits = httpx.Limits(
+            max_keepalive_connections=5,
+            max_connections=10,
+            keepalive_expiry=30.0,
+        )
         # Never verify certificates - self-signed certs are the norm for
         # home-server / NAS / Docker qBittorrent setups.
-        self._client = httpx.AsyncClient(timeout=timeout, verify=False)
+        self._client = httpx.AsyncClient(timeout=timeout, limits=limits, verify=False)
         while times < retry:
             try:
                 resp = await self._client.post(
                     self._url("auth/login"),
                     data={"username": self.username, "password": self.password},
                 )
-                if resp.status_code == 200 and resp.text == "Ok.":
+                # qBittorrent < 5.2 answers 200 + "Ok." / "Fails.";
+                # qBittorrent >= 5.2 answers 204 with an empty body on success
+                # (#1044). Keep the positive body check for 200 so a proxy or
+                # non-qB service answering 200 + HTML is not mistaken for a
+                # successful login.
+                if (
+                    resp.status_code == 200 and resp.text.startswith("Ok")
+                ) or resp.status_code == 204:
                     return True
                 elif resp.status_code == 403:
                     logger.error("Login refused by qBittorrent Server")
@@ -191,11 +208,22 @@ class QbDownloader:
         resp = await self._client.get(self._url("torrents/info"), params={"tag": tag})
         return resp.json()
 
-    async def torrents_delete(self, hash, delete_files: bool = True):
-        await self._client.post(
+    async def torrents_delete(self, hash, delete_files: bool = True) -> bool:
+        # qBittorrent expects one pipe-joined "hashes" field; a Python list would
+        # be form-encoded as repeated fields and silently ignored (#1046).
+        hashes = "|".join(hash) if isinstance(hash, (list, tuple)) else hash
+        resp = await self._client.post(
             self._url("torrents/delete"),
-            data={"hashes": hash, "deleteFiles": str(delete_files).lower()},
+            data={"hashes": hashes, "deleteFiles": str(delete_files).lower()},
         )
+        if resp.status_code != 200:
+            logger.error(
+                "[Downloader] Failed to delete torrents %s: HTTP %s",
+                hashes,
+                resp.status_code,
+            )
+            return False
+        return True
 
     async def torrents_pause(self, hashes: str):
         await self._client.post(
@@ -242,7 +270,8 @@ class QbDownloader:
                             break
                         # Final attempt failed
                         logger.debug(
-                            "[Downloader] Rename API returned 200 but file unchanged: %s", old_path
+                            "[Downloader] Rename API returned 200 but file unchanged: %s",
+                            old_path,
                         )
                         return False
                 # new_path found or old_path not found

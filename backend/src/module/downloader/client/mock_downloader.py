@@ -110,13 +110,19 @@ class MockDownloader:
         )
         return True
 
-    async def torrents_delete(self, hash: str, delete_files: bool = True):
-        hashes = hash.split("|") if "|" in hash else [hash]
+    async def torrents_delete(
+        self, hash: str | list, delete_files: bool = True
+    ) -> bool:
+        if isinstance(hash, (list, tuple)):
+            hashes = list(hash)
+        else:
+            hashes = hash.split("|") if "|" in hash else [hash]
         for h in hashes:
             self._torrents.pop(h, None)
         logger.debug(
             "[MockDownloader] torrents_delete(%s, delete_files=%s)", hash, delete_files
         )
+        return True
 
     async def torrents_pause(self, hashes: str):
         for h in hashes.split("|"):
