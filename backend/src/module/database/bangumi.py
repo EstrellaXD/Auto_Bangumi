@@ -173,7 +173,7 @@ class BangumiDatabase:
             )
         )
         result = await self.session.execute(statement)
-        candidates = result.scalars().all()
+        candidates = list(result.scalars().all())
 
         match = _find_semantic_match(data, candidates)
         if match:
@@ -187,7 +187,7 @@ class BangumiDatabase:
         return match
 
     async def add_title_alias(
-        self, bangumi_id: int, new_title_raw: str, auto_commit: bool = True
+        self, bangumi_id: int, new_title_raw: str | None, auto_commit: bool = True
     ) -> bool:
         """
         Add a new title_raw alias to an existing bangumi.
@@ -298,13 +298,15 @@ class BangumiDatabase:
         official_titles = {d.official_title for d in to_add}
         candidates_by_title: dict[str, list[Bangumi]] = {}
         if official_titles:
-            statement = select(Bangumi).where(
+            # SQLModel 类属性在 mypy 看来是普通字段类型而非 InstrumentedAttribute，
+            # 无法识别 .in_() 等查询方法（无官方 mypy 插件支持）。
+            dup_statement = select(Bangumi).where(
                 and_(
-                    Bangumi.official_title.in_(official_titles),
+                    Bangumi.official_title.in_(official_titles),  # type: ignore[attr-defined]
                     Bangumi.deleted == false(),
                 )
             )
-            result = await self.session.execute(statement)
+            result = await self.session.execute(dup_statement)
             for candidate in result.scalars().all():
                 candidates_by_title.setdefault(candidate.official_title, []).append(
                     candidate
@@ -371,7 +373,9 @@ class BangumiDatabase:
             )
         return len(unique_to_add)
 
-    async def update(self, data: Bangumi | BangumiUpdate, _id: int = None) -> bool:
+    async def update(
+        self, data: Bangumi | BangumiUpdate, _id: int | None = None
+    ) -> bool:
         if _id and isinstance(data, BangumiUpdate):
             db_data = await self.session.get(Bangumi, _id)
         elif isinstance(data, Bangumi):
@@ -454,7 +458,7 @@ class BangumiDatabase:
         """Batch lookup multiple bangumi by their IDs."""
         if not ids:
             return []
-        statement = select(Bangumi).where(Bangumi.id.in_(ids))
+        statement = select(Bangumi).where(Bangumi.id.in_(ids))  # type: ignore[attr-defined]
         result = await self.session.execute(statement)
         return list(result.scalars().all())
 
@@ -464,7 +468,7 @@ class BangumiDatabase:
         )
         result = await self.session.execute(statement)
         data = result.scalar_one_or_none()
-        return data.poster_link if data else ""
+        return (data.poster_link or "") if data else ""
 
     async def match_list(self, torrent_list: list, rss_link: str) -> list:
         match_datas = await self.search_all()
@@ -534,11 +538,13 @@ class BangumiDatabase:
         return list(result.scalars().all())
 
     async def not_added(self) -> list[Bangumi]:
+        # SQLModel 类属性在 mypy 看来是普通字段类型而非 InstrumentedAttribute，
+        # 无法识别 .is_() 等查询方法（无官方 mypy 插件支持）。
         conditions = select(Bangumi).where(
             or_(
                 Bangumi.added == 0,
-                Bangumi.rule_name.is_(None),
-                Bangumi.save_path.is_(None),
+                Bangumi.rule_name.is_(None),  # type: ignore[union-attr]
+                Bangumi.save_path.is_(None),  # type: ignore[union-attr]
             )
         )
         result = await self.session.execute(conditions)
@@ -685,6 +691,33 @@ class BangumiDatabase:
             reason,
             suggested_season_offset,
             suggested_episode_offset,
+        )
+        return True
+
+    async def apply_offset(self, _id: int) -> bool:
+        """将建议的季度/集数偏移写入正式的 season_offset/episode_offset，并清除检查标记。
+
+        Args:
+            _id: The bangumi ID
+        """
+        bangumi = await self.session.get(Bangumi, _id)
+        if not bangumi:
+            return False
+        if bangumi.suggested_season_offset is not None:
+            bangumi.season_offset = bangumi.suggested_season_offset
+        if bangumi.suggested_episode_offset is not None:
+            bangumi.episode_offset = bangumi.suggested_episode_offset
+        bangumi.needs_review = False
+        bangumi.needs_review_reason = None
+        bangumi.suggested_season_offset = None
+        bangumi.suggested_episode_offset = None
+        self.session.add(bangumi)
+        await self.session.commit()
+        logger.debug(
+            "[Database] Applied offset for bangumi id %s: season=%s, episode=%s",
+            _id,
+            bangumi.season_offset,
+            bangumi.episode_offset,
         )
         return True
 

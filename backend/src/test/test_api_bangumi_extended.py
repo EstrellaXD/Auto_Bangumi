@@ -288,6 +288,97 @@ class TestNeedsReview:
 
 
 # ---------------------------------------------------------------------------
+# Apply offset endpoints
+# ---------------------------------------------------------------------------
+
+
+class TestApplyOffset:
+    def test_apply_offset_success_triggers_rename(self, authed_client):
+        """POST /bangumi/apply-offset/{id} applies offset and reruns the renamer."""
+        mock_db = MagicMock()
+        mock_db.bangumi.apply_offset = AsyncMock(return_value=True)
+        mock_renamer = AsyncMock()
+        with patch("module.api.bangumi.Database", _async_db_mock(mock_db)):
+            with patch("module.api.bangumi.Renamer", return_value=mock_renamer):
+                with patch("module.api.bangumi.DownloadClient") as MockClient:
+                    MockClient.return_value.__aenter__ = AsyncMock(
+                        return_value=MagicMock()
+                    )
+                    MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
+                    response = authed_client.post("/api/v1/bangumi/apply-offset/1")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] is True
+        mock_db.bangumi.apply_offset.assert_awaited_once_with(1)
+        mock_renamer.rename.assert_awaited_once()
+
+    def test_apply_offset_not_found_skips_rename(self, authed_client):
+        """POST /bangumi/apply-offset/{id} with a non-existent bangumi does not rename."""
+        mock_db = MagicMock()
+        mock_db.bangumi.apply_offset = AsyncMock(return_value=False)
+        with patch("module.api.bangumi.Database", _async_db_mock(mock_db)):
+            with patch("module.api.bangumi.Renamer") as MockRenamer:
+                response = authed_client.post("/api/v1/bangumi/apply-offset/999")
+
+        assert response.status_code == 404
+        MockRenamer.assert_not_called()
+
+    def test_apply_offset_many_success(self, authed_client):
+        """POST /bangumi/apply-offset/many applies offsets to every id and renames once."""
+        mock_db = MagicMock()
+        mock_db.bangumi.apply_offset = AsyncMock(side_effect=[True, True])
+        mock_renamer = AsyncMock()
+        with patch("module.api.bangumi.Database", _async_db_mock(mock_db)):
+            with patch("module.api.bangumi.Renamer", return_value=mock_renamer):
+                with patch("module.api.bangumi.DownloadClient") as MockClient:
+                    MockClient.return_value.__aenter__ = AsyncMock(
+                        return_value=MagicMock()
+                    )
+                    MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
+                    response = authed_client.post(
+                        "/api/v1/bangumi/apply-offset/many", json=[1, 2]
+                    )
+
+        assert response.status_code == 200
+        assert mock_db.bangumi.apply_offset.await_count == 2
+        mock_renamer.rename.assert_awaited_once()
+
+    def test_apply_offset_many_partial_failure(self, authed_client):
+        """POST /bangumi/apply-offset/many reports a partial failure and still renames."""
+        mock_db = MagicMock()
+        mock_db.bangumi.apply_offset = AsyncMock(side_effect=[True, False])
+        mock_renamer = AsyncMock()
+        with patch("module.api.bangumi.Database", _async_db_mock(mock_db)):
+            with patch("module.api.bangumi.Renamer", return_value=mock_renamer):
+                with patch("module.api.bangumi.DownloadClient") as MockClient:
+                    MockClient.return_value.__aenter__ = AsyncMock(
+                        return_value=MagicMock()
+                    )
+                    MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
+                    response = authed_client.post(
+                        "/api/v1/bangumi/apply-offset/many", json=[1, 2]
+                    )
+
+        assert response.status_code == 500
+        mock_renamer.rename.assert_awaited_once()
+
+    def test_apply_offset_many_empty_list(self, authed_client):
+        """POST /bangumi/apply-offset/many with an empty list is a 400, no DB/rename calls."""
+        with patch("module.api.bangumi.Renamer") as MockRenamer:
+            response = authed_client.post("/api/v1/bangumi/apply-offset/many", json=[])
+
+        assert response.status_code == 400
+        MockRenamer.assert_not_called()
+
+    def test_apply_offset_auth_required(self, unauthed_client):
+        """POST /bangumi/apply-offset/{id} requires authentication."""
+        with patch("module.security.api.DEV_AUTH_BYPASS", False):
+            response = unauthed_client.post("/api/v1/bangumi/apply-offset/1")
+        assert response.status_code == 401
+
+
+# ---------------------------------------------------------------------------
 # Batch operations
 # ---------------------------------------------------------------------------
 
@@ -308,9 +399,7 @@ class TestSetWeekday:
 
     def test_set_weekday_out_of_range(self, authed_client):
         """PATCH /bangumi/{id}/weekday rejects weekday outside 0-6."""
-        response = authed_client.patch(
-            "/api/v1/bangumi/1/weekday", json={"weekday": 9}
-        )
+        response = authed_client.patch("/api/v1/bangumi/1/weekday", json={"weekday": 9})
         assert response.status_code == 400
 
 

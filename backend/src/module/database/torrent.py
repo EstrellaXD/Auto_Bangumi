@@ -54,7 +54,9 @@ class TorrentDatabase:
         if not torrents_list:
             return []
         urls = [t.url for t in torrents_list]
-        statement = select(Torrent.url).where(Torrent.url.in_(urls))
+        # SQLModel 类属性在 mypy 看来是普通字段类型而非 InstrumentedAttribute，
+        # 无法识别 .in_()/.is_() 等查询方法（无官方 mypy 插件支持）。
+        statement = select(Torrent.url).where(Torrent.url.in_(urls))  # type: ignore[attr-defined]
         result = await self.session.execute(statement)
         existing_urls = set(result.scalars().all())
         return [t for t in torrents_list if t.url not in existing_urls]
@@ -71,7 +73,14 @@ class TorrentDatabase:
         if not qb_hashes:
             return []
         result = await self.session.execute(
-            select(Torrent).where(Torrent.qb_hash.in_(qb_hashes))
+            select(Torrent).where(Torrent.qb_hash.in_(qb_hashes))  # type: ignore[union-attr]
+        )
+        return list(result.scalars().all())
+
+    async def search_by_bangumi_id(self, bangumi_id: int) -> list[Torrent]:
+        """Find all torrent records associated with a bangumi."""
+        result = await self.session.execute(
+            select(Torrent).where(Torrent.bangumi_id == bangumi_id)
         )
         return list(result.scalars().all())
 

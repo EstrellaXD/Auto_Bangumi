@@ -6,7 +6,8 @@ from pydantic import BaseModel
 
 from module.conf import settings
 from module.database import Database, get_db
-from module.manager import TorrentManager
+from module.downloader import DownloadClient
+from module.manager import Renamer, TorrentManager
 from module.models import APIResponse, Bangumi, BangumiUpdate, ResponseModel
 from module.parser.analyser.offset_detector import (
     OffsetSuggestion as DetectorSuggestion,
@@ -65,12 +66,6 @@ class DetectOffsetResponse(BaseModel):
 
 
 router = APIRouter(prefix="/bangumi", tags=["bangumi"])
-
-
-def str_to_list(data: Bangumi):
-    data.filter = data.filter.split(",")
-    data.rss_link = data.rss_link.split(",")
-    return data
 
 
 @router.get(
@@ -337,7 +332,8 @@ async def detect_offset(request: DetectOffsetRequest):
             has_mismatch=True,
             suggestion=OffsetSuggestionDetail(
                 season_offset=suggestion.season_offset,
-                episode_offset=suggestion.episode_offset,
+                # None means "no episode offset needed" (see offset_detector).
+                episode_offset=suggestion.episode_offset or 0,
                 reason=suggestion.reason,
                 confidence=suggestion.confidence,
             ),
@@ -368,6 +364,73 @@ async def dismiss_review(bangumi_id: int):
                 "status": True,
                 "msg_en": "Review dismissed.",
                 "msg_zh": "已取消检查标记。",
+            },
+        )
+    else:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "status": False,
+                "msg_en": f"Bangumi {bangumi_id} not found.",
+                "msg_zh": f"未找到番剧 {bangumi_id}。",
+            },
+        )
+
+
+async def _trigger_rename() -> None:
+    """Run a rename pass so applied offsets take effect immediately."""
+    async with DownloadClient() as client:
+        renamer = Renamer(client)
+        await renamer.rename()
+
+
+# Registered before /apply-offset/{bangumi_id} so "many" is never captured as an id.
+@router.post(
+    path="/apply-offset/many",
+    response_model=APIResponse,
+    dependencies=[Depends(get_current_user)],
+)
+async def apply_offset_many(bangumi_id: list[int]):
+    """Apply suggested offsets for multiple bangumi and trigger a rename pass."""
+    if not bangumi_id:
+        return _empty_id_list_response()
+
+    async with Database() as db:
+        results = [await db.bangumi.apply_offset(i) for i in bangumi_id]
+
+    succeeded = sum(1 for r in results if r)
+    if succeeded:
+        await _trigger_rename()
+
+    all_ok = succeeded == len(results)
+    return u_response(
+        ResponseModel(
+            status_code=200 if all_ok else 500,
+            status=all_ok,
+            msg_en=f"Applied offset for {succeeded}/{len(results)} bangumi.",
+            msg_zh=f"已为 {succeeded}/{len(results)} 部番剧应用偏移量。",
+        )
+    )
+
+
+@router.post(
+    path="/apply-offset/{bangumi_id}",
+    response_model=APIResponse,
+    dependencies=[Depends(get_current_user)],
+)
+async def apply_offset(bangumi_id: int):
+    """Apply the suggested season/episode offset and trigger a rename pass."""
+    async with Database() as db:
+        success = await db.bangumi.apply_offset(bangumi_id)
+
+    if success:
+        await _trigger_rename()
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": True,
+                "msg_en": "Offset applied.",
+                "msg_zh": "已应用偏移量。",
             },
         )
     else:

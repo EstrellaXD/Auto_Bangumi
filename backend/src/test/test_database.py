@@ -50,12 +50,14 @@ async def test_bangumi_database(db_session):
     # insert
     await db.add(test_data)
     result = await db.search_id(1)
+    assert result is not None
     assert result.official_title == test_data.official_title
 
     # update
     test_data.official_title = "无职转生，到了异世界就拿出真本事II"
     await db.update(test_data)
     result = await db.search_id(1)
+    assert result is not None
     assert result.official_title == test_data.official_title
 
     # search poster
@@ -66,6 +68,7 @@ async def test_bangumi_database(db_session):
     result = await db.match_torrent(
         "[Lilith-Raws] 无职转生，到了异世界就拿出真本事 / Mushoku Tensei - 11 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
     )
+    assert result is not None
     assert result.official_title == "无职转生，到了异世界就拿出真本事II"
 
     # delete
@@ -84,12 +87,14 @@ async def test_torrent_database(db_session):
     # insert
     await db.add(test_data)
     result = await db.search(1)
+    assert result is not None
     assert result.name == test_data.name
 
     # update
     test_data.downloaded = True
     await db.update(test_data)
     result = await db.search(1)
+    assert result is not None
     assert result.downloaded is True
 
 
@@ -99,6 +104,7 @@ async def test_rss_database(db_session):
 
     await db.add(RSSItem(url=rss_url, name="Test RSS"))
     result = await db.search_id(1)
+    assert result is not None
     assert result.url == rss_url
 
 
@@ -178,6 +184,7 @@ async def test_torrent_update_qb_hash(db_session):
 
     # Verify update
     result = await db.search(torrent.id)
+    assert result is not None
     assert result.qb_hash == "new_hash_value"
 
 
@@ -265,6 +272,7 @@ async def test_add_title_alias(db_session):
 
     # Verify alias was added
     updated = await db.search_id(bangumi_id)
+    assert updated is not None
     assert updated.title_aliases is not None
     aliases = json.loads(updated.title_aliases)
     assert "Test Anime Season 1" in aliases
@@ -486,6 +494,7 @@ async def test_add_all_semantic_duplicates_across_batch_all_merged_as_aliases(
     assert len(await db.search_all()) == 5
     for i in range(5):
         original = await db.search_official_title(f"Anime {i}")
+        assert original is not None
         aliases = json.loads(original.title_aliases) if original.title_aliases else []
         assert f"Raw {i} New" in aliases
 
@@ -623,6 +632,103 @@ class TestDeleteByBangumiId:
         assert new[0].url == "https://mikan.me/t/001"
 
 
+class TestSearchByBangumiId:
+    """Tests for TorrentDatabase.search_by_bangumi_id."""
+
+    async def test_returns_matching_torrents(self, db_session):
+        db = TorrentDatabase(db_session)
+        await _ensure_bangumi(db_session, 11)
+        await db.add(
+            Torrent(name="ep01", url="https://example.com/ep01", bangumi_id=11)
+        )
+        await db.add(
+            Torrent(name="ep02", url="https://example.com/ep02", bangumi_id=11)
+        )
+
+        torrents = await db.search_by_bangumi_id(11)
+        assert {t.name for t in torrents} == {"ep01", "ep02"}
+
+    async def test_excludes_other_bangumi_torrents(self, db_session):
+        db = TorrentDatabase(db_session)
+        await _ensure_bangumi(db_session, 21)
+        await _ensure_bangumi(db_session, 22)
+        await db.add(
+            Torrent(name="keep", url="https://example.com/keep", bangumi_id=21)
+        )
+        await db.add(
+            Torrent(name="other", url="https://example.com/other", bangumi_id=22)
+        )
+
+        torrents = await db.search_by_bangumi_id(21)
+        assert [t.name for t in torrents] == ["keep"]
+
+    async def test_no_match_returns_empty_list(self, db_session):
+        db = TorrentDatabase(db_session)
+        assert await db.search_by_bangumi_id(999) == []
+
+
+class TestApplyOffset:
+    """Tests for BangumiDatabase.apply_offset."""
+
+    async def test_copies_suggested_offsets_into_live_offsets_and_clears_review(
+        self, db_session
+    ):
+        db = BangumiDatabase(db_session)
+        bangumi = Bangumi(
+            official_title="Apply Offset Anime",
+            title_raw="Apply Offset Anime Raw",
+            group_name="TestGroup",
+            rss_link="r",
+            needs_review=True,
+            needs_review_reason="mismatch detected",
+            suggested_season_offset=-1,
+            suggested_episode_offset=12,
+        )
+        db_session.add(bangumi)
+        await db_session.commit()
+
+        result = await db.apply_offset(bangumi.id)
+        assert result is True
+
+        updated = await db.search_id(bangumi.id)
+        assert updated is not None
+        assert updated.season_offset == -1
+        assert updated.episode_offset == 12
+        assert updated.needs_review is False
+        assert updated.needs_review_reason is None
+        assert updated.suggested_season_offset is None
+        assert updated.suggested_episode_offset is None
+
+    async def test_leaves_episode_offset_untouched_when_no_episode_suggestion(
+        self, db_session
+    ):
+        """episode_offset suggestion of None means "no change needed", not "reset to 0"."""
+        db = BangumiDatabase(db_session)
+        bangumi = Bangumi(
+            official_title="Season Only Anime",
+            title_raw="Season Only Anime Raw",
+            group_name="TestGroup",
+            rss_link="r",
+            episode_offset=3,
+            needs_review=True,
+            suggested_season_offset=-1,
+            suggested_episode_offset=None,
+        )
+        db_session.add(bangumi)
+        await db_session.commit()
+
+        await db.apply_offset(bangumi.id)
+
+        updated = await db.search_id(bangumi.id)
+        assert updated is not None
+        assert updated.season_offset == -1
+        assert updated.episode_offset == 3
+
+    async def test_nonexistent_bangumi_returns_false(self, db_session):
+        db = BangumiDatabase(db_session)
+        assert await db.apply_offset(999) is False
+
+
 def test_groups_are_similar():
     """Test group name similarity detection."""
     from module.database.bangumi import _groups_are_similar
@@ -666,6 +772,7 @@ async def test_get_all_title_patterns(db_session):
 
     # Get all patterns
     updated = await db.search_id(bangumi_id)
+    assert updated is not None
     patterns = db.get_all_title_patterns(updated)
 
     assert len(patterns) == 3
