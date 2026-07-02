@@ -117,10 +117,11 @@ class DownloadClient:
         elif downloader_type == "aria2":
             from .client.aria2_downloader import Aria2Downloader
 
-            # Aria2Downloader only implements the capability-gated subset it
-            # declares via `capabilities` (all False) -- the facade never
-            # calls the rest, but that makes it structurally narrower than
-            # the full `DownloaderClient` protocol.
+            # Aria2Downloader implements query/rename/manage for real (see its
+            # `capabilities`), but has no qB-native RSS-rule/prefs surface
+            # (can_rss_rules=False), so it stays structurally narrower than
+            # the full `DownloaderClient` protocol -- the facade skips the
+            # rss/prefs methods it never calls on this backend.
             return Aria2Downloader(host, username, password)  # type: ignore[return-value]
         elif downloader_type == "mock":
             from .client.mock_downloader import MockDownloader

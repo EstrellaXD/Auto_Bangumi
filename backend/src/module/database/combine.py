@@ -6,6 +6,7 @@ from sqlmodel import SQLModel
 
 from module.models import Bangumi, User
 
+from .aria2 import Aria2GidDatabase
 from .bangumi import BangumiDatabase
 from .engine import async_engine, async_session_factory
 from .migrations import (  # noqa: F401  (re-exported for existing importers)
@@ -41,6 +42,7 @@ class Database:
         self.torrent = TorrentDatabase(self.session)
         self.bangumi = BangumiDatabase(self.session)
         self.user = UserDatabase(self.session)
+        self.aria2 = Aria2GidDatabase(self.session)
 
     async def __aenter__(self):
         return self

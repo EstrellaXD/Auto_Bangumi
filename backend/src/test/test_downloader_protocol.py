@@ -1,8 +1,8 @@
 """Conformance tests for the download-client protocol and capabilities.
 
 QbDownloader and MockDownloader implement the full async surface; Aria2Downloader
-only implements the core subset (authenticate + add torrents). All three advertise
-their capabilities.
+implements query/rename/manage for real but has no qB-native RSS-rule/prefs
+surface (can_rss_rules=False). All three advertise their capabilities.
 """
 
 from module.downloader.base import (
@@ -38,9 +38,9 @@ class TestCapabilities:
             can_query=True, can_rename=True, can_manage=True, can_rss_rules=True
         )
 
-    def test_aria2_supports_only_core(self):
+    def test_aria2_supports_query_rename_manage_but_not_rss_rules(self):
         assert Aria2Downloader.capabilities == DownloaderCapabilities(
-            can_query=False, can_rename=False, can_manage=False, can_rss_rules=False
+            can_query=True, can_rename=True, can_manage=True, can_rss_rules=False
         )
 
     def test_all_three_expose_capabilities(self):

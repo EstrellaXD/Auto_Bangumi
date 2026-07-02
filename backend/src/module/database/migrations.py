@@ -155,6 +155,21 @@ MIGRATIONS: tuple[Migration, ...] = (
         ),
         column_exists("bangumi", "preferred_group"),
     ),
+    Migration(
+        11,
+        "create aria2_gid table for aria2 gid<->bangumi association",
+        (
+            """CREATE TABLE IF NOT EXISTS aria2_gid (
+                gid VARCHAR NOT NULL PRIMARY KEY,
+                bangumi_id INTEGER REFERENCES bangumi(id),
+                category VARCHAR,
+                dedup_key VARCHAR,
+                created_at TIMESTAMP NOT NULL
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_aria2_gid_dedup_key ON aria2_gid(dedup_key)",
+        ),
+        table_exists("aria2_gid"),
+    ),
 )
 
 # 由迁移列表派生，新增迁移时无需手动同步
