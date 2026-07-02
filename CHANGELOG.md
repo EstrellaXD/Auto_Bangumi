@@ -1,5 +1,26 @@
 # [Unreleased]
 
+## Backend
+
+### Added
+
+- aria2 下载器升级为一等下载后端：真实的种子添加/查询/重命名/移动/删除支持（不再是仅返回占位结果的桩实现），新增 `aria2_gid` 表持久化 `ab:<bangumi_id>` 标签关联，供 `Renamer` 复用现有的按标签查偏移逻辑（迁移 v11）
+- 支持剧场版/OVA/SP 等非剧集番剧的识别与整理：解析器可识别 剧场版/劇場版/电影版/Movie 及 OVA/OAD/SP/Special 等关键词，新增 `episode_type` 字段（迁移 v12）；剧场版按「标题 (年份)」平铺目录整理（不再嵌套 Season 子目录），特别篇归入第 0 季；TMDB 解析器在 `search/tv` 找不到匹配时回退查询 `search/movie`
+- 新增番剧偏好字幕组/分辨率设置 (`preferred_group`/`preferred_resolution`，迁移 v10)：RSS 刷新时在同批次或与已下载种子比较，跳过明显更差的重复发布，未设置偏好的番剧行为不变
+- 新增 SSE 推送端点 `GET /api/v1/events/stream`（鉴权保护），按原轮询节奏推送状态/下载器/日志事件
+
+### Fixed
+
+- 修复 `gen_save_path` 季度守卫的一处预置 off-by-one 缺陷：合法的 `season=0`（特别篇）此前会被误判并回退为原值并打印多余警告
+
+## Frontend
+
+### Changed
+
+- 拆分超大组件：`ab-add-rss.vue`/`ab-edit-rule.vue` 提取出共享的 `useBangumiRuleForm` composable 及预览/标签/RSS 链接/过滤器/偏移量子组件；`calendar.vue` 拆分为 `calendar-board`/`calendar-day-column`/`calendar-card`/`calendar-mobile-list`/`calendar-rule-list-popup`
+- 统一使用 naive-ui 原生组件（`NButton`/`NSelect`/`NSwitch`）替换自定义的 `ab-button`/`ab-select`/`ab-switch`/`ab-checkbox` 并删除后者
+- 状态/下载器/日志轮询改为优先通过 SSE（`useEventStream`）获取更新，仅在 SSE 不可用或页面隐藏时才回退到定时轮询
+
 # [3.3.0]
 
 ## Backend — Architecture
