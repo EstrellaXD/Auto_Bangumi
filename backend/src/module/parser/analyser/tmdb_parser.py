@@ -5,13 +5,18 @@ import time
 from collections import OrderedDict
 from dataclasses import dataclass
 
-from module.conf import TMDB_API
+from module.conf import TMDB_API, settings
 from module.network import RequestContent
 from module.utils import save_image
 
 logger = logging.getLogger(__name__)
 
-TMDB_URL = "https://api.themoviedb.org"
+
+def _tmdb_url() -> str:
+    # Read live so a config change (e.g. a GFW mirror, #1042) takes effect
+    # without a restart.
+    return settings.network.tmdb_base_url.rstrip("/")
+
 
 # In-memory cache for TMDB lookups to avoid repeated API calls
 _TMDB_CACHE_MAX = 512
@@ -48,15 +53,15 @@ LANGUAGE = {"zh": "zh-CN", "jp": "ja-JP", "en": "en-US"}
 
 
 def search_url(e):
-    return f"{TMDB_URL}/3/search/tv?api_key={TMDB_API}&page=1&query={e}&include_adult=false"
+    return f"{_tmdb_url()}/3/search/tv?api_key={TMDB_API}&page=1&query={e}&include_adult=false"
 
 
 def info_url(e, key):
-    return f"{TMDB_URL}/3/tv/{e}?api_key={TMDB_API}&language={LANGUAGE[key]}"
+    return f"{_tmdb_url()}/3/tv/{e}?api_key={TMDB_API}&language={LANGUAGE[key]}"
 
 
 def season_url(tv_id, season_number, key):
-    return f"{TMDB_URL}/3/tv/{tv_id}/season/{season_number}?api_key={TMDB_API}&language={LANGUAGE[key]}"
+    return f"{_tmdb_url()}/3/tv/{tv_id}/season/{season_number}?api_key={TMDB_API}&language={LANGUAGE[key]}"
 
 
 async def is_animation(tv_id, language, req: RequestContent) -> bool:

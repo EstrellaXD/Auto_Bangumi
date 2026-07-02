@@ -19,7 +19,6 @@ from module.models.config import (
 from module.conf.config import Settings
 from module.conf.const import BCOLORS, DEFAULT_SETTINGS
 
-
 # ---------------------------------------------------------------------------
 # Config model defaults
 # ---------------------------------------------------------------------------
@@ -375,7 +374,9 @@ class TestNotificationLegacyMigration:
             enable=True,
             type="telegram",
             token="unused",
-            providers=[NotificationProvider(type="discord", webhook_url="https://d.co")],
+            providers=[
+                NotificationProvider(type="discord", webhook_url="https://d.co")
+            ],
         )
         assert len(n.providers) == 1
         assert n.providers[0].type == "discord"
@@ -473,7 +474,15 @@ class TestBCOLORS:
 
     def test_all_color_constants_are_strings(self):
         """All BCOLORS constants are strings."""
-        for attr in ["HEADER", "OKBLUE", "OKCYAN", "OKGREEN", "WARNING", "FAIL", "ENDC"]:
+        for attr in [
+            "HEADER",
+            "OKBLUE",
+            "OKCYAN",
+            "OKGREEN",
+            "WARNING",
+            "FAIL",
+            "ENDC",
+        ]:
             assert isinstance(getattr(BCOLORS, attr), str)
 
 
@@ -508,3 +517,55 @@ class TestMigrateSecuritySection:
         result = Settings._migrate_old_config(existing_config)
         assert result["security"]["login_tokens"] == ["mytoken"]
         assert result["security"]["login_whitelist"] == ["10.0.0.0/8"]
+
+
+class TestNetworkBaseUrls:
+    """Configurable TMDB / bgm.tv base URLs (#1040, #1042)."""
+
+    def test_defaults_are_official_endpoints(self):
+        from module.models.config import Config
+
+        net = Config().network
+        assert net.tmdb_base_url == "https://api.themoviedb.org"
+        assert net.bgm_base_url == "https://api.bgm.tv"
+
+    def test_tmdb_url_builders_use_configured_base(self):
+        import sys
+        from unittest.mock import patch
+
+        import module.parser.analyser.tmdb_parser  # noqa: F401
+
+        tp = sys.modules["module.parser.analyser.tmdb_parser"]
+        with patch.object(
+            tp.settings.network, "tmdb_base_url", "https://tmdb.mirror.test/"
+        ):
+            assert tp.search_url("q").startswith("https://tmdb.mirror.test/3/search/tv")
+            assert tp.info_url("1", "zh").startswith("https://tmdb.mirror.test/3/tv/1")
+
+    async def test_bgm_calendar_uses_configured_base(self):
+        from unittest.mock import AsyncMock, patch
+
+        from module.parser.analyser import bgm_calendar
+
+        captured = {}
+
+        class _Req:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *a):
+                return False
+
+            async def get_json(self, url):
+                captured["url"] = url
+                return None
+
+        with (
+            patch.object(
+                bgm_calendar.settings.network, "bgm_base_url", "https://bgm.mirror.test"
+            ),
+            patch.object(bgm_calendar, "RequestContent", _Req),
+        ):
+            await bgm_calendar.fetch_bgm_calendar()
+
+        assert captured["url"] == "https://bgm.mirror.test/calendar"

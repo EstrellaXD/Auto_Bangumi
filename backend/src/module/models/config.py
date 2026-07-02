@@ -71,6 +71,21 @@ class Log(BaseModel):
     debug_enable: bool = Field(False, description="Enable debug")
 
 
+class Network(BaseModel):
+    """External data-source base URLs.
+
+    Overridable so users behind a GFW/mirror can point TMDB and bgm.tv at a
+    reachable host (#1040, #1042). Defaults are the official endpoints.
+    """
+
+    tmdb_base_url: str = Field(
+        "https://api.themoviedb.org", description="TMDB API base URL"
+    )
+    bgm_base_url: str = Field(
+        "https://api.bgm.tv", description="Bangumi (bgm.tv) API base URL"
+    )
+
+
 class Proxy(BaseModel):
     """HTTP/SOCKS proxy settings. Credentials support ``$VAR`` expansion."""
 
@@ -98,7 +113,9 @@ class NotificationProvider(BaseModel):
 
     # Common fields (with env var expansion)
     token_: Optional[str] = Field(None, alias="token", description="Auth token")
-    chat_id_: Optional[str] = Field(None, alias="chat_id", description="Chat/channel ID")
+    chat_id_: Optional[str] = Field(
+        None, alias="chat_id", description="Chat/channel ID"
+    )
 
     # Provider-specific fields
     webhook_url_: Optional[str] = Field(
@@ -253,6 +270,7 @@ class Config(BaseModel):
     rss_parser: RSSParser = RSSParser()
     bangumi_manage: BangumiManage = BangumiManage()
     log: Log = Log()
+    network: Network = Network()
     proxy: Proxy = Proxy()
     notification: Notification = Notification()
     experimental_openai: ExperimentalOpenAI = ExperimentalOpenAI()
