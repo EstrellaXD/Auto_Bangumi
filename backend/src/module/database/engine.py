@@ -1,6 +1,5 @@
 from sqlalchemy import event
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from module.conf import DATA_PATH
 
@@ -9,7 +8,10 @@ from module.conf import DATA_PATH
 # which build their own throwaway sync engine.
 ASYNC_DATA_PATH = DATA_PATH.replace("sqlite:///", "sqlite+aiosqlite:///")
 async_engine = create_async_engine(ASYNC_DATA_PATH)
-async_session_factory = sessionmaker(
+# async_sessionmaker (not the generic ORM sessionmaker) is the type-correct
+# factory for an AsyncEngine -- sessionmaker's `bind` overloads only accept a
+# sync Engine/Connection.
+async_session_factory = async_sessionmaker(
     async_engine, class_=AsyncSession, expire_on_commit=False
 )
 

@@ -9,9 +9,13 @@ from module.models import Bangumi, BangumiUpdate
 logger = logging.getLogger(__name__)
 
 if PLATFORM == "Windows":
-    from pathlib import PureWindowsPath as Path
+    # PLATFORM is a runtime config value, not the actual OS (`sys.platform`),
+    # so mypy can't special-case this branch: it type-checks both arms and
+    # sees two incompatible bindings for the same name `Path`. Both classes
+    # share the PurePath interface (.suffix/.parts/joining) used below.
+    from pathlib import PureWindowsPath as Path  # type: ignore[assignment]
 else:
-    from pathlib import Path
+    from pathlib import Path  # type: ignore[assignment]
 
 
 _MEDIA_SUFFIXES = frozenset({".mp4", ".mkv"})

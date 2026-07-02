@@ -107,9 +107,9 @@ class TestQbDownloaderConstructor:
 def test_scheme_selection_matrix(host: str, ssl: bool, expected_prefix: str):
     """Constructor resolves host scheme correctly for all input combinations."""
     qb = QbDownloader(host=host, username="u", password="p", ssl=ssl)
-    assert qb.host.startswith(expected_prefix), (
-        f"host={host!r} ssl={ssl} -> expected prefix {expected_prefix!r}, got {qb.host!r}"
-    )
+    assert qb.host.startswith(
+        expected_prefix
+    ), f"host={host!r} ssl={ssl} -> expected prefix {expected_prefix!r}, got {qb.host!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -183,7 +183,7 @@ class TestAuthClientCreation:
         """auth() sets connect timeout to 5.0 seconds."""
         qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
 
-        captured_timeouts: list[httpx.Timeout] = []
+        captured_timeouts: list[httpx.Timeout | None] = []
 
         class _FakeClient:
             def __init__(self, **kwargs):
@@ -204,7 +204,9 @@ class TestAuthClientCreation:
             await qb.auth()
 
         assert len(captured_timeouts) == 1
-        assert captured_timeouts[0].connect == pytest.approx(5.0)
+        timeout = captured_timeouts[0]
+        assert timeout is not None
+        assert timeout.connect == pytest.approx(5.0)
 
     async def test_auth_sets_connection_limits_for_keepalive(self):
         """Regression for #984: qB client must cap keepalive so idle TCP

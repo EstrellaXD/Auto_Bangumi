@@ -123,6 +123,7 @@ class QbDownloader:
         not one per request (a login storm can get the caller's IP banned by
         qBittorrent). Only retry the original request if re-auth succeeded.
         """
+        assert self._client is not None, "QbDownloader.auth() must run first"
         resp = await self._client.request(method, self._url(endpoint), **kwargs)
         if resp.status_code == 403:
             self._authed = False

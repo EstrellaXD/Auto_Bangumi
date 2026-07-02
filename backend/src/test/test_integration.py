@@ -359,6 +359,7 @@ class TestDatabaseConsistency:
         # Disable
         await engine.db.bangumi.disable_rule(bangumi_id)
         disabled = await engine.db.bangumi.search_id(bangumi_id)
+        assert disabled is not None
         assert disabled.deleted is True
 
         # Torrent matching should now fail

@@ -61,7 +61,11 @@ class OpenAIParser:
         if not api_key:
             raise ValueError("API key is required.")
         if api_type == "azure":
-            self.client = AsyncAzureOpenAI(
+            # The `base_url` + `azure_deployment` combination (custom mirror +
+            # deployment) isn't covered by any single @overload in the SDK's
+            # type stubs, but the real __init__ accepts all these kwargs
+            # together (single unified signature).
+            self.client = AsyncAzureOpenAI(  # type: ignore[call-overload]
                 api_key=api_key,
                 base_url=api_base,
                 azure_deployment=kwargs.get("deployment_id", ""),

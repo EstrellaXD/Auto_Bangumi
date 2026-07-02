@@ -24,7 +24,7 @@ def _is_sensitive(key: str) -> bool:
 
 def _sanitize_dict(d: dict) -> dict:
     """Recursively mask string values whose keys contain sensitive keywords."""
-    result = {}
+    result: dict = {}
     for k, v in d.items():
         if isinstance(v, dict):
             result[k] = _sanitize_dict(v)

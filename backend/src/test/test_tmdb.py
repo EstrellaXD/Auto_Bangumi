@@ -65,6 +65,7 @@ async def test_tmdb_parser(mocker):
 
     tmdb_info = await tmdb_parser(bangumi_title, "zh", test=True)
 
+    assert tmdb_info is not None
     assert tmdb_info.title == "冰海战记"
     assert tmdb_info.year == bangumi_year
     assert tmdb_info.last_season == bangumi_season
@@ -95,6 +96,7 @@ async def test_tmdb_parser_live():
 
     tmdb_info = await tmdb_parser(bangumi_title, "zh", test=True)
 
+    assert tmdb_info is not None
     assert tmdb_info.title == "冰海战记"
     assert tmdb_info.year == bangumi_year
     assert tmdb_info.last_season == bangumi_season

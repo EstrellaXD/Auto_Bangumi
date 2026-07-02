@@ -81,7 +81,7 @@ class RSSAnalyser:
 
     async def torrent_to_data(
         self, torrent: Torrent, rss: RSSItem, fetch_poster: bool = True
-    ) -> Bangumi:
+    ) -> Bangumi | None:
         bangumi = await TitleParser.raw_parser(raw=torrent.name)
         if bangumi:
             await self.official_title_parser(
@@ -89,6 +89,7 @@ class RSSAnalyser:
             )
             bangumi.rss_link = rss.url
             return bangumi
+        return None
 
     async def rss_to_data(
         self, rss: RSSItem, engine: RSSEngine, full_parse: bool = True

@@ -28,7 +28,8 @@ class Aria2Downloader:
         self._rpc_url = f"{host}/jsonrpc"
         self._id = 0
 
-    async def _call(self, method: str, params: list = None):
+    async def _call(self, method: str, params: list | None = None):
+        assert self._client is not None, "Aria2Downloader.auth() must run first"
         self._id += 1
         if params is None:
             params = []

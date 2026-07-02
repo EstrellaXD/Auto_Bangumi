@@ -88,7 +88,7 @@ def check_login_ip(request: Request):
         )
 
 
-async def get_current_user(request: Request, token: str = Cookie(None)):
+async def get_current_user(request: Request, token: str | None = Cookie(None)):
     """FastAPI dependency that validates the current session.
 
     Accepts authentication via (in order of precedence):

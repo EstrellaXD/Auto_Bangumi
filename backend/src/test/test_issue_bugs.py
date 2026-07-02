@@ -202,11 +202,11 @@ class TestIssue976NoneInMatchList:
         """Demonstrate that sorted() with None keys crashes (the original bug)."""
         title_index = {"valid_title": "data", None: "bad_data"}
         with pytest.raises(TypeError, match="'NoneType'"):
-            sorted(title_index.keys(), key=len, reverse=True)
+            sorted(title_index.keys(), key=len, reverse=True)  # type: ignore[arg-type]
 
     def test_empty_title_index_produces_empty_pattern(self):
         """When all titles are None/empty, the regex pattern should be empty."""
-        title_index = {}
+        title_index: dict[str, str] = {}
         sorted_titles = sorted(title_index.keys(), key=len, reverse=True)
         pattern = "|".join(re.escape(t) for t in sorted_titles)
         assert pattern == ""
@@ -406,7 +406,7 @@ class TestIssue990NumberPrefixTitle:
 
         db = BangumiDatabase(db_session)
         bangumi = Bangumi(official_title="Test Anime")
-        bangumi.title_raw = None
+        bangumi.title_raw = None  # type: ignore[assignment]  # simulating corrupted data
         bangumi.title_aliases = None
 
         patterns = db.get_all_title_patterns(bangumi)
@@ -423,7 +423,7 @@ class TestIssue990NumberPrefixTitle:
             official_title="29岁单身冒险家的日常",
             season=1,
         )
-        bangumi.title_raw = None
+        bangumi.title_raw = None  # type: ignore[assignment]  # simulating corrupted data
         db_session.add(bangumi)
         await db_session.commit()
 
@@ -466,7 +466,7 @@ class TestIssue990NumberPrefixTitle:
 
         # Insert corrupted bangumi (title_raw=None, aliases=[null])
         bangumi = Bangumi(official_title="29岁单身冒险家的日常", season=1)
-        bangumi.title_raw = None
+        bangumi.title_raw = None  # type: ignore[assignment]  # simulating corrupted data
         bangumi.title_aliases = "[null]"
         db_session.add(bangumi)
 

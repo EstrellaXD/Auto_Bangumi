@@ -69,7 +69,7 @@ class SearchTorrent:
         rss_item = search_url(site, keywords)
         torrents = await self.search_torrents(rss_item)
         # yield for EventSourceResponse (Server Send)
-        exist_list = []
+        exist_list: list[str] = []
         for torrent in torrents:
             if len(exist_list) >= limit:
                 break

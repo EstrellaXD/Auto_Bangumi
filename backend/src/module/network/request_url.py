@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from typing import Any
 
 import httpx
 from httpx_socks import AsyncProxyTransport
@@ -39,7 +40,7 @@ async def get_shared_client() -> httpx.AsyncClient:
     # follow_redirects=True: Mikan mirrors and some CDNs respond with 302 to the
     # canonical host; without this, raise_for_status treats the redirect as an
     # error and the RSS pull fails (#983).
-    common_kwargs = {
+    common_kwargs: dict[str, Any] = {
         "timeout": timeout,
         "limits": _CONNECTION_LIMITS,
         "follow_redirects": True,
@@ -101,6 +102,9 @@ class RequestURL:
         return base_headers
 
     async def get_url(self, url, retry=3):
+        assert (
+            self._client is not None
+        ), "RequestURL must be used as an async context manager"
         try_time = 0
         headers = self._get_headers(url)
         while True:
@@ -138,6 +142,9 @@ class RequestURL:
         return None
 
     async def post_url(self, url: str, data: dict, retry=3):
+        assert (
+            self._client is not None
+        ), "RequestURL must be used as an async context manager"
         try_time = 0
         while True:
             try:
@@ -161,6 +168,9 @@ class RequestURL:
         return None
 
     async def check_url(self, url: str):
+        assert (
+            self._client is not None
+        ), "RequestURL must be used as an async context manager"
         if "://" not in url:
             url = f"http://{url}"
         try:
@@ -172,6 +182,9 @@ class RequestURL:
             return False
 
     async def post_form(self, url: str, data: dict, files):
+        assert (
+            self._client is not None
+        ), "RequestURL must be used as an async context manager"
         try:
             req = await self._client.post(
                 url=url, headers=self.header, data=data, files=files
@@ -188,6 +201,9 @@ class RequestURL:
         Used by JSON-body notification providers (Discord, Webhook, Gotify,
         Bark) that reject form-encoded requests.
         """
+        assert (
+            self._client is not None
+        ), "RequestURL must be used as an async context manager"
         try:
             req = await self._client.post(
                 url=url, headers=headers or self.header, json=json_data

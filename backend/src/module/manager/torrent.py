@@ -139,7 +139,7 @@ class TorrentManager:
             )
 
     async def update_rule(self, bangumi_id, data: BangumiUpdate):
-        old_data: Bangumi = await self.db.bangumi.search_id(bangumi_id)
+        old_data = await self.db.bangumi.search_id(bangumi_id)
         if old_data:
             # Move torrent
             match_list = await self.__match_torrents_list(old_data)
@@ -195,6 +195,13 @@ class TorrentManager:
 
     async def refind_poster(self, bangumi_id: int):
         bangumi = await self.db.bangumi.search_id(bangumi_id)
+        if not bangumi:
+            return ResponseModel(
+                status_code=406,
+                status=False,
+                msg_en=f"Can't find id {bangumi_id}",
+                msg_zh=f"无法找到 id {bangumi_id}",
+            )
         await TitleParser().tmdb_poster_parser(bangumi)
         await self.db.bangumi.update(bangumi)
         return ResponseModel(

@@ -7,6 +7,8 @@ from module.parser.analyser.openai import DEFAULT_PROMPT, OpenAIParser
 
 
 class TestOpenAIParser:
+    parser: OpenAIParser
+
     @classmethod
     def setup_class(cls):
         api_key = "testing!"
@@ -71,4 +73,5 @@ class TestOpenAIParser:
             mocker.return_value = json.dumps(expected)
 
             result = await self.parser.parse(text=text, asdict=False)
+            assert isinstance(result, str)
             assert json.loads(result) == expected

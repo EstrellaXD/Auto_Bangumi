@@ -7,6 +7,7 @@ def test_raw_parser():
     # Issue #794, RSS link: https://mikanani.me/RSS/Bangumi?bangumiId=3367&subgroupid=370
     content = "[喵萌奶茶屋&LoliHouse] 鹿乃子乃子乃子虎视眈眈 / Shikanoko Nokonoko Koshitantan\n- 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕]"
     info = raw_parser(content)
+    assert info is not None
     assert info.group == "喵萌奶茶屋&LoliHouse"
     assert info.title_zh == "鹿乃子乃子乃子虎视眈眈"
     assert info.title_en == "Shikanoko Nokonoko Koshitantan"
@@ -17,6 +18,7 @@ def test_raw_parser():
     # Issue #679, RSS link: https://mikanani.me/RSS/Bangumi?bangumiId=3225&subgroupid=370
     content = "[LoliHouse] 轮回七次的反派大小姐，在前敌国享受随心所欲的新婚生活\n / 7th Time Loop - 12 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][END]"
     info = raw_parser(content)
+    assert info is not None
     assert info.group == "LoliHouse"
     assert info.title_zh == "轮回七次的反派大小姐，在前敌国享受随心所欲的新婚生活"
     assert info.title_en == "7th Time Loop"
@@ -26,6 +28,7 @@ def test_raw_parser():
 
     content = "【幻樱字幕组】【4月新番】【古见同学有交流障碍症 第二季 Komi-san wa, Komyushou Desu. S02】【22】【GB_MP4】【1920X1080】"
     info = raw_parser(content)
+    assert info is not None
     assert info.title_en == "Komi-san wa, Komyushou Desu."
     assert info.resolution == "1920X1080"
     assert info.episode == 22
@@ -33,6 +36,7 @@ def test_raw_parser():
 
     content = "[百冬练习组&LoliHouse] BanG Dream! 少女乐团派对！☆PICO FEVER！ / Garupa Pico: Fever! - 26 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][END] [101.69 MB]"
     info = raw_parser(content)
+    assert info is not None
     assert info.group == "百冬练习组&LoliHouse"
     assert info.title_zh == "BanG Dream! 少女乐团派对！☆PICO FEVER！"
     assert info.resolution == "1080p"
@@ -41,6 +45,7 @@ def test_raw_parser():
 
     content = "【喵萌奶茶屋】★04月新番★[夏日重现/Summer Time Rendering][11][1080p][繁日双语][招募翻译]"
     info = raw_parser(content)
+    assert info is not None
     assert info.group == "喵萌奶茶屋"
     assert info.title_en == "Summer Time Rendering"
     assert info.resolution == "1080p"
@@ -49,6 +54,7 @@ def test_raw_parser():
 
     content = "[Lilith-Raws] 关于我在无意间被隔壁的天使变成废柴这件事 / Otonari no Tenshi-sama - 09 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
     info = raw_parser(content)
+    assert info is not None
     assert info.group == "Lilith-Raws"
     assert info.title_zh == "关于我在无意间被隔壁的天使变成废柴这件事"
     assert info.title_en == "Otonari no Tenshi-sama"
@@ -60,6 +66,7 @@ def test_raw_parser():
         "[梦蓝字幕组]New Doraemon 哆啦A梦新番[747][2023.02.25][AVC][1080P][GB_JP][MP4]"
     )
     info = raw_parser(content)
+    assert info is not None
     assert info.group == "梦蓝字幕组"
     assert info.title_zh == "哆啦A梦新番"
     assert info.title_en == "New Doraemon"
@@ -71,6 +78,7 @@ def test_raw_parser():
         "[织梦字幕组][尼尔：机械纪元 NieR Automata Ver1.1a][02集][1080P][AVC][简日双语]"
     )
     info = raw_parser(content)
+    assert info is not None
     assert info.group == "织梦字幕组"
     assert info.title_zh == "尼尔：机械纪元"
     assert info.title_en == "NieR Automata Ver1.1a"
@@ -80,6 +88,7 @@ def test_raw_parser():
 
     content = "[MagicStar] 假面骑士Geats / 仮面ライダーギーツ EP33 [WEBDL] [1080p] [TTFC]【生】"
     info = raw_parser(content)
+    assert info is not None
     assert info.group == "MagicStar"
     assert info.title_zh == "假面骑士Geats"
     assert info.title_jp == "仮面ライダーギーツ"
@@ -89,6 +98,7 @@ def test_raw_parser():
 
     content = "【极影字幕社】★4月新番 天国大魔境 Tengoku Daimakyou 第05话 GB 720P MP4（字幕社招人内详）"
     info = raw_parser(content)
+    assert info is not None
     assert info.group == "极影字幕社"
     assert info.title_zh == "天国大魔境"
     assert info.title_en == "Tengoku Daimakyou"
@@ -98,6 +108,7 @@ def test_raw_parser():
 
     content = "【喵萌奶茶屋】★07月新番★[银砂糖师与黑妖精 ~ Sugar Apple Fairy Tale ~][13][1080p][简日双语][招募翻译]"
     info = raw_parser(content)
+    assert info is not None
     assert info.group == "喵萌奶茶屋"
     assert info.title_zh == "银砂糖师与黑妖精"
     assert info.title_en == "~ Sugar Apple Fairy Tale ~"
@@ -107,6 +118,7 @@ def test_raw_parser():
 
     content = "[ANi]  16bit 的感动 ANOTHER LAYER - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
     info = raw_parser(content)
+    assert info is not None
     assert info.group == "ANi"
     assert info.title_zh == "16bit 的感动 ANOTHER LAYER"
     assert info.resolution == "1080P"
@@ -116,6 +128,7 @@ def test_raw_parser():
     # Chinese season number via CHINESE_NUMBER_MAP ("二" → 2)
     content = "[LoliHouse] 关于我转生变成史莱姆这档事 第二季 / Tensei shitara Slime Datta Ken 2nd Season - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕]"
     info = raw_parser(content)
+    assert info is not None
     assert info.group == "LoliHouse"
     assert info.title_zh == "关于我转生变成史莱姆这档事"
     assert info.title_en == "Tensei shitara Slime Datta Ken 2nd Season"
@@ -126,6 +139,7 @@ def test_raw_parser():
     # 4K resolution (2160p) — RESOLUTION_RE covers 2160 but untested
     content = "[NC-Raws] 葬送的芙莉莲 / Sousou no Frieren - 03 [B-Global][WEB-DL][2160p][AVC AAC][Multi Sub][MKV]"
     info = raw_parser(content)
+    assert info is not None
     assert info.group == "NC-Raws"
     assert info.title_zh == "葬送的芙莉莲"
     assert info.title_en == "Sousou no Frieren"
@@ -136,6 +150,7 @@ def test_raw_parser():
     # English "Season N" format (bracketed) — season_rule "Season \d{1,2}" branch
     content = "[LoliHouse] 狼与香辛料 [Season 2] / Spice and Wolf - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕]"
     info = raw_parser(content)
+    assert info is not None
     assert info.group == "LoliHouse"
     assert info.title_zh == "狼与香辛料"
     assert info.title_en == "Spice and Wolf"
@@ -146,6 +161,7 @@ def test_raw_parser():
     # Multi-group, Chinese punctuation in title, single-letter Latin prefix in EN title
     content = "[北宇治字幕组&LoliHouse] 地。-关于地球的运动- / Chi. Chikyuu no Undou ni Tsuite - 03 [WebRip 1080p HEVC-10bit AAC ASSx2][简繁日内封字幕]"
     info = raw_parser(content)
+    assert info is not None
     assert info.group == "北宇治字幕组&LoliHouse"
     assert info.title_zh == "地。-关于地球的运动-"
     assert info.title_en == "Chi. Chikyuu no Undou ni Tsuite"
@@ -156,6 +172,7 @@ def test_raw_parser():
     # English-only title — name_process returns title_zh=None when no CJK chars
     content = "[动漫国字幕组&LoliHouse] THE MARGINAL SERVICE - 08 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕]"
     info = raw_parser(content)
+    assert info is not None
     assert info.group == "动漫国字幕组&LoliHouse"
     assert info.title_en == "THE MARGINAL SERVICE"
     assert info.title_zh is None
@@ -168,6 +185,7 @@ def test_raw_parser():
         "[ANi] 29 岁单身中坚冒险家的日常 - 07 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
     )
     info = raw_parser(content)
+    assert info is not None
     assert info.group == "ANi"
     assert info.title_zh == "29 岁单身中坚冒险家的日常"
     assert info.resolution == "1080P"
@@ -187,6 +205,7 @@ class TestIssue924SpecialPunctuation:
         content = "[御坂字幕组] 男女之间存在纯友情吗？（不，不存在!!）-01 [WebRip 1080p HEVC10-bit AAC] [简繁日内封] [急招翻校轴]"
         info = raw_parser(content)
         assert info is not None
+        assert info is not None
         assert info.group == "御坂字幕组"
         assert info.title_zh == "男女之间存在纯友情吗？（不，不存在!!）"
         assert info.episode == 1
@@ -202,6 +221,7 @@ class TestIssue910NeoQswFormat:
 
     def test_parse_neo_qsw_format(self):
         info = raw_parser(self.TITLE)
+        assert info is not None
         assert info is not None
         assert info.title_zh == "想星的阿克艾利昂"
         assert info.episode == 2
@@ -219,6 +239,7 @@ class TestIssue876NoSeparator:
     def test_parse_without_dash(self):
         info = raw_parser(self.TITLE)
         assert info is not None
+        assert info is not None
         assert info.title_zh == "地。-关于地球的运动-"
         assert info.title_en == "Chi. Chikyuu no Undou ni Tsuite"
         assert info.episode == 3
@@ -230,6 +251,7 @@ class TestIssue819ChineseEpisodeMarker:
     def test_parse_chinese_episode_marker(self):
         content = "[Doomdos] - 白色闪电 - 第02话 - [1080P].mp4"
         info = raw_parser(content)
+        assert info is not None
         assert info is not None
         assert info.group == "Doomdos"
         assert info.episode == 2
@@ -245,6 +267,7 @@ class TestIssue811ColonInTitle:
         content = "[Up to 21°C] 鬼灭之刃 柱训练篇 / Kimetsu no Yaiba: Hashira Geiko-hen - 03 (CR 1920x1080 AVC AAC MKV)"
         info = raw_parser(content)
         assert info is not None
+        assert info is not None
         assert info.group == "Up to 21°C"
         assert info.title_zh == "鬼灭之刃 柱训练篇"
         assert info.title_en == "Kimetsu no Yaiba: Hashira Geiko-hen"
@@ -258,6 +281,7 @@ class TestIssue798VTuberTitle:
     def test_parse_vtuber_title(self):
         content = "[ANi] 身为 VTuber 的我因为忘记关台而成了传说 - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4][379.34 MB]"
         info = raw_parser(content)
+        assert info is not None
         assert info is not None
         assert info.group == "ANi"
         assert info.episode == 1
@@ -280,6 +304,7 @@ class TestIssue794PreEpisodeFormat:
     def test_parse_pre_episode(self):
         info = raw_parser(self.TITLES[0])
         assert info is not None
+        assert info is not None
         assert info.title_en == "Shikanoko Nokonoko Koshitantan"
         assert info.episode == 1
 
@@ -296,6 +321,7 @@ class TestIssue766Lv2InTitle:
         content = "[ANi]  从 Lv2 开始开外挂的前勇者候补过著悠哉异世界生活 - 04 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
         info = raw_parser(content)
         assert info is not None
+        assert info is not None
         assert info.group == "ANi"
         assert info.episode == 4
         assert info.resolution == "1080P"
@@ -310,6 +336,7 @@ class TestIssue764WesternFormat:
     def test_parse_western_format(self):
         content = "Girls Band Cry S01E05 VOSTFR 1080p WEB x264 AAC -Tsundere-Raws (ADN)"
         info = raw_parser(content)
+        assert info is not None
         assert info is not None
         assert info.episode == 5
         assert info.season == 1
@@ -336,6 +363,7 @@ class TestIssue986AtlasFormat:
     def test_parse_atlas_format(self):
         info = raw_parser(self.TITLES[0])
         assert info is not None
+        assert info is not None
         assert info.title_zh == "命运-奇异赝品"
         assert info.episode == 4
 
@@ -353,6 +381,7 @@ class TestIssue773CompoundEpisode:
     def test_parse_compound_episode(self):
         info = raw_parser(self.TITLE)
         assert info is not None
+        assert info is not None
         assert info.title_zh == "鬼灭之刃 柱训练篇"
         assert info.episode == 2
 
@@ -363,6 +392,7 @@ class TestIssue805TitleWithCht:
     def test_parse_cht_title(self):
         content = "[ANi] 不時輕聲地以俄語遮羞的鄰座艾莉同學 - 02 [1080P][Baha][WEB-DL][AAC AVC][CHT].mp4"
         info = raw_parser(content)
+        assert info is not None
         assert info is not None
         assert info.group == "ANi"
         assert info.title_zh == "不時輕聲地以俄語遮羞的鄰座艾莉同學"
@@ -386,6 +416,7 @@ class TestIssue1025NoGroupPrefix:
             "冰之城墙「氷の城壁」The Ramparts of Ice S01E02 1080p 日英双语-多国字幕"
         )
         info = raw_parser(content)
+        assert info is not None
         assert info is not None
         assert info.episode == 2
         assert info.season == 1

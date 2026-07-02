@@ -14,7 +14,7 @@ class SeasonCollector:
     def __init__(self, client: DownloadClient):
         self.client = client
 
-    async def collect_season(self, bangumi: Bangumi, link: str = None):
+    async def collect_season(self, bangumi: Bangumi, link: str | None = None):
         logger.info(
             f"Start collecting {bangumi.official_title} Season {bangumi.season}..."
         )

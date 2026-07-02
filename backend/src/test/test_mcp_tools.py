@@ -247,6 +247,7 @@ class TestDispatch:
         with patch("module.mcp.tools.TorrentManager", return_value=ctx):
             result = await _dispatch("get_anime", {"id": 5})
 
+        assert isinstance(result, dict)
         assert result["id"] == 5
         assert result["official_title"] == "Naruto"
 
@@ -263,6 +264,7 @@ class TestDispatch:
         with patch("module.mcp.tools.TorrentManager", return_value=ctx):
             result = await _dispatch("get_anime", {"id": 999})
 
+        assert isinstance(result, dict)
         assert "error" in result
         assert result["error"] == "Not found"
 
@@ -332,6 +334,7 @@ class TestDispatch:
                 {"rss_link": "https://mikanani.me/RSS/test", "parser": "mikan"},
             )
 
+        assert isinstance(result, dict)
         assert result["status"] is True
         assert "Subscribed" in result["message"]
 
@@ -363,6 +366,7 @@ class TestDispatch:
             result = await _dispatch("unsubscribe_anime", {"id": 3, "delete": False})
 
         mock_mgr.disable_rule.assert_called_once_with(3)
+        assert isinstance(result, dict)
         assert result["status"] is True
 
     async def test_dispatch_unsubscribe_delete(self):
@@ -374,6 +378,7 @@ class TestDispatch:
             result = await _dispatch("unsubscribe_anime", {"id": 3, "delete": True})
 
         mock_mgr.delete_rule.assert_called_once_with(3)
+        assert isinstance(result, dict)
         assert result["status"] is True
 
     # --- list_downloads ---
@@ -516,6 +521,7 @@ class TestDispatch:
         ):
             result = await _dispatch("refresh_feeds", {})
 
+        assert isinstance(result, dict)
         assert result["status"] is True
         mock_engine.refresh_rss.assert_called_once_with(mock_client)
 
@@ -540,6 +546,7 @@ class TestDispatch:
             )
 
         mock_mgr.update_rule.assert_called_once()
+        assert isinstance(result, dict)
         assert result["status"] is True
 
     async def test_dispatch_update_anime_not_found(self):
@@ -550,6 +557,7 @@ class TestDispatch:
         with patch("module.mcp.tools.TorrentManager", return_value=ctx):
             result = await _dispatch("update_anime", {"id": 9999})
 
+        assert isinstance(result, dict)
         assert "error" in result
         assert "9999" in result["error"]
 
@@ -558,6 +566,7 @@ class TestDispatch:
     async def test_dispatch_unknown_tool(self):
         """An unrecognised tool name returns an error dict."""
         result = await _dispatch("does_not_exist", {})
+        assert isinstance(result, dict)
         assert "error" in result
         assert "does_not_exist" in result["error"]
 

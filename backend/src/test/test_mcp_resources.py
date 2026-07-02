@@ -227,6 +227,7 @@ class TestHandleResourceStatus:
             patch("module.mcp.resources.get_context", return_value=mock_program),
         ):
             result = _parse(await handle_resource("autobangumi://status"))
+        assert isinstance(result, dict)
         assert result["version"] == "3.2.0-test"
 
     async def test_running_true(self, mock_program):
@@ -236,6 +237,7 @@ class TestHandleResourceStatus:
             patch("module.mcp.resources.get_context", return_value=mock_program),
         ):
             result = _parse(await handle_resource("autobangumi://status"))
+        assert isinstance(result, dict)
         assert result["running"] is True
 
     async def test_first_run_false(self, mock_program):
@@ -245,6 +247,7 @@ class TestHandleResourceStatus:
             patch("module.mcp.resources.get_context", return_value=mock_program),
         ):
             result = _parse(await handle_resource("autobangumi://status"))
+        assert isinstance(result, dict)
         assert result["first_run"] is False
 
     async def test_all_keys_present(self, mock_program):
@@ -253,6 +256,7 @@ class TestHandleResourceStatus:
             patch("module.mcp.resources.get_context", return_value=mock_program),
         ):
             result = _parse(await handle_resource("autobangumi://status"))
+        assert isinstance(result, dict)
         assert {"version", "running", "first_run"}.issubset(result.keys())
 
 
@@ -320,6 +324,7 @@ class TestHandleResourceAnimeById:
         ctx, _ = _mock_sync_manager(single=bangumi)
         with patch("module.mcp.resources.TorrentManager", return_value=ctx):
             result = _parse(await handle_resource("autobangumi://anime/3"))
+        assert isinstance(result, dict)
         assert result["id"] == 3
         assert result["official_title"] == "Fullmetal Alchemist"
 
@@ -336,6 +341,7 @@ class TestHandleResourceAnimeById:
     async def test_non_numeric_id_returns_error(self):
         """A non-integer ID segment produces a JSON error without crashing."""
         result = _parse(await handle_resource("autobangumi://anime/abc"))
+        assert isinstance(result, dict)
         assert "error" in result
         assert "abc" in result["error"]
 
@@ -355,6 +361,7 @@ class TestHandleResourceAnimeById:
         ctx, _ = _mock_sync_manager(single=bangumi)
         with patch("module.mcp.resources.TorrentManager", return_value=ctx):
             result = _parse(await handle_resource("autobangumi://anime/5"))
+        assert isinstance(result, dict)
         required = {"id", "official_title", "title_raw", "season", "rss_link"}
         assert required.issubset(result.keys())
 
@@ -376,6 +383,7 @@ class TestHandleResourceUnknown:
         """The error message includes the unrecognised URI."""
         uri = "autobangumi://does/not/exist"
         result = _parse(await handle_resource(uri))
+        assert isinstance(result, dict)
         assert uri in result["error"]
 
     async def test_empty_uri_returns_error(self):

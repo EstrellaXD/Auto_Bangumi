@@ -37,10 +37,10 @@ class TMDBInfo:
     season: list[dict]
     last_season: int
     year: str
-    poster_link: str = None
-    series_status: str = None  # "Ended", "Returning Series", etc.
-    season_episode_counts: dict[int, int] = None  # {1: 13, 2: 12, ...}
-    virtual_season_starts: dict[int, list[int]] = (
+    poster_link: str | None = None
+    series_status: str | None = None  # "Ended", "Returning Series", etc.
+    season_episode_counts: dict[int, int] | None = None  # {1: 13, 2: 12, ...}
+    virtual_season_starts: dict[int, list[int]] | None = (
         None  # {1: [1, 29], ...} - episode numbers where virtual seasons start
     )
 
@@ -193,7 +193,7 @@ async def get_aired_episode_count(
     return aired_count
 
 
-def get_season(seasons: list) -> tuple[int, str]:
+def get_season(seasons: list) -> tuple[int, str | None]:
     ss = [s for s in seasons if s["air_date"] is not None and "特别" not in s["season"]]
     if not ss:
         return 1, None
@@ -272,7 +272,7 @@ async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
                 return_exceptions=True,
             )
             for (season_num, total_eps), episodes in zip(season_nums, episode_results):
-                if isinstance(episodes, Exception):
+                if isinstance(episodes, BaseException):
                     logger.warning(
                         "[TMDB] Failed to get episodes for season %s: %s",
                         season_num,

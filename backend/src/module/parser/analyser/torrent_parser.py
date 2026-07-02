@@ -56,18 +56,17 @@ def get_group(group_and_title) -> tuple[str | None, str]:
 
 def get_season_and_title(season_and_title) -> tuple[str, int]:
     title = re.sub(r"([Ss]|Season )\d{1,3}", "", season_and_title).strip()
-    try:
-        season = re.search(r"([Ss]|Season )(\d{1,3})", season_and_title, re.I).group(2)
-    except AttributeError:
-        season = 1
-    return title, int(season)
+    match = re.search(r"([Ss]|Season )(\d{1,3})", season_and_title, re.I)
+    season = int(match.group(2)) if match else 1
+    return title, season
 
 
-def get_subtitle_lang(subtitle_name: str) -> str:
+def get_subtitle_lang(subtitle_name: str) -> str | None:
     for key, value in SUBTITLE_LANG.items():
         for v in value:
             if v in subtitle_name.lower():
                 return key
+    return None
 
 
 def torrent_parser(
@@ -101,9 +100,9 @@ def _torrent_parser_impl(
 ) -> EpisodeFile | SubtitleFile | None:
     """Internal implementation of torrent_parser without caching."""
     media_path = get_path_basename(torrent_path)
-    match_names = [torrent_name, media_path]
-    if torrent_name is None:
-        match_names = match_names[1:]
+    match_names = (
+        [torrent_name, media_path] if torrent_name is not None else [media_path]
+    )
     for match_name in match_names:
         for compiled_rule in COMPILED_RULES:
             match_obj = compiled_rule.match(match_name)
@@ -113,7 +112,10 @@ def _torrent_parser_impl(
                     title, season = get_season_and_title(title)
                 else:
                     title, _ = get_season_and_title(title)
-                episode = match_obj.group(2)
+                # regex group(2) is always the numeric episode string here (no
+                # optional groups); pydantic coerces it to int/float on
+                # construction (e.g. "01" -> 1, "48.5" -> 48.5).
+                episode: str = match_obj.group(2)
                 suffix = Path(torrent_path).suffix
                 if file_type == "media":
                     return EpisodeFile(
@@ -121,18 +123,21 @@ def _torrent_parser_impl(
                         group=group,
                         title=title,
                         season=season,
-                        episode=episode,
+                        episode=episode,  # type: ignore[arg-type]
                         suffix=suffix,
                     )
                 elif file_type == "subtitle":
+                    # `language` may be None for an unrecognized subtitle code;
+                    # SubtitleFile requires it, so construction intentionally
+                    # raises pydantic.ValidationError in that case.
                     language = get_subtitle_lang(media_path)
                     return SubtitleFile(
                         media_path=torrent_path,
                         group=group,
                         title=title,
                         season=season,
-                        language=language,
-                        episode=episode,
+                        language=language,  # type: ignore[arg-type]
+                        episode=episode,  # type: ignore[arg-type]
                         suffix=suffix,
                     )
     return None

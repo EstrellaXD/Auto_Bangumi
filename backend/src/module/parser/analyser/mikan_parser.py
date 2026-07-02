@@ -39,18 +39,25 @@ async def mikan_parser(homepage: str):
         # string instead of None so a network failure surfaces as a normal
         # "element not found" AttributeError rather than an uncaught TypeError.
         soup = BeautifulSoup(content or "", "html.parser")
-        poster_div = soup.find("div", {"class": "bangumi-poster"}).get("style")
+        # .find()/.select_one() can return None (missing element); accessing
+        # .get()/.text unguarded is deliberate -- see comment above -- so the
+        # caller's `except AttributeError` catches a parse/network failure.
+        poster_div = soup.find("div", {"class": "bangumi-poster"}).get(  # type: ignore[union-attr]
+            "style"
+        )
         official_title = soup.select_one(
             'p.bangumi-title a[href^="/Home/Bangumi/"]'
-        ).text
+        ).text  # type: ignore[union-attr]
         official_title = re.sub(r"第.*季", "", official_title).strip()
         if poster_div:
-            poster_path = poster_div.split("url('")[1].split("')")[0]
+            # bs4's Tag.get() return type also covers multi-valued attrs
+            # (AttributeValueList); "style" is never multi-valued in practice.
+            poster_path = poster_div.split("url('")[1].split("')")[0]  # type: ignore[union-attr]
             poster_path = poster_path.split("?")[0]
             img = await req.get_content(f"https://{root_path}{poster_path}")
             suffix = poster_path.split(".")[-1]
             # img can be None if the poster download failed; don't crash on it.
-            poster_link = await save_image(img, suffix) if img else ""
+            poster_link = (await save_image(img, suffix) or "") if img else ""
             return _cache_result(homepage, (poster_link, official_title))
         return _cache_result(homepage, ("", official_title))
 

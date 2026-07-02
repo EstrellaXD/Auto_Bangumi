@@ -1,4 +1,5 @@
 """Tests for config and database migration from 3.1.x to 3.2.x."""
+
 import json
 import tempfile
 from pathlib import Path
@@ -146,9 +147,7 @@ class TestConfigMigration:
 
     def test_load_old_config_file(self):
         """Full integration: loading a 3.1.x config.json produces correct Settings."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(OLD_31X_CONFIG, f)
             config_path = Path(f.name)
 
@@ -176,9 +175,7 @@ class TestConfigMigration:
 
     def test_load_old_config_saves_migrated_format(self):
         """After loading old config, the saved file should use new field names."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(OLD_31X_CONFIG, f)
             config_path = Path(f.name)
 
@@ -335,7 +332,10 @@ class TestDatabaseMigration:
 
         # Check data is preserved
         with Session(engine) as s:
-            bangumis = list(s.exec(select(Bangumi).order_by(Bangumi.id)).all())
+            # SQLModel 类属性在 mypy 看来是普通字段类型而非 InstrumentedAttribute
+            # （无官方 mypy 插件支持）。
+            statement = select(Bangumi).order_by(Bangumi.id)  # type: ignore[arg-type]
+            bangumis = list(s.exec(statement).all())
         assert len(bangumis) == 2
         assert bangumis[0].official_title == "无职转生"
         assert bangumis[0].year == "2021"

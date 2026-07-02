@@ -30,7 +30,9 @@ class RSSDatabase:
         if not data:
             return
         urls = [item.url for item in data]
-        statement = select(RSSItem.url).where(RSSItem.url.in_(urls))
+        # SQLModel 类属性在 mypy 看来是普通字段类型而非 InstrumentedAttribute，
+        # 无法识别 .in_()/.is_() 等查询方法（无官方 mypy 插件支持）。
+        statement = select(RSSItem.url).where(RSSItem.url.in_(urls))  # type: ignore[attr-defined]
         result = await self.session.execute(statement)
         existing_urls = set(result.scalars().all())
         new_items = [item for item in data if item.url not in existing_urls]
@@ -64,7 +66,7 @@ class RSSDatabase:
         return True
 
     async def enable_batch(self, ids: list[int]):
-        statement = select(RSSItem).where(RSSItem.id.in_(ids))
+        statement = select(RSSItem).where(RSSItem.id.in_(ids))  # type: ignore[attr-defined]
         result = await self.session.execute(statement)
         for item in result.scalars().all():
             item.enabled = True
@@ -82,7 +84,7 @@ class RSSDatabase:
         return True
 
     async def disable_batch(self, ids: list[int]):
-        statement = select(RSSItem).where(RSSItem.id.in_(ids))
+        statement = select(RSSItem).where(RSSItem.id.in_(ids))  # type: ignore[attr-defined]
         result = await self.session.execute(statement)
         for item in result.scalars().all():
             item.enabled = False
@@ -108,8 +110,14 @@ class RSSDatabase:
     async def delete(self, _id: int) -> bool:
         try:
             # 先删除引用该 RSS 的 torrent，避免外键约束报错
-            await self.session.execute(delete(Torrent).where(Torrent.rss_id == _id))
-            await self.session.execute(delete(RSSItem).where(RSSItem.id == _id))
+            # SQLModel 类属性比较在 mypy 看来返回 bool 而非 ColumnElement[bool]（无
+            # 官方 mypy 插件支持），但 DMLWhereBase.where() 的重载不接受裸 bool。
+            await self.session.execute(
+                delete(Torrent).where(Torrent.rss_id == _id)  # type: ignore[arg-type]
+            )
+            await self.session.execute(
+                delete(RSSItem).where(RSSItem.id == _id)  # type: ignore[arg-type]
+            )
             await self.session.commit()
             return True
         except Exception as e:
@@ -120,8 +128,9 @@ class RSSDatabase:
     async def delete_all(self):
         try:
             # 先删除所有引用 RSS 的 torrent，避免外键约束报错
+            rss_id_not_null = Torrent.rss_id != None  # noqa: E711
             await self.session.execute(
-                delete(Torrent).where(Torrent.rss_id != None)  # noqa: E711
+                delete(Torrent).where(rss_id_not_null)  # type: ignore[arg-type]
             )
             await self.session.execute(delete(RSSItem))
             await self.session.commit()

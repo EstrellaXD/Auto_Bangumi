@@ -38,6 +38,7 @@ def qb_connect_failed_wait(func):
         # Retries exhausted: re-raise instead of silently returning None,
         # which crashed callers with a much more confusing error further down.
         logger.error("Cannot connect to qBittorrent after %d retries.", times)
+        assert last_error is not None, "loop always sets last_error before exiting"
         raise last_error
 
     return wrapper

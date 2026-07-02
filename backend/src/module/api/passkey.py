@@ -45,7 +45,7 @@ def _get_webauthn_from_request(request: Request):
 
     origin = settings.security.webauthn_origin
     if not origin:
-        origin = request.headers.get("origin")
+        origin = request.headers.get("origin", "")
         if not origin:
             # Fallback: 从 Referer 或 Host 推断
             referer = request.headers.get("referer", "")

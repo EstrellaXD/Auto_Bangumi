@@ -9,6 +9,7 @@ import json
 import logging
 
 from mcp import types
+from pydantic import AnyUrl
 
 from module.conf import VERSION
 from module.database import Database
@@ -23,19 +24,19 @@ logger = logging.getLogger(__name__)
 
 RESOURCES = [
     types.Resource(
-        uri="autobangumi://anime/list",
+        uri=AnyUrl("autobangumi://anime/list"),
         name="All tracked anime",
         description="List of all anime subscriptions being tracked by AutoBangumi",
         mimeType="application/json",
     ),
     types.Resource(
-        uri="autobangumi://status",
+        uri=AnyUrl("autobangumi://status"),
         name="Program status",
         description="Current AutoBangumi program status, version, and state",
         mimeType="application/json",
     ),
     types.Resource(
-        uri="autobangumi://rss/feeds",
+        uri=AnyUrl("autobangumi://rss/feeds"),
         name="RSS feeds",
         description="All configured RSS feeds with health status",
         mimeType="application/json",
@@ -95,11 +96,11 @@ async def handle_resource(uri: str) -> str:
         )
 
     elif uri.startswith("autobangumi://anime/"):
-        anime_id = uri.split("/")[-1]
+        anime_id_str = uri.split("/")[-1]
         try:
-            anime_id = int(anime_id)
+            anime_id = int(anime_id_str)
         except ValueError:
-            return json.dumps({"error": f"Invalid anime ID: {anime_id}"})
+            return json.dumps({"error": f"Invalid anime ID: {anime_id_str}"})
         async with Database() as db:
             manager = TorrentManager(db)
             result = await manager.search_one(anime_id)

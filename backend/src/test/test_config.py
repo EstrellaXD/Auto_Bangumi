@@ -497,7 +497,7 @@ class TestBCOLORS:
 class TestMigrateSecuritySection:
     def test_adds_security_when_missing(self):
         """_migrate_old_config injects a default security section when absent."""
-        old_config = {
+        old_config: dict = {
             "program": {},
             "rss_parser": {},
         }

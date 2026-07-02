@@ -12,9 +12,9 @@ def _expand(value: str | None) -> str:
 class Program(BaseModel):
     """Scheduler timing and WebUI port settings."""
 
-    rss_time: int = Field(900, description="Sleep time")
-    rename_time: int = Field(60, description="Rename times in one loop")
-    webui_port: int = Field(7892, description="WebUI port")
+    rss_time: int = Field(default=900, description="Sleep time")
+    rename_time: int = Field(default=60, description="Rename times in one loop")
+    webui_port: int = Field(default=7892, description="WebUI port")
 
 
 class Downloader(BaseModel):
@@ -25,14 +25,18 @@ class Downloader(BaseModel):
     environment variable references at access time.
     """
 
-    type: str = Field("qbittorrent", description="Downloader type")
-    host_: str = Field("172.17.0.1:8080", alias="host", description="Downloader host")
-    username_: str = Field("admin", alias="username", description="Downloader username")
-    password_: str = Field(
-        "adminadmin", alias="password", description="Downloader password"
+    type: str = Field(default="qbittorrent", description="Downloader type")
+    host_: str = Field(
+        default="172.17.0.1:8080", alias="host", description="Downloader host"
     )
-    path: str = Field("/downloads/Bangumi", description="Downloader path")
-    ssl: bool = Field(False, description="Downloader ssl")
+    username_: str = Field(
+        default="admin", alias="username", description="Downloader username"
+    )
+    password_: str = Field(
+        default="adminadmin", alias="password", description="Downloader password"
+    )
+    path: str = Field(default="/downloads/Bangumi", description="Downloader path")
+    ssl: bool = Field(default=False, description="Downloader ssl")
 
     @property
     def host(self):
@@ -50,25 +54,25 @@ class Downloader(BaseModel):
 class RSSParser(BaseModel):
     """RSS feed parsing settings."""
 
-    enable: bool = Field(True, description="Enable RSS parser")
-    filter: list[str] = Field(["720", r"\d+-\d+"], description="Filter")
+    enable: bool = Field(default=True, description="Enable RSS parser")
+    filter: list[str] = Field(default=["720", r"\d+-\d+"], description="Filter")
     language: str = "zh"
 
 
 class BangumiManage(BaseModel):
     """File organisation and renaming settings."""
 
-    enable: bool = Field(True, description="Enable bangumi manage")
-    eps_complete: bool = Field(False, description="Enable eps complete")
-    rename_method: str = Field("pn", description="Rename method")
-    group_tag: bool = Field(False, description="Enable group tag")
-    remove_bad_torrent: bool = Field(False, description="Remove bad torrent")
+    enable: bool = Field(default=True, description="Enable bangumi manage")
+    eps_complete: bool = Field(default=False, description="Enable eps complete")
+    rename_method: str = Field(default="pn", description="Rename method")
+    group_tag: bool = Field(default=False, description="Enable group tag")
+    remove_bad_torrent: bool = Field(default=False, description="Remove bad torrent")
 
 
 class Log(BaseModel):
     """Logging verbosity settings."""
 
-    debug_enable: bool = Field(False, description="Enable debug")
+    debug_enable: bool = Field(default=False, description="Enable debug")
 
 
 class Network(BaseModel):
@@ -79,22 +83,22 @@ class Network(BaseModel):
     """
 
     tmdb_base_url: str = Field(
-        "https://api.themoviedb.org", description="TMDB API base URL"
+        default="https://api.themoviedb.org", description="TMDB API base URL"
     )
     bgm_base_url: str = Field(
-        "https://api.bgm.tv", description="Bangumi (bgm.tv) API base URL"
+        default="https://api.bgm.tv", description="Bangumi (bgm.tv) API base URL"
     )
 
 
 class Proxy(BaseModel):
     """HTTP/SOCKS proxy settings. Credentials support ``$VAR`` expansion."""
 
-    enable: bool = Field(False, description="Enable proxy")
-    type: str = Field("http", description="Proxy type")
-    host: str = Field("", description="Proxy host")
-    port: int = Field(0, description="Proxy port")
-    username_: str = Field("", alias="username", description="Proxy username")
-    password_: str = Field("", alias="password", description="Proxy password")
+    enable: bool = Field(default=False, description="Enable proxy")
+    type: str = Field(default="http", description="Proxy type")
+    host: str = Field(default="", description="Proxy host")
+    port: int = Field(default=0, description="Proxy port")
+    username_: str = Field(default="", alias="username", description="Proxy username")
+    password_: str = Field(default="", alias="password", description="Proxy password")
 
     @property
     def username(self):
@@ -109,35 +113,41 @@ class NotificationProvider(BaseModel):
     """Configuration for a single notification provider."""
 
     type: str = Field(..., description="Provider type (telegram, discord, bark, etc.)")
-    enabled: bool = Field(True, description="Whether this provider is enabled")
+    enabled: bool = Field(default=True, description="Whether this provider is enabled")
 
     # Common fields (with env var expansion)
-    token_: Optional[str] = Field(None, alias="token", description="Auth token")
+    token_: Optional[str] = Field(default=None, alias="token", description="Auth token")
     chat_id_: Optional[str] = Field(
-        None, alias="chat_id", description="Chat/channel ID"
+        default=None, alias="chat_id", description="Chat/channel ID"
     )
 
     # Provider-specific fields
     webhook_url_: Optional[str] = Field(
-        None, alias="webhook_url", description="Webhook URL for discord/wecom"
+        default=None, alias="webhook_url", description="Webhook URL for discord/wecom"
     )
     server_url_: Optional[str] = Field(
-        None, alias="server_url", description="Server URL for gotify/bark"
+        default=None, alias="server_url", description="Server URL for gotify/bark"
     )
     device_key_: Optional[str] = Field(
-        None, alias="device_key", description="Device key for bark"
+        default=None, alias="device_key", description="Device key for bark"
     )
     user_key_: Optional[str] = Field(
-        None, alias="user_key", description="User key for pushover"
+        default=None, alias="user_key", description="User key for pushover"
     )
     api_token_: Optional[str] = Field(
-        None, alias="api_token", description="API token for pushover"
+        default=None, alias="api_token", description="API token for pushover"
     )
     template: Optional[str] = Field(
-        None, description="Custom template for webhook provider"
+        default=None,
+        description=(
+            "Custom message template ({{title}}/{{season}}/{{episode}}/"
+            "{{poster_url}}); falls back to the default message when unset. "
+            "Webhook renders it as JSON; other providers render it as plain "
+            "text."
+        ),
     )
     url_: Optional[str] = Field(
-        None, alias="url", description="URL for generic webhook provider"
+        default=None, alias="url", description="URL for generic webhook provider"
     )
 
     @property
@@ -176,12 +186,12 @@ class NotificationProvider(BaseModel):
 class Notification(BaseModel):
     """Notification configuration supporting multiple providers."""
 
-    enable: bool = Field(False, description="Enable notification system")
+    enable: bool = Field(default=False, description="Enable notification system")
     providers: list[NotificationProvider] = Field(
         default_factory=list, description="List of notification providers"
     )
     base_url: str = Field(
-        "",
+        default="",
         description=(
             "Public base URL used to build absolute poster URLs for "
             "notification providers. Empty = omit the poster field entirely."
@@ -189,9 +199,15 @@ class Notification(BaseModel):
     )
 
     # Legacy fields for backward compatibility (deprecated)
-    type: Optional[str] = Field(None, description="[Deprecated] Use providers instead")
-    token_: Optional[str] = Field(None, alias="token", description="[Deprecated]")
-    chat_id_: Optional[str] = Field(None, alias="chat_id", description="[Deprecated]")
+    type: Optional[str] = Field(
+        default=None, description="[Deprecated] Use providers instead"
+    )
+    token_: Optional[str] = Field(
+        default=None, alias="token", description="[Deprecated]"
+    )
+    chat_id_: Optional[str] = Field(
+        default=None, alias="chat_id", description="[Deprecated]"
+    )
 
     @property
     def token(self) -> str:
@@ -217,22 +233,24 @@ class Notification(BaseModel):
 
 
 class ExperimentalOpenAI(BaseModel):
-    enable: bool = Field(False, description="Enable experimental OpenAI")
-    api_key: str = Field("", description="OpenAI api key")
+    enable: bool = Field(default=False, description="Enable experimental OpenAI")
+    api_key: str = Field(default="", description="OpenAI api key")
     api_base: str = Field(
-        "https://api.openai.com/v1", description="OpenAI api base url"
+        default="https://api.openai.com/v1", description="OpenAI api base url"
     )
     api_type: Literal["azure", "openai"] = Field(
-        "openai", description="OpenAI api type, usually for azure"
+        default="openai", description="OpenAI api type, usually for azure"
     )
     api_version: str = Field(
-        "2023-05-15", description="OpenAI api version, only for Azure"
+        default="2023-05-15", description="OpenAI api version, only for Azure"
     )
     model: str = Field(
-        "gpt-3.5-turbo", description="OpenAI model, ignored when api type is azure"
+        default="gpt-3.5-turbo",
+        description="OpenAI model, ignored when api type is azure",
     )
     deployment_id: str = Field(
-        "", description="Azure OpenAI deployment id, ignored when api type is openai"
+        default="",
+        description="Azure OpenAI deployment id, ignored when api type is openai",
     )
 
     @field_validator("api_base")
@@ -268,14 +286,14 @@ class Security(BaseModel):
         description="API bearer tokens for MCP access.",
     )
     webauthn_rp_id: str = Field(
-        "",
+        default="",
         description=(
             "WebAuthn relying-party ID. Empty = derive from the request "
             "headers instead."
         ),
     )
     webauthn_origin: str = Field(
-        "",
+        default="",
         description=(
             "Expected WebAuthn origin. Empty = derive from the request "
             "headers instead."

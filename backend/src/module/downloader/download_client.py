@@ -5,6 +5,7 @@ from module.conf import settings
 from module.models import Bangumi, Torrent
 from module.network import RequestContent
 
+from .base import DownloaderClient
 from .path import gen_save_path
 
 logger = logging.getLogger(__name__)
@@ -28,8 +29,8 @@ logger = logging.getLogger(__name__)
 # `_bookkeeping_lock` serializes reads/writes of this shared state across the
 # awaits in ``__aenter__``/``__aexit__``.
 # ---------------------------------------------------------------------------
-_client_cache: tuple[tuple, object] | None = None
-_stale_client: object | None = None
+_client_cache: tuple[tuple, DownloaderClient] | None = None
+_stale_client: DownloaderClient | None = None
 _active_holders: dict[int, int] = {}
 _pending_close: set[int] = set()
 _bookkeeping_lock = asyncio.Lock()
@@ -90,6 +91,7 @@ class DownloadClient:
     def __init__(self):
         global _client_cache, _stale_client
         key = _settings_key()
+        self.client: DownloaderClient
         if _client_cache is not None and _client_cache[0] == key:
             self.client = _client_cache[1]
         else:
@@ -101,7 +103,7 @@ class DownloadClient:
         self.authed = False
 
     @staticmethod
-    def __getClient():
+    def __getClient() -> DownloaderClient:
         """Instantiate the configured downloader client (qbittorrent | aria2 | mock)."""
         downloader_type = settings.downloader.type
         host = settings.downloader.host
@@ -115,7 +117,11 @@ class DownloadClient:
         elif downloader_type == "aria2":
             from .client.aria2_downloader import Aria2Downloader
 
-            return Aria2Downloader(host, username, password)
+            # Aria2Downloader only implements the capability-gated subset it
+            # declares via `capabilities` (all False) -- the facade never
+            # calls the rest, but that makes it structurally narrower than
+            # the full `DownloaderClient` protocol.
+            return Aria2Downloader(host, username, password)  # type: ignore[return-value]
         elif downloader_type == "mock":
             from .client.mock_downloader import MockDownloader
 
@@ -273,6 +279,7 @@ class DownloadClient:
         """
         if not bangumi.save_path:
             bangumi.save_path = gen_save_path(bangumi)
+        torrent_url: str | list[str] | None
         async with RequestContent() as req:
             if isinstance(torrent, list):
                 if len(torrent) == 0:
