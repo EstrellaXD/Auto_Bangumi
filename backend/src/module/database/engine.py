@@ -23,8 +23,19 @@ def _set_sqlite_fk_sync(dbapi_conn, connection_record):
     cursor.close()
 
 
-@event.listens_for(async_engine.sync_engine, "connect")
-def _set_sqlite_fk_async(dbapi_conn, connection_record):
+def _set_sqlite_pragmas_async(dbapi_conn, connection_record):
+    """Per-connection SQLite pragmas for the async engine.
+
+    The sync stack was implicitly serialized on a single Session. Several
+    aiosqlite connections now write concurrently, so WAL (readers never block
+    the writer) plus a busy_timeout (a contended write waits instead of raising
+    immediately) are required to avoid ``database is locked``.
+    """
     cursor = dbapi_conn.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA busy_timeout=5000")
     cursor.close()
+
+
+event.listen(async_engine.sync_engine, "connect", _set_sqlite_pragmas_async)
