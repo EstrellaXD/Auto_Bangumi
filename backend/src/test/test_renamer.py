@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from module.downloader import DownloadClient
 from module.manager.renamer import Renamer
 from module.models import EpisodeFile, Notification, SubtitleFile
 
@@ -136,9 +137,9 @@ class TestRenameFile:
                 "module.downloader.download_client.DownloadClient._DownloadClient__getClient",
                 return_value=mock_qb_client,
             ):
-                r = Renamer()
-        r.client = mock_qb_client
-        return r
+                client = DownloadClient()
+        client.client = mock_qb_client
+        return Renamer(client)
 
     async def test_successful_rename(self, renamer):
         """rename_file parses, generates new path, renames, returns Notification."""
@@ -146,7 +147,7 @@ class TestRenameFile:
             media_path="old.mkv", title="My Anime", season=1, episode=5, suffix=".mkv"
         )
         with patch.object(renamer._parser, "torrent_parser", return_value=ep):
-            renamer.client.torrents_rename_file.return_value = True
+            renamer.client.client.torrents_rename_file.return_value = True
             result = await renamer.rename_file(
                 torrent_name="[Sub] My Anime - 05.mkv",
                 media_path="old.mkv",
@@ -177,7 +178,7 @@ class TestRenameFile:
                 )
 
         assert result is None
-        renamer.client.torrents_delete.assert_not_called()
+        renamer.client.client.torrents_delete.assert_not_called()
 
     async def test_parse_fails_remove_bad(self, renamer):
         """When parser fails and remove_bad_torrent=True, deletes torrent."""
@@ -193,7 +194,7 @@ class TestRenameFile:
                     _hash="hash_bad",
                 )
 
-        renamer.client.torrents_delete.assert_called_once_with(
+        renamer.client.client.torrents_delete.assert_called_once_with(
             "hash_bad", delete_files=True
         )
 
@@ -217,7 +218,7 @@ class TestRenameFile:
             )
 
         assert result is None
-        renamer.client.torrents_rename_file.assert_not_called()
+        renamer.client.client.torrents_rename_file.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -241,9 +242,9 @@ class TestRenameCollection:
                 "module.downloader.download_client.DownloadClient._DownloadClient__getClient",
                 return_value=mock_qb_client,
             ):
-                r = Renamer()
-        r.client = mock_qb_client
-        return r
+                client = DownloadClient()
+        client.client = mock_qb_client
+        return Renamer(client)
 
     async def test_renames_each_file(self, renamer):
         """rename_collection iterates media_list and renames each valid file."""
@@ -260,7 +261,7 @@ class TestRenameCollection:
             )
 
         with patch.object(renamer._parser, "torrent_parser", side_effect=mock_parser):
-            renamer.client.torrents_rename_file.return_value = True
+            renamer.client.client.torrents_rename_file.return_value = True
             await renamer.rename_collection(
                 media_list=media_list,
                 bangumi_name="Anime",
@@ -269,7 +270,7 @@ class TestRenameCollection:
                 _hash="hash123",
             )
 
-        assert renamer.client.torrents_rename_file.call_count == 3
+        assert renamer.client.client.torrents_rename_file.call_count == 3
 
     async def test_skips_deep_files(self, renamer):
         """Files deeper than 2 levels are skipped (not is_ep)."""
@@ -283,7 +284,7 @@ class TestRenameCollection:
             suffix=".mkv",
         )
         with patch.object(renamer._parser, "torrent_parser", return_value=ep):
-            renamer.client.torrents_rename_file.return_value = True
+            renamer.client.client.torrents_rename_file.return_value = True
             await renamer.rename_collection(
                 media_list=media_list,
                 bangumi_name="Anime",
@@ -293,7 +294,7 @@ class TestRenameCollection:
             )
 
         # Only called once for ep01.mkv (depth 1)
-        assert renamer.client.torrents_rename_file.call_count == 1
+        assert renamer.client.client.torrents_rename_file.call_count == 1
 
 
 # ---------------------------------------------------------------------------
@@ -316,9 +317,9 @@ class TestRenameSubtitles:
                 "module.downloader.download_client.DownloadClient._DownloadClient__getClient",
                 return_value=mock_qb_client,
             ):
-                r = Renamer()
-        r.client = mock_qb_client
-        return r
+                client = DownloadClient()
+        client.client = mock_qb_client
+        return Renamer(client)
 
     async def test_renames_subtitles_with_language(self, renamer):
         """rename_subtitles prepends subtitle_ to method and renames files."""
@@ -331,7 +332,7 @@ class TestRenameSubtitles:
             suffix=".ass",
         )
         with patch.object(renamer._parser, "torrent_parser", return_value=sub):
-            renamer.client.torrents_rename_file.return_value = True
+            renamer.client.client.torrents_rename_file.return_value = True
             await renamer.rename_subtitles(
                 subtitle_list=["sub.ass"],
                 torrent_name="[Sub] Anime - 01.mkv",
@@ -341,8 +342,8 @@ class TestRenameSubtitles:
                 _hash="hash123",
             )
 
-        renamer.client.torrents_rename_file.assert_called_once()
-        call_args = renamer.client.torrents_rename_file.call_args
+        renamer.client.client.torrents_rename_file.assert_called_once()
+        call_args = renamer.client.client.torrents_rename_file.call_args
         new_path = (
             call_args[1]["new_path"]
             if "new_path" in (call_args[1] or {})
@@ -372,21 +373,23 @@ class TestRenameFlow:
                 "module.downloader.download_client.DownloadClient._DownloadClient__getClient",
                 return_value=mock_qb_client,
             ):
-                r = Renamer()
-        r.client = mock_qb_client
-        return r
+                client = DownloadClient()
+        client.client = mock_qb_client
+        return Renamer(client)
 
     async def test_single_file_rename(self, renamer):
         """Full rename flow for a single-file torrent."""
-        renamer.client.torrents_info.return_value = [
+        renamer.client.client.torrents_info.return_value = [
             {
                 "hash": "h1",
                 "name": "[Sub] Anime - 01.mkv",
                 "save_path": "/downloads/Bangumi/Anime (2024)/Season 1",
             }
         ]
-        renamer.client.torrents_files.return_value = [{"name": "[Sub] Anime - 01.mkv"}]
-        renamer.client.torrents_rename_file.return_value = True
+        renamer.client.client.torrents_files.return_value = [
+            {"name": "[Sub] Anime - 01.mkv"}
+        ]
+        renamer.client.client.torrents_rename_file.return_value = True
 
         ep = EpisodeFile(
             media_path="[Sub] Anime - 01.mkv",
@@ -408,19 +411,19 @@ class TestRenameFlow:
 
     async def test_collection_sets_category(self, renamer):
         """Multi-file torrent triggers collection rename and set_category."""
-        renamer.client.torrents_info.return_value = [
+        renamer.client.client.torrents_info.return_value = [
             {
                 "hash": "h1",
                 "name": "Anime Collection",
                 "save_path": "/downloads/Bangumi/Anime (2024)/Season 1",
             }
         ]
-        renamer.client.torrents_files.return_value = [
+        renamer.client.client.torrents_files.return_value = [
             {"name": "ep01.mkv"},
             {"name": "ep02.mkv"},
             {"name": "ep03.mkv"},
         ]
-        renamer.client.torrents_rename_file.return_value = True
+        renamer.client.client.torrents_rename_file.return_value = True
 
         def mock_parser(torrent_path, season, **kwargs):
             ep_num = int(torrent_path.replace("ep", "").replace(".mkv", ""))
@@ -440,18 +443,20 @@ class TestRenameFlow:
                     mock_path_settings.downloader.path = "/downloads/Bangumi"
                     await renamer.rename()
 
-        renamer.client.set_category.assert_called_once_with("h1", "BangumiCollection")
+        renamer.client.client.set_category.assert_called_once_with(
+            "h1", "BangumiCollection"
+        )
 
     async def test_no_media_files_no_crash(self, renamer):
         """When torrent has no media files, logs warning but doesn't crash."""
-        renamer.client.torrents_info.return_value = [
+        renamer.client.client.torrents_info.return_value = [
             {
                 "hash": "h1",
                 "name": "No Media",
                 "save_path": "/downloads/Bangumi/Anime/Season 1",
             }
         ]
-        renamer.client.torrents_files.return_value = [
+        renamer.client.client.torrents_files.return_value = [
             {"name": "readme.txt"},
             {"name": "info.nfo"},
         ]
@@ -462,7 +467,7 @@ class TestRenameFlow:
                 result = await renamer.rename()
 
         assert result == []
-        renamer.client.torrents_rename_file.assert_not_called()
+        renamer.client.client.torrents_rename_file.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -683,9 +688,9 @@ class TestLookupOffsets:
                 "module.downloader.download_client.DownloadClient._DownloadClient__getClient",
                 return_value=mock_qb_client,
             ):
-                r = Renamer()
-        r.client = mock_qb_client
-        return r
+                client = DownloadClient()
+        client.client = mock_qb_client
+        return Renamer(client)
 
     def test_lookup_by_qb_hash(self, renamer, db_session):
         """First priority: lookup by qb_hash in Torrent table."""

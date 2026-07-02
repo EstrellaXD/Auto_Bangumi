@@ -3,25 +3,32 @@ import logging
 from module.database import Database
 from module.downloader import DownloadClient
 from module.models import Bangumi, ResponseModel
+from module.network import RequestContent
 from module.rss import RSSEngine
 from module.searcher import SearchTorrent
 
 logger = logging.getLogger(__name__)
 
 
-class SeasonCollector(DownloadClient):
+class SeasonCollector:
+    def __init__(self, client: DownloadClient):
+        self.client = client
+
     async def collect_season(self, bangumi: Bangumi, link: str = None):
         logger.info(
             f"Start collecting {bangumi.official_title} Season {bangumi.season}..."
         )
-        async with SearchTorrent() as st:
-            if not link:
-                torrents = await st.search_season(bangumi)
-            else:
-                torrents = await st.get_torrents(link, bangumi.filter.replace(",", "|"))
+        st = SearchTorrent()
+        if not link:
+            torrents = await st.search_season(bangumi)
+        else:
+            async with RequestContent() as req:
+                torrents = await req.get_torrents(
+                    link, bangumi.filter.replace(",", "|")
+                )
         with Database() as db:
             engine = RSSEngine(db)
-            if await self.add_torrent(torrents, bangumi):
+            if await self.client.add_torrent(torrents, bangumi):
                 logger.info(
                     f"Collections of {bangumi.official_title} Season {bangumi.season} completed."
                 )
@@ -71,7 +78,8 @@ async def eps_complete():
         datas = engine.bangumi.not_complete()
         if datas:
             logger.info("Start collecting full season...")
-            async with SeasonCollector() as collector:
+            async with DownloadClient() as client:
+                collector = SeasonCollector(client)
                 for data in datas:
                     if not data.eps_collect:
                         await collector.collect_season(data)

@@ -5,6 +5,7 @@ import time
 from module.conf import settings
 from module.database import Database
 from module.downloader import DownloadClient
+from module.downloader.path import check_files, is_ep, path_to_bangumi
 from module.models import EpisodeFile, Notification, SubtitleFile
 from module.parser import TitleParser
 
@@ -19,9 +20,9 @@ _CLEANUP_INTERVAL = 60  # Clean up pending cache at most once per minute
 _last_cleanup_time: float = 0
 
 
-class Renamer(DownloadClient):
-    def __init__(self):
-        super().__init__()
+class Renamer:
+    def __init__(self, client: DownloadClient):
+        self.client = client
         self._parser = TitleParser()
         self._offset_cache: dict[str, tuple[int, int]] = {}
 
@@ -134,7 +135,7 @@ class Renamer(DownloadClient):
                     )
                     return None
 
-                if await self.rename_torrent_file(
+                if await self.client.rename_torrent_file(
                     _hash=_hash, old_path=media_path, new_path=new_path
                 ):
                     # Rename verified successful, remove from pending cache
@@ -164,7 +165,7 @@ class Renamer(DownloadClient):
         else:
             logger.warning(f"[Renamer] {media_path} parse failed")
             if settings.bangumi_manage.remove_bad_torrent:
-                await self.delete_torrent(hashes=_hash)
+                await self.client.delete_torrent(hashes=_hash)
         return None
 
     async def rename_collection(
@@ -179,7 +180,7 @@ class Renamer(DownloadClient):
         **kwargs,
     ):
         for media_path in media_list:
-            if self.is_ep(media_path):
+            if is_ep(media_path):
                 ep = self._parser.torrent_parser(
                     torrent_path=media_path,
                     season=season,
@@ -193,14 +194,14 @@ class Renamer(DownloadClient):
                         season_offset=season_offset,
                     )
                     if media_path != new_path:
-                        renamed = await self.rename_torrent_file(
+                        renamed = await self.client.rename_torrent_file(
                             _hash=_hash, old_path=media_path, new_path=new_path
                         )
                         if not renamed:
                             logger.warning(f"[Renamer] {media_path} rename failed")
                             # Delete bad torrent.
                             if settings.bangumi_manage.remove_bad_torrent:
-                                await self.delete_torrent(_hash)
+                                await self.client.delete_torrent(_hash)
                                 break
 
     async def rename_subtitles(
@@ -233,7 +234,7 @@ class Renamer(DownloadClient):
                 )
                 if subtitle_path != new_path:
                     # Skip verification for subtitles to reduce latency
-                    renamed = await self.rename_torrent_file(
+                    renamed = await self.client.rename_torrent_file(
                         _hash=_hash,
                         old_path=subtitle_path,
                         new_path=new_path,
@@ -443,11 +444,11 @@ class Renamer(DownloadClient):
         # Get torrent info
         logger.debug("[Renamer] Start rename process.")
         rename_method = settings.bangumi_manage.rename_method
-        torrents_info = await self.get_torrent_info()
+        torrents_info = await self.client.get_torrent_info()
         renamed_info: list[Notification] = []
         # Fetch all torrent files concurrently
         all_files = await asyncio.gather(
-            *[self.get_torrent_files(info["hash"]) for info in torrents_info]
+            *[self.client.get_torrent_files(info["hash"]) for info in torrents_info]
         )
         # Batch lookup all offsets in a single database session
         offset_map = self._batch_lookup_offsets(torrents_info)
@@ -455,8 +456,8 @@ class Renamer(DownloadClient):
             torrent_hash = info["hash"]
             torrent_name = info["name"]
             save_path = info["save_path"]
-            media_list, subtitle_list = self.check_files(files)
-            bangumi_name, season = self._path_to_bangumi(save_path, torrent_name)
+            media_list, subtitle_list = check_files(files)
+            bangumi_name, season = path_to_bangumi(save_path, torrent_name)
             # Use pre-fetched offsets
             episode_offset, season_offset = offset_map.get(torrent_hash, (0, 0))
             kwargs = {
@@ -482,7 +483,7 @@ class Renamer(DownloadClient):
                 await self.rename_collection(media_list=media_list, **kwargs)
                 if len(subtitle_list) > 0:
                     await self.rename_subtitles(subtitle_list=subtitle_list, **kwargs)
-                await self.set_category(torrent_hash, "BangumiCollection")
+                await self.client.set_category(torrent_hash, "BangumiCollection")
             else:
                 logger.warning(f"[Renamer] {torrent_name} has no media file")
         logger.debug("[Renamer] Rename process finished.")

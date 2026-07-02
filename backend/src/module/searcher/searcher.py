@@ -26,9 +26,13 @@ BangumiJSON: TypeAlias = str
 _poster_cache: dict[str, str | None] = {}
 
 
-class SearchTorrent(RequestContent, RSSAnalyser):
+class SearchTorrent:
+    def __init__(self):
+        self.analyser = RSSAnalyser()
+
     async def search_torrents(self, rss_item: RSSItem) -> list[Torrent]:
-        return await self.get_torrents(rss_item.url)
+        async with RequestContent() as req:
+            return await req.get_torrents(rss_item.url)
 
     async def _fetch_tmdb_poster(self, title: str) -> str | None:
         """Fetch poster from TMDB if not in cache."""
@@ -56,7 +60,7 @@ class SearchTorrent(RequestContent, RSSAnalyser):
         for torrent in torrents:
             if len(exist_list) >= limit:
                 break
-            bangumi = await self.torrent_to_data(torrent=torrent, rss=rss_item)
+            bangumi = await self.analyser.torrent_to_data(torrent=torrent, rss=rss_item)
             if bangumi:
                 special_link = self.special_url(bangumi, site).url
                 if special_link not in exist_list:
@@ -64,7 +68,9 @@ class SearchTorrent(RequestContent, RSSAnalyser):
                     exist_list.append(special_link)
                     # Fetch poster from TMDB if missing
                     if not bangumi.poster_link and bangumi.official_title:
-                        tmdb_poster = await self._fetch_tmdb_poster(bangumi.official_title)
+                        tmdb_poster = await self._fetch_tmdb_poster(
+                            bangumi.official_title
+                        )
                         if tmdb_poster:
                             bangumi.poster_link = tmdb_poster
                     yield json.dumps(bangumi.dict(), separators=(",", ":"))

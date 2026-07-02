@@ -345,13 +345,15 @@ class TestCollect:
         resp_model = ResponseModel(
             status=True, status_code=200, msg_en="Collected.", msg_zh="收集成功。"
         )
-        with patch("module.api.rss.SeasonCollector") as MockCollector:
+        with (
+            patch("module.api.rss.DownloadClient") as MockDC,
+            patch("module.api.rss.SeasonCollector") as MockCollector,
+        ):
+            MockDC.return_value.__aenter__ = AsyncMock(return_value=AsyncMock())
+            MockDC.return_value.__aexit__ = AsyncMock(return_value=False)
             mock_collector = MagicMock()
             mock_collector.collect_season = AsyncMock(return_value=resp_model)
-            MockCollector.return_value.__aenter__ = AsyncMock(
-                return_value=mock_collector
-            )
-            MockCollector.return_value.__aexit__ = AsyncMock(return_value=False)
+            MockCollector.return_value = mock_collector
 
             response = authed_client.post(
                 "/api/v1/rss/collect", json=make_bangumi(id=1).model_dump()

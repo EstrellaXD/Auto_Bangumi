@@ -195,7 +195,8 @@ async def analysis(rss: RSSItem):
     "/collect", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
 async def download_collection(data: Bangumi):
-    async with SeasonCollector() as collector:
+    async with DownloadClient() as client:
+        collector = SeasonCollector(client)
         resp = await collector.collect_season(data, data.rss_link)
         return u_response(resp)
 

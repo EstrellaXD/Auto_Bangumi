@@ -3,6 +3,8 @@ import logging
 from module.conf import settings
 from module.database import Database
 from module.downloader import DownloadClient
+from module.downloader.path import gen_save_path
+from module.downloader.rules import build_rss_rule
 from module.models import Bangumi, BangumiUpdate, ResponseModel
 from module.parser import TitleParser
 from module.parser.analyser.bgm_calendar import fetch_bgm_calendar, match_weekday
@@ -152,7 +154,7 @@ class TorrentManager:
             # Move torrent
             match_list = await self.__match_torrents_list(old_data)
             async with DownloadClient() as client:
-                new_path = client._gen_save_path(data)
+                new_path = gen_save_path(data)
                 old_path = old_data.save_path
 
                 # Move existing torrents to new location if path changed
@@ -165,32 +167,8 @@ class TorrentManager:
                 # Update qBittorrent RSS rule if save_path changed
                 if new_path != old_path and old_data.rule_name:
                     # Recreate the rule with the new save_path
-                    rule = {
-                        "enable": True,
-                        "mustContain": data.title_raw,
-                        "mustNotContain": (
-                            "|".join(data.filter)
-                            if isinstance(data.filter, list)
-                            else data.filter
-                        ),
-                        "useRegex": True,
-                        "episodeFilter": "",
-                        "smartFilter": False,
-                        "previouslyMatchedEpisodes": [],
-                        "affectedFeeds": (
-                            data.rss_link
-                            if isinstance(data.rss_link, str)
-                            else ",".join(data.rss_link)
-                        ),
-                        "ignoreDays": 0,
-                        "lastMatch": "",
-                        "addPaused": False,
-                        "assignedCategory": "Bangumi",
-                        "savePath": new_path,
-                    }
-                    await client.client.rss_set_rule(
-                        rule_name=old_data.rule_name, rule_def=rule
-                    )
+                    rule = build_rss_rule(data, new_path)
+                    await client.set_rss_rule(old_data.rule_name, rule)
                     logger.info(
                         f"[Manager] Updated RSS rule {old_data.rule_name} with new save_path"
                     )

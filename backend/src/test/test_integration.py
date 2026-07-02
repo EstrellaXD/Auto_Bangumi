@@ -174,6 +174,7 @@ class TestRenameFlow:
 
     async def test_single_file_rename(self, mock_qb_client):
         """Single-file torrent is parsed and renamed correctly."""
+        from module.downloader import DownloadClient
         from module.manager.renamer import Renamer
 
         # Setup renamer with mocked client
@@ -189,8 +190,9 @@ class TestRenameFlow:
                 "module.downloader.download_client.DownloadClient._DownloadClient__getClient",
                 return_value=mock_qb_client,
             ):
-                renamer = Renamer()
-        renamer.client = mock_qb_client
+                client = DownloadClient()
+        client.client = mock_qb_client
+        renamer = Renamer(client)
 
         # Mock completed torrent info
         mock_qb_client.torrents_info.return_value = [
@@ -233,6 +235,7 @@ class TestRenameFlow:
 
     async def test_collection_rename(self, mock_qb_client):
         """Multi-file torrent is treated as collection and re-categorized."""
+        from module.downloader import DownloadClient
         from module.manager.renamer import Renamer
 
         with patch("module.downloader.download_client.settings") as mock_settings:
@@ -247,8 +250,9 @@ class TestRenameFlow:
                 "module.downloader.download_client.DownloadClient._DownloadClient__getClient",
                 return_value=mock_qb_client,
             ):
-                renamer = Renamer()
-        renamer.client = mock_qb_client
+                client = DownloadClient()
+        client.client = mock_qb_client
+        renamer = Renamer(client)
 
         mock_qb_client.torrents_info.return_value = [
             {

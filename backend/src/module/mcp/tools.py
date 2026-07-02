@@ -258,11 +258,11 @@ def _get_anime(bangumi_id: int) -> dict:
 async def _search_anime(keywords: str, site: str) -> list[dict]:
     keyword_list = keywords.split()
     results = []
-    async with SearchTorrent() as st:
-        async for item_json in st.analyse_keyword(keywords=keyword_list, site=site):
-            results.append(json.loads(item_json))
-            if len(results) >= 20:
-                break
+    st = SearchTorrent()
+    async for item_json in st.analyse_keyword(keywords=keyword_list, site=site):
+        results.append(json.loads(item_json))
+        if len(results) >= 20:
+            break
     return results
 
 

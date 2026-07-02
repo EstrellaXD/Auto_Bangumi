@@ -1,15 +1,24 @@
 import asyncio
 import json
 import logging
+from typing import ClassVar
 
 import httpx
 
 from module.ab_decorator import qb_connect_failed_wait
+from module.downloader.base import DownloaderCapabilities
 
 logger = logging.getLogger(__name__)
 
 
 class QbDownloader:
+    capabilities: ClassVar[DownloaderCapabilities] = DownloaderCapabilities(
+        can_query=True,
+        can_rename=True,
+        can_manage=True,
+        can_rss_rules=True,
+    )
+
     def __init__(self, host: str, username: str, password: str, ssl: bool):
         if "://" not in host:
             scheme = "https" if ssl else "http"

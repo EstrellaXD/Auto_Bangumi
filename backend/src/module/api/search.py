@@ -21,9 +21,9 @@ async def search_torrents(site: str = "mikan", keywords: str = Query(None)):
     keywords = keywords.split(" ")
 
     async def event_generator():
-        async with SearchTorrent() as st:
-            async for item in st.analyse_keyword(keywords=keywords, site=site):
-                yield item
+        st = SearchTorrent()
+        async for item in st.analyse_keyword(keywords=keywords, site=site):
+            yield item
 
     return EventSourceResponse(content=event_generator())
 

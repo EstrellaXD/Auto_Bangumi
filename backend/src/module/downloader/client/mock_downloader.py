@@ -6,7 +6,9 @@ qBittorrent instance. All operations return success and log their actions.
 """
 
 import logging
-from typing import Any
+from typing import Any, ClassVar
+
+from module.downloader.base import DownloaderCapabilities
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +18,13 @@ class MockDownloader:
     A mock downloader that simulates qBittorrent API responses.
     All methods return success values and log their operations.
     """
+
+    capabilities: ClassVar[DownloaderCapabilities] = DownloaderCapabilities(
+        can_query=True,
+        can_rename=True,
+        can_manage=True,
+        can_rss_rules=True,
+    )
 
     def __init__(self):
         self._torrents: dict[str, dict] = {}
@@ -72,6 +81,11 @@ class MockDownloader:
                 continue
             result.append(torrent)
         return result
+
+    async def get_torrents_by_tag(self, tag: str) -> list[dict]:
+        """Return all torrents carrying a given tag."""
+        logger.debug("[MockDownloader] get_torrents_by_tag(%s)", tag)
+        return [t for t in self._torrents.values() if tag in t.get("tags", [])]
 
     async def torrents_files(self, torrent_hash: str) -> list[dict]:
         """Return files for a torrent."""

@@ -5,12 +5,17 @@ from module.conf import settings
 from module.models import Bangumi, Torrent
 from module.network import RequestContent
 
-from .path import TorrentPath
+from .path import gen_save_path, join_path, rule_name
+from .rules import build_rss_rule
 
 logger = logging.getLogger(__name__)
 
+# Warn at most once per (client type, operation) when a backend cannot perform
+# an operation, so aria2 users are not spammed every rename cycle.
+_warned_unsupported: set[tuple[str, str]] = set()
 
-class DownloadClient(TorrentPath):
+
+class DownloadClient:
     """Unified async download client.
 
     Wraps qBittorrent, Aria2, or MockDownloader behind a common interface.
@@ -19,7 +24,6 @@ class DownloadClient(TorrentPath):
     """
 
     def __init__(self):
-        super().__init__()
         self.client = self.__getClient()
         self.authed = False
 
@@ -45,8 +49,25 @@ class DownloadClient(TorrentPath):
             logger.debug("[Downloader] Using MockDownloader for local development")
             return MockDownloader()
         else:
-            logger.error("[Downloader] Unsupported downloader type: %s", downloader_type)
+            logger.error(
+                "[Downloader] Unsupported downloader type: %s", downloader_type
+            )
             raise Exception(f"Unsupported downloader type: {downloader_type}")
+
+    def _supports(self, capability: str, op: str) -> bool:
+        """Whether the concrete client can perform ``op`` (log once if not)."""
+        caps = getattr(self.client, "capabilities", None)
+        if caps is not None and getattr(caps, capability, False):
+            return True
+        key = (type(self.client).__name__, op)
+        if key not in _warned_unsupported:
+            _warned_unsupported.add(key)
+            logger.warning(
+                "[Downloader] %s does not support '%s'; skipping.",
+                type(self.client).__name__,
+                op,
+            )
+        return False
 
     async def __aenter__(self):
         if not self.authed:
@@ -74,10 +95,14 @@ class DownloadClient(TorrentPath):
             logger.error("[Downloader] Auth failed.")
 
     async def check_host(self):
+        if not self._supports("can_query", "check_host"):
+            return False
         return await self.client.check_host()
 
     async def init_downloader(self):
         """Apply required qBittorrent RSS preferences and create the Bangumi category."""
+        if not self._supports("can_rss_rules", "init_downloader"):
+            return
         prefs = {
             "rss_auto_downloading_enabled": True,
             "rss_max_articles_per_feed": 500,
@@ -94,28 +119,20 @@ class DownloadClient(TorrentPath):
             )
         if settings.downloader.path == "":
             prefs = await self.client.get_app_prefs()
-            settings.downloader.path = self._join_path(prefs["save_path"], "Bangumi")
+            settings.downloader.path = join_path(prefs["save_path"], "Bangumi")
+
+    async def set_rss_rule(self, rule_name: str, rule: dict):
+        """Create or update a raw qBittorrent RSS auto-download rule."""
+        if not self._supports("can_rss_rules", "set_rss_rule"):
+            return
+        await self.client.rss_set_rule(rule_name=rule_name, rule_def=rule)
 
     async def set_rule(self, data: Bangumi):
         """Create or update a qBittorrent RSS auto-download rule for one bangumi entry."""
-        data.rule_name = self._rule_name(data)
-        data.save_path = self._gen_save_path(data)
-        rule = {
-            "enable": True,
-            "mustContain": data.title_raw,
-            "mustNotContain": "|".join(data.filter),
-            "useRegex": True,
-            "episodeFilter": "",
-            "smartFilter": False,
-            "previouslyMatchedEpisodes": [],
-            "affectedFeeds": data.rss_link,
-            "ignoreDays": 0,
-            "lastMatch": "",
-            "addPaused": False,
-            "assignedCategory": "Bangumi",
-            "savePath": data.save_path,
-        }
-        await self.client.rss_set_rule(rule_name=data.rule_name, rule_def=rule)
+        data.rule_name = rule_name(data)
+        data.save_path = gen_save_path(data)
+        rule = build_rss_rule(data, data.save_path)
+        await self.set_rss_rule(data.rule_name, rule)
         data.added = True
         logger.info(
             f"[Downloader] Add {data.official_title} Season {data.season} to auto download rules."
@@ -129,16 +146,22 @@ class DownloadClient(TorrentPath):
     async def get_torrent_info(
         self, category="Bangumi", status_filter="completed", tag=None
     ):
+        if not self._supports("can_query", "get_torrent_info"):
+            return []
         return await self.client.torrents_info(
             status_filter=status_filter, category=category, tag=tag
         )
 
     async def get_torrent_files(self, torrent_hash: str):
+        if not self._supports("can_query", "get_torrent_files"):
+            return []
         return await self.client.torrents_files(torrent_hash=torrent_hash)
 
     async def rename_torrent_file(
         self, _hash, old_path, new_path, verify: bool = True
     ) -> bool:
+        if not self._supports("can_rename", "rename_torrent_file"):
+            return False
         result = await self.client.torrents_rename_file(
             torrent_hash=_hash, old_path=old_path, new_path=new_path, verify=verify
         )
@@ -149,6 +172,8 @@ class DownloadClient(TorrentPath):
         return result
 
     async def delete_torrent(self, hashes, delete_files: bool = True) -> bool:
+        if not self._supports("can_manage", "delete_torrent"):
+            return False
         ok = await self.client.torrents_delete(hashes, delete_files=delete_files)
         if ok:
             logger.info("[Downloader] Remove torrents.")
@@ -157,9 +182,13 @@ class DownloadClient(TorrentPath):
         return ok
 
     async def pause_torrent(self, hashes: str):
+        if not self._supports("can_manage", "pause_torrent"):
+            return
         await self.client.torrents_pause(hashes)
 
     async def resume_torrent(self, hashes: str):
+        if not self._supports("can_manage", "resume_torrent"):
+            return
         await self.client.torrents_resume(hashes)
 
     async def add_torrent(self, torrent: Torrent | list, bangumi: Bangumi) -> bool:
@@ -170,7 +199,7 @@ class DownloadClient(TorrentPath):
         episode-offset lookup during rename.
         """
         if not bangumi.save_path:
-            bangumi.save_path = self._gen_save_path(bangumi)
+            bangumi.save_path = gen_save_path(bangumi)
         async with RequestContent() as req:
             if isinstance(torrent, list):
                 if len(torrent) == 0:
@@ -229,39 +258,57 @@ class DownloadClient(TorrentPath):
             return False
 
     async def move_torrent(self, hashes, location):
+        if not self._supports("can_manage", "move_torrent"):
+            return
         await self.client.move_torrent(hashes=hashes, new_location=location)
 
     # RSS Parts
     async def add_rss_feed(self, rss_link, item_path="Mikan_RSS"):
+        if not self._supports("can_rss_rules", "add_rss_feed"):
+            return
         await self.client.rss_add_feed(url=rss_link, item_path=item_path)
 
     async def remove_rss_feed(self, item_path):
+        if not self._supports("can_rss_rules", "remove_rss_feed"):
+            return
         await self.client.rss_remove_item(item_path=item_path)
 
     async def get_rss_feed(self):
+        if not self._supports("can_rss_rules", "get_rss_feed"):
+            return {}
         return await self.client.rss_get_feeds()
 
     async def get_download_rules(self):
+        if not self._supports("can_rss_rules", "get_download_rules"):
+            return {}
         return await self.client.get_download_rule()
 
     async def get_torrent_path(self, hashes):
+        if not self._supports("can_query", "get_torrent_path"):
+            return ""
         return await self.client.get_torrent_path(hashes)
 
     async def set_category(self, hashes, category):
+        if not self._supports("can_manage", "set_category"):
+            return
         await self.client.set_category(hashes, category)
 
     async def remove_rule(self, rule_name):
+        if not self._supports("can_rss_rules", "remove_rule"):
+            return
         await self.client.remove_rule(rule_name)
         logger.info(f"[Downloader] Delete rule: {rule_name}")
 
     async def get_torrents_by_tag(self, tag: str) -> list[dict]:
         """Get all torrents with a specific tag."""
-        if hasattr(self.client, "get_torrents_by_tag"):
-            return await self.client.get_torrents_by_tag(tag)
-        return []
+        if not self._supports("can_query", "get_torrents_by_tag"):
+            return []
+        return await self.client.get_torrents_by_tag(tag)
 
     async def add_tag(self, torrent_hash: str, tag: str):
         """Add a tag to a torrent."""
+        if not self._supports("can_manage", "add_tag"):
+            return
         await self.client.add_tag(torrent_hash, tag)
         logger.debug(
             "[Downloader] Added tag '%s' to torrent %s...", tag, torrent_hash[:8]

@@ -79,7 +79,8 @@ class RenameThread(ProgramStatus):
     async def rename_loop(self):
         while not self._rename_stop_event.is_set():
             try:
-                async with Renamer() as renamer:
+                async with DownloadClient() as client:
+                    renamer = Renamer(client)
                     renamed_info = await renamer.rename()
                 if settings.notification.enable and renamed_info:
                     manager = NotificationManager()
