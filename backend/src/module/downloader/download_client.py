@@ -52,6 +52,10 @@ class DownloadClient(TorrentPath):
         if not self.authed:
             await self.auth()
             if not self.authed:
+                # __aexit__ never runs when we raise here, so close the
+                # concrete client's connection pool now or it leaks on every
+                # failed connect (#1043).
+                await self.client.logout()
                 raise ConnectionError("Download client authentication failed")
         else:
             logger.error("[Downloader] Already authed.")
@@ -144,9 +148,13 @@ class DownloadClient(TorrentPath):
             logger.debug("[Downloader] Rename failed: %s >> %s", old_path, new_path)
         return result
 
-    async def delete_torrent(self, hashes, delete_files: bool = True):
-        await self.client.torrents_delete(hashes, delete_files=delete_files)
-        logger.info("[Downloader] Remove torrents.")
+    async def delete_torrent(self, hashes, delete_files: bool = True) -> bool:
+        ok = await self.client.torrents_delete(hashes, delete_files=delete_files)
+        if ok:
+            logger.info("[Downloader] Remove torrents.")
+        else:
+            logger.error("[Downloader] Failed to remove torrents.")
+        return ok
 
     async def pause_torrent(self, hashes: str):
         await self.client.torrents_pause(hashes)

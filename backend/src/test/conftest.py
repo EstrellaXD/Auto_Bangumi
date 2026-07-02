@@ -222,5 +222,5 @@ def mock_download_client():
     ]
     client.pause_torrent.return_value = None
     client.resume_torrent.return_value = None
-    client.delete_torrent.return_value = None
+    client.delete_torrent.return_value = True
     return client

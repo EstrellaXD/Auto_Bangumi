@@ -25,7 +25,13 @@ class TorrentManager(Database):
     async def delete_torrents(self, data: Bangumi, client: DownloadClient):
         hash_list = await self.__match_torrents_list(data)
         if hash_list:
-            await client.delete_torrent(hash_list)
+            if not await client.delete_torrent(hash_list):
+                return ResponseModel(
+                    status_code=500,
+                    status=False,
+                    msg_en=f"Failed to delete torrents for {data.official_title}",
+                    msg_zh=f"删除 {data.official_title} 种子失败",
+                )
             logger.info(f"Delete rule and torrents for {data.official_title}")
             return ResponseModel(
                 status_code=200,
@@ -52,6 +58,14 @@ class TorrentManager(Database):
                 torrent_message = None
                 if file:
                     torrent_message = await self.delete_torrents(data, client)
+                    if torrent_message.status_code == 500:
+                        return ResponseModel(
+                            status_code=500,
+                            status=False,
+                            msg_en=f"Deleted rule for {data.official_title}, "
+                            "but deleting its torrents failed.",
+                            msg_zh=f"已删除 {data.official_title} 规则，但删除种子失败。",
+                        )
                 logger.info(f"[Manager] Delete rule for {data.official_title}")
                 return ResponseModel(
                     status_code=200,

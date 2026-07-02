@@ -47,7 +47,14 @@ class QbDownloader:
                     self._url("auth/login"),
                     data={"username": self.username, "password": self.password},
                 )
-                if resp.status_code == 200 and resp.text == "Ok.":
+                # qBittorrent < 5.2 answers 200 + "Ok." / "Fails.";
+                # qBittorrent >= 5.2 answers 204 with an empty body on success
+                # (#1044). Keep the positive body check for 200 so a proxy or
+                # non-qB service answering 200 + HTML is not mistaken for a
+                # successful login.
+                if (
+                    resp.status_code == 200 and resp.text.startswith("Ok")
+                ) or resp.status_code == 204:
                     return True
                 elif resp.status_code == 403:
                     logger.error("Login refused by qBittorrent Server")
@@ -201,11 +208,22 @@ class QbDownloader:
         resp = await self._client.get(self._url("torrents/info"), params={"tag": tag})
         return resp.json()
 
-    async def torrents_delete(self, hash, delete_files: bool = True):
-        await self._client.post(
+    async def torrents_delete(self, hash, delete_files: bool = True) -> bool:
+        # qBittorrent expects one pipe-joined "hashes" field; a Python list would
+        # be form-encoded as repeated fields and silently ignored (#1046).
+        hashes = "|".join(hash) if isinstance(hash, (list, tuple)) else hash
+        resp = await self._client.post(
             self._url("torrents/delete"),
-            data={"hashes": hash, "deleteFiles": str(delete_files).lower()},
+            data={"hashes": hashes, "deleteFiles": str(delete_files).lower()},
         )
+        if resp.status_code != 200:
+            logger.error(
+                "[Downloader] Failed to delete torrents %s: HTTP %s",
+                hashes,
+                resp.status_code,
+            )
+            return False
+        return True
 
     async def torrents_pause(self, hashes: str):
         await self._client.post(

@@ -528,3 +528,120 @@ class TestUrlHelper:
             host="http://nas.local:8080", username="u", password="p", ssl=True
         )
         assert qb._url("torrents/info") == "http://nas.local:8080/api/v2/torrents/info"
+
+
+# ---------------------------------------------------------------------------
+# qBittorrent 5.2 login compatibility (#1044, #1034, #1043)
+# ---------------------------------------------------------------------------
+
+
+class TestAuthQb52Compat:
+    """qBittorrent >= 5.2 returns HTTP 204 with an empty body on success."""
+
+    async def test_auth_returns_true_on_204_empty_body(self):
+        """Returns True when server responds 204 + empty body (qB >= 5.2)."""
+        qb = QbDownloader(
+            host="localhost:8080", username="admin", password="pass", ssl=False
+        )
+
+        mock_client = AsyncMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 204
+        mock_resp.text = ""
+        mock_client.post = AsyncMock(return_value=mock_resp)
+
+        with patch(
+            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            return_value=mock_client,
+        ):
+            result = await qb.auth()
+
+        assert result is True
+
+    async def test_auth_returns_false_on_200_fails_body(self):
+        """Returns False on 200 + 'Fails.' (bad credentials, qB < 5.2)."""
+        qb = QbDownloader(
+            host="localhost:8080", username="admin", password="wrong", ssl=False
+        )
+
+        mock_client = AsyncMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.text = "Fails."
+        mock_client.post = AsyncMock(return_value=mock_resp)
+
+        with (
+            patch(
+                "module.downloader.client.qb_downloader.httpx.AsyncClient",
+                return_value=mock_client,
+            ),
+            patch(
+                "module.downloader.client.qb_downloader.asyncio.sleep",
+                new_callable=AsyncMock,
+            ),
+        ):
+            result = await qb.auth(retry=1)
+
+        assert result is False
+
+    async def test_auth_returns_false_on_200_html_body(self):
+        """A 200 + HTML page (proxy, wrong service) is not a successful login."""
+        qb = QbDownloader(
+            host="localhost:8080", username="admin", password="pass", ssl=False
+        )
+
+        mock_client = AsyncMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.text = "<html><body>Sign in</body></html>"
+        mock_client.post = AsyncMock(return_value=mock_resp)
+
+        with (
+            patch(
+                "module.downloader.client.qb_downloader.httpx.AsyncClient",
+                return_value=mock_client,
+            ),
+            patch(
+                "module.downloader.client.qb_downloader.asyncio.sleep",
+                new_callable=AsyncMock,
+            ),
+        ):
+            result = await qb.auth(retry=1)
+
+        assert result is False
+
+
+# ---------------------------------------------------------------------------
+# torrents_delete (#1046)
+# ---------------------------------------------------------------------------
+
+
+class TestTorrentsDelete:
+    """torrents_delete must pipe-join hash lists and report failures."""
+
+    async def test_delete_joins_hash_list_with_pipe(self):
+        """A list of hashes is sent as a single pipe-joined string."""
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        qb._client.post = AsyncMock(return_value=mock_resp)
+
+        result = await qb.torrents_delete(["aaa", "bbb"], delete_files=True)
+
+        assert result is True
+        sent = qb._client.post.call_args.kwargs["data"]
+        assert sent["hashes"] == "aaa|bbb"
+        assert sent["deleteFiles"] == "true"
+
+    async def test_delete_returns_false_on_error_status(self):
+        """Non-200 response returns False instead of silently succeeding."""
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 403
+        qb._client.post = AsyncMock(return_value=mock_resp)
+
+        result = await qb.torrents_delete("aaa", delete_files=True)
+
+        assert result is False

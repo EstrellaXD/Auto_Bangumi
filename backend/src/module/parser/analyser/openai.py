@@ -1,9 +1,8 @@
 import json
 import logging
-from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Optional
 
-from openai import AzureOpenAI, OpenAI
+from openai import AsyncAzureOpenAI, AsyncOpenAI
 from pydantic import BaseModel
 
 from module.models import Bangumi
@@ -62,19 +61,19 @@ class OpenAIParser:
         if not api_key:
             raise ValueError("API key is required.")
         if api_type == "azure":
-            self.client = AzureOpenAI(
+            self.client = AsyncAzureOpenAI(
                 api_key=api_key,
                 base_url=api_base,
                 azure_deployment=kwargs.get("deployment_id", ""),
                 api_version=kwargs.get("api_version", "2023-05-15"),
             )
         else:
-            self.client = OpenAI(api_key=api_key, base_url=api_base)
+            self.client = AsyncOpenAI(api_key=api_key, base_url=api_base)
 
         self.model = model
         self.openai_kwargs = kwargs
 
-    def parse(
+    async def parse(
         self, text: str, prompt: str | None = None, asdict: bool = True
     ) -> dict | str:
         """parse text with openai
@@ -96,11 +95,8 @@ class OpenAIParser:
 
         params = self._prepare_params(text, prompt)
 
-        with ThreadPoolExecutor(max_workers=1) as worker:
-            future = worker.submit(self.client.beta.chat.completions.parse, **params)
-            resp = future.result()
-
-            result = resp.choices[0].message.parsed
+        resp = await self.client.beta.chat.completions.parse(**params)
+        result = resp.choices[0].message.parsed
 
         if asdict:
             if hasattr(result, "model_dump"):

@@ -1,8 +1,10 @@
 import asyncio
 import logging
 import re
+from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Optional
+from urllib.parse import urlparse
 
 from module.database import Database, engine
 from module.downloader import DownloadClient
@@ -10,6 +12,10 @@ from module.models import Bangumi, ResponseModel, RSSItem, Torrent
 from module.network import RequestContent
 
 logger = logging.getLogger(__name__)
+
+# Delay between consecutive requests to the same host. Firing all feeds of one
+# site at once gets the whole batch rate-limited with HTTP 429 (#1026).
+RSS_PER_HOST_DELAY = 2.0
 
 
 class RSSEngine(Database):
@@ -149,18 +155,35 @@ class RSSEngine(Database):
         else:
             rss_item = self.rss.search_id(rss_id)
             rss_items = [rss_item] if rss_item else []
-        # From RSS Items, fetch all torrents with concurrency limit
+        # From RSS Items, fetch all torrents: parallel across hosts, serial
+        # (with a delay) within one host so the site never sees a burst (#1026).
         logger.debug("[Engine] Get %s RSS items", len(rss_items))
         semaphore = asyncio.Semaphore(5)
 
-        async def _limited_pull(item):
-            async with semaphore:
-                return await self._pull_rss_with_status(item)
+        async def _pull_host_group(items: list[RSSItem]):
+            group_results = []
+            for i, item in enumerate(items):
+                if i and RSS_PER_HOST_DELAY:
+                    await asyncio.sleep(RSS_PER_HOST_DELAY)
+                async with semaphore:
+                    group_results.append(await self._pull_rss_with_status(item))
+            return group_results
 
-        results = await asyncio.gather(*[_limited_pull(item) for item in rss_items])
+        host_groups: dict[str, list[RSSItem]] = defaultdict(list)
+        for item in rss_items:
+            host_groups[urlparse(item.url).netloc].append(item)
+        group_lists = list(host_groups.values())
+        grouped_results = await asyncio.gather(
+            *[_pull_host_group(items) for items in group_lists]
+        )
+        item_results = [
+            (item, result)
+            for items, results in zip(group_lists, grouped_results)
+            for item, result in zip(items, results)
+        ]
         now = datetime.now(timezone.utc).isoformat()
         # Process results sequentially (DB operations)
-        for rss_item, (new_torrents, error) in zip(rss_items, results):
+        for rss_item, (new_torrents, error) in item_results:
             # Update connection status
             rss_item.connection_status = "error" if error else "healthy"
             rss_item.last_checked_at = now

@@ -340,11 +340,11 @@ class TestIssue990NumberPrefixTitle:
         assert result.resolution == "1080P"
         assert result.group == "ANi"
 
-    def test_title_parser_returns_bangumi_for_number_prefix_title(self):
+    async def test_title_parser_returns_bangumi_for_number_prefix_title(self):
         """TitleParser.raw_parser returns a valid Bangumi for number-prefixed titles."""
         from module.parser.title_parser import TitleParser
 
-        result = TitleParser.raw_parser(self.PROBLEM_TITLE)
+        result = await TitleParser.raw_parser(self.PROBLEM_TITLE)
         assert result is not None
         assert result.official_title == "29 岁单身中坚冒险家的日常"
         assert result.title_raw == "29 岁单身中坚冒险家的日常"
@@ -504,11 +504,11 @@ class TestIssue992NonEpisodicAttributeError:
     ]
 
     @pytest.mark.parametrize("title", NON_EPISODIC_TITLES)
-    def test_title_parser_returns_none_for_non_episodic(self, title):
+    async def test_title_parser_returns_none_for_non_episodic(self, title):
         """TitleParser.raw_parser should return None instead of crashing."""
         from module.parser.title_parser import TitleParser
 
-        result = TitleParser.raw_parser(title)
+        result = await TitleParser.raw_parser(title)
         assert result is None
 
     def test_raw_parser_returns_none_for_unparseable(self):

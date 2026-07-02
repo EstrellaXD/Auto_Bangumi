@@ -369,3 +369,66 @@ class TestRefreshRssConcurrency:
             await rss_engine.refresh_rss(client)
 
         assert max_active <= 5
+
+
+# ---------------------------------------------------------------------------
+# refresh_rss per-host throttling (#1026)
+# ---------------------------------------------------------------------------
+
+
+class TestRefreshRssPerHostThrottle:
+    async def test_same_host_requests_never_overlap(self, rss_engine):
+        """Feeds on the same host are fetched serially; other hosts stay parallel."""
+        for i in range(3):
+            rss_engine.rss.add(
+                make_rss_item(url=f"https://nyaa.example/rss/{i}", name=f"nyaa{i}")
+            )
+        rss_engine.rss.add(make_rss_item(url="https://mikan.example/rss", name="mikan"))
+
+        from urllib.parse import urlparse
+
+        active: dict[str, int] = {}
+        max_active: dict[str, int] = {}
+
+        async def fake_pull(item):
+            host = urlparse(item.url).netloc
+            active[host] = active.get(host, 0) + 1
+            max_active[host] = max(max_active.get(host, 0), active[host])
+            # Give concurrently-scheduled pulls a chance to overlap.
+            await asyncio.sleep(0.01)
+            active[host] -= 1
+            return [], None
+
+        client = AsyncMock()
+        with (
+            patch.object(
+                RSSEngine,
+                "_pull_rss_with_status",
+                new_callable=lambda: AsyncMock(side_effect=fake_pull),
+            ),
+            patch("module.rss.engine.RSS_PER_HOST_DELAY", 0),
+        ):
+            await rss_engine.refresh_rss(client)
+
+        assert max_active["nyaa.example"] == 1
+        assert max_active["mikan.example"] == 1
+
+    async def test_all_feeds_still_processed(self, rss_engine):
+        """Grouping by host must not drop any feed's status update."""
+        rss_engine.rss.add(make_rss_item(url="https://a.example/rss", name="a"))
+        rss_engine.rss.add(make_rss_item(url="https://b.example/rss", name="b"))
+
+        client = AsyncMock()
+        with (
+            patch.object(
+                RSSEngine,
+                "_pull_rss_with_status",
+                new_callable=lambda: AsyncMock(return_value=([], None)),
+            ),
+            patch("module.rss.engine.RSS_PER_HOST_DELAY", 0),
+        ):
+            await rss_engine.refresh_rss(client)
+
+        for rss_id in (1, 2):
+            item = rss_engine.rss.search_id(rss_id)
+            assert item.connection_status == "healthy"

@@ -51,7 +51,7 @@ class TestOpenAIParser:
         params = azure_parser._prepare_params(text, DEFAULT_PROMPT)
         assert expected == params
 
-    def test_parse(self):
+    async def test_parse(self):
         text = "[梦蓝字幕组]New Doraemon 哆啦A梦新番[747][2023.02.25][AVC][1080P][GB_JP][MP4]"
         expected = {
             "group": "梦蓝字幕组",
@@ -69,5 +69,5 @@ class TestOpenAIParser:
         with mock.patch("module.parser.analyser.OpenAIParser.parse") as mocker:
             mocker.return_value = json.dumps(expected)
 
-            result = self.parser.parse(text=text, asdict=False)
+            result = await self.parser.parse(text=text, asdict=False)
             assert json.loads(result) == expected
