@@ -3,9 +3,10 @@ from .base import (
     DownloaderCapabilities,
     DownloaderClient,
 )
-from .download_client import DownloadClient, shutdown
+from .download_client import AddResult, DownloadClient, shutdown
 
 __all__ = [
+    "AddResult",
     "CoreDownloaderClient",
     "DownloadClient",
     "DownloaderCapabilities",

@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from enum import Enum
 
 from module.conf import settings
 from module.models import Bangumi, Torrent
@@ -9,6 +10,20 @@ from .base import DownloaderClient
 from .path import gen_save_path
 
 logger = logging.getLogger(__name__)
+
+
+class AddResult(Enum):
+    """``add_torrent`` 的三态结果。
+
+    - ``ADDED``: 真正新增了下载任务；
+    - ``DUPLICATE``: 下载器里已有同一种子（qB 重复 / aria2 去重命中），
+      对调用方来说等同于成功，不应触发失败通知；
+    - ``FAILED``: 投递失败（抓取种子文件失败或客户端异常），可以重试。
+    """
+
+    ADDED = "added"
+    DUPLICATE = "duplicate"
+    FAILED = "failed"
 
 
 # ---------------------------------------------------------------------------
@@ -271,12 +286,15 @@ class DownloadClient:
             return
         await self.client.torrents_resume(hashes)
 
-    async def add_torrent(self, torrent: Torrent | list, bangumi: Bangumi) -> bool:
+    async def add_torrent(self, torrent: Torrent | list, bangumi: Bangumi) -> AddResult:
         """Download a torrent (or list of torrents) for the given bangumi entry.
 
         Handles both magnet links and .torrent file URLs, fetching file bytes
         when necessary. Tags each torrent with ``ab:<bangumi_id>`` for later
         episode-offset lookup during rename.
+
+        返回 :class:`AddResult`，区分"新增成功 / 已添加过 / 投递失败"，
+        调用方据此决定是否重试或发送失败通知。
         """
         if not bangumi.save_path:
             bangumi.save_path = gen_save_path(bangumi)
@@ -287,7 +305,7 @@ class DownloadClient:
                     logger.debug(
                         "[Downloader] No torrent found: %s", bangumi.official_title
                     )
-                    return False
+                    return AddResult.FAILED
                 if "magnet" in torrent[0].url:
                     torrent_url = [t.url for t in torrent]
                     torrent_file = None
@@ -301,7 +319,7 @@ class DownloadClient:
                         logger.warning(
                             f"[Downloader] Failed to fetch torrent files for: {bangumi.official_title}"
                         )
-                        return False
+                        return AddResult.FAILED
                     torrent_url = None
             else:
                 if "magnet" in torrent.url:
@@ -313,7 +331,7 @@ class DownloadClient:
                         logger.warning(
                             f"[Downloader] Failed to fetch torrent file for: {bangumi.official_title}"
                         )
-                        return False
+                        return AddResult.FAILED
                     torrent_url = None
         # Create tag with bangumi_id for offset lookup during rename
         tags = f"ab:{bangumi.id}" if bangumi.id else None
@@ -326,17 +344,17 @@ class DownloadClient:
                 tags=tags,
             ):
                 logger.debug("[Downloader] Add torrent: %s", bangumi.official_title)
-                return True
+                return AddResult.ADDED
             else:
                 logger.debug(
                     "[Downloader] Torrent added before: %s", bangumi.official_title
                 )
-                return False
+                return AddResult.DUPLICATE
         except Exception as e:
             logger.error(
                 f"[Downloader] Failed to add torrent for {bangumi.official_title}: {e}"
             )
-            return False
+            return AddResult.FAILED
 
     async def move_torrent(self, hashes, location):
         if not self._supports("can_manage", "move_torrent"):

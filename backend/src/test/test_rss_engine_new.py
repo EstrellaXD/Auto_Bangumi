@@ -7,6 +7,7 @@ import pytest
 import pytest_asyncio
 
 from module.database import Database
+from module.downloader import AddResult
 from module.models import Torrent
 from module.notification.events import DownloadFailureEvent, RssFailureEvent
 from module.rss.engine import RSSEngine
@@ -185,6 +186,48 @@ class TestMatchTorrent:
 
         assert result2 is not None
 
+    async def test_match_torrent_filter_rejected_leaves_bangumi_id_unset(
+        self, rss_engine
+    ):
+        """A filter-rejected torrent must NOT be associated with the bangumi,
+        or OffsetScanner would compute offsets from excluded episodes."""
+        bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="720")
+        await rss_engine.db.bangumi.add(bangumi)
+
+        torrent = make_torrent(name="[Sub] Mushoku Tensei - 01 [720p].mkv")
+        result = rss_engine.match_torrent(
+            torrent, await rss_engine.db.bangumi.search_all()
+        )
+
+        assert result is None
+        assert torrent.bangumi_id is None
+
+    async def test_match_torrent_filter_passed_sets_bangumi_id(self, rss_engine):
+        """A torrent passing a non-empty filter gets bangumi_id set."""
+        bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="720")
+        await rss_engine.db.bangumi.add(bangumi)
+
+        torrent = make_torrent(name="[Sub] Mushoku Tensei - 01 [1080p].mkv")
+        result = rss_engine.match_torrent(
+            torrent, await rss_engine.db.bangumi.search_all()
+        )
+
+        assert result is not None
+        assert torrent.bangumi_id == result.id
+
+    async def test_match_torrent_empty_filter_sets_bangumi_id(self, rss_engine):
+        """A torrent matched with an empty filter also gets bangumi_id set."""
+        bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="")
+        await rss_engine.db.bangumi.add(bangumi)
+
+        torrent = make_torrent(name="[Sub] Mushoku Tensei - 01 [1080p].mkv")
+        result = rss_engine.match_torrent(
+            torrent, await rss_engine.db.bangumi.search_all()
+        )
+
+        assert result is not None
+        assert torrent.bangumi_id == result.id
+
 
 # ---------------------------------------------------------------------------
 # refresh_rss
@@ -212,7 +255,7 @@ class TestRefreshRss:
 
             # Create a mock client
             client = AsyncMock()
-            client.add_torrent = AsyncMock(return_value=True)
+            client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
 
             await rss_engine.refresh_rss(client)
 
@@ -346,7 +389,7 @@ class TestRefreshRssEvents:
         ) as mock_get:
             mock_get.return_value = [new_torrent]
             client = AsyncMock()
-            client.add_torrent = AsyncMock(return_value=False)
+            client.add_torrent = AsyncMock(return_value=AddResult.FAILED)
 
             events = await rss_engine.refresh_rss(client)
 
@@ -355,8 +398,9 @@ class TestRefreshRssEvents:
         assert events[0].official_title == bangumi.official_title
         assert events[0].torrent_name == new_torrent.name
 
+        # The failed torrent is NOT persisted, so a later tick can retry it.
         all_torrents = await rss_engine.db.torrent.search_all()
-        assert all_torrents[0].downloaded is False
+        assert all_torrents == []
 
     async def test_add_torrent_success_returns_no_download_failure_event(
         self, rss_engine, mock_qb_client
@@ -376,11 +420,115 @@ class TestRefreshRssEvents:
         ) as mock_get:
             mock_get.return_value = [new_torrent]
             client = AsyncMock()
-            client.add_torrent = AsyncMock(return_value=True)
+            client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
 
             events = await rss_engine.refresh_rss(client)
 
         assert events == []
+
+    async def test_add_torrent_duplicate_marks_downloaded_without_event(
+        self, rss_engine
+    ):
+        """A torrent the client already has (DUPLICATE) is treated as success:
+        no failure notification, row persisted as downloaded."""
+        rss_item = make_rss_item(enabled=True)
+        await rss_engine.db.rss.add(rss_item)
+        bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="")
+        await rss_engine.db.bangumi.add(bangumi)
+
+        new_torrent = Torrent(
+            name="[Sub] Mushoku Tensei - 12 [1080p].mkv",
+            url="https://example.com/ep12.torrent",
+        )
+        with patch.object(
+            RSSEngine, "_get_torrents", new_callable=AsyncMock
+        ) as mock_get:
+            mock_get.return_value = [new_torrent]
+            client = AsyncMock()
+            client.add_torrent = AsyncMock(return_value=AddResult.DUPLICATE)
+
+            events = await rss_engine.refresh_rss(client)
+
+        assert events == []
+        all_torrents = await rss_engine.db.torrent.search_all()
+        assert len(all_torrents) == 1
+        assert all_torrents[0].downloaded is True
+
+
+# ---------------------------------------------------------------------------
+# refresh_rss retry semantics for failed adds
+# ---------------------------------------------------------------------------
+
+
+class TestRefreshRssRetry:
+    async def test_refresh_rss_failed_add_retried_on_next_tick(self, rss_engine):
+        """A torrent whose add FAILED is re-attempted on the next refresh
+        (it must not be persisted, or check_new would filter it forever)."""
+        rss_item = make_rss_item(enabled=True)
+        await rss_engine.db.rss.add(rss_item)
+        bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="")
+        await rss_engine.db.bangumi.add(bangumi)
+
+        def feed_torrent():
+            return Torrent(
+                name="[Sub] Mushoku Tensei - 12 [1080p].mkv",
+                url="https://example.com/ep12.torrent",
+            )
+
+        with patch.object(
+            RSSEngine, "_get_torrents", new_callable=AsyncMock
+        ) as mock_get:
+            client = AsyncMock()
+
+            # Tick 1: transient failure
+            mock_get.return_value = [feed_torrent()]
+            client.add_torrent = AsyncMock(return_value=AddResult.FAILED)
+            await rss_engine.refresh_rss(client)
+            client.add_torrent.assert_called_once()
+            assert await rss_engine.db.torrent.search_all() == []
+
+            # Tick 2: same feed item is still there, add now succeeds
+            mock_get.return_value = [feed_torrent()]
+            client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
+            await rss_engine.refresh_rss(client)
+            client.add_torrent.assert_called_once()
+
+        all_torrents = await rss_engine.db.torrent.search_all()
+        assert len(all_torrents) == 1
+        assert all_torrents[0].downloaded is True
+
+    async def test_refresh_rss_filter_rejected_persisted_and_not_retried(
+        self, rss_engine
+    ):
+        """Filter-rejected torrents keep the old behavior: persisted once
+        (downloaded=False, no bangumi association) and never re-processed."""
+        rss_item = make_rss_item(enabled=True)
+        await rss_engine.db.rss.add(rss_item)
+        bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="720")
+        await rss_engine.db.bangumi.add(bangumi)
+
+        def feed_torrent():
+            return Torrent(
+                name="[Sub] Mushoku Tensei - 01 [720p].mkv",
+                url="https://example.com/ep01-720.torrent",
+            )
+
+        with patch.object(
+            RSSEngine, "_get_torrents", new_callable=AsyncMock
+        ) as mock_get:
+            client = AsyncMock()
+            client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
+
+            mock_get.return_value = [feed_torrent()]
+            await rss_engine.refresh_rss(client)
+            mock_get.return_value = [feed_torrent()]
+            await rss_engine.refresh_rss(client)
+
+        client.add_torrent.assert_not_called()
+        all_torrents = await rss_engine.db.torrent.search_all()
+        assert len(all_torrents) == 1
+        assert all_torrents[0].downloaded is False
+        assert all_torrents[0].bangumi_id is None
 
 
 # ---------------------------------------------------------------------------
@@ -714,7 +862,7 @@ class TestRefreshRssPreferenceDedup:
         ) as mock_get:
             mock_get.return_value = [preferred, other]
             client = AsyncMock()
-            client.add_torrent = AsyncMock(return_value=True)
+            client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
 
             await rss_engine.refresh_rss(client)
 
@@ -749,7 +897,7 @@ class TestRefreshRssPreferenceDedup:
         ) as mock_get:
             mock_get.return_value = [torrent_a, torrent_b]
             client = AsyncMock()
-            client.add_torrent = AsyncMock(return_value=True)
+            client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
 
             await rss_engine.refresh_rss(client)
 

@@ -1,7 +1,7 @@
 import logging
 
 from module.database import Database
-from module.downloader import DownloadClient
+from module.downloader import AddResult, DownloadClient
 from module.models import Bangumi, ResponseModel
 from module.network import RequestContent
 from module.rss import RSSEngine
@@ -27,7 +27,7 @@ class SeasonCollector:
                     link, bangumi.filter.replace(",", "|")
                 )
         async with Database() as db:
-            if await self.client.add_torrent(torrents, bangumi):
+            if await self.client.add_torrent(torrents, bangumi) is AddResult.ADDED:
                 logger.info(
                     f"Collections of {bangumi.official_title} Season {bangumi.season} completed."
                 )

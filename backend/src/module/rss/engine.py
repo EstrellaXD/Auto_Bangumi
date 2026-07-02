@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 from module.database import Database
 from module.database.bangumi import _groups_are_similar, match_bangumi_in_list
-from module.downloader import DownloadClient
+from module.downloader import AddResult, DownloadClient
 from module.models import Bangumi, Episode, ResponseModel, RSSItem, Torrent
 from module.network import RequestContent
 from module.notification.events import (
@@ -168,11 +168,15 @@ class RSSEngine:
     ) -> Optional[Bangumi]:
         matched = match_bangumi_in_list(torrent.name, bangumi_list)
         if matched:
-            torrent.bangumi_id = matched.id
+            # 只有通过排除过滤的种子才关联 bangumi_id：被过滤掉的种子
+            # 不能挂在番剧名下，否则 OffsetScanner 会用用户明确排除的
+            # 剧集来计算 offset 建议。
             if matched.filter == "":
+                torrent.bangumi_id = matched.id
                 return matched
             pattern = self._get_filter_pattern(matched.filter)
             if not pattern.search(torrent.name):
+                torrent.bangumi_id = matched.id
                 return matched
         return None
 
@@ -336,6 +340,7 @@ class RSSEngine:
                         error=error,
                     )
                 )
+            failed_ids: set[int] = set()
             for torrent, matched_data in zip(new_torrents, matches):
                 if matched_data:
                     if id(torrent) in skip_ids:
@@ -345,22 +350,32 @@ class RSSEngine:
                             torrent.name,
                             matched_data.official_title,
                         )
-                    elif await client.add_torrent(torrent, matched_data):
-                        logger.debug("[Engine] Add torrent %s to client", torrent.name)
-                        torrent.downloaded = True
-                    else:
-                        # add_torrent() already retried the underlying fetch
-                        # internally (RequestURL.get_url, retry=3); leave
-                        # downloaded=False so a future tick can retry, and
-                        # surface the failure now.
+                        continue
+                    result = await client.add_torrent(torrent, matched_data)
+                    if result is AddResult.FAILED:
+                        # 投递失败：不入库（check_new 按 URL 去重，入库就
+                        # 永远不会再处理），下一轮 refresh 该种子仍在源里
+                        # 时会重新匹配并重试；同时发出失败通知。
+                        failed_ids.add(id(torrent))
                         events.append(
                             DownloadFailureEvent(
                                 official_title=matched_data.official_title,
                                 torrent_name=torrent.name,
                             )
                         )
-            # Add all torrents to database
-            await self.db.torrent.add_all(new_torrents)
+                    else:
+                        # ADDED 与 DUPLICATE（下载器里已有同一种子）都视为
+                        # 成功，不再对健康的重复种子发失败通知。
+                        logger.debug(
+                            "[Engine] Add torrent %s to client (%s)",
+                            torrent.name,
+                            result.value,
+                        )
+                        torrent.downloaded = True
+            # Add all torrents to database (投递失败的除外，留待重试)
+            await self.db.torrent.add_all(
+                [t for t in new_torrents if id(t) not in failed_ids]
+            )
         await self.db.commit()
         return events
 

@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock, patch
 
 from module.database import Database
+from module.downloader import AddResult
 from module.models import EpisodeFile, Torrent
 from module.rss.engine import RSSEngine
 from test.factories import make_bangumi, make_rss_item
@@ -54,7 +55,7 @@ class TestRssToDownloadFlow:
 
             # 4. Mock download client
             mock_client = AsyncMock()
-            mock_client.add_torrent = AsyncMock(return_value=True)
+            mock_client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
 
             # 5. Execute refresh_rss
             await engine.refresh_rss(mock_client)
@@ -107,7 +108,7 @@ class TestRssToDownloadFlow:
         ) as mock_get:
             mock_get.return_value = torrents
             mock_client = AsyncMock()
-            mock_client.add_torrent = AsyncMock(return_value=True)
+            mock_client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
             await engine.refresh_rss(mock_client)
 
         # Only 1080p should be downloaded (720p is filtered)
@@ -147,7 +148,7 @@ class TestRssToDownloadFlow:
         ) as mock_get:
             mock_get.return_value = torrents
             mock_client = AsyncMock()
-            mock_client.add_torrent = AsyncMock(return_value=True)
+            mock_client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
             await engine.refresh_rss(mock_client)
 
         # Only ep02 should be downloaded (ep01 already exists)
