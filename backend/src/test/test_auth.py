@@ -4,7 +4,6 @@ from datetime import timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
-from jose import JWTError
 
 from module.security.jwt import (
     create_access_token,
@@ -100,7 +99,7 @@ class TestVerifyToken:
         token = create_access_token(
             data={"sub": "user"}, expires_delta=timedelta(seconds=-10)
         )
-        # python-jose catches expired tokens during decode, so decode_token
+        # PyJWT catches expired tokens during decode, so decode_token
         # returns None, and verify_token propagates that as None
         result = verify_token(token)
         assert result is None
@@ -178,7 +177,9 @@ class TestGetCurrentUser:
         from module.security.api import get_current_user
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(request=self._mock_request(), token="invalid.jwt.token")
+            await get_current_user(
+                request=self._mock_request(), token="invalid.jwt.token"
+            )
         assert exc_info.value.status_code == 401
 
     @patch("module.security.api.DEV_AUTH_BYPASS", False)

@@ -2,8 +2,9 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
+import jwt
+from jwt import PyJWTError
 
 _SECRET_PATH = Path("config/.jwt_secret")
 
@@ -20,9 +21,6 @@ def _load_or_create_secret() -> str:
 
 app_pwd_key = _load_or_create_secret()
 app_pwd_algorithm = "HS256"
-
-# Hashing 密码
-app_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 # 创建 JWT Token
@@ -42,26 +40,29 @@ def decode_token(token: str | None):
     if not token:
         return None
     try:
+        # 显式指定 algorithms，防止算法混淆攻击 (CVE-2024-33663 同类问题)
         payload = jwt.decode(token, app_pwd_key, algorithms=[app_pwd_algorithm])
         username = payload.get("sub")
         if username is None:
             return None
         return payload
-    except JWTError:
+    except PyJWTError:
         return None
 
 
 def verify_token(token: str | None):
-    # jose's jwt.decode() already validates "exp" and raises JWTError (caught
-    # above) for expired tokens, so a token returned by decode_token() is
-    # never expired — no separate expiry recheck is needed here.
+    # PyJWT 的 jwt.decode() 已经校验 "exp" 并在过期时抛出 PyJWTError（在上面
+    # 被捕获），所以 decode_token() 返回的 token 永远不会是过期的——这里无需
+    # 再单独检查过期时间。
     return decode_token(token)
 
 
 # 密码加密&验证
-def verify_password(plain_password, hashed_password):
-    return app_pwd_context.verify(plain_password, hashed_password)
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return bcrypt.checkpw(
+        plain_password.encode("utf-8"), hashed_password.encode("utf-8")
+    )
 
 
-def get_password_hash(password):
-    return app_pwd_context.hash(password)
+def get_password_hash(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
