@@ -7,13 +7,13 @@ from pydantic import BaseModel
 from module.conf import settings
 from module.database import Database, get_db
 from module.manager import TorrentManager
-from module.models import APIResponse, Bangumi, BangumiUpdate
+from module.models import APIResponse, Bangumi, BangumiUpdate, ResponseModel
 from module.parser.analyser.offset_detector import (
     OffsetSuggestion as DetectorSuggestion,
 )
 from module.parser.analyser.offset_detector import detect_offset_mismatch
 from module.parser.analyser.tmdb_parser import tmdb_parser
-from module.security.api import UNAUTHORIZED, get_current_user
+from module.security.api import get_current_user
 
 from .response import u_response
 
@@ -85,7 +85,7 @@ async def get_all_data(db: Database = Depends(get_db)):
     response_model=Bangumi,
     dependencies=[Depends(get_current_user)],
 )
-async def get_data(bangumi_id: str, db: Database = Depends(get_db)):
+async def get_data(bangumi_id: int, db: Database = Depends(get_db)):
     manager = TorrentManager(db)
     resp = await manager.search_one(bangumi_id)
     return resp
@@ -106,66 +106,96 @@ async def update_rule(
     return u_response(resp)
 
 
+def _empty_id_list_response() -> JSONResponse:
+    return u_response(
+        ResponseModel(
+            status_code=400,
+            status=False,
+            msg_en="No bangumi id provided.",
+            msg_zh="未提供番剧 id。",
+        )
+    )
+
+
+def _aggregate_response(
+    action_en: str, action_zh: str, results: list[ResponseModel]
+) -> JSONResponse:
+    succeeded = sum(1 for r in results if r.status)
+    all_ok = succeeded == len(results)
+    return u_response(
+        ResponseModel(
+            status_code=200 if all_ok else 500,
+            status=all_ok,
+            msg_en=f"{action_en} {succeeded}/{len(results)} rules.",
+            msg_zh=f"已{action_zh} {succeeded}/{len(results)} 条规则。",
+        )
+    )
+
+
+# Registered before /delete/{bangumi_id} so "many" is never captured as an id.
+@router.post(
+    path="/delete/many",
+    response_model=APIResponse,
+    dependencies=[Depends(get_current_user)],
+)
+async def delete_many_rule(
+    bangumi_id: list[int], file: bool = False, db: Database = Depends(get_db)
+):
+    if not bangumi_id:
+        return _empty_id_list_response()
+    manager = TorrentManager(db)
+    results = [await manager.delete_rule(i, file) for i in bangumi_id]
+    return _aggregate_response("Deleted", "删除", results)
+
+
 @router.delete(
     path="/delete/{bangumi_id}",
     response_model=APIResponse,
     dependencies=[Depends(get_current_user)],
 )
 async def delete_rule(
-    bangumi_id: str, file: bool = False, db: Database = Depends(get_db)
+    bangumi_id: int, file: bool = False, db: Database = Depends(get_db)
 ):
     manager = TorrentManager(db)
     resp = await manager.delete_rule(bangumi_id, file)
     return u_response(resp)
 
 
-@router.delete(
-    path="/delete/many/",
+# Registered before /disable/{bangumi_id} so "many" is never captured as an id.
+@router.post(
+    path="/disable/many",
     response_model=APIResponse,
     dependencies=[Depends(get_current_user)],
 )
-async def delete_many_rule(
-    bangumi_id: list, file: bool = False, db: Database = Depends(get_db)
+async def disable_many_rule(
+    bangumi_id: list[int], file: bool = False, db: Database = Depends(get_db)
 ):
+    if not bangumi_id:
+        return _empty_id_list_response()
     manager = TorrentManager(db)
-    for i in bangumi_id:
-        resp = await manager.delete_rule(i, file)
-    return u_response(resp)
+    results = [await manager.disable_rule(i, file) for i in bangumi_id]
+    return _aggregate_response("Disabled", "禁用", results)
 
 
-@router.delete(
+@router.post(
     path="/disable/{bangumi_id}",
     response_model=APIResponse,
     dependencies=[Depends(get_current_user)],
 )
 async def disable_rule(
-    bangumi_id: str, file: bool = False, db: Database = Depends(get_db)
+    bangumi_id: int, file: bool = False, db: Database = Depends(get_db)
 ):
     manager = TorrentManager(db)
     resp = await manager.disable_rule(bangumi_id, file)
     return u_response(resp)
 
 
-@router.delete(
-    path="/disable/many/",
-    response_model=APIResponse,
-    dependencies=[Depends(get_current_user)],
-)
-async def disable_many_rule(
-    bangumi_id: list, file: bool = False, db: Database = Depends(get_db)
-):
-    manager = TorrentManager(db)
-    for i in bangumi_id:
-        resp = await manager.disable_rule(i, file)
-    return u_response(resp)
-
-
-@router.get(
+@router.post(
     path="/enable/{bangumi_id}",
     response_model=APIResponse,
     dependencies=[Depends(get_current_user)],
 )
-async def enable_rule(bangumi_id: str, db: Database = Depends(get_db)):
+async def enable_rule(bangumi_id: int, db: Database = Depends(get_db)):
     manager = TorrentManager(db)
     resp = await manager.enable_rule(bangumi_id)
     return u_response(resp)
@@ -204,7 +234,7 @@ async def refresh_calendar(db: Database = Depends(get_db)):
     return u_response(resp)
 
 
-@router.get(
+@router.post(
     "/reset/all", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
 async def reset_all(db: Database = Depends(get_db)):

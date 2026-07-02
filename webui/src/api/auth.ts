@@ -27,7 +27,7 @@ export const apiAuth = {
   },
 
   async logout() {
-    const { data } = await axios.get<ApiSuccess>('api/v1/auth/logout');
+    const { data } = await axios.post<ApiSuccess>('api/v1/auth/logout');
     return data;
   },
 

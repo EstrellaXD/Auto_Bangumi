@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 
 from module.conf import LOG_PATH
 from module.models import APIResponse
-from module.security.api import UNAUTHORIZED, get_current_user
+from module.security.api import get_current_user
 
 router = APIRouter(prefix="/log", tags=["log"])
 
@@ -32,7 +32,7 @@ async def get_log():
         return Response("Log file not found", status_code=404)
 
 
-@router.get(
+@router.post(
     "/clear", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
 async def clear_log():
@@ -44,6 +44,6 @@ async def clear_log():
         )
     else:
         return JSONResponse(
-            status_code=406,
+            status_code=404,
             content={"msg_en": "Log file not found.", "msg_zh": "日志文件未找到。"},
         )

@@ -2,16 +2,13 @@ from fastapi import APIRouter, Depends, Query
 from sse_starlette.sse import EventSourceResponse
 
 from module.conf.search_provider import get_provider, save_provider
-from module.models import Bangumi
 from module.searcher import SEARCH_CONFIG, SearchTorrent
-from module.security.api import UNAUTHORIZED, get_current_user
+from module.security.api import get_current_user
 
 router = APIRouter(prefix="/search", tags=["search"])
 
 
-@router.get(
-    "/bangumi", response_model=list[Bangumi], dependencies=[Depends(get_current_user)]
-)
+@router.get("/bangumi", dependencies=[Depends(get_current_user)])
 async def search_torrents(site: str = "mikan", keywords: str = Query(None)):
     """
     Server Send Event for per Bangumi item

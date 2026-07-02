@@ -136,12 +136,12 @@ class TestDeleteRss:
         assert response.status_code == 200
 
     def test_delete_failure(self, authed_client, mock_db):
-        """DELETE /rss/delete/{id} returns 406 when feed not found."""
+        """DELETE /rss/delete/{id} returns 400 when feed not found."""
         mock_db.rss.delete = AsyncMock(return_value=False)
 
         response = authed_client.delete("/api/v1/rss/delete/999")
 
-        assert response.status_code == 406
+        assert response.status_code == 400
 
 
 # ---------------------------------------------------------------------------
@@ -159,12 +159,12 @@ class TestDisableRss:
         assert response.status_code == 200
 
     def test_disable_failure(self, authed_client, mock_db):
-        """PATCH /rss/disable/{id} returns 406 when feed not found."""
+        """PATCH /rss/disable/{id} returns 404 when feed not found."""
         mock_db.rss.disable = AsyncMock(return_value=False)
 
         response = authed_client.patch("/api/v1/rss/disable/999")
 
-        assert response.status_code == 406
+        assert response.status_code == 404
 
 
 # ---------------------------------------------------------------------------
@@ -232,13 +232,13 @@ class TestUpdateRss:
 
 
 # ---------------------------------------------------------------------------
-# GET /rss/refresh/*
+# POST /rss/refresh/*
 # ---------------------------------------------------------------------------
 
 
 class TestRefreshRss:
     def test_refresh_all(self, authed_client):
-        """GET /rss/refresh/all triggers engine.refresh_rss."""
+        """POST /rss/refresh/all triggers engine.refresh_rss."""
         with patch("module.api.rss.DownloadClient") as MockClient:
             mock_client = AsyncMock()
             MockClient.return_value.__aenter__ = AsyncMock(return_value=mock_client)
@@ -247,12 +247,12 @@ class TestRefreshRss:
                 mock_eng = MockEngine.return_value
                 mock_eng.refresh_rss = AsyncMock()
 
-                response = authed_client.get("/api/v1/rss/refresh/all")
+                response = authed_client.post("/api/v1/rss/refresh/all")
 
         assert response.status_code == 200
 
     def test_refresh_single(self, authed_client):
-        """GET /rss/refresh/{id} refreshes specific feed."""
+        """POST /rss/refresh/{id} refreshes specific feed."""
         with patch("module.api.rss.DownloadClient") as MockClient:
             mock_client = AsyncMock()
             MockClient.return_value.__aenter__ = AsyncMock(return_value=mock_client)
@@ -261,7 +261,7 @@ class TestRefreshRss:
                 mock_eng = MockEngine.return_value
                 mock_eng.refresh_rss = AsyncMock()
 
-                response = authed_client.get("/api/v1/rss/refresh/1")
+                response = authed_client.post("/api/v1/rss/refresh/1")
 
         assert response.status_code == 200
 

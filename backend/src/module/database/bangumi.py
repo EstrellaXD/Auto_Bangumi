@@ -73,6 +73,33 @@ def _all_title_patterns(bangumi: Bangumi) -> list[str]:
     return patterns
 
 
+def normalize_save_path(save_path: str | None) -> str:
+    """Normalize a save_path so equivalent paths compare equal.
+
+    Collapses the separator/trailing-slash variations that
+    `BangumiDatabase.match_by_save_path` used to try one at a time.
+    """
+    if not save_path:
+        return ""
+    return save_path.replace("\\", "/").rstrip("/")
+
+
+def build_save_path_index(bangumi_list: list[Bangumi]) -> dict[str, Bangumi]:
+    """Build an in-memory normalized-save_path -> Bangumi index.
+
+    Lets callers match many torrents against an already-loaded bangumi list
+    (O(1) per lookup) instead of issuing a DB query per torrent.
+    """
+    index: dict[str, Bangumi] = {}
+    for bangumi in bangumi_list:
+        if bangumi.deleted or not bangumi.save_path:
+            continue
+        key = normalize_save_path(bangumi.save_path)
+        if key:
+            index.setdefault(key, bangumi)
+    return index
+
+
 def match_bangumi_in_list(
     torrent_name: str, bangumi_list: list[Bangumi]
 ) -> Optional[Bangumi]:

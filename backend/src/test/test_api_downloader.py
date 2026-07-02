@@ -393,8 +393,7 @@ class TestAutoTagTorrents:
 
             with patch("module.api.downloader.Database") as MockDB:
                 mock_db = MagicMock()
-                mock_db.bangumi.match_torrent = AsyncMock(return_value=mock_bangumi)
-                mock_db.bangumi.match_by_save_path = AsyncMock(return_value=None)
+                mock_db.bangumi.search_all = AsyncMock(return_value=[mock_bangumi])
                 MockDB.return_value.__aenter__ = AsyncMock(return_value=mock_db)
                 MockDB.return_value.__aexit__ = AsyncMock(return_value=False)
 
@@ -426,8 +425,7 @@ class TestAutoTagTorrents:
 
             with patch("module.api.downloader.Database") as MockDB:
                 mock_db = MagicMock()
-                mock_db.bangumi.match_torrent = AsyncMock(return_value=None)
-                mock_db.bangumi.match_by_save_path = AsyncMock(return_value=None)
+                mock_db.bangumi.search_all = AsyncMock(return_value=[])
                 MockDB.return_value.__aenter__ = AsyncMock(return_value=mock_db)
                 MockDB.return_value.__aexit__ = AsyncMock(return_value=False)
 

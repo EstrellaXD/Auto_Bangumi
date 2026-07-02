@@ -6,7 +6,7 @@ from module.downloader import DownloadClient
 from module.manager import SeasonCollector
 from module.models import APIResponse, Bangumi, RSSItem, RSSUpdate, Torrent
 from module.rss import RSSAnalyser, RSSEngine
-from module.security.api import UNAUTHORIZED, get_current_user
+from module.security.api import get_current_user
 
 from .response import u_response
 
@@ -56,7 +56,7 @@ async def delete_rss(rss_id: int, db: Database = Depends(get_db)):
         )
     else:
         return JSONResponse(
-            status_code=406,
+            status_code=400,
             content={"msg_en": "Delete RSS failed.", "msg_zh": "删除 RSS 失败。"},
         )
 
@@ -91,7 +91,7 @@ async def disable_rss(rss_id: int, db: Database = Depends(get_db)):
         )
     else:
         return JSONResponse(
-            status_code=406,
+            status_code=404,
             content={"msg_en": "Disable RSS failed.", "msg_zh": "禁用 RSS 失败。"},
         )
 
@@ -115,11 +115,8 @@ async def disable_many_rss(rss_ids: list[int], db: Database = Depends(get_db)):
 async def update_rss(
     rss_id: int,
     data: RSSUpdate,
-    current_user=Depends(get_current_user),
     db: Database = Depends(get_db),
 ):
-    if not current_user:
-        raise UNAUTHORIZED
     if await db.rss.update(rss_id, data):
         return JSONResponse(
             status_code=200,
@@ -127,12 +124,12 @@ async def update_rss(
         )
     else:
         return JSONResponse(
-            status_code=406,
+            status_code=404,
             content={"msg_en": "Update RSS failed.", "msg_zh": "更新 RSS 失败。"},
         )
 
 
-@router.get(
+@router.post(
     path="/refresh/all",
     response_model=APIResponse,
     dependencies=[Depends(get_current_user)],
@@ -150,7 +147,7 @@ async def refresh_all(db: Database = Depends(get_db)):
     )
 
 
-@router.get(
+@router.post(
     path="/refresh/{rss_id}",
     response_model=APIResponse,
     dependencies=[Depends(get_current_user)],

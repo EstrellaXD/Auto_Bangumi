@@ -1,8 +1,8 @@
 """Tests for Program API endpoints."""
 
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -77,20 +77,20 @@ def unauthed_client(app):
 class TestAuthRequired:
     @patch("module.security.api.DEV_AUTH_BYPASS", False)
     def test_restart_unauthorized(self, unauthed_client):
-        """GET /restart without auth returns 401."""
-        response = unauthed_client.get("/api/v1/restart")
+        """POST /restart without auth returns 401."""
+        response = unauthed_client.post("/api/v1/restart")
         assert response.status_code == 401
 
     @patch("module.security.api.DEV_AUTH_BYPASS", False)
     def test_start_unauthorized(self, unauthed_client):
-        """GET /start without auth returns 401."""
-        response = unauthed_client.get("/api/v1/start")
+        """POST /start without auth returns 401."""
+        response = unauthed_client.post("/api/v1/start")
         assert response.status_code == 401
 
     @patch("module.security.api.DEV_AUTH_BYPASS", False)
     def test_stop_unauthorized(self, unauthed_client):
-        """GET /stop without auth returns 401."""
-        response = unauthed_client.get("/api/v1/stop")
+        """POST /stop without auth returns 401."""
+        response = unauthed_client.post("/api/v1/stop")
         assert response.status_code == 401
 
     @patch("module.security.api.DEV_AUTH_BYPASS", False)
@@ -101,50 +101,50 @@ class TestAuthRequired:
 
 
 # ---------------------------------------------------------------------------
-# GET /start
+# POST /start
 # ---------------------------------------------------------------------------
 
 
 class TestStartProgram:
     def test_start_success(self, authed_client):
-        """GET /start returns success response."""
-        response = authed_client.get("/api/v1/start")
+        """POST /start returns success response."""
+        response = authed_client.post("/api/v1/start")
         assert response.status_code == 200
 
     def test_start_failure(self, authed_client, mock_ctx):
-        """GET /start handles exceptions."""
+        """POST /start handles exceptions."""
         mock_ctx.start_tasks = AsyncMock(side_effect=Exception("Start failed"))
-        response = authed_client.get("/api/v1/start")
+        response = authed_client.post("/api/v1/start")
         assert response.status_code == 500
 
 
 # ---------------------------------------------------------------------------
-# GET /stop
+# POST /stop
 # ---------------------------------------------------------------------------
 
 
 class TestStopProgram:
     def test_stop_success(self, authed_client):
-        """GET /stop returns success response."""
-        response = authed_client.get("/api/v1/stop")
+        """POST /stop returns success response."""
+        response = authed_client.post("/api/v1/stop")
         assert response.status_code == 200
 
 
 # ---------------------------------------------------------------------------
-# GET /restart
+# POST /restart
 # ---------------------------------------------------------------------------
 
 
 class TestRestartProgram:
     def test_restart_success(self, authed_client):
-        """GET /restart returns success response."""
-        response = authed_client.get("/api/v1/restart")
+        """POST /restart returns success response."""
+        response = authed_client.post("/api/v1/restart")
         assert response.status_code == 200
 
     def test_restart_failure(self, authed_client, mock_ctx):
-        """GET /restart handles exceptions."""
+        """POST /restart handles exceptions."""
         mock_ctx.restart = AsyncMock(side_effect=Exception("Restart failed"))
-        response = authed_client.get("/api/v1/restart")
+        response = authed_client.post("/api/v1/restart")
         assert response.status_code == 500
 
 

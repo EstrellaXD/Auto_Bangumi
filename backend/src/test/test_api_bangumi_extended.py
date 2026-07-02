@@ -321,23 +321,21 @@ class TestSetWeekday:
 
 class TestBatchOperations:
     def test_delete_many_auth_required(self, unauthed_client):
-        """DELETE /bangumi/delete/many/ requires authentication."""
+        """POST /bangumi/delete/many requires authentication."""
         # Note: The batch endpoints accept list as body but FastAPI requires
         # proper Query/Body annotations. Testing auth requirement only.
         with patch("module.security.api.DEV_AUTH_BYPASS", False):
-            response = unauthed_client.request(
-                "DELETE",
-                "/api/v1/bangumi/delete/many/",
+            response = unauthed_client.post(
+                "/api/v1/bangumi/delete/many",
                 json=[1, 2, 3],
             )
         assert response.status_code == 401
 
     def test_disable_many_auth_required(self, unauthed_client):
-        """DELETE /bangumi/disable/many/ requires authentication."""
+        """POST /bangumi/disable/many requires authentication."""
         with patch("module.security.api.DEV_AUTH_BYPASS", False):
-            response = unauthed_client.request(
-                "DELETE",
-                "/api/v1/bangumi/disable/many/",
+            response = unauthed_client.post(
+                "/api/v1/bangumi/disable/many",
                 json=[1, 2],
             )
         assert response.status_code == 401

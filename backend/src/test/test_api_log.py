@@ -1,16 +1,15 @@
 """Tests for Log API endpoints."""
 
-import pytest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from module.api import v1
 from module.security.api import get_current_user
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -67,8 +66,8 @@ class TestAuthRequired:
 
     @patch("module.security.api.DEV_AUTH_BYPASS", False)
     def test_clear_log_unauthorized(self, unauthed_client):
-        """GET /log/clear without auth returns 401."""
-        response = unauthed_client.get("/api/v1/log/clear")
+        """POST /log/clear without auth returns 401."""
+        response = unauthed_client.post("/api/v1/log/clear")
         assert response.status_code == 401
 
 
@@ -111,19 +110,19 @@ class TestGetLog:
 
 
 # ---------------------------------------------------------------------------
-# GET /log/clear
+# POST /log/clear
 # ---------------------------------------------------------------------------
 
 
 class TestClearLog:
     def test_clear_log_success(self, authed_client, temp_log_file):
-        """GET /log/clear clears the log file."""
+        """POST /log/clear clears the log file."""
         # Ensure file has content
         temp_log_file.write_text("Some log content")
         assert temp_log_file.read_text() != ""
 
         with patch("module.api.log.LOG_PATH", temp_log_file):
-            response = authed_client.get("/api/v1/log/clear")
+            response = authed_client.post("/api/v1/log/clear")
 
         assert response.status_code == 200
         data = response.json()
@@ -131,11 +130,11 @@ class TestClearLog:
         assert temp_log_file.read_text() == ""
 
     def test_clear_log_not_found(self, authed_client):
-        """GET /log/clear returns 406 when log file doesn't exist."""
+        """POST /log/clear returns 404 when log file doesn't exist."""
         non_existent_path = Path("/nonexistent/path/app.log")
         with patch("module.api.log.LOG_PATH", non_existent_path):
-            response = authed_client.get("/api/v1/log/clear")
+            response = authed_client.post("/api/v1/log/clear")
 
-        assert response.status_code == 406
+        assert response.status_code == 404
         data = response.json()
         assert data["msg_en"] == "Log file not found."

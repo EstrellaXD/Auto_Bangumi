@@ -173,7 +173,7 @@ class TestDeleteBangumi:
         assert response.status_code == 200
 
     def test_disable_rule(self, authed_client):
-        """DELETE /bangumi/disable/{id} marks as deleted."""
+        """POST /bangumi/disable/{id} marks as deleted."""
         resp_model = ResponseModel(
             status=True, status_code=200, msg_en="Disabled.", msg_zh="已禁用。"
         )
@@ -181,12 +181,12 @@ class TestDeleteBangumi:
             mock_mgr = MockManager.return_value
             mock_mgr.disable_rule = AsyncMock(return_value=resp_model)
 
-            response = authed_client.delete("/api/v1/bangumi/disable/1")
+            response = authed_client.post("/api/v1/bangumi/disable/1")
 
         assert response.status_code == 200
 
     def test_enable_rule(self, authed_client):
-        """GET /bangumi/enable/{id} re-enables rule."""
+        """POST /bangumi/enable/{id} re-enables rule."""
         resp_model = ResponseModel(
             status=True, status_code=200, msg_en="Enabled.", msg_zh="已启用。"
         )
@@ -194,7 +194,7 @@ class TestDeleteBangumi:
             mock_mgr = MockManager.return_value
             mock_mgr.enable_rule = AsyncMock(return_value=resp_model)
 
-            response = authed_client.get("/api/v1/bangumi/enable/1")
+            response = authed_client.post("/api/v1/bangumi/enable/1")
 
         assert response.status_code == 200
 
@@ -206,9 +206,9 @@ class TestDeleteBangumi:
 
 class TestResetBangumi:
     def test_reset_all(self, authed_client, mock_db):
-        """GET /bangumi/reset/all deletes all bangumi."""
+        """POST /bangumi/reset/all deletes all bangumi."""
         mock_db.bangumi.delete_all = AsyncMock(return_value=None)
 
-        response = authed_client.get("/api/v1/bangumi/reset/all")
+        response = authed_client.post("/api/v1/bangumi/reset/all")
 
         assert response.status_code == 200

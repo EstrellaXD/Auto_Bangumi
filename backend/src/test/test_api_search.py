@@ -1,14 +1,13 @@
 """Tests for Search API endpoints."""
 
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from module.api import v1
 from module.security.api import get_current_user
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

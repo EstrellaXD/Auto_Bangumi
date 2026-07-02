@@ -7,7 +7,7 @@ export const apiLog = {
   },
 
   async clearLog() {
-    const { data } = await axios.get<ApiSuccess>('api/v1/log/clear');
+    const { data } = await axios.post<ApiSuccess>('api/v1/log/clear');
     return data;
   },
 };

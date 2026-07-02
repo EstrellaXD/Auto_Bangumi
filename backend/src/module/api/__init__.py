@@ -5,12 +5,12 @@ from .bangumi import router as bangumi_router
 from .config import router as config_router
 from .downloader import router as downloader_router
 from .log import router as log_router
+from .notification import router as notification_router
 from .passkey import router as passkey_router
 from .program import router as program_router
 from .rss import router as rss_router
 from .search import router as search_router
 from .setup import router as setup_router
-from .notification import router as notification_router
 
 __all__ = "v1"
 

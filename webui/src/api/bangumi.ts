@@ -25,24 +25,6 @@ export const apiBangumi = {
   },
 
   /**
-   * 获取指定 bangumiId 的规则
-   * @param bangumiId  bangumi id
-   * @returns 指定 bangumi 的规则
-   */
-  async getRule(bangumiId: number) {
-    const { data } = await axios.get<BangumiAPI>(
-      `api/v1/bangumi/get/${bangumiId}`
-    );
-    const result: BangumiRule = {
-      ...data,
-      filter: data.filter.split(','),
-      rss_link: data.rss_link.split(','),
-      air_weekday: data.air_weekday ?? null,
-    };
-    return result;
-  },
-
-  /**
    * 更新指定 bangumiId 的规则
    * @param bangumiId - 需要更新的 bangumi 的 id
    * @param bangumiRule
@@ -69,22 +51,19 @@ export const apiBangumi = {
    * @returns axios 请求返回的数据
    */
   async deleteRule(bangumiId: number | number[], file: boolean) {
-    let url = 'api/v1/bangumi/delete';
-    let ids: undefined | number[];
-
     if (typeof bangumiId === 'number') {
-      url = `${url}/${bangumiId}`;
-    } else {
-      url = `${url}/many`;
-      ids = bangumiId;
+      const { data } = await axios.delete<ApiSuccess>(
+        `api/v1/bangumi/delete/${bangumiId}`,
+        { params: { file } }
+      );
+      return data;
     }
 
-    const { data } = await axios.delete<ApiSuccess>(url, {
-      data: ids,
-      params: {
-        file,
-      },
-    });
+    const { data } = await axios.post<ApiSuccess>(
+      'api/v1/bangumi/delete/many',
+      bangumiId,
+      { params: { file } }
+    );
     return data;
   },
 
@@ -95,22 +74,20 @@ export const apiBangumi = {
    * @returns axios 请求返回的数据
    */
   async disableRule(bangumiId: number | number[], file: boolean) {
-    let url = 'api/v1/bangumi/disable';
-    let ids: undefined | number[];
-
     if (typeof bangumiId === 'number') {
-      url = `${url}/${bangumiId}`;
-    } else {
-      url = `${url}/many`;
-      ids = bangumiId;
+      const { data } = await axios.post<ApiSuccess>(
+        `api/v1/bangumi/disable/${bangumiId}`,
+        null,
+        { params: { file } }
+      );
+      return data;
     }
 
-    const { data } = await axios.delete<ApiSuccess>(url, {
-      data: ids,
-      params: {
-        file,
-      },
-    });
+    const { data } = await axios.post<ApiSuccess>(
+      'api/v1/bangumi/disable/many',
+      bangumiId,
+      { params: { file } }
+    );
     return data;
   },
 
@@ -119,7 +96,7 @@ export const apiBangumi = {
    * @param bangumiId - 需要启用的 bangumi 的 id
    */
   async enableRule(bangumiId: number) {
-    const { data } = await axios.get<ApiSuccess>(
+    const { data } = await axios.post<ApiSuccess>(
       `api/v1/bangumi/enable/${bangumiId}`
     );
     return data;
@@ -129,7 +106,7 @@ export const apiBangumi = {
    * 重置所有 bangumi 数据
    */
   async resetAll() {
-    const { data } = await axios.get<ApiSuccess>('api/v1/bangumi/reset/all');
+    const { data } = await axios.post<ApiSuccess>('api/v1/bangumi/reset/all');
     return data;
   },
 
@@ -230,20 +207,5 @@ export const apiBangumi = {
       { weekday }
     );
     return data;
-  },
-
-  /**
-   * 获取所有需要检查偏移量的 bangumi
-   */
-  async getNeedsReview() {
-    const { data } = await axios.get<BangumiAPI[]>(
-      'api/v1/bangumi/needs-review'
-    );
-    return data.map((bangumi) => ({
-      ...bangumi,
-      filter: bangumi.filter.split(','),
-      rss_link: bangumi.rss_link.split(','),
-      air_weekday: bangumi.air_weekday ?? null,
-    })) as BangumiRule[];
   },
 };

@@ -21,7 +21,7 @@ router = APIRouter(tags=["program"])
 # lifespan context manager; the AppContext is injected here per-request.
 
 
-@router.get(
+@router.post(
     "/restart", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
 async def restart(ctx: AppContext = Depends(get_context)):
@@ -40,7 +40,7 @@ async def restart(ctx: AppContext = Depends(get_context)):
         )
 
 
-@router.get(
+@router.post(
     "/start", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
 async def start(ctx: AppContext = Depends(get_context)):
@@ -59,7 +59,7 @@ async def start(ctx: AppContext = Depends(get_context)):
         )
 
 
-@router.get(
+@router.post(
     "/stop", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
 async def stop(ctx: AppContext = Depends(get_context)):
@@ -83,7 +83,7 @@ async def program_status(ctx: AppContext = Depends(get_context)):
         }
 
 
-@router.get(
+@router.post(
     "/shutdown", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
 async def shutdown_program(ctx: AppContext = Depends(get_context)):
