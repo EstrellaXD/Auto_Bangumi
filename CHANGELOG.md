@@ -1,5 +1,33 @@
 # [Unreleased]
 
+# [3.3.0]
+
+## Backend — Architecture
+
+后端进行了一次以现代化和健壮性为目标的架构重构（行为与 REST API 保持兼容）：
+
+### Changed
+
+- 数据库层全面异步化：仓储层与 `Database` 迁移到 `sqlite+aiosqlite`（启用 WAL + busy_timeout），不再在事件循环上执行同步 DB 调用
+- 组合优于继承：`Database` 不再继承 `Session`；`RSSEngine`/`TorrentManager`/`Renamer`/`SeasonCollector`/`SearchTorrent`/`RSSAnalyser` 改为构造函数注入依赖
+- `Program` 上帝对象由 lifespan 组合根 `AppContext` + 通用 `PeriodicTask`/`Scheduler` 取代；启动流程改为 awaited（迁移失败会明确中止启动），下载器重试改为受监督的后台任务
+- 迁移系统改为表驱动（`database/migrations.py`，声明式 `already_applied` 守卫），取代按版本硬编码的 if 链；版本号与 SQL 不变，旧库照常升级
+- 下载器引入 `Downloader` Protocol + 能力标志；aria2 的部分支持如实声明（不再以 `NotImplementedError` 崩溃循环）
+- 配置变更统一经由 `AppContext.reload_settings()` 生效（恢复了 RSS 规则的重新应用）
+- 安全：会话存储加入过期清理，令牌比较改为常量时间比较
+
+### Added
+
+- qBittorrent 客户端会话复用：跨操作复用登录会话、401/403 自动重新认证，大幅减少重复登录 (#1039, #900)
+- 可配置 TMDB / bgm.tv API Base URL，便于被墙用户使用镜像 (#1040, #1042)
+
+### Fixed
+
+- 修复下载器认证失败时 httpx 连接池泄漏
+- 修复 OpenAI 解析阻塞事件循环（改用 AsyncOpenAI）
+- 修复 `build_rss_rule` 的 `mustNotContain` 把过滤字符串按字符拆分而非按项做正则或运算
+- 移除大量死代码（旧通知栈、SIGALRM 装饰器、空的 transmission 桩等）
+
 ## Backend
 
 ### Added
