@@ -81,8 +81,11 @@ def gen_save_path(data: Bangumi | BangumiUpdate):
         return str(Path(settings.downloader.path) / folder)
     # Apply season_offset to get the adjusted season number for the folder
     adjusted_season = data.season + getattr(data, "season_offset", 0)
-    if adjusted_season < 0:
-        adjusted_season = data.season  # Safety: don't go below 0 (0 = specials)
+    # 季号下限：普通剧集最小为 1——偏移到 Season 0 会被 Plex/Jellyfin 当作
+    # 特别篇；只有特别篇（special）允许合法落入第 0 季
+    min_season = 0 if episode_type == "special" else 1
+    if adjusted_season < min_season:
+        adjusted_season = data.season
         logger.warning(
             f"[Path] Season offset would result in invalid season for {data.official_title}, using original season"
         )

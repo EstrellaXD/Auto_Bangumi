@@ -12,6 +12,9 @@
 ### Fixed
 
 - 修复 `gen_save_path` 季度守卫的一处预置 off-by-one 缺陷：合法的 `season=0`（特别篇）此前会被误判并回退为原值并打印多余警告
+- 收紧 `gen_save_path` 季度守卫：普通剧集在 `season_offset` 为负导致季号落到 0 时回退原季号（Season 0 会被 Plex/Jellyfin 当作特别篇），仅 `special` 类型允许合法落入第 0 季
+- 撤销 `gen_path` 在重命名文件名前追加 `[字幕组] ` 前缀的改动（`group_tag` 恢复为仅影响 qBittorrent RSS 规则名）：避免已开启 `group_tag` 的用户升级后整个做种媒体库被批量重命名，破坏 Plex/Jellyfin 索引与 cross-seed/硬链接
+- 修复多文件电影种子（正片 + 特典/花絮，BD 常见）所有文件生成相同目标文件名导致重命名互相冲突/覆盖的问题：体积最大的主文件使用「标题 (年份).ext」干净名，其余文件追加原始文件名词干作区分
 
 ## Frontend
 

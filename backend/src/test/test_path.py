@@ -82,6 +82,52 @@ class TestGenSavePath:
 
         assert result == "/downloads/Bangumi/My Anime (2024)/Season 0"
 
+    def test_gen_save_path_regular_offset_to_zero_reverts_to_original_season(self):
+        """普通剧集 season+offset 落到 0 时回退原季号：Season 0 会被
+        Plex/Jellyfin 当作特别篇，只有 special 类型才允许落入。"""
+        bangumi = make_bangumi(
+            official_title="My Anime",
+            year="2024",
+            season=1,
+            season_offset=-1,
+            episode_type="episode",
+        )
+        with patch("module.downloader.path.settings") as mock_settings:
+            mock_settings.downloader.path = "/downloads/Bangumi"
+            result = gen_save_path(bangumi)
+
+        assert result == "/downloads/Bangumi/My Anime (2024)/Season 1"
+
+    def test_gen_save_path_special_offset_to_zero_lands_in_season_zero(self):
+        """特别篇（special）经偏移落到第 0 季是合法的（Jellyfin/Plex 惯例）。"""
+        bangumi = make_bangumi(
+            official_title="My Anime",
+            year="2024",
+            season=1,
+            season_offset=-1,
+            episode_type="special",
+        )
+        with patch("module.downloader.path.settings") as mock_settings:
+            mock_settings.downloader.path = "/downloads/Bangumi"
+            result = gen_save_path(bangumi)
+
+        assert result == "/downloads/Bangumi/My Anime (2024)/Season 0"
+
+    def test_gen_save_path_special_offset_below_zero_reverts_to_original_season(self):
+        """特别篇偏移到负季号仍属非法配置，回退原季号。"""
+        bangumi = make_bangumi(
+            official_title="My Anime",
+            year="2024",
+            season=0,
+            season_offset=-1,
+            episode_type="special",
+        )
+        with patch("module.downloader.path.settings") as mock_settings:
+            mock_settings.downloader.path = "/downloads/Bangumi"
+            result = gen_save_path(bangumi)
+
+        assert result == "/downloads/Bangumi/My Anime (2024)/Season 0"
+
 
 # ---------------------------------------------------------------------------
 # rule_name

@@ -161,7 +161,8 @@ class TestGenPathMovie:
         result = Renamer.gen_path(sub, "天气之子 (2019)", method="subtitle_advance")
         assert result == "天气之子 (2019).zh.ass"
 
-    def test_group_tag_prefix_applied(self):
+    def test_gen_path_movie_group_tag_enabled_keeps_clean_name(self):
+        """group_tag 不影响重命名文件名（只影响 qB RSS 规则名）。"""
         ep = EpisodeFile(
             media_path="raw.mkv",
             group="Lilith-Raws",
@@ -173,7 +174,7 @@ class TestGenPathMovie:
         )
         with patch.object(settings.bangumi_manage, "group_tag", True):
             result = Renamer.gen_path(ep, "天气之子 (2019)", method="advance")
-        assert result == "[Lilith-Raws] 天气之子 (2019).mkv"
+        assert result == "天气之子 (2019).mkv"
 
     def test_none_method_returns_original_path(self):
         ep = EpisodeFile(
@@ -193,12 +194,13 @@ class TestGenPathMovie:
 # ---------------------------------------------------------------------------
 
 
-class TestGenPathWithGroupTag:
-    """gen_path honors bangumi_manage.group_tag as a "[Group] " prefix,
-    mirroring the legacy downloader/path.py rule_name behavior."""
+class TestGenPathGroupTagStability:
+    """group_tag 只影响 qB RSS 规则名（downloader/path.py 的 rule_name），
+    从不写进重命名后的文件名：升级后已有做种媒体库的文件名必须保持稳定，
+    否则会触发整库批量重命名，破坏 Plex/Jellyfin 索引与 cross-seed/硬链接。"""
 
-    def test_group_tag_enabled_prefixes_pn_method(self):
-        """pn method gets a "[Group] " prefix when group_tag is enabled."""
+    def test_gen_path_group_tag_enabled_pn_no_prefix(self):
+        """pn 方法在 group_tag 开启时也不加 "[Group] " 前缀。"""
         ep = EpisodeFile(
             media_path="old.mkv",
             group="SubGroup",
@@ -209,10 +211,10 @@ class TestGenPathWithGroupTag:
         )
         with patch.object(settings.bangumi_manage, "group_tag", True):
             result = Renamer.gen_path(ep, "Bangumi Name", method="pn")
-        assert result == "[SubGroup] My Anime S01E05.mkv"
+        assert result == "My Anime S01E05.mkv"
 
-    def test_group_tag_enabled_prefixes_advance_method(self):
-        """advance method gets a "[Group] " prefix when group_tag is enabled."""
+    def test_gen_path_group_tag_enabled_advance_no_prefix(self):
+        """advance 方法在 group_tag 开启时也不加前缀。"""
         ep = EpisodeFile(
             media_path="old.mkv",
             group="SubGroup",
@@ -223,10 +225,10 @@ class TestGenPathWithGroupTag:
         )
         with patch.object(settings.bangumi_manage, "group_tag", True):
             result = Renamer.gen_path(ep, "Bangumi Name", method="advance")
-        assert result == "[SubGroup] Bangumi Name S01E05.mkv"
+        assert result == "Bangumi Name S01E05.mkv"
 
-    def test_group_tag_enabled_prefixes_subtitle_methods(self):
-        """subtitle_pn/subtitle_advance also get the prefix when enabled."""
+    def test_gen_path_group_tag_enabled_subtitle_methods_no_prefix(self):
+        """subtitle_pn/subtitle_advance 在 group_tag 开启时也不加前缀。"""
         sub = SubtitleFile(
             media_path="sub.ass",
             group="SubGroup",
@@ -238,10 +240,10 @@ class TestGenPathWithGroupTag:
         )
         with patch.object(settings.bangumi_manage, "group_tag", True):
             result = Renamer.gen_path(sub, "Bangumi Name", method="subtitle_pn")
-        assert result == "[SubGroup] My Anime S01E05.zh.ass"
+        assert result == "My Anime S01E05.zh.ass"
 
-    def test_group_tag_disabled_no_prefix(self):
-        """No prefix is added when group_tag is disabled, even with a group."""
+    def test_gen_path_group_tag_disabled_no_prefix(self):
+        """group_tag 关闭时同样没有前缀。"""
         ep = EpisodeFile(
             media_path="old.mkv",
             group="SubGroup",
@@ -254,24 +256,8 @@ class TestGenPathWithGroupTag:
             result = Renamer.gen_path(ep, "Bangumi Name", method="pn")
         assert result == "My Anime S01E05.mkv"
 
-    def test_group_tag_enabled_but_no_group_no_prefix(self):
-        """No "[None] " prefix leaks in when group_tag is enabled but the
-        parsed file has no group (e.g. no [Group] tag in the torrent name)."""
-        ep = EpisodeFile(
-            media_path="old.mkv",
-            group=None,
-            title="My Anime",
-            season=1,
-            episode=5,
-            suffix=".mkv",
-        )
-        with patch.object(settings.bangumi_manage, "group_tag", True):
-            result = Renamer.gen_path(ep, "Bangumi Name", method="pn")
-        assert result == "My Anime S01E05.mkv"
-
-    def test_group_tag_enabled_none_and_subtitle_none_unaffected(self):
-        """none/subtitle_none methods return the original path unchanged,
-        regardless of group_tag."""
+    def test_gen_path_group_tag_enabled_none_method_returns_original(self):
+        """none/subtitle_none 方法始终原样返回路径，与 group_tag 无关。"""
         ep = EpisodeFile(
             media_path="original/path/file.mkv",
             group="SubGroup",
@@ -467,6 +453,81 @@ class TestRenameCollection:
         # Only called once for ep01.mkv (depth 1)
         assert renamer.client.client.torrents_rename_file.call_count == 1
 
+    @staticmethod
+    def _rename_new_paths(mock_client) -> list[str]:
+        """提取 torrents_rename_file 每次调用的 new_path 参数。"""
+        return [
+            call.kwargs["new_path"]
+            for call in mock_client.torrents_rename_file.call_args_list
+        ]
+
+    async def test_rename_collection_movie_multifile_targets_distinct(self, renamer):
+        """多文件电影种子（正片 + 特典）不能全部生成同一个目标文件名：
+        主文件用干净名，其余文件追加原始文件名词干作区分。"""
+        media_list = ["Tenki no Ko.mkv", "Tenki no Ko Extra PV.mkv"]
+        renamer.client.client.torrents_rename_file.return_value = True
+        await renamer.rename_collection(
+            media_list=media_list,
+            bangumi_name="天气之子 (2019)",
+            season=1,
+            method="advance",
+            _hash="hash_movie",
+            episode_type="movie",
+            file_sizes={
+                "Tenki no Ko.mkv": 8_000_000_000,
+                "Tenki no Ko Extra PV.mkv": 100_000_000,
+            },
+        )
+
+        new_paths = self._rename_new_paths(renamer.client.client)
+        assert len(new_paths) == 2
+        assert len(set(new_paths)) == 2
+        assert "天气之子 (2019).mkv" in new_paths
+
+    async def test_rename_collection_movie_largest_file_gets_clean_name(self, renamer):
+        """体积最大的文件是主文件，即使它不在列表首位。"""
+        media_list = ["Extras Menu.mkv", "Tenki no Ko Main Feature.mkv"]
+        renamer.client.client.torrents_rename_file.return_value = True
+        await renamer.rename_collection(
+            media_list=media_list,
+            bangumi_name="天气之子 (2019)",
+            season=1,
+            method="advance",
+            _hash="hash_movie",
+            episode_type="movie",
+            file_sizes={
+                "Extras Menu.mkv": 100_000_000,
+                "Tenki no Ko Main Feature.mkv": 8_000_000_000,
+            },
+        )
+
+        calls = renamer.client.client.torrents_rename_file.call_args_list
+        by_old = {c.kwargs["old_path"]: c.kwargs["new_path"] for c in calls}
+        assert by_old["Tenki no Ko Main Feature.mkv"] == "天气之子 (2019).mkv"
+        assert by_old["Extras Menu.mkv"] == "天气之子 (2019) - Extras Menu.mkv"
+
+    async def test_rename_collection_movie_already_renamed_skips_rename(self, renamer):
+        """区分名是幂等的：已重命名过的多文件电影种子下一轮不再触发重命名。"""
+        media_list = [
+            "天气之子 (2019).mkv",
+            "天气之子 (2019) - Tenki no Ko Extra PV.mkv",
+        ]
+        renamer.client.client.torrents_rename_file.return_value = True
+        await renamer.rename_collection(
+            media_list=media_list,
+            bangumi_name="天气之子 (2019)",
+            season=1,
+            method="advance",
+            _hash="hash_movie",
+            episode_type="movie",
+            file_sizes={
+                "天气之子 (2019).mkv": 8_000_000_000,
+                "天气之子 (2019) - Tenki no Ko Extra PV.mkv": 100_000_000,
+            },
+        )
+
+        renamer.client.client.torrents_rename_file.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # rename_subtitles
@@ -617,6 +678,39 @@ class TestRenameFlow:
         renamer.client.client.set_category.assert_called_once_with(
             "h1", "BangumiCollection"
         )
+
+    async def test_rename_flow_movie_collection_uses_file_sizes(self, renamer):
+        """多文件电影种子走完整 rename 流程时，按文件体积选出主文件，
+        目标文件名互不相同。"""
+        renamer.client.client.torrents_info.return_value = [
+            {
+                "hash": "h1",
+                "name": "天气之子 Movie BDRip",
+                "save_path": "/downloads/Bangumi/天气之子 (2019)",
+            }
+        ]
+        renamer.client.client.torrents_files.return_value = [
+            {"name": "Menu PV.mkv", "size": 100_000_000},
+            {"name": "Tenki no Ko.mkv", "size": 8_000_000_000},
+        ]
+        renamer.client.client.torrents_rename_file.return_value = True
+
+        with patch.object(
+            renamer,
+            "_batch_lookup_offsets",
+            AsyncMock(return_value={"h1": (0, 0, "movie")}),
+        ):
+            with patch("module.manager.renamer.settings") as mock_settings:
+                mock_settings.bangumi_manage.rename_method = "advance"
+                mock_settings.bangumi_manage.remove_bad_torrent = False
+                with patch("module.downloader.path.settings") as mock_path_settings:
+                    mock_path_settings.downloader.path = "/downloads/Bangumi"
+                    await renamer.rename()
+
+        calls = renamer.client.client.torrents_rename_file.call_args_list
+        by_old = {c.kwargs["old_path"]: c.kwargs["new_path"] for c in calls}
+        assert by_old["Tenki no Ko.mkv"] == "天气之子 (2019).mkv"
+        assert by_old["Menu PV.mkv"] == "天气之子 (2019) - Menu PV.mkv"
 
     async def test_no_media_files_no_crash(self, renamer):
         """When torrent has no media files, logs warning but doesn't crash."""

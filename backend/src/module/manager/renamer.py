@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import time
+from pathlib import PurePath
 
 from module.conf import settings
 from module.database import Database
@@ -79,13 +80,9 @@ class Renamer:
                 f"[Renamer] Episode offset {episode_offset} would make episode {original_episode} non-positive, ignoring offset"
             )
         episode = f"0{adjusted_episode}" if adjusted_episode < 10 else adjusted_episode
-        # 与旧版 downloader/path.py 的 rule_name 行为保持一致：开启 group_tag 时，
-        # 在文件名前加上 "[字幕组] " 前缀
-        group_prefix = (
-            f"[{file_info.group}] "
-            if settings.bangumi_manage.group_tag and file_info.group
-            else ""
-        )
+        # 注意：group_tag 只影响 qB RSS 规则名（downloader/path.py 的 rule_name），
+        # 从不写进重命名后的文件名——已有做种媒体库的文件名必须保持稳定，
+        # 否则升级后会触发整库批量重命名，破坏 Plex/Jellyfin 索引与硬链接
         if method == "none" or method == "subtitle_none":
             return file_info.media_path
         if file_info.episode_type == "movie":
@@ -96,14 +93,12 @@ class Renamer:
                 assert isinstance(
                     file_info, SubtitleFile
                 ), "subtitle methods require a SubtitleFile"
-                return f"{group_prefix}{base}.{file_info.language}{file_info.suffix}"
-            return f"{group_prefix}{base}{file_info.suffix}"
+                return f"{base}.{file_info.language}{file_info.suffix}"
+            return f"{base}{file_info.suffix}"
         elif method == "pn":
-            return (
-                f"{group_prefix}{file_info.title} S{season}E{episode}{file_info.suffix}"
-            )
+            return f"{file_info.title} S{season}E{episode}{file_info.suffix}"
         elif method == "advance":
-            return f"{group_prefix}{bangumi_name} S{season}E{episode}{file_info.suffix}"
+            return f"{bangumi_name} S{season}E{episode}{file_info.suffix}"
         elif method == "normal":
             logger.warning("[Renamer] Normal rename method is deprecated.")
             return file_info.media_path
@@ -111,12 +106,12 @@ class Renamer:
             assert isinstance(
                 file_info, SubtitleFile
             ), "subtitle_pn requires a SubtitleFile"
-            return f"{group_prefix}{file_info.title} S{season}E{episode}.{file_info.language}{file_info.suffix}"
+            return f"{file_info.title} S{season}E{episode}.{file_info.language}{file_info.suffix}"
         elif method == "subtitle_advance":
             assert isinstance(
                 file_info, SubtitleFile
             ), "subtitle_advance requires a SubtitleFile"
-            return f"{group_prefix}{bangumi_name} S{season}E{episode}.{file_info.language}{file_info.suffix}"
+            return f"{bangumi_name} S{season}E{episode}.{file_info.language}{file_info.suffix}"
         else:
             logger.error(f"[Renamer] Unknown rename method: {method}")
             return file_info.media_path
@@ -195,6 +190,19 @@ class Renamer:
                 await self.client.delete_torrent(hashes=_hash)
         return None
 
+    @staticmethod
+    def _gen_movie_extra_path(new_path: str, media_path: str) -> str:
+        """多文件电影种子中，非主文件在干净名（Title (Year).ext）基础上追加
+        原始文件名词干作区分，避免与主文件生成相同目标名互相冲突/覆盖；
+        词干若已带 "Title (Year) - " 前缀则先剥离，保证重命名幂等。"""
+        suffix = PurePath(new_path).suffix
+        base = new_path[: -len(suffix)] if suffix else new_path
+        stem = PurePath(media_path).stem
+        prefix = f"{base} - "
+        if stem.startswith(prefix):
+            stem = stem[len(prefix) :]
+        return f"{base} - {stem}{suffix}"
+
     async def rename_collection(
         self,
         media_list: list[str],
@@ -205,8 +213,19 @@ class Renamer:
         episode_offset: int = 0,
         season_offset: int = 0,
         episode_type: str = "episode",
+        file_sizes: dict[str, int] | None = None,
         **kwargs,
     ):
+        # 多文件电影种子（正片 + 特典/花絮）：所有文件会解析出同一标题，
+        # 需选出主文件（体积最大者，无体积信息时取首个），其余文件追加区分词干
+        movie_primary: str | None = None
+        if episode_type == "movie":
+            ep_list = [p for p in media_list if is_ep(p)]
+            if ep_list:
+                if file_sizes:
+                    movie_primary = max(ep_list, key=lambda p: file_sizes.get(p, 0))
+                else:
+                    movie_primary = ep_list[0]
         for media_path in media_list:
             if is_ep(media_path):
                 ep = self._parser.torrent_parser(
@@ -222,6 +241,13 @@ class Renamer:
                         episode_offset=episode_offset,
                         season_offset=season_offset,
                     )
+                    if (
+                        movie_primary is not None
+                        and media_path != movie_primary
+                        and new_path != media_path
+                    ):
+                        # new_path == media_path 说明是 none 等直通方法，不做区分
+                        new_path = self._gen_movie_extra_path(new_path, media_path)
                     if media_path != new_path:
                         renamed = await self.client.rename_torrent_file(
                             _hash=_hash, old_path=media_path, new_path=new_path
@@ -543,7 +569,11 @@ class Renamer:
             # Rename collection
             elif len(media_list) > 1:
                 logger.info("[Renamer] Start rename collection")
-                await self.rename_collection(media_list=media_list, **kwargs)
+                # 传入各文件体积，供多文件电影种子选出正片主文件
+                file_sizes = {f["name"]: f.get("size") or 0 for f in files}
+                await self.rename_collection(
+                    media_list=media_list, file_sizes=file_sizes, **kwargs
+                )
                 if len(subtitle_list) > 0:
                     await self.rename_subtitles(subtitle_list=subtitle_list, **kwargs)
                 await self.client.set_category(torrent_hash, "BangumiCollection")
