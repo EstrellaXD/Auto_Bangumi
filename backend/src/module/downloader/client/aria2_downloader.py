@@ -169,6 +169,15 @@ class Aria2Downloader:
 
     @staticmethod
     def _move_file(old_abs: str, new_abs: str) -> None:
+        """移动单个文件；目标已存在且不是同一个文件时拒绝覆盖。
+
+        os.replace 会静默覆盖已有目标——多文件种子若映射到同一目标名，
+        直接覆盖会毁掉已重命名好的文件，所以这里显式拦下来。
+        """
+        if os.path.exists(new_abs) and not (
+            os.path.exists(old_abs) and os.path.samefile(old_abs, new_abs)
+        ):
+            raise FileExistsError(f"destination already exists: {new_abs}")
         os.makedirs(os.path.dirname(new_abs), exist_ok=True)
         os.replace(old_abs, new_abs)
 
@@ -207,6 +216,48 @@ class Aria2Downloader:
     # ------------------------------------------------------------------
     # Adding
     # ------------------------------------------------------------------
+
+    async def _dedup_record_is_stale(self, db: Database, gid: str) -> bool:
+        """dedup 命中后校验 gid 是否仍存在于 aria2；陈旧则删记录并返回 True。
+
+        本地 aria2_gid 表可能和 aria2 真实状态脱节（用户在 aria2 UI 里删了
+        任务、或 aria2 没开 --save-session 就重启了），不校验的话陈旧记录
+        会让同一个种子永远被当作"已添加"而无法重新下载。
+
+        - RPC 报 not found、或 status 为 "removed" → 记录陈旧，删掉，返回 True；
+        - aria2 不可达（连接错误）→ 无法断言，保守保留记录，返回 False；
+        - 其余 RPC 错误 → 同样保守保留。
+        """
+        try:
+            status = await self._call("tellStatus", [gid, ["status"]])
+        except Aria2RpcError as e:
+            if self._is_not_found_error(e):
+                logger.info(
+                    "[Aria2] Stale dedup record: gid %s no longer exists, "
+                    "removing and re-adding",
+                    gid,
+                )
+                await db.aria2.delete(gid)
+                return True
+            logger.debug("[Aria2] Cannot verify gid %s, keeping record: %s", gid, e)
+            return False
+        except Aria2ConnectionError as e:
+            # aria2 不可达 != 记录陈旧，绝不能因此删本地记录。
+            logger.debug(
+                "[Aria2] aria2 unreachable while verifying gid %s, keeping record: %s",
+                gid,
+                e,
+            )
+            return False
+        if (status or {}).get("status") == "removed":
+            logger.info(
+                "[Aria2] Stale dedup record: gid %s was removed in aria2, "
+                "removing and re-adding",
+                gid,
+            )
+            await db.aria2.delete(gid)
+            return True
+        return False
 
     async def _add_uri(self, url: str, options: dict) -> str | None:
         try:
@@ -257,7 +308,10 @@ class Aria2Downloader:
                 )
                 for url in urls:
                     dedup_key = f"url:{url}"
-                    if await db.aria2.find_by_dedup_key(dedup_key):
+                    existing_gid = await db.aria2.find_by_dedup_key(dedup_key)
+                    if existing_gid and not await self._dedup_record_is_stale(
+                        db, existing_gid
+                    ):
                         logger.debug("[Aria2] Skip already-added url: %s", url)
                         continue
                     gid = await self._add_uri(url, options)
@@ -273,7 +327,10 @@ class Aria2Downloader:
                 )
                 for f in files:
                     dedup_key = f"file:{hashlib.sha1(f).hexdigest()}"
-                    if await db.aria2.find_by_dedup_key(dedup_key):
+                    existing_gid = await db.aria2.find_by_dedup_key(dedup_key)
+                    if existing_gid and not await self._dedup_record_is_stale(
+                        db, existing_gid
+                    ):
                         logger.debug("[Aria2] Skip already-added torrent file")
                         continue
                     gid = await self._add_torrent_file(f, options)
@@ -316,6 +373,10 @@ class Aria2Downloader:
             tags_str = f"ab:{info.bangumi_id}" if info and info.bangumi_id else ""
             if tag and tag != tags_str:
                 continue
+            # aria2 JSON-RPC 的数值字段全是字符串（"0" 也是 truthy），必须先
+            # 转 int 再判断，否则磁力链拉元数据阶段 totalLength "0" 会除零。
+            total = int(d.get("totalLength", 0) or 0)
+            completed = int(d.get("completedLength", 0) or 0)
             result.append(
                 {
                     "hash": gid,
@@ -324,12 +385,8 @@ class Aria2Downloader:
                     "tags": tags_str,
                     "category": torrent_category or "",
                     "state": aria2_status,
-                    "size": int(d.get("totalLength", 0) or 0),
-                    "progress": (
-                        int(d.get("completedLength", 0) or 0) / int(d["totalLength"])
-                        if d.get("totalLength")
-                        else 0
-                    ),
+                    "size": total,
+                    "progress": completed / total if total > 0 else 0.0,
                     "dlspeed": int(d.get("downloadSpeed", 0) or 0),
                     "upspeed": int(d.get("uploadSpeed", 0) or 0),
                 }
@@ -378,6 +435,13 @@ class Aria2Downloader:
         new_abs = os.path.join(save_dir, new_path)
         try:
             await asyncio.to_thread(self._move_file, old_abs, new_abs)
+        except FileExistsError:
+            logger.warning(
+                "[Aria2] Refusing to overwrite existing file %s, rename of %s skipped",
+                new_abs,
+                old_abs,
+            )
+            return False
         except OSError as e:
             logger.warning(
                 "[Aria2] Failed to rename file %s -> %s: %s", old_abs, new_abs, e

@@ -211,8 +211,18 @@ class TestAddTorrents:
 
     async def test_duplicate_url_second_call_returns_false_and_skips_rpc(self):
         aria2 = _aria2()
-        call_mock = AsyncMock(return_value="gid001")
-        with patch.object(aria2, "_call", call_mock):
+        add_uri_calls = []
+
+        async def fake_call(method, params=None, timeout=10.0):
+            if method == "addUri":
+                add_uri_calls.append(params)
+                return "gid001"
+            if method == "tellStatus":
+                # 记录仍活在 aria2 中 -> 真重复。
+                return {"status": "active"}
+            return None
+
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
             await aria2.add_torrents(
                 torrent_urls="magnet:?xt=urn:btih:abc",
                 torrent_files=None,
@@ -229,12 +239,21 @@ class TestAddTorrents:
             )
         assert result is False
         # addUri only called once -- the second, duplicate add never hit aria2.
-        assert call_mock.call_count == 1
+        assert len(add_uri_calls) == 1
 
     async def test_partial_duplicate_returns_true(self):
         aria2 = _aria2()
-        call_mock = AsyncMock(side_effect=["gid001", "gid002"])
-        with patch.object(aria2, "_call", call_mock):
+        add_uri_calls = []
+
+        async def fake_call(method, params=None, timeout=10.0):
+            if method == "addUri":
+                add_uri_calls.append(params)
+                return f"gid{len(add_uri_calls):03d}"
+            if method == "tellStatus":
+                return {"status": "active"}
+            return None
+
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
             await aria2.add_torrents(
                 torrent_urls=["magnet:?xt=urn:btih:aaa"],
                 torrent_files=None,
@@ -250,12 +269,19 @@ class TestAddTorrents:
                 tags="ab:1",
             )
         assert result is True
-        assert call_mock.call_count == 2
+        assert len(add_uri_calls) == 2
 
     async def test_all_urls_already_added_returns_false(self):
         aria2 = _aria2()
-        call_mock = AsyncMock(return_value="gid001")
-        with patch.object(aria2, "_call", call_mock):
+
+        async def fake_call(method, params=None, timeout=10.0):
+            if method == "addUri":
+                return "gid001"
+            if method == "tellStatus":
+                return {"status": "active"}
+            return None
+
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
             await aria2.add_torrents(
                 torrent_urls=["magnet:?xt=urn:btih:aaa"],
                 torrent_files=None,
@@ -307,9 +333,18 @@ class TestAddTorrents:
 
     async def test_torrent_file_bytes_dedup_by_content_hash(self):
         aria2 = _aria2()
-        call_mock = AsyncMock(return_value="gid-file-1")
+        add_torrent_calls = []
         payload = b"fake torrent bytes"
-        with patch.object(aria2, "_call", call_mock):
+
+        async def fake_call(method, params=None, timeout=10.0):
+            if method == "addTorrent":
+                add_torrent_calls.append(params)
+                return "gid-file-1"
+            if method == "tellStatus":
+                return {"status": "active"}
+            return None
+
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
             first = await aria2.add_torrents(
                 torrent_urls=None,
                 torrent_files=payload,
@@ -326,7 +361,146 @@ class TestAddTorrents:
             )
         assert first is True
         assert second is False
-        assert call_mock.call_count == 1
+        assert len(add_torrent_calls) == 1
+
+    async def test_add_torrents_stale_dedup_gid_not_found_readds(self):
+        """aria2 报 not found（例如无 --save-session 重启后）→ 删陈旧记录并重新添加。"""
+        aria2 = _aria2()
+        url = "magnet:?xt=urn:btih:abc"
+        async with Database() as db:
+            await db.aria2.upsert(
+                "gid-stale", bangumi_id=1, category="Bangumi", dedup_key=f"url:{url}"
+            )
+
+        async def fake_call(method, params=None, timeout=10.0):
+            if method == "tellStatus":
+                raise Aria2RpcError(1, "GID#gid-stale is not found")
+            if method == "addUri":
+                return "gid-fresh"
+            return None
+
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
+            result = await aria2.add_torrents(
+                torrent_urls=url,
+                torrent_files=None,
+                save_path="/downloads",
+                category="Bangumi",
+                tags="ab:1",
+            )
+
+        assert result is True
+        async with Database() as db:
+            assert await db.aria2.get("gid-stale") is None
+            assert await db.aria2.get("gid-fresh") is not None
+
+    async def test_add_torrents_stale_dedup_gid_removed_status_readds(self):
+        """gid 还在 aria2 里但 status 是 removed（用户在 UI 删除）→ 视作陈旧，重新添加。"""
+        aria2 = _aria2()
+        url = "magnet:?xt=urn:btih:abc"
+        async with Database() as db:
+            await db.aria2.upsert("gid-removed", dedup_key=f"url:{url}")
+
+        async def fake_call(method, params=None, timeout=10.0):
+            if method == "tellStatus":
+                return {"status": "removed"}
+            if method == "addUri":
+                return "gid-fresh"
+            return None
+
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
+            result = await aria2.add_torrents(
+                torrent_urls=url,
+                torrent_files=None,
+                save_path="/downloads",
+                category="Bangumi",
+            )
+
+        assert result is True
+        async with Database() as db:
+            assert await db.aria2.get("gid-removed") is None
+            assert await db.aria2.get("gid-fresh") is not None
+
+    async def test_add_torrents_dedup_gid_still_active_skips_readd(self):
+        """gid 仍活在 aria2 中 → 真重复，不重新添加。"""
+        aria2 = _aria2()
+        url = "magnet:?xt=urn:btih:abc"
+        async with Database() as db:
+            await db.aria2.upsert("gid-alive", dedup_key=f"url:{url}")
+
+        async def fake_call(method, params=None, timeout=10.0):
+            if method == "tellStatus":
+                return {"status": "active"}
+            if method == "addUri":  # pragma: no cover - 不应该走到这里
+                raise AssertionError("addUri must not be called for a live duplicate")
+            return None
+
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
+            result = await aria2.add_torrents(
+                torrent_urls=url,
+                torrent_files=None,
+                save_path="/downloads",
+                category="Bangumi",
+            )
+
+        assert result is False
+        async with Database() as db:
+            assert await db.aria2.get("gid-alive") is not None
+
+    async def test_add_torrents_dedup_verify_unreachable_keeps_record_and_skips(self):
+        """aria2 不可达时不能断定记录陈旧：保留本地记录，也不重复添加。"""
+        aria2 = _aria2()
+        url = "magnet:?xt=urn:btih:abc"
+        async with Database() as db:
+            await db.aria2.upsert("gid-unknown", dedup_key=f"url:{url}")
+
+        async def fake_call(method, params=None, timeout=10.0):
+            if method == "tellStatus":
+                raise Aria2ConnectionError("down")
+            if method == "addUri":  # pragma: no cover - 不应该走到这里
+                raise AssertionError("addUri must not be called when unverifiable")
+            return None
+
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
+            result = await aria2.add_torrents(
+                torrent_urls=url,
+                torrent_files=None,
+                save_path="/downloads",
+                category="Bangumi",
+            )
+
+        assert result is False
+        async with Database() as db:
+            assert await db.aria2.get("gid-unknown") is not None
+
+    async def test_add_torrents_stale_dedup_torrent_file_readds(self):
+        """种子文件走 content-hash 去重，同样要做陈旧校验。"""
+        aria2 = _aria2()
+        import hashlib
+
+        payload = b"fake torrent bytes"
+        dedup_key = f"file:{hashlib.sha1(payload).hexdigest()}"
+        async with Database() as db:
+            await db.aria2.upsert("gid-stale-file", dedup_key=dedup_key)
+
+        async def fake_call(method, params=None, timeout=10.0):
+            if method == "tellStatus":
+                raise Aria2RpcError(1, "GID#gid-stale-file is not found")
+            if method == "addTorrent":
+                return "gid-fresh-file"
+            return None
+
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
+            result = await aria2.add_torrents(
+                torrent_urls=None,
+                torrent_files=payload,
+                save_path="/downloads",
+                category="Bangumi",
+            )
+
+        assert result is True
+        async with Database() as db:
+            assert await db.aria2.get("gid-stale-file") is None
+            assert await db.aria2.get("gid-fresh-file") is not None
 
     async def test_no_tags_leaves_bangumi_id_unset(self):
         aria2 = _aria2()
@@ -454,6 +628,54 @@ class TestTorrentsInfo:
             result = await aria2.torrents_info(status_filter=None, category=None)
         assert result == []
 
+    async def test_torrents_info_zero_total_length_progress_is_zero(self):
+        """磁力链在拉元数据阶段 totalLength 是字符串 "0"（truthy）——
+        不能除零崩掉整个 torrents_info。"""
+        aria2 = _aria2()
+        download = {
+            "gid": "gidMeta",
+            "status": "active",
+            "dir": "/downloads",
+            "totalLength": "0",
+            "completedLength": "0",
+            "downloadSpeed": "0",
+            "uploadSpeed": "0",
+            "files": [],
+        }
+
+        async def fake_call(method, params=None, timeout=10.0):
+            if method == "tellActive":
+                return [download]
+            return []
+
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
+            result = await aria2.torrents_info(status_filter=None, category=None)
+
+        assert len(result) == 1
+        assert result[0]["progress"] == 0.0
+        assert result[0]["size"] == 0
+
+    async def test_torrents_info_string_numbers_parsed_to_int(self):
+        """aria2 JSON-RPC 的数值字段都是字符串，映射结果必须是 int/float。"""
+        aria2 = _aria2()
+        download = _download("gidNum", status="active")
+        download["downloadSpeed"] = "12345"
+        download["uploadSpeed"] = "678"
+
+        async def fake_call(method, params=None, timeout=10.0):
+            if method == "tellActive":
+                return [download]
+            return []
+
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
+            result = await aria2.torrents_info(status_filter=None, category=None)
+
+        info = result[0]
+        assert info["size"] == 1000
+        assert info["progress"] == 0.5
+        assert info["dlspeed"] == 12345
+        assert info["upspeed"] == 678
+
 
 # ---------------------------------------------------------------------------
 # torrents_files: relative-path mapping
@@ -536,6 +758,25 @@ class TestTorrentsRenameFile:
             result = await aria2.torrents_rename_file("gidA", "missing.mkv", "new.mkv")
 
         assert result is False
+
+    async def test_torrents_rename_file_existing_destination_refuses_overwrite(
+        self, tmp_path
+    ):
+        """目标文件已存在时绝不覆盖（多文件电影种子可能映射到同一目标名）。"""
+        aria2 = _aria2()
+        (tmp_path / "old.mkv").write_bytes(b"source data")
+        (tmp_path / "new.mkv").write_bytes(b"precious existing data")
+
+        async def fake_call(method, params=None, timeout=10.0):
+            return {"dir": str(tmp_path)}
+
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
+            result = await aria2.torrents_rename_file("gidA", "old.mkv", "new.mkv")
+
+        assert result is False
+        # 两个文件都原封不动。
+        assert (tmp_path / "old.mkv").read_bytes() == b"source data"
+        assert (tmp_path / "new.mkv").read_bytes() == b"precious existing data"
 
     async def test_returns_false_when_status_lookup_fails(self):
         aria2 = _aria2()
