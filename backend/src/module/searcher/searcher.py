@@ -60,7 +60,13 @@ class SearchTorrent:
         for torrent in torrents:
             if len(exist_list) >= limit:
                 break
-            bangumi = await self.analyser.torrent_to_data(torrent=torrent, rss=rss_item)
+            # Skip the per-torrent Mikan homepage fetch / poster download here:
+            # interactive search can return many results and doing that fetch
+            # serially for each one makes the search feel unresponsive. Poster
+            # is filled in afterwards from the (title-keyed, cached) TMDB lookup.
+            bangumi = await self.analyser.torrent_to_data(
+                torrent=torrent, rss=rss_item, fetch_poster=False
+            )
             if bangumi:
                 special_link = self.special_url(bangumi, site).url
                 if special_link not in exist_list:

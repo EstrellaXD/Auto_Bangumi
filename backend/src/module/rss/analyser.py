@@ -13,16 +13,31 @@ logger = logging.getLogger(__name__)
 
 class RSSAnalyser:
     async def official_title_parser(
-        self, bangumi: Bangumi, rss: RSSItem, torrent: Torrent
+        self,
+        bangumi: Bangumi,
+        rss: RSSItem,
+        torrent: Torrent,
+        fetch_poster: bool = True,
     ):
-        if rss.parser == "mikan":
-            try:
-                bangumi.poster_link, bangumi.official_title = (
-                    await TitleParser.mikan_parser(torrent.homepage)
-                )
-            except AttributeError:
+        if not fetch_poster:
+            pass
+        elif rss.parser == "mikan":
+            if not torrent.homepage:
                 logger.warning("[Parser] Mikan torrent has no homepage info.")
-                pass
+            else:
+                try:
+                    poster_link, official_title = await TitleParser.mikan_parser(
+                        torrent.homepage
+                    )
+                except AttributeError as e:
+                    logger.warning(
+                        f"[Parser] Failed to parse Mikan homepage "
+                        f"{torrent.homepage}: {e}"
+                    )
+                else:
+                    bangumi.poster_link = poster_link
+                    if official_title:
+                        bangumi.official_title = official_title
         elif rss.parser == "tmdb":
             tmdb_title, season, year, poster_link = await TitleParser.tmdb_parser(
                 bangumi.official_title, bangumi.season, settings.rss_parser.language
@@ -56,6 +71,7 @@ class RSSAnalyser:
                 await self.official_title_parser(
                     bangumi=bangumi, rss=rss, torrent=torrent
                 )
+                bangumi.rss_link = rss.url
                 if not full_parse:
                     return [bangumi]
                 seen_titles.add(bangumi.title_raw)
@@ -63,10 +79,14 @@ class RSSAnalyser:
                 logger.info(f"[RSS] New bangumi founded: {bangumi.official_title}")
         return new_data
 
-    async def torrent_to_data(self, torrent: Torrent, rss: RSSItem) -> Bangumi:
+    async def torrent_to_data(
+        self, torrent: Torrent, rss: RSSItem, fetch_poster: bool = True
+    ) -> Bangumi:
         bangumi = await TitleParser.raw_parser(raw=torrent.name)
         if bangumi:
-            await self.official_title_parser(bangumi=bangumi, rss=rss, torrent=torrent)
+            await self.official_title_parser(
+                bangumi=bangumi, rss=rss, torrent=torrent, fetch_poster=fetch_poster
+            )
             bangumi.rss_link = rss.url
             return bangumi
 

@@ -13,6 +13,19 @@ from module.parser.analyser import (
 
 logger = logging.getLogger(__name__)
 
+# Lazy singleton: building an OpenAIParser (and its AsyncOpenAI client) is not
+# free, so keep one around and only rebuild it when the relevant settings change.
+_openai_parser: OpenAIParser | None = None
+_openai_parser_kwargs: dict | None = None
+
+
+def _get_openai_parser(kwargs: dict) -> OpenAIParser:
+    global _openai_parser, _openai_parser_kwargs
+    if _openai_parser is None or _openai_parser_kwargs != kwargs:
+        _openai_parser = OpenAIParser(**kwargs)
+        _openai_parser_kwargs = kwargs
+    return _openai_parser
+
 
 class TitleParser:
     def __init__(self):
@@ -63,7 +76,7 @@ class TitleParser:
             # use OpenAI ChatGPT to parse raw title and get structured data
             if settings.experimental_openai.enable:
                 kwargs = settings.experimental_openai.dict(exclude={"enable"})
-                gpt = OpenAIParser(**kwargs)
+                gpt = _get_openai_parser(kwargs)
                 episode_dict = await gpt.parse(raw, asdict=True)
                 episode = Episode(**episode_dict)
             else:

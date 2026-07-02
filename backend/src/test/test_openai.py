@@ -1,6 +1,7 @@
 import json
-import pytest
 from unittest import mock
+
+import pytest
 
 from module.parser.analyser.openai import DEFAULT_PROMPT, OpenAIParser
 

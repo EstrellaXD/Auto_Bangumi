@@ -139,11 +139,11 @@ class RSSEngine:
     ) -> Optional[Bangumi]:
         matched = match_bangumi_in_list(torrent.name, bangumi_list)
         if matched:
+            torrent.bangumi_id = matched.id
             if matched.filter == "":
                 return matched
             pattern = self._get_filter_pattern(matched.filter)
             if not pattern.search(torrent.name):
-                torrent.bangumi_id = matched.id
                 return matched
         return None
 
@@ -197,7 +197,9 @@ class RSSEngine:
                 if matched_data:
                     if await client.add_torrent(torrent, matched_data):
                         logger.debug("[Engine] Add torrent %s to client", torrent.name)
-                    torrent.downloaded = True
+                        torrent.downloaded = True
+                    # else: leave downloaded=False so a transient add failure
+                    # (e.g. downloader unreachable) gets retried next tick.
             # Add all torrents to database
             await self.db.torrent.add_all(new_torrents)
         await self.db.commit()

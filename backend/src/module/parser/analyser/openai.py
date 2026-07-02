@@ -14,9 +14,9 @@ class Episode(BaseModel):
     title_en: Optional[str]
     title_zh: Optional[str]
     title_jp: Optional[str]
-    season: str
+    season: int
     season_raw: str
-    episode: str
+    episode: int
     sub: str
     group: str
     resolution: str

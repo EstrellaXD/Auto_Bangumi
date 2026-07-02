@@ -1,11 +1,11 @@
 """Tests for search providers: URL construction, keyword handling."""
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 from module.models import Bangumi, RSSItem
 from module.searcher.provider import search_url
-
 
 # ---------------------------------------------------------------------------
 # search_url
@@ -80,7 +80,7 @@ class TestSearchUrl:
 class TestSpecialUrl:
     def test_uses_bangumi_fields(self):
         """special_url builds keywords from SEARCH_KEY fields of Bangumi."""
-        from module.searcher.searcher import SearchTorrent, SEARCH_KEY
+        from module.searcher.searcher import SEARCH_KEY, SearchTorrent
         from test.factories import make_bangumi
 
         bangumi = make_bangumi(

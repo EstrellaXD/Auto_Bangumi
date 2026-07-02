@@ -205,7 +205,10 @@ def get_season(seasons: list) -> tuple[int, str]:
 
 
 async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
-    cache_key = f"{title}:{language}"
+    # `test` must be part of the key: test mode returns the raw remote poster
+    # URL instead of a locally-saved one, so mixing the two would poison
+    # whichever caller queries second.
+    cache_key = f"{title}:{language}:{test}"
     if cache_key in _tmdb_cache:
         return _tmdb_cache[cache_key]
 
@@ -214,13 +217,13 @@ async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
         contents = await req.get_json(url)
         if not contents:
             return None
-        contents = contents.get("results")
-        if contents.__len__() == 0:
+        contents = (contents or {}).get("results") or []
+        if not contents:
             url = search_url(title.replace(" ", ""))
             contents_resp = await req.get_json(url)
             if not contents_resp:
                 return None
-            contents = contents_resp.get("results")
+            contents = (contents_resp or {}).get("results") or []
         # 判断动画
         if contents:
             matched_id = None
@@ -230,7 +233,8 @@ async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
                     matched_id = cid
                     break
             if matched_id is None:
-                _tmdb_cache[cache_key] = None
+                # Don't cache the negative result permanently — a temporary
+                # TMDB hiccup shouldn't poison this title for the process lifetime.
                 return None
             url_info = info_url(matched_id, language)
             info_content = await req.get_json(url_info)
@@ -294,7 +298,8 @@ async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
                     img = await req.get_content(
                         f"https://image.tmdb.org/t/p/w780{poster_path}"
                     )
-                    poster_link = save_image(img, "jpg")
+                    # img is None if the poster download failed; don't crash on it.
+                    poster_link = save_image(img, "jpg") if img else None
                 else:
                     poster_link = "https://image.tmdb.org/t/p/w780" + poster_path
             else:
@@ -318,9 +323,8 @@ async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
             _tmdb_cache[cache_key] = result
             return result
         else:
-            if len(_tmdb_cache) >= _TMDB_CACHE_MAX:
-                _tmdb_cache.popitem(last=False)
-            _tmdb_cache[cache_key] = None
+            # No results at all — don't cache the negative result permanently,
+            # see the matched_id is None case above.
             return None
 
 
