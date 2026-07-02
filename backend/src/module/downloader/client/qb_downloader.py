@@ -47,7 +47,9 @@ class QbDownloader:
                     self._url("auth/login"),
                     data={"username": self.username, "password": self.password},
                 )
-                if resp.status_code == 200 and resp.text == "Ok.":
+                # qBittorrent < 5.2 answers 200 + "Ok." / "Fails.";
+                # qBittorrent >= 5.2 answers 204 with an empty body on success (#1044).
+                if resp.status_code in (200, 204) and "fails" not in resp.text.lower():
                     return True
                 elif resp.status_code == 403:
                     logger.error("Login refused by qBittorrent Server")
@@ -80,6 +82,10 @@ class QbDownloader:
                 else:
                     logger.error(f"Unknown error: {e}")
                 break
+        # Failed auth: DownloadClient.__aenter__ raises before __aexit__ can run,
+        # so the client must be closed here or its connection pool leaks.
+        await self._client.aclose()
+        self._client = None
         return False
 
     async def logout(self):
@@ -201,11 +207,22 @@ class QbDownloader:
         resp = await self._client.get(self._url("torrents/info"), params={"tag": tag})
         return resp.json()
 
-    async def torrents_delete(self, hash, delete_files: bool = True):
-        await self._client.post(
+    async def torrents_delete(self, hash, delete_files: bool = True) -> bool:
+        # qBittorrent expects one pipe-joined "hashes" field; a Python list would
+        # be form-encoded as repeated fields and silently ignored (#1046).
+        hashes = "|".join(hash) if isinstance(hash, (list, tuple)) else hash
+        resp = await self._client.post(
             self._url("torrents/delete"),
-            data={"hashes": hash, "deleteFiles": str(delete_files).lower()},
+            data={"hashes": hashes, "deleteFiles": str(delete_files).lower()},
         )
+        if resp.status_code != 200:
+            logger.error(
+                "[Downloader] Failed to delete torrents %s: HTTP %s",
+                hashes,
+                resp.status_code,
+            )
+            return False
+        return True
 
     async def torrents_pause(self, hashes: str):
         await self._client.post(
