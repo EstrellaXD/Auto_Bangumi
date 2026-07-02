@@ -1,5 +1,6 @@
 import logging
 
+from module.database import Database
 from module.downloader import DownloadClient
 from module.models import Bangumi, ResponseModel
 from module.rss import RSSEngine
@@ -18,7 +19,8 @@ class SeasonCollector(DownloadClient):
                 torrents = await st.search_season(bangumi)
             else:
                 torrents = await st.get_torrents(link, bangumi.filter.replace(",", "|"))
-        with RSSEngine() as engine:
+        with Database() as db:
+            engine = RSSEngine(db)
             if await self.add_torrent(torrents, bangumi):
                 logger.info(
                     f"Collections of {bangumi.official_title} Season {bangumi.season} completed."
@@ -48,7 +50,8 @@ class SeasonCollector(DownloadClient):
 
     @staticmethod
     async def subscribe_season(data: Bangumi, parser: str = "mikan"):
-        with RSSEngine() as engine:
+        with Database() as db:
+            engine = RSSEngine(db)
             data.added = True
             data.eps_collect = True
             await engine.add_rss(
@@ -63,7 +66,8 @@ class SeasonCollector(DownloadClient):
 
 
 async def eps_complete():
-    with RSSEngine() as engine:
+    with Database() as db:
+        engine = RSSEngine(db)
         datas = engine.bangumi.not_complete()
         if datas:
             logger.info("Start collecting full season...")

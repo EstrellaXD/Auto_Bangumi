@@ -11,18 +11,20 @@ from .engine import RSSEngine
 logger = logging.getLogger(__name__)
 
 
-class RSSAnalyser(TitleParser):
-    async def official_title_parser(self, bangumi: Bangumi, rss: RSSItem, torrent: Torrent):
+class RSSAnalyser:
+    async def official_title_parser(
+        self, bangumi: Bangumi, rss: RSSItem, torrent: Torrent
+    ):
         if rss.parser == "mikan":
             try:
-                bangumi.poster_link, bangumi.official_title = await self.mikan_parser(
-                    torrent.homepage
+                bangumi.poster_link, bangumi.official_title = (
+                    await TitleParser.mikan_parser(torrent.homepage)
                 )
             except AttributeError:
                 logger.warning("[Parser] Mikan torrent has no homepage info.")
                 pass
         elif rss.parser == "tmdb":
-            tmdb_title, season, year, poster_link = await self.tmdb_parser(
+            tmdb_title, season, year, poster_link = await TitleParser.tmdb_parser(
                 bangumi.official_title, bangumi.season, settings.rss_parser.language
             )
             bangumi.official_title = tmdb_title
@@ -49,9 +51,11 @@ class RSSAnalyser(TitleParser):
         new_data = []
         seen_titles: set[str] = set()
         for torrent in torrents:
-            bangumi = await self.raw_parser(raw=torrent.name)
+            bangumi = await TitleParser.raw_parser(raw=torrent.name)
             if bangumi and bangumi.title_raw not in seen_titles:
-                await self.official_title_parser(bangumi=bangumi, rss=rss, torrent=torrent)
+                await self.official_title_parser(
+                    bangumi=bangumi, rss=rss, torrent=torrent
+                )
                 if not full_parse:
                     return [bangumi]
                 seen_titles.add(bangumi.title_raw)
@@ -60,7 +64,7 @@ class RSSAnalyser(TitleParser):
         return new_data
 
     async def torrent_to_data(self, torrent: Torrent, rss: RSSItem) -> Bangumi:
-        bangumi = await self.raw_parser(raw=torrent.name)
+        bangumi = await TitleParser.raw_parser(raw=torrent.name)
         if bangumi:
             await self.official_title_parser(bangumi=bangumi, rss=rss, torrent=torrent)
             bangumi.rss_link = rss.url

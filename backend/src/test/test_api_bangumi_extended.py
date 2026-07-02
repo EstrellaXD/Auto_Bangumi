@@ -1,17 +1,15 @@
 """Tests for extended Bangumi API endpoints (archive, refresh, offset, batch)."""
 
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from module.api import v1
 from module.models import Bangumi, ResponseModel
 from module.security.api import get_current_user
-
 from test.factories import make_bangumi
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -296,6 +294,36 @@ class TestNeedsReview:
             response = authed_client.post("/api/v1/bangumi/dismiss-review/999")
 
         assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Batch operations
+# ---------------------------------------------------------------------------
+
+
+class TestSetWeekday:
+    def test_set_weekday_success(self, authed_client):
+        """PATCH /bangumi/{id}/weekday sets the broadcast weekday."""
+        with patch("module.api.bangumi.Database") as MockDB:
+            mock_db = MagicMock()
+            mock_db.bangumi.set_weekday.return_value = True
+            MockDB.return_value.__enter__ = MagicMock(return_value=mock_db)
+            MockDB.return_value.__exit__ = MagicMock(return_value=False)
+
+            response = authed_client.patch(
+                "/api/v1/bangumi/1/weekday", json={"weekday": 5}
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] is True
+
+    def test_set_weekday_out_of_range(self, authed_client):
+        """PATCH /bangumi/{id}/weekday rejects weekday outside 0-6."""
+        response = authed_client.patch(
+            "/api/v1/bangumi/1/weekday", json={"weekday": 9}
+        )
+        assert response.status_code == 400
 
 
 # ---------------------------------------------------------------------------

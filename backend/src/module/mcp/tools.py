@@ -4,6 +4,7 @@ import logging
 from mcp import types
 
 from module.conf import VERSION
+from module.database import Database
 from module.downloader import DownloadClient
 from module.manager import SeasonCollector, TorrentManager
 from module.models import Bangumi, BangumiUpdate, RSSItem
@@ -236,7 +237,8 @@ async def _dispatch(name: str, args: dict) -> dict | list:
 
 
 def _list_anime(active_only: bool) -> list[dict]:
-    with TorrentManager() as manager:
+    with Database() as db:
+        manager = TorrentManager(db)
         if active_only:
             items = manager.search_all_bangumi()
         else:
@@ -245,7 +247,8 @@ def _list_anime(active_only: bool) -> list[dict]:
 
 
 def _get_anime(bangumi_id: int) -> dict:
-    with TorrentManager() as manager:
+    with Database() as db:
+        manager = TorrentManager(db)
         result = manager.search_one(bangumi_id)
     if isinstance(result, Bangumi):
         return _bangumi_to_dict(result)
@@ -274,7 +277,8 @@ async def _subscribe_anime(rss_link: str, parser: str) -> dict:
 
 
 async def _unsubscribe_anime(bangumi_id: int, delete: bool) -> dict:
-    with TorrentManager() as manager:
+    with Database() as db:
+        manager = TorrentManager(db)
         if delete:
             resp = await manager.delete_rule(bangumi_id)
         else:
@@ -303,7 +307,8 @@ async def _list_downloads(status: str) -> list[dict]:
 
 
 def _list_rss_feeds() -> list[dict]:
-    with RSSEngine() as engine:
+    with Database() as db:
+        engine = RSSEngine(db)
         feeds = engine.rss.search_all()
     return [
         {
@@ -333,14 +338,16 @@ def _get_program_status() -> dict:
 
 async def _refresh_feeds() -> dict:
     async with DownloadClient() as client:
-        with RSSEngine() as engine:
+        with Database() as db:
+            engine = RSSEngine(db)
             await engine.refresh_rss(client)
     return {"status": True, "message": "RSS feeds refreshed successfully"}
 
 
 async def _update_anime(args: dict) -> dict:
     bangumi_id = args["id"]
-    with TorrentManager() as manager:
+    with Database() as db:
+        manager = TorrentManager(db)
         existing = manager.bangumi.search_id(bangumi_id)
         if not existing:
             return {"error": f"Anime with id {bangumi_id} not found"}

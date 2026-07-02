@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from module.conf import settings
+from module.database import Database
 from module.downloader import DownloadClient
 from module.manager import Renamer, TorrentManager, eps_complete
 from module.notification import NotificationManager
@@ -27,7 +28,8 @@ class RSSThread(ProgramStatus):
         while not self._rss_stop_event.is_set():
             try:
                 async with DownloadClient() as client:
-                    with RSSEngine() as engine:
+                    with Database() as db:
+                        engine = RSSEngine(db)
                         # Analyse RSS
                         rss_list = engine.rss.search_aggregate()
                         for rss in rss_list:
@@ -173,7 +175,8 @@ class CalendarRefreshThread(ProgramStatus):
 
         while not self._calendar_stop_event.is_set():
             try:
-                with TorrentManager() as manager:
+                with Database() as db:
+                    manager = TorrentManager(db)
                     resp = await manager.refresh_calendar()
                     if resp.status:
                         logger.info(

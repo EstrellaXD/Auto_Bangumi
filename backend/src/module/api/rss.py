@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
+from module.database import Database, get_db
 from module.downloader import DownloadClient
 from module.manager import SeasonCollector
 from module.models import APIResponse, Bangumi, RSSItem, RSSUpdate, Torrent
@@ -15,16 +16,16 @@ router = APIRouter(prefix="/rss", tags=["rss"])
 @router.get(
     path="", response_model=list[RSSItem], dependencies=[Depends(get_current_user)]
 )
-async def get_rss():
-    with RSSEngine() as engine:
+async def get_rss(db: Database = Depends(get_db)):
+    with RSSEngine(db) as engine:
         return engine.rss.search_all()
 
 
 @router.post(
     path="/add", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
-async def add_rss(rss: RSSItem):
-    with RSSEngine() as engine:
+async def add_rss(rss: RSSItem, db: Database = Depends(get_db)):
+    with RSSEngine(db) as engine:
         result = await engine.add_rss(rss.url, rss.name, rss.aggregate, rss.parser)
     return u_response(result)
 
@@ -36,8 +37,9 @@ async def add_rss(rss: RSSItem):
 )
 async def enable_many_rss(
     rss_ids: list[int],
+    db: Database = Depends(get_db),
 ):
-    with RSSEngine() as engine:
+    with RSSEngine(db) as engine:
         result = engine.enable_list(rss_ids)
     return u_response(result)
 
@@ -47,8 +49,8 @@ async def enable_many_rss(
     response_model=APIResponse,
     dependencies=[Depends(get_current_user)],
 )
-async def delete_rss(rss_id: int):
-    with RSSEngine() as engine:
+async def delete_rss(rss_id: int, db: Database = Depends(get_db)):
+    with RSSEngine(db) as engine:
         if engine.rss.delete(rss_id):
             return JSONResponse(
                 status_code=200,
@@ -68,8 +70,9 @@ async def delete_rss(rss_id: int):
 )
 async def delete_many_rss(
     rss_ids: list[int],
+    db: Database = Depends(get_db),
 ):
-    with RSSEngine() as engine:
+    with RSSEngine(db) as engine:
         result = engine.delete_list(rss_ids)
     return u_response(result)
 
@@ -79,8 +82,8 @@ async def delete_many_rss(
     response_model=APIResponse,
     dependencies=[Depends(get_current_user)],
 )
-async def disable_rss(rss_id: int):
-    with RSSEngine() as engine:
+async def disable_rss(rss_id: int, db: Database = Depends(get_db)):
+    with RSSEngine(db) as engine:
         if engine.rss.disable(rss_id):
             return JSONResponse(
                 status_code=200,
@@ -98,8 +101,8 @@ async def disable_rss(rss_id: int):
     response_model=APIResponse,
     dependencies=[Depends(get_current_user)],
 )
-async def disable_many_rss(rss_ids: list[int]):
-    with RSSEngine() as engine:
+async def disable_many_rss(rss_ids: list[int], db: Database = Depends(get_db)):
+    with RSSEngine(db) as engine:
         result = engine.disable_list(rss_ids)
     return u_response(result)
 
@@ -110,11 +113,14 @@ async def disable_many_rss(rss_ids: list[int]):
     dependencies=[Depends(get_current_user)],
 )
 async def update_rss(
-    rss_id: int, data: RSSUpdate, current_user=Depends(get_current_user)
+    rss_id: int,
+    data: RSSUpdate,
+    current_user=Depends(get_current_user),
+    db: Database = Depends(get_db),
 ):
     if not current_user:
         raise UNAUTHORIZED
-    with RSSEngine() as engine:
+    with RSSEngine(db) as engine:
         if engine.rss.update(rss_id, data):
             return JSONResponse(
                 status_code=200,
@@ -132,9 +138,9 @@ async def update_rss(
     response_model=APIResponse,
     dependencies=[Depends(get_current_user)],
 )
-async def refresh_all():
+async def refresh_all(db: Database = Depends(get_db)):
     async with DownloadClient() as client:
-        with RSSEngine() as engine:
+        with RSSEngine(db) as engine:
             await engine.refresh_rss(client)
     return JSONResponse(
         status_code=200,
@@ -147,9 +153,9 @@ async def refresh_all():
     response_model=APIResponse,
     dependencies=[Depends(get_current_user)],
 )
-async def refresh_rss(rss_id: int):
+async def refresh_rss(rss_id: int, db: Database = Depends(get_db)):
     async with DownloadClient() as client:
-        with RSSEngine() as engine:
+        with RSSEngine(db) as engine:
             await engine.refresh_rss(client, rss_id)
     return JSONResponse(
         status_code=200,
@@ -164,8 +170,9 @@ async def refresh_rss(rss_id: int):
 )
 async def get_torrent(
     rss_id: int,
+    db: Database = Depends(get_db),
 ):
-    with RSSEngine() as engine:
+    with RSSEngine(db) as engine:
         return engine.get_rss_torrents(rss_id)
 
 

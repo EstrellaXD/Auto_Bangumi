@@ -3,6 +3,7 @@ import re
 
 from urllib3.util import parse_url
 
+from module.database import Database
 from module.network import RequestContent
 from module.rss import RSSEngine
 from module.utils import save_image
@@ -11,7 +12,8 @@ logger = logging.getLogger(__name__)
 
 
 async def from_30_to_31():
-    with RSSEngine() as db:
+    with Database() as db:
+        engine = RSSEngine(db)
         db.migrate()
         # Update poster link
         bangumis = db.bangumi.search_all()
@@ -32,12 +34,12 @@ async def from_30_to_31():
                 aggregate = True
             else:
                 aggregate = False
-            await db.add_rss(rss_link=rss, aggregate=aggregate)
+            await engine.add_rss(rss_link=rss, aggregate=aggregate)
 
 
 async def from_31_to_32():
     """Migrate database schema from 3.1.x to 3.2.x."""
-    with RSSEngine() as db:
+    with Database() as db:
         db.create_table()
         db.run_migrations()
     logger.info("[Migration] 3.1 -> 3.2 migration completed.")
@@ -45,12 +47,12 @@ async def from_31_to_32():
 
 def run_migrations():
     """Check schema version and run any pending migrations."""
-    with RSSEngine() as db:
+    with Database() as db:
         db.run_migrations()
 
 
 async def cache_image():
-    with RSSEngine() as db:
+    with Database() as db:
         bangumis = db.bangumi.search_all()
         async with RequestContent() as req:
             for bangumi in bangumis:

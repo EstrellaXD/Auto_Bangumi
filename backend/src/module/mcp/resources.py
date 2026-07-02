@@ -11,6 +11,7 @@ import logging
 from mcp import types
 
 from module.conf import VERSION
+from module.database import Database
 from module.manager import TorrentManager
 from module.models import Bangumi
 from module.rss import RSSEngine
@@ -60,7 +61,8 @@ def handle_resource(uri: str) -> str:
     - ``autobangumi://anime/{id}`` - single anime by integer ID
     """
     if uri == "autobangumi://anime/list":
-        with TorrentManager() as manager:
+        with Database() as db:
+            manager = TorrentManager(db)
             items = manager.bangumi.search_all()
         return json.dumps([_bangumi_to_dict(b) for b in items], ensure_ascii=False)
 
@@ -76,7 +78,8 @@ def handle_resource(uri: str) -> str:
         )
 
     elif uri == "autobangumi://rss/feeds":
-        with RSSEngine() as engine:
+        with Database() as db:
+            engine = RSSEngine(db)
             feeds = engine.rss.search_all()
         return json.dumps(
             [
@@ -99,7 +102,8 @@ def handle_resource(uri: str) -> str:
             anime_id = int(anime_id)
         except ValueError:
             return json.dumps({"error": f"Invalid anime ID: {anime_id}"})
-        with TorrentManager() as manager:
+        with Database() as db:
+            manager = TorrentManager(db)
             result = manager.search_one(anime_id)
         if isinstance(result, Bangumi):
             return json.dumps(_bangumi_to_dict(result), ensure_ascii=False)

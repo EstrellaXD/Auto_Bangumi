@@ -11,7 +11,28 @@ from module.parser.analyser.tmdb_parser import tmdb_parser
 logger = logging.getLogger(__name__)
 
 
-class TorrentManager(Database):
+class TorrentManager:
+    def __init__(self, db: Database):
+        self.db = db
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return False
+
+    @property
+    def rss(self):
+        return self.db.rss
+
+    @property
+    def torrent(self):
+        return self.db.torrent
+
+    @property
+    def bangumi(self):
+        return self.db.bangumi
+
     @staticmethod
     async def __match_torrents_list(data: Bangumi | BangumiUpdate) -> list:
         async with DownloadClient() as client:
@@ -147,16 +168,20 @@ class TorrentManager(Database):
                     rule = {
                         "enable": True,
                         "mustContain": data.title_raw,
-                        "mustNotContain": "|".join(data.filter)
-                        if isinstance(data.filter, list)
-                        else data.filter,
+                        "mustNotContain": (
+                            "|".join(data.filter)
+                            if isinstance(data.filter, list)
+                            else data.filter
+                        ),
                         "useRegex": True,
                         "episodeFilter": "",
                         "smartFilter": False,
                         "previouslyMatchedEpisodes": [],
-                        "affectedFeeds": data.rss_link
-                        if isinstance(data.rss_link, str)
-                        else ",".join(data.rss_link),
+                        "affectedFeeds": (
+                            data.rss_link
+                            if isinstance(data.rss_link, str)
+                            else ",".join(data.rss_link)
+                        ),
                         "ignoreDays": 0,
                         "lastMatch": "",
                         "addPaused": False,

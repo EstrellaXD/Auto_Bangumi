@@ -24,7 +24,12 @@ def _make_response(status: bool = True, msg: str = "OK") -> ResponseModel:
 
 
 def _mock_sync_manager(bangumi_list=None, single=None):
-    """Return a MagicMock that acts as a sync context-manager TorrentManager."""
+    """Return a MagicMock standing in for a TorrentManager service.
+
+    The service is now constructed as ``TorrentManager(db)`` (the Database is the
+    context manager), so the mock is returned directly rather than wrapped in a
+    context manager. Both return slots are the same object for call-site symmetry.
+    """
     mock_mgr = MagicMock()
     if bangumi_list is not None:
         mock_mgr.bangumi.search_all.return_value = bangumi_list
@@ -33,10 +38,7 @@ def _mock_sync_manager(bangumi_list=None, single=None):
         mock_mgr.search_one.return_value = single
         mock_mgr.bangumi.search_id.return_value = single
 
-    ctx = MagicMock()
-    ctx.__enter__ = MagicMock(return_value=mock_mgr)
-    ctx.__exit__ = MagicMock(return_value=False)
-    return ctx, mock_mgr
+    return mock_mgr, mock_mgr
 
 
 # ---------------------------------------------------------------------------
@@ -451,11 +453,8 @@ class TestDispatch:
 
         mock_engine = MagicMock()
         mock_engine.rss.search_all.return_value = [fake_feed]
-        ctx = MagicMock()
-        ctx.__enter__ = MagicMock(return_value=mock_engine)
-        ctx.__exit__ = MagicMock(return_value=False)
 
-        with patch("module.mcp.tools.RSSEngine", return_value=ctx):
+        with patch("module.mcp.tools.RSSEngine", return_value=mock_engine):
             result = await _dispatch("list_rss_feeds", {})
 
         assert isinstance(result, list)
@@ -495,13 +494,10 @@ class TestDispatch:
 
         mock_engine = MagicMock()
         mock_engine.refresh_rss = AsyncMock(return_value=None)
-        engine_ctx = MagicMock()
-        engine_ctx.__enter__ = MagicMock(return_value=mock_engine)
-        engine_ctx.__exit__ = MagicMock(return_value=False)
 
         with (
             patch("module.mcp.tools.DownloadClient", return_value=mock_client),
-            patch("module.mcp.tools.RSSEngine", return_value=engine_ctx),
+            patch("module.mcp.tools.RSSEngine", return_value=mock_engine),
         ):
             result = await _dispatch("refresh_feeds", {})
 

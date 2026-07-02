@@ -5,7 +5,7 @@ from sqlmodel import create_engine
 
 from module.conf import DATA_PATH
 
-# Sync engine (used by Database which extends Session)
+# Sync engine (used by Database, which owns a Session)
 engine = create_engine(DATA_PATH)
 
 # Async engine (for passkey operations)

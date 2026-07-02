@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from urllib.parse import urlparse
 
-from module.database import Database, engine
+from module.database import Database
 from module.downloader import DownloadClient
 from module.models import Bangumi, ResponseModel, RSSItem, Torrent
 from module.network import RequestContent
@@ -18,11 +18,29 @@ logger = logging.getLogger(__name__)
 RSS_PER_HOST_DELAY = 2.0
 
 
-class RSSEngine(Database):
-    def __init__(self, _engine=engine):
-        super().__init__(_engine)
+class RSSEngine:
+    def __init__(self, db: Database):
+        self.db = db
         self._to_refresh = False
         self._filter_cache: dict[str, re.Pattern] = {}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return False
+
+    @property
+    def rss(self):
+        return self.db.rss
+
+    @property
+    def torrent(self):
+        return self.db.torrent
+
+    @property
+    def bangumi(self):
+        return self.db.bangumi
 
     @staticmethod
     async def _get_torrents(rss: RSSItem) -> list[Torrent]:
@@ -120,17 +138,13 @@ class RSSEngine(Database):
         if filter_str not in self._filter_cache:
             raw_pattern = filter_str.replace(",", "|")
             try:
-                self._filter_cache[filter_str] = re.compile(
-                    raw_pattern, re.IGNORECASE
-                )
+                self._filter_cache[filter_str] = re.compile(raw_pattern, re.IGNORECASE)
             except re.error:
                 # Filter contains invalid regex chars (e.g. unmatched '[')
                 # Fall back to escaping each term for literal matching
                 terms = filter_str.split(",")
                 escaped = "|".join(re.escape(t) for t in terms)
-                self._filter_cache[filter_str] = re.compile(
-                    escaped, re.IGNORECASE
-                )
+                self._filter_cache[filter_str] = re.compile(escaped, re.IGNORECASE)
                 logger.warning(
                     f"[Engine] Filter '{filter_str}' contains invalid regex, "
                     f"using literal matching"
@@ -188,7 +202,7 @@ class RSSEngine(Database):
             rss_item.connection_status = "error" if error else "healthy"
             rss_item.last_checked_at = now
             rss_item.last_error = error
-            self.add(rss_item)
+            self.db.add(rss_item)
             for torrent in new_torrents:
                 matched_data = self.match_torrent(torrent)
                 if matched_data:
@@ -197,7 +211,7 @@ class RSSEngine(Database):
                     torrent.downloaded = True
             # Add all torrents to database
             self.torrent.add_all(new_torrents)
-        self.commit()
+        self.db.commit()
 
     async def download_bangumi(self, bangumi: Bangumi):
         async with RequestContent() as req:

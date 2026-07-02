@@ -20,28 +20,26 @@ from test.factories import make_bangumi
 
 
 def _mock_sync_manager(bangumi_list=None, single=None):
-    """Build a MagicMock that acts as a sync context-manager TorrentManager."""
+    """Build a MagicMock standing in for a TorrentManager service.
+
+    The service is now constructed as ``TorrentManager(db)`` (the Database is the
+    context manager), so the mock is returned directly.
+    """
     mock_mgr = MagicMock()
     if bangumi_list is not None:
         mock_mgr.bangumi.search_all.return_value = bangumi_list
     if single is not None:
         mock_mgr.search_one.return_value = single
 
-    ctx = MagicMock()
-    ctx.__enter__ = MagicMock(return_value=mock_mgr)
-    ctx.__exit__ = MagicMock(return_value=False)
-    return ctx, mock_mgr
+    return mock_mgr, mock_mgr
 
 
 def _mock_rss_engine(feeds):
-    """Build a MagicMock that acts as a sync context-manager RSSEngine."""
+    """Build a MagicMock standing in for an RSSEngine service."""
     mock_eng = MagicMock()
     mock_eng.rss.search_all.return_value = feeds
 
-    ctx = MagicMock()
-    ctx.__enter__ = MagicMock(return_value=mock_eng)
-    ctx.__exit__ = MagicMock(return_value=False)
-    return ctx
+    return mock_eng
 
 
 def _parse(raw: str) -> dict | list:

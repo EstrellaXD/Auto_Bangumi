@@ -1,25 +1,24 @@
 """Tests for RSS engine: pull_rss, match_torrent, refresh_rss, add_rss."""
 
 import asyncio
-
-import pytest
 from unittest.mock import AsyncMock, patch
 
+import pytest
 from sqlmodel import Session
 
+from module.database import Database
 from module.database.bangumi import BangumiDatabase, _invalidate_bangumi_cache
 from module.database.rss import RSSDatabase
 from module.database.torrent import TorrentDatabase
 from module.models import Bangumi, RSSItem, Torrent
 from module.rss.engine import RSSEngine
-
-from test.factories import make_bangumi, make_torrent, make_rss_item
+from test.factories import make_bangumi, make_rss_item, make_torrent
 
 
 @pytest.fixture
 def rss_engine(db_engine):
     """RSSEngine backed by in-memory database."""
-    engine = RSSEngine(_engine=db_engine)
+    engine = RSSEngine(Database(engine=db_engine))
     return engine
 
 

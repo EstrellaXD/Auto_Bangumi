@@ -336,7 +336,8 @@ async def complete_setup(req: SetupCompleteRequest):
         if req.rss_url:
             from module.rss import RSSEngine
 
-            with RSSEngine() as rss_engine:
+            with Database() as db:
+                rss_engine = RSSEngine(db)
                 await rss_engine.add_rss(req.rss_url, name=req.rss_name or None)
 
         # 4. Create sentinel file

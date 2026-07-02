@@ -20,14 +20,37 @@ from .user import UserDatabase
 logger = logging.getLogger(__name__)
 
 
-class Database(Session):
+class Database:
     def __init__(self, engine=e):
         self.engine = engine
-        super().__init__(engine)
-        self.rss = RSSDatabase(self)
-        self.torrent = TorrentDatabase(self)
-        self.bangumi = BangumiDatabase(self)
-        self.user = UserDatabase(self)
+        self.session = Session(engine)
+        self.rss = RSSDatabase(self.session)
+        self.torrent = TorrentDatabase(self.session)
+        self.bangumi = BangumiDatabase(self.session)
+        self.user = UserDatabase(self.session)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.session.close()
+
+    # Transitional session delegates for existing call sites that used to rely
+    # on Database being a Session.
+    def add(self, obj):
+        self.session.add(obj)
+
+    def commit(self):
+        self.session.commit()
+
+    def rollback(self):
+        self.session.rollback()
+
+    def refresh(self, obj):
+        self.session.refresh(obj)
+
+    def close(self):
+        self.session.close()
 
     def create_table(self):
         create_tables(self.engine)
@@ -41,7 +64,7 @@ class Database(Session):
     def migrate(self):
         # Run migration online
         bangumi_data = self.bangumi.search_all()
-        user_data = self.exec("SELECT * FROM user").all()
+        user_data = self.session.exec("SELECT * FROM user").all()
         if not user_data:
             logger.warning("[Database] No user data found, skipping migration.")
             return

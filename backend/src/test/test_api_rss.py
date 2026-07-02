@@ -1,17 +1,15 @@
 """Tests for RSS API endpoints."""
 
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from module.api import v1
-from module.models import RSSItem, RSSUpdate, ResponseModel, Torrent
+from module.models import Bangumi, ResponseModel, RSSItem, RSSUpdate, Torrent
 from module.security.api import get_current_user
-
-from test.factories import make_rss_item, make_torrent
-
+from test.factories import make_bangumi, make_rss_item, make_torrent
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -312,3 +310,78 @@ class TestGetRssTorrents:
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 2
+
+
+# ---------------------------------------------------------------------------
+# POST /rss/analysis
+# ---------------------------------------------------------------------------
+
+
+class TestAnalysis:
+    def test_analysis_returns_bangumi(self, authed_client):
+        """POST /rss/analysis returns the parsed Bangumi on success."""
+        bangumi = make_bangumi(id=1, official_title="Parsed Anime")
+        with patch("module.api.rss.analyser") as mock_analyser:
+            mock_analyser.link_to_data = AsyncMock(return_value=bangumi)
+
+            response = authed_client.post(
+                "/api/v1/rss/analysis",
+                json={"url": "https://mikanani.me/RSS/link", "parser": "mikan"},
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["official_title"] == "Parsed Anime"
+
+
+# ---------------------------------------------------------------------------
+# POST /rss/collect
+# ---------------------------------------------------------------------------
+
+
+class TestCollect:
+    def test_collect_success(self, authed_client):
+        """POST /rss/collect triggers SeasonCollector.collect_season."""
+        resp_model = ResponseModel(
+            status=True, status_code=200, msg_en="Collected.", msg_zh="收集成功。"
+        )
+        with patch("module.api.rss.SeasonCollector") as MockCollector:
+            mock_collector = MagicMock()
+            mock_collector.collect_season = AsyncMock(return_value=resp_model)
+            MockCollector.return_value.__aenter__ = AsyncMock(
+                return_value=mock_collector
+            )
+            MockCollector.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            response = authed_client.post(
+                "/api/v1/rss/collect", json=make_bangumi(id=1).model_dump()
+            )
+
+        assert response.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# POST /rss/subscribe
+# ---------------------------------------------------------------------------
+
+
+class TestSubscribe:
+    def test_subscribe_success(self, authed_client):
+        """POST /rss/subscribe triggers SeasonCollector.subscribe_season."""
+        resp_model = ResponseModel(
+            status=True, status_code=200, msg_en="Subscribed.", msg_zh="订阅成功。"
+        )
+        with patch(
+            "module.api.rss.SeasonCollector.subscribe_season",
+            new_callable=AsyncMock,
+            return_value=resp_model,
+        ):
+            response = authed_client.post(
+                "/api/v1/rss/subscribe",
+                json={
+                    "data": make_bangumi(id=1).model_dump(),
+                    "rss": {"url": "https://mikanani.me/RSS/link", "parser": "mikan"},
+                },
+            )
+
+        assert response.status_code == 200
