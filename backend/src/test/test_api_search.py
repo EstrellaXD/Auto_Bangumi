@@ -118,8 +118,14 @@ class TestSearchProviderConfig:
     def test_get_provider_config(self, authed_client):
         """GET /search/provider/config returns provider configurations."""
         mock_providers = {
-            "mikan": "https://mikanani.me/RSS/Search?searchstr={keyword}",
-            "dmhy": "https://share.dmhy.org/search?keyword={keyword}",
+            "mikan": {
+                "url": "https://mikanani.me/RSS/Search?searchstr={keyword}",
+                "parser": "mikan",
+            },
+            "dmhy": {
+                "url": "https://share.dmhy.org/search?keyword={keyword}",
+                "parser": "tmdb",
+            },
         }
         with patch("module.api.search.get_provider", return_value=mock_providers):
             response = authed_client.get("/api/v1/search/provider/config")
@@ -128,6 +134,8 @@ class TestSearchProviderConfig:
         data = response.json()
         assert "mikan" in data
         assert "dmhy" in data
+        # Only the URL is exposed via this endpoint, not the parser field.
+        assert data["mikan"] == "https://mikanani.me/RSS/Search?searchstr={keyword}"
 
 
 # ---------------------------------------------------------------------------
@@ -142,8 +150,18 @@ class TestUpdateProviderConfig:
             "mikan": "https://mikanani.me/RSS/Search?searchstr={keyword}",
             "custom": "https://custom.site/search?q={keyword}",
         }
+        saved_config = {
+            "mikan": {
+                "url": "https://mikanani.me/RSS/Search?searchstr={keyword}",
+                "parser": "mikan",
+            },
+            "custom": {
+                "url": "https://custom.site/search?q={keyword}",
+                "parser": "tmdb",
+            },
+        }
         with patch("module.api.search.save_provider") as mock_save:
-            with patch("module.api.search.get_provider", return_value=new_config):
+            with patch("module.api.search.get_provider", return_value=saved_config):
                 response = authed_client.put(
                     "/api/v1/search/provider/config", json=new_config
                 )
@@ -153,6 +171,7 @@ class TestUpdateProviderConfig:
         data = response.json()
         assert "mikan" in data
         assert "custom" in data
+        assert data["custom"] == "https://custom.site/search?q={keyword}"
 
     def test_update_provider_config_empty(self, authed_client):
         """PUT /search/provider/config with empty config."""

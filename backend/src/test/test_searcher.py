@@ -72,6 +72,38 @@ class TestSearchUrl:
         assert result.aggregate is False
 
 
+class TestSearchUrlPerProviderParser:
+    """search_url reads the parser from each provider's own {url, parser}
+    config instead of the old hardcoded "mikan-or-tmdb" rule."""
+
+    def test_uses_providers_declared_parser(self):
+        """A custom provider's declared parser is honored, not the default."""
+        with patch(
+            "module.searcher.provider.get_provider",
+            return_value={
+                "custom": {"url": "https://custom.example/?q=%s", "parser": "openai"}
+            },
+        ):
+            result = search_url("custom", ["test"])
+
+        assert result.parser == "openai"
+
+    def test_mikan_site_uses_declared_parser_not_hardcoded(self):
+        """Even the "mikan" site name honors the configured parser value."""
+        with patch(
+            "module.searcher.provider.get_provider",
+            return_value={
+                "mikan": {
+                    "url": "https://mikanani.me/RSS/Search?searchstr=%s",
+                    "parser": "tmdb",
+                }
+            },
+        ):
+            result = search_url("mikan", ["test"])
+
+        assert result.parser == "tmdb"
+
+
 # ---------------------------------------------------------------------------
 # SearchTorrent.special_url
 # ---------------------------------------------------------------------------

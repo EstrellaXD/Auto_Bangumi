@@ -14,8 +14,8 @@ def search_url(site: str, keywords: list[str]) -> RSSItem:
     if site in providers:
         # str.replace, not re.sub: the template is a literal "%s" placeholder,
         # and search_str may itself contain regex-special characters.
-        url = providers[site].replace("%s", search_str)
-        parser = "mikan" if site == "mikan" else "tmdb"
+        url = providers[site]["url"].replace("%s", search_str)
+        parser = providers[site]["parser"]
         rss_item = RSSItem(
             url=url,
             aggregate=False,

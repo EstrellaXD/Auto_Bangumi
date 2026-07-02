@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from module.conf import settings
 from module.downloader import DownloadClient
 from module.manager.renamer import Renamer
 from module.models import EpisodeFile, Notification, SubtitleFile
@@ -112,6 +113,103 @@ class TestGenPath:
         )
         result = Renamer.gen_path(ep, "Test", method="pn")
         assert result.endswith(".mp4")
+
+
+# ---------------------------------------------------------------------------
+# gen_path with group_tag
+# ---------------------------------------------------------------------------
+
+
+class TestGenPathWithGroupTag:
+    """gen_path honors bangumi_manage.group_tag as a "[Group] " prefix,
+    mirroring the legacy downloader/path.py rule_name behavior."""
+
+    def test_group_tag_enabled_prefixes_pn_method(self):
+        """pn method gets a "[Group] " prefix when group_tag is enabled."""
+        ep = EpisodeFile(
+            media_path="old.mkv",
+            group="SubGroup",
+            title="My Anime",
+            season=1,
+            episode=5,
+            suffix=".mkv",
+        )
+        with patch.object(settings.bangumi_manage, "group_tag", True):
+            result = Renamer.gen_path(ep, "Bangumi Name", method="pn")
+        assert result == "[SubGroup] My Anime S01E05.mkv"
+
+    def test_group_tag_enabled_prefixes_advance_method(self):
+        """advance method gets a "[Group] " prefix when group_tag is enabled."""
+        ep = EpisodeFile(
+            media_path="old.mkv",
+            group="SubGroup",
+            title="My Anime",
+            season=1,
+            episode=5,
+            suffix=".mkv",
+        )
+        with patch.object(settings.bangumi_manage, "group_tag", True):
+            result = Renamer.gen_path(ep, "Bangumi Name", method="advance")
+        assert result == "[SubGroup] Bangumi Name S01E05.mkv"
+
+    def test_group_tag_enabled_prefixes_subtitle_methods(self):
+        """subtitle_pn/subtitle_advance also get the prefix when enabled."""
+        sub = SubtitleFile(
+            media_path="sub.ass",
+            group="SubGroup",
+            title="My Anime",
+            season=1,
+            episode=5,
+            language="zh",
+            suffix=".ass",
+        )
+        with patch.object(settings.bangumi_manage, "group_tag", True):
+            result = Renamer.gen_path(sub, "Bangumi Name", method="subtitle_pn")
+        assert result == "[SubGroup] My Anime S01E05.zh.ass"
+
+    def test_group_tag_disabled_no_prefix(self):
+        """No prefix is added when group_tag is disabled, even with a group."""
+        ep = EpisodeFile(
+            media_path="old.mkv",
+            group="SubGroup",
+            title="My Anime",
+            season=1,
+            episode=5,
+            suffix=".mkv",
+        )
+        with patch.object(settings.bangumi_manage, "group_tag", False):
+            result = Renamer.gen_path(ep, "Bangumi Name", method="pn")
+        assert result == "My Anime S01E05.mkv"
+
+    def test_group_tag_enabled_but_no_group_no_prefix(self):
+        """No "[None] " prefix leaks in when group_tag is enabled but the
+        parsed file has no group (e.g. no [Group] tag in the torrent name)."""
+        ep = EpisodeFile(
+            media_path="old.mkv",
+            group=None,
+            title="My Anime",
+            season=1,
+            episode=5,
+            suffix=".mkv",
+        )
+        with patch.object(settings.bangumi_manage, "group_tag", True):
+            result = Renamer.gen_path(ep, "Bangumi Name", method="pn")
+        assert result == "My Anime S01E05.mkv"
+
+    def test_group_tag_enabled_none_and_subtitle_none_unaffected(self):
+        """none/subtitle_none methods return the original path unchanged,
+        regardless of group_tag."""
+        ep = EpisodeFile(
+            media_path="original/path/file.mkv",
+            group="SubGroup",
+            title="Test",
+            season=1,
+            episode=1,
+            suffix=".mkv",
+        )
+        with patch.object(settings.bangumi_manage, "group_tag", True):
+            result = Renamer.gen_path(ep, "Bangumi", method="none")
+        assert result == "original/path/file.mkv"
 
 
 # ---------------------------------------------------------------------------

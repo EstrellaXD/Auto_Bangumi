@@ -81,16 +81,18 @@ class TitleParser:
     async def raw_parser(raw: str) -> Bangumi | None:
         language = settings.rss_parser.language
         try:
-            # use OpenAI ChatGPT to parse raw title and get structured data
-            if settings.experimental_openai.enable:
+            # 优先使用正则解析；仅当正则解析失败且启用了 OpenAI 时，才用 OpenAI 兜底解析
+            episode = raw_parser(raw)
+            if episode is None:
+                if not settings.experimental_openai.enable:
+                    return None
                 kwargs = settings.experimental_openai.dict(exclude={"enable"})
                 gpt = _get_openai_parser(kwargs)
                 episode_dict = await gpt.parse(raw, asdict=True)
-                episode = Episode(**episode_dict)
-            else:
-                episode = raw_parser(raw)
-                if episode is None:
-                    return None
+                # asdict=True normally guarantees a dict; the `str` fallback
+                # case (JSON parse failure) intentionally raises TypeError
+                # here, caught by the except clause below.
+                episode = Episode(**episode_dict)  # type: ignore[arg-type]
 
             titles = {
                 "zh": episode.title_zh,

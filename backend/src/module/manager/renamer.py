@@ -79,19 +79,34 @@ class Renamer:
                 f"[Renamer] Episode offset {episode_offset} would make episode {original_episode} non-positive, ignoring offset"
             )
         episode = f"0{adjusted_episode}" if adjusted_episode < 10 else adjusted_episode
+        # 与旧版 downloader/path.py 的 rule_name 行为保持一致：开启 group_tag 时，
+        # 在文件名前加上 "[字幕组] " 前缀
+        group_prefix = (
+            f"[{file_info.group}] "
+            if settings.bangumi_manage.group_tag and file_info.group
+            else ""
+        )
         if method == "none" or method == "subtitle_none":
             return file_info.media_path
         elif method == "pn":
-            return f"{file_info.title} S{season}E{episode}{file_info.suffix}"
+            return (
+                f"{group_prefix}{file_info.title} S{season}E{episode}{file_info.suffix}"
+            )
         elif method == "advance":
-            return f"{bangumi_name} S{season}E{episode}{file_info.suffix}"
+            return f"{group_prefix}{bangumi_name} S{season}E{episode}{file_info.suffix}"
         elif method == "normal":
             logger.warning("[Renamer] Normal rename method is deprecated.")
             return file_info.media_path
         elif method == "subtitle_pn":
-            return f"{file_info.title} S{season}E{episode}.{file_info.language}{file_info.suffix}"
+            assert isinstance(
+                file_info, SubtitleFile
+            ), "subtitle_pn requires a SubtitleFile"
+            return f"{group_prefix}{file_info.title} S{season}E{episode}.{file_info.language}{file_info.suffix}"
         elif method == "subtitle_advance":
-            return f"{bangumi_name} S{season}E{episode}.{file_info.language}{file_info.suffix}"
+            assert isinstance(
+                file_info, SubtitleFile
+            ), "subtitle_advance requires a SubtitleFile"
+            return f"{group_prefix}{bangumi_name} S{season}E{episode}.{file_info.language}{file_info.suffix}"
         else:
             logger.error(f"[Renamer] Unknown rename method: {method}")
             return file_info.media_path
@@ -244,7 +259,7 @@ class Renamer:
                         logger.warning(f"[Renamer] {subtitle_path} rename failed")
 
     @staticmethod
-    def _parse_bangumi_id_from_tags(tags: str) -> int | None:
+    def _parse_bangumi_id_from_tags(tags: str | None) -> int | None:
         """Extract bangumi_id from torrent tags.
 
         Tags are comma-separated, and we look for 'ab:ID' format.

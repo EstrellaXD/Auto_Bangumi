@@ -15,11 +15,11 @@ async def search_torrents(site: str = "mikan", keywords: str = Query(None)):
     """
     if not keywords:
         return []
-    keywords = keywords.split(" ")
+    keyword_list = keywords.split(" ")
 
     async def event_generator():
         st = SearchTorrent()
-        async for item in st.analyse_keyword(keywords=keywords, site=site):
+        async for item in st.analyse_keyword(keywords=keyword_list, site=site):
             yield item
 
     return EventSourceResponse(content=event_generator())
@@ -38,8 +38,12 @@ async def search_provider():
     dependencies=[Depends(get_current_user)],
 )
 async def get_search_provider_config():
-    """Get all search providers with their URL templates."""
-    return get_provider()
+    """Get all search providers with their URL templates.
+
+    Each provider is stored internally as {url, parser}; only the URL is
+    exposed here to keep this endpoint's contract unchanged for callers.
+    """
+    return {site: config["url"] for site, config in get_provider().items()}
 
 
 @router.put(
@@ -50,4 +54,4 @@ async def get_search_provider_config():
 async def update_search_provider_config(providers: dict[str, str]):
     """Update search providers configuration."""
     save_provider(providers)
-    return get_provider()
+    return {site: config["url"] for site, config in get_provider().items()}
