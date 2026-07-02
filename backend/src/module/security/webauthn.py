@@ -7,6 +7,7 @@ import base64
 import json
 import logging
 import time
+from collections import OrderedDict
 from typing import List, Optional
 
 from webauthn import (
@@ -15,6 +16,10 @@ from webauthn import (
     options_to_json,
     verify_authentication_response,
     verify_registration_response,
+)
+from webauthn.helpers import (
+    parse_authentication_credential_json,
+    parse_client_data_json,
 )
 from webauthn.helpers.cose import COSEAlgorithmIdentifier
 from webauthn.helpers.structs import (
@@ -298,13 +303,20 @@ class WebAuthnService:
         Raises:
             ValueError: 验证失败
         """
-        # Try all discoverable challenges to find the matching one
-        expected_challenge = None
-        for b64key, (challenge, _, lk) in list(self._challenges.items()):
-            if lk.startswith("auth_discoverable_"):
-                expected_challenge = challenge
-                del self._challenges[b64key]
-                break
+        # Pop the challenge the authenticator actually signed over (from
+        # clientDataJSON), not just the first stored discoverable challenge —
+        # with multiple concurrent discoverable logins in flight, popping by
+        # position let one caller consume another caller's challenge.
+        try:
+            parsed_credential = parse_authentication_credential_json(credential)
+            client_data = parse_client_data_json(
+                parsed_credential.response.client_data_json
+            )
+        except Exception as e:
+            logger.warning(f"Failed to parse discoverable authentication response: {e}")
+            raise ValueError("Invalid authentication response")
+
+        expected_challenge = self._pop_challenge_by_value(client_data.challenge)
 
         if not expected_challenge:
             raise ValueError("Challenge not found or expired")
@@ -355,15 +367,24 @@ class WebAuthnService:
 
 
 # 全局 WebAuthn 服务实例存储
-_webauthn_services: dict[str, WebAuthnService] = {}
+# Keyed by "rp_id:origin"; when rp_id/origin are derived from request headers
+# (see api/passkey.py) a hostile client could otherwise grow this dict
+# without bound, so it is capped as an LRU cache.
+_WEBAUTHN_SERVICES_MAX = 8
+_webauthn_services: "OrderedDict[str, WebAuthnService]" = OrderedDict()
 
 
 def get_webauthn_service(rp_id: str, rp_name: str, origin: str) -> WebAuthnService:
     """
     获取或创建 WebAuthnService 实例
-    使用缓存以保持 challenge 状态
+    使用缓存以保持 challenge 状态；缓存容量有限（LRU 淘汰）
     """
     key = f"{rp_id}:{origin}"
-    if key not in _webauthn_services:
-        _webauthn_services[key] = WebAuthnService(rp_id, rp_name, origin)
-    return _webauthn_services[key]
+    if key in _webauthn_services:
+        _webauthn_services.move_to_end(key)
+        return _webauthn_services[key]
+    if len(_webauthn_services) >= _WEBAUTHN_SERVICES_MAX:
+        _webauthn_services.popitem(last=False)
+    service = WebAuthnService(rp_id, rp_name, origin)
+    _webauthn_services[key] = service
+    return service

@@ -14,6 +14,7 @@ def _load_or_create_secret() -> str:
     secret = secrets.token_hex(32)
     _SECRET_PATH.parent.mkdir(parents=True, exist_ok=True)
     _SECRET_PATH.write_text(secret)
+    _SECRET_PATH.chmod(0o600)
     return secret
 
 
@@ -37,7 +38,9 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 
 
 # 解码 Token
-def decode_token(token: str):
+def decode_token(token: str | None):
+    if not token:
+        return None
     try:
         payload = jwt.decode(token, app_pwd_key, algorithms=[app_pwd_algorithm])
         username = payload.get("sub")
@@ -48,14 +51,11 @@ def decode_token(token: str):
         return None
 
 
-def verify_token(token: str):
-    token_data = decode_token(token)
-    if token_data is None:
-        return None
-    expires = token_data.get("exp")
-    if datetime.now(timezone.utc) >= datetime.fromtimestamp(expires, tz=timezone.utc):
-        raise JWTError("Token expired")
-    return token_data
+def verify_token(token: str | None):
+    # jose's jwt.decode() already validates "exp" and raises JWTError (caught
+    # above) for expired tokens, so a token returned by decode_token() is
+    # never expired — no separate expiry recheck is needed here.
+    return decode_token(token)
 
 
 # 密码加密&验证

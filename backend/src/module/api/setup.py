@@ -5,7 +5,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from module.conf import VERSION, settings
@@ -13,7 +13,7 @@ from module.models import Config, ResponseModel
 from module.models.config import NotificationProvider as ProviderConfig
 from module.network import RequestContent
 from module.notification import PROVIDER_REGISTRY
-from module.security.jwt import get_password_hash
+from module.security.jwt import get_password_hash, verify_password
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,39 @@ def _require_setup_needed():
         raise HTTPException(status_code=403, detail="Setup already completed.")
     # Allow setup in dev mode even if settings differ
     if VERSION != "DEV_VERSION" and settings.dict() != Config().dict():
+        raise HTTPException(status_code=403, detail="Setup already completed.")
+
+
+async def _require_default_admin_or_authenticated(request: Request) -> None:
+    """Extra guard for /setup/complete specifically.
+
+    ``_require_setup_needed()`` only compares the on-disk config to its
+    defaults, which stays true on an upgraded install that never ran the
+    wizard even after the real admin already changed their password some
+    other way (e.g. the old settings UI). Without this check, an
+    unauthenticated caller could hit /setup/complete on such an install and
+    overwrite the admin's real credentials. Allow completion only if the
+    caller already has a valid session, or the "admin" account still has the
+    untouched factory-default password.
+    """
+    from module.security.api import get_current_user
+
+    try:
+        await get_current_user(request, token=request.cookies.get("token"))
+        return
+    except HTTPException:
+        pass
+
+    from module.database import Database
+
+    async with Database() as db:
+        try:
+            user = await db.user.get_user("admin")
+        except HTTPException:
+            # No admin account yet (fresh install) — setup may proceed.
+            return
+
+    if not verify_password("adminadmin", user.password):
         raise HTTPException(status_code=403, detail="Setup already completed.")
 
 
@@ -288,9 +321,10 @@ async def test_notification(req: TestNotificationRequest):
 
 
 @router.post("/complete", response_model=ResponseModel)
-async def complete_setup(req: SetupCompleteRequest):
+async def complete_setup(req: SetupCompleteRequest, request: Request):
     """Save all wizard configuration and mark setup as complete."""
     _require_setup_needed()
+    await _require_default_admin_or_authenticated(request)
 
     try:
         # 1. Update user credentials

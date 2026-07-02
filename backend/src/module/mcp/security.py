@@ -1,43 +1,19 @@
 """MCP access control: configurable IP whitelist and bearer token authentication."""
 
-import ipaddress
 import logging
-from functools import lru_cache
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from module.conf import settings
+from module.security.ip_allowlist import (  # noqa: F401  (re-exported for existing importers)
+    _is_allowed,
+    _parse_network,
+    clear_network_cache,
+)
 
 logger = logging.getLogger(__name__)
-
-
-@lru_cache(maxsize=128)
-def _parse_network(cidr: str) -> ipaddress.IPv4Network | ipaddress.IPv6Network | None:
-    try:
-        return ipaddress.ip_network(cidr, strict=False)
-    except ValueError:
-        logger.warning("[MCP] Invalid CIDR in whitelist: %s", cidr)
-        return None
-
-
-def _is_allowed(host: str, whitelist: list[str]) -> bool:
-    """Return True if *host* falls within any CIDR range in *whitelist*."""
-    try:
-        addr = ipaddress.ip_address(host)
-    except ValueError:
-        return False
-    for cidr in whitelist:
-        net = _parse_network(cidr)
-        if net and addr in net:
-            return True
-    return False
-
-
-def clear_network_cache():
-    """Clear the parsed network cache (call after config reload)."""
-    _parse_network.cache_clear()
 
 
 class McpAccessMiddleware(BaseHTTPMiddleware):

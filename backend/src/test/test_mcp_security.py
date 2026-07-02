@@ -10,7 +10,6 @@ from starlette.testclient import TestClient
 
 from module.mcp.security import McpAccessMiddleware, _is_allowed, clear_network_cache
 
-
 # ---------------------------------------------------------------------------
 # _is_allowed() unit tests
 # ---------------------------------------------------------------------------

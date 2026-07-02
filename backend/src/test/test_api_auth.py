@@ -65,8 +65,8 @@ class TestAuthRequired:
 
     @patch("module.security.api.DEV_AUTH_BYPASS", False)
     def test_logout_unauthorized(self, unauthed_client):
-        """GET /auth/logout without auth returns 401."""
-        response = unauthed_client.get("/api/v1/auth/logout")
+        """POST /auth/logout without auth returns 401."""
+        response = unauthed_client.post("/api/v1/auth/logout")
         assert response.status_code == 401
 
     @patch("module.security.api.DEV_AUTH_BYPASS", False)
@@ -135,17 +135,17 @@ class TestRefreshToken:
 
 
 # ---------------------------------------------------------------------------
-# GET /auth/logout
+# POST /auth/logout
 # ---------------------------------------------------------------------------
 
 
 class TestLogout:
     def test_logout_success(self, authed_client):
-        """GET /auth/logout clears session and returns success."""
+        """POST /auth/logout clears session and returns success."""
         token = create_access_token(data={"sub": "testuser"})
         authed_client.cookies.set("token", token)
         with patch("module.api.auth.active_user", _store("testuser")):
-            response = authed_client.get("/api/v1/auth/logout")
+            response = authed_client.post("/api/v1/auth/logout")
 
         assert response.status_code == 200
         data = response.json()
@@ -237,21 +237,21 @@ class TestRefreshTokenCookieBehavior:
 
 class TestLogoutCookieBehavior:
     def test_logout_removes_only_current_user(self, authed_client):
-        """GET /logout removes the current user from active_user, not others."""
+        """POST /logout removes the current user from active_user, not others."""
         token = create_access_token(data={"sub": "testuser"})
         authed_client.cookies.set("token", token)
         active_users = _store("testuser", "otheruser")
         with patch("module.api.auth.active_user", active_users):
-            response = authed_client.get("/api/v1/auth/logout")
+            response = authed_client.post("/api/v1/auth/logout")
         assert response.status_code == 200
         assert "testuser" not in active_users
         assert "otheruser" in active_users
 
     def test_logout_with_no_cookie_still_succeeds(self, authed_client):
-        """GET /logout with no cookie clears nothing but returns success."""
+        """POST /logout with no cookie clears nothing but returns success."""
         with patch("module.api.auth.decode_token", return_value=None):
             with patch("module.api.auth.active_user", SessionStore()):
-                response = authed_client.get("/api/v1/auth/logout")
+                response = authed_client.post("/api/v1/auth/logout")
         assert response.status_code == 200
 
 

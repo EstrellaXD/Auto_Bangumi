@@ -154,7 +154,6 @@ class TestGetCurrentUser:
     @staticmethod
     def _mock_request(authorization=""):
         """Create a mock Request with the given Authorization header."""
-        from unittest.mock import MagicMock
 
         request = MagicMock()
         request.headers = {"authorization": authorization}
@@ -261,7 +260,6 @@ class TestGetCurrentUser:
 class TestCheckLoginIp:
     @staticmethod
     def _make_request(host: str | None):
-        from unittest.mock import MagicMock
 
         request = MagicMock()
         if host is None:

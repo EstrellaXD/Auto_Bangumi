@@ -1,3 +1,5 @@
+import logging
+import os
 import secrets
 from datetime import datetime, timedelta
 
@@ -6,10 +8,12 @@ from fastapi.security import OAuth2PasswordBearer
 
 from module.conf import settings
 from module.database import Database
-from module.mcp.security import _is_allowed
 from module.models.user import User, UserUpdate
 
+from .ip_allowlist import _is_allowed
 from .jwt import verify_token
+
+logger = logging.getLogger(__name__)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
@@ -56,12 +60,16 @@ class SessionStore:
 
 active_user = SessionStore()
 
-try:
-    from module.__version__ import VERSION
-except ImportError:
-    VERSION = "DEV_VERSION"
+# Opt-in only: unlike the old `VERSION == "DEV_VERSION"` check (which was
+# true for every unofficial/self-built image), this requires an explicit
+# environment variable so auth can never be silently bypassed in production.
+DEV_AUTH_BYPASS = os.environ.get("AB_DEV_NO_AUTH") == "1"
 
-DEV_AUTH_BYPASS = VERSION == "DEV_VERSION"
+if DEV_AUTH_BYPASS:
+    logger.warning(
+        "!!! AB_DEV_NO_AUTH=1 is set — authentication is BYPASSED for every "
+        "request. This must never be set in production. !!!"
+    )
 
 
 def check_login_ip(request: Request):
@@ -84,7 +92,7 @@ async def get_current_user(request: Request, token: str = Cookie(None)):
     """FastAPI dependency that validates the current session.
 
     Accepts authentication via (in order of precedence):
-    1. DEV_AUTH_BYPASS when running as DEV_VERSION.
+    1. DEV_AUTH_BYPASS when ``AB_DEV_NO_AUTH=1`` is set in the environment.
     2. ``Authorization: Bearer <token>`` header matching ``login_tokens``.
     3. HttpOnly ``token`` cookie containing a valid JWT with an active session.
     """
