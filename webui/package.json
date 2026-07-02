@@ -24,7 +24,7 @@
     "@vueuse/components": "^10.11.1",
     "@vueuse/core": "^10.11.1",
     "axios": "^1.7.9",
-    "naive-ui": "^2.39.0",
+    "naive-ui": "^2.44.1",
     "pinia": "^2.2.2",
     "vue": "^3.5.8",
     "vue-i18n": "^9.14.2",

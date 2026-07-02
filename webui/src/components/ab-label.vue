@@ -38,7 +38,7 @@ const abLabel = computed(() => {
 
   // Make inputs full-width on mobile
   :deep(input[ab-input]),
-  :deep(.ab-select),
+  :deep(.n-select),
   :deep(.n-dynamic-tags) {
     width: 100%;
 

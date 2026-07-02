@@ -17,13 +17,10 @@ if (isLoggedIn.value) {
 // Button/Select/Switch tokens reference the app's own CSS custom properties
 // directly (they resolve correctly under both `:root` and `.dark`), so they
 // don't need to be duplicated between the light/dark override objects below.
+// 注意：common 里的颜色 token 会进入 naive-ui (seemly) 的 JS 颜色计算，
+// 写 CSS 变量会抛 "[seemly/rgba]: Invalid color value var(...)" 并让整个
+// 页面渲染崩溃（Config 页曾因此白屏）——必须用字面量，按主题各写一份。
 const primitiveOverrides: GlobalThemeOverrides = {
-  common: {
-    errorColor: 'var(--color-danger)',
-    errorColorHover: 'var(--color-danger)',
-    errorColorPressed: 'var(--color-danger)',
-    errorColorSuppl: 'var(--color-danger)',
-  },
   Button: {
     borderRadiusTiny: 'var(--radius-sm)',
     borderRadiusSmall: 'var(--radius-sm)',
@@ -38,7 +35,10 @@ const primitiveOverrides: GlobalThemeOverrides = {
 const lightOverrides: GlobalThemeOverrides = {
   ...primitiveOverrides,
   common: {
-    ...primitiveOverrides.common,
+    errorColor: '#EF4444',
+    errorColorHover: '#DC2626',
+    errorColorPressed: '#B91C1C',
+    errorColorSuppl: '#EF4444',
     primaryColor: '#6C4AB6',
     primaryColorHover: '#563A92',
     primaryColorPressed: '#4A3291',
@@ -70,7 +70,10 @@ const lightOverrides: GlobalThemeOverrides = {
 const darkOverrides: GlobalThemeOverrides = {
   ...primitiveOverrides,
   common: {
-    ...primitiveOverrides.common,
+    errorColor: '#F87171',
+    errorColorHover: '#EF4444',
+    errorColorPressed: '#DC2626',
+    errorColorSuppl: '#F87171',
     primaryColor: '#8B6CC7',
     primaryColorHover: '#A78BDB',
     primaryColorPressed: '#7B5CB7',
