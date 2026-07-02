@@ -10,6 +10,7 @@ from sqlmodel import Session, SQLModel, create_engine
 
 from module.conf.config import Settings
 from module.database.combine import CURRENT_SCHEMA_VERSION, Database
+from module.database.migrations import get_schema_version
 from module.models import Bangumi, RSSItem, Torrent, User
 
 # --- Mock old 3.1.x config (as stored in config.json) ---
@@ -474,7 +475,8 @@ class TestDatabaseMigration:
         # Verify schema_version table exists and has correct version
         inspector = inspect(engine)
         assert "schema_version" in inspector.get_table_names()
-        assert db._get_schema_version() == CURRENT_SCHEMA_VERSION
+        with engine.connect() as conn:
+            assert get_schema_version(conn) == CURRENT_SCHEMA_VERSION
 
         db.close()
 
@@ -489,9 +491,11 @@ class TestDatabaseMigration:
         db.run_migrations()
 
         # Set version to current - second run should skip
-        version_before = db._get_schema_version()
+        with engine.connect() as conn:
+            version_before = get_schema_version(conn)
         db.run_migrations()
-        version_after = db._get_schema_version()
+        with engine.connect() as conn:
+            version_after = get_schema_version(conn)
         assert version_before == version_after == CURRENT_SCHEMA_VERSION
 
         db.close()
@@ -503,6 +507,7 @@ class TestDatabaseMigration:
         self._insert_old_data(engine)
 
         db = Database(engine)
-        assert db._get_schema_version() == 0
+        with engine.connect() as conn:
+            assert get_schema_version(conn) == 0
 
         db.close()
