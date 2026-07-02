@@ -145,6 +145,51 @@ class TestPasswordHashing:
 
 
 # ---------------------------------------------------------------------------
+# Long (>72-byte) passwords — passlib silently truncated at 72 bytes, and
+# bcrypt 5.x raises ValueError instead. The wrappers must keep passlib's
+# truncation semantics so pre-upgrade users with long passwords can still
+# log in (and setting a long password doesn't 500).
+# ---------------------------------------------------------------------------
+
+
+class TestLongPasswordTruncation:
+    # 30 CJK chars * 3 bytes (UTF-8) = 90 bytes > 72-byte bcrypt limit
+    LONG_CJK_PASSWORD = "密码超过七十二字节" * 4
+
+    def test_get_password_hash_over_72_byte_cjk_password_hashes_and_verifies(self):
+        """A >72-byte multibyte password hashes without error and verifies."""
+        password = self.LONG_CJK_PASSWORD
+        assert len(password.encode("utf-8")) > 72
+        hashed = get_password_hash(password)
+        assert verify_password(password, hashed) is True
+
+    def test_verify_password_pre_upgrade_truncated_hash_full_password_verifies(self):
+        """A passlib-era hash (created from the first 72 bytes) still verifies
+        against the full long password after the bcrypt migration."""
+        import bcrypt
+
+        password = self.LONG_CJK_PASSWORD
+        legacy_hash = bcrypt.hashpw(
+            password.encode("utf-8")[:72], bcrypt.gensalt()
+        ).decode("utf-8")
+        assert verify_password(password, legacy_hash) is True
+
+    def test_verify_password_wrong_long_password_fails(self):
+        """A long password differing within its first 72 bytes still fails."""
+        hashed = get_password_hash(self.LONG_CJK_PASSWORD)
+        wrong = "错误密码完全不同的内容" * 4
+        assert len(wrong.encode("utf-8")) > 72
+        assert verify_password(wrong, hashed) is False
+
+    def test_verify_password_over_72_byte_ascii_password_roundtrip(self):
+        """A >72-byte pure-ASCII password also hashes and verifies."""
+        password = "a" * 100
+        hashed = get_password_hash(password)
+        assert verify_password(password, hashed) is True
+        assert verify_password("b" * 100, hashed) is False
+
+
+# ---------------------------------------------------------------------------
 # API Auth Flow (get_current_user)
 # ---------------------------------------------------------------------------
 

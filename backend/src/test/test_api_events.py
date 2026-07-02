@@ -1,5 +1,8 @@
 """Tests for the events SSE endpoint and its payload builders."""
 
+import asyncio
+import json
+import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -100,6 +103,82 @@ class TestDownloaderPayload:
             result = await _downloader_payload()
 
         assert result is None
+
+
+def _make_hung_client(cancelled: asyncio.Event) -> AsyncMock:
+    """Build a DownloadClient mock whose torrent fetch hangs until cancelled,
+    setting `cancelled` when the hung task is actually torn down."""
+
+    async def hung_fetch(*args, **kwargs):
+        try:
+            await asyncio.sleep(30)
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+        return []
+
+    mock_client = AsyncMock()
+    mock_client.get_torrent_info = hung_fetch
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+    return mock_client
+
+
+class TestDownloaderPayloadTimeout:
+    async def test_downloader_payload_hung_fetch_returns_none_and_cancels_task(self):
+        """A downloader fetch exceeding the timeout returns None promptly and
+        the hung task is cancelled rather than leaked."""
+        cancelled = asyncio.Event()
+        mock_client = _make_hung_client(cancelled)
+
+        with (
+            patch("module.api.events.DownloadClient", return_value=mock_client),
+            patch("module.api.events._DOWNLOADER_TIMEOUT_SECONDS", 0.05),
+        ):
+            start = time.monotonic()
+            result = await _downloader_payload()
+            elapsed = time.monotonic() - start
+
+        assert result is None
+        assert elapsed < 1.0
+        assert cancelled.is_set()
+
+
+class TestEventGeneratorNonBlocking:
+    async def test_event_generator_hung_downloader_emits_status_and_null_downloader(
+        self, tmp_path
+    ):
+        """With an unreachable downloader, the stream still yields the status
+        event promptly and emits an explicit null downloader payload instead
+        of stalling the whole connection."""
+        from module.api.events import _event_generator
+
+        request = AsyncMock()
+        request.is_disconnected = AsyncMock(return_value=False)
+        ctx = MagicMock()
+        ctx.is_running = True
+        ctx.first_run = False
+
+        cancelled = asyncio.Event()
+        mock_client = _make_hung_client(cancelled)
+
+        with (
+            patch("module.api.events.DownloadClient", return_value=mock_client),
+            patch("module.api.events._DOWNLOADER_TIMEOUT_SECONDS", 0.05),
+            patch("module.api.events.LOG_PATH", tmp_path / "missing.log"),
+        ):
+            gen = _event_generator(request, ctx)
+            try:
+                # 第一个 tick 内 status 与 downloader 事件都应在超时上限内到达
+                status_event = await asyncio.wait_for(gen.__anext__(), timeout=1.0)
+                downloader_event = await asyncio.wait_for(gen.__anext__(), timeout=1.0)
+            finally:
+                await gen.aclose()
+
+        assert status_event["event"] == "status"
+        assert json.loads(status_event["data"])["status"] is True
+        assert downloader_event["event"] == "downloader"
+        assert json.loads(downloader_event["data"]) is None
 
 
 class TestLogPayload:

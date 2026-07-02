@@ -30,6 +30,11 @@ _STATUS_EVERY = 3
 _DOWNLOADER_EVERY = 5
 _LOG_EVERY = 10
 
+# 下载器查询的超时上限（秒）。下载器不可达时 qB/aria2 的认证重试可能阻塞
+# 20-30s，而 SSE 是单连接串行推送——不设上限会把 status/log 事件一起卡住。
+# 取值需明显小于 downloader 的 5s 推送间隔。
+_DOWNLOADER_TIMEOUT_SECONDS = 3.0
+
 
 def _status_payload(ctx: AppContext) -> dict:
     """构造与 GET /program/status 相同结构的状态负载。"""
@@ -40,11 +45,22 @@ def _status_payload(ctx: AppContext) -> dict:
     }
 
 
+async def _fetch_torrents() -> list[dict]:
+    async with DownloadClient() as client:
+        return await client.get_torrent_info(category="Bangumi", status_filter=None)
+
+
 async def _downloader_payload() -> list[dict] | None:
-    """获取种子列表；下载器未配置或不可达时返回 None（跳过本次推送）。"""
+    """获取种子列表；下载器未配置、不可达或超时时返回 None。
+
+    asyncio.wait_for 超时会取消内部任务并等待其退出，慢查询不会泄漏；
+    None 会以 null 推送给前端，作为显式的"下载器不可用"信号。
+    """
     try:
-        async with DownloadClient() as client:
-            return await client.get_torrent_info(category="Bangumi", status_filter=None)
+        return await asyncio.wait_for(_fetch_torrents(), _DOWNLOADER_TIMEOUT_SECONDS)
+    except asyncio.TimeoutError:
+        logger.debug("SSE: downloader status fetch timed out")
+        return None
     except Exception:
         logger.debug("SSE: downloader status unavailable", exc_info=True)
         return None
@@ -58,30 +74,32 @@ async def _log_payload() -> str | None:
     return data.decode("utf-8", errors="replace")
 
 
+async def _event_generator(request: Request, ctx: AppContext):
+    """按各自节拍推送 status/downloader/log 事件的核心循环。"""
+    tick = 0
+    while True:
+        if await request.is_disconnected():
+            break
+
+        if tick % _STATUS_EVERY == 0:
+            yield {"event": "status", "data": json.dumps(_status_payload(ctx))}
+
+        if tick % _DOWNLOADER_EVERY == 0:
+            # 不可用时推送 null 而非跳过，前端据此感知下载器降级状态
+            # （store/downloader.ts 对 null 保留旧数据，不会崩溃）。
+            torrents = await _downloader_payload()
+            yield {"event": "downloader", "data": json.dumps(torrents)}
+
+        if tick % _LOG_EVERY == 0:
+            log_text = await _log_payload()
+            if log_text is not None:
+                yield {"event": "log", "data": log_text}
+
+        await asyncio.sleep(_TICK_SECONDS)
+        tick += _TICK_SECONDS
+
+
 @router.get("/stream", dependencies=[Depends(get_current_user)])
 async def event_stream(request: Request, ctx: AppContext = Depends(get_context)):
     """单一 SSE 连接，按各自节拍推送 status/downloader/log 事件。"""
-
-    async def generator():
-        tick = 0
-        while True:
-            if await request.is_disconnected():
-                break
-
-            if tick % _STATUS_EVERY == 0:
-                yield {"event": "status", "data": json.dumps(_status_payload(ctx))}
-
-            if tick % _DOWNLOADER_EVERY == 0:
-                torrents = await _downloader_payload()
-                if torrents is not None:
-                    yield {"event": "downloader", "data": json.dumps(torrents)}
-
-            if tick % _LOG_EVERY == 0:
-                log_text = await _log_payload()
-                if log_text is not None:
-                    yield {"event": "log", "data": log_text}
-
-            await asyncio.sleep(_TICK_SECONDS)
-            tick += _TICK_SECONDS
-
-    return EventSourceResponse(generator())
+    return EventSourceResponse(_event_generator(request, ctx))
