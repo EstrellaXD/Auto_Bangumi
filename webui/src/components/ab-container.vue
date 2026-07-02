@@ -46,6 +46,8 @@ withDefaults(
 .container-title {
   font-size: 15px;
   font-weight: 600;
+  // 卡片标题不应比正文更浅（层级倒挂），用主文本色，靠字重区分
+  color: var(--color-text);
 }
 
 .container-body {

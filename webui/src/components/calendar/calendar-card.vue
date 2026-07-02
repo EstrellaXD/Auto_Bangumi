@@ -41,6 +41,9 @@ const posterSrc = computed(() =>
         />
         <div v-else class="calendar-card-placeholder">
           <ErrorPicture theme="outline" size="20" />
+          <span class="calendar-card-placeholder-title">
+            {{ group.primary.official_title }}
+          </span>
         </div>
         <div class="calendar-card-overlay">
           <div class="calendar-card-overlay-tags">
@@ -141,11 +144,27 @@ const posterSrc = computed(() =>
   width: 100%;
   height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 6px;
+  padding: 8px;
   background: var(--color-surface-hover);
   color: var(--color-text-muted);
   transition: background-color var(--transition-normal);
+}
+
+// 无海报时在卡片上直接显示标题，否则卡片只剩一个灰色占位块
+.calendar-card-placeholder-title {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--color-text-secondary);
+  text-align: center;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
 }
 
 .calendar-card-overlay {

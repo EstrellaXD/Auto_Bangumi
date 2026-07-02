@@ -130,11 +130,15 @@ const rssRowKey = (row: RSS) => row.id;
           :disabled="isRefreshingAll"
           @click="refreshAllRSS"
         >
-          <div
-            :class="
-              isRefreshingAll ? 'i-carbon-renew animate-spin' : 'i-carbon-renew'
-            "
-          ></div>
+          <template #icon>
+            <div
+              :class="
+                isRefreshingAll
+                  ? 'i-carbon-renew animate-spin'
+                  : 'i-carbon-renew'
+              "
+            ></div>
+          </template>
           {{ $t('rss.refresh_all') }}
         </NButton>
       </template>

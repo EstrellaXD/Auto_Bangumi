@@ -128,7 +128,6 @@ const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
         <NProgress
           type="line"
           percentage={Math.round(row.progress * 100)}
-          indicator-placement="inside"
           processing={row.state === 'downloading' || row.state === 'forcedDL'}
         />
       );
@@ -179,7 +178,7 @@ const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
   {
     title: t('downloader.torrent.peers'),
     key: 'peers',
-    width: 90,
+    width: 110,
     render(row: QbTorrentInfo) {
       return `${row.num_seeds} / ${row.num_leechs}`;
     },

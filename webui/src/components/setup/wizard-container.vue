@@ -11,9 +11,10 @@ const { t } = useMyI18n();
   <div class="wizard-container">
     <div class="wizard-progress">
       <div class="wizard-progress-bar">
+        <!-- 按“已到第几步”计算，避免第一步进度条完全空白 -->
         <div
           class="wizard-progress-fill"
-          :style="{ width: `${(currentStep / (totalSteps - 1)) * 100}%` }"
+          :style="{ transform: `scaleX(${(currentStep + 1) / totalSteps})` }"
         />
       </div>
       <div class="wizard-step-indicator">
@@ -51,10 +52,16 @@ const { t } = useMyI18n();
 }
 
 .wizard-progress-fill {
+  width: 100%;
   height: 100%;
   background: var(--color-primary);
   border-radius: 2px;
-  transition: width 0.3s ease;
+  transform-origin: left;
+  transition: transform 0.3s ease-out;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 }
 
 .wizard-step-indicator {

@@ -39,8 +39,10 @@ const setupStore = useSetupStore();
 }
 
 .welcome-description {
-  font-size: 12px;
-  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+  // muted (#94A3B8) 在白底上不足 AA 对比度，正文用 secondary
+  color: var(--color-text-secondary);
   margin: 0;
 }
 
