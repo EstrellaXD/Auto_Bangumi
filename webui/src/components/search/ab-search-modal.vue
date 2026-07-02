@@ -11,6 +11,7 @@ const emit = defineEmits<{
 }>();
 
 const message = useMessage();
+const { t } = useMyI18n();
 const { getAll } = useBangumiStore();
 
 const {
@@ -67,8 +68,11 @@ onBeforeUnmount(() => {
   closeSearch();
 });
 
-// Close on Escape
+// Close on Escape (this component is always mounted, so the listener must
+// no-op while the modal itself is closed — otherwise Escape anywhere in the
+// app would toggle the modal open via the `close` -> toggleModal() handler).
 onKeyStroke('Escape', () => {
+  if (!showModal.value) return;
   if (selectedResult.value) {
     clearSelectedResult();
   } else {
@@ -109,20 +113,20 @@ async function handleConfirm(bangumi: BangumiRule) {
       name: bangumi.official_title,
       url: bangumi.rss_link?.[0] || '',
       aggregate: false,
-      parser: 'mikan',
+      parser: provider.value,
       enabled: true,
       connection_status: null,
       last_checked_at: null,
       last_error: null,
     };
     await apiDownload.subscribe(bangumi, rss);
-    message.success('订阅成功');
+    message.success(t('search.subscribe_success'));
     getAll();
     clearSelectedResult();
     emit('close');
   } catch (e) {
     console.error('Subscribe failed:', e);
-    message.error('订阅失败');
+    message.error(t('search.subscribe_failed'));
   } finally {
     subscribing.value = false;
   }

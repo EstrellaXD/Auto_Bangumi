@@ -13,6 +13,7 @@ const emit = defineEmits<{
 }>();
 
 const message = useMessage();
+const { t } = useMyI18n();
 
 // Local deep copy of bangumi for editing (prevents mutation of original prop)
 const localBangumi = ref<BangumiRule>(JSON.parse(JSON.stringify(props.bangumi)));
@@ -130,7 +131,7 @@ async function autoDetectOffset() {
     localBangumi.value.episode_offset = result.suggested_offset;
   } catch (e) {
     console.error('Failed to detect offset:', e);
-    message.error('Failed to detect offset');
+    message.error(t('offset.detect_failed'));
   } finally {
     offsetLoading.value = false;
   }

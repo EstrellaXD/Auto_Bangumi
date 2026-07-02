@@ -7,6 +7,13 @@ const router = createRouter({
 let setupChecked = false;
 let needSetup = false;
 
+// Called once the setup wizard finishes, so the next navigation isn't
+// bounced back into /setup by the guard below.
+export function markSetupComplete() {
+  needSetup = false;
+  setupChecked = true;
+}
+
 router.beforeEach(async (to) => {
   const { isLoggedIn } = useAuth();
   const { type, url } = storeToRefs(usePlayerStore());

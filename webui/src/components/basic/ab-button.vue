@@ -7,12 +7,16 @@ const props = withDefaults(
     size?: 'big' | 'normal' | 'small';
     link?: string | null;
     loading?: boolean;
+    /** Native `type` attribute when rendered as a <button>. Defaults to
+     * "button" so ab-button never triggers an implicit form submit. */
+    nativeType?: 'button' | 'submit' | 'reset';
   }>(),
   {
     type: 'primary',
     size: 'normal',
     link: null,
     loading: false,
+    nativeType: 'button',
   }
 );
 
@@ -34,6 +38,7 @@ const buttonSize = computed(() => {
   <Component
     :is="link !== null ? 'a' : 'button'"
     :href="link"
+    :type="link !== null ? undefined : nativeType"
     class="btn"
     :class="[`btn--${type}`, buttonSize]"
     @click="$emit('click')"

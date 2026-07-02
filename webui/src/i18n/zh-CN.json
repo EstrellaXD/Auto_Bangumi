@@ -100,7 +100,9 @@
       "url_missing_placeholder": "URL 必须包含 %s 作为搜索关键词占位符",
       "default": "默认",
       "no_providers": "暂无搜索源",
-      "delete_confirm": "确定删除此搜索源？"
+      "delete_confirm": "确定删除此搜索源？",
+      "load_failed": "加载搜索源失败",
+      "save_failed": "保存搜索源失败"
     }
   },
   "downloader": {
@@ -406,10 +408,14 @@
     "dismiss": "忽略",
     "suggestion_applied": "偏移量建议已应用",
     "no_mismatch": "未检测到季度/集数不匹配",
-    "review_dismissed": "检查提醒已忽略"
+    "review_dismissed": "检查提醒已忽略",
+    "detect_failed": "检测偏移量失败",
+    "dismiss_failed": "忽略检查提醒失败"
   },
   "search": {
     "subscribe": "订阅",
+    "subscribe_success": "订阅成功",
+    "subscribe_failed": "订阅失败",
     "no_results": "未找到相关结果，试试其他关键词",
     "start_typing": "输入关键词开始搜索",
     "filter": {

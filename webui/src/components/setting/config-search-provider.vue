@@ -7,6 +7,7 @@ interface SearchProvider {
 }
 
 const { t } = useMyI18n();
+const message = useMessage();
 
 // State
 const providers = ref<SearchProvider[]>([]);
@@ -30,16 +31,16 @@ onMounted(() => {
 async function loadProviders() {
   loading.value = true;
   try {
-    const response = await fetch('/api/v1/search/provider/config');
-    if (response.ok) {
-      const data = await response.json();
-      providers.value = Object.entries(data).map(([name, url]) => ({
-        name,
-        url: url as string,
-      }));
-    }
+    const { data } = await axios.get<Record<string, string>>(
+      'api/v1/search/provider/config'
+    );
+    providers.value = Object.entries(data).map(([name, url]) => ({
+      name,
+      url,
+    }));
   } catch (error) {
     console.error('Failed to load providers:', error);
+    message.error(t('config.search_provider_set.load_failed'));
   } finally {
     loading.value = false;
   }
@@ -52,16 +53,10 @@ async function saveProviders() {
   });
 
   try {
-    const response = await fetch('/api/v1/search/provider/config', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(providerObj),
-    });
-    if (!response.ok) {
-      throw new Error('Failed to save providers');
-    }
+    await axios.put('api/v1/search/provider/config', providerObj);
   } catch (error) {
     console.error('Failed to save providers:', error);
+    message.error(t('config.search_provider_set.save_failed'));
   }
 }
 

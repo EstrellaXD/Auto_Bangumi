@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { markSetupComplete } from '@/router';
+
 const { t } = useMyI18n();
 const setupStore = useSetupStore();
 const { accountData, downloaderData, rssData, notificationData, isLoading } =
@@ -13,6 +15,7 @@ async function completeSetup() {
     await apiSetup.complete(request);
     message.success(t('setup.review.success'));
     setupStore.$reset();
+    markSetupComplete();
     router.push({ name: 'Login' });
   } catch (e) {
     message.error(t('setup.review.failed'));

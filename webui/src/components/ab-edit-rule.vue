@@ -129,7 +129,7 @@ async function autoDetectOffset() {
     }
   } catch (e) {
     console.error('Failed to detect offset:', e);
-    message.error('Failed to detect offset');
+    message.error(t('offset.detect_failed'));
   } finally {
     offsetLoading.value = false;
   }
@@ -146,7 +146,7 @@ async function dismissReview() {
     message.success(t('offset.review_dismissed'));
   } catch (e) {
     console.error('Failed to dismiss review:', e);
-    message.error('Failed to dismiss review');
+    message.error(t('offset.dismiss_failed'));
   } finally {
     dismissingReview.value = false;
   }

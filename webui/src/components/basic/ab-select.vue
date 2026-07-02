@@ -19,9 +19,32 @@ const props = withDefaults(
 
 const emit = defineEmits(['update:modelValue']);
 
-const selected = ref<SelectItem | string>(
-  props.modelValue || (props.items?.[0] ?? '')
-);
+// Find an object item whose `.value` matches a plain string modelValue.
+// Lets callers bind a string v-model against object items ({id,label,value})
+// without having to round-trip the whole object.
+function findByValue(items: Array<SelectItem | string>, value: string) {
+  return items.find((item) => isObject(item) && item.value === value);
+}
+
+// Writable computed (instead of a ref seeded once from props.modelValue) so
+// external updates to modelValue (e.g. after async getConfig()) stay in sync.
+const selected = computed<SelectItem | string>({
+  get() {
+    if (isString(props.modelValue)) {
+      return findByValue(props.items, props.modelValue) ?? props.modelValue;
+    }
+    return props.modelValue ?? props.items?.[0] ?? '';
+  },
+  set(item) {
+    // Object item selected while the caller's v-model is a plain string:
+    // emit item.value so the binding stays string <-> string.
+    if (isObject(item) && isString(props.modelValue)) {
+      emit('update:modelValue', item.value);
+    } else {
+      emit('update:modelValue', item);
+    }
+  },
+});
 
 const otherItems = computed(() => {
   return (
@@ -56,10 +79,6 @@ function getLabel(item: SelectItem | string) {
 function getDisabled(item: SelectItem | string) {
   return isString(item) ? false : item.disabled;
 }
-
-watch(selected, (val) => {
-  emit('update:modelValue', val);
-});
 </script>
 
 <template>

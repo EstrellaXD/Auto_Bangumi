@@ -3,7 +3,7 @@ import type { NotificationProviderConfig, NotificationType } from '#/config';
 import type { TupleToUnion } from '#/utils';
 import { apiNotification } from '@/api/notification';
 
-const { t } = useMyI18n();
+const { t, returnUserLangText } = useMyI18n();
 const { getSettingGroup } = useConfigStore();
 
 const notificationRef = getSettingGroup('notification');
@@ -179,12 +179,15 @@ async function testProvider(index: number) {
     const response = await apiNotification.testProvider({ provider_index: index });
     testResult.value = {
       success: response.data.success,
-      message: response.data.message_zh || response.data.message,
+      message: returnUserLangText({
+        en: response.data.message_en,
+        'zh-CN': response.data.message_zh,
+      }),
     };
-  } catch (error: any) {
+  } catch {
     testResult.value = {
       success: false,
-      message: error.message || 'Test failed',
+      message: t('config.notification_set.test_failed'),
     };
   } finally {
     testingIndex.value = -1;
@@ -200,12 +203,15 @@ async function testNewProvider() {
     );
     testResult.value = {
       success: response.data.success,
-      message: response.data.message_zh || response.data.message,
+      message: returnUserLangText({
+        en: response.data.message_en,
+        'zh-CN': response.data.message_zh,
+      }),
     };
-  } catch (error: any) {
+  } catch {
     testResult.value = {
       success: false,
-      message: error.message || 'Test failed',
+      message: t('config.notification_set.test_failed'),
     };
   } finally {
     testingIndex.value = -1;

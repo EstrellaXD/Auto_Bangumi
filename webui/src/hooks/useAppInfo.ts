@@ -7,10 +7,17 @@ export const useAppInfo = createSharedComposable(() => {
 
   function getStatus() {
     if (isLoggedIn.value) {
-      apiProgram.status().then((res) => {
-        running.value = res.status;
-        version.value = res.version;
-      });
+      apiProgram
+        .status()
+        .then((res) => {
+          running.value = res.status;
+          version.value = res.version;
+        })
+        .catch(() => {
+          // Errors are already surfaced (throttled) by the axios interceptor;
+          // swallow here so a transient backend restart doesn't spam an
+          // unhandled rejection on every 3s poll tick.
+        });
     }
   }
 

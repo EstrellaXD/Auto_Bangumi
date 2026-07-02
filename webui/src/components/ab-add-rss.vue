@@ -175,7 +175,7 @@ async function autoDetectOffset() {
     offsetReason.value = result.reason;
   } catch (e) {
     console.error('Failed to detect offset:', e);
-    message.error('Failed to detect offset');
+    message.error(t('offset.detect_failed'));
   } finally {
     offsetLoading.value = false;
   }

@@ -26,8 +26,9 @@ async function refreshCalendar() {
 }
 
 onActivated(() => {
-  if (refreshing.value) return;
-  refreshCalendar();
+  // Re-read local state on tab activation; the bangumi.tv scrape + DB write
+  // in refreshCalendar() is reserved for the explicit refresh button.
+  getAll();
 });
 
 const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
