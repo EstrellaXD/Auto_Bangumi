@@ -7,13 +7,14 @@ import httpx
 logger = logging.getLogger(__name__)
 _lock = asyncio.Lock()
 
-_RETRY_DELAYS = [5, 15, 45, 120, 300]
+_RETRY_DELAYS = [0.5, 1, 1.5, 2, 3]
 
 
 def qb_connect_failed_wait(func):
     @functools.wraps(func)
     async def wrapper(*args, **kwargs):
         times = 0
+        last_error: Exception | None = None
         while times < 5:
             try:
                 return await func(*args, **kwargs)
@@ -25,14 +26,19 @@ def qb_connect_failed_wait(func):
                 httpx.TimeoutException,
                 httpx.RequestError,
             ) as e:
+                last_error = e
                 delay = _RETRY_DELAYS[times]
                 logger.debug("URL: %s", args[0])
                 logger.warning(e)
                 logger.warning(
-                    "Cannot connect to qBittorrent. Wait %ds and retry...", delay
+                    "Cannot connect to qBittorrent. Wait %.1fs and retry...", delay
                 )
                 await asyncio.sleep(delay)
                 times += 1
+        # Retries exhausted: re-raise instead of silently returning None,
+        # which crashed callers with a much more confusing error further down.
+        logger.error("Cannot connect to qBittorrent after %d retries.", times)
+        raise last_error
 
     return wrapper
 

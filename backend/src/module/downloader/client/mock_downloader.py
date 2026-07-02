@@ -129,28 +129,34 @@ class MockDownloader:
         )
         return True
 
+    @staticmethod
+    def _normalize_hashes(hashes: str | list | tuple) -> list[str]:
+        """Accept a single hash, a pipe-joined string, or a list/tuple of
+        hashes and always return a list -- mirrors the real qB client's
+        normalization so switching downloader backends doesn't change
+        behavior (#1046)."""
+        if isinstance(hashes, (list, tuple)):
+            return list(hashes)
+        return hashes.split("|") if "|" in hashes else [hashes]
+
     async def torrents_delete(
         self, hash: str | list, delete_files: bool = True
     ) -> bool:
-        if isinstance(hash, (list, tuple)):
-            hashes = list(hash)
-        else:
-            hashes = hash.split("|") if "|" in hash else [hash]
-        for h in hashes:
+        for h in self._normalize_hashes(hash):
             self._torrents.pop(h, None)
         logger.debug(
             "[MockDownloader] torrents_delete(%s, delete_files=%s)", hash, delete_files
         )
         return True
 
-    async def torrents_pause(self, hashes: str):
-        for h in hashes.split("|"):
+    async def torrents_pause(self, hashes: str | list):
+        for h in self._normalize_hashes(hashes):
             if h in self._torrents:
                 self._torrents[h]["state"] = "paused"
         logger.debug("[MockDownloader] torrents_pause(%s)", hashes)
 
-    async def torrents_resume(self, hashes: str):
-        for h in hashes.split("|"):
+    async def torrents_resume(self, hashes: str | list):
+        for h in self._normalize_hashes(hashes):
             if h in self._torrents:
                 self._torrents[h]["state"] = "downloading"
         logger.debug("[MockDownloader] torrents_resume(%s)", hashes)
@@ -177,8 +183,8 @@ class MockDownloader:
         self._rules[rule_name] = rule_def
         logger.info(f"[MockDownloader] rss_set_rule({rule_name})")
 
-    async def move_torrent(self, hashes: str, new_location: str):
-        for h in hashes.split("|"):
+    async def move_torrent(self, hashes: str | list, new_location: str):
+        for h in self._normalize_hashes(hashes):
             if h in self._torrents:
                 self._torrents[h]["save_path"] = new_location
         logger.debug("[MockDownloader] move_torrent(%s, %s)", hashes, new_location)
@@ -193,9 +199,10 @@ class MockDownloader:
         logger.debug("[MockDownloader] get_torrent_path(%s) -> %s", _hash, path)
         return path
 
-    async def set_category(self, _hash: str, category: str):
-        if _hash in self._torrents:
-            self._torrents[_hash]["category"] = category
+    async def set_category(self, _hash: str | list, category: str):
+        for h in self._normalize_hashes(_hash):
+            if h in self._torrents:
+                self._torrents[h]["category"] = category
         logger.debug("[MockDownloader] set_category(%s, %s)", _hash, category)
 
     async def remove_rule(self, rule_name: str):

@@ -5,8 +5,7 @@ from module.conf import settings
 from module.models import Bangumi, Torrent
 from module.network import RequestContent
 
-from .path import gen_save_path, join_path, rule_name
-from .rules import build_rss_rule
+from .path import gen_save_path
 
 logger = logging.getLogger(__name__)
 
@@ -18,11 +17,22 @@ logger = logging.getLogger(__name__)
 # and log in on enter / log out on exit -- one qB login+logout per operation,
 # roughly once a minute from the rename loop. The cache keeps a single concrete
 # client alive across operations, keyed by the connection-relevant settings.
-# When those settings change the old client is retired and re-closed lazily
-# inside the next ``__aenter__`` (so aclose runs in an async context).
+#
+# Closing a concrete client while another overlapping ``async with
+# DownloadClient()`` block is still using it (mid-request) would kill that
+# request out from under it. `_active_holders` reference-counts how many
+# entered-but-not-yet-exited blocks currently hold each client (keyed by
+# ``id(client)``); a client is only actually logged out once its count drops
+# to zero -- either immediately (nobody holds it) or deferred to whichever
+# block's ``__aexit__`` is the last to let go (`_pending_close`).
+# `_bookkeeping_lock` serializes reads/writes of this shared state across the
+# awaits in ``__aenter__``/``__aexit__``.
 # ---------------------------------------------------------------------------
 _client_cache: tuple[tuple, object] | None = None
 _stale_client: object | None = None
+_active_holders: dict[int, int] = {}
+_pending_close: set[int] = set()
+_bookkeeping_lock = asyncio.Lock()
 
 # Warn at most once per (client type, operation) when a backend cannot perform
 # an operation, so aria2 users are not spammed every rename cycle.
@@ -35,17 +45,25 @@ def _settings_key() -> tuple:
 
 
 def _reset_client_cache() -> None:
-    """Drop the cached/stale concrete clients (used by tests)."""
-    global _client_cache, _stale_client
+    """Drop the cached/stale concrete clients and refcount state (used by tests)."""
+    global _client_cache, _stale_client, _active_holders, _pending_close
     _client_cache = None
     _stale_client = None
+    _active_holders = {}
+    _pending_close = set()
+
+
+async def _close_client(client) -> None:
+    try:
+        await client.logout()
+    except Exception as e:  # pragma: no cover - best-effort cleanup
+        logger.debug("[Downloader] Error closing client: %s", e)
 
 
 async def shutdown() -> None:
     """Log out and close the cached concrete client.
 
-    Not called anywhere yet -- the Phase 5 composition root will own the
-    downloader lifecycle and invoke this on application shutdown.
+    Invoked by the composition root (`AppContext`) on application shutdown.
     """
     global _client_cache, _stale_client
     clients = []
@@ -56,10 +74,7 @@ async def shutdown() -> None:
     _client_cache = None
     _stale_client = None
     for client in clients:
-        try:
-            await client.logout()
-        except Exception as e:  # pragma: no cover - best-effort cleanup
-            logger.debug("[Downloader] Error closing client on shutdown: %s", e)
+        await _close_client(client)
 
 
 class DownloadClient:
@@ -129,29 +144,64 @@ class DownloadClient:
 
     async def __aenter__(self):
         global _stale_client, _client_cache
-        if _stale_client is not None:
-            stale, _stale_client = _stale_client, None
-            try:
-                await stale.logout()
-            except Exception as e:  # pragma: no cover - best-effort cleanup
-                logger.debug("[Downloader] Error closing stale client: %s", e)
+        stale_to_close = None
+        async with _bookkeeping_lock:
+            if _stale_client is not None:
+                if _active_holders.get(id(_stale_client), 0) > 0:
+                    # Still in use by another overlapping block; the last
+                    # holder's __aexit__ will close it once released.
+                    _pending_close.add(id(_stale_client))
+                else:
+                    stale_to_close = _stale_client
+                _stale_client = None
+        if stale_to_close is not None:
+            await _close_client(stale_to_close)
+
         if not self.authed:
             await self.auth()
             if not self.authed:
                 # __aexit__ never runs when we raise here, so close the
                 # concrete client's connection pool now or it leaks on every
-                # failed connect (#1043). Also drop it from the cache so the
-                # next construction rebuilds a fresh client.
-                await self.client.logout()
-                if _client_cache is not None and _client_cache[1] is self.client:
-                    _client_cache = None
+                # failed connect (#1043) -- unless another already-entered
+                # block still holds it, in which case defer to its
+                # __aexit__ instead of yanking the pool out from under it.
+                close_now = False
+                async with _bookkeeping_lock:
+                    if _client_cache is not None and _client_cache[1] is self.client:
+                        _client_cache = None
+                    if _active_holders.get(id(self.client), 0) > 0:
+                        _pending_close.add(id(self.client))
+                    else:
+                        close_now = True
+                if close_now:
+                    await _close_client(self.client)
                 raise ConnectionError("Download client authentication failed")
+
+        async with _bookkeeping_lock:
+            _active_holders[id(self.client)] = (
+                _active_holders.get(id(self.client), 0) + 1
+            )
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        # The concrete session is reused across operations; do NOT log out here.
-        # Teardown is deferred to shutdown() (Phase 5 composition root).
+        # The concrete session is reused across operations; do NOT log out
+        # here unless this was the last holder of a client that a concurrent
+        # block already marked for (deferred) close. Teardown is otherwise
+        # deferred to shutdown() (composition root).
         self.authed = False
+        client = self.client
+        to_close = False
+        async with _bookkeeping_lock:
+            count = _active_holders.get(id(client), 0) - 1
+            if count <= 0:
+                _active_holders.pop(id(client), None)
+                if id(client) in _pending_close:
+                    _pending_close.discard(id(client))
+                    to_close = True
+            else:
+                _active_holders[id(client)] = count
+        if to_close:
+            await _close_client(client)
 
     async def auth(self):
         self.authed = await self.client.auth()
@@ -160,54 +210,11 @@ class DownloadClient:
         else:
             logger.error("[Downloader] Auth failed.")
 
-    async def check_host(self):
-        if not self._supports("can_query", "check_host"):
-            return False
-        return await self.client.check_host()
-
-    async def init_downloader(self):
-        """Apply required qBittorrent RSS preferences and create the Bangumi category."""
-        if not self._supports("can_rss_rules", "init_downloader"):
-            return
-        prefs = {
-            "rss_auto_downloading_enabled": True,
-            "rss_max_articles_per_feed": 500,
-            "rss_processing_enabled": True,
-            "rss_refresh_interval": 30,
-        }
-        await self.client.prefs_init(prefs=prefs)
-        # Category creation may fail if it already exists (HTTP 409) or network issues
-        try:
-            await self.client.add_category("BangumiCollection")
-        except Exception as e:
-            logger.debug(
-                "[Downloader] Could not add category (may already exist): %s", e
-            )
-        if settings.downloader.path == "":
-            prefs = await self.client.get_app_prefs()
-            settings.downloader.path = join_path(prefs["save_path"], "Bangumi")
-
     async def set_rss_rule(self, rule_name: str, rule: dict):
         """Create or update a raw qBittorrent RSS auto-download rule."""
         if not self._supports("can_rss_rules", "set_rss_rule"):
             return
         await self.client.rss_set_rule(rule_name=rule_name, rule_def=rule)
-
-    async def set_rule(self, data: Bangumi):
-        """Create or update a qBittorrent RSS auto-download rule for one bangumi entry."""
-        data.rule_name = rule_name(data)
-        data.save_path = gen_save_path(data)
-        rule = build_rss_rule(data, data.save_path)
-        await self.set_rss_rule(data.rule_name, rule)
-        data.added = True
-        logger.info(
-            f"[Downloader] Add {data.official_title} Season {data.season} to auto download rules."
-        )
-
-    async def set_rules(self, bangumi_info: list[Bangumi]):
-        logger.debug("[Downloader] Start adding rules.")
-        await asyncio.gather(*[self.set_rule(info) for info in bangumi_info])
-        logger.debug("[Downloader] Finished.")
 
     async def get_torrent_info(
         self, category="Bangumi", status_filter="completed", tag=None
@@ -328,48 +335,10 @@ class DownloadClient:
             return
         await self.client.move_torrent(hashes=hashes, new_location=location)
 
-    # RSS Parts
-    async def add_rss_feed(self, rss_link, item_path="Mikan_RSS"):
-        if not self._supports("can_rss_rules", "add_rss_feed"):
-            return
-        await self.client.rss_add_feed(url=rss_link, item_path=item_path)
-
-    async def remove_rss_feed(self, item_path):
-        if not self._supports("can_rss_rules", "remove_rss_feed"):
-            return
-        await self.client.rss_remove_item(item_path=item_path)
-
-    async def get_rss_feed(self):
-        if not self._supports("can_rss_rules", "get_rss_feed"):
-            return {}
-        return await self.client.rss_get_feeds()
-
-    async def get_download_rules(self):
-        if not self._supports("can_rss_rules", "get_download_rules"):
-            return {}
-        return await self.client.get_download_rule()
-
-    async def get_torrent_path(self, hashes):
-        if not self._supports("can_query", "get_torrent_path"):
-            return ""
-        return await self.client.get_torrent_path(hashes)
-
     async def set_category(self, hashes, category):
         if not self._supports("can_manage", "set_category"):
             return
         await self.client.set_category(hashes, category)
-
-    async def remove_rule(self, rule_name):
-        if not self._supports("can_rss_rules", "remove_rule"):
-            return
-        await self.client.remove_rule(rule_name)
-        logger.info(f"[Downloader] Delete rule: {rule_name}")
-
-    async def get_torrents_by_tag(self, tag: str) -> list[dict]:
-        """Get all torrents with a specific tag."""
-        if not self._supports("can_query", "get_torrents_by_tag"):
-            return []
-        return await self.client.get_torrents_by_tag(tag)
 
     async def add_tag(self, torrent_hash: str, tag: str):
         """Add a tag to a torrent."""

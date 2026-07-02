@@ -30,6 +30,10 @@ class QbDownloader:
         self.ssl = ssl
         self._client: httpx.AsyncClient | None = None
         self._authed = False
+        # Single-flights the reactive 403 re-login below so concurrent
+        # requests don't each fire their own login attempt and trip
+        # qBittorrent's IP ban (#1046-adjacent).
+        self._auth_lock = asyncio.Lock()
 
     def _url(self, endpoint: str) -> str:
         return f"{self.host}/api/v2/{endpoint}"
@@ -114,11 +118,24 @@ class QbDownloader:
         qBittorrent answers 403 when the session cookie is no longer valid
         (e.g. the server restarted or reaped the session). Since we now keep one
         long-lived session, force a single re-login and retry the request once.
+        The re-login is single-flighted behind ``_auth_lock`` so a burst of
+        concurrent requests hitting 403 at once triggers one login attempt,
+        not one per request (a login storm can get the caller's IP banned by
+        qBittorrent). Only retry the original request if re-auth succeeded.
         """
         resp = await self._client.request(method, self._url(endpoint), **kwargs)
         if resp.status_code == 403:
             self._authed = False
-            await self.auth()
+            async with self._auth_lock:
+                # Another waiter may have already refreshed the session while
+                # we were blocked on the lock.
+                if not self._authed:
+                    await self.auth()
+            if not self._authed:
+                raise ConnectionError(
+                    f"[Downloader] Re-authentication to qBittorrent at {self.host} "
+                    "failed; not retrying request to avoid a login storm."
+                )
             resp = await self._client.request(method, self._url(endpoint), **kwargs)
         return resp
 
@@ -246,10 +263,17 @@ class QbDownloader:
         resp = await self._get("torrents/info", params={"tag": tag})
         return resp.json()
 
+    @staticmethod
+    def _normalize_hashes(hashes: str | list[str] | tuple[str, ...]) -> str:
+        """qBittorrent expects one pipe-joined "hashes" field; a Python list
+        would be form-encoded as repeated fields and silently ignored (#1046).
+        Centralized here so every hashes-taking endpoint applies it the same
+        way.
+        """
+        return "|".join(hashes) if isinstance(hashes, (list, tuple)) else hashes
+
     async def torrents_delete(self, hash, delete_files: bool = True) -> bool:
-        # qBittorrent expects one pipe-joined "hashes" field; a Python list would
-        # be form-encoded as repeated fields and silently ignored (#1046).
-        hashes = "|".join(hash) if isinstance(hash, (list, tuple)) else hash
+        hashes = self._normalize_hashes(hash)
         resp = await self._post(
             "torrents/delete",
             data={"hashes": hashes, "deleteFiles": str(delete_files).lower()},
@@ -263,16 +287,16 @@ class QbDownloader:
             return False
         return True
 
-    async def torrents_pause(self, hashes: str):
+    async def torrents_pause(self, hashes: str | list[str]):
         await self._post(
             "torrents/pause",
-            data={"hashes": hashes},
+            data={"hashes": self._normalize_hashes(hashes)},
         )
 
-    async def torrents_resume(self, hashes: str):
+    async def torrents_resume(self, hashes: str | list[str]):
         await self._post(
             "torrents/resume",
-            data={"hashes": hashes},
+            data={"hashes": self._normalize_hashes(hashes)},
         )
 
     async def torrents_rename_file(
@@ -303,18 +327,21 @@ class QbDownloader:
                     if f.get("name") == new_path:
                         return True
                     if f.get("name") == old_path:
-                        # File still has old name - break inner loop and retry
-                        if attempt < 2:
-                            break
-                        # Final attempt failed
-                        logger.debug(
-                            "[Downloader] Rename API returned 200 but file unchanged: %s",
-                            old_path,
-                        )
-                        return False
-                # new_path found or old_path not found
-                return True
-            return True
+                        # File still has old name - retry the outer backoff loop
+                        break
+                else:
+                    # Inner loop completed without hitting old_path: new_path
+                    # was already matched above (returned) or the file with
+                    # the old name is simply gone -> treat as renamed.
+                    return True
+                if attempt == 2:
+                    # Final attempt still shows the old name.
+                    logger.debug(
+                        "[Downloader] Rename API returned 200 but file unchanged: %s",
+                        old_path,
+                    )
+                    return False
+            return False
         except (httpx.ConnectError, httpx.RequestError, httpx.TimeoutException) as e:
             logger.warning(f"[Downloader] Failed to rename file {old_path}: {e}")
             return False
@@ -348,7 +375,7 @@ class QbDownloader:
     async def move_torrent(self, hashes, new_location):
         await self._post(
             "torrents/setLocation",
-            data={"hashes": hashes, "location": new_location},
+            data={"hashes": self._normalize_hashes(hashes), "location": new_location},
         )
 
     async def get_download_rule(self):
@@ -363,16 +390,17 @@ class QbDownloader:
         return ""
 
     async def set_category(self, _hash, category):
+        hashes = self._normalize_hashes(_hash)
         resp = await self._post(
             "torrents/setCategory",
-            data={"hashes": _hash, "category": category},
+            data={"hashes": hashes, "category": category},
         )
         if resp.status_code == 409:
             logger.warning(f"[Downloader] Category {category} does not exist")
             await self.add_category(category)
             await self._post(
                 "torrents/setCategory",
-                data={"hashes": _hash, "category": category},
+                data={"hashes": hashes, "category": category},
             )
 
     async def check_connection(self):

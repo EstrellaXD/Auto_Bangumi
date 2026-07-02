@@ -359,11 +359,18 @@ class Renamer:
                     result[torrent_hash] = (0, 0)
 
         except Exception as e:
-            logger.debug("[Renamer] Batch offset lookup failed: %s", e)
-            # Fall back to individual lookups on error
-            for info in torrents_info:
-                if info["hash"] not in result:
-                    result[info["hash"]] = (0, 0)
+            missing = [
+                info["hash"] for info in torrents_info if info["hash"] not in result
+            ]
+            logger.warning(
+                "[Renamer] Batch offset lookup failed; skipping rename for %d "
+                "torrent(s) this cycle: %s",
+                len(missing),
+                e,
+            )
+            # Leave the unresolved torrents out of the map entirely so
+            # rename() skips them instead of silently defaulting to (0, 0),
+            # which would apply a wrong offset instead of no offset.
 
         return result
 
@@ -460,10 +467,19 @@ class Renamer:
             torrent_hash = info["hash"]
             torrent_name = info["name"]
             save_path = info["save_path"]
+            if torrent_hash not in offset_map:
+                # Offset lookup failed for this torrent this cycle (see
+                # _batch_lookup_offsets) -- skip renaming rather than
+                # guessing offset (0, 0), which could misname episodes.
+                logger.warning(
+                    "[Renamer] Skipping %s: offset lookup failed this cycle",
+                    torrent_name,
+                )
+                continue
             media_list, subtitle_list = check_files(files)
             bangumi_name, season = path_to_bangumi(save_path, torrent_name)
             # Use pre-fetched offsets
-            episode_offset, season_offset = offset_map.get(torrent_hash, (0, 0))
+            episode_offset, season_offset = offset_map[torrent_hash]
             kwargs = {
                 "torrent_name": torrent_name,
                 "bangumi_name": bangumi_name,

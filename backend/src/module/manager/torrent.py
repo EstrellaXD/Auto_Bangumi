@@ -55,13 +55,20 @@ class TorrentManager:
     async def delete_rule(self, _id: int | str, file: bool = False):
         data = await self.db.bangumi.search_id(int(_id))
         if isinstance(data, Bangumi):
-            async with DownloadClient() as client:
-                await self.db.rss.delete(data.official_title)
-                # Clean up torrent records so re-adding the same anime can re-download
-                await self.db.torrent.delete_by_bangumi_id(int(_id))
-                await self.db.bangumi.delete_one(int(_id))
-                torrent_message = None
-                if file:
+            # NOTE: RSSDatabase.delete() takes an int RSS-item id, not a
+            # title; there is no reliable bangumi -> RSSItem link to look one
+            # up here (RSSItem.url may be shared by several aggregated
+            # bangumi), so we deliberately don't touch RSS items on rule
+            # deletion rather than risk deleting a feed other bangumi still
+            # depend on.
+            # Clean up torrent records so re-adding the same anime can re-download
+            await self.db.torrent.delete_by_bangumi_id(int(_id))
+            await self.db.bangumi.delete_one(int(_id))
+            torrent_message = None
+            if file:
+                # Only the file-cleanup path needs the downloader, so an
+                # unreachable downloader shouldn't block a DB-only delete.
+                async with DownloadClient() as client:
                     torrent_message = await self.delete_torrents(data, client)
                     if torrent_message.status_code == 500:
                         return ResponseModel(
@@ -71,13 +78,13 @@ class TorrentManager:
                             "but deleting its torrents failed.",
                             msg_zh=f"已删除 {data.official_title} 规则，但删除种子失败。",
                         )
-                logger.info(f"[Manager] Delete rule for {data.official_title}")
-                return ResponseModel(
-                    status_code=200,
-                    status=True,
-                    msg_en=f"Delete rule for {data.official_title}. {torrent_message.msg_en if file and torrent_message else ''}",
-                    msg_zh=f"删除 {data.official_title} 规则。{torrent_message.msg_zh if file and torrent_message else ''}",
-                )
+            logger.info(f"[Manager] Delete rule for {data.official_title}")
+            return ResponseModel(
+                status_code=200,
+                status=True,
+                msg_en=f"Delete rule for {data.official_title}. {torrent_message.msg_en if file and torrent_message else ''}",
+                msg_zh=f"删除 {data.official_title} 规则。{torrent_message.msg_zh if file and torrent_message else ''}",
+            )
         else:
             return ResponseModel(
                 status_code=406,
@@ -89,19 +96,20 @@ class TorrentManager:
     async def disable_rule(self, _id: str | int, file: bool = False):
         data = await self.db.bangumi.search_id(int(_id))
         if isinstance(data, Bangumi):
-            async with DownloadClient() as client:
-                data.deleted = True
-                await self.db.bangumi.update(data)
-                if file:
-                    torrent_message = await self.delete_torrents(data, client)
-                    return torrent_message
-                logger.info(f"[Manager] Disable rule for {data.official_title}")
-                return ResponseModel(
-                    status_code=200,
-                    status=True,
-                    msg_en=f"Disable rule for {data.official_title}",
-                    msg_zh=f"禁用 {data.official_title} 规则",
-                )
+            data.deleted = True
+            await self.db.bangumi.update(data)
+            if file:
+                # Only the file-cleanup path needs the downloader, so an
+                # unreachable downloader shouldn't block a DB-only disable.
+                async with DownloadClient() as client:
+                    return await self.delete_torrents(data, client)
+            logger.info(f"[Manager] Disable rule for {data.official_title}")
+            return ResponseModel(
+                status_code=200,
+                status=True,
+                msg_en=f"Disable rule for {data.official_title}",
+                msg_zh=f"禁用 {data.official_title} 规则",
+            )
         else:
             return ResponseModel(
                 status_code=406,

@@ -1,12 +1,12 @@
-"""Tests for DownloadClient: init, set_rule, add_torrent, rename, etc."""
+"""Tests for DownloadClient: auth, add_torrent, rename, etc."""
+
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
+from module.downloader.download_client import DownloadClient
 from module.models import Bangumi, Torrent
 from module.models.config import Config
-from module.downloader.download_client import DownloadClient
-
 from test.factories import make_bangumi, make_torrent
 
 
@@ -60,116 +60,6 @@ class TestAuth:
                 pass
 
         mock_qb_client.logout.assert_awaited_once()
-
-
-# ---------------------------------------------------------------------------
-# init_downloader
-# ---------------------------------------------------------------------------
-
-
-class TestInitDownloader:
-    async def test_sets_prefs_and_category(self, download_client, mock_qb_client):
-        """init_downloader calls prefs_init with RSS config and adds category."""
-        with patch("module.downloader.download_client.settings") as mock_settings:
-            mock_settings.downloader.path = "/downloads/Bangumi"
-            await download_client.init_downloader()
-
-        mock_qb_client.prefs_init.assert_called_once()
-        prefs_arg = mock_qb_client.prefs_init.call_args[1]["prefs"]
-        assert prefs_arg["rss_auto_downloading_enabled"] is True
-        assert prefs_arg["rss_refresh_interval"] == 30
-        mock_qb_client.add_category.assert_called_once_with("BangumiCollection")
-
-    async def test_detects_path_when_empty(self, download_client, mock_qb_client):
-        """When downloader.path is empty, fetches from app prefs."""
-        with patch("module.downloader.download_client.settings") as mock_settings:
-            mock_settings.downloader.path = ""
-            mock_qb_client.get_app_prefs.return_value = {"save_path": "/data"}
-            await download_client.init_downloader()
-
-        assert mock_settings.downloader.path != ""
-        assert "Bangumi" in mock_settings.downloader.path
-
-    async def test_category_already_exists_no_error(self, download_client, mock_qb_client):
-        """If category already exists, logs debug but doesn't crash."""
-        mock_qb_client.add_category.side_effect = Exception("already exists")
-        with patch("module.downloader.download_client.settings") as mock_settings:
-            mock_settings.downloader.path = "/downloads/Bangumi"
-            # Should not raise
-            await download_client.init_downloader()
-
-
-# ---------------------------------------------------------------------------
-# set_rule
-# ---------------------------------------------------------------------------
-
-
-class TestSetRule:
-    async def test_generates_correct_rule(self, download_client, mock_qb_client):
-        """set_rule creates a rule with correct mustContain and savePath."""
-        bangumi = make_bangumi(
-            title_raw="Mushoku Tensei",
-            filter="720,480",
-            official_title="Mushoku Tensei",
-            season=2,
-            year="2024",
-        )
-        with patch("module.downloader.path.settings") as mock_settings:
-            mock_settings.downloader.path = "/downloads/Bangumi"
-            mock_settings.bangumi_manage.group_tag = False
-            await download_client.set_rule(bangumi)
-
-        mock_qb_client.rss_set_rule.assert_called_once()
-        call_kwargs = mock_qb_client.rss_set_rule.call_args[1]
-        rule = call_kwargs["rule_def"]
-        assert rule["mustContain"] == "Mushoku Tensei"
-        # comma-separated filter terms become a regex alternation for qB
-        assert rule["mustNotContain"] == "720|480"
-        assert rule["enable"] is True
-        assert "Season 2" in rule["savePath"]
-
-    async def test_marks_bangumi_added(self, download_client, mock_qb_client):
-        """set_rule sets data.added=True after creating the rule."""
-        bangumi = make_bangumi(added=False, filter="")
-        with patch("module.downloader.path.settings") as mock_settings:
-            mock_settings.downloader.path = "/downloads/Bangumi"
-            mock_settings.bangumi_manage.group_tag = False
-            await download_client.set_rule(bangumi)
-
-        assert bangumi.added is True
-
-    async def test_rule_name_set(self, download_client, mock_qb_client):
-        """set_rule populates rule_name and save_path on the Bangumi."""
-        bangumi = make_bangumi(
-            official_title="My Anime",
-            season=1,
-            filter="",
-            rule_name=None,
-            save_path=None,
-        )
-        with patch("module.downloader.path.settings") as mock_settings:
-            mock_settings.downloader.path = "/downloads/Bangumi"
-            mock_settings.bangumi_manage.group_tag = False
-            await download_client.set_rule(bangumi)
-
-        assert bangumi.rule_name is not None
-        assert "My Anime" in bangumi.rule_name
-        assert bangumi.save_path is not None
-
-    async def test_rule_name_with_group_tag(self, download_client, mock_qb_client):
-        """When group_tag=True, rule_name includes [group]."""
-        bangumi = make_bangumi(
-            official_title="My Anime",
-            group_name="SubGroup",
-            season=1,
-            filter="",
-        )
-        with patch("module.downloader.path.settings") as mock_settings:
-            mock_settings.downloader.path = "/downloads/Bangumi"
-            mock_settings.bangumi_manage.group_tag = True
-            await download_client.set_rule(bangumi)
-
-        assert "[SubGroup]" in bangumi.rule_name
 
 
 # ---------------------------------------------------------------------------

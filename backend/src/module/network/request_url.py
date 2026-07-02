@@ -123,9 +123,11 @@ class RequestURL:
                 try_time += 1
                 if try_time >= retry:
                     break
-                # 连接错误时重建客户端以清除过期连接
-                await reset_shared_client()
-                self._client = await get_shared_client()
+                # Retry on the same shared client without closing it: other
+                # concurrent tasks may still have in-flight requests on this
+                # pool, and aclose()-ing it out from under them kills those
+                # requests too. The shared client is only replaced/closed on
+                # shutdown or settings reload (see AppContext).
                 await asyncio.sleep(5)
             except Exception as e:
                 logger.warning(f"[Network] Unexpected error for {url}: {e}")
@@ -149,9 +151,7 @@ class RequestURL:
                 try_time += 1
                 if try_time >= retry:
                     break
-                # 连接错误时重建客户端，清除过期连接
-                await reset_shared_client()
-                self._client = await get_shared_client()
+                # Retry on the same shared client; see comment in get_url().
                 await asyncio.sleep(5)
             except Exception as e:
                 logger.debug(e)
@@ -175,6 +175,22 @@ class RequestURL:
         try:
             req = await self._client.post(
                 url=url, headers=self.header, data=data, files=files
+            )
+            req.raise_for_status()
+            return req
+        except (httpx.RequestError, httpx.HTTPStatusError):
+            logger.warning(f"[Network] Cannot connect to {url}.")
+            return None
+
+    async def post_json(self, url: str, json_data: dict, headers: dict | None = None):
+        """POST a JSON body (httpx ``json=``, not form-encoded ``data=``).
+
+        Used by JSON-body notification providers (Discord, Webhook, Gotify,
+        Bark) that reject form-encoded requests.
+        """
+        try:
+            req = await self._client.post(
+                url=url, headers=headers or self.header, json=json_data
             )
             req.raise_for_status()
             return req

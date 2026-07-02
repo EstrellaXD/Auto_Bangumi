@@ -6,13 +6,12 @@ from self.host, so SSL/HTTPS behaviour is validated by observing auth() side-eff
 """
 
 import logging
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
+import pytest
 
 from module.downloader.client.qb_downloader import QbDownloader
-
 
 # ---------------------------------------------------------------------------
 # Constructor / URL building

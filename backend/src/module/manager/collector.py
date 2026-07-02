@@ -34,7 +34,10 @@ class SeasonCollector:
                 for torrent in torrents:
                     torrent.downloaded = True
                 bangumi.eps_collect = True
-                if await db.bangumi.update(bangumi):
+                # update() returns False when no existing row matches
+                # bangumi.id (i.e. this is a brand-new bangumi), in which
+                # case it needs to be inserted instead.
+                if not await db.bangumi.update(bangumi):
                     await db.bangumi.add(bangumi)
                 await db.torrent.add_all(torrents)
                 return ResponseModel(

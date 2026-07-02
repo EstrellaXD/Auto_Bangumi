@@ -1,7 +1,8 @@
 """Tests for network request_url: shared client configuration and reset."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from module.network.request_url import get_shared_client, reset_shared_client
 
@@ -70,9 +71,12 @@ class TestResetSharedClient:
 
 
 class TestRetryWithReset:
-    async def test_get_url_resets_on_connect_error(self):
-        """get_url should call reset_shared_client after ConnectTimeout."""
+    async def test_get_url_retries_without_resetting_client(self):
+        """get_url should retry a ConnectTimeout on the same shared client,
+        without closing/resetting it -- other concurrent callers may still
+        have in-flight requests on that connection pool."""
         import httpx
+
         from module.network.request_url import RequestURL
 
         call_count = 0
@@ -101,5 +105,7 @@ class TestRetryWithReset:
             async with RequestURL() as req:
                 result = await req.get_url("https://example.com/test", retry=2)
 
-        mock_reset.assert_called()
+        mock_reset.assert_not_called()
         assert call_count == 2
+        assert result is not None
+        assert result.status_code == 200
