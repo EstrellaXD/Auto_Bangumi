@@ -15,7 +15,7 @@ If you discover a security vulnerability in AutoBangumi, please report it respon
 
 1. **GitHub Private Vulnerability Reporting** (Recommended): Use [GitHub's private vulnerability reporting feature](https://github.com/EstrellaXD/Auto_Bangumi/security/advisories/new) to submit your report securely.
 
-2. **Email**: Contact the maintainer directly at the email associated with the GitHub account [@EstrellaXD](https://github.com/EstrellaXD).
+2. **Email**: Contact the maintainer directly at [estrellaxd05@gmail.com](mailto:estrellaxd05@gmail.com).
 
 **Please do NOT:**
 - Open a public GitHub issue for security vulnerabilities
@@ -37,7 +37,7 @@ We will acknowledge receipt of your report within 48 hours and work to address t
 
 1. **GitHub 私密漏洞报告**（推荐）：使用 [GitHub 的私密漏洞报告功能](https://github.com/EstrellaXD/Auto_Bangumi/security/advisories/new) 安全地提交您的报告。
 
-2. **邮件**：直接联系维护者，使用 GitHub 账户 [@EstrellaXD](https://github.com/EstrellaXD) 关联的邮箱。
+2. **邮件**：直接联系维护者，邮箱 [estrellaxd05@gmail.com](mailto:estrellaxd05@gmail.com)。
 
 **请勿：**
 - 在公开的 GitHub Issue 中报告安全漏洞
