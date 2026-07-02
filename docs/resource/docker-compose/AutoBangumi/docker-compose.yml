@@ -1,5 +1,3 @@
-version: "3.4"
-
 services:
   AutoBangumi:
     image: "ghcr.io/estrellaxd/auto_bangumi:latest"
@@ -15,6 +13,6 @@ services:
       - 223.5.5.5
     environment:
       - TZ=Asia/Shanghai
-      - PGID=$(id -g)
-      - PUID=$(id -u)
+      - PGID=${PGID:-1000}
+      - PUID=${PUID:-1000}
       - UMASK=022

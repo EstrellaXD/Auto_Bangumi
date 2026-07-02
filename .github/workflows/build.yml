@@ -350,9 +350,12 @@ jobs:
       - name: Read changelog
         id: changelog
         run: |
-          if [ -f docs/changelog/3.2.md ]; then
+          # Derive the changelog file from the release version's major.minor (e.g. 3.3.0-beta.1 -> 3.3.md)
+          CHANGELOG_VERSION=$(echo "${{ needs.version-info.outputs.version }}" | grep -oE '^[0-9]+\.[0-9]+')
+          CHANGELOG_FILE="docs/changelog/${CHANGELOG_VERSION}.md"
+          if [ -f "$CHANGELOG_FILE" ]; then
             echo "body<<EOF" >> $GITHUB_OUTPUT
-            cat docs/changelog/3.2.md >> $GITHUB_OUTPUT
+            cat "$CHANGELOG_FILE" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
           fi
 
