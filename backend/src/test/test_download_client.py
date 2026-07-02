@@ -365,9 +365,15 @@ class TestContextManagerAuth:
         assert result is download_client
         assert download_client.authed is True
 
-    async def test_aexit_calls_logout_when_authed(self, download_client, mock_qb_client):
-        """__aexit__ calls logout and resets authed when session was active."""
+    async def test_aexit_reuses_session_without_logout(
+        self, download_client, mock_qb_client
+    ):
+        """__aexit__ resets authed but keeps the session (no logout).
+
+        The concrete client is reused across operations (#1039 / #900);
+        teardown is deferred to shutdown().
+        """
         download_client.authed = True
         await download_client.__aexit__(None, None, None)
-        mock_qb_client.logout.assert_called_once()
+        mock_qb_client.logout.assert_not_called()
         assert download_client.authed is False

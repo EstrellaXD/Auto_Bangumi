@@ -29,13 +29,12 @@ class QbDownloader:
         self.password = password
         self.ssl = ssl
         self._client: httpx.AsyncClient | None = None
+        self._authed = False
 
     def _url(self, endpoint: str) -> str:
         return f"{self.host}/api/v2/{endpoint}"
 
-    async def auth(self, retry=3):
-        times = 0
-        use_https = self.host.startswith("https://")
+    def _new_client(self) -> httpx.AsyncClient:
         timeout = httpx.Timeout(connect=5.0, read=10.0, write=10.0, pool=10.0)
         # Keepalive_expiry keeps idle TCP sockets short-lived so they can't
         # outlive a proxy / NAS idle-reap, which would otherwise surface as
@@ -49,7 +48,17 @@ class QbDownloader:
         )
         # Never verify certificates - self-signed certs are the norm for
         # home-server / NAS / Docker qBittorrent setups.
-        self._client = httpx.AsyncClient(timeout=timeout, limits=limits, verify=False)
+        return httpx.AsyncClient(timeout=timeout, limits=limits, verify=False)
+
+    async def auth(self, retry=3):
+        # Session reuse: a live, already-authenticated client short-circuits so
+        # repeated operations don't re-login every cycle (#1039 / #900).
+        if self._client is not None and self._authed:
+            return True
+        times = 0
+        use_https = self.host.startswith("https://")
+        if self._client is None:
+            self._client = self._new_client()
         while times < retry:
             try:
                 resp = await self._client.post(
@@ -64,6 +73,7 @@ class QbDownloader:
                 if (
                     resp.status_code == 200 and resp.text.startswith("Ok")
                 ) or resp.status_code == 204:
+                    self._authed = True
                     return True
                 elif resp.status_code == 403:
                     logger.error("Login refused by qBittorrent Server")
@@ -98,6 +108,26 @@ class QbDownloader:
                 break
         return False
 
+    async def _request(self, method: str, endpoint: str, **kwargs) -> httpx.Response:
+        """Issue a request, re-authenticating once if the session expired.
+
+        qBittorrent answers 403 when the session cookie is no longer valid
+        (e.g. the server restarted or reaped the session). Since we now keep one
+        long-lived session, force a single re-login and retry the request once.
+        """
+        resp = await self._client.request(method, self._url(endpoint), **kwargs)
+        if resp.status_code == 403:
+            self._authed = False
+            await self.auth()
+            resp = await self._client.request(method, self._url(endpoint), **kwargs)
+        return resp
+
+    async def _get(self, endpoint: str, **kwargs) -> httpx.Response:
+        return await self._request("GET", endpoint, **kwargs)
+
+    async def _post(self, endpoint: str, **kwargs) -> httpx.Response:
+        return await self._request("POST", endpoint, **kwargs)
+
     async def logout(self):
         if self._client:
             try:
@@ -110,10 +140,11 @@ class QbDownloader:
                 logger.debug("[Downloader] Logout request failed (non-critical): %s", e)
             await self._client.aclose()
             self._client = None
+        self._authed = False
 
     async def check_host(self):
         try:
-            resp = await self._client.get(self._url("app/version"))
+            resp = await self._get("app/version")
             return resp.status_code == 200
         except (httpx.ConnectError, httpx.RequestError):
             return False
@@ -123,20 +154,20 @@ class QbDownloader:
 
     @qb_connect_failed_wait
     async def prefs_init(self, prefs):
-        resp = await self._client.post(
-            self._url("app/setPreferences"),
+        resp = await self._post(
+            "app/setPreferences",
             data={"json": json.dumps(prefs)},
         )
         return resp
 
     @qb_connect_failed_wait
     async def get_app_prefs(self):
-        resp = await self._client.get(self._url("app/preferences"))
+        resp = await self._get("app/preferences")
         return resp.json()
 
     async def add_category(self, category):
-        await self._client.post(
-            self._url("torrents/createCategory"),
+        await self._post(
+            "torrents/createCategory",
             data={"category": category, "savePath": ""},
         )
 
@@ -149,14 +180,12 @@ class QbDownloader:
             params["category"] = category
         if tag:
             params["tag"] = tag
-        resp = await self._client.get(self._url("torrents/info"), params=params)
+        resp = await self._get("torrents/info", params=params)
         return resp.json()
 
     @qb_connect_failed_wait
     async def torrents_files(self, torrent_hash: str):
-        resp = await self._client.get(
-            self._url("torrents/files"), params={"hash": torrent_hash}
-        )
+        resp = await self._get("torrents/files", params={"hash": torrent_hash})
         return resp.json()
 
     async def add_torrents(
@@ -195,8 +224,8 @@ class QbDownloader:
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                resp = await self._client.post(
-                    self._url("torrents/add"),
+                resp = await self._post(
+                    "torrents/add",
                     data=data,
                     files=files if files else None,
                 )
@@ -214,15 +243,15 @@ class QbDownloader:
                     raise
 
     async def get_torrents_by_tag(self, tag: str) -> list[dict]:
-        resp = await self._client.get(self._url("torrents/info"), params={"tag": tag})
+        resp = await self._get("torrents/info", params={"tag": tag})
         return resp.json()
 
     async def torrents_delete(self, hash, delete_files: bool = True) -> bool:
         # qBittorrent expects one pipe-joined "hashes" field; a Python list would
         # be form-encoded as repeated fields and silently ignored (#1046).
         hashes = "|".join(hash) if isinstance(hash, (list, tuple)) else hash
-        resp = await self._client.post(
-            self._url("torrents/delete"),
+        resp = await self._post(
+            "torrents/delete",
             data={"hashes": hashes, "deleteFiles": str(delete_files).lower()},
         )
         if resp.status_code != 200:
@@ -235,14 +264,14 @@ class QbDownloader:
         return True
 
     async def torrents_pause(self, hashes: str):
-        await self._client.post(
-            self._url("torrents/pause"),
+        await self._post(
+            "torrents/pause",
             data={"hashes": hashes},
         )
 
     async def torrents_resume(self, hashes: str):
-        await self._client.post(
-            self._url("torrents/resume"),
+        await self._post(
+            "torrents/resume",
             data={"hashes": hashes},
         )
 
@@ -250,8 +279,8 @@ class QbDownloader:
         self, torrent_hash, old_path, new_path, verify: bool = True
     ) -> bool:
         try:
-            resp = await self._client.post(
-                self._url("torrents/renameFile"),
+            resp = await self._post(
+                "torrents/renameFile",
                 data={"hash": torrent_hash, "oldPath": old_path, "newPath": new_path},
             )
             if resp.status_code == 409:
@@ -291,75 +320,73 @@ class QbDownloader:
             return False
 
     async def rss_add_feed(self, url, item_path):
-        resp = await self._client.post(
-            self._url("rss/addFeed"),
+        resp = await self._post(
+            "rss/addFeed",
             data={"url": url, "path": item_path},
         )
         if resp.status_code == 409:
             logger.warning(f"[Downloader] RSS feed {url} already exists")
 
     async def rss_remove_item(self, item_path):
-        resp = await self._client.post(
-            self._url("rss/removeItem"),
+        resp = await self._post(
+            "rss/removeItem",
             data={"path": item_path},
         )
         if resp.status_code == 409:
             logger.warning(f"[Downloader] RSS item {item_path} does not exist")
 
     async def rss_get_feeds(self):
-        resp = await self._client.get(self._url("rss/items"))
+        resp = await self._get("rss/items")
         return resp.json()
 
     async def rss_set_rule(self, rule_name, rule_def):
-        await self._client.post(
-            self._url("rss/setRule"),
+        await self._post(
+            "rss/setRule",
             data={"ruleName": rule_name, "ruleDef": json.dumps(rule_def)},
         )
 
     async def move_torrent(self, hashes, new_location):
-        await self._client.post(
-            self._url("torrents/setLocation"),
+        await self._post(
+            "torrents/setLocation",
             data={"hashes": hashes, "location": new_location},
         )
 
     async def get_download_rule(self):
-        resp = await self._client.get(self._url("rss/rules"))
+        resp = await self._get("rss/rules")
         return resp.json()
 
     async def get_torrent_path(self, _hash):
-        resp = await self._client.get(
-            self._url("torrents/info"), params={"hashes": _hash}
-        )
+        resp = await self._get("torrents/info", params={"hashes": _hash})
         torrents = resp.json()
         if torrents:
             return torrents[0].get("save_path", "")
         return ""
 
     async def set_category(self, _hash, category):
-        resp = await self._client.post(
-            self._url("torrents/setCategory"),
+        resp = await self._post(
+            "torrents/setCategory",
             data={"hashes": _hash, "category": category},
         )
         if resp.status_code == 409:
             logger.warning(f"[Downloader] Category {category} does not exist")
             await self.add_category(category)
-            await self._client.post(
-                self._url("torrents/setCategory"),
+            await self._post(
+                "torrents/setCategory",
                 data={"hashes": _hash, "category": category},
             )
 
     async def check_connection(self):
-        resp = await self._client.get(self._url("app/version"))
+        resp = await self._get("app/version")
         return resp.text
 
     async def remove_rule(self, rule_name):
-        await self._client.post(
-            self._url("rss/removeRule"),
+        await self._post(
+            "rss/removeRule",
             data={"ruleName": rule_name},
         )
 
     async def add_tag(self, _hash, tag):
-        await self._client.post(
-            self._url("torrents/addTags"),
+        await self._post(
+            "torrents/addTags",
             data={"hashes": _hash, "tags": tag},
         )

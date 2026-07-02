@@ -32,6 +32,21 @@ def _clear_bangumi_cache():
     _invalidate_bangumi_cache()
 
 
+@pytest.fixture(autouse=True)
+def _reset_downloader_client_cache():
+    """Clear the module-level concrete-client cache between tests.
+
+    DownloadClient reuses one concrete client across context-manager blocks
+    (session reuse, #1039 / #900); the cache would otherwise leak a mock from
+    one test into the next.
+    """
+    from module.downloader.download_client import _reset_client_cache
+
+    _reset_client_cache()
+    yield
+    _reset_client_cache()
+
+
 @pytest.fixture
 def db_engine():
     """Create an in-memory SQLite engine for testing."""

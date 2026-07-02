@@ -31,6 +31,7 @@ class MockDownloader:
         self._rules: dict[str, dict] = {}
         self._feeds: dict[str, dict] = {}
         self._categories: set[str] = {"Bangumi", "BangumiCollection"}
+        self._authed = False
         self._prefs = {
             "save_path": "/tmp/mock-downloads",
             "rss_auto_downloading_enabled": True,
@@ -41,10 +42,14 @@ class MockDownloader:
         logger.debug("[MockDownloader] Initialized")
 
     async def auth(self, retry=3) -> bool:
+        # No real session; idempotent by construction, kept for parity with
+        # QbDownloader so session-reuse tests stay meaningful.
+        self._authed = True
         logger.debug("[MockDownloader] Auth successful (mocked)")
         return True
 
     async def logout(self):
+        self._authed = False
         logger.debug("[MockDownloader] Logout (mocked)")
 
     async def check_host(self) -> bool:

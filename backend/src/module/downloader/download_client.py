@@ -10,9 +10,56 @@ from .rules import build_rss_rule
 
 logger = logging.getLogger(__name__)
 
+
+# ---------------------------------------------------------------------------
+# Module-level concrete-client cache (session reuse, #1039 / #900)
+#
+# Every ``async with DownloadClient()`` used to spin up a fresh concrete client
+# and log in on enter / log out on exit -- one qB login+logout per operation,
+# roughly once a minute from the rename loop. The cache keeps a single concrete
+# client alive across operations, keyed by the connection-relevant settings.
+# When those settings change the old client is retired and re-closed lazily
+# inside the next ``__aenter__`` (so aclose runs in an async context).
+# ---------------------------------------------------------------------------
+_client_cache: tuple[tuple, object] | None = None
+_stale_client: object | None = None
+
 # Warn at most once per (client type, operation) when a backend cannot perform
 # an operation, so aria2 users are not spammed every rename cycle.
 _warned_unsupported: set[tuple[str, str]] = set()
+
+
+def _settings_key() -> tuple:
+    d = settings.downloader
+    return (d.type, d.host, d.username, d.password, d.ssl)
+
+
+def _reset_client_cache() -> None:
+    """Drop the cached/stale concrete clients (used by tests)."""
+    global _client_cache, _stale_client
+    _client_cache = None
+    _stale_client = None
+
+
+async def shutdown() -> None:
+    """Log out and close the cached concrete client.
+
+    Not called anywhere yet -- the Phase 5 composition root will own the
+    downloader lifecycle and invoke this on application shutdown.
+    """
+    global _client_cache, _stale_client
+    clients = []
+    if _stale_client is not None:
+        clients.append(_stale_client)
+    if _client_cache is not None:
+        clients.append(_client_cache[1])
+    _client_cache = None
+    _stale_client = None
+    for client in clients:
+        try:
+            await client.logout()
+        except Exception as e:  # pragma: no cover - best-effort cleanup
+            logger.debug("[Downloader] Error closing client on shutdown: %s", e)
 
 
 class DownloadClient:
@@ -20,11 +67,22 @@ class DownloadClient:
 
     Wraps qBittorrent, Aria2, or MockDownloader behind a common interface.
     Intended to be used as an async context manager; authentication is
-    performed on ``__aenter__`` and the session is closed on ``__aexit__``.
+    performed on ``__aenter__``. The concrete client's session is reused across
+    context-manager blocks (see the module-level cache above) and only torn
+    down by :func:`shutdown`.
     """
 
     def __init__(self):
-        self.client = self.__getClient()
+        global _client_cache, _stale_client
+        key = _settings_key()
+        if _client_cache is not None and _client_cache[0] == key:
+            self.client = _client_cache[1]
+        else:
+            if _client_cache is not None:
+                # Settings changed: retire the previous client, close it later.
+                _stale_client = _client_cache[1]
+            self.client = self.__getClient()
+            _client_cache = (key, self.client)
         self.authed = False
 
     @staticmethod
@@ -70,22 +128,30 @@ class DownloadClient:
         return False
 
     async def __aenter__(self):
+        global _stale_client, _client_cache
+        if _stale_client is not None:
+            stale, _stale_client = _stale_client, None
+            try:
+                await stale.logout()
+            except Exception as e:  # pragma: no cover - best-effort cleanup
+                logger.debug("[Downloader] Error closing stale client: %s", e)
         if not self.authed:
             await self.auth()
             if not self.authed:
                 # __aexit__ never runs when we raise here, so close the
                 # concrete client's connection pool now or it leaks on every
-                # failed connect (#1043).
+                # failed connect (#1043). Also drop it from the cache so the
+                # next construction rebuilds a fresh client.
                 await self.client.logout()
+                if _client_cache is not None and _client_cache[1] is self.client:
+                    _client_cache = None
                 raise ConnectionError("Download client authentication failed")
-        else:
-            logger.error("[Downloader] Already authed.")
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        if self.authed:
-            await self.client.logout()
-            self.authed = False
+        # The concrete session is reused across operations; do NOT log out here.
+        # Teardown is deferred to shutdown() (Phase 5 composition root).
+        self.authed = False
 
     async def auth(self):
         self.authed = await self.client.auth()

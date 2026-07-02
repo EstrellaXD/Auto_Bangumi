@@ -24,6 +24,7 @@ class Aria2Downloader:
         self.host = host
         self.secret = password
         self._client: httpx.AsyncClient | None = None
+        self._authed = False
         self._rpc_url = f"{host}/jsonrpc"
         self._id = 0
 
@@ -46,13 +47,17 @@ class Aria2Downloader:
         return result.get("result")
 
     async def auth(self, retry=3):
-        self._client = httpx.AsyncClient(
-            timeout=httpx.Timeout(connect=3.1, read=10.0, write=10.0, pool=10.0)
-        )
+        if self._client is not None and self._authed:
+            return True
+        if self._client is None:
+            self._client = httpx.AsyncClient(
+                timeout=httpx.Timeout(connect=3.1, read=10.0, write=10.0, pool=10.0)
+            )
         times = 0
         while times < retry:
             try:
                 await self._call("getVersion")
+                self._authed = True
                 return True
             except Exception as e:
                 logger.warning(
@@ -63,6 +68,7 @@ class Aria2Downloader:
         return False
 
     async def logout(self):
+        self._authed = False
         if self._client:
             await self._client.aclose()
             self._client = None

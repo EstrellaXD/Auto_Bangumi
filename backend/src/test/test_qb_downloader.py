@@ -625,12 +625,13 @@ class TestTorrentsDelete:
         qb._client = AsyncMock()
         mock_resp = MagicMock()
         mock_resp.status_code = 200
-        qb._client.post = AsyncMock(return_value=mock_resp)
+        # Data ops now go through _request -> _client.request (session reuse).
+        qb._client.request = AsyncMock(return_value=mock_resp)
 
         result = await qb.torrents_delete(["aaa", "bbb"], delete_files=True)
 
         assert result is True
-        sent = qb._client.post.call_args.kwargs["data"]
+        sent = qb._client.request.call_args.kwargs["data"]
         assert sent["hashes"] == "aaa|bbb"
         assert sent["deleteFiles"] == "true"
 
@@ -639,8 +640,8 @@ class TestTorrentsDelete:
         qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
         qb._client = AsyncMock()
         mock_resp = MagicMock()
-        mock_resp.status_code = 403
-        qb._client.post = AsyncMock(return_value=mock_resp)
+        mock_resp.status_code = 500
+        qb._client.request = AsyncMock(return_value=mock_resp)
 
         result = await qb.torrents_delete("aaa", delete_files=True)
 
