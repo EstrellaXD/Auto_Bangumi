@@ -204,7 +204,7 @@ class TestHandleResourceStatus:
     def test_returns_json_string(self, mock_program):
         with (
             patch("module.mcp.resources.VERSION", "3.2.0-test"),
-            patch("module.api.program.program", mock_program),
+            patch("module.mcp.resources.get_context", return_value=mock_program),
         ):
             raw = handle_resource("autobangumi://status")
         assert isinstance(raw, str)
@@ -213,7 +213,7 @@ class TestHandleResourceStatus:
     def test_version_in_output(self, mock_program):
         with (
             patch("module.mcp.resources.VERSION", "3.2.0-test"),
-            patch("module.api.program.program", mock_program),
+            patch("module.mcp.resources.get_context", return_value=mock_program),
         ):
             result = _parse(handle_resource("autobangumi://status"))
         assert result["version"] == "3.2.0-test"
@@ -222,7 +222,7 @@ class TestHandleResourceStatus:
         mock_program.is_running = True
         with (
             patch("module.mcp.resources.VERSION", "3.2.0-test"),
-            patch("module.api.program.program", mock_program),
+            patch("module.mcp.resources.get_context", return_value=mock_program),
         ):
             result = _parse(handle_resource("autobangumi://status"))
         assert result["running"] is True
@@ -231,7 +231,7 @@ class TestHandleResourceStatus:
         mock_program.first_run = False
         with (
             patch("module.mcp.resources.VERSION", "3.2.0-test"),
-            patch("module.api.program.program", mock_program),
+            patch("module.mcp.resources.get_context", return_value=mock_program),
         ):
             result = _parse(handle_resource("autobangumi://status"))
         assert result["first_run"] is False
@@ -239,7 +239,7 @@ class TestHandleResourceStatus:
     def test_all_keys_present(self, mock_program):
         with (
             patch("module.mcp.resources.VERSION", "3.2.0-test"),
-            patch("module.api.program.program", mock_program),
+            patch("module.mcp.resources.get_context", return_value=mock_program),
         ):
             result = _parse(handle_resource("autobangumi://status"))
         assert {"version", "running", "first_run"}.issubset(result.keys())

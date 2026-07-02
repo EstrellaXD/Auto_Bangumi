@@ -7,9 +7,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from module.api import v1
+from module.api.deps import get_context
 from module.models import ResponseModel
 from module.security.api import get_current_user
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -25,13 +25,39 @@ def app():
 
 
 @pytest.fixture
-def authed_client(app):
-    """TestClient with auth dependency overridden."""
+def mock_ctx():
+    """Mock AppContext instance injected via the get_context dependency."""
+    ctx = MagicMock()
+    ctx.is_running = True
+    ctx.first_run = False
+    ctx.start_tasks = AsyncMock(
+        return_value=ResponseModel(
+            status=True, status_code=200, msg_en="Started.", msg_zh="已启动。"
+        )
+    )
+    ctx.stop = AsyncMock(
+        return_value=ResponseModel(
+            status=True, status_code=200, msg_en="Stopped.", msg_zh="已停止。"
+        )
+    )
+    ctx.restart = AsyncMock(
+        return_value=ResponseModel(
+            status=True, status_code=200, msg_en="Restarted.", msg_zh="已重启。"
+        )
+    )
+    ctx.check_downloader = AsyncMock(return_value=True)
+    return ctx
+
+
+@pytest.fixture
+def authed_client(app, mock_ctx):
+    """TestClient with auth and context dependencies overridden."""
 
     async def mock_user():
         return "testuser"
 
     app.dependency_overrides[get_current_user] = mock_user
+    app.dependency_overrides[get_context] = lambda: mock_ctx
     client = TestClient(app)
     yield client
     app.dependency_overrides.clear()
@@ -41,31 +67,6 @@ def authed_client(app):
 def unauthed_client(app):
     """TestClient without auth (no override)."""
     return TestClient(app)
-
-
-@pytest.fixture
-def mock_program():
-    """Mock Program instance."""
-    program = MagicMock()
-    program.is_running = True
-    program.first_run = False
-    program.start = AsyncMock(
-        return_value=ResponseModel(
-            status=True, status_code=200, msg_en="Started.", msg_zh="已启动。"
-        )
-    )
-    program.stop = AsyncMock(
-        return_value=ResponseModel(
-            status=True, status_code=200, msg_en="Stopped.", msg_zh="已停止。"
-        )
-    )
-    program.restart = AsyncMock(
-        return_value=ResponseModel(
-            status=True, status_code=200, msg_en="Restarted.", msg_zh="已重启。"
-        )
-    )
-    program.check_downloader = AsyncMock(return_value=True)
-    return program
 
 
 # ---------------------------------------------------------------------------
@@ -105,19 +106,15 @@ class TestAuthRequired:
 
 
 class TestStartProgram:
-    def test_start_success(self, authed_client, mock_program):
+    def test_start_success(self, authed_client):
         """GET /start returns success response."""
-        with patch("module.api.program.program", mock_program):
-            response = authed_client.get("/api/v1/start")
-
+        response = authed_client.get("/api/v1/start")
         assert response.status_code == 200
 
-    def test_start_failure(self, authed_client, mock_program):
+    def test_start_failure(self, authed_client, mock_ctx):
         """GET /start handles exceptions."""
-        mock_program.start = AsyncMock(side_effect=Exception("Start failed"))
-        with patch("module.api.program.program", mock_program):
-            response = authed_client.get("/api/v1/start")
-
+        mock_ctx.start_tasks = AsyncMock(side_effect=Exception("Start failed"))
+        response = authed_client.get("/api/v1/start")
         assert response.status_code == 500
 
 
@@ -127,11 +124,9 @@ class TestStartProgram:
 
 
 class TestStopProgram:
-    def test_stop_success(self, authed_client, mock_program):
+    def test_stop_success(self, authed_client):
         """GET /stop returns success response."""
-        with patch("module.api.program.program", mock_program):
-            response = authed_client.get("/api/v1/stop")
-
+        response = authed_client.get("/api/v1/stop")
         assert response.status_code == 200
 
 
@@ -141,19 +136,15 @@ class TestStopProgram:
 
 
 class TestRestartProgram:
-    def test_restart_success(self, authed_client, mock_program):
+    def test_restart_success(self, authed_client):
         """GET /restart returns success response."""
-        with patch("module.api.program.program", mock_program):
-            response = authed_client.get("/api/v1/restart")
-
+        response = authed_client.get("/api/v1/restart")
         assert response.status_code == 200
 
-    def test_restart_failure(self, authed_client, mock_program):
+    def test_restart_failure(self, authed_client, mock_ctx):
         """GET /restart handles exceptions."""
-        mock_program.restart = AsyncMock(side_effect=Exception("Restart failed"))
-        with patch("module.api.program.program", mock_program):
-            response = authed_client.get("/api/v1/restart")
-
+        mock_ctx.restart = AsyncMock(side_effect=Exception("Restart failed"))
+        response = authed_client.get("/api/v1/restart")
         assert response.status_code == 500
 
 
@@ -163,13 +154,12 @@ class TestRestartProgram:
 
 
 class TestProgramStatus:
-    def test_status_running(self, authed_client, mock_program):
+    def test_status_running(self, authed_client, mock_ctx):
         """GET /status returns running status."""
-        mock_program.is_running = True
-        mock_program.first_run = False
-        with patch("module.api.program.program", mock_program):
-            with patch("module.api.program.VERSION", "3.2.0"):
-                response = authed_client.get("/api/v1/status")
+        mock_ctx.is_running = True
+        mock_ctx.first_run = False
+        with patch("module.api.program.VERSION", "3.2.0"):
+            response = authed_client.get("/api/v1/status")
 
         assert response.status_code == 200
         data = response.json()
@@ -177,13 +167,12 @@ class TestProgramStatus:
         assert data["version"] == "3.2.0"
         assert data["first_run"] is False
 
-    def test_status_stopped(self, authed_client, mock_program):
+    def test_status_stopped(self, authed_client, mock_ctx):
         """GET /status returns stopped status."""
-        mock_program.is_running = False
-        mock_program.first_run = True
-        with patch("module.api.program.program", mock_program):
-            with patch("module.api.program.VERSION", "3.2.0"):
-                response = authed_client.get("/api/v1/status")
+        mock_ctx.is_running = False
+        mock_ctx.first_run = True
+        with patch("module.api.program.VERSION", "3.2.0"):
+            response = authed_client.get("/api/v1/status")
 
         assert response.status_code == 200
         data = response.json()
@@ -197,20 +186,18 @@ class TestProgramStatus:
 
 
 class TestCheckDownloader:
-    def test_check_downloader_connected(self, authed_client, mock_program):
+    def test_check_downloader_connected(self, authed_client, mock_ctx):
         """GET /check/downloader returns True when connected."""
-        mock_program.check_downloader = AsyncMock(return_value=True)
-        with patch("module.api.program.program", mock_program):
-            response = authed_client.get("/api/v1/check/downloader")
+        mock_ctx.check_downloader = AsyncMock(return_value=True)
+        response = authed_client.get("/api/v1/check/downloader")
 
         assert response.status_code == 200
         assert response.json() is True
 
-    def test_check_downloader_disconnected(self, authed_client, mock_program):
+    def test_check_downloader_disconnected(self, authed_client, mock_ctx):
         """GET /check/downloader returns False when disconnected."""
-        mock_program.check_downloader = AsyncMock(return_value=False)
-        with patch("module.api.program.program", mock_program):
-            response = authed_client.get("/api/v1/check/downloader")
+        mock_ctx.check_downloader = AsyncMock(return_value=False)
+        response = authed_client.get("/api/v1/check/downloader")
 
         assert response.status_code == 200
         assert response.json() is False

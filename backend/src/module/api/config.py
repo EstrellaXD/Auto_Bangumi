@@ -4,8 +4,11 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
 from module.conf import settings
+from module.core import AppContext
 from module.models import APIResponse, Config
 from module.security.api import UNAUTHORIZED, get_current_user
+
+from .deps import get_context
 
 router = APIRouter(prefix="/config", tags=["config"])
 logger = logging.getLogger(__name__)
@@ -63,13 +66,14 @@ async def get_config():
 @router.patch(
     "/update", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
-async def update_config(config: Config):
+async def update_config(config: Config, ctx: AppContext = Depends(get_context)):
     """Persist and reload configuration from the supplied payload."""
     try:
         config_dict = _restore_masked(config.dict(), settings.dict())
         settings.save(config_dict=config_dict)
-        settings.load()
-        # update_rss()
+        # reload_settings reloads from disk, resets the shared HTTP client,
+        # rebuilds notifications, and re-applies the RSS/rename loops.
+        await ctx.reload_settings()
         logger.info("Config updated")
         return JSONResponse(
             status_code=200,

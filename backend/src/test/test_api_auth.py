@@ -1,6 +1,5 @@
 """Tests for Auth API endpoints."""
 
-from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -9,12 +8,20 @@ from fastapi.testclient import TestClient
 
 from module.api import v1
 from module.models import ResponseModel
-from module.security.api import active_user, get_current_user
+from module.security.api import SessionStore, active_user, get_current_user
 from module.security.jwt import create_access_token
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
+
+def _store(*usernames: str) -> SessionStore:
+    """Build a SessionStore pre-populated with the given active usernames."""
+    store = SessionStore()
+    for username in usernames:
+        store.add(username)
+    return store
 
 
 @pytest.fixture
@@ -118,7 +125,7 @@ class TestRefreshToken:
         """GET /auth/refresh_token returns new token."""
         token = create_access_token(data={"sub": "testuser"})
         authed_client.cookies.set("token", token)
-        with patch("module.api.auth.active_user", {"testuser": datetime.now()}):
+        with patch("module.api.auth.active_user", _store("testuser")):
             response = authed_client.get("/api/v1/auth/refresh_token")
 
         assert response.status_code == 200
@@ -137,7 +144,7 @@ class TestLogout:
         """GET /auth/logout clears session and returns success."""
         token = create_access_token(data={"sub": "testuser"})
         authed_client.cookies.set("token", token)
-        with patch("module.api.auth.active_user", {"testuser": datetime.now()}):
+        with patch("module.api.auth.active_user", _store("testuser")):
             response = authed_client.get("/api/v1/auth/logout")
 
         assert response.status_code == 200
@@ -155,7 +162,7 @@ class TestUpdateCredentials:
         """POST /auth/update with valid data updates credentials."""
         token = create_access_token(data={"sub": "testuser"})
         authed_client.cookies.set("token", token)
-        with patch("module.api.auth.active_user", {"testuser": datetime.now()}):
+        with patch("module.api.auth.active_user", _store("testuser")):
             with patch("module.api.auth.update_user_info", return_value=True):
                 response = authed_client.post(
                     "/api/v1/auth/update",
@@ -171,7 +178,7 @@ class TestUpdateCredentials:
         """POST /auth/update with invalid old password fails."""
         token = create_access_token(data={"sub": "testuser"})
         authed_client.cookies.set("token", token)
-        with patch("module.api.auth.active_user", {"testuser": datetime.now()}):
+        with patch("module.api.auth.active_user", _store("testuser")):
             with patch("module.api.auth.update_user_info", return_value=False):
                 # When update_user_info returns False, the endpoint implicitly
                 # returns None which causes an error
@@ -204,7 +211,7 @@ class TestRefreshTokenCookieBehavior:
         """GET /refresh_token updates the active user timestamp."""
         token = create_access_token(data={"sub": "testuser"})
         authed_client.cookies.set("token", token)
-        active_users: dict = {}
+        active_users = SessionStore()
         with patch("module.api.auth.active_user", active_users):
             response = authed_client.get("/api/v1/auth/refresh_token")
         assert response.status_code == 200
@@ -214,7 +221,7 @@ class TestRefreshTokenCookieBehavior:
         """GET /refresh_token issues a valid JWT with bearer type."""
         token = create_access_token(data={"sub": "testuser"})
         authed_client.cookies.set("token", token)
-        with patch("module.api.auth.active_user", {}):
+        with patch("module.api.auth.active_user", SessionStore()):
             response = authed_client.get("/api/v1/auth/refresh_token")
         assert response.status_code == 200
         data = response.json()
@@ -233,10 +240,7 @@ class TestLogoutCookieBehavior:
         """GET /logout removes the current user from active_user, not others."""
         token = create_access_token(data={"sub": "testuser"})
         authed_client.cookies.set("token", token)
-        active_users = {
-            "testuser": datetime.now(),
-            "otheruser": datetime.now(),
-        }
+        active_users = _store("testuser", "otheruser")
         with patch("module.api.auth.active_user", active_users):
             response = authed_client.get("/api/v1/auth/logout")
         assert response.status_code == 200
@@ -246,7 +250,7 @@ class TestLogoutCookieBehavior:
     def test_logout_with_no_cookie_still_succeeds(self, authed_client):
         """GET /logout with no cookie clears nothing but returns success."""
         with patch("module.api.auth.decode_token", return_value=None):
-            with patch("module.api.auth.active_user", {}):
+            with patch("module.api.auth.active_user", SessionStore()):
                 response = authed_client.get("/api/v1/auth/logout")
         assert response.status_code == 200
 
@@ -270,7 +274,7 @@ class TestUpdateCookieBehavior:
         """POST /auth/update resolves username from cookie and issues new token."""
         token = create_access_token(data={"sub": "testuser"})
         authed_client.cookies.set("token", token)
-        with patch("module.api.auth.active_user", {"testuser": datetime.now()}):
+        with patch("module.api.auth.active_user", _store("testuser")):
             with patch("module.api.auth.update_user_info", return_value=True):
                 response = authed_client.post(
                     "/api/v1/auth/update",

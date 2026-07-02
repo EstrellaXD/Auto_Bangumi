@@ -201,15 +201,13 @@ class TestGetCurrentUser:
     @patch("module.security.api.DEV_AUTH_BYPASS", False)
     async def test_valid_token_active_user_succeeds(self):
         """get_current_user returns username for valid token + active user."""
-        from datetime import datetime
-
         from module.security.api import active_user, get_current_user
 
         token = create_access_token(
             data={"sub": "active_user"}, expires_delta=timedelta(hours=1)
         )
         active_user.clear()
-        active_user["active_user"] = datetime.now()
+        active_user.add("active_user")
 
         result = await get_current_user(request=self._mock_request(), token=token)
         assert result == "active_user"

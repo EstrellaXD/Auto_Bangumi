@@ -11,6 +11,8 @@ from module.models import Bangumi, BangumiUpdate, RSSItem
 from module.rss import RSSAnalyser, RSSEngine
 from module.searcher import SearchTorrent
 
+from .runtime import get_context
+
 logger = logging.getLogger(__name__)
 
 TOOLS = [
@@ -327,12 +329,11 @@ def _list_rss_feeds() -> list[dict]:
 
 
 def _get_program_status() -> dict:
-    from module.api.program import program
-
+    ctx = get_context()
     return {
         "version": VERSION,
-        "running": program.is_running,
-        "first_run": program.first_run,
+        "running": ctx.is_running if ctx is not None else False,
+        "first_run": ctx.first_run if ctx is not None else True,
     }
 
 

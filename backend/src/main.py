@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -11,8 +12,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from module.api import v1
-from module.api.program import program
 from module.conf import VERSION, settings, setup_logger
+from module.core import AppContext
 from module.mcp import create_mcp_app
 
 setup_logger(reset=True)
@@ -32,19 +33,34 @@ uvicorn_logging_config = {
 }
 
 
+def _supervise_start_tasks(task: asyncio.Task) -> None:
+    """Log-and-surface any exception from the background start task."""
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if exc is not None:
+        logger.error("[Core] Background start task failed", exc_info=exc)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    import asyncio
-
-    # Startup
-    asyncio.create_task(program.startup())
+    ctx: AppContext = app.state.ctx
+    # Run migrations before serving; failure here aborts boot loudly.
+    await ctx.startup()
+    # First run just created the DB — do not auto-start loops (matches the old
+    # Program.startup early return); the user starts them after setup.
+    if not ctx.first_run_boot:
+        start_task = asyncio.create_task(ctx.start_tasks())
+        start_task.add_done_callback(_supervise_start_tasks)
     yield
     # Shutdown
-    await program.stop()
+    await ctx.stop()
 
 
 def create_app() -> FastAPI:
+    ctx = AppContext.build(settings)
     app = FastAPI(lifespan=lifespan)
+    app.state.ctx = ctx
 
     app.add_middleware(
         CORSMiddleware,
@@ -58,7 +74,7 @@ def create_app() -> FastAPI:
     app.include_router(v1, prefix="/api")
 
     # mount MCP server (SSE transport for LLM tool integration)
-    app.mount("/mcp", create_mcp_app())
+    app.mount("/mcp", create_mcp_app(ctx))
 
     return app
 

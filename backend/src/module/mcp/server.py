@@ -19,6 +19,7 @@ from starlette.responses import Response
 from starlette.routing import Mount, Route
 
 from .resources import RESOURCE_TEMPLATES, RESOURCES, handle_resource
+from .runtime import set_context
 from .security import McpAccessMiddleware
 from .tools import TOOLS, handle_tool
 
@@ -68,16 +69,18 @@ async def handle_sse(request: Request):
     return Response()
 
 
-def create_mcp_starlette_app() -> Starlette:
+def create_mcp_starlette_app(ctx=None) -> Starlette:
     """Build and return the MCP Starlette sub-application.
 
     Routes:
     - ``GET /sse`` - SSE stream for MCP clients
     - ``POST /messages/`` - client-to-server message posting
 
-    ``McpAccessMiddleware`` is applied to enforce configurable IP whitelist
-    and bearer token access control.
+    ``ctx`` is the application :class:`AppContext`; it is stored so status
+    tools/resources can report live program state. ``McpAccessMiddleware`` is
+    applied to enforce configurable IP whitelist and bearer token access control.
     """
+    set_context(ctx)
     app = Starlette(
         routes=[
             Route("/sse", endpoint=handle_sse),

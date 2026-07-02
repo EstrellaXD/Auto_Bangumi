@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, status
 from fastapi.responses import JSONResponse, Response
@@ -53,7 +53,7 @@ async def refresh(response: Response, token: str = Cookie(None)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized"
         )
-    active_user[username] = datetime.now()
+    active_user.add(username)
     return _issue_token(username, response)
 
 
@@ -65,7 +65,7 @@ async def logout(response: Response, token: str = Cookie(None)):
     payload = decode_token(token)
     username = payload.get("sub") if payload else None
     if username:
-        active_user.pop(username, None)
+        active_user.remove(username)
     response.delete_cookie(key="token")
     return JSONResponse(
         status_code=200,

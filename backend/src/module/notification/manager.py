@@ -22,6 +22,15 @@ class NotificationManager:
         self.providers: list["NotificationProvider"] = []
         self._load_providers()
 
+    def rebuild(self):
+        """Reload providers from current settings, mutating in place.
+
+        Called on config reload so the shared instance (captured by the rename
+        loop) picks up provider changes without being re-wired.
+        """
+        self.providers = []
+        self._load_providers()
+
     def _load_providers(self):
         """Initialize providers from configuration."""
         from module.notification.providers import PROVIDER_REGISTRY

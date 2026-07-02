@@ -7,7 +7,7 @@ Usage::
 
     from module.mcp import create_mcp_app
 
-    app = create_mcp_app()  # returns a Starlette ASGI app, mount at /mcp
+    app = create_mcp_app(ctx)  # returns a Starlette ASGI app, mount at /mcp
 """
 
 from .server import create_mcp_starlette_app as create_mcp_app

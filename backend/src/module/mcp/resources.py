@@ -16,6 +16,7 @@ from module.manager import TorrentManager
 from module.models import Bangumi
 from module.rss import RSSEngine
 
+from .runtime import get_context
 from .tools import _bangumi_to_dict
 
 logger = logging.getLogger(__name__)
@@ -67,13 +68,12 @@ def handle_resource(uri: str) -> str:
         return json.dumps([_bangumi_to_dict(b) for b in items], ensure_ascii=False)
 
     elif uri == "autobangumi://status":
-        from module.api.program import program
-
+        ctx = get_context()
         return json.dumps(
             {
                 "version": VERSION,
-                "running": program.is_running,
-                "first_run": program.first_run,
+                "running": ctx.is_running if ctx is not None else False,
+                "first_run": ctx.first_run if ctx is not None else True,
             }
         )
 

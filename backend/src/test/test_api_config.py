@@ -1,13 +1,14 @@
 """Tests for Config API endpoints and config sanitization."""
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, AsyncMock, MagicMock
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from module.api import v1
 from module.api.config import _sanitize_dict, _restore_masked
+from module.api.deps import get_context
 from module.models.config import Config
 from module.security.api import get_current_user
 
@@ -26,13 +27,22 @@ def app():
 
 
 @pytest.fixture
-def authed_client(app):
-    """TestClient with auth dependency overridden."""
+def mock_ctx():
+    """Mock AppContext whose reload_settings is an awaitable no-op."""
+    ctx = MagicMock()
+    ctx.reload_settings = AsyncMock()
+    return ctx
+
+
+@pytest.fixture
+def authed_client(app, mock_ctx):
+    """TestClient with auth and context dependencies overridden."""
 
     async def mock_user():
         return "testuser"
 
     app.dependency_overrides[get_current_user] = mock_user
+    app.dependency_overrides[get_context] = lambda: mock_ctx
     client = TestClient(app)
     yield client
     app.dependency_overrides.clear()
@@ -128,7 +138,7 @@ class TestGetConfig:
 
 
 class TestUpdateConfig:
-    def test_update_config_success(self, authed_client, mock_settings):
+    def test_update_config_success(self, authed_client, mock_settings, mock_ctx):
         """PATCH /config/update updates configuration successfully."""
         update_data = {
             "program": {
@@ -188,7 +198,9 @@ class TestUpdateConfig:
         data = response.json()
         assert data["msg_en"] == "Update config successfully."
         mock_settings.save.assert_called_once()
-        mock_settings.load.assert_called_once()
+        # settings.load() now runs inside ctx.reload_settings(), which the route
+        # awaits after saving.
+        mock_ctx.reload_settings.assert_awaited_once()
 
     def test_update_config_failure(self, authed_client, mock_settings):
         """PATCH /config/update handles save failure."""

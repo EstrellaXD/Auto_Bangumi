@@ -1,4 +1,5 @@
-from datetime import datetime
+import secrets
+from datetime import datetime, timedelta
 
 from fastapi import Cookie, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
@@ -12,7 +13,48 @@ from .jwt import verify_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
-active_user: dict[str, datetime] = {}
+# Session lifetime mirrors the JWT expiry used at issuance (see auth.py /
+# passkey.py, both timedelta(days=1)); the store is a secondary guard so a
+# session cannot outlive its token.
+SESSION_LIFETIME = timedelta(days=1)
+
+
+class SessionStore:
+    """In-memory registry of active usernames with lazy expiry.
+
+    A username counts as present only while its recorded session is younger than
+    ``lifetime``. Expired entries are evicted lazily on access. Replaces the bare
+    module-global ``dict`` that never expired entries.
+    """
+
+    def __init__(self, lifetime: timedelta = SESSION_LIFETIME) -> None:
+        self._lifetime = lifetime
+        self._sessions: dict[str, datetime] = {}
+
+    def add(self, username: str) -> None:
+        self._sessions[username] = datetime.now()
+
+    def remove(self, username: str) -> None:
+        self._sessions.pop(username, None)
+
+    def clear(self) -> None:
+        """Invalidate every session (logout-all)."""
+        self._sessions.clear()
+
+    def __contains__(self, username: str) -> bool:
+        issued = self._sessions.get(username)
+        if issued is None:
+            return False
+        if datetime.now() - issued >= self._lifetime:
+            self._sessions.pop(username, None)
+            return False
+        return True
+
+    def __len__(self) -> int:
+        return len(self._sessions)
+
+
+active_user = SessionStore()
 
 try:
     from module.__version__ import VERSION
@@ -52,7 +94,9 @@ async def get_current_user(request: Request, token: str = Cookie(None)):
     auth_header = request.headers.get("authorization", "")
     if auth_header.startswith("Bearer "):
         api_token = auth_header[7:]
-        if api_token and api_token in settings.security.login_tokens:
+        if api_token and any(
+            secrets.compare_digest(api_token, t) for t in settings.security.login_tokens
+        ):
             return "api_token_user"
     if not token:
         raise UNAUTHORIZED
@@ -88,7 +132,7 @@ def auth_user(user: User):
     with Database() as db:
         resp = db.user.auth_user(user)
         if resp.status:
-            active_user[user.username] = datetime.now()
+            active_user.add(user.username)
         return resp
 
 

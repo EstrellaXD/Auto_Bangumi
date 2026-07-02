@@ -4,7 +4,7 @@ Passkey 管理 API
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
@@ -234,7 +234,7 @@ async def login_with_passkey(
             data={"sub": username}, expires_delta=timedelta(days=1)
         )
         response.set_cookie(key="token", value=token, httponly=True, max_age=86400)
-        active_user[username] = datetime.now()
+        active_user.add(username)
         return {"access_token": token, "token_type": "bearer"}
 
     raise HTTPException(status_code=resp.status_code, detail=resp.msg_en)
