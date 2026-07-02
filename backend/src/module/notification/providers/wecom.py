@@ -16,7 +16,7 @@ class WecomProvider(NotificationProvider):
     """WeChat Work (企业微信) notification provider using news message format."""
 
     def __init__(self, config: "ProviderConfig"):
-        super().__init__()
+        super().__init__(config)
         # Support both webhook_url and legacy chat_id field
         self.notification_url = config.webhook_url or config.chat_id
         self.token = config.token
@@ -56,3 +56,9 @@ class WecomProvider(NotificationProvider):
                 return False, f"WeChat Work API returned status {resp.status_code}"
         except Exception as e:
             return False, f"WeChat Work test failed: {e}"
+
+    async def _deliver_text(self, title: str, body: str) -> bool:
+        """Deliver a system event via WeChat Work."""
+        data = {"key": self.token, "type": "news", "title": title, "msg": body}
+        resp = await self.post_data(self.notification_url, data)
+        return resp.status_code == 200

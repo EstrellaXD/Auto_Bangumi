@@ -18,7 +18,7 @@ from .offset_scanner import OffsetScanner
 logger = logging.getLogger(__name__)
 
 
-async def rss_tick(analyser: RSSAnalyser) -> None:
+async def rss_tick(analyser: RSSAnalyser, notifier: NotificationManager) -> None:
     """Analyse aggregate RSS feeds and refresh the RSS engine once."""
     async with DownloadClient() as client:
         async with Database() as db:
@@ -44,7 +44,10 @@ async def rss_tick(analyser: RSSAnalyser) -> None:
                             exc_info=True,
                         )
             # Run RSS Engine
-            await engine.refresh_rss(client)
+            events = await engine.refresh_rss(client)
+    if settings.notification.enable:
+        for event in events:
+            await notifier.send_event(event)
     if settings.bangumi_manage.eps_complete:
         await eps_complete()
 
@@ -59,11 +62,14 @@ async def rename_tick(notifier: NotificationManager) -> None:
             await notifier.send_all(info)
 
 
-async def offset_scan_tick() -> None:
+async def offset_scan_tick(notifier: NotificationManager) -> None:
     """Scan all bangumi for season/episode offset mismatches."""
     scanner = OffsetScanner()
-    flagged = await scanner.scan_all()
-    logger.info("[OffsetScanThread] Scan complete, flagged %s bangumi", flagged)
+    events = await scanner.scan_all()
+    logger.info("[OffsetScanThread] Scan complete, flagged %s bangumi", len(events))
+    if settings.notification.enable:
+        for event in events:
+            await notifier.send_event(event)
 
 
 async def calendar_tick() -> None:

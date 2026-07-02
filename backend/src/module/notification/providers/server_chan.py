@@ -16,7 +16,7 @@ class ServerChanProvider(NotificationProvider):
     """Server Chan (Server酱) notification provider for WeChat."""
 
     def __init__(self, config: "ProviderConfig"):
-        super().__init__()
+        super().__init__(config)
         token = config.token
         self.notification_url = f"https://sctapi.ftqq.com/{token}.send"
 
@@ -46,3 +46,9 @@ class ServerChanProvider(NotificationProvider):
                 return False, f"Server Chan API returned status {resp.status_code}"
         except Exception as e:
             return False, f"Server Chan test failed: {e}"
+
+    async def _deliver_text(self, title: str, body: str) -> bool:
+        """Deliver a system event via Server Chan."""
+        data = {"title": title, "desp": body}
+        resp = await self.post_data(self.notification_url, data)
+        return resp.status_code == 200

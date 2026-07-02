@@ -11,6 +11,11 @@ from module.database.bangumi import match_bangumi_in_list
 from module.downloader import DownloadClient
 from module.models import Bangumi, ResponseModel, RSSItem, Torrent
 from module.network import RequestContent
+from module.notification.events import (
+    DownloadFailureEvent,
+    RssFailureEvent,
+    SystemEvent,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -147,7 +152,9 @@ class RSSEngine:
                 return matched
         return None
 
-    async def refresh_rss(self, client: DownloadClient, rss_id: Optional[int] = None):
+    async def refresh_rss(
+        self, client: DownloadClient, rss_id: Optional[int] = None
+    ) -> list[SystemEvent]:
         # Get All RSS Items
         if not rss_id:
             rss_items: list[RSSItem] = await self.db.rss.search_active()
@@ -185,24 +192,46 @@ class RSSEngine:
         # torrent against it in memory (this is the job the old module-level
         # TTL cache existed to do).
         bangumi_list = await self.db.bangumi.search_all()
+        events: list[SystemEvent] = []
         # Process results sequentially (DB operations)
         for rss_item, (new_torrents, error) in item_results:
-            # Update connection status
+            # Update connection status. Only notify on the working->error
+            # transition (previous_status read before it's overwritten below),
+            # not on every tick a feed stays broken.
+            previous_status = rss_item.connection_status
             rss_item.connection_status = "error" if error else "healthy"
             rss_item.last_checked_at = now
             rss_item.last_error = error
             self.db.add(rss_item)
+            if error and previous_status != "error":
+                events.append(
+                    RssFailureEvent(
+                        rss_name=rss_item.name or rss_item.url,
+                        rss_url=rss_item.url,
+                        error=error,
+                    )
+                )
             for torrent in new_torrents:
                 matched_data = self.match_torrent(torrent, bangumi_list)
                 if matched_data:
                     if await client.add_torrent(torrent, matched_data):
                         logger.debug("[Engine] Add torrent %s to client", torrent.name)
                         torrent.downloaded = True
-                    # else: leave downloaded=False so a transient add failure
-                    # (e.g. downloader unreachable) gets retried next tick.
+                    else:
+                        # add_torrent() already retried the underlying fetch
+                        # internally (RequestURL.get_url, retry=3); leave
+                        # downloaded=False so a future tick can retry, and
+                        # surface the failure now.
+                        events.append(
+                            DownloadFailureEvent(
+                                official_title=matched_data.official_title,
+                                torrent_name=torrent.name,
+                            )
+                        )
             # Add all torrents to database
             await self.db.torrent.add_all(new_torrents)
         await self.db.commit()
+        return events
 
     async def download_bangumi(self, bangumi: Bangumi):
         async with RequestContent() as req:

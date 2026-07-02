@@ -8,6 +8,7 @@ import pytest_asyncio
 
 from module.database import Database
 from module.models import Torrent
+from module.notification.events import DownloadFailureEvent, RssFailureEvent
 from module.rss.engine import RSSEngine
 from test.factories import make_bangumi, make_rss_item, make_torrent
 
@@ -270,6 +271,116 @@ class TestRefreshRss:
             await rss_engine.refresh_rss(client, rss_id=999)
 
         mock_get.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# refresh_rss notification events (RSS failure transition, download failure)
+# ---------------------------------------------------------------------------
+
+
+class TestRefreshRssEvents:
+    async def test_healthy_to_error_transition_returns_rss_failure_event(
+        self, rss_engine
+    ):
+        """A feed going from healthy to error is reported exactly once."""
+        rss_item = make_rss_item(
+            name="Feed 1", url="https://feed1.example/rss", enabled=True
+        )
+        await rss_engine.db.rss.add(rss_item)
+
+        with patch.object(
+            RSSEngine, "_pull_rss_with_status", new_callable=AsyncMock
+        ) as mock_pull:
+            mock_pull.return_value = ([], "connection refused")
+            client = AsyncMock()
+            events = await rss_engine.refresh_rss(client)
+
+        assert len(events) == 1
+        assert isinstance(events[0], RssFailureEvent)
+        assert events[0].rss_name == "Feed 1"
+        assert events[0].error == "connection refused"
+
+    async def test_error_stays_error_does_not_repeat_event(self, rss_engine):
+        """A feed already in 'error' does not re-fire on every subsequent tick."""
+        rss_item = make_rss_item(url="https://feed1.example/rss", enabled=True)
+        await rss_engine.db.rss.add(rss_item)
+
+        with patch.object(
+            RSSEngine, "_pull_rss_with_status", new_callable=AsyncMock
+        ) as mock_pull:
+            mock_pull.return_value = ([], "connection refused")
+            client = AsyncMock()
+            first_events = await rss_engine.refresh_rss(client)
+            second_events = await rss_engine.refresh_rss(client)
+
+        assert len(first_events) == 1
+        assert second_events == []
+
+    async def test_no_error_returns_no_rss_failure_event(self, rss_engine):
+        """A healthy feed produces no failure event."""
+        rss_item = make_rss_item(url="https://feed1.example/rss", enabled=True)
+        await rss_engine.db.rss.add(rss_item)
+
+        with patch.object(
+            RSSEngine, "_pull_rss_with_status", new_callable=AsyncMock
+        ) as mock_pull:
+            mock_pull.return_value = ([], None)
+            client = AsyncMock()
+            events = await rss_engine.refresh_rss(client)
+
+        assert events == []
+
+    async def test_add_torrent_failure_returns_download_failure_event(self, rss_engine):
+        """A matched torrent that fails to add is reported as a download failure."""
+        rss_item = make_rss_item(enabled=True)
+        await rss_engine.db.rss.add(rss_item)
+        bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="")
+        await rss_engine.db.bangumi.add(bangumi)
+
+        new_torrent = Torrent(
+            name="[Sub] Mushoku Tensei - 12 [1080p].mkv",
+            url="https://example.com/ep12.torrent",
+        )
+        with patch.object(
+            RSSEngine, "_get_torrents", new_callable=AsyncMock
+        ) as mock_get:
+            mock_get.return_value = [new_torrent]
+            client = AsyncMock()
+            client.add_torrent = AsyncMock(return_value=False)
+
+            events = await rss_engine.refresh_rss(client)
+
+        assert len(events) == 1
+        assert isinstance(events[0], DownloadFailureEvent)
+        assert events[0].official_title == bangumi.official_title
+        assert events[0].torrent_name == new_torrent.name
+
+        all_torrents = await rss_engine.db.torrent.search_all()
+        assert all_torrents[0].downloaded is False
+
+    async def test_add_torrent_success_returns_no_download_failure_event(
+        self, rss_engine, mock_qb_client
+    ):
+        """A torrent that adds successfully produces no failure event."""
+        rss_item = make_rss_item(enabled=True)
+        await rss_engine.db.rss.add(rss_item)
+        bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="")
+        await rss_engine.db.bangumi.add(bangumi)
+
+        new_torrent = Torrent(
+            name="[Sub] Mushoku Tensei - 12 [1080p].mkv",
+            url="https://example.com/ep12.torrent",
+        )
+        with patch.object(
+            RSSEngine, "_get_torrents", new_callable=AsyncMock
+        ) as mock_get:
+            mock_get.return_value = [new_torrent]
+            client = AsyncMock()
+            client.add_torrent = AsyncMock(return_value=True)
+
+            events = await rss_engine.refresh_rss(client)
+
+        assert events == []
 
 
 # ---------------------------------------------------------------------------

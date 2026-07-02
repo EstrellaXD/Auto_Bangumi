@@ -16,7 +16,7 @@ class GotifyProvider(NotificationProvider):
     """Gotify notification provider."""
 
     def __init__(self, config: "ProviderConfig"):
-        super().__init__()
+        super().__init__(config)
         server_url = config.server_url.rstrip("/")
         self.token = config.token
         self.notification_url = f"{server_url}/message?token={self.token}"
@@ -62,3 +62,9 @@ class GotifyProvider(NotificationProvider):
                 return False, f"Gotify API returned status {resp.status_code}"
         except Exception as e:
             return False, f"Gotify test failed: {e}"
+
+    async def _deliver_text(self, title: str, body: str) -> bool:
+        """Deliver a system event via Gotify."""
+        data = {"title": title, "message": body, "priority": 5}
+        resp = await self._post_json(self.notification_url, data)
+        return resp.status_code == 200

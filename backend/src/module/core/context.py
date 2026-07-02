@@ -104,7 +104,7 @@ class AppContext:
             [
                 PeriodicTask(
                     name="rss",
-                    run=lambda: rss_tick(analyser),
+                    run=lambda: rss_tick(analyser, notifier),
                     interval=lambda: settings_obj.program.rss_time,
                     enabled=Checker.check_analyser,
                 ),
@@ -116,7 +116,7 @@ class AppContext:
                 ),
                 PeriodicTask(
                     name="offset_scan",
-                    run=offset_scan_tick,
+                    run=lambda: offset_scan_tick(notifier),
                     interval=lambda: OFFSET_SCAN_INTERVAL,
                     initial_delay=OFFSET_SCAN_INITIAL_DELAY,
                 ),

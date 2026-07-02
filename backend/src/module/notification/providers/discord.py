@@ -16,17 +16,24 @@ class DiscordProvider(NotificationProvider):
     """Discord webhook notification provider."""
 
     def __init__(self, config: "ProviderConfig"):
-        super().__init__()
+        super().__init__(config)
         self.webhook_url = config.webhook_url
 
     async def send(self, notification: Notification) -> bool:
         """Send notification via Discord webhook."""
-        embed = {
-            "title": f"📺 {notification.official_title}",
-            "description": (
+        # A configured template overrides the description only; the default
+        # (no template) description is kept byte-for-byte for existing configs.
+        description = (
+            self._format_message(notification)
+            if self.template
+            else (
                 f"**季度:** 第{notification.season}季\n"
                 f"**集数:** 第{notification.episode}集"
-            ),
+            )
+        )
+        embed = {
+            "title": f"📺 {notification.official_title}",
+            "description": description,
             "color": 0x00BFFF,  # Deep Sky Blue
         }
 
@@ -60,3 +67,9 @@ class DiscordProvider(NotificationProvider):
                 return False, f"Discord API returned status {resp.status_code}"
         except Exception as e:
             return False, f"Discord test failed: {e}"
+
+    async def _deliver_text(self, title: str, body: str) -> bool:
+        """Deliver a system event via Discord webhook."""
+        embed = {"title": title, "description": body, "color": 0xFFA500}  # Orange
+        resp = await self._post_json(self.webhook_url, {"embeds": [embed]})
+        return resp.status_code in (200, 204)
