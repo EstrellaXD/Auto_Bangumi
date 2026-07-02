@@ -297,3 +297,79 @@ class TestSentinelPath:
     def test_sentinel_path_is_in_config_dir(self):
         assert str(SENTINEL_PATH) == "config/.setup_complete"
         assert SENTINEL_PATH.parent == Path("config")
+
+
+class TestTestDownloaderHardening:
+    """qB 5.2 login compat (#1044) and SSRF hardening (#1041)."""
+
+    @staticmethod
+    def _mock_client(get_resp=None, login_resp=None, get_exc=None):
+        mock_instance = AsyncMock()
+        if get_exc is not None:
+            mock_instance.get.side_effect = get_exc
+        else:
+            mock_instance.get.return_value = get_resp
+        mock_instance.post.return_value = login_resp
+        cls_patch = patch("module.api.setup.httpx.AsyncClient")
+        mock_cls = cls_patch.start()
+        mock_cls.return_value.__aenter__ = AsyncMock(return_value=mock_instance)
+        mock_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+        return cls_patch
+
+    def _post(self, client, host="192.168.1.100:8080"):
+        return client.post(
+            "/api/v1/setup/test-downloader",
+            json={
+                "type": "qbittorrent",
+                "host": host,
+                "username": "admin",
+                "password": "admin",
+                "ssl": False,
+            },
+        )
+
+    def test_login_accepts_204_empty_body(self, client, mock_first_run):
+        """qBittorrent >= 5.2 returns 204 + empty body on successful login."""
+        from unittest.mock import MagicMock
+
+        get_resp = MagicMock(text="qBittorrent WebUI")
+        login_resp = MagicMock(status_code=204, text="")
+        cls_patch = self._mock_client(get_resp=get_resp, login_resp=login_resp)
+        try:
+            response = self._post(client)
+        finally:
+            cls_patch.stop()
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+
+    def test_login_rejects_200_fails_body(self, client, mock_first_run):
+        """200 + 'Fails.' (bad credentials) is still a failure."""
+        from unittest.mock import MagicMock
+
+        get_resp = MagicMock(text="qBittorrent WebUI")
+        login_resp = MagicMock(status_code=200, text="Fails.")
+        cls_patch = self._mock_client(get_resp=get_resp, login_resp=login_resp)
+        try:
+            response = self._post(client)
+        finally:
+            cls_patch.stop()
+        assert response.status_code == 200
+        assert response.json()["success"] is False
+
+    def test_non_http_scheme_rejected(self, client, mock_first_run):
+        """Non-http(s) schemes must be rejected before any request is made."""
+        response = self._post(client, host="ftp://internal-server:21")
+        assert response.status_code == 400
+
+    def test_exception_detail_not_echoed(self, client, mock_first_run):
+        """Raw exception text must not leak into the API response (#1041)."""
+        cls_patch = self._mock_client(get_exc=Exception("secret-detail-xyz"))
+        try:
+            response = self._post(client)
+        finally:
+            cls_patch.stop()
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is False
+        assert "secret-detail-xyz" not in data["message_en"]
+        assert "secret-detail-xyz" not in data["message_zh"]

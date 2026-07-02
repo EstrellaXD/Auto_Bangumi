@@ -31,14 +31,19 @@ def _require_setup_needed():
         raise HTTPException(status_code=403, detail="Setup already completed.")
 
 
-def _validate_url(url: str) -> None:
-    """Reject non-HTTP schemes and private/reserved/loopback IPs."""
+def _validate_scheme(url: str) -> None:
+    """Reject non-HTTP schemes and URLs without a hostname."""
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https"):
         raise HTTPException(status_code=400, detail="Only http/https URLs are allowed.")
-    hostname = parsed.hostname
-    if not hostname:
+    if not parsed.hostname:
         raise HTTPException(status_code=400, detail="Invalid URL: no hostname.")
+
+
+def _validate_url(url: str) -> None:
+    """Reject non-HTTP schemes and private/reserved/loopback IPs."""
+    _validate_scheme(url)
+    hostname = urlparse(url).hostname
     try:
         addrs = socket.getaddrinfo(hostname, None)
     except socket.gaierror:
@@ -132,6 +137,9 @@ async def test_downloader(req: TestDownloaderRequest):
 
     scheme = "https" if req.ssl else "http"
     host = req.host if "://" in req.host else f"{scheme}://{req.host}"
+    # Private/loopback IPs stay allowed (a LAN NAS is the normal case), but
+    # only http/https schemes may be probed from this pre-auth endpoint (#1041).
+    _validate_scheme(host)
 
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
@@ -153,7 +161,12 @@ async def test_downloader(req: TestDownloaderRequest):
                 login_url,
                 data={"username": req.username, "password": req.password},
             )
-            if login_resp.status_code == 200 and "ok" in login_resp.text.lower():
+            # qBittorrent < 5.2 answers 200 + "Ok."; >= 5.2 answers 204 with
+            # an empty body on success (#1044).
+            if (
+                login_resp.status_code in (200, 204)
+                and "fails" not in login_resp.text.lower()
+            ):
                 return TestResultResponse(
                     success=True,
                     message_en="Connection successful.",
@@ -184,11 +197,13 @@ async def test_downloader(req: TestDownloaderRequest):
             message_zh="无法连接到主机。",
         )
     except Exception as e:
+        # Log the detail server-side only — this endpoint is reachable before
+        # authentication, so raw errors must not be echoed back (#1041).
         logger.error(f"[Setup] Downloader test failed: {e}")
         return TestResultResponse(
             success=False,
-            message_en=f"Connection failed: {e}",
-            message_zh=f"连接失败：{e}",
+            message_en="Connection failed.",
+            message_zh="连接失败。",
         )
 
 
@@ -221,8 +236,8 @@ async def test_rss(req: TestRSSRequest):
         logger.error(f"[Setup] RSS test failed: {e}")
         return TestResultResponse(
             success=False,
-            message_en=f"Failed to fetch RSS feed: {e}",
-            message_zh=f"获取 RSS 源失败：{e}",
+            message_en="Failed to fetch RSS feed.",
+            message_zh="获取 RSS 源失败。",
         )
 
 
@@ -266,8 +281,8 @@ async def test_notification(req: TestNotificationRequest):
         logger.error(f"[Setup] Notification test failed: {e}")
         return TestResultResponse(
             success=False,
-            message_en=f"Notification test failed: {e}",
-            message_zh=f"通知测试失败：{e}",
+            message_en="Notification test failed.",
+            message_zh="通知测试失败。",
         )
 
 
@@ -338,6 +353,6 @@ async def complete_setup(req: SetupCompleteRequest):
         return ResponseModel(
             status=False,
             status_code=500,
-            msg_en=f"Setup failed: {e}",
-            msg_zh=f"设置失败：{e}",
+            msg_en="Setup failed. Check the server log for details.",
+            msg_zh="设置失败，请查看服务器日志。",
         )
