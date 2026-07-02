@@ -8,6 +8,7 @@ export default defineConfig({
     vue(),
     AutoImport({
       imports: ['vue', 'vitest', 'pinia'],
+      dirs: ['src/api', 'src/store', 'src/hooks', 'src/utils'],
       dts: false,
     }),
   ],

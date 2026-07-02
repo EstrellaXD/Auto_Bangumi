@@ -256,6 +256,8 @@
     "enable": "启用",
     "error": "错误",
     "name": "名称",
+    "refresh": "刷新",
+    "refresh_all": "全部刷新",
     "selectbox": "选择",
     "status": "状态",
     "title": "RSS 条目",

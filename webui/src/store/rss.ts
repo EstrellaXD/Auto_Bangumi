@@ -34,6 +34,21 @@ export const useRSSStore = defineStore('rss', () => {
   const deleteSelected = () => deleteRSS(selectedRSS.value);
   const enableSelected = () => enableRSS(selectedRSS.value);
 
+  // Refresh doesn't touch selectedRSS, so it gets its own onSuccess instead
+  // of reusing `opts`.
+  const refreshOpts = {
+    showMessage: true,
+    onSuccess() {
+      getAll();
+    },
+  };
+
+  const { execute: refreshRSS } = useApi(apiRSS.refresh, refreshOpts);
+  const { execute: refreshAllRSS, isLoading: isRefreshingAll } = useApi(
+    apiRSS.refreshAll,
+    refreshOpts
+  );
+
   return {
     rss,
     selectedRSS,
@@ -46,5 +61,8 @@ export const useRSSStore = defineStore('rss', () => {
     disableSelected,
     deleteSelected,
     enableSelected,
+    refreshRSS,
+    refreshAllRSS,
+    isRefreshingAll,
   };
 });

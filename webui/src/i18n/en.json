@@ -256,6 +256,8 @@
     "enable": "Enable",
     "error": "Error",
     "name": "Name",
+    "refresh": "Refresh",
+    "refresh_all": "Refresh All",
     "selectbox": "Select",
     "status": "Status",
     "title": "RSS Item",

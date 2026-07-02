@@ -3,11 +3,19 @@
  * Note: These tests focus on the filter/rss_link string<->array transformations
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
+  mockApiSuccess,
   mockBangumiAPI,
   mockBangumiRule,
 } from '@/test/mocks/api';
+import { createAxiosMock } from '@/test/mocks/axios';
+import type { DetectOffsetRequest } from '#/bangumi';
+
+import { apiBangumi } from '@/api/bangumi';
+import { axios } from '@/utils/axios';
+
+vi.mock('@/utils/axios', () => ({ axios: createAxiosMock() }));
 
 describe('Bangumi API Logic', () => {
   describe('getAll transformation (string to array)', () => {
@@ -108,53 +116,143 @@ describe('Bangumi API Logic', () => {
     });
   });
 
-  describe('deleteRule logic', () => {
-    it('should use single endpoint for single ID', () => {
-      const id = 1;
-      const isArray = Array.isArray(id);
-
-      expect(isArray).toBe(false);
-      // Single ID should use: `api/v1/bangumi/delete/${id}`
+  // Contract tests: call the real apiBangumi functions against a mocked
+  // axios instance so a drift between the wrapper and the FastAPI routes in
+  // backend/src/module/api/bangumi.py fails a test instead of going
+  // unnoticed.
+  describe('API contract (path + HTTP method)', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
     });
 
-    it('should use many endpoint for array of IDs', () => {
-      const ids = [1, 2, 3];
-      const isArray = Array.isArray(ids);
-
-      expect(isArray).toBe(true);
-      // Array should use: `api/v1/bangumi/delete/many`
-    });
-  });
-
-  describe('API endpoint paths', () => {
-    const BANGUMI_ENDPOINTS = {
-      getAll: 'api/v1/bangumi/get/all',
-      getOne: (id: number) => `api/v1/bangumi/get/${id}`,
-      update: (id: number) => `api/v1/bangumi/update/${id}`,
-      delete: (id: number) => `api/v1/bangumi/delete/${id}`,
-      deleteMany: 'api/v1/bangumi/delete/many',
-      disable: (id: number) => `api/v1/bangumi/disable/${id}`,
-      disableMany: 'api/v1/bangumi/disable/many',
-      enable: (id: number) => `api/v1/bangumi/enable/${id}`,
-      archive: (id: number) => `api/v1/bangumi/archive/${id}`,
-      unarchive: (id: number) => `api/v1/bangumi/unarchive/${id}`,
-      resetAll: 'api/v1/bangumi/reset/all',
-      detectOffset: 'api/v1/bangumi/detect-offset',
-      needsReview: 'api/v1/bangumi/needs-review',
-    };
-
-    it('should generate correct getOne endpoint', () => {
-      expect(BANGUMI_ENDPOINTS.getOne(42)).toBe('api/v1/bangumi/get/42');
+    it('should GET api/v1/bangumi/get/all when fetching all rules', async () => {
+      (axios.get as any).mockResolvedValue({ data: [mockBangumiAPI] });
+      await apiBangumi.getAll();
+      expect(axios.get).toHaveBeenCalledWith('api/v1/bangumi/get/all');
     });
 
-    it('should generate correct update endpoint', () => {
-      expect(BANGUMI_ENDPOINTS.update(42)).toBe('api/v1/bangumi/update/42');
+    it('should PATCH api/v1/bangumi/update/:id with the id omitted when updating a rule', async () => {
+      (axios.patch as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiBangumi.updateRule(1, mockBangumiRule);
+      expect(axios.patch).toHaveBeenCalledWith(
+        'api/v1/bangumi/update/1',
+        expect.not.objectContaining({ id: expect.anything() })
+      );
     });
 
-    it('should have correct static endpoints', () => {
-      expect(BANGUMI_ENDPOINTS.getAll).toBe('api/v1/bangumi/get/all');
-      expect(BANGUMI_ENDPOINTS.deleteMany).toBe('api/v1/bangumi/delete/many');
-      expect(BANGUMI_ENDPOINTS.needsReview).toBe('api/v1/bangumi/needs-review');
+    it('should DELETE api/v1/bangumi/delete/:id with the file param when deleting a single rule', async () => {
+      (axios.delete as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiBangumi.deleteRule(1, true);
+      expect(axios.delete).toHaveBeenCalledWith('api/v1/bangumi/delete/1', {
+        params: { file: true },
+      });
+    });
+
+    it('should POST api/v1/bangumi/delete/many with the id array when batch deleting', async () => {
+      (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiBangumi.deleteRule([1, 2, 3], false);
+      expect(axios.post).toHaveBeenCalledWith(
+        'api/v1/bangumi/delete/many',
+        [1, 2, 3],
+        { params: { file: false } }
+      );
+    });
+
+    it('should POST api/v1/bangumi/disable/:id with the file param when disabling a single rule', async () => {
+      (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiBangumi.disableRule(1, true);
+      expect(axios.post).toHaveBeenCalledWith(
+        'api/v1/bangumi/disable/1',
+        null,
+        { params: { file: true } }
+      );
+    });
+
+    it('should POST api/v1/bangumi/disable/many with the id array when batch disabling', async () => {
+      (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiBangumi.disableRule([1, 2], false);
+      expect(axios.post).toHaveBeenCalledWith(
+        'api/v1/bangumi/disable/many',
+        [1, 2],
+        { params: { file: false } }
+      );
+    });
+
+    it('should POST api/v1/bangumi/enable/:id when enabling a rule', async () => {
+      (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiBangumi.enableRule(1);
+      expect(axios.post).toHaveBeenCalledWith('api/v1/bangumi/enable/1');
+    });
+
+    it('should POST api/v1/bangumi/reset/all when resetting all rules', async () => {
+      (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiBangumi.resetAll();
+      expect(axios.post).toHaveBeenCalledWith('api/v1/bangumi/reset/all');
+    });
+
+    it('should GET api/v1/bangumi/refresh/poster/all when refreshing posters', async () => {
+      (axios.get as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiBangumi.refreshPoster();
+      expect(axios.get).toHaveBeenCalledWith('api/v1/bangumi/refresh/poster/all');
+    });
+
+    it('should GET api/v1/bangumi/refresh/calendar when refreshing the calendar', async () => {
+      (axios.get as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiBangumi.refreshCalendar();
+      expect(axios.get).toHaveBeenCalledWith('api/v1/bangumi/refresh/calendar');
+    });
+
+    it('should PATCH api/v1/bangumi/archive/:id when archiving a rule', async () => {
+      (axios.patch as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiBangumi.archiveRule(1);
+      expect(axios.patch).toHaveBeenCalledWith('api/v1/bangumi/archive/1');
+    });
+
+    it('should PATCH api/v1/bangumi/unarchive/:id when unarchiving a rule', async () => {
+      (axios.patch as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiBangumi.unarchiveRule(1);
+      expect(axios.patch).toHaveBeenCalledWith('api/v1/bangumi/unarchive/1');
+    });
+
+    it('should GET api/v1/bangumi/refresh/metadata when refreshing metadata', async () => {
+      (axios.get as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiBangumi.refreshMetadata();
+      expect(axios.get).toHaveBeenCalledWith('api/v1/bangumi/refresh/metadata');
+    });
+
+    it('should GET api/v1/bangumi/suggest-offset/:id when suggesting an offset', async () => {
+      (axios.get as any).mockResolvedValue({
+        data: { suggested_offset: 1, reason: 'test' },
+      });
+      await apiBangumi.suggestOffset(1);
+      expect(axios.get).toHaveBeenCalledWith('api/v1/bangumi/suggest-offset/1');
+    });
+
+    it('should POST api/v1/bangumi/detect-offset with the request body when detecting offset', async () => {
+      const request: DetectOffsetRequest = {
+        title: 'Test Anime',
+        parsed_season: 1,
+        parsed_episode: 1,
+      };
+      (axios.post as any).mockResolvedValue({
+        data: { has_mismatch: false, suggestion: null, tmdb_info: null },
+      });
+      await apiBangumi.detectOffset(request);
+      expect(axios.post).toHaveBeenCalledWith('api/v1/bangumi/detect-offset', request);
+    });
+
+    it('should POST api/v1/bangumi/dismiss-review/:id when dismissing a review flag', async () => {
+      (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiBangumi.dismissReview(1);
+      expect(axios.post).toHaveBeenCalledWith('api/v1/bangumi/dismiss-review/1');
+    });
+
+    it('should PATCH api/v1/bangumi/:id/weekday with the weekday when setting the weekday', async () => {
+      (axios.patch as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiBangumi.setWeekday(1, 3);
+      expect(axios.patch).toHaveBeenCalledWith('api/v1/bangumi/1/weekday', {
+        weekday: 3,
+      });
     });
   });
 });

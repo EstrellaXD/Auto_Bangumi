@@ -8,13 +8,32 @@ definePage({
 
 const { t } = useMyI18n();
 const { isMobile } = useBreakpointQuery();
-const { rss, selectedRSS } = storeToRefs(useRSSStore());
-const { getAll, deleteSelected, disableSelected, enableSelected } =
-  useRSSStore();
+const { rss, selectedRSS, isRefreshingAll } = storeToRefs(useRSSStore());
+const {
+  getAll,
+  deleteSelected,
+  disableSelected,
+  enableSelected,
+  refreshRSS,
+  refreshAllRSS,
+} = useRSSStore();
 
 onActivated(() => {
   getAll();
 });
+
+// Tracks which single row is refreshing so only its button spins — the
+// store's isRefreshingAll only covers the "refresh all" button.
+const refreshingId = ref<number | null>(null);
+
+async function onRefreshOne(id: number) {
+  refreshingId.value = id;
+  try {
+    await refreshRSS(id);
+  } finally {
+    refreshingId.value = null;
+  }
+}
 
 const rssColumns = computed<DataTableColumns<RSS>>(() => [
   {
@@ -69,6 +88,26 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
       );
     },
   },
+  {
+    title: t('rss.refresh'),
+    key: 'actions',
+    align: 'center',
+    width: 90,
+    render(rss: RSS) {
+      const isRowRefreshing = refreshingId.value === rss.id;
+      return (
+        <ab-button
+          size="small"
+          type="secondary"
+          title={t('rss.refresh')}
+          disabled={isRowRefreshing}
+          onClick={() => onRefreshOne(rss.id)}
+        >
+          <div class={isRowRefreshing ? 'i-carbon-renew animate-spin' : 'i-carbon-renew'} />
+        </ab-button>
+      );
+    },
+  },
 ]);
 
 const rssRowKey = (row: RSS) => row.id;
@@ -77,6 +116,19 @@ const rssRowKey = (row: RSS) => row.id;
 <template>
   <div class="page-rss">
     <ab-container :title="$t('rss.title')">
+      <template #title-right>
+        <ab-button
+          size="small"
+          type="secondary"
+          :title="$t('rss.refresh_all')"
+          :disabled="isRefreshingAll"
+          @click="refreshAllRSS"
+        >
+          <div :class="isRefreshingAll ? 'i-carbon-renew animate-spin' : 'i-carbon-renew'"></div>
+          {{ $t('rss.refresh_all') }}
+        </ab-button>
+      </template>
+
       <!-- Mobile: Card-based list -->
       <ab-data-list
         v-if="isMobile"
@@ -111,6 +163,24 @@ const rssRowKey = (row: RSS) => row.id;
                 :type="item.enabled ? 'active' : 'inactive'"
                 :title="item.enabled ? 'active' : 'inactive'"
               />
+            </div>
+            <div class="rss-card-actions" @click.stop>
+              <ab-button
+                size="small"
+                type="secondary"
+                :title="$t('rss.refresh')"
+                :disabled="refreshingId === item.id"
+                @click="onRefreshOne(item.id)"
+              >
+                <div
+                  :class="
+                    refreshingId === item.id
+                      ? 'i-carbon-renew animate-spin'
+                      : 'i-carbon-renew'
+                  "
+                ></div>
+                {{ $t('rss.refresh') }}
+              </ab-button>
             </div>
           </div>
         </template>
@@ -196,6 +266,12 @@ const rssRowKey = (row: RSS) => row.id;
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.rss-card-actions {
+  display: flex;
+  justify-content: flex-end;
   margin-top: 4px;
 }
 </style>
