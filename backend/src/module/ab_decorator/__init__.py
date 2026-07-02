@@ -4,8 +4,6 @@ import logging
 
 import httpx
 
-from .timeout import timeout
-
 logger = logging.getLogger(__name__)
 _lock = asyncio.Lock()
 

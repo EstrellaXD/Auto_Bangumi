@@ -1,4 +1,3 @@
-import asyncio
 import time
 
 from module.checker import Checker
@@ -10,13 +9,9 @@ DOWNLOADER_STATUS_TTL = 60
 class ProgramStatus(Checker):
     def __init__(self):
         super().__init__()
-        self.stop_event = asyncio.Event()
-        self.lock = asyncio.Lock()
         self._downloader_status = False
         self._downloader_last_check: float = 0
-        self._torrents_status = False
         self._tasks_started = False
-        self.event = asyncio.Event()
 
     @property
     def is_running(self):
