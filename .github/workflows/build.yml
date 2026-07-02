@@ -8,6 +8,7 @@ on:
       - closed
     branches:
       - main
+      - "3.*-dev"
   push:
 
 jobs:
@@ -24,6 +25,8 @@ jobs:
           version: "latest"
       - name: Install dependencies
         run: cd backend && uv sync --group dev
+      - name: Lint
+        run: cd backend && uv run ruff check src
       - name: Test
         run: |
           mkdir -p backend/config
@@ -61,6 +64,12 @@ jobs:
 
       - name: Install dependencies
         run: cd webui && pnpm install
+
+      - name: Lint
+        run: cd webui && pnpm lint
+
+      - name: Unit test
+        run: cd webui && pnpm test
 
       - name: build test
         run: |
@@ -192,16 +201,16 @@ jobs:
           echo "VERSION='${{ needs.version-info.outputs.version }}'" >> module/__version__.py
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Docker metadata main
         if: ${{ needs.version-info.outputs.release == 1 && needs.version-info.outputs.dev != 1 }}
         id: meta
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: |
             estrellaxd/auto_bangumi
@@ -213,7 +222,7 @@ jobs:
       - name: Docker metadata dev
         if: ${{ needs.version-info.outputs.dev == 1 }}
         id: meta-dev
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: |
             estrellaxd/auto_bangumi
@@ -224,14 +233,14 @@ jobs:
 
       - name: Login to DockerHub
         if: ${{ needs.version-info.outputs.release == 1 }}
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
       - name: Login to ghcr.io
         if: ${{ needs.version-info.outputs.release == 1 }}
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -245,41 +254,41 @@ jobs:
 
       - name: Build and push
         if: ${{ needs.version-info.outputs.release == 1 && needs.version-info.outputs.dev != 1 }}
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
-          builder: ${{ steps.buildx.output.name }}
+          builder: ${{ steps.buildx.outputs.name }}
           platforms: linux/amd64,linux/arm64
           push: True
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha, scope=${{ github.workflow }}
-          cache-to: type=gha, scope=${{ github.workflow }}
+          cache-from: type=gha,scope=${{ github.workflow }}
+          cache-to: type=gha,scope=${{ github.workflow }},ignore-error=true
 
       - name: Build and push dev
         if: ${{ needs.version-info.outputs.dev == 1 }}
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
-          builder: ${{ steps.buildx.output.name }}
+          builder: ${{ steps.buildx.outputs.name }}
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name == 'push' }}
           tags: ${{ steps.meta-dev.outputs.tags }}
           labels: ${{ steps.meta-dev.outputs.labels }}
-          cache-from: type=gha, scope=${{ github.workflow }}
-          cache-to: type=gha, scope=${{ github.workflow }}
+          cache-from: type=gha,scope=${{ github.workflow }}
+          cache-to: type=gha,scope=${{ github.workflow }},ignore-error=true
 
       - name: Build test
         if: ${{ needs.version-info.outputs.release == 0 }}
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
-          builder: ${{ steps.buildx.output.name }}
+          builder: ${{ steps.buildx.outputs.name }}
           platforms: linux/amd64,linux/arm64
           push: false
           tags: estrellaxd/auto_bangumi:test
-          cache-from: type=gha, scope=${{ github.workflow }}
-          cache-to: type=gha, scope=${{ github.workflow }}
+          cache-from: type=gha,scope=${{ github.workflow }}
+          cache-to: type=gha,scope=${{ github.workflow }},ignore-error=true
 
   release:
     runs-on: ubuntu-latest
