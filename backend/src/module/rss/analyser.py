@@ -40,7 +40,10 @@ class RSSAnalyser:
                         bangumi.official_title = official_title
         elif rss.parser == "tmdb":
             tmdb_title, season, year, poster_link = await TitleParser.tmdb_parser(
-                bangumi.official_title, bangumi.season, settings.rss_parser.language
+                bangumi.official_title,
+                bangumi.season,
+                settings.rss_parser.language,
+                episode_type=bangumi.episode_type,
             )
             bangumi.official_title = tmdb_title
             bangumi.year = year

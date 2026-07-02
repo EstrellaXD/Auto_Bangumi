@@ -62,6 +62,10 @@ def search_url(e):
     return f"{_tmdb_url()}/3/search/tv?api_key={TMDB_API}&page=1&query={e}&include_adult=false"
 
 
+def search_movie_url(e):
+    return f"{_tmdb_url()}/3/search/movie?api_key={TMDB_API}&page=1&query={e}&include_adult=false"
+
+
 def info_url(e, key):
     return f"{_tmdb_url()}/3/tv/{e}?api_key={TMDB_API}&language={LANGUAGE[key]}"
 
@@ -210,26 +214,69 @@ def get_season(seasons: list) -> tuple[int, str | None]:
     return len(ss), ss[-1].get("poster_path")
 
 
-async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
+async def _search_movie(title: str, req: RequestContent) -> TMDBInfo | None:
+    """在 search/movie 端点查询电影/剧场版。
+
+    电影没有季度概念，因此不复用剧集的季度/集数聚合逻辑，仅返回标题、原名、
+    年份与海报等基本信息。"""
+    url = search_movie_url(title)
+    contents = await req.get_json(url)
+    results = (contents or {}).get("results") or []
+    if not results:
+        url = search_movie_url(title.replace(" ", ""))
+        contents = await req.get_json(url)
+        results = (contents or {}).get("results") or []
+    if not results:
+        return None
+    movie = results[0]
+    year_number = (movie.get("release_date") or "").split("-")[0]
+    poster_path = movie.get("poster_path")
+    return TMDBInfo(
+        id=movie["id"],
+        title=movie.get("title") or title,
+        original_title=movie.get("original_title") or title,
+        season=[],
+        last_season=0,
+        year=str(year_number),
+        poster_link=(
+            f"https://image.tmdb.org/t/p/w780{poster_path}" if poster_path else None
+        ),
+        series_status=None,
+        season_episode_counts=None,
+        virtual_season_starts=None,
+    )
+
+
+async def tmdb_parser(
+    title, language, test: bool = False, is_movie: bool = False
+) -> TMDBInfo | None:
     # `test` must be part of the key: test mode returns the raw remote poster
     # URL instead of a locally-saved one, so mixing the two would poison
     # whichever caller queries second.
-    cache_key = f"{title}:{language}:{test}"
+    cache_key = f"{title}:{language}:{test}:{is_movie}"
     if cache_key in _tmdb_cache:
         return _tmdb_cache[cache_key]
 
     async with RequestContent() as req:
+        if is_movie:
+            # 已知是电影/剧场版，直接查询 search/movie，跳过剧集搜索
+            result = await _search_movie(title, req)
+            _tmdb_cache[cache_key] = result
+            return result
         url = search_url(title)
         contents = await req.get_json(url)
         if not contents:
-            return None
+            return await _search_movie(title, req)
         contents = (contents or {}).get("results") or []
         if not contents:
             url = search_url(title.replace(" ", ""))
             contents_resp = await req.get_json(url)
             if not contents_resp:
-                return None
+                return await _search_movie(title, req)
             contents = (contents_resp or {}).get("results") or []
+            if not contents:
+                # search/tv 无结果：回退到 search/movie (剧场版等)
+                return await _search_movie(title, req)
         # 判断动画
         if contents:
             matched_id = None
@@ -239,9 +286,10 @@ async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
                     matched_id = cid
                     break
             if matched_id is None:
+                # search/tv 有结果但都不是动画：回退到 search/movie (剧场版等)。
                 # Don't cache the negative result permanently — a temporary
                 # TMDB hiccup shouldn't poison this title for the process lifetime.
-                return None
+                return await _search_movie(title, req)
             url_info = info_url(matched_id, language)
             info_content = await req.get_json(url_info)
             season = [

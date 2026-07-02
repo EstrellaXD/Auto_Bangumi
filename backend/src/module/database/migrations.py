@@ -170,6 +170,12 @@ MIGRATIONS: tuple[Migration, ...] = (
         ),
         table_exists("aria2_gid"),
     ),
+    Migration(
+        12,
+        "add episode_type column to bangumi for movie/special support",
+        ("ALTER TABLE bangumi ADD COLUMN episode_type TEXT DEFAULT 'episode'",),
+        column_exists("bangumi", "episode_type"),
+    ),
 )
 
 # 由迁移列表派生，新增迁移时无需手动同步

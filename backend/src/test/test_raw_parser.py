@@ -386,6 +386,68 @@ class TestIssue773CompoundEpisode:
         assert info.episode == 2
 
 
+class TestMovieAndSpecialParsing:
+    """Movies / OVA / OAD / SP / Special titles have no regular episode number,
+    so TITLE_RE and the fallback patterns both fail. Previously raw_parser
+    returned None for these and the resource was silently dropped; it now
+    recognizes the type tokens and returns a typed Episode instead."""
+
+    def test_parse_movie_with_juchangban_token(self):
+        content = (
+            "[Lilith-Raws] 天气之子 / Tenki no Ko 剧场版 [Baha][WEB-DL][1080p][MP4]"
+        )
+        info = raw_parser(content)
+        assert info is not None
+        assert info.episode_type == "movie"
+        assert info.title_zh == "天气之子"
+        assert info.title_en == "Tenki no Ko"
+        assert info.season == 1
+
+    def test_parse_movie_with_movie_token(self):
+        content = "[SubGroup] 某剧场作品 Movie [1080p][MP4]"
+        info = raw_parser(content)
+        assert info is not None
+        assert info.episode_type == "movie"
+
+    def test_parse_ova_sets_special_type_and_season_zero(self):
+        content = "[LoliHouse] 鬼灭之刃 / Kimetsu no Yaiba OVA01 [WebRip 1080p HEVC-10bit AAC]"
+        info = raw_parser(content)
+        assert info is not None
+        assert info.episode_type == "special"
+        assert info.season == 0
+        assert info.episode == 1
+        assert info.title_zh == "鬼灭之刃"
+        assert info.title_en == "Kimetsu no Yaiba"
+
+    def test_parse_sp_token_extracts_episode_number(self):
+        content = "[SubGroup] 某动画 SP02 [1080p]"
+        info = raw_parser(content)
+        assert info is not None
+        assert info.episode_type == "special"
+        assert info.season == 0
+        assert info.episode == 2
+
+    def test_parse_special_token_without_digit_defaults_episode_zero(self):
+        content = "[SubGroup] 某动画 Special [1080p]"
+        info = raw_parser(content)
+        assert info is not None
+        assert info.episode_type == "special"
+        assert info.episode == 0
+
+    def test_non_matching_title_without_tokens_still_returns_none(self):
+        """A genuinely unparseable title with no movie/special tokens must
+        still return None so it is not silently accepted as garbage."""
+        assert raw_parser("Random Non Matching Title No Digits At All") is None
+
+    def test_regular_episode_has_episode_type_episode(self):
+        """Normal episodic titles are unaffected: episode_type defaults to
+        'episode'."""
+        content = "[LoliHouse] 关于我转生变成史莱姆这档事 第二季 / Tensei shitara Slime Datta Ken 2nd Season - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕]"
+        info = raw_parser(content)
+        assert info is not None
+        assert info.episode_type == "episode"
+
+
 class TestIssue805TitleWithCht:
     """Issue #805: Traditional Chinese title parses correctly."""
 

@@ -58,6 +58,9 @@ class Bangumi(SQLModel, table=True):
     preferred_resolution: Optional[str] = Field(
         default=None, alias="preferred_resolution", title="偏好分辨率"
     )
+    episode_type: str = Field(
+        default="episode", alias="episode_type", title="剧集类型"
+    )  # "episode" | "movie" | "special"
 
 
 class BangumiUpdate(SQLModel):
@@ -102,6 +105,9 @@ class BangumiUpdate(SQLModel):
     preferred_resolution: Optional[str] = Field(
         default=None, alias="preferred_resolution", title="偏好分辨率"
     )
+    episode_type: str = Field(
+        default="episode", alias="episode_type", title="剧集类型"
+    )  # "episode" | "movie" | "special"
 
 
 class Notification(BaseModel):
@@ -123,6 +129,7 @@ class Episode:
     group: str
     resolution: str
     source: str
+    episode_type: str = "episode"  # "episode" | "movie" | "special"
 
 
 @dataclass(slots=True)

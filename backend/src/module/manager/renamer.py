@@ -88,6 +88,16 @@ class Renamer:
         )
         if method == "none" or method == "subtitle_none":
             return file_info.media_path
+        if file_info.episode_type == "movie":
+            # 电影/剧场版：Title (Year).ext，不使用 SxxExx 编号。bangumi_name 由
+            # 调用方传入，与 gen_save_path 的文件夹命名保持一致 (Title (Year))
+            base = bangumi_name if "advance" in method else file_info.title
+            if method.startswith("subtitle_"):
+                assert isinstance(
+                    file_info, SubtitleFile
+                ), "subtitle methods require a SubtitleFile"
+                return f"{group_prefix}{base}.{file_info.language}{file_info.suffix}"
+            return f"{group_prefix}{base}{file_info.suffix}"
         elif method == "pn":
             return (
                 f"{group_prefix}{file_info.title} S{season}E{episode}{file_info.suffix}"
@@ -121,12 +131,14 @@ class Renamer:
         _hash: str,
         episode_offset: int = 0,
         season_offset: int = 0,
+        episode_type: str = "episode",
         **kwargs,
     ):
         ep = self._parser.torrent_parser(
             torrent_name=torrent_name,
             torrent_path=media_path,
             season=season,
+            episode_type=episode_type,
         )
         if ep:
             new_path = self.gen_path(
@@ -192,6 +204,7 @@ class Renamer:
         _hash: str,
         episode_offset: int = 0,
         season_offset: int = 0,
+        episode_type: str = "episode",
         **kwargs,
     ):
         for media_path in media_list:
@@ -199,6 +212,7 @@ class Renamer:
                 ep = self._parser.torrent_parser(
                     torrent_path=media_path,
                     season=season,
+                    episode_type=episode_type,
                 )
                 if ep:
                     new_path = self.gen_path(
@@ -229,6 +243,7 @@ class Renamer:
         _hash,
         episode_offset: int = 0,
         season_offset: int = 0,
+        episode_type: str = "episode",
         **kwargs,
     ):
         method = "subtitle_" + method
@@ -238,6 +253,7 @@ class Renamer:
                 torrent_name=torrent_name,
                 season=season,
                 file_type="subtitle",
+                episode_type=episode_type,
             )
             if sub:
                 new_path = self.gen_path(
@@ -287,12 +303,13 @@ class Renamer:
 
     async def _batch_lookup_offsets(
         self, torrents_info: list[dict]
-    ) -> dict[str, tuple[int, int]]:
+    ) -> dict[str, tuple[int, int, str]]:
         """Batch lookup offsets for all torrents in a single database session.
 
-        Returns a dict mapping torrent_hash to (episode_offset, season_offset).
+        Returns a dict mapping torrent_hash to
+        (episode_offset, season_offset, episode_type).
         """
-        result: dict[str, tuple[int, int]] = {}
+        result: dict[str, tuple[int, int, str]] = {}
         if not torrents_info:
             return result
 
@@ -337,14 +354,22 @@ class Renamer:
                     bangumi_id = hash_to_bangumi_id.get(torrent_hash)
                     if bangumi_id and bangumi_id in bangumi_map:
                         b = bangumi_map[bangumi_id]
-                        result[torrent_hash] = (b.episode_offset, b.season_offset)
+                        result[torrent_hash] = (
+                            b.episode_offset,
+                            b.season_offset,
+                            b.episode_type,
+                        )
                         continue
 
                     # 2. Try by tag
                     bangumi_id = tag_bangumi_ids.get(torrent_hash)
                     if bangumi_id and bangumi_id in bangumi_map:
                         b = bangumi_map[bangumi_id]
-                        result[torrent_hash] = (b.episode_offset, b.season_offset)
+                        result[torrent_hash] = (
+                            b.episode_offset,
+                            b.season_offset,
+                            b.episode_type,
+                        )
                         continue
 
                     # 3. Try by torrent name (individual query, but less common path)
@@ -353,6 +378,7 @@ class Renamer:
                         result[torrent_hash] = (
                             bangumi.episode_offset,
                             bangumi.season_offset,
+                            bangumi.episode_type,
                         )
                         continue
 
@@ -367,11 +393,12 @@ class Renamer:
                         result[torrent_hash] = (
                             bangumi.episode_offset,
                             bangumi.season_offset,
+                            bangumi.episode_type,
                         )
                         continue
 
                     # Default: no offset
-                    result[torrent_hash] = (0, 0)
+                    result[torrent_hash] = (0, 0, "episode")
 
         except Exception as e:
             missing = [
@@ -494,7 +521,7 @@ class Renamer:
             media_list, subtitle_list = check_files(files)
             bangumi_name, season = path_to_bangumi(save_path, torrent_name)
             # Use pre-fetched offsets
-            episode_offset, season_offset = offset_map[torrent_hash]
+            episode_offset, season_offset, episode_type = offset_map[torrent_hash]
             kwargs = {
                 "torrent_name": torrent_name,
                 "bangumi_name": bangumi_name,
@@ -503,6 +530,7 @@ class Renamer:
                 "_hash": torrent_hash,
                 "episode_offset": episode_offset,
                 "season_offset": season_offset,
+                "episode_type": episode_type,
             }
             # Rename single media file
             if len(media_list) == 1:

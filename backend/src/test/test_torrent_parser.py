@@ -151,6 +151,35 @@ def test_torrent_parser():
     assert bf.season == 1
 
 
+class TestMovieFile:
+    """episode_type='movie' bypasses episode-number regex matching entirely —
+    a movie file's name has no SxxExx / episode marker to match against."""
+
+    def test_parses_movie_without_episode_marker(self):
+        file_name = "/downloads/Bangumi/天气之子 (2019)/[Lilith-Raws] 天气之子 [Baha][WEB-DL][1080p][MP4].mp4"
+        bf = torrent_parser(file_name, episode_type="movie")
+        assert bf is not None
+        assert bf.episode_type == "movie"
+        assert bf.group == "Lilith-Raws"
+        assert "天气之子" in bf.title
+        assert "[" not in bf.title
+        assert bf.suffix == ".mp4"
+
+    def test_movie_subtitle_file(self):
+        file_name = "天气之子.zh.ass"
+        sf = torrent_parser(file_name, file_type="subtitle", episode_type="movie")
+        assert sf is not None
+        assert sf.episode_type == "movie"
+        assert sf.suffix == ".ass"
+
+    def test_regular_episode_type_unaffected(self):
+        """episode_type defaults to 'episode', existing RULES-based parsing unchanged."""
+        file_name = "[Lilith-Raws] Boku no Kokoro no Yabai Yatsu - 01 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4].mp4"
+        bf = torrent_parser(file_name)
+        assert bf is not None
+        assert bf.episode_type == "episode"
+
+
 class TestGetPathBasename:
     def test_regular_path(self):
         assert get_path_basename("/path/to/file.txt") == "file.txt"

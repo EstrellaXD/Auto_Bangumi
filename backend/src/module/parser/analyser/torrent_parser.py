@@ -69,20 +69,67 @@ def get_subtitle_lang(subtitle_name: str) -> str | None:
     return None
 
 
+# 电影文件名通常没有集数标记，用于剥离方括号标签（分辨率/来源/字幕组等），
+# 剩余文本视为标题
+_BRACKET_RE = re.compile(r"[\[\(（【].*?[\]\)）】]")
+
+
+def _parse_movie_file(
+    torrent_path: str, torrent_name: str | None, file_type: str
+) -> EpisodeFile | SubtitleFile | None:
+    """解析电影/剧场版文件：不要求集数标记，Title (Year)/Title (Year).ext 布局
+    下文件名本身即完整标题。"""
+    media_path = get_path_basename(torrent_path)
+    match_name = torrent_name if torrent_name is not None else media_path
+    group, _ = get_group(match_name)
+    stem = Path(match_name).stem
+    title = _BRACKET_RE.sub(" ", stem)
+    title = re.sub(r"\s+", " ", title).strip(" -/")
+    if not title:
+        title = Path(media_path).stem
+    suffix = Path(torrent_path).suffix
+    if file_type == "media":
+        return EpisodeFile(
+            media_path=torrent_path,
+            group=group,
+            title=title,
+            season=1,
+            episode=1,
+            suffix=suffix,
+            episode_type="movie",
+        )
+    elif file_type == "subtitle":
+        language = get_subtitle_lang(media_path)
+        return SubtitleFile(
+            media_path=torrent_path,
+            group=group,
+            title=title,
+            season=1,
+            episode=1,
+            language=language,  # type: ignore[arg-type]
+            suffix=suffix,
+            episode_type="movie",
+        )
+    return None
+
+
 def torrent_parser(
     torrent_path: str,
     torrent_name: str | None = None,
     season: int | None = None,
     file_type: str = "media",
+    episode_type: str = "episode",
 ) -> EpisodeFile | SubtitleFile | None:
     # Check cache first to avoid repeated regex parsing
-    cache_key = (torrent_path, torrent_name, season, file_type)
+    cache_key = (torrent_path, torrent_name, season, file_type, episode_type)
     if cache_key in _parser_cache:
         # Move to end to mark as recently used
         _parser_cache.move_to_end(cache_key)
         return _parser_cache[cache_key]
 
-    result = _torrent_parser_impl(torrent_path, torrent_name, season, file_type)
+    result = _torrent_parser_impl(
+        torrent_path, torrent_name, season, file_type, episode_type
+    )
 
     # Store in cache with LRU eviction
     _parser_cache[cache_key] = result
@@ -97,8 +144,11 @@ def _torrent_parser_impl(
     torrent_name: str | None = None,
     season: int | None = None,
     file_type: str = "media",
+    episode_type: str = "episode",
 ) -> EpisodeFile | SubtitleFile | None:
     """Internal implementation of torrent_parser without caching."""
+    if episode_type == "movie":
+        return _parse_movie_file(torrent_path, torrent_name, file_type)
     media_path = get_path_basename(torrent_path)
     match_names = (
         [torrent_name, media_path] if torrent_name is not None else [media_path]

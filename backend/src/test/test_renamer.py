@@ -116,6 +116,79 @@ class TestGenPath:
 
 
 # ---------------------------------------------------------------------------
+# gen_path for movies
+# ---------------------------------------------------------------------------
+
+
+class TestGenPathMovie:
+    """episode_type='movie' bypasses SxxExx numbering entirely, producing a
+    'Title (Year).ext' layout instead."""
+
+    def test_advance_method_uses_bangumi_name(self):
+        ep = EpisodeFile(
+            media_path="raw.mkv",
+            title="Your Name",
+            season=1,
+            episode=1,
+            suffix=".mkv",
+            episode_type="movie",
+        )
+        result = Renamer.gen_path(ep, "天气之子 (2019)", method="advance")
+        assert result == "天气之子 (2019).mkv"
+
+    def test_pn_method_uses_file_title(self):
+        ep = EpisodeFile(
+            media_path="raw.mkv",
+            title="Tenki no Ko",
+            season=1,
+            episode=1,
+            suffix=".mkv",
+            episode_type="movie",
+        )
+        result = Renamer.gen_path(ep, "天气之子 (2019)", method="pn")
+        assert result == "Tenki no Ko.mkv"
+
+    def test_subtitle_advance_method(self):
+        sub = SubtitleFile(
+            media_path="raw.ass",
+            title="Tenki no Ko",
+            season=1,
+            episode=1,
+            language="zh",
+            suffix=".ass",
+            episode_type="movie",
+        )
+        result = Renamer.gen_path(sub, "天气之子 (2019)", method="subtitle_advance")
+        assert result == "天气之子 (2019).zh.ass"
+
+    def test_group_tag_prefix_applied(self):
+        ep = EpisodeFile(
+            media_path="raw.mkv",
+            group="Lilith-Raws",
+            title="Tenki no Ko",
+            season=1,
+            episode=1,
+            suffix=".mkv",
+            episode_type="movie",
+        )
+        with patch.object(settings.bangumi_manage, "group_tag", True):
+            result = Renamer.gen_path(ep, "天气之子 (2019)", method="advance")
+        assert result == "[Lilith-Raws] 天气之子 (2019).mkv"
+
+    def test_none_method_returns_original_path(self):
+        ep = EpisodeFile(
+            media_path="original/path/movie.mkv",
+            title="Tenki no Ko",
+            season=1,
+            episode=1,
+            suffix=".mkv",
+            episode_type="movie",
+        )
+        result = Renamer.gen_path(ep, "天气之子 (2019)", method="none")
+        assert result == "original/path/movie.mkv"
+
+
+# ---------------------------------------------------------------------------
 # gen_path with group_tag
 # ---------------------------------------------------------------------------
 

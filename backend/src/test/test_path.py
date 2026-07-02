@@ -59,6 +59,29 @@ class TestGenSavePath:
         assert "Test (2025)" in result
         assert "Season 3" in result
 
+    def test_movie_layout_omits_season_folder(self):
+        """Movies use a flat 'Title (Year)' layout with no Season subfolder."""
+        bangumi = make_bangumi(
+            official_title="天气之子", year="2019", season=1, episode_type="movie"
+        )
+        with patch("module.downloader.path.settings") as mock_settings:
+            mock_settings.downloader.path = "/downloads/Bangumi"
+            result = gen_save_path(bangumi)
+
+        assert result == "/downloads/Bangumi/天气之子 (2019)"
+        assert "Season" not in result
+
+    def test_special_uses_season_zero(self):
+        """Specials/OVA/OAD (season=0) land in Season 0, Jellyfin/Plex convention."""
+        bangumi = make_bangumi(
+            official_title="My Anime", year="2024", season=0, episode_type="special"
+        )
+        with patch("module.downloader.path.settings") as mock_settings:
+            mock_settings.downloader.path = "/downloads/Bangumi"
+            result = gen_save_path(bangumi)
+
+        assert result == "/downloads/Bangumi/My Anime (2024)/Season 0"
+
 
 # ---------------------------------------------------------------------------
 # rule_name

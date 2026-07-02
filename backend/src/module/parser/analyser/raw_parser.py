@@ -20,6 +20,60 @@ FALLBACK_EP_PATTERNS = [
 
 PREFIX_RE = re.compile(r"[^\w\s\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff-]")
 
+# movie token: hits route the title to episode_type="movie" (no episode number required)
+MOVIE_TOKEN_RE = re.compile(r"剧场版|劇場版|电影版|[Mm]ovie")
+# OVA / OAD / SP / Special token: hits route the title to episode_type="special",
+# season is forced to 0 (Season 0). Digits directly after the token (e.g. "OVA01")
+# must also be recognized, so the token itself allows a trailing number.
+SPECIAL_TOKEN_RE = re.compile(
+    r"\bOVA\d*\b|\bOAD\d*\b|\bSP\d*\b|[Ss]pecial|番外篇?|特别篇"
+)
+# digits directly after OVA/OAD/SP are treated as the episode number, e.g. "OVA01", "SP 02"
+SPECIAL_EPISODE_RE = re.compile(r"(?:OVA|OAD|SP)\s*[-_]?\s*(\d{1,3})", re.I)
+BRACKET_RE = re.compile(r"[\[\(（【].*?[\]\)）】]")
+
+
+def _detect_non_episodic_type(content_title: str) -> str | None:
+    """识别剧场版/OVA/OAD/SP/Special 等非常规编号资源的类型。"""
+    if MOVIE_TOKEN_RE.search(content_title):
+        return "movie"
+    if SPECIAL_TOKEN_RE.search(content_title):
+        return "special"
+    return None
+
+
+def _parse_non_episodic(content_title: str, group: str, episode_type: str) -> tuple:
+    """解析剧场版/OVA/OAD/SP/Special 标题：提炼标题与可选的集数信息，不依赖常规的
+    TITLE_RE / fallback 集数匹配。"""
+    stripped = prefix_process(content_title, group)
+    brackets = BRACKET_RE.findall(stripped)
+    name_part = BRACKET_RE.sub(" ", stripped)
+    name_part = MOVIE_TOKEN_RE.sub(" ", name_part)
+    name_part = SPECIAL_TOKEN_RE.sub(" ", name_part)
+    name_part = name_part.strip(" -/")
+    name_en, name_zh, name_jp = "", "", ""
+    try:
+        name_en, name_zh, name_jp = name_process(name_part)
+    except ValueError:
+        pass
+    sub, dpi, source = find_tags(" ".join(brackets))
+    ep_match = SPECIAL_EPISODE_RE.search(stripped)
+    episode = int(ep_match.group(1)) if ep_match else 0
+    season = 0 if episode_type == "special" else 1
+    return (
+        name_en,
+        name_zh,
+        name_jp,
+        season,
+        "",
+        episode,
+        sub,
+        dpi,
+        source,
+        group,
+        episode_type,
+    )
+
 
 def _fallback_parse(content_title: str) -> tuple | None:
     """Try fallback regex patterns when TITLE_RE fails."""
@@ -171,6 +225,11 @@ def process(raw_title: str):
     else:
         fallback = _fallback_parse(content_title)
         if fallback is None:
+            # 常规集数解析失败：识别剧场版/OVA/OAD/SP/Special 等非常规编号资源，
+            # 而非直接丢弃 (原先返回 None 会导致这些资源被整体丢弃)
+            episode_type = _detect_non_episodic_type(content_title)
+            if episode_type is not None:
+                return _parse_non_episodic(content_title, group, episode_type)
             return None
         season_info, episode_info, other = fallback
     process_raw = prefix_process(season_info, group)
@@ -200,17 +259,40 @@ def process(raw_title: str):
         dpi,
         source,
         group,
+        "episode",
     )
 
 
 def raw_parser(raw: str) -> Episode | None:
     ret = process(raw)
     if ret is None:
-        logger.info(f"Detected non-episodic resource: {raw}, skipping.")
+        logger.info(f"Cannot parse resource: {raw}, skipping.")
         return None
-    name_en, name_zh, name_jp, season, sr, episode, sub, dpi, source, group = ret
+    (
+        name_en,
+        name_zh,
+        name_jp,
+        season,
+        sr,
+        episode,
+        sub,
+        dpi,
+        source,
+        group,
+        episode_type,
+    ) = ret
     return Episode(
-        name_en, name_zh, name_jp, season, sr, episode, sub, group, dpi, source
+        name_en,
+        name_zh,
+        name_jp,
+        season,
+        sr,
+        episode,
+        sub,
+        group,
+        dpi,
+        source,
+        episode_type,
     )
 
 

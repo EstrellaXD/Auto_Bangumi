@@ -71,6 +71,83 @@ async def test_tmdb_parser(mocker):
     assert tmdb_info.last_season == bangumi_season
 
 
+_MOVIE_SEARCH_RESULT = {
+    "results": [
+        {
+            "id": 372058,
+            "title": "你的名字。",
+            "original_title": "君の名は。",
+            "release_date": "2016-08-26",
+            "poster_path": "/movie_poster.jpg",
+        }
+    ]
+}
+
+
+async def test_tmdb_parser_movie_fallback_when_tv_search_misses(mocker):
+    """When search/tv has no results at all, fall back to search/movie
+    (e.g. for a theatrical release with no matching TV series)."""
+
+    async def fake_get_json(url: str) -> dict:
+        if "/search/tv" in url:
+            return {"results": []}
+        if "/search/movie" in url:
+            return _MOVIE_SEARCH_RESULT
+        return {}
+
+    mocker.patch.object(
+        tmdb_parser_module.RequestContent, "get_json", side_effect=fake_get_json
+    )
+    tmdb_parser_module._tmdb_cache.clear()
+
+    tmdb_info = await tmdb_parser("你的名字", "zh", test=True)
+
+    assert tmdb_info is not None
+    assert tmdb_info.title == "你的名字。"
+    assert tmdb_info.original_title == "君の名は。"
+    assert tmdb_info.year == "2016"
+    assert tmdb_info.last_season == 0
+
+
+async def test_tmdb_parser_is_movie_queries_movie_search_directly(mocker):
+    """is_movie=True skips the TV search entirely and queries search/movie."""
+    tv_search_called = False
+
+    async def fake_get_json(url: str) -> dict:
+        nonlocal tv_search_called
+        if "/search/tv" in url:
+            tv_search_called = True
+            return {"results": [{"id": 1}]}
+        if "/search/movie" in url:
+            return _MOVIE_SEARCH_RESULT
+        return {}
+
+    mocker.patch.object(
+        tmdb_parser_module.RequestContent, "get_json", side_effect=fake_get_json
+    )
+    tmdb_parser_module._tmdb_cache.clear()
+
+    tmdb_info = await tmdb_parser("你的名字", "zh", test=True, is_movie=True)
+
+    assert tv_search_called is False
+    assert tmdb_info is not None
+    assert tmdb_info.title == "你的名字。"
+
+
+async def test_tmdb_parser_movie_search_no_results_returns_none(mocker):
+    async def fake_get_json(url: str) -> dict:
+        return {"results": []}
+
+    mocker.patch.object(
+        tmdb_parser_module.RequestContent, "get_json", side_effect=fake_get_json
+    )
+    tmdb_parser_module._tmdb_cache.clear()
+
+    tmdb_info = await tmdb_parser("不存在的电影", "zh", test=True, is_movie=True)
+
+    assert tmdb_info is None
+
+
 def test_reset_cache_clears_tmdb_cache():
     """reset_cache() must drop all cached lookups (called on config reload so
     a changed tmdb_base_url stops serving results from the old endpoint)."""

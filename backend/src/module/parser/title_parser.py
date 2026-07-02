@@ -45,15 +45,20 @@ class TitleParser:
         torrent_name: str | None = None,
         season: int | None = None,
         file_type: str = "media",
+        episode_type: str = "episode",
     ):
         try:
-            return torrent_parser(torrent_path, torrent_name, season, file_type)
+            return torrent_parser(
+                torrent_path, torrent_name, season, file_type, episode_type
+            )
         except Exception as e:
             logger.warning(f"Cannot parse {torrent_path} with error {e}")
 
     @staticmethod
-    async def tmdb_parser(title: str, season: int, language: str):
-        tmdb_info = await tmdb_parser(title, language)
+    async def tmdb_parser(
+        title: str, season: int, language: str, episode_type: str = "episode"
+    ):
+        tmdb_info = await tmdb_parser(title, language, is_movie=episode_type == "movie")
         if tmdb_info:
             logger.debug("TMDB Matched, official title is %s", tmdb_info.title)
             tmdb_season = tmdb_info.last_season if tmdb_info.last_season else season
@@ -127,6 +132,7 @@ class TitleParser:
                 eps_collect=False if episode.episode > 1 else True,
                 offset=0,
                 filter=",".join(settings.rss_parser.filter),
+                episode_type=episode.episode_type,
             )
         except (ValueError, AttributeError, TypeError) as e:
             logger.warning(f"Cannot parse '{raw}': {type(e).__name__}: {e}")
