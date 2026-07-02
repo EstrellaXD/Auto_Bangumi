@@ -162,10 +162,11 @@ async def test_downloader(req: TestDownloaderRequest):
                 data={"username": req.username, "password": req.password},
             )
             # qBittorrent < 5.2 answers 200 + "Ok."; >= 5.2 answers 204 with
-            # an empty body on success (#1044).
-            if (
-                login_resp.status_code in (200, 204)
-                and "fails" not in login_resp.text.lower()
+            # an empty body on success (#1044). Keep the positive body check
+            # for 200 so a proxy answering 200 + HTML is not reported as a
+            # working login.
+            if login_resp.status_code == 204 or (
+                login_resp.status_code == 200 and "ok" in login_resp.text.lower()
             ):
                 return TestResultResponse(
                     success=True,

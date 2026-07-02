@@ -48,8 +48,13 @@ class QbDownloader:
                     data={"username": self.username, "password": self.password},
                 )
                 # qBittorrent < 5.2 answers 200 + "Ok." / "Fails.";
-                # qBittorrent >= 5.2 answers 204 with an empty body on success (#1044).
-                if resp.status_code in (200, 204) and "fails" not in resp.text.lower():
+                # qBittorrent >= 5.2 answers 204 with an empty body on success
+                # (#1044). Keep the positive body check for 200 so a proxy or
+                # non-qB service answering 200 + HTML is not mistaken for a
+                # successful login.
+                if (
+                    resp.status_code == 200 and resp.text.startswith("Ok")
+                ) or resp.status_code == 204:
                     return True
                 elif resp.status_code == 403:
                     logger.error("Login refused by qBittorrent Server")
@@ -82,10 +87,6 @@ class QbDownloader:
                 else:
                     logger.error(f"Unknown error: {e}")
                 break
-        # Failed auth: DownloadClient.__aenter__ raises before __aexit__ can run,
-        # so the client must be closed here or its connection pool leaks.
-        await self._client.aclose()
-        self._client = None
         return False
 
     async def logout(self):

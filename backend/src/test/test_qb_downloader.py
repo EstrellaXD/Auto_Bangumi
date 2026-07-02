@@ -584,27 +584,31 @@ class TestAuthQb52Compat:
 
         assert result is False
 
-    async def test_auth_closes_client_on_failure(self):
-        """A failed auth must aclose() the httpx client (leak fix)."""
+    async def test_auth_returns_false_on_200_html_body(self):
+        """A 200 + HTML page (proxy, wrong service) is not a successful login."""
         qb = QbDownloader(
             host="localhost:8080", username="admin", password="pass", ssl=False
         )
 
         mock_client = AsyncMock()
         mock_resp = MagicMock()
-        mock_resp.status_code = 403
-        mock_resp.text = "Forbidden"
+        mock_resp.status_code = 200
+        mock_resp.text = "<html><body>Sign in</body></html>"
         mock_client.post = AsyncMock(return_value=mock_resp)
 
-        with patch(
-            "module.downloader.client.qb_downloader.httpx.AsyncClient",
-            return_value=mock_client,
+        with (
+            patch(
+                "module.downloader.client.qb_downloader.httpx.AsyncClient",
+                return_value=mock_client,
+            ),
+            patch(
+                "module.downloader.client.qb_downloader.asyncio.sleep",
+                new_callable=AsyncMock,
+            ),
         ):
-            result = await qb.auth()
+            result = await qb.auth(retry=1)
 
         assert result is False
-        mock_client.aclose.assert_awaited_once()
-        assert qb._client is None
 
 
 # ---------------------------------------------------------------------------

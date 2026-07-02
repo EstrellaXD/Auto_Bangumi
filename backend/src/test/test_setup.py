@@ -373,3 +373,19 @@ class TestTestDownloaderHardening:
         assert data["success"] is False
         assert "secret-detail-xyz" not in data["message_en"]
         assert "secret-detail-xyz" not in data["message_zh"]
+
+    def test_login_rejects_200_html_body(self, client, mock_first_run):
+        """A proxy answering 200 + HTML to the login POST is not a success."""
+        from unittest.mock import MagicMock
+
+        get_resp = MagicMock(text="qBittorrent WebUI")
+        login_resp = MagicMock(
+            status_code=200, text="<html><body>portal</body></html>"
+        )
+        cls_patch = self._mock_client(get_resp=get_resp, login_resp=login_resp)
+        try:
+            response = self._post(client)
+        finally:
+            cls_patch.stop()
+        assert response.status_code == 200
+        assert response.json()["success"] is False

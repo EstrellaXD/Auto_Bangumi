@@ -72,13 +72,17 @@ _bangumi_cache: list[Bangumi] | None = None
 _bangumi_cache_time: float = 0
 _BANGUMI_CACHE_TTL: float = 300.0  # 5 minutes - extended from 60s to reduce DB queries
 _bangumi_cache_lock = threading.Lock()
+# Bumped on every invalidation so a search_all() that was already past the
+# cache check cannot overwrite a newer invalidation with its stale snapshot.
+_bangumi_cache_gen = 0
 
 
 def _invalidate_bangumi_cache():
-    global _bangumi_cache, _bangumi_cache_time
+    global _bangumi_cache, _bangumi_cache_time, _bangumi_cache_gen
     with _bangumi_cache_lock:
         _bangumi_cache = None
         _bangumi_cache_time = 0
+        _bangumi_cache_gen += 1
 
 
 class BangumiDatabase:
@@ -376,6 +380,7 @@ class BangumiDatabase:
                 and (now - _bangumi_cache_time) < _BANGUMI_CACHE_TTL
             ):
                 return _bangumi_cache
+            gen_at_query = _bangumi_cache_gen
         statement = select(Bangumi)
         result = self.session.execute(statement)
         bangumis = list(result.scalars().all())
@@ -384,8 +389,9 @@ class BangumiDatabase:
         for b in bangumis:
             self.session.expunge(b)
         with _bangumi_cache_lock:
-            _bangumi_cache = bangumis
-            _bangumi_cache_time = now
+            if _bangumi_cache_gen == gen_at_query:
+                _bangumi_cache = bangumis
+                _bangumi_cache_time = now
         return bangumis
 
     def search_id(self, _id: int) -> Optional[Bangumi]:

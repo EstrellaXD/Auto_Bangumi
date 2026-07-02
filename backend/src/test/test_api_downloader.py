@@ -62,7 +62,7 @@ def mock_download_client():
     ]
     client.pause_torrent.return_value = None
     client.resume_torrent.return_value = None
-    client.delete_torrent.return_value = None
+    client.delete_torrent.return_value = True
     return client
 
 
@@ -433,3 +433,24 @@ class TestAutoTagTorrents:
         assert data["unmatched_count"] == 1
         assert len(data["unmatched"]) == 1
         mock_download_client.add_tag.assert_not_called()
+
+
+class TestDeleteTorrentsFailure:
+    def test_delete_failure_is_reported(self, authed_client, mock_download_client):
+        """A rejected qB delete must not be reported as success (#1046)."""
+        mock_download_client.delete_torrent.return_value = False
+        with patch("module.api.downloader.DownloadClient") as MockClient:
+            MockClient.return_value.__aenter__ = AsyncMock(
+                return_value=mock_download_client
+            )
+            MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            response = authed_client.post(
+                "/api/v1/downloader/torrents/delete",
+                json={"hashes": ["abc123"], "delete_files": True},
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] is False
+        assert data["msg_en"] == "Failed to delete torrents"
