@@ -70,6 +70,17 @@ async def test_tmdb_parser(mocker):
     assert tmdb_info.last_season == bangumi_season
 
 
+def test_reset_cache_clears_tmdb_cache():
+    """reset_cache() must drop all cached lookups (called on config reload so
+    a changed tmdb_base_url stops serving results from the old endpoint)."""
+    tmdb_parser_module._tmdb_cache["stale-key"] = None
+    assert len(tmdb_parser_module._tmdb_cache) > 0
+
+    tmdb_parser_module.reset_cache()
+
+    assert len(tmdb_parser_module._tmdb_cache) == 0
+
+
 @pytest.mark.live
 @pytest.mark.skipif(
     not os.environ.get("RUN_LIVE_TMDB_TESTS"),

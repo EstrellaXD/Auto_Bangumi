@@ -1,20 +1,31 @@
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
+from module.api.deps import get_context
 from module.api.setup import SENTINEL_PATH, router
 
 
 @pytest.fixture
-def client():
+def mock_ctx():
+    """Mock AppContext whose reload_settings is an awaitable no-op."""
+    ctx = MagicMock()
+    ctx.reload_settings = AsyncMock()
+    return ctx
+
+
+@pytest.fixture
+def client(mock_ctx):
     """Create a test client for the FastAPI app."""
     from fastapi import FastAPI
 
     app = FastAPI()
     app.include_router(router, prefix="/api/v1")
-    return TestClient(app)
+    app.dependency_overrides[get_context] = lambda: mock_ctx
+    yield TestClient(app)
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture
@@ -293,6 +304,56 @@ class TestRequestValidation:
         assert response.status_code == 422
 
 
+class TestSetupComplete:
+    """Issue: setup wizard must route config reload through AppContext, not
+    mutate settings.__dict__ directly (the shared httpx client, notifier, and
+    scheduler must be rebuilt after first-run setup)."""
+
+    @staticmethod
+    def _payload():
+        return {
+            "username": "testuser",
+            "password": "testpassword123",
+            "downloader_type": "qbittorrent",
+            "downloader_host": "localhost:8080",
+            "downloader_username": "admin",
+            "downloader_password": "admin",
+            "downloader_path": "/downloads",
+            "downloader_ssl": False,
+            "rss_url": "",
+            "rss_name": "",
+            "notification_enable": False,
+            "notification_type": "telegram",
+            "notification_token": "",
+            "notification_chat_id": "",
+        }
+
+    def test_complete_routes_through_ctx_reload_settings(
+        self, client, mock_first_run, mock_ctx
+    ):
+        """A successful /setup/complete call saves the config and awaits
+        ctx.reload_settings(), instead of poking settings.__dict__ directly."""
+        from fastapi import HTTPException
+
+        with patch("module.database.Database") as mock_db_cls:
+            db_instance = AsyncMock()
+            # No admin account yet: _require_default_admin_or_authenticated()
+            # treats this as a fresh install and lets setup proceed.
+            db_instance.user.get_user = AsyncMock(
+                side_effect=HTTPException(status_code=404, detail="not found")
+            )
+            db_instance.user.update_user = AsyncMock(return_value=True)
+            mock_db_cls.return_value.__aenter__ = AsyncMock(return_value=db_instance)
+            mock_db_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            response = client.post("/api/v1/setup/complete", json=self._payload())
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] is True
+        mock_ctx.reload_settings.assert_awaited_once()
+
+
 class TestSentinelPath:
     def test_sentinel_path_is_in_config_dir(self):
         assert str(SENTINEL_PATH) == "config/.setup_complete"
@@ -379,9 +440,7 @@ class TestTestDownloaderHardening:
         from unittest.mock import MagicMock
 
         get_resp = MagicMock(text="qBittorrent WebUI")
-        login_resp = MagicMock(
-            status_code=200, text="<html><body>portal</body></html>"
-        )
+        login_resp = MagicMock(status_code=200, text="<html><body>portal</body></html>")
         cls_patch = self._mock_client(get_resp=get_resp, login_resp=login_resp)
         try:
             response = self._post(client)

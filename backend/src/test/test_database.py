@@ -9,16 +9,18 @@ from module.models import Bangumi, RSSItem, Torrent
 async def _ensure_bangumi(session, bangumi_id: int):
     """确保 bangumi 表中存在指定 id 的记录，满足外键约束。"""
     if await session.get(Bangumi, bangumi_id) is None:
-        session.add(Bangumi(
-            id=bangumi_id,
-            official_title=f"Stub Anime {bangumi_id}",
-            title_raw=f"Stub {bangumi_id}",
-            group_name="TestGroup",
-            dpi="1080p",
-            source="Web",
-            subtitle="CHT",
-            rss_link=f"stub_{bangumi_id}",
-        ))
+        session.add(
+            Bangumi(
+                id=bangumi_id,
+                official_title=f"Stub Anime {bangumi_id}",
+                title_raw=f"Stub {bangumi_id}",
+                group_name="TestGroup",
+                dpi="1080p",
+                source="Web",
+                subtitle="CHT",
+                rss_link=f"stub_{bangumi_id}",
+            )
+        )
         await session.commit()
 
 
@@ -445,6 +447,102 @@ async def test_add_with_semantic_duplicate_creates_alias(db_session):
     assert "Frieren Beyond Journey's End" in aliases
 
 
+async def test_add_all_semantic_duplicates_across_batch_all_merged_as_aliases(
+    db_session,
+):
+    """add_all() must catch semantic duplicates for every item in a batch, not
+    just the first (regression test for the N+1 batching fix)."""
+    db = BangumiDatabase(db_session)
+
+    for i in range(5):
+        await db.add(
+            Bangumi(
+                official_title=f"Anime {i}",
+                title_raw=f"Raw {i}",
+                group_name="GroupA",
+                dpi="1080p",
+                source="Web",
+                subtitle="CHT",
+                rss_link=f"rss{i}",
+            )
+        )
+
+    batch = [
+        Bangumi(
+            official_title=f"Anime {i}",
+            title_raw=f"Raw {i} New",
+            group_name="GroupA&GroupB",  # naming changed mid-season
+            dpi="1080p",
+            source="Web",
+            subtitle="CHT",
+            rss_link=f"rss{i}-new",
+        )
+        for i in range(5)
+    ]
+
+    added = await db.add_all(batch)
+
+    assert added == 0  # every item merged as an alias, no new rows
+    assert len(await db.search_all()) == 5
+    for i in range(5):
+        original = await db.search_official_title(f"Anime {i}")
+        aliases = json.loads(original.title_aliases) if original.title_aliases else []
+        assert f"Raw {i} New" in aliases
+
+
+async def test_add_all_semantic_duplicate_lookup_uses_batched_query(
+    db_session, db_engine
+):
+    """add_all() loads semantic-duplicate candidates in one batched SELECT
+    instead of one find_semantic_duplicate() query per candidate."""
+    from sqlalchemy import event
+
+    db = BangumiDatabase(db_session)
+
+    for i in range(5):
+        await db.add(
+            Bangumi(
+                official_title=f"Anime {i}",
+                title_raw=f"Raw {i}",
+                group_name="GroupA",
+                dpi="1080p",
+                source="Web",
+                subtitle="CHT",
+                rss_link=f"rss{i}",
+            )
+        )
+
+    batch = [
+        Bangumi(
+            official_title=f"Anime {i}",
+            title_raw=f"Raw {i} New",
+            group_name="GroupA&GroupB",
+            dpi="1080p",
+            source="Web",
+            subtitle="CHT",
+            rss_link=f"rss{i}-new",
+        )
+        for i in range(5)
+    ]
+
+    select_statements = []
+
+    def _record(conn, cursor, statement, parameters, context, executemany):
+        if statement.strip().upper().startswith("SELECT") and "bangumi" in statement:
+            select_statements.append(statement)
+
+    event.listen(db_engine.sync_engine, "before_cursor_execute", _record)
+    try:
+        await db.add_all(batch)
+    finally:
+        event.remove(db_engine.sync_engine, "before_cursor_execute", _record)
+
+    # Exactly one SELECT for the exact-duplicate check plus one for the
+    # semantic-duplicate candidates: O(1), not one per batch item (would be
+    # 1 + 5 = 6 before the fix).
+    assert len(select_statements) == 2
+
+
 class TestDeleteByBangumiId:
     """Tests for TorrentDatabase.delete_by_bangumi_id."""
 
@@ -452,7 +550,11 @@ class TestDeleteByBangumiId:
         db = TorrentDatabase(db_session)
         await _ensure_bangumi(db_session, 10)
         for i in range(3):
-            await db.add(Torrent(name=f"torrent_{i}", url=f"https://example.com/{i}", bangumi_id=10))
+            await db.add(
+                Torrent(
+                    name=f"torrent_{i}", url=f"https://example.com/{i}", bangumi_id=10
+                )
+            )
         assert len(await db.search_all()) == 3
 
         count = await db.delete_by_bangumi_id(10)
@@ -463,8 +565,12 @@ class TestDeleteByBangumiId:
         db = TorrentDatabase(db_session)
         await _ensure_bangumi(db_session, 20)
         await _ensure_bangumi(db_session, 30)
-        await db.add(Torrent(name="keep", url="https://example.com/keep", bangumi_id=20))
-        await db.add(Torrent(name="delete", url="https://example.com/delete", bangumi_id=30))
+        await db.add(
+            Torrent(name="keep", url="https://example.com/keep", bangumi_id=20)
+        )
+        await db.add(
+            Torrent(name="delete", url="https://example.com/delete", bangumi_id=30)
+        )
 
         count = await db.delete_by_bangumi_id(30)
         assert count == 1
@@ -475,7 +581,9 @@ class TestDeleteByBangumiId:
     async def test_no_match_returns_zero(self, db_session):
         db = TorrentDatabase(db_session)
         await _ensure_bangumi(db_session, 5)
-        await db.add(Torrent(name="unrelated", url="https://example.com/1", bangumi_id=5))
+        await db.add(
+            Torrent(name="unrelated", url="https://example.com/1", bangumi_id=5)
+        )
 
         count = await db.delete_by_bangumi_id(999)
         assert count == 0
@@ -484,8 +592,12 @@ class TestDeleteByBangumiId:
     async def test_skips_null_bangumi_id(self, db_session):
         db = TorrentDatabase(db_session)
         await _ensure_bangumi(db_session, 7)
-        await db.add(Torrent(name="orphan", url="https://example.com/orphan", bangumi_id=None))
-        await db.add(Torrent(name="target", url="https://example.com/target", bangumi_id=7))
+        await db.add(
+            Torrent(name="orphan", url="https://example.com/orphan", bangumi_id=None)
+        )
+        await db.add(
+            Torrent(name="target", url="https://example.com/target", bangumi_id=7)
+        )
 
         count = await db.delete_by_bangumi_id(7)
         assert count == 1
@@ -609,10 +721,16 @@ class TestRSSDeleteWithTorrents:
         rss = RSSItem(url="https://mikanani.me/RSS/test", name="Test RSS")
         await rss_db.add(rss)
 
-        await torrent_db.add(Torrent(name="ep01", url="https://example.com/1", rss_id=rss.id))
-        await torrent_db.add(Torrent(name="ep02", url="https://example.com/2", rss_id=rss.id))
+        await torrent_db.add(
+            Torrent(name="ep01", url="https://example.com/1", rss_id=rss.id)
+        )
+        await torrent_db.add(
+            Torrent(name="ep02", url="https://example.com/2", rss_id=rss.id)
+        )
         # 不关联此 RSS 的 torrent
-        await torrent_db.add(Torrent(name="other", url="https://example.com/3", rss_id=None))
+        await torrent_db.add(
+            Torrent(name="other", url="https://example.com/3", rss_id=None)
+        )
 
         assert len(await torrent_db.search_rss(rss.id)) == 2
 
@@ -647,7 +765,9 @@ class TestRSSDeleteWithTorrents:
 
         for i in range(5):
             await torrent_db.add(
-                Torrent(name=f"ep{i:02d}", url=f"https://example.com/{i}", rss_id=rss.id)
+                Torrent(
+                    name=f"ep{i:02d}", url=f"https://example.com/{i}", rss_id=rss.id
+                )
             )
 
         assert len(await torrent_db.search_rss(rss.id)) == 5
@@ -668,10 +788,16 @@ class TestRSSDeleteWithTorrents:
         await rss_db.add(rss1)
         await rss_db.add(rss2)
 
-        await torrent_db.add(Torrent(name="t1", url="https://example.com/1", rss_id=rss1.id))
-        await torrent_db.add(Torrent(name="t2", url="https://example.com/2", rss_id=rss2.id))
+        await torrent_db.add(
+            Torrent(name="t1", url="https://example.com/1", rss_id=rss1.id)
+        )
+        await torrent_db.add(
+            Torrent(name="t2", url="https://example.com/2", rss_id=rss2.id)
+        )
         # rss_id 为 None 的 torrent 应不受影响
-        await torrent_db.add(Torrent(name="orphan", url="https://example.com/3", rss_id=None))
+        await torrent_db.add(
+            Torrent(name="orphan", url="https://example.com/3", rss_id=None)
+        )
 
         await rss_db.delete_all()
 

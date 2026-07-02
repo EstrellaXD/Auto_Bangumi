@@ -16,7 +16,11 @@ from module.downloader.download_client import shutdown as downloader_shutdown
 from module.models import ResponseModel
 from module.network.request_url import reset_shared_client
 from module.notification import NotificationManager
+from module.parser.analyser.mikan_parser import reset_cache as reset_mikan_cache
+from module.parser.analyser.tmdb_parser import reset_cache as reset_tmdb_cache
+from module.parser.title_parser import reset_cache as reset_openai_parser
 from module.rss import RSSAnalyser
+from module.searcher.searcher import reset_cache as reset_poster_cache
 from module.update import (
     cache_image,
     data_migration,
@@ -247,8 +251,12 @@ class AppContext:
         it inline used to block both the lifespan and the /start,/restart API
         handlers for that long. It now runs as a supervised background task
         tracked on ``self._start_task`` so ``stop()`` can cancel it cleanly.
+
+        Reloads settings through ``reload_settings()`` (the single reload entry
+        point) rather than calling ``settings.load()`` directly; the scheduler
+        is not yet running at this point so its restart branch is a no-op.
         """
-        settings.load()
+        await self.reload_settings()
         if self._start_task is None or self._start_task.done():
             self._start_task = asyncio.create_task(self._run_start_tasks())
             self._start_task.add_done_callback(self._supervise_start_task)
@@ -331,9 +339,23 @@ class AppContext:
     # ------------------------------------------------------------------ reload
 
     async def reload_settings(self) -> None:
-        """Single choreography for a config update: reload + re-apply live state."""
-        settings.load()
+        """Single choreography for a config update: reload + re-apply live state.
+
+        This is the ONLY place settings are reloaded from disk — callers must
+        route through here (not a bare ``settings.load()``) so the HTTP
+        client, notifier, endpoint-keyed caches, and scheduler all stay in
+        sync with the new config.
+        """
+        # settings.load() does synchronous file I/O; keep it off the event loop.
+        await asyncio.to_thread(settings.load)
         await reset_shared_client()
+        # Endpoint-keyed caches (TMDB/Mikan/poster lookups, the OpenAI parser
+        # singleton) must be dropped too, or a changed tmdb_base_url/bgm_base_url
+        # keeps serving results cached from the old endpoint.
+        reset_tmdb_cache()
+        reset_mikan_cache()
+        reset_poster_cache()
+        reset_openai_parser()
         self.notifier.rebuild()
         if self.scheduler.running:
             await self.scheduler.stop_all()

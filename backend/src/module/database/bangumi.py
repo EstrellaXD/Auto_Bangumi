@@ -100,6 +100,32 @@ def build_save_path_index(bangumi_list: list[Bangumi]) -> dict[str, Bangumi]:
     return index
 
 
+def _find_semantic_match(data: Bangumi, candidates: list[Bangumi]) -> Optional[Bangumi]:
+    """在已加载的候选列表中查找语义重复项（同一部番剧、命名规则不同）。
+
+    被 ``find_semantic_duplicate``（单条、逐条查库）和 ``add_all``（批量、
+    候选一次性查库后在内存中匹配）共用，匹配规则只维护一处。
+    """
+    for candidate in candidates:
+        is_exact_duplicate = (
+            candidate.title_raw == data.title_raw
+            and candidate.group_name == data.group_name
+        )
+        if is_exact_duplicate:
+            continue
+
+        is_semantic_match = (
+            candidate.dpi == data.dpi
+            and candidate.subtitle == data.subtitle
+            and candidate.source == data.source
+            and _groups_are_similar(candidate.group_name, data.group_name)
+        )
+        if is_semantic_match:
+            return candidate
+
+    return None
+
+
 def match_bangumi_in_list(
     torrent_name: str, bangumi_list: list[Bangumi]
 ) -> Optional[Bangumi]:
@@ -149,31 +175,16 @@ class BangumiDatabase:
         result = await self.session.execute(statement)
         candidates = result.scalars().all()
 
-        for candidate in candidates:
-            is_exact_duplicate = (
-                candidate.title_raw == data.title_raw
-                and candidate.group_name == data.group_name
+        match = _find_semantic_match(data, candidates)
+        if match:
+            logger.debug(
+                "[Database] Found semantic duplicate: '%s' matches "
+                "existing '%s' (official: %s)",
+                data.title_raw,
+                match.title_raw,
+                data.official_title,
             )
-            if is_exact_duplicate:
-                continue
-
-            is_semantic_match = (
-                candidate.dpi == data.dpi
-                and candidate.subtitle == data.subtitle
-                and candidate.source == data.source
-                and _groups_are_similar(candidate.group_name, data.group_name)
-            )
-            if is_semantic_match:
-                logger.debug(
-                    "[Database] Found semantic duplicate: '%s' matches "
-                    "existing '%s' (official: %s)",
-                    data.title_raw,
-                    candidate.title_raw,
-                    data.official_title,
-                )
-                return candidate
-
-        return None
+        return match
 
     async def add_title_alias(
         self, bangumi_id: int, new_title_raw: str, auto_commit: bool = True
@@ -279,11 +290,33 @@ class BangumiDatabase:
         # Filter out exact duplicates
         to_add = [d for d in datas if (d.title_raw, d.group_name) not in existing]
 
+        # Batch query: load all semantic-duplicate candidates (grouped by
+        # official_title) in one SELECT, instead of one find_semantic_duplicate()
+        # query per candidate. Safe because no rows are inserted mid-loop —
+        # add_title_alias() only mutates existing rows and the new bangumi are
+        # only added to the session after this loop finishes.
+        official_titles = {d.official_title for d in to_add}
+        candidates_by_title: dict[str, list[Bangumi]] = {}
+        if official_titles:
+            statement = select(Bangumi).where(
+                and_(
+                    Bangumi.official_title.in_(official_titles),
+                    Bangumi.deleted == false(),
+                )
+            )
+            result = await self.session.execute(statement)
+            for candidate in result.scalars().all():
+                candidates_by_title.setdefault(candidate.official_title, []).append(
+                    candidate
+                )
+
         # Check for semantic duplicates and add as aliases
         semantic_merged = 0
         really_to_add = []
         for d in to_add:
-            semantic_match = await self.find_semantic_duplicate(d)
+            semantic_match = _find_semantic_match(
+                d, candidates_by_title.get(d.official_title, [])
+            )
             if semantic_match:
                 # Add as alias instead of creating new entry (defer commit)
                 await self.add_title_alias(

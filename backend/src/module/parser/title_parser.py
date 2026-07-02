@@ -27,6 +27,14 @@ def _get_openai_parser(kwargs: dict) -> OpenAIParser:
     return _openai_parser
 
 
+def reset_cache() -> None:
+    """清空 OpenAI 解析器单例。配置重载后必须调用，否则会继续使用旧配置
+    （如 api_base/api_key）构建的客户端。"""
+    global _openai_parser, _openai_parser_kwargs
+    _openai_parser = None
+    _openai_parser_kwargs = None
+
+
 class TitleParser:
     def __init__(self):
         pass

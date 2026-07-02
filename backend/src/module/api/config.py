@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from fastapi import APIRouter, Depends
@@ -70,7 +71,8 @@ async def update_config(config: Config, ctx: AppContext = Depends(get_context)):
     """Persist and reload configuration from the supplied payload."""
     try:
         config_dict = _restore_masked(config.dict(), settings.dict())
-        settings.save(config_dict=config_dict)
+        # settings.save() does synchronous file I/O; keep it off the event loop.
+        await asyncio.to_thread(settings.save, config_dict=config_dict)
         # reload_settings reloads from disk, resets the shared HTTP client,
         # rebuilds notifications, and re-applies the RSS/rename loops.
         await ctx.reload_settings()

@@ -63,7 +63,7 @@ async def cache_image():
                         # Hash local path
                         img = await req.get_content(bangumi.poster_link)
                         suffix = bangumi.poster_link.split(".")[-1]
-                        img_path = save_image(img, suffix)
+                        img_path = await save_image(img, suffix)
                         if img_path:
                             bangumi.poster_link = img_path
                     except Exception as e:

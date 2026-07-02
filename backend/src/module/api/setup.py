@@ -1,3 +1,4 @@
+import asyncio
 import ipaddress
 import logging
 import socket
@@ -5,15 +6,18 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from module.conf import VERSION, settings
+from module.core import AppContext
 from module.models import Config, ResponseModel
 from module.models.config import NotificationProvider as ProviderConfig
 from module.network import RequestContent
 from module.notification import PROVIDER_REGISTRY
 from module.security.jwt import get_password_hash, verify_password
+
+from .deps import get_context
 
 logger = logging.getLogger(__name__)
 
@@ -321,7 +325,11 @@ async def test_notification(req: TestNotificationRequest):
 
 
 @router.post("/complete", response_model=ResponseModel)
-async def complete_setup(req: SetupCompleteRequest, request: Request):
+async def complete_setup(
+    req: SetupCompleteRequest,
+    request: Request,
+    ctx: AppContext = Depends(get_context),
+):
     """Save all wizard configuration and mark setup as complete."""
     _require_setup_needed()
     await _require_default_admin_or_authenticated(request)
@@ -361,10 +369,12 @@ async def complete_setup(req: SetupCompleteRequest, request: Request):
                 ],
             }
 
-        settings.save(config_dict)
-        # Reload settings in-place
-        config_obj = Config.parse_obj(config_dict)
-        settings.__dict__.update(config_obj.__dict__)
+        # settings.save() does synchronous file I/O; keep it off the event loop.
+        await asyncio.to_thread(settings.save, config_dict)
+        # Route through the AppContext reload path so the shared httpx client,
+        # notifier, and scheduler are rebuilt against the new config too — not
+        # just the in-memory settings dict.
+        await ctx.reload_settings()
 
         # 3. Add RSS feed if provided
         if req.rss_url:

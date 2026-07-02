@@ -33,7 +33,7 @@ class TelegramProvider(NotificationProvider):
             "disable_notification": True,
         }
 
-        photo = load_image(notification.poster_path)
+        photo = await load_image(notification.poster_path)
         if photo:
             resp = await self.post_files(self.photo_url, data, files={"photo": photo})
         else:

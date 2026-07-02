@@ -1,5 +1,6 @@
 import json
 import logging
+from collections import OrderedDict
 from typing import TypeAlias
 
 from module.models import Bangumi, RSSItem, Torrent
@@ -22,8 +23,17 @@ SEARCH_KEY = [
 
 BangumiJSON: TypeAlias = str
 
-# Cache for TMDB poster lookups by official_title
-_poster_cache: dict[str, str | None] = {}
+# Cache for TMDB poster lookups by official_title. Bounded (LRU-ish,
+# oldest-evicted) like _tmdb_cache/_mikan_cache — was previously a plain dict
+# and grew unbounded for the life of the process.
+_POSTER_CACHE_MAX = 512
+_poster_cache: "OrderedDict[str, str | None]" = OrderedDict()
+
+
+def reset_cache() -> None:
+    """清空 TMDB 海报查询缓存。配置重载（如 tmdb_base_url 变更）后必须调用，
+    否则会继续返回旧接口地址下缓存的结果。"""
+    _poster_cache.clear()
 
 
 class SearchTorrent:
@@ -37,18 +47,21 @@ class SearchTorrent:
     async def _fetch_tmdb_poster(self, title: str) -> str | None:
         """Fetch poster from TMDB if not in cache."""
         if title in _poster_cache:
+            _poster_cache.move_to_end(title)
             return _poster_cache[title]
 
+        poster_link = None
         try:
             tmdb_info = await tmdb_parser(title, "zh", test=True)
             if tmdb_info and tmdb_info.poster_link:
-                _poster_cache[title] = tmdb_info.poster_link
-                return tmdb_info.poster_link
+                poster_link = tmdb_info.poster_link
         except Exception as e:
             logger.debug("[Searcher] Failed to fetch TMDB poster for %s: %s", title, e)
 
-        _poster_cache[title] = None
-        return None
+        if len(_poster_cache) >= _POSTER_CACHE_MAX:
+            _poster_cache.popitem(last=False)
+        _poster_cache[title] = poster_link
+        return poster_link
 
     async def analyse_keyword(
         self, keywords: list[str], site: str = "mikan", limit: int = 100

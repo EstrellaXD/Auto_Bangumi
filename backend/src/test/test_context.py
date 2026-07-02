@@ -17,6 +17,10 @@ def ctx():
     ctx.scheduler = MagicMock()
     ctx.scheduler.stop_all = AsyncMock()
     ctx.scheduler.start_all = MagicMock()
+    # A freshly built context has not started its scheduler yet; set this
+    # explicitly since a bare MagicMock attribute is truthy by default and
+    # would make reload_settings() think a restart is needed.
+    ctx.scheduler.running = False
     return ctx
 
 
@@ -113,6 +117,7 @@ class TestStartTasks:
     async def test_start_tasks_waits_then_starts_scheduler(self, ctx):
         with (
             patch("module.core.context.settings"),
+            patch("module.core.context.reset_shared_client", new=AsyncMock()),
             patch(
                 "module.core.context.Checker.check_downloader",
                 new=AsyncMock(return_value=True),
@@ -128,6 +133,19 @@ class TestStartTasks:
         assert ctx._tasks_started is True
         assert isinstance(resp, ResponseModel)
         assert resp.status is True
+
+    async def test_start_tasks_routes_through_reload_settings(self, ctx):
+        """start_tasks() must go through reload_settings() (the single reload
+        entry point) instead of calling settings.load() directly."""
+        ctx.reload_settings = AsyncMock()
+        with patch(
+            "module.core.context.Checker.check_downloader",
+            new=AsyncMock(return_value=True),
+        ):
+            await ctx.start_tasks()
+            await ctx._start_task
+
+        ctx.reload_settings.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------
@@ -200,3 +218,23 @@ class TestReloadSettings:
         ctx.notifier.rebuild.assert_called_once()
         ctx.scheduler.stop_all.assert_not_awaited()
         ctx.scheduler.start_all.assert_not_called()
+
+    async def test_reload_resets_endpoint_keyed_caches(self, ctx):
+        """A changed tmdb_base_url/bgm_base_url must not keep serving results
+        cached from the old endpoint — reload_settings() must drop the TMDB,
+        Mikan, and poster caches plus the OpenAI parser singleton."""
+        ctx.scheduler.running = False
+        with (
+            patch("module.core.context.settings"),
+            patch("module.core.context.reset_shared_client", new=AsyncMock()),
+            patch("module.core.context.reset_tmdb_cache") as mock_tmdb,
+            patch("module.core.context.reset_mikan_cache") as mock_mikan,
+            patch("module.core.context.reset_poster_cache") as mock_poster,
+            patch("module.core.context.reset_openai_parser") as mock_openai,
+        ):
+            await ctx.reload_settings()
+
+        mock_tmdb.assert_called_once()
+        mock_mikan.assert_called_once()
+        mock_poster.assert_called_once()
+        mock_openai.assert_called_once()

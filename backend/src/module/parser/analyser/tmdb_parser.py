@@ -23,6 +23,12 @@ _TMDB_CACHE_MAX = 512
 _tmdb_cache: OrderedDict[str, "TMDBInfo | None"] = OrderedDict()
 
 
+def reset_cache() -> None:
+    """清空 TMDB 查询缓存。配置重载（如 tmdb_base_url 变更）后必须调用，否则会
+    继续返回旧接口地址下缓存的结果。"""
+    _tmdb_cache.clear()
+
+
 @dataclass
 class TMDBInfo:
     id: int
@@ -299,7 +305,7 @@ async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
                         f"https://image.tmdb.org/t/p/w780{poster_path}"
                     )
                     # img is None if the poster download failed; don't crash on it.
-                    poster_link = save_image(img, "jpg") if img else None
+                    poster_link = await save_image(img, "jpg") if img else None
                 else:
                     poster_link = "https://image.tmdb.org/t/p/w780" + poster_path
             else:
