@@ -146,6 +146,15 @@ MIGRATIONS: tuple[Migration, ...] = (
         ("ALTER TABLE bangumi ADD COLUMN weekday_locked BOOLEAN DEFAULT 0",),
         column_exists("bangumi", "weekday_locked"),
     ),
+    Migration(
+        10,
+        "add preferred_group and preferred_resolution columns to bangumi",
+        (
+            "ALTER TABLE bangumi ADD COLUMN preferred_group TEXT DEFAULT NULL",
+            "ALTER TABLE bangumi ADD COLUMN preferred_resolution TEXT DEFAULT NULL",
+        ),
+        column_exists("bangumi", "preferred_group"),
+    ),
 )
 
 # 由迁移列表派生，新增迁移时无需手动同步

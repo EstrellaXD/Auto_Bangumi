@@ -552,3 +552,205 @@ class TestRefreshRssPerHostThrottle:
         for rss_id in (1, 2):
             item = await rss_engine.db.rss.search_id(rss_id)
             assert item.connection_status == "healthy"
+
+
+# ---------------------------------------------------------------------------
+# Release-group / resolution preference dedup
+# ---------------------------------------------------------------------------
+
+
+class TestPreferenceDedup:
+    """Unit tests for RSSEngine._select_preference_skips."""
+
+    async def test_no_preference_keeps_all_candidates(self, rss_engine):
+        """No preferred_group/preferred_resolution set -> nothing is skipped."""
+        bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="", id=1)
+        torrent_a = make_torrent(name="[GroupA] Mushoku Tensei - 12 [1080p].mkv")
+        torrent_b = make_torrent(name="[GroupB] Mushoku Tensei - 12 [720p].mkv")
+
+        skips = RSSEngine._select_preference_skips(
+            [(torrent_a, bangumi), (torrent_b, bangumi)],
+            preference_bangumi={},
+            existing_downloaded={},
+        )
+
+        assert skips == set()
+
+    async def test_batch_picks_preferred_group_skips_other(self, rss_engine):
+        """Two releases of the same episode arrive together -> only the
+        preferred group is kept."""
+        bangumi = make_bangumi(
+            title_raw="Mushoku Tensei", filter="", id=1, preferred_group="GroupA"
+        )
+        preferred = make_torrent(name="[GroupA] Mushoku Tensei - 12 [1080p].mkv")
+        other = make_torrent(name="[GroupB] Mushoku Tensei - 12 [1080p].mkv")
+
+        skips = RSSEngine._select_preference_skips(
+            [(preferred, bangumi), (other, bangumi)],
+            preference_bangumi={1: bangumi},
+            existing_downloaded={},
+        )
+
+        assert id(other) in skips
+        assert id(preferred) not in skips
+
+    async def test_batch_picks_preferred_resolution_skips_other(self, rss_engine):
+        """Preference on resolution alone also dedups within a batch."""
+        bangumi = make_bangumi(
+            title_raw="Mushoku Tensei",
+            filter="",
+            id=1,
+            preferred_resolution="1080p",
+        )
+        preferred = make_torrent(name="[GroupA] Mushoku Tensei - 12 [1080p].mkv")
+        other = make_torrent(name="[GroupB] Mushoku Tensei - 12 [720p].mkv")
+
+        skips = RSSEngine._select_preference_skips(
+            [(preferred, bangumi), (other, bangumi)],
+            preference_bangumi={1: bangumi},
+            existing_downloaded={},
+        )
+
+        assert id(other) in skips
+        assert id(preferred) not in skips
+
+    async def test_new_release_strictly_better_than_downloaded_is_kept(
+        self, rss_engine
+    ):
+        """A better-matching release replaces a worse already-downloaded one."""
+        bangumi = make_bangumi(
+            title_raw="Mushoku Tensei", filter="", id=1, preferred_group="GroupA"
+        )
+        already_downloaded = make_torrent(
+            name="[GroupB] Mushoku Tensei - 12 [1080p].mkv", downloaded=True
+        )
+        better_candidate = make_torrent(name="[GroupA] Mushoku Tensei - 12 [1080p].mkv")
+
+        skips = RSSEngine._select_preference_skips(
+            [(better_candidate, bangumi)],
+            preference_bangumi={1: bangumi},
+            existing_downloaded={1: [already_downloaded]},
+        )
+
+        assert skips == set()
+
+    async def test_new_release_not_better_than_downloaded_is_skipped(self, rss_engine):
+        """A same-or-worse-matching release does not replace what is already
+        downloaded (old download is left in place, new one is just skipped)."""
+        bangumi = make_bangumi(
+            title_raw="Mushoku Tensei", filter="", id=1, preferred_group="GroupA"
+        )
+        already_downloaded = make_torrent(
+            name="[GroupA] Mushoku Tensei - 12 [1080p].mkv", downloaded=True
+        )
+        worse_candidate = make_torrent(name="[GroupB] Mushoku Tensei - 12 [720p].mkv")
+
+        skips = RSSEngine._select_preference_skips(
+            [(worse_candidate, bangumi)],
+            preference_bangumi={1: bangumi},
+            existing_downloaded={1: [already_downloaded]},
+        )
+
+        assert id(worse_candidate) in skips
+
+    async def test_unparseable_episode_is_never_skipped(self, rss_engine):
+        """A candidate whose episode number can't be parsed is a conservative
+        fallback: always keep it rather than risk dropping a real episode."""
+        bangumi = make_bangumi(
+            title_raw="Mushoku Tensei", filter="", id=1, preferred_group="GroupA"
+        )
+        unparseable = make_torrent(name="Completely Unparseable Blob")
+
+        skips = RSSEngine._select_preference_skips(
+            [(unparseable, bangumi)],
+            preference_bangumi={1: bangumi},
+            existing_downloaded={},
+        )
+
+        assert skips == set()
+
+    async def test_different_episodes_are_not_deduped_against_each_other(
+        self, rss_engine
+    ):
+        """Preference dedup only compares candidates for the same episode."""
+        bangumi = make_bangumi(
+            title_raw="Mushoku Tensei", filter="", id=1, preferred_group="GroupA"
+        )
+        ep12 = make_torrent(name="[GroupB] Mushoku Tensei - 12 [1080p].mkv")
+        ep13 = make_torrent(name="[GroupB] Mushoku Tensei - 13 [1080p].mkv")
+
+        skips = RSSEngine._select_preference_skips(
+            [(ep12, bangumi), (ep13, bangumi)],
+            preference_bangumi={1: bangumi},
+            existing_downloaded={},
+        )
+
+        assert skips == set()
+
+
+class TestRefreshRssPreferenceDedup:
+    """Integration coverage through refresh_rss end to end."""
+
+    async def test_refresh_rss_downloads_only_preferred_group(self, rss_engine):
+        """Two subtitle groups match the same episode; only the preferred one
+        is added to the download client."""
+        rss_item = make_rss_item(enabled=True)
+        await rss_engine.db.rss.add(rss_item)
+        bangumi = make_bangumi(
+            title_raw="Mushoku Tensei", filter="", preferred_group="GroupA"
+        )
+        await rss_engine.db.bangumi.add(bangumi)
+
+        preferred = Torrent(
+            name="[GroupA] Mushoku Tensei - 12 [1080p].mkv",
+            url="https://example.com/groupa12.torrent",
+        )
+        other = Torrent(
+            name="[GroupB] Mushoku Tensei - 12 [1080p].mkv",
+            url="https://example.com/groupb12.torrent",
+        )
+        with patch.object(
+            RSSEngine, "_get_torrents", new_callable=AsyncMock
+        ) as mock_get:
+            mock_get.return_value = [preferred, other]
+            client = AsyncMock()
+            client.add_torrent = AsyncMock(return_value=True)
+
+            await rss_engine.refresh_rss(client)
+
+        client.add_torrent.assert_called_once()
+        called_torrent = client.add_torrent.call_args[0][0]
+        assert called_torrent.name == preferred.name
+
+        all_torrents = await rss_engine.db.torrent.search_all()
+        assert len(all_torrents) == 2
+        downloaded = {t.name: t.downloaded for t in all_torrents}
+        assert downloaded[preferred.name] is True
+        assert downloaded[other.name] is False
+
+    async def test_refresh_rss_no_preference_downloads_both_groups(self, rss_engine):
+        """Regression: with no preference set, both groups still download
+        (unchanged legacy behavior)."""
+        rss_item = make_rss_item(enabled=True)
+        await rss_engine.db.rss.add(rss_item)
+        bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="")
+        await rss_engine.db.bangumi.add(bangumi)
+
+        torrent_a = Torrent(
+            name="[GroupA] Mushoku Tensei - 12 [1080p].mkv",
+            url="https://example.com/groupa12.torrent",
+        )
+        torrent_b = Torrent(
+            name="[GroupB] Mushoku Tensei - 12 [1080p].mkv",
+            url="https://example.com/groupb12.torrent",
+        )
+        with patch.object(
+            RSSEngine, "_get_torrents", new_callable=AsyncMock
+        ) as mock_get:
+            mock_get.return_value = [torrent_a, torrent_b]
+            client = AsyncMock()
+            client.add_torrent = AsyncMock(return_value=True)
+
+            await rss_engine.refresh_rss(client)
+
+        assert client.add_torrent.call_count == 2

@@ -1,7 +1,8 @@
 import logging
+from collections import defaultdict
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import and_, select, true
 
 from module.models import Torrent
 
@@ -83,6 +84,31 @@ class TorrentDatabase:
             select(Torrent).where(Torrent.bangumi_id == bangumi_id)
         )
         return list(result.scalars().all())
+
+    async def search_downloaded_by_bangumi_ids(
+        self, bangumi_ids: list[int]
+    ) -> dict[int, list[Torrent]]:
+        """Batch lookup already-downloaded torrents for the given bangumi ids.
+
+        Used by the release-preference dedup path to compare an incoming
+        candidate against what has already been downloaded for that episode,
+        without a query per bangumi.
+        """
+        if not bangumi_ids:
+            return {}
+        result = await self.session.execute(
+            select(Torrent).where(
+                and_(
+                    Torrent.bangumi_id.in_(bangumi_ids),  # type: ignore[union-attr]
+                    Torrent.downloaded == true(),
+                )
+            )
+        )
+        grouped: dict[int, list[Torrent]] = defaultdict(list)
+        for torrent in result.scalars().all():
+            if torrent.bangumi_id is not None:
+                grouped[torrent.bangumi_id].append(torrent)
+        return dict(grouped)
 
     async def delete_by_bangumi_id(self, bangumi_id: int) -> int:
         """Delete all torrent records associated with a bangumi.

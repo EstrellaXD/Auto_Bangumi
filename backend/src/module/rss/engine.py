@@ -7,21 +7,45 @@ from typing import Optional
 from urllib.parse import urlparse
 
 from module.database import Database
-from module.database.bangumi import match_bangumi_in_list
+from module.database.bangumi import _groups_are_similar, match_bangumi_in_list
 from module.downloader import DownloadClient
-from module.models import Bangumi, ResponseModel, RSSItem, Torrent
+from module.models import Bangumi, Episode, ResponseModel, RSSItem, Torrent
 from module.network import RequestContent
 from module.notification.events import (
     DownloadFailureEvent,
     RssFailureEvent,
     SystemEvent,
 )
+from module.parser.analyser.raw_parser import raw_parser
 
 logger = logging.getLogger(__name__)
 
 # Delay between consecutive requests to the same host. Firing all feeds of one
 # site at once gets the whole batch rate-limited with HTTP 429 (#1026).
 RSS_PER_HOST_DELAY = 2.0
+
+
+def _resolution_matches(candidate: str | None, preferred: str | None) -> bool:
+    """比较分辨率是否一致（"1080p" 与 "1080" 视为相同）。"""
+    if not candidate or not preferred:
+        return False
+    normalized_candidate = re.sub(r"[pP]$", "", candidate.strip())
+    normalized_preferred = re.sub(r"[pP]$", "", preferred.strip())
+    return normalized_candidate == normalized_preferred
+
+
+def _preference_score(episode: Episode, bangumi: Bangumi) -> int:
+    """候选版本相对番剧发布组/分辨率偏好的匹配得分：每命中一项 +1。"""
+    score = 0
+    if bangumi.preferred_group and _groups_are_similar(
+        episode.group, bangumi.preferred_group
+    ):
+        score += 1
+    if bangumi.preferred_resolution and _resolution_matches(
+        episode.resolution, bangumi.preferred_resolution
+    ):
+        score += 1
+    return score
 
 
 class RSSEngine:
@@ -152,6 +176,69 @@ class RSSEngine:
                 return matched
         return None
 
+    @staticmethod
+    def _select_preference_skips(
+        matched: list[tuple[Torrent, Bangumi]],
+        preference_bangumi: dict[int, Bangumi],
+        existing_downloaded: dict[int, list[Torrent]],
+    ) -> set[int]:
+        """按番剧的发布组/分辨率偏好去重：同一集只保留最匹配偏好的版本。
+
+        只影响设置了 ``preferred_group`` 或 ``preferred_resolution`` 的番剧；
+        未设置偏好的番剧完全不受影响（沿用旧行为，多字幕组各自下载全部集数）。
+
+        规则：
+        - 该集已有下载版本时，新到的版本只有严格优于已下载版本（得分更高）
+          才会被保留，平局或更差一律跳过——不删除已下载的旧版本，只是不再
+          重复下载。
+        - 同一批次内同一集出现多个候选时，只保留得分最高的一个。
+        - 无法从种子名解析出集数的候选不参与去重判断，始终保留（保守回退，
+          避免因解析失败漏下载）。
+
+        返回需要跳过下载的种子对象 id（``id(torrent)``），供调用方在本轮
+        ``refresh_rss`` 内部过滤，不做跨请求持久化。
+        """
+        skip_ids: set[int] = set()
+
+        # 已下载版本：按 (bangumi_id, episode) 记录当前最高得分
+        existing_best: dict[tuple[int, int], int] = {}
+        for bangumi_id, torrents in existing_downloaded.items():
+            bangumi = preference_bangumi.get(bangumi_id)
+            if not bangumi:
+                continue
+            for torrent in torrents:
+                episode = raw_parser(torrent.name)
+                if episode is None:
+                    continue
+                key = (bangumi_id, episode.episode)
+                score = _preference_score(episode, bangumi)
+                existing_best[key] = max(existing_best.get(key, -1), score)
+
+        # 本批次候选：按 (bangumi_id, episode) 分组
+        batch_groups: dict[tuple[int, int], list[tuple[Torrent, int]]] = defaultdict(
+            list
+        )
+        for torrent, bangumi in matched:
+            if bangumi.id is None or bangumi.id not in preference_bangumi:
+                continue
+            episode = raw_parser(torrent.name)
+            if episode is None:
+                continue
+            key = (bangumi.id, episode.episode)
+            batch_groups[key].append((torrent, _preference_score(episode, bangumi)))
+
+        for key, candidates in batch_groups.items():
+            best_score = max(score for _, score in candidates)
+            best_torrent = next(t for t, s in candidates if s == best_score)
+            prior_best = existing_best.get(key)
+            keep_best = prior_best is None or best_score > prior_best
+            for torrent, _score in candidates:
+                if torrent is best_torrent and keep_best:
+                    continue
+                skip_ids.add(id(torrent))
+
+        return skip_ids
+
     async def refresh_rss(
         self, client: DownloadClient, rss_id: Optional[int] = None
     ) -> list[SystemEvent]:
@@ -193,8 +280,46 @@ class RSSEngine:
         # TTL cache existed to do).
         bangumi_list = await self.db.bangumi.search_all()
         events: list[SystemEvent] = []
-        # Process results sequentially (DB operations)
+
+        # Bangumi with a release-group/resolution preference need per-episode
+        # dedup; everyone else keeps the old "download every match" behavior.
+        preference_bangumi = {
+            b.id: b
+            for b in bangumi_list
+            if b.id is not None and (b.preferred_group or b.preferred_resolution)
+        }
+        existing_downloaded: dict[int, list[Torrent]] = {}
+        if preference_bangumi:
+            existing_downloaded = (
+                await self.db.torrent.search_downloaded_by_bangumi_ids(
+                    list(preference_bangumi)
+                )
+            )
+
+        # First pass: match every torrent against the bangumi list (this also
+        # tags torrent.bangumi_id as a side effect) without downloading yet,
+        # so preference dedup can see the whole batch before anything is
+        # added to the download client.
+        item_matches: list[
+            tuple[RSSItem, list[Torrent], Optional[str], list[Optional[Bangumi]]]
+        ] = []
         for rss_item, (new_torrents, error) in item_results:
+            matches = [self.match_torrent(t, bangumi_list) for t in new_torrents]
+            item_matches.append((rss_item, new_torrents, error, matches))
+
+        skip_ids = self._select_preference_skips(
+            [
+                (torrent, matched)
+                for _, new_torrents, _, matches in item_matches
+                for torrent, matched in zip(new_torrents, matches)
+                if matched is not None
+            ],
+            preference_bangumi,
+            existing_downloaded,
+        )
+
+        # Process results sequentially (DB operations)
+        for rss_item, new_torrents, error, matches in item_matches:
             # Update connection status. Only notify on the working->error
             # transition (previous_status read before it's overwritten below),
             # not on every tick a feed stays broken.
@@ -211,10 +336,16 @@ class RSSEngine:
                         error=error,
                     )
                 )
-            for torrent in new_torrents:
-                matched_data = self.match_torrent(torrent, bangumi_list)
+            for torrent, matched_data in zip(new_torrents, matches):
                 if matched_data:
-                    if await client.add_torrent(torrent, matched_data):
+                    if id(torrent) in skip_ids:
+                        logger.debug(
+                            "[Engine] Skip %s: worse/duplicate release for an "
+                            "already-downloaded episode of %s",
+                            torrent.name,
+                            matched_data.official_title,
+                        )
+                    elif await client.add_torrent(torrent, matched_data):
                         logger.debug("[Engine] Add torrent %s to client", torrent.name)
                         torrent.downloaded = True
                     else:
