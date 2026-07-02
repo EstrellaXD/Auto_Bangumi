@@ -79,14 +79,16 @@ backend/src/
 │   │   ├── program.py     # Program status/control
 │   │   └── search.py      # Torrent search
 │   ├── core/              # Application logic
-│   │   ├── program.py     # Main controller, orchestrates all operations
-│   │   ├── sub_thread.py  # Background task execution
-│   │   └── status.py      # Application state tracking
+│   │   ├── context.py     # AppContext composition root (built in create_app, on app.state.ctx)
+│   │   ├── scheduler.py   # PeriodicTask + Scheduler (generic background-loop runner)
+│   │   ├── loops.py       # The individual periodic tick functions (rss/rename/offset/calendar)
+│   │   └── offset_scanner.py
 │   ├── models/            # SQLModel ORM models (Pydantic + SQLAlchemy)
-│   ├── database/          # Database operations (SQLite at data/data.db)
+│   ├── database/          # Async DB (aiosqlite) — repos + Database + migrations.py
 │   ├── rss/               # RSS parsing and analysis
 │   ├── downloader/        # qBittorrent integration
-│   │   └── client/        # Download client implementations (qb, aria2, tr)
+│   │   ├── base.py        # Downloader Protocol + DownloaderCapabilities
+│   │   └── client/        # Download client implementations (qb, aria2, mock)
 │   ├── searcher/          # Torrent search providers (Mikan, DMHY, Nyaa)
 │   ├── parser/            # Torrent name parsing, metadata extraction
 │   │   └── analyser/      # TMDB, Mikan, OpenAI parsers
@@ -112,7 +114,15 @@ webui/src/
 2. Torrent names are analyzed by `module/parser/analyser/` to extract anime metadata
 3. Downloads are managed via `module/downloader/` (qBittorrent API)
 4. Files are organized by `module/manager/` into standard directory structure
-5. Background tasks run in `module/core/sub_thread.py` to avoid blocking
+5. Periodic loops (`module/core/loops.py`) run under a `Scheduler` owned by the lifespan `AppContext` (`module/core/context.py`)
+
+## Architecture conventions (3.3+)
+
+- **Async DB throughout.** Everything runs on the async engine (`sqlite+aiosqlite`, WAL). Repositories (`database/{bangumi,rss,torrent,user,passkey}.py`) take an `AsyncSession` and are `async def`. `Database` is an async context manager owning one session with the repos attached (`db.rss`, `db.bangumi`, …).
+- **Session per operation.** Get a session via `Depends(get_db)` in routes, or `async with Database() as db:` in loops/services. Never store a session on anything that outlives one request or one loop tick. `AppContext` holds no session.
+- **Services take dependencies in their constructor** (composition, not inheritance): `RSSEngine(db)`, `TorrentManager(db)`, `Renamer(client)`, `SearchTorrent()`. They use `self.db.<repo>` internally; callers that only need a repo use `db.<repo>` directly.
+- **Downloaders** implement the `Downloader` Protocol and declare `DownloaderCapabilities`; the facade (`DownloadClient`) skips-and-logs unsupported ops rather than crashing. The qB client is reused across operations (one login), not re-authed per call.
+- **Config reloads** go through `AppContext.reload_settings()` (settings + http client + notifier + scheduler), not ad-hoc `settings.load()`.
 
 ## Code Style
 
@@ -145,9 +155,9 @@ The VERSION is injected at build time via CI — `module/__version__.py` does no
 
 Schema migrations are tracked via a `schema_version` table in SQLite. To add a new migration:
 
-1. Increment `CURRENT_SCHEMA_VERSION` in `backend/src/module/database/combine.py`
-2. Append a new entry to the `MIGRATIONS` list: `(version, "description", ["SQL statements"])`
-3. Migrations run automatically on startup via `run_migrations()`
+1. Append a `Migration(version, "description", (…SQL…), already_applied=column_exists("table", "col"))` entry to the `MIGRATIONS` tuple in `backend/src/module/database/migrations.py` (`CURRENT_SCHEMA_VERSION` is derived from the list — do not edit it by hand)
+2. Provide an `already_applied` guard (`column_exists` / `table_exists`) so a schema created out-of-band is detected and skipped
+3. Migrations run automatically on startup via `run_migrations()` (each in a SAVEPOINT, stopping on first failure)
 
 ## Notes
 
