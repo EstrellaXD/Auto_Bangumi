@@ -5,6 +5,13 @@ export const useDownloaderStore = defineStore('downloader', () => {
   const selectedHashes = ref<string[]>([]);
   const loading = ref(false);
 
+  const { downloaderData } = useEventStream();
+  // SSE 已连接时使用推送数据，省去 downloader.vue 页面自己的 5s 轮询请求。
+  watch(downloaderData, (data) => {
+    if (data === null) return;
+    torrents.value = data;
+  });
+
   const groups = computed<TorrentGroup[]>(() => {
     const map = new Map<string, QbTorrentInfo[]>();
     for (const t of torrents.value) {

@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { NButton } from 'naive-ui';
 import { Caution, Close } from '@icon-park/vue-next';
 import type { OffsetSuggestionDetail, TMDBSummary } from '#/bangumi';
 
@@ -48,7 +49,9 @@ const preview = computed(() => {
   const formatNum = (n: number) => (n < 10 ? `0${n}` : `${n}`);
   return {
     from: `S${formatNum(props.parsedSeason)}E${formatNum(props.parsedEpisode)}`,
-    to: `S${formatNum(Math.max(1, newSeason))}E${formatNum(Math.max(1, newEpisode))}`,
+    to: `S${formatNum(Math.max(1, newSeason))}E${formatNum(
+      Math.max(1, newEpisode)
+    )}`,
   };
 });
 
@@ -108,7 +111,9 @@ function handleCancel() {
             <div class="comparison">
               <!-- RSS parsed result -->
               <div class="comparison-box">
-                <div class="comparison-label">{{ t('offset.parsed_result') }}</div>
+                <div class="comparison-label">
+                  {{ t('offset.parsed_result') }}
+                </div>
                 <div class="comparison-value">
                   <span class="value-label">{{ t('offset.season') }}:</span>
                   <span class="value-num">{{ parsedSeason }}</span>
@@ -125,19 +130,39 @@ function handleCancel() {
               <div class="comparison-box">
                 <div class="comparison-label">{{ t('offset.tmdb_data') }}</div>
                 <div v-if="tmdbInfo" class="comparison-value">
-                  <span class="value-label">{{ t('offset.total_seasons') }}:</span>
+                  <span class="value-label"
+                    >{{ t('offset.total_seasons') }}:</span
+                  >
                   <span class="value-num">{{ tmdbInfo.total_seasons }}</span>
                 </div>
-                <div v-if="tmdbInfo && tmdbInfo.season_episode_counts[parsedSeason + (suggestion?.season_offset ?? 0)]" class="comparison-value">
-                  <span class="value-label">S{{ parsedSeason + (suggestion?.season_offset ?? 0) }} {{ t('offset.episode') }}:</span>
-                  <span class="value-num">{{ tmdbInfo.season_episode_counts[parsedSeason + (suggestion?.season_offset ?? 0)] }}</span>
+                <div
+                  v-if="
+                    tmdbInfo &&
+                    tmdbInfo.season_episode_counts[
+                      parsedSeason + (suggestion?.season_offset ?? 0)
+                    ]
+                  "
+                  class="comparison-value"
+                >
+                  <span class="value-label"
+                    >S{{ parsedSeason + (suggestion?.season_offset ?? 0) }}
+                    {{ t('offset.episode') }}:</span
+                  >
+                  <span class="value-num">{{
+                    tmdbInfo.season_episode_counts[
+                      parsedSeason + (suggestion?.season_offset ?? 0)
+                    ]
+                  }}</span>
                 </div>
               </div>
             </div>
 
             <!-- Reason -->
             <div v-if="suggestion?.reason" class="reason-section">
-              <span class="reason-badge" :style="{ backgroundColor: confidenceColor }">
+              <span
+                class="reason-badge"
+                :style="{ backgroundColor: confidenceColor }"
+              >
                 {{ suggestion.confidence }}
               </span>
               <span class="reason-text">{{ suggestion.reason }}</span>
@@ -147,22 +172,36 @@ function handleCancel() {
             <div class="offset-section">
               <div class="offset-title">{{ t('offset.suggested_offset') }}</div>
               <div class="offset-row">
-                <label class="offset-label">{{ t('offset.season_offset') }}:</label>
+                <label class="offset-label"
+                  >{{ t('offset.season_offset') }}:</label
+                >
                 <input
                   v-model.number="seasonOffset"
                   type="number"
                   class="offset-input"
                 />
-                <span class="offset-hint">&rarr; S{{ parsedSeason }} {{ t('offset.season') === '季度' ? '变为' : 'becomes' }} S{{ Math.max(1, parsedSeason + seasonOffset) }}</span>
+                <span class="offset-hint"
+                  >&rarr; S{{ parsedSeason }}
+                  {{ t('offset.season') === '季度' ? '变为' : 'becomes' }} S{{
+                    Math.max(1, parsedSeason + seasonOffset)
+                  }}</span
+                >
               </div>
               <div class="offset-row">
-                <label class="offset-label">{{ t('offset.episode_offset') }}:</label>
+                <label class="offset-label"
+                  >{{ t('offset.episode_offset') }}:</label
+                >
                 <input
                   v-model.number="episodeOffset"
                   type="number"
                   class="offset-input"
                 />
-                <span class="offset-hint">&rarr; E{{ parsedEpisode }} {{ t('offset.season') === '季度' ? '保持' : 'stays' }} E{{ Math.max(1, parsedEpisode + episodeOffset) }}</span>
+                <span class="offset-hint"
+                  >&rarr; E{{ parsedEpisode }}
+                  {{ t('offset.season') === '季度' ? '保持' : 'stays' }} E{{
+                    Math.max(1, parsedEpisode + episodeOffset)
+                  }}</span
+                >
               </div>
             </div>
 
@@ -177,15 +216,20 @@ function handleCancel() {
 
           <!-- Footer -->
           <footer class="dialog-footer">
-            <ab-button size="small" type="secondary" @click="handleCancel">
+            <NButton
+              size="small"
+              type="primary"
+              secondary
+              @click="handleCancel"
+            >
               {{ t('offset.cancel') }}
-            </ab-button>
-            <ab-button size="small" @click="handleKeep">
+            </NButton>
+            <NButton type="primary" size="small" @click="handleKeep">
               {{ t('offset.keep') }}
-            </ab-button>
-            <ab-button size="small" type="primary" @click="handleApply">
+            </NButton>
+            <NButton size="small" type="primary" @click="handleApply">
               {{ t('offset.apply') }}
-            </ab-button>
+            </NButton>
           </footer>
         </div>
       </div>

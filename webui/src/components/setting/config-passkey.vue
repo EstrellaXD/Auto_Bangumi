@@ -1,10 +1,17 @@
 <script lang="ts" setup>
+import { NButton } from 'naive-ui';
 import { Delete } from '@icon-park/vue-next';
 import type { PasskeyItem } from '#/passkey';
 
 const { t } = useMyI18n();
-const { passkeys, loading, isSupported, loadPasskeys, addPasskey, deletePasskey } =
-  usePasskey();
+const {
+  passkeys,
+  loading,
+  isSupported,
+  loadPasskeys,
+  addPasskey,
+  deletePasskey,
+} = usePasskey();
 
 const showAddDialog = ref(false);
 const deviceName = ref('');
@@ -93,22 +100,20 @@ function formatDate(dateString: string | null): string {
           <div>
             <div font-medium>{{ passkey.name }}</div>
             <div text-12 text-gray-500>
-              {{ $t('passkey.created_at') }}: {{ formatDate(passkey.created_at) }}
+              {{ $t('passkey.created_at') }}:
+              {{ formatDate(passkey.created_at) }}
             </div>
             <div v-if="passkey.last_used_at" text-12 text-gray-500>
-              {{ $t('passkey.last_used') }}: {{ formatDate(passkey.last_used_at) }}
+              {{ $t('passkey.last_used') }}:
+              {{ formatDate(passkey.last_used_at) }}
             </div>
             <div v-if="passkey.backup_eligible" text-12 text-green-600>
               {{ $t('passkey.synced') }}
             </div>
           </div>
-          <ab-button
-            size="small"
-            type="warn"
-            @click="handleDelete(passkey)"
-          >
+          <NButton size="small" type="error" @click="handleDelete(passkey)">
             <Delete size="16" />
-          </ab-button>
+          </NButton>
         </div>
       </div>
 
@@ -116,14 +121,14 @@ function formatDate(dateString: string | null): string {
 
       <!-- 添加按钮 -->
       <div flex="~ justify-end">
-        <ab-button
+        <NButton
           v-if="isSupported"
           size="small"
           type="primary"
           @click="openAddDialog"
         >
           {{ $t('passkey.add_new') }}
-        </ab-button>
+        </NButton>
       </div>
     </div>
 
@@ -152,21 +157,17 @@ function formatDate(dateString: string | null): string {
         <div line></div>
 
         <div flex="~ justify-end gap-8">
-          <ab-button
-            size="small"
-            type="warn"
-            @click="showAddDialog = false"
-          >
+          <NButton size="small" type="error" @click="showAddDialog = false">
             {{ $t('config.cancel') }}
-          </ab-button>
-          <ab-button
+          </NButton>
+          <NButton
             size="small"
             type="primary"
             :disabled="!deviceName.trim() || isRegistering"
             @click="handleAdd"
           >
             {{ $t('config.apply') }}
-          </ab-button>
+          </NButton>
         </div>
       </div>
     </ab-popup>

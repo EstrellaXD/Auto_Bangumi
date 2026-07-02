@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { NButton } from 'naive-ui';
 import type { NotificationProviderConfig, NotificationType } from '#/config';
 import type { TupleToUnion } from '#/utils';
 import { apiNotification } from '@/api/notification';
@@ -9,7 +10,10 @@ const { getSettingGroup } = useConfigStore();
 const notificationRef = getSettingGroup('notification');
 
 // Provider types with display names
-const providerTypes: { value: TupleToUnion<NotificationType>; label: string }[] = [
+const providerTypes: {
+  value: TupleToUnion<NotificationType>;
+  label: string;
+}[] = [
   { value: 'telegram', label: 'Telegram' },
   { value: 'discord', label: 'Discord' },
   { value: 'bark', label: 'Bark' },
@@ -23,7 +27,11 @@ const providerTypes: { value: TupleToUnion<NotificationType>; label: string }[] 
 // Provider field configurations
 const providerFields: Record<
   string,
-  { key: keyof NotificationProviderConfig; label: string; placeholder: string }[]
+  {
+    key: keyof NotificationProviderConfig;
+    label: string;
+    placeholder: string;
+  }[]
 > = {
   telegram: [
     { key: 'token', label: 'Bot Token', placeholder: 'bot token' },
@@ -176,7 +184,9 @@ async function testProvider(index: number) {
   testingIndex.value = index;
   testResult.value = null;
   try {
-    const response = await apiNotification.testProvider({ provider_index: index });
+    const response = await apiNotification.testProvider({
+      provider_index: index,
+    });
     testResult.value = {
       success: response.data.success,
       message: returnUserLangText({
@@ -228,10 +238,10 @@ function getFieldsForType(type: string) {
     <div space-y-8>
       <!-- Global enable switch -->
       <ab-setting
+        v-model:data="notificationEnabled"
         config-key="enable"
         :label="() => t('config.notification_set.enable')"
         type="switch"
-        v-model:data="notificationEnabled"
         bottom-line
       />
 
@@ -253,9 +263,10 @@ function getFieldsForType(type: string) {
             </div>
           </div>
           <div class="provider-actions">
-            <ab-button
+            <NButton
               size="small"
-              type="secondary"
+              type="primary"
+              secondary
               :disabled="testingIndex === index"
               :title="$t('config.notification_set.test')"
               @click="testProvider(index)"
@@ -266,18 +277,20 @@ function getFieldsForType(type: string) {
                 animate-spin
               />
               <div v-else i-carbon-play />
-            </ab-button>
-            <ab-button
+            </NButton>
+            <NButton
               size="small"
-              type="secondary"
+              type="primary"
+              secondary
               :title="$t('config.notification_set.edit')"
               @click="openEditDialog(index)"
             >
               <div i-carbon-edit />
-            </ab-button>
-            <ab-button
+            </NButton>
+            <NButton
               size="small"
-              type="secondary"
+              type="primary"
+              secondary
               :title="
                 provider.enabled
                   ? $t('config.notification_set.disable')
@@ -286,17 +299,19 @@ function getFieldsForType(type: string) {
               @click="toggleProvider(index)"
             >
               <div
-                :class="provider.enabled ? 'i-carbon-view' : 'i-carbon-view-off'"
+                :class="
+                  provider.enabled ? 'i-carbon-view' : 'i-carbon-view-off'
+                "
               />
-            </ab-button>
-            <ab-button
+            </NButton>
+            <NButton
               size="small"
-              type="warn"
+              type="error"
               :title="$t('config.notification_set.remove')"
               @click="removeProvider(index)"
             >
               <div i-carbon-trash-can />
-            </ab-button>
+            </NButton>
           </div>
         </div>
 
@@ -313,10 +328,10 @@ function getFieldsForType(type: string) {
 
         <!-- Add provider button -->
         <div flex="~ justify-end">
-          <ab-button size="small" type="primary" @click="openAddDialog">
+          <NButton size="small" type="primary" @click="openAddDialog">
             <div i-carbon-add />
             {{ $t('config.notification_set.add_provider') }}
-          </ab-button>
+          </NButton>
         </div>
       </div>
     </div>
@@ -330,7 +345,11 @@ function getFieldsForType(type: string) {
       <div space-y-16>
         <ab-label :label="$t('config.notification_set.type')">
           <select v-model="newProvider.type" ab-input>
-            <option v-for="pt in providerTypes" :key="pt.value" :value="pt.value">
+            <option
+              v-for="pt in providerTypes"
+              :key="pt.value"
+              :value="pt.value"
+            >
               {{ pt.label }}
             </option>
           </select>
@@ -368,9 +387,10 @@ function getFieldsForType(type: string) {
         <div line></div>
 
         <div flex="~ justify-between items-center">
-          <ab-button
+          <NButton
             size="small"
-            type="secondary"
+            type="primary"
+            secondary
             :disabled="testingIndex === -999"
             @click="testNewProvider"
           >
@@ -381,14 +401,14 @@ function getFieldsForType(type: string) {
             />
             <div v-else i-carbon-play />
             {{ $t('config.notification_set.test') }}
-          </ab-button>
+          </NButton>
           <div flex="~ gap-8">
-            <ab-button size="small" type="warn" @click="showAddDialog = false">
+            <NButton size="small" type="error" @click="showAddDialog = false">
               {{ $t('config.cancel') }}
-            </ab-button>
-            <ab-button size="small" type="primary" @click="addProvider">
+            </NButton>
+            <NButton size="small" type="primary" @click="addProvider">
               {{ $t('config.apply') }}
-            </ab-button>
+            </NButton>
           </div>
         </div>
       </div>
@@ -403,7 +423,11 @@ function getFieldsForType(type: string) {
       <div space-y-16>
         <ab-label :label="$t('config.notification_set.type')">
           <select v-model="newProvider.type" ab-input disabled>
-            <option v-for="pt in providerTypes" :key="pt.value" :value="pt.value">
+            <option
+              v-for="pt in providerTypes"
+              :key="pt.value"
+              :value="pt.value"
+            >
               {{ pt.label }}
             </option>
           </select>
@@ -441,9 +465,10 @@ function getFieldsForType(type: string) {
         <div line></div>
 
         <div flex="~ justify-between items-center">
-          <ab-button
+          <NButton
             size="small"
-            type="secondary"
+            type="primary"
+            secondary
             :disabled="testingIndex === -999"
             @click="testNewProvider"
           >
@@ -454,14 +479,14 @@ function getFieldsForType(type: string) {
             />
             <div v-else i-carbon-play />
             {{ $t('config.notification_set.test') }}
-          </ab-button>
+          </NButton>
           <div flex="~ gap-8">
-            <ab-button size="small" type="warn" @click="showEditDialog = false">
+            <NButton size="small" type="error" @click="showEditDialog = false">
               {{ $t('config.cancel') }}
-            </ab-button>
-            <ab-button size="small" type="primary" @click="saveProvider">
+            </NButton>
+            <NButton size="small" type="primary" @click="saveProvider">
               {{ $t('config.apply') }}
-            </ab-button>
+            </NButton>
           </div>
         </div>
       </div>
@@ -478,7 +503,8 @@ function getFieldsForType(type: string) {
   padding: 12px;
   background: var(--color-surface-elevated, #f9fafb);
   border-radius: 8px;
-  transition: background-color var(--transition-normal), opacity var(--transition-normal);
+  transition: background-color var(--transition-normal),
+    opacity var(--transition-normal);
 
   :root.dark & {
     background: var(--color-surface-elevated, #1f2937);
@@ -519,7 +545,7 @@ function getFieldsForType(type: string) {
   gap: 8px;
   flex-shrink: 0;
 
-  :deep(.btn--small) {
+  :deep(.n-button) {
     min-width: 32px;
     width: 32px;
     height: 32px;
@@ -538,7 +564,8 @@ function getFieldsForType(type: string) {
 
 .field-textarea {
   resize: none;
-  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+    monospace;
   font-size: 13px;
 }
 
@@ -550,7 +577,11 @@ function getFieldsForType(type: string) {
 
 .test-success {
   color: var(--color-success, #22c55e);
-  background: color-mix(in srgb, var(--color-success, #22c55e) 10%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--color-success, #22c55e) 10%,
+    transparent
+  );
 }
 
 .test-error {

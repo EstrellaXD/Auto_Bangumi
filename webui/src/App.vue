@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { type GlobalThemeOverrides, NConfigProvider, NMessageProvider, darkTheme } from 'naive-ui';
+import {
+  type GlobalThemeOverrides,
+  NConfigProvider,
+  NMessageProvider,
+  darkTheme,
+} from 'naive-ui';
 
 const { isDark } = useDarkMode();
 const { refresh, isLoggedIn } = useAuth();
@@ -9,8 +14,31 @@ if (isLoggedIn.value) {
   refresh();
 }
 
-const lightOverrides: GlobalThemeOverrides = {
+// Button/Select/Switch tokens reference the app's own CSS custom properties
+// directly (they resolve correctly under both `:root` and `.dark`), so they
+// don't need to be duplicated between the light/dark override objects below.
+const primitiveOverrides: GlobalThemeOverrides = {
   common: {
+    errorColor: 'var(--color-danger)',
+    errorColorHover: 'var(--color-danger)',
+    errorColorPressed: 'var(--color-danger)',
+    errorColorSuppl: 'var(--color-danger)',
+  },
+  Button: {
+    borderRadiusTiny: 'var(--radius-sm)',
+    borderRadiusSmall: 'var(--radius-sm)',
+    borderRadiusMedium: 'var(--radius-sm)',
+    borderRadiusLarge: 'var(--radius-md)',
+  },
+  Switch: {
+    railColorActive: 'var(--color-primary)',
+  },
+};
+
+const lightOverrides: GlobalThemeOverrides = {
+  ...primitiveOverrides,
+  common: {
+    ...primitiveOverrides.common,
     primaryColor: '#6C4AB6',
     primaryColorHover: '#563A92',
     primaryColorPressed: '#4A3291',
@@ -40,7 +68,9 @@ const lightOverrides: GlobalThemeOverrides = {
 };
 
 const darkOverrides: GlobalThemeOverrides = {
+  ...primitiveOverrides,
   common: {
+    ...primitiveOverrides.common,
     primaryColor: '#8B6CC7',
     primaryColorHover: '#A78BDB',
     primaryColorPressed: '#7B5CB7',
@@ -69,8 +99,10 @@ const darkOverrides: GlobalThemeOverrides = {
   },
 };
 
-const themeOverrides = computed(() => isDark.value ? darkOverrides : lightOverrides);
-const naiveTheme = computed(() => isDark.value ? darkTheme : null);
+const themeOverrides = computed(() =>
+  isDark.value ? darkOverrides : lightOverrides
+);
+const naiveTheme = computed(() => (isDark.value ? darkTheme : null));
 </script>
 
 <template>

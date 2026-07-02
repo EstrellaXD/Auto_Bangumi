@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { NButton } from 'naive-ui';
 import { Delete, EditTwo, Plus } from '@icon-park/vue-next';
 
 interface SearchProvider {
@@ -160,7 +161,10 @@ function validateUrl(url: string): boolean {
           <div class="provider-info">
             <div class="provider-name">
               {{ provider.name }}
-              <span v-if="isDefaultProvider(provider.name)" class="default-badge">
+              <span
+                v-if="isDefaultProvider(provider.name)"
+                class="default-badge"
+              >
                 {{ $t('config.search_provider_set.default') }}
               </span>
             </div>
@@ -169,21 +173,22 @@ function validateUrl(url: string): boolean {
             </div>
           </div>
           <div class="provider-actions">
-            <ab-button
+            <NButton
               size="small"
-              type="secondary"
+              type="primary"
+              secondary
               @click="openEditDialog(provider, index)"
             >
               <EditTwo size="16" />
-            </ab-button>
-            <ab-button
+            </NButton>
+            <NButton
               v-if="!isDefaultProvider(provider.name)"
               size="small"
-              type="warn"
+              type="error"
               @click="handleDelete(index)"
             >
               <Delete size="16" />
-            </ab-button>
+            </NButton>
           </div>
         </div>
       </div>
@@ -197,10 +202,10 @@ function validateUrl(url: string): boolean {
 
       <!-- Add button -->
       <div flex="~ justify-end">
-        <ab-button size="small" type="primary" @click="openAddDialog">
+        <NButton size="small" type="primary" @click="openAddDialog">
           <Plus size="16" />
           {{ $t('config.search_provider_set.add_new') }}
-        </ab-button>
+        </NButton>
       </div>
     </div>
 
@@ -231,27 +236,26 @@ function validateUrl(url: string): boolean {
           />
         </ab-label>
 
-        <div
-          v-if="formUrl && !validateUrl(formUrl)"
-          class="validation-warning"
-        >
+        <div v-if="formUrl && !validateUrl(formUrl)" class="validation-warning">
           {{ $t('config.search_provider_set.url_missing_placeholder') }}
         </div>
 
         <div line></div>
 
         <div flex="~ justify-end gap-8">
-          <ab-button size="small" type="warn" @click="showAddDialog = false">
+          <NButton size="small" type="error" @click="showAddDialog = false">
             {{ $t('config.cancel') }}
-          </ab-button>
-          <ab-button
+          </NButton>
+          <NButton
             size="small"
             type="primary"
-            :disabled="!formName.trim() || !formUrl.trim() || !validateUrl(formUrl)"
+            :disabled="
+              !formName.trim() || !formUrl.trim() || !validateUrl(formUrl)
+            "
             @click="handleAdd"
           >
             {{ $t('config.apply') }}
-          </ab-button>
+          </NButton>
         </div>
       </div>
     </ab-popup>
@@ -270,7 +274,10 @@ function validateUrl(url: string): boolean {
             :placeholder="$t('config.search_provider_set.name_placeholder')"
             ab-input
             maxlength="32"
-            :disabled="editingProvider !== null && isDefaultProvider(editingProvider.name)"
+            :disabled="
+              editingProvider !== null &&
+              isDefaultProvider(editingProvider.name)
+            "
           />
         </ab-label>
 
@@ -284,27 +291,26 @@ function validateUrl(url: string): boolean {
           />
         </ab-label>
 
-        <div
-          v-if="formUrl && !validateUrl(formUrl)"
-          class="validation-warning"
-        >
+        <div v-if="formUrl && !validateUrl(formUrl)" class="validation-warning">
           {{ $t('config.search_provider_set.url_missing_placeholder') }}
         </div>
 
         <div line></div>
 
         <div flex="~ justify-end gap-8">
-          <ab-button size="small" type="warn" @click="showEditDialog = false">
+          <NButton size="small" type="error" @click="showEditDialog = false">
             {{ $t('config.cancel') }}
-          </ab-button>
-          <ab-button
+          </NButton>
+          <NButton
             size="small"
             type="primary"
-            :disabled="!formName.trim() || !formUrl.trim() || !validateUrl(formUrl)"
+            :disabled="
+              !formName.trim() || !formUrl.trim() || !validateUrl(formUrl)
+            "
             @click="handleEdit"
           >
             {{ $t('config.apply') }}
-          </ab-button>
+          </NButton>
         </div>
       </div>
     </ab-popup>
@@ -358,7 +364,8 @@ function validateUrl(url: string): boolean {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+    monospace;
 }
 
 .provider-actions {

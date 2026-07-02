@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { CheckOne, Close, Copy, Down, ErrorPicture, Link, Right } from '@icon-park/vue-next';
-import { NDynamicTags, NSpin } from 'naive-ui';
+import { Close, Link } from '@icon-park/vue-next';
+import { NButton, NSpin } from 'naive-ui';
 import type { BangumiRule } from '#/bangumi';
 import type { RSS } from '#/rss';
 import { rssTemplate } from '#/rss';
@@ -14,15 +14,18 @@ const { getAll } = useBangumiStore();
 const { t } = useMyI18n();
 
 const rss = ref<RSS>({ ...rssTemplate });
-const rule = defineModel<BangumiRule>('rule', { default: () => ({ ...ruleTemplate }) });
+const rule = defineModel<BangumiRule>('rule', {
+  default: () => ({ ...ruleTemplate }),
+});
 const parserTypes = ['tmdb', 'mikan', 'parser'] as const;
 
 // UI state
 const step = ref<'input' | 'confirm'>('input');
-const showAdvanced = ref(true);
-const copied = ref(false);
 const offsetLoading = ref(false);
 const offsetReason = ref('');
+
+const { posterSrc, infoTags, showAdvanced, copied, copyRssLink } =
+  useBangumiRuleForm(rule);
 
 const loading = reactive({
   analyze: false,
@@ -85,33 +88,6 @@ const { execute: executeSubscribe } = useApi(apiDownload.subscribe, {
   },
 });
 
-// Computed
-const posterSrc = computed(() => resolvePosterUrl(rule.value.poster_link));
-
-const infoTags = computed(() => {
-  const tags: { value: string; type: string }[] = [];
-  const { season, season_raw, dpi, subtitle, group_name } = rule.value;
-
-  if (season || season_raw) {
-    const seasonDisplay = season_raw || (season ? `S${season}` : '');
-    tags.push({ value: seasonDisplay, type: 'season' });
-  }
-
-  if (dpi) {
-    tags.push({ value: dpi, type: 'resolution' });
-  }
-
-  if (subtitle) {
-    tags.push({ value: subtitle, type: 'subtitle' });
-  }
-
-  if (group_name) {
-    tags.push({ value: group_name, type: 'group' });
-  }
-
-  return tags;
-});
-
 // Watchers
 watch(show, (val) => {
   if (!val) {
@@ -147,23 +123,7 @@ function goBack() {
   step.value = 'input';
 }
 
-let copyTimer: ReturnType<typeof setTimeout> | undefined;
-
-async function copyRssLink() {
-  const rssLink = rule.value.rss_link?.[0] || rss.value.url || '';
-  if (rssLink) {
-    await navigator.clipboard.writeText(rssLink);
-    copied.value = true;
-    clearTimeout(copyTimer);
-    copyTimer = setTimeout(() => {
-      copied.value = false;
-    }, 2000);
-  }
-}
-
-onBeforeUnmount(() => {
-  clearTimeout(copyTimer);
-});
+const rssLink = computed(() => rule.value.rss_link?.[0] || rss.value.url || '');
 
 async function autoDetectOffset() {
   if (!rule.value.id) return;
@@ -210,7 +170,9 @@ function subscribe() {
             <div class="form-section">
               <!-- RSS Link -->
               <div class="form-group">
-                <label class="form-label">{{ $t('topbar.add.rss_link') }}</label>
+                <label class="form-label">{{
+                  $t('topbar.add.rss_link')
+                }}</label>
                 <div class="input-wrapper">
                   <Link theme="outline" size="16" class="input-icon" />
                   <input
@@ -237,7 +199,9 @@ function subscribe() {
               <div class="options-row">
                 <!-- Aggregate Switch -->
                 <div class="option-item">
-                  <label class="option-label">{{ $t('topbar.add.aggregate') }}</label>
+                  <label class="option-label">{{
+                    $t('topbar.add.aggregate')
+                  }}</label>
                   <label class="switch">
                     <input v-model="rss.aggregate" type="checkbox" />
                     <span class="switch-slider"></span>
@@ -246,9 +210,15 @@ function subscribe() {
 
                 <!-- Parser Select -->
                 <div class="option-item">
-                  <label class="option-label">{{ $t('topbar.add.parser') }}</label>
+                  <label class="option-label">{{
+                    $t('topbar.add.parser')
+                  }}</label>
                   <select v-model="rss.parser" class="form-select">
-                    <option v-for="type in parserTypes" :key="type" :value="type">
+                    <option
+                      v-for="type in parserTypes"
+                      :key="type"
+                      :value="type"
+                    >
                       {{ type }}
                     </option>
                   </select>
@@ -258,139 +228,79 @@ function subscribe() {
 
             <!-- Footer -->
             <footer class="add-footer">
-              <ab-button size="small" :loading="loading.analyze" @click="addRss">
+              <NButton
+                type="primary"
+                size="small"
+                :loading="loading.analyze"
+                @click="addRss"
+              >
                 {{ $t('topbar.add.button') }}
-              </ab-button>
+              </NButton>
             </footer>
           </div>
 
           <!-- Step 2: Confirm -->
           <template v-else>
             <div class="add-content">
-              <!-- Bangumi Info -->
-              <div class="bangumi-info">
-                <div class="bangumi-poster">
-                  <template v-if="rule.poster_link">
-                    <img :src="posterSrc" :alt="rule.official_title" />
-                  </template>
-                  <template v-else>
-                    <div class="poster-placeholder">
-                      <ErrorPicture theme="outline" size="32" />
-                    </div>
-                  </template>
-                </div>
-                <div class="bangumi-meta">
-                  <input
-                    v-model="rule.official_title"
-                    type="text"
-                    class="title-input"
-                    :placeholder="$t('homepage.rule.official_title')"
-                  />
-                  <p v-if="rule.title_raw" class="bangumi-subtitle">{{ rule.title_raw }}</p>
-                  <div class="meta-row">
-                    <input
-                      :value="rule.year ?? ''"
-                      type="text"
-                      class="year-input"
-                      :class="{ 'year-input--empty': !rule.year }"
-                      :placeholder="$t('homepage.rule.year')"
-                      @input="(e) => rule.year = (e.target as HTMLInputElement).value || null"
-                    />
-                    <span class="meta-separator">·</span>
-                    <label class="season-label">S</label>
-                    <input
-                      v-model.number="rule.season"
-                      type="number"
-                      class="season-input"
-                      min="1"
-                    />
-                  </div>
-                </div>
-              </div>
+              <bangumi-preview v-model:rule="rule" :poster-src="posterSrc" />
 
-              <!-- Info Tags -->
-              <div v-if="infoTags.length > 0" class="info-tags">
-                <div
-                  v-for="tag in infoTags"
-                  :key="tag.type"
-                  class="info-tag"
-                  :class="`info-tag--${tag.type}`"
-                >
-                  {{ tag.value }}
-                </div>
-              </div>
+              <bangumi-info-tags :tags="infoTags" />
 
-              <!-- RSS Link Display -->
-              <div v-if="rule.rss_link?.[0] || rss.url" class="rss-section">
-                <div class="info-row">
-                  <span class="info-label">{{ $t('search.confirm.rss') }}:</span>
-                  <span class="info-value info-value--link">
-                    {{ rule.rss_link?.[0] || rss.url || '-' }}
-                  </span>
-                  <button class="copy-btn" :class="{ copied }" @click="copyRssLink">
-                    <CheckOne v-if="copied" theme="outline" size="14" />
-                    <Copy v-else theme="outline" size="14" />
-                  </button>
-                </div>
-              </div>
+              <bangumi-rss-link-row
+                :link="rssLink"
+                :copied="copied"
+                @copy="copyRssLink(rssLink)"
+              />
 
               <!-- Advanced settings -->
-              <div class="advanced-section">
-                <button class="advanced-toggle" @click="showAdvanced = !showAdvanced">
-                  <component :is="showAdvanced ? Down : Right" theme="outline" size="14" />
-                  {{ $t('search.confirm.advanced') }}
-                </button>
+              <advanced-section v-model:open="showAdvanced">
+                <bangumi-filter-field v-model="rule.filter" />
 
-                <Transition name="expand">
-                  <div v-show="showAdvanced" class="advanced-content">
-                    <!-- Filter rules row -->
-                    <div class="advanced-row advanced-row--tags">
-                      <label class="advanced-label">{{ $t('homepage.rule.filter') }}</label>
-                      <div class="advanced-control filter-tags">
-                        <NDynamicTags v-model:value="rule.filter" size="small" />
-                      </div>
-                    </div>
-
-                    <!-- Offset row -->
-                    <div class="advanced-row">
-                      <label class="advanced-label">{{ $t('homepage.rule.offset') }}</label>
-                      <div class="advanced-control offset-controls">
-                        <input
-                          v-model.number="rule.episode_offset"
-                          type="number"
-                          ab-input
-                          class="offset-input"
-                        />
-                        <button
-                          class="detect-btn"
-                          :disabled="offsetLoading || !rule.id"
-                          @click="autoDetectOffset"
-                        >
-                          <NSpin v-if="offsetLoading" :size="14" />
-                          <span v-else>{{ $t('homepage.rule.auto_detect') }}</span>
-                        </button>
-                      </div>
-                    </div>
-                    <div v-if="offsetReason" class="offset-reason">{{ offsetReason }}</div>
-                  </div>
-                </Transition>
-              </div>
+                <bangumi-offset-field
+                  v-model="rule.episode_offset"
+                  :label="$t('homepage.rule.offset')"
+                >
+                  <template #action>
+                    <button
+                      class="detect-btn"
+                      :disabled="offsetLoading || !rule.id"
+                      @click="autoDetectOffset"
+                    >
+                      <NSpin v-if="offsetLoading" :size="14" />
+                      <span v-else>{{ $t('homepage.rule.auto_detect') }}</span>
+                    </button>
+                  </template>
+                </bangumi-offset-field>
+                <div v-if="offsetReason" class="offset-reason">
+                  {{ offsetReason }}
+                </div>
+              </advanced-section>
             </div>
 
             <!-- Footer -->
             <footer class="add-footer add-footer--confirm">
               <div class="footer-left">
-                <ab-button size="small" type="secondary" @click="goBack">
+                <NButton size="small" type="primary" secondary @click="goBack">
                   {{ $t('setup.nav.previous') }}
-                </ab-button>
+                </NButton>
               </div>
               <div class="footer-right">
-                <ab-button size="small" :loading="loading.collect" @click="collect">
+                <NButton
+                  type="primary"
+                  size="small"
+                  :loading="loading.collect"
+                  @click="collect"
+                >
                   {{ $t('topbar.add.collect') }}
-                </ab-button>
-                <ab-button size="small" :loading="loading.subscribe" @click="subscribe">
+                </NButton>
+                <NButton
+                  type="primary"
+                  size="small"
+                  :loading="loading.subscribe"
+                  @click="subscribe"
+                >
                   {{ $t('topbar.add.subscribe') }}
-                </ab-button>
+                </NButton>
               </div>
             </footer>
           </template>
@@ -512,11 +422,13 @@ function subscribe() {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   outline: none;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 
   &:focus {
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+    box-shadow: 0 0 0 3px
+      color-mix(in srgb, var(--color-primary) 15%, transparent);
   }
 
   &::placeholder {
@@ -641,355 +553,9 @@ function subscribe() {
   gap: 12px;
 }
 
-// Bangumi Info (Step 2 - same as ab-edit-rule)
-.bangumi-info {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.bangumi-poster {
-  width: 80px;
-  height: 112px;
-  flex-shrink: 0;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  background: var(--color-surface-hover);
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-}
-
-.poster-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
-.bangumi-meta {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.title-input {
-  width: 100%;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text);
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid transparent;
-  padding: 4px 0;
-  outline: none;
-  transition: border-color var(--transition-fast);
-
-  &:hover,
-  &:focus {
-    border-bottom-color: var(--color-border);
-  }
-
-  &:focus {
-    border-bottom-color: var(--color-primary);
-  }
-
-  &::placeholder {
-    color: var(--color-text-muted);
-    font-weight: 400;
-  }
-}
-
-.bangumi-subtitle {
-  font-size: 13px;
-  color: var(--color-text-muted);
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.meta-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.year-input {
-  width: 60px;
-  font-size: 13px;
-  color: var(--color-text-secondary);
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid transparent;
-  padding: 2px 0;
-  outline: none;
-  transition: border-color var(--transition-fast), background-color var(--transition-fast);
-
-  &:hover,
-  &:focus {
-    border-bottom-color: var(--color-border);
-  }
-
-  &:focus {
-    border-bottom-color: var(--color-primary);
-  }
-
-  &::placeholder {
-    color: var(--color-text-muted);
-  }
-
-  &--empty {
-    background: color-mix(in srgb, var(--color-warning) 15%, transparent);
-    border-bottom-color: var(--color-warning);
-    border-radius: var(--radius-xs) var(--radius-xs) 0 0;
-    padding: 2px 4px;
-
-    &::placeholder {
-      color: var(--color-warning);
-    }
-  }
-}
-
-.meta-separator {
-  color: var(--color-text-muted);
-}
-
-.season-label {
-  font-size: 13px;
-  color: var(--color-text-secondary);
-  font-weight: 500;
-}
-
-.season-input {
-  width: 40px;
-  font-size: 13px;
-  color: var(--color-text-secondary);
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid transparent;
-  padding: 2px 0;
-  outline: none;
-  text-align: center;
-  transition: border-color var(--transition-fast);
-
-  &:hover,
-  &:focus {
-    border-bottom-color: var(--color-border);
-  }
-
-  &:focus {
-    border-bottom-color: var(--color-primary);
-  }
-
-  &::-webkit-outer-spin-button,
-  &::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-  }
-  -moz-appearance: textfield;
-}
-
-// Info Tags
-.info-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.info-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 14px;
-  border-radius: var(--radius-full);
-  font-size: 13px;
-  font-weight: 600;
-
-  &--season {
-    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
-    color: var(--color-primary);
-  }
-
-  &--resolution {
-    background: color-mix(in srgb, var(--color-accent) 12%, transparent);
-    color: var(--color-accent);
-  }
-
-  &--subtitle {
-    background: color-mix(in srgb, var(--color-success) 12%, transparent);
-    color: var(--color-success);
-  }
-
-  &--group {
-    background: color-mix(in srgb, var(--color-warning) 12%, transparent);
-    color: var(--color-warning);
-  }
-}
-
-// RSS section
-.rss-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  background: var(--color-surface-hover);
-  border-radius: var(--radius-md);
-  margin-bottom: 16px;
-}
-
-.info-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.info-label {
-  flex-shrink: 0;
-  width: 70px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-}
-
-.info-value {
-  flex: 1;
-  min-width: 0;
-  font-size: 13px;
-  color: var(--color-text);
-  word-break: break-all;
-
-  &--link {
-    color: var(--color-primary);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-}
-
-.copy-btn {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  color: var(--color-text-muted);
-  transition: all var(--transition-fast);
-
-  &:hover {
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-  }
-
-  &.copied {
-    background: var(--color-success);
-    border-color: var(--color-success);
-    color: #fff;
-  }
-}
-
-// Advanced section
-.advanced-section {
-  margin-bottom: 8px;
-}
-
-.advanced-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 0;
-  font-size: 13px;
-  font-family: inherit;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition: color var(--transition-fast);
-
-  &:hover {
-    color: var(--color-text);
-  }
-}
-
-.advanced-content {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  background: var(--color-surface-hover);
-  border-radius: var(--radius-md);
-  margin-top: 8px;
-}
-
-.advanced-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 32px;
-
-  &--tags {
-    align-items: flex-start;
-  }
-}
-
-.advanced-label {
-  flex-shrink: 0;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  line-height: 32px;
-}
-
-.advanced-control {
-  display: flex;
-  justify-content: flex-end;
-
-  :deep(.n-dynamic-tags) {
-    justify-content: flex-end;
-    min-height: 32px;
-
-    .n-tag {
-      height: 28px;
-      margin: 2px 0 2px 6px !important;
-    }
-
-    .n-button {
-      height: 28px;
-    }
-  }
-}
-
-.offset-controls {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  height: 32px;
-}
-
-.offset-input {
-  width: 70px;
-  height: 32px;
-  text-align: center;
-}
-
+// Offset detect button + reason (specific to the add-rss flow;
+// shared preview/tags/rss-link/filter/offset-row styles live in the
+// bangumi-* / advanced-section sub-components)
 .detect-btn {
   display: inline-flex;
   align-items: center;
@@ -1022,22 +588,6 @@ function subscribe() {
   font-size: 12px;
   color: var(--color-text-secondary);
   margin-top: -4px;
-}
-
-// Expand transition
-.expand-enter-active,
-.expand-leave-active {
-  transition: all var(--transition-normal);
-  overflow: hidden;
-}
-
-.expand-enter-from,
-.expand-leave-to {
-  opacity: 0;
-  max-height: 0;
-  margin-top: 0;
-  padding-top: 0;
-  padding-bottom: 0;
 }
 
 // Modal transition

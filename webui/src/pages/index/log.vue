@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { NButton } from 'naive-ui';
 import { watchOnce } from '@vueuse/core';
 
 definePage({
@@ -137,10 +138,7 @@ onDeactivated(() => {
         <div ref="logContainer" class="log-viewer">
           <div class="log-content">
             <template v-for="i in filteredLog" :key="i.index">
-              <div
-                class="log-entry"
-                :style="{ color: typeColor(i.type) }"
-              >
+              <div class="log-entry" :style="{ color: typeColor(i.type) }">
                 <div class="log-meta">
                   <div class="log-type">{{ i.type }}</div>
                   <div class="log-date">{{ i.date }}</div>
@@ -152,17 +150,17 @@ onDeactivated(() => {
         </div>
 
         <div class="log-actions">
-          <ab-button size="small" @click="getLog">
+          <NButton type="primary" size="small" @click="getLog">
             {{ $t('log.update_now') }}
-          </ab-button>
+          </NButton>
 
-          <ab-button type="warn" size="small" @click="reset">
+          <NButton type="error" size="small" @click="reset">
             {{ $t('log.reset') }}
-          </ab-button>
+          </NButton>
 
-          <ab-button size="small" @click="copy">
+          <NButton type="primary" size="small" @click="copy">
             {{ $t('log.copy') }}
-          </ab-button>
+          </NButton>
         </div>
       </ab-container>
 
@@ -170,57 +168,67 @@ onDeactivated(() => {
         <ab-container :title="$t('log.contact_info')">
           <div class="contact-list">
             <ab-label label="Github">
-              <ab-button
+              <NButton
+                type="primary"
                 size="small"
-                link="https://github.com/EstrellaXD/Auto_Bangumi"
+                tag="a"
+                href="https://github.com/EstrellaXD/Auto_Bangumi"
                 target="_blank"
               >
                 {{ $t('log.go') }}
-              </ab-button>
+              </NButton>
             </ab-label>
 
             <ab-label label="Official Website">
-              <ab-button
+              <NButton
+                type="primary"
                 size="small"
-                link="https://autobangumi.org"
+                tag="a"
+                href="https://autobangumi.org"
                 target="_blank"
               >
                 {{ $t('log.go') }}
-              </ab-button>
+              </NButton>
             </ab-label>
 
             <div class="divider"></div>
 
             <ab-label label="X">
-              <ab-button
+              <NButton
+                type="primary"
                 size="small"
-                link="https://twitter.com/Estrella_Pan"
+                tag="a"
+                href="https://twitter.com/Estrella_Pan"
                 target="_blank"
               >
                 {{ $t('log.go') }}
-              </ab-button>
+              </NButton>
             </ab-label>
 
             <ab-label label="Telegram Group">
-              <ab-button
+              <NButton
+                type="primary"
                 size="small"
-                link="https://t.me/autobangumi"
+                tag="a"
+                href="https://t.me/autobangumi"
                 target="_blank"
               >
                 {{ $t('log.join') }}
-              </ab-button>
+              </NButton>
             </ab-label>
           </div>
         </ab-container>
 
         <ab-container :title="$t('log.bug_repo')">
           <div class="bug-section">
-            <ab-button
+            <NButton
+              type="primary"
               class="issues-btn"
-              link="https://github.com/EstrellaXD/Auto_Bangumi/issues"
+              tag="a"
+              href="https://github.com/EstrellaXD/Auto_Bangumi/issues"
             >
               Github Issues
-            </ab-button>
+            </NButton>
 
             <div class="divider"></div>
 

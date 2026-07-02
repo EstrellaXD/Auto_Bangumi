@@ -1,5 +1,5 @@
 <script lang="tsx" setup>
-import { type DataTableColumns, NDataTable, NTooltip } from 'naive-ui';
+import { type DataTableColumns, NButton, NDataTable, NTooltip } from 'naive-ui';
 import type { RSS } from '#/rss';
 
 definePage({
@@ -96,15 +96,20 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
     render(rss: RSS) {
       const isRowRefreshing = refreshingId.value === rss.id;
       return (
-        <ab-button
+        <NButton
           size="small"
-          type="secondary"
-          title={t('rss.refresh')}
+          type="primary"
+          secondary
+          {...{ title: t('rss.refresh') }}
           disabled={isRowRefreshing}
           onClick={() => onRefreshOne(rss.id)}
         >
-          <div class={isRowRefreshing ? 'i-carbon-renew animate-spin' : 'i-carbon-renew'} />
-        </ab-button>
+          <div
+            class={
+              isRowRefreshing ? 'i-carbon-renew animate-spin' : 'i-carbon-renew'
+            }
+          />
+        </NButton>
       );
     },
   },
@@ -117,16 +122,21 @@ const rssRowKey = (row: RSS) => row.id;
   <div class="page-rss">
     <ab-container :title="$t('rss.title')">
       <template #title-right>
-        <ab-button
+        <NButton
           size="small"
-          type="secondary"
+          type="primary"
+          secondary
           :title="$t('rss.refresh_all')"
           :disabled="isRefreshingAll"
           @click="refreshAllRSS"
         >
-          <div :class="isRefreshingAll ? 'i-carbon-renew animate-spin' : 'i-carbon-renew'"></div>
+          <div
+            :class="
+              isRefreshingAll ? 'i-carbon-renew animate-spin' : 'i-carbon-renew'
+            "
+          ></div>
           {{ $t('rss.refresh_all') }}
-        </ab-button>
+        </NButton>
       </template>
 
       <!-- Mobile: Card-based list -->
@@ -165,9 +175,10 @@ const rssRowKey = (row: RSS) => row.id;
               />
             </div>
             <div class="rss-card-actions" @click.stop>
-              <ab-button
+              <NButton
                 size="small"
-                type="secondary"
+                type="primary"
+                secondary
                 :title="$t('rss.refresh')"
                 :disabled="refreshingId === item.id"
                 @click="onRefreshOne(item.id)"
@@ -180,7 +191,7 @@ const rssRowKey = (row: RSS) => row.id;
                   "
                 ></div>
                 {{ $t('rss.refresh') }}
-              </ab-button>
+              </NButton>
             </div>
           </div>
         </template>
@@ -201,13 +212,15 @@ const rssRowKey = (row: RSS) => row.id;
       <div v-if="selectedRSS.length > 0">
         <div class="divider"></div>
         <div class="rss-actions">
-          <ab-button @click="enableSelected">{{ $t('rss.enable') }}</ab-button>
-          <ab-button @click="disableSelected">{{
+          <NButton type="primary" @click="enableSelected">{{
+            $t('rss.enable')
+          }}</NButton>
+          <NButton type="primary" @click="disableSelected">{{
             $t('rss.disable')
-          }}</ab-button>
-          <ab-button type="warn" @click="deleteSelected">{{
+          }}</NButton>
+          <NButton type="error" @click="deleteSelected">{{
             $t('rss.delete')
-          }}</ab-button>
+          }}</NButton>
         </div>
       </div>
     </ab-container>

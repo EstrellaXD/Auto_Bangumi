@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { NButton } from 'naive-ui';
 import type { BangumiRule } from '#/bangumi';
 import type { SettingItem } from '#/components';
 
@@ -79,13 +80,14 @@ const items: SettingItem<BangumiRule>[] = [
           ab-input
           class="offset-input"
         />
-        <ab-button
+        <NButton
+          type="primary"
           size="small"
           :loading="offsetLoading"
           @click="autoDetectOffset"
         >
           {{ $t('homepage.rule.auto_detect') }}
-        </ab-button>
+        </NButton>
       </div>
     </ab-label>
 

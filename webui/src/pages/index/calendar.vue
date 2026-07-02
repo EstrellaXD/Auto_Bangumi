@@ -1,17 +1,16 @@
 <script lang="ts" setup>
-import { ErrorPicture, Pin, Refresh } from '@icon-park/vue-next';
-import draggable from 'vuedraggable';
+import { Refresh } from '@icon-park/vue-next';
 import type { BangumiRule } from '#/bangumi';
+import type { BangumiGroup } from '@/components/calendar/types';
 
 definePage({
   name: 'Calendar',
 });
 
-const { t } = useMyI18n();
-const posterSrc = (link: string | null | undefined) => resolvePosterUrl(link);
 const { bangumi } = storeToRefs(useBangumiStore());
-const { getAll, openEditPopup, setWeekday } = useBangumiStore();
+const { getAll, openEditPopup } = useBangumiStore();
 const { isMobile } = useBreakpointQuery();
+const { t } = useMyI18n();
 
 const refreshing = ref(false);
 
@@ -41,12 +40,6 @@ const todayIndex = computed(() => {
 });
 
 // Group bangumi by official_title + season (same logic as main page)
-interface BangumiGroup {
-  key: string;
-  primary: BangumiRule;
-  rules: BangumiRule[];
-}
-
 function groupBangumiList(items: BangumiRule[]): BangumiGroup[] {
   if (!items) return [];
   const map = new Map<string, BangumiRule[]>();
@@ -103,10 +96,6 @@ function getDayLabel(key: string): string {
     : t(`calendar.days_short.${key}`);
 }
 
-function isToday(index: number): boolean {
-  return index === todayIndex.value;
-}
-
 // Rule list popup state (same as main page)
 const ruleListPopup = reactive<{
   show: boolean;
@@ -128,36 +117,6 @@ function onCardClick(group: BangumiGroup) {
 function onRuleSelect(rule: BangumiRule) {
   ruleListPopup.show = false;
   openEditPopup(rule);
-}
-
-// Drag-and-drop state (desktop only)
-const isDragging = ref(false);
-
-async function onDropToDay(dayIndex: number, evt: any) {
-  if (evt.added) {
-    const group: BangumiGroup = evt.added.element;
-    for (const rule of group.rules) {
-      await setWeekday(rule.id, dayIndex);
-    }
-  }
-}
-
-async function onUnpin(group: BangumiGroup, event: Event) {
-  event.stopPropagation();
-  for (const rule of group.rules) {
-    await setWeekday(rule.id, null);
-  }
-}
-
-const unknownGroups = computed({
-  get: () => groupedBangumiByDay.value.unknown || [],
-  set: () => {
-    // No-op: actual update happens via API in onDropToDay
-  },
-});
-
-function getDayGroups(key: string) {
-  return groupedBangumiByDay.value[key] || [];
 }
 </script>
 
@@ -183,285 +142,42 @@ function getDayGroups(key: string) {
     <!-- Empty state -->
     <div v-if="!hasBangumi" class="empty-guide">
       <div class="empty-guide-header anim-fade-in">
-        <div class="empty-guide-title">{{ $t('calendar.empty_state.title') }}</div>
-        <div class="empty-guide-subtitle">{{ $t('calendar.empty_state.subtitle') }}</div>
+        <div class="empty-guide-title">
+          {{ $t('calendar.empty_state.title') }}
+        </div>
+        <div class="empty-guide-subtitle">
+          {{ $t('calendar.empty_state.subtitle') }}
+        </div>
       </div>
     </div>
 
-    <!-- Desktop: Grid columns -->
-    <div v-else-if="!isMobile" class="calendar-desktop">
-      <div class="calendar-grid">
-        <div
-          v-for="(key, index) in DAY_KEYS"
-          :key="key"
-          class="calendar-column anim-slide-up"
-          :class="{
-            'calendar-column--today': isToday(index),
-            'calendar-column--drop-active': isDragging,
-          }"
-          :style="{ '--delay': `${index * 0.05}s` }"
-        >
-          <!-- Day header -->
-          <div
-            class="calendar-day-header"
-            :class="{ 'calendar-day-header--today': isToday(index) }"
-          >
-            <span class="calendar-day-label">{{ getDayLabel(key) }}</span>
-            <span
-              v-if="isToday(index)"
-              class="calendar-today-badge"
-            >
-              {{ $t('calendar.today') }}
-            </span>
-          </div>
+    <!-- Desktop: board of day columns -->
+    <calendar-board
+      v-else-if="!isMobile"
+      :day-keys="DAY_KEYS"
+      :grouped-by-day="groupedBangumiByDay"
+      :today-index="todayIndex"
+      :get-day-label="getDayLabel"
+      @card-click="onCardClick"
+    />
 
-          <!-- Anime cards (grouped) - drop target -->
-          <draggable
-            :model-value="getDayGroups(key)"
-            group="calendar"
-            item-key="key"
-            :sort="false"
-            ghost-class="sortable-ghost"
-            drag-class="sortable-drag"
-            class="calendar-column-items"
-            @change="onDropToDay(index, $event)"
-          >
-            <template #item="{ element: group }">
-              <div class="calendar-card-wrapper">
-                <div
-                  class="calendar-card"
-                  :class="{ 'calendar-card--pinned': group.primary.weekday_locked }"
-                  role="button"
-                  tabindex="0"
-                  :aria-label="`Edit ${group.primary.official_title}`"
-                  @click="onCardClick(group)"
-                  @keydown.enter="onCardClick(group)"
-                >
-                  <div class="calendar-card-poster">
-                    <img
-                      v-if="group.primary.poster_link"
-                      :src="posterSrc(group.primary.poster_link)"
-                      :alt="group.primary.official_title"
-                      class="calendar-card-img"
-                      loading="lazy"
-                    />
-                    <div v-else class="calendar-card-placeholder">
-                      <ErrorPicture theme="outline" size="20" />
-                    </div>
-                    <div class="calendar-card-overlay">
-                      <div class="calendar-card-overlay-tags">
-                        <ab-tag :title="`S${group.primary.season}`" type="primary" />
-                        <ab-tag
-                          v-if="group.primary.group_name"
-                          :title="group.primary.group_name"
-                          type="primary"
-                        />
-                      </div>
-                      <div class="calendar-card-overlay-title">{{ group.primary.official_title }}</div>
-                    </div>
-                    <!-- Pin indicator for manually assigned -->
-                    <div v-if="group.primary.weekday_locked" class="calendar-card-pin">
-                      <Pin theme="filled" size="12" />
-                    </div>
-                  </div>
-                </div>
-                <!-- Unpin button -->
-                <button
-                  v-if="group.primary.weekday_locked"
-                  class="calendar-unpin-btn"
-                  :title="$t('calendar.unpin')"
-                  @click="onUnpin(group, $event)"
-                >
-                  &times;
-                </button>
-                <div v-if="group.rules.length > 1" class="group-badge">
-                  {{ group.rules.length }}
-                </div>
-              </div>
-            </template>
-
-            <template #footer>
-              <div v-if="getDayGroups(key).length === 0" class="calendar-empty-day">
-                {{ isDragging ? $t('calendar.drop_here') : $t('calendar.empty') }}
-              </div>
-            </template>
-          </draggable>
-        </div>
-      </div>
-
-      <!-- Unknown air day section (draggable source) -->
-      <div
-        v-if="unknownGroups.length > 0"
-        class="calendar-unknown-section anim-slide-up"
-        :style="{ '--delay': '0.4s' }"
-      >
-        <div class="calendar-unknown-header">
-          <span class="calendar-day-label">{{ getDayLabel('unknown') }}</span>
-          <span class="calendar-drag-hint">{{ $t('calendar.drag_hint') }}</span>
-        </div>
-        <draggable
-          v-model="unknownGroups"
-          :group="{ name: 'calendar', pull: 'clone', put: false }"
-          item-key="key"
-          :sort="false"
-          ghost-class="sortable-ghost"
-          drag-class="sortable-drag"
-          class="calendar-unknown-items"
-          @start="isDragging = true"
-          @end="isDragging = false"
-        >
-          <template #item="{ element: group }">
-            <div class="calendar-card-wrapper">
-              <div
-                class="calendar-card"
-                role="button"
-                tabindex="0"
-                :aria-label="`Edit ${group.primary.official_title}`"
-                @click="onCardClick(group)"
-                @keydown.enter="onCardClick(group)"
-              >
-                <div class="calendar-card-poster">
-                  <img
-                    v-if="group.primary.poster_link"
-                    :src="posterSrc(group.primary.poster_link)"
-                    :alt="group.primary.official_title"
-                    class="calendar-card-img"
-                    loading="lazy"
-                  />
-                  <div v-else class="calendar-card-placeholder">
-                    <ErrorPicture theme="outline" size="20" />
-                  </div>
-                  <div class="calendar-card-overlay">
-                    <div class="calendar-card-overlay-tags">
-                      <ab-tag :title="`S${group.primary.season}`" type="primary" />
-                      <ab-tag
-                        v-if="group.primary.group_name"
-                        :title="group.primary.group_name"
-                        type="primary"
-                      />
-                    </div>
-                    <div class="calendar-card-overlay-title">{{ group.primary.official_title }}</div>
-                  </div>
-                </div>
-              </div>
-              <div v-if="group.rules.length > 1" class="group-badge">
-                {{ group.rules.length }}
-              </div>
-            </div>
-          </template>
-        </draggable>
-      </div>
-    </div>
-
-    <!-- Mobile: Vertical list -->
-    <div v-else class="calendar-list">
-      <template v-for="(key, index) in [...DAY_KEYS, 'unknown']" :key="key">
-        <div
-          v-if="groupedBangumiByDay[key].length > 0"
-          class="calendar-section anim-slide-up"
-          :style="{ '--delay': `${index * 0.05}s` }"
-        >
-          <!-- Day divider -->
-          <div
-            class="calendar-section-header"
-            :class="{ 'calendar-section-header--today': key !== 'unknown' && isToday(index) }"
-          >
-            <span class="calendar-section-label">{{ getDayLabel(key) }}</span>
-            <span
-              v-if="key !== 'unknown' && isToday(index)"
-              class="calendar-today-badge calendar-today-badge--small"
-            >
-              {{ $t('calendar.today') }}
-            </span>
-          </div>
-
-          <!-- Anime rows (grouped) -->
-          <div class="calendar-section-items">
-            <div
-              v-for="group in groupedBangumiByDay[key]"
-              :key="group.key"
-              class="calendar-row"
-              role="button"
-              tabindex="0"
-              :aria-label="`Edit ${group.primary.official_title}`"
-              @click="onCardClick(group)"
-              @keydown.enter="onCardClick(group)"
-            >
-              <div class="calendar-row-poster">
-                <img
-                  v-if="group.primary.poster_link"
-                  :src="posterSrc(group.primary.poster_link)"
-                  :alt="group.primary.official_title"
-                  class="calendar-row-img"
-                  loading="lazy"
-                />
-                <div v-else class="calendar-row-placeholder">
-                  <ErrorPicture theme="outline" size="16" />
-                </div>
-              </div>
-              <div class="calendar-row-info">
-                <div class="calendar-row-title">
-                  {{ group.primary.official_title }}
-                  <span v-if="group.rules.length > 1" class="calendar-row-badge">
-                    {{ group.rules.length }}
-                  </span>
-                </div>
-                <div class="calendar-row-meta">
-                  <ab-tag :title="`S${group.primary.season}`" type="primary" />
-                  <ab-tag
-                    v-if="group.primary.group_name"
-                    :title="group.primary.group_name"
-                    type="primary"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </template>
-
-      <!-- All days empty on mobile -->
-      <div v-if="!hasBangumi" class="calendar-empty-day calendar-empty-day--mobile">
-        {{ $t('calendar.no_data') }}
-      </div>
-    </div>
+    <!-- Mobile: vertical list -->
+    <calendar-mobile-list
+      v-else
+      :day-keys="[...DAY_KEYS, 'unknown']"
+      :grouped-by-day="groupedBangumiByDay"
+      :today-index="todayIndex"
+      :get-day-label="getDayLabel"
+      :has-bangumi="hasBangumi"
+      @card-click="onCardClick"
+    />
 
     <!-- Rule list popup for grouped items -->
-    <ab-popup
+    <calendar-rule-list-popup
       v-model:show="ruleListPopup.show"
-      :title="ruleListPopup.group?.primary.official_title || ''"
-    >
-      <div v-if="ruleListPopup.group" class="rule-list">
-        <div class="rule-list-hint">{{ $t('homepage.rule.select_hint') }}</div>
-        <div
-          v-for="rule in ruleListPopup.group.rules"
-          :key="rule.id"
-          class="rule-list-item"
-          :class="[rule.deleted && 'rule-list-item--disabled']"
-          @click="onRuleSelect(rule)"
-        >
-          <div class="rule-list-item-info">
-            <div class="rule-list-item-title">
-              {{ rule.group_name || rule.rule_name || $t('homepage.rule.unnamed') }}
-            </div>
-            <div class="rule-list-item-tags">
-              <ab-tag v-if="rule.dpi" :title="rule.dpi" type="primary" />
-              <ab-tag v-if="rule.subtitle" :title="rule.subtitle" type="primary" />
-              <ab-tag v-if="rule.source" :title="rule.source" type="primary" />
-            </div>
-            <div v-if="rule.filter && rule.filter.length > 0" class="rule-list-item-filter">
-              <span class="rule-list-item-filter-label">{{ $t('homepage.rule.filter') }}:</span>
-              <span class="rule-list-item-filter-value">{{ rule.filter.join(', ') }}</span>
-            </div>
-            <div v-if="rule.title_raw" class="rule-list-item-raw">
-              {{ rule.title_raw }}
-            </div>
-          </div>
-          <div class="rule-list-item-arrow">›</div>
-        </div>
-      </div>
-    </ab-popup>
-
+      :group="ruleListPopup.group"
+      @select="onRuleSelect"
+    />
   </div>
 </template>
 
@@ -507,9 +223,8 @@ function getDayGroups(key: string) {
   background: var(--color-surface);
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: color var(--transition-fast),
-              border-color var(--transition-fast),
-              background-color var(--transition-fast);
+  transition: color var(--transition-fast), border-color var(--transition-fast),
+    background-color var(--transition-fast);
 
   &:hover:not(:disabled) {
     color: var(--color-primary);
@@ -530,534 +245,12 @@ function getDayGroups(key: string) {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-// Desktop layout
-.calendar-desktop {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  flex: 1;
-}
-
-// Desktop grid
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 10px;
-}
-
-.calendar-column {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  transition: background-color var(--transition-normal),
-              border-color var(--transition-normal);
-
-  &--today {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 1px var(--color-primary-light);
+  from {
+    transform: rotate(0deg);
   }
-}
-
-// Unknown air day section
-.calendar-unknown-section {
-  background: var(--color-surface-hover);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 12px;
-}
-
-.calendar-unknown-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 6px;
-  margin-bottom: 10px;
-}
-
-.calendar-unknown-items {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 10px;
-}
-
-.calendar-day-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 6px;
-  border-radius: var(--radius-sm);
-  transition: background-color var(--transition-fast);
-
-  &--today {
-    background: var(--color-primary-light);
+  to {
+    transform: rotate(360deg);
   }
-}
-
-.calendar-day-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  transition: color var(--transition-normal);
-
-  .calendar-day-header--today & {
-    color: var(--color-primary);
-  }
-}
-
-.calendar-today-badge {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--color-primary);
-  background: var(--color-primary-light);
-  padding: 1px 6px;
-  border-radius: var(--radius-full);
-
-  &--small {
-    font-size: 10px;
-    padding: 0 5px;
-  }
-}
-
-.calendar-column-items {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex: 1;
-}
-
-// Card wrapper for badge positioning
-.calendar-card-wrapper {
-  position: relative;
-}
-
-.group-badge {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 5px;
-  border-radius: 10px;
-  background: var(--color-badge-bg);
-  color: var(--color-white);
-  font-size: 11px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: var(--z-dropdown);
-  pointer-events: none;
-  box-shadow: 0 2px 4px var(--color-badge-shadow);
-}
-
-// Desktop card
-.calendar-card {
-  cursor: pointer;
-  user-select: none;
-  border-radius: var(--radius-md);
-  transition: transform var(--transition-fast),
-              box-shadow var(--transition-fast);
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
-  }
-}
-
-.calendar-card-poster {
-  position: relative;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  aspect-ratio: 2 / 3;
-}
-
-.calendar-card-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.calendar-card-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-surface-hover);
-  color: var(--color-text-muted);
-  transition: background-color var(--transition-normal);
-}
-
-.calendar-card-overlay {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(2px);
-  transition: opacity var(--transition-normal);
-
-  .calendar-card:hover & {
-    opacity: 1;
-  }
-}
-
-.calendar-card-overlay-title {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  right: 6px;
-  font-size: 11px;
-  font-weight: 500;
-  color: #fff;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-}
-
-.calendar-card-overlay-tags {
-  position: absolute;
-  bottom: 5px;
-  left: 5px;
-  right: 5px;
-  display: flex;
-  gap: 3px;
-  flex-wrap: wrap;
-
-  :deep(.tag) {
-    background: rgba(0, 0, 0, 0.5);
-    border-color: rgba(255, 255, 255, 0.4);
-    color: #fff;
-    font-size: 9px;
-    padding: 1px 5px;
-  }
-}
-
-// Drag hint text
-.calendar-drag-hint {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  font-style: italic;
-}
-
-// Drop active state
-.calendar-column--drop-active {
-  border-color: var(--color-primary);
-  border-style: dashed;
-  background: var(--color-primary-light);
-}
-
-// Pin indicator
-.calendar-card-pin {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-
-// Unpin button
-.calendar-unpin-btn {
-  position: absolute;
-  top: -6px;
-  left: -6px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--color-danger, #e74c3c);
-  color: #fff;
-  border: none;
-  font-size: 12px;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: var(--z-dropdown);
-  opacity: 0;
-  transition: opacity var(--transition-fast);
-
-  .calendar-card-wrapper:hover & {
-    opacity: 1;
-  }
-}
-
-// Pinned card subtle styling
-.calendar-card--pinned {
-  box-shadow: 0 0 0 1.5px var(--color-primary);
-  border-radius: var(--radius-md);
-}
-
-// vuedraggable ghost and drag classes
-.sortable-ghost {
-  opacity: 0.4;
-}
-
-.sortable-drag {
-  opacity: 0.9;
-  box-shadow: var(--shadow-lg);
-  transform: rotate(2deg);
-}
-
-// Empty day
-.calendar-empty-day {
-  font-size: 12px;
-  color: var(--color-text-muted);
-  text-align: center;
-  padding: 12px 4px;
-  transition: color var(--transition-normal);
-
-  &--mobile {
-    padding: 32px 16px;
-    font-size: 14px;
-  }
-}
-
-// Mobile list
-.calendar-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-}
-
-.calendar-section {
-  margin-bottom: 8px;
-}
-
-.calendar-section-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 0 6px;
-  border-bottom: 1px solid var(--color-border);
-  margin-bottom: 6px;
-  transition: border-color var(--transition-normal);
-
-  &--today {
-    border-bottom-color: var(--color-primary);
-  }
-}
-
-.calendar-section-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  letter-spacing: 0.3px;
-  transition: color var(--transition-normal);
-
-  .calendar-section-header--today & {
-    color: var(--color-primary);
-  }
-}
-
-.calendar-section-items {
-  display: flex;
-  flex-direction: column;
-}
-
-.calendar-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  user-select: none;
-  transition: background-color var(--transition-fast);
-
-  &:hover {
-    background: var(--color-surface-hover);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
-  }
-}
-
-.calendar-row-poster {
-  width: 44px;
-  height: 62px;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.calendar-row-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.calendar-row-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-surface-hover);
-  color: var(--color-text-muted);
-  transition: background-color var(--transition-normal);
-}
-
-.calendar-row-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.calendar-row-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--color-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  margin-bottom: 4px;
-  transition: color var(--transition-normal);
-}
-
-.calendar-row-meta {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.calendar-row-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  margin-left: 6px;
-  border-radius: 9px;
-  background: var(--color-badge-bg);
-  color: var(--color-white);
-  font-size: 11px;
-  font-weight: 600;
-  vertical-align: middle;
-}
-
-// Rule list popup (same as main page)
-.rule-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px;
-  min-width: 300px;
-}
-
-.rule-list-hint {
-  font-size: 12px;
-  color: var(--color-text-muted);
-  padding: 4px 12px 8px;
-  border-bottom: 1px solid var(--color-border);
-  margin-bottom: 4px;
-}
-
-.rule-list-item {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: var(--touch-target);
-  padding: 12px;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: background-color var(--transition-fast);
-
-  &:hover {
-    background: var(--color-surface-hover);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: -2px;
-  }
-
-  &--disabled {
-    opacity: 0.5;
-  }
-}
-
-.rule-list-item-info {
-  flex: 1;
-  min-width: 0;
-  text-align: left;
-}
-
-.rule-list-item-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.rule-list-item-tags {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 4px;
-}
-
-.rule-list-item-filter {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  margin-top: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.rule-list-item-filter-label {
-  color: var(--color-text-secondary);
-}
-
-.rule-list-item-filter-value {
-  font-family: var(--font-mono, monospace);
-}
-
-.rule-list-item-raw {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  margin-top: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-style: italic;
-}
-
-.rule-list-item-arrow {
-  font-size: 18px;
-  color: var(--color-text-muted);
-  flex-shrink: 0;
-  margin-top: 2px;
 }
 
 // Empty state (reuse pattern from bangumi page)
@@ -1093,11 +286,6 @@ function getDayGroups(key: string) {
   animation: fadeIn 0.5s ease both;
 }
 
-.anim-slide-up {
-  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: var(--delay, 0s);
-}
-
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -1109,27 +297,9 @@ function getDayGroups(key: string) {
   }
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .anim-fade-in,
-  .anim-slide-up {
+  .anim-fade-in {
     animation: none;
-  }
-
-  .calendar-card {
-    &:hover {
-      transform: none;
-    }
   }
 }
 </style>

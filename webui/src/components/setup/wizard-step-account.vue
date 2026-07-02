@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { NButton } from 'naive-ui';
+
 const { t } = useMyI18n();
 const setupStore = useSetupStore();
 const { accountData } = storeToRefs(setupStore);
@@ -60,12 +62,22 @@ const passwordError = computed(() => {
       </div>
 
       <div class="wizard-actions">
-        <ab-button size="small" type="secondary" @click="setupStore.prevStep()">
+        <NButton
+          size="small"
+          type="primary"
+          secondary
+          @click="setupStore.prevStep()"
+        >
           {{ t('setup.nav.previous') }}
-        </ab-button>
-        <ab-button size="small" :disabled="!isValid" @click="setupStore.nextStep()">
+        </NButton>
+        <NButton
+          type="primary"
+          size="small"
+          :disabled="!isValid"
+          @click="setupStore.nextStep()"
+        >
           {{ t('setup.nav.next') }}
-        </ab-button>
+        </NButton>
       </div>
     </div>
   </ab-container>
@@ -106,7 +118,8 @@ const passwordError = computed(() => {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 
   &:hover {
     border-color: var(--color-primary);

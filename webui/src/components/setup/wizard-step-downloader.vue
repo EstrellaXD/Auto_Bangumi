@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { NButton, NSwitch } from 'naive-ui';
+
 const { t } = useMyI18n();
 const setupStore = useSetupStore();
 const { downloaderData, validation } = storeToRefs(setupStore);
@@ -38,7 +40,11 @@ function handleNext() {
 }
 
 const canTest = computed(() => {
-  return downloaderData.value.host && downloaderData.value.username && downloaderData.value.password;
+  return (
+    downloaderData.value.host &&
+    downloaderData.value.username &&
+    downloaderData.value.password
+  );
 });
 </script>
 
@@ -84,35 +90,50 @@ const canTest = computed(() => {
         </ab-label>
 
         <ab-label :label="t('config.downloader_set.ssl')">
-          <ab-switch v-model="downloaderData.ssl" />
+          <NSwitch v-model:value="downloaderData.ssl" />
         </ab-label>
       </div>
 
       <div class="test-section">
-        <ab-button
+        <NButton
           size="small"
-          type="secondary"
+          type="primary"
+          secondary
           :disabled="!canTest || isTesting"
           @click="testConnection"
         >
-          {{ isTesting ? t('setup.downloader.testing') : t('setup.downloader.test') }}
-        </ab-button>
-        <p v-if="testMessage" class="test-message" :class="{ success: testSuccess }">
+          {{
+            isTesting
+              ? t('setup.downloader.testing')
+              : t('setup.downloader.test')
+          }}
+        </NButton>
+        <p
+          v-if="testMessage"
+          class="test-message"
+          :class="{ success: testSuccess }"
+        >
           {{ testMessage }}
         </p>
       </div>
 
       <div class="wizard-actions">
-        <ab-button size="small" type="secondary" @click="setupStore.prevStep()">
+        <NButton
+          size="small"
+          type="primary"
+          secondary
+          @click="setupStore.prevStep()"
+        >
           {{ t('setup.nav.previous') }}
-        </ab-button>
-        <ab-button
+        </NButton>
+        <NButton
+          type="primary"
           size="small"
           :disabled="!validation.downloaderTested"
           @click="handleNext"
         >
           {{ t('setup.nav.next') }}
-        </ab-button>
+        </NButton>
       </div>
     </div>
   </ab-container>
@@ -153,7 +174,8 @@ const canTest = computed(() => {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 
   &:hover {
     border-color: var(--color-primary);

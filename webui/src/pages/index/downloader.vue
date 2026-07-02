@@ -1,5 +1,10 @@
 <script lang="tsx" setup>
-import { type DataTableColumns, NDataTable, NProgress } from 'naive-ui';
+import {
+  type DataTableColumns,
+  NButton,
+  NDataTable,
+  NProgress,
+} from 'naive-ui';
 import type { QbTorrentInfo, TorrentGroup } from '#/downloader';
 
 definePage({
@@ -24,8 +29,18 @@ const isNull = computed(() => {
   return config.value.downloader.host === '';
 });
 
+const { connected: sseConnected } = useEventStream();
+
 const isActive = ref(false);
-const { pause, resume } = useIntervalFn(getAll, 5000, { immediate: false });
+const { pause, resume } = useIntervalFn(
+  () => {
+    // SSE 已接管种子列表推送，或页面不可见时，跳过本次轮询请求。
+    if (sseConnected.value || document.hidden) return;
+    getAll();
+  },
+  5000,
+  { immediate: false }
+);
 
 onActivated(async () => {
   isActive.value = true;
@@ -46,12 +61,12 @@ function formatSize(bytes: number): string {
   if (bytes === 0) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / 1024**i).toFixed(1)  } ${  units[i]}`;
+  return `${(bytes / 1024 ** i).toFixed(1)} ${units[i]}`;
 }
 
 function formatSpeed(bytesPerSec: number): string {
   if (bytesPerSec === 0) return '-';
-  return `${formatSize(bytesPerSec)  }/s`;
+  return `${formatSize(bytesPerSec)}/s`;
 }
 
 function formatEta(seconds: number): string {
@@ -124,7 +139,9 @@ const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
     key: 'state',
     width: 100,
     render(row: QbTorrentInfo) {
-      return <ab-tag type={stateType(row.state)} title={stateLabel(row.state)} />;
+      return (
+        <ab-tag type={stateType(row.state)} title={stateLabel(row.state)} />
+      );
     },
   },
   {
@@ -193,36 +210,54 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
     <div v-if="isNull" class="empty-guide">
       <div class="empty-guide-header anim-fade-in">
         <div class="empty-guide-title">{{ $t('downloader.empty.title') }}</div>
-        <div class="empty-guide-subtitle">{{ $t('downloader.empty.subtitle') }}</div>
+        <div class="empty-guide-subtitle">
+          {{ $t('downloader.empty.subtitle') }}
+        </div>
       </div>
 
       <div class="empty-guide-steps">
         <div class="empty-guide-step anim-slide-up" style="--delay: 0.15s">
           <div class="empty-guide-step-number">1</div>
           <div class="empty-guide-step-content">
-            <div class="empty-guide-step-title">{{ $t('downloader.empty.step1_title') }}</div>
-            <div class="empty-guide-step-desc">{{ $t('downloader.empty.step1_desc') }}</div>
+            <div class="empty-guide-step-title">
+              {{ $t('downloader.empty.step1_title') }}
+            </div>
+            <div class="empty-guide-step-desc">
+              {{ $t('downloader.empty.step1_desc') }}
+            </div>
           </div>
         </div>
 
         <div class="empty-guide-step anim-slide-up" style="--delay: 0.3s">
           <div class="empty-guide-step-number">2</div>
           <div class="empty-guide-step-content">
-            <div class="empty-guide-step-title">{{ $t('downloader.empty.step2_title') }}</div>
-            <div class="empty-guide-step-desc">{{ $t('downloader.empty.step2_desc') }}</div>
+            <div class="empty-guide-step-title">
+              {{ $t('downloader.empty.step2_title') }}
+            </div>
+            <div class="empty-guide-step-desc">
+              {{ $t('downloader.empty.step2_desc') }}
+            </div>
           </div>
         </div>
 
         <div class="empty-guide-step anim-slide-up" style="--delay: 0.45s">
           <div class="empty-guide-step-number">3</div>
           <div class="empty-guide-step-content">
-            <div class="empty-guide-step-title">{{ $t('downloader.empty.step3_title') }}</div>
-            <div class="empty-guide-step-desc">{{ $t('downloader.empty.step3_desc') }}</div>
+            <div class="empty-guide-step-title">
+              {{ $t('downloader.empty.step3_title') }}
+            </div>
+            <div class="empty-guide-step-desc">
+              {{ $t('downloader.empty.step3_desc') }}
+            </div>
           </div>
         </div>
       </div>
 
-      <RouterLink to="/config" class="empty-guide-action anim-slide-up" style="--delay: 0.6s">
+      <RouterLink
+        to="/config"
+        class="empty-guide-action anim-slide-up"
+        style="--delay: 0.6s"
+      >
         {{ $t('sidebar.config') }}
       </RouterLink>
     </div>
@@ -258,9 +293,15 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
             {{ selectedHashes.length }} {{ $t('downloader.selected') }}
           </span>
           <div class="action-bar-buttons">
-            <ab-button size="small" @click="resumeSelected">{{ $t('downloader.action.resume') }}</ab-button>
-            <ab-button size="small" @click="pauseSelected">{{ $t('downloader.action.pause') }}</ab-button>
-            <ab-button size="small" type="warn" @click="deleteSelected(false)">{{ $t('downloader.action.delete') }}</ab-button>
+            <NButton type="primary" size="small" @click="resumeSelected">{{
+              $t('downloader.action.resume')
+            }}</NButton>
+            <NButton type="primary" size="small" @click="pauseSelected">{{
+              $t('downloader.action.pause')
+            }}</NButton>
+            <NButton size="small" type="error" @click="deleteSelected(false)">{{
+              $t('downloader.action.delete')
+            }}</NButton>
           </div>
         </div>
       </Transition>
@@ -339,7 +380,7 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
   @include forMobile {
     width: 100%;
 
-    :deep(.btn) {
+    :deep(.n-button) {
       flex: 1;
     }
   }
@@ -399,7 +440,7 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   transition: background-color var(--transition-normal),
-              border-color var(--transition-normal);
+    border-color var(--transition-normal);
 }
 
 .empty-guide-step-number {

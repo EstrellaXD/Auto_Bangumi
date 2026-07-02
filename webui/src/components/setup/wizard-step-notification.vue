@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { NButton, NSelect } from 'naive-ui';
+
 const { t } = useMyI18n();
 const setupStore = useSetupStore();
 const { notificationData, validation } = storeToRefs(setupStore);
@@ -61,9 +63,10 @@ const canTest = computed(() => {
 
       <div class="form-fields">
         <ab-label :label="t('config.notification_set.type')">
-          <ab-select
-            v-model="notificationData.type"
-            :items="notificationTypes"
+          <NSelect
+            v-model:value="notificationData.type"
+            :options="notificationTypes"
+            size="small"
           />
         </ab-label>
 
@@ -85,34 +88,49 @@ const canTest = computed(() => {
       </div>
 
       <div class="test-section">
-        <ab-button
+        <NButton
           size="small"
-          type="secondary"
+          type="primary"
+          secondary
           :disabled="!canTest || isTesting"
           @click="testNotification"
         >
-          {{ isTesting ? t('setup.downloader.testing') : t('setup.notification.test') }}
-        </ab-button>
-        <p v-if="testMessage" class="test-message" :class="{ success: testSuccess }">
+          {{
+            isTesting
+              ? t('setup.downloader.testing')
+              : t('setup.notification.test')
+          }}
+        </NButton>
+        <p
+          v-if="testMessage"
+          class="test-message"
+          :class="{ success: testSuccess }"
+        >
           {{ testMessage }}
         </p>
       </div>
 
       <div class="wizard-actions">
-        <ab-button size="small" type="secondary" @click="setupStore.prevStep()">
+        <NButton
+          size="small"
+          type="primary"
+          secondary
+          @click="setupStore.prevStep()"
+        >
           {{ t('setup.nav.previous') }}
-        </ab-button>
+        </NButton>
         <div class="action-group">
-          <ab-button size="small" type="secondary" @click="skipStep">
+          <NButton size="small" type="primary" secondary @click="skipStep">
             {{ t('setup.nav.skip') }}
-          </ab-button>
-          <ab-button
+          </NButton>
+          <NButton
+            type="primary"
             size="small"
             :disabled="!validation.notificationTested"
             @click="handleNext"
           >
             {{ t('setup.nav.next') }}
-          </ab-button>
+          </NButton>
         </div>
       </div>
     </div>
@@ -154,7 +172,8 @@ const canTest = computed(() => {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 
   &:hover {
     border-color: var(--color-primary);

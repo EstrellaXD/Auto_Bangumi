@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { NButton } from 'naive-ui';
+
 definePage({
   name: 'Config',
 });
@@ -54,18 +56,19 @@ onActivated(() => {
     </div>
 
     <div class="config-actions">
-      <ab-button
-        :size="isMobileOrTablet ? 'big' : 'normal'"
+      <NButton
+        :size="isMobileOrTablet ? 'large' : 'medium'"
         :class="[{ 'flex-1': isMobileOrTablet }]"
-        type="secondary"
+        type="primary"
+        secondary
         :loading="isResetting"
         :disabled="isResetting || isSaving"
         @click="handleReset"
       >
         {{ $t('config.cancel') }}
-      </ab-button>
-      <ab-button
-        :size="isMobileOrTablet ? 'big' : 'normal'"
+      </NButton>
+      <NButton
+        :size="isMobileOrTablet ? 'large' : 'medium'"
         :class="[{ 'flex-1': isMobileOrTablet }]"
         type="primary"
         :loading="isSaving"
@@ -73,7 +76,7 @@ onActivated(() => {
         @click="handleSave"
       >
         {{ $t('config.apply') }}
-      </ab-button>
+      </NButton>
     </div>
   </div>
 </template>
@@ -122,26 +125,12 @@ onActivated(() => {
   background: color-mix(in srgb, var(--color-surface) 90%, transparent);
   border: 1px solid var(--color-border);
 
-  // Override button max-width on mobile to allow flex grow
-  :deep(.btn) {
-    max-width: none;
-  }
-
   @include forTablet {
     justify-content: flex-end;
     padding: 12px 0;
     border-radius: 0;
     border: none;
     background: color-mix(in srgb, var(--color-bg) 80%, transparent);
-
-    // Restore button max-width on tablet+
-    :deep(.btn) {
-      max-width: 170px;
-
-      &.btn--big {
-        max-width: 276px;
-      }
-    }
   }
 }
 </style>
