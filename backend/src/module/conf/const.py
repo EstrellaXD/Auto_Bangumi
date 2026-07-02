@@ -40,7 +40,7 @@ DEFAULT_SETTINGS = {
         "username": "",
         "password": "",
     },
-    "notification": {"enable": False, "providers": []},
+    "notification": {"enable": False, "providers": [], "base_url": ""},
     "experimental_openai": {
         "enable": False,
         "api_key": "",
@@ -63,6 +63,8 @@ DEFAULT_SETTINGS = {
             "fc00::/7",
         ],
         "mcp_tokens": [],
+        "webauthn_rp_id": "",
+        "webauthn_origin": "",
     },
 }
 
@@ -106,7 +108,7 @@ ENV_TO_ATTR = {
         ],
         "AB_SOCKS": [
             ("enable", lambda e: True),
-            ("type", lambda e: "socks"),
+            ("type", lambda e: "socks5"),
             ("host", lambda e: e.split(",")[0]),
             ("port", lambda e: int(e.split(",")[1])),
             ("username", lambda e: e.split(",")[2]),

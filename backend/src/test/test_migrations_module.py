@@ -1,6 +1,8 @@
 """Tests for the table-driven migration system (module.database.migrations)."""
 
+import pytest
 from sqlalchemy import inspect, text
+from sqlalchemy.exc import OperationalError
 from sqlmodel import create_engine
 
 from module.database.migrations import (
@@ -101,13 +103,20 @@ class TestRunMigrations:
         assert "weekday_locked" in bangumi_cols  # later migrations still ran
 
     def test_failure_stops_before_bumping_version(self):
-        """A failing migration must not record its version as applied."""
+        """A failing migration must not record its version as applied.
+
+        run_migrations aborts loudly on failure (so startup aborts too, see
+        AppContext.startup) rather than swallowing it -- the caller is
+        expected to observe the exception.
+        """
         engine = _make_v0_engine()
         with engine.begin() as conn:
             # Sabotage migration 1: its target table is gone, the guard says
             # "not applied", and the ALTER then fails.
             conn.execute(text("DROP TABLE bangumi"))
-        run_migrations(engine)
+
+        with pytest.raises(OperationalError):
+            run_migrations(engine)
 
         with engine.connect() as conn:
             version = get_schema_version(conn)

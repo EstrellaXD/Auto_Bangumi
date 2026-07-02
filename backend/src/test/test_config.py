@@ -2,22 +2,25 @@
 
 import json
 import os
-import pytest
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
+from module.conf.config import Settings
+from module.conf.const import BCOLORS, DEFAULT_SETTINGS
 from module.models.config import (
     Config,
     Downloader,
-    Notification as NotificationConfig,
     NotificationProvider,
     Program,
     Proxy,
     RSSParser,
     Security,
 )
-from module.conf.config import Settings
-from module.conf.const import BCOLORS, DEFAULT_SETTINGS
+from module.models.config import (
+    Notification as NotificationConfig,
+)
 
 # ---------------------------------------------------------------------------
 # Config model defaults

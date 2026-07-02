@@ -1,6 +1,10 @@
+import logging
+
 import semver
 
 from module.conf import VERSION, VERSION_PATH
+
+logger = logging.getLogger(__name__)
 
 
 def version_check() -> tuple[bool, int | None]:
@@ -22,8 +26,18 @@ def version_check() -> tuple[bool, int | None]:
         with open(VERSION_PATH, "r+") as f:
             # Read last version
             versions = f.readlines()
-            last_version = versions[-1].strip()
-            last_ver = semver.VersionInfo.parse(last_version)
+            try:
+                last_version = versions[-1].strip()
+                last_ver = semver.VersionInfo.parse(last_version)
+            except (IndexError, ValueError) as e:
+                logger.warning(
+                    f"[Version] {VERSION_PATH} is empty or malformed ({e}); "
+                    "rewriting with the current version."
+                )
+                f.seek(0)
+                f.truncate()
+                f.write(VERSION + "\n")
+                return True, None
             now_ver = semver.VersionInfo.parse(VERSION)
             if now_ver.minor == last_ver.minor:
                 return True, None

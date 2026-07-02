@@ -1,17 +1,16 @@
 """Tests for Config API endpoints and config sanitization."""
 
-import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from module.api import v1
-from module.api.config import _sanitize_dict, _restore_masked
+from module.api.config import _restore_masked, _sanitize_dict
 from module.api.deps import get_context
 from module.models.config import Config
 from module.security.api import get_current_user
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

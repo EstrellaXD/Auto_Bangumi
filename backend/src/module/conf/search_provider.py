@@ -15,6 +15,7 @@ def load_provider():
     if PROVIDER_PATH.exists():
         return json_config.load(PROVIDER_PATH)
     else:
+        PROVIDER_PATH.parent.mkdir(parents=True, exist_ok=True)
         json_config.save(PROVIDER_PATH, DEFAULT_PROVIDER)
         return DEFAULT_PROVIDER
 

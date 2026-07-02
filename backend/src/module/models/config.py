@@ -180,6 +180,13 @@ class Notification(BaseModel):
     providers: list[NotificationProvider] = Field(
         default_factory=list, description="List of notification providers"
     )
+    base_url: str = Field(
+        "",
+        description=(
+            "Public base URL used to build absolute poster URLs for "
+            "notification providers. Empty = omit the poster field entirely."
+        ),
+    )
 
     # Legacy fields for backward compatibility (deprecated)
     type: Optional[str] = Field(None, description="[Deprecated] Use providers instead")
@@ -259,6 +266,20 @@ class Security(BaseModel):
     mcp_tokens: list[str] = Field(
         default_factory=list,
         description="API bearer tokens for MCP access.",
+    )
+    webauthn_rp_id: str = Field(
+        "",
+        description=(
+            "WebAuthn relying-party ID. Empty = derive from the request "
+            "headers instead."
+        ),
+    )
+    webauthn_origin: str = Field(
+        "",
+        description=(
+            "Expected WebAuthn origin. Empty = derive from the request "
+            "headers instead."
+        ),
     )
 
 

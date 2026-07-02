@@ -2,6 +2,10 @@ import hashlib
 
 
 def save_image(img, suffix):
+    if img is None:
+        # Fetching the poster failed upstream; skip caching instead of
+        # crashing on hashlib.md5(None).
+        return None
     img_hash = hashlib.md5(img).hexdigest()[0:8]
     image_path = f"data/posters/{img_hash}.{suffix}"
     with open(image_path, "wb") as f:

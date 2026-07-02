@@ -57,9 +57,19 @@ async def cache_image():
         async with RequestContent() as req:
             for bangumi in bangumis:
                 if bangumi.poster_link:
-                    # Hash local path
-                    img = await req.get_content(bangumi.poster_link)
-                    suffix = bangumi.poster_link.split(".")[-1]
-                    img_path = save_image(img, suffix)
-                    bangumi.poster_link = img_path
+                    # Best-effort: a single dead/unreachable poster link must
+                    # not abort the whole migration for every other bangumi.
+                    try:
+                        # Hash local path
+                        img = await req.get_content(bangumi.poster_link)
+                        suffix = bangumi.poster_link.split(".")[-1]
+                        img_path = save_image(img, suffix)
+                        if img_path:
+                            bangumi.poster_link = img_path
+                    except Exception as e:
+                        logger.warning(
+                            "[Migration] Failed to cache poster for %s: %s",
+                            bangumi.official_title,
+                            e,
+                        )
         await db.bangumi.update_all(bangumis)

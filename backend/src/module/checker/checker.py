@@ -1,8 +1,6 @@
 import logging
 from pathlib import Path
 
-import httpx
-
 from module.conf import VERSION, settings
 from module.models import Config
 from module.update import version_check
@@ -65,27 +63,13 @@ class Checker:
             logger.info("[Checker] Using MockDownloader - skipping connection check")
             return True
 
+        # Delegate to the concrete client's own auth/capabilities instead of
+        # grepping the downloader's homepage HTML (which only ever matches
+        # qBittorrent, so aria2 and future backends could never pass).
         try:
-            prefix =  "https" if settings.downloader.ssl else "http"
-            url = (
-                f"{prefix}://{settings.downloader.host}"
-                if "://" not in settings.downloader.host
-                else f"{settings.downloader.host}"
-            )
-            async with httpx.AsyncClient(timeout=2.0) as client:
-                response = await client.get(url)
-            if "qbittorrent" in response.text.lower() or "vuetorrent" in response.text.lower():
-                async with DownloadClient() as dl_client:
-                    if dl_client.authed:
-                        return True
-                    else:
-                        return False
-            else:
-                return False
-        except httpx.TimeoutException:
-            logger.error("[Checker] Downloader connect timeout.")
-            return False
-        except httpx.ConnectError:
+            async with DownloadClient() as dl_client:
+                return dl_client.authed
+        except ConnectionError:
             logger.error("[Checker] Downloader connect failed.")
             return False
         except Exception as e:

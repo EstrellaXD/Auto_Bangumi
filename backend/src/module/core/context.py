@@ -11,6 +11,7 @@ import time
 
 from module.checker import Checker
 from module.conf import LEGACY_DATA_PATH, VERSION, settings
+from module.database import Database
 from module.downloader.download_client import shutdown as downloader_shutdown
 from module.models import ResponseModel
 from module.network.request_url import reset_shared_client
@@ -74,6 +75,10 @@ class AppContext:
         self._downloader_last_check: float = 0.0
         self._tasks_started = False
         self._startup_done = False
+        # The background task spawned by start_tasks() (downloader-wait +
+        # scheduler start). Tracked so stop() can cancel it if shutdown
+        # happens while it is still waiting on the downloader.
+        self._start_task: asyncio.Task | None = None
         # True when this boot created the database (genuine first run); the
         # lifespan then skips auto-starting background tasks, matching the old
         # Program.startup() early-return.
@@ -177,6 +182,11 @@ class AppContext:
             logger.info(
                 "[Core] Legacy data detected, starting data migration, please wait patiently."
             )
+            # data_migration() writes into the bangumi/rssitem tables directly,
+            # so the schema must exist and be up to date first.
+            async with Database() as db:
+                await db.create_table()
+                await db.run_migrations()
             await data_migration()
         else:
             is_same, last_minor = Checker.check_version()
@@ -214,22 +224,54 @@ class AppContext:
             logger.info("Waiting for downloader to start...")
             await asyncio.sleep(_DOWNLOADER_RETRY_INTERVAL)
 
-    async def start_tasks(self) -> ResponseModel:
-        """Wait for the downloader, then start all enabled background loops."""
-        settings.load()
+    async def _run_start_tasks(self) -> None:
+        """Body of the background start task: wait for the downloader, then start loops."""
         await self._wait_for_downloader()
         self.scheduler.start_all()
         self._tasks_started = True
         logger.info("Program running.")
+
+    @staticmethod
+    def _supervise_start_task(task: asyncio.Task) -> None:
+        """Log-and-surface any exception from the background start task."""
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc is not None:
+            logger.error("[Core] Background start task failed", exc_info=exc)
+
+    async def start_tasks(self) -> ResponseModel:
+        """Kick off the downloader-wait + loop-start in the background and return immediately.
+
+        The downloader wait-retry loop can take up to ~300s (CONTRACT #5); running
+        it inline used to block both the lifespan and the /start,/restart API
+        handlers for that long. It now runs as a supervised background task
+        tracked on ``self._start_task`` so ``stop()`` can cancel it cleanly.
+        """
+        settings.load()
+        if self._start_task is None or self._start_task.done():
+            self._start_task = asyncio.create_task(self._run_start_tasks())
+            self._start_task.add_done_callback(self._supervise_start_task)
         return ResponseModel(
             status=True,
             status_code=200,
-            msg_en="Program started.",
-            msg_zh="程序启动成功。",
+            msg_en="Program starting.",
+            msg_zh="程序启动中。",
         )
 
     async def stop(self) -> ResponseModel:
-        """Stop background loops and close the cached downloader session."""
+        """Cancel any pending start task, stop background loops, and close the cached downloader session."""
+        if self._start_task is not None:
+            self._start_task.cancel()
+            try:
+                await self._start_task
+            except asyncio.CancelledError:
+                pass
+            except Exception as e:
+                logger.warning(
+                    f"[Core] Background start task failed during shutdown: {e}"
+                )
+            self._start_task = None
         if self.is_running:
             await self.scheduler.stop_all()
             self._tasks_started = False

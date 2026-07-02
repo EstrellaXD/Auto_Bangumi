@@ -29,11 +29,20 @@ async def rss_tick(analyser: RSSAnalyser) -> None:
                 try:
                     await analyser.rss_to_data(rss, engine)
                 except Exception:
-                    # RSS 可能在遍历期间被 API 删除，跳过即可
-                    logger.debug(
-                        "[RSSThread] Skipping RSS id=%s, likely deleted",
-                        rss.id if hasattr(rss, "id") else "?",
-                    )
+                    # 仅当该 RSS 确实已在遍历期间被 API 删除时才视为预期情况；
+                    # 其余异常可能是真实 bug，需在 WARNING 级别带完整堆栈。
+                    if await db.rss.search_id(rss.id) is None:
+                        logger.debug(
+                            "[RSSThread] Skipping RSS id=%s, deleted during iteration",
+                            rss.id,
+                        )
+                    else:
+                        logger.warning(
+                            "[RSSThread] Error analysing RSS id=%s (%s)",
+                            rss.id,
+                            rss.url,
+                            exc_info=True,
+                        )
             # Run RSS Engine
             await engine.refresh_rss(client)
     if settings.bangumi_manage.eps_complete:

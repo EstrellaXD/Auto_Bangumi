@@ -184,8 +184,9 @@ def set_schema_version(conn: Connection, version: int) -> None:
 def run_migrations_conn(conn: Connection) -> None:
     """在单个连接上执行所有待应用迁移。
 
-    每个迁移包在 SAVEPOINT 中执行：失败即回滚该迁移并停止，之前成功的
-    迁移保持生效（与旧实现的可观测行为一致）。
+    每个迁移包在 SAVEPOINT 中执行：失败即回滚该迁移并重新抛出异常，使外层
+    事务整体回滚、启动失败并高声中止 —— 不允许应用在半迁移的 schema 上继续
+    提供服务。
     """
     ensure_schema_version_table(conn)
     current = get_schema_version(conn)
@@ -213,7 +214,9 @@ def run_migrations_conn(conn: Connection) -> None:
             except Exception as e:
                 savepoint.rollback()
                 logger.error(f"[Database] Migration v{migration.version} failed: {e}")
-                break
+                # Abort loudly instead of silently continuing to serve on a
+                # half-migrated schema; the outer transaction rolls back.
+                raise
         set_schema_version(conn, migration.version)
     logger.info(f"[Database] Schema version is now {get_schema_version(conn)}.")
     fill_null_with_defaults_conn(conn)

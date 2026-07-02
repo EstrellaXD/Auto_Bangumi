@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -33,15 +32,6 @@ uvicorn_logging_config = {
 }
 
 
-def _supervise_start_tasks(task: asyncio.Task) -> None:
-    """Log-and-surface any exception from the background start task."""
-    if task.cancelled():
-        return
-    exc = task.exception()
-    if exc is not None:
-        logger.error("[Core] Background start task failed", exc_info=exc)
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     ctx: AppContext = app.state.ctx
@@ -50,8 +40,10 @@ async def lifespan(app: FastAPI):
     # First run just created the DB — do not auto-start loops (matches the old
     # Program.startup early return); the user starts them after setup.
     if not ctx.first_run_boot:
-        start_task = asyncio.create_task(ctx.start_tasks())
-        start_task.add_done_callback(_supervise_start_tasks)
+        # start_tasks() itself schedules the downloader-wait + loop-start as a
+        # supervised background task and returns immediately (CONTRACT #5),
+        # so this does not block server startup.
+        await ctx.start_tasks()
     yield
     # Shutdown
     await ctx.stop()

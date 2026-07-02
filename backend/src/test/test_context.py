@@ -119,6 +119,10 @@ class TestStartTasks:
             ),
         ):
             resp = await ctx.start_tasks()
+            # start_tasks() only kicks off the downloader-wait + scheduler-start
+            # as a supervised background task and returns immediately; await it
+            # here so the assertions below observe its effects.
+            await ctx._start_task
 
         ctx.scheduler.start_all.assert_called_once()
         assert ctx._tasks_started is True
