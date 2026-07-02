@@ -53,8 +53,14 @@ async def resume_torrents(req: TorrentHashesRequest):
 async def delete_torrents(req: TorrentDeleteRequest):
     hashes = "|".join(req.hashes)
     async with DownloadClient() as client:
-        await client.delete_torrent(hashes, delete_files=req.delete_files)
-    return {"msg_en": "Torrents deleted", "msg_zh": "种子已删除"}
+        ok = await client.delete_torrent(hashes, delete_files=req.delete_files)
+    if not ok:
+        return {
+            "status": False,
+            "msg_en": "Failed to delete torrents",
+            "msg_zh": "删除种子失败",
+        }
+    return {"status": True, "msg_en": "Torrents deleted", "msg_zh": "种子已删除"}
 
 
 @router.post("/torrents/tag", dependencies=[Depends(get_current_user)])

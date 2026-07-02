@@ -52,6 +52,10 @@ class DownloadClient(TorrentPath):
         if not self.authed:
             await self.auth()
             if not self.authed:
+                # __aexit__ never runs when we raise here, so close the
+                # concrete client's connection pool now or it leaks on every
+                # failed connect (#1043).
+                await self.client.logout()
                 raise ConnectionError("Download client authentication failed")
         else:
             logger.error("[Downloader] Already authed.")

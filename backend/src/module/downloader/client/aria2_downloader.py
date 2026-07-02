@@ -49,10 +49,6 @@ class Aria2Downloader:
                 )
                 await asyncio.sleep(5)
                 times += 1
-        # Failed auth: close the client here or its connection pool leaks,
-        # because DownloadClient.__aenter__ raises before __aexit__ can run.
-        await self._client.aclose()
-        self._client = None
         return False
 
     async def logout(self):

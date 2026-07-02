@@ -58,6 +58,14 @@ class TorrentManager(Database):
                 torrent_message = None
                 if file:
                     torrent_message = await self.delete_torrents(data, client)
+                    if torrent_message.status_code == 500:
+                        return ResponseModel(
+                            status_code=500,
+                            status=False,
+                            msg_en=f"Deleted rule for {data.official_title}, "
+                            "but deleting its torrents failed.",
+                            msg_zh=f"已删除 {data.official_title} 规则，但删除种子失败。",
+                        )
                 logger.info(f"[Manager] Delete rule for {data.official_title}")
                 return ResponseModel(
                     status_code=200,
