@@ -30,11 +30,13 @@ class BarkProvider(NotificationProvider):
         data = {
             "title": notification.official_title,
             "body": text,
-            "icon": notification.poster_path or "",
             "device_key": self.device_key,
         }
+        poster_url = self._poster_url(notification)
+        if poster_url:
+            data["icon"] = poster_url
 
-        resp = await self.post_data(self.notification_url, data)
+        resp = await self._post_json(self.notification_url, data)
         logger.debug("Bark notification: %s", resp.status_code)
         return resp.status_code == 200
 
@@ -46,7 +48,7 @@ class BarkProvider(NotificationProvider):
             "device_key": self.device_key,
         }
         try:
-            resp = await self.post_data(self.notification_url, data)
+            resp = await self._post_json(self.notification_url, data)
             if resp.status_code == 200:
                 return True, "Bark test notification sent successfully"
             else:

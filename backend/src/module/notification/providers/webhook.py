@@ -49,7 +49,7 @@ class WebhookProvider(NotificationProvider):
             "{{title}}": notification.official_title,
             "{{season}}": str(notification.season),
             "{{episode}}": str(notification.episode),
-            "{{poster_url}}": notification.poster_path or "",
+            "{{poster_url}}": self._poster_url(notification) or "",
         }
 
         for pattern, value in replacements.items():
@@ -66,14 +66,14 @@ class WebhookProvider(NotificationProvider):
                 "title": notification.official_title,
                 "season": notification.season,
                 "episode": notification.episode,
-                "poster_url": notification.poster_path or "",
+                "poster_url": self._poster_url(notification) or "",
             }
 
     async def send(self, notification: Notification) -> bool:
         """Send notification via generic webhook."""
         data = self._render_template(notification)
 
-        resp = await self.post_data(self.url, data)
+        resp = await self._post_json(self.url, data)
         logger.debug("Webhook notification: %s", resp.status_code)
         # Accept any 2xx status code as success
         return 200 <= resp.status_code < 300
@@ -89,7 +89,7 @@ class WebhookProvider(NotificationProvider):
         data = self._render_template(test_notification)
 
         try:
-            resp = await self.post_data(self.url, data)
+            resp = await self._post_json(self.url, data)
             if 200 <= resp.status_code < 300:
                 return True, "Webhook test request sent successfully"
             else:

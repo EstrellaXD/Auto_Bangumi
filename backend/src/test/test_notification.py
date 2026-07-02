@@ -1,22 +1,22 @@
 """Tests for notification: provider registry, manager, and provider implementations."""
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
 from module.models import Notification
 from module.models.config import NotificationProvider as ProviderConfig
 from module.notification import PROVIDER_REGISTRY, NotificationManager
 from module.notification.providers import (
-    TelegramProvider,
-    DiscordProvider,
     BarkProvider,
-    ServerChanProvider,
-    WecomProvider,
+    DiscordProvider,
     GotifyProvider,
     PushoverProvider,
+    ServerChanProvider,
+    TelegramProvider,
     WebhookProvider,
+    WecomProvider,
 )
-
 
 # ---------------------------------------------------------------------------
 # Provider Registry
@@ -237,7 +237,7 @@ class TestDiscordProvider:
             official_title="Test Anime", season=1, episode=5, poster_path="https://example.com/poster.jpg"
         )
 
-        with patch.object(provider, "post_data", new_callable=AsyncMock) as mock_post:
+        with patch.object(provider, "_post_json", new_callable=AsyncMock) as mock_post:
             mock_post.return_value = MagicMock(status_code=204)
             result = await provider.send(notify)
 
@@ -256,7 +256,7 @@ class TestBarkProvider:
         """Sends push notification."""
         notify = Notification(official_title="Test Anime", season=1, episode=5)
 
-        with patch.object(provider, "post_data", new_callable=AsyncMock) as mock_post:
+        with patch.object(provider, "_post_json", new_callable=AsyncMock) as mock_post:
             mock_post.return_value = MagicMock(status_code=200)
             result = await provider.send(notify)
 
@@ -288,7 +288,7 @@ class TestWebhookProvider:
         """Sends custom payload."""
         notify = Notification(official_title="Test Anime", season=1, episode=5)
 
-        with patch.object(provider, "post_data", new_callable=AsyncMock) as mock_post:
+        with patch.object(provider, "_post_json", new_callable=AsyncMock) as mock_post:
             mock_post.return_value = MagicMock(status_code=200)
             result = await provider.send(notify)
 

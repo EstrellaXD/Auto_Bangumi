@@ -9,8 +9,8 @@ from module.database import Database
 from module.models.bangumi import Notification
 
 if TYPE_CHECKING:
-    from module.notification.base import NotificationProvider
     from module.models.config import NotificationProvider as ProviderConfig
+    from module.notification.base import NotificationProvider
 
 logger = logging.getLogger(__name__)
 

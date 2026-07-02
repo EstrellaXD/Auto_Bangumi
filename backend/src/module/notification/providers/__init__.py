@@ -2,14 +2,14 @@
 
 from typing import TYPE_CHECKING
 
-from module.notification.providers.telegram import TelegramProvider
-from module.notification.providers.discord import DiscordProvider
 from module.notification.providers.bark import BarkProvider
-from module.notification.providers.server_chan import ServerChanProvider
-from module.notification.providers.wecom import WecomProvider
+from module.notification.providers.discord import DiscordProvider
 from module.notification.providers.gotify import GotifyProvider
 from module.notification.providers.pushover import PushoverProvider
+from module.notification.providers.server_chan import ServerChanProvider
+from module.notification.providers.telegram import TelegramProvider
 from module.notification.providers.webhook import WebhookProvider
+from module.notification.providers.wecom import WecomProvider
 
 if TYPE_CHECKING:
     from module.notification.base import NotificationProvider

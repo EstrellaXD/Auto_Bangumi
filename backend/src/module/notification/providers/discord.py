@@ -30,15 +30,16 @@ class DiscordProvider(NotificationProvider):
             "color": 0x00BFFF,  # Deep Sky Blue
         }
 
-        # Add poster as thumbnail if available
-        if notification.poster_path and notification.poster_path != "https://mikanani.me":
-            embed["thumbnail"] = {"url": notification.poster_path}
+        # Add poster as thumbnail if a public poster URL is available
+        poster_url = self._poster_url(notification)
+        if poster_url:
+            embed["thumbnail"] = {"url": poster_url}
 
         data = {
             "embeds": [embed],
         }
 
-        resp = await self.post_data(self.webhook_url, data)
+        resp = await self._post_json(self.webhook_url, data)
         logger.debug("Discord notification: %s", resp.status_code)
         return resp.status_code in (200, 204)
 
@@ -52,7 +53,7 @@ class DiscordProvider(NotificationProvider):
         data = {"embeds": [embed]}
 
         try:
-            resp = await self.post_data(self.webhook_url, data)
+            resp = await self._post_json(self.webhook_url, data)
             if resp.status_code in (200, 204):
                 return True, "Discord test message sent successfully"
             else:
