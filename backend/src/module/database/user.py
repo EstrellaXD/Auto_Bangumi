@@ -1,7 +1,8 @@
 import logging
 
 from fastapi import HTTPException
-from sqlmodel import Session, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
 
 from module.models import ResponseModel
 from module.models.user import User, UserUpdate
@@ -11,21 +12,21 @@ logger = logging.getLogger(__name__)
 
 
 class UserDatabase:
-    def __init__(self, session: Session):
+    def __init__(self, session: AsyncSession):
         self.session = session
 
-    def get_user(self, username: str) -> User:
+    async def get_user(self, username: str) -> User:
         statement = select(User).where(User.username == username)
-        result = self.session.exec(statement)
-        user = result.first()
+        result = await self.session.execute(statement)
+        user = result.scalars().first()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         return user
 
-    def auth_user(self, user: User) -> ResponseModel:
+    async def auth_user(self, user: User) -> ResponseModel:
         statement = select(User).where(User.username == user.username)
-        result = self.session.exec(statement)
-        db_user = result.first()
+        result = await self.session.execute(statement)
+        db_user = result.scalars().first()
         if not user.password:
             return ResponseModel(
                 status_code=401,
@@ -54,10 +55,10 @@ class UserDatabase:
             msg_zh="登录成功",
         )
 
-    def update_user(self, username: str, update_user: UserUpdate) -> User:
+    async def update_user(self, username: str, update_user: UserUpdate) -> User:
         statement = select(User).where(User.username == username)
-        result = self.session.exec(statement)
-        db_user = result.first()
+        result = await self.session.execute(statement)
+        db_user = result.scalars().first()
         if not db_user:
             raise HTTPException(status_code=404, detail="User not found")
         if update_user.username:
@@ -65,14 +66,14 @@ class UserDatabase:
         if update_user.password:
             db_user.password = get_password_hash(update_user.password)
         self.session.add(db_user)
-        self.session.commit()
+        await self.session.commit()
         return db_user
 
-    def add_default_user(self):
+    async def add_default_user(self):
         statement = select(User)
         try:
-            result = self.session.exec(statement)
-            users = list(result.all())
+            result = await self.session.execute(statement)
+            users = list(result.scalars().all())
         except Exception as e:
             # Table may not exist yet during initial setup
             logger.debug(
@@ -83,5 +84,5 @@ class UserDatabase:
             return
         user = User(username="admin", password=get_password_hash("adminadmin"))
         self.session.add(user)
-        self.session.commit()
+        await self.session.commit()
         logger.info("[Database] Created default admin user")

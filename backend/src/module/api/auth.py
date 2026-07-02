@@ -36,7 +36,7 @@ def _issue_token(username: str, response: Response) -> dict:
 async def login(response: Response, form_data=Depends(OAuth2PasswordRequestForm)):
     """Authenticate with username/password and issue a session token."""
     user = User(username=form_data.username, password=form_data.password)
-    resp = auth_user(user)
+    resp = await auth_user(user)
     if resp.status:
         return _issue_token(user.username, response)
     return u_response(resp)
@@ -84,5 +84,5 @@ async def update_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized"
         )
-    if update_user_info(user_data, old_user):
+    if await update_user_info(user_data, old_user):
         return {**_issue_token(old_user, response), "message": "update success"}

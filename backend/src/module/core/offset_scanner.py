@@ -22,8 +22,8 @@ class OffsetScanner:
         """
         logger.info("[OffsetScanner] Starting offset scan...")
 
-        with Database() as db:
-            bangumi_list = db.bangumi.get_active_for_scan()
+        async with Database() as db:
+            bangumi_list = await db.bangumi.get_active_for_scan()
 
         if not bangumi_list:
             logger.debug("[OffsetScanner] No active bangumi to scan.")
@@ -89,8 +89,8 @@ class OffsetScanner:
         )
 
         if suggestion and suggestion.confidence in ("high", "medium"):
-            with Database() as db:
-                db.bangumi.set_needs_review(
+            async with Database() as db:
+                await db.bangumi.set_needs_review(
                     bangumi.id,
                     suggestion.reason,
                     suggested_season_offset=suggestion.season_offset,
@@ -113,8 +113,8 @@ class OffsetScanner:
         Returns:
             True if flagged for review, False otherwise.
         """
-        with Database() as db:
-            bangumi = db.bangumi.search_id(bangumi_id)
+        async with Database() as db:
+            bangumi = await db.bangumi.search_id(bangumi_id)
 
         if not bangumi:
             logger.warning(f"[OffsetScanner] Bangumi {bangumi_id} not found")

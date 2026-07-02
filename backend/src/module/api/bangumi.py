@@ -71,8 +71,8 @@ def str_to_list(data: Bangumi):
     "/get/all", response_model=list[Bangumi], dependencies=[Depends(get_current_user)]
 )
 async def get_all_data(db: Database = Depends(get_db)):
-    with TorrentManager(db) as manager:
-        return manager.bangumi.search_all()
+    manager = TorrentManager(db)
+    return await manager.bangumi.search_all()
 
 
 @router.get(
@@ -81,8 +81,8 @@ async def get_all_data(db: Database = Depends(get_db)):
     dependencies=[Depends(get_current_user)],
 )
 async def get_data(bangumi_id: str, db: Database = Depends(get_db)):
-    with TorrentManager(db) as manager:
-        resp = manager.search_one(bangumi_id)
+    manager = TorrentManager(db)
+    resp = await manager.search_one(bangumi_id)
     return resp
 
 
@@ -96,8 +96,8 @@ async def update_rule(
     data: BangumiUpdate,
     db: Database = Depends(get_db),
 ):
-    with TorrentManager(db) as manager:
-        resp = await manager.update_rule(bangumi_id, data)
+    manager = TorrentManager(db)
+    resp = await manager.update_rule(bangumi_id, data)
     return u_response(resp)
 
 
@@ -109,8 +109,8 @@ async def update_rule(
 async def delete_rule(
     bangumi_id: str, file: bool = False, db: Database = Depends(get_db)
 ):
-    with TorrentManager(db) as manager:
-        resp = await manager.delete_rule(bangumi_id, file)
+    manager = TorrentManager(db)
+    resp = await manager.delete_rule(bangumi_id, file)
     return u_response(resp)
 
 
@@ -122,9 +122,9 @@ async def delete_rule(
 async def delete_many_rule(
     bangumi_id: list, file: bool = False, db: Database = Depends(get_db)
 ):
-    with TorrentManager(db) as manager:
-        for i in bangumi_id:
-            resp = await manager.delete_rule(i, file)
+    manager = TorrentManager(db)
+    for i in bangumi_id:
+        resp = await manager.delete_rule(i, file)
     return u_response(resp)
 
 
@@ -136,8 +136,8 @@ async def delete_many_rule(
 async def disable_rule(
     bangumi_id: str, file: bool = False, db: Database = Depends(get_db)
 ):
-    with TorrentManager(db) as manager:
-        resp = await manager.disable_rule(bangumi_id, file)
+    manager = TorrentManager(db)
+    resp = await manager.disable_rule(bangumi_id, file)
     return u_response(resp)
 
 
@@ -149,9 +149,9 @@ async def disable_rule(
 async def disable_many_rule(
     bangumi_id: list, file: bool = False, db: Database = Depends(get_db)
 ):
-    with TorrentManager(db) as manager:
-        for i in bangumi_id:
-            resp = await manager.disable_rule(i, file)
+    manager = TorrentManager(db)
+    for i in bangumi_id:
+        resp = await manager.disable_rule(i, file)
     return u_response(resp)
 
 
@@ -161,8 +161,8 @@ async def disable_many_rule(
     dependencies=[Depends(get_current_user)],
 )
 async def enable_rule(bangumi_id: str, db: Database = Depends(get_db)):
-    with TorrentManager(db) as manager:
-        resp = manager.enable_rule(bangumi_id)
+    manager = TorrentManager(db)
+    resp = await manager.enable_rule(bangumi_id)
     return u_response(resp)
 
 
@@ -172,8 +172,8 @@ async def enable_rule(bangumi_id: str, db: Database = Depends(get_db)):
     dependencies=[Depends(get_current_user)],
 )
 async def refresh_poster_all(db: Database = Depends(get_db)):
-    with TorrentManager(db) as manager:
-        resp = await manager.refresh_poster()
+    manager = TorrentManager(db)
+    resp = await manager.refresh_poster()
     return u_response(resp)
 
 @router.get(
@@ -182,8 +182,8 @@ async def refresh_poster_all(db: Database = Depends(get_db)):
     dependencies=[Depends(get_current_user)],
 )
 async def refresh_poster_one(bangumi_id: int, db: Database = Depends(get_db)):
-    with TorrentManager(db) as manager:
-        resp = await manager.refind_poster(bangumi_id)
+    manager = TorrentManager(db)
+    resp = await manager.refind_poster(bangumi_id)
     return u_response(resp)
 
 
@@ -193,8 +193,8 @@ async def refresh_poster_one(bangumi_id: int, db: Database = Depends(get_db)):
     dependencies=[Depends(get_current_user)],
 )
 async def refresh_calendar(db: Database = Depends(get_db)):
-    with TorrentManager(db) as manager:
-        resp = await manager.refresh_calendar()
+    manager = TorrentManager(db)
+    resp = await manager.refresh_calendar()
     return u_response(resp)
 
 
@@ -202,12 +202,12 @@ async def refresh_calendar(db: Database = Depends(get_db)):
     "/reset/all", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
 async def reset_all(db: Database = Depends(get_db)):
-    with TorrentManager(db) as manager:
-        manager.bangumi.delete_all()
-        return JSONResponse(
-            status_code=200,
-            content={"msg_en": "Reset all rules successfully.", "msg_zh": "重置所有规则成功。"},
-        )
+    manager = TorrentManager(db)
+    await manager.bangumi.delete_all()
+    return JSONResponse(
+        status_code=200,
+        content={"msg_en": "Reset all rules successfully.", "msg_zh": "重置所有规则成功。"},
+    )
 
 
 @router.patch(
@@ -217,8 +217,8 @@ async def reset_all(db: Database = Depends(get_db)):
 )
 async def archive_rule(bangumi_id: int, db: Database = Depends(get_db)):
     """Archive a bangumi."""
-    with TorrentManager(db) as manager:
-        resp = manager.archive_rule(bangumi_id)
+    manager = TorrentManager(db)
+    resp = await manager.archive_rule(bangumi_id)
     return u_response(resp)
 
 
@@ -229,8 +229,8 @@ async def archive_rule(bangumi_id: int, db: Database = Depends(get_db)):
 )
 async def unarchive_rule(bangumi_id: int, db: Database = Depends(get_db)):
     """Unarchive a bangumi."""
-    with TorrentManager(db) as manager:
-        resp = manager.unarchive_rule(bangumi_id)
+    manager = TorrentManager(db)
+    resp = await manager.unarchive_rule(bangumi_id)
     return u_response(resp)
 
 
@@ -241,8 +241,8 @@ async def unarchive_rule(bangumi_id: int, db: Database = Depends(get_db)):
 )
 async def refresh_metadata(db: Database = Depends(get_db)):
     """Refresh TMDB metadata and auto-archive ended series."""
-    with TorrentManager(db) as manager:
-        resp = await manager.refresh_metadata()
+    manager = TorrentManager(db)
+    resp = await manager.refresh_metadata()
     return u_response(resp)
 
 
@@ -253,8 +253,8 @@ async def refresh_metadata(db: Database = Depends(get_db)):
 )
 async def suggest_offset(bangumi_id: int, db: Database = Depends(get_db)):
     """Suggest offset based on TMDB episode counts."""
-    with TorrentManager(db) as manager:
-        resp = await manager.suggest_offset(bangumi_id)
+    manager = TorrentManager(db)
+    resp = await manager.suggest_offset(bangumi_id)
     return resp
 
 
@@ -320,8 +320,8 @@ async def detect_offset(request: DetectOffsetRequest):
 )
 async def dismiss_review(bangumi_id: int):
     """Clear the needs_review flag for a bangumi after user reviews."""
-    with Database() as db:
-        success = db.bangumi.clear_needs_review(bangumi_id)
+    async with Database() as db:
+        success = await db.bangumi.clear_needs_review(bangumi_id)
 
     if success:
         return JSONResponse(
@@ -350,8 +350,8 @@ async def dismiss_review(bangumi_id: int):
 )
 async def get_needs_review():
     """Get all bangumi that need review for offset mismatch."""
-    with Database() as db:
-        return db.bangumi.get_needs_review()
+    async with Database() as db:
+        return await db.bangumi.get_needs_review()
 
 
 @router.patch(
@@ -370,8 +370,8 @@ async def set_weekday(bangumi_id: int, request: SetWeekdayRequest):
                 "msg_zh": "星期必须是 0-6（周一至周日）或空。",
             },
         )
-    with Database() as db:
-        success = db.bangumi.set_weekday(bangumi_id, request.weekday)
+    async with Database() as db:
+        success = await db.bangumi.set_weekday(bangumi_id, request.weekday)
     if success:
         action = f"weekday {request.weekday}" if request.weekday is not None else "unknown"
         return JSONResponse(

@@ -270,7 +270,7 @@ class Renamer:
         # Remove trailing slashes
         return normalized.rstrip("/")
 
-    def _batch_lookup_offsets(
+    async def _batch_lookup_offsets(
         self, torrents_info: list[dict]
     ) -> dict[str, tuple[int, int]]:
         """Batch lookup offsets for all torrents in a single database session.
@@ -282,10 +282,10 @@ class Renamer:
             return result
 
         try:
-            with Database() as db:
+            async with Database() as db:
                 # Collect all hashes for batch query
                 hashes = [info["hash"] for info in torrents_info]
-                torrent_records = db.torrent.search_by_qb_hashes(hashes)
+                torrent_records = await db.torrent.search_by_qb_hashes(hashes)
                 hash_to_bangumi_id = {
                     r.qb_hash: r.bangumi_id for r in torrent_records if r.bangumi_id
                 }
@@ -305,7 +305,9 @@ class Renamer:
                 # Batch fetch all bangumi records
                 bangumi_map = {}
                 if bangumi_ids_to_fetch:
-                    bangumi_records = db.bangumi.search_ids(list(bangumi_ids_to_fetch))
+                    bangumi_records = await db.bangumi.search_ids(
+                        list(bangumi_ids_to_fetch)
+                    )
                     bangumi_map = {
                         b.id: b for b in bangumi_records if b and not b.deleted
                     }
@@ -331,7 +333,7 @@ class Renamer:
                         continue
 
                     # 3. Try by torrent name (individual query, but less common path)
-                    bangumi = db.bangumi.match_torrent(torrent_name)
+                    bangumi = await db.bangumi.match_torrent(torrent_name)
                     if bangumi:
                         result[torrent_hash] = (
                             bangumi.episode_offset,
@@ -341,9 +343,11 @@ class Renamer:
 
                     # 4. Try by save_path (individual query, fallback)
                     normalized_save_path = self._normalize_path(save_path)
-                    bangumi = db.bangumi.match_by_save_path(save_path)
+                    bangumi = await db.bangumi.match_by_save_path(save_path)
                     if not bangumi:
-                        bangumi = db.bangumi.match_by_save_path(normalized_save_path)
+                        bangumi = await db.bangumi.match_by_save_path(
+                            normalized_save_path
+                        )
                     if bangumi:
                         result[torrent_hash] = (
                             bangumi.episode_offset,
@@ -363,7 +367,7 @@ class Renamer:
 
         return result
 
-    def _lookup_offsets(
+    async def _lookup_offsets(
         self, torrent_hash: str, torrent_name: str, save_path: str, tags: str = ""
     ) -> tuple[int, int]:
         """Look up episode and season offsets for a bangumi.
@@ -384,11 +388,11 @@ class Renamer:
             tuple[int, int]: (episode_offset, season_offset)
         """
         try:
-            with Database() as db:
+            async with Database() as db:
                 # First try by qb_hash in Torrent table (most reliable for existing torrents)
-                torrent_record = db.torrent.search_by_qb_hash(torrent_hash)
+                torrent_record = await db.torrent.search_by_qb_hash(torrent_hash)
                 if torrent_record and torrent_record.bangumi_id:
-                    bangumi = db.bangumi.search_id(torrent_record.bangumi_id)
+                    bangumi = await db.bangumi.search_id(torrent_record.bangumi_id)
                     if bangumi and not bangumi.deleted:
                         logger.debug(
                             "[Renamer] Found offsets via qb_hash: ep=%s, season=%s",
@@ -400,7 +404,7 @@ class Renamer:
                 # Then try by bangumi_id from tags (for newly added torrents)
                 bangumi_id = self._parse_bangumi_id_from_tags(tags)
                 if bangumi_id:
-                    bangumi = db.bangumi.search_id(bangumi_id)
+                    bangumi = await db.bangumi.search_id(bangumi_id)
                     if bangumi and not bangumi.deleted:
                         logger.debug(
                             "[Renamer] Found offsets via tag ab:%s: ep=%s, season=%s",
@@ -411,7 +415,7 @@ class Renamer:
                         return bangumi.episode_offset, bangumi.season_offset
 
                 # Then try matching by torrent name
-                bangumi = db.bangumi.match_torrent(torrent_name)
+                bangumi = await db.bangumi.match_torrent(torrent_name)
                 if bangumi:
                     logger.info(
                         f"[Renamer] Matched bangumi '{bangumi.official_title}' (id={bangumi.id}) via name, "
@@ -421,10 +425,10 @@ class Renamer:
 
                 # Finally fall back to save_path matching with normalization
                 normalized_save_path = self._normalize_path(save_path)
-                bangumi = db.bangumi.match_by_save_path(save_path)
+                bangumi = await db.bangumi.match_by_save_path(save_path)
                 if not bangumi:
                     # Try with normalized path if exact match failed
-                    bangumi = db.bangumi.match_by_save_path(normalized_save_path)
+                    bangumi = await db.bangumi.match_by_save_path(normalized_save_path)
                 if bangumi:
                     logger.info(
                         f"[Renamer] Matched bangumi '{bangumi.official_title}' (id={bangumi.id}) via save_path, "
@@ -451,7 +455,7 @@ class Renamer:
             *[self.client.get_torrent_files(info["hash"]) for info in torrents_info]
         )
         # Batch lookup all offsets in a single database session
-        offset_map = self._batch_lookup_offsets(torrents_info)
+        offset_map = await self._batch_lookup_offsets(torrents_info)
         for info, files in zip(torrents_info, all_files):
             torrent_hash = info["hash"]
             torrent_name = info["name"]

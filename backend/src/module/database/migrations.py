@@ -224,10 +224,27 @@ def run_migrations(engine: Engine) -> None:
         run_migrations_conn(conn)
 
 
+def create_tables_conn(conn: Connection) -> None:
+    """Sync-Connection body for table creation, usable via ``conn.run_sync``."""
+    SQLModel.metadata.create_all(conn)
+    ensure_schema_version_table(conn)
+
+
 def create_tables(engine: Engine) -> None:
-    SQLModel.metadata.create_all(engine)
     with engine.begin() as conn:
-        ensure_schema_version_table(conn)
+        create_tables_conn(conn)
+
+
+async def run_migrations_async(async_engine) -> None:
+    """Run all pending migrations on the async engine via ``run_sync``."""
+    async with async_engine.begin() as conn:
+        await conn.run_sync(run_migrations_conn)
+
+
+async def create_tables_async(async_engine) -> None:
+    """Create tables + schema_version on the async engine via ``run_sync``."""
+    async with async_engine.begin() as conn:
+        await conn.run_sync(create_tables_conn)
 
 
 def _get_field_default(field_info: FieldInfo) -> tuple[bool, Any]:

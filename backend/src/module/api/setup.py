@@ -296,10 +296,10 @@ async def complete_setup(req: SetupCompleteRequest):
         # 1. Update user credentials
         from module.database import Database
 
-        with Database() as db:
+        async with Database() as db:
             from module.models.user import UserUpdate
 
-            db.user.update_user(
+            await db.user.update_user(
                 "admin",
                 UserUpdate(username=req.username, password=req.password),
             )
@@ -336,7 +336,7 @@ async def complete_setup(req: SetupCompleteRequest):
         if req.rss_url:
             from module.rss import RSSEngine
 
-            with Database() as db:
+            async with Database() as db:
                 rss_engine = RSSEngine(db)
                 await rss_engine.add_rss(req.rss_url, name=req.rss_name or None)
 

@@ -1,29 +1,14 @@
 import json
 
-import pytest
-from sqlalchemy import event
-from sqlmodel import Session, SQLModel, create_engine
-
 from module.database.bangumi import BangumiDatabase
 from module.database.rss import RSSDatabase
 from module.database.torrent import TorrentDatabase
 from module.models import Bangumi, RSSItem, Torrent
 
-# sqlite sync engine for testing
-engine = create_engine("sqlite://", echo=False)
 
-
-@event.listens_for(engine, "connect")
-def _enable_foreign_keys(dbapi_conn, connection_record):
-    """匹配生产环境行为：启用 SQLite 外键约束。"""
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-def _ensure_bangumi(session, bangumi_id: int):
+async def _ensure_bangumi(session, bangumi_id: int):
     """确保 bangumi 表中存在指定 id 的记录，满足外键约束。"""
-    if session.get(Bangumi, bangumi_id) is None:
+    if await session.get(Bangumi, bangumi_id) is None:
         session.add(Bangumi(
             id=bangumi_id,
             official_title=f"Stub Anime {bangumi_id}",
@@ -34,18 +19,10 @@ def _ensure_bangumi(session, bangumi_id: int):
             subtitle="CHT",
             rss_link=f"stub_{bangumi_id}",
         ))
-        session.commit()
+        await session.commit()
 
 
-@pytest.fixture
-def db_session():
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        yield session
-    SQLModel.metadata.drop_all(engine)
-
-
-def test_bangumi_database(db_session):
+async def test_bangumi_database(db_session):
     test_data = Bangumi(
         official_title="无职转生，到了异世界就拿出真本事",
         year="2021",
@@ -69,33 +46,33 @@ def test_bangumi_database(db_session):
     db = BangumiDatabase(db_session)
 
     # insert
-    db.add(test_data)
-    result = db.search_id(1)
+    await db.add(test_data)
+    result = await db.search_id(1)
     assert result.official_title == test_data.official_title
 
     # update
     test_data.official_title = "无职转生，到了异世界就拿出真本事II"
-    db.update(test_data)
-    result = db.search_id(1)
+    await db.update(test_data)
+    result = await db.search_id(1)
     assert result.official_title == test_data.official_title
 
     # search poster
-    poster = db.match_poster("无职转生，到了异世界就拿出真本事II (2021)")
+    poster = await db.match_poster("无职转生，到了异世界就拿出真本事II (2021)")
     assert poster == "/test/test.jpg"
 
     # match torrent
-    result = db.match_torrent(
+    result = await db.match_torrent(
         "[Lilith-Raws] 无职转生，到了异世界就拿出真本事 / Mushoku Tensei - 11 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
     )
     assert result.official_title == "无职转生，到了异世界就拿出真本事II"
 
     # delete
-    db.delete_one(1)
-    result = db.search_id(1)
+    await db.delete_one(1)
+    result = await db.search_id(1)
     assert result is None
 
 
-def test_torrent_database(db_session):
+async def test_torrent_database(db_session):
     test_data = Torrent(
         name="[Sub Group]test S02 01 [720p].mkv",
         url="https://test.com/test.mkv",
@@ -103,23 +80,23 @@ def test_torrent_database(db_session):
     db = TorrentDatabase(db_session)
 
     # insert
-    db.add(test_data)
-    result = db.search(1)
+    await db.add(test_data)
+    result = await db.search(1)
     assert result.name == test_data.name
 
     # update
     test_data.downloaded = True
-    db.update(test_data)
-    result = db.search(1)
-    assert result.downloaded == True
+    await db.update(test_data)
+    result = await db.search(1)
+    assert result.downloaded is True
 
 
-def test_rss_database(db_session):
+async def test_rss_database(db_session):
     rss_url = "https://test.com/test.xml"
     db = RSSDatabase(db_session)
 
-    db.add(RSSItem(url=rss_url, name="Test RSS"))
-    result = db.search_id(1)
+    await db.add(RSSItem(url=rss_url, name="Test RSS"))
+    result = await db.search_id(1)
     assert result.url == rss_url
 
 
@@ -128,7 +105,7 @@ def test_rss_database(db_session):
 # ---------------------------------------------------------------------------
 
 
-def test_torrent_search_by_qb_hash(db_session):
+async def test_torrent_search_by_qb_hash(db_session):
     """Test searching torrent by qBittorrent hash."""
     db = TorrentDatabase(db_session)
 
@@ -138,24 +115,24 @@ def test_torrent_search_by_qb_hash(db_session):
         url="https://example.com/torrent1",
         qb_hash="abc123def456",
     )
-    db.add(torrent)
+    await db.add(torrent)
 
     # Search by qb_hash
-    result = db.search_by_qb_hash("abc123def456")
+    result = await db.search_by_qb_hash("abc123def456")
     assert result is not None
     assert result.name == torrent.name
     assert result.qb_hash == "abc123def456"
 
 
-def test_torrent_search_by_qb_hash_not_found(db_session):
+async def test_torrent_search_by_qb_hash_not_found(db_session):
     """Test searching non-existent qb_hash returns None."""
     db = TorrentDatabase(db_session)
 
-    result = db.search_by_qb_hash("nonexistent_hash")
+    result = await db.search_by_qb_hash("nonexistent_hash")
     assert result is None
 
 
-def test_torrent_search_by_url(db_session):
+async def test_torrent_search_by_url(db_session):
     """Test searching torrent by URL."""
     db = TorrentDatabase(db_session)
 
@@ -164,24 +141,24 @@ def test_torrent_search_by_url(db_session):
         name="[SubGroup] Test Anime - 02 [1080p].mkv",
         url=url,
     )
-    db.add(torrent)
+    await db.add(torrent)
 
     # Search by URL
-    result = db.search_by_url(url)
+    result = await db.search_by_url(url)
     assert result is not None
     assert result.url == url
     assert result.name == torrent.name
 
 
-def test_torrent_search_by_url_not_found(db_session):
+async def test_torrent_search_by_url_not_found(db_session):
     """Test searching non-existent URL returns None."""
     db = TorrentDatabase(db_session)
 
-    result = db.search_by_url("https://nonexistent.com/torrent.torrent")
+    result = await db.search_by_url("https://nonexistent.com/torrent.torrent")
     assert result is None
 
 
-def test_torrent_update_qb_hash(db_session):
+async def test_torrent_update_qb_hash(db_session):
     """Test updating qb_hash for existing torrent."""
     db = TorrentDatabase(db_session)
 
@@ -190,32 +167,32 @@ def test_torrent_update_qb_hash(db_session):
         name="[SubGroup] Test Anime - 03 [1080p].mkv",
         url="https://example.com/torrent3",
     )
-    db.add(torrent)
+    await db.add(torrent)
     assert torrent.qb_hash is None
 
     # Update qb_hash
-    success = db.update_qb_hash(torrent.id, "new_hash_value")
+    success = await db.update_qb_hash(torrent.id, "new_hash_value")
     assert success is True
 
     # Verify update
-    result = db.search(torrent.id)
+    result = await db.search(torrent.id)
     assert result.qb_hash == "new_hash_value"
 
 
-def test_torrent_update_qb_hash_nonexistent(db_session):
+async def test_torrent_update_qb_hash_nonexistent(db_session):
     """Test updating qb_hash for non-existent torrent returns False."""
     db = TorrentDatabase(db_session)
 
-    success = db.update_qb_hash(99999, "some_hash")
+    success = await db.update_qb_hash(99999, "some_hash")
     assert success is False
 
 
-def test_torrent_with_bangumi_id(db_session):
+async def test_torrent_with_bangumi_id(db_session):
     """Test torrent with bangumi_id for offset lookup."""
     db = TorrentDatabase(db_session)
 
     # 父记录满足外键约束
-    _ensure_bangumi(db_session, 42)
+    await _ensure_bangumi(db_session, 42)
 
     # Create torrent linked to a bangumi
     torrent = Torrent(
@@ -224,15 +201,15 @@ def test_torrent_with_bangumi_id(db_session):
         bangumi_id=42,
         qb_hash="hash_for_bangumi_42",
     )
-    db.add(torrent)
+    await db.add(torrent)
 
     # Search and verify bangumi_id is preserved
-    result = db.search_by_qb_hash("hash_for_bangumi_42")
+    result = await db.search_by_qb_hash("hash_for_bangumi_42")
     assert result is not None
     assert result.bangumi_id == 42
 
 
-def test_torrent_qb_hash_index_efficient(db_session):
+async def test_torrent_qb_hash_index_efficient(db_session):
     """Test that qb_hash lookups work correctly with multiple torrents."""
     db = TorrentDatabase(db_session)
 
@@ -243,19 +220,19 @@ def test_torrent_qb_hash_index_efficient(db_session):
         )
         for i in range(10)
     ]
-    db.add_all(torrents)
+    await db.add_all(torrents)
 
     # Verify we can find specific torrents by hash
-    result = db.search_by_qb_hash("hash_5")
+    result = await db.search_by_qb_hash("hash_5")
     assert result is not None
     assert result.name == "Torrent 5"
 
-    result = db.search_by_qb_hash("hash_9")
+    result = await db.search_by_qb_hash("hash_9")
     assert result is not None
     assert result.name == "Torrent 9"
 
     # Non-existent hash
-    result = db.search_by_qb_hash("hash_100")
+    result = await db.search_by_qb_hash("hash_100")
     assert result is None
 
 
@@ -264,7 +241,7 @@ def test_torrent_qb_hash_index_efficient(db_session):
 # ============================================================
 
 
-def test_add_title_alias(db_session):
+async def test_add_title_alias(db_session):
     """Test adding a title alias to an existing bangumi."""
     db = BangumiDatabase(db_session)
 
@@ -277,21 +254,21 @@ def test_add_title_alias(db_session):
         subtitle="CHT",
         rss_link="test",
     )
-    db.add(bangumi)
-    bangumi_id = db.search_all()[0].id
+    await db.add(bangumi)
+    bangumi_id = (await db.search_all())[0].id
 
     # Add an alias
-    result = db.add_title_alias(bangumi_id, "Test Anime Season 1")
+    result = await db.add_title_alias(bangumi_id, "Test Anime Season 1")
     assert result is True
 
     # Verify alias was added
-    updated = db.search_id(bangumi_id)
+    updated = await db.search_id(bangumi_id)
     assert updated.title_aliases is not None
     aliases = json.loads(updated.title_aliases)
     assert "Test Anime Season 1" in aliases
 
 
-def test_add_title_alias_duplicate(db_session):
+async def test_add_title_alias_duplicate(db_session):
     """Test that adding the same alias twice is a no-op."""
     db = BangumiDatabase(db_session)
 
@@ -304,16 +281,16 @@ def test_add_title_alias_duplicate(db_session):
         subtitle="CHT",
         rss_link="test",
     )
-    db.add(bangumi)
-    bangumi_id = db.search_all()[0].id
+    await db.add(bangumi)
+    bangumi_id = (await db.search_all())[0].id
 
     # Add same alias twice
-    db.add_title_alias(bangumi_id, "Test Anime Season 1")
-    result = db.add_title_alias(bangumi_id, "Test Anime Season 1")
+    await db.add_title_alias(bangumi_id, "Test Anime Season 1")
+    result = await db.add_title_alias(bangumi_id, "Test Anime Season 1")
     assert result is False  # Second add should be a no-op
 
 
-def test_add_title_alias_same_as_title_raw(db_session):
+async def test_add_title_alias_same_as_title_raw(db_session):
     """Test that adding title_raw as alias is a no-op."""
     db = BangumiDatabase(db_session)
 
@@ -326,14 +303,14 @@ def test_add_title_alias_same_as_title_raw(db_session):
         subtitle="CHT",
         rss_link="test",
     )
-    db.add(bangumi)
-    bangumi_id = db.search_all()[0].id
+    await db.add(bangumi)
+    bangumi_id = (await db.search_all())[0].id
 
-    result = db.add_title_alias(bangumi_id, "Test Anime S1")
+    result = await db.add_title_alias(bangumi_id, "Test Anime S1")
     assert result is False
 
 
-def test_match_torrent_with_alias(db_session):
+async def test_match_torrent_with_alias(db_session):
     """Test that match_torrent finds bangumi using aliases."""
     db = BangumiDatabase(db_session)
 
@@ -347,24 +324,24 @@ def test_match_torrent_with_alias(db_session):
         rss_link="test",
         deleted=False,
     )
-    db.add(bangumi)
-    bangumi_id = db.search_all()[0].id
+    await db.add(bangumi)
+    bangumi_id = (await db.search_all())[0].id
 
     # Add alias
-    db.add_title_alias(bangumi_id, "Test Anime Season 1")
+    await db.add_title_alias(bangumi_id, "Test Anime Season 1")
 
     # Match using title_raw
-    result = db.match_torrent("[TestGroup] Test Anime S1 - 01.mkv")
+    result = await db.match_torrent("[TestGroup] Test Anime S1 - 01.mkv")
     assert result is not None
     assert result.official_title == "Test Anime"
 
     # Match using alias
-    result = db.match_torrent("[TestGroup] Test Anime Season 1 - 01.mkv")
+    result = await db.match_torrent("[TestGroup] Test Anime Season 1 - 01.mkv")
     assert result is not None
     assert result.official_title == "Test Anime"
 
 
-def test_find_semantic_duplicate_same_official_title(db_session):
+async def test_find_semantic_duplicate_same_official_title(db_session):
     """Test finding semantic duplicates with same official title."""
     db = BangumiDatabase(db_session)
 
@@ -378,7 +355,7 @@ def test_find_semantic_duplicate_same_official_title(db_session):
         subtitle="CHT",
         rss_link="test1",
     )
-    db.add(bangumi1)
+    await db.add(bangumi1)
 
     # Create a semantically similar bangumi (same anime, group changed naming)
     bangumi2 = Bangumi(
@@ -392,12 +369,12 @@ def test_find_semantic_duplicate_same_official_title(db_session):
     )
 
     # Should find semantic duplicate
-    result = db.find_semantic_duplicate(bangumi2)
+    result = await db.find_semantic_duplicate(bangumi2)
     assert result is not None
     assert result.title_raw == "Sousou no Frieren"
 
 
-def test_find_semantic_duplicate_no_match_different_resolution(db_session):
+async def test_find_semantic_duplicate_no_match_different_resolution(db_session):
     """Test that different resolution is NOT a semantic match."""
     db = BangumiDatabase(db_session)
 
@@ -410,7 +387,7 @@ def test_find_semantic_duplicate_no_match_different_resolution(db_session):
         subtitle="CHT",
         rss_link="test1",
     )
-    db.add(bangumi1)
+    await db.add(bangumi1)
 
     # Same anime but different resolution - should NOT be semantic duplicate
     bangumi2 = Bangumi(
@@ -423,11 +400,11 @@ def test_find_semantic_duplicate_no_match_different_resolution(db_session):
         rss_link="test2",
     )
 
-    result = db.find_semantic_duplicate(bangumi2)
+    result = await db.find_semantic_duplicate(bangumi2)
     assert result is None
 
 
-def test_add_with_semantic_duplicate_creates_alias(db_session):
+async def test_add_with_semantic_duplicate_creates_alias(db_session):
     """Test that adding a semantic duplicate creates an alias instead."""
     db = BangumiDatabase(db_session)
 
@@ -441,8 +418,8 @@ def test_add_with_semantic_duplicate_creates_alias(db_session):
         subtitle="CHT",
         rss_link="test1",
     )
-    db.add(bangumi1)
-    initial_count = len(db.search_all())
+    await db.add(bangumi1)
+    initial_count = len(await db.search_all())
     assert initial_count == 1
 
     # Try to add semantic duplicate
@@ -455,15 +432,15 @@ def test_add_with_semantic_duplicate_creates_alias(db_session):
         subtitle="CHT",
         rss_link="test2",
     )
-    result = db.add(bangumi2)
+    result = await db.add(bangumi2)
     assert result is False  # Should not add new entry
 
     # Count should still be 1
-    final_count = len(db.search_all())
+    final_count = len(await db.search_all())
     assert final_count == 1
 
     # But the new title_raw should be an alias
-    original = db.search_all()[0]
+    original = (await db.search_all())[0]
     aliases = json.loads(original.title_aliases) if original.title_aliases else []
     assert "Frieren Beyond Journey's End" in aliases
 
@@ -471,65 +448,65 @@ def test_add_with_semantic_duplicate_creates_alias(db_session):
 class TestDeleteByBangumiId:
     """Tests for TorrentDatabase.delete_by_bangumi_id."""
 
-    def test_deletes_matching_torrents(self, db_session):
+    async def test_deletes_matching_torrents(self, db_session):
         db = TorrentDatabase(db_session)
-        _ensure_bangumi(db_session, 10)
+        await _ensure_bangumi(db_session, 10)
         for i in range(3):
-            db.add(Torrent(name=f"torrent_{i}", url=f"https://example.com/{i}", bangumi_id=10))
-        assert len(db.search_all()) == 3
+            await db.add(Torrent(name=f"torrent_{i}", url=f"https://example.com/{i}", bangumi_id=10))
+        assert len(await db.search_all()) == 3
 
-        count = db.delete_by_bangumi_id(10)
+        count = await db.delete_by_bangumi_id(10)
         assert count == 3
-        assert len(db.search_all()) == 0
+        assert len(await db.search_all()) == 0
 
-    def test_leaves_other_bangumi_torrents(self, db_session):
+    async def test_leaves_other_bangumi_torrents(self, db_session):
         db = TorrentDatabase(db_session)
-        _ensure_bangumi(db_session, 20)
-        _ensure_bangumi(db_session, 30)
-        db.add(Torrent(name="keep", url="https://example.com/keep", bangumi_id=20))
-        db.add(Torrent(name="delete", url="https://example.com/delete", bangumi_id=30))
+        await _ensure_bangumi(db_session, 20)
+        await _ensure_bangumi(db_session, 30)
+        await db.add(Torrent(name="keep", url="https://example.com/keep", bangumi_id=20))
+        await db.add(Torrent(name="delete", url="https://example.com/delete", bangumi_id=30))
 
-        count = db.delete_by_bangumi_id(30)
+        count = await db.delete_by_bangumi_id(30)
         assert count == 1
-        remaining = db.search_all()
+        remaining = await db.search_all()
         assert len(remaining) == 1
         assert remaining[0].name == "keep"
 
-    def test_no_match_returns_zero(self, db_session):
+    async def test_no_match_returns_zero(self, db_session):
         db = TorrentDatabase(db_session)
-        _ensure_bangumi(db_session, 5)
-        db.add(Torrent(name="unrelated", url="https://example.com/1", bangumi_id=5))
+        await _ensure_bangumi(db_session, 5)
+        await db.add(Torrent(name="unrelated", url="https://example.com/1", bangumi_id=5))
 
-        count = db.delete_by_bangumi_id(999)
+        count = await db.delete_by_bangumi_id(999)
         assert count == 0
-        assert len(db.search_all()) == 1
+        assert len(await db.search_all()) == 1
 
-    def test_skips_null_bangumi_id(self, db_session):
+    async def test_skips_null_bangumi_id(self, db_session):
         db = TorrentDatabase(db_session)
-        _ensure_bangumi(db_session, 7)
-        db.add(Torrent(name="orphan", url="https://example.com/orphan", bangumi_id=None))
-        db.add(Torrent(name="target", url="https://example.com/target", bangumi_id=7))
+        await _ensure_bangumi(db_session, 7)
+        await db.add(Torrent(name="orphan", url="https://example.com/orphan", bangumi_id=None))
+        await db.add(Torrent(name="target", url="https://example.com/target", bangumi_id=7))
 
-        count = db.delete_by_bangumi_id(7)
+        count = await db.delete_by_bangumi_id(7)
         assert count == 1
-        remaining = db.search_all()
+        remaining = await db.search_all()
         assert len(remaining) == 1
         assert remaining[0].bangumi_id is None
 
-    def test_check_new_finds_urls_after_cleanup(self, db_session):
+    async def test_check_new_finds_urls_after_cleanup(self, db_session):
         """Core scenario: after deleting torrent records, check_new should treat those URLs as new."""
         db = TorrentDatabase(db_session)
-        _ensure_bangumi(db_session, 42)
-        db.add(Torrent(name="ep01", url="https://mikan.me/t/001", bangumi_id=42))
-        db.add(Torrent(name="ep02", url="https://mikan.me/t/002", bangumi_id=42))
+        await _ensure_bangumi(db_session, 42)
+        await db.add(Torrent(name="ep01", url="https://mikan.me/t/001", bangumi_id=42))
+        await db.add(Torrent(name="ep02", url="https://mikan.me/t/002", bangumi_id=42))
 
         # Before cleanup: check_new filters them out
         incoming = [Torrent(name="ep01", url="https://mikan.me/t/001")]
-        assert db.check_new(incoming) == []
+        assert await db.check_new(incoming) == []
 
         # After cleanup: same URLs are now "new"
-        db.delete_by_bangumi_id(42)
-        new = db.check_new(incoming)
+        await db.delete_by_bangumi_id(42)
+        new = await db.check_new(incoming)
         assert len(new) == 1
         assert new[0].url == "https://mikan.me/t/001"
 
@@ -555,7 +532,7 @@ def test_groups_are_similar():
     assert _groups_are_similar(None, None) is False
 
 
-def test_get_all_title_patterns(db_session):
+async def test_get_all_title_patterns(db_session):
     """Test getting all title patterns for a bangumi."""
     db = BangumiDatabase(db_session)
 
@@ -568,15 +545,15 @@ def test_get_all_title_patterns(db_session):
         subtitle="CHT",
         rss_link="test",
     )
-    db.add(bangumi)
-    bangumi_id = db.search_all()[0].id
+    await db.add(bangumi)
+    bangumi_id = (await db.search_all())[0].id
 
     # Add aliases
-    db.add_title_alias(bangumi_id, "Test Anime Season 1")
-    db.add_title_alias(bangumi_id, "TA S1")
+    await db.add_title_alias(bangumi_id, "Test Anime Season 1")
+    await db.add_title_alias(bangumi_id, "TA S1")
 
     # Get all patterns
-    updated = db.search_id(bangumi_id)
+    updated = await db.search_id(bangumi_id)
     patterns = db.get_all_title_patterns(updated)
 
     assert len(patterns) == 3
@@ -585,7 +562,7 @@ def test_get_all_title_patterns(db_session):
     assert "TA S1" in patterns
 
 
-def test_match_list_with_aliases(db_session):
+async def test_match_list_with_aliases(db_session):
     """Test match_list works with aliases."""
     db = BangumiDatabase(db_session)
 
@@ -598,9 +575,9 @@ def test_match_list_with_aliases(db_session):
         subtitle="CHT",
         rss_link="rss1",
     )
-    db.add(bangumi)
-    bangumi_id = db.search_all()[0].id
-    db.add_title_alias(bangumi_id, "Test Anime Season 1")
+    await db.add(bangumi)
+    bangumi_id = (await db.search_all())[0].id
+    await db.add_title_alias(bangumi_id, "Test Anime Season 1")
 
     # Create torrents with different naming patterns
     torrents = [
@@ -610,7 +587,7 @@ def test_match_list_with_aliases(db_session):
     ]
 
     # Only the third torrent should be unmatched
-    unmatched = db.match_list(torrents, "rss2")
+    unmatched = await db.match_list(torrents, "rss2")
     assert len(unmatched) == 1
     assert unmatched[0].name == "[OtherGroup] Different Anime - 01.mkv"
 
@@ -623,89 +600,89 @@ def test_match_list_with_aliases(db_session):
 class TestRSSDeleteWithTorrents:
     """Regression tests: deleting RSSItem must cascade-delete referencing torrents."""
 
-    def test_delete_rss_with_torrents(self, db_session):
+    async def test_delete_rss_with_torrents(self, db_session):
         """删除 RSSItem 时应自动清除引用它的 torrent 记录。"""
         rss_db = RSSDatabase(db_session)
         torrent_db = TorrentDatabase(db_session)
 
         # 创建 RSS 和关联的 torrent
         rss = RSSItem(url="https://mikanani.me/RSS/test", name="Test RSS")
-        rss_db.add(rss)
+        await rss_db.add(rss)
 
-        torrent_db.add(Torrent(name="ep01", url="https://example.com/1", rss_id=rss.id))
-        torrent_db.add(Torrent(name="ep02", url="https://example.com/2", rss_id=rss.id))
+        await torrent_db.add(Torrent(name="ep01", url="https://example.com/1", rss_id=rss.id))
+        await torrent_db.add(Torrent(name="ep02", url="https://example.com/2", rss_id=rss.id))
         # 不关联此 RSS 的 torrent
-        torrent_db.add(Torrent(name="other", url="https://example.com/3", rss_id=None))
+        await torrent_db.add(Torrent(name="other", url="https://example.com/3", rss_id=None))
 
-        assert len(torrent_db.search_rss(rss.id)) == 2
+        assert len(await torrent_db.search_rss(rss.id)) == 2
 
         # 删除 RSS（不应报外键错误）
-        result = rss_db.delete(rss.id)
+        result = await rss_db.delete(rss.id)
         assert result is True
 
         # RSS 和关联 torrent 都应被删除
-        assert rss_db.search_id(rss.id) is None
-        assert len(torrent_db.search_rss(rss.id)) == 0
+        assert await rss_db.search_id(rss.id) is None
+        assert len(await torrent_db.search_rss(rss.id)) == 0
         # 无关 torrent 不受影响
-        assert len(torrent_db.search_all()) == 1
+        assert len(await torrent_db.search_all()) == 1
 
-    def test_delete_rss_without_torrents(self, db_session):
+    async def test_delete_rss_without_torrents(self, db_session):
         """删除没有关联 torrent 的 RSSItem 应正常工作。"""
         rss_db = RSSDatabase(db_session)
 
         rss = RSSItem(url="https://mikanani.me/RSS/empty", name="Empty RSS")
-        rss_db.add(rss)
+        await rss_db.add(rss)
 
-        result = rss_db.delete(rss.id)
+        result = await rss_db.delete(rss.id)
         assert result is True
-        assert rss_db.search_id(rss.id) is None
+        assert await rss_db.search_id(rss.id) is None
 
-    def test_delete_rss_cascades_in_transaction(self, db_session):
+    async def test_delete_rss_cascades_in_transaction(self, db_session):
         """验证删除操作在同一事务中完成，要么全成功要么全回滚。"""
         rss_db = RSSDatabase(db_session)
         torrent_db = TorrentDatabase(db_session)
 
         rss = RSSItem(url="https://mikanani.me/RSS/tx", name="TX Test")
-        rss_db.add(rss)
+        await rss_db.add(rss)
 
         for i in range(5):
-            torrent_db.add(
+            await torrent_db.add(
                 Torrent(name=f"ep{i:02d}", url=f"https://example.com/{i}", rss_id=rss.id)
             )
 
-        assert len(torrent_db.search_rss(rss.id)) == 5
+        assert len(await torrent_db.search_rss(rss.id)) == 5
 
-        rss_db.delete(rss.id)
+        await rss_db.delete(rss.id)
 
         # 全部清理干净
-        assert rss_db.search_id(rss.id) is None
-        assert len(torrent_db.search_rss(rss.id)) == 0
+        assert await rss_db.search_id(rss.id) is None
+        assert len(await torrent_db.search_rss(rss.id)) == 0
 
-    def test_delete_all_rss_with_torrents(self, db_session):
+    async def test_delete_all_rss_with_torrents(self, db_session):
         """delete_all 应删除所有 RSS 及其关联 torrent。"""
         rss_db = RSSDatabase(db_session)
         torrent_db = TorrentDatabase(db_session)
 
         rss1 = RSSItem(url="https://mikanani.me/RSS/a", name="RSS A")
         rss2 = RSSItem(url="https://mikanani.me/RSS/b", name="RSS B")
-        rss_db.add(rss1)
-        rss_db.add(rss2)
+        await rss_db.add(rss1)
+        await rss_db.add(rss2)
 
-        torrent_db.add(Torrent(name="t1", url="https://example.com/1", rss_id=rss1.id))
-        torrent_db.add(Torrent(name="t2", url="https://example.com/2", rss_id=rss2.id))
+        await torrent_db.add(Torrent(name="t1", url="https://example.com/1", rss_id=rss1.id))
+        await torrent_db.add(Torrent(name="t2", url="https://example.com/2", rss_id=rss2.id))
         # rss_id 为 None 的 torrent 应不受影响
-        torrent_db.add(Torrent(name="orphan", url="https://example.com/3", rss_id=None))
+        await torrent_db.add(Torrent(name="orphan", url="https://example.com/3", rss_id=None))
 
-        rss_db.delete_all()
+        await rss_db.delete_all()
 
-        assert len(rss_db.search_all()) == 0
+        assert len(await rss_db.search_all()) == 0
         # 只剩 rss_id 为 None 的
-        remaining = torrent_db.search_all()
+        remaining = await torrent_db.search_all()
         assert len(remaining) == 1
         assert remaining[0].name == "orphan"
 
-    def test_delete_nonexistent_rss(self, db_session):
+    async def test_delete_nonexistent_rss(self, db_session):
         """删除不存在的 RSS 不应报错。"""
         rss_db = RSSDatabase(db_session)
-        result = rss_db.delete(999)
+        result = await rss_db.delete(999)
         assert result is True

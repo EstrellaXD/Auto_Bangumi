@@ -55,13 +55,10 @@ class NotificationManager:
         if notification.poster_path:
             return
 
-        def _get_poster_sync():
-            with Database() as db:
-                data = db.bangumi.search_official_title(notification.official_title)
-                if data:
-                    notification.poster_path = data.poster_link
-
-        await asyncio.to_thread(_get_poster_sync)
+        async with Database() as db:
+            data = await db.bangumi.search_official_title(notification.official_title)
+            if data:
+                notification.poster_path = data.poster_link
 
     async def send_all(self, notification: Notification):
         """Send notification to all enabled providers.

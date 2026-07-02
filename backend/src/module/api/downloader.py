@@ -71,8 +71,8 @@ async def tag_torrent(req: TorrentTagRequest):
     the renamer to look up the correct episode/season offset.
     """
     # Verify bangumi exists
-    with Database() as db:
-        bangumi = db.bangumi.search_id(req.bangumi_id)
+    async with Database() as db:
+        bangumi = await db.bangumi.search_id(req.bangumi_id)
         if not bangumi:
             return {
                 "status": False,
@@ -105,7 +105,7 @@ async def auto_tag_torrents():
         # Get all Bangumi torrents
         torrents = await client.get_torrent_info(category="Bangumi", status_filter=None)
 
-        with Database() as db:
+        async with Database() as db:
             for torrent in torrents:
                 torrent_hash = torrent["hash"]
                 torrent_name = torrent["name"]
@@ -120,11 +120,11 @@ async def auto_tag_torrents():
                 bangumi = None
 
                 # First try by torrent name
-                bangumi = db.bangumi.match_torrent(torrent_name)
+                bangumi = await db.bangumi.match_torrent(torrent_name)
 
                 # Then try by save_path
                 if not bangumi:
-                    bangumi = db.bangumi.match_by_save_path(save_path)
+                    bangumi = await db.bangumi.match_by_save_path(save_path)
 
                 if bangumi and not bangumi.deleted:
                     tag = f"ab:{bangumi.id}"

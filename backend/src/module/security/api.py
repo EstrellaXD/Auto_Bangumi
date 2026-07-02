@@ -117,20 +117,20 @@ async def get_token_data(token: str = Depends(oauth2_scheme)):
     return payload
 
 
-def update_user_info(user_data: UserUpdate, current_user):
+async def update_user_info(user_data: UserUpdate, current_user):
     """Persist updated credentials for *current_user* to the database."""
     try:
-        with Database() as db:
-            db.user.update_user(current_user, user_data)
+        async with Database() as db:
+            await db.user.update_user(current_user, user_data)
         return True
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-def auth_user(user: User):
+async def auth_user(user: User):
     """Verify credentials and register the user in ``active_user`` on success."""
-    with Database() as db:
-        resp = db.user.auth_user(user)
+    async with Database() as db:
+        resp = await db.user.auth_user(user)
         if resp.status:
             active_user.add(user.username)
         return resp

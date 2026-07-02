@@ -8,14 +8,13 @@ import re
 
 import pytest
 
-from module.models import EpisodeFile
 from module.manager.renamer import Renamer
+from module.models import EpisodeFile
 from module.parser.analyser.raw_parser import (
     get_group,
     process,
     raw_parser,
 )
-
 
 # ---------------------------------------------------------------------------
 # Issue #986: Parser fails on [group][title][episode_text] format
@@ -171,7 +170,7 @@ class TestIssue977EpisodeZeroOffset:
 class TestIssue976NoneInMatchList:
     """Issue #976: match_list should handle None titles gracefully."""
 
-    def test_match_list_filters_none_title_raw(self, db_session):
+    async def test_match_list_filters_none_title_raw(self, db_session):
         """match_list should skip bangumi with title_raw=None."""
         from module.database.bangumi import BangumiDatabase
         from module.models import Bangumi
@@ -185,11 +184,11 @@ class TestIssue976NoneInMatchList:
             title_raw="[Group] Normal Anime",
             season=1,
         )
-        db.add(b1)
+        await db.add(b1)
 
         # The match_list code now checks `if m.title_raw:` before adding to index
         # This test verifies that path works when all entries are valid
-        match_datas = db.search_all()
+        match_datas = await db.search_all()
         title_index = {}
         for m in match_datas:
             if m.title_raw:
@@ -261,8 +260,9 @@ class TestIssue974FilterPatternError:
 
     def test_engine_handles_unterminated_bracket(self):
         """_get_filter_pattern falls back to literal matching for invalid regex."""
-        from module.rss.engine import RSSEngine
         from unittest.mock import MagicMock
+
+        from module.rss.engine import RSSEngine
 
         engine = RSSEngine.__new__(RSSEngine)
         engine._filter_cache = {}
@@ -349,7 +349,7 @@ class TestIssue990NumberPrefixTitle:
         assert result.official_title == "29 岁单身中坚冒险家的日常"
         assert result.title_raw == "29 岁单身中坚冒险家的日常"
 
-    def test_add_title_alias_rejects_none(self, db_session):
+    async def test_add_title_alias_rejects_none(self, db_session):
         """add_title_alias should reject None as alias."""
         from module.database.bangumi import BangumiDatabase
         from module.models import Bangumi
@@ -361,14 +361,14 @@ class TestIssue990NumberPrefixTitle:
             season=1,
         )
         db_session.add(bangumi)
-        db_session.commit()
+        await db_session.commit()
 
-        result = db.add_title_alias(bangumi.id, None)
+        result = await db.add_title_alias(bangumi.id, None)
         assert result is False
         # Verify no alias was stored
         assert bangumi.title_aliases is None
 
-    def test_add_title_alias_rejects_empty_string(self, db_session):
+    async def test_add_title_alias_rejects_empty_string(self, db_session):
         """add_title_alias should reject empty string as alias."""
         from module.database.bangumi import BangumiDatabase
         from module.models import Bangumi
@@ -380,9 +380,9 @@ class TestIssue990NumberPrefixTitle:
             season=1,
         )
         db_session.add(bangumi)
-        db_session.commit()
+        await db_session.commit()
 
-        result = db.add_title_alias(bangumi.id, "")
+        result = await db.add_title_alias(bangumi.id, "")
         assert result is False
 
     def test_get_aliases_list_filters_null_values(self):
@@ -399,7 +399,7 @@ class TestIssue990NumberPrefixTitle:
         bangumi.title_aliases = '[null, "valid_alias", null, "another"]'
         assert _get_aliases_list(bangumi) == ["valid_alias", "another"]
 
-    def test_get_all_title_patterns_skips_none_title_raw(self, db_session):
+    async def test_get_all_title_patterns_skips_none_title_raw(self, db_session):
         """get_all_title_patterns should return empty list when title_raw is None."""
         from module.database.bangumi import BangumiDatabase
         from module.models import Bangumi
@@ -412,7 +412,7 @@ class TestIssue990NumberPrefixTitle:
         patterns = db.get_all_title_patterns(bangumi)
         assert patterns == []
 
-    def test_match_torrent_no_crash_on_none_title_raw(self, db_session):
+    async def test_match_torrent_no_crash_on_none_title_raw(self, db_session):
         """match_torrent should not crash when a bangumi has None title_raw."""
         from module.database.bangumi import BangumiDatabase
         from module.models import Bangumi
@@ -425,15 +425,15 @@ class TestIssue990NumberPrefixTitle:
         )
         bangumi.title_raw = None
         db_session.add(bangumi)
-        db_session.commit()
+        await db_session.commit()
 
         # Should not raise TypeError: 'in <string>' requires string
-        result = db.match_torrent(
+        result = await db.match_torrent(
             "[ANi] 29 岁单身中坚冒险家的日常 - 07 [1080P][Baha][WEB-DL]"
         )
         assert result is None
 
-    def test_match_torrent_no_crash_on_null_aliases(self, db_session):
+    async def test_match_torrent_no_crash_on_null_aliases(self, db_session):
         """match_torrent should not crash when title_aliases contains null."""
         from module.database.bangumi import BangumiDatabase
         from module.models import Bangumi
@@ -446,20 +446,21 @@ class TestIssue990NumberPrefixTitle:
         )
         bangumi.title_aliases = "[null]"
         db_session.add(bangumi)
-        db_session.commit()
+        await db_session.commit()
 
         # Should not crash — null aliases are filtered out
-        result = db.match_torrent(
+        result = await db.match_torrent(
             "[ANi] 29岁单身冒险家的日常 - 07 [1080P][Baha][WEB-DL]"
         )
         assert result is not None
         assert result.official_title == "29岁单身冒险家的日常"
 
-    def test_match_list_no_crash_on_corrupted_data(self, db_session):
+    async def test_match_list_no_crash_on_corrupted_data(self, db_session):
         """match_list should handle bangumi with None title_raw and null aliases."""
+        from unittest.mock import MagicMock
+
         from module.database.bangumi import BangumiDatabase
         from module.models import Bangumi
-        from unittest.mock import MagicMock
 
         db = BangumiDatabase(db_session)
 
@@ -476,13 +477,13 @@ class TestIssue990NumberPrefixTitle:
             season=1,
         )
         db_session.add(valid)
-        db_session.commit()
+        await db_session.commit()
 
         torrent = MagicMock()
         torrent.name = "[ANi] 29 岁单身中坚冒险家的日常 - 07 [1080P]"
 
         # Should not crash even with corrupted data in the DB
-        unmatched = db.match_list([torrent], "https://mikanani.me/RSS/test")
+        await db.match_list([torrent], "https://mikanani.me/RSS/test")
 
 
 # ---------------------------------------------------------------------------
@@ -532,7 +533,7 @@ class TestIssue1005SearchOfficialTitle:
 
         assert hasattr(BangumiDatabase, "search_official_title")
 
-    def test_search_official_title_finds_match(self, db_session):
+    async def test_search_official_title_finds_match(self, db_session):
         """search_official_title returns the matching bangumi."""
         from module.database.bangumi import BangumiDatabase
         from module.models import Bangumi
@@ -544,16 +545,16 @@ class TestIssue1005SearchOfficialTitle:
             season=1,
             rss_link="test",
         )
-        db.add(bangumi)
+        await db.add(bangumi)
 
-        result = db.search_official_title("路人女主的养成方法")
+        result = await db.search_official_title("路人女主的养成方法")
         assert result is not None
         assert result.official_title == "路人女主的养成方法"
 
-    def test_search_official_title_returns_none_when_not_found(self, db_session):
+    async def test_search_official_title_returns_none_when_not_found(self, db_session):
         """search_official_title returns None for non-existent title."""
         from module.database.bangumi import BangumiDatabase
 
         db = BangumiDatabase(db_session)
-        result = db.search_official_title("不存在的番剧")
+        result = await db.search_official_title("不存在的番剧")
         assert result is None

@@ -21,10 +21,10 @@ logger = logging.getLogger(__name__)
 async def rss_tick(analyser: RSSAnalyser) -> None:
     """Analyse aggregate RSS feeds and refresh the RSS engine once."""
     async with DownloadClient() as client:
-        with Database() as db:
+        async with Database() as db:
             engine = RSSEngine(db)
             # Analyse RSS
-            rss_list = engine.rss.search_aggregate()
+            rss_list = await engine.rss.search_aggregate()
             for rss in rss_list:
                 try:
                     await analyser.rss_to_data(rss, engine)
@@ -59,7 +59,7 @@ async def offset_scan_tick() -> None:
 
 async def calendar_tick() -> None:
     """Refresh bangumi calendar metadata."""
-    with Database() as db:
+    async with Database() as db:
         manager = TorrentManager(db)
         resp = await manager.refresh_calendar()
         if resp.status:

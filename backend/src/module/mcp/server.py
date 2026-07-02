@@ -53,7 +53,7 @@ async def list_resource_templates() -> list[types.ResourceTemplate]:
 @server.read_resource()
 async def read_resource(uri: str) -> str:
     logger.debug("[MCP] Resource read: %s", uri)
-    return handle_resource(uri)
+    return await handle_resource(uri)
 
 
 async def handle_sse(request: Request):

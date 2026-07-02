@@ -1,25 +1,11 @@
 """Integration tests: end-to-end flows with real DB and mocked externals."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
-from sqlmodel import Session, SQLModel, create_engine
+from unittest.mock import AsyncMock, patch
 
 from module.database import Database
-from module.database.bangumi import BangumiDatabase, _invalidate_bangumi_cache
-from module.database.rss import RSSDatabase
-from module.database.torrent import TorrentDatabase
-from module.models import Bangumi, EpisodeFile, Notification, RSSItem, Torrent
+from module.models import EpisodeFile, Torrent
 from module.rss.engine import RSSEngine
-from test.factories import make_bangumi, make_rss_item, make_torrent
-
-
-@pytest.fixture(autouse=True)
-def clear_cache():
-    _invalidate_bangumi_cache()
-    yield
-    _invalidate_bangumi_cache()
-
+from test.factories import make_bangumi, make_rss_item
 
 # ---------------------------------------------------------------------------
 # RSS → Download Flow
@@ -36,7 +22,7 @@ class TestRssToDownloadFlow:
 
         # 2. Add RSS feed and Bangumi to DB
         rss_item = make_rss_item(name="My Feed", url="https://mikanani.me/RSS/test")
-        engine.rss.add(rss_item)
+        await engine.rss.add(rss_item)
 
         bangumi = make_bangumi(
             title_raw="Mushoku Tensei",
@@ -44,7 +30,7 @@ class TestRssToDownloadFlow:
             filter="",
             added=True,
         )
-        engine.bangumi.add(bangumi)
+        await engine.bangumi.add(bangumi)
 
         # 3. Mock the HTTP layer to return new torrents
         new_torrents = [
@@ -75,7 +61,7 @@ class TestRssToDownloadFlow:
         assert mock_client.add_torrent.call_count == 2
 
         # 7. Verify: all torrents stored in DB
-        all_torrents = engine.torrent.search_all()
+        all_torrents = await engine.torrent.search_all()
         assert len(all_torrents) == 3
 
         # 8. Verify: matched torrents are marked downloaded
@@ -95,14 +81,14 @@ class TestRssToDownloadFlow:
         engine = RSSEngine(Database(engine=db_engine))
 
         rss_item = make_rss_item()
-        engine.rss.add(rss_item)
+        await engine.rss.add(rss_item)
 
         # Bangumi has filter="720" to exclude 720p
         bangumi = make_bangumi(
             title_raw="Mushoku Tensei",
             filter="720",
         )
-        engine.bangumi.add(bangumi)
+        await engine.bangumi.add(bangumi)
 
         torrents = [
             Torrent(
@@ -128,10 +114,10 @@ class TestRssToDownloadFlow:
         engine = RSSEngine(Database(engine=db_engine))
 
         rss_item = make_rss_item()
-        engine.rss.add(rss_item)
+        await engine.rss.add(rss_item)
 
         bangumi = make_bangumi(title_raw="Anime", filter="")
-        engine.bangumi.add(bangumi)
+        await engine.bangumi.add(bangumi)
 
         # Pre-insert a torrent
         existing = Torrent(
@@ -139,7 +125,7 @@ class TestRssToDownloadFlow:
             url="https://example.com/ep01.torrent",
             downloaded=True,
         )
-        engine.torrent.add(existing)
+        await engine.torrent.add(existing)
 
         # Mock returns same torrent + a new one
         torrents = [
@@ -160,7 +146,7 @@ class TestRssToDownloadFlow:
 
         # Only ep02 should be downloaded (ep01 already exists)
         assert mock_client.add_torrent.call_count == 1
-        all_torrents = engine.torrent.search_all()
+        all_torrents = await engine.torrent.search_all()
         assert len(all_torrents) == 2  # original + new one
 
 
@@ -302,73 +288,73 @@ class TestRenameFlow:
 class TestDatabaseConsistency:
     """Verify database operations maintain data integrity across operations."""
 
-    def test_bangumi_uniqueness_by_title_raw(self, db_engine):
+    async def test_bangumi_uniqueness_by_title_raw(self, db_engine):
         """Cannot add two Bangumi with same title_raw."""
         engine = RSSEngine(Database(engine=db_engine))
 
         b1 = make_bangumi(title_raw="Same Title", official_title="First")
         b2 = make_bangumi(title_raw="Same Title", official_title="Second")
 
-        assert engine.bangumi.add(b1) is True
-        assert engine.bangumi.add(b2) is False  # Duplicate rejected
+        assert await engine.bangumi.add(b1) is True
+        assert await engine.bangumi.add(b2) is False  # Duplicate rejected
 
-        all_bangumi = engine.bangumi.search_all()
+        all_bangumi = await engine.bangumi.search_all()
         assert len(all_bangumi) == 1
         assert all_bangumi[0].official_title == "First"
 
-    def test_rss_uniqueness_by_url(self, db_engine):
+    async def test_rss_uniqueness_by_url(self, db_engine):
         """Cannot add two RSSItems with same URL."""
         engine = RSSEngine(Database(engine=db_engine))
 
         r1 = make_rss_item(url="https://same.url/rss", name="First")
         r2 = make_rss_item(url="https://same.url/rss", name="Second")
 
-        assert engine.rss.add(r1) is True
-        assert engine.rss.add(r2) is False
+        assert await engine.rss.add(r1) is True
+        assert await engine.rss.add(r2) is False
 
-    def test_torrent_check_new_filters_duplicates(self, db_engine):
+    async def test_torrent_check_new_filters_duplicates(self, db_engine):
         """check_new only returns torrents not already in the database."""
         engine = RSSEngine(Database(engine=db_engine))
 
         existing = Torrent(name="existing", url="https://existing.com")
-        engine.torrent.add(existing)
+        await engine.torrent.add(existing)
 
         candidates = [
             Torrent(name="existing", url="https://existing.com"),
             Torrent(name="new1", url="https://new1.com"),
             Torrent(name="new2", url="https://new2.com"),
         ]
-        new_ones = engine.torrent.check_new(candidates)
+        new_ones = await engine.torrent.check_new(candidates)
         assert len(new_ones) == 2
         assert all(t.url != "https://existing.com" for t in new_ones)
 
-    def test_match_torrent_respects_deleted_flag(self, db_engine):
+    async def test_match_torrent_respects_deleted_flag(self, db_engine):
         """Deleted bangumi are not matched by match_torrent."""
         engine = RSSEngine(Database(engine=db_engine))
 
         bangumi = make_bangumi(title_raw="Deleted Anime", filter="", deleted=True)
-        engine.bangumi.add(bangumi)
+        await engine.bangumi.add(bangumi)
 
         torrent = Torrent(
             name="[Sub] Deleted Anime - 01 [1080p].mkv",
             url="https://test.com",
         )
-        result = engine.match_torrent(torrent)
+        result = engine.match_torrent(torrent, await engine.bangumi.search_all())
         assert result is None
 
-    def test_bangumi_disable_and_enable(self, db_engine):
+    async def test_bangumi_disable_and_enable(self, db_engine):
         """disable_rule and re-enabling preserves data."""
         engine = RSSEngine(Database(engine=db_engine))
 
         bangumi = make_bangumi(title_raw="My Anime", deleted=False)
-        engine.bangumi.add(bangumi)
-        bangumi_id = engine.bangumi.search_all()[0].id
+        await engine.bangumi.add(bangumi)
+        bangumi_id = (await engine.bangumi.search_all())[0].id
 
         # Disable
-        engine.bangumi.disable_rule(bangumi_id)
-        disabled = engine.bangumi.search_id(bangumi_id)
+        await engine.bangumi.disable_rule(bangumi_id)
+        disabled = await engine.bangumi.search_id(bangumi_id)
         assert disabled.deleted is True
 
         # Torrent matching should now fail
         torrent = Torrent(name="[Sub] My Anime - 01.mkv", url="https://test.com")
-        assert engine.match_torrent(torrent) is None
+        assert engine.match_torrent(torrent, await engine.bangumi.search_all()) is None

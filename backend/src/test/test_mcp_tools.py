@@ -31,12 +31,11 @@ def _mock_sync_manager(bangumi_list=None, single=None):
     context manager. Both return slots are the same object for call-site symmetry.
     """
     mock_mgr = MagicMock()
-    if bangumi_list is not None:
-        mock_mgr.bangumi.search_all.return_value = bangumi_list
-        mock_mgr.search_all_bangumi.return_value = bangumi_list
-    if single is not None:
-        mock_mgr.search_one.return_value = single
-        mock_mgr.bangumi.search_id.return_value = single
+    # Repo/service methods the handlers now `await`.
+    mock_mgr.bangumi.search_all = AsyncMock(return_value=bangumi_list or [])
+    mock_mgr.search_all_bangumi = AsyncMock(return_value=bangumi_list or [])
+    mock_mgr.search_one = AsyncMock(return_value=single)
+    mock_mgr.bangumi.search_id = AsyncMock(return_value=single)
 
     return mock_mgr, mock_mgr
 
@@ -452,7 +451,7 @@ class TestDispatch:
         fake_feed.last_error = None
 
         mock_engine = MagicMock()
-        mock_engine.rss.search_all.return_value = [fake_feed]
+        mock_engine.rss.search_all = AsyncMock(return_value=[fake_feed])
 
         with patch("module.mcp.tools.RSSEngine", return_value=mock_engine):
             result = await _dispatch("list_rss_feeds", {})

@@ -5,7 +5,7 @@ from module.rss import RSSEngine
 from module.utils import json_config
 
 
-def data_migration():
+async def data_migration():
     if not LEGACY_DATA_PATH.exists():
         return False
     old_data = json_config.load(LEGACY_DATA_PATH)
@@ -14,13 +14,13 @@ def data_migration():
     new_data = []
     for info in infos:
         new_data.append(Bangumi(**info, rss_link=rss_link))
-    with Database() as db:
+    async with Database() as db:
         engine = RSSEngine(db)
-        db.bangumi.add_all(new_data)
-        engine.add_rss(rss_link)
+        await db.bangumi.add_all(new_data)
+        await engine.add_rss(rss_link)
     LEGACY_DATA_PATH.unlink(missing_ok=True)
 
 
-def database_migration():
-    with Database() as db:
-        db.migrate()
+async def database_migration():
+    async with Database() as db:
+        await db.migrate()

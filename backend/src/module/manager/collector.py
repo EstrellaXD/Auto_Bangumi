@@ -26,7 +26,7 @@ class SeasonCollector:
                 torrents = await req.get_torrents(
                     link, bangumi.filter.replace(",", "|")
                 )
-        with Database() as db:
+        async with Database() as db:
             engine = RSSEngine(db)
             if await self.client.add_torrent(torrents, bangumi):
                 logger.info(
@@ -35,9 +35,9 @@ class SeasonCollector:
                 for torrent in torrents:
                     torrent.downloaded = True
                 bangumi.eps_collect = True
-                if engine.bangumi.update(bangumi):
-                    engine.bangumi.add(bangumi)
-                engine.torrent.add_all(torrents)
+                if await engine.bangumi.update(bangumi):
+                    await engine.bangumi.add(bangumi)
+                await engine.torrent.add_all(torrents)
                 return ResponseModel(
                     status=True,
                     status_code=200,
@@ -57,7 +57,7 @@ class SeasonCollector:
 
     @staticmethod
     async def subscribe_season(data: Bangumi, parser: str = "mikan"):
-        with Database() as db:
+        async with Database() as db:
             engine = RSSEngine(db)
             data.added = True
             data.eps_collect = True
@@ -68,14 +68,14 @@ class SeasonCollector:
                 parser=parser,
             )
             result = await engine.download_bangumi(data)
-            engine.bangumi.add(data)
+            await engine.bangumi.add(data)
             return result
 
 
 async def eps_complete():
-    with Database() as db:
+    async with Database() as db:
         engine = RSSEngine(db)
-        datas = engine.bangumi.not_complete()
+        datas = await engine.bangumi.not_complete()
         if datas:
             logger.info("Start collecting full season...")
             async with DownloadClient() as client:
@@ -84,4 +84,4 @@ async def eps_complete():
                     if not data.eps_collect:
                         await collector.collect_season(data)
                     data.eps_collect = True
-            engine.bangumi.update_all(datas)
+            await engine.bangumi.update_all(datas)

@@ -1,14 +1,13 @@
 """Tests for Downloader API endpoints."""
 
-import pytest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from module.api import v1
 from module.security.api import get_current_user
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -314,8 +313,10 @@ class TestTagTorrent:
             MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
 
             with patch("module.api.downloader.Database") as MockDB:
-                mock_db = MockDB.return_value.__enter__.return_value
-                mock_db.bangumi.search_id.return_value = mock_bangumi
+                mock_db = MagicMock()
+                mock_db.bangumi.search_id = AsyncMock(return_value=mock_bangumi)
+                MockDB.return_value.__aenter__ = AsyncMock(return_value=mock_db)
+                MockDB.return_value.__aexit__ = AsyncMock(return_value=False)
 
                 response = authed_client.post(
                     "/api/v1/downloader/torrents/tag",
@@ -331,8 +332,10 @@ class TestTagTorrent:
     def test_tag_torrent_bangumi_not_found(self, authed_client, mock_download_client):
         """POST /downloader/torrents/tag fails if bangumi doesn't exist."""
         with patch("module.api.downloader.Database") as MockDB:
-            mock_db = MockDB.return_value.__enter__.return_value
-            mock_db.bangumi.search_id.return_value = None
+            mock_db = MagicMock()
+            mock_db.bangumi.search_id = AsyncMock(return_value=None)
+            MockDB.return_value.__aenter__ = AsyncMock(return_value=mock_db)
+            MockDB.return_value.__aexit__ = AsyncMock(return_value=False)
 
             response = authed_client.post(
                 "/api/v1/downloader/torrents/tag",
@@ -389,9 +392,11 @@ class TestAutoTagTorrents:
             MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
 
             with patch("module.api.downloader.Database") as MockDB:
-                mock_db = MockDB.return_value.__enter__.return_value
-                mock_db.bangumi.match_torrent.return_value = mock_bangumi
-                mock_db.bangumi.match_by_save_path.return_value = None
+                mock_db = MagicMock()
+                mock_db.bangumi.match_torrent = AsyncMock(return_value=mock_bangumi)
+                mock_db.bangumi.match_by_save_path = AsyncMock(return_value=None)
+                MockDB.return_value.__aenter__ = AsyncMock(return_value=mock_db)
+                MockDB.return_value.__aexit__ = AsyncMock(return_value=False)
 
                 response = authed_client.post("/api/v1/downloader/torrents/tag/auto")
 
@@ -420,9 +425,11 @@ class TestAutoTagTorrents:
             MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
 
             with patch("module.api.downloader.Database") as MockDB:
-                mock_db = MockDB.return_value.__enter__.return_value
-                mock_db.bangumi.match_torrent.return_value = None
-                mock_db.bangumi.match_by_save_path.return_value = None
+                mock_db = MagicMock()
+                mock_db.bangumi.match_torrent = AsyncMock(return_value=None)
+                mock_db.bangumi.match_by_save_path = AsyncMock(return_value=None)
+                MockDB.return_value.__aenter__ = AsyncMock(return_value=mock_db)
+                MockDB.return_value.__aexit__ = AsyncMock(return_value=False)
 
                 response = authed_client.post("/api/v1/downloader/torrents/tag/auto")
 

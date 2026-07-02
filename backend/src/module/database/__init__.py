@@ -1,8 +1,7 @@
 from .combine import Database
-from .engine import engine
 
 
-def get_db():
-    """FastAPI dependency yielding a request-scoped Database."""
-    with Database() as db:
+async def get_db():
+    """FastAPI dependency yielding a request-scoped async Database."""
+    async with Database() as db:
         yield db

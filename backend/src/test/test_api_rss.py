@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from module.api import v1
+from module.database import get_db
 from module.models import Bangumi, ResponseModel, RSSItem, RSSUpdate, Torrent
 from module.security.api import get_current_user
 from test.factories import make_bangumi, make_rss_item, make_torrent
@@ -20,6 +21,11 @@ from test.factories import make_bangumi, make_rss_item, make_torrent
 def app():
     app = FastAPI()
     app.include_router(v1, prefix="/api")
+
+    async def _override_get_db():
+        yield MagicMock()
+
+    app.dependency_overrides[get_db] = _override_get_db
     return app
 
 
@@ -73,10 +79,8 @@ class TestGetRss:
             make_rss_item(id=2, name="Feed 2"),
         ]
         with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MagicMock()
-            mock_eng.rss.search_all.return_value = items
-            MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-            MockEngine.return_value.__exit__ = MagicMock(return_value=False)
+            mock_eng = MockEngine.return_value
+            mock_eng.rss.search_all = AsyncMock(return_value=items)
 
             response = authed_client.get("/api/v1/rss")
 
@@ -97,10 +101,8 @@ class TestAddRss:
             status=True, status_code=200, msg_en="Added.", msg_zh="添加成功。"
         )
         with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MagicMock()
+            mock_eng = MockEngine.return_value
             mock_eng.add_rss = AsyncMock(return_value=resp_model)
-            MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-            MockEngine.return_value.__exit__ = MagicMock(return_value=False)
 
             response = authed_client.post(
                 "/api/v1/rss/add",
@@ -124,10 +126,8 @@ class TestDeleteRss:
     def test_delete_success(self, authed_client):
         """DELETE /rss/delete/{id} removes the feed."""
         with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MagicMock()
-            mock_eng.rss.delete.return_value = True
-            MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-            MockEngine.return_value.__exit__ = MagicMock(return_value=False)
+            mock_eng = MockEngine.return_value
+            mock_eng.rss.delete = AsyncMock(return_value=True)
 
             response = authed_client.delete("/api/v1/rss/delete/1")
 
@@ -136,10 +136,8 @@ class TestDeleteRss:
     def test_delete_failure(self, authed_client):
         """DELETE /rss/delete/{id} returns 406 when feed not found."""
         with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MagicMock()
-            mock_eng.rss.delete.return_value = False
-            MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-            MockEngine.return_value.__exit__ = MagicMock(return_value=False)
+            mock_eng = MockEngine.return_value
+            mock_eng.rss.delete = AsyncMock(return_value=False)
 
             response = authed_client.delete("/api/v1/rss/delete/999")
 
@@ -155,10 +153,8 @@ class TestDisableRss:
     def test_disable_success(self, authed_client):
         """PATCH /rss/disable/{id} disables the feed."""
         with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MagicMock()
-            mock_eng.rss.disable.return_value = True
-            MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-            MockEngine.return_value.__exit__ = MagicMock(return_value=False)
+            mock_eng = MockEngine.return_value
+            mock_eng.rss.disable = AsyncMock(return_value=True)
 
             response = authed_client.patch("/api/v1/rss/disable/1")
 
@@ -167,10 +163,8 @@ class TestDisableRss:
     def test_disable_failure(self, authed_client):
         """PATCH /rss/disable/{id} returns 406 when feed not found."""
         with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MagicMock()
-            mock_eng.rss.disable.return_value = False
-            MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-            MockEngine.return_value.__exit__ = MagicMock(return_value=False)
+            mock_eng = MockEngine.return_value
+            mock_eng.rss.disable = AsyncMock(return_value=False)
 
             response = authed_client.patch("/api/v1/rss/disable/999")
 
@@ -189,10 +183,8 @@ class TestBatchOperations:
             status=True, status_code=200, msg_en="Enabled.", msg_zh="启用成功。"
         )
         with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MagicMock()
-            mock_eng.enable_list.return_value = resp_model
-            MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-            MockEngine.return_value.__exit__ = MagicMock(return_value=False)
+            mock_eng = MockEngine.return_value
+            mock_eng.enable_list = AsyncMock(return_value=resp_model)
 
             response = authed_client.post("/api/v1/rss/enable/many", json=[1, 2, 3])
 
@@ -204,10 +196,8 @@ class TestBatchOperations:
             status=True, status_code=200, msg_en="Disabled.", msg_zh="禁用成功。"
         )
         with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MagicMock()
-            mock_eng.disable_list.return_value = resp_model
-            MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-            MockEngine.return_value.__exit__ = MagicMock(return_value=False)
+            mock_eng = MockEngine.return_value
+            mock_eng.disable_list = AsyncMock(return_value=resp_model)
 
             response = authed_client.post("/api/v1/rss/disable/many", json=[1, 2])
 
@@ -219,10 +209,8 @@ class TestBatchOperations:
             status=True, status_code=200, msg_en="Deleted.", msg_zh="删除成功。"
         )
         with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MagicMock()
-            mock_eng.delete_list.return_value = resp_model
-            MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-            MockEngine.return_value.__exit__ = MagicMock(return_value=False)
+            mock_eng = MockEngine.return_value
+            mock_eng.delete_list = AsyncMock(return_value=resp_model)
 
             response = authed_client.post("/api/v1/rss/delete/many", json=[1, 2])
 
@@ -238,10 +226,8 @@ class TestUpdateRss:
     def test_update_success(self, authed_client):
         """PATCH /rss/update/{id} updates feed."""
         with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MagicMock()
-            mock_eng.rss.update.return_value = True
-            MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-            MockEngine.return_value.__exit__ = MagicMock(return_value=False)
+            mock_eng = MockEngine.return_value
+            mock_eng.rss.update = AsyncMock(return_value=True)
 
             response = authed_client.patch(
                 "/api/v1/rss/update/1",
@@ -264,10 +250,8 @@ class TestRefreshRss:
             MockClient.return_value.__aenter__ = AsyncMock(return_value=mock_client)
             MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
             with patch("module.api.rss.RSSEngine") as MockEngine:
-                mock_eng = MagicMock()
+                mock_eng = MockEngine.return_value
                 mock_eng.refresh_rss = AsyncMock()
-                MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-                MockEngine.return_value.__exit__ = MagicMock(return_value=False)
 
                 response = authed_client.get("/api/v1/rss/refresh/all")
 
@@ -280,10 +264,8 @@ class TestRefreshRss:
             MockClient.return_value.__aenter__ = AsyncMock(return_value=mock_client)
             MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
             with patch("module.api.rss.RSSEngine") as MockEngine:
-                mock_eng = MagicMock()
+                mock_eng = MockEngine.return_value
                 mock_eng.refresh_rss = AsyncMock()
-                MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-                MockEngine.return_value.__exit__ = MagicMock(return_value=False)
 
                 response = authed_client.get("/api/v1/rss/refresh/1")
 
@@ -300,10 +282,8 @@ class TestGetRssTorrents:
         """GET /rss/torrent/{id} returns torrents for that feed."""
         torrents = [make_torrent(id=1, rss_id=1), make_torrent(id=2, rss_id=1)]
         with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MagicMock()
-            mock_eng.get_rss_torrents.return_value = torrents
-            MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-            MockEngine.return_value.__exit__ = MagicMock(return_value=False)
+            mock_eng = MockEngine.return_value
+            mock_eng.get_rss_torrents = AsyncMock(return_value=torrents)
 
             response = authed_client.get("/api/v1/rss/torrent/1")
 

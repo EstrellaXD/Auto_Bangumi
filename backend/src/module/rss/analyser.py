@@ -74,7 +74,7 @@ class RSSAnalyser:
         self, rss: RSSItem, engine: RSSEngine, full_parse: bool = True
     ) -> list[Bangumi]:
         rss_torrents = await self.get_rss_torrents(rss.url, full_parse)
-        torrents_to_add = engine.bangumi.match_list(rss_torrents, rss.url)
+        torrents_to_add = await engine.bangumi.match_list(rss_torrents, rss.url)
         if not torrents_to_add:
             logger.debug("[RSS] No new title has been found.")
             return []
@@ -82,7 +82,7 @@ class RSSAnalyser:
         new_data = await self.torrents_to_data(torrents_to_add, rss, full_parse)
         if new_data:
             # Add to database
-            engine.bangumi.add_all(new_data)
+            await engine.bangumi.add_all(new_data)
             return new_data
         else:
             return []

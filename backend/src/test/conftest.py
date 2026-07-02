@@ -1,35 +1,28 @@
 """Shared test fixtures for AutoBangumi test suite."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+import pytest_asyncio
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlmodel import Session, SQLModel, create_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlalchemy.pool import NullPool, StaticPool
+from sqlmodel import SQLModel, create_engine
 
 from module.api import v1
-from module.database.bangumi import _invalidate_bangumi_cache
-from module.models.config import Config
+from module.database import Database, get_db
 from module.models import ResponseModel
+from module.models.config import Config
 from module.security.api import get_current_user
 
-
 # ---------------------------------------------------------------------------
-# Database Fixtures
+# Download client cache reset
 # ---------------------------------------------------------------------------
-
-
-@pytest.fixture(autouse=True)
-def _clear_bangumi_cache():
-    """Invalidate the module-level bangumi cache before each test.
-
-    The BangumiDatabase.search_all() uses a module-level TTL cache that
-    persists across tests using different in-memory databases, causing
-    stale results.
-    """
-    _invalidate_bangumi_cache()
-    yield
-    _invalidate_bangumi_cache()
 
 
 @pytest.fixture(autouse=True)
@@ -47,19 +40,63 @@ def _reset_downloader_client_cache():
     _reset_client_cache()
 
 
-@pytest.fixture
-def db_engine():
-    """Create an in-memory SQLite engine for testing."""
-    engine = create_engine("sqlite://", echo=False)
-    SQLModel.metadata.create_all(engine)
+# ---------------------------------------------------------------------------
+# Database Fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _bind_bare_database(tmp_path, monkeypatch):
+    """Point every bare ``Database()`` at a per-test temp-file SQLite DB.
+
+    A file DB with NullPool works from both pytest-asyncio's loop and the
+    TestClient's loop (each connection is independent and opened lazily in the
+    active loop), so it is safe for both sync and async tests. Tables are
+    created up front with a sync engine so this fixture stays synchronous and
+    usable by sync tests. Direct-repo tests that pass ``Database(engine=...)``
+    or use ``db_session`` bypass this and get their own in-memory DB.
+    """
+    db_file = tmp_path / "ab_test.db"
+    sync_engine = create_engine(f"sqlite:///{db_file}")
+    SQLModel.metadata.create_all(sync_engine)
+    sync_engine.dispose()
+
+    async_engine = create_async_engine(
+        f"sqlite+aiosqlite:///{db_file}", poolclass=NullPool
+    )
+    factory = async_sessionmaker(
+        async_engine, class_=AsyncSession, expire_on_commit=False
+    )
+    monkeypatch.setattr("module.database.combine.async_session_factory", factory)
+    monkeypatch.setattr("module.database.combine.async_engine", async_engine)
+    yield
+
+
+@pytest_asyncio.fixture
+async def db_engine():
+    """In-memory async engine shared across connections via StaticPool.
+
+    For direct-repo tests that construct repositories or ``Database(engine=...)``
+    explicitly. Fresh per test for isolation.
+    """
+    engine = create_async_engine(
+        "sqlite+aiosqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
     yield engine
-    SQLModel.metadata.drop_all(engine)
+    await engine.dispose()
 
 
-@pytest.fixture
-def db_session(db_engine):
-    """Provide a fresh database session per test."""
-    with Session(db_engine) as session:
+@pytest_asyncio.fixture
+async def db_session(db_engine):
+    """Provide a fresh async database session per test."""
+    factory = async_sessionmaker(
+        db_engine, class_=AsyncSession, expire_on_commit=False
+    )
+    async with factory() as session:
         yield session
 
 
@@ -123,9 +160,15 @@ def mock_qb_client():
 
 @pytest.fixture
 def app():
-    """Create a FastAPI app with v1 routes for testing."""
+    """Create a FastAPI app with v1 routes and an async get_db override."""
     app = FastAPI()
     app.include_router(v1, prefix="/api")
+
+    async def _override_get_db():
+        async with Database() as db:
+            yield db
+
+    app.dependency_overrides[get_db] = _override_get_db
     return app
 
 

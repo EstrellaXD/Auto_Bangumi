@@ -168,7 +168,7 @@ class AppContext:
             return
         self._start_info()
         if not Checker.check_database():
-            first_run()
+            await first_run()
             logger.info("[Core] No db file exists, create database file.")
             self.first_run_boot = True
             self._startup_done = True
@@ -177,7 +177,7 @@ class AppContext:
             logger.info(
                 "[Core] Legacy data detected, starting data migration, please wait patiently."
             )
-            data_migration()
+            await data_migration()
         else:
             is_same, last_minor = Checker.check_version()
             if not is_same:
@@ -189,7 +189,7 @@ class AppContext:
             else:
                 # Always check schema version and run pending migrations,
                 # in case a previous migration was interrupted or failed.
-                run_migrations()
+                await run_migrations()
         if not Checker.check_img_cache():
             logger.info("[Core] No image cache exists, create image cache.")
             await cache_image()

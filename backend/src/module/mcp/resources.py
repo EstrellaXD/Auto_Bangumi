@@ -52,7 +52,7 @@ RESOURCE_TEMPLATES = [
 ]
 
 
-def handle_resource(uri: str) -> str:
+async def handle_resource(uri: str) -> str:
     """Return a JSON string for the given MCP resource URI.
 
     Supported URIs:
@@ -62,9 +62,9 @@ def handle_resource(uri: str) -> str:
     - ``autobangumi://anime/{id}`` - single anime by integer ID
     """
     if uri == "autobangumi://anime/list":
-        with Database() as db:
+        async with Database() as db:
             manager = TorrentManager(db)
-            items = manager.bangumi.search_all()
+            items = await manager.bangumi.search_all()
         return json.dumps([_bangumi_to_dict(b) for b in items], ensure_ascii=False)
 
     elif uri == "autobangumi://status":
@@ -78,9 +78,9 @@ def handle_resource(uri: str) -> str:
         )
 
     elif uri == "autobangumi://rss/feeds":
-        with Database() as db:
+        async with Database() as db:
             engine = RSSEngine(db)
-            feeds = engine.rss.search_all()
+            feeds = await engine.rss.search_all()
         return json.dumps(
             [
                 {
@@ -102,9 +102,9 @@ def handle_resource(uri: str) -> str:
             anime_id = int(anime_id)
         except ValueError:
             return json.dumps({"error": f"Invalid anime ID: {anime_id}"})
-        with Database() as db:
+        async with Database() as db:
             manager = TorrentManager(db)
-            result = manager.search_one(anime_id)
+            result = await manager.search_one(anime_id)
         if isinstance(result, Bangumi):
             return json.dumps(_bangumi_to_dict(result), ensure_ascii=False)
         return json.dumps({"error": result.msg_en})

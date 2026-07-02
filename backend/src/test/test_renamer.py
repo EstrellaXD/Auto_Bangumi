@@ -692,7 +692,7 @@ class TestLookupOffsets:
         client.client = mock_qb_client
         return Renamer(client)
 
-    def test_lookup_by_qb_hash(self, renamer, db_session):
+    async def test_lookup_by_qb_hash(self, renamer, db_session):
         """First priority: lookup by qb_hash in Torrent table."""
         from module.database.bangumi import BangumiDatabase
         from module.database.torrent import TorrentDatabase
@@ -708,7 +708,7 @@ class TestLookupOffsets:
             episode_offset=-12,
             season_offset=1,
         )
-        bangumi_db.add(bangumi)
+        await bangumi_db.add(bangumi)
 
         # Create torrent linked to bangumi
         torrent_db = TorrentDatabase(db_session)
@@ -718,17 +718,17 @@ class TestLookupOffsets:
             bangumi_id=bangumi.id,
             qb_hash="abc123hash",
         )
-        torrent_db.add(torrent)
+        await torrent_db.add(torrent)
 
         with patch("module.manager.renamer.Database") as MockDatabase:
             mock_db = MagicMock()
-            mock_db.__enter__ = MagicMock(return_value=mock_db)
-            mock_db.__exit__ = MagicMock(return_value=False)
+            mock_db.__aenter__ = AsyncMock(return_value=mock_db)
+            mock_db.__aexit__ = AsyncMock(return_value=False)
             mock_db.torrent = TorrentDatabase(db_session)
             mock_db.bangumi = BangumiDatabase(db_session)
             MockDatabase.return_value = mock_db
 
-            episode_offset, season_offset = renamer._lookup_offsets(
+            episode_offset, season_offset = await renamer._lookup_offsets(
                 torrent_hash="abc123hash",
                 torrent_name="irrelevant",
                 save_path="/irrelevant/path",
@@ -738,7 +738,7 @@ class TestLookupOffsets:
         assert episode_offset == -12
         assert season_offset == 1
 
-    def test_lookup_by_tag_when_hash_not_found(self, renamer, db_session):
+    async def test_lookup_by_tag_when_hash_not_found(self, renamer, db_session):
         """Second priority: lookup by ab:ID tag when qb_hash not found."""
         from module.database.bangumi import BangumiDatabase
         from module.database.torrent import TorrentDatabase
@@ -754,17 +754,17 @@ class TestLookupOffsets:
             episode_offset=5,
             season_offset=0,
         )
-        bangumi_db.add(bangumi)
+        await bangumi_db.add(bangumi)
 
         with patch("module.manager.renamer.Database") as MockDatabase:
             mock_db = MagicMock()
-            mock_db.__enter__ = MagicMock(return_value=mock_db)
-            mock_db.__exit__ = MagicMock(return_value=False)
+            mock_db.__aenter__ = AsyncMock(return_value=mock_db)
+            mock_db.__aexit__ = AsyncMock(return_value=False)
             mock_db.torrent = TorrentDatabase(db_session)
             mock_db.bangumi = BangumiDatabase(db_session)
             MockDatabase.return_value = mock_db
 
-            episode_offset, season_offset = renamer._lookup_offsets(
+            episode_offset, season_offset = await renamer._lookup_offsets(
                 torrent_hash="nonexistent_hash",
                 torrent_name="irrelevant",
                 save_path="/irrelevant/path",
@@ -774,7 +774,7 @@ class TestLookupOffsets:
         assert episode_offset == 5
         assert season_offset == 0
 
-    def test_lookup_by_torrent_name(self, renamer, db_session):
+    async def test_lookup_by_torrent_name(self, renamer, db_session):
         """Third priority: lookup by torrent name matching title_raw."""
         from module.database.bangumi import BangumiDatabase
         from module.database.torrent import TorrentDatabase
@@ -790,17 +790,17 @@ class TestLookupOffsets:
             episode_offset=-6,
             season_offset=2,
         )
-        bangumi_db.add(bangumi)
+        await bangumi_db.add(bangumi)
 
         with patch("module.manager.renamer.Database") as MockDatabase:
             mock_db = MagicMock()
-            mock_db.__enter__ = MagicMock(return_value=mock_db)
-            mock_db.__exit__ = MagicMock(return_value=False)
+            mock_db.__aenter__ = AsyncMock(return_value=mock_db)
+            mock_db.__aexit__ = AsyncMock(return_value=False)
             mock_db.torrent = TorrentDatabase(db_session)
             mock_db.bangumi = BangumiDatabase(db_session)
             MockDatabase.return_value = mock_db
 
-            episode_offset, season_offset = renamer._lookup_offsets(
+            episode_offset, season_offset = await renamer._lookup_offsets(
                 torrent_hash="nonexistent_hash",
                 torrent_name="[SubGroup] Name Match - 01 [1080p].mkv",
                 save_path="/irrelevant/path",
@@ -810,7 +810,7 @@ class TestLookupOffsets:
         assert episode_offset == -6
         assert season_offset == 2
 
-    def test_lookup_by_save_path_fallback(self, renamer, db_session):
+    async def test_lookup_by_save_path_fallback(self, renamer, db_session):
         """Fourth priority: lookup by save_path when other methods fail."""
         from module.database.bangumi import BangumiDatabase
         from module.database.torrent import TorrentDatabase
@@ -827,17 +827,17 @@ class TestLookupOffsets:
             episode_offset=10,
             season_offset=-1,
         )
-        bangumi_db.add(bangumi)
+        await bangumi_db.add(bangumi)
 
         with patch("module.manager.renamer.Database") as MockDatabase:
             mock_db = MagicMock()
-            mock_db.__enter__ = MagicMock(return_value=mock_db)
-            mock_db.__exit__ = MagicMock(return_value=False)
+            mock_db.__aenter__ = AsyncMock(return_value=mock_db)
+            mock_db.__aexit__ = AsyncMock(return_value=False)
             mock_db.torrent = TorrentDatabase(db_session)
             mock_db.bangumi = BangumiDatabase(db_session)
             MockDatabase.return_value = mock_db
 
-            episode_offset, season_offset = renamer._lookup_offsets(
+            episode_offset, season_offset = await renamer._lookup_offsets(
                 torrent_hash="nonexistent_hash",
                 torrent_name="completely_different_name.mkv",
                 save_path="/downloads/Bangumi/Path Match Anime (2024)/Season 1",
@@ -847,20 +847,20 @@ class TestLookupOffsets:
         assert episode_offset == 10
         assert season_offset == -1
 
-    def test_lookup_returns_zero_when_not_found(self, renamer, db_session):
+    async def test_lookup_returns_zero_when_not_found(self, renamer, db_session):
         """Returns (0, 0) when no matching bangumi found."""
         from module.database.bangumi import BangumiDatabase
         from module.database.torrent import TorrentDatabase
 
         with patch("module.manager.renamer.Database") as MockDatabase:
             mock_db = MagicMock()
-            mock_db.__enter__ = MagicMock(return_value=mock_db)
-            mock_db.__exit__ = MagicMock(return_value=False)
+            mock_db.__aenter__ = AsyncMock(return_value=mock_db)
+            mock_db.__aexit__ = AsyncMock(return_value=False)
             mock_db.torrent = TorrentDatabase(db_session)
             mock_db.bangumi = BangumiDatabase(db_session)
             MockDatabase.return_value = mock_db
 
-            episode_offset, season_offset = renamer._lookup_offsets(
+            episode_offset, season_offset = await renamer._lookup_offsets(
                 torrent_hash="nonexistent",
                 torrent_name="no_match",
                 save_path="/no/match/path",
@@ -870,7 +870,7 @@ class TestLookupOffsets:
         assert episode_offset == 0
         assert season_offset == 0
 
-    def test_lookup_skips_deleted_bangumi(self, renamer, db_session):
+    async def test_lookup_skips_deleted_bangumi(self, renamer, db_session):
         """Skips deleted bangumi even if hash/tag matches."""
         from module.database.bangumi import BangumiDatabase
         from module.database.torrent import TorrentDatabase
@@ -887,17 +887,17 @@ class TestLookupOffsets:
             season_offset=99,
             deleted=True,
         )
-        bangumi_db.add(bangumi)
+        await bangumi_db.add(bangumi)
 
         with patch("module.manager.renamer.Database") as MockDatabase:
             mock_db = MagicMock()
-            mock_db.__enter__ = MagicMock(return_value=mock_db)
-            mock_db.__exit__ = MagicMock(return_value=False)
+            mock_db.__aenter__ = AsyncMock(return_value=mock_db)
+            mock_db.__aexit__ = AsyncMock(return_value=False)
             mock_db.torrent = TorrentDatabase(db_session)
             mock_db.bangumi = BangumiDatabase(db_session)
             MockDatabase.return_value = mock_db
 
-            episode_offset, season_offset = renamer._lookup_offsets(
+            episode_offset, season_offset = await renamer._lookup_offsets(
                 torrent_hash="nonexistent",
                 torrent_name="no_match",
                 save_path="/no/match",
@@ -908,12 +908,12 @@ class TestLookupOffsets:
         assert episode_offset == 0
         assert season_offset == 0
 
-    def test_lookup_handles_database_exception(self, renamer):
+    async def test_lookup_handles_database_exception(self, renamer):
         """Returns (0, 0) when database throws exception."""
         with patch("module.manager.renamer.Database") as MockDatabase:
             MockDatabase.side_effect = Exception("Database connection failed")
 
-            episode_offset, season_offset = renamer._lookup_offsets(
+            episode_offset, season_offset = await renamer._lookup_offsets(
                 torrent_hash="any",
                 torrent_name="any",
                 save_path="/any",
@@ -923,7 +923,7 @@ class TestLookupOffsets:
         assert episode_offset == 0
         assert season_offset == 0
 
-    def test_lookup_by_save_path_with_trailing_slash(self, renamer, db_session):
+    async def test_lookup_by_save_path_with_trailing_slash(self, renamer, db_session):
         """Save path matching works with trailing slashes."""
         from module.database.bangumi import BangumiDatabase
         from module.database.torrent import TorrentDatabase
@@ -940,18 +940,18 @@ class TestLookupOffsets:
             episode_offset=5,
             season_offset=2,
         )
-        bangumi_db.add(bangumi)
+        await bangumi_db.add(bangumi)
 
         with patch("module.manager.renamer.Database") as MockDatabase:
             mock_db = MagicMock()
-            mock_db.__enter__ = MagicMock(return_value=mock_db)
-            mock_db.__exit__ = MagicMock(return_value=False)
+            mock_db.__aenter__ = AsyncMock(return_value=mock_db)
+            mock_db.__aexit__ = AsyncMock(return_value=False)
             mock_db.torrent = TorrentDatabase(db_session)
             mock_db.bangumi = BangumiDatabase(db_session)
             MockDatabase.return_value = mock_db
 
             # Query WITH trailing slash - should still match
-            episode_offset, season_offset = renamer._lookup_offsets(
+            episode_offset, season_offset = await renamer._lookup_offsets(
                 torrent_hash="nonexistent",
                 torrent_name="no_match",
                 save_path="/downloads/Bangumi/Test (2024)/Season 1/",
@@ -961,7 +961,7 @@ class TestLookupOffsets:
         assert episode_offset == 5
         assert season_offset == 2
 
-    def test_lookup_by_save_path_with_backslashes(self, renamer, db_session):
+    async def test_lookup_by_save_path_with_backslashes(self, renamer, db_session):
         """Save path matching works with Windows-style backslashes."""
         from module.database.bangumi import BangumiDatabase
         from module.database.torrent import TorrentDatabase
@@ -978,18 +978,18 @@ class TestLookupOffsets:
             episode_offset=3,
             season_offset=1,
         )
-        bangumi_db.add(bangumi)
+        await bangumi_db.add(bangumi)
 
         with patch("module.manager.renamer.Database") as MockDatabase:
             mock_db = MagicMock()
-            mock_db.__enter__ = MagicMock(return_value=mock_db)
-            mock_db.__exit__ = MagicMock(return_value=False)
+            mock_db.__aenter__ = AsyncMock(return_value=mock_db)
+            mock_db.__aexit__ = AsyncMock(return_value=False)
             mock_db.torrent = TorrentDatabase(db_session)
             mock_db.bangumi = BangumiDatabase(db_session)
             MockDatabase.return_value = mock_db
 
             # Query with backslashes - should still match after normalization
-            episode_offset, season_offset = renamer._lookup_offsets(
+            episode_offset, season_offset = await renamer._lookup_offsets(
                 torrent_hash="nonexistent",
                 torrent_name="no_match",
                 save_path="\\downloads\\Bangumi\\Test (2024)\\Season 1",
