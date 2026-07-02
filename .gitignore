@@ -220,3 +220,7 @@ test.*
 # local config
 /backend/config/
 .claude/settings.local.json
+
+# Local dev environment (scripts/dev.sh) and design-tool state
+.dev/
+.impeccable/
