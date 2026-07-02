@@ -188,14 +188,15 @@
   "log": {
     "bug_repo": "Bug Report",
     "clear_filters": "Clear",
-    "contact_info": "Contact Infomation",
+    "contact_info": "Contact Information",
     "copy": "Copy",
+    "empty": "No log entries yet. The log fills up once background tasks start running.",
     "filter_level": "Level",
     "go": "Go",
     "join": "Join",
-    "reset": "Reset",
+    "reset": "Clear log",
     "title": "Log",
-    "update_now": "Update Now"
+    "update_now": "Refresh"
   },
   "login": {
     "login_btn": "Login",
@@ -250,21 +251,23 @@
     }
   },
   "rss": {
+    "active": "Active",
+    "aggregate": "Aggregate",
     "connected": "Connected",
     "delete": "Delete",
     "disable": "Disable",
     "enable": "Enable",
     "error": "Error",
+    "inactive": "Inactive",
     "name": "Name",
     "refresh": "Refresh",
     "refresh_all": "Refresh All",
     "selectbox": "Select",
     "status": "Status",
     "title": "RSS Item",
-    "url": "Url"
+    "url": "URL"
   },
   "calendar": {
-    "title": "Schedule",
     "subtitle": "This season's broadcast schedule",
     "days": {
       "mon": "Monday",
@@ -370,11 +373,11 @@
     "calendar": "Calendar",
     "config": "Config",
     "downloader": "Downloader",
-    "homepage": "HomePage",
+    "homepage": "Home",
     "log": "Log",
     "logout": "Logout",
     "player": "Player",
-    "rss": "RSS Manager",
+    "rss": "RSS",
     "title": "Menu"
   },
   "common": {

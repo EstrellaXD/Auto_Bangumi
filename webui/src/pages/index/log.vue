@@ -136,7 +136,10 @@ onDeactivated(() => {
         </div>
 
         <div ref="logContainer" class="log-viewer">
-          <div class="log-content">
+          <div v-if="filteredLog.length === 0" class="log-empty">
+            {{ $t('log.empty') }}
+          </div>
+          <div v-else class="log-content">
             <template v-for="i in filteredLog" :key="i.index">
               <div class="log-entry" :style="{ color: typeColor(i.type) }">
                 <div class="log-meta">
@@ -275,6 +278,13 @@ onDeactivated(() => {
 
 .log-content {
   min-width: 0;
+}
+
+.log-empty {
+  padding: 24px 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-secondary);
 }
 
 .log-entry {

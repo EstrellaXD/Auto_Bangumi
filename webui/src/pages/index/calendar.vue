@@ -124,8 +124,8 @@ function onRuleSelect(rule: BangumiRule) {
   <div class="page-calendar">
     <!-- Header -->
     <div class="calendar-header anim-fade-in">
+      <!-- 页面本身已有 h1 “Calendar”，这里不再重复标题，只留说明文字 -->
       <div class="calendar-header-text">
-        <h2 class="calendar-title">{{ $t('calendar.title') }}</h2>
         <p class="calendar-subtitle">{{ $t('calendar.subtitle') }}</p>
       </div>
       <button
@@ -197,18 +197,10 @@ function onRuleSelect(rule: BangumiRule) {
   justify-content: space-between;
 }
 
-.calendar-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0;
-  transition: color var(--transition-normal);
-}
-
 .calendar-subtitle {
   font-size: 13px;
   color: var(--color-text-secondary);
-  margin: 4px 0 0;
+  margin: 0;
   transition: color var(--transition-normal);
 }
 

@@ -190,12 +190,13 @@
     "clear_filters": "清除",
     "contact_info": "联系方式",
     "copy": "复制",
+    "empty": "暂无日志。后台任务运行后这里会显示日志内容。",
     "filter_level": "级别",
     "go": "访问",
     "join": "加入",
-    "reset": "重置",
+    "reset": "清空日志",
     "title": "日志",
-    "update_now": "立即更新"
+    "update_now": "刷新"
   },
   "login": {
     "login_btn": "登录",
@@ -250,11 +251,14 @@
     }
   },
   "rss": {
+    "active": "启用",
+    "aggregate": "聚合",
     "connected": "已连接",
     "delete": "删除",
     "disable": "禁用",
     "enable": "启用",
     "error": "错误",
+    "inactive": "停用",
     "name": "名称",
     "refresh": "刷新",
     "refresh_all": "全部刷新",
@@ -264,7 +268,6 @@
     "url": "链接"
   },
   "calendar": {
-    "title": "放送表",
     "subtitle": "本季度放送时间表",
     "days": {
       "mon": "周一",

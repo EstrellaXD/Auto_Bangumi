@@ -58,7 +58,9 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
     </div>
 
     <div class="card-info">
-      <div class="card-title">{{ bangumi.official_title }}</div>
+      <div class="card-title" :title="bangumi.official_title">
+        {{ bangumi.official_title }}
+      </div>
     </div>
   </div>
 
@@ -269,9 +271,11 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
   font-weight: 500;
   line-height: 1.4;
   color: var(--color-text);
+  // 两行截断代替单行：动画标题普遍偏长，单行几乎总在截断
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   transition: color var(--transition-normal);
 }
 

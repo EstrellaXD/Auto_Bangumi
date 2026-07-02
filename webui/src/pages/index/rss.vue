@@ -40,11 +40,22 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
     type: 'selection',
   },
   {
+    // 名称列同时承载来源元信息（解析器 / 聚合），Status 列只保留运行状态
     title: t('rss.name'),
     key: 'name',
     className: 'text-h3',
-    ellipsis: {
-      tooltip: true,
+    render(rss: RSS) {
+      return (
+        <div class="rss-name-cell">
+          <span class="rss-name" title={rss.name}>
+            {rss.name}
+          </span>
+          {rss.parser && <ab-tag type="primary" title={rss.parser} />}
+          {rss.aggregate && (
+            <ab-tag type="primary" title={t('rss.aggregate')} />
+          )}
+        </div>
+      );
     },
   },
   {
@@ -52,7 +63,6 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
     key: 'url',
     className: 'text-h3',
     minWidth: 400,
-    align: 'center',
     ellipsis: {
       tooltip: true,
     },
@@ -62,12 +72,10 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
     key: 'status',
     className: 'text-h3',
     align: 'right',
-    minWidth: 200,
+    minWidth: 140,
     render(rss: RSS) {
       return (
         <div flex="~ justify-end gap-x-8">
-          {rss.parser && <ab-tag type="primary" title={rss.parser} />}
-          {rss.aggregate && <ab-tag type="primary" title="aggregate" />}
           {rss.connection_status === 'healthy' && (
             <ab-tag type="active" title={t('rss.connected')} />
           )}
@@ -80,9 +88,9 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
             </NTooltip>
           )}
           {rss.enabled ? (
-            <ab-tag type="active" title="active" />
+            <ab-tag type="active" title={t('rss.active')} />
           ) : (
-            <ab-tag type="inactive" title="inactive" />
+            <ab-tag type="inactive" title={t('rss.inactive')} />
           )}
         </div>
       );
@@ -235,6 +243,19 @@ const rssRowKey = (row: RSS) => row.id;
 .page-rss {
   overflow: auto;
   flex-grow: 1;
+}
+
+:deep(.rss-name-cell) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+
+  .rss-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 .divider {
