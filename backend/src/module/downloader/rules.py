@@ -14,10 +14,18 @@ def build_rss_rule(data: Bangumi | BangumiUpdate, save_path: str) -> dict:
     affected_feeds = (
         data.rss_link if isinstance(data.rss_link, str) else ",".join(data.rss_link)
     )
+    # filter is a comma-separated string of regex terms; qB wants them as a
+    # single alternation. join() would split the string into characters
+    # ("720,480" -> "7|2|0|,|4|8|0"); replace keeps whole terms ("720|480").
+    must_not_contain = (
+        data.filter.replace(",", "|")
+        if isinstance(data.filter, str)
+        else "|".join(data.filter)
+    )
     return {
         "enable": True,
         "mustContain": data.title_raw,
-        "mustNotContain": "|".join(data.filter),
+        "mustNotContain": must_not_contain,
         "useRegex": True,
         "episodeFilter": "",
         "smartFilter": False,

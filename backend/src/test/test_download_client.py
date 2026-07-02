@@ -123,8 +123,8 @@ class TestSetRule:
         call_kwargs = mock_qb_client.rss_set_rule.call_args[1]
         rule = call_kwargs["rule_def"]
         assert rule["mustContain"] == "Mushoku Tensei"
-        # filter string is joined char-by-char with "|" (this is how the code works)
-        assert rule["mustNotContain"] == "|".join("720,480")
+        # comma-separated filter terms become a regex alternation for qB
+        assert rule["mustNotContain"] == "720|480"
         assert rule["enable"] is True
         assert "Season 2" in rule["savePath"]
 
