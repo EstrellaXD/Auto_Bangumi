@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import { usePointerSwipe } from '@vueuse/core';
 import {
   Dialog,

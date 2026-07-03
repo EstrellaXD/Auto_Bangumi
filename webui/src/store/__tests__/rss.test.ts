@@ -3,8 +3,8 @@
  * Note: These tests focus on pure logic that can be tested without full Vue/Pinia setup
  */
 
-import { describe, it, expect } from 'vitest';
-import { mockRSSList } from '@/test/mocks/api';
+import { describe, expect, it } from 'vitest';
+import type { mockRSSList } from '@/test/mocks/api';
 
 describe('RSS Store Logic', () => {
   describe('sort and filter functions', () => {
