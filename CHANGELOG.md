@@ -1,21 +1,39 @@
-# [Unreleased]
+# [3.3.0-beta.2] - 2026-07-03
 
 ## Backend
 
 ### Added
 
-- 应用内在线自动更新：从项目 GitHub Release 下载 `update-bundle-<version>.zip`（校验 sha256），把 module 源码树 + 前端 dist 作为覆盖层落地到持久卷 `config/updates/`，容器重建后仍保留；启动时由 entrypoint 的 `boot_overlay.py` 比较“镜像基线 vs 覆盖层”版本，取较新者生效（依赖变化时按 uv.lock `uv sync`）；新增鉴权保护端点 `GET /api/v1/update/check`、`POST /api/v1/update/apply`、`POST /api/v1/update/rollback`，进度经既有 SSE（`/api/v1/events/stream`）推送；新增 `update` 配置段（`channel` stable/beta、`auto_check`）。**需容器以 `restart: unless-stopped` 运行**——更新后进程自行退出，由 Docker 重启以应用覆盖层
+- 应用内在线自动更新：从项目 GitHub Release 下载 `update-bundle-<version>.zip`（校验 sha256 与 ed25519 签名，未签名的 Release 会被拒绝），把 module 源码树 + 前端 dist 作为覆盖层落地到持久卷 `config/updates/`，容器重建后仍保留；启动时由 entrypoint 的 `boot_overlay.py` 重新校验签名后比较“镜像基线 vs 覆盖层”版本，取较新者生效（依赖在应用阶段以非 root 身份按 uv.lock `uv sync`）；应用前自动快照数据库，回滚可恢复；新增鉴权保护端点 `GET /api/v1/update/check`、`POST /api/v1/update/apply`、`POST /api/v1/update/rollback`，进度经既有 SSE（`/api/v1/events/stream`）推送；新增 `update` 配置段（`channel` stable/beta、`auto_check`）。**需容器以 `restart: unless-stopped` 运行**——更新后进程自行退出，由 Docker 重启以应用覆盖层
 - LLM 解析器支持多提供商（OpenAI 兼容端点/Anthropic Claude/Google Gemini）：`experimental_openai` 配置自动迁移到新的 `llm` 段（迁移用户默认 `mode=primary`，保持原有 LLM 优先语义）；新增 `mode` 解析模式开关——`fallback`（默认，正则优先，LLM 仅兜底）与 `primary`（LLM 优先，失败时正则兜底，不丢标题）；openai 提供商经 `base_url` 兼容 DeepSeek/Ollama/LM Studio/OpenRouter 等任意 OpenAI 格式端点
+
+### Fixed
+
+- 修复 qBittorrent 重命名校验在未看到新文件名时即报成功的问题（重试循环失效导致假阳性成功通知，#754 #749）
+- 架构评审修复：下载器失败结果不再被误标为“已下载”（qB/aria2 统一返回 AddResult）；aria2 重命名后路径持久化、磁力 followedBy gid 迁移；生命周期状态切换加锁；安装向导完成后正确启动后台任务；LLM 调用增加超时/缓存/并发限制/熔断并走应用代理
 
 ## Frontend
 
 ### Added
 
 - 日志页新增“软件更新”卡片：显示当前/最新版本与可更新徽标、渲染 Release 说明、稳定/测试渠道切换、检查与一键更新（带确认弹窗）、按 SSE 实时进度条、以及有备份时的回滚入口；含 `restart: unless-stopped` 要求与“重启中/需手动重启”状态提示
+- 编辑规则新增「放送星期」选择器：移动端与键盘也能指定日历放送日（此前仅桌面拖拽可用）
 
 ### Changed
 
 - 设置页 OpenAI 面板替换为 LLM 解析器面板：支持选择提供商（openai/anthropic/gemini）与解析模式，`base_url` 仅在 openai 提供商下显示
+- 自托管 Inter 字体，移除阻塞渲染的 Google Fonts 外链（大陆网络环境首屏不再受 fonts.googleapis.com 拖累）；首页海报懒加载；日志页仅渲染最新 1000 行
+- 移动端体验：底部导航真正固定在屏幕底部（此前实际渲染在内容顶部）；顶栏按钮、搜索筹码、弹窗关闭、偏移输入、设置向导等触控目标提升至 44px；RSS 订阅源错误信息在卡片内联显示（原为悬停提示）
+- 无障碍：搜索结果与筛选项可键盘操作并带焦点样式、Esc 可关闭添加/编辑弹窗、空格键可激活卡片、退出登录改为真实按钮、搜索弹窗新增可见关闭按钮
+- 设置向导：下载器连接测试不再强制通过才能继续（可先跳过测试稍后在设置页调整）、密码为空也可测试、用户名过短有内联提示、向导进度在页面刷新后保留（sessionStorage）
+- 新增亮/暗主题警示色 token 并替换组件内硬编码颜色；添加 RSS 与通知设置的自绘开关/原生下拉替换为 naive-ui 控件
+
+### Fixed
+
+- 修复删除规则确认框的按钮语义陷阱：此前「否」也会删除规则（仅保留本地文件）且没有真正的取消按钮；现为明确的说明文案 +「同时删除已下载的文件」勾选 + 取消/删除双按钮
+- RSS 订阅批量删除、下载器种子删除、清空日志、通知服务删除均增加确认弹窗
+- 后台轮询（状态/日志/下载器/Passkey 列表）失败不再触发全局错误提示；下载器轮询失败保留上次数据而非清空为“无种子”；首页首次加载失败显示错误与重试而非新手引导；搜索连接失败与“无结果”区分显示；设置向导提交失败时展示后端具体原因
+- 移动端 RSS 列表批量操作后勾选框与实际选中状态不再脱节
 
 # [3.3.0-beta.1] - 2026-07-03
 
