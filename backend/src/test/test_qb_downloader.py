@@ -719,3 +719,43 @@ class TestTorrentsDelete:
         result = await qb.torrents_delete("aaa", delete_files=True)
 
         assert result is False
+
+
+# ---------------------------------------------------------------------------
+# torrents_rename_file verify contract (#754 / #749, from PR #1037)
+# ---------------------------------------------------------------------------
+
+
+class TestRenameVerifyContract:
+    """Pin the verify contract: only trust a rename when new_path appears.
+
+    qBittorrent can answer 200 without actually renaming (e.g. while seeding,
+    or when the target name is taken by a duplicate from another source).
+    Any false True here re-triggers rename + notification every rename cycle.
+    """
+
+    def _make_qb(self, file_list, post_code: int = 200):
+        qb = QbDownloader(host="http://qb", username="u", password="p", ssl=False)
+        qb._post = AsyncMock(return_value=MagicMock(status_code=post_code))
+        qb.torrents_files = AsyncMock(return_value=file_list)
+        return qb
+
+    async def test_verify_false_when_file_keeps_old_name(self):
+        """API 200 but the file never gets renamed -> False."""
+        qb = self._make_qb([{"name": "old.mkv"}])
+        assert await qb.torrents_rename_file("h", "old.mkv", "new.mkv") is False
+
+    async def test_verify_false_when_neither_name_present(self):
+        """Neither old nor new name in the file list -> False, not a blind True."""
+        qb = self._make_qb([{"name": "unrelated.mkv"}])
+        assert await qb.torrents_rename_file("h", "old.mkv", "new.mkv") is False
+
+    async def test_verify_true_when_new_path_appears(self):
+        """A real, verified rename returns True."""
+        qb = self._make_qb([{"name": "new.mkv"}])
+        assert await qb.torrents_rename_file("h", "old.mkv", "new.mkv") is True
+
+    async def test_verify_409_conflict_is_false(self):
+        """Target already exists (duplicate from another source) -> False."""
+        qb = self._make_qb([{"name": "old.mkv"}], post_code=409)
+        assert await qb.torrents_rename_file("h", "old.mkv", "new.mkv") is False

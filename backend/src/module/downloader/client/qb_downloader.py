@@ -377,24 +377,18 @@ class QbDownloader:
                 delay = 0.1 * (2**attempt)
                 await asyncio.sleep(delay)
                 files = await self.torrents_files(torrent_hash)
-                for f in files:
-                    if f.get("name") == new_path:
-                        return True
-                    if f.get("name") == old_path:
-                        # File still has old name - retry the outer backoff loop
-                        break
-                else:
-                    # Inner loop completed without hitting old_path: new_path
-                    # was already matched above (returned) or the file with
-                    # the old name is simply gone -> treat as renamed.
+                if any(f.get("name") == new_path for f in files):
                     return True
+                # new_path 未出现（旧名仍在，或两个名字都不在列表里）一律不算
+                # 成功：盲目返回 True 会让 renamer 每周期重复改名 + 发通知
+                # (#754/#749)。返回 False 由调用方走 _PENDING_RENAME_COOLDOWN 退避。
                 if attempt == 2:
-                    # Final attempt still shows the old name.
                     logger.debug(
-                        "[Downloader] Rename API returned 200 but file unchanged: %s",
+                        "[Downloader] Rename API returned 200 but %s never appeared "
+                        "(rename of %s)",
+                        new_path,
                         old_path,
                     )
-                    return False
             return False
         except (httpx.ConnectError, httpx.RequestError, httpx.TimeoutException) as e:
             logger.warning(f"[Downloader] Failed to rename file {old_path}: {e}")
