@@ -41,6 +41,12 @@ COPY --chmod=755 entrypoint.sh /entrypoint.sh
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=builder /app/uv.lock /app/uv.lock
 
+# 更新签名公钥：在线更新的信任根。必须位于覆盖层不会替换的位置（/app 下、
+# 而非 /app/module 内），boot_overlay 每次启动都用它验签留存的 bundle。私钥
+# 只在 CI 的 UPDATE_SIGNING_KEY secret 里。它随 src 一起 COPY 进来，这里显式
+# 再放一次以固化信任根位置、防止后续目录调整把它漏掉。
+COPY backend/src/ab_update_pubkey.pem /app/ab_update_pubkey.pem
+
 # 构建期写入镜像基线版本，供 boot_overlay 判断“镜像 vs 覆盖层”谁更新，以及
 # 在线更新的 min_image_version 兼容性检查。CI 通过 build-arg 注入真实版本。
 ARG VERSION=DEV_VERSION

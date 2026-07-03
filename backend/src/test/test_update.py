@@ -6,6 +6,7 @@
 """
 
 import asyncio
+import base64
 import hashlib
 import io
 import json
@@ -16,12 +17,32 @@ from unittest.mock import patch
 
 import httpx
 import pytest
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from module.api import v1
 from module.security.api import get_current_user
 from module.update.updater import Updater, _is_newer, _parse_semver
+
+# 测试用签名密钥对：私钥签 bundle，公钥写到 tmp 供 Updater 验签。
+_TEST_SIGNING_KEY = Ed25519PrivateKey.generate()
+
+
+def _sign_bytes(data: bytes) -> str:
+    return base64.b64encode(_TEST_SIGNING_KEY.sign(data)).decode()
+
+
+def _write_test_pubkey(dest_dir: Path) -> Path:
+    pem = _TEST_SIGNING_KEY.public_key().public_bytes(
+        serialization.Encoding.PEM,
+        serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+    path = dest_dir / "ab_update_pubkey.pem"
+    path.write_bytes(pem)
+    return path
+
 
 # ---------------------------------------------------------------------------
 # Helpers: build a fake release + a real bundle zip served by a MockTransport
@@ -59,6 +80,10 @@ def _releases_payload(bundle_bytes: bytes, sha_text: str) -> list[dict]:
             "name": "update-bundle-3.2.0.zip.sha256",
             "browser_download_url": "https://dl.test/stable/bundle.sha256",
         },
+        {
+            "name": "update-bundle-3.2.0.zip.sig",
+            "browser_download_url": "https://dl.test/stable/bundle.sig",
+        },
     ]
     beta_assets = [
         {
@@ -68,6 +93,10 @@ def _releases_payload(bundle_bytes: bytes, sha_text: str) -> list[dict]:
         {
             "name": "update-bundle-3.3.0-beta.2.zip.sha256",
             "browser_download_url": "https://dl.test/beta/bundle.sha256",
+        },
+        {
+            "name": "update-bundle-3.3.0-beta.2.zip.sig",
+            "browser_download_url": "https://dl.test/beta/bundle.sig",
         },
     ]
     return [
@@ -116,8 +145,9 @@ def _read_schema_db(path: Path) -> int:
         ).fetchone()[0]
 
 
-def _default_handler(bundle_bytes: bytes, sha_hex: str):
+def _default_handler(bundle_bytes: bytes, sha_hex: str, sig_b64: str | None = None):
     """路由 GitHub API 与下载 URL 到对应的响应。"""
+    signature = sig_b64 if sig_b64 is not None else _sign_bytes(bundle_bytes)
 
     def handler(request: httpx.Request) -> httpx.Response:
         url = str(request.url)
@@ -131,6 +161,8 @@ def _default_handler(bundle_bytes: bytes, sha_hex: str):
             )
         if url.endswith("bundle.sha256"):
             return httpx.Response(200, text=sha_hex + "\n")
+        if url.endswith("bundle.sig"):
+            return httpx.Response(200, text=signature + "\n")
         return httpx.Response(404)
 
     return handler
@@ -242,6 +274,7 @@ def _updater_for_apply(tmp_path, data, sha, current="3.1.0", image="3.3.0-beta.1
         image_version=image,
         dependency_syncer=lambda unpacked: None,
         client=_make_client(_default_handler(data, sha)),
+        pubkey_path=_write_test_pubkey(tmp_path),
     )
 
 
@@ -276,6 +309,7 @@ class TestApplyUpdate:
             data_db=db_path,
             dependency_syncer=lambda unpacked: None,
             client=_make_client(_default_handler(data, sha)),
+            pubkey_path=_write_test_pubkey(tmp_path),
         )
 
         res = await up.apply_update("beta")
@@ -306,6 +340,7 @@ class TestApplyUpdate:
             image_version="3.3.0-beta.1",
             dependency_syncer=fail_sync,
             client=_make_client(_default_handler(data, sha)),
+            pubkey_path=_write_test_pubkey(tmp_path),
         )
 
         res = await up.apply_update("beta")
@@ -330,6 +365,36 @@ class TestApplyUpdate:
         assert "sha256" in res.message.lower()
         assert not (tmp_path / "u" / "current").exists()
         assert not (tmp_path / "u" / "applied.json").exists()
+
+    @pytest.mark.asyncio
+    async def test_bad_signature_aborts_without_promote(self, tmp_path, bundle):
+        data, sha = bundle
+        # 用错误密钥签名：sha256 校验通过但验签必失败
+        wrong_key = Ed25519PrivateKey.generate()
+        bad_sig = base64.b64encode(wrong_key.sign(data)).decode()
+        up = Updater(
+            root=tmp_path / "u",
+            current_version="3.1.0",
+            image_version="3.3.0-beta.1",
+            dependency_syncer=lambda unpacked: None,
+            client=_make_client(_default_handler(data, sha, sig_b64=bad_sig)),
+            pubkey_path=_write_test_pubkey(tmp_path),
+        )
+        res = await up.apply_update("beta")
+        assert res.success is False
+        assert "signature" in res.message.lower()
+        assert not (tmp_path / "u" / "current").exists()
+        assert not (tmp_path / "u" / "applied.json").exists()
+
+    @pytest.mark.asyncio
+    async def test_apply_retains_verified_bundle_for_boot(self, tmp_path, bundle):
+        data, sha = bundle
+        up = _updater_for_apply(tmp_path, data, sha)
+        res = await up.apply_update("beta")
+        assert res.success is True
+        # boot_overlay 每次启动都要用留存的已验签 zip + 签名重新验签
+        assert (tmp_path / "u" / "bundle.zip").read_bytes() == data
+        assert (tmp_path / "u" / "bundle.zip.sig").exists()
 
     @pytest.mark.asyncio
     async def test_incompatible_min_image_version_aborts(self, tmp_path):
@@ -539,8 +604,12 @@ class TestRollback:
 
 
 class TestBootOverlay:
-    def _seed(self, tmp_path, overlay_version):
-        """构造一个假的 /app 布局 + 覆盖层。返回相关路径。"""
+    def _seed(self, tmp_path, overlay_version, sign=True, stage_venv=True):
+        """构造一个假的 /app 布局 + 已验签覆盖层。返回相关路径。
+
+        module 树与前端 dist 现在从已验签的 bundle.zip 解包，不再从 current/
+        复制；staged .venv 仍来自 current/.venv。
+        """
         app = tmp_path / "app"
         (app / "module").mkdir(parents=True)
         (app / "module" / "old.txt").write_text("image module")
@@ -548,52 +617,105 @@ class TestBootOverlay:
         (app / "dist" / "old.html").write_text("image dist")
 
         updates = app / "config" / "updates"
-        current = updates / "current"
-        (current / "backend" / "src" / "module").mkdir(parents=True)
-        (current / "backend" / "src" / "module" / "new.txt").write_text(
-            "overlay module"
-        )
-        (current / "webui-dist").mkdir(parents=True)
-        (current / "webui-dist" / "new.html").write_text("overlay dist")
-        (current / ".venv").mkdir(parents=True)
-        (current / ".venv" / "pyvenv.cfg").write_text("overlay venv")
+        updates.mkdir(parents=True)
+        bundle_bytes = _make_bundle(overlay_version)
+        (updates / "bundle.zip").write_bytes(bundle_bytes)
+        sig = _sign_bytes(bundle_bytes)
+        if not sign:
+            # 篡改签名：验签必失败
+            sig = base64.b64encode(b"\x00" * 64).decode()
+        (updates / "bundle.zip.sig").write_text(sig)
         (updates / "applied.json").write_text(json.dumps({"version": overlay_version}))
+
+        if stage_venv:
+            current = updates / "current"
+            (current / ".venv").mkdir(parents=True)
+            (current / ".venv" / "pyvenv.cfg").write_text("overlay venv")
 
         image_version_path = app / "IMAGE_VERSION"
         image_version_path.write_text("3.3.0")
         baseline_lock = app / "uv.lock"
         baseline_lock.write_text("baseline lock\n")
-        return app, updates, image_version_path, baseline_lock
+        pubkey = _write_test_pubkey(tmp_path)
+        return app, updates, image_version_path, baseline_lock, pubkey
 
     def test_applies_overlay_when_newer(self, tmp_path):
         import boot_overlay
 
-        app, updates, ivp, lock = self._seed(tmp_path, "3.4.0")
+        app, updates, ivp, lock, pubkey = self._seed(tmp_path, "3.4.0")
         applied = boot_overlay.apply_overlay(
             app_root=app,
             updates_root=updates,
             image_version_path=ivp,
             baseline_lock=lock,
+            pubkey_path=pubkey,
         )
         assert applied is True
-        assert (app / "module" / "new.txt").exists()
+        # module 树来自 zip 内 backend/src/module/__marker__.txt
+        assert (app / "module" / "__marker__.txt").exists()
         assert not (app / "module" / "old.txt").exists()  # tree replaced, not merged
-        assert (app / "dist" / "new.html").exists()
+        assert (app / "dist" / "index.html").exists()
         assert (app / ".venv" / "pyvenv.cfg").read_text() == "overlay venv"
+
+    def test_rejects_overlay_with_bad_signature(self, tmp_path):
+        import boot_overlay
+
+        app, updates, ivp, lock, pubkey = self._seed(tmp_path, "3.4.0", sign=False)
+        applied = boot_overlay.apply_overlay(
+            app_root=app,
+            updates_root=updates,
+            image_version_path=ivp,
+            baseline_lock=lock,
+            pubkey_path=pubkey,
+        )
+        assert applied is False
+        assert (app / "module" / "old.txt").exists()  # image kept
+        # 验签失败的覆盖层被清除
+        assert not (updates / "bundle.zip").exists()
+
+    def test_rejects_legacy_overlay_without_bundle(self, tmp_path):
+        """只有 applied.json + current/（旧格式、无签名 bundle）必须拒绝。"""
+        import boot_overlay
+
+        app = tmp_path / "app"
+        (app / "module").mkdir(parents=True)
+        (app / "module" / "old.txt").write_text("image module")
+        updates = app / "config" / "updates"
+        current = updates / "current" / "backend" / "src" / "module"
+        current.mkdir(parents=True)
+        (current / "evil.txt").write_text("attacker module")
+        (updates / "applied.json").write_text(json.dumps({"version": "9.9.9"}))
+        ivp = app / "IMAGE_VERSION"
+        ivp.write_text("3.3.0")
+
+        applied = boot_overlay.apply_overlay(
+            app_root=app,
+            updates_root=updates,
+            image_version_path=ivp,
+            baseline_lock=app / "uv.lock",
+            pubkey_path=_write_test_pubkey(tmp_path),
+        )
+        assert applied is False
+        assert (
+            app / "module" / "old.txt"
+        ).exists()  # image kept, attacker tree ignored
+        assert not (updates / "applied.json").exists()  # unsigned overlay cleared
 
     def test_skips_and_clears_overlay_when_image_newer(self, tmp_path):
         import boot_overlay
 
-        app, updates, ivp, lock = self._seed(tmp_path, "3.2.0")  # < image 3.3.0
+        app, updates, ivp, lock, pubkey = self._seed(tmp_path, "3.2.0")  # < image
         applied = boot_overlay.apply_overlay(
             app_root=app,
             updates_root=updates,
             image_version_path=ivp,
             baseline_lock=lock,
+            pubkey_path=pubkey,
         )
         assert applied is False
         assert (app / "module" / "old.txt").exists()  # image kept
         assert not (updates / "applied.json").exists()  # stale marker cleared
+        assert not (updates / "bundle.zip").exists()
 
     def test_no_applied_json_is_noop(self, tmp_path):
         import boot_overlay
@@ -609,6 +731,7 @@ class TestBootOverlay:
             updates_root=updates,
             image_version_path=ivp,
             baseline_lock=app / "uv.lock",
+            pubkey_path=_write_test_pubkey(tmp_path),
         )
         assert applied is False
 

@@ -36,6 +36,7 @@ from pydantic import BaseModel
 from module.conf import IMAGE_VERSION, VERSION
 from module.database.migrations import CURRENT_SCHEMA_VERSION
 from module.network.request_url import get_shared_client
+from module.update.signing import DEFAULT_PUBKEY_PATH, verify_bundle_signature
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +74,7 @@ class UpdateCheckResult(BaseModel):
     is_prerelease: bool = False
     bundle_url: Optional[str] = None
     sha256_url: Optional[str] = None
+    signature_url: Optional[str] = None
     # 本地覆盖层状态
     applied_version: Optional[str] = None
     can_rollback: bool = False
@@ -143,7 +145,7 @@ def _safe_extract(zip_path: Path, dest: Path) -> None:
     with zipfile.ZipFile(zip_path) as zf:
         for member in zf.namelist():
             target = (dest / member).resolve()
-            if not str(target).startswith(str(dest_resolved)):
+            if not target.is_relative_to(dest_resolved):
                 raise ValueError(f"Unsafe path in bundle: {member}")
         zf.extractall(dest)
 
@@ -175,10 +177,14 @@ class Updater:
         client: Optional[httpx.AsyncClient] = None,
         owner: str = GITHUB_OWNER,
         repo: str = GITHUB_REPO,
+        pubkey_path: Optional[Path] = None,
     ) -> None:
         self.root = root if root is not None else DEFAULT_UPDATES_ROOT
         self.data_db = data_db if data_db is not None else Path("data") / "data.db"
         self.app_root = app_root if app_root is not None else Path(".")
+        self.pubkey_path = (
+            pubkey_path if pubkey_path is not None else DEFAULT_PUBKEY_PATH
+        )
         self._dependency_syncer = dependency_syncer
         self.current_version = (
             current_version if current_version is not None else VERSION
@@ -243,9 +249,12 @@ class Updater:
 
     # -------------------------------------------------------------- 检查
 
-    def _find_bundle(self, assets: list[dict]) -> tuple[Optional[str], Optional[str]]:
+    def _find_bundle(
+        self, assets: list[dict]
+    ) -> tuple[Optional[str], Optional[str], Optional[str]]:
         bundle_url: Optional[str] = None
         sha_url: Optional[str] = None
+        sig_url: Optional[str] = None
         for asset in assets:
             name = asset.get("name", "")
             url = asset.get("browser_download_url")
@@ -253,9 +262,11 @@ class Updater:
                 continue
             if name.endswith(".zip.sha256"):
                 sha_url = url
+            elif name.endswith(".zip.sig"):
+                sig_url = url
             elif name.endswith(".zip"):
                 bundle_url = url
-        return bundle_url, sha_url
+        return bundle_url, sha_url, sig_url
 
     def _pick_release(self, releases: list[dict], channel: str) -> Optional[dict]:
         candidates: list[tuple[semver.VersionInfo, dict]] = []
@@ -318,7 +329,7 @@ class Updater:
             )
 
         latest_tag = (latest.get("tag_name") or "").lstrip("v")
-        bundle_url, sha_url = self._find_bundle(latest.get("assets") or [])
+        bundle_url, sha_url, sig_url = self._find_bundle(latest.get("assets") or [])
         has_update = (
             _is_newer(latest_tag, self.current_version) and bundle_url is not None
         )
@@ -332,6 +343,7 @@ class Updater:
             is_prerelease=bool(latest.get("prerelease")),
             bundle_url=bundle_url,
             sha256_url=sha_url,
+            signature_url=sig_url,
         )
         self._cache = (now, channel, result)
         return self._local_state(result.model_copy())
@@ -359,6 +371,8 @@ class Updater:
         manifest: dict,
         db_snapshot: Optional[dict],
         schema_version_before: Optional[int],
+        bundle_zip: Optional[Path] = None,
+        signature_b64: Optional[str] = None,
     ) -> None:
         """把解包好的 staging 提升为 current，旧 current 移到 backup。"""
         current = self.root / "current"
@@ -368,6 +382,21 @@ class Updater:
         if current.exists():
             os.rename(current, backup)
         os.rename(unpacked, current)
+
+        # 留存已验签的 zip + 签名：boot_overlay 每次启动都据此重新验签并
+        # 从 zip 解包（信任边界在镜像侧，不信任 ab 可写的 current/ 树）。
+        # 旧的 bundle 挪到 -backup 供回滚换回。
+        if bundle_zip is not None and signature_b64 is not None:
+            retained = self.root / "bundle.zip"
+            retained_sig = self.root / "bundle.zip.sig"
+            for src, dst in (
+                (retained, self.root / "bundle-backup.zip"),
+                (retained_sig, self.root / "bundle-backup.zip.sig"),
+            ):
+                if src.exists():
+                    os.replace(src, dst)
+            os.replace(bundle_zip, retained)
+            retained_sig.write_text(signature_b64.strip(), encoding="utf-8")
 
         lockfile = current / "backend" / "uv.lock"
         lock_sha = _sha256_file(lockfile) if lockfile.exists() else None
@@ -494,6 +523,11 @@ class Updater:
                     or not result.latest
                 ):
                     return self._fail("no update available")
+                if not result.signature_url:
+                    return self._fail(
+                        "release has no bundle signature (.zip.sig); "
+                        "refusing unsigned update"
+                    )
 
                 version = result.latest
                 self.root.mkdir(parents=True, exist_ok=True)
@@ -502,6 +536,7 @@ class Updater:
 
                 expected_raw = await self._download_text(result.sha256_url)
                 expected_hash = expected_raw.strip().split()[0].lower()
+                signature_b64 = await self._download_text(result.signature_url)
 
                 zip_path = staging / "bundle.zip"
                 await self._download_file(result.bundle_url, zip_path)
@@ -512,6 +547,12 @@ class Updater:
                 actual_hash = (await asyncio.to_thread(_sha256_file, zip_path)).lower()
                 if actual_hash != expected_hash:
                     return self._fail("sha256 mismatch; aborting update")
+                if not await asyncio.to_thread(
+                    verify_bundle_signature, zip_path, signature_b64, self.pubkey_path
+                ):
+                    return self._fail(
+                        "bundle signature verification failed; aborting update"
+                    )
 
                 self._set_progress(phase="unpacking", message="unpacking bundle")
                 unpacked = staging / "unpacked"
@@ -538,6 +579,8 @@ class Updater:
                     manifest,
                     db_snapshot,
                     schema_version_before,
+                    zip_path,
+                    signature_b64,
                 )
                 self._cache = None  # 版本已变，作废检查缓存
 
@@ -592,6 +635,19 @@ class Updater:
                     if swap.exists():
                         os.rename(swap, backup)
 
+                    # bundle.zip(.sig) 与 bundle-backup.zip(.sig) 同步互换，
+                    # boot_overlay 验签的对象要跟 current 树保持一致。
+                    for name in ("bundle.zip", "bundle.zip.sig"):
+                        cur = self.root / name
+                        bak = self.root / name.replace("bundle", "bundle-backup", 1)
+                        tmp = self.root / (name + ".swap_tmp")
+                        if cur.exists():
+                            os.replace(cur, tmp)
+                        if bak.exists():
+                            os.replace(bak, cur)
+                        if tmp.exists():
+                            os.replace(tmp, bak)
+
                     try:
                         version = _read_manifest(current).get("version")
                     except (OSError, ValueError):
@@ -639,6 +695,13 @@ class Updater:
                         shutil.rmtree(current)
                     if applied.exists():
                         applied.unlink()
+                    for name in (
+                        "bundle.zip",
+                        "bundle.zip.sig",
+                        "bundle-backup.zip",
+                        "bundle-backup.zip.sig",
+                    ):
+                        (self.root / name).unlink(missing_ok=True)
                     version = self.image_version
                     message = "reverted to image version; restarting"
 

@@ -1,18 +1,27 @@
 """容器启动时应用在线更新覆盖层（在应用启动前、以 root 运行）。
 
-由 entrypoint.sh 在 `exec ... python main.py` 之前调用：
+由 entrypoint.sh 在启动 main.py 之前调用：
 
     python /app/boot_overlay.py
 
-逻辑：从持久卷 ``/app/config/updates/`` 读取 ``applied.json``，当覆盖层版本
-**高于** 镜像基线版本（``/app/IMAGE_VERSION``）时，把覆盖层的 module 树覆盖到
-``/app/module``、前端 dist 覆盖到 ``/app/dist``，并在更新包已预先准备好
-``.venv`` 时替换 ``/app/.venv``；否则（镜像更新或相等）忽略并清除过期覆盖层，
-让镜像版本生效。
+信任模型：持久卷 ``config/updates/`` 归 ab（应用用户）所有，其中一切内容都
+**不可信**。唯一的信任根是镜像自带的公钥（``/app/ab_update_pubkey.pem``）与
+CI 签名的 ``bundle.zip`` + ``bundle.zip.sig``。因此每次启动都重新验签留存的
+zip，并且 module 树 / 前端 dist **直接从验签通过的 zip 解包**，绝不从 ab 可写
+的 ``current/`` 目录复制——否则拿到 ab 权限的攻击者伪造 applied.json/current
+即可让 root 把任意代码落到 /app 并跨镜像升级持久化。
+
+版本比较也以 zip 内 manifest 为准：覆盖层版本高于镜像基线（``/app/
+IMAGE_VERSION``）才应用，否则清除过期覆盖层，镜像版本生效。
+
+staged ``.venv`` 是 apply 时由应用（ab 身份）按已验签 lockfile 预装的，无法
+被 CI 签名；boot 只做复制、从不执行其内容，运行期由 ab 加载——被篡改最多
+维持 ab 级持久化（攻击者本就具备），不构成提权面。
 
 关键约束：本脚本位于 ``/app/boot_overlay.py``，**不在** 覆盖层会替换的
-``/app/module`` 里，因此始终是镜像自带的稳定版本在做决策。任何一步失败都不得
-阻断启动——记录日志后回退到镜像版本继续启动。
+``/app/module`` 里，因此始终是镜像自带的稳定版本在做决策；这里的验签才是
+安全边界（apply 时的验签跑在可能已被覆盖的 module 代码里，只是尽早失败的
+用户体验）。任何一步失败都不得阻断启动——记录日志后回退镜像版本继续启动。
 """
 
 import logging
@@ -29,6 +38,7 @@ logger = logging.getLogger("boot_overlay")
 APP_ROOT = Path("/app")
 UPDATES_ROOT = APP_ROOT / "config" / "updates"
 IMAGE_VERSION_PATH = APP_ROOT / "IMAGE_VERSION"
+PUBKEY_PATH = APP_ROOT / "ab_update_pubkey.pem"
 
 
 def _parse_semver(value: str):
@@ -95,7 +105,7 @@ _VENV_LOCK_MARKER = ".ab-lock-sha256"
 
 
 def _sync_venv_to_lock(
-    current: Path, app_root: Path, baseline_lock: Path | None
+    verified_root: Path, app_root: Path, baseline_lock: Path | None
 ) -> None:
     """把 /app/.venv 与当前生效覆盖层的 uv.lock 对齐。
 
@@ -103,9 +113,13 @@ def _sync_venv_to_lock(
     覆盖层带 uv.lock 却没有 staged .venv（回滚到旧覆盖层、或旧版 updater
     落盘的覆盖层）且 lock 与 venv 当前对应的 lock 不一致时才补一次
     uv sync——否则回滚后的旧代码会跑在新依赖上直接启动崩溃。
+
+    ``verified_root`` 必须是**已验签 zip 的解包目录**（pyproject/uv.lock 可信）。
+    uv sync 绝不以 root 运行——lockfile 驱动的构建钩子等价于任意代码执行，
+    root 下即提权；以 root 启动时降权到 ab 执行。
     失败只记日志：用现有 venv 继续启动好过卡死在启动前。
     """
-    overlay_lock = current / "backend" / "uv.lock"
+    overlay_lock = verified_root / "backend" / "uv.lock"
     if not overlay_lock.exists():
         return
     image_lock = baseline_lock if baseline_lock is not None else app_root / "uv.lock"
@@ -126,13 +140,27 @@ def _sync_venv_to_lock(
 
     env = dict(os.environ)
     env["UV_PROJECT_ENVIRONMENT"] = str((app_root / ".venv").resolve())
+    run_kwargs: dict = {}
+    if hasattr(os, "geteuid") and os.geteuid() == 0:
+        try:
+            import pwd
+
+            pwd.getpwnam("ab")
+        except (ImportError, KeyError):
+            logger.error("User 'ab' not found; refusing to run uv sync as root.")
+            return
+        # 降权执行前先把 venv 交给 ab，否则无写权限。
+        subprocess.run(["chown", "-R", "ab:ab", str(app_root / ".venv")], check=False)
+        env["HOME"] = "/home/ab"
+        run_kwargs = {"user": "ab", "group": "ab"}
     logger.info("No staged venv; syncing /app/.venv against overlay uv.lock.")
     try:
         subprocess.run(
             [uv, "sync", "--frozen", "--no-dev"],
-            cwd=str(current / "backend"),
+            cwd=str(verified_root / "backend"),
             env=env,
             check=True,
+            **run_kwargs,
         )
         marker.write_text(desired, encoding="utf-8")
     except Exception as exc:
@@ -140,14 +168,65 @@ def _sync_venv_to_lock(
 
 
 def _clear_overlay(updates_root: Path) -> None:
-    """删除过期覆盖层标记，使运行状态回归镜像版本。"""
-    applied = updates_root / "applied.json"
+    """删除过期/不可信覆盖层标记与 bundle，使运行状态回归镜像版本。"""
     try:
-        if applied.exists():
-            applied.unlink()
+        for name in (
+            "applied.json",
+            "bundle.zip",
+            "bundle.zip.sig",
+            "bundle-backup.zip",
+            "bundle-backup.zip.sig",
+        ):
+            target = updates_root / name
+            if target.exists():
+                target.unlink()
         logger.info("Cleared stale overlay marker; running image version.")
     except OSError as exc:
         logger.warning("Failed to clear stale overlay: %s", exc)
+
+
+def _verify_bundle(bundle: Path, sig: Path, pubkey_path: Path) -> bool:
+    """用镜像自带公钥验证 bundle 的 ed25519 签名；任何失败都拒绝覆盖层。"""
+    import base64
+
+    try:
+        from cryptography.hazmat.primitives.serialization import load_pem_public_key
+    except ImportError:
+        logger.error("cryptography unavailable; refusing overlay.")
+        return False
+    try:
+        public_key = load_pem_public_key(pubkey_path.read_bytes())
+        signature = base64.b64decode(sig.read_text().strip(), validate=True)
+        public_key.verify(signature, bundle.read_bytes())
+        return True
+    except Exception as exc:  # noqa: BLE001 - 验签失败必须拒绝
+        logger.error("Bundle signature verification failed: %s", exc)
+        return False
+
+
+def _read_zip_manifest(bundle: Path) -> dict | None:
+    import json
+    import zipfile
+
+    try:
+        with zipfile.ZipFile(bundle) as zf:
+            data = json.loads(zf.read("manifest.json"))
+            return data if isinstance(data, dict) else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _safe_extract_zip(bundle: Path, dest: Path) -> None:
+    """解压已验签 zip 到 dest，拒绝绝对路径/`..` 越界成员（防 zip-slip）。"""
+    import zipfile
+
+    dest_resolved = dest.resolve()
+    with zipfile.ZipFile(bundle) as zf:
+        for member in zf.namelist():
+            target = (dest / member).resolve()
+            if not target.is_relative_to(dest_resolved):
+                raise ValueError(f"Unsafe path in bundle: {member}")
+        zf.extractall(dest)
 
 
 def apply_overlay(
@@ -155,14 +234,33 @@ def apply_overlay(
     updates_root: Path = UPDATES_ROOT,
     image_version_path: Path = IMAGE_VERSION_PATH,
     baseline_lock: Path | None = None,
+    pubkey_path: Path = PUBKEY_PATH,
 ) -> bool:
-    """应用覆盖层。返回是否实际把覆盖层落地（供测试断言）。"""
+    """验签并应用覆盖层。返回是否实际把覆盖层落地（供测试断言）。"""
+    import tempfile
+
     applied = _read_applied(updates_root)
-    if not applied:
-        logger.info("No applied overlay; using image version.")
+    bundle = updates_root / "bundle.zip"
+    sig = updates_root / "bundle.zip.sig"
+
+    if not bundle.exists() or not sig.exists():
+        if applied:
+            logger.warning(
+                "Overlay marker present but signed bundle is missing; "
+                "refusing legacy/unsigned overlay."
+            )
+            _clear_overlay(updates_root)
+        else:
+            logger.info("No applied overlay; using image version.")
         return False
 
-    overlay_version = str(applied.get("version") or "")
+    if not _verify_bundle(bundle, sig, pubkey_path):
+        _clear_overlay(updates_root)
+        return False
+
+    # 版本以已验签 zip 内的 manifest 为准；ab 可写的 applied.json 只是 UI 状态。
+    manifest = _read_zip_manifest(bundle) or {}
+    overlay_version = str(manifest.get("version") or "")
     image_version = _read_text(image_version_path) or "DEV_VERSION"
 
     overlay_ver = _parse_semver(overlay_version)
@@ -184,47 +282,58 @@ def apply_overlay(
         _clear_overlay(updates_root)
         return False
 
-    current = updates_root / "current"
-    src_module = current / "backend" / "src" / "module"
-    src_dist = current / "webui-dist"
-    src_venv = current / ".venv"
-
-    if not src_module.exists():
-        logger.warning(
-            "Overlay marked applied but %s is missing; skipping.", src_module
-        )
-        return False
-
     logger.info(
-        "Applying overlay version %s over image %s.", overlay_version, image_version
+        "Applying overlay version %s over image %s (signature verified).",
+        overlay_version,
+        image_version,
     )
+    # module 树与前端 dist 直接从已验签 zip 解包到 root 私有临时目录，
+    # 不从 ab 可写的 current/ 复制。
+    tmp = Path(tempfile.mkdtemp(prefix="ab-overlay-"))
     try:
-        _replace_tree(src_module, app_root / "module")
-    except Exception as exc:
-        logger.error("Failed to overlay module tree: %s", exc)
-        return False
+        try:
+            _safe_extract_zip(bundle, tmp)
+        except Exception as exc:
+            logger.error("Failed to unpack verified bundle: %s", exc)
+            return False
 
-    if src_dist.exists():
-        try:
-            _replace_tree(src_dist, app_root / "dist")
-        except Exception as exc:
-            logger.error("Failed to overlay webui dist: %s", exc)
+        src_module = tmp / "backend" / "src" / "module"
+        if not src_module.exists():
+            logger.warning("Verified bundle has no module tree; skipping.")
+            return False
 
-    if src_venv.exists():
         try:
-            _replace_tree(src_venv, app_root / ".venv")
-            lock_sha = _sha256_file(current / "backend" / "uv.lock")
-            if lock_sha:
-                (app_root / ".venv" / _VENV_LOCK_MARKER).write_text(
-                    lock_sha, encoding="utf-8"
-                )
+            _replace_tree(src_module, app_root / "module")
         except Exception as exc:
-            logger.error("Failed to overlay staged venv: %s", exc)
-    else:
-        try:
-            _sync_venv_to_lock(current, app_root, baseline_lock)
-        except Exception as exc:
-            logger.error("Failed to reconcile venv with overlay lock: %s", exc)
+            logger.error("Failed to overlay module tree: %s", exc)
+            return False
+
+        src_dist = tmp / "webui-dist"
+        if src_dist.exists():
+            try:
+                _replace_tree(src_dist, app_root / "dist")
+            except Exception as exc:
+                logger.error("Failed to overlay webui dist: %s", exc)
+
+        # staged venv 见模块 docstring：只复制、从不以 root 执行其内容。
+        src_venv = updates_root / "current" / ".venv"
+        if src_venv.exists():
+            try:
+                _replace_tree(src_venv, app_root / ".venv")
+                lock_sha = _sha256_file(tmp / "backend" / "uv.lock")
+                if lock_sha:
+                    (app_root / ".venv" / _VENV_LOCK_MARKER).write_text(
+                        lock_sha, encoding="utf-8"
+                    )
+            except Exception as exc:
+                logger.error("Failed to overlay staged venv: %s", exc)
+        else:
+            try:
+                _sync_venv_to_lock(tmp, app_root, baseline_lock)
+            except Exception as exc:
+                logger.error("Failed to reconcile venv with overlay lock: %s", exc)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
     logger.info("Overlay applied successfully.")
     return True

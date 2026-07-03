@@ -369,6 +369,30 @@ jobs:
           ( cd "$STAGE" && zip -r "../update-bundle-${VERSION}.zip" backend webui-dist manifest.json )
           sha256sum "update-bundle-${VERSION}.zip" | awk '{print $1}' > "update-bundle-${VERSION}.zip.sha256"
 
+      # 对 bundle 做 ed25519 签名（私钥在 UPDATE_SIGNING_KEY secret，公钥随镜像
+      # 分发）。客户端 apply 前验签，boot_overlay 每次启动重新验签——没有 .sig
+      # 的 release 会被更新器拒绝，所以签名失败必须让构建失败。
+      - name: Sign update bundle
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+        run: |
+          if [ -z "$UPDATE_SIGNING_KEY" ]; then
+            echo "::error::UPDATE_SIGNING_KEY secret is not set; unsigned bundles are rejected by the updater" >&2
+            exit 1
+          fi
+          VERSION="${{ needs.version-info.outputs.version }}"
+          uv run --no-project --with cryptography python - "update-bundle-${VERSION}.zip" <<'PY'
+          import base64, os, sys
+          from pathlib import Path
+          from cryptography.hazmat.primitives.serialization import load_pem_private_key
+
+          bundle = Path(sys.argv[1])
+          key = load_pem_private_key(os.environ["UPDATE_SIGNING_KEY"].encode(), password=None)
+          sig = key.sign(bundle.read_bytes())
+          Path(str(bundle) + ".sig").write_text(base64.b64encode(sig).decode() + "\n")
+          print(f"signed {bundle}")
+          PY
+
       - name: Generate Release info
         id: release-info
         run: |
@@ -406,6 +430,7 @@ jobs:
             backend/app-v${{ needs.version-info.outputs.version }}.zip
             update-bundle-${{ needs.version-info.outputs.version }}.zip
             update-bundle-${{ needs.version-info.outputs.version }}.zip.sha256
+            update-bundle-${{ needs.version-info.outputs.version }}.zip.sig
         env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
