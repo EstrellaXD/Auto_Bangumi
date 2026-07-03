@@ -29,6 +29,7 @@ def verify_bundle_signature(
     """
     try:
         from cryptography.exceptions import InvalidSignature
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
         from cryptography.hazmat.primitives.serialization import load_pem_public_key
     except ImportError:
         logger.error("[Update] cryptography unavailable; refusing unverified bundle")
@@ -36,6 +37,9 @@ def verify_bundle_signature(
 
     try:
         public_key = load_pem_public_key(pubkey_path.read_bytes())
+        if not isinstance(public_key, Ed25519PublicKey):
+            logger.error("[Update] pubkey is not ed25519; refusing bundle")
+            return False
         signature = base64.b64decode(signature_b64.strip(), validate=True)
         public_key.verify(signature, bundle_path.read_bytes())
         return True

@@ -15,22 +15,25 @@ def ctx():
     """A built AppContext whose notifier/scheduler are replaced with mocks."""
     ctx = AppContext.build(real_settings)
     ctx.notifier = MagicMock()
-    ctx.scheduler = MagicMock()
-    ctx.scheduler.stop_all = AsyncMock()
-    ctx.scheduler.start_all = MagicMock()
+    # 通过局部变量操作 mock：嵌套函数里 ctx.scheduler 的声明类型是 Scheduler，
+    # 其 running 是只读 property，mypy 会拒绝直接赋值。
+    scheduler = MagicMock()
+    scheduler.stop_all = AsyncMock()
+    scheduler.start_all = MagicMock()
     # A freshly built context has not started its scheduler yet; set this
     # explicitly since a bare MagicMock attribute is truthy by default and
     # would make reload_settings() think a restart is needed.
-    ctx.scheduler.running = False
+    scheduler.running = False
 
     def _mark_running():
-        ctx.scheduler.running = True
+        scheduler.running = True
 
     async def _mark_stopped():
-        ctx.scheduler.running = False
+        scheduler.running = False
 
-    ctx.scheduler.start_all.side_effect = _mark_running
-    ctx.scheduler.stop_all.side_effect = _mark_stopped
+    scheduler.start_all.side_effect = _mark_running
+    scheduler.stop_all.side_effect = _mark_stopped
+    ctx.scheduler = scheduler
     return ctx
 
 

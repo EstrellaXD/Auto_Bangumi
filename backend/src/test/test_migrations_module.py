@@ -2,6 +2,7 @@
 
 import pytest
 from sqlalchemy import inspect, text
+from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
 from sqlmodel import create_engine
 
@@ -75,7 +76,7 @@ def _make_versioned_engine(
     *,
     bangumi_extra: str,
     torrent_extra: str = "",
-) -> object:
+) -> Engine:
     engine = create_engine("sqlite://")
     bangumi_extra_sql = f", {bangumi_extra}" if bangumi_extra else ""
     torrent_extra_sql = f", {torrent_extra}" if torrent_extra else ""
