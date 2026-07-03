@@ -154,7 +154,8 @@ class TorrentDatabase:
             delete(Torrent).where(Torrent.bangumi_id.is_(None))  # type: ignore[union-attr]
         )
         await self.session.commit()
-        count = result.rowcount
+        # execute(delete()) 返回 CursorResult，mypy 只能推断出基类 Result[Any]
+        count = result.rowcount  # type: ignore[attr-defined]
         if count > 0:
             logger.debug("Deleted %s orphan torrents.", count)
         return count
