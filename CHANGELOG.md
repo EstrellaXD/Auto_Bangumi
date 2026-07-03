@@ -4,9 +4,14 @@
 
 ### Added
 
+- 应用内在线自动更新：从项目 GitHub Release 下载 `update-bundle-<version>.zip`（校验 sha256），把 module 源码树 + 前端 dist 作为覆盖层落地到持久卷 `config/updates/`，容器重建后仍保留；启动时由 entrypoint 的 `boot_overlay.py` 比较“镜像基线 vs 覆盖层”版本，取较新者生效（依赖变化时按 uv.lock `uv sync`）；新增鉴权保护端点 `GET /api/v1/update/check`、`POST /api/v1/update/apply`、`POST /api/v1/update/rollback`，进度经既有 SSE（`/api/v1/events/stream`）推送；新增 `update` 配置段（`channel` stable/beta、`auto_check`）。**需容器以 `restart: unless-stopped` 运行**——更新后进程自行退出，由 Docker 重启以应用覆盖层
 - LLM 解析器支持多提供商（OpenAI 兼容端点/Anthropic Claude/Google Gemini）：`experimental_openai` 配置自动迁移到新的 `llm` 段（迁移用户默认 `mode=primary`，保持原有 LLM 优先语义）；新增 `mode` 解析模式开关——`fallback`（默认，正则优先，LLM 仅兜底）与 `primary`（LLM 优先，失败时正则兜底，不丢标题）；openai 提供商经 `base_url` 兼容 DeepSeek/Ollama/LM Studio/OpenRouter 等任意 OpenAI 格式端点
 
 ## Frontend
+
+### Added
+
+- 日志页新增“软件更新”卡片：显示当前/最新版本与可更新徽标、渲染 Release 说明、稳定/测试渠道切换、检查与一键更新（带确认弹窗）、按 SSE 实时进度条、以及有备份时的回滚入口；含 `restart: unless-stopped` 要求与“重启中/需手动重启”状态提示
 
 ### Changed
 

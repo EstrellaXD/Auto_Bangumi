@@ -168,6 +168,8 @@ onDeactivated(() => {
       </ab-container>
 
       <div class="log-sidebar">
+        <update-card />
+
         <ab-container :title="$t('log.contact_info')">
           <div class="contact-list">
             <ab-label label="Github">

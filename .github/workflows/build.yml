@@ -262,6 +262,8 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           platforms: linux/amd64,linux/arm64
           push: True
+          build-args: |
+            VERSION=${{ needs.version-info.outputs.version }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ github.workflow }}
@@ -275,6 +277,8 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name == 'push' }}
+          build-args: |
+            VERSION=${{ needs.version-info.outputs.version }}
           tags: ${{ steps.meta-dev.outputs.tags }}
           labels: ${{ steps.meta-dev.outputs.labels }}
           cache-from: type=gha,scope=${{ github.workflow }}
@@ -288,6 +292,8 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           platforms: linux/amd64,linux/arm64
           push: false
+          build-args: |
+            VERSION=${{ needs.version-info.outputs.version }}
           tags: estrellaxd/auto_bangumi:test
           cache-from: type=gha,scope=${{ github.workflow }}
           cache-to: type=gha,scope=${{ github.workflow }},ignore-error=true
@@ -338,6 +344,31 @@ jobs:
           cd backend && zip -r app-v${{ needs.version-info.outputs.version }}.zip \
             src pyproject.toml uv.lock requirements.txt
 
+      # 在线自动更新 bundle：module 源码树 + pyproject/uv.lock + 前端 dist + manifest。
+      # 同时产出 .sha256（客户端下载后据此校验完整性）。min_image_version 是能应用
+      # 此 bundle 布局的最低镜像版本（引入在线更新的首个版本）。
+      - name: Build update bundle
+        run: |
+          VERSION="${{ needs.version-info.outputs.version }}"
+          MIN_IMAGE_VERSION="3.3.0-beta.1"
+          STAGE="bundle_stage"
+          rm -rf "$STAGE"
+          mkdir -p "$STAGE/backend/src" "$STAGE/webui-dist"
+          cp -r backend/src/module "$STAGE/backend/src/module"
+          cp backend/pyproject.toml backend/uv.lock "$STAGE/backend/"
+          cp -r webui/dist/. "$STAGE/webui-dist/"
+          LOCK_SHA=$(sha256sum backend/uv.lock | awk '{print $1}')
+          cat > "$STAGE/manifest.json" <<EOF
+          {
+            "version": "$VERSION",
+            "min_image_version": "$MIN_IMAGE_VERSION",
+            "lockfile_sha256": "$LOCK_SHA",
+            "notes": "See release notes."
+          }
+          EOF
+          ( cd "$STAGE" && zip -r "../update-bundle-${VERSION}.zip" backend webui-dist manifest.json )
+          sha256sum "update-bundle-${VERSION}.zip" | awk '{print $1}' > "update-bundle-${VERSION}.zip.sha256"
+
       - name: Generate Release info
         id: release-info
         run: |
@@ -373,6 +404,8 @@ jobs:
           files: |
             webui/dist.zip
             backend/app-v${{ needs.version-info.outputs.version }}.zip
+            update-bundle-${{ needs.version-info.outputs.version }}.zip
+            update-bundle-${{ needs.version-info.outputs.version }}.zip.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 

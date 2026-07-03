@@ -1,0 +1,77 @@
+"""在线自动更新 API：检查 / 应用 / 回滚。
+
+三个端点均由 ``get_current_user`` 鉴权保护。``apply`` / ``rollback`` 成功后会
+安排一次延迟进程退出——Docker 的 ``restart: unless-stopped`` 会重跑 entrypoint，
+由 entrypoint 的覆盖层逻辑把更新落到应用目录（并在依赖变化时 uv sync）。
+
+进程退出被抽成可打桩的 ``schedule_restart``，测试据此断言“已安排重启”而不会真的
+退出进程。
+"""
+
+import asyncio
+import logging
+import os
+import signal
+
+from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
+
+from module.conf import settings
+from module.security.api import get_current_user
+from module.update import updater
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/update", tags=["update"])
+
+# 退出前的延迟：先让 HTTP 响应与最后一帧 SSE 进度刷出，再退出进程。
+_RESTART_DELAY_SECONDS = 1.5
+
+
+def _request_restart() -> None:
+    """退出进程，交给容器 restart 策略重启（重跑 entrypoint 应用覆盖层）。"""
+    logger.info("[Update] restarting process to apply update")
+    os.kill(os.getpid(), signal.SIGINT)
+
+
+async def _delayed_restart() -> None:
+    await asyncio.sleep(_RESTART_DELAY_SECONDS)
+    _request_restart()
+
+
+def schedule_restart() -> None:
+    """安排一次延迟重启（抽成独立函数以便测试打桩，避免真的退出进程）。"""
+    asyncio.create_task(_delayed_restart())
+
+
+@router.get("/check", dependencies=[Depends(get_current_user)])
+async def check_update(channel: str | None = None):
+    """查询 GitHub Release，返回最新版本、更新提示与本地覆盖层状态。"""
+    ch = channel or settings.update.channel
+    result = await updater.check_update(ch)
+    return result.model_dump()
+
+
+@router.post("/apply", dependencies=[Depends(get_current_user)])
+async def apply_update(channel: str | None = None):
+    """下载并落地最新更新；成功后安排进程重启以生效。"""
+    ch = channel or settings.update.channel
+    result = await updater.apply_update(ch)
+    if result.success and result.restart_required:
+        schedule_restart()
+    return JSONResponse(
+        status_code=200 if result.success else 400,
+        content=result.model_dump(),
+    )
+
+
+@router.post("/rollback", dependencies=[Depends(get_current_user)])
+async def rollback_update():
+    """回滚到上一个覆盖层版本（无备份则回退到镜像版本）；成功后安排重启。"""
+    result = await updater.rollback()
+    if result.success and result.restart_required:
+        schedule_restart()
+    return JSONResponse(
+        status_code=200 if result.success else 400,
+        content=result.model_dump(),
+    )

@@ -19,6 +19,16 @@ except ImportError:
     logger.info("Can't find version info, use DEV_VERSION instead")
     VERSION = "DEV_VERSION"
 
+# 镜像构建期写入的基线版本（见 Dockerfile 的 `RUN echo ... > /app/IMAGE_VERSION`）。
+# 覆盖层（在线自动更新）应用后，运行版本 VERSION 会变成覆盖层版本，而
+# IMAGE_VERSION 始终保持镜像自带的基线版本——用于判断“镜像 vs 覆盖层”谁更新，
+# 以及在线更新的 min_image_version 兼容性检查。仓库/开发环境无此文件时回退到 VERSION。
+IMAGE_VERSION_PATH = Path("/app/IMAGE_VERSION")
+try:
+    IMAGE_VERSION = IMAGE_VERSION_PATH.read_text(encoding="utf-8").strip() or VERSION
+except OSError:
+    IMAGE_VERSION = VERSION
+
 CONFIG_PATH = (
     CONFIG_ROOT / "config_dev.json"
     if VERSION == "DEV_VERSION"

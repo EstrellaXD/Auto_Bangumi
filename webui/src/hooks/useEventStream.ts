@@ -1,5 +1,6 @@
 import { createSharedComposable } from '@vueuse/core';
 import type { QbTorrentInfo } from '#/downloader';
+import type { UpdateProgress } from '#/update';
 
 export interface StatusPayload {
   status: boolean;
@@ -25,6 +26,7 @@ export const useEventStream = createSharedComposable(() => {
   const statusData = ref<StatusPayload | null>(null);
   const downloaderData = ref<QbTorrentInfo[] | null>(null);
   const logData = ref<string | null>(null);
+  const updateData = ref<UpdateProgress | null>(null);
 
   let source: EventSource | null = null;
   let retryCount = 0;
@@ -82,6 +84,14 @@ export const useEventStream = createSharedComposable(() => {
       logData.value = (e as MessageEvent).data;
     });
 
+    es.addEventListener('update', (e) => {
+      try {
+        updateData.value = JSON.parse((e as MessageEvent).data);
+      } catch {
+        // Ignore malformed frames; the next tick will retry.
+      }
+    });
+
     es.onerror = () => {
       teardown();
       scheduleReconnect();
@@ -114,5 +124,6 @@ export const useEventStream = createSharedComposable(() => {
     statusData,
     downloaderData,
     logData,
+    updateData,
   };
 });

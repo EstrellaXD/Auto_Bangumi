@@ -1,0 +1,520 @@
+"""在线自动更新的核心逻辑：GitHub Release 检查 + bundle 下载/校验/落地。
+
+设计要点（见 docs/plans 与 CLAUDE.md）：
+
+- 仓库固定为本项目（``EstrellaXD/Auto_Bangumi``），只从项目 Release 下载，
+  不接受任意 URL。
+- ``check_update`` 查询 Release 列表，按 channel（stable / 含预发布的 beta）用
+  semver 选出最新版本并与当前运行版本比较，结果缓存约 15 分钟。
+- ``apply_update`` 下载 bundle → 校验 sha256 → 解包读取 manifest → 检查
+  ``min_image_version`` 兼容性 → 原子地把 staging 提升为 current（旧 current
+  移到 backup）→ 写入 applied.json。真正的“重启以生效”由 API 层触发（进程退出，
+  交给 Docker 的 restart 策略重跑 entrypoint 的覆盖层逻辑）。
+- ``rollback`` 把 backup 换回 current（无 backup 则清除覆盖层回退到镜像版本）。
+
+覆盖层文件都放在持久卷 ``config/updates/`` 下，因此容器重建后仍然保留。
+"""
+
+import asyncio
+import hashlib
+import json
+import logging
+import os
+import shutil
+import time
+import zipfile
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Optional
+
+import httpx
+import semver
+from pydantic import BaseModel
+
+from module.conf import IMAGE_VERSION, VERSION
+from module.network.request_url import get_shared_client
+
+logger = logging.getLogger(__name__)
+
+# 固定的项目仓库，禁止从任意来源下载（安全约束）。
+GITHUB_OWNER = "EstrellaXD"
+GITHUB_REPO = "Auto_Bangumi"
+_API_BASE = "https://api.github.com"
+
+# check_update 结果缓存时长（秒）。
+_CACHE_TTL = 15 * 60
+
+# 覆盖层持久化根目录（相对运行时 cwd=/app，即 /app/config/updates）。
+DEFAULT_UPDATES_ROOT = Path("config") / "updates"
+
+_DL_HEADERS = {"User-Agent": "AutoBangumi-Updater"}
+_API_HEADERS = {
+    "Accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+    "User-Agent": "AutoBangumi-Updater",
+}
+
+
+# --------------------------------------------------------------------------- 模型
+
+
+class UpdateCheckResult(BaseModel):
+    """``GET /update/check`` 的返回体：远端最新版本 + 本地覆盖层状态。"""
+
+    current: str
+    latest: Optional[str] = None
+    has_update: bool = False
+    channel: str = "stable"
+    notes: str = ""
+    published_at: Optional[str] = None
+    is_prerelease: bool = False
+    bundle_url: Optional[str] = None
+    sha256_url: Optional[str] = None
+    # 本地覆盖层状态
+    applied_version: Optional[str] = None
+    can_rollback: bool = False
+    error: Optional[str] = None
+
+
+class ApplyResult(BaseModel):
+    """``apply_update`` / ``rollback`` 的结果。"""
+
+    success: bool
+    message: str = ""
+    version: Optional[str] = None
+    restart_required: bool = False
+
+
+@dataclass
+class Progress:
+    """在线更新进度，供 SSE 推送给前端。"""
+
+    phase: str = (
+        "idle"  # idle|checking|downloading|verifying|unpacking|promoting|restarting|error|done
+    )
+    percent: int = 0
+    message: str = ""
+    version: Optional[str] = None
+    restart_required: bool = False
+    error: Optional[str] = None
+
+
+# --------------------------------------------------------------------------- 纯函数辅助
+
+
+def _parse_semver(value: str) -> Optional[semver.VersionInfo]:
+    try:
+        return semver.VersionInfo.parse(value.lstrip("v"))
+    except (ValueError, TypeError):
+        return None
+
+
+def _is_newer(candidate: str, base: str) -> bool:
+    """candidate 是否严格新于 base（任一无法解析则返回 False）。"""
+    a = _parse_semver(candidate)
+    b = _parse_semver(base)
+    if a is None or b is None:
+        return False
+    return a > b
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _reset_dir(path: Path) -> None:
+    """清空并重建目录（用于 staging 暂存区）。"""
+    if path.exists():
+        shutil.rmtree(path)
+    path.mkdir(parents=True, exist_ok=True)
+
+
+def _safe_extract(zip_path: Path, dest: Path) -> None:
+    """解压 zip 到 dest，拒绝绝对路径/`..` 越界成员（防 zip-slip）。"""
+    _reset_dir(dest)
+    dest_resolved = dest.resolve()
+    with zipfile.ZipFile(zip_path) as zf:
+        for member in zf.namelist():
+            target = (dest / member).resolve()
+            if not str(target).startswith(str(dest_resolved)):
+                raise ValueError(f"Unsafe path in bundle: {member}")
+        zf.extractall(dest)
+
+
+def _read_manifest(unpacked: Path) -> dict:
+    manifest_path = unpacked / "manifest.json"
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    if not isinstance(data, dict):
+        raise ValueError("manifest.json is not an object")
+    return data
+
+
+# --------------------------------------------------------------------------- Updater
+
+
+class Updater:
+    """检查/应用/回滚在线更新。依赖（root、版本、http client）可注入以便测试。"""
+
+    def __init__(
+        self,
+        *,
+        root: Optional[Path] = None,
+        current_version: Optional[str] = None,
+        image_version: Optional[str] = None,
+        client: Optional[httpx.AsyncClient] = None,
+        owner: str = GITHUB_OWNER,
+        repo: str = GITHUB_REPO,
+    ) -> None:
+        self.root = root if root is not None else DEFAULT_UPDATES_ROOT
+        self.current_version = (
+            current_version if current_version is not None else VERSION
+        )
+        self.image_version = (
+            image_version if image_version is not None else IMAGE_VERSION
+        )
+        self._client = client
+        self.owner = owner
+        self.repo = repo
+        self._lock = asyncio.Lock()
+        self._cache: Optional[tuple[float, str, UpdateCheckResult]] = None
+        self.progress = Progress()
+
+    # -------------------------------------------------------------- 进度
+
+    def _set_progress(self, **kwargs) -> None:
+        for key, value in kwargs.items():
+            setattr(self.progress, key, value)
+
+    def progress_dict(self) -> dict:
+        return asdict(self.progress)
+
+    # -------------------------------------------------------------- HTTP
+
+    async def _get_client(self) -> httpx.AsyncClient:
+        if self._client is not None:
+            return self._client
+        return await get_shared_client()
+
+    async def _fetch_releases(self) -> list[dict]:
+        client = await self._get_client()
+        url = f"{_API_BASE}/repos/{self.owner}/{self.repo}/releases?per_page=20"
+        resp = await client.get(url, headers=_API_HEADERS)
+        resp.raise_for_status()
+        data = resp.json()
+        return data if isinstance(data, list) else []
+
+    async def _download_text(self, url: str) -> str:
+        client = await self._get_client()
+        resp = await client.get(url, headers=_DL_HEADERS)
+        resp.raise_for_status()
+        return resp.text
+
+    async def _download_file(self, url: str, dest: Path) -> None:
+        client = await self._get_client()
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        async with client.stream("GET", url, headers=_DL_HEADERS) as resp:
+            resp.raise_for_status()
+            total = int(resp.headers.get("content-length", 0) or 0)
+            done = 0
+            with open(dest, "wb") as f:
+                async for chunk in resp.aiter_bytes(1 << 16):
+                    f.write(chunk)
+                    done += len(chunk)
+                    if total:
+                        self._set_progress(
+                            phase="downloading",
+                            percent=min(100, int(done * 100 / total)),
+                            message="downloading bundle",
+                        )
+
+    # -------------------------------------------------------------- 检查
+
+    def _find_bundle(self, assets: list[dict]) -> tuple[Optional[str], Optional[str]]:
+        bundle_url: Optional[str] = None
+        sha_url: Optional[str] = None
+        for asset in assets:
+            name = asset.get("name", "")
+            url = asset.get("browser_download_url")
+            if not name.startswith("update-bundle") or not url:
+                continue
+            if name.endswith(".zip.sha256"):
+                sha_url = url
+            elif name.endswith(".zip"):
+                bundle_url = url
+        return bundle_url, sha_url
+
+    def _pick_release(self, releases: list[dict], channel: str) -> Optional[dict]:
+        candidates: list[tuple[semver.VersionInfo, dict]] = []
+        for rel in releases:
+            if rel.get("draft"):
+                continue
+            if channel == "stable" and rel.get("prerelease"):
+                continue
+            ver = _parse_semver(rel.get("tag_name") or "")
+            if ver is None:
+                continue
+            candidates.append((ver, rel))
+        if not candidates:
+            return None
+        candidates.sort(key=lambda item: item[0])
+        return candidates[-1][1]
+
+    def _applied_version(self) -> Optional[str]:
+        applied = self.root / "applied.json"
+        try:
+            data = json.loads(applied.read_text(encoding="utf-8"))
+            return data.get("version")
+        except (OSError, ValueError):
+            return None
+
+    def _local_state(self, result: UpdateCheckResult) -> UpdateCheckResult:
+        result.applied_version = self._applied_version()
+        result.can_rollback = (self.root / "backup").exists()
+        return result
+
+    async def check_update(
+        self, channel: str = "stable", *, force: bool = False
+    ) -> UpdateCheckResult:
+        now = time.monotonic()
+        if not force and self._cache is not None:
+            ts, cached_channel, cached = self._cache
+            if cached_channel == channel and now - ts < _CACHE_TTL:
+                return self._local_state(cached.model_copy())
+
+        try:
+            releases = await self._fetch_releases()
+        except Exception as exc:  # 网络错误优雅降级
+            logger.warning("[Update] release check failed: %s", exc)
+            return self._local_state(
+                UpdateCheckResult(
+                    current=self.current_version,
+                    channel=channel,
+                    error=str(exc),
+                )
+            )
+
+        latest = self._pick_release(releases, channel)
+        if latest is None:
+            return self._local_state(
+                UpdateCheckResult(
+                    current=self.current_version,
+                    channel=channel,
+                    error="no matching release found",
+                )
+            )
+
+        latest_tag = (latest.get("tag_name") or "").lstrip("v")
+        bundle_url, sha_url = self._find_bundle(latest.get("assets") or [])
+        has_update = (
+            _is_newer(latest_tag, self.current_version) and bundle_url is not None
+        )
+        result = UpdateCheckResult(
+            current=self.current_version,
+            latest=latest_tag,
+            has_update=has_update,
+            channel=channel,
+            notes=latest.get("body") or "",
+            published_at=latest.get("published_at"),
+            is_prerelease=bool(latest.get("prerelease")),
+            bundle_url=bundle_url,
+            sha256_url=sha_url,
+        )
+        self._cache = (now, channel, result)
+        return self._local_state(result.model_copy())
+
+    # -------------------------------------------------------------- 应用
+
+    def _image_supports(self, min_image_version: str) -> bool:
+        current = _parse_semver(self.image_version)
+        required = _parse_semver(min_image_version)
+        if current is None or required is None:
+            # 镜像版本无法解析（开发/本地构建）时，不允许应用覆盖层。
+            return False
+        return current >= required
+
+    def _fail(self, message: str) -> ApplyResult:
+        logger.warning("[Update] %s", message)
+        self._set_progress(phase="error", error=message, message=message)
+        return ApplyResult(success=False, message=message)
+
+    def _promote(
+        self, unpacked: Path, version: str, sha256: str, manifest: dict
+    ) -> None:
+        """把解包好的 staging 提升为 current，旧 current 移到 backup。"""
+        current = self.root / "current"
+        backup = self.root / "backup"
+        if backup.exists():
+            shutil.rmtree(backup)
+        if current.exists():
+            os.rename(current, backup)
+        os.rename(unpacked, current)
+
+        lockfile = current / "backend" / "uv.lock"
+        lock_sha = _sha256_file(lockfile) if lockfile.exists() else None
+        applied = {
+            "version": version,
+            "applied_at": int(time.time()),
+            "sha256": sha256,
+            "lockfile_sha256": manifest.get("lockfile_sha256") or lock_sha,
+        }
+        (self.root / "applied.json").write_text(
+            json.dumps(applied, indent=2), encoding="utf-8"
+        )
+
+    async def apply_update(self, channel: str = "stable") -> ApplyResult:
+        if self._lock.locked():
+            return ApplyResult(
+                success=False, message="an update is already in progress"
+            )
+        async with self._lock:
+            try:
+                self._set_progress(
+                    phase="checking",
+                    percent=0,
+                    message="checking release",
+                    version=None,
+                    restart_required=False,
+                    error=None,
+                )
+                result = await self.check_update(channel, force=True)
+                if result.error:
+                    return self._fail(f"check failed: {result.error}")
+                if (
+                    not result.has_update
+                    or not result.bundle_url
+                    or not result.sha256_url
+                    or not result.latest
+                ):
+                    return self._fail("no update available")
+
+                version = result.latest
+                self.root.mkdir(parents=True, exist_ok=True)
+                staging = self.root / "staging"
+                await asyncio.to_thread(_reset_dir, staging)
+
+                expected_raw = await self._download_text(result.sha256_url)
+                expected_hash = expected_raw.strip().split()[0].lower()
+
+                zip_path = staging / "bundle.zip"
+                await self._download_file(result.bundle_url, zip_path)
+
+                self._set_progress(
+                    phase="verifying", percent=100, message="verifying checksum"
+                )
+                actual_hash = (await asyncio.to_thread(_sha256_file, zip_path)).lower()
+                if actual_hash != expected_hash:
+                    return self._fail("sha256 mismatch; aborting update")
+
+                self._set_progress(phase="unpacking", message="unpacking bundle")
+                unpacked = staging / "unpacked"
+                await asyncio.to_thread(_safe_extract, zip_path, unpacked)
+                manifest = await asyncio.to_thread(_read_manifest, unpacked)
+
+                min_iv = manifest.get("min_image_version")
+                if min_iv and not self._image_supports(str(min_iv)):
+                    return self._fail(
+                        f"image version {self.image_version} is too old for this "
+                        f"update (requires >= {min_iv}); please pull a newer image"
+                    )
+
+                self._set_progress(phase="promoting", message="promoting update")
+                await asyncio.to_thread(
+                    self._promote, unpacked, version, actual_hash, manifest
+                )
+                self._cache = None  # 版本已变，作废检查缓存
+
+                self._set_progress(
+                    phase="restarting",
+                    percent=100,
+                    message="update applied, restarting",
+                    version=version,
+                    restart_required=True,
+                    error=None,
+                )
+                return ApplyResult(
+                    success=True,
+                    version=version,
+                    restart_required=True,
+                    message="update applied; restarting to take effect",
+                )
+            except Exception as exc:  # noqa: BLE001 - 任何失败都要优雅返回
+                logger.exception("[Update] apply failed")
+                return self._fail(f"apply failed: {exc}")
+
+    # -------------------------------------------------------------- 回滚
+
+    async def rollback(self) -> ApplyResult:
+        async with self._lock:
+            try:
+                current = self.root / "current"
+                backup = self.root / "backup"
+                applied = self.root / "applied.json"
+
+                if backup.exists():
+                    # current <-> backup 互换，使回滚本身可再次撤销。
+                    swap = self.root / "_swap_tmp"
+                    if swap.exists():
+                        shutil.rmtree(swap)
+                    if current.exists():
+                        os.rename(current, swap)
+                    os.rename(backup, current)
+                    if swap.exists():
+                        os.rename(swap, backup)
+
+                    try:
+                        version = _read_manifest(current).get("version")
+                    except (OSError, ValueError):
+                        version = None
+                    applied.write_text(
+                        json.dumps(
+                            {
+                                "version": version,
+                                "applied_at": int(time.time()),
+                                "rolled_back": True,
+                            },
+                            indent=2,
+                        ),
+                        encoding="utf-8",
+                    )
+                    message = "rolled back to previous version; restarting"
+                else:
+                    # 无备份：删除覆盖层，回退到镜像自带版本。
+                    if current.exists():
+                        shutil.rmtree(current)
+                    if applied.exists():
+                        applied.unlink()
+                    version = self.image_version
+                    message = "reverted to image version; restarting"
+
+                self._cache = None
+                self._set_progress(
+                    phase="restarting",
+                    percent=100,
+                    message=message,
+                    version=version,
+                    restart_required=True,
+                    error=None,
+                )
+                return ApplyResult(
+                    success=True,
+                    version=version,
+                    restart_required=True,
+                    message=message,
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.exception("[Update] rollback failed")
+                return self._fail(f"rollback failed: {exc}")
+
+
+# 进程级单例：API 与 SSE 共享同一个实例，使 apply 期间设置的进度对 SSE 可见。
+updater = Updater()
+
+
+def get_update_progress() -> dict:
+    """供 SSE 端点读取当前更新进度。"""
+    return updater.progress_dict()

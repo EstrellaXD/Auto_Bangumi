@@ -66,6 +66,7 @@ declare module '@vue/runtime-core' {
     MediaQuery: typeof import('./../../src/components/media-query.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    UpdateCard: typeof import('./../../src/components/setting/update-card.vue')['default']
     WizardContainer: typeof import('./../../src/components/setup/wizard-container.vue')['default']
     WizardStepAccount: typeof import('./../../src/components/setup/wizard-step-account.vue')['default']
     WizardStepDownloader: typeof import('./../../src/components/setup/wizard-step-downloader.vue')['default']

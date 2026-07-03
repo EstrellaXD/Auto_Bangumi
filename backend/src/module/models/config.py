@@ -332,6 +332,19 @@ class Security(BaseModel):
     )
 
 
+class Update(BaseModel):
+    """在线自动更新配置。
+
+    ``channel`` 决定检查更新时挑选稳定版还是包含预发布（beta）版本；
+    ``auto_check`` 控制前端是否在进入设置页时自动检查一次更新。
+    """
+
+    channel: Literal["stable", "beta"] = Field(
+        default="stable", description="Update channel"
+    )
+    auto_check: bool = Field(default=True, description="Auto-check for updates")
+
+
 class Config(BaseModel):
     """Root configuration model composed of all subsection models."""
 
@@ -347,6 +360,7 @@ class Config(BaseModel):
     # [Deprecated] 仅用于读取旧配置，运行时逻辑请读 llm 段
     experimental_openai: ExperimentalOpenAI = ExperimentalOpenAI()
     security: Security = Security()
+    update: Update = Update()
 
     def model_dump(self, *args, by_alias=True, **kwargs):
         return super().model_dump(*args, by_alias=by_alias, **kwargs)

@@ -123,6 +123,14 @@ export interface Security {
   mcp_tokens: string[];
 }
 
+/** 在线自动更新配置 */
+export interface Update {
+  /** 更新渠道：stable 仅稳定版；beta 含预发布版本 */
+  channel: 'stable' | 'beta';
+  /** 进入设置页时是否自动检查一次更新 */
+  auto_check: boolean;
+}
+
 export interface Config {
   program: Program;
   downloader: Downloader;
@@ -135,6 +143,7 @@ export interface Config {
   /** @deprecated 已被 llm 段取代 */
   experimental_openai: ExperimentalOpenAI;
   security: Security;
+  update: Update;
 }
 
 export const initConfig: Config = {
@@ -201,5 +210,9 @@ export const initConfig: Config = {
     login_tokens: [],
     mcp_whitelist: [],
     mcp_tokens: [],
+  },
+  update: {
+    channel: 'stable',
+    auto_check: true,
   },
 };

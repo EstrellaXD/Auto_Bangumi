@@ -77,6 +77,10 @@ DEFAULT_SETTINGS: dict[str, dict[str, Any]] = {
         "webauthn_rp_id": "",
         "webauthn_origin": "",
     },
+    "update": {
+        "channel": "stable",
+        "auto_check": True,
+    },
 }
 
 

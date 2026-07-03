@@ -18,6 +18,7 @@ declare global {
   const apiRSS: typeof import('../../src/api/rss')['apiRSS']
   const apiSearch: typeof import('../../src/api/search')['apiSearch']
   const apiSetup: typeof import('../../src/api/setup')['apiSetup']
+  const apiUpdate: typeof import('../../src/api/update')['apiUpdate']
   const assert: typeof import('vitest')['assert']
   const axios: typeof import('../../src/utils/axios')['axios']
   const beforeAll: typeof import('vitest')['beforeAll']

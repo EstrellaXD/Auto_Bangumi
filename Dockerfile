@@ -36,6 +36,16 @@ COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/src .
 COPY --chmod=755 entrypoint.sh /entrypoint.sh
 
+# uv 二进制 + 基线 lock：在线自动更新落地时，若覆盖层的 uv.lock 相对基线变化，
+# entrypoint 会用 uv 按锁文件把依赖同步到 /app/.venv。
+COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
+COPY --from=builder /app/uv.lock /app/uv.lock
+
+# 构建期写入镜像基线版本，供 boot_overlay 判断“镜像 vs 覆盖层”谁更新，以及
+# 在线更新的 min_image_version 兼容性检查。CI 通过 build-arg 注入真实版本。
+ARG VERSION=DEV_VERSION
+RUN echo "${VERSION}" > /app/IMAGE_VERSION
+
 # Add user
 RUN mkdir -p /home/ab && \
     addgroup -S ab -g 911 && \

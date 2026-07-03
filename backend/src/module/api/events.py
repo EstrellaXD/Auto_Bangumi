@@ -18,6 +18,7 @@ from module.conf import LOG_PATH, VERSION
 from module.core import AppContext
 from module.downloader import DownloadClient
 from module.security.api import get_current_user
+from module.update import get_update_progress
 
 logger = logging.getLogger(__name__)
 
@@ -77,9 +78,19 @@ async def _log_payload() -> str | None:
 async def _event_generator(request: Request, ctx: AppContext):
     """按各自节拍推送 status/downloader/log 事件的核心循环。"""
     tick = 0
+    last_update: str | None = None
     while True:
         if await request.is_disconnected():
             break
+
+        # 更新进度：仅在有进行中的更新（phase != idle）且负载变化时推送，
+        # 避免重复帧刷屏；每 tick 检查一次以保证下载进度足够实时。
+        progress = get_update_progress()
+        if progress.get("phase") != "idle":
+            payload = json.dumps(progress)
+            if payload != last_update:
+                last_update = payload
+                yield {"event": "update", "data": payload}
 
         if tick % _STATUS_EVERY == 0:
             yield {"event": "status", "data": json.dumps(_status_payload(ctx))}
