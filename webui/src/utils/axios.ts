@@ -2,6 +2,14 @@ import Axios from 'axios';
 import type { AxiosError, AxiosResponse } from 'axios';
 import type { ApiSuccess, StatusCode } from '#/api';
 
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    /** Suppress the interceptor's error toast — the caller surfaces failures
+     * itself (background polls, optional data with its own inline state). */
+    silent?: boolean;
+  }
+}
+
 export const axios = Axios.create({
   withCredentials: true,
 });
@@ -35,20 +43,30 @@ axios.interceptors.response.use(
     });
 
     const { isLoggedIn } = useAuth();
+    const silent = err.config?.silent === true;
 
     // Handle network errors (no response from server)
     if (!err.response) {
-      showErrorThrottled(
-        returnUserLangText({
-          en: 'Network error. Please check your connection.',
-          'zh-CN': '网络错误，请检查连接。',
-        })
-      );
+      if (!silent) {
+        showErrorThrottled(
+          returnUserLangText({
+            en: 'Network error. Please check your connection.',
+            'zh-CN': '网络错误，请检查连接。',
+          })
+        );
+      }
       const error = {
         status: 0,
         msg_en: 'Network error',
         msg_zh: '网络错误',
       };
+      return Promise.reject(error);
+    }
+
+    if (silent) {
+      // Still handle the auth side effect, but no toast.
+      if (status === 401) isLoggedIn.value = false;
+      const error = { status, msg_en, msg_zh };
       return Promise.reject(error);
     }
 

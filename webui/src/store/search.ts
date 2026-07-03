@@ -34,6 +34,7 @@ export const useSearchStore = defineStore('search', () => {
     close: closeSearch,
     data: searchData,
     status,
+    error: searchFailed,
   } = apiSearch.get();
 
   provider.value = providers.value[0];
@@ -120,6 +121,7 @@ export const useSearchStore = defineStore('search', () => {
     // State
     inputValue: keyword,
     loading,
+    searchFailed,
     provider,
     providers,
     groupedResults,

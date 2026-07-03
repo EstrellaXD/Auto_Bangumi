@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 export interface DataListColumn {
   key: string;
@@ -8,7 +8,6 @@ export interface DataListColumn {
   hidden?: boolean;
 }
 
- 
 type DataItem = Record<string, any>;
 
 const props = withDefaults(
@@ -17,10 +16,14 @@ const props = withDefaults(
     columns: DataListColumn[];
     selectable?: boolean;
     keyField?: string;
+    /** Controlled selection — keeps the checkboxes in sync when the parent
+     * resets its selection (e.g. after a bulk action). */
+    selected?: unknown[];
   }>(),
   {
     selectable: false,
     keyField: 'id',
+    selected: undefined,
   }
 );
 
@@ -30,7 +33,15 @@ const emit = defineEmits<{
   (e: 'item-click', item: DataItem): void;
 }>();
 
-const selectedKeys = ref<Set<unknown>>(new Set());
+const selectedKeys = ref<Set<unknown>>(new Set(props.selected ?? []));
+
+watch(
+  () => props.selected,
+  (val) => {
+    if (val) selectedKeys.value = new Set(val);
+  },
+  { deep: true }
+);
 
 const visibleColumns = computed(() =>
   props.columns.filter((col) => !col.hidden)
@@ -72,12 +83,16 @@ defineExpose({ selectedKeys, toggleSelectAll });
         <input
           type="checkbox"
           :checked="selectedKeys.size === items.length && items.length > 0"
-          :indeterminate="selectedKeys.size > 0 && selectedKeys.size < items.length"
+          :indeterminate="
+            selectedKeys.size > 0 && selectedKeys.size < items.length
+          "
           @change="toggleSelectAll"
         />
         <span>{{ $t('common.selectAll') }}</span>
       </label>
-      <span class="ab-data-list__count">{{ items.length }} {{ $t('common.items') }}</span>
+      <span class="ab-data-list__count"
+        >{{ items.length }} {{ $t('common.items') }}</span
+      >
     </div>
 
     <!-- Items -->
@@ -106,7 +121,9 @@ defineExpose({ selectedKeys, toggleSelectAll });
             class="ab-data-list__field"
           >
             <span class="ab-data-list__label">{{ col.title }}</span>
-            <span class="ab-data-list__value">{{ getCellValue(item, col) }}</span>
+            <span class="ab-data-list__value">{{
+              getCellValue(item, col)
+            }}</span>
           </div>
         </slot>
       </div>
@@ -162,7 +179,8 @@ defineExpose({ selectedKeys, toggleSelectAll });
     border-radius: var(--radius-md);
     overflow: hidden;
     cursor: pointer;
-    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    transition: border-color var(--transition-fast),
+      box-shadow var(--transition-fast);
 
     &:active {
       border-color: var(--color-primary);

@@ -55,6 +55,7 @@ async function saveProviders() {
 
   try {
     await axios.put('api/v1/search/provider/config', providerObj);
+    message.success(t('config.search_provider_set.save_success'));
   } catch (error) {
     console.error('Failed to save providers:', error);
     message.error(t('config.search_provider_set.save_failed'));

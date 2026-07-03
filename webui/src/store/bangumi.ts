@@ -6,6 +6,7 @@ export const useBangumiStore = defineStore('bangumi', () => {
   const showArchived = ref(false);
   const isLoading = ref(false);
   const hasLoaded = ref(false);
+  const loadFailed = ref(false);
   const editRule = reactive<{
     show: boolean;
     item: BangumiRule;
@@ -35,6 +36,11 @@ export const useBangumiStore = defineStore('bangumi', () => {
 
       bangumi.value = [...enabled, ...disabled];
       hasLoaded.value = true;
+      loadFailed.value = false;
+    } catch {
+      // Keep any previously loaded data; the page distinguishes a failed
+      // first load from a genuinely empty library via this flag.
+      loadFailed.value = true;
     } finally {
       isLoading.value = false;
     }
@@ -96,6 +102,7 @@ export const useBangumiStore = defineStore('bangumi', () => {
     showArchived,
     isLoading,
     hasLoaded,
+    loadFailed,
     activeBangumi,
     archivedBangumi,
     editRule,

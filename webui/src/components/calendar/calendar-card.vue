@@ -30,6 +30,7 @@ const posterSrc = computed(() =>
       :aria-label="`Edit ${group.primary.official_title}`"
       @click="emit('click')"
       @keydown.enter="emit('click')"
+      @keydown.space.prevent="emit('click')"
     >
       <div class="calendar-card-poster">
         <img

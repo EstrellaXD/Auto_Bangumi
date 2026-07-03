@@ -22,7 +22,11 @@ const show = defineModel<boolean>('show', { default: false });
         :key="rule.id"
         class="rule-list-item"
         :class="[rule.deleted && 'rule-list-item--disabled']"
+        role="button"
+        tabindex="0"
         @click="emit('select', rule)"
+        @keydown.enter="emit('select', rule)"
+        @keydown.space.prevent="emit('select', rule)"
       >
         <div class="rule-list-item-info">
           <div class="rule-list-item-title">

@@ -56,7 +56,8 @@ export const useDownloaderStore = defineStore('downloader', () => {
     try {
       torrents.value = await apiDownloader.getTorrents();
     } catch {
-      torrents.value = [];
+      // Keep the last known list — a failed 5s poll (e.g. during a backend
+      // restart) must not blank the page into a fake "no torrents" state.
     } finally {
       loading.value = false;
     }

@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { Close } from '@icon-park/vue-next';
-import { NButton, NSpin, useMessage } from 'naive-ui';
+import { NButton, NCheckbox, NSelect, NSpin, useMessage } from 'naive-ui';
+import { onKeyStroke } from '@vueuse/core';
 import type { BangumiRule, DetectOffsetResponse } from '#/bangumi';
 
 const emit = defineEmits<{
@@ -50,6 +51,7 @@ const deleteFileDialog = reactive<{
   show: false,
   type: 'disable',
 });
+const deleteLocalFiles = ref(false);
 
 watch(show, (val) => {
   if (!val) {
@@ -60,6 +62,23 @@ watch(show, (val) => {
 });
 
 const rssLink = computed(() => localRule.value.rss_link?.[0] || '');
+
+// Air-weekday select — the drag-to-assign board is desktop-pointer-only, so
+// the editor must offer a mobile/keyboard path to the same field.
+const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+const weekdayOptions = computed(() =>
+  WEEKDAY_KEYS.map((key, index) => ({
+    label: t(`calendar.days.${key}`),
+    value: index,
+  }))
+);
+
+function onWeekdayChange(value: number | null) {
+  localRule.value.air_weekday = value;
+  // Mirror the dedicated setWeekday endpoint: an explicit choice locks the
+  // day against the automatic scanner; clearing unlocks it.
+  localRule.value.weekday_locked = value !== null;
+}
 
 // Auto detect offset using the new detectOffset API
 async function autoDetectOffset() {
@@ -115,7 +134,18 @@ async function dismissReview() {
 
 const close = () => (show.value = false);
 
+onKeyStroke('Escape', () => {
+  if (!show.value) return;
+  // Inner delete dialog closes first, then the modal itself.
+  if (deleteFileDialog.show) {
+    deleteFileDialog.show = false;
+  } else {
+    close();
+  }
+});
+
 function showDeleteFileDialog() {
+  deleteLocalFiles.value = false;
   deleteFileDialog.show = true;
   deleteFileDialog.type = 'delete';
 }
@@ -240,6 +270,21 @@ function emitUnarchive() {
                 v-model="localRule.episode_offset"
                 :label="$t('homepage.rule.episode_offset')"
               />
+
+              <div class="weekday-row">
+                <label class="weekday-label">{{
+                  $t('homepage.rule.air_weekday')
+                }}</label>
+                <NSelect
+                  :value="localRule.air_weekday ?? null"
+                  :options="weekdayOptions"
+                  clearable
+                  size="small"
+                  :placeholder="$t('calendar.unknown')"
+                  class="weekday-select"
+                  @update:value="onWeekdayChange"
+                />
+              </div>
             </advanced-section>
           </div>
 
@@ -276,24 +321,31 @@ function emitUnarchive() {
             class="delete-dialog-backdrop"
             @click.self="deleteFileDialog.show = false"
           >
-            <div class="delete-dialog">
+            <div class="delete-dialog" role="alertdialog" aria-modal="true">
               <h3 class="delete-title">{{ $t('homepage.rule.delete') }}</h3>
-              <p class="delete-message">{{ $t('homepage.rule.delete_hit') }}</p>
+              <p class="delete-message">
+                {{ $t('homepage.rule.delete_confirm') }}
+              </p>
+              <NCheckbox
+                v-model:checked="deleteLocalFiles"
+                class="delete-files-option"
+              >
+                {{ $t('homepage.rule.delete_files_label') }}
+              </NCheckbox>
               <div class="delete-actions">
                 <NButton
                   size="small"
-                  type="primary"
                   secondary
-                  @click="emitDeleteFile(false)"
+                  @click="deleteFileDialog.show = false"
                 >
-                  {{ $t('homepage.rule.no_btn') }}
+                  {{ $t('homepage.rule.cancel_btn') }}
                 </NButton>
                 <NButton
                   size="small"
                   type="error"
-                  @click="emitDeleteFile(true)"
+                  @click="emitDeleteFile(deleteLocalFiles)"
                 >
-                  {{ $t('homepage.rule.yes_btn') }}
+                  {{ $t('homepage.rule.delete') }}
                 </NButton>
               </div>
             </div>
@@ -319,7 +371,12 @@ function emitUnarchive() {
 .edit-modal {
   width: 100%;
   max-width: 480px;
-  max-height: 90vh;
+  // dvh tracks the iOS Safari URL bar/keyboard; vh fallback for old browsers
+  max-height: 90dvh;
+
+  @supports not (max-height: 1dvh) {
+    max-height: 90vh;
+  }
   display: flex;
   flex-direction: column;
   background: var(--color-surface);
@@ -352,6 +409,11 @@ function emitUnarchive() {
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
+
+  @include forTouch {
+    width: var(--touch-target);
+    height: var(--touch-target);
+  }
   cursor: pointer;
   color: var(--color-text-muted);
   transition: all var(--transition-fast);
@@ -370,8 +432,8 @@ function emitUnarchive() {
   gap: 12px;
   padding: 10px 16px;
   margin: 12px 20px;
-  background: #fef9ed;
-  border: 1px solid #fde68a;
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
   border-radius: var(--radius-md);
 }
 
@@ -396,12 +458,12 @@ function emitUnarchive() {
 .review-warning-title {
   font-size: 13px;
   font-weight: 600;
-  color: #92400e;
+  color: var(--color-warning-text);
 }
 
 .review-warning-reason {
   font-size: 12px;
-  color: #a16207;
+  color: var(--color-warning-text-secondary);
   line-height: 1.3;
   margin-top: 2px;
 }
@@ -516,7 +578,30 @@ function emitUnarchive() {
 .delete-message {
   font-size: 14px;
   color: var(--color-text-secondary);
-  margin: 0 0 20px;
+  margin: 0 0 12px;
+}
+
+.delete-files-option {
+  margin-bottom: 20px;
+}
+
+.weekday-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+}
+
+.weekday-label {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.weekday-select {
+  max-width: 160px;
 }
 
 .delete-actions {

@@ -59,6 +59,7 @@ function posterSrc(link: string | null | undefined): string {
             :aria-label="`Edit ${group.primary.official_title}`"
             @click="emit('card-click', group)"
             @keydown.enter="emit('card-click', group)"
+            @keydown.space.prevent="emit('card-click', group)"
           >
             <div class="calendar-row-poster">
               <img

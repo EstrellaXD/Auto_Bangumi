@@ -18,7 +18,9 @@ const { t } = useMyI18n();
         />
       </div>
       <div class="wizard-step-indicator">
-        {{ t('setup.nav.step', { current: currentStep + 1, total: totalSteps }) }}
+        {{
+          t('setup.nav.step', { current: currentStep + 1, total: totalSteps })
+        }}
       </div>
     </div>
 
@@ -73,5 +75,25 @@ const { t } = useMyI18n();
 .wizard-content {
   display: flex;
   flex-direction: column;
+
+  // On touch screens the compact desktop sizing (28px inputs/buttons) is
+  // below the 44px touch-target minimum; widen and heighten the shared
+  // wizard controls here instead of per step component.
+  @include forTouch {
+    :deep(.setup-input),
+    :deep(.setup-input-wide) {
+      width: 100%;
+      height: var(--touch-target);
+      font-size: 16px; // ≥16px stops iOS Safari from zooming the input
+      text-align: left;
+    }
+
+    :deep(.wizard-actions .n-button),
+    :deep(.test-section .n-button) {
+      min-height: var(--touch-target);
+      padding-left: 18px;
+      padding-right: 18px;
+    }
+  }
 }
 </style>

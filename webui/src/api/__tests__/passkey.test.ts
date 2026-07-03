@@ -26,7 +26,12 @@ describe('Passkey API contract (path + HTTP method)', () => {
 
   it('should POST api/v1/passkey/register/options when starting registration', async () => {
     (axios.post as any).mockResolvedValue({
-      data: { challenge: 'c', rp: { name: 'AB', id: 'localhost' }, user: {}, pubKeyCredParams: [] },
+      data: {
+        challenge: 'c',
+        rp: { name: 'AB', id: 'localhost' },
+        user: {},
+        pubKeyCredParams: [],
+      },
     });
     await apiPasskey.getRegistrationOptions();
     expect(axios.post).toHaveBeenCalledWith('api/v1/passkey/register/options');
@@ -34,29 +39,46 @@ describe('Passkey API contract (path + HTTP method)', () => {
 
   it('should POST api/v1/passkey/register/verify with the credential when finishing registration', async () => {
     (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
-    const request: PasskeyCreateRequest = { name: 'my device', attestation_response: {} };
+    const request: PasskeyCreateRequest = {
+      name: 'my device',
+      attestation_response: {},
+    };
     await apiPasskey.verifyRegistration(request);
-    expect(axios.post).toHaveBeenCalledWith('api/v1/passkey/register/verify', request);
+    expect(axios.post).toHaveBeenCalledWith(
+      'api/v1/passkey/register/verify',
+      request
+    );
   });
 
   it('should POST api/v1/passkey/auth/options with the username when starting login', async () => {
     (axios.post as any).mockResolvedValue({ data: { challenge: 'c' } });
     const request: PasskeyAuthStartRequest = { username: 'admin' };
     await apiPasskey.getLoginOptions(request);
-    expect(axios.post).toHaveBeenCalledWith('api/v1/passkey/auth/options', request);
+    expect(axios.post).toHaveBeenCalledWith(
+      'api/v1/passkey/auth/options',
+      request
+    );
   });
 
   it('should POST api/v1/passkey/auth/verify with the credential when finishing login', async () => {
     (axios.post as any).mockResolvedValue({ data: mockLoginSuccess });
-    const request: PasskeyAuthFinishRequest = { username: 'admin', credential: {} };
+    const request: PasskeyAuthFinishRequest = {
+      username: 'admin',
+      credential: {},
+    };
     await apiPasskey.loginWithPasskey(request);
-    expect(axios.post).toHaveBeenCalledWith('api/v1/passkey/auth/verify', request);
+    expect(axios.post).toHaveBeenCalledWith(
+      'api/v1/passkey/auth/verify',
+      request
+    );
   });
 
   it('should GET api/v1/passkey/list when listing passkeys', async () => {
     (axios.get as any).mockResolvedValue({ data: [] });
     await apiPasskey.list();
-    expect(axios.get).toHaveBeenCalledWith('api/v1/passkey/list');
+    expect(axios.get).toHaveBeenCalledWith('api/v1/passkey/list', {
+      silent: true,
+    });
   });
 
   it('should POST api/v1/passkey/delete with the passkey id when deleting', async () => {

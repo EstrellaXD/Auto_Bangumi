@@ -20,7 +20,7 @@ describe('Log API contract (path + HTTP method)', () => {
   it('should GET api/v1/log when fetching the log', async () => {
     (axios.get as any).mockResolvedValue({ data: 'log contents' });
     await apiLog.getLog();
-    expect(axios.get).toHaveBeenCalledWith('api/v1/log');
+    expect(axios.get).toHaveBeenCalledWith('api/v1/log', { silent: true });
   });
 
   it('should POST api/v1/log/clear when clearing the log', async () => {

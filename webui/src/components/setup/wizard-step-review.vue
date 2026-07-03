@@ -2,7 +2,7 @@
 import { NButton } from 'naive-ui';
 import { markSetupComplete } from '@/router';
 
-const { t } = useMyI18n();
+const { t, returnUserLangText } = useMyI18n();
 const setupStore = useSetupStore();
 const { accountData, downloaderData, rssData, notificationData, isLoading } =
   storeToRefs(setupStore);
@@ -19,7 +19,18 @@ async function completeSetup() {
     markSetupComplete();
     router.push({ name: 'Login' });
   } catch (e) {
-    message.error(t('setup.review.failed'));
+    // The axios interceptor rejects with { status, msg_en, msg_zh } — show
+    // the backend's reason so the user knows what to fix before retrying.
+    const err = e as { msg_en?: string; msg_zh?: string };
+    const detail = returnUserLangText({
+      en: err.msg_en ?? '',
+      'zh-CN': err.msg_zh ?? '',
+    });
+    message.error(
+      detail
+        ? `${t('setup.review.failed')}: ${detail}`
+        : t('setup.review.failed')
+    );
   } finally {
     isLoading.value = false;
   }

@@ -1,5 +1,11 @@
 <script lang="tsx" setup>
-import { type DataTableColumns, NButton, NDataTable, NTooltip } from 'naive-ui';
+import {
+  type DataTableColumns,
+  NButton,
+  NDataTable,
+  NPopconfirm,
+  NTooltip,
+} from 'naive-ui';
 import type { RSS } from '#/rss';
 
 definePage({
@@ -8,7 +14,9 @@ definePage({
 
 const { t } = useMyI18n();
 const { isMobile } = useBreakpointQuery();
-const { rss, selectedRSS, isRefreshingAll } = storeToRefs(useRSSStore());
+const { rss, selectedRSS, isRefreshingAll, isLoading } = storeToRefs(
+  useRSSStore()
+);
 const {
   getAll,
   deleteSelected,
@@ -164,6 +172,7 @@ const rssRowKey = (row: RSS) => row.id;
         ]"
         :selectable="true"
         key-field="id"
+        :selected="selectedRSS"
         @select="(keys) => (selectedRSS = keys as number[])"
       >
         <template #item="{ item }">
@@ -178,16 +187,22 @@ const rssRowKey = (row: RSS) => row.id;
                 type="active"
                 :title="$t('rss.connected')"
               />
-              <NTooltip v-if="item.connection_status === 'error'">
-                <template #trigger>
-                  <ab-tag type="warn" :title="$t('rss.error')" />
-                </template>
-                {{ item.last_error || 'Unknown error' }}
-              </NTooltip>
+              <ab-tag
+                v-if="item.connection_status === 'error'"
+                type="warn"
+                :title="$t('rss.error')"
+              />
               <ab-tag
                 :type="item.enabled ? 'active' : 'inactive'"
                 :title="item.enabled ? 'active' : 'inactive'"
               />
+            </div>
+            <!-- Inline on touch — a tooltip can't be hovered on a phone -->
+            <div
+              v-if="item.connection_status === 'error' && item.last_error"
+              class="rss-card-error"
+            >
+              {{ item.last_error }}
             </div>
             <div class="rss-card-actions" @click.stop>
               <NButton
@@ -218,6 +233,7 @@ const rssRowKey = (row: RSS) => row.id;
         :columns="rssColumns"
         :data="rss"
         :row-key="rssRowKey"
+        :loading="isLoading && rss.length === 0"
         :pagination="false"
         :bordered="false"
         :max-height="500"
@@ -233,9 +249,17 @@ const rssRowKey = (row: RSS) => row.id;
           <NButton type="primary" @click="disableSelected">{{
             $t('rss.disable')
           }}</NButton>
-          <NButton type="error" @click="deleteSelected">{{
-            $t('rss.delete')
-          }}</NButton>
+          <NPopconfirm
+            :positive-text="$t('rss.delete')"
+            :negative-text="$t('config.cancel')"
+            :positive-button-props="{ type: 'error' }"
+            @positive-click="deleteSelected"
+          >
+            <template #trigger>
+              <NButton type="error">{{ $t('rss.delete') }}</NButton>
+            </template>
+            {{ $t('rss.delete_confirm') }}
+          </NPopconfirm>
         </div>
       </div>
     </ab-container>
@@ -301,6 +325,12 @@ const rssRowKey = (row: RSS) => row.id;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.rss-card-error {
+  font-size: 12px;
+  color: var(--color-warning-text-secondary);
+  word-break: break-word;
 }
 
 .rss-card-tags {

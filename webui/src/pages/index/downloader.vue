@@ -3,6 +3,7 @@ import {
   type DataTableColumns,
   NButton,
   NDataTable,
+  NPopconfirm,
   NProgress,
 } from 'naive-ui';
 import type { QbTorrentInfo, TorrentGroup } from '#/downloader';
@@ -298,9 +299,19 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
             <NButton type="primary" size="small" @click="pauseSelected">{{
               $t('downloader.action.pause')
             }}</NButton>
-            <NButton size="small" type="error" @click="deleteSelected(false)">{{
-              $t('downloader.action.delete')
-            }}</NButton>
+            <NPopconfirm
+              :positive-text="$t('downloader.action.delete')"
+              :negative-text="$t('config.cancel')"
+              :positive-button-props="{ type: 'error' }"
+              @positive-click="deleteSelected(false)"
+            >
+              <template #trigger>
+                <NButton size="small" type="error">{{
+                  $t('downloader.action.delete')
+                }}</NButton>
+              </template>
+              {{ $t('downloader.action.delete_confirm') }}
+            </NPopconfirm>
           </div>
         </div>
       </Transition>

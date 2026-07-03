@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { Close, Link } from '@icon-park/vue-next';
-import { NButton, NSpin } from 'naive-ui';
+import { NButton, NSelect, NSpin, NSwitch } from 'naive-ui';
+import { onKeyStroke } from '@vueuse/core';
 import type { BangumiRule } from '#/bangumi';
 import type { RSS } from '#/rss';
 import { rssTemplate } from '#/rss';
@@ -106,6 +107,10 @@ function close() {
   show.value = false;
 }
 
+onKeyStroke('Escape', () => {
+  if (show.value) close();
+});
+
 function addRss() {
   if (rss.value.url === '') {
     message.error(t('notify.please_enter', [t('notify.rss_link')]));
@@ -202,10 +207,7 @@ function subscribe() {
                   <label class="option-label">{{
                     $t('topbar.add.aggregate')
                   }}</label>
-                  <label class="switch">
-                    <input v-model="rss.aggregate" type="checkbox" />
-                    <span class="switch-slider"></span>
-                  </label>
+                  <NSwitch v-model:value="rss.aggregate" />
                 </div>
 
                 <!-- Parser Select -->
@@ -213,15 +215,11 @@ function subscribe() {
                   <label class="option-label">{{
                     $t('topbar.add.parser')
                   }}</label>
-                  <select v-model="rss.parser" class="form-select">
-                    <option
-                      v-for="type in parserTypes"
-                      :key="type"
-                      :value="type"
-                    >
-                      {{ type }}
-                    </option>
-                  </select>
+                  <NSelect
+                    v-model:value="rss.parser"
+                    :options="parserTypes.map((p) => ({ label: p, value: p }))"
+                    class="parser-select"
+                  />
                 </div>
               </div>
             </div>
@@ -363,6 +361,11 @@ function subscribe() {
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
+
+  @include forTouch {
+    width: var(--touch-target);
+    height: var(--touch-target);
+  }
   cursor: pointer;
   color: var(--color-text-muted);
   transition: all var(--transition-fast);
@@ -440,26 +443,8 @@ function subscribe() {
   }
 }
 
-.form-select {
-  height: 36px;
-  padding: 0 32px 0 12px;
-  font-size: 13px;
-  font-family: inherit;
-  color: var(--color-text);
-  background: var(--color-surface-hover);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  outline: none;
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6,9 12,15 18,9'%3E%3C/polyline%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 8px center;
-  transition: border-color var(--transition-fast);
-
-  &:focus {
-    border-color: var(--color-primary);
-  }
+.parser-select {
+  width: 140px;
 }
 
 .options-row {
@@ -483,49 +468,6 @@ function subscribe() {
   font-size: 13px;
   font-weight: 500;
   color: var(--color-text-secondary);
-}
-
-// Custom Switch
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 44px;
-  height: 24px;
-
-  input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-}
-
-.switch-slider {
-  position: absolute;
-  cursor: pointer;
-  inset: 0;
-  background: var(--color-border);
-  border-radius: 24px;
-  transition: background-color var(--transition-fast);
-
-  &::before {
-    content: '';
-    position: absolute;
-    left: 2px;
-    bottom: 2px;
-    width: 20px;
-    height: 20px;
-    background: #fff;
-    border-radius: 50%;
-    transition: transform var(--transition-fast);
-  }
-
-  input:checked + & {
-    background: var(--color-primary);
-  }
-
-  input:checked + &::before {
-    transform: translateX(20px);
-  }
 }
 
 // Footer

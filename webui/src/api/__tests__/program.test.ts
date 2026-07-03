@@ -39,7 +39,7 @@ describe('Program API contract (path + HTTP method)', () => {
   it('should GET api/v1/status when fetching program status', async () => {
     (axios.get as any).mockResolvedValue({ data: mockProgramStatus });
     await apiProgram.status();
-    expect(axios.get).toHaveBeenCalledWith('api/v1/status');
+    expect(axios.get).toHaveBeenCalledWith('api/v1/status', { silent: true });
   });
 
   it('should POST api/v1/shutdown when shutting down the program', async () => {

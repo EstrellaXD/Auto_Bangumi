@@ -14,6 +14,9 @@ const isValid = computed(() => {
 });
 
 const passwordError = computed(() => {
+  if (accountData.value.username && accountData.value.username.length < 4) {
+    return t('setup.account.username_too_short');
+  }
   if (accountData.value.password && accountData.value.password.length < 8) {
     return t('setup.account.password_too_short');
   }

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { NButton } from 'naive-ui';
+import { NButton, NPopconfirm, NSelect } from 'naive-ui';
 import type { NotificationProviderConfig, NotificationType } from '#/config';
 import type { TupleToUnion } from '#/utils';
 import { apiNotification } from '@/api/notification';
@@ -304,14 +304,23 @@ function getFieldsForType(type: string) {
                 "
               />
             </NButton>
-            <NButton
-              size="small"
-              type="error"
-              :title="$t('config.notification_set.remove')"
-              @click="removeProvider(index)"
+            <NPopconfirm
+              :positive-text="$t('config.notification_set.remove')"
+              :negative-text="$t('config.cancel')"
+              :positive-button-props="{ type: 'error' }"
+              @positive-click="removeProvider(index)"
             >
-              <div i-carbon-trash-can />
-            </NButton>
+              <template #trigger>
+                <NButton
+                  size="small"
+                  type="error"
+                  :title="$t('config.notification_set.remove')"
+                >
+                  <div i-carbon-trash-can />
+                </NButton>
+              </template>
+              {{ $t('config.notification_set.remove_confirm') }}
+            </NPopconfirm>
           </div>
         </div>
 
@@ -344,15 +353,11 @@ function getFieldsForType(type: string) {
     >
       <div space-y-16>
         <ab-label :label="$t('config.notification_set.type')">
-          <select v-model="newProvider.type" ab-input>
-            <option
-              v-for="pt in providerTypes"
-              :key="pt.value"
-              :value="pt.value"
-            >
-              {{ pt.label }}
-            </option>
-          </select>
+          <NSelect
+            v-model:value="newProvider.type"
+            :options="providerTypes"
+            class="provider-type-select"
+          />
         </ab-label>
 
         <ab-label
@@ -422,15 +427,12 @@ function getFieldsForType(type: string) {
     >
       <div space-y-16>
         <ab-label :label="$t('config.notification_set.type')">
-          <select v-model="newProvider.type" ab-input disabled>
-            <option
-              v-for="pt in providerTypes"
-              :key="pt.value"
-              :value="pt.value"
-            >
-              {{ pt.label }}
-            </option>
-          </select>
+          <NSelect
+            v-model:value="newProvider.type"
+            :options="providerTypes"
+            disabled
+            class="provider-type-select"
+          />
         </ab-label>
 
         <ab-label
@@ -495,6 +497,11 @@ function getFieldsForType(type: string) {
 </template>
 
 <style lang="scss" scoped>
+.provider-type-select {
+  width: 200px;
+  max-width: 100%;
+}
+
 .provider-item {
   display: flex;
   align-items: center;

@@ -62,12 +62,17 @@ const proxyValue = computed({
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  height: 32px;
+  min-height: 32px;
 }
 
 .offset-input {
   width: 70px;
   height: 32px;
   text-align: center;
+
+  @include forTouch {
+    width: 84px;
+    height: var(--touch-target);
+  }
 }
 </style>

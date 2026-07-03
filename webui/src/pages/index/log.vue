@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { NButton } from 'naive-ui';
+import { NButton, NPopconfirm } from 'naive-ui';
 import { watchOnce } from '@vueuse/core';
 
 definePage({
@@ -16,6 +16,10 @@ const selectedLevels = ref<string[]>([]);
 // Log levels
 const logLevels = ['INFO', 'WARNING', 'ERROR', 'DEBUG'];
 
+// Rendering is unvirtualized, so bound the work: only the newest lines are
+// parsed and shown. Older history is still available via the log file.
+const MAX_LOG_LINES = 1000;
+
 const formatLog = computed(() => {
   const list = log.value
     .trim()
@@ -23,18 +27,21 @@ const formatLog = computed(() => {
     .filter((i) => i !== '');
   const startIndex = list.findIndex((i) => /Version/.test(i));
 
-  return list.slice(startIndex === -1 ? 0 : startIndex).map((i, index) => {
-    const date = i.match(/\[\d+-\d+-\d+\ \d+:\d+:\d+\]/)?.[0] || '';
-    const type = i.match(/(INFO)|(WARNING)|(ERROR)|(DEBUG)/)?.[0] || '';
-    const content = i.replace(date, '').replace(`${type}:`, '').trim();
+  return list
+    .slice(startIndex === -1 ? 0 : startIndex)
+    .slice(-MAX_LOG_LINES)
+    .map((i, index) => {
+      const date = i.match(/\[\d+-\d+-\d+\ \d+:\d+:\d+\]/)?.[0] || '';
+      const type = i.match(/(INFO)|(WARNING)|(ERROR)|(DEBUG)/)?.[0] || '';
+      const content = i.replace(date, '').replace(`${type}:`, '').trim();
 
-    return {
-      index,
-      date,
-      type,
-      content,
-    };
-  });
+      return {
+        index,
+        date,
+        type,
+        content,
+      };
+    });
 });
 
 // Filtered logs based on selected levels
@@ -157,9 +164,19 @@ onDeactivated(() => {
             {{ $t('log.update_now') }}
           </NButton>
 
-          <NButton type="error" size="small" @click="reset">
-            {{ $t('log.reset') }}
-          </NButton>
+          <NPopconfirm
+            :positive-text="$t('log.reset')"
+            :negative-text="$t('config.cancel')"
+            :positive-button-props="{ type: 'error' }"
+            @positive-click="reset"
+          >
+            <template #trigger>
+              <NButton type="error" size="small">
+                {{ $t('log.reset') }}
+              </NButton>
+            </template>
+            {{ $t('log.reset_confirm') }}
+          </NPopconfirm>
 
           <NButton type="primary" size="small" @click="copy">
             {{ $t('log.copy') }}
@@ -374,6 +391,11 @@ onDeactivated(() => {
   cursor: pointer;
   transition: all var(--transition-fast);
   color: var(--color-text);
+
+  @include forTouch {
+    min-height: 40px;
+    padding: 4px 16px;
+  }
 
   &:hover {
     border-color: var(--color-primary);

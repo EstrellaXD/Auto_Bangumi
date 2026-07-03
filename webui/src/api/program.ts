@@ -30,7 +30,8 @@ export const apiProgram = {
    */
   async status() {
     const { data } = await axios.get<{ status: boolean; version: string }>(
-      'api/v1/status'
+      'api/v1/status',
+      { silent: true }
     );
 
     return data!;

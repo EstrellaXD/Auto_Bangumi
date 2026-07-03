@@ -275,8 +275,8 @@ function handleCancel() {
   justify-content: center;
   width: 32px;
   height: 32px;
-  background: #fef3c7;
-  color: #f59e0b;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
   border-radius: var(--radius-sm);
 }
 
@@ -373,8 +373,8 @@ function handleCancel() {
   align-items: flex-start;
   gap: 8px;
   padding: 12px;
-  background: #fef9ed;
-  border: 1px solid #fde68a;
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
   border-radius: var(--radius-md);
   margin-bottom: 16px;
 }

@@ -51,6 +51,51 @@ export const useSetupStore = defineStore('setup', () => {
     notificationTested: false,
   });
 
+  // Persist progress across reloads (mobile tab discards, accidental refresh).
+  // sessionStorage on purpose: the form holds credentials, so the draft dies
+  // with the tab instead of lingering in localStorage.
+  const STORAGE_KEY = 'ab-setup-wizard';
+
+  try {
+    const saved = sessionStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const s = JSON.parse(saved);
+      currentStepIndex.value = s.currentStepIndex ?? 0;
+      Object.assign(accountData, s.accountData ?? {});
+      Object.assign(downloaderData, s.downloaderData ?? {});
+      Object.assign(rssData, s.rssData ?? {});
+      Object.assign(notificationData, s.notificationData ?? {});
+      Object.assign(validation, s.validation ?? {});
+    }
+  } catch {
+    // Corrupt draft — start fresh.
+  }
+
+  watch(
+    [
+      currentStepIndex,
+      accountData,
+      downloaderData,
+      rssData,
+      notificationData,
+      validation,
+    ],
+    () => {
+      sessionStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          currentStepIndex: currentStepIndex.value,
+          accountData,
+          downloaderData,
+          rssData,
+          notificationData,
+          validation,
+        })
+      );
+    },
+    { deep: true }
+  );
+
   // Navigation
   function nextStep() {
     if (currentStepIndex.value < steps.length - 1) {
@@ -91,9 +136,14 @@ export const useSetupStore = defineStore('setup', () => {
   }
 
   function $reset() {
+    sessionStorage.removeItem(STORAGE_KEY);
     currentStepIndex.value = 0;
     isLoading.value = false;
-    Object.assign(accountData, { username: '', password: '', confirmPassword: '' });
+    Object.assign(accountData, {
+      username: '',
+      password: '',
+      confirmPassword: '',
+    });
     Object.assign(downloaderData, {
       type: 'qbittorrent',
       host: '',

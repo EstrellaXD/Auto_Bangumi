@@ -27,10 +27,19 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
     :aria-label="`Edit ${bangumi.official_title}`"
     @click="() => $emit('click')"
     @keydown.enter="() => $emit('click')"
+    @keydown.space.prevent="() => $emit('click')"
   >
-    <div class="card-poster" :class="{ 'card-poster--needs-review': bangumi.needs_review }">
+    <div
+      class="card-poster"
+      :class="{ 'card-poster--needs-review': bangumi.needs_review }"
+    >
       <template v-if="bangumi.poster_link">
-        <img :src="posterSrc" :alt="bangumi.official_title" class="card-img" />
+        <img
+          :src="posterSrc"
+          :alt="bangumi.official_title"
+          class="card-img"
+          loading="lazy"
+        />
       </template>
       <template v-else>
         <div class="card-placeholder">
@@ -70,7 +79,11 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
       <div class="search-card-content">
         <div class="search-card-thumb">
           <template v-if="bangumi.poster_link">
-            <img :src="posterSrc" :alt="bangumi.official_title" class="search-card-img" />
+            <img
+              :src="posterSrc"
+              :alt="bangumi.official_title"
+              class="search-card-img"
+            />
           </template>
           <template v-else>
             <div class="card-placeholder card-placeholder--small">
@@ -125,7 +138,8 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
   border-radius: var(--radius-md);
   overflow: hidden;
   box-shadow: var(--shadow-md);
-  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+  transition: box-shadow var(--transition-fast),
+    transform var(--transition-fast);
 
   .card:hover &,
   .card:focus-visible & {
@@ -154,7 +168,8 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
 }
 
 @keyframes card-glow {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: var(--shadow-md), 0 0 0 0 rgba(251, 191, 36, 0);
   }
   50% {
@@ -204,7 +219,11 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
   // On touch devices, always show a subtle indicator
   @include forTouch {
     opacity: 1;
-    background: linear-gradient(to top, var(--color-overlay) 0%, transparent 50%);
+    background: linear-gradient(
+      to top,
+      var(--color-overlay) 0%,
+      transparent 50%
+    );
     backdrop-filter: none;
 
     .card-edit-btn {
@@ -250,7 +269,8 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
   background: var(--color-primary);
   color: var(--color-white);
   box-shadow: var(--shadow-md);
-  transition: transform var(--transition-fast), background-color var(--transition-fast);
+  transition: transform var(--transition-fast),
+    background-color var(--transition-fast);
 
   .card:active & {
     transform: scale(0.9);

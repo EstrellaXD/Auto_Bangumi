@@ -9,6 +9,7 @@ export const apiSearch = {
     const eventSource = ref(null) as Ref<EventSource | null>;
     const status = ref<EventSourceStatus>('CLOSED');
     const data = ref<BangumiRule[]>([]);
+    const error = ref(false);
 
     const keyword = ref('');
     const provider = ref('');
@@ -44,12 +45,19 @@ export const apiSearch = {
       };
       es.onerror = (err) => {
         console.error('EventSource error:', err);
+        // onerror also fires when the server closes the stream after a
+        // successful search — only count it as a failure when the connection
+        // never opened (auth/server/network problem).
+        if (status.value === 'CONNECTING') {
+          error.value = true;
+        }
         close();
       };
     };
 
     const open = () => {
       data.value = [];
+      error.value = false;
       _init();
     };
 
@@ -58,6 +66,7 @@ export const apiSearch = {
       provider,
       status,
       data,
+      error,
       open,
       close,
     };

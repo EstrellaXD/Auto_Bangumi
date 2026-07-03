@@ -18,9 +18,14 @@ export const useLogStore = defineStore('log', () => {
     // SSE 已接管日志推送，或页面不可见时，跳过本次轮询请求。
     if (sseConnected.value || document.hidden) return;
     if (isLoggedIn.value) {
-      apiLog.getLog().then((res) => {
-        log.value = res;
-      });
+      apiLog
+        .getLog()
+        .then((res) => {
+          log.value = res;
+        })
+        .catch(() => {
+          // Silent poll — keep the last log content on a transient failure.
+        });
     }
   }
 
@@ -42,9 +47,11 @@ export const useLogStore = defineStore('log', () => {
     }
   });
 
-  const { copy: clipboardCopy, isSupported: clipboardSupported } = useClipboard({
-    legacy: true,
-  });
+  const { copy: clipboardCopy, isSupported: clipboardSupported } = useClipboard(
+    {
+      legacy: true,
+    }
+  );
 
   function copy() {
     if (clipboardSupported.value) {

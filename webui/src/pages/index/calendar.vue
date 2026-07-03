@@ -13,12 +13,16 @@ const { isMobile } = useBreakpointQuery();
 const { t } = useMyI18n();
 
 const refreshing = ref(false);
+const message = useMessage();
 
 async function refreshCalendar() {
   refreshing.value = true;
   try {
     await apiBangumi.refreshCalendar();
     await getAll();
+    message.success(t('calendar.refresh_success'));
+  } catch {
+    // Failure toast already shown by the axios interceptor.
   } finally {
     refreshing.value = false;
   }
@@ -211,6 +215,11 @@ function onRuleSelect(rule: BangumiRule) {
   width: 34px;
   height: 34px;
   border-radius: var(--radius-md);
+
+  @include forTouch {
+    width: var(--touch-target);
+    height: var(--touch-target);
+  }
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text-secondary);

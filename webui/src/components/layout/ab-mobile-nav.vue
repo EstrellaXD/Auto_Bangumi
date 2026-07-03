@@ -16,18 +16,41 @@ const { isDark, toggle: toggleDark } = useDarkMode();
 
 const RSS = h(
   'span',
-  { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px' } },
+  {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '20px',
+      height: '20px',
+    },
+  },
   h(InlineSvg, { src: './images/RSS.svg', width: '14', height: '14' })
 );
 
 const navItems = [
   { id: 1, icon: Home, label: () => t('sidebar.homepage'), path: '/bangumi' },
-  { id: 2, icon: Calendar, label: () => t('sidebar.calendar'), path: '/calendar' },
+  {
+    id: 2,
+    icon: Calendar,
+    label: () => t('sidebar.calendar'),
+    path: '/calendar',
+  },
   { id: 3, icon: RSS, label: () => t('sidebar.rss'), path: '/rss' },
-  { id: 5, icon: Download, label: () => t('sidebar.downloader'), path: '/downloader',
-    hidden: localStorage.getItem('enable_downloader_iframe') !== '1' },
+  {
+    id: 5,
+    icon: Download,
+    label: () => t('sidebar.downloader'),
+    path: '/downloader',
+    hidden: localStorage.getItem('enable_downloader_iframe') !== '1',
+  },
   { id: 6, icon: Log, label: () => t('sidebar.log'), path: '/log' },
-  { id: 7, icon: SettingTwo, label: () => t('sidebar.config'), path: '/config' },
+  {
+    id: 7,
+    icon: SettingTwo,
+    label: () => t('sidebar.config'),
+    path: '/config',
+  },
 ];
 
 const visibleItems = computed(() => navItems.filter((i) => !i.hidden));
@@ -55,18 +78,27 @@ const visibleItems = computed(() => navItems.filter((i) => !i.hidden));
     >
       <Moon v-if="!isDark" :size="18" class="mobile-nav__icon" />
       <Sun v-else :size="18" class="mobile-nav__icon" />
-      <span class="mobile-nav__label">{{ isDark ? t('theme.light') : t('theme.dark') }}</span>
+      <span class="mobile-nav__label">{{
+        isDark ? t('theme.light') : t('theme.dark')
+      }}</span>
     </button>
   </nav>
 </template>
 
 <style lang="scss" scoped>
 .mobile-nav {
+  // Thumb-reachable bottom bar. The nav is rendered inside .layout-main,
+  // which would otherwise place it at the top of the content column.
+  position: fixed;
+  left: var(--layout-padding);
+  right: var(--layout-padding);
+  bottom: var(--layout-padding);
+  z-index: var(--z-fixed);
   display: flex;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
   overflow-x: auto;
   scrollbar-width: none;
   @include safeAreaBottom(padding-bottom);
@@ -92,7 +124,7 @@ const visibleItems = computed(() => navItems.filter((i) => !i.hidden));
     border: none;
     border-radius: var(--radius-md);
     transition: color var(--transition-fast),
-                background-color var(--transition-fast);
+      background-color var(--transition-fast);
     text-decoration: none;
     font: inherit;
     position: relative;

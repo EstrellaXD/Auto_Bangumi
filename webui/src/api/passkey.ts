@@ -71,7 +71,9 @@ export const apiPasskey = {
    * 获取 Passkey 列表
    */
   async list(): Promise<PasskeyItem[]> {
-    const { data } = await axios.get<PasskeyItem[]>('api/v1/passkey/list');
+    const { data } = await axios.get<PasskeyItem[]>('api/v1/passkey/list', {
+      silent: true,
+    });
     return data;
   },
 

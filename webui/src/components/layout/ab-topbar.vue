@@ -100,7 +100,9 @@ onUnmounted(() => {
       <img
         v-if="!isMobile"
         v-show="onSearchFocus === false"
-        :src="isDark ? '/images/AutoBangumi.svg' : '/images/AutoBangumi-dark.svg'"
+        :src="
+          isDark ? '/images/AutoBangumi.svg' : '/images/AutoBangumi-dark.svg'
+        "
         alt="AutoBangumi"
         class="topbar-wordmark"
       />
@@ -119,7 +121,9 @@ onUnmounted(() => {
       @click="openSearch"
     >
       <Search theme="outline" size="18" />
-      <span class="topbar-mobile-search-text">{{ $t('topbar.search.click_to_search') }}</span>
+      <span class="topbar-mobile-search-text">{{
+        $t('topbar.search.click_to_search')
+      }}</span>
     </button>
 
     <!-- Right side actions -->
@@ -133,10 +137,7 @@ onUnmounted(() => {
     </div>
 
     <ab-change-account v-model:show="showAccount"></ab-change-account>
-    <ab-add-rss
-      v-model:show="showAddRSS"
-      v-model:rule="rssRule"
-    ></ab-add-rss>
+    <ab-add-rss v-model:show="showAddRSS" v-model:rule="rssRule"></ab-add-rss>
   </div>
 </template>
 
@@ -153,8 +154,7 @@ onUnmounted(() => {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   transition: background-color var(--transition-normal),
-              border-color var(--transition-normal),
-              box-shadow var(--transition-normal);
+    border-color var(--transition-normal), box-shadow var(--transition-normal);
 
   @include forTablet {
     gap: 12px;
@@ -213,16 +213,15 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   flex: 1;
-  height: 34px;
+  height: 40px;
   padding: 0 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   background: var(--color-surface-hover);
   color: var(--color-text-muted);
   cursor: pointer;
-  transition: color var(--transition-fast),
-              border-color var(--transition-fast),
-              background-color var(--transition-fast);
+  transition: color var(--transition-fast), border-color var(--transition-fast),
+    background-color var(--transition-fast);
 
   &:hover {
     color: var(--color-primary);

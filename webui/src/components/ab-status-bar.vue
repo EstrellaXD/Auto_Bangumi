@@ -109,6 +109,12 @@ function abLabel(label: string | (() => string)) {
   padding: 6px;
   border-radius: var(--radius-sm);
 
+  // Transparent background — a full 44px hit area costs nothing visually.
+  @include forTouch {
+    min-width: var(--touch-target);
+    min-height: var(--touch-target);
+  }
+
   @include forTablet {
     min-width: var(--touch-target);
     min-height: var(--touch-target);
@@ -145,7 +151,7 @@ function abLabel(label: string | (() => string)) {
   animation: dropdown-in 150ms ease-out;
   transform-origin: top right;
   transition: background-color var(--transition-normal),
-              border-color var(--transition-normal);
+    border-color var(--transition-normal);
 }
 
 @keyframes dropdown-in {
@@ -169,7 +175,8 @@ function abLabel(label: string | (() => string)) {
   border-radius: var(--radius-sm);
   cursor: pointer;
   color: var(--color-text);
-  transition: color var(--transition-fast), background-color var(--transition-fast);
+  transition: color var(--transition-fast),
+    background-color var(--transition-fast);
 
   &:hover,
   &--active {

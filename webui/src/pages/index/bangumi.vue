@@ -11,6 +11,7 @@ const {
   showArchived,
   isLoading,
   hasLoaded,
+  loadFailed,
   activeBangumi,
   archivedBangumi,
 } = storeToRefs(useBangumiStore());
@@ -109,6 +110,21 @@ function groupNeedsReview(group: BangumiGroup): boolean {
           <div class="skeleton-poster"></div>
           <div class="skeleton-title"></div>
         </div>
+      </div>
+
+      <!-- Failed first load — distinct from an empty library -->
+      <div v-else-if="loadFailed && !hasLoaded" class="empty-guide load-failed">
+        <div class="empty-guide-header">
+          <div class="empty-guide-title">
+            {{ $t('homepage.load_failed.title') }}
+          </div>
+          <div class="empty-guide-subtitle">
+            {{ $t('homepage.load_failed.subtitle') }}
+          </div>
+        </div>
+        <NButton type="primary" :loading="isLoading" @click="getAll">
+          {{ $t('homepage.load_failed.retry') }}
+        </NButton>
       </div>
 
       <!-- Empty state guide -->
@@ -419,7 +435,7 @@ function groupNeedsReview(group: BangumiGroup): boolean {
 
   // Warning variant - yellow with purple border
   &--warning {
-    background: #fbbf24;
+    background: var(--color-warning);
     border: 2px solid var(--color-primary);
     color: var(--color-primary);
     box-shadow: 0 2px 8px rgba(251, 191, 36, 0.5);
@@ -509,7 +525,7 @@ function groupNeedsReview(group: BangumiGroup): boolean {
   flex-direction: column;
   gap: 4px;
   padding: 8px;
-  min-width: 300px;
+  min-width: min(300px, 100%);
 }
 
 .rule-list-hint {
@@ -551,7 +567,7 @@ function groupNeedsReview(group: BangumiGroup): boolean {
       rgba(251, 191, 36, 0.15) 0%,
       rgba(251, 191, 36, 0.08) 100%
     );
-    border-left: 3px solid #fbbf24;
+    border-left: 3px solid var(--color-warning);
 
     &:hover {
       background: linear-gradient(

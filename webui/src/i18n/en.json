@@ -54,6 +54,7 @@
       "add_provider": "Add Provider",
       "edit_provider": "Edit Provider",
       "remove": "Remove",
+      "remove_confirm": "Remove this notification provider?",
       "edit": "Edit",
       "test": "Test",
       "enable_provider": "Enable",
@@ -103,7 +104,8 @@
       "no_providers": "No search providers configured",
       "delete_confirm": "Are you sure you want to delete this provider?",
       "load_failed": "Failed to load search providers",
-      "save_failed": "Failed to save search providers"
+      "save_failed": "Failed to save search providers",
+      "save_success": "Search providers saved"
     }
   },
   "downloader": {
@@ -142,10 +144,16 @@
     "action": {
       "pause": "Pause",
       "resume": "Resume",
-      "delete": "Delete"
+      "delete": "Delete",
+      "delete_confirm": "Remove the selected torrents from the downloader? Downloaded files are kept."
     }
   },
   "homepage": {
+    "load_failed": {
+      "title": "Could not load your subscriptions",
+      "subtitle": "The backend did not respond. Check that AutoBangumi is running, then retry.",
+      "retry": "Retry"
+    },
     "empty": {
       "title": "No subscriptions yet",
       "subtitle": "Get started by adding your first RSS feed",
@@ -160,7 +168,9 @@
     "rule": {
       "apply": "Apply",
       "delete": "Delete",
-      "delete_hit": "Delete Local File?",
+      "delete_confirm": "This rule will be deleted. This cannot be undone.",
+      "delete_files_label": "Also delete downloaded files",
+      "cancel_btn": "Cancel",
       "disable": "Disable",
       "edit": "Edit",
       "edit_rule": "Edit Rule",
@@ -171,6 +181,7 @@
       "no_btn": "No",
       "official_title": "Official Title",
       "episode_offset": "Episode Offset",
+      "air_weekday": "Air Weekday",
       "season_offset": "Season Offset",
       "auto_detect": "Auto Detect",
       "needs_review": "Needs Review",
@@ -196,6 +207,7 @@
     "go": "Go",
     "join": "Join",
     "reset": "Clear log",
+    "reset_confirm": "Clear the log? This cannot be undone.",
     "title": "Log",
     "update_now": "Refresh"
   },
@@ -285,6 +297,7 @@
     "aggregate": "Aggregate",
     "connected": "Connected",
     "delete": "Delete",
+    "delete_confirm": "Delete the selected RSS feeds? Existing rules and downloads are kept.",
     "disable": "Disable",
     "enable": "Enable",
     "error": "Error",
@@ -299,6 +312,7 @@
   },
   "calendar": {
     "subtitle": "This season's broadcast schedule",
+    "refresh_success": "Calendar refreshed",
     "days": {
       "mon": "Monday",
       "tue": "Tuesday",
@@ -352,7 +366,8 @@
       "password": "Password",
       "confirm_password": "Confirm Password",
       "password_mismatch": "Passwords do not match",
-      "password_too_short": "Password must be at least 8 characters"
+      "password_too_short": "Password must be at least 8 characters",
+      "username_too_short": "Username must be at least 4 characters"
     },
     "downloader": {
       "title": "Download Client",
@@ -360,7 +375,8 @@
       "test": "Test Connection",
       "testing": "Testing...",
       "test_success": "Connection successful",
-      "test_failed": "Connection failed"
+      "test_failed": "Connection failed",
+      "untested_hint": "You can continue without a successful test and adjust the connection later in Config."
     },
     "rss": {
       "title": "RSS Source",
@@ -452,6 +468,7 @@
     "subscribe_success": "Subscribed successfully",
     "subscribe_failed": "Subscription failed",
     "no_results": "No results found. Try different keywords.",
+    "failed_hint": "Search failed. Check the connection and try again.",
     "start_typing": "Enter keywords to start searching",
     "filter": {
       "group": "Group",
@@ -466,6 +483,7 @@
     "confirm": {
       "title": "Add Subscription",
       "rss": "RSS Feed",
+      "copy_rss": "Copy RSS link",
       "group": "Subtitle Group",
       "resolution": "Resolution",
       "subtitle": "Subtitle Type",

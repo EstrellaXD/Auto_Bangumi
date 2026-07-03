@@ -25,6 +25,7 @@ withDefaults(
         v-if="src"
         :src="src"
         alt="poster"
+        loading="lazy"
         abs
         top-0
         left-0
@@ -34,7 +35,14 @@ withDefaults(
     </template>
 
     <template v-else>
-      <img v-if="src" :src="src" alt="poster" :style="{ objectFit }" wh-full />
+      <img
+        v-if="src"
+        :src="src"
+        alt="poster"
+        loading="lazy"
+        :style="{ objectFit }"
+        wh-full
+      />
 
       <div v-else wh-full f-cer border="1 white">
         <ErrorPicture theme="outline" size="24" fill="#333" />

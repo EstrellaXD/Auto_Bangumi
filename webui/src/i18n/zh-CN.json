@@ -54,6 +54,7 @@
       "add_provider": "添加通知服务",
       "edit_provider": "编辑通知服务",
       "remove": "删除",
+      "remove_confirm": "确定删除此通知服务？",
       "edit": "编辑",
       "test": "测试",
       "enable_provider": "启用",
@@ -103,7 +104,8 @@
       "no_providers": "暂无搜索源",
       "delete_confirm": "确定删除此搜索源？",
       "load_failed": "加载搜索源失败",
-      "save_failed": "保存搜索源失败"
+      "save_failed": "保存搜索源失败",
+      "save_success": "搜索源已保存"
     }
   },
   "downloader": {
@@ -142,10 +144,16 @@
     "action": {
       "pause": "暂停",
       "resume": "恢复",
-      "delete": "删除"
+      "delete": "删除",
+      "delete_confirm": "从下载器中移除所选种子？已下载的文件将保留。"
     }
   },
   "homepage": {
+    "load_failed": {
+      "title": "订阅列表加载失败",
+      "subtitle": "后端没有响应。请确认 AutoBangumi 正在运行，然后重试。",
+      "retry": "重试"
+    },
     "empty": {
       "title": "暂无订阅",
       "subtitle": "添加你的第一个 RSS 订阅开始使用",
@@ -160,7 +168,9 @@
     "rule": {
       "apply": "应用",
       "delete": "删除",
-      "delete_hit": "是否删除本地文件？",
+      "delete_confirm": "将删除该订阅规则，此操作无法撤销。",
+      "delete_files_label": "同时删除已下载的文件",
+      "cancel_btn": "取消",
       "disable": "禁用",
       "edit": "编辑",
       "edit_rule": "编辑规则",
@@ -171,6 +181,7 @@
       "no_btn": "否",
       "official_title": "官方名称",
       "episode_offset": "集数偏移",
+      "air_weekday": "放送星期",
       "season_offset": "季度偏移",
       "auto_detect": "自动检测",
       "needs_review": "需要检查",
@@ -196,6 +207,7 @@
     "go": "访问",
     "join": "加入",
     "reset": "清空日志",
+    "reset_confirm": "确定清空日志？此操作无法撤销。",
     "title": "日志",
     "update_now": "刷新"
   },
@@ -285,6 +297,7 @@
     "aggregate": "聚合",
     "connected": "已连接",
     "delete": "删除",
+    "delete_confirm": "确定删除所选 RSS 订阅？已有规则和下载不受影响。",
     "disable": "禁用",
     "enable": "启用",
     "error": "错误",
@@ -299,6 +312,7 @@
   },
   "calendar": {
     "subtitle": "本季度放送时间表",
+    "refresh_success": "日历已刷新",
     "days": {
       "mon": "周一",
       "tue": "周二",
@@ -352,7 +366,8 @@
       "password": "密码",
       "confirm_password": "确认密码",
       "password_mismatch": "两次输入的密码不一致",
-      "password_too_short": "密码长度不能少于 8 个字符"
+      "password_too_short": "密码长度不能少于 8 个字符",
+      "username_too_short": "用户名长度不能少于 4 个字符"
     },
     "downloader": {
       "title": "下载客户端",
@@ -360,7 +375,8 @@
       "test": "测试连接",
       "testing": "测试中...",
       "test_success": "连接成功",
-      "test_failed": "连接失败"
+      "test_failed": "连接失败",
+      "untested_hint": "可以先跳过连接测试继续设置，之后在设置页中调整连接信息。"
     },
     "rss": {
       "title": "RSS 订阅源",
@@ -452,6 +468,7 @@
     "subscribe_success": "订阅成功",
     "subscribe_failed": "订阅失败",
     "no_results": "未找到相关结果，试试其他关键词",
+    "failed_hint": "搜索失败，请检查连接后重试。",
     "start_typing": "输入关键词开始搜索",
     "filter": {
       "group": "字幕组",
@@ -466,6 +483,7 @@
     "confirm": {
       "title": "添加订阅",
       "rss": "RSS 源",
+      "copy_rss": "复制 RSS 链接",
       "group": "字幕组",
       "resolution": "分辨率",
       "subtitle": "字幕类型",

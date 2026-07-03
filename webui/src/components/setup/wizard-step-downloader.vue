@@ -39,13 +39,32 @@ function handleNext() {
   setupStore.nextStep();
 }
 
+// A passed test only vouches for the values it ran against — editing any
+// connection field re-arms the untested state.
+watch(
+  () => [
+    downloaderData.value.type,
+    downloaderData.value.host,
+    downloaderData.value.username,
+    downloaderData.value.password,
+    downloaderData.value.ssl,
+  ],
+  () => {
+    validation.value.downloaderTested = false;
+    testSuccess.value = false;
+    testMessage.value = '';
+  }
+);
+
+// Password intentionally not required — qB with bypass_local_auth has none.
 const canTest = computed(() => {
-  return (
-    downloaderData.value.host &&
-    downloaderData.value.username &&
-    downloaderData.value.password
-  );
+  return downloaderData.value.host && downloaderData.value.username;
 });
+
+// The connection test is encouraged but must not be a dead end: a backend
+// that can't reach qB right now (network, container DNS) would otherwise
+// trap the user in the wizard with no way forward.
+const canProceed = computed(() => Boolean(downloaderData.value.host));
 </script>
 
 <template>
@@ -117,6 +136,10 @@ const canTest = computed(() => {
         </p>
       </div>
 
+      <p v-if="!validation.downloaderTested" class="untested-hint">
+        {{ t('setup.downloader.untested_hint') }}
+      </p>
+
       <div class="wizard-actions">
         <NButton
           size="small"
@@ -129,7 +152,7 @@ const canTest = computed(() => {
         <NButton
           type="primary"
           size="small"
-          :disabled="!validation.downloaderTested"
+          :disabled="!canProceed"
           @click="handleNext"
         >
           {{ t('setup.nav.next') }}
@@ -201,6 +224,12 @@ const canTest = computed(() => {
   &.success {
     color: var(--color-success, #43a047);
   }
+}
+
+.untested-hint {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin: 0;
 }
 
 .wizard-actions {
