@@ -47,6 +47,15 @@ def table_exists(table: str) -> AppliedCheck:
     return check
 
 
+def index_exists(table: str, index: str) -> AppliedCheck:
+    def check(inspector) -> bool:
+        if table not in inspector.get_table_names():
+            return False
+        return index in {ix["name"] for ix in inspector.get_indexes(table)}
+
+    return check
+
+
 @dataclass(frozen=True)
 class Migration:
     version: int
@@ -175,6 +184,43 @@ MIGRATIONS: tuple[Migration, ...] = (
         "add episode_type column to bangumi for movie/special support",
         ("ALTER TABLE bangumi ADD COLUMN episode_type TEXT DEFAULT 'episode'",),
         column_exists("bangumi", "episode_type"),
+    ),
+    Migration(
+        13,
+        "backfill indexes on bangumi/rssitem/torrent for pre-existing databases "
+        "(the SQLModel `index=True` markers only create them via "
+        "metadata.create_all on a *fresh* database; upgrading databases never "
+        "got them, leaving check_new/match_torrent-style lookups doing full "
+        "table scans)",
+        (
+            "CREATE INDEX IF NOT EXISTS ix_bangumi_title_raw ON bangumi(title_raw)",
+            "CREATE INDEX IF NOT EXISTS ix_bangumi_deleted ON bangumi(deleted)",
+            "CREATE INDEX IF NOT EXISTS ix_bangumi_archived ON bangumi(archived)",
+            "CREATE INDEX IF NOT EXISTS ix_rssitem_url ON rssitem(url)",
+            "CREATE INDEX IF NOT EXISTS ix_torrent_rss_id ON torrent(rss_id)",
+            "CREATE INDEX IF NOT EXISTS ix_torrent_url ON torrent(url)",
+        ),
+        lambda inspector: all(
+            check(inspector)
+            for check in (
+                index_exists("bangumi", "ix_bangumi_title_raw"),
+                index_exists("bangumi", "ix_bangumi_deleted"),
+                index_exists("bangumi", "ix_bangumi_archived"),
+                index_exists("rssitem", "ix_rssitem_url"),
+                index_exists("torrent", "ix_torrent_rss_id"),
+                index_exists("torrent", "ix_torrent_url"),
+            )
+        ),
+    ),
+    Migration(
+        14,
+        "add index on torrent.bangumi_id (EXPLAIN QUERY PLAN showed "
+        "search_by_bangumi_id/search_downloaded_by_bangumi_ids doing a full "
+        "table scan -- the former runs once per active bangumi on every "
+        "offset-scan tick, the latter on every RSS refresh tick when release "
+        "preferences are configured)",
+        ("CREATE INDEX IF NOT EXISTS ix_torrent_bangumi_id ON torrent(bangumi_id)",),
+        index_exists("torrent", "ix_torrent_bangumi_id"),
     ),
 )
 

@@ -15,7 +15,14 @@ from module.database.migrations import (
 
 def _make_v0_engine():
     """A pre-migration (3.1-era) database: bangumi table without any of the
-    migrated columns, no schema_version table."""
+    migrated columns, no schema_version table.
+
+    title_raw/deleted (bangumi), url (rssitem/torrent), rss_id (torrent) and
+    bangumi_id (torrent) are included even though no migration ever ADDs
+    them: those columns predate the migration system itself (present since
+    the very first schema), unlike the columns below that later migrations
+    introduce.
+    """
     engine = create_engine("sqlite://")
     with engine.begin() as conn:
         conn.execute(
@@ -23,6 +30,8 @@ def _make_v0_engine():
                 "CREATE TABLE bangumi ("
                 "  id INTEGER PRIMARY KEY,"
                 "  official_title TEXT,"
+                "  title_raw TEXT,"
+                "  deleted BOOLEAN DEFAULT 0,"
                 "  offset INTEGER DEFAULT 0"
                 ")"
             )
@@ -36,7 +45,17 @@ def _make_v0_engine():
                 ")"
             )
         )
-        conn.execute(text("CREATE TABLE torrent (id INTEGER PRIMARY KEY, name TEXT)"))
+        conn.execute(
+            text(
+                "CREATE TABLE torrent ("
+                "  id INTEGER PRIMARY KEY,"
+                "  name TEXT,"
+                "  bangumi_id INTEGER,"
+                "  rss_id INTEGER,"
+                "  url TEXT"
+                ")"
+            )
+        )
         conn.execute(
             text(
                 "CREATE TABLE user ("
@@ -79,6 +98,37 @@ class TestRunMigrations:
         assert "weekday_locked" in bangumi_cols
         assert "offset" not in bangumi_cols
         assert "passkey" in inspector.get_table_names()
+
+    def test_backfills_indexes_on_upgrading_database(self):
+        """v13 must create the title_raw/deleted/archived/url/rss_id indexes
+        on a database that predates the SQLModel `index=True` markers --
+        those only apply via metadata.create_all on a *fresh* database, so an
+        upgrading database would otherwise keep doing full table scans on
+        check_new/match_torrent-style lookups forever."""
+        engine = _make_v0_engine()
+        run_migrations(engine)
+
+        inspector = inspect(engine)
+        bangumi_indexes = {ix["name"] for ix in inspector.get_indexes("bangumi")}
+        rssitem_indexes = {ix["name"] for ix in inspector.get_indexes("rssitem")}
+        torrent_indexes = {ix["name"] for ix in inspector.get_indexes("torrent")}
+        assert "ix_bangumi_title_raw" in bangumi_indexes
+        assert "ix_bangumi_deleted" in bangumi_indexes
+        assert "ix_bangumi_archived" in bangumi_indexes
+        assert "ix_rssitem_url" in rssitem_indexes
+        assert "ix_torrent_rss_id" in torrent_indexes
+        assert "ix_torrent_url" in torrent_indexes
+
+    def test_backfills_torrent_bangumi_id_index(self):
+        """v14: search_by_bangumi_id / search_downloaded_by_bangumi_ids
+        (offset scanner, RSS preference dedup) filter on torrent.bangumi_id;
+        EXPLAIN QUERY PLAN showed a full table scan without this index."""
+        engine = _make_v0_engine()
+        run_migrations(engine)
+
+        inspector = inspect(engine)
+        torrent_indexes = {ix["name"] for ix in inspector.get_indexes("torrent")}
+        assert "ix_torrent_bangumi_id" in torrent_indexes
 
     def test_is_idempotent(self):
         engine = _make_v0_engine()

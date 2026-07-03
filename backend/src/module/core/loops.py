@@ -4,6 +4,7 @@
 显式参数注入。异常由 :class:`PeriodicTask` 统一捕获，这里不再包裹顶层 try。
 """
 
+import asyncio
 import logging
 
 from module.conf import settings
@@ -45,9 +46,13 @@ async def rss_tick(analyser: RSSAnalyser, notifier: NotificationManager) -> None
                         )
             # Run RSS Engine
             events = await engine.refresh_rss(client)
-    if settings.notification.enable:
-        for event in events:
-            await notifier.send_event(event)
+    if settings.notification.enable and events:
+        # One provider's exception never blocks another event (send_event
+        # itself gathers across providers); gathering across events too
+        # means a tick with several RSS failures doesn't serialize their
+        # notification latency (#1026 fallout: many feeds can fail in the
+        # same tick when a whole host is unreachable).
+        await asyncio.gather(*[notifier.send_event(e) for e in events])
     if settings.bangumi_manage.eps_complete:
         await eps_complete()
 
@@ -58,8 +63,9 @@ async def rename_tick(notifier: NotificationManager) -> None:
         renamer = Renamer(client)
         renamed_info = await renamer.rename()
     if settings.notification.enable and renamed_info:
-        for info in renamed_info:
-            await notifier.send_all(info)
+        # Gather across renamed items so a batch rename (e.g. first import of
+        # a season) doesn't serialize N notification round-trips.
+        await asyncio.gather(*[notifier.send_all(info) for info in renamed_info])
 
 
 async def offset_scan_tick(notifier: NotificationManager) -> None:
@@ -67,9 +73,8 @@ async def offset_scan_tick(notifier: NotificationManager) -> None:
     scanner = OffsetScanner()
     events = await scanner.scan_all()
     logger.info("[OffsetScanThread] Scan complete, flagged %s bangumi", len(events))
-    if settings.notification.enable:
-        for event in events:
-            await notifier.send_event(event)
+    if settings.notification.enable and events:
+        await asyncio.gather(*[notifier.send_event(e) for e in events])
 
 
 async def calendar_tick() -> None:

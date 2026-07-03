@@ -219,5 +219,12 @@ class RequestURL:
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        # Client is shared; do not close it here
-        self._client = None
+        # Client is shared and torn down independently (shutdown() /
+        # reset_shared_client()), so there is nothing to release here. Do NOT
+        # reset self._client to None: callers that keep one long-lived
+        # RequestContent/provider instance around (e.g. NotificationManager's
+        # providers) may have several overlapping `async with` blocks on the
+        # *same* instance in flight concurrently (see loops.py gathering
+        # notifications), and nulling the pointer on the first one to finish
+        # would break the others mid-request.
+        pass

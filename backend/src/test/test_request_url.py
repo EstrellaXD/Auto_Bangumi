@@ -1,10 +1,15 @@
 """Tests for network request_url: shared client configuration and reset."""
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from module.network.request_url import get_shared_client, reset_shared_client
+from module.network.request_url import (
+    RequestURL,
+    get_shared_client,
+    reset_shared_client,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -77,8 +82,6 @@ class TestRetryWithReset:
         have in-flight requests on that connection pool."""
         import httpx
 
-        from module.network.request_url import RequestURL
-
         call_count = 0
 
         async def mock_get(**kwargs):
@@ -109,3 +112,38 @@ class TestRetryWithReset:
         assert call_count == 2
         assert result is not None
         assert result.status_code == 200
+
+
+class TestReentrantContextManager:
+    """Regression for the notification-dispatch concurrency restore.
+
+    NotificationProvider holds one long-lived RequestContent instance
+    (self._http) reused across ticks. core/loops.py now gathers notification
+    sends concurrently (see rename_tick/rss_tick/offset_scan_tick), which
+    means several overlapping ``async with provider:`` blocks -- and
+    therefore several overlapping ``async with self._http:`` blocks -- can be
+    in flight on the *same* RequestContent instance at once. __aexit__ must
+    not null out self._client, or the first block to finish would break every
+    other block still mid-request on that instance.
+    """
+
+    async def test_overlapping_blocks_on_same_instance_dont_race(self):
+        req = RequestURL()
+        seen_none = False
+
+        async def use_it(delay: float) -> None:
+            nonlocal seen_none
+            async with req:
+                if req._client is None:
+                    seen_none = True
+                await asyncio.sleep(delay)
+                if req._client is None:
+                    seen_none = True
+
+        # The faster block exits while the slower one is still mid-"request";
+        # before the fix this would null self._client out from under it.
+        await asyncio.gather(use_it(0.0), use_it(0.05))
+
+        assert not seen_none
+        # Client stays valid after both blocks exit -- __aexit__ is a no-op.
+        assert req._client is not None

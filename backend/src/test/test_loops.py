@@ -8,9 +8,12 @@ returned events into ``notifier.send_event`` calls, gated by
 ``settings.notification.enable``.
 """
 
+import asyncio
+import time
 from unittest.mock import AsyncMock, patch
 
-from module.core.loops import offset_scan_tick, rss_tick
+from module.core.loops import offset_scan_tick, rename_tick, rss_tick
+from module.models.bangumi import Notification
 from module.notification.events import OffsetReviewEvent, RssFailureEvent
 
 # ---------------------------------------------------------------------------
@@ -123,3 +126,88 @@ class TestRssTick:
             await rss_tick(analyser, notifier)
 
         notifier.send_event.assert_not_awaited()
+
+
+# ---------------------------------------------------------------------------
+# rename_tick
+# ---------------------------------------------------------------------------
+
+
+class TestRenameTick:
+    async def test_sends_notification_per_renamed_item(self):
+        """Every item Renamer.rename() returns is forwarded to the notifier."""
+        notify = Notification(official_title="Test Anime", season=1, episode=1)
+        notifier = AsyncMock()
+
+        mock_renamer = AsyncMock()
+        mock_renamer.rename = AsyncMock(return_value=[notify])
+
+        with (
+            patch(
+                "module.core.loops.DownloadClient",
+                return_value=_async_cm(AsyncMock()),
+            ),
+            patch("module.core.loops.Renamer", return_value=mock_renamer),
+            patch("module.core.loops.settings") as mock_settings,
+        ):
+            mock_settings.notification.enable = True
+            await rename_tick(notifier)
+
+        notifier.send_all.assert_awaited_once_with(notify)
+
+    async def test_no_notification_sent_when_disabled(self):
+        notify = Notification(official_title="Test Anime", season=1, episode=1)
+        notifier = AsyncMock()
+
+        mock_renamer = AsyncMock()
+        mock_renamer.rename = AsyncMock(return_value=[notify])
+
+        with (
+            patch(
+                "module.core.loops.DownloadClient",
+                return_value=_async_cm(AsyncMock()),
+            ),
+            patch("module.core.loops.Renamer", return_value=mock_renamer),
+            patch("module.core.loops.settings") as mock_settings,
+        ):
+            mock_settings.notification.enable = False
+            await rename_tick(notifier)
+
+        notifier.send_all.assert_not_awaited()
+
+    async def test_dispatches_multiple_renamed_items_concurrently(self):
+        """Regression: a batch rename (several episodes in one tick) must
+        fan out notifications concurrently, not serialize one item's full
+        round-trip after another (restores the cba4988 concurrent-dispatch
+        optimization lost in the 3.3 core rewrite)."""
+        notifications = [
+            Notification(official_title=f"Anime {i}", season=1, episode=i)
+            for i in range(5)
+        ]
+        notifier = AsyncMock()
+
+        async def slow_send_all(_notify):
+            await asyncio.sleep(0.05)
+
+        notifier.send_all = AsyncMock(side_effect=slow_send_all)
+
+        mock_renamer = AsyncMock()
+        mock_renamer.rename = AsyncMock(return_value=notifications)
+
+        with (
+            patch(
+                "module.core.loops.DownloadClient",
+                return_value=_async_cm(AsyncMock()),
+            ),
+            patch("module.core.loops.Renamer", return_value=mock_renamer),
+            patch("module.core.loops.settings") as mock_settings,
+        ):
+            mock_settings.notification.enable = True
+            start = time.perf_counter()
+            await rename_tick(notifier)
+            elapsed = time.perf_counter() - start
+
+        assert notifier.send_all.await_count == 5
+        # Serial would take ~0.25s (5 x 0.05s); concurrent should stay well
+        # under 2x a single call's latency.
+        assert elapsed < 0.15

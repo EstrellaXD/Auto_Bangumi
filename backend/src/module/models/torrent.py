@@ -6,7 +6,9 @@ from sqlmodel import Field, SQLModel
 
 class Torrent(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True, alias="id")
-    bangumi_id: Optional[int] = Field(None, alias="refer_id", foreign_key="bangumi.id")
+    bangumi_id: Optional[int] = Field(
+        None, alias="refer_id", foreign_key="bangumi.id", index=True
+    )
     rss_id: Optional[int] = Field(
         None, alias="rss_id", foreign_key="rssitem.id", index=True
     )

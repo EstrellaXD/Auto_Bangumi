@@ -5,6 +5,11 @@ from pathlib import PurePath
 
 from module.conf import settings
 from module.database import Database
+from module.database.bangumi import (
+    build_save_path_index,
+    match_bangumi_in_list,
+    normalize_save_path,
+)
 from module.downloader import DownloadClient
 from module.downloader.path import check_files, is_ep, path_to_bangumi
 from module.models import EpisodeFile, Notification, SubtitleFile
@@ -370,11 +375,11 @@ class Renamer:
                         b.id: b for b in bangumi_records if b and not b.deleted
                     }
 
-                # Now resolve offsets for each torrent
+                # Resolve via qb_hash/tag first (both already batched above,
+                # O(1) queries regardless of torrent count).
+                unresolved: list[dict] = []
                 for info in torrents_info:
                     torrent_hash = info["hash"]
-                    torrent_name = info["name"]
-                    save_path = info["save_path"]
 
                     # 1. Try by qb_hash
                     bangumi_id = hash_to_bangumi_id.get(torrent_hash)
@@ -398,33 +403,41 @@ class Renamer:
                         )
                         continue
 
-                    # 3. Try by torrent name (individual query, but less common path)
-                    bangumi = await db.bangumi.match_torrent(torrent_name)
-                    if bangumi:
-                        result[torrent_hash] = (
-                            bangumi.episode_offset,
-                            bangumi.season_offset,
-                            bangumi.episode_type,
-                        )
-                        continue
+                    unresolved.append(info)
 
-                    # 4. Try by save_path (individual query, fallback)
-                    normalized_save_path = self._normalize_path(save_path)
-                    bangumi = await db.bangumi.match_by_save_path(save_path)
-                    if not bangumi:
-                        bangumi = await db.bangumi.match_by_save_path(
-                            normalized_save_path
-                        )
-                    if bangumi:
-                        result[torrent_hash] = (
-                            bangumi.episode_offset,
-                            bangumi.season_offset,
-                            bangumi.episode_type,
-                        )
-                        continue
+                # 3./4. Fall back to name/save_path matching for whatever is
+                # left. Load the full bangumi list once (same idiom as
+                # RSSEngine.refresh_rss / auto_tag_torrents) and match every
+                # remaining torrent in memory, instead of running up to 3
+                # queries per torrent (match_torrent()'s own search_all() +
+                # up to 2 match_by_save_path() calls).
+                if unresolved:
+                    bangumi_list = await db.bangumi.search_all()
+                    save_path_index = build_save_path_index(bangumi_list)
+                    for info in unresolved:
+                        torrent_hash = info["hash"]
+                        torrent_name = info["name"]
+                        save_path = info["save_path"]
 
-                    # Default: no offset
-                    result[torrent_hash] = (0, 0, "episode")
+                        bangumi = match_bangumi_in_list(torrent_name, bangumi_list)
+                        if not bangumi:
+                            # normalize_save_path() already folds "\\" -> "/"
+                            # and strips trailing slashes, so a single lookup
+                            # covers every variation match_by_save_path() used
+                            # to try separately.
+                            bangumi = save_path_index.get(
+                                normalize_save_path(save_path)
+                            )
+
+                        if bangumi:
+                            result[torrent_hash] = (
+                                bangumi.episode_offset,
+                                bangumi.season_offset,
+                                bangumi.episode_type,
+                            )
+                        else:
+                            # Default: no offset
+                            result[torrent_hash] = (0, 0, "episode")
 
         except Exception as e:
             missing = [

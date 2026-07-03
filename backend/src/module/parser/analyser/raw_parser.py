@@ -20,6 +20,29 @@ FALLBACK_EP_PATTERNS = [
 
 PREFIX_RE = re.compile(r"[^\w\s\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff-]")
 
+# 以下均为静态正则：预编译成模块级 Pattern 对象，避免 process() 内层每次调用都
+# 走 re.xxx(pattern_string, ...) 的内部编译缓存查找（profile 显示这部分开销占
+# raw_parser 单次调用总耗时的 ~20%，见 2026-07 性能优化）。语义与原来的
+# re.search/sub/split/match/findall(r"...", ...) 完全一致。
+_BRACKET_CLEAR_RE = re.compile(r"[\[\]]")
+_XINFAN_RE = re.compile(r"新番|月?番")
+_HK_MO_TW_RE = re.compile(r"港澳台地区")
+SEASON_RULE_RE = re.compile(r"S\d{1,2}|Season \d{1,2}|[第].[季期]")
+_SEASON_WORD_RE = re.compile(r"Season|S")
+_SEASON_CN_RE = re.compile(r"[第 ].*[季期(部分)]|部分")
+_SEASON_CN_STRIP_RE = re.compile(r"[第季期 ]")
+_HK_MO_TW_BRACKET_RE = re.compile(r"[(（]仅限港澳台地区[）)]")
+_NAME_SPLIT_RE = re.compile(r"/|\s{2}|-\s{2}")
+_UNDERSCORE_RE = re.compile(r"_{1}")
+_DASH_SPACE_RE = re.compile(r" - {1}")
+_DIGIT_CN_RE = re.compile(r"\d+\s[一-龥]")
+_CN_PREFIX_RE = re.compile(r"^[一-龥]{2,}")
+_JP_RE = re.compile(r"[ࠀ-一]{2,}")
+_CN_RE = re.compile(r"[一-龥]{2,}")
+_EN_RE = re.compile(r"[a-zA-Z]{3,}")
+_TAG_BRACKET_RE = re.compile(r"[\[\]()（）]")
+_SUFFIX_STRIP_RE = re.compile(r"_MP4|_MKV")
+
 # movie token: hits route the title to episode_type="movie" (no episode number required)
 MOVIE_TOKEN_RE = re.compile(r"剧场版|劇場版|电影版|[Mm]ovie")
 # OVA / OAD / SP / Special token: hits route the title to episode_type="special",
@@ -102,7 +125,7 @@ CHINESE_NUMBER_MAP = {
 
 
 def get_group(name: str) -> str:
-    parts = re.split(r"[\[\]]", name)
+    parts = _BRACKET_CLEAR_RE.split(name)
     if len(parts) > 1:
         return parts[1]
     return ""
@@ -125,9 +148,9 @@ def prefix_process(raw: str, group: str) -> str:
     if len(arg_group) == 1:
         arg_group = arg_group[0].split(" ")
     for arg in arg_group:
-        if re.search(r"新番|月?番", arg) and len(arg) <= 5:
+        if _XINFAN_RE.search(arg) and len(arg) <= 5:
             raw = re.sub(f".{re.escape(arg)}.", "", raw)
-        elif re.search(r"港澳台地区", arg):
+        elif _HK_MO_TW_RE.search(arg):
             raw = re.sub(f".{re.escape(arg)}.", "", raw)
     return raw
 
@@ -138,19 +161,18 @@ def season_process(season_info: str):
     #     name_season = re.sub(".*新番.", "", season_info)
     #     # 去除「新番」信息
     # name_season = re.sub(r"^[^]】]*[]】]", "", name_season).strip()
-    season_rule = r"S\d{1,2}|Season \d{1,2}|[第].[季期]"
-    name_season = re.sub(r"[\[\]]", " ", name_season)
-    seasons = re.findall(season_rule, name_season)
+    name_season = _BRACKET_CLEAR_RE.sub(" ", name_season)
+    seasons = SEASON_RULE_RE.findall(name_season)
     if not seasons:
         return name_season, "", 1
-    name = re.sub(season_rule, "", name_season)
+    name = SEASON_RULE_RE.sub("", name_season)
     for season in seasons:
         season_raw = season
-        if re.search(r"Season|S", season) is not None:
-            season = int(re.sub(r"Season|S", "", season))
+        if _SEASON_WORD_RE.search(season) is not None:
+            season = int(_SEASON_WORD_RE.sub("", season))
             break
-        elif re.search(r"[第 ].*[季期(部分)]|部分", season) is not None:
-            season_pro = re.sub(r"[第季期 ]", "", season)
+        elif _SEASON_CN_RE.search(season) is not None:
+            season_pro = _SEASON_CN_STRIP_RE.sub("", season)
             try:
                 season = int(season_pro)
             except ValueError:
@@ -162,39 +184,39 @@ def season_process(season_info: str):
 def name_process(name: str):
     name_en, name_zh, name_jp = None, None, None
     name = name.strip()
-    name = re.sub(r"[(（]仅限港澳台地区[）)]", "", name)
-    split = re.split(r"/|\s{2}|-\s{2}", name)
+    name = _HK_MO_TW_BRACKET_RE.sub("", name)
+    split = _NAME_SPLIT_RE.split(name)
     while "" in split:
         split.remove("")
     if len(split) == 1:
-        if re.search("_{1}", name) is not None:
-            split = re.split("_", name)
-        elif re.search(" - {1}", name) is not None:
-            split = re.split("-", name)
+        if _UNDERSCORE_RE.search(name) is not None:
+            split = name.split("_")
+        elif _DASH_SPACE_RE.search(name) is not None:
+            split = name.split("-")
     if len(split) == 1:
         # Titles like "29 岁单身..." — digits + Chinese are one title
-        if re.match(r"\d+\s[\u4e00-\u9fa5]", split[0]):
+        if _DIGIT_CN_RE.match(split[0]):
             name_zh = split[0].strip()
             return name_en, name_zh, name_jp
         split_space = split[0].split(" ")
         for idx in [0, -1]:
-            if re.search(r"^[\u4e00-\u9fa5]{2,}", split_space[idx]) is not None:
+            if _CN_PREFIX_RE.search(split_space[idx]) is not None:
                 chs = split_space[idx]
                 split_space.remove(chs)
                 split = [chs, " ".join(split_space)]
                 break
     for item in split:
-        if re.search(r"[\u0800-\u4e00]{2,}", item) and not name_jp:
+        if _JP_RE.search(item) and not name_jp:
             name_jp = item.strip()
-        elif re.search(r"[\u4e00-\u9fa5]{2,}", item) and not name_zh:
+        elif _CN_RE.search(item) and not name_zh:
             name_zh = item.strip()
-        elif re.search(r"[a-zA-Z]{3,}", item) and not name_en:
+        elif _EN_RE.search(item) and not name_en:
             name_en = item.strip()
     return name_en, name_zh, name_jp
 
 
 def find_tags(other):
-    elements = re.sub(r"[\[\]()（）]", " ", other).split(" ")
+    elements = _TAG_BRACKET_RE.sub(" ", other).split(" ")
     # find CHT
     sub, resolution, source = None, None, None
     for element in filter(lambda x: x != "", elements):
@@ -210,7 +232,7 @@ def find_tags(other):
 def clean_sub(sub: str | None) -> str | None:
     if sub is None:
         return sub
-    return re.sub(r"_MP4|_MKV", "", sub)
+    return _SUFFIX_STRIP_RE.sub("", sub)
 
 
 def process(raw_title: str):
