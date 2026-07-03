@@ -43,6 +43,15 @@ DEFAULT_SETTINGS: dict[str, dict[str, Any]] = {
         "password": "",
     },
     "notification": {"enable": False, "providers": [], "base_url": ""},
+    "llm": {
+        "enable": False,
+        "provider": "openai",
+        "api_key": "",
+        "model": "gpt-4o-mini",
+        "base_url": "",
+        "mode": "fallback",
+    },
+    # [Deprecated] 旧版 OpenAI 解析配置，仅保留向后兼容
     "experimental_openai": {
         "enable": False,
         "api_key": "",

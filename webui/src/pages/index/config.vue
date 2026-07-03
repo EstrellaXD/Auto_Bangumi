@@ -49,7 +49,7 @@ onActivated(() => {
         <config-proxy></config-proxy>
         <config-search-provider></config-search-provider>
         <config-player></config-player>
-        <config-openai></config-openai>
+        <config-llm></config-llm>
         <config-passkey></config-passkey>
         <config-security></config-security>
       </div>

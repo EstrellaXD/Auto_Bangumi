@@ -79,6 +79,27 @@ class Settings(Config):
         if "security" not in config:
             config["security"] = DEFAULT_SETTINGS["security"]
 
+        # 旧版 experimental_openai 配置自动迁移到 llm 段（幂等：
+        # llm 段已有有效内容时不再触碰，旧段保留以便降级回滚）
+        openai_conf = config.get("experimental_openai", {})
+        llm_conf = config.get("llm") or {}
+        llm_configured = llm_conf.get("enable") or llm_conf.get("api_key")
+        openai_configured = openai_conf.get("enable") or openai_conf.get("api_key")
+        if not llm_configured and openai_configured:
+            base_url = openai_conf.get("base_url", openai_conf.get("api_base", ""))
+            # 官方地址无需显式指定，空串即官方 API
+            if base_url in ("https://api.openai.com/v1", "https://api.openai.com/"):
+                base_url = ""
+            config["llm"] = {
+                "enable": openai_conf.get("enable", False),
+                "provider": "openai",
+                "api_key": openai_conf.get("api_key", ""),
+                "model": openai_conf.get("model", "gpt-4o-mini"),
+                "base_url": base_url,
+                # 旧版语义是 LLM 优先解析，迁移用户保持原有行为
+                "mode": "primary",
+            }
+
         return config
 
     def save(self, config_dict: dict | None = None):

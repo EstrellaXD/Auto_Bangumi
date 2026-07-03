@@ -84,6 +84,8 @@ def mock_settings():
     settings.proxy.enable = False
     settings.notification = MagicMock()
     settings.notification.enable = False
+    settings.llm = MagicMock()
+    settings.llm.enable = False
     settings.experimental_openai = MagicMock()
     settings.experimental_openai.enable = False
     settings.save = MagicMock()
@@ -381,7 +383,9 @@ class TestSanitizeDict:
         data = response.json()
         # Downloader password should be masked
         assert data["downloader"]["password"] == "********"
-        # OpenAI api_key should be masked (it's an empty string but still masked)
+        # LLM api_key should be masked (it's an empty string but still masked)
+        assert data["llm"]["api_key"] == "********"
+        # Legacy OpenAI api_key should be masked too
         assert data["experimental_openai"]["api_key"] == "********"
 
 
@@ -471,17 +475,17 @@ class TestRestoreMasked:
         """Full round-trip: sanitize then restore recovers original values."""
         original = {
             "downloader": {"host": "10.0.0.1", "password": "secret123"},
-            "experimental_openai": {"api_key": "sk-abc", "model": "gpt-4"},
+            "llm": {"api_key": "sk-abc", "model": "gpt-4o-mini"},
         }
         sanitized = _sanitize_dict(original)
         assert sanitized["downloader"]["password"] == "********"
-        assert sanitized["experimental_openai"]["api_key"] == "********"
+        assert sanitized["llm"]["api_key"] == "********"
 
         _restore_masked(sanitized, original)
         assert sanitized["downloader"]["password"] == "secret123"
-        assert sanitized["experimental_openai"]["api_key"] == "sk-abc"
+        assert sanitized["llm"]["api_key"] == "sk-abc"
         assert sanitized["downloader"]["host"] == "10.0.0.1"
-        assert sanitized["experimental_openai"]["model"] == "gpt-4"
+        assert sanitized["llm"]["model"] == "gpt-4o-mini"
 
     def test_update_config_preserves_password_when_masked(
         self, authed_client, mock_settings

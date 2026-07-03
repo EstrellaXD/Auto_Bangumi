@@ -250,6 +250,7 @@ class TestE2EWorkflow:
             "log",
             "proxy",
             "notification",
+            "llm",
             "experimental_openai",
         ):
             assert section in config, f"Missing config section: {section}"
@@ -454,9 +455,7 @@ class TestE2EWorkflow:
 
     def test_52_downloader_pause_empty(self, api_client):
         """Pausing with empty hash list should succeed (no-op)."""
-        resp = api_client.post(
-            "/api/v1/downloader/torrents/pause", json={"hashes": []}
-        )
+        resp = api_client.post("/api/v1/downloader/torrents/pause", json={"hashes": []})
         assert resp.status_code == 200
 
     def test_53_downloader_resume_empty(self, api_client):

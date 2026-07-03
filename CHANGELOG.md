@@ -1,5 +1,17 @@
 # [Unreleased]
 
+## Backend
+
+### Added
+
+- LLM 解析器支持多提供商（OpenAI 兼容端点/Anthropic Claude/Google Gemini）：`experimental_openai` 配置自动迁移到新的 `llm` 段（迁移用户默认 `mode=primary`，保持原有 LLM 优先语义）；新增 `mode` 解析模式开关——`fallback`（默认，正则优先，LLM 仅兜底）与 `primary`（LLM 优先，失败时正则兜底，不丢标题）；openai 提供商经 `base_url` 兼容 DeepSeek/Ollama/LM Studio/OpenRouter 等任意 OpenAI 格式端点
+
+## Frontend
+
+### Changed
+
+- 设置页 OpenAI 面板替换为 LLM 解析器面板：支持选择提供商（openai/anthropic/gemini）与解析模式，`base_url` 仅在 openai 提供商下显示
+
 # [3.3.0-beta.1] - 2026-07-03
 
 ## Backend

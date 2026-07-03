@@ -18,7 +18,7 @@ from module.network.request_url import reset_shared_client
 from module.notification import NotificationManager
 from module.parser.analyser.mikan_parser import reset_cache as reset_mikan_cache
 from module.parser.analyser.tmdb_parser import reset_cache as reset_tmdb_cache
-from module.parser.title_parser import reset_cache as reset_openai_parser
+from module.parser.title_parser import reset_cache as reset_llm_parser
 from module.rss import RSSAnalyser
 from module.searcher.searcher import reset_cache as reset_poster_cache
 from module.update import (
@@ -349,13 +349,13 @@ class AppContext:
         # settings.load() does synchronous file I/O; keep it off the event loop.
         await asyncio.to_thread(settings.load)
         await reset_shared_client()
-        # Endpoint-keyed caches (TMDB/Mikan/poster lookups, the OpenAI parser
+        # Endpoint-keyed caches (TMDB/Mikan/poster lookups, the LLM parser
         # singleton) must be dropped too, or a changed tmdb_base_url/bgm_base_url
         # keeps serving results cached from the old endpoint.
         reset_tmdb_cache()
         reset_mikan_cache()
         reset_poster_cache()
-        reset_openai_parser()
+        reset_llm_parser()
         self.notifier.rebuild()
         if self.scheduler.running:
             await self.scheduler.stop_all()

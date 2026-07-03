@@ -3,8 +3,9 @@ import logging
 from module.conf import settings
 from module.models import Bangumi
 from module.models.bangumi import Episode
+from module.models.config import LLM
 from module.parser.analyser import (
-    OpenAIParser,
+    LLMParser,
     mikan_parser,
     raw_parser,
     tmdb_parser,
@@ -13,26 +14,67 @@ from module.parser.analyser import (
 
 logger = logging.getLogger(__name__)
 
-# Lazy singleton: building an OpenAIParser (and its AsyncOpenAI client) is not
+# Lazy singleton: building an LLMParser (and its underlying SDK client) is not
 # free, so keep one around and only rebuild it when the relevant settings change.
-_openai_parser: OpenAIParser | None = None
-_openai_parser_kwargs: dict | None = None
+# mode 不影响客户端构建（调用时读取），不参与缓存键。
+_llm_parser: LLMParser | None = None
+_llm_parser_kwargs: dict | None = None
 
 
-def _get_openai_parser(kwargs: dict) -> OpenAIParser:
-    global _openai_parser, _openai_parser_kwargs
-    if _openai_parser is None or _openai_parser_kwargs != kwargs:
-        _openai_parser = OpenAIParser(**kwargs)
-        _openai_parser_kwargs = kwargs
-    return _openai_parser
+def _get_llm_parser(kwargs: dict) -> LLMParser:
+    global _llm_parser, _llm_parser_kwargs
+    if _llm_parser is None or _llm_parser_kwargs != kwargs:
+        _llm_parser = LLMParser(**kwargs)
+        _llm_parser_kwargs = kwargs
+    return _llm_parser
 
 
 def reset_cache() -> None:
-    """清空 OpenAI 解析器单例。配置重载后必须调用，否则会继续使用旧配置
-    （如 api_base/api_key）构建的客户端。"""
-    global _openai_parser, _openai_parser_kwargs
-    _openai_parser = None
-    _openai_parser_kwargs = None
+    """清空 LLM 解析器单例。配置重载后必须调用，否则会继续使用旧配置
+    （如 provider/base_url/api_key）构建的客户端。"""
+    global _llm_parser, _llm_parser_kwargs
+    _llm_parser = None
+    _llm_parser_kwargs = None
+
+
+def _llm_config() -> LLM:
+    """读取 LLM 配置段；llm 段缺失时回退读取旧的 experimental_openai
+    （与 conf/config.py 的自动迁移互为保险）。"""
+    llm = getattr(settings, "llm", None)
+    if llm is not None:
+        return llm
+    legacy = settings.experimental_openai
+    return LLM(
+        enable=legacy.enable,
+        provider="openai",
+        api_key=legacy.api_key,
+        model=legacy.model,
+        base_url=legacy.api_base,
+        # 旧配置的语义是 LLM 优先
+        mode="primary",
+    )
+
+
+async def _llm_parse(raw: str) -> Episode | None:
+    """用 LLM 解析标题，返回 Episode；任何失败（API 错误、拒答、
+    输出不可用）都返回 None，由调用方决定是否回退。"""
+    conf = _llm_config()
+    try:
+        llm = _get_llm_parser(
+            {
+                "provider": conf.provider,
+                "api_key": conf.api_key,
+                "model": conf.model,
+                "base_url": conf.base_url,
+            }
+        )
+        episode_dict = await llm.parse(raw, asdict=True)
+        if not isinstance(episode_dict, dict):
+            return None
+        return Episode(**episode_dict)
+    except Exception as e:
+        logger.warning(f"LLM cannot parse '{raw}': {type(e).__name__}: {e}")
+        return None
 
 
 class TitleParser:
@@ -86,18 +128,18 @@ class TitleParser:
     async def raw_parser(raw: str) -> Bangumi | None:
         language = settings.rss_parser.language
         try:
-            # 优先使用正则解析；仅当正则解析失败且启用了 OpenAI 时，才用 OpenAI 兜底解析
-            episode = raw_parser(raw)
+            llm_conf = _llm_config()
+            episode = None
+            # primary 模式：LLM 优先解析每个标题；失败时用正则兜底，保证不丢标题
+            if llm_conf.enable and llm_conf.mode == "primary":
+                episode = await _llm_parse(raw)
             if episode is None:
-                if not settings.experimental_openai.enable:
-                    return None
-                kwargs = settings.experimental_openai.dict(exclude={"enable"})
-                gpt = _get_openai_parser(kwargs)
-                episode_dict = await gpt.parse(raw, asdict=True)
-                # asdict=True normally guarantees a dict; the `str` fallback
-                # case (JSON parse failure) intentionally raises TypeError
-                # here, caught by the except clause below.
-                episode = Episode(**episode_dict)  # type: ignore[arg-type]
+                episode = raw_parser(raw)
+            # fallback 模式（默认）：正则优先，仅当正则失败时才请求 LLM 兜底
+            if episode is None and llm_conf.enable and llm_conf.mode == "fallback":
+                episode = await _llm_parse(raw)
+            if episode is None:
+                return None
 
             titles = {
                 "zh": episode.title_zh,

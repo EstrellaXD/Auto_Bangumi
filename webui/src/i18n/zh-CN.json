@@ -11,16 +11,17 @@
       "type": "下载器类型",
       "username": "用户名"
     },
-    "experimental_openai_set": {
-      "api_base": "API 地址",
+    "llm_set": {
       "api_key": "API 密钥",
-      "api_type": "服务商",
-      "api_version": "API 版本",
-      "deployment_id": "部署 ID",
+      "base_url": "API 地址",
       "enable": "启用 LLM 解析",
+      "hint": "openai 服务商兼容任意 OpenAI 格式端点（DeepSeek、Ollama、LM Studio、OpenRouter 等）；claude-haiku-4-5 与 gemini-2.5-flash 是较为经济的选择。",
+      "mode": "解析模式",
+      "mode_fallback": "回退（正则优先）",
+      "mode_primary": "优先（LLM 优先）",
       "model": "模型",
-      "title": "LLM 设置",
-      "warning": "实验功能：基于 LLM 的番剧标题解析可能产生不准确的结果。"
+      "provider": "服务商",
+      "title": "LLM 解析器"
     },
     "manage_set": {
       "delete_bad_torrent": "删除坏种",

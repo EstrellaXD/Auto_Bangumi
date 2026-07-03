@@ -153,6 +153,14 @@ export const mockConfig = {
     token: '',
     chat_id: '',
   },
+  llm: {
+    enable: false,
+    provider: 'openai',
+    api_key: '',
+    model: 'gpt-4o-mini',
+    base_url: '',
+    mode: 'fallback',
+  },
   experimental_openai: {
     enable: false,
     api_key: '',

@@ -176,6 +176,88 @@ class TestMigrateOldConfig:
         assert "sleep_time" not in result["program"]
 
 
+class TestMigrateOpenAIToLLM:
+    """experimental_openai → llm 自动迁移（provider=openai，mode=primary）。"""
+
+    def test_old_openai_config_populates_llm_section(self):
+        """旧配置有 enable/api_key 且无 llm 段时，迁移到 llm 段。"""
+        old_config = {
+            "program": {},
+            "rss_parser": {},
+            "experimental_openai": {
+                "enable": True,
+                "api_key": "sk-old",
+                "api_base": "https://api.deepseek.com/v1",
+                "model": "deepseek-chat",
+            },
+        }
+        result = Settings._migrate_old_config(old_config)
+        assert result["llm"] == {
+            "enable": True,
+            "provider": "openai",
+            "api_key": "sk-old",
+            "model": "deepseek-chat",
+            "base_url": "https://api.deepseek.com/v1",
+            # 旧版语义是 LLM 优先解析
+            "mode": "primary",
+        }
+        # 旧段保留，便于降级回滚
+        assert result["experimental_openai"]["api_key"] == "sk-old"
+
+    def test_official_api_base_migrates_to_empty_base_url(self):
+        """官方 API 地址迁移为空串（空串即官方 API）。"""
+        old_config = {
+            "program": {},
+            "rss_parser": {},
+            "experimental_openai": {
+                "enable": True,
+                "api_key": "sk-old",
+                "api_base": "https://api.openai.com/v1",
+            },
+        }
+        result = Settings._migrate_old_config(old_config)
+        assert result["llm"]["base_url"] == ""
+
+    def test_already_migrated_config_untouched(self):
+        """llm 段已有有效内容时不再迁移（幂等）。"""
+        migrated = {
+            "program": {},
+            "rss_parser": {},
+            "experimental_openai": {"enable": True, "api_key": "sk-old"},
+            "llm": {
+                "enable": False,
+                "provider": "gemini",
+                "api_key": "AIza-new",
+                "model": "gemini-2.5-flash",
+                "base_url": "",
+                "mode": "fallback",
+            },
+        }
+        result = Settings._migrate_old_config(json.loads(json.dumps(migrated)))
+        assert result["llm"] == migrated["llm"]
+
+    def test_unconfigured_openai_section_not_migrated(self):
+        """旧段未启用且无 api_key 时，不注入 llm 段（用默认值即可）。"""
+        config = {
+            "program": {},
+            "rss_parser": {},
+            "experimental_openai": {"enable": False, "api_key": ""},
+        }
+        result = Settings._migrate_old_config(config)
+        assert "llm" not in result
+
+    def test_migrated_defaults_fill_model(self):
+        """旧段缺 model 时迁移用默认模型。"""
+        config = {
+            "program": {},
+            "rss_parser": {},
+            "experimental_openai": {"enable": True, "api_key": "sk-old"},
+        }
+        result = Settings._migrate_old_config(config)
+        assert result["llm"]["model"] == "gpt-4o-mini"
+        assert result["llm"]["mode"] == "primary"
+
+
 # ---------------------------------------------------------------------------
 # Settings.load from file
 # ---------------------------------------------------------------------------
@@ -212,6 +294,30 @@ class TestSettingsLoad:
             data = json.load(f)
         assert "program" in data
         assert "downloader" in data
+        # 新配置文件包含 llm 段（旧 experimental_openai 段同样保留）
+        assert "llm" in data
+
+    def test_load_old_openai_config_migrates_to_llm(self, tmp_path):
+        """加载含旧 experimental_openai 的文件后，llm 段生效且为 primary 模式。"""
+        config_data = Config().dict()
+        del config_data["llm"]
+        config_data["experimental_openai"].update(
+            {"enable": True, "api_key": "sk-old", "model": "gpt-4o"}
+        )
+        config_file = tmp_path / "config.json"
+        with open(config_file, "w") as f:
+            json.dump(config_data, f)
+
+        with patch("module.conf.config.CONFIG_PATH", config_file):
+            s = Settings.__new__(Settings)
+            Config.__init__(s)
+            s.load()
+
+        assert s.llm.enable is True
+        assert s.llm.provider == "openai"
+        assert s.llm.api_key == "sk-old"
+        assert s.llm.model == "gpt-4o"
+        assert s.llm.mode == "primary"
 
 
 # ---------------------------------------------------------------------------

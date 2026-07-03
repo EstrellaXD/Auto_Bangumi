@@ -19,6 +19,10 @@ export type NotificationType = [
   'pushover',
   'webhook',
 ];
+/** LLM 提供商（openai 表示任意 OpenAI 兼容端点） */
+export type LLMProvider = ['openai', 'anthropic', 'gemini'];
+/** LLM 解析模式（fallback：正则优先；primary：LLM 优先） */
+export type LLMParseMode = ['fallback', 'primary'];
 /** OpenAI Model List */
 export type OpenAIModel = ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'];
 /** OpenAI API Type */
@@ -86,6 +90,17 @@ export interface Notification {
   token?: string;
   chat_id?: string;
 }
+export interface LLM {
+  enable: boolean;
+  provider: TupleToUnion<LLMProvider>;
+  api_key: string;
+  model: string;
+  /** 自定义端点，仅 openai 提供商使用；空串表示官方 API */
+  base_url: string;
+  mode: TupleToUnion<LLMParseMode>;
+}
+
+/** @deprecated 旧版 OpenAI 解析配置，已被 LLM 段取代（保留向后兼容） */
 export interface ExperimentalOpenAI {
   enable: boolean;
   api_key: string;
@@ -116,6 +131,8 @@ export interface Config {
   log: Log;
   proxy: Proxy;
   notification: Notification;
+  llm: LLM;
+  /** @deprecated 已被 llm 段取代 */
   experimental_openai: ExperimentalOpenAI;
   security: Security;
 }
@@ -160,6 +177,14 @@ export const initConfig: Config = {
   notification: {
     enable: false,
     providers: [],
+  },
+  llm: {
+    enable: false,
+    provider: 'openai',
+    api_key: '',
+    model: 'gpt-4o-mini',
+    base_url: '',
+    mode: 'fallback',
   },
   experimental_openai: {
     enable: false,

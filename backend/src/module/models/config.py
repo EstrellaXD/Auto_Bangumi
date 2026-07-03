@@ -232,6 +232,37 @@ class Notification(BaseModel):
         return self
 
 
+class LLM(BaseModel):
+    """LLM 标题解析配置，支持多提供商。
+
+    ``provider="openai"`` 表示任意 OpenAI 兼容端点（DeepSeek/Ollama/
+    LM Studio/OpenRouter/OneAPI 等均可通过 ``base_url`` 接入）。
+    """
+
+    enable: bool = Field(default=False, description="Enable LLM parser")
+    provider: Literal["openai", "anthropic", "gemini"] = Field(
+        default="openai", description="LLM provider"
+    )
+    api_key: str = Field(default="", description="LLM api key")
+    model: str = Field(default="gpt-4o-mini", description="LLM model name")
+    base_url: str = Field(
+        default="",
+        description=(
+            "Custom base URL, only used by the openai provider. "
+            "Empty = official API."
+        ),
+    )
+    mode: Literal["fallback", "primary"] = Field(
+        default="fallback",
+        description=(
+            "fallback: regex first, LLM only when regex fails; "
+            "primary: LLM first, regex as safety net"
+        ),
+    )
+
+
+# [Deprecated] 旧版 OpenAI 解析配置，仅保留用于读取旧配置文件（向后兼容）。
+# 新配置请使用上方的 LLM 段；加载时会自动迁移（见 conf/config.py）。
 class ExperimentalOpenAI(BaseModel):
     enable: bool = Field(default=False, description="Enable experimental OpenAI")
     api_key: str = Field(default="", description="OpenAI api key")
@@ -312,6 +343,8 @@ class Config(BaseModel):
     network: Network = Network()
     proxy: Proxy = Proxy()
     notification: Notification = Notification()
+    llm: LLM = LLM()
+    # [Deprecated] 仅用于读取旧配置，运行时逻辑请读 llm 段
     experimental_openai: ExperimentalOpenAI = ExperimentalOpenAI()
     security: Security = Security()
 

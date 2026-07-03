@@ -11,16 +11,17 @@
       "type": "Downloader Type",
       "username": "Username"
     },
-    "experimental_openai_set": {
-      "api_base": "API Base URL",
+    "llm_set": {
       "api_key": "API Key",
-      "api_type": "Provider",
-      "api_version": "API Version",
-      "deployment_id": "Deployment ID",
+      "base_url": "Base URL",
       "enable": "Enable LLM Parsing",
+      "hint": "The openai provider works with any OpenAI-compatible endpoint (DeepSeek, Ollama, LM Studio, OpenRouter, etc.). claude-haiku-4-5 and gemini-2.5-flash are economical choices.",
+      "mode": "Parse Mode",
+      "mode_fallback": "Fallback (regex first)",
+      "mode_primary": "Primary (LLM first)",
       "model": "Model",
-      "title": "LLM Settings",
-      "warning": "Experimental: LLM-based anime title parsing may produce inaccurate results."
+      "provider": "Provider",
+      "title": "LLM Parser"
     },
     "manage_set": {
       "delete_bad_torrent": "Delete Bad Torrent",
