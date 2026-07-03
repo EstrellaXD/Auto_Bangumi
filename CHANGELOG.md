@@ -1,5 +1,7 @@
 # [Unreleased]
 
+# [3.3.0-beta.1] - 2026-07-03
+
 ## Backend
 
 ### Added
