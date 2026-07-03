@@ -93,9 +93,7 @@ async def db_engine():
 @pytest_asyncio.fixture
 async def db_session(db_engine):
     """Provide a fresh async database session per test."""
-    factory = async_sessionmaker(
-        db_engine, class_=AsyncSession, expire_on_commit=False
-    )
+    factory = async_sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False)
     async with factory() as session:
         yield session
 
@@ -127,6 +125,8 @@ def mock_settings(test_settings):
 @pytest.fixture
 def mock_qb_client():
     """Mock QbDownloader that simulates qBittorrent API responses."""
+    from module.downloader import AddResult
+
     client = AsyncMock()
     client.auth.return_value = True
     client.logout.return_value = None
@@ -134,7 +134,7 @@ def mock_qb_client():
     client.torrents_info.return_value = []
     client.torrents_files.return_value = []
     client.torrents_rename_file.return_value = True
-    client.add_torrents.return_value = True
+    client.add_torrents.return_value = AddResult.ADDED
     client.torrents_delete.return_value = None
     client.torrents_pause.return_value = None
     client.torrents_resume.return_value = None

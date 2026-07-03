@@ -2,6 +2,7 @@ import { type Config, initConfig } from '#/config';
 
 export const useConfigStore = defineStore('config', () => {
   const config = ref<Config>(initConfig);
+  const lastSaveError = ref<unknown>(null);
 
   async function getConfig() {
     const res = await apiConfig.getConfig();
@@ -17,7 +18,11 @@ export const useConfigStore = defineStore('config', () => {
     },
   });
 
-  const setConfig = () => set(config.value);
+  const setConfig = async () => {
+    const result = await set(config.value);
+    lastSaveError.value = result.ok ? null : result.error;
+    return result;
+  };
 
   function getSettingGroup<Tkey extends keyof Config>(key: Tkey) {
     return computed<Config[Tkey]>({
@@ -32,6 +37,7 @@ export const useConfigStore = defineStore('config', () => {
 
   return {
     config,
+    lastSaveError,
     getConfig,
     setConfig,
     getSettingGroup,

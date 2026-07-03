@@ -21,17 +21,20 @@ import json
 import logging
 import os
 import shutil
+import sqlite3
+import subprocess
 import time
 import zipfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 import httpx
 import semver
 from pydantic import BaseModel
 
 from module.conf import IMAGE_VERSION, VERSION
+from module.database.migrations import CURRENT_SCHEMA_VERSION
 from module.network.request_url import get_shared_client
 
 logger = logging.getLogger(__name__)
@@ -166,11 +169,17 @@ class Updater:
         root: Optional[Path] = None,
         current_version: Optional[str] = None,
         image_version: Optional[str] = None,
+        data_db: Optional[Path] = None,
+        app_root: Optional[Path] = None,
+        dependency_syncer: Optional[Callable[[Path], None]] = None,
         client: Optional[httpx.AsyncClient] = None,
         owner: str = GITHUB_OWNER,
         repo: str = GITHUB_REPO,
     ) -> None:
         self.root = root if root is not None else DEFAULT_UPDATES_ROOT
+        self.data_db = data_db if data_db is not None else Path("data") / "data.db"
+        self.app_root = app_root if app_root is not None else Path(".")
+        self._dependency_syncer = dependency_syncer
         self.current_version = (
             current_version if current_version is not None else VERSION
         )
@@ -343,7 +352,13 @@ class Updater:
         return ApplyResult(success=False, message=message)
 
     def _promote(
-        self, unpacked: Path, version: str, sha256: str, manifest: dict
+        self,
+        unpacked: Path,
+        version: str,
+        sha256: str,
+        manifest: dict,
+        db_snapshot: Optional[dict],
+        schema_version_before: Optional[int],
     ) -> None:
         """把解包好的 staging 提升为 current，旧 current 移到 backup。"""
         current = self.root / "current"
@@ -356,15 +371,103 @@ class Updater:
 
         lockfile = current / "backend" / "uv.lock"
         lock_sha = _sha256_file(lockfile) if lockfile.exists() else None
+        # schema_version_after 不能在这里记录：新版本的迁移要到下次启动才会
+        # 执行，此刻读库得到的仍是旧值。回滚时直接读活库比较。
         applied = {
             "version": version,
             "applied_at": int(time.time()),
             "sha256": sha256,
             "lockfile_sha256": manifest.get("lockfile_sha256") or lock_sha,
+            "schema_version_before": schema_version_before,
+            "db_backup": db_snapshot,
         }
         (self.root / "applied.json").write_text(
             json.dumps(applied, indent=2), encoding="utf-8"
         )
+
+    def _snapshot_database(self) -> tuple[Optional[dict], Optional[int]]:
+        """Back up the runtime SQLite DB before applying an overlay update."""
+        schema_version = _read_db_schema_version(self.data_db)
+        if not self.data_db.exists():
+            return None, schema_version
+
+        backup_dir = self.root / "db-backup"
+        if backup_dir.exists():
+            shutil.rmtree(backup_dir)
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        dest = backup_dir / self.data_db.name
+
+        # sqlite3 backup API 透过 WAL 读出一致的独立快照，不需要（也不能）
+        # 搭配活库的 -wal/-shm 边车文件——那属于另一个数据库实例，配对恢复
+        # 会导致 WAL 帧错乱。
+        with sqlite3.connect(self.data_db) as src, sqlite3.connect(dest) as dst:
+            src.backup(dst)
+
+        return (
+            {
+                "path": str(dest.relative_to(self.root)),
+                "created_at": int(time.time()),
+            },
+            schema_version,
+        )
+
+    def _prepare_dependencies(self, unpacked: Path) -> None:
+        """Resolve overlay dependencies before promotion so boot stays simple."""
+        if self._dependency_syncer is not None:
+            self._dependency_syncer(unpacked)
+            return
+
+        backend_dir = unpacked / "backend"
+        overlay_lock = backend_dir / "uv.lock"
+        if not overlay_lock.exists():
+            return
+        baseline_lock = self.app_root / "uv.lock"
+        overlay_sha = _sha256_file(overlay_lock)
+        baseline_sha = _sha256_file(baseline_lock) if baseline_lock.exists() else None
+        if baseline_sha == overlay_sha:
+            logger.info(
+                "[Update] Dependencies unchanged from image baseline; skip sync."
+            )
+            return
+
+        uv = shutil.which("uv")
+        if not uv:
+            raise RuntimeError("uv not found on PATH; cannot sync update dependencies")
+
+        env = dict(os.environ)
+        env["UV_PROJECT_ENVIRONMENT"] = str((unpacked / ".venv").resolve())
+        logger.info("[Update] Syncing overlay dependencies into staged venv.")
+        subprocess.run(
+            [uv, "sync", "--frozen", "--no-dev"],
+            cwd=str(backend_dir),
+            env=env,
+            check=True,
+        )
+
+    def _restore_database_snapshot(self, applied: dict) -> Optional[int]:
+        # 只认 applied.json 里显式记录的快照；不回退到磁盘上残留的
+        # db-backup/ 目录，否则第二次回滚会误还原上一轮更新的陈旧快照。
+        snapshot = applied.get("db_backup") or {}
+        rel_path = snapshot.get("path") if isinstance(snapshot, dict) else None
+        if not rel_path:
+            return None
+        backup_db = self.root / rel_path
+        if not backup_db.exists():
+            return None
+
+        self.data_db.parent.mkdir(parents=True, exist_ok=True)
+        tmp = self.data_db.with_name(self.data_db.name + ".rollback_tmp")
+        shutil.copy2(backup_db, tmp)
+        os.replace(tmp, self.data_db)
+        # 快照是 backup API 生成的独立文件；活库残留的 -wal/-shm 必须清掉。
+        for suffix in ("-wal", "-shm"):
+            sidecar = self.data_db.with_name(self.data_db.name + suffix)
+            try:
+                sidecar.unlink()
+            except FileNotFoundError:
+                pass
+        shutil.rmtree(backup_db.parent, ignore_errors=True)
+        return _read_db_schema_version(self.data_db)
 
     async def apply_update(self, channel: str = "stable") -> ApplyResult:
         if self._lock.locked():
@@ -422,9 +525,19 @@ class Updater:
                         f"update (requires >= {min_iv}); please pull a newer image"
                     )
 
+                await asyncio.to_thread(self._prepare_dependencies, unpacked)
+                db_snapshot, schema_version_before = await asyncio.to_thread(
+                    self._snapshot_database
+                )
                 self._set_progress(phase="promoting", message="promoting update")
                 await asyncio.to_thread(
-                    self._promote, unpacked, version, actual_hash, manifest
+                    self._promote,
+                    unpacked,
+                    version,
+                    actual_hash,
+                    manifest,
+                    db_snapshot,
+                    schema_version_before,
                 )
                 self._cache = None  # 版本已变，作废检查缓存
 
@@ -454,6 +567,19 @@ class Updater:
                 current = self.root / "current"
                 backup = self.root / "backup"
                 applied = self.root / "applied.json"
+                applied_data: dict = {}
+                try:
+                    applied_data = json.loads(applied.read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    pass
+
+                live_schema = _read_db_schema_version(self.data_db)
+                if live_schema is not None and live_schema > CURRENT_SCHEMA_VERSION:
+                    return self._fail(
+                        "database schema is newer than this rollback code "
+                        f"understands ({live_schema} > {CURRENT_SCHEMA_VERSION}); "
+                        "refusing rollback"
+                    )
 
                 if backup.exists():
                     # current <-> backup 互换，使回滚本身可再次撤销。
@@ -470,12 +596,37 @@ class Updater:
                         version = _read_manifest(current).get("version")
                     except (OSError, ValueError):
                         version = None
+                    # 只有当 schema 自 apply 后确实前进过（旧代码读不了新库）
+                    # 才还原快照；schema 没变时保留活库，避免丢掉更新之后
+                    # 写入的全部数据。
+                    snapshot_schema = applied_data.get("schema_version_before")
+                    restored_schema = None
+                    if (
+                        live_schema is not None
+                        and snapshot_schema is not None
+                        and live_schema != snapshot_schema
+                    ):
+                        logger.warning(
+                            "[Update] Schema advanced since update (%s -> %s); "
+                            "restoring pre-update database snapshot. Data written "
+                            "since the update will be lost.",
+                            snapshot_schema,
+                            live_schema,
+                        )
+                        restored_schema = self._restore_database_snapshot(applied_data)
+                    else:
+                        logger.info(
+                            "[Update] Schema unchanged since update; "
+                            "keeping live database."
+                        )
                     applied.write_text(
                         json.dumps(
                             {
                                 "version": version,
                                 "applied_at": int(time.time()),
                                 "rolled_back": True,
+                                "schema_version_before": live_schema,
+                                "schema_version_after": restored_schema,
                             },
                             indent=2,
                         ),
@@ -518,3 +669,23 @@ updater = Updater()
 def get_update_progress() -> dict:
     """供 SSE 端点读取当前更新进度。"""
     return updater.progress_dict()
+
+
+def _read_db_schema_version(db_path: Path) -> Optional[int]:
+    if not db_path.exists():
+        return None
+    try:
+        with sqlite3.connect(db_path) as conn:
+            row = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' "
+                "AND name='schema_version'"
+            ).fetchone()
+            if row is None:
+                return 0
+            version = conn.execute(
+                "SELECT version FROM schema_version WHERE id = 1"
+            ).fetchone()
+            return int(version[0]) if version else 0
+    except sqlite3.Error as exc:
+        logger.warning("[Update] failed to read DB schema version: %s", exc)
+        return None

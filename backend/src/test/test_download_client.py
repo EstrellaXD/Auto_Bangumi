@@ -142,7 +142,7 @@ class TestAddTorrent:
     ):
         """When client.add_torrents returns False (already added), returns
         DUPLICATE, not a failure."""
-        mock_qb_client.add_torrents.return_value = False
+        mock_qb_client.add_torrents.return_value = AddResult.DUPLICATE
         torrent = make_torrent(url="magnet:?xt=urn:btih:abc")
         bangumi = make_bangumi()
 
@@ -154,6 +154,23 @@ class TestAddTorrent:
             result = await download_client.add_torrent(torrent, bangumi)
 
         assert result is AddResult.DUPLICATE
+
+    async def test_add_torrent_client_reports_failed_returns_failed(
+        self, download_client, mock_qb_client
+    ):
+        """When client.add_torrents returns FAILED, facade returns FAILED."""
+        mock_qb_client.add_torrents.return_value = AddResult.FAILED
+        torrent = make_torrent(url="magnet:?xt=urn:btih:abc")
+        bangumi = make_bangumi()
+
+        with patch("module.downloader.download_client.RequestContent") as MockReq:
+            mock_req = AsyncMock()
+            MockReq.return_value.__aenter__ = AsyncMock(return_value=mock_req)
+            MockReq.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            result = await download_client.add_torrent(torrent, bangumi)
+
+        assert result is AddResult.FAILED
 
     async def test_add_torrent_fetch_failure_returns_failed(
         self, download_client, mock_qb_client

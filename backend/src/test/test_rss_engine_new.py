@@ -531,6 +531,37 @@ class TestRefreshRssRetry:
         assert all_torrents[0].bangumi_id is None
 
 
+class TestDownloadBangumi:
+    async def test_failed_add_returns_failure_and_does_not_persist(self, rss_engine):
+        bangumi = make_bangumi(
+            official_title="Mushoku Tensei",
+            rss_link="https://example.com/rss",
+            filter="",
+        )
+        torrent = Torrent(
+            name="[Sub] Mushoku Tensei - 12 [1080p].mkv",
+            url="https://example.com/ep12.torrent",
+        )
+        with (
+            patch("module.rss.engine.RequestContent") as MockReq,
+            patch("module.rss.engine.DownloadClient") as MockClient,
+        ):
+            req = AsyncMock()
+            req.get_torrents = AsyncMock(return_value=[torrent])
+            MockReq.return_value.__aenter__ = AsyncMock(return_value=req)
+            MockReq.return_value.__aexit__ = AsyncMock(return_value=False)
+            client = AsyncMock()
+            client.add_torrent = AsyncMock(return_value=AddResult.FAILED)
+            MockClient.return_value.__aenter__ = AsyncMock(return_value=client)
+            MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            resp = await rss_engine.download_bangumi(bangumi)
+
+        assert resp.status is False
+        assert resp.status_code == 502
+        assert await rss_engine.db.torrent.search_all() == []
+
+
 # ---------------------------------------------------------------------------
 # add_rss
 # ---------------------------------------------------------------------------

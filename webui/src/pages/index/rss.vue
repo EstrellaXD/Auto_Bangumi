@@ -25,11 +25,13 @@ onActivated(() => {
 // Tracks which single row is refreshing so only its button spins — the
 // store's isRefreshingAll only covers the "refresh all" button.
 const refreshingId = ref<number | null>(null);
+const refreshFailedId = ref<number | null>(null);
 
 async function onRefreshOne(id: number) {
   refreshingId.value = id;
   try {
-    await refreshRSS(id);
+    const result = await refreshRSS(id);
+    refreshFailedId.value = result.ok ? null : id;
   } finally {
     refreshingId.value = null;
   }
@@ -103,10 +105,11 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
     width: 90,
     render(rss: RSS) {
       const isRowRefreshing = refreshingId.value === rss.id;
+      const isRowFailed = refreshFailedId.value === rss.id;
       return (
         <NButton
           size="small"
-          type="primary"
+          type={isRowFailed ? 'error' : 'primary'}
           secondary
           {...{ title: t('rss.refresh') }}
           disabled={isRowRefreshing}
@@ -189,7 +192,7 @@ const rssRowKey = (row: RSS) => row.id;
             <div class="rss-card-actions" @click.stop>
               <NButton
                 size="small"
-                type="primary"
+                :type="refreshFailedId === item.id ? 'error' : 'primary'"
                 secondary
                 :title="$t('rss.refresh')"
                 :disabled="refreshingId === item.id"

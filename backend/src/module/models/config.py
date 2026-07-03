@@ -259,6 +259,27 @@ class LLM(BaseModel):
             "primary: LLM first, regex as safety net"
         ),
     )
+    timeout: float = Field(default=20.0, ge=1.0, description="LLM request timeout")
+    cache_ttl: int = Field(
+        default=900,
+        ge=0,
+        description="Seconds to cache LLM parse successes and failures; 0 disables",
+    )
+    max_concurrency: int = Field(
+        default=2,
+        ge=1,
+        description="Maximum concurrent LLM parse requests",
+    )
+    failure_threshold: int = Field(
+        default=3,
+        ge=1,
+        description="Consecutive LLM failures before temporarily skipping calls",
+    )
+    failure_backoff: int = Field(
+        default=300,
+        ge=0,
+        description="Seconds to skip LLM calls after failure_threshold is reached",
+    )
 
 
 # [Deprecated] 旧版 OpenAI 解析配置，仅保留用于读取旧配置文件（向后兼容）。

@@ -8,7 +8,16 @@ unsupported operations instead of blowing up on a missing method.
 """
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any, ClassVar, Protocol, runtime_checkable
+
+
+class AddResult(Enum):
+    """Torrent-add result shared by concrete clients and the facade."""
+
+    ADDED = "added"
+    DUPLICATE = "duplicate"
+    FAILED = "failed"
 
 
 @dataclass(frozen=True)
@@ -39,7 +48,7 @@ class CoreDownloaderClient(Protocol):
 
     async def add_torrents(
         self, torrent_urls, torrent_files, save_path, category, tags=None
-    ) -> bool: ...
+    ) -> AddResult: ...
 
 
 @runtime_checkable
@@ -70,7 +79,7 @@ class DownloaderClient(Protocol):
     # Torrent lifecycle
     async def add_torrents(
         self, torrent_urls, torrent_files, save_path, category, tags=None
-    ) -> bool: ...
+    ) -> AddResult: ...
 
     async def torrents_info(self, status_filter, category, tag=None) -> list[dict]: ...
 

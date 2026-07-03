@@ -1,29 +1,14 @@
 import asyncio
 import logging
-from enum import Enum
 
 from module.conf import settings
 from module.models import Bangumi, Torrent
 from module.network import RequestContent
 
-from .base import DownloaderClient
+from .base import AddResult, DownloaderClient
 from .path import gen_save_path
 
 logger = logging.getLogger(__name__)
-
-
-class AddResult(Enum):
-    """``add_torrent`` 的三态结果。
-
-    - ``ADDED``: 真正新增了下载任务；
-    - ``DUPLICATE``: 下载器里已有同一种子（qB 重复 / aria2 去重命中），
-      对调用方来说等同于成功，不应触发失败通知；
-    - ``FAILED``: 投递失败（抓取种子文件失败或客户端异常），可以重试。
-    """
-
-    ADDED = "added"
-    DUPLICATE = "duplicate"
-    FAILED = "failed"
 
 
 # ---------------------------------------------------------------------------
@@ -336,20 +321,22 @@ class DownloadClient:
         # Create tag with bangumi_id for offset lookup during rename
         tags = f"ab:{bangumi.id}" if bangumi.id else None
         try:
-            if await self.client.add_torrents(
+            result = await self.client.add_torrents(
                 torrent_urls=torrent_url,
                 torrent_files=torrent_file,
                 save_path=bangumi.save_path,
                 category="Bangumi",
                 tags=tags,
-            ):
+            )
+            if result is AddResult.ADDED:
                 logger.debug("[Downloader] Add torrent: %s", bangumi.official_title)
                 return AddResult.ADDED
-            else:
+            if result is AddResult.DUPLICATE:
                 logger.debug(
                     "[Downloader] Torrent added before: %s", bangumi.official_title
                 )
                 return AddResult.DUPLICATE
+            return AddResult.FAILED
         except Exception as e:
             logger.error(
                 f"[Downloader] Failed to add torrent for {bangumi.official_title}: {e}"

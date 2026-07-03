@@ -10,11 +10,13 @@ const { isMobileOrTablet } = useBreakpointQuery();
 
 const isSaving = ref(false);
 const isResetting = ref(false);
+const saveFailed = ref(false);
 
 async function handleSave() {
   isSaving.value = true;
   try {
-    await setConfig();
+    const result = await setConfig();
+    saveFailed.value = !result.ok;
   } finally {
     isSaving.value = false;
   }
@@ -24,6 +26,7 @@ async function handleReset() {
   isResetting.value = true;
   try {
     await getConfig();
+    saveFailed.value = false;
   } finally {
     isResetting.value = false;
   }
@@ -70,7 +73,7 @@ onActivated(() => {
       <NButton
         :size="isMobileOrTablet ? 'large' : 'medium'"
         :class="[{ 'flex-1': isMobileOrTablet }]"
-        type="primary"
+        :type="saveFailed ? 'error' : 'primary'"
         :loading="isSaving"
         :disabled="isResetting || isSaving"
         @click="handleSave"

@@ -8,7 +8,7 @@ qBittorrent instance. All operations return success and log their actions.
 import logging
 from typing import Any, ClassVar
 
-from module.downloader.base import DownloaderCapabilities
+from module.downloader.base import AddResult, DownloaderCapabilities
 
 logger = logging.getLogger(__name__)
 
@@ -105,8 +105,8 @@ class MockDownloader:
         save_path: str,
         category: str,
         tags: str | None = None,
-    ) -> bool:
-        """Add a torrent. Returns True for success."""
+    ) -> AddResult:
+        """Add a torrent. Returns ADDED for success."""
         import hashlib
         import time
 
@@ -127,7 +127,7 @@ class MockDownloader:
         logger.info(
             f"[MockDownloader] add_torrents -> hash={mock_hash[:16]}... save_path={save_path}"
         )
-        return True
+        return AddResult.ADDED
 
     @staticmethod
     def _normalize_hashes(hashes: str | list | tuple) -> list[str]:

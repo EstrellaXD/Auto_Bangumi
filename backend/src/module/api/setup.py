@@ -387,6 +387,7 @@ async def complete_setup(
         # 4. Create sentinel file
         SENTINEL_PATH.parent.mkdir(parents=True, exist_ok=True)
         SENTINEL_PATH.touch()
+        await ctx.start_tasks()
 
         return ResponseModel(
             status=True,

@@ -77,8 +77,8 @@ class AppContext:
         # Downloader-status TTL cache (was ProgramStatus.check_downloader_status).
         self._downloader_status = False
         self._downloader_last_check: float = 0.0
-        self._tasks_started = False
         self._startup_done = False
+        self._lifecycle_lock = asyncio.Lock()
         # The background task spawned by start_tasks() (downloader-wait +
         # scheduler start). Tracked so stop() can cancel it if shutdown
         # happens while it is still waiting on the downloader.
@@ -134,7 +134,10 @@ class AppContext:
 
     @property
     def is_running(self) -> bool:
-        return self._tasks_started and not Checker.check_first_run()
+        if Checker.check_first_run():
+            return False
+        start_pending = self._start_task is not None and not self._start_task.done()
+        return self.scheduler.running or start_pending
 
     @property
     def first_run(self) -> bool:
@@ -231,8 +234,9 @@ class AppContext:
     async def _run_start_tasks(self) -> None:
         """Body of the background start task: wait for the downloader, then start loops."""
         await self._wait_for_downloader()
-        self.scheduler.start_all()
-        self._tasks_started = True
+        async with self._lifecycle_lock:
+            if not Checker.check_first_run() and not self.scheduler.running:
+                self.scheduler.start_all()
         logger.info("Program running.")
 
     @staticmethod
@@ -256,8 +260,14 @@ class AppContext:
         point) rather than calling ``settings.load()`` directly; the scheduler
         is not yet running at this point so its restart branch is a no-op.
         """
-        await self.reload_settings()
-        if self._start_task is None or self._start_task.done():
+        async with self._lifecycle_lock:
+            return await self._start_tasks_unlocked()
+
+    async def _start_tasks_unlocked(self) -> ResponseModel:
+        await self._reload_settings_unlocked()
+        if not self.scheduler.running and (
+            self._start_task is None or self._start_task.done()
+        ):
             self._start_task = asyncio.create_task(self._run_start_tasks())
             self._start_task.add_done_callback(self._supervise_start_task)
         return ResponseModel(
@@ -269,6 +279,11 @@ class AppContext:
 
     async def stop(self) -> ResponseModel:
         """Cancel any pending start task, stop background loops, and close the cached downloader session."""
+        async with self._lifecycle_lock:
+            return await self._stop_unlocked()
+
+    async def _stop_unlocked(self) -> ResponseModel:
+        was_running = self.is_running
         if self._start_task is not None:
             self._start_task.cancel()
             try:
@@ -280,9 +295,9 @@ class AppContext:
                     f"[Core] Background start task failed during shutdown: {e}"
                 )
             self._start_task = None
-        if self.is_running:
+        if self.scheduler.running:
             await self.scheduler.stop_all()
-            self._tasks_started = False
+        if was_running:
             resp = ResponseModel(
                 status=True,
                 status_code=200,
@@ -302,15 +317,19 @@ class AppContext:
         return resp
 
     async def restart(self) -> ResponseModel:
+        async with self._lifecycle_lock:
+            return await self._restart_unlocked()
+
+    async def _restart_unlocked(self) -> ResponseModel:
         stop_ok = True
         try:
-            await self.stop()
+            await self._stop_unlocked()
         except Exception as e:
             logger.warning(f"[Core] Error during stop in restart: {e}")
             stop_ok = False
         start_ok = True
         try:
-            await self.start_tasks()
+            await self._start_tasks_unlocked()
         except Exception as e:
             logger.error(f"[Core] Error during start in restart: {e}")
             start_ok = False
@@ -346,6 +365,10 @@ class AppContext:
         client, notifier, endpoint-keyed caches, and scheduler all stay in
         sync with the new config.
         """
+        async with self._lifecycle_lock:
+            await self._reload_settings_unlocked()
+
+    async def _reload_settings_unlocked(self) -> None:
         # settings.load() does synchronous file I/O; keep it off the event loop.
         await asyncio.to_thread(settings.load)
         await reset_shared_client()

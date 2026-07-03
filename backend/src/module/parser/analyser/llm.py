@@ -15,12 +15,16 @@ import logging
 from typing import Any, Optional
 
 import anthropic
+import httpx
 import openai as openai_sdk
 from google import genai
 from google.genai import errors as genai_errors
 from google.genai import types as genai_types
+from httpx_socks import AsyncProxyTransport
 from openai import AsyncOpenAI
 from pydantic import BaseModel
+
+from module.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +103,7 @@ class LLMParser:
         provider: str = "openai",
         model: str = "gpt-4o-mini",
         base_url: str = "",
+        timeout: float = 20.0,
     ) -> None:
         """初始化解析器并构建对应提供商的异步客户端。
 
@@ -107,6 +112,7 @@ class LLMParser:
             provider: "openai" | "anthropic" | "gemini"。
             model: 模型名。
             base_url: 自定义端点，仅 openai 提供商使用；空串表示官方 API。
+            timeout: 单次 LLM 请求超时秒数。
 
         Raises:
             ValueError: api_key 为空或 provider 不受支持。
@@ -115,16 +121,30 @@ class LLMParser:
             raise ValueError("API key is required.")
         self.provider = provider
         self.model = model
+        self._http_client: httpx.AsyncClient | None = None
         if provider == "openai":
+            self._http_client = _build_http_client(timeout)
             self._openai_client = AsyncOpenAI(
-                api_key=api_key, base_url=base_url or None
+                api_key=api_key,
+                base_url=base_url or None,
+                timeout=timeout,
+                http_client=self._http_client,
             )
         elif provider == "anthropic":
-            self._anthropic_client = anthropic.AsyncAnthropic(api_key=api_key)
+            self._http_client = _build_http_client(timeout)
+            self._anthropic_client = anthropic.AsyncAnthropic(
+                api_key=api_key,
+                timeout=timeout,
+                http_client=self._http_client,
+            )
         elif provider == "gemini":
             self._gemini_client = genai.Client(api_key=api_key)
         else:
             raise ValueError(f"Unsupported LLM provider: {provider}")
+
+    async def aclose(self) -> None:
+        if self._http_client is not None:
+            await self._http_client.aclose()
 
     async def parse(self, raw: str, asdict: bool = True) -> dict | None:
         """解析种子标题，返回 Episode 形状的 dict；失败返回 None。
@@ -212,3 +232,36 @@ class LLMParser:
         except json.JSONDecodeError as e:
             logger.warning("Cannot decode Gemini output for '%s': %s", raw, e)
             return None
+
+
+def _build_http_client(timeout: float) -> httpx.AsyncClient:
+    http_timeout = httpx.Timeout(
+        connect=min(timeout, 10.0),
+        read=timeout,
+        write=min(timeout, 10.0),
+        pool=min(timeout, 10.0),
+    )
+    kwargs: dict[str, Any] = {"timeout": http_timeout, "follow_redirects": True}
+    if not settings.proxy.enable:
+        return httpx.AsyncClient(**kwargs)
+    if "http" in settings.proxy.type:
+        if settings.proxy.username:
+            proxy_url = (
+                f"http://{settings.proxy.username}:{settings.proxy.password}"
+                f"@{settings.proxy.host}:{settings.proxy.port}"
+            )
+        else:
+            proxy_url = f"http://{settings.proxy.host}:{settings.proxy.port}"
+        return httpx.AsyncClient(proxy=proxy_url, **kwargs)
+    if settings.proxy.type == "socks5":
+        if settings.proxy.username:
+            proxy_url = (
+                f"socks5://{settings.proxy.username}:{settings.proxy.password}"
+                f"@{settings.proxy.host}:{settings.proxy.port}"
+            )
+        else:
+            proxy_url = f"socks5://{settings.proxy.host}:{settings.proxy.port}"
+        return httpx.AsyncClient(
+            transport=AsyncProxyTransport.from_url(proxy_url, rdns=True), **kwargs
+        )
+    return httpx.AsyncClient(**kwargs)

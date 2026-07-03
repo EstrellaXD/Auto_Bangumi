@@ -386,7 +386,18 @@ class RSSEngine:
             )
             if torrents:
                 async with DownloadClient() as client:
-                    await client.add_torrent(torrents, bangumi)
+                    result = await client.add_torrent(torrents, bangumi)
+                    if result is AddResult.FAILED:
+                        return ResponseModel(
+                            status=False,
+                            status_code=502,
+                            msg_en=(
+                                f"[Engine] Download {bangumi.official_title} failed."
+                            ),
+                            msg_zh=f"[Engine] 下载 {bangumi.official_title} 失败。",
+                        )
+                    for torrent in torrents:
+                        torrent.downloaded = True
                     await self.db.torrent.add_all(torrents)
                     return ResponseModel(
                         status=True,

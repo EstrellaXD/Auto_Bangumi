@@ -20,4 +20,5 @@ class Aria2Gid(SQLModel, table=True):
     bangumi_id: Optional[int] = Field(default=None, foreign_key="bangumi.id")
     category: Optional[str] = None
     dedup_key: Optional[str] = Field(default=None, index=True)
+    renamed_paths: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

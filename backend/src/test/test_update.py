@@ -5,9 +5,11 @@
 覆盖层落地走 tmp_path，进程退出被打桩以确保测试不会真的退出。
 """
 
+import asyncio
 import hashlib
 import io
 import json
+import sqlite3
 import zipfile
 from pathlib import Path
 from unittest.mock import patch
@@ -90,6 +92,28 @@ def _releases_payload(bundle_bytes: bytes, sha_text: str) -> list[dict]:
 
 def _make_client(handler) -> httpx.AsyncClient:
     return httpx.AsyncClient(transport=httpx.MockTransport(handler))
+
+
+def _seed_schema_db(path: Path, version: int) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(path) as conn:
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS schema_version ("
+            "  id INTEGER PRIMARY KEY,"
+            "  version INTEGER NOT NULL"
+            ")"
+        )
+        conn.execute(
+            "INSERT OR REPLACE INTO schema_version (id, version) VALUES (1, ?)",
+            (version,),
+        )
+
+
+def _read_schema_db(path: Path) -> int:
+    with sqlite3.connect(path) as conn:
+        return conn.execute(
+            "SELECT version FROM schema_version WHERE id = 1"
+        ).fetchone()[0]
 
 
 def _default_handler(bundle_bytes: bytes, sha_hex: str):
@@ -216,6 +240,7 @@ def _updater_for_apply(tmp_path, data, sha, current="3.1.0", image="3.3.0-beta.1
         root=tmp_path / "u",
         current_version=current,
         image_version=image,
+        dependency_syncer=lambda unpacked: None,
         client=_make_client(_default_handler(data, sha)),
     )
 
@@ -236,6 +261,59 @@ class TestApplyUpdate:
         assert applied["version"] == "3.3.0-beta.2"
         assert applied["sha256"] == sha
         assert applied["lockfile_sha256"]
+
+    @pytest.mark.asyncio
+    async def test_success_snapshots_db_and_records_schema(self, tmp_path, bundle):
+        data, sha = bundle
+        db_path = tmp_path / "data" / "data.db"
+        _seed_schema_db(db_path, 7)
+        (tmp_path / "data" / "data.db-wal").write_bytes(b"wal")
+        (tmp_path / "data" / "data.db-shm").write_bytes(b"shm")
+        up = Updater(
+            root=tmp_path / "u",
+            current_version="3.1.0",
+            image_version="3.3.0-beta.1",
+            data_db=db_path,
+            dependency_syncer=lambda unpacked: None,
+            client=_make_client(_default_handler(data, sha)),
+        )
+
+        res = await up.apply_update("beta")
+
+        assert res.success is True
+        applied = json.loads((tmp_path / "u" / "applied.json").read_text())
+        assert applied["schema_version_before"] == 7
+        # schema_version_after 在 apply 时不可知（迁移下次启动才跑），不得记录
+        assert "schema_version_after" not in applied
+        backup_db = tmp_path / "u" / applied["db_backup"]["path"]
+        assert _read_schema_db(backup_db) == 7
+        # backup API 快照是独立一致文件，不携带活库的 -wal/-shm 边车
+        assert not (backup_db.parent / "data.db-wal").exists()
+        assert not (backup_db.parent / "data.db-shm").exists()
+
+    @pytest.mark.asyncio
+    async def test_dependency_sync_failure_aborts_without_promote(
+        self, tmp_path, bundle
+    ):
+        data, sha = bundle
+
+        def fail_sync(unpacked: Path) -> None:
+            raise RuntimeError("uv sync failed")
+
+        up = Updater(
+            root=tmp_path / "u",
+            current_version="3.1.0",
+            image_version="3.3.0-beta.1",
+            dependency_syncer=fail_sync,
+            client=_make_client(_default_handler(data, sha)),
+        )
+
+        res = await up.apply_update("beta")
+
+        assert res.success is False
+        assert "uv sync failed" in res.message
+        assert not (tmp_path / "u" / "current").exists()
+        assert not (tmp_path / "u" / "applied.json").exists()
 
     @pytest.mark.asyncio
     async def test_sha_mismatch_aborts_without_promote(self, tmp_path, bundle):
@@ -302,6 +380,144 @@ class TestRollback:
         assert applied["version"] == "3.2.0"
 
     @pytest.mark.asyncio
+    async def test_rollback_restores_db_snapshot(self, tmp_path):
+        root = tmp_path / "u"
+        current = root / "current"
+        backup = root / "backup"
+        current.mkdir(parents=True)
+        backup.mkdir(parents=True)
+        (current / "manifest.json").write_text(json.dumps({"version": "3.3.0"}))
+        (backup / "manifest.json").write_text(json.dumps({"version": "3.2.0"}))
+        db_path = tmp_path / "data" / "data.db"
+        _seed_schema_db(db_path, 9)
+        backup_db = root / "db-backup" / "data.db"
+        _seed_schema_db(backup_db, 4)
+        (root / "applied.json").write_text(
+            json.dumps(
+                {
+                    "version": "3.3.0",
+                    "schema_version_before": 4,
+                    "db_backup": {"path": "db-backup/data.db"},
+                }
+            )
+        )
+
+        up = Updater(
+            root=root,
+            current_version="3.3.0",
+            image_version="3.1.0",
+            data_db=db_path,
+        )
+        res = await up.rollback()
+
+        assert res.success is True
+        # schema 自 apply 后前进过（4 -> 9），旧代码读不了新库，必须还原快照
+        assert _read_schema_db(db_path) == 4
+        applied = json.loads((root / "applied.json").read_text())
+        assert applied["schema_version_before"] == 9
+        assert applied["schema_version_after"] == 4
+        # 快照目录用后即焚，避免下一轮回滚误还原陈旧快照
+        assert not (root / "db-backup").exists()
+
+    @pytest.mark.asyncio
+    async def test_rollback_keeps_live_db_when_schema_unchanged(self, tmp_path):
+        root = tmp_path / "u"
+        current = root / "current"
+        backup = root / "backup"
+        current.mkdir(parents=True)
+        backup.mkdir(parents=True)
+        (current / "manifest.json").write_text(json.dumps({"version": "3.3.0"}))
+        (backup / "manifest.json").write_text(json.dumps({"version": "3.2.0"}))
+        db_path = tmp_path / "data" / "data.db"
+        _seed_schema_db(db_path, 4)
+        backup_db = root / "db-backup" / "data.db"
+        _seed_schema_db(backup_db, 3)
+        (root / "applied.json").write_text(
+            json.dumps(
+                {
+                    "version": "3.3.0",
+                    "schema_version_before": 4,
+                    "db_backup": {"path": "db-backup/data.db"},
+                }
+            )
+        )
+
+        up = Updater(
+            root=root,
+            current_version="3.3.0",
+            image_version="3.1.0",
+            data_db=db_path,
+        )
+        res = await up.rollback()
+
+        assert res.success is True
+        # schema 没变：保留活库，不得用快照抹掉更新后写入的数据
+        assert _read_schema_db(db_path) == 4
+
+    @pytest.mark.asyncio
+    async def test_second_rollback_ignores_leftover_backup_dir(self, tmp_path):
+        root = tmp_path / "u"
+        current = root / "current"
+        backup = root / "backup"
+        current.mkdir(parents=True)
+        backup.mkdir(parents=True)
+        (current / "manifest.json").write_text(json.dumps({"version": "3.3.0"}))
+        (backup / "manifest.json").write_text(json.dumps({"version": "3.2.0"}))
+        db_path = tmp_path / "data" / "data.db"
+        _seed_schema_db(db_path, 9)
+        # 上一轮更新遗留的快照目录；本轮 applied.json 没有 db_backup 记录
+        stale_backup = root / "db-backup" / "data.db"
+        _seed_schema_db(stale_backup, 3)
+        (root / "applied.json").write_text(
+            json.dumps(
+                {
+                    "version": "3.3.0",
+                    "rolled_back": True,
+                    "schema_version_before": 5,
+                }
+            )
+        )
+
+        up = Updater(
+            root=root,
+            current_version="3.3.0",
+            image_version="3.1.0",
+            data_db=db_path,
+        )
+        res = await up.rollback()
+
+        assert res.success is True
+        # 不得回退到磁盘残留的陈旧快照
+        assert _read_schema_db(db_path) == 9
+
+    @pytest.mark.asyncio
+    async def test_rollback_refuses_unknown_future_schema(self, tmp_path):
+        root = tmp_path / "u"
+        current = root / "current"
+        backup = root / "backup"
+        current.mkdir(parents=True)
+        backup.mkdir(parents=True)
+        (current / "manifest.json").write_text(json.dumps({"version": "3.3.0"}))
+        (backup / "manifest.json").write_text(json.dumps({"version": "3.2.0"}))
+        db_path = tmp_path / "data" / "data.db"
+        _seed_schema_db(db_path, 999)
+
+        up = Updater(
+            root=root,
+            current_version="3.3.0",
+            image_version="3.1.0",
+            data_db=db_path,
+        )
+        with patch("module.update.updater.CURRENT_SCHEMA_VERSION", 14):
+            res = await up.rollback()
+
+        assert res.success is False
+        assert "schema" in res.message
+        assert (backup / "manifest.json").exists()
+        cur = json.loads((current / "manifest.json").read_text())
+        assert cur["version"] == "3.3.0"
+
+    @pytest.mark.asyncio
     async def test_rollback_without_backup_reverts_to_image(self, tmp_path):
         root = tmp_path / "u"
         current = root / "current"
@@ -339,6 +555,8 @@ class TestBootOverlay:
         )
         (current / "webui-dist").mkdir(parents=True)
         (current / "webui-dist" / "new.html").write_text("overlay dist")
+        (current / ".venv").mkdir(parents=True)
+        (current / ".venv" / "pyvenv.cfg").write_text("overlay venv")
         (updates / "applied.json").write_text(json.dumps({"version": overlay_version}))
 
         image_version_path = app / "IMAGE_VERSION"
@@ -361,6 +579,7 @@ class TestBootOverlay:
         assert (app / "module" / "new.txt").exists()
         assert not (app / "module" / "old.txt").exists()  # tree replaced, not merged
         assert (app / "dist" / "new.html").exists()
+        assert (app / ".venv" / "pyvenv.cfg").read_text() == "overlay venv"
 
     def test_skips_and_clears_overlay_when_image_newer(self, tmp_path):
         import boot_overlay
@@ -492,3 +711,31 @@ class TestUpdateApiContract:
             resp = authed_client.post("/api/v1/update/apply")
         assert resp.status_code == 400
         sched.assert_not_called()
+
+    def test_request_restart_writes_entrypoint_sentinel(self, tmp_path):
+        from module.api import update as update_api
+
+        sentinel = tmp_path / "config" / "updates" / ".restart"
+        with (
+            patch("module.api.update.RESTART_SENTINEL", sentinel),
+            patch("module.api.update.os.kill") as kill,
+        ):
+            update_api._request_restart()
+
+        assert sentinel.exists()
+        kill.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_schedule_restart_retains_task_reference(self):
+        from module.api import update as update_api
+
+        update_api._RESTART_TASKS.clear()
+        with (
+            patch("module.api.update._RESTART_DELAY_SECONDS", 0),
+            patch("module.api.update._request_restart"),
+        ):
+            update_api.schedule_restart()
+            assert len(update_api._RESTART_TASKS) == 1
+            await asyncio.gather(*list(update_api._RESTART_TASKS))
+            await asyncio.sleep(0)
+        assert len(update_api._RESTART_TASKS) == 0

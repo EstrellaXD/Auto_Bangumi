@@ -8,7 +8,7 @@ from typing import ClassVar
 import httpx
 
 from module.database import Database
-from module.downloader.base import DownloaderCapabilities
+from module.downloader.base import AddResult, DownloaderCapabilities
 
 logger = logging.getLogger(__name__)
 
@@ -168,18 +168,41 @@ class Aria2Downloader:
         return download.get("gid", "")
 
     @staticmethod
+    def _extract_followed_by_gid(status: dict | None) -> str | None:
+        if not isinstance(status, dict):
+            return None
+        followed_by = (status or {}).get("followedBy") or []
+        if isinstance(followed_by, list) and followed_by:
+            return str(followed_by[0])
+        return None
+
+    @staticmethod
+    def _translate_renamed_path(path: str, renamed_paths: dict[str, str]) -> str:
+        seen = set()
+        while path in renamed_paths and path not in seen:
+            seen.add(path)
+            path = renamed_paths[path]
+        return path
+
+    @staticmethod
     def _move_file(old_abs: str, new_abs: str) -> None:
         """移动单个文件；目标已存在且不是同一个文件时拒绝覆盖。
 
-        os.replace 会静默覆盖已有目标——多文件种子若映射到同一目标名，
-        直接覆盖会毁掉已重命名好的文件，所以这里显式拦下来。
+        多文件种子若映射到同一目标名，直接覆盖会毁掉已重命名好的文件，
+        所以这里显式拦下来。
         """
+        if (
+            os.path.exists(old_abs)
+            and os.path.exists(new_abs)
+            and os.path.samefile(old_abs, new_abs)
+        ):
+            return
         if os.path.exists(new_abs) and not (
             os.path.exists(old_abs) and os.path.samefile(old_abs, new_abs)
         ):
             raise FileExistsError(f"destination already exists: {new_abs}")
         os.makedirs(os.path.dirname(new_abs), exist_ok=True)
-        os.replace(old_abs, new_abs)
+        shutil.move(old_abs, new_abs)
 
     @staticmethod
     def _move_files(files: list[dict], old_dir: str, new_dir: str) -> None:
@@ -217,7 +240,7 @@ class Aria2Downloader:
     # Adding
     # ------------------------------------------------------------------
 
-    async def _dedup_record_is_stale(self, db: Database, gid: str) -> bool:
+    async def _dedup_record_is_stale(self, db: Database, gid: str) -> bool | None:
         """dedup 命中后校验 gid 是否仍存在于 aria2；陈旧则删记录并返回 True。
 
         本地 aria2_gid 表可能和 aria2 真实状态脱节（用户在 aria2 UI 里删了
@@ -225,8 +248,8 @@ class Aria2Downloader:
         会让同一个种子永远被当作"已添加"而无法重新下载。
 
         - RPC 报 not found、或 status 为 "removed" → 记录陈旧，删掉，返回 True；
-        - aria2 不可达（连接错误）→ 无法断言，保守保留记录，返回 False；
-        - 其余 RPC 错误 → 同样保守保留。
+        - aria2 不可达（连接错误）→ 无法断言，保守保留记录，返回 None；
+        - 其余 RPC 错误 → 同样保守保留，返回 None。
         """
         try:
             status = await self._call("tellStatus", [gid, ["status"]])
@@ -240,7 +263,7 @@ class Aria2Downloader:
                 await db.aria2.delete(gid)
                 return True
             logger.debug("[Aria2] Cannot verify gid %s, keeping record: %s", gid, e)
-            return False
+            return None
         except Aria2ConnectionError as e:
             # aria2 不可达 != 记录陈旧，绝不能因此删本地记录。
             logger.debug(
@@ -248,7 +271,7 @@ class Aria2Downloader:
                 gid,
                 e,
             )
-            return False
+            return None
         if (status or {}).get("status") == "removed":
             logger.info(
                 "[Aria2] Stale dedup record: gid %s was removed in aria2, "
@@ -259,39 +282,51 @@ class Aria2Downloader:
             return True
         return False
 
-    async def _add_uri(self, url: str, options: dict) -> str | None:
+    async def _add_uri(self, url: str, options: dict) -> tuple[AddResult, str | None]:
         try:
-            return await self._call("addUri", [[url], options])
+            return AddResult.ADDED, await self._call("addUri", [[url], options])
         except Aria2RpcError as e:
             if self._is_duplicate_error(e):
                 logger.debug("[Aria2] addUri reports duplicate: %s", e.message)
+                return AddResult.DUPLICATE, None
             else:
                 logger.error("[Aria2] addUri failed for %s: %s", url, e)
-            return None
+                return AddResult.FAILED, None
         except Aria2ConnectionError as e:
             logger.error("[Aria2] addUri connection error for %s: %s", url, e)
-            return None
+            return AddResult.FAILED, None
 
-    async def _add_torrent_file(self, data: bytes, options: dict) -> str | None:
+    async def _add_torrent_file(
+        self, data: bytes, options: dict
+    ) -> tuple[AddResult, str | None]:
         import base64
 
         b64 = base64.b64encode(data).decode()
         try:
-            return await self._call("addTorrent", [b64, [], options])
+            return AddResult.ADDED, await self._call("addTorrent", [b64, [], options])
         except Aria2RpcError as e:
             if self._is_duplicate_error(e):
                 logger.debug("[Aria2] addTorrent reports duplicate: %s", e.message)
+                return AddResult.DUPLICATE, None
             else:
                 logger.error("[Aria2] addTorrent failed: %s", e)
-            return None
+                return AddResult.FAILED, None
         except Aria2ConnectionError as e:
             logger.error("[Aria2] addTorrent connection error: %s", e)
-            return None
+            return AddResult.FAILED, None
+
+    async def _resolve_followed_by_gid(self, gid: str) -> str:
+        try:
+            status = await self._call("tellStatus", [gid, ["followedBy"]])
+        except (Aria2RpcError, Aria2ConnectionError) as e:
+            logger.debug("[Aria2] Could not resolve followedBy for %s: %s", gid, e)
+            return gid
+        return self._extract_followed_by_gid(status) or gid
 
     async def add_torrents(
         self, torrent_urls, torrent_files, save_path, category, tags=None
-    ) -> bool:
-        """添加下载任务，返回 True 当且仅当真的新增了至少一个任务。
+    ) -> AddResult:
+        """添加下载任务，返回新增/重复/失败的三态结果。
 
         去重优先靠本地的 dedup_key（url 或种子内容 hash）判断"已经添加过"，
         aria2 RPC 报错里带 already/duplicate 字样时也当作重复处理（见
@@ -301,6 +336,8 @@ class Aria2Downloader:
         bangumi_id = self._parse_bangumi_id_from_tag(tags)
         options = {"dir": save_path}
         added_any = False
+        duplicate_any = False
+        failed_any = False
         async with Database() as db:
             if torrent_urls:
                 urls = (
@@ -309,14 +346,23 @@ class Aria2Downloader:
                 for url in urls:
                     dedup_key = f"url:{url}"
                     existing_gid = await db.aria2.find_by_dedup_key(dedup_key)
-                    if existing_gid and not await self._dedup_record_is_stale(
-                        db, existing_gid
-                    ):
-                        logger.debug("[Aria2] Skip already-added url: %s", url)
+                    if existing_gid:
+                        stale = await self._dedup_record_is_stale(db, existing_gid)
+                        if stale is None:
+                            failed_any = True
+                            continue
+                        if not stale:
+                            logger.debug("[Aria2] Skip already-added url: %s", url)
+                            duplicate_any = True
+                            continue
+                    result, gid = await self._add_uri(url, options)
+                    if result is AddResult.DUPLICATE:
+                        duplicate_any = True
                         continue
-                    gid = await self._add_uri(url, options)
-                    if gid is None:
+                    if result is AddResult.FAILED or gid is None:
+                        failed_any = True
                         continue
+                    gid = await self._resolve_followed_by_gid(gid)
                     await db.aria2.upsert(gid, bangumi_id, category, dedup_key)
                     added_any = True
             if torrent_files:
@@ -328,17 +374,34 @@ class Aria2Downloader:
                 for f in files:
                     dedup_key = f"file:{hashlib.sha1(f).hexdigest()}"
                     existing_gid = await db.aria2.find_by_dedup_key(dedup_key)
-                    if existing_gid and not await self._dedup_record_is_stale(
-                        db, existing_gid
-                    ):
-                        logger.debug("[Aria2] Skip already-added torrent file")
+                    if existing_gid:
+                        stale = await self._dedup_record_is_stale(db, existing_gid)
+                        if stale is None:
+                            failed_any = True
+                            continue
+                        if not stale:
+                            logger.debug("[Aria2] Skip already-added torrent file")
+                            duplicate_any = True
+                            continue
+                    result, gid = await self._add_torrent_file(f, options)
+                    if result is AddResult.DUPLICATE:
+                        duplicate_any = True
                         continue
-                    gid = await self._add_torrent_file(f, options)
-                    if gid is None:
+                    if result is AddResult.FAILED or gid is None:
+                        failed_any = True
                         continue
+                    gid = await self._resolve_followed_by_gid(gid)
                     await db.aria2.upsert(gid, bangumi_id, category, dedup_key)
                     added_any = True
-        return added_any
+        # 部分成功按 ADDED 报告（与 qB 的批量语义一致）：已经真正开始下载
+        # 的任务必须让上层入库，否则会与 aria2 状态脱节；全部失败才算 FAILED。
+        if added_any:
+            return AddResult.ADDED
+        if failed_any:
+            return AddResult.FAILED
+        if duplicate_any:
+            return AddResult.DUPLICATE
+        return AddResult.FAILED
 
     # ------------------------------------------------------------------
     # Querying
@@ -353,8 +416,16 @@ class Aria2Downloader:
             logger.error("[Aria2] Failed to query downloads: %s", e)
             return []
         raw = [*active, *waiting, *stopped]
-        gids = [d["gid"] for d in raw if d.get("gid")]
+        followed_by: dict[str, str] = {}
+        for d in raw:
+            gid = d.get("gid")
+            follower = self._extract_followed_by_gid(d)
+            if gid and follower:
+                followed_by[gid] = follower
+        gids = [followed_by.get(d["gid"], d["gid"]) for d in raw if d.get("gid")]
         async with Database() as db:
+            for old_gid, new_gid in followed_by.items():
+                await db.aria2.replace_gid(old_gid, new_gid)
             meta = await db.aria2.get_many(gids)
 
         allowed_statuses = (
@@ -364,9 +435,14 @@ class Aria2Downloader:
         for d in raw:
             gid = d.get("gid", "")
             aria2_status = d.get("status", "")
+            if gid in followed_by:
+                # 磁力元数据 stub：真实下载由 followedBy gid 表示。stub 的
+                # status 是 "complete"，若不跳过会以完成态混进结果，让
+                # 重命名循环拿元数据文件当正片处理，且 UI 出现重复条目。
+                continue
             if allowed_statuses is not None and aria2_status not in allowed_statuses:
                 continue
-            info = meta.get(gid)
+            info = meta.get(followed_by.get(gid, gid))
             torrent_category = info.category if info else None
             if category and torrent_category != category:
                 continue
@@ -405,10 +481,13 @@ class Aria2Downloader:
             save_dir = (status or {}).get("dir", "")
         except (Aria2RpcError, Aria2ConnectionError) as e:
             logger.debug("[Aria2] Could not resolve dir for %s: %s", torrent_hash, e)
+        async with Database() as db:
+            renamed_paths = await db.aria2.get_renamed_paths(torrent_hash)
         result = []
         for f in files or []:
             path = f.get("path", "")
             rel = os.path.relpath(path, save_dir) if save_dir and path else path
+            rel = self._translate_renamed_path(rel, renamed_paths)
             result.append({"name": rel, "size": int(f.get("length", 0) or 0)})
         return result
 
@@ -454,6 +533,8 @@ class Aria2Downloader:
                     "[Aria2] Rename reported success but %s is missing", new_abs
                 )
                 return False
+        async with Database() as db:
+            await db.aria2.set_renamed_path(torrent_hash, old_path, new_path)
         return True
 
     # ------------------------------------------------------------------

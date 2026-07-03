@@ -1,14 +1,17 @@
 import asyncio
 import json
 import logging
+import re
 from typing import ClassVar
 
 import httpx
 
 from module.ab_decorator import qb_connect_failed_wait
-from module.downloader.base import DownloaderCapabilities
+from module.downloader.base import AddResult, DownloaderCapabilities
 
 logger = logging.getLogger(__name__)
+
+_MAGNET_BTIH_RE = re.compile(r"xt=urn:btih:([0-9A-Fa-f]{40}|[A-Za-z2-7]{32})")
 
 
 class QbDownloader:
@@ -206,6 +209,40 @@ class QbDownloader:
         resp = await self._get("torrents/files", params={"hash": torrent_hash})
         return resp.json()
 
+    async def _urls_already_added(self, torrent_urls) -> bool:
+        """尽力确认"Fails."是否因为任务已存在：从磁力链提取 btih 并查询 qB。
+
+        只有全部 URL 都是可提取 hash 的磁力链、且每个 hash 都已在 qB 中时才
+        返回 True；.torrent URL 无法事先得知 hash，返回 False（按失败处理）。
+        """
+        urls = (
+            torrent_urls
+            if isinstance(torrent_urls, list)
+            else [torrent_urls] if torrent_urls else []
+        )
+        if not urls:
+            return False
+        hashes: list[str] = []
+        for url in urls:
+            m = _MAGNET_BTIH_RE.search(url or "")
+            if not m:
+                return False
+            btih = m.group(1)
+            if len(btih) == 32:  # base32 -> hex
+                import base64
+
+                try:
+                    btih = base64.b32decode(btih.upper()).hex()
+                except ValueError:
+                    return False
+            hashes.append(btih.lower())
+        try:
+            resp = await self._get("torrents/info", params={"hashes": "|".join(hashes)})
+            found = {t.get("hash", "").lower() for t in resp.json()}
+            return set(hashes) <= found
+        except (httpx.RequestError, ValueError):
+            return False
+
     async def add_torrents(
         self, torrent_urls, torrent_files, save_path, category, tags=None
     ):
@@ -247,7 +284,23 @@ class QbDownloader:
                     data=data,
                     files=files if files else None,
                 )
-                return resp.text == "Ok."
+                if resp.status_code == 200 and resp.text == "Ok.":
+                    return AddResult.ADDED
+                if resp.status_code == 200 and resp.text == "Fails.":
+                    # "Fails." 覆盖所有被拒绝的 add（重复、种子损坏、磁力链
+                    # 无法解析……），不能一律当重复——否则损坏种子会被记成
+                    # 已下载、永远不重试。只有能通过 hash 确认任务已存在时
+                    # 才归类为重复，其余按失败抛出让上层重试。
+                    if await self._urls_already_added(torrent_urls):
+                        return AddResult.DUPLICATE
+                    raise ConnectionError(
+                        "[Downloader] qBittorrent rejected torrent add "
+                        "(200 'Fails.') and no matching torrent found"
+                    )
+                raise ConnectionError(
+                    "[Downloader] qBittorrent rejected torrent add: "
+                    f"HTTP {resp.status_code} {resp.text!r}"
+                )
             except (httpx.ReadError, httpx.ConnectError, httpx.RequestError) as e:
                 if attempt < max_retries - 1:
                     logger.warning(

@@ -1,8 +1,8 @@
 """在线自动更新 API：检查 / 应用 / 回滚。
 
 三个端点均由 ``get_current_user`` 鉴权保护。``apply`` / ``rollback`` 成功后会
-安排一次延迟进程退出——Docker 的 ``restart: unless-stopped`` 会重跑 entrypoint，
-由 entrypoint 的覆盖层逻辑把更新落到应用目录（并在依赖变化时 uv sync）。
+安排一次延迟进程退出——退出前写入 ``config/updates/.restart``，entrypoint
+内部循环会重跑覆盖层逻辑并再次启动应用。
 
 进程退出被抽成可打桩的 ``schedule_restart``，测试据此断言“已安排重启”而不会真的
 退出进程。
@@ -12,6 +12,7 @@ import asyncio
 import logging
 import os
 import signal
+from pathlib import Path
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
@@ -26,11 +27,15 @@ router = APIRouter(prefix="/update", tags=["update"])
 
 # 退出前的延迟：先让 HTTP 响应与最后一帧 SSE 进度刷出，再退出进程。
 _RESTART_DELAY_SECONDS = 1.5
+RESTART_SENTINEL = Path("config") / "updates" / ".restart"
+_RESTART_TASKS: set[asyncio.Task] = set()
 
 
 def _request_restart() -> None:
-    """退出进程，交给容器 restart 策略重启（重跑 entrypoint 应用覆盖层）。"""
+    """请求 entrypoint 内部循环重启进程并重跑覆盖层。"""
     logger.info("[Update] restarting process to apply update")
+    RESTART_SENTINEL.parent.mkdir(parents=True, exist_ok=True)
+    RESTART_SENTINEL.touch()
     os.kill(os.getpid(), signal.SIGINT)
 
 
@@ -41,7 +46,9 @@ async def _delayed_restart() -> None:
 
 def schedule_restart() -> None:
     """安排一次延迟重启（抽成独立函数以便测试打桩，避免真的退出进程）。"""
-    asyncio.create_task(_delayed_restart())
+    task = asyncio.create_task(_delayed_restart())
+    _RESTART_TASKS.add(task)
+    task.add_done_callback(_RESTART_TASKS.discard)
 
 
 @router.get("/check", dependencies=[Depends(get_current_user)])

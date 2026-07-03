@@ -1,5 +1,6 @@
 """Tests for module.core.context.AppContext."""
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -21,6 +22,15 @@ def ctx():
     # explicitly since a bare MagicMock attribute is truthy by default and
     # would make reload_settings() think a restart is needed.
     ctx.scheduler.running = False
+
+    def _mark_running():
+        ctx.scheduler.running = True
+
+    async def _mark_stopped():
+        ctx.scheduler.running = False
+
+    ctx.scheduler.start_all.side_effect = _mark_running
+    ctx.scheduler.stop_all.side_effect = _mark_stopped
     return ctx
 
 
@@ -60,7 +70,7 @@ class TestStartup:
         mock_first_run.assert_called_once()
         assert ctx.first_run_boot is True
         assert ctx._startup_done is True
-        assert ctx._tasks_started is False
+        assert ctx.scheduler.running is False
 
     async def test_existing_db_runs_pending_migrations(self, ctx):
         """Existing DB, same version => run_migrations() is invoked."""
@@ -118,6 +128,7 @@ class TestStartTasks:
         with (
             patch("module.core.context.settings"),
             patch("module.core.context.reset_shared_client", new=AsyncMock()),
+            patch("module.core.context.Checker.check_first_run", return_value=False),
             patch(
                 "module.core.context.Checker.check_downloader",
                 new=AsyncMock(return_value=True),
@@ -128,24 +139,49 @@ class TestStartTasks:
             # as a supervised background task and returns immediately; await it
             # here so the assertions below observe its effects.
             await ctx._start_task
+            assert ctx.is_running is True
 
         ctx.scheduler.start_all.assert_called_once()
-        assert ctx._tasks_started is True
         assert isinstance(resp, ResponseModel)
         assert resp.status is True
 
-    async def test_start_tasks_routes_through_reload_settings(self, ctx):
-        """start_tasks() must go through reload_settings() (the single reload
-        entry point) instead of calling settings.load() directly."""
-        ctx.reload_settings = AsyncMock()
-        with patch(
-            "module.core.context.Checker.check_downloader",
-            new=AsyncMock(return_value=True),
+    async def test_start_tasks_runs_reload_choreography(self, ctx):
+        """start_tasks() must use the same reload choreography as config updates."""
+        with (
+            patch("module.core.context.settings") as mock_settings,
+            patch("module.core.context.reset_shared_client", new=AsyncMock()),
+            patch("module.core.context.Checker.check_first_run", return_value=False),
+            patch(
+                "module.core.context.Checker.check_downloader",
+                new=AsyncMock(return_value=True),
+            ),
         ):
             await ctx.start_tasks()
             await ctx._start_task
 
-        ctx.reload_settings.assert_awaited_once()
+        mock_settings.load.assert_called_once()
+
+    async def test_concurrent_start_tasks_create_one_background_start(self, ctx):
+        start_gate = asyncio.Event()
+
+        async def check_downloader():
+            await start_gate.wait()
+            return True
+
+        with (
+            patch("module.core.context.settings"),
+            patch("module.core.context.reset_shared_client", new=AsyncMock()),
+            patch("module.core.context.Checker.check_first_run", return_value=False),
+            patch(
+                "module.core.context.Checker.check_downloader",
+                new=AsyncMock(side_effect=check_downloader),
+            ),
+        ):
+            await asyncio.gather(ctx.start_tasks(), ctx.start_tasks())
+            start_gate.set()
+            await ctx._start_task
+
+        ctx.scheduler.start_all.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -155,7 +191,7 @@ class TestStartTasks:
 
 class TestStop:
     async def test_stop_running_stops_scheduler_and_downloader(self, ctx):
-        ctx._tasks_started = True
+        ctx.scheduler.running = True
         with (
             patch("module.core.context.Checker.check_first_run", return_value=False),
             patch(
@@ -166,11 +202,11 @@ class TestStop:
 
         ctx.scheduler.stop_all.assert_awaited_once()
         mock_shutdown.assert_awaited_once()
-        assert ctx._tasks_started is False
+        assert ctx.scheduler.running is False
         assert resp.status_code == 200
 
     async def test_stop_not_running_still_closes_downloader(self, ctx):
-        ctx._tasks_started = False
+        ctx.scheduler.running = False
         with (
             patch("module.core.context.Checker.check_first_run", return_value=False),
             patch(

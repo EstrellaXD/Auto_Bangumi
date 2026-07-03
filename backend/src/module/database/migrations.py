@@ -29,6 +29,7 @@ TABLE_MODELS: list[type[SQLModel]] = [Bangumi, RSSItem, Torrent, User, Passkey]
 
 # already_applied 守卫：接收 inspector，返回该迁移是否已生效
 AppliedCheck = Callable[[Any], bool]
+GuardedStatement = tuple[str, AppliedCheck]
 
 
 def column_exists(table: str, column: str) -> AppliedCheck:
@@ -56,12 +57,31 @@ def index_exists(table: str, index: str) -> AppliedCheck:
     return check
 
 
+def all_checks(*checks: AppliedCheck) -> AppliedCheck:
+    def check(inspector) -> bool:
+        return all(item(inspector) for item in checks)
+
+    return check
+
+
 @dataclass(frozen=True)
 class Migration:
     version: int
     description: str
     statements: tuple[str, ...]
     already_applied: AppliedCheck
+    guarded_statements: tuple[GuardedStatement, ...] = ()
+
+    def pending_statements(self, inspector) -> tuple[str, ...]:
+        if self.guarded_statements:
+            return tuple(
+                statement
+                for statement, statement_applied in self.guarded_statements
+                if not statement_applied(inspector)
+            )
+        if self.already_applied(inspector):
+            return ()
+        return self.statements
 
 
 # 迁移按版本顺序执行；版本号与 3.2.x 的历史保持一致，旧数据库照常升级。
@@ -80,7 +100,25 @@ MIGRATIONS: tuple[Migration, ...] = (
             "ALTER TABLE rssitem ADD COLUMN last_checked_at TEXT",
             "ALTER TABLE rssitem ADD COLUMN last_error TEXT",
         ),
-        column_exists("rssitem", "connection_status"),
+        all_checks(
+            column_exists("rssitem", "connection_status"),
+            column_exists("rssitem", "last_checked_at"),
+            column_exists("rssitem", "last_error"),
+        ),
+        (
+            (
+                "ALTER TABLE rssitem ADD COLUMN connection_status TEXT",
+                column_exists("rssitem", "connection_status"),
+            ),
+            (
+                "ALTER TABLE rssitem ADD COLUMN last_checked_at TEXT",
+                column_exists("rssitem", "last_checked_at"),
+            ),
+            (
+                "ALTER TABLE rssitem ADD COLUMN last_error TEXT",
+                column_exists("rssitem", "last_error"),
+            ),
+        ),
     ),
     Migration(
         3,
@@ -121,7 +159,30 @@ MIGRATIONS: tuple[Migration, ...] = (
             "ALTER TABLE bangumi ADD COLUMN needs_review INTEGER DEFAULT 0",
             "ALTER TABLE bangumi ADD COLUMN needs_review_reason TEXT DEFAULT NULL",
         ),
-        column_exists("bangumi", "episode_offset"),
+        all_checks(
+            column_exists("bangumi", "episode_offset"),
+            column_exists("bangumi", "season_offset"),
+            column_exists("bangumi", "needs_review"),
+            column_exists("bangumi", "needs_review_reason"),
+        ),
+        (
+            (
+                "ALTER TABLE bangumi RENAME COLUMN offset TO episode_offset",
+                column_exists("bangumi", "episode_offset"),
+            ),
+            (
+                "ALTER TABLE bangumi ADD COLUMN season_offset INTEGER DEFAULT 0",
+                column_exists("bangumi", "season_offset"),
+            ),
+            (
+                "ALTER TABLE bangumi ADD COLUMN needs_review INTEGER DEFAULT 0",
+                column_exists("bangumi", "needs_review"),
+            ),
+            (
+                "ALTER TABLE bangumi ADD COLUMN needs_review_reason TEXT DEFAULT NULL",
+                column_exists("bangumi", "needs_review_reason"),
+            ),
+        ),
     ),
     Migration(
         6,
@@ -130,7 +191,20 @@ MIGRATIONS: tuple[Migration, ...] = (
             "ALTER TABLE torrent ADD COLUMN qb_hash TEXT",
             "CREATE INDEX IF NOT EXISTS ix_torrent_qb_hash ON torrent(qb_hash)",
         ),
-        column_exists("torrent", "qb_hash"),
+        all_checks(
+            column_exists("torrent", "qb_hash"),
+            index_exists("torrent", "ix_torrent_qb_hash"),
+        ),
+        (
+            (
+                "ALTER TABLE torrent ADD COLUMN qb_hash TEXT",
+                column_exists("torrent", "qb_hash"),
+            ),
+            (
+                "CREATE INDEX IF NOT EXISTS ix_torrent_qb_hash ON torrent(qb_hash)",
+                index_exists("torrent", "ix_torrent_qb_hash"),
+            ),
+        ),
     ),
     Migration(
         7,
@@ -141,7 +215,22 @@ MIGRATIONS: tuple[Migration, ...] = (
             "ALTER TABLE bangumi ADD COLUMN suggested_episode_offset "
             "INTEGER DEFAULT NULL",
         ),
-        column_exists("bangumi", "suggested_season_offset"),
+        all_checks(
+            column_exists("bangumi", "suggested_season_offset"),
+            column_exists("bangumi", "suggested_episode_offset"),
+        ),
+        (
+            (
+                "ALTER TABLE bangumi ADD COLUMN suggested_season_offset "
+                "INTEGER DEFAULT NULL",
+                column_exists("bangumi", "suggested_season_offset"),
+            ),
+            (
+                "ALTER TABLE bangumi ADD COLUMN suggested_episode_offset "
+                "INTEGER DEFAULT NULL",
+                column_exists("bangumi", "suggested_episode_offset"),
+            ),
+        ),
     ),
     Migration(
         8,
@@ -162,7 +251,20 @@ MIGRATIONS: tuple[Migration, ...] = (
             "ALTER TABLE bangumi ADD COLUMN preferred_group TEXT DEFAULT NULL",
             "ALTER TABLE bangumi ADD COLUMN preferred_resolution TEXT DEFAULT NULL",
         ),
-        column_exists("bangumi", "preferred_group"),
+        all_checks(
+            column_exists("bangumi", "preferred_group"),
+            column_exists("bangumi", "preferred_resolution"),
+        ),
+        (
+            (
+                "ALTER TABLE bangumi ADD COLUMN preferred_group TEXT DEFAULT NULL",
+                column_exists("bangumi", "preferred_group"),
+            ),
+            (
+                "ALTER TABLE bangumi ADD COLUMN preferred_resolution TEXT DEFAULT NULL",
+                column_exists("bangumi", "preferred_resolution"),
+            ),
+        ),
     ),
     Migration(
         11,
@@ -222,6 +324,12 @@ MIGRATIONS: tuple[Migration, ...] = (
         ("CREATE INDEX IF NOT EXISTS ix_torrent_bangumi_id ON torrent(bangumi_id)",),
         index_exists("torrent", "ix_torrent_bangumi_id"),
     ),
+    Migration(
+        15,
+        "add renamed_paths column to aria2_gid for persisted file renames",
+        ("ALTER TABLE aria2_gid ADD COLUMN renamed_paths TEXT DEFAULT NULL",),
+        column_exists("aria2_gid", "renamed_paths"),
+    ),
 )
 
 # 由迁移列表派生，新增迁移时无需手动同步
@@ -272,7 +380,8 @@ def run_migrations_conn(conn: Connection) -> None:
         if migration.version <= current:
             continue
         # 每轮重新 inspect：前一个迁移的 DDL 需要对守卫可见
-        if migration.already_applied(inspect(conn)):
+        pending = migration.pending_statements(inspect(conn))
+        if not pending:
             logger.debug(
                 f"[Database] Migration v{migration.version} skipped "
                 f"(already applied): {migration.description}"
@@ -280,7 +389,7 @@ def run_migrations_conn(conn: Connection) -> None:
         else:
             savepoint = conn.begin_nested()
             try:
-                for stmt in migration.statements:
+                for stmt in pending:
                     conn.execute(text(stmt))
                 savepoint.commit()
                 logger.info(

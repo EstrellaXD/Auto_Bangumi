@@ -8,8 +8,10 @@ from sqlmodel import create_engine
 from module.database.migrations import (
     CURRENT_SCHEMA_VERSION,
     MIGRATIONS,
+    ensure_schema_version_table,
     get_schema_version,
     run_migrations,
+    set_schema_version,
 )
 
 
@@ -66,6 +68,71 @@ def _make_v0_engine():
             )
         )
     return engine
+
+
+def _make_versioned_engine(
+    version: int,
+    *,
+    bangumi_extra: str,
+    torrent_extra: str = "",
+) -> object:
+    engine = create_engine("sqlite://")
+    bangumi_extra_sql = f", {bangumi_extra}" if bangumi_extra else ""
+    torrent_extra_sql = f", {torrent_extra}" if torrent_extra else ""
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                "CREATE TABLE bangumi ("
+                "  id INTEGER PRIMARY KEY,"
+                "  official_title TEXT,"
+                "  title_raw TEXT,"
+                "  deleted BOOLEAN DEFAULT 0,"
+                "  air_weekday INTEGER,"
+                "  archived BOOLEAN DEFAULT 0"
+                f"{bangumi_extra_sql}"
+                ")"
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE TABLE rssitem ("
+                "  id INTEGER PRIMARY KEY,"
+                "  name TEXT,"
+                "  url TEXT,"
+                "  connection_status TEXT,"
+                "  last_checked_at TEXT,"
+                "  last_error TEXT"
+                ")"
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE TABLE torrent ("
+                "  id INTEGER PRIMARY KEY,"
+                "  name TEXT,"
+                "  bangumi_id INTEGER,"
+                "  rss_id INTEGER,"
+                "  url TEXT"
+                f"{torrent_extra_sql}"
+                ")"
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE TABLE user ("
+                "  id INTEGER PRIMARY KEY,"
+                "  username TEXT,"
+                "  password TEXT"
+                ")"
+            )
+        )
+        ensure_schema_version_table(conn)
+        set_schema_version(conn, version)
+    return engine
+
+
+def _columns(engine, table: str) -> set[str]:
+    return {c["name"] for c in inspect(engine).get_columns(table)}
 
 
 class TestMigrationTable:
@@ -130,6 +197,15 @@ class TestRunMigrations:
         torrent_indexes = {ix["name"] for ix in inspector.get_indexes("torrent")}
         assert "ix_torrent_bangumi_id" in torrent_indexes
 
+    def test_adds_aria2_renamed_paths_column(self):
+        """v15 stores local aria2 file-renames so getFiles can be translated."""
+        engine = _make_v0_engine()
+        run_migrations(engine)
+
+        inspector = inspect(engine)
+        aria2_cols = {c["name"] for c in inspector.get_columns("aria2_gid")}
+        assert "renamed_paths" in aria2_cols
+
     def test_is_idempotent(self):
         engine = _make_v0_engine()
         run_migrations(engine)
@@ -151,6 +227,89 @@ class TestRunMigrations:
         inspector = inspect(engine)
         bangumi_cols = {c["name"] for c in inspector.get_columns("bangumi")}
         assert "weekday_locked" in bangumi_cols  # later migrations still ran
+
+    def test_partial_v2_adds_missing_rssitem_connection_columns(self):
+        engine = _make_v0_engine()
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE rssitem ADD COLUMN connection_status TEXT"))
+
+        run_migrations(engine)
+
+        rss_cols = _columns(engine, "rssitem")
+        assert {"connection_status", "last_checked_at", "last_error"} <= rss_cols
+
+    def test_partial_v5_adds_missing_columns_without_rerunning_rename(self):
+        engine = _make_versioned_engine(
+            4,
+            bangumi_extra="episode_offset INTEGER DEFAULT 0",
+        )
+
+        run_migrations(engine)
+
+        bangumi_cols = _columns(engine, "bangumi")
+        assert "episode_offset" in bangumi_cols
+        assert "season_offset" in bangumi_cols
+        assert "needs_review" in bangumi_cols
+        assert "needs_review_reason" in bangumi_cols
+
+    def test_partial_v6_adds_missing_qb_hash_index(self):
+        engine = _make_versioned_engine(
+            5,
+            bangumi_extra=(
+                "episode_offset INTEGER DEFAULT 0,"
+                " season_offset INTEGER DEFAULT 0,"
+                " needs_review INTEGER DEFAULT 0,"
+                " needs_review_reason TEXT DEFAULT NULL"
+            ),
+            torrent_extra="qb_hash TEXT",
+        )
+
+        run_migrations(engine)
+
+        torrent_indexes = {ix["name"] for ix in inspect(engine).get_indexes("torrent")}
+        assert "ix_torrent_qb_hash" in torrent_indexes
+
+    def test_partial_v7_adds_missing_suggested_episode_offset(self):
+        engine = _make_versioned_engine(
+            6,
+            bangumi_extra=(
+                "episode_offset INTEGER DEFAULT 0,"
+                " season_offset INTEGER DEFAULT 0,"
+                " needs_review INTEGER DEFAULT 0,"
+                " needs_review_reason TEXT DEFAULT NULL,"
+                " suggested_season_offset INTEGER DEFAULT NULL"
+            ),
+            torrent_extra="qb_hash TEXT",
+        )
+
+        run_migrations(engine)
+
+        bangumi_cols = _columns(engine, "bangumi")
+        assert "suggested_season_offset" in bangumi_cols
+        assert "suggested_episode_offset" in bangumi_cols
+
+    def test_partial_v10_adds_missing_preferred_resolution(self):
+        engine = _make_versioned_engine(
+            9,
+            bangumi_extra=(
+                "episode_offset INTEGER DEFAULT 0,"
+                " season_offset INTEGER DEFAULT 0,"
+                " needs_review INTEGER DEFAULT 0,"
+                " needs_review_reason TEXT DEFAULT NULL,"
+                " suggested_season_offset INTEGER DEFAULT NULL,"
+                " suggested_episode_offset INTEGER DEFAULT NULL,"
+                " title_aliases TEXT DEFAULT NULL,"
+                " weekday_locked BOOLEAN DEFAULT 0,"
+                " preferred_group TEXT DEFAULT NULL"
+            ),
+            torrent_extra="qb_hash TEXT",
+        )
+
+        run_migrations(engine)
+
+        bangumi_cols = _columns(engine, "bangumi")
+        assert "preferred_group" in bangumi_cols
+        assert "preferred_resolution" in bangumi_cols
 
     def test_failure_stops_before_bumping_version(self):
         """A failing migration must not record its version as applied.

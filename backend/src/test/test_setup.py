@@ -10,9 +10,10 @@ from module.api.setup import SENTINEL_PATH, router
 
 @pytest.fixture
 def mock_ctx():
-    """Mock AppContext whose reload_settings is an awaitable no-op."""
+    """Mock AppContext whose lifecycle methods are awaitable no-ops."""
     ctx = MagicMock()
     ctx.reload_settings = AsyncMock()
+    ctx.start_tasks = AsyncMock()
     return ctx
 
 
@@ -352,6 +353,7 @@ class TestSetupComplete:
         data = response.json()
         assert data["status"] is True
         mock_ctx.reload_settings.assert_awaited_once()
+        mock_ctx.start_tasks.assert_awaited_once()
 
 
 class TestSentinelPath:

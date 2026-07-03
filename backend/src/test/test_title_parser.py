@@ -14,7 +14,7 @@ RAW_TITLE = (
 )
 
 
-def _make_llm_episode() -> Episode:
+def _make_llm_episode(episode_type: str = "episode") -> Episode:
     return Episode(
         title_en="LLM Title",
         title_zh=None,
@@ -26,6 +26,7 @@ def _make_llm_episode() -> Episode:
         group="LLMGroup",
         resolution="1080P",
         source="Web",
+        episode_type=episode_type,
     )
 
 
@@ -131,6 +132,20 @@ class TestRawParserLLMPrimaryMode:
         assert result is not None
         assert result.official_title == "LLM Title"
 
+    async def test_raw_non_episodic_type_overrides_llm_episode_type(self):
+        with patch.object(
+            settings, "llm", LLM(enable=True, api_key="k", mode="primary")
+        ):
+            with patch(
+                "module.parser.title_parser._llm_parse",
+                new_callable=AsyncMock,
+                return_value=_make_llm_episode(episode_type="episode"),
+            ):
+                result = await TitleParser.raw_parser("[Group] LLM Title Movie [1080P]")
+
+        assert result is not None
+        assert result.episode_type == "movie"
+
     async def test_llm_failure_falls_back_to_regex(self):
         """LLM 失败（返回 None）时用正则兜底，标题不丢失。"""
         with patch.object(
@@ -188,6 +203,78 @@ class TestLLMParseErrorHandling:
                 result = await title_parser_module._llm_parse("some title")
         assert result is None
 
+    async def test_llm_success_is_cached(self):
+        mock_parser = AsyncMock()
+        mock_parser.parse = AsyncMock(
+            return_value={
+                "title_en": "Cached",
+                "title_zh": None,
+                "title_jp": None,
+                "season": 1,
+                "season_raw": "S1",
+                "episode": 1,
+                "sub": "",
+                "group": "",
+                "resolution": "",
+                "source": "",
+            }
+        )
+        with patch.object(settings, "llm", LLM(enable=True, api_key="k", cache_ttl=60)):
+            with patch(
+                "module.parser.title_parser._get_llm_parser", return_value=mock_parser
+            ):
+                first = await title_parser_module._llm_parse("cached title")
+                second = await title_parser_module._llm_parse("cached title")
+
+        assert first == second
+        assert mock_parser.parse.await_count == 1
+
+    async def test_llm_failures_are_cached(self):
+        mock_parser = AsyncMock()
+        mock_parser.parse = AsyncMock(side_effect=RuntimeError("boom"))
+        with patch.object(
+            settings,
+            "llm",
+            LLM(
+                enable=True,
+                api_key="k",
+                cache_ttl=60,
+                failure_threshold=10,
+            ),
+        ):
+            with patch(
+                "module.parser.title_parser._get_llm_parser", return_value=mock_parser
+            ):
+                first = await title_parser_module._llm_parse("bad title")
+                second = await title_parser_module._llm_parse("bad title")
+
+        assert first is None
+        assert second is None
+        assert mock_parser.parse.await_count == 1
+
+    async def test_llm_failure_breaker_skips_provider_calls(self):
+        mock_parser = AsyncMock()
+        mock_parser.parse = AsyncMock(side_effect=RuntimeError("boom"))
+        with patch.object(
+            settings,
+            "llm",
+            LLM(
+                enable=True,
+                api_key="k",
+                cache_ttl=0,
+                failure_threshold=2,
+                failure_backoff=60,
+            ),
+        ):
+            with patch(
+                "module.parser.title_parser._get_llm_parser", return_value=mock_parser
+            ):
+                assert await title_parser_module._llm_parse("bad title 1") is None
+                assert await title_parser_module._llm_parse("bad title 2") is None
+                assert await title_parser_module._llm_parse("bad title 3") is None
+
+        assert mock_parser.parse.await_count == 2
+
 
 class TestLLMConfigLegacyFallback:
     """llm 段缺失时，_llm_config 回退读取旧的 experimental_openai 段。"""
@@ -225,8 +312,14 @@ class TestLLMParserResetCache:
         # clears it, not that it's a real LLMParser.
         title_parser_module._llm_parser = object()  # type: ignore[assignment]
         title_parser_module._llm_parser_kwargs = {"api_key": "old"}
+        title_parser_module._llm_cache = {("old",): (1, None)}
+        title_parser_module._llm_failure_count = 2
+        title_parser_module._llm_breaker_until = 999
 
         title_parser_module.reset_cache()
 
         assert title_parser_module._llm_parser is None
         assert title_parser_module._llm_parser_kwargs is None
+        assert title_parser_module._llm_cache == {}
+        assert title_parser_module._llm_failure_count == 0
+        assert title_parser_module._llm_breaker_until == 0.0

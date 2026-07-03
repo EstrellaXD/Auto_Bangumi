@@ -6,20 +6,18 @@
 
 逻辑：从持久卷 ``/app/config/updates/`` 读取 ``applied.json``，当覆盖层版本
 **高于** 镜像基线版本（``/app/IMAGE_VERSION``）时，把覆盖层的 module 树覆盖到
-``/app/module``、前端 dist 覆盖到 ``/app/dist``，并在 ``uv.lock`` 相对镜像基线
-变化时 ``uv sync`` 同步依赖到 ``/app/.venv``；否则（镜像更新或相等）忽略并清除
-过期覆盖层，让镜像版本生效。
+``/app/module``、前端 dist 覆盖到 ``/app/dist``，并在更新包已预先准备好
+``.venv`` 时替换 ``/app/.venv``；否则（镜像更新或相等）忽略并清除过期覆盖层，
+让镜像版本生效。
 
 关键约束：本脚本位于 ``/app/boot_overlay.py``，**不在** 覆盖层会替换的
 ``/app/module`` 里，因此始终是镜像自带的稳定版本在做决策。任何一步失败都不得
 阻断启动——记录日志后回退到镜像版本继续启动。
 """
 
-import hashlib
 import logging
 import os
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 
@@ -31,8 +29,6 @@ logger = logging.getLogger("boot_overlay")
 APP_ROOT = Path("/app")
 UPDATES_ROOT = APP_ROOT / "config" / "updates"
 IMAGE_VERSION_PATH = APP_ROOT / "IMAGE_VERSION"
-BASELINE_LOCK = APP_ROOT / "uv.lock"
-VENV_PATH = APP_ROOT / ".venv"
 
 
 def _parse_semver(value: str):
@@ -42,17 +38,6 @@ def _parse_semver(value: str):
 
         return semver.VersionInfo.parse(value.strip().lstrip("v"))
     except Exception:
-        return None
-
-
-def _sha256(path: Path):
-    try:
-        h = hashlib.sha256()
-        with open(path, "rb") as f:
-            for chunk in iter(lambda: f.read(1 << 20), b""):
-                h.update(chunk)
-        return h.hexdigest()
-    except OSError:
         return None
 
 
@@ -92,25 +77,66 @@ def _replace_tree(src: Path, dst: Path) -> None:
         shutil.rmtree(old)
 
 
-def _uv_sync(backend_dir: Path) -> None:
-    """按覆盖层的 uv.lock 把依赖同步到应用 venv（best-effort）。"""
+def _sha256_file(path: Path) -> str | None:
+    import hashlib
+
+    try:
+        h = hashlib.sha256()
+        with path.open("rb") as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                h.update(chunk)
+        return h.hexdigest()
+    except OSError:
+        return None
+
+
+# 记录 /app/.venv 当前对应的 uv.lock 哈希；缺失即视为镜像基线 venv。
+_VENV_LOCK_MARKER = ".ab-lock-sha256"
+
+
+def _sync_venv_to_lock(
+    current: Path, app_root: Path, baseline_lock: Path | None
+) -> None:
+    """把 /app/.venv 与当前生效覆盖层的 uv.lock 对齐。
+
+    正常路径下依赖在 apply 时已预装进 staged .venv，这里不会做任何事；只有
+    覆盖层带 uv.lock 却没有 staged .venv（回滚到旧覆盖层、或旧版 updater
+    落盘的覆盖层）且 lock 与 venv 当前对应的 lock 不一致时才补一次
+    uv sync——否则回滚后的旧代码会跑在新依赖上直接启动崩溃。
+    失败只记日志：用现有 venv 继续启动好过卡死在启动前。
+    """
+    overlay_lock = current / "backend" / "uv.lock"
+    if not overlay_lock.exists():
+        return
+    image_lock = baseline_lock if baseline_lock is not None else app_root / "uv.lock"
+    desired = _sha256_file(overlay_lock)
+    marker = app_root / ".venv" / _VENV_LOCK_MARKER
+    actual = _read_text(marker) or (
+        _sha256_file(image_lock) if image_lock.exists() else None
+    )
+    if desired is None or actual == desired:
+        return
+
     uv = shutil.which("uv")
     if not uv:
-        logger.error("uv not found on PATH; cannot sync dependencies for the overlay")
+        logger.error("uv not found; cannot reconcile venv with overlay lockfile.")
         return
+
+    import subprocess
+
     env = dict(os.environ)
-    env["UV_PROJECT_ENVIRONMENT"] = str(VENV_PATH)
+    env["UV_PROJECT_ENVIRONMENT"] = str((app_root / ".venv").resolve())
+    logger.info("No staged venv; syncing /app/.venv against overlay uv.lock.")
     try:
-        logger.info("Syncing overlay dependencies with uv (uv.lock changed)...")
         subprocess.run(
             [uv, "sync", "--frozen", "--no-dev"],
-            cwd=str(backend_dir),
+            cwd=str(current / "backend"),
             env=env,
             check=True,
         )
-        logger.info("Dependency sync complete.")
-    except (subprocess.CalledProcessError, OSError) as exc:
-        logger.error("uv sync failed: %s (continuing with existing venv)", exc)
+        marker.write_text(desired, encoding="utf-8")
+    except Exception as exc:
+        logger.error("venv reconcile failed; continuing with existing venv: %s", exc)
 
 
 def _clear_overlay(updates_root: Path) -> None:
@@ -128,7 +154,7 @@ def apply_overlay(
     app_root: Path = APP_ROOT,
     updates_root: Path = UPDATES_ROOT,
     image_version_path: Path = IMAGE_VERSION_PATH,
-    baseline_lock: Path = BASELINE_LOCK,
+    baseline_lock: Path | None = None,
 ) -> bool:
     """应用覆盖层。返回是否实际把覆盖层落地（供测试断言）。"""
     applied = _read_applied(updates_root)
@@ -161,7 +187,7 @@ def apply_overlay(
     current = updates_root / "current"
     src_module = current / "backend" / "src" / "module"
     src_dist = current / "webui-dist"
-    overlay_lock = current / "backend" / "uv.lock"
+    src_venv = current / ".venv"
 
     if not src_module.exists():
         logger.warning(
@@ -184,14 +210,21 @@ def apply_overlay(
         except Exception as exc:
             logger.error("Failed to overlay webui dist: %s", exc)
 
-    # 依赖同步：覆盖层 uv.lock 相对镜像基线 lock 变化时才 uv sync。
-    if overlay_lock.exists():
-        overlay_lock_sha = _sha256(overlay_lock)
-        baseline_lock_sha = _sha256(baseline_lock) if baseline_lock.exists() else None
-        if overlay_lock_sha and overlay_lock_sha != baseline_lock_sha:
-            _uv_sync(overlay_lock.parent)
-        else:
-            logger.info("Dependencies unchanged from image baseline; skip uv sync.")
+    if src_venv.exists():
+        try:
+            _replace_tree(src_venv, app_root / ".venv")
+            lock_sha = _sha256_file(current / "backend" / "uv.lock")
+            if lock_sha:
+                (app_root / ".venv" / _VENV_LOCK_MARKER).write_text(
+                    lock_sha, encoding="utf-8"
+                )
+        except Exception as exc:
+            logger.error("Failed to overlay staged venv: %s", exc)
+    else:
+        try:
+            _sync_venv_to_lock(current, app_root, baseline_lock)
+        except Exception as exc:
+            logger.error("Failed to reconcile venv with overlay lock: %s", exc)
 
     logger.info("Overlay applied successfully.")
     return True

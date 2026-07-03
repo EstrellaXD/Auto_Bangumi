@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
+from module.downloader import AddResult
 from module.downloader.client.qb_downloader import QbDownloader
 
 # ---------------------------------------------------------------------------
@@ -610,6 +611,77 @@ class TestAuthQb52Compat:
             result = await qb.auth(retry=1)
 
         assert result is False
+
+
+# ---------------------------------------------------------------------------
+# add_torrents
+# ---------------------------------------------------------------------------
+
+
+class TestAddTorrents:
+    async def test_add_returns_added_on_ok_body(self):
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        mock_resp = MagicMock(status_code=200, text="Ok.")
+        qb._client.request = AsyncMock(return_value=mock_resp)
+
+        result = await qb.add_torrents(
+            torrent_urls="magnet:?xt=urn:btih:abc",
+            torrent_files=None,
+            save_path="/downloads",
+            category="Bangumi",
+        )
+
+        assert result is AddResult.ADDED
+
+    async def test_add_fails_body_with_existing_magnet_is_duplicate(self):
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        btih = "a" * 40
+        add_resp = MagicMock(status_code=200, text="Fails.")
+        info_resp = MagicMock(status_code=200)
+        info_resp.json.return_value = [{"hash": btih}]
+        qb._client.request = AsyncMock(side_effect=[add_resp, info_resp])
+
+        result = await qb.add_torrents(
+            torrent_urls=f"magnet:?xt=urn:btih:{btih}",
+            torrent_files=None,
+            save_path="/downloads",
+            category="Bangumi",
+        )
+
+        # 磁力 hash 已存在于 qB：确认是重复
+        assert result is AddResult.DUPLICATE
+
+    async def test_add_fails_body_without_confirmed_duplicate_raises(self):
+        # "Fails." 也可能是种子损坏/无法解析——无法确认重复时必须按失败抛出，
+        # 让上层保留重试机会，而不是记成已下载
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        mock_resp = MagicMock(status_code=200, text="Fails.")
+        qb._client.request = AsyncMock(return_value=mock_resp)
+
+        with pytest.raises(ConnectionError):
+            await qb.add_torrents(
+                torrent_urls="https://mikanani.me/Download/broken.torrent",
+                torrent_files=None,
+                save_path="/downloads",
+                category="Bangumi",
+            )
+
+    async def test_add_raises_on_non_ok_status(self):
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        mock_resp = MagicMock(status_code=415, text="Unsupported Media Type")
+        qb._client.request = AsyncMock(return_value=mock_resp)
+
+        with pytest.raises(ConnectionError):
+            await qb.add_torrents(
+                torrent_urls="magnet:?xt=urn:btih:abc",
+                torrent_files=None,
+                save_path="/downloads",
+                category="Bangumi",
+            )
 
 
 # ---------------------------------------------------------------------------

@@ -3,7 +3,7 @@
 import json
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import anthropic
 import httpx
@@ -11,6 +11,8 @@ import openai as openai_sdk
 import pytest
 from google.genai import errors as genai_errors
 
+from module.models.config import Proxy
+from module.parser.analyser import llm as llm_module
 from module.parser.analyser.llm import (
     DEFAULT_PROMPT,
     EPISODE_JSON_SCHEMA,
@@ -44,6 +46,38 @@ class TestLLMParserInit:
     def test_init_unknown_provider_raises(self):
         with pytest.raises(ValueError):
             LLMParser(api_key="key", provider="deepmind")
+
+    def test_http_proxy_is_passed_to_injected_http_client(self):
+        proxy = Proxy(
+            enable=True,
+            type="http",
+            host="proxy.local",
+            port=7890,
+            username="user",
+            password="pass",
+        )
+        with patch.object(llm_module.settings, "proxy", proxy):
+            with patch("module.parser.analyser.llm.httpx.AsyncClient") as mock_client:
+                llm_module._build_http_client(5.0)
+
+        assert mock_client.call_args.kwargs["proxy"] == (
+            "http://user:pass@proxy.local:7890"
+        )
+
+    def test_socks_proxy_uses_proxy_transport(self):
+        proxy = Proxy(enable=True, type="socks5", host="proxy.local", port=7891)
+        with patch.object(llm_module.settings, "proxy", proxy):
+            with (
+                patch("module.parser.analyser.llm.httpx.AsyncClient") as mock_client,
+                patch(
+                    "module.parser.analyser.llm.AsyncProxyTransport.from_url",
+                    return_value="transport",
+                ) as mock_transport,
+            ):
+                llm_module._build_http_client(5.0)
+
+        mock_transport.assert_called_once_with("socks5://proxy.local:7891", rdns=True)
+        assert mock_client.call_args.kwargs["transport"] == "transport"
 
 
 class TestOpenAIProvider:

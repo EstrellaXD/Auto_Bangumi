@@ -1,4 +1,8 @@
-type AnyAsyncFuntion<TData = any> = (...args: any[]) => Promise<TData>;
+type AnyAsyncFunction<TData = any> = (...args: any[]) => Promise<TData>;
+
+export type ApiExecuteResult<TData> =
+  | { ok: true; data: TData }
+  | { ok: false; error: unknown };
 
 interface Options<T = any> {
   showMessage?: boolean;
@@ -9,7 +13,7 @@ interface Options<T = any> {
 }
 
 export function useApi<
-  TApi extends AnyAsyncFuntion = AnyAsyncFuntion,
+  TApi extends AnyAsyncFunction = AnyAsyncFunction,
   TData = Awaited<ReturnType<TApi>>
 >(
   api: TApi,
@@ -19,7 +23,7 @@ export function useApi<
     onSuccess,
     onError,
     onFinally,
-  }: Options = {}
+  }: Options<TData> = {}
 ) {
   const data = ref<TData>();
   const isLoading = ref(false);
@@ -27,21 +31,25 @@ export function useApi<
   const message = useMessage();
   const { returnUserLangMsg } = useMyI18n();
 
-  async function execute(...params: Parameters<TApi>) {
+  async function execute(
+    ...params: Parameters<TApi>
+  ): Promise<ApiExecuteResult<TData>> {
     onBeforeExecute?.();
 
     try {
       isLoading.value = true;
       const res = await api(...params);
-      data.value = res;
+      data.value = res as TData;
 
-      onSuccess?.(res);
+      onSuccess?.(res as TData);
 
-      if (showMessage && 'msg_en' in res) {
+      if (showMessage && res && typeof res === 'object' && 'msg_en' in res) {
         message.success(returnUserLangMsg(res));
       }
+      return { ok: true, data: res as TData };
     } catch (err) {
       onError?.(err);
+      return { ok: false, error: err };
     } finally {
       isLoading.value = false;
       onFinally?.();

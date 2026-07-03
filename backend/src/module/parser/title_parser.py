@@ -1,4 +1,6 @@
+import asyncio
 import logging
+import time
 
 from module.conf import settings
 from module.models import Bangumi
@@ -11,6 +13,7 @@ from module.parser.analyser import (
     tmdb_parser,
     torrent_parser,
 )
+from module.parser.analyser.raw_parser import _detect_non_episodic_type
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +22,11 @@ logger = logging.getLogger(__name__)
 # mode 不影响客户端构建（调用时读取），不参与缓存键。
 _llm_parser: LLMParser | None = None
 _llm_parser_kwargs: dict | None = None
+_llm_cache: dict[tuple, tuple[float, Episode | None]] = {}
+_llm_failure_count = 0
+_llm_breaker_until = 0.0
+_llm_semaphore: asyncio.Semaphore | None = None
+_llm_semaphore_limit: int | None = None
 
 
 def _get_llm_parser(kwargs: dict) -> LLMParser:
@@ -33,8 +41,32 @@ def reset_cache() -> None:
     """清空 LLM 解析器单例。配置重载后必须调用，否则会继续使用旧配置
     （如 provider/base_url/api_key）构建的客户端。"""
     global _llm_parser, _llm_parser_kwargs
+    global _llm_cache, _llm_failure_count, _llm_breaker_until
+    global _llm_semaphore, _llm_semaphore_limit
+    parser = _llm_parser
+    old_kwargs = _llm_parser_kwargs
     _llm_parser = None
     _llm_parser_kwargs = None
+    _llm_cache = {}
+    _llm_failure_count = 0
+    _llm_breaker_until = 0.0
+    _llm_semaphore = None
+    _llm_semaphore_limit = None
+    if parser is not None and hasattr(parser, "aclose"):
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        # 不能立刻关：进行中的 _llm_parse 还握着这个共享 client，立即
+        # aclose 会让它们全部报错、把 None 写进缓存并误触熔断。in-flight
+        # 调用被 wait_for(timeout) 兜底，等一个超时周期后再关必然安全。
+        grace = float((old_kwargs or {}).get("timeout") or 30) + 5.0
+
+        async def _close_after_grace() -> None:
+            await asyncio.sleep(grace)
+            await parser.aclose()
+
+        loop.create_task(_close_after_grace())
 
 
 def _llm_config() -> LLM:
@@ -58,23 +90,71 @@ def _llm_config() -> LLM:
 async def _llm_parse(raw: str) -> Episode | None:
     """用 LLM 解析标题，返回 Episode；任何失败（API 错误、拒答、
     输出不可用）都返回 None，由调用方决定是否回退。"""
+    global _llm_failure_count, _llm_breaker_until
     conf = _llm_config()
+    now = time.monotonic()
+    if _llm_breaker_until > now:
+        logger.warning("LLM parser breaker is open; skipping '%s'", raw)
+        return None
+    parser_kwargs = {
+        "provider": conf.provider,
+        "api_key": conf.api_key,
+        "model": conf.model,
+        "base_url": conf.base_url,
+        "timeout": conf.timeout,
+    }
+    cache_key = (tuple(sorted(parser_kwargs.items())), raw)
+    if conf.cache_ttl > 0:
+        cached = _llm_cache.get(cache_key)
+        if cached is not None:
+            expires_at, cached_episode = cached
+            if expires_at > now:
+                return cached_episode
+            _llm_cache.pop(cache_key, None)
     try:
-        llm = _get_llm_parser(
-            {
-                "provider": conf.provider,
-                "api_key": conf.api_key,
-                "model": conf.model,
-                "base_url": conf.base_url,
-            }
-        )
-        episode_dict = await llm.parse(raw, asdict=True)
+        llm = _get_llm_parser(parser_kwargs)
+        semaphore = _get_llm_semaphore(conf.max_concurrency)
+        async with semaphore:
+            episode_dict = await asyncio.wait_for(
+                llm.parse(raw, asdict=True), timeout=conf.timeout
+            )
         if not isinstance(episode_dict, dict):
+            _record_llm_failure(conf)
+            _cache_llm_result(cache_key, None, conf.cache_ttl)
             return None
-        return Episode(**episode_dict)
+        episode = Episode(**episode_dict)
+        _llm_failure_count = 0
+        _llm_breaker_until = 0.0
+        _cache_llm_result(cache_key, episode, conf.cache_ttl)
+        return episode
     except Exception as e:
         logger.warning(f"LLM cannot parse '{raw}': {type(e).__name__}: {e}")
+        _record_llm_failure(conf)
+        _cache_llm_result(cache_key, None, conf.cache_ttl)
         return None
+
+
+def _get_llm_semaphore(limit: int) -> asyncio.Semaphore:
+    global _llm_semaphore, _llm_semaphore_limit
+    if _llm_semaphore is None or _llm_semaphore_limit != limit:
+        _llm_semaphore = asyncio.Semaphore(limit)
+        _llm_semaphore_limit = limit
+    return _llm_semaphore
+
+
+def _cache_llm_result(
+    cache_key: tuple, episode: Episode | None, cache_ttl: int
+) -> None:
+    if cache_ttl <= 0:
+        return
+    _llm_cache[cache_key] = (time.monotonic() + cache_ttl, episode)
+
+
+def _record_llm_failure(conf: LLM) -> None:
+    global _llm_failure_count, _llm_breaker_until
+    _llm_failure_count += 1
+    if _llm_failure_count >= conf.failure_threshold:
+        _llm_breaker_until = time.monotonic() + conf.failure_backoff
 
 
 class TitleParser:
@@ -130,16 +210,26 @@ class TitleParser:
         try:
             llm_conf = _llm_config()
             episode = None
+            from_llm = False
             # primary 模式：LLM 优先解析每个标题；失败时用正则兜底，保证不丢标题
             if llm_conf.enable and llm_conf.mode == "primary":
                 episode = await _llm_parse(raw)
+                from_llm = episode is not None
             if episode is None:
                 episode = raw_parser(raw)
             # fallback 模式（默认）：正则优先，仅当正则失败时才请求 LLM 兜底
             if episode is None and llm_conf.enable and llm_conf.mode == "fallback":
                 episode = await _llm_parse(raw)
+                from_llm = episode is not None
             if episode is None:
                 return None
+            # 正则路径已在剥离字幕组名后的标题上判定过 episode_type，这里只
+            # 给缺少该能力的 LLM 结果补分类；对完整 raw 判定会把组名/标签里
+            # 撞词（如 "[Movie-Fan]"）的普通周更集误判成剧场版/特别篇。
+            if from_llm:
+                detected_episode_type = _detect_non_episodic_type(raw)
+                if detected_episode_type is not None:
+                    episode.episode_type = detected_episode_type
 
             titles = {
                 "zh": episode.title_zh,
