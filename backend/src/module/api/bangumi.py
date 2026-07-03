@@ -8,7 +8,7 @@ from module.conf import settings
 from module.database import Database, get_db
 from module.downloader import DownloadClient
 from module.manager import Renamer, TorrentManager
-from module.models import APIResponse, Bangumi, BangumiUpdate, ResponseModel
+from module.models import APIResponse, Bangumi, BangumiUpdate, ResponseModel, Torrent
 from module.parser.analyser.offset_detector import (
     OffsetSuggestion as DetectorSuggestion,
 )
@@ -492,4 +492,135 @@ async def set_weekday(bangumi_id: int, request: SetWeekdayRequest):
             "msg_en": f"Bangumi {bangumi_id} not found.",
             "msg_zh": f"未找到番剧 {bangumi_id}。",
         },
+    )
+
+
+# ---------------------------------------------------------------------------
+# Torrent management (#1020)
+# 孤儿种子：bangumi_id 为 NULL 的种子记录（解析失败、取消关联或脏数据残留）。
+# /torrents/orphans 使用字面量路径，注册在 /{bangumi_id}/torrents 之前以避免歧义。
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    path="/torrents/orphans",
+    response_model=list[Torrent],
+    dependencies=[Depends(get_current_user)],
+)
+async def get_orphan_torrents(db: Database = Depends(get_db)):
+    """List all torrent records not associated with any bangumi."""
+    return await db.torrent.search_orphans()
+
+
+@router.get(
+    path="/torrents/orphans/count",
+    response_model=int,
+    dependencies=[Depends(get_current_user)],
+)
+async def get_orphan_torrent_count(db: Database = Depends(get_db)):
+    """Count torrent records not associated with any bangumi."""
+    return await db.torrent.count_orphans()
+
+
+@router.delete(
+    path="/torrents/orphans",
+    response_model=APIResponse,
+    dependencies=[Depends(get_current_user)],
+)
+async def delete_orphan_torrents(db: Database = Depends(get_db)):
+    """Delete all torrent records not associated with any bangumi."""
+    count = await db.torrent.delete_orphans()
+    return u_response(
+        ResponseModel(
+            status=True,
+            status_code=200,
+            msg_en=f"Deleted {count} orphan torrents.",
+            msg_zh=f"已删除 {count} 条未匹配种子。",
+        )
+    )
+
+
+@router.delete(
+    path="/torrents/orphans/{torrent_id}",
+    response_model=APIResponse,
+    dependencies=[Depends(get_current_user)],
+)
+async def delete_orphan_torrent(torrent_id: int, db: Database = Depends(get_db)):
+    """Delete a single orphan torrent record."""
+    torrent = await db.torrent.search(torrent_id)
+    if torrent is None or torrent.bangumi_id is not None:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "status": False,
+                "msg_en": f"Orphan torrent {torrent_id} not found.",
+                "msg_zh": f"未找到孤儿种子 {torrent_id}。",
+            },
+        )
+    await db.torrent.delete_obj(torrent)
+    return u_response(
+        ResponseModel(
+            status=True,
+            status_code=200,
+            msg_en=f"Deleted torrent {torrent_id}.",
+            msg_zh=f"已删除种子 {torrent_id}。",
+        )
+    )
+
+
+@router.get(
+    path="/{bangumi_id}/torrents",
+    response_model=list[Torrent],
+    dependencies=[Depends(get_current_user)],
+)
+async def get_bangumi_torrents(bangumi_id: int, db: Database = Depends(get_db)):
+    """List all torrent records associated with a bangumi."""
+    return await db.torrent.search_by_bangumi_id(bangumi_id)
+
+
+@router.delete(
+    path="/{bangumi_id}/torrents",
+    response_model=APIResponse,
+    dependencies=[Depends(get_current_user)],
+)
+async def delete_bangumi_torrents(bangumi_id: int, db: Database = Depends(get_db)):
+    """Delete all torrent records associated with a bangumi."""
+    count = await db.torrent.delete_by_bangumi_id(bangumi_id)
+    return u_response(
+        ResponseModel(
+            status=True,
+            status_code=200,
+            msg_en=f"Deleted {count} torrents for bangumi {bangumi_id}.",
+            msg_zh=f"已删除番剧 {bangumi_id} 的 {count} 条种子。",
+        )
+    )
+
+
+@router.delete(
+    path="/{bangumi_id}/torrents/{torrent_id}",
+    response_model=APIResponse,
+    dependencies=[Depends(get_current_user)],
+)
+async def delete_bangumi_torrent(
+    bangumi_id: int, torrent_id: int, db: Database = Depends(get_db)
+):
+    """Delete a single torrent record under a bangumi."""
+    torrent = await db.torrent.search(torrent_id)
+    if torrent is None or torrent.bangumi_id != bangumi_id:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "status": False,
+                "msg_en": f"Torrent {torrent_id} not found under bangumi {bangumi_id}.",
+                "msg_zh": f"番剧 {bangumi_id} 下未找到种子 {torrent_id}。",
+            },
+        )
+    await db.torrent.delete_obj(torrent)
+    return u_response(
+        ResponseModel(
+            status=True,
+            status_code=200,
+            msg_en=f"Deleted torrent {torrent_id}.",
+            msg_zh=f"已删除种子 {torrent_id}。",
+        )
     )

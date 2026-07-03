@@ -919,3 +919,78 @@ class TestRSSDeleteWithTorrents:
         rss_db = RSSDatabase(db_session)
         result = await rss_db.delete(999)
         assert result is True
+
+
+class TestOrphanTorrents:
+    """Tests for TorrentDatabase orphan-torrent operations (bangumi_id IS NULL)."""
+
+    async def test_search_orphans_returns_only_unmatched(self, db_session):
+        db = TorrentDatabase(db_session)
+        await _ensure_bangumi(db_session, 50)
+        await db.add(
+            Torrent(name="matched", url="https://example.com/m", bangumi_id=50)
+        )
+        await db.add(
+            Torrent(name="orphan_a", url="https://example.com/a", bangumi_id=None)
+        )
+        await db.add(
+            Torrent(name="orphan_b", url="https://example.com/b", bangumi_id=None)
+        )
+
+        orphans = await db.search_orphans()
+        assert sorted(t.name for t in orphans) == ["orphan_a", "orphan_b"]
+
+    async def test_count_orphans(self, db_session):
+        db = TorrentDatabase(db_session)
+        await _ensure_bangumi(db_session, 51)
+        await db.add(
+            Torrent(name="matched", url="https://example.com/m", bangumi_id=51)
+        )
+        await db.add(
+            Torrent(name="orphan", url="https://example.com/o", bangumi_id=None)
+        )
+
+        assert await db.count_orphans() == 1
+
+    async def test_count_orphans_empty(self, db_session):
+        db = TorrentDatabase(db_session)
+        assert await db.count_orphans() == 0
+
+    async def test_delete_orphans_removes_all_and_returns_count(self, db_session):
+        db = TorrentDatabase(db_session)
+        await _ensure_bangumi(db_session, 52)
+        await db.add(
+            Torrent(name="matched", url="https://example.com/m", bangumi_id=52)
+        )
+        await db.add(
+            Torrent(name="orphan_a", url="https://example.com/a", bangumi_id=None)
+        )
+        await db.add(
+            Torrent(name="orphan_b", url="https://example.com/b", bangumi_id=None)
+        )
+
+        count = await db.delete_orphans()
+        assert count == 2
+        remaining = await db.search_all()
+        assert len(remaining) == 1
+        assert remaining[0].name == "matched"
+
+    async def test_delete_orphans_no_match_returns_zero(self, db_session):
+        db = TorrentDatabase(db_session)
+        await _ensure_bangumi(db_session, 53)
+        await db.add(
+            Torrent(name="matched", url="https://example.com/m", bangumi_id=53)
+        )
+
+        assert await db.delete_orphans() == 0
+        assert len(await db.search_all()) == 1
+
+    async def test_delete_obj_removes_single_torrent(self, db_session):
+        db = TorrentDatabase(db_session)
+        await db.add(
+            Torrent(name="orphan", url="https://example.com/o", bangumi_id=None)
+        )
+        torrent = (await db.search_all())[0]
+
+        await db.delete_obj(torrent)
+        assert await db.search_all() == []

@@ -1,6 +1,7 @@
 import logging
 from collections import defaultdict
 
+from sqlalchemy import delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import and_, select, true
 
@@ -127,6 +128,42 @@ class TorrentDatabase:
                 "Deleted %s torrent records for bangumi_id %s.", count, bangumi_id
             )
         return count
+
+    async def search_orphans(self) -> list[Torrent]:
+        """Find all torrent records not associated with any bangumi."""
+        result = await self.session.execute(
+            select(Torrent).where(Torrent.bangumi_id.is_(None))  # type: ignore[union-attr]
+        )
+        return list(result.scalars().all())
+
+    async def count_orphans(self) -> int:
+        """Count torrent records not associated with any bangumi."""
+        result = await self.session.execute(
+            select(func.count())
+            .select_from(Torrent)
+            .where(Torrent.bangumi_id.is_(None))  # type: ignore[union-attr]
+        )
+        return result.scalar_one()
+
+    async def delete_orphans(self) -> int:
+        """Delete all torrent records not associated with any bangumi.
+
+        Returns the number of deleted records.
+        """
+        result = await self.session.execute(
+            delete(Torrent).where(Torrent.bangumi_id.is_(None))  # type: ignore[union-attr]
+        )
+        await self.session.commit()
+        count = result.rowcount
+        if count > 0:
+            logger.debug("Deleted %s orphan torrents.", count)
+        return count
+
+    async def delete_obj(self, torrent: Torrent) -> None:
+        """Delete a single torrent record."""
+        await self.session.delete(torrent)
+        await self.session.commit()
+        logger.debug("Deleted torrent %s.", torrent.id)
 
     async def search_by_url(self, url: str) -> Torrent | None:
         """Find torrent by URL."""

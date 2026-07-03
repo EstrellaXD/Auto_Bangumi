@@ -41,6 +41,7 @@ declare module '@vue/runtime-core' {
     AbSwipeContainer: typeof import('./../../src/components/basic/ab-swipe-container.vue')['default']
     AbTag: typeof import('./../../src/components/basic/ab-tag.vue')['default']
     AbTopbar: typeof import('./../../src/components/layout/ab-topbar.vue')['default']
+    AbTorrentListPage: typeof import('./../../src/components/ab-torrent-list-page.vue')['default']
     AdvancedSection: typeof import('./../../src/components/advanced-section.vue')['default']
     BangumiFilterField: typeof import('./../../src/components/bangumi-filter-field.vue')['default']
     BangumiInfoTags: typeof import('./../../src/components/bangumi-info-tags.vue')['default']
