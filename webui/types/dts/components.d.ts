@@ -52,6 +52,7 @@ declare module '@vue/runtime-core' {
     AbToolbar: typeof import('./../../src/components/basic/ab-toolbar.vue')['default']
     AbTooltip: typeof import('./../../src/components/basic/ab-tooltip.vue')['default']
     AbTopbar: typeof import('./../../src/components/layout/ab-topbar.vue')['default']
+    AbTorrentListPage: typeof import('./../../src/components/ab-torrent-list-page.vue')['default']
     AdvancedSection: typeof import('./../../src/components/advanced-section.vue')['default']
     BangumiFilterField: typeof import('./../../src/components/bangumi-filter-field.vue')['default']
     BangumiInfoTags: typeof import('./../../src/components/bangumi-info-tags.vue')['default']

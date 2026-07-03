@@ -131,6 +131,7 @@ declare global {
   const useSearchStore: typeof import('../../src/store/search')['useSearchStore']
   const useSetupStore: typeof import('../../src/store/setup')['useSetupStore']
   const useSlots: typeof import('vue')['useSlots']
+  const useTorrentList: typeof import('../../src/hooks/useTorrentList')['useTorrentList']
   const vi: typeof import('vitest')['vi']
   const vitest: typeof import('vitest')['vitest']
   const watch: typeof import('vue')['watch']
