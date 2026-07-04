@@ -28,6 +28,7 @@ class TorrentDeleteRequest(BaseModel):
 
 class TorrentTagRequest(BaseModel):
     """Request to tag a torrent with a bangumi ID."""
+
     hash: str
     bangumi_id: int
 
@@ -136,15 +137,17 @@ async def auto_tag_torrents():
                 await client.add_tag(torrent_hash, tag)
                 tagged_count += 1
                 logger.info(
-                    f"[AutoTag] Tagged '{torrent_name[:50]}...' with {tag} "
+                    f"Tagged '{torrent_name[:50]}...' with {tag} "
                     f"(matched: {bangumi.official_title})"
                 )
             else:
-                unmatched.append({
-                    "hash": torrent_hash,
-                    "name": torrent_name,
-                    "save_path": save_path,
-                })
+                unmatched.append(
+                    {
+                        "hash": torrent_hash,
+                        "name": torrent_name,
+                        "save_path": save_path,
+                    }
+                )
 
     return {
         "status": True,

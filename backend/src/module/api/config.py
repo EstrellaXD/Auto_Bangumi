@@ -1,12 +1,15 @@
 import asyncio
 import logging
+from typing import Literal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from module.conf import settings
 from module.core import AppContext
 from module.models import APIResponse, Config
+from module.parser.analyser.llm import LLMParser
 from module.security.api import UNAUTHORIZED, get_current_user
 
 from .deps import get_context
@@ -90,3 +93,51 @@ async def update_config(config: Config, ctx: AppContext = Depends(get_context)):
             status_code=406,
             content={"msg_en": "Update config failed.", "msg_zh": "更新配置失败。"},
         )
+
+
+class LLMModelsRequest(BaseModel):
+    provider: Literal["openai", "anthropic", "gemini"] = "openai"
+    api_key: str = ""
+    base_url: str = ""
+
+
+class LLMModelsResponse(BaseModel):
+    models: list[str]
+
+
+@router.post(
+    "/llm/models",
+    response_model=LLMModelsResponse,
+    dependencies=[Depends(get_current_user)],
+)
+async def list_llm_models(req: LLMModelsRequest):
+    """拉取所选 LLM 提供商的可用模型列表。
+
+    表单里的密钥若是掩码（用户未改动已保存的密钥），回退到已保存值。
+    """
+    api_key = req.api_key
+    if not api_key or api_key == _MASK:
+        api_key = settings.llm.api_key
+    if not api_key:
+        raise HTTPException(status_code=400, detail="LLM API key is required")
+    try:
+        parser = LLMParser(
+            api_key=api_key,
+            provider=req.provider,
+            base_url=req.base_url,
+            timeout=10.0,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    try:
+        models = await parser.list_models()
+    except Exception as e:
+        # SDK 异常类型因提供商而异；细节进日志，响应保持通用文案
+        logger.warning("LLM model list fetch failed (%s): %s", req.provider, e)
+        raise HTTPException(
+            status_code=502,
+            detail="Failed to fetch the model list from the provider",
+        )
+    finally:
+        await parser.aclose()
+    return LLMModelsResponse(models=models)

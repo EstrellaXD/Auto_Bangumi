@@ -24,6 +24,6 @@ async def health() -> dict:
             await db.session.execute(text("SELECT 1"))
         db_ok = True
     except Exception as e:
-        logger.warning(f"[Health] DB check failed: {e}")
+        logger.warning(f"DB check failed: {e}")
         db_ok = False
     return {"status": "ok", "version": VERSION, "db_ok": db_ok}

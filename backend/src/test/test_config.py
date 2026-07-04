@@ -254,7 +254,7 @@ class TestMigrateOpenAIToLLM:
             "experimental_openai": {"enable": True, "api_key": "sk-old"},
         }
         result = Settings._migrate_old_config(config)
-        assert result["llm"]["model"] == "gpt-4o-mini"
+        assert result["llm"]["model"] == "gpt-5-mini"
         assert result["llm"]["mode"] == "primary"
 
 

@@ -37,7 +37,7 @@ class McpAccessMiddleware(BaseHTTPMiddleware):
         if client_host and _is_allowed(client_host, settings.security.mcp_whitelist):
             return await call_next(request)
 
-        logger.warning("[MCP] Rejected connection from %s", client_host)
+        logger.warning("Rejected connection from %s", client_host)
         return JSONResponse(
             status_code=403,
             content={"error": "MCP access denied"},

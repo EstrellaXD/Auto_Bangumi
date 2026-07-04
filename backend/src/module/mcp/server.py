@@ -36,7 +36,7 @@ async def list_tools() -> list[types.Tool]:
 
 @server.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
-    logger.debug("[MCP] Tool called: %s", name)
+    logger.debug("Tool called: %s", name)
     return await handle_tool(name, arguments)
 
 
@@ -52,7 +52,7 @@ async def list_resource_templates() -> list[types.ResourceTemplate]:
 
 @server.read_resource()
 async def read_resource(uri: str) -> str:
-    logger.debug("[MCP] Resource read: %s", uri)
+    logger.debug("Resource read: %s", uri)
     return await handle_resource(uri)
 
 

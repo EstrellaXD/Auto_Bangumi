@@ -33,7 +33,7 @@ _RESTART_TASKS: set[asyncio.Task] = set()
 
 def _request_restart() -> None:
     """请求 entrypoint 内部循环重启进程并重跑覆盖层。"""
-    logger.info("[Update] restarting process to apply update")
+    logger.info("restarting process to apply update")
     RESTART_SENTINEL.parent.mkdir(parents=True, exist_ok=True)
     RESTART_SENTINEL.touch()
     os.kill(os.getpid(), signal.SIGINT)

@@ -42,7 +42,7 @@ async def from_31_to_32():
     async with Database() as db:
         await db.create_table()
         await db.run_migrations()
-    logger.info("[Migration] 3.1 -> 3.2 migration completed.")
+    logger.info("3.1 -> 3.2 migration completed.")
 
 
 async def run_migrations():
@@ -68,7 +68,7 @@ async def cache_image():
                             bangumi.poster_link = img_path
                     except Exception as e:
                         logger.warning(
-                            "[Migration] Failed to cache poster for %s: %s",
+                            "Failed to cache poster for %s: %s",
                             bangumi.official_title,
                             e,
                         )

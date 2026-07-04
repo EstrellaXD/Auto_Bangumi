@@ -31,7 +31,7 @@ def version_check() -> tuple[bool, int | None]:
                 last_ver = semver.VersionInfo.parse(last_version)
             except (IndexError, ValueError) as e:
                 logger.warning(
-                    f"[Version] {VERSION_PATH} is empty or malformed ({e}); "
+                    f"{VERSION_PATH} is empty or malformed ({e}); "
                     "rewriting with the current version."
                 )
                 f.seek(0)

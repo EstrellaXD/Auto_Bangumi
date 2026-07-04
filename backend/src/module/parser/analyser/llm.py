@@ -101,7 +101,7 @@ class LLMParser:
         self,
         api_key: str,
         provider: str = "openai",
-        model: str = "gpt-4o-mini",
+        model: str = "gpt-5-mini",
         base_url: str = "",
         timeout: float = 20.0,
     ) -> None:
@@ -145,6 +145,30 @@ class LLMParser:
     async def aclose(self) -> None:
         if self._http_client is not None:
             await self._http_client.aclose()
+
+    async def list_models(self) -> list[str]:
+        """列出当前提供商可用的模型 id（升序）。
+
+        openai 走 ``/models``（自定义 base_url 时即该端点的模型表）；
+        gemini 只保留支持 generateContent 的模型并去掉 ``models/`` 前缀。
+        SDK 异常原样抛出，由调用方决定如何呈现。
+        """
+        ids: list[str]
+        if self.provider == "openai":
+            openai_page = await self._openai_client.models.list()
+            ids = [m.id for m in openai_page.data]
+        elif self.provider == "anthropic":
+            anthropic_page = await self._anthropic_client.models.list()
+            ids = [m.id for m in anthropic_page.data]
+        else:
+            ids = []
+            async for m in await self._gemini_client.aio.models.list():
+                actions = getattr(m, "supported_actions", None)
+                if actions and "generateContent" not in actions:
+                    continue
+                name = m.name or ""
+                ids.append(name.removeprefix("models/"))
+        return sorted(ids)
 
     async def parse(self, raw: str, asdict: bool = True) -> dict | None:
         """解析种子标题，返回 Episode 形状的 dict；失败返回 None。

@@ -18,8 +18,12 @@ async def test_async_engine_enables_wal_and_busy_timeout(tmp_path):
     try:
         for _ in range(2):
             async with engine.connect() as conn:
-                journal_mode = (await conn.execute(text("PRAGMA journal_mode"))).scalar()
-                busy_timeout = (await conn.execute(text("PRAGMA busy_timeout"))).scalar()
+                journal_mode = (
+                    await conn.execute(text("PRAGMA journal_mode"))
+                ).scalar()
+                busy_timeout = (
+                    await conn.execute(text("PRAGMA busy_timeout"))
+                ).scalar()
                 assert journal_mode == "wal"
                 assert busy_timeout == 5000
     finally:

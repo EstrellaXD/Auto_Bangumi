@@ -16,7 +16,7 @@ const programItems: SettingItem<Program>[] = [
     css: 'w-72',
     prop: {
       type: 'number',
-      placeholder: 'port',
+      placeholder: '900',
     },
   },
   {
@@ -26,7 +26,7 @@ const programItems: SettingItem<Program>[] = [
     css: 'w-72',
     prop: {
       type: 'number',
-      placeholder: 'port',
+      placeholder: '60',
     },
   },
   {
@@ -36,7 +36,7 @@ const programItems: SettingItem<Program>[] = [
     css: 'w-72',
     prop: {
       type: 'number',
-      placeholder: 'port',
+      placeholder: '7892',
     },
     bottomLine: true,
   },

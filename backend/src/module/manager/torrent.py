@@ -78,7 +78,7 @@ class TorrentManager:
                             "but deleting its torrents failed.",
                             msg_zh=f"已删除 {data.official_title} 规则，但删除种子失败。",
                         )
-            logger.info(f"[Manager] Delete rule for {data.official_title}")
+            logger.info(f"Delete rule for {data.official_title}")
             return ResponseModel(
                 status_code=200,
                 status=True,
@@ -103,7 +103,7 @@ class TorrentManager:
                 # unreachable downloader shouldn't block a DB-only disable.
                 async with DownloadClient() as client:
                     return await self.delete_torrents(data, client)
-            logger.info(f"[Manager] Disable rule for {data.official_title}")
+            logger.info(f"Disable rule for {data.official_title}")
             return ResponseModel(
                 status_code=200,
                 status=True,
@@ -123,7 +123,7 @@ class TorrentManager:
         if data:
             data.deleted = False
             await self.db.bangumi.update(data)
-            logger.info(f"[Manager] Enable rule for {data.official_title}")
+            logger.info(f"Enable rule for {data.official_title}")
             return ResponseModel(
                 status_code=200,
                 status=True,
@@ -150,9 +150,7 @@ class TorrentManager:
                 # Move existing torrents to new location if path changed
                 if match_list and new_path != old_path:
                     await client.move_torrent(match_list, new_path)
-                    logger.info(
-                        f"[Manager] Moved torrents from {old_path} to {new_path}"
-                    )
+                    logger.info(f"Moved torrents from {old_path} to {new_path}")
 
                 # Update qBittorrent RSS rule if save_path changed
                 if new_path != old_path and old_data.rule_name:
@@ -160,7 +158,7 @@ class TorrentManager:
                     rule = build_rss_rule(data, new_path)
                     await client.set_rss_rule(old_data.rule_name, rule)
                     logger.info(
-                        f"[Manager] Updated RSS rule {old_data.rule_name} with new save_path"
+                        f"Updated RSS rule {old_data.rule_name} with new save_path"
                     )
 
             data.save_path = new_path
@@ -172,7 +170,7 @@ class TorrentManager:
                 msg_zh=f"更新 {data.official_title} 规则",
             )
         else:
-            logger.error(f"[Manager] Can't find data with {bangumi_id}")
+            logger.error(f"Can't find data with {bangumi_id}")
             return ResponseModel(
                 status_code=406,
                 status=False,
@@ -234,7 +232,7 @@ class TorrentManager:
                 updated += 1
         if updated > 0:
             await self.db.bangumi.update_all(bangumis)
-        logger.info(f"[Manager] Calendar refresh: updated {updated} bangumi.")
+        logger.info(f"Calendar refresh: updated {updated} bangumi.")
         return ResponseModel(
             status_code=200,
             status=True,
@@ -251,7 +249,7 @@ class TorrentManager:
     async def search_one(self, _id: int | str):
         data = await self.db.bangumi.search_id(int(_id))
         if not data:
-            logger.error(f"[Manager] Can't find data with {_id}")
+            logger.error(f"Can't find data with {_id}")
             return ResponseModel(
                 status_code=406,
                 status=False,
@@ -272,7 +270,7 @@ class TorrentManager:
                 msg_zh=f"无法找到 id {_id}",
             )
         if await self.db.bangumi.archive_one(_id):
-            logger.info(f"[Manager] Archived {data.official_title}")
+            logger.info(f"Archived {data.official_title}")
             return ResponseModel(
                 status_code=200,
                 status=True,
@@ -297,7 +295,7 @@ class TorrentManager:
                 msg_zh=f"无法找到 id {_id}",
             )
         if await self.db.bangumi.unarchive_one(_id):
-            logger.info(f"[Manager] Unarchived {data.official_title}")
+            logger.info(f"Unarchived {data.official_title}")
             return ResponseModel(
                 status_code=200,
                 status=True,
@@ -331,15 +329,13 @@ class TorrentManager:
                 if tmdb_info.series_status == "Ended" and not bangumi.archived:
                     bangumi.archived = True
                     archived_count += 1
-                    logger.info(
-                        f"[Manager] Auto-archived ended series: {bangumi.official_title}"
-                    )
+                    logger.info(f"Auto-archived ended series: {bangumi.official_title}")
 
         if archived_count > 0 or poster_count > 0:
             await self.db.bangumi.update_all(bangumis)
 
         logger.info(
-            f"[Manager] Metadata refresh: archived {archived_count}, updated posters {poster_count}"
+            f"Metadata refresh: archived {archived_count}, updated posters {poster_count}"
         )
         return ResponseModel(
             status_code=200,

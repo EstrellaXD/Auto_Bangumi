@@ -142,8 +142,7 @@ def detect_virtual_seasons(episodes: list[dict], gap_months: int = 6) -> list[in
         if days_diff > gap_days:
             virtual_season_starts.append(curr_ep["episode_number"])
             logger.debug(
-                "[TMDB] Detected virtual season break: %s days gap "
-                "between ep%s and ep%s",
+                "Detected virtual season break: %s days gap " "between ep%s and ep%s",
                 days_diff,
                 prev_ep["episode_number"],
                 curr_ep["episode_number"],
@@ -189,7 +188,7 @@ async def get_aired_episode_count(
                 continue
 
     logger.debug(
-        "[TMDB] Season %s: %s aired of %s total episodes",
+        "Season %s: %s aired of %s total episodes",
         season_number,
         aired_count,
         len(episodes),
@@ -322,7 +321,7 @@ async def tmdb_parser(
             for (season_num, total_eps), episodes in zip(season_nums, episode_results):
                 if isinstance(episodes, BaseException):
                     logger.warning(
-                        "[TMDB] Failed to get episodes for season %s: %s",
+                        "Failed to get episodes for season %s: %s",
                         season_num,
                         episodes,
                     )
@@ -334,7 +333,7 @@ async def tmdb_parser(
                     if len(vs_starts) > 1:
                         virtual_season_starts[season_num] = vs_starts
                         logger.debug(
-                            "[TMDB] Season %s has virtual seasons starting at episodes: %s",
+                            "Season %s has virtual seasons starting at episodes: %s",
                             season_num,
                             vs_starts,
                         )

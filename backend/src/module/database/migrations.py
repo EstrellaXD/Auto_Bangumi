@@ -383,7 +383,7 @@ def run_migrations_conn(conn: Connection) -> None:
         pending = migration.pending_statements(inspect(conn))
         if not pending:
             logger.debug(
-                f"[Database] Migration v{migration.version} skipped "
+                f"Migration v{migration.version} skipped "
                 f"(already applied): {migration.description}"
             )
         else:
@@ -393,17 +393,16 @@ def run_migrations_conn(conn: Connection) -> None:
                     conn.execute(text(stmt))
                 savepoint.commit()
                 logger.info(
-                    f"[Database] Migration v{migration.version}: "
-                    f"{migration.description}"
+                    f"Migration v{migration.version}: " f"{migration.description}"
                 )
             except Exception as e:
                 savepoint.rollback()
-                logger.error(f"[Database] Migration v{migration.version} failed: {e}")
+                logger.error(f"Migration v{migration.version} failed: {e}")
                 # Abort loudly instead of silently continuing to serve on a
                 # half-migrated schema; the outer transaction rolls back.
                 raise
         set_schema_version(conn, migration.version)
-    logger.info(f"[Database] Schema version is now {get_schema_version(conn)}.")
+    logger.info(f"Schema version is now {get_schema_version(conn)}.")
     fill_null_with_defaults_conn(conn)
 
 
@@ -519,6 +518,6 @@ def fill_null_with_defaults_conn(conn: Connection) -> None:
             )
             if result.rowcount > 0:
                 logger.info(
-                    f"[Database] Filled {result.rowcount} NULL values "
+                    f"Filled {result.rowcount} NULL values "
                     f"in {table_name}.{field_name} with default: {default_value}"
                 )

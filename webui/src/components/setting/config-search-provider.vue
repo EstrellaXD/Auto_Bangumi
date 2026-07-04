@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { NButton } from 'naive-ui';
+import { NButton, NPopconfirm } from 'naive-ui';
 import { Delete, EditTwo, Plus } from '@icon-park/vue-next';
 
 interface SearchProvider {
@@ -124,8 +124,6 @@ async function handleDelete(index: number) {
     return;
   }
 
-  if (!confirm(t('config.search_provider_set.delete_confirm'))) return;
-
   providers.value.splice(index, 1);
   await saveProviders();
 }
@@ -182,14 +180,24 @@ function validateUrl(url: string): boolean {
             >
               <EditTwo size="16" />
             </NButton>
-            <NButton
+            <NPopconfirm
               v-if="!isDefaultProvider(provider.name)"
-              size="small"
-              type="error"
-              @click="handleDelete(index)"
+              :positive-text="$t('config.search_provider_set.remove')"
+              :negative-text="$t('config.cancel')"
+              :positive-button-props="{ type: 'error' }"
+              @positive-click="handleDelete(index)"
             >
-              <Delete size="16" />
-            </NButton>
+              <template #trigger>
+                <NButton
+                  size="small"
+                  type="error"
+                  :aria-label="$t('config.search_provider_set.remove')"
+                >
+                  <Delete size="16" />
+                </NButton>
+              </template>
+              {{ $t('config.search_provider_set.delete_confirm') }}
+            </NPopconfirm>
           </div>
         </div>
       </div>

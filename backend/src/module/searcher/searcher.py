@@ -56,7 +56,7 @@ class SearchTorrent:
             if tmdb_info and tmdb_info.poster_link:
                 poster_link = tmdb_info.poster_link
         except Exception as e:
-            logger.debug("[Searcher] Failed to fetch TMDB poster for %s: %s", title, e)
+            logger.debug("Failed to fetch TMDB poster for %s: %s", title, e)
 
         if len(_poster_cache) >= _POSTER_CACHE_MAX:
             _poster_cache.popitem(last=False)

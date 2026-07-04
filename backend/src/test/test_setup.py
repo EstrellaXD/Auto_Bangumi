@@ -391,6 +391,54 @@ class TestTestDownloaderHardening:
             },
         )
 
+    def _post_aria2(self, client, host="192.168.1.100:6800", password="secret"):
+        return client.post(
+            "/api/v1/setup/test-downloader",
+            json={
+                "type": "aria2",
+                "host": host,
+                "username": "",
+                "password": password,
+                "ssl": False,
+            },
+        )
+
+    def test_aria2_getversion_success(self, client, mock_first_run):
+        """aria2 is probed via JSON-RPC getVersion, not the qB login flow."""
+        from unittest.mock import MagicMock
+
+        rpc_resp = MagicMock(status_code=200)
+        rpc_resp.json.return_value = {
+            "jsonrpc": "2.0",
+            "id": "ab-setup",
+            "result": {"version": "1.37.0"},
+        }
+        cls_patch = self._mock_client(login_resp=rpc_resp)
+        try:
+            response = self._post_aria2(client)
+        finally:
+            cls_patch.stop()
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+
+    def test_aria2_bad_secret_fails(self, client, mock_first_run):
+        """aria2 answering 401 (bad RPC secret) must not be reported as success."""
+        from unittest.mock import MagicMock
+
+        rpc_resp = MagicMock(status_code=401)
+        rpc_resp.json.return_value = {
+            "jsonrpc": "2.0",
+            "id": "ab-setup",
+            "error": {"code": 1, "message": "Unauthorized"},
+        }
+        cls_patch = self._mock_client(login_resp=rpc_resp)
+        try:
+            response = self._post_aria2(client)
+        finally:
+            cls_patch.stop()
+        assert response.status_code == 200
+        assert response.json()["success"] is False
+
     def test_login_accepts_204_empty_body(self, client, mock_first_run):
         """qBittorrent >= 5.2 returns 204 + empty body on successful login."""
         from unittest.mock import MagicMock

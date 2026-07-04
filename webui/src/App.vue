@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import {
   type GlobalThemeOverrides,
   NConfigProvider,
+  NDialogProvider,
   NMessageProvider,
   darkTheme,
 } from 'naive-ui';
@@ -112,7 +113,9 @@ const naiveTheme = computed(() => (isDark.value ? darkTheme : null));
   <Suspense>
     <NConfigProvider :theme="naiveTheme" :theme-overrides="themeOverrides">
       <NMessageProvider>
-        <RouterView></RouterView>
+        <NDialogProvider>
+          <RouterView></RouterView>
+        </NDialogProvider>
       </NMessageProvider>
     </NConfigProvider>
   </Suspense>

@@ -6,10 +6,38 @@ const { t } = useMyI18n();
 const message = useMessage();
 const { updateData } = useEventStream();
 const { version } = useAppInfo();
-const { config } = storeToRefs(useConfigStore());
+const configStore = useConfigStore();
+const { getConfig } = configStore;
+const { config, isDirty } = storeToRefs(configStore);
 
 const info = ref<UpdateInfo | null>(null);
 const channel = ref<UpdateChannel>(config.value.update?.channel ?? 'stable');
+const autoCheck = ref(true);
+
+// 渠道/自动检查改动直接写回配置（不经过设置页的“保存并重启”流程，
+// 也不触发重启）。设置页有未保存修改时只改内存值，随用户的保存一起提交。
+async function persistUpdateSetting(patch: {
+  channel?: UpdateChannel;
+  auto_check?: boolean;
+}) {
+  const hasPendingEdits = isDirty.value;
+  if (!hasPendingEdits) await getConfig();
+  config.value.update = { ...config.value.update, ...patch };
+  if (!hasPendingEdits) {
+    await apiConfig.updateConfig(JSON.parse(JSON.stringify(config.value)));
+    await getConfig();
+  }
+}
+
+function onChannelToggle(beta: boolean) {
+  channel.value = beta ? 'beta' : 'stable';
+  persistUpdateSetting({ channel: channel.value });
+}
+
+function onAutoCheckToggle(value: boolean) {
+  autoCheck.value = value;
+  persistUpdateSetting({ auto_check: value });
+}
 const checking = ref(false);
 const applying = ref(false);
 const restarting = ref(false);
@@ -139,8 +167,18 @@ watch(channel, () => {
   if (info.value) onCheck();
 });
 
-onMounted(() => {
-  if (config.value.update?.auto_check !== false) {
+onMounted(async () => {
+  // 日志页不一定加载过配置：先取一次，避免读到 initConfig 默认值
+  if (!isDirty.value) {
+    try {
+      await getConfig();
+    } catch {
+      // 拉取失败时按默认行为处理
+    }
+  }
+  channel.value = config.value.update?.channel ?? 'stable';
+  autoCheck.value = config.value.update?.auto_check !== false;
+  if (autoCheck.value) {
     onCheck();
   }
 });
@@ -183,12 +221,24 @@ onBeforeUnmount(() => {
           <NSwitch
             :value="channel === 'beta'"
             :disabled="applying || restarting"
-            @update:value="(v: boolean) => (channel = v ? 'beta' : 'stable')"
+            :aria-label="$t('update.channel')"
+            @update:value="onChannelToggle"
           />
           <span :class="{ dim: channel === 'stable' }">
             {{ $t('update.channel_beta') }}
           </span>
         </div>
+      </div>
+
+      <!-- 自动检查 -->
+      <div class="update-row">
+        <span class="update-key">{{ $t('update.auto_check') }}</span>
+        <NSwitch
+          :value="autoCheck"
+          :disabled="applying || restarting"
+          :aria-label="$t('update.auto_check')"
+          @update:value="onAutoCheckToggle"
+        />
       </div>
 
       <!-- 状态提示 -->

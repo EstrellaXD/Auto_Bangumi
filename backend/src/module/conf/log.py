@@ -38,8 +38,15 @@ def setup_logger(level: int = logging.INFO, reset: bool = False):
 
     log_queue: SimpleQueue = SimpleQueue()
     queue_handler = QueueHandler(log_queue)
+    # QueueHandler.prepare() 会用 handler 的 formatter 预格式化 record.msg，
+    # 不设置时落到默认的 "%(levelname)s:%(name)s:%(message)s"，导致每行出现
+    # "INFO::module.x:" 这种重复前缀。这里显式声明为 "模块名: 消息"，
+    # 模块来源只出现一次，由外层 formatter 补时间与级别。
+    queue_handler.setFormatter(logging.Formatter("%(name)s: %(message)s"))
 
-    _listener = QueueListener(log_queue, file_handler, stream_handler, respect_handler_level=True)
+    _listener = QueueListener(
+        log_queue, file_handler, stream_handler, respect_handler_level=True
+    )
     _listener.start()
     atexit.register(_listener.stop)
 

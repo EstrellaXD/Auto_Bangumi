@@ -244,3 +244,52 @@ class TestGeminiProvider:
             return_value=SimpleNamespace(text="not json")
         )
         assert await parser.parse(RAW_TITLE) is None
+
+
+class TestListModels:
+    async def test_openai_list_models_returns_sorted_ids(self):
+        parser = LLMParser(api_key="sk-test", provider="openai")
+        stub = SimpleNamespace(
+            data=[SimpleNamespace(id="gpt-5-mini"), SimpleNamespace(id="gpt-5")]
+        )
+        parser._openai_client.models.list = AsyncMock(  # type: ignore[method-assign]
+            return_value=stub
+        )
+        assert await parser.list_models() == ["gpt-5", "gpt-5-mini"]
+
+    async def test_anthropic_list_models_returns_sorted_ids(self):
+        parser = LLMParser(api_key="sk-ant", provider="anthropic")
+        stub = SimpleNamespace(
+            data=[
+                SimpleNamespace(id="claude-sonnet-4-5"),
+                SimpleNamespace(id="claude-haiku-4-5"),
+            ]
+        )
+        parser._anthropic_client.models.list = AsyncMock(  # type: ignore[method-assign]
+            return_value=stub
+        )
+        assert await parser.list_models() == [
+            "claude-haiku-4-5",
+            "claude-sonnet-4-5",
+        ]
+
+    async def test_gemini_list_models_strips_prefix_and_filters(self):
+        parser = LLMParser(api_key="g-key", provider="gemini")
+
+        async def agen():
+            yield SimpleNamespace(
+                name="models/gemini-2.5-flash",
+                supported_actions=["generateContent"],
+            )
+            yield SimpleNamespace(
+                name="models/text-embedding-004",
+                supported_actions=["embedContent"],
+            )
+            yield SimpleNamespace(name="models/gemini-2.5-pro", supported_actions=None)
+
+        parser._gemini_client = SimpleNamespace(  # type: ignore[assignment]
+            aio=SimpleNamespace(
+                models=SimpleNamespace(list=AsyncMock(return_value=agen()))
+            )
+        )
+        assert await parser.list_models() == ["gemini-2.5-flash", "gemini-2.5-pro"]

@@ -137,7 +137,7 @@ class QbDownloader:
                     await self.auth()
             if not self._authed:
                 raise ConnectionError(
-                    f"[Downloader] Re-authentication to qBittorrent at {self.host} "
+                    f"Re-authentication to qBittorrent at {self.host} "
                     "failed; not retrying request to avoid a login storm."
                 )
             resp = await self._client.request(method, self._url(endpoint), **kwargs)
@@ -158,7 +158,7 @@ class QbDownloader:
                 httpx.RequestError,
                 httpx.TimeoutException,
             ) as e:
-                logger.debug("[Downloader] Logout request failed (non-critical): %s", e)
+                logger.debug("Logout request failed (non-critical): %s", e)
             await self._client.aclose()
             self._client = None
         self._authed = False
@@ -294,22 +294,22 @@ class QbDownloader:
                     if await self._urls_already_added(torrent_urls):
                         return AddResult.DUPLICATE
                     raise ConnectionError(
-                        "[Downloader] qBittorrent rejected torrent add "
+                        "qBittorrent rejected torrent add "
                         "(200 'Fails.') and no matching torrent found"
                     )
                 raise ConnectionError(
-                    "[Downloader] qBittorrent rejected torrent add: "
+                    "qBittorrent rejected torrent add: "
                     f"HTTP {resp.status_code} {resp.text!r}"
                 )
             except (httpx.ReadError, httpx.ConnectError, httpx.RequestError) as e:
                 if attempt < max_retries - 1:
                     logger.warning(
-                        f"[Downloader] Network error adding torrent (attempt {attempt + 1}/{max_retries}): {e}"
+                        f"Network error adding torrent (attempt {attempt + 1}/{max_retries}): {e}"
                     )
                     await asyncio.sleep(2)
                 else:
                     logger.error(
-                        f"[Downloader] Failed to add torrent after {max_retries} attempts: {e}"
+                        f"Failed to add torrent after {max_retries} attempts: {e}"
                     )
                     raise
 
@@ -334,7 +334,7 @@ class QbDownloader:
         )
         if resp.status_code != 200:
             logger.error(
-                "[Downloader] Failed to delete torrents %s: HTTP %s",
+                "Failed to delete torrents %s: HTTP %s",
                 hashes,
                 resp.status_code,
             )
@@ -384,14 +384,14 @@ class QbDownloader:
                 # (#754/#749)。返回 False 由调用方走 _PENDING_RENAME_COOLDOWN 退避。
                 if attempt == 2:
                     logger.debug(
-                        "[Downloader] Rename API returned 200 but %s never appeared "
+                        "Rename API returned 200 but %s never appeared "
                         "(rename of %s)",
                         new_path,
                         old_path,
                     )
             return False
         except (httpx.ConnectError, httpx.RequestError, httpx.TimeoutException) as e:
-            logger.warning(f"[Downloader] Failed to rename file {old_path}: {e}")
+            logger.warning(f"Failed to rename file {old_path}: {e}")
             return False
 
     async def rss_add_feed(self, url, item_path):
@@ -400,7 +400,7 @@ class QbDownloader:
             data={"url": url, "path": item_path},
         )
         if resp.status_code == 409:
-            logger.warning(f"[Downloader] RSS feed {url} already exists")
+            logger.warning(f"RSS feed {url} already exists")
 
     async def rss_remove_item(self, item_path):
         resp = await self._post(
@@ -408,7 +408,7 @@ class QbDownloader:
             data={"path": item_path},
         )
         if resp.status_code == 409:
-            logger.warning(f"[Downloader] RSS item {item_path} does not exist")
+            logger.warning(f"RSS item {item_path} does not exist")
 
     async def rss_get_feeds(self):
         resp = await self._get("rss/items")
@@ -444,7 +444,7 @@ class QbDownloader:
             data={"hashes": hashes, "category": category},
         )
         if resp.status_code == 409:
-            logger.warning(f"[Downloader] Category {category} does not exist")
+            logger.warning(f"Category {category} does not exist")
             await self.add_category(category)
             await self._post(
                 "torrents/setCategory",

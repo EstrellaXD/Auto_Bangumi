@@ -52,6 +52,9 @@ export const mockBangumiAPI: BangumiAPI = {
   weekday_locked: false,
   needs_review: false,
   needs_review_reason: null,
+  preferred_group: null,
+  preferred_resolution: null,
+  episode_type: 'episode',
 };
 
 export const mockBangumiRule: BangumiRule = {

@@ -17,7 +17,7 @@ def rss_parser(soup):
                 homepage = ""
             results.append((title, url, homepage))
         except Exception as e:
-            logger.warning("[RSS] Failed to parse RSS item: %s", e)
+            logger.warning("Failed to parse RSS item: %s", e)
             continue
     return results
 

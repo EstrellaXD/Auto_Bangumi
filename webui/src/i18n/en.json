@@ -2,7 +2,17 @@
   "config": {
     "apply": "Apply",
     "cancel": "Cancel",
+    "discard": "Discard",
+    "discard_confirm": "Discard unsaved changes?",
+    "leave_confirm": "You have unsaved changes. Leave and discard them?",
+    "no_match": "No settings match the search",
+    "restart_confirm": "Saving restarts AutoBangumi to apply the new settings. Continue?",
+    "save_restart": "Save & restart",
+    "search_placeholder": "Search settings…",
+    "unsaved_count": "1 unsaved change | {count} unsaved changes",
+    "unsaved_none": "No unsaved changes",
     "downloader_set": {
+      "aria2_hint": "For aria2, enter the RPC secret in the password field (username is ignored). Host example: 172.17.0.1:6800",
       "host": "Host",
       "password": "Password",
       "path": "Download Path",
@@ -14,13 +24,19 @@
     "llm_set": {
       "api_key": "API Key",
       "base_url": "Base URL",
+      "cache_ttl": "Result cache (seconds)",
       "enable": "Enable LLM Parsing",
+      "failure_backoff": "Pause after failures (seconds)",
+      "failure_threshold": "Failures before pausing",
       "hint": "The openai provider works with any OpenAI-compatible endpoint (DeepSeek, Ollama, LM Studio, OpenRouter, etc.). claude-haiku-4-5 and gemini-2.5-flash are economical choices.",
+      "max_concurrency": "Max concurrent requests",
       "mode": "Parse Mode",
+      "models_failed": "Failed to fetch the model list — check the API key (and Base URL).",
       "mode_fallback": "Fallback (regex first)",
       "mode_primary": "Primary (LLM first)",
       "model": "Model",
       "provider": "Provider",
+      "timeout": "Request timeout (seconds)",
       "title": "LLM Parser"
     },
     "manage_set": {
@@ -33,13 +49,13 @@
     },
     "media_player_set": {
       "title": "Media Player Setting",
-      "type": "type",
-      "url": "url"
+      "type": "Type",
+      "url": "Player URL"
     },
     "normal_set": {
       "debug": "Debug",
-      "rename_interval": "Interval Time of Rename",
-      "rss_interval": "Interval Time of Rss",
+      "rename_interval": "Rename interval (seconds)",
+      "rss_interval": "RSS check interval (seconds)",
       "title": "Normal Setting",
       "web_port": "WebUI Port"
     },
@@ -92,6 +108,7 @@
     "search_provider_set": {
       "title": "Search Provider",
       "add_new": "Add Provider",
+      "remove": "Remove",
       "add_title": "Add Search Provider",
       "edit_title": "Edit Search Provider",
       "name": "Name",
@@ -185,6 +202,13 @@
       "season_offset": "Season Offset",
       "auto_detect": "Auto Detect",
       "needs_review": "Needs Review",
+      "preferred_group": "Preferred group",
+      "preferred_resolution": "Preferred resolution",
+      "preferred_hint": "When set, the RSS refresh skips duplicate releases that don't match while a preferred one exists.",
+      "episode_type": "Content type",
+      "type_episode": "Series",
+      "type_movie": "Movie",
+      "type_special": "Special",
       "archive": "Archive",
       "unarchive": "Unarchive",
       "archived": "Archived",
@@ -198,18 +222,22 @@
     }
   },
   "log": {
-    "bug_repo": "Bug Report",
-    "clear_filters": "Clear",
-    "contact_info": "Contact Information",
+    "about": "About",
+    "clear_filters": "Clear filter",
     "copy": "Copy",
     "empty": "No log entries yet. The log fills up once background tasks start running.",
     "filter_level": "Level",
-    "go": "Go",
-    "join": "Join",
+    "filtered_empty": "No entries match the current filters.",
+    "health_summary": "{errors} errors · {warnings} warnings in this log",
+    "jump_first": "Jump to first",
+    "report_bug": "Report a bug",
     "reset": "Clear log",
     "reset_confirm": "Clear the log? This cannot be undone.",
+    "search_placeholder": "Search log…",
+    "telegram_group": "Telegram group",
     "title": "Log",
-    "update_now": "Refresh"
+    "update_now": "Refresh",
+    "website": "Official website"
   },
   "update": {
     "title": "Software Update",
@@ -218,6 +246,7 @@
     "channel": "Update channel",
     "channel_stable": "Stable",
     "channel_beta": "Beta",
+    "auto_check": "Check automatically",
     "check": "Check for updates",
     "checking": "Checking…",
     "up_to_date": "You are on the latest version.",
@@ -250,6 +279,7 @@
   "passkey": {
     "add_new": "Add Passkey",
     "created_at": "Created",
+    "delete": "Delete",
     "delete_confirm": "Are you sure you want to delete this passkey?",
     "delete_failed": "Delete failed",
     "delete_success": "Passkey deleted",

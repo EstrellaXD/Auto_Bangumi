@@ -205,7 +205,7 @@ async def handle_tool(name: str, arguments: dict) -> list[types.TextContent]:
             types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False))
         ]
     except Exception as e:
-        logger.exception("[MCP] Tool %s failed", name)
+        logger.exception("Tool %s failed", name)
         return [
             types.TextContent(
                 type="text", text=json.dumps({"error": str(e)}, ensure_ascii=False)

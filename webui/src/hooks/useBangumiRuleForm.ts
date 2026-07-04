@@ -3,7 +3,9 @@ import type { BangumiRule } from '#/bangumi';
 
 export interface InfoTag {
   value: string;
-  type: 'season' | 'resolution' | 'subtitle' | 'group';
+  type: 'season' | 'resolution' | 'subtitle' | 'group' | 'etype';
+  /** value 是 i18n key（由组件翻译），而非直接展示的文本 */
+  i18n?: boolean;
 }
 
 /**
@@ -16,7 +18,17 @@ export function useBangumiRuleForm(rule: Ref<BangumiRule>) {
 
   const infoTags = computed<InfoTag[]>(() => {
     const tags: InfoTag[] = [];
-    const { season, season_raw, dpi, subtitle, group_name } = rule.value;
+    const { season, season_raw, dpi, subtitle, group_name, episode_type } =
+      rule.value;
+
+    // 普通剧集不打标签，只标出剧场版/特别篇这类少数情况
+    if (episode_type === 'movie' || episode_type === 'special') {
+      tags.push({
+        value: `homepage.rule.type_${episode_type}`,
+        type: 'etype',
+        i18n: true,
+      });
+    }
 
     if (season || season_raw) {
       const seasonDisplay = season_raw || (season ? `S${season}` : '');

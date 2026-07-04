@@ -37,6 +37,19 @@ describe('useBangumiRuleForm', () => {
     expect(result.infoTags.value).toEqual([]);
   });
 
+  it('should emit an i18n etype tag when episode_type is movie', () => {
+    const rule = ref<BangumiRule>({
+      ...ruleTemplate,
+      season: 0,
+      episode_type: 'movie',
+    });
+    const { result } = withSetup(rule);
+
+    expect(result.infoTags.value).toEqual([
+      { value: 'homepage.rule.type_movie', type: 'etype', i18n: true },
+    ]);
+  });
+
   it('should build info tags in season/resolution/subtitle/group order when populated', () => {
     const rule = ref<BangumiRule>({
       ...ruleTemplate,

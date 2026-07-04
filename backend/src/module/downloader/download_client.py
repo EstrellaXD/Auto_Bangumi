@@ -58,7 +58,7 @@ async def _close_client(client) -> None:
     try:
         await client.logout()
     except Exception as e:  # pragma: no cover - best-effort cleanup
-        logger.debug("[Downloader] Error closing client: %s", e)
+        logger.debug("Error closing client: %s", e)
 
 
 async def shutdown() -> None:
@@ -126,12 +126,10 @@ class DownloadClient:
         elif downloader_type == "mock":
             from .client.mock_downloader import MockDownloader
 
-            logger.debug("[Downloader] Using MockDownloader for local development")
+            logger.debug("Using MockDownloader for local development")
             return MockDownloader()
         else:
-            logger.error(
-                "[Downloader] Unsupported downloader type: %s", downloader_type
-            )
+            logger.error("Unsupported downloader type: %s", downloader_type)
             raise Exception(f"Unsupported downloader type: {downloader_type}")
 
     def _supports(self, capability: str, op: str) -> bool:
@@ -143,7 +141,7 @@ class DownloadClient:
         if key not in _warned_unsupported:
             _warned_unsupported.add(key)
             logger.warning(
-                "[Downloader] %s does not support '%s'; skipping.",
+                "%s does not support '%s'; skipping.",
                 type(self.client).__name__,
                 op,
             )
@@ -213,9 +211,9 @@ class DownloadClient:
     async def auth(self):
         self.authed = await self.client.auth()
         if self.authed:
-            logger.debug("[Downloader] Authed.")
+            logger.debug("Authed.")
         else:
-            logger.error("[Downloader] Auth failed.")
+            logger.error("Auth failed.")
 
     async def set_rss_rule(self, rule_name: str, rule: dict):
         """Create or update a raw qBittorrent RSS auto-download rule."""
@@ -248,7 +246,7 @@ class DownloadClient:
         if result:
             logger.info(f"{old_path} >> {new_path}")
         else:
-            logger.debug("[Downloader] Rename failed: %s >> %s", old_path, new_path)
+            logger.debug("Rename failed: %s >> %s", old_path, new_path)
         return result
 
     async def delete_torrent(self, hashes, delete_files: bool = True) -> bool:
@@ -256,9 +254,9 @@ class DownloadClient:
             return False
         ok = await self.client.torrents_delete(hashes, delete_files=delete_files)
         if ok:
-            logger.info("[Downloader] Remove torrents.")
+            logger.info("Remove torrents.")
         else:
-            logger.error("[Downloader] Failed to remove torrents.")
+            logger.error("Failed to remove torrents.")
         return ok
 
     async def pause_torrent(self, hashes: str):
@@ -287,9 +285,7 @@ class DownloadClient:
         async with RequestContent() as req:
             if isinstance(torrent, list):
                 if len(torrent) == 0:
-                    logger.debug(
-                        "[Downloader] No torrent found: %s", bangumi.official_title
-                    )
+                    logger.debug("No torrent found: %s", bangumi.official_title)
                     return AddResult.FAILED
                 if "magnet" in torrent[0].url:
                     torrent_url = [t.url for t in torrent]
@@ -302,7 +298,7 @@ class DownloadClient:
                     torrent_file = [f for f in torrent_file if f is not None]
                     if not torrent_file:
                         logger.warning(
-                            f"[Downloader] Failed to fetch torrent files for: {bangumi.official_title}"
+                            f"Failed to fetch torrent files for: {bangumi.official_title}"
                         )
                         return AddResult.FAILED
                     torrent_url = None
@@ -314,7 +310,7 @@ class DownloadClient:
                     torrent_file = await req.get_content(torrent.url)
                     if torrent_file is None:
                         logger.warning(
-                            f"[Downloader] Failed to fetch torrent file for: {bangumi.official_title}"
+                            f"Failed to fetch torrent file for: {bangumi.official_title}"
                         )
                         return AddResult.FAILED
                     torrent_url = None
@@ -329,18 +325,14 @@ class DownloadClient:
                 tags=tags,
             )
             if result is AddResult.ADDED:
-                logger.debug("[Downloader] Add torrent: %s", bangumi.official_title)
+                logger.debug("Add torrent: %s", bangumi.official_title)
                 return AddResult.ADDED
             if result is AddResult.DUPLICATE:
-                logger.debug(
-                    "[Downloader] Torrent added before: %s", bangumi.official_title
-                )
+                logger.debug("Torrent added before: %s", bangumi.official_title)
                 return AddResult.DUPLICATE
             return AddResult.FAILED
         except Exception as e:
-            logger.error(
-                f"[Downloader] Failed to add torrent for {bangumi.official_title}: {e}"
-            )
+            logger.error(f"Failed to add torrent for {bangumi.official_title}: {e}")
             return AddResult.FAILED
 
     async def move_torrent(self, hashes, location):
@@ -358,6 +350,4 @@ class DownloadClient:
         if not self._supports("can_manage", "add_tag"):
             return
         await self.client.add_tag(torrent_hash, tag)
-        logger.debug(
-            "[Downloader] Added tag '%s' to torrent %s...", tag, torrent_hash[:8]
-        )
+        logger.debug("Added tag '%s' to torrent %s...", tag, torrent_hash[:8])

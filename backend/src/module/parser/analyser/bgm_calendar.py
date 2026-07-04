@@ -17,7 +17,7 @@ async def fetch_bgm_calendar() -> list[dict]:
         data = await req.get_json(calendar_url)
 
     if not data:
-        logger.warning("[BGM Calendar] Failed to fetch calendar data.")
+        logger.warning("Failed to fetch calendar data.")
         return []
 
     items = []
@@ -39,7 +39,7 @@ async def fetch_bgm_calendar() -> list[dict]:
                 }
             )
 
-    logger.info(f"[BGM Calendar] Fetched {len(items)} airing anime from Bangumi.tv.")
+    logger.info(f"Fetched {len(items)} airing anime from Bangumi.tv.")
     return items
 
 

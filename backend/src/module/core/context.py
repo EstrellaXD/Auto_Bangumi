@@ -181,13 +181,13 @@ class AppContext:
         self._start_info()
         if not Checker.check_database():
             await first_run()
-            logger.info("[Core] No db file exists, create database file.")
+            logger.info("No db file exists, create database file.")
             self.first_run_boot = True
             self._startup_done = True
             return
         if LEGACY_DATA_PATH.exists():
             logger.info(
-                "[Core] Legacy data detected, starting data migration, please wait patiently."
+                "Legacy data detected, starting data migration, please wait patiently."
             )
             # data_migration() writes into the bangumi/rssitem tables directly,
             # so the schema must exist and be up to date first.
@@ -200,15 +200,15 @@ class AppContext:
             if not is_same:
                 if last_minor is not None and last_minor == 0:
                     await from_30_to_31()
-                    logger.info("[Core] Database migrated from 3.0 to 3.1.")
+                    logger.info("Database migrated from 3.0 to 3.1.")
                 await from_31_to_32()
-                logger.info("[Core] Database updated.")
+                logger.info("Database updated.")
             else:
                 # Always check schema version and run pending migrations,
                 # in case a previous migration was interrupted or failed.
                 await run_migrations()
         if not Checker.check_img_cache():
-            logger.info("[Core] No image cache exists, create image cache.")
+            logger.info("No image cache exists, create image cache.")
             await cache_image()
         self._startup_done = True
 
@@ -246,7 +246,7 @@ class AppContext:
             return
         exc = task.exception()
         if exc is not None:
-            logger.error("[Core] Background start task failed", exc_info=exc)
+            logger.error("Background start task failed", exc_info=exc)
 
     async def start_tasks(self) -> ResponseModel:
         """Kick off the downloader-wait + loop-start in the background and return immediately.
@@ -291,9 +291,7 @@ class AppContext:
             except asyncio.CancelledError:
                 pass
             except Exception as e:
-                logger.warning(
-                    f"[Core] Background start task failed during shutdown: {e}"
-                )
+                logger.warning(f"Background start task failed during shutdown: {e}")
             self._start_task = None
         if self.scheduler.running:
             await self.scheduler.stop_all()
@@ -325,13 +323,13 @@ class AppContext:
         try:
             await self._stop_unlocked()
         except Exception as e:
-            logger.warning(f"[Core] Error during stop in restart: {e}")
+            logger.warning(f"Error during stop in restart: {e}")
             stop_ok = False
         start_ok = True
         try:
             await self._start_tasks_unlocked()
         except Exception as e:
-            logger.error(f"[Core] Error during start in restart: {e}")
+            logger.error(f"Error during start in restart: {e}")
             start_ok = False
         if start_ok and stop_ok:
             return ResponseModel(

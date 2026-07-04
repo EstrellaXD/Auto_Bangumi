@@ -584,3 +584,64 @@ class TestRestoreMasked:
         saved = mock_settings.save.call_args[1]["config_dict"]
         assert saved["downloader"]["password"] == "realpassword"
         assert saved["downloader"]["ssl"] is False
+
+
+class TestListLLMModels:
+    def _mock_parser(self, models=None, error=None):
+        parser = MagicMock()
+        if error is not None:
+            parser.list_models = AsyncMock(side_effect=error)
+        else:
+            parser.list_models = AsyncMock(return_value=models or [])
+        parser.aclose = AsyncMock()
+        return parser
+
+    def test_returns_models_from_provider(self, authed_client):
+        parser = self._mock_parser(models=["gpt-5", "gpt-5-mini"])
+        with patch("module.api.config.LLMParser", return_value=parser) as cls:
+            response = authed_client.post(
+                "/api/v1/config/llm/models",
+                json={"provider": "openai", "api_key": "sk-x", "base_url": ""},
+            )
+        assert response.status_code == 200
+        assert response.json()["models"] == ["gpt-5", "gpt-5-mini"]
+        cls.assert_called_once_with(
+            api_key="sk-x", provider="openai", base_url="", timeout=10.0
+        )
+        parser.aclose.assert_awaited_once()
+
+    def test_masked_key_falls_back_to_saved_key(self, authed_client):
+        parser = self._mock_parser(models=["m"])
+        saved = MagicMock()
+        saved.llm.api_key = "sk-saved"
+        with (
+            patch("module.api.config.settings", saved),
+            patch("module.api.config.LLMParser", return_value=parser) as cls,
+        ):
+            response = authed_client.post(
+                "/api/v1/config/llm/models",
+                json={"provider": "anthropic", "api_key": "********"},
+            )
+        assert response.status_code == 200
+        assert cls.call_args.kwargs["api_key"] == "sk-saved"
+
+    def test_missing_key_returns_400(self, authed_client):
+        saved = MagicMock()
+        saved.llm.api_key = ""
+        with patch("module.api.config.settings", saved):
+            response = authed_client.post(
+                "/api/v1/config/llm/models",
+                json={"provider": "openai", "api_key": ""},
+            )
+        assert response.status_code == 400
+
+    def test_provider_error_returns_502_and_closes(self, authed_client):
+        parser = self._mock_parser(error=RuntimeError("boom"))
+        with patch("module.api.config.LLMParser", return_value=parser):
+            response = authed_client.post(
+                "/api/v1/config/llm/models",
+                json={"provider": "gemini", "api_key": "g-key"},
+            )
+        assert response.status_code == 502
+        assert "boom" not in response.text
+        parser.aclose.assert_awaited_once()

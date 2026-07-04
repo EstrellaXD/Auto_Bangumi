@@ -22,13 +22,13 @@ class OffsetScanner:
         Returns:
             One event per bangumi flagged for review.
         """
-        logger.info("[OffsetScanner] Starting offset scan...")
+        logger.info("Starting offset scan...")
 
         async with Database() as db:
             bangumi_list = await db.bangumi.get_active_for_scan()
 
         if not bangumi_list:
-            logger.debug("[OffsetScanner] No active bangumi to scan.")
+            logger.debug("No active bangumi to scan.")
             return []
 
         events: list[OffsetReviewEvent] = []
@@ -38,13 +38,9 @@ class OffsetScanner:
                 if event is not None:
                     events.append(event)
             except Exception as e:
-                logger.warning(
-                    f"[OffsetScanner] Error checking {bangumi.official_title}: {e}"
-                )
+                logger.warning(f"Error checking {bangumi.official_title}: {e}")
 
-        logger.info(
-            f"[OffsetScanner] Scan complete. Flagged {len(events)} bangumi for review."
-        )
+        logger.info(f"Scan complete. Flagged {len(events)} bangumi for review.")
         return events
 
     async def _check_bangumi(self, bangumi: Bangumi) -> OffsetReviewEvent | None:
@@ -59,16 +55,12 @@ class OffsetScanner:
         """
         # Skip if already needs review
         if bangumi.needs_review:
-            logger.debug(
-                f"[OffsetScanner] Skipping {bangumi.official_title}: already needs review"
-            )
+            logger.debug(f"Skipping {bangumi.official_title}: already needs review")
             return None
 
         # Skip if user has already configured offsets
         if bangumi.season_offset != 0 or bangumi.episode_offset != 0:
-            logger.debug(
-                f"[OffsetScanner] Skipping {bangumi.official_title}: has configured offsets"
-            )
+            logger.debug(f"Skipping {bangumi.official_title}: has configured offsets")
             return None
 
         # Get TMDB info
@@ -76,18 +68,14 @@ class OffsetScanner:
         tmdb_info = await tmdb_parser(bangumi.official_title, language)
 
         if not tmdb_info:
-            logger.debug(
-                f"[OffsetScanner] Skipping {bangumi.official_title}: no TMDB info"
-            )
+            logger.debug(f"Skipping {bangumi.official_title}: no TMDB info")
             return None
 
         # Get the real latest parsed episode from this bangumi's torrent records,
         # instead of guessing. No torrents parsed yet means no signal to act on.
         parsed_episode = await self._get_latest_parsed_episode(bangumi.id)
         if parsed_episode is None:
-            logger.debug(
-                f"[OffsetScanner] Skipping {bangumi.official_title}: no parsed episode data"
-            )
+            logger.debug(f"Skipping {bangumi.official_title}: no parsed episode data")
             return None
 
         # Detect mismatch
@@ -106,7 +94,7 @@ class OffsetScanner:
                     suggested_episode_offset=suggestion.episode_offset,
                 )
             logger.info(
-                f"[OffsetScanner] Flagged {bangumi.official_title} for review: {suggestion.reason} "
+                f"Flagged {bangumi.official_title} for review: {suggestion.reason} "
                 f"(suggested: season={suggestion.season_offset}, episode={suggestion.episode_offset})"
             )
             return OffsetReviewEvent(
@@ -146,7 +134,7 @@ class OffsetScanner:
             bangumi = await db.bangumi.search_id(bangumi_id)
 
         if not bangumi:
-            logger.warning(f"[OffsetScanner] Bangumi {bangumi_id} not found")
+            logger.warning(f"Bangumi {bangumi_id} not found")
             return False
 
         return await self._check_bangumi(bangumi) is not None

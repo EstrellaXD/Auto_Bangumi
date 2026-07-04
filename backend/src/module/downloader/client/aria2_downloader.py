@@ -256,25 +256,25 @@ class Aria2Downloader:
         except Aria2RpcError as e:
             if self._is_not_found_error(e):
                 logger.info(
-                    "[Aria2] Stale dedup record: gid %s no longer exists, "
+                    "Stale dedup record: gid %s no longer exists, "
                     "removing and re-adding",
                     gid,
                 )
                 await db.aria2.delete(gid)
                 return True
-            logger.debug("[Aria2] Cannot verify gid %s, keeping record: %s", gid, e)
+            logger.debug("Cannot verify gid %s, keeping record: %s", gid, e)
             return None
         except Aria2ConnectionError as e:
             # aria2 不可达 != 记录陈旧，绝不能因此删本地记录。
             logger.debug(
-                "[Aria2] aria2 unreachable while verifying gid %s, keeping record: %s",
+                "aria2 unreachable while verifying gid %s, keeping record: %s",
                 gid,
                 e,
             )
             return None
         if (status or {}).get("status") == "removed":
             logger.info(
-                "[Aria2] Stale dedup record: gid %s was removed in aria2, "
+                "Stale dedup record: gid %s was removed in aria2, "
                 "removing and re-adding",
                 gid,
             )
@@ -287,13 +287,13 @@ class Aria2Downloader:
             return AddResult.ADDED, await self._call("addUri", [[url], options])
         except Aria2RpcError as e:
             if self._is_duplicate_error(e):
-                logger.debug("[Aria2] addUri reports duplicate: %s", e.message)
+                logger.debug("addUri reports duplicate: %s", e.message)
                 return AddResult.DUPLICATE, None
             else:
-                logger.error("[Aria2] addUri failed for %s: %s", url, e)
+                logger.error("addUri failed for %s: %s", url, e)
                 return AddResult.FAILED, None
         except Aria2ConnectionError as e:
-            logger.error("[Aria2] addUri connection error for %s: %s", url, e)
+            logger.error("addUri connection error for %s: %s", url, e)
             return AddResult.FAILED, None
 
     async def _add_torrent_file(
@@ -306,20 +306,20 @@ class Aria2Downloader:
             return AddResult.ADDED, await self._call("addTorrent", [b64, [], options])
         except Aria2RpcError as e:
             if self._is_duplicate_error(e):
-                logger.debug("[Aria2] addTorrent reports duplicate: %s", e.message)
+                logger.debug("addTorrent reports duplicate: %s", e.message)
                 return AddResult.DUPLICATE, None
             else:
-                logger.error("[Aria2] addTorrent failed: %s", e)
+                logger.error("addTorrent failed: %s", e)
                 return AddResult.FAILED, None
         except Aria2ConnectionError as e:
-            logger.error("[Aria2] addTorrent connection error: %s", e)
+            logger.error("addTorrent connection error: %s", e)
             return AddResult.FAILED, None
 
     async def _resolve_followed_by_gid(self, gid: str) -> str:
         try:
             status = await self._call("tellStatus", [gid, ["followedBy"]])
         except (Aria2RpcError, Aria2ConnectionError) as e:
-            logger.debug("[Aria2] Could not resolve followedBy for %s: %s", gid, e)
+            logger.debug("Could not resolve followedBy for %s: %s", gid, e)
             return gid
         return self._extract_followed_by_gid(status) or gid
 
@@ -352,7 +352,7 @@ class Aria2Downloader:
                             failed_any = True
                             continue
                         if not stale:
-                            logger.debug("[Aria2] Skip already-added url: %s", url)
+                            logger.debug("Skip already-added url: %s", url)
                             duplicate_any = True
                             continue
                     result, gid = await self._add_uri(url, options)
@@ -380,7 +380,7 @@ class Aria2Downloader:
                             failed_any = True
                             continue
                         if not stale:
-                            logger.debug("[Aria2] Skip already-added torrent file")
+                            logger.debug("Skip already-added torrent file")
                             duplicate_any = True
                             continue
                     result, gid = await self._add_torrent_file(f, options)
@@ -413,7 +413,7 @@ class Aria2Downloader:
             waiting = await self._call("tellWaiting", [0, 1000]) or []
             stopped = await self._call("tellStopped", [0, 1000]) or []
         except (Aria2RpcError, Aria2ConnectionError) as e:
-            logger.error("[Aria2] Failed to query downloads: %s", e)
+            logger.error("Failed to query downloads: %s", e)
             return []
         raw = [*active, *waiting, *stopped]
         followed_by: dict[str, str] = {}
@@ -473,14 +473,14 @@ class Aria2Downloader:
         try:
             files = await self._call("getFiles", [torrent_hash])
         except (Aria2RpcError, Aria2ConnectionError) as e:
-            logger.error("[Aria2] Failed to get files for %s: %s", torrent_hash, e)
+            logger.error("Failed to get files for %s: %s", torrent_hash, e)
             return []
         save_dir = ""
         try:
             status = await self._call("tellStatus", [torrent_hash, ["dir"]])
             save_dir = (status or {}).get("dir", "")
         except (Aria2RpcError, Aria2ConnectionError) as e:
-            logger.debug("[Aria2] Could not resolve dir for %s: %s", torrent_hash, e)
+            logger.debug("Could not resolve dir for %s: %s", torrent_hash, e)
         async with Database() as db:
             renamed_paths = await db.aria2.get_renamed_paths(torrent_hash)
         result = []
@@ -502,7 +502,7 @@ class Aria2Downloader:
             status = await self._call("tellStatus", [torrent_hash, ["dir"]])
         except (Aria2RpcError, Aria2ConnectionError) as e:
             logger.warning(
-                "[Aria2] Rename failed, cannot resolve save dir for %s: %s",
+                "Rename failed, cannot resolve save dir for %s: %s",
                 torrent_hash,
                 e,
             )
@@ -516,22 +516,18 @@ class Aria2Downloader:
             await asyncio.to_thread(self._move_file, old_abs, new_abs)
         except FileExistsError:
             logger.warning(
-                "[Aria2] Refusing to overwrite existing file %s, rename of %s skipped",
+                "Refusing to overwrite existing file %s, rename of %s skipped",
                 new_abs,
                 old_abs,
             )
             return False
         except OSError as e:
-            logger.warning(
-                "[Aria2] Failed to rename file %s -> %s: %s", old_abs, new_abs, e
-            )
+            logger.warning("Failed to rename file %s -> %s: %s", old_abs, new_abs, e)
             return False
         if verify:
             exists = await asyncio.to_thread(os.path.exists, new_abs)
             if not exists:
-                logger.debug(
-                    "[Aria2] Rename reported success but %s is missing", new_abs
-                )
+                logger.debug("Rename reported success but %s is missing", new_abs)
                 return False
         async with Database() as db:
             await db.aria2.set_renamed_path(torrent_hash, old_path, new_path)
@@ -551,7 +547,7 @@ class Aria2Downloader:
                     status = await self._call("tellStatus", [gid, ["dir"]])
                     save_dir = (status or {}).get("dir")
                 except (Aria2RpcError, Aria2ConnectionError) as e:
-                    logger.debug("[Aria2] Could not resolve dir for %s: %s", gid, e)
+                    logger.debug("Could not resolve dir for %s: %s", gid, e)
 
                 if delete_files and save_dir:
                     try:
@@ -567,18 +563,16 @@ class Aria2Downloader:
                                 self._remove_file_and_empty_dirs, path, save_dir
                             )
                         except OSError as e:
-                            logger.warning(
-                                "[Aria2] Failed to delete file %s: %s", path, e
-                            )
+                            logger.warning("Failed to delete file %s: %s", path, e)
 
                 try:
                     await self._call("forceRemove", [gid])
                 except Aria2RpcError as e:
                     if not self._is_not_found_error(e):
-                        logger.error("[Aria2] Failed to remove %s: %s", gid, e)
+                        logger.error("Failed to remove %s: %s", gid, e)
                         ok = False
                 except Aria2ConnectionError as e:
-                    logger.error("[Aria2] Failed to remove %s: %s", gid, e)
+                    logger.error("Failed to remove %s: %s", gid, e)
                     ok = False
 
                 await db.aria2.delete(gid)
@@ -589,23 +583,21 @@ class Aria2Downloader:
             try:
                 await self._call("forcePause", [gid])
             except (Aria2RpcError, Aria2ConnectionError) as e:
-                logger.warning("[Aria2] Failed to pause %s: %s", gid, e)
+                logger.warning("Failed to pause %s: %s", gid, e)
 
     async def torrents_resume(self, hashes: str | list[str]) -> None:
         for gid in self._normalize_hashes(hashes):
             try:
                 await self._call("unpause", [gid])
             except (Aria2RpcError, Aria2ConnectionError) as e:
-                logger.warning("[Aria2] Failed to resume %s: %s", gid, e)
+                logger.warning("Failed to resume %s: %s", gid, e)
 
     async def move_torrent(self, hashes, new_location) -> None:
         for gid in self._normalize_hashes(hashes):
             try:
                 status = await self._call("tellStatus", [gid, ["dir"]])
             except (Aria2RpcError, Aria2ConnectionError) as e:
-                logger.warning(
-                    "[Aria2] Cannot move %s, status lookup failed: %s", gid, e
-                )
+                logger.warning("Cannot move %s, status lookup failed: %s", gid, e)
                 continue
             old_dir = (status or {}).get("dir")
             if not old_dir or os.path.normpath(old_dir) == os.path.normpath(
@@ -615,21 +607,19 @@ class Aria2Downloader:
             try:
                 files = await self._call("getFiles", [gid])
             except (Aria2RpcError, Aria2ConnectionError) as e:
-                logger.warning("[Aria2] Cannot move %s, file list failed: %s", gid, e)
+                logger.warning("Cannot move %s, file list failed: %s", gid, e)
                 continue
             try:
                 await asyncio.to_thread(
                     self._move_files, files or [], old_dir, new_location
                 )
             except OSError as e:
-                logger.warning("[Aria2] Failed to move files for %s: %s", gid, e)
+                logger.warning("Failed to move files for %s: %s", gid, e)
                 continue
             try:
                 await self._call("changeOption", [gid, {"dir": new_location}])
             except (Aria2RpcError, Aria2ConnectionError) as e:
-                logger.debug(
-                    "[Aria2] changeOption dir failed for %s (non-fatal): %s", gid, e
-                )
+                logger.debug("changeOption dir failed for %s (non-fatal): %s", gid, e)
 
     async def set_category(self, _hash, category) -> None:
         async with Database() as db:
@@ -640,7 +630,7 @@ class Aria2Downloader:
         """只认识 'ab:<bangumi_id>' 格式的 tag（用于 offset 关联），其余忽略。"""
         bangumi_id = self._parse_bangumi_id_from_tag(tag)
         if bangumi_id is None:
-            logger.debug("[Aria2] Ignoring unsupported tag: %s", tag)
+            logger.debug("Ignoring unsupported tag: %s", tag)
             return
         async with Database() as db:
             await db.aria2.upsert(_hash, bangumi_id=bangumi_id)

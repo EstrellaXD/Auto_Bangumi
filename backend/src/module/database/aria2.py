@@ -112,7 +112,7 @@ class Aria2GidDatabase:
         try:
             data = json.loads(record.renamed_paths)
         except json.JSONDecodeError:
-            logger.warning("[Aria2] Ignoring invalid renamed_paths for gid %s", gid)
+            logger.warning("Ignoring invalid renamed_paths for gid %s", gid)
             return {}
         if not isinstance(data, dict):
             return {}

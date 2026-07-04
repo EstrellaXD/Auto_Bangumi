@@ -61,7 +61,8 @@ class Settings(Config):
         config = self._migrate_old_config(config)
         config_obj = Config.model_validate(config)
         self.__dict__.update(config_obj.__dict__)
-        logger.info("Config loaded")
+        # 每次 reload/重启都会触发 load，INFO 级别会在日志里反复刷屏
+        logger.debug("Config loaded")
 
     @staticmethod
     def _migrate_old_config(config: dict) -> dict:
@@ -104,7 +105,7 @@ class Settings(Config):
                 "enable": openai_conf.get("enable", False),
                 "provider": "openai",
                 "api_key": openai_conf.get("api_key", ""),
-                "model": openai_conf.get("model", "gpt-4o-mini"),
+                "model": openai_conf.get("model", "gpt-5-mini"),
                 "base_url": base_url,
                 # 旧版语义是 LLM 优先解析，迁移用户保持原有行为
                 "mode": "primary",
@@ -143,7 +144,7 @@ class Settings(Config):
                         config_dict[key][attr_name] = self.__val_from_env(env, attr)
         config_obj = Config.model_validate(config_dict)
         self.__dict__.update(config_obj.__dict__)
-        logger.info("Config loaded from env")
+        logger.debug("Config loaded from env")
 
     @staticmethod
     def __val_from_env(env: str, attr: tuple | str):

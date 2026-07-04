@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { NButton, NSwitch } from 'naive-ui';
+import { NButton, NSelect, NSwitch } from 'naive-ui';
 
 const { t } = useMyI18n();
 const setupStore = useSetupStore();
@@ -56,9 +56,18 @@ watch(
   }
 );
 
+const downloaderTypeOptions = [
+  { label: 'qBittorrent', value: 'qbittorrent' },
+  { label: 'aria2', value: 'aria2' },
+];
+
 // Password intentionally not required — qB with bypass_local_auth has none.
+// aria2 authenticates via RPC secret (password field); it has no username.
 const canTest = computed(() => {
-  return downloaderData.value.host && downloaderData.value.username;
+  return (
+    downloaderData.value.host &&
+    (downloaderData.value.type === 'aria2' || downloaderData.value.username)
+  );
 });
 
 // The connection test is encouraged but must not be a dead end: a backend
@@ -73,6 +82,19 @@ const canProceed = computed(() => Boolean(downloaderData.value.host));
       <p class="step-subtitle">{{ t('setup.downloader.subtitle') }}</p>
 
       <div class="form-fields">
+        <ab-label :label="t('config.downloader_set.type')">
+          <NSelect
+            v-model:value="downloaderData.type"
+            :options="downloaderTypeOptions"
+            :aria-label="t('config.downloader_set.type')"
+            class="type-select"
+          />
+        </ab-label>
+
+        <p v-if="downloaderData.type === 'aria2'" class="aria2-hint">
+          {{ t('config.downloader_set.aria2_hint') }}
+        </p>
+
         <ab-label :label="t('config.downloader_set.host')">
           <input
             v-model="downloaderData.host"
@@ -229,6 +251,16 @@ const canProceed = computed(() => Boolean(downloaderData.value.host));
 .untested-hint {
   font-size: 11px;
   color: var(--color-text-muted);
+  margin: 0;
+}
+
+.type-select {
+  max-width: 200px;
+}
+
+.aria2-hint {
+  font-size: 11px;
+  color: var(--color-text-secondary);
   margin: 0;
 }
 

@@ -80,6 +80,18 @@ function onWeekdayChange(value: number | null) {
   localRule.value.weekday_locked = value !== null;
 }
 
+const episodeTypeOptions = computed(() => [
+  { label: t('homepage.rule.type_episode'), value: 'episode' },
+  { label: t('homepage.rule.type_movie'), value: 'movie' },
+  { label: t('homepage.rule.type_special'), value: 'special' },
+]);
+
+// 常见分辨率作预设，filterable+tag 允许输入任意值
+const resolutionOptions = ['2160p', '1080p', '720p'].map((r) => ({
+  label: r,
+  value: r,
+}));
+
 // Auto detect offset using the new detectOffset API
 async function autoDetectOffset() {
   if (!localRule.value.official_title || !localRule.value.season) return;
@@ -285,6 +297,51 @@ function emitUnarchive() {
                   @update:value="onWeekdayChange"
                 />
               </div>
+
+              <div class="weekday-row">
+                <label class="weekday-label">{{
+                  $t('homepage.rule.episode_type')
+                }}</label>
+                <NSelect
+                  v-model:value="localRule.episode_type"
+                  :options="episodeTypeOptions"
+                  size="small"
+                  class="weekday-select"
+                />
+              </div>
+
+              <div class="weekday-row">
+                <label class="weekday-label">{{
+                  $t('homepage.rule.preferred_group')
+                }}</label>
+                <input
+                  v-model="localRule.preferred_group"
+                  ab-input
+                  type="text"
+                  class="preferred-input"
+                  placeholder="ANi"
+                />
+              </div>
+
+              <div class="weekday-row">
+                <label class="weekday-label">{{
+                  $t('homepage.rule.preferred_resolution')
+                }}</label>
+                <NSelect
+                  v-model:value="localRule.preferred_resolution"
+                  :options="resolutionOptions"
+                  clearable
+                  filterable
+                  tag
+                  size="small"
+                  :placeholder="$t('homepage.rule.auto_detect')"
+                  class="weekday-select"
+                />
+              </div>
+
+              <p class="preferred-hint">
+                {{ $t('homepage.rule.preferred_hint') }}
+              </p>
             </advanced-section>
           </div>
 
@@ -602,6 +659,17 @@ function emitUnarchive() {
 
 .weekday-select {
   max-width: 160px;
+}
+
+.preferred-input {
+  width: 160px;
+  max-width: 160px;
+}
+
+.preferred-hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--color-text-secondary);
 }
 
 .delete-actions {

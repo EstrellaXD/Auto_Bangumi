@@ -23,7 +23,7 @@ class RSSAnalyser:
             pass
         elif rss.parser == "mikan":
             if not torrent.homepage:
-                logger.warning("[Parser] Mikan torrent has no homepage info.")
+                logger.warning("Mikan torrent has no homepage info.")
             else:
                 try:
                     poster_link, official_title = await TitleParser.mikan_parser(
@@ -31,8 +31,7 @@ class RSSAnalyser:
                     )
                 except AttributeError as e:
                     logger.warning(
-                        f"[Parser] Failed to parse Mikan homepage "
-                        f"{torrent.homepage}: {e}"
+                        f"Failed to parse Mikan homepage " f"{torrent.homepage}: {e}"
                     )
                 else:
                     bangumi.poster_link = poster_link
@@ -79,7 +78,7 @@ class RSSAnalyser:
                     return [bangumi]
                 seen_titles.add(bangumi.title_raw)
                 new_data.append(bangumi)
-                logger.info(f"[RSS] New bangumi founded: {bangumi.official_title}")
+                logger.info(f"New bangumi founded: {bangumi.official_title}")
         return new_data
 
     async def torrent_to_data(
@@ -100,7 +99,7 @@ class RSSAnalyser:
         rss_torrents = await self.get_rss_torrents(rss.url, full_parse)
         torrents_to_add = await engine.db.bangumi.match_list(rss_torrents, rss.url)
         if not torrents_to_add:
-            logger.debug("[RSS] No new title has been found.")
+            logger.debug("No new title has been found.")
             return []
         # New List
         new_data = await self.torrents_to_data(torrents_to_add, rss, full_parse)

@@ -143,7 +143,7 @@ class RSSEngine:
             torrents = await self.pull_rss(rss_item)
             return torrents, None
         except Exception as e:
-            logger.warning(f"[Engine] Failed to fetch RSS {rss_item.name}: {e}")
+            logger.warning(f"Failed to fetch RSS {rss_item.name}: {e}")
             return [], str(e)
 
     def _get_filter_pattern(self, filter_str: str) -> re.Pattern:
@@ -158,7 +158,7 @@ class RSSEngine:
                 escaped = "|".join(re.escape(t) for t in terms)
                 self._filter_cache[filter_str] = re.compile(escaped, re.IGNORECASE)
                 logger.warning(
-                    f"[Engine] Filter '{filter_str}' contains invalid regex, "
+                    f"Filter '{filter_str}' contains invalid regex, "
                     f"using literal matching"
                 )
         return self._filter_cache[filter_str]
@@ -254,7 +254,7 @@ class RSSEngine:
             rss_items = [rss_item] if rss_item else []
         # From RSS Items, fetch all torrents: parallel across hosts, serial
         # (with a delay) within one host so the site never sees a burst (#1026).
-        logger.debug("[Engine] Get %s RSS items", len(rss_items))
+        logger.debug("Get %s RSS items", len(rss_items))
         semaphore = asyncio.Semaphore(5)
 
         async def _pull_host_group(items: list[RSSItem]):
@@ -345,7 +345,7 @@ class RSSEngine:
                 if matched_data:
                     if id(torrent) in skip_ids:
                         logger.debug(
-                            "[Engine] Skip %s: worse/duplicate release for an "
+                            "Skip %s: worse/duplicate release for an "
                             "already-downloaded episode of %s",
                             torrent.name,
                             matched_data.official_title,
@@ -367,7 +367,7 @@ class RSSEngine:
                         # ADDED 与 DUPLICATE（下载器里已有同一种子）都视为
                         # 成功，不再对健康的重复种子发失败通知。
                         logger.debug(
-                            "[Engine] Add torrent %s to client (%s)",
+                            "Add torrent %s to client (%s)",
                             torrent.name,
                             result.value,
                         )
@@ -391,10 +391,8 @@ class RSSEngine:
                         return ResponseModel(
                             status=False,
                             status_code=502,
-                            msg_en=(
-                                f"[Engine] Download {bangumi.official_title} failed."
-                            ),
-                            msg_zh=f"[Engine] 下载 {bangumi.official_title} 失败。",
+                            msg_en=(f"Download {bangumi.official_title} failed."),
+                            msg_zh=f"下载 {bangumi.official_title} 失败。",
                         )
                     for torrent in torrents:
                         torrent.downloaded = True
@@ -402,13 +400,13 @@ class RSSEngine:
                     return ResponseModel(
                         status=True,
                         status_code=200,
-                        msg_en=f"[Engine] Download {bangumi.official_title} successfully.",
+                        msg_en=f"Download {bangumi.official_title} successfully.",
                         msg_zh=f"下载 {bangumi.official_title} 成功。",
                     )
             else:
                 return ResponseModel(
                     status=False,
                     status_code=406,
-                    msg_en=f"[Engine] Download {bangumi.official_title} failed.",
-                    msg_zh=f"[Engine] 下载 {bangumi.official_title} 失败。",
+                    msg_en=f"Download {bangumi.official_title} failed.",
+                    msg_zh=f"下载 {bangumi.official_title} 失败。",
                 )

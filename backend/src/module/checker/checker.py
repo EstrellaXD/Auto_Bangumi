@@ -60,7 +60,7 @@ class Checker:
 
         # Mock downloader always succeeds
         if settings.downloader.type == "mock":
-            logger.info("[Checker] Using MockDownloader - skipping connection check")
+            logger.info("Using MockDownloader - skipping connection check")
             return True
 
         # Delegate to the concrete client's own auth/capabilities instead of
@@ -70,10 +70,10 @@ class Checker:
             async with DownloadClient() as dl_client:
                 return dl_client.authed
         except ConnectionError:
-            logger.error("[Checker] Downloader connect failed.")
+            logger.error("Downloader connect failed.")
             return False
         except Exception as e:
-            logger.error(f"[Checker] Downloader connect failed: {e}")
+            logger.error(f"Downloader connect failed: {e}")
             return False
 
     @staticmethod

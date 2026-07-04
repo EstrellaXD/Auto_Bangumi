@@ -27,6 +27,9 @@ export interface BangumiRule {
   weekday_locked: boolean;
   needs_review: boolean;
   needs_review_reason: string | null;
+  preferred_group: string | null;
+  preferred_resolution: string | null;
+  episode_type: 'episode' | 'movie' | 'special';
 }
 
 export interface BangumiAPI extends Omit<BangumiRule, 'filter' | 'rss_link'> {
@@ -67,6 +70,9 @@ export const ruleTemplate: BangumiRule = {
   weekday_locked: false,
   needs_review: false,
   needs_review_reason: null,
+  preferred_group: null,
+  preferred_resolution: null,
+  episode_type: 'episode',
 };
 
 /** Legacy offset suggestion (for backward compatibility) */

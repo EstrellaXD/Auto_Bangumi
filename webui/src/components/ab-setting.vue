@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useId } from 'vue';
 import { NDynamicTags, NSelect, NSwitch } from 'naive-ui';
 import { isObject } from 'radash';
 import type { SelectOption } from 'naive-ui';
@@ -11,6 +12,15 @@ const props = withDefaults(defineProps<AbSettingProps>(), {
 
 
 const data = defineModel<any>('data');
+
+// 每个设置项一对稳定 id：原生 input 用 <label for>，
+// naive-ui 组件（无法透传 id 到焦点元素）用 aria-label/aria-labelledby
+const controlId = useId();
+const labelId = useId();
+
+const labelText = computed(() =>
+  typeof props.label === 'function' ? props.label() : props.label
+);
 
 // 旧 AbSelect 接受 items: Array<SelectItem | string>；NSelect 需要
 // options: Array<{ label, value }>，这里做一层适配
@@ -37,11 +47,17 @@ const selectValue = computed<string | number | null>({
 
 <template>
   <div class="setting-item">
-    <ab-label :label="label">
+    <ab-label
+      :label="label"
+      :for-id="type === 'input' ? controlId : undefined"
+      :label-id="labelId"
+    >
       <NSwitch
         v-if="type === 'switch'"
         v-model:value="data"
         :class="css"
+        :aria-label="labelText"
+        :aria-labelledby="labelId"
       ></NSwitch>
 
       <NSelect
@@ -50,10 +66,12 @@ const selectValue = computed<string | number | null>({
         :options="selectOptions"
         :class="css"
         class="setting-select"
+        :aria-label="labelText"
       ></NSelect>
 
       <input
         v-else-if="type === 'input'"
+        :id="controlId"
         v-model="data"
         ab-input
         :class="css"
@@ -61,7 +79,11 @@ const selectValue = computed<string | number | null>({
       />
 
       <div v-else-if="type === 'dynamic-tags'" class="dynamic-tags-wrapper">
-        <NDynamicTags v-model:value="data" size="small"></NDynamicTags>
+        <NDynamicTags
+          v-model:value="data"
+          size="small"
+          :aria-label="labelText"
+        ></NDynamicTags>
       </div>
     </ab-label>
 

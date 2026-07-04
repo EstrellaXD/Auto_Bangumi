@@ -82,7 +82,7 @@ class Renamer:
         if adjusted_episode < 0 or (adjusted_episode == 0 and original_episode > 0):
             adjusted_episode = original_episode
             logger.warning(
-                f"[Renamer] Episode offset {episode_offset} would make episode {original_episode} non-positive, ignoring offset"
+                f"Episode offset {episode_offset} would make episode {original_episode} non-positive, ignoring offset"
             )
         episode = f"0{adjusted_episode}" if adjusted_episode < 10 else adjusted_episode
         # 注意：group_tag 只影响 qB RSS 规则名（downloader/path.py 的 rule_name），
@@ -105,7 +105,7 @@ class Renamer:
         elif method == "advance":
             return f"{bangumi_name} S{season}E{episode}{file_info.suffix}"
         elif method == "normal":
-            logger.warning("[Renamer] Normal rename method is deprecated.")
+            logger.warning("Normal rename method is deprecated.")
             return file_info.media_path
         elif method == "subtitle_pn":
             assert isinstance(
@@ -118,7 +118,7 @@ class Renamer:
             ), "subtitle_advance requires a SubtitleFile"
             return f"{bangumi_name} S{season}E{episode}.{file_info.language}{file_info.suffix}"
         else:
-            logger.error(f"[Renamer] Unknown rename method: {method}")
+            logger.error(f"Unknown rename method: {method}")
             return file_info.media_path
 
     async def rename_file(
@@ -157,9 +157,7 @@ class Renamer:
                     last_attempt
                     and (time.time() - last_attempt) < _PENDING_RENAME_COOLDOWN
                 ):
-                    logger.debug(
-                        "[Renamer] Skipping rename (pending cooldown): %s", media_path
-                    )
+                    logger.debug("Skipping rename (pending cooldown): %s", media_path)
                     return None
 
                 if await self.client.rename_torrent_file(
@@ -190,7 +188,7 @@ class Renamer:
                     # Periodic cleanup of expired entries (at most once per minute)
                     self._cleanup_pending_cache()
         else:
-            logger.warning(f"[Renamer] {media_path} parse failed")
+            logger.warning(f"{media_path} parse failed")
             if settings.bangumi_manage.remove_bad_torrent:
                 await self.client.delete_torrent(hashes=_hash)
         return None
@@ -258,7 +256,7 @@ class Renamer:
                             _hash=_hash, old_path=media_path, new_path=new_path
                         )
                         if not renamed:
-                            logger.warning(f"[Renamer] {media_path} rename failed")
+                            logger.warning(f"{media_path} rename failed")
                             # Delete bad torrent.
                             if settings.bangumi_manage.remove_bad_torrent:
                                 await self.client.delete_torrent(_hash)
@@ -303,7 +301,7 @@ class Renamer:
                         verify=False,
                     )
                     if not renamed:
-                        logger.warning(f"[Renamer] {subtitle_path} rename failed")
+                        logger.warning(f"{subtitle_path} rename failed")
 
     @staticmethod
     def _parse_bangumi_id_from_tags(tags: str | None) -> int | None:
@@ -444,7 +442,7 @@ class Renamer:
                 info["hash"] for info in torrents_info if info["hash"] not in result
             ]
             logger.warning(
-                "[Renamer] Batch offset lookup failed; skipping rename for %d "
+                "Batch offset lookup failed; skipping rename for %d "
                 "torrent(s) this cycle: %s",
                 len(missing),
                 e,
@@ -483,7 +481,7 @@ class Renamer:
                     bangumi = await db.bangumi.search_id(torrent_record.bangumi_id)
                     if bangumi and not bangumi.deleted:
                         logger.debug(
-                            "[Renamer] Found offsets via qb_hash: ep=%s, season=%s",
+                            "Found offsets via qb_hash: ep=%s, season=%s",
                             bangumi.episode_offset,
                             bangumi.season_offset,
                         )
@@ -495,7 +493,7 @@ class Renamer:
                     bangumi = await db.bangumi.search_id(bangumi_id)
                     if bangumi and not bangumi.deleted:
                         logger.debug(
-                            "[Renamer] Found offsets via tag ab:%s: ep=%s, season=%s",
+                            "Found offsets via tag ab:%s: ep=%s, season=%s",
                             bangumi_id,
                             bangumi.episode_offset,
                             bangumi.season_offset,
@@ -506,7 +504,7 @@ class Renamer:
                 bangumi = await db.bangumi.match_torrent(torrent_name)
                 if bangumi:
                     logger.info(
-                        f"[Renamer] Matched bangumi '{bangumi.official_title}' (id={bangumi.id}) via name, "
+                        f"Matched bangumi '{bangumi.official_title}' (id={bangumi.id}) via name, "
                         f"offsets: ep={bangumi.episode_offset}, season={bangumi.season_offset}"
                     )
                     return bangumi.episode_offset, bangumi.season_offset
@@ -519,22 +517,22 @@ class Renamer:
                     bangumi = await db.bangumi.match_by_save_path(normalized_save_path)
                 if bangumi:
                     logger.info(
-                        f"[Renamer] Matched bangumi '{bangumi.official_title}' (id={bangumi.id}) via save_path, "
+                        f"Matched bangumi '{bangumi.official_title}' (id={bangumi.id}) via save_path, "
                         f"offsets: ep={bangumi.episode_offset}, season={bangumi.season_offset}"
                     )
                     return bangumi.episode_offset, bangumi.season_offset
 
                 logger.info(
-                    f"[Renamer] No bangumi match for torrent (using offset=0): "
+                    f"No bangumi match for torrent (using offset=0): "
                     f"name={torrent_name[:60] if torrent_name else 'N/A'}..."
                 )
         except Exception as e:
-            logger.debug("[Renamer] Could not lookup offsets for %s: %s", save_path, e)
+            logger.debug("Could not lookup offsets for %s: %s", save_path, e)
         return 0, 0
 
     async def rename(self) -> list[Notification]:
         # Get torrent info
-        logger.debug("[Renamer] Start rename process.")
+        logger.debug("Start rename process.")
         rename_method = settings.bangumi_manage.rename_method
         torrents_info = await self.client.get_torrent_info()
         renamed_info: list[Notification] = []
@@ -553,7 +551,7 @@ class Renamer:
                 # _batch_lookup_offsets) -- skip renaming rather than
                 # guessing offset (0, 0), which could misname episodes.
                 logger.warning(
-                    "[Renamer] Skipping %s: offset lookup failed this cycle",
+                    "Skipping %s: offset lookup failed this cycle",
                     torrent_name,
                 )
                 continue
@@ -581,7 +579,7 @@ class Renamer:
                     await self.rename_subtitles(subtitle_list=subtitle_list, **kwargs)
             # Rename collection
             elif len(media_list) > 1:
-                logger.info("[Renamer] Start rename collection")
+                logger.info("Start rename collection")
                 # 传入各文件体积，供多文件电影种子选出正片主文件
                 file_sizes = {f["name"]: f.get("size") or 0 for f in files}
                 await self.rename_collection(
@@ -591,6 +589,6 @@ class Renamer:
                     await self.rename_subtitles(subtitle_list=subtitle_list, **kwargs)
                 await self.client.set_category(torrent_hash, "BangumiCollection")
             else:
-                logger.warning(f"[Renamer] {torrent_name} has no media file")
-        logger.debug("[Renamer] Rename process finished.")
+                logger.warning(f"{torrent_name} has no media file")
+        logger.debug("Rename process finished.")
         return renamed_info

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { NButton } from 'naive-ui';
+import { NButton, NPopconfirm } from 'naive-ui';
 import { Delete } from '@icon-park/vue-next';
 import type { PasskeyItem } from '#/passkey';
 
@@ -59,7 +59,6 @@ async function handleAdd() {
 }
 
 async function handleDelete(passkey: PasskeyItem) {
-  if (!confirm(t('passkey.delete_confirm'))) return;
   await deletePasskey(passkey.id);
 }
 
@@ -111,9 +110,23 @@ function formatDate(dateString: string | null): string {
               {{ $t('passkey.synced') }}
             </div>
           </div>
-          <NButton size="small" type="error" @click="handleDelete(passkey)">
-            <Delete size="16" />
-          </NButton>
+          <NPopconfirm
+            :positive-text="$t('passkey.delete')"
+            :negative-text="$t('config.cancel')"
+            :positive-button-props="{ type: 'error' }"
+            @positive-click="handleDelete(passkey)"
+          >
+            <template #trigger>
+              <NButton
+                size="small"
+                type="error"
+                :aria-label="$t('passkey.delete')"
+              >
+                <Delete size="16" />
+              </NButton>
+            </template>
+            {{ $t('passkey.delete_confirm') }}
+          </NPopconfirm>
         </div>
       </div>
 

@@ -180,6 +180,38 @@ async def test_downloader(req: TestDownloaderRequest):
 
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
+            if req.type == "aria2":
+                # aria2 走 JSON-RPC：getVersion 一次验证可达性与 RPC secret
+                params = [f"token:{req.password}"] if req.password else []
+                rpc_resp = await client.post(
+                    f"{host}/jsonrpc",
+                    json={
+                        "jsonrpc": "2.0",
+                        "id": "ab-setup",
+                        "method": "aria2.getVersion",
+                        "params": params,
+                    },
+                )
+                try:
+                    payload = rpc_resp.json()
+                except ValueError:
+                    payload = {}
+                if rpc_resp.status_code == 200 and "result" in payload:
+                    version = payload["result"].get("version", "")
+                    return TestResultResponse(
+                        success=True,
+                        message_en=f"Connected to aria2 {version}.".strip(),
+                        message_zh=f"已连接 aria2 {version}。",
+                    )
+                return TestResultResponse(
+                    success=False,
+                    message_en=(
+                        "aria2 is reachable but rejected the request "
+                        "(check the RPC secret)."
+                    ),
+                    message_zh="aria2 可达但拒绝了请求（请检查 RPC secret）。",
+                )
+
             # Check if host is reachable and is qBittorrent
             resp = await client.get(host)
             if (
@@ -237,7 +269,7 @@ async def test_downloader(req: TestDownloaderRequest):
     except Exception as e:
         # Log the detail server-side only — this endpoint is reachable before
         # authentication, so raw errors must not be echoed back (#1041).
-        logger.error(f"[Setup] Downloader test failed: {e}")
+        logger.error(f"Downloader test failed: {e}")
         return TestResultResponse(
             success=False,
             message_en="Connection failed.",
@@ -271,7 +303,7 @@ async def test_rss(req: TestRSSRequest):
                 item_count=len(items),
             )
     except Exception as e:
-        logger.error(f"[Setup] RSS test failed: {e}")
+        logger.error(f"RSS test failed: {e}")
         return TestResultResponse(
             success=False,
             message_en="Failed to fetch RSS feed.",
@@ -316,7 +348,7 @@ async def test_notification(req: TestNotificationRequest):
                     message_zh=f"测试通知发送失败：{message}",
                 )
     except Exception as e:
-        logger.error(f"[Setup] Notification test failed: {e}")
+        logger.error(f"Notification test failed: {e}")
         return TestResultResponse(
             success=False,
             message_en="Notification test failed.",
@@ -396,7 +428,7 @@ async def complete_setup(
             msg_zh="设置完成。",
         )
     except Exception as e:
-        logger.error(f"[Setup] Complete failed: {e}")
+        logger.error(f"Complete failed: {e}")
         return ResponseModel(
             status=False,
             status_code=500,

@@ -14,7 +14,7 @@ defineProps<{
       class="info-tag"
       :class="`info-tag--${tag.type}`"
     >
-      {{ tag.value }}
+      {{ tag.i18n ? $t(tag.value) : tag.value }}
     </div>
   </div>
 </template>
@@ -53,6 +53,12 @@ defineProps<{
   &--group {
     background: color-mix(in srgb, var(--color-warning) 12%, transparent);
     color: var(--color-warning);
+  }
+
+  // 剧场版/特别篇：反白强调，与常规元数据标签区分
+  &--etype {
+    background: var(--color-primary);
+    color: var(--color-white);
   }
 }
 </style>

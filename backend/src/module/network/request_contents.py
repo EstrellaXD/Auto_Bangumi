@@ -37,7 +37,7 @@ class RequestContent(RequestURL):
                         break
             return torrents
         else:
-            logger.warning(f"[Network] Failed to get torrents: {_url}")
+            logger.warning(f"Failed to get torrents: {_url}")
             return []
 
     async def get_xml(
@@ -48,7 +48,7 @@ class RequestContent(RequestURL):
             try:
                 return xml.etree.ElementTree.fromstring(req.text)
             except xml.etree.ElementTree.ParseError as e:
-                logger.warning(f"[Network] Failed to parse XML from {_url}: {e}")
+                logger.warning(f"Failed to parse XML from {_url}: {e}")
                 return None
         return None
 
@@ -83,7 +83,7 @@ class RequestContent(RequestURL):
         req = await self.get_url(_url)
         if req:
             return req.content
-        logger.warning(f"[Network] Failed to get content from {_url}")
+        logger.warning(f"Failed to get content from {_url}")
         return None
 
     async def check_connection(self, _url):

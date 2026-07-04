@@ -87,7 +87,7 @@ def gen_save_path(data: Bangumi | BangumiUpdate):
     if adjusted_season < min_season:
         adjusted_season = data.season
         logger.warning(
-            f"[Path] Season offset would result in invalid season for {data.official_title}, using original season"
+            f"Season offset would result in invalid season for {data.official_title}, using original season"
         )
     save_path = Path(settings.downloader.path) / folder / f"Season {adjusted_season}"
     return str(save_path)

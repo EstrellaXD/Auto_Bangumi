@@ -82,7 +82,7 @@ class Database:
         result = await self.session.execute(text("SELECT * FROM user"))
         user_data = result.mappings().all()
         if not user_data:
-            logger.warning("[Database] No user data found, skipping migration.")
+            logger.warning("No user data found, skipping migration.")
             return
         readd_bangumi = []
         for bangumi in bangumi_data:

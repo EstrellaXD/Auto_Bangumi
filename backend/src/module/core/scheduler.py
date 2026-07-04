@@ -69,7 +69,7 @@ class PeriodicTask:
                 except asyncio.CancelledError:
                     raise
                 except Exception as e:
-                    logger.error("[%s] Error during tick: %s", self._name, e)
+                    logger.error("%s tick failed: %s", self._name, e)
                 if await self._wait(self._interval()):
                     return
         except asyncio.CancelledError:

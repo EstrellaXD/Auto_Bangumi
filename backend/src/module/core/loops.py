@@ -34,12 +34,12 @@ async def rss_tick(analyser: RSSAnalyser, notifier: NotificationManager) -> None
                     # 其余异常可能是真实 bug，需在 WARNING 级别带完整堆栈。
                     if await db.rss.search_id(rss.id) is None:
                         logger.debug(
-                            "[RSSThread] Skipping RSS id=%s, deleted during iteration",
+                            "Skipping RSS id=%s, deleted during iteration",
                             rss.id,
                         )
                     else:
                         logger.warning(
-                            "[RSSThread] Error analysing RSS id=%s (%s)",
+                            "Error analysing RSS id=%s (%s)",
                             rss.id,
                             rss.url,
                             exc_info=True,
@@ -70,9 +70,9 @@ async def rename_tick(notifier: NotificationManager) -> None:
 
 async def offset_scan_tick(notifier: NotificationManager) -> None:
     """Scan all bangumi for season/episode offset mismatches."""
+    # 扫描结果由 OffsetScanner.scan_all 自己记录，这里不再重复记一行
     scanner = OffsetScanner()
     events = await scanner.scan_all()
-    logger.info("[OffsetScanThread] Scan complete, flagged %s bangumi", len(events))
     if settings.notification.enable and events:
         await asyncio.gather(*[notifier.send_event(e) for e in events])
 
@@ -82,9 +82,6 @@ async def calendar_tick() -> None:
     async with Database() as db:
         manager = TorrentManager(db)
         resp = await manager.refresh_calendar()
-        if resp.status:
-            logger.info("[CalendarRefreshThread] Calendar refresh completed")
-        else:
-            logger.warning(
-                "[CalendarRefreshThread] Calendar refresh failed: %s", resp.msg_en
-            )
+        # 成功已由 TorrentManager.refresh_calendar 记录（含更新数量）
+        if not resp.status:
+            logger.warning("Calendar refresh failed: %s", resp.msg_en)

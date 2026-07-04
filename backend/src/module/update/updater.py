@@ -309,7 +309,7 @@ class Updater:
         try:
             releases = await self._fetch_releases()
         except Exception as exc:  # 网络错误优雅降级
-            logger.warning("[Update] release check failed: %s", exc)
+            logger.warning("release check failed: %s", exc)
             return self._local_state(
                 UpdateCheckResult(
                     current=self.current_version,
@@ -359,7 +359,7 @@ class Updater:
         return current >= required
 
     def _fail(self, message: str) -> ApplyResult:
-        logger.warning("[Update] %s", message)
+        logger.warning("%s", message)
         self._set_progress(phase="error", error=message, message=message)
         return ApplyResult(success=False, message=message)
 
@@ -454,9 +454,7 @@ class Updater:
         overlay_sha = _sha256_file(overlay_lock)
         baseline_sha = _sha256_file(baseline_lock) if baseline_lock.exists() else None
         if baseline_sha == overlay_sha:
-            logger.info(
-                "[Update] Dependencies unchanged from image baseline; skip sync."
-            )
+            logger.info("Dependencies unchanged from image baseline; skip sync.")
             return
 
         uv = shutil.which("uv")
@@ -465,7 +463,7 @@ class Updater:
 
         env = dict(os.environ)
         env["UV_PROJECT_ENVIRONMENT"] = str((unpacked / ".venv").resolve())
-        logger.info("[Update] Syncing overlay dependencies into staged venv.")
+        logger.info("Syncing overlay dependencies into staged venv.")
         subprocess.run(
             [uv, "sync", "--frozen", "--no-dev"],
             cwd=str(backend_dir),
@@ -599,7 +597,7 @@ class Updater:
                     message="update applied; restarting to take effect",
                 )
             except Exception as exc:  # noqa: BLE001 - 任何失败都要优雅返回
-                logger.exception("[Update] apply failed")
+                logger.exception("apply failed")
                 return self._fail(f"apply failed: {exc}")
 
     # -------------------------------------------------------------- 回滚
@@ -663,7 +661,7 @@ class Updater:
                         and live_schema != snapshot_schema
                     ):
                         logger.warning(
-                            "[Update] Schema advanced since update (%s -> %s); "
+                            "Schema advanced since update (%s -> %s); "
                             "restoring pre-update database snapshot. Data written "
                             "since the update will be lost.",
                             snapshot_schema,
@@ -672,8 +670,7 @@ class Updater:
                         restored_schema = self._restore_database_snapshot(applied_data)
                     else:
                         logger.info(
-                            "[Update] Schema unchanged since update; "
-                            "keeping live database."
+                            "Schema unchanged since update; " "keeping live database."
                         )
                     applied.write_text(
                         json.dumps(
@@ -721,7 +718,7 @@ class Updater:
                     message=message,
                 )
             except Exception as exc:  # noqa: BLE001
-                logger.exception("[Update] rollback failed")
+                logger.exception("rollback failed")
                 return self._fail(f"rollback failed: {exc}")
 
 
@@ -750,5 +747,5 @@ def _read_db_schema_version(db_path: Path) -> Optional[int]:
             ).fetchone()
             return int(version[0]) if version else 0
     except sqlite3.Error as exc:
-        logger.warning("[Update] failed to read DB schema version: %s", exc)
+        logger.warning("failed to read DB schema version: %s", exc)
         return None

@@ -116,9 +116,7 @@ def ab_process(e2e_tmpdir, docker_services):
     (dist_dir / "assets").mkdir()
     (dist_dir / "images").mkdir()
     # Jinja2Templates requires at least one template file
-    (dist_dir / "index.html").write_text(
-        "<html><body>e2e stub</body></html>"
-    )
+    (dist_dir / "index.html").write_text("<html><body>e2e stub</body></html>")
 
     # backend/src/ is the directory containing main.py and module/
     src_dir = Path(__file__).resolve().parents[2]
@@ -134,9 +132,7 @@ def ab_process(e2e_tmpdir, docker_services):
     ready = False
     for _ in range(30):
         try:
-            resp = httpx.get(
-                "http://localhost:7892/api/v1/setup/status", timeout=3.0
-            )
+            resp = httpx.get("http://localhost:7892/api/v1/setup/status", timeout=3.0)
             if resp.status_code == 200:
                 ready = True
                 break

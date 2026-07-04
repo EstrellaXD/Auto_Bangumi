@@ -47,7 +47,7 @@ DEFAULT_SETTINGS: dict[str, dict[str, Any]] = {
         "enable": False,
         "provider": "openai",
         "api_key": "",
-        "model": "gpt-4o-mini",
+        "model": "gpt-5-mini",
         "base_url": "",
         "mode": "fallback",
     },

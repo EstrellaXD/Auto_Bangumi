@@ -244,7 +244,7 @@ class LLM(BaseModel):
         default="openai", description="LLM provider"
     )
     api_key: str = Field(default="", description="LLM api key")
-    model: str = Field(default="gpt-4o-mini", description="LLM model name")
+    model: str = Field(default="gpt-5-mini", description="LLM model name")
     base_url: str = Field(
         default="",
         description=(

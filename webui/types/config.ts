@@ -1,7 +1,7 @@
 import type { TupleToUnion } from './utils';
 
 /** 下载方式 */
-export type DownloaderType = ['qbittorrent'];
+export type DownloaderType = ['qbittorrent', 'aria2'];
 /** rss parser 语言 */
 export type RssParserLang = ['zh', 'en', 'jp'];
 /** 重命名方式 */
@@ -98,6 +98,16 @@ export interface LLM {
   /** 自定义端点，仅 openai 提供商使用；空串表示官方 API */
   base_url: string;
   mode: TupleToUnion<LLMParseMode>;
+  /** 单次请求超时（秒） */
+  timeout: number;
+  /** 解析结果缓存时长（秒），0 = 关闭 */
+  cache_ttl: number;
+  /** 最大并发请求数 */
+  max_concurrency: number;
+  /** 连续失败多少次后熔断 */
+  failure_threshold: number;
+  /** 熔断后暂停调用的时长（秒） */
+  failure_backoff: number;
 }
 
 /** @deprecated 旧版 OpenAI 解析配置，已被 LLM 段取代（保留向后兼容） */
@@ -191,9 +201,15 @@ export const initConfig: Config = {
     enable: false,
     provider: 'openai',
     api_key: '',
-    model: 'gpt-4o-mini',
+    model: 'gpt-5-mini',
     base_url: '',
     mode: 'fallback',
+    // 与 backend/src/module/models/config.py 的 LLM 默认值保持一致
+    timeout: 20,
+    cache_ttl: 900,
+    max_concurrency: 2,
+    failure_threshold: 3,
+    failure_backoff: 300,
   },
   experimental_openai: {
     enable: false,

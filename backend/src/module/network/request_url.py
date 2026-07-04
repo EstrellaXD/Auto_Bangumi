@@ -111,18 +111,18 @@ class RequestURL:
             try:
                 req = await self._client.get(url=url, headers=headers)
                 logger.debug(
-                    "[Network] Successfully connected to %s. Status: %s",
+                    "Successfully connected to %s. Status: %s",
                     url,
                     req.status_code,
                 )
                 req.raise_for_status()
                 return req
             except httpx.HTTPStatusError as e:
-                logger.warning(f"[Network] HTTP {e.response.status_code} from {url}")
+                logger.warning(f"HTTP {e.response.status_code} from {url}")
                 break
             except httpx.RequestError as e:
                 logger.warning(
-                    f"[Network] Request error for {url}: {type(e).__name__}. Retry {try_time + 1}/{retry}"
+                    f"Request error for {url}: {type(e).__name__}. Retry {try_time + 1}/{retry}"
                 )
                 try_time += 1
                 if try_time >= retry:
@@ -134,11 +134,9 @@ class RequestURL:
                 # shutdown or settings reload (see AppContext).
                 await asyncio.sleep(5)
             except Exception as e:
-                logger.warning(f"[Network] Unexpected error for {url}: {e}")
+                logger.warning(f"Unexpected error for {url}: {e}")
                 break
-        logger.error(
-            f"[Network] Unable to connect to {url}, Please check your network settings"
-        )
+        logger.error(f"Unable to connect to {url}, Please check your network settings")
         return None
 
     async def post_url(self, url: str, data: dict, retry=3):
@@ -152,9 +150,7 @@ class RequestURL:
                 req.raise_for_status()
                 return req
             except httpx.RequestError:
-                logger.warning(
-                    f"[Network] Cannot connect to {url}. Wait for 5 seconds."
-                )
+                logger.warning(f"Cannot connect to {url}. Wait for 5 seconds.")
                 try_time += 1
                 if try_time >= retry:
                     break
@@ -163,8 +159,8 @@ class RequestURL:
             except Exception as e:
                 logger.debug(e)
                 break
-        logger.error(f"[Network] Failed connecting to {url}")
-        logger.warning("[Network] Please check DNS/Connection settings")
+        logger.error(f"Failed connecting to {url}")
+        logger.warning("Please check DNS/Connection settings")
         return None
 
     async def check_url(self, url: str):
@@ -178,7 +174,7 @@ class RequestURL:
             req.raise_for_status()
             return True
         except (httpx.RequestError, httpx.HTTPStatusError):
-            logger.debug("[Network] Cannot connect to %s.", url)
+            logger.debug("Cannot connect to %s.", url)
             return False
 
     async def post_form(self, url: str, data: dict, files):
@@ -192,7 +188,7 @@ class RequestURL:
             req.raise_for_status()
             return req
         except (httpx.RequestError, httpx.HTTPStatusError):
-            logger.warning(f"[Network] Cannot connect to {url}.")
+            logger.warning(f"Cannot connect to {url}.")
             return None
 
     async def post_json(self, url: str, json_data: dict, headers: dict | None = None):
@@ -211,7 +207,7 @@ class RequestURL:
             req.raise_for_status()
             return req
         except (httpx.RequestError, httpx.HTTPStatusError):
-            logger.warning(f"[Network] Cannot connect to {url}.")
+            logger.warning(f"Cannot connect to {url}.")
             return None
 
     async def __aenter__(self):
