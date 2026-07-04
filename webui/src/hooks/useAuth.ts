@@ -35,15 +35,16 @@ export const useAuth = createSharedComposable(() => {
   }
 
   function login() {
-    if (!formVerify()) return;
+    if (!formVerify()) return Promise.resolve();
 
-    apiAuth
+    // 返回 promise：登录页据此维持 loading 状态、等待跳转完成
+    return apiAuth
       .login(user.username, user.password)
       .then(() => {
         isLoggedIn.value = true;
         clearUser();
         message.success(t('notify.login_success'));
-        router.replace({ name: 'Index' });
+        return router.replace({ name: 'Index' });
       })
       .catch((err: ApiError) => {
         if (err.status === 404) {

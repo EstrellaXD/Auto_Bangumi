@@ -1,4 +1,5 @@
 import { createSharedComposable } from '@vueuse/core';
+import { router } from '@/router';
 import { apiPasskey } from '@/api/passkey';
 import {
   isWebAuthnSupported,
@@ -56,6 +57,9 @@ export const usePasskey = createSharedComposable(() => {
       await webauthnLogin(username);
       isLoggedIn.value = true;
       message.success(t('notify.login_success'));
+      // 密码登录在 useAuth 里跳转；passkey 此前漏了这一步，导致登录成功
+      // 却停留在登录页（#登录卡住不转跳）
+      await router.replace({ name: 'Index' });
       return true;
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'status' in error) {

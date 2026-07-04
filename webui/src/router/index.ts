@@ -18,8 +18,11 @@ router.beforeEach(async (to) => {
   const { isLoggedIn } = useAuth();
   const { type, url } = storeToRefs(usePlayerStore());
 
-  // Check setup status once per session
-  if (!setupChecked && to.path !== '/setup') {
+  // Check setup status once per session. Skip while logged in: a session can
+  // only exist after setup completed, so an authed navigation never needs the
+  // gate — and awaiting this network call here is what wedged the post-login
+  // redirect when the initial check had failed (setupChecked still false).
+  if (!setupChecked && !isLoggedIn.value && to.path !== '/setup') {
     try {
       const status = await apiSetup.getStatus();
       needSetup = status.need_setup;
