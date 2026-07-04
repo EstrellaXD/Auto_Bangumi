@@ -22,7 +22,12 @@ export const apiAuth = {
   },
 
   async refresh() {
-    const { data } = await axios.get<LoginSuccess>('api/v1/auth/refresh_token');
+    // silent: a startup refresh of an expired session must not flash a scary
+    // error toast — the 401 handler still logs out and routes to /login.
+    const { data } = await axios.get<LoginSuccess>(
+      'api/v1/auth/refresh_token',
+      { silent: true }
+    );
     return data;
   },
 

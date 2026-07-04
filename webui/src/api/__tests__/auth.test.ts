@@ -94,7 +94,11 @@ describe('Auth API Data Structures', () => {
     it('should GET api/v1/auth/refresh_token when refreshing the session', async () => {
       (axios.get as any).mockResolvedValue({ data: mockLoginSuccess });
       await apiAuth.refresh();
-      expect(axios.get).toHaveBeenCalledWith('api/v1/auth/refresh_token');
+      // silent: an expired-session refresh at startup must not toast; the 401
+      // handler still logs out and routes to /login.
+      expect(axios.get).toHaveBeenCalledWith('api/v1/auth/refresh_token', {
+        silent: true,
+      });
     });
 
     it('should POST api/v1/auth/logout when logging out', async () => {
