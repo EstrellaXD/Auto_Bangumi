@@ -1,4 +1,4 @@
-import json
+﻿import json
 import logging
 import re
 import threading
@@ -441,6 +441,10 @@ class BangumiDatabase:
 
         # Build compiled regex pattern for fast substring matching
         # Sort by length descending so longer (more specific) matches are found first
+        # If no titles are available to match, return all as unmatched
+        if not title_index:
+            return torrent_list
+
         sorted_titles = sorted(title_index.keys(), key=len, reverse=True)
         # Escape special regex characters and join with alternation
         pattern = "|".join(re.escape(title) for title in sorted_titles)

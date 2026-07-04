@@ -15,6 +15,7 @@ from module.notification.providers import (
     GotifyProvider,
     PushoverProvider,
     WebhookProvider,
+    OneBotProvider,
 )
 
 
@@ -295,6 +296,100 @@ class TestWebhookProvider:
         assert result is True
 
 
+
+
+class TestOneBotProvider:
+    @pytest.fixture
+    def provider(self):
+        config = ProviderConfig(
+            type="onebot",
+            enabled=True,
+            url="http://localhost:5700",
+            token="test_token",
+            chat_id="123456789",
+            message_type="private",
+        )
+        return OneBotProvider(config)
+
+    async def test_send_private_message(self, provider):
+        """Sends private message via OneBot API."""
+        notify = Notification(
+            official_title="Test Anime", season=1, episode=5, poster_path="https://example.com/poster.jpg"
+        )
+
+        with patch.object(provider, "_post_json", new_callable=AsyncMock) as mock_post:
+            mock_response = MagicMock(status_code=200)
+            mock_response.json.return_value = {"status": "ok", "retcode": 0}
+            mock_post.return_value = mock_response
+            result = await provider.send(notify)
+
+        assert result is True
+        call_args = mock_post.call_args[0]
+        assert "send_private_msg" in call_args[0]
+        assert "user_id" in call_args[1]
+
+    async def test_send_group_message(self, provider):
+        """Sends group message via OneBot API."""
+        provider.message_type = "group"
+        notify = Notification(
+            official_title="Test Anime", season=1, episode=5
+        )
+
+        with patch.object(provider, "_post_json", new_callable=AsyncMock) as mock_post:
+            mock_response = MagicMock(status_code=200)
+            mock_response.json.return_value = {"status": "ok", "retcode": 0}
+            mock_post.return_value = mock_response
+            result = await provider.send(notify)
+
+        assert result is True
+        call_args = mock_post.call_args[0]
+        assert "send_group_msg" in call_args[0]
+        assert "group_id" in call_args[1]
+
+    async def test_send_api_error(self, provider):
+        """Handles OneBot API error response."""
+        notify = Notification(official_title="Test Anime", season=1, episode=5)
+
+        with patch.object(provider, "_post_json", new_callable=AsyncMock) as mock_post:
+            mock_response = MagicMock(status_code=200)
+            mock_response.json.return_value = {"status": "failed", "retcode": 100, "msg": "bad request"}
+            mock_post.return_value = mock_response
+            result = await provider.send(notify)
+
+        assert result is False
+
+    async def test_send_http_error(self, provider):
+        """Handles HTTP error."""
+        notify = Notification(official_title="Test Anime", season=1, episode=5)
+
+        with patch.object(provider, "_post_json", new_callable=AsyncMock) as mock_post:
+            mock_post.return_value = MagicMock(status_code=401)
+            result = await provider.send(notify)
+
+        assert result is False
+
+    async def test_test_success(self, provider):
+        """Test method sends test message successfully."""
+        with patch.object(provider, "_post_json", new_callable=AsyncMock) as mock_post:
+            mock_response = MagicMock(status_code=200)
+            mock_response.json.return_value = {"status": "ok", "retcode": 0}
+            mock_post.return_value = mock_response
+            success, message = await provider.test()
+
+        assert success is True
+        assert "successfully" in message.lower()
+
+    async def test_test_failure(self, provider):
+        """Test method handles API error."""
+        with patch.object(provider, "_post_json", new_callable=AsyncMock) as mock_post:
+            mock_response = MagicMock(status_code=200)
+            mock_response.json.return_value = {"status": "failed", "retcode": 100, "wording": "invalid target"}
+            mock_post.return_value = mock_response
+            success, message = await provider.test()
+
+        assert success is False
+        assert "invalid target" in message.lower()
+
 # ---------------------------------------------------------------------------
 # Config Migration
 # ---------------------------------------------------------------------------
@@ -330,3 +425,4 @@ class TestConfigMigration:
 
         assert len(new_config.providers) == 1
         assert new_config.providers[0].type == "discord"
+
