@@ -14,17 +14,16 @@ import json
 import logging
 from typing import Any, Optional
 
-import anthropic
 import httpx
-import openai as openai_sdk
-from google import genai
-from google.genai import errors as genai_errors
-from google.genai import types as genai_types
 from httpx_socks import AsyncProxyTransport
-from openai import AsyncOpenAI
 from pydantic import BaseModel
 
 from module.conf import settings
+
+# anthropic / openai / google-genai 合计导入约 0.7s，而 LLM 默认关闭。
+# 这些重型 SDK 改为在真正构造/调用某提供商时才导入（见 __init__ 与各
+# _parse_* 方法），把这段耗时移出容器启动路径。httpx / httpx_socks 保持
+# 顶层导入：它们本就在网络层被加载，且测试按模块级名字 patch 它们。
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +122,8 @@ class LLMParser:
         self.model = model
         self._http_client: httpx.AsyncClient | None = None
         if provider == "openai":
+            from openai import AsyncOpenAI
+
             self._http_client = _build_http_client(timeout)
             self._openai_client = AsyncOpenAI(
                 api_key=api_key,
@@ -131,6 +132,8 @@ class LLMParser:
                 http_client=self._http_client,
             )
         elif provider == "anthropic":
+            import anthropic
+
             self._http_client = _build_http_client(timeout)
             self._anthropic_client = anthropic.AsyncAnthropic(
                 api_key=api_key,
@@ -138,6 +141,8 @@ class LLMParser:
                 http_client=self._http_client,
             )
         elif provider == "gemini":
+            from google import genai
+
             self._gemini_client = genai.Client(api_key=api_key)
         else:
             raise ValueError(f"Unsupported LLM provider: {provider}")
@@ -187,6 +192,8 @@ class LLMParser:
         return result
 
     async def _parse_openai(self, raw: str) -> dict | None:
+        import openai as openai_sdk
+
         try:
             resp = await self._openai_client.beta.chat.completions.parse(
                 model=self.model,
@@ -208,6 +215,8 @@ class LLMParser:
         return parsed.model_dump()
 
     async def _parse_anthropic(self, raw: str) -> dict | None:
+        import anthropic
+
         try:
             resp = await self._anthropic_client.messages.create(
                 model=self.model,
@@ -236,6 +245,9 @@ class LLMParser:
             return None
 
     async def _parse_gemini(self, raw: str) -> dict | None:
+        from google.genai import errors as genai_errors
+        from google.genai import types as genai_types
+
         try:
             resp = await self._gemini_client.aio.models.generate_content(
                 model=self.model,

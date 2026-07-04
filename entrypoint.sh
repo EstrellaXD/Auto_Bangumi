@@ -5,6 +5,9 @@ umask ${UMASK}
 
 if [ -f /config/bangumi.json ]; then
     mv /config/bangumi.json /app/data/bangumi.json
+    # Created as root by the mv; the gated chown below may skip the tree walk,
+    # so fix this one legacy file explicitly.
+    chown ab:ab /app/data/bangumi.json
 fi
 
 groupmod -o -g "${PGID}" ab
@@ -29,7 +32,20 @@ while true; do
     # 兜底 try/except，这里再加 `|| true`：覆盖层失败绝不能阻断容器启动。
     python /app/boot_overlay.py || true
 
-    chown ab:ab -R /app/data /app/config /home/ab
+    # Recursive chown of the mounted volumes is O(files): a large poster cache
+    # on a NAS makes it the dominant cost of every container start. Only walk
+    # the tree when ownership actually needs fixing — first run or a changed
+    # PUID/PGID — recorded by a marker. /home/ab is image-internal and tiny, so
+    # chown it every time.
+    chown ab:ab -R /home/ab
+    own_marker="/app/config/.ab_owner"
+    want="${PUID}:${PGID}"
+    if [ "$(cat "${own_marker}" 2>/dev/null)" != "${want}" ] ||
+        [ "$(stat -c '%u:%g' /app/data 2>/dev/null)" != "${want}" ] ||
+        [ "$(stat -c '%u:%g' /app/config 2>/dev/null)" != "${want}" ]; then
+        echo "${want}" >"${own_marker}"
+        chown ab:ab -R /app/data /app/config
+    fi
 
     su-exec "${PUID}:${PGID}" python main.py &
     child=$!
