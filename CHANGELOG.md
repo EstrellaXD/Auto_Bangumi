@@ -1,3 +1,27 @@
+# [3.3.0-beta.4] - 2026-07-05
+
+## Backend
+
+### Added
+
+- `GET /api/v1/update/check` 新增 `force` 参数：用户主动点「检查更新」时绕过 15 分钟结果缓存重新拉取；进入设置页时的自动检查仍走缓存，避免频繁请求 GitHub API
+
+### Changed
+
+- 容器启动优化：LLM SDK（anthropic / openai / google-genai）由模块加载改为按需导入（仅在真正构造某提供商时才加载），把约 0.7s 移出启动路径——LLM 默认关闭时不再白付；实测 `parser.analyser` 包导入 782ms → 203ms
+- entrypoint 递归 `chown /app/data /app/config` 改为按需执行：仅在首次启动、PUID/PGID 变更或卷根属主不符时才遍历（marker 记录），避免大海报缓存在 NAS 上每次启动的 O(文件数) 开销
+
+## Frontend
+
+### Fixed
+
+- 修复登录成功后偶尔卡住不跳转（用户名/密码与 passkey 三种方式均受影响）：passkey 登录成功后从不导航（漏了 `router.replace`）；`useAuth.login` 未返回 promise 导致登录页无法 await 跳转；路由守卫在导航时 `await` setup 状态检查，初次检查失败后会阻塞之后的登录跳转——已登录时跳过该检查
+- 会话过期（401）现在跳回登录页，而非停留在已失效页面看过期数据（含后台静默轮询的 401）；启动时的 token 刷新改为静默，过期不再在首屏闪错误提示
+
+### Changed
+
+- 「检查更新」给出主动反馈：已是最新/发现新版本各弹一条提示，并显示「上次检查 时间」（每次点击都刷新）；检查失败时展示后端的具体原因（限流/无匹配 Release）而非泛化文案
+
 # [3.3.0-beta.3] - 2026-07-04
 
 ## Backend
