@@ -52,10 +52,14 @@ def schedule_restart() -> None:
 
 
 @router.get("/check", dependencies=[Depends(get_current_user)])
-async def check_update(channel: str | None = None):
-    """查询 GitHub Release，返回最新版本、更新提示与本地覆盖层状态。"""
+async def check_update(channel: str | None = None, force: bool = False):
+    """查询 GitHub Release，返回最新版本、更新提示与本地覆盖层状态。
+
+    ``force=True``（用户点“检查更新”）绕过 15 分钟结果缓存重新拉取；
+    进入设置页时的自动检查用 ``force=False`` 走缓存，避免频繁打 GitHub API。
+    """
     ch = channel or settings.update.channel
-    result = await updater.check_update(ch)
+    result = await updater.check_update(ch, force=force)
     return result.model_dump()
 
 

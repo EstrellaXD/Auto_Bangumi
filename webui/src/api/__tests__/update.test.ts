@@ -46,11 +46,19 @@ describe('Update API contract (path + HTTP method)', () => {
     });
   });
 
-  it('should GET api/v1/update/check without params when channel omitted', async () => {
+  it('should GET api/v1/update/check with no params when channel omitted', async () => {
     (axios.get as any).mockResolvedValue({ data: mockInfo });
     await apiUpdate.check();
     expect(axios.get).toHaveBeenCalledWith('api/v1/update/check', {
-      params: undefined,
+      params: {},
+    });
+  });
+
+  it('should pass force=true to bypass the cache on a user-initiated check', async () => {
+    (axios.get as any).mockResolvedValue({ data: mockInfo });
+    await apiUpdate.check('beta', true);
+    expect(axios.get).toHaveBeenCalledWith('api/v1/update/check', {
+      params: { channel: 'beta', force: true },
     });
   });
 

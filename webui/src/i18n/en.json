@@ -249,6 +249,8 @@
     "auto_check": "Check automatically",
     "check": "Check for updates",
     "checking": "Checking…",
+    "found_new": "New version {version} available",
+    "last_checked": "Last checked {time}",
     "up_to_date": "You are on the latest version.",
     "update_available": "Update available",
     "update_now": "Update now",

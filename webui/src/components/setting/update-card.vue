@@ -1,5 +1,12 @@
 <script lang="ts" setup>
-import { NButton, NPopconfirm, NProgress, NSpin, NSwitch, NTag } from 'naive-ui';
+import {
+  NButton,
+  NPopconfirm,
+  NProgress,
+  NSpin,
+  NSwitch,
+  NTag,
+} from 'naive-ui';
 import type { UpdateChannel, UpdateInfo } from '#/update';
 
 const { t } = useMyI18n();
@@ -46,7 +53,9 @@ const restartTimedOut = ref(false);
 let pollTimer: ReturnType<typeof setInterval> | undefined;
 let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
 
-const currentVersion = computed(() => info.value?.current || version.value || '-');
+const currentVersion = computed(
+  () => info.value?.current || version.value || '-'
+);
 const hasUpdate = computed(() => info.value?.has_update === true);
 const canRollback = computed(() => info.value?.can_rollback === true);
 const appliedVersion = computed(() => info.value?.applied_version || '');
@@ -92,13 +101,29 @@ function renderNotes(md: string): string {
 
 const notesHtml = computed(() => renderNotes(info.value?.notes ?? ''));
 
-async function onCheck() {
+// 上次检查完成的时刻；用户主动点检查时每次刷新，给出"确实检查过了"的反馈。
+const lastCheckedAt = ref<Date | null>(null);
+const lastCheckedLabel = computed(() =>
+  lastCheckedAt.value ? lastCheckedAt.value.toLocaleTimeString() : ''
+);
+
+// userInitiated：来自“检查更新”按钮。强制绕过后端 15 分钟缓存并弹出主动反馈；
+// 挂载时的自动检查走缓存、保持安静。
+async function onCheck(userInitiated = false) {
   checking.value = true;
   try {
-    const res = await apiUpdate.check(channel.value);
+    const res = await apiUpdate.check(channel.value, userInitiated);
     info.value = res;
+    lastCheckedAt.value = new Date();
     if (res.error) {
-      message.error(t('update.check_failed'));
+      // 展示后端的具体原因（如 GitHub 限流 / 无匹配 Release），而非泛化文案
+      message.error(`${t('update.check_failed')}: ${res.error}`);
+    } else if (userInitiated) {
+      if (res.has_update) {
+        message.info(t('update.found_new', { version: res.latest ?? '' }));
+      } else {
+        message.success(t('update.up_to_date'));
+      }
     }
   } catch {
     // axios 拦截器已提示网络错误
@@ -273,6 +298,11 @@ onBeforeUnmount(() => {
         {{ $t('update.restart_timeout') }}
       </p>
 
+      <!-- 上次检查时间：给"检查更新"一个可见的状态变化 -->
+      <p v-if="lastCheckedLabel" class="update-checked">
+        {{ $t('update.last_checked', { time: lastCheckedLabel }) }}
+      </p>
+
       <!-- 需要 restart: unless-stopped 的说明 -->
       <p class="update-note">{{ $t('update.restart_note') }}</p>
 
@@ -282,7 +312,7 @@ onBeforeUnmount(() => {
           size="small"
           :loading="checking"
           :disabled="applying || restarting"
-          @click="onCheck"
+          @click="onCheck(true)"
         >
           {{ checking ? $t('update.checking') : $t('update.check') }}
         </NButton>
@@ -368,9 +398,14 @@ onBeforeUnmount(() => {
 .update-hint,
 .update-ok,
 .update-note,
-.update-warn {
+.update-warn,
+.update-checked {
   font-size: 12px;
   margin: 0;
+}
+
+.update-checked {
+  color: var(--color-text-muted);
 }
 
 .update-hint {

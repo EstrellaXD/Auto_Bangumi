@@ -249,6 +249,8 @@
     "auto_check": "自动检查",
     "check": "检查更新",
     "checking": "检查中…",
+    "found_new": "发现新版本 {version}",
+    "last_checked": "上次检查 {time}",
     "up_to_date": "已是最新版本。",
     "update_available": "有可用更新",
     "update_now": "立即更新",

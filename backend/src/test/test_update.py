@@ -261,6 +261,30 @@ class TestCheckUpdate:
         assert res.has_update is False
         assert res.error is not None
 
+    @pytest.mark.asyncio
+    async def test_force_bypasses_the_result_cache(self, tmp_path, bundle):
+        """A user-initiated check must re-fetch; the 15-min cache only serves
+        the passive auto-check so repeated clicks don't feel like a no-op."""
+        data, sha = bundle
+        calls = {"n": 0}
+        inner = _default_handler(data, sha)
+
+        def handler(request):
+            calls["n"] += 1
+            return inner(request)
+
+        up = Updater(
+            root=tmp_path / "u",
+            current_version="3.1.0",
+            image_version="3.3.0-beta.1",
+            client=_make_client(handler),
+        )
+        await up.check_update("stable")
+        await up.check_update("stable")  # within TTL → served from cache
+        assert calls["n"] == 1
+        await up.check_update("stable", force=True)  # force → re-fetch
+        assert calls["n"] == 2
+
 
 # ---------------------------------------------------------------------------
 # apply_update

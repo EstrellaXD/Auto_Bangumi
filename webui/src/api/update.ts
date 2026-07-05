@@ -5,9 +5,9 @@ export const apiUpdate = {
    * 检查更新：查询 GitHub Release，返回最新版本、更新提示与本地覆盖层状态。
    * @param channel - 更新渠道（stable/beta），省略则用后端配置的默认渠道
    */
-  async check(channel?: string) {
+  async check(channel?: string, force = false) {
     const { data } = await axios.get<UpdateInfo>('api/v1/update/check', {
-      params: channel ? { channel } : undefined,
+      params: { ...(channel ? { channel } : {}), ...(force ? { force } : {}) },
     });
     return data;
   },
