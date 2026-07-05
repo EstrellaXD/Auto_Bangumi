@@ -229,8 +229,6 @@ onDeactivated(() => {
       </div>
 
       <div class="log-sidebar">
-        <update-card />
-
         <ab-container :title="$t('log.about')">
           <ul class="about-links">
             <li>

@@ -13,6 +13,7 @@ import ConfigPlayer from '@/components/setting/config-player.vue';
 import ConfigLlm from '@/components/setting/config-llm.vue';
 import ConfigPasskey from '@/components/setting/config-passkey.vue';
 import ConfigSecurity from '@/components/setting/config-security.vue';
+import UpdateCard from '@/components/setting/update-card.vue';
 
 definePage({
   name: 'Config',
@@ -111,6 +112,15 @@ const sections: ConfigSection[] = [
     component: ConfigSecurity,
     groups: ['security'],
     keywords: ['security', 'whitelist', 'ip', 'token', 'mcp'],
+  },
+  {
+    id: 'update',
+    titleKey: 'update.title',
+    // 更新卡片自持久化（渠道/自动检查直接写回配置，apply/rollback 独立），
+    // 不参与全局保存，故 groups 为空
+    component: UpdateCard,
+    groups: [],
+    keywords: ['update', 'version', 'upgrade', 'release', 'rollback'],
   },
 ];
 
