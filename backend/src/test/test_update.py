@@ -681,6 +681,40 @@ class TestBootOverlay:
         assert (app / "dist" / "index.html").exists()
         assert (app / ".venv" / "pyvenv.cfg").read_text() == "overlay venv"
 
+    def test_applies_overlay_when_rename_hits_exdev(self, tmp_path, monkeypatch):
+        """overlayfs refuses to rename a lower-layer dir (EXDEV); the overlay
+        must still land via the in-place content-replace fallback (#update)."""
+        import errno
+        import os as os_mod
+
+        import boot_overlay
+
+        app, updates, ivp, lock, pubkey = self._seed(tmp_path, "3.4.0")
+
+        real_rename = os_mod.rename
+
+        def fake_rename(a, b):
+            # Only the module/dist directory swap should trip EXDEV, mirroring
+            # renaming a lower-image-layer dir; leave temp-file renames alone.
+            if str(a).endswith(("module", "dist")):
+                raise OSError(errno.EXDEV, "Cross-device link")
+            return real_rename(a, b)
+
+        monkeypatch.setattr(boot_overlay.os, "rename", fake_rename)
+
+        applied = boot_overlay.apply_overlay(
+            app_root=app,
+            updates_root=updates,
+            image_version_path=ivp,
+            baseline_lock=lock,
+            pubkey_path=pubkey,
+        )
+        assert applied is True
+        assert (app / "module" / "__marker__.txt").exists()
+        assert not (app / "module" / "old.txt").exists()  # contents replaced
+        assert (app / "dist" / "index.html").exists()
+        assert not (app / "dist" / "old.html").exists()
+
     def test_rejects_overlay_with_bad_signature(self, tmp_path):
         import boot_overlay
 
