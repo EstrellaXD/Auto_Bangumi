@@ -1,3 +1,17 @@
+# [3.3.0-beta.5] - 2026-07-05
+
+## Backend
+
+### Fixed
+
+- 修复在线更新在 overlayfs/绑定挂载布局下"报告成功却停在旧版本"的问题：`boot_overlay` 用 `os.rename` 把 `/app/module` 换成新代码，而 `/app/module` 来自镜像的 overlayfs 下层，某些 overlay/内核组合拒绝跨挂载边界 rename 下层目录、抛 `EXDEV`（Errno 18），导致每次重启换码失败。现改为在遇到 EXDEV 时退回"就地替换目录内容"（逐文件触发 overlayfs copy-up），与挂载/overlay 拓扑无关；`dist` 树同理修复。**注意 `boot_overlay.py` 不随在线更新替换，此修复需拉取新镜像后方对后续更新生效**
+
+## Frontend
+
+### Changed
+
+- "软件更新"卡片从日志页移到设置页（作为设置分区导航的最后一项）；日志页保留联系方式（About）卡片
+
 # [3.3.0-beta.4] - 2026-07-05
 
 ## Backend
