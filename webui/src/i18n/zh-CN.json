@@ -483,7 +483,8 @@
     "confirm": "确认",
     "select": "选择",
     "selectAll": "全选",
-    "items": "项"
+    "items": "项",
+    "moreActions": "更多操作"
   },
   "theme": {
     "light": "浅色",
