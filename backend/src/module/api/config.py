@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
@@ -96,7 +95,7 @@ async def update_config(config: Config, ctx: AppContext = Depends(get_context)):
 
 
 class LLMModelsRequest(BaseModel):
-    provider: Literal["openai", "anthropic", "gemini"] = "openai"
+    provider: str = "openai"
     api_key: str = ""
     base_url: str = ""
 
@@ -117,7 +116,8 @@ async def list_llm_models(req: LLMModelsRequest):
     """
     api_key = req.api_key
     if not api_key or api_key == _MASK:
-        api_key = settings.llm.api_key
+        # 按提供商取已保存密钥（providers[id] 覆盖 → 扁平字段兜底）
+        api_key, _, _ = settings.llm.effective(req.provider)
     if not api_key:
         raise HTTPException(status_code=400, detail="LLM API key is required")
     try:

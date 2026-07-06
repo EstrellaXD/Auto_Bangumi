@@ -13,7 +13,7 @@ import json
 import sqlite3
 import zipfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
@@ -803,6 +803,10 @@ class TestBootOverlay:
 def app():
     app = FastAPI()
     app.include_router(v1, prefix="/api")
+    # apply/rollback 通过 ctx.notifier 发更新结果通知
+    ctx = MagicMock()
+    ctx.notifier.send_event = AsyncMock()
+    app.state.ctx = ctx
     return app
 
 
@@ -878,6 +882,43 @@ class TestUpdateApiContract:
             resp = authed_client.post("/api/v1/update/rollback")
         assert resp.status_code == 200
         sched.assert_called_once()
+
+    def test_apply_emits_update_applied_event(self, authed_client, app):
+        from module.notification import UpdateAppliedEvent
+        from module.update.updater import ApplyResult
+
+        async def fake_apply(channel="stable"):
+            return ApplyResult(
+                success=True, version="3.3.0", restart_required=True, message="ok"
+            )
+
+        with (
+            patch("module.api.update.updater.apply_update", side_effect=fake_apply),
+            patch("module.api.update.schedule_restart"),
+        ):
+            authed_client.post("/api/v1/update/apply")
+
+        app.state.ctx.notifier.send_event.assert_awaited_once()
+        event = app.state.ctx.notifier.send_event.await_args.args[0]
+        assert isinstance(event, UpdateAppliedEvent)
+        assert event.kind == "update_applied"
+        assert event.version == "3.3.0"
+
+    def test_apply_failure_emits_update_failed_event(self, authed_client, app):
+        from module.update.updater import ApplyResult
+
+        async def fake_apply(channel="stable"):
+            return ApplyResult(success=False, message="signature mismatch")
+
+        with (
+            patch("module.api.update.updater.apply_update", side_effect=fake_apply),
+            patch("module.api.update.schedule_restart"),
+        ):
+            authed_client.post("/api/v1/update/apply")
+
+        event = app.state.ctx.notifier.send_event.await_args.args[0]
+        assert event.kind == "update_failed"
+        assert "signature mismatch" in event.message
 
     def test_apply_failure_returns_400(self, authed_client):
         from module.update.updater import ApplyResult

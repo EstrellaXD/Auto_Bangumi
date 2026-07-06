@@ -9,6 +9,8 @@ from module.models import Bangumi, User
 from .aria2 import Aria2GidDatabase
 from .bangumi import BangumiDatabase
 from .engine import async_engine, async_session_factory
+from .inbox import InboxDatabase
+from .llm_credential import LLMCredentialDatabase
 from .migrations import (  # noqa: F401  (re-exported for existing importers)
     CURRENT_SCHEMA_VERSION,
     MIGRATIONS,
@@ -43,6 +45,8 @@ class Database:
         self.bangumi = BangumiDatabase(self.session)
         self.user = UserDatabase(self.session)
         self.aria2 = Aria2GidDatabase(self.session)
+        self.inbox = InboxDatabase(self.session)
+        self.llm_credential = LLMCredentialDatabase(self.session)
 
     async def __aenter__(self):
         return self

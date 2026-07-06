@@ -13,9 +13,30 @@ from module.parser.analyser import (
     tmdb_parser,
     torrent_parser,
 )
+from module.parser.analyser.providers.base import AuthExpiredError
+from module.parser.analyser.providers.credentials import auth_generation
 from module.parser.analyser.raw_parser import _detect_non_episodic_type
 
 logger = logging.getLogger(__name__)
+
+
+# 保留 fire-and-forget 通知任务的强引用，防止其在运行完成前被 GC。
+_notify_tasks: set = set()
+
+
+def _notify_auth_failure(provider_id: str, message: str) -> None:
+    """凭据失效时向通知中心投递事件（fire-and-forget，不阻塞解析路径）。"""
+    from module.notification import LLMAuthFailureEvent, NotificationManager
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return
+    event = LLMAuthFailureEvent(provider_id=provider_id, message=message)
+    task = loop.create_task(NotificationManager().send_event(event))
+    _notify_tasks.add(task)
+    task.add_done_callback(_notify_tasks.discard)
+
 
 # Lazy singleton: building an LLMParser (and its underlying SDK client) is not
 # free, so keep one around and only rebuild it when the relevant settings change.
@@ -32,7 +53,9 @@ _llm_semaphore_limit: int | None = None
 def _get_llm_parser(kwargs: dict) -> LLMParser:
     global _llm_parser, _llm_parser_kwargs
     if _llm_parser is None or _llm_parser_kwargs != kwargs:
-        _llm_parser = LLMParser(**kwargs)
+        # auth_gen 只参与"是否重建"的比较，不是构造参数
+        ctor_kwargs = {k: v for k, v in kwargs.items() if k != "auth_gen"}
+        _llm_parser = LLMParser(**ctor_kwargs)
         _llm_parser_kwargs = kwargs
     return _llm_parser
 
@@ -96,12 +119,15 @@ async def _llm_parse(raw: str) -> Episode | None:
     if _llm_breaker_until > now:
         logger.warning("LLM parser breaker is open; skipping '%s'", raw)
         return None
+    api_key, model, base_url = conf.effective()
     parser_kwargs = {
         "provider": conf.provider,
-        "api_key": conf.api_key,
-        "model": conf.model,
-        "base_url": conf.base_url,
+        "api_key": api_key,
+        "model": model,
+        "base_url": base_url,
         "timeout": conf.timeout,
+        # 换号/断开时 bump → 单例重建；静默刷新不 bump（token 不进键）。
+        "auth_gen": auth_generation(conf.provider),
     }
     cache_key = (tuple(sorted(parser_kwargs.items())), raw)
     if conf.cache_ttl > 0:
@@ -112,7 +138,19 @@ async def _llm_parse(raw: str) -> Episode | None:
                 return cached_episode
             _llm_cache.pop(cache_key, None)
     try:
-        llm = _get_llm_parser(parser_kwargs)
+        try:
+            llm = _get_llm_parser(parser_kwargs)
+        except ValueError as e:
+            # 未知 provider id（如配置里手改出拼写错误）：明确指出并熔断，
+            # 避免每个标题都刷一行含糊的失败日志。
+            logger.error(
+                "Unknown LLM provider '%s' (%s); check settings.llm.provider",
+                conf.provider,
+                e,
+            )
+            _llm_breaker_until = time.monotonic() + conf.failure_backoff
+            _cache_llm_result(cache_key, None, conf.cache_ttl)
+            return None
         semaphore = _get_llm_semaphore(conf.max_concurrency)
         async with semaphore:
             episode_dict = await asyncio.wait_for(
@@ -127,6 +165,17 @@ async def _llm_parse(raw: str) -> Episode | None:
         _llm_breaker_until = 0.0
         _cache_llm_result(cache_key, episode, conf.cache_ttl)
         return episode
+    except AuthExpiredError as e:
+        # 刷新已失败，重试没有意义：跳过失败阈值直接熔断，等用户重连。
+        logger.error(
+            "LLM credentials for '%s' expired and refresh failed: %s",
+            conf.provider,
+            e,
+        )
+        _llm_breaker_until = time.monotonic() + conf.failure_backoff
+        _cache_llm_result(cache_key, None, conf.cache_ttl)
+        _notify_auth_failure(conf.provider, str(e))
+        return None
     except Exception as e:
         logger.warning(f"LLM cannot parse '{raw}': {type(e).__name__}: {e}")
         _record_llm_failure(conf)

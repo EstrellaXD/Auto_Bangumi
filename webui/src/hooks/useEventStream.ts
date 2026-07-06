@@ -8,6 +8,12 @@ export interface StatusPayload {
   first_run: boolean;
 }
 
+export interface NotificationStreamPayload {
+  unread_count: number;
+  latest_id: number;
+  revision: number;
+}
+
 const RECONNECT_BASE_DELAY_MS = 1000;
 const RECONNECT_MAX_DELAY_MS = 15000;
 
@@ -27,6 +33,7 @@ export const useEventStream = createSharedComposable(() => {
   const downloaderData = ref<QbTorrentInfo[] | null>(null);
   const logData = ref<string | null>(null);
   const updateData = ref<UpdateProgress | null>(null);
+  const notificationData = ref<NotificationStreamPayload | null>(null);
 
   let source: EventSource | null = null;
   let retryCount = 0;
@@ -92,6 +99,14 @@ export const useEventStream = createSharedComposable(() => {
       }
     });
 
+    es.addEventListener('notification', (e) => {
+      try {
+        notificationData.value = JSON.parse((e as MessageEvent).data);
+      } catch {
+        // Ignore malformed frames; the next tick will retry.
+      }
+    });
+
     es.onerror = () => {
       teardown();
       scheduleReconnect();
@@ -125,5 +140,6 @@ export const useEventStream = createSharedComposable(() => {
     downloaderData,
     logData,
     updateData,
+    notificationData,
   };
 });

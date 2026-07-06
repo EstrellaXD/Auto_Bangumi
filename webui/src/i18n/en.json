@@ -37,7 +37,27 @@
       "model": "Model",
       "provider": "Provider",
       "timeout": "Request timeout (seconds)",
-      "title": "LLM Parser"
+      "title": "LLM Parser",
+      "group_builtin": "Built-in",
+      "group_installed": "Installed presets",
+      "group_subscription": "Subscription",
+      "group_available": "Available to download",
+      "not_installed": "This provider is not installed yet.",
+      "install": "Install",
+      "install_success": "Provider installed",
+      "install_failed": "Install failed",
+      "uninstall": "Uninstall",
+      "connect": "Connect",
+      "disconnect": "Disconnect",
+      "connected_as": "Connected as {account}",
+      "risk_notice": "This provider uses an unofficial subscription flow. Third-party use may violate the vendor's terms and could get your account restricted. Continue at your own risk.",
+      "risk_cancel": "Cancel",
+      "risk_confirm": "Install anyway",
+      "auth_open_link": "Open this link on any device, authorize, then paste the code below:",
+      "auth_paste_code": "Paste the code or redirect URL here",
+      "auth_device_hint": "Open this link and enter the code to authorize:",
+      "auth_pending": "Waiting for authorization…",
+      "auth_failed": "Authorization failed"
     },
     "manage_set": {
       "delete_bad_torrent": "Delete Bad Torrent",
@@ -558,5 +578,62 @@
     },
     "shutdown": "Shutdown",
     "start": "Start"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "unread": "{n} unread",
+    "empty": "No notifications",
+    "mark_all_read": "Mark all read",
+    "clear_all": "Clear all",
+    "clear_confirm": "Confirm?",
+    "delete": "Delete",
+    "time": {
+      "just_now": "just now",
+      "minutes_ago": "{n} min ago",
+      "hours_ago": "{n} h ago",
+      "days_ago": "{n} d ago"
+    },
+    "reason": {
+      "unreachable": "Cannot connect to the downloader. Check the host, port and network.",
+      "credentials": "Username or password rejected. Check the downloader credentials in settings.",
+      "banned": "IP banned by the downloader. Unban it in the downloader WebUI or restart the downloader."
+    },
+    "kind": {
+      "rss_failure": {
+        "title": "RSS feed error",
+        "body": "{rss_name}: {error}"
+      },
+      "download_failure": {
+        "title": "Torrent add failed",
+        "body": "{official_title} — {torrent_name}"
+      },
+      "offset_review": {
+        "title": "Episode offset needs review",
+        "body": "{official_title}: {reason}"
+      },
+      "downloader_unavailable": {
+        "title": "Downloader unavailable"
+      },
+      "update_available": {
+        "title": "New version available",
+        "body": "{current} → {latest} ({channel} channel)"
+      },
+      "update_applied": {
+        "title": "Update applied",
+        "body": "Updated to {version}. It takes effect after restart."
+      },
+      "update_failed": {
+        "title": "Update failed",
+        "body": "{message}"
+      },
+      "llm_auth_failure": {
+        "title": "LLM credentials expired",
+        "body": "{provider_id}: {message}"
+      },
+      "llm_plugin_install_failed": {
+        "title": "LLM plugin install failed",
+        "body": "{plugin_id}: {message}"
+      }
+    }
   }
 }

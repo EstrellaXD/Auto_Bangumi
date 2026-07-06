@@ -8,7 +8,14 @@ from module.models import Notification
 from module.models.config import NotificationProvider as ProviderConfig
 from module.network import RequestContent
 from module.notification import PROVIDER_REGISTRY, NotificationManager
-from module.notification.events import OffsetReviewEvent, RssFailureEvent
+from module.notification.events import (
+    DownloaderUnavailableEvent,
+    DownloadFailureEvent,
+    OffsetReviewEvent,
+    RssFailureEvent,
+    UpdateAppliedEvent,
+    UpdateAvailableEvent,
+)
 from module.notification.providers import (
     BarkProvider,
     DiscordProvider,
@@ -448,12 +455,91 @@ class TestSendEvent:
             provider.__aexit__ = AsyncMock(return_value=None)
 
         event = OffsetReviewEvent(official_title="Test Anime", reason="mismatch")
-        await manager.send_event(event)
+        with (
+            patch("module.notification.manager.record_event", new_callable=AsyncMock),
+            patch("module.notification.manager.settings") as mock_settings,
+        ):
+            mock_settings.notification.enable = True
+            await manager.send_event(event)
 
         for provider in manager.providers:
             provider.send_event.assert_called_once_with(  # type: ignore[attr-defined]
                 event
             )
+
+
+class TestEventInboxContract:
+    """每个 SystemEvent 提供 kind/severity/once/dedup_key()/payload()，供通知中心持久化。"""
+
+    def test_rss_failure_event_contract(self):
+        event = RssFailureEvent(rss_name="Feed", rss_url="http://x/rss", error="boom")
+        assert event.kind == "rss_failure"
+        assert event.severity == "error"
+        assert event.once is False
+        assert event.dedup_key() == "rss_failure:http://x/rss"
+        assert event.payload() == {
+            "rss_name": "Feed",
+            "rss_url": "http://x/rss",
+            "error": "boom",
+        }
+
+    def test_download_failure_event_contract(self):
+        event = DownloadFailureEvent(official_title="Anime", torrent_name="t.torrent")
+        assert event.kind == "download_failure"
+        assert event.severity == "error"
+        assert event.dedup_key() == "download_failure:Anime"
+        assert event.payload() == {
+            "official_title": "Anime",
+            "torrent_name": "t.torrent",
+        }
+
+    def test_offset_review_event_contract(self):
+        event = OffsetReviewEvent(official_title="Anime", reason="mismatch")
+        assert event.kind == "offset_review"
+        assert event.severity == "warning"
+        assert event.dedup_key() == "offset_review:Anime"
+        assert event.payload() == {"official_title": "Anime", "reason": "mismatch"}
+
+    def test_downloader_unavailable_event_contract(self):
+        event = DownloaderUnavailableEvent(host="http://qb:8080", reason="credentials")
+        assert event.kind == "downloader_unavailable"
+        assert event.severity == "error"
+        assert event.once is False
+        # reason 不进 dedup_key：unreachable→credentials 的翻转合并为一条
+        assert event.dedup_key() == "downloader:http://qb:8080"
+        assert event.payload() == {"host": "http://qb:8080", "reason": "credentials"}
+        title, body = event.describe()
+        assert "下载器" in title
+        assert "密码" in body
+
+    def test_update_available_event_contract(self):
+        event = UpdateAvailableEvent(current="3.3.0", latest="3.3.1", channel="beta")
+        assert event.kind == "update_available"
+        assert event.severity == "info"
+        assert event.once is True  # 每个版本只提醒一次，已读后不再重建
+        assert event.dedup_key() == "update_available:3.3.1"
+        assert event.payload() == {
+            "current": "3.3.0",
+            "latest": "3.3.1",
+            "channel": "beta",
+            "notes": "",
+        }
+        title, body = event.describe()
+        assert "3.3.1" in body
+
+    def test_update_applied_event_kind_follows_success(self):
+        ok = UpdateAppliedEvent(version="3.3.1", success=True)
+        assert ok.kind == "update_applied"
+        assert ok.severity == "info"
+        assert ok.dedup_key() is None
+        assert ok.payload() == {"version": "3.3.1", "message": ""}
+
+        failed = UpdateAppliedEvent(version="3.3.1", success=False, message="sig error")
+        assert failed.kind == "update_failed"
+        assert failed.severity == "error"
+        title, body = failed.describe()
+        assert "失败" in title
+        assert "sig error" in body
 
 
 class TestDeliverText:

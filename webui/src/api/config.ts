@@ -1,5 +1,4 @@
-import type { Config, LLMProvider } from '#/config';
-import type { TupleToUnion } from '#/utils';
+import type { Config, LLMProviderId } from '#/config';
 import type { ApiSuccess } from '#/api';
 
 export const apiConfig = {
@@ -28,7 +27,7 @@ export const apiConfig = {
    * （api_key 传掩码时后端回退到已保存的密钥）
    */
   async getLLMModels(payload: {
-    provider: TupleToUnion<LLMProvider>;
+    provider: LLMProviderId;
     api_key: string;
     base_url: string;
   }) {

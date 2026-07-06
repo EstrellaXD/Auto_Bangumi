@@ -11,8 +11,9 @@ from module.conf import settings
 from module.database import Database
 from module.downloader import DownloadClient
 from module.manager import Renamer, TorrentManager, eps_complete
-from module.notification import NotificationManager
+from module.notification import NotificationManager, UpdateAvailableEvent
 from module.rss import RSSAnalyser, RSSEngine
+from module.update import updater
 
 from .offset_scanner import OffsetScanner
 
@@ -46,7 +47,9 @@ async def rss_tick(analyser: RSSAnalyser, notifier: NotificationManager) -> None
                         )
             # Run RSS Engine
             events = await engine.refresh_rss(client)
-    if settings.notification.enable and events:
+    if events:
+        # 站内通知中心要求事件总是送达 notifier（send_event 内部先落库，
+        # 再按 settings.notification.enable 决定是否外发）。
         # One provider's exception never blocks another event (send_event
         # itself gathers across providers); gathering across events too
         # means a tick with several RSS failures doesn't serialize their
@@ -73,8 +76,30 @@ async def offset_scan_tick(notifier: NotificationManager) -> None:
     # 扫描结果由 OffsetScanner.scan_all 自己记录，这里不再重复记一行
     scanner = OffsetScanner()
     events = await scanner.scan_all()
-    if settings.notification.enable and events:
+    if events:
         await asyncio.gather(*[notifier.send_event(e) for e in events])
+
+
+async def update_check_tick(notifier: NotificationManager) -> None:
+    """每日检查一次 GitHub Release，发现新版本时写入通知中心。
+
+    ``UpdateAvailableEvent.once=True``（按最新版本号去重），同一版本终生只
+    提醒一次；检查失败（网络/限流）静默跳过，避免每天误报。
+    """
+    result = await updater.check_update(settings.update.channel, force=False)
+    if result.error:
+        logger.debug("Update check failed: %s", result.error)
+        return
+    if not result.has_update:
+        return
+    await notifier.send_event(
+        UpdateAvailableEvent(
+            current=result.current,
+            latest=result.latest or "",
+            channel=result.channel,
+            notes=result.notes or "",
+        )
+    )
 
 
 async def calendar_tick() -> None:

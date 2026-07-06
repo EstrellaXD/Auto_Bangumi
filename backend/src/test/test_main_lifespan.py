@@ -23,7 +23,7 @@ class TestCreateApp:
         app = main.create_app()
         assert isinstance(app.state.ctx, AppContext)
         names = [t.name for t in app.state.ctx.scheduler.tasks]
-        assert names == ["rss", "rename", "offset_scan", "calendar"]
+        assert names == ["rss", "rename", "offset_scan", "calendar", "update_check"]
 
 
 class TestLifespan:

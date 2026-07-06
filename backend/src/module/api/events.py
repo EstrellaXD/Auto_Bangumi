@@ -16,7 +16,9 @@ from module.api.deps import get_context
 from module.api.log import _read_log_tail
 from module.conf import LOG_PATH, VERSION
 from module.core import AppContext
+from module.database import Database
 from module.downloader import DownloadClient
+from module.notification.inbox import inbox_revision
 from module.security.api import get_current_user
 from module.update import get_update_progress
 
@@ -30,6 +32,7 @@ _TICK_SECONDS = 1
 _STATUS_EVERY = 3
 _DOWNLOADER_EVERY = 5
 _LOG_EVERY = 10
+_NOTIFICATION_EVERY = 3
 
 # 下载器查询的超时上限（秒）。下载器不可达时 qB/aria2 的认证重试可能阻塞
 # 20-30s，而 SSE 是单连接串行推送——不设上限会把 status/log 事件一起卡住。
@@ -67,6 +70,15 @@ async def _downloader_payload() -> list[dict] | None:
         return None
 
 
+async def _notification_payload() -> dict:
+    """通知中心未读数 + 最新消息 id（前端据 latest_id 区分新消息与已读操作）。"""
+    async with Database() as db:
+        return {
+            "unread_count": await db.inbox.unread_count(),
+            "latest_id": await db.inbox.latest_id(),
+        }
+
+
 async def _log_payload() -> str | None:
     """读取日志尾部；日志文件不存在时返回 None（跳过本次推送）。"""
     if not LOG_PATH.exists():
@@ -79,6 +91,7 @@ async def _event_generator(request: Request, ctx: AppContext):
     """按各自节拍推送 status/downloader/log 事件的核心循环。"""
     tick = 0
     last_update: str | None = None
+    last_inbox_rev: int | None = None
     while True:
         if await request.is_disconnected():
             break
@@ -105,6 +118,20 @@ async def _event_generator(request: Request, ctx: AppContext):
             log_text = await _log_payload()
             if log_text is not None:
                 yield {"event": "log", "data": log_text}
+
+        # 通知中心：只在修订号变化时查库推送（写入/已读/删除都会 bump），
+        # 平时每 3 tick 只做一次整数比较，不产生数据库查询。
+        if tick % _NOTIFICATION_EVERY == 0:
+            rev = inbox_revision()
+            if rev != last_inbox_rev:
+                try:
+                    payload = await _notification_payload()
+                except Exception:
+                    logger.debug("SSE: notification payload unavailable", exc_info=True)
+                else:
+                    last_inbox_rev = rev
+                    payload["revision"] = rev
+                    yield {"event": "notification", "data": json.dumps(payload)}
 
         await asyncio.sleep(_TICK_SECONDS)
         tick += _TICK_SECONDS

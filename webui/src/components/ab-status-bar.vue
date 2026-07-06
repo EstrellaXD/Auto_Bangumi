@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue';
-import { AddOne, International, System } from '@icon-park/vue-next';
+import { AddOne, System, Translate } from '@icon-park/vue-next';
 
 withDefaults(
   defineProps<{
@@ -40,7 +40,7 @@ function abLabel(label: string | (() => string)) {
           aria-label="Switch language"
           @click="() => $emit('changeLang')"
         >
-          <International theme="outline" size="1em" />
+          <Translate theme="outline" size="1em" />
         </button>
 
         <button
@@ -86,11 +86,6 @@ function abLabel(label: string | (() => string)) {
   align-items: center;
   gap: 2px;
   font-size: 18px;
-
-  @include forTablet {
-    gap: 6px;
-    font-size: 20px;
-  }
 }
 
 .status-bar-btn {
@@ -110,15 +105,10 @@ function abLabel(label: string | (() => string)) {
   border-radius: var(--radius-sm);
 
   // Transparent background — a full 44px hit area costs nothing visually.
+  // 仅触屏放大命中区域；桌面指针设备保持 36px 紧凑排布。
   @include forTouch {
     min-width: var(--touch-target);
     min-height: var(--touch-target);
-  }
-
-  @include forTablet {
-    min-width: var(--touch-target);
-    min-height: var(--touch-target);
-    padding: 8px;
   }
 
   &:hover {

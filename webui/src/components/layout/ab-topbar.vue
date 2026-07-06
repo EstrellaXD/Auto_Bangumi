@@ -128,6 +128,7 @@ onUnmounted(() => {
 
     <!-- Right side actions -->
     <div class="topbar-right">
+      <ab-notification-center />
       <ab-status-bar
         :items="items"
         :running="running"
@@ -244,9 +245,9 @@ onUnmounted(() => {
 
 .topbar-right {
   flex-shrink: 0;
-}
-
-.topbar-right {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 </style>

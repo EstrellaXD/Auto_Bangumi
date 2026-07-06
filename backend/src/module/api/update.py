@@ -18,8 +18,12 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
 from module.conf import settings
+from module.core import AppContext
+from module.notification import UpdateAppliedEvent
 from module.security.api import get_current_user
 from module.update import updater
+
+from .deps import get_context
 
 logger = logging.getLogger(__name__)
 
@@ -63,11 +67,28 @@ async def check_update(channel: str | None = None, force: bool = False):
     return result.model_dump()
 
 
+async def _notify_apply_result(ctx: AppContext, result) -> None:
+    """把更新结果写入通知中心（在 schedule_restart 之前落库，重启后仍可见）。"""
+    try:
+        await ctx.notifier.send_event(
+            UpdateAppliedEvent(
+                version=result.version or "",
+                success=result.success,
+                message=result.message or "",
+            )
+        )
+    except Exception:
+        logger.warning("Failed to emit update-result notification", exc_info=True)
+
+
 @router.post("/apply", dependencies=[Depends(get_current_user)])
-async def apply_update(channel: str | None = None):
+async def apply_update(
+    channel: str | None = None, ctx: AppContext = Depends(get_context)
+):
     """下载并落地最新更新；成功后安排进程重启以生效。"""
     ch = channel or settings.update.channel
     result = await updater.apply_update(ch)
+    await _notify_apply_result(ctx, result)
     if result.success and result.restart_required:
         schedule_restart()
     return JSONResponse(
@@ -77,9 +98,10 @@ async def apply_update(channel: str | None = None):
 
 
 @router.post("/rollback", dependencies=[Depends(get_current_user)])
-async def rollback_update():
+async def rollback_update(ctx: AppContext = Depends(get_context)):
     """回滚到上一个覆盖层版本（无备份则回退到镜像版本）；成功后安排重启。"""
     result = await updater.rollback()
+    await _notify_apply_result(ctx, result)
     if result.success and result.restart_required:
         schedule_restart()
     return JSONResponse(

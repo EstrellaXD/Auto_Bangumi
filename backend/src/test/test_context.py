@@ -8,6 +8,7 @@ import pytest
 from module.conf import settings as real_settings
 from module.core.context import AppContext
 from module.models import ResponseModel
+from module.notification import DownloaderUnavailableEvent
 
 
 @pytest.fixture
@@ -43,10 +44,10 @@ def ctx():
 
 
 class TestBuild:
-    def test_build_registers_four_named_tasks(self):
+    def test_build_registers_five_named_tasks(self):
         built = AppContext.build(real_settings)
         names = [t.name for t in built.scheduler.tasks]
-        assert names == ["rss", "rename", "offset_scan", "calendar"]
+        assert names == ["rss", "rename", "offset_scan", "calendar", "update_check"]
 
     def test_build_does_no_io(self):
         """build() is pure wiring: not running, startup not done."""
@@ -133,8 +134,8 @@ class TestStartTasks:
             patch("module.core.context.reset_shared_client", new=AsyncMock()),
             patch("module.core.context.Checker.check_first_run", return_value=False),
             patch(
-                "module.core.context.Checker.check_downloader",
-                new=AsyncMock(return_value=True),
+                "module.core.context.Checker.check_downloader_detail",
+                new=AsyncMock(return_value=(True, None)),
             ),
         ):
             resp = await ctx.start_tasks()
@@ -155,8 +156,8 @@ class TestStartTasks:
             patch("module.core.context.reset_shared_client", new=AsyncMock()),
             patch("module.core.context.Checker.check_first_run", return_value=False),
             patch(
-                "module.core.context.Checker.check_downloader",
-                new=AsyncMock(return_value=True),
+                "module.core.context.Checker.check_downloader_detail",
+                new=AsyncMock(return_value=(True, None)),
             ),
         ):
             await ctx.start_tasks()
@@ -169,14 +170,14 @@ class TestStartTasks:
 
         async def check_downloader():
             await start_gate.wait()
-            return True
+            return (True, None)
 
         with (
             patch("module.core.context.settings"),
             patch("module.core.context.reset_shared_client", new=AsyncMock()),
             patch("module.core.context.Checker.check_first_run", return_value=False),
             patch(
-                "module.core.context.Checker.check_downloader",
+                "module.core.context.Checker.check_downloader_detail",
                 new=AsyncMock(side_effect=check_downloader),
             ),
         ):
@@ -185,6 +186,52 @@ class TestStartTasks:
             await ctx._start_task
 
         ctx.scheduler.start_all.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# _wait_for_downloader()
+# ---------------------------------------------------------------------------
+
+
+class TestWaitForDownloader:
+    async def test_gives_up_after_max_retries_and_emits_unreachable(self, ctx):
+        """连不上时按原有节奏重试到上限，然后写入一条 unreachable 通知。"""
+        ctx.notifier.send_event = AsyncMock()
+
+        with (
+            patch(
+                "module.core.context.Checker.check_downloader_detail",
+                new=AsyncMock(return_value=(False, "unreachable")),
+            ),
+            patch("module.core.context.asyncio.sleep", new_callable=AsyncMock),
+        ):
+            await ctx._wait_for_downloader()
+
+        ctx.notifier.send_event.assert_awaited_once()
+        event = ctx.notifier.send_event.await_args.args[0]
+        assert isinstance(event, DownloaderUnavailableEvent)
+        assert event.reason == "unreachable"
+
+    async def test_aborts_immediately_on_credentials_error(self, ctx):
+        """密码错误重试没有意义且会触发 qB 封禁——立即放弃并通知。"""
+        ctx.notifier.send_event = AsyncMock()
+
+        with (
+            patch(
+                "module.core.context.Checker.check_downloader_detail",
+                new=AsyncMock(return_value=(False, "credentials")),
+            ) as mock_check,
+            patch(
+                "module.core.context.asyncio.sleep", new_callable=AsyncMock
+            ) as mock_sleep,
+        ):
+            await ctx._wait_for_downloader()
+
+        assert mock_check.await_count == 1
+        mock_sleep.assert_not_awaited()
+        event = ctx.notifier.send_event.await_args.args[0]
+        assert isinstance(event, DownloaderUnavailableEvent)
+        assert event.reason == "credentials"
 
 
 # ---------------------------------------------------------------------------

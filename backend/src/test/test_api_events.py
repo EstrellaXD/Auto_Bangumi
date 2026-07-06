@@ -206,3 +206,83 @@ class TestLogPayload:
             result = await _log_payload()
 
         assert result == "hello world\n"
+
+
+# ---------------------------------------------------------------------------
+# notification event（通知中心未读数推送）
+# ---------------------------------------------------------------------------
+
+
+class TestNotificationEvent:
+    def _generator(self, tmp_path):
+        from module.api.events import _event_generator
+
+        request = AsyncMock()
+        request.is_disconnected = AsyncMock(return_value=False)
+        ctx = MagicMock()
+        ctx.is_running = True
+        ctx.first_run = False
+        patches = (
+            patch(
+                "module.api.events._downloader_payload",
+                new=AsyncMock(return_value=None),
+            ),
+            patch("module.api.events.LOG_PATH", tmp_path / "missing.log"),
+            patch(
+                "module.api.events._notification_payload",
+                new=AsyncMock(return_value={"unread_count": 2, "latest_id": 9}),
+            ),
+            patch("module.api.events.asyncio.sleep", new=AsyncMock()),
+        )
+        return _event_generator(request, ctx), patches
+
+    async def _collect(self, gen, n):
+        events = []
+        for _ in range(n):
+            events.append(await asyncio.wait_for(gen.__anext__(), timeout=1.0))
+        return events
+
+    async def test_first_tick_emits_notification_frame(self, tmp_path):
+        from module.notification.inbox import inbox_revision
+
+        gen, patches = self._generator(tmp_path)
+        with patches[0], patches[1], patches[2], patches[3]:
+            try:
+                events = await self._collect(gen, 3)
+            finally:
+                await gen.aclose()
+
+        by_name = {e["event"]: e for e in events}
+        assert set(by_name) == {"status", "downloader", "notification"}
+        data = json.loads(by_name["notification"]["data"])
+        assert data["unread_count"] == 2
+        assert data["latest_id"] == 9
+        assert data["revision"] == inbox_revision()
+
+    async def test_no_frame_when_revision_unchanged(self, tmp_path):
+        gen, patches = self._generator(tmp_path)
+        with patches[0], patches[1], patches[2], patches[3]:
+            try:
+                await self._collect(gen, 3)  # 第一个 tick
+                # tick3 status、tick5 downloader —— 中间不应再有 notification
+                more = await self._collect(gen, 2)
+            finally:
+                await gen.aclose()
+
+        assert [e["event"] for e in more] == ["status", "downloader"]
+
+    async def test_frame_emitted_after_revision_bump(self, tmp_path):
+        from module.notification.inbox import bump_inbox_revision, inbox_revision
+
+        gen, patches = self._generator(tmp_path)
+        with patches[0], patches[1], patches[2], patches[3]:
+            try:
+                await self._collect(gen, 3)  # 第一个 tick
+                bump_inbox_revision()
+                # tick3：status + notification（修订号变了）
+                more = await self._collect(gen, 2)
+            finally:
+                await gen.aclose()
+
+        assert [e["event"] for e in more] == ["status", "notification"]
+        assert json.loads(more[1]["data"])["revision"] == inbox_revision()

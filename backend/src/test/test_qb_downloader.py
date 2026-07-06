@@ -586,6 +586,134 @@ class TestAuthQb52Compat:
 
         assert result is False
 
+    async def test_auth_sets_last_auth_error_credentials_on_fails_body(self):
+        """密码错误后 last_auth_error 标记为 credentials，供上层区分故障类型。"""
+        qb = QbDownloader(
+            host="localhost:8080", username="admin", password="wrong", ssl=False
+        )
+
+        mock_client = AsyncMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.text = "Fails."
+        mock_client.post = AsyncMock(return_value=mock_resp)
+
+        with patch(
+            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            return_value=mock_client,
+        ):
+            await qb.auth(retry=3)
+
+        assert qb.last_auth_error == "credentials"
+
+    async def test_auth_sets_last_auth_error_banned_on_403(self):
+        qb = QbDownloader(
+            host="localhost:8080", username="admin", password="pass", ssl=False
+        )
+
+        mock_client = AsyncMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 403
+        mock_resp.text = "Forbidden"
+        mock_client.post = AsyncMock(return_value=mock_resp)
+
+        with patch(
+            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            return_value=mock_client,
+        ):
+            await qb.auth(retry=3)
+
+        assert qb.last_auth_error == "banned"
+
+    async def test_auth_sets_last_auth_error_unreachable_on_connect_error(self):
+        qb = QbDownloader(
+            host="localhost:8080", username="admin", password="pass", ssl=False
+        )
+
+        mock_client = AsyncMock()
+        mock_client.post = AsyncMock(side_effect=httpx.ConnectError("boom"))
+
+        with (
+            patch(
+                "module.downloader.client.qb_downloader.httpx.AsyncClient",
+                return_value=mock_client,
+            ),
+            patch(
+                "module.downloader.client.qb_downloader.asyncio.sleep",
+                new_callable=AsyncMock,
+            ),
+        ):
+            await qb.auth(retry=1)
+
+        assert qb.last_auth_error == "unreachable"
+
+    async def test_auth_clears_last_auth_error_on_success(self):
+        qb = QbDownloader(
+            host="localhost:8080", username="admin", password="pass", ssl=False
+        )
+        qb.last_auth_error = "credentials"
+
+        mock_client = AsyncMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.text = "Ok."
+        mock_client.post = AsyncMock(return_value=mock_resp)
+
+        with patch(
+            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            return_value=mock_client,
+        ):
+            result = await qb.auth()
+
+        assert result is True
+        assert qb.last_auth_error is None
+
+    async def test_auth_stops_immediately_on_200_fails_body(self, caplog):
+        """Wrong credentials (200 + 'Fails.') must not be retried — repeated
+        failed logins trigger qBittorrent's WebUI IP ban — and the log must
+        say the credentials are wrong."""
+        qb = QbDownloader(
+            host="localhost:8080", username="admin", password="wrong", ssl=False
+        )
+
+        mock_client = AsyncMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.text = "Fails."
+        mock_client.post = AsyncMock(return_value=mock_resp)
+
+        with patch(
+            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            return_value=mock_client,
+        ):
+            result = await qb.auth(retry=3)
+
+        assert result is False
+        assert mock_client.post.call_count == 1
+        assert "username or password" in caplog.text
+
+    async def test_auth_stops_immediately_on_401(self, caplog):
+        """401 also means bad credentials; same no-retry behaviour."""
+        qb = QbDownloader(
+            host="localhost:8080", username="admin", password="wrong", ssl=False
+        )
+
+        mock_client = AsyncMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 401
+        mock_resp.text = ""
+        mock_client.post = AsyncMock(return_value=mock_resp)
+
+        with patch(
+            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            return_value=mock_client,
+        ):
+            result = await qb.auth(retry=3)
+
+        assert result is False
+        assert mock_client.post.call_count == 1
+        assert "username or password" in caplog.text
+
     async def test_auth_returns_false_on_200_html_body(self):
         """A 200 + HTML page (proxy, wrong service) is not a successful login."""
         qb = QbDownloader(

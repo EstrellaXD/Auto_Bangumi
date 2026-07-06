@@ -18,6 +18,8 @@ from sqlalchemy import Connection, Engine, inspect, text
 from sqlmodel import SQLModel
 
 from module.models import Bangumi, User
+from module.models.inbox import InboxMessage
+from module.models.llm_credential import LLMCredential
 from module.models.passkey import Passkey
 from module.models.rss import RSSItem
 from module.models.torrent import Torrent
@@ -25,7 +27,15 @@ from module.models.torrent import Torrent
 logger = logging.getLogger(__name__)
 
 # 所有需要进行空值填充的表模型
-TABLE_MODELS: list[type[SQLModel]] = [Bangumi, RSSItem, Torrent, User, Passkey]
+TABLE_MODELS: list[type[SQLModel]] = [
+    Bangumi,
+    RSSItem,
+    Torrent,
+    User,
+    Passkey,
+    InboxMessage,
+    LLMCredential,
+]
 
 # already_applied 守卫：接收 inspector，返回该迁移是否已生效
 AppliedCheck = Callable[[Any], bool]
@@ -329,6 +339,49 @@ MIGRATIONS: tuple[Migration, ...] = (
         "add renamed_paths column to aria2_gid for persisted file renames",
         ("ALTER TABLE aria2_gid ADD COLUMN renamed_paths TEXT DEFAULT NULL",),
         column_exists("aria2_gid", "renamed_paths"),
+    ),
+    Migration(
+        16,
+        "create inboxmessage table for the in-app notification center",
+        (
+            """CREATE TABLE IF NOT EXISTS inboxmessage (
+                id INTEGER PRIMARY KEY,
+                kind TEXT NOT NULL DEFAULT '',
+                severity TEXT NOT NULL DEFAULT 'info',
+                title TEXT NOT NULL DEFAULT '',
+                body TEXT NOT NULL DEFAULT '',
+                payload TEXT,
+                dedup_key TEXT,
+                read BOOLEAN NOT NULL DEFAULT 0,
+                count INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL DEFAULT '',
+                updated_at TEXT NOT NULL DEFAULT ''
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_inboxmessage_kind ON inboxmessage(kind)",
+            "CREATE INDEX IF NOT EXISTS ix_inboxmessage_dedup_key "
+            "ON inboxmessage(dedup_key)",
+            "CREATE INDEX IF NOT EXISTS ix_inboxmessage_read ON inboxmessage(read)",
+        ),
+        table_exists("inboxmessage"),
+    ),
+    Migration(
+        17,
+        "create llmcredential table for subscription LLM provider tokens",
+        (
+            """CREATE TABLE IF NOT EXISTS llmcredential (
+                id INTEGER PRIMARY KEY,
+                provider_id TEXT NOT NULL DEFAULT '',
+                access_token TEXT NOT NULL DEFAULT '',
+                refresh_token TEXT NOT NULL DEFAULT '',
+                expires_at REAL,
+                account_label TEXT NOT NULL DEFAULT '',
+                extra TEXT,
+                updated_at TEXT NOT NULL DEFAULT ''
+            )""",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_llmcredential_provider_id "
+            "ON llmcredential(provider_id)",
+        ),
+        table_exists("llmcredential"),
     ),
 )
 

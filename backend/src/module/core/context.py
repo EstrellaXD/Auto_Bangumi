@@ -15,7 +15,7 @@ from module.database import Database
 from module.downloader.download_client import shutdown as downloader_shutdown
 from module.models import ResponseModel
 from module.network.request_url import reset_shared_client
-from module.notification import NotificationManager
+from module.notification import DownloaderUnavailableEvent, NotificationManager
 from module.parser.analyser.mikan_parser import reset_cache as reset_mikan_cache
 from module.parser.analyser.tmdb_parser import reset_cache as reset_tmdb_cache
 from module.parser.title_parser import reset_cache as reset_llm_parser
@@ -30,7 +30,13 @@ from module.update import (
     run_migrations,
 )
 
-from .loops import calendar_tick, offset_scan_tick, rename_tick, rss_tick
+from .loops import (
+    calendar_tick,
+    offset_scan_tick,
+    rename_tick,
+    rss_tick,
+    update_check_tick,
+)
 from .scheduler import PeriodicTask, Scheduler
 
 logger = logging.getLogger(__name__)
@@ -41,8 +47,10 @@ DOWNLOADER_STATUS_TTL = 60
 # Background loop cadence (seconds).
 OFFSET_SCAN_INTERVAL = 6 * 60 * 60
 CALENDAR_REFRESH_INTERVAL = 24 * 60 * 60
+UPDATE_CHECK_INTERVAL = 24 * 60 * 60
 OFFSET_SCAN_INITIAL_DELAY = 60
 CALENDAR_INITIAL_DELAY = 120
+UPDATE_CHECK_INITIAL_DELAY = 300
 
 # Downloader wait-retry loop on startup.
 _DOWNLOADER_MAX_RETRIES = 10
@@ -76,6 +84,7 @@ class AppContext:
         self.analyser = analyser
         # Downloader-status TTL cache (was ProgramStatus.check_downloader_status).
         self._downloader_status = False
+        self._downloader_reason: str | None = None
         self._downloader_last_check: float = 0.0
         self._startup_done = False
         self._lifecycle_lock = asyncio.Lock()
@@ -126,6 +135,13 @@ class AppContext:
                     interval=lambda: CALENDAR_REFRESH_INTERVAL,
                     initial_delay=CALENDAR_INITIAL_DELAY,
                 ),
+                PeriodicTask(
+                    name="update_check",
+                    run=lambda: update_check_tick(notifier),
+                    interval=lambda: UPDATE_CHECK_INTERVAL,
+                    initial_delay=UPDATE_CHECK_INITIAL_DELAY,
+                    enabled=lambda: settings_obj.update.auto_check,
+                ),
             ]
         )
         return cls(settings_obj, notifier, scheduler, analyser)
@@ -154,7 +170,10 @@ class AppContext:
             not self._downloader_status
             or (now - self._downloader_last_check) >= DOWNLOADER_STATUS_TTL
         ):
-            self._downloader_status = await Checker.check_downloader()
+            (
+                self._downloader_status,
+                self._downloader_reason,
+            ) = await Checker.check_downloader_detail()
             self._downloader_last_check = now
         return self._downloader_status
 
@@ -217,6 +236,17 @@ class AppContext:
     async def _wait_for_downloader(self) -> None:
         retry_count = 0
         while not await self.check_downloader_status():
+            reason = self._downloader_reason or "unreachable"
+            if reason in ("credentials", "banned"):
+                # 凭据错误/IP 被封时等待没有意义，继续探测反而会累积失败
+                # 登录、触发（或加剧）qB 的 WebUI IP ban——立即放弃并通知。
+                logger.error(
+                    "Downloader rejected authentication (%s); giving up. "
+                    "Program will continue but download functions will not work.",
+                    reason,
+                )
+                await self._notify_downloader_unavailable(reason)
+                return
             retry_count += 1
             logger.warning(
                 f"Downloader is not running. (attempt {retry_count}/{_DOWNLOADER_MAX_RETRIES})"
@@ -227,9 +257,22 @@ class AppContext:
                     "Please check downloader settings and network/proxy configuration. "
                     "Program will continue but download functions will not work."
                 )
+                await self._notify_downloader_unavailable("unreachable")
                 break
             logger.info("Waiting for downloader to start...")
             await asyncio.sleep(_DOWNLOADER_RETRY_INTERVAL)
+
+    async def _notify_downloader_unavailable(self, reason: str) -> None:
+        try:
+            await self.notifier.send_event(
+                DownloaderUnavailableEvent(
+                    host=self.settings.downloader.host, reason=reason
+                )
+            )
+        except Exception:
+            logger.warning(
+                "Failed to emit downloader-unavailable notification", exc_info=True
+            )
 
     async def _run_start_tasks(self) -> None:
         """Body of the background start task: wait for the downloader, then start loops."""

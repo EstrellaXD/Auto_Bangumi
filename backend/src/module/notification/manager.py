@@ -8,6 +8,7 @@ from module.conf import settings
 from module.database import Database
 from module.models.bangumi import Notification
 from module.notification.events import SystemEvent
+from module.notification.inbox import record_event
 
 if TYPE_CHECKING:
     from module.models.config import NotificationProvider as ProviderConfig
@@ -115,12 +116,24 @@ class NotificationManager:
         await self._broadcast("notification", send_one)
 
     async def send_event(self, event: SystemEvent):
-        """Send a system event (RSS failure, download failure, offset review)
-        to all enabled providers.
+        """Persist a system event to the in-app inbox, then broadcast it.
+
+        持久化不受 ``settings.notification.enable`` 影响（该开关只管外部
+        推送），失败也不阻塞外部广播。
 
         Args:
             event: The system event to send.
         """
+        try:
+            await record_event(event)
+        except Exception:
+            logger.warning(
+                "Failed to persist inbox message for %s",
+                type(event).__name__,
+                exc_info=True,
+            )
+        if not settings.notification.enable:
+            return
 
         async def send_one(provider: "NotificationProvider"):
             await provider.send_event(event)

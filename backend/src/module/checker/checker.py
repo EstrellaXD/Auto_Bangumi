@@ -55,26 +55,43 @@ class Checker:
             return True
 
     @staticmethod
-    async def check_downloader() -> bool:
+    async def check_downloader_detail() -> tuple[bool, str | None]:
+        """下载器可达性检查，附失败原因。
+
+        返回 ``(ok, reason)``；reason 取值 unreachable | credentials | banned，
+        成功时为 None。上层（启动等待循环）据此区分「等它启动」和「密码错误，
+        等也没用」两类故障。
+        """
         from module.downloader import DownloadClient
 
         # Mock downloader always succeeds
         if settings.downloader.type == "mock":
             logger.info("Using MockDownloader - skipping connection check")
-            return True
+            return True, None
 
         # Delegate to the concrete client's own auth/capabilities instead of
         # grepping the downloader's homepage HTML (which only ever matches
         # qBittorrent, so aria2 and future backends could never pass).
+        # DownloadClient() 的构造本身可能抛（下载器类型无法识别），必须一并
+        # 纳入 try——否则一个配置错误会击穿启动等待循环。
+        client = None
         try:
-            async with DownloadClient() as dl_client:
-                return dl_client.authed
+            client = DownloadClient()
+            async with client as dl_client:
+                return dl_client.authed, None
         except ConnectionError:
             logger.error("Downloader connect failed.")
-            return False
+            reason = getattr(client, "last_auth_error", None)
+            return False, reason or "unreachable"
         except Exception as e:
             logger.error(f"Downloader connect failed: {e}")
-            return False
+            reason = getattr(client, "last_auth_error", None)
+            return False, reason or "unreachable"
+
+    @staticmethod
+    async def check_downloader() -> bool:
+        ok, _ = await Checker.check_downloader_detail()
+        return ok
 
     @staticmethod
     def check_img_cache() -> bool:

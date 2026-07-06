@@ -232,17 +232,26 @@ class Notification(BaseModel):
         return self
 
 
+class LLMProviderOverride(BaseModel):
+    """单个提供商的凭据/模型/端点覆盖（键名含 api_key，掩码机制自动生效）。"""
+
+    api_key: str = Field(default="", description="Provider API key")
+    model: str = Field(default="", description="Model override")
+    base_url: str = Field(default="", description="Base URL override")
+
+
 class LLM(BaseModel):
     """LLM 标题解析配置，支持多提供商。
 
     ``provider="openai"`` 表示任意 OpenAI 兼容端点（DeepSeek/Ollama/
     LM Studio/OpenRouter/OneAPI 等均可通过 ``base_url`` 接入）。
+    扁平的 ``api_key/model/base_url`` 是历史字段（老用户零迁移）；
+    ``providers`` 按提供商 id 存放各自的覆盖值，取值见 ``effective()``。
     """
 
     enable: bool = Field(default=False, description="Enable LLM parser")
-    provider: Literal["openai", "anthropic", "gemini"] = Field(
-        default="openai", description="LLM provider"
-    )
+    # 开放为任意注册表 id：内置三家 + base_url 预设 + 已安装插件
+    provider: str = Field(default="openai", min_length=1, description="LLM provider id")
     api_key: str = Field(default="", description="LLM api key")
     model: str = Field(default="gpt-5-mini", description="LLM model name")
     base_url: str = Field(
@@ -280,6 +289,24 @@ class LLM(BaseModel):
         ge=0,
         description="Seconds to skip LLM calls after failure_threshold is reached",
     )
+    providers: dict[str, LLMProviderOverride] = Field(
+        default_factory=dict,
+        description="Per-provider overrides keyed by provider id",
+    )
+
+    def effective(self, provider_id: str | None = None) -> tuple[str, str, str]:
+        """返回 (api_key, model, base_url)。
+
+        有 providers[id] 覆盖项时用其值（可为空，交由适配器回退到该提供商
+        自己的默认端点/型号）；不跨提供商回退到扁平的 openai 字段——否则
+        DeepSeek 等会误收到 openai 的 model/base_url。仅当无覆盖项（内置
+        openai 默认路径）才用扁平字段。
+        """
+        pid = provider_id or self.provider
+        override = self.providers.get(pid)
+        if override is None:
+            return self.api_key, self.model, self.base_url
+        return override.api_key, override.model, override.base_url
 
 
 # [Deprecated] 旧版 OpenAI 解析配置，仅保留用于读取旧配置文件（向后兼容）。
@@ -357,7 +384,8 @@ class Update(BaseModel):
     """在线自动更新配置。
 
     ``channel`` 决定检查更新时挑选稳定版还是包含预发布（beta）版本；
-    ``auto_check`` 控制前端是否在进入设置页时自动检查一次更新。
+    ``auto_check`` 控制自动检查更新：前端进入设置页时检查一次，
+    后端每 24 小时检查一次并把新版本写入通知中心。
     """
 
     channel: Literal["stable", "beta"] = Field(

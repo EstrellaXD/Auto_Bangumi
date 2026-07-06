@@ -19,8 +19,14 @@ export type NotificationType = [
   'pushover',
   'webhook',
 ];
-/** LLM 提供商（openai 表示任意 OpenAI 兼容端点） */
-export type LLMProvider = ['openai', 'anthropic', 'gemini'];
+/** LLM 提供商 id（内置三家 + 预设/插件，开放集合） */
+export type LLMProviderId = string;
+/** 单个提供商的凭据/模型/端点覆盖 */
+export interface LLMProviderOverride {
+  api_key: string;
+  model: string;
+  base_url: string;
+}
 /** LLM 解析模式（fallback：正则优先；primary：LLM 优先） */
 export type LLMParseMode = ['fallback', 'primary'];
 /** OpenAI Model List */
@@ -92,7 +98,7 @@ export interface Notification {
 }
 export interface LLM {
   enable: boolean;
-  provider: TupleToUnion<LLMProvider>;
+  provider: LLMProviderId;
   api_key: string;
   model: string;
   /** 自定义端点，仅 openai 提供商使用；空串表示官方 API */
@@ -108,6 +114,8 @@ export interface LLM {
   failure_threshold: number;
   /** 熔断后暂停调用的时长（秒） */
   failure_backoff: number;
+  /** 按提供商 id 存放的凭据/模型/端点覆盖 */
+  providers: Record<string, LLMProviderOverride>;
 }
 
 /** @deprecated 旧版 OpenAI 解析配置，已被 LLM 段取代（保留向后兼容） */
@@ -210,6 +218,7 @@ export const initConfig: Config = {
     max_concurrency: 2,
     failure_threshold: 3,
     failure_backoff: 300,
+    providers: {},
   },
   experimental_openai: {
     enable: false,

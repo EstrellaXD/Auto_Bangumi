@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "id": "codex-chatgpt",
+  "name": "ChatGPT (Codex)",
+  "version": "1.0.0",
+  "min_ab_version": "3.3.0",
+  "entry": "ab_llm_codex.adapter:CodexChatgptAdapter",
+  "auth_kind": "device_code",
+  "needs_base_url": false,
+  "default_model": "gpt-5.1-codex",
+  "description_en": "Use a ChatGPT Plus/Pro subscription for title parsing via the Codex device-flow login.",
+  "description_zh": "通过 Codex device flow 登录，用 ChatGPT Plus/Pro 订阅解析标题。",
+  "risk_notice_en": "ChatGPT subscription credentials are scoped to the official Codex client; third-party use is unsanctioned and may be blocked. Use at your own risk.",
+  "risk_notice_zh": "ChatGPT 订阅凭据被限定到官方 Codex 客户端，第三方使用未获许可、可能被封锁。请自担风险。"
+}

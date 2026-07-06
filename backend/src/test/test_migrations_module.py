@@ -207,6 +207,30 @@ class TestRunMigrations:
         aria2_cols = {c["name"] for c in inspector.get_columns("aria2_gid")}
         assert "renamed_paths" in aria2_cols
 
+    def test_creates_inboxmessage_table(self):
+        """v16 creates the in-app notification center table with its indexes."""
+        engine = _make_v0_engine()
+        run_migrations(engine)
+
+        inspector = inspect(engine)
+        assert "inboxmessage" in inspector.get_table_names()
+        inbox_indexes = {ix["name"] for ix in inspector.get_indexes("inboxmessage")}
+        assert {
+            "ix_inboxmessage_kind",
+            "ix_inboxmessage_dedup_key",
+            "ix_inboxmessage_read",
+        } <= inbox_indexes
+
+    def test_creates_llmcredential_table(self):
+        """v17 creates the subscription-LLM credential table (unique provider_id)."""
+        engine = _make_v0_engine()
+        run_migrations(engine)
+
+        inspector = inspect(engine)
+        assert "llmcredential" in inspector.get_table_names()
+        indexes = {ix["name"]: ix for ix in inspector.get_indexes("llmcredential")}
+        assert indexes["ix_llmcredential_provider_id"]["unique"]
+
     def test_is_idempotent(self):
         engine = _make_v0_engine()
         run_migrations(engine)

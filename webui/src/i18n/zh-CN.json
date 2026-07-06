@@ -37,7 +37,27 @@
       "model": "模型",
       "provider": "服务商",
       "timeout": "请求超时（秒）",
-      "title": "LLM 解析器"
+      "title": "LLM 解析器",
+      "group_builtin": "内置",
+      "group_installed": "已安装预设",
+      "group_subscription": "订阅账号",
+      "group_available": "可下载",
+      "not_installed": "该提供商尚未安装。",
+      "install": "安装",
+      "install_success": "提供商已安装",
+      "install_failed": "安装失败",
+      "uninstall": "卸载",
+      "connect": "连接",
+      "disconnect": "断开",
+      "connected_as": "已连接：{account}",
+      "risk_notice": "该提供商使用非官方订阅流程，第三方使用可能违反厂商条款、导致账号被限制。请自担风险后继续。",
+      "risk_cancel": "取消",
+      "risk_confirm": "仍然安装",
+      "auth_open_link": "在任意设备打开此链接授权，然后把回调 code 粘贴到下方：",
+      "auth_paste_code": "粘贴授权 code 或回调 URL",
+      "auth_device_hint": "打开链接并输入下方代码完成授权：",
+      "auth_pending": "等待授权中…",
+      "auth_failed": "授权失败"
     },
     "manage_set": {
       "delete_bad_torrent": "删除坏种",
@@ -558,5 +578,62 @@
     },
     "shutdown": "关闭",
     "start": "启动"
+  },
+  "notifications": {
+    "title": "通知",
+    "unread": "{n} 条未读",
+    "empty": "暂无通知",
+    "mark_all_read": "全部已读",
+    "clear_all": "清空",
+    "clear_confirm": "确认清空？",
+    "delete": "删除",
+    "time": {
+      "just_now": "刚刚",
+      "minutes_ago": "{n} 分钟前",
+      "hours_ago": "{n} 小时前",
+      "days_ago": "{n} 天前"
+    },
+    "reason": {
+      "unreachable": "无法连接下载器，请检查地址、端口和网络。",
+      "credentials": "用户名或密码错误，请在设置中检查下载器凭据。",
+      "banned": "IP 已被下载器封禁，请在下载器 WebUI 解封或重启下载器。"
+    },
+    "kind": {
+      "rss_failure": {
+        "title": "RSS 订阅连接异常",
+        "body": "{rss_name}：{error}"
+      },
+      "download_failure": {
+        "title": "种子添加失败",
+        "body": "{official_title} — {torrent_name}"
+      },
+      "offset_review": {
+        "title": "集数偏移待确认",
+        "body": "{official_title}：{reason}"
+      },
+      "downloader_unavailable": {
+        "title": "下载器连接异常"
+      },
+      "update_available": {
+        "title": "发现新版本",
+        "body": "{current} → {latest}（{channel} 频道）"
+      },
+      "update_applied": {
+        "title": "程序更新完成",
+        "body": "已更新到 {version}，重启后生效。"
+      },
+      "update_failed": {
+        "title": "程序更新失败",
+        "body": "{message}"
+      },
+      "llm_auth_failure": {
+        "title": "LLM 提供商凭据失效",
+        "body": "{provider_id}：{message}"
+      },
+      "llm_plugin_install_failed": {
+        "title": "LLM 插件安装失败",
+        "body": "{plugin_id}：{message}"
+      }
+    }
   }
 }

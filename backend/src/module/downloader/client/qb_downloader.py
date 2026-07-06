@@ -33,6 +33,9 @@ class QbDownloader:
         self.ssl = ssl
         self._client: httpx.AsyncClient | None = None
         self._authed = False
+        # 最近一次 auth 失败的原因（unreachable | credentials | banned），
+        # 供上层（checker/startup 等待循环）区分故障类型；成功后清空。
+        self.last_auth_error: str | None = None
         # Single-flights the reactive 403 re-login below so concurrent
         # requests don't each fire their own login attempt and trip
         # qBittorrent's IP ban (#1046-adjacent).
@@ -81,18 +84,34 @@ class QbDownloader:
                     resp.status_code == 200 and resp.text.startswith("Ok")
                 ) or resp.status_code == 204:
                     self._authed = True
+                    self.last_auth_error = None
                     return True
+                elif (
+                    resp.status_code == 200 and resp.text.startswith("Fails")
+                ) or resp.status_code == 401:
+                    # 密码错误重试只会触发 qB 的 WebUI IP ban（默认 5 次失败
+                    # 即封禁，之后全部 403），必须立刻停下并明确提示。
+                    self.last_auth_error = "credentials"
+                    logger.error(
+                        "qBittorrent rejected the username or password. "
+                        "Check the downloader credentials in AutoBangumi settings; "
+                        "not retrying to avoid a WebUI IP ban."
+                    )
+                    break
                 elif resp.status_code == 403:
+                    self.last_auth_error = "banned"
                     logger.error("Login refused by qBittorrent Server")
                     logger.info("Please release the IP in qBittorrent Server")
                     break
                 else:
+                    self.last_auth_error = "unreachable"
                     logger.error(
                         f"Can't login qBittorrent Server {self.host} by {self.username}, retry in 5 seconds."
                     )
                     await asyncio.sleep(5)
                     times += 1
             except httpx.ConnectError as e:
+                self.last_auth_error = "unreachable"
                 if use_https:
                     logger.error(
                         "Cannot connect to qBittorrent Server via HTTPS. "
@@ -105,6 +124,7 @@ class QbDownloader:
                 await asyncio.sleep(10)
                 times += 1
             except Exception as e:
+                self.last_auth_error = "unreachable"
                 if use_https and "ssl" in str(e).lower():
                     logger.error(
                         "TLS/SSL error connecting to qBittorrent. "

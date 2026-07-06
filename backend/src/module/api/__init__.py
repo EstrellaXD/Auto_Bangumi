@@ -5,6 +5,7 @@ from .bangumi import router as bangumi_router
 from .config import router as config_router
 from .downloader import router as downloader_router
 from .events import router as events_router
+from .llm import router as llm_router
 from .log import router as log_router
 from .notification import router as notification_router
 from .passkey import router as passkey_router
@@ -31,3 +32,4 @@ v1.include_router(search_router)
 v1.include_router(setup_router)
 v1.include_router(notification_router)
 v1.include_router(update_router)
+v1.include_router(llm_router)

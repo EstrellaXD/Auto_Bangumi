@@ -132,6 +132,14 @@ class DownloadClient:
             logger.error("Unsupported downloader type: %s", downloader_type)
             raise Exception(f"Unsupported downloader type: {downloader_type}")
 
+    @property
+    def last_auth_error(self) -> str | None:
+        """最近一次认证失败的原因（unreachable | credentials | banned）。
+
+        仅 qBittorrent 客户端会区分原因；aria2/mock 无此属性时返回 None。
+        """
+        return getattr(self.client, "last_auth_error", None)
+
     def _supports(self, capability: str, op: str) -> bool:
         """Whether the concrete client can perform ``op`` (log once if not)."""
         caps = getattr(self.client, "capabilities", None)

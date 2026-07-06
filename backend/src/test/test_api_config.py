@@ -613,7 +613,8 @@ class TestListLLMModels:
     def test_masked_key_falls_back_to_saved_key(self, authed_client):
         parser = self._mock_parser(models=["m"])
         saved = MagicMock()
-        saved.llm.api_key = "sk-saved"
+        # 掩码回退现在按提供商取值（providers[id] 覆盖 → 扁平字段兜底）
+        saved.llm.effective.return_value = ("sk-saved", "", "")
         with (
             patch("module.api.config.settings", saved),
             patch("module.api.config.LLMParser", return_value=parser) as cls,
@@ -627,7 +628,7 @@ class TestListLLMModels:
 
     def test_missing_key_returns_400(self, authed_client):
         saved = MagicMock()
-        saved.llm.api_key = ""
+        saved.llm.effective.return_value = ("", "", "")
         with patch("module.api.config.settings", saved):
             response = authed_client.post(
                 "/api/v1/config/llm/models",
