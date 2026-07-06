@@ -108,3 +108,22 @@ async def shutdown_program(ctx: AppContext = Depends(get_context)):
 )
 async def check_downloader_status(ctx: AppContext = Depends(get_context)):
     return await ctx.check_downloader()
+
+
+# 3.2 兼容：这些控制端点在 3.2 及更早版本是 GET，外部自动化（cron/Home
+# Assistant 等）沿用旧方法，升级后不得 405 静默失效。GET 别名标记为
+# deprecated，计划下个大版本移除。
+for _path, _endpoint in (
+    ("/restart", restart),
+    ("/start", start),
+    ("/stop", stop),
+    ("/shutdown", shutdown_program),
+):
+    router.add_api_route(
+        _path,
+        _endpoint,
+        methods=["GET"],
+        response_model=APIResponse,
+        dependencies=[Depends(get_current_user)],
+        deprecated=True,
+    )

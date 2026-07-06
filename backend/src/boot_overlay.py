@@ -70,12 +70,8 @@ def _read_applied(updates_root: Path) -> dict | None:
         return None
 
 
-def _replace_contents(dst: Path, src: Path) -> None:
-    """让 dst 的子项与 src 一致，但不 rename dst 本身。
-
-    这是 EXDEV 的兜底路径：overlayfs 拒绝把镜像下层目录跨挂载边界 rename，
-    但逐文件删/写会触发 copy-up，因而可行（非原子，但拓扑无关）。
-    """
+def _clear_and_fill(dst: Path, src: Path) -> None:
+    """删光 dst 的子项后从 src 复制（EXDEV 兜底的非原子核心步骤）。"""
     for child in list(dst.iterdir()):
         if child.is_dir() and not child.is_symlink():
             shutil.rmtree(child)
@@ -87,6 +83,63 @@ def _replace_contents(dst: Path, src: Path) -> None:
             shutil.copytree(child, target)
         else:
             shutil.copy2(child, target)
+
+
+def _replace_contents(dst: Path, src: Path) -> None:
+    """让 dst 的子项与 src 一致，但不 rename dst 本身。
+
+    这是 EXDEV 的兜底路径：overlayfs 拒绝把镜像下层目录跨挂载边界 rename，
+    但逐文件删/写会触发 copy-up，因而可行。非原子——中途失败（磁盘满/IO
+    错误）会留下"删光了但没灌满"的残树，启动进去必然 ImportError 崩溃循环。
+    因此先把 dst 现有内容快照到 .ab_bak：快照失败则 dst 未被触碰、直接放弃；
+    填充失败则从快照恢复旧树后再抛出，保证 dst 要么是新树要么是旧树。
+    """
+    backup = dst.parent / (dst.name + ".ab_bak")
+    if backup.exists():
+        shutil.rmtree(backup)
+    shutil.copytree(dst, backup)
+    try:
+        _clear_and_fill(dst, src)
+    except BaseException:
+        try:
+            _clear_and_fill(dst, backup)
+            # 恢复也是 root 在复制：属主变回 root，受限 UMASK 下的 600
+            # 模式会让 ab 读不了恢复出来的旧树——同样要交还应用用户
+            # （成功路径的 chown 在上层，异常路径走不到那里）。
+            _chown_app_tree(dst)
+        except Exception:
+            logger.critical(
+                "Failed to restore %s from its snapshot after a partial "
+                "overlay write; the tree may be incomplete.",
+                dst,
+            )
+        raise
+    finally:
+        shutil.rmtree(backup, ignore_errors=True)
+
+
+def _chown_app_tree(path: Path) -> None:
+    """把覆盖层落地的树交还应用用户（ab）。
+
+    boot_overlay 以 root 运行；extractall/copytree 产物的权限跟随 UMASK
+    （entrypoint 在调用前已 ``umask ${UMASK}``），受限 UMASK（如 077）下是
+    600/700 root:root——以 ab 运行的 main.py 读不了 /app/module，启动即
+    ImportError 崩溃循环。落地后统一 chown 给 ab，使可读性与 UMASK 无关
+    （3.2 的每次启动全量 ``chown -R /app`` 已移除，必须在这里补上）。
+    只处理刚写入的树，不触碰镜像层文件，避免无谓的 overlayfs copy-up。
+    """
+    if not hasattr(os, "geteuid") or os.geteuid() != 0:
+        return
+    try:
+        import pwd
+
+        pwd.getpwnam("ab")
+    except (ImportError, KeyError):
+        logger.warning("User 'ab' not found; skipping ownership fix for %s", path)
+        return
+    import subprocess
+
+    subprocess.run(["chown", "-R", "ab:ab", str(path)], check=False)
 
 
 def _replace_tree(src: Path, dst: Path) -> None:
@@ -352,11 +405,13 @@ def apply_overlay(
         except Exception as exc:
             logger.error("Failed to overlay module tree: %s", exc)
             return False
+        _chown_app_tree(app_root / "module")
 
         src_dist = tmp / "webui-dist"
         if src_dist.exists():
             try:
                 _replace_tree(src_dist, app_root / "dist")
+                _chown_app_tree(app_root / "dist")
             except Exception as exc:
                 logger.error("Failed to overlay webui dist: %s", exc)
 
@@ -370,6 +425,7 @@ def apply_overlay(
                     (app_root / ".venv" / _VENV_LOCK_MARKER).write_text(
                         lock_sha, encoding="utf-8"
                     )
+                _chown_app_tree(app_root / ".venv")
             except Exception as exc:
                 logger.error("Failed to overlay staged venv: %s", exc)
         else:

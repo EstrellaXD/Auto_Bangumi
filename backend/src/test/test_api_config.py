@@ -487,6 +487,112 @@ class TestRestoreMasked:
         assert sanitized["downloader"]["host"] == "10.0.0.1"
         assert sanitized["llm"]["model"] == "gpt-4o-mini"
 
+    def test_list_item_deleted_restores_survivor_from_own_entry(self):
+        """删除列表首项后，幸存项的掩码密钥必须从它自己的旧值恢复，
+        不能按下标错拿被删项的密钥。"""
+        incoming = {
+            "providers": [
+                {"type": "telegram", "chat_id": "2", "token": "********"},
+            ]
+        }
+        current = {
+            "providers": [
+                {"type": "telegram", "chat_id": "1", "token": "tg-first"},
+                {"type": "telegram", "chat_id": "2", "token": "tg-second"},
+            ]
+        }
+        _restore_masked(incoming, current)
+        assert incoming["providers"][0]["token"] == "tg-second"
+
+    def test_list_reordered_restores_each_from_matching_entry(self):
+        """列表重排后，每个掩码项按自身身份（非敏感字段）匹配恢复。"""
+        incoming = {
+            "providers": [
+                {"type": "bark", "chat_id": "b", "token": "********"},
+                {"type": "telegram", "chat_id": "a", "token": "********"},
+            ]
+        }
+        current = {
+            "providers": [
+                {"type": "telegram", "chat_id": "a", "token": "tg-token"},
+                {"type": "bark", "chat_id": "b", "token": "bark-token"},
+            ]
+        }
+        _restore_masked(incoming, current)
+        assert incoming["providers"][0]["token"] == "bark-token"
+        assert incoming["providers"][1]["token"] == "tg-token"
+
+    def test_list_same_length_edited_fields_falls_back_to_index(self):
+        """长度不变时编辑了非敏感字段（无法按身份匹配）→ 按下标恢复，
+        保持旧行为：改 chat_id 不应要求重输 token。"""
+        incoming = {
+            "providers": [
+                {"type": "telegram", "chat_id": "changed", "token": "********"},
+            ]
+        }
+        current = {
+            "providers": [
+                {"type": "telegram", "chat_id": "orig", "token": "tg-token"},
+            ]
+        }
+        _restore_masked(incoming, current)
+        assert incoming["providers"][0]["token"] == "tg-token"
+
+    def test_list_structural_change_plus_edit_raises(self):
+        """删项 + 同时编辑幸存项的身份字段 → 无法可靠匹配，必须报错
+        而不是猜错来源静默写坏密钥。"""
+        from module.api.config import MaskRestoreError
+
+        incoming = {
+            "providers": [
+                {"type": "telegram", "chat_id": "edited", "token": "********"},
+            ]
+        }
+        current = {
+            "providers": [
+                {"type": "telegram", "chat_id": "1", "token": "tg-first"},
+                {"type": "telegram", "chat_id": "2", "token": "tg-second"},
+            ]
+        }
+        with pytest.raises(MaskRestoreError):
+            _restore_masked(incoming, current)
+
+    def test_list_item_deleted_among_identical_identities_raises(self):
+        """两个身份完全相同（只差密钥）的项删掉一个：无法知道幸存的是哪个，
+        必须报错而不是按下标把被删项的密钥塞给幸存者。"""
+        from module.api.config import MaskRestoreError
+
+        incoming = {
+            "providers": [
+                {"type": "telegram", "chat_id": "same", "token": "********"},
+            ]
+        }
+        current = {
+            "providers": [
+                {"type": "telegram", "chat_id": "same", "token": "tg-first"},
+                {"type": "telegram", "chat_id": "same", "token": "tg-second"},
+            ]
+        }
+        with pytest.raises(MaskRestoreError):
+            _restore_masked(incoming, current)
+
+    def test_list_item_added_with_new_secret_passes(self):
+        """新增列表项带明文新密钥：无掩码,不需要匹配,不得报错。"""
+        incoming = {
+            "providers": [
+                {"type": "telegram", "chat_id": "1", "token": "********"},
+                {"type": "bark", "chat_id": "b", "token": "new-bark-token"},
+            ]
+        }
+        current = {
+            "providers": [
+                {"type": "telegram", "chat_id": "1", "token": "tg-token"},
+            ]
+        }
+        _restore_masked(incoming, current)
+        assert incoming["providers"][0]["token"] == "tg-token"
+        assert incoming["providers"][1]["token"] == "new-bark-token"
+
     def test_update_config_preserves_password_when_masked(
         self, authed_client, mock_settings
     ):

@@ -447,6 +447,17 @@ class TestApplyUpdate:
 # ---------------------------------------------------------------------------
 
 
+def _seed_backup_bundles(root):
+    """正常签名流程下 backup 树总是伴随留存的已验签 bundle 及其签名。"""
+    for name in (
+        "bundle.zip",
+        "bundle.zip.sig",
+        "bundle-backup.zip",
+        "bundle-backup.zip.sig",
+    ):
+        (root / name).write_bytes(b"stub-" + name.encode())
+
+
 class TestRollback:
     @pytest.mark.asyncio
     async def test_rollback_swaps_backup_into_current(self, tmp_path):
@@ -457,6 +468,7 @@ class TestRollback:
         backup.mkdir(parents=True)
         (current / "manifest.json").write_text(json.dumps({"version": "3.3.0"}))
         (backup / "manifest.json").write_text(json.dumps({"version": "3.2.0"}))
+        _seed_backup_bundles(root)
 
         up = Updater(root=root, current_version="3.3.0", image_version="3.1.0")
         res = await up.rollback()
@@ -467,6 +479,34 @@ class TestRollback:
         assert cur["version"] == "3.2.0"
         applied = json.loads((root / "applied.json").read_text())
         assert applied["version"] == "3.2.0"
+        # bundle 与 backup-bundle 同步互换，boot_overlay 验签对象跟 current 一致
+        assert (root / "bundle.zip").read_bytes() == b"stub-bundle-backup.zip"
+        assert (root / "bundle-backup.zip").read_bytes() == b"stub-bundle.zip"
+
+    @pytest.mark.asyncio
+    async def test_rollback_without_backup_bundle_reverts_to_image(self, tmp_path):
+        """backup 树存在但没有留存的已验签 bundle-backup.zip（旧 beta 遗留）：
+        直接互换会把 bundle.zip 换丢，boot_overlay 下次启动拒绝并清除覆盖层。
+        必须改走"回退镜像版本"路径，而不是报告回滚成功却落在另一个版本。"""
+        root = tmp_path / "u"
+        current = root / "current"
+        backup = root / "backup"
+        current.mkdir(parents=True)
+        backup.mkdir(parents=True)
+        (current / "manifest.json").write_text(json.dumps({"version": "3.3.0"}))
+        (backup / "manifest.json").write_text(json.dumps({"version": "3.2.0"}))
+        (root / "bundle.zip").write_bytes(b"stub")
+        (root / "bundle.zip.sig").write_bytes(b"stub")
+        (root / "applied.json").write_text(json.dumps({"version": "3.3.0"}))
+
+        up = Updater(root=root, current_version="3.3.0", image_version="3.1.0")
+        res = await up.rollback()
+        assert res.success is True
+        assert res.version == "3.1.0"  # 镜像版本，而非无法验签的 3.2.0
+        assert not current.exists()
+        assert not backup.exists()
+        assert not (root / "bundle.zip").exists()
+        assert not (root / "applied.json").exists()
 
     @pytest.mark.asyncio
     async def test_rollback_restores_db_snapshot(self, tmp_path):
@@ -477,6 +517,7 @@ class TestRollback:
         backup.mkdir(parents=True)
         (current / "manifest.json").write_text(json.dumps({"version": "3.3.0"}))
         (backup / "manifest.json").write_text(json.dumps({"version": "3.2.0"}))
+        _seed_backup_bundles(root)
         db_path = tmp_path / "data" / "data.db"
         _seed_schema_db(db_path, 9)
         backup_db = root / "db-backup" / "data.db"
@@ -517,6 +558,7 @@ class TestRollback:
         backup.mkdir(parents=True)
         (current / "manifest.json").write_text(json.dumps({"version": "3.3.0"}))
         (backup / "manifest.json").write_text(json.dumps({"version": "3.2.0"}))
+        _seed_backup_bundles(root)
         db_path = tmp_path / "data" / "data.db"
         _seed_schema_db(db_path, 4)
         backup_db = root / "db-backup" / "data.db"
@@ -552,6 +594,7 @@ class TestRollback:
         backup.mkdir(parents=True)
         (current / "manifest.json").write_text(json.dumps({"version": "3.3.0"}))
         (backup / "manifest.json").write_text(json.dumps({"version": "3.2.0"}))
+        _seed_backup_bundles(root)
         db_path = tmp_path / "data" / "data.db"
         _seed_schema_db(db_path, 9)
         # 上一轮更新遗留的快照目录；本轮 applied.json 没有 db_backup 记录
@@ -588,6 +631,7 @@ class TestRollback:
         backup.mkdir(parents=True)
         (current / "manifest.json").write_text(json.dumps({"version": "3.3.0"}))
         (backup / "manifest.json").write_text(json.dumps({"version": "3.2.0"}))
+        _seed_backup_bundles(root)
         db_path = tmp_path / "data" / "data.db"
         _seed_schema_db(db_path, 999)
 
@@ -792,6 +836,146 @@ class TestBootOverlay:
             pubkey_path=_write_test_pubkey(tmp_path),
         )
         assert applied is False
+
+    def test_exdev_fallback_restores_old_tree_on_partial_copy(
+        self, tmp_path, monkeypatch
+    ):
+        """EXDEV 就地替换中途失败（磁盘满/IO 错）不得留下残缺的 module 树——
+        必须恢复旧树，让启动继续跑镜像版本而不是 ImportError 崩溃循环。"""
+        import errno
+        import os as os_mod
+        import shutil as shutil_mod
+
+        import boot_overlay
+
+        app, updates, ivp, lock, pubkey = self._seed(tmp_path, "3.4.0")
+
+        real_rename = os_mod.rename
+
+        def fake_rename(a, b):
+            if str(a).endswith(("module", "dist")):
+                raise OSError(errno.EXDEV, "Cross-device link")
+            return real_rename(a, b)
+
+        monkeypatch.setattr(boot_overlay.os, "rename", fake_rename)
+
+        real_copy2 = shutil_mod.copy2
+
+        def fake_copy2(src, dst, *args, **kwargs):
+            d = Path(dst)
+            # 只让"往 /app/module 里灌新文件"这一步失败；快照备份（old.txt）
+            # 与 staging 复制不受影响。
+            if d.parent == app / "module" and d.name == "__marker__.txt":
+                raise OSError(errno.ENOSPC, "No space left on device")
+            return real_copy2(src, dst, *args, **kwargs)
+
+        monkeypatch.setattr(boot_overlay.shutil, "copy2", fake_copy2)
+
+        applied = boot_overlay.apply_overlay(
+            app_root=app,
+            updates_root=updates,
+            image_version_path=ivp,
+            baseline_lock=lock,
+            pubkey_path=pubkey,
+        )
+        assert applied is False
+        # 旧树必须完整恢复，不能是"删光了但没灌进去"的空壳
+        assert (app / "module" / "old.txt").exists()
+        assert not (app / "module" / "__marker__.txt").exists()
+        # 恢复用的快照目录不残留
+        assert not (app / "module.ab_bak").exists()
+
+    def test_overlay_chowns_replaced_trees_when_root(self, tmp_path, monkeypatch):
+        """以 root 落地覆盖层后必须把树交还应用用户：受限 UMASK（如 077）下
+        extractall 产物是 600/700 root:root，ab 读不了 → 启动崩溃循环。"""
+        import pwd
+        import subprocess
+
+        import boot_overlay
+
+        app, updates, ivp, lock, pubkey = self._seed(tmp_path, "3.4.0")
+
+        monkeypatch.setattr(boot_overlay.os, "geteuid", lambda: 0, raising=False)
+        monkeypatch.setattr(pwd, "getpwnam", lambda name: object())
+        calls: list[list[str]] = []
+
+        def fake_run(cmd, *args, **kwargs):
+            calls.append([str(c) for c in cmd])
+            return MagicMock(returncode=0)
+
+        monkeypatch.setattr(subprocess, "run", fake_run)
+
+        applied = boot_overlay.apply_overlay(
+            app_root=app,
+            updates_root=updates,
+            image_version_path=ivp,
+            baseline_lock=lock,
+            pubkey_path=pubkey,
+        )
+        assert applied is True
+        chown_targets = {
+            cmd[-1] for cmd in calls if cmd[:3] == ["chown", "-R", "ab:ab"]
+        }
+        assert str(app / "module") in chown_targets
+        assert str(app / "dist") in chown_targets
+        assert str(app / ".venv") in chown_targets
+
+    def test_exdev_restore_also_chowns_restored_tree_when_root(
+        self, tmp_path, monkeypatch
+    ):
+        """EXDEV 部分复制失败后恢复的旧树同样要交还 ab：以 root 复制回来的
+        文件在受限 UMASK 下可能 600 root:root，不 chown 则恢复了也读不了。"""
+        import errno
+        import os as os_mod
+        import pwd
+        import shutil as shutil_mod
+        import subprocess
+
+        import boot_overlay
+
+        app, updates, ivp, lock, pubkey = self._seed(tmp_path, "3.4.0")
+
+        real_rename = os_mod.rename
+
+        def fake_rename(a, b):
+            if str(a).endswith(("module", "dist")):
+                raise OSError(errno.EXDEV, "Cross-device link")
+            return real_rename(a, b)
+
+        monkeypatch.setattr(boot_overlay.os, "rename", fake_rename)
+
+        real_copy2 = shutil_mod.copy2
+
+        def fake_copy2(src, dst, *args, **kwargs):
+            d = Path(dst)
+            if d.parent == app / "module" and d.name == "__marker__.txt":
+                raise OSError(errno.ENOSPC, "No space left on device")
+            return real_copy2(src, dst, *args, **kwargs)
+
+        monkeypatch.setattr(boot_overlay.shutil, "copy2", fake_copy2)
+        monkeypatch.setattr(boot_overlay.os, "geteuid", lambda: 0, raising=False)
+        monkeypatch.setattr(pwd, "getpwnam", lambda name: object())
+        calls: list[list[str]] = []
+
+        def fake_run(cmd, *args, **kwargs):
+            calls.append([str(c) for c in cmd])
+            return MagicMock(returncode=0)
+
+        monkeypatch.setattr(subprocess, "run", fake_run)
+
+        applied = boot_overlay.apply_overlay(
+            app_root=app,
+            updates_root=updates,
+            image_version_path=ivp,
+            baseline_lock=lock,
+            pubkey_path=pubkey,
+        )
+        assert applied is False
+        assert (app / "module" / "old.txt").exists()
+        chown_targets = {
+            cmd[-1] for cmd in calls if cmd[:3] == ["chown", "-R", "ab:ab"]
+        }
+        assert str(app / "module") in chown_targets
 
 
 # ---------------------------------------------------------------------------

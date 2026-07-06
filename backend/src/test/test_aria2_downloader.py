@@ -585,7 +585,7 @@ class TestTorrentsInfo:
         assert info["save_path"] == "/downloads/Show/Season 1"
         assert info["tags"] == "ab:5"
         assert info["category"] == "Bangumi"
-        assert info["state"] == "active"
+        assert info["state"] == "downloading"  # active + 未完成 → qB 词汇
         assert info["name"] == "gidA.mkv"
 
     async def test_status_filter_completed_excludes_active(self):
@@ -682,6 +682,75 @@ class TestTorrentsInfo:
         assert len(result) == 1
         assert result[0]["progress"] == 0.0
         assert result[0]["size"] == 0
+
+    async def test_torrents_info_provides_ui_fields(self):
+        """WebUI 下载页无条件消费 num_seeds/num_leechs/eta/added_on——aria2
+        载荷缺了它们会渲染成 'undefined / undefined' 和 'NaNhNaNm'。"""
+        aria2 = _aria2()
+        download = _download("gidUi", status="active")
+        download["numSeeders"] = "3"
+        download["connections"] = "8"
+        download["downloadSpeed"] = "100"  # 剩余 500 字节 → eta 5s
+
+        async def fake_call(method, params=None, timeout=10.0):
+            if method == "tellActive":
+                return [download]
+            return []
+
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
+            result = await aria2.torrents_info(status_filter=None, category=None)
+
+        info = result[0]
+        assert info["num_seeds"] == 3
+        assert info["num_leechs"] == 5  # connections - seeders
+        assert info["eta"] == 5
+        assert isinstance(info["added_on"], int)
+
+    async def test_torrents_info_eta_infinite_when_stalled(self):
+        """下载中但速度为 0：eta 用 qB 的"无穷"约定 8640000（UI 显示 '-'）。"""
+        aria2 = _aria2()
+        download = _download("gidStall", status="active")  # dlspeed "0"
+
+        async def fake_call(method, params=None, timeout=10.0):
+            if method == "tellActive":
+                return [download]
+            return []
+
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
+            result = await aria2.torrents_info(status_filter=None, category=None)
+
+        assert result[0]["eta"] == 8640000
+
+    async def test_torrents_info_maps_states_to_qb_vocabulary(self):
+        """状态徽标/筛选只认 qB 词汇：active/waiting/paused/complete/error
+        必须映射，不能把 aria2 原词直接透传给 UI。"""
+        aria2 = _aria2()
+        cases = [
+            ("active", "500", "downloading"),
+            ("active", "1000", "uploading"),  # 下载完成、做种中
+            ("waiting", "500", "queuedDL"),
+            ("paused", "500", "pausedDL"),
+            ("paused", "1000", "pausedUP"),
+            ("complete", "1000", "pausedUP"),
+            ("error", "500", "error"),
+        ]
+        downloads = []
+        for idx, (status, completed, _) in enumerate(cases):
+            d = _download(f"gid{idx}", status=status)
+            d["completedLength"] = completed
+            downloads.append(d)
+
+        async def fake_call(method, params=None, timeout=10.0):
+            if method == "tellActive":
+                return downloads
+            return []
+
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
+            result = await aria2.torrents_info(status_filter=None, category=None)
+
+        by_gid = {info["hash"]: info["state"] for info in result}
+        for idx, (_, _, expected) in enumerate(cases):
+            assert by_gid[f"gid{idx}"] == expected, f"case {idx}"
 
     async def test_torrents_info_string_numbers_parsed_to_int(self):
         """aria2 JSON-RPC 的数值字段都是字符串，映射结果必须是 int/float。"""

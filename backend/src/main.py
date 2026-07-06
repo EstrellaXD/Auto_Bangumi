@@ -93,6 +93,11 @@ def posters(path: str):
 if VERSION != "DEV_VERSION":
     app.mount("/assets", StaticFiles(directory="dist/assets"), name="assets")
     app.mount("/images", StaticFiles(directory="dist/images"), name="images")
+    # 自托管 Inter 字体：index.html 以 /fonts/*.woff2 预加载，不挂载则被下面的
+    # SPA 兜底路由回成 index.html，全站字体静默回退。在线更新可能覆盖进来
+    # 更旧的、没有 fonts/ 的 dist，故按存在性挂载。
+    if os.path.isdir("dist/fonts"):
+        app.mount("/fonts", StaticFiles(directory="dist/fonts"), name="fonts")
     # app.mount("/icons", StaticFiles(directory="dist/icons"), name="icons")
     templates = Jinja2Templates(directory="dist")
 

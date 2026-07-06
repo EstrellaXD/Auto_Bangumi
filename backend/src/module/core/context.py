@@ -12,6 +12,7 @@ import time
 from module.checker import Checker
 from module.conf import LEGACY_DATA_PATH, VERSION, settings
 from module.database import Database
+from module.downloader.download_client import clear_credential_latch
 from module.downloader.download_client import shutdown as downloader_shutdown
 from module.models import ResponseModel
 from module.network.request_url import reset_shared_client
@@ -420,6 +421,9 @@ class AppContext:
         reset_mikan_cache()
         reset_poster_cache()
         reset_llm_parser()
+        # 用户保存了设置即视为已处理凭据问题：解除下载器的凭据失败闩锁，
+        # 允许重试（哪怕保存的值没变——qB 侧密码可能被改回来了）。
+        clear_credential_latch()
         self.notifier.rebuild()
         if self.scheduler.running:
             await self.scheduler.stop_all()

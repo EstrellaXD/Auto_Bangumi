@@ -149,6 +149,30 @@ class TestRestartProgram:
 
 
 # ---------------------------------------------------------------------------
+# 3.2 GET compatibility shims
+# ---------------------------------------------------------------------------
+
+
+class TestLegacyGetCompat:
+    """3.2 及更早版本的控制端点是 GET；外部自动化（cron/Home Assistant）
+    升级到 3.3 后不得 405 静默失效。"""
+
+    def test_restart_get_compat(self, authed_client):
+        assert authed_client.get("/api/v1/restart").status_code == 200
+
+    def test_start_get_compat(self, authed_client):
+        assert authed_client.get("/api/v1/start").status_code == 200
+
+    def test_stop_get_compat(self, authed_client):
+        assert authed_client.get("/api/v1/stop").status_code == 200
+
+    def test_shutdown_get_route_exists(self, unauthed_client):
+        # 不真调用（会杀掉测试进程）：无鉴权应得 401，说明路由存在；
+        # 不存在的方法是 405。
+        assert unauthed_client.get("/api/v1/shutdown").status_code == 401
+
+
+# ---------------------------------------------------------------------------
 # GET /status
 # ---------------------------------------------------------------------------
 

@@ -622,7 +622,22 @@ class Updater:
                         "refusing rollback"
                     )
 
-                if backup.exists():
+                # backup 树必须连同它的已验签 bundle 一起换回：boot_overlay
+                # 只认 bundle.zip(.sig)，缺了它互换会把现有 bundle.zip 换丢，
+                # 下次启动被判"legacy/unsigned"整体清除——报告回滚成功、
+                # 实际落在镜像版本。旧 beta 遗留的 backup 树可能没有留存
+                # bundle-backup.zip，此时走"回退镜像版本"分支才是诚实结果。
+                has_signed_backup = (
+                    backup.exists()
+                    and (self.root / "bundle-backup.zip").exists()
+                    and (self.root / "bundle-backup.zip.sig").exists()
+                )
+                if backup.exists() and not has_signed_backup:
+                    logger.warning(
+                        "Backup tree exists but its signed bundle is missing; "
+                        "reverting to the image version instead of swapping."
+                    )
+                if has_signed_backup:
                     # current <-> backup 互换，使回滚本身可再次撤销。
                     swap = self.root / "_swap_tmp"
                     if swap.exists():
@@ -687,9 +702,11 @@ class Updater:
                     )
                     message = "rolled back to previous version; restarting"
                 else:
-                    # 无备份：删除覆盖层，回退到镜像自带版本。
+                    # 无（可验签的）备份：删除覆盖层，回退到镜像自带版本。
                     if current.exists():
                         shutil.rmtree(current)
+                    if backup.exists():
+                        shutil.rmtree(backup)
                     if applied.exists():
                         applied.unlink()
                     for name in (

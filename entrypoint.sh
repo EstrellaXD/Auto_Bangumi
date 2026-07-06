@@ -43,8 +43,12 @@ while true; do
     if [ "$(cat "${own_marker}" 2>/dev/null)" != "${want}" ] ||
         [ "$(stat -c '%u:%g' /app/data 2>/dev/null)" != "${want}" ] ||
         [ "$(stat -c '%u:%g' /app/config 2>/dev/null)" != "${want}" ]; then
-        echo "${want}" >"${own_marker}"
-        chown ab:ab -R /app/data /app/config
+        # 先 chown、后写 marker：中途被打断（停容器/崩溃）或部分失败
+        # （NAS/root-squash 报错）时下次启动必须重跑树遍历，否则半途的
+        # 属主状态被记成"已完成"、永不自愈。
+        if chown ab:ab -R /app/data /app/config; then
+            echo "${want}" >"${own_marker}"
+        fi
     fi
 
     su-exec "${PUID}:${PGID}" python main.py &

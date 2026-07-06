@@ -30,10 +30,15 @@ logger = logging.getLogger(__name__)
 # awaits in ``__aenter__``/``__aexit__``.
 # ---------------------------------------------------------------------------
 _client_cache: tuple[tuple, DownloaderClient] | None = None
-_stale_client: DownloaderClient | None = None
+_stale_clients: list[DownloaderClient] = []
 _active_holders: dict[int, int] = {}
 _pending_close: set[int] = set()
 _bookkeeping_lock = asyncio.Lock()
+# 凭据被服务端明确拒绝后的闩锁：记录失败时的连接设置 key。命中时 enter 直接
+# 失败、不再发 login POST——每个 tick 重试一次登录，约 5 次即触发 qB 的
+# WebUI IP ban。设置变更（key 不同）自然解锁；同值重存经
+# clear_credential_latch()（AppContext.reload_settings）解锁。
+_credential_failed_key: tuple | None = None
 
 # Warn at most once per (client type, operation) when a backend cannot perform
 # an operation, so aria2 users are not spammed every rename cycle.
@@ -47,11 +52,18 @@ def _settings_key() -> tuple:
 
 def _reset_client_cache() -> None:
     """Drop the cached/stale concrete clients and refcount state (used by tests)."""
-    global _client_cache, _stale_client, _active_holders, _pending_close
+    global _client_cache, _stale_clients, _active_holders, _pending_close
     _client_cache = None
-    _stale_client = None
+    _stale_clients = []
     _active_holders = {}
     _pending_close = set()
+    clear_credential_latch()
+
+
+def clear_credential_latch() -> None:
+    """解除凭据失败闩锁（配置保存后调用，允许用户重试同值凭据）。"""
+    global _credential_failed_key
+    _credential_failed_key = None
 
 
 async def _close_client(client) -> None:
@@ -66,14 +78,12 @@ async def shutdown() -> None:
 
     Invoked by the composition root (`AppContext`) on application shutdown.
     """
-    global _client_cache, _stale_client
-    clients = []
-    if _stale_client is not None:
-        clients.append(_stale_client)
+    global _client_cache, _stale_clients
+    clients = list(_stale_clients)
     if _client_cache is not None:
         clients.append(_client_cache[1])
     _client_cache = None
-    _stale_client = None
+    _stale_clients = []
     for client in clients:
         await _close_client(client)
 
@@ -89,15 +99,18 @@ class DownloadClient:
     """
 
     def __init__(self):
-        global _client_cache, _stale_client
+        global _client_cache
         key = _settings_key()
         self.client: DownloaderClient
+        self._cache_key = key
         if _client_cache is not None and _client_cache[0] == key:
             self.client = _client_cache[1]
         else:
             if _client_cache is not None:
                 # Settings changed: retire the previous client, close it later.
-                _stale_client = _client_cache[1]
+                # 用列表累积——连续两次改设置（期间没有 enter）不得把第一个
+                # 被撤下的客户端顶掉，否则它的连接池泄漏到进程结束。
+                _stale_clients.append(_client_cache[1])
             self.client = self.__getClient()
             _client_cache = (key, self.client)
         self.authed = False
@@ -156,52 +169,69 @@ class DownloadClient:
         return False
 
     async def __aenter__(self):
-        global _stale_client, _client_cache
-        stale_to_close = None
-        async with _bookkeeping_lock:
-            if _stale_client is not None:
-                if _active_holders.get(id(_stale_client), 0) > 0:
-                    # Still in use by another overlapping block; the last
-                    # holder's __aexit__ will close it once released.
-                    _pending_close.add(id(_stale_client))
-                else:
-                    stale_to_close = _stale_client
-                _stale_client = None
-        if stale_to_close is not None:
-            await _close_client(stale_to_close)
+        global _client_cache, _credential_failed_key
+        if (
+            _credential_failed_key is not None
+            and _credential_failed_key == self._cache_key
+        ):
+            # 凭据上次已被服务端明确拒绝且设置未变：不再发 login POST，
+            # 避免逐 tick 累积到 qB 的 IP ban。checker/等待循环读的是
+            # 具体客户端上的失败原因，这里补齐。
+            if hasattr(self.client, "last_auth_error"):
+                self.client.last_auth_error = "credentials"  # type: ignore[attr-defined]
+            raise ConnectionError(
+                "Download client credentials were rejected previously; "
+                "update the downloader settings to retry"
+            )
 
-        if not self.authed:
-            await self.auth()
-            if not self.authed:
-                # __aexit__ never runs when we raise here, so close the
-                # concrete client's connection pool now or it leaks on every
-                # failed connect (#1043) -- unless another already-entered
-                # block still holds it, in which case defer to its
-                # __aexit__ instead of yanking the pool out from under it.
-                close_now = False
-                async with _bookkeeping_lock:
-                    if _client_cache is not None and _client_cache[1] is self.client:
-                        _client_cache = None
-                    if _active_holders.get(id(self.client), 0) > 0:
-                        _pending_close.add(id(self.client))
-                    else:
-                        close_now = True
-                if close_now:
-                    await _close_client(self.client)
-                raise ConnectionError("Download client authentication failed")
-
+        stale_to_close: list[DownloaderClient] = []
         async with _bookkeeping_lock:
+            # 先把自己计入引用——auth() 是 await 点，期间一个"设置变更"块
+            # 可能进来关闭被撤下的客户端；不先占坑的话，自己正在登录的
+            # 客户端会被从脚下抽走。
             _active_holders[id(self.client)] = (
                 _active_holders.get(id(self.client), 0) + 1
             )
+            while _stale_clients:
+                stale = _stale_clients.pop()
+                if _active_holders.get(id(stale), 0) > 0:
+                    # Still in use by another overlapping block; the last
+                    # holder's __aexit__ will close it once released.
+                    _pending_close.add(id(stale))
+                else:
+                    stale_to_close.append(stale)
+        for stale in stale_to_close:
+            await _close_client(stale)
+
+        if not self.authed:
+            # __aexit__ never runs when __aenter__ raises, so every exit path
+            # below must release the holder slot itself -- including
+            # cancellation mid-login, or the count leaks and a retired client
+            # stays pending-close (pool open) forever.
+            try:
+                await self.auth()
+            except BaseException:
+                await self._release_holder()
+                raise
+            if not self.authed:
+                if self.last_auth_error == "credentials":
+                    _credential_failed_key = self._cache_key
+                # Release our slot and close the concrete client's connection
+                # pool now or it leaks on every failed connect (#1043) --
+                # unless another already-entered block still holds it, in
+                # which case defer to its __aexit__ instead of yanking the
+                # pool out from under it.
+                async with _bookkeeping_lock:
+                    if _client_cache is not None and _client_cache[1] is self.client:
+                        _client_cache = None
+                    _pending_close.add(id(self.client))
+                await self._release_holder()
+                raise ConnectionError("Download client authentication failed")
+
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        # The concrete session is reused across operations; do NOT log out
-        # here unless this was the last holder of a client that a concurrent
-        # block already marked for (deferred) close. Teardown is otherwise
-        # deferred to shutdown() (composition root).
-        self.authed = False
+    async def _release_holder(self) -> None:
+        """释放本块对具体客户端的引用；若是最后一个且已标记待关，则关闭。"""
         client = self.client
         to_close = False
         async with _bookkeeping_lock:
@@ -215,6 +245,14 @@ class DownloadClient:
                 _active_holders[id(client)] = count
         if to_close:
             await _close_client(client)
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        # The concrete session is reused across operations; do NOT log out
+        # here unless this was the last holder of a client that a concurrent
+        # block already marked for (deferred) close. Teardown is otherwise
+        # deferred to shutdown() (composition root).
+        self.authed = False
+        await self._release_holder()
 
     async def auth(self):
         self.authed = await self.client.auth()

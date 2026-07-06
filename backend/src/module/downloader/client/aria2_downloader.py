@@ -26,6 +26,22 @@ _STATUS_FILTER_MAP: dict[str, set[str]] = {
 }
 
 
+def _map_qb_state(aria2_status: str, finished: bool) -> str:
+    """aria2 status -> qB 状态词汇。WebUI 的状态徽标/文案只认 qB 的取值，
+    直接透传 aria2 原词会显示未翻译的原始字符串。"""
+    if aria2_status == "active":
+        return "uploading" if finished else "downloading"
+    if aria2_status == "waiting":
+        return "queuedUP" if finished else "queuedDL"
+    if aria2_status == "paused":
+        return "pausedUP" if finished else "pausedDL"
+    if aria2_status == "complete":
+        return "pausedUP"
+    if aria2_status in ("error", "removed"):
+        return "error"
+    return aria2_status
+
+
 class Aria2RpcError(Exception):
     """aria2 JSON-RPC 返回的业务错误（服务器收到了请求，但拒绝执行）。"""
 
@@ -453,6 +469,17 @@ class Aria2Downloader:
             # 转 int 再判断，否则磁力链拉元数据阶段 totalLength "0" 会除零。
             total = int(d.get("totalLength", 0) or 0)
             completed = int(d.get("completedLength", 0) or 0)
+            dlspeed = int(d.get("downloadSpeed", 0) or 0)
+            num_seeds = int(d.get("numSeeders", 0) or 0)
+            connections = int(d.get("connections", 0) or 0)
+            finished = total > 0 and completed >= total
+            # ETA 沿 qB 约定：8640000 = 未知/无穷（UI 渲染为 "-"）。
+            if finished:
+                eta = 0
+            elif dlspeed > 0 and total > 0:
+                eta = (total - completed) // dlspeed
+            else:
+                eta = 8640000
             result.append(
                 {
                     "hash": gid,
@@ -460,11 +487,22 @@ class Aria2Downloader:
                     "save_path": d.get("dir", ""),
                     "tags": tags_str,
                     "category": torrent_category or "",
-                    "state": aria2_status,
+                    "state": _map_qb_state(aria2_status, finished),
                     "size": total,
                     "progress": completed / total if total > 0 else 0.0,
-                    "dlspeed": int(d.get("downloadSpeed", 0) or 0),
+                    "dlspeed": dlspeed,
                     "upspeed": int(d.get("uploadSpeed", 0) or 0),
+                    "num_seeds": num_seeds,
+                    # qB 的 num_leechs ≈ 非做种连接数；aria2 只报连接总数。
+                    "num_leechs": max(connections - num_seeds, 0),
+                    "eta": eta,
+                    # aria2 不记录添加时间；用本地 gid 映射的入库时间近似
+                    # （UI 按 added_on 排序），无记录时归 0 排到最后。
+                    "added_on": (
+                        int(info.created_at.timestamp())
+                        if info and info.created_at
+                        else 0
+                    ),
                 }
             )
         return result

@@ -40,6 +40,9 @@ class QbDownloader:
         # requests don't each fire their own login attempt and trip
         # qBittorrent's IP ban (#1046-adjacent).
         self._auth_lock = asyncio.Lock()
+        # 每完成一次真实登录尝试 +1：让排在锁后的并发等待者识别"我等待期间
+        # 已有一次登录被凭据拒绝"，从而不再补发自己的 POST。
+        self._auth_generation = 0
 
     def _url(self, endpoint: str) -> str:
         return f"{self.host}/api/v2/{endpoint}"
@@ -65,6 +68,34 @@ class QbDownloader:
         # repeated operations don't re-login every cycle (#1039 / #900).
         if self._client is not None and self._authed:
             return True
+        # 单飞：并发的 loop tick 同时 auth() 时只发一次 login POST——失败的
+        # 并发登录会各自计入 qB 的 WebUI IP ban 阈值（默认 5 次即封禁）。
+        generation = self._auth_generation
+        async with self._auth_lock:
+            if self._client is not None and self._authed:
+                return True
+            if (
+                generation != self._auth_generation
+                and self.last_auth_error == "credentials"
+            ):
+                # 等锁期间已有一次真实登录被凭据拒绝：共享这个否定结果，
+                # 不再补发自己的 POST。之后的全新 auth() 调用（如 checker
+                # 主动探测）不受影响，仍可重试并在成功后清除失败原因。
+                return False
+            return await self._locked_auth(retry)
+
+    async def _locked_auth(self, retry=3):
+        """auth() 的主体；调用方必须已持有 ``_auth_lock``。"""
+        if self._client is not None and self._authed:
+            return True
+        try:
+            return await self._login_attempt(retry)
+        finally:
+            # 尝试结束后才 +1：在本次尝试期间排队的等待者捕获的是旧值，
+            # 醒来后据此识别"结果已出"，共享失败结论而非重复 POST。
+            self._auth_generation += 1
+
+    async def _login_attempt(self, retry=3):
         times = 0
         use_https = self.host.startswith("https://")
         if self._client is None:
@@ -154,7 +185,7 @@ class QbDownloader:
                 # Another waiter may have already refreshed the session while
                 # we were blocked on the lock.
                 if not self._authed:
-                    await self.auth()
+                    await self._locked_auth()
             if not self._authed:
                 raise ConnectionError(
                     f"Re-authentication to qBittorrent at {self.host} "
