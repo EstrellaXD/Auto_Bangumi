@@ -105,6 +105,8 @@ declare global {
   const useBreakpoints: typeof import('@vueuse/core')['useBreakpoints']
   const useClipboard: typeof import('@vueuse/core')['useClipboard']
   const useConfigStore: typeof import('../../src/store/config')['useConfigStore']
+  const useConfirm: typeof import('../../src/hooks/useConfirm')['useConfirm']
+  const useConfirmState: typeof import('../../src/hooks/useConfirm')['useConfirmState']
   const useCssModule: typeof import('vue')['useCssModule']
   const useCssVars: typeof import('vue')['useCssVars']
   const useDarkMode: typeof import('../../src/hooks/useDarkMode')['useDarkMode']

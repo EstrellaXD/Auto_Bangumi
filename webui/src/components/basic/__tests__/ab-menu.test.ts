@@ -2,11 +2,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import AbMenu from '../ab-menu.vue';
 
-const items = (handler = vi.fn()) => [
-  { key: 'enable', label: 'Enable rule', handler },
-  { key: 'archive', label: () => 'Archive rule' },
-  { key: 'delete', label: 'Delete rule', danger: true },
-];
+function items(handler = vi.fn()) {
+  return [
+    { key: 'enable', label: 'Enable rule', handler },
+    { key: 'archive', label: () => 'Archive rule' },
+    { key: 'delete', label: 'Delete rule', danger: true },
+  ];
+}
 
 describe('ab-menu', () => {
   it('renders item labels (string and function) after opening', async () => {

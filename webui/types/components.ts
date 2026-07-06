@@ -11,6 +11,11 @@ export interface AbSettingProps {
   css?: string;
   prop?: any;
   bottomLine?: boolean;
+  /** 字段说明文字（显示在标签下方） */
+  description?: string;
+  /** 校验错误文案（显示为错误态） */
+  error?: string;
+  required?: boolean;
 }
 
 export type SettingItem<T> = AbSettingProps & {

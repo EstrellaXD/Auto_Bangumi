@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Down, Right } from '@icon-park/vue-next';
+import { Down } from '@icon-park/vue-next';
 
 /** v-model open state */
 const open = defineModel<boolean>('open', { default: false });
@@ -7,8 +7,18 @@ const open = defineModel<boolean>('open', { default: false });
 
 <template>
   <div class="advanced-section">
-    <button class="advanced-toggle" @click="open = !open">
-      <component :is="open ? Down : Right" theme="outline" size="14" />
+    <button
+      type="button"
+      class="advanced-toggle"
+      :aria-expanded="open"
+      @click="open = !open"
+    >
+      <Down
+        class="advanced-chevron"
+        :class="{ 'advanced-chevron--open': open }"
+        theme="outline"
+        size="14"
+      />
       {{ $t('search.confirm.advanced') }}
     </button>
 
@@ -41,6 +51,25 @@ const open = defineModel<boolean>('open', { default: false });
 
   &:hover {
     color: var(--color-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+}
+
+.advanced-chevron {
+  transform: rotate(-90deg);
+  transition: transform var(--transition-normal);
+
+  &--open {
+    transform: rotate(0deg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
   }
 }
 

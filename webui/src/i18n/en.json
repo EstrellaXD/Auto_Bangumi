@@ -484,7 +484,11 @@
     "select": "Select",
     "selectAll": "Select All",
     "items": "items",
-    "moreActions": "More actions"
+    "moreActions": "More actions",
+    "copy": "Copy",
+    "clear": "Clear",
+    "toggle_password": "Show or hide password",
+    "empty": "Nothing here yet"
   },
   "theme": {
     "light": "Light",

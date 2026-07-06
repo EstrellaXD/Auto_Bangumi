@@ -1,40 +1,29 @@
 <script lang="ts" setup>
-import { useId } from 'vue';
-import { NDynamicTags, NSelect, NSwitch } from 'naive-ui';
+import { NDynamicTags } from 'naive-ui';
 import { isObject } from 'radash';
-import type { SelectOption } from 'naive-ui';
+import AbField from './basic/ab-field.vue';
+import AbInput from './basic/ab-input.vue';
+import AbSelect from './basic/ab-select.vue';
+import AbSwitch from './basic/ab-switch.vue';
 import type { AbSettingProps, SelectItem } from '#/components';
 
+// 设置行：ab-field（标签/说明/错误/aria）+ 对应控件的组合。
 const props = withDefaults(defineProps<AbSettingProps>(), {
   css: '',
   bottomLine: false,
+  description: '',
+  error: '',
+  required: false,
 });
 
-
 const data = defineModel<any>('data');
-
-// 每个设置项一对稳定 id：原生 input 用 <label for>，
-// naive-ui 组件（无法透传 id 到焦点元素）用 aria-label/aria-labelledby
-const controlId = useId();
-const labelId = useId();
 
 const labelText = computed(() =>
   typeof props.label === 'function' ? props.label() : props.label
 );
 
-// 旧 AbSelect 接受 items: Array<SelectItem | string>；NSelect 需要
-// options: Array<{ label, value }>，这里做一层适配
-const selectOptions = computed<SelectOption[]>(() => {
-  const items: Array<SelectItem | string> = props.prop?.items ?? [];
-  return items.map((item) =>
-    isObject(item)
-      ? { label: item.label ?? item.value, value: item.value }
-      : { label: item, value: item }
-  );
-});
-
-// 旧组件允许 v-model 绑定对象（SelectItem）；NSelect 只接受基础类型，
-// 读取时取 .value，写回时保持字符串（配置值均为字符串）
+// 旧组件允许 v-model 绑定对象（SelectItem）；读取时取 .value，
+// 写回时保持字符串（配置值均为字符串）
 const selectValue = computed<string | number | null>({
   get() {
     return isObject(data.value) ? (data.value as SelectItem).value : data.value;
@@ -47,36 +36,37 @@ const selectValue = computed<string | number | null>({
 
 <template>
   <div class="setting-item">
-    <ab-label
+    <AbField
       :label="label"
-      :for-id="type === 'input' ? controlId : undefined"
-      :label-id="labelId"
+      :description="description"
+      :error="error"
+      :required="required"
     >
-      <NSwitch
+      <AbSwitch
         v-if="type === 'switch'"
-        v-model:value="data"
+        v-model="data"
         :class="css"
         :aria-label="labelText"
-        :aria-labelledby="labelId"
-      ></NSwitch>
+      ></AbSwitch>
 
-      <NSelect
+      <AbSelect
         v-else-if="type === 'select'"
-        v-model:value="selectValue"
-        :options="selectOptions"
+        v-model="selectValue"
+        :items="prop?.items ?? []"
         :class="css"
         class="setting-select"
         :aria-label="labelText"
-      ></NSelect>
+      ></AbSelect>
 
-      <input
+      <AbInput
         v-else-if="type === 'input'"
-        :id="controlId"
         v-model="data"
-        ab-input
         :class="css"
-        v-bind="prop"
-      />
+        :type="prop?.type"
+        :placeholder="prop?.placeholder"
+        :min="prop?.min"
+        :max="prop?.max"
+      ></AbInput>
 
       <div v-else-if="type === 'dynamic-tags'" class="dynamic-tags-wrapper">
         <NDynamicTags
@@ -85,7 +75,7 @@ const selectValue = computed<string | number | null>({
           :aria-label="labelText"
         ></NDynamicTags>
       </div>
-    </ab-label>
+    </AbField>
 
     <div v-if="bottomLine" class="setting-divider"></div>
   </div>
@@ -104,7 +94,8 @@ const selectValue = computed<string | number | null>({
   :deep(input),
   :deep(select),
   :deep(.n-select),
-  :deep(.n-input) {
+  :deep(.n-input),
+  :deep(.ab-input) {
     max-width: 100%;
   }
 }

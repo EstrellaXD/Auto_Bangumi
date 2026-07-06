@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { NButton } from 'naive-ui';
 import { Caution, Close } from '@icon-park/vue-next';
 import type { OffsetSuggestionDetail, TMDBSummary } from '#/bangumi';
 
@@ -216,20 +215,19 @@ function handleCancel() {
 
           <!-- Footer -->
           <footer class="dialog-footer">
-            <NButton
-              size="small"
-              type="primary"
-              secondary
+            <ab-button
+              size="sm"
+              variant="secondary"
               @click="handleCancel"
             >
               {{ t('offset.cancel') }}
-            </NButton>
-            <NButton type="primary" size="small" @click="handleKeep">
+            </ab-button>
+            <ab-button variant="primary" size="sm" @click="handleKeep">
               {{ t('offset.keep') }}
-            </NButton>
-            <NButton size="small" type="primary" @click="handleApply">
+            </ab-button>
+            <ab-button size="sm" variant="primary" @click="handleApply">
               {{ t('offset.apply') }}
-            </NButton>
+            </ab-button>
           </footer>
         </div>
       </div>

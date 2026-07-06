@@ -5,10 +5,15 @@ const props = withDefaults(
     /** 无文本按钮的可访问名称（必填） */
     label: string;
     size?: 'sm' | 'md';
+    /** solid：主色填充（用于卡片上的主要动作）；round：圆形 */
+    variant?: 'ghost' | 'solid';
+    round?: boolean;
     disabled?: boolean;
   }>(),
   {
     size: 'md',
+    variant: 'ghost',
+    round: false,
     disabled: false,
   }
 );
@@ -24,7 +29,11 @@ function onClick(event: MouseEvent) {
 <template>
   <button
     class="ab-icon-btn"
-    :class="`ab-icon-btn--${size}`"
+    :class="[
+      `ab-icon-btn--${size}`,
+      `ab-icon-btn--${variant}`,
+      round && 'ab-icon-btn--round',
+    ]"
     type="button"
     :aria-label="label"
     :title="label"
@@ -84,6 +93,20 @@ function onClick(event: MouseEvent) {
       width: 36px;
       height: 36px;
     }
+  }
+
+  &--solid {
+    background: var(--color-primary);
+    color: var(--color-white);
+
+    &:hover:not(:disabled) {
+      background: var(--color-primary-hover);
+      color: var(--color-white);
+    }
+  }
+
+  &--round {
+    border-radius: var(--radius-full);
   }
 }
 </style>

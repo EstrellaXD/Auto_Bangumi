@@ -24,9 +24,9 @@ const props = withDefaults(
   }
 );
 
-const value = defineModel<string>('value', { required: true });
-
 const emit = defineEmits<{ click: [value: string] }>();
+
+const value = defineModel<string>('value', { required: true });
 
 const selected = computed(
   () =>
@@ -63,7 +63,7 @@ function onMainClick() {
       {{ selected?.label }}
     </button>
 
-    <ab-menu :items="menuItems" align="right">
+    <AbMenu :items="menuItems" align="right">
       <template #trigger>
         <button
           type="button"
@@ -74,7 +74,7 @@ function onMainClick() {
           <Down size="12" />
         </button>
       </template>
-    </ab-menu>
+    </AbMenu>
   </div>
 </template>
 

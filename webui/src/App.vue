@@ -147,6 +147,7 @@ const naiveTheme = computed(() => (isDark.value ? darkTheme : null));
       <NMessageProvider>
         <NDialogProvider>
           <RouterView></RouterView>
+          <ab-confirm-host />
         </NDialogProvider>
       </NMessageProvider>
     </NConfigProvider>

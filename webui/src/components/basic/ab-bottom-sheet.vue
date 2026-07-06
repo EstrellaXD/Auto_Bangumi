@@ -146,6 +146,11 @@ function close() {
             <div class="ab-bottom-sheet__content">
               <slot />
             </div>
+
+            <!-- Footer actions -->
+            <div v-if="$slots.footer" class="ab-bottom-sheet__footer">
+              <slot name="footer" />
+            </div>
           </DialogPanel>
         </div>
       </TransitionChild>
@@ -157,22 +162,22 @@ function close() {
 .ab-bottom-sheet {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: var(--z-modal);
   display: flex;
   align-items: flex-end;
 
   &__backdrop {
     position: fixed;
     inset: 0;
-    z-index: 100;
-    background: rgba(0, 0, 0, 0.4);
+    z-index: var(--z-modal-backdrop);
+    background: var(--color-overlay);
     backdrop-filter: blur(4px);
   }
 
   &__container {
     position: fixed;
     inset: 0;
-    z-index: 101;
+    z-index: var(--z-modal);
     display: flex;
     align-items: flex-end;
     justify-content: center;
@@ -181,7 +186,6 @@ function close() {
 
   &__panel {
     position: relative;
-    z-index: 102;
     width: 100%;
     max-width: 640px;
     max-height: 85dvh; // Use dynamic viewport height for iOS Safari keyboard support
@@ -243,6 +247,14 @@ function close() {
     :deep(select) {
       scroll-margin-bottom: 20px;
     }
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 20px;
+    border-top: 1px solid var(--color-border);
   }
 }
 </style>
