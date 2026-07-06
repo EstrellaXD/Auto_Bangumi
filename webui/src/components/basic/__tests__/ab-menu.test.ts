@@ -11,7 +11,7 @@ function items(handler = vi.fn()) {
 }
 
 describe('ab-menu', () => {
-  it('renders item labels (string and function) after opening', async () => {
+  it('should render item labels (string and function) after opening', async () => {
     const wrapper = mount(AbMenu, {
       props: { items: items() },
       slots: { trigger: '<button type="button">Actions</button>' },
@@ -22,7 +22,7 @@ describe('ab-menu', () => {
     expect(wrapper.text()).toContain('Archive rule');
   });
 
-  it('calls the item handler and emits select on item click', async () => {
+  it('should call the item handler and emits select on item click', async () => {
     const handler = vi.fn();
     const wrapper = mount(AbMenu, {
       props: { items: items(handler) },
@@ -37,7 +37,7 @@ describe('ab-menu', () => {
     });
   });
 
-  it('marks danger items with the danger class', async () => {
+  it('should mark danger items with the danger class', async () => {
     const wrapper = mount(AbMenu, {
       props: { items: items() },
       slots: { trigger: '<button type="button">Actions</button>' },

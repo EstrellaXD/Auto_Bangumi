@@ -1,9 +1,20 @@
 <script lang="ts" setup>
-import { NPopconfirm } from 'naive-ui';
 import { Delete } from '@icon-park/vue-next';
+import { useConfirm } from '@/hooks/useConfirm';
 import type { PasskeyItem } from '#/passkey';
 
 const { t } = useMyI18n();
+const { confirm } = useConfirm();
+
+async function onDeleteClick(passkey: PasskeyItem) {
+  const ok = await confirm({
+    title: t('passkey.delete'),
+    body: t('passkey.delete_confirm'),
+    confirmText: t('passkey.delete'),
+    danger: true,
+  });
+  if (ok) handleDelete(passkey);
+}
 const {
   passkeys,
   loading,
@@ -110,23 +121,14 @@ function formatDate(dateString: string | null): string {
               {{ $t('passkey.synced') }}
             </div>
           </div>
-          <NPopconfirm
-            :positive-text="$t('passkey.delete')"
-            :negative-text="$t('config.cancel')"
-            :positive-button-props="{ type: 'error' }"
-            @positive-click="handleDelete(passkey)"
+          <ab-icon-button
+            size="sm"
+            class="passkey-delete"
+            :label="$t('passkey.delete')"
+            @click="onDeleteClick(passkey)"
           >
-            <template #trigger>
-              <ab-button
-                size="sm"
-                variant="danger"
-                :aria-label="$t('passkey.delete')"
-              >
-                <Delete size="16" />
-              </ab-button>
-            </template>
-            {{ $t('passkey.delete_confirm') }}
-          </NPopconfirm>
+            <Delete size="16" />
+          </ab-icon-button>
         </div>
       </div>
 
@@ -164,7 +166,6 @@ function formatDate(dateString: string | null): string {
         <div text-14 text-gray-500>
           {{ $t('passkey.register_hint') }}
         </div>
-
       </div>
 
       <template #footer>

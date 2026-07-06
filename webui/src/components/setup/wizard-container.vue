@@ -88,9 +88,8 @@ const { t } = useMyI18n();
       text-align: left;
     }
 
-    :deep(.wizard-actions .n-button),
-    :deep(.test-section .n-button) {
-      min-height: var(--touch-target);
+    :deep(.wizard-actions .ab-btn),
+    :deep(.test-section .ab-btn) {
       padding-left: 18px;
       padding-right: 18px;
     }

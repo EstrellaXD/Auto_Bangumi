@@ -88,7 +88,16 @@ const sections: ConfigSection[] = [
     titleKey: 'config.notification_set.title',
     component: ConfigNotification,
     groups: ['notification'],
-    keywords: ['telegram', 'discord', 'bark', 'wecom', 'gotify', 'pushover', 'webhook', 'token'],
+    keywords: [
+      'telegram',
+      'discord',
+      'bark',
+      'wecom',
+      'gotify',
+      'pushover',
+      'webhook',
+      'token',
+    ],
   },
   {
     id: 'proxy',
@@ -371,8 +380,7 @@ onBeforeRouteLeave(() => {
   font-size: 13px;
   text-align: left;
   cursor: pointer;
-  transition:
-    background-color var(--transition-fast),
+  transition: background-color var(--transition-fast),
     color var(--transition-fast);
 
   &:hover {
@@ -475,7 +483,7 @@ onBeforeRouteLeave(() => {
       width: 100%;
     }
 
-    .n-button {
+    :deep(.ab-btn) {
       flex: 1;
     }
   }

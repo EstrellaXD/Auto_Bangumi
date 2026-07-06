@@ -47,7 +47,7 @@ withDefaults(
   border-bottom: 1px solid var(--color-border);
   user-select: none;
   transition: color var(--transition-normal),
-              border-color var(--transition-normal);
+    border-color var(--transition-normal);
 }
 
 .container-title {
@@ -63,7 +63,7 @@ withDefaults(
   color: var(--color-text);
   font-size: 14px;
   transition: background-color var(--transition-normal),
-              color var(--transition-normal);
+    color var(--transition-normal);
 
   &--flush {
     padding: 0;

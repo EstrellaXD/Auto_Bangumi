@@ -105,7 +105,7 @@ function close() {
                 v-if="closable && showClose"
                 class="ab-modal-close"
                 size="sm"
-                :label="$t('common.cancel')"
+                :label="$t('common.close')"
                 @click="close"
               >
                 <Close theme="outline" size="16" />

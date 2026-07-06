@@ -82,8 +82,7 @@ function onKeydown(event: KeyboardEvent, index: number) {
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: color var(--transition-fast),
-    border-color var(--transition-fast);
+  transition: color var(--transition-fast), border-color var(--transition-fast);
 
   @include forTouch {
     padding: 10px 2px;

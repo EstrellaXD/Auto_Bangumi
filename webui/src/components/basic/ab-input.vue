@@ -17,6 +17,7 @@ const props = withDefaults(
     max?: number;
     step?: number;
     maxlength?: number;
+    autocomplete?: string;
   }>(),
   {
     type: 'text',
@@ -29,12 +30,14 @@ const props = withDefaults(
     max: undefined,
     step: undefined,
     maxlength: undefined,
+    autocomplete: undefined,
   }
 );
 
 const model = defineModel<string | number>({ default: '' });
 
 const field = inject(abFieldInjectionKey, null);
+if (field) field.adopted.value = true;
 
 const revealed = ref(false);
 
@@ -77,6 +80,7 @@ function clear() {
       :max="max"
       :step="step"
       :maxlength="maxlength"
+      :autocomplete="autocomplete"
       :aria-label="ariaLabel"
       :aria-describedby="field?.describedBy.value"
       :aria-invalid="invalid || undefined"
@@ -122,7 +126,13 @@ function clear() {
           stroke-width="2"
           stroke-linejoin="round"
         />
-        <circle cx="12" cy="12" r="2.5" stroke="currentColor" stroke-width="2" />
+        <circle
+          cx="12"
+          cy="12"
+          r="2.5"
+          stroke="currentColor"
+          stroke-width="2"
+        />
       </svg>
       <svg v-else viewBox="0 0 24 24" fill="none" width="14" height="14">
         <path

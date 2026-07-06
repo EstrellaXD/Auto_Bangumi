@@ -1,10 +1,12 @@
 <script lang="ts">
-import { computed, provide, useId } from 'vue';
-import type { ComputedRef, InjectionKey } from 'vue';
+import { computed, provide, ref, useId } from 'vue';
+import type { ComputedRef, InjectionKey, Ref } from 'vue';
 
 export interface AbFieldContext {
   /** 原生控件应设置的 id（配合 <label for>） */
   controlId: string;
+  /** 消费 controlId 的控件置 true —— 只有这时才渲染真正的 <label for> */
+  adopted: Ref<boolean>;
   /** 标签文本节点 id（无法用 for 关联的组件用 aria-labelledby） */
   labelId: string;
   /** description/error 节点 id 列表，控件应设为 aria-describedby */
@@ -53,22 +55,34 @@ const describedBy = computed(() => {
 
 const invalid = computed(() => Boolean(props.error));
 
-provide(abFieldInjectionKey, { controlId, labelId, describedBy, invalid });
+// ab-input 等原生控件在挂载时认领 controlId；naive 组件无法接收 id，
+// 走 aria-labelledby（此时渲染 span 而非悬空的 label[for]）
+const adopted = ref(false);
+
+provide(abFieldInjectionKey, {
+  controlId,
+  adopted,
+  labelId,
+  describedBy,
+  invalid,
+});
 </script>
 
 <template>
   <div class="ab-field" :class="{ 'ab-field--invalid': invalid }">
     <div class="ab-field-main">
       <div class="ab-field-heading">
-        <label :id="labelId" class="ab-field-label" :for="controlId">
+        <Component
+          :is="adopted ? 'label' : 'span'"
+          :id="labelId"
+          class="ab-field-label"
+          :for="adopted ? controlId : undefined"
+        >
           {{ labelText }}
-          <span
-            v-if="required"
-            class="ab-field-required"
-            aria-hidden="true"
+          <span v-if="required" class="ab-field-required" aria-hidden="true"
             >*</span
           >
-        </label>
+        </Component>
         <p v-if="description" :id="descriptionId" class="ab-field-description">
           {{ description }}
         </p>

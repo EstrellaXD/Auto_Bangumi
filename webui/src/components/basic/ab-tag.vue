@@ -19,12 +19,14 @@ defineEmits<{ close: [] }>();
 
 <template>
   <span class="ab-tag" :class="`ab-tag--${type}`">
-    <span class="ab-tag-text"><slot>{{ title }}</slot></span>
+    <span class="ab-tag-text"
+      ><slot>{{ title }}</slot></span
+    >
     <button
       v-if="closable"
       type="button"
       class="ab-tag-close"
-      :aria-label="$t('common.cancel')"
+      :aria-label="$t('common.remove')"
       @click.stop="$emit('close')"
     >
       <svg viewBox="0 0 24 24" fill="none" width="10" height="10">
@@ -52,8 +54,7 @@ defineEmits<{ close: [] }>();
   color: var(--color-text);
   font-size: 12px;
   font-weight: 500;
-  transition: border-color var(--transition-fast),
-    color var(--transition-fast);
+  transition: border-color var(--transition-fast), color var(--transition-fast);
 
   // 语义色方块标记
   &::before {

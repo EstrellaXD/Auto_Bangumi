@@ -66,6 +66,7 @@ const selectValue = computed<string | number | null>({
         :placeholder="prop?.placeholder"
         :min="prop?.min"
         :max="prop?.max"
+        :autocomplete="prop?.autocomplete"
       ></AbInput>
 
       <div v-else-if="type === 'dynamic-tags'" class="dynamic-tags-wrapper">

@@ -489,7 +489,9 @@
     "clear": "Clear",
     "toggle_password": "Show or hide password",
     "empty": "Nothing here yet",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "close": "Close",
+    "remove": "Remove"
   },
   "theme": {
     "light": "Light",

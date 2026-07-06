@@ -26,8 +26,13 @@ const startY = ref(0);
 const pullStyle = computed(() => {
   if (pullDistance.value > 0) {
     return {
-      transform: `translateY(${Math.min(pullDistance.value, props.threshold * 1.5)}px)`,
-      transition: isPulling.value ? 'none' : 'transform var(--transition-normal)',
+      transform: `translateY(${Math.min(
+        pullDistance.value,
+        props.threshold * 1.5
+      )}px)`,
+      transition: isPulling.value
+        ? 'none'
+        : 'transform var(--transition-normal)',
     };
   }
   return {
@@ -101,10 +106,7 @@ function onTouchEnd() {
       aria-live="polite"
       :aria-label="loading ? $t('common.loading') : undefined"
     >
-      <div
-        v-if="loading"
-        class="ab-pull-refresh__spinner"
-      />
+      <div v-if="loading" class="ab-pull-refresh__spinner" />
       <svg
         v-else
         class="ab-pull-refresh__arrow"

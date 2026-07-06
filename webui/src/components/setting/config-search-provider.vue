@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { NPopconfirm } from 'naive-ui';
 import { Delete, EditTwo, Plus } from '@icon-park/vue-next';
+import { useConfirm } from '@/hooks/useConfirm';
 
 interface SearchProvider {
   name: string;
@@ -8,6 +8,17 @@ interface SearchProvider {
 }
 
 const { t } = useMyI18n();
+const { confirm } = useConfirm();
+
+async function onDeleteClick(index: number) {
+  const ok = await confirm({
+    title: t('config.search_provider_set.remove'),
+    body: t('config.search_provider_set.delete_confirm'),
+    confirmText: t('config.search_provider_set.remove'),
+    danger: true,
+  });
+  if (ok) handleDelete(index);
+}
 const message = useMessage();
 
 // State
@@ -179,24 +190,15 @@ function validateUrl(url: string): boolean {
             >
               <EditTwo size="16" />
             </ab-button>
-            <NPopconfirm
+            <ab-icon-button
               v-if="!isDefaultProvider(provider.name)"
-              :positive-text="$t('config.search_provider_set.remove')"
-              :negative-text="$t('config.cancel')"
-              :positive-button-props="{ type: 'error' }"
-              @positive-click="handleDelete(index)"
+              size="sm"
+              class="provider-delete"
+              :label="$t('config.search_provider_set.remove')"
+              @click="onDeleteClick(index)"
             >
-              <template #trigger>
-                <ab-button
-                  size="sm"
-                  variant="danger"
-                  :aria-label="$t('config.search_provider_set.remove')"
-                >
-                  <Delete size="16" />
-                </ab-button>
-              </template>
-              {{ $t('config.search_provider_set.delete_confirm') }}
-            </NPopconfirm>
+              <Delete size="16" />
+            </ab-icon-button>
           </div>
         </div>
       </div>
@@ -244,7 +246,6 @@ function validateUrl(url: string): boolean {
         <div v-if="formUrl && !validateUrl(formUrl)" class="validation-warning">
           {{ $t('config.search_provider_set.url_missing_placeholder') }}
         </div>
-
       </div>
 
       <template #footer>
@@ -295,7 +296,6 @@ function validateUrl(url: string): boolean {
         <div v-if="formUrl && !validateUrl(formUrl)" class="validation-warning">
           {{ $t('config.search_provider_set.url_missing_placeholder') }}
         </div>
-
       </div>
 
       <template #footer>
@@ -387,5 +387,13 @@ function validateUrl(url: string): boolean {
   padding: 8px 12px;
   background: color-mix(in srgb, var(--color-danger, #ef4444) 10%, transparent);
   border-radius: 6px;
+}
+.provider-delete {
+  color: var(--color-danger);
+
+  &:hover:not(:disabled) {
+    color: var(--color-danger);
+    background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+  }
 }
 </style>

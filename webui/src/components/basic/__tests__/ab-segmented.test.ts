@@ -9,7 +9,7 @@ const options = [
 ];
 
 describe('ab-segmented', () => {
-  it('marks the selected option', () => {
+  it('should mark the selected option', () => {
     const wrapper = mount(AbSegmented, {
       props: { options, value: 'airing' },
     });
@@ -18,7 +18,7 @@ describe('ab-segmented', () => {
     expect(tabs[0].attributes('aria-selected')).toBe('false');
   });
 
-  it('updates v-model on click', async () => {
+  it('should update v-model on click', async () => {
     const wrapper = mount(AbSegmented, {
       props: { options, value: 'all' },
     });
@@ -26,7 +26,7 @@ describe('ab-segmented', () => {
     expect(wrapper.emitted('update:value')?.[0]).toEqual(['archived']);
   });
 
-  it('moves selection with arrow keys', async () => {
+  it('should move selection with arrow keys', async () => {
     const wrapper = mount(AbSegmented, {
       props: { options, value: 'all' },
     });

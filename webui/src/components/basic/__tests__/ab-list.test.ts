@@ -9,7 +9,7 @@ const items = [
 ];
 
 describe('ab-list', () => {
-  it('renders one row per item via the row slot', () => {
+  it('should render one row per item via the row slot', () => {
     const wrapper = mount(AbList, {
       props: { items },
       slots: { row: `<template #row="{ item }">{{ item.name }}</template>` },
@@ -18,7 +18,7 @@ describe('ab-list', () => {
     expect(wrapper.text()).toContain('怪兽8号');
   });
 
-  it('emits selection updates when a checkbox is toggled', async () => {
+  it('should emit selection updates when a checkbox is toggled', async () => {
     const wrapper = mount(AbList, {
       props: { items, selectable: true, selected: [] },
     });
@@ -28,7 +28,7 @@ describe('ab-list', () => {
     expect(wrapper.emitted('update:selected')?.at(-1)).toEqual([[1]]);
   });
 
-  it('select-all toggles every row', async () => {
+  it('should toggle every row when select-all is clicked', async () => {
     const wrapper = mount(AbList, {
       props: { items, selectable: true, selected: [] },
     });
@@ -36,14 +36,14 @@ describe('ab-list', () => {
     expect(wrapper.emitted('update:selected')?.at(-1)).toEqual([[1, 2, 3]]);
   });
 
-  it('shows skeleton rows while loading', () => {
+  it('should show skeleton rows while loading', () => {
     const wrapper = mount(AbList, {
       props: { items: [], loading: true },
     });
     expect(wrapper.find('.ab-skeleton').exists()).toBe(true);
   });
 
-  it('shows the empty slot when there are no items', () => {
+  it('should show the empty slot when there are no items', () => {
     const wrapper = mount(AbList, {
       props: { items: [] },
       slots: { empty: '<p id="empty-msg">nothing</p>' },
@@ -51,7 +51,7 @@ describe('ab-list', () => {
     expect(wrapper.find('#empty-msg').exists()).toBe(true);
   });
 
-  it('emits row-click with the item', async () => {
+  it('should emit row-click with the item', async () => {
     const wrapper = mount(AbList, { props: { items } });
     await wrapper.findAll('.ab-list-row')[2].trigger('click');
     expect(wrapper.emitted('row-click')?.[0]?.[0]).toMatchObject({ id: 3 });

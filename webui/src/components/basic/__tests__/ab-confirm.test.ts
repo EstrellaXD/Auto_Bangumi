@@ -8,34 +8,30 @@ async function tick() {
 }
 
 describe('useConfirm + ab-confirm-host', () => {
-  it('resolves true when the confirm button is clicked', async () => {
+  it('should resolve true when the confirm button is clicked', async () => {
     const wrapper = mount(AbConfirmHost, { attachTo: document.body });
     const { confirm } = useConfirm();
     const result = confirm({ title: 'Delete rule?', body: 'Files stay.' });
     await tick();
     expect(document.body.textContent).toContain('Delete rule?');
 
-    (
-      document.querySelector('.ab-confirm-ok') as HTMLButtonElement
-    ).click();
+    (document.querySelector('.ab-confirm-ok') as HTMLButtonElement).click();
     await expect(result).resolves.toBe(true);
     wrapper.unmount();
   });
 
-  it('resolves false when cancelled', async () => {
+  it('should resolve false when cancelled', async () => {
     const wrapper = mount(AbConfirmHost, { attachTo: document.body });
     const { confirm } = useConfirm();
     const result = confirm({ title: 'Reset log?' });
     await tick();
 
-    (
-      document.querySelector('.ab-confirm-cancel') as HTMLButtonElement
-    ).click();
+    (document.querySelector('.ab-confirm-cancel') as HTMLButtonElement).click();
     await expect(result).resolves.toBe(false);
     wrapper.unmount();
   });
 
-  it('renders danger variant confirm button when danger is set', async () => {
+  it('should render danger variant confirm button when danger is set', async () => {
     const wrapper = mount(AbConfirmHost, { attachTo: document.body });
     const { confirm } = useConfirm();
     const result = confirm({ title: 'Delete rule?', danger: true });

@@ -310,11 +310,7 @@ function groupNeedsReview(group: BangumiGroup): boolean {
                   :title="rule.subtitle"
                   type="info"
                 />
-                <ab-tag
-                  v-if="rule.source"
-                  :title="rule.source"
-                  type="info"
-                />
+                <ab-tag v-if="rule.source" :title="rule.source" type="info" />
               </div>
               <div
                 v-if="rule.filter && rule.filter.length > 0"

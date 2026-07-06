@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils';
 import AbInput from '../ab-input.vue';
 
 describe('ab-input', () => {
-  it('binds v-model', async () => {
+  it('should bind v-model', async () => {
     const wrapper = mount(AbInput, {
       props: {
         modelValue: 'abc',
@@ -15,14 +15,14 @@ describe('ab-input', () => {
     expect(wrapper.props('modelValue')).toBe('https://mikanani.me');
   });
 
-  it('applies the error class when error is set', () => {
+  it('should apply the error class when error is set', () => {
     const wrapper = mount(AbInput, {
       props: { modelValue: '', error: true },
     });
     expect(wrapper.classes()).toContain('ab-input--error');
   });
 
-  it('clears the value via the clear button when clearable', async () => {
+  it('should clear the value via the clear button when clearable', async () => {
     const wrapper = mount(AbInput, {
       props: {
         modelValue: 'abc',
@@ -35,7 +35,7 @@ describe('ab-input', () => {
     expect(wrapper.props('modelValue')).toBe('');
   });
 
-  it('toggles password visibility', async () => {
+  it('should toggle password visibility', async () => {
     const wrapper = mount(AbInput, {
       props: { modelValue: 'secret', type: 'password' },
     });
@@ -44,7 +44,7 @@ describe('ab-input', () => {
     expect(wrapper.find('input').attributes('type')).toBe('text');
   });
 
-  it('emits numbers for type=number', async () => {
+  it('should emit numbers for type=number', async () => {
     const wrapper = mount(AbInput, {
       props: { modelValue: 0, type: 'number' },
     });

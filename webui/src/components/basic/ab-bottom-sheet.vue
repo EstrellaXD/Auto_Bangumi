@@ -43,17 +43,21 @@ function handleViewportResize() {
 }
 
 // Set up visualViewport listeners when sheet is shown
-watch(() => props.show, (isVisible) => {
-  if (isVisible && window.visualViewport) {
-    window.visualViewport.addEventListener('resize', handleViewportResize);
-    window.visualViewport.addEventListener('scroll', handleViewportResize);
-    handleViewportResize();
-  } else if (window.visualViewport) {
-    window.visualViewport.removeEventListener('resize', handleViewportResize);
-    window.visualViewport.removeEventListener('scroll', handleViewportResize);
-    keyboardHeight.value = 0;
-  }
-}, { immediate: true });
+watch(
+  () => props.show,
+  (isVisible) => {
+    if (isVisible && window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleViewportResize);
+      window.visualViewport.addEventListener('scroll', handleViewportResize);
+      handleViewportResize();
+    } else if (window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', handleViewportResize);
+      window.visualViewport.removeEventListener('scroll', handleViewportResize);
+      keyboardHeight.value = 0;
+    }
+  },
+  { immediate: true }
+);
 
 onUnmounted(() => {
   if (window.visualViewport) {

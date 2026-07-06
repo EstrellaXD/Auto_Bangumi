@@ -8,7 +8,6 @@ definePage({
   name: 'Downloader',
 });
 
-
 const { t } = useMyI18n();
 const { config } = storeToRefs(useConfigStore());
 const { getConfig } = useConfigStore();
@@ -33,7 +32,6 @@ async function onDeleteSelected() {
   });
   if (ok) deleteSelected(false);
 }
-
 
 const isNull = computed(() => {
   return config.value.downloader.host === '';
@@ -393,7 +391,7 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
   @include forMobile {
     width: 100%;
 
-    :deep(.n-button) {
+    :deep(.ab-btn) {
       flex: 1;
     }
   }

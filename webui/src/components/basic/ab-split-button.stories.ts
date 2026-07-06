@@ -24,7 +24,6 @@ export const Template: Story = {
       ];
       return { value, options };
     },
-    template:
-      '<ab-split-button v-model:value="value" :options="options" />',
+    template: '<ab-split-button v-model:value="value" :options="options" />',
   }),
 };

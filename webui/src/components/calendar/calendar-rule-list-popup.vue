@@ -36,11 +36,7 @@ const show = defineModel<boolean>('show', { default: false });
           </div>
           <div class="rule-list-item-tags">
             <ab-tag v-if="rule.dpi" :title="rule.dpi" type="info" />
-            <ab-tag
-              v-if="rule.subtitle"
-              :title="rule.subtitle"
-              type="info"
-            />
+            <ab-tag v-if="rule.subtitle" :title="rule.subtitle" type="info" />
             <ab-tag v-if="rule.source" :title="rule.source" type="info" />
           </div>
           <div

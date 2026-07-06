@@ -8,7 +8,7 @@ const options = [
 ];
 
 describe('ab-split-button', () => {
-  it('shows the label of the selected value on the main button', () => {
+  it('should show the label of the selected value on the main button', () => {
     const wrapper = mount(AbSplitButton, {
       props: { options, value: 'collect' },
     });
@@ -17,7 +17,7 @@ describe('ab-split-button', () => {
     );
   });
 
-  it('emits click with the current value', async () => {
+  it('should emit click with the current value', async () => {
     const wrapper = mount(AbSplitButton, {
       props: { options, value: 'enable' },
     });
@@ -25,7 +25,7 @@ describe('ab-split-button', () => {
     expect(wrapper.emitted('click')?.[0]).toEqual(['enable']);
   });
 
-  it('updates v-model when an option is selected from the menu', async () => {
+  it('should update v-model when an option is selected from the menu', async () => {
     const wrapper = mount(AbSplitButton, {
       props: { options, value: 'enable' },
       attachTo: document.body,
@@ -35,7 +35,7 @@ describe('ab-split-button', () => {
     expect(wrapper.emitted('update:value')?.[0]).toEqual(['collect']);
   });
 
-  it('does not emit click while loading', async () => {
+  it('should not emit click while loading', async () => {
     const wrapper = mount(AbSplitButton, {
       props: { options, value: 'enable', loading: true },
     });

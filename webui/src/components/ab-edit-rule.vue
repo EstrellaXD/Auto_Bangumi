@@ -214,137 +214,161 @@ function emitUnarchive() {
     :title="$t('homepage.rule.edit_rule')"
     @close="close"
   >
-
-          <!-- Needs Review Warning Banner -->
-          <div v-if="localRule.needs_review" class="review-warning">
-            <div class="review-warning-main">
-              <span class="review-warning-emoji">⚠️</span>
-              <div class="review-warning-content">
-                <div class="review-warning-title">
-                  {{ $t('offset.needs_review') }}
-                </div>
-                <div
-                  v-if="localRule.needs_review_reason"
-                  class="review-warning-reason"
-                >
-                  {{ localRule.needs_review_reason }}
-                </div>
-              </div>
-            </div>
-            <div class="review-warning-actions">
-              <button
-                class="detect-btn"
-                :disabled="offsetLoading"
-                @click="autoDetectOffset"
-              >
-                <NSpin v-if="offsetLoading" :size="12" />
-                <span v-else>{{ $t('homepage.rule.auto_detect') }}</span>
-              </button>
-              <button
-                class="dismiss-btn"
-                :disabled="dismissingReview"
-                @click="dismissReview"
-              >
-                <NSpin v-if="dismissingReview" :size="12" />
-                <span v-else>{{ $t('offset.dismiss') }}</span>
-              </button>
-            </div>
+    <!-- Needs Review Warning Banner -->
+    <div v-if="localRule.needs_review" class="review-warning">
+      <div class="review-warning-main">
+        <span class="review-warning-emoji">⚠️</span>
+        <div class="review-warning-content">
+          <div class="review-warning-title">
+            {{ $t('offset.needs_review') }}
           </div>
-
-          <!-- Content -->
-          <div class="edit-content">
-            <bangumi-preview v-model:rule="localRule" :poster-src="posterSrc" />
-
-            <bangumi-info-tags :tags="infoTags" />
-
-            <bangumi-rss-link-row
-              :link="rssLink"
-              :copied="copied"
-              @copy="copyRssLink(rssLink)"
-            />
-
-            <!-- Advanced settings -->
-            <advanced-section v-model:open="showAdvanced">
-              <bangumi-filter-field v-model="localRule.filter" />
-
-              <bangumi-offset-field
-                v-model="localRule.season_offset"
-                :label="$t('homepage.rule.season_offset')"
-              />
-
-              <bangumi-offset-field
-                v-model="localRule.episode_offset"
-                :label="$t('homepage.rule.episode_offset')"
-              />
-
-              <div class="weekday-row">
-                <label class="weekday-label">{{
-                  $t('homepage.rule.air_weekday')
-                }}</label>
-                <NSelect
-                  :value="localRule.air_weekday ?? null"
-                  :options="weekdayOptions"
-                  clearable
-                  size="small"
-                  :placeholder="$t('calendar.unknown')"
-                  class="weekday-select"
-                  @update:value="onWeekdayChange"
-                />
-              </div>
-
-              <div class="weekday-row">
-                <label class="weekday-label">{{
-                  $t('homepage.rule.episode_type')
-                }}</label>
-                <NSelect
-                  v-model:value="localRule.episode_type"
-                  :options="episodeTypeOptions"
-                  size="small"
-                  class="weekday-select"
-                />
-              </div>
-
-              <div class="weekday-row">
-                <label class="weekday-label">{{
-                  $t('homepage.rule.preferred_group')
-                }}</label>
-                <ab-input
-                  :model-value="localRule.preferred_group ?? ''"
-                  type="text"
-                  class="preferred-input"
-                  placeholder="ANi"
-                  @update:model-value="localRule.preferred_group = String($event)"
-                />
-              </div>
-
-              <div class="weekday-row">
-                <label class="weekday-label">{{
-                  $t('homepage.rule.preferred_resolution')
-                }}</label>
-                <NSelect
-                  v-model:value="localRule.preferred_resolution"
-                  :options="resolutionOptions"
-                  clearable
-                  filterable
-                  tag
-                  size="small"
-                  :placeholder="$t('homepage.rule.auto_detect')"
-                  class="weekday-select"
-                />
-              </div>
-
-              <p class="preferred-hint">
-                {{ $t('homepage.rule.preferred_hint') }}
-              </p>
-            </advanced-section>
+          <div
+            v-if="localRule.needs_review_reason"
+            class="review-warning-reason"
+          >
+            {{ localRule.needs_review_reason }}
           </div>
+        </div>
+      </div>
+      <div class="review-warning-actions">
+        <button
+          class="detect-btn"
+          :disabled="offsetLoading"
+          @click="autoDetectOffset"
+        >
+          <NSpin v-if="offsetLoading" :size="12" />
+          <span v-else>{{ $t('homepage.rule.auto_detect') }}</span>
+        </button>
+        <button
+          class="dismiss-btn"
+          :disabled="dismissingReview"
+          @click="dismissReview"
+        >
+          <NSpin v-if="dismissingReview" :size="12" />
+          <span v-else>{{ $t('offset.dismiss') }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="edit-content">
+      <bangumi-preview v-model:rule="localRule" :poster-src="posterSrc" />
+
+      <bangumi-info-tags :tags="infoTags" />
+
+      <bangumi-rss-link-row
+        :link="rssLink"
+        :copied="copied"
+        @copy="copyRssLink(rssLink)"
+      />
+
+      <!-- Advanced settings -->
+      <advanced-section v-model:open="showAdvanced">
+        <bangumi-filter-field v-model="localRule.filter" />
+
+        <bangumi-offset-field
+          v-model="localRule.season_offset"
+          :label="$t('homepage.rule.season_offset')"
+        />
+
+        <bangumi-offset-field
+          v-model="localRule.episode_offset"
+          :label="$t('homepage.rule.episode_offset')"
+        />
+
+        <div class="weekday-row">
+          <label class="weekday-label">{{
+            $t('homepage.rule.air_weekday')
+          }}</label>
+          <NSelect
+            :value="localRule.air_weekday ?? null"
+            :options="weekdayOptions"
+            clearable
+            size="small"
+            :placeholder="$t('calendar.unknown')"
+            class="weekday-select"
+            @update:value="onWeekdayChange"
+          />
+        </div>
+
+        <div class="weekday-row">
+          <label class="weekday-label">{{
+            $t('homepage.rule.episode_type')
+          }}</label>
+          <NSelect
+            v-model:value="localRule.episode_type"
+            :options="episodeTypeOptions"
+            size="small"
+            class="weekday-select"
+          />
+        </div>
+
+        <div class="weekday-row">
+          <label class="weekday-label">{{
+            $t('homepage.rule.preferred_group')
+          }}</label>
+          <ab-input
+            :model-value="localRule.preferred_group ?? ''"
+            type="text"
+            class="preferred-input"
+            placeholder="ANi"
+            @update:model-value="localRule.preferred_group = String($event)"
+          />
+        </div>
+
+        <div class="weekday-row">
+          <label class="weekday-label">{{
+            $t('homepage.rule.preferred_resolution')
+          }}</label>
+          <NSelect
+            v-model:value="localRule.preferred_resolution"
+            :options="resolutionOptions"
+            clearable
+            filterable
+            tag
+            size="small"
+            :placeholder="$t('homepage.rule.auto_detect')"
+            class="weekday-select"
+          />
+        </div>
+
+        <p class="preferred-hint">
+          {{ $t('homepage.rule.preferred_hint') }}
+        </p>
+      </advanced-section>
+    </div>
+
+    <!-- 删除确认：嵌套在主弹窗组件树内，headlessui 才会把外层的
+         Escape/遮罩点击挂起，只关闭内层 -->
+    <!-- Delete confirmation dialog -->
+    <ab-modal
+      v-model:show="deleteFileDialog.show"
+      size="sm"
+      :title="$t('homepage.rule.delete')"
+    >
+      <p class="delete-message">
+        {{ $t('homepage.rule.delete_confirm') }}
+      </p>
+      <NCheckbox v-model:checked="deleteLocalFiles" class="delete-files-option">
+        {{ $t('homepage.rule.delete_files_label') }}
+      </NCheckbox>
+
+      <template #footer>
+        <ab-button size="sm" @click="deleteFileDialog.show = false">
+          {{ $t('homepage.rule.cancel_btn') }}
+        </ab-button>
+        <ab-button
+          size="sm"
+          variant="danger"
+          @click="emitDeleteFile(deleteLocalFiles)"
+        >
+          {{ $t('homepage.rule.delete') }}
+        </ab-button>
+      </template>
+    </ab-modal>
 
     <template #footer>
-      <ab-button
-        v-if="localRule.archived"
-        size="sm"
-        @click="emitUnarchive"
-      >
+      <ab-button v-if="localRule.archived" size="sm" @click="emitUnarchive">
         {{ $t('homepage.rule.unarchive') }}
       </ab-button>
       <ab-button v-else size="sm" @click="emitArchive">
@@ -360,37 +384,6 @@ function emitUnarchive() {
       </ab-button>
       <ab-button variant="primary" size="sm" @click="emitApply">
         {{ $t('homepage.rule.apply') }}
-      </ab-button>
-    </template>
-
-  </ab-modal>
-
-  <!-- Delete confirmation dialog -->
-  <ab-modal
-    v-model:show="deleteFileDialog.show"
-    size="sm"
-    :title="$t('homepage.rule.delete')"
-  >
-    <p class="delete-message">
-      {{ $t('homepage.rule.delete_confirm') }}
-    </p>
-    <NCheckbox
-      v-model:checked="deleteLocalFiles"
-      class="delete-files-option"
-    >
-      {{ $t('homepage.rule.delete_files_label') }}
-    </NCheckbox>
-
-    <template #footer>
-      <ab-button size="sm" @click="deleteFileDialog.show = false">
-        {{ $t('homepage.rule.cancel_btn') }}
-      </ab-button>
-      <ab-button
-        size="sm"
-        variant="danger"
-        @click="emitDeleteFile(deleteLocalFiles)"
-      >
-        {{ $t('homepage.rule.delete') }}
       </ab-button>
     </template>
   </ab-modal>
@@ -543,5 +536,4 @@ function emitUnarchive() {
   font-size: 11px;
   color: var(--color-text-secondary);
 }
-
 </style>

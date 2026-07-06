@@ -60,22 +60,46 @@ const providerOptions = computed<SelectGroupOption[]>(() => {
   const installed = providerList.value.filter(
     (p) => !p.builtin && p.auth_kind === 'api_key'
   );
-  const subscription = providerList.value.filter((p) => !p.builtin && p.auth_kind !== 'api_key');
+  const subscription = providerList.value.filter(
+    (p) => !p.builtin && p.auth_kind !== 'api_key'
+  );
   const installedIds = new Set(providerList.value.map((p) => p.id));
-  const downloadable = KNOWN_DOWNLOADABLE.filter((p) => !installedIds.has(p.id));
+  const downloadable = KNOWN_DOWNLOADABLE.filter(
+    (p) => !installedIds.has(p.id)
+  );
   const groups: SelectGroupOption[] = [];
   const toOpt = (p: { id: string; display_name: string }) => ({
     label: p.display_name,
     value: p.id,
   });
   if (builtin.length)
-    groups.push({ type: 'group', label: t('config.llm_set.group_builtin'), key: 'builtin', children: builtin.map(toOpt) });
+    groups.push({
+      type: 'group',
+      label: t('config.llm_set.group_builtin'),
+      key: 'builtin',
+      children: builtin.map(toOpt),
+    });
   if (installed.length)
-    groups.push({ type: 'group', label: t('config.llm_set.group_installed'), key: 'installed', children: installed.map(toOpt) });
+    groups.push({
+      type: 'group',
+      label: t('config.llm_set.group_installed'),
+      key: 'installed',
+      children: installed.map(toOpt),
+    });
   if (subscription.length)
-    groups.push({ type: 'group', label: t('config.llm_set.group_subscription'), key: 'subscription', children: subscription.map(toOpt) });
+    groups.push({
+      type: 'group',
+      label: t('config.llm_set.group_subscription'),
+      key: 'subscription',
+      children: subscription.map(toOpt),
+    });
   if (downloadable.length)
-    groups.push({ type: 'group', label: t('config.llm_set.group_available'), key: 'available', children: downloadable.map(toOpt) });
+    groups.push({
+      type: 'group',
+      label: t('config.llm_set.group_available'),
+      key: 'available',
+      children: downloadable.map(toOpt),
+    });
   return groups;
 });
 
@@ -276,9 +300,12 @@ const tuningItems = computed(() => [
                   account: selected.account_label || selected.display_name,
                 })
               }}</span>
-              <ab-button size="sm" variant="ghost" @click="onDisconnect(selected.id)">{{
-                t('config.llm_set.disconnect')
-              }}</ab-button>
+              <ab-button
+                size="sm"
+                variant="ghost"
+                @click="onDisconnect(selected.id)"
+                >{{ t('config.llm_set.disconnect') }}</ab-button
+              >
             </div>
             <ab-button
               v-else
@@ -337,9 +364,12 @@ const tuningItems = computed(() => [
             <div v-else class="llm-risk">
               <p class="llm-risk-text">{{ t('config.llm_set.risk_notice') }}</p>
               <div class="llm-risk-actions">
-                <ab-button size="sm" variant="secondary" @click="confirmRisk = false">{{
-                  t('config.llm_set.risk_cancel')
-                }}</ab-button>
+                <ab-button
+                  size="sm"
+                  variant="secondary"
+                  @click="confirmRisk = false"
+                  >{{ t('config.llm_set.risk_cancel') }}</ab-button
+                >
                 <ab-button
                   variant="danger"
                   size="sm"
@@ -409,7 +439,7 @@ const tuningItems = computed(() => [
   color: var(--color-text-secondary);
   font-size: 12px;
   transition: background-color var(--transition-normal),
-              border-color var(--transition-normal);
+    border-color var(--transition-normal);
 }
 
 .llm-config {

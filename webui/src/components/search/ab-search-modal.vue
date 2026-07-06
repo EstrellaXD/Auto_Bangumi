@@ -681,7 +681,7 @@ function handleFilterClick(
 
             <ab-icon-button
               class="modal-close-btn"
-              :label="$t('common.cancel')"
+              :label="$t('common.close')"
               @click="handleClose"
             >
               <Close theme="outline" size="20" />

@@ -215,11 +215,7 @@ function handleCancel() {
 
           <!-- Footer -->
           <footer class="dialog-footer">
-            <ab-button
-              size="sm"
-              variant="secondary"
-              @click="handleCancel"
-            >
+            <ab-button size="sm" variant="secondary" @click="handleCancel">
               {{ t('offset.cancel') }}
             </ab-button>
             <ab-button variant="primary" size="sm" @click="handleKeep">

@@ -55,7 +55,9 @@ function startPolling() {
       const status = await apiLLM.getAuthStatus(props.providerId);
       if (status.connected) {
         stopPolling();
-        message.success(t('config.llm_set.connected_as', { account: status.account_label }));
+        message.success(
+          t('config.llm_set.connected_as', { account: status.account_label })
+        );
         emit('connected');
         close();
       }
@@ -74,7 +76,9 @@ async function submitCode() {
       state: challenge.value.state,
       code: pastedCode.value.trim(),
     });
-    message.success(t('config.llm_set.connected_as', { account: res.account_label }));
+    message.success(
+      t('config.llm_set.connected_as', { account: res.account_label })
+    );
     emit('connected');
     close();
   } catch {

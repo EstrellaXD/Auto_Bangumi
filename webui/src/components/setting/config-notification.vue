@@ -383,7 +383,6 @@ function getFieldsForType(type: string) {
         >
           {{ testResult.message }}
         </div>
-
       </div>
 
       <template #footer>
@@ -393,11 +392,7 @@ function getFieldsForType(type: string) {
           :disabled="testingIndex === -999"
           @click="testNewProvider"
         >
-          <div
-            v-if="testingIndex === -999"
-            i-carbon-circle-dash
-            animate-spin
-          />
+          <div v-if="testingIndex === -999" i-carbon-circle-dash animate-spin />
           <div v-else i-carbon-play />
           {{ $t('config.notification_set.test') }}
         </ab-button>
@@ -452,7 +447,6 @@ function getFieldsForType(type: string) {
         >
           {{ testResult.message }}
         </div>
-
       </div>
 
       <template #footer>
@@ -462,11 +456,7 @@ function getFieldsForType(type: string) {
           :disabled="testingIndex === -999"
           @click="testNewProvider"
         >
-          <div
-            v-if="testingIndex === -999"
-            i-carbon-circle-dash
-            animate-spin
-          />
+          <div v-if="testingIndex === -999" i-carbon-circle-dash animate-spin />
           <div v-else i-carbon-play />
           {{ $t('config.notification_set.test') }}
         </ab-button>

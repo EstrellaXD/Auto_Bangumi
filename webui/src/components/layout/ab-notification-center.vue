@@ -99,7 +99,6 @@ function relativeTime(iso: string): string {
               v-if="unreadCount > 0"
               variant="ghost"
               size="sm"
-              class="notification-action"
               @click="store.markAllRead()"
             >
               {{ $t('notifications.mark_all_read') }}
@@ -108,7 +107,6 @@ function relativeTime(iso: string): string {
               v-if="messages.length > 0"
               variant="danger"
               size="sm"
-              class="notification-action"
               @click="onClearClick"
             >
               {{
@@ -265,28 +263,6 @@ function relativeTime(iso: string): string {
 .notification-head-actions {
   display: flex;
   gap: 4px;
-}
-
-.notification-action {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 12px;
-  color: var(--color-primary);
-  padding: 4px 6px;
-  border-radius: var(--radius-sm);
-
-  &:hover {
-    background: var(--color-primary-light);
-  }
-
-  &--danger {
-    color: var(--color-danger, #ef4444);
-
-    &:hover {
-      background: color-mix(in srgb, var(--color-danger) 12%, transparent);
-    }
-  }
 }
 
 .notification-empty {

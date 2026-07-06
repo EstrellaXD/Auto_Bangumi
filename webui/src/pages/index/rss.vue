@@ -69,9 +69,7 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
             {rss.name}
           </span>
           {rss.parser && <ab-tag type="info" title={rss.parser} />}
-          {rss.aggregate && (
-            <ab-tag type="info" title={t('rss.aggregate')} />
-          )}
+          {rss.aggregate && <ab-tag type="info" title={t('rss.aggregate')} />}
         </div>
       );
     },

@@ -7,7 +7,11 @@ const { user, update } = useAuth();
 </script>
 
 <template>
-  <ab-modal v-model:show="show" size="sm" :title="$t('topbar.profile.pop_title')">
+  <ab-modal
+    v-model:show="show"
+    size="sm"
+    :title="$t('topbar.profile.pop_title')"
+  >
     <div space-y-16>
       <ab-field :label="$t('topbar.profile.username')">
         <ab-input

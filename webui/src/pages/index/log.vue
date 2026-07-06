@@ -162,7 +162,9 @@ onDeactivated(() => {
                 :key="level"
                 size="sm"
                 class="filter-chip"
-                :variant="selectedLevels.includes(level) ? 'primary' : 'secondary'"
+                :variant="
+                  selectedLevels.includes(level) ? 'primary' : 'secondary'
+                "
                 :aria-pressed="selectedLevels.includes(level)"
                 @click="toggleLevel(level)"
               >
@@ -214,7 +216,10 @@ onDeactivated(() => {
                   'is-warning': i.type === 'WARNING',
                 }"
               >
-                <span class="log-level" :class="`level-${i.type.toLowerCase()}`">
+                <span
+                  class="log-level"
+                  :class="`level-${i.type.toLowerCase()}`"
+                >
                   {{ i.type || '—' }}
                 </span>
                 <span class="log-date">{{ i.date }}</span>
@@ -311,7 +316,11 @@ onDeactivated(() => {
 
   &.has-errors {
     border-color: color-mix(in srgb, var(--color-danger) 35%, transparent);
-    background: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface));
+    background: color-mix(
+      in srgb,
+      var(--color-danger) 8%,
+      var(--color-surface)
+    );
     color: var(--color-danger);
   }
 }
@@ -361,12 +370,6 @@ onDeactivated(() => {
   display: flex;
   gap: 6px;
   margin-left: auto;
-
-  :deep(.n-button) {
-    @include forTouch {
-      min-height: var(--touch-target);
-    }
-  }
 }
 
 .log-viewer {
@@ -444,7 +447,11 @@ onDeactivated(() => {
   }
 
   &.level-error {
-    background: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
+    background: color-mix(
+      in srgb,
+      var(--color-danger) 12%,
+      var(--color-surface)
+    );
     border: 1px solid color-mix(in srgb, var(--color-danger) 40%, transparent);
     color: var(--color-danger);
   }

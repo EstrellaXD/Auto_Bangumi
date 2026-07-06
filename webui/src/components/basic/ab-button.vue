@@ -31,11 +31,7 @@ function onClick(event: MouseEvent) {
 <template>
   <button
     class="ab-btn"
-    :class="[
-      `ab-btn--${variant}`,
-      `ab-btn--${size}`,
-      block && 'ab-btn--block',
-    ]"
+    :class="[`ab-btn--${variant}`, `ab-btn--${size}`, block && 'ab-btn--block']"
     :type="type"
     :disabled="disabled || loading"
     :aria-busy="loading || undefined"
@@ -87,8 +83,9 @@ function onClick(event: MouseEvent) {
     padding: 0 10px;
     font-size: 13px;
 
+    // 触屏统一保证 44px 命中区（PRODUCT.md 无障碍约定）
     @include forTouch {
-      height: 36px;
+      height: var(--touch-target);
     }
   }
 

@@ -156,92 +156,86 @@ function subscribe() {
   <ab-modal v-model:show="show" :title="$t('topbar.add.title')">
     <!-- Step 1: Input RSS -->
     <div v-if="step === 'input'" class="form-section">
-              <!-- RSS Link -->
-              <div class="form-group">
-                <label class="form-label">{{
-                  $t('topbar.add.rss_link')
-                }}</label>
-                <div class="input-wrapper">
-                  <Link theme="outline" size="16" class="input-icon" />
-                  <input
-                    v-model="rss.url"
-                    type="text"
-                    class="form-input form-input--with-icon"
-                    :placeholder="$t('topbar.add.placeholder_link')"
-                  />
-                </div>
-              </div>
+      <!-- RSS Link -->
+      <div class="form-group">
+        <label class="form-label">{{ $t('topbar.add.rss_link') }}</label>
+        <div class="input-wrapper">
+          <Link theme="outline" size="16" class="input-icon" />
+          <input
+            v-model="rss.url"
+            type="text"
+            class="form-input form-input--with-icon"
+            :placeholder="$t('topbar.add.placeholder_link')"
+          />
+        </div>
+      </div>
 
-              <!-- Name -->
-              <div class="form-group">
-                <label class="form-label">{{ $t('topbar.add.name') }}</label>
-                <input
-                  v-model="rss.name"
-                  type="text"
-                  class="form-input"
-                  :placeholder="$t('topbar.add.placeholder_name')"
-                />
-              </div>
+      <!-- Name -->
+      <div class="form-group">
+        <label class="form-label">{{ $t('topbar.add.name') }}</label>
+        <input
+          v-model="rss.name"
+          type="text"
+          class="form-input"
+          :placeholder="$t('topbar.add.placeholder_name')"
+        />
+      </div>
 
-              <!-- Options row -->
-              <div class="options-row">
-                <!-- Aggregate Switch -->
-                <div class="option-item">
-                  <label class="option-label">{{
-                    $t('topbar.add.aggregate')
-                  }}</label>
-                  <NSwitch v-model:value="rss.aggregate" />
-                </div>
+      <!-- Options row -->
+      <div class="options-row">
+        <!-- Aggregate Switch -->
+        <div class="option-item">
+          <label class="option-label">{{ $t('topbar.add.aggregate') }}</label>
+          <NSwitch v-model:value="rss.aggregate" />
+        </div>
 
-                <!-- Parser Select -->
-                <div class="option-item">
-                  <label class="option-label">{{
-                    $t('topbar.add.parser')
-                  }}</label>
-                  <NSelect
-                    v-model:value="rss.parser"
-                    :options="parserTypes.map((p) => ({ label: p, value: p }))"
-                    class="parser-select"
-                  />
-                </div>
-              </div>
+        <!-- Parser Select -->
+        <div class="option-item">
+          <label class="option-label">{{ $t('topbar.add.parser') }}</label>
+          <NSelect
+            v-model:value="rss.parser"
+            :options="parserTypes.map((p) => ({ label: p, value: p }))"
+            class="parser-select"
+          />
+        </div>
+      </div>
     </div>
 
     <!-- Step 2: Confirm -->
     <div v-else class="confirm-section">
-              <bangumi-preview v-model:rule="rule" :poster-src="posterSrc" />
+      <bangumi-preview v-model:rule="rule" :poster-src="posterSrc" />
 
-              <bangumi-info-tags :tags="infoTags" />
+      <bangumi-info-tags :tags="infoTags" />
 
-              <bangumi-rss-link-row
-                :link="rssLink"
-                :copied="copied"
-                @copy="copyRssLink(rssLink)"
-              />
+      <bangumi-rss-link-row
+        :link="rssLink"
+        :copied="copied"
+        @copy="copyRssLink(rssLink)"
+      />
 
-              <!-- Advanced settings -->
-              <advanced-section v-model:open="showAdvanced">
-                <bangumi-filter-field v-model="rule.filter" />
+      <!-- Advanced settings -->
+      <advanced-section v-model:open="showAdvanced">
+        <bangumi-filter-field v-model="rule.filter" />
 
-                <bangumi-offset-field
-                  v-model="rule.episode_offset"
-                  :label="$t('homepage.rule.offset')"
-                >
-                  <template #action>
-                    <button
-                      class="detect-btn"
-                      :disabled="offsetLoading || !rule.id"
-                      @click="autoDetectOffset"
-                    >
-                      <NSpin v-if="offsetLoading" :size="14" />
-                      <span v-else>{{ $t('homepage.rule.auto_detect') }}</span>
-                    </button>
-                  </template>
-                </bangumi-offset-field>
-                <div v-if="offsetReason" class="offset-reason">
-                  {{ offsetReason }}
-                </div>
-              </advanced-section>
+        <bangumi-offset-field
+          v-model="rule.episode_offset"
+          :label="$t('homepage.rule.episode_offset')"
+        >
+          <template #action>
+            <button
+              class="detect-btn"
+              :disabled="offsetLoading || !rule.id"
+              @click="autoDetectOffset"
+            >
+              <NSpin v-if="offsetLoading" :size="14" />
+              <span v-else>{{ $t('homepage.rule.auto_detect') }}</span>
+            </button>
+          </template>
+        </bangumi-offset-field>
+        <div v-if="offsetReason" class="offset-reason">
+          {{ offsetReason }}
+        </div>
+      </advanced-section>
     </div>
 
     <template #footer>
@@ -448,6 +442,5 @@ function subscribe() {
     justify-content: space-between;
     width: 100%;
   }
-
 }
 </style>

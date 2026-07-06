@@ -173,7 +173,7 @@ function handleConfirm() {
         <h2 class="confirm-title">{{ $t('search.confirm.title') }}</h2>
         <ab-icon-button
           class="close-btn"
-          :label="$t('common.cancel')"
+          :label="$t('common.close')"
           @click="emit('cancel')"
         >
           <Close theme="outline" size="18" />

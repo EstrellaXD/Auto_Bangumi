@@ -162,11 +162,7 @@ const canProceed = computed(() => Boolean(downloaderData.value.host));
       </p>
 
       <div class="wizard-actions">
-        <ab-button
-          size="sm"
-          variant="secondary"
-          @click="setupStore.prevStep()"
-        >
+        <ab-button size="sm" variant="secondary" @click="setupStore.prevStep()">
           {{ t('setup.nav.previous') }}
         </ab-button>
         <ab-button
