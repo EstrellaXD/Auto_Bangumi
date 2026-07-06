@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { NButton, NPopconfirm, NSelect } from 'naive-ui';
+import { NPopconfirm, NSelect } from 'naive-ui';
 import type { NotificationProviderConfig, NotificationType } from '#/config';
 import type { TupleToUnion } from '#/utils';
 import { apiNotification } from '@/api/notification';
@@ -263,10 +263,9 @@ function getFieldsForType(type: string) {
             </div>
           </div>
           <div class="provider-actions">
-            <NButton
-              size="small"
-              type="primary"
-              secondary
+            <ab-button
+              size="sm"
+              variant="secondary"
               :disabled="testingIndex === index"
               :title="$t('config.notification_set.test')"
               @click="testProvider(index)"
@@ -277,20 +276,18 @@ function getFieldsForType(type: string) {
                 animate-spin
               />
               <div v-else i-carbon-play />
-            </NButton>
-            <NButton
-              size="small"
-              type="primary"
-              secondary
+            </ab-button>
+            <ab-button
+              size="sm"
+              variant="secondary"
               :title="$t('config.notification_set.edit')"
               @click="openEditDialog(index)"
             >
               <div i-carbon-edit />
-            </NButton>
-            <NButton
-              size="small"
-              type="primary"
-              secondary
+            </ab-button>
+            <ab-button
+              size="sm"
+              variant="secondary"
               :title="
                 provider.enabled
                   ? $t('config.notification_set.disable')
@@ -303,7 +300,7 @@ function getFieldsForType(type: string) {
                   provider.enabled ? 'i-carbon-view' : 'i-carbon-view-off'
                 "
               />
-            </NButton>
+            </ab-button>
             <NPopconfirm
               :positive-text="$t('config.notification_set.remove')"
               :negative-text="$t('config.cancel')"
@@ -311,13 +308,13 @@ function getFieldsForType(type: string) {
               @positive-click="removeProvider(index)"
             >
               <template #trigger>
-                <NButton
-                  size="small"
-                  type="error"
+                <ab-button
+                  size="sm"
+                  variant="danger"
                   :title="$t('config.notification_set.remove')"
                 >
                   <div i-carbon-trash-can />
-                </NButton>
+                </ab-button>
               </template>
               {{ $t('config.notification_set.remove_confirm') }}
             </NPopconfirm>
@@ -337,10 +334,10 @@ function getFieldsForType(type: string) {
 
         <!-- Add provider button -->
         <div flex="~ justify-end">
-          <NButton size="small" type="primary" @click="openAddDialog">
+          <ab-button size="sm" variant="primary" @click="openAddDialog">
             <div i-carbon-add />
             {{ $t('config.notification_set.add_provider') }}
-          </NButton>
+          </ab-button>
         </div>
       </div>
     </div>
@@ -392,10 +389,9 @@ function getFieldsForType(type: string) {
         <div line></div>
 
         <div flex="~ justify-between items-center">
-          <NButton
-            size="small"
-            type="primary"
-            secondary
+          <ab-button
+            size="sm"
+            variant="secondary"
             :disabled="testingIndex === -999"
             @click="testNewProvider"
           >
@@ -406,14 +402,14 @@ function getFieldsForType(type: string) {
             />
             <div v-else i-carbon-play />
             {{ $t('config.notification_set.test') }}
-          </NButton>
+          </ab-button>
           <div flex="~ gap-8">
-            <NButton size="small" type="error" @click="showAddDialog = false">
+            <ab-button size="sm" variant="danger" @click="showAddDialog = false">
               {{ $t('config.cancel') }}
-            </NButton>
-            <NButton size="small" type="primary" @click="addProvider">
+            </ab-button>
+            <ab-button size="sm" variant="primary" @click="addProvider">
               {{ $t('config.apply') }}
-            </NButton>
+            </ab-button>
           </div>
         </div>
       </div>
@@ -467,10 +463,9 @@ function getFieldsForType(type: string) {
         <div line></div>
 
         <div flex="~ justify-between items-center">
-          <NButton
-            size="small"
-            type="primary"
-            secondary
+          <ab-button
+            size="sm"
+            variant="secondary"
             :disabled="testingIndex === -999"
             @click="testNewProvider"
           >
@@ -481,14 +476,14 @@ function getFieldsForType(type: string) {
             />
             <div v-else i-carbon-play />
             {{ $t('config.notification_set.test') }}
-          </NButton>
+          </ab-button>
           <div flex="~ gap-8">
-            <NButton size="small" type="error" @click="showEditDialog = false">
+            <ab-button size="sm" variant="danger" @click="showEditDialog = false">
               {{ $t('config.cancel') }}
-            </NButton>
-            <NButton size="small" type="primary" @click="saveProvider">
+            </ab-button>
+            <ab-button size="sm" variant="primary" @click="saveProvider">
               {{ $t('config.apply') }}
-            </NButton>
+            </ab-button>
           </div>
         </div>
       </div>

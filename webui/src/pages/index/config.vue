@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { NButton, NPopconfirm, useDialog } from 'naive-ui';
+import { useConfirm } from '@/hooks/useConfirm';
 import type { Component } from 'vue';
 import type { Config } from '#/config';
 import ConfigNormal from '@/components/setting/config-normal.vue';
@@ -20,11 +20,30 @@ definePage({
 });
 
 const { t } = useMyI18n();
-const dialog = useDialog();
+const { confirm } = useConfirm();
 const configStore = useConfigStore();
 const { getConfig, setConfig } = configStore;
 const { dirtyGroups, isDirty } = storeToRefs(configStore);
 const { isMobileOrTablet } = useBreakpointQuery();
+
+async function onDiscardClick() {
+  const ok = await confirm({
+    title: t('config.discard'),
+    body: t('config.discard_confirm'),
+    confirmText: t('config.discard'),
+    danger: true,
+  });
+  if (ok) handleDiscard();
+}
+
+async function onSaveClick() {
+  const ok = await confirm({
+    title: t('config.save_restart'),
+    body: t('config.restart_confirm'),
+    confirmText: t('config.save_restart'),
+  });
+  if (ok) handleSave();
+}
 
 interface ConfigSection {
   id: string;
@@ -216,15 +235,10 @@ onActivated(() => {
 
 onBeforeRouteLeave(() => {
   if (!isDirty.value) return true;
-  return new Promise<boolean>((resolve) => {
-    dialog.warning({
-      title: t('config.leave_confirm'),
-      positiveText: t('config.discard'),
-      negativeText: t('config.cancel'),
-      onPositiveClick: () => resolve(true),
-      onNegativeClick: () => resolve(false),
-      onClose: () => resolve(false),
-    });
+  return confirm({
+    title: t('config.leave_confirm'),
+    confirmText: t('config.discard'),
+    danger: true,
   });
 });
 </script>
@@ -265,9 +279,9 @@ onBeforeRouteLeave(() => {
       <div ref="scrollEl" class="config-scroll" @scroll.passive="onScroll">
         <div v-if="visibleSections.length === 0" class="config-no-match">
           <p>{{ $t('config.no_match') }}</p>
-          <NButton size="small" secondary @click="searchQuery = ''">
+          <ab-button size="sm" @click="searchQuery = ''">
             {{ $t('log.clear_filters') }}
-          </NButton>
+          </ab-button>
         </div>
 
         <div
@@ -294,42 +308,22 @@ onBeforeRouteLeave(() => {
         <template v-else>{{ $t('config.unsaved_none') }}</template>
       </span>
 
-      <NPopconfirm
-        :positive-text="$t('config.discard')"
-        :negative-text="$t('config.cancel')"
-        @positive-click="handleDiscard"
+      <ab-button
+        :loading="isResetting"
+        :disabled="!isDirty || isResetting || isSaving"
+        @click="onDiscardClick"
       >
-        <template #trigger>
-          <NButton
-            :size="isMobileOrTablet ? 'large' : 'medium'"
-            type="primary"
-            secondary
-            :loading="isResetting"
-            :disabled="!isDirty || isResetting || isSaving"
-          >
-            {{ $t('config.discard') }}
-          </NButton>
-        </template>
-        {{ $t('config.discard_confirm') }}
-      </NPopconfirm>
+        {{ $t('config.discard') }}
+      </ab-button>
 
-      <NPopconfirm
-        :positive-text="$t('config.save_restart')"
-        :negative-text="$t('config.cancel')"
-        @positive-click="handleSave"
+      <ab-button
+        :variant="saveFailed ? 'danger' : 'primary'"
+        :loading="isSaving"
+        :disabled="!isDirty || isResetting || isSaving"
+        @click="onSaveClick"
       >
-        <template #trigger>
-          <NButton
-            :size="isMobileOrTablet ? 'large' : 'medium'"
-            :type="saveFailed ? 'error' : 'primary'"
-            :loading="isSaving"
-            :disabled="!isDirty || isResetting || isSaving"
-          >
-            {{ $t('config.save_restart') }}
-          </NButton>
-        </template>
-        {{ $t('config.restart_confirm') }}
-      </NPopconfirm>
+        {{ $t('config.save_restart') }}
+      </ab-button>
     </div>
   </div>
 </template>

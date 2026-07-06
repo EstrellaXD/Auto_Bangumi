@@ -55,7 +55,7 @@ function abLabel(label: string | (() => string)) {
           <System theme="outline" size="1em" />
         </MenuButton>
 
-        <ab-status :running="running" />
+        <ab-status :state="running ? 'running' : 'stopped'" />
       </div>
 
       <MenuItems class="status-menu">

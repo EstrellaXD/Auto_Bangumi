@@ -25,10 +25,6 @@ const SEVERITY_ICONS = {
   info: Info,
 } as const;
 
-const badgeText = computed(() =>
-  unreadCount.value > 99 ? '99+' : String(unreadCount.value)
-);
-
 const confirmClear = ref(false);
 
 // PopoverPanel 挂载/卸载即打开/关闭：打开时拉取列表，关闭时复位确认态。
@@ -86,9 +82,7 @@ function relativeTime(iso: string): string {
       :aria-label="$t('notifications.title')"
     >
       <Remind theme="outline" size="1em" />
-      <span v-if="unreadCount > 0" class="notification-badge">{{
-        badgeText
-      }}</span>
+      <ab-badge class="notification-badge" :count="unreadCount" />
     </PopoverButton>
 
     <PopoverPanel v-slot="{ close }" class="notification-panel">
@@ -101,16 +95,20 @@ function relativeTime(iso: string): string {
             </template>
           </span>
           <div class="notification-head-actions">
-            <button
+            <ab-button
               v-if="unreadCount > 0"
+              variant="ghost"
+              size="sm"
               class="notification-action"
               @click="store.markAllRead()"
             >
               {{ $t('notifications.mark_all_read') }}
-            </button>
-            <button
+            </ab-button>
+            <ab-button
+              variant="danger"
+              size="sm"
               v-if="messages.length > 0"
-              class="notification-action notification-action--danger"
+              class="notification-action"
               @click="onClearClick"
             >
               {{
@@ -118,7 +116,7 @@ function relativeTime(iso: string): string {
                   ? $t('notifications.clear_confirm')
                   : $t('notifications.clear_all')
               }}
-            </button>
+            </ab-button>
           </div>
         </div>
 
@@ -152,13 +150,14 @@ function relativeTime(iso: string): string {
                 {{ relativeTime(msg.updated_at) }}
               </div>
             </div>
-            <button
+            <ab-icon-button
+              size="sm"
               class="notification-delete"
-              :aria-label="$t('notifications.delete')"
+              :label="$t('notifications.delete')"
               @click.stop="store.remove(msg.id)"
             >
               <Delete theme="outline" size="13" />
-            </button>
+            </ab-icon-button>
           </div>
         </div>
       </div>
@@ -217,18 +216,8 @@ function relativeTime(iso: string): string {
 
 .notification-badge {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  min-width: 15px;
-  height: 15px;
-  padding: 0 4px;
-  border-radius: 8px;
-  background: var(--color-danger, #ef4444);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 15px;
-  text-align: center;
+  top: 0;
+  right: 0;
   pointer-events: none;
 }
 

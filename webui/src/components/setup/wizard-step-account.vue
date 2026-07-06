@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import { NButton } from 'naive-ui';
-
 const { t } = useMyI18n();
 const setupStore = useSetupStore();
 const { accountData } = storeToRefs(setupStore);
@@ -65,22 +63,21 @@ const passwordError = computed(() => {
       </div>
 
       <div class="wizard-actions">
-        <NButton
-          size="small"
-          type="primary"
-          secondary
+        <ab-button
+          size="sm"
+          variant="secondary"
           @click="setupStore.prevStep()"
         >
           {{ t('setup.nav.previous') }}
-        </NButton>
-        <NButton
-          type="primary"
-          size="small"
+        </ab-button>
+        <ab-button
+          variant="primary"
+          size="sm"
           :disabled="!isValid"
           @click="setupStore.nextStep()"
         >
           {{ t('setup.nav.next') }}
-        </NButton>
+        </ab-button>
       </div>
     </div>
   </ab-container>

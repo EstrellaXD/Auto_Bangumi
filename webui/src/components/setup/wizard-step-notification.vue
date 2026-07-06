@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { NButton, NSelect } from 'naive-ui';
+import { NSelect } from 'naive-ui';
 
 const { t } = useMyI18n();
 const setupStore = useSetupStore();
@@ -88,10 +88,9 @@ const canTest = computed(() => {
       </div>
 
       <div class="test-section">
-        <NButton
-          size="small"
-          type="primary"
-          secondary
+        <ab-button
+          size="sm"
+          variant="secondary"
           :disabled="!canTest || isTesting"
           @click="testNotification"
         >
@@ -100,7 +99,7 @@ const canTest = computed(() => {
               ? t('setup.downloader.testing')
               : t('setup.notification.test')
           }}
-        </NButton>
+        </ab-button>
         <p
           v-if="testMessage"
           class="test-message"
@@ -111,26 +110,25 @@ const canTest = computed(() => {
       </div>
 
       <div class="wizard-actions">
-        <NButton
-          size="small"
-          type="primary"
-          secondary
+        <ab-button
+          size="sm"
+          variant="secondary"
           @click="setupStore.prevStep()"
         >
           {{ t('setup.nav.previous') }}
-        </NButton>
+        </ab-button>
         <div class="action-group">
-          <NButton size="small" type="primary" secondary @click="skipStep">
+          <ab-button size="sm" variant="secondary" @click="skipStep">
             {{ t('setup.nav.skip') }}
-          </NButton>
-          <NButton
-            type="primary"
-            size="small"
+          </ab-button>
+          <ab-button
+            variant="primary"
+            size="sm"
             :disabled="!validation.notificationTested"
             @click="handleNext"
           >
             {{ t('setup.nav.next') }}
-          </NButton>
+          </ab-button>
         </div>
       </div>
     </div>

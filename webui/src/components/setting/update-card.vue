@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import {
-  NButton,
   NPopconfirm,
   NProgress,
   NSpin,
@@ -308,27 +307,28 @@ onBeforeUnmount(() => {
 
       <!-- 操作按钮 -->
       <div class="update-actions">
-        <NButton
-          size="small"
+        <ab-button
+          size="sm"
+          variant="secondary"
           :loading="checking"
           :disabled="applying || restarting"
           @click="onCheck(true)"
         >
           {{ checking ? $t('update.checking') : $t('update.check') }}
-        </NButton>
+        </ab-button>
 
         <NPopconfirm
           :positive-text="$t('update.update_now')"
           @positive-click="onApply"
         >
           <template #trigger>
-            <NButton
-              type="primary"
-              size="small"
+            <ab-button
+              variant="primary"
+              size="sm"
               :disabled="!hasUpdate || applying || restarting"
             >
               {{ $t('update.update_now') }}
-            </NButton>
+            </ab-button>
           </template>
           <div class="update-confirm">
             <strong>{{ $t('update.confirm_title') }}</strong>
@@ -342,13 +342,13 @@ onBeforeUnmount(() => {
           @positive-click="onRollback"
         >
           <template #trigger>
-            <NButton
-              type="warning"
-              size="small"
+            <ab-button
+              variant="danger"
+              size="sm"
               :disabled="applying || restarting"
             >
               {{ $t('update.rollback') }}
-            </NButton>
+            </ab-button>
           </template>
           {{ $t('update.rollback_confirm') }}
         </NPopconfirm>

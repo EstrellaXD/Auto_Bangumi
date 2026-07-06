@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { NButton, NPopconfirm } from 'naive-ui';
+import { NPopconfirm } from 'naive-ui';
 import { Delete, EditTwo, Plus } from '@icon-park/vue-next';
 
 interface SearchProvider {
@@ -172,14 +172,13 @@ function validateUrl(url: string): boolean {
             </div>
           </div>
           <div class="provider-actions">
-            <NButton
-              size="small"
-              type="primary"
-              secondary
+            <ab-button
+              size="sm"
+              variant="secondary"
               @click="openEditDialog(provider, index)"
             >
               <EditTwo size="16" />
-            </NButton>
+            </ab-button>
             <NPopconfirm
               v-if="!isDefaultProvider(provider.name)"
               :positive-text="$t('config.search_provider_set.remove')"
@@ -188,13 +187,13 @@ function validateUrl(url: string): boolean {
               @positive-click="handleDelete(index)"
             >
               <template #trigger>
-                <NButton
-                  size="small"
-                  type="error"
+                <ab-button
+                  size="sm"
+                  variant="danger"
                   :aria-label="$t('config.search_provider_set.remove')"
                 >
                   <Delete size="16" />
-                </NButton>
+                </ab-button>
               </template>
               {{ $t('config.search_provider_set.delete_confirm') }}
             </NPopconfirm>
@@ -211,10 +210,10 @@ function validateUrl(url: string): boolean {
 
       <!-- Add button -->
       <div flex="~ justify-end">
-        <NButton size="small" type="primary" @click="openAddDialog">
+        <ab-button size="sm" variant="primary" @click="openAddDialog">
           <Plus size="16" />
           {{ $t('config.search_provider_set.add_new') }}
-        </NButton>
+        </ab-button>
       </div>
     </div>
 
@@ -252,19 +251,19 @@ function validateUrl(url: string): boolean {
         <div line></div>
 
         <div flex="~ justify-end gap-8">
-          <NButton size="small" type="error" @click="showAddDialog = false">
+          <ab-button size="sm" variant="danger" @click="showAddDialog = false">
             {{ $t('config.cancel') }}
-          </NButton>
-          <NButton
-            size="small"
-            type="primary"
+          </ab-button>
+          <ab-button
+            size="sm"
+            variant="primary"
             :disabled="
               !formName.trim() || !formUrl.trim() || !validateUrl(formUrl)
             "
             @click="handleAdd"
           >
             {{ $t('config.apply') }}
-          </NButton>
+          </ab-button>
         </div>
       </div>
     </ab-popup>
@@ -307,19 +306,19 @@ function validateUrl(url: string): boolean {
         <div line></div>
 
         <div flex="~ justify-end gap-8">
-          <NButton size="small" type="error" @click="showEditDialog = false">
+          <ab-button size="sm" variant="danger" @click="showEditDialog = false">
             {{ $t('config.cancel') }}
-          </NButton>
-          <NButton
-            size="small"
-            type="primary"
+          </ab-button>
+          <ab-button
+            size="sm"
+            variant="primary"
             :disabled="
               !formName.trim() || !formUrl.trim() || !validateUrl(formUrl)
             "
             @click="handleEdit"
           >
             {{ $t('config.apply') }}
-          </NButton>
+          </ab-button>
         </div>
       </div>
     </ab-popup>

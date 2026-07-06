@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { NButton, NPopconfirm } from 'naive-ui';
+import { NPopconfirm } from 'naive-ui';
 import { Delete } from '@icon-park/vue-next';
 import type { PasskeyItem } from '#/passkey';
 
@@ -117,13 +117,13 @@ function formatDate(dateString: string | null): string {
             @positive-click="handleDelete(passkey)"
           >
             <template #trigger>
-              <NButton
-                size="small"
-                type="error"
+              <ab-button
+                size="sm"
+                variant="danger"
                 :aria-label="$t('passkey.delete')"
               >
                 <Delete size="16" />
-              </NButton>
+              </ab-button>
             </template>
             {{ $t('passkey.delete_confirm') }}
           </NPopconfirm>
@@ -134,14 +134,14 @@ function formatDate(dateString: string | null): string {
 
       <!-- 添加按钮 -->
       <div flex="~ justify-end">
-        <NButton
+        <ab-button
           v-if="isSupported"
-          size="small"
-          type="primary"
+          size="sm"
+          variant="primary"
           @click="openAddDialog"
         >
           {{ $t('passkey.add_new') }}
-        </NButton>
+        </ab-button>
       </div>
     </div>
 
@@ -170,17 +170,17 @@ function formatDate(dateString: string | null): string {
         <div line></div>
 
         <div flex="~ justify-end gap-8">
-          <NButton size="small" type="error" @click="showAddDialog = false">
+          <ab-button size="sm" variant="danger" @click="showAddDialog = false">
             {{ $t('config.cancel') }}
-          </NButton>
-          <NButton
-            size="small"
-            type="primary"
+          </ab-button>
+          <ab-button
+            size="sm"
+            variant="primary"
             :disabled="!deviceName.trim() || isRegistering"
             @click="handleAdd"
           >
             {{ $t('config.apply') }}
-          </NButton>
+          </ab-button>
         </div>
       </div>
     </ab-popup>

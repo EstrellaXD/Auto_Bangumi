@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { Close, Link } from '@icon-park/vue-next';
-import { NButton, NSelect, NSpin, NSwitch } from 'naive-ui';
+import { NSelect, NSpin, NSwitch } from 'naive-ui';
 import { onKeyStroke } from '@vueuse/core';
 import type { BangumiRule } from '#/bangumi';
 import type { RSS } from '#/rss';
@@ -226,14 +226,14 @@ function subscribe() {
 
             <!-- Footer -->
             <footer class="add-footer">
-              <NButton
-                type="primary"
-                size="small"
+              <ab-button
+                variant="primary"
+                size="sm"
                 :loading="loading.analyze"
                 @click="addRss"
               >
                 {{ $t('topbar.add.button') }}
-              </NButton>
+              </ab-button>
             </footer>
           </div>
 
@@ -278,27 +278,27 @@ function subscribe() {
             <!-- Footer -->
             <footer class="add-footer add-footer--confirm">
               <div class="footer-left">
-                <NButton size="small" type="primary" secondary @click="goBack">
+                <ab-button variant="secondary" size="sm" @click="goBack">
                   {{ $t('setup.nav.previous') }}
-                </NButton>
+                </ab-button>
               </div>
               <div class="footer-right">
-                <NButton
-                  type="primary"
-                  size="small"
+                <ab-button
+                  variant="primary"
+                  size="sm"
                   :loading="loading.collect"
                   @click="collect"
                 >
                   {{ $t('topbar.add.collect') }}
-                </NButton>
-                <NButton
-                  type="primary"
-                  size="small"
+                </ab-button>
+                <ab-button
+                  variant="primary"
+                  size="sm"
                   :loading="loading.subscribe"
                   @click="subscribe"
                 >
                   {{ $t('topbar.add.subscribe') }}
-                </NButton>
+                </ab-button>
               </div>
             </footer>
           </template>

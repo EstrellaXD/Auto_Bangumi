@@ -14,7 +14,7 @@ const show = defineModel<boolean>('show', { default: false });
 </script>
 
 <template>
-  <ab-popup v-model:show="show" :title="group?.primary.official_title || ''">
+  <ab-modal v-model:show="show" :title="group?.primary.official_title || ''">
     <div v-if="group" class="rule-list">
       <div class="rule-list-hint">{{ $t('homepage.rule.select_hint') }}</div>
       <div
@@ -35,13 +35,13 @@ const show = defineModel<boolean>('show', { default: false });
             }}
           </div>
           <div class="rule-list-item-tags">
-            <ab-tag v-if="rule.dpi" :title="rule.dpi" type="primary" />
+            <ab-tag v-if="rule.dpi" :title="rule.dpi" type="info" />
             <ab-tag
               v-if="rule.subtitle"
               :title="rule.subtitle"
-              type="primary"
+              type="info"
             />
-            <ab-tag v-if="rule.source" :title="rule.source" type="primary" />
+            <ab-tag v-if="rule.source" :title="rule.source" type="info" />
           </div>
           <div
             v-if="rule.filter && rule.filter.length > 0"
@@ -61,7 +61,7 @@ const show = defineModel<boolean>('show', { default: false });
         <div class="rule-list-item-arrow">&rsaquo;</div>
       </div>
     </div>
-  </ab-popup>
+  </ab-modal>
 </template>
 
 <style lang="scss" scoped>

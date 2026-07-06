@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { Info } from '@icon-park/vue-next';
-import { NButton, NSelect } from 'naive-ui';
+import { NSelect } from 'naive-ui';
 import type { SelectGroupOption, SelectOption } from 'naive-ui';
 import type { LLMProviderView } from '@/api/llm';
 import type { SelectItem } from '#/components';
@@ -276,16 +276,16 @@ const tuningItems = computed(() => [
                   account: selected.account_label || selected.display_name,
                 })
               }}</span>
-              <NButton size="tiny" quaternary @click="onDisconnect(selected.id)">{{
+              <ab-button size="sm" variant="ghost" @click="onDisconnect(selected.id)">{{
                 t('config.llm_set.disconnect')
-              }}</NButton>
+              }}</ab-button>
             </div>
-            <NButton
+            <ab-button
               v-else
-              type="primary"
-              size="small"
+              variant="primary"
+              size="sm"
               @click="showAuthDialog = true"
-              >{{ t('config.llm_set.connect') }}</NButton
+              >{{ t('config.llm_set.connect') }}</ab-button
             >
           </div>
 
@@ -326,26 +326,26 @@ const tuningItems = computed(() => [
             <p class="llm-install-hint">
               {{ t('config.llm_set.not_installed') }}
             </p>
-            <NButton
+            <ab-button
               v-if="!confirmRisk"
-              type="primary"
-              size="small"
+              variant="primary"
+              size="sm"
               :loading="busyProvider === llm.provider"
               @click="onInstall(llm.provider)"
-              >{{ t('config.llm_set.install') }}</NButton
+              >{{ t('config.llm_set.install') }}</ab-button
             >
             <div v-else class="llm-risk">
               <p class="llm-risk-text">{{ t('config.llm_set.risk_notice') }}</p>
               <div class="llm-risk-actions">
-                <NButton size="small" @click="confirmRisk = false">{{
+                <ab-button size="sm" variant="secondary" @click="confirmRisk = false">{{
                   t('config.llm_set.risk_cancel')
-                }}</NButton>
-                <NButton
-                  type="warning"
-                  size="small"
+                }}</ab-button>
+                <ab-button
+                  variant="danger"
+                  size="sm"
                   :loading="busyProvider === llm.provider"
                   @click="onInstall(llm.provider)"
-                  >{{ t('config.llm_set.risk_confirm') }}</NButton
+                  >{{ t('config.llm_set.risk_confirm') }}</ab-button
                 >
               </div>
             </div>
@@ -356,13 +356,12 @@ const tuningItems = computed(() => [
             v-if="selected && !selected.builtin && selected.plugin_version"
             class="llm-uninstall"
           >
-            <NButton
-              size="tiny"
-              quaternary
-              type="error"
+            <ab-button
+              size="sm"
+              variant="danger"
               :loading="busyProvider === selected.id"
               @click="onUninstall(selected.id)"
-              >{{ t('config.llm_set.uninstall') }}</NButton
+              >{{ t('config.llm_set.uninstall') }}</ab-button
             >
           </div>
 

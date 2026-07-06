@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { NButton, NInput, NModal } from 'naive-ui';
+import { NInput, NModal } from 'naive-ui';
 import type { LLMAuthChallenge } from '@/api/llm';
 
 const props = defineProps<{
@@ -134,12 +134,12 @@ onUnmounted(stopPolling);
           :rows="2"
           :placeholder="t('config.llm_set.auth_paste_code')"
         />
-        <NButton
-          type="primary"
+        <ab-button
+          variant="primary"
           :loading="loading"
           :disabled="!pastedCode.trim()"
           @click="submitCode"
-          >{{ t('config.llm_set.connect') }}</NButton
+          >{{ t('config.llm_set.connect') }}</ab-button
         >
       </template>
     </div>

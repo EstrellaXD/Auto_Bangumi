@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { NButton, NPopconfirm } from 'naive-ui';
+import { useConfirm } from '@/hooks/useConfirm';
 import { watchOnce } from '@vueuse/core';
 import { countLogLevels, parseLogLines } from '@/utils/log-parse';
 import type { LogLevel } from '@/utils/log-parse';
@@ -8,7 +8,19 @@ definePage({
   name: 'Log',
 });
 
+const { t } = useMyI18n();
 const { onUpdate, offUpdate, reset, copy, getLog } = useLogStore();
+const { confirm } = useConfirm();
+
+async function onReset() {
+  const ok = await confirm({
+    title: t('log.reset'),
+    body: t('log.reset_confirm'),
+    confirmText: t('log.reset'),
+    danger: true,
+  });
+  if (ok) reset();
+}
 const { log } = storeToRefs(useLogStore());
 
 // Filter states
@@ -133,9 +145,9 @@ onDeactivated(() => {
               warnings: warningCount,
             })
           }}</b>
-          <NButton size="tiny" secondary @click="jumpToFirstProblem">
+          <ab-button size="sm" @click="jumpToFirstProblem">
             {{ $t('log.jump_first') }} ↓
-          </NButton>
+          </ab-button>
         </div>
 
         <div class="log-viewer-card">
@@ -145,19 +157,18 @@ onDeactivated(() => {
               role="group"
               :aria-label="$t('log.filter_level')"
             >
-              <NButton
+              <ab-button
                 v-for="level in logLevels"
                 :key="level"
-                size="small"
+                size="sm"
                 class="filter-chip"
-                :secondary="!selectedLevels.includes(level)"
-                :type="selectedLevels.includes(level) ? 'primary' : 'default'"
+                :variant="selectedLevels.includes(level) ? 'primary' : 'secondary'"
                 :aria-pressed="selectedLevels.includes(level)"
                 @click="toggleLevel(level)"
               >
                 {{ level }}
                 <span class="chip-count">{{ levelCounts[level] }}</span>
-              </NButton>
+              </ab-button>
             </div>
 
             <input
@@ -170,27 +181,17 @@ onDeactivated(() => {
             />
 
             <div class="log-actions">
-              <NButton size="small" secondary @click="getLog(true)">
+              <ab-button size="sm" @click="getLog(true)">
                 {{ $t('log.update_now') }}
-              </NButton>
+              </ab-button>
 
-              <NButton size="small" secondary @click="copy">
+              <ab-button size="sm" @click="copy">
                 {{ $t('log.copy') }}
-              </NButton>
+              </ab-button>
 
-              <NPopconfirm
-                :positive-text="$t('log.reset')"
-                :negative-text="$t('config.cancel')"
-                :positive-button-props="{ type: 'error' }"
-                @positive-click="reset"
-              >
-                <template #trigger>
-                  <NButton size="small" secondary type="error">
-                    {{ $t('log.reset') }}
-                  </NButton>
-                </template>
-                {{ $t('log.reset_confirm') }}
-              </NPopconfirm>
+              <ab-button size="sm" variant="danger" @click="onReset">
+                {{ $t('log.reset') }}
+              </ab-button>
             </div>
           </div>
 
@@ -198,9 +199,9 @@ onDeactivated(() => {
             <div v-if="filteredLog.length === 0" class="log-empty">
               <template v-if="formatLog.length > 0 && isFiltered">
                 <p>{{ $t('log.filtered_empty') }}</p>
-                <NButton size="small" secondary @click="clearFilters">
+                <ab-button size="sm" @click="clearFilters">
                   {{ $t('log.clear_filters') }}
-                </NButton>
+                </ab-button>
               </template>
               <p v-else>{{ $t('log.empty') }}</p>
             </div>

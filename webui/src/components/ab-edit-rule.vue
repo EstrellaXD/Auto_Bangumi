@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { Close } from '@icon-park/vue-next';
-import { NButton, NCheckbox, NSelect, NSpin, useMessage } from 'naive-ui';
+import { NCheckbox, NSelect, NSpin, useMessage } from 'naive-ui';
 import { onKeyStroke } from '@vueuse/core';
 import type { BangumiRule, DetectOffsetResponse } from '#/bangumi';
 
@@ -199,12 +199,12 @@ function emitUnarchive() {
     <div>{{ $t('homepage.rule.enable_hit') }}</div>
     <div line my-8></div>
     <div f-cer gap-x-10>
-      <NButton size="small" type="error" @click="emitEnable">
+      <ab-button size="sm" variant="danger" @click="emitEnable">
         {{ $t('homepage.rule.yes_btn') }}
-      </NButton>
-      <NButton type="primary" size="small" @click="close">
+      </ab-button>
+      <ab-button variant="primary" size="sm" @click="close">
         {{ $t('homepage.rule.no_btn') }}
-      </NButton>
+      </ab-button>
     </div>
   </ab-popup>
 
@@ -348,25 +348,25 @@ function emitUnarchive() {
           <!-- Footer -->
           <footer class="edit-footer">
             <div class="footer-left">
-              <NButton
+              <ab-button
                 v-if="localRule.archived"
-                type="primary"
-                size="small"
+                variant="primary"
+                size="sm"
                 @click="emitUnarchive"
               >
                 {{ $t('homepage.rule.unarchive') }}
-              </NButton>
-              <NButton v-else type="primary" size="small" @click="emitArchive">
+              </ab-button>
+              <ab-button v-else variant="primary" size="sm" @click="emitArchive">
                 {{ $t('homepage.rule.archive') }}
-              </NButton>
-              <NButton size="small" type="error" @click="showDeleteFileDialog">
+              </ab-button>
+              <ab-button size="sm" variant="danger" @click="showDeleteFileDialog">
                 {{ $t('homepage.rule.delete') }}
-              </NButton>
+              </ab-button>
             </div>
             <div class="footer-right">
-              <NButton type="primary" size="small" @click="emitApply">
+              <ab-button variant="primary" size="sm" @click="emitApply">
                 {{ $t('homepage.rule.apply') }}
-              </NButton>
+              </ab-button>
             </div>
           </footer>
         </div>
@@ -390,20 +390,20 @@ function emitUnarchive() {
                 {{ $t('homepage.rule.delete_files_label') }}
               </NCheckbox>
               <div class="delete-actions">
-                <NButton
-                  size="small"
-                  secondary
+                <ab-button
+                  size="sm"
+                  variant="secondary"
                   @click="deleteFileDialog.show = false"
                 >
                   {{ $t('homepage.rule.cancel_btn') }}
-                </NButton>
-                <NButton
-                  size="small"
-                  type="error"
+                </ab-button>
+                <ab-button
+                  size="sm"
+                  variant="danger"
                   @click="emitDeleteFile(deleteLocalFiles)"
                 >
                   {{ $t('homepage.rule.delete') }}
-                </NButton>
+                </ab-button>
               </div>
             </div>
           </div>

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { NButton, NSelect, NSwitch } from 'naive-ui';
+import { NSelect, NSwitch } from 'naive-ui';
 
 const { t } = useMyI18n();
 const setupStore = useSetupStore();
@@ -136,10 +136,9 @@ const canProceed = computed(() => Boolean(downloaderData.value.host));
       </div>
 
       <div class="test-section">
-        <NButton
-          size="small"
-          type="primary"
-          secondary
+        <ab-button
+          size="sm"
+          variant="secondary"
           :disabled="!canTest || isTesting"
           @click="testConnection"
         >
@@ -148,7 +147,7 @@ const canProceed = computed(() => Boolean(downloaderData.value.host));
               ? t('setup.downloader.testing')
               : t('setup.downloader.test')
           }}
-        </NButton>
+        </ab-button>
         <p
           v-if="testMessage"
           class="test-message"
@@ -163,22 +162,21 @@ const canProceed = computed(() => Boolean(downloaderData.value.host));
       </p>
 
       <div class="wizard-actions">
-        <NButton
-          size="small"
-          type="primary"
-          secondary
+        <ab-button
+          size="sm"
+          variant="secondary"
           @click="setupStore.prevStep()"
         >
           {{ t('setup.nav.previous') }}
-        </NButton>
-        <NButton
-          type="primary"
-          size="small"
+        </ab-button>
+        <ab-button
+          variant="primary"
+          size="sm"
           :disabled="!canProceed"
           @click="handleNext"
         >
           {{ t('setup.nav.next') }}
-        </NButton>
+        </ab-button>
       </div>
     </div>
   </ab-container>

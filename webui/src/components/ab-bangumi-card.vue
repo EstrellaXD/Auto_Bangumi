@@ -49,11 +49,11 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
 
       <div class="card-overlay">
         <div class="card-overlay-tags">
-          <ab-tag :title="`Season ${bangumi.season}`" type="primary" />
+          <ab-tag :title="`Season ${bangumi.season}`" type="info" />
           <ab-tag
             v-if="bangumi.group_name"
             :title="bangumi.group_name"
-            type="primary"
+            type="info"
           />
         </div>
         <div
@@ -97,22 +97,36 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
             <ab-tag
               v-if="bangumi.season"
               :title="`Season ${bangumi.season}`"
-              type="primary"
+              type="info"
             />
             <ab-tag
               v-if="bangumi.group_name"
               :title="bangumi.group_name"
-              type="primary"
+              type="info"
             />
             <ab-tag
               v-if="bangumi.subtitle"
               :title="bangumi.subtitle"
-              type="primary"
+              type="info"
             />
           </div>
         </div>
       </div>
-      <ab-add :round="true" type="medium" @click="() => $emit('click')" />
+      <ab-icon-button
+        variant="solid"
+        round
+        :label="$t('topbar.add.button')"
+        @click="() => $emit('click')"
+      >
+        <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+          <path
+            d="M12 5v14M5 12h14"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          />
+        </svg>
+      </ab-icon-button>
     </div>
   </div>
 </template>
@@ -245,12 +259,17 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
   gap: 3px;
   flex-wrap: wrap;
 
-  :deep(.tag) {
+  :deep(.ab-tag) {
     background: var(--color-overlay);
     border-color: rgba(255, 255, 255, 0.4);
     color: var(--color-white);
     font-size: 9px;
     padding: 1px 6px;
+
+    // 海报叠层上的信息 chip 不需要语义色标记
+    &::before {
+      display: none;
+    }
   }
 
   // On touch, move tags to avoid overlap with edit button

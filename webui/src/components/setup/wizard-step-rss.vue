@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import { NButton } from 'naive-ui';
-
 const { t } = useMyI18n();
 const setupStore = useSetupStore();
 const { rssData, validation } = storeToRefs(setupStore);
@@ -72,15 +70,14 @@ function handleNext() {
       </div>
 
       <div class="test-section">
-        <NButton
-          size="small"
-          type="primary"
-          secondary
+        <ab-button
+          size="sm"
+          variant="secondary"
           :disabled="!rssData.url || isTesting"
           @click="testFeed"
         >
           {{ isTesting ? t('setup.downloader.testing') : t('setup.rss.test') }}
-        </NButton>
+        </ab-button>
         <p
           v-if="testMessage"
           class="test-message"
@@ -100,26 +97,25 @@ function handleNext() {
       </div>
 
       <div class="wizard-actions">
-        <NButton
-          size="small"
-          type="primary"
-          secondary
+        <ab-button
+          size="sm"
+          variant="secondary"
           @click="setupStore.prevStep()"
         >
           {{ t('setup.nav.previous') }}
-        </NButton>
+        </ab-button>
         <div class="action-group">
-          <NButton size="small" type="primary" secondary @click="skipStep">
+          <ab-button size="sm" variant="secondary" @click="skipStep">
             {{ t('setup.nav.skip') }}
-          </NButton>
-          <NButton
-            type="primary"
-            size="small"
+          </ab-button>
+          <ab-button
+            variant="primary"
+            size="sm"
             :disabled="!validation.rssTested"
             @click="handleNext"
           >
             {{ t('setup.nav.next') }}
-          </NButton>
+          </ab-button>
         </div>
       </div>
     </div>

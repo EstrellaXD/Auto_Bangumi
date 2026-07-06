@@ -1,11 +1,7 @@
 <script lang="tsx" setup>
-import {
-  type DataTableColumns,
-  NButton,
-  NDataTable,
-  NPopconfirm,
-  NTooltip,
-} from 'naive-ui';
+import { type DataTableColumns, NDataTable, NTooltip } from 'naive-ui';
+import AbButton from '@/components/basic/ab-button.vue';
+import { useConfirm } from '@/hooks/useConfirm';
 import type { RSS } from '#/rss';
 
 definePage({
@@ -13,6 +9,17 @@ definePage({
 });
 
 const { t } = useMyI18n();
+const { confirm } = useConfirm();
+
+async function onDeleteSelected() {
+  const ok = await confirm({
+    title: t('rss.delete'),
+    body: t('rss.delete_confirm'),
+    confirmText: t('rss.delete'),
+    danger: true,
+  });
+  if (ok) deleteSelected();
+}
 const { isMobile } = useBreakpointQuery();
 const { rss, selectedRSS, isRefreshingAll, isLoading } = storeToRefs(
   useRSSStore()
@@ -60,9 +67,9 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
           <span class="rss-name" title={rss.name}>
             {rss.name}
           </span>
-          {rss.parser && <ab-tag type="primary" title={rss.parser} />}
+          {rss.parser && <ab-tag type="info" title={rss.parser} />}
           {rss.aggregate && (
-            <ab-tag type="primary" title={t('rss.aggregate')} />
+            <ab-tag type="info" title={t('rss.aggregate')} />
           )}
         </div>
       );
@@ -87,20 +94,20 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
       return (
         <div flex="~ justify-end gap-x-8">
           {rss.connection_status === 'healthy' && (
-            <ab-tag type="active" title={t('rss.connected')} />
+            <ab-tag type="success" title={t('rss.connected')} />
           )}
           {rss.connection_status === 'error' && (
             <NTooltip>
               {{
-                trigger: () => <ab-tag type="warn" title={t('rss.error')} />,
+                trigger: () => <ab-tag type="danger" title={t('rss.error')} />,
                 default: () => rss.last_error || 'Unknown error',
               }}
             </NTooltip>
           )}
           {rss.enabled ? (
-            <ab-tag type="active" title={t('rss.active')} />
+            <ab-tag type="success" title={t('rss.active')} />
           ) : (
-            <ab-tag type="inactive" title={t('rss.inactive')} />
+            <ab-tag type="neutral" title={t('rss.inactive')} />
           )}
         </div>
       );
@@ -115,10 +122,9 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
       const isRowRefreshing = refreshingId.value === rss.id;
       const isRowFailed = refreshFailedId.value === rss.id;
       return (
-        <NButton
-          size="small"
-          type={isRowFailed ? 'error' : 'primary'}
-          secondary
+        <AbButton
+          size="sm"
+          variant={isRowFailed ? 'danger' : 'secondary'}
           {...{ title: t('rss.refresh') }}
           disabled={isRowRefreshing}
           onClick={() => onRefreshOne(rss.id)}
@@ -128,7 +134,7 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
               isRowRefreshing ? 'i-carbon-renew animate-spin' : 'i-carbon-renew'
             }
           />
-        </NButton>
+        </AbButton>
       );
     },
   },
@@ -141,10 +147,8 @@ const rssRowKey = (row: RSS) => row.id;
   <div class="page-rss">
     <ab-container :title="$t('rss.title')">
       <template #title-right>
-        <NButton
-          size="small"
-          type="primary"
-          secondary
+        <AbButton
+          size="sm"
           :title="$t('rss.refresh_all')"
           :disabled="isRefreshingAll"
           @click="refreshAllRSS"
@@ -159,7 +163,7 @@ const rssRowKey = (row: RSS) => row.id;
             ></div>
           </template>
           {{ $t('rss.refresh_all') }}
-        </NButton>
+        </AbButton>
       </template>
 
       <!-- Mobile: Card-based list -->
@@ -180,21 +184,21 @@ const rssRowKey = (row: RSS) => row.id;
             <div class="rss-card-name">{{ item.name }}</div>
             <div class="rss-card-url">{{ item.url }}</div>
             <div class="rss-card-tags">
-              <ab-tag v-if="item.parser" type="primary" :title="item.parser" />
-              <ab-tag v-if="item.aggregate" type="primary" title="aggregate" />
+              <ab-tag v-if="item.parser" type="info" :title="item.parser" />
+              <ab-tag v-if="item.aggregate" type="info" title="aggregate" />
               <ab-tag
                 v-if="item.connection_status === 'healthy'"
-                type="active"
+                type="success"
                 :title="$t('rss.connected')"
               />
               <ab-tag
                 v-if="item.connection_status === 'error'"
-                type="warn"
+                type="danger"
                 :title="$t('rss.error')"
               />
               <ab-tag
-                :type="item.enabled ? 'active' : 'inactive'"
-                :title="item.enabled ? 'active' : 'inactive'"
+                :type="item.enabled ? 'success' : 'neutral'"
+                :title="item.enabled ? 'success' : 'neutral'"
               />
             </div>
             <!-- Inline on touch — a tooltip can't be hovered on a phone -->
@@ -205,10 +209,9 @@ const rssRowKey = (row: RSS) => row.id;
               {{ item.last_error }}
             </div>
             <div class="rss-card-actions" @click.stop>
-              <NButton
-                size="small"
-                :type="refreshFailedId === item.id ? 'error' : 'primary'"
-                secondary
+              <AbButton
+                size="sm"
+                :variant="refreshFailedId === item.id ? 'danger' : 'secondary'"
                 :title="$t('rss.refresh')"
                 :disabled="refreshingId === item.id"
                 @click="onRefreshOne(item.id)"
@@ -221,7 +224,7 @@ const rssRowKey = (row: RSS) => row.id;
                   "
                 ></div>
                 {{ $t('rss.refresh') }}
-              </NButton>
+              </AbButton>
             </div>
           </div>
         </template>
@@ -243,23 +246,15 @@ const rssRowKey = (row: RSS) => row.id;
       <div v-if="selectedRSS.length > 0">
         <div class="divider"></div>
         <div class="rss-actions">
-          <NButton type="primary" @click="enableSelected">{{
+          <AbButton variant="primary" @click="enableSelected">{{
             $t('rss.enable')
-          }}</NButton>
-          <NButton type="primary" @click="disableSelected">{{
+          }}</AbButton>
+          <AbButton variant="secondary" @click="disableSelected">{{
             $t('rss.disable')
-          }}</NButton>
-          <NPopconfirm
-            :positive-text="$t('rss.delete')"
-            :negative-text="$t('config.cancel')"
-            :positive-button-props="{ type: 'error' }"
-            @positive-click="deleteSelected"
-          >
-            <template #trigger>
-              <NButton type="error">{{ $t('rss.delete') }}</NButton>
-            </template>
-            {{ $t('rss.delete_confirm') }}
-          </NPopconfirm>
+          }}</AbButton>
+          <AbButton variant="danger" @click="onDeleteSelected">{{
+            $t('rss.delete')
+          }}</AbButton>
         </div>
       </div>
     </ab-container>

@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import { NButton } from 'naive-ui';
-
 const show = defineModel('show', {
   default: false,
 });
@@ -36,9 +34,9 @@ const { user, update } = useAuth();
       <div line></div>
 
       <div flex="~ justify-end">
-        <NButton type="primary" size="small" @click="update">{{
+        <ab-button variant="primary" size="sm" @click="update">{{
           $t('topbar.profile.update_btn')
-        }}</NButton>
+        }}</ab-button>
       </div>
     </div>
   </ab-popup>

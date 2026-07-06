@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { NButton } from 'naive-ui';
 import { Fingerprint, Lock, User } from '@icon-park/vue-next';
 
 definePage({
@@ -95,15 +94,15 @@ async function handleLogin() {
 
         <!-- Actions -->
         <div class="login-actions">
-          <NButton
-            size="large"
-            type="primary"
+          <ab-button
+            variant="primary"
+            block
             :loading="isLoginLoading"
             :disabled="isLoginLoading"
             @click="handleLogin"
           >
             {{ $t('login.login_btn') }}
-          </NButton>
+          </ab-button>
 
           <button
             v-if="isSupported"
@@ -364,10 +363,6 @@ async function handleLogin() {
   gap: 12px;
   margin-top: 8px;
 
-  // Override NButton width to be full width
-  :deep(.n-button) {
-    width: 100%;
-  }
 }
 
 .passkey-btn {

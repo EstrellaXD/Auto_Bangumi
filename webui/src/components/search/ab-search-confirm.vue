@@ -171,9 +171,13 @@ function handleConfirm() {
       <!-- Header -->
       <header class="confirm-header">
         <h2 class="confirm-title">{{ $t('search.confirm.title') }}</h2>
-        <button class="close-btn" aria-label="Close" @click="emit('cancel')">
+        <ab-icon-button
+          class="close-btn"
+          :label="$t('common.cancel')"
+          @click="emit('cancel')"
+        >
           <Close theme="outline" size="18" />
-        </button>
+        </ab-icon-button>
       </header>
 
       <!-- Content -->
@@ -302,12 +306,12 @@ function handleConfirm() {
 
       <!-- Footer -->
       <footer class="confirm-footer">
-        <button class="btn btn-secondary" @click="emit('cancel')">
+        <ab-button @click="emit('cancel')">
           {{ $t('common.cancel') }}
-        </button>
-        <button class="btn btn-primary" @click="handleConfirm">
+        </ab-button>
+        <ab-button variant="primary" @click="handleConfirm">
           {{ $t('search.confirm.subscribe') }}
-        </button>
+        </ab-button>
       </footer>
     </div>
 

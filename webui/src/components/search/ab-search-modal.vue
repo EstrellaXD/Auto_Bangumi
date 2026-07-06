@@ -679,13 +679,13 @@ function handleFilterClick(
               </div>
             </div>
 
-            <button
+            <ab-icon-button
               class="modal-close-btn"
-              aria-label="Close"
+              :label="$t('common.cancel')"
               @click="handleClose"
             >
               <Close theme="outline" size="20" />
-            </button>
+            </ab-icon-button>
           </header>
 
           <!-- Filter Section - Chip Cloud -->
