@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { Info } from '@icon-park/vue-next';
-import { NButton, NSelect } from 'naive-ui';
+import { NSelect } from 'naive-ui';
 import type { SelectGroupOption, SelectOption } from 'naive-ui';
 import type { LLMProviderView } from '@/api/llm';
 import type { SelectItem } from '#/components';
@@ -60,22 +60,46 @@ const providerOptions = computed<SelectGroupOption[]>(() => {
   const installed = providerList.value.filter(
     (p) => !p.builtin && p.auth_kind === 'api_key'
   );
-  const subscription = providerList.value.filter((p) => !p.builtin && p.auth_kind !== 'api_key');
+  const subscription = providerList.value.filter(
+    (p) => !p.builtin && p.auth_kind !== 'api_key'
+  );
   const installedIds = new Set(providerList.value.map((p) => p.id));
-  const downloadable = KNOWN_DOWNLOADABLE.filter((p) => !installedIds.has(p.id));
+  const downloadable = KNOWN_DOWNLOADABLE.filter(
+    (p) => !installedIds.has(p.id)
+  );
   const groups: SelectGroupOption[] = [];
   const toOpt = (p: { id: string; display_name: string }) => ({
     label: p.display_name,
     value: p.id,
   });
   if (builtin.length)
-    groups.push({ type: 'group', label: t('config.llm_set.group_builtin'), key: 'builtin', children: builtin.map(toOpt) });
+    groups.push({
+      type: 'group',
+      label: t('config.llm_set.group_builtin'),
+      key: 'builtin',
+      children: builtin.map(toOpt),
+    });
   if (installed.length)
-    groups.push({ type: 'group', label: t('config.llm_set.group_installed'), key: 'installed', children: installed.map(toOpt) });
+    groups.push({
+      type: 'group',
+      label: t('config.llm_set.group_installed'),
+      key: 'installed',
+      children: installed.map(toOpt),
+    });
   if (subscription.length)
-    groups.push({ type: 'group', label: t('config.llm_set.group_subscription'), key: 'subscription', children: subscription.map(toOpt) });
+    groups.push({
+      type: 'group',
+      label: t('config.llm_set.group_subscription'),
+      key: 'subscription',
+      children: subscription.map(toOpt),
+    });
   if (downloadable.length)
-    groups.push({ type: 'group', label: t('config.llm_set.group_available'), key: 'available', children: downloadable.map(toOpt) });
+    groups.push({
+      type: 'group',
+      label: t('config.llm_set.group_available'),
+      key: 'available',
+      children: downloadable.map(toOpt),
+    });
   return groups;
 });
 
@@ -251,14 +275,14 @@ const tuningItems = computed(() => [
 
       <transition name="slide-fade">
         <div v-if="llm.enable" class="llm-config">
-          <ab-label :label="() => t('config.llm_set.provider')">
+          <ab-field :label="() => t('config.llm_set.provider')">
             <NSelect
               v-model:value="llm.provider"
               class="model-select"
               :options="providerOptions"
               :aria-label="t('config.llm_set.provider')"
             />
-          </ab-label>
+          </ab-field>
 
           <ab-setting
             v-model:data="llm.mode"
@@ -276,16 +300,19 @@ const tuningItems = computed(() => [
                   account: selected.account_label || selected.display_name,
                 })
               }}</span>
-              <NButton size="tiny" quaternary @click="onDisconnect(selected.id)">{{
-                t('config.llm_set.disconnect')
-              }}</NButton>
+              <ab-button
+                size="sm"
+                variant="ghost"
+                @click="onDisconnect(selected.id)"
+                >{{ t('config.llm_set.disconnect') }}</ab-button
+              >
             </div>
-            <NButton
+            <ab-button
               v-else
-              type="primary"
-              size="small"
+              variant="primary"
+              size="sm"
               @click="showAuthDialog = true"
-              >{{ t('config.llm_set.connect') }}</NButton
+              >{{ t('config.llm_set.connect') }}</ab-button
             >
           </div>
 
@@ -298,7 +325,7 @@ const tuningItems = computed(() => [
               :prop="{ type: 'password', placeholder: 'sk-...' }"
             />
 
-            <ab-label :label="() => t('config.llm_set.model')">
+            <ab-field :label="() => t('config.llm_set.model')">
               <NSelect
                 v-model:value="model"
                 class="model-select"
@@ -310,7 +337,7 @@ const tuningItems = computed(() => [
                 :aria-label="t('config.llm_set.model')"
                 @update:show="onModelDropdownShow"
               />
-            </ab-label>
+            </ab-field>
 
             <ab-setting
               v-if="selected?.needs_base_url"
@@ -326,26 +353,29 @@ const tuningItems = computed(() => [
             <p class="llm-install-hint">
               {{ t('config.llm_set.not_installed') }}
             </p>
-            <NButton
+            <ab-button
               v-if="!confirmRisk"
-              type="primary"
-              size="small"
+              variant="primary"
+              size="sm"
               :loading="busyProvider === llm.provider"
               @click="onInstall(llm.provider)"
-              >{{ t('config.llm_set.install') }}</NButton
+              >{{ t('config.llm_set.install') }}</ab-button
             >
             <div v-else class="llm-risk">
               <p class="llm-risk-text">{{ t('config.llm_set.risk_notice') }}</p>
               <div class="llm-risk-actions">
-                <NButton size="small" @click="confirmRisk = false">{{
-                  t('config.llm_set.risk_cancel')
-                }}</NButton>
-                <NButton
-                  type="warning"
-                  size="small"
+                <ab-button
+                  size="sm"
+                  variant="secondary"
+                  @click="confirmRisk = false"
+                  >{{ t('config.llm_set.risk_cancel') }}</ab-button
+                >
+                <ab-button
+                  variant="danger"
+                  size="sm"
                   :loading="busyProvider === llm.provider"
                   @click="onInstall(llm.provider)"
-                  >{{ t('config.llm_set.risk_confirm') }}</NButton
+                  >{{ t('config.llm_set.risk_confirm') }}</ab-button
                 >
               </div>
             </div>
@@ -356,13 +386,12 @@ const tuningItems = computed(() => [
             v-if="selected && !selected.builtin && selected.plugin_version"
             class="llm-uninstall"
           >
-            <NButton
-              size="tiny"
-              quaternary
-              type="error"
+            <ab-button
+              size="sm"
+              variant="danger"
               :loading="busyProvider === selected.id"
               @click="onUninstall(selected.id)"
-              >{{ t('config.llm_set.uninstall') }}</NButton
+              >{{ t('config.llm_set.uninstall') }}</ab-button
             >
           </div>
 
@@ -410,7 +439,7 @@ const tuningItems = computed(() => [
   color: var(--color-text-secondary);
   font-size: 12px;
   transition: background-color var(--transition-normal),
-              border-color var(--transition-normal);
+    border-color var(--transition-normal);
 }
 
 .llm-config {
@@ -463,13 +492,13 @@ const tuningItems = computed(() => [
   gap: 8px;
   padding: 10px 12px;
   border-radius: var(--radius-sm);
-  background: var(--color-warning-bg, #fef9ed);
-  border: 1px solid var(--color-warning-border, #fde68a);
+  background: transparent;
+  border: 1px solid var(--color-border);
 }
 
 .llm-risk-text {
   font-size: 12.5px;
-  color: var(--color-warning-text, #92400e);
+  color: var(--color-text);
 }
 
 .llm-risk-actions {

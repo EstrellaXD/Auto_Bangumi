@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { NButton } from 'naive-ui';
 import { markSetupComplete } from '@/router';
 
 const { t, returnUserLangText } = useMyI18n();
@@ -101,17 +100,12 @@ function maskPassword(pwd: string): string {
       </div>
 
       <div class="wizard-actions">
-        <NButton
-          size="small"
-          type="primary"
-          secondary
-          @click="setupStore.prevStep()"
-        >
+        <ab-button size="sm" variant="secondary" @click="setupStore.prevStep()">
           {{ t('setup.nav.previous') }}
-        </NButton>
-        <NButton
-          type="primary"
-          size="small"
+        </ab-button>
+        <ab-button
+          variant="primary"
+          size="sm"
           :disabled="isLoading"
           @click="completeSetup"
         >
@@ -120,7 +114,7 @@ function maskPassword(pwd: string): string {
               ? t('setup.review.completing')
               : t('setup.review.complete')
           }}
-        </NButton>
+        </ab-button>
       </div>
     </div>
   </ab-container>

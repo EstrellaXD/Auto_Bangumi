@@ -81,11 +81,11 @@ function posterSrc(link: string | null | undefined): string {
                 </span>
               </div>
               <div class="calendar-row-meta">
-                <ab-tag :title="`S${group.primary.season}`" type="primary" />
+                <ab-tag :title="`S${group.primary.season}`" type="info" />
                 <ab-tag
                   v-if="group.primary.group_name"
                   :title="group.primary.group_name"
-                  type="primary"
+                  type="info"
                 />
               </div>
             </div>

@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { NButton } from 'naive-ui';
 import type { BangumiRule } from '#/bangumi';
 
 definePage({
@@ -122,9 +121,9 @@ function groupNeedsReview(group: BangumiGroup): boolean {
             {{ $t('homepage.load_failed.subtitle') }}
           </div>
         </div>
-        <NButton type="primary" :loading="isLoading" @click="getAll">
+        <ab-button variant="primary" :loading="isLoading" @click="getAll">
           {{ $t('homepage.load_failed.retry') }}
-        </NButton>
+        </ab-button>
       </div>
 
       <!-- Empty state guide -->
@@ -175,9 +174,9 @@ function groupNeedsReview(group: BangumiGroup): boolean {
         </div>
 
         <div class="empty-guide-action anim-slide-up" style="--delay: 0.6s">
-          <NButton type="primary" size="large" @click="openAddRss">
+          <ab-button variant="primary" @click="openAddRss">
             {{ $t('homepage.empty.add_rss_btn') }}
-          </NButton>
+          </ab-button>
         </div>
       </div>
 
@@ -277,7 +276,7 @@ function groupNeedsReview(group: BangumiGroup): boolean {
       </template>
 
       <!-- Rule list popup for grouped items -->
-      <ab-popup
+      <ab-modal
         v-model:show="ruleListPopup.show"
         :title="ruleListPopup.group?.primary.official_title || ''"
       >
@@ -305,17 +304,13 @@ function groupNeedsReview(group: BangumiGroup): boolean {
                 }}
               </div>
               <div class="rule-list-item-tags">
-                <ab-tag v-if="rule.dpi" :title="rule.dpi" type="primary" />
+                <ab-tag v-if="rule.dpi" :title="rule.dpi" type="info" />
                 <ab-tag
                   v-if="rule.subtitle"
                   :title="rule.subtitle"
-                  type="primary"
+                  type="info"
                 />
-                <ab-tag
-                  v-if="rule.source"
-                  :title="rule.source"
-                  type="primary"
-                />
+                <ab-tag v-if="rule.source" :title="rule.source" type="info" />
               </div>
               <div
                 v-if="rule.filter && rule.filter.length > 0"
@@ -335,7 +330,7 @@ function groupNeedsReview(group: BangumiGroup): boolean {
             <div class="rule-list-item-arrow">›</div>
           </div>
         </div>
-      </ab-popup>
+      </ab-modal>
     </div>
   </ab-pull-refresh>
 </template>

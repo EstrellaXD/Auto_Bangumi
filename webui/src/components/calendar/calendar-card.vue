@@ -48,11 +48,11 @@ const posterSrc = computed(() =>
         </div>
         <div class="calendar-card-overlay">
           <div class="calendar-card-overlay-tags">
-            <ab-tag :title="`S${group.primary.season}`" type="primary" />
+            <ab-tag :title="`S${group.primary.season}`" type="info" />
             <ab-tag
               v-if="group.primary.group_name"
               :title="group.primary.group_name"
-              type="primary"
+              type="info"
             />
           </div>
           <div class="calendar-card-overlay-title">
@@ -204,12 +204,17 @@ const posterSrc = computed(() =>
   gap: 3px;
   flex-wrap: wrap;
 
-  :deep(.tag) {
-    background: rgba(0, 0, 0, 0.5);
+  :deep(.ab-tag) {
+    background: var(--color-overlay);
     border-color: rgba(255, 255, 255, 0.4);
-    color: #fff;
+    color: var(--color-white);
     font-size: 9px;
     padding: 1px 5px;
+
+    // 海报叠层上的信息 chip 不需要语义色标记
+    &::before {
+      display: none;
+    }
   }
 }
 

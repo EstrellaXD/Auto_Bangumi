@@ -132,15 +132,15 @@ function onRuleSelect(rule: BangumiRule) {
       <div class="calendar-header-text">
         <p class="calendar-subtitle">{{ $t('calendar.subtitle') }}</p>
       </div>
-      <button
+      <ab-icon-button
         class="calendar-refresh-btn"
         :class="{ 'calendar-refresh-btn--spinning': refreshing }"
         :disabled="refreshing"
-        :title="$t('calendar.refresh')"
+        :label="$t('calendar.refresh')"
         @click="refreshCalendar"
       >
         <Refresh :size="18" />
-      </button>
+      </ab-icon-button>
     </div>
 
     <!-- Empty state -->

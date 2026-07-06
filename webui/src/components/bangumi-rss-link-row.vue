@@ -16,14 +16,16 @@ const emit = defineEmits<{
     <div class="info-row">
       <span class="info-label">{{ $t('search.confirm.rss') }}:</span>
       <span class="info-value info-value--link">{{ props.link }}</span>
-      <button
+      <ab-icon-button
+        size="sm"
         class="copy-btn"
         :class="{ copied: props.copied }"
+        :label="$t('common.copy')"
         @click="emit('copy')"
       >
         <CheckOne v-if="props.copied" theme="outline" size="14" />
         <Copy v-else theme="outline" size="14" />
-      </button>
+      </ab-icon-button>
     </div>
   </div>
 </template>

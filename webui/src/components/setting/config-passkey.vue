@@ -1,9 +1,20 @@
 <script lang="ts" setup>
-import { NButton, NPopconfirm } from 'naive-ui';
 import { Delete } from '@icon-park/vue-next';
+import { useConfirm } from '@/hooks/useConfirm';
 import type { PasskeyItem } from '#/passkey';
 
 const { t } = useMyI18n();
+const { confirm } = useConfirm();
+
+async function onDeleteClick(passkey: PasskeyItem) {
+  const ok = await confirm({
+    title: t('passkey.delete'),
+    body: t('passkey.delete_confirm'),
+    confirmText: t('passkey.delete'),
+    danger: true,
+  });
+  if (ok) handleDelete(passkey);
+}
 const {
   passkeys,
   loading,
@@ -110,23 +121,14 @@ function formatDate(dateString: string | null): string {
               {{ $t('passkey.synced') }}
             </div>
           </div>
-          <NPopconfirm
-            :positive-text="$t('passkey.delete')"
-            :negative-text="$t('config.cancel')"
-            :positive-button-props="{ type: 'error' }"
-            @positive-click="handleDelete(passkey)"
+          <ab-icon-button
+            size="sm"
+            class="passkey-delete"
+            :label="$t('passkey.delete')"
+            @click="onDeleteClick(passkey)"
           >
-            <template #trigger>
-              <NButton
-                size="small"
-                type="error"
-                :aria-label="$t('passkey.delete')"
-              >
-                <Delete size="16" />
-              </NButton>
-            </template>
-            {{ $t('passkey.delete_confirm') }}
-          </NPopconfirm>
+            <Delete size="16" />
+          </ab-icon-button>
         </div>
       </div>
 
@@ -134,55 +136,51 @@ function formatDate(dateString: string | null): string {
 
       <!-- 添加按钮 -->
       <div flex="~ justify-end">
-        <NButton
+        <ab-button
           v-if="isSupported"
-          size="small"
-          type="primary"
+          size="sm"
+          variant="primary"
           @click="openAddDialog"
         >
           {{ $t('passkey.add_new') }}
-        </NButton>
+        </ab-button>
       </div>
     </div>
 
     <!-- 添加对话框 -->
-    <ab-popup
+    <ab-modal
       v-model:show="showAddDialog"
+      size="sm"
       :title="$t('passkey.register_title')"
-      css="w-365"
     >
       <div space-y-16>
-        <ab-label :label="$t('passkey.device_name')">
-          <input
+        <ab-field :label="$t('passkey.device_name')">
+          <ab-input
             v-model="deviceName"
-            type="text"
             :placeholder="$t('passkey.device_name_placeholder')"
-            ab-input
-            maxlength="64"
+            :maxlength="64"
             @keyup.enter="handleAdd"
           />
-        </ab-label>
+        </ab-field>
 
         <div text-14 text-gray-500>
           {{ $t('passkey.register_hint') }}
         </div>
-
-        <div line></div>
-
-        <div flex="~ justify-end gap-8">
-          <NButton size="small" type="error" @click="showAddDialog = false">
-            {{ $t('config.cancel') }}
-          </NButton>
-          <NButton
-            size="small"
-            type="primary"
-            :disabled="!deviceName.trim() || isRegistering"
-            @click="handleAdd"
-          >
-            {{ $t('config.apply') }}
-          </NButton>
-        </div>
       </div>
-    </ab-popup>
+
+      <template #footer>
+        <ab-button size="sm" @click="showAddDialog = false">
+          {{ $t('config.cancel') }}
+        </ab-button>
+        <ab-button
+          size="sm"
+          variant="primary"
+          :disabled="!deviceName.trim() || isRegistering"
+          @click="handleAdd"
+        >
+          {{ $t('config.apply') }}
+        </ab-button>
+      </template>
+    </ab-modal>
   </ab-fold-panel>
 </template>

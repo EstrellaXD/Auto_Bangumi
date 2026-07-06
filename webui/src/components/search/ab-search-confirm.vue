@@ -171,9 +171,13 @@ function handleConfirm() {
       <!-- Header -->
       <header class="confirm-header">
         <h2 class="confirm-title">{{ $t('search.confirm.title') }}</h2>
-        <button class="close-btn" aria-label="Close" @click="emit('cancel')">
+        <ab-icon-button
+          class="close-btn"
+          :label="$t('common.close')"
+          @click="emit('cancel')"
+        >
           <Close theme="outline" size="18" />
-        </button>
+        </ab-icon-button>
       </header>
 
       <!-- Content -->
@@ -264,10 +268,9 @@ function handleConfirm() {
                   $t('homepage.rule.season_offset')
                 }}</label>
                 <div class="advanced-control offset-controls">
-                  <input
-                    v-model.number="localBangumi.season_offset"
+                  <ab-input
+                    v-model="localBangumi.season_offset"
                     type="number"
-                    ab-input
                     class="offset-input"
                   />
                 </div>
@@ -279,10 +282,9 @@ function handleConfirm() {
                   $t('homepage.rule.episode_offset')
                 }}</label>
                 <div class="advanced-control offset-controls">
-                  <input
-                    v-model.number="localBangumi.episode_offset"
+                  <ab-input
+                    v-model="localBangumi.episode_offset"
                     type="number"
-                    ab-input
                     class="offset-input"
                   />
                   <button
@@ -302,12 +304,12 @@ function handleConfirm() {
 
       <!-- Footer -->
       <footer class="confirm-footer">
-        <button class="btn btn-secondary" @click="emit('cancel')">
+        <ab-button @click="emit('cancel')">
           {{ $t('common.cancel') }}
-        </button>
-        <button class="btn btn-primary" @click="handleConfirm">
+        </ab-button>
+        <ab-button variant="primary" @click="handleConfirm">
           {{ $t('search.confirm.subscribe') }}
-        </button>
+        </ab-button>
       </footer>
     </div>
 

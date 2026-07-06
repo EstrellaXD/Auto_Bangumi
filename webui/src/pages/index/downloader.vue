@@ -1,11 +1,7 @@
 <script lang="tsx" setup>
-import {
-  type DataTableColumns,
-  NButton,
-  NDataTable,
-  NPopconfirm,
-  NProgress,
-} from 'naive-ui';
+import { type DataTableColumns, NDataTable } from 'naive-ui';
+import AbProgress from '@/components/basic/ab-progress.vue';
+import { useConfirm } from '@/hooks/useConfirm';
 import type { QbTorrentInfo, TorrentGroup } from '#/downloader';
 
 definePage({
@@ -25,6 +21,17 @@ const {
   toggleGroup,
   clearSelection,
 } = useDownloaderStore();
+const { confirm } = useConfirm();
+
+async function onDeleteSelected() {
+  const ok = await confirm({
+    title: t('downloader.action.delete'),
+    body: t('downloader.action.delete_confirm'),
+    confirmText: t('downloader.action.delete'),
+    danger: true,
+  });
+  if (ok) deleteSelected(false);
+}
 
 const isNull = computed(() => {
   return config.value.downloader.host === '';
@@ -99,11 +106,11 @@ function stateLabel(state: string): string {
 }
 
 function stateType(state: string): string {
-  if (state.includes('paused')) return 'inactive';
-  if (state === 'downloading' || state === 'forcedDL') return 'active';
-  if (state.includes('UP') || state === 'uploading') return 'primary';
-  if (state === 'error' || state === 'missingFiles') return 'warn';
-  return 'primary';
+  if (state.includes('paused')) return 'neutral';
+  if (state === 'downloading' || state === 'forcedDL') return 'success';
+  if (state.includes('UP') || state === 'uploading') return 'info';
+  if (state === 'error' || state === 'missingFiles') return 'danger';
+  return 'info';
 }
 
 function isGroupAllSelected(group: TorrentGroup): boolean {
@@ -126,10 +133,14 @@ const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
     width: 160,
     render(row: QbTorrentInfo) {
       return (
-        <NProgress
-          type="line"
-          percentage={Math.round(row.progress * 100)}
-          processing={row.state === 'downloading' || row.state === 'forcedDL'}
+        <AbProgress
+          value={row.progress * 100}
+          label={`${Math.round(row.progress * 100)}%`}
+          state={
+            row.state === 'error' || row.state === 'missingFiles'
+              ? 'error'
+              : 'active'
+          }
         />
       );
     },
@@ -293,25 +304,15 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
             {{ selectedHashes.length }} {{ $t('downloader.selected') }}
           </span>
           <div class="action-bar-buttons">
-            <NButton type="primary" size="small" @click="resumeSelected">{{
+            <ab-button variant="primary" size="sm" @click="resumeSelected">{{
               $t('downloader.action.resume')
-            }}</NButton>
-            <NButton type="primary" size="small" @click="pauseSelected">{{
+            }}</ab-button>
+            <ab-button variant="secondary" size="sm" @click="pauseSelected">{{
               $t('downloader.action.pause')
-            }}</NButton>
-            <NPopconfirm
-              :positive-text="$t('downloader.action.delete')"
-              :negative-text="$t('config.cancel')"
-              :positive-button-props="{ type: 'error' }"
-              @positive-click="deleteSelected(false)"
-            >
-              <template #trigger>
-                <NButton size="small" type="error">{{
-                  $t('downloader.action.delete')
-                }}</NButton>
-              </template>
-              {{ $t('downloader.action.delete_confirm') }}
-            </NPopconfirm>
+            }}</ab-button>
+            <ab-button variant="danger" size="sm" @click="onDeleteSelected">{{
+              $t('downloader.action.delete')
+            }}</ab-button>
           </div>
         </div>
       </Transition>
@@ -390,7 +391,7 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
   @include forMobile {
     width: 100%;
 
-    :deep(.n-button) {
+    :deep(.ab-btn) {
       flex: 1;
     }
   }

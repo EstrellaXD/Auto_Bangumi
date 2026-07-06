@@ -483,7 +483,15 @@
     "confirm": "Confirm",
     "select": "Select",
     "selectAll": "Select All",
-    "items": "items"
+    "items": "items",
+    "moreActions": "More actions",
+    "copy": "Copy",
+    "clear": "Clear",
+    "toggle_password": "Show or hide password",
+    "empty": "Nothing here yet",
+    "loading": "Loading…",
+    "close": "Close",
+    "remove": "Remove"
   },
   "theme": {
     "light": "Light",

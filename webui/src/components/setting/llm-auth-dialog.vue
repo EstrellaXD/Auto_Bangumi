@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { NButton, NInput, NModal } from 'naive-ui';
+import { NInput, NModal } from 'naive-ui';
 import type { LLMAuthChallenge } from '@/api/llm';
 
 const props = defineProps<{
@@ -55,7 +55,9 @@ function startPolling() {
       const status = await apiLLM.getAuthStatus(props.providerId);
       if (status.connected) {
         stopPolling();
-        message.success(t('config.llm_set.connected_as', { account: status.account_label }));
+        message.success(
+          t('config.llm_set.connected_as', { account: status.account_label })
+        );
         emit('connected');
         close();
       }
@@ -74,7 +76,9 @@ async function submitCode() {
       state: challenge.value.state,
       code: pastedCode.value.trim(),
     });
-    message.success(t('config.llm_set.connected_as', { account: res.account_label }));
+    message.success(
+      t('config.llm_set.connected_as', { account: res.account_label })
+    );
     emit('connected');
     close();
   } catch {
@@ -134,12 +138,12 @@ onUnmounted(stopPolling);
           :rows="2"
           :placeholder="t('config.llm_set.auth_paste_code')"
         />
-        <NButton
-          type="primary"
+        <ab-button
+          variant="primary"
           :loading="loading"
           :disabled="!pastedCode.trim()"
           @click="submitCode"
-          >{{ t('config.llm_set.connect') }}</NButton
+          >{{ t('config.llm_set.connect') }}</ab-button
         >
       </template>
     </div>

@@ -24,12 +24,7 @@ const proxyValue = computed({
   <div class="advanced-row">
     <label class="advanced-label">{{ label }}</label>
     <div class="advanced-control offset-controls">
-      <input
-        v-model.number="proxyValue"
-        type="number"
-        ab-input
-        class="offset-input"
-      />
+      <ab-input v-model="proxyValue" type="number" class="offset-input" />
       <slot name="action" />
     </div>
   </div>

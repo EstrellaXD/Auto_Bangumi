@@ -1,6 +1,5 @@
 <script lang="ts" setup>
-import { Close } from '@icon-park/vue-next';
-import { NButton, NCheckbox, NSelect, NSpin, useMessage } from 'naive-ui';
+import { NCheckbox, NSelect, NSpin, useMessage } from 'naive-ui';
 import { onKeyStroke } from '@vueuse/core';
 import type { BangumiRule, DetectOffsetResponse } from '#/bangumi';
 
@@ -190,297 +189,207 @@ function emitUnarchive() {
 
 <template>
   <!-- Enable deleted rule dialog -->
-  <ab-popup
+  <ab-modal
     v-if="rule.deleted"
     v-model:show="show"
+    size="sm"
     :title="$t('homepage.rule.enable_rule')"
-    css="w-300 max-w-[90vw]"
   >
     <div>{{ $t('homepage.rule.enable_hit') }}</div>
-    <div line my-8></div>
-    <div f-cer gap-x-10>
-      <NButton size="small" type="error" @click="emitEnable">
-        {{ $t('homepage.rule.yes_btn') }}
-      </NButton>
-      <NButton type="primary" size="small" @click="close">
+
+    <template #footer>
+      <ab-button size="sm" @click="close">
         {{ $t('homepage.rule.no_btn') }}
-      </NButton>
-    </div>
-  </ab-popup>
+      </ab-button>
+      <ab-button size="sm" variant="primary" @click="emitEnable">
+        {{ $t('homepage.rule.yes_btn') }}
+      </ab-button>
+    </template>
+  </ab-modal>
 
   <!-- Main edit modal -->
-  <Teleport v-else to="body">
-    <Transition name="modal">
-      <div v-if="show" class="edit-backdrop" @click.self="close">
-        <div class="edit-modal" role="dialog" aria-modal="true">
-          <!-- Header -->
-          <header class="edit-header">
-            <h2 class="edit-title">{{ $t('homepage.rule.edit_rule') }}</h2>
-            <button class="close-btn" aria-label="Close" @click="close">
-              <Close theme="outline" size="18" />
-            </button>
-          </header>
-
-          <!-- Needs Review Warning Banner -->
-          <div v-if="localRule.needs_review" class="review-warning">
-            <div class="review-warning-main">
-              <span class="review-warning-emoji">⚠️</span>
-              <div class="review-warning-content">
-                <div class="review-warning-title">
-                  {{ $t('offset.needs_review') }}
-                </div>
-                <div
-                  v-if="localRule.needs_review_reason"
-                  class="review-warning-reason"
-                >
-                  {{ localRule.needs_review_reason }}
-                </div>
-              </div>
-            </div>
-            <div class="review-warning-actions">
-              <button
-                class="detect-btn"
-                :disabled="offsetLoading"
-                @click="autoDetectOffset"
-              >
-                <NSpin v-if="offsetLoading" :size="12" />
-                <span v-else>{{ $t('homepage.rule.auto_detect') }}</span>
-              </button>
-              <button
-                class="dismiss-btn"
-                :disabled="dismissingReview"
-                @click="dismissReview"
-              >
-                <NSpin v-if="dismissingReview" :size="12" />
-                <span v-else>{{ $t('offset.dismiss') }}</span>
-              </button>
-            </div>
+  <ab-modal
+    v-else
+    v-model:show="show"
+    :title="$t('homepage.rule.edit_rule')"
+    @close="close"
+  >
+    <!-- Needs Review Warning Banner -->
+    <div v-if="localRule.needs_review" class="review-warning">
+      <div class="review-warning-main">
+        <span class="review-warning-emoji">⚠️</span>
+        <div class="review-warning-content">
+          <div class="review-warning-title">
+            {{ $t('offset.needs_review') }}
           </div>
-
-          <!-- Content -->
-          <div class="edit-content">
-            <bangumi-preview v-model:rule="localRule" :poster-src="posterSrc" />
-
-            <bangumi-info-tags :tags="infoTags" />
-
-            <bangumi-rss-link-row
-              :link="rssLink"
-              :copied="copied"
-              @copy="copyRssLink(rssLink)"
-            />
-
-            <!-- Advanced settings -->
-            <advanced-section v-model:open="showAdvanced">
-              <bangumi-filter-field v-model="localRule.filter" />
-
-              <bangumi-offset-field
-                v-model="localRule.season_offset"
-                :label="$t('homepage.rule.season_offset')"
-              />
-
-              <bangumi-offset-field
-                v-model="localRule.episode_offset"
-                :label="$t('homepage.rule.episode_offset')"
-              />
-
-              <div class="weekday-row">
-                <label class="weekday-label">{{
-                  $t('homepage.rule.air_weekday')
-                }}</label>
-                <NSelect
-                  :value="localRule.air_weekday ?? null"
-                  :options="weekdayOptions"
-                  clearable
-                  size="small"
-                  :placeholder="$t('calendar.unknown')"
-                  class="weekday-select"
-                  @update:value="onWeekdayChange"
-                />
-              </div>
-
-              <div class="weekday-row">
-                <label class="weekday-label">{{
-                  $t('homepage.rule.episode_type')
-                }}</label>
-                <NSelect
-                  v-model:value="localRule.episode_type"
-                  :options="episodeTypeOptions"
-                  size="small"
-                  class="weekday-select"
-                />
-              </div>
-
-              <div class="weekday-row">
-                <label class="weekday-label">{{
-                  $t('homepage.rule.preferred_group')
-                }}</label>
-                <input
-                  v-model="localRule.preferred_group"
-                  ab-input
-                  type="text"
-                  class="preferred-input"
-                  placeholder="ANi"
-                />
-              </div>
-
-              <div class="weekday-row">
-                <label class="weekday-label">{{
-                  $t('homepage.rule.preferred_resolution')
-                }}</label>
-                <NSelect
-                  v-model:value="localRule.preferred_resolution"
-                  :options="resolutionOptions"
-                  clearable
-                  filterable
-                  tag
-                  size="small"
-                  :placeholder="$t('homepage.rule.auto_detect')"
-                  class="weekday-select"
-                />
-              </div>
-
-              <p class="preferred-hint">
-                {{ $t('homepage.rule.preferred_hint') }}
-              </p>
-            </advanced-section>
+          <div
+            v-if="localRule.needs_review_reason"
+            class="review-warning-reason"
+          >
+            {{ localRule.needs_review_reason }}
           </div>
+        </div>
+      </div>
+      <div class="review-warning-actions">
+        <button
+          class="detect-btn"
+          :disabled="offsetLoading"
+          @click="autoDetectOffset"
+        >
+          <NSpin v-if="offsetLoading" :size="12" />
+          <span v-else>{{ $t('homepage.rule.auto_detect') }}</span>
+        </button>
+        <button
+          class="dismiss-btn"
+          :disabled="dismissingReview"
+          @click="dismissReview"
+        >
+          <NSpin v-if="dismissingReview" :size="12" />
+          <span v-else>{{ $t('offset.dismiss') }}</span>
+        </button>
+      </div>
+    </div>
 
-          <!-- Footer -->
-          <footer class="edit-footer">
-            <div class="footer-left">
-              <NButton
-                v-if="localRule.archived"
-                type="primary"
-                size="small"
-                @click="emitUnarchive"
-              >
-                {{ $t('homepage.rule.unarchive') }}
-              </NButton>
-              <NButton v-else type="primary" size="small" @click="emitArchive">
-                {{ $t('homepage.rule.archive') }}
-              </NButton>
-              <NButton size="small" type="error" @click="showDeleteFileDialog">
-                {{ $t('homepage.rule.delete') }}
-              </NButton>
-            </div>
-            <div class="footer-right">
-              <NButton type="primary" size="small" @click="emitApply">
-                {{ $t('homepage.rule.apply') }}
-              </NButton>
-            </div>
-          </footer>
+    <!-- Content -->
+    <div class="edit-content">
+      <bangumi-preview v-model:rule="localRule" :poster-src="posterSrc" />
+
+      <bangumi-info-tags :tags="infoTags" />
+
+      <bangumi-rss-link-row
+        :link="rssLink"
+        :copied="copied"
+        @copy="copyRssLink(rssLink)"
+      />
+
+      <!-- Advanced settings -->
+      <advanced-section v-model:open="showAdvanced">
+        <bangumi-filter-field v-model="localRule.filter" />
+
+        <bangumi-offset-field
+          v-model="localRule.season_offset"
+          :label="$t('homepage.rule.season_offset')"
+        />
+
+        <bangumi-offset-field
+          v-model="localRule.episode_offset"
+          :label="$t('homepage.rule.episode_offset')"
+        />
+
+        <div class="weekday-row">
+          <label class="weekday-label">{{
+            $t('homepage.rule.air_weekday')
+          }}</label>
+          <NSelect
+            :value="localRule.air_weekday ?? null"
+            :options="weekdayOptions"
+            clearable
+            size="small"
+            :placeholder="$t('calendar.unknown')"
+            class="weekday-select"
+            @update:value="onWeekdayChange"
+          />
         </div>
 
-        <!-- Delete confirmation dialog -->
-        <Transition name="modal">
-          <div
-            v-if="deleteFileDialog.show"
-            class="delete-dialog-backdrop"
-            @click.self="deleteFileDialog.show = false"
-          >
-            <div class="delete-dialog" role="alertdialog" aria-modal="true">
-              <h3 class="delete-title">{{ $t('homepage.rule.delete') }}</h3>
-              <p class="delete-message">
-                {{ $t('homepage.rule.delete_confirm') }}
-              </p>
-              <NCheckbox
-                v-model:checked="deleteLocalFiles"
-                class="delete-files-option"
-              >
-                {{ $t('homepage.rule.delete_files_label') }}
-              </NCheckbox>
-              <div class="delete-actions">
-                <NButton
-                  size="small"
-                  secondary
-                  @click="deleteFileDialog.show = false"
-                >
-                  {{ $t('homepage.rule.cancel_btn') }}
-                </NButton>
-                <NButton
-                  size="small"
-                  type="error"
-                  @click="emitDeleteFile(deleteLocalFiles)"
-                >
-                  {{ $t('homepage.rule.delete') }}
-                </NButton>
-              </div>
-            </div>
-          </div>
-        </Transition>
-      </div>
-    </Transition>
-  </Teleport>
+        <div class="weekday-row">
+          <label class="weekday-label">{{
+            $t('homepage.rule.episode_type')
+          }}</label>
+          <NSelect
+            v-model:value="localRule.episode_type"
+            :options="episodeTypeOptions"
+            size="small"
+            class="weekday-select"
+          />
+        </div>
+
+        <div class="weekday-row">
+          <label class="weekday-label">{{
+            $t('homepage.rule.preferred_group')
+          }}</label>
+          <ab-input
+            :model-value="localRule.preferred_group ?? ''"
+            type="text"
+            class="preferred-input"
+            placeholder="ANi"
+            @update:model-value="localRule.preferred_group = String($event)"
+          />
+        </div>
+
+        <div class="weekday-row">
+          <label class="weekday-label">{{
+            $t('homepage.rule.preferred_resolution')
+          }}</label>
+          <NSelect
+            v-model:value="localRule.preferred_resolution"
+            :options="resolutionOptions"
+            clearable
+            filterable
+            tag
+            size="small"
+            :placeholder="$t('homepage.rule.auto_detect')"
+            class="weekday-select"
+          />
+        </div>
+
+        <p class="preferred-hint">
+          {{ $t('homepage.rule.preferred_hint') }}
+        </p>
+      </advanced-section>
+    </div>
+
+    <!-- 删除确认：嵌套在主弹窗组件树内，headlessui 才会把外层的
+         Escape/遮罩点击挂起，只关闭内层 -->
+    <!-- Delete confirmation dialog -->
+    <ab-modal
+      v-model:show="deleteFileDialog.show"
+      size="sm"
+      :title="$t('homepage.rule.delete')"
+    >
+      <p class="delete-message">
+        {{ $t('homepage.rule.delete_confirm') }}
+      </p>
+      <NCheckbox v-model:checked="deleteLocalFiles" class="delete-files-option">
+        {{ $t('homepage.rule.delete_files_label') }}
+      </NCheckbox>
+
+      <template #footer>
+        <ab-button size="sm" @click="deleteFileDialog.show = false">
+          {{ $t('homepage.rule.cancel_btn') }}
+        </ab-button>
+        <ab-button
+          size="sm"
+          variant="danger"
+          @click="emitDeleteFile(deleteLocalFiles)"
+        >
+          {{ $t('homepage.rule.delete') }}
+        </ab-button>
+      </template>
+    </ab-modal>
+
+    <template #footer>
+      <ab-button v-if="localRule.archived" size="sm" @click="emitUnarchive">
+        {{ $t('homepage.rule.unarchive') }}
+      </ab-button>
+      <ab-button v-else size="sm" @click="emitArchive">
+        {{ $t('homepage.rule.archive') }}
+      </ab-button>
+      <ab-button
+        size="sm"
+        variant="danger"
+        class="footer-delete"
+        @click="showDeleteFileDialog"
+      >
+        {{ $t('homepage.rule.delete') }}
+      </ab-button>
+      <ab-button variant="primary" size="sm" @click="emitApply">
+        {{ $t('homepage.rule.apply') }}
+      </ab-button>
+    </template>
+  </ab-modal>
 </template>
 
 <style lang="scss" scoped>
-.edit-backdrop {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-overlay);
-  z-index: var(--z-modal);
-  padding: 16px;
-}
-
-.edit-modal {
-  width: 100%;
-  max-width: 480px;
-  // dvh tracks the iOS Safari URL bar/keyboard; vh fallback for old browsers
-  max-height: 90dvh;
-
-  @supports not (max-height: 1dvh) {
-    max-height: 90vh;
-  }
-  display: flex;
-  flex-direction: column;
-  background: var(--color-surface);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-  overflow: hidden;
-}
-
-.edit-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.edit-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0;
-}
-
-.close-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-sm);
-
-  @include forTouch {
-    width: var(--touch-target);
-    height: var(--touch-target);
-  }
-  cursor: pointer;
-  color: var(--color-text-muted);
-  transition: all var(--transition-fast);
-
-  &:hover {
-    background: var(--color-surface-hover);
-    color: var(--color-text);
-  }
-}
-
 // Review warning banner
 .review-warning {
   display: flex;
@@ -576,62 +485,18 @@ function emitUnarchive() {
 }
 
 .edit-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+// 归档/删除靠左，应用靠右
+.footer-delete {
+  margin-right: auto;
 }
 
 // Footer
-.edit-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px 20px;
-  border-top: 1px solid var(--color-border);
-  flex-wrap: wrap;
-}
-
-.footer-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.footer-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
 // Delete confirmation dialog
-.delete-dialog-backdrop {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-overlay);
-  z-index: calc(var(--z-modal) + 10);
-}
-
-.delete-dialog {
-  width: 100%;
-  max-width: 320px;
-  padding: 24px;
-  background: var(--color-surface);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-  text-align: center;
-}
-
-.delete-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0 0 12px;
-}
-
 .delete-message {
   font-size: 14px;
   color: var(--color-text-secondary);
@@ -670,51 +535,5 @@ function emitUnarchive() {
   margin: 0;
   font-size: 11px;
   color: var(--color-text-secondary);
-}
-
-.delete-actions {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-}
-
-// Modal transition
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 200ms ease;
-
-  .edit-modal,
-  .delete-dialog {
-    transition: transform 200ms ease, opacity 200ms ease;
-  }
-}
-
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-
-  .edit-modal,
-  .delete-dialog {
-    transform: scale(0.95) translateY(10px);
-    opacity: 0;
-  }
-}
-
-// Responsive adjustments
-@media (max-width: 480px) {
-  .edit-footer {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .footer-left,
-  .footer-right {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .footer-right {
-    order: -1;
-  }
 }
 </style>

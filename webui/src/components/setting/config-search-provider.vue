@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { NButton, NPopconfirm } from 'naive-ui';
 import { Delete, EditTwo, Plus } from '@icon-park/vue-next';
+import { useConfirm } from '@/hooks/useConfirm';
 
 interface SearchProvider {
   name: string;
@@ -8,6 +8,17 @@ interface SearchProvider {
 }
 
 const { t } = useMyI18n();
+const { confirm } = useConfirm();
+
+async function onDeleteClick(index: number) {
+  const ok = await confirm({
+    title: t('config.search_provider_set.remove'),
+    body: t('config.search_provider_set.delete_confirm'),
+    confirmText: t('config.search_provider_set.remove'),
+    danger: true,
+  });
+  if (ok) handleDelete(index);
+}
 const message = useMessage();
 
 // State
@@ -172,32 +183,22 @@ function validateUrl(url: string): boolean {
             </div>
           </div>
           <div class="provider-actions">
-            <NButton
-              size="small"
-              type="primary"
-              secondary
+            <ab-button
+              size="sm"
+              variant="secondary"
               @click="openEditDialog(provider, index)"
             >
               <EditTwo size="16" />
-            </NButton>
-            <NPopconfirm
+            </ab-button>
+            <ab-icon-button
               v-if="!isDefaultProvider(provider.name)"
-              :positive-text="$t('config.search_provider_set.remove')"
-              :negative-text="$t('config.cancel')"
-              :positive-button-props="{ type: 'error' }"
-              @positive-click="handleDelete(index)"
+              size="sm"
+              class="provider-delete"
+              :label="$t('config.search_provider_set.remove')"
+              @click="onDeleteClick(index)"
             >
-              <template #trigger>
-                <NButton
-                  size="small"
-                  type="error"
-                  :aria-label="$t('config.search_provider_set.remove')"
-                >
-                  <Delete size="16" />
-                </NButton>
-              </template>
-              {{ $t('config.search_provider_set.delete_confirm') }}
-            </NPopconfirm>
+              <Delete size="16" />
+            </ab-icon-button>
           </div>
         </div>
       </div>
@@ -211,118 +212,108 @@ function validateUrl(url: string): boolean {
 
       <!-- Add button -->
       <div flex="~ justify-end">
-        <NButton size="small" type="primary" @click="openAddDialog">
+        <ab-button size="sm" variant="primary" @click="openAddDialog">
           <Plus size="16" />
           {{ $t('config.search_provider_set.add_new') }}
-        </NButton>
+        </ab-button>
       </div>
     </div>
 
     <!-- Add dialog -->
-    <ab-popup
+    <ab-modal
       v-model:show="showAddDialog"
+      size="sm"
       :title="$t('config.search_provider_set.add_title')"
-      css="w-400"
     >
       <div space-y-16>
-        <ab-label :label="$t('config.search_provider_set.name')">
-          <input
+        <ab-field :label="$t('config.search_provider_set.name')">
+          <ab-input
             v-model="formName"
-            type="text"
             :placeholder="$t('config.search_provider_set.name_placeholder')"
-            ab-input
-            maxlength="32"
+            :maxlength="32"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="$t('config.search_provider_set.url')">
-          <input
+        <ab-field :label="$t('config.search_provider_set.url')">
+          <ab-input
             v-model="formUrl"
             type="text"
             :placeholder="$t('config.search_provider_set.url_placeholder')"
-            ab-input
             @keyup.enter="handleAdd"
           />
-        </ab-label>
+        </ab-field>
 
         <div v-if="formUrl && !validateUrl(formUrl)" class="validation-warning">
           {{ $t('config.search_provider_set.url_missing_placeholder') }}
         </div>
-
-        <div line></div>
-
-        <div flex="~ justify-end gap-8">
-          <NButton size="small" type="error" @click="showAddDialog = false">
-            {{ $t('config.cancel') }}
-          </NButton>
-          <NButton
-            size="small"
-            type="primary"
-            :disabled="
-              !formName.trim() || !formUrl.trim() || !validateUrl(formUrl)
-            "
-            @click="handleAdd"
-          >
-            {{ $t('config.apply') }}
-          </NButton>
-        </div>
       </div>
-    </ab-popup>
+
+      <template #footer>
+        <ab-button size="sm" @click="showAddDialog = false">
+          {{ $t('config.cancel') }}
+        </ab-button>
+        <ab-button
+          size="sm"
+          variant="primary"
+          :disabled="
+            !formName.trim() || !formUrl.trim() || !validateUrl(formUrl)
+          "
+          @click="handleAdd"
+        >
+          {{ $t('config.apply') }}
+        </ab-button>
+      </template>
+    </ab-modal>
 
     <!-- Edit dialog -->
-    <ab-popup
+    <ab-modal
       v-model:show="showEditDialog"
+      size="sm"
       :title="$t('config.search_provider_set.edit_title')"
-      css="w-400"
     >
       <div space-y-16>
-        <ab-label :label="$t('config.search_provider_set.name')">
-          <input
+        <ab-field :label="$t('config.search_provider_set.name')">
+          <ab-input
             v-model="formName"
-            type="text"
             :placeholder="$t('config.search_provider_set.name_placeholder')"
-            ab-input
-            maxlength="32"
+            :maxlength="32"
             :disabled="
               editingProvider !== null &&
               isDefaultProvider(editingProvider.name)
             "
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="$t('config.search_provider_set.url')">
-          <input
+        <ab-field :label="$t('config.search_provider_set.url')">
+          <ab-input
             v-model="formUrl"
             type="text"
             :placeholder="$t('config.search_provider_set.url_placeholder')"
-            ab-input
             @keyup.enter="handleEdit"
           />
-        </ab-label>
+        </ab-field>
 
         <div v-if="formUrl && !validateUrl(formUrl)" class="validation-warning">
           {{ $t('config.search_provider_set.url_missing_placeholder') }}
         </div>
-
-        <div line></div>
-
-        <div flex="~ justify-end gap-8">
-          <NButton size="small" type="error" @click="showEditDialog = false">
-            {{ $t('config.cancel') }}
-          </NButton>
-          <NButton
-            size="small"
-            type="primary"
-            :disabled="
-              !formName.trim() || !formUrl.trim() || !validateUrl(formUrl)
-            "
-            @click="handleEdit"
-          >
-            {{ $t('config.apply') }}
-          </NButton>
-        </div>
       </div>
-    </ab-popup>
+
+      <template #footer>
+        <ab-button size="sm" @click="showEditDialog = false">
+          {{ $t('config.cancel') }}
+        </ab-button>
+        <ab-button
+          size="sm"
+          variant="primary"
+          :disabled="
+            !formName.trim() || !formUrl.trim() || !validateUrl(formUrl)
+          "
+          @click="handleEdit"
+        >
+          {{ $t('config.apply') }}
+        </ab-button>
+      </template>
+    </ab-modal>
   </ab-fold-panel>
 </template>
 
@@ -396,5 +387,13 @@ function validateUrl(url: string): boolean {
   padding: 8px 12px;
   background: color-mix(in srgb, var(--color-danger, #ef4444) 10%, transparent);
   border-radius: 6px;
+}
+.provider-delete {
+  color: var(--color-danger);
+
+  &:hover:not(:disabled) {
+    color: var(--color-danger);
+    background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+  }
 }
 </style>

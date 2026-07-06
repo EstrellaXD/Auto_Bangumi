@@ -1,7 +1,6 @@
 <script lang="ts" setup>
-import { Close, Link } from '@icon-park/vue-next';
-import { NButton, NSelect, NSpin, NSwitch } from 'naive-ui';
-import { onKeyStroke } from '@vueuse/core';
+import { Link } from '@icon-park/vue-next';
+import { NSelect, NSpin, NSwitch } from 'naive-ui';
 import type { BangumiRule } from '#/bangumi';
 import type { RSS } from '#/rss';
 import { rssTemplate } from '#/rss';
@@ -107,10 +106,6 @@ function close() {
   show.value = false;
 }
 
-onKeyStroke('Escape', () => {
-  if (show.value) close();
-});
-
 function addRss() {
   if (rss.value.url === '') {
     message.error(t('notify.please_enter', [t('notify.rss_link')]));
@@ -158,228 +153,143 @@ function subscribe() {
 </script>
 
 <template>
-  <Teleport to="body">
-    <Transition name="modal">
-      <div v-if="show" class="add-backdrop" @click.self="close">
-        <div class="add-modal" role="dialog" aria-modal="true">
-          <!-- Header -->
-          <header class="add-header">
-            <h2 class="add-title">{{ $t('topbar.add.title') }}</h2>
-            <button class="close-btn" aria-label="Close" @click="close">
-              <Close theme="outline" size="18" />
-            </button>
-          </header>
-
-          <!-- Step 1: Input RSS -->
-          <div v-if="step === 'input'" class="add-content">
-            <div class="form-section">
-              <!-- RSS Link -->
-              <div class="form-group">
-                <label class="form-label">{{
-                  $t('topbar.add.rss_link')
-                }}</label>
-                <div class="input-wrapper">
-                  <Link theme="outline" size="16" class="input-icon" />
-                  <input
-                    v-model="rss.url"
-                    type="text"
-                    class="form-input form-input--with-icon"
-                    :placeholder="$t('topbar.add.placeholder_link')"
-                  />
-                </div>
-              </div>
-
-              <!-- Name -->
-              <div class="form-group">
-                <label class="form-label">{{ $t('topbar.add.name') }}</label>
-                <input
-                  v-model="rss.name"
-                  type="text"
-                  class="form-input"
-                  :placeholder="$t('topbar.add.placeholder_name')"
-                />
-              </div>
-
-              <!-- Options row -->
-              <div class="options-row">
-                <!-- Aggregate Switch -->
-                <div class="option-item">
-                  <label class="option-label">{{
-                    $t('topbar.add.aggregate')
-                  }}</label>
-                  <NSwitch v-model:value="rss.aggregate" />
-                </div>
-
-                <!-- Parser Select -->
-                <div class="option-item">
-                  <label class="option-label">{{
-                    $t('topbar.add.parser')
-                  }}</label>
-                  <NSelect
-                    v-model:value="rss.parser"
-                    :options="parserTypes.map((p) => ({ label: p, value: p }))"
-                    class="parser-select"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <!-- Footer -->
-            <footer class="add-footer">
-              <NButton
-                type="primary"
-                size="small"
-                :loading="loading.analyze"
-                @click="addRss"
-              >
-                {{ $t('topbar.add.button') }}
-              </NButton>
-            </footer>
-          </div>
-
-          <!-- Step 2: Confirm -->
-          <template v-else>
-            <div class="add-content">
-              <bangumi-preview v-model:rule="rule" :poster-src="posterSrc" />
-
-              <bangumi-info-tags :tags="infoTags" />
-
-              <bangumi-rss-link-row
-                :link="rssLink"
-                :copied="copied"
-                @copy="copyRssLink(rssLink)"
-              />
-
-              <!-- Advanced settings -->
-              <advanced-section v-model:open="showAdvanced">
-                <bangumi-filter-field v-model="rule.filter" />
-
-                <bangumi-offset-field
-                  v-model="rule.episode_offset"
-                  :label="$t('homepage.rule.offset')"
-                >
-                  <template #action>
-                    <button
-                      class="detect-btn"
-                      :disabled="offsetLoading || !rule.id"
-                      @click="autoDetectOffset"
-                    >
-                      <NSpin v-if="offsetLoading" :size="14" />
-                      <span v-else>{{ $t('homepage.rule.auto_detect') }}</span>
-                    </button>
-                  </template>
-                </bangumi-offset-field>
-                <div v-if="offsetReason" class="offset-reason">
-                  {{ offsetReason }}
-                </div>
-              </advanced-section>
-            </div>
-
-            <!-- Footer -->
-            <footer class="add-footer add-footer--confirm">
-              <div class="footer-left">
-                <NButton size="small" type="primary" secondary @click="goBack">
-                  {{ $t('setup.nav.previous') }}
-                </NButton>
-              </div>
-              <div class="footer-right">
-                <NButton
-                  type="primary"
-                  size="small"
-                  :loading="loading.collect"
-                  @click="collect"
-                >
-                  {{ $t('topbar.add.collect') }}
-                </NButton>
-                <NButton
-                  type="primary"
-                  size="small"
-                  :loading="loading.subscribe"
-                  @click="subscribe"
-                >
-                  {{ $t('topbar.add.subscribe') }}
-                </NButton>
-              </div>
-            </footer>
-          </template>
+  <ab-modal v-model:show="show" :title="$t('topbar.add.title')">
+    <!-- Step 1: Input RSS -->
+    <div v-if="step === 'input'" class="form-section">
+      <!-- RSS Link -->
+      <div class="form-group">
+        <label class="form-label">{{ $t('topbar.add.rss_link') }}</label>
+        <div class="input-wrapper">
+          <Link theme="outline" size="16" class="input-icon" />
+          <input
+            v-model="rss.url"
+            type="text"
+            class="form-input form-input--with-icon"
+            :placeholder="$t('topbar.add.placeholder_link')"
+          />
         </div>
       </div>
-    </Transition>
-  </Teleport>
+
+      <!-- Name -->
+      <div class="form-group">
+        <label class="form-label">{{ $t('topbar.add.name') }}</label>
+        <input
+          v-model="rss.name"
+          type="text"
+          class="form-input"
+          :placeholder="$t('topbar.add.placeholder_name')"
+        />
+      </div>
+
+      <!-- Options row -->
+      <div class="options-row">
+        <!-- Aggregate Switch -->
+        <div class="option-item">
+          <label class="option-label">{{ $t('topbar.add.aggregate') }}</label>
+          <NSwitch v-model:value="rss.aggregate" />
+        </div>
+
+        <!-- Parser Select -->
+        <div class="option-item">
+          <label class="option-label">{{ $t('topbar.add.parser') }}</label>
+          <NSelect
+            v-model:value="rss.parser"
+            :options="parserTypes.map((p) => ({ label: p, value: p }))"
+            class="parser-select"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Confirm -->
+    <div v-else class="confirm-section">
+      <bangumi-preview v-model:rule="rule" :poster-src="posterSrc" />
+
+      <bangumi-info-tags :tags="infoTags" />
+
+      <bangumi-rss-link-row
+        :link="rssLink"
+        :copied="copied"
+        @copy="copyRssLink(rssLink)"
+      />
+
+      <!-- Advanced settings -->
+      <advanced-section v-model:open="showAdvanced">
+        <bangumi-filter-field v-model="rule.filter" />
+
+        <bangumi-offset-field
+          v-model="rule.episode_offset"
+          :label="$t('homepage.rule.episode_offset')"
+        >
+          <template #action>
+            <button
+              class="detect-btn"
+              :disabled="offsetLoading || !rule.id"
+              @click="autoDetectOffset"
+            >
+              <NSpin v-if="offsetLoading" :size="14" />
+              <span v-else>{{ $t('homepage.rule.auto_detect') }}</span>
+            </button>
+          </template>
+        </bangumi-offset-field>
+        <div v-if="offsetReason" class="offset-reason">
+          {{ offsetReason }}
+        </div>
+      </advanced-section>
+    </div>
+
+    <template #footer>
+      <template v-if="step === 'input'">
+        <ab-button
+          variant="primary"
+          size="sm"
+          :loading="loading.analyze"
+          @click="addRss"
+        >
+          {{ $t('topbar.add.button') }}
+        </ab-button>
+      </template>
+      <template v-else>
+        <ab-button
+          variant="secondary"
+          size="sm"
+          class="footer-prev"
+          @click="goBack"
+        >
+          {{ $t('setup.nav.previous') }}
+        </ab-button>
+        <ab-button
+          variant="primary"
+          size="sm"
+          :loading="loading.collect"
+          @click="collect"
+        >
+          {{ $t('topbar.add.collect') }}
+        </ab-button>
+        <ab-button
+          variant="primary"
+          size="sm"
+          :loading="loading.subscribe"
+          @click="subscribe"
+        >
+          {{ $t('topbar.add.subscribe') }}
+        </ab-button>
+      </template>
+    </template>
+  </ab-modal>
 </template>
 
 <style lang="scss" scoped>
-.add-backdrop {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-overlay);
-  z-index: var(--z-modal);
-  padding: 16px;
-}
-
-.add-modal {
-  width: 100%;
-  max-width: 480px;
-  max-height: 90dvh; // Use dynamic viewport height for iOS Safari keyboard support
+// Step 2 confirm content spacing
+.confirm-section {
   display: flex;
   flex-direction: column;
-  background: var(--color-surface);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-  overflow: hidden;
-
-  // Fallback for browsers that don't support dvh
-  @supports not (max-height: 1dvh) {
-    max-height: 90vh;
-  }
+  gap: 14px;
 }
 
-.add-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.add-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0;
-}
-
-.close-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-sm);
-
-  @include forTouch {
-    width: var(--touch-target);
-    height: var(--touch-target);
-  }
-  cursor: pointer;
-  color: var(--color-text-muted);
-  transition: all var(--transition-fast);
-
-  &:hover {
-    background: var(--color-surface-hover);
-    color: var(--color-text);
-  }
-}
-
-.add-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
+// step-2 footer: “上一步” 靠左，其余动作靠右
+.footer-prev {
+  margin-right: auto;
 }
 
 // Form Section (Step 1)
@@ -471,18 +381,6 @@ function subscribe() {
 }
 
 // Footer
-.add-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 16px 20px;
-  border-top: 1px solid var(--color-border);
-
-  &--confirm {
-    justify-content: space-between;
-  }
-}
-
 .footer-left {
   display: flex;
   align-items: center;
@@ -533,25 +431,6 @@ function subscribe() {
 }
 
 // Modal transition
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 200ms ease;
-
-  .add-modal {
-    transition: transform 200ms ease, opacity 200ms ease;
-  }
-}
-
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-
-  .add-modal {
-    transform: scale(0.95) translateY(10px);
-    opacity: 0;
-  }
-}
-
 // Responsive
 @media (max-width: 480px) {
   .options-row {
@@ -562,21 +441,6 @@ function subscribe() {
   .option-item {
     justify-content: space-between;
     width: 100%;
-  }
-
-  .add-footer--confirm {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .footer-left,
-  .footer-right {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .footer-right {
-    order: -1;
   }
 }
 </style>

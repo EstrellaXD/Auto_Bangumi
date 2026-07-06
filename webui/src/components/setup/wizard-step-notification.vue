@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { NButton, NSelect } from 'naive-ui';
+import { NSelect } from 'naive-ui';
 
 const { t } = useMyI18n();
 const setupStore = useSetupStore();
@@ -62,36 +62,35 @@ const canTest = computed(() => {
       <p class="step-subtitle">{{ t('setup.notification.subtitle') }}</p>
 
       <div class="form-fields">
-        <ab-label :label="t('config.notification_set.type')">
+        <ab-field :label="t('config.notification_set.type')">
           <NSelect
             v-model:value="notificationData.type"
             :options="notificationTypes"
             size="small"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="t('config.notification_set.token')">
+        <ab-field :label="t('config.notification_set.token')">
           <input
             v-model="notificationData.token"
             type="text"
             class="setup-input setup-input-wide"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="t('config.notification_set.chat_id')">
+        <ab-field :label="t('config.notification_set.chat_id')">
           <input
             v-model="notificationData.chat_id"
             type="text"
             class="setup-input"
           />
-        </ab-label>
+        </ab-field>
       </div>
 
       <div class="test-section">
-        <NButton
-          size="small"
-          type="primary"
-          secondary
+        <ab-button
+          size="sm"
+          variant="secondary"
           :disabled="!canTest || isTesting"
           @click="testNotification"
         >
@@ -100,7 +99,7 @@ const canTest = computed(() => {
               ? t('setup.downloader.testing')
               : t('setup.notification.test')
           }}
-        </NButton>
+        </ab-button>
         <p
           v-if="testMessage"
           class="test-message"
@@ -111,26 +110,21 @@ const canTest = computed(() => {
       </div>
 
       <div class="wizard-actions">
-        <NButton
-          size="small"
-          type="primary"
-          secondary
-          @click="setupStore.prevStep()"
-        >
+        <ab-button size="sm" variant="secondary" @click="setupStore.prevStep()">
           {{ t('setup.nav.previous') }}
-        </NButton>
+        </ab-button>
         <div class="action-group">
-          <NButton size="small" type="primary" secondary @click="skipStep">
+          <ab-button size="sm" variant="secondary" @click="skipStep">
             {{ t('setup.nav.skip') }}
-          </NButton>
-          <NButton
-            type="primary"
-            size="small"
+          </ab-button>
+          <ab-button
+            variant="primary"
+            size="sm"
             :disabled="!validation.notificationTested"
             @click="handleNext"
           >
             {{ t('setup.nav.next') }}
-          </NButton>
+          </ab-button>
         </div>
       </div>
     </div>

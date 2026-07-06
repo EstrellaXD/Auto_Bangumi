@@ -31,6 +31,38 @@ const primitiveOverrides: GlobalThemeOverrides = {
   Switch: {
     railColorActive: 'var(--color-primary)',
   },
+  // Soft Ink：输入类控件为填充式（surface-2），无边框；
+  // 边框与描边只在聚焦时出现（primary）
+  Input: {
+    color: 'var(--color-surface-2)',
+    colorFocus: 'var(--color-surface)',
+    border: '1px solid transparent',
+    borderHover: '1px solid transparent',
+    borderFocus: '1px solid var(--color-primary)',
+    boxShadowFocus: '0 0 0 2px var(--color-primary-alpha)',
+    borderRadius: 'var(--radius-sm)',
+  },
+  Select: {
+    peers: {
+      InternalSelection: {
+        color: 'var(--color-surface-2)',
+        colorActive: 'var(--color-surface)',
+        border: '1px solid transparent',
+        borderHover: '1px solid transparent',
+        borderFocus: '1px solid var(--color-primary)',
+        borderActive: '1px solid var(--color-primary)',
+        boxShadowFocus: '0 0 0 2px var(--color-primary-alpha)',
+        boxShadowActive: '0 0 0 2px var(--color-primary-alpha)',
+        borderRadius: 'var(--radius-sm)',
+      },
+    },
+  },
+  Popover: {
+    borderRadius: 'var(--radius-md)',
+  },
+  Dialog: {
+    borderRadius: 'var(--radius-md)',
+  },
 };
 
 const lightOverrides: GlobalThemeOverrides = {
@@ -115,6 +147,7 @@ const naiveTheme = computed(() => (isDark.value ? darkTheme : null));
       <NMessageProvider>
         <NDialogProvider>
           <RouterView></RouterView>
+          <ab-confirm-host />
         </NDialogProvider>
       </NMessageProvider>
     </NConfigProvider>

@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import { NButton } from 'naive-ui';
-
 const { t } = useMyI18n();
 const setupStore = useSetupStore();
 </script>
@@ -13,9 +11,9 @@ const setupStore = useSetupStore();
 
       <div class="wizard-actions">
         <div></div>
-        <NButton type="primary" size="small" @click="setupStore.nextStep()">
+        <ab-button variant="primary" size="sm" @click="setupStore.nextStep()">
           {{ t('setup.welcome.start') }}
-        </NButton>
+        </ab-button>
       </div>
     </div>
   </ab-container>

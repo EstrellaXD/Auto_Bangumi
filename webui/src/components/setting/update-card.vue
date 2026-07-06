@@ -1,15 +1,29 @@
 <script lang="ts" setup>
-import {
-  NButton,
-  NPopconfirm,
-  NProgress,
-  NSpin,
-  NSwitch,
-  NTag,
-} from 'naive-ui';
+import { NProgress, NSpin, NSwitch, NTag } from 'naive-ui';
+import { useConfirm } from '@/hooks/useConfirm';
 import type { UpdateChannel, UpdateInfo } from '#/update';
 
 const { t } = useMyI18n();
+const { confirm } = useConfirm();
+
+async function onApplyClick() {
+  const ok = await confirm({
+    title: t('update.confirm_title'),
+    body: t('update.confirm_body'),
+    confirmText: t('update.update_now'),
+  });
+  if (ok) onApply();
+}
+
+async function onRollbackClick() {
+  const ok = await confirm({
+    title: t('update.rollback'),
+    body: t('update.rollback_confirm'),
+    confirmText: t('update.rollback'),
+    danger: true,
+  });
+  if (ok) onRollback();
+}
 const message = useMessage();
 const { updateData } = useEventStream();
 const { version } = useAppInfo();
@@ -308,50 +322,34 @@ onBeforeUnmount(() => {
 
       <!-- 操作按钮 -->
       <div class="update-actions">
-        <NButton
-          size="small"
+        <ab-button
+          size="sm"
+          variant="secondary"
           :loading="checking"
           :disabled="applying || restarting"
           @click="onCheck(true)"
         >
           {{ checking ? $t('update.checking') : $t('update.check') }}
-        </NButton>
+        </ab-button>
 
-        <NPopconfirm
-          :positive-text="$t('update.update_now')"
-          @positive-click="onApply"
+        <ab-button
+          variant="primary"
+          size="sm"
+          :disabled="!hasUpdate || applying || restarting"
+          @click="onApplyClick"
         >
-          <template #trigger>
-            <NButton
-              type="primary"
-              size="small"
-              :disabled="!hasUpdate || applying || restarting"
-            >
-              {{ $t('update.update_now') }}
-            </NButton>
-          </template>
-          <div class="update-confirm">
-            <strong>{{ $t('update.confirm_title') }}</strong>
-            <div>{{ $t('update.confirm_body') }}</div>
-          </div>
-        </NPopconfirm>
+          {{ $t('update.update_now') }}
+        </ab-button>
 
-        <NPopconfirm
+        <ab-button
           v-if="canRollback"
-          :positive-text="$t('update.rollback')"
-          @positive-click="onRollback"
+          variant="danger"
+          size="sm"
+          :disabled="applying || restarting"
+          @click="onRollbackClick"
         >
-          <template #trigger>
-            <NButton
-              type="warning"
-              size="small"
-              :disabled="applying || restarting"
-            >
-              {{ $t('update.rollback') }}
-            </NButton>
-          </template>
-          {{ $t('update.rollback_confirm') }}
-        </NPopconfirm>
+          {{ $t('update.rollback') }}
+        </ab-button>
       </div>
     </div>
   </ab-container>
