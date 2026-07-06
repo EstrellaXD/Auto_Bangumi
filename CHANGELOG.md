@@ -1,3 +1,24 @@
+# [3.3.0-beta.6] - 2026-07-06
+
+## Frontend
+
+### Changed
+
+- **Soft Ink 组件体系重构**：WebUI 的通用组件层整体重设计为"Soft Ink"语言——近单色的墨色文字 + 柔和填充控件，语义色只以小方块标记出现、不再承载文字（去掉粉彩胶囊标签、着色警告框、悬浮滑块分段器等模板化样式）
+- 新增 22 个通用组件（`ab-button`/`ab-icon-button`/`ab-menu`/`ab-split-button`/`ab-modal`/`useConfirm()`/`ab-field`/`ab-input`/`ab-select`/`ab-switch`/`ab-segmented`/`ab-tag` v2/`ab-status` v2/`ab-badge`/`ab-progress`/`ab-alert`/`ab-empty`/`ab-skeleton`/`ab-list`/`ab-toolbar`/`ab-tooltip` 等），全部带 vitest 测试与 Storybook story；页面全量迁移，不再直接使用裸 `NButton`/`<button>`/`NPopconfirm`
+- 弹窗统一为自适应 `ab-modal`（桌面居中对话框 / 移动端底部抽屉，焦点陷阱 + aria 语义 + 统一 footer 动作区）；破坏性操作统一走 Promise 式确认框
+- 状态灯恢复"细线圆环 + 内部灯珠"形态并扩展为四态（运行/停止/暂停/降级）
+
+### Fixed
+
+- 触屏下按钮命中区统一保证 44px；键盘焦点环、屏幕阅读器标签（关闭/移除）等无障碍问题成批修复
+- 下载器/代理设置的密码输入恢复 `autocomplete=off`，避免浏览器误填登录密码
+- 深色主题下弹窗遮罩、通知徽标等硬编码颜色改走主题 token
+
+### Removed
+
+- 删除废弃组件：`ab-popup`、`ab-adaptive-modal`、`ab-label`、`ab-data-list`、`ab-add`、`ab-button-multi`、`ab-image`、`ab-rule`、`ab-swipe-container`，以及 `ab-input` UnoCSS 快捷类
+
 # [3.3.0-beta.5] - 2026-07-05
 
 ## Backend
