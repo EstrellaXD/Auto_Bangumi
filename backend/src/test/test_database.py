@@ -455,6 +455,106 @@ async def test_add_with_semantic_duplicate_creates_alias(db_session):
     assert "Frieren Beyond Journey's End" in aliases
 
 
+async def test_add_same_title_new_entry_inherits_year(db_session):
+    """A new entry for an already-known anime (same official_title, different
+    group/quality so no semantic merge) must inherit the existing year, so both
+    entries build the same save path (title (year)/Season N)."""
+    db = BangumiDatabase(db_session)
+
+    existing = Bangumi(
+        official_title="躲在超市后门抽烟的两人",
+        year="2026",
+        title_raw="躲在超市后门抽烟的两人",
+        group_name="樱都字幕组",
+        dpi="1080p",
+        source="Baha",
+        subtitle="CHS",
+        rss_link="test1",
+    )
+    await db.add(existing)
+
+    new_entry = Bangumi(
+        official_title="躲在超市后门抽烟的两人",
+        year=None,
+        title_raw="Super no Ura de Yani Suu Futari",
+        group_name="Dynamis One",
+        dpi="1080p",
+        source="ABEMA",
+        subtitle="JPSC",
+        rss_link="test2",
+    )
+    result = await db.add(new_entry)
+
+    assert result is True  # different group/source: a new entry, not a merge
+    assert new_entry.year == "2026"
+
+
+async def test_add_same_title_keeps_own_year(db_session):
+    """An explicitly parsed year must not be overwritten by an existing entry's."""
+    db = BangumiDatabase(db_session)
+
+    await db.add(
+        Bangumi(
+            official_title="Frieren",
+            year="2023",
+            title_raw="Sousou no Frieren",
+            group_name="LoliHouse",
+            dpi="1080p",
+            source="Web",
+            subtitle="CHT",
+            rss_link="test1",
+        )
+    )
+
+    new_entry = Bangumi(
+        official_title="Frieren",
+        year="2024",
+        title_raw="Frieren S2",
+        group_name="OtherGroup",
+        dpi="720p",
+        source="Baha",
+        subtitle="CHS",
+        rss_link="test2",
+    )
+    result = await db.add(new_entry)
+
+    assert result is True
+    assert new_entry.year == "2024"
+
+
+async def test_add_all_same_title_new_entries_inherit_year(db_session):
+    """add_all() applies the same year inheritance as add()."""
+    db = BangumiDatabase(db_session)
+
+    await db.add(
+        Bangumi(
+            official_title="躲在超市后门抽烟的两人",
+            year="2026",
+            title_raw="躲在超市后门抽烟的两人",
+            group_name="樱都字幕组",
+            dpi="1080p",
+            source="Baha",
+            subtitle="CHS",
+            rss_link="test1",
+        )
+    )
+
+    new_entry = Bangumi(
+        official_title="躲在超市后门抽烟的两人",
+        year=None,
+        title_raw="Super no Ura de Yani Suu Futari",
+        group_name="Dynamis One",
+        dpi="1080p",
+        source="ABEMA",
+        subtitle="JPSC",
+        rss_link="test2",
+    )
+    added = await db.add_all([new_entry])
+
+    assert added == 1
+    assert new_entry.year == "2026"
+
+
 async def test_add_all_semantic_duplicates_across_batch_all_merged_as_aliases(
     db_session,
 ):

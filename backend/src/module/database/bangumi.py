@@ -126,6 +126,21 @@ def _find_semantic_match(data: Bangumi, candidates: list[Bangumi]) -> Optional[B
     return None
 
 
+def _inherit_year(data: Bangumi, candidates: list[Bangumi]) -> None:
+    """新条目缺年份时继承同名已有条目的年份。
+
+    save path 由 ``official_title (year)`` 组成（downloader/path.py），同一部
+    番剧的不同订阅条目（不同字幕组/清晰度）若年份不一致，会被拆进两个媒体库
+    目录。Mikan 解析路径不填 year，因此从已有同名条目补齐。
+    """
+    if data.year:
+        return
+    for candidate in candidates:
+        if candidate.year:
+            data.year = candidate.year
+            return
+
+
 def match_bangumi_in_list(
     torrent_name: str, bangumi_list: list[Bangumi]
 ) -> Optional[Bangumi]:
@@ -152,6 +167,17 @@ class BangumiDatabase:
     def __init__(self, session: AsyncSession):
         self.session = session
 
+    async def _same_title_candidates(self, official_title: str) -> list[Bangumi]:
+        """加载与给定 official_title 同名的所有未删除条目。"""
+        statement = select(Bangumi).where(
+            and_(
+                Bangumi.official_title == official_title,
+                Bangumi.deleted == false(),
+            )
+        )
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
+
     async def find_semantic_duplicate(self, data: Bangumi) -> Optional[Bangumi]:
         """
         Find existing bangumi that semantically matches the new one.
@@ -166,15 +192,7 @@ class BangumiDatabase:
 
         Returns the matching Bangumi if found, None otherwise.
         """
-        statement = select(Bangumi).where(
-            and_(
-                Bangumi.official_title == data.official_title,
-                Bangumi.deleted == false(),
-            )
-        )
-        result = await self.session.execute(statement)
-        candidates = list(result.scalars().all())
-
+        candidates = await self._same_title_candidates(data.official_title)
         match = _find_semantic_match(data, candidates)
         if match:
             logger.debug(
@@ -249,7 +267,8 @@ class BangumiDatabase:
             return False
 
         # Check for semantic duplicate (same anime, different naming pattern)
-        semantic_match = await self.find_semantic_duplicate(data)
+        candidates = await self._same_title_candidates(data.official_title)
+        semantic_match = _find_semantic_match(data, candidates)
         if semantic_match:
             # Add as alias instead of creating new entry
             await self.add_title_alias(semantic_match.id, data.title_raw)
@@ -259,6 +278,7 @@ class BangumiDatabase:
             )
             return False  # Return False since we didn't add a new entry
 
+        _inherit_year(data, candidates)
         self.session.add(data)
         await self.session.commit()
         logger.debug("Insert %s into database.", data.official_title)
@@ -328,6 +348,7 @@ class BangumiDatabase:
                     f"'{semantic_match.title_raw}' (official: {d.official_title})"
                 )
             else:
+                _inherit_year(d, candidates_by_title.get(d.official_title, []))
                 really_to_add.append(d)
 
         # Also deduplicate within the batch itself
