@@ -45,6 +45,7 @@ export default defineConfig({
       warning: 'var(--color-warning)',
       surface: 'var(--color-surface)',
       'surface-hover': 'var(--color-surface-hover)',
+      'surface-2': 'var(--color-surface-2)',
       'text-primary': 'var(--color-text)',
       'text-secondary': 'var(--color-text-secondary)',
       'text-muted': 'var(--color-text-muted)',
@@ -117,12 +118,12 @@ export default defineConfig({
 
     // input
     {
+      // Soft Ink：填充式控件，无边框；边框只在聚焦（primary）/错误（danger）时出现
       'ab-input': `outline-none min-w-0 w-full sm:w-200 h-36 sm:h-28
-                     px-12 text-main text-right
-                     rounded-6
-                     border-1 border-border
-                     bg-surface text-text-primary
-                     hover:border-primary
+                     px-12 text-main text-left
+                     rounded-4
+                     border-1 border-transparent
+                     bg-surface-2 text-text-primary
                      focus:border-primary focus:ring-2 focus:ring-primary/20
                      transition-colors duration-150
                     `,
