@@ -19,11 +19,14 @@ const show = computed({
   <AbModal
     v-model:show="show"
     size="sm"
+    :show-close="false"
     :title="state.current?.title ?? ''"
   >
-    <p v-if="state.current?.body" class="ab-confirm-body">
-      {{ state.current.body }}
-    </p>
+    <template v-if="state.current?.body" #default>
+      <p class="ab-confirm-body">
+        {{ state.current.body }}
+      </p>
+    </template>
 
     <template #footer>
       <AbButton class="ab-confirm-cancel" size="sm" @click="settle(false)">

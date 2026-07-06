@@ -141,6 +141,25 @@ provide(abFieldInjectionKey, { controlId, labelId, describedBy, invalid });
   @include forTablet {
     width: auto;
   }
+
+  // 沿用旧 ab-label 的控件尺寸约定：下拉框/输入框在桌面端
+  // 有 200px 的宽度下限，避免收缩到只剩箭头
+  :deep(.n-select),
+  :deep(.n-dynamic-tags),
+  :deep(.ab-input) {
+    width: 100%;
+
+    @include forTablet {
+      width: auto;
+      min-width: 200px;
+    }
+  }
+
+  :deep(.ab-input) {
+    @include forTablet {
+      width: 200px;
+    }
+  }
 }
 
 .ab-field-error {

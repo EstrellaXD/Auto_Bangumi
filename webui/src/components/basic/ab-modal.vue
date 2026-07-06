@@ -19,12 +19,15 @@ const props = withDefaults(
     size?: 'sm' | 'md' | 'lg';
     /** false 时禁用遮罩点击/关闭按钮（用于流程中不可中断的弹窗） */
     closable?: boolean;
+    /** 隐藏右上角 X（confirm 类弹窗：Esc/遮罩仍可关闭） */
+    showClose?: boolean;
     maxHeight?: string;
   }>(),
   {
     title: '',
     size: 'md',
     closable: true,
+    showClose: true,
     maxHeight: '85dvh',
   }
 );
@@ -86,14 +89,20 @@ function close() {
         >
           <DialogPanel
             class="ab-modal-panel"
-            :class="`ab-modal-panel--${size}`"
+            :class="[
+              `ab-modal-panel--${size}`,
+              !$slots.default && 'ab-modal-panel--bare',
+            ]"
           >
-            <header v-if="title || closable" class="ab-modal-header">
+            <header
+              v-if="title || (closable && showClose)"
+              class="ab-modal-header"
+            >
               <DialogTitle as="h2" class="ab-modal-title">
                 {{ title }}
               </DialogTitle>
               <AbIconButton
-                v-if="closable"
+                v-if="closable && showClose"
                 class="ab-modal-close"
                 size="sm"
                 :label="$t('common.cancel')"
@@ -103,7 +112,11 @@ function close() {
               </AbIconButton>
             </header>
 
-            <div class="ab-modal-body" :style="{ maxHeight }">
+            <div
+              v-if="$slots.default"
+              class="ab-modal-body"
+              :style="{ maxHeight }"
+            >
               <slot />
             </div>
 
@@ -160,6 +173,19 @@ function close() {
 
   &--lg {
     max-width: 680px;
+  }
+
+  // 无正文的紧凑形态（confirm）：头/脚之间没有 body，去掉多余分割线
+  &--bare {
+    .ab-modal-header {
+      border-bottom: none;
+      padding-bottom: 4px;
+    }
+
+    .ab-modal-footer {
+      border-top: none;
+      padding-top: 4px;
+    }
   }
 }
 

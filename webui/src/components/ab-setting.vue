@@ -85,11 +85,6 @@ const selectValue = computed<string | number | null>({
 .setting-item {
   width: 100%;
 
-  // 无宽度 class 的下拉框给一个下限，避免窄到只剩箭头
-  .setting-select {
-    min-width: 140px;
-  }
-
   // Prevent fixed-width inputs from causing horizontal overflow on mobile
   :deep(input),
   :deep(select),

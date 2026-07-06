@@ -165,22 +165,21 @@ function formatDate(dateString: string | null): string {
           {{ $t('passkey.register_hint') }}
         </div>
 
-        <div line></div>
-
-        <div flex="~ justify-end gap-8">
-          <ab-button size="sm" variant="danger" @click="showAddDialog = false">
-            {{ $t('config.cancel') }}
-          </ab-button>
-          <ab-button
-            size="sm"
-            variant="primary"
-            :disabled="!deviceName.trim() || isRegistering"
-            @click="handleAdd"
-          >
-            {{ $t('config.apply') }}
-          </ab-button>
-        </div>
       </div>
+
+      <template #footer>
+        <ab-button size="sm" @click="showAddDialog = false">
+          {{ $t('config.cancel') }}
+        </ab-button>
+        <ab-button
+          size="sm"
+          variant="primary"
+          :disabled="!deviceName.trim() || isRegistering"
+          @click="handleAdd"
+        >
+          {{ $t('config.apply') }}
+        </ab-button>
+      </template>
     </ab-modal>
   </ab-fold-panel>
 </template>

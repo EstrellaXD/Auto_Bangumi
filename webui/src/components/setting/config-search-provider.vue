@@ -245,24 +245,23 @@ function validateUrl(url: string): boolean {
           {{ $t('config.search_provider_set.url_missing_placeholder') }}
         </div>
 
-        <div line></div>
-
-        <div flex="~ justify-end gap-8">
-          <ab-button size="sm" variant="danger" @click="showAddDialog = false">
-            {{ $t('config.cancel') }}
-          </ab-button>
-          <ab-button
-            size="sm"
-            variant="primary"
-            :disabled="
-              !formName.trim() || !formUrl.trim() || !validateUrl(formUrl)
-            "
-            @click="handleAdd"
-          >
-            {{ $t('config.apply') }}
-          </ab-button>
-        </div>
       </div>
+
+      <template #footer>
+        <ab-button size="sm" @click="showAddDialog = false">
+          {{ $t('config.cancel') }}
+        </ab-button>
+        <ab-button
+          size="sm"
+          variant="primary"
+          :disabled="
+            !formName.trim() || !formUrl.trim() || !validateUrl(formUrl)
+          "
+          @click="handleAdd"
+        >
+          {{ $t('config.apply') }}
+        </ab-button>
+      </template>
     </ab-modal>
 
     <!-- Edit dialog -->
@@ -297,24 +296,23 @@ function validateUrl(url: string): boolean {
           {{ $t('config.search_provider_set.url_missing_placeholder') }}
         </div>
 
-        <div line></div>
-
-        <div flex="~ justify-end gap-8">
-          <ab-button size="sm" variant="danger" @click="showEditDialog = false">
-            {{ $t('config.cancel') }}
-          </ab-button>
-          <ab-button
-            size="sm"
-            variant="primary"
-            :disabled="
-              !formName.trim() || !formUrl.trim() || !validateUrl(formUrl)
-            "
-            @click="handleEdit"
-          >
-            {{ $t('config.apply') }}
-          </ab-button>
-        </div>
       </div>
+
+      <template #footer>
+        <ab-button size="sm" @click="showEditDialog = false">
+          {{ $t('config.cancel') }}
+        </ab-button>
+        <ab-button
+          size="sm"
+          variant="primary"
+          :disabled="
+            !formName.trim() || !formUrl.trim() || !validateUrl(formUrl)
+          "
+          @click="handleEdit"
+        >
+          {{ $t('config.apply') }}
+        </ab-button>
+      </template>
     </ab-modal>
   </ab-fold-panel>
 </template>

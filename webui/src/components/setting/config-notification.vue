@@ -1,10 +1,12 @@
 <script lang="ts" setup>
-import { NPopconfirm, NSelect } from 'naive-ui';
+import { NSelect } from 'naive-ui';
+import { useConfirm } from '@/hooks/useConfirm';
 import type { NotificationProviderConfig, NotificationType } from '#/config';
 import type { TupleToUnion } from '#/utils';
 import { apiNotification } from '@/api/notification';
 
 const { t, returnUserLangText } = useMyI18n();
+const { confirm } = useConfirm();
 const { getSettingGroup } = useConfigStore();
 
 const notificationRef = getSettingGroup('notification');
@@ -166,6 +168,16 @@ function saveProvider() {
   editingIndex.value = -1;
 }
 
+async function onRemoveProvider(index: number) {
+  const ok = await confirm({
+    title: t('config.notification_set.remove'),
+    body: t('config.notification_set.remove_confirm'),
+    confirmText: t('config.notification_set.remove'),
+    danger: true,
+  });
+  if (ok) removeProvider(index);
+}
+
 function removeProvider(index: number) {
   const newProviders = providers.value.filter((_, i) => i !== index);
   providers.value = newProviders;
@@ -263,11 +275,10 @@ function getFieldsForType(type: string) {
             </div>
           </div>
           <div class="provider-actions">
-            <ab-button
+            <ab-icon-button
               size="sm"
-              variant="secondary"
               :disabled="testingIndex === index"
-              :title="$t('config.notification_set.test')"
+              :label="$t('config.notification_set.test')"
               @click="testProvider(index)"
             >
               <div
@@ -276,19 +287,17 @@ function getFieldsForType(type: string) {
                 animate-spin
               />
               <div v-else i-carbon-play />
-            </ab-button>
-            <ab-button
+            </ab-icon-button>
+            <ab-icon-button
               size="sm"
-              variant="secondary"
-              :title="$t('config.notification_set.edit')"
+              :label="$t('config.notification_set.edit')"
               @click="openEditDialog(index)"
             >
               <div i-carbon-edit />
-            </ab-button>
-            <ab-button
+            </ab-icon-button>
+            <ab-icon-button
               size="sm"
-              variant="secondary"
-              :title="
+              :label="
                 provider.enabled
                   ? $t('config.notification_set.disable')
                   : $t('config.notification_set.enable_provider')
@@ -300,24 +309,15 @@ function getFieldsForType(type: string) {
                   provider.enabled ? 'i-carbon-view' : 'i-carbon-view-off'
                 "
               />
-            </ab-button>
-            <NPopconfirm
-              :positive-text="$t('config.notification_set.remove')"
-              :negative-text="$t('config.cancel')"
-              :positive-button-props="{ type: 'error' }"
-              @positive-click="removeProvider(index)"
+            </ab-icon-button>
+            <ab-icon-button
+              size="sm"
+              class="provider-remove"
+              :label="$t('config.notification_set.remove')"
+              @click="onRemoveProvider(index)"
             >
-              <template #trigger>
-                <ab-button
-                  size="sm"
-                  variant="danger"
-                  :title="$t('config.notification_set.remove')"
-                >
-                  <div i-carbon-trash-can />
-                </ab-button>
-              </template>
-              {{ $t('config.notification_set.remove_confirm') }}
-            </NPopconfirm>
+              <div i-carbon-trash-can />
+            </ab-icon-button>
           </div>
         </div>
 
@@ -384,33 +384,30 @@ function getFieldsForType(type: string) {
           {{ testResult.message }}
         </div>
 
-        <div line></div>
-
-        <div flex="~ justify-between items-center">
-          <ab-button
-            size="sm"
-            variant="secondary"
-            :disabled="testingIndex === -999"
-            @click="testNewProvider"
-          >
-            <div
-              v-if="testingIndex === -999"
-              i-carbon-circle-dash
-              animate-spin
-            />
-            <div v-else i-carbon-play />
-            {{ $t('config.notification_set.test') }}
-          </ab-button>
-          <div flex="~ gap-8">
-            <ab-button size="sm" variant="danger" @click="showAddDialog = false">
-              {{ $t('config.cancel') }}
-            </ab-button>
-            <ab-button size="sm" variant="primary" @click="addProvider">
-              {{ $t('config.apply') }}
-            </ab-button>
-          </div>
-        </div>
       </div>
+
+      <template #footer>
+        <ab-button
+          size="sm"
+          class="footer-test"
+          :disabled="testingIndex === -999"
+          @click="testNewProvider"
+        >
+          <div
+            v-if="testingIndex === -999"
+            i-carbon-circle-dash
+            animate-spin
+          />
+          <div v-else i-carbon-play />
+          {{ $t('config.notification_set.test') }}
+        </ab-button>
+        <ab-button size="sm" @click="showAddDialog = false">
+          {{ $t('config.cancel') }}
+        </ab-button>
+        <ab-button size="sm" variant="primary" @click="addProvider">
+          {{ $t('config.apply') }}
+        </ab-button>
+      </template>
     </ab-modal>
 
     <!-- Edit Dialog -->
@@ -456,33 +453,30 @@ function getFieldsForType(type: string) {
           {{ testResult.message }}
         </div>
 
-        <div line></div>
-
-        <div flex="~ justify-between items-center">
-          <ab-button
-            size="sm"
-            variant="secondary"
-            :disabled="testingIndex === -999"
-            @click="testNewProvider"
-          >
-            <div
-              v-if="testingIndex === -999"
-              i-carbon-circle-dash
-              animate-spin
-            />
-            <div v-else i-carbon-play />
-            {{ $t('config.notification_set.test') }}
-          </ab-button>
-          <div flex="~ gap-8">
-            <ab-button size="sm" variant="danger" @click="showEditDialog = false">
-              {{ $t('config.cancel') }}
-            </ab-button>
-            <ab-button size="sm" variant="primary" @click="saveProvider">
-              {{ $t('config.apply') }}
-            </ab-button>
-          </div>
-        </div>
       </div>
+
+      <template #footer>
+        <ab-button
+          size="sm"
+          class="footer-test"
+          :disabled="testingIndex === -999"
+          @click="testNewProvider"
+        >
+          <div
+            v-if="testingIndex === -999"
+            i-carbon-circle-dash
+            animate-spin
+          />
+          <div v-else i-carbon-play />
+          {{ $t('config.notification_set.test') }}
+        </ab-button>
+        <ab-button size="sm" @click="showEditDialog = false">
+          {{ $t('config.cancel') }}
+        </ab-button>
+        <ab-button size="sm" variant="primary" @click="saveProvider">
+          {{ $t('config.apply') }}
+        </ab-button>
+      </template>
     </ab-modal>
   </ab-fold-panel>
 </template>
@@ -543,21 +537,18 @@ function getFieldsForType(type: string) {
   gap: 8px;
   flex-shrink: 0;
 
-  :deep(.n-button) {
-    min-width: 32px;
-    width: 32px;
-    height: 32px;
-    padding: 0;
-  }
+  .provider-remove {
+    color: var(--color-danger);
 
-  :deep(.n-spin-container),
-  :deep(.n-spin-content) {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
+    &:hover:not(:disabled) {
+      color: var(--color-danger);
+      background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+    }
   }
+}
+
+.footer-test {
+  margin-right: auto;
 }
 
 .field-textarea {

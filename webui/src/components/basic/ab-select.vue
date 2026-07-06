@@ -60,7 +60,6 @@ const invalid = computed(() => props.error || field?.invalid.value === true);
 
 <style lang="scss" scoped>
 .ab-select {
-  min-width: 140px;
   max-width: 100%;
 
   &--error {

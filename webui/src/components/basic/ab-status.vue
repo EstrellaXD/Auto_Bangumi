@@ -27,7 +27,10 @@ const ariaText = computed(() => props.label || props.state);
     role="status"
     :aria-label="detail ? `${ariaText} — ${detail}` : ariaText"
   >
-    <span class="ab-status-mark" aria-hidden="true"></span>
+    <!-- 状态灯：外圈细线，内里是灯 -->
+    <span class="ab-status-ring" aria-hidden="true">
+      <span class="ab-status-mark"></span>
+    </span>
     <span v-if="label" class="ab-status-label">{{ label }}</span>
     <span v-if="detail" class="ab-status-detail">{{ detail }}</span>
   </span>
@@ -48,17 +51,33 @@ const ariaText = computed(() => props.label || props.state);
   }
 }
 
-.ab-status-mark {
-  width: 10px;
-  height: 10px;
-  border-radius: 2.5px;
+.ab-status-ring {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
+  border: 2px solid var(--color-border);
+  border-radius: 50%;
+  transition: border-color var(--transition-normal);
+
+  .ab-status--sm & {
+    width: 14px;
+    height: 14px;
+    border-width: 1.5px;
+  }
+}
+
+.ab-status-mark {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
   transition: background-color var(--transition-fast);
 
   .ab-status--sm & {
-    width: 8px;
-    height: 8px;
-    border-radius: 2px;
+    width: 6px;
+    height: 6px;
   }
 
   .ab-status--running & {
