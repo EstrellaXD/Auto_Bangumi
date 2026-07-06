@@ -8,6 +8,13 @@ from module.database.inbox import InboxDatabase
 from module.models import InboxMessage
 
 
+async def _upsert(db: InboxDatabase, **kwargs) -> InboxMessage:
+    """upsert 的非空封装：本文件里除 once 去重测试外都必然返回一行。"""
+    msg = await db.upsert(**kwargs)
+    assert msg is not None
+    return msg
+
+
 async def _rows(db_session) -> list[InboxMessage]:
     result = await db_session.execute(select(InboxMessage))
     return list(result.scalars().all())
@@ -15,7 +22,8 @@ async def _rows(db_session) -> list[InboxMessage]:
 
 async def test_upsert_inserts_new_message(db_session):
     db = InboxDatabase(db_session)
-    msg = await db.upsert(
+    msg = await _upsert(
+        db,
         kind="rss_failure",
         severity="error",
         title="RSS 失效",
@@ -32,7 +40,8 @@ async def test_upsert_inserts_new_message(db_session):
 
 async def test_upsert_unread_same_dedup_coalesces(db_session):
     db = InboxDatabase(db_session)
-    first = await db.upsert(
+    first = await _upsert(
+        db,
         kind="downloader_unavailable",
         severity="error",
         payload=json.dumps({"reason": "unreachable"}),
@@ -43,7 +52,8 @@ async def test_upsert_unread_same_dedup_coalesces(db_session):
     db_session.add(first)
     await db_session.commit()
 
-    second = await db.upsert(
+    second = await _upsert(
+        db,
         kind="downloader_unavailable",
         severity="error",
         payload=json.dumps({"reason": "credentials"}),
@@ -54,16 +64,16 @@ async def test_upsert_unread_same_dedup_coalesces(db_session):
     assert len(rows) == 1
     assert second.id == first.id
     assert second.count == 2
-    assert json.loads(second.payload)["reason"] == "credentials"  # 最新覆盖
+    assert json.loads(second.payload or "{}")["reason"] == "credentials"  # 最新覆盖
     assert second.updated_at > "2020-01-01T00:00:00+00:00"
 
 
 async def test_upsert_read_same_dedup_inserts_new_row(db_session):
     db = InboxDatabase(db_session)
-    first = await db.upsert(kind="rss_failure", dedup_key="rss:1")
+    first = await _upsert(db, kind="rss_failure", dedup_key="rss:1")
     await db.mark_read(first.id)
 
-    second = await db.upsert(kind="rss_failure", dedup_key="rss:1")
+    second = await _upsert(db, kind="rss_failure", dedup_key="rss:1")
 
     rows = await _rows(db_session)
     assert len(rows) == 2
@@ -89,15 +99,15 @@ async def test_upsert_once_skips_when_any_row_exists(db_session):
 
 async def test_upsert_without_dedup_always_inserts(db_session):
     db = InboxDatabase(db_session)
-    await db.upsert(kind="update_applied")
-    await db.upsert(kind="update_applied")
+    await _upsert(db, kind="update_applied")
+    await _upsert(db, kind="update_applied")
     assert len(await _rows(db_session)) == 2
 
 
 async def test_prune_keeps_newest(db_session):
     db = InboxDatabase(db_session)
     for i in range(5):
-        msg = await db.upsert(kind="download_failure")
+        msg = await _upsert(db, kind="download_failure")
         msg.updated_at = f"2026-01-0{i + 1}T00:00:00+00:00"
         db_session.add(msg)
     await db_session.commit()
@@ -113,14 +123,14 @@ async def test_prune_keeps_newest(db_session):
 async def test_upsert_prunes_beyond_keep(db_session):
     db = InboxDatabase(db_session)
     for _ in range(4):
-        await db.upsert(kind="download_failure", keep=3)
+        await _upsert(db, kind="download_failure", keep=3)
     assert len(await _rows(db_session)) == 3
 
 
 async def test_unread_count_and_mark_read(db_session):
     db = InboxDatabase(db_session)
-    first = await db.upsert(kind="rss_failure")
-    await db.upsert(kind="download_failure")
+    first = await _upsert(db, kind="rss_failure")
+    await _upsert(db, kind="download_failure")
     assert await db.unread_count() == 2
 
     assert await db.mark_read(first.id) is True
@@ -130,8 +140,8 @@ async def test_unread_count_and_mark_read(db_session):
 
 async def test_mark_all_read(db_session):
     db = InboxDatabase(db_session)
-    await db.upsert(kind="rss_failure")
-    await db.upsert(kind="download_failure")
+    await _upsert(db, kind="rss_failure")
+    await _upsert(db, kind="download_failure")
 
     changed = await db.mark_all_read()
 
@@ -141,8 +151,8 @@ async def test_mark_all_read(db_session):
 
 async def test_delete_and_clear(db_session):
     db = InboxDatabase(db_session)
-    first = await db.upsert(kind="rss_failure")
-    await db.upsert(kind="download_failure")
+    first = await _upsert(db, kind="rss_failure")
+    await _upsert(db, kind="download_failure")
 
     assert await db.delete(first.id) is True
     assert await db.delete(first.id) is False
@@ -153,7 +163,7 @@ async def test_delete_and_clear(db_session):
 async def test_list_pagination_and_unread_filter(db_session):
     db = InboxDatabase(db_session)
     for i in range(3):
-        msg = await db.upsert(kind=f"kind_{i}")
+        msg = await _upsert(db, kind=f"kind_{i}")
         msg.updated_at = f"2026-01-0{i + 1}T00:00:00+00:00"
         db_session.add(msg)
     await db_session.commit()

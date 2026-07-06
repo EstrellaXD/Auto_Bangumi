@@ -333,7 +333,7 @@ class TestCodexChatgpt:
 
         await _install(tmp_path, keypair, "codex-chatgpt")
         cls = registry.resolve("codex-chatgpt")
-        refreshed_saved = {}
+        refreshed_saved: dict = {}
 
         def handler(request):
             url = str(request.url)

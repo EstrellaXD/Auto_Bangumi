@@ -125,13 +125,13 @@ async def _event_generator(request: Request, ctx: AppContext):
             rev = inbox_revision()
             if rev != last_inbox_rev:
                 try:
-                    payload = await _notification_payload()
+                    notif_payload = await _notification_payload()
                 except Exception:
                     logger.debug("SSE: notification payload unavailable", exc_info=True)
                 else:
                     last_inbox_rev = rev
-                    payload["revision"] = rev
-                    yield {"event": "notification", "data": json.dumps(payload)}
+                    notif_payload["revision"] = rev
+                    yield {"event": "notification", "data": json.dumps(notif_payload)}
 
         await asyncio.sleep(_TICK_SECONDS)
         tick += _TICK_SECONDS

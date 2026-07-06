@@ -23,6 +23,7 @@ async def test_upsert_inserts_then_updates(db_session):
 
     await db.upsert("github-copilot", TokenSet(access_token="at-2"))
     updated = await db.get("github-copilot")
+    assert updated is not None
     assert updated.access_token == "at-2"
     assert await db.count() == 1  # 同 provider 只有一行
 

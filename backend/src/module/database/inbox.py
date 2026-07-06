@@ -115,11 +115,11 @@ class InboxDatabase:
     async def mark_all_read(self) -> int:
         result = await self.session.execute(
             update(InboxMessage)
-            .where(InboxMessage.read == False)  # noqa: E712
+            .where(InboxMessage.read == False)  # type: ignore[arg-type]  # noqa: E712
             .values(read=True)
         )
         await self.session.commit()
-        return int(result.rowcount or 0)
+        return int(result.rowcount or 0)  # type: ignore[attr-defined]
 
     async def delete(self, message_id: int) -> bool:
         message = await self.session.get(InboxMessage, message_id)
@@ -132,7 +132,7 @@ class InboxDatabase:
     async def clear(self) -> int:
         result = await self.session.execute(delete(InboxMessage))
         await self.session.commit()
-        return int(result.rowcount or 0)
+        return int(result.rowcount or 0)  # type: ignore[attr-defined]
 
     async def prune(self, keep: int = DEFAULT_KEEP) -> int:
         """删除最近 ``keep`` 条以外的旧消息，返回删除数量。"""

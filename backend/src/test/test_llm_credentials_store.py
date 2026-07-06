@@ -44,6 +44,7 @@ class TestCredentialStore:
             await store.save(TokenSet(access_token="at-2"))
             await store.clear()
 
+        assert loaded is not None
         assert loaded.access_token == "at"
         db.llm_credential.get.assert_awaited_once_with("github-copilot")
         db.llm_credential.upsert.assert_awaited_once()
