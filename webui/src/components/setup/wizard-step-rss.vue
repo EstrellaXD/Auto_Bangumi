@@ -55,18 +55,18 @@ function handleNext() {
       <p class="step-subtitle">{{ t('setup.rss.subtitle') }}</p>
 
       <div class="form-fields">
-        <ab-label :label="t('setup.rss.url')">
+        <ab-field :label="t('setup.rss.url')">
           <input
             v-model="rssData.url"
             type="text"
             placeholder="https://mikanani.me/RSS/..."
             class="setup-input setup-input-wide"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label v-if="rssData.name" :label="t('setup.rss.feed_name')">
+        <ab-field v-if="rssData.name" :label="t('setup.rss.feed_name')">
           <input v-model="rssData.name" type="text" class="setup-input" />
-        </ab-label>
+        </ab-field>
       </div>
 
       <div class="test-section">

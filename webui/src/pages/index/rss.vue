@@ -11,15 +11,6 @@ definePage({
 const { t } = useMyI18n();
 const { confirm } = useConfirm();
 
-async function onDeleteSelected() {
-  const ok = await confirm({
-    title: t('rss.delete'),
-    body: t('rss.delete_confirm'),
-    confirmText: t('rss.delete'),
-    danger: true,
-  });
-  if (ok) deleteSelected();
-}
 const { isMobile } = useBreakpointQuery();
 const { rss, selectedRSS, isRefreshingAll, isLoading } = storeToRefs(
   useRSSStore()
@@ -32,6 +23,16 @@ const {
   refreshRSS,
   refreshAllRSS,
 } = useRSSStore();
+
+async function onDeleteSelected() {
+  const ok = await confirm({
+    title: t('rss.delete'),
+    body: t('rss.delete_confirm'),
+    confirmText: t('rss.delete'),
+    danger: true,
+  });
+  if (ok) deleteSelected();
+}
 
 onActivated(() => {
   getAll();
@@ -167,19 +168,16 @@ const rssRowKey = (row: RSS) => row.id;
       </template>
 
       <!-- Mobile: Card-based list -->
-      <ab-data-list
+      <ab-list
         v-if="isMobile"
         :items="rss || []"
-        :columns="[
-          { key: 'name', title: t('rss.name') },
-          { key: 'url', title: t('rss.url') },
-        ]"
-        :selectable="true"
+        selectable
         key-field="id"
+        :loading="isLoading && rss.length === 0"
         :selected="selectedRSS"
-        @select="(keys) => (selectedRSS = keys as number[])"
+        @update:selected="(keys) => (selectedRSS = keys as number[])"
       >
-        <template #item="{ item }">
+        <template #row="{ item }">
           <div class="rss-card-content">
             <div class="rss-card-name">{{ item.name }}</div>
             <div class="rss-card-url">{{ item.url }}</div>
@@ -198,7 +196,11 @@ const rssRowKey = (row: RSS) => row.id;
               />
               <ab-tag
                 :type="item.enabled ? 'success' : 'neutral'"
-                :title="item.enabled ? 'success' : 'neutral'"
+                :title="
+                  item.enabled
+                    ? $t('config.notification_set.enabled')
+                    : $t('config.notification_set.disabled')
+                "
               />
             </div>
             <!-- Inline on touch — a tooltip can't be hovered on a phone -->
@@ -228,7 +230,7 @@ const rssRowKey = (row: RSS) => row.id;
             </div>
           </div>
         </template>
-      </ab-data-list>
+      </ab-list>
 
       <!-- Desktop: Data table -->
       <NDataTable

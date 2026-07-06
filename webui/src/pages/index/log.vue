@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { useConfirm } from '@/hooks/useConfirm';
 import { watchOnce } from '@vueuse/core';
+import { useConfirm } from '@/hooks/useConfirm';
 import { countLogLevels, parseLogLines } from '@/utils/log-parse';
 import type { LogLevel } from '@/utils/log-parse';
 
@@ -171,9 +171,8 @@ onDeactivated(() => {
               </ab-button>
             </div>
 
-            <input
+            <ab-input
               v-model="searchQuery"
-              ab-input
               class="log-search"
               type="search"
               :placeholder="$t('log.search_placeholder')"

@@ -94,7 +94,13 @@ function onTouchEnd() {
     @touchcancel="onTouchEnd"
   >
     <!-- Pull indicator -->
-    <div class="ab-pull-refresh__indicator" :style="{ opacity: indicatorOpacity }">
+    <div
+      class="ab-pull-refresh__indicator"
+      :style="{ opacity: indicatorOpacity }"
+      role="status"
+      aria-live="polite"
+      :aria-label="loading ? $t('common.loading') : undefined"
+    >
       <div
         v-if="loading"
         class="ab-pull-refresh__spinner"

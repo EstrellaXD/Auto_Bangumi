@@ -190,11 +190,11 @@ function emitUnarchive() {
 
 <template>
   <!-- Enable deleted rule dialog -->
-  <ab-popup
+  <ab-modal
     v-if="rule.deleted"
     v-model:show="show"
+    size="sm"
     :title="$t('homepage.rule.enable_rule')"
-    css="w-300 max-w-[90vw]"
   >
     <div>{{ $t('homepage.rule.enable_hit') }}</div>
     <div line my-8></div>
@@ -206,7 +206,7 @@ function emitUnarchive() {
         {{ $t('homepage.rule.no_btn') }}
       </ab-button>
     </div>
-  </ab-popup>
+  </ab-modal>
 
   <!-- Main edit modal -->
   <Teleport v-else to="body">
@@ -314,12 +314,12 @@ function emitUnarchive() {
                 <label class="weekday-label">{{
                   $t('homepage.rule.preferred_group')
                 }}</label>
-                <input
-                  v-model="localRule.preferred_group"
-                  ab-input
+                <ab-input
+                  :model-value="localRule.preferred_group ?? ''"
                   type="text"
                   class="preferred-input"
                   placeholder="ANi"
+                  @update:model-value="localRule.preferred_group = String($event)"
                 />
               </div>
 

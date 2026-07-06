@@ -105,9 +105,9 @@ function relativeTime(iso: string): string {
               {{ $t('notifications.mark_all_read') }}
             </ab-button>
             <ab-button
+              v-if="messages.length > 0"
               variant="danger"
               size="sm"
-              v-if="messages.length > 0"
               class="notification-action"
               @click="onClearClick"
             >

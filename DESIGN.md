@@ -59,6 +59,19 @@ Semantic scale only: `--z-dropdown` 10 · `--z-sticky` 20 · `--z-fixed` 30 · `
 - Soft Ink component grammar: filled controls on `--color-surface-2` (border only on focus/error); tags are hairline chips with a square semantic mark and ink text; status is a square mark + ink label; tabs underline (no thumb); alerts are hairline outlines led by a bold colored word (no icons, no tinted fills); toasts are inverted ink chips; empty states are left-aligned prose with one action; loading is skeletons, not spinners-in-content.
 - Every universal component ships a Storybook story and (where it has behavior) a vitest test in `__tests__/`.
 
+The universal set (`src/components/basic/` unless noted):
+
+| Group | Components |
+|---|---|
+| Actions | `ab-button` (primary/secondary/ghost/danger·sm/md·loading), `ab-icon-button` (required label, 44px touch, ghost/solid/round), `ab-menu` (headlessui dropdown), `ab-split-button` |
+| Forms | `ab-field` (label/description/error/required + aria wiring via injection), `ab-input` (affixes, clearable, password reveal, error), `ab-select`, `ab-switch`, `ab-segmented` (underline tabs), `ab-setting` (root — field+control settings row) |
+| Overlays | `ab-modal` (adaptive: dialog ≥ tablet, bottom sheet on mobile; footer slot; sizes sm/md/lg), `useConfirm()` + `ab-confirm-host` (promise confirm, danger variant), `ab-tooltip`, `ab-bottom-sheet` (internal to ab-modal) |
+| Display | `ab-tag` (semantic marks: success/warning/danger/info/neutral, closable), `ab-status` (running/stopped/paused/degraded + label/detail), `ab-badge` (count/dot, 99+), `ab-container` (root — title/footer/flush card), `ab-fold-panel` (root — accessible, animated), `ab-progress` |
+| Data & feedback | `ab-list` (selection, loading skeleton, density comfortable/compact, empty slot), `ab-toolbar` (search/filters/actions), `ab-alert` (hairline, bold lead word), toast via `useMessage()` (inverted ink), `ab-empty`, `ab-skeleton` (lines/row/card), `ab-pull-refresh` |
+| Page chrome | `ab-page-title`, `ab-search`, `ab-status-bar` (root), layout shells |
+
+Retired (do not reintroduce): `ab-popup`, `ab-adaptive-modal`, `ab-label`, `ab-setting`'s type-switch-only API, `ab-add`, `ab-button-multi`, `ab-data-list`, `ab-image`, `ab-rule`, `ab-swipe-container`, and the `ab-input` UnoCSS attribute shortcut.
+
 ## Voice
 
 UI copy through i18n only (`src/i18n/en.json` + `zh-CN.json`, keys always added in pairs). Sentence case in English. Labels are nouns, buttons are verbs, errors say what to do next.

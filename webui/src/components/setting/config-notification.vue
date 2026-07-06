@@ -343,40 +343,38 @@ function getFieldsForType(type: string) {
     </div>
 
     <!-- Add Dialog -->
-    <ab-popup
+    <ab-modal
       v-model:show="showAddDialog"
+      size="sm"
       :title="$t('config.notification_set.add_provider')"
-      css="w-400"
     >
       <div space-y-16>
-        <ab-label :label="$t('config.notification_set.type')">
+        <ab-field :label="$t('config.notification_set.type')">
           <NSelect
             v-model:value="newProvider.type"
             :options="providerTypes"
             class="provider-type-select"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label
+        <ab-field
           v-for="field in getFieldsForType(newProvider.type)"
           :key="field.key"
           :label="field.label"
         >
-          <input
+          <ab-input
             v-if="field.key !== 'template'"
             v-model="(newProvider as any)[field.key]"
             :placeholder="field.placeholder"
-            ab-input
           />
           <textarea
             v-else
             v-model="(newProvider as any)[field.key]"
             :placeholder="field.placeholder"
-            ab-input
             class="field-textarea"
             rows="3"
           />
-        </ab-label>
+        </ab-field>
 
         <div
           v-if="testResult"
@@ -413,44 +411,42 @@ function getFieldsForType(type: string) {
           </div>
         </div>
       </div>
-    </ab-popup>
+    </ab-modal>
 
     <!-- Edit Dialog -->
-    <ab-popup
+    <ab-modal
       v-model:show="showEditDialog"
+      size="sm"
       :title="$t('config.notification_set.edit_provider')"
-      css="w-400"
     >
       <div space-y-16>
-        <ab-label :label="$t('config.notification_set.type')">
+        <ab-field :label="$t('config.notification_set.type')">
           <NSelect
             v-model:value="newProvider.type"
             :options="providerTypes"
             disabled
             class="provider-type-select"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label
+        <ab-field
           v-for="field in getFieldsForType(newProvider.type)"
           :key="field.key"
           :label="field.label"
         >
-          <input
+          <ab-input
             v-if="field.key !== 'template'"
             v-model="(newProvider as any)[field.key]"
             :placeholder="field.placeholder"
-            ab-input
           />
           <textarea
             v-else
             v-model="(newProvider as any)[field.key]"
             :placeholder="field.placeholder"
-            ab-input
             class="field-textarea"
             rows="3"
           />
-        </ab-label>
+        </ab-field>
 
         <div
           v-if="testResult"
@@ -487,7 +483,7 @@ function getFieldsForType(type: string) {
           </div>
         </div>
       </div>
-    </ab-popup>
+    </ab-modal>
   </ab-fold-panel>
 </template>
 
@@ -565,10 +561,29 @@ function getFieldsForType(type: string) {
 }
 
 .field-textarea {
+  // Soft Ink 填充式多行输入（ab-input 组件暂不支持 textarea）
+  width: 100%;
+  padding: 8px 11px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  outline: none;
   resize: none;
-  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
-    monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
+  transition: border-color var(--transition-fast),
+    background-color var(--transition-fast), box-shadow var(--transition-fast);
+
+  &:focus {
+    background: var(--color-surface);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary-alpha);
+  }
+
+  @include forTablet {
+    width: 220px;
+  }
 }
 
 .test-result {

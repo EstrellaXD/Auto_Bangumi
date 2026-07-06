@@ -118,17 +118,6 @@ export default defineConfig({
 
     // input
     {
-      // Soft Ink：填充式控件，无边框；边框只在聚焦（primary）/错误（danger）时出现
-      'ab-input': `outline-none min-w-0 w-full sm:w-200 h-36 sm:h-28
-                     px-12 text-main text-left
-                     rounded-4
-                     border-1 border-transparent
-                     bg-surface-2 text-text-primary
-                     focus:border-primary focus:ring-2 focus:ring-primary/20
-                     transition-colors duration-150
-                    `,
-
-      'input-error': 'border-danger',
       'input-reset': 'bg-transparent min-w-0 flex-1 outline-none',
     },
 

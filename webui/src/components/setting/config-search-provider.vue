@@ -218,31 +218,28 @@ function validateUrl(url: string): boolean {
     </div>
 
     <!-- Add dialog -->
-    <ab-popup
+    <ab-modal
       v-model:show="showAddDialog"
+      size="sm"
       :title="$t('config.search_provider_set.add_title')"
-      css="w-400"
     >
       <div space-y-16>
-        <ab-label :label="$t('config.search_provider_set.name')">
-          <input
+        <ab-field :label="$t('config.search_provider_set.name')">
+          <ab-input
             v-model="formName"
-            type="text"
             :placeholder="$t('config.search_provider_set.name_placeholder')"
-            ab-input
-            maxlength="32"
+            :maxlength="32"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="$t('config.search_provider_set.url')">
-          <input
+        <ab-field :label="$t('config.search_provider_set.url')">
+          <ab-input
             v-model="formUrl"
             type="text"
             :placeholder="$t('config.search_provider_set.url_placeholder')"
-            ab-input
             @keyup.enter="handleAdd"
           />
-        </ab-label>
+        </ab-field>
 
         <div v-if="formUrl && !validateUrl(formUrl)" class="validation-warning">
           {{ $t('config.search_provider_set.url_missing_placeholder') }}
@@ -266,38 +263,35 @@ function validateUrl(url: string): boolean {
           </ab-button>
         </div>
       </div>
-    </ab-popup>
+    </ab-modal>
 
     <!-- Edit dialog -->
-    <ab-popup
+    <ab-modal
       v-model:show="showEditDialog"
+      size="sm"
       :title="$t('config.search_provider_set.edit_title')"
-      css="w-400"
     >
       <div space-y-16>
-        <ab-label :label="$t('config.search_provider_set.name')">
-          <input
+        <ab-field :label="$t('config.search_provider_set.name')">
+          <ab-input
             v-model="formName"
-            type="text"
             :placeholder="$t('config.search_provider_set.name_placeholder')"
-            ab-input
-            maxlength="32"
+            :maxlength="32"
             :disabled="
               editingProvider !== null &&
               isDefaultProvider(editingProvider.name)
             "
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="$t('config.search_provider_set.url')">
-          <input
+        <ab-field :label="$t('config.search_provider_set.url')">
+          <ab-input
             v-model="formUrl"
             type="text"
             :placeholder="$t('config.search_provider_set.url_placeholder')"
-            ab-input
             @keyup.enter="handleEdit"
           />
-        </ab-label>
+        </ab-field>
 
         <div v-if="formUrl && !validateUrl(formUrl)" class="validation-warning">
           {{ $t('config.search_provider_set.url_missing_placeholder') }}
@@ -321,7 +315,7 @@ function validateUrl(url: string): boolean {
           </ab-button>
         </div>
       </div>
-    </ab-popup>
+    </ab-modal>
   </ab-fold-panel>
 </template>
 

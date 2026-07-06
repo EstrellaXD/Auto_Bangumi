@@ -8,17 +8,6 @@ definePage({
   name: 'Downloader',
 });
 
-const { confirm } = useConfirm();
-
-async function onDeleteSelected() {
-  const ok = await confirm({
-    title: t('downloader.action.delete'),
-    body: t('downloader.action.delete_confirm'),
-    confirmText: t('downloader.action.delete'),
-    danger: true,
-  });
-  if (ok) deleteSelected(false);
-}
 
 const { t } = useMyI18n();
 const { config } = storeToRefs(useConfigStore());
@@ -33,6 +22,18 @@ const {
   toggleGroup,
   clearSelection,
 } = useDownloaderStore();
+const { confirm } = useConfirm();
+
+async function onDeleteSelected() {
+  const ok = await confirm({
+    title: t('downloader.action.delete'),
+    body: t('downloader.action.delete_confirm'),
+    confirmText: t('downloader.action.delete'),
+    danger: true,
+  });
+  if (ok) deleteSelected(false);
+}
+
 
 const isNull = computed(() => {
   return config.value.downloader.host === '';

@@ -146,22 +146,20 @@ function formatDate(dateString: string | null): string {
     </div>
 
     <!-- 添加对话框 -->
-    <ab-popup
+    <ab-modal
       v-model:show="showAddDialog"
+      size="sm"
       :title="$t('passkey.register_title')"
-      css="w-365"
     >
       <div space-y-16>
-        <ab-label :label="$t('passkey.device_name')">
-          <input
+        <ab-field :label="$t('passkey.device_name')">
+          <ab-input
             v-model="deviceName"
-            type="text"
             :placeholder="$t('passkey.device_name_placeholder')"
-            ab-input
-            maxlength="64"
+            :maxlength="64"
             @keyup.enter="handleAdd"
           />
-        </ab-label>
+        </ab-field>
 
         <div text-14 text-gray-500>
           {{ $t('passkey.register_hint') }}
@@ -183,6 +181,6 @@ function formatDate(dateString: string | null): string {
           </ab-button>
         </div>
       </div>
-    </ab-popup>
+    </ab-modal>
   </ab-fold-panel>
 </template>

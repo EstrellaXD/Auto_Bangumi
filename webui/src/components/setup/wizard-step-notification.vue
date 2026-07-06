@@ -62,29 +62,29 @@ const canTest = computed(() => {
       <p class="step-subtitle">{{ t('setup.notification.subtitle') }}</p>
 
       <div class="form-fields">
-        <ab-label :label="t('config.notification_set.type')">
+        <ab-field :label="t('config.notification_set.type')">
           <NSelect
             v-model:value="notificationData.type"
             :options="notificationTypes"
             size="small"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="t('config.notification_set.token')">
+        <ab-field :label="t('config.notification_set.token')">
           <input
             v-model="notificationData.token"
             type="text"
             class="setup-input setup-input-wide"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="t('config.notification_set.chat_id')">
+        <ab-field :label="t('config.notification_set.chat_id')">
           <input
             v-model="notificationData.chat_id"
             type="text"
             class="setup-input"
           />
-        </ab-label>
+        </ab-field>
       </div>
 
       <div class="test-section">

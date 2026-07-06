@@ -268,10 +268,9 @@ function handleConfirm() {
                   $t('homepage.rule.season_offset')
                 }}</label>
                 <div class="advanced-control offset-controls">
-                  <input
-                    v-model.number="localBangumi.season_offset"
+                  <ab-input
+                    v-model="localBangumi.season_offset"
                     type="number"
-                    ab-input
                     class="offset-input"
                   />
                 </div>
@@ -283,10 +282,9 @@ function handleConfirm() {
                   $t('homepage.rule.episode_offset')
                 }}</label>
                 <div class="advanced-control offset-controls">
-                  <input
-                    v-model.number="localBangumi.episode_offset"
+                  <ab-input
+                    v-model="localBangumi.episode_offset"
                     type="number"
-                    ab-input
                     class="offset-input"
                   />
                   <button

@@ -7,37 +7,28 @@ const { user, update } = useAuth();
 </script>
 
 <template>
-  <ab-popup
-    v-model:show="show"
-    :title="$t('topbar.profile.pop_title')"
-    css="w-365"
-  >
+  <ab-modal v-model:show="show" size="sm" :title="$t('topbar.profile.pop_title')">
     <div space-y-16>
-      <ab-label :label="$t('topbar.profile.username')">
-        <input
+      <ab-field :label="$t('topbar.profile.username')">
+        <ab-input
           v-model="user.username"
-          type="text"
           :placeholder="$t('topbar.profile.username')"
-          ab-input
         />
-      </ab-label>
+      </ab-field>
 
-      <ab-label :label="$t('topbar.profile.password')">
-        <input
+      <ab-field :label="$t('topbar.profile.password')">
+        <ab-input
           v-model="user.password"
           type="password"
           :placeholder="$t('topbar.profile.password')"
-          ab-input
         />
-      </ab-label>
-
-      <div line></div>
-
-      <div flex="~ justify-end">
-        <ab-button variant="primary" size="sm" @click="update">{{
-          $t('topbar.profile.update_btn')
-        }}</ab-button>
-      </div>
+      </ab-field>
     </div>
-  </ab-popup>
+
+    <template #footer>
+      <ab-button variant="primary" size="sm" @click="update">{{
+        $t('topbar.profile.update_btn')
+      }}</ab-button>
+    </template>
+  </ab-modal>
 </template>

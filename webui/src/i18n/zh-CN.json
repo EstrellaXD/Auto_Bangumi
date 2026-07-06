@@ -488,7 +488,8 @@
     "copy": "复制",
     "clear": "清空",
     "toggle_password": "显示或隐藏密码",
-    "empty": "暂无内容"
+    "empty": "暂无内容",
+    "loading": "加载中…"
   },
   "theme": {
     "light": "浅色",

@@ -82,57 +82,57 @@ const canProceed = computed(() => Boolean(downloaderData.value.host));
       <p class="step-subtitle">{{ t('setup.downloader.subtitle') }}</p>
 
       <div class="form-fields">
-        <ab-label :label="t('config.downloader_set.type')">
+        <ab-field :label="t('config.downloader_set.type')">
           <NSelect
             v-model:value="downloaderData.type"
             :options="downloaderTypeOptions"
             :aria-label="t('config.downloader_set.type')"
             class="type-select"
           />
-        </ab-label>
+        </ab-field>
 
         <p v-if="downloaderData.type === 'aria2'" class="aria2-hint">
           {{ t('config.downloader_set.aria2_hint') }}
         </p>
 
-        <ab-label :label="t('config.downloader_set.host')">
+        <ab-field :label="t('config.downloader_set.host')">
           <input
             v-model="downloaderData.host"
             type="text"
             placeholder="172.17.0.1:8080"
             class="setup-input"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="t('config.downloader_set.username')">
+        <ab-field :label="t('config.downloader_set.username')">
           <input
             v-model="downloaderData.username"
             type="text"
             placeholder="admin"
             class="setup-input"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="t('config.downloader_set.password')">
+        <ab-field :label="t('config.downloader_set.password')">
           <input
             v-model="downloaderData.password"
             type="password"
             class="setup-input"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="t('config.downloader_set.path')">
+        <ab-field :label="t('config.downloader_set.path')">
           <input
             v-model="downloaderData.path"
             type="text"
             placeholder="/downloads/Bangumi"
             class="setup-input"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="t('config.downloader_set.ssl')">
+        <ab-field :label="t('config.downloader_set.ssl')">
           <NSwitch v-model:value="downloaderData.ssl" />
-        </ab-label>
+        </ab-field>
       </div>
 
       <div class="test-section">

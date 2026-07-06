@@ -16,6 +16,7 @@ const props = withDefaults(
     min?: number;
     max?: number;
     step?: number;
+    maxlength?: number;
   }>(),
   {
     type: 'text',
@@ -27,6 +28,7 @@ const props = withDefaults(
     min: undefined,
     max: undefined,
     step: undefined,
+    maxlength: undefined,
   }
 );
 
@@ -74,6 +76,7 @@ function clear() {
       :min="min"
       :max="max"
       :step="step"
+      :maxlength="maxlength"
       :aria-label="ariaLabel"
       :aria-describedby="field?.describedBy.value"
       :aria-invalid="invalid || undefined"

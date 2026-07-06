@@ -488,7 +488,8 @@
     "copy": "Copy",
     "clear": "Clear",
     "toggle_password": "Show or hide password",
-    "empty": "Nothing here yet"
+    "empty": "Nothing here yet",
+    "loading": "Loading…"
   },
   "theme": {
     "light": "Light",

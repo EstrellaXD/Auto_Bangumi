@@ -34,30 +34,30 @@ const passwordError = computed(() => {
       <p class="step-subtitle">{{ t('setup.account.subtitle') }}</p>
 
       <div class="form-fields">
-        <ab-label :label="t('setup.account.username')">
+        <ab-field :label="t('setup.account.username')">
           <input
             v-model="accountData.username"
             type="text"
             placeholder="admin"
             class="setup-input"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="t('setup.account.password')">
+        <ab-field :label="t('setup.account.password')">
           <input
             v-model="accountData.password"
             type="password"
             class="setup-input"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="t('setup.account.confirm_password')">
+        <ab-field :label="t('setup.account.confirm_password')">
           <input
             v-model="accountData.confirmPassword"
             type="password"
             class="setup-input"
           />
-        </ab-label>
+        </ab-field>
 
         <p v-if="passwordError" class="error-text">{{ passwordError }}</p>
       </div>

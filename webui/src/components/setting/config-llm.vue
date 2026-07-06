@@ -251,14 +251,14 @@ const tuningItems = computed(() => [
 
       <transition name="slide-fade">
         <div v-if="llm.enable" class="llm-config">
-          <ab-label :label="() => t('config.llm_set.provider')">
+          <ab-field :label="() => t('config.llm_set.provider')">
             <NSelect
               v-model:value="llm.provider"
               class="model-select"
               :options="providerOptions"
               :aria-label="t('config.llm_set.provider')"
             />
-          </ab-label>
+          </ab-field>
 
           <ab-setting
             v-model:data="llm.mode"
@@ -298,7 +298,7 @@ const tuningItems = computed(() => [
               :prop="{ type: 'password', placeholder: 'sk-...' }"
             />
 
-            <ab-label :label="() => t('config.llm_set.model')">
+            <ab-field :label="() => t('config.llm_set.model')">
               <NSelect
                 v-model:value="model"
                 class="model-select"
@@ -310,7 +310,7 @@ const tuningItems = computed(() => [
                 :aria-label="t('config.llm_set.model')"
                 @update:show="onModelDropdownShow"
               />
-            </ab-label>
+            </ab-field>
 
             <ab-setting
               v-if="selected?.needs_base_url"
@@ -462,13 +462,13 @@ const tuningItems = computed(() => [
   gap: 8px;
   padding: 10px 12px;
   border-radius: var(--radius-sm);
-  background: var(--color-warning-bg, #fef9ed);
-  border: 1px solid var(--color-warning-border, #fde68a);
+  background: transparent;
+  border: 1px solid var(--color-border);
 }
 
 .llm-risk-text {
   font-size: 12.5px;
-  color: var(--color-warning-text, #92400e);
+  color: var(--color-text);
 }
 
 .llm-risk-actions {

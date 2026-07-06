@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { useConfirm } from '@/hooks/useConfirm';
 import type { Component } from 'vue';
+import { useConfirm } from '@/hooks/useConfirm';
 import type { Config } from '#/config';
 import ConfigNormal from '@/components/setting/config-normal.vue';
 import ConfigParser from '@/components/setting/config-parser.vue';
@@ -251,9 +251,8 @@ onBeforeRouteLeave(() => {
         class="config-rail"
         :aria-label="$t('config.search_placeholder')"
       >
-        <input
+        <ab-input
           v-model="searchQuery"
-          ab-input
           class="rail-search"
           type="search"
           :placeholder="$t('config.search_placeholder')"
