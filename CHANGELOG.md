@@ -1,3 +1,25 @@
+# [3.3.0-beta.7] - 2026-07-06
+
+发版前 ship-readiness 审查（多代理评审 + 对抗验证）确认的 10 个缺陷全部修复；本版为 3.3.0 稳定版前的收尾修复版。
+
+## Backend
+
+### Fixed
+
+- **保存设置可能静默写坏通知渠道密钥**：掩码密钥（`********`）按下标回填，删除/重排列表项后幸存项会错拿被删项的密钥且原值永久丢失。现按身份匹配回填（同下标同身份 → 全列表唯一身份 → 长度不变时按下标兜底），无法唯一定位来源时返回 400 提示重新输入密钥，绝不猜
+- **生产构建下自托管 Inter 字体 404**：`/fonts` 未挂载静态目录，字体请求被 SPA 兜底路由回成 index.html，整站字体静默回退系统字体（开发模式由 Vite 直接服务 `public/`，故此前未暴露）
+- **受限 UMASK（如 077）下在线更新后崩溃循环**：boot_overlay 以 root 解包/复制的文件是 600/700 root:root，以 ab 运行的应用读不了 `/app/module`。现每棵落地的树（module / dist / .venv，含 EXDEV 恢复路径）都交还应用用户，可读性与 UMASK 无关
+- **EXDEV 就地替换非原子**：中途失败（磁盘满/IO 错误）会留下"删光了但没灌满"的残缺 module 树，启动进入必然 ImportError 崩溃循环。现先快照旧树到 `.ab_bak`，失败时恢复旧树再放弃本次覆盖
+- **缺留存备份 bundle 时回滚会把 bundle.zip 换丢**：boot_overlay 下次启动判定 legacy/unsigned 整体清除覆盖层，实际落在镜像版本却报告"已回滚到上一版本"。现该场景改走"回退镜像版本"路径并如实报告，同时清掉无法验签的孤儿 backup 树
+- **qBittorrent 凭据错误仍会累积触发 WebUI IP ban**："不重试"只在单次 auth 内生效，每个周期 tick 仍各发一次失败登录，约 5 次即被 qB 封禁 IP。现凭据被拒后进程级闩锁（保存设置后解锁重试）；auth 单飞化，并发等待者共享失败结论、不再补发 POST
+- **下载器设置变更的生命周期竞态**：正在登录（尚未计入引用计数）的客户端不再被并发的设置变更块中途登出；连续两次改设置不再把第一个被撤下客户端顶掉导致连接池泄漏；`__aenter__` 中途被取消不再泄漏引用计数
+- **entrypoint 属主迁移 marker 先写后 chown**：大海报缓存迁移中途被打断（停容器/崩溃/NAS 报错）会被记成"已完成"、之后每次启动跳过且永不自愈。现 `chown -R` 成功退出后才写 marker
+- **aria2 下载列表在 WebUI 显示 undefined / NaNhNaNm**：`torrents_info` 载荷缺少下载页无条件消费的字段。现补齐 `num_seeds`/`num_leechs`（numSeeders/connections）、`eta`（qB 的 8640000=未知约定）、`added_on`（gid 映射入库时间，用于排序），并把 aria2 状态映射为 qB 状态词汇（active→downloading/uploading 等）
+
+### Changed
+
+- 程序控制端点（`/restart` `/start` `/stop` `/shutdown`）恢复 GET 别名（标记 deprecated，计划下个大版本移除）：3.2 及更早版本这些端点是 GET，外部自动化（cron / Home Assistant 等）升级后不应 405 静默失效
+
 # [3.3.0-beta.6] - 2026-07-06
 
 ## Frontend
