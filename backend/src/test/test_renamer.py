@@ -139,6 +139,50 @@ class TestGenPath:
 # ---------------------------------------------------------------------------
 
 
+class TestGenPathFractionalEpisode:
+    """总集篇等半集（12.5）必须保留小数，否则会覆盖同季的整数集 (#667)。"""
+
+    def test_pn_keeps_fraction(self):
+        ep = EpisodeFile(
+            media_path="old.mkv",
+            title="My Anime",
+            season=1,
+            episode=12.5,
+            suffix=".mkv",
+        )
+        result = Renamer.gen_path(ep, "Bangumi Name", method="pn")
+        assert result == "My Anime S01E12.5.mkv"
+
+    def test_fraction_below_ten_zero_padded(self):
+        ep = EpisodeFile(
+            media_path="old.mkv", title="My Anime", season=1, episode=9.5, suffix=".mkv"
+        )
+        result = Renamer.gen_path(ep, "Bangumi Name", method="pn")
+        assert result == "My Anime S01E09.5.mkv"
+
+    def test_offset_applies_to_fraction(self):
+        ep = EpisodeFile(
+            media_path="old.mkv",
+            title="My Anime",
+            season=1,
+            episode=13.5,
+            suffix=".mkv",
+        )
+        result = Renamer.gen_path(ep, "Bangumi Name", method="pn", episode_offset=-1)
+        assert result == "My Anime S01E12.5.mkv"
+
+    def test_integer_valued_float_formats_as_int(self):
+        ep = EpisodeFile(
+            media_path="old.mkv",
+            title="My Anime",
+            season=1,
+            episode=12.0,
+            suffix=".mkv",
+        )
+        result = Renamer.gen_path(ep, "Bangumi Name", method="pn")
+        assert result == "My Anime S01E12.mkv"
+
+
 class TestGenPathMovie:
     """episode_type='movie' bypasses SxxExx numbering entirely, producing a
     'Title (Year).ext' layout instead."""
@@ -338,6 +382,29 @@ class TestRenameFile:
         assert result.official_title == "My Anime"
         assert result.season == 1
         assert result.episode == 5
+
+    async def test_fractional_episode_notification_keeps_fraction(self, renamer):
+        """半集重命名后通知里的集数保留小数 (#667)。"""
+        ep = EpisodeFile(
+            media_path="old.mkv",
+            title="My Anime",
+            season=1,
+            episode=12.5,
+            suffix=".mkv",
+        )
+        with patch.object(renamer._parser, "torrent_parser", return_value=ep):
+            renamer.client.client.torrents_rename_file.return_value = True
+            result = await renamer.rename_file(
+                torrent_name="[Sub] My Anime - 12.5.mkv",
+                media_path="old.mkv",
+                bangumi_name="My Anime",
+                method="pn",
+                season=1,
+                _hash="hash123",
+            )
+
+        assert result is not None
+        assert result.episode == 12.5
 
     async def test_parse_fails_no_remove(self, renamer):
         """When parser returns None and remove_bad_torrent=False, returns None."""

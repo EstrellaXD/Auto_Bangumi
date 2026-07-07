@@ -62,6 +62,30 @@ class Renamer:
         logger.debug("Checked %s files", torrent_count)
 
     @staticmethod
+    def _adjust_episode(original: int | float, episode_offset: int) -> int | float:
+        if original == 0 and episode_offset != 0:
+            # Episode 0 is a special/OVA — never apply offset to avoid
+            # overwriting regular episodes (see issue #977)
+            return 0
+        adjusted = original + episode_offset
+        # An offset producing a non-positive result (e.g., EP5 + offset -10)
+        # is almost always a misconfiguration, so revert to original.
+        if adjusted < 0 or (adjusted == 0 and original > 0):
+            logger.warning(
+                f"Episode offset {episode_offset} would make episode {original} non-positive, ignoring offset"
+            )
+            return original
+        return adjusted
+
+    @staticmethod
+    def _format_episode(episode: int | float) -> str:
+        # 总集篇等半集（12.5）保留小数，否则会覆盖同季的整数集 (#667)；
+        # 整数值沿用两位补零
+        if isinstance(episode, float) and episode.is_integer():
+            episode = int(episode)
+        return f"0{episode}" if episode < 10 else str(episode)
+
+    @staticmethod
     def gen_path(
         file_info: EpisodeFile | SubtitleFile,
         bangumi_name: str,
@@ -74,22 +98,9 @@ class Renamer:
         # So we use file_info.season directly without applying offset again
         season_num = file_info.season
         season = f"0{season_num}" if season_num < 10 else season_num
-        # Apply episode offset
-        original_episode = int(file_info.episode)
-        if original_episode == 0 and episode_offset != 0:
-            # Episode 0 is a special/OVA — never apply offset to avoid
-            # overwriting regular episodes (see issue #977)
-            adjusted_episode = 0
-        else:
-            adjusted_episode = original_episode + episode_offset
-        # An offset producing a non-positive result (e.g., EP5 + offset -10)
-        # is almost always a misconfiguration, so revert to original.
-        if adjusted_episode < 0 or (adjusted_episode == 0 and original_episode > 0):
-            adjusted_episode = original_episode
-            logger.warning(
-                f"Episode offset {episode_offset} would make episode {original_episode} non-positive, ignoring offset"
-            )
-        episode = f"0{adjusted_episode}" if adjusted_episode < 10 else adjusted_episode
+        episode = Renamer._format_episode(
+            Renamer._adjust_episode(file_info.episode, episode_offset)
+        )
         # 注意：group_tag 只影响 qB RSS 规则名（downloader/path.py 的 rule_name），
         # 从不写进重命名后的文件名——已有做种媒体库的文件名必须保持稳定，
         # 否则升级后会触发整库批量重命名，破坏 Plex/Jellyfin 索引与硬链接
@@ -176,19 +187,10 @@ class Renamer:
                     _pending_renames.pop(pending_key, None)
                     # Season comes from folder which already has offset applied
                     # Only apply episode offset
-                    original_ep = int(ep.episode)
-                    if original_ep == 0 and episode_offset != 0:
-                        adjusted_episode = 0
-                    else:
-                        adjusted_episode = original_ep + episode_offset
-                    if adjusted_episode < 0 or (
-                        adjusted_episode == 0 and original_ep > 0
-                    ):
-                        adjusted_episode = original_ep
                     return Notification(
                         official_title=bangumi_name,
                         season=ep.season,
-                        episode=adjusted_episode,
+                        episode=self._adjust_episode(ep.episode, episode_offset),
                     )
                 else:
                     # Rename API returned success but file wasn't actually renamed
