@@ -782,6 +782,80 @@ class TestAddTorrents:
         # 磁力 hash 已存在于 qB：确认是重复
         assert result is AddResult.DUPLICATE
 
+    async def test_add_fails_body_with_existing_torrent_file_is_duplicate(self):
+        """qB ≤5.1 对 .torrent 文件上传回 'Fails.' 时，用文件字节算 infohash
+        并到 qB 里确认——已存在即重复，不能永远按失败重试（用户日志里的
+        '200 Fails. and no matching torrent found' 无限循环）。"""
+        import hashlib
+
+        raw = (
+            b"d4:infod6:lengthi1e4:name3:foo12:piece lengthi16384e6:pieces20:"
+            + b"\x00" * 20
+            + b"ee"
+        )
+        infohash = hashlib.sha1(raw[7:-1]).hexdigest()
+
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        add_resp = MagicMock(status_code=200, text="Fails.")
+        info_resp = MagicMock(status_code=200)
+        info_resp.json.return_value = [{"hash": infohash}]
+        qb._client.request = AsyncMock(side_effect=[add_resp, info_resp])
+
+        result = await qb.add_torrents(
+            torrent_urls=None,
+            torrent_files=raw,
+            save_path="/downloads",
+            category="Bangumi",
+        )
+
+        assert result is AddResult.DUPLICATE
+
+    async def test_add_fails_body_with_unknown_torrent_file_raises(self):
+        """文件 hash 不在 qB 中（真失败，如种子损坏）时仍按失败抛出。"""
+        raw = (
+            b"d4:infod6:lengthi1e4:name3:foo12:piece lengthi16384e6:pieces20:"
+            + b"\x00" * 20
+            + b"ee"
+        )
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        add_resp = MagicMock(status_code=200, text="Fails.")
+        info_resp = MagicMock(status_code=200)
+        info_resp.json.return_value = []
+        qb._client.request = AsyncMock(side_effect=[add_resp, info_resp])
+
+        with pytest.raises(ConnectionError):
+            await qb.add_torrents(
+                torrent_urls=None,
+                torrent_files=raw,
+                save_path="/downloads",
+                category="Bangumi",
+            )
+
+    def test_torrent_infohash_extraction(self):
+        """infohash = bencoded info 字典的 SHA-1；损坏输入返回 None。"""
+        import hashlib
+
+        announce = b"http://tracker.example/announce"
+        raw = (
+            b"d8:announce"
+            + str(len(announce)).encode()
+            + b":"
+            + announce
+            + b"4:infod6:lengthi1e4:name3:foo12:piece lengthi16384e6:pieces20:"
+            + b"\x01" * 20
+            + b"ee"
+        )
+        info_start = raw.index(b"4:info") + len(b"4:info")
+        expected = hashlib.sha1(raw[info_start:-1]).hexdigest()
+
+        from module.downloader.client.qb_downloader import _torrent_infohash
+
+        assert _torrent_infohash(raw) == expected
+        assert _torrent_infohash(b"not a torrent") is None
+        assert _torrent_infohash(b"d4:infoi3e") is None  # truncated/no dict end
+
     async def test_add_fails_body_without_confirmed_duplicate_raises(self):
         # "Fails." 也可能是种子损坏/无法解析——无法确认重复时必须按失败抛出，
         # 让上层保留重试机会，而不是记成已下载

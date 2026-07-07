@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 import logging
 import re
@@ -12,6 +13,47 @@ from module.downloader.base import AddResult, DownloaderCapabilities
 logger = logging.getLogger(__name__)
 
 _MAGNET_BTIH_RE = re.compile(r"xt=urn:btih:([0-9A-Fa-f]{40}|[A-Za-z2-7]{32})")
+
+
+def _torrent_infohash(data: bytes) -> str | None:
+    """从 .torrent 字节中提取 v1 infohash（bencoded ``info`` 字典的 SHA-1）。
+
+    qB ≤5.1 对重复上传只回笼统的 "Fails."——要确认"其实已存在"就得拿文件
+    自己算 hash 去查。手写极简 bencode 游标（只需定位 info 值的字节区间，
+    不需要完整解码），损坏/非 bencode 输入返回 None。
+    """
+
+    def _skip(i: int) -> int:
+        """返回从 i 开始的 bencode 元素的结束下标（exclusive）。"""
+        c = data[i : i + 1]
+        if c == b"i":
+            return data.index(b"e", i) + 1
+        if c in (b"l", b"d"):
+            i += 1
+            while data[i : i + 1] != b"e":
+                i = _skip(i)
+            return i + 1
+        colon = data.index(b":", i)
+        return colon + 1 + int(data[i:colon])
+
+    try:
+        if data[:1] != b"d":
+            return None
+        i = 1
+        while data[i : i + 1] != b"e":
+            colon = data.index(b":", i)
+            key_len = int(data[i:colon])
+            key = data[colon + 1 : colon + 1 + key_len]
+            i = colon + 1 + key_len
+            end = _skip(i)
+            if key == b"info":
+                if data[i : i + 1] != b"d":
+                    return None
+                return hashlib.sha1(data[i:end]).hexdigest()
+            i = end
+        return None
+    except (ValueError, IndexError):
+        return None
 
 
 class QbDownloader:
@@ -301,6 +343,29 @@ class QbDownloader:
                 except ValueError:
                     return False
             hashes.append(btih.lower())
+        return await self._hashes_all_present(hashes)
+
+    async def _files_already_added(self, torrent_files) -> bool:
+        """尽力确认"Fails."是否因为任务已存在：对 .torrent 文件字节计算
+        infohash 并查询 qB。只有全部文件都能算出 hash、且每个 hash 都已在
+        qB 中时才返回 True；算不出 hash（损坏文件）返回 False（按失败处理）。
+        """
+        if not torrent_files:
+            return False
+        file_list = (
+            torrent_files if isinstance(torrent_files, list) else [torrent_files]
+        )
+        hashes: list[str] = []
+        for f in file_list:
+            infohash = _torrent_infohash(f)
+            if infohash is None:
+                return False
+            hashes.append(infohash)
+        return await self._hashes_all_present(hashes)
+
+    async def _hashes_all_present(self, hashes: list[str]) -> bool:
+        if not hashes:
+            return False
         try:
             resp = await self._get("torrents/info", params={"hashes": "|".join(hashes)})
             found = {t.get("hash", "").lower() for t in resp.json()}
@@ -384,9 +449,12 @@ class QbDownloader:
                     # "Fails."（qB <= 5.1）与 JSON failure_count > 0 都覆盖
                     # 所有被拒绝的 add（重复、种子损坏、磁力链无法解析……），
                     # 不能一律当重复——否则损坏种子会被记成已下载、永远不
-                    # 重试。只有能通过 hash 确认任务已存在时才归类为重复，
+                    # 重试。只有能通过 hash（磁力链的 btih 或 .torrent 文件
+                    # 算出的 infohash）确认任务已存在时才归类为重复，
                     # 其余按失败抛出让上层重试。
-                    if await self._urls_already_added(torrent_urls):
+                    if await self._urls_already_added(
+                        torrent_urls
+                    ) or await self._files_already_added(torrent_files):
                         return AddResult.DUPLICATE
                     raise ConnectionError(
                         "qBittorrent rejected torrent add "
