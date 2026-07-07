@@ -5,7 +5,6 @@ export function useTorrentList(loadFn: () => Promise<Torrent[]>) {
   const message = useMessage();
   const torrents = ref<Torrent[]>([]);
   const selectedIds = ref<Set<number>>(new Set());
-  const showConfirmClear = ref(false);
 
   async function load() {
     try {
@@ -43,16 +42,17 @@ export function useTorrentList(loadFn: () => Promise<Torrent[]>) {
     try {
       await fn();
       message.success(label);
-      await load();
     } catch {
       message.error(t('homepage.torrents.delete_failed'));
+    } finally {
+      // 部分失败（Promise.all 扇出）时也要刷新，避免已删除的行残留
+      await load();
     }
   }
 
   return {
     torrents,
     selectedIds,
-    showConfirmClear,
     load,
     allSelected,
     toggleAll,

@@ -249,10 +249,11 @@
       "unnamed": "Unnamed Rule",
       "season": "Season",
       "year": "Year",
-      "yes_btn": "Yes"
+      "yes_btn": "Yes",
+      "view_torrents": "View torrents"
     },
     "others": {
-      "title": "Others"
+      "title": "Unmatched torrents"
     },
     "torrents": {
       "title": "Torrents",

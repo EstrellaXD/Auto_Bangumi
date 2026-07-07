@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { Close, Delete, FullSelection } from '@icon-park/vue-next';
-import { NButton } from 'naive-ui';
+import { useConfirm } from '@/hooks/useConfirm';
 import type { Torrent } from '#/torrent';
 import { useTorrentList } from '@/hooks/useTorrentList';
 
@@ -14,7 +14,6 @@ const props = defineProps<{
 const {
   torrents,
   selectedIds,
-  showConfirmClear,
   load,
   allSelected,
   toggleAll,
@@ -23,6 +22,7 @@ const {
 } = useTorrentList(props.loadFn);
 
 const { t } = useI18n();
+const { confirm } = useConfirm();
 
 async function handleDeleteOne(id: number) {
   await runDelete(
@@ -40,7 +40,13 @@ async function handleDeleteSelected() {
 }
 
 async function handleClearAll() {
-  showConfirmClear.value = false;
+  const ok = await confirm({
+    title: t('homepage.torrents.deleteAll'),
+    body: t('homepage.torrents.confirm_clear'),
+    confirmText: t('homepage.torrents.deleteAll'),
+    danger: true,
+  });
+  if (!ok) return;
   await runDelete(() => props.deleteAll(), t('homepage.torrents.cleared_all'));
 }
 
@@ -52,39 +58,43 @@ onActivated(load);
     <div class="toolbar">
       <h2 class="toolbar-title">{{ title }}</h2>
       <div class="toolbar-actions">
-        <button
-          v-if="torrents.length > 0"
-          class="toolbar-btn"
-          @click="toggleAll"
-        >
-          <FullSelection :size="16" />
+        <ab-button v-if="torrents.length > 0" size="sm" @click="toggleAll">
+          <template #icon>
+            <FullSelection :size="14" />
+          </template>
           {{
             allSelected
               ? $t('homepage.torrents.deselect_all')
               : $t('homepage.torrents.select_all')
           }}
-        </button>
-        <button
+        </ab-button>
+        <ab-button
           v-if="selectedIds.size > 0"
-          class="toolbar-btn toolbar-btn--danger"
+          size="sm"
+          variant="danger"
           @click="handleDeleteSelected"
         >
-          <Delete :size="16" />
+          <template #icon>
+            <Delete :size="14" />
+          </template>
           {{ $t('homepage.torrents.delete_selected', { count: selectedIds.size }) }}
-        </button>
-        <button
+        </ab-button>
+        <ab-button
           v-if="torrents.length > 0"
-          class="toolbar-btn toolbar-btn--danger-outline"
-          @click="showConfirmClear = true"
+          size="sm"
+          variant="danger"
+          @click="handleClearAll"
         >
-          <Delete :size="16" />
+          <template #icon>
+            <Delete :size="14" />
+          </template>
           {{ $t('homepage.torrents.deleteAll') }}
-        </button>
+        </ab-button>
       </div>
     </div>
 
     <div v-if="torrents.length === 0" class="torrent-empty">
-      {{ $t('homepage.torrents.empty') }}
+      <ab-empty :title="$t('homepage.torrents.empty')" />
     </div>
     <div v-else class="torrent-scroll">
       <div
@@ -109,39 +119,30 @@ onActivated(load);
         </div>
         <div class="torrent-info">
           <span class="torrent-name">{{ torrent.name }}</span>
-          <div class="torrent-badges">
-            <span v-if="torrent.downloaded" class="badge badge-downloaded">
-              {{ $t('homepage.torrents.downloaded') }}
-            </span>
-            <span v-if="torrent.rss_id" class="badge badge-rss">RSS</span>
-            <span v-else class="badge badge-manual">
-              {{ $t('homepage.torrents.source.manual') }}
-            </span>
+          <div class="torrent-tags">
+            <ab-tag
+              v-if="torrent.downloaded"
+              type="success"
+              :title="$t('homepage.torrents.downloaded')"
+            />
+            <ab-tag v-if="torrent.rss_id" type="info" title="RSS" />
+            <ab-tag
+              v-else
+              type="neutral"
+              :title="$t('homepage.torrents.source.manual')"
+            />
           </div>
         </div>
-        <button
-          class="btn-delete"
-          :aria-label="$t('homepage.torrents.delete')"
+        <ab-icon-button
+          size="sm"
+          class="torrent-delete"
+          :label="$t('homepage.torrents.delete')"
           @click.stop="handleDeleteOne(torrent.id)"
         >
           <Close :size="14" />
-        </button>
+        </ab-icon-button>
       </div>
     </div>
-
-    <ab-popup v-model:show="showConfirmClear" :title="$t('homepage.torrents.deleteAll')">
-      <div class="confirm-body">
-        <p>{{ $t('homepage.torrents.confirm_clear') }}</p>
-        <div class="confirm-actions">
-          <NButton size="small" @click="showConfirmClear = false">
-            {{ $t('common.cancel') }}
-          </NButton>
-          <NButton size="small" type="error" @click="handleClearAll">
-            {{ $t('homepage.torrents.deleteAll') }}
-          </NButton>
-        </div>
-      </div>
-    </ab-popup>
   </div>
 </template>
 
@@ -178,51 +179,8 @@ onActivated(load);
   flex-wrap: wrap;
 }
 
-.toolbar-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  padding: 5px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  font-family: inherit;
-  transition: all var(--transition-fast);
-
-  &:hover {
-    color: var(--color-text);
-    border-color: var(--color-text-muted);
-  }
-
-  &--danger {
-    background: var(--color-danger);
-    border-color: var(--color-danger);
-    color: var(--color-white);
-
-    &:hover {
-      opacity: 0.9;
-    }
-  }
-
-  &--danger-outline {
-    border-color: var(--color-danger);
-    color: var(--color-danger);
-
-    &:hover {
-      background: var(--color-danger);
-      color: var(--color-white);
-    }
-  }
-}
-
 .torrent-empty {
-  text-align: center;
-  padding: 48px 24px;
-  color: var(--color-text-muted);
-  font-size: 14px;
+  padding: 12px;
 }
 
 .torrent-scroll {
@@ -287,63 +245,13 @@ onActivated(load);
   color: var(--color-text);
 }
 
-.torrent-badges {
+.torrent-tags {
   display: flex;
   gap: 4px;
   margin-top: 4px;
 }
 
-.badge {
-  font-size: 11px;
-  padding: 1px 6px;
-  border-radius: 3px;
-  line-height: 1.4;
-}
-
-.badge-downloaded {
-  background: var(--color-success);
-  color: var(--color-white);
-}
-
-.badge-rss {
-  background: var(--color-primary);
-  color: var(--color-white);
-}
-
-.badge-manual {
-  background: var(--color-accent);
-  color: var(--color-white);
-}
-
-.btn-delete {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  flex-shrink: 0;
+.torrent-delete {
   margin-left: 8px;
-  transition: color var(--transition-fast), background-color var(--transition-fast);
-
-  &:hover {
-    color: var(--color-danger);
-    background: rgba(239, 68, 68, 0.1);
-  }
-}
-
-.confirm-body {
-  padding: 16px;
-}
-
-.confirm-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
 }
 </style>

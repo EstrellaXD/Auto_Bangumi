@@ -243,7 +243,7 @@ function groupNeedsReview(group: BangumiGroup): boolean {
           >
             <div class="others-poster">
               <span class="others-icon">?</span>
-              <div class="others-count-badge">{{ orphanCount }}</div>
+              <ab-badge :count="orphanCount" class="others-count" />
             </div>
             <div class="others-info">
               <div class="others-title">{{ $t('homepage.others.title') }}</div>
@@ -484,23 +484,11 @@ function groupNeedsReview(group: BangumiGroup): boolean {
   color: var(--color-text-muted);
 }
 
-.others-count-badge {
+.others-count {
   position: absolute;
   top: -8px;
   right: -8px;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: 10px;
-  background: var(--color-primary);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   z-index: 10;
-  box-shadow: 0 2px 6px rgba(124, 77, 255, 0.4);
 }
 
 .others-info {

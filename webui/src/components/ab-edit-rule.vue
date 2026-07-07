@@ -145,6 +145,14 @@ async function dismissReview() {
 
 const close = () => (show.value = false);
 
+// 种子管理页入口：关闭弹窗后跳转到该规则的种子列表
+const router = useRouter();
+
+function goToTorrents() {
+  close();
+  router.push(`/bangumi-torrents/${rule.value.id}`);
+}
+
 onKeyStroke('Escape', () => {
   if (!show.value) return;
   // Inner delete dialog closes first, then the modal itself.
@@ -368,6 +376,9 @@ function emitUnarchive() {
     </ab-modal>
 
     <template #footer>
+      <ab-button size="sm" variant="ghost" @click="goToTorrents">
+        {{ $t('homepage.rule.view_torrents') }}
+      </ab-button>
       <ab-button v-if="localRule.archived" size="sm" @click="emitUnarchive">
         {{ $t('homepage.rule.unarchive') }}
       </ab-button>

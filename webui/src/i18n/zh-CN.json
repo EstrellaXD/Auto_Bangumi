@@ -249,7 +249,8 @@
       "unnamed": "未命名规则",
       "season": "季度",
       "year": "年份",
-      "yes_btn": "是"
+      "yes_btn": "是",
+      "view_torrents": "查看种子"
     },
     "others": {
       "title": "未匹配种子"
