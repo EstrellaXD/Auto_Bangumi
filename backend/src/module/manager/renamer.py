@@ -1,10 +1,17 @@
 import asyncio
 import logging
 import time
+from pathlib import PurePath
 
 from module.conf import settings
 from module.database import Database
+from module.database.bangumi import (
+    build_save_path_index,
+    match_bangumi_in_list,
+    normalize_save_path,
+)
 from module.downloader import DownloadClient
+from module.downloader.path import check_files, is_ep, path_to_bangumi
 from module.models import EpisodeFile, Notification, SubtitleFile
 from module.parser import TitleParser
 
@@ -19,9 +26,9 @@ _CLEANUP_INTERVAL = 60  # Clean up pending cache at most once per minute
 _last_cleanup_time: float = 0
 
 
-class Renamer(DownloadClient):
-    def __init__(self):
-        super().__init__()
+class Renamer:
+    def __init__(self, client: DownloadClient):
+        self.client = client
         self._parser = TitleParser()
         self._offset_cache: dict[str, tuple[int, int]] = {}
 
@@ -75,24 +82,43 @@ class Renamer(DownloadClient):
         if adjusted_episode < 0 or (adjusted_episode == 0 and original_episode > 0):
             adjusted_episode = original_episode
             logger.warning(
-                f"[Renamer] Episode offset {episode_offset} would make episode {original_episode} non-positive, ignoring offset"
+                f"Episode offset {episode_offset} would make episode {original_episode} non-positive, ignoring offset"
             )
         episode = f"0{adjusted_episode}" if adjusted_episode < 10 else adjusted_episode
+        # 注意：group_tag 只影响 qB RSS 规则名（downloader/path.py 的 rule_name），
+        # 从不写进重命名后的文件名——已有做种媒体库的文件名必须保持稳定，
+        # 否则升级后会触发整库批量重命名，破坏 Plex/Jellyfin 索引与硬链接
         if method == "none" or method == "subtitle_none":
             return file_info.media_path
+        if file_info.episode_type == "movie":
+            # 电影/剧场版：Title (Year).ext，不使用 SxxExx 编号。bangumi_name 由
+            # 调用方传入，与 gen_save_path 的文件夹命名保持一致 (Title (Year))
+            base = bangumi_name if "advance" in method else file_info.title
+            if method.startswith("subtitle_"):
+                assert isinstance(
+                    file_info, SubtitleFile
+                ), "subtitle methods require a SubtitleFile"
+                return f"{base}.{file_info.language}{file_info.suffix}"
+            return f"{base}{file_info.suffix}"
         elif method == "pn":
             return f"{file_info.title} S{season}E{episode}{file_info.suffix}"
         elif method == "advance":
             return f"{bangumi_name} S{season}E{episode}{file_info.suffix}"
         elif method == "normal":
-            logger.warning("[Renamer] Normal rename method is deprecated.")
+            logger.warning("Normal rename method is deprecated.")
             return file_info.media_path
         elif method == "subtitle_pn":
+            assert isinstance(
+                file_info, SubtitleFile
+            ), "subtitle_pn requires a SubtitleFile"
             return f"{file_info.title} S{season}E{episode}.{file_info.language}{file_info.suffix}"
         elif method == "subtitle_advance":
+            assert isinstance(
+                file_info, SubtitleFile
+            ), "subtitle_advance requires a SubtitleFile"
             return f"{bangumi_name} S{season}E{episode}.{file_info.language}{file_info.suffix}"
         else:
-            logger.error(f"[Renamer] Unknown rename method: {method}")
+            logger.error(f"Unknown rename method: {method}")
             return file_info.media_path
 
     async def rename_file(
@@ -105,12 +131,14 @@ class Renamer(DownloadClient):
         _hash: str,
         episode_offset: int = 0,
         season_offset: int = 0,
+        episode_type: str = "episode",
         **kwargs,
     ):
         ep = self._parser.torrent_parser(
             torrent_name=torrent_name,
             torrent_path=media_path,
             season=season,
+            episode_type=episode_type,
         )
         if ep:
             new_path = self.gen_path(
@@ -129,12 +157,10 @@ class Renamer(DownloadClient):
                     last_attempt
                     and (time.time() - last_attempt) < _PENDING_RENAME_COOLDOWN
                 ):
-                    logger.debug(
-                        "[Renamer] Skipping rename (pending cooldown): %s", media_path
-                    )
+                    logger.debug("Skipping rename (pending cooldown): %s", media_path)
                     return None
 
-                if await self.rename_torrent_file(
+                if await self.client.rename_torrent_file(
                     _hash=_hash, old_path=media_path, new_path=new_path
                 ):
                     # Rename verified successful, remove from pending cache
@@ -162,10 +188,23 @@ class Renamer(DownloadClient):
                     # Periodic cleanup of expired entries (at most once per minute)
                     self._cleanup_pending_cache()
         else:
-            logger.warning(f"[Renamer] {media_path} parse failed")
+            logger.warning(f"{media_path} parse failed")
             if settings.bangumi_manage.remove_bad_torrent:
-                await self.delete_torrent(hashes=_hash)
+                await self.client.delete_torrent(hashes=_hash)
         return None
+
+    @staticmethod
+    def _gen_movie_extra_path(new_path: str, media_path: str) -> str:
+        """多文件电影种子中，非主文件在干净名（Title (Year).ext）基础上追加
+        原始文件名词干作区分，避免与主文件生成相同目标名互相冲突/覆盖；
+        词干若已带 "Title (Year) - " 前缀则先剥离，保证重命名幂等。"""
+        suffix = PurePath(new_path).suffix
+        base = new_path[: -len(suffix)] if suffix else new_path
+        stem = PurePath(media_path).stem
+        prefix = f"{base} - "
+        if stem.startswith(prefix):
+            stem = stem[len(prefix) :]
+        return f"{base} - {stem}{suffix}"
 
     async def rename_collection(
         self,
@@ -176,13 +215,26 @@ class Renamer(DownloadClient):
         _hash: str,
         episode_offset: int = 0,
         season_offset: int = 0,
+        episode_type: str = "episode",
+        file_sizes: dict[str, int] | None = None,
         **kwargs,
     ):
+        # 多文件电影种子（正片 + 特典/花絮）：所有文件会解析出同一标题，
+        # 需选出主文件（体积最大者，无体积信息时取首个），其余文件追加区分词干
+        movie_primary: str | None = None
+        if episode_type == "movie":
+            ep_list = [p for p in media_list if is_ep(p)]
+            if ep_list:
+                if file_sizes:
+                    movie_primary = max(ep_list, key=lambda p: file_sizes.get(p, 0))
+                else:
+                    movie_primary = ep_list[0]
         for media_path in media_list:
-            if self.is_ep(media_path):
+            if is_ep(media_path):
                 ep = self._parser.torrent_parser(
                     torrent_path=media_path,
                     season=season,
+                    episode_type=episode_type,
                 )
                 if ep:
                     new_path = self.gen_path(
@@ -192,15 +244,22 @@ class Renamer(DownloadClient):
                         episode_offset=episode_offset,
                         season_offset=season_offset,
                     )
+                    if (
+                        movie_primary is not None
+                        and media_path != movie_primary
+                        and new_path != media_path
+                    ):
+                        # new_path == media_path 说明是 none 等直通方法，不做区分
+                        new_path = self._gen_movie_extra_path(new_path, media_path)
                     if media_path != new_path:
-                        renamed = await self.rename_torrent_file(
+                        renamed = await self.client.rename_torrent_file(
                             _hash=_hash, old_path=media_path, new_path=new_path
                         )
                         if not renamed:
-                            logger.warning(f"[Renamer] {media_path} rename failed")
+                            logger.warning(f"{media_path} rename failed")
                             # Delete bad torrent.
                             if settings.bangumi_manage.remove_bad_torrent:
-                                await self.delete_torrent(_hash)
+                                await self.client.delete_torrent(_hash)
                                 break
 
     async def rename_subtitles(
@@ -213,6 +272,7 @@ class Renamer(DownloadClient):
         _hash,
         episode_offset: int = 0,
         season_offset: int = 0,
+        episode_type: str = "episode",
         **kwargs,
     ):
         method = "subtitle_" + method
@@ -222,6 +282,7 @@ class Renamer(DownloadClient):
                 torrent_name=torrent_name,
                 season=season,
                 file_type="subtitle",
+                episode_type=episode_type,
             )
             if sub:
                 new_path = self.gen_path(
@@ -233,17 +294,17 @@ class Renamer(DownloadClient):
                 )
                 if subtitle_path != new_path:
                     # Skip verification for subtitles to reduce latency
-                    renamed = await self.rename_torrent_file(
+                    renamed = await self.client.rename_torrent_file(
                         _hash=_hash,
                         old_path=subtitle_path,
                         new_path=new_path,
                         verify=False,
                     )
                     if not renamed:
-                        logger.warning(f"[Renamer] {subtitle_path} rename failed")
+                        logger.warning(f"{subtitle_path} rename failed")
 
     @staticmethod
-    def _parse_bangumi_id_from_tags(tags: str) -> int | None:
+    def _parse_bangumi_id_from_tags(tags: str | None) -> int | None:
         """Extract bangumi_id from torrent tags.
 
         Tags are comma-separated, and we look for 'ab:ID' format.
@@ -269,22 +330,23 @@ class Renamer(DownloadClient):
         # Remove trailing slashes
         return normalized.rstrip("/")
 
-    def _batch_lookup_offsets(
+    async def _batch_lookup_offsets(
         self, torrents_info: list[dict]
-    ) -> dict[str, tuple[int, int]]:
+    ) -> dict[str, tuple[int, int, str]]:
         """Batch lookup offsets for all torrents in a single database session.
 
-        Returns a dict mapping torrent_hash to (episode_offset, season_offset).
+        Returns a dict mapping torrent_hash to
+        (episode_offset, season_offset, episode_type).
         """
-        result: dict[str, tuple[int, int]] = {}
+        result: dict[str, tuple[int, int, str]] = {}
         if not torrents_info:
             return result
 
         try:
-            with Database() as db:
+            async with Database() as db:
                 # Collect all hashes for batch query
                 hashes = [info["hash"] for info in torrents_info]
-                torrent_records = db.torrent.search_by_qb_hashes(hashes)
+                torrent_records = await db.torrent.search_by_qb_hashes(hashes)
                 hash_to_bangumi_id = {
                     r.qb_hash: r.bangumi_id for r in torrent_records if r.bangumi_id
                 }
@@ -304,65 +366,94 @@ class Renamer(DownloadClient):
                 # Batch fetch all bangumi records
                 bangumi_map = {}
                 if bangumi_ids_to_fetch:
-                    bangumi_records = db.bangumi.search_ids(list(bangumi_ids_to_fetch))
+                    bangumi_records = await db.bangumi.search_ids(
+                        list(bangumi_ids_to_fetch)
+                    )
                     bangumi_map = {
                         b.id: b for b in bangumi_records if b and not b.deleted
                     }
 
-                # Now resolve offsets for each torrent
+                # Resolve via qb_hash/tag first (both already batched above,
+                # O(1) queries regardless of torrent count).
+                unresolved: list[dict] = []
                 for info in torrents_info:
                     torrent_hash = info["hash"]
-                    torrent_name = info["name"]
-                    save_path = info["save_path"]
 
                     # 1. Try by qb_hash
                     bangumi_id = hash_to_bangumi_id.get(torrent_hash)
                     if bangumi_id and bangumi_id in bangumi_map:
                         b = bangumi_map[bangumi_id]
-                        result[torrent_hash] = (b.episode_offset, b.season_offset)
+                        result[torrent_hash] = (
+                            b.episode_offset,
+                            b.season_offset,
+                            b.episode_type,
+                        )
                         continue
 
                     # 2. Try by tag
                     bangumi_id = tag_bangumi_ids.get(torrent_hash)
                     if bangumi_id and bangumi_id in bangumi_map:
                         b = bangumi_map[bangumi_id]
-                        result[torrent_hash] = (b.episode_offset, b.season_offset)
-                        continue
-
-                    # 3. Try by torrent name (individual query, but less common path)
-                    bangumi = db.bangumi.match_torrent(torrent_name)
-                    if bangumi:
                         result[torrent_hash] = (
-                            bangumi.episode_offset,
-                            bangumi.season_offset,
+                            b.episode_offset,
+                            b.season_offset,
+                            b.episode_type,
                         )
                         continue
 
-                    # 4. Try by save_path (individual query, fallback)
-                    normalized_save_path = self._normalize_path(save_path)
-                    bangumi = db.bangumi.match_by_save_path(save_path)
-                    if not bangumi:
-                        bangumi = db.bangumi.match_by_save_path(normalized_save_path)
-                    if bangumi:
-                        result[torrent_hash] = (
-                            bangumi.episode_offset,
-                            bangumi.season_offset,
-                        )
-                        continue
+                    unresolved.append(info)
 
-                    # Default: no offset
-                    result[torrent_hash] = (0, 0)
+                # 3./4. Fall back to name/save_path matching for whatever is
+                # left. Load the full bangumi list once (same idiom as
+                # RSSEngine.refresh_rss / auto_tag_torrents) and match every
+                # remaining torrent in memory, instead of running up to 3
+                # queries per torrent (match_torrent()'s own search_all() +
+                # up to 2 match_by_save_path() calls).
+                if unresolved:
+                    bangumi_list = await db.bangumi.search_all()
+                    save_path_index = build_save_path_index(bangumi_list)
+                    for info in unresolved:
+                        torrent_hash = info["hash"]
+                        torrent_name = info["name"]
+                        save_path = info["save_path"]
+
+                        bangumi = match_bangumi_in_list(torrent_name, bangumi_list)
+                        if not bangumi:
+                            # normalize_save_path() already folds "\\" -> "/"
+                            # and strips trailing slashes, so a single lookup
+                            # covers every variation match_by_save_path() used
+                            # to try separately.
+                            bangumi = save_path_index.get(
+                                normalize_save_path(save_path)
+                            )
+
+                        if bangumi:
+                            result[torrent_hash] = (
+                                bangumi.episode_offset,
+                                bangumi.season_offset,
+                                bangumi.episode_type,
+                            )
+                        else:
+                            # Default: no offset
+                            result[torrent_hash] = (0, 0, "episode")
 
         except Exception as e:
-            logger.debug("[Renamer] Batch offset lookup failed: %s", e)
-            # Fall back to individual lookups on error
-            for info in torrents_info:
-                if info["hash"] not in result:
-                    result[info["hash"]] = (0, 0)
+            missing = [
+                info["hash"] for info in torrents_info if info["hash"] not in result
+            ]
+            logger.warning(
+                "Batch offset lookup failed; skipping rename for %d "
+                "torrent(s) this cycle: %s",
+                len(missing),
+                e,
+            )
+            # Leave the unresolved torrents out of the map entirely so
+            # rename() skips them instead of silently defaulting to (0, 0),
+            # which would apply a wrong offset instead of no offset.
 
         return result
 
-    def _lookup_offsets(
+    async def _lookup_offsets(
         self, torrent_hash: str, torrent_name: str, save_path: str, tags: str = ""
     ) -> tuple[int, int]:
         """Look up episode and season offsets for a bangumi.
@@ -383,14 +474,14 @@ class Renamer(DownloadClient):
             tuple[int, int]: (episode_offset, season_offset)
         """
         try:
-            with Database() as db:
+            async with Database() as db:
                 # First try by qb_hash in Torrent table (most reliable for existing torrents)
-                torrent_record = db.torrent.search_by_qb_hash(torrent_hash)
+                torrent_record = await db.torrent.search_by_qb_hash(torrent_hash)
                 if torrent_record and torrent_record.bangumi_id:
-                    bangumi = db.bangumi.search_id(torrent_record.bangumi_id)
+                    bangumi = await db.bangumi.search_id(torrent_record.bangumi_id)
                     if bangumi and not bangumi.deleted:
                         logger.debug(
-                            "[Renamer] Found offsets via qb_hash: ep=%s, season=%s",
+                            "Found offsets via qb_hash: ep=%s, season=%s",
                             bangumi.episode_offset,
                             bangumi.season_offset,
                         )
@@ -399,10 +490,10 @@ class Renamer(DownloadClient):
                 # Then try by bangumi_id from tags (for newly added torrents)
                 bangumi_id = self._parse_bangumi_id_from_tags(tags)
                 if bangumi_id:
-                    bangumi = db.bangumi.search_id(bangumi_id)
+                    bangumi = await db.bangumi.search_id(bangumi_id)
                     if bangumi and not bangumi.deleted:
                         logger.debug(
-                            "[Renamer] Found offsets via tag ab:%s: ep=%s, season=%s",
+                            "Found offsets via tag ab:%s: ep=%s, season=%s",
                             bangumi_id,
                             bangumi.episode_offset,
                             bangumi.season_offset,
@@ -410,55 +501,64 @@ class Renamer(DownloadClient):
                         return bangumi.episode_offset, bangumi.season_offset
 
                 # Then try matching by torrent name
-                bangumi = db.bangumi.match_torrent(torrent_name)
+                bangumi = await db.bangumi.match_torrent(torrent_name)
                 if bangumi:
                     logger.info(
-                        f"[Renamer] Matched bangumi '{bangumi.official_title}' (id={bangumi.id}) via name, "
+                        f"Matched bangumi '{bangumi.official_title}' (id={bangumi.id}) via name, "
                         f"offsets: ep={bangumi.episode_offset}, season={bangumi.season_offset}"
                     )
                     return bangumi.episode_offset, bangumi.season_offset
 
                 # Finally fall back to save_path matching with normalization
                 normalized_save_path = self._normalize_path(save_path)
-                bangumi = db.bangumi.match_by_save_path(save_path)
+                bangumi = await db.bangumi.match_by_save_path(save_path)
                 if not bangumi:
                     # Try with normalized path if exact match failed
-                    bangumi = db.bangumi.match_by_save_path(normalized_save_path)
+                    bangumi = await db.bangumi.match_by_save_path(normalized_save_path)
                 if bangumi:
                     logger.info(
-                        f"[Renamer] Matched bangumi '{bangumi.official_title}' (id={bangumi.id}) via save_path, "
+                        f"Matched bangumi '{bangumi.official_title}' (id={bangumi.id}) via save_path, "
                         f"offsets: ep={bangumi.episode_offset}, season={bangumi.season_offset}"
                     )
                     return bangumi.episode_offset, bangumi.season_offset
 
                 logger.info(
-                    f"[Renamer] No bangumi match for torrent (using offset=0): "
+                    f"No bangumi match for torrent (using offset=0): "
                     f"name={torrent_name[:60] if torrent_name else 'N/A'}..."
                 )
         except Exception as e:
-            logger.debug("[Renamer] Could not lookup offsets for %s: %s", save_path, e)
+            logger.debug("Could not lookup offsets for %s: %s", save_path, e)
         return 0, 0
 
     async def rename(self) -> list[Notification]:
         # Get torrent info
-        logger.debug("[Renamer] Start rename process.")
+        logger.debug("Start rename process.")
         rename_method = settings.bangumi_manage.rename_method
-        torrents_info = await self.get_torrent_info()
+        torrents_info = await self.client.get_torrent_info()
         renamed_info: list[Notification] = []
         # Fetch all torrent files concurrently
         all_files = await asyncio.gather(
-            *[self.get_torrent_files(info["hash"]) for info in torrents_info]
+            *[self.client.get_torrent_files(info["hash"]) for info in torrents_info]
         )
         # Batch lookup all offsets in a single database session
-        offset_map = self._batch_lookup_offsets(torrents_info)
+        offset_map = await self._batch_lookup_offsets(torrents_info)
         for info, files in zip(torrents_info, all_files):
             torrent_hash = info["hash"]
             torrent_name = info["name"]
             save_path = info["save_path"]
-            media_list, subtitle_list = self.check_files(files)
-            bangumi_name, season = self._path_to_bangumi(save_path, torrent_name)
+            if torrent_hash not in offset_map:
+                # Offset lookup failed for this torrent this cycle (see
+                # _batch_lookup_offsets) -- skip renaming rather than
+                # guessing offset (0, 0), which could misname episodes.
+                logger.warning(
+                    "Skipping %s: offset lookup failed this cycle",
+                    torrent_name,
+                )
+                continue
+            media_list, subtitle_list = check_files(files)
+            bangumi_name, season = path_to_bangumi(save_path, torrent_name)
             # Use pre-fetched offsets
-            episode_offset, season_offset = offset_map.get(torrent_hash, (0, 0))
+            episode_offset, season_offset, episode_type = offset_map[torrent_hash]
             kwargs = {
                 "torrent_name": torrent_name,
                 "bangumi_name": bangumi_name,
@@ -467,6 +567,7 @@ class Renamer(DownloadClient):
                 "_hash": torrent_hash,
                 "episode_offset": episode_offset,
                 "season_offset": season_offset,
+                "episode_type": episode_type,
             }
             # Rename single media file
             if len(media_list) == 1:
@@ -478,12 +579,16 @@ class Renamer(DownloadClient):
                     await self.rename_subtitles(subtitle_list=subtitle_list, **kwargs)
             # Rename collection
             elif len(media_list) > 1:
-                logger.info("[Renamer] Start rename collection")
-                await self.rename_collection(media_list=media_list, **kwargs)
+                logger.info("Start rename collection")
+                # 传入各文件体积，供多文件电影种子选出正片主文件
+                file_sizes = {f["name"]: f.get("size") or 0 for f in files}
+                await self.rename_collection(
+                    media_list=media_list, file_sizes=file_sizes, **kwargs
+                )
                 if len(subtitle_list) > 0:
                     await self.rename_subtitles(subtitle_list=subtitle_list, **kwargs)
-                await self.set_category(torrent_hash, "BangumiCollection")
+                await self.client.set_category(torrent_hash, "BangumiCollection")
             else:
-                logger.warning(f"[Renamer] {torrent_name} has no media file")
-        logger.debug("[Renamer] Rename process finished.")
+                logger.warning(f"{torrent_name} has no media file")
+        logger.debug("Rename process finished.")
         return renamed_info

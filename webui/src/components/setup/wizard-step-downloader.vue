@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { NSelect, NSwitch } from 'naive-ui';
+
 const { t } = useMyI18n();
 const setupStore = useSetupStore();
 const { downloaderData, validation } = storeToRefs(setupStore);
@@ -37,9 +39,41 @@ function handleNext() {
   setupStore.nextStep();
 }
 
+// A passed test only vouches for the values it ran against — editing any
+// connection field re-arms the untested state.
+watch(
+  () => [
+    downloaderData.value.type,
+    downloaderData.value.host,
+    downloaderData.value.username,
+    downloaderData.value.password,
+    downloaderData.value.ssl,
+  ],
+  () => {
+    validation.value.downloaderTested = false;
+    testSuccess.value = false;
+    testMessage.value = '';
+  }
+);
+
+const downloaderTypeOptions = [
+  { label: 'qBittorrent', value: 'qbittorrent' },
+  { label: 'aria2', value: 'aria2' },
+];
+
+// Password intentionally not required — qB with bypass_local_auth has none.
+// aria2 authenticates via RPC secret (password field); it has no username.
 const canTest = computed(() => {
-  return downloaderData.value.host && downloaderData.value.username && downloaderData.value.password;
+  return (
+    downloaderData.value.host &&
+    (downloaderData.value.type === 'aria2' || downloaderData.value.username)
+  );
 });
+
+// The connection test is encouraged but must not be a dead end: a backend
+// that can't reach qB right now (network, container DNS) would otherwise
+// trap the user in the wizard with no way forward.
+const canProceed = computed(() => Boolean(downloaderData.value.host));
 </script>
 
 <template>
@@ -48,67 +82,93 @@ const canTest = computed(() => {
       <p class="step-subtitle">{{ t('setup.downloader.subtitle') }}</p>
 
       <div class="form-fields">
-        <ab-label :label="t('config.downloader_set.host')">
+        <ab-field :label="t('config.downloader_set.type')">
+          <NSelect
+            v-model:value="downloaderData.type"
+            :options="downloaderTypeOptions"
+            :aria-label="t('config.downloader_set.type')"
+            class="type-select"
+          />
+        </ab-field>
+
+        <p v-if="downloaderData.type === 'aria2'" class="aria2-hint">
+          {{ t('config.downloader_set.aria2_hint') }}
+        </p>
+
+        <ab-field :label="t('config.downloader_set.host')">
           <input
             v-model="downloaderData.host"
             type="text"
             placeholder="172.17.0.1:8080"
             class="setup-input"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="t('config.downloader_set.username')">
+        <ab-field :label="t('config.downloader_set.username')">
           <input
             v-model="downloaderData.username"
             type="text"
             placeholder="admin"
             class="setup-input"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="t('config.downloader_set.password')">
+        <ab-field :label="t('config.downloader_set.password')">
           <input
             v-model="downloaderData.password"
             type="password"
             class="setup-input"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="t('config.downloader_set.path')">
+        <ab-field :label="t('config.downloader_set.path')">
           <input
             v-model="downloaderData.path"
             type="text"
             placeholder="/downloads/Bangumi"
             class="setup-input"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="t('config.downloader_set.ssl')">
-          <ab-switch v-model="downloaderData.ssl" />
-        </ab-label>
+        <ab-field :label="t('config.downloader_set.ssl')">
+          <NSwitch v-model:value="downloaderData.ssl" />
+        </ab-field>
       </div>
 
       <div class="test-section">
         <ab-button
-          size="small"
-          type="secondary"
+          size="sm"
+          variant="secondary"
           :disabled="!canTest || isTesting"
           @click="testConnection"
         >
-          {{ isTesting ? t('setup.downloader.testing') : t('setup.downloader.test') }}
+          {{
+            isTesting
+              ? t('setup.downloader.testing')
+              : t('setup.downloader.test')
+          }}
         </ab-button>
-        <p v-if="testMessage" class="test-message" :class="{ success: testSuccess }">
+        <p
+          v-if="testMessage"
+          class="test-message"
+          :class="{ success: testSuccess }"
+        >
           {{ testMessage }}
         </p>
       </div>
 
+      <p v-if="!validation.downloaderTested" class="untested-hint">
+        {{ t('setup.downloader.untested_hint') }}
+      </p>
+
       <div class="wizard-actions">
-        <ab-button size="small" type="secondary" @click="setupStore.prevStep()">
+        <ab-button size="sm" variant="secondary" @click="setupStore.prevStep()">
           {{ t('setup.nav.previous') }}
         </ab-button>
         <ab-button
-          size="small"
-          :disabled="!validation.downloaderTested"
+          variant="primary"
+          size="sm"
+          :disabled="!canProceed"
           @click="handleNext"
         >
           {{ t('setup.nav.next') }}
@@ -153,7 +213,8 @@ const canTest = computed(() => {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 
   &:hover {
     border-color: var(--color-primary);
@@ -179,6 +240,22 @@ const canTest = computed(() => {
   &.success {
     color: var(--color-success, #43a047);
   }
+}
+
+.untested-hint {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.type-select {
+  max-width: 200px;
+}
+
+.aria2-hint {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin: 0;
 }
 
 .wizard-actions {

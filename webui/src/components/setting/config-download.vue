@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { Info } from '@icon-park/vue-next';
 import type { Downloader, DownloaderType } from '#/config';
 import type { SettingItem } from '#/components';
 
@@ -6,7 +7,7 @@ const { t } = useMyI18n();
 const { getSettingGroup } = useConfigStore();
 
 const downloader = getSettingGroup('downloader');
-const downloaderType: DownloaderType = ['qbittorrent'];
+const downloaderType: DownloaderType = ['qbittorrent', 'aria2'];
 
 const items: SettingItem<Downloader>[] = [
   {
@@ -24,7 +25,7 @@ const items: SettingItem<Downloader>[] = [
     type: 'input',
     prop: {
       type: 'text',
-      placeholder: '127.0.0.1:8989',
+      placeholder: '127.0.0.1:8080',
     },
   },
   {
@@ -41,8 +42,8 @@ const items: SettingItem<Downloader>[] = [
     label: () => t('config.downloader_set.password'),
     type: 'input',
     prop: {
-      type: 'text',
-      placeholder: 'admindmin',
+      type: 'password',
+      autocomplete: 'off',
     },
     bottomLine: true,
   },
@@ -66,6 +67,11 @@ const items: SettingItem<Downloader>[] = [
 <template>
   <ab-fold-panel :title="$t('config.downloader_set.title')">
     <div space-y-8>
+      <div v-if="downloader.type === 'aria2'" class="downloader-hint">
+        <Info size="16" />
+        <span>{{ $t('config.downloader_set.aria2_hint') }}</span>
+      </div>
+
       <ab-setting
         v-for="i in items"
         :key="i.configKey"
@@ -75,3 +81,20 @@ const items: SettingItem<Downloader>[] = [
     </div>
   </ab-fold-panel>
 </template>
+
+<style lang="scss" scoped>
+.downloader-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  transition:
+    background-color var(--transition-normal),
+    border-color var(--transition-normal);
+}
+</style>

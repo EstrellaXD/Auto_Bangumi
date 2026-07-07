@@ -4,11 +4,14 @@ import logging
 from mcp import types
 
 from module.conf import VERSION
+from module.database import Database
 from module.downloader import DownloadClient
 from module.manager import SeasonCollector, TorrentManager
 from module.models import Bangumi, BangumiUpdate, RSSItem
 from module.rss import RSSAnalyser, RSSEngine
 from module.searcher import SearchTorrent
+
+from .runtime import get_context
 
 logger = logging.getLogger(__name__)
 
@@ -202,7 +205,7 @@ async def handle_tool(name: str, arguments: dict) -> list[types.TextContent]:
             types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False))
         ]
     except Exception as e:
-        logger.exception("[MCP] Tool %s failed", name)
+        logger.exception("Tool %s failed", name)
         return [
             types.TextContent(
                 type="text", text=json.dumps({"error": str(e)}, ensure_ascii=False)
@@ -212,9 +215,9 @@ async def handle_tool(name: str, arguments: dict) -> list[types.TextContent]:
 
 async def _dispatch(name: str, args: dict) -> dict | list:
     if name == "list_anime":
-        return _list_anime(args.get("active_only", False))
+        return await _list_anime(args.get("active_only", False))
     elif name == "get_anime":
-        return _get_anime(args["id"])
+        return await _get_anime(args["id"])
     elif name == "search_anime":
         return await _search_anime(args["keywords"], args.get("site", "mikan"))
     elif name == "subscribe_anime":
@@ -224,7 +227,7 @@ async def _dispatch(name: str, args: dict) -> dict | list:
     elif name == "list_downloads":
         return await _list_downloads(args.get("status", "all"))
     elif name == "list_rss_feeds":
-        return _list_rss_feeds()
+        return await _list_rss_feeds()
     elif name == "get_program_status":
         return _get_program_status()
     elif name == "refresh_feeds":
@@ -235,18 +238,20 @@ async def _dispatch(name: str, args: dict) -> dict | list:
         return {"error": f"Unknown tool: {name}"}
 
 
-def _list_anime(active_only: bool) -> list[dict]:
-    with TorrentManager() as manager:
+async def _list_anime(active_only: bool) -> list[dict]:
+    async with Database() as db:
+        manager = TorrentManager(db)
         if active_only:
-            items = manager.search_all_bangumi()
+            items = await manager.search_all_bangumi()
         else:
-            items = manager.bangumi.search_all()
+            items = await db.bangumi.search_all()
     return [_bangumi_to_dict(b) for b in items]
 
 
-def _get_anime(bangumi_id: int) -> dict:
-    with TorrentManager() as manager:
-        result = manager.search_one(bangumi_id)
+async def _get_anime(bangumi_id: int) -> dict:
+    async with Database() as db:
+        manager = TorrentManager(db)
+        result = await manager.search_one(bangumi_id)
     if isinstance(result, Bangumi):
         return _bangumi_to_dict(result)
     return {"error": result.msg_en}
@@ -255,11 +260,11 @@ def _get_anime(bangumi_id: int) -> dict:
 async def _search_anime(keywords: str, site: str) -> list[dict]:
     keyword_list = keywords.split()
     results = []
-    async with SearchTorrent() as st:
-        async for item_json in st.analyse_keyword(keywords=keyword_list, site=site):
-            results.append(json.loads(item_json))
-            if len(results) >= 20:
-                break
+    st = SearchTorrent()
+    async for item_json in st.analyse_keyword(keywords=keyword_list, site=site):
+        results.append(json.loads(item_json))
+        if len(results) >= 20:
+            break
     return results
 
 
@@ -274,7 +279,8 @@ async def _subscribe_anime(rss_link: str, parser: str) -> dict:
 
 
 async def _unsubscribe_anime(bangumi_id: int, delete: bool) -> dict:
-    with TorrentManager() as manager:
+    async with Database() as db:
+        manager = TorrentManager(db)
         if delete:
             resp = await manager.delete_rule(bangumi_id)
         else:
@@ -302,9 +308,9 @@ async def _list_downloads(status: str) -> list[dict]:
     ]
 
 
-def _list_rss_feeds() -> list[dict]:
-    with RSSEngine() as engine:
-        feeds = engine.rss.search_all()
+async def _list_rss_feeds() -> list[dict]:
+    async with Database() as db:
+        feeds = await db.rss.search_all()
     return [
         {
             "id": f.id,
@@ -322,26 +328,27 @@ def _list_rss_feeds() -> list[dict]:
 
 
 def _get_program_status() -> dict:
-    from module.api.program import program
-
+    ctx = get_context()
     return {
         "version": VERSION,
-        "running": program.is_running,
-        "first_run": program.first_run,
+        "running": ctx.is_running if ctx is not None else False,
+        "first_run": ctx.first_run if ctx is not None else True,
     }
 
 
 async def _refresh_feeds() -> dict:
     async with DownloadClient() as client:
-        with RSSEngine() as engine:
+        async with Database() as db:
+            engine = RSSEngine(db)
             await engine.refresh_rss(client)
     return {"status": True, "message": "RSS feeds refreshed successfully"}
 
 
 async def _update_anime(args: dict) -> dict:
     bangumi_id = args["id"]
-    with TorrentManager() as manager:
-        existing = manager.bangumi.search_id(bangumi_id)
+    async with Database() as db:
+        manager = TorrentManager(db)
+        existing = await db.bangumi.search_id(bangumi_id)
         if not existing:
             return {"error": f"Anime with id {bangumi_id} not found"}
 

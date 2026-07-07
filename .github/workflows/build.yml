@@ -8,6 +8,7 @@ on:
       - closed
     branches:
       - main
+      - "3.*-dev"
   push:
 
 jobs:
@@ -24,6 +25,10 @@ jobs:
           version: "latest"
       - name: Install dependencies
         run: cd backend && uv sync --group dev
+      - name: Lint
+        run: cd backend && uv run ruff check src
+      - name: Type check
+        run: cd backend && uv run mypy src
       - name: Test
         run: |
           mkdir -p backend/config
@@ -61,6 +66,12 @@ jobs:
 
       - name: Install dependencies
         run: cd webui && pnpm install
+
+      - name: Lint
+        run: cd webui && pnpm lint
+
+      - name: Unit test
+        run: cd webui && pnpm test
 
       - name: build test
         run: |
@@ -248,9 +259,11 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          builder: ${{ steps.buildx.output.name }}
+          builder: ${{ steps.buildx.outputs.name }}
           platforms: linux/amd64,linux/arm64
           push: True
+          build-args: |
+            VERSION=${{ needs.version-info.outputs.version }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ github.workflow }}
@@ -261,9 +274,11 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          builder: ${{ steps.buildx.output.name }}
+          builder: ${{ steps.buildx.outputs.name }}
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name == 'push' }}
+          build-args: |
+            VERSION=${{ needs.version-info.outputs.version }}
           tags: ${{ steps.meta-dev.outputs.tags }}
           labels: ${{ steps.meta-dev.outputs.labels }}
           cache-from: type=gha,scope=${{ github.workflow }}
@@ -274,9 +289,11 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          builder: ${{ steps.buildx.output.name }}
+          builder: ${{ steps.buildx.outputs.name }}
           platforms: linux/amd64,linux/arm64
           push: false
+          build-args: |
+            VERSION=${{ needs.version-info.outputs.version }}
           tags: estrellaxd/auto_bangumi:test
           cache-from: type=gha,scope=${{ github.workflow }}
           cache-to: type=gha,scope=${{ github.workflow }},ignore-error=true
@@ -327,6 +344,55 @@ jobs:
           cd backend && zip -r app-v${{ needs.version-info.outputs.version }}.zip \
             src pyproject.toml uv.lock requirements.txt
 
+      # 在线自动更新 bundle：module 源码树 + pyproject/uv.lock + 前端 dist + manifest。
+      # 同时产出 .sha256（客户端下载后据此校验完整性）。min_image_version 是能应用
+      # 此 bundle 布局的最低镜像版本（引入在线更新的首个版本）。
+      - name: Build update bundle
+        run: |
+          VERSION="${{ needs.version-info.outputs.version }}"
+          MIN_IMAGE_VERSION="3.3.0-beta.1"
+          STAGE="bundle_stage"
+          rm -rf "$STAGE"
+          mkdir -p "$STAGE/backend/src" "$STAGE/webui-dist"
+          cp -r backend/src/module "$STAGE/backend/src/module"
+          cp backend/pyproject.toml backend/uv.lock "$STAGE/backend/"
+          cp -r webui/dist/. "$STAGE/webui-dist/"
+          LOCK_SHA=$(sha256sum backend/uv.lock | awk '{print $1}')
+          cat > "$STAGE/manifest.json" <<EOF
+          {
+            "version": "$VERSION",
+            "min_image_version": "$MIN_IMAGE_VERSION",
+            "lockfile_sha256": "$LOCK_SHA",
+            "notes": "See release notes."
+          }
+          EOF
+          ( cd "$STAGE" && zip -r "../update-bundle-${VERSION}.zip" backend webui-dist manifest.json )
+          sha256sum "update-bundle-${VERSION}.zip" | awk '{print $1}' > "update-bundle-${VERSION}.zip.sha256"
+
+      # 对 bundle 做 ed25519 签名（私钥在 UPDATE_SIGNING_KEY secret，公钥随镜像
+      # 分发）。客户端 apply 前验签，boot_overlay 每次启动重新验签——没有 .sig
+      # 的 release 会被更新器拒绝，所以签名失败必须让构建失败。
+      - name: Sign update bundle
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+        run: |
+          if [ -z "$UPDATE_SIGNING_KEY" ]; then
+            echo "::error::UPDATE_SIGNING_KEY secret is not set; unsigned bundles are rejected by the updater" >&2
+            exit 1
+          fi
+          VERSION="${{ needs.version-info.outputs.version }}"
+          uv run --no-project --with cryptography python - "update-bundle-${VERSION}.zip" <<'PY'
+          import base64, os, sys
+          from pathlib import Path
+          from cryptography.hazmat.primitives.serialization import load_pem_private_key
+
+          bundle = Path(sys.argv[1])
+          key = load_pem_private_key(os.environ["UPDATE_SIGNING_KEY"].encode(), password=None)
+          sig = key.sign(bundle.read_bytes())
+          Path(str(bundle) + ".sig").write_text(base64.b64encode(sig).decode() + "\n")
+          print(f"signed {bundle}")
+          PY
+
       - name: Generate Release info
         id: release-info
         run: |
@@ -341,9 +407,12 @@ jobs:
       - name: Read changelog
         id: changelog
         run: |
-          if [ -f docs/changelog/3.2.md ]; then
+          # Derive the changelog file from the release version's major.minor (e.g. 3.3.0-beta.1 -> 3.3.md)
+          CHANGELOG_VERSION=$(echo "${{ needs.version-info.outputs.version }}" | grep -oE '^[0-9]+\.[0-9]+')
+          CHANGELOG_FILE="docs/changelog/${CHANGELOG_VERSION}.md"
+          if [ -f "$CHANGELOG_FILE" ]; then
             echo "body<<EOF" >> $GITHUB_OUTPUT
-            cat docs/changelog/3.2.md >> $GITHUB_OUTPUT
+            cat "$CHANGELOG_FILE" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
           fi
 
@@ -359,6 +428,9 @@ jobs:
           files: |
             webui/dist.zip
             backend/app-v${{ needs.version-info.outputs.version }}.zip
+            update-bundle-${{ needs.version-info.outputs.version }}.zip
+            update-bundle-${{ needs.version-info.outputs.version }}.zip.sha256
+            update-bundle-${{ needs.version-info.outputs.version }}.zip.sig
         env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 

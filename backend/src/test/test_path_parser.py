@@ -5,10 +5,10 @@ from module.conf import PLATFORM
 
 def test_path_to_bangumi():
     # Test for unix-like path
-    from module.downloader.path import TorrentPath
+    from module.downloader.path import path_to_bangumi
 
     path = "Downloads/Bangumi/Kono Subarashii Sekai ni Shukufuku wo!/Season 2/"
-    bangumi_name, season = TorrentPath()._path_to_bangumi(path)
+    bangumi_name, season = path_to_bangumi(path)
     assert bangumi_name == "Kono Subarashii Sekai ni Shukufuku wo!"
     assert season == 2
 
@@ -17,12 +17,12 @@ def test_path_to_bangumi_windows_style_save_path():
     """Regression for #1016: when qBittorrent runs on Windows and AB runs on
     Linux, qB returns backslash paths. PurePosixPath treats the whole string
     as one segment, leaving season stuck at 1."""
-    from module.downloader.path import TorrentPath
+    from module.downloader.path import path_to_bangumi
 
     with patch("module.downloader.path.settings") as mock_settings:
         mock_settings.downloader.path = r"D:\video\Bangumis"
         path = r"D:\video\Bangumis\小书痴的下克上\Season 4"
-        bangumi_name, season = TorrentPath._path_to_bangumi(path)
+        bangumi_name, season = path_to_bangumi(path)
 
     assert bangumi_name == "小书痴的下克上"
     assert season == 4
@@ -30,23 +30,23 @@ def test_path_to_bangumi_windows_style_save_path():
 
 def test_path_to_bangumi_posix_path_on_linux_ab():
     """Regression guard: POSIX paths still parse correctly after the fix."""
-    from module.downloader.path import TorrentPath
+    from module.downloader.path import path_to_bangumi
 
     with patch("module.downloader.path.settings") as mock_settings:
         mock_settings.downloader.path = "/downloads/Bangumi"
         path = "/downloads/Bangumi/葬送的芙莉莲/Season 2"
-        bangumi_name, season = TorrentPath._path_to_bangumi(path)
+        bangumi_name, season = path_to_bangumi(path)
 
     assert bangumi_name == "葬送的芙莉莲"
     assert season == 2
 
 
 class TestGenSavePath:
-    """Tests for TorrentPath._gen_save_path with season_offset."""
+    """Tests for gen_save_path with season_offset."""
 
     def test_gen_save_path_no_offset(self):
         """Save path uses season directly when no offset."""
-        from module.downloader.path import TorrentPath
+        from module.downloader.path import gen_save_path
         from module.models import Bangumi
 
         bangumi = Bangumi(
@@ -58,14 +58,14 @@ class TestGenSavePath:
         )
         with patch("module.downloader.path.settings") as mock_settings:
             mock_settings.downloader.path = "/downloads/Bangumi"
-            result = TorrentPath._gen_save_path(bangumi)
+            result = gen_save_path(bangumi)
 
         assert "Season 1" in result
         assert "Test Anime (2024)" in result
 
     def test_gen_save_path_with_positive_offset(self):
         """Save path uses adjusted season when offset is positive."""
-        from module.downloader.path import TorrentPath
+        from module.downloader.path import gen_save_path
         from module.models import Bangumi
 
         bangumi = Bangumi(
@@ -77,14 +77,14 @@ class TestGenSavePath:
         )
         with patch("module.downloader.path.settings") as mock_settings:
             mock_settings.downloader.path = "/downloads/Bangumi"
-            result = TorrentPath._gen_save_path(bangumi)
+            result = gen_save_path(bangumi)
 
         assert "Season 2" in result  # 1 + 1 = 2
         assert "Test Anime (2024)" in result
 
     def test_gen_save_path_with_negative_offset(self):
         """Save path uses adjusted season when offset is negative."""
-        from module.downloader.path import TorrentPath
+        from module.downloader.path import gen_save_path
         from module.models import Bangumi
 
         bangumi = Bangumi(
@@ -96,13 +96,13 @@ class TestGenSavePath:
         )
         with patch("module.downloader.path.settings") as mock_settings:
             mock_settings.downloader.path = "/downloads/Bangumi"
-            result = TorrentPath._gen_save_path(bangumi)
+            result = gen_save_path(bangumi)
 
         assert "Season 2" in result  # 3 - 1 = 2
 
     def test_gen_save_path_offset_below_one_ignored(self):
         """Save path doesn't go below Season 1."""
-        from module.downloader.path import TorrentPath
+        from module.downloader.path import gen_save_path
         from module.models import Bangumi
 
         bangumi = Bangumi(
@@ -114,13 +114,13 @@ class TestGenSavePath:
         )
         with patch("module.downloader.path.settings") as mock_settings:
             mock_settings.downloader.path = "/downloads/Bangumi"
-            result = TorrentPath._gen_save_path(bangumi)
+            result = gen_save_path(bangumi)
 
         assert "Season 1" in result  # Would be -4, so uses original season
 
     def test_gen_save_path_season_two_no_offset(self):
         """Non-S1 base season with no offset resolves directly."""
-        from module.downloader.path import TorrentPath
+        from module.downloader.path import gen_save_path
         from module.models import Bangumi
 
         bangumi = Bangumi(
@@ -132,13 +132,13 @@ class TestGenSavePath:
         )
         with patch("module.downloader.path.settings") as mock_settings:
             mock_settings.downloader.path = "/downloads/Bangumi"
-            result = TorrentPath._gen_save_path(bangumi)
+            result = gen_save_path(bangumi)
 
         assert "Season 2" in result
 
     def test_gen_save_path_large_positive_offset(self):
         """Large positive offset adds correctly."""
-        from module.downloader.path import TorrentPath
+        from module.downloader.path import gen_save_path
         from module.models import Bangumi
 
         bangumi = Bangumi(
@@ -150,13 +150,13 @@ class TestGenSavePath:
         )
         with patch("module.downloader.path.settings") as mock_settings:
             mock_settings.downloader.path = "/downloads/Bangumi"
-            result = TorrentPath._gen_save_path(bangumi)
+            result = gen_save_path(bangumi)
 
         assert "Season 6" in result  # 1 + 5
 
     def test_gen_save_path_offset_yields_exactly_season_one(self):
         """Offset that resolves to exactly Season 1 is kept."""
-        from module.downloader.path import TorrentPath
+        from module.downloader.path import gen_save_path
         from module.models import Bangumi
 
         bangumi = Bangumi(
@@ -168,6 +168,6 @@ class TestGenSavePath:
         )
         with patch("module.downloader.path.settings") as mock_settings:
             mock_settings.downloader.path = "/downloads/Bangumi"
-            result = TorrentPath._gen_save_path(bangumi)
+            result = gen_save_path(bangumi)
 
         assert "Season 1" in result  # 2 - 1 = 1

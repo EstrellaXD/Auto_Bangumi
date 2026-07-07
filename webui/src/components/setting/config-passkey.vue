@@ -1,10 +1,28 @@
 <script lang="ts" setup>
 import { Delete } from '@icon-park/vue-next';
+import { useConfirm } from '@/hooks/useConfirm';
 import type { PasskeyItem } from '#/passkey';
 
 const { t } = useMyI18n();
-const { passkeys, loading, isSupported, loadPasskeys, addPasskey, deletePasskey } =
-  usePasskey();
+const { confirm } = useConfirm();
+
+async function onDeleteClick(passkey: PasskeyItem) {
+  const ok = await confirm({
+    title: t('passkey.delete'),
+    body: t('passkey.delete_confirm'),
+    confirmText: t('passkey.delete'),
+    danger: true,
+  });
+  if (ok) handleDelete(passkey);
+}
+const {
+  passkeys,
+  loading,
+  isSupported,
+  loadPasskeys,
+  addPasskey,
+  deletePasskey,
+} = usePasskey();
 
 const showAddDialog = ref(false);
 const deviceName = ref('');
@@ -52,7 +70,6 @@ async function handleAdd() {
 }
 
 async function handleDelete(passkey: PasskeyItem) {
-  if (!confirm(t('passkey.delete_confirm'))) return;
   await deletePasskey(passkey.id);
 }
 
@@ -93,22 +110,25 @@ function formatDate(dateString: string | null): string {
           <div>
             <div font-medium>{{ passkey.name }}</div>
             <div text-12 text-gray-500>
-              {{ $t('passkey.created_at') }}: {{ formatDate(passkey.created_at) }}
+              {{ $t('passkey.created_at') }}:
+              {{ formatDate(passkey.created_at) }}
             </div>
             <div v-if="passkey.last_used_at" text-12 text-gray-500>
-              {{ $t('passkey.last_used') }}: {{ formatDate(passkey.last_used_at) }}
+              {{ $t('passkey.last_used') }}:
+              {{ formatDate(passkey.last_used_at) }}
             </div>
             <div v-if="passkey.backup_eligible" text-12 text-green-600>
               {{ $t('passkey.synced') }}
             </div>
           </div>
-          <ab-button
-            size="small"
-            type="warn"
-            @click="handleDelete(passkey)"
+          <ab-icon-button
+            size="sm"
+            class="passkey-delete"
+            :label="$t('passkey.delete')"
+            @click="onDeleteClick(passkey)"
           >
             <Delete size="16" />
-          </ab-button>
+          </ab-icon-button>
         </div>
       </div>
 
@@ -118,8 +138,8 @@ function formatDate(dateString: string | null): string {
       <div flex="~ justify-end">
         <ab-button
           v-if="isSupported"
-          size="small"
-          type="primary"
+          size="sm"
+          variant="primary"
           @click="openAddDialog"
         >
           {{ $t('passkey.add_new') }}
@@ -128,47 +148,39 @@ function formatDate(dateString: string | null): string {
     </div>
 
     <!-- 添加对话框 -->
-    <ab-popup
+    <ab-modal
       v-model:show="showAddDialog"
+      size="sm"
       :title="$t('passkey.register_title')"
-      css="w-365"
     >
       <div space-y-16>
-        <ab-label :label="$t('passkey.device_name')">
-          <input
+        <ab-field :label="$t('passkey.device_name')">
+          <ab-input
             v-model="deviceName"
-            type="text"
             :placeholder="$t('passkey.device_name_placeholder')"
-            ab-input
-            maxlength="64"
+            :maxlength="64"
             @keyup.enter="handleAdd"
           />
-        </ab-label>
+        </ab-field>
 
         <div text-14 text-gray-500>
           {{ $t('passkey.register_hint') }}
         </div>
-
-        <div line></div>
-
-        <div flex="~ justify-end gap-8">
-          <ab-button
-            size="small"
-            type="warn"
-            @click="showAddDialog = false"
-          >
-            {{ $t('config.cancel') }}
-          </ab-button>
-          <ab-button
-            size="small"
-            type="primary"
-            :disabled="!deviceName.trim() || isRegistering"
-            @click="handleAdd"
-          >
-            {{ $t('config.apply') }}
-          </ab-button>
-        </div>
       </div>
-    </ab-popup>
+
+      <template #footer>
+        <ab-button size="sm" @click="showAddDialog = false">
+          {{ $t('config.cancel') }}
+        </ab-button>
+        <ab-button
+          size="sm"
+          variant="primary"
+          :disabled="!deviceName.trim() || isRegistering"
+          @click="handleAdd"
+        >
+          {{ $t('config.apply') }}
+        </ab-button>
+      </template>
+    </ab-modal>
   </ab-fold-panel>
 </template>

@@ -1,5 +1,6 @@
 import json
 import logging
+from collections import OrderedDict
 from typing import TypeAlias
 
 from module.models import Bangumi, RSSItem, Torrent
@@ -22,29 +23,45 @@ SEARCH_KEY = [
 
 BangumiJSON: TypeAlias = str
 
-# Cache for TMDB poster lookups by official_title
-_poster_cache: dict[str, str | None] = {}
+# Cache for TMDB poster lookups by official_title. Bounded (LRU-ish,
+# oldest-evicted) like _tmdb_cache/_mikan_cache — was previously a plain dict
+# and grew unbounded for the life of the process.
+_POSTER_CACHE_MAX = 512
+_poster_cache: "OrderedDict[str, str | None]" = OrderedDict()
 
 
-class SearchTorrent(RequestContent, RSSAnalyser):
+def reset_cache() -> None:
+    """清空 TMDB 海报查询缓存。配置重载（如 tmdb_base_url 变更）后必须调用，
+    否则会继续返回旧接口地址下缓存的结果。"""
+    _poster_cache.clear()
+
+
+class SearchTorrent:
+    def __init__(self):
+        self.analyser = RSSAnalyser()
+
     async def search_torrents(self, rss_item: RSSItem) -> list[Torrent]:
-        return await self.get_torrents(rss_item.url)
+        async with RequestContent() as req:
+            return await req.get_torrents(rss_item.url)
 
     async def _fetch_tmdb_poster(self, title: str) -> str | None:
         """Fetch poster from TMDB if not in cache."""
         if title in _poster_cache:
+            _poster_cache.move_to_end(title)
             return _poster_cache[title]
 
+        poster_link = None
         try:
             tmdb_info = await tmdb_parser(title, "zh", test=True)
             if tmdb_info and tmdb_info.poster_link:
-                _poster_cache[title] = tmdb_info.poster_link
-                return tmdb_info.poster_link
+                poster_link = tmdb_info.poster_link
         except Exception as e:
-            logger.debug("[Searcher] Failed to fetch TMDB poster for %s: %s", title, e)
+            logger.debug("Failed to fetch TMDB poster for %s: %s", title, e)
 
-        _poster_cache[title] = None
-        return None
+        if len(_poster_cache) >= _POSTER_CACHE_MAX:
+            _poster_cache.popitem(last=False)
+        _poster_cache[title] = poster_link
+        return poster_link
 
     async def analyse_keyword(
         self, keywords: list[str], site: str = "mikan", limit: int = 100
@@ -52,11 +69,17 @@ class SearchTorrent(RequestContent, RSSAnalyser):
         rss_item = search_url(site, keywords)
         torrents = await self.search_torrents(rss_item)
         # yield for EventSourceResponse (Server Send)
-        exist_list = []
+        exist_list: list[str] = []
         for torrent in torrents:
             if len(exist_list) >= limit:
                 break
-            bangumi = await self.torrent_to_data(torrent=torrent, rss=rss_item)
+            # Skip the per-torrent Mikan homepage fetch / poster download here:
+            # interactive search can return many results and doing that fetch
+            # serially for each one makes the search feel unresponsive. Poster
+            # is filled in afterwards from the (title-keyed, cached) TMDB lookup.
+            bangumi = await self.analyser.torrent_to_data(
+                torrent=torrent, rss=rss_item, fetch_poster=False
+            )
             if bangumi:
                 special_link = self.special_url(bangumi, site).url
                 if special_link not in exist_list:
@@ -64,7 +87,9 @@ class SearchTorrent(RequestContent, RSSAnalyser):
                     exist_list.append(special_link)
                     # Fetch poster from TMDB if missing
                     if not bangumi.poster_link and bangumi.official_title:
-                        tmdb_poster = await self._fetch_tmdb_poster(bangumi.official_title)
+                        tmdb_poster = await self._fetch_tmdb_poster(
+                            bangumi.official_title
+                        )
                         if tmdb_poster:
                             bangumi.poster_link = tmdb_poster
                     yield json.dumps(bangumi.dict(), separators=(",", ":"))

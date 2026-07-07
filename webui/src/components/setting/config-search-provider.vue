@@ -1,5 +1,10 @@
 <script lang="ts" setup>
 import { Delete, EditTwo, Plus } from '@icon-park/vue-next';
+import { useConfirm } from '@/hooks/useConfirm';
+import {
+  buildNexusPhpSearchUrl,
+  isValidNexusPhpCategoryIds,
+} from '@/utils/nexusphp';
 
 interface SearchProvider {
   name: string;
@@ -7,6 +12,18 @@ interface SearchProvider {
 }
 
 const { t } = useMyI18n();
+const { confirm } = useConfirm();
+
+async function onDeleteClick(index: number) {
+  const ok = await confirm({
+    title: t('config.search_provider_set.remove'),
+    body: t('config.search_provider_set.delete_confirm'),
+    confirmText: t('config.search_provider_set.remove'),
+    danger: true,
+  });
+  if (ok) handleDelete(index);
+}
+const message = useMessage();
 
 // State
 const providers = ref<SearchProvider[]>([]);
@@ -20,6 +37,53 @@ const editingIndex = ref<number>(-1);
 const formName = ref('');
 const formUrl = ref('');
 
+// Add-dialog mode: custom URL template, or NexusPHP PT-site preset that
+// builds a torrentrss.php search template from base URL + passkey.
+type AddMode = 'custom' | 'nexusphp';
+const formMode = ref<AddMode>('custom');
+const formBaseUrl = ref('');
+const formPasskey = ref('');
+const formCategoryId = ref('');
+
+const addModeOptions = computed(() => [
+  { label: t('config.search_provider_set.mode_custom'), value: 'custom' },
+  { label: t('config.search_provider_set.mode_nexusphp'), value: 'nexusphp' },
+]);
+
+const categoryIdsValid = computed(() =>
+  isValidNexusPhpCategoryIds(formCategoryId.value)
+);
+
+const builtNexusPhpUrl = computed(() => {
+  if (!formBaseUrl.value.trim() || !formPasskey.value.trim()) return '';
+  if (!categoryIdsValid.value) return '';
+  return buildNexusPhpSearchUrl({
+    baseUrl: formBaseUrl.value,
+    passkey: formPasskey.value,
+    categoryId: formCategoryId.value,
+  });
+});
+
+// 预览里遮住 passkey（存储的 URL 不变——供应商列表本就显示完整 URL）
+const previewNexusPhpUrl = computed(() =>
+  builtNexusPhpUrl.value.replace(
+    /(passkey=)([^&]+)/,
+    (_, prefix: string, key: string) =>
+      `${prefix}${key.length > 4 ? `${key.slice(0, 4)}…` : '…'}`
+  )
+);
+
+const addFormUrl = computed(() =>
+  formMode.value === 'nexusphp' ? builtNexusPhpUrl.value : formUrl.value.trim()
+);
+
+const canAdd = computed(
+  () =>
+    !!formName.value.trim() &&
+    !!addFormUrl.value &&
+    validateUrl(addFormUrl.value)
+);
+
 // Default providers that cannot be deleted
 const defaultProviderNames = ['mikan', 'nyaa', 'dmhy'];
 
@@ -30,16 +94,16 @@ onMounted(() => {
 async function loadProviders() {
   loading.value = true;
   try {
-    const response = await fetch('/api/v1/search/provider/config');
-    if (response.ok) {
-      const data = await response.json();
-      providers.value = Object.entries(data).map(([name, url]) => ({
-        name,
-        url: url as string,
-      }));
-    }
+    const { data } = await axios.get<Record<string, string>>(
+      'api/v1/search/provider/config'
+    );
+    providers.value = Object.entries(data).map(([name, url]) => ({
+      name,
+      url,
+    }));
   } catch (error) {
     console.error('Failed to load providers:', error);
+    message.error(t('config.search_provider_set.load_failed'));
   } finally {
     loading.value = false;
   }
@@ -52,22 +116,21 @@ async function saveProviders() {
   });
 
   try {
-    const response = await fetch('/api/v1/search/provider/config', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(providerObj),
-    });
-    if (!response.ok) {
-      throw new Error('Failed to save providers');
-    }
+    await axios.put('api/v1/search/provider/config', providerObj);
+    message.success(t('config.search_provider_set.save_success'));
   } catch (error) {
     console.error('Failed to save providers:', error);
+    message.error(t('config.search_provider_set.save_failed'));
   }
 }
 
 function openAddDialog() {
   formName.value = '';
   formUrl.value = '';
+  formMode.value = 'custom';
+  formBaseUrl.value = '';
+  formPasskey.value = '';
+  formCategoryId.value = '';
   showAddDialog.value = true;
 }
 
@@ -80,7 +143,7 @@ function openEditDialog(provider: SearchProvider, index: number) {
 }
 
 async function handleAdd() {
-  if (!formName.value.trim() || !formUrl.value.trim()) return;
+  if (!canAdd.value) return;
 
   // Check for duplicate name
   if (providers.value.some((p) => p.name === formName.value.trim())) {
@@ -89,13 +152,16 @@ async function handleAdd() {
 
   providers.value.push({
     name: formName.value.trim(),
-    url: formUrl.value.trim(),
+    url: addFormUrl.value,
   });
 
   await saveProviders();
   showAddDialog.value = false;
   formName.value = '';
   formUrl.value = '';
+  formBaseUrl.value = '';
+  formPasskey.value = '';
+  formCategoryId.value = '';
 }
 
 async function handleEdit() {
@@ -126,8 +192,6 @@ async function handleDelete(index: number) {
   if (defaultProviderNames.includes(provider.name)) {
     return;
   }
-
-  if (!confirm(t('config.search_provider_set.delete_confirm'))) return;
 
   providers.value.splice(index, 1);
   await saveProviders();
@@ -165,7 +229,10 @@ function validateUrl(url: string): boolean {
           <div class="provider-info">
             <div class="provider-name">
               {{ provider.name }}
-              <span v-if="isDefaultProvider(provider.name)" class="default-badge">
+              <span
+                v-if="isDefaultProvider(provider.name)"
+                class="default-badge"
+              >
                 {{ $t('config.search_provider_set.default') }}
               </span>
             </div>
@@ -175,20 +242,21 @@ function validateUrl(url: string): boolean {
           </div>
           <div class="provider-actions">
             <ab-button
-              size="small"
-              type="secondary"
+              size="sm"
+              variant="secondary"
               @click="openEditDialog(provider, index)"
             >
               <EditTwo size="16" />
             </ab-button>
-            <ab-button
+            <ab-icon-button
               v-if="!isDefaultProvider(provider.name)"
-              size="small"
-              type="warn"
-              @click="handleDelete(index)"
+              size="sm"
+              class="provider-delete"
+              :label="$t('config.search_provider_set.remove')"
+              @click="onDeleteClick(index)"
             >
               <Delete size="16" />
-            </ab-button>
+            </ab-icon-button>
           </div>
         </div>
       </div>
@@ -202,7 +270,7 @@ function validateUrl(url: string): boolean {
 
       <!-- Add button -->
       <div flex="~ justify-end">
-        <ab-button size="small" type="primary" @click="openAddDialog">
+        <ab-button size="sm" variant="primary" @click="openAddDialog">
           <Plus size="16" />
           {{ $t('config.search_provider_set.add_new') }}
         </ab-button>
@@ -210,109 +278,162 @@ function validateUrl(url: string): boolean {
     </div>
 
     <!-- Add dialog -->
-    <ab-popup
+    <ab-modal
       v-model:show="showAddDialog"
+      size="sm"
       :title="$t('config.search_provider_set.add_title')"
-      css="w-400"
     >
       <div space-y-16>
-        <ab-label :label="$t('config.search_provider_set.name')">
-          <input
+        <ab-segmented
+          v-model:value="formMode"
+          size="sm"
+          :options="addModeOptions"
+          :aria-label="$t('config.search_provider_set.add_title')"
+        />
+
+        <ab-field :label="$t('config.search_provider_set.name')">
+          <ab-input
             v-model="formName"
-            type="text"
-            :placeholder="$t('config.search_provider_set.name_placeholder')"
-            ab-input
-            maxlength="32"
+            :placeholder="
+              formMode === 'nexusphp'
+                ? $t('config.search_provider_set.name_placeholder_nexusphp')
+                : $t('config.search_provider_set.name_placeholder')
+            "
+            :maxlength="32"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="$t('config.search_provider_set.url')">
-          <input
-            v-model="formUrl"
-            type="text"
-            :placeholder="$t('config.search_provider_set.url_placeholder')"
-            ab-input
-            @keyup.enter="handleAdd"
-          />
-        </ab-label>
+        <template v-if="formMode === 'custom'">
+          <ab-field :label="$t('config.search_provider_set.url')">
+            <ab-input
+              v-model="formUrl"
+              type="text"
+              :placeholder="$t('config.search_provider_set.url_placeholder')"
+              @keyup.enter="handleAdd"
+            />
+          </ab-field>
 
-        <div
-          v-if="formUrl && !validateUrl(formUrl)"
-          class="validation-warning"
-        >
-          {{ $t('config.search_provider_set.url_missing_placeholder') }}
-        </div>
-
-        <div line></div>
-
-        <div flex="~ justify-end gap-8">
-          <ab-button size="small" type="warn" @click="showAddDialog = false">
-            {{ $t('config.cancel') }}
-          </ab-button>
-          <ab-button
-            size="small"
-            type="primary"
-            :disabled="!formName.trim() || !formUrl.trim() || !validateUrl(formUrl)"
-            @click="handleAdd"
+          <div
+            v-if="formUrl && !validateUrl(formUrl)"
+            class="validation-warning"
           >
-            {{ $t('config.apply') }}
-          </ab-button>
-        </div>
+            {{ $t('config.search_provider_set.url_missing_placeholder') }}
+          </div>
+        </template>
+
+        <template v-else>
+          <ab-field :label="$t('config.search_provider_set.base_url')">
+            <ab-input
+              v-model="formBaseUrl"
+              type="text"
+              :placeholder="
+                $t('config.search_provider_set.base_url_placeholder')
+              "
+            />
+          </ab-field>
+
+          <ab-field :label="$t('config.search_provider_set.passkey')">
+            <ab-input
+              v-model="formPasskey"
+              type="text"
+              :placeholder="
+                $t('config.search_provider_set.passkey_placeholder')
+              "
+            />
+          </ab-field>
+
+          <ab-field :label="$t('config.search_provider_set.category_id')">
+            <ab-input
+              v-model="formCategoryId"
+              type="text"
+              :placeholder="
+                $t('config.search_provider_set.category_id_placeholder')
+              "
+              @keyup.enter="handleAdd"
+            />
+          </ab-field>
+
+          <div
+            v-if="formCategoryId && !categoryIdsValid"
+            class="validation-warning"
+          >
+            {{ $t('config.search_provider_set.category_id_invalid') }}
+          </div>
+
+          <div class="hint-text">
+            {{ $t('config.search_provider_set.nexusphp_hint') }}
+          </div>
+
+          <div v-if="previewNexusPhpUrl" class="url-preview">
+            {{ previewNexusPhpUrl }}
+          </div>
+        </template>
       </div>
-    </ab-popup>
+
+      <template #footer>
+        <ab-button size="sm" @click="showAddDialog = false">
+          {{ $t('config.cancel') }}
+        </ab-button>
+        <ab-button
+          size="sm"
+          variant="primary"
+          :disabled="!canAdd"
+          @click="handleAdd"
+        >
+          {{ $t('config.apply') }}
+        </ab-button>
+      </template>
+    </ab-modal>
 
     <!-- Edit dialog -->
-    <ab-popup
+    <ab-modal
       v-model:show="showEditDialog"
+      size="sm"
       :title="$t('config.search_provider_set.edit_title')"
-      css="w-400"
     >
       <div space-y-16>
-        <ab-label :label="$t('config.search_provider_set.name')">
-          <input
+        <ab-field :label="$t('config.search_provider_set.name')">
+          <ab-input
             v-model="formName"
-            type="text"
             :placeholder="$t('config.search_provider_set.name_placeholder')"
-            ab-input
-            maxlength="32"
-            :disabled="editingProvider !== null && isDefaultProvider(editingProvider.name)"
+            :maxlength="32"
+            :disabled="
+              editingProvider !== null &&
+              isDefaultProvider(editingProvider.name)
+            "
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="$t('config.search_provider_set.url')">
-          <input
+        <ab-field :label="$t('config.search_provider_set.url')">
+          <ab-input
             v-model="formUrl"
             type="text"
             :placeholder="$t('config.search_provider_set.url_placeholder')"
-            ab-input
             @keyup.enter="handleEdit"
           />
-        </ab-label>
+        </ab-field>
 
-        <div
-          v-if="formUrl && !validateUrl(formUrl)"
-          class="validation-warning"
-        >
+        <div v-if="formUrl && !validateUrl(formUrl)" class="validation-warning">
           {{ $t('config.search_provider_set.url_missing_placeholder') }}
         </div>
-
-        <div line></div>
-
-        <div flex="~ justify-end gap-8">
-          <ab-button size="small" type="warn" @click="showEditDialog = false">
-            {{ $t('config.cancel') }}
-          </ab-button>
-          <ab-button
-            size="small"
-            type="primary"
-            :disabled="!formName.trim() || !formUrl.trim() || !validateUrl(formUrl)"
-            @click="handleEdit"
-          >
-            {{ $t('config.apply') }}
-          </ab-button>
-        </div>
       </div>
-    </ab-popup>
+
+      <template #footer>
+        <ab-button size="sm" @click="showEditDialog = false">
+          {{ $t('config.cancel') }}
+        </ab-button>
+        <ab-button
+          size="sm"
+          variant="primary"
+          :disabled="
+            !formName.trim() || !formUrl.trim() || !validateUrl(formUrl)
+          "
+          @click="handleEdit"
+        >
+          {{ $t('config.apply') }}
+        </ab-button>
+      </template>
+    </ab-modal>
   </ab-fold-panel>
 </template>
 
@@ -363,7 +484,8 @@ function validateUrl(url: string): boolean {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+    monospace;
 }
 
 .provider-actions {
@@ -379,11 +501,34 @@ function validateUrl(url: string): boolean {
   line-height: 1.5;
 }
 
+.url-preview {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+    monospace;
+  padding: 8px 12px;
+  background: var(--color-surface-elevated, #f9fafb);
+  border-radius: 6px;
+  word-break: break-all;
+
+  :root.dark & {
+    background: var(--color-surface-elevated, #1f2937);
+  }
+}
+
 .validation-warning {
   font-size: 12px;
   color: var(--color-danger, #ef4444);
   padding: 8px 12px;
   background: color-mix(in srgb, var(--color-danger, #ef4444) 10%, transparent);
   border-radius: 6px;
+}
+.provider-delete {
+  color: var(--color-danger);
+
+  &:hover:not(:disabled) {
+    color: var(--color-danger);
+    background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+  }
 }
 </style>

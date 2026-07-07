@@ -6,7 +6,7 @@
     <img title="docker build version" src="https://img.shields.io/docker/v/estrellaxd/auto_bangumi" alt="">
     <img title="release date" src="https://img.shields.io/github/release-date/estrellaxd/auto_bangumi" alt="">
     <img title="docker pull" src="https://img.shields.io/docker/pulls/estrellaxd/auto_bangumi" alt="">
-    <img title="python version" src="https://img.shields.io/badge/python-3.11-blue" alt="">
+    <img title="python version" src="https://img.shields.io/badge/python-3.13-blue" alt="">
 </p>
 
 <p align="center">

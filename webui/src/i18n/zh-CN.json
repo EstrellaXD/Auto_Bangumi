@@ -2,7 +2,17 @@
   "config": {
     "apply": "应用",
     "cancel": "取消",
+    "discard": "放弃修改",
+    "discard_confirm": "放弃未保存的修改？",
+    "leave_confirm": "有未保存的修改，确定离开并放弃？",
+    "no_match": "没有匹配搜索的设置",
+    "restart_confirm": "保存后将重启 AutoBangumi 以应用新设置，是否继续？",
+    "save_restart": "保存并重启",
+    "search_placeholder": "搜索设置…",
+    "unsaved_count": "{count} 处未保存修改",
+    "unsaved_none": "暂无未保存修改",
     "downloader_set": {
+      "aria2_hint": "aria2 请在密码栏填入 RPC secret（用户名会被忽略）。地址示例：172.17.0.1:6800",
       "host": "下载器地址",
       "password": "密码",
       "path": "下载地址",
@@ -11,16 +21,43 @@
       "type": "下载器类型",
       "username": "用户名"
     },
-    "experimental_openai_set": {
-      "api_base": "API 地址",
+    "llm_set": {
       "api_key": "API 密钥",
-      "api_type": "服务商",
-      "api_version": "API 版本",
-      "deployment_id": "部署 ID",
+      "base_url": "API 地址",
+      "cache_ttl": "解析缓存（秒）",
       "enable": "启用 LLM 解析",
+      "failure_backoff": "熔断暂停时长（秒）",
+      "failure_threshold": "熔断失败次数",
+      "hint": "openai 服务商兼容任意 OpenAI 格式端点（DeepSeek、Ollama、LM Studio、OpenRouter 等）；claude-haiku-4-5 与 gemini-2.5-flash 是较为经济的选择。",
+      "max_concurrency": "最大并发数",
+      "mode": "解析模式",
+      "models_failed": "获取模型列表失败，请检查 API 密钥（及 API 地址）。",
+      "mode_fallback": "回退（正则优先）",
+      "mode_primary": "优先（LLM 优先）",
       "model": "模型",
-      "title": "LLM 设置",
-      "warning": "实验功能：基于 LLM 的番剧标题解析可能产生不准确的结果。"
+      "provider": "服务商",
+      "timeout": "请求超时（秒）",
+      "title": "LLM 解析器",
+      "group_builtin": "内置",
+      "group_installed": "已安装预设",
+      "group_subscription": "订阅账号",
+      "group_available": "可下载",
+      "not_installed": "该提供商尚未安装。",
+      "install": "安装",
+      "install_success": "提供商已安装",
+      "install_failed": "安装失败",
+      "uninstall": "卸载",
+      "connect": "连接",
+      "disconnect": "断开",
+      "connected_as": "已连接：{account}",
+      "risk_notice": "该提供商使用非官方订阅流程，第三方使用可能违反厂商条款、导致账号被限制。请自担风险后继续。",
+      "risk_cancel": "取消",
+      "risk_confirm": "仍然安装",
+      "auth_open_link": "在任意设备打开此链接授权，然后把回调 code 粘贴到下方：",
+      "auth_paste_code": "粘贴授权 code 或回调 URL",
+      "auth_device_hint": "打开链接并输入下方代码完成授权：",
+      "auth_pending": "等待授权中…",
+      "auth_failed": "授权失败"
     },
     "manage_set": {
       "delete_bad_torrent": "删除坏种",
@@ -28,7 +65,8 @@
       "eps": "番剧补全",
       "group_tag": "添加组标签",
       "method": "重命名方式",
-      "title": "番剧管理设置"
+      "title": "番剧管理设置",
+      "track_orphans": "记录未匹配种子"
     },
     "media_player_set": {
       "title": "播放器设置",
@@ -37,8 +75,8 @@
     },
     "normal_set": {
       "debug": "调试",
-      "rename_interval": "重命名间隔",
-      "rss_interval": "RSS 间隔",
+      "rename_interval": "重命名间隔（秒）",
+      "rss_interval": "RSS 检查间隔（秒）",
       "title": "常规设置",
       "web_port": "网页端口"
     },
@@ -53,6 +91,7 @@
       "add_provider": "添加通知服务",
       "edit_provider": "编辑通知服务",
       "remove": "删除",
+      "remove_confirm": "确定删除此通知服务？",
       "edit": "编辑",
       "test": "测试",
       "enable_provider": "启用",
@@ -90,6 +129,7 @@
     "search_provider_set": {
       "title": "搜索源设置",
       "add_new": "添加搜索源",
+      "remove": "删除",
       "add_title": "添加搜索源",
       "edit_title": "编辑搜索源",
       "name": "名称",
@@ -100,7 +140,21 @@
       "url_missing_placeholder": "URL 必须包含 %s 作为搜索关键词占位符",
       "default": "默认",
       "no_providers": "暂无搜索源",
-      "delete_confirm": "确定删除此搜索源？"
+      "delete_confirm": "确定删除此搜索源？",
+      "load_failed": "加载搜索源失败",
+      "save_failed": "保存搜索源失败",
+      "save_success": "搜索源已保存",
+      "mode_custom": "自定义 URL",
+      "mode_nexusphp": "PT 站点（NexusPHP）",
+      "name_placeholder_nexusphp": "例如：audiences",
+      "base_url": "站点地址",
+      "base_url_placeholder": "https://audiences.me",
+      "passkey": "Passkey",
+      "passkey_placeholder": "站点用户控制面板中的 Passkey",
+      "category_id": "分类 ID（可选）",
+      "category_id_placeholder": "例如：402",
+      "nexusphp_hint": "根据 Passkey 生成 torrentrss.php 搜索模板。注意：原生 NexusPHP 已停用 search 参数、对任何搜索词都返回最新种子，请先在站点上确认 RSS 搜索确实按词过滤。",
+      "category_id_invalid": "分类 ID 必须是数字（多个用逗号分隔）"
     }
   },
   "downloader": {
@@ -139,10 +193,16 @@
     "action": {
       "pause": "暂停",
       "resume": "恢复",
-      "delete": "删除"
+      "delete": "删除",
+      "delete_confirm": "从下载器中移除所选种子？已下载的文件将保留。"
     }
   },
   "homepage": {
+    "load_failed": {
+      "title": "订阅列表加载失败",
+      "subtitle": "后端没有响应。请确认 AutoBangumi 正在运行，然后重试。",
+      "retry": "重试"
+    },
     "empty": {
       "title": "暂无订阅",
       "subtitle": "添加你的第一个 RSS 订阅开始使用",
@@ -157,7 +217,9 @@
     "rule": {
       "apply": "应用",
       "delete": "删除",
-      "delete_hit": "是否删除本地文件？",
+      "delete_confirm": "将删除该订阅规则，此操作无法撤销。",
+      "delete_files_label": "同时删除已下载的文件",
+      "cancel_btn": "取消",
       "disable": "禁用",
       "edit": "编辑",
       "edit_rule": "编辑规则",
@@ -168,9 +230,17 @@
       "no_btn": "否",
       "official_title": "官方名称",
       "episode_offset": "集数偏移",
+      "air_weekday": "放送星期",
       "season_offset": "季度偏移",
       "auto_detect": "自动检测",
       "needs_review": "需要检查",
+      "preferred_group": "偏好字幕组",
+      "preferred_resolution": "偏好分辨率",
+      "preferred_hint": "设置后，RSS 刷新时若存在偏好版本，会跳过不匹配的重复发布。",
+      "episode_type": "内容类型",
+      "type_episode": "剧集",
+      "type_movie": "剧场版",
+      "type_special": "特别篇",
       "archive": "归档",
       "unarchive": "取消归档",
       "archived": "已归档",
@@ -180,20 +250,81 @@
       "unnamed": "未命名规则",
       "season": "季度",
       "year": "年份",
-      "yes_btn": "是"
+      "yes_btn": "是",
+      "view_torrents": "查看种子"
+    },
+    "others": {
+      "title": "未匹配种子"
+    },
+    "torrents": {
+      "title": "种子列表",
+      "delete": "删除",
+      "deleteAll": "清空所有",
+      "downloaded": "已下载",
+      "empty": "暂无种子",
+      "confirm_clear": "确定要清空所有种子吗？此操作不可撤销。",
+      "select_all": "全选",
+      "deselect_all": "取消全选",
+      "delete_selected": "删除 ({count})",
+      "deleted_one": "已删除种子 {id}",
+      "deleted_count": "已删除 {count} 条种子",
+      "cleared_all": "已清空所有种子",
+      "load_failed": "加载种子列表失败",
+      "delete_failed": "删除失败",
+      "source": {
+        "manual": "手动/订阅"
+      }
     }
   },
   "log": {
-    "bug_repo": "Bug 反馈",
-    "clear_filters": "清除",
-    "contact_info": "联系方式",
+    "about": "关于",
+    "clear_filters": "清除筛选",
     "copy": "复制",
+    "empty": "暂无日志。后台任务运行后这里会显示日志内容。",
     "filter_level": "级别",
-    "go": "访问",
-    "join": "加入",
-    "reset": "重置",
+    "filtered_empty": "没有匹配当前筛选的日志。",
+    "health_summary": "本段日志包含 {errors} 个错误 · {warnings} 个警告",
+    "jump_first": "跳到第一条",
+    "report_bug": "反馈问题",
+    "reset": "清空日志",
+    "reset_confirm": "确定清空日志？此操作无法撤销。",
+    "search_placeholder": "搜索日志…",
+    "telegram_group": "Telegram 群组",
     "title": "日志",
-    "update_now": "立即更新"
+    "update_now": "刷新",
+    "website": "官方网站"
+  },
+  "update": {
+    "title": "软件更新",
+    "current_version": "当前版本",
+    "latest_version": "最新版本",
+    "channel": "更新渠道",
+    "channel_stable": "稳定版",
+    "channel_beta": "测试版",
+    "auto_check": "自动检查",
+    "check": "检查更新",
+    "checking": "检查中…",
+    "found_new": "发现新版本 {version}",
+    "last_checked": "上次检查 {time}",
+    "up_to_date": "已是最新版本。",
+    "update_available": "有可用更新",
+    "update_now": "立即更新",
+    "release_notes": "更新说明",
+    "rollback": "回滚",
+    "rollback_confirm": "回滚到上一个版本？应用将重启。",
+    "confirm_title": "更新 AutoBangumi？",
+    "confirm_body": "将下载并应用更新，随后应用会重启以生效。",
+    "restart_note": "应用内更新要求容器以 `restart: unless-stopped` 运行，以便自行重启来应用更新。",
+    "restarting": "正在应用更新并重启……本页将自动刷新。",
+    "restart_timeout": "应用较长时间未恢复。请确认容器以 `restart: unless-stopped` 运行，或手动重启。",
+    "applied_overlay": "正在镜像之上运行更新覆盖层（v{version}）。",
+    "phase_downloading": "下载中",
+    "phase_verifying": "校验中",
+    "phase_unpacking": "解包中",
+    "phase_promoting": "落地中",
+    "success": "更新已应用，正在重启……",
+    "failed": "更新失败",
+    "check_failed": "检查更新失败"
   },
   "login": {
     "login_btn": "登录",
@@ -205,6 +336,7 @@
   "passkey": {
     "add_new": "添加 Passkey",
     "created_at": "创建于",
+    "delete": "删除",
     "delete_confirm": "确定删除此 Passkey？",
     "delete_failed": "删除失败",
     "delete_success": "Passkey 已删除",
@@ -248,20 +380,26 @@
     }
   },
   "rss": {
+    "active": "启用",
+    "aggregate": "聚合",
     "connected": "已连接",
     "delete": "删除",
+    "delete_confirm": "确定删除所选 RSS 订阅？已有规则和下载不受影响。",
     "disable": "禁用",
     "enable": "启用",
     "error": "错误",
+    "inactive": "停用",
     "name": "名称",
+    "refresh": "刷新",
+    "refresh_all": "全部刷新",
     "selectbox": "选择",
     "status": "状态",
     "title": "RSS 条目",
     "url": "链接"
   },
   "calendar": {
-    "title": "放送表",
     "subtitle": "本季度放送时间表",
+    "refresh_success": "日历已刷新",
     "days": {
       "mon": "周一",
       "tue": "周二",
@@ -315,7 +453,8 @@
       "password": "密码",
       "confirm_password": "确认密码",
       "password_mismatch": "两次输入的密码不一致",
-      "password_too_short": "密码长度不能少于 8 个字符"
+      "password_too_short": "密码长度不能少于 8 个字符",
+      "username_too_short": "用户名长度不能少于 4 个字符"
     },
     "downloader": {
       "title": "下载客户端",
@@ -323,7 +462,8 @@
       "test": "测试连接",
       "testing": "测试中...",
       "test_success": "连接成功",
-      "test_failed": "连接失败"
+      "test_failed": "连接失败",
+      "untested_hint": "可以先跳过连接测试继续设置，之后在设置页中调整连接信息。"
     },
     "rss": {
       "title": "RSS 订阅源",
@@ -378,7 +518,15 @@
     "confirm": "确认",
     "select": "选择",
     "selectAll": "全选",
-    "items": "项"
+    "items": "项",
+    "moreActions": "更多操作",
+    "copy": "复制",
+    "clear": "清空",
+    "toggle_password": "显示或隐藏密码",
+    "empty": "暂无内容",
+    "loading": "加载中…",
+    "close": "关闭",
+    "remove": "移除"
   },
   "theme": {
     "light": "浅色",
@@ -406,11 +554,16 @@
     "dismiss": "忽略",
     "suggestion_applied": "偏移量建议已应用",
     "no_mismatch": "未检测到季度/集数不匹配",
-    "review_dismissed": "检查提醒已忽略"
+    "review_dismissed": "检查提醒已忽略",
+    "detect_failed": "检测偏移量失败",
+    "dismiss_failed": "忽略检查提醒失败"
   },
   "search": {
     "subscribe": "订阅",
+    "subscribe_success": "订阅成功",
+    "subscribe_failed": "订阅失败",
     "no_results": "未找到相关结果，试试其他关键词",
+    "failed_hint": "搜索失败，请检查连接后重试。",
     "start_typing": "输入关键词开始搜索",
     "filter": {
       "group": "字幕组",
@@ -425,6 +578,7 @@
     "confirm": {
       "title": "添加订阅",
       "rss": "RSS 源",
+      "copy_rss": "复制 RSS 链接",
       "group": "字幕组",
       "resolution": "分辨率",
       "subtitle": "字幕类型",
@@ -467,5 +621,62 @@
     },
     "shutdown": "关闭",
     "start": "启动"
+  },
+  "notifications": {
+    "title": "通知",
+    "unread": "{n} 条未读",
+    "empty": "暂无通知",
+    "mark_all_read": "全部已读",
+    "clear_all": "清空",
+    "clear_confirm": "确认清空？",
+    "delete": "删除",
+    "time": {
+      "just_now": "刚刚",
+      "minutes_ago": "{n} 分钟前",
+      "hours_ago": "{n} 小时前",
+      "days_ago": "{n} 天前"
+    },
+    "reason": {
+      "unreachable": "无法连接下载器，请检查地址、端口和网络。",
+      "credentials": "用户名或密码错误，请在设置中检查下载器凭据。",
+      "banned": "IP 已被下载器封禁，请在下载器 WebUI 解封或重启下载器。"
+    },
+    "kind": {
+      "rss_failure": {
+        "title": "RSS 订阅连接异常",
+        "body": "{rss_name}：{error}"
+      },
+      "download_failure": {
+        "title": "种子添加失败",
+        "body": "{official_title} — {torrent_name}"
+      },
+      "offset_review": {
+        "title": "集数偏移待确认",
+        "body": "{official_title}：{reason}"
+      },
+      "downloader_unavailable": {
+        "title": "下载器连接异常"
+      },
+      "update_available": {
+        "title": "发现新版本",
+        "body": "{current} → {latest}（{channel} 频道）"
+      },
+      "update_applied": {
+        "title": "程序更新完成",
+        "body": "已更新到 {version}，重启后生效。"
+      },
+      "update_failed": {
+        "title": "程序更新失败",
+        "body": "{message}"
+      },
+      "llm_auth_failure": {
+        "title": "LLM 提供商凭据失效",
+        "body": "{provider_id}：{message}"
+      },
+      "llm_plugin_install_failed": {
+        "title": "LLM 插件安装失败",
+        "body": "{plugin_id}：{message}"
+      }
+    }
   }
 }

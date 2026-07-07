@@ -27,10 +27,19 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
     :aria-label="`Edit ${bangumi.official_title}`"
     @click="() => $emit('click')"
     @keydown.enter="() => $emit('click')"
+    @keydown.space.prevent="() => $emit('click')"
   >
-    <div class="card-poster" :class="{ 'card-poster--needs-review': bangumi.needs_review }">
+    <div
+      class="card-poster"
+      :class="{ 'card-poster--needs-review': bangumi.needs_review }"
+    >
       <template v-if="bangumi.poster_link">
-        <img :src="posterSrc" :alt="bangumi.official_title" class="card-img" />
+        <img
+          :src="posterSrc"
+          :alt="bangumi.official_title"
+          class="card-img"
+          loading="lazy"
+        />
       </template>
       <template v-else>
         <div class="card-placeholder">
@@ -40,11 +49,11 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
 
       <div class="card-overlay">
         <div class="card-overlay-tags">
-          <ab-tag :title="`Season ${bangumi.season}`" type="primary" />
+          <ab-tag :title="`Season ${bangumi.season}`" type="info" />
           <ab-tag
             v-if="bangumi.group_name"
             :title="bangumi.group_name"
-            type="primary"
+            type="info"
           />
         </div>
         <div
@@ -58,7 +67,9 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
     </div>
 
     <div class="card-info">
-      <div class="card-title">{{ bangumi.official_title }}</div>
+      <div class="card-title" :title="bangumi.official_title">
+        {{ bangumi.official_title }}
+      </div>
     </div>
   </div>
 
@@ -68,7 +79,11 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
       <div class="search-card-content">
         <div class="search-card-thumb">
           <template v-if="bangumi.poster_link">
-            <img :src="posterSrc" :alt="bangumi.official_title" class="search-card-img" />
+            <img
+              :src="posterSrc"
+              :alt="bangumi.official_title"
+              class="search-card-img"
+            />
           </template>
           <template v-else>
             <div class="card-placeholder card-placeholder--small">
@@ -82,22 +97,36 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
             <ab-tag
               v-if="bangumi.season"
               :title="`Season ${bangumi.season}`"
-              type="primary"
+              type="info"
             />
             <ab-tag
               v-if="bangumi.group_name"
               :title="bangumi.group_name"
-              type="primary"
+              type="info"
             />
             <ab-tag
               v-if="bangumi.subtitle"
               :title="bangumi.subtitle"
-              type="primary"
+              type="info"
             />
           </div>
         </div>
       </div>
-      <ab-add :round="true" type="medium" @click="() => $emit('click')" />
+      <ab-icon-button
+        variant="solid"
+        round
+        :label="$t('topbar.add.button')"
+        @click="() => $emit('click')"
+      >
+        <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+          <path
+            d="M12 5v14M5 12h14"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          />
+        </svg>
+      </ab-icon-button>
     </div>
   </div>
 </template>
@@ -123,7 +152,8 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
   border-radius: var(--radius-md);
   overflow: hidden;
   box-shadow: var(--shadow-md);
-  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+  transition: box-shadow var(--transition-fast),
+    transform var(--transition-fast);
 
   .card:hover &,
   .card:focus-visible & {
@@ -152,7 +182,8 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
 }
 
 @keyframes card-glow {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: var(--shadow-md), 0 0 0 0 rgba(251, 191, 36, 0);
   }
   50% {
@@ -202,7 +233,11 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
   // On touch devices, always show a subtle indicator
   @include forTouch {
     opacity: 1;
-    background: linear-gradient(to top, var(--color-overlay) 0%, transparent 50%);
+    background: linear-gradient(
+      to top,
+      var(--color-overlay) 0%,
+      transparent 50%
+    );
     backdrop-filter: none;
 
     .card-edit-btn {
@@ -224,12 +259,17 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
   gap: 3px;
   flex-wrap: wrap;
 
-  :deep(.tag) {
+  :deep(.ab-tag) {
     background: var(--color-overlay);
     border-color: rgba(255, 255, 255, 0.4);
     color: var(--color-white);
     font-size: 9px;
     padding: 1px 6px;
+
+    // 海报叠层上的信息 chip 不需要语义色标记
+    &::before {
+      display: none;
+    }
   }
 
   // On touch, move tags to avoid overlap with edit button
@@ -248,7 +288,8 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
   background: var(--color-primary);
   color: var(--color-white);
   box-shadow: var(--shadow-md);
-  transition: transform var(--transition-fast), background-color var(--transition-fast);
+  transition: transform var(--transition-fast),
+    background-color var(--transition-fast);
 
   .card:active & {
     transform: scale(0.9);
@@ -269,9 +310,11 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
   font-weight: 500;
   line-height: 1.4;
   color: var(--color-text);
+  // 两行截断代替单行：动画标题普遍偏长，单行几乎总在截断
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   transition: color var(--transition-normal);
 }
 

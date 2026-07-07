@@ -1,4 +1,5 @@
 """Tests for config and database migration from 3.1.x to 3.2.x."""
+
 import json
 import tempfile
 from pathlib import Path
@@ -6,10 +7,15 @@ from unittest.mock import patch
 
 import pytest
 from sqlalchemy import inspect, text
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session, SQLModel, create_engine, select
 
 from module.conf.config import Settings
-from module.database.combine import CURRENT_SCHEMA_VERSION, Database
+from module.database.combine import CURRENT_SCHEMA_VERSION
+from module.database.migrations import (
+    create_tables,
+    get_schema_version,
+    run_migrations,
+)
 from module.models import Bangumi, RSSItem, Torrent, User
 
 # --- Mock old 3.1.x config (as stored in config.json) ---
@@ -141,9 +147,7 @@ class TestConfigMigration:
 
     def test_load_old_config_file(self):
         """Full integration: loading a 3.1.x config.json produces correct Settings."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(OLD_31X_CONFIG, f)
             config_path = Path(f.name)
 
@@ -171,9 +175,7 @@ class TestConfigMigration:
 
     def test_load_old_config_saves_migrated_format(self):
         """After loading old config, the saved file should use new field names."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(OLD_31X_CONFIG, f)
             config_path = Path(f.name)
 
@@ -310,16 +312,13 @@ class TestDatabaseMigration:
         assert "air_weekday" not in columns
 
         # Run migration
-        db = Database(engine)
-        db.create_table()
-        db.run_migrations()
+        create_tables(engine)
+        run_migrations(engine)
 
         # Verify air_weekday now exists
         inspector = inspect(engine)
         columns = [col["name"] for col in inspector.get_columns("bangumi")]
         assert "air_weekday" in columns
-
-        db.close()
 
     def test_migrate_preserves_existing_data(self):
         """Migration should not lose existing bangumi data."""
@@ -328,12 +327,15 @@ class TestDatabaseMigration:
         self._insert_old_data(engine)
 
         # Run migration
-        db = Database(engine)
-        db.create_table()
-        db.run_migrations()
+        create_tables(engine)
+        run_migrations(engine)
 
         # Check data is preserved
-        bangumis = db.bangumi.search_all()
+        with Session(engine) as s:
+            # SQLModel 类属性在 mypy 看来是普通字段类型而非 InstrumentedAttribute
+            # （无官方 mypy 插件支持）。
+            statement = select(Bangumi).order_by(Bangumi.id)  # type: ignore[arg-type]
+            bangumis = list(s.exec(statement).all())
         assert len(bangumis) == 2
         assert bangumis[0].official_title == "无职转生"
         assert bangumis[0].year == "2021"
@@ -345,23 +347,19 @@ class TestDatabaseMigration:
         assert bangumis[1].official_title == "咒术回战"
         assert bangumis[1].season == 2
 
-        db.close()
-
     def test_migrate_preserves_user_data(self):
         """User table should be intact after migration."""
         engine = create_engine("sqlite://", echo=False)
         self._create_old_31x_database(engine)
         self._insert_old_data(engine)
 
-        db = Database(engine)
-        db.create_table()
-        db.run_migrations()
+        create_tables(engine)
+        run_migrations(engine)
 
-        users = db.user.get_user("admin")
-        assert users is not None
-        assert users.username == "admin"
-
-        db.close()
+        with Session(engine) as s:
+            user = s.exec(select(User).where(User.username == "admin")).first()
+        assert user is not None
+        assert user.username == "admin"
 
     def test_migrate_preserves_rss_data(self):
         """RSS items should be preserved after migration."""
@@ -369,16 +367,14 @@ class TestDatabaseMigration:
         self._create_old_31x_database(engine)
         self._insert_old_data(engine)
 
-        db = Database(engine)
-        db.create_table()
-        db.run_migrations()
+        create_tables(engine)
+        run_migrations(engine)
 
-        rss = db.rss.search_id(1)
+        with Session(engine) as s:
+            rss = s.get(RSSItem, 1)
         assert rss is not None
         assert rss.url == "https://mikanani.me/RSS/MyBangumi?token=abc"
         assert rss.aggregate is True
-
-        db.close()
 
     def test_migrate_preserves_torrent_data(self):
         """Torrent data should be preserved after migration."""
@@ -386,16 +382,14 @@ class TestDatabaseMigration:
         self._create_old_31x_database(engine)
         self._insert_old_data(engine)
 
-        db = Database(engine)
-        db.create_table()
-        db.run_migrations()
+        create_tables(engine)
+        run_migrations(engine)
 
-        torrent = db.torrent.search(1)
+        with Session(engine) as s:
+            torrent = s.get(Torrent, 1)
         assert torrent is not None
         assert "[Lilith-Raws]" in torrent.name
         assert torrent.downloaded is True
-
-        db.close()
 
     def test_migrate_idempotent(self):
         """Running migration multiple times should not cause errors."""
@@ -404,15 +398,13 @@ class TestDatabaseMigration:
         self._insert_old_data(engine)
 
         # Run migration twice
-        db = Database(engine)
-        db.create_table()
-        db.run_migrations()
-        db.run_migrations()  # Should not fail
+        create_tables(engine)
+        run_migrations(engine)
+        run_migrations(engine)  # Should not fail
 
-        bangumis = db.bangumi.search_all()
+        with Session(engine) as s:
+            bangumis = list(s.exec(select(Bangumi)).all())
         assert len(bangumis) == 2
-
-        db.close()
 
     def test_new_bangumi_with_air_weekday(self):
         """After migration, new bangumi can be added with air_weekday."""
@@ -420,9 +412,8 @@ class TestDatabaseMigration:
         self._create_old_31x_database(engine)
         self._insert_old_data(engine)
 
-        db = Database(engine)
-        db.create_table()
-        db.run_migrations()
+        create_tables(engine)
+        run_migrations(engine)
 
         new_bangumi = Bangumi(
             official_title="葬送的芙莉莲",
@@ -435,15 +426,15 @@ class TestDatabaseMigration:
             added=True,
             air_weekday=5,  # Friday
         )
-        db.bangumi.add(new_bangumi)
-        db.commit()
+        with Session(engine) as s:
+            s.add(new_bangumi)
+            s.commit()
 
-        result = db.bangumi.search_id(3)
+        with Session(engine) as s:
+            result = s.get(Bangumi, 3)
         assert result is not None
         assert result.official_title == "葬送的芙莉莲"
         assert result.air_weekday == 5
-
-        db.close()
 
     def test_passkey_table_created(self):
         """Migration should create the new passkey table."""
@@ -451,15 +442,12 @@ class TestDatabaseMigration:
         self._create_old_31x_database(engine)
         self._insert_old_data(engine)
 
-        db = Database(engine)
-        db.create_table()
-        db.run_migrations()
+        create_tables(engine)
+        run_migrations(engine)
 
         inspector = inspect(engine)
         tables = inspector.get_table_names()
         assert "passkey" in tables
-
-        db.close()
 
     def test_schema_version_tracked(self):
         """After migration, schema_version table should store current version."""
@@ -467,16 +455,14 @@ class TestDatabaseMigration:
         self._create_old_31x_database(engine)
         self._insert_old_data(engine)
 
-        db = Database(engine)
-        db.create_table()
-        db.run_migrations()
+        create_tables(engine)
+        run_migrations(engine)
 
         # Verify schema_version table exists and has correct version
         inspector = inspect(engine)
         assert "schema_version" in inspector.get_table_names()
-        assert db._get_schema_version() == CURRENT_SCHEMA_VERSION
-
-        db.close()
+        with engine.connect() as conn:
+            assert get_schema_version(conn) == CURRENT_SCHEMA_VERSION
 
     def test_schema_version_skips_applied_migrations(self):
         """If schema version is current, run_migrations should be a no-op."""
@@ -484,17 +470,16 @@ class TestDatabaseMigration:
         self._create_old_31x_database(engine)
         self._insert_old_data(engine)
 
-        db = Database(engine)
-        db.create_table()
-        db.run_migrations()
+        create_tables(engine)
+        run_migrations(engine)
 
         # Set version to current - second run should skip
-        version_before = db._get_schema_version()
-        db.run_migrations()
-        version_after = db._get_schema_version()
+        with engine.connect() as conn:
+            version_before = get_schema_version(conn)
+        run_migrations(engine)
+        with engine.connect() as conn:
+            version_after = get_schema_version(conn)
         assert version_before == version_after == CURRENT_SCHEMA_VERSION
-
-        db.close()
 
     def test_schema_version_zero_for_old_db(self):
         """Old database without schema_version table should report version 0."""
@@ -502,7 +487,5 @@ class TestDatabaseMigration:
         self._create_old_31x_database(engine)
         self._insert_old_data(engine)
 
-        db = Database(engine)
-        assert db._get_schema_version() == 0
-
-        db.close()
+        with engine.connect() as conn:
+            assert get_schema_version(conn) == 0

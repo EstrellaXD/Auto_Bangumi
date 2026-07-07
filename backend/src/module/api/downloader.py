@@ -4,6 +4,11 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from module.database import Database
+from module.database.bangumi import (
+    build_save_path_index,
+    match_bangumi_in_list,
+    normalize_save_path,
+)
 from module.downloader import DownloadClient
 from module.security.api import get_current_user
 
@@ -23,6 +28,7 @@ class TorrentDeleteRequest(BaseModel):
 
 class TorrentTagRequest(BaseModel):
     """Request to tag a torrent with a bangumi ID."""
+
     hash: str
     bangumi_id: int
 
@@ -71,8 +77,8 @@ async def tag_torrent(req: TorrentTagRequest):
     the renamer to look up the correct episode/season offset.
     """
     # Verify bangumi exists
-    with Database() as db:
-        bangumi = db.bangumi.search_id(req.bangumi_id)
+    async with Database() as db:
+        bangumi = await db.bangumi.search_id(req.bangumi_id)
         if not bangumi:
             return {
                 "status": False,
@@ -101,45 +107,47 @@ async def auto_tag_torrents():
     tagged_count = 0
     unmatched = []
 
+    # Load the bangumi list once and match in memory instead of running up to
+    # two DB queries (plus save_path fallback variations) per torrent.
+    async with Database() as db:
+        bangumi_list = await db.bangumi.search_all()
+    save_path_index = build_save_path_index(bangumi_list)
+
     async with DownloadClient() as client:
         # Get all Bangumi torrents
         torrents = await client.get_torrent_info(category="Bangumi", status_filter=None)
 
-        with Database() as db:
-            for torrent in torrents:
-                torrent_hash = torrent["hash"]
-                torrent_name = torrent["name"]
-                save_path = torrent["save_path"]
-                tags = torrent.get("tags", "")
+        for torrent in torrents:
+            torrent_hash = torrent["hash"]
+            torrent_name = torrent["name"]
+            save_path = torrent["save_path"]
+            tags = torrent.get("tags", "")
 
-                # Skip if already has ab: tag
-                if "ab:" in tags:
-                    continue
+            # Skip if already has ab: tag
+            if "ab:" in tags:
+                continue
 
-                # Try to match bangumi
-                bangumi = None
+            # First try by torrent name, then fall back to save_path
+            bangumi = match_bangumi_in_list(torrent_name, bangumi_list)
+            if not bangumi:
+                bangumi = save_path_index.get(normalize_save_path(save_path))
 
-                # First try by torrent name
-                bangumi = db.bangumi.match_torrent(torrent_name)
-
-                # Then try by save_path
-                if not bangumi:
-                    bangumi = db.bangumi.match_by_save_path(save_path)
-
-                if bangumi and not bangumi.deleted:
-                    tag = f"ab:{bangumi.id}"
-                    await client.add_tag(torrent_hash, tag)
-                    tagged_count += 1
-                    logger.info(
-                        f"[AutoTag] Tagged '{torrent_name[:50]}...' with {tag} "
-                        f"(matched: {bangumi.official_title})"
-                    )
-                else:
-                    unmatched.append({
+            if bangumi and not bangumi.deleted:
+                tag = f"ab:{bangumi.id}"
+                await client.add_tag(torrent_hash, tag)
+                tagged_count += 1
+                logger.info(
+                    f"Tagged '{torrent_name[:50]}...' with {tag} "
+                    f"(matched: {bangumi.official_title})"
+                )
+            else:
+                unmatched.append(
+                    {
                         "hash": torrent_hash,
                         "name": torrent_name,
                         "save_path": save_path,
-                    })
+                    }
+                )
 
     return {
         "status": True,

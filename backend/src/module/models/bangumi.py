@@ -52,6 +52,15 @@ class Bangumi(SQLModel, table=True):
     title_aliases: Optional[str] = Field(
         default=None, alias="title_aliases", title="标题别名"
     )  # JSON list: ["alt_title_1", "alt_title_2"]
+    preferred_group: Optional[str] = Field(
+        default=None, alias="preferred_group", title="偏好字幕组"
+    )
+    preferred_resolution: Optional[str] = Field(
+        default=None, alias="preferred_resolution", title="偏好分辨率"
+    )
+    episode_type: str = Field(
+        default="episode", alias="episode_type", title="剧集类型"
+    )  # "episode" | "movie" | "special"
 
 
 class BangumiUpdate(SQLModel):
@@ -90,6 +99,15 @@ class BangumiUpdate(SQLModel):
     title_aliases: Optional[str] = Field(
         default=None, alias="title_aliases", title="标题别名"
     )
+    preferred_group: Optional[str] = Field(
+        default=None, alias="preferred_group", title="偏好字幕组"
+    )
+    preferred_resolution: Optional[str] = Field(
+        default=None, alias="preferred_resolution", title="偏好分辨率"
+    )
+    episode_type: str = Field(
+        default="episode", alias="episode_type", title="剧集类型"
+    )  # "episode" | "movie" | "special"
 
 
 class Notification(BaseModel):
@@ -111,6 +129,7 @@ class Episode:
     group: str
     resolution: str
     source: str
+    episode_type: str = "episode"  # "episode" | "movie" | "special"
 
 
 @dataclass(slots=True)

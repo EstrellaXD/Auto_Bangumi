@@ -38,6 +38,11 @@ const items: SettingItem<BangumiManage>[] = [
     label: () => t('config.manage_set.delete_bad_torrent'),
     type: 'switch',
   },
+  {
+    configKey: 'track_orphans',
+    label: () => t('config.manage_set.track_orphans'),
+    type: 'switch',
+  },
 ];
 </script>
 

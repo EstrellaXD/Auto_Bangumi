@@ -2,8 +2,9 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
+import jwt
+from jwt import PyJWTError
 
 _SECRET_PATH = Path("config/.jwt_secret")
 
@@ -14,14 +15,12 @@ def _load_or_create_secret() -> str:
     secret = secrets.token_hex(32)
     _SECRET_PATH.parent.mkdir(parents=True, exist_ok=True)
     _SECRET_PATH.write_text(secret)
+    _SECRET_PATH.chmod(0o600)
     return secret
 
 
 app_pwd_key = _load_or_create_secret()
 app_pwd_algorithm = "HS256"
-
-# Hashing 密码
-app_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 # 创建 JWT Token
@@ -37,31 +36,41 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 
 
 # 解码 Token
-def decode_token(token: str):
+def decode_token(token: str | None):
+    if not token:
+        return None
     try:
+        # 显式指定 algorithms，防止算法混淆攻击 (CVE-2024-33663 同类问题)
         payload = jwt.decode(token, app_pwd_key, algorithms=[app_pwd_algorithm])
         username = payload.get("sub")
         if username is None:
             return None
         return payload
-    except JWTError:
+    except PyJWTError:
         return None
 
 
-def verify_token(token: str):
-    token_data = decode_token(token)
-    if token_data is None:
-        return None
-    expires = token_data.get("exp")
-    if datetime.now(timezone.utc) >= datetime.fromtimestamp(expires, tz=timezone.utc):
-        raise JWTError("Token expired")
-    return token_data
+def verify_token(token: str | None):
+    # PyJWT 的 jwt.decode() 已经校验 "exp" 并在过期时抛出 PyJWTError（在上面
+    # 被捕获），所以 decode_token() 返回的 token 永远不会是过期的——这里无需
+    # 再单独检查过期时间。
+    return decode_token(token)
 
 
 # 密码加密&验证
-def verify_password(plain_password, hashed_password):
-    return app_pwd_context.verify(plain_password, hashed_password)
+def _truncate_password(password: str) -> bytes:
+    # bcrypt 只使用前 72 字节；passlib 时代会静默截断，bcrypt 5.x 则对超长输入
+    # 抛 ValueError。这里显式截断以保持 passlib 兼容语义：升级前用超长密码
+    # （UTF-8 下中文很容易超过 72 字节）注册的用户仍可用原密码登录，设置
+    # 超长新密码也不会报错。
+    return password.encode("utf-8")[:72]
 
 
-def get_password_hash(password):
-    return app_pwd_context.hash(password)
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return bcrypt.checkpw(
+        _truncate_password(plain_password), hashed_password.encode("utf-8")
+    )
+
+
+def get_password_hash(password: str) -> str:
+    return bcrypt.hashpw(_truncate_password(password), bcrypt.gensalt()).decode("utf-8")

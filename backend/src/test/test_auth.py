@@ -4,7 +4,6 @@ from datetime import timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
-from jose import JWTError
 
 from module.security.jwt import (
     create_access_token,
@@ -100,7 +99,7 @@ class TestVerifyToken:
         token = create_access_token(
             data={"sub": "user"}, expires_delta=timedelta(seconds=-10)
         )
-        # python-jose catches expired tokens during decode, so decode_token
+        # PyJWT catches expired tokens during decode, so decode_token
         # returns None, and verify_token propagates that as None
         result = verify_token(token)
         assert result is None
@@ -146,6 +145,51 @@ class TestPasswordHashing:
 
 
 # ---------------------------------------------------------------------------
+# Long (>72-byte) passwords — passlib silently truncated at 72 bytes, and
+# bcrypt 5.x raises ValueError instead. The wrappers must keep passlib's
+# truncation semantics so pre-upgrade users with long passwords can still
+# log in (and setting a long password doesn't 500).
+# ---------------------------------------------------------------------------
+
+
+class TestLongPasswordTruncation:
+    # 30 CJK chars * 3 bytes (UTF-8) = 90 bytes > 72-byte bcrypt limit
+    LONG_CJK_PASSWORD = "密码超过七十二字节" * 4
+
+    def test_get_password_hash_over_72_byte_cjk_password_hashes_and_verifies(self):
+        """A >72-byte multibyte password hashes without error and verifies."""
+        password = self.LONG_CJK_PASSWORD
+        assert len(password.encode("utf-8")) > 72
+        hashed = get_password_hash(password)
+        assert verify_password(password, hashed) is True
+
+    def test_verify_password_pre_upgrade_truncated_hash_full_password_verifies(self):
+        """A passlib-era hash (created from the first 72 bytes) still verifies
+        against the full long password after the bcrypt migration."""
+        import bcrypt
+
+        password = self.LONG_CJK_PASSWORD
+        legacy_hash = bcrypt.hashpw(
+            password.encode("utf-8")[:72], bcrypt.gensalt()
+        ).decode("utf-8")
+        assert verify_password(password, legacy_hash) is True
+
+    def test_verify_password_wrong_long_password_fails(self):
+        """A long password differing within its first 72 bytes still fails."""
+        hashed = get_password_hash(self.LONG_CJK_PASSWORD)
+        wrong = "错误密码完全不同的内容" * 4
+        assert len(wrong.encode("utf-8")) > 72
+        assert verify_password(wrong, hashed) is False
+
+    def test_verify_password_over_72_byte_ascii_password_roundtrip(self):
+        """A >72-byte pure-ASCII password also hashes and verifies."""
+        password = "a" * 100
+        hashed = get_password_hash(password)
+        assert verify_password(password, hashed) is True
+        assert verify_password("b" * 100, hashed) is False
+
+
+# ---------------------------------------------------------------------------
 # API Auth Flow (get_current_user)
 # ---------------------------------------------------------------------------
 
@@ -154,7 +198,6 @@ class TestGetCurrentUser:
     @staticmethod
     def _mock_request(authorization=""):
         """Create a mock Request with the given Authorization header."""
-        from unittest.mock import MagicMock
 
         request = MagicMock()
         request.headers = {"authorization": authorization}
@@ -179,7 +222,9 @@ class TestGetCurrentUser:
         from module.security.api import get_current_user
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(request=self._mock_request(), token="invalid.jwt.token")
+            await get_current_user(
+                request=self._mock_request(), token="invalid.jwt.token"
+            )
         assert exc_info.value.status_code == 401
 
     @patch("module.security.api.DEV_AUTH_BYPASS", False)
@@ -201,15 +246,13 @@ class TestGetCurrentUser:
     @patch("module.security.api.DEV_AUTH_BYPASS", False)
     async def test_valid_token_active_user_succeeds(self):
         """get_current_user returns username for valid token + active user."""
-        from datetime import datetime
-
         from module.security.api import active_user, get_current_user
 
         token = create_access_token(
             data={"sub": "active_user"}, expires_delta=timedelta(hours=1)
         )
         active_user.clear()
-        active_user["active_user"] = datetime.now()
+        active_user.add("active_user")
 
         result = await get_current_user(request=self._mock_request(), token=token)
         assert result == "active_user"
@@ -263,7 +306,6 @@ class TestGetCurrentUser:
 class TestCheckLoginIp:
     @staticmethod
     def _make_request(host: str | None):
-        from unittest.mock import MagicMock
 
         request = MagicMock()
         if host is None:

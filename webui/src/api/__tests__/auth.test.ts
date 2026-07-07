@@ -3,8 +3,14 @@
  * Note: These tests focus on the data structures and transformations
  */
 
-import { describe, it, expect } from 'vitest';
-import { mockLoginSuccess } from '@/test/mocks/api';
+import { describe, expect, it, vi } from 'vitest';
+import { mockApiSuccess, mockLoginSuccess } from '@/test/mocks/api';
+import { createAxiosMock } from '@/test/mocks/axios';
+
+import { apiAuth } from '@/api/auth';
+import { axios } from '@/utils/axios';
+
+vi.mock('@/utils/axios', () => ({ axios: createAxiosMock() }));
 
 describe('Auth API Data Structures', () => {
   describe('login response', () => {
@@ -62,28 +68,55 @@ describe('Auth API Data Structures', () => {
     });
   });
 
-  describe('API endpoint paths', () => {
-    const AUTH_ENDPOINTS = {
-      login: 'api/v1/auth/login',
-      logout: 'api/v1/auth/logout',
-      refresh: 'api/v1/auth/refresh_token',
-      update: 'api/v1/auth/update',
-    };
-
-    it('should have correct login endpoint', () => {
-      expect(AUTH_ENDPOINTS.login).toBe('api/v1/auth/login');
+  // Contract tests: call the real apiAuth functions against a mocked axios
+  // instance so a drift between the wrapper and the FastAPI routes in
+  // backend/src/module/api/auth.py fails a test instead of going unnoticed.
+  describe('API contract (path + HTTP method)', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
     });
 
-    it('should have correct logout endpoint', () => {
-      expect(AUTH_ENDPOINTS.logout).toBe('api/v1/auth/logout');
+    it('should POST api/v1/auth/login with form-encoded credentials when logging in', async () => {
+      (axios.post as any).mockResolvedValue({ data: mockLoginSuccess });
+      await apiAuth.login('testuser', 'testpassword');
+
+      expect(axios.post).toHaveBeenCalledTimes(1);
+      const [url, body, config] = (axios.post as any).mock.calls[0];
+      expect(url).toBe('api/v1/auth/login');
+      expect(body).toBeInstanceOf(URLSearchParams);
+      expect((body as URLSearchParams).get('username')).toBe('testuser');
+      expect((body as URLSearchParams).get('password')).toBe('testpassword');
+      expect(config.headers['Content-Type']).toBe(
+        'application/x-www-form-urlencoded'
+      );
     });
 
-    it('should have correct refresh endpoint', () => {
-      expect(AUTH_ENDPOINTS.refresh).toBe('api/v1/auth/refresh_token');
+    it('should GET api/v1/auth/refresh_token when refreshing the session', async () => {
+      (axios.get as any).mockResolvedValue({ data: mockLoginSuccess });
+      await apiAuth.refresh();
+      // silent: an expired-session refresh at startup must not toast; the 401
+      // handler still logs out and routes to /login.
+      expect(axios.get).toHaveBeenCalledWith('api/v1/auth/refresh_token', {
+        silent: true,
+      });
     });
 
-    it('should have correct update endpoint', () => {
-      expect(AUTH_ENDPOINTS.update).toBe('api/v1/auth/update');
+    it('should POST api/v1/auth/logout when logging out', async () => {
+      (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiAuth.logout();
+      expect(axios.post).toHaveBeenCalledWith('api/v1/auth/logout');
+    });
+
+    it('should POST api/v1/auth/update with the new credentials when updating', async () => {
+      (axios.post as any).mockResolvedValue({
+        ...mockLoginSuccess,
+        message: 'update success',
+      });
+      await apiAuth.update('newuser', 'newpassword123');
+      expect(axios.post).toHaveBeenCalledWith('api/v1/auth/update', {
+        username: 'newuser',
+        password: 'newpassword123',
+      });
     });
   });
 });

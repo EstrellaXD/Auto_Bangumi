@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3';
+import { ref } from 'vue';
 
 import AbSelect from './ab-select.vue';
 
@@ -12,11 +13,17 @@ export default meta;
 type Story = StoryObj<typeof AbSelect>;
 
 export const Template: Story = {
-  render: (args) => ({
+  render: () => ({
     components: { AbSelect },
     setup() {
-      return { args };
+      const value = ref('mikan');
+      return { value };
     },
-    template: '<ab-select v-bind="args" />',
+    template: `
+      <ab-select
+        v-model="value"
+        :items="['mikan', 'dmhy', 'nyaa']"
+        style="width:200px"
+      />`,
   }),
 };

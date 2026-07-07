@@ -250,6 +250,7 @@ class TestE2EWorkflow:
             "log",
             "proxy",
             "notification",
+            "llm",
             "experimental_openai",
         ):
             assert section in config, f"Missing config section: {section}"
@@ -394,9 +395,9 @@ class TestE2EWorkflow:
         assert resp.status_code == 200
 
     def test_39c_disable_nonexistent_rss(self, api_client):
-        """Disabling a non-existent RSS ID returns 406."""
+        """Disabling a non-existent RSS ID returns 404."""
         resp = api_client.patch("/api/v1/rss/disable/99999")
-        assert resp.status_code == 406
+        assert resp.status_code == 404
 
     def test_39d_delete_rss(self, api_client, e2e_state):
         """Delete the second RSS feed."""
@@ -434,7 +435,7 @@ class TestE2EWorkflow:
 
     def test_43_bangumi_reset_all(self, api_client):
         """Reset all bangumi (safe when list is empty)."""
-        resp = api_client.get("/api/v1/bangumi/reset/all")
+        resp = api_client.post("/api/v1/bangumi/reset/all")
         assert resp.status_code == 200
 
     # ===================================================================
@@ -454,9 +455,7 @@ class TestE2EWorkflow:
 
     def test_52_downloader_pause_empty(self, api_client):
         """Pausing with empty hash list should succeed (no-op)."""
-        resp = api_client.post(
-            "/api/v1/downloader/torrents/pause", json={"hashes": []}
-        )
+        resp = api_client.post("/api/v1/downloader/torrents/pause", json={"hashes": []})
         assert resp.status_code == 200
 
     def test_53_downloader_resume_empty(self, api_client):
@@ -498,8 +497,10 @@ class TestE2EWorkflow:
             data={"username": "admin", "password": qb_password},
             timeout=5.0,
         )
-        assert resp.status_code == 200
-        assert "ok" in resp.text.lower()
+        # 旧版 qB 返回 200 + "Ok."，新版镜像返回 204 无响应体
+        assert resp.status_code in (200, 204)
+        if resp.status_code == 200:
+            assert "ok" in resp.text.lower()
 
     # ===================================================================
     # Phase 7: Program Lifecycle
@@ -519,27 +520,27 @@ class TestE2EWorkflow:
 
     def test_61_program_stop_when_not_running(self, api_client):
         """Stopping a program that isn't running returns 406."""
-        resp = api_client.get("/api/v1/stop")
+        resp = api_client.post("/api/v1/stop")
         assert resp.status_code == 406
 
     def test_62_program_start(self, api_client):
         """Explicitly start the program."""
-        resp = api_client.get("/api/v1/start")
+        resp = api_client.post("/api/v1/start")
         assert resp.status_code == 200
 
     def test_63_program_stop(self, api_client):
         """Stop the now-running program."""
-        resp = api_client.get("/api/v1/stop")
+        resp = api_client.post("/api/v1/stop")
         assert resp.status_code == 200
 
     def test_64_program_stop_already_stopped(self, api_client):
         """Stopping again returns 406 (not running)."""
-        resp = api_client.get("/api/v1/stop")
+        resp = api_client.post("/api/v1/stop")
         assert resp.status_code == 406
 
     def test_65_program_restart(self, api_client):
         """Restart works even from a stopped state."""
-        resp = api_client.get("/api/v1/restart")
+        resp = api_client.post("/api/v1/restart")
         assert resp.status_code == 200
 
     # ===================================================================
@@ -556,7 +557,7 @@ class TestE2EWorkflow:
 
     def test_71_clear_log(self, api_client):
         """Clear the log file."""
-        resp = api_client.get("/api/v1/log/clear")
+        resp = api_client.post("/api/v1/log/clear")
         # 200 if log exists, 406 if not found
         assert resp.status_code in (200, 406)
 
@@ -651,7 +652,7 @@ class TestE2EWorkflow:
 
     def test_93_logout(self, api_client):
         """Logout clears the auth session and deletes cookie."""
-        resp = api_client.get("/api/v1/auth/logout")
+        resp = api_client.post("/api/v1/auth/logout")
         assert resp.status_code == 200
 
     def test_94_verify_logged_out(self, api_client):

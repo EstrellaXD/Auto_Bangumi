@@ -1,17 +1,16 @@
 """Tests for extended Bangumi API endpoints (archive, refresh, offset, batch)."""
 
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from module.api import v1
-from module.models import Bangumi, ResponseModel
+from module.database import get_db
+from module.models import ResponseModel
 from module.security.api import get_current_user
-
 from test.factories import make_bangumi
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -23,6 +22,11 @@ def app():
     """Create a FastAPI app with v1 routes for testing."""
     app = FastAPI()
     app.include_router(v1, prefix="/api")
+
+    async def _override_get_db():
+        yield MagicMock()
+
+    app.dependency_overrides[get_db] = _override_get_db
     return app
 
 
@@ -57,10 +61,8 @@ class TestArchiveBangumi:
             status=True, status_code=200, msg_en="Archived.", msg_zh="已归档。"
         )
         with patch("module.api.bangumi.TorrentManager") as MockManager:
-            mock_mgr = MagicMock()
-            mock_mgr.archive_rule.return_value = resp_model
-            MockManager.return_value.__enter__ = MagicMock(return_value=mock_mgr)
-            MockManager.return_value.__exit__ = MagicMock(return_value=False)
+            mock_mgr = MockManager.return_value
+            mock_mgr.archive_rule = AsyncMock(return_value=resp_model)
 
             response = authed_client.patch("/api/v1/bangumi/archive/1")
 
@@ -72,10 +74,8 @@ class TestArchiveBangumi:
             status=True, status_code=200, msg_en="Unarchived.", msg_zh="已取消归档。"
         )
         with patch("module.api.bangumi.TorrentManager") as MockManager:
-            mock_mgr = MagicMock()
-            mock_mgr.unarchive_rule.return_value = resp_model
-            MockManager.return_value.__enter__ = MagicMock(return_value=mock_mgr)
-            MockManager.return_value.__exit__ = MagicMock(return_value=False)
+            mock_mgr = MockManager.return_value
+            mock_mgr.unarchive_rule = AsyncMock(return_value=resp_model)
 
             response = authed_client.patch("/api/v1/bangumi/unarchive/1")
 
@@ -94,10 +94,8 @@ class TestRefreshBangumi:
             status=True, status_code=200, msg_en="Refreshed.", msg_zh="已刷新。"
         )
         with patch("module.api.bangumi.TorrentManager") as MockManager:
-            mock_mgr = MagicMock()
+            mock_mgr = MockManager.return_value
             mock_mgr.refresh_poster = AsyncMock(return_value=resp_model)
-            MockManager.return_value.__enter__ = MagicMock(return_value=mock_mgr)
-            MockManager.return_value.__exit__ = MagicMock(return_value=False)
 
             response = authed_client.get("/api/v1/bangumi/refresh/poster/all")
 
@@ -109,10 +107,8 @@ class TestRefreshBangumi:
             status=True, status_code=200, msg_en="Refreshed.", msg_zh="已刷新。"
         )
         with patch("module.api.bangumi.TorrentManager") as MockManager:
-            mock_mgr = MagicMock()
+            mock_mgr = MockManager.return_value
             mock_mgr.refind_poster = AsyncMock(return_value=resp_model)
-            MockManager.return_value.__enter__ = MagicMock(return_value=mock_mgr)
-            MockManager.return_value.__exit__ = MagicMock(return_value=False)
 
             response = authed_client.get("/api/v1/bangumi/refresh/poster/1")
 
@@ -124,10 +120,8 @@ class TestRefreshBangumi:
             status=True, status_code=200, msg_en="Refreshed.", msg_zh="已刷新。"
         )
         with patch("module.api.bangumi.TorrentManager") as MockManager:
-            mock_mgr = MagicMock()
+            mock_mgr = MockManager.return_value
             mock_mgr.refresh_calendar = AsyncMock(return_value=resp_model)
-            MockManager.return_value.__enter__ = MagicMock(return_value=mock_mgr)
-            MockManager.return_value.__exit__ = MagicMock(return_value=False)
 
             response = authed_client.get("/api/v1/bangumi/refresh/calendar")
 
@@ -139,10 +133,8 @@ class TestRefreshBangumi:
             status=True, status_code=200, msg_en="Refreshed.", msg_zh="已刷新。"
         )
         with patch("module.api.bangumi.TorrentManager") as MockManager:
-            mock_mgr = MagicMock()
+            mock_mgr = MockManager.return_value
             mock_mgr.refresh_metadata = AsyncMock(return_value=resp_model)
-            MockManager.return_value.__enter__ = MagicMock(return_value=mock_mgr)
-            MockManager.return_value.__exit__ = MagicMock(return_value=False)
 
             response = authed_client.get("/api/v1/bangumi/refresh/metadata")
 
@@ -159,10 +151,8 @@ class TestOffsetDetection:
         """GET /bangumi/suggest-offset/{id} returns offset suggestion."""
         suggestion = {"suggested_offset": 12, "reason": "Season 2 starts at episode 13"}
         with patch("module.api.bangumi.TorrentManager") as MockManager:
-            mock_mgr = MagicMock()
+            mock_mgr = MockManager.return_value
             mock_mgr.suggest_offset = AsyncMock(return_value=suggestion)
-            MockManager.return_value.__enter__ = MagicMock(return_value=mock_mgr)
-            MockManager.return_value.__exit__ = MagicMock(return_value=False)
 
             response = authed_client.get("/api/v1/bangumi/suggest-offset/1")
 
@@ -252,6 +242,14 @@ class TestOffsetDetection:
 # ---------------------------------------------------------------------------
 
 
+def _async_db_mock(mock_db):
+    """Wrap a repo mock as an async-CM Database() replacement."""
+    MockDB = MagicMock()
+    MockDB.return_value.__aenter__ = AsyncMock(return_value=mock_db)
+    MockDB.return_value.__aexit__ = AsyncMock(return_value=False)
+    return MockDB
+
+
 class TestNeedsReview:
     def test_get_needs_review(self, authed_client):
         """GET /bangumi/needs-review returns bangumi needing review."""
@@ -259,12 +257,9 @@ class TestNeedsReview:
             make_bangumi(id=1, official_title="Anime 1"),
             make_bangumi(id=2, official_title="Anime 2"),
         ]
-        with patch("module.api.bangumi.Database") as MockDB:
-            mock_db = MagicMock()
-            mock_db.bangumi.get_needs_review.return_value = bangumi_list
-            MockDB.return_value.__enter__ = MagicMock(return_value=mock_db)
-            MockDB.return_value.__exit__ = MagicMock(return_value=False)
-
+        mock_db = MagicMock()
+        mock_db.bangumi.get_needs_review = AsyncMock(return_value=bangumi_list)
+        with patch("module.api.bangumi.Database", _async_db_mock(mock_db)):
             response = authed_client.get("/api/v1/bangumi/needs-review")
 
         assert response.status_code == 200
@@ -273,12 +268,9 @@ class TestNeedsReview:
 
     def test_dismiss_review_success(self, authed_client):
         """POST /bangumi/dismiss-review/{id} clears review flag."""
-        with patch("module.api.bangumi.Database") as MockDB:
-            mock_db = MagicMock()
-            mock_db.bangumi.clear_needs_review.return_value = True
-            MockDB.return_value.__enter__ = MagicMock(return_value=mock_db)
-            MockDB.return_value.__exit__ = MagicMock(return_value=False)
-
+        mock_db = MagicMock()
+        mock_db.bangumi.clear_needs_review = AsyncMock(return_value=True)
+        with patch("module.api.bangumi.Database", _async_db_mock(mock_db)):
             response = authed_client.post("/api/v1/bangumi/dismiss-review/1")
 
         assert response.status_code == 200
@@ -287,15 +279,128 @@ class TestNeedsReview:
 
     def test_dismiss_review_not_found(self, authed_client):
         """POST /bangumi/dismiss-review/{id} with non-existent bangumi."""
-        with patch("module.api.bangumi.Database") as MockDB:
-            mock_db = MagicMock()
-            mock_db.bangumi.clear_needs_review.return_value = False
-            MockDB.return_value.__enter__ = MagicMock(return_value=mock_db)
-            MockDB.return_value.__exit__ = MagicMock(return_value=False)
-
+        mock_db = MagicMock()
+        mock_db.bangumi.clear_needs_review = AsyncMock(return_value=False)
+        with patch("module.api.bangumi.Database", _async_db_mock(mock_db)):
             response = authed_client.post("/api/v1/bangumi/dismiss-review/999")
 
         assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Apply offset endpoints
+# ---------------------------------------------------------------------------
+
+
+class TestApplyOffset:
+    def test_apply_offset_success_triggers_rename(self, authed_client):
+        """POST /bangumi/apply-offset/{id} applies offset and reruns the renamer."""
+        mock_db = MagicMock()
+        mock_db.bangumi.apply_offset = AsyncMock(return_value=True)
+        mock_renamer = AsyncMock()
+        with patch("module.api.bangumi.Database", _async_db_mock(mock_db)):
+            with patch("module.api.bangumi.Renamer", return_value=mock_renamer):
+                with patch("module.api.bangumi.DownloadClient") as MockClient:
+                    MockClient.return_value.__aenter__ = AsyncMock(
+                        return_value=MagicMock()
+                    )
+                    MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
+                    response = authed_client.post("/api/v1/bangumi/apply-offset/1")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] is True
+        mock_db.bangumi.apply_offset.assert_awaited_once_with(1)
+        mock_renamer.rename.assert_awaited_once()
+
+    def test_apply_offset_not_found_skips_rename(self, authed_client):
+        """POST /bangumi/apply-offset/{id} with a non-existent bangumi does not rename."""
+        mock_db = MagicMock()
+        mock_db.bangumi.apply_offset = AsyncMock(return_value=False)
+        with patch("module.api.bangumi.Database", _async_db_mock(mock_db)):
+            with patch("module.api.bangumi.Renamer") as MockRenamer:
+                response = authed_client.post("/api/v1/bangumi/apply-offset/999")
+
+        assert response.status_code == 404
+        MockRenamer.assert_not_called()
+
+    def test_apply_offset_many_success(self, authed_client):
+        """POST /bangumi/apply-offset/many applies offsets to every id and renames once."""
+        mock_db = MagicMock()
+        mock_db.bangumi.apply_offset = AsyncMock(side_effect=[True, True])
+        mock_renamer = AsyncMock()
+        with patch("module.api.bangumi.Database", _async_db_mock(mock_db)):
+            with patch("module.api.bangumi.Renamer", return_value=mock_renamer):
+                with patch("module.api.bangumi.DownloadClient") as MockClient:
+                    MockClient.return_value.__aenter__ = AsyncMock(
+                        return_value=MagicMock()
+                    )
+                    MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
+                    response = authed_client.post(
+                        "/api/v1/bangumi/apply-offset/many", json=[1, 2]
+                    )
+
+        assert response.status_code == 200
+        assert mock_db.bangumi.apply_offset.await_count == 2
+        mock_renamer.rename.assert_awaited_once()
+
+    def test_apply_offset_many_partial_failure(self, authed_client):
+        """POST /bangumi/apply-offset/many reports a partial failure and still renames."""
+        mock_db = MagicMock()
+        mock_db.bangumi.apply_offset = AsyncMock(side_effect=[True, False])
+        mock_renamer = AsyncMock()
+        with patch("module.api.bangumi.Database", _async_db_mock(mock_db)):
+            with patch("module.api.bangumi.Renamer", return_value=mock_renamer):
+                with patch("module.api.bangumi.DownloadClient") as MockClient:
+                    MockClient.return_value.__aenter__ = AsyncMock(
+                        return_value=MagicMock()
+                    )
+                    MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
+                    response = authed_client.post(
+                        "/api/v1/bangumi/apply-offset/many", json=[1, 2]
+                    )
+
+        assert response.status_code == 500
+        mock_renamer.rename.assert_awaited_once()
+
+    def test_apply_offset_many_empty_list(self, authed_client):
+        """POST /bangumi/apply-offset/many with an empty list is a 400, no DB/rename calls."""
+        with patch("module.api.bangumi.Renamer") as MockRenamer:
+            response = authed_client.post("/api/v1/bangumi/apply-offset/many", json=[])
+
+        assert response.status_code == 400
+        MockRenamer.assert_not_called()
+
+    def test_apply_offset_auth_required(self, unauthed_client):
+        """POST /bangumi/apply-offset/{id} requires authentication."""
+        with patch("module.security.api.DEV_AUTH_BYPASS", False):
+            response = unauthed_client.post("/api/v1/bangumi/apply-offset/1")
+        assert response.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# Batch operations
+# ---------------------------------------------------------------------------
+
+
+class TestSetWeekday:
+    def test_set_weekday_success(self, authed_client):
+        """PATCH /bangumi/{id}/weekday sets the broadcast weekday."""
+        mock_db = MagicMock()
+        mock_db.bangumi.set_weekday = AsyncMock(return_value=True)
+        with patch("module.api.bangumi.Database", _async_db_mock(mock_db)):
+            response = authed_client.patch(
+                "/api/v1/bangumi/1/weekday", json={"weekday": 5}
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] is True
+
+    def test_set_weekday_out_of_range(self, authed_client):
+        """PATCH /bangumi/{id}/weekday rejects weekday outside 0-6."""
+        response = authed_client.patch("/api/v1/bangumi/1/weekday", json={"weekday": 9})
+        assert response.status_code == 400
 
 
 # ---------------------------------------------------------------------------
@@ -305,23 +410,21 @@ class TestNeedsReview:
 
 class TestBatchOperations:
     def test_delete_many_auth_required(self, unauthed_client):
-        """DELETE /bangumi/delete/many/ requires authentication."""
+        """POST /bangumi/delete/many requires authentication."""
         # Note: The batch endpoints accept list as body but FastAPI requires
         # proper Query/Body annotations. Testing auth requirement only.
         with patch("module.security.api.DEV_AUTH_BYPASS", False):
-            response = unauthed_client.request(
-                "DELETE",
-                "/api/v1/bangumi/delete/many/",
+            response = unauthed_client.post(
+                "/api/v1/bangumi/delete/many",
                 json=[1, 2, 3],
             )
         assert response.status_code == 401
 
     def test_disable_many_auth_required(self, unauthed_client):
-        """DELETE /bangumi/disable/many/ requires authentication."""
+        """POST /bangumi/disable/many requires authentication."""
         with patch("module.security.api.DEV_AUTH_BYPASS", False):
-            response = unauthed_client.request(
-                "DELETE",
-                "/api/v1/bangumi/disable/many/",
+            response = unauthed_client.post(
+                "/api/v1/bangumi/disable/many",
                 json=[1, 2],
             )
         assert response.status_code == 401

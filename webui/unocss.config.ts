@@ -45,6 +45,7 @@ export default defineConfig({
       warning: 'var(--color-warning)',
       surface: 'var(--color-surface)',
       'surface-hover': 'var(--color-surface-hover)',
+      'surface-2': 'var(--color-surface-2)',
       'text-primary': 'var(--color-text)',
       'text-secondary': 'var(--color-text-secondary)',
       'text-muted': 'var(--color-text-muted)',
@@ -61,19 +62,22 @@ export default defineConfig({
     [
       'bg-theme-row',
       {
-        background: 'linear-gradient(90.5deg, var(--color-primary) 1.53%, var(--color-primary-hover) 96.48%)',
+        background:
+          'linear-gradient(90.5deg, var(--color-primary) 1.53%, var(--color-primary-hover) 96.48%)',
       },
     ],
     [
       'bg-theme-col',
       {
-        background: 'linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-hover) 100%)',
+        background:
+          'linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-hover) 100%)',
       },
     ],
     [
       'poster-shandow',
       {
-        filter: 'drop-shadow(2px 2px 2px var(--shadow-color, rgba(0, 0, 0, 0.1)))',
+        filter:
+          'drop-shadow(2px 2px 2px var(--shadow-color, rgba(0, 0, 0, 0.1)))',
       },
     ],
     [
@@ -117,17 +121,6 @@ export default defineConfig({
 
     // input
     {
-      'ab-input': `outline-none min-w-0 w-full sm:w-200 h-36 sm:h-28
-                     px-12 text-main text-right
-                     rounded-6
-                     border-1 border-border
-                     bg-surface text-text-primary
-                     hover:border-primary
-                     focus:border-primary focus:ring-2 focus:ring-primary/20
-                     transition-colors duration-150
-                    `,
-
-      'input-error': 'border-danger',
       'input-reset': 'bg-transparent min-w-0 flex-1 outline-none',
     },
 

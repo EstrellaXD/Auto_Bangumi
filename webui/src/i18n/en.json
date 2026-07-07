@@ -2,7 +2,17 @@
   "config": {
     "apply": "Apply",
     "cancel": "Cancel",
+    "discard": "Discard",
+    "discard_confirm": "Discard unsaved changes?",
+    "leave_confirm": "You have unsaved changes. Leave and discard them?",
+    "no_match": "No settings match the search",
+    "restart_confirm": "Saving restarts AutoBangumi to apply the new settings. Continue?",
+    "save_restart": "Save & restart",
+    "search_placeholder": "Search settings…",
+    "unsaved_count": "1 unsaved change | {count} unsaved changes",
+    "unsaved_none": "No unsaved changes",
     "downloader_set": {
+      "aria2_hint": "For aria2, enter the RPC secret in the password field (username is ignored). Host example: 172.17.0.1:6800",
       "host": "Host",
       "password": "Password",
       "path": "Download Path",
@@ -11,16 +21,43 @@
       "type": "Downloader Type",
       "username": "Username"
     },
-    "experimental_openai_set": {
-      "api_base": "API Base URL",
+    "llm_set": {
       "api_key": "API Key",
-      "api_type": "Provider",
-      "api_version": "API Version",
-      "deployment_id": "Deployment ID",
+      "base_url": "Base URL",
+      "cache_ttl": "Result cache (seconds)",
       "enable": "Enable LLM Parsing",
+      "failure_backoff": "Pause after failures (seconds)",
+      "failure_threshold": "Failures before pausing",
+      "hint": "The openai provider works with any OpenAI-compatible endpoint (DeepSeek, Ollama, LM Studio, OpenRouter, etc.). claude-haiku-4-5 and gemini-2.5-flash are economical choices.",
+      "max_concurrency": "Max concurrent requests",
+      "mode": "Parse Mode",
+      "models_failed": "Failed to fetch the model list — check the API key (and Base URL).",
+      "mode_fallback": "Fallback (regex first)",
+      "mode_primary": "Primary (LLM first)",
       "model": "Model",
-      "title": "LLM Settings",
-      "warning": "Experimental: LLM-based anime title parsing may produce inaccurate results."
+      "provider": "Provider",
+      "timeout": "Request timeout (seconds)",
+      "title": "LLM Parser",
+      "group_builtin": "Built-in",
+      "group_installed": "Installed presets",
+      "group_subscription": "Subscription",
+      "group_available": "Available to download",
+      "not_installed": "This provider is not installed yet.",
+      "install": "Install",
+      "install_success": "Provider installed",
+      "install_failed": "Install failed",
+      "uninstall": "Uninstall",
+      "connect": "Connect",
+      "disconnect": "Disconnect",
+      "connected_as": "Connected as {account}",
+      "risk_notice": "This provider uses an unofficial subscription flow. Third-party use may violate the vendor's terms and could get your account restricted. Continue at your own risk.",
+      "risk_cancel": "Cancel",
+      "risk_confirm": "Install anyway",
+      "auth_open_link": "Open this link on any device, authorize, then paste the code below:",
+      "auth_paste_code": "Paste the code or redirect URL here",
+      "auth_device_hint": "Open this link and enter the code to authorize:",
+      "auth_pending": "Waiting for authorization…",
+      "auth_failed": "Authorization failed"
     },
     "manage_set": {
       "delete_bad_torrent": "Delete Bad Torrent",
@@ -28,17 +65,18 @@
       "eps": "EPS complete",
       "group_tag": "Add Group Tag",
       "method": "Rename Method",
-      "title": "Manage Setting"
+      "title": "Manage Setting",
+      "track_orphans": "Track Unmatched Torrents"
     },
     "media_player_set": {
       "title": "Media Player Setting",
-      "type": "type",
-      "url": "url"
+      "type": "Type",
+      "url": "Player URL"
     },
     "normal_set": {
       "debug": "Debug",
-      "rename_interval": "Interval Time of Rename",
-      "rss_interval": "Interval Time of Rss",
+      "rename_interval": "Rename interval (seconds)",
+      "rss_interval": "RSS check interval (seconds)",
       "title": "Normal Setting",
       "web_port": "WebUI Port"
     },
@@ -53,6 +91,7 @@
       "add_provider": "Add Provider",
       "edit_provider": "Edit Provider",
       "remove": "Remove",
+      "remove_confirm": "Remove this notification provider?",
       "edit": "Edit",
       "test": "Test",
       "enable_provider": "Enable",
@@ -90,6 +129,7 @@
     "search_provider_set": {
       "title": "Search Provider",
       "add_new": "Add Provider",
+      "remove": "Remove",
       "add_title": "Add Search Provider",
       "edit_title": "Edit Search Provider",
       "name": "Name",
@@ -100,7 +140,21 @@
       "url_missing_placeholder": "URL must contain %s as search keyword placeholder",
       "default": "Default",
       "no_providers": "No search providers configured",
-      "delete_confirm": "Are you sure you want to delete this provider?"
+      "delete_confirm": "Are you sure you want to delete this provider?",
+      "load_failed": "Failed to load search providers",
+      "save_failed": "Failed to save search providers",
+      "save_success": "Search providers saved",
+      "mode_custom": "Custom URL",
+      "mode_nexusphp": "PT Site (NexusPHP)",
+      "name_placeholder_nexusphp": "e.g., audiences",
+      "base_url": "Site URL",
+      "base_url_placeholder": "https://audiences.me",
+      "passkey": "Passkey",
+      "passkey_placeholder": "Passkey from the site's user control panel",
+      "category_id": "Category ID (optional)",
+      "category_id_placeholder": "e.g., 402",
+      "nexusphp_hint": "Builds a torrentrss.php search template from your passkey. Note: stock NexusPHP ignores the search parameter and always returns the latest torrents — verify on your site that RSS search actually filters results.",
+      "category_id_invalid": "Category IDs must be numeric (comma-separated for multiple)"
     }
   },
   "downloader": {
@@ -139,10 +193,16 @@
     "action": {
       "pause": "Pause",
       "resume": "Resume",
-      "delete": "Delete"
+      "delete": "Delete",
+      "delete_confirm": "Remove the selected torrents from the downloader? Downloaded files are kept."
     }
   },
   "homepage": {
+    "load_failed": {
+      "title": "Could not load your subscriptions",
+      "subtitle": "The backend did not respond. Check that AutoBangumi is running, then retry.",
+      "retry": "Retry"
+    },
     "empty": {
       "title": "No subscriptions yet",
       "subtitle": "Get started by adding your first RSS feed",
@@ -157,7 +217,9 @@
     "rule": {
       "apply": "Apply",
       "delete": "Delete",
-      "delete_hit": "Delete Local File?",
+      "delete_confirm": "This rule will be deleted. This cannot be undone.",
+      "delete_files_label": "Also delete downloaded files",
+      "cancel_btn": "Cancel",
       "disable": "Disable",
       "edit": "Edit",
       "edit_rule": "Edit Rule",
@@ -168,9 +230,17 @@
       "no_btn": "No",
       "official_title": "Official Title",
       "episode_offset": "Episode Offset",
+      "air_weekday": "Air Weekday",
       "season_offset": "Season Offset",
       "auto_detect": "Auto Detect",
       "needs_review": "Needs Review",
+      "preferred_group": "Preferred group",
+      "preferred_resolution": "Preferred resolution",
+      "preferred_hint": "When set, the RSS refresh skips duplicate releases that don't match while a preferred one exists.",
+      "episode_type": "Content type",
+      "type_episode": "Series",
+      "type_movie": "Movie",
+      "type_special": "Special",
       "archive": "Archive",
       "unarchive": "Unarchive",
       "archived": "Archived",
@@ -180,20 +250,81 @@
       "unnamed": "Unnamed Rule",
       "season": "Season",
       "year": "Year",
-      "yes_btn": "Yes"
+      "yes_btn": "Yes",
+      "view_torrents": "View torrents"
+    },
+    "others": {
+      "title": "Unmatched torrents"
+    },
+    "torrents": {
+      "title": "Torrents",
+      "delete": "Delete",
+      "deleteAll": "Delete All",
+      "downloaded": "Downloaded",
+      "empty": "No torrents",
+      "confirm_clear": "Are you sure you want to delete all torrents? This cannot be undone.",
+      "select_all": "Select All",
+      "deselect_all": "Deselect All",
+      "delete_selected": "Delete ({count})",
+      "deleted_one": "Deleted torrent {id}",
+      "deleted_count": "Deleted {count} torrents",
+      "cleared_all": "Cleared all torrents",
+      "load_failed": "Failed to load torrent list",
+      "delete_failed": "Failed to delete",
+      "source": {
+        "manual": "Manual"
+      }
     }
   },
   "log": {
-    "bug_repo": "Bug Report",
-    "clear_filters": "Clear",
-    "contact_info": "Contact Infomation",
+    "about": "About",
+    "clear_filters": "Clear filter",
     "copy": "Copy",
+    "empty": "No log entries yet. The log fills up once background tasks start running.",
     "filter_level": "Level",
-    "go": "Go",
-    "join": "Join",
-    "reset": "Reset",
+    "filtered_empty": "No entries match the current filters.",
+    "health_summary": "{errors} errors · {warnings} warnings in this log",
+    "jump_first": "Jump to first",
+    "report_bug": "Report a bug",
+    "reset": "Clear log",
+    "reset_confirm": "Clear the log? This cannot be undone.",
+    "search_placeholder": "Search log…",
+    "telegram_group": "Telegram group",
     "title": "Log",
-    "update_now": "Update Now"
+    "update_now": "Refresh",
+    "website": "Official website"
+  },
+  "update": {
+    "title": "Software Update",
+    "current_version": "Current version",
+    "latest_version": "Latest version",
+    "channel": "Update channel",
+    "channel_stable": "Stable",
+    "channel_beta": "Beta",
+    "auto_check": "Check automatically",
+    "check": "Check for updates",
+    "checking": "Checking…",
+    "found_new": "New version {version} available",
+    "last_checked": "Last checked {time}",
+    "up_to_date": "You are on the latest version.",
+    "update_available": "Update available",
+    "update_now": "Update now",
+    "release_notes": "Release notes",
+    "rollback": "Roll back",
+    "rollback_confirm": "Roll back to the previous version? The app will restart.",
+    "confirm_title": "Update AutoBangumi?",
+    "confirm_body": "The update will be downloaded and applied, then the app will restart to take effect.",
+    "restart_note": "In-app update needs the container to run with `restart: unless-stopped` so it can restart itself to apply the update.",
+    "restarting": "Applying update and restarting… this page will reload automatically.",
+    "restart_timeout": "The app is taking a while to come back. Make sure the container runs with `restart: unless-stopped`, or restart it manually.",
+    "applied_overlay": "Running an updated overlay (v{version}) on top of the image.",
+    "phase_downloading": "Downloading",
+    "phase_verifying": "Verifying",
+    "phase_unpacking": "Unpacking",
+    "phase_promoting": "Finalizing",
+    "success": "Update applied. Restarting…",
+    "failed": "Update failed",
+    "check_failed": "Failed to check for updates"
   },
   "login": {
     "login_btn": "Login",
@@ -205,6 +336,7 @@
   "passkey": {
     "add_new": "Add Passkey",
     "created_at": "Created",
+    "delete": "Delete",
     "delete_confirm": "Are you sure you want to delete this passkey?",
     "delete_failed": "Delete failed",
     "delete_success": "Passkey deleted",
@@ -248,20 +380,26 @@
     }
   },
   "rss": {
+    "active": "Active",
+    "aggregate": "Aggregate",
     "connected": "Connected",
     "delete": "Delete",
+    "delete_confirm": "Delete the selected RSS feeds? Existing rules and downloads are kept.",
     "disable": "Disable",
     "enable": "Enable",
     "error": "Error",
+    "inactive": "Inactive",
     "name": "Name",
+    "refresh": "Refresh",
+    "refresh_all": "Refresh All",
     "selectbox": "Select",
     "status": "Status",
     "title": "RSS Item",
-    "url": "Url"
+    "url": "URL"
   },
   "calendar": {
-    "title": "Schedule",
     "subtitle": "This season's broadcast schedule",
+    "refresh_success": "Calendar refreshed",
     "days": {
       "mon": "Monday",
       "tue": "Tuesday",
@@ -315,7 +453,8 @@
       "password": "Password",
       "confirm_password": "Confirm Password",
       "password_mismatch": "Passwords do not match",
-      "password_too_short": "Password must be at least 8 characters"
+      "password_too_short": "Password must be at least 8 characters",
+      "username_too_short": "Username must be at least 4 characters"
     },
     "downloader": {
       "title": "Download Client",
@@ -323,7 +462,8 @@
       "test": "Test Connection",
       "testing": "Testing...",
       "test_success": "Connection successful",
-      "test_failed": "Connection failed"
+      "test_failed": "Connection failed",
+      "untested_hint": "You can continue without a successful test and adjust the connection later in Config."
     },
     "rss": {
       "title": "RSS Source",
@@ -366,11 +506,11 @@
     "calendar": "Calendar",
     "config": "Config",
     "downloader": "Downloader",
-    "homepage": "HomePage",
+    "homepage": "Home",
     "log": "Log",
     "logout": "Logout",
     "player": "Player",
-    "rss": "RSS Manager",
+    "rss": "RSS",
     "title": "Menu"
   },
   "common": {
@@ -378,7 +518,15 @@
     "confirm": "Confirm",
     "select": "Select",
     "selectAll": "Select All",
-    "items": "items"
+    "items": "items",
+    "moreActions": "More actions",
+    "copy": "Copy",
+    "clear": "Clear",
+    "toggle_password": "Show or hide password",
+    "empty": "Nothing here yet",
+    "loading": "Loading…",
+    "close": "Close",
+    "remove": "Remove"
   },
   "theme": {
     "light": "Light",
@@ -406,11 +554,16 @@
     "dismiss": "Dismiss",
     "suggestion_applied": "Offset suggestion applied",
     "no_mismatch": "No season/episode mismatch detected",
-    "review_dismissed": "Review reminder dismissed"
+    "review_dismissed": "Review reminder dismissed",
+    "detect_failed": "Failed to detect offset",
+    "dismiss_failed": "Failed to dismiss review"
   },
   "search": {
     "subscribe": "Subscribe",
+    "subscribe_success": "Subscribed successfully",
+    "subscribe_failed": "Subscription failed",
     "no_results": "No results found. Try different keywords.",
+    "failed_hint": "Search failed. Check the connection and try again.",
     "start_typing": "Enter keywords to start searching",
     "filter": {
       "group": "Group",
@@ -425,6 +578,7 @@
     "confirm": {
       "title": "Add Subscription",
       "rss": "RSS Feed",
+      "copy_rss": "Copy RSS link",
       "group": "Subtitle Group",
       "resolution": "Resolution",
       "subtitle": "Subtitle Type",
@@ -467,5 +621,62 @@
     },
     "shutdown": "Shutdown",
     "start": "Start"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "unread": "{n} unread",
+    "empty": "No notifications",
+    "mark_all_read": "Mark all read",
+    "clear_all": "Clear all",
+    "clear_confirm": "Confirm?",
+    "delete": "Delete",
+    "time": {
+      "just_now": "just now",
+      "minutes_ago": "{n} min ago",
+      "hours_ago": "{n} h ago",
+      "days_ago": "{n} d ago"
+    },
+    "reason": {
+      "unreachable": "Cannot connect to the downloader. Check the host, port and network.",
+      "credentials": "Username or password rejected. Check the downloader credentials in settings.",
+      "banned": "IP banned by the downloader. Unban it in the downloader WebUI or restart the downloader."
+    },
+    "kind": {
+      "rss_failure": {
+        "title": "RSS feed error",
+        "body": "{rss_name}: {error}"
+      },
+      "download_failure": {
+        "title": "Torrent add failed",
+        "body": "{official_title} — {torrent_name}"
+      },
+      "offset_review": {
+        "title": "Episode offset needs review",
+        "body": "{official_title}: {reason}"
+      },
+      "downloader_unavailable": {
+        "title": "Downloader unavailable"
+      },
+      "update_available": {
+        "title": "New version available",
+        "body": "{current} → {latest} ({channel} channel)"
+      },
+      "update_applied": {
+        "title": "Update applied",
+        "body": "Updated to {version}. It takes effect after restart."
+      },
+      "update_failed": {
+        "title": "Update failed",
+        "body": "{message}"
+      },
+      "llm_auth_failure": {
+        "title": "LLM credentials expired",
+        "body": "{provider_id}: {message}"
+      },
+      "llm_plugin_install_failed": {
+        "title": "LLM plugin install failed",
+        "body": "{plugin_id}: {message}"
+      }
+    }
   }
 }

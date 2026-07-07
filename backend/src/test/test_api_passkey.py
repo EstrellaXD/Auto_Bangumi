@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from module.api import v1
 from module.models import ResponseModel
 from module.models.passkey import Passkey
-from module.security.api import get_current_user
+from module.security.api import SessionStore, get_current_user
 from test.factories import make_passkey
 
 # ---------------------------------------------------------------------------
@@ -294,7 +294,11 @@ class TestAuthOptions:
         assert "challenge" in data
 
     def test_get_auth_options_user_not_found(self, unauthed_client, mock_webauthn):
-        """POST /passkey/auth/options with non-existent user returns 404."""
+        """POST /passkey/auth/options with non-existent user returns 400.
+
+        Same status/message as "user exists but has no passkeys" so this
+        endpoint can't be used to enumerate valid usernames.
+        """
         with patch(
             "module.api.passkey._get_webauthn_from_request", return_value=mock_webauthn
         ):
@@ -313,7 +317,7 @@ class TestAuthOptions:
                     "/api/v1/passkey/auth/options", json={"username": "nonexistent"}
                 )
 
-        assert response.status_code == 404
+        assert response.status_code == 400
 
 
 # ---------------------------------------------------------------------------
@@ -340,7 +344,7 @@ class TestAuthVerify:
             with patch(
                 "module.api.passkey.PasskeyAuthStrategy", return_value=mock_strategy
             ):
-                with patch("module.api.passkey.active_user", {}):
+                with patch("module.api.passkey.active_user", SessionStore()):
                     response = unauthed_client.post(
                         "/api/v1/passkey/auth/verify",
                         json={

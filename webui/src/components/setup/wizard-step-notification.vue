@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { NSelect } from 'naive-ui';
+
 const { t } = useMyI18n();
 const setupStore = useSetupStore();
 const { notificationData, validation } = storeToRefs(setupStore);
@@ -60,54 +62,64 @@ const canTest = computed(() => {
       <p class="step-subtitle">{{ t('setup.notification.subtitle') }}</p>
 
       <div class="form-fields">
-        <ab-label :label="t('config.notification_set.type')">
-          <ab-select
-            v-model="notificationData.type"
-            :items="notificationTypes"
+        <ab-field :label="t('config.notification_set.type')">
+          <NSelect
+            v-model:value="notificationData.type"
+            :options="notificationTypes"
+            size="small"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="t('config.notification_set.token')">
+        <ab-field :label="t('config.notification_set.token')">
           <input
             v-model="notificationData.token"
             type="text"
             class="setup-input setup-input-wide"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="t('config.notification_set.chat_id')">
+        <ab-field :label="t('config.notification_set.chat_id')">
           <input
             v-model="notificationData.chat_id"
             type="text"
             class="setup-input"
           />
-        </ab-label>
+        </ab-field>
       </div>
 
       <div class="test-section">
         <ab-button
-          size="small"
-          type="secondary"
+          size="sm"
+          variant="secondary"
           :disabled="!canTest || isTesting"
           @click="testNotification"
         >
-          {{ isTesting ? t('setup.downloader.testing') : t('setup.notification.test') }}
+          {{
+            isTesting
+              ? t('setup.downloader.testing')
+              : t('setup.notification.test')
+          }}
         </ab-button>
-        <p v-if="testMessage" class="test-message" :class="{ success: testSuccess }">
+        <p
+          v-if="testMessage"
+          class="test-message"
+          :class="{ success: testSuccess }"
+        >
           {{ testMessage }}
         </p>
       </div>
 
       <div class="wizard-actions">
-        <ab-button size="small" type="secondary" @click="setupStore.prevStep()">
+        <ab-button size="sm" variant="secondary" @click="setupStore.prevStep()">
           {{ t('setup.nav.previous') }}
         </ab-button>
         <div class="action-group">
-          <ab-button size="small" type="secondary" @click="skipStep">
+          <ab-button size="sm" variant="secondary" @click="skipStep">
             {{ t('setup.nav.skip') }}
           </ab-button>
           <ab-button
-            size="small"
+            variant="primary"
+            size="sm"
             :disabled="!validation.notificationTested"
             @click="handleNext"
           >
@@ -154,7 +166,8 @@ const canTest = computed(() => {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 
   &:hover {
     border-color: var(--color-primary);

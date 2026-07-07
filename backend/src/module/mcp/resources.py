@@ -9,31 +9,34 @@ import json
 import logging
 
 from mcp import types
+from pydantic import AnyUrl
 
 from module.conf import VERSION
+from module.database import Database
 from module.manager import TorrentManager
 from module.models import Bangumi
 from module.rss import RSSEngine
 
+from .runtime import get_context
 from .tools import _bangumi_to_dict
 
 logger = logging.getLogger(__name__)
 
 RESOURCES = [
     types.Resource(
-        uri="autobangumi://anime/list",
+        uri=AnyUrl("autobangumi://anime/list"),
         name="All tracked anime",
         description="List of all anime subscriptions being tracked by AutoBangumi",
         mimeType="application/json",
     ),
     types.Resource(
-        uri="autobangumi://status",
+        uri=AnyUrl("autobangumi://status"),
         name="Program status",
         description="Current AutoBangumi program status, version, and state",
         mimeType="application/json",
     ),
     types.Resource(
-        uri="autobangumi://rss/feeds",
+        uri=AnyUrl("autobangumi://rss/feeds"),
         name="RSS feeds",
         description="All configured RSS feeds with health status",
         mimeType="application/json",
@@ -50,7 +53,7 @@ RESOURCE_TEMPLATES = [
 ]
 
 
-def handle_resource(uri: str) -> str:
+async def handle_resource(uri: str) -> str:
     """Return a JSON string for the given MCP resource URI.
 
     Supported URIs:
@@ -60,24 +63,23 @@ def handle_resource(uri: str) -> str:
     - ``autobangumi://anime/{id}`` - single anime by integer ID
     """
     if uri == "autobangumi://anime/list":
-        with TorrentManager() as manager:
-            items = manager.bangumi.search_all()
+        async with Database() as db:
+            items = await db.bangumi.search_all()
         return json.dumps([_bangumi_to_dict(b) for b in items], ensure_ascii=False)
 
     elif uri == "autobangumi://status":
-        from module.api.program import program
-
+        ctx = get_context()
         return json.dumps(
             {
                 "version": VERSION,
-                "running": program.is_running,
-                "first_run": program.first_run,
+                "running": ctx.is_running if ctx is not None else False,
+                "first_run": ctx.first_run if ctx is not None else True,
             }
         )
 
     elif uri == "autobangumi://rss/feeds":
-        with RSSEngine() as engine:
-            feeds = engine.rss.search_all()
+        async with Database() as db:
+            feeds = await db.rss.search_all()
         return json.dumps(
             [
                 {
@@ -94,13 +96,14 @@ def handle_resource(uri: str) -> str:
         )
 
     elif uri.startswith("autobangumi://anime/"):
-        anime_id = uri.split("/")[-1]
+        anime_id_str = uri.split("/")[-1]
         try:
-            anime_id = int(anime_id)
+            anime_id = int(anime_id_str)
         except ValueError:
-            return json.dumps({"error": f"Invalid anime ID: {anime_id}"})
-        with TorrentManager() as manager:
-            result = manager.search_one(anime_id)
+            return json.dumps({"error": f"Invalid anime ID: {anime_id_str}"})
+        async with Database() as db:
+            manager = TorrentManager(db)
+            result = await manager.search_one(anime_id)
         if isinstance(result, Bangumi):
             return json.dumps(_bangumi_to_dict(result), ensure_ascii=False)
         return json.dumps({"error": result.msg_en})

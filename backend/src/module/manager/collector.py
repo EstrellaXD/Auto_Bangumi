@@ -1,34 +1,45 @@
 import logging
 
-from module.downloader import DownloadClient
+from module.database import Database
+from module.downloader import AddResult, DownloadClient
 from module.models import Bangumi, ResponseModel
+from module.network import RequestContent
 from module.rss import RSSEngine
 from module.searcher import SearchTorrent
 
 logger = logging.getLogger(__name__)
 
 
-class SeasonCollector(DownloadClient):
-    async def collect_season(self, bangumi: Bangumi, link: str = None):
+class SeasonCollector:
+    def __init__(self, client: DownloadClient):
+        self.client = client
+
+    async def collect_season(self, bangumi: Bangumi, link: str | None = None):
         logger.info(
             f"Start collecting {bangumi.official_title} Season {bangumi.season}..."
         )
-        async with SearchTorrent() as st:
-            if not link:
-                torrents = await st.search_season(bangumi)
-            else:
-                torrents = await st.get_torrents(link, bangumi.filter.replace(",", "|"))
-        with RSSEngine() as engine:
-            if await self.add_torrent(torrents, bangumi):
+        st = SearchTorrent()
+        if not link:
+            torrents = await st.search_season(bangumi)
+        else:
+            async with RequestContent() as req:
+                torrents = await req.get_torrents(
+                    link, bangumi.filter.replace(",", "|")
+                )
+        async with Database() as db:
+            if await self.client.add_torrent(torrents, bangumi) is AddResult.ADDED:
                 logger.info(
                     f"Collections of {bangumi.official_title} Season {bangumi.season} completed."
                 )
                 for torrent in torrents:
                     torrent.downloaded = True
                 bangumi.eps_collect = True
-                if engine.bangumi.update(bangumi):
-                    engine.bangumi.add(bangumi)
-                engine.torrent.add_all(torrents)
+                # update() returns False when no existing row matches
+                # bangumi.id (i.e. this is a brand-new bangumi), in which
+                # case it needs to be inserted instead.
+                if not await db.bangumi.update(bangumi):
+                    await db.bangumi.add(bangumi)
+                await db.torrent.add_all(torrents)
                 return ResponseModel(
                     status=True,
                     status_code=200,
@@ -48,7 +59,8 @@ class SeasonCollector(DownloadClient):
 
     @staticmethod
     async def subscribe_season(data: Bangumi, parser: str = "mikan"):
-        with RSSEngine() as engine:
+        async with Database() as db:
+            engine = RSSEngine(db)
             data.added = True
             data.eps_collect = True
             await engine.add_rss(
@@ -58,18 +70,19 @@ class SeasonCollector(DownloadClient):
                 parser=parser,
             )
             result = await engine.download_bangumi(data)
-            engine.bangumi.add(data)
+            await db.bangumi.add(data)
             return result
 
 
 async def eps_complete():
-    with RSSEngine() as engine:
-        datas = engine.bangumi.not_complete()
+    async with Database() as db:
+        datas = await db.bangumi.not_complete()
         if datas:
             logger.info("Start collecting full season...")
-            async with SeasonCollector() as collector:
+            async with DownloadClient() as client:
+                collector = SeasonCollector(client)
                 for data in datas:
                     if not data.eps_collect:
                         await collector.collect_season(data)
                     data.eps_collect = True
-            engine.bangumi.update_all(datas)
+            await db.bangumi.update_all(datas)

@@ -3,7 +3,7 @@
  * Note: These tests focus on pure logic that can be tested without full Vue/Pinia setup
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { mockBangumiRule } from '@/test/mocks/api';
 
 describe('Bangumi Store Logic', () => {

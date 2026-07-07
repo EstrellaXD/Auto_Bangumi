@@ -1,17 +1,16 @@
 """Tests for RSS API endpoints."""
 
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from module.api import v1
-from module.models import RSSItem, RSSUpdate, ResponseModel, Torrent
+from module.database import get_db
+from module.models import Bangumi, ResponseModel, RSSItem, RSSUpdate, Torrent
 from module.security.api import get_current_user
-
-from test.factories import make_rss_item, make_torrent
-
+from test.factories import make_bangumi, make_rss_item, make_torrent
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -19,9 +18,20 @@ from test.factories import make_rss_item, make_torrent
 
 
 @pytest.fixture
-def app():
+def mock_db():
+    """A stand-in Database whose repos can be configured with AsyncMocks."""
+    return MagicMock()
+
+
+@pytest.fixture
+def app(mock_db):
     app = FastAPI()
     app.include_router(v1, prefix="/api")
+
+    async def _override_get_db():
+        yield mock_db
+
+    app.dependency_overrides[get_db] = _override_get_db
     return app
 
 
@@ -68,19 +78,15 @@ class TestAuthRequired:
 
 
 class TestGetRss:
-    def test_get_all(self, authed_client):
+    def test_get_all(self, authed_client, mock_db):
         """GET /rss returns list of RSSItems."""
         items = [
             make_rss_item(id=1, name="Feed 1"),
             make_rss_item(id=2, name="Feed 2"),
         ]
-        with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MagicMock()
-            mock_eng.rss.search_all.return_value = items
-            MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-            MockEngine.return_value.__exit__ = MagicMock(return_value=False)
+        mock_db.rss.search_all = AsyncMock(return_value=items)
 
-            response = authed_client.get("/api/v1/rss")
+        response = authed_client.get("/api/v1/rss")
 
         assert response.status_code == 200
         data = response.json()
@@ -99,10 +105,8 @@ class TestAddRss:
             status=True, status_code=200, msg_en="Added.", msg_zh="添加成功。"
         )
         with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MagicMock()
+            mock_eng = MockEngine.return_value
             mock_eng.add_rss = AsyncMock(return_value=resp_model)
-            MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-            MockEngine.return_value.__exit__ = MagicMock(return_value=False)
 
             response = authed_client.post(
                 "/api/v1/rss/add",
@@ -123,29 +127,21 @@ class TestAddRss:
 
 
 class TestDeleteRss:
-    def test_delete_success(self, authed_client):
+    def test_delete_success(self, authed_client, mock_db):
         """DELETE /rss/delete/{id} removes the feed."""
-        with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MagicMock()
-            mock_eng.rss.delete.return_value = True
-            MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-            MockEngine.return_value.__exit__ = MagicMock(return_value=False)
+        mock_db.rss.delete = AsyncMock(return_value=True)
 
-            response = authed_client.delete("/api/v1/rss/delete/1")
+        response = authed_client.delete("/api/v1/rss/delete/1")
 
         assert response.status_code == 200
 
-    def test_delete_failure(self, authed_client):
-        """DELETE /rss/delete/{id} returns 406 when feed not found."""
-        with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MagicMock()
-            mock_eng.rss.delete.return_value = False
-            MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-            MockEngine.return_value.__exit__ = MagicMock(return_value=False)
+    def test_delete_failure(self, authed_client, mock_db):
+        """DELETE /rss/delete/{id} returns 400 when feed not found."""
+        mock_db.rss.delete = AsyncMock(return_value=False)
 
-            response = authed_client.delete("/api/v1/rss/delete/999")
+        response = authed_client.delete("/api/v1/rss/delete/999")
 
-        assert response.status_code == 406
+        assert response.status_code == 400
 
 
 # ---------------------------------------------------------------------------
@@ -154,29 +150,21 @@ class TestDeleteRss:
 
 
 class TestDisableRss:
-    def test_disable_success(self, authed_client):
+    def test_disable_success(self, authed_client, mock_db):
         """PATCH /rss/disable/{id} disables the feed."""
-        with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MagicMock()
-            mock_eng.rss.disable.return_value = True
-            MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-            MockEngine.return_value.__exit__ = MagicMock(return_value=False)
+        mock_db.rss.disable = AsyncMock(return_value=True)
 
-            response = authed_client.patch("/api/v1/rss/disable/1")
+        response = authed_client.patch("/api/v1/rss/disable/1")
 
         assert response.status_code == 200
 
-    def test_disable_failure(self, authed_client):
-        """PATCH /rss/disable/{id} returns 406 when feed not found."""
-        with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MagicMock()
-            mock_eng.rss.disable.return_value = False
-            MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-            MockEngine.return_value.__exit__ = MagicMock(return_value=False)
+    def test_disable_failure(self, authed_client, mock_db):
+        """PATCH /rss/disable/{id} returns 404 when feed not found."""
+        mock_db.rss.disable = AsyncMock(return_value=False)
 
-            response = authed_client.patch("/api/v1/rss/disable/999")
+        response = authed_client.patch("/api/v1/rss/disable/999")
 
-        assert response.status_code == 406
+        assert response.status_code == 404
 
 
 # ---------------------------------------------------------------------------
@@ -191,10 +179,8 @@ class TestBatchOperations:
             status=True, status_code=200, msg_en="Enabled.", msg_zh="启用成功。"
         )
         with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MagicMock()
-            mock_eng.enable_list.return_value = resp_model
-            MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-            MockEngine.return_value.__exit__ = MagicMock(return_value=False)
+            mock_eng = MockEngine.return_value
+            mock_eng.enable_list = AsyncMock(return_value=resp_model)
 
             response = authed_client.post("/api/v1/rss/enable/many", json=[1, 2, 3])
 
@@ -206,10 +192,8 @@ class TestBatchOperations:
             status=True, status_code=200, msg_en="Disabled.", msg_zh="禁用成功。"
         )
         with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MagicMock()
-            mock_eng.disable_list.return_value = resp_model
-            MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-            MockEngine.return_value.__exit__ = MagicMock(return_value=False)
+            mock_eng = MockEngine.return_value
+            mock_eng.disable_list = AsyncMock(return_value=resp_model)
 
             response = authed_client.post("/api/v1/rss/disable/many", json=[1, 2])
 
@@ -221,10 +205,8 @@ class TestBatchOperations:
             status=True, status_code=200, msg_en="Deleted.", msg_zh="删除成功。"
         )
         with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MagicMock()
-            mock_eng.delete_list.return_value = resp_model
-            MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-            MockEngine.return_value.__exit__ = MagicMock(return_value=False)
+            mock_eng = MockEngine.return_value
+            mock_eng.delete_list = AsyncMock(return_value=resp_model)
 
             response = authed_client.post("/api/v1/rss/delete/many", json=[1, 2])
 
@@ -237,57 +219,49 @@ class TestBatchOperations:
 
 
 class TestUpdateRss:
-    def test_update_success(self, authed_client):
+    def test_update_success(self, authed_client, mock_db):
         """PATCH /rss/update/{id} updates feed."""
-        with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MagicMock()
-            mock_eng.rss.update.return_value = True
-            MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-            MockEngine.return_value.__exit__ = MagicMock(return_value=False)
+        mock_db.rss.update = AsyncMock(return_value=True)
 
-            response = authed_client.patch(
-                "/api/v1/rss/update/1",
-                json={"name": "Updated Name", "aggregate": False},
-            )
+        response = authed_client.patch(
+            "/api/v1/rss/update/1",
+            json={"name": "Updated Name", "aggregate": False},
+        )
 
         assert response.status_code == 200
 
 
 # ---------------------------------------------------------------------------
-# GET /rss/refresh/*
+# POST /rss/refresh/*
 # ---------------------------------------------------------------------------
 
 
 class TestRefreshRss:
     def test_refresh_all(self, authed_client):
-        """GET /rss/refresh/all triggers engine.refresh_rss."""
+        """POST /rss/refresh/all triggers engine.refresh_rss."""
         with patch("module.api.rss.DownloadClient") as MockClient:
             mock_client = AsyncMock()
             MockClient.return_value.__aenter__ = AsyncMock(return_value=mock_client)
             MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
             with patch("module.api.rss.RSSEngine") as MockEngine:
-                mock_eng = MagicMock()
+                mock_eng = MockEngine.return_value
                 mock_eng.refresh_rss = AsyncMock()
-                MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-                MockEngine.return_value.__exit__ = MagicMock(return_value=False)
 
-                response = authed_client.get("/api/v1/rss/refresh/all")
+                response = authed_client.post("/api/v1/rss/refresh/all")
 
         assert response.status_code == 200
 
     def test_refresh_single(self, authed_client):
-        """GET /rss/refresh/{id} refreshes specific feed."""
+        """POST /rss/refresh/{id} refreshes specific feed."""
         with patch("module.api.rss.DownloadClient") as MockClient:
             mock_client = AsyncMock()
             MockClient.return_value.__aenter__ = AsyncMock(return_value=mock_client)
             MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
             with patch("module.api.rss.RSSEngine") as MockEngine:
-                mock_eng = MagicMock()
+                mock_eng = MockEngine.return_value
                 mock_eng.refresh_rss = AsyncMock()
-                MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-                MockEngine.return_value.__exit__ = MagicMock(return_value=False)
 
-                response = authed_client.get("/api/v1/rss/refresh/1")
+                response = authed_client.post("/api/v1/rss/refresh/1")
 
         assert response.status_code == 200
 
@@ -302,13 +276,178 @@ class TestGetRssTorrents:
         """GET /rss/torrent/{id} returns torrents for that feed."""
         torrents = [make_torrent(id=1, rss_id=1), make_torrent(id=2, rss_id=1)]
         with patch("module.api.rss.RSSEngine") as MockEngine:
-            mock_eng = MagicMock()
-            mock_eng.get_rss_torrents.return_value = torrents
-            MockEngine.return_value.__enter__ = MagicMock(return_value=mock_eng)
-            MockEngine.return_value.__exit__ = MagicMock(return_value=False)
+            mock_eng = MockEngine.return_value
+            mock_eng.get_rss_torrents = AsyncMock(return_value=torrents)
 
             response = authed_client.get("/api/v1/rss/torrent/1")
 
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 2
+
+
+# ---------------------------------------------------------------------------
+# POST /rss/analysis
+# ---------------------------------------------------------------------------
+
+
+class TestAnalysis:
+    def test_analysis_returns_bangumi(self, authed_client):
+        """POST /rss/analysis returns the parsed Bangumi on success."""
+        bangumi = make_bangumi(id=1, official_title="Parsed Anime")
+        with patch("module.api.rss.analyser") as mock_analyser:
+            mock_analyser.link_to_data = AsyncMock(return_value=bangumi)
+
+            response = authed_client.post(
+                "/api/v1/rss/analysis",
+                json={"url": "https://mikanani.me/RSS/link", "parser": "mikan"},
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["official_title"] == "Parsed Anime"
+
+
+# ---------------------------------------------------------------------------
+# POST /rss/collect
+# ---------------------------------------------------------------------------
+
+
+class TestCollect:
+    def test_collect_success(self, authed_client):
+        """POST /rss/collect triggers SeasonCollector.collect_season."""
+        resp_model = ResponseModel(
+            status=True, status_code=200, msg_en="Collected.", msg_zh="收集成功。"
+        )
+        with (
+            patch("module.api.rss.DownloadClient") as MockDC,
+            patch("module.api.rss.SeasonCollector") as MockCollector,
+        ):
+            MockDC.return_value.__aenter__ = AsyncMock(return_value=AsyncMock())
+            MockDC.return_value.__aexit__ = AsyncMock(return_value=False)
+            mock_collector = MagicMock()
+            mock_collector.collect_season = AsyncMock(return_value=resp_model)
+            MockCollector.return_value = mock_collector
+
+            response = authed_client.post(
+                "/api/v1/rss/collect", json=make_bangumi(id=1).model_dump()
+            )
+
+        assert response.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# POST /rss/subscribe
+# ---------------------------------------------------------------------------
+
+
+class TestSubscribe:
+    def test_subscribe_success(self, authed_client):
+        """POST /rss/subscribe triggers SeasonCollector.subscribe_season."""
+        resp_model = ResponseModel(
+            status=True, status_code=200, msg_en="Subscribed.", msg_zh="订阅成功。"
+        )
+        with patch(
+            "module.api.rss.SeasonCollector.subscribe_season",
+            new_callable=AsyncMock,
+            return_value=resp_model,
+        ):
+            response = authed_client.post(
+                "/api/v1/rss/subscribe",
+                json={
+                    "data": make_bangumi(id=1).model_dump(),
+                    "rss": {"url": "https://mikanani.me/RSS/link", "parser": "mikan"},
+                },
+            )
+
+        assert response.status_code == 200
+
+    _PROVIDERS = {
+        "mikan": {
+            "url": "https://mikanani.me/RSS/Search?searchstr=%s",
+            "parser": "mikan",
+        },
+        "nyaa": {"url": "https://nyaa.si/?page=rss&q=%s", "parser": "tmdb"},
+    }
+
+    def test_subscribe_site_name_maps_to_provider_parser(self, authed_client):
+        """搜索订阅传入站点名（如 nyaa）时应映射为该站点配置的解析器（#1053）。"""
+        resp_model = ResponseModel(
+            status=True, status_code=200, msg_en="Subscribed.", msg_zh="订阅成功。"
+        )
+        with (
+            patch(
+                "module.api.rss.SeasonCollector.subscribe_season",
+                new_callable=AsyncMock,
+                return_value=resp_model,
+            ) as mock_subscribe,
+            patch("module.api.rss.get_provider", return_value=self._PROVIDERS),
+        ):
+            response = authed_client.post(
+                "/api/v1/rss/subscribe",
+                json={
+                    "data": make_bangumi(id=1).model_dump(),
+                    "rss": {"url": "https://nyaa.si/?page=rss&q=x", "parser": "nyaa"},
+                },
+            )
+
+        assert response.status_code == 200
+        assert mock_subscribe.await_args is not None
+        assert mock_subscribe.await_args.kwargs["parser"] == "tmdb"
+
+    def test_subscribe_parser_value_passes_through_unchanged(self, authed_client):
+        """已是解析器类型的值（非站点名）应原样传递。"""
+        resp_model = ResponseModel(
+            status=True, status_code=200, msg_en="Subscribed.", msg_zh="订阅成功。"
+        )
+        with (
+            patch(
+                "module.api.rss.SeasonCollector.subscribe_season",
+                new_callable=AsyncMock,
+                return_value=resp_model,
+            ) as mock_subscribe,
+            patch("module.api.rss.get_provider", return_value=self._PROVIDERS),
+        ):
+            response = authed_client.post(
+                "/api/v1/rss/subscribe",
+                json={
+                    "data": make_bangumi(id=1).model_dump(),
+                    "rss": {"url": "https://example.com/rss", "parser": "tmdb"},
+                },
+            )
+
+        assert response.status_code == 200
+        assert mock_subscribe.await_args is not None
+        assert mock_subscribe.await_args.kwargs["parser"] == "tmdb"
+
+    def test_subscribe_known_parser_type_never_remapped(self, authed_client):
+        """parser='mikan' 是解析器类型而非站点名，即便用户自定义了 mikan
+        站点的解析器（如 tmdb），也不应被站点映射改写。"""
+        customized = {
+            "mikan": {
+                "url": "https://mikanani.me/RSS/Search?searchstr=%s",
+                "parser": "tmdb",
+            },
+        }
+        resp_model = ResponseModel(
+            status=True, status_code=200, msg_en="Subscribed.", msg_zh="订阅成功。"
+        )
+        with (
+            patch(
+                "module.api.rss.SeasonCollector.subscribe_season",
+                new_callable=AsyncMock,
+                return_value=resp_model,
+            ) as mock_subscribe,
+            patch("module.api.rss.get_provider", return_value=customized),
+        ):
+            response = authed_client.post(
+                "/api/v1/rss/subscribe",
+                json={
+                    "data": make_bangumi(id=1).model_dump(),
+                    "rss": {"url": "https://mikanani.me/RSS/link", "parser": "mikan"},
+                },
+            )
+
+        assert response.status_code == 200
+        assert mock_subscribe.await_args is not None
+        assert mock_subscribe.await_args.kwargs["parser"] == "mikan"

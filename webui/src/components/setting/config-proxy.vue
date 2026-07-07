@@ -55,8 +55,8 @@ const items: SettingItem<Proxy>[] = [
     label: () => t('config.proxy_set.password'),
     type: 'input',
     prop: {
-      type: 'text',
-      placeholder: 'password',
+      type: 'password',
+      autocomplete: 'off',
     },
   },
 ];

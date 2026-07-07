@@ -1,11 +1,11 @@
 """Tests for search providers: URL construction, keyword handling."""
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import patch
 
 from module.models import Bangumi, RSSItem
 from module.searcher.provider import search_url
-
 
 # ---------------------------------------------------------------------------
 # search_url
@@ -72,6 +72,38 @@ class TestSearchUrl:
         assert result.aggregate is False
 
 
+class TestSearchUrlPerProviderParser:
+    """search_url reads the parser from each provider's own {url, parser}
+    config instead of the old hardcoded "mikan-or-tmdb" rule."""
+
+    def test_uses_providers_declared_parser(self):
+        """A custom provider's declared parser is honored, not the default."""
+        with patch(
+            "module.searcher.provider.get_provider",
+            return_value={
+                "custom": {"url": "https://custom.example/?q=%s", "parser": "openai"}
+            },
+        ):
+            result = search_url("custom", ["test"])
+
+        assert result.parser == "openai"
+
+    def test_mikan_site_uses_declared_parser_not_hardcoded(self):
+        """Even the "mikan" site name honors the configured parser value."""
+        with patch(
+            "module.searcher.provider.get_provider",
+            return_value={
+                "mikan": {
+                    "url": "https://mikanani.me/RSS/Search?searchstr=%s",
+                    "parser": "tmdb",
+                }
+            },
+        ):
+            result = search_url("mikan", ["test"])
+
+        assert result.parser == "tmdb"
+
+
 # ---------------------------------------------------------------------------
 # SearchTorrent.special_url
 # ---------------------------------------------------------------------------
@@ -80,7 +112,7 @@ class TestSearchUrl:
 class TestSpecialUrl:
     def test_uses_bangumi_fields(self):
         """special_url builds keywords from SEARCH_KEY fields of Bangumi."""
-        from module.searcher.searcher import SearchTorrent, SEARCH_KEY
+        from module.searcher.searcher import SEARCH_KEY, SearchTorrent
         from test.factories import make_bangumi
 
         bangumi = make_bangumi(
@@ -92,9 +124,12 @@ class TestSpecialUrl:
             subtitle="CHT",
         )
 
-        with patch("module.searcher.provider.SEARCH_CONFIG", {
-            "mikan": "https://mikanani.me/RSS/Search?searchstr=%s",
-        }):
+        with patch(
+            "module.searcher.provider.SEARCH_CONFIG",
+            {
+                "mikan": "https://mikanani.me/RSS/Search?searchstr=%s",
+            },
+        ):
             result = SearchTorrent.special_url(bangumi, "mikan")
 
         assert isinstance(result, RSSItem)
@@ -116,10 +151,59 @@ class TestSpecialUrl:
             subtitle=None,
         )
 
-        with patch("module.searcher.provider.SEARCH_CONFIG", {
-            "mikan": "https://mikanani.me/RSS/Search?searchstr=%s",
-        }):
+        with patch(
+            "module.searcher.provider.SEARCH_CONFIG",
+            {
+                "mikan": "https://mikanani.me/RSS/Search?searchstr=%s",
+            },
+        ):
             result = SearchTorrent.special_url(bangumi, "mikan")
 
         # Only title_raw should be in the URL
         assert "Test" in result.url
+
+
+# ---------------------------------------------------------------------------
+# _poster_cache: bounded LRU + reset_cache()
+# ---------------------------------------------------------------------------
+
+
+class TestPosterCache:
+    @pytest.fixture(autouse=True)
+    def _clean_poster_cache(self):
+        """Isolate the module-level poster cache between tests."""
+        from module.searcher import searcher as searcher_module
+
+        searcher_module.reset_cache()
+        yield
+        searcher_module.reset_cache()
+
+    def test_reset_cache_clears_poster_cache(self):
+        from module.searcher import searcher as searcher_module
+
+        searcher_module._poster_cache["Test Anime"] = "http://example.com/p.jpg"
+        assert len(searcher_module._poster_cache) > 0
+
+        searcher_module.reset_cache()
+
+        assert len(searcher_module._poster_cache) == 0
+
+    async def test_poster_cache_evicts_oldest_when_full(self, monkeypatch):
+        """_poster_cache is bounded (LRU-ish) like _tmdb_cache/_mikan_cache,
+        instead of growing without limit for the life of the process."""
+        from module.searcher import searcher as searcher_module
+        from module.searcher.searcher import SearchTorrent
+
+        monkeypatch.setattr(searcher_module, "_POSTER_CACHE_MAX", 3)
+        torrent = SearchTorrent()
+
+        with patch(
+            "module.searcher.searcher.tmdb_parser", new=AsyncMock(return_value=None)
+        ):
+            for i in range(4):
+                await torrent._fetch_tmdb_poster(f"Title {i}")
+
+        assert len(searcher_module._poster_cache) == 3
+        # The oldest entry ("Title 0") was evicted; the rest remain.
+        assert "Title 0" not in searcher_module._poster_cache
+        assert "Title 3" in searcher_module._poster_cache

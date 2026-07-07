@@ -3,7 +3,7 @@
  * Note: These tests focus on testable aspects of the hook's behavior
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 // Simplified useApi implementation for testing
 interface Options<T = unknown> {
@@ -14,7 +14,10 @@ interface Options<T = unknown> {
   onFinally?: () => void;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ApiExecuteResult<TData> =
+  | { ok: true; data: TData }
+  | { ok: false; error: unknown };
+
 type AnyAsyncFunction = (...args: any[]) => Promise<any>;
 
 function createUseApi<TApi extends AnyAsyncFunction>(
@@ -24,15 +27,19 @@ function createUseApi<TApi extends AnyAsyncFunction>(
   let data: Awaited<ReturnType<TApi>> | undefined;
   let isLoading = false;
 
-  const execute = async (...params: Parameters<TApi>): Promise<void> => {
+  const execute = async (
+    ...params: Parameters<TApi>
+  ): Promise<ApiExecuteResult<Awaited<ReturnType<TApi>>>> => {
     options.onBeforeExecute?.();
     isLoading = true;
     try {
       const res: Awaited<ReturnType<TApi>> = await api(...params);
       data = res;
       options.onSuccess?.(res);
+      return { ok: true, data: res };
     } catch (err) {
       options.onError?.(err);
+      return { ok: false, error: err };
     } finally {
       isLoading = false;
       options.onFinally?.();
@@ -55,6 +62,16 @@ describe('useApi logic', () => {
       await execute('param1', 'param2', 123);
 
       expect(mockApi).toHaveBeenCalledWith('param1', 'param2', 123);
+    });
+
+    it('should return ok result with data on success', async () => {
+      const responseData = { msg_en: 'Success', value: 42 };
+      const mockApi = vi.fn().mockResolvedValue(responseData);
+      const { execute } = createUseApi(mockApi);
+
+      const result = await execute();
+
+      expect(result).toEqual({ ok: true, data: responseData });
     });
 
     it('should set data to API response on success', async () => {
@@ -101,6 +118,16 @@ describe('useApi logic', () => {
       expect(onError).toHaveBeenCalledWith(error);
     });
 
+    it('should return ok false result when API throws', async () => {
+      const error = new Error('API Error');
+      const mockApi = vi.fn().mockRejectedValue(error);
+      const { execute } = createUseApi(mockApi, { onError: vi.fn() });
+
+      const result = await execute();
+
+      expect(result).toEqual({ ok: false, error });
+    });
+
     it('should call onFinally after success', async () => {
       const onFinally = vi.fn();
       const mockApi = vi.fn().mockResolvedValue({});
@@ -113,7 +140,7 @@ describe('useApi logic', () => {
 
     it('should call onFinally after error', async () => {
       const onFinally = vi.fn();
-      const mockApi = vi.fn().mockRejectedValue(new Error());
+      const mockApi = vi.fn().mockRejectedValue(new Error('request failed'));
       const { execute } = createUseApi(mockApi, { onFinally, onError: vi.fn() });
 
       await execute();

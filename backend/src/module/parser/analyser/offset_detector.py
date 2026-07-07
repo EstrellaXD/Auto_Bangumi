@@ -78,7 +78,7 @@ def detect_offset_mismatch(
                     f"建议集数偏移+{suggested_episode_offset}）"
                 )
                 logger.debug(
-                    f"[OffsetDetector] Virtual season detected: S{parsed_season} maps to "
+                    f"Virtual season detected: S{parsed_season} maps to "
                     f"TMDB S{target_season} starting at episode {vs_starts[virtual_season_index]}"
                 )
             else:
@@ -95,7 +95,7 @@ def detect_offset_mismatch(
             )
 
         logger.debug(
-            f"[OffsetDetector] Season mismatch: parsed S{parsed_season}, "
+            f"Season mismatch: parsed S{parsed_season}, "
             f"TMDB has {tmdb_info.last_season} seasons, suggesting offset {suggested_season_offset}"
         )
 
@@ -119,7 +119,7 @@ def detect_offset_mismatch(
                 )
 
             logger.debug(
-                f"[OffsetDetector] Episode range issue: adjusted E{adjusted_episode}, "
+                f"Episode range issue: adjusted E{adjusted_episode}, "
                 f"TMDB S{target_season} has {season_ep_count} episodes"
             )
 

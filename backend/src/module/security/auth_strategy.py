@@ -2,6 +2,7 @@
 认证策略抽象层
 将密码认证和 Passkey 认证统一为策略模式
 """
+
 from abc import ABC, abstractmethod
 
 from sqlmodel import select

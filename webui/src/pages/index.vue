@@ -5,7 +5,8 @@ definePage({
 });
 
 const { editRule } = storeToRefs(useBangumiStore());
-const { updateRule, enableRule, archiveRule, unarchiveRule, ruleManage } = useBangumiStore();
+const { updateRule, enableRule, archiveRule, unarchiveRule, ruleManage } =
+  useBangumiStore();
 </script>
 
 <template>
@@ -22,7 +23,9 @@ const { updateRule, enableRule, archiveRule, unarchiveRule, ruleManage } = useBa
 
         <RouterView v-slot="{ Component }">
           <transition name="page" mode="out-in">
-            <KeepAlive>
+            <!-- max bounds background re-renders: SSE-fed pages (log,
+                 downloader) keep updating while cached -->
+            <KeepAlive :max="3">
               <component :is="Component" />
             </KeepAlive>
           </transition>
@@ -36,7 +39,9 @@ const { updateRule, enableRule, archiveRule, unarchiveRule, ruleManage } = useBa
       @enable="(id) => enableRule(id)"
       @archive="(id) => archiveRule(id)"
       @unarchive="(id) => unarchiveRule(id)"
-      @delete-file="(type, { id, deleteFile }) => ruleManage(type, id, deleteFile)"
+      @delete-file="
+        (type, { id, deleteFile }) => ruleManage(type, id, deleteFile)
+      "
       @apply="(rule) => updateRule(rule.id, rule)"
     />
   </div>
@@ -72,9 +77,12 @@ const { updateRule, enableRule, archiveRule, unarchiveRule, ruleManage } = useBa
   overflow: hidden;
   flex: 1;
   min-height: 0;
+  // Clear the fixed bottom nav (only rendered <640px)
+  padding-bottom: calc(var(--nav-height) + var(--layout-gap));
 
   @include forTablet {
     flex-direction: row;
+    padding-bottom: 0;
   }
 
   @include forDesktop {

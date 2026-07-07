@@ -1,21 +1,19 @@
-"""Tests for TorrentPath: save path generation, file classification, parsing."""
+"""Tests for path helpers: save path generation, file classification, parsing."""
 
-import pytest
 from unittest.mock import patch
 
-from module.downloader.path import TorrentPath
-from module.models import Bangumi, BangumiUpdate
-
+from module.downloader.path import (
+    check_files,
+    file_depth,
+    gen_save_path,
+    is_ep,
+    path_to_bangumi,
+    rule_name,
+)
 from test.factories import make_bangumi
 
-
-@pytest.fixture
-def torrent_path():
-    return TorrentPath()
-
-
 # ---------------------------------------------------------------------------
-# _gen_save_path
+# gen_save_path
 # ---------------------------------------------------------------------------
 
 
@@ -25,7 +23,7 @@ class TestGenSavePath:
         bangumi = make_bangumi(official_title="My Anime", year="2024", season=2)
         with patch("module.downloader.path.settings") as mock_settings:
             mock_settings.downloader.path = "/downloads/Bangumi"
-            result = TorrentPath._gen_save_path(bangumi)
+            result = gen_save_path(bangumi)
 
         assert "My Anime (2024)" in result
         assert "Season 2" in result
@@ -35,7 +33,7 @@ class TestGenSavePath:
         bangumi = make_bangumi(official_title="My Anime", year=None, season=1)
         with patch("module.downloader.path.settings") as mock_settings:
             mock_settings.downloader.path = "/downloads/Bangumi"
-            result = TorrentPath._gen_save_path(bangumi)
+            result = gen_save_path(bangumi)
 
         assert "My Anime" in result
         assert "()" not in result
@@ -46,7 +44,7 @@ class TestGenSavePath:
         bangumi = make_bangumi(season=10)
         with patch("module.downloader.path.settings") as mock_settings:
             mock_settings.downloader.path = "/downloads/Bangumi"
-            result = TorrentPath._gen_save_path(bangumi)
+            result = gen_save_path(bangumi)
 
         assert "Season 10" in result
 
@@ -55,15 +53,84 @@ class TestGenSavePath:
         bangumi = make_bangumi(official_title="Test", year="2025", season=3)
         with patch("module.downloader.path.settings") as mock_settings:
             mock_settings.downloader.path = "/mnt/media/Bangumi"
-            result = TorrentPath._gen_save_path(bangumi)
+            result = gen_save_path(bangumi)
 
         assert result.startswith("/mnt/media/Bangumi")
         assert "Test (2025)" in result
         assert "Season 3" in result
 
+    def test_movie_layout_omits_season_folder(self):
+        """Movies use a flat 'Title (Year)' layout with no Season subfolder."""
+        bangumi = make_bangumi(
+            official_title="天气之子", year="2019", season=1, episode_type="movie"
+        )
+        with patch("module.downloader.path.settings") as mock_settings:
+            mock_settings.downloader.path = "/downloads/Bangumi"
+            result = gen_save_path(bangumi)
+
+        assert result == "/downloads/Bangumi/天气之子 (2019)"
+        assert "Season" not in result
+
+    def test_special_uses_season_zero(self):
+        """Specials/OVA/OAD (season=0) land in Season 0, Jellyfin/Plex convention."""
+        bangumi = make_bangumi(
+            official_title="My Anime", year="2024", season=0, episode_type="special"
+        )
+        with patch("module.downloader.path.settings") as mock_settings:
+            mock_settings.downloader.path = "/downloads/Bangumi"
+            result = gen_save_path(bangumi)
+
+        assert result == "/downloads/Bangumi/My Anime (2024)/Season 0"
+
+    def test_gen_save_path_regular_offset_to_zero_reverts_to_original_season(self):
+        """普通剧集 season+offset 落到 0 时回退原季号：Season 0 会被
+        Plex/Jellyfin 当作特别篇，只有 special 类型才允许落入。"""
+        bangumi = make_bangumi(
+            official_title="My Anime",
+            year="2024",
+            season=1,
+            season_offset=-1,
+            episode_type="episode",
+        )
+        with patch("module.downloader.path.settings") as mock_settings:
+            mock_settings.downloader.path = "/downloads/Bangumi"
+            result = gen_save_path(bangumi)
+
+        assert result == "/downloads/Bangumi/My Anime (2024)/Season 1"
+
+    def test_gen_save_path_special_offset_to_zero_lands_in_season_zero(self):
+        """特别篇（special）经偏移落到第 0 季是合法的（Jellyfin/Plex 惯例）。"""
+        bangumi = make_bangumi(
+            official_title="My Anime",
+            year="2024",
+            season=1,
+            season_offset=-1,
+            episode_type="special",
+        )
+        with patch("module.downloader.path.settings") as mock_settings:
+            mock_settings.downloader.path = "/downloads/Bangumi"
+            result = gen_save_path(bangumi)
+
+        assert result == "/downloads/Bangumi/My Anime (2024)/Season 0"
+
+    def test_gen_save_path_special_offset_below_zero_reverts_to_original_season(self):
+        """特别篇偏移到负季号仍属非法配置，回退原季号。"""
+        bangumi = make_bangumi(
+            official_title="My Anime",
+            year="2024",
+            season=0,
+            season_offset=-1,
+            episode_type="special",
+        )
+        with patch("module.downloader.path.settings") as mock_settings:
+            mock_settings.downloader.path = "/downloads/Bangumi"
+            result = gen_save_path(bangumi)
+
+        assert result == "/downloads/Bangumi/My Anime (2024)/Season 0"
+
 
 # ---------------------------------------------------------------------------
-# _rule_name
+# rule_name
 # ---------------------------------------------------------------------------
 
 
@@ -73,16 +140,18 @@ class TestRuleName:
         bangumi = make_bangumi(official_title="My Anime", season=1, group_name="Sub")
         with patch("module.downloader.path.settings") as mock_settings:
             mock_settings.bangumi_manage.group_tag = False
-            result = TorrentPath._rule_name(bangumi)
+            result = rule_name(bangumi)
 
         assert result == "My Anime S1"
 
     def test_with_group_tag(self):
         """Rule name with group tag includes [group] prefix."""
-        bangumi = make_bangumi(official_title="My Anime", season=2, group_name="SubGroup")
+        bangumi = make_bangumi(
+            official_title="My Anime", season=2, group_name="SubGroup"
+        )
         with patch("module.downloader.path.settings") as mock_settings:
             mock_settings.bangumi_manage.group_tag = True
-            result = TorrentPath._rule_name(bangumi)
+            result = rule_name(bangumi)
 
         assert result == "[SubGroup] My Anime S2"
 
@@ -101,7 +170,7 @@ class TestCheckFiles:
             {"name": "episode02.mp4"},
             {"name": "episode02.srt"},
         ]
-        media, subs = TorrentPath.check_files(files)
+        media, subs = check_files(files)
 
         assert len(media) == 2
         assert "episode01.mkv" in media
@@ -118,7 +187,7 @@ class TestCheckFiles:
             {"name": "info.nfo"},
             {"name": "cover.jpg"},
         ]
-        media, subs = TorrentPath.check_files(files)
+        media, subs = check_files(files)
 
         assert len(media) == 1
         assert len(subs) == 0
@@ -131,14 +200,14 @@ class TestCheckFiles:
             {"name": "sub.ASS"},
             {"name": "sub.SRT"},
         ]
-        media, subs = TorrentPath.check_files(files)
+        media, subs = check_files(files)
 
         assert len(media) == 2
         assert len(subs) == 2
 
     def test_empty_file_list(self):
         """Empty file list returns empty lists."""
-        media, subs = TorrentPath.check_files([])
+        media, subs = check_files([])
         assert media == []
         assert subs == []
 
@@ -148,14 +217,14 @@ class TestCheckFiles:
             {"name": "Season 1/episode01.mkv"},
             {"name": "Subs/episode01.ass"},
         ]
-        media, subs = TorrentPath.check_files(files)
+        media, subs = check_files(files)
 
         assert len(media) == 1
         assert len(subs) == 1
 
 
 # ---------------------------------------------------------------------------
-# _path_to_bangumi
+# path_to_bangumi
 # ---------------------------------------------------------------------------
 
 
@@ -164,8 +233,7 @@ class TestPathToBangumi:
         """Parses save_path to extract bangumi name and season number."""
         with patch("module.downloader.path.settings") as mock_settings:
             mock_settings.downloader.path = "/downloads/Bangumi"
-            tp = TorrentPath()
-            name, season = tp._path_to_bangumi(
+            name, season = path_to_bangumi(
                 "/downloads/Bangumi/My Anime (2024)/Season 2"
             )
 
@@ -176,8 +244,7 @@ class TestPathToBangumi:
         """When no Season pattern found, defaults to season 1."""
         with patch("module.downloader.path.settings") as mock_settings:
             mock_settings.downloader.path = "/downloads/Bangumi"
-            tp = TorrentPath()
-            name, season = tp._path_to_bangumi("/downloads/Bangumi/My Anime (2024)")
+            name, season = path_to_bangumi("/downloads/Bangumi/My Anime (2024)")
 
         assert name == "My Anime (2024)"
         assert season == 1
@@ -186,36 +253,31 @@ class TestPathToBangumi:
         """Recognizes S01 style season naming."""
         with patch("module.downloader.path.settings") as mock_settings:
             mock_settings.downloader.path = "/downloads/Bangumi"
-            tp = TorrentPath()
-            name, season = tp._path_to_bangumi("/downloads/Bangumi/Anime/S03")
+            name, season = path_to_bangumi("/downloads/Bangumi/Anime/S03")
 
         assert season == 3
 
 
 # ---------------------------------------------------------------------------
-# is_ep / _file_depth
+# is_ep / file_depth
 # ---------------------------------------------------------------------------
 
 
 class TestIsEp:
     def test_shallow_file(self):
         """File at depth 1 (just filename) is considered an episode."""
-        tp = TorrentPath()
-        assert tp.is_ep("episode.mkv") is True
+        assert is_ep("episode.mkv") is True
 
     def test_one_folder_deep(self):
         """File at depth 2 (one folder) is still an episode."""
-        tp = TorrentPath()
-        assert tp.is_ep("Season 1/episode.mkv") is True
+        assert is_ep("Season 1/episode.mkv") is True
 
     def test_too_deep(self):
         """File at depth 3+ is NOT considered an episode."""
-        tp = TorrentPath()
-        assert tp.is_ep("a/b/episode.mkv") is False
+        assert is_ep("a/b/episode.mkv") is False
 
     def test_file_depth(self):
-        """_file_depth returns correct part count."""
-        tp = TorrentPath()
-        assert tp._file_depth("file.mkv") == 1
-        assert tp._file_depth("a/file.mkv") == 2
-        assert tp._file_depth("a/b/c/file.mkv") == 4
+        """file_depth returns correct part count."""
+        assert file_depth("file.mkv") == 1
+        assert file_depth("a/file.mkv") == 2
+        assert file_depth("a/b/c/file.mkv") == 4

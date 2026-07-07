@@ -6,7 +6,9 @@ qBittorrent instance. All operations return success and log their actions.
 """
 
 import logging
-from typing import Any
+from typing import Any, ClassVar
+
+from module.downloader.base import AddResult, DownloaderCapabilities
 
 logger = logging.getLogger(__name__)
 
@@ -17,11 +19,19 @@ class MockDownloader:
     All methods return success values and log their operations.
     """
 
+    capabilities: ClassVar[DownloaderCapabilities] = DownloaderCapabilities(
+        can_query=True,
+        can_rename=True,
+        can_manage=True,
+        can_rss_rules=True,
+    )
+
     def __init__(self):
         self._torrents: dict[str, dict] = {}
         self._rules: dict[str, dict] = {}
         self._feeds: dict[str, dict] = {}
         self._categories: set[str] = {"Bangumi", "BangumiCollection"}
+        self._authed = False
         self._prefs = {
             "save_path": "/tmp/mock-downloads",
             "rss_auto_downloading_enabled": True,
@@ -29,37 +39,41 @@ class MockDownloader:
             "rss_processing_enabled": True,
             "rss_refresh_interval": 30,
         }
-        logger.debug("[MockDownloader] Initialized")
+        logger.debug("Initialized")
 
     async def auth(self, retry=3) -> bool:
-        logger.debug("[MockDownloader] Auth successful (mocked)")
+        # No real session; idempotent by construction, kept for parity with
+        # QbDownloader so session-reuse tests stay meaningful.
+        self._authed = True
+        logger.debug("Auth successful (mocked)")
         return True
 
     async def logout(self):
-        logger.debug("[MockDownloader] Logout (mocked)")
+        self._authed = False
+        logger.debug("Logout (mocked)")
 
     async def check_host(self) -> bool:
-        logger.debug("[MockDownloader] check_host -> True")
+        logger.debug("check_host -> True")
         return True
 
     async def prefs_init(self, prefs: dict):
         self._prefs.update(prefs)
-        logger.debug("[MockDownloader] prefs_init: %s", prefs)
+        logger.debug("prefs_init: %s", prefs)
 
     async def get_app_prefs(self) -> dict:
-        logger.debug("[MockDownloader] get_app_prefs")
+        logger.debug("get_app_prefs")
         return self._prefs
 
     async def add_category(self, category: str):
         self._categories.add(category)
-        logger.debug("[MockDownloader] add_category: %s", category)
+        logger.debug("add_category: %s", category)
 
     async def torrents_info(
         self, status_filter: str | None, category: str | None, tag: str | None = None
     ) -> list[dict]:
         """Return list of torrents matching the filter."""
         logger.debug(
-            "[MockDownloader] torrents_info(filter=%s, category=%s, tag=%s)",
+            "torrents_info(filter=%s, category=%s, tag=%s)",
             status_filter,
             category,
             tag,
@@ -73,9 +87,14 @@ class MockDownloader:
             result.append(torrent)
         return result
 
+    async def get_torrents_by_tag(self, tag: str) -> list[dict]:
+        """Return all torrents carrying a given tag."""
+        logger.debug("get_torrents_by_tag(%s)", tag)
+        return [t for t in self._torrents.values() if tag in t.get("tags", [])]
+
     async def torrents_files(self, torrent_hash: str) -> list[dict]:
         """Return files for a torrent."""
-        logger.debug("[MockDownloader] torrents_files(%s)", torrent_hash)
+        logger.debug("torrents_files(%s)", torrent_hash)
         torrent = self._torrents.get(torrent_hash, {})
         return torrent.get("files", [])
 
@@ -86,8 +105,8 @@ class MockDownloader:
         save_path: str,
         category: str,
         tags: str | None = None,
-    ) -> bool:
-        """Add a torrent. Returns True for success."""
+    ) -> AddResult:
+        """Add a torrent. Returns ADDED for success."""
         import hashlib
         import time
 
@@ -105,90 +124,93 @@ class MockDownloader:
             "files": [],
             "tags": tags or "",
         }
-        logger.info(
-            f"[MockDownloader] add_torrents -> hash={mock_hash[:16]}... save_path={save_path}"
-        )
-        return True
+        logger.info(f"add_torrents -> hash={mock_hash[:16]}... save_path={save_path}")
+        return AddResult.ADDED
+
+    @staticmethod
+    def _normalize_hashes(hashes: str | list | tuple) -> list[str]:
+        """Accept a single hash, a pipe-joined string, or a list/tuple of
+        hashes and always return a list -- mirrors the real qB client's
+        normalization so switching downloader backends doesn't change
+        behavior (#1046)."""
+        if isinstance(hashes, (list, tuple)):
+            return list(hashes)
+        return hashes.split("|") if "|" in hashes else [hashes]
 
     async def torrents_delete(
         self, hash: str | list, delete_files: bool = True
     ) -> bool:
-        if isinstance(hash, (list, tuple)):
-            hashes = list(hash)
-        else:
-            hashes = hash.split("|") if "|" in hash else [hash]
-        for h in hashes:
+        for h in self._normalize_hashes(hash):
             self._torrents.pop(h, None)
-        logger.debug(
-            "[MockDownloader] torrents_delete(%s, delete_files=%s)", hash, delete_files
-        )
+        logger.debug("torrents_delete(%s, delete_files=%s)", hash, delete_files)
         return True
 
-    async def torrents_pause(self, hashes: str):
-        for h in hashes.split("|"):
+    async def torrents_pause(self, hashes: str | list):
+        for h in self._normalize_hashes(hashes):
             if h in self._torrents:
                 self._torrents[h]["state"] = "paused"
-        logger.debug("[MockDownloader] torrents_pause(%s)", hashes)
+        logger.debug("torrents_pause(%s)", hashes)
 
-    async def torrents_resume(self, hashes: str):
-        for h in hashes.split("|"):
+    async def torrents_resume(self, hashes: str | list):
+        for h in self._normalize_hashes(hashes):
             if h in self._torrents:
                 self._torrents[h]["state"] = "downloading"
-        logger.debug("[MockDownloader] torrents_resume(%s)", hashes)
+        logger.debug("torrents_resume(%s)", hashes)
 
     async def torrents_rename_file(
         self, torrent_hash: str, old_path: str, new_path: str, verify: bool = True
     ) -> bool:
-        logger.info(f"[MockDownloader] rename: {old_path} -> {new_path}")
+        logger.info(f"rename: {old_path} -> {new_path}")
         return True
 
     async def rss_add_feed(self, url: str, item_path: str):
         self._feeds[item_path] = {"url": url, "path": item_path}
-        logger.debug("[MockDownloader] rss_add_feed(%s, %s)", url, item_path)
+        logger.debug("rss_add_feed(%s, %s)", url, item_path)
 
     async def rss_remove_item(self, item_path: str):
         self._feeds.pop(item_path, None)
-        logger.debug("[MockDownloader] rss_remove_item(%s)", item_path)
+        logger.debug("rss_remove_item(%s)", item_path)
 
     async def rss_get_feeds(self) -> dict:
-        logger.debug("[MockDownloader] rss_get_feeds")
+        logger.debug("rss_get_feeds")
         return self._feeds
 
     async def rss_set_rule(self, rule_name: str, rule_def: dict):
         self._rules[rule_name] = rule_def
-        logger.info(f"[MockDownloader] rss_set_rule({rule_name})")
+        logger.info(f"rss_set_rule({rule_name})")
 
-    async def move_torrent(self, hashes: str, new_location: str):
-        for h in hashes.split("|"):
+    async def move_torrent(self, hashes: str | list, new_location: str):
+        for h in self._normalize_hashes(hashes):
             if h in self._torrents:
                 self._torrents[h]["save_path"] = new_location
-        logger.debug("[MockDownloader] move_torrent(%s, %s)", hashes, new_location)
+        logger.debug("move_torrent(%s, %s)", hashes, new_location)
 
     async def get_download_rule(self) -> dict:
-        logger.debug("[MockDownloader] get_download_rule")
+        logger.debug("get_download_rule")
         return self._rules
 
     async def get_torrent_path(self, _hash: str) -> str:
         torrent = self._torrents.get(_hash, {})
         path = torrent.get("save_path", "/tmp/mock-downloads")
-        logger.debug("[MockDownloader] get_torrent_path(%s) -> %s", _hash, path)
+        logger.debug("get_torrent_path(%s) -> %s", _hash, path)
         return path
 
-    async def set_category(self, _hash: str, category: str):
-        if _hash in self._torrents:
-            self._torrents[_hash]["category"] = category
-        logger.debug("[MockDownloader] set_category(%s, %s)", _hash, category)
+    async def set_category(self, _hash: str | list, category: str):
+        for h in self._normalize_hashes(_hash):
+            if h in self._torrents:
+                self._torrents[h]["category"] = category
+        logger.debug("set_category(%s, %s)", _hash, category)
 
     async def remove_rule(self, rule_name: str):
         self._rules.pop(rule_name, None)
-        logger.debug("[MockDownloader] remove_rule(%s)", rule_name)
+        logger.debug("remove_rule(%s)", rule_name)
 
     async def add_tag(self, _hash: str, tag: str):
         if _hash in self._torrents:
             tags = self._torrents[_hash].setdefault("tags", [])
             if tag not in tags:
                 tags.append(tag)
-        logger.debug("[MockDownloader] add_tag(%s, %s)", _hash, tag)
+        logger.debug("add_tag(%s, %s)", _hash, tag)
 
     async def check_connection(self) -> str:
         return "v4.6.0 (mock)"
@@ -220,7 +242,7 @@ class MockDownloader:
             "files": files or [{"name": f"{name}.mkv", "size": 1024 * 1024 * 500}],
             "tags": [],
         }
-        logger.debug("[MockDownloader] Added mock torrent: %s", name)
+        logger.debug("Added mock torrent: %s", name)
         return hash
 
     def get_state(self) -> dict[str, Any]:

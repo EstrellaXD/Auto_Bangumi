@@ -15,8 +15,8 @@ class RequestContent(RequestURL):
     async def get_torrents(
         self,
         _url: str,
-        _filter: str = None,
-        limit: int = None,
+        _filter: str | None = None,
+        limit: int | None = None,
         retry: int = 3,
     ) -> list[Torrent]:
         soup = await self.get_xml(_url, retry)
@@ -26,7 +26,9 @@ class RequestContent(RequestURL):
             if _filter is None:
                 _filter = "|".join(settings.rss_parser.filter)
             for _title, torrent_url, homepage in parsed_items:
-                if re.search(_filter, _title) is None:
+                # A blank filter means "exclude nothing" — re.search("", x) matches
+                # every string, which would otherwise exclude everything.
+                if not _filter or re.search(_filter, _title) is None:
                     torrents.append(
                         Torrent(name=_title, url=torrent_url, homepage=homepage)
                     )
@@ -35,25 +37,35 @@ class RequestContent(RequestURL):
                         break
             return torrents
         else:
-            logger.warning(f"[Network] Failed to get torrents: {_url}")
+            logger.warning(f"Failed to get torrents: {_url}")
             return []
 
-    async def get_xml(self, _url, retry: int = 3) -> xml.etree.ElementTree.Element:
+    async def get_xml(
+        self, _url, retry: int = 3
+    ) -> xml.etree.ElementTree.Element | None:
         req = await self.get_url(_url, retry)
         if req:
             try:
                 return xml.etree.ElementTree.fromstring(req.text)
             except xml.etree.ElementTree.ParseError as e:
-                logger.warning(f"[Network] Failed to parse XML from {_url}: {e}")
+                logger.warning(f"Failed to parse XML from {_url}: {e}")
                 return None
+        return None
 
     # API JSON
-    async def get_json(self, _url) -> dict:
+    async def get_json(self, _url) -> dict | None:
         req = await self.get_url(_url)
         if req:
             return req.json()
+        return None
 
-    async def post_json(self, _url, data: dict) -> dict:
+    async def post_form_json(self, _url, data: dict) -> dict:
+        """Form-encoded POST that returns a parsed JSON response.
+
+        Renamed from ``post_json`` to avoid shadowing ``RequestURL.post_json``
+        (the JSON-body POST used by notification providers) -- the two had
+        unrelated, LSP-incompatible signatures despite the same name.
+        """
         resp = await self.post_url(_url, data)
         return resp.json()
 
@@ -71,13 +83,16 @@ class RequestContent(RequestURL):
         req = await self.get_url(_url)
         if req:
             return req.content
-        logger.warning(f"[Network] Failed to get content from {_url}")
+        logger.warning(f"Failed to get content from {_url}")
         return None
 
     async def check_connection(self, _url):
         return await self.check_url(_url)
 
-    async def get_rss_title(self, _url):
+    async def get_rss_title(self, _url) -> str | None:
         soup = await self.get_xml(_url)
-        if soup:
-            return soup.find("./channel/title").text
+        if soup is not None:
+            title_el = soup.find("./channel/title")
+            if title_el is not None:
+                return title_el.text
+        return None

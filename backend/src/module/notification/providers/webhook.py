@@ -29,9 +29,11 @@ class WebhookProvider(NotificationProvider):
     """Generic webhook notification provider with customizable templates."""
 
     def __init__(self, config: "ProviderConfig"):
-        super().__init__()
+        super().__init__(config)
         self.url = config.url
-        self.template = config.template or DEFAULT_TEMPLATE
+        # Narrower than the base class's `str | None` -- webhook always has a
+        # rendered template (falls back to DEFAULT_TEMPLATE).
+        self.template: str = config.template or DEFAULT_TEMPLATE
 
     def _render_template(self, notification: Notification) -> dict:
         """Render the template with notification data.
@@ -49,7 +51,7 @@ class WebhookProvider(NotificationProvider):
             "{{title}}": notification.official_title,
             "{{season}}": str(notification.season),
             "{{episode}}": str(notification.episode),
-            "{{poster_url}}": notification.poster_path or "",
+            "{{poster_url}}": self._poster_url(notification) or "",
         }
 
         for pattern, value in replacements.items():
@@ -66,14 +68,14 @@ class WebhookProvider(NotificationProvider):
                 "title": notification.official_title,
                 "season": notification.season,
                 "episode": notification.episode,
-                "poster_url": notification.poster_path or "",
+                "poster_url": self._poster_url(notification) or "",
             }
 
     async def send(self, notification: Notification) -> bool:
         """Send notification via generic webhook."""
         data = self._render_template(notification)
 
-        resp = await self.post_data(self.url, data)
+        resp = await self._post_json(self.url, data)
         logger.debug("Webhook notification: %s", resp.status_code)
         # Accept any 2xx status code as success
         return 200 <= resp.status_code < 300
@@ -89,10 +91,21 @@ class WebhookProvider(NotificationProvider):
         data = self._render_template(test_notification)
 
         try:
-            resp = await self.post_data(self.url, data)
+            resp = await self._post_json(self.url, data)
             if 200 <= resp.status_code < 300:
                 return True, "Webhook test request sent successfully"
             else:
                 return False, f"Webhook returned status {resp.status_code}"
         except Exception as e:
             return False, f"Webhook test failed: {e}"
+
+    async def _deliver_text(self, title: str, body: str) -> bool:
+        """Deliver a system event via webhook (fixed minimal JSON shape).
+
+        System events don't use the user-configured episode template -- it
+        expects {{title}}/{{season}}/{{episode}}/{{poster_url}}, which system
+        events don't have.
+        """
+        data = {"title": title, "message": body}
+        resp = await self._post_json(self.url, data)
+        return 200 <= resp.status_code < 300

@@ -12,6 +12,9 @@ const isValid = computed(() => {
 });
 
 const passwordError = computed(() => {
+  if (accountData.value.username && accountData.value.username.length < 4) {
+    return t('setup.account.username_too_short');
+  }
   if (accountData.value.password && accountData.value.password.length < 8) {
     return t('setup.account.password_too_short');
   }
@@ -31,39 +34,44 @@ const passwordError = computed(() => {
       <p class="step-subtitle">{{ t('setup.account.subtitle') }}</p>
 
       <div class="form-fields">
-        <ab-label :label="t('setup.account.username')">
+        <ab-field :label="t('setup.account.username')">
           <input
             v-model="accountData.username"
             type="text"
             placeholder="admin"
             class="setup-input"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="t('setup.account.password')">
+        <ab-field :label="t('setup.account.password')">
           <input
             v-model="accountData.password"
             type="password"
             class="setup-input"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label :label="t('setup.account.confirm_password')">
+        <ab-field :label="t('setup.account.confirm_password')">
           <input
             v-model="accountData.confirmPassword"
             type="password"
             class="setup-input"
           />
-        </ab-label>
+        </ab-field>
 
         <p v-if="passwordError" class="error-text">{{ passwordError }}</p>
       </div>
 
       <div class="wizard-actions">
-        <ab-button size="small" type="secondary" @click="setupStore.prevStep()">
+        <ab-button size="sm" variant="secondary" @click="setupStore.prevStep()">
           {{ t('setup.nav.previous') }}
         </ab-button>
-        <ab-button size="small" :disabled="!isValid" @click="setupStore.nextStep()">
+        <ab-button
+          variant="primary"
+          size="sm"
+          :disabled="!isValid"
+          @click="setupStore.nextStep()"
+        >
           {{ t('setup.nav.next') }}
         </ab-button>
       </div>
@@ -106,7 +114,8 @@ const passwordError = computed(() => {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 
   &:hover {
     border-color: var(--color-primary);

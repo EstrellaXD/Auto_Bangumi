@@ -6,14 +6,22 @@
   --color-primary: #6C4AB6;
   --color-primary-hover: #563A92;
   --color-primary-light: #E8DEF8;
+  // 聚焦描边（focus ring）的半透明主色
+  --color-primary-alpha: rgba(108, 74, 182, 0.2);
   --color-accent: #F97316;
   --color-success: #22C55E;
   --color-danger: #EF4444;
   --color-warning: #F59E0B;
+  --color-warning-bg: #FEF9ED;
+  --color-warning-border: #FDE68A;
+  --color-warning-text: #92400E;
+  --color-warning-text-secondary: #A16207;
 
   --color-bg: #FAFAFA;
   --color-surface: #FFFFFF;
   --color-surface-hover: #F5F5F5;
+  // Soft Ink: 控件的填充底色（无边框，聚焦时才出现边框/描边）
+  --color-surface-2: #F1F4F8;
 
   --color-text: #1E293B;
   --color-text-secondary: #64748B;
@@ -28,8 +36,8 @@
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
 
-  // --- Radius ---
-  --radius-sm: 6px;
+  // --- Radius (Soft Ink: 4px 控件 / 8px 卡片、菜单、弹窗) ---
+  --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
@@ -55,6 +63,8 @@
 
   // --- Typography ---
   --font-family: 'Inter', -apple-system, 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
+  // Soft Ink: 数据文本（订阅源、时间戳、集数）用等宽字体 + tabular-nums
+  --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
 
   // --- Z-Index Scale ---
   --z-dropdown: 10;
@@ -89,14 +99,20 @@
   --color-primary: #8B6CC7;
   --color-primary-hover: #A78BDB;
   --color-primary-light: #2D2250;
+  --color-primary-alpha: rgba(139, 108, 199, 0.28);
   --color-accent: #FB923C;
   --color-success: #4ADE80;
   --color-danger: #F87171;
   --color-warning: #FBBF24;
+  --color-warning-bg: #322414;
+  --color-warning-border: #6B5416;
+  --color-warning-text: #FDE68A;
+  --color-warning-text-secondary: #EAB308;
 
   --color-bg: #0F172A;
   --color-surface: #1E293B;
   --color-surface-hover: #334155;
+  --color-surface-2: #26334A;
 
   --color-text: #F1F5F9;
   --color-text-secondary: #94A3B8;

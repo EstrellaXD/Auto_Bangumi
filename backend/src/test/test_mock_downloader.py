@@ -2,6 +2,7 @@
 
 import pytest
 
+from module.downloader import AddResult
 from module.downloader.client.mock_downloader import MockDownloader
 
 
@@ -112,7 +113,7 @@ class TestMockDownloaderAddTorrents:
             save_path="/downloads/Bangumi",
             category="Bangumi",
         )
-        assert result is True
+        assert result is AddResult.ADDED
 
     async def test_add_torrent_stores_in_state(self, mock_dl):
         await mock_dl.add_torrents(
@@ -143,7 +144,7 @@ class TestMockDownloaderAddTorrents:
             save_path="/downloads",
             category="Bangumi",
         )
-        assert result is True
+        assert result is AddResult.ADDED
 
     async def test_two_different_torrents_stored_separately(self, mock_dl):
         await mock_dl.add_torrents(

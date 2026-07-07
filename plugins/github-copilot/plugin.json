@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "id": "github-copilot",
+  "name": "GitHub Copilot",
+  "version": "1.0.0",
+  "min_ab_version": "3.3.0",
+  "entry": "ab_llm_copilot.adapter:GithubCopilotAdapter",
+  "auth_kind": "device_code",
+  "needs_base_url": false,
+  "default_model": "gpt-4o",
+  "description_en": "Use a GitHub Copilot subscription for title parsing via the device-flow login.",
+  "description_zh": "通过 device flow 登录，用 GitHub Copilot 订阅解析标题。",
+  "risk_notice_en": "Copilot's internal endpoint is for official clients only; third-party use may violate GitHub's terms and trigger abuse detection. Use at your own risk.",
+  "risk_notice_zh": "Copilot 内部端点仅供官方客户端使用，第三方调用可能违反 GitHub 条款并触发滥用检测。请自担风险。"
+}

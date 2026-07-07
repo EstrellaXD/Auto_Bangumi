@@ -1,11 +1,29 @@
-from .notification import PostNotification
-from .manager import NotificationManager
 from .base import NotificationProvider
+from .events import (
+    DownloaderUnavailableEvent,
+    DownloadFailureEvent,
+    LLMAuthFailureEvent,
+    LLMPluginInstallFailedEvent,
+    OffsetReviewEvent,
+    RssFailureEvent,
+    SystemEvent,
+    UpdateAppliedEvent,
+    UpdateAvailableEvent,
+)
+from .manager import NotificationManager
 from .providers import PROVIDER_REGISTRY
 
 __all__ = [
-    "PostNotification",
+    "DownloadFailureEvent",
+    "DownloaderUnavailableEvent",
+    "LLMAuthFailureEvent",
+    "LLMPluginInstallFailedEvent",
     "NotificationManager",
     "NotificationProvider",
+    "OffsetReviewEvent",
     "PROVIDER_REGISTRY",
+    "RssFailureEvent",
+    "SystemEvent",
+    "UpdateAppliedEvent",
+    "UpdateAvailableEvent",
 ]

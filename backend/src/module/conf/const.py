@@ -1,9 +1,11 @@
 # -*- encoding: utf-8 -*-
+from typing import Any
+
 # DEFAULT_SETTINGS: factory defaults written to config.json on first run.
 # ENV_TO_ATTR: maps AB_* environment variables to Config model attribute paths.
 #   Values are either a string attr name, a (attr_name, converter) tuple, or a
 #   list of such tuples when a single env var sets multiple attributes.
-DEFAULT_SETTINGS = {
+DEFAULT_SETTINGS: dict[str, dict[str, Any]] = {
     "program": {
         "rss_time": 900,
         "rename_time": 60,
@@ -40,7 +42,16 @@ DEFAULT_SETTINGS = {
         "username": "",
         "password": "",
     },
-    "notification": {"enable": False, "providers": []},
+    "notification": {"enable": False, "providers": [], "base_url": ""},
+    "llm": {
+        "enable": False,
+        "provider": "openai",
+        "api_key": "",
+        "model": "gpt-5-mini",
+        "base_url": "",
+        "mode": "fallback",
+    },
+    # [Deprecated] 旧版 OpenAI 解析配置，仅保留向后兼容
     "experimental_openai": {
         "enable": False,
         "api_key": "",
@@ -63,11 +74,17 @@ DEFAULT_SETTINGS = {
             "fc00::/7",
         ],
         "mcp_tokens": [],
+        "webauthn_rp_id": "",
+        "webauthn_origin": "",
+    },
+    "update": {
+        "channel": "stable",
+        "auto_check": True,
     },
 }
 
 
-ENV_TO_ATTR = {
+ENV_TO_ATTR: dict[str, dict[str, Any]] = {
     "program": {
         "AB_INTERVAL_TIME": ("rss_time", lambda e: int(e)),
         "AB_RENAME_FREQ": ("rename_time", lambda e: int(e)),
@@ -106,7 +123,7 @@ ENV_TO_ATTR = {
         ],
         "AB_SOCKS": [
             ("enable", lambda e: True),
-            ("type", lambda e: "socks"),
+            ("type", lambda e: "socks5"),
             ("host", lambda e: e.split(",")[0]),
             ("port", lambda e: int(e.split(",")[1])),
             ("username", lambda e: e.split(",")[2]),
@@ -120,7 +137,7 @@ class BCOLORS:
     """ANSI colour helpers for terminal output."""
 
     @staticmethod
-    def _(color: str, *args: str) -> str:
+    def _(color: str, *args: Any) -> str:
         """Wrap *args* in the given ANSI colour code and reset at the end."""
         strings = [str(s) for s in args]
         return f"{color}{', '.join(strings)}{BCOLORS.ENDC}"

@@ -19,6 +19,16 @@ except ImportError:
     logger.info("Can't find version info, use DEV_VERSION instead")
     VERSION = "DEV_VERSION"
 
+# 镜像构建期写入的基线版本（见 Dockerfile 的 `RUN echo ... > /app/IMAGE_VERSION`）。
+# 覆盖层（在线自动更新）应用后，运行版本 VERSION 会变成覆盖层版本，而
+# IMAGE_VERSION 始终保持镜像自带的基线版本——用于判断“镜像 vs 覆盖层”谁更新，
+# 以及在线更新的 min_image_version 兼容性检查。仓库/开发环境无此文件时回退到 VERSION。
+IMAGE_VERSION_PATH = Path("/app/IMAGE_VERSION")
+try:
+    IMAGE_VERSION = IMAGE_VERSION_PATH.read_text(encoding="utf-8").strip() or VERSION
+except OSError:
+    IMAGE_VERSION = VERSION
+
 CONFIG_PATH = (
     CONFIG_ROOT / "config_dev.json"
     if VERSION == "DEV_VERSION"
@@ -51,7 +61,8 @@ class Settings(Config):
         config = self._migrate_old_config(config)
         config_obj = Config.model_validate(config)
         self.__dict__.update(config_obj.__dict__)
-        logger.info("Config loaded")
+        # 每次 reload/重启都会触发 load，INFO 级别会在日志里反复刷屏
+        logger.debug("Config loaded")
 
     @staticmethod
     def _migrate_old_config(config: dict) -> dict:
@@ -79,12 +90,34 @@ class Settings(Config):
         if "security" not in config:
             config["security"] = DEFAULT_SETTINGS["security"]
 
+        # 旧版 experimental_openai 配置自动迁移到 llm 段（幂等：
+        # llm 段已有有效内容时不再触碰，旧段保留以便降级回滚）
+        openai_conf = config.get("experimental_openai", {})
+        llm_conf = config.get("llm") or {}
+        llm_configured = llm_conf.get("enable") or llm_conf.get("api_key")
+        openai_configured = openai_conf.get("enable") or openai_conf.get("api_key")
+        if not llm_configured and openai_configured:
+            base_url = openai_conf.get("base_url", openai_conf.get("api_base", ""))
+            # 官方地址无需显式指定，空串即官方 API
+            if base_url in ("https://api.openai.com/v1", "https://api.openai.com/"):
+                base_url = ""
+            config["llm"] = {
+                "enable": openai_conf.get("enable", False),
+                "provider": "openai",
+                "api_key": openai_conf.get("api_key", ""),
+                "model": openai_conf.get("model", "gpt-5-mini"),
+                "base_url": base_url,
+                # 旧版语义是 LLM 优先解析，迁移用户保持原有行为
+                "mode": "primary",
+            }
+
         return config
 
     def save(self, config_dict: dict | None = None):
         """Write configuration to ``CONFIG_PATH``. Uses current state when no dict supplied."""
         if not config_dict:
             config_dict = self.model_dump()
+        CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
         with open(CONFIG_PATH, "w", encoding="utf-8") as f:
             json.dump(config_dict, f, indent=4, ensure_ascii=False)
 
@@ -111,7 +144,7 @@ class Settings(Config):
                         config_dict[key][attr_name] = self.__val_from_env(env, attr)
         config_obj = Config.model_validate(config_dict)
         self.__dict__.update(config_obj.__dict__)
-        logger.info("Config loaded from env")
+        logger.debug("Config loaded from env")
 
     @staticmethod
     def __val_from_env(env: str, attr: tuple | str):

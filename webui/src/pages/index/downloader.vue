@@ -1,5 +1,7 @@
 <script lang="tsx" setup>
-import { type DataTableColumns, NDataTable, NProgress } from 'naive-ui';
+import { type DataTableColumns, NDataTable } from 'naive-ui';
+import AbProgress from '@/components/basic/ab-progress.vue';
+import { useConfirm } from '@/hooks/useConfirm';
 import type { QbTorrentInfo, TorrentGroup } from '#/downloader';
 
 definePage({
@@ -19,13 +21,34 @@ const {
   toggleGroup,
   clearSelection,
 } = useDownloaderStore();
+const { confirm } = useConfirm();
+
+async function onDeleteSelected() {
+  const ok = await confirm({
+    title: t('downloader.action.delete'),
+    body: t('downloader.action.delete_confirm'),
+    confirmText: t('downloader.action.delete'),
+    danger: true,
+  });
+  if (ok) deleteSelected(false);
+}
 
 const isNull = computed(() => {
   return config.value.downloader.host === '';
 });
 
+const { connected: sseConnected } = useEventStream();
+
 const isActive = ref(false);
-const { pause, resume } = useIntervalFn(getAll, 5000, { immediate: false });
+const { pause, resume } = useIntervalFn(
+  () => {
+    // SSE 已接管种子列表推送，或页面不可见时，跳过本次轮询请求。
+    if (sseConnected.value || document.hidden) return;
+    getAll();
+  },
+  5000,
+  { immediate: false }
+);
 
 onActivated(async () => {
   isActive.value = true;
@@ -46,12 +69,12 @@ function formatSize(bytes: number): string {
   if (bytes === 0) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / 1024**i).toFixed(1)  } ${  units[i]}`;
+  return `${(bytes / 1024 ** i).toFixed(1)} ${units[i]}`;
 }
 
 function formatSpeed(bytesPerSec: number): string {
   if (bytesPerSec === 0) return '-';
-  return `${formatSize(bytesPerSec)  }/s`;
+  return `${formatSize(bytesPerSec)}/s`;
 }
 
 function formatEta(seconds: number): string {
@@ -69,6 +92,9 @@ function stateLabel(state: string): string {
     uploading: t('downloader.state.seeding'),
     pausedDL: t('downloader.state.paused'),
     pausedUP: t('downloader.state.paused'),
+    // qBittorrent 5.0+ 把 paused* 状态改名为 stopped*
+    stoppedDL: t('downloader.state.paused'),
+    stoppedUP: t('downloader.state.paused'),
     stalledDL: t('downloader.state.stalled'),
     stalledUP: t('downloader.state.seeding'),
     queuedDL: t('downloader.state.queued'),
@@ -83,11 +109,11 @@ function stateLabel(state: string): string {
 }
 
 function stateType(state: string): string {
-  if (state.includes('paused')) return 'inactive';
-  if (state === 'downloading' || state === 'forcedDL') return 'active';
-  if (state.includes('UP') || state === 'uploading') return 'primary';
-  if (state === 'error' || state === 'missingFiles') return 'warn';
-  return 'primary';
+  if (state.includes('paused') || state.includes('stopped')) return 'neutral';
+  if (state === 'downloading' || state === 'forcedDL') return 'success';
+  if (state.includes('UP') || state === 'uploading') return 'info';
+  if (state === 'error' || state === 'missingFiles') return 'danger';
+  return 'info';
 }
 
 function isGroupAllSelected(group: TorrentGroup): boolean {
@@ -110,11 +136,14 @@ const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
     width: 160,
     render(row: QbTorrentInfo) {
       return (
-        <NProgress
-          type="line"
-          percentage={Math.round(row.progress * 100)}
-          indicator-placement="inside"
-          processing={row.state === 'downloading' || row.state === 'forcedDL'}
+        <AbProgress
+          value={row.progress * 100}
+          label={`${Math.round(row.progress * 100)}%`}
+          state={
+            row.state === 'error' || row.state === 'missingFiles'
+              ? 'error'
+              : 'active'
+          }
         />
       );
     },
@@ -124,7 +153,9 @@ const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
     key: 'state',
     width: 100,
     render(row: QbTorrentInfo) {
-      return <ab-tag type={stateType(row.state)} title={stateLabel(row.state)} />;
+      return (
+        <ab-tag type={stateType(row.state)} title={stateLabel(row.state)} />
+      );
     },
   },
   {
@@ -162,7 +193,7 @@ const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
   {
     title: t('downloader.torrent.peers'),
     key: 'peers',
-    width: 90,
+    width: 110,
     render(row: QbTorrentInfo) {
       return `${row.num_seeds} / ${row.num_leechs}`;
     },
@@ -193,36 +224,54 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
     <div v-if="isNull" class="empty-guide">
       <div class="empty-guide-header anim-fade-in">
         <div class="empty-guide-title">{{ $t('downloader.empty.title') }}</div>
-        <div class="empty-guide-subtitle">{{ $t('downloader.empty.subtitle') }}</div>
+        <div class="empty-guide-subtitle">
+          {{ $t('downloader.empty.subtitle') }}
+        </div>
       </div>
 
       <div class="empty-guide-steps">
         <div class="empty-guide-step anim-slide-up" style="--delay: 0.15s">
           <div class="empty-guide-step-number">1</div>
           <div class="empty-guide-step-content">
-            <div class="empty-guide-step-title">{{ $t('downloader.empty.step1_title') }}</div>
-            <div class="empty-guide-step-desc">{{ $t('downloader.empty.step1_desc') }}</div>
+            <div class="empty-guide-step-title">
+              {{ $t('downloader.empty.step1_title') }}
+            </div>
+            <div class="empty-guide-step-desc">
+              {{ $t('downloader.empty.step1_desc') }}
+            </div>
           </div>
         </div>
 
         <div class="empty-guide-step anim-slide-up" style="--delay: 0.3s">
           <div class="empty-guide-step-number">2</div>
           <div class="empty-guide-step-content">
-            <div class="empty-guide-step-title">{{ $t('downloader.empty.step2_title') }}</div>
-            <div class="empty-guide-step-desc">{{ $t('downloader.empty.step2_desc') }}</div>
+            <div class="empty-guide-step-title">
+              {{ $t('downloader.empty.step2_title') }}
+            </div>
+            <div class="empty-guide-step-desc">
+              {{ $t('downloader.empty.step2_desc') }}
+            </div>
           </div>
         </div>
 
         <div class="empty-guide-step anim-slide-up" style="--delay: 0.45s">
           <div class="empty-guide-step-number">3</div>
           <div class="empty-guide-step-content">
-            <div class="empty-guide-step-title">{{ $t('downloader.empty.step3_title') }}</div>
-            <div class="empty-guide-step-desc">{{ $t('downloader.empty.step3_desc') }}</div>
+            <div class="empty-guide-step-title">
+              {{ $t('downloader.empty.step3_title') }}
+            </div>
+            <div class="empty-guide-step-desc">
+              {{ $t('downloader.empty.step3_desc') }}
+            </div>
           </div>
         </div>
       </div>
 
-      <RouterLink to="/config" class="empty-guide-action anim-slide-up" style="--delay: 0.6s">
+      <RouterLink
+        to="/config"
+        class="empty-guide-action anim-slide-up"
+        style="--delay: 0.6s"
+      >
         {{ $t('sidebar.config') }}
       </RouterLink>
     </div>
@@ -258,9 +307,15 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
             {{ selectedHashes.length }} {{ $t('downloader.selected') }}
           </span>
           <div class="action-bar-buttons">
-            <ab-button size="small" @click="resumeSelected">{{ $t('downloader.action.resume') }}</ab-button>
-            <ab-button size="small" @click="pauseSelected">{{ $t('downloader.action.pause') }}</ab-button>
-            <ab-button size="small" type="warn" @click="deleteSelected(false)">{{ $t('downloader.action.delete') }}</ab-button>
+            <ab-button variant="primary" size="sm" @click="resumeSelected">{{
+              $t('downloader.action.resume')
+            }}</ab-button>
+            <ab-button variant="secondary" size="sm" @click="pauseSelected">{{
+              $t('downloader.action.pause')
+            }}</ab-button>
+            <ab-button variant="danger" size="sm" @click="onDeleteSelected">{{
+              $t('downloader.action.delete')
+            }}</ab-button>
           </div>
         </div>
       </Transition>
@@ -339,7 +394,7 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
   @include forMobile {
     width: 100%;
 
-    :deep(.btn) {
+    :deep(.ab-btn) {
       flex: 1;
     }
   }
@@ -399,7 +454,7 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   transition: background-color var(--transition-normal),
-              border-color var(--transition-normal);
+    border-color var(--transition-normal);
 }
 
 .empty-guide-step-number {

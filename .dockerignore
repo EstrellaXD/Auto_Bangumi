@@ -1,5 +1,7 @@
 __pycache__
+**/__pycache__
 *.pyc
+**/*.pyc
 *.pyo
 *.pyd
 .Python
@@ -20,6 +22,7 @@ coverage.xml
 .hypothesis
 
 backend/src/module/tests
+backend/src/test
 backend/src/module/conf/const_dev.py
 config/bangumi.json/config/bangumi.json
 /docs

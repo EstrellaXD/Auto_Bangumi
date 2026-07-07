@@ -60,12 +60,12 @@ export const apiRSS = {
   },
 
   async refreshAll() {
-    const { data } = await axios.get<ApiSuccess>('api/v1/rss/refresh/all');
+    const { data } = await axios.post<ApiSuccess>('api/v1/rss/refresh/all');
     return data!;
   },
 
   async refresh(rss_id: number) {
-    const { data } = await axios.get<ApiSuccess>(
+    const { data } = await axios.post<ApiSuccess>(
       `api/v1/rss/refresh/${rss_id}`
     );
     return data!;

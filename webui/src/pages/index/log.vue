@@ -1,50 +1,72 @@
 <script lang="ts" setup>
 import { watchOnce } from '@vueuse/core';
+import { useConfirm } from '@/hooks/useConfirm';
+import { countLogLevels, parseLogLines } from '@/utils/log-parse';
+import type { LogLevel } from '@/utils/log-parse';
 
 definePage({
   name: 'Log',
 });
 
+const { t } = useMyI18n();
 const { onUpdate, offUpdate, reset, copy, getLog } = useLogStore();
+const { confirm } = useConfirm();
+
+async function onReset() {
+  const ok = await confirm({
+    title: t('log.reset'),
+    body: t('log.reset_confirm'),
+    confirmText: t('log.reset'),
+    danger: true,
+  });
+  if (ok) reset();
+}
 const { log } = storeToRefs(useLogStore());
-const { version } = useAppInfo();
 
 // Filter states
 const selectedLevels = ref<string[]>([]);
+const searchQuery = ref('');
 
 // Log levels
-const logLevels = ['INFO', 'WARNING', 'ERROR', 'DEBUG'];
+const logLevels: LogLevel[] = ['INFO', 'WARNING', 'ERROR', 'DEBUG'];
 
-const formatLog = computed(() => {
-  const list = log.value
-    .trim()
-    .split('\n')
-    .filter((i) => i !== '');
-  const startIndex = list.findIndex((i) => /Version/.test(i));
+// Rendering is unvirtualized, so bound the work: only the newest lines are
+// parsed and shown. Older history is still available via the log file.
+const MAX_LOG_LINES = 1000;
 
-  return list.slice(startIndex === -1 ? 0 : startIndex).map((i, index) => {
-    const date = i.match(/\[\d+-\d+-\d+\ \d+:\d+:\d+\]/)?.[0] || '';
-    const type = i.match(/(INFO)|(WARNING)|(ERROR)|(DEBUG)/)?.[0] || '';
-    const content = i.replace(date, '').replace(`${type}:`, '').trim();
+const formatLog = computed(() => parseLogLines(log.value, MAX_LOG_LINES));
 
-    return {
-      index,
-      date,
-      type,
-      content,
-    };
+const levelCounts = computed(() => countLogLevels(formatLog.value));
+
+// 健康摘要：错误/警告计数，回答“是否在正常工作”
+const errorCount = computed(() => levelCounts.value.ERROR);
+const warningCount = computed(() => levelCounts.value.WARNING);
+const hasProblems = computed(() => errorCount.value + warningCount.value > 0);
+
+// Filtered logs based on selected levels + text search
+const filteredLog = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase();
+  return formatLog.value.filter((entry) => {
+    if (
+      selectedLevels.value.length > 0 &&
+      !selectedLevels.value.includes(entry.type)
+    ) {
+      return false;
+    }
+    if (
+      query &&
+      !entry.content.toLowerCase().includes(query) &&
+      !entry.module.toLowerCase().includes(query)
+    ) {
+      return false;
+    }
+    return true;
   });
 });
 
-// Filtered logs based on selected levels
-const filteredLog = computed(() => {
-  if (selectedLevels.value.length === 0) {
-    return formatLog.value;
-  }
-  return formatLog.value.filter((entry) =>
-    selectedLevels.value.includes(entry.type)
-  );
-});
+const isFiltered = computed(
+  () => selectedLevels.value.length > 0 || searchQuery.value.trim() !== ''
+);
 
 // Toggle level filter
 function toggleLevel(level: string) {
@@ -59,24 +81,28 @@ function toggleLevel(level: string) {
 // Clear all filters
 function clearFilters() {
   selectedLevels.value = [];
-}
-
-function typeColor(type: string) {
-  const M: Record<string, string> = {
-    INFO: 'var(--color-primary)',
-    WARNING: 'var(--color-warning)',
-    ERROR: 'var(--color-danger)',
-    DEBUG: 'var(--color-text-muted)',
-  };
-  return M[type] || 'var(--color-text)';
+  searchQuery.value = '';
 }
 
 const logContainer = ref<HTMLElement | null>(null);
+
+function scrollBehavior(): ScrollBehavior {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ? 'auto'
+    : 'smooth';
+}
 
 function backToBottom() {
   if (logContainer.value) {
     logContainer.value.scrollTop = logContainer.value.scrollHeight;
   }
+}
+
+function jumpToFirstProblem() {
+  const el = logContainer.value?.querySelector<HTMLElement>(
+    '.log-entry.is-error, .log-entry.is-warning'
+  );
+  el?.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
 }
 
 onActivated(() => {
@@ -85,6 +111,8 @@ onActivated(() => {
   if (log.value) {
     backToBottom();
   } else {
+    // SSE 只在日志变化时推送：新会话首次进入时主动拉一次全量日志
+    getLog(true);
     watchOnce(
       () => log.value,
       () => {
@@ -104,131 +132,146 @@ onDeactivated(() => {
 <template>
   <div class="page-log">
     <div class="log-layout">
-      <ab-container :title="$t('log.title')" class="log-main">
-        <!-- Level Filter Section -->
-        <div class="log-filters">
-          <div class="filter-group">
-            <span class="filter-label">{{ $t('log.filter_level') }}</span>
-            <div class="filter-chips">
-              <button
+      <div class="log-main">
+        <div
+          v-if="hasProblems"
+          class="log-health"
+          :class="{ 'has-errors': errorCount > 0 }"
+          role="status"
+        >
+          <b>{{
+            $t('log.health_summary', {
+              errors: errorCount,
+              warnings: warningCount,
+            })
+          }}</b>
+          <ab-button size="sm" @click="jumpToFirstProblem">
+            {{ $t('log.jump_first') }} ↓
+          </ab-button>
+        </div>
+
+        <div class="log-viewer-card">
+          <div class="log-toolbar">
+            <div
+              class="filter-chips"
+              role="group"
+              :aria-label="$t('log.filter_level')"
+            >
+              <ab-button
                 v-for="level in logLevels"
                 :key="level"
+                size="sm"
                 class="filter-chip"
-                :class="{
-                  active: selectedLevels.includes(level),
-                  [`level-${level.toLowerCase()}`]: true,
-                }"
+                :variant="
+                  selectedLevels.includes(level) ? 'primary' : 'secondary'
+                "
+                :aria-pressed="selectedLevels.includes(level)"
                 @click="toggleLevel(level)"
               >
                 {{ level }}
-              </button>
+                <span class="chip-count">{{ levelCounts[level] }}</span>
+              </ab-button>
+            </div>
+
+            <ab-input
+              v-model="searchQuery"
+              class="log-search"
+              type="search"
+              :placeholder="$t('log.search_placeholder')"
+              :aria-label="$t('log.search_placeholder')"
+            />
+
+            <div class="log-actions">
+              <ab-button size="sm" @click="getLog(true)">
+                {{ $t('log.update_now') }}
+              </ab-button>
+
+              <ab-button size="sm" @click="copy">
+                {{ $t('log.copy') }}
+              </ab-button>
+
+              <ab-button size="sm" variant="danger" @click="onReset">
+                {{ $t('log.reset') }}
+              </ab-button>
             </div>
           </div>
 
-          <button
-            v-if="selectedLevels.length > 0"
-            class="clear-filters"
-            @click="clearFilters"
-          >
-            {{ $t('log.clear_filters') }}
-          </button>
-        </div>
-
-        <div ref="logContainer" class="log-viewer">
-          <div class="log-content">
-            <template v-for="i in filteredLog" :key="i.index">
+          <div ref="logContainer" class="log-viewer">
+            <div v-if="filteredLog.length === 0" class="log-empty">
+              <template v-if="formatLog.length > 0 && isFiltered">
+                <p>{{ $t('log.filtered_empty') }}</p>
+                <ab-button size="sm" @click="clearFilters">
+                  {{ $t('log.clear_filters') }}
+                </ab-button>
+              </template>
+              <p v-else>{{ $t('log.empty') }}</p>
+            </div>
+            <div v-else class="log-content">
               <div
+                v-for="i in filteredLog"
+                :key="i.index"
                 class="log-entry"
-                :style="{ color: typeColor(i.type) }"
+                :class="{
+                  'is-error': i.type === 'ERROR',
+                  'is-warning': i.type === 'WARNING',
+                }"
               >
-                <div class="log-meta">
-                  <div class="log-type">{{ i.type }}</div>
-                  <div class="log-date">{{ i.date }}</div>
-                </div>
-                <div class="log-message">{{ i.content }}</div>
+                <span
+                  class="log-level"
+                  :class="`level-${i.type.toLowerCase()}`"
+                >
+                  {{ i.type || '—' }}
+                </span>
+                <span class="log-date">{{ i.date }}</span>
+                <span class="log-message">
+                  <span v-if="i.module" class="log-module">{{ i.module }}</span>
+                  {{ i.content }}
+                </span>
               </div>
-            </template>
+            </div>
           </div>
         </div>
-
-        <div class="log-actions">
-          <ab-button size="small" @click="getLog">
-            {{ $t('log.update_now') }}
-          </ab-button>
-
-          <ab-button type="warn" size="small" @click="reset">
-            {{ $t('log.reset') }}
-          </ab-button>
-
-          <ab-button size="small" @click="copy">
-            {{ $t('log.copy') }}
-          </ab-button>
-        </div>
-      </ab-container>
+      </div>
 
       <div class="log-sidebar">
-        <ab-container :title="$t('log.contact_info')">
-          <div class="contact-list">
-            <ab-label label="Github">
-              <ab-button
-                size="small"
-                link="https://github.com/EstrellaXD/Auto_Bangumi"
+        <ab-container :title="$t('log.about')">
+          <ul class="about-links">
+            <li>
+              <a
+                href="https://github.com/EstrellaXD/Auto_Bangumi"
                 target="_blank"
+                rel="noopener"
+                >GitHub <span aria-hidden="true">↗</span></a
               >
-                {{ $t('log.go') }}
-              </ab-button>
-            </ab-label>
-
-            <ab-label label="Official Website">
-              <ab-button
-                size="small"
-                link="https://autobangumi.org"
+            </li>
+            <li>
+              <a href="https://autobangumi.org" target="_blank" rel="noopener"
+                >{{ $t('log.website') }} <span aria-hidden="true">↗</span></a
+              >
+            </li>
+            <li>
+              <a href="https://t.me/autobangumi" target="_blank" rel="noopener"
+                >{{ $t('log.telegram_group') }}
+                <span aria-hidden="true">↗</span></a
+              >
+            </li>
+            <li>
+              <a
+                href="https://twitter.com/Estrella_Pan"
                 target="_blank"
+                rel="noopener"
+                >X <span aria-hidden="true">↗</span></a
               >
-                {{ $t('log.go') }}
-              </ab-button>
-            </ab-label>
-
-            <div class="divider"></div>
-
-            <ab-label label="X">
-              <ab-button
-                size="small"
-                link="https://twitter.com/Estrella_Pan"
+            </li>
+            <li>
+              <a
+                href="https://github.com/EstrellaXD/Auto_Bangumi/issues"
                 target="_blank"
+                rel="noopener"
+                >{{ $t('log.report_bug') }} <span aria-hidden="true">↗</span></a
               >
-                {{ $t('log.go') }}
-              </ab-button>
-            </ab-label>
-
-            <ab-label label="Telegram Group">
-              <ab-button
-                size="small"
-                link="https://t.me/autobangumi"
-                target="_blank"
-              >
-                {{ $t('log.join') }}
-              </ab-button>
-            </ab-label>
-          </div>
-        </ab-container>
-
-        <ab-container :title="$t('log.bug_repo')">
-          <div class="bug-section">
-            <ab-button
-              class="issues-btn"
-              link="https://github.com/EstrellaXD/Auto_Bangumi/issues"
-            >
-              Github Issues
-            </ab-button>
-
-            <div class="divider"></div>
-
-            <div class="version-info">
-              <span>Version: </span>
-              <span>{{ version }}</span>
-            </div>
-          </div>
+            </li>
+          </ul>
         </ab-container>
       </div>
     </div>
@@ -248,95 +291,54 @@ onDeactivated(() => {
   align-items: start;
 
   @include forDesktop {
-    grid-template-columns: 3fr 2fr;
+    grid-template-columns: 1fr 280px;
   }
 }
 
 .log-main {
   min-width: 0;
-}
-
-.log-viewer {
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  overflow: auto;
-  padding: 10px;
-  max-height: 60vh;
-  transition: border-color var(--transition-normal);
-}
-
-.log-content {
-  min-width: 0;
-}
-
-.log-entry {
-  padding: 10px 0;
-  line-height: 1.5;
-  border-bottom: 1px solid var(--color-border);
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-
-  @include forDesktop {
-    align-items: center;
-    gap: 20px;
-  }
-
-  &:last-child {
-    border-bottom: none;
-  }
-}
-
-.log-meta {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 10px;
-  white-space: nowrap;
 }
 
-.log-type {
-  text-align: center;
-  font-weight: 500;
-  font-size: 12px;
-}
-
-.log-date {
-  font-size: 11px;
-  opacity: 0.8;
-}
-
-.log-message {
-  flex: 1;
-  word-break: break-all;
+.log-health {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-warning-border);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
   font-size: 13px;
-}
 
-.log-filters {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-
-  @include forDesktop {
-    flex-direction: row;
-    align-items: center;
+  &.has-errors {
+    border-color: color-mix(in srgb, var(--color-danger) 35%, transparent);
+    background: color-mix(
+      in srgb,
+      var(--color-danger) 8%,
+      var(--color-surface)
+    );
+    color: var(--color-danger);
   }
 }
 
-.filter-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text-muted);
-  min-width: 60px;
+.log-viewer-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.log-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .filter-chips {
@@ -346,88 +348,135 @@ onDeactivated(() => {
 }
 
 .filter-chip {
-  padding: 4px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-  background: transparent;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  color: var(--color-text);
-
-  &:hover {
-    border-color: var(--color-primary);
-  }
-
-  &.active {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
-    color: white;
-  }
-
-  &.level-info {
-    &:hover,
-    &.active {
-      border-color: var(--color-primary);
-    }
-    &.active {
-      background: var(--color-primary);
-    }
-  }
-
-  &.level-warning {
-    &:hover,
-    &.active {
-      border-color: var(--color-warning);
-    }
-    &.active {
-      background: var(--color-warning);
-    }
-  }
-
-  &.level-error {
-    &:hover,
-    &.active {
-      border-color: var(--color-danger);
-    }
-    &.active {
-      background: var(--color-danger);
-    }
-  }
-
-  &.level-debug {
-    &:hover,
-    &.active {
-      border-color: var(--color-text-muted);
-    }
-    &.active {
-      background: var(--color-text-muted);
-    }
+  @include forTouch {
+    min-height: var(--touch-target);
   }
 }
 
-.clear-filters {
-  align-self: flex-start;
-  padding: 4px 12px;
-  border-radius: var(--radius-sm);
-  border: none;
-  background: var(--color-danger-light);
-  color: var(--color-danger);
-  font-size: 12px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
+.chip-count {
+  margin-left: 5px;
+  font-size: 11px;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
 
-  &:hover {
-    background: var(--color-danger);
-    color: white;
-  }
+.log-search {
+  flex: 1;
+  min-width: 140px;
+  max-width: 260px;
 }
 
 .log-actions {
   display: flex;
-  justify-content: flex-end;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.log-viewer {
+  overflow: auto;
+  max-height: 62vh;
+  padding: 4px 0;
+}
+
+.log-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 10px;
-  margin-top: 12px;
+  padding: 24px 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.log-entry {
+  display: grid;
+  // 固定列宽：auto 轨道会随每行徽标/时间戳宽度变化，导致跨行错位
+  grid-template-columns: 64px 21ch 1fr;
+  align-items: baseline;
+  gap: 10px;
+  padding: 4px 12px;
+  line-height: 1.5;
+  // 行内统一等宽字体与字号；时间戳 21ch 轨道按此字体解析
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12.5px;
+
+  &.is-warning {
+    background: color-mix(in srgb, var(--color-warning) 9%, transparent);
+  }
+
+  &.is-error {
+    background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+  }
+
+  @media (max-width: 639px) {
+    grid-template-columns: 64px 1fr;
+
+    .log-message {
+      grid-column: 1 / -1;
+    }
+  }
+}
+
+.log-level {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 58px;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+
+  &.level-info {
+    background: var(--color-surface-hover);
+    color: var(--color-text-secondary);
+  }
+
+  &.level-debug {
+    background: transparent;
+    border: 1px dashed var(--color-border-hover);
+    color: var(--color-text-secondary);
+  }
+
+  &.level-warning {
+    background: var(--color-warning-bg);
+    border: 1px solid var(--color-warning-border);
+    color: var(--color-warning-text);
+  }
+
+  &.level-error {
+    background: color-mix(
+      in srgb,
+      var(--color-danger) 12%,
+      var(--color-surface)
+    );
+    border: 1px solid color-mix(in srgb, var(--color-danger) 40%, transparent);
+    color: var(--color-danger);
+  }
+}
+
+.log-date {
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.log-message {
+  min-width: 0;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.log-module {
+  color: var(--color-text-secondary);
+  margin-right: 4px;
+
+  &::after {
+    content: '—';
+    margin-left: 4px;
+  }
 }
 
 .log-sidebar {
@@ -437,36 +486,42 @@ onDeactivated(() => {
   gap: 12px;
 }
 
-.contact-list {
+.about-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
 
-.divider {
-  width: 100%;
-  height: 1px;
-  background: var(--color-border);
-}
+  a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 4px;
+    border-radius: var(--radius-sm);
+    color: var(--color-text);
+    font-size: 13px;
+    text-decoration: none;
+    transition: background-color var(--transition-fast);
 
-.bug-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  align-items: center;
-}
+    span {
+      color: var(--color-text-secondary);
+    }
 
-.issues-btn {
-  width: 100%;
-  max-width: 300px;
-  height: 46px;
-  font-size: 16px;
-  border-radius: var(--radius-md);
-}
+    &:hover {
+      background: var(--color-surface-hover);
+      color: var(--color-primary);
+    }
 
-.version-info {
-  text-align: center;
-  color: var(--color-primary);
-  font-size: 16px;
+    @include forTouch {
+      min-height: var(--touch-target);
+    }
+  }
+
+  li + li a {
+    border-top: 1px solid var(--color-border);
+    border-radius: 0;
+  }
 }
 </style>

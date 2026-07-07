@@ -18,7 +18,7 @@ class PushoverProvider(NotificationProvider):
     API_URL = "https://api.pushover.net/1/messages.json"
 
     def __init__(self, config: "ProviderConfig"):
-        super().__init__()
+        super().__init__(config)
         self.user_key = config.user_key
         self.api_token = config.api_token
 
@@ -35,7 +35,10 @@ class PushoverProvider(NotificationProvider):
         }
 
         # Add poster as supplementary URL if available
-        if notification.poster_path and notification.poster_path != "https://mikanani.me":
+        if (
+            notification.poster_path
+            and notification.poster_path != "https://mikanani.me"
+        ):
             data["url"] = notification.poster_path
             data["url_title"] = "查看海报"
 
@@ -67,3 +70,14 @@ class PushoverProvider(NotificationProvider):
                 return False, f"Pushover API returned status {resp.status_code}"
         except Exception as e:
             return False, f"Pushover test failed: {e}"
+
+    async def _deliver_text(self, title: str, body: str) -> bool:
+        """Deliver a system event via Pushover."""
+        data = {
+            "token": self.api_token,
+            "user": self.user_key,
+            "title": title,
+            "message": body,
+        }
+        resp = await self.post_data(self.API_URL, data)
+        return resp.status_code == 200

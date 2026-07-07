@@ -4,7 +4,8 @@ import type { ApiSuccess } from '#/api';
 export const apiDownloader = {
   async getTorrents() {
     const { data } = await axios.get<QbTorrentInfo[]>(
-      'api/v1/downloader/torrents'
+      'api/v1/downloader/torrents',
+      { silent: true }
     );
     return data!;
   },

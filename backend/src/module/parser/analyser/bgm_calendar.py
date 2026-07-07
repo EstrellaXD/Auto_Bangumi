@@ -1,22 +1,23 @@
 import logging
 
+from module.conf import settings
 from module.network import RequestContent
 
 logger = logging.getLogger(__name__)
-
-BGM_CALENDAR_URL = "https://api.bgm.tv/calendar"
 
 
 async def fetch_bgm_calendar() -> list[dict]:
     """Fetch the current season's broadcast calendar from Bangumi.tv API.
 
     Returns a flat list of anime items with their air_weekday (0=Mon, ..., 6=Sun).
+    The base URL is configurable so users behind a GFW can use a mirror (#1040).
     """
+    calendar_url = f"{settings.network.bgm_base_url.rstrip('/')}/calendar"
     async with RequestContent() as req:
-        data = await req.get_json(BGM_CALENDAR_URL)
+        data = await req.get_json(calendar_url)
 
     if not data:
-        logger.warning("[BGM Calendar] Failed to fetch calendar data.")
+        logger.warning("Failed to fetch calendar data.")
         return []
 
     items = []
@@ -30,17 +31,21 @@ async def fetch_bgm_calendar() -> list[dict]:
         weekday = bgm_weekday - 1  # 1-7 → 0-6
 
         for item in day_group.get("items", []):
-            items.append({
-                "name": item.get("name", ""),          # Japanese title
-                "name_cn": item.get("name_cn", ""),    # Chinese title
-                "air_weekday": weekday,
-            })
+            items.append(
+                {
+                    "name": item.get("name", ""),  # Japanese title
+                    "name_cn": item.get("name_cn", ""),  # Chinese title
+                    "air_weekday": weekday,
+                }
+            )
 
-    logger.info(f"[BGM Calendar] Fetched {len(items)} airing anime from Bangumi.tv.")
+    logger.info(f"Fetched {len(items)} airing anime from Bangumi.tv.")
     return items
 
 
-def match_weekday(official_title: str, title_raw: str, calendar_items: list[dict]) -> int | None:
+def match_weekday(
+    official_title: str, title_raw: str, calendar_items: list[dict]
+) -> int | None:
     """Match a bangumi against calendar items to find its air weekday.
 
     Matching strategy:

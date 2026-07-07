@@ -1,3 +1,4 @@
+import asyncio
 import ipaddress
 import logging
 import socket
@@ -5,15 +6,18 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from module.conf import VERSION, settings
+from module.core import AppContext
 from module.models import Config, ResponseModel
 from module.models.config import NotificationProvider as ProviderConfig
 from module.network import RequestContent
 from module.notification import PROVIDER_REGISTRY
-from module.security.jwt import get_password_hash
+from module.security.jwt import get_password_hash, verify_password
+
+from .deps import get_context
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +32,39 @@ def _require_setup_needed():
         raise HTTPException(status_code=403, detail="Setup already completed.")
     # Allow setup in dev mode even if settings differ
     if VERSION != "DEV_VERSION" and settings.dict() != Config().dict():
+        raise HTTPException(status_code=403, detail="Setup already completed.")
+
+
+async def _require_default_admin_or_authenticated(request: Request) -> None:
+    """Extra guard for /setup/complete specifically.
+
+    ``_require_setup_needed()`` only compares the on-disk config to its
+    defaults, which stays true on an upgraded install that never ran the
+    wizard even after the real admin already changed their password some
+    other way (e.g. the old settings UI). Without this check, an
+    unauthenticated caller could hit /setup/complete on such an install and
+    overwrite the admin's real credentials. Allow completion only if the
+    caller already has a valid session, or the "admin" account still has the
+    untouched factory-default password.
+    """
+    from module.security.api import get_current_user
+
+    try:
+        await get_current_user(request, token=request.cookies.get("token"))
+        return
+    except HTTPException:
+        pass
+
+    from module.database import Database
+
+    async with Database() as db:
+        try:
+            user = await db.user.get_user("admin")
+        except HTTPException:
+            # No admin account yet (fresh install) — setup may proceed.
+            return
+
+    if not verify_password("adminadmin", user.password):
         raise HTTPException(status_code=403, detail="Setup already completed.")
 
 
@@ -143,6 +180,38 @@ async def test_downloader(req: TestDownloaderRequest):
 
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
+            if req.type == "aria2":
+                # aria2 走 JSON-RPC：getVersion 一次验证可达性与 RPC secret
+                params = [f"token:{req.password}"] if req.password else []
+                rpc_resp = await client.post(
+                    f"{host}/jsonrpc",
+                    json={
+                        "jsonrpc": "2.0",
+                        "id": "ab-setup",
+                        "method": "aria2.getVersion",
+                        "params": params,
+                    },
+                )
+                try:
+                    payload = rpc_resp.json()
+                except ValueError:
+                    payload = {}
+                if rpc_resp.status_code == 200 and "result" in payload:
+                    version = payload["result"].get("version", "")
+                    return TestResultResponse(
+                        success=True,
+                        message_en=f"Connected to aria2 {version}.".strip(),
+                        message_zh=f"已连接 aria2 {version}。",
+                    )
+                return TestResultResponse(
+                    success=False,
+                    message_en=(
+                        "aria2 is reachable but rejected the request "
+                        "(check the RPC secret)."
+                    ),
+                    message_zh="aria2 可达但拒绝了请求（请检查 RPC secret）。",
+                )
+
             # Check if host is reachable and is qBittorrent
             resp = await client.get(host)
             if (
@@ -200,7 +269,7 @@ async def test_downloader(req: TestDownloaderRequest):
     except Exception as e:
         # Log the detail server-side only — this endpoint is reachable before
         # authentication, so raw errors must not be echoed back (#1041).
-        logger.error(f"[Setup] Downloader test failed: {e}")
+        logger.error(f"Downloader test failed: {e}")
         return TestResultResponse(
             success=False,
             message_en="Connection failed.",
@@ -234,7 +303,7 @@ async def test_rss(req: TestRSSRequest):
                 item_count=len(items),
             )
     except Exception as e:
-        logger.error(f"[Setup] RSS test failed: {e}")
+        logger.error(f"RSS test failed: {e}")
         return TestResultResponse(
             success=False,
             message_en="Failed to fetch RSS feed.",
@@ -279,7 +348,7 @@ async def test_notification(req: TestNotificationRequest):
                     message_zh=f"测试通知发送失败：{message}",
                 )
     except Exception as e:
-        logger.error(f"[Setup] Notification test failed: {e}")
+        logger.error(f"Notification test failed: {e}")
         return TestResultResponse(
             success=False,
             message_en="Notification test failed.",
@@ -288,18 +357,23 @@ async def test_notification(req: TestNotificationRequest):
 
 
 @router.post("/complete", response_model=ResponseModel)
-async def complete_setup(req: SetupCompleteRequest):
+async def complete_setup(
+    req: SetupCompleteRequest,
+    request: Request,
+    ctx: AppContext = Depends(get_context),
+):
     """Save all wizard configuration and mark setup as complete."""
     _require_setup_needed()
+    await _require_default_admin_or_authenticated(request)
 
     try:
         # 1. Update user credentials
         from module.database import Database
 
-        with Database() as db:
+        async with Database() as db:
             from module.models.user import UserUpdate
 
-            db.user.update_user(
+            await db.user.update_user(
                 "admin",
                 UserUpdate(username=req.username, password=req.password),
             )
@@ -327,21 +401,25 @@ async def complete_setup(req: SetupCompleteRequest):
                 ],
             }
 
-        settings.save(config_dict)
-        # Reload settings in-place
-        config_obj = Config.parse_obj(config_dict)
-        settings.__dict__.update(config_obj.__dict__)
+        # settings.save() does synchronous file I/O; keep it off the event loop.
+        await asyncio.to_thread(settings.save, config_dict)
+        # Route through the AppContext reload path so the shared httpx client,
+        # notifier, and scheduler are rebuilt against the new config too — not
+        # just the in-memory settings dict.
+        await ctx.reload_settings()
 
         # 3. Add RSS feed if provided
         if req.rss_url:
             from module.rss import RSSEngine
 
-            with RSSEngine() as rss_engine:
+            async with Database() as db:
+                rss_engine = RSSEngine(db)
                 await rss_engine.add_rss(req.rss_url, name=req.rss_name or None)
 
         # 4. Create sentinel file
         SENTINEL_PATH.parent.mkdir(parents=True, exist_ok=True)
         SENTINEL_PATH.touch()
+        await ctx.start_tasks()
 
         return ResponseModel(
             status=True,
@@ -350,7 +428,7 @@ async def complete_setup(req: SetupCompleteRequest):
             msg_zh="设置完成。",
         )
     except Exception as e:
-        logger.error(f"[Setup] Complete failed: {e}")
+        logger.error(f"Complete failed: {e}")
         return ResponseModel(
             status=False,
             status_code=500,

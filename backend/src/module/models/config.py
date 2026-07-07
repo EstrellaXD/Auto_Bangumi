@@ -12,9 +12,9 @@ def _expand(value: str | None) -> str:
 class Program(BaseModel):
     """Scheduler timing and WebUI port settings."""
 
-    rss_time: int = Field(900, description="Sleep time")
-    rename_time: int = Field(60, description="Rename times in one loop")
-    webui_port: int = Field(7892, description="WebUI port")
+    rss_time: int = Field(default=900, description="Sleep time")
+    rename_time: int = Field(default=60, description="Rename times in one loop")
+    webui_port: int = Field(default=7892, description="WebUI port")
 
 
 class Downloader(BaseModel):
@@ -25,14 +25,18 @@ class Downloader(BaseModel):
     environment variable references at access time.
     """
 
-    type: str = Field("qbittorrent", description="Downloader type")
-    host_: str = Field("172.17.0.1:8080", alias="host", description="Downloader host")
-    username_: str = Field("admin", alias="username", description="Downloader username")
-    password_: str = Field(
-        "adminadmin", alias="password", description="Downloader password"
+    type: str = Field(default="qbittorrent", description="Downloader type")
+    host_: str = Field(
+        default="172.17.0.1:8080", alias="host", description="Downloader host"
     )
-    path: str = Field("/downloads/Bangumi", description="Downloader path")
-    ssl: bool = Field(False, description="Downloader ssl")
+    username_: str = Field(
+        default="admin", alias="username", description="Downloader username"
+    )
+    password_: str = Field(
+        default="adminadmin", alias="password", description="Downloader password"
+    )
+    path: str = Field(default="/downloads/Bangumi", description="Downloader path")
+    ssl: bool = Field(default=False, description="Downloader ssl")
 
     @property
     def host(self):
@@ -50,36 +54,56 @@ class Downloader(BaseModel):
 class RSSParser(BaseModel):
     """RSS feed parsing settings."""
 
-    enable: bool = Field(True, description="Enable RSS parser")
-    filter: list[str] = Field(["720", r"\d+-\d+"], description="Filter")
+    enable: bool = Field(default=True, description="Enable RSS parser")
+    filter: list[str] = Field(default=["720", r"\d+-\d+"], description="Filter")
     language: str = "zh"
 
 
 class BangumiManage(BaseModel):
     """File organisation and renaming settings."""
 
-    enable: bool = Field(True, description="Enable bangumi manage")
-    eps_complete: bool = Field(False, description="Enable eps complete")
-    rename_method: str = Field("pn", description="Rename method")
-    group_tag: bool = Field(False, description="Enable group tag")
-    remove_bad_torrent: bool = Field(False, description="Remove bad torrent")
+    enable: bool = Field(default=True, description="Enable bangumi manage")
+    eps_complete: bool = Field(default=False, description="Enable eps complete")
+    rename_method: str = Field(default="pn", description="Rename method")
+    group_tag: bool = Field(default=False, description="Enable group tag")
+    remove_bad_torrent: bool = Field(default=False, description="Remove bad torrent")
+    # 关闭后 refresh_rss 不再把未匹配种子入库（孤儿记录）；代价是这些条目
+    # 每轮会被重新内存匹配（廉价），好处是后补规则能立即接住仍在源里的旧集
+    track_orphans: bool = Field(
+        default=True, description="Persist unmatched (orphan) torrents"
+    )
 
 
 class Log(BaseModel):
     """Logging verbosity settings."""
 
-    debug_enable: bool = Field(False, description="Enable debug")
+    debug_enable: bool = Field(default=False, description="Enable debug")
+
+
+class Network(BaseModel):
+    """External data-source base URLs.
+
+    Overridable so users behind a GFW/mirror can point TMDB and bgm.tv at a
+    reachable host (#1040, #1042). Defaults are the official endpoints.
+    """
+
+    tmdb_base_url: str = Field(
+        default="https://api.themoviedb.org", description="TMDB API base URL"
+    )
+    bgm_base_url: str = Field(
+        default="https://api.bgm.tv", description="Bangumi (bgm.tv) API base URL"
+    )
 
 
 class Proxy(BaseModel):
     """HTTP/SOCKS proxy settings. Credentials support ``$VAR`` expansion."""
 
-    enable: bool = Field(False, description="Enable proxy")
-    type: str = Field("http", description="Proxy type")
-    host: str = Field("", description="Proxy host")
-    port: int = Field(0, description="Proxy port")
-    username_: str = Field("", alias="username", description="Proxy username")
-    password_: str = Field("", alias="password", description="Proxy password")
+    enable: bool = Field(default=False, description="Enable proxy")
+    type: str = Field(default="http", description="Proxy type")
+    host: str = Field(default="", description="Proxy host")
+    port: int = Field(default=0, description="Proxy port")
+    username_: str = Field(default="", alias="username", description="Proxy username")
+    password_: str = Field(default="", alias="password", description="Proxy password")
 
     @property
     def username(self):
@@ -94,33 +118,41 @@ class NotificationProvider(BaseModel):
     """Configuration for a single notification provider."""
 
     type: str = Field(..., description="Provider type (telegram, discord, bark, etc.)")
-    enabled: bool = Field(True, description="Whether this provider is enabled")
+    enabled: bool = Field(default=True, description="Whether this provider is enabled")
 
     # Common fields (with env var expansion)
-    token_: Optional[str] = Field(None, alias="token", description="Auth token")
-    chat_id_: Optional[str] = Field(None, alias="chat_id", description="Chat/channel ID")
+    token_: Optional[str] = Field(default=None, alias="token", description="Auth token")
+    chat_id_: Optional[str] = Field(
+        default=None, alias="chat_id", description="Chat/channel ID"
+    )
 
     # Provider-specific fields
     webhook_url_: Optional[str] = Field(
-        None, alias="webhook_url", description="Webhook URL for discord/wecom"
+        default=None, alias="webhook_url", description="Webhook URL for discord/wecom"
     )
     server_url_: Optional[str] = Field(
-        None, alias="server_url", description="Server URL for gotify/bark"
+        default=None, alias="server_url", description="Server URL for gotify/bark"
     )
     device_key_: Optional[str] = Field(
-        None, alias="device_key", description="Device key for bark"
+        default=None, alias="device_key", description="Device key for bark"
     )
     user_key_: Optional[str] = Field(
-        None, alias="user_key", description="User key for pushover"
+        default=None, alias="user_key", description="User key for pushover"
     )
     api_token_: Optional[str] = Field(
-        None, alias="api_token", description="API token for pushover"
+        default=None, alias="api_token", description="API token for pushover"
     )
     template: Optional[str] = Field(
-        None, description="Custom template for webhook provider"
+        default=None,
+        description=(
+            "Custom message template ({{title}}/{{season}}/{{episode}}/"
+            "{{poster_url}}); falls back to the default message when unset. "
+            "Webhook renders it as JSON; other providers render it as plain "
+            "text."
+        ),
     )
     url_: Optional[str] = Field(
-        None, alias="url", description="URL for generic webhook provider"
+        default=None, alias="url", description="URL for generic webhook provider"
     )
 
     @property
@@ -159,15 +191,28 @@ class NotificationProvider(BaseModel):
 class Notification(BaseModel):
     """Notification configuration supporting multiple providers."""
 
-    enable: bool = Field(False, description="Enable notification system")
+    enable: bool = Field(default=False, description="Enable notification system")
     providers: list[NotificationProvider] = Field(
         default_factory=list, description="List of notification providers"
     )
+    base_url: str = Field(
+        default="",
+        description=(
+            "Public base URL used to build absolute poster URLs for "
+            "notification providers. Empty = omit the poster field entirely."
+        ),
+    )
 
     # Legacy fields for backward compatibility (deprecated)
-    type: Optional[str] = Field(None, description="[Deprecated] Use providers instead")
-    token_: Optional[str] = Field(None, alias="token", description="[Deprecated]")
-    chat_id_: Optional[str] = Field(None, alias="chat_id", description="[Deprecated]")
+    type: Optional[str] = Field(
+        default=None, description="[Deprecated] Use providers instead"
+    )
+    token_: Optional[str] = Field(
+        default=None, alias="token", description="[Deprecated]"
+    )
+    chat_id_: Optional[str] = Field(
+        default=None, alias="chat_id", description="[Deprecated]"
+    )
 
     @property
     def token(self) -> str:
@@ -192,23 +237,104 @@ class Notification(BaseModel):
         return self
 
 
+class LLMProviderOverride(BaseModel):
+    """单个提供商的凭据/模型/端点覆盖（键名含 api_key，掩码机制自动生效）。"""
+
+    api_key: str = Field(default="", description="Provider API key")
+    model: str = Field(default="", description="Model override")
+    base_url: str = Field(default="", description="Base URL override")
+
+
+class LLM(BaseModel):
+    """LLM 标题解析配置，支持多提供商。
+
+    ``provider="openai"`` 表示任意 OpenAI 兼容端点（DeepSeek/Ollama/
+    LM Studio/OpenRouter/OneAPI 等均可通过 ``base_url`` 接入）。
+    扁平的 ``api_key/model/base_url`` 是历史字段（老用户零迁移）；
+    ``providers`` 按提供商 id 存放各自的覆盖值，取值见 ``effective()``。
+    """
+
+    enable: bool = Field(default=False, description="Enable LLM parser")
+    # 开放为任意注册表 id：内置三家 + base_url 预设 + 已安装插件
+    provider: str = Field(default="openai", min_length=1, description="LLM provider id")
+    api_key: str = Field(default="", description="LLM api key")
+    model: str = Field(default="gpt-5-mini", description="LLM model name")
+    base_url: str = Field(
+        default="",
+        description=(
+            "Custom base URL, only used by the openai provider. "
+            "Empty = official API."
+        ),
+    )
+    mode: Literal["fallback", "primary"] = Field(
+        default="fallback",
+        description=(
+            "fallback: regex first, LLM only when regex fails; "
+            "primary: LLM first, regex as safety net"
+        ),
+    )
+    timeout: float = Field(default=20.0, ge=1.0, description="LLM request timeout")
+    cache_ttl: int = Field(
+        default=900,
+        ge=0,
+        description="Seconds to cache LLM parse successes and failures; 0 disables",
+    )
+    max_concurrency: int = Field(
+        default=2,
+        ge=1,
+        description="Maximum concurrent LLM parse requests",
+    )
+    failure_threshold: int = Field(
+        default=3,
+        ge=1,
+        description="Consecutive LLM failures before temporarily skipping calls",
+    )
+    failure_backoff: int = Field(
+        default=300,
+        ge=0,
+        description="Seconds to skip LLM calls after failure_threshold is reached",
+    )
+    providers: dict[str, LLMProviderOverride] = Field(
+        default_factory=dict,
+        description="Per-provider overrides keyed by provider id",
+    )
+
+    def effective(self, provider_id: str | None = None) -> tuple[str, str, str]:
+        """返回 (api_key, model, base_url)。
+
+        有 providers[id] 覆盖项时用其值（可为空，交由适配器回退到该提供商
+        自己的默认端点/型号）；不跨提供商回退到扁平的 openai 字段——否则
+        DeepSeek 等会误收到 openai 的 model/base_url。仅当无覆盖项（内置
+        openai 默认路径）才用扁平字段。
+        """
+        pid = provider_id or self.provider
+        override = self.providers.get(pid)
+        if override is None:
+            return self.api_key, self.model, self.base_url
+        return override.api_key, override.model, override.base_url
+
+
+# [Deprecated] 旧版 OpenAI 解析配置，仅保留用于读取旧配置文件（向后兼容）。
+# 新配置请使用上方的 LLM 段；加载时会自动迁移（见 conf/config.py）。
 class ExperimentalOpenAI(BaseModel):
-    enable: bool = Field(False, description="Enable experimental OpenAI")
-    api_key: str = Field("", description="OpenAI api key")
+    enable: bool = Field(default=False, description="Enable experimental OpenAI")
+    api_key: str = Field(default="", description="OpenAI api key")
     api_base: str = Field(
-        "https://api.openai.com/v1", description="OpenAI api base url"
+        default="https://api.openai.com/v1", description="OpenAI api base url"
     )
     api_type: Literal["azure", "openai"] = Field(
-        "openai", description="OpenAI api type, usually for azure"
+        default="openai", description="OpenAI api type, usually for azure"
     )
     api_version: str = Field(
-        "2023-05-15", description="OpenAI api version, only for Azure"
+        default="2023-05-15", description="OpenAI api version, only for Azure"
     )
     model: str = Field(
-        "gpt-3.5-turbo", description="OpenAI model, ignored when api type is azure"
+        default="gpt-3.5-turbo",
+        description="OpenAI model, ignored when api type is azure",
     )
     deployment_id: str = Field(
-        "", description="Azure OpenAI deployment id, ignored when api type is openai"
+        default="",
+        description="Azure OpenAI deployment id, ignored when api type is openai",
     )
 
     @field_validator("api_base")
@@ -243,6 +369,34 @@ class Security(BaseModel):
         default_factory=list,
         description="API bearer tokens for MCP access.",
     )
+    webauthn_rp_id: str = Field(
+        default="",
+        description=(
+            "WebAuthn relying-party ID. Empty = derive from the request "
+            "headers instead."
+        ),
+    )
+    webauthn_origin: str = Field(
+        default="",
+        description=(
+            "Expected WebAuthn origin. Empty = derive from the request "
+            "headers instead."
+        ),
+    )
+
+
+class Update(BaseModel):
+    """在线自动更新配置。
+
+    ``channel`` 决定检查更新时挑选稳定版还是包含预发布（beta）版本；
+    ``auto_check`` 控制自动检查更新：前端进入设置页时检查一次，
+    后端每 24 小时检查一次并把新版本写入通知中心。
+    """
+
+    channel: Literal["stable", "beta"] = Field(
+        default="stable", description="Update channel"
+    )
+    auto_check: bool = Field(default=True, description="Auto-check for updates")
 
 
 class Config(BaseModel):
@@ -253,10 +407,14 @@ class Config(BaseModel):
     rss_parser: RSSParser = RSSParser()
     bangumi_manage: BangumiManage = BangumiManage()
     log: Log = Log()
+    network: Network = Network()
     proxy: Proxy = Proxy()
     notification: Notification = Notification()
+    llm: LLM = LLM()
+    # [Deprecated] 仅用于读取旧配置，运行时逻辑请读 llm 段
     experimental_openai: ExperimentalOpenAI = ExperimentalOpenAI()
     security: Security = Security()
+    update: Update = Update()
 
     def model_dump(self, *args, by_alias=True, **kwargs):
         return super().model_dump(*args, by_alias=by_alias, **kwargs)

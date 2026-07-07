@@ -3,6 +3,8 @@ import logging
 from module.conf import settings
 from module.database import Database
 from module.downloader import DownloadClient
+from module.downloader.path import gen_save_path
+from module.downloader.rules import build_rss_rule
 from module.models import Bangumi, BangumiUpdate, ResponseModel
 from module.parser import TitleParser
 from module.parser.analyser.bgm_calendar import fetch_bgm_calendar, match_weekday
@@ -11,7 +13,10 @@ from module.parser.analyser.tmdb_parser import tmdb_parser
 logger = logging.getLogger(__name__)
 
 
-class TorrentManager(Database):
+class TorrentManager:
+    def __init__(self, db: Database):
+        self.db = db
+
     @staticmethod
     async def __match_torrents_list(data: Bangumi | BangumiUpdate) -> list:
         async with DownloadClient() as client:
@@ -47,16 +52,45 @@ class TorrentManager(Database):
                 msg_zh=f"无法找到 {data.official_title} 的种子",
             )
 
+    async def _disable_orphan_sub_rss(self, data: Bangumi) -> None:
+        """停用该番剧独立订阅（aggregate=False）且不再被引用的 RSS 条目（#1053）。
+
+        停用而非删除：无法区分搜索订阅与用户手动添加的独立订阅，删除还会
+        连带清掉该 rss_id 下可能属于其他番剧的种子去重记录。聚合订阅由多个
+        番剧共享，永不在此处停用；rss_link 可能是逗号拼接的多个链接
+        （见 BangumiDatabase.match_list），逐个拆分精确匹配。
+        """
+        urls = {u.strip() for u in (data.rss_link or "").split(",") if u.strip()}
+        if not urls:
+            return
+        # 含软删除（deleted=True）的番剧：其订阅需保留以便重新启用
+        still_referenced: set[str] = set()
+        for bangumi in await self.db.bangumi.search_all():
+            still_referenced.update(
+                u.strip() for u in (bangumi.rss_link or "").split(",") if u.strip()
+            )
+        orphan_ids: list[int] = []
+        for url in urls - still_referenced:
+            rss_item = await self.db.rss.search_url(url)
+            if rss_item and not rss_item.aggregate and rss_item.enabled:
+                orphan_ids.append(rss_item.id)
+                logger.info(f"[Manager] Disable orphan RSS feed {url}")
+        if orphan_ids:
+            await self.db.rss.disable_batch(orphan_ids)
+
     async def delete_rule(self, _id: int | str, file: bool = False):
-        data = self.bangumi.search_id(int(_id))
+        data = await self.db.bangumi.search_id(int(_id))
         if isinstance(data, Bangumi):
-            async with DownloadClient() as client:
-                self.rss.delete(data.official_title)
-                # Clean up torrent records so re-adding the same anime can re-download
-                self.torrent.delete_by_bangumi_id(int(_id))
-                self.bangumi.delete_one(int(_id))
-                torrent_message = None
-                if file:
+            # Clean up torrent records so re-adding the same anime can re-download
+            await self.db.torrent.delete_by_bangumi_id(int(_id))
+            await self.db.bangumi.delete_one(int(_id))
+            # 番剧删除后停用其独立订阅的孤儿 RSS；聚合订阅不受影响
+            await self._disable_orphan_sub_rss(data)
+            torrent_message = None
+            if file:
+                # Only the file-cleanup path needs the downloader, so an
+                # unreachable downloader shouldn't block a DB-only delete.
+                async with DownloadClient() as client:
                     torrent_message = await self.delete_torrents(data, client)
                     if torrent_message.status_code == 500:
                         return ResponseModel(
@@ -66,13 +100,13 @@ class TorrentManager(Database):
                             "but deleting its torrents failed.",
                             msg_zh=f"已删除 {data.official_title} 规则，但删除种子失败。",
                         )
-                logger.info(f"[Manager] Delete rule for {data.official_title}")
-                return ResponseModel(
-                    status_code=200,
-                    status=True,
-                    msg_en=f"Delete rule for {data.official_title}. {torrent_message.msg_en if file and torrent_message else ''}",
-                    msg_zh=f"删除 {data.official_title} 规则。{torrent_message.msg_zh if file and torrent_message else ''}",
-                )
+            logger.info(f"Delete rule for {data.official_title}")
+            return ResponseModel(
+                status_code=200,
+                status=True,
+                msg_en=f"Delete rule for {data.official_title}. {torrent_message.msg_en if file and torrent_message else ''}",
+                msg_zh=f"删除 {data.official_title} 规则。{torrent_message.msg_zh if file and torrent_message else ''}",
+            )
         else:
             return ResponseModel(
                 status_code=406,
@@ -82,21 +116,22 @@ class TorrentManager(Database):
             )
 
     async def disable_rule(self, _id: str | int, file: bool = False):
-        data = self.bangumi.search_id(int(_id))
+        data = await self.db.bangumi.search_id(int(_id))
         if isinstance(data, Bangumi):
-            async with DownloadClient() as client:
-                data.deleted = True
-                self.bangumi.update(data)
-                if file:
-                    torrent_message = await self.delete_torrents(data, client)
-                    return torrent_message
-                logger.info(f"[Manager] Disable rule for {data.official_title}")
-                return ResponseModel(
-                    status_code=200,
-                    status=True,
-                    msg_en=f"Disable rule for {data.official_title}",
-                    msg_zh=f"禁用 {data.official_title} 规则",
-                )
+            data.deleted = True
+            await self.db.bangumi.update(data)
+            if file:
+                # Only the file-cleanup path needs the downloader, so an
+                # unreachable downloader shouldn't block a DB-only disable.
+                async with DownloadClient() as client:
+                    return await self.delete_torrents(data, client)
+            logger.info(f"Disable rule for {data.official_title}")
+            return ResponseModel(
+                status_code=200,
+                status=True,
+                msg_en=f"Disable rule for {data.official_title}",
+                msg_zh=f"禁用 {data.official_title} 规则",
+            )
         else:
             return ResponseModel(
                 status_code=406,
@@ -105,12 +140,12 @@ class TorrentManager(Database):
                 msg_zh=f"无法找到 id {_id}",
             )
 
-    def enable_rule(self, _id: str | int):
-        data = self.bangumi.search_id(int(_id))
+    async def enable_rule(self, _id: str | int):
+        data = await self.db.bangumi.search_id(int(_id))
         if data:
             data.deleted = False
-            self.bangumi.update(data)
-            logger.info(f"[Manager] Enable rule for {data.official_title}")
+            await self.db.bangumi.update(data)
+            logger.info(f"Enable rule for {data.official_title}")
             return ResponseModel(
                 status_code=200,
                 status=True,
@@ -126,52 +161,30 @@ class TorrentManager(Database):
             )
 
     async def update_rule(self, bangumi_id, data: BangumiUpdate):
-        old_data: Bangumi = self.bangumi.search_id(bangumi_id)
+        old_data = await self.db.bangumi.search_id(bangumi_id)
         if old_data:
             # Move torrent
             match_list = await self.__match_torrents_list(old_data)
             async with DownloadClient() as client:
-                new_path = client._gen_save_path(data)
+                new_path = gen_save_path(data)
                 old_path = old_data.save_path
 
                 # Move existing torrents to new location if path changed
                 if match_list and new_path != old_path:
                     await client.move_torrent(match_list, new_path)
-                    logger.info(
-                        f"[Manager] Moved torrents from {old_path} to {new_path}"
-                    )
+                    logger.info(f"Moved torrents from {old_path} to {new_path}")
 
                 # Update qBittorrent RSS rule if save_path changed
                 if new_path != old_path and old_data.rule_name:
                     # Recreate the rule with the new save_path
-                    rule = {
-                        "enable": True,
-                        "mustContain": data.title_raw,
-                        "mustNotContain": "|".join(data.filter)
-                        if isinstance(data.filter, list)
-                        else data.filter,
-                        "useRegex": True,
-                        "episodeFilter": "",
-                        "smartFilter": False,
-                        "previouslyMatchedEpisodes": [],
-                        "affectedFeeds": data.rss_link
-                        if isinstance(data.rss_link, str)
-                        else ",".join(data.rss_link),
-                        "ignoreDays": 0,
-                        "lastMatch": "",
-                        "addPaused": False,
-                        "assignedCategory": "Bangumi",
-                        "savePath": new_path,
-                    }
-                    await client.client.rss_set_rule(
-                        rule_name=old_data.rule_name, rule_def=rule
-                    )
+                    rule = build_rss_rule(data, new_path)
+                    await client.set_rss_rule(old_data.rule_name, rule)
                     logger.info(
-                        f"[Manager] Updated RSS rule {old_data.rule_name} with new save_path"
+                        f"Updated RSS rule {old_data.rule_name} with new save_path"
                     )
 
             data.save_path = new_path
-            self.bangumi.update(data, bangumi_id)
+            await self.db.bangumi.update(data, bangumi_id)
             return ResponseModel(
                 status_code=200,
                 status=True,
@@ -179,7 +192,7 @@ class TorrentManager(Database):
                 msg_zh=f"更新 {data.official_title} 规则",
             )
         else:
-            logger.error(f"[Manager] Can't find data with {bangumi_id}")
+            logger.error(f"Can't find data with {bangumi_id}")
             return ResponseModel(
                 status_code=406,
                 status=False,
@@ -188,11 +201,11 @@ class TorrentManager(Database):
             )
 
     async def refresh_poster(self):
-        bangumis = self.bangumi.search_all()
+        bangumis = await self.db.bangumi.search_all()
         for bangumi in bangumis:
             if not bangumi.poster_link:
                 await TitleParser().tmdb_poster_parser(bangumi)
-        self.bangumi.update_all(bangumis)
+        await self.db.bangumi.update_all(bangumis)
         return ResponseModel(
             status_code=200,
             status=True,
@@ -201,9 +214,16 @@ class TorrentManager(Database):
         )
 
     async def refind_poster(self, bangumi_id: int):
-        bangumi = self.bangumi.search_id(bangumi_id)
+        bangumi = await self.db.bangumi.search_id(bangumi_id)
+        if not bangumi:
+            return ResponseModel(
+                status_code=406,
+                status=False,
+                msg_en=f"Can't find id {bangumi_id}",
+                msg_zh=f"无法找到 id {bangumi_id}",
+            )
         await TitleParser().tmdb_poster_parser(bangumi)
-        self.bangumi.update(bangumi)
+        await self.db.bangumi.update(bangumi)
         return ResponseModel(
             status_code=200,
             status=True,
@@ -221,7 +241,7 @@ class TorrentManager(Database):
                 msg_en="Failed to fetch calendar data from Bangumi.tv.",
                 msg_zh="从 Bangumi.tv 获取放送表失败。",
             )
-        bangumis = self.bangumi.search_all()
+        bangumis = await self.db.bangumi.search_all()
         updated = 0
         for bangumi in bangumis:
             if bangumi.deleted or bangumi.weekday_locked:
@@ -233,8 +253,8 @@ class TorrentManager(Database):
                 bangumi.air_weekday = weekday
                 updated += 1
         if updated > 0:
-            self.bangumi.update_all(bangumis)
-        logger.info(f"[Manager] Calendar refresh: updated {updated} bangumi.")
+            await self.db.bangumi.update_all(bangumis)
+        logger.info(f"Calendar refresh: updated {updated} bangumi.")
         return ResponseModel(
             status_code=200,
             status=True,
@@ -242,16 +262,16 @@ class TorrentManager(Database):
             msg_zh=f"放送表已刷新，更新了 {updated} 部番剧。",
         )
 
-    def search_all_bangumi(self):
-        datas = self.bangumi.search_all()
+    async def search_all_bangumi(self):
+        datas = await self.db.bangumi.search_all()
         if not datas:
             return []
         return [data for data in datas if not data.deleted]
 
-    def search_one(self, _id: int | str):
-        data = self.bangumi.search_id(int(_id))
+    async def search_one(self, _id: int | str):
+        data = await self.db.bangumi.search_id(int(_id))
         if not data:
-            logger.error(f"[Manager] Can't find data with {_id}")
+            logger.error(f"Can't find data with {_id}")
             return ResponseModel(
                 status_code=406,
                 status=False,
@@ -261,9 +281,9 @@ class TorrentManager(Database):
         else:
             return data
 
-    def archive_rule(self, _id: int):
+    async def archive_rule(self, _id: int):
         """Archive a bangumi."""
-        data = self.bangumi.search_id(_id)
+        data = await self.db.bangumi.search_id(_id)
         if not data:
             return ResponseModel(
                 status_code=406,
@@ -271,8 +291,8 @@ class TorrentManager(Database):
                 msg_en=f"Can't find id {_id}",
                 msg_zh=f"无法找到 id {_id}",
             )
-        if self.bangumi.archive_one(_id):
-            logger.info(f"[Manager] Archived {data.official_title}")
+        if await self.db.bangumi.archive_one(_id):
+            logger.info(f"Archived {data.official_title}")
             return ResponseModel(
                 status_code=200,
                 status=True,
@@ -286,9 +306,9 @@ class TorrentManager(Database):
             msg_zh=f"归档 {data.official_title} 失败",
         )
 
-    def unarchive_rule(self, _id: int):
+    async def unarchive_rule(self, _id: int):
         """Unarchive a bangumi."""
-        data = self.bangumi.search_id(_id)
+        data = await self.db.bangumi.search_id(_id)
         if not data:
             return ResponseModel(
                 status_code=406,
@@ -296,8 +316,8 @@ class TorrentManager(Database):
                 msg_en=f"Can't find id {_id}",
                 msg_zh=f"无法找到 id {_id}",
             )
-        if self.bangumi.unarchive_one(_id):
-            logger.info(f"[Manager] Unarchived {data.official_title}")
+        if await self.db.bangumi.unarchive_one(_id):
+            logger.info(f"Unarchived {data.official_title}")
             return ResponseModel(
                 status_code=200,
                 status=True,
@@ -313,7 +333,7 @@ class TorrentManager(Database):
 
     async def refresh_metadata(self):
         """Refresh TMDB metadata and auto-archive ended series."""
-        bangumis = self.bangumi.search_all()
+        bangumis = await self.db.bangumi.search_all()
         language = settings.rss_parser.language
         archived_count = 0
         poster_count = 0
@@ -331,15 +351,13 @@ class TorrentManager(Database):
                 if tmdb_info.series_status == "Ended" and not bangumi.archived:
                     bangumi.archived = True
                     archived_count += 1
-                    logger.info(
-                        f"[Manager] Auto-archived ended series: {bangumi.official_title}"
-                    )
+                    logger.info(f"Auto-archived ended series: {bangumi.official_title}")
 
         if archived_count > 0 or poster_count > 0:
-            self.bangumi.update_all(bangumis)
+            await self.db.bangumi.update_all(bangumis)
 
         logger.info(
-            f"[Manager] Metadata refresh: archived {archived_count}, updated posters {poster_count}"
+            f"Metadata refresh: archived {archived_count}, updated posters {poster_count}"
         )
         return ResponseModel(
             status_code=200,
@@ -350,7 +368,7 @@ class TorrentManager(Database):
 
     async def suggest_offset(self, bangumi_id: int) -> dict:
         """Suggest offset based on TMDB episode counts."""
-        data = self.bangumi.search_id(bangumi_id)
+        data = await self.db.bangumi.search_id(bangumi_id)
         if not data:
             return {
                 "suggested_offset": 0,

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3';
+import { ref } from 'vue';
 
 import AbSwitch from './ab-switch.vue';
 
@@ -12,11 +13,18 @@ export default meta;
 type Story = StoryObj<typeof AbSwitch>;
 
 export const Template: Story = {
-  render: (args) => ({
+  render: () => ({
     components: { AbSwitch },
     setup() {
-      return { args };
+      const on = ref(true);
+      const off = ref(false);
+      return { on, off };
     },
-    template: '<ab-switch v-bind="args" />',
+    template: `
+      <div style="display:flex;gap:14px;align-items:center">
+        <ab-switch v-model="on" aria-label="Auto rename" />
+        <ab-switch v-model="off" aria-label="Proxy" />
+        <ab-switch :model-value="true" disabled aria-label="Disabled" />
+      </div>`,
   }),
 };

@@ -18,7 +18,7 @@ class BarkProvider(NotificationProvider):
     DEFAULT_SERVER = "https://api.day.app"
 
     def __init__(self, config: "ProviderConfig"):
-        super().__init__()
+        super().__init__(config)
         # Support both legacy token field and new device_key field
         self.device_key = config.device_key or config.token
         server_url = config.server_url or self.DEFAULT_SERVER
@@ -30,11 +30,13 @@ class BarkProvider(NotificationProvider):
         data = {
             "title": notification.official_title,
             "body": text,
-            "icon": notification.poster_path or "",
             "device_key": self.device_key,
         }
+        poster_url = self._poster_url(notification)
+        if poster_url:
+            data["icon"] = poster_url
 
-        resp = await self.post_data(self.notification_url, data)
+        resp = await self._post_json(self.notification_url, data)
         logger.debug("Bark notification: %s", resp.status_code)
         return resp.status_code == 200
 
@@ -46,10 +48,16 @@ class BarkProvider(NotificationProvider):
             "device_key": self.device_key,
         }
         try:
-            resp = await self.post_data(self.notification_url, data)
+            resp = await self._post_json(self.notification_url, data)
             if resp.status_code == 200:
                 return True, "Bark test notification sent successfully"
             else:
                 return False, f"Bark API returned status {resp.status_code}"
         except Exception as e:
             return False, f"Bark test failed: {e}"
+
+    async def _deliver_text(self, title: str, body: str) -> bool:
+        """Deliver a system event via Bark."""
+        data = {"title": title, "body": body, "device_key": self.device_key}
+        resp = await self._post_json(self.notification_url, data)
+        return resp.status_code == 200

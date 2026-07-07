@@ -17,7 +17,7 @@ class TelegramProvider(NotificationProvider):
     """Telegram Bot notification provider."""
 
     def __init__(self, config: "ProviderConfig"):
-        super().__init__()
+        super().__init__(config)
         token = config.token
         self.chat_id = config.chat_id
         self.photo_url = f"https://api.telegram.org/bot{token}/sendPhoto"
@@ -33,7 +33,7 @@ class TelegramProvider(NotificationProvider):
             "disable_notification": True,
         }
 
-        photo = load_image(notification.poster_path)
+        photo = await load_image(notification.poster_path)
         if photo:
             resp = await self.post_files(self.photo_url, data, files={"photo": photo})
         else:
@@ -56,3 +56,13 @@ class TelegramProvider(NotificationProvider):
                 return False, f"Telegram API returned status {resp.status_code}"
         except Exception as e:
             return False, f"Telegram test failed: {e}"
+
+    async def _deliver_text(self, title: str, body: str) -> bool:
+        """Deliver a system event via Telegram."""
+        data = {
+            "chat_id": self.chat_id,
+            "text": f"{title}\n{body}",
+            "disable_notification": True,
+        }
+        resp = await self.post_data(self.message_url, data)
+        return resp.status_code == 200

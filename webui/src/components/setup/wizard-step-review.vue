@@ -1,5 +1,7 @@
 <script lang="ts" setup>
-const { t } = useMyI18n();
+import { markSetupComplete } from '@/router';
+
+const { t, returnUserLangText } = useMyI18n();
 const setupStore = useSetupStore();
 const { accountData, downloaderData, rssData, notificationData, isLoading } =
   storeToRefs(setupStore);
@@ -13,9 +15,21 @@ async function completeSetup() {
     await apiSetup.complete(request);
     message.success(t('setup.review.success'));
     setupStore.$reset();
+    markSetupComplete();
     router.push({ name: 'Login' });
   } catch (e) {
-    message.error(t('setup.review.failed'));
+    // The axios interceptor rejects with { status, msg_en, msg_zh } — show
+    // the backend's reason so the user knows what to fix before retrying.
+    const err = e as { msg_en?: string; msg_zh?: string };
+    const detail = returnUserLangText({
+      en: err.msg_en ?? '',
+      'zh-CN': err.msg_zh ?? '',
+    });
+    message.error(
+      detail
+        ? `${t('setup.review.failed')}: ${detail}`
+        : t('setup.review.failed')
+    );
   } finally {
     isLoading.value = false;
   }
@@ -41,18 +55,24 @@ function maskPassword(pwd: string): string {
           </div>
           <div class="review-item">
             <span class="review-label">{{ t('setup.account.password') }}</span>
-            <span class="review-value">{{ maskPassword(accountData.password) }}</span>
+            <span class="review-value">{{
+              maskPassword(accountData.password)
+            }}</span>
           </div>
         </div>
 
         <div class="review-section">
           <h4>{{ t('setup.downloader.title') }}</h4>
           <div class="review-item">
-            <span class="review-label">{{ t('config.downloader_set.host') }}</span>
+            <span class="review-label">{{
+              t('config.downloader_set.host')
+            }}</span>
             <span class="review-value">{{ downloaderData.host }}</span>
           </div>
           <div class="review-item">
-            <span class="review-label">{{ t('config.downloader_set.username') }}</span>
+            <span class="review-label">{{
+              t('config.downloader_set.username')
+            }}</span>
             <span class="review-value">{{ downloaderData.username }}</span>
           </div>
         </div>
@@ -65,21 +85,35 @@ function maskPassword(pwd: string): string {
           </div>
         </div>
 
-        <div v-if="!notificationData.skipped && notificationData.token" class="review-section">
+        <div
+          v-if="!notificationData.skipped && notificationData.token"
+          class="review-section"
+        >
           <h4>{{ t('setup.notification.title') }}</h4>
           <div class="review-item">
-            <span class="review-label">{{ t('config.notification_set.type') }}</span>
+            <span class="review-label">{{
+              t('config.notification_set.type')
+            }}</span>
             <span class="review-value">{{ notificationData.type }}</span>
           </div>
         </div>
       </div>
 
       <div class="wizard-actions">
-        <ab-button size="small" type="secondary" @click="setupStore.prevStep()">
+        <ab-button size="sm" variant="secondary" @click="setupStore.prevStep()">
           {{ t('setup.nav.previous') }}
         </ab-button>
-        <ab-button size="small" :disabled="isLoading" @click="completeSetup">
-          {{ isLoading ? t('setup.review.completing') : t('setup.review.complete') }}
+        <ab-button
+          variant="primary"
+          size="sm"
+          :disabled="isLoading"
+          @click="completeSetup"
+        >
+          {{
+            isLoading
+              ? t('setup.review.completing')
+              : t('setup.review.complete')
+          }}
         </ab-button>
       </div>
     </div>

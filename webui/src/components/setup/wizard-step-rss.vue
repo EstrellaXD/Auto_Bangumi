@@ -55,53 +55,58 @@ function handleNext() {
       <p class="step-subtitle">{{ t('setup.rss.subtitle') }}</p>
 
       <div class="form-fields">
-        <ab-label :label="t('setup.rss.url')">
+        <ab-field :label="t('setup.rss.url')">
           <input
             v-model="rssData.url"
             type="text"
             placeholder="https://mikanani.me/RSS/..."
             class="setup-input setup-input-wide"
           />
-        </ab-label>
+        </ab-field>
 
-        <ab-label v-if="rssData.name" :label="t('setup.rss.feed_name')">
-          <input
-            v-model="rssData.name"
-            type="text"
-            class="setup-input"
-          />
-        </ab-label>
+        <ab-field v-if="rssData.name" :label="t('setup.rss.feed_name')">
+          <input v-model="rssData.name" type="text" class="setup-input" />
+        </ab-field>
       </div>
 
       <div class="test-section">
         <ab-button
-          size="small"
-          type="secondary"
+          size="sm"
+          variant="secondary"
           :disabled="!rssData.url || isTesting"
           @click="testFeed"
         >
           {{ isTesting ? t('setup.downloader.testing') : t('setup.rss.test') }}
         </ab-button>
-        <p v-if="testMessage" class="test-message" :class="{ success: testSuccess }">
+        <p
+          v-if="testMessage"
+          class="test-message"
+          :class="{ success: testSuccess }"
+        >
           {{ testMessage }}
         </p>
       </div>
 
       <div v-if="feedTitle" class="feed-info">
-        <p><strong>{{ t('setup.rss.feed_title') }}:</strong> {{ feedTitle }}</p>
-        <p><strong>{{ t('setup.rss.item_count') }}:</strong> {{ itemCount }}</p>
+        <p>
+          <strong>{{ t('setup.rss.feed_title') }}:</strong> {{ feedTitle }}
+        </p>
+        <p>
+          <strong>{{ t('setup.rss.item_count') }}:</strong> {{ itemCount }}
+        </p>
       </div>
 
       <div class="wizard-actions">
-        <ab-button size="small" type="secondary" @click="setupStore.prevStep()">
+        <ab-button size="sm" variant="secondary" @click="setupStore.prevStep()">
           {{ t('setup.nav.previous') }}
         </ab-button>
         <div class="action-group">
-          <ab-button size="small" type="secondary" @click="skipStep">
+          <ab-button size="sm" variant="secondary" @click="skipStep">
             {{ t('setup.nav.skip') }}
           </ab-button>
           <ab-button
-            size="small"
+            variant="primary"
+            size="sm"
             :disabled="!validation.rssTested"
             @click="handleNext"
           >
@@ -148,7 +153,8 @@ function handleNext() {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 
   &:hover {
     border-color: var(--color-primary);
@@ -189,7 +195,9 @@ function handleNext() {
 
   p {
     margin: 0 0 4px;
-    &:last-child { margin: 0; }
+    &:last-child {
+      margin: 0;
+    }
   }
 }
 

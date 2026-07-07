@@ -1,6 +1,6 @@
 [project]
 name = "auto-bangumi"
-version = "3.2.8"
+version = "3.3.0"
 description = "AutoBangumi - Automated anime download manager"
 requires-python = ">=3.13"
 dependencies = [
@@ -13,9 +13,9 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.0",
     "aiosqlite>=0.19.0",
     "pydantic>=2.0.0",
-    "python-jose>=3.3.0",
-    "passlib>=1.7.4",
-    "bcrypt>=4.0.1,<4.1",
+    "pyjwt>=2.11.0",
+    "bcrypt>=4.1",
+    "cryptography>=42.0.0",
     "python-multipart>=0.0.6",
     "python-dotenv>=1.0.0",
     "Jinja2>=3.1.2",
@@ -24,7 +24,9 @@ dependencies = [
     "sse-starlette>=1.6.5",
     "webauthn>=2.0.0",
     "urllib3>=2.0.3",
-    "mcp[cli]>=1.8.0",
+    "mcp>=1.8.0",
+    "anthropic>=0.116.0",
+    "google-genai>=2.10.0",
 ]
 
 [dependency-groups]
@@ -35,6 +37,7 @@ dev = [
     "ruff>=0.1.0",
     "black>=24.0.0",
     "pre-commit>=3.0.0",
+    "mypy>=2.1.0",
 ]
 
 [tool.pytest.ini_options]
@@ -65,3 +68,32 @@ package = false
 [tool.black]
 line-length = 88
 target-version = ['py313']
+
+[tool.mypy]
+python_version = "3.13"
+# 非严格基线：先打开对未标注函数体的检查（能捕获协程未 await 等真实 bug），
+# 暂不强制所有函数都标注类型。
+check_untyped_defs = true
+disallow_untyped_defs = false
+
+# module.__version__ 是构建期生成的文件，仓库中不存在（见 module/conf/config.py 的 try/except）
+[[tool.mypy.overrides]]
+module = "module.__version__"
+ignore_missing_imports = true
+
+# httpx_socks 已安装但未发布类型存根
+[[tool.mypy.overrides]]
+module = "httpx_socks.*"
+ignore_missing_imports = true
+
+# aiohttp 仅用于 e2e mock server（在独立 Docker 容器中安装，不在本项目依赖中）
+[[tool.mypy.overrides]]
+module = "aiohttp"
+ignore_missing_imports = true
+
+# 测试代码惯用 `obj.method = AsyncMock()` 直接打桩实例方法，这是标准、安全的
+# unittest.mock 用法，但 mypy 默认禁止给方法赋值。只关闭这一条错误码，
+# attr-defined 等其余检查（含真实 bug）在测试代码中保持开启。
+[[tool.mypy.overrides]]
+module = "test.*"
+disable_error_code = ["method-assign"]

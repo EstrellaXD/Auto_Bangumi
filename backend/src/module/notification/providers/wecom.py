@@ -11,18 +11,12 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Default fallback image for when no poster is available
-DEFAULT_POSTER = (
-    "https://article.biliimg.com/bfs/article/"
-    "d8bcd0408bf32594fd82f27de7d2c685829d1b2e.png"
-)
-
 
 class WecomProvider(NotificationProvider):
     """WeChat Work (企业微信) notification provider using news message format."""
 
     def __init__(self, config: "ProviderConfig"):
-        super().__init__()
+        super().__init__(config)
         # Support both webhook_url and legacy chat_id field
         self.notification_url = config.webhook_url or config.chat_id
         self.token = config.token
@@ -32,18 +26,15 @@ class WecomProvider(NotificationProvider):
         title = f"【番剧更新】{notification.official_title}"
         msg = self._format_message(notification)
 
-        # Use default poster if none available or if it's just the base Mikan URL
-        picurl = notification.poster_path
-        if not picurl or picurl == "https://mikanani.me":
-            picurl = DEFAULT_POSTER
-
         data = {
             "key": self.token,
             "type": "news",
             "title": title,
             "msg": msg,
-            "picurl": picurl,
         }
+        poster_url = self._poster_url(notification)
+        if poster_url:
+            data["picurl"] = poster_url
 
         resp = await self.post_data(self.notification_url, data)
         logger.debug("Wecom notification: %s", resp.status_code)
@@ -56,7 +47,6 @@ class WecomProvider(NotificationProvider):
             "type": "news",
             "title": "AutoBangumi 通知测试",
             "msg": "通知测试成功！\nNotification test successful!",
-            "picurl": DEFAULT_POSTER,
         }
         try:
             resp = await self.post_data(self.notification_url, data)
@@ -66,3 +56,9 @@ class WecomProvider(NotificationProvider):
                 return False, f"WeChat Work API returned status {resp.status_code}"
         except Exception as e:
             return False, f"WeChat Work test failed: {e}"
+
+    async def _deliver_text(self, title: str, body: str) -> bool:
+        """Deliver a system event via WeChat Work."""
+        data = {"key": self.token, "type": "news", "title": title, "msg": body}
+        resp = await self.post_data(self.notification_url, data)
+        return resp.status_code == 200

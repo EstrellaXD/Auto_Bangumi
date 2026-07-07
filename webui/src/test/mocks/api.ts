@@ -52,6 +52,9 @@ export const mockBangumiAPI: BangumiAPI = {
   weekday_locked: false,
   needs_review: false,
   needs_review_reason: null,
+  preferred_group: null,
+  preferred_resolution: null,
+  episode_type: 'episode',
 };
 
 export const mockBangumiRule: BangumiRule = {
@@ -135,6 +138,7 @@ export const mockConfig = {
     rename_method: 'pn',
     group_tag: false,
     remove_bad_torrent: false,
+    track_orphans: true,
   },
   log: {
     debug_enable: false,
@@ -152,6 +156,14 @@ export const mockConfig = {
     type: 'telegram',
     token: '',
     chat_id: '',
+  },
+  llm: {
+    enable: false,
+    provider: 'openai',
+    api_key: '',
+    model: 'gpt-4o-mini',
+    base_url: '',
+    mode: 'fallback',
   },
   experimental_openai: {
     enable: false,

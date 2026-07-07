@@ -1,12 +1,11 @@
 import json
 import logging
 import re
-import threading
-import time
 from typing import Optional
 
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
-from sqlmodel import Session, and_, delete, false, or_, select
+from sqlmodel import and_, delete, false, or_, select
 
 from module.models import Bangumi, BangumiUpdate
 
@@ -65,31 +64,121 @@ def _set_aliases_list(bangumi: Bangumi, aliases: list[str]) -> None:
         bangumi.title_aliases = json.dumps(unique_aliases, ensure_ascii=False)
 
 
-# Module-level TTL cache for search_all results.
-# Guarded by a lock: notification paths read/write it from asyncio.to_thread
-# worker threads while the event loop uses it concurrently.
-_bangumi_cache: list[Bangumi] | None = None
-_bangumi_cache_time: float = 0
-_BANGUMI_CACHE_TTL: float = 300.0  # 5 minutes - extended from 60s to reduce DB queries
-_bangumi_cache_lock = threading.Lock()
-# Bumped on every invalidation so a search_all() that was already past the
-# cache check cannot overwrite a newer invalidation with its stale snapshot.
-_bangumi_cache_gen = 0
+def _all_title_patterns(bangumi: Bangumi) -> list[str]:
+    """All title patterns for matching (title_raw + all aliases)."""
+    patterns = []
+    if bangumi.title_raw:
+        patterns.append(bangumi.title_raw)
+    patterns.extend(_get_aliases_list(bangumi))
+    return patterns
 
 
-def _invalidate_bangumi_cache():
-    global _bangumi_cache, _bangumi_cache_time, _bangumi_cache_gen
-    with _bangumi_cache_lock:
-        _bangumi_cache = None
-        _bangumi_cache_time = 0
-        _bangumi_cache_gen += 1
+def normalize_save_path(save_path: str | None) -> str:
+    """Normalize a save_path so equivalent paths compare equal.
+
+    Collapses the separator/trailing-slash variations that
+    `BangumiDatabase.match_by_save_path` used to try one at a time.
+    """
+    if not save_path:
+        return ""
+    return save_path.replace("\\", "/").rstrip("/")
+
+
+def build_save_path_index(bangumi_list: list[Bangumi]) -> dict[str, Bangumi]:
+    """Build an in-memory normalized-save_path -> Bangumi index.
+
+    Lets callers match many torrents against an already-loaded bangumi list
+    (O(1) per lookup) instead of issuing a DB query per torrent.
+    """
+    index: dict[str, Bangumi] = {}
+    for bangumi in bangumi_list:
+        if bangumi.deleted or not bangumi.save_path:
+            continue
+        key = normalize_save_path(bangumi.save_path)
+        if key:
+            index.setdefault(key, bangumi)
+    return index
+
+
+def _find_semantic_match(data: Bangumi, candidates: list[Bangumi]) -> Optional[Bangumi]:
+    """在已加载的候选列表中查找语义重复项（同一部番剧、命名规则不同）。
+
+    被 ``find_semantic_duplicate``（单条、逐条查库）和 ``add_all``（批量、
+    候选一次性查库后在内存中匹配）共用，匹配规则只维护一处。
+    """
+    for candidate in candidates:
+        is_exact_duplicate = (
+            candidate.title_raw == data.title_raw
+            and candidate.group_name == data.group_name
+        )
+        if is_exact_duplicate:
+            continue
+
+        is_semantic_match = (
+            candidate.dpi == data.dpi
+            and candidate.subtitle == data.subtitle
+            and candidate.source == data.source
+            and _groups_are_similar(candidate.group_name, data.group_name)
+        )
+        if is_semantic_match:
+            return candidate
+
+    return None
+
+
+def _inherit_year(data: Bangumi, candidates: list[Bangumi]) -> None:
+    """新条目缺年份时继承同名已有条目的年份。
+
+    save path 由 ``official_title (year)`` 组成（downloader/path.py），同一部
+    番剧的不同订阅条目（不同字幕组/清晰度）若年份不一致，会被拆进两个媒体库
+    目录。Mikan 解析路径不填 year，因此从已有同名条目补齐。
+    """
+    if data.year:
+        return
+    for candidate in candidates:
+        if candidate.year:
+            data.year = candidate.year
+            return
+
+
+def match_bangumi_in_list(
+    torrent_name: str, bangumi_list: list[Bangumi]
+) -> Optional[Bangumi]:
+    """Match a torrent name against an already-loaded list of bangumi.
+
+    Pure/in-memory: the RSS refresh cycle loads the active bangumi once and
+    matches every torrent against it here, instead of querying per torrent
+    (the job the old module-level TTL cache used to do). Returns the bangumi
+    with the longest matching pattern for specificity.
+    """
+    best_match: Optional[Bangumi] = None
+    best_match_len = 0
+    for bangumi in bangumi_list:
+        if bangumi.deleted:
+            continue
+        for pattern in _all_title_patterns(bangumi):
+            if pattern in torrent_name and len(pattern) > best_match_len:
+                best_match = bangumi
+                best_match_len = len(pattern)
+    return best_match
 
 
 class BangumiDatabase:
-    def __init__(self, session: Session):
+    def __init__(self, session: AsyncSession):
         self.session = session
 
-    def find_semantic_duplicate(self, data: Bangumi) -> Optional[Bangumi]:
+    async def _same_title_candidates(self, official_title: str) -> list[Bangumi]:
+        """加载与给定 official_title 同名的所有未删除条目。"""
+        statement = select(Bangumi).where(
+            and_(
+                Bangumi.official_title == official_title,
+                Bangumi.deleted == false(),
+            )
+        )
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
+
+    async def find_semantic_duplicate(self, data: Bangumi) -> Optional[Bangumi]:
         """
         Find existing bangumi that semantically matches the new one.
 
@@ -103,53 +192,29 @@ class BangumiDatabase:
 
         Returns the matching Bangumi if found, None otherwise.
         """
-        statement = select(Bangumi).where(
-            and_(
-                Bangumi.official_title == data.official_title,
-                Bangumi.deleted == false(),
+        candidates = await self._same_title_candidates(data.official_title)
+        match = _find_semantic_match(data, candidates)
+        if match:
+            logger.debug(
+                "Found semantic duplicate: '%s' matches "
+                "existing '%s' (official: %s)",
+                data.title_raw,
+                match.title_raw,
+                data.official_title,
             )
-        )
-        candidates = self.session.execute(statement).scalars().all()
+        return match
 
-        for candidate in candidates:
-            is_exact_duplicate = (
-                candidate.title_raw == data.title_raw
-                and candidate.group_name == data.group_name
-            )
-            if is_exact_duplicate:
-                continue
-
-            is_semantic_match = (
-                candidate.dpi == data.dpi
-                and candidate.subtitle == data.subtitle
-                and candidate.source == data.source
-                and _groups_are_similar(candidate.group_name, data.group_name)
-            )
-            if is_semantic_match:
-                logger.debug(
-                    "[Database] Found semantic duplicate: '%s' matches "
-                    "existing '%s' (official: %s)",
-                    data.title_raw,
-                    candidate.title_raw,
-                    data.official_title,
-                )
-                return candidate
-
-        return None
-
-    def add_title_alias(
-        self, bangumi_id: int, new_title_raw: str, auto_commit: bool = True
+    async def add_title_alias(
+        self, bangumi_id: int, new_title_raw: str | None, auto_commit: bool = True
     ) -> bool:
         """
         Add a new title_raw alias to an existing bangumi.
 
         This allows a single bangumi entry to match multiple naming patterns.
         """
-        bangumi = self.session.get(Bangumi, bangumi_id)
+        bangumi = await self.session.get(Bangumi, bangumi_id)
         if not bangumi:
-            logger.warning(
-                f"[Database] Cannot add alias: bangumi id {bangumi_id} not found"
-            )
+            logger.warning(f"Cannot add alias: bangumi id {bangumi_id} not found")
             return False
 
         # Don't add None or empty aliases
@@ -170,23 +235,18 @@ class BangumiDatabase:
 
         self.session.add(bangumi)
         if auto_commit:
-            self.session.commit()
-            _invalidate_bangumi_cache()
+            await self.session.commit()
         logger.info(
-            f"[Database] Added alias '{new_title_raw}' to bangumi '{bangumi.official_title}' "
+            f"Added alias '{new_title_raw}' to bangumi '{bangumi.official_title}' "
             f"(id: {bangumi_id})"
         )
         return True
 
     def get_all_title_patterns(self, bangumi: Bangumi) -> list[str]:
         """Get all title patterns for matching (title_raw + all aliases)."""
-        patterns = []
-        if bangumi.title_raw:
-            patterns.append(bangumi.title_raw)
-        patterns.extend(_get_aliases_list(bangumi))
-        return patterns
+        return _all_title_patterns(bangumi)
 
-    def _is_duplicate(self, data: Bangumi) -> bool:
+    async def _is_duplicate(self, data: Bangumi) -> bool:
         """Check if a bangumi rule already exists based on title_raw and group_name."""
         statement = select(Bangumi).where(
             and_(
@@ -194,36 +254,37 @@ class BangumiDatabase:
                 Bangumi.group_name == data.group_name,
             )
         )
-        result = self.session.execute(statement)
+        result = await self.session.execute(statement)
         return result.scalar_one_or_none() is not None
 
-    def add(self, data: Bangumi) -> bool:
-        if self._is_duplicate(data):
+    async def add(self, data: Bangumi) -> bool:
+        if await self._is_duplicate(data):
             logger.debug(
-                "[Database] Skipping duplicate: %s (%s)",
+                "Skipping duplicate: %s (%s)",
                 data.official_title,
                 data.group_name,
             )
             return False
 
         # Check for semantic duplicate (same anime, different naming pattern)
-        semantic_match = self.find_semantic_duplicate(data)
+        candidates = await self._same_title_candidates(data.official_title)
+        semantic_match = _find_semantic_match(data, candidates)
         if semantic_match:
             # Add as alias instead of creating new entry
-            self.add_title_alias(semantic_match.id, data.title_raw)
+            await self.add_title_alias(semantic_match.id, data.title_raw)
             logger.info(
-                f"[Database] Merged '{data.title_raw}' as alias to existing "
+                f"Merged '{data.title_raw}' as alias to existing "
                 f"'{semantic_match.title_raw}' (official: {data.official_title})"
             )
             return False  # Return False since we didn't add a new entry
 
+        _inherit_year(data, candidates)
         self.session.add(data)
-        self.session.commit()
-        _invalidate_bangumi_cache()
-        logger.debug("[Database] Insert %s into database.", data.official_title)
+        await self.session.commit()
+        logger.debug("Insert %s into database.", data.official_title)
         return True
 
-    def add_all(self, datas: list[Bangumi]) -> int:
+    async def add_all(self, datas: list[Bangumi]) -> int:
         """Add multiple bangumi, skipping duplicates. Returns count of added items."""
         if not datas:
             return 0
@@ -239,7 +300,7 @@ class BangumiDatabase:
             statement = select(Bangumi.title_raw, Bangumi.group_name).where(
                 or_(*conditions)
             )
-            result = self.session.execute(statement)
+            result = await self.session.execute(statement)
             existing = set(result.all())
         else:
             existing = set()
@@ -247,20 +308,47 @@ class BangumiDatabase:
         # Filter out exact duplicates
         to_add = [d for d in datas if (d.title_raw, d.group_name) not in existing]
 
+        # Batch query: load all semantic-duplicate candidates (grouped by
+        # official_title) in one SELECT, instead of one find_semantic_duplicate()
+        # query per candidate. Safe because no rows are inserted mid-loop —
+        # add_title_alias() only mutates existing rows and the new bangumi are
+        # only added to the session after this loop finishes.
+        official_titles = {d.official_title for d in to_add}
+        candidates_by_title: dict[str, list[Bangumi]] = {}
+        if official_titles:
+            # SQLModel 类属性在 mypy 看来是普通字段类型而非 InstrumentedAttribute，
+            # 无法识别 .in_() 等查询方法（无官方 mypy 插件支持）。
+            dup_statement = select(Bangumi).where(
+                and_(
+                    Bangumi.official_title.in_(official_titles),  # type: ignore[attr-defined]
+                    Bangumi.deleted == false(),
+                )
+            )
+            result = await self.session.execute(dup_statement)
+            for candidate in result.scalars().all():
+                candidates_by_title.setdefault(candidate.official_title, []).append(
+                    candidate
+                )
+
         # Check for semantic duplicates and add as aliases
         semantic_merged = 0
         really_to_add = []
         for d in to_add:
-            semantic_match = self.find_semantic_duplicate(d)
+            semantic_match = _find_semantic_match(
+                d, candidates_by_title.get(d.official_title, [])
+            )
             if semantic_match:
                 # Add as alias instead of creating new entry (defer commit)
-                self.add_title_alias(semantic_match.id, d.title_raw, auto_commit=False)
+                await self.add_title_alias(
+                    semantic_match.id, d.title_raw, auto_commit=False
+                )
                 semantic_merged += 1
                 logger.info(
-                    f"[Database] Merged '{d.title_raw}' as alias to existing "
+                    f"Merged '{d.title_raw}' as alias to existing "
                     f"'{semantic_match.title_raw}' (official: {d.official_title})"
                 )
             else:
+                _inherit_year(d, candidates_by_title.get(d.official_title, []))
                 really_to_add.append(d)
 
         # Also deduplicate within the batch itself
@@ -274,43 +362,42 @@ class BangumiDatabase:
 
         if not unique_to_add:
             if semantic_merged > 0:
-                self.session.commit()
-                _invalidate_bangumi_cache()
+                await self.session.commit()
                 logger.debug(
-                    "[Database] %s bangumi merged as aliases, " "rest were duplicates.",
+                    "%s bangumi merged as aliases, " "rest were duplicates.",
                     semantic_merged,
                 )
             else:
                 logger.debug(
-                    "[Database] All %s bangumi already exist, skipping.",
+                    "All %s bangumi already exist, skipping.",
                     len(datas),
                 )
             return 0
 
         self.session.add_all(unique_to_add)
-        self.session.commit()
-        _invalidate_bangumi_cache()
+        await self.session.commit()
         skipped = len(datas) - len(unique_to_add) - semantic_merged
         if skipped > 0 or semantic_merged > 0:
             logger.debug(
-                "[Database] Insert %s bangumi, "
-                "skipped %s duplicates, merged %s as aliases.",
+                "Insert %s bangumi, " "skipped %s duplicates, merged %s as aliases.",
                 len(unique_to_add),
                 skipped,
                 semantic_merged,
             )
         else:
             logger.debug(
-                "[Database] Insert %s bangumi into database.",
+                "Insert %s bangumi into database.",
                 len(unique_to_add),
             )
         return len(unique_to_add)
 
-    def update(self, data: Bangumi | BangumiUpdate, _id: int = None) -> bool:
+    async def update(
+        self, data: Bangumi | BangumiUpdate, _id: int | None = None
+    ) -> bool:
         if _id and isinstance(data, BangumiUpdate):
-            db_data = self.session.get(Bangumi, _id)
+            db_data = await self.session.get(Bangumi, _id)
         elif isinstance(data, Bangumi):
-            db_data = self.session.get(Bangumi, data.id)
+            db_data = await self.session.get(Bangumi, data.id)
         else:
             return False
         if not db_data:
@@ -319,111 +406,88 @@ class BangumiDatabase:
         for key, value in bangumi_data.items():
             setattr(db_data, key, value)
         self.session.add(db_data)
-        self.session.commit()
-        _invalidate_bangumi_cache()
-        logger.debug("[Database] Update %s", data.official_title)
+        await self.session.commit()
+        logger.debug("Update %s", data.official_title)
         return True
 
-    def update_all(self, datas: list[Bangumi]):
+    async def update_all(self, datas: list[Bangumi]):
         self.session.add_all(datas)
-        self.session.commit()
-        _invalidate_bangumi_cache()
-        logger.debug("[Database] Update %s bangumi.", len(datas))
+        await self.session.commit()
+        logger.debug("Update %s bangumi.", len(datas))
 
-    def update_rss(self, title_raw: str, rss_set: str):
+    async def update_rss(self, title_raw: str, rss_set: str):
         statement = select(Bangumi).where(Bangumi.title_raw == title_raw)
-        result = self.session.execute(statement)
+        result = await self.session.execute(statement)
         bangumi = result.scalar_one_or_none()
         if bangumi:
             bangumi.rss_link = rss_set
             bangumi.added = False
             self.session.add(bangumi)
-            self.session.commit()
-            _invalidate_bangumi_cache()
-            logger.debug("[Database] Update %s rss_link to %s.", title_raw, rss_set)
+            await self.session.commit()
+            logger.debug("Update %s rss_link to %s.", title_raw, rss_set)
 
-    def update_poster(self, title_raw: str, poster_link: str):
+    async def update_poster(self, title_raw: str, poster_link: str):
         statement = select(Bangumi).where(Bangumi.title_raw == title_raw)
-        result = self.session.execute(statement)
+        result = await self.session.execute(statement)
         bangumi = result.scalar_one_or_none()
         if bangumi:
             bangumi.poster_link = poster_link
             self.session.add(bangumi)
-            self.session.commit()
-            _invalidate_bangumi_cache()
-            logger.debug(
-                "[Database] Update %s poster_link to %s.", title_raw, poster_link
-            )
+            await self.session.commit()
+            logger.debug("Update %s poster_link to %s.", title_raw, poster_link)
 
-    def delete_one(self, _id: int):
+    async def delete_one(self, _id: int):
         statement = select(Bangumi).where(Bangumi.id == _id)
-        result = self.session.execute(statement)
+        result = await self.session.execute(statement)
         bangumi = result.scalar_one_or_none()
         if bangumi:
-            self.session.delete(bangumi)
-            self.session.commit()
-            _invalidate_bangumi_cache()
-            logger.debug("[Database] Delete bangumi id: %s.", _id)
+            await self.session.delete(bangumi)
+            await self.session.commit()
+            logger.debug("Delete bangumi id: %s.", _id)
 
-    def delete_all(self):
+    async def delete_all(self):
         statement = delete(Bangumi)
-        self.session.execute(statement)
-        self.session.commit()
-        _invalidate_bangumi_cache()
+        await self.session.execute(statement)
+        await self.session.commit()
 
-    def search_all(self) -> list[Bangumi]:
-        global _bangumi_cache, _bangumi_cache_time
-        now = time.time()
-        with _bangumi_cache_lock:
-            if (
-                _bangumi_cache is not None
-                and (now - _bangumi_cache_time) < _BANGUMI_CACHE_TTL
-            ):
-                return _bangumi_cache
-            gen_at_query = _bangumi_cache_gen
+    async def search_all(self) -> list[Bangumi]:
         statement = select(Bangumi)
-        result = self.session.execute(statement)
-        bangumis = list(result.scalars().all())
-        # Expunge objects from session to prevent DetachedInstanceError when
-        # cached objects are accessed from a different session/request context
-        for b in bangumis:
-            self.session.expunge(b)
-        with _bangumi_cache_lock:
-            if _bangumi_cache_gen == gen_at_query:
-                _bangumi_cache = bangumis
-                _bangumi_cache_time = now
-        return bangumis
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
 
-    def search_id(self, _id: int) -> Optional[Bangumi]:
+    async def search_id(self, _id: int) -> Optional[Bangumi]:
         statement = select(Bangumi).where(Bangumi.id == _id)
-        bangumi = self.session.execute(statement).scalar_one_or_none()
+        result = await self.session.execute(statement)
+        bangumi = result.scalar_one_or_none()
         if bangumi is None:
-            logger.warning(f"[Database] Cannot find bangumi id: {_id}.")
+            logger.warning(f"Cannot find bangumi id: {_id}.")
             return None
-        logger.debug("[Database] Find bangumi id: %s.", _id)
+        logger.debug("Find bangumi id: %s.", _id)
         return bangumi
 
-    def search_official_title(self, official_title: str) -> Optional[Bangumi]:
+    async def search_official_title(self, official_title: str) -> Optional[Bangumi]:
         statement = select(Bangumi).where(Bangumi.official_title == official_title)
-        return self.session.execute(statement).scalar_one_or_none()
+        result = await self.session.execute(statement)
+        return result.scalar_one_or_none()
 
-    def search_ids(self, ids: list[int]) -> list[Bangumi]:
+    async def search_ids(self, ids: list[int]) -> list[Bangumi]:
         """Batch lookup multiple bangumi by their IDs."""
         if not ids:
             return []
-        statement = select(Bangumi).where(Bangumi.id.in_(ids))
-        result = self.session.execute(statement)
+        statement = select(Bangumi).where(Bangumi.id.in_(ids))  # type: ignore[attr-defined]
+        result = await self.session.execute(statement)
         return list(result.scalars().all())
 
-    def match_poster(self, bangumi_name: str) -> str:
+    async def match_poster(self, bangumi_name: str) -> str:
         statement = select(Bangumi).where(
             func.instr(bangumi_name, Bangumi.official_title) > 0
         )
-        data = self.session.execute(statement).scalar_one_or_none()
-        return data.poster_link if data else ""
+        result = await self.session.execute(statement)
+        data = result.scalar_one_or_none()
+        return (data.poster_link or "") if data else ""
 
-    def match_list(self, torrent_list: list, rss_link: str) -> list:
-        match_datas = self.search_all()
+    async def match_list(self, torrent_list: list, rss_link: str) -> list:
+        match_datas = await self.search_all()
         if not match_datas:
             return torrent_list
 
@@ -458,7 +522,7 @@ class BangumiDatabase:
                     rss_link not in match_data.rss_link
                     and match_data.title_raw not in rss_updated
                 ):
-                    match_data = self.session.merge(match_data)
+                    match_data = await self.session.merge(match_data)
                     match_data.rss_link += f",{rss_link}"
                     match_data.added = False
                     rss_updated.add(match_data.title_raw)
@@ -466,103 +530,82 @@ class BangumiDatabase:
                 unmatched.append(torrent)
         # Batch commit all rss_link updates
         if rss_updated:
-            self.session.commit()
-            _invalidate_bangumi_cache()
+            await self.session.commit()
             logger.debug(
-                "[Database] Batch updated rss_link for %s bangumi.",
+                "Batch updated rss_link for %s bangumi.",
                 len(rss_updated),
             )
         return unmatched
 
-    def match_torrent(self, torrent_name: str) -> Optional[Bangumi]:
+    async def match_torrent(self, torrent_name: str) -> Optional[Bangumi]:
         """
         Match torrent name to a bangumi, checking both title_raw and title_aliases.
 
         Returns the bangumi with the longest matching pattern for specificity.
         """
-        match_datas = self.search_all()
-        if not match_datas:
-            return None
+        match_datas = await self.search_all()
+        return match_bangumi_in_list(torrent_name, match_datas)
 
-        best_match: Optional[Bangumi] = None
-        best_match_len = 0
-
-        for bangumi in match_datas:
-            if bangumi.deleted:
-                continue
-
-            # Check all patterns (title_raw + aliases)
-            patterns = self.get_all_title_patterns(bangumi)
-            for pattern in patterns:
-                if pattern in torrent_name:
-                    # Prefer longer matches (more specific)
-                    if len(pattern) > best_match_len:
-                        best_match = bangumi
-                        best_match_len = len(pattern)
-
-        return best_match
-
-    def not_complete(self) -> list[Bangumi]:
+    async def not_complete(self) -> list[Bangumi]:
         condition = select(Bangumi).where(
             and_(Bangumi.eps_collect == false(), Bangumi.deleted == false())
         )
-        result = self.session.execute(condition)
+        result = await self.session.execute(condition)
         return list(result.scalars().all())
 
-    def not_added(self) -> list[Bangumi]:
+    async def not_added(self) -> list[Bangumi]:
+        # SQLModel 类属性在 mypy 看来是普通字段类型而非 InstrumentedAttribute，
+        # 无法识别 .is_() 等查询方法（无官方 mypy 插件支持）。
         conditions = select(Bangumi).where(
             or_(
                 Bangumi.added == 0,
-                Bangumi.rule_name.is_(None),
-                Bangumi.save_path.is_(None),
+                Bangumi.rule_name.is_(None),  # type: ignore[union-attr]
+                Bangumi.save_path.is_(None),  # type: ignore[union-attr]
             )
         )
-        result = self.session.execute(conditions)
+        result = await self.session.execute(conditions)
         return list(result.scalars().all())
 
-    def disable_rule(self, _id: int):
+    async def disable_rule(self, _id: int):
         statement = select(Bangumi).where(Bangumi.id == _id)
-        result = self.session.execute(statement)
+        result = await self.session.execute(statement)
         bangumi = result.scalar_one_or_none()
         if bangumi:
             bangumi.deleted = True
             self.session.add(bangumi)
-            self.session.commit()
-            _invalidate_bangumi_cache()
-            logger.debug("[Database] Disable rule %s.", bangumi.title_raw)
+            await self.session.commit()
+            logger.debug("Disable rule %s.", bangumi.title_raw)
 
-    def search_rss(self, rss_link: str) -> list[Bangumi]:
+    async def search_rss(self, rss_link: str) -> list[Bangumi]:
         statement = select(Bangumi).where(func.instr(rss_link, Bangumi.rss_link) > 0)
-        result = self.session.execute(statement)
+        result = await self.session.execute(statement)
         return list(result.scalars().all())
 
-    def archive_one(self, _id: int) -> bool:
+    async def archive_one(self, _id: int) -> bool:
         """Set archived=True for the given bangumi."""
-        bangumi = self.session.get(Bangumi, _id)
+        bangumi = await self.session.get(Bangumi, _id)
         if not bangumi:
-            logger.warning(f"[Database] Cannot archive bangumi id: {_id}, not found.")
+            logger.warning(f"Cannot archive bangumi id: {_id}, not found.")
             return False
         bangumi.archived = True
         self.session.add(bangumi)
-        self.session.commit()
-        _invalidate_bangumi_cache()
-        logger.debug("[Database] Archived bangumi id: %s.", _id)
+        await self.session.commit()
+        logger.debug("Archived bangumi id: %s.", _id)
         return True
 
-    def unarchive_one(self, _id: int) -> bool:
+    async def unarchive_one(self, _id: int) -> bool:
         """Set archived=False for the given bangumi."""
-        bangumi = self.session.get(Bangumi, _id)
+        bangumi = await self.session.get(Bangumi, _id)
         if not bangumi:
-            logger.warning(f"[Database] Cannot unarchive bangumi id: {_id}, not found.")
+            logger.warning(f"Cannot unarchive bangumi id: {_id}, not found.")
             return False
         bangumi.archived = False
         self.session.add(bangumi)
-        self.session.commit()
-        _invalidate_bangumi_cache()
-        logger.debug("[Database] Unarchived bangumi id: %s.", _id)
+        await self.session.commit()
+        logger.debug("Unarchived bangumi id: %s.", _id)
         return True
 
-    def match_by_save_path(self, save_path: str) -> Optional[Bangumi]:
+    async def match_by_save_path(self, save_path: str) -> Optional[Bangumi]:
         """Find bangumi by save_path to get offset.
 
         Tries exact match first, then falls back to matching with/without trailing slashes
@@ -579,7 +622,7 @@ class BangumiDatabase:
         statement = select(Bangumi).where(
             and_(Bangumi.save_path == save_path, Bangumi.deleted == false())
         )
-        result = self.session.execute(statement)
+        result = await self.session.execute(statement)
         bangumi = result.scalars().first()
         if bangumi:
             return bangumi
@@ -604,14 +647,14 @@ class BangumiDatabase:
             statement = select(Bangumi).where(
                 and_(Bangumi.save_path == variant, Bangumi.deleted == false())
             )
-            result = self.session.execute(statement)
+            result = await self.session.execute(statement)
             bangumi = result.scalars().first()
             if bangumi:
                 return bangumi
 
         return None
 
-    def get_needs_review(self) -> list[Bangumi]:
+    async def get_needs_review(self) -> list[Bangumi]:
         """Get all bangumi that need review for offset mismatch."""
         statement = select(Bangumi).where(
             and_(
@@ -619,10 +662,10 @@ class BangumiDatabase:
                 Bangumi.deleted == false(),
             )
         )
-        result = self.session.execute(statement)
+        result = await self.session.execute(statement)
         return list(result.scalars().all())
 
-    def get_active_for_scan(self) -> list[Bangumi]:
+    async def get_active_for_scan(self) -> list[Bangumi]:
         """Get all active (non-deleted, non-archived) bangumi for offset scanning."""
         statement = select(Bangumi).where(
             and_(
@@ -630,10 +673,10 @@ class BangumiDatabase:
                 Bangumi.archived == false(),
             )
         )
-        result = self.session.execute(statement)
+        result = await self.session.execute(statement)
         return list(result.scalars().all())
 
-    def set_needs_review(
+    async def set_needs_review(
         self,
         _id: int,
         reason: str,
@@ -648,7 +691,7 @@ class BangumiDatabase:
             suggested_season_offset: Suggested season offset value
             suggested_episode_offset: Suggested episode offset value
         """
-        bangumi = self.session.get(Bangumi, _id)
+        bangumi = await self.session.get(Bangumi, _id)
         if not bangumi:
             return False
         bangumi.needs_review = True
@@ -656,10 +699,9 @@ class BangumiDatabase:
         bangumi.suggested_season_offset = suggested_season_offset
         bangumi.suggested_episode_offset = suggested_episode_offset
         self.session.add(bangumi)
-        self.session.commit()
-        _invalidate_bangumi_cache()
+        await self.session.commit()
         logger.debug(
-            "[Database] Marked bangumi id %s as needs_review: %s "
+            "Marked bangumi id %s as needs_review: %s "
             "(suggested: season=%s, episode=%s)",
             _id,
             reason,
@@ -668,9 +710,36 @@ class BangumiDatabase:
         )
         return True
 
-    def clear_needs_review(self, _id: int) -> bool:
+    async def apply_offset(self, _id: int) -> bool:
+        """将建议的季度/集数偏移写入正式的 season_offset/episode_offset，并清除检查标记。
+
+        Args:
+            _id: The bangumi ID
+        """
+        bangumi = await self.session.get(Bangumi, _id)
+        if not bangumi:
+            return False
+        if bangumi.suggested_season_offset is not None:
+            bangumi.season_offset = bangumi.suggested_season_offset
+        if bangumi.suggested_episode_offset is not None:
+            bangumi.episode_offset = bangumi.suggested_episode_offset
+        bangumi.needs_review = False
+        bangumi.needs_review_reason = None
+        bangumi.suggested_season_offset = None
+        bangumi.suggested_episode_offset = None
+        self.session.add(bangumi)
+        await self.session.commit()
+        logger.debug(
+            "Applied offset for bangumi id %s: season=%s, episode=%s",
+            _id,
+            bangumi.season_offset,
+            bangumi.episode_offset,
+        )
+        return True
+
+    async def clear_needs_review(self, _id: int) -> bool:
         """Clear the needs_review flag and suggested offsets for a bangumi."""
-        bangumi = self.session.get(Bangumi, _id)
+        bangumi = await self.session.get(Bangumi, _id)
         if not bangumi:
             return False
         bangumi.needs_review = False
@@ -678,14 +747,13 @@ class BangumiDatabase:
         bangumi.suggested_season_offset = None
         bangumi.suggested_episode_offset = None
         self.session.add(bangumi)
-        self.session.commit()
-        _invalidate_bangumi_cache()
-        logger.debug("[Database] Cleared needs_review for bangumi id %s", _id)
+        await self.session.commit()
+        logger.debug("Cleared needs_review for bangumi id %s", _id)
         return True
 
-    def set_weekday(self, _id: int, weekday: int | None) -> bool:
+    async def set_weekday(self, _id: int, weekday: int | None) -> bool:
         """Set air_weekday and weekday_locked for manual calendar assignment."""
-        bangumi = self.session.get(Bangumi, _id)
+        bangumi = await self.session.get(Bangumi, _id)
         if not bangumi:
             return False
         if weekday is not None:
@@ -695,10 +763,9 @@ class BangumiDatabase:
             bangumi.air_weekday = None
             bangumi.weekday_locked = False
         self.session.add(bangumi)
-        self.session.commit()
-        _invalidate_bangumi_cache()
+        await self.session.commit()
         logger.debug(
-            "[Database] Set weekday=%s, locked=%s for bangumi id %s",
+            "Set weekday=%s, locked=%s for bangumi id %s",
             weekday,
             bangumi.weekday_locked,
             _id,

@@ -10,7 +10,6 @@ from starlette.testclient import TestClient
 
 from module.mcp.security import McpAccessMiddleware, _is_allowed, clear_network_cache
 
-
 # ---------------------------------------------------------------------------
 # _is_allowed() unit tests
 # ---------------------------------------------------------------------------
@@ -195,9 +194,7 @@ class TestMcpAccessMiddleware:
         app = _patch_client_ip(_make_app(), "8.8.8.8")
         with patch("module.mcp.security.settings", mock_settings):
             client = TestClient(app, raise_server_exceptions=False)
-            response = client.get(
-                "/", headers={"Authorization": "Bearer wrong-token"}
-            )
+            response = client.get("/", headers={"Authorization": "Bearer wrong-token"})
         assert response.status_code == 403
 
     def test_private_network_with_default_whitelist(self):

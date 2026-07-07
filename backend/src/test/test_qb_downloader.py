@@ -5,14 +5,15 @@ from self.host, so SSL/HTTPS behaviour is validated by observing auth() side-eff
 (log messages) rather than reading an instance attribute directly.
 """
 
+import json
 import logging
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
+import pytest
 
+from module.downloader import AddResult
 from module.downloader.client.qb_downloader import QbDownloader
-
 
 # ---------------------------------------------------------------------------
 # Constructor / URL building
@@ -108,9 +109,9 @@ class TestQbDownloaderConstructor:
 def test_scheme_selection_matrix(host: str, ssl: bool, expected_prefix: str):
     """Constructor resolves host scheme correctly for all input combinations."""
     qb = QbDownloader(host=host, username="u", password="p", ssl=ssl)
-    assert qb.host.startswith(expected_prefix), (
-        f"host={host!r} ssl={ssl} -> expected prefix {expected_prefix!r}, got {qb.host!r}"
-    )
+    assert qb.host.startswith(
+        expected_prefix
+    ), f"host={host!r} ssl={ssl} -> expected prefix {expected_prefix!r}, got {qb.host!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -184,7 +185,7 @@ class TestAuthClientCreation:
         """auth() sets connect timeout to 5.0 seconds."""
         qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
 
-        captured_timeouts: list[httpx.Timeout] = []
+        captured_timeouts: list[httpx.Timeout | None] = []
 
         class _FakeClient:
             def __init__(self, **kwargs):
@@ -205,7 +206,9 @@ class TestAuthClientCreation:
             await qb.auth()
 
         assert len(captured_timeouts) == 1
-        assert captured_timeouts[0].connect == pytest.approx(5.0)
+        timeout = captured_timeouts[0]
+        assert timeout is not None
+        assert timeout.connect == pytest.approx(5.0)
 
     async def test_auth_sets_connection_limits_for_keepalive(self):
         """Regression for #984: qB client must cap keepalive so idle TCP
@@ -584,6 +587,134 @@ class TestAuthQb52Compat:
 
         assert result is False
 
+    async def test_auth_sets_last_auth_error_credentials_on_fails_body(self):
+        """密码错误后 last_auth_error 标记为 credentials，供上层区分故障类型。"""
+        qb = QbDownloader(
+            host="localhost:8080", username="admin", password="wrong", ssl=False
+        )
+
+        mock_client = AsyncMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.text = "Fails."
+        mock_client.post = AsyncMock(return_value=mock_resp)
+
+        with patch(
+            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            return_value=mock_client,
+        ):
+            await qb.auth(retry=3)
+
+        assert qb.last_auth_error == "credentials"
+
+    async def test_auth_sets_last_auth_error_banned_on_403(self):
+        qb = QbDownloader(
+            host="localhost:8080", username="admin", password="pass", ssl=False
+        )
+
+        mock_client = AsyncMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 403
+        mock_resp.text = "Forbidden"
+        mock_client.post = AsyncMock(return_value=mock_resp)
+
+        with patch(
+            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            return_value=mock_client,
+        ):
+            await qb.auth(retry=3)
+
+        assert qb.last_auth_error == "banned"
+
+    async def test_auth_sets_last_auth_error_unreachable_on_connect_error(self):
+        qb = QbDownloader(
+            host="localhost:8080", username="admin", password="pass", ssl=False
+        )
+
+        mock_client = AsyncMock()
+        mock_client.post = AsyncMock(side_effect=httpx.ConnectError("boom"))
+
+        with (
+            patch(
+                "module.downloader.client.qb_downloader.httpx.AsyncClient",
+                return_value=mock_client,
+            ),
+            patch(
+                "module.downloader.client.qb_downloader.asyncio.sleep",
+                new_callable=AsyncMock,
+            ),
+        ):
+            await qb.auth(retry=1)
+
+        assert qb.last_auth_error == "unreachable"
+
+    async def test_auth_clears_last_auth_error_on_success(self):
+        qb = QbDownloader(
+            host="localhost:8080", username="admin", password="pass", ssl=False
+        )
+        qb.last_auth_error = "credentials"
+
+        mock_client = AsyncMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.text = "Ok."
+        mock_client.post = AsyncMock(return_value=mock_resp)
+
+        with patch(
+            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            return_value=mock_client,
+        ):
+            result = await qb.auth()
+
+        assert result is True
+        assert qb.last_auth_error is None
+
+    async def test_auth_stops_immediately_on_200_fails_body(self, caplog):
+        """Wrong credentials (200 + 'Fails.') must not be retried — repeated
+        failed logins trigger qBittorrent's WebUI IP ban — and the log must
+        say the credentials are wrong."""
+        qb = QbDownloader(
+            host="localhost:8080", username="admin", password="wrong", ssl=False
+        )
+
+        mock_client = AsyncMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.text = "Fails."
+        mock_client.post = AsyncMock(return_value=mock_resp)
+
+        with patch(
+            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            return_value=mock_client,
+        ):
+            result = await qb.auth(retry=3)
+
+        assert result is False
+        assert mock_client.post.call_count == 1
+        assert "username or password" in caplog.text
+
+    async def test_auth_stops_immediately_on_401(self, caplog):
+        """401 also means bad credentials; same no-retry behaviour."""
+        qb = QbDownloader(
+            host="localhost:8080", username="admin", password="wrong", ssl=False
+        )
+
+        mock_client = AsyncMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 401
+        mock_resp.text = ""
+        mock_client.post = AsyncMock(return_value=mock_resp)
+
+        with patch(
+            "module.downloader.client.qb_downloader.httpx.AsyncClient",
+            return_value=mock_client,
+        ):
+            result = await qb.auth(retry=3)
+
+        assert result is False
+        assert mock_client.post.call_count == 1
+        assert "username or password" in caplog.text
+
     async def test_auth_returns_false_on_200_html_body(self):
         """A 200 + HTML page (proxy, wrong service) is not a successful login."""
         qb = QbDownloader(
@@ -612,6 +743,371 @@ class TestAuthQb52Compat:
 
 
 # ---------------------------------------------------------------------------
+# add_torrents
+# ---------------------------------------------------------------------------
+
+
+class TestAddTorrents:
+    async def test_add_returns_added_on_ok_body(self):
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        mock_resp = MagicMock(status_code=200, text="Ok.")
+        qb._client.request = AsyncMock(return_value=mock_resp)
+
+        result = await qb.add_torrents(
+            torrent_urls="magnet:?xt=urn:btih:abc",
+            torrent_files=None,
+            save_path="/downloads",
+            category="Bangumi",
+        )
+
+        assert result is AddResult.ADDED
+
+    async def test_add_fails_body_with_existing_magnet_is_duplicate(self):
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        btih = "a" * 40
+        add_resp = MagicMock(status_code=200, text="Fails.")
+        info_resp = MagicMock(status_code=200)
+        info_resp.json.return_value = [{"hash": btih}]
+        qb._client.request = AsyncMock(side_effect=[add_resp, info_resp])
+
+        result = await qb.add_torrents(
+            torrent_urls=f"magnet:?xt=urn:btih:{btih}",
+            torrent_files=None,
+            save_path="/downloads",
+            category="Bangumi",
+        )
+
+        # 磁力 hash 已存在于 qB：确认是重复
+        assert result is AddResult.DUPLICATE
+
+    async def test_add_fails_body_without_confirmed_duplicate_raises(self):
+        # "Fails." 也可能是种子损坏/无法解析——无法确认重复时必须按失败抛出，
+        # 让上层保留重试机会，而不是记成已下载
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        mock_resp = MagicMock(status_code=200, text="Fails.")
+        qb._client.request = AsyncMock(return_value=mock_resp)
+
+        with pytest.raises(ConnectionError):
+            await qb.add_torrents(
+                torrent_urls="https://mikanani.me/Download/broken.torrent",
+                torrent_files=None,
+                save_path="/downloads",
+                category="Bangumi",
+            )
+
+    async def test_add_raises_on_non_ok_status(self):
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        mock_resp = MagicMock(status_code=415, text="Unsupported Media Type")
+        qb._client.request = AsyncMock(return_value=mock_resp)
+
+        with pytest.raises(ConnectionError):
+            await qb.add_torrents(
+                torrent_urls="magnet:?xt=urn:btih:abc",
+                torrent_files=None,
+                save_path="/downloads",
+                category="Bangumi",
+            )
+
+    async def test_add_returns_added_on_json_success_body(self):
+        # qBittorrent >= 5.2 返回逐种子 JSON 结果而非 "Ok."
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        body = (
+            '{"added_torrent_ids":["5fab7547cd1f626f56a0b5492cfd25d60d0635c6"],'
+            '"failure_count":0,"pending_count":0,"success_count":1}'
+        )
+        mock_resp = MagicMock(status_code=200, text=body)
+        mock_resp.json.return_value = json.loads(body)
+        qb._client.request = AsyncMock(return_value=mock_resp)
+
+        result = await qb.add_torrents(
+            torrent_urls="magnet:?xt=urn:btih:abc",
+            torrent_files=None,
+            save_path="/downloads",
+            category="Bangumi",
+        )
+
+        assert result is AddResult.ADDED
+
+    async def test_add_returns_added_on_202_json_pending_body(self):
+        # URL 形式的 add 是异步下载：qB 5.2 回 202 + pending_count>0——
+        # 已受理，同样视为成功
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        body = (
+            '{"added_torrent_ids":[],'
+            '"failure_count":0,"pending_count":1,"success_count":0}'
+        )
+        mock_resp = MagicMock(status_code=202, text=body)
+        mock_resp.json.return_value = json.loads(body)
+        qb._client.request = AsyncMock(return_value=mock_resp)
+
+        result = await qb.add_torrents(
+            torrent_urls="magnet:?xt=urn:btih:abc",
+            torrent_files=None,
+            save_path="/downloads",
+            category="Bangumi",
+        )
+
+        assert result is AddResult.ADDED
+
+    async def test_add_json_body_with_failures_and_existing_magnet_is_duplicate(self):
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        btih = "a" * 40
+        body = (
+            '{"added_torrent_ids":[],'
+            '"failure_count":1,"pending_count":0,"success_count":0}'
+        )
+        add_resp = MagicMock(status_code=200, text=body)
+        add_resp.json.return_value = json.loads(body)
+        info_resp = MagicMock(status_code=200)
+        info_resp.json.return_value = [{"hash": btih}]
+        qb._client.request = AsyncMock(side_effect=[add_resp, info_resp])
+
+        result = await qb.add_torrents(
+            torrent_urls=f"magnet:?xt=urn:btih:{btih}",
+            torrent_files=None,
+            save_path="/downloads",
+            category="Bangumi",
+        )
+
+        assert result is AddResult.DUPLICATE
+
+    async def test_add_json_body_with_failures_without_confirmed_duplicate_raises(self):
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        body = (
+            '{"added_torrent_ids":[],'
+            '"failure_count":1,"pending_count":0,"success_count":0}'
+        )
+        mock_resp = MagicMock(status_code=200, text=body)
+        mock_resp.json.return_value = json.loads(body)
+        qb._client.request = AsyncMock(return_value=mock_resp)
+
+        with pytest.raises(ConnectionError):
+            await qb.add_torrents(
+                torrent_urls="https://mikanani.me/Download/broken.torrent",
+                torrent_files=None,
+                save_path="/downloads",
+                category="Bangumi",
+            )
+
+    async def test_add_409_with_torrent_file_is_duplicate(self):
+        # qBittorrent >= 5.2 对已存在的种子回 409 Conflict (qbittorrent#18361)。
+        # 文件上传是同步解析的：损坏文件走 415，所以文件的 409 就是重复。
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        mock_resp = MagicMock(status_code=409, text="Conflict")
+        qb._client.request = AsyncMock(return_value=mock_resp)
+
+        result = await qb.add_torrents(
+            torrent_urls=None,
+            torrent_files=b"fake torrent bytes",
+            save_path="/downloads",
+            category="Bangumi",
+        )
+
+        assert result is AddResult.DUPLICATE
+
+    async def test_add_409_with_existing_magnet_is_duplicate(self):
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        btih = "b" * 40
+        add_resp = MagicMock(status_code=409, text="Conflict")
+        info_resp = MagicMock(status_code=200)
+        info_resp.json.return_value = [{"hash": btih}]
+        qb._client.request = AsyncMock(side_effect=[add_resp, info_resp])
+
+        result = await qb.add_torrents(
+            torrent_urls=f"magnet:?xt=urn:btih:{btih}",
+            torrent_files=None,
+            save_path="/downloads",
+            category="Bangumi",
+        )
+
+        assert result is AddResult.DUPLICATE
+
+    async def test_add_409_with_unconfirmed_url_raises(self):
+        # URL 形式在 5.2 走异步（202），几乎不会 409；真出现且无法用 hash
+        # 确认时按失败抛出，避免把损坏的 add 记成已下载
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        mock_resp = MagicMock(status_code=409, text="Conflict")
+        qb._client.request = AsyncMock(return_value=mock_resp)
+
+        with pytest.raises(ConnectionError):
+            await qb.add_torrents(
+                torrent_urls="https://mikanani.me/Download/unknown.torrent",
+                torrent_files=None,
+                save_path="/downloads",
+                category="Bangumi",
+            )
+
+    async def test_add_json_partial_success_is_added(self):
+        # 批量投递部分成功：与旧版 "Ok."（>=1 成功即 Ok.）和 aria2 客户端
+        # 的约定一致，按 ADDED 处理，不能把整批记成失败
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        body = (
+            '{"added_torrent_ids":["c" ],'
+            '"failure_count":1,"pending_count":0,"success_count":1}'
+        )
+        mock_resp = MagicMock(status_code=200, text=body)
+        mock_resp.json.return_value = json.loads(body)
+        qb._client.request = AsyncMock(return_value=mock_resp)
+
+        result = await qb.add_torrents(
+            torrent_urls=["magnet:?xt=urn:btih:abc", "magnet:?xt=urn:btih:def"],
+            torrent_files=None,
+            save_path="/downloads",
+            category="Bangumi",
+        )
+
+        assert result is AddResult.ADDED
+
+    async def test_add_json_all_zero_counts_raises(self):
+        # 三个计数全 0：什么都没加进去，不能算 ADDED
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        body = (
+            '{"added_torrent_ids":[],'
+            '"failure_count":0,"pending_count":0,"success_count":0}'
+        )
+        mock_resp = MagicMock(status_code=200, text=body)
+        mock_resp.json.return_value = json.loads(body)
+        qb._client.request = AsyncMock(return_value=mock_resp)
+
+        with pytest.raises(ConnectionError):
+            await qb.add_torrents(
+                torrent_urls="https://mikanani.me/Download/ignored.torrent",
+                torrent_files=None,
+                save_path="/downloads",
+                category="Bangumi",
+            )
+
+    async def test_add_sends_both_paused_and_stopped_params(self):
+        # qB 5.0 把 add 的 paused 参数改名为 stopped，双方都会静默忽略
+        # 未知参数——必须两个都发才能覆盖所有版本
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        mock_resp = MagicMock(status_code=200, text="Ok.")
+        qb._client.request = AsyncMock(return_value=mock_resp)
+
+        await qb.add_torrents(
+            torrent_urls="magnet:?xt=urn:btih:abc",
+            torrent_files=None,
+            save_path="/downloads",
+            category="Bangumi",
+        )
+
+        sent = qb._client.request.call_args.kwargs["data"]
+        assert sent["paused"] == "false"
+        assert sent["stopped"] == "false"
+
+
+# ---------------------------------------------------------------------------
+# torrents/pause|resume vs torrents/stop|start (qB 5.0 rename, no aliases)
+# ---------------------------------------------------------------------------
+
+
+class TestPauseResumeCompat:
+    """qB 5.0 把 pause/resume 改名为 stop/start 且旧名 404；4.x 没有新名。
+    客户端先试新名，404 时回退旧名并记住选择。"""
+
+    async def test_pause_uses_stop_endpoint_first(self):
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        mock_resp = MagicMock(status_code=200)
+        qb._client.request = AsyncMock(return_value=mock_resp)
+
+        await qb.torrents_pause("h1")
+
+        url = qb._client.request.call_args.args[1]
+        assert url.endswith("torrents/stop")
+
+    async def test_pause_falls_back_to_legacy_endpoint_on_404(self):
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        resp_404 = MagicMock(status_code=404)
+        resp_200 = MagicMock(status_code=200)
+        qb._client.request = AsyncMock(side_effect=[resp_404, resp_200])
+
+        await qb.torrents_pause("h1")
+
+        urls = [c.args[1] for c in qb._client.request.call_args_list]
+        assert urls[0].endswith("torrents/stop")
+        assert urls[1].endswith("torrents/pause")
+
+    async def test_resume_remembers_legacy_era_after_fallback(self):
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        resp_404 = MagicMock(status_code=404)
+        resp_200 = MagicMock(status_code=200)
+        qb._client.request = AsyncMock(side_effect=[resp_404, resp_200])
+        await qb.torrents_pause("h1")
+
+        qb._client.request = AsyncMock(return_value=MagicMock(status_code=200))
+        await qb.torrents_resume("h1")
+
+        url = qb._client.request.call_args.args[1]
+        assert url.endswith("torrents/resume")
+
+    async def test_resume_remembers_modern_era_after_success(self):
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        qb._client.request = AsyncMock(return_value=MagicMock(status_code=200))
+        await qb.torrents_pause("h1")
+
+        await qb.torrents_resume("h1")
+
+        url = qb._client.request.call_args.args[1]
+        assert url.endswith("torrents/start")
+
+
+# ---------------------------------------------------------------------------
+# torrents/info filter=paused (qB 5.0 renamed the value; unknown value = All)
+# ---------------------------------------------------------------------------
+
+
+class TestTorrentsInfoPausedFilter:
+    async def test_paused_filter_is_applied_client_side(self):
+        # 5.x 把 filter=paused 改名 stopped，且未知 filter 值静默等于 All——
+        # 服务端过滤不可跨版本，改为不带 filter 拉取后按 state 本地过滤
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        mock_resp = MagicMock(status_code=200)
+        mock_resp.json.return_value = [
+            {"hash": "a", "state": "pausedDL"},
+            {"hash": "b", "state": "stoppedUP"},
+            {"hash": "c", "state": "downloading"},
+        ]
+        qb._client.request = AsyncMock(return_value=mock_resp)
+
+        result = await qb.torrents_info(status_filter="paused", category="Bangumi")
+
+        sent_params = qb._client.request.call_args.kwargs["params"]
+        assert "filter" not in sent_params
+        assert [t["hash"] for t in result] == ["a", "b"]
+
+    async def test_completed_filter_still_server_side(self):
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        mock_resp = MagicMock(status_code=200)
+        mock_resp.json.return_value = []
+        qb._client.request = AsyncMock(return_value=mock_resp)
+
+        await qb.torrents_info(status_filter="completed", category="Bangumi")
+
+        sent_params = qb._client.request.call_args.kwargs["params"]
+        assert sent_params["filter"] == "completed"
+
+
+# ---------------------------------------------------------------------------
 # torrents_delete (#1046)
 # ---------------------------------------------------------------------------
 
@@ -625,23 +1121,81 @@ class TestTorrentsDelete:
         qb._client = AsyncMock()
         mock_resp = MagicMock()
         mock_resp.status_code = 200
-        qb._client.post = AsyncMock(return_value=mock_resp)
+        # Data ops now go through _request -> _client.request (session reuse).
+        qb._client.request = AsyncMock(return_value=mock_resp)
 
         result = await qb.torrents_delete(["aaa", "bbb"], delete_files=True)
 
         assert result is True
-        sent = qb._client.post.call_args.kwargs["data"]
+        sent = qb._client.request.call_args.kwargs["data"]
         assert sent["hashes"] == "aaa|bbb"
         assert sent["deleteFiles"] == "true"
 
     async def test_delete_returns_false_on_error_status(self):
-        """Non-200 response returns False instead of silently succeeding."""
+        """Error response returns False instead of silently succeeding."""
         qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
         qb._client = AsyncMock()
         mock_resp = MagicMock()
-        mock_resp.status_code = 403
-        qb._client.post = AsyncMock(return_value=mock_resp)
+        mock_resp.status_code = 500
+        qb._client.request = AsyncMock(return_value=mock_resp)
 
         result = await qb.torrents_delete("aaa", delete_files=True)
 
         assert result is False
+
+    async def test_delete_accepts_204_empty_body(self):
+        """qB 5.2 回 204 表示成功（空响应体全局改为 204）。"""
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 204
+        qb._client.request = AsyncMock(return_value=mock_resp)
+
+        result = await qb.torrents_delete("aaa", delete_files=True)
+
+        assert result is True
+
+
+# ---------------------------------------------------------------------------
+# torrents_rename_file verify contract (#754 / #749, from PR #1037)
+# ---------------------------------------------------------------------------
+
+
+class TestRenameVerifyContract:
+    """Pin the verify contract: only trust a rename when new_path appears.
+
+    qBittorrent can answer 200 without actually renaming (e.g. while seeding,
+    or when the target name is taken by a duplicate from another source).
+    Any false True here re-triggers rename + notification every rename cycle.
+    """
+
+    def _make_qb(self, file_list, post_code: int = 200):
+        qb = QbDownloader(host="http://qb", username="u", password="p", ssl=False)
+        qb._post = AsyncMock(return_value=MagicMock(status_code=post_code))
+        qb.torrents_files = AsyncMock(return_value=file_list)
+        return qb
+
+    async def test_verify_false_when_file_keeps_old_name(self):
+        """API 200 but the file never gets renamed -> False."""
+        qb = self._make_qb([{"name": "old.mkv"}])
+        assert await qb.torrents_rename_file("h", "old.mkv", "new.mkv") is False
+
+    async def test_verify_false_when_neither_name_present(self):
+        """Neither old nor new name in the file list -> False, not a blind True."""
+        qb = self._make_qb([{"name": "unrelated.mkv"}])
+        assert await qb.torrents_rename_file("h", "old.mkv", "new.mkv") is False
+
+    async def test_verify_true_when_new_path_appears(self):
+        """A real, verified rename returns True."""
+        qb = self._make_qb([{"name": "new.mkv"}])
+        assert await qb.torrents_rename_file("h", "old.mkv", "new.mkv") is True
+
+    async def test_verify_409_conflict_is_false(self):
+        """Target already exists (duplicate from another source) -> False."""
+        qb = self._make_qb([{"name": "old.mkv"}], post_code=409)
+        assert await qb.torrents_rename_file("h", "old.mkv", "new.mkv") is False
+
+    async def test_rename_204_with_verified_new_path_is_true(self):
+        """qB 5.2 对成功的 renameFile 回 204；不能再用 ==200 判定失败。"""
+        qb = self._make_qb([{"name": "new.mkv"}], post_code=204)
+        assert await qb.torrents_rename_file("h", "old.mkv", "new.mkv") is True

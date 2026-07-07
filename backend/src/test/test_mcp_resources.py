@@ -1,7 +1,7 @@
-"""Tests for module.mcp.resources - handle_resource() and _bangumi_to_dict()."""
+"""Tests for module.mcp.resources - await handle_resource() and _bangumi_to_dict()."""
 
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -19,29 +19,38 @@ from test.factories import make_bangumi
 # ---------------------------------------------------------------------------
 
 
+def _mock_db(bangumi_list=None, feeds=None, single=None):
+    """Build an async-context-manager mock standing in for ``Database()``.
+
+    The MCP handlers open ``async with Database() as db`` and read repos off
+    ``db`` directly, so tests configure the repo AsyncMocks here.
+    """
+    db = MagicMock()
+    if bangumi_list is not None:
+        db.bangumi.search_all = AsyncMock(return_value=bangumi_list)
+    if feeds is not None:
+        db.rss.search_all = AsyncMock(return_value=feeds)
+    if single is not None:
+        db.bangumi.search_id = AsyncMock(return_value=single)
+    cm = MagicMock()
+    cm.__aenter__ = AsyncMock(return_value=db)
+    cm.__aexit__ = AsyncMock(return_value=False)
+    return cm
+
+
 def _mock_sync_manager(bangumi_list=None, single=None):
-    """Build a MagicMock that acts as a sync context-manager TorrentManager."""
+    """Build a MagicMock standing in for a TorrentManager service.
+
+    Used by handlers that call domain methods (e.g. ``search_one``) rather
+    than reaching repos off the Database.
+    """
     mock_mgr = MagicMock()
     if bangumi_list is not None:
-        mock_mgr.bangumi.search_all.return_value = bangumi_list
+        mock_mgr.bangumi.search_all = AsyncMock(return_value=bangumi_list)
     if single is not None:
-        mock_mgr.search_one.return_value = single
+        mock_mgr.search_one = AsyncMock(return_value=single)
 
-    ctx = MagicMock()
-    ctx.__enter__ = MagicMock(return_value=mock_mgr)
-    ctx.__exit__ = MagicMock(return_value=False)
-    return ctx, mock_mgr
-
-
-def _mock_rss_engine(feeds):
-    """Build a MagicMock that acts as a sync context-manager RSSEngine."""
-    mock_eng = MagicMock()
-    mock_eng.rss.search_all.return_value = feeds
-
-    ctx = MagicMock()
-    ctx.__enter__ = MagicMock(return_value=mock_eng)
-    ctx.__exit__ = MagicMock(return_value=False)
-    return ctx
+    return mock_mgr, mock_mgr
 
 
 def _parse(raw: str) -> dict | list:
@@ -56,22 +65,22 @@ def _parse(raw: str) -> dict | list:
 class TestResourceMetadata:
     """Verify the static resource and template lists."""
 
-    def test_resources_is_list(self):
+    async def test_resources_is_list(self):
         assert isinstance(RESOURCES, list)
 
-    def test_resources_not_empty(self):
+    async def test_resources_not_empty(self):
         assert len(RESOURCES) > 0
 
-    def test_resource_uris_present(self):
+    async def test_resource_uris_present(self):
         uris = {str(r.uri) for r in RESOURCES}
         assert "autobangumi://anime/list" in uris
         assert "autobangumi://status" in uris
         assert "autobangumi://rss/feeds" in uris
 
-    def test_resource_templates_is_list(self):
+    async def test_resource_templates_is_list(self):
         assert isinstance(RESOURCE_TEMPLATES, list)
 
-    def test_anime_id_template_present(self):
+    async def test_anime_id_template_present(self):
         templates = [str(t.uriTemplate) for t in RESOURCE_TEMPLATES]
         assert "autobangumi://anime/{id}" in templates
 
@@ -106,10 +115,10 @@ class TestBangumiToDictResources:
             eps_collect=True,
         )
 
-    def test_returns_dict(self, sample):
+    async def test_returns_dict(self, sample):
         assert isinstance(_bangumi_to_dict(sample), dict)
 
-    def test_required_keys_present(self, sample):
+    async def test_required_keys_present(self, sample):
         result = _bangumi_to_dict(sample)
         required = {
             "id",
@@ -129,16 +138,16 @@ class TestBangumiToDictResources:
         }
         assert required.issubset(result.keys())
 
-    def test_id_value(self, sample):
+    async def test_id_value(self, sample):
         assert _bangumi_to_dict(sample)["id"] == 10
 
-    def test_official_title_value(self, sample):
+    async def test_official_title_value(self, sample):
         assert _bangumi_to_dict(sample)["official_title"] == "Demon Slayer"
 
-    def test_eps_collect_true(self, sample):
+    async def test_eps_collect_true(self, sample):
         assert _bangumi_to_dict(sample)["eps_collect"] is True
 
-    def test_none_optional_poster(self):
+    async def test_none_optional_poster(self):
         b = make_bangumi(id=1, poster_link=None)
         assert _bangumi_to_dict(b)["poster_link"] is None
 
@@ -151,44 +160,44 @@ class TestBangumiToDictResources:
 class TestHandleResourceAnimeList:
     """Tests for autobangumi://anime/list."""
 
-    def test_returns_json_string(self):
+    async def test_returns_json_string(self):
         """Result is a valid JSON string."""
-        ctx, _ = _mock_sync_manager(bangumi_list=[])
-        with patch("module.mcp.resources.TorrentManager", return_value=ctx):
-            raw = handle_resource("autobangumi://anime/list")
+        ctx = _mock_db(bangumi_list=[])
+        with patch("module.mcp.resources.Database", return_value=ctx):
+            raw = await handle_resource("autobangumi://anime/list")
         assert isinstance(raw, str)
         _parse(raw)  # must not raise
 
-    def test_empty_database_returns_empty_list(self):
+    async def test_empty_database_returns_empty_list(self):
         """Empty DB produces an empty JSON array."""
-        ctx, _ = _mock_sync_manager(bangumi_list=[])
-        with patch("module.mcp.resources.TorrentManager", return_value=ctx):
-            result = _parse(handle_resource("autobangumi://anime/list"))
+        ctx = _mock_db(bangumi_list=[])
+        with patch("module.mcp.resources.Database", return_value=ctx):
+            result = _parse(await handle_resource("autobangumi://anime/list"))
         assert result == []
 
-    def test_multiple_bangumi_serialised(self):
+    async def test_multiple_bangumi_serialised(self):
         """Multiple Bangumi entries all appear in the output list."""
         bangumi = [make_bangumi(id=1), make_bangumi(id=2, title_raw="Other")]
-        ctx, _ = _mock_sync_manager(bangumi_list=bangumi)
-        with patch("module.mcp.resources.TorrentManager", return_value=ctx):
-            result = _parse(handle_resource("autobangumi://anime/list"))
+        ctx = _mock_db(bangumi_list=bangumi)
+        with patch("module.mcp.resources.Database", return_value=ctx):
+            result = _parse(await handle_resource("autobangumi://anime/list"))
         assert len(result) == 2
 
-    def test_ids_are_in_output(self):
+    async def test_ids_are_in_output(self):
         """Each serialised entry contains its correct id."""
         bangumi = [make_bangumi(id=7), make_bangumi(id=8, title_raw="B")]
-        ctx, _ = _mock_sync_manager(bangumi_list=bangumi)
-        with patch("module.mcp.resources.TorrentManager", return_value=ctx):
-            result = _parse(handle_resource("autobangumi://anime/list"))
+        ctx = _mock_db(bangumi_list=bangumi)
+        with patch("module.mcp.resources.Database", return_value=ctx):
+            result = _parse(await handle_resource("autobangumi://anime/list"))
         ids = {item["id"] for item in result}
         assert {7, 8}.issubset(ids)
 
-    def test_non_ascii_titles_preserved(self):
+    async def test_non_ascii_titles_preserved(self):
         """Japanese/Chinese titles survive JSON serialisation."""
         bangumi = [make_bangumi(id=1, official_title="進撃の巨人")]
-        ctx, _ = _mock_sync_manager(bangumi_list=bangumi)
-        with patch("module.mcp.resources.TorrentManager", return_value=ctx):
-            raw = handle_resource("autobangumi://anime/list")
+        ctx = _mock_db(bangumi_list=bangumi)
+        with patch("module.mcp.resources.Database", return_value=ctx):
+            raw = await handle_resource("autobangumi://anime/list")
         # ensure_ascii=False means the characters appear verbatim
         assert "進撃の巨人" in raw
 
@@ -203,47 +212,51 @@ class TestHandleResourceStatus:
         prog.first_run = False
         return prog
 
-    def test_returns_json_string(self, mock_program):
+    async def test_returns_json_string(self, mock_program):
         with (
             patch("module.mcp.resources.VERSION", "3.2.0-test"),
-            patch("module.api.program.program", mock_program),
+            patch("module.mcp.resources.get_context", return_value=mock_program),
         ):
-            raw = handle_resource("autobangumi://status")
+            raw = await handle_resource("autobangumi://status")
         assert isinstance(raw, str)
         _parse(raw)
 
-    def test_version_in_output(self, mock_program):
+    async def test_version_in_output(self, mock_program):
         with (
             patch("module.mcp.resources.VERSION", "3.2.0-test"),
-            patch("module.api.program.program", mock_program),
+            patch("module.mcp.resources.get_context", return_value=mock_program),
         ):
-            result = _parse(handle_resource("autobangumi://status"))
+            result = _parse(await handle_resource("autobangumi://status"))
+        assert isinstance(result, dict)
         assert result["version"] == "3.2.0-test"
 
-    def test_running_true(self, mock_program):
+    async def test_running_true(self, mock_program):
         mock_program.is_running = True
         with (
             patch("module.mcp.resources.VERSION", "3.2.0-test"),
-            patch("module.api.program.program", mock_program),
+            patch("module.mcp.resources.get_context", return_value=mock_program),
         ):
-            result = _parse(handle_resource("autobangumi://status"))
+            result = _parse(await handle_resource("autobangumi://status"))
+        assert isinstance(result, dict)
         assert result["running"] is True
 
-    def test_first_run_false(self, mock_program):
+    async def test_first_run_false(self, mock_program):
         mock_program.first_run = False
         with (
             patch("module.mcp.resources.VERSION", "3.2.0-test"),
-            patch("module.api.program.program", mock_program),
+            patch("module.mcp.resources.get_context", return_value=mock_program),
         ):
-            result = _parse(handle_resource("autobangumi://status"))
+            result = _parse(await handle_resource("autobangumi://status"))
+        assert isinstance(result, dict)
         assert result["first_run"] is False
 
-    def test_all_keys_present(self, mock_program):
+    async def test_all_keys_present(self, mock_program):
         with (
             patch("module.mcp.resources.VERSION", "3.2.0-test"),
-            patch("module.api.program.program", mock_program),
+            patch("module.mcp.resources.get_context", return_value=mock_program),
         ):
-            result = _parse(handle_resource("autobangumi://status"))
+            result = _parse(await handle_resource("autobangumi://status"))
+        assert isinstance(result, dict)
         assert {"version", "running", "first_run"}.issubset(result.keys())
 
 
@@ -260,24 +273,24 @@ class TestHandleResourceRssFeeds:
         f.last_checked_at = "2024-01-01T00:00:00"
         return f
 
-    def test_returns_json_string(self):
-        ctx = _mock_rss_engine([])
-        with patch("module.mcp.resources.RSSEngine", return_value=ctx):
-            raw = handle_resource("autobangumi://rss/feeds")
+    async def test_returns_json_string(self):
+        ctx = _mock_db(feeds=[])
+        with patch("module.mcp.resources.Database", return_value=ctx):
+            raw = await handle_resource("autobangumi://rss/feeds")
         assert isinstance(raw, str)
         _parse(raw)
 
-    def test_empty_feeds_returns_empty_list(self):
-        ctx = _mock_rss_engine([])
-        with patch("module.mcp.resources.RSSEngine", return_value=ctx):
-            result = _parse(handle_resource("autobangumi://rss/feeds"))
+    async def test_empty_feeds_returns_empty_list(self):
+        ctx = _mock_db(feeds=[])
+        with patch("module.mcp.resources.Database", return_value=ctx):
+            result = _parse(await handle_resource("autobangumi://rss/feeds"))
         assert result == []
 
-    def test_feed_fields_present(self):
+    async def test_feed_fields_present(self):
         feed = self._make_feed(feed_id=2, name="Mikan", url="https://mikanani.me/rss")
-        ctx = _mock_rss_engine([feed])
-        with patch("module.mcp.resources.RSSEngine", return_value=ctx):
-            result = _parse(handle_resource("autobangumi://rss/feeds"))
+        ctx = _mock_db(feeds=[feed])
+        with patch("module.mcp.resources.Database", return_value=ctx):
+            result = _parse(await handle_resource("autobangumi://rss/feeds"))
         entry = result[0]
         assert entry["id"] == 2
         assert entry["name"] == "Mikan"
@@ -286,14 +299,14 @@ class TestHandleResourceRssFeeds:
         assert "connection_status" in entry
         assert "last_checked_at" in entry
 
-    def test_multiple_feeds(self):
+    async def test_multiple_feeds(self):
         feeds = [
             self._make_feed(1, "Feed A", "https://a.example.com/rss"),
             self._make_feed(2, "Feed B", "https://b.example.com/rss"),
         ]
-        ctx = _mock_rss_engine(feeds)
-        with patch("module.mcp.resources.RSSEngine", return_value=ctx):
-            result = _parse(handle_resource("autobangumi://rss/feeds"))
+        ctx = _mock_db(feeds=feeds)
+        with patch("module.mcp.resources.Database", return_value=ctx):
+            result = _parse(await handle_resource("autobangumi://rss/feeds"))
         assert len(result) == 2
 
 
@@ -305,47 +318,50 @@ class TestHandleResourceRssFeeds:
 class TestHandleResourceAnimeById:
     """Tests for the autobangumi://anime/{id} template."""
 
-    def test_valid_id_returns_bangumi_dict(self):
+    async def test_valid_id_returns_bangumi_dict(self):
         """A numeric ID resolves to the bangumi's serialised dict."""
         bangumi = make_bangumi(id=3, official_title="Fullmetal Alchemist")
         ctx, _ = _mock_sync_manager(single=bangumi)
         with patch("module.mcp.resources.TorrentManager", return_value=ctx):
-            result = _parse(handle_resource("autobangumi://anime/3"))
+            result = _parse(await handle_resource("autobangumi://anime/3"))
+        assert isinstance(result, dict)
         assert result["id"] == 3
         assert result["official_title"] == "Fullmetal Alchemist"
 
-    def test_not_found_id_returns_error(self):
+    async def test_not_found_id_returns_error(self):
         """When search_one returns a ResponseModel, result contains 'error'."""
         not_found = ResponseModel(
             status=False, status_code=404, msg_en="Anime not found", msg_zh="未找到"
         )
         ctx, _ = _mock_sync_manager(single=not_found)
         with patch("module.mcp.resources.TorrentManager", return_value=ctx):
-            result = _parse(handle_resource("autobangumi://anime/9999"))
+            result = _parse(await handle_resource("autobangumi://anime/9999"))
         assert "error" in result
 
-    def test_non_numeric_id_returns_error(self):
+    async def test_non_numeric_id_returns_error(self):
         """A non-integer ID segment produces a JSON error without crashing."""
-        result = _parse(handle_resource("autobangumi://anime/abc"))
+        result = _parse(await handle_resource("autobangumi://anime/abc"))
+        assert isinstance(result, dict)
         assert "error" in result
         assert "abc" in result["error"]
 
-    def test_negative_id_is_passed_to_manager(self):
+    async def test_negative_id_is_passed_to_manager(self):
         """Negative integers are valid integers and passed through."""
         not_found = ResponseModel(
             status=False, status_code=404, msg_en="Anime not found", msg_zh="未找到"
         )
         ctx, mock_mgr = _mock_sync_manager(single=not_found)
         with patch("module.mcp.resources.TorrentManager", return_value=ctx):
-            handle_resource("autobangumi://anime/-1")
+            await handle_resource("autobangumi://anime/-1")
         mock_mgr.search_one.assert_called_once_with(-1)
 
-    def test_result_has_required_fields(self):
+    async def test_result_has_required_fields(self):
         """Returned dict contains all expected bangumi fields."""
         bangumi = make_bangumi(id=5)
         ctx, _ = _mock_sync_manager(single=bangumi)
         with patch("module.mcp.resources.TorrentManager", return_value=ctx):
-            result = _parse(handle_resource("autobangumi://anime/5"))
+            result = _parse(await handle_resource("autobangumi://anime/5"))
+        assert isinstance(result, dict)
         required = {"id", "official_title", "title_raw", "season", "rss_link"}
         assert required.issubset(result.keys())
 
@@ -358,23 +374,26 @@ class TestHandleResourceAnimeById:
 class TestHandleResourceUnknown:
     """Tests for unrecognised resource URIs."""
 
-    def test_unknown_uri_returns_json_error(self):
+    async def test_unknown_uri_returns_json_error(self):
         """An unrecognised URI produces a JSON object with 'error'."""
-        result = _parse(handle_resource("autobangumi://does/not/exist"))
+        result = _parse(await handle_resource("autobangumi://does/not/exist"))
         assert "error" in result
 
-    def test_unknown_uri_mentions_uri_in_error(self):
+    async def test_unknown_uri_mentions_uri_in_error(self):
         """The error message includes the unrecognised URI."""
         uri = "autobangumi://does/not/exist"
-        result = _parse(handle_resource(uri))
+        result = _parse(await handle_resource(uri))
+        assert isinstance(result, dict)
         assert uri in result["error"]
 
-    def test_empty_uri_returns_error(self):
+    async def test_empty_uri_returns_error(self):
         """An empty string URI returns a JSON error."""
-        result = _parse(handle_resource(""))
+        result = _parse(await handle_resource(""))
         assert "error" in result
 
-    def test_completely_different_scheme_returns_error(self):
+    async def test_completely_different_scheme_returns_error(self):
         """A URI with a wrong scheme returns a JSON error."""
-        result = _parse(handle_resource("https://autobangumi.example.com/anime/list"))
+        result = _parse(
+            await handle_resource("https://autobangumi.example.com/anime/list")
+        )
         assert "error" in result

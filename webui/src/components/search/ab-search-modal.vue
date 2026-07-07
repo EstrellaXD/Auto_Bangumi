@@ -1,5 +1,13 @@
 <script lang="ts" setup>
-import { Calendar, Down, Monitor, PeoplesTwo, Search, Translate } from '@icon-park/vue-next';
+import {
+  Calendar,
+  Close,
+  Down,
+  Monitor,
+  PeoplesTwo,
+  Search,
+  Translate,
+} from '@icon-park/vue-next';
 import { NSpin } from 'naive-ui';
 import { onKeyStroke } from '@vueuse/core';
 import AbSearchConfirm from './ab-search-confirm.vue';
@@ -11,12 +19,14 @@ const emit = defineEmits<{
 }>();
 
 const message = useMessage();
+const { t } = useMyI18n();
 const { getAll } = useBangumiStore();
 
 const {
   providers,
   provider,
   loading,
+  searchFailed,
   inputValue,
   groupedResults,
   showModal,
@@ -57,7 +67,9 @@ const MAX_VISIBLE_CHIPS = 6;
 const MAX_VISIBLE_VARIANTS = 12;
 
 // Track which categories are expanded
-const expandedCategories = ref<Set<'group' | 'resolution' | 'subtitle' | 'season'>>(new Set());
+const expandedCategories = ref<
+  Set<'group' | 'resolution' | 'subtitle' | 'season'>
+>(new Set());
 
 // Track which bangumi groups have expanded variants
 const expandedVariants = ref<Set<string>>(new Set());
@@ -67,8 +79,11 @@ onBeforeUnmount(() => {
   closeSearch();
 });
 
-// Close on Escape
+// Close on Escape (this component is always mounted, so the listener must
+// no-op while the modal itself is closed — otherwise Escape anywhere in the
+// app would toggle the modal open via the `close` -> toggleModal() handler).
 onKeyStroke('Escape', () => {
+  if (!showModal.value) return;
   if (selectedResult.value) {
     clearSelectedResult();
   } else {
@@ -109,20 +124,20 @@ async function handleConfirm(bangumi: BangumiRule) {
       name: bangumi.official_title,
       url: bangumi.rss_link?.[0] || '',
       aggregate: false,
-      parser: 'mikan',
+      parser: provider.value,
       enabled: true,
       connection_status: null,
       last_checked_at: null,
       last_error: null,
     };
     await apiDownload.subscribe(bangumi, rss);
-    message.success('订阅成功');
+    message.success(t('search.subscribe_success'));
     getAll();
     clearSelectedResult();
     emit('close');
   } catch (e) {
     console.error('Subscribe failed:', e);
-    message.error('订阅失败');
+    message.error(t('search.subscribe_failed'));
   } finally {
     subscribing.value = false;
   }
@@ -144,7 +159,11 @@ function normalizeResolution(raw: string): string {
     return '4K';
   }
   // 1080p variants
-  if (lower.includes('1080') || lower.includes('fhd') || lower.includes('1920')) {
+  if (
+    lower.includes('1080') ||
+    lower.includes('fhd') ||
+    lower.includes('1920')
+  ) {
     return 'FHD';
   }
   // 720p variants
@@ -165,9 +184,12 @@ function normalizeSubtitle(raw: string): string {
   const lower = raw.toLowerCase();
 
   // Check for dual/bilingual first
-  if (lower.includes('双语') || lower.includes('dual') ||
-      (lower.includes('简') && lower.includes('繁')) ||
-      (lower.includes('chs') && lower.includes('cht'))) {
+  if (
+    lower.includes('双语') ||
+    lower.includes('dual') ||
+    (lower.includes('简') && lower.includes('繁')) ||
+    (lower.includes('chs') && lower.includes('cht'))
+  ) {
     return '双语';
   }
 
@@ -198,7 +220,11 @@ function normalizeSubtitle(raw: string): string {
   }
 
   // External subs
-  if (lower.includes('外挂') || lower.includes('ass') || lower.includes('srt')) {
+  if (
+    lower.includes('外挂') ||
+    lower.includes('ass') ||
+    lower.includes('srt')
+  ) {
     return '外挂';
   }
 
@@ -222,7 +248,11 @@ function normalizeSeason(raw: string): string {
 
   // Special types
   const lower = raw.toLowerCase();
-  if (lower.includes('剧场') || lower.includes('movie') || lower.includes('劇場')) {
+  if (
+    lower.includes('剧场') ||
+    lower.includes('movie') ||
+    lower.includes('劇場')
+  ) {
     return '剧场版';
   }
   if (lower.includes('ova')) {
@@ -289,7 +319,16 @@ const filterOptions = computed(() => {
       return aIndex - bIndex;
     }),
     subtitle: Array.from(subtitles).sort((a, b) => {
-      const order = ['简', '繁', '双语', '简/内嵌', '繁/内嵌', '内嵌', '外挂', '日'];
+      const order = [
+        '简',
+        '繁',
+        '双语',
+        '简/内嵌',
+        '繁/内嵌',
+        '内嵌',
+        '外挂',
+        '日',
+      ];
       const aIndex = order.indexOf(a);
       const bIndex = order.indexOf(b);
       if (aIndex === -1 && bIndex === -1) return a.localeCompare(b);
@@ -313,16 +352,20 @@ const filterOptions = computed(() => {
 
 // Check if filter section should be visible
 const showFilters = computed(() => {
-  return groupedResults.value.length > 0 && (
-    filterOptions.value.group.length > 0 ||
-    filterOptions.value.resolution.length > 0 ||
-    filterOptions.value.subtitle.length > 0 ||
-    filterOptions.value.season.length > 0
+  return (
+    groupedResults.value.length > 0 &&
+    (filterOptions.value.group.length > 0 ||
+      filterOptions.value.resolution.length > 0 ||
+      filterOptions.value.subtitle.length > 0 ||
+      filterOptions.value.season.length > 0)
   );
 });
 
 // Toggle filter (multi-select)
-function toggleFilter(type: 'group' | 'resolution' | 'subtitle' | 'season', value: string) {
+function toggleFilter(
+  type: 'group' | 'resolution' | 'subtitle' | 'season',
+  value: string
+) {
   const index = activeFilters.value[type].indexOf(value);
   if (index === -1) {
     activeFilters.value[type].push(value);
@@ -332,7 +375,10 @@ function toggleFilter(type: 'group' | 'resolution' | 'subtitle' | 'season', valu
 }
 
 // Check if filter chip is active
-function isFilterActive(type: 'group' | 'resolution' | 'subtitle' | 'season', value: string): boolean {
+function isFilterActive(
+  type: 'group' | 'resolution' | 'subtitle' | 'season',
+  value: string
+): boolean {
   return activeFilters.value[type].includes(value);
 }
 
@@ -340,7 +386,10 @@ function isFilterActive(type: 'group' | 'resolution' | 'subtitle' | 'season', va
 function variantMatchesFilters(variant: BangumiRule): boolean {
   const { group, resolution, subtitle, season } = activeFilters.value;
 
-  if (group.length > 0 && (!variant.group_name || !group.includes(variant.group_name))) {
+  if (
+    group.length > 0 &&
+    (!variant.group_name || !group.includes(variant.group_name))
+  ) {
     return false;
   }
   if (resolution.length > 0) {
@@ -361,17 +410,24 @@ function variantMatchesFilters(variant: BangumiRule): boolean {
 
 // Get filtered variants for a group
 function getFilteredVariants(group: GroupedBangumi): BangumiRule[] {
-  const hasActiveFilter = Object.values(activeFilters.value).some(arr => arr.length > 0);
+  const hasActiveFilter = Object.values(activeFilters.value).some(
+    (arr) => arr.length > 0
+  );
   if (!hasActiveFilter) return group.variants;
   return group.variants.filter(variantMatchesFilters);
 }
 
 // Check if any filter is active
-const hasActiveFilters = computed(() => Object.values(activeFilters.value).some(arr => arr.length > 0));
+const hasActiveFilters = computed(() =>
+  Object.values(activeFilters.value).some((arr) => arr.length > 0)
+);
 
 // Get all selected filter tags for display
 const selectedFilterTags = computed(() => {
-  const tags: { type: 'group' | 'resolution' | 'subtitle' | 'season'; value: string }[] = [];
+  const tags: {
+    type: 'group' | 'resolution' | 'subtitle' | 'season';
+    value: string;
+  }[] = [];
   for (const value of activeFilters.value.group) {
     tags.push({ type: 'group', value });
   }
@@ -394,16 +450,25 @@ function clearFilters() {
 
 // Count total and filtered results
 const totalVariantCount = computed(() => {
-  return groupedResults.value.reduce((sum, group) => sum + group.variants.length, 0);
+  return groupedResults.value.reduce(
+    (sum, group) => sum + group.variants.length,
+    0
+  );
 });
 
 const filteredVariantCount = computed(() => {
   if (!hasActiveFilters.value) return totalVariantCount.value;
-  return groupedResults.value.reduce((sum, group) => sum + getFilteredVariants(group).length, 0);
+  return groupedResults.value.reduce(
+    (sum, group) => sum + getFilteredVariants(group).length,
+    0
+  );
 });
 
 // Get visible options (limited or all if expanded)
-function getVisibleOptions(category: 'group' | 'resolution' | 'subtitle' | 'season', options: string[]) {
+function getVisibleOptions(
+  category: 'group' | 'resolution' | 'subtitle' | 'season',
+  options: string[]
+) {
   if (expandedCategories.value.has(category)) {
     return options;
   }
@@ -422,7 +487,9 @@ function isExpanded(category: 'group' | 'resolution' | 'subtitle' | 'season') {
   return expandedCategories.value.has(category);
 }
 
-function toggleExpand(category: 'group' | 'resolution' | 'subtitle' | 'season') {
+function toggleExpand(
+  category: 'group' | 'resolution' | 'subtitle' | 'season'
+) {
   if (expandedCategories.value.has(category)) {
     expandedCategories.value.delete(category);
   } else {
@@ -485,33 +552,38 @@ function wouldProduceResults(
   // Check if any variant matches the hypothetical filter combination
   return allVariants.value.some((variant) => {
     // Check group constraint
-    const groupMatch = type === 'group'
-      ? variant.group_name === value
-      : group.length === 0 || (variant.group_name && group.includes(variant.group_name));
+    const groupMatch =
+      type === 'group'
+        ? variant.group_name === value
+        : group.length === 0 ||
+          (variant.group_name && group.includes(variant.group_name));
 
     if (!groupMatch) return false;
 
     // Check resolution constraint
     const res = getResolution(variant);
-    const resMatch = type === 'resolution'
-      ? res === value
-      : resolution.length === 0 || (res && resolution.includes(res));
+    const resMatch =
+      type === 'resolution'
+        ? res === value
+        : resolution.length === 0 || (res && resolution.includes(res));
 
     if (!resMatch) return false;
 
     // Check subtitle constraint
     const sub = getSubtitle(variant);
-    const subMatch = type === 'subtitle'
-      ? sub === value
-      : subtitle.length === 0 || (sub && subtitle.includes(sub));
+    const subMatch =
+      type === 'subtitle'
+        ? sub === value
+        : subtitle.length === 0 || (sub && subtitle.includes(sub));
 
     if (!subMatch) return false;
 
     // Check season constraint
     const s = getSeason(variant);
-    const seasonMatch = type === 'season'
-      ? s === value
-      : season.length === 0 || (s && season.includes(s));
+    const seasonMatch =
+      type === 'season'
+        ? s === value
+        : season.length === 0 || (s && season.includes(s));
 
     if (!seasonMatch) return false;
 
@@ -520,14 +592,20 @@ function wouldProduceResults(
 }
 
 // Check if a filter option is disabled (would produce no results)
-function isFilterDisabled(type: 'group' | 'resolution' | 'subtitle' | 'season', value: string): boolean {
+function isFilterDisabled(
+  type: 'group' | 'resolution' | 'subtitle' | 'season',
+  value: string
+): boolean {
   // Only disable when there are active filters
   if (!hasActiveFilters.value) return false;
   return !wouldProduceResults(type, value);
 }
 
 // Handle filter click - only toggle if not disabled
-function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season', value: string) {
+function handleFilterClick(
+  type: 'group' | 'resolution' | 'subtitle' | 'season',
+  value: string
+) {
   if (isFilterDisabled(type, value)) return;
   toggleFilter(type, value);
 }
@@ -547,7 +625,7 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
         class="modal-container"
         role="dialog"
         aria-modal="true"
-        @mousedown.self="handleClose"
+        @click.self="handleClose"
       >
         <div class="modal-content">
           <!-- Header -->
@@ -577,6 +655,8 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
                 <button
                   class="provider-btn"
                   aria-label="Select search provider"
+                  aria-haspopup="listbox"
+                  :aria-expanded="showProvider"
                   @click="showProvider = !showProvider"
                 >
                   <span class="provider-label">{{ provider }}</span>
@@ -598,6 +678,14 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
                 </transition>
               </div>
             </div>
+
+            <ab-icon-button
+              class="modal-close-btn"
+              :label="$t('common.close')"
+              @click="handleClose"
+            >
+              <Close theme="outline" size="20" />
+            </ab-icon-button>
           </header>
 
           <!-- Filter Section - Chip Cloud -->
@@ -609,12 +697,15 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
               </span>
               <div class="filter-chips">
                 <button
-                  v-for="option in getVisibleOptions('group', filterOptions.group)"
+                  v-for="option in getVisibleOptions(
+                    'group',
+                    filterOptions.group
+                  )"
                   :key="option"
                   class="filter-chip chip-group"
                   :class="{
                     active: isFilterActive('group', option),
-                    disabled: isFilterDisabled('group', option)
+                    disabled: isFilterDisabled('group', option),
                   }"
                   :disabled="isFilterDisabled('group', option)"
                   @click="handleFilterClick('group', option)"
@@ -626,24 +717,34 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
                   class="expand-btn"
                   @click="toggleExpand('group')"
                 >
-                  {{ isExpanded('group') ? $t('search.filter.collapse') : `+${getOverflowCount(filterOptions.group)}` }}
+                  {{
+                    isExpanded('group')
+                      ? $t('search.filter.collapse')
+                      : `+${getOverflowCount(filterOptions.group)}`
+                  }}
                 </button>
               </div>
             </div>
 
             <!-- Resolution Filters -->
-            <div v-if="filterOptions.resolution.length > 0" class="filter-category">
+            <div
+              v-if="filterOptions.resolution.length > 0"
+              class="filter-category"
+            >
               <span class="category-icon">
                 <Monitor theme="outline" :size="16" />
               </span>
               <div class="filter-chips">
                 <button
-                  v-for="option in getVisibleOptions('resolution', filterOptions.resolution)"
+                  v-for="option in getVisibleOptions(
+                    'resolution',
+                    filterOptions.resolution
+                  )"
                   :key="option"
                   class="filter-chip chip-resolution"
                   :class="{
                     active: isFilterActive('resolution', option),
-                    disabled: isFilterDisabled('resolution', option)
+                    disabled: isFilterDisabled('resolution', option),
                   }"
                   :disabled="isFilterDisabled('resolution', option)"
                   @click="handleFilterClick('resolution', option)"
@@ -655,24 +756,34 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
                   class="expand-btn"
                   @click="toggleExpand('resolution')"
                 >
-                  {{ isExpanded('resolution') ? $t('search.filter.collapse') : `+${getOverflowCount(filterOptions.resolution)}` }}
+                  {{
+                    isExpanded('resolution')
+                      ? $t('search.filter.collapse')
+                      : `+${getOverflowCount(filterOptions.resolution)}`
+                  }}
                 </button>
               </div>
             </div>
 
             <!-- Subtitle Filters -->
-            <div v-if="filterOptions.subtitle.length > 0" class="filter-category">
+            <div
+              v-if="filterOptions.subtitle.length > 0"
+              class="filter-category"
+            >
               <span class="category-icon">
                 <Translate theme="outline" :size="16" />
               </span>
               <div class="filter-chips">
                 <button
-                  v-for="option in getVisibleOptions('subtitle', filterOptions.subtitle)"
+                  v-for="option in getVisibleOptions(
+                    'subtitle',
+                    filterOptions.subtitle
+                  )"
                   :key="option"
                   class="filter-chip chip-subtitle"
                   :class="{
                     active: isFilterActive('subtitle', option),
-                    disabled: isFilterDisabled('subtitle', option)
+                    disabled: isFilterDisabled('subtitle', option),
                   }"
                   :disabled="isFilterDisabled('subtitle', option)"
                   @click="handleFilterClick('subtitle', option)"
@@ -684,7 +795,11 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
                   class="expand-btn"
                   @click="toggleExpand('subtitle')"
                 >
-                  {{ isExpanded('subtitle') ? $t('search.filter.collapse') : `+${getOverflowCount(filterOptions.subtitle)}` }}
+                  {{
+                    isExpanded('subtitle')
+                      ? $t('search.filter.collapse')
+                      : `+${getOverflowCount(filterOptions.subtitle)}`
+                  }}
                 </button>
               </div>
             </div>
@@ -696,12 +811,15 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
               </span>
               <div class="filter-chips">
                 <button
-                  v-for="option in getVisibleOptions('season', filterOptions.season)"
+                  v-for="option in getVisibleOptions(
+                    'season',
+                    filterOptions.season
+                  )"
                   :key="option"
                   class="filter-chip chip-season"
                   :class="{
                     active: isFilterActive('season', option),
-                    disabled: isFilterDisabled('season', option)
+                    disabled: isFilterDisabled('season', option),
                   }"
                   :disabled="isFilterDisabled('season', option)"
                   @click="handleFilterClick('season', option)"
@@ -713,7 +831,11 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
                   class="expand-btn"
                   @click="toggleExpand('season')"
                 >
-                  {{ isExpanded('season') ? $t('search.filter.collapse') : `+${getOverflowCount(filterOptions.season)}` }}
+                  {{
+                    isExpanded('season')
+                      ? $t('search.filter.collapse')
+                      : `+${getOverflowCount(filterOptions.season)}`
+                  }}
                 </button>
               </div>
             </div>
@@ -721,17 +843,20 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
             <!-- Selected Filters Summary -->
             <div class="filter-summary">
               <div v-if="hasActiveFilters" class="selected-filters">
-                <span class="selected-label">{{ $t('search.filter.active') }}:</span>
+                <span class="selected-label"
+                  >{{ $t('search.filter.active') }}:</span
+                >
                 <div class="selected-chips">
-                  <span
+                  <button
                     v-for="tag in selectedFilterTags"
                     :key="`${tag.type}-${tag.value}`"
                     class="selected-chip"
                     :class="`chip-${tag.type}`"
+                    :aria-label="`${$t('search.filter.clear')} ${tag.value}`"
                     @click="toggleFilter(tag.type, tag.value)"
                   >
                     {{ tag.value }} &times;
-                  </span>
+                  </button>
                 </div>
                 <button class="clear-all-btn" @click="clearFilters">
                   {{ $t('search.filter.clear') }}
@@ -739,7 +864,8 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
               </div>
               <span class="results-count">
                 <template v-if="hasActiveFilters">
-                  {{ filteredVariantCount }} / {{ totalVariantCount }} {{ $t('search.filter.results') }}
+                  {{ filteredVariantCount }} / {{ totalVariantCount }}
+                  {{ $t('search.filter.results') }}
                 </template>
                 <template v-else>
                   {{ totalVariantCount }} {{ $t('search.filter.results') }}
@@ -750,13 +876,24 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
 
           <!-- Results List -->
           <div class="results-container">
+            <!-- Failure state (connection/server error, distinct from zero matches) -->
+            <div v-if="!loading && searchFailed" class="empty-state">
+              <p>{{ $t('search.failed_hint') }}</p>
+            </div>
+
             <!-- Empty state -->
-            <div v-if="!loading && groupedResults.length === 0 && inputValue" class="empty-state">
+            <div
+              v-else-if="!loading && groupedResults.length === 0 && inputValue"
+              class="empty-state"
+            >
               <p>{{ $t('search.no_results') }}</p>
             </div>
 
             <!-- Initial state -->
-            <div v-else-if="!inputValue && groupedResults.length === 0" class="empty-state">
+            <div
+              v-else-if="!inputValue && groupedResults.length === 0"
+              class="empty-state"
+            >
               <p>{{ $t('search.start_typing') }}</p>
             </div>
 
@@ -775,19 +912,24 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
                       :alt="group.official_title"
                     />
                     <div v-else class="bangumi-poster-placeholder">
-                      <span class="placeholder-title">{{ group.official_title }}</span>
+                      <span class="placeholder-title">{{
+                        group.official_title
+                      }}</span>
                     </div>
                   </div>
 
                   <!-- Right: Variant Chips (Original Prototype 4) -->
                   <div class="bangumi-variants">
-                    <div
+                    <button
                       v-for="variant in getVisibleVariants(group)"
                       :key="variant.rss_link?.[0] || variant.title_raw"
                       class="variant-chip"
+                      type="button"
                       @click="handleVariantSelect(variant)"
                     >
-                      <span class="tag tag-group">{{ variant.group_name || 'Unknown' }}</span>
+                      <span class="tag tag-group">{{
+                        variant.group_name || 'Unknown'
+                      }}</span>
                       <span v-if="getResolution(variant)" class="tag tag-res">
                         {{ getResolution(variant) }}
                       </span>
@@ -797,13 +939,17 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
                       <span v-if="getSeason(variant)" class="tag tag-season">
                         {{ getSeason(variant) }}
                       </span>
-                    </div>
+                    </button>
                     <button
                       v-if="hasVariantOverflow(group)"
                       class="variant-expand-btn"
                       @click="toggleVariantsExpand(group.key)"
                     >
-                      {{ isVariantsExpanded(group.key) ? $t('search.filter.collapse') : `+${getVariantOverflowCount(group)}` }}
+                      {{
+                        isVariantsExpanded(group.key)
+                          ? $t('search.filter.collapse')
+                          : `+${getVariantOverflowCount(group)}`
+                      }}
                     </button>
                   </div>
                 </div>
@@ -888,6 +1034,32 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
   }
 }
 
+.modal-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: var(--color-text-muted);
+  transition: all var(--transition-fast);
+
+  @include forTablet {
+    width: 44px;
+    height: 44px;
+  }
+
+  &:hover,
+  &:focus-visible {
+    background: var(--color-surface-hover);
+    color: var(--color-text);
+  }
+}
+
 .search-input-wrapper {
   flex: 1;
   min-width: 0;
@@ -899,7 +1071,8 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
   background: var(--color-surface-hover);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  transition: border-color var(--transition-fast), background-color var(--transition-normal);
+  transition: border-color var(--transition-fast),
+    background-color var(--transition-normal);
 
   @include forTablet {
     gap: 10px;
@@ -1005,7 +1178,8 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
   border: none;
   cursor: pointer;
   text-align: left;
-  transition: background-color var(--transition-fast), color var(--transition-fast);
+  transition: background-color var(--transition-fast),
+    color var(--transition-fast);
 
   &:hover {
     background: var(--color-primary);
@@ -1024,7 +1198,8 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface-hover);
   flex-shrink: 0;
-  transition: background-color var(--transition-normal), border-color var(--transition-normal);
+  transition: background-color var(--transition-normal),
+    border-color var(--transition-normal);
 }
 
 .filter-category {
@@ -1207,6 +1382,8 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
   padding: 0 8px;
   font-size: 11px;
   font-weight: 500;
+  font-family: inherit;
+  border: none;
   border-radius: var(--radius-sm);
   display: inline-flex;
   align-items: center;
@@ -1214,7 +1391,8 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
   color: #fff;
   transition: opacity var(--transition-fast);
 
-  &:hover {
+  &:hover,
+  &:focus-visible {
     opacity: 0.8;
   }
 
@@ -1277,7 +1455,8 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
 
 // Modal transition
 .modal-enter-active {
-  transition: opacity var(--transition-normal), transform var(--transition-normal);
+  transition: opacity var(--transition-normal),
+    transform var(--transition-normal);
 }
 
 .modal-leave-active {
@@ -1368,13 +1547,19 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
   gap: 8px;
   height: 36px;
   padding: 0 6px;
+  font-family: inherit;
   background: var(--color-surface-hover);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   cursor: pointer;
   transition: all var(--transition-fast);
 
-  &:hover {
+  @include forTouch {
+    min-height: 44px;
+  }
+
+  &:hover,
+  &:focus-visible {
     border-color: var(--color-primary);
     background: var(--color-primary);
 
@@ -1382,6 +1567,10 @@ function handleFilterClick(type: 'group' | 'resolution' | 'subtitle' | 'season',
       background: rgba(255, 255, 255, 0.2);
       color: #fff;
     }
+  }
+
+  &:active {
+    transform: scale(0.97);
   }
 }
 

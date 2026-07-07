@@ -1,4 +1,4 @@
-import type { Config } from '#/config';
+import type { Config, LLMProviderId } from '#/config';
 import type { ApiSuccess } from '#/api';
 
 export const apiConfig = {
@@ -20,5 +20,22 @@ export const apiConfig = {
       newConfig
     );
     return data;
+  },
+
+  /**
+   * 拉取所选 LLM 提供商的可用模型列表
+   * （api_key 传掩码时后端回退到已保存的密钥）
+   */
+  async getLLMModels(payload: {
+    provider: LLMProviderId;
+    api_key: string;
+    base_url: string;
+  }) {
+    const { data } = await axios.post<{ models: string[] }>(
+      'api/v1/config/llm/models',
+      payload,
+      { silent: true }
+    );
+    return data.models;
   },
 };

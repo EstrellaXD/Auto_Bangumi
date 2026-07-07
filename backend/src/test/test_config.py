@@ -2,23 +2,25 @@
 
 import json
 import os
-import pytest
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
+from module.conf.config import Settings
+from module.conf.const import BCOLORS, DEFAULT_SETTINGS
 from module.models.config import (
     Config,
     Downloader,
-    Notification as NotificationConfig,
     NotificationProvider,
     Program,
     Proxy,
     RSSParser,
     Security,
 )
-from module.conf.config import Settings
-from module.conf.const import BCOLORS, DEFAULT_SETTINGS
-
+from module.models.config import (
+    Notification as NotificationConfig,
+)
 
 # ---------------------------------------------------------------------------
 # Config model defaults
@@ -174,6 +176,88 @@ class TestMigrateOldConfig:
         assert "sleep_time" not in result["program"]
 
 
+class TestMigrateOpenAIToLLM:
+    """experimental_openai → llm 自动迁移（provider=openai，mode=primary）。"""
+
+    def test_old_openai_config_populates_llm_section(self):
+        """旧配置有 enable/api_key 且无 llm 段时，迁移到 llm 段。"""
+        old_config = {
+            "program": {},
+            "rss_parser": {},
+            "experimental_openai": {
+                "enable": True,
+                "api_key": "sk-old",
+                "api_base": "https://api.deepseek.com/v1",
+                "model": "deepseek-chat",
+            },
+        }
+        result = Settings._migrate_old_config(old_config)
+        assert result["llm"] == {
+            "enable": True,
+            "provider": "openai",
+            "api_key": "sk-old",
+            "model": "deepseek-chat",
+            "base_url": "https://api.deepseek.com/v1",
+            # 旧版语义是 LLM 优先解析
+            "mode": "primary",
+        }
+        # 旧段保留，便于降级回滚
+        assert result["experimental_openai"]["api_key"] == "sk-old"
+
+    def test_official_api_base_migrates_to_empty_base_url(self):
+        """官方 API 地址迁移为空串（空串即官方 API）。"""
+        old_config = {
+            "program": {},
+            "rss_parser": {},
+            "experimental_openai": {
+                "enable": True,
+                "api_key": "sk-old",
+                "api_base": "https://api.openai.com/v1",
+            },
+        }
+        result = Settings._migrate_old_config(old_config)
+        assert result["llm"]["base_url"] == ""
+
+    def test_already_migrated_config_untouched(self):
+        """llm 段已有有效内容时不再迁移（幂等）。"""
+        migrated = {
+            "program": {},
+            "rss_parser": {},
+            "experimental_openai": {"enable": True, "api_key": "sk-old"},
+            "llm": {
+                "enable": False,
+                "provider": "gemini",
+                "api_key": "AIza-new",
+                "model": "gemini-2.5-flash",
+                "base_url": "",
+                "mode": "fallback",
+            },
+        }
+        result = Settings._migrate_old_config(json.loads(json.dumps(migrated)))
+        assert result["llm"] == migrated["llm"]
+
+    def test_unconfigured_openai_section_not_migrated(self):
+        """旧段未启用且无 api_key 时，不注入 llm 段（用默认值即可）。"""
+        config = {
+            "program": {},
+            "rss_parser": {},
+            "experimental_openai": {"enable": False, "api_key": ""},
+        }
+        result = Settings._migrate_old_config(config)
+        assert "llm" not in result
+
+    def test_migrated_defaults_fill_model(self):
+        """旧段缺 model 时迁移用默认模型。"""
+        config = {
+            "program": {},
+            "rss_parser": {},
+            "experimental_openai": {"enable": True, "api_key": "sk-old"},
+        }
+        result = Settings._migrate_old_config(config)
+        assert result["llm"]["model"] == "gpt-5-mini"
+        assert result["llm"]["mode"] == "primary"
+
+
 # ---------------------------------------------------------------------------
 # Settings.load from file
 # ---------------------------------------------------------------------------
@@ -210,6 +294,30 @@ class TestSettingsLoad:
             data = json.load(f)
         assert "program" in data
         assert "downloader" in data
+        # 新配置文件包含 llm 段（旧 experimental_openai 段同样保留）
+        assert "llm" in data
+
+    def test_load_old_openai_config_migrates_to_llm(self, tmp_path):
+        """加载含旧 experimental_openai 的文件后，llm 段生效且为 primary 模式。"""
+        config_data = Config().dict()
+        del config_data["llm"]
+        config_data["experimental_openai"].update(
+            {"enable": True, "api_key": "sk-old", "model": "gpt-4o"}
+        )
+        config_file = tmp_path / "config.json"
+        with open(config_file, "w") as f:
+            json.dump(config_data, f)
+
+        with patch("module.conf.config.CONFIG_PATH", config_file):
+            s = Settings.__new__(Settings)
+            Config.__init__(s)
+            s.load()
+
+        assert s.llm.enable is True
+        assert s.llm.provider == "openai"
+        assert s.llm.api_key == "sk-old"
+        assert s.llm.model == "gpt-4o"
+        assert s.llm.mode == "primary"
 
 
 # ---------------------------------------------------------------------------
@@ -375,7 +483,9 @@ class TestNotificationLegacyMigration:
             enable=True,
             type="telegram",
             token="unused",
-            providers=[NotificationProvider(type="discord", webhook_url="https://d.co")],
+            providers=[
+                NotificationProvider(type="discord", webhook_url="https://d.co")
+            ],
         )
         assert len(n.providers) == 1
         assert n.providers[0].type == "discord"
@@ -473,7 +583,15 @@ class TestBCOLORS:
 
     def test_all_color_constants_are_strings(self):
         """All BCOLORS constants are strings."""
-        for attr in ["HEADER", "OKBLUE", "OKCYAN", "OKGREEN", "WARNING", "FAIL", "ENDC"]:
+        for attr in [
+            "HEADER",
+            "OKBLUE",
+            "OKCYAN",
+            "OKGREEN",
+            "WARNING",
+            "FAIL",
+            "ENDC",
+        ]:
             assert isinstance(getattr(BCOLORS, attr), str)
 
 
@@ -485,7 +603,7 @@ class TestBCOLORS:
 class TestMigrateSecuritySection:
     def test_adds_security_when_missing(self):
         """_migrate_old_config injects a default security section when absent."""
-        old_config = {
+        old_config: dict = {
             "program": {},
             "rss_parser": {},
         }
@@ -508,3 +626,55 @@ class TestMigrateSecuritySection:
         result = Settings._migrate_old_config(existing_config)
         assert result["security"]["login_tokens"] == ["mytoken"]
         assert result["security"]["login_whitelist"] == ["10.0.0.0/8"]
+
+
+class TestNetworkBaseUrls:
+    """Configurable TMDB / bgm.tv base URLs (#1040, #1042)."""
+
+    def test_defaults_are_official_endpoints(self):
+        from module.models.config import Config
+
+        net = Config().network
+        assert net.tmdb_base_url == "https://api.themoviedb.org"
+        assert net.bgm_base_url == "https://api.bgm.tv"
+
+    def test_tmdb_url_builders_use_configured_base(self):
+        import sys
+        from unittest.mock import patch
+
+        import module.parser.analyser.tmdb_parser  # noqa: F401
+
+        tp = sys.modules["module.parser.analyser.tmdb_parser"]
+        with patch.object(
+            tp.settings.network, "tmdb_base_url", "https://tmdb.mirror.test/"
+        ):
+            assert tp.search_url("q").startswith("https://tmdb.mirror.test/3/search/tv")
+            assert tp.info_url("1", "zh").startswith("https://tmdb.mirror.test/3/tv/1")
+
+    async def test_bgm_calendar_uses_configured_base(self):
+        from unittest.mock import AsyncMock, patch
+
+        from module.parser.analyser import bgm_calendar
+
+        captured = {}
+
+        class _Req:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *a):
+                return False
+
+            async def get_json(self, url):
+                captured["url"] = url
+                return None
+
+        with (
+            patch.object(
+                bgm_calendar.settings.network, "bgm_base_url", "https://bgm.mirror.test"
+            ),
+            patch.object(bgm_calendar, "RequestContent", _Req),
+        ):
+            await bgm_calendar.fetch_bgm_calendar()
+
+        assert captured["url"] == "https://bgm.mirror.test/calendar"

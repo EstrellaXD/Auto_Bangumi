@@ -3,11 +3,18 @@
  * Note: These tests focus on data structures and endpoint paths
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
+  mockApiSuccess,
   mockRSSItem,
   mockRSSList,
 } from '@/test/mocks/api';
+import { createAxiosMock } from '@/test/mocks/axios';
+
+import { apiRSS } from '@/api/rss';
+import { axios } from '@/utils/axios';
+
+vi.mock('@/utils/axios', () => ({ axios: createAxiosMock() }));
 
 describe('RSS API Logic', () => {
   describe('RSS data structure', () => {
@@ -63,58 +70,78 @@ describe('RSS API Logic', () => {
     });
   });
 
-  describe('API endpoint paths', () => {
-    const RSS_ENDPOINTS = {
-      get: 'api/v1/rss',
-      add: 'api/v1/rss/add',
-      delete: (id: number) => `api/v1/rss/delete/${id}`,
-      deleteMany: 'api/v1/rss/delete/many',
-      disable: (id: number) => `api/v1/rss/disable/${id}`,
-      disableMany: 'api/v1/rss/disable/many',
-      update: (id: number) => `api/v1/rss/update/${id}`,
-      enableMany: 'api/v1/rss/enable/many',
-      refreshAll: 'api/v1/rss/refresh/all',
-      refresh: (id: number) => `api/v1/rss/refresh/${id}`,
-      getTorrent: (id: number) => `api/v1/rss/torrent/${id}`,
-    };
-
-    it('should have correct base RSS endpoint', () => {
-      expect(RSS_ENDPOINTS.get).toBe('api/v1/rss');
+  // Contract tests: call the real apiRSS functions against a mocked axios
+  // instance so a drift between the wrapper and the FastAPI routes in
+  // backend/src/module/api/rss.py fails a test instead of going unnoticed.
+  describe('API contract (path + HTTP method)', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
     });
 
-    it('should have correct add endpoint', () => {
-      expect(RSS_ENDPOINTS.add).toBe('api/v1/rss/add');
+    it('should GET api/v1/rss when fetching all feeds', async () => {
+      (axios.get as any).mockResolvedValue({ data: mockRSSList });
+      await apiRSS.get();
+      expect(axios.get).toHaveBeenCalledWith('api/v1/rss');
     });
 
-    it('should generate correct delete endpoint for ID', () => {
-      expect(RSS_ENDPOINTS.delete(1)).toBe('api/v1/rss/delete/1');
-      expect(RSS_ENDPOINTS.delete(42)).toBe('api/v1/rss/delete/42');
+    it('should POST api/v1/rss/add with the RSS payload when adding a feed', async () => {
+      (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiRSS.add(mockRSSItem);
+      expect(axios.post).toHaveBeenCalledWith('api/v1/rss/add', mockRSSItem);
     });
 
-    it('should have correct deleteMany endpoint', () => {
-      expect(RSS_ENDPOINTS.deleteMany).toBe('api/v1/rss/delete/many');
+    it('should DELETE api/v1/rss/delete/:id when deleting a single feed', async () => {
+      (axios.delete as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiRSS.delete(7);
+      expect(axios.delete).toHaveBeenCalledWith('api/v1/rss/delete/7');
     });
 
-    it('should generate correct disable endpoint for ID', () => {
-      expect(RSS_ENDPOINTS.disable(1)).toBe('api/v1/rss/disable/1');
+    it('should POST api/v1/rss/delete/many with the id array when batch deleting', async () => {
+      (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiRSS.deleteMany([1, 2, 3]);
+      expect(axios.post).toHaveBeenCalledWith('api/v1/rss/delete/many', [1, 2, 3]);
     });
 
-    it('should have correct batch operation endpoints', () => {
-      expect(RSS_ENDPOINTS.disableMany).toBe('api/v1/rss/disable/many');
-      expect(RSS_ENDPOINTS.enableMany).toBe('api/v1/rss/enable/many');
+    it('should PATCH api/v1/rss/disable/:id when disabling a single feed', async () => {
+      (axios.patch as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiRSS.disable(3);
+      expect(axios.patch).toHaveBeenCalledWith('api/v1/rss/disable/3');
     });
 
-    it('should generate correct update endpoint for ID', () => {
-      expect(RSS_ENDPOINTS.update(1)).toBe('api/v1/rss/update/1');
+    it('should POST api/v1/rss/disable/many with the id array when batch disabling', async () => {
+      (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiRSS.disableMany([1, 2]);
+      expect(axios.post).toHaveBeenCalledWith('api/v1/rss/disable/many', [1, 2]);
     });
 
-    it('should have correct refresh endpoints', () => {
-      expect(RSS_ENDPOINTS.refreshAll).toBe('api/v1/rss/refresh/all');
-      expect(RSS_ENDPOINTS.refresh(1)).toBe('api/v1/rss/refresh/1');
+    it('should PATCH api/v1/rss/update/:id with the RSS payload when updating', async () => {
+      (axios.patch as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiRSS.update(1, mockRSSItem);
+      expect(axios.patch).toHaveBeenCalledWith('api/v1/rss/update/1', mockRSSItem);
     });
 
-    it('should generate correct getTorrent endpoint for ID', () => {
-      expect(RSS_ENDPOINTS.getTorrent(1)).toBe('api/v1/rss/torrent/1');
+    it('should POST api/v1/rss/enable/many with the id array when batch enabling', async () => {
+      (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiRSS.enableMany([1, 2, 3]);
+      expect(axios.post).toHaveBeenCalledWith('api/v1/rss/enable/many', [1, 2, 3]);
+    });
+
+    it('should POST api/v1/rss/refresh/all when refreshing every feed', async () => {
+      (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiRSS.refreshAll();
+      expect(axios.post).toHaveBeenCalledWith('api/v1/rss/refresh/all');
+    });
+
+    it('should POST api/v1/rss/refresh/:id when refreshing a single feed', async () => {
+      (axios.post as any).mockResolvedValue({ data: mockApiSuccess });
+      await apiRSS.refresh(9);
+      expect(axios.post).toHaveBeenCalledWith('api/v1/rss/refresh/9');
+    });
+
+    it('should GET api/v1/rss/torrent/:id when fetching torrents for a feed', async () => {
+      (axios.get as any).mockResolvedValue({ data: [] });
+      await apiRSS.getTorrent(5);
+      expect(axios.get).toHaveBeenCalledWith('api/v1/rss/torrent/5');
     });
   });
 

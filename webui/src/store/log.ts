@@ -4,14 +4,30 @@ export const useLogStore = defineStore('log', () => {
   const message = useMessage();
   const { isLoggedIn } = useAuth();
   const { t } = useMyI18n();
+  const { connected: sseConnected, logData } = useEventStream();
 
   const log = ref('');
 
-  function getLog() {
+  // SSE 已连接时使用推送数据；否则回退到轮询。
+  watch(logData, (data) => {
+    if (data === null) return;
+    log.value = data;
+  });
+
+  function getLog(force = false) {
+    // SSE 已接管日志推送，或页面不可见时，跳过本次轮询请求；
+    // force = 用户显式点击刷新，总是拉取（SSE 只在日志变化时推送，
+    // 新会话连上后可能一直收不到初始内容）。
+    if (!force && (sseConnected.value || document.hidden)) return;
     if (isLoggedIn.value) {
-      apiLog.getLog().then((res) => {
-        log.value = res;
-      });
+      apiLog
+        .getLog()
+        .then((res) => {
+          log.value = res;
+        })
+        .catch(() => {
+          // Silent poll — keep the last log content on a transient failure.
+        });
     }
   }
 
@@ -33,9 +49,11 @@ export const useLogStore = defineStore('log', () => {
     }
   });
 
-  const { copy: clipboardCopy, isSupported: clipboardSupported } = useClipboard({
-    legacy: true,
-  });
+  const { copy: clipboardCopy, isSupported: clipboardSupported } = useClipboard(
+    {
+      legacy: true,
+    }
+  );
 
   function copy() {
     if (clipboardSupported.value) {

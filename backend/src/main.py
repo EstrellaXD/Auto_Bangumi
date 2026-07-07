@@ -11,8 +11,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from module.api import v1
-from module.api.program import program
+from module.api.health import router as health_router
 from module.conf import VERSION, settings, setup_logger
+from module.core import AppContext
 from module.mcp import create_mcp_app
 
 setup_logger(reset=True)
@@ -34,17 +35,25 @@ uvicorn_logging_config = {
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    import asyncio
-
-    # Startup
-    asyncio.create_task(program.startup())
+    ctx: AppContext = app.state.ctx
+    # Run migrations before serving; failure here aborts boot loudly.
+    await ctx.startup()
+    # First run just created the DB — do not auto-start loops (matches the old
+    # Program.startup early return); the user starts them after setup.
+    if not ctx.first_run_boot:
+        # start_tasks() itself schedules the downloader-wait + loop-start as a
+        # supervised background task and returns immediately (CONTRACT #5),
+        # so this does not block server startup.
+        await ctx.start_tasks()
     yield
     # Shutdown
-    await program.stop()
+    await ctx.stop()
 
 
 def create_app() -> FastAPI:
+    ctx = AppContext.build(settings)
     app = FastAPI(lifespan=lifespan)
+    app.state.ctx = ctx
 
     app.add_middleware(
         CORSMiddleware,
@@ -57,8 +66,12 @@ def create_app() -> FastAPI:
     # mount routers
     app.include_router(v1, prefix="/api")
 
+    # unauthenticated liveness probe, mounted at the app root (not /api) so
+    # it stays reachable without auth for container/orchestrator health checks
+    app.include_router(health_router)
+
     # mount MCP server (SSE transport for LLM tool integration)
-    app.mount("/mcp", create_mcp_app())
+    app.mount("/mcp", create_mcp_app(ctx))
 
     return app
 
@@ -80,6 +93,11 @@ def posters(path: str):
 if VERSION != "DEV_VERSION":
     app.mount("/assets", StaticFiles(directory="dist/assets"), name="assets")
     app.mount("/images", StaticFiles(directory="dist/images"), name="images")
+    # 自托管 Inter 字体：index.html 以 /fonts/*.woff2 预加载，不挂载则被下面的
+    # SPA 兜底路由回成 index.html，全站字体静默回退。在线更新可能覆盖进来
+    # 更旧的、没有 fonts/ 的 dist，故按存在性挂载。
+    if os.path.isdir("dist/fonts"):
+        app.mount("/fonts", StaticFiles(directory="dist/fonts"), name="fonts")
     # app.mount("/icons", StaticFiles(directory="dist/icons"), name="icons")
     templates = Jinja2Templates(directory="dist")
 

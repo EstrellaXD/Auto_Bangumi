@@ -16,7 +16,7 @@ class GotifyProvider(NotificationProvider):
     """Gotify notification provider."""
 
     def __init__(self, config: "ProviderConfig"):
-        super().__init__()
+        super().__init__(config)
         server_url = config.server_url.rstrip("/")
         self.token = config.token
         self.notification_url = f"{server_url}/message?token={self.token}"
@@ -30,9 +30,10 @@ class GotifyProvider(NotificationProvider):
             "client::display": {"contentType": "text/markdown"},
         }
 
-        if notification.poster_path and notification.poster_path != "https://mikanani.me":
+        poster_url = self._poster_url(notification)
+        if poster_url:
             extras["client::notification"] = {
-                "bigImageUrl": notification.poster_path,
+                "bigImageUrl": poster_url,
             }
 
         data = {
@@ -42,7 +43,7 @@ class GotifyProvider(NotificationProvider):
             "extras": extras,
         }
 
-        resp = await self.post_data(self.notification_url, data)
+        resp = await self._post_json(self.notification_url, data)
         logger.debug("Gotify notification: %s", resp.status_code)
         return resp.status_code == 200
 
@@ -54,10 +55,16 @@ class GotifyProvider(NotificationProvider):
             "priority": 5,
         }
         try:
-            resp = await self.post_data(self.notification_url, data)
+            resp = await self._post_json(self.notification_url, data)
             if resp.status_code == 200:
                 return True, "Gotify test message sent successfully"
             else:
                 return False, f"Gotify API returned status {resp.status_code}"
         except Exception as e:
             return False, f"Gotify test failed: {e}"
+
+    async def _deliver_text(self, title: str, body: str) -> bool:
+        """Deliver a system event via Gotify."""
+        data = {"title": title, "message": body, "priority": 5}
+        resp = await self._post_json(self.notification_url, data)
+        return resp.status_code == 200

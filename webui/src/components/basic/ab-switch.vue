@@ -1,51 +1,36 @@
 <script lang="ts" setup>
-import { Switch } from '@headlessui/vue';
+import { inject } from 'vue';
+import { NSwitch } from 'naive-ui';
+import { abFieldInjectionKey } from './ab-field.vue';
 
-const checked = defineModel<boolean>('checked', {
-  default: false,
-});
+// NSwitch 的统一封装：尺寸、loading 与 aria 接线在这里定一次。
+withDefaults(
+  defineProps<{
+    size?: 'small' | 'medium' | 'large';
+    disabled?: boolean;
+    loading?: boolean;
+    ariaLabel?: string;
+  }>(),
+  {
+    size: 'medium',
+    disabled: false,
+    loading: false,
+    ariaLabel: undefined,
+  }
+);
+
+const model = defineModel<boolean>({ default: false });
+
+const field = inject(abFieldInjectionKey, null);
 </script>
 
 <template>
-  <Switch v-model="checked" as="template">
-    <div class="switch-track" :class="{ 'switch-track--checked': checked }">
-      <div
-        class="switch-thumb"
-        :class="{ 'switch-thumb--checked': checked }"
-      ></div>
-    </div>
-  </Switch>
+  <NSwitch
+    v-model:value="model"
+    :size="size"
+    :disabled="disabled"
+    :loading="loading"
+    :aria-label="ariaLabel"
+    :aria-labelledby="field?.labelId"
+  ></NSwitch>
 </template>
-
-<style lang="scss" scoped>
-.switch-track {
-  width: 44px;
-  height: 24px;
-  border-radius: var(--radius-full);
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  padding: 2px;
-  cursor: pointer;
-  user-select: none;
-  background: var(--color-border-hover);
-  transition: background-color var(--transition-fast);
-
-  &--checked {
-    background: var(--color-primary);
-  }
-}
-
-.switch-thumb {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-  transition: transform var(--transition-fast);
-
-  &--checked {
-    transform: translateX(20px);
-  }
-}
-</style>

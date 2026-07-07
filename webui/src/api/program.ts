@@ -5,7 +5,7 @@ export const apiProgram = {
    * 重启
    */
   async restart() {
-    const { data } = await axios.get<ApiSuccess>('api/v1/restart');
+    const { data } = await axios.post<ApiSuccess>('api/v1/restart');
     return data;
   },
 
@@ -13,7 +13,7 @@ export const apiProgram = {
    * 启动
    */
   async start() {
-    const { data } = await axios.get<ApiSuccess>('api/v1/start');
+    const { data } = await axios.post<ApiSuccess>('api/v1/start');
     return data;
   },
 
@@ -21,7 +21,7 @@ export const apiProgram = {
    * 停止
    */
   async stop() {
-    const { data } = await axios.get<ApiSuccess>('api/v1/stop');
+    const { data } = await axios.post<ApiSuccess>('api/v1/stop');
     return data;
   },
 
@@ -30,7 +30,8 @@ export const apiProgram = {
    */
   async status() {
     const { data } = await axios.get<{ status: boolean; version: string }>(
-      'api/v1/status'
+      'api/v1/status',
+      { silent: true }
     );
 
     return data!;
@@ -40,7 +41,7 @@ export const apiProgram = {
    * 终止
    */
   async shutdown() {
-    const { data } = await axios.get<ApiSuccess>('api/v1/shutdown');
+    const { data } = await axios.post<ApiSuccess>('api/v1/shutdown');
     return data;
   },
 };
