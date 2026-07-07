@@ -51,6 +51,7 @@ declare global {
   const isReactive: typeof import('vue')['isReactive']
   const isReadonly: typeof import('vue')['isReadonly']
   const isRef: typeof import('vue')['isRef']
+  const isValidNexusPhpCategoryIds: typeof import('../../src/utils/nexusphp')['isValidNexusPhpCategoryIds']
   const it: typeof import('vitest')['it']
   const mapActions: typeof import('pinia')['mapActions']
   const mapGetters: typeof import('pinia')['mapGetters']
