@@ -152,7 +152,8 @@
       "passkey_placeholder": "Passkey from the site's user control panel",
       "category_id": "Category ID (optional)",
       "category_id_placeholder": "e.g., 402",
-      "nexusphp_hint": "Builds a torrentrss.php search template from your passkey. Works with NexusPHP-based PT sites such as Audiences.me."
+      "nexusphp_hint": "Builds a torrentrss.php search template from your passkey. Note: stock NexusPHP ignores the search parameter and always returns the latest torrents — verify on your site that RSS search actually filters results.",
+      "category_id_invalid": "Category IDs must be numeric (comma-separated for multiple)"
     }
   },
   "downloader": {

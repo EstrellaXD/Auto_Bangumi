@@ -152,7 +152,8 @@
       "passkey_placeholder": "站点用户控制面板中的 Passkey",
       "category_id": "分类 ID（可选）",
       "category_id_placeholder": "例如：402",
-      "nexusphp_hint": "根据 Passkey 生成 torrentrss.php 搜索模板，适用于 NexusPHP 架构的 PT 站点（如 Audiences.me）。"
+      "nexusphp_hint": "根据 Passkey 生成 torrentrss.php 搜索模板。注意：原生 NexusPHP 已停用 search 参数、对任何搜索词都返回最新种子，请先在站点上确认 RSS 搜索确实按词过滤。",
+      "category_id_invalid": "分类 ID 必须是数字（多个用逗号分隔）"
     }
   },
   "downloader": {

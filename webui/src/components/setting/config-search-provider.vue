@@ -1,7 +1,10 @@
 <script lang="ts" setup>
 import { Delete, EditTwo, Plus } from '@icon-park/vue-next';
 import { useConfirm } from '@/hooks/useConfirm';
-import { buildNexusPhpSearchUrl } from '@/utils/nexusphp';
+import {
+  buildNexusPhpSearchUrl,
+  isValidNexusPhpCategoryIds,
+} from '@/utils/nexusphp';
 
 interface SearchProvider {
   name: string;
@@ -47,14 +50,28 @@ const addModeOptions = computed(() => [
   { label: t('config.search_provider_set.mode_nexusphp'), value: 'nexusphp' },
 ]);
 
+const categoryIdsValid = computed(() =>
+  isValidNexusPhpCategoryIds(formCategoryId.value)
+);
+
 const builtNexusPhpUrl = computed(() => {
   if (!formBaseUrl.value.trim() || !formPasskey.value.trim()) return '';
+  if (!categoryIdsValid.value) return '';
   return buildNexusPhpSearchUrl({
     baseUrl: formBaseUrl.value,
     passkey: formPasskey.value,
     categoryId: formCategoryId.value,
   });
 });
+
+// 预览里遮住 passkey（存储的 URL 不变——供应商列表本就显示完整 URL）
+const previewNexusPhpUrl = computed(() =>
+  builtNexusPhpUrl.value.replace(
+    /(passkey=)([^&]+)/,
+    (_, prefix: string, key: string) =>
+      `${prefix}${key.length > 4 ? `${key.slice(0, 4)}…` : '…'}`
+  )
+);
 
 const addFormUrl = computed(() =>
   formMode.value === 'nexusphp' ? builtNexusPhpUrl.value : formUrl.value.trim()
@@ -336,12 +353,19 @@ function validateUrl(url: string): boolean {
             />
           </ab-field>
 
+          <div
+            v-if="formCategoryId && !categoryIdsValid"
+            class="validation-warning"
+          >
+            {{ $t('config.search_provider_set.category_id_invalid') }}
+          </div>
+
           <div class="hint-text">
             {{ $t('config.search_provider_set.nexusphp_hint') }}
           </div>
 
-          <div v-if="builtNexusPhpUrl" class="url-preview">
-            {{ builtNexusPhpUrl }}
+          <div v-if="previewNexusPhpUrl" class="url-preview">
+            {{ previewNexusPhpUrl }}
           </div>
         </template>
       </div>
