@@ -1,6 +1,7 @@
 """Server Chan notification provider."""
 
 import logging
+import re
 from typing import TYPE_CHECKING
 
 from module.models.bangumi import Notification
@@ -11,6 +12,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Server酱³ 的 sendkey 形如 sctp<uid>t<key>，推送端点与 Turbo 版不同 (#904)
+_SC3_KEY_RE = re.compile(r"^sctp(\d+)t")
+
 
 class ServerChanProvider(NotificationProvider):
     """Server Chan (Server酱) notification provider for WeChat."""
@@ -18,7 +22,13 @@ class ServerChanProvider(NotificationProvider):
     def __init__(self, config: "ProviderConfig"):
         super().__init__(config)
         token = config.token
-        self.notification_url = f"https://sctapi.ftqq.com/{token}.send"
+        sc3 = _SC3_KEY_RE.match(token)
+        if sc3:
+            self.notification_url = (
+                f"https://{sc3.group(1)}.push.ft07.com/send/{token}.send"
+            )
+        else:
+            self.notification_url = f"https://sctapi.ftqq.com/{token}.send"
 
     async def send(self, notification: Notification) -> bool:
         """Send notification via Server Chan."""
