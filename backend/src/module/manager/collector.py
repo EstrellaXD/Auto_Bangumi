@@ -10,6 +10,22 @@ from module.searcher import SearchTorrent
 logger = logging.getLogger(__name__)
 
 
+async def _ensure_bangumi_id(db: Database, data: Bangumi) -> None:
+    """确保 ``data.id`` 可用：新番剧插入拿 id，重复番剧解析出已存在行的 id。
+
+    ``add()`` 对精确重复（title_raw+group_name）与语义重复（并入别名）都
+    返回 False 且不回填 id——不解析已存在行的话，add_torrent 的 ab:<id>
+    标签与种子行的 bangumi_id 关联都会丢失，种子被记成孤儿。
+    """
+    if await db.bangumi.add(data) or data.id is not None:
+        return
+    existing = await db.bangumi.find_duplicate(data)
+    if existing is None:
+        existing = await db.bangumi.find_semantic_duplicate(data)
+    if existing is not None:
+        data.id = existing.id
+
+
 class SeasonCollector:
     def __init__(self, client: DownloadClient):
         self.client = client
@@ -32,9 +48,10 @@ class SeasonCollector:
             # track_orphans 开关对这些"已匹配"的种子完全失效。
             # update() returns False when no existing row matches
             # bangumi.id (i.e. this is a brand-new bangumi), in which
-            # case it needs to be inserted instead.
+            # case it needs to be inserted (or resolved to the existing
+            # duplicate row) instead.
             if bangumi.id is None or not await db.bangumi.update(bangumi):
-                await db.bangumi.add(bangumi)
+                await _ensure_bangumi_id(db, bangumi)
             if await self.client.add_torrent(torrents, bangumi) is AddResult.ADDED:
                 logger.info(
                     f"Collections of {bangumi.official_title} Season {bangumi.season} completed."
@@ -74,9 +91,9 @@ class SeasonCollector:
                 aggregate=False,
                 parser=parser,
             )
-            # 先落库拿到 id：download_bangumi 里 add_torrent 的 ab:<id>
-            # 标签和种子行的 bangumi_id 关联都依赖它，否则种子被记成孤儿
-            await db.bangumi.add(data)
+            # 先落库拿到 id（重复订阅时解析已存在行的 id）：download_bangumi
+            # 里 add_torrent 的 ab:<id> 标签和种子行的 bangumi_id 关联都依赖它
+            await _ensure_bangumi_id(db, data)
             return await engine.download_bangumi(data)
 
 

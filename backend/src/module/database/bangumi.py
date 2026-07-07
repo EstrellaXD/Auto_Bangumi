@@ -246,8 +246,8 @@ class BangumiDatabase:
         """Get all title patterns for matching (title_raw + all aliases)."""
         return _all_title_patterns(bangumi)
 
-    async def _is_duplicate(self, data: Bangumi) -> bool:
-        """Check if a bangumi rule already exists based on title_raw and group_name."""
+    async def find_duplicate(self, data: Bangumi) -> Optional[Bangumi]:
+        """Find an existing bangumi with the same title_raw and group_name."""
         statement = select(Bangumi).where(
             and_(
                 Bangumi.title_raw == data.title_raw,
@@ -255,7 +255,11 @@ class BangumiDatabase:
             )
         )
         result = await self.session.execute(statement)
-        return result.scalar_one_or_none() is not None
+        return result.scalars().first()
+
+    async def _is_duplicate(self, data: Bangumi) -> bool:
+        """Check if a bangumi rule already exists based on title_raw and group_name."""
+        return await self.find_duplicate(data) is not None
 
     async def add(self, data: Bangumi) -> bool:
         if await self._is_duplicate(data):

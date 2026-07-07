@@ -79,6 +79,35 @@ class TestCollectSeason:
 
 
 class TestSubscribeSeason:
+    async def test_existing_bangumi_links_torrents_to_existing_id(self):
+        """重复订阅已存在的番剧（add 返回 False）时，种子必须挂到
+        已存在行的 id 上，不能被记成孤儿。"""
+        existing = make_bangumi(filter="")
+        async with Database() as db:
+            assert await db.bangumi.add(existing)
+
+        data = make_bangumi(filter="")  # 同 title_raw+group_name -> 精确重复
+        downloader_client = AsyncMock()
+        downloader_client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
+        with (
+            patch(
+                "module.rss.engine.RequestContent",
+                return_value=_req_with_torrents(_make_torrents()),
+            ),
+            patch(
+                "module.rss.engine.DownloadClient",
+                return_value=_async_ctx(downloader_client),
+            ),
+        ):
+            result = await SeasonCollector.subscribe_season(data)
+
+        assert result.status is True
+        async with Database() as db:
+            stored = await db.torrent.search_all()
+            assert len(stored) == 2
+            assert all(t.bangumi_id == existing.id for t in stored)
+            assert await db.torrent.count_orphans() == 0
+
     async def test_torrents_persisted_with_bangumi_id(self):
         data = make_bangumi(filter="")
         torrents = _make_torrents()
