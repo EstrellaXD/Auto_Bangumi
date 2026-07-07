@@ -58,6 +58,9 @@ export const useAuth = createSharedComposable(() => {
     onSuccess() {
       clearUser();
       isLoggedIn.value = false;
+      // 主动登出后登录页不要自动弹 passkey——反射式的指纹确认会把
+      // 用户直接又登回去；只压制紧接着的这一次
+      sessionStorage.setItem('suppressPasskeyAutoPrompt', '1');
       router.replace({ name: 'Login' });
     },
   });

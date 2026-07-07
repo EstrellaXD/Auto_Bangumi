@@ -5,8 +5,7 @@
  * useAuth.login didn't return its promise so callers couldn't await it.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { defineComponent } from 'vue';
-import { mount } from '@vue/test-utils';
+import { withSetup } from './test-utils';
 import { router } from '@/router';
 import { apiAuth } from '@/api/auth';
 import { loginWithPasskey as webauthnLogin } from '@/services/webauthn';
@@ -52,20 +51,6 @@ vi.mock('@/hooks/useMyI18n', () => ({
 const replace = router.replace as ReturnType<typeof vi.fn>;
 const apiLogin = apiAuth.login as ReturnType<typeof vi.fn>;
 const passkeyLogin = webauthnLogin as unknown as ReturnType<typeof vi.fn>;
-
-/** Run a composable inside a real component instance. */
-function withSetup<T>(fn: () => T): T {
-  let result!: T;
-  mount(
-    defineComponent({
-      setup() {
-        result = fn();
-        return () => null;
-      },
-    })
-  );
-  return result;
-}
 
 describe('login redirect', () => {
   beforeEach(() => {

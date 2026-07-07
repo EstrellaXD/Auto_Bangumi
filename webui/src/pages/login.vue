@@ -6,22 +6,37 @@ definePage({
 });
 
 const { user, login } = useAuth();
-const { isSupported, loginWithPasskey } = usePasskey();
+const { isSupported, hasKnownPasskey, loginWithPasskey } = usePasskey();
 
 const isPasskeyLoading = ref(false);
 const isLoginLoading = ref(false);
 
-async function handlePasskeyLogin() {
+async function handlePasskeyLogin(silent = false) {
+  if (isPasskeyLoading.value) return;
   isPasskeyLoading.value = true;
   try {
     // Pass username if provided, otherwise use discoverable credentials mode
-    await loginWithPasskey(user.username || undefined);
+    await loginWithPasskey(user.username || undefined, { silent });
   } finally {
     isPasskeyLoading.value = false;
   }
 }
 
+// 本浏览器成功用过 passkey：打开登录页时自动弹出认证；
+// 用户取消则静默回落到密码表单（并解除自动弹出，见 usePasskey）。
+// 主动登出后的那一次跳转不自动弹（sessionStorage 标记）。
+onMounted(() => {
+  if (sessionStorage.getItem('suppressPasskeyAutoPrompt')) {
+    sessionStorage.removeItem('suppressPasskeyAutoPrompt');
+    return;
+  }
+  if (isSupported.value && hasKnownPasskey.value) {
+    handlePasskeyLogin(true);
+  }
+});
+
 async function handleLogin() {
+  if (isLoginLoading.value) return;
   isLoginLoading.value = true;
   try {
     await login();
@@ -94,12 +109,14 @@ async function handleLogin() {
 
         <!-- Actions -->
         <div class="login-actions">
+          <!-- type=submit：表单里必须有提交按钮，密码框按回车才会触发
+               隐式提交（两个输入框时浏览器不做无按钮隐式提交） -->
           <ab-button
+            type="submit"
             variant="primary"
             block
             :loading="isLoginLoading"
             :disabled="isLoginLoading"
-            @click="handleLogin"
           >
             {{ $t('login.login_btn') }}
           </ab-button>
@@ -109,7 +126,7 @@ async function handleLogin() {
             type="button"
             class="passkey-btn"
             :disabled="isPasskeyLoading"
-            @click="handlePasskeyLogin"
+            @click="handlePasskeyLogin()"
           >
             <Fingerprint size="20" />
             <span>{{ $t('login.passkey_btn') }}</span>

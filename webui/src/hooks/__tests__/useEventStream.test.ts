@@ -5,8 +5,8 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { defineComponent, ref } from 'vue';
-import { mount } from '@vue/test-utils';
+import { ref } from 'vue';
+import { withSetup } from './test-utils';
 
 // useAuth.ts creates a vue-router instance at module scope, which the test
 // setup doesn't mock (see useAuth.test.ts's own note about this). Stub the
@@ -43,20 +43,6 @@ class MockEventSource {
   close() {
     this.closed = true;
   }
-}
-
-/** Runs `fn` inside a real component instance and returns its result. */
-function withSetup<T>(fn: () => T) {
-  let result!: T;
-  mount(
-    defineComponent({
-      setup() {
-        result = fn();
-        return () => null;
-      },
-    })
-  );
-  return result;
 }
 
 /**
