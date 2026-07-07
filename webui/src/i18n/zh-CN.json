@@ -118,6 +118,12 @@
       "type": "类型",
       "username": "用户名"
     },
+    "network_set": {
+      "bgm_base_url": "Bangumi API 地址",
+      "title": "网络设置",
+      "tmdb_api_key": "TMDB API Key（可选）",
+      "tmdb_base_url": "TMDB API 地址"
+    },
     "security_set": {
       "title": "安全设置",
       "hint": "登录白名单：为空则允许所有 IP。MCP 白名单：为空则拒绝所有访问。",

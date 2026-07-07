@@ -67,6 +67,7 @@ declare module '@vue/runtime-core' {
     ConfigDownload: typeof import('./../../src/components/setting/config-download.vue')['default']
     ConfigLlm: typeof import('./../../src/components/setting/config-llm.vue')['default']
     ConfigManage: typeof import('./../../src/components/setting/config-manage.vue')['default']
+    ConfigNetwork: typeof import('./../../src/components/setting/config-network.vue')['default']
     ConfigNormal: typeof import('./../../src/components/setting/config-normal.vue')['default']
     ConfigNotification: typeof import('./../../src/components/setting/config-notification.vue')['default']
     ConfigParser: typeof import('./../../src/components/setting/config-parser.vue')['default']

@@ -148,6 +148,37 @@ async def test_tmdb_parser_movie_search_no_results_returns_none(mocker):
     assert tmdb_info is None
 
 
+def test_search_url_uses_custom_api_key():
+    """用户自配的 TMDB API key 优先于内置共享 key (#975)。"""
+    from unittest.mock import patch
+
+    with patch.object(tmdb_parser_module, "settings") as mock_settings:
+        mock_settings.network.tmdb_base_url = "https://api.themoviedb.org"
+        mock_settings.network.tmdb_api_key = "customkey123"
+        url = tmdb_parser_module.search_url("test")
+
+    assert "api_key=customkey123" in url
+
+
+def test_search_url_falls_back_to_builtin_key():
+    from unittest.mock import patch
+
+    from module.conf import TMDB_API
+
+    with patch.object(tmdb_parser_module, "settings") as mock_settings:
+        mock_settings.network.tmdb_base_url = "https://api.themoviedb.org"
+        mock_settings.network.tmdb_api_key = ""
+        url = tmdb_parser_module.search_url("test")
+
+    assert f"api_key={TMDB_API}" in url
+
+
+def test_network_config_tmdb_api_key_defaults_empty():
+    from module.models.config import Network
+
+    assert Network().tmdb_api_key == ""
+
+
 def test_reset_cache_clears_tmdb_cache():
     """reset_cache() must drop all cached lookups (called on config reload so
     a changed tmdb_base_url stops serving results from the old endpoint)."""

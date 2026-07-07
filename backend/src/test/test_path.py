@@ -26,11 +26,14 @@ class TestSanitizePathFragment:
         assert sanitize_path_fragment("Name  ...") == "Name"
 
     def test_preserves_cjk_and_brackets(self):
-        assert sanitize_path_fragment("[Sub] 孤独摇滚！(2022)") == "[Sub] 孤独摇滚！(2022)"
+        assert (
+            sanitize_path_fragment("[Sub] 孤独摇滚！(2022)") == "[Sub] 孤独摇滚！(2022)"
+        )
 
     def test_idempotent(self):
         once = sanitize_path_fragment("Fate/Zero: Part?2")
         assert sanitize_path_fragment(once) == once
+
 
 # ---------------------------------------------------------------------------
 # gen_save_path

@@ -323,9 +323,7 @@ class TestRefreshRss:
         assert len(all_torrents) == 1
         assert all_torrents[0].bangumi_id is not None
 
-    async def test_track_orphans_on_persists_unmatched(
-        self, rss_engine, test_settings
-    ):
+    async def test_track_orphans_on_persists_unmatched(self, rss_engine, test_settings):
         """默认开启时行为不变：未匹配种子以 bangumi_id NULL 入库。"""
         rss_item = make_rss_item(enabled=True)
         await rss_engine.db.rss.add(rss_item)

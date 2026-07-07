@@ -118,6 +118,12 @@
       "type": "Proxy Type",
       "username": "Username"
     },
+    "network_set": {
+      "bgm_base_url": "Bangumi API URL",
+      "title": "Network Setting",
+      "tmdb_api_key": "TMDB API Key (optional)",
+      "tmdb_base_url": "TMDB API URL"
+    },
     "security_set": {
       "title": "Security",
       "hint": "Login whitelist: empty = allow all IPs. MCP whitelist: empty = deny all access.",
