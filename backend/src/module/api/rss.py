@@ -13,6 +13,10 @@ from .response import u_response
 
 router = APIRouter(prefix="/rss", tags=["rss"])
 
+# RSSItem.parser 的合法取值（与 webui ab-add-rss 的选项一致）；
+# 这些值即便与搜索站点同名（mikan）也不做站点名映射
+PARSER_TYPES = {"mikan", "tmdb", "parser"}
+
 
 @router.get(
     path="", response_model=list[RSSItem], dependencies=[Depends(get_current_user)]
@@ -205,10 +209,14 @@ async def download_collection(data: Bangumi):
     "/subscribe", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
 async def subscribe(data: Bangumi, rss: RSSItem):
-    # 搜索订阅时前端传来的是站点名（nyaa/dmhy/mikan），而分析器只认识解析器
-    # 类型 mikan/tmdb（见 rss/analyser.py），站点名会静默跳过 TMDB 补全（#1053）。
-    # 这里按搜索源配置把站点名映射为解析器；已是解析器类型的值原样透传。
-    providers = get_provider()
-    parser = providers[rss.parser]["parser"] if rss.parser in providers else rss.parser
+    # 搜索订阅时前端传来的是站点名（nyaa/dmhy），而分析器只认识解析器类型
+    # mikan/tmdb（见 rss/analyser.py），站点名会静默跳过 TMDB 补全（#1053）。
+    # 这里按搜索源配置把站点名映射为解析器；已是解析器类型的值原样透传，
+    # 且不参与站点映射——避免 "mikan" 这类与站点同名的解析器被配置改写。
+    parser = rss.parser
+    if parser not in PARSER_TYPES:
+        providers = get_provider()
+        if parser in providers:
+            parser = providers[parser]["parser"]
     resp = await SeasonCollector.subscribe_season(data, parser=parser)
     return u_response(resp)

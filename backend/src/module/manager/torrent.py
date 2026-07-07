@@ -52,11 +52,13 @@ class TorrentManager:
                 msg_zh=f"无法找到 {data.official_title} 的种子",
             )
 
-    async def _delete_orphan_sub_rss(self, data: Bangumi) -> None:
-        """删除该番剧独立订阅（aggregate=False）且不再被引用的 RSS 条目（#1053）。
+    async def _disable_orphan_sub_rss(self, data: Bangumi) -> None:
+        """停用该番剧独立订阅（aggregate=False）且不再被引用的 RSS 条目（#1053）。
 
-        聚合订阅由多个番剧共享，永不在此处删除；rss_link 可能是逗号拼接的
-        多个链接（见 BangumiDatabase.match_list），逐个拆分精确匹配。
+        停用而非删除：无法区分搜索订阅与用户手动添加的独立订阅，删除还会
+        连带清掉该 rss_id 下可能属于其他番剧的种子去重记录。聚合订阅由多个
+        番剧共享，永不在此处停用；rss_link 可能是逗号拼接的多个链接
+        （见 BangumiDatabase.match_list），逐个拆分精确匹配。
         """
         urls = {u.strip() for u in (data.rss_link or "").split(",") if u.strip()}
         if not urls:
@@ -67,11 +69,14 @@ class TorrentManager:
             still_referenced.update(
                 u.strip() for u in (bangumi.rss_link or "").split(",") if u.strip()
             )
+        orphan_ids: list[int] = []
         for url in urls - still_referenced:
             rss_item = await self.db.rss.search_url(url)
-            if rss_item and not rss_item.aggregate:
-                await self.db.rss.delete(rss_item.id)
-                logger.info(f"[Manager] Delete orphan RSS feed {url}")
+            if rss_item and not rss_item.aggregate and rss_item.enabled:
+                orphan_ids.append(rss_item.id)
+                logger.info(f"[Manager] Disable orphan RSS feed {url}")
+        if orphan_ids:
+            await self.db.rss.disable_batch(orphan_ids)
 
     async def delete_rule(self, _id: int | str, file: bool = False):
         data = await self.db.bangumi.search_id(int(_id))
@@ -79,8 +84,8 @@ class TorrentManager:
             # Clean up torrent records so re-adding the same anime can re-download
             await self.db.torrent.delete_by_bangumi_id(int(_id))
             await self.db.bangumi.delete_one(int(_id))
-            # 番剧删除后清理其独立订阅的孤儿 RSS；聚合订阅不受影响
-            await self._delete_orphan_sub_rss(data)
+            # 番剧删除后停用其独立订阅的孤儿 RSS；聚合订阅不受影响
+            await self._disable_orphan_sub_rss(data)
             torrent_message = None
             if file:
                 # Only the file-cleanup path needs the downloader, so an

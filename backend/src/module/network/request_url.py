@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import math
 from typing import Any
 
 import httpx
@@ -33,9 +34,13 @@ def _retry_after_delay(response: httpx.Response) -> float:
     retry_after = response.headers.get("Retry-After")
     if retry_after is not None:
         try:
-            return min(max(float(retry_after), 0.0), HTTP_429_MAX_RETRY_AFTER)
+            value = float(retry_after)
         except ValueError:
-            pass
+            return HTTP_429_FALLBACK_DELAY
+        # float("nan") 能通过解析，且 min/max 会传播 NaN → asyncio.sleep(nan) 永不唤醒
+        if math.isnan(value):
+            return HTTP_429_FALLBACK_DELAY
+        return min(max(value, 0.0), HTTP_429_MAX_RETRY_AFTER)
     return HTTP_429_FALLBACK_DELAY
 
 

@@ -1,7 +1,8 @@
 """Tests for TorrentManager.delete_rule RSS cleanup (#1053).
 
-删除番剧时应一并清理其独立订阅（aggregate=False）的孤儿 RSS 条目；
-聚合订阅与仍被其他番剧引用的订阅不受影响。
+删除番剧时应停用其独立订阅（aggregate=False）的孤儿 RSS 条目（停用而非删除：
+无法区分搜索订阅与用户手动添加的独立订阅，删除会连带清掉其他番剧的种子
+去重记录）；聚合订阅与仍被其他番剧引用的订阅不受影响。
 """
 
 from module.database import Database
@@ -19,7 +20,7 @@ async def _seed(db: Database, *, bangumi=(), rss=()):
 
 
 class TestDeleteRuleRSSCleanup:
-    async def test_delete_rule_removes_orphan_sub_rss(self, db_engine):
+    async def test_delete_rule_disables_orphan_sub_rss(self, db_engine):
         async with Database(engine=db_engine) as db:
             await _seed(
                 db,
@@ -31,9 +32,11 @@ class TestDeleteRuleRSSCleanup:
             resp = await manager.delete_rule(1, file=False)
 
             assert resp.status is True
-            assert await db.rss.search_url(SUB_URL) is None
+            rss_item = await db.rss.search_url(SUB_URL)
+            assert rss_item is not None
+            assert rss_item.enabled is False
 
-    async def test_delete_rule_keeps_aggregate_rss(self, db_engine):
+    async def test_delete_rule_keeps_aggregate_rss_enabled(self, db_engine):
         async with Database(engine=db_engine) as db:
             await _seed(
                 db,
@@ -44,7 +47,9 @@ class TestDeleteRuleRSSCleanup:
 
             await manager.delete_rule(1, file=False)
 
-            assert await db.rss.search_url(SUB_URL) is not None
+            rss_item = await db.rss.search_url(SUB_URL)
+            assert rss_item is not None
+            assert rss_item.enabled is True
 
     async def test_delete_rule_keeps_rss_referenced_by_other_bangumi(self, db_engine):
         async with Database(engine=db_engine) as db:
@@ -65,9 +70,11 @@ class TestDeleteRuleRSSCleanup:
 
             await manager.delete_rule(1, file=False)
 
-            assert await db.rss.search_url(SUB_URL) is not None
+            rss_item = await db.rss.search_url(SUB_URL)
+            assert rss_item is not None
+            assert rss_item.enabled is True
 
-    async def test_delete_rule_comma_joined_link_removes_each_orphan_feed(
+    async def test_delete_rule_comma_joined_link_disables_each_orphan_feed(
         self, db_engine
     ):
         url_a = "https://mikanani.me/RSS/Bangumi?bangumiId=1"
@@ -85,5 +92,28 @@ class TestDeleteRuleRSSCleanup:
 
             await manager.delete_rule(1, file=False)
 
-            assert await db.rss.search_url(url_a) is None
-            assert await db.rss.search_url(url_b) is None
+            for url in (url_a, url_b):
+                rss_item = await db.rss.search_url(url)
+                assert rss_item is not None
+                assert rss_item.enabled is False
+
+    async def test_delete_rule_keeps_orphan_feed_torrent_history(self, db_engine):
+        """停用而非删除：不应连带清掉该 RSS 关联的种子去重记录。"""
+        from module.models import Torrent
+
+        async with Database(engine=db_engine) as db:
+            await _seed(
+                db,
+                bangumi=[make_bangumi(id=1, rss_link=SUB_URL)],
+                rss=[make_rss_item(url=SUB_URL, aggregate=False)],
+            )
+            rss_item = await db.rss.search_url(SUB_URL)
+            assert rss_item is not None
+            await db.torrent.add(
+                Torrent(name="ep01", url="https://example.com/1", rss_id=rss_item.id)
+            )
+            manager = TorrentManager(db)
+
+            await manager.delete_rule(1, file=False)
+
+            assert len(await db.torrent.search_rss(rss_item.id)) == 1

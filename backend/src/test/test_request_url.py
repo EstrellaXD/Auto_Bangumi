@@ -218,6 +218,13 @@ class TestRateLimit429:
         assert result is not None
         mock_sleep.assert_awaited_once_with(HTTP_429_MAX_RETRY_AFTER)
 
+    async def test_get_url_429_with_nan_retry_after_uses_fallback(self):
+        result, _, mock_sleep = await self._run(
+            [self._resp_429({"Retry-After": "nan"}), self._resp_ok()]
+        )
+        assert result is not None
+        mock_sleep.assert_awaited_once_with(HTTP_429_FALLBACK_DELAY)
+
     async def test_get_url_429_with_date_retry_after_uses_fallback(self):
         result, _, mock_sleep = await self._run(
             [

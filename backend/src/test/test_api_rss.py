@@ -419,3 +419,35 @@ class TestSubscribe:
         assert response.status_code == 200
         assert mock_subscribe.await_args is not None
         assert mock_subscribe.await_args.kwargs["parser"] == "tmdb"
+
+    def test_subscribe_known_parser_type_never_remapped(self, authed_client):
+        """parser='mikan' 是解析器类型而非站点名，即便用户自定义了 mikan
+        站点的解析器（如 tmdb），也不应被站点映射改写。"""
+        customized = {
+            "mikan": {
+                "url": "https://mikanani.me/RSS/Search?searchstr=%s",
+                "parser": "tmdb",
+            },
+        }
+        resp_model = ResponseModel(
+            status=True, status_code=200, msg_en="Subscribed.", msg_zh="订阅成功。"
+        )
+        with (
+            patch(
+                "module.api.rss.SeasonCollector.subscribe_season",
+                new_callable=AsyncMock,
+                return_value=resp_model,
+            ) as mock_subscribe,
+            patch("module.api.rss.get_provider", return_value=customized),
+        ):
+            response = authed_client.post(
+                "/api/v1/rss/subscribe",
+                json={
+                    "data": make_bangumi(id=1).model_dump(),
+                    "rss": {"url": "https://mikanani.me/RSS/link", "parser": "mikan"},
+                },
+            )
+
+        assert response.status_code == 200
+        assert mock_subscribe.await_args is not None
+        assert mock_subscribe.await_args.kwargs["parser"] == "mikan"

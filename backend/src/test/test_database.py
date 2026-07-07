@@ -1037,6 +1037,20 @@ class TestRSSSearchUrl:
         rss_db = RSSDatabase(db_session)
         assert await rss_db.search_url("https://example.com/absent") is None
 
+    async def test_search_url_duplicate_urls_returns_one_without_raising(
+        self, db_session
+    ):
+        """URL 无数据库唯一约束，遗留库可能有重复行；不应抛 MultipleResultsFound。"""
+        url = "https://mikanani.me/RSS/dup"
+        db_session.add(RSSItem(url=url, name="A"))
+        db_session.add(RSSItem(url=url, name="B"))
+        await db_session.commit()
+
+        rss_db = RSSDatabase(db_session)
+        found = await rss_db.search_url(url)
+        assert found is not None
+        assert found.url == url
+
 
 class TestOrphanTorrents:
     """Tests for TorrentDatabase orphan-torrent operations (bangumi_id IS NULL)."""
