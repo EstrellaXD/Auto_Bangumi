@@ -93,6 +93,11 @@ class RSSDatabase:
     async def search_id(self, _id: int) -> RSSItem | None:
         return await self.session.get(RSSItem, _id)
 
+    async def search_url(self, url: str) -> RSSItem | None:
+        statement = select(RSSItem).where(RSSItem.url == url)
+        result = await self.session.execute(statement)
+        return result.scalar_one_or_none()
+
     async def search_all(self) -> list[RSSItem]:
         result = await self.session.execute(select(RSSItem))
         return list(result.scalars().all())

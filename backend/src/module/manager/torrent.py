@@ -52,18 +52,35 @@ class TorrentManager:
                 msg_zh=f"无法找到 {data.official_title} 的种子",
             )
 
+    async def _delete_orphan_sub_rss(self, data: Bangumi) -> None:
+        """删除该番剧独立订阅（aggregate=False）且不再被引用的 RSS 条目（#1053）。
+
+        聚合订阅由多个番剧共享，永不在此处删除；rss_link 可能是逗号拼接的
+        多个链接（见 BangumiDatabase.match_list），逐个拆分精确匹配。
+        """
+        urls = {u.strip() for u in (data.rss_link or "").split(",") if u.strip()}
+        if not urls:
+            return
+        # 含软删除（deleted=True）的番剧：其订阅需保留以便重新启用
+        still_referenced: set[str] = set()
+        for bangumi in await self.db.bangumi.search_all():
+            still_referenced.update(
+                u.strip() for u in (bangumi.rss_link or "").split(",") if u.strip()
+            )
+        for url in urls - still_referenced:
+            rss_item = await self.db.rss.search_url(url)
+            if rss_item and not rss_item.aggregate:
+                await self.db.rss.delete(rss_item.id)
+                logger.info(f"[Manager] Delete orphan RSS feed {url}")
+
     async def delete_rule(self, _id: int | str, file: bool = False):
         data = await self.db.bangumi.search_id(int(_id))
         if isinstance(data, Bangumi):
-            # NOTE: RSSDatabase.delete() takes an int RSS-item id, not a
-            # title; there is no reliable bangumi -> RSSItem link to look one
-            # up here (RSSItem.url may be shared by several aggregated
-            # bangumi), so we deliberately don't touch RSS items on rule
-            # deletion rather than risk deleting a feed other bangumi still
-            # depend on.
             # Clean up torrent records so re-adding the same anime can re-download
             await self.db.torrent.delete_by_bangumi_id(int(_id))
             await self.db.bangumi.delete_one(int(_id))
+            # 番剧删除后清理其独立订阅的孤儿 RSS；聚合订阅不受影响
+            await self._delete_orphan_sub_rss(data)
             torrent_message = None
             if file:
                 # Only the file-cleanup path needs the downloader, so an

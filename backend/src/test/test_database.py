@@ -1021,6 +1021,23 @@ class TestRSSDeleteWithTorrents:
         assert result is True
 
 
+class TestRSSSearchUrl:
+    """Tests for RSSDatabase.search_url (exact-URL lookup, #1053)."""
+
+    async def test_search_url_returns_matching_item(self, db_session):
+        rss_db = RSSDatabase(db_session)
+        rss = RSSItem(url="https://mikanani.me/RSS/Bangumi?bangumiId=9", name="Sub")
+        await rss_db.add(rss)
+
+        found = await rss_db.search_url("https://mikanani.me/RSS/Bangumi?bangumiId=9")
+        assert found is not None
+        assert found.id == rss.id
+
+    async def test_search_url_missing_returns_none(self, db_session):
+        rss_db = RSSDatabase(db_session)
+        assert await rss_db.search_url("https://example.com/absent") is None
+
+
 class TestOrphanTorrents:
     """Tests for TorrentDatabase orphan-torrent operations (bangumi_id IS NULL)."""
 
