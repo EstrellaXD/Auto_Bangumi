@@ -1,3 +1,37 @@
+# [3.3.0-beta.8] - 2026-07-07
+
+qBittorrent 5.x 全面兼容 + 种子管理页 + PT 站搜索源；日志不再"时有时无"。
+
+## Backend
+
+### Fixed
+
+- **qBittorrent 5.x WebAPI 全面兼容**（对照 qB 各发布 tag 源码逐端点核验）：
+  - qB 5.2 的 `torrents/add` 返回 JSON 计数（200/202）而非 "Ok."，此前每次成功投递都被记为失败并无限重试（beta.7 用户日志中的 `rejected torrent add: HTTP 200 …success_count:1` 与循环 409）；现正确识别 200/202/JSON/409，部分成功与 pending（URL 异步抓取）均按成功处理，409 对文件上传视为重复、磁力链经 hash 确认，无法确认时抛出留待重试
+  - qB 5.0 把 `torrents/pause|resume` 改名为 `stop|start` 且无别名：此前对全部 5.x 暂停/恢复是静默空操作；现先试新名、404 时回退旧名并记住
+  - `torrents/info?filter=paused` 在 5.x 被静默当作 All（MCP `list_downloads` 会返回全部种子）：paused/stopped 改为本地按 state 过滤
+  - qB 5.2 空响应体统一回 204：`torrents/delete` 误报失败、`torrents/renameFile` 误判失败导致重命名每周期重试，均改为按 2xx 判定
+  - `torrents/add` 同时发送 `paused` 与 `stopped` 参数（5.0 改名，双方各自忽略未知参数）
+- **日志时有时无**：启动（容器重启/在线更新）时日志被整个删除，改为轮转进 `log.txt.1-3` 备份；轮转后 UI 只读 `log.txt` 导致历史瞬间清空，现预算内自动拼接备份尾部；轮转竞态不再可能炸掉 SSE 流；清空日志同时删除备份；总量上限约 8 MB
+- **孤儿种子持续累积无处清理**（#818 / #885 / #1010，#1020 的 3.3 移植）：新增孤儿种子与按番剧种子的查询/删除端点
+
+### Changed
+
+- **Docker 镜像瘦身 208 MB → 160 MB（拉取体积 −24%）**：不再预编译字节码（root 属主 venv 下本就无法持久化）；去掉未使用的 `mcp[cli]` 附加依赖（typer/rich 等约 14 MB）
+
+## Frontend
+
+### Added
+
+- **种子管理页**：番剧网格新增"未匹配种子"卡片（计数徽标），孤儿种子与按番剧种子列表支持多选、批量删除、一键清空（Promise 确认框）；规则编辑弹窗新增"查看种子"入口
+- **PT 站（NexusPHP）搜索源预设**：添加搜索源对话框新增 PT 站模式，填站点地址 + Passkey +（可选）分类 ID 即可生成 `torrentrss.php` 搜索模板（分类用 `cat<ID>=1` 逐分类开关形式，纯数字校验，预览遮蔽 Passkey）；注意原生新版 NexusPHP 已停用 search 参数，请先在站点上确认 RSS 搜索可用
+- **Passkey 自动弹出**：本浏览器成功用过 Passkey 后，打开登录页自动弹出认证；取消则本浏览器解除自动弹出（下次 Passkey 登录成功后重新记住），主动登出后的一次跳转不弹，避免反射式指纹确认又把用户登回去
+
+### Fixed
+
+- **登录页密码框按回车不登录**：登录按钮现在是表单的 submit 按钮（此前 type=button，双输入框表单无提交按钮时浏览器不做隐式提交）
+- 下载页种子状态适配 qB 5.0+ 的 `stoppedDL/stoppedUP` 命名（此前显示原始状态串）
+
 # [3.3.0-beta.7] - 2026-07-06
 
 发版前 ship-readiness 审查（多代理评审 + 对抗验证）确认的 10 个缺陷全部修复；本版为 3.3.0 稳定版前的收尾修复版。
