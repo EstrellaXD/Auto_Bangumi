@@ -90,6 +90,8 @@ class Network(BaseModel):
     tmdb_base_url: str = Field(
         default="https://api.themoviedb.org", description="TMDB API base URL"
     )
+    # 留空时回退到内置共享 key；自配 key 可避开共享 key 的限流 (#975)
+    tmdb_api_key: str = Field(default="", description="Custom TMDB API key")
     bgm_base_url: str = Field(
         default="https://api.bgm.tv", description="Bangumi (bgm.tv) API base URL"
     )

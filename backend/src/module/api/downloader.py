@@ -1,4 +1,5 @@
 import logging
+import re
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -123,8 +124,9 @@ async def auto_tag_torrents():
             save_path = torrent["save_path"]
             tags = torrent.get("tags", "")
 
-            # Skip if already has ab: tag
-            if "ab:" in tags:
+            # Skip if already has an ab:<id> link tag。必须精确匹配数字 id：
+            # ab:renamed（处理完成标记）等同前缀标签不代表已关联番剧
+            if re.search(r"ab:\d+", tags):
                 continue
 
             # First try by torrent name, then fall back to save_path

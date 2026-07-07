@@ -25,6 +25,11 @@ _PENDING_RENAME_COOLDOWN = 300  # 5 minutes cooldown before retrying same rename
 _CLEANUP_INTERVAL = 60  # Clean up pending cache at most once per minute
 _last_cleanup_time: float = 0
 
+# 处理完成标记：供外部脚本（filebot、hlink 等）过滤 AB 已重命名的任务 (#147)。
+# 语义 = 顶层媒体文件全部就位；字幕在同一轮循环里紧随其后重命名，深层
+# 嵌套文件（特典/花絮）设计上从不重命名——两者都不阻塞打标
+_RENAMED_TAG = "ab:renamed"
+
 
 class Renamer:
     def __init__(self, client: DownloadClient):
@@ -57,6 +62,30 @@ class Renamer:
         logger.debug("Checked %s files", torrent_count)
 
     @staticmethod
+    def _adjust_episode(original: int | float, episode_offset: int) -> int | float:
+        if original == 0 and episode_offset != 0:
+            # Episode 0 is a special/OVA — never apply offset to avoid
+            # overwriting regular episodes (see issue #977)
+            return 0
+        adjusted = original + episode_offset
+        # An offset producing a non-positive result (e.g., EP5 + offset -10)
+        # is almost always a misconfiguration, so revert to original.
+        if adjusted < 0 or (adjusted == 0 and original > 0):
+            logger.warning(
+                f"Episode offset {episode_offset} would make episode {original} non-positive, ignoring offset"
+            )
+            return original
+        return adjusted
+
+    @staticmethod
+    def _format_episode(episode: int | float) -> str:
+        # 总集篇等半集（12.5）保留小数，否则会覆盖同季的整数集 (#667)；
+        # 整数值沿用两位补零
+        if isinstance(episode, float) and episode.is_integer():
+            episode = int(episode)
+        return f"0{episode}" if episode < 10 else str(episode)
+
+    @staticmethod
     def gen_path(
         file_info: EpisodeFile | SubtitleFile,
         bangumi_name: str,
@@ -69,31 +98,22 @@ class Renamer:
         # So we use file_info.season directly without applying offset again
         season_num = file_info.season
         season = f"0{season_num}" if season_num < 10 else season_num
-        # Apply episode offset
-        original_episode = int(file_info.episode)
-        if original_episode == 0 and episode_offset != 0:
-            # Episode 0 is a special/OVA — never apply offset to avoid
-            # overwriting regular episodes (see issue #977)
-            adjusted_episode = 0
-        else:
-            adjusted_episode = original_episode + episode_offset
-        # An offset producing a non-positive result (e.g., EP5 + offset -10)
-        # is almost always a misconfiguration, so revert to original.
-        if adjusted_episode < 0 or (adjusted_episode == 0 and original_episode > 0):
-            adjusted_episode = original_episode
-            logger.warning(
-                f"Episode offset {episode_offset} would make episode {original_episode} non-positive, ignoring offset"
-            )
-        episode = f"0{adjusted_episode}" if adjusted_episode < 10 else adjusted_episode
+        episode = Renamer._format_episode(
+            Renamer._adjust_episode(file_info.episode, episode_offset)
+        )
         # 注意：group_tag 只影响 qB RSS 规则名（downloader/path.py 的 rule_name），
         # 从不写进重命名后的文件名——已有做种媒体库的文件名必须保持稳定，
         # 否则升级后会触发整库批量重命名，破坏 Plex/Jellyfin 索引与硬链接
         if method == "none" or method == "subtitle_none":
             return file_info.media_path
+        # 注意：这里的 title/bangumi_name 来自已存在于磁盘上的文件/文件夹名
+        # （单个路径分量，不可能含分隔符），不做保留字符清洗——追加清洗会让
+        # 既有做种库（如含 ":" 的标题）在升级后被整库批量重命名 (#721 评审)
+        title = file_info.title
         if file_info.episode_type == "movie":
             # 电影/剧场版：Title (Year).ext，不使用 SxxExx 编号。bangumi_name 由
             # 调用方传入，与 gen_save_path 的文件夹命名保持一致 (Title (Year))
-            base = bangumi_name if "advance" in method else file_info.title
+            base = bangumi_name if "advance" in method else title
             if method.startswith("subtitle_"):
                 assert isinstance(
                     file_info, SubtitleFile
@@ -101,7 +121,7 @@ class Renamer:
                 return f"{base}.{file_info.language}{file_info.suffix}"
             return f"{base}{file_info.suffix}"
         elif method == "pn":
-            return f"{file_info.title} S{season}E{episode}{file_info.suffix}"
+            return f"{title} S{season}E{episode}{file_info.suffix}"
         elif method == "advance":
             return f"{bangumi_name} S{season}E{episode}{file_info.suffix}"
         elif method == "normal":
@@ -111,7 +131,7 @@ class Renamer:
             assert isinstance(
                 file_info, SubtitleFile
             ), "subtitle_pn requires a SubtitleFile"
-            return f"{file_info.title} S{season}E{episode}.{file_info.language}{file_info.suffix}"
+            return f"{title} S{season}E{episode}.{file_info.language}{file_info.suffix}"
         elif method == "subtitle_advance":
             assert isinstance(
                 file_info, SubtitleFile
@@ -120,6 +140,19 @@ class Renamer:
         else:
             logger.error(f"Unknown rename method: {method}")
             return file_info.media_path
+
+    async def _mark_renamed(self, _hash: str, existing_tags: str | None) -> None:
+        """给处理完成的种子打 ``ab:renamed`` 标签；已带标签时不再调 API。
+
+        打标失败绝不能影响重命名主流程（重命名已经成功、通知必须发出、
+        本轮其余种子必须继续处理）——吞掉异常，下一轮会自动补打。
+        """
+        if _RENAMED_TAG in (t.strip() for t in (existing_tags or "").split(",")):
+            return
+        try:
+            await self.client.add_tag(_hash, _RENAMED_TAG)
+        except Exception as e:
+            logger.warning("Failed to tag %s as renamed: %s", _hash[:8], e)
 
     async def rename_file(
         self,
@@ -132,6 +165,7 @@ class Renamer:
         episode_offset: int = 0,
         season_offset: int = 0,
         episode_type: str = "episode",
+        existing_tags: str | None = None,
         **kwargs,
     ):
         ep = self._parser.torrent_parser(
@@ -148,7 +182,12 @@ class Renamer:
                 episode_offset=episode_offset,
                 season_offset=season_offset,
             )
-            if media_path != new_path:
+            if media_path == new_path:
+                # 已符合目标命名（如重启后再次扫描）：视为处理完成。
+                # none/normal 是直通方法，没有"重命名完成"的语义，不打标
+                if method not in ("none", "normal"):
+                    await self._mark_renamed(_hash, existing_tags)
+            else:
                 # Check if this rename was recently attempted but didn't take effect
                 # (qBittorrent can return 200 but delay actual rename while seeding)
                 pending_key = (_hash, media_path, new_path)
@@ -165,21 +204,13 @@ class Renamer:
                 ):
                     # Rename verified successful, remove from pending cache
                     _pending_renames.pop(pending_key, None)
+                    await self._mark_renamed(_hash, existing_tags)
                     # Season comes from folder which already has offset applied
                     # Only apply episode offset
-                    original_ep = int(ep.episode)
-                    if original_ep == 0 and episode_offset != 0:
-                        adjusted_episode = 0
-                    else:
-                        adjusted_episode = original_ep + episode_offset
-                    if adjusted_episode < 0 or (
-                        adjusted_episode == 0 and original_ep > 0
-                    ):
-                        adjusted_episode = original_ep
                     return Notification(
                         official_title=bangumi_name,
                         season=ep.season,
-                        episode=adjusted_episode,
+                        episode=self._adjust_episode(ep.episode, episode_offset),
                     )
                 else:
                     # Rename API returned success but file wasn't actually renamed
@@ -217,6 +248,7 @@ class Renamer:
         season_offset: int = 0,
         episode_type: str = "episode",
         file_sizes: dict[str, int] | None = None,
+        existing_tags: str | None = None,
         **kwargs,
     ):
         # 多文件电影种子（正片 + 特典/花絮）：所有文件会解析出同一标题，
@@ -229,6 +261,7 @@ class Renamer:
                     movie_primary = max(ep_list, key=lambda p: file_sizes.get(p, 0))
                 else:
                     movie_primary = ep_list[0]
+        all_renamed = True
         for media_path in media_list:
             if is_ep(media_path):
                 ep = self._parser.torrent_parser(
@@ -256,11 +289,19 @@ class Renamer:
                             _hash=_hash, old_path=media_path, new_path=new_path
                         )
                         if not renamed:
+                            all_renamed = False
                             logger.warning(f"{media_path} rename failed")
                             # Delete bad torrent.
                             if settings.bangumi_manage.remove_bad_torrent:
                                 await self.client.delete_torrent(_hash)
                                 break
+                else:
+                    # 解析失败的媒体文件不会被重命名——不能算处理完成
+                    all_renamed = False
+        # 全部媒体文件就位（含本轮无需改名的情况）才算处理完成；
+        # none/normal 直通方法没有"重命名完成"的语义，不打标
+        if all_renamed and method not in ("none", "normal"):
+            await self._mark_renamed(_hash, existing_tags)
 
     async def rename_subtitles(
         self,
@@ -568,6 +609,8 @@ class Renamer:
                 "episode_offset": episode_offset,
                 "season_offset": season_offset,
                 "episode_type": episode_type,
+                # 处理完成后打 ab:renamed 标签用；已带标签则跳过 API 调用
+                "existing_tags": info.get("tags"),
             }
             # Rename single media file
             if len(media_list) == 1:
