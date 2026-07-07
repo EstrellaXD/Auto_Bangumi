@@ -17,16 +17,20 @@ async def _ensure_bangumi_id(db: Database, data: Bangumi) -> bool:
     返回 False 且不回填 id——不解析已存在行的话，add_torrent 的 ab:<id>
     标签与种子行的 bangumi_id 关联都会丢失，种子被记成孤儿。
 
-    只解析未被软删除的行（禁用规则对下游所有查询都不可见，挂上去等于
-    白挂）；传入的 id 指向已不存在的行时清空，避免种子挂到悬空外键。
-    返回是否插入了新行（调用方据此决定失败时是否回滚删除）。
+    解析到被软删除（禁用）的行时会重新启用它：显式订阅/收集一个已禁用
+    的规则只能是用户想要它回来——不启用的话种子要么变孤儿、要么挂到
+    对下游所有查询都不可见的行上。传入的 id 指向已不存在的行时清空，
+    避免种子挂到悬空外键。返回是否插入了新行（调用方据此决定失败时
+    是否回滚删除）。
     """
     if await db.bangumi.add(data):
         return True
     existing = await db.bangumi.find_duplicate(data)
-    if existing is None or existing.deleted:
+    if existing is None:
         existing = await db.bangumi.find_semantic_duplicate(data)
-    if existing is not None and not existing.deleted:
+    if existing is not None:
+        if existing.deleted:
+            await db.bangumi.restore_one(existing.id)
         data.id = existing.id
     elif data.id is not None and await db.bangumi.search_id(data.id) is None:
         data.id = None  # type: ignore[assignment]
@@ -60,6 +64,10 @@ class SeasonCollector:
             inserted = False
             if bangumi.id is None or not await db.bangumi.update(bangumi):
                 inserted = await _ensure_bangumi_id(db, bangumi)
+            else:
+                # 载荷带着已禁用行的 id 也能 update 成功：显式收集
+                # 即用户想重新启用，否则种子会挂到不可见的行上
+                await db.bangumi.restore_one(bangumi.id)
             if await self.client.add_torrent(torrents, bangumi) is AddResult.ADDED:
                 logger.info(
                     f"Collections of {bangumi.official_title} Season {bangumi.season} completed."

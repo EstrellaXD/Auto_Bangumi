@@ -147,8 +147,9 @@ class TestSubscribeSeason:
             assert all(t.bangumi_id == existing.id for t in stored)
             assert await db.torrent.count_orphans() == 0
 
-    async def test_deleted_duplicate_is_not_linked(self):
-        """已被软删除（禁用）的重复规则对下游查询不可见——不能把新种子挂上去。"""
+    async def test_deleted_duplicate_is_restored_and_linked(self):
+        """重新订阅已禁用的规则时重新启用该行并把种子挂上去——否则种子
+        要么变孤儿、要么挂到对下游查询不可见的行上。"""
         existing = make_bangumi(filter="", deleted=True)
         async with Database() as db:
             assert await db.bangumi.add(existing)
@@ -169,8 +170,11 @@ class TestSubscribeSeason:
             await SeasonCollector.subscribe_season(data)
 
         async with Database() as db:
+            row = await db.bangumi.search_id(existing.id)
+            assert row is not None
+            assert row.deleted is False
             stored = await db.torrent.search_all()
-            assert all(t.bangumi_id != existing.id for t in stored)
+            assert stored and all(t.bangumi_id == existing.id for t in stored)
 
     async def test_torrents_persisted_with_bangumi_id(self):
         data = make_bangumi(filter="")

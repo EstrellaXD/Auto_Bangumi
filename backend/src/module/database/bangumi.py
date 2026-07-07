@@ -457,6 +457,17 @@ class BangumiDatabase:
             await self.session.commit()
             logger.debug("Update %s poster_link to %s.", title_raw, poster_link)
 
+    async def restore_one(self, _id: int) -> bool:
+        """取消软删除（重新启用规则）。行不存在或本就未删除时不写库。"""
+        bangumi = await self.session.get(Bangumi, _id)
+        if not bangumi or not bangumi.deleted:
+            return False
+        bangumi.deleted = False
+        self.session.add(bangumi)
+        await self.session.commit()
+        logger.info("Restored disabled bangumi id: %s.", _id)
+        return True
+
     async def mark_eps_collect(self, _id: int) -> None:
         """只把 eps_collect 置位，不触碰行内其他字段（offset/filter 等）。"""
         bangumi = await self.session.get(Bangumi, _id)

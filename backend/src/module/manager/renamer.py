@@ -25,7 +25,9 @@ _PENDING_RENAME_COOLDOWN = 300  # 5 minutes cooldown before retrying same rename
 _CLEANUP_INTERVAL = 60  # Clean up pending cache at most once per minute
 _last_cleanup_time: float = 0
 
-# 处理完成标记：供外部脚本（filebot、hlink 等）过滤 AB 已重命名的任务 (#147)
+# 处理完成标记：供外部脚本（filebot、hlink 等）过滤 AB 已重命名的任务 (#147)。
+# 语义 = 顶层媒体文件全部就位；字幕在同一轮循环里紧随其后重命名，深层
+# 嵌套文件（特典/花絮）设计上从不重命名——两者都不阻塞打标
 _RENAMED_TAG = "ab:renamed"
 
 
