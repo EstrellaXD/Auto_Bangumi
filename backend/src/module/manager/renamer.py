@@ -30,6 +30,9 @@ _PENDING_RENAME_COOLDOWN = 300  # 5 minutes cooldown before retrying same rename
 _CLEANUP_INTERVAL = 60  # Clean up pending cache at most once per minute
 _last_cleanup_time: float = 0
 
+# 处理完成标记：供外部脚本（filebot、hlink 等）过滤 AB 已重命名的任务 (#147)
+_RENAMED_TAG = "ab:renamed"
+
 
 class Renamer:
     def __init__(self, client: DownloadClient):
@@ -141,6 +144,12 @@ class Renamer:
             logger.error(f"Unknown rename method: {method}")
             return file_info.media_path
 
+    async def _mark_renamed(self, _hash: str, existing_tags: str | None) -> None:
+        """给处理完成的种子打 ``ab:renamed`` 标签；已带标签时不再调 API。"""
+        if _RENAMED_TAG in (t.strip() for t in (existing_tags or "").split(",")):
+            return
+        await self.client.add_tag(_hash, _RENAMED_TAG)
+
     async def rename_file(
         self,
         torrent_name: str,
@@ -152,6 +161,7 @@ class Renamer:
         episode_offset: int = 0,
         season_offset: int = 0,
         episode_type: str = "episode",
+        existing_tags: str | None = None,
         **kwargs,
     ):
         ep = self._parser.torrent_parser(
@@ -168,7 +178,12 @@ class Renamer:
                 episode_offset=episode_offset,
                 season_offset=season_offset,
             )
-            if media_path != new_path:
+            if media_path == new_path:
+                # 已符合目标命名（如重启后再次扫描）：视为处理完成。
+                # none/normal 是直通方法，没有"重命名完成"的语义，不打标
+                if method not in ("none", "normal"):
+                    await self._mark_renamed(_hash, existing_tags)
+            else:
                 # Check if this rename was recently attempted but didn't take effect
                 # (qBittorrent can return 200 but delay actual rename while seeding)
                 pending_key = (_hash, media_path, new_path)
@@ -185,6 +200,7 @@ class Renamer:
                 ):
                     # Rename verified successful, remove from pending cache
                     _pending_renames.pop(pending_key, None)
+                    await self._mark_renamed(_hash, existing_tags)
                     # Season comes from folder which already has offset applied
                     # Only apply episode offset
                     return Notification(
@@ -228,6 +244,7 @@ class Renamer:
         season_offset: int = 0,
         episode_type: str = "episode",
         file_sizes: dict[str, int] | None = None,
+        existing_tags: str | None = None,
         **kwargs,
     ):
         # 多文件电影种子（正片 + 特典/花絮）：所有文件会解析出同一标题，
@@ -240,6 +257,7 @@ class Renamer:
                     movie_primary = max(ep_list, key=lambda p: file_sizes.get(p, 0))
                 else:
                     movie_primary = ep_list[0]
+        all_renamed = True
         for media_path in media_list:
             if is_ep(media_path):
                 ep = self._parser.torrent_parser(
@@ -267,11 +285,16 @@ class Renamer:
                             _hash=_hash, old_path=media_path, new_path=new_path
                         )
                         if not renamed:
+                            all_renamed = False
                             logger.warning(f"{media_path} rename failed")
                             # Delete bad torrent.
                             if settings.bangumi_manage.remove_bad_torrent:
                                 await self.client.delete_torrent(_hash)
                                 break
+        # 全部媒体文件就位（含本轮无需改名的情况）才算处理完成；
+        # none/normal 直通方法没有"重命名完成"的语义，不打标
+        if all_renamed and method not in ("none", "normal"):
+            await self._mark_renamed(_hash, existing_tags)
 
     async def rename_subtitles(
         self,
@@ -579,6 +602,8 @@ class Renamer:
                 "episode_offset": episode_offset,
                 "season_offset": season_offset,
                 "episode_type": episode_type,
+                # 处理完成后打 ab:renamed 标签用；已带标签则跳过 API 调用
+                "existing_tags": info.get("tags"),
             }
             # Rename single media file
             if len(media_list) == 1:

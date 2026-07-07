@@ -406,6 +406,98 @@ class TestRenameFile:
         assert result is not None
         assert result.episode == 12.5
 
+    async def test_successful_rename_adds_renamed_tag(self, renamer):
+        """重命名成功后给种子打 ab:renamed 标签，供外部脚本识别 (#147)。"""
+        ep = EpisodeFile(
+            media_path="old.mkv", title="My Anime", season=1, episode=5, suffix=".mkv"
+        )
+        with patch.object(renamer._parser, "torrent_parser", return_value=ep):
+            renamer.client.client.torrents_rename_file.return_value = True
+            await renamer.rename_file(
+                torrent_name="[Sub] My Anime - 05.mkv",
+                media_path="old.mkv",
+                bangumi_name="My Anime",
+                method="pn",
+                season=1,
+                _hash="hash123",
+            )
+
+        renamer.client.client.add_tag.assert_awaited_once_with("hash123", "ab:renamed")
+
+    async def test_conformant_file_adds_renamed_tag(self, renamer):
+        """文件名已符合目标命名（如重启后再扫）也视为处理完成，补标签。"""
+        ep = EpisodeFile(
+            media_path="My Anime S01E05.mkv",
+            title="My Anime",
+            season=1,
+            episode=5,
+            suffix=".mkv",
+        )
+        with patch.object(renamer._parser, "torrent_parser", return_value=ep):
+            await renamer.rename_file(
+                torrent_name="[Sub] My Anime - 05.mkv",
+                media_path="My Anime S01E05.mkv",
+                bangumi_name="My Anime",
+                method="pn",
+                season=1,
+                _hash="hash123",
+            )
+
+        renamer.client.client.torrents_rename_file.assert_not_awaited()
+        renamer.client.client.add_tag.assert_awaited_once_with("hash123", "ab:renamed")
+
+    async def test_existing_renamed_tag_not_re_added(self, renamer):
+        ep = EpisodeFile(
+            media_path="old.mkv", title="My Anime", season=1, episode=5, suffix=".mkv"
+        )
+        with patch.object(renamer._parser, "torrent_parser", return_value=ep):
+            renamer.client.client.torrents_rename_file.return_value = True
+            await renamer.rename_file(
+                torrent_name="[Sub] My Anime - 05.mkv",
+                media_path="old.mkv",
+                bangumi_name="My Anime",
+                method="pn",
+                season=1,
+                _hash="hash123",
+                existing_tags="ab:42, ab:renamed",
+            )
+
+        renamer.client.client.add_tag.assert_not_awaited()
+
+    async def test_failed_rename_does_not_tag(self, renamer):
+        ep = EpisodeFile(
+            media_path="old.mkv", title="My Anime", season=1, episode=5, suffix=".mkv"
+        )
+        with patch.object(renamer._parser, "torrent_parser", return_value=ep):
+            renamer.client.client.torrents_rename_file.return_value = False
+            await renamer.rename_file(
+                torrent_name="[Sub] My Anime - 05.mkv",
+                media_path="old.mkv",
+                bangumi_name="My Anime",
+                method="pn",
+                season=1,
+                _hash="hash-fail-tag",
+            )
+
+        renamer.client.client.add_tag.assert_not_awaited()
+
+    async def test_none_method_does_not_tag(self, renamer):
+        """none 方法不做重命名，也不应打处理完成标签。"""
+        ep = EpisodeFile(
+            media_path="old.mkv", title="My Anime", season=1, episode=5, suffix=".mkv"
+        )
+        with patch.object(renamer._parser, "torrent_parser", return_value=ep):
+            await renamer.rename_file(
+                torrent_name="[Sub] My Anime - 05.mkv",
+                media_path="old.mkv",
+                bangumi_name="My Anime",
+                method="none",
+                season=1,
+                _hash="hash123",
+            )
+
+        renamer.client.client.add_tag.assert_not_awaited()
+
     async def test_parse_fails_no_remove(self, renamer):
         """When parser returns None and remove_bad_torrent=False, returns None."""
         with patch.object(renamer._parser, "torrent_parser", return_value=None):
@@ -514,6 +606,48 @@ class TestRenameCollection:
             )
 
         assert renamer.client.client.torrents_rename_file.call_count == 3
+
+    async def test_collection_success_adds_renamed_tag(self, renamer):
+        """合集全部重命名成功后打 ab:renamed 标签 (#147)。"""
+        media_list = ["ep01.mkv", "ep02.mkv"]
+
+        def mock_parser(torrent_path, season, **kwargs):
+            ep_num = int(torrent_path.replace("ep", "").replace(".mkv", ""))
+            return EpisodeFile(
+                media_path=torrent_path,
+                title="Anime",
+                season=season,
+                episode=ep_num,
+                suffix=".mkv",
+            )
+
+        with patch.object(renamer._parser, "torrent_parser", side_effect=mock_parser):
+            renamer.client.client.torrents_rename_file.return_value = True
+            await renamer.rename_collection(
+                media_list=media_list,
+                bangumi_name="Anime",
+                season=1,
+                method="pn",
+                _hash="hash123",
+            )
+
+        renamer.client.client.add_tag.assert_awaited_once_with("hash123", "ab:renamed")
+
+    async def test_collection_failure_does_not_tag(self, renamer):
+        ep = EpisodeFile(
+            media_path="ep01.mkv", title="Anime", season=1, episode=1, suffix=".mkv"
+        )
+        with patch.object(renamer._parser, "torrent_parser", return_value=ep):
+            renamer.client.client.torrents_rename_file.return_value = False
+            await renamer.rename_collection(
+                media_list=["ep01.mkv"],
+                bangumi_name="Anime",
+                season=1,
+                method="pn",
+                _hash="hash-collection-fail",
+            )
+
+        renamer.client.client.add_tag.assert_not_awaited()
 
     async def test_skips_deep_files(self, renamer):
         """Files deeper than 2 levels are skipped (not is_ep)."""
