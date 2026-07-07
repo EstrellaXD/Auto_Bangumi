@@ -65,7 +65,8 @@
       "eps": "EPS complete",
       "group_tag": "Add Group Tag",
       "method": "Rename Method",
-      "title": "Manage Setting"
+      "title": "Manage Setting",
+      "track_orphans": "Track Unmatched Torrents"
     },
     "media_player_set": {
       "title": "Media Player Setting",

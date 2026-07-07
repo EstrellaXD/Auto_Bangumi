@@ -138,6 +138,7 @@ export const mockConfig = {
     rename_method: 'pn',
     group_tag: false,
     remove_bad_torrent: false,
+    track_orphans: true,
   },
   log: {
     debug_enable: false,

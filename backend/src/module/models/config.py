@@ -67,6 +67,11 @@ class BangumiManage(BaseModel):
     rename_method: str = Field(default="pn", description="Rename method")
     group_tag: bool = Field(default=False, description="Enable group tag")
     remove_bad_torrent: bool = Field(default=False, description="Remove bad torrent")
+    # 关闭后 refresh_rss 不再把未匹配种子入库（孤儿记录）；代价是这些条目
+    # 每轮会被重新内存匹配（廉价），好处是后补规则能立即接住仍在源里的旧集
+    track_orphans: bool = Field(
+        default=True, description="Persist unmatched (orphan) torrents"
+    )
 
 
 class Log(BaseModel):

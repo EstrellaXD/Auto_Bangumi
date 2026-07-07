@@ -65,7 +65,8 @@
       "eps": "番剧补全",
       "group_tag": "添加组标签",
       "method": "重命名方式",
-      "title": "番剧管理设置"
+      "title": "番剧管理设置",
+      "track_orphans": "记录未匹配种子"
     },
     "media_player_set": {
       "title": "播放器设置",

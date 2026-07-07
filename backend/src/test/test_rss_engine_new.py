@@ -288,6 +288,74 @@ class TestRefreshRss:
         assert len(all_torrents) == 1
         assert all_torrents[0].downloaded is False
 
+    async def test_track_orphans_off_skips_unmatched_persist(
+        self, rss_engine, test_settings
+    ):
+        """关闭 track_orphans 后未匹配种子不再入库；匹配的照常入库。"""
+        test_settings.bangumi_manage.track_orphans = False
+        rss_item = make_rss_item(enabled=True)
+        await rss_engine.db.rss.add(rss_item)
+        bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="")
+        await rss_engine.db.bangumi.add(bangumi)
+
+        matched = Torrent(
+            name="[Sub] Mushoku Tensei - 12 [1080p].mkv",
+            url="https://example.com/ep12.torrent",
+        )
+        unmatched = Torrent(
+            name="[Sub] Unknown Anime - 01 [1080p].mkv",
+            url="https://example.com/unknown.torrent",
+        )
+        with (
+            patch.object(
+                RSSEngine, "_get_torrents", new_callable=AsyncMock
+            ) as mock_get,
+            # conftest 的 mock_settings 补丁的是 module.conf.settings，
+            # 不会重绑 engine 模块内的名字——必须补丁消费方模块
+            patch("module.rss.engine.settings", test_settings),
+        ):
+            mock_get.return_value = [matched, unmatched]
+            client = AsyncMock()
+            client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
+            await rss_engine.refresh_rss(client)
+
+        all_torrents = await rss_engine.db.torrent.search_all()
+        assert len(all_torrents) == 1
+        assert all_torrents[0].bangumi_id is not None
+
+    async def test_track_orphans_on_persists_unmatched(
+        self, rss_engine, test_settings
+    ):
+        """默认开启时行为不变：未匹配种子以 bangumi_id NULL 入库。"""
+        rss_item = make_rss_item(enabled=True)
+        await rss_engine.db.rss.add(rss_item)
+        bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="")
+        await rss_engine.db.bangumi.add(bangumi)
+
+        matched = Torrent(
+            name="[Sub] Mushoku Tensei - 12 [1080p].mkv",
+            url="https://example.com/ep12.torrent",
+        )
+        unmatched = Torrent(
+            name="[Sub] Unknown Anime - 01 [1080p].mkv",
+            url="https://example.com/unknown.torrent",
+        )
+        with (
+            patch.object(
+                RSSEngine, "_get_torrents", new_callable=AsyncMock
+            ) as mock_get,
+            # 同样补丁 engine 的 settings，避免开发机 config_dev.json 干扰
+            patch("module.rss.engine.settings", test_settings),
+        ):
+            mock_get.return_value = [matched, unmatched]
+            client = AsyncMock()
+            client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
+            await rss_engine.refresh_rss(client)
+
+        all_torrents = await rss_engine.db.torrent.search_all()
+        assert len(all_torrents) == 2
+        assert any(t.bangumi_id is None for t in all_torrents)
+
     async def test_refresh_specific_rss_id(self, rss_engine):
         """refresh_rss with rss_id only processes that specific feed."""
         rss1 = make_rss_item(name="Feed 1", url="https://feed1.com/rss")

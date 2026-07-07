@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from urllib.parse import urlparse
 
+from module.conf import settings
 from module.database import Database
 from module.database.bangumi import _groups_are_similar, match_bangumi_in_list
 from module.downloader import AddResult, DownloadClient
@@ -373,9 +374,12 @@ class RSSEngine:
                         )
                         torrent.downloaded = True
             # Add all torrents to database (投递失败的除外，留待重试)
-            await self.db.torrent.add_all(
-                [t for t in new_torrents if id(t) not in failed_ids]
-            )
+            to_persist = [t for t in new_torrents if id(t) not in failed_ids]
+            if not settings.bangumi_manage.track_orphans:
+                # 不记录未匹配种子：它们每轮会被 check_new 重新看到并在内存
+                # 中重新匹配（廉价），后补规则能立即接住仍在源里的旧集
+                to_persist = [t for t in to_persist if t.bangumi_id is not None]
+            await self.db.torrent.add_all(to_persist)
         await self.db.commit()
         return events
 
