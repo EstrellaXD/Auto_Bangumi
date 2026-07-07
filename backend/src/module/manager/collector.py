@@ -27,18 +27,23 @@ class SeasonCollector:
                     link, bangumi.filter.replace(",", "|")
                 )
         async with Database() as db:
+            # bangumi 必须先落库拿到 id：add_torrent 用它打 ab:<id> 标签，
+            # 种子行也要用它关联 bangumi_id——否则种子会被记成孤儿，
+            # track_orphans 开关对这些"已匹配"的种子完全失效。
+            # update() returns False when no existing row matches
+            # bangumi.id (i.e. this is a brand-new bangumi), in which
+            # case it needs to be inserted instead.
+            if bangumi.id is None or not await db.bangumi.update(bangumi):
+                await db.bangumi.add(bangumi)
             if await self.client.add_torrent(torrents, bangumi) is AddResult.ADDED:
                 logger.info(
                     f"Collections of {bangumi.official_title} Season {bangumi.season} completed."
                 )
                 for torrent in torrents:
                     torrent.downloaded = True
+                    torrent.bangumi_id = bangumi.id
                 bangumi.eps_collect = True
-                # update() returns False when no existing row matches
-                # bangumi.id (i.e. this is a brand-new bangumi), in which
-                # case it needs to be inserted instead.
-                if not await db.bangumi.update(bangumi):
-                    await db.bangumi.add(bangumi)
+                await db.bangumi.update(bangumi)
                 await db.torrent.add_all(torrents)
                 return ResponseModel(
                     status=True,
@@ -69,9 +74,10 @@ class SeasonCollector:
                 aggregate=False,
                 parser=parser,
             )
-            result = await engine.download_bangumi(data)
+            # 先落库拿到 id：download_bangumi 里 add_torrent 的 ab:<id>
+            # 标签和种子行的 bangumi_id 关联都依赖它，否则种子被记成孤儿
             await db.bangumi.add(data)
-            return result
+            return await engine.download_bangumi(data)
 
 
 async def eps_complete():

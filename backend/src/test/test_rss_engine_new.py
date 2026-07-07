@@ -600,6 +600,38 @@ class TestRefreshRssRetry:
 
 
 class TestDownloadBangumi:
+    async def test_success_persists_torrents_with_bangumi_id(self, rss_engine):
+        """成功下载后种子行必须关联 bangumi_id，否则会被记成孤儿。"""
+        bangumi = make_bangumi(
+            official_title="Mushoku Tensei",
+            rss_link="https://example.com/rss",
+            filter="",
+        )
+        await rss_engine.db.bangumi.add(bangumi)
+        torrent = Torrent(
+            name="[Sub] Mushoku Tensei - 12 [1080p].mkv",
+            url="https://example.com/ep12.torrent",
+        )
+        with (
+            patch("module.rss.engine.RequestContent") as MockReq,
+            patch("module.rss.engine.DownloadClient") as MockClient,
+        ):
+            req = AsyncMock()
+            req.get_torrents = AsyncMock(return_value=[torrent])
+            MockReq.return_value.__aenter__ = AsyncMock(return_value=req)
+            MockReq.return_value.__aexit__ = AsyncMock(return_value=False)
+            client = AsyncMock()
+            client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
+            MockClient.return_value.__aenter__ = AsyncMock(return_value=client)
+            MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            resp = await rss_engine.download_bangumi(bangumi)
+
+        assert resp.status is True
+        stored = await rss_engine.db.torrent.search_all()
+        assert len(stored) == 1
+        assert stored[0].bangumi_id == bangumi.id
+
     async def test_failed_add_returns_failure_and_does_not_persist(self, rss_engine):
         bangumi = make_bangumi(
             official_title="Mushoku Tensei",
