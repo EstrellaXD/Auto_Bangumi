@@ -117,6 +117,13 @@ export const useSearchStore = defineStore('search', () => {
     openSearch();
   }
 
+  // 输入被清空时停掉进行中的搜索流：空输入框不该继续转圈
+  watch(keyword, (val) => {
+    if (!val.trim()) {
+      closeSearch();
+    }
+  });
+
   return {
     // State
     inputValue: keyword,
