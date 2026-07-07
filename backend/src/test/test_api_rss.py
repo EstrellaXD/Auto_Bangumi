@@ -361,3 +361,61 @@ class TestSubscribe:
             )
 
         assert response.status_code == 200
+
+    _PROVIDERS = {
+        "mikan": {
+            "url": "https://mikanani.me/RSS/Search?searchstr=%s",
+            "parser": "mikan",
+        },
+        "nyaa": {"url": "https://nyaa.si/?page=rss&q=%s", "parser": "tmdb"},
+    }
+
+    def test_subscribe_site_name_maps_to_provider_parser(self, authed_client):
+        """搜索订阅传入站点名（如 nyaa）时应映射为该站点配置的解析器（#1053）。"""
+        resp_model = ResponseModel(
+            status=True, status_code=200, msg_en="Subscribed.", msg_zh="订阅成功。"
+        )
+        with (
+            patch(
+                "module.api.rss.SeasonCollector.subscribe_season",
+                new_callable=AsyncMock,
+                return_value=resp_model,
+            ) as mock_subscribe,
+            patch("module.api.rss.get_provider", return_value=self._PROVIDERS),
+        ):
+            response = authed_client.post(
+                "/api/v1/rss/subscribe",
+                json={
+                    "data": make_bangumi(id=1).model_dump(),
+                    "rss": {"url": "https://nyaa.si/?page=rss&q=x", "parser": "nyaa"},
+                },
+            )
+
+        assert response.status_code == 200
+        assert mock_subscribe.await_args is not None
+        assert mock_subscribe.await_args.kwargs["parser"] == "tmdb"
+
+    def test_subscribe_parser_value_passes_through_unchanged(self, authed_client):
+        """已是解析器类型的值（非站点名）应原样传递。"""
+        resp_model = ResponseModel(
+            status=True, status_code=200, msg_en="Subscribed.", msg_zh="订阅成功。"
+        )
+        with (
+            patch(
+                "module.api.rss.SeasonCollector.subscribe_season",
+                new_callable=AsyncMock,
+                return_value=resp_model,
+            ) as mock_subscribe,
+            patch("module.api.rss.get_provider", return_value=self._PROVIDERS),
+        ):
+            response = authed_client.post(
+                "/api/v1/rss/subscribe",
+                json={
+                    "data": make_bangumi(id=1).model_dump(),
+                    "rss": {"url": "https://example.com/rss", "parser": "tmdb"},
+                },
+            )
+
+        assert response.status_code == 200
+        assert mock_subscribe.await_args is not None
+        assert mock_subscribe.await_args.kwargs["parser"] == "tmdb"

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
+from module.conf.search_provider import get_provider
 from module.database import Database, get_db
 from module.downloader import DownloadClient
 from module.manager import SeasonCollector
@@ -204,5 +205,10 @@ async def download_collection(data: Bangumi):
     "/subscribe", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
 async def subscribe(data: Bangumi, rss: RSSItem):
-    resp = await SeasonCollector.subscribe_season(data, parser=rss.parser)
+    # 搜索订阅时前端传来的是站点名（nyaa/dmhy/mikan），而分析器只认识解析器
+    # 类型 mikan/tmdb（见 rss/analyser.py），站点名会静默跳过 TMDB 补全（#1053）。
+    # 这里按搜索源配置把站点名映射为解析器；已是解析器类型的值原样透传。
+    providers = get_provider()
+    parser = providers[rss.parser]["parser"] if rss.parser in providers else rss.parser
+    resp = await SeasonCollector.subscribe_season(data, parser=parser)
     return u_response(resp)
