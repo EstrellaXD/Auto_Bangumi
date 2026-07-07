@@ -616,6 +616,28 @@ class TestDeliverText:
         assert data["title"] == "标题"
         assert data["desp"] == "正文"
 
+    def test_server_chan_legacy_key_uses_sctapi_endpoint(self):
+        config = ProviderConfig(type="server-chan", enabled=True, token="SCT123abc")
+        provider = ServerChanProvider(config)
+
+        assert provider.notification_url == "https://sctapi.ftqq.com/SCT123abc.send"
+
+    def test_server_chan_sc3_key_uses_ft07_endpoint(self):
+        """Server酱³ 的 sendkey 以 sctp<uid>t 开头，走 push.ft07.com 端点 (#904)。"""
+        config = ProviderConfig(type="server-chan", enabled=True, token="sctp456tXYZ")
+        provider = ServerChanProvider(config)
+
+        assert (
+            provider.notification_url
+            == "https://456.push.ft07.com/send/sctp456tXYZ.send"
+        )
+
+    def test_server_chan_malformed_sctp_key_falls_back_to_legacy(self):
+        config = ProviderConfig(type="server-chan", enabled=True, token="sctpXYZ")
+        provider = ServerChanProvider(config)
+
+        assert provider.notification_url == "https://sctapi.ftqq.com/sctpXYZ.send"
+
     async def test_telegram_deliver_text_posts_combined_text(self):
         config = ProviderConfig(
             type="telegram", enabled=True, token="test_token", chat_id="12345"

@@ -18,6 +18,11 @@ def _tmdb_url() -> str:
     return settings.network.tmdb_base_url.rstrip("/")
 
 
+def _api_key() -> str:
+    # 用户自配 key 优先（#975）；留空回退到内置共享 key。同样读实时值
+    return settings.network.tmdb_api_key or TMDB_API
+
+
 # In-memory cache for TMDB lookups to avoid repeated API calls
 _TMDB_CACHE_MAX = 512
 _tmdb_cache: OrderedDict[str, "TMDBInfo | None"] = OrderedDict()
@@ -59,19 +64,19 @@ LANGUAGE = {"zh": "zh-CN", "jp": "ja-JP", "en": "en-US"}
 
 
 def search_url(e):
-    return f"{_tmdb_url()}/3/search/tv?api_key={TMDB_API}&page=1&query={e}&include_adult=false"
+    return f"{_tmdb_url()}/3/search/tv?api_key={_api_key()}&page=1&query={e}&include_adult=false"
 
 
 def search_movie_url(e):
-    return f"{_tmdb_url()}/3/search/movie?api_key={TMDB_API}&page=1&query={e}&include_adult=false"
+    return f"{_tmdb_url()}/3/search/movie?api_key={_api_key()}&page=1&query={e}&include_adult=false"
 
 
 def info_url(e, key):
-    return f"{_tmdb_url()}/3/tv/{e}?api_key={TMDB_API}&language={LANGUAGE[key]}"
+    return f"{_tmdb_url()}/3/tv/{e}?api_key={_api_key()}&language={LANGUAGE[key]}"
 
 
 def season_url(tv_id, season_number, key):
-    return f"{_tmdb_url()}/3/tv/{tv_id}/season/{season_number}?api_key={TMDB_API}&language={LANGUAGE[key]}"
+    return f"{_tmdb_url()}/3/tv/{tv_id}/season/{season_number}?api_key={_api_key()}&language={LANGUAGE[key]}"
 
 
 async def is_animation(tv_id, language, req: RequestContent) -> bool:

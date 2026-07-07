@@ -113,7 +113,8 @@ class BangumiUpdate(SQLModel):
 class Notification(BaseModel):
     official_title: str = Field(..., alias="official_title", title="番剧名")
     season: int = Field(..., alias="season", title="番剧季度")
-    episode: int = Field(..., alias="episode", title="番剧集数")
+    # int | float：总集篇等半集（12.5）在通知里保留小数 (#667)
+    episode: int | float = Field(..., alias="episode", title="番剧集数")
     poster_path: Optional[str] = Field(None, alias="poster_path", title="番剧海报路径")
 
 

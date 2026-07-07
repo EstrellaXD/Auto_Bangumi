@@ -151,6 +151,11 @@ export const mockConfig = {
     username: '',
     password: '',
   },
+  network: {
+    tmdb_base_url: 'https://api.themoviedb.org',
+    tmdb_api_key: '',
+    bgm_base_url: 'https://api.bgm.tv',
+  },
   notification: {
     enable: false,
     type: 'telegram',

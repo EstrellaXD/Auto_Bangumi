@@ -8,6 +8,7 @@ import ConfigDownload from '@/components/setting/config-download.vue';
 import ConfigManage from '@/components/setting/config-manage.vue';
 import ConfigNotification from '@/components/setting/config-notification.vue';
 import ConfigProxy from '@/components/setting/config-proxy.vue';
+import ConfigNetwork from '@/components/setting/config-network.vue';
 import ConfigSearchProvider from '@/components/setting/config-search-provider.vue';
 import ConfigPlayer from '@/components/setting/config-player.vue';
 import ConfigLlm from '@/components/setting/config-llm.vue';
@@ -105,6 +106,13 @@ const sections: ConfigSection[] = [
     component: ConfigProxy,
     groups: ['proxy'],
     keywords: ['proxy', 'http', 'socks5', 'host', 'port'],
+  },
+  {
+    id: 'network',
+    titleKey: 'config.network_set.title',
+    component: ConfigNetwork,
+    groups: ['network'],
+    keywords: ['network', 'tmdb', 'bangumi', 'bgm', 'mirror', 'api', 'key'],
   },
   {
     id: 'search-provider',

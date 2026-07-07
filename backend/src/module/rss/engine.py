@@ -400,6 +400,9 @@ class RSSEngine:
                         )
                     for torrent in torrents:
                         torrent.downloaded = True
+                        # 关联 bangumi_id，避免已匹配的种子被记成孤儿
+                        if bangumi.id is not None:
+                            torrent.bangumi_id = bangumi.id
                     await self.db.torrent.add_all(torrents)
                     return ResponseModel(
                         status=True,

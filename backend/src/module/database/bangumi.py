@@ -246,16 +246,37 @@ class BangumiDatabase:
         """Get all title patterns for matching (title_raw + all aliases)."""
         return _all_title_patterns(bangumi)
 
-    async def _is_duplicate(self, data: Bangumi) -> bool:
-        """Check if a bangumi rule already exists based on title_raw and group_name."""
-        statement = select(Bangumi).where(
-            and_(
-                Bangumi.title_raw == data.title_raw,
-                Bangumi.group_name == data.group_name,
+    async def find_duplicate(self, data: Bangumi) -> Optional[Bangumi]:
+        """Find an existing bangumi with the same title_raw and group_name.
+
+        Legacy data may contain multiple rows for the same key; return the
+        oldest (lowest id) deterministically and warn instead of raising.
+        """
+        statement = (
+            select(Bangumi)
+            .where(
+                and_(
+                    Bangumi.title_raw == data.title_raw,
+                    Bangumi.group_name == data.group_name,
+                )
             )
+            .order_by(Bangumi.id)  # type: ignore[arg-type]
         )
         result = await self.session.execute(statement)
-        return result.scalar_one_or_none() is not None
+        rows = list(result.scalars().all())
+        if len(rows) > 1:
+            logger.warning(
+                "Multiple bangumi rows share (title_raw=%s, group_name=%s); "
+                "using the oldest (id=%s)",
+                data.title_raw,
+                data.group_name,
+                rows[0].id,
+            )
+        return rows[0] if rows else None
+
+    async def _is_duplicate(self, data: Bangumi) -> bool:
+        """Check if a bangumi rule already exists based on title_raw and group_name."""
+        return await self.find_duplicate(data) is not None
 
     async def add(self, data: Bangumi) -> bool:
         if await self._is_duplicate(data):
@@ -435,6 +456,25 @@ class BangumiDatabase:
             self.session.add(bangumi)
             await self.session.commit()
             logger.debug("Update %s poster_link to %s.", title_raw, poster_link)
+
+    async def restore_one(self, _id: int) -> bool:
+        """取消软删除（重新启用规则）。行不存在或本就未删除时不写库。"""
+        bangumi = await self.session.get(Bangumi, _id)
+        if not bangumi or not bangumi.deleted:
+            return False
+        bangumi.deleted = False
+        self.session.add(bangumi)
+        await self.session.commit()
+        logger.info("Restored disabled bangumi id: %s.", _id)
+        return True
+
+    async def mark_eps_collect(self, _id: int) -> None:
+        """只把 eps_collect 置位，不触碰行内其他字段（offset/filter 等）。"""
+        bangumi = await self.session.get(Bangumi, _id)
+        if bangumi:
+            bangumi.eps_collect = True
+            self.session.add(bangumi)
+            await self.session.commit()
 
     async def delete_one(self, _id: int):
         statement = select(Bangumi).where(Bangumi.id == _id)

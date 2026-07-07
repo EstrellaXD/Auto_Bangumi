@@ -9,8 +9,41 @@ from module.downloader.path import (
     is_ep,
     path_to_bangumi,
     rule_name,
+    sanitize_path_fragment,
 )
 from test.factories import make_bangumi
+
+# ---------------------------------------------------------------------------
+# sanitize_path_fragment
+# ---------------------------------------------------------------------------
+
+
+class TestSanitizePathFragment:
+    def test_replaces_reserved_characters(self):
+        assert sanitize_path_fragment('A<B>C:D"E/F\\G|H?I*J') == "A B C D E F G H I J"
+
+    def test_collapses_whitespace_and_strips_trailing_dots(self):
+        assert sanitize_path_fragment("Name  ...") == "Name"
+
+    def test_preserves_cjk_and_brackets(self):
+        assert (
+            sanitize_path_fragment("[Sub] 孤独摇滚！(2022)") == "[Sub] 孤独摇滚！(2022)"
+        )
+
+    def test_idempotent(self):
+        once = sanitize_path_fragment("Fate/Zero: Part?2")
+        assert sanitize_path_fragment(once) == once
+
+    def test_all_reserved_title_falls_back_in_save_path(self):
+        """全保留字符的标题不能让保存路径坍缩出空目录层。"""
+        bangumi = make_bangumi(official_title="??", year=None)
+        with patch("module.downloader.path.settings") as mock_settings:
+            mock_settings.downloader.path = "/downloads/Bangumi"
+            result = gen_save_path(bangumi)
+
+        assert "//" not in result
+        assert "Unknown Bangumi" in result
+
 
 # ---------------------------------------------------------------------------
 # gen_save_path
@@ -27,6 +60,16 @@ class TestGenSavePath:
 
         assert "My Anime (2024)" in result
         assert "Season 2" in result
+
+    def test_reserved_characters_sanitized_in_folder(self):
+        """标题里的保留字符不能把保存路径拆成多级目录 (#721)。"""
+        bangumi = make_bangumi(official_title="Fate/Zero: Part?2", year="2024")
+        with patch("module.downloader.path.settings") as mock_settings:
+            mock_settings.downloader.path = "/downloads/Bangumi"
+            result = gen_save_path(bangumi)
+
+        assert "Fate Zero Part 2 (2024)" in result
+        assert result.count("/") == 4  # /downloads/Bangumi/<folder>/Season 1
 
     def test_without_year(self):
         """Save path omits year parentheses when year is None."""

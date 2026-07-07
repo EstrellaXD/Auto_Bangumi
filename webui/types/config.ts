@@ -72,6 +72,13 @@ export interface Proxy {
   username: string;
   password: string;
 }
+/** 外部数据源地址与凭据（TMDB / bgm.tv）：镜像与自配 key */
+export interface Network {
+  tmdb_base_url: string;
+  /** 留空回退到内置共享 key */
+  tmdb_api_key: string;
+  bgm_base_url: string;
+}
 /** Notification provider configuration */
 export interface NotificationProviderConfig {
   type: TupleToUnion<NotificationType>;
@@ -157,6 +164,7 @@ export interface Config {
   bangumi_manage: BangumiManage;
   log: Log;
   proxy: Proxy;
+  network: Network;
   notification: Notification;
   llm: LLM;
   /** @deprecated 已被 llm 段取代 */
@@ -202,6 +210,12 @@ export const initConfig: Config = {
     port: 0,
     username: '',
     password: '',
+  },
+  network: {
+    // 与 backend/src/module/models/config.py 的 Network 默认值保持一致
+    tmdb_base_url: 'https://api.themoviedb.org',
+    tmdb_api_key: '',
+    bgm_base_url: 'https://api.bgm.tv',
   },
   notification: {
     enable: false,
