@@ -1,6 +1,10 @@
 <script lang="ts" setup>
 import { Delete, EditTwo, Plus } from '@icon-park/vue-next';
 import { useConfirm } from '@/hooks/useConfirm';
+import {
+  buildNexusPhpSearchUrl,
+  isValidNexusPhpCategoryIds,
+} from '@/utils/nexusphp';
 
 interface SearchProvider {
   name: string;
@@ -32,6 +36,53 @@ const editingIndex = ref<number>(-1);
 // Form state
 const formName = ref('');
 const formUrl = ref('');
+
+// Add-dialog mode: custom URL template, or NexusPHP PT-site preset that
+// builds a torrentrss.php search template from base URL + passkey.
+type AddMode = 'custom' | 'nexusphp';
+const formMode = ref<AddMode>('custom');
+const formBaseUrl = ref('');
+const formPasskey = ref('');
+const formCategoryId = ref('');
+
+const addModeOptions = computed(() => [
+  { label: t('config.search_provider_set.mode_custom'), value: 'custom' },
+  { label: t('config.search_provider_set.mode_nexusphp'), value: 'nexusphp' },
+]);
+
+const categoryIdsValid = computed(() =>
+  isValidNexusPhpCategoryIds(formCategoryId.value)
+);
+
+const builtNexusPhpUrl = computed(() => {
+  if (!formBaseUrl.value.trim() || !formPasskey.value.trim()) return '';
+  if (!categoryIdsValid.value) return '';
+  return buildNexusPhpSearchUrl({
+    baseUrl: formBaseUrl.value,
+    passkey: formPasskey.value,
+    categoryId: formCategoryId.value,
+  });
+});
+
+// 预览里遮住 passkey（存储的 URL 不变——供应商列表本就显示完整 URL）
+const previewNexusPhpUrl = computed(() =>
+  builtNexusPhpUrl.value.replace(
+    /(passkey=)([^&]+)/,
+    (_, prefix: string, key: string) =>
+      `${prefix}${key.length > 4 ? `${key.slice(0, 4)}…` : '…'}`
+  )
+);
+
+const addFormUrl = computed(() =>
+  formMode.value === 'nexusphp' ? builtNexusPhpUrl.value : formUrl.value.trim()
+);
+
+const canAdd = computed(
+  () =>
+    !!formName.value.trim() &&
+    !!addFormUrl.value &&
+    validateUrl(addFormUrl.value)
+);
 
 // Default providers that cannot be deleted
 const defaultProviderNames = ['mikan', 'nyaa', 'dmhy'];
@@ -76,6 +127,10 @@ async function saveProviders() {
 function openAddDialog() {
   formName.value = '';
   formUrl.value = '';
+  formMode.value = 'custom';
+  formBaseUrl.value = '';
+  formPasskey.value = '';
+  formCategoryId.value = '';
   showAddDialog.value = true;
 }
 
@@ -88,7 +143,7 @@ function openEditDialog(provider: SearchProvider, index: number) {
 }
 
 async function handleAdd() {
-  if (!formName.value.trim() || !formUrl.value.trim()) return;
+  if (!canAdd.value) return;
 
   // Check for duplicate name
   if (providers.value.some((p) => p.name === formName.value.trim())) {
@@ -97,13 +152,16 @@ async function handleAdd() {
 
   providers.value.push({
     name: formName.value.trim(),
-    url: formUrl.value.trim(),
+    url: addFormUrl.value,
   });
 
   await saveProviders();
   showAddDialog.value = false;
   formName.value = '';
   formUrl.value = '';
+  formBaseUrl.value = '';
+  formPasskey.value = '';
+  formCategoryId.value = '';
 }
 
 async function handleEdit() {
@@ -226,26 +284,90 @@ function validateUrl(url: string): boolean {
       :title="$t('config.search_provider_set.add_title')"
     >
       <div space-y-16>
+        <ab-segmented
+          v-model:value="formMode"
+          size="sm"
+          :options="addModeOptions"
+          :aria-label="$t('config.search_provider_set.add_title')"
+        />
+
         <ab-field :label="$t('config.search_provider_set.name')">
           <ab-input
             v-model="formName"
-            :placeholder="$t('config.search_provider_set.name_placeholder')"
+            :placeholder="
+              formMode === 'nexusphp'
+                ? $t('config.search_provider_set.name_placeholder_nexusphp')
+                : $t('config.search_provider_set.name_placeholder')
+            "
             :maxlength="32"
           />
         </ab-field>
 
-        <ab-field :label="$t('config.search_provider_set.url')">
-          <ab-input
-            v-model="formUrl"
-            type="text"
-            :placeholder="$t('config.search_provider_set.url_placeholder')"
-            @keyup.enter="handleAdd"
-          />
-        </ab-field>
+        <template v-if="formMode === 'custom'">
+          <ab-field :label="$t('config.search_provider_set.url')">
+            <ab-input
+              v-model="formUrl"
+              type="text"
+              :placeholder="$t('config.search_provider_set.url_placeholder')"
+              @keyup.enter="handleAdd"
+            />
+          </ab-field>
 
-        <div v-if="formUrl && !validateUrl(formUrl)" class="validation-warning">
-          {{ $t('config.search_provider_set.url_missing_placeholder') }}
-        </div>
+          <div
+            v-if="formUrl && !validateUrl(formUrl)"
+            class="validation-warning"
+          >
+            {{ $t('config.search_provider_set.url_missing_placeholder') }}
+          </div>
+        </template>
+
+        <template v-else>
+          <ab-field :label="$t('config.search_provider_set.base_url')">
+            <ab-input
+              v-model="formBaseUrl"
+              type="text"
+              :placeholder="
+                $t('config.search_provider_set.base_url_placeholder')
+              "
+            />
+          </ab-field>
+
+          <ab-field :label="$t('config.search_provider_set.passkey')">
+            <ab-input
+              v-model="formPasskey"
+              type="text"
+              :placeholder="
+                $t('config.search_provider_set.passkey_placeholder')
+              "
+            />
+          </ab-field>
+
+          <ab-field :label="$t('config.search_provider_set.category_id')">
+            <ab-input
+              v-model="formCategoryId"
+              type="text"
+              :placeholder="
+                $t('config.search_provider_set.category_id_placeholder')
+              "
+              @keyup.enter="handleAdd"
+            />
+          </ab-field>
+
+          <div
+            v-if="formCategoryId && !categoryIdsValid"
+            class="validation-warning"
+          >
+            {{ $t('config.search_provider_set.category_id_invalid') }}
+          </div>
+
+          <div class="hint-text">
+            {{ $t('config.search_provider_set.nexusphp_hint') }}
+          </div>
+
+          <div v-if="previewNexusPhpUrl" class="url-preview">
+            {{ previewNexusPhpUrl }}
+          </div>
+        </template>
       </div>
 
       <template #footer>
@@ -255,9 +377,7 @@ function validateUrl(url: string): boolean {
         <ab-button
           size="sm"
           variant="primary"
-          :disabled="
-            !formName.trim() || !formUrl.trim() || !validateUrl(formUrl)
-          "
+          :disabled="!canAdd"
           @click="handleAdd"
         >
           {{ $t('config.apply') }}
@@ -379,6 +499,21 @@ function validateUrl(url: string): boolean {
   font-size: 12px;
   color: var(--color-text-secondary);
   line-height: 1.5;
+}
+
+.url-preview {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+    monospace;
+  padding: 8px 12px;
+  background: var(--color-surface-elevated, #f9fafb);
+  border-radius: 6px;
+  word-break: break-all;
+
+  :root.dark & {
+    background: var(--color-surface-elevated, #1f2937);
+  }
 }
 
 .validation-warning {

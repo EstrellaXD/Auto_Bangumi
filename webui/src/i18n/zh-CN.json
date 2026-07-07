@@ -142,7 +142,18 @@
       "delete_confirm": "确定删除此搜索源？",
       "load_failed": "加载搜索源失败",
       "save_failed": "保存搜索源失败",
-      "save_success": "搜索源已保存"
+      "save_success": "搜索源已保存",
+      "mode_custom": "自定义 URL",
+      "mode_nexusphp": "PT 站点（NexusPHP）",
+      "name_placeholder_nexusphp": "例如：audiences",
+      "base_url": "站点地址",
+      "base_url_placeholder": "https://audiences.me",
+      "passkey": "Passkey",
+      "passkey_placeholder": "站点用户控制面板中的 Passkey",
+      "category_id": "分类 ID（可选）",
+      "category_id_placeholder": "例如：402",
+      "nexusphp_hint": "根据 Passkey 生成 torrentrss.php 搜索模板。注意：原生 NexusPHP 已停用 search 参数、对任何搜索词都返回最新种子，请先在站点上确认 RSS 搜索确实按词过滤。",
+      "category_id_invalid": "分类 ID 必须是数字（多个用逗号分隔）"
     }
   },
   "downloader": {
