@@ -11,7 +11,12 @@ from module.database.bangumi import (
     normalize_save_path,
 )
 from module.downloader import DownloadClient
-from module.downloader.path import check_files, is_ep, path_to_bangumi
+from module.downloader.path import (
+    check_files,
+    is_ep,
+    path_to_bangumi,
+    sanitize_path_fragment,
+)
 from module.models import EpisodeFile, Notification, SubtitleFile
 from module.parser import TitleParser
 
@@ -90,10 +95,14 @@ class Renamer:
         # 否则升级后会触发整库批量重命名，破坏 Plex/Jellyfin 索引与硬链接
         if method == "none" or method == "subtitle_none":
             return file_info.media_path
+        # 标题可能带有 Windows/qB 保留字符（如 "Fate/Zero"），直接拼进
+        # 文件名会被下载器拆成子目录或丢字 (#721)
+        title = sanitize_path_fragment(file_info.title)
+        bangumi_name = sanitize_path_fragment(bangumi_name)
         if file_info.episode_type == "movie":
             # 电影/剧场版：Title (Year).ext，不使用 SxxExx 编号。bangumi_name 由
             # 调用方传入，与 gen_save_path 的文件夹命名保持一致 (Title (Year))
-            base = bangumi_name if "advance" in method else file_info.title
+            base = bangumi_name if "advance" in method else title
             if method.startswith("subtitle_"):
                 assert isinstance(
                     file_info, SubtitleFile
@@ -101,7 +110,7 @@ class Renamer:
                 return f"{base}.{file_info.language}{file_info.suffix}"
             return f"{base}{file_info.suffix}"
         elif method == "pn":
-            return f"{file_info.title} S{season}E{episode}{file_info.suffix}"
+            return f"{title} S{season}E{episode}{file_info.suffix}"
         elif method == "advance":
             return f"{bangumi_name} S{season}E{episode}{file_info.suffix}"
         elif method == "normal":
@@ -111,7 +120,7 @@ class Renamer:
             assert isinstance(
                 file_info, SubtitleFile
             ), "subtitle_pn requires a SubtitleFile"
-            return f"{file_info.title} S{season}E{episode}.{file_info.language}{file_info.suffix}"
+            return f"{title} S{season}E{episode}.{file_info.language}{file_info.suffix}"
         elif method == "subtitle_advance":
             assert isinstance(
                 file_info, SubtitleFile

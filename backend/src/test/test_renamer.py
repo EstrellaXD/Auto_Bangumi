@@ -31,6 +31,25 @@ class TestGenPath:
         result = Renamer.gen_path(ep, "Bangumi Name", method="advance")
         assert result == "Bangumi Name S02E12.mkv"
 
+    def test_pn_reserved_characters_sanitized(self):
+        """标题里的保留字符（/ : ?）不能进入生成的文件名 (#721)。"""
+        ep = EpisodeFile(
+            media_path="old.mkv",
+            title="Anime: Re/Start?",
+            season=1,
+            episode=5,
+            suffix=".mkv",
+        )
+        result = Renamer.gen_path(ep, "Bangumi Name", method="pn")
+        assert result == "Anime Re Start S01E05.mkv"
+
+    def test_advance_reserved_characters_sanitized(self):
+        ep = EpisodeFile(
+            media_path="old.mkv", title="My Anime", season=1, episode=5, suffix=".mkv"
+        )
+        result = Renamer.gen_path(ep, 'Bangumi "X" <Y>', method="advance")
+        assert result == "Bangumi X Y S01E05.mkv"
+
     def test_none_method(self):
         """none method: returns original media_path unchanged."""
         ep = EpisodeFile(

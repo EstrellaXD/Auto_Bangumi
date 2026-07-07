@@ -21,6 +21,21 @@ else:
 _MEDIA_SUFFIXES = frozenset({".mp4", ".mkv"})
 _SUBTITLE_SUFFIXES = frozenset({".ass", ".srt"})
 
+# Windows/qB 保留字符 + 控制字符：出现在路径片段里会被下载器拆成多级
+# 目录或直接丢字（qB 静默截断），必须在拼路径前替换掉 (#721)
+_ILLEGAL_PATH_CHARS_RE = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+
+
+def sanitize_path_fragment(name: str) -> str:
+    """把单个路径片段（文件夹名或文件名，不含分隔符）里的保留字符替换为空格。
+
+    多余空白折叠为单个空格；Windows 不允许目录/文件名以点或空格结尾，
+    一并去掉。幂等：对已合法的名字原样返回。
+    """
+    cleaned = _ILLEGAL_PATH_CHARS_RE.sub(" ", name)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned.rstrip(". ")
+
 
 def check_files(files: list[dict]):
     media_list = []
@@ -72,7 +87,7 @@ def gen_save_path(data: Bangumi | BangumiUpdate):
     specials/OVA/OAD land in "Season 0" (Jellyfin/Plex convention) instead of
     being interleaved with regular episodes.
     """
-    folder = (
+    folder = sanitize_path_fragment(
         f"{data.official_title} ({data.year})" if data.year else data.official_title
     )
     episode_type = getattr(data, "episode_type", "episode")
