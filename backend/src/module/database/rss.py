@@ -93,6 +93,13 @@ class RSSDatabase:
     async def search_id(self, _id: int) -> RSSItem | None:
         return await self.session.get(RSSItem, _id)
 
+    async def search_url(self, url: str) -> RSSItem | None:
+        # url 仅有索引而无唯一约束（去重只在 add() 里做），遗留库可能存在
+        # 重复行，用 first() 而非 scalar_one_or_none() 以免抛 MultipleResultsFound
+        statement = select(RSSItem).where(RSSItem.url == url)
+        result = await self.session.execute(statement)
+        return result.scalars().first()
+
     async def search_all(self) -> list[RSSItem]:
         result = await self.session.execute(select(RSSItem))
         return list(result.scalars().all())

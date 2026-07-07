@@ -1,5 +1,7 @@
 import asyncio
 import logging
+from collections import defaultdict
+from urllib.parse import urlparse
 
 from module.conf import settings
 from module.models import Bangumi, Torrent
@@ -9,6 +11,35 @@ from .base import AddResult, DownloaderClient
 from .path import gen_save_path
 
 logger = logging.getLogger(__name__)
+
+# 同一主机批量抓取 .torrent 文件的请求间隔（#1052）。批量收集整季时并发抓取
+# 会触发 nyaa 等站点的 429 限流；与 rss/engine.py 的 RSS_PER_HOST_DELAY 同思路，
+# 但这里是收集接口内的一次性批量抓取，取 1s 以控制接口延迟（24 集约 +23s）。
+TORRENT_FETCH_PER_HOST_DELAY = 1.0
+
+
+async def _fetch_torrent_files(
+    req: RequestContent, torrents: list[Torrent]
+) -> list[bytes]:
+    """抓取种子文件内容：同主机串行加延时，不同主机并行，失败项丢弃（#1052）。"""
+    by_host: dict[str, list[Torrent]] = defaultdict(list)
+    for t in torrents:
+        by_host[urlparse(t.url).netloc].append(t)
+
+    async def _fetch_host_group(items: list[Torrent]) -> list[bytes]:
+        files: list[bytes] = []
+        for i, t in enumerate(items):
+            if i and TORRENT_FETCH_PER_HOST_DELAY:
+                await asyncio.sleep(TORRENT_FETCH_PER_HOST_DELAY)
+            content = await req.get_content(t.url)
+            if content is not None:
+                files.append(content)
+        return files
+
+    groups = await asyncio.gather(
+        *[_fetch_host_group(items) for items in by_host.values()]
+    )
+    return [f for group in groups for f in group]
 
 
 # ---------------------------------------------------------------------------
@@ -337,11 +368,7 @@ class DownloadClient:
                     torrent_url = [t.url for t in torrent]
                     torrent_file = None
                 else:
-                    torrent_file = await asyncio.gather(
-                        *[req.get_content(t.url) for t in torrent]
-                    )
-                    # Filter out None values (failed fetches)
-                    torrent_file = [f for f in torrent_file if f is not None]
+                    torrent_file = await _fetch_torrent_files(req, torrent)
                     if not torrent_file:
                         logger.warning(
                             f"Failed to fetch torrent files for: {bangumi.official_title}"
