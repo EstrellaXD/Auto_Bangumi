@@ -4,7 +4,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from module.downloader.download_client import AddResult, DownloadClient
+from module.downloader.download_client import (
+    TORRENT_FETCH_PER_HOST_DELAY,
+    AddResult,
+    DownloadClient,
+)
 from module.models import Bangumi, Torrent
 from module.models.config import Config
 from test.factories import make_bangumi, make_torrent
@@ -102,6 +106,94 @@ class TestAddTorrent:
         call_kwargs = mock_qb_client.add_torrents.call_args[1]
         assert call_kwargs["torrent_files"] == b"torrent-file-data"
         assert call_kwargs["torrent_urls"] is None
+
+    async def test_add_torrent_same_host_batch_delays_between_fetches(
+        self, download_client, mock_qb_client
+    ):
+        """同一主机的批量种子下载应串行并在请求间加延时（#1052）。"""
+        torrents = [
+            make_torrent(url=f"https://nyaa.si/download/{i}.torrent")
+            for i in range(1, 4)
+        ]
+        bangumi = make_bangumi()
+
+        with (
+            patch("module.downloader.download_client.RequestContent") as MockReq,
+            patch(
+                "module.downloader.download_client.asyncio.sleep",
+                new_callable=AsyncMock,
+            ) as mock_sleep,
+        ):
+            mock_req = AsyncMock()
+            mock_req.get_content = AsyncMock(return_value=b"data")
+            MockReq.return_value.__aenter__ = AsyncMock(return_value=mock_req)
+            MockReq.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            result = await download_client.add_torrent(torrents, bangumi)
+
+        assert result is AddResult.ADDED
+        assert mock_req.get_content.await_count == 3
+        assert mock_sleep.await_count == 2
+        for call in mock_sleep.await_args_list:
+            assert call.args == (TORRENT_FETCH_PER_HOST_DELAY,)
+        call_kwargs = mock_qb_client.add_torrents.call_args[1]
+        assert len(call_kwargs["torrent_files"]) == 3
+
+    async def test_add_torrent_different_hosts_no_delay(
+        self, download_client, mock_qb_client
+    ):
+        """不同主机之间并行下载，无需延时。"""
+        torrents = [
+            make_torrent(url="https://nyaa.si/download/1.torrent"),
+            make_torrent(url="https://mikanani.me/Download/2.torrent"),
+        ]
+        bangumi = make_bangumi()
+
+        with (
+            patch("module.downloader.download_client.RequestContent") as MockReq,
+            patch(
+                "module.downloader.download_client.asyncio.sleep",
+                new_callable=AsyncMock,
+            ) as mock_sleep,
+        ):
+            mock_req = AsyncMock()
+            mock_req.get_content = AsyncMock(return_value=b"data")
+            MockReq.return_value.__aenter__ = AsyncMock(return_value=mock_req)
+            MockReq.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            result = await download_client.add_torrent(torrents, bangumi)
+
+        assert result is AddResult.ADDED
+        assert mock_req.get_content.await_count == 2
+        mock_sleep.assert_not_awaited()
+
+    async def test_add_torrent_batch_partial_fetch_failure_keeps_successes(
+        self, download_client, mock_qb_client
+    ):
+        """批量下载中个别失败（None）应被过滤，其余照常提交。"""
+        torrents = [
+            make_torrent(url=f"https://nyaa.si/download/{i}.torrent")
+            for i in range(1, 4)
+        ]
+        bangumi = make_bangumi()
+
+        with (
+            patch("module.downloader.download_client.RequestContent") as MockReq,
+            patch(
+                "module.downloader.download_client.asyncio.sleep",
+                new_callable=AsyncMock,
+            ),
+        ):
+            mock_req = AsyncMock()
+            mock_req.get_content = AsyncMock(side_effect=[b"a", None, b"c"])
+            MockReq.return_value.__aenter__ = AsyncMock(return_value=mock_req)
+            MockReq.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            result = await download_client.add_torrent(torrents, bangumi)
+
+        assert result is AddResult.ADDED
+        call_kwargs = mock_qb_client.add_torrents.call_args[1]
+        assert call_kwargs["torrent_files"] == [b"a", b"c"]
 
     async def test_list_magnet_urls(self, download_client, mock_qb_client):
         """List of magnet torrents are joined as list of URLs."""

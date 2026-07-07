@@ -22,6 +22,22 @@ _CONNECTION_LIMITS = httpx.Limits(
     keepalive_expiry=60.0,
 )
 
+# HTTP 429 限流退避（#1052）：无 Retry-After（或非数字形式）时的默认等待，
+# 以及对服务端 Retry-After 的上限保护
+HTTP_429_FALLBACK_DELAY = 10.0
+HTTP_429_MAX_RETRY_AFTER = 60.0
+
+
+def _retry_after_delay(response: httpx.Response) -> float:
+    """从 429 响应解析等待秒数；仅接受数字形式的 Retry-After，日期形式走默认值。"""
+    retry_after = response.headers.get("Retry-After")
+    if retry_after is not None:
+        try:
+            return min(max(float(retry_after), 0.0), HTTP_429_MAX_RETRY_AFTER)
+        except ValueError:
+            pass
+    return HTTP_429_FALLBACK_DELAY
+
 
 def _proxy_config_key() -> str:
     if settings.proxy.enable:
@@ -119,7 +135,18 @@ class RequestURL:
                 return req
             except httpx.HTTPStatusError as e:
                 logger.warning(f"HTTP {e.response.status_code} from {url}")
-                break
+                if e.response.status_code != 429:
+                    break
+                # 429 限流：按 Retry-After 退避后重试（#1052）
+                try_time += 1
+                if try_time >= retry:
+                    break
+                delay = _retry_after_delay(e.response)
+                logger.warning(
+                    f"Rate limited by {url}, retrying in {delay:.0f}s "
+                    f"({try_time}/{retry})"
+                )
+                await asyncio.sleep(delay)
             except httpx.RequestError as e:
                 logger.warning(
                     f"Request error for {url}: {type(e).__name__}. Retry {try_time + 1}/{retry}"
