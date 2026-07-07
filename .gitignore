@@ -221,6 +221,13 @@ test.*
 /backend/config/
 .claude/settings.local.json
 
+# Local runtime data (dev server DB/logs)
+/backend/data/
+
+# Local agent workspace (worktrees, session state) and task notes
+/.claude/
+/tasks/
+
 # Local dev environment (scripts/dev.sh) and design-tool state
 .dev/
 .impeccable/

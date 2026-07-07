@@ -43,6 +43,9 @@ class QbDownloader:
         # 每完成一次真实登录尝试 +1：让排在锁后的并发等待者识别"我等待期间
         # 已有一次登录被凭据拒绝"，从而不再补发自己的 POST。
         self._auth_generation = 0
+        # qB 5.0 把 torrents/pause|resume 改名为 stop|start 且无别名（旧名
+        # 404），4.x 则没有新名。记住哪套命名有效；None = 还没探测过。
+        self._uses_stop_start: bool | None = None
 
     def _url(self, endpoint: str) -> str:
         return f"{self.host}/api/v2/{endpoint}"
@@ -246,14 +249,25 @@ class QbDownloader:
     @qb_connect_failed_wait
     async def torrents_info(self, status_filter, category, tag=None):
         params = {}
-        if status_filter:
+        # qB 5.0 把 filter=paused 改名为 stopped，且未知 filter 值会静默
+        # 退化成 All（返回全部种子）——服务端过滤无法跨版本，改为不带
+        # filter 拉取后按 state 本地过滤。其余值（completed 等）未改名。
+        paused_filter = status_filter in ("paused", "stopped")
+        if status_filter and not paused_filter:
             params["filter"] = status_filter
         if category:
             params["category"] = category
         if tag:
             params["tag"] = tag
         resp = await self._get("torrents/info", params=params)
-        return resp.json()
+        torrents = resp.json()
+        if paused_filter:
+            torrents = [
+                t
+                for t in torrents
+                if t.get("state", "").startswith(("paused", "stopped"))
+            ]
+        return torrents
 
     @qb_connect_failed_wait
     async def torrents_files(self, torrent_hash: str):
@@ -294,13 +308,29 @@ class QbDownloader:
         except (httpx.RequestError, ValueError):
             return False
 
+    @staticmethod
+    def _parse_add_response_json(resp: httpx.Response) -> dict | None:
+        """qB >= 5.2 的 torrents/add 回 JSON 计数；旧版本回 "Ok."/"Fails."。
+        不是该结构（如代理返回的 HTML 错误页）时返回 None，走通用失败路径。
+        """
+        try:
+            data = resp.json()
+        except ValueError:
+            return None
+        if isinstance(data, dict) and "success_count" in data:
+            return data
+        return None
+
     async def add_torrents(
         self, torrent_urls, torrent_files, save_path, category, tags=None
     ):
         data = {
             "savepath": save_path,
             "category": category,
+            # qB 5.0 把 paused 参数改名为 stopped；双方都静默忽略未知参数，
+            # 两个都发才能覆盖所有版本。
             "paused": "false",
+            "stopped": "false",
             "autoTMM": "false",
             "contentLayout": "NoSubfolder",
         }
@@ -337,16 +367,45 @@ class QbDownloader:
                 )
                 if resp.status_code == 200 and resp.text == "Ok.":
                     return AddResult.ADDED
-                if resp.status_code == 200 and resp.text == "Fails.":
-                    # "Fails." 覆盖所有被拒绝的 add（重复、种子损坏、磁力链
-                    # 无法解析……），不能一律当重复——否则损坏种子会被记成
-                    # 已下载、永远不重试。只有能通过 hash 确认任务已存在时
-                    # 才归类为重复，其余按失败抛出让上层重试。
+                if resp.status_code in (200, 202):
+                    # qBittorrent >= 5.2 返回逐种子 JSON 结果：
+                    # {"added_torrent_ids": [...], "failure_count": 0,
+                    #  "pending_count": 0, "success_count": 1}
+                    # URL 形式的 add 是异步下载，qB 回 202 + pending_count>0
+                    # ——已受理即算成功。部分成功也按 ADDED 处理：与旧版
+                    # "Ok."（>=1 成功即 Ok.）和 aria2 客户端的约定一致，
+                    # 否则已投递的种子会被整批记成失败。计数全 0 说明什么
+                    # 都没发生，不算成功。
+                    counts = self._parse_add_response_json(resp)
+                    if counts is not None and (
+                        counts.get("success_count") or counts.get("pending_count")
+                    ):
+                        return AddResult.ADDED
+                    # "Fails."（qB <= 5.1）与 JSON failure_count > 0 都覆盖
+                    # 所有被拒绝的 add（重复、种子损坏、磁力链无法解析……），
+                    # 不能一律当重复——否则损坏种子会被记成已下载、永远不
+                    # 重试。只有能通过 hash 确认任务已存在时才归类为重复，
+                    # 其余按失败抛出让上层重试。
                     if await self._urls_already_added(torrent_urls):
                         return AddResult.DUPLICATE
                     raise ConnectionError(
                         "qBittorrent rejected torrent add "
-                        "(200 'Fails.') and no matching torrent found"
+                        f"({resp.status_code} {resp.text!r}) "
+                        "and no matching torrent found"
+                    )
+                if resp.status_code == 409:
+                    # qBittorrent >= 5.2：全部为重复/失败且无 pending 时回
+                    # 409 Conflict (qbittorrent/qBittorrent#18361)。文件上传
+                    # 是同步解析的，损坏文件走 415（BadData），所以文件的
+                    # 409 就是重复；磁力链尽力用 hash 确认，确认不了的按
+                    # 失败抛出，避免把损坏的 add 记成已下载、永远不重试。
+                    if torrent_files is not None or await self._urls_already_added(
+                        torrent_urls
+                    ):
+                        return AddResult.DUPLICATE
+                    raise ConnectionError(
+                        "qBittorrent rejected torrent add (409 Conflict) "
+                        "and no matching torrent found"
                     )
                 raise ConnectionError(
                     "qBittorrent rejected torrent add: "
@@ -383,7 +442,8 @@ class QbDownloader:
             "torrents/delete",
             data={"hashes": hashes, "deleteFiles": str(delete_files).lower()},
         )
-        if resp.status_code != 200:
+        # qB 5.2 起空响应体统一回 204，不能用 ==200 判定
+        if resp.status_code >= 300:
             logger.error(
                 "Failed to delete torrents %s: HTTP %s",
                 hashes,
@@ -392,17 +452,38 @@ class QbDownloader:
             return False
         return True
 
+    async def _start_stop(
+        self, hashes: str | list[str], modern: str, legacy: str
+    ) -> None:
+        """qB 5.0 把 pause/resume 改名为 stop/start 且无别名（旧名 404），
+        4.x 没有新名。先试上次成功的那套命名（默认新名），404 时换另一套
+        并记住。操作幂等，重发一次无副作用。
+        """
+        data = {"hashes": self._normalize_hashes(hashes)}
+        prefer_modern = self._uses_stop_start is not False
+        first, second = (modern, legacy) if prefer_modern else (legacy, modern)
+        used = first
+        resp = await self._post(f"torrents/{first}", data=data)
+        if resp.status_code == 404:
+            used = second
+            resp = await self._post(f"torrents/{second}", data=data)
+            if resp.status_code != 404:
+                self._uses_stop_start = second == modern
+        else:
+            self._uses_stop_start = first == modern
+        if resp.status_code >= 300:
+            logger.error(
+                "Failed to %s torrents %s: HTTP %s",
+                used,
+                data["hashes"],
+                resp.status_code,
+            )
+
     async def torrents_pause(self, hashes: str | list[str]):
-        await self._post(
-            "torrents/pause",
-            data={"hashes": self._normalize_hashes(hashes)},
-        )
+        await self._start_stop(hashes, "stop", "pause")
 
     async def torrents_resume(self, hashes: str | list[str]):
-        await self._post(
-            "torrents/resume",
-            data={"hashes": self._normalize_hashes(hashes)},
-        )
+        await self._start_stop(hashes, "start", "resume")
 
     async def torrents_rename_file(
         self, torrent_hash, old_path, new_path, verify: bool = True
@@ -415,7 +496,8 @@ class QbDownloader:
             if resp.status_code == 409:
                 logger.debug("Conflict409Error: %s >> %s", old_path, new_path)
                 return False
-            if resp.status_code != 200:
+            # qB 5.2 对成功的 renameFile 回 204（空响应体全局改为 204）
+            if resp.status_code >= 300:
                 return False
 
             if not verify:

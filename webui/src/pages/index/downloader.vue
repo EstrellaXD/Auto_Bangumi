@@ -92,6 +92,9 @@ function stateLabel(state: string): string {
     uploading: t('downloader.state.seeding'),
     pausedDL: t('downloader.state.paused'),
     pausedUP: t('downloader.state.paused'),
+    // qBittorrent 5.0+ 把 paused* 状态改名为 stopped*
+    stoppedDL: t('downloader.state.paused'),
+    stoppedUP: t('downloader.state.paused'),
     stalledDL: t('downloader.state.stalled'),
     stalledUP: t('downloader.state.seeding'),
     queuedDL: t('downloader.state.queued'),
@@ -106,7 +109,7 @@ function stateLabel(state: string): string {
 }
 
 function stateType(state: string): string {
-  if (state.includes('paused')) return 'neutral';
+  if (state.includes('paused') || state.includes('stopped')) return 'neutral';
   if (state === 'downloading' || state === 'forcedDL') return 'success';
   if (state.includes('UP') || state === 'uploading') return 'info';
   if (state === 'error' || state === 'missingFiles') return 'danger';
