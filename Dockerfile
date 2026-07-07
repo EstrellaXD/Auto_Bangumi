@@ -3,7 +3,6 @@
 FROM ghcr.io/astral-sh/uv:0.5-python3.13-alpine AS builder
 
 WORKDIR /app
-ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 
 # Install dependencies (cached layer)

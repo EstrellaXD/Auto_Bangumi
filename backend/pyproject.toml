@@ -24,7 +24,7 @@ dependencies = [
     "sse-starlette>=1.6.5",
     "webauthn>=2.0.0",
     "urllib3>=2.0.3",
-    "mcp[cli]>=1.8.0",
+    "mcp>=1.8.0",
     "anthropic>=0.116.0",
     "google-genai>=2.10.0",
 ]
