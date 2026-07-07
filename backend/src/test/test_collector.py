@@ -61,6 +61,45 @@ class TestCollectSeason:
             assert all(t.bangumi_id == bangumi.id for t in stored)
             assert await db.torrent.count_orphans() == 0
 
+    async def test_duplicate_resolution_preserves_existing_row_fields(self):
+        """解析到已存在行时不能用刚解析的默认值覆盖用户调好的配置。"""
+        existing = make_bangumi(filter="", episode_offset=12)
+        async with Database() as db:
+            assert await db.bangumi.add(existing)
+
+        payload = make_bangumi(filter="", episode_offset=0)  # 同 key，默认 offset
+        client = AsyncMock()
+        client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
+        collector = SeasonCollector(client)
+        with patch(
+            "module.manager.collector.RequestContent",
+            return_value=_req_with_torrents(_make_torrents()),
+        ):
+            resp = await collector.collect_season(payload, "https://example.com/rss")
+
+        assert resp.status is True
+        async with Database() as db:
+            row = await db.bangumi.search_id(existing.id)
+            assert row is not None
+            assert row.episode_offset == 12
+            assert row.eps_collect is True
+
+    async def test_failed_collect_leaves_no_phantom_bangumi(self):
+        """下载器投递失败时不能留下幽灵订阅规则。"""
+        bangumi = make_bangumi(filter="")
+        client = AsyncMock()
+        client.add_torrent = AsyncMock(return_value=AddResult.FAILED)
+        collector = SeasonCollector(client)
+        with patch(
+            "module.manager.collector.RequestContent",
+            return_value=_req_with_torrents(_make_torrents()),
+        ):
+            resp = await collector.collect_season(bangumi, "https://example.com/rss")
+
+        assert resp.status is False
+        async with Database() as db:
+            assert await db.bangumi.search_all() == []
+
     async def test_add_torrent_called_with_persisted_bangumi(self):
         """add_torrent 打 ab:<id> 标签依赖调用时 bangumi.id 已存在。"""
         bangumi = make_bangumi(filter="")
@@ -107,6 +146,31 @@ class TestSubscribeSeason:
             assert len(stored) == 2
             assert all(t.bangumi_id == existing.id for t in stored)
             assert await db.torrent.count_orphans() == 0
+
+    async def test_deleted_duplicate_is_not_linked(self):
+        """已被软删除（禁用）的重复规则对下游查询不可见——不能把新种子挂上去。"""
+        existing = make_bangumi(filter="", deleted=True)
+        async with Database() as db:
+            assert await db.bangumi.add(existing)
+
+        data = make_bangumi(filter="")
+        downloader_client = AsyncMock()
+        downloader_client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
+        with (
+            patch(
+                "module.rss.engine.RequestContent",
+                return_value=_req_with_torrents(_make_torrents()),
+            ),
+            patch(
+                "module.rss.engine.DownloadClient",
+                return_value=_async_ctx(downloader_client),
+            ),
+        ):
+            await SeasonCollector.subscribe_season(data)
+
+        async with Database() as db:
+            stored = await db.torrent.search_all()
+            assert all(t.bangumi_id != existing.id for t in stored)
 
     async def test_torrents_persisted_with_bangumi_id(self):
         data = make_bangumi(filter="")

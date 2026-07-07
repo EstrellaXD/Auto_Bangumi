@@ -10,20 +10,27 @@ from module.searcher import SearchTorrent
 logger = logging.getLogger(__name__)
 
 
-async def _ensure_bangumi_id(db: Database, data: Bangumi) -> None:
+async def _ensure_bangumi_id(db: Database, data: Bangumi) -> bool:
     """确保 ``data.id`` 可用：新番剧插入拿 id，重复番剧解析出已存在行的 id。
 
     ``add()`` 对精确重复（title_raw+group_name）与语义重复（并入别名）都
     返回 False 且不回填 id——不解析已存在行的话，add_torrent 的 ab:<id>
     标签与种子行的 bangumi_id 关联都会丢失，种子被记成孤儿。
+
+    只解析未被软删除的行（禁用规则对下游所有查询都不可见，挂上去等于
+    白挂）；传入的 id 指向已不存在的行时清空，避免种子挂到悬空外键。
+    返回是否插入了新行（调用方据此决定失败时是否回滚删除）。
     """
-    if await db.bangumi.add(data) or data.id is not None:
-        return
+    if await db.bangumi.add(data):
+        return True
     existing = await db.bangumi.find_duplicate(data)
-    if existing is None:
+    if existing is None or existing.deleted:
         existing = await db.bangumi.find_semantic_duplicate(data)
-    if existing is not None:
+    if existing is not None and not existing.deleted:
         data.id = existing.id
+    elif data.id is not None and await db.bangumi.search_id(data.id) is None:
+        data.id = None  # type: ignore[assignment]
+    return False
 
 
 class SeasonCollector:
@@ -50,8 +57,9 @@ class SeasonCollector:
             # bangumi.id (i.e. this is a brand-new bangumi), in which
             # case it needs to be inserted (or resolved to the existing
             # duplicate row) instead.
+            inserted = False
             if bangumi.id is None or not await db.bangumi.update(bangumi):
-                await _ensure_bangumi_id(db, bangumi)
+                inserted = await _ensure_bangumi_id(db, bangumi)
             if await self.client.add_torrent(torrents, bangumi) is AddResult.ADDED:
                 logger.info(
                     f"Collections of {bangumi.official_title} Season {bangumi.season} completed."
@@ -60,7 +68,10 @@ class SeasonCollector:
                     torrent.downloaded = True
                     torrent.bangumi_id = bangumi.id
                 bangumi.eps_collect = True
-                await db.bangumi.update(bangumi)
+                # 只更新 eps_collect 单个字段：解析到已存在行时，整行
+                # update 会用刚解析的默认值覆盖用户调好的 offset/filter
+                if bangumi.id is not None:
+                    await db.bangumi.mark_eps_collect(bangumi.id)
                 await db.torrent.add_all(torrents)
                 return ResponseModel(
                     status=True,
@@ -69,6 +80,10 @@ class SeasonCollector:
                     msg_zh=f"收集 {bangumi.official_title} 第 {bangumi.season} 季完成。",
                 )
             else:
+                if inserted and bangumi.id is not None:
+                    # 收集失败时回滚刚插入的行，不留下幽灵订阅规则
+                    await db.bangumi.delete_one(bangumi.id)
+                    bangumi.id = None  # type: ignore[assignment]
                 logger.warning(
                     f"Already collected {bangumi.official_title} Season {bangumi.season}."
                 )

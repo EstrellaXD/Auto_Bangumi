@@ -11,12 +11,7 @@ from module.database.bangumi import (
     normalize_save_path,
 )
 from module.downloader import DownloadClient
-from module.downloader.path import (
-    check_files,
-    is_ep,
-    path_to_bangumi,
-    sanitize_path_fragment,
-)
+from module.downloader.path import check_files, is_ep, path_to_bangumi
 from module.models import EpisodeFile, Notification, SubtitleFile
 from module.parser import TitleParser
 
@@ -109,10 +104,10 @@ class Renamer:
         # 否则升级后会触发整库批量重命名，破坏 Plex/Jellyfin 索引与硬链接
         if method == "none" or method == "subtitle_none":
             return file_info.media_path
-        # 标题可能带有 Windows/qB 保留字符（如 "Fate/Zero"），直接拼进
-        # 文件名会被下载器拆成子目录或丢字 (#721)
-        title = sanitize_path_fragment(file_info.title)
-        bangumi_name = sanitize_path_fragment(bangumi_name)
+        # 注意：这里的 title/bangumi_name 来自已存在于磁盘上的文件/文件夹名
+        # （单个路径分量，不可能含分隔符），不做保留字符清洗——追加清洗会让
+        # 既有做种库（如含 ":" 的标题）在升级后被整库批量重命名 (#721 评审)
+        title = file_info.title
         if file_info.episode_type == "movie":
             # 电影/剧场版：Title (Year).ext，不使用 SxxExx 编号。bangumi_name 由
             # 调用方传入，与 gen_save_path 的文件夹命名保持一致 (Title (Year))
@@ -145,10 +140,17 @@ class Renamer:
             return file_info.media_path
 
     async def _mark_renamed(self, _hash: str, existing_tags: str | None) -> None:
-        """给处理完成的种子打 ``ab:renamed`` 标签；已带标签时不再调 API。"""
+        """给处理完成的种子打 ``ab:renamed`` 标签；已带标签时不再调 API。
+
+        打标失败绝不能影响重命名主流程（重命名已经成功、通知必须发出、
+        本轮其余种子必须继续处理）——吞掉异常，下一轮会自动补打。
+        """
         if _RENAMED_TAG in (t.strip() for t in (existing_tags or "").split(",")):
             return
-        await self.client.add_tag(_hash, _RENAMED_TAG)
+        try:
+            await self.client.add_tag(_hash, _RENAMED_TAG)
+        except Exception as e:
+            logger.warning("Failed to tag %s as renamed: %s", _hash[:8], e)
 
     async def rename_file(
         self,
@@ -291,6 +293,9 @@ class Renamer:
                             if settings.bangumi_manage.remove_bad_torrent:
                                 await self.client.delete_torrent(_hash)
                                 break
+                else:
+                    # 解析失败的媒体文件不会被重命名——不能算处理完成
+                    all_renamed = False
         # 全部媒体文件就位（含本轮无需改名的情况）才算处理完成；
         # none/normal 直通方法没有"重命名完成"的语义，不打标
         if all_renamed and method not in ("none", "normal"):

@@ -369,7 +369,8 @@ class TestAutoTagTorrents:
             deleted=False,
         )
 
-        # Mock torrents - one untagged, one already tagged
+        # Mock torrents - one untagged, one already tagged, one only carrying
+        # the ab:renamed completion marker (must NOT count as linked)
         mock_download_client.get_torrent_info.return_value = [
             {
                 "hash": "abc123",
@@ -382,6 +383,12 @@ class TestAutoTagTorrents:
                 "name": "[TestGroup] Other Anime - 01.mkv",
                 "save_path": "/downloads/Other Anime/Season 1",
                 "tags": "ab:456",  # Already tagged
+            },
+            {
+                "hash": "ghi789",
+                "name": "[TestGroup] Test Anime - 02.mkv",
+                "save_path": "/downloads/Test Anime/Season 1",
+                "tags": "ab:renamed",  # 处理完成标记 ≠ 已关联番剧
             },
         ]
 
@@ -402,9 +409,13 @@ class TestAutoTagTorrents:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] is True
-        assert data["tagged_count"] == 1
-        # Only the untagged torrent should be tagged
-        mock_download_client.add_tag.assert_called_once_with("abc123", "ab:123")
+        assert data["tagged_count"] == 2
+        # The untagged torrent and the ab:renamed-only torrent get linked;
+        # the ab:456 one is skipped
+        assert mock_download_client.add_tag.call_args_list == [
+            (("abc123", "ab:123"),),
+            (("ghi789", "ab:123"),),
+        ]
 
     def test_auto_tag_no_matches(self, authed_client, mock_download_client):
         """POST /downloader/torrents/tag/auto handles unmatched torrents."""

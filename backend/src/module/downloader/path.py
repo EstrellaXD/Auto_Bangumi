@@ -90,6 +90,10 @@ def gen_save_path(data: Bangumi | BangumiUpdate):
     folder = sanitize_path_fragment(
         f"{data.official_title} ({data.year})" if data.year else data.official_title
     )
+    if not folder:
+        # 标题全由保留字符组成时清洗结果为空——不能让所有这类番剧
+        # 坍缩到同一个 ``…//Season N`` 目录里
+        folder = "Unknown Bangumi"
     episode_type = getattr(data, "episode_type", "episode")
     if episode_type == "movie":
         # 电影/剧场版：Title (Year)/Title (Year).ext，不建 Season 子目录

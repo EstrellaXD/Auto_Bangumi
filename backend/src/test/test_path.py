@@ -34,6 +34,16 @@ class TestSanitizePathFragment:
         once = sanitize_path_fragment("Fate/Zero: Part?2")
         assert sanitize_path_fragment(once) == once
 
+    def test_all_reserved_title_falls_back_in_save_path(self):
+        """全保留字符的标题不能让保存路径坍缩出空目录层。"""
+        bangumi = make_bangumi(official_title="??", year=None)
+        with patch("module.downloader.path.settings") as mock_settings:
+            mock_settings.downloader.path = "/downloads/Bangumi"
+            result = gen_save_path(bangumi)
+
+        assert "//" not in result
+        assert "Unknown Bangumi" in result
+
 
 # ---------------------------------------------------------------------------
 # gen_save_path
