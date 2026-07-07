@@ -41,6 +41,8 @@ declare module 'vue-router/auto/routes' {
   export interface RouteNamedMap {
     'Index': RouteRecordInfo<'Index', '/', Record<never, never>, Record<never, never>>,
     'Bangumi List': RouteRecordInfo<'Bangumi List', '/bangumi', Record<never, never>, Record<never, never>>,
+    'Bangumi Torrents': RouteRecordInfo<'Bangumi Torrents', '/bangumi-torrents/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
+    'Orphan Torrents': RouteRecordInfo<'Orphan Torrents', '/bangumi-torrents/orphans', Record<never, never>, Record<never, never>>,
     'Calendar': RouteRecordInfo<'Calendar', '/calendar', Record<never, never>, Record<never, never>>,
     'Config': RouteRecordInfo<'Config', '/config', Record<never, never>, Record<never, never>>,
     'Downloader': RouteRecordInfo<'Downloader', '/downloader', Record<never, never>, Record<never, never>>,

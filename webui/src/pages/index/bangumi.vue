@@ -23,10 +23,27 @@ const skeletonCount = 8; // Number of skeleton cards to show
 
 const refreshing = ref(false);
 
+// Orphan torrents count for the Others card
+const orphanCount = ref(0);
+
+async function loadOrphanCount() {
+  try {
+    orphanCount.value = await apiBangumi.getOrphanTorrentCount();
+  } catch {
+    orphanCount.value = 0;
+  }
+}
+
+const router = useRouter();
+
+function goToOrphans() {
+  router.push('/bangumi-torrents/orphans');
+}
+
 async function onRefresh() {
   refreshing.value = true;
   try {
-    await getAll();
+    await Promise.all([getAll(), loadOrphanCount()]);
   } finally {
     refreshing.value = false;
   }
@@ -34,6 +51,7 @@ async function onRefresh() {
 
 onActivated(() => {
   getAll();
+  loadOrphanCount();
 });
 
 // Group bangumi by official_title + season
@@ -210,6 +228,25 @@ function groupNeedsReview(group: BangumiGroup): boolean {
               <template v-else>
                 {{ group.rules.length }}
               </template>
+            </div>
+          </div>
+
+          <!-- Others card for orphan torrents -->
+          <div
+            v-if="orphanCount > 0"
+            key="__others__"
+            class="others-card"
+            role="button"
+            tabindex="0"
+            @click="goToOrphans"
+            @keydown.enter="goToOrphans"
+          >
+            <div class="others-poster">
+              <span class="others-icon">?</span>
+              <ab-badge :count="orphanCount" class="others-count" />
+            </div>
+            <div class="others-info">
+              <div class="others-title">{{ $t('homepage.others.title') }}</div>
             </div>
           </div>
         </transition-group>
@@ -400,6 +437,72 @@ function groupNeedsReview(group: BangumiGroup): boolean {
   100% {
     background-position: -200% 0;
   }
+}
+
+// Others card for orphan torrents
+.others-card {
+  width: 150px;
+  cursor: pointer;
+  user-select: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 4px;
+    border-radius: var(--radius-md);
+  }
+}
+
+.others-poster {
+  position: relative;
+  aspect-ratio: 5 / 7;
+  border-radius: var(--radius-md);
+  overflow: visible;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-hover);
+  border: 2px dashed var(--color-border);
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+
+  .others-card:hover &,
+  .others-card:focus-visible & {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+  }
+
+  @include forTouch {
+    .others-card:hover & {
+      transform: none;
+    }
+  }
+}
+
+.others-icon {
+  font-size: 48px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.others-count {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 10;
+}
+
+.others-info {
+  padding: 8px 2px 4px;
+}
+
+.others-title {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bangumi-group-wrapper {

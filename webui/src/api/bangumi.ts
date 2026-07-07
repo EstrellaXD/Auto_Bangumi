@@ -7,6 +7,7 @@ import type {
   OffsetSuggestion,
 } from '#/bangumi';
 import type { ApiSuccess } from '#/api';
+import type { Torrent } from '#/torrent';
 
 export const apiBangumi = {
   /**
@@ -205,6 +206,78 @@ export const apiBangumi = {
     const { data } = await axios.patch<ApiSuccess>(
       `api/v1/bangumi/${bangumiId}/weekday`,
       { weekday }
+    );
+    return data;
+  },
+
+  // ── Torrent management ──
+
+  /**
+   * 获取指定番剧关联的所有种子记录
+   */
+  async getTorrents(bangumiId: number) {
+    const { data } = await axios.get<Torrent[]>(
+      `api/v1/bangumi/${bangumiId}/torrents`
+    );
+    return data;
+  },
+
+  /**
+   * 删除指定番剧关联的所有种子记录
+   */
+  async deleteAllTorrents(bangumiId: number) {
+    const { data } = await axios.delete<ApiSuccess>(
+      `api/v1/bangumi/${bangumiId}/torrents`
+    );
+    return data;
+  },
+
+  /**
+   * 删除指定番剧下的单条种子记录
+   */
+  async deleteTorrent(bangumiId: number, torrentId: number) {
+    const { data } = await axios.delete<ApiSuccess>(
+      `api/v1/bangumi/${bangumiId}/torrents/${torrentId}`
+    );
+    return data;
+  },
+
+  /**
+   * 获取所有孤儿种子（未关联番剧的种子记录）
+   */
+  async getOrphanTorrents() {
+    const { data } = await axios.get<Torrent[]>(
+      'api/v1/bangumi/torrents/orphans'
+    );
+    return data;
+  },
+
+  /**
+   * 获取孤儿种子数量
+   */
+  async getOrphanTorrentCount() {
+    const { data } = await axios.get<number>(
+      'api/v1/bangumi/torrents/orphans/count'
+    );
+    return data;
+  },
+
+  /**
+   * 删除所有孤儿种子
+   */
+  async deleteOrphanTorrents() {
+    const { data } = await axios.delete<ApiSuccess>(
+      'api/v1/bangumi/torrents/orphans'
+    );
+    return data;
+  },
+
+  /**
+   * 删除单条孤儿种子
+   */
+  async deleteOrphanTorrent(torrentId: number) {
+    const { data } = await axios.delete<ApiSuccess>(
+      `api/v1/bangumi/torrents/orphans/${torrentId}`
     );
     return data;
   },
