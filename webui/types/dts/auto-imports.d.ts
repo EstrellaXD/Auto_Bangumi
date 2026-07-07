@@ -24,6 +24,7 @@ declare global {
   const axios: typeof import('../../src/utils/axios')['axios']
   const beforeAll: typeof import('vitest')['beforeAll']
   const beforeEach: typeof import('vitest')['beforeEach']
+  const buildNexusPhpSearchUrl: typeof import('../../src/utils/nexusphp')['buildNexusPhpSearchUrl']
   const chai: typeof import('vitest')['chai']
   const computed: typeof import('vue')['computed']
   const countLogLevels: typeof import('../../src/utils/log-parse')['countLogLevels']

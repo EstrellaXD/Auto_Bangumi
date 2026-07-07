@@ -142,7 +142,17 @@
       "delete_confirm": "确定删除此搜索源？",
       "load_failed": "加载搜索源失败",
       "save_failed": "保存搜索源失败",
-      "save_success": "搜索源已保存"
+      "save_success": "搜索源已保存",
+      "mode_custom": "自定义 URL",
+      "mode_nexusphp": "PT 站点（NexusPHP）",
+      "name_placeholder_nexusphp": "例如：audiences",
+      "base_url": "站点地址",
+      "base_url_placeholder": "https://audiences.me",
+      "passkey": "Passkey",
+      "passkey_placeholder": "站点用户控制面板中的 Passkey",
+      "category_id": "分类 ID（可选）",
+      "category_id_placeholder": "例如：402",
+      "nexusphp_hint": "根据 Passkey 生成 torrentrss.php 搜索模板，适用于 NexusPHP 架构的 PT 站点（如 Audiences.me）。"
     }
   },
   "downloader": {
