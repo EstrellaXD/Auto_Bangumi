@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitepress'
 
-const version = `v3.2`
+const version = `v3.3.2`
 
 // Shared configuration
 const sharedConfig = {
@@ -61,7 +61,13 @@ const zhSidebar = [
       { text: '通知设置', link: '/config/notifier' },
       { text: '番剧管理设置', link: '/config/manager' },
       { text: '代理设置', link: '/config/proxy' },
-      { text: '实验性功能', link: '/config/experimental' },
+      { text: '网络设置', link: '/config/network' },
+      { text: '搜索源设置', link: '/config/search-provider' },
+      { text: '播放器设置', link: '/config/player' },
+      { text: 'LLM 解析器', link: '/config/llm' },
+      { text: 'Passkey 设置', link: '/config/passkey' },
+      { text: '安全设置', link: '/config/security' },
+      { text: '软件更新', link: '/config/update' },
     ],
   },
   {
@@ -91,6 +97,7 @@ const zhSidebar = [
   {
     text: '更新日志',
     items: [
+      { text: '3.3 版本说明', link: '/changelog/3.3' },
       { text: '3.2 版本说明', link: '/changelog/3.2' },
       { text: '3.1 版本说明', link: '/changelog/3.1' },
       { text: '3.0 版本说明', link: '/changelog/3.0' },
@@ -133,7 +140,13 @@ const jaSidebar = [
       { text: '通知設定', link: '/ja/config/notifier' },
       { text: 'アニメ管理設定', link: '/ja/config/manager' },
       { text: 'プロキシ設定', link: '/ja/config/proxy' },
-      { text: '実験的機能', link: '/ja/config/experimental' },
+      { text: 'ネットワーク設定', link: '/ja/config/network' },
+      { text: '検索プロバイダー設定', link: '/ja/config/search-provider' },
+      { text: 'プレイヤー設定', link: '/ja/config/player' },
+      { text: 'LLMパーサー', link: '/ja/config/llm' },
+      { text: 'Passkey設定', link: '/ja/config/passkey' },
+      { text: 'セキュリティ設定', link: '/ja/config/security' },
+      { text: 'ソフトウェア更新', link: '/ja/config/update' },
     ],
   },
   {
@@ -163,6 +176,7 @@ const jaSidebar = [
   {
     text: '更新履歴',
     items: [
+      { text: '3.3 リリースノート', link: '/ja/changelog/3.3' },
       { text: '3.2 リリースノート', link: '/ja/changelog/3.2' },
       { text: '3.1 リリースノート', link: '/ja/changelog/3.1' },
       { text: '3.0 リリースノート', link: '/ja/changelog/3.0' },
@@ -205,7 +219,13 @@ const enSidebar = [
       { text: 'Notification Settings', link: '/en/config/notifier' },
       { text: 'Bangumi Manager', link: '/en/config/manager' },
       { text: 'Proxy Settings', link: '/en/config/proxy' },
-      { text: 'Experimental Features', link: '/en/config/experimental' },
+      { text: 'Network Settings', link: '/en/config/network' },
+      { text: 'Search Providers', link: '/en/config/search-provider' },
+      { text: 'Player Settings', link: '/en/config/player' },
+      { text: 'LLM Parser', link: '/en/config/llm' },
+      { text: 'Passkey Settings', link: '/en/config/passkey' },
+      { text: 'Security Settings', link: '/en/config/security' },
+      { text: 'Software Update', link: '/en/config/update' },
     ],
   },
   {
@@ -235,6 +255,7 @@ const enSidebar = [
   {
     text: 'Changelog',
     items: [
+      { text: '3.3 Release Notes', link: '/en/changelog/3.3' },
       { text: '3.2 Release Notes', link: '/en/changelog/3.2' },
       { text: '3.1 Release Notes', link: '/en/changelog/3.1' },
       { text: '3.0 Release Notes', link: '/en/changelog/3.0' },
@@ -250,6 +271,7 @@ const enSidebar = [
 ]
 
 export default defineConfig({
+  lang: 'zh-CN',
   title: 'AutoBangumi',
   description: '基于 RSS 的全自动番剧下载与整理工具',
   ...sharedConfig,
@@ -258,6 +280,7 @@ export default defineConfig({
     root: {
       label: '简体中文',
       lang: 'zh-CN',
+      link: '/',
       themeConfig: {
         nav: [
           { text: '关于', link: '/home/' },
@@ -294,6 +317,7 @@ export default defineConfig({
       label: 'English',
       lang: 'en-US',
       link: '/en/',
+      description: 'An RSS-based automatic anime downloading and organization tool',
       themeConfig: {
         nav: [
           { text: 'About', link: '/en/home/' },
@@ -310,12 +334,27 @@ export default defineConfig({
           message: `AutoBangumi is released under the MIT License. (latest: ${version})`,
           copyright: 'Copyright © 2021-present @EstrellaXD & AutoBangumi Contributors',
         },
+        docFooter: {
+          prev: 'Previous page',
+          next: 'Next page',
+        },
+        outline: {
+          label: 'On this page',
+        },
+        lastUpdated: {
+          text: 'Last updated',
+        },
+        returnToTopLabel: 'Return to top',
+        sidebarMenuLabel: 'Menu',
+        darkModeSwitchLabel: 'Theme',
+        langMenuLabel: 'Change language',
       },
     },
     ja: {
       label: '日本語',
       lang: 'ja-JP',
       link: '/ja/',
+      description: 'RSSベースの全自動アニメダウンロード・整理ツール',
       themeConfig: {
         nav: [
           { text: '概要', link: '/ja/home/' },

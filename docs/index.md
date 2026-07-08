@@ -18,7 +18,7 @@ hero:
       link: /home/
     - theme: alt
       text: 更新日志
-      link: /changelog/3.2
+      link: /changelog/3.3
 
 features:
   - icon:
@@ -27,8 +27,8 @@ features:
     details: 自动识别并解析番剧 RSS 订阅源。无需手动输入，只需订阅即可自动完成解析、下载和整理。
   - icon:
       src: /image/icons/qbittorrent-logo.svg
-    title: qBittorrent 下载器
-    details: 使用 qBittorrent 下载番剧资源。在 AutoBangumi 中即可管理现有番剧、下载往期番剧以及删除条目。
+    title: qBittorrent / aria2 下载器
+    details: 使用 qBittorrent 或 aria2 下载番剧资源。在 AutoBangumi 中即可管理现有番剧、下载往期番剧以及删除条目。
   - icon:
       src: /image/icons/tmdb-icon.png
     title: TMDB 元数据匹配
@@ -50,6 +50,7 @@ features:
 - [Mikan Project](https://mikanani.me) 提供了如此优秀的番剧资源。
 - [VitePress](https://vitepress.dev) 提供了优秀的文档框架。
 - [qBittorrent](https://www.qbittorrent.org) 提供了优秀的下载器。
+- [aria2](https://aria2.github.io) 提供了优秀的下载器。
 - [Plex](https://www.plex.tv) / [Jellyfin](https://jellyfin.org) 提供了优秀的自托管媒体库。
 - [Infuse](https://firecore.com/infuse) 提供了优雅的视频播放器。
 - [弹弹 Play](https://www.dandanplay.com) 提供了优秀的弹幕播放器。

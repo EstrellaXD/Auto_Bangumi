@@ -2,33 +2,55 @@
 
 ## WebUI 配置
 
-![notification](/image/config/notifier.png){width=500}{class=ab-shadow-card}
+![notification](/image/config/notifier.png){width=700}{class=ab-shadow-card}
 
-<br/>
+![notification provider](/image/config/notifier-provider.png){width=700}{class=ab-shadow-card}
 
-- **启用** 启用通知功能。如果禁用，下方设置将不会生效。
-- **类型** 为通知类型。目前支持：
-  - Telegram
-  - Wecom
-  - Bark
-  - ServerChan
-- **Chat ID** 仅在使用 `telegram` 通知时需要填写。[如何获取 Telegram Bot Chat ID][1]
-- **Wecom**：在 Chat ID 字段填写自定义推送 URL，并在服务端添加[富文本消息][2]类型。[Wecom 配置指南][3]
+通知设置支持多个通知服务。启用总开关后，可以添加、编辑、启用/禁用、删除和测试单个 provider。修改通知设置后，需要点击底部 **保存并重启**。
+
+当前支持的通知服务：
+
+- Telegram
+- Discord
+- Bark
+- Server Chan / Server 酱³
+- WeCom / 企业微信
+- Gotify
+- Pushover
+- Webhook
+
+不同 provider 需要的字段不同：
+
+- Telegram：`Bot Token`、`Chat ID`
+- Discord / WeCom：Webhook URL
+- Bark：Device Key，可选 Server URL
+- Server Chan：SendKey
+- Gotify：Server URL、App Token
+- Pushover：User Key、API Token
+- Webhook：Webhook URL、消息模板
+
+Webhook 模板可以使用 `{{title}}`、`{{season}}`、`{{episode}}`、`{{poster_url}}` 等占位符。非 Webhook provider 会把模板渲染为普通文本。
 
 ## `config.json` 配置选项
 
-配置文件中的对应选项如下：
-
 配置节：`notification`
 
-| 参数    | 说明          | 类型    | WebUI 选项      | 默认值   |
-|---------|---------------|---------|-----------------|----------|
-| enable  | 启用通知      | 布尔值  | 通知            | false    |
-| type    | 通知类型      | 字符串  | 通知类型        | telegram |
-| token   | 通知 Token    | 字符串  | 通知 Token      |          |
-| chat_id | 通知 Chat ID  | 字符串  | 通知 Chat ID    |          |
+| 参数 | 说明 | 类型 | WebUI 选项 | 默认值 |
+| --- | --- | --- | --- | --- |
+| `enable` | 启用通知系统 | 布尔值 | 启用 | `false` |
+| `providers` | 通知服务列表 | 数组 | 通知服务列表 | `[]` |
+| `base_url` | 生成通知海报绝对地址时使用的公开 URL | 字符串 | 暂无 WebUI 项 | `""` |
 
+`providers` 中的单个对象通常包含：
 
-[1]: https://core.telegram.org/bots#6-botfather
-[2]: https://github.com/umbors/wecomchan-alifun
-[3]: https://github.com/easychen/wecomchan
+| 参数 | 说明 |
+| --- | --- |
+| `type` | provider 类型，例如 `telegram`、`discord`、`webhook` |
+| `enabled` | 是否启用该 provider |
+| `token` / `chat_id` | Telegram、Server Chan 等 provider 使用 |
+| `webhook_url` / `url` | Discord、WeCom、Webhook 使用 |
+| `server_url` / `device_key` | Bark、Gotify 使用 |
+| `user_key` / `api_token` | Pushover 使用 |
+| `template` | 自定义通知模板 |
+
+旧版 `type`、`token`、`chat_id` 单 provider 配置仍可读取，启动时会迁移为 `providers` 列表。

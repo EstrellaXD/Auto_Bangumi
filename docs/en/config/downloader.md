@@ -1,56 +1,47 @@
 # Downloader Settings
 
-## WebUI Configuration
+## WebUI
 
-![downloader](/image/config/downloader.png){width=500}{class=ab-shadow-card}
+![downloader](/image/config/downloader.png){width=700}{class=ab-shadow-card}
 
-<br/>
+![downloader type](/image/config/downloader-type.png){width=700}{class=ab-shadow-card}
 
-- **Downloader Type** is the downloader type. Currently only qBittorrent is supported.
-- **Host** is the downloader address. [See below](#downloader-address)
-- **Download path** is the mapped download path for the downloader. [See below](#download-path-issues)
-- **SSL** enables SSL for the downloader connection.
+- **Downloader Type**: `qbittorrent` or `aria2`.
+- **Host**: Web API or RPC address. See [Downloader address](#downloader-address).
+- **Username / Password**: qBittorrent uses WebUI credentials. aria2 ignores username and uses the password field as the RPC secret.
+- **Download Path**: the path as seen by the downloader. See [Download path](#download-path).
+- **SSL**: use HTTPS when connecting to the downloader.
 
-## Common Issues
+After changing downloader settings, click **Save & restart** so the downloader client is recreated.
 
-### Downloader Address
+## Downloader Address
 
-::: warning Note
-Do not use 127.0.0.1 or localhost as the downloader address.
+::: warning
+In Docker Bridge mode, do not use `127.0.0.1` or `localhost` unless the downloader and AutoBangumi share the same network namespace.
 :::
 
-Since AB runs in Docker with **Bridge** mode in the official tutorial, using 127.0.0.1 or localhost will resolve to AB itself, not the downloader.
-- If your qBittorrent also runs in Docker, we recommend using the Docker **gateway address: 172.17.0.1**.
-- If your qBittorrent runs on the host machine, use the host machine's IP address.
+- Downloader in Docker: use a service name on the same Docker network, or a gateway address such as `172.17.0.1:8080`.
+- Downloader on the host: use the host LAN IP.
+- AutoBangumi in Host network mode: `127.0.0.1` can be used.
+- aria2 example: `172.17.0.1:6800`, with the RPC secret in the password field.
 
-If you run AB in **Host** mode, you can use 127.0.0.1 instead of the Docker gateway address.
+## Download Path
 
-::: warning Note
-Macvlan isolates container networks. Without additional bridge configuration, containers cannot access other containers or the host itself.
-:::
+Use the path from the downloader's point of view:
 
-### Download Path Issues
+- Docker: if the downloader sees `/downloads`, use `/downloads/Bangumi`.
+- Linux/macOS: for example `/home/user/downloads/Bangumi`.
+- Windows: for example `D:\Media\Bangumi`.
 
-The path configured in AB is only used to generate the corresponding anime file path. AB itself does not directly manage files at that path.
+## `config.json`
 
-**What should I put for the download path?**
+Section: `downloader`
 
-This parameter just needs to match your **downloader's** configuration:
-- Docker: If qB uses `/downloads`, then set `/downloads/Bangumi`. You can change `Bangumi` to anything.
-- Linux/macOS: If it's `/home/usr/downloads` or `/User/UserName/Downloads`, just append `/Bangumi` at the end.
-- Windows: Change `D:\Media\` to `D:\Media\Bangumi`
-
-## `config.json` Configuration Options
-
-The corresponding options in the configuration file are:
-
-Configuration section: `downloader`
-
-| Parameter | Description          | Type    | WebUI Option          | Default              |
-|-----------|---------------------|---------|----------------------|---------------------|
-| type      | Downloader type     | String  | Downloader type      | qbittorrent         |
-| host      | Downloader address  | String  | Downloader address   | 172.17.0.1:8080     |
-| username  | Downloader username | String  | Downloader username  | admin               |
-| password  | Downloader password | String  | Downloader password  | adminadmin          |
-| path      | Download path       | String  | Download path        | /downloads/Bangumi  |
-| ssl       | Enable SSL          | Boolean | Enable SSL           | false               |
+| Key | Description | Type | WebUI field | Default |
+| --- | --- | --- | --- | --- |
+| `type` | Downloader type | string | Downloader Type | `qbittorrent` |
+| `host` | Downloader address | string | Host | `172.17.0.1:8080` |
+| `username` | Downloader username | string | Username | `admin` |
+| `password` | Downloader password or aria2 RPC secret | string | Password | `adminadmin` |
+| `path` | Download path | string | Download Path | `/downloads/Bangumi` |
+| `ssl` | Enable HTTPS | boolean | SSL | `false` |

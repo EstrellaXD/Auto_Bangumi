@@ -1,56 +1,39 @@
 # ダウンローダー設定
 
-## WebUI設定
+## WebUI
 
-![downloader](/image/config/downloader.png){width=500}{class=ab-shadow-card}
+![downloader](/image/config/downloader.png){width=700}{class=ab-shadow-card}
 
-<br/>
+![downloader type](/image/config/downloader-type.png){width=700}{class=ab-shadow-card}
 
-- **ダウンローダータイプ**はダウンローダーの種類です。現在はqBittorrentのみサポートされています。
-- **ホスト**はダウンローダーのアドレスです。[下記参照](#ダウンローダーアドレス)
-- **ダウンロードパス**はダウンローダーのマッピングされたダウンロードパスです。[下記参照](#ダウンロードパスの問題)
-- **SSL**はダウンローダー接続のSSLを有効にします。
+- **ダウンローダー種類**：`qbittorrent` または `aria2`。
+- **ホスト**：Web APIまたはRPCのアドレスです。
+- **ユーザー名 / パスワード**：qBittorrentはWebUIの認証情報を使います。aria2ではユーザー名は無視され、パスワード欄がRPC secretになります。
+- **ダウンロードパス**：ダウンローダーから見える保存パスです。
+- **SSL**：HTTPSで接続します。
 
-## よくある問題
+変更後は **保存して再起動** をクリックしてください。
 
-### ダウンローダーアドレス
+## アドレスの注意
 
-::: warning 注意
-ダウンローダーアドレスに127.0.0.1またはlocalhostを使用しないでください。
+::: warning
+Docker Bridgeモードでは、ダウンローダーとAutoBangumiが同じネットワーク名前空間にない限り、`127.0.0.1` や `localhost` は使わないでください。
 :::
 
-公式チュートリアルではABは**Bridge**モードのDockerで実行されるため、127.0.0.1またはlocalhostを使用するとダウンローダーではなくAB自体に解決されます。
-- qBittorrentもDockerで実行している場合は、Dockerの**ゲートウェイアドレス：172.17.0.1**の使用を推奨します。
-- qBittorrentがホストマシンで実行されている場合は、ホストマシンのIPアドレスを使用してください。
+- ダウンローダーもDocker内：同じDockerネットワークのサービス名、または `172.17.0.1:8080` などのゲートウェイを使います。
+- ダウンローダーがホスト上：ホストのLAN IPを使います。
+- AutoBangumiがHostネットワーク：`127.0.0.1` を使えます。
+- aria2例：`172.17.0.1:6800`、RPC secretはパスワード欄に入力します。
 
-ABを**Host**モードで実行している場合は、Dockerゲートウェイアドレスの代わりに127.0.0.1を使用できます。
+## `config.json`
 
-::: warning 注意
-Macvlanはコンテナネットワークを分離します。追加のブリッジ設定なしでは、コンテナは他のコンテナやホスト自体にアクセスできません。
-:::
+セクション：`downloader`
 
-### ダウンロードパスの問題
-
-ABで設定されたパスは、対応するアニメファイルパスを生成するためにのみ使用されます。AB自体はそのパスのファイルを直接管理しません。
-
-**ダウンロードパスには何を入力すればよいですか？**
-
-このパラメータは**ダウンローダー**の設定と一致させるだけです：
-- Docker：qBが`/downloads`を使用している場合は、`/downloads/Bangumi`に設定します。`Bangumi`は任意の名前に変更できます。
-- Linux/macOS：`/home/usr/downloads`または`/User/UserName/Downloads`の場合は、末尾に`/Bangumi`を追加するだけです。
-- Windows：`D:\Media\`を`D:\Media\Bangumi`に変更します
-
-## `config.json`設定オプション
-
-設定ファイルの対応するオプションは以下のとおりです：
-
-設定セクション：`downloader`
-
-| パラメータ | 説明               | タイプ   | WebUIオプション        | デフォルト           |
-|-----------|-------------------|---------|----------------------|---------------------|
-| type      | ダウンローダータイプ | 文字列   | ダウンローダータイプ    | qbittorrent         |
-| host      | ダウンローダーアドレス | 文字列   | ダウンローダーアドレス  | 172.17.0.1:8080     |
-| username  | ダウンローダーユーザー名 | 文字列   | ダウンローダーユーザー名 | admin               |
-| password  | ダウンローダーパスワード | 文字列   | ダウンローダーパスワード | adminadmin          |
-| path      | ダウンロードパス     | 文字列   | ダウンロードパス        | /downloads/Bangumi  |
-| ssl       | SSL有効            | ブール値 | SSL有効               | false               |
+| キー | 説明 | 型 | WebUI項目 | 既定値 |
+| --- | --- | --- | --- | --- |
+| `type` | ダウンローダー種類 | 文字列 | ダウンローダー種類 | `qbittorrent` |
+| `host` | ダウンローダーアドレス | 文字列 | ホスト | `172.17.0.1:8080` |
+| `username` | ユーザー名 | 文字列 | ユーザー名 | `admin` |
+| `password` | パスワードまたはaria2 RPC secret | 文字列 | パスワード | `adminadmin` |
+| `path` | ダウンロードパス | 文字列 | ダウンロードパス | `/downloads/Bangumi` |
+| `ssl` | HTTPSを使う | 真偽値 | SSL | `false` |

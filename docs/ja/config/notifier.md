@@ -1,34 +1,34 @@
 # 通知設定
 
-## WebUI設定
+## WebUI
 
-![notification](/image/config/notifier.png){width=500}{class=ab-shadow-card}
+![notification](/image/config/notifier.png){width=700}{class=ab-shadow-card}
 
-<br/>
+![notification provider](/image/config/notifier-provider.png){width=700}{class=ab-shadow-card}
 
-- **有効**は通知を有効にします。無効にすると、以下の設定は効果がありません。
-- **タイプ**は通知タイプです。現在サポートされているもの：
-  - Telegram
-  - Wecom
-  - Bark
-  - ServerChan
-- **Chat ID**は`telegram`通知を使用する場合にのみ入力が必要です。[Telegram Bot Chat IDの取得方法][1]
-- **Wecom**：Chat IDフィールドにカスタムプッシュURLを入力し、サーバー側で[リッチテキストメッセージ][2]タイプを追加します。[Wecom設定ガイド][3]
+通知は複数のproviderに対応しています。全体スイッチを有効にした後、個別providerを追加、編集、有効/無効化、削除、テストできます。変更後は **保存して再起動** をクリックしてください。
 
-## `config.json`設定オプション
+対応provider：
 
-設定ファイルの対応するオプションは以下のとおりです：
+- Telegram
+- Discord
+- Bark
+- Server Chan / Server Chan 3
+- WeCom
+- Gotify
+- Pushover
+- Webhook
 
-設定セクション：`notification`
+Webhookテンプレートでは `{{title}}`、`{{season}}`、`{{episode}}`、`{{poster_url}}` などのプレースホルダーを使えます。
 
-| パラメータ | 説明             | タイプ    | WebUIオプション    | デフォルト |
-|-----------|-----------------|---------|------------------|----------|
-| enable    | 通知有効         | ブール値 | 通知              | false    |
-| type      | 通知タイプ       | 文字列   | 通知タイプ        | telegram |
-| token     | 通知トークン     | 文字列   | 通知トークン       |          |
-| chat_id   | 通知Chat ID     | 文字列   | 通知Chat ID       |          |
+## `config.json`
 
+セクション：`notification`
 
-[1]: https://core.telegram.org/bots#6-botfather
-[2]: https://github.com/umbors/wecomchan-alifun
-[3]: https://github.com/easychen/wecomchan
+| キー | 説明 | 型 | WebUI項目 | 既定値 |
+| --- | --- | --- | --- | --- |
+| `enable` | 通知を有効化 | 真偽値 | 有効化 | `false` |
+| `providers` | 通知provider一覧 | 配列 | provider一覧 | `[]` |
+| `base_url` | ポスターURLを絶対URLにする公開URL | 文字列 | 設定ファイルのみ | `""` |
+
+旧形式の `type`、`token`、`chat_id` は読み込み時に `providers` へ移行されます。
