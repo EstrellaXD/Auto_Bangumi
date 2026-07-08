@@ -49,6 +49,14 @@ class TestNormalize:
         assert result["custom"]["parser"] == "tmdb"
 
 
+class TestDefaultProvider:
+    def test_default_provider_includes_anibt_with_tmdb_parser(self):
+        """anibt is a built-in default provider searched via its RSS feed."""
+        anibt = search_provider_module.DEFAULT_PROVIDER["anibt"]
+        assert anibt["url"] == "https://anibt.net/rss/magnets.xml?q=%s"
+        assert anibt["parser"] == "tmdb"
+
+
 class TestLoadProvider:
     def test_load_provider_backward_compatible_with_legacy_file(
         self, tmp_path, monkeypatch
@@ -73,6 +81,22 @@ class TestLoadProvider:
         result = load_provider()
         assert result == search_provider_module.DEFAULT_PROVIDER
         assert search_provider_module.PROVIDER_PATH.exists()
+
+    def test_load_provider_merges_new_default_sites_into_saved_config(self):
+        """A saved config that predates a newly added built-in provider gains
+        that provider on load, while user-customized entries are kept as-is."""
+        from module.utils import json_config
+
+        json_config.save(
+            search_provider_module.PROVIDER_PATH,
+            {"mikan": {"url": "https://my.mirror/RSS/Search?searchstr=%s"}},
+        )
+
+        result = load_provider()
+
+        assert result["mikan"]["url"] == "https://my.mirror/RSS/Search?searchstr=%s"
+        assert result["anibt"] == search_provider_module.DEFAULT_PROVIDER["anibt"]
+        assert result["nyaa"] == search_provider_module.DEFAULT_PROVIDER["nyaa"]
 
 
 class TestSaveProvider:

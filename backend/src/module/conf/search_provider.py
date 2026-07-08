@@ -18,6 +18,7 @@ def _default_parser(site: str) -> str:
 
 DEFAULT_PROVIDER: dict[str, ProviderConfig] = {
     "mikan": {"url": "https://mikanani.me/RSS/Search?searchstr=%s", "parser": "mikan"},
+    "anibt": {"url": "https://anibt.net/rss/magnets.xml?q=%s", "parser": "tmdb"},
     "nyaa": {"url": "https://nyaa.si/?page=rss&q=%s&c=0_0&f=0", "parser": "tmdb"},
     "dmhy": {"url": "http://dmhy.org/topics/rss/rss.xml?keyword=%s", "parser": "tmdb"},
 }
@@ -41,7 +42,12 @@ def _normalize(raw: dict) -> dict[str, ProviderConfig]:
 
 def load_provider() -> dict[str, ProviderConfig]:
     if PROVIDER_PATH.exists():
-        return _normalize(json_config.load(PROVIDER_PATH))
+        providers = _normalize(json_config.load(PROVIDER_PATH))
+        # 旧配置文件可能缺少后来新增的内置搜索源（如 anibt）：补齐缺失项，
+        # 用户对已有站点的自定义 URL / 解析器保持不变。
+        for site, config in DEFAULT_PROVIDER.items():
+            providers.setdefault(site, config)
+        return providers
     else:
         PROVIDER_PATH.parent.mkdir(parents=True, exist_ok=True)
         json_config.save(PROVIDER_PATH, DEFAULT_PROVIDER)
