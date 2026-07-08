@@ -10,7 +10,11 @@
 </p>
 
 <p align="center">
-  <a href="https://www.autobangumi.org">官方网站</a> | <a href="https://www.autobangumi.org/deploy/quick-start.html">快速开始</a> | <a href="https://www.autobangumi.org/changelog/3.2.html">更新日志</a> | <a href="https://t.me/autobangumi_update">更新推送</a> | <a href="https://t.me/autobangumi">TG 群组</a>
+  简体中文 | <a href="https://www.autobangumi.org/en/">English</a> | <a href="https://www.autobangumi.org/ja/">日本語</a>
+</p>
+
+<p align="center">
+  <a href="https://www.autobangumi.org">官方网站</a> | <a href="https://www.autobangumi.org/deploy/quick-start.html">快速开始</a> | <a href="https://www.autobangumi.org/changelog/3.3.html">更新日志</a> | <a href="https://t.me/autobangumi_update">更新推送</a> | <a href="https://t.me/autobangumi">TG 群组</a>
 </p>
 
 # 项目说明
@@ -63,23 +67,22 @@
 - 无需维护完全无感使用
 - 内置 TMDB 解析器，可以直接生成完整的 TMDB 格式的文件以及番剧信息
 
-### 3.2 新功能
+### 3.3 新功能
 
-- **日历视图**：按播出日期查看订阅番剧，集成 Bangumi.tv 放送时间表
-- **Passkey 无密码登录**：支持 WebAuthn 指纹/面容登录，支持无用户名登录
-- **季度/集数偏移自动检测**：自动识别「虚拟季度」并计算正确的集数偏移
-- **番剧归档**：手动或自动归档已完结番剧，保持列表整洁
-- **搜索源设置面板**：在 UI 中直接管理搜索源，无需编辑配置文件
-- **RSS 连接状态**：实时显示订阅源健康状态，快速定位问题
-- **iOS 风格通知徽章**：直观显示需要关注的订阅
-- **全新 UI 设计**：深色/浅色主题、移动端适配、毛玻璃登录页
-- **性能优化**：并发 RSS 刷新提速 10 倍、并发下载提速 5 倍
+- **程序内更新**：在日志页面检查、应用和回滚更新，并进行 sha256 与 ed25519 签名校验
+- **多供应商 LLM 解析器**：支持 OpenAI 兼容接口、Anthropic Claude、Google Gemini，并提供 fallback / primary 模式
+- **aria2 一等下载器支持**：支持添加、查询、重命名、管理与重复检测，不再只是简单添加任务
+- **剧场版 / OVA / Special 支持**：自动识别电影、OVA、OAD、SP 等类型并按媒体库友好的结构整理
+- **单番发布偏好**：可为单个番剧设置字幕组与分辨率偏好，避免同集多字幕组重复下载
+- **SSE 驱动的 WebUI**：状态、下载器与日志页面改用事件流更新，减少轮询并提升稳定性
+- **安全与架构升级**：全异步后端、加固的认证栈、健康检查和更可靠的数据库迁移
 
 ## [Roadmap](https://github.com/users/EstrellaXD/projects/2)
 
 ***已支持的下载器：***
 
 - qBittorrent
+- aria2
 
 ## Star History
 

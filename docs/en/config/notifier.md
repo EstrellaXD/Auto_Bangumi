@@ -1,34 +1,44 @@
 # Notification Settings
 
-## WebUI Configuration
+## WebUI
 
-![notification](/image/config/notifier.png){width=500}{class=ab-shadow-card}
+![notification](/image/config/notifier.png){width=700}{class=ab-shadow-card}
 
-<br/>
+![notification provider](/image/config/notifier-provider.png){width=700}{class=ab-shadow-card}
 
-- **Enable** enables notifications. If disabled, the settings below will not take effect.
-- **Type** is the notification type. Currently supported:
-  - Telegram
-  - Wecom
-  - Bark
-  - ServerChan
-- **Chat ID** only needs to be filled in when using `telegram` notifications. [How to get Telegram Bot Chat ID][1]
-- **Wecom**: Fill in the custom push URL in the Chat ID field, and add [Rich Text Message][2] type on the server side. [Wecom Configuration Guide][3]
+Notifications now support multiple providers. Enable the global switch, then add, edit, enable/disable, remove or test individual providers. Click **Save & restart** after changing notification settings.
 
-## `config.json` Configuration Options
+Supported providers:
 
-The corresponding options in the configuration file are:
+- Telegram
+- Discord
+- Bark
+- Server Chan / Server Chan 3
+- WeCom
+- Gotify
+- Pushover
+- Webhook
 
-Configuration section: `notification`
+Provider-specific fields include:
 
-| Parameter | Description       | Type    | WebUI Option     | Default  |
-|-----------|------------------|---------|-----------------|----------|
-| enable    | Enable notifications | Boolean | Notifications   | false    |
-| type      | Notification type | String  | Notification type | telegram |
-| token     | Notification token | String | Notification token |         |
-| chat_id   | Notification Chat ID | String | Notification Chat ID |       |
+- Telegram: `Bot Token`, `Chat ID`
+- Discord / WeCom: Webhook URL
+- Bark: Device Key and optional Server URL
+- Server Chan: SendKey
+- Gotify: Server URL and App Token
+- Pushover: User Key and API Token
+- Webhook: Webhook URL and message template
 
+Webhook templates can use placeholders such as `{{title}}`, `{{season}}`, `{{episode}}` and `{{poster_url}}`.
 
-[1]: https://core.telegram.org/bots#6-botfather
-[2]: https://github.com/umbors/wecomchan-alifun
-[3]: https://github.com/easychen/wecomchan
+## `config.json`
+
+Section: `notification`
+
+| Key | Description | Type | WebUI field | Default |
+| --- | --- | --- | --- | --- |
+| `enable` | Enable notifications | boolean | Enable | `false` |
+| `providers` | Notification provider list | array | Provider list | `[]` |
+| `base_url` | Public base URL for absolute poster URLs | string | config only | `""` |
+
+Legacy `type`, `token` and `chat_id` single-provider configs are still read and migrated into `providers`.

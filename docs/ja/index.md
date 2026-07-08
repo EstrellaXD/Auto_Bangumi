@@ -18,7 +18,7 @@ hero:
       link: /ja/home/
     - theme: alt
       text: 更新履歴
-      link: /ja/changelog/3.2
+      link: /ja/changelog/3.3
 
 features:
   - icon:
@@ -27,8 +27,8 @@ features:
     details: アニメのRSS購読を自動的に認識・解析。手動入力不要で、購読するだけで自動的に解析、ダウンロード、整理を完了します。
   - icon:
       src: /image/icons/qbittorrent-logo.svg
-    title: qBittorrentダウンローダー
-    details: qBittorrentを使用してアニメをダウンロード。AutoBangumiで既存のアニメ管理、過去のエピソードのダウンロード、エントリの削除が可能です。
+    title: qBittorrent / aria2 ダウンローダー
+    details: qBittorrentまたはaria2を使用してアニメをダウンロード。AutoBangumiで既存のアニメ管理、過去のエピソードのダウンロード、エントリの削除が可能です。
   - icon:
       src: /image/icons/tmdb-icon.png
     title: TMDBメタデータマッチング
@@ -49,6 +49,7 @@ features:
 - [Mikan Project](https://mikanani.me) - 優れたアニメリソースを提供していただきありがとうございます。
 - [VitePress](https://vitepress.dev) - 優れたドキュメントフレームワークを提供していただきありがとうございます。
 - [qBittorrent](https://www.qbittorrent.org) - 優れたダウンローダーを提供していただきありがとうございます。
+- [aria2](https://aria2.github.io) - 優れたダウンローダーを提供していただきありがとうございます。
 - [Plex](https://www.plex.tv) / [Jellyfin](https://jellyfin.org) - 優れたセルフホストメディアライブラリを提供していただきありがとうございます。
 - [Infuse](https://firecore.com/infuse) - エレガントなビデオプレーヤーを提供していただきありがとうございます。
 - [弾弾 Play](https://www.dandanplay.com) - 優れたコメント付きプレーヤーを提供していただきありがとうございます。

@@ -1,25 +1,28 @@
 # Program Settings
 
-## WebUI Configuration
+## WebUI
 
-![program](/image/config/program.png){width=500}{class=ab-shadow-card}
+![program](/image/config/program.png){width=700}{class=ab-shadow-card}
 
-<br/>
+The Config page has a searchable section rail on the left. `program` and `log` are global settings; after changing them, click **Save & restart** at the bottom.
 
-- Interval Time parameters are in seconds. Convert to seconds if you need to set minutes.
-- RSS is the RSS check interval, which affects how often automatic download rules are generated.
-- Rename is the rename check interval. Modify this if you need to change how often renaming is checked.
-- WebUI Port is the port number. Note that if you're using Docker, you need to remap the port in Docker after changing it.
+- **RSS check interval**: how often AutoBangumi refreshes RSS feeds and creates download tasks, in seconds.
+- **Rename interval**: how often AutoBangumi checks downloader tasks and organizes files, in seconds.
+- **WebUI port**: the backend and WebUI port. In Docker deployments, update the container port mapping as well.
+- **Debug**: enables verbose logs. Disable it after troubleshooting.
 
+## `config.json`
 
-## `config.json` Configuration Options
+Section: `program`
 
-The corresponding options in the configuration file are:
+| Key | Description | Type | WebUI field | Default |
+| --- | --- | --- | --- | --- |
+| `rss_time` | RSS check interval | integer seconds | RSS check interval | `900` |
+| `rename_time` | Rename interval | integer seconds | Rename interval | `60` |
+| `webui_port` | WebUI port | integer | WebUI Port | `7892` |
 
-Configuration section: `program`
+Section: `log`
 
-| Parameter   | Description          | Type            | WebUI Option         | Default |
-|-------------|---------------------|-----------------|---------------------|---------|
-| rss_time    | RSS check interval  | Integer (seconds) | RSS check interval  | 7200    |
-| rename_time | Rename check interval | Integer (seconds) | Rename check interval | 60    |
-| webui_port  | WebUI port          | Integer         | WebUI port          | 7892    |
+| Key | Description | Type | WebUI field | Default |
+| --- | --- | --- | --- | --- |
+| `debug_enable` | Enable debug logs | boolean | Debug | `false` |
