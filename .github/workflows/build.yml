@@ -5,7 +5,6 @@ on:
     types:
       - opened
       - synchronize
-      - closed
     branches:
       - main
       - "3.*-dev"
@@ -82,66 +81,54 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: If release
-        id: release
+        with:
+          fetch-depth: 0
+      # 发布只由手动推送 tag 触发：
+      #   - 稳定版：语义化版本号 tag（如 3.3.2），且必须打在 main 的提交上
+      #   - 预发布：包含 alpha/beta 的 tag（如 3.4.0-beta.1），在 dev 分支上打
+      # 合并 PR 不再触发发布（防止 PR 标题被当作版本号，见 #1065）。
+      - name: Classify trigger
+        id: classify
+        env:
+          TAG: ${{ github.ref_name }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
-          if [[ '${{ github.event_name }}' == 'pull_request' && '${{ github.event.pull_request.head.ref }}' == *'dev'* ]]; then
-            if [ ${{ github.event.pull_request.merged }} == true ]; then
-              echo "release=1" >> $GITHUB_OUTPUT
-            else
-              echo "release=0" >> $GITHUB_OUTPUT
-            fi
-          elif [[ '${{ github.event_name }}' == 'push' && (${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'*) ]]; then
-            echo "release=1" >> $GITHUB_OUTPUT
-          else
-            echo "release=0" >> $GITHUB_OUTPUT
-          fi
-      - name: If dev
-        id: dev
-        run: |
-          if [[ '${{ github.event_name }}' == 'push' && (${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'*) ]]; then
-            echo "dev=1" >> $GITHUB_OUTPUT
-          else
-            echo "dev=0" >> $GITHUB_OUTPUT
-          fi
-      - name: Check version
-        id: version
-        run: |
-          if [ '${{ github.event_name }}' == 'pull_request' ]; then
-            if [ ${{ github.event.pull_request.merged }} == true ]; then
-              # Extract version from PR title (handles "Release X.Y.Z", "vX.Y.Z", or "X.Y.Z")
-              PR_TITLE="${{ github.event.pull_request.title }}"
-              VERSION=$(echo "$PR_TITLE" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1)
-              if [ -n "$VERSION" ]; then
-                echo "version=$VERSION" >> $GITHUB_OUTPUT
+          RELEASE=0
+          DEV=0
+          BUILD_TEST=0
+          VERSION=Test
+          if [[ '${{ github.ref_type }}' == 'tag' ]]; then
+            if [[ "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              if git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+                RELEASE=1
+                VERSION="$TAG"
               else
-                echo "version=$PR_TITLE" >> $GITHUB_OUTPUT
+                echo "::error::Stable tag $TAG does not point to a commit on main; refusing to release"
+                exit 1
               fi
+            elif [[ "$TAG" == *'alpha'* || "$TAG" == *'beta'* ]]; then
+              RELEASE=1
+              DEV=1
+              VERSION="$TAG"
             fi
-          elif [[ ${{ github.event_name }} == 'push' && (${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'*) ]]; then
-            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-          else
-            echo "version=Test" >> $GITHUB_OUTPUT
+          elif [[ '${{ github.event_name }}' == 'pull_request' && "$HEAD_REF" == *'dev'* ]]; then
+            BUILD_TEST=1
           fi
-      - name: If build test
-        id: build_test
-        run: |
-          if [[ '${{ github.event_name }}' == 'pull_request' && '${{ github.event.pull_request.merged }}' != 'true' && '${{ github.event.pull_request.head.ref }}' == *'dev'* ]]; then
-            echo "build_test=1" >> $GITHUB_OUTPUT
-          else
-            echo "build_test=0" >> $GITHUB_OUTPUT
-          fi
+          echo "release=$RELEASE" >> $GITHUB_OUTPUT
+          echo "dev=$DEV" >> $GITHUB_OUTPUT
+          echo "build_test=$BUILD_TEST" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
       - name: Check result
         run: |
-          echo "release: ${{ steps.release.outputs.release }}"
-          echo "dev: ${{ steps.dev.outputs.dev }}"
-          echo "build_test: ${{ steps.build_test.outputs.build_test }}"
-          echo "version: ${{ steps.version.outputs.version }}"
+          echo "release: ${{ steps.classify.outputs.release }}"
+          echo "dev: ${{ steps.classify.outputs.dev }}"
+          echo "build_test: ${{ steps.classify.outputs.build_test }}"
+          echo "version: ${{ steps.classify.outputs.version }}"
     outputs:
-      release: ${{ steps.release.outputs.release }}
-      dev: ${{ steps.dev.outputs.dev }}
-      build_test: ${{ steps.build_test.outputs.build_test }}
-      version: ${{ steps.version.outputs.version }}
+      release: ${{ steps.classify.outputs.release }}
+      dev: ${{ steps.classify.outputs.dev }}
+      build_test: ${{ steps.classify.outputs.build_test }}
+      version: ${{ steps.classify.outputs.version }}
 
   build-webui:
     runs-on: ubuntu-latest
@@ -422,7 +409,7 @@ jobs:
         with:
           tag_name: ${{ needs.version-info.outputs.version }}
           name: ${{ steps.release-info.outputs.version }}
-          body: ${{ github.event.pull_request.body || steps.changelog.outputs.body }}
+          body: ${{ steps.changelog.outputs.body }}
           draft: false
           prerelease: ${{ steps.release-info.outputs.pre_release == 'true' }}
           files: |

@@ -137,7 +137,11 @@ webui/src/
 - Bug fixes → PR to current released version's `-dev` branch
 - New features → PR to next version's `-dev` branch
 
-## Releasing a Beta Version
+## Releasing
+
+All releases are triggered by manually pushing a tag — merging a PR never releases.
+
+### Beta Version
 
 1. Update version in `backend/pyproject.toml`
 2. Update `CHANGELOG.md` with the new version heading
@@ -147,7 +151,17 @@ webui/src/
    git tag 3.2.0-beta.4
    git push origin 3.2.0-beta.4
    ```
-5. The CI/CD workflow (`.github/workflows/build.yml`) detects the tag contains "beta", uses the tag name as the VERSION string, generates `module/__version__.py`, and builds the Docker image
+5. The CI/CD workflow (`.github/workflows/build.yml`) detects the tag contains "beta", uses the tag name as the VERSION string, generates `module/__version__.py`, and builds the Docker image (tagged `<version>` + `dev-latest`)
+
+### Stable Version
+
+1. Merge the dev branch into `main` via PR (this only runs tests and a build test)
+2. Tag the merge commit on `main` with the bare semver version and push:
+   ```bash
+   git tag 3.3.2 <merge-commit-on-main>
+   git push origin 3.3.2
+   ```
+3. CI validates the tag is `X.Y.Z` **and** points to a commit on `main` (refuses otherwise), then builds and pushes Docker images (tagged `<version>` + `latest`) and creates the GitHub release with notes from `docs/changelog/<X.Y>.md`
 
 The VERSION is injected at build time via CI — `module/__version__.py` does not exist in the repo. At runtime, `module/conf/config.py` imports it or falls back to `"DEV_VERSION"`.
 
