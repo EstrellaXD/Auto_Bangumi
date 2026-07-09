@@ -2,6 +2,7 @@ import logging
 
 from module.conf import settings
 from module.database import Database
+from module.database.bangumi import normalize_save_path
 from module.downloader import DownloadClient
 from module.downloader.path import gen_save_path
 from module.downloader.rules import build_rss_rule
@@ -21,10 +22,11 @@ class TorrentManager:
     async def __match_torrents_list(data: Bangumi | BangumiUpdate) -> list:
         async with DownloadClient() as client:
             torrents = await client.get_torrent_info(status_filter=None)
+        target_save_path = normalize_save_path(data.save_path)
         return [
             torrent.get("hash", torrent.get("infohash_v1", ""))
             for torrent in torrents
-            if torrent.get("save_path") == data.save_path
+            if normalize_save_path(torrent.get("save_path")) == target_save_path
         ]
 
     async def delete_torrents(self, data: Bangumi, client: DownloadClient):
