@@ -25,7 +25,7 @@ export interface GroupedBangumi {
 }
 
 export const useSearchStore = defineStore('search', () => {
-  const providers = ref<string[]>(['mikan', 'dmhy', 'nyaa']);
+  const providers = ref<string[]>(['mikan', 'anibt', 'dmhy', 'nyaa']);
 
   const {
     keyword,

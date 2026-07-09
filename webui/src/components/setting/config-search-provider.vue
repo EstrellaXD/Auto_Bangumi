@@ -85,7 +85,7 @@ const canAdd = computed(
 );
 
 // Default providers that cannot be deleted
-const defaultProviderNames = ['mikan', 'nyaa', 'dmhy'];
+const defaultProviderNames = ['mikan', 'anibt', 'nyaa', 'dmhy'];
 
 onMounted(() => {
   loadProviders();
