@@ -1,9 +1,11 @@
-"""Tests for TorrentManager.delete_rule RSS cleanup (#1053).
+"""Tests for TorrentManager rule management.
 
 删除番剧时应停用其独立订阅（aggregate=False）的孤儿 RSS 条目（停用而非删除：
 无法区分搜索订阅与用户手动添加的独立订阅，删除会连带清掉其他番剧的种子
 去重记录）；聚合订阅与仍被其他番剧引用的订阅不受影响。
 """
+
+from unittest.mock import AsyncMock, patch
 
 from module.database import Database
 from module.manager import TorrentManager
@@ -117,3 +119,34 @@ class TestDeleteRuleRSSCleanup:
             await manager.delete_rule(1, file=False)
 
             assert len(await db.torrent.search_rss(rss_item.id)) == 1
+
+
+class TestTorrentMatching:
+    async def test_match_torrents_list_normalizes_save_path_separators(self):
+        """qBittorrent-on-Windows returns backslashes; DB paths may use slashes."""
+        bangumi = make_bangumi(
+            save_path="D:/Downloads/Bangumi/Test Anime (2024)/Season 1"
+        )
+        mock_client = AsyncMock()
+        mock_client.get_torrent_info = AsyncMock(
+            return_value=[
+                {
+                    "hash": "matched",
+                    "save_path": "D:\\Downloads\\Bangumi\\Test Anime (2024)\\Season 1\\",
+                },
+                {
+                    "hash": "other",
+                    "save_path": "D:/Downloads/Bangumi/Other/Season 1",
+                },
+            ]
+        )
+
+        with patch("module.manager.torrent.DownloadClient") as mock_download_client:
+            mock_download_client.return_value.__aenter__ = AsyncMock(
+                return_value=mock_client
+            )
+            mock_download_client.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            hashes = await TorrentManager._TorrentManager__match_torrents_list(bangumi)
+
+        assert hashes == ["matched"]

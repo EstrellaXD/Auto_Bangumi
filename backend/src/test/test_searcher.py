@@ -1,9 +1,12 @@
 """Tests for search providers: URL construction, keyword handling."""
 
+import json
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from module.conf import settings
 from module.models import Bangumi, RSSItem
 from module.searcher.provider import search_url
 
@@ -181,7 +184,9 @@ class TestPosterCache:
     def test_reset_cache_clears_poster_cache(self):
         from module.searcher import searcher as searcher_module
 
-        searcher_module._poster_cache["Test Anime"] = "http://example.com/p.jpg"
+        searcher_module._poster_cache["Test Anime"] = {
+            "zh": (None, "http://example.com/p.jpg")
+        }
         assert len(searcher_module._poster_cache) > 0
 
         searcher_module.reset_cache()
@@ -207,3 +212,53 @@ class TestPosterCache:
         # The oldest entry ("Title 0") was evicted; the rest remain.
         assert "Title 0" not in searcher_module._poster_cache
         assert "Title 3" in searcher_module._poster_cache
+
+
+class TestSearchLocalization:
+    async def test_search_result_uses_configured_tmdb_language(self, monkeypatch):
+        """Interactive search should not fall back to raw-parser zh/en titles for jp."""
+        from module.searcher.searcher import SearchTorrent
+        from test.factories import make_bangumi, make_torrent
+
+        monkeypatch.setattr(settings.rss_parser, "language", "jp")
+        search = SearchTorrent()
+        search.search_torrents = AsyncMock(
+            return_value=[make_torrent(name="[Group] English Raw - 01 [1080p]")]
+        )
+
+        raw_bangumi = make_bangumi(
+            official_title="中文标题",
+            title_raw="English Raw",
+            poster_link=None,
+        )
+        tmdb_info = SimpleNamespace(
+            title="日本語タイトル",
+            poster_link="https://image.tmdb.org/t/p/w780/poster.jpg",
+        )
+
+        with (
+            patch(
+                "module.searcher.searcher.search_url",
+                return_value=RSSItem(
+                    url="https://example.com/rss",
+                    parser="mikan",
+                    aggregate=False,
+                ),
+            ),
+            patch(
+                "module.rss.analyser.TitleParser.raw_parser",
+                new=AsyncMock(return_value=raw_bangumi),
+            ),
+            patch(
+                "module.searcher.searcher.tmdb_parser",
+                new=AsyncMock(return_value=tmdb_info),
+            ) as mock_tmdb_parser,
+        ):
+            results = [
+                json.loads(item)
+                async for item in search.analyse_keyword(["English", "Raw"])
+            ]
+
+        assert results[0]["official_title"] == "日本語タイトル"
+        assert results[0]["poster_link"] == tmdb_info.poster_link
+        mock_tmdb_parser.assert_awaited_once_with("中文标题", "jp", test=True)

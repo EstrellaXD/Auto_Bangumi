@@ -22,6 +22,10 @@ const props = withDefaults(
     /** 隐藏右上角 X（confirm 类弹窗：Esc/遮罩仍可关闭） */
     showClose?: boolean;
     maxHeight?: string;
+    /** 移动端用整屏抽屉承载长表单 */
+    mobileFullscreen?: boolean;
+    /** 移动端软键盘出现时是否把抽屉整体上移 */
+    avoidKeyboard?: boolean;
   }>(),
   {
     title: '',
@@ -29,6 +33,8 @@ const props = withDefaults(
     closable: true,
     showClose: true,
     maxHeight: '85dvh',
+    mobileFullscreen: false,
+    avoidKeyboard: true,
   }
 );
 
@@ -53,6 +59,8 @@ function close() {
     :title="title"
     :closeable="closable"
     :max-height="maxHeight"
+    :fullscreen="mobileFullscreen"
+    :avoid-keyboard="avoidKeyboard"
     @update:show="show = $event"
     @close="emit('close')"
   >

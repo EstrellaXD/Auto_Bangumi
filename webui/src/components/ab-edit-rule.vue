@@ -220,6 +220,8 @@ function emitUnarchive() {
     v-else
     v-model:show="show"
     :title="$t('homepage.rule.edit_rule')"
+    mobile-fullscreen
+    :avoid-keyboard="false"
     @close="close"
   >
     <!-- Needs Review Warning Banner -->

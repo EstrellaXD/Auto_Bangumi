@@ -14,10 +14,14 @@ const props = withDefaults(
     title?: string;
     closeable?: boolean;
     maxHeight?: string;
+    fullscreen?: boolean;
+    avoidKeyboard?: boolean;
   }>(),
   {
     closeable: true,
     maxHeight: '85dvh',
+    fullscreen: false,
+    avoidKeyboard: true,
   }
 );
 
@@ -31,6 +35,9 @@ const dragHandleRef = ref<HTMLElement | null>(null);
 const translateY = ref(0);
 const isDragging = ref(false);
 const keyboardHeight = ref(0);
+const panelMaxHeight = computed(() =>
+  props.fullscreen ? '100dvh' : props.maxHeight
+);
 
 // Handle iOS Safari virtual keyboard using visualViewport API
 function handleViewportResize() {
@@ -44,9 +51,9 @@ function handleViewportResize() {
 
 // Set up visualViewport listeners when sheet is shown
 watch(
-  () => props.show,
-  (isVisible) => {
-    if (isVisible && window.visualViewport) {
+  () => [props.show, props.avoidKeyboard] as const,
+  ([isVisible, shouldAvoidKeyboard]) => {
+    if (isVisible && shouldAvoidKeyboard && window.visualViewport) {
       window.visualViewport.addEventListener('resize', handleViewportResize);
       window.visualViewport.addEventListener('scroll', handleViewportResize);
       handleViewportResize();
@@ -134,7 +141,8 @@ function close() {
           <DialogPanel
             ref="sheetRef"
             class="ab-bottom-sheet__panel"
-            :style="[sheetStyle, { maxHeight }]"
+            :class="{ 'ab-bottom-sheet__panel--fullscreen': fullscreen }"
+            :style="[sheetStyle, { maxHeight: panelMaxHeight }]"
           >
             <!-- Drag handle -->
             <div ref="dragHandleRef" class="ab-bottom-sheet__handle">
@@ -205,6 +213,18 @@ function close() {
     // Fallback for browsers that don't support dvh
     @supports not (max-height: 1dvh) {
       max-height: 85vh;
+    }
+
+    &--fullscreen {
+      height: 100dvh;
+      max-height: 100dvh;
+      border-radius: 0;
+      @include safeAreaTop(padding-top);
+
+      @supports not (height: 1dvh) {
+        height: 100vh;
+        max-height: 100vh;
+      }
     }
   }
 
