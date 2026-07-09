@@ -597,6 +597,36 @@
       "subscribe": "确认订阅"
     }
   },
+  "access": {
+    "title": "用户与访问控制",
+    "users": "用户",
+    "users_hint": "所有启用用户拥有相同权限。",
+    "tokens": "API 令牌",
+    "tokens_hint": "令牌仅以哈希保存，明文只显示一次。",
+    "add_user": "添加用户",
+    "add_token": "创建令牌",
+    "user_created": "用户已创建",
+    "username": "用户名",
+    "password": "密码",
+    "enabled": "已启用",
+    "disabled": "已禁用",
+    "toggle_user": "切换 {username} 状态",
+    "delete": "删除",
+    "delete_user_confirm": "确认删除 {username}？",
+    "token_name": "令牌名称",
+    "token_scope": "作用域",
+    "token_created": "令牌已创建",
+    "token_once": "请立即复制此令牌，之后无法再次显示。",
+    "token_copied": "令牌已复制",
+    "copy": "复制",
+    "revoke": "撤销",
+    "revoke_token_confirm": "确认撤销此令牌？",
+    "last_used": "上次使用",
+    "never": "从未",
+    "no_tokens": "暂无有效令牌",
+    "loading": "加载中…",
+    "create": "创建"
+  },
   "topbar": {
     "add": {
       "aggregate": "聚合 RSS",

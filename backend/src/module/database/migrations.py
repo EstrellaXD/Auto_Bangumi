@@ -17,7 +17,7 @@ from pydantic_core import PydanticUndefined
 from sqlalchemy import Connection, Engine, inspect, text
 from sqlmodel import SQLModel
 
-from module.models import Bangumi, User
+from module.models import ApiToken, AuthSession, Bangumi, User
 from module.models.inbox import InboxMessage
 from module.models.llm_credential import LLMCredential
 from module.models.passkey import Passkey
@@ -35,6 +35,8 @@ TABLE_MODELS: list[type[SQLModel]] = [
     Passkey,
     InboxMessage,
     LLMCredential,
+    AuthSession,
+    ApiToken,
 ]
 
 # already_applied 守卫：接收 inspector，返回该迁移是否已生效
@@ -382,6 +384,94 @@ MIGRATIONS: tuple[Migration, ...] = (
             "ON llmcredential(provider_id)",
         ),
         table_exists("llmcredential"),
+    ),
+    Migration(
+        18,
+        "add multi-user account state and audit columns",
+        (
+            "ALTER TABLE user ADD COLUMN enabled BOOLEAN NOT NULL DEFAULT 1",
+            "ALTER TABLE user ADD COLUMN created_at TIMESTAMP NOT NULL "
+            "DEFAULT '1970-01-01 00:00:00'",
+            "ALTER TABLE user ADD COLUMN updated_at TIMESTAMP NOT NULL "
+            "DEFAULT '1970-01-01 00:00:00'",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_user_username ON user(username)",
+            "CREATE INDEX IF NOT EXISTS ix_user_enabled ON user(enabled)",
+        ),
+        all_checks(
+            column_exists("user", "enabled"),
+            column_exists("user", "created_at"),
+            column_exists("user", "updated_at"),
+            index_exists("user", "ix_user_username"),
+            index_exists("user", "ix_user_enabled"),
+        ),
+        (
+            (
+                "ALTER TABLE user ADD COLUMN enabled BOOLEAN NOT NULL DEFAULT 1",
+                column_exists("user", "enabled"),
+            ),
+            (
+                "ALTER TABLE user ADD COLUMN created_at TIMESTAMP NOT NULL "
+                "DEFAULT '1970-01-01 00:00:00'",
+                column_exists("user", "created_at"),
+            ),
+            (
+                "ALTER TABLE user ADD COLUMN updated_at TIMESTAMP NOT NULL "
+                "DEFAULT '1970-01-01 00:00:00'",
+                column_exists("user", "updated_at"),
+            ),
+            (
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_user_username ON user(username)",
+                index_exists("user", "ix_user_username"),
+            ),
+            (
+                "CREATE INDEX IF NOT EXISTS ix_user_enabled ON user(enabled)",
+                index_exists("user", "ix_user_enabled"),
+            ),
+        ),
+    ),
+    Migration(
+        19,
+        "create persistent sessions and scoped API tokens",
+        (
+            """CREATE TABLE IF NOT EXISTS auth_session (
+                id INTEGER PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES user(id),
+                token_hash VARCHAR(64) NOT NULL UNIQUE,
+                created_at TIMESTAMP NOT NULL,
+                last_seen_at TIMESTAMP NOT NULL,
+                expires_at TIMESTAMP NOT NULL,
+                revoked_at TIMESTAMP
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_auth_session_user_id "
+            "ON auth_session(user_id)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_auth_session_token_hash "
+            "ON auth_session(token_hash)",
+            "CREATE INDEX IF NOT EXISTS ix_auth_session_expires_at "
+            "ON auth_session(expires_at)",
+            "CREATE INDEX IF NOT EXISTS ix_auth_session_revoked_at "
+            "ON auth_session(revoked_at)",
+            """CREATE TABLE IF NOT EXISTS api_token (
+                id INTEGER PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES user(id),
+                name VARCHAR(64) NOT NULL,
+                scope VARCHAR(8) NOT NULL,
+                token_hash VARCHAR(64) NOT NULL UNIQUE,
+                prefix VARCHAR(16) NOT NULL,
+                created_at TIMESTAMP NOT NULL,
+                last_used_at TIMESTAMP,
+                expires_at TIMESTAMP,
+                revoked_at TIMESTAMP
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_api_token_user_id ON api_token(user_id)",
+            "CREATE INDEX IF NOT EXISTS ix_api_token_scope ON api_token(scope)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_api_token_token_hash "
+            "ON api_token(token_hash)",
+            "CREATE INDEX IF NOT EXISTS ix_api_token_expires_at "
+            "ON api_token(expires_at)",
+            "CREATE INDEX IF NOT EXISTS ix_api_token_revoked_at "
+            "ON api_token(revoked_at)",
+        ),
+        all_checks(table_exists("auth_session"), table_exists("api_token")),
     ),
 )
 

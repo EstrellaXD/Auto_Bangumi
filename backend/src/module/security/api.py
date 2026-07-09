@@ -2,10 +2,13 @@ import logging
 import os
 import secrets
 from datetime import datetime, timedelta
+from typing import Annotated
 
 from fastapi import Cookie, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 
+from module.application.auth import AuthenticationService
+from module.composition import auth_service
 from module.conf import settings
 from module.database import Database
 from module.models.user import User, UserUpdate
@@ -88,26 +91,52 @@ def check_login_ip(request: Request):
         )
 
 
-async def get_current_user(request: Request, token: str | None = Cookie(None)):
+def get_auth_service() -> AuthenticationService:
+    return auth_service
+
+
+async def get_current_user(
+    request: Request,
+    token: str | None = Cookie(None),
+    service: Annotated[AuthenticationService | None, Depends(get_auth_service)] = None,
+):
     """FastAPI dependency that validates the current session.
 
     Accepts authentication via (in order of precedence):
     1. DEV_AUTH_BYPASS when ``AB_DEV_NO_AUTH=1`` is set in the environment.
-    2. ``Authorization: Bearer <token>`` header matching ``login_tokens``.
-    3. HttpOnly ``token`` cookie containing a valid JWT with an active session.
+    2. A persisted API token or session in the ``Authorization`` header.
+    3. An HttpOnly cookie containing a persisted session.
+    4. Legacy plaintext config tokens/JWT cookies during the migration window.
     """
     if DEV_AUTH_BYPASS:
         return "dev_user"
-    # Check bearer token bypass
+    service = service or auth_service
+    # Database tokens are authoritative. Plaintext configuration tokens remain
+    # readable for one migration window and are removed after startup import.
     auth_header = request.headers.get("authorization", "")
     if auth_header.startswith("Bearer "):
         api_token = auth_header[7:]
+        user = await service.authenticate_api_token(api_token, scope="api")
+        if user is not None:
+            return user.username
+        user = await service.authenticate_session(api_token)
+        if user is not None:
+            return user.username
         if api_token and any(
             secrets.compare_digest(api_token, t) for t in settings.security.login_tokens
         ):
             return "api_token_user"
     if not token:
         raise UNAUTHORIZED
+    user = await service.authenticate_session(token)
+    if user is not None:
+        return user.username
+
+    # Accept legacy JWT cookies for one compatibility period. New logins no
+    # longer issue JWTs; /auth/refresh_token exchanges one for a DB session.
+    user = await service.authenticate_legacy_jwt(token)
+    if user is not None:
+        return user.username
     payload = verify_token(token)
     username = payload.get("sub") if payload else None
     if not username or username not in active_user:

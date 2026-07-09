@@ -13,13 +13,17 @@ from .program import router as program_router
 from .rss import router as rss_router
 from .search import router as search_router
 from .setup import router as setup_router
+from .tokens import router as tokens_router
 from .update import router as update_router
+from .users import router as users_router
 
 __all__ = "v1"
 
 # API 1.0
 v1 = APIRouter(prefix="/v1")
 v1.include_router(auth_router)
+v1.include_router(users_router)
+v1.include_router(tokens_router)
 v1.include_router(passkey_router)
 v1.include_router(log_router)
 v1.include_router(program_router)

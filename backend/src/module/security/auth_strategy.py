@@ -84,7 +84,7 @@ class PasskeyAuthStrategy(AuthStrategy):
                 select(User).where(User.id == passkey.user_id)
             )
             user = result.scalar_one_or_none()
-            if not user:
+            if not user or not user.enabled:
                 return ResponseModel(
                     status_code=401,
                     status=False,

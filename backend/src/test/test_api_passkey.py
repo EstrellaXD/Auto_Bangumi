@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from module.api import v1
 from module.models import ResponseModel
 from module.models.passkey import Passkey
-from module.security.api import SessionStore, get_current_user
+from module.security.api import get_current_user
 from test.factories import make_passkey
 
 # ---------------------------------------------------------------------------
@@ -344,7 +344,11 @@ class TestAuthVerify:
             with patch(
                 "module.api.passkey.PasskeyAuthStrategy", return_value=mock_strategy
             ):
-                with patch("module.api.passkey.active_user", SessionStore()):
+                service = MagicMock()
+                service.issue_session_for_username = AsyncMock(
+                    return_value="persisted-session"
+                )
+                with patch("module.security.api.auth_service", service):
                     response = unauthed_client.post(
                         "/api/v1/passkey/auth/verify",
                         json={

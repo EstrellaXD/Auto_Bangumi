@@ -4,12 +4,13 @@ Passkey 管理 API
 """
 
 import logging
-from datetime import timedelta
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
 from sqlmodel import select
 
+from module.application.auth import AuthenticationService
 from module.conf import settings
 from module.database.engine import async_session_factory
 from module.database.passkey import PasskeyDatabase
@@ -22,13 +23,13 @@ from module.models.passkey import (
     PasskeyList,
 )
 from module.models.user import User
-from module.security.api import active_user, check_login_ip, get_current_user
+from module.security.api import check_login_ip, get_auth_service, get_current_user
 from module.security.auth_strategy import PasskeyAuthStrategy
-from module.security.jwt import create_access_token
 from module.security.webauthn import get_webauthn_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/passkey", tags=["passkey"])
+AuthService = Annotated[AuthenticationService, Depends(get_auth_service)]
 
 _GENERIC_ERROR = "Internal server error."
 
@@ -233,6 +234,7 @@ async def login_with_passkey(
     auth_data: PasskeyAuthFinish,
     response: Response,
     request: Request,
+    service: AuthService,
 ):
     """
     使用 Passkey 登录（替代密码登录）
@@ -251,9 +253,7 @@ async def login_with_passkey(
         if not username:
             raise HTTPException(status_code=500, detail="Failed to determine username")
 
-        token = create_access_token(
-            data={"sub": username}, expires_delta=timedelta(days=1)
-        )
+        token = await service.issue_session_for_username(username)
         response.set_cookie(
             key="token",
             value=token,
@@ -261,7 +261,6 @@ async def login_with_passkey(
             max_age=86400,
             samesite="strict",
         )
-        active_user.add(username)
         return {"access_token": token, "token_type": "bearer"}
 
     raise HTTPException(status_code=resp.status_code, detail=resp.msg_en)

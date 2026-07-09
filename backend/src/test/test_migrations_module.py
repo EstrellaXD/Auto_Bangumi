@@ -166,6 +166,11 @@ class TestRunMigrations:
         assert "weekday_locked" in bangumi_cols
         assert "offset" not in bangumi_cols
         assert "passkey" in inspector.get_table_names()
+        assert {"enabled", "created_at", "updated_at"} <= _columns(engine, "user")
+        assert "auth_session" in inspector.get_table_names()
+        assert "api_token" in inspector.get_table_names()
+        user_indexes = {ix["name"] for ix in inspector.get_indexes("user")}
+        assert "ix_user_username" in user_indexes
 
     def test_backfills_indexes_on_upgrading_database(self):
         """v13 must create the title_raw/deleted/archived/url/rss_id indexes

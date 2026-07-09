@@ -10,7 +10,7 @@ export type ApiErrorMessage = AuthError | LoginError;
  * 406 Not Acceptable
  * 500 Internal Server Error
  */
-export type StatusCode = 401 | 404 | 406 | 500;
+export type StatusCode = 400 | 401 | 403 | 404 | 406 | 409 | 422 | 500;
 
 export interface ApiError {
   status: StatusCode;

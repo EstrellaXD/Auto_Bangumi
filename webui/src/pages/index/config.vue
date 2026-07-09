@@ -14,6 +14,7 @@ import ConfigPlayer from '@/components/setting/config-player.vue';
 import ConfigLlm from '@/components/setting/config-llm.vue';
 import ConfigPasskey from '@/components/setting/config-passkey.vue';
 import ConfigSecurity from '@/components/setting/config-security.vue';
+import ConfigAccess from '@/components/setting/config-access.vue';
 import UpdateCard from '@/components/setting/update-card.vue';
 
 definePage({
@@ -141,6 +142,13 @@ const sections: ConfigSection[] = [
     component: ConfigPasskey,
     groups: [],
     keywords: ['passkey', 'webauthn', 'login'],
+  },
+  {
+    id: 'access',
+    titleKey: 'access.title',
+    component: ConfigAccess,
+    groups: [],
+    keywords: ['user', 'account', 'token', 'api', 'mcp', 'access'],
   },
   {
     id: 'security',

@@ -7,6 +7,7 @@ from sqlmodel import SQLModel
 from module.models import Bangumi, User
 
 from .aria2 import Aria2GidDatabase
+from .auth import AuthDatabase
 from .bangumi import BangumiDatabase
 from .engine import async_engine, async_session_factory
 from .inbox import InboxDatabase
@@ -45,6 +46,7 @@ class Database:
         self.bangumi = BangumiDatabase(self.session)
         self.user = UserDatabase(self.session)
         self.aria2 = Aria2GidDatabase(self.session)
+        self.auth = AuthDatabase(self.session)
         self.inbox = InboxDatabase(self.session)
         self.llm_credential = LLMCredentialDatabase(self.session)
 

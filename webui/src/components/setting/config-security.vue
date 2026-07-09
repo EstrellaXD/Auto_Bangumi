@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import type { Security } from '#/config';
 import type { SettingItem } from '#/components';
+import { useMyI18n } from '@/hooks/useMyI18n';
+import { useConfigStore } from '@/store/config';
 
 const { t } = useMyI18n();
 const { getSettingGroup } = useConfigStore();
@@ -17,28 +19,11 @@ const items: SettingItem<Security>[] = [
     },
   },
   {
-    configKey: 'login_tokens',
-    label: () => t('config.security_set.login_tokens'),
-    type: 'dynamic-tags',
-    prop: {
-      placeholder: 'your-api-token',
-    },
-    bottomLine: true,
-  },
-  {
     configKey: 'mcp_whitelist',
     label: () => t('config.security_set.mcp_whitelist'),
     type: 'dynamic-tags',
     prop: {
       placeholder: '127.0.0.0/8',
-    },
-  },
-  {
-    configKey: 'mcp_tokens',
-    label: () => t('config.security_set.mcp_tokens'),
-    type: 'dynamic-tags',
-    prop: {
-      placeholder: 'your-mcp-token',
     },
   },
 ];

@@ -597,6 +597,36 @@
       "subscribe": "Subscribe"
     }
   },
+  "access": {
+    "title": "Users & Access",
+    "users": "Users",
+    "users_hint": "All enabled users have the same permissions.",
+    "tokens": "API tokens",
+    "tokens_hint": "Tokens are stored as hashes and shown only once.",
+    "add_user": "Add user",
+    "add_token": "Create token",
+    "user_created": "User created",
+    "username": "Username",
+    "password": "Password",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "toggle_user": "Toggle {username}",
+    "delete": "Delete",
+    "delete_user_confirm": "Delete {username}?",
+    "token_name": "Token name",
+    "token_scope": "Scope",
+    "token_created": "Token created",
+    "token_once": "Copy this token now. It cannot be shown again.",
+    "token_copied": "Token copied",
+    "copy": "Copy",
+    "revoke": "Revoke",
+    "revoke_token_confirm": "Revoke this token?",
+    "last_used": "Last used",
+    "never": "Never",
+    "no_tokens": "No active tokens",
+    "loading": "Loading…",
+    "create": "Create"
+  },
   "topbar": {
     "add": {
       "aggregate": "Aggregate RSS",
