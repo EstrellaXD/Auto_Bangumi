@@ -18,6 +18,7 @@ export interface UserUpdate {
 }
 
 export type TokenScope = 'api' | 'mcp';
+export type ApiTokenStatus = 'active' | 'expired' | 'revoked';
 
 export interface ApiTokenPublic {
   id: number;

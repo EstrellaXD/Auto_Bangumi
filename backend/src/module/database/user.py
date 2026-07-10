@@ -51,8 +51,6 @@ class UserDatabase:
         return list(result.scalars().all())
 
     async def create_user(self, username: str, password: str) -> User:
-        if await self.find_user(username) is not None:
-            raise ValueError("Username already exists")
         user = User(username=username, password=get_password_hash(password))
         self.session.add(user)
         try:
@@ -72,7 +70,9 @@ class UserDatabase:
     async def enabled_count(self) -> int:
         return await self._enabled_count()
 
-    async def update_user_by_id(self, user_id: int, data: UserUpdate) -> User:
+    async def update_user_by_id(
+        self, user_id: int, data: UserUpdate, *, commit: bool = True
+    ) -> User:
         user = await self.session.get(User, user_id)
         if user is None:
             raise ValueError("User not found")
@@ -89,24 +89,36 @@ class UserDatabase:
         user.updated_at = datetime.now(timezone.utc)
         self.session.add(user)
         try:
-            await self.session.commit()
+            if commit:
+                await self.session.commit()
+            else:
+                await self.session.flush()
         except IntegrityError as exc:
-            await self.session.rollback()
+            if commit:
+                await self.session.rollback()
             raise ValueError("Username already exists") from exc
-        await self.session.refresh(user)
+        if commit:
+            await self.session.refresh(user)
         return user
 
-    async def set_enabled(self, user_id: int, enabled: bool) -> User:
-        return await self.update_user_by_id(user_id, UserUpdate(enabled=enabled))
+    async def set_enabled(
+        self, user_id: int, enabled: bool, *, commit: bool = True
+    ) -> User:
+        return await self.update_user_by_id(
+            user_id, UserUpdate(enabled=enabled), commit=commit
+        )
 
-    async def delete_user(self, user_id: int) -> bool:
+    async def delete_user(self, user_id: int, *, commit: bool = True) -> bool:
         user = await self.session.get(User, user_id)
         if user is None:
             return False
         if user.enabled and await self._enabled_count() <= 1:
             raise ValueError("Cannot delete the last enabled user")
         await self.session.delete(user)
-        await self.session.commit()
+        if commit:
+            await self.session.commit()
+        else:
+            await self.session.flush()
         return True
 
     async def auth_user(self, user: User) -> ResponseModel:

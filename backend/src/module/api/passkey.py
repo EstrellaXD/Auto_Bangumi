@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
 from sqlmodel import select
 
-from module.application.auth import AuthenticationService
+from module.application.auth import AuthenticationError, AuthenticationService
 from module.conf import settings
 from module.database.engine import async_session_factory
 from module.database.passkey import PasskeyDatabase
@@ -22,14 +22,20 @@ from module.models.passkey import (
     PasskeyDelete,
     PasskeyList,
 )
-from module.models.user import User
-from module.security.api import check_login_ip, get_auth_service, get_current_user
+from module.models.user import AuthenticationSuccess, User
+from module.security.api import (
+    AuthPrincipal,
+    check_login_ip,
+    get_auth_service,
+    require_session_principal,
+)
 from module.security.auth_strategy import PasskeyAuthStrategy
 from module.security.webauthn import get_webauthn_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/passkey", tags=["passkey"])
 AuthService = Annotated[AuthenticationService, Depends(get_auth_service)]
+SessionPrincipal = Annotated[AuthPrincipal, Depends(require_session_principal)]
 
 _GENERIC_ERROR = "Internal server error."
 
@@ -78,26 +84,22 @@ def _get_webauthn_from_request(request: Request):
 @router.post("/register/options", response_model=dict)
 async def get_registration_options(
     request: Request,
-    username: str = Depends(get_current_user),
+    principal: SessionPrincipal,
 ):
     """
     生成 Passkey 注册选项
     前端调用 navigator.credentials.create() 时使用
     """
     webauthn = _get_webauthn_from_request(request)
+    user = principal.user
+    if user is None:
+        raise HTTPException(status_code=403, detail="A browser session is required")
+    username = principal.username
+    user_id = _require_user_id(user)
 
     async with async_session_factory() as session:
         try:
-            # Get user
-            result = await session.execute(
-                select(User).where(User.username == username)
-            )
-            user = result.scalar_one_or_none()
-            if not user:
-                raise HTTPException(status_code=404, detail="User not found")
-
             # Get existing passkeys
-            user_id = _require_user_id(user)
             passkey_db = PasskeyDatabase(session)
             existing_passkeys = await passkey_db.get_passkeys_by_user_id(user_id)
 
@@ -120,23 +122,20 @@ async def get_registration_options(
 async def verify_registration(
     passkey_data: PasskeyCreate,
     request: Request,
-    username: str = Depends(get_current_user),
+    principal: SessionPrincipal,
 ):
     """
     验证 Passkey 注册响应并保存
     """
     webauthn = _get_webauthn_from_request(request)
+    user = principal.user
+    if user is None:
+        raise HTTPException(status_code=403, detail="A browser session is required")
+    username = principal.username
+    user_id = _require_user_id(user)
 
     async with async_session_factory() as session:
         try:
-            # Get user
-            result = await session.execute(
-                select(User).where(User.username == username)
-            )
-            user = result.scalar_one_or_none()
-            if not user:
-                raise HTTPException(status_code=404, detail="User not found")
-
             # 验证 WebAuthn 响应
             passkey = webauthn.verify_registration(
                 username=username,
@@ -145,7 +144,7 @@ async def verify_registration(
             )
 
             # 设置 user_id 并保存
-            passkey.user_id = user.id
+            passkey.user_id = user_id
             passkey_db = PasskeyDatabase(session)
             await passkey_db.create_passkey(passkey)
 
@@ -235,7 +234,7 @@ async def get_passkey_login_options(
 
 @router.post(
     "/auth/verify",
-    response_model=dict,
+    response_model=AuthenticationSuccess,
     dependencies=[Depends(check_login_ip)],
 )
 async def login_with_passkey(
@@ -256,12 +255,20 @@ async def login_with_passkey(
     resp = await strategy.authenticate(auth_data.username, auth_data.credential)
 
     if resp.status:
-        # Get username from response (may be discovered from credential)
-        username = resp.data.get("username") if resp.data else auth_data.username
-        if not username:
-            raise HTTPException(status_code=500, detail="Failed to determine username")
-
-        token = await service.issue_session_for_username(username)
+        user_id = resp.data.get("user_id") if resp.data else None
+        credential_id = resp.data.get("credential_id") if resp.data else None
+        if type(user_id) is not int or not isinstance(credential_id, str):
+            raise HTTPException(
+                status_code=500, detail="Failed to determine passkey identity"
+            )
+        try:
+            token = await service.issue_session_for_verified_passkey(
+                user_id, credential_id
+            )
+        except AuthenticationError as exc:
+            raise HTTPException(
+                status_code=401, detail="User is not available"
+            ) from exc
         response.set_cookie(
             key="token",
             value=token,
@@ -269,7 +276,7 @@ async def login_with_passkey(
             max_age=86400,
             samesite="strict",
         )
-        return {"access_token": token, "token_type": "bearer"}
+        return AuthenticationSuccess()
 
     raise HTTPException(status_code=resp.status_code, detail=resp.msg_en)
 
@@ -278,18 +285,13 @@ async def login_with_passkey(
 
 
 @router.get("/list", response_model=list[PasskeyList])
-async def list_passkeys(username: str = Depends(get_current_user)):
+async def list_passkeys(principal: SessionPrincipal):
     """获取用户的所有 Passkey"""
+    user = principal.user
+    if user is None:
+        raise HTTPException(status_code=403, detail="A browser session is required")
     async with async_session_factory() as session:
         try:
-            # Get user
-            result = await session.execute(
-                select(User).where(User.username == username)
-            )
-            user = result.scalar_one_or_none()
-            if not user:
-                raise HTTPException(status_code=404, detail="User not found")
-
             passkey_db = PasskeyDatabase(session)
             passkeys = await passkey_db.get_passkeys_by_user_id(_require_user_id(user))
 
@@ -305,19 +307,14 @@ async def list_passkeys(username: str = Depends(get_current_user)):
 @router.post("/delete", response_model=APIResponse)
 async def delete_passkey(
     delete_data: PasskeyDelete,
-    username: str = Depends(get_current_user),
+    principal: SessionPrincipal,
 ):
     """删除 Passkey"""
+    user = principal.user
+    if user is None:
+        raise HTTPException(status_code=403, detail="A browser session is required")
     async with async_session_factory() as session:
         try:
-            # Get user
-            result = await session.execute(
-                select(User).where(User.username == username)
-            )
-            user = result.scalar_one_or_none()
-            if not user:
-                raise HTTPException(status_code=404, detail="User not found")
-
             passkey_db = PasskeyDatabase(session)
             await passkey_db.delete_passkey(
                 delete_data.passkey_id, _require_user_id(user)

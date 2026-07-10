@@ -1,5 +1,5 @@
 import type { ApiSuccess } from '#/api';
-import type { LoginSuccess } from '#/auth';
+import type { SessionSuccess } from '#/auth';
 import type {
   AuthenticationOptions,
   PasskeyAuthFinishRequest,
@@ -57,8 +57,8 @@ export const apiPasskey = {
    */
   async loginWithPasskey(
     request: PasskeyAuthFinishRequest
-  ): Promise<LoginSuccess> {
-    const { data } = await axios.post<LoginSuccess>(
+  ): Promise<SessionSuccess> {
+    const { data } = await axios.post<SessionSuccess>(
       'api/v1/passkey/auth/verify',
       request
     );

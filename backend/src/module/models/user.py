@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlmodel import Field, SQLModel
 
 
@@ -29,6 +29,17 @@ class UserUpdate(SQLModel):
     enabled: Optional[bool] = None
 
 
+class UserCredentialsUpdate(BaseModel):
+    """Credential fields a signed-in user may change on their own account."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    username: Optional[str] = Field(
+        None, min_length=4, max_length=20, regex=r"^[a-zA-Z0-9_]+$"
+    )
+    password: Optional[str] = Field(None, min_length=8)
+
+
 class UserCreate(SQLModel):
     username: str = Field(min_length=4, max_length=20, regex=r"^[a-zA-Z0-9_]+$")
     password: str = Field(min_length=8)
@@ -40,6 +51,12 @@ class UserPublic(SQLModel):
     enabled: bool
     created_at: datetime
     updated_at: datetime
+
+
+class AuthenticationSuccess(SQLModel):
+    """Non-secret response shared by every browser-session issuing endpoint."""
+
+    authenticated: Literal[True] = True
 
 
 class UserLogin(SQLModel):

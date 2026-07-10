@@ -6,6 +6,9 @@ from fastapi.testclient import TestClient
 
 from module.api.deps import get_context
 from module.api.setup import SENTINEL_PATH, router
+from module.models.user import User
+from module.security.api import get_auth_service
+from module.security.jwt import get_password_hash
 
 
 @pytest.fixture
@@ -18,13 +21,31 @@ def mock_ctx():
 
 
 @pytest.fixture
-def client(mock_ctx):
+def auth_service():
+    service = MagicMock()
+    service.authenticate_api_token = AsyncMock(return_value=None)
+    service.authenticate_session = AsyncMock(return_value=None)
+    service.get_user = AsyncMock(
+        return_value=User(
+            id=1,
+            username="admin",
+            password="hashed-password",
+            enabled=True,
+        )
+    )
+    service.update_user = AsyncMock()
+    return service
+
+
+@pytest.fixture
+def client(mock_ctx, auth_service):
     """Create a test client for the FastAPI app."""
     from fastapi import FastAPI
 
     app = FastAPI()
     app.include_router(router, prefix="/api/v1")
     app.dependency_overrides[get_context] = lambda: mock_ctx
+    app.dependency_overrides[get_auth_service] = lambda: auth_service
     yield TestClient(app)
     app.dependency_overrides.clear()
 
@@ -330,30 +351,85 @@ class TestSetupComplete:
         }
 
     def test_complete_routes_through_ctx_reload_settings(
-        self, client, mock_first_run, mock_ctx
+        self, client, mock_first_run, mock_ctx, auth_service
     ):
         """A successful /setup/complete call saves the config and awaits
         ctx.reload_settings(), instead of poking settings.__dict__ directly."""
-        from fastapi import HTTPException
+        auth_service.authenticate_session.return_value = User(
+            id=7,
+            username="renamed_admin",
+            password="hashed-password",
+            enabled=True,
+        )
+        client.cookies.set("token", "pre-setup-session")
+        response = client.post("/api/v1/setup/complete", json=self._payload())
 
-        with patch("module.database.Database") as mock_db_cls:
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] is True
+        auth_service.get_user.assert_not_awaited()
+        auth_service.update_user.assert_awaited_once()
+        user_id, update = auth_service.update_user.await_args.args
+        assert user_id == 7
+        assert update.username == "testuser"
+        assert update.password == "testpassword123"
+        assert "token=" in response.headers["set-cookie"]
+        assert "Max-Age=0" in response.headers["set-cookie"]
+        mock_ctx.reload_settings.assert_awaited_once()
+        mock_ctx.start_tasks.assert_awaited_once()
+
+    def test_default_admin_fallback_passes_its_stable_id_to_completion(
+        self, client, mock_first_run, auth_service
+    ):
+        default_admin = User(
+            id=11,
+            username="admin",
+            password=get_password_hash("adminadmin"),
+            enabled=True,
+        )
+        with patch("module.api.setup.Database") as mock_db_cls:
             db_instance = AsyncMock()
-            # No admin account yet: _require_default_admin_or_authenticated()
-            # treats this as a fresh install and lets setup proceed.
-            db_instance.user.get_user = AsyncMock(
-                side_effect=HTTPException(status_code=404, detail="not found")
-            )
-            db_instance.user.update_user = AsyncMock(return_value=True)
+            db_instance.user.get_user = AsyncMock(return_value=default_admin)
             mock_db_cls.return_value.__aenter__ = AsyncMock(return_value=db_instance)
             mock_db_cls.return_value.__aexit__ = AsyncMock(return_value=False)
 
             response = client.post("/api/v1/setup/complete", json=self._payload())
 
         assert response.status_code == 200
-        data = response.json()
-        assert data["status"] is True
-        mock_ctx.reload_settings.assert_awaited_once()
-        mock_ctx.start_tasks.assert_awaited_once()
+        assert auth_service.update_user.await_args.args[0] == 11
+        auth_service.get_user.assert_not_awaited()
+
+    @pytest.mark.parametrize("admin_password", ["adminadmin", "already-changed"])
+    def test_api_token_cannot_authorize_setup(
+        self, client, mock_first_run, auth_service, admin_password
+    ):
+        """Automation credentials cannot become account-recovery credentials."""
+        auth_service.authenticate_api_token.return_value = User(
+            id=2,
+            username="automation",
+            password="hashed-password",
+            enabled=True,
+        )
+        changed_admin = User(
+            id=1,
+            username="admin",
+            password=get_password_hash(admin_password),
+            enabled=True,
+        )
+        with patch("module.api.setup.Database") as mock_db_cls:
+            db_instance = AsyncMock()
+            db_instance.user.get_user = AsyncMock(return_value=changed_admin)
+            mock_db_cls.return_value.__aenter__ = AsyncMock(return_value=db_instance)
+            mock_db_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            response = client.post(
+                "/api/v1/setup/complete",
+                headers={"Authorization": "Bearer automation-token"},
+                json=self._payload(),
+            )
+
+        assert response.status_code == 403
+        auth_service.update_user.assert_not_awaited()
 
 
 class TestSentinelPath:

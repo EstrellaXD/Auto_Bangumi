@@ -1,10 +1,11 @@
 """Tests for authentication: JWT tokens, password hashing, login flow."""
 
 from datetime import timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from module.models.user import User
 from module.security.jwt import (
     create_access_token,
     decode_token,
@@ -190,11 +191,11 @@ class TestLongPasswordTruncation:
 
 
 # ---------------------------------------------------------------------------
-# API Auth Flow (get_current_user)
+# API Auth Flow (typed principal)
 # ---------------------------------------------------------------------------
 
 
-class TestGetCurrentUser:
+class TestGetPrincipal:
     @staticmethod
     def _mock_request(authorization=""):
         """Create a mock Request with the given Authorization header."""
@@ -205,97 +206,99 @@ class TestGetCurrentUser:
 
     @patch("module.security.api.DEV_AUTH_BYPASS", False)
     async def test_no_cookie_raises_401(self):
-        """get_current_user raises 401 when no token cookie."""
+        """Authentication raises 401 when no supported credential is present."""
         from fastapi import HTTPException
 
-        from module.security.api import get_current_user
+        from module.security.api import get_principal
+
+        service = MagicMock()
+        service.authenticate_api_token = AsyncMock(return_value=None)
+        service.authenticate_session = AsyncMock(return_value=None)
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(request=self._mock_request(), token=None)
-        assert exc_info.value.status_code == 401
-
-    @patch("module.security.api.DEV_AUTH_BYPASS", False)
-    async def test_invalid_token_raises_401(self):
-        """get_current_user raises 401 for invalid token."""
-        from fastapi import HTTPException
-
-        from module.security.api import get_current_user
-
-        with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(
-                request=self._mock_request(), token="invalid.jwt.token"
+            await get_principal(
+                request=self._mock_request(), token=None, service=service
             )
         assert exc_info.value.status_code == 401
 
     @patch("module.security.api.DEV_AUTH_BYPASS", False)
-    async def test_valid_token_user_not_active(self):
-        """get_current_user raises 401 when user not in active_user list."""
+    async def test_invalid_cookie_raises_401(self):
         from fastapi import HTTPException
 
-        from module.security.api import active_user, get_current_user
+        from module.security.api import get_principal
 
-        token = create_access_token(
-            data={"sub": "ghost_user"}, expires_delta=timedelta(hours=1)
-        )
-        active_user.clear()
+        service = MagicMock()
+        service.authenticate_api_token = AsyncMock(return_value=None)
+        service.authenticate_session = AsyncMock(return_value=None)
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(request=self._mock_request(), token=token)
+            await get_principal(
+                request=self._mock_request(),
+                token="invalid.jwt.token",
+                service=service,
+            )
         assert exc_info.value.status_code == 401
 
     @patch("module.security.api.DEV_AUTH_BYPASS", False)
-    async def test_valid_token_active_user_succeeds(self):
-        """get_current_user returns username for valid token + active user."""
-        from module.security.api import active_user, get_current_user
+    async def test_cookie_session_returns_session_principal(self):
+        from module.security.api import CredentialKind, get_principal
 
-        token = create_access_token(
-            data={"sub": "active_user"}, expires_delta=timedelta(hours=1)
+        user = User(id=1, username="session_user", password="hashed-password")
+        service = MagicMock()
+        service.authenticate_api_token = AsyncMock(return_value=None)
+        service.authenticate_session = AsyncMock(return_value=user)
+
+        principal = await get_principal(
+            request=self._mock_request(), token="persisted-session", service=service
         )
-        active_user.clear()
-        active_user.add("active_user")
-
-        result = await get_current_user(request=self._mock_request(), token=token)
-        assert result == "active_user"
-
-        # Cleanup
-        active_user.clear()
+        assert principal.kind is CredentialKind.SESSION
+        assert principal.user is user
+        assert principal.username == "session_user"
 
     @patch("module.security.api.DEV_AUTH_BYPASS", True)
     async def test_dev_bypass_skips_auth(self):
-        """When DEV_AUTH_BYPASS is True, get_current_user returns 'dev_user' unconditionally."""
-        from module.security.api import get_current_user
+        from module.security.api import CredentialKind, get_principal
 
-        result = await get_current_user(request=self._mock_request(), token=None)
-        assert result == "dev_user"
-
-    @patch("module.security.api.DEV_AUTH_BYPASS", False)
-    async def test_bearer_token_bypass_valid(self):
-        """A valid login_token in Authorization header returns 'api_token_user'."""
-        from module.security.api import get_current_user
-
-        mock_request = self._mock_request(authorization="Bearer valid-api-token")
-        mock_security = type("S", (), {"login_tokens": ["valid-api-token"]})()
-        mock_settings = type("Settings", (), {"security": mock_security})()
-
-        with patch("module.security.api.settings", mock_settings):
-            result = await get_current_user(request=mock_request, token=None)
-        assert result == "api_token_user"
+        principal = await get_principal(request=self._mock_request(), token=None)
+        assert principal.kind is CredentialKind.DEVELOPMENT
+        assert principal.username == "dev_user"
 
     @patch("module.security.api.DEV_AUTH_BYPASS", False)
-    async def test_bearer_token_bypass_invalid(self):
-        """An invalid login_token still falls through to cookie check."""
+    async def test_database_api_token_returns_api_principal(self):
+        from module.security.api import CredentialKind, get_principal
+
+        user = User(id=1, username="api_user", password="hashed-password")
+        service = MagicMock()
+        service.authenticate_api_token = AsyncMock(return_value=user)
+        service.authenticate_session = AsyncMock(return_value=None)
+
+        principal = await get_principal(
+            request=self._mock_request("Bearer valid-api-token"),
+            token=None,
+            service=service,
+        )
+        assert principal.kind is CredentialKind.API_TOKEN
+        assert principal.username == "api_user"
+
+    @patch("module.security.api.DEV_AUTH_BYPASS", False)
+    async def test_invalid_authorization_does_not_fall_back_to_cookie(self):
         from fastapi import HTTPException
 
-        from module.security.api import get_current_user
+        from module.security.api import get_principal
 
-        mock_request = self._mock_request(authorization="Bearer wrong-token")
-        mock_security = type("S", (), {"login_tokens": ["correct-token"]})()
-        mock_settings = type("Settings", (), {"security": mock_security})()
+        user = User(id=1, username="cookie_user", password="hashed-password")
+        service = MagicMock()
+        service.authenticate_api_token = AsyncMock(return_value=None)
+        service.authenticate_session = AsyncMock(return_value=user)
 
-        with patch("module.security.api.settings", mock_settings):
-            with pytest.raises(HTTPException) as exc_info:
-                await get_current_user(request=mock_request, token=None)
+        with pytest.raises(HTTPException) as exc_info:
+            await get_principal(
+                request=self._mock_request("Bearer wrong-token"),
+                token="valid-cookie-session",
+                service=service,
+            )
         assert exc_info.value.status_code == 401
+        service.authenticate_session.assert_not_awaited()
 
 
 # ---------------------------------------------------------------------------

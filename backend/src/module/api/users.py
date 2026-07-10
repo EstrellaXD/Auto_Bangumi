@@ -10,12 +10,12 @@ from module.application.auth import (
     NotFoundError,
 )
 from module.models.user import UserCreate, UserPublic, UserUpdate
-from module.security.api import get_auth_service, get_current_user
+from module.security.api import get_auth_service, require_session_principal
 
 router = APIRouter(
     prefix="/users",
     tags=["users"],
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Depends(require_session_principal)],
 )
 AuthService = Annotated[AuthenticationService, Depends(get_auth_service)]
 

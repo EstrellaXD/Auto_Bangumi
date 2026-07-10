@@ -473,6 +473,45 @@ MIGRATIONS: tuple[Migration, ...] = (
         ),
         all_checks(table_exists("auth_session"), table_exists("api_token")),
     ),
+    Migration(
+        20,
+        "make API token identity scope-aware and redact stored display prefixes",
+        (
+            """CREATE TABLE api_token_v20 (
+                id INTEGER PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES user(id),
+                name VARCHAR(64) NOT NULL,
+                scope VARCHAR(8) NOT NULL,
+                token_hash VARCHAR(64) NOT NULL,
+                prefix VARCHAR(16) NOT NULL,
+                created_at TIMESTAMP NOT NULL,
+                last_used_at TIMESTAMP,
+                expires_at TIMESTAMP,
+                revoked_at TIMESTAMP
+            )""",
+            """INSERT INTO api_token_v20 (
+                id, user_id, name, scope, token_hash, prefix, created_at,
+                last_used_at, expires_at, revoked_at
+            ) SELECT
+                id, user_id, name, scope, token_hash,
+                'legacy_' || substr(token_hash, 1, 8), created_at,
+                last_used_at, expires_at, revoked_at
+            FROM api_token""",
+            "DROP TABLE api_token",
+            "ALTER TABLE api_token_v20 RENAME TO api_token",
+            "CREATE INDEX ix_api_token_user_id ON api_token(user_id)",
+            "CREATE INDEX ix_api_token_scope ON api_token(scope)",
+            "CREATE UNIQUE INDEX ix_api_token_token_hash_scope "
+            "ON api_token(token_hash, scope)",
+            "CREATE INDEX ix_api_token_expires_at ON api_token(expires_at)",
+            "CREATE INDEX ix_api_token_revoked_at ON api_token(revoked_at)",
+        ),
+        # Schema shape alone cannot prove that existing prefixes were redacted:
+        # metadata.create_all or an out-of-band repair may already have added
+        # the composite index. The schema_version gate makes this one-time, so
+        # every database still below v20 must run the transactional rebuild.
+        lambda _inspector: False,
+    ),
 )
 
 # 由迁移列表派生，新增迁移时无需手动同步

@@ -40,8 +40,12 @@ export const useAccessStore = defineStore('access', () => {
 
   async function createToken(name: string, scope: TokenScope): Promise<string> {
     const created = await apiTokens.create(name, scope);
-    tokens.value = await apiTokens.list();
-    return created.token;
+    const { token, ...publicToken } = created;
+    tokens.value = [
+      publicToken,
+      ...tokens.value.filter((item) => item.id !== publicToken.id),
+    ];
+    return token;
   }
 
   async function revokeToken(tokenId: number): Promise<void> {

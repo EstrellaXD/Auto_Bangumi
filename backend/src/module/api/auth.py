@@ -3,7 +3,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, status
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import Response
 from fastapi.security import OAuth2PasswordRequestForm
 
 from module.application.auth import (
@@ -13,19 +13,30 @@ from module.application.auth import (
     NotFoundError,
 )
 from module.models import APIResponse
-from module.models.user import UserPublic, UserUpdate
-from module.security.api import check_login_ip, get_auth_service, get_current_user
+from module.models.user import (
+    AuthenticationSuccess,
+    UserCredentialsUpdate,
+    UserPublic,
+    UserUpdate,
+)
+from module.security.api import (
+    AuthPrincipal,
+    check_login_ip,
+    get_auth_service,
+    get_principal,
+    require_session_principal,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 _TOKEN_MAX_AGE = 86400
-_API_TOKEN_USER = "api_token_user"
 
 AuthService = Annotated[AuthenticationService, Depends(get_auth_service)]
-CurrentUser = Annotated[str, Depends(get_current_user)]
+Principal = Annotated[AuthPrincipal, Depends(get_principal)]
+SessionPrincipal = Annotated[AuthPrincipal, Depends(require_session_principal)]
 
 
-def _issue_token(token: str, response: Response) -> dict[str, str]:
+def _issue_session(token: str, response: Response) -> AuthenticationSuccess:
     response.set_cookie(
         key="token",
         value=token,
@@ -33,10 +44,14 @@ def _issue_token(token: str, response: Response) -> dict[str, str]:
         max_age=_TOKEN_MAX_AGE,
         samesite="strict",
     )
-    return {"access_token": token, "token_type": "bearer"}
+    return AuthenticationSuccess()
 
 
-@router.post("/login", response_model=dict, dependencies=[Depends(check_login_ip)])
+@router.post(
+    "/login",
+    response_model=AuthenticationSuccess,
+    dependencies=[Depends(check_login_ip)],
+)
 async def login(
     response: Response,
     service: AuthService,
@@ -50,37 +65,33 @@ async def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password",
         ) from exc
-    return _issue_token(token, response)
+    return _issue_session(token, response)
 
 
 async def _refresh_cookie(
     response: Response,
     token: str | None,
     service: AuthenticationService,
-) -> dict[str, str]:
+) -> AuthenticationSuccess:
     if not token:
         raise HTTPException(status_code=401, detail="Unauthorized")
     user = await service.refresh_session(token)
     if user is not None:
-        return _issue_token(token, response)
-    exchanged = await service.exchange_legacy_jwt(token)
-    if exchanged is None:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    _user, persisted_token = exchanged
-    return _issue_token(persisted_token, response)
+        return _issue_session(token, response)
+    raise HTTPException(status_code=401, detail="Unauthorized")
 
 
-@router.post("/refresh_token", response_model=dict)
+@router.post("/refresh_token", response_model=AuthenticationSuccess)
 async def refresh(
     response: Response,
     service: AuthService,
     token: str | None = Cookie(None),
 ):
-    """Extend a persisted session or exchange a legacy JWT cookie."""
+    """Extend the persisted browser session carried by the cookie."""
     return await _refresh_cookie(response, token, service)
 
 
-@router.get("/refresh_token", response_model=dict, deprecated=True)
+@router.get("/refresh_token", response_model=AuthenticationSuccess, deprecated=True)
 async def refresh_legacy_get(
     response: Response,
     service: AuthService,
@@ -101,40 +112,39 @@ async def logout(
     """Revoke the current persisted session and clear its cookie."""
     if token:
         await service.logout(token)
-    response.delete_cookie(key="token")
-    return JSONResponse(
-        status_code=200,
-        content={"msg_en": "Logout successfully.", "msg_zh": "登出成功。"},
+    response.delete_cookie(key="token", httponly=True, samesite="strict")
+    return APIResponse(
+        status=True,
+        msg_en="Logout successfully.",
+        msg_zh="登出成功。",
     )
 
 
 @router.get("/me", response_model=UserPublic)
-async def me(current_user: CurrentUser, service: AuthService):
-    if current_user in {_API_TOKEN_USER, "dev_user"}:
+async def me(principal: Principal):
+    if principal.user is None:
         raise HTTPException(status_code=400, detail="No database user for this session")
-    try:
-        return await service.get_user(current_user)
-    except NotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return principal.user
 
 
-@router.post("/update", response_model=dict)
+@router.post("/update", response_model=AuthenticationSuccess)
 async def update_user(
-    user_data: UserUpdate,
+    user_data: UserCredentialsUpdate,
     response: Response,
-    current_user: CurrentUser,
+    principal: SessionPrincipal,
     service: AuthService,
 ):
     """Update the current account and rotate all of its sessions."""
-    if current_user in {_API_TOKEN_USER, "dev_user"}:
-        raise HTTPException(
-            status_code=400,
-            detail="API token authentication cannot update user credentials.",
-        )
+    user = principal.user
+    if user is None or user.id is None:
+        raise HTTPException(status_code=403, detail="A browser session is required")
     try:
-        _user, token = await service.update_current_user(current_user, user_data)
+        update = UserUpdate(**user_data.model_dump(exclude_unset=True))
+        _user, token = await service.update_current_user(user.id, update)
+    except AuthenticationError as exc:
+        raise HTTPException(status_code=401, detail="Unauthorized") from exc
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return {**_issue_token(token, response), "message": "update success"}
+    return _issue_session(token, response)

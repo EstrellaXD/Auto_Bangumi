@@ -1,11 +1,14 @@
 """Tests for the table-driven migration system (module.database.migrations)."""
 
+from dataclasses import replace
+
 import pytest
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
-from sqlalchemy.exc import OperationalError
-from sqlmodel import create_engine
+from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlmodel import SQLModel, create_engine
 
+import module.database.migrations as migration_module
 from module.database.migrations import (
     CURRENT_SCHEMA_VERSION,
     MIGRATIONS,
@@ -132,6 +135,111 @@ def _make_versioned_engine(
     return engine
 
 
+def _make_v19_auth_engine() -> Engine:
+    """A real v19 auth schema containing every token field and index."""
+    engine = create_engine("sqlite://")
+    with engine.begin() as conn:
+        conn.execute(text("PRAGMA foreign_keys=ON"))
+        conn.execute(
+            text(
+                "CREATE TABLE user ("
+                "  id INTEGER PRIMARY KEY,"
+                "  username TEXT NOT NULL,"
+                "  password TEXT NOT NULL,"
+                "  enabled BOOLEAN NOT NULL DEFAULT 1,"
+                "  created_at TIMESTAMP NOT NULL,"
+                "  updated_at TIMESTAMP NOT NULL"
+                ")"
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE TABLE auth_session ("
+                "  id INTEGER PRIMARY KEY,"
+                "  user_id INTEGER NOT NULL REFERENCES user(id),"
+                "  token_hash VARCHAR(64) NOT NULL UNIQUE,"
+                "  created_at TIMESTAMP NOT NULL,"
+                "  last_seen_at TIMESTAMP NOT NULL,"
+                "  expires_at TIMESTAMP NOT NULL,"
+                "  revoked_at TIMESTAMP"
+                ")"
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE TABLE api_token ("
+                "  id INTEGER PRIMARY KEY,"
+                "  user_id INTEGER NOT NULL REFERENCES user(id),"
+                "  name VARCHAR(64) NOT NULL,"
+                "  scope VARCHAR(8) NOT NULL,"
+                "  token_hash VARCHAR(64) NOT NULL UNIQUE,"
+                "  prefix VARCHAR(16) NOT NULL,"
+                "  created_at TIMESTAMP NOT NULL,"
+                "  last_used_at TIMESTAMP,"
+                "  expires_at TIMESTAMP,"
+                "  revoked_at TIMESTAMP"
+                ")"
+            )
+        )
+        conn.execute(
+            text("CREATE INDEX ix_auth_session_user_id ON auth_session(user_id)")
+        )
+        conn.execute(
+            text(
+                "CREATE UNIQUE INDEX ix_auth_session_token_hash "
+                "ON auth_session(token_hash)"
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE INDEX ix_auth_session_expires_at " "ON auth_session(expires_at)"
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE INDEX ix_auth_session_revoked_at " "ON auth_session(revoked_at)"
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE UNIQUE INDEX ix_api_token_token_hash "
+                "ON api_token(token_hash)"
+            )
+        )
+        conn.execute(text("CREATE INDEX ix_api_token_user_id ON api_token(user_id)"))
+        conn.execute(text("CREATE INDEX ix_api_token_scope ON api_token(scope)"))
+        conn.execute(
+            text("CREATE INDEX ix_api_token_expires_at ON api_token(expires_at)")
+        )
+        conn.execute(
+            text("CREATE INDEX ix_api_token_revoked_at ON api_token(revoked_at)")
+        )
+        conn.execute(
+            text(
+                "INSERT INTO user "
+                "(id, username, password, enabled, created_at, updated_at) VALUES "
+                "(7, 'migration_user', 'hashed-password', 1, "
+                "'2026-01-01 01:02:03', '2026-01-02 02:03:04')"
+            )
+        )
+        conn.execute(
+            text(
+                "INSERT INTO api_token "
+                "(id, user_id, name, scope, token_hash, prefix, created_at, "
+                " last_used_at, expires_at, revoked_at) VALUES "
+                "(11, 7, 'active api', 'api', :api_hash, 'tiny', "
+                " '2026-02-01 03:04:05', '2026-02-02 04:05:06', "
+                " '2027-02-01 03:04:05', NULL),"
+                "(12, 7, 'revoked mcp', 'mcp', :mcp_hash, 'legacy-mcp', "
+                " '2026-03-01 05:06:07', NULL, NULL, '2026-03-02 06:07:08')"
+            ),
+            {"api_hash": "a" * 64, "mcp_hash": "b" * 64},
+        )
+        ensure_schema_version_table(conn)
+        set_schema_version(conn, 19)
+    return engine
+
+
 def _columns(engine, table: str) -> set[str]:
     return {c["name"] for c in inspect(engine).get_columns(table)}
 
@@ -235,6 +343,146 @@ class TestRunMigrations:
         assert "llmcredential" in inspector.get_table_names()
         indexes = {ix["name"]: ix for ix in inspector.get_indexes("llmcredential")}
         assert indexes["ix_llmcredential_provider_id"]["unique"]
+
+    def test_v20_rebuilds_v19_api_tokens_without_losing_data(self):
+        engine = _make_v19_auth_engine()
+        # Production upgrade paths may call metadata.create_all before the
+        # table-driven migrations. It must not disguise a v19 table as v20.
+        SQLModel.metadata.create_all(engine)
+        assert "ix_api_token_token_hash_scope" not in {
+            index["name"] for index in inspect(engine).get_indexes("api_token")
+        }
+        preserved_fields = (
+            "id",
+            "user_id",
+            "name",
+            "scope",
+            "token_hash",
+            "created_at",
+            "last_used_at",
+            "expires_at",
+            "revoked_at",
+        )
+        with engine.connect() as conn:
+            before = (
+                conn.execute(text("SELECT * FROM api_token ORDER BY id"))
+                .mappings()
+                .all()
+            )
+
+        run_migrations(engine)
+
+        with engine.connect() as conn:
+            after = (
+                conn.execute(text("SELECT * FROM api_token ORDER BY id"))
+                .mappings()
+                .all()
+            )
+            assert get_schema_version(conn) == 20
+
+        assert len(after) == len(before) == 2
+        for old, new in zip(before, after):
+            assert {field: new[field] for field in preserved_fields} == {
+                field: old[field] for field in preserved_fields
+            }
+            assert new["prefix"] == f"legacy_{new['token_hash'][:8]}"
+
+        inspector = inspect(engine)
+        indexes = {index["name"]: index for index in inspector.get_indexes("api_token")}
+        composite = indexes["ix_api_token_token_hash_scope"]
+        assert composite["unique"]
+        assert composite["column_names"] == ["token_hash", "scope"]
+        foreign_keys = inspector.get_foreign_keys("api_token")
+        assert foreign_keys[0]["referred_table"] == "user"
+        assert foreign_keys[0]["constrained_columns"] == ["user_id"]
+
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO api_token "
+                    "(id, user_id, name, scope, token_hash, prefix, created_at) "
+                    "VALUES (13, 7, 'same hash other scope', 'mcp', :token_hash, "
+                    "'legacy_aaaaaaaa', '2026-04-01 00:00:00')"
+                ),
+                {"token_hash": "a" * 64},
+            )
+        with pytest.raises(IntegrityError):
+            with engine.begin() as conn:
+                conn.execute(
+                    text(
+                        "INSERT INTO api_token "
+                        "(id, user_id, name, scope, token_hash, prefix, created_at) "
+                        "VALUES (14, 7, 'duplicate pair', 'api', :token_hash, "
+                        "'legacy_aaaaaaaa', '2026-04-02 00:00:00')"
+                    ),
+                    {"token_hash": "a" * 64},
+                )
+
+    def test_v20_rebuild_rolls_back_if_a_late_statement_fails(self, monkeypatch):
+        engine = _make_v19_auth_engine()
+        v20 = MIGRATIONS[-1]
+        broken_v20 = replace(
+            v20,
+            statements=(
+                *v20.statements[:3],
+                "SELECT * FROM deliberately_missing_v20_table",
+                *v20.statements[3:],
+            ),
+        )
+        monkeypatch.setattr(
+            migration_module,
+            "MIGRATIONS",
+            (*MIGRATIONS[:-1], broken_v20),
+        )
+
+        with pytest.raises(OperationalError):
+            run_migrations(engine)
+
+        inspector = inspect(engine)
+        assert "api_token" in inspector.get_table_names()
+        assert "api_token_v20" not in inspector.get_table_names()
+        with engine.connect() as conn:
+            assert get_schema_version(conn) == 19
+            rows = conn.execute(
+                text("SELECT id, prefix FROM api_token ORDER BY id")
+            ).all()
+        assert rows == [(11, "tiny"), (12, "legacy-mcp")]
+
+    def test_v20_rebuilds_out_of_band_composite_schema_to_redact_prefixes(self):
+        engine = create_engine("sqlite://")
+        SQLModel.metadata.create_all(engine)
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO user "
+                    "(id, username, password, enabled, created_at, updated_at) VALUES "
+                    "(1, 'out_of_band', 'hashed-password', 1, "
+                    "'2026-01-01 00:00:00', '2026-01-01 00:00:00')"
+                )
+            )
+            conn.execute(
+                text(
+                    "INSERT INTO api_token "
+                    "(id, user_id, name, scope, token_hash, prefix, created_at) VALUES "
+                    "(1, 1, 'legacy short token', 'api', :token_hash, 'tiny', "
+                    "'2026-01-01 00:00:00')"
+                ),
+                {"token_hash": "c" * 64},
+            )
+            ensure_schema_version_table(conn)
+            set_schema_version(conn, 19)
+
+        assert "ix_api_token_token_hash_scope" in {
+            index["name"] for index in inspect(engine).get_indexes("api_token")
+        }
+        run_migrations(engine)
+
+        with engine.connect() as conn:
+            prefix = conn.execute(
+                text("SELECT prefix FROM api_token WHERE id = 1")
+            ).scalar_one()
+            assert get_schema_version(conn) == 20
+        assert prefix == "legacy_cccccccc"
 
     def test_is_idempotent(self):
         engine = _make_v0_engine()

@@ -5,7 +5,7 @@
  * unnoticed.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { mockApiSuccess, mockLoginSuccess } from '@/test/mocks/api';
+import { mockApiSuccess, mockSessionSuccess } from '@/test/mocks/api';
 import { createAxiosMock } from '@/test/mocks/axios';
 import type {
   PasskeyAuthFinishRequest,
@@ -61,7 +61,7 @@ describe('Passkey API contract (path + HTTP method)', () => {
   });
 
   it('should POST api/v1/passkey/auth/verify with the credential when finishing login', async () => {
-    (axios.post as any).mockResolvedValue({ data: mockLoginSuccess });
+    (axios.post as any).mockResolvedValue({ data: mockSessionSuccess });
     const request: PasskeyAuthFinishRequest = {
       username: 'admin',
       credential: {},

@@ -4,6 +4,8 @@ import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import update
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, delete, select
 
@@ -24,6 +26,11 @@ def _hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
+def _legacy_token_fingerprint(token_hash: str) -> str:
+    """Return display metadata that cannot reveal any raw legacy token text."""
+    return f"legacy_{token_hash[:8]}"
+
+
 class AuthDatabase:
     """Repository that stores only SHA-256 token digests."""
 
@@ -36,6 +43,7 @@ class AuthDatabase:
         *,
         now: datetime | None = None,
         ttl: timedelta = DEFAULT_SESSION_TTL,
+        commit: bool = True,
     ) -> str:
         issued_at = _utc(now or datetime.now(timezone.utc))
         raw_token = secrets.token_urlsafe(48)
@@ -48,7 +56,10 @@ class AuthDatabase:
                 expires_at=issued_at + ttl,
             )
         )
-        await self.session.commit()
+        if commit:
+            await self.session.commit()
+        else:
+            await self.session.flush()
         return raw_token
 
     async def authenticate_session(
@@ -79,16 +90,24 @@ class AuthDatabase:
         ttl: timedelta = DEFAULT_SESSION_TTL,
     ) -> User | None:
         current = _utc(now or datetime.now(timezone.utc))
-        user = await self.authenticate_session(raw_token, now=current)
-        if user is None:
-            return None
         result = await self.session.execute(
-            select(AuthSession).where(AuthSession.token_hash == _hash_token(raw_token))
+            update(AuthSession)
+            .where(
+                col(AuthSession.token_hash) == _hash_token(raw_token),
+                col(AuthSession.revoked_at).is_(None),
+                col(AuthSession.expires_at) > current,
+            )
+            .values(last_seen_at=current, expires_at=current + ttl)
+            .returning(col(AuthSession.user_id))
         )
-        auth_session = result.scalar_one()
-        auth_session.last_seen_at = current
-        auth_session.expires_at = current + ttl
-        self.session.add(auth_session)
+        user_id = result.scalar_one_or_none()
+        if user_id is None:
+            await self.session.rollback()
+            return None
+        user = await self.session.get(User, user_id)
+        if user is None or not user.enabled:
+            await self.session.rollback()
+            return None
         await self.session.commit()
         return user
 
@@ -97,36 +116,39 @@ class AuthDatabase:
     ) -> bool:
         if not raw_token:
             return False
+        current = _utc(now or datetime.now(timezone.utc))
         result = await self.session.execute(
-            select(AuthSession).where(
-                AuthSession.token_hash == _hash_token(raw_token),
+            update(AuthSession)
+            .where(
+                col(AuthSession.token_hash) == _hash_token(raw_token),
                 col(AuthSession.revoked_at).is_(None),
             )
+            .values(revoked_at=current)
         )
-        auth_session = result.scalars().first()
-        if auth_session is None:
-            return False
-        auth_session.revoked_at = _utc(now or datetime.now(timezone.utc))
-        self.session.add(auth_session)
         await self.session.commit()
-        return True
+        return bool(getattr(result, "rowcount", 0))
 
     async def revoke_user_sessions(
-        self, user_id: int, *, now: datetime | None = None
+        self,
+        user_id: int,
+        *,
+        now: datetime | None = None,
+        commit: bool = True,
     ) -> int:
         current = _utc(now or datetime.now(timezone.utc))
         result = await self.session.execute(
-            select(AuthSession).where(
-                AuthSession.user_id == user_id,
+            update(AuthSession)
+            .where(
+                col(AuthSession.user_id) == user_id,
                 col(AuthSession.revoked_at).is_(None),
             )
+            .values(revoked_at=current)
         )
-        sessions = list(result.scalars().all())
-        for auth_session in sessions:
-            auth_session.revoked_at = current
-            self.session.add(auth_session)
-        await self.session.commit()
-        return len(sessions)
+        if commit:
+            await self.session.commit()
+        else:
+            await self.session.flush()
+        return int(getattr(result, "rowcount", 0) or 0)
 
     async def create_api_token(
         self,
@@ -164,26 +186,29 @@ class AuthDatabase:
         scope: str,
         now: datetime | None = None,
     ) -> ApiToken:
-        token_hash = _hash_token(raw_token)
-        result = await self.session.execute(
-            select(ApiToken).where(ApiToken.token_hash == token_hash)
-        )
-        existing = result.scalars().first()
-        if existing is not None:
-            return existing
         if scope not in {"api", "mcp"}:
             raise ValueError("Unsupported API token scope")
-        token = ApiToken(
-            user_id=user_id,
-            name=name,
-            scope=scope,
-            token_hash=token_hash,
-            prefix=raw_token[:12],
-            created_at=_utc(now or datetime.now(timezone.utc)),
+        token_hash = _hash_token(raw_token)
+        await self.session.execute(
+            sqlite_insert(ApiToken)
+            .values(
+                user_id=user_id,
+                name=name,
+                scope=scope,
+                token_hash=token_hash,
+                prefix=_legacy_token_fingerprint(token_hash),
+                created_at=_utc(now or datetime.now(timezone.utc)),
+            )
+            .on_conflict_do_nothing(index_elements=["token_hash", "scope"])
         )
-        self.session.add(token)
+        result = await self.session.execute(
+            select(ApiToken).where(
+                ApiToken.token_hash == token_hash,
+                ApiToken.scope == scope,
+            )
+        )
+        token = result.scalar_one()
         await self.session.commit()
-        await self.session.refresh(token)
         return token
 
     async def authenticate_api_token(
@@ -192,7 +217,7 @@ class AuthDatabase:
         *,
         scope: str,
         now: datetime | None = None,
-    ) -> User | None:
+    ) -> tuple[User, int] | None:
         if not raw_token:
             return None
         current = _utc(now or datetime.now(timezone.utc))
@@ -211,21 +236,44 @@ class AuthDatabase:
         user = await self.session.get(User, token.user_id)
         if user is None or not user.enabled:
             return None
-        token.last_used_at = current
-        self.session.add(token)
+        if token.id is None:
+            raise RuntimeError("Persisted API token has no primary key")
+        return user, token.id
+
+    async def touch_api_token(
+        self, token_id: int, *, now: datetime | None = None
+    ) -> None:
+        """Update best-effort usage metadata with a direct write transaction."""
+        current = _utc(now or datetime.now(timezone.utc))
+        await self.session.execute(
+            update(ApiToken)
+            .where(col(ApiToken.id) == token_id)
+            .values(last_used_at=current)
+        )
         await self.session.commit()
-        return user
 
     async def revoke_api_token(
         self, token_id: int, *, now: datetime | None = None
     ) -> bool:
-        token = await self.session.get(ApiToken, token_id)
-        if token is None or token.revoked_at is not None:
-            return False
-        token.revoked_at = _utc(now or datetime.now(timezone.utc))
-        self.session.add(token)
+        result = await self.session.execute(
+            update(ApiToken)
+            .where(
+                col(ApiToken.id) == token_id,
+                col(ApiToken.revoked_at).is_(None),
+            )
+            .values(revoked_at=_utc(now or datetime.now(timezone.utc)))
+        )
         await self.session.commit()
-        return True
+        return bool(getattr(result, "rowcount", 0))
+
+    async def passkey_belongs_to_user(self, user_id: int, credential_id: str) -> bool:
+        result = await self.session.execute(
+            select(Passkey.id).where(
+                col(Passkey.user_id) == user_id,
+                col(Passkey.credential_id) == credential_id,
+            )
+        )
+        return result.first() is not None
 
     async def list_api_tokens(self) -> list[ApiToken]:
         result = await self.session.execute(
@@ -233,7 +281,9 @@ class AuthDatabase:
         )
         return list(result.scalars().all())
 
-    async def purge_user_credentials(self, user_id: int) -> None:
+    async def purge_user_credentials(
+        self, user_id: int, *, commit: bool = True
+    ) -> None:
         """Remove credentials before deleting their owning user."""
         await self.session.execute(
             delete(AuthSession).where(col(AuthSession.user_id) == user_id)
@@ -244,4 +294,7 @@ class AuthDatabase:
         await self.session.execute(
             delete(Passkey).where(col(Passkey.user_id) == user_id)
         )
-        await self.session.commit()
+        if commit:
+            await self.session.commit()
+        else:
+            await self.session.flush()

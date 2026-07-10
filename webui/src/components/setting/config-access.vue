@@ -1,7 +1,18 @@
 <script lang="ts" setup>
-import { computed, onMounted, ref } from 'vue';
+import {
+  computed,
+  onActivated,
+  onBeforeUnmount,
+  onDeactivated,
+  ref,
+} from 'vue';
 import { storeToRefs } from 'pinia';
-import type { TokenScope, UserPublic } from '#/access';
+import type {
+  ApiTokenPublic,
+  ApiTokenStatus,
+  TokenScope,
+  UserPublic,
+} from '#/access';
 import { useAccessStore } from '@/store/access';
 import { useMessage } from '@/hooks/useMessage';
 import { useMyI18n } from '@/hooks/useMyI18n';
@@ -22,14 +33,62 @@ const tokenName = ref('');
 const tokenScope = ref<TokenScope>('api');
 const issuedToken = ref('');
 const submitting = ref(false);
+let accessActive = false;
+let tokenRevealGeneration = 0;
 
-const activeTokens = computed(() =>
-  tokens.value.filter((token) => token.revoked_at === null)
+const ownerByUserId = computed(
+  () => new Map(users.value.map((user) => [user.id, user.username]))
 );
 
-onMounted(() => {
+const TIMEZONE_SUFFIX = /(?:z|[+-]\d{2}:\d{2})$/i;
+
+function parseApiTimestamp(value: string): number {
+  // SQLite drops tzinfo on round-trip, but auth timestamps are stored and
+  // compared as UTC by the backend. Treat an absent offset as UTC instead of
+  // letting browsers reinterpret it in the viewer's local timezone.
+  return Date.parse(TIMEZONE_SUFFIX.test(value) ? value : `${value}Z`);
+}
+
+function activateAccess(): void {
+  accessActive = true;
   store.load().catch(() => undefined);
-});
+}
+
+onActivated(activateAccess);
+
+function setUserDialogVisibility(show: boolean): void {
+  showUserDialog.value = show;
+  if (!show) {
+    username.value = '';
+    password.value = '';
+  }
+}
+
+function setTokenDialogVisibility(show: boolean): void {
+  showTokenDialog.value = show;
+  if (!show) {
+    tokenRevealGeneration += 1;
+    tokenName.value = '';
+  }
+}
+
+function setTokenValueVisibility(show: boolean): void {
+  showTokenValue.value = show;
+  if (!show) {
+    tokenRevealGeneration += 1;
+    issuedToken.value = '';
+  }
+}
+
+function scrubSensitiveState(): void {
+  accessActive = false;
+  setUserDialogVisibility(false);
+  setTokenDialogVisibility(false);
+  setTokenValueVisibility(false);
+}
+
+onDeactivated(scrubSensitiveState);
+onBeforeUnmount(scrubSensitiveState);
 
 async function handleCreateUser(): Promise<void> {
   if (!username.value.trim() || password.value.length < 8) return;
@@ -39,9 +98,7 @@ async function handleCreateUser(): Promise<void> {
       username: username.value.trim(),
       password: password.value,
     });
-    username.value = '';
-    password.value = '';
-    showUserDialog.value = false;
+    setUserDialogVisibility(false);
     message.success(t('access.user_created'));
   } finally {
     submitting.value = false;
@@ -65,14 +122,16 @@ async function deleteUser(user: UserPublic): Promise<void> {
 async function handleCreateToken(): Promise<void> {
   if (!tokenName.value.trim()) return;
   submitting.value = true;
+  const revealGeneration = tokenRevealGeneration;
   try {
-    issuedToken.value = await store.createToken(
+    const token = await store.createToken(
       tokenName.value.trim(),
       tokenScope.value
     );
-    tokenName.value = '';
-    showTokenDialog.value = false;
-    showTokenValue.value = true;
+    if (!accessActive || revealGeneration !== tokenRevealGeneration) return;
+    issuedToken.value = token;
+    setTokenDialogVisibility(false);
+    setTokenValueVisibility(true);
   } finally {
     submitting.value = false;
   }
@@ -94,7 +153,24 @@ async function revokeToken(tokenId: number): Promise<void> {
 }
 
 function formatDate(value: string | null): string {
-  return value ? new Date(value).toLocaleString() : t('access.never');
+  if (!value) return t('access.never');
+  const timestamp = parseApiTimestamp(value);
+  return Number.isFinite(timestamp)
+    ? new Date(timestamp).toLocaleString()
+    : value;
+}
+
+function tokenOwner(userId: number): string {
+  return ownerByUserId.value.get(userId) ?? t('access.unknown_user');
+}
+
+function tokenStatus(token: ApiTokenPublic): ApiTokenStatus {
+  if (token.revoked_at !== null) return 'revoked';
+  if (token.expires_at !== null) {
+    const expiresAt = parseApiTimestamp(token.expires_at);
+    if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) return 'expired';
+  }
+  return 'active';
 }
 </script>
 
@@ -106,7 +182,7 @@ function formatDate(value: string | null): string {
           <h3>{{ $t('access.users') }}</h3>
           <p>{{ $t('access.users_hint') }}</p>
         </div>
-        <ab-button size="sm" @click="showUserDialog = true">
+        <ab-button size="sm" @click="setUserDialogVisibility(true)">
           {{ $t('access.add_user') }}
         </ab-button>
       </div>
@@ -144,27 +220,45 @@ function formatDate(value: string | null): string {
           <h3>{{ $t('access.tokens') }}</h3>
           <p>{{ $t('access.tokens_hint') }}</p>
         </div>
-        <ab-button size="sm" @click="showTokenDialog = true">
+        <ab-button size="sm" @click="setTokenDialogVisibility(true)">
           {{ $t('access.add_token') }}
         </ab-button>
       </div>
 
-      <div v-if="activeTokens.length === 0" class="empty-state">
+      <div v-if="loading" class="empty-state">{{ $t('access.loading') }}</div>
+      <div v-else-if="tokens.length === 0" class="empty-state">
         {{ $t('access.no_tokens') }}
       </div>
       <div v-else class="access-list">
-        <div v-for="token in activeTokens" :key="token.id" class="access-row">
+        <div v-for="token in tokens" :key="token.id" class="access-row">
           <div class="token-info">
             <div class="row-main">
               <strong>{{ token.name }}</strong>
               <span class="scope-badge">{{ token.scope.toUpperCase() }}</span>
+              <span
+                class="token-status"
+                :class="`token-status--${tokenStatus(token)}`"
+              >
+                {{ $t(`access.token_status_${tokenStatus(token)}`) }}
+              </span>
             </div>
             <code>{{ token.prefix }}…</code>
             <small>
+              {{ $t('access.owner') }}: {{ tokenOwner(token.user_id) }}
+            </small>
+            <small>
               {{ $t('access.last_used') }}: {{ formatDate(token.last_used_at) }}
             </small>
+            <small v-if="token.expires_at">
+              {{ $t('access.expires_at') }}: {{ formatDate(token.expires_at) }}
+            </small>
           </div>
-          <ab-button size="sm" variant="danger" @click="revokeToken(token.id)">
+          <ab-button
+            v-if="tokenStatus(token) !== 'revoked'"
+            size="sm"
+            variant="danger"
+            @click="revokeToken(token.id)"
+          >
             {{ $t('access.revoke') }}
           </ab-button>
         </div>
@@ -172,9 +266,10 @@ function formatDate(value: string | null): string {
     </div>
 
     <ab-modal
-      v-model:show="showUserDialog"
+      :show="showUserDialog"
       size="sm"
       :title="$t('access.add_user')"
+      @update:show="setUserDialogVisibility"
     >
       <div class="dialog-form">
         <ab-field :label="$t('access.username')">
@@ -189,7 +284,7 @@ function formatDate(value: string | null): string {
         </ab-field>
       </div>
       <template #footer>
-        <ab-button size="sm" @click="showUserDialog = false">
+        <ab-button size="sm" @click="setUserDialogVisibility(false)">
           {{ $t('config.cancel') }}
         </ab-button>
         <ab-button
@@ -205,9 +300,10 @@ function formatDate(value: string | null): string {
     </ab-modal>
 
     <ab-modal
-      v-model:show="showTokenDialog"
+      :show="showTokenDialog"
       size="sm"
       :title="$t('access.add_token')"
+      @update:show="setTokenDialogVisibility"
     >
       <div class="dialog-form">
         <ab-field :label="$t('access.token_name')">
@@ -224,7 +320,7 @@ function formatDate(value: string | null): string {
         </ab-field>
       </div>
       <template #footer>
-        <ab-button size="sm" @click="showTokenDialog = false">
+        <ab-button size="sm" @click="setTokenDialogVisibility(false)">
           {{ $t('config.cancel') }}
         </ab-button>
         <ab-button
@@ -239,7 +335,11 @@ function formatDate(value: string | null): string {
       </template>
     </ab-modal>
 
-    <ab-modal v-model:show="showTokenValue" :title="$t('access.token_created')">
+    <ab-modal
+      :show="showTokenValue"
+      :title="$t('access.token_created')"
+      @update:show="setTokenValueVisibility"
+    >
       <div class="token-reveal">
         <p>{{ $t('access.token_once') }}</p>
         <code>{{ issuedToken }}</code>
@@ -307,7 +407,8 @@ function formatDate(value: string | null): string {
 }
 
 .status-dot,
-.scope-badge {
+.scope-badge,
+.token-status {
   padding: 2px 7px;
   border-radius: var(--radius-full);
   color: var(--color-primary);
@@ -320,8 +421,21 @@ function formatDate(value: string | null): string {
   background: var(--color-surface-hover);
 }
 
+.token-status--expired {
+  color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 12%, transparent);
+}
+
+.token-status--revoked {
+  color: var(--color-text-secondary);
+  background: var(--color-surface-hover);
+}
+
 .token-info {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .token-info code,

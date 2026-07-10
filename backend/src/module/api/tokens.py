@@ -4,17 +4,25 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
-from module.application.auth import AuthenticationService, NotFoundError
+from module.application.auth import (
+    AuthenticationError,
+    AuthenticationService,
+    NotFoundError,
+)
 from module.models.auth import ApiTokenCreate, ApiTokenCreated, ApiTokenPublic
-from module.security.api import get_auth_service, get_current_user
+from module.security.api import (
+    AuthPrincipal,
+    get_auth_service,
+    require_session_principal,
+)
 
 router = APIRouter(prefix="/tokens", tags=["tokens"])
 AuthService = Annotated[AuthenticationService, Depends(get_auth_service)]
-CurrentUser = Annotated[str, Depends(get_current_user)]
+SessionPrincipal = Annotated[AuthPrincipal, Depends(require_session_principal)]
 
 
 @router.get("", response_model=list[ApiTokenPublic])
-async def list_tokens(_current_user: CurrentUser, service: AuthService):
+async def list_tokens(_principal: SessionPrincipal, service: AuthService):
     return await service.list_api_tokens()
 
 
@@ -25,22 +33,28 @@ async def list_tokens(_current_user: CurrentUser, service: AuthService):
 )
 async def create_token(
     data: ApiTokenCreate,
-    current_user: CurrentUser,
+    principal: SessionPrincipal,
     service: AuthService,
 ):
-    token, raw_token = await service.create_api_token_for_username(
-        current_user,
-        name=data.name,
-        scope=data.scope,
-        expires_at=data.expires_at,
-    )
+    user = principal.user
+    if user is None or user.id is None:
+        raise HTTPException(status_code=403, detail="A browser session is required")
+    try:
+        token, raw_token = await service.create_api_token_for_user_id(
+            user.id,
+            name=data.name,
+            scope=data.scope,
+            expires_at=data.expires_at,
+        )
+    except AuthenticationError as exc:
+        raise HTTPException(status_code=401, detail="Unauthorized") from exc
     return {**ApiTokenPublic.model_validate(token).model_dump(), "token": raw_token}
 
 
 @router.delete("/{token_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def revoke_token(
     token_id: int,
-    _current_user: CurrentUser,
+    _principal: SessionPrincipal,
     service: AuthService,
 ):
     try:

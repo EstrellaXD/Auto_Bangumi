@@ -10,7 +10,13 @@ from fastapi.testclient import TestClient
 from module.api import v1
 from module.models import ResponseModel
 from module.models.passkey import Passkey
-from module.security.api import get_current_user
+from module.security.api import (
+    AuthPrincipal,
+    CredentialKind,
+    get_auth_service,
+    get_principal,
+)
+from module.security.auth_strategy import PasskeyAuthStrategy
 from test.factories import make_passkey
 
 # ---------------------------------------------------------------------------
@@ -27,13 +33,17 @@ def app():
 
 
 @pytest.fixture
-def authed_client(app):
+def authed_client(app, mock_user_model):
     """TestClient with auth dependency overridden."""
 
-    async def mock_user():
-        return "testuser"
+    async def mock_principal():
+        return AuthPrincipal(
+            username="testuser",
+            kind=CredentialKind.SESSION,
+            user=mock_user_model,
+        )
 
-    app.dependency_overrides[get_current_user] = mock_user
+    app.dependency_overrides[get_principal] = mock_principal
     client = TestClient(app)
     yield client
     app.dependency_overrides.clear()
@@ -161,28 +171,34 @@ class TestRegisterOptions:
         assert "challenge" in data
         assert "rp" in data
         assert "user" in data
+        mock_webauthn.generate_registration_options.assert_called_once_with(
+            username="testuser", user_id=1, existing_passkeys=[]
+        )
 
-    def test_get_registration_options_user_not_found(
+    def test_get_registration_options_uses_authenticated_user(
         self, authed_client, mock_webauthn
     ):
-        """POST /passkey/register/options with non-existent user returns 404."""
+        """Registration identity comes from the typed session principal."""
         with patch(
             "module.api.passkey._get_webauthn_from_request", return_value=mock_webauthn
         ):
             with patch("module.api.passkey.async_session_factory") as MockSession:
                 mock_session = AsyncMock()
-                mock_result = MagicMock()
-                mock_result.scalar_one_or_none.return_value = None
-                mock_session.execute = AsyncMock(return_value=mock_result)
+                mock_passkey_db = MagicMock()
+                mock_passkey_db.get_passkeys_by_user_id = AsyncMock(return_value=[])
 
                 MockSession.return_value.__aenter__ = AsyncMock(
                     return_value=mock_session
                 )
                 MockSession.return_value.__aexit__ = AsyncMock(return_value=False)
 
-                response = authed_client.post("/api/v1/passkey/register/options")
+                with patch(
+                    "module.api.passkey.PasskeyDatabase", return_value=mock_passkey_db
+                ):
+                    response = authed_client.post("/api/v1/passkey/register/options")
 
-        assert response.status_code == 404
+        assert response.status_code == 200
+        mock_passkey_db.get_passkeys_by_user_id.assert_awaited_once_with(1)
 
 
 # ---------------------------------------------------------------------------
@@ -326,14 +342,18 @@ class TestAuthOptions:
 
 
 class TestAuthVerify:
-    def test_login_with_passkey_success(self, unauthed_client, mock_webauthn):
+    def test_login_with_passkey_success(self, app, unauthed_client, mock_webauthn):
         """POST /passkey/auth/verify with valid passkey logs in."""
         mock_response = ResponseModel(
             status=True,
             status_code=200,
             msg_en="OK",
             msg_zh="成功",
-            data={"username": "testuser"},
+            data={
+                "user_id": 42,
+                "username": "testuser",
+                "credential_id": "normalized-id",
+            },
         )
         mock_strategy = MagicMock()
         mock_strategy.authenticate = AsyncMock(return_value=mock_response)
@@ -345,30 +365,34 @@ class TestAuthVerify:
                 "module.api.passkey.PasskeyAuthStrategy", return_value=mock_strategy
             ):
                 service = MagicMock()
-                service.issue_session_for_username = AsyncMock(
+                service.issue_session_for_verified_passkey = AsyncMock(
                     return_value="persisted-session"
                 )
-                with patch("module.security.api.auth_service", service):
-                    response = unauthed_client.post(
-                        "/api/v1/passkey/auth/verify",
-                        json={
-                            "username": "testuser",
-                            "credential": {
-                                "id": "cred_id",
-                                "rawId": "raw_id",
-                                "response": {
-                                    "clientDataJSON": "data",
-                                    "authenticatorData": "auth_data",
-                                    "signature": "sig",
-                                },
-                                "type": "public-key",
+                app.dependency_overrides[get_auth_service] = lambda: service
+                response = unauthed_client.post(
+                    "/api/v1/passkey/auth/verify",
+                    json={
+                        "username": "testuser",
+                        "credential": {
+                            "id": "cred_id",
+                            "rawId": "raw_id",
+                            "response": {
+                                "clientDataJSON": "data",
+                                "authenticatorData": "auth_data",
+                                "signature": "sig",
                             },
+                            "type": "public-key",
                         },
-                    )
+                    },
+                )
 
         assert response.status_code == 200
-        data = response.json()
-        assert "access_token" in data
+        assert response.json() == {"authenticated": True}
+        assert "persisted-session" not in response.text
+        assert response.cookies.get("token") == "persisted-session"
+        service.issue_session_for_verified_passkey.assert_awaited_once_with(
+            42, "normalized-id"
+        )
 
     def test_login_with_passkey_failure(self, unauthed_client, mock_webauthn):
         """POST /passkey/auth/verify with invalid passkey fails."""
@@ -402,6 +426,43 @@ class TestAuthVerify:
                 )
 
         assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_passkey_strategy_returns_immutable_user_id(mock_webauthn):
+    """The verified credential identity crosses the route boundary by DB ID."""
+    user = MagicMock(id=42, username="testuser", enabled=True)
+    passkey = make_passkey(user_id=42, credential_id="normalized-id")
+    mock_webauthn.base64url_decode.return_value = b"credential-id"
+    mock_webauthn.base64url_encode.return_value = "normalized-id"
+    mock_webauthn.verify_authentication.return_value = 1
+
+    with (
+        patch("module.security.auth_strategy.async_session_factory") as factory,
+        patch("module.security.auth_strategy.PasskeyDatabase") as database_cls,
+    ):
+        session = AsyncMock()
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = user
+        session.execute = AsyncMock(return_value=result)
+        factory.return_value.__aenter__ = AsyncMock(return_value=session)
+        factory.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        database = MagicMock()
+        database.get_passkey_by_credential_id = AsyncMock(return_value=passkey)
+        database.update_passkey_usage = AsyncMock()
+        database_cls.return_value = database
+
+        response = await PasskeyAuthStrategy(mock_webauthn).authenticate(
+            "testuser", {"rawId": "credential-id"}
+        )
+
+    assert response.status is True
+    assert response.data == {
+        "user_id": 42,
+        "username": "testuser",
+        "credential_id": "normalized-id",
+    }
 
 
 # ---------------------------------------------------------------------------

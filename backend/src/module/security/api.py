@@ -1,7 +1,8 @@
 import logging
 import os
-import secrets
+from dataclasses import dataclass
 from datetime import datetime, timedelta
+from enum import Enum
 from typing import Annotated
 
 from fastapi import Cookie, Depends, HTTPException, Request, status
@@ -95,53 +96,87 @@ def get_auth_service() -> AuthenticationService:
     return auth_service
 
 
-async def get_current_user(
+class CredentialKind(str, Enum):
+    SESSION = "session"
+    API_TOKEN = "api_token"
+    DEVELOPMENT = "development"
+
+
+@dataclass(frozen=True)
+class AuthPrincipal:
+    """Authenticated identity together with the credential that proved it."""
+
+    username: str
+    kind: CredentialKind
+    user: User | None = None
+
+
+async def get_principal(
     request: Request,
     token: str | None = Cookie(None),
     service: Annotated[AuthenticationService | None, Depends(get_auth_service)] = None,
-):
-    """FastAPI dependency that validates the current session.
+) -> AuthPrincipal:
+    """Resolve one supported credential into a typed principal.
 
     Accepts authentication via (in order of precedence):
     1. DEV_AUTH_BYPASS when ``AB_DEV_NO_AUTH=1`` is set in the environment.
-    2. A persisted API token or session in the ``Authorization`` header.
+    2. A persisted ``scope=api`` token in the ``Authorization`` header.
     3. An HttpOnly cookie containing a persisted session.
-    4. Legacy plaintext config tokens/JWT cookies during the migration window.
+
+    Any explicit Authorization header takes precedence over a cookie. Browser
+    session tokens and legacy plaintext/JWT credentials are deliberately not
+    accepted in the header or cookie compatibility paths.
     """
     if DEV_AUTH_BYPASS:
-        return "dev_user"
+        return AuthPrincipal(
+            username="dev_user",
+            kind=CredentialKind.DEVELOPMENT,
+        )
     service = service or auth_service
-    # Database tokens are authoritative. Plaintext configuration tokens remain
-    # readable for one migration window and are removed after startup import.
+
     auth_header = request.headers.get("authorization", "")
-    if auth_header.startswith("Bearer "):
-        api_token = auth_header[7:]
+    if auth_header:
+        scheme, separator, api_token = auth_header.partition(" ")
+        if not separator or scheme.lower() != "bearer" or not api_token:
+            raise UNAUTHORIZED
         user = await service.authenticate_api_token(api_token, scope="api")
         if user is not None:
-            return user.username
-        user = await service.authenticate_session(api_token)
-        if user is not None:
-            return user.username
-        if api_token and any(
-            secrets.compare_digest(api_token, t) for t in settings.security.login_tokens
-        ):
-            return "api_token_user"
+            return AuthPrincipal(
+                username=user.username,
+                kind=CredentialKind.API_TOKEN,
+                user=user,
+            )
+        raise UNAUTHORIZED
+
     if not token:
         raise UNAUTHORIZED
     user = await service.authenticate_session(token)
     if user is not None:
-        return user.username
+        return AuthPrincipal(
+            username=user.username,
+            kind=CredentialKind.SESSION,
+            user=user,
+        )
+    raise UNAUTHORIZED
 
-    # Accept legacy JWT cookies for one compatibility period. New logins no
-    # longer issue JWTs; /auth/refresh_token exchanges one for a DB session.
-    user = await service.authenticate_legacy_jwt(token)
-    if user is not None:
-        return user.username
-    payload = verify_token(token)
-    username = payload.get("sub") if payload else None
-    if not username or username not in active_user:
-        raise UNAUTHORIZED
-    return username
+
+async def get_current_user(
+    principal: Annotated[AuthPrincipal, Depends(get_principal)],
+) -> str:
+    """Compatibility wrapper for data routes that only need a username."""
+    return principal.username
+
+
+async def require_session_principal(
+    principal: Annotated[AuthPrincipal, Depends(get_principal)],
+) -> AuthPrincipal:
+    """Require a real browser cookie session for account-control operations."""
+    if principal.kind is not CredentialKind.SESSION or principal.user is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="A browser session is required for this operation",
+        )
+    return principal
 
 
 async def get_token_data(token: str = Depends(oauth2_scheme)):

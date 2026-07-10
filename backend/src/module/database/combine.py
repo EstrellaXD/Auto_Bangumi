@@ -66,6 +66,20 @@ class Database:
     async def rollback(self):
         await self.session.rollback()
 
+    async def begin_write(self):
+        """Acquire the write transaction before invariant-checking reads.
+
+        SQLite's normal deferred transaction lets two writers observe the same
+        last-enabled-user state. ``BEGIN IMMEDIATE`` serializes them before the
+        first SELECT; other database backends use their normal explicit begin.
+        """
+        if self.session.in_transaction():
+            raise RuntimeError("Write transaction must begin before database access")
+        if self.session.get_bind().dialect.name == "sqlite":
+            await self.session.execute(text("BEGIN IMMEDIATE"))
+        else:
+            await self.session.begin()
+
     async def refresh(self, obj):
         await self.session.refresh(obj)
 

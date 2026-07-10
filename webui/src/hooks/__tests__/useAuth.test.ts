@@ -15,7 +15,10 @@ describe('Auth Logic', () => {
     const validateForm = (
       username: string,
       password: string
-    ): { valid: boolean; error: 'empty_username' | 'empty_password' | 'short_password' | null } => {
+    ): {
+      valid: boolean;
+      error: 'empty_username' | 'empty_password' | 'short_password' | null;
+    } => {
       if (!username) {
         return { valid: false, error: 'empty_username' };
       }
@@ -129,7 +132,7 @@ describe('Auth Logic', () => {
     });
 
     it('should call API with credentials when validation passes', async () => {
-      const mockLoginApi = vi.fn().mockResolvedValue({ access_token: 'token' });
+      const mockLoginApi = vi.fn().mockResolvedValue({ authenticated: true });
       const validateForm = (username: string, password: string) =>
         username !== '' && password !== '' && password.length >= 8;
 

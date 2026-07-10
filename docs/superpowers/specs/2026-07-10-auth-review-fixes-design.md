@@ -72,9 +72,12 @@ Logout revokes the cookie session, clears the cookie on the actual returned
 response, and remains idempotent. Since header sessions no longer exist, there
 is no second session transport that logout could overlook.
 
-Passkey verification carries the immutable database `user_id` from the verified
-credential into session issuance. It never resolves the user again by mutable
-username after signature verification.
+Passkey verification carries the database `user_id` and normalized credential
+ID into session issuance. The signing transaction revalidates that the
+credential still belongs to the user before creating a session; this prevents
+SQLite row-ID reuse after delete/recreate from transferring a verified passkey
+to a replacement account. It never resolves the user again by mutable username
+after signature verification.
 
 ## Legacy JWT Policy
 
@@ -115,7 +118,14 @@ database services do not silently change behavior.
 
 Setup uses the same atomic credential-update application service. Completion
 revokes every pre-setup session and intentionally leaves the caller signed out;
-the user signs in with the newly selected credentials.
+the user signs in with the newly selected credentials. The setup guard returns
+the authenticated session user's ID (or the factory-default administrator's
+ID), so completion never performs a second lookup by the mutable `admin` name.
+
+Every authentication path that reads before writing acquires the SQLite write
+snapshot before its first SELECT. Paths that only revoke or refresh use direct
+conditional updates. This prevents WAL stale-snapshot upgrades from surfacing
+as immediate `database is locked` errors even when a busy timeout is configured.
 
 ## Legacy API/MCP Token Migration
 
@@ -168,10 +178,12 @@ returns the secret to the reveal dialog without making a second request first.
 Any later list refresh is independent and cannot consume the only copy.
 
 Closing, deactivating, or unmounting an access dialog clears password and
-one-time-token refs. The access panel reloads on KeepAlive activation, maps each
-token's `user_id` to an owner name, and distinguishes active, expired, and
-revoked tokens using `expires_at` and `revoked_at` rather than treating every
-unrevoked row as active.
+one-time-token refs. A lifecycle generation guard also discards a one-time token
+whose create request resolves after the panel was closed or deactivated, so an
+in-flight promise cannot restore scrubbed secret state. The access panel reloads
+on KeepAlive activation, maps each token's `user_id` to an owner name, and
+distinguishes active, expired, and revoked tokens using `expires_at` and
+`revoked_at` rather than treating every unrevoked row as active.
 
 The Axios error normalizer accepts the existing bilingual response envelope,
 FastAPI string `detail`, and validation-error `detail[]`. Non-silent 401
@@ -217,10 +229,15 @@ Regression tests are added before implementation for:
   session-only endpoint, including mixed header-plus-cookie requests;
 - passkey verification issuing by immutable user ID during concurrent username
   rename/reuse;
+- passkey session issuance revalidating credential ownership after SQLite user
+  ID reuse;
+- WAL concurrency between login/session writes and another writer;
+- setup completion updating the authenticated stable user ID after admin rename;
 - frontend token reveal surviving a subsequent refresh failure;
 - frontend parsing FastAPI `detail` and showing a 401 fallback;
 - frontend authentication types no longer containing `access_token`;
 - sensitive access refs being scrubbed on close/deactivate/unmount;
+- in-flight token creation not restoring a scrubbed one-time secret;
 - KeepAlive activation reloading access data;
 - token owner and active/expired/revoked state rendering.
 

@@ -1,7 +1,6 @@
 """MCP access control: configurable IP whitelist and bearer token authentication."""
 
 import logging
-import secrets
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -21,9 +20,9 @@ logger = logging.getLogger(__name__)
 class McpAccessMiddleware(BaseHTTPMiddleware):
     """Configurable access control for MCP endpoint.
 
-    Checks client IP against ``settings.security.mcp_whitelist`` CIDR ranges,
-    and ``Authorization`` header against ``settings.security.mcp_tokens``.
-    If the whitelist is empty and no tokens are configured, all access is denied.
+    Checks client IP against ``settings.security.mcp_whitelist`` CIDR ranges or
+    validates a database-backed bearer token with ``scope=mcp``. Legacy
+    plaintext configuration tokens are not part of the request path.
     """
 
     async def dispatch(self, request: Request, call_next):
@@ -34,11 +33,6 @@ class McpAccessMiddleware(BaseHTTPMiddleware):
             if token:
                 user = await auth_service.authenticate_api_token(token, scope="mcp")
                 if user is not None:
-                    return await call_next(request)
-                if any(
-                    secrets.compare_digest(token, legacy)
-                    for legacy in settings.security.mcp_tokens
-                ):
                     return await call_next(request)
 
         # Check IP whitelist

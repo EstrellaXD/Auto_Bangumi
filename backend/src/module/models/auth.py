@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 from typing import Literal
 
+from sqlalchemy import Index
 from sqlmodel import Field, SQLModel
 
 
@@ -28,12 +29,20 @@ class ApiToken(SQLModel, table=True):
     """Hashed API or MCP bearer token."""
 
     __tablename__ = "api_token"
+    __table_args__ = (
+        Index(
+            "ix_api_token_token_hash_scope",
+            "token_hash",
+            "scope",
+            unique=True,
+        ),
+    )
 
     id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", index=True)
     name: str = Field(min_length=1, max_length=64)
     scope: str = Field(index=True, max_length=8)
-    token_hash: str = Field(unique=True, index=True, max_length=64)
+    token_hash: str = Field(max_length=64)
     prefix: str = Field(max_length=16)
     created_at: datetime = Field(default_factory=utc_now)
     last_used_at: datetime | None = None
