@@ -61,9 +61,7 @@ class TestRotateBootLog:
         def boom(self):
             raise OSError("permission denied")
 
-        monkeypatch.setattr(
-            "logging.handlers.RotatingFileHandler.doRollover", boom
-        )
+        monkeypatch.setattr("logging.handlers.RotatingFileHandler.doRollover", boom)
 
         conf_log.rotate_boot_log()
 
