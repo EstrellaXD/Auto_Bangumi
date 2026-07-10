@@ -29,6 +29,7 @@ const rule = defineModel<BangumiRule>('rule', { required: true });
       <input
         v-model="rule.official_title"
         type="text"
+        :aria-label="$t('homepage.rule.official_title')"
         class="title-input"
         :placeholder="$t('homepage.rule.official_title')"
       />
@@ -37,6 +38,7 @@ const rule = defineModel<BangumiRule>('rule', { required: true });
         <input
           :value="rule.year ?? ''"
           type="text"
+          :aria-label="$t('homepage.rule.year')"
           class="year-input"
           :class="{ 'year-input--empty': !rule.year }"
           :placeholder="$t('homepage.rule.year')"
@@ -47,6 +49,7 @@ const rule = defineModel<BangumiRule>('rule', { required: true });
         <input
           v-model.number="rule.season"
           type="number"
+          :aria-label="$t('homepage.rule.season')"
           class="season-input"
           min="1"
         />

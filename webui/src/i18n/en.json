@@ -617,6 +617,7 @@
     "token_scope": "Scope",
     "token_created": "Token created",
     "token_once": "Copy this token now. It cannot be shown again.",
+    "one_time_token": "One-time token",
     "token_copied": "Token copied",
     "copy": "Copy",
     "revoke": "Revoke",

@@ -42,6 +42,12 @@ const normalizedOptions = computed<SelectOption[]>(() => {
 });
 
 const invalid = computed(() => props.error || field?.invalid.value === true);
+
+const menuProps = { role: 'listbox' } as const;
+
+function optionNodeProps() {
+  return { role: 'option' };
+}
 </script>
 
 <template>
@@ -52,9 +58,13 @@ const invalid = computed(() => props.error || field?.invalid.value === true);
     :options="normalizedOptions"
     :placeholder="placeholder"
     :disabled="disabled"
+    role="combobox"
+    aria-haspopup="listbox"
     :aria-label="ariaLabel"
     :aria-labelledby="field?.labelId"
     :aria-describedby="field?.describedBy.value"
+    :menu-props="menuProps"
+    :node-props="optionNodeProps"
   ></NSelect>
 </template>
 

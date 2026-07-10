@@ -617,6 +617,7 @@
     "token_scope": "作用域",
     "token_created": "令牌已创建",
     "token_once": "请立即复制此令牌，之后无法再次显示。",
+    "one_time_token": "一次性令牌",
     "token_copied": "令牌已复制",
     "copy": "复制",
     "revoke": "撤销",

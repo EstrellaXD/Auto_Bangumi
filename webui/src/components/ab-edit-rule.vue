@@ -91,6 +91,12 @@ const resolutionOptions = ['2160p', '1080p', '720p'].map((r) => ({
   value: r,
 }));
 
+const selectMenuProps = { role: 'listbox' } as const;
+
+function selectOptionNodeProps() {
+  return { role: 'option' };
+}
+
 // Auto detect offset using the new detectOffset API
 async function autoDetectOffset() {
   if (!localRule.value.official_title || !localRule.value.season) return;
@@ -225,7 +231,12 @@ function emitUnarchive() {
     @close="close"
   >
     <!-- Needs Review Warning Banner -->
-    <div v-if="localRule.needs_review" class="review-warning">
+    <div
+      v-if="localRule.needs_review"
+      class="review-warning"
+      role="status"
+      :aria-label="$t('offset.needs_review')"
+    >
       <div class="review-warning-main">
         <span class="review-warning-emoji">⚠️</span>
         <div class="review-warning-content">
@@ -293,9 +304,14 @@ function emitUnarchive() {
           <NSelect
             :value="localRule.air_weekday ?? null"
             :options="weekdayOptions"
+            role="combobox"
+            aria-haspopup="listbox"
+            :menu-props="selectMenuProps"
+            :node-props="selectOptionNodeProps"
             clearable
             size="small"
             :placeholder="$t('calendar.unknown')"
+            :aria-label="$t('homepage.rule.air_weekday')"
             class="weekday-select"
             @update:value="onWeekdayChange"
           />
@@ -308,7 +324,12 @@ function emitUnarchive() {
           <NSelect
             v-model:value="localRule.episode_type"
             :options="episodeTypeOptions"
+            role="combobox"
+            aria-haspopup="listbox"
+            :menu-props="selectMenuProps"
+            :node-props="selectOptionNodeProps"
             size="small"
+            :aria-label="$t('homepage.rule.episode_type')"
             class="weekday-select"
           />
         </div>
@@ -322,6 +343,7 @@ function emitUnarchive() {
             type="text"
             class="preferred-input"
             placeholder="ANi"
+            :aria-label="$t('homepage.rule.preferred_group')"
             @update:model-value="localRule.preferred_group = String($event)"
           />
         </div>
@@ -333,11 +355,16 @@ function emitUnarchive() {
           <NSelect
             v-model:value="localRule.preferred_resolution"
             :options="resolutionOptions"
+            role="combobox"
+            aria-haspopup="listbox"
+            :menu-props="selectMenuProps"
+            :node-props="selectOptionNodeProps"
             clearable
             filterable
             tag
             size="small"
             :placeholder="$t('homepage.rule.auto_detect')"
+            :aria-label="$t('homepage.rule.preferred_resolution')"
             class="weekday-select"
           />
         </div>
