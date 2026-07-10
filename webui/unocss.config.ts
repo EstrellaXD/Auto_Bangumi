@@ -15,7 +15,9 @@ export default defineConfig({
       baseFontSize: 4,
     }),
     presetAttributify(),
-    presetIcons({ cdn: 'https://esm.sh/' }),
+    // Icon collections are installed locally so production builds remain
+    // reproducible when the E2E runtime has no public network access.
+    presetIcons(),
   ],
   preflights: [
     {

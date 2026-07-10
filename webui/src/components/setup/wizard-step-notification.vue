@@ -66,6 +66,7 @@ const canTest = computed(() => {
           <NSelect
             v-model:value="notificationData.type"
             :options="notificationTypes"
+            :aria-label="t('config.notification_set.type')"
             size="small"
           />
         </ab-field>
@@ -74,6 +75,8 @@ const canTest = computed(() => {
           <input
             v-model="notificationData.token"
             type="text"
+            :aria-label="t('config.notification_set.token')"
+            autocomplete="off"
             class="setup-input setup-input-wide"
           />
         </ab-field>
@@ -82,6 +85,7 @@ const canTest = computed(() => {
           <input
             v-model="notificationData.chat_id"
             type="text"
+            :aria-label="t('config.notification_set.chat_id')"
             class="setup-input"
           />
         </ab-field>

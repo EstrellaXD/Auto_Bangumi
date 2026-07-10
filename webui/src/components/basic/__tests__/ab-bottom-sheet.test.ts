@@ -31,12 +31,46 @@ async function mountSheet(props = {}) {
 }
 
 describe('ab-bottom-sheet', () => {
+  it('should expose its title as the dialog accessible name', async () => {
+    await mountSheet();
+
+    const dialog = document.querySelector('[role="dialog"]');
+    const labelledBy = dialog?.getAttribute('aria-labelledby');
+    expect(labelledBy).toBeTruthy();
+    expect(document.getElementById(labelledBy!)?.textContent).toContain(
+      'Edit rule'
+    );
+  });
+
+  it('should provide an accessible close action', async () => {
+    const wrapper = await mountSheet({ closeLabel: 'Dismiss sheet' });
+
+    const closeButton = document.querySelector<HTMLButtonElement>(
+      'button[aria-label="Dismiss sheet"]'
+    );
+    expect(closeButton).not.toBeNull();
+    expect(closeButton!.classList.contains('ab-icon-btn--md')).toBe(true);
+    closeButton!.click();
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.emitted('update:show')).toEqual([[false]]);
+    expect(wrapper.emitted('close')).toHaveLength(1);
+  });
+
+  it('should hide the close action when requested', async () => {
+    await mountSheet({ showClose: false });
+
+    expect(document.querySelector('button[aria-label="Close"]')).toBeNull();
+  });
+
   it('should render the fullscreen panel class when requested', async () => {
     await mountSheet({ fullscreen: true, avoidKeyboard: false });
 
+    const panel = document.querySelector('[data-testid="bottom-sheet-panel"]');
+    expect(panel).not.toBeNull();
     expect(
-      document.querySelector('.ab-bottom-sheet__panel--fullscreen')
-    ).not.toBeNull();
+      panel?.classList.contains('ab-bottom-sheet__panel--fullscreen')
+    ).toBe(true);
   });
 
   it('should not translate the sheet for keyboard changes when avoidance is disabled', async () => {

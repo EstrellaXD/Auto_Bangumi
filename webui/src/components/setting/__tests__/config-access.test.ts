@@ -256,6 +256,12 @@ describe('config access', () => {
     );
     expect(wrapper.text()).toContain('expired-token');
     expect(wrapper.text()).toContain('revoked-token');
+    expect(wrapper.find('[role="group"][aria-label="alice"]').exists()).toBe(
+      true
+    );
+    expect(
+      wrapper.find('[role="group"][aria-label="active-token"]').exists()
+    ).toBe(true);
     wrapper.unmount();
   });
 
@@ -312,6 +318,9 @@ describe('config access', () => {
     await flushPromises();
     expect(state.issuedToken).toBe('ab_api_one_time_secret');
     expect(wrapper.text()).toContain('ab_api_one_time_secret');
+    expect(wrapper.find('[aria-label="access.one_time_token"]').text()).toBe(
+      'ab_api_one_time_secret'
+    );
 
     await wrapper
       .find('[data-title="access.token_created"] .stub-modal-close')

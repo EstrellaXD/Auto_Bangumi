@@ -4,21 +4,28 @@ import { usePointerSwipe } from '@vueuse/core';
 import {
   Dialog,
   DialogPanel,
+  DialogTitle,
   TransitionChild,
   TransitionRoot,
 } from '@headlessui/vue';
+import { Close } from '@icon-park/vue-next';
+import AbIconButton from './ab-icon-button.vue';
 
 const props = withDefaults(
   defineProps<{
     show: boolean;
     title?: string;
     closeable?: boolean;
+    showClose?: boolean;
+    closeLabel?: string;
     maxHeight?: string;
     fullscreen?: boolean;
     avoidKeyboard?: boolean;
   }>(),
   {
     closeable: true,
+    showClose: true,
+    closeLabel: 'Close',
     maxHeight: '85dvh',
     fullscreen: false,
     avoidKeyboard: true,
@@ -140,6 +147,7 @@ function close() {
         <div class="ab-bottom-sheet__container">
           <DialogPanel
             ref="sheetRef"
+            data-testid="bottom-sheet-panel"
             class="ab-bottom-sheet__panel"
             :class="{ 'ab-bottom-sheet__panel--fullscreen': fullscreen }"
             :style="[sheetStyle, { maxHeight: panelMaxHeight }]"
@@ -150,8 +158,22 @@ function close() {
             </div>
 
             <!-- Title -->
-            <div v-if="title" class="ab-bottom-sheet__header">
-              <h3 class="ab-bottom-sheet__title">{{ title }}</h3>
+            <div
+              v-if="title || (closeable && showClose)"
+              class="ab-bottom-sheet__header"
+            >
+              <DialogTitle v-if="title" as="h3" class="ab-bottom-sheet__title">
+                {{ title }}
+              </DialogTitle>
+              <AbIconButton
+                v-if="closeable && showClose"
+                class="ab-bottom-sheet__close"
+                size="md"
+                :label="closeLabel"
+                @click="close"
+              >
+                <Close theme="outline" size="16" />
+              </AbIconButton>
             </div>
 
             <!-- Content -->
@@ -248,6 +270,10 @@ function close() {
   }
 
   &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
     padding: 0 20px 12px;
     border-bottom: 1px solid var(--color-border);
   }
@@ -257,6 +283,10 @@ function close() {
     font-weight: 600;
     color: var(--color-text);
     margin: 0;
+  }
+
+  &__close {
+    margin-left: auto;
   }
 
   &__content {

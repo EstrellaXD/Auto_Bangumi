@@ -189,7 +189,13 @@ function tokenStatus(token: ApiTokenPublic): ApiTokenStatus {
 
       <div v-if="loading" class="empty-state">{{ $t('access.loading') }}</div>
       <div v-else class="access-list">
-        <div v-for="user in users" :key="user.id" class="access-row">
+        <div
+          v-for="user in users"
+          :key="user.id"
+          class="access-row"
+          role="group"
+          :aria-label="user.username"
+        >
           <div class="row-main">
             <strong>{{ user.username }}</strong>
             <span class="status-dot" :class="[{ disabled: !user.enabled }]">
@@ -230,7 +236,13 @@ function tokenStatus(token: ApiTokenPublic): ApiTokenStatus {
         {{ $t('access.no_tokens') }}
       </div>
       <div v-else class="access-list">
-        <div v-for="token in tokens" :key="token.id" class="access-row">
+        <div
+          v-for="token in tokens"
+          :key="token.id"
+          class="access-row"
+          role="group"
+          :aria-label="token.name"
+        >
           <div class="token-info">
             <div class="row-main">
               <strong>{{ token.name }}</strong>
@@ -342,7 +354,7 @@ function tokenStatus(token: ApiTokenPublic): ApiTokenStatus {
     >
       <div class="token-reveal">
         <p>{{ $t('access.token_once') }}</p>
-        <code>{{ issuedToken }}</code>
+        <code :aria-label="$t('access.one_time_token')">{{ issuedToken }}</code>
       </div>
       <template #footer>
         <ab-button size="sm" variant="primary" @click="copyIssuedToken">

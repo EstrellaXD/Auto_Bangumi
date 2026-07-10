@@ -58,6 +58,8 @@ function close() {
     :show="show"
     :title="title"
     :closeable="closable"
+    :show-close="showClose"
+    :close-label="$t('common.close')"
     :max-height="maxHeight"
     :fullscreen="mobileFullscreen"
     :avoid-keyboard="avoidKeyboard"
