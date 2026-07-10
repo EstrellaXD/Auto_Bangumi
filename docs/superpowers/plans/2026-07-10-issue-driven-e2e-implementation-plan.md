@@ -160,7 +160,6 @@ cd backend && uv run black --check src/module/parser/analyser/tmdb_parser.py src
 cd backend && uv run pytest \
   src/test/test_torrent_parser.py \
   src/test/test_title_parser.py \
-  src/test/test_offset_detector.py \
   src/test/test_offset_scanner.py \
   src/test/test_issue_bugs.py -q
 cd backend && uv run ruff check src/module/parser/analyser/raw_parser.py \
@@ -195,8 +194,8 @@ cd backend && uv run ruff check src/module/parser/analyser/raw_parser.py \
 cd backend && uv run pytest src/test/test_release_classification.py -q
 cd backend && uv run ruff check ../scripts/classify_release.py \
   src/test/test_release_classification.py
-python scripts/classify_release.py --event pull_request --ref-type branch \
-  --ref-name main --head-ref Doc-update --on-main false
+python3 scripts/classify_release.py --event-name pull_request --ref-type branch \
+  --ref-name main --pr-head Doc-update --pr-title "3.3.4"
 ```
 
 ## Task 5: Build Deterministic Fixture Assets
