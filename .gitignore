@@ -219,6 +219,7 @@ dev-dist
 
 # test file
 test.*
+!webui/e2e/fixtures/test.ts
 
 # local config
 /backend/config/
