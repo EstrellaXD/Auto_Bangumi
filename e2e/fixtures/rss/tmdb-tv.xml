@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Localized TV Search</title>
+    <link>http://mock-upstream:18888/rss/tmdb-tv.xml</link>
+    <description>TMDB television language fixture</description>
+    <item>
+      <title>[E2E] Localized Show - 01 [1080p][CHS].mkv</title>
+      <link>http://mock-upstream:18888/items/localized-show-01</link>
+      <pubDate>Wed, 01 Jul 2026 12:00:00 GMT</pubDate>
+      <enclosure url="http://mock-upstream:18888/torrents/tiny-media.torrent" type="application/x-bittorrent" length="0" />
+    </item>
+  </channel>
+</rss>
