@@ -71,7 +71,13 @@ def _parse_non_episodic(content_title: str, group: str, episode_type: str) -> tu
     stripped = prefix_process(content_title, group)
     brackets = BRACKET_RE.findall(stripped)
     name_part = BRACKET_RE.sub(" ", stripped)
-    name_part = MOVIE_TOKEN_RE.sub(" ", name_part)
+    # ``Movie`` may be part of the real title as well as the trailing release
+    # type marker (``Localized Movie Movie``).  Only the final occurrence is
+    # the marker; deleting every occurrence silently changes the TMDB query.
+    movie_tokens = list(MOVIE_TOKEN_RE.finditer(name_part))
+    if movie_tokens:
+        marker = movie_tokens[-1]
+        name_part = f"{name_part[: marker.start()]} {name_part[marker.end() :]}"
     name_part = SPECIAL_TOKEN_RE.sub(" ", name_part)
     name_part = name_part.strip(" -/")
     name_en, name_zh, name_jp = "", "", ""

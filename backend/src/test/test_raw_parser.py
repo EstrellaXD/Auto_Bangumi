@@ -408,6 +408,29 @@ class TestMovieAndSpecialParsing:
         info = raw_parser(content)
         assert info is not None
         assert info.episode_type == "movie"
+        assert info.title_zh == "某剧场作品"
+
+    @pytest.mark.parametrize(
+        ("title", "expected_title"),
+        (
+            ("Localized Movie", "Localized Movie"),
+            ("The Movie", "The Movie"),
+        ),
+    )
+    def test_movie_marker_preserves_movie_word_in_official_title(
+        self, title, expected_title
+    ):
+        content = f"[E2E] {title} Movie [1080p][CHS].mkv"
+        info = raw_parser(content)
+        assert info is not None
+        assert info.episode_type == "movie"
+        assert info.title_en == expected_title
+
+    def test_single_movie_marker_is_removed_from_plain_title(self):
+        info = raw_parser("[E2E] Standalone Title Movie [1080p][CHS].mkv")
+        assert info is not None
+        assert info.episode_type == "movie"
+        assert info.title_en == "Standalone Title"
 
     def test_parse_ova_sets_special_type_and_season_zero(self):
         content = "[LoliHouse] 鬼灭之刃 / Kimetsu no Yaiba OVA01 [WebRip 1080p HEVC-10bit AAC]"
