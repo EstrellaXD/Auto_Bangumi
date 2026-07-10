@@ -65,7 +65,7 @@ class UserDatabase:
 
     async def _enabled_count(self) -> int:
         result = await self.session.execute(
-            select(func.count()).select_from(User).where(User.enabled.is_(True))
+            select(func.count()).select_from(User).where(col(User.enabled).is_(True))
         )
         return int(result.scalar_one())
 

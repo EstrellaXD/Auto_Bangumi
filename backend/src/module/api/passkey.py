@@ -34,6 +34,12 @@ AuthService = Annotated[AuthenticationService, Depends(get_auth_service)]
 _GENERIC_ERROR = "Internal server error."
 
 
+def _require_user_id(user: User) -> int:
+    if user.id is None:
+        raise RuntimeError("Persisted user has no primary key")
+    return user.id
+
+
 def _get_webauthn_from_request(request: Request):
     """
     从请求中构造 WebAuthnService
@@ -91,12 +97,13 @@ async def get_registration_options(
                 raise HTTPException(status_code=404, detail="User not found")
 
             # Get existing passkeys
+            user_id = _require_user_id(user)
             passkey_db = PasskeyDatabase(session)
-            existing_passkeys = await passkey_db.get_passkeys_by_user_id(user.id)
+            existing_passkeys = await passkey_db.get_passkeys_by_user_id(user_id)
 
             options = webauthn.generate_registration_options(
                 username=username,
-                user_id=user.id,
+                user_id=user_id,
                 existing_passkeys=existing_passkeys,
             )
 
@@ -201,8 +208,9 @@ async def get_passkey_login_options(
 
             passkeys = []
             if user:
+                user_id = _require_user_id(user)
                 passkey_db = PasskeyDatabase(session)
-                passkeys = await passkey_db.get_passkeys_by_user_id(user.id)
+                passkeys = await passkey_db.get_passkeys_by_user_id(user_id)
 
             if not user or not passkeys:
                 # Same response whether the username doesn't exist or simply
@@ -283,7 +291,7 @@ async def list_passkeys(username: str = Depends(get_current_user)):
                 raise HTTPException(status_code=404, detail="User not found")
 
             passkey_db = PasskeyDatabase(session)
-            passkeys = await passkey_db.get_passkeys_by_user_id(user.id)
+            passkeys = await passkey_db.get_passkeys_by_user_id(_require_user_id(user))
 
             return [passkey_db.to_list_model(pk) for pk in passkeys]
 
@@ -311,7 +319,9 @@ async def delete_passkey(
                 raise HTTPException(status_code=404, detail="User not found")
 
             passkey_db = PasskeyDatabase(session)
-            await passkey_db.delete_passkey(delete_data.passkey_id, user.id)
+            await passkey_db.delete_passkey(
+                delete_data.passkey_id, _require_user_id(user)
+            )
 
             return JSONResponse(
                 status_code=200,

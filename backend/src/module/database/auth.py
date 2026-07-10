@@ -60,7 +60,7 @@ class AuthDatabase:
         result = await self.session.execute(
             select(AuthSession).where(
                 AuthSession.token_hash == _hash_token(raw_token),
-                AuthSession.revoked_at.is_(None),
+                col(AuthSession.revoked_at).is_(None),
             )
         )
         auth_session = result.scalars().first()
@@ -100,7 +100,7 @@ class AuthDatabase:
         result = await self.session.execute(
             select(AuthSession).where(
                 AuthSession.token_hash == _hash_token(raw_token),
-                AuthSession.revoked_at.is_(None),
+                col(AuthSession.revoked_at).is_(None),
             )
         )
         auth_session = result.scalars().first()
@@ -118,7 +118,7 @@ class AuthDatabase:
         result = await self.session.execute(
             select(AuthSession).where(
                 AuthSession.user_id == user_id,
-                AuthSession.revoked_at.is_(None),
+                col(AuthSession.revoked_at).is_(None),
             )
         )
         sessions = list(result.scalars().all())
@@ -200,7 +200,7 @@ class AuthDatabase:
             select(ApiToken).where(
                 ApiToken.token_hash == _hash_token(raw_token),
                 ApiToken.scope == scope,
-                ApiToken.revoked_at.is_(None),
+                col(ApiToken.revoked_at).is_(None),
             )
         )
         token = result.scalars().first()
@@ -236,8 +236,12 @@ class AuthDatabase:
     async def purge_user_credentials(self, user_id: int) -> None:
         """Remove credentials before deleting their owning user."""
         await self.session.execute(
-            delete(AuthSession).where(AuthSession.user_id == user_id)
+            delete(AuthSession).where(col(AuthSession.user_id) == user_id)
         )
-        await self.session.execute(delete(ApiToken).where(ApiToken.user_id == user_id))
-        await self.session.execute(delete(Passkey).where(Passkey.user_id == user_id))
+        await self.session.execute(
+            delete(ApiToken).where(col(ApiToken.user_id) == user_id)
+        )
+        await self.session.execute(
+            delete(Passkey).where(col(Passkey.user_id) == user_id)
+        )
         await self.session.commit()

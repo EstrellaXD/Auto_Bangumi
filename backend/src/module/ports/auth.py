@@ -62,8 +62,11 @@ class SessionTokenRepository(Protocol):
 
 
 class AuthUnitOfWork(Protocol):
-    user: UserRepository
-    auth: SessionTokenRepository
+    @property
+    def user(self) -> UserRepository: ...
+
+    @property
+    def auth(self) -> SessionTokenRepository: ...
 
     async def __aenter__(self) -> Self: ...
 
