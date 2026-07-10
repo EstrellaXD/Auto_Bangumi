@@ -8,6 +8,7 @@ import json
 import re
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 from urllib.parse import urlparse
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -25,26 +26,26 @@ def _load_generator() -> ModuleType:
     return module
 
 
-def _bdecode(data: bytes, index: int = 0):
+def _bdecode(data: bytes, index: int = 0) -> tuple[Any, int]:
     token = data[index : index + 1]
     if token == b"i":
         end = data.index(b"e", index)
         return int(data[index + 1 : end]), end + 1
     if token == b"l":
-        result = []
+        items: list[Any] = []
         index += 1
         while data[index : index + 1] != b"e":
             value, index = _bdecode(data, index)
-            result.append(value)
-        return result, index + 1
+            items.append(value)
+        return items, index + 1
     if token == b"d":
-        result = {}
+        mapping: dict[bytes, Any] = {}
         index += 1
         while data[index : index + 1] != b"e":
             key, index = _bdecode(data, index)
             value, index = _bdecode(data, index)
-            result[key] = value
-        return result, index + 1
+            mapping[key] = value
+        return mapping, index + 1
     colon = data.index(b":", index)
     length = int(data[index:colon])
     start = colon + 1

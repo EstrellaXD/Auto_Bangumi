@@ -174,6 +174,7 @@ class Stack:
         self.env_file = self.work_dir / "stack.env"
         self._runner = runner
         self._started = False
+        self._up_attempted = False
 
         for directory in (
             self.config_dir,
@@ -191,6 +192,7 @@ class Stack:
         self.environment: dict[str, str] = {
             "AB_E2E_PROFILE": self.profile,
             "AB_E2E_PROJECT": self.project_name,
+            "AB_E2E_WORK_DIR": str(self.work_dir),
             "AB_E2E_CONFIG_DIR": str(self.config_dir),
             "AB_E2E_DATA_DIR": str(self.data_dir),
             "AB_E2E_DOWNLOAD_DIR": str(self.download_dir),
@@ -206,6 +208,9 @@ class Stack:
             ),
             "AB_E2E_FAKE_QB_IMAGE": os.environ.get(
                 "AB_E2E_FAKE_QB_IMAGE", f"{self.project_name}/fake-qb:local"
+            ),
+            "AB_E2E_PROXY_IMAGE": os.environ.get(
+                "AB_E2E_PROXY_IMAGE", f"{self.project_name}/port-proxy:local"
             ),
             "AB_E2E_PUID": str(getattr(os, "getuid", lambda: 1000)()),
             "AB_E2E_PGID": str(getattr(os, "getgid", lambda: 1000)()),
@@ -283,12 +288,12 @@ class Stack:
 
     def ports(self) -> dict[str, int]:
         ports = {
-            "app": self._published_port("app", 7892),
-            "mock-upstream": self._published_port("mock-upstream", 18888),
-            "fake-qb": self._published_port("fake-qb", 8080),
+            "app": self._published_port("port-proxy", 17892),
+            "mock-upstream": self._published_port("port-proxy", 18888),
+            "fake-qb": self._published_port("port-proxy", 18080),
         }
         if self.profile == "downloader":
-            ports["qbittorrent"] = self._published_port("qbittorrent", 8080)
+            ports["qbittorrent"] = self._published_port("port-proxy", 28080)
         return ports
 
     def _publish_urls(self, ports: Mapping[str, int]) -> None:
@@ -308,7 +313,11 @@ class Stack:
     def start(self) -> dict[str, int]:
         if self.profile == "downloader":
             self._run_compose("pull", "qbittorrent")
-        self._run_compose("build", "mock-upstream", "fake-qb")
+        self._run_compose("build", "mock-upstream", "fake-qb", "port-proxy")
+        # A failed `up --wait` can still leave unhealthy containers with the
+        # only useful startup logs.  Remember the attempt before Compose runs
+        # so `stop()` captures those diagnostics before tearing them down.
+        self._up_attempted = True
         self._run_compose(
             "up",
             "--detach",
@@ -375,7 +384,7 @@ class Stack:
 
     def stop(self, *, collect: bool = True) -> None:
         try:
-            if collect and self._started:
+            if collect and (self._up_attempted or self._started):
                 self.collect()
         finally:
             self._run_compose(
@@ -385,6 +394,7 @@ class Stack:
                 check=False,
             )
             self._started = False
+            self._up_attempted = False
 
 
 CommandRunner = Callable[[Sequence[str], Mapping[str, str]], object]
@@ -426,8 +436,8 @@ def run_with_stack(
     runner: CommandRunner = _default_command_runner,
 ):
     with scoped_signal_cleanup(stack):
-        stack.start()
         try:
+            stack.start()
             return runner(list(command), {**os.environ, **stack.environment})
         finally:
             stack.stop(collect=True)
@@ -471,7 +481,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         stack.validate()
         return 0
     if args.action == "start":
-        print(json.dumps(stack.start(), sort_keys=True))
+        try:
+            published = stack.start()
+        except Exception:
+            stack.stop(collect=True)
+            raise
+        print(json.dumps(published, sort_keys=True))
         print(stack.env_file)
         return 0
     if args.action == "stop":
@@ -490,8 +505,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if args.action == "smoke":
         with scoped_signal_cleanup(stack):
-            stack.start()
             try:
+                stack.start()
                 stack._wait_for_health()
             finally:
                 stack.stop(collect=True)

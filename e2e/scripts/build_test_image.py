@@ -42,9 +42,15 @@ def tracked_backend_files(repo_root: Path) -> tuple[Path, ...]:
         check=True,
         capture_output=True,
     )
-    return tuple(
+    tracked = (
         Path(value.decode("utf-8")) for value in result.stdout.split(b"\0") if value
     )
+    # `git ls-files` still reports tracked files deleted in the current
+    # worktree.  Local pre-commit image verification must reflect those
+    # deletions instead of trying to copy paths that intentionally no longer
+    # exist.  Explicit `tracked_files` passed to `prepare_context` remain
+    # strict and still surface missing required inputs.
+    return tuple(path for path in tracked if (repo_root / path).is_file())
 
 
 def _safe_relative(path: Path) -> Path:

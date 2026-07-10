@@ -1,9 +1,5 @@
 services:
   app:
-    environment:
-      AB_DOWNLOADER_HOST: qbittorrent:8080
-      AB_DOWNLOADER_USERNAME: admin
-      AB_DOWNLOADER_PASSWORD: adminadmin
     depends_on:
       qbittorrent:
         condition: service_healthy
@@ -16,8 +12,6 @@ services:
       PGID: ${AB_E2E_PGID:-1000}
       WEBUI_PORT: "8080"
       TORRENTING_PORT: "6881"
-    ports:
-      - "127.0.0.1::8080"
     volumes:
       - type: bind
         source: ${AB_E2E_QB_CONFIG_DIR:?AB_E2E_QB_CONFIG_DIR must be set}
@@ -34,3 +28,7 @@ services:
     stop_grace_period: 20s
     networks:
       - e2e
+
+  port-proxy:
+    ports:
+      - "127.0.0.1::28080"

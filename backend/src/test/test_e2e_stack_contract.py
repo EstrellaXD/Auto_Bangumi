@@ -38,11 +38,21 @@ def test_compose_files_are_isolated_and_use_random_loopback_ports():
     assert "internal: true" in browser
     assert "container_name" not in browser + downloader
     assert ":latest" not in browser + downloader
-    assert '"127.0.0.1::7892"' in browser
+    assert '"127.0.0.1::17892"' in browser
     assert '"127.0.0.1::18888"' in browser
-    assert '"127.0.0.1::8080"' in browser
-    assert '"127.0.0.1::8080"' in downloader
-    assert not re.search(r"127\.0\.0\.1:\d+:\d+", browser + downloader)
+    assert '"127.0.0.1::18080"' in browser
+    assert '"127.0.0.1::28080"' in downloader
+    assert not re.search(r"127\.0\.0\.1:(?!0:)\d+:\d+", browser + downloader)
+    for setting in (
+        "AB_DOWNLOADER_HOST",
+        "AB_DOWNLOADER_USERNAME",
+        "AB_DOWNLOADER_PASSWORD",
+        "AB_DOWNLOAD_PATH",
+        "AB_INTERVAL_TIME",
+        "AB_RENAME_FREQ",
+        "AB_DEBUG_MODE",
+    ):
+        assert setting not in browser + downloader
     assert QB_IMAGE in downloader
 
 
@@ -50,6 +60,7 @@ def test_support_service_images_are_pinned_and_dependency_free():
     for relative in (
         "mock-upstream/Dockerfile",
         "fake-qb/Dockerfile",
+        "port-proxy/Dockerfile",
     ):
         dockerfile = (E2E / relative).read_text()
         assert f"FROM {PYTHON_IMAGE}" in dockerfile
@@ -114,6 +125,23 @@ def test_build_context_stages_dist_and_version_without_touching_source(tmp_path)
     assert not (repo / "backend/src/module/__version__.py").exists()
 
 
+def test_build_inputs_ignore_tracked_files_deleted_in_the_worktree(
+    tmp_path,
+    monkeypatch,
+):
+    build = _load_script("build_test_image")
+    repo = tmp_path / "repo"
+    (repo / "backend").mkdir(parents=True)
+    (repo / "Dockerfile").write_text("FROM scratch\n", encoding="utf-8")
+
+    class Result:
+        stdout = b"Dockerfile\0backend/deleted.py\0"
+
+    monkeypatch.setattr(build.subprocess, "run", lambda *_args, **_kwargs: Result())
+
+    assert build.tracked_backend_files(repo) == (Path("Dockerfile"),)
+
+
 def test_build_command_uses_only_the_temporary_context(tmp_path):
     build = _load_script("build_test_image")
 
@@ -156,6 +184,7 @@ def test_stack_builds_unique_compose_commands_and_environment(tmp_path):
     assert stack.environment["AB_E2E_CONFIG_DIR"] == str(
         (tmp_path / "work/config").resolve()
     )
+    assert stack.environment["AB_E2E_WORK_DIR"] == str((tmp_path / "work").resolve())
     assert stack.environment["AB_E2E_DOWNLOAD_DIR"] == str(
         (tmp_path / "work/downloads").resolve()
     )
@@ -273,6 +302,59 @@ def test_run_with_stack_always_stops_after_command_failure():
 
     assert fake.started is True
     assert fake.stopped is True
+
+
+def test_run_with_stack_stops_after_start_failure():
+    stack_module = _load_script("stack")
+
+    class FakeStack:
+        stopped = False
+        environment = {}
+
+        def start(self):
+            raise RuntimeError("startup failed")
+
+        def stop(self, *, collect=True):
+            assert collect is True
+            self.stopped = True
+
+    fake = FakeStack()
+
+    with pytest.raises(RuntimeError, match="startup failed"):
+        stack_module.run_with_stack(fake, ["pytest"])
+
+    assert fake.stopped is True
+
+
+def test_partial_compose_start_collects_before_teardown(tmp_path, monkeypatch):
+    stack_module = _load_script("stack")
+    events = []
+
+    def runner(command, **_kwargs):
+        if "build" in command:
+            events.append("build")
+            return None
+        if "up" in command:
+            events.append("up")
+            raise RuntimeError("compose health check failed")
+        if "down" in command:
+            events.append("down")
+            return None
+        raise AssertionError(f"Unexpected command: {command!r}")
+
+    stack = stack_module.Stack(
+        profile="browser",
+        repo_root=ROOT,
+        work_dir=tmp_path / "partial-start",
+        project_name="ab-e2e-partial-start",
+        runner=runner,
+    )
+    monkeypatch.setattr(stack, "collect", lambda: events.append("collect"))
+
+    with pytest.raises(RuntimeError, match="compose health check failed"):
+        stack_module.run_with_stack(stack, ["pytest"])
+
+    assert events == ["build", "up", "collect", "down"]
 
 
 def test_run_with_stack_handles_sigterm_and_restores_handlers(monkeypatch):

@@ -11,7 +11,7 @@ from typing import Iterable, Sequence
 from urllib.parse import urlsplit
 
 _URL_RE = re.compile(r"https?://[^\s\"'<>]+")
-_FIXED_PORT_RE = re.compile(r"127\.0\.0\.1:\d+:\d+")
+_FIXED_PORT_RE = re.compile(r"127\.0\.0\.1:(?!0:)\d+:\d+")
 _BLIND_SLEEP_RE = re.compile(r"\b(?:time\.)?sleep\(\s*\d+(?:\.\d+)?\s*\)")
 _ALLOWED_HOSTS = {
     "127.0.0.1",

@@ -8,21 +8,12 @@ services:
       PGID: ${AB_E2E_PGID:-1000}
       UMASK: "022"
       AB_WEBUI_PORT: "7892"
-      AB_DOWNLOADER_HOST: fake-qb:8080
-      AB_DOWNLOADER_USERNAME: admin
-      AB_DOWNLOADER_PASSWORD: adminadmin
-      AB_DOWNLOAD_PATH: /downloads/Bangumi
-      AB_INTERVAL_TIME: "3600"
-      AB_RENAME_FREQ: "1"
-      AB_DEBUG_MODE: "true"
       AB_DEV_NO_AUTH: "0"
     depends_on:
       mock-upstream:
         condition: service_healthy
       fake-qb:
         condition: service_healthy
-    ports:
-      - "127.0.0.1::7892"
     volumes:
       - type: bind
         source: ${AB_E2E_CONFIG_DIR:?AB_E2E_CONFIG_DIR must be set}
@@ -58,8 +49,6 @@ services:
       FIXTURES_ROOT: /fixtures
     init: true
     read_only: true
-    ports:
-      - "127.0.0.1::18888"
     volumes:
       - type: bind
         source: ${AB_E2E_FIXTURES_DIR:?AB_E2E_FIXTURES_DIR must be set}
@@ -93,8 +82,6 @@ services:
       QB_PASSWORD: adminadmin
     init: true
     read_only: true
-    ports:
-      - "127.0.0.1::8080"
     tmpfs:
       - /tmp
     healthcheck:
@@ -110,6 +97,43 @@ services:
     networks:
       - e2e
 
+  port-proxy:
+    image: ${AB_E2E_PROXY_IMAGE:-auto-bangumi-e2e/port-proxy:local}
+    pull_policy: never
+    build:
+      context: ../..
+      dockerfile: e2e/port-proxy/Dockerfile
+    environment:
+      HOST: 0.0.0.0
+      FORWARDS: >-
+        17892=app:7892,18888=mock-upstream:18888,
+        18080=fake-qb:8080,28080=qbittorrent:8080
+    depends_on:
+      app:
+        condition: service_healthy
+    init: true
+    read_only: true
+    ports:
+      - "127.0.0.1::17892"
+      - "127.0.0.1::18888"
+      - "127.0.0.1::18080"
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import socket; socket.create_connection(('127.0.0.1', 17892), timeout=2).close()
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s
+    networks:
+      - e2e
+      - host-access
+
 networks:
   e2e:
     internal: true
+  host-access:

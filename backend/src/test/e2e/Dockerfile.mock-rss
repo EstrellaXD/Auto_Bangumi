@@ -1,7 +1,0 @@
-FROM python:3.11-slim
-RUN pip install --no-cache-dir aiohttp
-COPY mock_rss_server.py /app/
-COPY fixtures/ /app/fixtures/
-WORKDIR /app
-EXPOSE 18888
-CMD ["python", "mock_rss_server.py"]
