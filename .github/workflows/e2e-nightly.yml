@@ -1,0 +1,174 @@
+name: Hermetic E2E Nightly
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-nightly-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  E2E_VERSION: 3.3.999-e2e.1
+  PNPM_VERSION: 9.11.0
+  PLAYWRIGHT_VERSION: 1.61.1
+
+jobs:
+  e2e-nightly:
+    name: e2e-nightly (${{ matrix.lane }}-${{ matrix.pass }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - lane: firefox
+            pass: 1
+            profile: browser
+            browser: firefox
+            playwright-project: firefox-nightly
+          - lane: browser
+            pass: 1
+            profile: browser
+            browser: chromium
+            playwright-project: chromium-desktop
+          - lane: browser
+            pass: 2
+            profile: browser
+            browser: chromium
+            playwright-project: chromium-desktop
+          - lane: downloader
+            pass: 1
+            profile: downloader
+            browser: chromium
+            playwright-project: chromium-desktop
+          - lane: downloader
+            pass: 2
+            profile: downloader
+            browser: chromium
+            playwright-project: chromium-desktop
+    env:
+      AB_E2E_PROJECT: ab-e2e-nightly-${{ matrix.lane }}-${{ matrix.pass }}-${{ github.run_id }}-${{ github.run_attempt }}
+      AB_E2E_APP_IMAGE: auto-bangumi:e2e-nightly-${{ matrix.lane }}-${{ matrix.pass }}-${{ github.run_id }}-${{ github.run_attempt }}
+      AB_E2E_CACHE_IMAGE: auto-bangumi:e2e-cache
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare isolated work directory
+        id: paths
+        run: |
+          work_dir="$RUNNER_TEMP/$AB_E2E_PROJECT"
+          mkdir -p "$work_dir/artifacts"
+          {
+            echo "AB_E2E_WORK_DIR=$work_dir"
+            echo "AB_E2E_IMAGE_ARCHIVE=$RUNNER_TEMP/auto-bangumi-e2e-image.tar"
+            echo "PLAYWRIGHT_BROWSERS_PATH=$RUNNER_TEMP/ms-playwright"
+          } >> "$GITHUB_ENV"
+          {
+            echo "work-dir=$work_dir"
+            echo "image-archive=$RUNNER_TEMP/auto-bangumi-e2e-image.tar"
+            echo "playwright-path=$RUNNER_TEMP/ms-playwright"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: webui/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        run: pnpm --dir webui install --frozen-lockfile
+
+      - name: Cache Playwright browser
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.paths.outputs.playwright-path }}
+          key: playwright-v1-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}-${{ matrix.browser }}-${{ hashFiles('webui/pnpm-lock.yaml') }}
+
+      - name: Install Playwright browser and system dependencies
+        run: pnpm --dir webui exec playwright install --with-deps "${{ matrix.browser }}"
+
+      - name: Type-check Playwright tests
+        run: pnpm --dir webui run test:e2e:typecheck
+
+      - name: Cache production WebUI
+        id: webui-dist
+        uses: actions/cache@v4
+        with:
+          path: webui/dist
+          key: webui-dist-v1-${{ runner.os }}-${{ hashFiles('webui/package.json', 'webui/pnpm-lock.yaml', 'webui/index.html', 'webui/vite.config.*', 'webui/tsconfig*.json', 'webui/src/**', 'webui/public/**') }}
+
+      - name: Build production WebUI
+        if: steps.webui-dist.outputs.cache-hit != 'true'
+        run: pnpm --dir webui run build
+
+      - name: Cache native E2E image
+        id: app-image
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.paths.outputs.image-archive }}
+          key: app-image-v1-3.3.999-e2e.1-${{ runner.os }}-${{ hashFiles('Dockerfile', '.dockerignore', 'entrypoint.sh', 'backend/pyproject.toml', 'backend/uv.lock', 'backend/src/**', 'webui/package.json', 'webui/pnpm-lock.yaml', 'webui/index.html', 'webui/vite.config.*', 'webui/tsconfig*.json', 'webui/src/**', 'webui/public/**') }}
+
+      - name: Load cached native E2E image
+        if: steps.app-image.outputs.cache-hit == 'true'
+        run: |
+          docker load --input "$AB_E2E_IMAGE_ARCHIVE"
+          docker tag "$AB_E2E_CACHE_IMAGE" "$AB_E2E_APP_IMAGE"
+
+      - name: Build and verify native E2E image
+        if: steps.app-image.outputs.cache-hit != 'true'
+        run: |
+          python3 e2e/scripts/build_test_image.py --version "$E2E_VERSION" --image "$AB_E2E_APP_IMAGE" --dist webui/dist
+          docker tag "$AB_E2E_APP_IMAGE" "$AB_E2E_CACHE_IMAGE"
+          docker save "$AB_E2E_CACHE_IMAGE" --output "$AB_E2E_IMAGE_ARCHIVE"
+
+      - name: Run nightly E2E pass
+        run: |
+          python3 e2e/scripts/stack.py run --profile "${{ matrix.profile }}" --project-name "$AB_E2E_PROJECT" --work-dir "$AB_E2E_WORK_DIR" -- pnpm --dir webui run test:e2e --project="${{ matrix.playwright-project }}" --retries=0
+
+      - name: Collect startup diagnostics
+        if: failure()
+        continue-on-error: true
+        shell: bash
+        run: |
+          compose_files=(--file e2e/compose/browser.yml)
+          if [[ "${{ matrix.profile }}" == "downloader" ]]; then
+            compose_files+=(--file e2e/compose/downloader.yml)
+          fi
+          python3 e2e/scripts/collect_artifacts.py --artifact-dir "$AB_E2E_WORK_DIR/artifacts/startup-diagnostics" --data-dir "$AB_E2E_WORK_DIR/data" --log-file "$AB_E2E_WORK_DIR/logs/log.txt" -- docker compose --project-name "$AB_E2E_PROJECT" --env-file "$AB_E2E_WORK_DIR/stack.env" "${compose_files[@]}"
+
+      - name: Ensure stack teardown
+        if: always()
+        continue-on-error: true
+        run: |
+          python3 e2e/scripts/stack.py stop --profile "${{ matrix.profile }}" --project-name "$AB_E2E_PROJECT" --work-dir "$AB_E2E_WORK_DIR"
+
+      - name: Upload nightly diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-nightly-${{ matrix.lane }}-${{ matrix.pass }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ steps.paths.outputs.work-dir }}/artifacts
+            webui/playwright-report
+            webui/test-results
+          if-no-files-found: warn
+          retention-days: 14

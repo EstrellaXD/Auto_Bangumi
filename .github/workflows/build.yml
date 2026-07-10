@@ -31,7 +31,7 @@ jobs:
       - name: Test
         run: |
           mkdir -p backend/config
-          cd backend && uv run pytest src/test -v
+          cd backend && uv run pytest src/test -v -m "not e2e"
 
   webui-test:
     runs-on: ubuntu-latest
