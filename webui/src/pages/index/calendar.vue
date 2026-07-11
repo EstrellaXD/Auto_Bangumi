@@ -7,7 +7,7 @@ definePage({
   name: 'Calendar',
 });
 
-const { bangumi } = storeToRefs(useBangumiStore());
+const { activeBangumi } = storeToRefs(useBangumiStore());
 const { getAll, openEditPopup } = useBangumiStore();
 const { isMobile } = useBreakpointQuery();
 const { t } = useMyI18n();
@@ -71,8 +71,7 @@ const groupedBangumiByDay = computed(() => {
   DAY_KEYS.forEach((key) => (itemsByDay[key] = []));
   itemsByDay.unknown = [];
 
-  bangumi.value?.forEach((item) => {
-    if (item.deleted) return;
+  activeBangumi.value.forEach((item) => {
     const weekday = item.air_weekday;
     if (weekday != null && weekday >= 0 && weekday <= 6) {
       itemsByDay[DAY_KEYS[weekday]].push(item);
@@ -90,7 +89,7 @@ const groupedBangumiByDay = computed(() => {
 });
 
 const hasBangumi = computed(() => {
-  return bangumi.value && bangumi.value.some((b) => !b.deleted);
+  return activeBangumi.value.length > 0;
 });
 
 function getDayLabel(key: string): string {
