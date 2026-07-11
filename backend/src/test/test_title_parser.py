@@ -1,13 +1,15 @@
 from types import SimpleNamespace
+from typing import Literal
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from module.conf import settings
-from module.models import Bangumi
+from module.models import Bangumi, Movie
 from module.models.bangumi import Episode
 from module.models.config import LLM, ExperimentalOpenAI
 from module.parser import title_parser as title_parser_module
+from module.parser.analyser.tokenizer import ParseOutcome, ParseTrace
 from module.parser.title_parser import TitleParser, _llm_config
 
 RAW_TITLE = (
@@ -29,6 +31,10 @@ def _make_llm_episode(episode_type: str = "episode") -> Episode:
         source="Web",
         episode_type=episode_type,
     )
+
+
+def _empty_parse_outcome(raw: str = "") -> ParseOutcome:
+    return ParseOutcome(result=None, trace=ParseTrace(raw=raw, normalized=raw))
 
 
 class TestTitleParser:
@@ -83,7 +89,8 @@ class TestRawParserLLMFallbackMode:
             settings, "llm", LLM(enable=True, api_key="k", mode="fallback")
         ):
             with patch(
-                "module.parser.title_parser.raw_parser", return_value=None
+                "module.parser.title_parser.parse_release_title_with_trace",
+                return_value=_empty_parse_outcome(),
             ) as mock_raw:
                 with patch(
                     "module.parser.title_parser._llm_parse",
@@ -101,7 +108,10 @@ class TestRawParserLLMFallbackMode:
     async def test_regex_failure_llm_disabled_returns_none(self):
         """正则失败且 LLM 未启用时直接返回 None。"""
         with patch.object(settings, "llm", LLM(enable=False, mode="fallback")):
-            with patch("module.parser.title_parser.raw_parser", return_value=None):
+            with patch(
+                "module.parser.title_parser.parse_release_title_with_trace",
+                return_value=_empty_parse_outcome(),
+            ):
                 with patch(
                     "module.parser.title_parser._llm_parse", new_callable=AsyncMock
                 ) as mock_llm:
@@ -117,8 +127,8 @@ class TestRawParserLLMPrimaryMode:
     def teardown_method(self):
         title_parser_module.reset_cache()
 
-    async def test_llm_called_first_and_regex_skipped(self):
-        """LLM 成功时结果直接采用，正则解析不再执行。"""
+    async def test_llm_keeps_primary_titles_and_reads_deterministic_hints(self):
+        """LLM 标题优先，同时确定性解析仍提供安全的结构提示。"""
         with patch.object(
             settings, "llm", LLM(enable=True, api_key="k", mode="primary")
         ):
@@ -127,11 +137,14 @@ class TestRawParserLLMPrimaryMode:
                 new_callable=AsyncMock,
                 return_value=_make_llm_episode(),
             ) as mock_llm:
-                with patch("module.parser.title_parser.raw_parser") as mock_raw:
+                with patch(
+                    "module.parser.title_parser.parse_release_title_with_trace",
+                    return_value=_empty_parse_outcome(),
+                ) as mock_raw:
                     result = await TitleParser.raw_parser(RAW_TITLE)
 
         mock_llm.assert_awaited_once()
-        mock_raw.assert_not_called()
+        mock_raw.assert_called_once_with(RAW_TITLE)
         assert result is not None
         assert result.official_title == "LLM Title"
 
@@ -147,8 +160,7 @@ class TestRawParserLLMPrimaryMode:
                 result = await TitleParser.raw_parser("[Group] LLM Title Movie [1080P]")
 
         assert result is not None
-        assert isinstance(result, Bangumi)
-        assert result.episode_type == "movie"
+        assert isinstance(result, Movie)
 
     async def test_llm_failure_falls_back_to_regex(self):
         """LLM 失败（返回 None）时用正则兜底，标题不丢失。"""
@@ -175,10 +187,217 @@ class TestRawParserLLMPrimaryMode:
                 new_callable=AsyncMock,
                 return_value=None,
             ):
-                with patch("module.parser.title_parser.raw_parser", return_value=None):
+                with patch(
+                    "module.parser.title_parser.parse_release_title_with_trace",
+                    return_value=_empty_parse_outcome(),
+                ):
                     result = await TitleParser.raw_parser("unparseable garbage title")
 
         assert result is None
+
+
+class TestParsedReleaseAdmission:
+    """Generic parsing and database admission stay separate and typed."""
+
+    @pytest.mark.parametrize("marker", ("OVA01", "OAD01", "SP01"))
+    async def test_numbered_special_projects_to_special_bangumi(self, marker: str):
+        with patch.object(settings, "llm", LLM(enable=False)):
+            result = await TitleParser.raw_parser(
+                f"[Group] Anime Title {marker} [1080p WEB-DL]"
+            )
+
+        assert isinstance(result, Bangumi)
+        assert result.season == 0
+        assert result.episode_type == "special"
+
+    @pytest.mark.parametrize("marker", ("OVA", "OAD", "SP"))
+    async def test_unnumbered_special_projects_without_episode_sentinel(
+        self, marker: str
+    ):
+        with patch.object(settings, "llm", LLM(enable=False)):
+            result = await TitleParser.raw_parser(
+                f"[Group] Anime Title {marker} [1080p WEB-DL]"
+            )
+
+        assert isinstance(result, Bangumi)
+        assert result.season == 0
+        assert result.episode_type == "special"
+
+    async def test_half_episode_projects_without_integer_coercion(self):
+        with patch.object(settings, "llm", LLM(enable=False)):
+            result = await TitleParser.raw_parser(
+                "[Group] Anime Title - 12.5 [1080p WEB-DL]"
+            )
+
+        assert isinstance(result, Bangumi)
+        assert result.eps_collect is False
+
+    async def test_deterministic_movie_projects_to_movie_and_keeps_year(self):
+        with patch.object(settings, "llm", LLM(enable=False)):
+            result = await TitleParser.raw_parser(
+                "[Group] 劇場版 Anime Title 2024 [1080p BluRay]"
+            )
+
+        assert isinstance(result, Movie)
+        assert result.year == 2024
+
+    @pytest.mark.parametrize(
+        "raw",
+        (
+            "[Group] Anime Title [01-12] [1080p]",
+            "[Group] Anime Title Complete Batch [1080p]",
+            "[Group] Anime Title 全集 [1080p]",
+            "[Group] Anime Title PV2 [1080p]",
+            "[Group] Anime Title NCOP [1080p]",
+            "[Group] Anime Title NCED [1080p]",
+        ),
+    )
+    async def test_recognized_non_single_or_auxiliary_video_is_not_persisted(
+        self, raw: str
+    ):
+        with patch.object(settings, "llm", LLM(enable=False)):
+            assert await TitleParser.raw_parser(raw) is None
+
+    async def test_strong_title_only_release_is_admitted_but_bare_title_is_not(self):
+        with patch.object(settings, "llm", LLM(enable=False)):
+            strong = await TitleParser.raw_parser(
+                "[Group] Plain Anime Title [1080p WEB-DL]"
+            )
+            weak = await TitleParser.raw_parser("Plain Anime Title")
+
+        assert isinstance(strong, Bangumi)
+        assert weak is None
+
+    async def test_llm_movie_uses_same_movie_projection_as_deterministic_path(self):
+        with patch.object(
+            settings, "llm", LLM(enable=True, api_key="k", mode="primary")
+        ):
+            with patch(
+                "module.parser.title_parser._llm_parse",
+                new_callable=AsyncMock,
+                return_value=_make_llm_episode(episode_type="movie"),
+            ):
+                result = await TitleParser.raw_parser("Opaque LLM Movie Title")
+
+        assert isinstance(result, Movie)
+
+    async def test_primary_llm_cannot_override_explicit_episode_from_movie_group(self):
+        raw = "[Movie-Fan] Ordinary Anime - 01 [1080p WEB-DL]"
+        with patch.object(
+            settings, "llm", LLM(enable=True, api_key="k", mode="primary")
+        ):
+            with patch(
+                "module.parser.title_parser._llm_parse",
+                new_callable=AsyncMock,
+                return_value=_make_llm_episode(episode_type="movie"),
+            ):
+                result = await TitleParser.raw_parser(raw)
+
+        assert isinstance(result, Bangumi)
+        assert result.episode_type == "episode"
+
+    async def test_deterministic_episode_bundle_stays_atomic_in_primary_mode(self):
+        raw = "[Group] Anime Title S02E12v2 [1080p WEB-DL]"
+        with patch.object(
+            settings, "llm", LLM(enable=True, api_key="k", mode="primary")
+        ):
+            with patch(
+                "module.parser.title_parser._llm_parse",
+                new_callable=AsyncMock,
+                return_value=_make_llm_episode(),
+            ):
+                result = await TitleParser.raw_parser(raw)
+
+        assert isinstance(result, Bangumi)
+        assert result.season == 2
+        assert result.eps_collect is False
+
+    async def test_deterministic_ova_beats_wrong_llm_movie_type(self):
+        raw = "[Group] Anime Title OVA [1080p WEB-DL]"
+        with patch.object(
+            settings, "llm", LLM(enable=True, api_key="k", mode="primary")
+        ):
+            with patch(
+                "module.parser.title_parser._llm_parse",
+                new_callable=AsyncMock,
+                return_value=_make_llm_episode(episode_type="movie"),
+            ):
+                result = await TitleParser.raw_parser(raw)
+
+        assert isinstance(result, Bangumi)
+        assert result.season == 0
+        assert result.episode_type == "special"
+
+    @pytest.mark.parametrize(
+        "raw",
+        (
+            "[Group] Anime Title [01-12] [1080p]",
+            "[Group] Anime Title PV2 [1080p]",
+            "[Group] Anime Title Complete Batch [1080p]",
+            "[Group] Anime Title 合集 [1080p]",
+        ),
+    )
+    async def test_primary_llm_cannot_bypass_deterministic_admission(self, raw: str):
+        with patch.object(
+            settings, "llm", LLM(enable=True, api_key="k", mode="primary")
+        ):
+            with patch(
+                "module.parser.title_parser._llm_parse",
+                new_callable=AsyncMock,
+                return_value=_make_llm_episode(),
+            ):
+                result = await TitleParser.raw_parser(raw)
+
+        assert result is None
+
+    async def test_fallback_does_not_call_llm_for_known_rejected_kind(self):
+        with patch.object(
+            settings, "llm", LLM(enable=True, api_key="k", mode="fallback")
+        ):
+            with patch(
+                "module.parser.title_parser._llm_parse", new_callable=AsyncMock
+            ) as mock_llm:
+                result = await TitleParser.raw_parser("[Group] Anime Title PV2 [1080p]")
+
+        assert result is None
+        mock_llm.assert_not_awaited()
+
+    @pytest.mark.parametrize("mode", ("primary", "fallback"))
+    @pytest.mark.parametrize(
+        "raw",
+        (
+            "[Group] PV [1080p]",
+            "[Group] [01-12] [1080p]",
+            "[Group] OVA [1080p]",
+        ),
+    )
+    async def test_titleless_structured_resource_never_reaches_llm(
+        self, mode: Literal["primary", "fallback"], raw: str
+    ):
+        with patch.object(settings, "llm", LLM(enable=True, api_key="k", mode=mode)):
+            with patch(
+                "module.parser.title_parser._llm_parse",
+                new_callable=AsyncMock,
+                return_value=_make_llm_episode(),
+            ) as mock_llm:
+                result = await TitleParser.raw_parser(raw)
+
+        assert result is None
+        mock_llm.assert_not_awaited()
+
+    async def test_real_weak_title_uses_llm_fallback(self):
+        with patch.object(
+            settings, "llm", LLM(enable=True, api_key="k", mode="fallback")
+        ):
+            with patch(
+                "module.parser.title_parser._llm_parse",
+                new_callable=AsyncMock,
+                return_value=_make_llm_episode(),
+            ) as mock_llm:
+                result = await TitleParser.raw_parser("Bare Weak Anime Title")
+
+        assert isinstance(result, Bangumi)
+        mock_llm.assert_awaited_once()
 
 
 class TestLLMParseErrorHandling:
