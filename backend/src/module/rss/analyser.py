@@ -109,20 +109,25 @@ class RSSAnalyser:
     ) -> tuple[list[Bangumi], list[Movie]]:
         new_bangumi: list[Bangumi] = []
         new_movies: list[Movie] = []
-        seen_titles: set[str] = set()
+        seen_identities: set[tuple[str, str, int]] = set()
         for torrent in torrents:
             result = await TitleParser.raw_parser(raw=torrent.name)
             if result is None or not result.title_raw:
                 continue
             title_raw = result.title_raw
-            if title_raw in seen_titles:
+            identity = (
+                ("movie", title_raw, 0)
+                if isinstance(result, Movie)
+                else (result.episode_type, title_raw, result.season)
+            )
+            if identity in seen_identities:
                 continue
             if isinstance(result, Movie):
                 await self.official_title_parser_movie(
                     movie=result, rss=rss, torrent=torrent
                 )
                 result.rss_link = rss.url
-                seen_titles.add(title_raw)
+                seen_identities.add(identity)
                 new_movies.append(result)
                 logger.info(f"New movie found: {result.official_title}")
             elif isinstance(result, Bangumi):
@@ -132,7 +137,7 @@ class RSSAnalyser:
                 result.rss_link = rss.url
                 if not full_parse:
                     return [result], new_movies
-                seen_titles.add(title_raw)
+                seen_identities.add(identity)
                 new_bangumi.append(result)
                 logger.info(f"New bangumi found: {result.official_title}")
         return new_bangumi, new_movies
