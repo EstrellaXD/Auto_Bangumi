@@ -126,10 +126,10 @@ class Episode:
     season: int
     season_raw: str
     episode: int
-    sub: str
+    sub: Optional[str]
     group: str
-    resolution: str
-    source: str
+    resolution: Optional[str]
+    source: Optional[str]
     episode_type: str = "episode"  # "episode" | "movie" | "special"
     is_movie: bool = False
 

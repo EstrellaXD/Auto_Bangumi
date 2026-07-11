@@ -1,19 +1,13 @@
-from module.models import Episode
+"""Public APIs for generic and legacy resource-title parsing."""
 
-from . import hot_reload
-from .stage_classify import classify
-from .stage_compose import compose
-from .stage_normalize import normalize
-from .stage_resolve import resolve
-from .stage_tokenize import tokenize
+from .compat import tokenize_title
+from .parser import parse_release_title
+from .result import MediaType, ParsedRelease, ReleaseKind
 
-
-def tokenize_title(raw: str) -> Episode | None:
-    hot_reload.maybe_reload()
-    normalized = normalize(raw)
-    tokens = tokenize(normalized)
-    if not tokens:
-        return None
-    tokens = classify(tokens)
-    tokens = resolve(tokens)
-    return compose(tokens)
+__all__ = [
+    "MediaType",
+    "ParsedRelease",
+    "ReleaseKind",
+    "parse_release_title",
+    "tokenize_title",
+]

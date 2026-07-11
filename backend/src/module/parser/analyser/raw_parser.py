@@ -1,28 +1,16 @@
 import logging
-import re
 
 from module.models import Episode
-from module.parser.analyser.tokenizer import tokenize_title
+from module.parser.analyser.tokenizer import parse_release_title, tokenize_title
+from module.parser.analyser.tokenizer.compat import legacy_non_episodic_type
 
 logger = logging.getLogger(__name__)
 
 
-_MOVIE_TOKEN_RE = re.compile(
-    r"剧场版|劇場版|电影版|電影版|\bmovie\b|\bgekijou-?ban\b",
-    re.IGNORECASE,
-)
-_SPECIAL_TOKEN_RE = re.compile(
-    r"\bOVA\d*\b|\bOAD\d*\b|\bSP\d*\b|\bspecial\b|番外篇?|特别篇|特別篇",
-    re.IGNORECASE,
-)
-_LEADING_GROUP_RE = re.compile(r"^\s*[\[【][^\]】]+[\]】]\s*")
-_GROUP_RE = re.compile(r"\[([^\]]*)\]")
-
-
 def get_group(raw: str) -> str:
     """Return the first square-bracket group, or an empty string."""
-    match = _GROUP_RE.search(raw)
-    return match.group(1) if match else ""
+    parsed = parse_release_title(raw)
+    return parsed.group if parsed and parsed.group else ""
 
 
 def _detect_non_episodic_type(raw: str) -> str | None:
@@ -32,12 +20,10 @@ def _detect_non_episodic_type(raw: str) -> str | None:
     helper remains the compatibility seam used by ``TitleParser`` when an LLM
     result needs its episode type corrected from the original release title.
     """
-    content = _LEADING_GROUP_RE.sub("", raw, count=1)
-    if _MOVIE_TOKEN_RE.search(content):
-        return "movie"
-    if _SPECIAL_TOKEN_RE.search(content):
-        return "special"
-    return None
+    parsed = parse_release_title(raw)
+    if parsed is None:
+        return None
+    return legacy_non_episodic_type(parsed.media_type)
 
 
 def raw_parser(raw: str) -> Episode | None:
