@@ -1,6 +1,6 @@
 # Tokenizer Candidate/Resolver 与 ParsedRelease 迁移设计
 
-日期：2026-07-11  
+日期：2026-07-11
 状态：已实施，A（解析架构）与 B（业务迁移）均已完成
 
 ## 背景
@@ -163,6 +163,36 @@ Claims 保证 `S02E05`、`OVA01`、range 不会被拆成互相矛盾的半份结
 5. 无新依赖的确定性性质矩阵：448 个固定随机种子/变形场景覆盖 Unicode、括号、
    技术标签和未知标签，保证确定性与不抛异常。
 6. 下游测试验证 range/PV 不进入单集去重，OVA 不污染 Offset，Movie 的 LLM/确定性投影一致。
+
+## 性能基准
+
+Tokenizer benchmark 是纯标准库 CLI，不引入 `pytest-benchmark`，也不在普通测试或
+CI 中设置机器相关的速度阈值：
+
+```bash
+cd backend
+
+# 71 条真实语料；分别测 plain、Trace 和 Trace 开销
+uv run python scripts/benchmark_tokenizer.py
+
+# 加入固定 stress 语料，并保存可复算的原始样本
+uv run python scripts/benchmark_tokenizer.py \
+  --suite all --format json --output tokenizer-benchmark.json
+
+# 只检查 benchmark 流程，不作为有效性能数据
+uv run python scripts/benchmark_tokenizer.py \
+  --suite all --warmup-rounds 1 --samples 1 --loops 1
+```
+
+默认先 warm up 20 轮，再为每个分组自动校准 loops，使每个 sample 至少持续 250ms，
+最后采集 7 个 sample。主指标是每个资源名的 median，辅助报告 p95、MAD、吞吐量和
+完整 `sample_elapsed_ns`。真实语料划分为 episode、cardinality、media、ambiguous、
+technical；stress 套件单独观察 1/4/16/64 个技术标签以及冲突 marker，避免合成输入
+污染真实语料总分。
+
+比较两次结果时至少要核对 Python、平台、commit、worktree dirty 状态和 corpus
+SHA-256。Plain 与 Trace 的结果一致性在计时区外验证；语料加载、GC collect、报告
+序列化和输出均不计入样本时间。
 
 ## 迁移与回滚
 
