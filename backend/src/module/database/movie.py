@@ -124,6 +124,9 @@ class MovieDatabase:
             logger.debug("Enable movie %s.", movie.title_raw)
 
     async def match_list(self, torrent_list: list, rss_link: str) -> list:
+        # Lazy import avoids a database/parser import cycle during startup.
+        from module.parser.analyser.tokenizer import MediaType, parse_release_title
+
         match_datas = await self.search_all()
         if not match_datas:
             return torrent_list
@@ -144,7 +147,8 @@ class MovieDatabase:
         rss_updated = set()
         for torrent in torrent_list:
             match = title_regex.search(torrent.name)
-            if match:
+            release = parse_release_title(torrent.name)
+            if match and release is not None and release.media_type is MediaType.MOVIE:
                 matched_title = match.group(0)
                 match_data = title_index[matched_title]
                 if (
