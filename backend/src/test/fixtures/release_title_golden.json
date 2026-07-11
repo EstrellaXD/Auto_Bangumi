@@ -1,0 +1,1603 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "episode_multilingual_lolihouse",
+      "category": "episode",
+      "raw": "[LoliHouse] 葬送的芙莉莲 / Sousou no Frieren - 03 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][MKV]",
+      "expected": {
+        "title_en": "Sousou no Frieren",
+        "title_zh": "葬送的芙莉莲",
+        "group": "LoliHouse",
+        "episode": 3,
+        "media_type": "episode",
+        "resolution": "1080p",
+        "source": "WebRip",
+        "subtitle": "简繁内封字幕",
+        "codecs": [
+          "HEVC-10bit"
+        ],
+        "audio": [
+          "AAC"
+        ],
+        "container": "MKV"
+      },
+      "legacy": {
+        "title_en": "Sousou no Frieren",
+        "title_zh": "葬送的芙莉莲",
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 3,
+        "sub": "简繁内封字幕",
+        "group": "LoliHouse",
+        "resolution": "1080p",
+        "source": "WebRip",
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "episode_sxxexx",
+      "category": "episode",
+      "raw": "[Group] Anime Title S02E05 [WEB-DL 1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "Group",
+        "season": 2,
+        "season_raw": "S02E05",
+        "episode": 5,
+        "media_type": "episode",
+        "resolution": "1080p",
+        "source": "WEB-DL"
+      },
+      "legacy": {
+        "title_en": "Anime Title",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 2,
+        "season_raw": "S02E05",
+        "episode": 5,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": "WEB-DL",
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "episode_season_words",
+      "category": "episode",
+      "raw": "[Group] Anime Title Season 2 - 01 [1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "Group",
+        "season": 2,
+        "season_raw": "Season 2",
+        "episode": 1,
+        "media_type": "episode",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": "Anime Title",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 2,
+        "season_raw": "Season 2",
+        "episode": 1,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "episode_fractional",
+      "category": "episode",
+      "raw": "[Group] Anime Title - 12.5 [1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "Group",
+        "episode": 12.5,
+        "media_type": "episode",
+        "resolution": "1080p"
+      },
+      "legacy": null
+    },
+    {
+      "id": "episode_versioned",
+      "category": "episode",
+      "raw": "[Group] Anime Title - 12v2 [1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "Group",
+        "episode": 12,
+        "media_type": "episode",
+        "resolution": "1080p",
+        "version": 2
+      },
+      "legacy": {
+        "title_en": "Anime Title",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 12,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "range_bare",
+      "category": "range",
+      "raw": "[Group] Anime Title [01-12] [BDRip 1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "Group",
+        "episode": 1,
+        "episode_end": 12,
+        "media_type": "episode",
+        "release_kind": "range",
+        "resolution": "1080p",
+        "source": "BDRip"
+      },
+      "legacy": null
+    },
+    {
+      "id": "range_e_prefix",
+      "category": "range",
+      "raw": "[Group] Anime Title [E01-E12] [BDRip 1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "Group",
+        "episode": 1,
+        "episode_end": 12,
+        "media_type": "episode",
+        "release_kind": "range",
+        "resolution": "1080p",
+        "source": "BDRip"
+      },
+      "legacy": null
+    },
+    {
+      "id": "batch_complete",
+      "category": "batch",
+      "raw": "[VCB-Studio] Violet Evergarden Complete Batch [BDRip 1080p]",
+      "expected": {
+        "title_en": "Violet Evergarden",
+        "group": "VCB-Studio",
+        "media_type": "episode",
+        "release_kind": "batch",
+        "resolution": "1080p",
+        "source": "BDRip"
+      },
+      "legacy": null
+    },
+    {
+      "id": "collection_chinese_heji",
+      "category": "collection",
+      "raw": "[Group] 葬送的芙莉莲合集 [BDRip 1080p]",
+      "expected": {
+        "title_zh": "葬送的芙莉莲",
+        "group": "Group",
+        "media_type": "episode",
+        "release_kind": "collection",
+        "resolution": "1080p",
+        "source": "BDRip"
+      },
+      "legacy": {
+        "title_en": null,
+        "title_zh": "葬送的芙莉莲",
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 0,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": "BDRip",
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "collection_chinese_quanji",
+      "category": "collection",
+      "raw": "[Group] 葬送的芙莉莲全集 [BDRip 1080p]",
+      "expected": {
+        "title_zh": "葬送的芙莉莲",
+        "group": "Group",
+        "media_type": "episode",
+        "release_kind": "collection",
+        "resolution": "1080p",
+        "source": "BDRip"
+      },
+      "legacy": {
+        "title_en": null,
+        "title_zh": "葬送的芙莉莲",
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 0,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": "BDRip",
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "collection_chinese_summary",
+      "category": "collection",
+      "raw": "[Group] 进击的巨人总集篇 [BDRip 1080p]",
+      "expected": {
+        "title_zh": "进击的巨人",
+        "group": "Group",
+        "media_type": "episode",
+        "release_kind": "collection",
+        "resolution": "1080p",
+        "source": "BDRip"
+      },
+      "legacy": {
+        "title_en": null,
+        "title_zh": "进击的巨人",
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 0,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": "BDRip",
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "collection_bonus",
+      "category": "collection",
+      "raw": "[Group] Anime Title 特典 [BDRip 1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "Group",
+        "media_type": "episode",
+        "release_kind": "collection",
+        "resolution": "1080p",
+        "source": "BDRip"
+      },
+      "legacy": {
+        "title_en": "Anime Title",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 0,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": "BDRip",
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "collection_movie",
+      "category": "collection",
+      "raw": "[Group] 剧场版合集 - 进击的巨人 [1080p]",
+      "expected": {
+        "title_zh": "进击的巨人",
+        "group": "Group",
+        "media_type": "movie",
+        "release_kind": "collection",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": null,
+        "title_zh": "进击的巨人",
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 0,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "movie",
+        "is_movie": true
+      }
+    },
+    {
+      "id": "special_ova_numbered",
+      "category": "special",
+      "raw": "[Group] Anime Title OVA01 [BDRip 1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "Group",
+        "episode": 1,
+        "media_type": "ova",
+        "resolution": "1080p",
+        "source": "BDRip"
+      },
+      "legacy": {
+        "title_en": "Anime Title",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 0,
+        "season_raw": "",
+        "episode": 1,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": "BDRip",
+        "episode_type": "special",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "special_oad_numbered",
+      "category": "special",
+      "raw": "[Group] Anime Title OAD 02 [BDRip 1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "Group",
+        "episode": 2,
+        "media_type": "oad",
+        "resolution": "1080p",
+        "source": "BDRip"
+      },
+      "legacy": {
+        "title_en": "Anime Title",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 0,
+        "season_raw": "",
+        "episode": 2,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": "BDRip",
+        "episode_type": "special",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "special_sp_numbered",
+      "category": "special",
+      "raw": "[Group] Anime Title SP03 [BDRip 1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "Group",
+        "episode": 3,
+        "media_type": "special",
+        "resolution": "1080p",
+        "source": "BDRip"
+      },
+      "legacy": {
+        "title_en": "Anime Title",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 0,
+        "season_raw": "",
+        "episode": 3,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": "BDRip",
+        "episode_type": "special",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "movie_attached_chinese",
+      "category": "movie",
+      "raw": "[VCB-Studio]电影版哆啦A梦：大雄的地球交响乐[BDRip 1080p]",
+      "expected": {
+        "title_zh": "哆啦A梦：大雄的地球交响乐",
+        "group": "VCB-Studio",
+        "media_type": "movie",
+        "resolution": "1080p",
+        "source": "BDRip"
+      },
+      "legacy": {
+        "title_en": null,
+        "title_zh": "哆啦A梦：大雄的地球交响乐",
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 0,
+        "sub": null,
+        "group": "VCB-Studio",
+        "resolution": "1080p",
+        "source": "BDRip",
+        "episode_type": "movie",
+        "is_movie": true
+      }
+    },
+    {
+      "id": "movie_attached_japanese",
+      "category": "movie",
+      "raw": "[SubGroup]劇場版SPY×FAMILY CODE: White[WEB-DL 1080p]",
+      "expected": {
+        "title_en": "SPY×FAMILY CODE: White",
+        "group": "SubGroup",
+        "media_type": "movie",
+        "resolution": "1080p",
+        "source": "WEB-DL"
+      },
+      "legacy": {
+        "title_en": "SPY×FAMILY CODE: White",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 0,
+        "sub": null,
+        "group": "SubGroup",
+        "resolution": "1080p",
+        "source": "WEB-DL",
+        "episode_type": "movie",
+        "is_movie": true
+      }
+    },
+    {
+      "id": "auxiliary_pv_numbered",
+      "category": "auxiliary",
+      "raw": "[Official] Anime Title PV2 [1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "Official",
+        "episode": 2,
+        "media_type": "pv",
+        "resolution": "1080p"
+      },
+      "legacy": null
+    },
+    {
+      "id": "auxiliary_ncop",
+      "category": "auxiliary",
+      "raw": "[VCB-Studio] Anime Title NCOP [BDRip 1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "VCB-Studio",
+        "media_type": "opening",
+        "resolution": "1080p",
+        "source": "BDRip"
+      },
+      "legacy": null
+    },
+    {
+      "id": "auxiliary_nced",
+      "category": "auxiliary",
+      "raw": "[VCB-Studio] Anime Title NCED [BDRip 1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "VCB-Studio",
+        "media_type": "ending",
+        "resolution": "1080p",
+        "source": "BDRip"
+      },
+      "legacy": null
+    },
+    {
+      "id": "title_only_english",
+      "category": "title-only",
+      "raw": "[LoliHouse] Sousou no Frieren [WEB-DL 1080p]",
+      "expected": {
+        "title_en": "Sousou no Frieren",
+        "group": "LoliHouse",
+        "resolution": "1080p",
+        "source": "WEB-DL"
+      },
+      "legacy": null
+    },
+    {
+      "id": "title_only_slash",
+      "category": "title-only",
+      "raw": "[VCB-Studio] Fate/stay night [BDRip 1080p]",
+      "expected": {
+        "title_en": "Fate/stay night",
+        "group": "VCB-Studio",
+        "resolution": "1080p",
+        "source": "BDRip"
+      },
+      "legacy": null
+    },
+    {
+      "id": "movie_year_parenthesized",
+      "category": "movie",
+      "raw": "[VCB-Studio] Kimi no Na wa. (2016) [BDRip 1080p]",
+      "expected": {
+        "title_en": "Kimi no Na wa.",
+        "group": "VCB-Studio",
+        "resolution": "1080p",
+        "source": "BDRip",
+        "year": 2016
+      },
+      "legacy": null
+    },
+    {
+      "id": "negative_only_technical",
+      "category": "negative",
+      "raw": "[1080p][HEVC][AAC][MKV]",
+      "expected": null,
+      "legacy": null
+    },
+    {
+      "id": "ambiguity_movie_in_group",
+      "category": "ambiguity",
+      "raw": "[Movie-Fan] Ordinary Anime - 01 [WEB-DL 1080p]",
+      "expected": {
+        "title_en": "Ordinary Anime",
+        "group": "Movie-Fan",
+        "episode": 1,
+        "media_type": "episode",
+        "resolution": "1080p",
+        "source": "WEB-DL"
+      },
+      "legacy": {
+        "title_en": "Ordinary Anime",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 1,
+        "sub": null,
+        "group": "Movie-Fan",
+        "resolution": "1080p",
+        "source": "WEB-DL",
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "ambiguity_movie_in_episode_title",
+      "category": "ambiguity",
+      "raw": "[SubGroup] The Movie Star Next Door - 03 [WEB-DL 1080p]",
+      "expected": {
+        "title_en": "The Movie Star Next Door",
+        "group": "SubGroup",
+        "episode": 3,
+        "media_type": "episode",
+        "resolution": "1080p",
+        "source": "WEB-DL"
+      },
+      "legacy": {
+        "title_en": "The Movie Star Next Door",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 3,
+        "sub": null,
+        "group": "SubGroup",
+        "resolution": "1080p",
+        "source": "WEB-DL",
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "ambiguity_fraction_in_title",
+      "category": "ambiguity",
+      "raw": "[SubGroup] Ranma 1/2 - 03 [WEB-DL 1080p]",
+      "expected": {
+        "title_en": "Ranma 1/2",
+        "group": "SubGroup",
+        "episode": 3,
+        "media_type": "episode",
+        "resolution": "1080p",
+        "source": "WEB-DL"
+      },
+      "legacy": {
+        "title_en": "Ranma 1/2",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 3,
+        "sub": null,
+        "group": "SubGroup",
+        "resolution": "1080p",
+        "source": "WEB-DL",
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "metadata_leading_movie",
+      "category": "movie",
+      "raw": "[MOVIE] Anime Title [1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "media_type": "movie",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": "Anime Title",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 0,
+        "sub": null,
+        "group": "",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "movie",
+        "is_movie": true
+      }
+    },
+    {
+      "id": "metadata_leading_movie_cjk",
+      "category": "movie",
+      "raw": "[劇場版] Anime Title [1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "media_type": "movie",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": "Anime Title",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 0,
+        "sub": null,
+        "group": "",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "movie",
+        "is_movie": true
+      }
+    },
+    {
+      "id": "metadata_leading_sxxexx",
+      "category": "episode",
+      "raw": "[S02E05] Anime Title [1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "season": 2,
+        "season_raw": "S02E05",
+        "episode": 5,
+        "media_type": "episode",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": "Anime Title",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 2,
+        "season_raw": "S02E05",
+        "episode": 5,
+        "sub": null,
+        "group": "",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "metadata_leading_season",
+      "category": "episode",
+      "raw": "[Season 2] Anime Title - 01 [1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "season": 2,
+        "season_raw": "Season 2",
+        "episode": 1,
+        "media_type": "episode",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": "Anime Title",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 2,
+        "season_raw": "Season 2",
+        "episode": 1,
+        "sub": null,
+        "group": "",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "metadata_leading_range",
+      "category": "range",
+      "raw": "[E01-E12] Anime Title [1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "episode": 1,
+        "episode_end": 12,
+        "media_type": "episode",
+        "release_kind": "range",
+        "resolution": "1080p"
+      },
+      "legacy": null
+    },
+    {
+      "id": "metadata_leading_technical",
+      "category": "technical",
+      "raw": "[BDRip 1080p] Anime Title - 01",
+      "expected": {
+        "title_en": "Anime Title",
+        "episode": 1,
+        "media_type": "episode",
+        "resolution": "1080p",
+        "source": "BDRip"
+      },
+      "legacy": {
+        "title_en": "Anime Title",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 1,
+        "sub": null,
+        "group": "",
+        "resolution": "1080p",
+        "source": "BDRip",
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "special_attached_ova",
+      "category": "special",
+      "raw": "[Group] 某作品OVA [1080p]",
+      "expected": {
+        "title_zh": "某作品",
+        "group": "Group",
+        "media_type": "ova",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": null,
+        "title_zh": "某作品",
+        "title_jp": null,
+        "season": 0,
+        "season_raw": "",
+        "episode": 0,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "special",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "special_attached_side_story",
+      "category": "special",
+      "raw": "[Group] 某作品番外篇 [1080p]",
+      "expected": {
+        "title_zh": "某作品",
+        "group": "Group",
+        "media_type": "special",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": null,
+        "title_zh": "某作品",
+        "title_jp": null,
+        "season": 0,
+        "season_raw": "",
+        "episode": 0,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "special",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "special_attached_special_chinese",
+      "category": "special",
+      "raw": "[Group] 某作品特别篇 [1080p]",
+      "expected": {
+        "title_zh": "某作品",
+        "group": "Group",
+        "media_type": "special",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": null,
+        "title_zh": "某作品",
+        "title_jp": null,
+        "season": 0,
+        "season_raw": "",
+        "episode": 0,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "special",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "collection_numbered_complete",
+      "category": "collection",
+      "raw": "[Group] 迷宫饭 全24话 [1080p]",
+      "expected": {
+        "title_zh": "迷宫饭",
+        "group": "Group",
+        "episode": 1,
+        "episode_end": 24,
+        "media_type": "episode",
+        "release_kind": "collection",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": null,
+        "title_zh": "迷宫饭",
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 1,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "technical_provider_labels",
+      "category": "technical",
+      "raw": "[EMBER] Frieren - 12.5 [BDRip 1080p AVC 8bit Dual Audio Multiple Subtitle MKV]",
+      "expected": {
+        "title_en": "Frieren",
+        "group": "EMBER",
+        "episode": 12.5,
+        "media_type": "episode",
+        "resolution": "1080p",
+        "source": "BDRip",
+        "subtitle": "Multiple Subtitle",
+        "codecs": [
+          "AVC",
+          "8bit"
+        ],
+        "audio": [
+          "Dual Audio"
+        ],
+        "container": "MKV"
+      },
+      "legacy": null
+    },
+    {
+      "id": "episode_plex_title",
+      "category": "episode",
+      "raw": "Mob Psycho 100 - S03E05 - Divine Tree 2 ~Peace~ [1080p]",
+      "expected": {
+        "title_en": "Mob Psycho 100",
+        "season": 3,
+        "season_raw": "S03E05",
+        "episode": 5,
+        "episode_title": "Divine Tree 2 ~Peace~",
+        "media_type": "episode",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": "Mob Psycho 100",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 3,
+        "season_raw": "S03E05",
+        "episode": 5,
+        "sub": null,
+        "group": "",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "movie_inline_year",
+      "category": "movie",
+      "raw": "The Boy and the Heron 2023 1080p BluRay",
+      "expected": {
+        "title_en": "The Boy and the Heron",
+        "resolution": "1080p",
+        "source": "BluRay",
+        "year": 2023
+      },
+      "legacy": null
+    },
+    {
+      "id": "ambiguity_pv_in_title",
+      "category": "ambiguity",
+      "raw": "[Group] PV=nRT - 01 [1080p]",
+      "expected": {
+        "title_en": "PV=nRT",
+        "group": "Group",
+        "episode": 1,
+        "media_type": "episode",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": "PV=nRT",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 1,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "ambiguity_movie_title_only",
+      "category": "ambiguity",
+      "raw": "[Group] The Movie Star Next Door [1080p]",
+      "expected": {
+        "title_en": "The Movie Star Next Door",
+        "group": "Group",
+        "resolution": "1080p"
+      },
+      "legacy": null
+    },
+    {
+      "id": "ambiguity_special_title_only",
+      "category": "ambiguity",
+      "raw": "[Group] Special A [1080p]",
+      "expected": {
+        "title_en": "Special A",
+        "group": "Group",
+        "resolution": "1080p"
+      },
+      "legacy": null
+    },
+    {
+      "id": "movie_numeric_title_cjk",
+      "category": "movie",
+      "raw": "[Group] 劇場版 呪術廻戦 0 [1080p]",
+      "expected": {
+        "title_zh": "呪術廻戦 0",
+        "group": "Group",
+        "media_type": "movie",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": null,
+        "title_zh": "呪術廻戦 0",
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 0,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "movie",
+        "is_movie": true
+      }
+    },
+    {
+      "id": "movie_numeric_title_romaji",
+      "category": "movie",
+      "raw": "[Group] Gekijouban Naruto 3 [1080p]",
+      "expected": {
+        "title_en": "Naruto 3",
+        "group": "Group",
+        "media_type": "movie",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": "Naruto 3",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 0,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "movie",
+        "is_movie": true
+      }
+    },
+    {
+      "id": "episode_numeric_title_86",
+      "category": "episode",
+      "raw": "[Group] 86 - 01 [1080p]",
+      "expected": {
+        "title_en": "86",
+        "group": "Group",
+        "episode": 1,
+        "media_type": "episode",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": "86",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 1,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "episode_numeric_title_22_7",
+      "category": "episode",
+      "raw": "[Group] 22/7 - 01 [1080p]",
+      "expected": {
+        "title_en": "22/7",
+        "group": "Group",
+        "episode": 1,
+        "media_type": "episode",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": "22/7",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 1,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "episode_ordinal_season",
+      "category": "episode",
+      "raw": "[Group] Dandadan 2nd Season - 01 [1080p]",
+      "expected": {
+        "title_en": "Dandadan",
+        "group": "Group",
+        "season": 2,
+        "season_raw": "2nd Season",
+        "episode": 1,
+        "media_type": "episode",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": "Dandadan",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 2,
+        "season_raw": "2nd Season",
+        "episode": 1,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "episode_inside_technical_tag",
+      "category": "episode",
+      "raw": "[Group] Anime Title [01 1080p HEVC]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "Group",
+        "episode": 1,
+        "media_type": "episode",
+        "resolution": "1080p",
+        "codecs": [
+          "HEVC"
+        ]
+      },
+      "legacy": {
+        "title_en": "Anime Title",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 1,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "technical_surround_audio",
+      "category": "technical",
+      "raw": "[Group] Anime Title - 01 [Dual Audio][DDP5.1][1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "Group",
+        "episode": 1,
+        "media_type": "episode",
+        "resolution": "1080p",
+        "audio": [
+          "Dual Audio",
+          "DDP5.1"
+        ]
+      },
+      "legacy": {
+        "title_en": "Anime Title",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 1,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "legacy_reject_range",
+      "category": "legacy-boundary",
+      "raw": "[Group] Anime [01-12] [1080p]",
+      "expected": {
+        "title_en": "Anime",
+        "group": "Group",
+        "episode": 1,
+        "episode_end": 12,
+        "media_type": "episode",
+        "release_kind": "range",
+        "resolution": "1080p"
+      },
+      "legacy": null
+    },
+    {
+      "id": "legacy_reject_batch",
+      "category": "legacy-boundary",
+      "raw": "[Group] Anime Complete Batch [1080p]",
+      "expected": {
+        "title_en": "Anime",
+        "group": "Group",
+        "media_type": "episode",
+        "release_kind": "batch",
+        "resolution": "1080p"
+      },
+      "legacy": null
+    },
+    {
+      "id": "legacy_reject_pv",
+      "category": "legacy-boundary",
+      "raw": "[Group] Anime PV2 [1080p]",
+      "expected": {
+        "title_en": "Anime",
+        "group": "Group",
+        "episode": 2,
+        "media_type": "pv",
+        "resolution": "1080p"
+      },
+      "legacy": null
+    },
+    {
+      "id": "legacy_reject_ncop",
+      "category": "legacy-boundary",
+      "raw": "[Group] Anime NCOP [1080p]",
+      "expected": {
+        "title_en": "Anime",
+        "group": "Group",
+        "media_type": "opening",
+        "resolution": "1080p"
+      },
+      "legacy": null
+    },
+    {
+      "id": "legacy_reject_fractional",
+      "category": "legacy-boundary",
+      "raw": "[Group] Anime - 12.5 [1080p]",
+      "expected": {
+        "title_en": "Anime",
+        "group": "Group",
+        "episode": 12.5,
+        "media_type": "episode",
+        "resolution": "1080p"
+      },
+      "legacy": null
+    },
+    {
+      "id": "episode_mikan_multiline",
+      "category": "episode",
+      "raw": "[喵萌奶茶屋&LoliHouse] 鹿乃子乃子乃子虎视眈眈 / Shikanoko Nokonoko Koshitantan\n- 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕]",
+      "expected": {
+        "title_en": "Shikanoko Nokonoko Koshitantan",
+        "title_zh": "鹿乃子乃子乃子虎视眈眈",
+        "group": "喵萌奶茶屋&LoliHouse",
+        "episode": 1,
+        "media_type": "episode",
+        "resolution": "1080p",
+        "source": "WebRip",
+        "subtitle": "简繁内封字幕",
+        "codecs": [
+          "HEVC-10bit"
+        ],
+        "audio": [
+          "AAC"
+        ]
+      },
+      "legacy": {
+        "title_en": "Shikanoko Nokonoko Koshitantan",
+        "title_zh": "鹿乃子乃子乃子虎视眈眈",
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 1,
+        "sub": "简繁内封字幕",
+        "group": "喵萌奶茶屋&LoliHouse",
+        "resolution": "1080p",
+        "source": "WebRip",
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "episode_fullwidth_brackets",
+      "category": "episode",
+      "raw": "【幻樱字幕组】【4月新番】【古见同学有交流障碍症 第二季 Komi-san wa, Komyushou Desu. S02】【22】【GB_MP4】【1920X1080】",
+      "expected": {
+        "title_en": "Komi-san wa, Komyushou Desu.",
+        "title_zh": "古见同学有交流障碍症",
+        "group": "幻樱字幕组",
+        "season": 2,
+        "season_raw": "第二季",
+        "episode": 22,
+        "media_type": "episode",
+        "resolution": "1920X1080",
+        "subtitle": "GB",
+        "container": "MP4",
+        "tags": [
+          "4月新番"
+        ]
+      },
+      "legacy": {
+        "title_en": "Komi-san wa, Komyushou Desu.",
+        "title_zh": "古见同学有交流障碍症",
+        "title_jp": null,
+        "season": 2,
+        "season_raw": "第二季",
+        "episode": 22,
+        "sub": "GB",
+        "group": "幻樱字幕组",
+        "resolution": "1920X1080",
+        "source": null,
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "episode_chinese_marker",
+      "category": "episode",
+      "raw": "【极影字幕社】★4月新番 天国大魔境 Tengoku Daimakyou 第05话 GB 720P MP4（字幕社招人内详）",
+      "expected": {
+        "title_en": "Tengoku Daimakyou",
+        "title_zh": "天国大魔境",
+        "group": "极影字幕社",
+        "episode": 5,
+        "media_type": "episode",
+        "resolution": "720P",
+        "subtitle": "GB",
+        "container": "MP4",
+        "tags": [
+          "★4月新番",
+          "（字幕社招人内详）"
+        ]
+      },
+      "legacy": {
+        "title_en": "Tengoku Daimakyou",
+        "title_zh": "天国大魔境",
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 5,
+        "sub": "GB",
+        "group": "极影字幕社",
+        "resolution": "720P",
+        "source": null,
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "episode_date_and_size_tags",
+      "category": "episode",
+      "raw": "[梦蓝字幕组]New Doraemon 哆啦A梦新番[747][2023.02.25][AVC][1080P][GB_JP][MP4][101.69 MB]",
+      "expected": {
+        "title_en": "New Doraemon",
+        "title_zh": "哆啦A梦新番",
+        "group": "梦蓝字幕组",
+        "episode": 747,
+        "media_type": "episode",
+        "resolution": "1080P",
+        "subtitle": "GB_JP",
+        "codecs": [
+          "AVC"
+        ],
+        "container": "MP4",
+        "tags": [
+          "2023.02.25",
+          "101.69 MB"
+        ]
+      },
+      "legacy": {
+        "title_en": "New Doraemon",
+        "title_zh": "哆啦A梦新番",
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 747,
+        "sub": "GB_JP",
+        "group": "梦蓝字幕组",
+        "resolution": "1080P",
+        "source": null,
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "episode_file_extension",
+      "category": "episode",
+      "raw": "[Lilith-Raws] Otonari no Tenshi-sama - 09 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4].mkv",
+      "expected": {
+        "title_en": "Otonari no Tenshi-sama",
+        "group": "Lilith-Raws",
+        "episode": 9,
+        "media_type": "episode",
+        "resolution": "1080p",
+        "source": "Baha",
+        "subtitle": "CHT",
+        "codecs": [
+          "AVC"
+        ],
+        "audio": [
+          "AAC"
+        ],
+        "container": "MP4"
+      },
+      "legacy": {
+        "title_en": "Otonari no Tenshi-sama",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 9,
+        "sub": "CHT",
+        "group": "Lilith-Raws",
+        "resolution": "1080p",
+        "source": "Baha",
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "episode_pre_release",
+      "category": "episode",
+      "raw": "[Group] Anime Title [01Pre] [1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "Group",
+        "episode": 1,
+        "media_type": "episode",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": "Anime Title",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 1,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "episode_atlas_style",
+      "category": "episode",
+      "raw": "[Group] Anime Title [04_アニメサブタイトル] [1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "Group",
+        "episode": 4,
+        "media_type": "episode",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": "Anime Title",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 4,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "episode_chinese_season",
+      "category": "episode",
+      "raw": "[Group] 某作品 第二季 - 08 [1080p]",
+      "expected": {
+        "title_zh": "某作品",
+        "group": "Group",
+        "season": 2,
+        "season_raw": "第二季",
+        "episode": 8,
+        "media_type": "episode",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": null,
+        "title_zh": "某作品",
+        "title_jp": null,
+        "season": 2,
+        "season_raw": "第二季",
+        "episode": 8,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "episode_season_episode_words",
+      "category": "episode",
+      "raw": "[Group] Anime Title Season 2 Episode 08 [1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "Group",
+        "season": 2,
+        "season_raw": "Season 2 Episode 08",
+        "episode": 8,
+        "media_type": "episode",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": "Anime Title",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 2,
+        "season_raw": "Season 2 Episode 08",
+        "episode": 8,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "episode",
+        "is_movie": false
+      }
+    },
+    {
+      "id": "auxiliary_ncop_versioned",
+      "category": "auxiliary",
+      "raw": "[Group] Anime Title NCOPv2 [1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "Group",
+        "media_type": "opening",
+        "resolution": "1080p",
+        "version": 2
+      },
+      "legacy": null
+    },
+    {
+      "id": "auxiliary_nced_versioned",
+      "category": "auxiliary",
+      "raw": "[Group] Anime Title NCEDv3 [1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "Group",
+        "media_type": "ending",
+        "resolution": "1080p",
+        "version": 3
+      },
+      "legacy": null
+    },
+    {
+      "id": "auxiliary_cm_numbered",
+      "category": "auxiliary",
+      "raw": "[Group] Anime Title CM1 [1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "Group",
+        "episode": 1,
+        "media_type": "pv",
+        "resolution": "1080p"
+      },
+      "legacy": null
+    },
+    {
+      "id": "movie_english_marker",
+      "category": "movie",
+      "raw": "[Group] Anime Title Movie [1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "Group",
+        "media_type": "movie",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": "Anime Title",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 0,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "movie",
+        "is_movie": true
+      }
+    },
+    {
+      "id": "movie_romaji_marker",
+      "category": "movie",
+      "raw": "[Group] Gekijouban Anime Title [1080p]",
+      "expected": {
+        "title_en": "Anime Title",
+        "group": "Group",
+        "media_type": "movie",
+        "resolution": "1080p"
+      },
+      "legacy": {
+        "title_en": "Anime Title",
+        "title_zh": null,
+        "title_jp": null,
+        "season": 1,
+        "season_raw": "",
+        "episode": 0,
+        "sub": null,
+        "group": "Group",
+        "resolution": "1080p",
+        "source": null,
+        "episode_type": "movie",
+        "is_movie": true
+      }
+    },
+    {
+      "id": "negative_date_hash_size",
+      "category": "negative",
+      "raw": "[A1B2C3D4][1.2 GiB][2023-01-12]",
+      "expected": null,
+      "legacy": null
+    }
+  ]
+}

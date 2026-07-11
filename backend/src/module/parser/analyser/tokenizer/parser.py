@@ -11,8 +11,18 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from .candidate import (
+    Candidate,
+    Claims,
+    Observation,
+    OverlapPolicy,
+    ShadowedSpanPolicy,
+    Span,
+)
 from .normalization import normalize
+from .resolver import Resolution, resolve_candidates
 from .result import MediaType, ParsedRelease, ReleaseKind
+from .trace import ParseOutcome, ParseTrace, TraceSegment
 
 _TITLE_CHAR = re.compile(r"[A-Za-z\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]")
 _HAN = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]")
@@ -36,8 +46,20 @@ _SEASON_EPISODE = re.compile(
     r"(?<!\w)S(\d{1,2})\s*E(?:P)?\.?\s*(\d{1,4}(?:\.\d+)?)" r"(?:v(\d+))?(?!\w)",
     re.I,
 )
+_SEASON_EPISODE_RANGE = re.compile(
+    r"(?<!\w)S(\d{1,2})\s*E(?:P)?\.?\s*(\d{1,4}(?:\.\d+)?)\s*"
+    r"(?:-|~|～|—)\s*(?:E(?:P)?\.?\s*)?(\d{1,4}(?:\.\d+)?)"
+    r"(?:v(\d+))?(?!\w)",
+    re.I,
+)
 _SEASON_EPISODE_WORDS = re.compile(
     r"\bSeason\s+(\d{1,2})\s+(?:Episode|EP?\.?)\s*" r"(\d{1,4}(?:\.\d+)?)(?:v(\d+))?\b",
+    re.I,
+)
+_SEASON_EPISODE_WORDS_RANGE = re.compile(
+    r"\bSeason\s+(\d{1,2})\s+(?:Episodes?|EPs?\.?)\s*"
+    r"(\d{1,4}(?:\.\d+)?)\s*(?:-|~|～|—)\s*"
+    r"(?:E(?:P)?\.?\s*)?(\d{1,4}(?:\.\d+)?)(?:v(\d+))?\b",
     re.I,
 )
 _SEASON = re.compile(r"(?<!\w)(S\d{1,2}|Season\s+\d{1,2})(?!\w)", re.I)
@@ -61,6 +83,12 @@ _TRAILING_EPISODE = re.compile(
 _SPECIAL_NUMBER = re.compile(
     r"(?<![A-Za-z0-9])(OVA|OAD|SP|Special)\s*(?:[-_.]\s*)?"
     r"(\d{1,4}(?:\.\d+)?)(?:v(\d+))?(?![A-Za-z0-9])",
+    re.I,
+)
+_SPECIAL_RANGE = re.compile(
+    r"(?<![A-Za-z0-9])(OVA|OAD|SP|Special)\s*(?:[-_.]\s*)?"
+    r"(\d{1,4}(?:\.\d+)?)\s*(?:-|~|～|—)\s*"
+    r"(?:\1\s*)?(\d{1,4}(?:\.\d+)?)(?:v(\d+))?(?![A-Za-z0-9])",
     re.I,
 )
 _SPECIAL_WORD = re.compile(r"(?<![A-Za-z0-9])(OVA|OAD|SP|Special)(?![A-Za-z0-9])", re.I)
@@ -126,18 +154,12 @@ class _Segment:
     enclosure: str | None = None
 
 
-class _WorkingSegment:
+class _ResidualSegment:
     def __init__(self, segment: _Segment):
         self.segment = segment
         self.mask = [False] * len(segment.text)
 
-    def available(self, match: re.Match[str]) -> bool:
-        return not any(self.mask[match.start() : match.end()])
-
-    def consume(self, match: re.Match[str]) -> None:
-        self.mask[match.start() : match.end()] = [True] * (match.end() - match.start())
-
-    def consume_span(self, start: int, end: int) -> None:
+    def mask_span(self, start: int, end: int) -> None:
         self.mask[start:end] = [True] * (end - start)
 
     def residual(self) -> str:
@@ -147,107 +169,246 @@ class _WorkingSegment:
 
 
 @dataclass(slots=True)
-class _State:
-    raw: str
-    group: str | None = None
-    season: int | None = None
-    season_raw: str | None = None
-    episode: int | float | None = None
-    episode_end: int | float | None = None
-    episode_title: str | None = None
-    episode_priority: int = -1
-    media_type: MediaType = MediaType.UNKNOWN
-    media_priority: int = -1
-    release_kind: ReleaseKind = ReleaseKind.SINGLE
-    resolution: str | None = None
-    source: str | None = None
-    subtitle: str | None = None
-    codecs: list[str] = field(default_factory=list)
-    audio: list[str] = field(default_factory=list)
-    container: str | None = None
-    version: int | None = None
-    year: int | None = None
-    tags: list[str] = field(default_factory=list)
-    evidence: list[str] = field(default_factory=list)
+class _CandidateCollector:
+    segments: list[_Segment]
+    capture_observations: bool = False
+    observations: list[Observation] = field(default_factory=list)
+    candidates: list[Candidate] = field(default_factory=list)
 
-    def set_episode(
+    def add_span(
         self,
-        episode: int | float,
         *,
-        priority: int,
-        end: int | float | None = None,
-        version: int | None = None,
-    ) -> None:
-        if priority >= self.episode_priority:
-            self.episode = episode
-            self.episode_end = end
-            self.episode_priority = priority
-            if version is not None:
-                self.version = version
+        rule_id: str,
+        kind: str,
+        segment_index: int,
+        start: int,
+        end: int,
+        claims: Claims = Claims(),
+        priority: int = 0,
+        specificity: int = 0,
+        evidence: tuple[str, ...] = (),
+        extra_spans: tuple[Span, ...] = (),
+        conflict_tags: frozenset[str] = frozenset(),
+        blocks: frozenset[str] = frozenset(),
+        preserve_as_title_on_conflict: bool = False,
+        shadowed_span_policy: ShadowedSpanPolicy = ShadowedSpanPolicy.EXCLUDE,
+        overlap_policy: OverlapPolicy = OverlapPolicy.EXCLUSIVE,
+        captures: tuple[str | None, ...] = (),
+    ) -> Candidate:
+        span = Span(segment_index, start, end)
+        suffix = f"{segment_index}:{start}:{end}"
+        candidate_id = f"{rule_id}:{suffix}"
+        observation_ids: tuple[str, ...] = ()
+        if self.capture_observations:
+            observation_id = f"observation:{candidate_id}"
+            observation_ids = (observation_id,)
+            self.observations.append(
+                Observation(
+                    id=observation_id,
+                    rule_id=rule_id,
+                    kind=kind,
+                    span=span,
+                    text=self.segments[segment_index].text[start:end],
+                    captures=captures,
+                )
+            )
+        candidate = Candidate(
+            id=candidate_id,
+            rule_id=rule_id,
+            spans=(span, *extra_spans),
+            claims=claims,
+            priority=priority,
+            specificity=specificity,
+            observation_ids=observation_ids,
+            evidence=evidence,
+            conflict_tags=conflict_tags,
+            blocks=blocks,
+            preserve_as_title_on_conflict=preserve_as_title_on_conflict,
+            shadowed_span_policy=shadowed_span_policy,
+            shadowed_spans=(span,) if extra_spans else None,
+            overlap_policy=overlap_policy,
+        )
+        self.candidates.append(candidate)
+        return candidate
 
-    def set_media(self, media_type: MediaType, priority: int) -> None:
-        if priority > self.media_priority:
-            self.media_type = media_type
-            self.media_priority = priority
+    def add_match(
+        self,
+        *,
+        rule_id: str,
+        kind: str,
+        segment_index: int,
+        match: re.Match[str],
+        **kwargs: object,
+    ) -> Candidate:
+        return self.add_span(
+            rule_id=rule_id,
+            kind=kind,
+            segment_index=segment_index,
+            start=match.start(),
+            end=match.end(),
+            captures=match.groups(),
+            **kwargs,  # type: ignore[arg-type]
+        )
+
+    def add_segments(
+        self,
+        *,
+        rule_id: str,
+        kind: str,
+        segment_indices: tuple[int, ...],
+        claims: Claims,
+        priority: int,
+        evidence: tuple[str, ...] = (),
+    ) -> Candidate:
+        spans = tuple(
+            Span(index, 0, len(self.segments[index].text)) for index in segment_indices
+        )
+        observation_ids: list[str] = []
+        if self.capture_observations:
+            for span in spans:
+                observation_id = (
+                    f"observation:{rule_id}:{span.segment}:{span.start}:{span.end}"
+                )
+                observation_ids.append(observation_id)
+                self.observations.append(
+                    Observation(
+                        id=observation_id,
+                        rule_id=rule_id,
+                        kind=kind,
+                        span=span,
+                        text=self.segments[span.segment].text,
+                    )
+                )
+        candidate = Candidate(
+            id=f"{rule_id}:" + ",".join(str(index) for index in segment_indices),
+            rule_id=rule_id,
+            spans=spans,
+            claims=claims,
+            priority=priority,
+            observation_ids=tuple(observation_ids),
+            evidence=evidence,
+        )
+        self.candidates.append(candidate)
+        return candidate
 
 
 def parse_release_title(raw: str) -> ParsedRelease | None:
     """Parse a resource name without requiring an episode number."""
-    if not raw or not raw.strip():
-        return None
+    result, _ = _parse_release_title_with_candidates(raw, capture_trace=False)
+    return result
 
-    normalized = normalize(raw)
-    segments = _scan_segments(normalized)
+
+def parse_release_title_with_trace(raw: str) -> ParseOutcome:
+    """Parse a resource name together with immutable resolver diagnostics."""
+    result, trace = _parse_release_title_with_candidates(raw, capture_trace=True)
+    assert trace is not None
+    return ParseOutcome(result=result, trace=trace)
+
+
+def _parse_release_title_with_candidates(
+    raw: str, *, capture_trace: bool
+) -> tuple[ParsedRelease | None, ParseTrace | None]:
+    normalized = normalize(raw) if raw and raw.strip() else ""
+    segments = _scan_segments(normalized) if normalized else []
     if not segments:
-        return None
+        trace = ParseTrace(raw=raw, normalized=normalized) if capture_trace else None
+        return None, trace
 
-    state = _State(raw=raw)
-    group_indices = _find_group_segments(segments)
-    if group_indices:
-        state.group = "&".join(segments[index].text.strip() for index in group_indices)
-        state.evidence.append("group")
+    collector = _CandidateCollector(segments, capture_observations=capture_trace)
+    _collect_group_candidates(collector)
+    _collect_structural_candidates(collector)
+    _collect_media_candidates(collector)
+    _collect_technical_candidates(collector)
+    _collect_metadata_episode_candidates(collector)
 
-    working = [_WorkingSegment(segment) for segment in segments]
-    for index in group_indices:
-        working[index].mask[:] = [True] * len(working[index].mask)
-
-    _preclassify_movie(working, state)
-    _extract_numbers(working, state)
-    _extract_media_and_cardinality(working, state)
-    _extract_technical_metadata(working, state)
-
+    resolution = resolve_candidates(
+        collector.candidates, collect_warnings=capture_trace
+    )
+    working = _working_from_spans(segments, resolution.excluded_spans)
     title_en, title_zh, title_jp = _reconstruct_titles(working)
-    if not any((title_en, title_zh, title_jp)):
-        return None
+    result = None
+    if any((title_en, title_zh, title_jp)):
+        result = _result_from_resolution(raw, title_en, title_zh, title_jp, resolution)
 
-    if state.media_type is MediaType.UNKNOWN:
-        if state.episode is not None or state.release_kind is not ReleaseKind.SINGLE:
-            state.set_media(MediaType.EPISODE, 0)
+    trace = None
+    if capture_trace:
+        trace = ParseTrace.from_resolution(
+            raw=raw,
+            normalized=normalized,
+            resolution=resolution,
+            segments=_trace_segments(segments),
+            observations=tuple(collector.observations),
+            candidates=tuple(collector.candidates),
+            residuals=tuple(work.residual() for work in working),
+        )
+    return result, trace
 
+
+def _result_from_resolution(
+    raw: str,
+    title_en: str | None,
+    title_zh: str | None,
+    title_jp: str | None,
+    resolution: Resolution,
+) -> ParsedRelease:
+    claims = resolution.claims
+    media_type = claims.media_type
+    if media_type is None and (
+        claims.episode is not None or claims.release_kind is not None
+    ):
+        media_type = MediaType.EPISODE
     return ParsedRelease(
         raw=raw,
         title_en=title_en,
         title_zh=title_zh,
         title_jp=title_jp,
-        group=state.group,
-        season=state.season,
-        season_raw=state.season_raw,
-        episode=state.episode,
-        episode_end=state.episode_end,
-        episode_title=state.episode_title,
-        media_type=state.media_type,
-        release_kind=state.release_kind,
-        resolution=state.resolution,
-        source=state.source,
-        subtitle=state.subtitle,
-        codecs=tuple(state.codecs),
-        audio=tuple(state.audio),
-        container=state.container,
-        version=state.version,
-        year=state.year,
-        tags=tuple(state.tags),
-        evidence=tuple(state.evidence),
+        group=claims.group,
+        season=claims.season,
+        season_raw=claims.season_raw,
+        episode=claims.episode,
+        episode_end=claims.episode_end,
+        episode_title=claims.episode_title,
+        media_type=media_type or MediaType.UNKNOWN,
+        release_kind=claims.release_kind or ReleaseKind.SINGLE,
+        resolution=claims.resolution,
+        source=claims.source,
+        subtitle=claims.subtitle,
+        codecs=claims.codecs,
+        audio=claims.audio,
+        container=claims.container,
+        version=claims.version,
+        year=claims.year,
+        tags=claims.tags,
+        evidence=resolution.evidence,
     )
+
+
+def _working_from_spans(
+    segments: list[_Segment], excluded_spans: tuple[Span, ...]
+) -> list[_ResidualSegment]:
+    working = [_ResidualSegment(segment) for segment in segments]
+    for span in excluded_spans:
+        working[span.segment].mask_span(span.start, span.end)
+    return working
+
+
+def _trace_segments(segments: list[_Segment]) -> tuple[TraceSegment, ...]:
+    traced: list[TraceSegment] = []
+    for index, segment in enumerate(segments):
+        enclosed = segment.enclosure is not None
+        content_start = segment.start + 1 if enclosed else segment.start
+        traced.append(
+            TraceSegment(
+                index=index,
+                text=segment.text,
+                outer_start=segment.start,
+                outer_end=segment.end,
+                content_start=content_start,
+                content_end=content_start + len(segment.text),
+                enclosure=segment.enclosure,
+            )
+        )
+    return tuple(traced)
 
 
 def _scan_segments(text: str) -> list[_Segment]:
@@ -289,24 +450,42 @@ def _scan_segments(text: str) -> list[_Segment]:
 
 
 def _find_group_segments(segments: list[_Segment]) -> set[int]:
-    if not segments or segments[0].enclosure != "square":
-        return set()
-    first = segments[0].text.strip()
-    if _looks_like_metadata(first):
+    if not segments:
         return set()
 
-    has_free_title = any(
-        segment.enclosure is None
-        and _contains_title(segment.text)
-        and not _looks_like_metadata(segment.text)
-        for segment in segments[1:]
+    first_free_title = next(
+        (
+            index
+            for index, segment in enumerate(segments)
+            if segment.enclosure is None
+            and _contains_title_fragment(segment.text)
+            and not _looks_like_metadata(segment.text)
+        ),
+        None,
     )
-    if not (_looks_like_group(first) or has_free_title):
+    has_free_title = first_free_title is not None
+
+    group_index = next(
+        (
+            index
+            for index, segment in enumerate(segments)
+            if segment.enclosure == "square"
+            and (first_free_title is None or index < first_free_title)
+            and not _looks_like_metadata(segment.text)
+            and (_looks_like_group(segment.text) or has_free_title)
+        ),
+        None,
+    )
+    if group_index is None:
         return set()
 
-    indices = {0}
-    for index, segment in enumerate(segments[1:], 1):
-        if segment.enclosure != "square" or not _looks_like_group(segment.text):
+    indices = {group_index}
+    for index, segment in enumerate(segments[group_index + 1 :], group_index + 1):
+        if (
+            segment.enclosure != "square"
+            or _looks_like_metadata(segment.text)
+            or not _looks_like_group(segment.text)
+        ):
             break
         indices.add(index)
     return indices
@@ -318,6 +497,8 @@ def _looks_like_group(text: str) -> bool:
     if re.search(r"字幕[组組社]?|搬运|搬運|压制|壓制|发布|發佈", value):
         return True
     if re.search(r"raws?|fansub|subs?|house|studio|group|team|rip", lower):
+        return True
+    if re.search(r"(?:^|[-_. ])fan(?:$|[-_. ])", lower):
         return True
     if lower in {"ani", "official", "magicstar", "doomdos", "vcb-studio"}:
         return True
@@ -334,6 +515,8 @@ def _looks_like_metadata(text: str) -> bool:
         return True
     structural_patterns = (
         _RANGE,
+        _SEASON_EPISODE_RANGE,
+        _SEASON_EPISODE_WORDS_RANGE,
         _SEASON_EPISODE,
         _SEASON_EPISODE_WORDS,
         _SEASON,
@@ -342,6 +525,7 @@ def _looks_like_metadata(text: str) -> bool:
         _CHINESE_EPISODE,
         _BARE_EPISODE,
         _SPECIAL_NUMBER,
+        _SPECIAL_RANGE,
         _SPECIAL_WORD,
         _SPECIAL_CJK,
         _PV,
@@ -393,24 +577,667 @@ def _is_year_number(value: str) -> bool:
     return value.isdigit() and len(value) == 4 and 1800 <= int(value) <= 2199
 
 
-def _consume_all(work: _WorkingSegment, pattern: re.Pattern[str]):
-    for match in pattern.finditer(work.segment.text):
-        if work.available(match):
-            yield match
+def _collect_group_candidates(collector: _CandidateCollector) -> set[int]:
+    group_indices = _find_group_segments(collector.segments)
+    if not group_indices:
+        return set()
+    ordered = tuple(sorted(group_indices))
+    collector.add_segments(
+        rule_id="group.square-prefix",
+        kind="group",
+        segment_indices=ordered,
+        claims=Claims(
+            group="&".join(collector.segments[index].text.strip() for index in ordered)
+        ),
+        priority=1000,
+        evidence=("group",),
+    )
+    return group_indices
 
 
-def _preclassify_movie(working: list[_WorkingSegment], state: _State) -> None:
-    """Record strong movie evidence before resolving ambiguous trailing numbers."""
-    for work in working:
-        for pattern in (_MOVIE_CJK, _MOVIE_ROMAJI):
-            if any(True for _ in _consume_all(work, pattern)):
-                state.set_media(MediaType.MOVIE, 100)
-                return
-        for match in _consume_all(work, _MOVIE_EN):
-            after = work.segment.text[match.end() :].lstrip()
-            if not re.match(r"[A-Za-z]", after):
-                state.set_media(MediaType.MOVIE, 100)
-                return
+def _episode_title_parts(
+    segment_index: int, text: str, match: re.Match[str]
+) -> tuple[str | None, tuple[Span, ...]]:
+    spans: list[Span] = []
+    before = text[: match.start()]
+    separator = re.search(r"\s+-\s*$", before)
+    if separator:
+        spans.append(Span(segment_index, separator.start(), match.start()))
+
+    after = text[match.end() :]
+    episode_title = re.fullmatch(r"\s*-\s*(.+?)\s*", after)
+    if not episode_title or not _contains_title_fragment(episode_title.group(1)):
+        return None, tuple(spans)
+    spans.append(Span(segment_index, match.end(), len(text)))
+    return _clean_title(episode_title.group(1)), tuple(spans)
+
+
+def _collect_structural_candidates(collector: _CandidateCollector) -> None:
+    for index, segment in enumerate(collector.segments):
+        text = segment.text
+
+        for match in _DATE.finditer(text):
+            collector.add_match(
+                rule_id="metadata.date",
+                kind="tag",
+                segment_index=index,
+                match=match,
+                claims=Claims(tags=(match.group(),)),
+                priority=110,
+            )
+
+        for match in _FILE_SIZE.finditer(text):
+            collector.add_match(
+                rule_id="metadata.file-size",
+                kind="tag",
+                segment_index=index,
+                match=match,
+                claims=Claims(tags=(match.group(),)),
+                priority=110,
+            )
+
+        for match in _YEAR.finditer(text):
+            if match.group() != text.strip() and not _is_metadata_tail(
+                text[match.end() :]
+            ):
+                continue
+            collector.add_match(
+                rule_id="metadata.year",
+                kind="year",
+                segment_index=index,
+                match=match,
+                claims=Claims(year=int(match.group(1))),
+                priority=100,
+                evidence=("year",),
+            )
+
+        for rule_id, pattern in (
+            ("episode.season-range-compact", _SEASON_EPISODE_RANGE),
+            ("episode.season-range-words", _SEASON_EPISODE_WORDS_RANGE),
+        ):
+            for match in pattern.finditer(text):
+                start, end = _number(match.group(2)), _number(match.group(3))
+                if start >= 1800 or end >= 1800 or start > end:
+                    continue
+                collector.add_match(
+                    rule_id=rule_id,
+                    kind="season-episode-range",
+                    segment_index=index,
+                    match=match,
+                    claims=Claims(
+                        season=int(match.group(1)),
+                        season_raw=match.group(0),
+                        episode=start,
+                        episode_end=end,
+                        release_kind=ReleaseKind.RANGE,
+                        version=_int(match.group(4)),
+                    ),
+                    priority=105,
+                    specificity=5,
+                    evidence=("season", "episode-range"),
+                )
+
+        for match in _SPECIAL_RANGE.finditer(text):
+            start, end = _number(match.group(2)), _number(match.group(3))
+            if start >= 1800 or end >= 1800 or start > end:
+                continue
+            media_type = _special_media(match.group(1))
+            collector.add_match(
+                rule_id=f"episode.{media_type.value}-range",
+                kind="special-episode-range",
+                segment_index=index,
+                match=match,
+                claims=Claims(
+                    episode=start,
+                    episode_end=end,
+                    media_type=media_type,
+                    release_kind=ReleaseKind.RANGE,
+                    version=_int(match.group(4)),
+                ),
+                priority=105,
+                specificity=5,
+                evidence=(media_type.value, "episode-range"),
+            )
+
+        for match in _RANGE.finditer(text):
+            start, end = _number(match.group(1)), _number(match.group(2))
+            prefix = text[: match.start()]
+            suffix = text[match.end() :]
+            compact = bool(
+                re.search(r"\d(?:-|~|～|—)(?:E(?:P)?\.?\s*)?\d", match.group(), re.I)
+            )
+            isolated = not _contains_title(prefix + suffix)
+            labelled = bool(re.search(r"(?:Episodes?|Eps?)\s*$", prefix, re.I))
+            if (
+                start >= 1800
+                or end >= 1800
+                or start > end
+                or re.search(r"\d+\s*/\s*$", prefix)
+                or not (compact or isolated or labelled)
+            ):
+                continue
+            collector.add_match(
+                rule_id="episode.range",
+                kind="episode-range",
+                segment_index=index,
+                match=match,
+                claims=Claims(
+                    episode=start,
+                    episode_end=end,
+                    release_kind=ReleaseKind.RANGE,
+                    version=_int(match.group(3)),
+                ),
+                priority=95,
+                specificity=3,
+                evidence=("episode-range",),
+            )
+
+        for rule_id, pattern in (
+            ("episode.season-compact", _SEASON_EPISODE),
+            ("episode.season-words", _SEASON_EPISODE_WORDS),
+        ):
+            for match in pattern.finditer(text):
+                episode_title, extra_spans = _episode_title_parts(index, text, match)
+                evidence: tuple[str, ...] = ("season", "episode")
+                if episode_title:
+                    evidence += ("episode-title",)
+                collector.add_match(
+                    rule_id=rule_id,
+                    kind="season-episode",
+                    segment_index=index,
+                    match=match,
+                    claims=Claims(
+                        season=int(match.group(1)),
+                        season_raw=match.group(0),
+                        episode=_number(match.group(2)),
+                        episode_title=episode_title,
+                        version=_int(match.group(3)),
+                    ),
+                    priority=100,
+                    specificity=4,
+                    evidence=evidence,
+                    extra_spans=extra_spans,
+                )
+
+        for match in _SPECIAL_NUMBER.finditer(text):
+            media_type = _special_media(match.group(1))
+            collector.add_match(
+                rule_id=f"episode.{media_type.value}-numbered",
+                kind="special-episode",
+                segment_index=index,
+                match=match,
+                claims=Claims(
+                    episode=_number(match.group(2)),
+                    media_type=media_type,
+                    version=_int(match.group(3)),
+                ),
+                priority=80,
+                specificity=3,
+                evidence=(media_type.value, "episode"),
+            )
+
+        for match in _PV.finditer(text):
+            if match.group(2) is None:
+                continue
+            collector.add_match(
+                rule_id="media.pv-numbered",
+                kind="non-episode-video",
+                segment_index=index,
+                match=match,
+                claims=Claims(episode=_number(match.group(2)), media_type=MediaType.PV),
+                priority=75,
+                specificity=2,
+                evidence=("pv", "episode"),
+            )
+
+        for match in _SEASON.finditer(text):
+            number_match = re.search(r"\d+", match.group(1))
+            if number_match:
+                collector.add_match(
+                    rule_id="season.marker",
+                    kind="season",
+                    segment_index=index,
+                    match=match,
+                    claims=Claims(
+                        season=int(number_match.group()), season_raw=match.group(1)
+                    ),
+                    priority=80,
+                    evidence=("season",),
+                )
+
+        for match in _CHINESE_SEASON.finditer(text):
+            collector.add_match(
+                rule_id="season.chinese",
+                kind="season",
+                segment_index=index,
+                match=match,
+                claims=Claims(
+                    season=_chinese_number(match.group(1)), season_raw=match.group(0)
+                ),
+                priority=80,
+                evidence=("season",),
+            )
+
+        for match in _ORDINAL_SEASON.finditer(text):
+            collector.add_match(
+                rule_id="season.ordinal",
+                kind="season",
+                segment_index=index,
+                match=match,
+                claims=Claims(season=int(match.group(1)), season_raw=match.group(0)),
+                priority=50,
+                evidence=("season",),
+                shadowed_span_policy=ShadowedSpanPolicy.KEEP,
+            )
+
+        for match in _FULL_COLLECTION.finditer(text):
+            collector.add_match(
+                rule_id="episode.full-collection",
+                kind="collection",
+                segment_index=index,
+                match=match,
+                claims=Claims(
+                    episode=1,
+                    episode_end=int(match.group(1)),
+                    release_kind=ReleaseKind.COLLECTION,
+                ),
+                priority=95,
+                specificity=3,
+                evidence=("collection", "episode-range"),
+            )
+
+        for match in _EXPLICIT_EPISODE.finditer(text):
+            collector.add_match(
+                rule_id="episode.explicit",
+                kind="episode",
+                segment_index=index,
+                match=match,
+                claims=Claims(
+                    episode=_number(match.group(1)), version=_int(match.group(2))
+                ),
+                priority=90,
+                specificity=2,
+                evidence=("episode",),
+            )
+
+        for match in _CHINESE_EPISODE.finditer(text):
+            collector.add_match(
+                rule_id="episode.chinese",
+                kind="episode",
+                segment_index=index,
+                match=match,
+                claims=Claims(episode=_number(match.group(1))),
+                priority=90,
+                specificity=2,
+                evidence=("episode",),
+            )
+
+        for rule_id, pattern in (
+            ("episode.pre", _PRE_EPISODE),
+            ("episode.compound", _COMPOUND_EPISODE),
+            ("episode.atlas", _ATLAS_EPISODE),
+        ):
+            special_match = pattern.match(text)
+            if special_match:
+                collector.add_match(
+                    rule_id=rule_id,
+                    kind="episode",
+                    segment_index=index,
+                    match=special_match,
+                    claims=Claims(episode=_number(special_match.group(1))),
+                    priority=75,
+                    evidence=("episode",),
+                )
+
+        trailing = _TRAILING_EPISODE.search(text)
+        if trailing and not _is_year_number(trailing.group(1)):
+            collector.add_match(
+                rule_id="episode.trailing",
+                kind="episode",
+                segment_index=index,
+                match=trailing,
+                claims=Claims(
+                    episode=_number(trailing.group(1)),
+                    version=_int(trailing.group(2)),
+                ),
+                priority=70,
+                evidence=("episode",),
+                conflict_tags=frozenset({"ambiguous-episode"}),
+                preserve_as_title_on_conflict=True,
+            )
+
+        bare = _BARE_EPISODE.match(text)
+        if bare and not _is_year_number(bare.group(1)):
+            collector.add_match(
+                rule_id="episode.bare",
+                kind="episode",
+                segment_index=index,
+                match=bare,
+                claims=Claims(
+                    episode=_number(bare.group(1)), version=_int(bare.group(2))
+                ),
+                priority=70,
+                evidence=("episode",),
+                conflict_tags=frozenset({"ambiguous-episode"}),
+                preserve_as_title_on_conflict=True,
+            )
+
+
+def _collect_media_candidates(collector: _CandidateCollector) -> None:
+    for index, segment in enumerate(collector.segments):
+        text = segment.text
+
+        for rule_id, pattern in (
+            ("media.movie-cjk", _MOVIE_CJK),
+            ("media.movie-romaji", _MOVIE_ROMAJI),
+        ):
+            for match in pattern.finditer(text):
+                collector.add_match(
+                    rule_id=rule_id,
+                    kind="movie",
+                    segment_index=index,
+                    match=match,
+                    claims=Claims(media_type=MediaType.MOVIE),
+                    priority=100,
+                    specificity=2,
+                    evidence=("movie",),
+                    blocks=frozenset({"ambiguous-episode"}),
+                )
+
+        for match in _MOVIE_EN.finditer(text):
+            before = text[: match.start()].rstrip()
+            after = text[match.end() :].lstrip()
+            marker_is_edge = not before or not after or segment.enclosure == "square"
+            if re.match(r"[A-Za-z]", after):
+                continue
+            collector.add_match(
+                rule_id="media.movie-english",
+                kind="movie",
+                segment_index=index,
+                match=match,
+                claims=Claims(media_type=MediaType.MOVIE),
+                priority=100 if marker_is_edge else 99,
+                specificity=2,
+                evidence=("movie",),
+                blocks=frozenset({"ambiguous-episode"}),
+            )
+
+        for match in _SPECIAL_WORD.finditer(text):
+            after = text[match.end() :].lstrip()
+            if re.match(r"[A-Za-z]", after):
+                continue
+            media_type = _special_media(match.group(1))
+            collector.add_match(
+                rule_id=f"media.{media_type.value}",
+                kind="special",
+                segment_index=index,
+                match=match,
+                claims=Claims(media_type=media_type),
+                priority=80,
+                specificity=1,
+                evidence=(media_type.value,),
+            )
+
+        for match in _SPECIAL_CJK.finditer(text):
+            collector.add_match(
+                rule_id="media.special-cjk",
+                kind="special",
+                segment_index=index,
+                match=match,
+                claims=Claims(media_type=MediaType.SPECIAL),
+                priority=80,
+                evidence=("special",),
+            )
+
+        for match in _PV.finditer(text):
+            if match.group(2) is not None:
+                continue
+            collector.add_match(
+                rule_id="media.pv",
+                kind="non-episode-video",
+                segment_index=index,
+                match=match,
+                claims=Claims(media_type=MediaType.PV),
+                priority=60,
+                evidence=("pv",),
+            )
+
+        for rule_id, pattern, media_type, evidence in (
+            ("media.opening", _NCOP, MediaType.OPENING, "opening"),
+            ("media.ending", _NCED, MediaType.ENDING, "ending"),
+        ):
+            for match in pattern.finditer(text):
+                collector.add_match(
+                    rule_id=rule_id,
+                    kind="non-episode-video",
+                    segment_index=index,
+                    match=match,
+                    claims=Claims(media_type=media_type, version=_int(match.group(1))),
+                    priority=60,
+                    evidence=(evidence,),
+                )
+
+        for match in _BATCH.finditer(text):
+            collector.add_match(
+                rule_id="cardinality.batch",
+                kind="batch",
+                segment_index=index,
+                match=match,
+                claims=Claims(release_kind=ReleaseKind.BATCH),
+                priority=80,
+                evidence=("batch",),
+            )
+
+        for match in _COLLECTION.finditer(text):
+            collector.add_match(
+                rule_id="cardinality.collection",
+                kind="collection",
+                segment_index=index,
+                match=match,
+                claims=Claims(release_kind=ReleaseKind.COLLECTION),
+                priority=80,
+                evidence=("collection",),
+            )
+
+
+_TECHNICAL_PATTERNS = (
+    _RESOLUTION,
+    _SOURCE,
+    _CODEC,
+    _AUDIO,
+    _SUBTITLE,
+    _CONTAINER,
+)
+
+
+def _pattern_residual(text: str, patterns: tuple[re.Pattern[str], ...]) -> str:
+    mask = [False] * len(text)
+    for pattern in patterns:
+        for match in pattern.finditer(text):
+            mask[match.start() : match.end()] = [True] * (match.end() - match.start())
+    return "".join(" " if used else char for char, used in zip(text, mask))
+
+
+def _collect_technical_candidates(collector: _CandidateCollector) -> None:
+    for index, segment in enumerate(collector.segments):
+        text = segment.text
+
+        for match in _RESOLUTION.finditer(text):
+            collector.add_match(
+                rule_id="technical.resolution",
+                kind="resolution",
+                segment_index=index,
+                match=match,
+                claims=Claims(resolution=match.group()),
+                priority=30,
+                evidence=("resolution",),
+            )
+
+        for match in _SOURCE.finditer(text):
+            collector.add_match(
+                rule_id="technical.source",
+                kind="source",
+                segment_index=index,
+                match=match,
+                claims=Claims(source=match.group()),
+                priority=30,
+                evidence=("source",),
+            )
+
+        for match in _CODEC.finditer(text):
+            collector.add_match(
+                rule_id="technical.codec",
+                kind="codec",
+                segment_index=index,
+                match=match,
+                claims=Claims(codecs=(match.group(),)),
+                priority=30,
+            )
+
+        for match in _AUDIO.finditer(text):
+            collector.add_match(
+                rule_id="technical.audio",
+                kind="audio",
+                segment_index=index,
+                match=match,
+                claims=Claims(audio=(match.group(),)),
+                priority=30,
+            )
+
+        for match in _SUBTITLE.finditer(text):
+            container_match = re.search(r"_(MP4|MKV)$", match.group(), re.I)
+            collector.add_match(
+                rule_id="technical.subtitle",
+                kind="subtitle",
+                segment_index=index,
+                match=match,
+                claims=Claims(
+                    subtitle=re.sub(r"_(?:MP4|MKV)$", "", match.group(), flags=re.I),
+                    container=(container_match.group(1) if container_match else None),
+                ),
+                priority=35 if container_match else 30,
+                specificity=2 if container_match else 1,
+            )
+
+        for match in _CONTAINER.finditer(text):
+            collector.add_match(
+                rule_id="technical.container",
+                kind="container",
+                segment_index=index,
+                match=match,
+                claims=Claims(container=match.group(1)),
+                priority=30,
+            )
+
+        if segment.enclosure == "square":
+            residual = _clean_fragment(_pattern_residual(text, _TECHNICAL_PATTERNS))
+            if residual and _CJK_SUBTITLE_TAG.fullmatch(residual):
+                collector.add_span(
+                    rule_id="technical.subtitle-cjk",
+                    kind="subtitle",
+                    segment_index=index,
+                    start=0,
+                    end=len(text),
+                    claims=Claims(subtitle=residual),
+                    priority=45,
+                    evidence=(),
+                    overlap_policy=OverlapPolicy.SHARED,
+                )
+            if _DUB.search(text):
+                collector.add_span(
+                    rule_id="metadata.dub",
+                    kind="tag",
+                    segment_index=index,
+                    start=0,
+                    end=len(text),
+                    claims=Claims(tags=(text.strip(),)),
+                    priority=45,
+                    overlap_policy=OverlapPolicy.SHARED,
+                )
+
+        for match in _VERSION.finditer(text):
+            collector.add_match(
+                rule_id="metadata.version",
+                kind="version",
+                segment_index=index,
+                match=match,
+                claims=Claims(version=int(match.group(1))),
+                priority=20,
+            )
+
+        for rule_id, pattern in (
+            ("metadata.prefix", _PREFIX),
+            ("metadata.recruitment", _RECRUIT),
+            ("metadata.region", _REGION),
+            ("metadata.trailing-group", _TRAILING_RELEASE_GROUP),
+        ):
+            for match in pattern.finditer(text):
+                collector.add_match(
+                    rule_id=rule_id,
+                    kind="tag",
+                    segment_index=index,
+                    match=match,
+                    claims=Claims(tags=(match.group().strip(),)),
+                    priority=25,
+                )
+
+        for match in _HASH.finditer(text):
+            collector.add_match(
+                rule_id="metadata.hash",
+                kind="tag",
+                segment_index=index,
+                match=match,
+                claims=Claims(tags=(match.group(),)),
+                priority=25,
+            )
+
+        if segment.enclosure in {"square", "round"}:
+            residual = _clean_fragment(_pattern_residual(text, _TECHNICAL_PATTERNS))
+            if residual.lower() in {"end", "生"}:
+                collector.add_span(
+                    rule_id="metadata.end-marker",
+                    kind="tag",
+                    segment_index=index,
+                    start=0,
+                    end=len(text),
+                    claims=Claims(tags=(residual,)),
+                    priority=25,
+                    overlap_policy=OverlapPolicy.SHARED,
+                )
+
+
+def _collect_metadata_episode_candidates(collector: _CandidateCollector) -> None:
+    for index, segment in enumerate(collector.segments):
+        if segment.enclosure != "square":
+            continue
+        residual = _pattern_residual(segment.text, _TECHNICAL_PATTERNS)
+        episode_match = _BARE_EPISODE.match(residual) or _TRAILING_EPISODE.search(
+            residual
+        )
+        if not episode_match or _is_year_number(episode_match.group(1)):
+            continue
+        start = episode_match.start(1)
+        end = (
+            episode_match.end(2)
+            if episode_match.group(2) is not None
+            else episode_match.end(1)
+        )
+        collector.add_span(
+            rule_id="episode.metadata-mixed",
+            kind="episode",
+            segment_index=index,
+            start=start,
+            end=end,
+            claims=Claims(
+                episode=_number(episode_match.group(1)),
+                version=_int(episode_match.group(2)),
+            ),
+            priority=65,
+            evidence=("episode",),
+            conflict_tags=frozenset({"ambiguous-episode"}),
+            preserve_as_title_on_conflict=True,
+            captures=episode_match.groups(),
+        )
 
 
 def _is_metadata_tail(text: str) -> bool:
@@ -429,319 +1256,8 @@ def _is_metadata_tail(text: str) -> bool:
     return not _contains_title(residual)
 
 
-def _extract_episode_title(
-    work: _WorkingSegment, match: re.Match[str], state: _State
-) -> None:
-    """Separate Emby/Plex ``Series - SxxExx - Episode title`` layouts."""
-    before = work.segment.text[: match.start()]
-    separator = re.search(r"\s+-\s*$", before)
-    if separator:
-        work.consume_span(separator.start(), match.start())
-
-    after = work.segment.text[match.end() :]
-    episode_title = re.fullmatch(r"\s*-\s*(.+?)\s*", after)
-    if episode_title and _contains_title_fragment(episode_title.group(1)):
-        state.episode_title = _clean_title(episode_title.group(1))
-        work.consume_span(match.end(), len(work.segment.text))
-        state.evidence.append("episode-title")
-
-
-def _extract_numbers(working: list[_WorkingSegment], state: _State) -> None:
-    for work in working:
-        text = work.segment.text
-
-        for match in _consume_all(work, _DATE):
-            work.consume(match)
-            state.tags.append(match.group())
-
-        for match in _consume_all(work, _FILE_SIZE):
-            work.consume(match)
-            state.tags.append(match.group())
-
-        for match in _consume_all(work, _YEAR):
-            if match.group() == text.strip() or _is_metadata_tail(text[match.end() :]):
-                work.consume(match)
-                state.year = int(match.group(1))
-                state.evidence.append("year")
-
-        for match in _consume_all(work, _RANGE):
-            start, end = _number(match.group(1)), _number(match.group(2))
-            prefix = text[: match.start()]
-            suffix = text[match.end() :]
-            compact = bool(
-                re.search(r"\d(?:-|~|～|—)(?:E(?:P)?\.?)?\d", match.group(), re.I)
-            )
-            isolated = not _contains_title(prefix + suffix)
-            labelled = bool(re.search(r"(?:Episodes?|Eps?)\s*$", prefix, re.I))
-            if (
-                start >= 1800
-                or end >= 1800
-                or start > end
-                or re.search(r"\d+\s*/\s*$", prefix)
-                or not (compact or isolated or labelled)
-            ):
-                continue
-            work.consume(match)
-            state.set_episode(start, priority=85, end=end, version=_int(match.group(3)))
-            state.release_kind = ReleaseKind.RANGE
-            state.evidence.append("episode-range")
-
-        for pattern in (_SEASON_EPISODE, _SEASON_EPISODE_WORDS):
-            for match in _consume_all(work, pattern):
-                work.consume(match)
-                _extract_episode_title(work, match, state)
-                state.season = int(match.group(1))
-                state.season_raw = match.group(0)
-                state.set_episode(
-                    _number(match.group(2)),
-                    priority=100,
-                    version=_int(match.group(3)),
-                )
-                state.evidence.extend(("season", "episode"))
-
-        for match in _consume_all(work, _SPECIAL_NUMBER):
-            work.consume(match)
-            media_type = _special_media(match.group(1))
-            state.set_media(media_type, 80)
-            state.set_episode(
-                _number(match.group(2)),
-                priority=80,
-                version=_int(match.group(3)),
-            )
-            state.evidence.extend((media_type.value, "episode"))
-
-        for match in _consume_all(work, _PV):
-            if match.group(2) is None:
-                continue
-            work.consume(match)
-            state.set_media(MediaType.PV, 60)
-            state.set_episode(_number(match.group(2)), priority=75)
-            state.evidence.extend(("pv", "episode"))
-
-        for match in _consume_all(work, _SEASON):
-            work.consume(match)
-            raw_season = match.group(1)
-            number_match = re.search(r"\d+", raw_season)
-            if number_match:
-                state.season = int(number_match.group())
-                state.season_raw = raw_season
-                state.evidence.append("season")
-
-        for match in _consume_all(work, _CHINESE_SEASON):
-            work.consume(match)
-            state.season = _chinese_number(match.group(1))
-            state.season_raw = match.group(0)
-            state.evidence.append("season")
-
-        for match in _consume_all(work, _ORDINAL_SEASON):
-            if state.season is None:
-                work.consume(match)
-                state.season = int(match.group(1))
-                state.season_raw = match.group(0)
-                state.evidence.append("season")
-
-        for match in _consume_all(work, _FULL_COLLECTION):
-            work.consume(match)
-            state.set_episode(1, priority=95, end=int(match.group(1)))
-            state.release_kind = ReleaseKind.COLLECTION
-            state.evidence.extend(("collection", "episode-range"))
-
-        for match in _consume_all(work, _EXPLICIT_EPISODE):
-            work.consume(match)
-            state.set_episode(
-                _number(match.group(1)), priority=90, version=_int(match.group(2))
-            )
-            state.evidence.append("episode")
-
-        for match in _consume_all(work, _CHINESE_EPISODE):
-            work.consume(match)
-            state.set_episode(_number(match.group(1)), priority=90)
-            state.evidence.append("episode")
-
-        for pattern in (_PRE_EPISODE, _COMPOUND_EPISODE, _ATLAS_EPISODE):
-            match = pattern.match(text)
-            if match and work.available(match):
-                work.consume(match)
-                state.set_episode(_number(match.group(1)), priority=75)
-                state.evidence.append("episode")
-
-        trailing = _TRAILING_EPISODE.search(text)
-        if (
-            trailing
-            and work.available(trailing)
-            and not _is_year_number(trailing.group(1))
-            and state.media_type is not MediaType.MOVIE
-        ):
-            work.consume(trailing)
-            state.set_episode(
-                _number(trailing.group(1)),
-                priority=70,
-                version=_int(trailing.group(2)),
-            )
-            state.evidence.append("episode")
-
-        bare = _BARE_EPISODE.match(text)
-        if (
-            bare
-            and work.available(bare)
-            and not _is_year_number(bare.group(1))
-            and state.media_type is not MediaType.MOVIE
-        ):
-            work.consume(bare)
-            state.set_episode(
-                _number(bare.group(1)), priority=70, version=_int(bare.group(2))
-            )
-            state.evidence.append("episode")
-
-
-def _extract_media_and_cardinality(
-    working: list[_WorkingSegment], state: _State
-) -> None:
-    for work in working:
-        text = work.segment.text
-
-        for match in _consume_all(work, _MOVIE_CJK):
-            work.consume(match)
-            state.set_media(MediaType.MOVIE, 100)
-            state.evidence.append("movie")
-        for match in _consume_all(work, _MOVIE_ROMAJI):
-            work.consume(match)
-            state.set_media(MediaType.MOVIE, 100)
-            state.evidence.append("movie")
-        for match in _consume_all(work, _MOVIE_EN):
-            before = text[: match.start()].rstrip()
-            after = text[match.end() :].lstrip()
-            marker_is_edge = (
-                not before or not after or work.segment.enclosure == "square"
-            )
-            followed_by_title_word = bool(re.match(r"[A-Za-z]", after))
-            if followed_by_title_word:
-                continue
-            if not marker_is_edge and state.episode is not None:
-                continue
-            work.consume(match)
-            state.set_media(MediaType.MOVIE, 100)
-            state.evidence.append("movie")
-
-        for match in _consume_all(work, _SPECIAL_WORD):
-            after = text[match.end() :].lstrip()
-            if re.match(r"[A-Za-z]", after):
-                continue
-            media_type = _special_media(match.group(1))
-            work.consume(match)
-            state.set_media(media_type, 80)
-            state.evidence.append(media_type.value)
-
-        for match in _consume_all(work, _SPECIAL_CJK):
-            work.consume(match)
-            state.set_media(MediaType.SPECIAL, 80)
-            state.evidence.append("special")
-
-        for match in _consume_all(work, _PV):
-            work.consume(match)
-            state.set_media(MediaType.PV, 60)
-            state.evidence.append("pv")
-        for match in _consume_all(work, _NCOP):
-            work.consume(match)
-            state.set_media(MediaType.OPENING, 60)
-            state.version = state.version or _int(match.group(1))
-            state.evidence.append("opening")
-        for match in _consume_all(work, _NCED):
-            work.consume(match)
-            state.set_media(MediaType.ENDING, 60)
-            state.version = state.version or _int(match.group(1))
-            state.evidence.append("ending")
-
-        for match in _consume_all(work, _BATCH):
-            work.consume(match)
-            state.release_kind = ReleaseKind.BATCH
-            state.evidence.append("batch")
-        for match in _consume_all(work, _COLLECTION):
-            work.consume(match)
-            state.release_kind = ReleaseKind.COLLECTION
-            state.evidence.append("collection")
-
-
-def _extract_technical_metadata(working: list[_WorkingSegment], state: _State) -> None:
-    for work in working:
-        text = work.segment.text
-
-        for match in _consume_all(work, _RESOLUTION):
-            work.consume(match)
-            state.resolution = state.resolution or match.group()
-            state.evidence.append("resolution")
-        for match in _consume_all(work, _SOURCE):
-            work.consume(match)
-            state.source = state.source or match.group()
-            state.evidence.append("source")
-        for match in _consume_all(work, _CODEC):
-            work.consume(match)
-            _append_unique(state.codecs, match.group())
-        for match in _consume_all(work, _AUDIO):
-            work.consume(match)
-            _append_unique(state.audio, match.group())
-        for match in _consume_all(work, _SUBTITLE):
-            work.consume(match)
-            state.subtitle = _prefer_subtitle(state.subtitle, match.group())
-            container = re.search(r"_(MP4|MKV)$", match.group(), re.I)
-            if container:
-                state.container = state.container or container.group(1)
-        for match in _consume_all(work, _CONTAINER):
-            work.consume(match)
-            state.container = state.container or match.group(1)
-
-        if work.segment.enclosure == "square":
-            subtitle_tag = _clean_fragment(work.residual())
-            if _CJK_SUBTITLE_TAG.fullmatch(subtitle_tag):
-                work.mask[:] = [True] * len(work.mask)
-                state.subtitle = _prefer_subtitle(state.subtitle, subtitle_tag)
-            if _DUB.search(text):
-                work.mask[:] = [True] * len(work.mask)
-                state.tags.append(text.strip())
-
-        for match in _consume_all(work, _VERSION):
-            work.consume(match)
-            state.version = state.version or int(match.group(1))
-        for pattern in (_PREFIX, _RECRUIT, _REGION, _TRAILING_RELEASE_GROUP):
-            for match in _consume_all(work, pattern):
-                work.consume(match)
-                state.tags.append(match.group().strip())
-        for match in _consume_all(work, _HASH):
-            work.consume(match)
-            state.tags.append(match.group())
-
-        _extract_episode_after_metadata(work, state)
-
-        residual = _clean_fragment(work.residual())
-        if work.segment.enclosure in {"square", "round"} and residual.lower() in {
-            "end",
-            "生",
-        }:
-            work.mask[:] = [True] * len(work.mask)
-            state.tags.append(residual)
-
-
-def _extract_episode_after_metadata(work: _WorkingSegment, state: _State) -> None:
-    """Resolve episode numbers mixed into an enclosed technical tag."""
-    if (
-        state.episode is not None
-        or state.media_type is MediaType.MOVIE
-        or work.segment.enclosure != "square"
-    ):
-        return
-    residual = work.residual()
-    match = _BARE_EPISODE.match(residual) or _TRAILING_EPISODE.search(residual)
-    if not match or _is_year_number(match.group(1)):
-        return
-    work.consume_span(match.start(), match.end())
-    state.set_episode(
-        _number(match.group(1)), priority=65, version=_int(match.group(2))
-    )
-    state.evidence.append("episode")
-
-
 def _reconstruct_titles(
-    working: list[_WorkingSegment],
+    working: list[_ResidualSegment],
 ) -> tuple[str | None, str | None, str | None]:
     fragments: list[str] = []
     for work in working:
@@ -878,21 +1394,6 @@ def _clean_title(text: str) -> str:
 
 def _join_title_parts(parts: list[str]) -> str | None:
     return " ".join(parts).strip() if parts else None
-
-
-def _mostly_metadata(text: str) -> bool:
-    return bool(re.fullmatch(r"[\w\s+_.-]{1,48}", text))
-
-
-def _prefer_subtitle(current: str | None, candidate: str) -> str:
-    if current is None or _HAN.search(candidate):
-        return re.sub(r"_(?:MP4|MKV)$", "", candidate, flags=re.I)
-    return current
-
-
-def _append_unique(values: list[str], value: str) -> None:
-    if value.lower() not in {item.lower() for item in values}:
-        values.append(value)
 
 
 def _special_media(marker: str) -> MediaType:
