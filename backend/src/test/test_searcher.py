@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from module.conf import settings
-from module.models import Bangumi, RSSItem
+from module.models import Bangumi, Movie, RSSItem
 from module.searcher.provider import search_url
 
 # ---------------------------------------------------------------------------
@@ -164,6 +164,24 @@ class TestSpecialUrl:
 
         # Only title_raw should be in the URL
         assert "Test" in result.url
+
+    def test_supports_movie_without_season_fields(self):
+        """Movie search results do not expose Bangumi-only season fields."""
+        from module.searcher.searcher import SearchTorrent
+
+        movie = Movie(
+            official_title="Movie Title",
+            title_raw="Movie Title",
+            group_name="MovieGroup",
+            dpi="1080p",
+        )
+        with patch(
+            "module.searcher.provider.SEARCH_CONFIG",
+            {"mikan": "https://mikanani.me/RSS/Search?searchstr=%s"},
+        ):
+            result = SearchTorrent.special_url(movie, "mikan")
+
+        assert "Movie" in result.url
 
 
 # ---------------------------------------------------------------------------

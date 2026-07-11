@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from module.api import v1
 from module.database import get_db
-from module.models import Bangumi, ResponseModel, RSSItem, RSSUpdate, Torrent
+from module.models import Bangumi, Movie, ResponseModel, RSSItem, RSSUpdate, Torrent
 from module.security.api import get_current_user
 from test.factories import make_bangumi, make_rss_item, make_torrent
 
@@ -306,6 +306,20 @@ class TestAnalysis:
         assert response.status_code == 200
         data = response.json()
         assert data["official_title"] == "Parsed Anime"
+
+    def test_analysis_returns_movie(self, authed_client):
+        """POST /rss/analysis preserves a parsed movie response."""
+        movie = Movie(official_title="Parsed Movie", title_raw="Parsed Movie")
+        with patch("module.api.rss.analyser") as mock_analyser:
+            mock_analyser.link_to_data = AsyncMock(return_value=movie)
+
+            response = authed_client.post(
+                "/api/v1/rss/analysis",
+                json={"url": "https://mikanani.me/RSS/link", "parser": "mikan"},
+            )
+
+        assert response.status_code == 200
+        assert response.json()["official_title"] == "Parsed Movie"
 
 
 # ---------------------------------------------------------------------------

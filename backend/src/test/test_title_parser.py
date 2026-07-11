@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from module.conf import settings
+from module.models import Bangumi
 from module.models.bangumi import Episode
 from module.models.config import LLM, ExperimentalOpenAI
 from module.parser import title_parser as title_parser_module
@@ -34,6 +35,7 @@ class TestTitleParser:
     async def test_parse_without_llm(self):
         result = await TitleParser.raw_parser(RAW_TITLE)
         assert result is not None
+        assert isinstance(result, Bangumi)
         assert result.group_name == "梦蓝字幕组"
         assert result.title_raw == "New Doraemon"
         assert result.dpi == "1080P"
@@ -47,6 +49,7 @@ class TestTitleParser:
     async def test_parse_with_llm(self):
         result = await TitleParser.raw_parser(RAW_TITLE)
         assert result is not None
+        assert isinstance(result, Bangumi)
         assert result.group_name == "梦蓝字幕组"
         assert result.title_raw == "New Doraemon"
         assert result.dpi == "1080P"
@@ -144,6 +147,7 @@ class TestRawParserLLMPrimaryMode:
                 result = await TitleParser.raw_parser("[Group] LLM Title Movie [1080P]")
 
         assert result is not None
+        assert isinstance(result, Bangumi)
         assert result.episode_type == "movie"
 
     async def test_llm_failure_falls_back_to_regex(self):
