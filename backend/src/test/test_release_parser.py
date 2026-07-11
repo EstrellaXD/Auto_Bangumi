@@ -113,6 +113,52 @@ def test_episode_range_is_a_range_release(raw: str) -> None:
     assert parsed.release_kind is ReleaseKind.RANGE
 
 
+@pytest.mark.parametrize(
+    ("raw", "media_type", "season", "episode_end"),
+    (
+        (
+            "[Group] Anime Title S02E01-E12 [1080p]",
+            MediaType.EPISODE,
+            2,
+            12,
+        ),
+        (
+            "[Group] Anime Title Season 2 Episodes 01-12 [1080p]",
+            MediaType.EPISODE,
+            2,
+            12,
+        ),
+        (
+            "[Group] Anime Title OVA01-02 [1080p]",
+            MediaType.OVA,
+            None,
+            2,
+        ),
+        (
+            "[Group] Anime Title OAD01-OAD03 [1080p]",
+            MediaType.OAD,
+            None,
+            3,
+        ),
+    ),
+)
+def test_compound_range_forms_do_not_degrade_to_single_episode(
+    raw: str,
+    media_type: MediaType,
+    season: int | None,
+    episode_end: int,
+) -> None:
+    parsed = parse_release_title(raw)
+
+    assert parsed is not None
+    assert parsed.media_type is media_type
+    assert parsed.release_kind is ReleaseKind.RANGE
+    assert parsed.season == season
+    assert parsed.episode == 1
+    assert parsed.episode_end == episode_end
+    assert raw_parser(raw) is None
+
+
 def test_complete_batch_without_episode_number() -> None:
     parsed = parse_release_title(
         "[VCB-Studio] Violet Evergarden Complete Batch [BDRip 1080p]"
@@ -260,6 +306,36 @@ def test_movie_word_in_group_does_not_mark_episode_as_movie() -> None:
     assert parsed.group == "Movie-Fan"
     assert parsed.episode == 1
     assert parsed.media_type is MediaType.EPISODE
+
+
+def test_rejected_structural_marker_inside_group_does_not_infer_media() -> None:
+    parsed = parse_release_title("[S02E05-Fansub] Plain Anime Title [1080p]")
+
+    assert parsed is not None
+    assert parsed.group == "S02E05-Fansub"
+    assert parsed.episode is None
+    assert parsed.media_type is MediaType.UNKNOWN
+
+
+def test_shadowed_episode_title_candidate_does_not_remove_title_text() -> None:
+    raw = "[Group] Anime S01E01 Season 2 Episode 3 - Another Title " "[1080p]"
+
+    parsed = parse_release_title(raw)
+
+    assert parsed is not None
+    assert parsed.season == 1
+    assert parsed.episode == 1
+    assert "Another Title" in _title_text(parsed)
+    assert "episode-title" not in parsed.evidence
+
+
+def test_resolved_evidence_excludes_shadowed_special_candidate() -> None:
+    parsed = parse_release_title("[Group] Anime OVA01 OAD02 [1080p]")
+
+    assert parsed is not None
+    assert parsed.media_type is MediaType.OVA
+    assert "ova" in parsed.evidence
+    assert "oad" not in parsed.evidence
 
 
 def test_movie_word_in_regular_series_title_does_not_override_episode() -> None:
