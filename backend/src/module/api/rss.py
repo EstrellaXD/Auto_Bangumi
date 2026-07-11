@@ -5,7 +5,7 @@ from module.conf.search_provider import get_provider
 from module.database import Database, get_db
 from module.downloader import DownloadClient
 from module.manager import SeasonCollector
-from module.models import APIResponse, Bangumi, RSSItem, RSSUpdate, Torrent
+from module.models import APIResponse, Bangumi, Movie, RSSItem, RSSUpdate, Torrent
 from module.rss import RSSAnalyser, RSSEngine
 from module.security.api import get_current_user
 
@@ -185,14 +185,15 @@ analyser = RSSAnalyser()
 
 
 @router.post(
-    "/analysis", response_model=Bangumi, dependencies=[Depends(get_current_user)]
+    "/analysis",
+    response_model=Bangumi | Movie,
+    dependencies=[Depends(get_current_user)],
 )
 async def analysis(rss: RSSItem):
     data = await analyser.link_to_data(rss)
-    if isinstance(data, Bangumi):
+    if isinstance(data, (Bangumi, Movie)):
         return data
-    else:
-        return u_response(data)
+    return u_response(data)
 
 
 @router.post(
