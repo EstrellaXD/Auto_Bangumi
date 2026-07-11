@@ -2,6 +2,8 @@
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from module.core.offset_scanner import OffsetScanner
 from module.database import Database
 from module.models import Torrent
@@ -48,6 +50,98 @@ class TestGetLatestParsedEpisode:
 
         assert await scanner._get_latest_parsed_episode(bangumi.id) is None
 
+    @pytest.mark.parametrize(
+        "resource_name",
+        [
+            "[TestGroup] Signal Anime - 12.5 [1080p].mkv",
+            "[TestGroup] Signal Anime Movie [1080p].mkv",
+            "[TestGroup] Signal Anime OVA99 [1080p].mkv",
+            "[TestGroup] Signal Anime OAD98 [1080p].mkv",
+            "[TestGroup] Signal Anime SP97 [1080p].mkv",
+            "[TestGroup] Signal Anime [01-99] [1080p].mkv",
+            "[TestGroup] Signal Anime S02E01-E99 [1080p].mkv",
+            "[TestGroup] Signal Anime OVA01-99 [1080p].mkv",
+            "[TestGroup] Signal Anime Complete Batch [1080p].mkv",
+            "[TestGroup] Signal Anime 合集 [1080p].mkv",
+            "[TestGroup] Signal Anime PV99 [1080p].mkv",
+            "[TestGroup] Signal Anime [1080p].mkv",
+        ],
+        ids=[
+            "fractional",
+            "movie",
+            "ova",
+            "oad",
+            "special",
+            "range",
+            "season-range",
+            "ova-range",
+            "batch",
+            "collection",
+            "pv",
+            "title-only",
+        ],
+    )
+    async def test_non_weekly_resources_are_not_offset_signals(self, resource_name):
+        scanner = OffsetScanner()
+        async with Database() as db:
+            bangumi = make_bangumi(title_raw="Signal Anime")
+            await db.bangumi.add(bangumi)
+            await db.torrent.add(
+                Torrent(
+                    name=resource_name,
+                    url="https://example.com/non-weekly",
+                    bangumi_id=bangumi.id,
+                )
+            )
+
+        assert await scanner._get_latest_parsed_episode(bangumi.id) is None
+
+    async def test_excluded_resources_do_not_override_latest_weekly_episode(self):
+        scanner = OffsetScanner()
+        resource_names = [
+            "[TestGroup] Signal Anime - 05 [1080p].mkv",
+            "[TestGroup] Signal Anime - 99.5 [1080p].mkv",
+            "[TestGroup] Signal Anime Movie [1080p].mkv",
+            "[TestGroup] Signal Anime OVA99 [1080p].mkv",
+            "[TestGroup] Signal Anime OAD98 [1080p].mkv",
+            "[TestGroup] Signal Anime SP97 [1080p].mkv",
+            "[TestGroup] Signal Anime [01-100] [1080p].mkv",
+            "[TestGroup] Signal Anime S02E01-E100 [1080p].mkv",
+            "[TestGroup] Signal Anime OVA01-100 [1080p].mkv",
+            "[TestGroup] Signal Anime Complete Batch [1080p].mkv",
+            "[TestGroup] Signal Anime 合集 [1080p].mkv",
+            "[TestGroup] Signal Anime PV99 [1080p].mkv",
+            "[TestGroup] Signal Anime [1080p].mkv",
+        ]
+        async with Database() as db:
+            bangumi = make_bangumi(title_raw="Signal Anime")
+            await db.bangumi.add(bangumi)
+            for index, resource_name in enumerate(resource_names):
+                await db.torrent.add(
+                    Torrent(
+                        name=resource_name,
+                        url=f"https://example.com/mixed/{index}",
+                        bangumi_id=bangumi.id,
+                    )
+                )
+
+        assert await scanner._get_latest_parsed_episode(bangumi.id) == 5
+
+    async def test_versioned_weekly_episode_remains_an_offset_signal(self):
+        scanner = OffsetScanner()
+        async with Database() as db:
+            bangumi = make_bangumi(title_raw="Signal Anime")
+            await db.bangumi.add(bangumi)
+            await db.torrent.add(
+                Torrent(
+                    name="[TestGroup] Signal Anime - 12v2 [1080p].mkv",
+                    url="https://example.com/versioned",
+                    bangumi_id=bangumi.id,
+                )
+            )
+
+        assert await scanner._get_latest_parsed_episode(bangumi.id) == 12
+
 
 class TestCheckBangumiUsesRealSignal:
     """Tests for OffsetScanner._check_bangumi consuming the real torrent signal."""
@@ -64,6 +158,26 @@ class TestCheckBangumiUsesRealSignal:
             event = await scanner._check_bangumi(bangumi)
 
         assert event is None
+
+    @pytest.mark.parametrize("episode_type", ("special", "movie"))
+    async def test_skips_non_episode_bangumi_before_tmdb_lookup(
+        self, episode_type: str
+    ):
+        scanner = OffsetScanner()
+        bangumi = make_bangumi(
+            id=1,
+            episode_type=episode_type,
+            season_offset=0,
+            episode_offset=0,
+        )
+
+        with patch(
+            "module.core.offset_scanner.tmdb_parser", new_callable=AsyncMock
+        ) as mock_tmdb:
+            event = await scanner._check_bangumi(bangumi)
+
+        assert event is None
+        mock_tmdb.assert_not_awaited()
 
     async def test_flags_using_real_latest_episode_from_torrent_table(self):
         """A mismatch is only suggested from the actual parsed episode, not a constant."""
