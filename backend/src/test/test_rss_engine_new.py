@@ -6,10 +6,13 @@ from unittest.mock import AsyncMock, patch
 import pytest
 import pytest_asyncio
 
+from module.conf import settings
 from module.database import Database
 from module.downloader import AddResult
 from module.models import Torrent
 from module.notification.events import DownloadFailureEvent, RssFailureEvent
+from module.parser.analyser.selector import parse_configured_release_title
+from module.parser.analyser.tokenizer import ReleaseKind
 from module.rss.engine import RSSEngine
 from test.factories import make_bangumi, make_rss_item, make_torrent
 
@@ -129,9 +132,10 @@ class TestMatchTorrent:
             name="[Group] Shared Anime [TV 01-12 + OVA 01-02] [1080p].mkv"
         )
 
-        result = rss_engine.match_torrent(
-            torrent, await rss_engine.db.bangumi.search_all()
-        )
+        with patch.object(settings.rss_parser, "engine", "tokenizer"):
+            result = rss_engine.match_torrent(
+                torrent, await rss_engine.db.bangumi.search_all()
+            )
 
         assert result is None
         assert torrent.bangumi_id is None
@@ -857,6 +861,11 @@ class TestRefreshRssPerHostThrottle:
 
 
 class TestPreferenceDedup:
+    @pytest.fixture(autouse=True)
+    def use_preview_engine(self):
+        with patch.object(settings.rss_parser, "engine", "tokenizer"):
+            yield
+
     """Unit tests for RSSEngine._select_preference_skips."""
 
     async def test_no_preference_keeps_all_candidates(self, rss_engine):
@@ -1149,6 +1158,33 @@ class TestPreferenceDedup:
 
         assert skips == set()
 
+    async def test_preference_identity_follows_selected_parser_engine(self, rss_engine):
+        bangumi = make_bangumi(
+            title_raw="Mushoku Tensei",
+            filter="",
+            id=1,
+            preferred_group="GroupA",
+        )
+        preferred = make_torrent(name="[GroupA] Mushoku Tensei EP01 ~ EP02 [1080p].mkv")
+        other = make_torrent(name="[GroupB] Mushoku Tensei EP01 ~ EP02 [1080p].mkv")
+        matched = [(preferred, bangumi), (other, bangumi)]
+
+        with patch.object(settings.rss_parser, "engine", "classic"):
+            classic_skips = RSSEngine._select_preference_skips(
+                matched,
+                preference_bangumi={1: bangumi},
+                existing_downloaded={},
+            )
+        with patch.object(settings.rss_parser, "engine", "tokenizer"):
+            preview_skips = RSSEngine._select_preference_skips(
+                matched,
+                preference_bangumi={1: bangumi},
+                existing_downloaded={},
+            )
+
+        assert classic_skips == {id(other)}
+        assert preview_skips == set()
+
     async def test_higher_revision_wins_when_preference_score_ties(self, rss_engine):
         bangumi = make_bangumi(
             title_raw="Mushoku Tensei", filter="", id=1, preferred_group="GroupA"
@@ -1219,6 +1255,60 @@ class TestPreferenceDedup:
 
 class TestRefreshRssPreferenceDedup:
     """Integration coverage through refresh_rss end to end."""
+
+    async def test_refresh_keeps_engine_snapshot_from_match_through_preference(
+        self, rss_engine, monkeypatch
+    ):
+        rss_item = make_rss_item(enabled=True)
+        await rss_engine.db.rss.add(rss_item)
+        bangumi = make_bangumi(
+            title_raw="Signal Anime",
+            filter="",
+            preferred_group="GroupA",
+        )
+        await rss_engine.db.bangumi.add(bangumi)
+        torrent = Torrent(
+            name="[GroupA] Signal Anime EP01 ~ EP02 [1080p].mkv",
+            url="https://example.com/configured-range.torrent",
+        )
+
+        original_match = rss_engine.match_torrent
+
+        def switch_engine_after_match(torrent, bangumi_list):
+            result = original_match(torrent, bangumi_list)
+            settings.rss_parser.engine = "tokenizer"
+            return result
+
+        original_select = rss_engine._select_preference_skips
+
+        def assert_classic_during_preference(*args, **kwargs):
+            parsed = parse_configured_release_title(torrent.name)
+            assert parsed is not None
+            assert parsed.release_kind is ReleaseKind.SINGLE
+            return original_select(*args, **kwargs)
+
+        monkeypatch.setattr(rss_engine, "match_torrent", switch_engine_after_match)
+        monkeypatch.setattr(
+            rss_engine,
+            "_select_preference_skips",
+            assert_classic_during_preference,
+        )
+
+        with (
+            patch.object(settings.rss_parser, "engine", "classic"),
+            patch.object(
+                RSSEngine, "_get_torrents", new_callable=AsyncMock
+            ) as mock_get,
+        ):
+            mock_get.return_value = [torrent]
+            client = AsyncMock()
+            client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
+
+            await rss_engine.refresh_rss(client)
+
+            parsed_after_refresh = parse_configured_release_title(torrent.name)
+            assert parsed_after_refresh is not None
+            assert parsed_after_refresh.release_kind is ReleaseKind.RANGE
 
     async def test_refresh_rss_downloads_only_preferred_group(self, rss_engine):
         """Two subtitle groups match the same episode; only the preferred one

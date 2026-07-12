@@ -23,6 +23,7 @@ DEFAULT_SETTINGS: dict[str, dict[str, Any]] = {
         "enable": True,
         "filter": ["720", "\\d+-\\d+"],
         "language": "zh",
+        "engine": "classic",
     },
     "bangumi_manage": {
         "enable": True,
@@ -100,6 +101,7 @@ ENV_TO_ATTR: dict[str, dict[str, Any]] = {
         "AB_RSS_COLLECTOR": ("enable", lambda e: e.lower() in ("true", "1", "t")),
         "AB_NOT_CONTAIN": ("filter", lambda e: e.split("|")),
         "AB_LANGUAGE": "language",
+        "AB_RSS_PARSER_ENGINE": ("engine", lambda e: e.lower()),
     },
     "bangumi_manage": {
         "AB_RENAME": ("enable", lambda e: e.lower() in ("true", "1", "t")),

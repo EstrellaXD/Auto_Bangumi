@@ -4,6 +4,8 @@ import type { TupleToUnion } from './utils';
 export type DownloaderType = ['qbittorrent', 'aria2'];
 /** rss parser 语言 */
 export type RssParserLang = ['zh', 'en', 'jp'];
+/** RSS 标题解析引擎（tokenizer 仍处于 Preview） */
+export type RssParserEngine = ['classic', 'tokenizer'];
 /** 重命名方式 */
 export type RenameMethod = ['normal', 'pn', 'advance', 'none'];
 /** 代理类型 */
@@ -17,7 +19,7 @@ export type NotificationType = [
   'wecom',
   'gotify',
   'pushover',
-  'webhook',
+  'webhook'
 ];
 /** LLM 提供商 id（内置三家 + 预设/插件，开放集合） */
 export type LLMProviderId = string;
@@ -50,6 +52,7 @@ export interface Downloader {
 }
 export interface RssParser {
   enable: boolean;
+  engine: TupleToUnion<RssParserEngine>;
   filter: Array<string>;
   language: TupleToUnion<RssParserLang>;
 }
@@ -189,6 +192,7 @@ export const initConfig: Config = {
   },
   rss_parser: {
     enable: true,
+    engine: 'classic',
     filter: [],
     language: 'zh',
   },

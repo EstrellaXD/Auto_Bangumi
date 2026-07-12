@@ -1,4 +1,4 @@
-"""Public APIs for generic and legacy resource-title parsing."""
+"""Low-level Preview parser APIs and its legacy ``Episode`` projection."""
 
 from .compat import tokenize_title
 from .parser import parse_release_title, parse_release_title_with_trace

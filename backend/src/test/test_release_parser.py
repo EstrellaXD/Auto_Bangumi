@@ -11,8 +11,7 @@ from typing import Any
 
 import pytest
 
-from module.parser.analyser.raw_parser import raw_parser
-from module.parser.analyser.tokenizer import parse_release_title
+from module.parser.analyser.tokenizer import parse_release_title, tokenize_title
 from module.parser.analyser.tokenizer.result import MediaType, ReleaseKind
 
 REQUIRED_FIELDS = (
@@ -145,7 +144,7 @@ def test_both_explicit_endpoints_admit_spaced_episode_range(
     assert parsed.version == version
     assert parsed.media_type is MediaType.EPISODE
     assert parsed.release_kind is ReleaseKind.RANGE
-    assert raw_parser(raw) is None
+    assert tokenize_title(raw) is None
 
 
 @pytest.mark.parametrize(
@@ -191,7 +190,7 @@ def test_compound_range_forms_do_not_degrade_to_single_episode(
     assert parsed.season == season
     assert parsed.episode == 1
     assert parsed.episode_end == episode_end
-    assert raw_parser(raw) is None
+    assert tokenize_title(raw) is None
 
 
 def test_complete_batch_without_episode_number() -> None:
@@ -262,7 +261,7 @@ def test_plus_delimited_mixed_content_manifest_is_a_collection(raw: str) -> None
     assert "TV 01-12" not in title
     assert "TV动画" not in title
     assert "+OVA" not in title
-    assert raw_parser(raw) is None
+    assert tokenize_title(raw) is None
     if raw == MIKAN_MIXED_COLLECTION:
         assert "整理时间" not in title
         assert "2025.11.12" in parsed.tags
@@ -748,4 +747,4 @@ def test_surround_audio_metadata_is_not_a_title() -> None:
 )
 def test_generic_only_kinds_do_not_leak_into_legacy_parser(raw: str) -> None:
     assert parse_release_title(raw) is not None
-    assert raw_parser(raw) is None
+    assert tokenize_title(raw) is None

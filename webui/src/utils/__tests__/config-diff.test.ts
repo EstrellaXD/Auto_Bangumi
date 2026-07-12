@@ -34,6 +34,12 @@ describe('dirtyConfigGroups', () => {
     expect(dirtyConfigGroups(initConfig, current)).toEqual(['rss_parser']);
   });
 
+  it('should detect parser engine changes', () => {
+    const current = clone(initConfig);
+    current.rss_parser.engine = 'tokenizer';
+    expect(dirtyConfigGroups(initConfig, current)).toEqual(['rss_parser']);
+  });
+
   it('should not report a group after the change is reverted', () => {
     const current = clone(initConfig);
     current.log.debug_enable = true;

@@ -101,6 +101,10 @@
     },
     "parser_set": {
       "enable": "Enable",
+      "engine": "Title Parser",
+      "engine_classic": "Classic Parser (Stable)",
+      "engine_tokenizer": "Universal Parser (Preview)",
+      "engine_hint": "Classic preserves existing parsing behavior. Preview supports episodes, OVAs, movies, ranges, and mixed collections. The two modes never fall back to each other automatically.",
       "exclude": "Exclude",
       "language": "Language",
       "source": "Source",

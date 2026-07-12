@@ -29,6 +29,7 @@ declare global {
   const buildNexusPhpSearchUrl: typeof import('../../src/utils/nexusphp')['buildNexusPhpSearchUrl']
   const chai: typeof import('vitest')['chai']
   const computed: typeof import('vue')['computed']
+  const configSectionMatches: typeof import('../../src/utils/config-search')['configSectionMatches']
   const countLogLevels: typeof import('../../src/utils/log-parse')['countLogLevels']
   const createApp: typeof import('vue')['createApp']
   const createPinia: typeof import('pinia')['createPinia']

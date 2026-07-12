@@ -9,13 +9,17 @@ from module.models import Bangumi, Movie
 from module.models.bangumi import Episode
 from module.models.config import LLM, ExperimentalOpenAI
 from module.parser import title_parser as title_parser_module
+from module.parser.analyser.selector import ConfiguredParseOutcome
 from module.parser.analyser.tokenizer import (
     MediaType,
-    ParseOutcome,
     ParseTrace,
     ReleaseKind,
     parse_release_title,
 )
+from module.parser.analyser.tokenizer.classic import (
+    parse_release_title as parse_classic_release_title,
+)
+from module.parser.analyser.tokenizer.compat import to_legacy_episode
 from module.parser.title_parser import TitleParser, _llm_config
 
 RAW_TITLE = (
@@ -40,8 +44,12 @@ def _make_llm_episode(episode_type: str = "episode") -> Episode:
     )
 
 
-def _empty_parse_outcome(raw: str = "") -> ParseOutcome:
-    return ParseOutcome(result=None, trace=ParseTrace(raw=raw, normalized=raw))
+def _empty_parse_outcome(raw: str = "") -> ConfiguredParseOutcome:
+    return ConfiguredParseOutcome(
+        engine="tokenizer",
+        result=None,
+        trace=ParseTrace(raw=raw, normalized=raw),
+    )
 
 
 class TestTitleParser:
@@ -96,7 +104,7 @@ class TestRawParserLLMFallbackMode:
             settings, "llm", LLM(enable=True, api_key="k", mode="fallback")
         ):
             with patch(
-                "module.parser.title_parser.parse_release_title_with_trace",
+                "module.parser.title_parser.parse_configured_release_title_with_trace",
                 return_value=_empty_parse_outcome(),
             ) as mock_raw:
                 with patch(
@@ -116,7 +124,7 @@ class TestRawParserLLMFallbackMode:
         """正则失败且 LLM 未启用时直接返回 None。"""
         with patch.object(settings, "llm", LLM(enable=False, mode="fallback")):
             with patch(
-                "module.parser.title_parser.parse_release_title_with_trace",
+                "module.parser.title_parser.parse_configured_release_title_with_trace",
                 return_value=_empty_parse_outcome(),
             ):
                 with patch(
@@ -145,7 +153,7 @@ class TestRawParserLLMPrimaryMode:
                 return_value=_make_llm_episode(),
             ) as mock_llm:
                 with patch(
-                    "module.parser.title_parser.parse_release_title_with_trace",
+                    "module.parser.title_parser.parse_configured_release_title_with_trace",
                     return_value=_empty_parse_outcome(),
                 ) as mock_raw:
                     result = await TitleParser.raw_parser(RAW_TITLE)
@@ -195,7 +203,7 @@ class TestRawParserLLMPrimaryMode:
                 return_value=None,
             ):
                 with patch(
-                    "module.parser.title_parser.parse_release_title_with_trace",
+                    "module.parser.title_parser.parse_configured_release_title_with_trace",
                     return_value=_empty_parse_outcome(),
                 ):
                     result = await TitleParser.raw_parser("unparseable garbage title")
@@ -203,8 +211,97 @@ class TestRawParserLLMPrimaryMode:
         assert result is None
 
 
+class TestConfiguredParserEngine:
+    async def test_classic_keeps_pre_refactor_range_behavior(self):
+        raw = "Anime Title - EP01 ~ EP02 [1080p]"
+        with (
+            patch.object(settings, "llm", LLM(enable=False)),
+            patch.object(settings.rss_parser, "engine", "classic"),
+        ):
+            result = await TitleParser.raw_parser(raw)
+
+        assert isinstance(result, Bangumi)
+        assert result.eps_collect is False
+
+    async def test_preview_uses_strict_range_admission_without_classic_fallback(self):
+        raw = "Anime Title - EP01 ~ EP02 [1080p]"
+        with (
+            patch.object(settings, "llm", LLM(enable=False)),
+            patch.object(settings.rss_parser, "engine", "tokenizer"),
+        ):
+            result = await TitleParser.raw_parser(raw)
+
+        assert result is None
+
+    @pytest.mark.parametrize(
+        "raw",
+        (
+            "[Group] Anime [1080p]",
+            "[Group] Anime EP07.5 [1080p]",
+        ),
+    )
+    async def test_classic_preserves_legacy_compatibility_rejections(self, raw):
+        parsed = parse_classic_release_title(raw)
+
+        assert parsed is not None
+        assert to_legacy_episode(parsed) is None
+
+        with (
+            patch.object(settings, "llm", LLM(enable=False)),
+            patch.object(settings.rss_parser, "engine", "classic"),
+        ):
+            result = await TitleParser.raw_parser(raw)
+
+        assert result is None
+
+    async def test_classic_projects_admitted_result_through_legacy_episode(self):
+        raw = "[Group] Anime - 01 [2024][1080p]"
+        parsed = parse_classic_release_title(raw)
+
+        assert parsed is not None
+        assert parsed.year == 2024
+        legacy = to_legacy_episode(parsed)
+        assert legacy is not None
+
+        with (
+            patch.object(settings, "llm", LLM(enable=False)),
+            patch.object(settings.rss_parser, "engine", "classic"),
+        ):
+            result = await TitleParser.raw_parser(raw)
+
+        assert isinstance(result, Bangumi)
+        assert result.title_raw == legacy.title_en
+        assert result.season == legacy.season
+        assert result.season_raw == legacy.season_raw
+        assert result.group_name == legacy.group
+        assert result.dpi == legacy.resolution
+        assert result.episode_type == legacy.episode_type
+        assert result.year is None
+
+    async def test_classic_keeps_legacy_collection_admission(self):
+        raw = "[Group] Anime 合集 [1080p]"
+        parsed = parse_classic_release_title(raw)
+
+        assert parsed is not None
+        assert parsed.release_kind is ReleaseKind.COLLECTION
+        assert to_legacy_episode(parsed) is not None
+
+        with (
+            patch.object(settings, "llm", LLM(enable=False)),
+            patch.object(settings.rss_parser, "engine", "classic"),
+        ):
+            result = await TitleParser.raw_parser(raw)
+
+        assert isinstance(result, Bangumi)
+
+
 class TestParsedReleaseAdmission:
     """Generic parsing and database admission stay separate and typed."""
+
+    @pytest.fixture(autouse=True)
+    def use_preview_engine(self):
+        with patch.object(settings.rss_parser, "engine", "tokenizer"):
+            yield
 
     @pytest.mark.parametrize("marker", ("OVA01", "OAD01", "SP01"))
     async def test_numbered_special_projects_to_special_bangumi(self, marker: str):

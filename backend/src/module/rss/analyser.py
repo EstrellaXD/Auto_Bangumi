@@ -5,6 +5,7 @@ from module.conf import settings
 from module.models import Bangumi, Movie, ResponseModel, RSSItem, Torrent
 from module.network import RequestContent
 from module.parser import TitleParser
+from module.parser.analyser.selector import parser_engine_snapshot
 
 from .engine import RSSEngine
 
@@ -169,26 +170,32 @@ class RSSAnalyser:
     async def rss_to_data(
         self, rss: RSSItem, engine: RSSEngine, full_parse: bool = True
     ) -> list[Bangumi]:
-        rss_torrents = await self.get_rss_torrents(rss.url, full_parse)
-        # Filter out already-known movies first
-        torrents_after_movies = await engine.db.movie.match_list(rss_torrents, rss.url)
-        # Then filter out already-known bangumi
-        torrents_to_add = await engine.db.bangumi.match_list(
-            torrents_after_movies, rss.url
-        )
-        if not torrents_to_add:
-            logger.debug("No new title has been found.")
+        # One RSS workflow can cross several await boundaries and parse the
+        # same resource during Movie match, Bangumi match, and persistence.
+        # Keep those stages on the engine selected when the workflow started.
+        with parser_engine_snapshot():
+            rss_torrents = await self.get_rss_torrents(rss.url, full_parse)
+            # Filter out already-known movies first
+            torrents_after_movies = await engine.db.movie.match_list(
+                rss_torrents, rss.url
+            )
+            # Then filter out already-known bangumi
+            torrents_to_add = await engine.db.bangumi.match_list(
+                torrents_after_movies, rss.url
+            )
+            if not torrents_to_add:
+                logger.debug("No new title has been found.")
+                return []
+            # Parse remaining torrents
+            new_bangumi, new_movies = await self.torrents_to_data(
+                torrents_to_add, rss, full_parse
+            )
+            for movie in new_movies:
+                await engine.db.movie.add(movie)
+            if new_bangumi:
+                await engine.db.bangumi.add_all(new_bangumi)
+                return new_bangumi
             return []
-        # Parse remaining torrents
-        new_bangumi, new_movies = await self.torrents_to_data(
-            torrents_to_add, rss, full_parse
-        )
-        for movie in new_movies:
-            await engine.db.movie.add(movie)
-        if new_bangumi:
-            await engine.db.bangumi.add_all(new_bangumi)
-            return new_bangumi
-        return []
 
     async def link_to_data(self, rss: RSSItem) -> Bangumi | Movie | ResponseModel:
         torrents = await self.get_rss_torrents(rss.url, False)
