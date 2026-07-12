@@ -92,7 +92,9 @@ def test_movie_and_whitespace_retry_keep_the_selected_language(
     _activate(mock_upstream, "localized-movie-jp")
     movie = _analyse(backend, mock_upstream, "tmdb-movie.xml")
     assert movie["official_title"] == "ローカライズ映画"
-    assert movie["episode_type"] == "movie"
+    assert movie["title_raw"] == "Localized Movie"
+    assert movie["year"] == 2026
+    assert movie["group_name"] == "E2E"
 
     _activate(mock_upstream, "localized-retry-jp")
     retried = _analyse(backend, mock_upstream, "tmdb-retry.xml")
