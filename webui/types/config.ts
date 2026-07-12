@@ -8,6 +8,8 @@ export type RssParserLang = ['zh', 'en', 'jp'];
 export type RssParserEngine = ['classic', 'tokenizer'];
 /** 重命名方式 */
 export type RenameMethod = ['normal', 'pn', 'advance', 'none'];
+/** 修订版文件名冲突处理策略 */
+export type RevisionConflictPolicy = ['hold', 'replace'];
 /** 代理类型 */
 export type ProxyType = ['http', 'https', 'socks5'];
 /** 通知类型 */
@@ -60,6 +62,7 @@ export interface BangumiManage {
   enable: boolean;
   eps_complete: boolean;
   rename_method: TupleToUnion<RenameMethod>;
+  revision_conflict_policy: TupleToUnion<RevisionConflictPolicy>;
   group_tag: boolean;
   remove_bad_torrent: boolean;
   track_orphans: boolean;
@@ -200,6 +203,7 @@ export const initConfig: Config = {
     enable: true,
     eps_complete: true,
     rename_method: 'normal',
+    revision_conflict_policy: 'hold',
     group_tag: true,
     remove_bad_torrent: true,
     track_orphans: true,

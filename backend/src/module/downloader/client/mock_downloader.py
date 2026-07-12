@@ -8,7 +8,12 @@ qBittorrent instance. All operations return success and log their actions.
 import logging
 from typing import Any, ClassVar
 
-from module.downloader.base import AddResult, DownloaderCapabilities
+from module.downloader.base import (
+    AddResult,
+    DownloaderCapabilities,
+    RenameOutcome,
+    RenameResult,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +97,9 @@ class MockDownloader:
         logger.debug("get_torrents_by_tag(%s)", tag)
         return [t for t in self._torrents.values() if tag in t.get("tags", [])]
 
+    async def torrent_exists(self, torrent_hash: str) -> bool | None:
+        return torrent_hash in self._torrents
+
     async def torrents_files(self, torrent_hash: str) -> list[dict]:
         """Return files for a torrent."""
         logger.debug("torrents_files(%s)", torrent_hash)
@@ -159,9 +167,9 @@ class MockDownloader:
 
     async def torrents_rename_file(
         self, torrent_hash: str, old_path: str, new_path: str, verify: bool = True
-    ) -> bool:
+    ) -> RenameResult:
         logger.info(f"rename: {old_path} -> {new_path}")
-        return True
+        return RenameResult(RenameOutcome.RENAMED)
 
     async def rss_add_feed(self, url: str, item_path: str):
         self._feeds[item_path] = {"url": url, "path": item_path}

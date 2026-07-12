@@ -17,7 +17,7 @@ from pydantic_core import PydanticUndefined
 from sqlalchemy import Connection, Engine, inspect, text
 from sqlmodel import SQLModel
 
-from module.models import ApiToken, AuthSession, Bangumi, Movie, User
+from module.models import ApiToken, AuthSession, Bangumi, Movie, RenameOperation, User
 from module.models.inbox import InboxMessage
 from module.models.llm_credential import LLMCredential
 from module.models.passkey import Passkey
@@ -38,6 +38,7 @@ TABLE_MODELS: list[type[SQLModel]] = [
     LLMCredential,
     AuthSession,
     ApiToken,
+    RenameOperation,
 ]
 
 # already_applied 守卫：接收 inspector，返回该迁移是否已生效
@@ -614,6 +615,169 @@ MIGRATIONS: tuple[Migration, ...] = (
             (
                 "CREATE INDEX IF NOT EXISTS ix_user_enabled ON user(enabled)",
                 index_exists("user", "ix_user_enabled"),
+            ),
+        ),
+    ),
+    Migration(
+        23,
+        "create durable rename/revision-replacement operation state",
+        (
+            """CREATE TABLE IF NOT EXISTS rename_operation (
+                id INTEGER PRIMARY KEY,
+                downloader_type VARCHAR(32) NOT NULL,
+                kind VARCHAR(32) NOT NULL DEFAULT 'conflict',
+                state VARCHAR(32) NOT NULL DEFAULT 'planned',
+                new_task_id VARCHAR NOT NULL,
+                old_task_id VARCHAR,
+                save_path VARCHAR NOT NULL,
+                source_path VARCHAR NOT NULL,
+                target_path VARCHAR NOT NULL,
+                staged_path VARCHAR,
+                bangumi_id INTEGER,
+                media_type VARCHAR(32),
+                season INTEGER,
+                episode REAL,
+                group_name VARCHAR,
+                resolution VARCHAR(32),
+                old_revision INTEGER,
+                new_revision INTEGER,
+                revision_metadata TEXT,
+                attempt_count INTEGER NOT NULL DEFAULT 0,
+                retry_at TIMESTAMP,
+                lease_owner VARCHAR(64),
+                lease_expires_at TIMESTAMP,
+                notified_at TIMESTAMP,
+                last_error TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT ck_rename_operation_state CHECK (
+                    state IN ('conflict', 'retry', 'running', 'planned', 'old_staged',
+                              'new_promoted', 'old_removed', 'done')
+                ),
+                CONSTRAINT ck_rename_operation_attempt_count CHECK (
+                    attempt_count >= 0
+                )
+            )""",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ux_rename_operation_identity "
+            "ON rename_operation(downloader_type, new_task_id, save_path, "
+            "source_path, target_path)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ux_rename_operation_active_target "
+            "ON rename_operation(downloader_type, save_path, target_path) "
+            "WHERE state NOT IN ('done')",
+            "CREATE INDEX IF NOT EXISTS ix_rename_operation_state_retry_at "
+            "ON rename_operation(state, retry_at)",
+            "CREATE INDEX IF NOT EXISTS ix_rename_operation_new_task_id "
+            "ON rename_operation(new_task_id)",
+            "CREATE INDEX IF NOT EXISTS ix_rename_operation_old_task_id "
+            "ON rename_operation(old_task_id)",
+        ),
+        all_checks(
+            table_exists("rename_operation"),
+            index_exists("rename_operation", "ux_rename_operation_identity"),
+            index_exists("rename_operation", "ux_rename_operation_active_target"),
+            index_exists("rename_operation", "ix_rename_operation_state_retry_at"),
+            index_exists("rename_operation", "ix_rename_operation_new_task_id"),
+            index_exists("rename_operation", "ix_rename_operation_old_task_id"),
+        ),
+        (
+            (
+                """CREATE TABLE IF NOT EXISTS rename_operation (
+                    id INTEGER PRIMARY KEY,
+                    downloader_type VARCHAR(32) NOT NULL,
+                    kind VARCHAR(32) NOT NULL DEFAULT 'conflict',
+                    state VARCHAR(32) NOT NULL DEFAULT 'planned',
+                    new_task_id VARCHAR NOT NULL,
+                    old_task_id VARCHAR,
+                    save_path VARCHAR NOT NULL,
+                    source_path VARCHAR NOT NULL,
+                    target_path VARCHAR NOT NULL,
+                    staged_path VARCHAR,
+                    bangumi_id INTEGER,
+                    media_type VARCHAR(32),
+                    season INTEGER,
+                    episode REAL,
+                    group_name VARCHAR,
+                    resolution VARCHAR(32),
+                    old_revision INTEGER,
+                    new_revision INTEGER,
+                    revision_metadata TEXT,
+                    attempt_count INTEGER NOT NULL DEFAULT 0,
+                    retry_at TIMESTAMP,
+                    lease_owner VARCHAR(64),
+                    lease_expires_at TIMESTAMP,
+                    notified_at TIMESTAMP,
+                    last_error TEXT,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT ck_rename_operation_state CHECK (
+                        state IN ('conflict', 'retry', 'running', 'planned', 'old_staged',
+                                  'new_promoted', 'old_removed', 'done')
+                    ),
+                    CONSTRAINT ck_rename_operation_attempt_count CHECK (
+                        attempt_count >= 0
+                    )
+                )""",
+                table_exists("rename_operation"),
+            ),
+            (
+                "CREATE UNIQUE INDEX IF NOT EXISTS ux_rename_operation_identity "
+                "ON rename_operation(downloader_type, new_task_id, save_path, "
+                "source_path, target_path)",
+                index_exists("rename_operation", "ux_rename_operation_identity"),
+            ),
+            (
+                "CREATE UNIQUE INDEX IF NOT EXISTS ux_rename_operation_active_target "
+                "ON rename_operation(downloader_type, save_path, target_path) "
+                "WHERE state NOT IN ('done')",
+                index_exists("rename_operation", "ux_rename_operation_active_target"),
+            ),
+            (
+                "CREATE INDEX IF NOT EXISTS ix_rename_operation_state_retry_at "
+                "ON rename_operation(state, retry_at)",
+                index_exists("rename_operation", "ix_rename_operation_state_retry_at"),
+            ),
+            (
+                "CREATE INDEX IF NOT EXISTS ix_rename_operation_new_task_id "
+                "ON rename_operation(new_task_id)",
+                index_exists("rename_operation", "ix_rename_operation_new_task_id"),
+            ),
+            (
+                "CREATE INDEX IF NOT EXISTS ix_rename_operation_old_task_id "
+                "ON rename_operation(old_task_id)",
+                index_exists("rename_operation", "ix_rename_operation_old_task_id"),
+            ),
+        ),
+    ),
+    Migration(
+        24,
+        "add durable filesystem rename intent to aria2 gid state",
+        (
+            """CREATE TABLE IF NOT EXISTS aria2_gid (
+                gid VARCHAR NOT NULL PRIMARY KEY,
+                bangumi_id INTEGER REFERENCES bangumi(id),
+                category VARCHAR,
+                dedup_key VARCHAR,
+                renamed_paths TEXT DEFAULT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )""",
+            "ALTER TABLE aria2_gid ADD COLUMN rename_intent TEXT DEFAULT NULL",
+        ),
+        column_exists("aria2_gid", "rename_intent"),
+        (
+            (
+                """CREATE TABLE IF NOT EXISTS aria2_gid (
+                    gid VARCHAR NOT NULL PRIMARY KEY,
+                    bangumi_id INTEGER REFERENCES bangumi(id),
+                    category VARCHAR,
+                    dedup_key VARCHAR,
+                    renamed_paths TEXT DEFAULT NULL,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )""",
+                table_exists("aria2_gid"),
+            ),
+            (
+                "ALTER TABLE aria2_gid ADD COLUMN rename_intent TEXT DEFAULT NULL",
+                column_exists("aria2_gid", "rename_intent"),
             ),
         ),
     ),

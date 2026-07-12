@@ -51,6 +51,11 @@ source path, and target path. It stores operation kind, phase, old owner task,
 deterministic temporary path, parsed identity metadata, attempt counters,
 retry time, notification time, last error, and timestamps.
 
+Each replacement phase is fenced by an expiring database lease and committed
+with compare-and-swap semantics. This supplements the target uniqueness index:
+multiple processes may observe the same row, but only the lease holder can run
+the phase and persist its transition.
+
 Normal conflict phases are `CONFLICT` and `RETRY_WAIT`. Replacement phases are:
 
 ```text
@@ -96,11 +101,14 @@ verification after every action. `deleteFiles=true` is allowed only after the
 single-file guard has passed.
 
 For aria2, rename remains an AutoBangumi filesystem move recorded in
-`aria2_gid.renamed_paths`. Old-version cleanup must resolve the old gid's current
-renamed path, delete that deterministic temporary file, call `forceRemove`
-without generic file deletion, and delete the sidecar only after success or an
-explicit not-found response. This prevents cleanup from deleting the V2 file now
-occupying aria2's original path.
+`aria2_gid.renamed_paths`. Before moving a file, aria2 persists an intent with
+the source and target paths plus the source filesystem identity. A restart may
+finalize the move only when the target still has that exact identity; an
+unrelated existing target remains a conflict. Old-version cleanup must resolve
+the old gid's current renamed path, delete that deterministic temporary file,
+call `forceRemove` without generic file deletion, and delete the sidecar only
+after success or an explicit not-found response. This prevents cleanup from
+deleting the V2 file now occupying aria2's original path.
 
 ## Configuration and UI
 

@@ -21,4 +21,5 @@ class Aria2Gid(SQLModel, table=True):
     category: Optional[str] = None
     dedup_key: Optional[str] = Field(default=None, index=True)
     renamed_paths: Optional[str] = None
+    rename_intent: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

@@ -8,7 +8,12 @@ from typing import ClassVar
 import httpx
 
 from module.ab_decorator import qb_connect_failed_wait
-from module.downloader.base import AddResult, DownloaderCapabilities
+from module.downloader.base import (
+    AddResult,
+    DownloaderCapabilities,
+    RenameOutcome,
+    RenameResult,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -311,6 +316,28 @@ class QbDownloader:
             ]
         return torrents
 
+    async def torrent_exists(self, torrent_hash: str) -> bool | None:
+        """Query one hash without confusing a failed request with absence."""
+
+        try:
+            resp = await self._get("torrents/info", params={"hashes": torrent_hash})
+            if resp.status_code >= 300:
+                logger.warning(
+                    "Could not verify qBittorrent task %s: HTTP %s",
+                    torrent_hash,
+                    resp.status_code,
+                )
+                return None
+            payload = resp.json()
+        except (ConnectionError, OSError, ValueError, httpx.RequestError) as e:
+            logger.warning("Could not verify qBittorrent task %s: %s", torrent_hash, e)
+            return None
+        return isinstance(payload, list) and any(
+            str(item.get("hash", "")).lower() == torrent_hash.lower()
+            for item in payload
+            if isinstance(item, dict)
+        )
+
     @qb_connect_failed_wait
     async def torrents_files(self, torrent_hash: str):
         resp = await self._get("torrents/files", params={"hash": torrent_hash})
@@ -555,7 +582,7 @@ class QbDownloader:
 
     async def torrents_rename_file(
         self, torrent_hash, old_path, new_path, verify: bool = True
-    ) -> bool:
+    ) -> RenameResult:
         try:
             resp = await self._post(
                 "torrents/renameFile",
@@ -563,13 +590,19 @@ class QbDownloader:
             )
             if resp.status_code == 409:
                 logger.debug("Conflict409Error: %s >> %s", old_path, new_path)
-                return False
+                return RenameResult(
+                    RenameOutcome.DESTINATION_EXISTS,
+                    detail="qBittorrent rejected rename with HTTP 409",
+                )
             # qB 5.2 对成功的 renameFile 回 204（空响应体全局改为 204）
             if resp.status_code >= 300:
-                return False
+                return RenameResult(
+                    RenameOutcome.RETRYABLE_FAILURE,
+                    detail=f"qBittorrent rename returned HTTP {resp.status_code}",
+                )
 
             if not verify:
-                return True
+                return RenameResult(RenameOutcome.RENAMED)
 
             # Verify the rename actually happened by checking file list
             # qBittorrent can return 200 but delay the actual rename (e.g., while seeding)
@@ -579,7 +612,7 @@ class QbDownloader:
                 await asyncio.sleep(delay)
                 files = await self.torrents_files(torrent_hash)
                 if any(f.get("name") == new_path for f in files):
-                    return True
+                    return RenameResult(RenameOutcome.RENAMED)
                 # new_path 未出现（旧名仍在，或两个名字都不在列表里）一律不算
                 # 成功：盲目返回 True 会让 renamer 每周期重复改名 + 发通知
                 # (#754/#749)。返回 False 由调用方走 _PENDING_RENAME_COOLDOWN 退避。
@@ -590,10 +623,13 @@ class QbDownloader:
                         new_path,
                         old_path,
                     )
-            return False
+            return RenameResult(
+                RenameOutcome.RETRYABLE_FAILURE,
+                detail="qBittorrent did not expose the target path after rename",
+            )
         except (httpx.ConnectError, httpx.RequestError, httpx.TimeoutException) as e:
             logger.warning(f"Failed to rename file {old_path}: {e}")
-            return False
+            return RenameResult(RenameOutcome.RETRYABLE_FAILURE, detail=str(e))
 
     async def rss_add_feed(self, url, item_path):
         resp = await self._post(

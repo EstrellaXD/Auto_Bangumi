@@ -1,7 +1,13 @@
 import asyncio
+import hashlib
+import json
 import logging
-import time
+import uuid
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from pathlib import PurePath
+
+from sqlalchemy.exc import IntegrityError
 
 from module.conf import settings
 from module.database import Database
@@ -10,25 +16,49 @@ from module.database.bangumi import (
     match_bangumi_in_list,
     normalize_save_path,
 )
-from module.downloader import DownloadClient
+from module.downloader import DownloadClient, RenameOutcome, RenameResult
 from module.downloader.path import check_files, is_ep, path_to_bangumi
-from module.models import EpisodeFile, Notification, SubtitleFile
+from module.models import EpisodeFile, Notification, RenameOperation, SubtitleFile
+from module.notification import RenameConflictEvent
 from module.parser import TitleParser
+
+from .revision_policy import (
+    RevisionIdentity,
+    is_strict_upgrade,
+    parse_revision_identity,
+    replacement_staged_path,
+)
 
 logger = logging.getLogger(__name__)
 
-# Module-level cache to track pending renames that qBittorrent hasn't processed yet
-# Key: (torrent_hash, old_path, new_path), Value: timestamp of last attempt
-# This prevents spamming the same rename when qBittorrent returns 200 but doesn't actually rename
-_pending_renames: dict[tuple[str, str, str], float] = {}
 _PENDING_RENAME_COOLDOWN = 300  # 5 minutes cooldown before retrying same rename
-_CLEANUP_INTERVAL = 60  # Clean up pending cache at most once per minute
-_last_cleanup_time: float = 0
 
 # 处理完成标记：供外部脚本（filebot、hlink 等）过滤 AB 已重命名的任务 (#147)。
 # 语义 = 顶层媒体文件全部就位；字幕在同一轮循环里紧随其后重命名，深层
 # 嵌套文件（特典/花絮）设计上从不重命名——两者都不阻塞打标
 _RENAMED_TAG = "ab:renamed"
+_replacement_locks: dict[tuple[str, str, str], asyncio.Lock] = {}
+
+
+@dataclass(frozen=True, slots=True)
+class PreparedMediaRename:
+    episode: EpisodeFile
+    source_path: str
+    target_path: str
+
+
+@dataclass(frozen=True, slots=True)
+class MediaRenameReport:
+    result: RenameResult
+    prepared: PreparedMediaRename | None = None
+    notification: Notification | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class RevisionOwner:
+    info: dict
+    files: list[dict]
+    identity: RevisionIdentity | None
 
 
 class Renamer:
@@ -36,22 +66,7 @@ class Renamer:
         self.client = client
         self._parser = TitleParser()
         self._offset_cache: dict[str, tuple[int, int]] = {}
-
-    @staticmethod
-    def _cleanup_pending_cache():
-        """Clean up expired entries from pending renames cache (throttled)."""
-        global _last_cleanup_time
-        current_time = time.time()
-        if current_time - _last_cleanup_time < _CLEANUP_INTERVAL:
-            return
-        _last_cleanup_time = current_time
-        expired_keys = [
-            k
-            for k, v in _pending_renames.items()
-            if current_time - v > _PENDING_RENAME_COOLDOWN * 2
-        ]
-        for k in expired_keys:
-            _pending_renames.pop(k, None)
+        self.events: list[RenameConflictEvent] = []
 
     @staticmethod
     def print_result(torrent_count, rename_count):
@@ -178,61 +193,123 @@ class Renamer:
         existing_tags: str | None = None,
         **kwargs,
     ):
+        report = await self._rename_media_file(
+            torrent_name=torrent_name,
+            media_path=media_path,
+            bangumi_name=bangumi_name,
+            method=method,
+            season=season,
+            _hash=_hash,
+            episode_offset=episode_offset,
+            season_offset=season_offset,
+            episode_type=episode_type,
+        )
+        if report.result.succeeded and method not in ("none", "normal"):
+            await self._mark_renamed(_hash, existing_tags)
+        return report.notification
+
+    def _prepare_media_rename(
+        self,
+        *,
+        torrent_name: str,
+        media_path: str,
+        bangumi_name: str,
+        method: str,
+        season: int,
+        episode_offset: int = 0,
+        season_offset: int = 0,
+        episode_type: str = "episode",
+    ) -> PreparedMediaRename | None:
         ep = self._parser.torrent_parser(
             torrent_name=torrent_name,
             torrent_path=media_path,
             season=season,
             episode_type=episode_type,
         )
-        if ep:
-            new_path = self.gen_path(
+        if ep is None:
+            return None
+        return PreparedMediaRename(
+            episode=ep,
+            source_path=media_path,
+            target_path=self.gen_path(
                 ep,
                 bangumi_name,
                 method=method,
                 episode_offset=episode_offset,
                 season_offset=season_offset,
-            )
-            if media_path == new_path:
-                # 已符合目标命名（如重启后再次扫描）：视为处理完成。
-                # none/normal 是直通方法，没有"重命名完成"的语义，不打标
-                if method not in ("none", "normal"):
-                    await self._mark_renamed(_hash, existing_tags)
-            else:
-                # Check if this rename was recently attempted but didn't take effect
-                # (qBittorrent can return 200 but delay actual rename while seeding)
-                pending_key = (_hash, media_path, new_path)
-                last_attempt = _pending_renames.get(pending_key)
-                if (
-                    last_attempt
-                    and (time.time() - last_attempt) < _PENDING_RENAME_COOLDOWN
-                ):
-                    logger.debug("Skipping rename (pending cooldown): %s", media_path)
-                    return None
+            ),
+        )
 
-                if await self.client.rename_torrent_file(
-                    _hash=_hash, old_path=media_path, new_path=new_path
-                ):
-                    # Rename verified successful, remove from pending cache
-                    _pending_renames.pop(pending_key, None)
-                    await self._mark_renamed(_hash, existing_tags)
-                    # Season comes from folder which already has offset applied
-                    # Only apply episode offset
-                    return Notification(
-                        official_title=bangumi_name,
-                        season=ep.season,
-                        episode=self._adjust_episode(ep.episode, episode_offset),
-                    )
-                else:
-                    # Rename API returned success but file wasn't actually renamed
-                    # Add to pending cache to avoid spamming
-                    _pending_renames[pending_key] = time.time()
-                    # Periodic cleanup of expired entries (at most once per minute)
-                    self._cleanup_pending_cache()
-        else:
-            logger.warning(f"{media_path} parse failed")
+    async def _execute_media_rename(
+        self,
+        *,
+        prepared: PreparedMediaRename,
+        bangumi_name: str,
+        _hash: str,
+        episode_offset: int,
+    ) -> MediaRenameReport:
+        if prepared.source_path == prepared.target_path:
+            return MediaRenameReport(
+                result=RenameResult(RenameOutcome.ALREADY_APPLIED),
+                prepared=prepared,
+            )
+        result = await self.client.rename_torrent_file(
+            _hash=_hash,
+            old_path=prepared.source_path,
+            new_path=prepared.target_path,
+        )
+        notification = None
+        if result.outcome is RenameOutcome.RENAMED:
+            notification = Notification(
+                official_title=bangumi_name,
+                season=prepared.episode.season,
+                episode=self._adjust_episode(prepared.episode.episode, episode_offset),
+            )
+        return MediaRenameReport(
+            result=result,
+            prepared=prepared,
+            notification=notification,
+        )
+
+    async def _rename_media_file(
+        self,
+        *,
+        torrent_name: str,
+        media_path: str,
+        bangumi_name: str,
+        method: str,
+        season: int,
+        _hash: str,
+        episode_offset: int = 0,
+        season_offset: int = 0,
+        episode_type: str = "episode",
+    ) -> MediaRenameReport:
+        prepared = self._prepare_media_rename(
+            torrent_name=torrent_name,
+            media_path=media_path,
+            bangumi_name=bangumi_name,
+            method=method,
+            season=season,
+            episode_offset=episode_offset,
+            season_offset=season_offset,
+            episode_type=episode_type,
+        )
+        if prepared is None:
+            logger.warning("%s parse failed", media_path)
             if settings.bangumi_manage.remove_bad_torrent:
                 await self.client.delete_torrent(hashes=_hash)
-        return None
+            return MediaRenameReport(
+                result=RenameResult(
+                    RenameOutcome.RETRYABLE_FAILURE,
+                    detail="media path could not be parsed",
+                )
+            )
+        return await self._execute_media_rename(
+            prepared=prepared,
+            bangumi_name=bangumi_name,
+            _hash=_hash,
+            episode_offset=episode_offset,
+        )
 
     @staticmethod
     def _gen_movie_extra_path(new_path: str, media_path: str) -> str:
@@ -288,6 +365,8 @@ class Renamer:
         episode_type: str = "episode",
         file_sizes: dict[str, int] | None = None,
         existing_tags: str | None = None,
+        mark_complete: bool = True,
+        torrent_info: dict | None = None,
         **kwargs,
     ):
         # 多文件电影种子（正片 + 特典/花絮）：所有文件会解析出同一标题，
@@ -324,23 +403,43 @@ class Renamer:
                         # new_path == media_path 说明是 none 等直通方法，不做区分
                         new_path = self._gen_movie_extra_path(new_path, media_path)
                     if media_path != new_path:
-                        renamed = await self.client.rename_torrent_file(
-                            _hash=_hash, old_path=media_path, new_path=new_path
+                        prepared = PreparedMediaRename(
+                            episode=ep,
+                            source_path=media_path,
+                            target_path=new_path,
                         )
-                        if not renamed:
+                        if torrent_info is not None:
+                            identity = parse_revision_identity(
+                                torrent_info.get("name", ""),
+                                bangumi_id=self._parse_bangumi_id_from_tags(
+                                    torrent_info.get("tags")
+                                ),
+                                default_season=season,
+                                episode_offset=episode_offset,
+                            )
+                            report = await self._run_ordinary_rename(
+                                info=torrent_info,
+                                prepared=prepared,
+                                identity=identity,
+                                bangumi_name=bangumi_name,
+                                episode_offset=episode_offset,
+                            )
+                            result = report.result
+                        else:
+                            result = await self.client.rename_torrent_file(
+                                _hash=_hash,
+                                old_path=media_path,
+                                new_path=new_path,
+                            )
+                        if not result.succeeded:
                             all_renamed = False
                             logger.warning(f"{media_path} rename failed")
-                            # Delete bad torrent.
-                            if settings.bangumi_manage.remove_bad_torrent:
-                                await self.client.delete_torrent(_hash)
-                                break
                 else:
                     # 解析失败的媒体文件不会被重命名——不能算处理完成
                     all_renamed = False
-        # 全部媒体文件就位（含本轮无需改名的情况）才算处理完成；
-        # none/normal 直通方法没有"重命名完成"的语义，不打标
-        if all_renamed and method not in ("none", "normal"):
+        if all_renamed and mark_complete and method not in ("none", "normal"):
             await self._mark_renamed(_hash, existing_tags)
+        return all_renamed
 
     async def rename_subtitles(
         self,
@@ -399,6 +498,1028 @@ class Renamer:
                 except ValueError:
                     pass
         return None
+
+    @staticmethod
+    def _has_tag(tags: str | None, expected: str) -> bool:
+        return expected in (tag.strip() for tag in (tags or "").split(","))
+
+    @staticmethod
+    def _retry_at() -> datetime:
+        return datetime.now(timezone.utc) + timedelta(seconds=_PENDING_RENAME_COOLDOWN)
+
+    @staticmethod
+    def _retry_is_due(value: datetime | None) -> bool:
+        if value is None:
+            return True
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value <= datetime.now(timezone.utc)
+
+    def _downloader_type(self) -> str:
+        configured = settings.downloader.type
+        downloader_type = (
+            configured
+            if isinstance(configured, str)
+            else type(self.client.client).__name__.lower()
+        )
+        host = settings.downloader.host
+        if not isinstance(host, str) or not host:
+            return downloader_type
+        instance_hash = hashlib.sha256(host.strip().lower().encode()).hexdigest()[:12]
+        return f"{downloader_type}:{instance_hash}"
+
+    async def _find_revision_owners(
+        self,
+        *,
+        incoming: dict,
+        target_path: str,
+        all_infos: list[dict],
+        episode_offset: int,
+    ) -> tuple[RevisionIdentity | None, list[RevisionOwner]]:
+        """Find downloader tasks that already own an incoming canonical path."""
+
+        incoming_id = self._parse_bangumi_id_from_tags(incoming.get("tags"))
+        _, incoming_season = path_to_bangumi(
+            incoming.get("save_path", ""), incoming.get("name", "")
+        )
+        incoming_identity = parse_revision_identity(
+            incoming.get("name", ""),
+            bangumi_id=incoming_id,
+            default_season=incoming_season,
+            episode_offset=episode_offset,
+        )
+        if incoming_id is None:
+            return incoming_identity, []
+
+        save_path = normalize_save_path(incoming.get("save_path", ""))
+        candidates = [
+            info
+            for info in all_infos
+            if info.get("hash") != incoming.get("hash")
+            and normalize_save_path(info.get("save_path", "")) == save_path
+            and self._parse_bangumi_id_from_tags(info.get("tags")) == incoming_id
+        ]
+        if not candidates:
+            return incoming_identity, []
+
+        candidate_files = await asyncio.gather(
+            *[self.client.get_torrent_files(info["hash"]) for info in candidates]
+        )
+        owners: list[RevisionOwner] = []
+        normalized_target = target_path.replace("\\", "/")
+        for info, files in zip(candidates, candidate_files):
+            # Count every downloader task that references the canonical path
+            # before applying the destructive single-file guard. A collection
+            # owner must make replacement ineligible, not disappear from the
+            # owner count.
+            if not any(
+                str(item.get("name", "")).replace("\\", "/") == normalized_target
+                for item in files
+            ):
+                continue
+            _, old_season = path_to_bangumi(
+                info.get("save_path", ""), info.get("name", "")
+            )
+            owners.append(
+                RevisionOwner(
+                    info=info,
+                    files=files,
+                    identity=parse_revision_identity(
+                        info.get("name", ""),
+                        bangumi_id=incoming_id,
+                        default_season=old_season,
+                        episode_offset=episode_offset,
+                    ),
+                )
+            )
+        return incoming_identity, owners
+
+    def _build_operation(
+        self,
+        *,
+        info: dict,
+        prepared: PreparedMediaRename,
+        identity: RevisionIdentity | None,
+        kind: str,
+        state: str,
+        owner: RevisionOwner | None = None,
+        reason: str | None = None,
+    ) -> RenameOperation:
+        owner_identity = owner.identity if owner else None
+        metadata = {
+            "new_torrent_name": info.get("name", ""),
+            "old_torrent_name": owner.info.get("name", "") if owner else None,
+        }
+        return RenameOperation(
+            downloader_type=self._downloader_type(),
+            kind=kind,
+            state=state,
+            new_task_id=info["hash"],
+            old_task_id=owner.info["hash"] if owner else None,
+            save_path=normalize_save_path(info.get("save_path", "")),
+            source_path=prepared.source_path,
+            target_path=prepared.target_path,
+            staged_path=(
+                replacement_staged_path(
+                    prepared.target_path,
+                    old_task_id=owner.info["hash"],
+                    old_revision=owner_identity.revision,
+                )
+                if owner and owner_identity
+                else None
+            ),
+            bangumi_id=identity.bangumi_id if identity else None,
+            media_type=identity.media_type.value if identity else None,
+            season=identity.season if identity else None,
+            episode=float(identity.episode) if identity else None,
+            group_name=identity.group if identity else None,
+            resolution=identity.resolution if identity else None,
+            old_revision=owner_identity.revision if owner_identity else None,
+            new_revision=identity.revision if identity else None,
+            revision_metadata=json.dumps(metadata, ensure_ascii=False),
+            last_error=reason,
+        )
+
+    async def _emit_conflict_once(
+        self,
+        operation: RenameOperation,
+        *,
+        torrent_name: str,
+        reason: str,
+    ) -> None:
+        async with Database() as db:
+            claimed = await db.rename_operation.mark_notified(operation.id)
+        if claimed:
+            self.events.append(
+                RenameConflictEvent(
+                    task_id=operation.new_task_id,
+                    torrent_name=torrent_name,
+                    target_path=operation.target_path,
+                    reason=reason,
+                )
+            )
+
+    async def _persist_conflict(
+        self,
+        *,
+        info: dict,
+        prepared: PreparedMediaRename,
+        identity: RevisionIdentity | None,
+        reason: str,
+        owner: RevisionOwner | None = None,
+    ) -> RenameOperation | None:
+        operation = self._build_operation(
+            info=info,
+            prepared=prepared,
+            identity=identity,
+            kind="conflict",
+            state="conflict",
+            owner=owner,
+            reason=reason,
+        )
+        async with Database() as db:
+            active = await db.rename_operation.get_by_target(
+                downloader_type=operation.downloader_type,
+                save_path=operation.save_path,
+                target_path=operation.target_path,
+            )
+            if active is not None and active.new_task_id != operation.new_task_id:
+                logger.warning(
+                    "Rename target already reserved by task %s: %s",
+                    active.new_task_id[:8],
+                    operation.target_path,
+                )
+                return active
+            try:
+                row, _ = await db.rename_operation.upsert_conflict(operation)
+            except IntegrityError:
+                row = await db.rename_operation.get_by_target(
+                    downloader_type=operation.downloader_type,
+                    save_path=operation.save_path,
+                    target_path=operation.target_path,
+                )
+        if row is not None and row.new_task_id == info["hash"]:
+            await self._emit_conflict_once(
+                row, torrent_name=info.get("name", ""), reason=reason
+            )
+        return row
+
+    async def _set_operation_state(
+        self,
+        operation: RenameOperation,
+        state: str,
+        *,
+        retry: bool = False,
+        error: str | None = None,
+    ) -> RenameOperation:
+        async with Database() as db:
+            if operation.kind == "replacement" and operation.lease_owner:
+                updated = await db.rename_operation.set_state_claimed(
+                    operation.id,
+                    owner=operation.lease_owner,
+                    state=state,  # type: ignore[arg-type]
+                    retry_at=self._retry_at() if retry else None,
+                    last_error=error,
+                )
+                if updated is None:
+                    raise RuntimeError("replacement lease was lost before state commit")
+            else:
+                updated = await db.rename_operation.set_state(
+                    operation.id,
+                    state,  # type: ignore[arg-type]
+                    retry_at=self._retry_at() if retry else None,
+                    last_error=error,
+                )
+        return updated or operation
+
+    async def _replacement_conflict(
+        self,
+        operation: RenameOperation,
+        *,
+        info: dict,
+        reason: str,
+    ) -> None:
+        operation = await self._set_operation_state(operation, "conflict", error=reason)
+        await self._emit_conflict_once(
+            operation,
+            torrent_name=info.get("name", ""),
+            reason=reason,
+        )
+
+    async def _advance_replacement(
+        self,
+        *,
+        operation: RenameOperation,
+        info: dict,
+        prepared: PreparedMediaRename,
+        all_infos: list[dict],
+        bangumi_name: str,
+        episode_offset: int,
+        existing_tags: str | None,
+    ) -> Notification | None:
+        """Advance a staged V1 -> V2 replacement saga as far as possible."""
+
+        key = (
+            operation.downloader_type,
+            operation.save_path,
+            operation.target_path,
+        )
+        lock = _replacement_locks.setdefault(key, asyncio.Lock())
+        async with lock:
+            async with Database() as db:
+                current = await db.rename_operation.get(operation.id)
+            if current is None:
+                return None
+            operation = current
+            if not self._retry_is_due(operation.retry_at):
+                return None
+
+            info_by_hash = {item["hash"]: item for item in all_infos}
+            staged_path = operation.staged_path
+            if not staged_path or not operation.old_task_id:
+                await self._replacement_conflict(
+                    operation,
+                    info=info,
+                    reason="replacement operation is missing old owner metadata",
+                )
+                return None
+            old_task_id = operation.old_task_id
+
+            # A bounded loop lets the normal successful path finish in one tick,
+            # while every external action is verified and persisted separately.
+            for _ in range(6):
+                state = operation.state
+                if state in {
+                    "planned",
+                    "old_staged",
+                    "new_promoted",
+                    "old_removed",
+                }:
+                    async with Database() as db:
+                        claimed = await db.rename_operation.claim_replacement_lease(
+                            operation.id,
+                            owner=uuid.uuid4().hex,
+                        )
+                    if claimed is None:
+                        return None
+                    operation = claimed
+                    state = operation.state
+                if state == "conflict":
+                    await self._emit_conflict_once(
+                        operation,
+                        torrent_name=info.get("name", ""),
+                        reason=operation.last_error or "rename conflict",
+                    )
+                    return None
+
+                if state == "planned":
+                    old_info = info_by_hash.get(old_task_id)
+                    if old_info is None:
+                        await self._replacement_conflict(
+                            operation,
+                            info=info,
+                            reason="old revision task disappeared before staging",
+                        )
+                        return None
+                    old_files = await self.client.get_torrent_files(old_task_id)
+                    old_names = {
+                        str(item.get("name", "")).replace("\\", "/")
+                        for item in old_files
+                    }
+                    if staged_path in old_names:
+                        operation = await self._set_operation_state(
+                            operation, "old_staged"
+                        )
+                        continue
+                    if operation.target_path not in old_names:
+                        await self._replacement_conflict(
+                            operation,
+                            info=info,
+                            reason="old revision no longer owns the canonical path",
+                        )
+                        return None
+                    result = await self.client.rename_torrent_file(
+                        _hash=old_task_id,
+                        old_path=operation.target_path,
+                        new_path=staged_path,
+                    )
+                    if result.succeeded:
+                        operation = await self._set_operation_state(
+                            operation, "old_staged"
+                        )
+                        continue
+                    if result.outcome is RenameOutcome.DESTINATION_EXISTS:
+                        await self._replacement_conflict(
+                            operation,
+                            info=info,
+                            reason="temporary staging path already exists",
+                        )
+                        return None
+                    operation = await self._set_operation_state(
+                        operation,
+                        "planned",
+                        retry=True,
+                        error=result.detail or "failed to stage old revision",
+                    )
+                    return None
+
+                if state == "old_staged":
+                    new_files = await self.client.get_torrent_files(
+                        operation.new_task_id
+                    )
+                    new_names = {
+                        str(item.get("name", "")).replace("\\", "/")
+                        for item in new_files
+                    }
+                    if operation.target_path in new_names:
+                        operation = await self._set_operation_state(
+                            operation, "new_promoted"
+                        )
+                        continue
+                    if operation.source_path not in new_names:
+                        rollback = await self.client.rename_torrent_file(
+                            _hash=old_task_id,
+                            old_path=staged_path,
+                            new_path=operation.target_path,
+                        )
+                        if rollback.succeeded:
+                            await self._replacement_conflict(
+                                operation,
+                                info=info,
+                                reason=(
+                                    "new revision source disappeared after "
+                                    "staging; V1 was restored"
+                                ),
+                            )
+                        else:
+                            await self._set_operation_state(
+                                operation,
+                                "old_staged",
+                                retry=True,
+                                error=(
+                                    "new revision source disappeared and V1 "
+                                    "rollback needs retry: "
+                                    f"{rollback.detail or rollback.outcome.value}"
+                                ),
+                            )
+                        return None
+                    result = await self.client.rename_torrent_file(
+                        _hash=operation.new_task_id,
+                        old_path=operation.source_path,
+                        new_path=operation.target_path,
+                    )
+                    if result.succeeded:
+                        operation = await self._set_operation_state(
+                            operation, "new_promoted"
+                        )
+                        continue
+
+                    # Reconcile once more before rollback: a transport failure
+                    # may happen after the downloader applied the promotion.
+                    new_files = await self.client.get_torrent_files(
+                        operation.new_task_id
+                    )
+                    if any(
+                        str(item.get("name", "")).replace("\\", "/")
+                        == operation.target_path
+                        for item in new_files
+                    ):
+                        operation = await self._set_operation_state(
+                            operation, "new_promoted"
+                        )
+                        continue
+
+                    rollback = await self.client.rename_torrent_file(
+                        _hash=old_task_id,
+                        old_path=staged_path,
+                        new_path=operation.target_path,
+                    )
+                    if rollback.succeeded:
+                        if result.outcome is RenameOutcome.DESTINATION_EXISTS:
+                            await self._replacement_conflict(
+                                operation,
+                                info=info,
+                                reason=(
+                                    "V2 promotion target is owned by an unknown "
+                                    "file; V1 was restored"
+                                ),
+                            )
+                            return None
+                        operation = await self._set_operation_state(
+                            operation,
+                            "planned",
+                            retry=True,
+                            error=result.detail
+                            or "promotion failed and V1 was restored",
+                        )
+                        return None
+                    if rollback.outcome is RenameOutcome.DESTINATION_EXISTS:
+                        await self._replacement_conflict(
+                            operation,
+                            info=info,
+                            reason=(
+                                "V2 promotion and V1 rollback both found an "
+                                "occupied canonical target"
+                            ),
+                        )
+                        return None
+                    operation = await self._set_operation_state(
+                        operation,
+                        "old_staged",
+                        retry=True,
+                        error=(
+                            "promotion failed and rollback needs retry: "
+                            f"{rollback.detail or rollback.outcome.value}"
+                        ),
+                    )
+                    return None
+
+                if state == "new_promoted":
+                    old_exists = await self.client.torrent_exists(old_task_id)
+                    if old_exists is None:
+                        operation = await self._set_operation_state(
+                            operation,
+                            "new_promoted",
+                            retry=True,
+                            error=(
+                                "new revision is live; old task existence could "
+                                "not be verified"
+                            ),
+                        )
+                        return None
+                    if old_exists:
+                        removed = await self.client.delete_torrent(
+                            old_task_id, delete_files=True
+                        )
+                        if not removed:
+                            operation = await self._set_operation_state(
+                                operation,
+                                "new_promoted",
+                                retry=True,
+                                error="new revision is live; old task cleanup failed",
+                            )
+                            return None
+                        old_exists = await self.client.torrent_exists(old_task_id)
+                        if old_exists is not False:
+                            operation = await self._set_operation_state(
+                                operation,
+                                "new_promoted",
+                                retry=True,
+                                error=(
+                                    "old task deletion was accepted but is not "
+                                    "yet observable"
+                                ),
+                            )
+                            return None
+                    operation = await self._set_operation_state(
+                        operation, "old_removed"
+                    )
+                    continue
+
+                if state == "old_removed":
+                    operation = await self._set_operation_state(operation, "done")
+                    continue
+
+                if state == "done":
+                    await self._mark_renamed(info["hash"], existing_tags)
+                    async with Database() as db:
+                        notify = await db.rename_operation.mark_notified(operation.id)
+                    if not notify:
+                        return None
+                    return Notification(
+                        official_title=bangumi_name,
+                        season=prepared.episode.season,
+                        episode=self._adjust_episode(
+                            prepared.episode.episode, episode_offset
+                        ),
+                    )
+
+                # `retry` is only used by ordinary renames. A replacement row
+                # reaching it is malformed and must stop rather than guessing.
+                await self._replacement_conflict(
+                    operation,
+                    info=info,
+                    reason=f"unexpected replacement state: {state}",
+                )
+                return None
+        return None
+
+    async def _start_replacement(
+        self,
+        *,
+        info: dict,
+        prepared: PreparedMediaRename,
+        identity: RevisionIdentity,
+        owner: RevisionOwner,
+        all_infos: list[dict],
+        bangumi_name: str,
+        episode_offset: int,
+        existing_tags: str | None,
+    ) -> Notification | None:
+        operation = self._build_operation(
+            info=info,
+            prepared=prepared,
+            identity=identity,
+            kind="replacement",
+            state="planned",
+            owner=owner,
+        )
+        async with Database() as db:
+            try:
+                row, _ = await db.rename_operation.get_or_create(operation)
+            except IntegrityError:
+                row = await db.rename_operation.get_by_target(
+                    downloader_type=operation.downloader_type,
+                    save_path=operation.save_path,
+                    target_path=operation.target_path,
+                )
+        if row is None or row.new_task_id != info["hash"]:
+            await self._persist_conflict(
+                info=info,
+                prepared=prepared,
+                identity=identity,
+                owner=owner,
+                reason="canonical target is reserved by another rename operation",
+            )
+            return None
+        return await self._advance_replacement(
+            operation=row,
+            info=info,
+            prepared=prepared,
+            all_infos=all_infos,
+            bangumi_name=bangumi_name,
+            episode_offset=episode_offset,
+            existing_tags=existing_tags,
+        )
+
+    async def _recover_missing_replacement(
+        self, operation: RenameOperation, all_infos: list[dict]
+    ) -> None:
+        """Recover an active saga whose incoming task left the normal snapshot."""
+
+        if any(info.get("hash") == operation.new_task_id for info in all_infos):
+            return
+        async with Database() as db:
+            claimed = await db.rename_operation.claim_replacement_lease(
+                operation.id,
+                owner=uuid.uuid4().hex,
+            )
+        if claimed is None:
+            return
+        operation = claimed
+        try:
+            metadata = json.loads(operation.revision_metadata or "{}")
+        except json.JSONDecodeError:
+            metadata = {}
+        info = {
+            "hash": operation.new_task_id,
+            "name": metadata.get("new_torrent_name") or operation.new_task_id,
+        }
+        if operation.state == "old_staged" and operation.old_task_id:
+            rollback = await self.client.rename_torrent_file(
+                _hash=operation.old_task_id,
+                old_path=operation.staged_path or "",
+                new_path=operation.target_path,
+            )
+            if rollback.succeeded:
+                await self._replacement_conflict(
+                    operation,
+                    info=info,
+                    reason="incoming revision task disappeared; V1 was restored",
+                )
+                return
+            if rollback.outcome is RenameOutcome.DESTINATION_EXISTS:
+                await self._replacement_conflict(
+                    operation,
+                    info=info,
+                    reason=(
+                        "incoming revision task disappeared while the canonical "
+                        "path remained occupied"
+                    ),
+                )
+                return
+            await self._set_operation_state(
+                operation,
+                "old_staged",
+                retry=True,
+                error=(
+                    "incoming revision task disappeared and V1 rollback needs "
+                    f"retry: {rollback.detail or rollback.outcome.value}"
+                ),
+            )
+            return
+        if operation.state == "old_removed":
+            await self._set_operation_state(operation, "done")
+            return
+        await self._replacement_conflict(
+            operation,
+            info=info,
+            reason=(
+                "incoming revision task disappeared during replacement; "
+                "automatic deletion is stopped"
+            ),
+        )
+
+    async def _run_ordinary_rename(
+        self,
+        *,
+        info: dict,
+        prepared: PreparedMediaRename,
+        identity: RevisionIdentity | None,
+        bangumi_name: str,
+        episode_offset: int,
+    ) -> MediaRenameReport:
+        """Claim and execute one non-replacement rename exactly once at a time."""
+
+        template = self._build_operation(
+            info=info,
+            prepared=prepared,
+            identity=identity,
+            kind="conflict",
+            state="retry",
+        )
+        key = (template.downloader_type, template.save_path, template.target_path)
+        lock = _replacement_locks.setdefault(key, asyncio.Lock())
+        async with lock:
+            async with Database() as db:
+                active = await db.rename_operation.get_by_target(
+                    downloader_type=template.downloader_type,
+                    save_path=template.save_path,
+                    target_path=template.target_path,
+                )
+                if active is not None and active.new_task_id != info["hash"]:
+                    return MediaRenameReport(
+                        result=RenameResult(
+                            RenameOutcome.DESTINATION_EXISTS,
+                            detail="canonical target is reserved by another operation",
+                        ),
+                        prepared=prepared,
+                    )
+                if active is None:
+                    try:
+                        active, _ = await db.rename_operation.get_or_create(template)
+                    except IntegrityError:
+                        active = await db.rename_operation.get_by_target(
+                            downloader_type=template.downloader_type,
+                            save_path=template.save_path,
+                            target_path=template.target_path,
+                        )
+                if active is None:
+                    return MediaRenameReport(
+                        result=RenameResult(
+                            RenameOutcome.RETRYABLE_FAILURE,
+                            detail="could not reserve rename operation",
+                        ),
+                        prepared=prepared,
+                    )
+                if active.state == "done":
+                    return MediaRenameReport(
+                        result=RenameResult(RenameOutcome.ALREADY_APPLIED),
+                        prepared=prepared,
+                    )
+                if active.state == "conflict":
+                    conflict = active
+                    claimed = None
+                else:
+                    conflict = None
+                    if active.state == "running":
+                        recovered = await db.rename_operation.recover_stale_running(
+                            active.id,
+                            before=datetime.now(timezone.utc)
+                            - timedelta(seconds=_PENDING_RENAME_COOLDOWN),
+                        )
+                        if not recovered:
+                            return MediaRenameReport(
+                                result=RenameResult(
+                                    RenameOutcome.RETRYABLE_FAILURE,
+                                    detail="rename operation is already running",
+                                ),
+                                prepared=prepared,
+                            )
+                        active = await db.rename_operation.get(active.id) or active
+                    if active.state == "retry" and not self._retry_is_due(
+                        active.retry_at
+                    ):
+                        return MediaRenameReport(
+                            result=RenameResult(
+                                RenameOutcome.RETRYABLE_FAILURE,
+                                detail=active.last_error or "rename retry cooldown",
+                            ),
+                            prepared=prepared,
+                        )
+                    claimed = await db.rename_operation.claim(
+                        active.id,
+                        from_states=("retry",),
+                        to_state="running",
+                    )
+
+            if conflict is not None:
+                await self._emit_conflict_once(
+                    conflict,
+                    torrent_name=info.get("name", ""),
+                    reason=conflict.last_error or "target already exists",
+                )
+                return MediaRenameReport(
+                    result=RenameResult(
+                        RenameOutcome.DESTINATION_EXISTS,
+                        detail=conflict.last_error,
+                    ),
+                    prepared=prepared,
+                )
+            if claimed is None:
+                return MediaRenameReport(
+                    result=RenameResult(
+                        RenameOutcome.RETRYABLE_FAILURE,
+                        detail="rename operation was claimed by another worker",
+                    ),
+                    prepared=prepared,
+                )
+
+            # The downloader may have applied the previous rename just before
+            # the process crashed, leaving the DB row in ``running``.  Its own
+            # file list is authoritative proof of ownership; reconcile that
+            # state before sending the external mutation again (qB commonly
+            # answers the replay with 409).
+            current_files = await self.client.get_torrent_files(info["hash"])
+            current_names = {
+                str(item.get("name", "")).replace("\\", "/") for item in current_files
+            }
+            if (
+                prepared.target_path in current_names
+                and prepared.source_path not in current_names
+            ):
+                await self._set_operation_state(claimed, "done")
+                return MediaRenameReport(
+                    result=RenameResult(RenameOutcome.ALREADY_APPLIED),
+                    prepared=prepared,
+                )
+
+            report = await self._execute_media_rename(
+                prepared=prepared,
+                bangumi_name=bangumi_name,
+                _hash=info["hash"],
+                episode_offset=episode_offset,
+            )
+            if report.result.succeeded:
+                await self._set_operation_state(claimed, "done")
+                return report
+            if report.result.outcome is RenameOutcome.DESTINATION_EXISTS:
+                conflict = await self._set_operation_state(
+                    claimed,
+                    "conflict",
+                    error=report.result.detail or "target path already exists",
+                )
+                await self._emit_conflict_once(
+                    conflict,
+                    torrent_name=info.get("name", ""),
+                    reason=conflict.last_error or "target path already exists",
+                )
+                return report
+            await self._set_operation_state(
+                claimed,
+                "retry",
+                retry=True,
+                error=report.result.detail or "rename failed verification",
+            )
+            return report
+
+    async def _process_single_torrent(
+        self,
+        *,
+        info: dict,
+        files: list[dict],
+        media_path: str,
+        all_infos: list[dict],
+        bangumi_name: str,
+        season: int,
+        method: str,
+        episode_offset: int,
+        season_offset: int,
+        episode_type: str,
+    ) -> MediaRenameReport:
+        prepared = self._prepare_media_rename(
+            torrent_name=info["name"],
+            media_path=media_path,
+            bangumi_name=bangumi_name,
+            method=method,
+            season=season,
+            episode_offset=episode_offset,
+            season_offset=season_offset,
+            episode_type=episode_type,
+        )
+        if prepared is None:
+            logger.warning("%s parse failed", media_path)
+            if settings.bangumi_manage.remove_bad_torrent:
+                await self.client.delete_torrent(hashes=info["hash"])
+            return MediaRenameReport(
+                result=RenameResult(
+                    RenameOutcome.RETRYABLE_FAILURE,
+                    detail="media path could not be parsed",
+                )
+            )
+
+        incoming_id = self._parse_bangumi_id_from_tags(info.get("tags"))
+        identity = parse_revision_identity(
+            info.get("name", ""),
+            bangumi_id=incoming_id,
+            default_season=season,
+            episode_offset=episode_offset,
+        )
+        save_path = normalize_save_path(info.get("save_path", ""))
+        async with Database() as db:
+            active = await db.rename_operation.get_by_target(
+                downloader_type=self._downloader_type(),
+                save_path=save_path,
+                target_path=prepared.target_path,
+            )
+
+        if active is not None:
+            if active.new_task_id != info["hash"]:
+                return MediaRenameReport(
+                    result=RenameResult(
+                        RenameOutcome.DESTINATION_EXISTS,
+                        detail="canonical target is reserved by another operation",
+                    ),
+                    prepared=prepared,
+                )
+            if active.state == "conflict":
+                await self._emit_conflict_once(
+                    active,
+                    torrent_name=info.get("name", ""),
+                    reason=active.last_error or "target already exists",
+                )
+                return MediaRenameReport(
+                    result=RenameResult(
+                        RenameOutcome.DESTINATION_EXISTS,
+                        detail=active.last_error,
+                    ),
+                    prepared=prepared,
+                )
+            if active.kind == "replacement" and active.state != "done":
+                notification = await self._advance_replacement(
+                    operation=active,
+                    info=info,
+                    prepared=prepared,
+                    all_infos=all_infos,
+                    bangumi_name=bangumi_name,
+                    episode_offset=episode_offset,
+                    existing_tags=info.get("tags"),
+                )
+                async with Database() as db:
+                    refreshed = await db.rename_operation.get(active.id)
+                finished = refreshed is not None and refreshed.state == "done"
+                return MediaRenameReport(
+                    result=RenameResult(
+                        (
+                            RenameOutcome.RENAMED
+                            if finished
+                            else RenameOutcome.RETRYABLE_FAILURE
+                        ),
+                        detail=(
+                            None
+                            if finished
+                            else (refreshed.last_error if refreshed else None)
+                        ),
+                    ),
+                    prepared=prepared,
+                    notification=notification,
+                )
+            if active.state == "retry" and not self._retry_is_due(active.retry_at):
+                return MediaRenameReport(
+                    result=RenameResult(
+                        RenameOutcome.RETRYABLE_FAILURE,
+                        detail=active.last_error or "rename retry cooldown",
+                    ),
+                    prepared=prepared,
+                )
+            if active.state == "done":
+                return MediaRenameReport(
+                    result=RenameResult(RenameOutcome.ALREADY_APPLIED),
+                    prepared=prepared,
+                )
+
+        incoming_identity, owners = await self._find_revision_owners(
+            incoming=info,
+            target_path=prepared.target_path,
+            all_infos=all_infos,
+            episode_offset=episode_offset,
+        )
+        if owners:
+            owner = owners[0] if len(owners) == 1 else None
+            reason = "canonical path has more than one downloader owner"
+            can_replace = bool(
+                owner is not None
+                and len(files) == 1
+                and len(owner.files) == 1
+                and incoming_identity is not None
+                and owner.identity is not None
+                and is_strict_upgrade(owner.identity, incoming_identity)
+            )
+            if (
+                settings.bangumi_manage.revision_conflict_policy == "replace"
+                and can_replace
+            ):
+                assert owner is not None
+                assert incoming_identity is not None
+                notification = await self._start_replacement(
+                    info=info,
+                    prepared=prepared,
+                    identity=incoming_identity,
+                    owner=owner,
+                    all_infos=all_infos,
+                    bangumi_name=bangumi_name,
+                    episode_offset=episode_offset,
+                    existing_tags=info.get("tags"),
+                )
+                async with Database() as db:
+                    replacement = await db.rename_operation.get_by_target(
+                        downloader_type=self._downloader_type(),
+                        save_path=save_path,
+                        target_path=prepared.target_path,
+                    )
+                finished = replacement is not None and replacement.state == "done"
+                return MediaRenameReport(
+                    result=RenameResult(
+                        (
+                            RenameOutcome.RENAMED
+                            if finished
+                            else RenameOutcome.RETRYABLE_FAILURE
+                        ),
+                        detail=(replacement.last_error if replacement else None),
+                    ),
+                    prepared=prepared,
+                    notification=notification,
+                )
+
+            if len(owners) == 1:
+                assert owner is not None
+                if len(files) != 1 or len(owner.files) != 1:
+                    reason = "automatic replacement requires two single-file torrents"
+                elif incoming_identity is None or owner.identity is None:
+                    reason = "revision identity is incomplete"
+                elif not is_strict_upgrade(owner.identity, incoming_identity):
+                    reason = "existing and incoming releases are not a strict revision upgrade"
+                else:
+                    reason = "revision conflict policy is hold"
+            await self._persist_conflict(
+                info=info,
+                prepared=prepared,
+                identity=incoming_identity,
+                owner=owner,
+                reason=reason,
+            )
+            return MediaRenameReport(
+                result=RenameResult(RenameOutcome.DESTINATION_EXISTS, detail=reason),
+                prepared=prepared,
+            )
+
+        return await self._run_ordinary_rename(
+            info=info,
+            prepared=prepared,
+            identity=identity,
+            bangumi_name=bangumi_name,
+            episode_offset=episode_offset,
+        )
 
     @staticmethod
     def _normalize_path(path: str) -> str:
@@ -611,16 +1732,54 @@ class Renamer:
         return 0, 0
 
     async def rename(self) -> list[Notification]:
-        # Get torrent info
         logger.debug("Start rename process.")
         rename_method = settings.bangumi_manage.rename_method
-        torrents_info = await self.client.get_torrent_info()
+        pending_infos = await self.client.get_torrent_info()
+        # Owner counting and Saga recovery must see tasks outside the normal
+        # Bangumi/completed filter (collections, paused tasks, changed category).
+        all_infos = await self.client.get_torrent_info(
+            category=None, status_filter=None
+        )
+        info_by_hash = {info["hash"]: info for info in all_infos}
+        for info in pending_infos:
+            info_by_hash.setdefault(info["hash"], info)
+        all_infos = list(info_by_hash.values())
+        async with Database() as db:
+            active_replacements = await db.rename_operation.list_active_replacements()
+        active_replacement_ids = {
+            operation.new_task_id for operation in active_replacements
+        }
+        for operation in active_replacements:
+            if operation.new_task_id not in info_by_hash:
+                incoming_exists = await self.client.torrent_exists(
+                    operation.new_task_id
+                )
+                if incoming_exists is None or incoming_exists:
+                    # A failed/incomplete bulk snapshot must never be treated
+                    # as proof that the incoming task disappeared.
+                    continue
+                await self._recover_missing_replacement(operation, all_infos)
+                continue
+            if not any(
+                info.get("hash") == operation.new_task_id for info in pending_infos
+            ):
+                pending_infos.append(info_by_hash[operation.new_task_id])
+        # `ab:renamed` is a real terminal marker.  Filter it before file and
+        # offset queries; a later V2 still sees it lazily as a possible owner.
+        torrents_info = [
+            info
+            for info in pending_infos
+            if info.get("hash") in active_replacement_ids
+            or not self._has_tag(info.get("tags"), _RENAMED_TAG)
+        ]
         renamed_info: list[Notification] = []
-        # Fetch all torrent files concurrently
+        if not torrents_info:
+            logger.debug("Rename process finished: no pending torrents")
+            return renamed_info
+
         all_files = await asyncio.gather(
             *[self.client.get_torrent_files(info["hash"]) for info in torrents_info]
         )
-        # Batch lookup all offsets in a single database session
         offset_map = await self._batch_lookup_offsets(torrents_info)
         for info, files in zip(torrents_info, all_files):
             torrent_hash = info["hash"]
@@ -637,7 +1796,6 @@ class Renamer:
                 continue
             media_list, subtitle_list = check_files(files)
             bangumi_name, season = path_to_bangumi(save_path, torrent_name)
-            # Use pre-fetched offsets
             episode_offset, season_offset, episode_type = offset_map[torrent_hash]
             kwargs = {
                 "torrent_name": torrent_name,
@@ -648,29 +1806,51 @@ class Renamer:
                 "episode_offset": episode_offset,
                 "season_offset": season_offset,
                 "episode_type": episode_type,
-                # 处理完成后打 ab:renamed 标签用；已带标签则跳过 API 调用
                 "existing_tags": info.get("tags"),
             }
-            # Rename single media file
             if len(media_list) == 1:
-                notify_info = await self.rename_file(media_path=media_list[0], **kwargs)
-                if notify_info:
-                    renamed_info.append(notify_info)
-                # Rename subtitle file
-                if len(subtitle_list) > 0:
-                    await self.rename_subtitles(subtitle_list=subtitle_list, **kwargs)
-            # Rename collection
+                report = await self._process_single_torrent(
+                    info=info,
+                    files=files,
+                    media_path=media_list[0],
+                    all_infos=all_infos,
+                    bangumi_name=bangumi_name,
+                    season=season,
+                    method=rename_method,
+                    episode_offset=episode_offset,
+                    season_offset=season_offset,
+                    episode_type=episode_type,
+                )
+                if report.notification:
+                    renamed_info.append(report.notification)
+                if report.result.succeeded:
+                    if subtitle_list:
+                        await self.rename_subtitles(
+                            subtitle_list=subtitle_list, **kwargs
+                        )
+                    if rename_method not in ("none", "normal"):
+                        await self._mark_renamed(torrent_hash, info.get("tags"))
             elif len(media_list) > 1:
                 logger.info("Start rename collection")
-                # 传入各文件体积，供多文件电影种子选出正片主文件
                 file_sizes = {f["name"]: f.get("size") or 0 for f in files}
-                await self.rename_collection(
-                    media_list=media_list, file_sizes=file_sizes, **kwargs
+                collection_complete = await self.rename_collection(
+                    media_list=media_list,
+                    file_sizes=file_sizes,
+                    mark_complete=False,
+                    torrent_info=info,
+                    **kwargs,
                 )
-                if len(subtitle_list) > 0:
+                if collection_complete and subtitle_list:
                     await self.rename_subtitles(subtitle_list=subtitle_list, **kwargs)
-                await self.client.set_category(torrent_hash, "BangumiCollection")
+                if collection_complete:
+                    if rename_method not in ("none", "normal"):
+                        await self._mark_renamed(torrent_hash, info.get("tags"))
+                    await self.client.set_category(torrent_hash, "BangumiCollection")
             else:
                 logger.warning(f"{torrent_name} has no media file")
+        async with Database() as db:
+            await db.rename_operation.prune_done(
+                datetime.now(timezone.utc) - timedelta(days=30)
+            )
         logger.debug("Rename process finished.")
         return renamed_info

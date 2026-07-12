@@ -135,6 +135,7 @@ export const mockConfig = {
     enable: true,
     eps_complete: false,
     rename_method: 'pn',
+    revision_conflict_policy: 'hold',
     group_tag: false,
     remove_bad_torrent: false,
     track_orphans: true,

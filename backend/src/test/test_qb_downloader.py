@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from module.downloader import AddResult
+from module.downloader import AddResult, RenameOutcome
 from module.downloader.client.qb_downloader import QbDownloader
 
 # ---------------------------------------------------------------------------
@@ -1181,6 +1181,34 @@ class TestTorrentsInfoPausedFilter:
         assert sent_params["filter"] == "completed"
 
 
+class TestTorrentExists:
+    async def test_queries_exact_hash_and_confirms_presence(self):
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        response = MagicMock(status_code=200)
+        response.json.return_value = [{"hash": "ABC123"}]
+        qb._client.request = AsyncMock(return_value=response)
+
+        assert await qb.torrent_exists("abc123") is True
+        assert qb._client.request.call_args.kwargs["params"] == {"hashes": "abc123"}
+
+    async def test_empty_exact_hash_query_confirms_absence(self):
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        response = MagicMock(status_code=200)
+        response.json.return_value = []
+        qb._client.request = AsyncMock(return_value=response)
+
+        assert await qb.torrent_exists("missing") is False
+
+    async def test_failed_query_is_unknown_not_absent(self):
+        qb = QbDownloader(host="localhost:8080", username="u", password="p", ssl=False)
+        qb._client = AsyncMock()
+        qb._client.request = AsyncMock(side_effect=ConnectionError("offline"))
+
+        assert await qb.torrent_exists("abc123") is None
+
+
 # ---------------------------------------------------------------------------
 # torrents_delete (#1046)
 # ---------------------------------------------------------------------------
@@ -1250,26 +1278,42 @@ class TestRenameVerifyContract:
         return qb
 
     async def test_verify_false_when_file_keeps_old_name(self):
-        """API 200 but the file never gets renamed -> False."""
+        """API 200 but the file never gets renamed -> retryable."""
         qb = self._make_qb([{"name": "old.mkv"}])
-        assert await qb.torrents_rename_file("h", "old.mkv", "new.mkv") is False
+        result = await qb.torrents_rename_file("h", "old.mkv", "new.mkv")
+        assert result.outcome is RenameOutcome.RETRYABLE_FAILURE
 
     async def test_verify_false_when_neither_name_present(self):
-        """Neither old nor new name in the file list -> False, not a blind True."""
+        """Neither old nor new name is retryable, not a blind success."""
         qb = self._make_qb([{"name": "unrelated.mkv"}])
-        assert await qb.torrents_rename_file("h", "old.mkv", "new.mkv") is False
+        result = await qb.torrents_rename_file("h", "old.mkv", "new.mkv")
+        assert result.outcome is RenameOutcome.RETRYABLE_FAILURE
 
     async def test_verify_true_when_new_path_appears(self):
         """A real, verified rename returns True."""
         qb = self._make_qb([{"name": "new.mkv"}])
-        assert await qb.torrents_rename_file("h", "old.mkv", "new.mkv") is True
+        result = await qb.torrents_rename_file("h", "old.mkv", "new.mkv")
+        assert result.outcome is RenameOutcome.RENAMED
 
     async def test_verify_409_conflict_is_false(self):
-        """Target already exists (duplicate from another source) -> False."""
+        """Target already exists is a terminal, distinguishable outcome."""
         qb = self._make_qb([{"name": "old.mkv"}], post_code=409)
-        assert await qb.torrents_rename_file("h", "old.mkv", "new.mkv") is False
+        result = await qb.torrents_rename_file("h", "old.mkv", "new.mkv")
+        assert result.outcome is RenameOutcome.DESTINATION_EXISTS
 
     async def test_rename_204_with_verified_new_path_is_true(self):
         """qB 5.2 对成功的 renameFile 回 204；不能再用 ==200 判定失败。"""
         qb = self._make_qb([{"name": "new.mkv"}], post_code=204)
-        assert await qb.torrents_rename_file("h", "old.mkv", "new.mkv") is True
+        result = await qb.torrents_rename_file("h", "old.mkv", "new.mkv")
+        assert result.outcome is RenameOutcome.RENAMED
+
+    async def test_http_error_is_retryable(self):
+        qb = self._make_qb([{"name": "old.mkv"}], post_code=500)
+        result = await qb.torrents_rename_file("h", "old.mkv", "new.mkv")
+        assert result.outcome is RenameOutcome.RETRYABLE_FAILURE
+
+    async def test_network_error_is_retryable(self):
+        qb = self._make_qb([])
+        qb._post = AsyncMock(side_effect=httpx.ConnectError("down"))
+        result = await qb.torrents_rename_file("h", "old.mkv", "new.mkv")
+        assert result.outcome is RenameOutcome.RETRYABLE_FAILURE

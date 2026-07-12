@@ -31,6 +31,7 @@ DEFAULT_SETTINGS: dict[str, dict[str, Any]] = {
         "rename_method": "pn",
         "group_tag": False,
         "remove_bad_torrent": False,
+        "revision_conflict_policy": "hold",
     },
     "log": {
         "debug_enable": False,
@@ -111,6 +112,10 @@ ENV_TO_ATTR: dict[str, dict[str, Any]] = {
         "AB_REMOVE_BAD_BT": (
             "remove_bad_torrent",
             lambda e: e.lower() in ("true", "1", "t"),
+        ),
+        "AB_REVISION_CONFLICT_POLICY": (
+            "revision_conflict_policy",
+            lambda e: e.lower(),
         ),
     },
     "log": {

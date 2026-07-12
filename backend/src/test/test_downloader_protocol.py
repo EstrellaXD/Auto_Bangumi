@@ -9,6 +9,8 @@ from module.downloader.base import (
     CoreDownloaderClient,
     DownloaderCapabilities,
     DownloaderClient,
+    RenameOutcome,
+    RenameResult,
 )
 from module.downloader.client.aria2_downloader import Aria2Downloader
 from module.downloader.client.mock_downloader import MockDownloader
@@ -46,6 +48,16 @@ class TestCapabilities:
     def test_all_three_expose_capabilities(self):
         for cls in (QbDownloader, MockDownloader, Aria2Downloader):
             assert isinstance(cls.capabilities, DownloaderCapabilities)
+
+
+class TestRenameResult:
+    def test_success_outcomes_preserve_boolean_compatibility(self):
+        assert RenameResult(RenameOutcome.RENAMED)
+        assert RenameResult(RenameOutcome.ALREADY_APPLIED)
+
+    def test_failure_outcomes_are_false(self):
+        assert not RenameResult(RenameOutcome.DESTINATION_EXISTS)
+        assert not RenameResult(RenameOutcome.RETRYABLE_FAILURE)
 
 
 class TestProtocolConformance:

@@ -6,6 +6,7 @@
 
 import json
 import logging
+from dataclasses import asdict, dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -13,6 +14,41 @@ from sqlmodel import select
 from module.models.aria2 import Aria2Gid
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class Aria2RenameIntent:
+    """Durable proof that this gid owned a filesystem move before it started."""
+
+    old_path: str
+    new_path: str
+    st_dev: int
+    st_ino: int
+    st_size: int
+    st_mtime_ns: int
+
+    def to_json(self) -> str:
+        return json.dumps(
+            {"version": 1, **asdict(self)}, ensure_ascii=False, sort_keys=True
+        )
+
+    @classmethod
+    def from_json(cls, raw: str | None) -> "Aria2RenameIntent | None":
+        if not raw:
+            return None
+        try:
+            data = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            return None
+        if not isinstance(data, dict) or data.get("version") != 1:
+            return None
+        path_fields = ("old_path", "new_path")
+        stat_fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns")
+        if any(not isinstance(data.get(field), str) for field in path_fields):
+            return None
+        if any(type(data.get(field)) is not int for field in stat_fields):
+            return None
+        return cls(**{field: data[field] for field in (*path_fields, *stat_fields)})
 
 
 class Aria2GidDatabase:
@@ -88,6 +124,7 @@ class Aria2GidDatabase:
                     category=old.category,
                     dedup_key=old.dedup_key,
                     renamed_paths=old.renamed_paths,
+                    rename_intent=old.rename_intent,
                     created_at=old.created_at,
                 )
             )
@@ -101,6 +138,8 @@ class Aria2GidDatabase:
             existing.renamed_paths = _merge_renamed_paths(
                 existing.renamed_paths, old.renamed_paths
             )
+            if existing.rename_intent is None:
+                existing.rename_intent = old.rename_intent
             self.session.add(existing)
         await self.session.delete(old)
         await self.session.commit()
@@ -126,6 +165,62 @@ class Aria2GidDatabase:
         mapping[old_path] = new_path
         await self.upsert(gid, renamed_paths=json.dumps(mapping, ensure_ascii=False))
 
+    async def get_rename_intent(self, gid: str) -> Aria2RenameIntent | None:
+        record = await self.session.get(Aria2Gid, gid)
+        if record is None or not record.rename_intent:
+            return None
+        intent = Aria2RenameIntent.from_json(record.rename_intent)
+        if intent is None:
+            logger.warning("Ignoring invalid rename_intent for gid %s", gid)
+        return intent
+
+    async def set_rename_intent(self, gid: str, intent: Aria2RenameIntent) -> None:
+        record = await self.session.get(Aria2Gid, gid)
+        if record is None:
+            record = Aria2Gid(gid=gid)
+        record.rename_intent = intent.to_json()
+        self.session.add(record)
+        await self.session.commit()
+
+    async def clear_rename_intent(
+        self,
+        gid: str,
+        expected: Aria2RenameIntent | None = None,
+    ) -> bool:
+        record = await self.session.get(Aria2Gid, gid)
+        if record is None:
+            return False
+        if (
+            expected is not None
+            and Aria2RenameIntent.from_json(record.rename_intent) != expected
+        ):
+            return False
+        record.rename_intent = None
+        self.session.add(record)
+        await self.session.commit()
+        return True
+
+    async def finalize_rename_intent(
+        self, gid: str, expected: Aria2RenameIntent
+    ) -> bool:
+        """Commit the sidecar mapping and clear its matching intent together."""
+        record = await self.session.get(Aria2Gid, gid)
+        if (
+            record is None
+            or Aria2RenameIntent.from_json(record.rename_intent) != expected
+        ):
+            return False
+        mapping = _decode_renamed_paths(record.renamed_paths)
+        for original_path, renamed_path in list(mapping.items()):
+            if renamed_path == expected.old_path:
+                mapping[original_path] = expected.new_path
+        mapping[expected.old_path] = expected.new_path
+        record.renamed_paths = json.dumps(mapping, ensure_ascii=False)
+        record.rename_intent = None
+        self.session.add(record)
+        await self.session.commit()
+        return True
+
     async def delete(self, gid: str) -> None:
         existing = await self.session.get(Aria2Gid, gid)
         if existing is not None:
@@ -147,3 +242,15 @@ def _merge_renamed_paths(left: str | None, right: str | None) -> str | None:
         return left
     merged.update(incoming)
     return json.dumps(merged, ensure_ascii=False)
+
+
+def _decode_renamed_paths(raw: str | None) -> dict[str, str]:
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {str(key): str(value) for key, value in data.items()}
