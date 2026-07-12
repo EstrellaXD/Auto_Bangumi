@@ -101,6 +101,10 @@
     },
     "parser_set": {
       "enable": "启用",
+      "engine": "标题解析器",
+      "engine_classic": "经典解析器（稳定）",
+      "engine_tokenizer": "通用解析器（Preview）",
+      "engine_hint": "经典模式保持现有解析行为；Preview 支持剧集、OVA、剧场版、范围和混合合集。两种模式不会自动互相回退。",
       "exclude": "排除",
       "language": "语言",
       "source": "数据源",

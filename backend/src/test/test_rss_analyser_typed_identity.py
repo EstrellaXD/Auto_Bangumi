@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+from types import SimpleNamespace
+from typing import cast
 from unittest.mock import patch
 
 import pytest
@@ -7,7 +10,11 @@ import pytest
 from module.conf import settings
 from module.models import Movie, Torrent
 from module.models.config import LLM
+from module.parser.analyser import selector
+from module.parser.analyser.selector import parse_configured_release_title
+from module.parser.analyser.tokenizer.result import ParsedRelease
 from module.rss.analyser import RSSAnalyser
+from module.rss.engine import RSSEngine
 from test.factories import make_rss_item
 
 
@@ -53,8 +60,74 @@ async def test_feed_does_not_create_entry_for_mixed_collection() -> None:
     )
 
     rss = make_rss_item(parser="none")
-    with patch.object(settings, "llm", LLM(enable=False)):
+    with (
+        patch.object(settings, "llm", LLM(enable=False)),
+        patch.object(settings.rss_parser, "engine", "tokenizer"),
+    ):
         bangumi, movies = await RSSAnalyser().torrents_to_data([torrent], rss)
 
     assert bangumi == []
     assert movies == []
+
+
+async def test_rss_to_data_keeps_one_parser_engine_across_awaits(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A settings reload must not split one RSS workflow across engines."""
+    parser_config = SimpleNamespace(engine="classic")
+    monkeypatch.setattr(
+        selector,
+        "settings",
+        SimpleNamespace(rss_parser=parser_config),
+    )
+
+    classic_release = ParsedRelease(raw="resource", title_en="Classic")
+    preview_release = ParsedRelease(raw="resource", title_en="Preview")
+    monkeypatch.setattr(
+        selector.classic,
+        "parse_release_title",
+        lambda raw: classic_release,
+    )
+    monkeypatch.setattr(
+        selector.preview,
+        "parse_release_title",
+        lambda raw: preview_release,
+    )
+
+    torrent = Torrent(name="resource", url="https://example.com/resource")
+    analyser = RSSAnalyser()
+
+    async def get_rss_torrents(rss_link: str, full_parse: bool = True):
+        return [torrent]
+
+    async def match_movies(torrents, rss_link: str):
+        assert parse_configured_release_title(torrent.name) is classic_release
+        parser_config.engine = "tokenizer"
+        await asyncio.sleep(0)
+        assert parse_configured_release_title(torrent.name) is classic_release
+        return torrents
+
+    async def match_bangumi(torrents, rss_link: str):
+        assert parse_configured_release_title(torrent.name) is classic_release
+        return torrents
+
+    async def torrents_to_data(torrents, rss, full_parse: bool = True):
+        assert parse_configured_release_title(torrent.name) is classic_release
+        return [], []
+
+    monkeypatch.setattr(analyser, "get_rss_torrents", get_rss_torrents)
+    monkeypatch.setattr(analyser, "torrents_to_data", torrents_to_data)
+    engine = cast(
+        RSSEngine,
+        SimpleNamespace(
+            db=SimpleNamespace(
+                movie=SimpleNamespace(match_list=match_movies),
+                bangumi=SimpleNamespace(match_list=match_bangumi),
+            )
+        ),
+    )
+
+    await analyser.rss_to_data(make_rss_item(parser="none"), engine)
+
+    # The task-local scope is gone, so a later workflow sees the new setting.
+    assert parse_configured_release_title(torrent.name) is preview_release

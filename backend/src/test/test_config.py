@@ -47,7 +47,19 @@ class TestConfigDefaults:
         config = Config()
         assert config.rss_parser.enable is True
         assert config.rss_parser.language == "zh"
+        assert config.rss_parser.engine == "classic"
         assert "720" in config.rss_parser.filter
+
+    @pytest.mark.parametrize("engine", ["classic", "tokenizer"])
+    def test_rss_parser_accepts_supported_engines(self, engine):
+        """RSSParser accepts the stable and Preview engine identifiers."""
+        parser = RSSParser.model_validate({"engine": engine})
+        assert parser.engine == engine
+
+    def test_rss_parser_rejects_unknown_engine(self):
+        """Unknown engines are rejected instead of silently falling back."""
+        with pytest.raises(ValueError):
+            RSSParser.model_validate({"engine": "preview"})
 
     def test_bangumi_manage_defaults(self):
         """BangumiManage has correct default values."""
@@ -99,6 +111,7 @@ class TestConfigSerialization:
         loaded_config = Config.model_validate(loaded)
         assert loaded_config.program.rss_time == config.program.rss_time
         assert loaded_config.downloader.type == config.downloader.type
+        assert loaded_config.rss_parser.engine == "classic"
 
 
 # ---------------------------------------------------------------------------
@@ -280,6 +293,21 @@ class TestSettingsLoad:
 
         assert s.program.rss_time == 1200
 
+    def test_load_legacy_config_defaults_parser_engine_to_classic(self, tmp_path):
+        """A config written before engine existed keeps Classic behaviour."""
+        config_data = Config().dict()
+        config_data["rss_parser"].pop("engine", None)
+        config_file = tmp_path / "config.json"
+        with open(config_file, "w") as f:
+            json.dump(config_data, f)
+
+        with patch("module.conf.config.CONFIG_PATH", config_file):
+            s = Settings.__new__(Settings)
+            Config.__init__(s)
+            s.load()
+
+        assert s.rss_parser.engine == "classic"
+
     def test_save_writes_json(self, tmp_path):
         """settings.save() writes valid JSON to CONFIG_PATH."""
         config_file = tmp_path / "config_out.json"
@@ -296,6 +324,7 @@ class TestSettingsLoad:
         assert "downloader" in data
         # 新配置文件包含 llm 段（旧 experimental_openai 段同样保留）
         assert "llm" in data
+        assert data["rss_parser"]["engine"] == "classic"
 
     def test_load_old_openai_config_migrates_to_llm(self, tmp_path):
         """加载含旧 experimental_openai 的文件后，llm 段生效且为 primary 模式。"""
@@ -338,6 +367,18 @@ class TestEnvOverrides:
                 s.init()
 
         assert "192.168.1.100:9090" in s.downloader.host
+
+    def test_rss_parser_engine_from_env(self, tmp_path):
+        """AB_RSS_PARSER_ENGINE selects a supported parser engine."""
+        config_file = tmp_path / "config.json"
+
+        with patch.dict(os.environ, {"AB_RSS_PARSER_ENGINE": "TOKENIZER"}, clear=False):
+            with patch("module.conf.config.CONFIG_PATH", config_file):
+                s = Settings.__new__(Settings)
+                Config.__init__(s)
+                s.init()
+
+        assert s.rss_parser.engine == "tokenizer"
 
 
 # ---------------------------------------------------------------------------
@@ -555,6 +596,10 @@ class TestDefaultSettings:
         assert "providers" in notif
         assert notif["providers"] == []
         assert "type" not in notif
+
+    def test_rss_parser_defaults_to_classic_engine(self):
+        """Factory defaults preserve the pre-Preview parser behaviour."""
+        assert DEFAULT_SETTINGS["rss_parser"]["engine"] == "classic"
 
 
 # ---------------------------------------------------------------------------

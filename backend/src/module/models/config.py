@@ -57,6 +57,10 @@ class RSSParser(BaseModel):
     enable: bool = Field(default=True, description="Enable RSS parser")
     filter: list[str] = Field(default=["720", r"\d+-\d+"], description="Filter")
     language: str = "zh"
+    engine: Literal["classic", "tokenizer"] = Field(
+        default="classic",
+        description="Title parser engine (classic or tokenizer Preview)",
+    )
 
 
 class BangumiManage(BaseModel):

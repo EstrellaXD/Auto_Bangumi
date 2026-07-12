@@ -14,13 +14,14 @@ from module.parser.analyser import (
 )
 from module.parser.analyser.providers.base import AuthExpiredError
 from module.parser.analyser.providers.credentials import auth_generation
+from module.parser.analyser.selector import parse_configured_release_title_with_trace
 from module.parser.analyser.tokenizer import (
     MediaType,
     ParsedRelease,
     ReleaseKind,
-    parse_release_title_with_trace,
 )
 from module.parser.analyser.tokenizer.candidate import Claims
+from module.parser.analyser.tokenizer.compat import to_legacy_episode
 from module.parser.release_policy import (
     PersistenceTarget,
     bangumi_episode_type,
@@ -226,6 +227,31 @@ def _llm_media_type(episode: Episode) -> MediaType:
     return MediaType.EPISODE
 
 
+def _project_classic_release(
+    raw: str, release: ParsedRelease | None
+) -> ParsedRelease | None:
+    """Apply the pre-refactor compatibility contract to a Classic result."""
+    if release is None:
+        return None
+    episode = to_legacy_episode(release)
+    if episode is None:
+        return None
+    return ParsedRelease(
+        raw=raw,
+        title_en=episode.title_en,
+        title_zh=episode.title_zh,
+        title_jp=episode.title_jp,
+        group=episode.group,
+        season=episode.season,
+        season_raw=episode.season_raw,
+        episode=episode.episode,
+        media_type=_llm_media_type(episode),
+        resolution=episode.resolution,
+        source=episode.source,
+        subtitle=episode.sub,
+    )
+
+
 def _has_structured_release_claims(claims: Claims) -> bool:
     """Whether a title-less parse still identified a concrete resource kind."""
     return any(
@@ -424,10 +450,17 @@ class TitleParser:
     async def raw_parser(raw: str) -> Bangumi | Movie | None:
         try:
             llm_conf = _llm_config()
-            parse_outcome = parse_release_title_with_trace(raw)
+            parse_outcome = parse_configured_release_title_with_trace(raw)
+            logger.debug(
+                "Parsing resource with %s engine: %s", parse_outcome.engine, raw
+            )
             deterministic = parse_outcome.result
-            if deterministic is None and _has_structured_release_claims(
-                parse_outcome.trace.claims
+            if parse_outcome.engine == "classic":
+                deterministic = _project_classic_release(raw, deterministic)
+            if (
+                deterministic is None
+                and parse_outcome.trace is not None
+                and _has_structured_release_claims(parse_outcome.trace.claims)
             ):
                 logger.debug("Structured resource has no usable title: %s", raw)
                 return None

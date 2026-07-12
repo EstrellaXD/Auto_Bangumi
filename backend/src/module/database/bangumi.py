@@ -160,9 +160,21 @@ def match_bangumi_in_list(
     """
     # Lazy import avoids the database -> parser -> database import cycle during
     # application startup while still giving matching the typed parser result.
-    from module.parser.analyser.tokenizer import parse_release_title
+    from module.parser.analyser.selector import parse_configured_release_title_outcome
 
-    release = parse_release_title(torrent_name)
+    parse_outcome = parse_configured_release_title_outcome(torrent_name)
+    release = parse_outcome.result
+    if parse_outcome.engine == "tokenizer":
+        from module.parser.release_policy import (
+            PersistenceTarget,
+            persistence_target,
+        )
+
+        if (
+            release is None
+            or persistence_target(release) is not PersistenceTarget.BANGUMI
+        ):
+            return None
     best_match: Optional[Bangumi] = None
     best_rank = (-1, -1, -1)
     for bangumi in bangumi_list:

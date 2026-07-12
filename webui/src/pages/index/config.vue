@@ -15,6 +15,7 @@ import ConfigLlm from '@/components/setting/config-llm.vue';
 import ConfigPasskey from '@/components/setting/config-passkey.vue';
 import ConfigSecurity from '@/components/setting/config-security.vue';
 import UpdateCard from '@/components/setting/update-card.vue';
+import { configSectionMatches } from '@/utils/config-search';
 
 definePage({
   name: 'Config',
@@ -53,6 +54,8 @@ interface ConfigSection {
   /** 参与全局保存/脏值比对的配置段；空数组 = 该卡片即时自存 */
   groups: Array<keyof Config>;
   keywords: string[];
+  /** 当前 locale 下也应参与搜索的可见字段/选项文案。 */
+  keywordKeys?: string[];
 }
 
 const sections: ConfigSection[] = [
@@ -68,7 +71,21 @@ const sections: ConfigSection[] = [
     titleKey: 'config.parser_set.title',
     component: ConfigParser,
     groups: ['rss_parser'],
-    keywords: ['parser', 'language', 'filter', 'exclude'],
+    keywords: [
+      'parser',
+      'engine',
+      'classic',
+      'preview',
+      'tokenizer',
+      'language',
+      'filter',
+      'exclude',
+    ],
+    keywordKeys: [
+      'config.parser_set.engine',
+      'config.parser_set.engine_classic',
+      'config.parser_set.engine_tokenizer',
+    ],
   },
   {
     id: 'downloader',
@@ -164,12 +181,7 @@ const sections: ConfigSection[] = [
 const searchQuery = ref('');
 
 function sectionMatches(section: ConfigSection): boolean {
-  const query = searchQuery.value.trim().toLowerCase();
-  if (!query) return true;
-  if (t(section.titleKey).toLowerCase().includes(query)) return true;
-  return [...section.keywords, ...section.groups].some((k) =>
-    k.toLowerCase().includes(query)
-  );
+  return configSectionMatches(section, searchQuery.value, t);
 }
 
 const visibleSections = computed(() => sections.filter(sectionMatches));

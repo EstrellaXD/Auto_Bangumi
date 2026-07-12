@@ -17,10 +17,13 @@ from module.notification.events import (
     RssFailureEvent,
     SystemEvent,
 )
+from module.parser.analyser.selector import (
+    parse_configured_release_title,
+    parser_engine_snapshot,
+)
 from module.parser.analyser.tokenizer import (
     MediaType,
     ParsedRelease,
-    parse_release_title,
 )
 from module.parser.release_policy import preference_identity, preference_revision
 
@@ -221,7 +224,7 @@ class RSSEngine:
             if not bangumi:
                 continue
             for torrent in torrents:
-                release = parse_release_title(torrent.name)
+                release = parse_configured_release_title(torrent.name)
                 if release is None:
                     continue
                 identity = preference_identity(release, default_season=bangumi.season)
@@ -243,7 +246,7 @@ class RSSEngine:
         for torrent, bangumi in matched:
             if bangumi.id is None or bangumi.id not in preference_bangumi:
                 continue
-            release = parse_release_title(torrent.name)
+            release = parse_configured_release_title(torrent.name)
             if release is None:
                 continue
             identity = preference_identity(release, default_season=bangumi.season)
@@ -269,6 +272,13 @@ class RSSEngine:
         return skip_ids
 
     async def refresh_rss(
+        self, client: DownloadClient, rss_id: Optional[int] = None
+    ) -> list[SystemEvent]:
+        """Refresh feeds with one parser engine for the complete workflow."""
+        with parser_engine_snapshot():
+            return await self._refresh_rss(client, rss_id)
+
+    async def _refresh_rss(
         self, client: DownloadClient, rss_id: Optional[int] = None
     ) -> list[SystemEvent]:
         # Get All RSS Items

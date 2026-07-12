@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from module.conf import settings
 from module.core.offset_scanner import OffsetScanner
 from module.database import Database
 from module.models import Torrent
@@ -13,6 +14,11 @@ from test.factories import make_bangumi
 
 class TestGetLatestParsedEpisode:
     """Tests for OffsetScanner._get_latest_parsed_episode."""
+
+    @pytest.fixture(autouse=True)
+    def use_preview_engine(self):
+        with patch.object(settings.rss_parser, "engine", "tokenizer"):
+            yield
 
     async def test_returns_none_when_no_torrents(self):
         scanner = OffsetScanner()
@@ -99,6 +105,27 @@ class TestGetLatestParsedEpisode:
             )
 
         assert await scanner._get_latest_parsed_episode(bangumi.id) is None
+
+    async def test_offset_signal_follows_selected_parser_engine(self):
+        scanner = OffsetScanner()
+        async with Database() as db:
+            bangumi = make_bangumi(title_raw="Signal Anime")
+            await db.bangumi.add(bangumi)
+            await db.torrent.add(
+                Torrent(
+                    name="[TestGroup] Signal Anime EP01 ~ EP02 [1080p].mkv",
+                    url="https://example.com/configured-range",
+                    bangumi_id=bangumi.id,
+                )
+            )
+
+        with patch.object(settings.rss_parser, "engine", "classic"):
+            classic = await scanner._get_latest_parsed_episode(bangumi.id)
+        with patch.object(settings.rss_parser, "engine", "tokenizer"):
+            preview = await scanner._get_latest_parsed_episode(bangumi.id)
+
+        assert classic == 2
+        assert preview is None
 
     async def test_excluded_resources_do_not_override_latest_weekly_episode(self):
         scanner = OffsetScanner()

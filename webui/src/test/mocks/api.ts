@@ -129,6 +129,7 @@ export const mockConfig = {
   },
   rss_parser: {
     enable: true,
+    engine: 'classic',
     filter: ['720', '\\d+-\\d'],
     language: 'zh',
   },

@@ -7,8 +7,8 @@ from module.database import Database
 from module.models import Bangumi
 from module.notification.events import OffsetReviewEvent
 from module.parser.analyser.offset_detector import detect_offset_mismatch
+from module.parser.analyser.selector import parse_configured_release_title
 from module.parser.analyser.tmdb_parser import tmdb_parser
-from module.parser.analyser.tokenizer import parse_release_title
 from module.parser.release_policy import is_offset_signal
 
 logger = logging.getLogger(__name__)
@@ -125,7 +125,7 @@ class OffsetScanner:
 
         latest: int | None = None
         for torrent in torrents:
-            release = parse_release_title(torrent.name)
+            release = parse_configured_release_title(torrent.name)
             if release is None or not is_offset_signal(release):
                 continue
             episode = release.episode

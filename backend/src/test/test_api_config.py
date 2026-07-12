@@ -72,6 +72,7 @@ def mock_settings():
     settings.rss_parser.enable = True
     settings.rss_parser.filter = ["720", r"\d+-\d"]
     settings.rss_parser.language = "zh"
+    settings.rss_parser.engine = "classic"
     settings.bangumi_manage = MagicMock()
     settings.bangumi_manage.enable = True
     settings.bangumi_manage.eps_complete = False
@@ -131,6 +132,7 @@ class TestGetConfig:
         assert "rss_parser" in data
         assert data["program"]["rss_time"] == 900
         assert data["program"]["webui_port"] == 7892
+        assert data["rss_parser"]["engine"] == "classic"
 
 
 # ---------------------------------------------------------------------------
@@ -139,6 +141,33 @@ class TestGetConfig:
 
 
 class TestUpdateConfig:
+    @pytest.mark.parametrize("engine", ["classic", "tokenizer"])
+    def test_update_config_accepts_parser_engine(
+        self, authed_client, mock_settings, mock_ctx, engine
+    ):
+        """PATCH persists either supported parser engine identifier."""
+        current = Config().dict()
+        mock_settings.dict.return_value = current
+        update_data = Config().dict()
+        update_data["rss_parser"]["engine"] = engine
+
+        with patch("module.api.config.settings", mock_settings):
+            response = authed_client.patch("/api/v1/config/update", json=update_data)
+
+        assert response.status_code == 200
+        saved = mock_settings.save.call_args.kwargs["config_dict"]
+        assert saved["rss_parser"]["engine"] == engine
+        mock_ctx.reload_settings.assert_awaited_once()
+
+    def test_update_config_rejects_unknown_parser_engine(self, authed_client):
+        """PATCH returns 422 for an unsupported parser engine."""
+        update_data = Config().dict()
+        update_data["rss_parser"]["engine"] = "preview"
+
+        response = authed_client.patch("/api/v1/config/update", json=update_data)
+
+        assert response.status_code == 422
+
     def test_update_config_success(self, authed_client, mock_settings, mock_ctx):
         """PATCH /config/update updates configuration successfully."""
         update_data = {

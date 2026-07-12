@@ -77,6 +77,11 @@ def legacy_non_episodic_type(media_type: MediaType) -> str | None:
 
 
 def tokenize_title(raw: str) -> Episode | None:
-    """Return the historical ``Episode`` projection used by RSS callers."""
+    """Project the low-level Preview parser result onto the legacy contract.
+
+    This helper intentionally does not consult ``rss_parser.engine``. Runtime
+    callers that need the configured Classic/Preview choice must use the
+    selector-aware ``module.parser.analyser.raw_parser`` compatibility entry.
+    """
     parsed = parse_release_title(raw)
     return to_legacy_episode(parsed) if parsed is not None else None
