@@ -38,8 +38,14 @@ class RSSAnalyser:
                     if official_title:
                         bangumi.official_title = official_title
         elif rss.parser == "tmdb":
+            rss_name = (rss.name or "").strip()
+            query_title = (
+                rss_name
+                if rss_name and not rss.aggregate
+                else bangumi.official_title
+            )
             tmdb_title, season, year, poster_link = await TitleParser.tmdb_parser(
-                bangumi.official_title,
+                query_title,
                 bangumi.season,
                 settings.rss_parser.language,
                 episode_type=bangumi.episode_type,
