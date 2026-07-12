@@ -23,6 +23,8 @@ def to_legacy_episode(parsed: ParsedRelease) -> Episode | None:
     """
     if not parsed.primary_title:
         return None
+    if parsed.is_mixed_collection:
+        return None
     if parsed.release_kind in {ReleaseKind.RANGE, ReleaseKind.BATCH}:
         return None
     if parsed.media_type in {

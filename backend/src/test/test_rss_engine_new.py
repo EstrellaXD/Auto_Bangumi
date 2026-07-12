@@ -116,6 +116,26 @@ class TestMatchTorrent:
 
         assert result is None
 
+    async def test_mixed_collection_does_not_match_episode_or_special(self, rss_engine):
+        episode = make_bangumi(
+            title_raw="Shared Anime", season=1, episode_type="episode", filter=""
+        )
+        special = make_bangumi(
+            title_raw="Shared Anime", season=0, episode_type="special", filter=""
+        )
+        await rss_engine.db.bangumi.add(episode)
+        await rss_engine.db.bangumi.add(special)
+        torrent = make_torrent(
+            name="[Group] Shared Anime [TV 01-12 + OVA 01-02] [1080p].mkv"
+        )
+
+        result = rss_engine.match_torrent(
+            torrent, await rss_engine.db.bangumi.search_all()
+        )
+
+        assert result is None
+        assert torrent.bangumi_id is None
+
     async def test_filter_excludes_matching_torrent(self, rss_engine):
         """When torrent name matches the filter regex, returns None."""
         bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="720")
@@ -1089,20 +1109,24 @@ class TestPreferenceDedup:
         [
             "Mushoku Tensei Movie [1080p].mkv",
             "Mushoku Tensei [01-12] [1080p].mkv",
+            "Mushoku Tensei EP01 ~ EP02 [1080p].mkv",
             "Mushoku Tensei S02E01-E12 [1080p].mkv",
             "Mushoku Tensei OVA01-02 [1080p].mkv",
             "Mushoku Tensei Complete Batch [1080p].mkv",
             "Mushoku Tensei 合集 [1080p].mkv",
+            "Mushoku Tensei [TV 01-12 + OVA 01-02] [1080p].mkv",
             "Mushoku Tensei PV2 [1080p].mkv",
             "Mushoku Tensei [1080p].mkv",
         ],
         ids=[
             "movie",
             "range",
+            "spaced-explicit-range",
             "season-range",
             "ova-range",
             "batch",
             "collection",
+            "mixed-collection",
             "pv",
             "title-only",
         ],

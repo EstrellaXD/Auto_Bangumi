@@ -44,3 +44,17 @@ async def test_feed_keeps_episode_special_and_movie_with_same_title(
     assert isinstance(movies[0], Movie)
     assert {item.title_raw for item in bangumi} == {"Shared Anime"}
     assert {item.title_raw for item in movies} == {"Shared Anime"}
+
+
+async def test_feed_does_not_create_entry_for_mixed_collection() -> None:
+    torrent = Torrent(
+        name="[Group] Shared Anime：TV+OVA+Manga+Music [1080p WEB-DL]",
+        url="https://example.com/mixed",
+    )
+
+    rss = make_rss_item(parser="none")
+    with patch.object(settings, "llm", LLM(enable=False)):
+        bangumi, movies = await RSSAnalyser().torrents_to_data([torrent], rss)
+
+    assert bangumi == []
+    assert movies == []

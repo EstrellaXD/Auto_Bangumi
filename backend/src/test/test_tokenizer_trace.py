@@ -170,6 +170,83 @@ def test_real_parser_trace_preserves_movie_title_number_with_reason() -> None:
     )
 
 
+def test_spaced_explicit_range_wins_over_both_single_episode_candidates() -> None:
+    raw = "[Group] Anime Title EP01 ~ EP02 [1080p]"
+
+    outcome = parse_release_title_with_trace(raw)
+
+    assert outcome.result == parse_release_title(raw)
+    assert outcome.result is not None
+    assert outcome.result.episode == 1
+    assert outcome.result.episode_end == 2
+    range_candidate = next(
+        candidate
+        for candidate in outcome.trace.candidates
+        if candidate.rule_id == "episode.range"
+    )
+    explicit_candidates = tuple(
+        candidate
+        for candidate in outcome.trace.candidates
+        if candidate.rule_id == "episode.explicit"
+    )
+    assert (
+        outcome.trace.decision_for(range_candidate.id).status is DecisionStatus.SELECTED
+    )
+    assert len(explicit_candidates) == 2
+    assert all(
+        outcome.trace.decision_for(candidate.id).status
+        is DecisionStatus.REJECTED_CONFLICT
+        for candidate in explicit_candidates
+    )
+    assert outcome.trace.warnings == ()
+
+
+def test_mixed_collection_candidate_shadows_embedded_ova_and_range() -> None:
+    raw = "[Group] Anime Title [TV 01-12 + OVA 01-02] [1080p]"
+
+    outcome = parse_release_title_with_trace(raw)
+
+    assert outcome.result is not None
+    assert outcome.result.is_mixed_collection
+    mixed = next(
+        candidate
+        for candidate in outcome.trace.candidates
+        if candidate.rule_id == "cardinality.mixed-content"
+    )
+    embedded = tuple(
+        candidate
+        for candidate in outcome.trace.candidates
+        if candidate.rule_id in {"episode.range", "episode.ova-range", "media.ova"}
+    )
+    assert outcome.trace.decision_for(mixed.id).status is DecisionStatus.SELECTED
+    assert embedded
+    assert all(
+        outcome.trace.decision_for(candidate.id).status
+        is DecisionStatus.REJECTED_CONFLICT
+        for candidate in embedded
+    )
+
+
+def test_mixed_public_result_normalizes_external_episode_resolution() -> None:
+    outcome = parse_release_title_with_trace("[TV + OVA] Anime Title - 01 [1080p]")
+
+    assert outcome.result is not None
+    assert outcome.result.is_mixed_collection
+    assert outcome.result.episode is None
+    assert "episode" not in outcome.result.evidence
+    assert outcome.trace.claims.episode == 1
+
+
+def test_mixed_numeric_title_retry_keeps_resolver_residuals_consistent() -> None:
+    outcome = parse_release_title_with_trace("[TV+OVA] 86 [1080p]")
+
+    assert outcome.result is not None
+    assert outcome.result.primary_title == "86"
+    for span in outcome.trace.excluded_spans:
+        residual = outcome.trace.residuals[span.segment]
+        assert not residual[span.start : span.end].strip()
+
+
 def test_empty_input_still_returns_an_explainable_outcome() -> None:
     outcome = parse_release_title_with_trace("  ")
 

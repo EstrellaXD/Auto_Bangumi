@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from module.database.bangumi import BangumiDatabase, match_bangumi_in_list
 from module.database.movie import MovieDatabase
 from module.database.rss import RSSDatabase
@@ -483,6 +485,68 @@ async def test_typed_bangumi_identities_can_coexist_and_match(db_session):
     assert matched_s2 is not None and matched_s2.season == 2
     assert matched_ova is not None and matched_ova.episode_type == "special"
     assert matched_episode is not None and matched_episode.episode_type == "episode"
+
+
+@pytest.mark.parametrize(
+    "raw",
+    (
+        "[Group] Shared Anime [TV 01-12 + OVA 01-02] [1080p]",
+        "Shared Anime_TV+OVA+Manga+Novel+Music+Other_dub jpn sub cht",
+    ),
+)
+async def test_mixed_collection_does_not_match_episode_or_special_bangumi(
+    db_session, raw: str
+):
+    db = BangumiDatabase(db_session)
+    shared = dict(
+        official_title="Shared Anime",
+        title_raw="Shared Anime",
+        group_name="Group",
+        rss_link="rss",
+    )
+    assert await db.add(Bangumi(**shared, season=1, episode_type="episode")) is True
+    assert await db.add(Bangumi(**shared, season=0, episode_type="special")) is True
+
+    matched = match_bangumi_in_list(raw, await db.search_all())
+
+    assert matched is None
+
+
+@pytest.mark.parametrize(
+    "raw",
+    (
+        "[TV+OVA] 86 [1080p]",
+        "86：[TV+OVA] [1080p]",
+        "86: [TV+OVA] [1080p]",
+    ),
+)
+def test_numeric_mixed_collection_does_not_fall_through_to_title_matching(
+    raw: str,
+) -> None:
+    bangumi = Bangumi(
+        official_title="86",
+        title_raw="86",
+        group_name="Group",
+        rss_link="rss",
+        season=1,
+        episode_type="episode",
+    )
+
+    assert match_bangumi_in_list(raw, [bangumi]) is None
+
+
+def test_titleless_mixed_collection_does_not_bypass_typed_matching() -> None:
+    bangumi = Bangumi(
+        official_title="名侦探柯南",
+        title_raw="名侦探柯南",
+        group_name="CONAN",
+        rss_link="rss",
+        season=1,
+        episode_type="episode",
+    )
+    raw = "[APTX4869][CONAN][名侦探柯南 1045&1046 降下天罚的生日派对]" "[TV+OVA][1080p]"
+
+    assert match_bangumi_in_list(raw, [bangumi]) is None
 
 
 async def test_add_same_title_new_entry_inherits_year(db_session):

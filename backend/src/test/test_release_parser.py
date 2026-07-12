@@ -36,6 +36,19 @@ REQUIRED_FIELDS = (
     "version",
 )
 
+MIKAN_EXPLICIT_RANGE = (
+    "才女的侍从 - EP01 ~ EP02 [简／繁] "
+    "(1080p H.264 AAC SRTx2) {才女的侍从 | 才女のお世话}"
+)
+MIKAN_MIXED_COLLECTION = (
+    "\u200b\u200b[整理搬运] 不可思议的游戏／不思议游戏／梦幻游戏／幻梦游戏 "
+    "(ふしぎ游戯) (Fushigi Yugi)：TV动画+OVA+漫画+小说+音乐+其他；"
+    "日语音轨; 外挂繁中字幕 (整理时间：2025.11.12)"
+)
+MIKAN_MIXED_ROOT = (
+    "Fushigi Yugi_TV+OVA+Manga+Novel+Music+Other_" "dub jpn sub cht (2025-11-12)"
+)
+
 
 def _title_text(parsed: Any) -> str:
     """Join title slots so tests do not prescribe a language heuristic."""
@@ -111,6 +124,28 @@ def test_episode_range_is_a_range_release(raw: str) -> None:
     assert parsed.episode_end == 12
     assert parsed.media_type is MediaType.EPISODE
     assert parsed.release_kind is ReleaseKind.RANGE
+
+
+@pytest.mark.parametrize(
+    ("raw", "episode_end", "version"),
+    (
+        (MIKAN_EXPLICIT_RANGE, 2, None),
+        ("[Group] Anime Title E01 ～ E02 [1080p]", 2, None),
+        ("[Group] Anime Title EP. 01 ～ EP. 02v2 [1080p]", 2, 2),
+    ),
+)
+def test_both_explicit_endpoints_admit_spaced_episode_range(
+    raw: str, episode_end: int, version: int | None
+) -> None:
+    parsed = parse_release_title(raw)
+
+    assert parsed is not None
+    assert parsed.episode == 1
+    assert parsed.episode_end == episode_end
+    assert parsed.version == version
+    assert parsed.media_type is MediaType.EPISODE
+    assert parsed.release_kind is ReleaseKind.RANGE
+    assert raw_parser(raw) is None
 
 
 @pytest.mark.parametrize(
@@ -198,6 +233,140 @@ def test_movie_collection_keeps_both_dimensions() -> None:
     assert parsed.title_zh == "进击的巨人"
     assert parsed.media_type is MediaType.MOVIE
     assert parsed.release_kind is ReleaseKind.COLLECTION
+
+
+@pytest.mark.parametrize(
+    "raw",
+    (
+        MIKAN_MIXED_COLLECTION,
+        "[Group] Anime Title [TV 01-12 + OVA 01-02] [BDRip 1080p]",
+        "Anime Title：TV Anime+OVA+Manga+Music",
+        "Anime Title：TV＋剧场版＋OVA",
+        "Anime Title：[TV+OVA] [1080p]",
+        "[TV+OVA; dub jpn] Anime Title [1080p]",
+        "[TV+OVA_1080p] Anime Title",
+        MIKAN_MIXED_ROOT,
+    ),
+)
+def test_plus_delimited_mixed_content_manifest_is_a_collection(raw: str) -> None:
+    parsed = parse_release_title(raw)
+
+    assert parsed is not None
+    assert parsed.media_type is MediaType.UNKNOWN
+    assert parsed.release_kind is ReleaseKind.COLLECTION
+    assert parsed.episode is None
+    assert parsed.episode_end is None
+    assert parsed.is_mixed_collection
+    assert "mixed-content" in parsed.evidence
+    title = _title_text(parsed)
+    assert "TV 01-12" not in title
+    assert "TV动画" not in title
+    assert "+OVA" not in title
+    assert raw_parser(raw) is None
+    if raw == MIKAN_MIXED_COLLECTION:
+        assert "整理时间" not in title
+        assert "2025.11.12" in parsed.tags
+    if raw == MIKAN_MIXED_ROOT:
+        assert parsed.title_en == "Fushigi Yugi"
+        assert parsed.subtitle is not None
+        assert parsed.subtitle.casefold() == "cht"
+
+
+def test_mixed_content_metadata_cleanup_preserves_real_subtitle() -> None:
+    parsed = parse_release_title("Anime Title：TV+OVA; The Story")
+
+    assert parsed is not None
+    assert parsed.is_mixed_collection
+    assert "The Story" in _title_text(parsed)
+
+
+def test_mixed_content_date_context_does_not_consume_a_real_subtitle() -> None:
+    parsed = parse_release_title("Anime Title：TV+OVA (The Story 2025-11-12)")
+
+    assert parsed is not None
+    assert parsed.is_mixed_collection
+    assert "The Story" in _title_text(parsed)
+
+
+@pytest.mark.parametrize(
+    "raw",
+    (
+        "[TV+OVA] 86 [1080p]",
+        "86：[TV+OVA] [1080p]",
+        "86: [TV+OVA] [1080p]",
+    ),
+)
+def test_mixed_collection_preserves_a_numeric_work_title(raw: str) -> None:
+    parsed = parse_release_title(raw)
+
+    assert parsed is not None
+    assert parsed.is_mixed_collection
+    assert parsed.primary_title == "86"
+    assert parsed.episode is None
+    assert "episode" not in parsed.evidence
+
+
+@pytest.mark.parametrize(
+    "raw",
+    (
+        "[TV+OVA][1080p]",
+        "[APTX4869][CONAN][名侦探柯南 1045&1046 降下天罚的生日派对]" "[TV+OVA][1080p]",
+    ),
+)
+def test_titleless_mixed_structure_is_still_materialized(raw: str) -> None:
+    parsed = parse_release_title(raw)
+
+    assert parsed is not None
+    assert parsed.primary_title is None
+    assert parsed.is_mixed_collection
+    assert parsed.episode is None
+
+
+def test_mixed_root_metadata_tail_accepts_inline_date() -> None:
+    raw = "Fushigi Yugi_TV+OVA+Manga_dub jpn sub cht_2025-11-12"
+
+    parsed = parse_release_title(raw)
+
+    assert parsed is not None
+    assert parsed.is_mixed_collection
+    assert parsed.title_en == "Fushigi Yugi"
+    assert parsed.subtitle is not None
+    assert parsed.subtitle.casefold() == "cht"
+
+
+def test_mixed_collection_does_not_expose_external_episode_claim() -> None:
+    parsed = parse_release_title("[TV + OVA] Anime Title - 01 [1080p]")
+
+    assert parsed is not None
+    assert parsed.is_mixed_collection
+    assert parsed.episode is None
+    assert parsed.episode_end is None
+    assert "episode" not in parsed.evidence
+
+
+@pytest.mark.parametrize(
+    "raw",
+    (
+        "[TV-OVA-Fansub] Anime - 01",
+        "[Group] Anime OVA01 [1080p]",
+        "[Group] Anime OVA01-02 [1080p]",
+        "[Group] Anime S01E03 - TV + OVA Discussion [1080p]",
+        "[Group] Anime EP03 - TV + OVA [1080p]",
+        "[Group] Anime TV 01-12 [1080p]",
+        "Anime Title：SP+Special",
+        "Anime Title：TV+TV Anime",
+        "Anime - 01 (Alt_TV+OVA) [1080p]",
+        "Anime - 01 (Alt:TV+OVA) [1080p]",
+        "[Group] Anime - 01 [Tag_TV+OVA] [1080p]",
+        "[Group] Anime - 01 [Tag:TV+OVA] [1080p]",
+        "[TV+OVA_Fansub] Anime - 01 [1080p]",
+    ),
+)
+def test_mixed_content_manifest_requires_metadata_shaped_context(raw: str) -> None:
+    parsed = parse_release_title(raw)
+
+    assert parsed is not None
+    assert not parsed.is_mixed_collection
 
 
 @pytest.mark.parametrize(
@@ -358,6 +527,37 @@ def test_fraction_in_title_is_not_an_episode_range() -> None:
     assert parsed.episode == 3
     assert parsed.episode_end is None
     assert parsed.release_kind is ReleaseKind.SINGLE
+
+
+@pytest.mark.parametrize(
+    ("raw", "episode"),
+    (
+        ("[Group] Room No. 01 ~ 02 - 03 [1080p]", 3),
+        ("[Group] Room EP01 ~ EP02 - 03 [1080p]", 3),
+        ("[Group] Anime EP03 - Review EP01 ~ EP02 [1080p]", 3),
+        ("[EP01 ~ EP02-Fansub] Anime Title - 03 [1080p]", 3),
+        ("[Group][S01E03] Anime - Review EP01 ~ EP02 [1080p]", 3),
+    ),
+)
+def test_spaced_numbers_in_titles_or_groups_are_not_episode_ranges(
+    raw: str, episode: int
+) -> None:
+    parsed = parse_release_title(raw)
+
+    assert parsed is not None
+    assert parsed.episode == episode
+    assert parsed.episode_end is None
+    assert parsed.release_kind is ReleaseKind.SINGLE
+
+
+def test_explicit_range_allows_a_same_segment_year_suffix() -> None:
+    parsed = parse_release_title("[Group] Anime EP01 ~ EP02 - 2025 [1080p]")
+
+    assert parsed is not None
+    assert parsed.episode == 1
+    assert parsed.episode_end == 2
+    assert parsed.release_kind is ReleaseKind.RANGE
+    assert parsed.year == 2025
 
 
 @pytest.mark.parametrize(
