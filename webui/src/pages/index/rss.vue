@@ -140,6 +140,10 @@ const rssColumns = computed<DataTableColumns<RSS>>(() => [
 ]);
 
 const rssRowKey = (row: RSS) => row.id;
+
+function onSelectedRSSUpdate(keys: unknown[]) {
+  selectedRSS.value = keys as number[];
+}
 </script>
 
 <template>
@@ -173,7 +177,7 @@ const rssRowKey = (row: RSS) => row.id;
         key-field="id"
         :loading="isLoading && rss.length === 0"
         :selected="selectedRSS"
-        @update:selected="(keys) => (selectedRSS = keys as number[])"
+        @update:selected="onSelectedRSSUpdate"
       >
         <template #row="{ item }">
           <div class="rss-card-content">
@@ -240,7 +244,7 @@ const rssRowKey = (row: RSS) => row.id;
         :pagination="false"
         :bordered="false"
         :max-height="500"
-        @update:checked-row-keys="(e) => (selectedRSS = (e as number[]))"
+        @update:checked-row-keys="onSelectedRSSUpdate"
       ></NDataTable>
 
       <div v-if="selectedRSS.length > 0">
