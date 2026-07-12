@@ -68,6 +68,7 @@ class TestConfigDefaults:
         assert config.bangumi_manage.rename_method == "pn"
         assert config.bangumi_manage.group_tag is False
         assert config.bangumi_manage.remove_bad_torrent is False
+        assert config.bangumi_manage.revision_conflict_policy == "hold"
         assert config.bangumi_manage.eps_complete is False
 
     def test_proxy_defaults(self):
@@ -380,6 +381,21 @@ class TestEnvOverrides:
 
         assert s.rss_parser.engine == "tokenizer"
 
+    def test_revision_conflict_policy_from_env(self, tmp_path):
+        config_file = tmp_path / "config.json"
+
+        with patch.dict(
+            os.environ,
+            {"AB_REVISION_CONFLICT_POLICY": "REPLACE"},
+            clear=False,
+        ):
+            with patch("module.conf.config.CONFIG_PATH", config_file):
+                s = Settings.__new__(Settings)
+                Config.__init__(s)
+                s.init()
+
+        assert s.bangumi_manage.revision_conflict_policy == "replace"
+
 
 # ---------------------------------------------------------------------------
 # Security model
@@ -600,6 +616,9 @@ class TestDefaultSettings:
     def test_rss_parser_defaults_to_classic_engine(self):
         """Factory defaults preserve the pre-Preview parser behaviour."""
         assert DEFAULT_SETTINGS["rss_parser"]["engine"] == "classic"
+
+    def test_revision_conflict_policy_defaults_to_hold(self):
+        assert DEFAULT_SETTINGS["bangumi_manage"]["revision_conflict_policy"] == "hold"
 
 
 # ---------------------------------------------------------------------------

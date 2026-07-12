@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from module.downloader.base import RenameOutcome, RenameResult
 from module.downloader.download_client import (
     TORRENT_FETCH_PER_HOST_DELAY,
     AddResult,
@@ -335,27 +336,44 @@ class TestClientDelegation:
         )
         assert len(result) == 1
 
+    async def test_torrent_exists_preserves_unknown_state(
+        self, download_client, mock_qb_client
+    ):
+        mock_qb_client.torrent_exists.return_value = None
+
+        result = await download_client.torrent_exists("hash1")
+
+        assert result is None
+        mock_qb_client.torrent_exists.assert_awaited_once_with("hash1")
+
     async def test_rename_torrent_file_success(self, download_client, mock_qb_client):
-        """rename_torrent_file returns True on success."""
-        mock_qb_client.torrents_rename_file.return_value = True
+        """rename_torrent_file preserves the concrete structured result."""
+        expected = RenameResult(RenameOutcome.RENAMED)
+        mock_qb_client.torrents_rename_file.return_value = expected
         result = await download_client.rename_torrent_file(
             "hash1", "old.mkv", "new.mkv"
         )
-        assert result is True
+        assert result is expected
 
     async def test_rename_torrent_file_failure(self, download_client, mock_qb_client):
-        """rename_torrent_file returns False on failure."""
-        mock_qb_client.torrents_rename_file.return_value = False
+        """Failure reasons are not collapsed back into a boolean."""
+        expected = RenameResult(
+            RenameOutcome.RETRYABLE_FAILURE, detail="verification timed out"
+        )
+        mock_qb_client.torrents_rename_file.return_value = expected
         result = await download_client.rename_torrent_file(
             "hash1", "old.mkv", "new.mkv"
         )
-        assert result is False
+        assert result is expected
+        assert result.outcome is RenameOutcome.RETRYABLE_FAILURE
 
     async def test_rename_torrent_file_passes_verify_flag(
         self, download_client, mock_qb_client
     ):
         """rename_torrent_file forwards the verify kwarg to the underlying client."""
-        mock_qb_client.torrents_rename_file.return_value = True
+        mock_qb_client.torrents_rename_file.return_value = RenameResult(
+            RenameOutcome.RENAMED
+        )
         await download_client.rename_torrent_file(
             "hash1", "old.mkv", "new.mkv", verify=False
         )

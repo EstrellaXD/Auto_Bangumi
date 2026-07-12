@@ -12,6 +12,7 @@ const KNOWN_KINDS = [
   'update_failed',
   'llm_auth_failure',
   'llm_plugin_install_failed',
+  'rename_conflict',
 ] as const;
 
 export const useNotificationStore = defineStore('notification', () => {

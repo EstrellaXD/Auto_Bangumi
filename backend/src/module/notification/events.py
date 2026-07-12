@@ -248,6 +248,38 @@ class LLMPluginInstallFailedEvent:
         )
 
 
+@dataclass(slots=True, frozen=True)
+class RenameConflictEvent:
+    """A media rename reached a durable target-path conflict."""
+
+    kind: ClassVar[str] = "rename_conflict"
+    severity: ClassVar[str] = "warning"
+    once: ClassVar[bool] = False
+
+    task_id: str
+    torrent_name: str
+    target_path: str
+    reason: str
+
+    def dedup_key(self) -> Optional[str]:
+        return f"rename_conflict:{self.task_id}:{self.target_path}"
+
+    def payload(self) -> dict:
+        return {
+            "task_id": self.task_id,
+            "torrent_name": self.torrent_name,
+            "target_path": self.target_path,
+            "reason": self.reason,
+        }
+
+    def describe(self) -> tuple[str, str]:
+        return (
+            "媒体文件重命名冲突",
+            f"种子：{self.torrent_name}\n目标：{self.target_path}\n"
+            f"原因：{self.reason}",
+        )
+
+
 # 除「新集数」以外的通知事件的联合类型。
 SystemEvent = (
     RssFailureEvent
@@ -258,4 +290,5 @@ SystemEvent = (
     | UpdateAppliedEvent
     | LLMAuthFailureEvent
     | LLMPluginInstallFailedEvent
+    | RenameConflictEvent
 )

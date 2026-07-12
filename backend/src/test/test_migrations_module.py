@@ -375,6 +375,14 @@ class TestRunMigrations:
         aria2_cols = {c["name"] for c in inspector.get_columns("aria2_gid")}
         assert "renamed_paths" in aria2_cols
 
+    def test_v24_adds_aria2_rename_intent_column(self):
+        """v24 persists an ownership proof before moving an aria2 file."""
+        engine = _make_v0_engine()
+        run_migrations(engine)
+
+        aria2_cols = _columns(engine, "aria2_gid")
+        assert "rename_intent" in aria2_cols
+
     def test_creates_inboxmessage_table(self):
         """v16 creates the in-app notification center table with its indexes."""
         engine = _make_v0_engine()
@@ -398,6 +406,110 @@ class TestRunMigrations:
         assert "llmcredential" in inspector.get_table_names()
         indexes = {ix["name"]: ix for ix in inspector.get_indexes("llmcredential")}
         assert indexes["ix_llmcredential_provider_id"]["unique"]
+
+    def test_v23_creates_durable_rename_operation_schema(self):
+        engine = _make_v0_engine()
+
+        run_migrations(engine)
+
+        inspector = inspect(engine)
+        assert "rename_operation" in inspector.get_table_names()
+        assert {
+            "downloader_type",
+            "kind",
+            "state",
+            "new_task_id",
+            "old_task_id",
+            "save_path",
+            "source_path",
+            "target_path",
+            "staged_path",
+            "bangumi_id",
+            "media_type",
+            "season",
+            "episode",
+            "group_name",
+            "resolution",
+            "old_revision",
+            "new_revision",
+            "revision_metadata",
+            "attempt_count",
+            "retry_at",
+            "notified_at",
+            "last_error",
+            "created_at",
+            "updated_at",
+        } <= _columns(engine, "rename_operation")
+        indexes = {
+            item["name"]: item for item in inspector.get_indexes("rename_operation")
+        }
+        assert {
+            "ux_rename_operation_identity",
+            "ux_rename_operation_active_target",
+            "ix_rename_operation_state_retry_at",
+            "ix_rename_operation_new_task_id",
+            "ix_rename_operation_old_task_id",
+        } <= set(indexes)
+        assert indexes["ux_rename_operation_identity"]["unique"]
+        assert indexes["ux_rename_operation_active_target"]["unique"]
+
+    def test_v23_active_target_unique_index_ignores_done_history(self):
+        engine = _make_v0_engine()
+        run_migrations(engine)
+        insert = text(
+            "INSERT INTO rename_operation "
+            "(downloader_type, kind, state, new_task_id, save_path, "
+            " source_path, target_path, attempt_count, created_at, updated_at) "
+            "VALUES ('qbittorrent', 'replacement', :state, :task, '/show', "
+            " :source, 'Show S01E01.mkv', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+        )
+        with engine.begin() as conn:
+            conn.execute(insert, {"state": "conflict", "task": "v2", "source": "v2"})
+        with pytest.raises(IntegrityError):
+            with engine.begin() as conn:
+                conn.execute(
+                    insert,
+                    {"state": "planned", "task": "v3", "source": "v3"},
+                )
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "UPDATE rename_operation SET state = 'done' WHERE new_task_id = 'v2'"
+                )
+            )
+            conn.execute(
+                insert,
+                {"state": "planned", "task": "v3", "source": "v3"},
+            )
+
+    def test_v23_rejects_unknown_operation_state(self):
+        engine = _make_v0_engine()
+        run_migrations(engine)
+
+        with pytest.raises(IntegrityError):
+            with engine.begin() as conn:
+                conn.execute(
+                    text(
+                        "INSERT INTO rename_operation "
+                        "(downloader_type, kind, state, new_task_id, save_path, "
+                        " source_path, target_path, attempt_count, created_at, updated_at) "
+                        "VALUES ('qbittorrent', 'conflict', 'unknown', 'v2', '/show', "
+                        " 'v2.mkv', 'Show S01E01.mkv', 0, CURRENT_TIMESTAMP, "
+                        " CURRENT_TIMESTAMP)"
+                    )
+                )
+
+    def test_v23_guard_accepts_metadata_created_table(self, monkeypatch):
+        engine = _make_v0_engine()
+        _run_through_version(engine, 22, monkeypatch)
+        SQLModel.metadata.create_all(engine)
+
+        run_migrations(engine)
+
+        with engine.connect() as conn:
+            assert get_schema_version(conn) == CURRENT_SCHEMA_VERSION
+        indexes = {ix["name"] for ix in inspect(engine).get_indexes("rename_operation")}
+        assert "ux_rename_operation_active_target" in indexes
 
     def test_upgrades_auth_beta_v20_without_losing_tokens(self, monkeypatch):
         engine = _make_v19_auth_engine()

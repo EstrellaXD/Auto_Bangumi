@@ -65,6 +65,10 @@
       "eps": "EPS complete",
       "group_tag": "Add Group Tag",
       "method": "Rename Method",
+      "revision_conflict_hint": "When replacement is enabled, the old torrent and its data are deleted only after the higher revision is promoted successfully.",
+      "revision_conflict_hold": "Keep Existing File",
+      "revision_conflict_policy": "Revision Conflict Policy",
+      "revision_conflict_replace": "Replace with Higher Revision",
       "title": "Manage Setting",
       "track_orphans": "Track Unmatched Torrents"
     },
@@ -723,6 +727,10 @@
       "llm_plugin_install_failed": {
         "title": "LLM plugin install failed",
         "body": "{plugin_id}: {message}"
+      },
+      "rename_conflict": {
+        "title": "Media rename conflict",
+        "body": "{torrent_name} → {target_path}: {reason}"
       }
     }
   }

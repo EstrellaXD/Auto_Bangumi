@@ -20,6 +20,7 @@ from .migrations import (  # noqa: F401  (re-exported for existing importers)
     run_migrations_async,
 )
 from .movie import MovieDatabase
+from .rename_operation import RenameOperationDatabase
 from .rss import RSSDatabase
 from .torrent import TorrentDatabase
 from .user import UserDatabase
@@ -51,6 +52,7 @@ class Database:
         self.auth = AuthDatabase(self.session)
         self.inbox = InboxDatabase(self.session)
         self.llm_credential = LLMCredentialDatabase(self.session)
+        self.rename_operation = RenameOperationDatabase(self.session)
 
     async def __aenter__(self):
         return self

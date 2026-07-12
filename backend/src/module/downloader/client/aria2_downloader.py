@@ -8,7 +8,13 @@ from typing import ClassVar
 import httpx
 
 from module.database import Database
-from module.downloader.base import AddResult, DownloaderCapabilities
+from module.database.aria2 import Aria2RenameIntent
+from module.downloader.base import (
+    AddResult,
+    DownloaderCapabilities,
+    RenameOutcome,
+    RenameResult,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -221,6 +227,30 @@ class Aria2Downloader:
         shutil.move(old_abs, new_abs)
 
     @staticmethod
+    def _rename_intent(
+        old_path: str, new_path: str, source_stat: os.stat_result
+    ) -> Aria2RenameIntent:
+        return Aria2RenameIntent(
+            old_path=old_path,
+            new_path=new_path,
+            st_dev=source_stat.st_dev,
+            st_ino=source_stat.st_ino,
+            st_size=source_stat.st_size,
+            st_mtime_ns=source_stat.st_mtime_ns,
+        )
+
+    @staticmethod
+    def _intent_matches_stat(
+        intent: Aria2RenameIntent, target_stat: os.stat_result
+    ) -> bool:
+        return (
+            intent.st_dev == target_stat.st_dev
+            and intent.st_ino == target_stat.st_ino
+            and intent.st_size == target_stat.st_size
+            and intent.st_mtime_ns == target_stat.st_mtime_ns
+        )
+
+    @staticmethod
     def _move_files(files: list[dict], old_dir: str, new_dir: str) -> None:
         old_dir = os.path.normpath(old_dir)
         for f in files:
@@ -430,7 +460,7 @@ class Aria2Downloader:
             stopped = await self._call("tellStopped", [0, 1000]) or []
         except (Aria2RpcError, Aria2ConnectionError) as e:
             logger.error("Failed to query downloads: %s", e)
-            return []
+            raise
         raw = [*active, *waiting, *stopped]
         followed_by: dict[str, str] = {}
         for d in raw:
@@ -507,6 +537,20 @@ class Aria2Downloader:
             )
         return result
 
+    async def torrent_exists(self, gid: str) -> bool | None:
+        """Return False only when aria2 explicitly confirms a gid is absent."""
+        try:
+            await self._call("tellStatus", [gid, ["status"]])
+        except Aria2RpcError as e:
+            if self._is_not_found_error(e):
+                return False
+            logger.warning("Cannot confirm whether aria2 gid %s exists: %s", gid, e)
+            return None
+        except Aria2ConnectionError as e:
+            logger.warning("Cannot confirm whether aria2 gid %s exists: %s", gid, e)
+            return None
+        return True
+
     async def torrents_files(self, torrent_hash: str) -> list[dict]:
         try:
             files = await self._call("getFiles", [torrent_hash])
@@ -535,7 +579,7 @@ class Aria2Downloader:
 
     async def torrents_rename_file(
         self, torrent_hash, old_path, new_path, verify: bool = True
-    ) -> bool:
+    ) -> RenameResult:
         try:
             status = await self._call("tellStatus", [torrent_hash, ["dir"]])
         except (Aria2RpcError, Aria2ConnectionError) as e:
@@ -544,32 +588,118 @@ class Aria2Downloader:
                 torrent_hash,
                 e,
             )
-            return False
+            return RenameResult(RenameOutcome.RETRYABLE_FAILURE, detail=str(e))
         save_dir = (status or {}).get("dir", "")
         if not save_dir:
-            return False
+            return RenameResult(
+                RenameOutcome.RETRYABLE_FAILURE,
+                detail="aria2 returned no download directory",
+            )
         old_abs = os.path.join(save_dir, old_path)
         new_abs = os.path.join(save_dir, new_path)
+        old_exists, new_exists = await asyncio.gather(
+            asyncio.to_thread(os.path.exists, old_abs),
+            asyncio.to_thread(os.path.exists, new_abs),
+        )
+        async with Database() as db:
+            persisted_intent = await db.aria2.get_rename_intent(torrent_hash)
+
+        if not old_exists:
+            matching_intent = (
+                persisted_intent
+                if persisted_intent is not None
+                and persisted_intent.old_path == old_path
+                and persisted_intent.new_path == new_path
+                else None
+            )
+            if not new_exists:
+                if matching_intent is not None:
+                    async with Database() as db:
+                        await db.aria2.clear_rename_intent(
+                            torrent_hash, matching_intent
+                        )
+                return RenameResult(
+                    RenameOutcome.RETRYABLE_FAILURE,
+                    detail=f"rename source is missing: {old_abs}",
+                )
+            if matching_intent is None:
+                return RenameResult(
+                    RenameOutcome.DESTINATION_EXISTS,
+                    detail=(
+                        "destination exists without a matching durable rename "
+                        f"intent: {new_abs}"
+                    ),
+                )
+            try:
+                target_stat = await asyncio.to_thread(os.stat, new_abs)
+            except OSError as e:
+                return RenameResult(RenameOutcome.RETRYABLE_FAILURE, detail=str(e))
+            if not self._intent_matches_stat(matching_intent, target_stat):
+                async with Database() as db:
+                    await db.aria2.clear_rename_intent(torrent_hash, matching_intent)
+                return RenameResult(
+                    RenameOutcome.DESTINATION_EXISTS,
+                    detail=f"destination does not match durable rename intent: {new_abs}",
+                )
+            async with Database() as db:
+                finalized = await db.aria2.finalize_rename_intent(
+                    torrent_hash, matching_intent
+                )
+            if not finalized:
+                return RenameResult(
+                    RenameOutcome.RETRYABLE_FAILURE,
+                    detail="durable rename intent changed before recovery commit",
+                )
+            return RenameResult(RenameOutcome.ALREADY_APPLIED)
+
+        try:
+            source_stat = await asyncio.to_thread(os.stat, old_abs)
+        except OSError as e:
+            return RenameResult(RenameOutcome.RETRYABLE_FAILURE, detail=str(e))
+        intent = self._rename_intent(old_path, new_path, source_stat)
+        async with Database() as db:
+            await db.aria2.set_rename_intent(torrent_hash, intent)
         try:
             await asyncio.to_thread(self._move_file, old_abs, new_abs)
         except FileExistsError:
+            async with Database() as db:
+                await db.aria2.clear_rename_intent(torrent_hash, intent)
             logger.warning(
                 "Refusing to overwrite existing file %s, rename of %s skipped",
                 new_abs,
                 old_abs,
             )
-            return False
+            return RenameResult(
+                RenameOutcome.DESTINATION_EXISTS,
+                detail=f"destination already exists: {new_abs}",
+            )
         except OSError as e:
+            async with Database() as db:
+                await db.aria2.clear_rename_intent(torrent_hash, intent)
             logger.warning("Failed to rename file %s -> %s: %s", old_abs, new_abs, e)
-            return False
-        if verify:
-            exists = await asyncio.to_thread(os.path.exists, new_abs)
-            if not exists:
-                logger.debug("Rename reported success but %s is missing", new_abs)
-                return False
+            return RenameResult(RenameOutcome.RETRYABLE_FAILURE, detail=str(e))
+        try:
+            target_stat = await asyncio.to_thread(os.stat, new_abs)
+        except OSError as e:
+            logger.debug("Rename reported success but %s cannot be verified", new_abs)
+            # Keep the intent: the move may have completed and a later retry can
+            # still reconcile it if the target becomes visible.
+            return RenameResult(RenameOutcome.RETRYABLE_FAILURE, detail=str(e))
+        if not self._intent_matches_stat(intent, target_stat):
+            async with Database() as db:
+                await db.aria2.clear_rename_intent(torrent_hash, intent)
+            return RenameResult(
+                RenameOutcome.DESTINATION_EXISTS,
+                detail=f"renamed target identity changed unexpectedly: {new_abs}",
+            )
         async with Database() as db:
-            await db.aria2.set_renamed_path(torrent_hash, old_path, new_path)
-        return True
+            finalized = await db.aria2.finalize_rename_intent(torrent_hash, intent)
+        if not finalized:
+            return RenameResult(
+                RenameOutcome.RETRYABLE_FAILURE,
+                detail="durable rename intent changed before sidecar commit",
+            )
+        return RenameResult(RenameOutcome.RENAMED)
 
     # ------------------------------------------------------------------
     # Management
@@ -580,40 +710,98 @@ class Aria2Downloader:
         ok = True
         async with Database() as db:
             for gid in gids:
-                save_dir = None
-                try:
-                    status = await self._call("tellStatus", [gid, ["dir"]])
-                    save_dir = (status or {}).get("dir")
-                except (Aria2RpcError, Aria2ConnectionError) as e:
-                    logger.debug("Could not resolve dir for %s: %s", gid, e)
-
-                if delete_files and save_dir:
+                if delete_files:
                     try:
+                        status = await self._call("tellStatus", [gid, ["dir"]])
+                        save_dir = (status or {}).get("dir")
+                        if not save_dir:
+                            raise Aria2ConnectionError(
+                                f"aria2 returned no download directory for {gid}"
+                            )
                         files = await self._call("getFiles", [gid])
-                    except (Aria2RpcError, Aria2ConnectionError):
-                        files = []
+                    except Aria2RpcError as e:
+                        if self._is_not_found_error(e):
+                            # The task disappeared after a previous successful
+                            # cleanup (or was removed externally).  There is no
+                            # downloader-owned file list left to resolve.
+                            await db.aria2.delete(gid)
+                            continue
+                        logger.warning(
+                            "Cannot safely delete current files for %s: %s", gid, e
+                        )
+                        ok = False
+                        continue
+                    except Aria2ConnectionError as e:
+                        # If the current paths cannot be enumerated safely, do
+                        # not remove the task or its sidecar.  A later retry can
+                        # still reconcile the staged files.
+                        logger.warning(
+                            "Cannot safely delete current files for %s: %s", gid, e
+                        )
+                        ok = False
+                        continue
+
+                    renamed_paths = await db.aria2.get_renamed_paths(gid)
+                    files_removed = True
                     for f in files or []:
-                        path = f.get("path")
-                        if not path:
+                        raw_path = f.get("path")
+                        if not raw_path:
+                            continue
+                        relative_path = os.path.relpath(raw_path, save_dir)
+                        current_relative_path = self._translate_renamed_path(
+                            relative_path, renamed_paths
+                        )
+                        current_path = os.path.normpath(
+                            os.path.join(save_dir, current_relative_path)
+                        )
+                        boundary = os.path.normpath(save_dir)
+                        try:
+                            within_boundary = (
+                                os.path.commonpath([boundary, current_path]) == boundary
+                            )
+                        except ValueError:
+                            within_boundary = False
+                        if not within_boundary:
+                            logger.warning(
+                                "Refusing to delete aria2 path outside save dir: %s",
+                                current_path,
+                            )
+                            files_removed = False
                             continue
                         try:
                             await asyncio.to_thread(
-                                self._remove_file_and_empty_dirs, path, save_dir
+                                self._remove_file_and_empty_dirs,
+                                current_path,
+                                save_dir,
                             )
                         except OSError as e:
-                            logger.warning("Failed to delete file %s: %s", path, e)
+                            logger.warning(
+                                "Failed to delete current file %s: %s", current_path, e
+                            )
+                            files_removed = False
+                    if not files_removed:
+                        ok = False
+                        continue
 
+                removed = False
                 try:
                     await self._call("forceRemove", [gid])
+                    removed = True
                 except Aria2RpcError as e:
-                    if not self._is_not_found_error(e):
+                    if self._is_not_found_error(e):
+                        removed = True
+                    else:
                         logger.error("Failed to remove %s: %s", gid, e)
                         ok = False
                 except Aria2ConnectionError as e:
                     logger.error("Failed to remove %s: %s", gid, e)
                     ok = False
 
-                await db.aria2.delete(gid)
+                # The local mapping is recovery state.  Keep it whenever aria2
+                # may still own the task; delete only after confirmed removal
+                # or an explicit not-found response.
+                if removed:
+                    await db.aria2.delete(gid)
         return ok
 
     async def torrents_pause(self, hashes: str | list[str]) -> None:

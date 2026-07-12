@@ -125,15 +125,16 @@ def mock_settings(test_settings):
 @pytest.fixture
 def mock_qb_client():
     """Mock QbDownloader that simulates qBittorrent API responses."""
-    from module.downloader import AddResult
+    from module.downloader import AddResult, RenameOutcome, RenameResult
 
     client = AsyncMock()
     client.auth.return_value = True
     client.logout.return_value = None
     client.check_host.return_value = True
     client.torrents_info.return_value = []
+    client.torrent_exists.return_value = False
     client.torrents_files.return_value = []
-    client.torrents_rename_file.return_value = True
+    client.torrents_rename_file.return_value = RenameResult(RenameOutcome.RENAMED)
     client.add_torrents.return_value = AddResult.ADDED
     client.torrents_delete.return_value = None
     client.torrents_pause.return_value = None

@@ -15,7 +15,8 @@ import httpx
 import pytest
 
 from module.database import Database
-from module.downloader import AddResult
+from module.database.aria2 import Aria2RenameIntent
+from module.downloader import AddResult, RenameOutcome
 from module.downloader.client.aria2_downloader import (
     Aria2ConnectionError,
     Aria2Downloader,
@@ -25,6 +26,18 @@ from module.downloader.client.aria2_downloader import (
 
 def _aria2() -> Aria2Downloader:
     return Aria2Downloader("http://localhost:6800", "u", "secret-token")
+
+
+def _rename_intent(old_path: str, new_path: str, source) -> Aria2RenameIntent:
+    stat_result = source.stat()
+    return Aria2RenameIntent(
+        old_path=old_path,
+        new_path=new_path,
+        st_dev=stat_result.st_dev,
+        st_ino=stat_result.st_ino,
+        st_size=stat_result.st_size,
+        st_mtime_ns=stat_result.st_mtime_ns,
+    )
 
 
 def _rpc_response(result=None, error=None):
@@ -648,13 +661,47 @@ class TestTorrentsInfo:
         assert result[0]["tags"] == ""
         assert result[0]["category"] == ""
 
-    async def test_query_failure_returns_empty_list(self):
+    async def test_connection_query_failure_is_raised(self):
         aria2 = _aria2()
         with patch.object(
             aria2, "_call", AsyncMock(side_effect=Aria2ConnectionError("down"))
         ):
-            result = await aria2.torrents_info(status_filter=None, category=None)
-        assert result == []
+            with pytest.raises(Aria2ConnectionError, match="down"):
+                await aria2.torrents_info(status_filter=None, category=None)
+
+    async def test_rpc_query_failure_is_raised(self):
+        aria2 = _aria2()
+        with patch.object(
+            aria2, "_call", AsyncMock(side_effect=Aria2RpcError(1, "failed"))
+        ):
+            with pytest.raises(Aria2RpcError, match="failed"):
+                await aria2.torrents_info(status_filter=None, category=None)
+
+    async def test_torrent_exists_returns_true_for_known_gid(self):
+        aria2 = _aria2()
+        with patch.object(
+            aria2, "_call", AsyncMock(return_value={"status": "complete"})
+        ) as call:
+            assert await aria2.torrent_exists("gidA") is True
+        call.assert_awaited_once_with("tellStatus", ["gidA", ["status"]])
+
+    async def test_torrent_exists_returns_false_only_for_explicit_not_found(self):
+        aria2 = _aria2()
+        with patch.object(
+            aria2,
+            "_call",
+            AsyncMock(side_effect=Aria2RpcError(1, "GID#gidA is not found")),
+        ):
+            assert await aria2.torrent_exists("gidA") is False
+
+    @pytest.mark.parametrize(
+        "error",
+        [Aria2ConnectionError("down"), Aria2RpcError(1, "Internal error")],
+    )
+    async def test_torrent_exists_returns_none_when_presence_is_unknown(self, error):
+        aria2 = _aria2()
+        with patch.object(aria2, "_call", AsyncMock(side_effect=error)):
+            assert await aria2.torrent_exists("gidA") is None
 
     async def test_torrents_info_zero_total_length_progress_is_zero(self):
         """磁力链在拉元数据阶段 totalLength 是字符串 "0"（truthy）——
@@ -803,6 +850,67 @@ class TestTorrentsInfo:
 
 
 # ---------------------------------------------------------------------------
+# aria2_gid durable rename intent repository
+# ---------------------------------------------------------------------------
+
+
+class TestRenameIntentDatabase:
+    async def test_persists_and_reads_typed_rename_intent(self, tmp_path):
+        source = tmp_path / "old.mkv"
+        source.write_bytes(b"data")
+        intent = _rename_intent("old.mkv", "new.mkv", source)
+
+        async with Database() as db:
+            await db.aria2.set_rename_intent("gidA", intent)
+            assert await db.aria2.get_rename_intent("gidA") == intent
+            record = await db.aria2.get("gidA")
+
+        assert record is not None
+        assert record.rename_intent is not None
+
+    async def test_finalize_updates_mapping_and_clears_intent_atomically(
+        self, tmp_path
+    ):
+        source = tmp_path / "old.mkv"
+        source.write_bytes(b"data")
+        intent = _rename_intent("old.mkv", "new.mkv", source)
+
+        async with Database() as db:
+            await db.aria2.set_rename_intent("gidA", intent)
+            finalized = await db.aria2.finalize_rename_intent("gidA", intent)
+
+            assert finalized is True
+            assert await db.aria2.get_renamed_paths("gidA") == {"old.mkv": "new.mkv"}
+            assert await db.aria2.get_rename_intent("gidA") is None
+            record = await db.aria2.get("gidA")
+            assert record is not None
+            assert record.rename_intent is None
+
+    async def test_finalize_rejects_stale_intent_without_mutating_mapping(
+        self, tmp_path
+    ):
+        source = tmp_path / "old.mkv"
+        source.write_bytes(b"data")
+        persisted = _rename_intent("old.mkv", "new.mkv", source)
+        stale = Aria2RenameIntent(
+            old_path="old.mkv",
+            new_path="other.mkv",
+            st_dev=persisted.st_dev,
+            st_ino=persisted.st_ino,
+            st_size=persisted.st_size,
+            st_mtime_ns=persisted.st_mtime_ns,
+        )
+
+        async with Database() as db:
+            await db.aria2.set_rename_intent("gidA", persisted)
+            finalized = await db.aria2.finalize_rename_intent("gidA", stale)
+
+            assert finalized is False
+            assert await db.aria2.get_renamed_paths("gidA") == {}
+            assert await db.aria2.get_rename_intent("gidA") == persisted
+
+
+# ---------------------------------------------------------------------------
 # torrents_files: relative-path mapping
 # ---------------------------------------------------------------------------
 
@@ -872,7 +980,7 @@ class TestTorrentsRenameFile:
         with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
             result = await aria2.torrents_rename_file("gidA", "old.mkv", "new.mkv")
 
-        assert result is True
+        assert result.outcome is RenameOutcome.RENAMED
         assert not (tmp_path / "old.mkv").exists()
         assert (tmp_path / "new.mkv").read_bytes() == b"data"
 
@@ -887,7 +995,8 @@ class TestTorrentsRenameFile:
             return {"dir": str(tmp_path)}
 
         with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
-            assert await aria2.torrents_rename_file("gidA", "old.mkv", "new.mkv")
+            result = await aria2.torrents_rename_file("gidA", "old.mkv", "new.mkv")
+            assert result.outcome is RenameOutcome.RENAMED
             files = await aria2.torrents_files("gidA")
 
         assert files == [{"name": "new.mkv", "size": 4}]
@@ -903,8 +1012,10 @@ class TestTorrentsRenameFile:
             return {"dir": str(tmp_path)}
 
         with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
-            assert await aria2.torrents_rename_file("gidA", "old.mkv", "mid.mkv")
-            assert await aria2.torrents_rename_file("gidA", "mid.mkv", "new.mkv")
+            first = await aria2.torrents_rename_file("gidA", "old.mkv", "mid.mkv")
+            second = await aria2.torrents_rename_file("gidA", "mid.mkv", "new.mkv")
+            assert first.outcome is RenameOutcome.RENAMED
+            assert second.outcome is RenameOutcome.RENAMED
             files = await aria2.torrents_files("gidA")
 
         assert files == [{"name": "new.mkv", "size": 4}]
@@ -921,7 +1032,7 @@ class TestTorrentsRenameFile:
                 "gidA", "old.mkv", os.path.join("Season 01", "new.mkv")
             )
 
-        assert result is True
+        assert result.outcome is RenameOutcome.RENAMED
         assert (tmp_path / "Season 01" / "new.mkv").exists()
 
     async def test_returns_false_when_source_file_missing(self, tmp_path):
@@ -933,7 +1044,95 @@ class TestTorrentsRenameFile:
         with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
             result = await aria2.torrents_rename_file("gidA", "missing.mkv", "new.mkv")
 
-        assert result is False
+        assert result.outcome is RenameOutcome.RETRYABLE_FAILURE
+
+    async def test_recovers_move_completed_before_sidecar_commit(self, tmp_path):
+        aria2 = _aria2()
+        old_file = tmp_path / "old.mkv"
+        new_file = tmp_path / "new.mkv"
+        old_file.write_bytes(b"data")
+        intent = _rename_intent("old.mkv", "new.mkv", old_file)
+        async with Database() as db:
+            await db.aria2.set_rename_intent("gidA", intent)
+        old_file.rename(new_file)
+
+        async def fake_call(method, params=None, timeout=10.0):
+            if method == "getFiles":
+                return [{"path": str(tmp_path / "old.mkv"), "length": "4"}]
+            return {"dir": str(tmp_path)}
+
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
+            result = await aria2.torrents_rename_file("gidA", "old.mkv", "new.mkv")
+            files = await aria2.torrents_files("gidA")
+
+        assert result.outcome is RenameOutcome.ALREADY_APPLIED
+        assert files == [{"name": "new.mkv", "size": 4}]
+        async with Database() as db:
+            record = await db.aria2.get("gidA")
+            assert record is not None
+            assert record.rename_intent is None
+
+    async def test_missing_source_does_not_claim_unrelated_target_without_intent(
+        self, tmp_path
+    ):
+        aria2 = _aria2()
+        target = tmp_path / "new.mkv"
+        target.write_bytes(b"unrelated")
+
+        async def fake_call(method, params=None, timeout=10.0):
+            return {"dir": str(tmp_path)}
+
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
+            result = await aria2.torrents_rename_file("gidA", "old.mkv", "new.mkv")
+
+        assert result.outcome is RenameOutcome.DESTINATION_EXISTS
+        assert target.read_bytes() == b"unrelated"
+        async with Database() as db:
+            assert await db.aria2.get_renamed_paths("gidA") == {}
+
+    async def test_crash_recovery_rejects_target_with_mismatched_fingerprint(
+        self, tmp_path
+    ):
+        aria2 = _aria2()
+        old_file = tmp_path / "old.mkv"
+        old_file.write_bytes(b"original")
+        intent = _rename_intent("old.mkv", "new.mkv", old_file)
+        async with Database() as db:
+            await db.aria2.set_rename_intent("gidA", intent)
+        old_file.unlink()
+        (tmp_path / "new.mkv").write_bytes(b"unrelated")
+
+        async def fake_call(method, params=None, timeout=10.0):
+            return {"dir": str(tmp_path)}
+
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
+            result = await aria2.torrents_rename_file("gidA", "old.mkv", "new.mkv")
+
+        assert result.outcome is RenameOutcome.DESTINATION_EXISTS
+        async with Database() as db:
+            record = await db.aria2.get("gidA")
+            assert record is not None
+            assert record.rename_intent is None
+            assert await db.aria2.get_renamed_paths("gidA") == {}
+
+    async def test_move_failure_clears_rename_intent(self, tmp_path):
+        aria2 = _aria2()
+        (tmp_path / "old.mkv").write_bytes(b"data")
+
+        async def fake_call(method, params=None, timeout=10.0):
+            return {"dir": str(tmp_path)}
+
+        with (
+            patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)),
+            patch.object(aria2, "_move_file", side_effect=OSError("move failed")),
+        ):
+            result = await aria2.torrents_rename_file("gidA", "old.mkv", "new.mkv")
+
+        assert result.outcome is RenameOutcome.RETRYABLE_FAILURE
+        async with Database() as db:
+            record = await db.aria2.get("gidA")
+            assert record is not None
+            assert record.rename_intent is None
 
     async def test_torrents_rename_file_existing_destination_refuses_overwrite(
         self, tmp_path
@@ -949,7 +1148,7 @@ class TestTorrentsRenameFile:
         with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
             result = await aria2.torrents_rename_file("gidA", "old.mkv", "new.mkv")
 
-        assert result is False
+        assert result.outcome is RenameOutcome.DESTINATION_EXISTS
         # 两个文件都原封不动。
         assert (tmp_path / "old.mkv").read_bytes() == b"source data"
         assert (tmp_path / "new.mkv").read_bytes() == b"precious existing data"
@@ -960,7 +1159,7 @@ class TestTorrentsRenameFile:
             aria2, "_call", AsyncMock(side_effect=Aria2ConnectionError("down"))
         ):
             result = await aria2.torrents_rename_file("gidA", "old.mkv", "new.mkv")
-        assert result is False
+        assert result.outcome is RenameOutcome.RETRYABLE_FAILURE
 
 
 # ---------------------------------------------------------------------------
@@ -1015,10 +1214,77 @@ class TestTorrentsDelete:
                 raise Aria2RpcError(1, "Internal error")
             return None
 
+        async with Database() as db:
+            await db.aria2.upsert(
+                "gidA", bangumi_id=1, renamed_paths='{"old.mkv": "staged.mkv"}'
+            )
+
         with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
             result = await aria2.torrents_delete("gidA", delete_files=False)
 
         assert result is False
+        async with Database() as db:
+            record = await db.aria2.get("gidA")
+        assert record is not None
+        assert record.renamed_paths == '{"old.mkv": "staged.mkv"}'
+
+    async def test_delete_uses_current_renamed_path_not_reoccupied_original(
+        self, tmp_path
+    ):
+        aria2 = _aria2()
+        original = tmp_path / "Show S01E01.mkv"
+        staged = tmp_path / ".Show S01E01.ab-old.mkv"
+        staged.write_bytes(b"old-v1")
+        original.write_bytes(b"new-v2")
+
+        async def fake_call(method, params=None, timeout=10.0):
+            if method == "tellStatus":
+                return {"dir": str(tmp_path)}
+            if method == "getFiles":
+                return [{"path": str(original)}]
+            if method == "forceRemove":
+                return "gidA"
+            return None
+
+        async with Database() as db:
+            await db.aria2.upsert("gidA", bangumi_id=1)
+            await db.aria2.set_renamed_path("gidA", original.name, staged.name)
+
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
+            result = await aria2.torrents_delete("gidA", delete_files=True)
+
+        assert result is True
+        assert not staged.exists()
+        assert original.read_bytes() == b"new-v2"
+        async with Database() as db:
+            assert await db.aria2.get("gidA") is None
+
+    async def test_file_listing_failure_preserves_sidecar_and_task(self):
+        aria2 = _aria2()
+        calls = []
+
+        async def fake_call(method, params=None, timeout=10.0):
+            calls.append(method)
+            if method == "tellStatus":
+                return {"dir": "/downloads"}
+            if method == "getFiles":
+                raise Aria2ConnectionError("down")
+            if method == "forceRemove":
+                return "gidA"
+            return None
+
+        async with Database() as db:
+            await db.aria2.upsert(
+                "gidA", bangumi_id=1, renamed_paths='{"old.mkv": "staged.mkv"}'
+            )
+
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
+            result = await aria2.torrents_delete("gidA", delete_files=True)
+
+        assert result is False
+        assert "forceRemove" not in calls
+        async with Database() as db:
+            assert await db.aria2.get("gidA") is not None
 
     async def test_not_found_error_is_treated_as_already_gone(self):
         aria2 = _aria2()
@@ -1036,6 +1302,26 @@ class TestTorrentsDelete:
             result = await aria2.torrents_delete("gidA", delete_files=False)
 
         assert result is True
+
+    async def test_not_found_before_file_listing_clears_stale_sidecar(self):
+        aria2 = _aria2()
+
+        async def fake_call(method, params=None, timeout=10.0):
+            if method == "tellStatus":
+                raise Aria2RpcError(1, "GID#gidA is not found")
+            raise AssertionError(f"unexpected RPC after not-found: {method}")
+
+        async with Database() as db:
+            await db.aria2.upsert(
+                "gidA", bangumi_id=1, renamed_paths='{"old.mkv": "staged.mkv"}'
+            )
+
+        with patch.object(aria2, "_call", AsyncMock(side_effect=fake_call)):
+            result = await aria2.torrents_delete("gidA", delete_files=True)
+
+        assert result is True
+        async with Database() as db:
+            assert await db.aria2.get("gidA") is None
 
     async def test_accepts_pipe_joined_hashes(self):
         aria2 = _aria2()

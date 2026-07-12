@@ -20,6 +20,38 @@ class AddResult(Enum):
     FAILED = "failed"
 
 
+class RenameOutcome(str, Enum):
+    """Downloader-independent outcome of a single file rename."""
+
+    RENAMED = "renamed"
+    ALREADY_APPLIED = "already_applied"
+    DESTINATION_EXISTS = "destination_exists"
+    RETRYABLE_FAILURE = "retryable_failure"
+
+
+@dataclass(frozen=True)
+class RenameResult:
+    """Structured rename result preserved across the downloader facade.
+
+    ``bool(result)`` deliberately keeps the old success/failure behaviour while
+    callers migrate to inspecting :attr:`outcome`.  It must never make a
+    collision or retryable failure truthy.
+    """
+
+    outcome: RenameOutcome
+    detail: str | None = None
+
+    @property
+    def succeeded(self) -> bool:
+        return self.outcome in {
+            RenameOutcome.RENAMED,
+            RenameOutcome.ALREADY_APPLIED,
+        }
+
+    def __bool__(self) -> bool:
+        return self.succeeded
+
+
 @dataclass(frozen=True)
 class DownloaderCapabilities:
     """What a concrete download client can do.
@@ -83,6 +115,8 @@ class DownloaderClient(Protocol):
 
     async def torrents_info(self, status_filter, category, tag=None) -> list[dict]: ...
 
+    async def torrent_exists(self, torrent_hash: str) -> bool | None: ...
+
     async def torrents_files(self, torrent_hash: str) -> list[dict]: ...
 
     async def torrents_delete(self, hash, delete_files: bool = True) -> bool: ...
@@ -93,7 +127,7 @@ class DownloaderClient(Protocol):
 
     async def torrents_rename_file(
         self, torrent_hash, old_path, new_path, verify: bool = True
-    ) -> bool: ...
+    ) -> RenameResult: ...
 
     async def move_torrent(self, hashes, new_location) -> None: ...
 

@@ -1,14 +1,32 @@
 <script lang="ts" setup>
-import type { BangumiManage, RenameMethod } from '#/config';
-import type { SettingItem } from '#/components';
+import type {
+  BangumiManage,
+  RenameMethod,
+  RevisionConflictPolicy,
+} from '#/config';
+import type { SelectItem, SettingItem } from '#/components';
 
 const { t } = useMyI18n();
 const { getSettingGroup } = useConfigStore();
 
 const manage = getSettingGroup('bangumi_manage');
 const renameMethod: RenameMethod = ['normal', 'pn', 'advance', 'none'];
+const revisionConflictPolicies: RevisionConflictPolicy = ['hold', 'replace'];
 
-const items: SettingItem<BangumiManage>[] = [
+const revisionConflictOptions = computed<SelectItem[]>(() => [
+  {
+    id: 1,
+    label: t('config.manage_set.revision_conflict_hold'),
+    value: revisionConflictPolicies[0],
+  },
+  {
+    id: 2,
+    label: t('config.manage_set.revision_conflict_replace'),
+    value: revisionConflictPolicies[1],
+  },
+]);
+
+const items = computed<SettingItem<BangumiManage>[]>(() => [
   {
     configKey: 'enable',
     label: () => t('config.manage_set.enable'),
@@ -20,6 +38,15 @@ const items: SettingItem<BangumiManage>[] = [
     type: 'select',
     prop: {
       items: renameMethod,
+    },
+  },
+  {
+    configKey: 'revision_conflict_policy',
+    label: () => t('config.manage_set.revision_conflict_policy'),
+    description: t('config.manage_set.revision_conflict_hint'),
+    type: 'select',
+    prop: {
+      items: revisionConflictOptions.value,
     },
     bottomLine: true,
   },
@@ -43,7 +70,7 @@ const items: SettingItem<BangumiManage>[] = [
     label: () => t('config.manage_set.track_orphans'),
     type: 'switch',
   },
-];
+]);
 </script>
 
 <template>
