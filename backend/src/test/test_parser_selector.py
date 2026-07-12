@@ -95,6 +95,34 @@ def test_classic_and_preview_are_distinct_implementations() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    "parse",
+    [parse_classic_release_title, selector.preview.parse_release_title],
+    ids=["classic", "preview"],
+)
+@pytest.mark.parametrize("title", ["某剧场作品", "小剧场", "某劇場作品", "小劇場"])
+def test_cjk_movie_word_inside_title_is_not_consumed(parse, title: str) -> None:
+    parsed = parse(f"[SubGroup] {title} Movie [1080p][MP4]")
+
+    assert parsed is not None
+    assert parsed.title_zh == title
+    assert parsed.media_type is MediaType.MOVIE
+
+
+@pytest.mark.parametrize(
+    "parse",
+    [parse_classic_release_title, selector.preview.parse_release_title],
+    ids=["classic", "preview"],
+)
+def test_standalone_cjk_movie_marker_is_still_consumed(parse) -> None:
+    parsed = parse("[SubGroup] 某动画 / Some Anime 剧场 [1080p][MP4]")
+
+    assert parsed is not None
+    assert parsed.title_zh == "某动画"
+    assert parsed.title_en == "Some Anime"
+    assert parsed.media_type is MediaType.MOVIE
+
+
 def test_selector_uses_classic_without_preview_fallback(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

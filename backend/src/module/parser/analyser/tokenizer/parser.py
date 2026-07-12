@@ -103,7 +103,10 @@ _PV = re.compile(
 )
 _NCOP = re.compile(r"(?<![A-Za-z0-9])NCOP(?:v?(\d+))?(?![A-Za-z0-9])", re.I)
 _NCED = re.compile(r"(?<![A-Za-z0-9])NCED(?:v?(\d+))?(?![A-Za-z0-9])", re.I)
-_MOVIE_CJK = re.compile(r"劇場版?|剧场版?|電影版|电影版")
+_MOVIE_CJK = re.compile(
+    r"劇場版|剧场版|電影版|电影版|"
+    r"(?<![\u3400-\u9fff])(?:劇場|剧场)(?![\u3400-\u9fff])"
+)
 _MOVIE_ROMAJI = re.compile(r"(?<!\w)Gekijou-?ban(?!\w)", re.I)
 _MOVIE_EN = re.compile(r"(?<!\w)(?:The\s+)?Movie(?!\w)", re.I)
 
