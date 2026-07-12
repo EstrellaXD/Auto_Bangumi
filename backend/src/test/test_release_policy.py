@@ -157,6 +157,19 @@ def test_non_single_or_unnumbered_release_has_no_preference_identity() -> None:
     assert preference_identity(_release(media_type=MediaType.PV)) is None
 
 
+def test_mixed_collection_is_rejected_by_every_single_release_policy() -> None:
+    mixed = _release(
+        episode=None,
+        media_type=MediaType.UNKNOWN,
+        release_kind=ReleaseKind.COLLECTION,
+    )
+
+    assert mixed.is_mixed_collection
+    assert persistence_target(mixed) is None
+    assert preference_identity(mixed) is None
+    assert is_offset_signal(mixed) is False
+
+
 def test_preference_revision_defaults_to_one_and_uses_explicit_version() -> None:
     assert preference_revision(_release()) == 1
     assert preference_revision(replace(_release(), version=3)) == 3

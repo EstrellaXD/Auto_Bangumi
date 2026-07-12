@@ -257,7 +257,10 @@ def _merge_llm_release(
     release_kind = ReleaseKind.SINGLE
     use_deterministic_structure = False
     if deterministic is not None:
-        if deterministic.media_type is not MediaType.UNKNOWN:
+        if (
+            deterministic.media_type is not MediaType.UNKNOWN
+            or deterministic.is_mixed_collection
+        ):
             media_type = deterministic.media_type
         release_kind = deterministic.release_kind
         use_deterministic_structure = bool(
@@ -426,6 +429,9 @@ class TitleParser:
             if deterministic is None and _has_structured_release_claims(
                 parse_outcome.trace.claims
             ):
+                logger.debug("Structured resource has no usable title: %s", raw)
+                return None
+            if deterministic is not None and not deterministic.primary_title:
                 logger.debug("Structured resource has no usable title: %s", raw)
                 return None
             release: ParsedRelease | None = None

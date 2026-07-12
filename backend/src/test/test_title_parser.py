@@ -9,12 +9,19 @@ from module.models import Bangumi, Movie
 from module.models.bangumi import Episode
 from module.models.config import LLM, ExperimentalOpenAI
 from module.parser import title_parser as title_parser_module
-from module.parser.analyser.tokenizer import ParseOutcome, ParseTrace
+from module.parser.analyser.tokenizer import (
+    MediaType,
+    ParseOutcome,
+    ParseTrace,
+    ReleaseKind,
+    parse_release_title,
+)
 from module.parser.title_parser import TitleParser, _llm_config
 
 RAW_TITLE = (
     "[梦蓝字幕组]New Doraemon 哆啦A梦新番[747][2023.02.25][AVC][1080P][GB_JP][MP4]"
 )
+MIXED_COLLECTION = "[Group] Anime Title [TV 01-12 + OVA 01-02] [1080p]"
 
 
 def _make_llm_episode(episode_type: str = "episode") -> Episode:
@@ -247,6 +254,7 @@ class TestParsedReleaseAdmission:
             "[Group] Anime Title [01-12] [1080p]",
             "[Group] Anime Title Complete Batch [1080p]",
             "[Group] Anime Title 全集 [1080p]",
+            MIXED_COLLECTION,
             "[Group] Anime Title PV2 [1080p]",
             "[Group] Anime Title NCOP [1080p]",
             "[Group] Anime Title NCED [1080p]",
@@ -328,6 +336,25 @@ class TestParsedReleaseAdmission:
         assert result.season == 0
         assert result.episode_type == "special"
 
+    @pytest.mark.parametrize("episode_type", ("episode", "movie", "special"))
+    def test_mixed_collection_structure_stays_atomic_during_llm_merge(
+        self, episode_type: str
+    ):
+        deterministic = parse_release_title(MIXED_COLLECTION)
+
+        assert deterministic is not None
+        merged = title_parser_module._merge_llm_release(
+            MIXED_COLLECTION,
+            _make_llm_episode(episode_type=episode_type),
+            deterministic,
+        )
+
+        assert merged.media_type is MediaType.UNKNOWN
+        assert merged.release_kind is ReleaseKind.COLLECTION
+        assert merged.episode is None
+        assert merged.episode_end is None
+        assert merged.is_mixed_collection
+
     @pytest.mark.parametrize(
         "raw",
         (
@@ -335,6 +362,7 @@ class TestParsedReleaseAdmission:
             "[Group] Anime Title PV2 [1080p]",
             "[Group] Anime Title Complete Batch [1080p]",
             "[Group] Anime Title 合集 [1080p]",
+            MIXED_COLLECTION,
         ),
     )
     async def test_primary_llm_cannot_bypass_deterministic_admission(self, raw: str):
@@ -350,14 +378,17 @@ class TestParsedReleaseAdmission:
 
         assert result is None
 
-    async def test_fallback_does_not_call_llm_for_known_rejected_kind(self):
+    @pytest.mark.parametrize(
+        "raw", ("[Group] Anime Title PV2 [1080p]", MIXED_COLLECTION)
+    )
+    async def test_fallback_does_not_call_llm_for_known_rejected_kind(self, raw: str):
         with patch.object(
             settings, "llm", LLM(enable=True, api_key="k", mode="fallback")
         ):
             with patch(
                 "module.parser.title_parser._llm_parse", new_callable=AsyncMock
             ) as mock_llm:
-                result = await TitleParser.raw_parser("[Group] Anime Title PV2 [1080p]")
+                result = await TitleParser.raw_parser(raw)
 
         assert result is None
         mock_llm.assert_not_awaited()
@@ -369,6 +400,7 @@ class TestParsedReleaseAdmission:
             "[Group] PV [1080p]",
             "[Group] [01-12] [1080p]",
             "[Group] OVA [1080p]",
+            "[TV+OVA][1080p]",
         ),
     )
     async def test_titleless_structured_resource_never_reaches_llm(

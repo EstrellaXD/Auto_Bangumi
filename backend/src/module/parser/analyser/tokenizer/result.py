@@ -68,3 +68,11 @@ class ParsedRelease:
     @property
     def is_movie(self) -> bool:
         return self.media_type is MediaType.MOVIE
+
+    @property
+    def is_mixed_collection(self) -> bool:
+        """Whether no single media type can represent this collection."""
+        return (
+            self.media_type is MediaType.UNKNOWN
+            and self.release_kind is ReleaseKind.COLLECTION
+        )

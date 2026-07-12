@@ -185,6 +185,8 @@ def match_bangumi_in_list(
 def _release_matches_bangumi(release: "ParsedRelease | None", bangumi: Bangumi) -> bool:
     if release is None:
         return True
+    if release.is_mixed_collection:
+        return False
 
     from module.parser.analyser.tokenizer import MediaType
 

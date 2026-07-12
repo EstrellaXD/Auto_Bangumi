@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from .candidate import (
     Candidate,
     Claims,
+    DecisionStatus,
     Observation,
     OverlapPolicy,
     ShadowedSpanPolicy,
@@ -32,6 +33,9 @@ _LATIN = re.compile(r"[A-Za-z]")
 _NUMERIC_TITLE = re.compile(r"\d{1,3}(?:\s*[/.-]\s*\d{1,3})?")
 
 _DATE = re.compile(r"(?<!\d)(?:19|20)\d{2}[.\-/]\d{1,2}[.\-/]\d{1,2}(?!\d)")
+_ORGANIZED_DATE_CONTEXT = re.compile(
+    r"^\s*整理时间\s*[:：]\s*((?:19|20)\d{2}[.\-/]\d{1,2}[.\-/]\d{1,2})\s*$"
+)
 _YEAR = re.compile(r"(?<!\d)((?:18|19|20|21)\d{2})(?!\d)")
 _FILE_SIZE = re.compile(r"(?<!\w)\d+(?:\.\d+)?\s*[KMGT]i?B(?!\w)", re.I)
 _HASH = re.compile(r"(?<![0-9A-F])[0-9A-F]{8}(?![0-9A-F])", re.I)
@@ -108,6 +112,28 @@ _BATCH = re.compile(
     re.I,
 )
 _COLLECTION = re.compile(r"合集|全集|全[话話集]|总集篇|總集篇|特典")
+
+_MIXED_CONTENT_NAME = (
+    r"TV(?:\s*(?:动画|動畫|Anime))?|OVA|OAD|Special|SP|Movie|"
+    r"劇場版?|剧场版?|Manga|漫画|漫畫|Novel|小说|小說|"
+    r"Music|音乐|音樂|Other|其他|Extras?"
+)
+_MIXED_CONTENT_NUMBERS = (
+    r"(?:\s*(?:E(?:P)?\.?\s*)?\d{1,4}"
+    r"(?:\s*(?:-|~|～|—)\s*(?:E(?:P)?\.?\s*)?\d{1,4})?)?"
+)
+_MIXED_CONTENT_ITEM = rf"(?:{_MIXED_CONTENT_NAME}){_MIXED_CONTENT_NUMBERS}"
+_MIXED_CONTENT_MANIFEST = re.compile(
+    rf"(?<![A-Za-z0-9])(?P<items>{_MIXED_CONTENT_ITEM}"
+    rf"(?:\s*[+＋]\s*{_MIXED_CONTENT_ITEM})+)\s*(?=$|[；;_])",
+    re.I,
+)
+_MIXED_CONTENT_NAME_AT_START = re.compile(rf"^(?P<name>{_MIXED_CONTENT_NAME})", re.I)
+_MIXED_CONTENT_TAIL_TOKEN = re.compile(
+    r"\b(?:dub|jpn?|chs|cht|eng|subs?|audio|tracks?|external)\b|"
+    r"(?:日[语語]|英[语語]|中[文语語]|简中|簡中|繁中|外挂|外掛|音[轨軌]|字幕)",
+    re.I,
+)
 
 _RESOLUTION = re.compile(
     r"(?<![A-Za-z0-9])(?:\d{3,4}[xX]\d{3,4}|(?:720|1080|2160)[pP](?:60)?|4[Kk])(?![A-Za-z0-9])"
@@ -326,8 +352,15 @@ def _parse_release_title_with_candidates(
     )
     working = _working_from_spans(segments, resolution.excluded_spans)
     title_en, title_zh, title_jp = _reconstruct_titles(working)
+    if not any((title_en, title_zh, title_jp)) and _is_mixed_resolution(resolution):
+        retry_spans = _mixed_title_retry_spans(collector.candidates, resolution)
+        if retry_spans != resolution.excluded_spans:
+            retry_working = _working_from_spans(segments, retry_spans)
+            retry_titles = _reconstruct_titles(retry_working)
+            if any(retry_titles):
+                title_en, title_zh, title_jp = retry_titles
     result = None
-    if any((title_en, title_zh, title_jp)):
+    if any((title_en, title_zh, title_jp)) or _is_mixed_resolution(resolution):
         result = _result_from_resolution(raw, title_en, title_zh, title_jp, resolution)
 
     trace = None
@@ -344,6 +377,31 @@ def _parse_release_title_with_candidates(
     return result, trace
 
 
+def _is_mixed_resolution(resolution: Resolution) -> bool:
+    return (
+        resolution.claims.media_type is MediaType.UNKNOWN
+        and resolution.claims.release_kind is ReleaseKind.COLLECTION
+    )
+
+
+def _mixed_title_retry_spans(
+    candidates: list[Candidate], resolution: Resolution
+) -> tuple[Span, ...]:
+    """Keep an ambiguous numeric episode only when it is the sole mixed title."""
+    by_id = {candidate.id: candidate for candidate in candidates}
+    spans: list[Span] = []
+    for decision in resolution.decisions:
+        candidate = by_id[decision.candidate_id]
+        ambiguous_episode = (
+            decision.status is DecisionStatus.SELECTED
+            and candidate.preserve_as_title_on_conflict
+            and "ambiguous-episode" in candidate.conflict_tags
+        )
+        if not ambiguous_episode:
+            spans.extend(decision.excluded_spans)
+    return tuple(spans)
+
+
 def _result_from_resolution(
     raw: str,
     title_en: str | None,
@@ -357,19 +415,34 @@ def _result_from_resolution(
         claims.episode is not None or claims.release_kind is not None
     ):
         media_type = MediaType.EPISODE
+    resolved_media_type = media_type or MediaType.UNKNOWN
+    release_kind = claims.release_kind or ReleaseKind.SINGLE
+    mixed_collection = (
+        resolved_media_type is MediaType.UNKNOWN
+        and release_kind is ReleaseKind.COLLECTION
+    )
+    evidence = resolution.evidence
+    if mixed_collection:
+        # The trace keeps pre-normalization resolver claims for diagnostics, but
+        # the public collection must not advertise a single-episode identity.
+        evidence = tuple(
+            item
+            for item in evidence
+            if item not in {"season", "episode", "episode-title", "episode-range"}
+        )
     return ParsedRelease(
         raw=raw,
         title_en=title_en,
         title_zh=title_zh,
         title_jp=title_jp,
         group=claims.group,
-        season=claims.season,
-        season_raw=claims.season_raw,
-        episode=claims.episode,
-        episode_end=claims.episode_end,
-        episode_title=claims.episode_title,
-        media_type=media_type or MediaType.UNKNOWN,
-        release_kind=claims.release_kind or ReleaseKind.SINGLE,
+        season=None if mixed_collection else claims.season,
+        season_raw=None if mixed_collection else claims.season_raw,
+        episode=None if mixed_collection else claims.episode,
+        episode_end=None if mixed_collection else claims.episode_end,
+        episode_title=None if mixed_collection else claims.episode_title,
+        media_type=resolved_media_type,
+        release_kind=release_kind,
         resolution=claims.resolution,
         source=claims.source,
         subtitle=claims.subtitle,
@@ -379,7 +452,7 @@ def _result_from_resolution(
         version=claims.version,
         year=claims.year,
         tags=claims.tags,
-        evidence=resolution.evidence,
+        evidence=evidence,
     )
 
 
@@ -542,6 +615,15 @@ def _looks_like_metadata(text: str) -> bool:
     )
     if any(pattern.fullmatch(value) for pattern in structural_patterns):
         return True
+    if "+" in value or "＋" in value:
+        manifest = _MIXED_CONTENT_MANIFEST.match(value)
+        if manifest is not None:
+            categories = _mixed_content_categories(manifest.group("items"))
+            suffix = value[manifest.end() :]
+            if len(categories) >= 2 and (
+                not suffix or _is_mixed_content_metadata_tail(suffix)
+            ):
+                return True
     if _CJK_SUBTITLE_TAG.fullmatch(value) or value.lower() in {"end", "生"}:
         return True
 
@@ -575,6 +657,13 @@ def _number(value: str) -> int | float:
 
 def _is_year_number(value: str) -> bool:
     return value.isdigit() and len(value) == 4 and 1800 <= int(value) <= 2199
+
+
+def _trailing_release_episode(text: str) -> re.Match[str] | None:
+    match = _TRAILING_EPISODE.search(text)
+    if match is None or _is_year_number(match.group(1)):
+        return None
+    return match
 
 
 def _collect_group_candidates(collector: _CandidateCollector) -> set[int]:
@@ -615,6 +704,18 @@ def _episode_title_parts(
 def _collect_structural_candidates(collector: _CandidateCollector) -> None:
     for index, segment in enumerate(collector.segments):
         text = segment.text
+
+        organized_date = _ORGANIZED_DATE_CONTEXT.fullmatch(text)
+        if organized_date is not None and segment.enclosure in {"square", "round"}:
+            collector.add_span(
+                rule_id="metadata.organized-date",
+                kind="tag",
+                segment_index=index,
+                start=0,
+                end=len(text),
+                claims=Claims(tags=(organized_date.group(1),)),
+                priority=111,
+            )
 
         for match in _DATE.finditer(text):
             collector.add_match(
@@ -708,12 +809,39 @@ def _collect_structural_candidates(collector: _CandidateCollector) -> None:
             )
             isolated = not _contains_title(prefix + suffix)
             labelled = bool(re.search(r"(?:Episodes?|Eps?)\s*$", prefix, re.I))
+            explicit_endpoints = sum(
+                1 for _ in _EXPLICIT_EPISODE.finditer(match.group())
+            )
+            strong_structure_patterns = (
+                _SEASON_EPISODE_RANGE,
+                _SEASON_EPISODE_WORDS_RANGE,
+                _SEASON_EPISODE,
+                _SEASON_EPISODE_WORDS,
+                _SPECIAL_RANGE,
+                _SPECIAL_NUMBER,
+                _EXPLICIT_EPISODE,
+                _CHINESE_EPISODE,
+            )
+            has_prior_structure = any(
+                pattern.search(prefix) for pattern in strong_structure_patterns
+            ) or any(
+                pattern.search(prior.text)
+                for prior in collector.segments[:index]
+                for pattern in strong_structure_patterns
+            )
+            strong_labelled_range = (
+                explicit_endpoints == 2
+                and not has_prior_structure
+                and _trailing_release_episode(suffix) is None
+                and _is_metadata_tail(suffix)
+            )
             if (
                 start >= 1800
                 or end >= 1800
                 or start > end
                 or re.search(r"\d+\s*/\s*$", prefix)
-                or not (compact or isolated or labelled)
+                or _trailing_release_episode(suffix) is not None
+                or not (compact or isolated or labelled or strong_labelled_range)
             ):
                 continue
             collector.add_match(
@@ -847,6 +975,8 @@ def _collect_structural_candidates(collector: _CandidateCollector) -> None:
             )
 
         for match in _EXPLICIT_EPISODE.finditer(text):
+            if _inside_range_before_trailing_episode(text, match):
+                continue
             collector.add_match(
                 rule_id="episode.explicit",
                 kind="episode",
@@ -926,6 +1056,62 @@ def _collect_structural_candidates(collector: _CandidateCollector) -> None:
 def _collect_media_candidates(collector: _CandidateCollector) -> None:
     for index, segment in enumerate(collector.segments):
         text = segment.text
+
+        mixed_matches = (
+            _MIXED_CONTENT_MANIFEST.finditer(text)
+            if "+" in text or "＋" in text
+            else ()
+        )
+        for match in mixed_matches:
+            prefix = text[: match.start()]
+            stripped_prefix = prefix.rstrip()
+            free_segment = segment.enclosure is None
+            after_colon = free_segment and stripped_prefix.endswith((":", "："))
+            after_underscore = free_segment and stripped_prefix.endswith("_")
+            independent_square = segment.enclosure == "square" and not stripped_prefix
+            if not (after_colon or after_underscore or independent_square):
+                continue
+            categories = _mixed_content_categories(match.group("items"))
+            if len(categories) < 2:
+                continue
+
+            start = len(stripped_prefix) - 1 if after_colon else match.start()
+            extra_spans: tuple[Span, ...] = ()
+            if independent_square and index > 0:
+                previous = collector.segments[index - 1]
+                trailing_colon = re.search(r"[:：]\s*$", previous.text)
+                if previous.enclosure is None and trailing_colon is not None:
+                    extra_spans = (
+                        Span(index - 1, trailing_colon.start(), trailing_colon.end()),
+                    )
+            collector.add_span(
+                rule_id="cardinality.mixed-content",
+                kind="mixed-collection",
+                segment_index=index,
+                start=start,
+                end=match.end(),
+                claims=Claims(
+                    media_type=MediaType.UNKNOWN,
+                    release_kind=ReleaseKind.COLLECTION,
+                ),
+                priority=110,
+                specificity=len(categories),
+                evidence=("collection", "mixed-content"),
+                extra_spans=extra_spans,
+                captures=(match.group("items"),),
+            )
+
+            suffix = text[match.end() :]
+            if suffix and _is_mixed_content_metadata_tail(suffix):
+                collector.add_span(
+                    rule_id="metadata.mixed-content-tail",
+                    kind="tag",
+                    segment_index=index,
+                    start=match.end(),
+                    end=len(text),
+                    priority=25,
+                    overlap_policy=OverlapPolicy.SHARED,
+                )
 
         for rule_id, pattern in (
             ("media.movie-cjk", _MOVIE_CJK),
@@ -1256,6 +1442,39 @@ def _is_metadata_tail(text: str) -> bool:
     return not _contains_title(residual)
 
 
+def _inside_range_before_trailing_episode(
+    text: str, explicit_match: re.Match[str]
+) -> bool:
+    for range_match in _RANGE.finditer(text):
+        if not (
+            range_match.start() <= explicit_match.start()
+            and explicit_match.end() <= range_match.end()
+        ):
+            continue
+        if sum(1 for _ in _EXPLICIT_EPISODE.finditer(range_match.group())) != 2:
+            continue
+        if _trailing_release_episode(text[range_match.end() :]) is not None:
+            return True
+    return False
+
+
+def _is_mixed_content_metadata_tail(text: str) -> bool:
+    residual = text
+    for pattern in (
+        *_TECHNICAL_PATTERNS,
+        _CJK_SUBTITLE_TAG,
+        _DUB,
+        _DATE,
+        _YEAR,
+        _FILE_SIZE,
+        _HASH,
+    ):
+        residual = pattern.sub(" ", residual)
+    residual = _MIXED_CONTENT_TAIL_TOKEN.sub(" ", residual)
+    residual = re.sub(r"[\s_;；:：,，/|+.-]+", "", residual)
+    return not residual
+
+
 def _reconstruct_titles(
     working: list[_ResidualSegment],
 ) -> tuple[str | None, str | None, str | None]:
@@ -1403,6 +1622,33 @@ def _special_media(marker: str) -> MediaType:
     if marker == "oad":
         return MediaType.OAD
     return MediaType.SPECIAL
+
+
+def _mixed_content_categories(manifest: str) -> frozenset[str]:
+    categories: set[str] = set()
+    for item in re.split(r"\s*[+＋]\s*", manifest):
+        match = _MIXED_CONTENT_NAME_AT_START.match(item)
+        if match is None:
+            continue
+        marker = match.group("name").casefold().replace(" ", "")
+        if marker.startswith("tv"):
+            category = "tv"
+        elif marker in {"sp", "special"}:
+            category = "special"
+        elif marker in {"movie", "劇場版", "劇場", "剧场版", "剧场"}:
+            category = "movie"
+        elif marker in {"manga", "漫画", "漫畫"}:
+            category = "manga"
+        elif marker in {"novel", "小说", "小說"}:
+            category = "novel"
+        elif marker in {"music", "音乐", "音樂"}:
+            category = "music"
+        elif marker in {"other", "其他", "extra", "extras"}:
+            category = "other"
+        else:
+            category = marker
+        categories.add(category)
+    return frozenset(categories)
 
 
 def _int(value: str | None) -> int | None:
