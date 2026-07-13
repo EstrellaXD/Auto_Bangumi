@@ -1,7 +1,7 @@
 import Axios from 'axios';
 import type { AxiosError, AxiosResponse } from 'axios';
 import { router } from '@/router';
-import type { ApiSuccess, StatusCode } from '#/api';
+import type { ApiError, ApiErrorResponse, StatusCode } from '#/api';
 
 declare module 'axios' {
   export interface AxiosRequestConfig {
@@ -29,6 +29,32 @@ function showErrorThrottled(msg: string) {
   useMessage().error(msg);
 }
 
+function normalizeFastApiDetail(detail: unknown): string {
+  if (typeof detail === 'string') return detail.trim();
+  if (!Array.isArray(detail)) return '';
+
+  return detail
+    .map((issue) => {
+      if (typeof issue === 'string') return issue.trim();
+      if (!issue || typeof issue !== 'object') return '';
+
+      const candidate = issue as { loc?: unknown; msg?: unknown };
+      const message =
+        typeof candidate.msg === 'string' ? candidate.msg.trim() : '';
+      if (!message) return '';
+
+      const location = Array.isArray(candidate.loc)
+        ? candidate.loc
+            .filter((part) => part !== 'body')
+            .map(String)
+            .join('.')
+        : '';
+      return location ? `${location}: ${message}` : message;
+    })
+    .filter(Boolean)
+    .join('; ');
+}
+
 /** A 401 means the session is gone — drop the flag and get back to the login
  * page. Skip the redirect when we're already there (a bad-credentials 401 on
  * the login form) so it doesn't fight the login flow. */
@@ -41,17 +67,22 @@ function handleAuthExpired() {
   }
 }
 
-export function onResponseError(err: AxiosError<ApiSuccess>) {
+export function onResponseError(err: AxiosError<ApiErrorResponse>) {
   const status = err.response?.status as StatusCode;
-  const msg_en = err.response?.data?.msg_en ?? '';
-  const msg_zh = err.response?.data?.msg_zh ?? '';
+  const responseData = err.response?.data;
+  const msg_en =
+    typeof responseData?.msg_en === 'string' ? responseData.msg_en : '';
+  const msg_zh =
+    typeof responseData?.msg_zh === 'string' ? responseData.msg_zh : '';
+  const detail = normalizeFastApiDetail(responseData?.detail);
 
   const { returnUserLangText } = useMyI18n();
 
-  const errorMsg = returnUserLangText({
-    en: msg_en,
-    'zh-CN': msg_zh,
-  });
+  const errorMsg =
+    returnUserLangText({
+      en: msg_en,
+      'zh-CN': msg_zh,
+    }) || detail;
 
   const silent = err.config?.silent === true;
 
@@ -65,7 +96,7 @@ export function onResponseError(err: AxiosError<ApiSuccess>) {
         })
       );
     }
-    const error = {
+    const error: ApiError = {
       status: 0,
       msg_en: 'Network error',
       msg_zh: '网络错误',
@@ -73,10 +104,16 @@ export function onResponseError(err: AxiosError<ApiSuccess>) {
     return Promise.reject(error);
   }
 
+  const error: ApiError = {
+    status,
+    msg_en,
+    msg_zh,
+    ...(detail ? { detail } : {}),
+  };
+
   if (silent) {
     // Still handle the auth side effect (logout + redirect), but no toast.
     if (status === 401) handleAuthExpired();
-    const error = { status, msg_en, msg_zh };
     return Promise.reject(error);
   }
 
@@ -84,7 +121,13 @@ export function onResponseError(err: AxiosError<ApiSuccess>) {
     /** token 过期 - only logout on auth errors */
     case 401:
       handleAuthExpired();
-      if (errorMsg) showErrorThrottled(errorMsg);
+      showErrorThrottled(
+        errorMsg ||
+          returnUserLangText({
+            en: 'Authentication failed. Please check your credentials or sign in again.',
+            'zh-CN': '身份验证失败，请检查凭据或重新登录。',
+          })
+      );
       break;
     /** 执行失败 */
     case 406:
@@ -112,12 +155,6 @@ export function onResponseError(err: AxiosError<ApiSuccess>) {
       );
       break;
   }
-
-  const error = {
-    status,
-    msg_en,
-    msg_zh,
-  };
 
   return Promise.reject(error);
 }

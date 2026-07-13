@@ -75,15 +75,17 @@ export const useAuth = createSharedComposable(() => {
   function update() {
     if (!formVerify()) return;
 
-    apiAuth.update(user.username, user.password).then((res) => {
-      if (res.message.toLocaleLowerCase() === 'update success') {
+    return apiAuth
+      .update(user.username, user.password)
+      .then(() => {
         clearUser();
         message.success(t('notify.update_success'));
-      } else {
+      })
+      .catch(() => {
+        // The response interceptor already surfaces the request failure. Keep
+        // the username for retry, but do not retain the submitted password.
         user.password = '';
-        message.error(t('notify.update_failed'));
-      }
-    });
+      });
   }
 
   return {

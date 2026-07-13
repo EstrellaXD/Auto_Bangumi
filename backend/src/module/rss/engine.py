@@ -10,20 +10,31 @@ from module.conf import settings
 from module.database import Database
 from module.database.bangumi import _groups_are_similar, match_bangumi_in_list
 from module.downloader import AddResult, DownloadClient
-from module.models import Bangumi, Episode, ResponseModel, RSSItem, Torrent
+from module.models import Bangumi, Movie, ResponseModel, RSSItem, Torrent
 from module.network import RequestContent
 from module.notification.events import (
     DownloadFailureEvent,
     RssFailureEvent,
     SystemEvent,
 )
-from module.parser.analyser.raw_parser import raw_parser
+from module.parser.analyser.selector import (
+    parse_configured_release_title,
+    parser_engine_snapshot,
+)
+from module.parser.analyser.tokenizer import (
+    MediaType,
+    ParsedRelease,
+)
+from module.parser.release_policy import preference_identity, preference_revision
 
 logger = logging.getLogger(__name__)
 
 # Delay between consecutive requests to the same host. Firing all feeds of one
 # site at once gets the whole batch rate-limited with HTTP 429 (#1026).
 RSS_PER_HOST_DELAY = 2.0
+
+_PreferenceKey = tuple[int, MediaType, int, int | float]
+_PreferenceRank = tuple[int, int]
 
 
 def _resolution_matches(candidate: str | None, preferred: str | None) -> bool:
@@ -35,15 +46,15 @@ def _resolution_matches(candidate: str | None, preferred: str | None) -> bool:
     return normalized_candidate == normalized_preferred
 
 
-def _preference_score(episode: Episode, bangumi: Bangumi) -> int:
+def _preference_score(release: ParsedRelease, bangumi: Bangumi) -> int:
     """候选版本相对番剧发布组/分辨率偏好的匹配得分：每命中一项 +1。"""
     score = 0
     if bangumi.preferred_group and _groups_are_similar(
-        episode.group, bangumi.preferred_group
+        release.group, bangumi.preferred_group
     ):
         score += 1
     if bangumi.preferred_resolution and _resolution_matches(
-        episode.resolution, bangumi.preferred_resolution
+        release.resolution, bangumi.preferred_resolution
     ):
         score += 1
     return score
@@ -193,51 +204,67 @@ class RSSEngine:
         未设置偏好的番剧完全不受影响（沿用旧行为，多字幕组各自下载全部集数）。
 
         规则：
-        - 该集已有下载版本时，新到的版本只有严格优于已下载版本（得分更高）
-          才会被保留，平局或更差一律跳过——不删除已下载的旧版本，只是不再
-          重复下载。
-        - 同一批次内同一集出现多个候选时，只保留得分最高的一个。
-        - 无法从种子名解析出集数的候选不参与去重判断，始终保留（保守回退，
-          避免因解析失败漏下载）。
+        - 内容身份包含媒体类型、规范化季度和集数，防止正片、跨季及特典互相
+          冲突。
+        - 该内容已有下载版本时，新到版本只有偏好得分更高，或偏好得分相同但
+          修订号更高时才保留；偏好匹配始终优先于修订号。
+        - 同一批次内同一内容出现多个候选时，只保留排序最高的一个。
+        - 无法得到安全单集身份的候选不参与去重，始终保留（保守回退，避免因
+          解析失败或把 Movie/合集/PV 当成单集而漏下载）。
 
         返回需要跳过下载的种子对象 id（``id(torrent)``），供调用方在本轮
         ``refresh_rss`` 内部过滤，不做跨请求持久化。
         """
         skip_ids: set[int] = set()
 
-        # 已下载版本：按 (bangumi_id, episode) 记录当前最高得分
-        existing_best: dict[tuple[int, int], int] = {}
+        # 已下载版本：按完整内容身份记录当前最高 (偏好得分, 修订号)。
+        existing_best: dict[_PreferenceKey, _PreferenceRank] = {}
         for bangumi_id, torrents in existing_downloaded.items():
             bangumi = preference_bangumi.get(bangumi_id)
             if not bangumi:
                 continue
             for torrent in torrents:
-                episode = raw_parser(torrent.name)
-                if episode is None:
+                release = parse_configured_release_title(torrent.name)
+                if release is None:
                     continue
-                key = (bangumi_id, episode.episode)
-                score = _preference_score(episode, bangumi)
-                existing_best[key] = max(existing_best.get(key, -1), score)
+                identity = preference_identity(release, default_season=bangumi.season)
+                if identity is None:
+                    continue
+                key = (bangumi_id, identity[0], identity[1], identity[2])
+                rank = (
+                    _preference_score(release, bangumi),
+                    preference_revision(release),
+                )
+                previous = existing_best.get(key)
+                if previous is None or rank > previous:
+                    existing_best[key] = rank
 
-        # 本批次候选：按 (bangumi_id, episode) 分组
-        batch_groups: dict[tuple[int, int], list[tuple[Torrent, int]]] = defaultdict(
-            list
+        # 本批次候选：按 (bangumi_id, media_type, season, episode) 分组。
+        batch_groups: dict[_PreferenceKey, list[tuple[Torrent, _PreferenceRank]]] = (
+            defaultdict(list)
         )
         for torrent, bangumi in matched:
             if bangumi.id is None or bangumi.id not in preference_bangumi:
                 continue
-            episode = raw_parser(torrent.name)
-            if episode is None:
+            release = parse_configured_release_title(torrent.name)
+            if release is None:
                 continue
-            key = (bangumi.id, episode.episode)
-            batch_groups[key].append((torrent, _preference_score(episode, bangumi)))
+            identity = preference_identity(release, default_season=bangumi.season)
+            if identity is None:
+                continue
+            key = (bangumi.id, identity[0], identity[1], identity[2])
+            rank = (
+                _preference_score(release, bangumi),
+                preference_revision(release),
+            )
+            batch_groups[key].append((torrent, rank))
 
         for key, candidates in batch_groups.items():
-            best_score = max(score for _, score in candidates)
-            best_torrent = next(t for t, s in candidates if s == best_score)
+            best_rank = max(rank for _, rank in candidates)
+            best_torrent = next(t for t, rank in candidates if rank == best_rank)
             prior_best = existing_best.get(key)
-            keep_best = prior_best is None or best_score > prior_best
-            for torrent, _score in candidates:
+            keep_best = prior_best is None or best_rank > prior_best
+            for torrent, _rank in candidates:
                 if torrent is best_torrent and keep_best:
                     continue
                 skip_ids.add(id(torrent))
@@ -245,6 +272,13 @@ class RSSEngine:
         return skip_ids
 
     async def refresh_rss(
+        self, client: DownloadClient, rss_id: Optional[int] = None
+    ) -> list[SystemEvent]:
+        """Refresh feeds with one parser engine for the complete workflow."""
+        with parser_engine_snapshot():
+            return await self._refresh_rss(client, rss_id)
+
+    async def _refresh_rss(
         self, client: DownloadClient, rss_id: Optional[int] = None
     ) -> list[SystemEvent]:
         # Get All RSS Items
@@ -382,6 +416,46 @@ class RSSEngine:
             await self.db.torrent.add_all(to_persist)
         await self.db.commit()
         return events
+
+    async def download_movie(self, movie: Movie):
+        if not movie.rss_link:
+            return ResponseModel(
+                status=False,
+                status_code=406,
+                msg_en=f"Download movie {movie.official_title} failed: no RSS link.",
+                msg_zh=f"下载剧场版 {movie.official_title} 失败：缺少 RSS 链接。",
+            )
+        async with RequestContent() as req:
+            filter_pattern = movie.filter.replace(",", "|") if movie.filter else ""
+            torrents = await req.get_torrents(movie.rss_link, filter_pattern)
+            if torrents:
+                async with DownloadClient() as client:
+                    result = await client.add_torrent(
+                        torrents, movie  # type: ignore[arg-type]
+                    )
+                    if result is AddResult.FAILED:
+                        return ResponseModel(
+                            status=False,
+                            status_code=502,
+                            msg_en=f"Download movie {movie.official_title} failed.",
+                            msg_zh=f"下载剧场版 {movie.official_title} 失败。",
+                        )
+                    for torrent in torrents:
+                        torrent.downloaded = True
+                    await self.db.torrent.add_all(torrents)
+                    return ResponseModel(
+                        status=True,
+                        status_code=200,
+                        msg_en=f"Download movie {movie.official_title} successfully.",
+                        msg_zh=f"下载剧场版 {movie.official_title} 成功。",
+                    )
+            else:
+                return ResponseModel(
+                    status=False,
+                    status_code=406,
+                    msg_en=f"[Engine] Download movie {movie.official_title} failed.",
+                    msg_zh=f"下载剧场版 {movie.official_title} 失败。",
+                )
 
     async def download_bangumi(self, bangumi: Bangumi):
         async with RequestContent() as req:

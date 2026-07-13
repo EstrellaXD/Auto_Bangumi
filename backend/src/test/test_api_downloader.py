@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from module.api import v1
+from module.models import RenameOperation
 from module.security.api import get_current_user
 
 # ---------------------------------------------------------------------------
@@ -77,6 +78,76 @@ class TestAuthRequired:
         response = unauthed_client.get("/api/v1/downloader/torrents")
         assert response.status_code == 401
 
+
+class TestRenameConflicts:
+    def test_list_conflicts(self, authed_client):
+        row = RenameOperation(
+            id=7,
+            downloader_type="qbittorrent",
+            kind="conflict",
+            state="conflict",
+            new_task_id="new-v2",
+            save_path="/downloads/Show/Season 1",
+            source_path="raw-v2.mkv",
+            target_path="Show S01E01.mkv",
+            last_error="target exists",
+        )
+        with patch("module.api.downloader.Database") as mock_database:
+            db = MagicMock()
+            db.rename_operation.list_conflicts = AsyncMock(return_value=[row])
+            mock_database.return_value.__aenter__ = AsyncMock(return_value=db)
+            mock_database.return_value.__aexit__ = AsyncMock(return_value=False)
+            response = authed_client.get("/api/v1/downloader/rename-conflicts")
+
+        assert response.status_code == 200
+        assert response.json()[0]["id"] == 7
+        assert response.json()[0]["state"] == "conflict"
+
+    def test_retry_deletes_terminal_conflict(self, authed_client):
+        row = RenameOperation(
+            id=7,
+            downloader_type="qbittorrent",
+            kind="conflict",
+            state="conflict",
+            new_task_id="new-v2",
+            save_path="/downloads/Show/Season 1",
+            source_path="raw-v2.mkv",
+            target_path="Show S01E01.mkv",
+        )
+        with patch("module.api.downloader.Database") as mock_database:
+            db = MagicMock()
+            db.rename_operation.get = AsyncMock(return_value=row)
+            db.rename_operation.delete = AsyncMock(return_value=True)
+            mock_database.return_value.__aenter__ = AsyncMock(return_value=db)
+            mock_database.return_value.__aexit__ = AsyncMock(return_value=False)
+            response = authed_client.post("/api/v1/downloader/rename-conflicts/7/retry")
+
+        assert response.status_code == 200
+        db.rename_operation.delete.assert_awaited_once_with(7)
+
+    def test_retry_rejects_active_replacement(self, authed_client):
+        row = RenameOperation(
+            id=7,
+            downloader_type="qbittorrent",
+            kind="replacement",
+            state="new_promoted",
+            new_task_id="new-v2",
+            old_task_id="old-v1",
+            save_path="/downloads/Show/Season 1",
+            source_path="raw-v2.mkv",
+            target_path="Show S01E01.mkv",
+        )
+        with patch("module.api.downloader.Database") as mock_database:
+            db = MagicMock()
+            db.rename_operation.get = AsyncMock(return_value=row)
+            mock_database.return_value.__aenter__ = AsyncMock(return_value=db)
+            mock_database.return_value.__aexit__ = AsyncMock(return_value=False)
+            response = authed_client.post("/api/v1/downloader/rename-conflicts/7/retry")
+
+        assert response.status_code == 409
+
+
+class TestOtherAuthRequired:
     @patch("module.security.api.DEV_AUTH_BYPASS", False)
     def test_pause_torrents_unauthorized(self, unauthed_client):
         """POST /downloader/torrents/pause without auth returns 401."""

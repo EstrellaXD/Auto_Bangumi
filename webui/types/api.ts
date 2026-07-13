@@ -10,15 +10,28 @@ export type ApiErrorMessage = AuthError | LoginError;
  * 406 Not Acceptable
  * 500 Internal Server Error
  */
-export type StatusCode = 401 | 404 | 406 | 500;
+export type StatusCode = 400 | 401 | 403 | 404 | 406 | 409 | 422 | 500;
 
 export interface ApiError {
-  status: StatusCode;
+  status: StatusCode | 0;
   msg_en: string;
   msg_zh: string;
+  detail?: string;
 }
 
 export interface ApiSuccess {
   msg_en: string;
   msg_zh: string;
+}
+
+export interface FastApiValidationIssue {
+  loc?: Array<string | number>;
+  msg: string;
+  type?: string;
+}
+
+export interface ApiErrorResponse {
+  msg_en?: string;
+  msg_zh?: string;
+  detail?: string | FastApiValidationIssue[];
 }

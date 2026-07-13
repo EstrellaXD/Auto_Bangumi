@@ -99,6 +99,7 @@ const canProceed = computed(() => Boolean(downloaderData.value.host));
           <input
             v-model="downloaderData.host"
             type="text"
+            :aria-label="t('config.downloader_set.host')"
             placeholder="172.17.0.1:8080"
             class="setup-input"
           />
@@ -108,6 +109,8 @@ const canProceed = computed(() => Boolean(downloaderData.value.host));
           <input
             v-model="downloaderData.username"
             type="text"
+            :aria-label="t('config.downloader_set.username')"
+            autocomplete="username"
             placeholder="admin"
             class="setup-input"
           />
@@ -117,6 +120,8 @@ const canProceed = computed(() => Boolean(downloaderData.value.host));
           <input
             v-model="downloaderData.password"
             type="password"
+            :aria-label="t('config.downloader_set.password')"
+            autocomplete="current-password"
             class="setup-input"
           />
         </ab-field>
@@ -125,13 +130,17 @@ const canProceed = computed(() => Boolean(downloaderData.value.host));
           <input
             v-model="downloaderData.path"
             type="text"
+            :aria-label="t('config.downloader_set.path')"
             placeholder="/downloads/Bangumi"
             class="setup-input"
           />
         </ab-field>
 
         <ab-field :label="t('config.downloader_set.ssl')">
-          <NSwitch v-model:value="downloaderData.ssl" />
+          <NSwitch
+            v-model:value="downloaderData.ssl"
+            :aria-label="t('config.downloader_set.ssl')"
+          />
         </ab-field>
       </div>
 

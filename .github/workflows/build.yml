@@ -31,7 +31,7 @@ jobs:
       - name: Test
         run: |
           mkdir -p backend/config
-          cd backend && uv run pytest src/test -v
+          cd backend && uv run pytest src/test -v -m "not e2e"
 
   webui-test:
     runs-on: ubuntu-latest
@@ -90,34 +90,12 @@ jobs:
       - name: Classify trigger
         id: classify
         env:
-          TAG: ${{ github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
-        run: |
-          RELEASE=0
-          DEV=0
-          BUILD_TEST=0
-          VERSION=Test
-          if [[ '${{ github.ref_type }}' == 'tag' ]]; then
-            if [[ "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              if git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
-                RELEASE=1
-                VERSION="$TAG"
-              else
-                echo "::error::Stable tag $TAG does not point to a commit on main; refusing to release"
-                exit 1
-              fi
-            elif [[ "$TAG" == *'alpha'* || "$TAG" == *'beta'* ]]; then
-              RELEASE=1
-              DEV=1
-              VERSION="$TAG"
-            fi
-          elif [[ '${{ github.event_name }}' == 'pull_request' && "$HEAD_REF" == *'dev'* ]]; then
-            BUILD_TEST=1
-          fi
-          echo "release=$RELEASE" >> $GITHUB_OUTPUT
-          echo "dev=$DEV" >> $GITHUB_OUTPUT
-          echo "build_test=$BUILD_TEST" >> $GITHUB_OUTPUT
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: python3 scripts/classify_release.py --output "$GITHUB_OUTPUT"
       - name: Check result
         run: |
           echo "release: ${{ steps.classify.outputs.release }}"

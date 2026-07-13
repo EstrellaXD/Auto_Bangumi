@@ -6,6 +6,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from module.composition import auth_service
 from module.conf import settings
 from module.security.ip_allowlist import (  # noqa: F401  (re-exported for existing importers)
     _is_allowed,
@@ -19,9 +20,9 @@ logger = logging.getLogger(__name__)
 class McpAccessMiddleware(BaseHTTPMiddleware):
     """Configurable access control for MCP endpoint.
 
-    Checks client IP against ``settings.security.mcp_whitelist`` CIDR ranges,
-    and ``Authorization`` header against ``settings.security.mcp_tokens``.
-    If the whitelist is empty and no tokens are configured, all access is denied.
+    Checks client IP against ``settings.security.mcp_whitelist`` CIDR ranges or
+    validates a database-backed bearer token with ``scope=mcp``. Legacy
+    plaintext configuration tokens are not part of the request path.
     """
 
     async def dispatch(self, request: Request, call_next):
@@ -29,8 +30,10 @@ class McpAccessMiddleware(BaseHTTPMiddleware):
         auth_header = request.headers.get("authorization", "")
         if auth_header.startswith("Bearer "):
             token = auth_header[7:]
-            if token and token in settings.security.mcp_tokens:
-                return await call_next(request)
+            if token:
+                user = await auth_service.authenticate_api_token(token, scope="mcp")
+                if user is not None:
+                    return await call_next(request)
 
         # Check IP whitelist
         client_host = request.client.host if request.client else None

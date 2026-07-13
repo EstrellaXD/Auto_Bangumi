@@ -65,6 +65,9 @@ async def rename_tick(notifier: NotificationManager) -> None:
     async with DownloadClient() as client:
         renamer = Renamer(client)
         renamed_info = await renamer.rename()
+        rename_events = list(renamer.events)
+    if rename_events:
+        await asyncio.gather(*[notifier.send_event(event) for event in rename_events])
     if settings.notification.enable and renamed_info:
         # Gather across renamed items so a batch rename (e.g. first import of
         # a season) doesn't serialize N notification round-trips.

@@ -1,0 +1,139 @@
+services:
+  app:
+    image: ${AB_E2E_APP_IMAGE:-auto-bangumi:e2e}
+    pull_policy: never
+    environment:
+      TZ: UTC
+      PUID: ${AB_E2E_PUID:-1000}
+      PGID: ${AB_E2E_PGID:-1000}
+      UMASK: "022"
+      AB_WEBUI_PORT: "7892"
+      AB_DEV_NO_AUTH: "0"
+    depends_on:
+      mock-upstream:
+        condition: service_healthy
+      fake-qb:
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: ${AB_E2E_CONFIG_DIR:?AB_E2E_CONFIG_DIR must be set}
+        target: /app/config
+      - type: bind
+        source: ${AB_E2E_DATA_DIR:?AB_E2E_DATA_DIR must be set}
+        target: /app/data
+      - type: bind
+        source: ${AB_E2E_DOWNLOAD_DIR:?AB_E2E_DOWNLOAD_DIR must be set}
+        target: /downloads
+      - type: bind
+        source: ${AB_E2E_LOG_FILE:?AB_E2E_LOG_FILE must be set}
+        target: /app/data/log.txt
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:7892/health"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+    stop_grace_period: 20s
+    networks:
+      - e2e
+
+  mock-upstream:
+    image: ${AB_E2E_MOCK_IMAGE:-auto-bangumi-e2e/mock-upstream:local}
+    pull_policy: never
+    build:
+      context: ../..
+      dockerfile: e2e/mock-upstream/Dockerfile
+    environment:
+      HOST: 0.0.0.0
+      PORT: "18888"
+      FIXTURES_ROOT: /fixtures
+    init: true
+    read_only: true
+    volumes:
+      - type: bind
+        source: ${AB_E2E_FIXTURES_DIR:?AB_E2E_FIXTURES_DIR must be set}
+        target: /fixtures
+        read_only: true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:18888/health', timeout=2)
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s
+    networks:
+      - e2e
+
+  fake-qb:
+    image: ${AB_E2E_FAKE_QB_IMAGE:-auto-bangumi-e2e/fake-qb:local}
+    pull_policy: never
+    build:
+      context: ../..
+      dockerfile: e2e/fake-qb/Dockerfile
+    environment:
+      HOST: 0.0.0.0
+      PORT: "8080"
+      QB_USERNAME: admin
+      QB_PASSWORD: adminadmin
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/__admin/state', timeout=2)
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s
+    networks:
+      - e2e
+
+  port-proxy:
+    image: ${AB_E2E_PROXY_IMAGE:-auto-bangumi-e2e/port-proxy:local}
+    pull_policy: never
+    build:
+      context: ../..
+      dockerfile: e2e/port-proxy/Dockerfile
+    environment:
+      HOST: 0.0.0.0
+      FORWARDS: >-
+        17892=app:7892,18888=mock-upstream:18888,
+        18080=fake-qb:8080,28080=qbittorrent:8080
+    depends_on:
+      app:
+        condition: service_healthy
+    init: true
+    read_only: true
+    ports:
+      - "127.0.0.1::17892"
+      - "127.0.0.1::18888"
+      - "127.0.0.1::18080"
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import socket; socket.create_connection(('127.0.0.1', 17892), timeout=2).close()
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s
+    networks:
+      - e2e
+      - host-access
+
+networks:
+  e2e:
+    internal: true
+  host-access:

@@ -4,8 +4,12 @@ import type { TupleToUnion } from './utils';
 export type DownloaderType = ['qbittorrent', 'aria2'];
 /** rss parser 语言 */
 export type RssParserLang = ['zh', 'en', 'jp'];
+/** RSS 标题解析引擎（tokenizer 仍处于 Preview） */
+export type RssParserEngine = ['classic', 'tokenizer'];
 /** 重命名方式 */
 export type RenameMethod = ['normal', 'pn', 'advance', 'none'];
+/** 修订版文件名冲突处理策略 */
+export type RevisionConflictPolicy = ['hold', 'replace'];
 /** 代理类型 */
 export type ProxyType = ['http', 'https', 'socks5'];
 /** 通知类型 */
@@ -17,7 +21,7 @@ export type NotificationType = [
   'wecom',
   'gotify',
   'pushover',
-  'webhook',
+  'webhook'
 ];
 /** LLM 提供商 id（内置三家 + 预设/插件，开放集合） */
 export type LLMProviderId = string;
@@ -50,6 +54,7 @@ export interface Downloader {
 }
 export interface RssParser {
   enable: boolean;
+  engine: TupleToUnion<RssParserEngine>;
   filter: Array<string>;
   language: TupleToUnion<RssParserLang>;
 }
@@ -57,6 +62,7 @@ export interface BangumiManage {
   enable: boolean;
   eps_complete: boolean;
   rename_method: TupleToUnion<RenameMethod>;
+  revision_conflict_policy: TupleToUnion<RevisionConflictPolicy>;
   group_tag: boolean;
   remove_bad_torrent: boolean;
   track_orphans: boolean;
@@ -189,6 +195,7 @@ export const initConfig: Config = {
   },
   rss_parser: {
     enable: true,
+    engine: 'classic',
     filter: [],
     language: 'zh',
   },
@@ -196,6 +203,7 @@ export const initConfig: Config = {
     enable: true,
     eps_complete: true,
     rename_method: 'normal',
+    revision_conflict_policy: 'hold',
     group_tag: true,
     remove_bad_torrent: true,
     track_orphans: true,

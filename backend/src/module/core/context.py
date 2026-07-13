@@ -28,6 +28,7 @@ from module.update import (
     first_run,
     from_30_to_31,
     from_31_to_32,
+    migrate_legacy_auth_tokens,
     run_migrations,
 )
 
@@ -201,6 +202,7 @@ class AppContext:
         self._start_info()
         if not Checker.check_database():
             await first_run()
+            await migrate_legacy_auth_tokens()
             logger.info("No db file exists, create database file.")
             self.first_run_boot = True
             self._startup_done = True
@@ -227,6 +229,7 @@ class AppContext:
                 # Always check schema version and run pending migrations,
                 # in case a previous migration was interrupted or failed.
                 await run_migrations()
+        await migrate_legacy_auth_tokens()
         if not Checker.check_img_cache():
             logger.info("No image cache exists, create image cache.")
             await cache_image()

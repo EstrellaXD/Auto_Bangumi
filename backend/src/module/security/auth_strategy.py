@@ -5,6 +5,7 @@
 
 from abc import ABC, abstractmethod
 
+from sqlalchemy import text
 from sqlmodel import select
 
 from module.database.engine import async_session_factory
@@ -69,6 +70,12 @@ class PasskeyAuthStrategy(AuthStrategy):
                     msg_zh="Passkey 凭证无效",
                 )
 
+            # Passkey verification updates the signature counter. Acquire the
+            # SQLite write snapshot before loading the credential so a
+            # concurrent writer cannot commit between SELECT and UPDATE and
+            # trigger a WAL snapshot-upgrade failure (or race the counter).
+            await session.execute(text("BEGIN IMMEDIATE"))
+
             # 2. 查找 passkey
             passkey = await passkey_db.get_passkey_by_credential_id(credential_id_str)
             if not passkey:
@@ -84,12 +91,19 @@ class PasskeyAuthStrategy(AuthStrategy):
                 select(User).where(User.id == passkey.user_id)
             )
             user = result.scalar_one_or_none()
-            if not user:
+            if not user or not user.enabled:
                 return ResponseModel(
                     status_code=401,
                     status=False,
                     msg_en="User not found",
                     msg_zh="用户不存在",
+                )
+            if user.id is None:
+                return ResponseModel(
+                    status_code=401,
+                    status=False,
+                    msg_en="User is not available",
+                    msg_zh="用户不可用",
                 )
 
             # 4. 如果提供了 username，验证一致性
@@ -124,7 +138,11 @@ class PasskeyAuthStrategy(AuthStrategy):
                     status=True,
                     msg_en="Login successfully with passkey",
                     msg_zh="通过 Passkey 登录成功",
-                    data={"username": user.username},
+                    data={
+                        "user_id": user.id,
+                        "username": user.username,
+                        "credential_id": credential_id_str,
+                    },
                 )
 
             except ValueError as e:

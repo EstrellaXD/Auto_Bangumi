@@ -5,6 +5,7 @@ from pathlib import PureWindowsPath
 
 from module.conf import PLATFORM, settings
 from module.models import Bangumi, BangumiUpdate
+from module.models.movie import Movie, MovieUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +78,17 @@ def is_ep(file_path: PathLike[str] | str):
     return file_depth(file_path) <= 2
 
 
-def gen_save_path(data: Bangumi | BangumiUpdate):
+def _media_folder(data: Bangumi | BangumiUpdate | Movie | MovieUpdate) -> str:
+    title = data.official_title or "Unknown Bangumi"
+    folder = sanitize_path_fragment(f"{title} ({data.year})" if data.year else title)
+    if folder:
+        return folder
+    # 标题全由保留字符组成时清洗结果为空——不能让所有这类条目
+    # 坍缩到同一个下载目录里
+    return "Unknown Bangumi"
+
+
+def gen_save_path(data: Bangumi | BangumiUpdate | Movie | MovieUpdate) -> str:
     """Generate save path for a bangumi.
 
     The save path uses the adjusted season number (season + season_offset)
@@ -87,15 +98,9 @@ def gen_save_path(data: Bangumi | BangumiUpdate):
     specials/OVA/OAD land in "Season 0" (Jellyfin/Plex convention) instead of
     being interleaved with regular episodes.
     """
-    folder = sanitize_path_fragment(
-        f"{data.official_title} ({data.year})" if data.year else data.official_title
-    )
-    if not folder:
-        # 标题全由保留字符组成时清洗结果为空——不能让所有这类番剧
-        # 坍缩到同一个 ``…//Season N`` 目录里
-        folder = "Unknown Bangumi"
+    folder = _media_folder(data)
     episode_type = getattr(data, "episode_type", "episode")
-    if episode_type == "movie":
+    if isinstance(data, (Movie, MovieUpdate)) or episode_type == "movie":
         # 电影/剧场版：Title (Year)/Title (Year).ext，不建 Season 子目录
         return str(Path(settings.downloader.path) / folder)
     # Apply season_offset to get the adjusted season number for the folder
@@ -110,6 +115,19 @@ def gen_save_path(data: Bangumi | BangumiUpdate):
         )
     save_path = Path(settings.downloader.path) / folder / f"Season {adjusted_season}"
     return str(save_path)
+
+
+def gen_movie_save_path(data: Movie | MovieUpdate) -> str:
+    """Generate the flat save directory used by a movie/gekijouban."""
+    return str(Path(settings.downloader.path) / _media_folder(data))
+
+
+def movie_rule_name(data: Movie) -> str:
+    return (
+        f"[{data.group_name}] {data.official_title}"
+        if settings.bangumi_manage.group_tag
+        else data.official_title
+    )
 
 
 def rule_name(data: Bangumi):

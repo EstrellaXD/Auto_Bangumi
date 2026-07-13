@@ -65,6 +65,10 @@
       "eps": "番剧补全",
       "group_tag": "添加组标签",
       "method": "重命名方式",
+      "revision_conflict_hint": "启用替换后，仅在更高修订版成功就位后删除旧种子及其数据。",
+      "revision_conflict_hold": "保留现有文件",
+      "revision_conflict_policy": "修订版冲突处理",
+      "revision_conflict_replace": "替换为更高修订版",
       "title": "番剧管理设置",
       "track_orphans": "记录未匹配种子"
     },
@@ -101,6 +105,10 @@
     },
     "parser_set": {
       "enable": "启用",
+      "engine": "标题解析器",
+      "engine_classic": "经典解析器（稳定）",
+      "engine_tokenizer": "通用解析器（Preview）",
+      "engine_hint": "经典模式保持现有解析行为；Preview 支持剧集、OVA、剧场版、范围和混合合集。两种模式不会自动互相回退。",
       "exclude": "排除",
       "language": "语言",
       "source": "数据源",
@@ -597,6 +605,43 @@
       "subscribe": "确认订阅"
     }
   },
+  "access": {
+    "title": "用户与访问控制",
+    "users": "用户",
+    "users_hint": "所有启用用户拥有相同权限。",
+    "tokens": "API 令牌",
+    "tokens_hint": "令牌仅以哈希保存，明文只显示一次。",
+    "add_user": "添加用户",
+    "add_token": "创建令牌",
+    "user_created": "用户已创建",
+    "username": "用户名",
+    "password": "密码",
+    "enabled": "已启用",
+    "disabled": "已禁用",
+    "toggle_user": "切换 {username} 状态",
+    "delete": "删除",
+    "delete_user_confirm": "确认删除 {username}？",
+    "token_name": "令牌名称",
+    "token_scope": "作用域",
+    "token_created": "令牌已创建",
+    "token_once": "请立即复制此令牌，之后无法再次显示。",
+    "one_time_token": "一次性令牌",
+    "token_copied": "令牌已复制",
+    "copy": "复制",
+    "revoke": "撤销",
+    "revoke_token_confirm": "确认撤销此令牌？",
+    "owner": "所属用户",
+    "unknown_user": "未知用户",
+    "last_used": "上次使用",
+    "expires_at": "过期时间",
+    "token_status_active": "有效",
+    "token_status_expired": "已过期",
+    "token_status_revoked": "已撤销",
+    "never": "从未",
+    "no_tokens": "暂无令牌",
+    "loading": "加载中…",
+    "create": "创建"
+  },
   "topbar": {
     "add": {
       "aggregate": "聚合 RSS",
@@ -682,6 +727,10 @@
       "llm_plugin_install_failed": {
         "title": "LLM 插件安装失败",
         "body": "{plugin_id}：{message}"
+      },
+      "rename_conflict": {
+        "title": "媒体文件重命名冲突",
+        "body": "{torrent_name} → {target_path}：{reason}"
       }
     }
   }

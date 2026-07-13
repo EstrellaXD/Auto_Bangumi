@@ -1,13 +1,16 @@
 import json
 import logging
 import re
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
 from sqlmodel import and_, delete, false, or_, select
 
 from module.models import Bangumi, BangumiUpdate
+
+if TYPE_CHECKING:
+    from module.parser.analyser.tokenizer.result import ParsedRelease
 
 logger = logging.getLogger(__name__)
 
@@ -110,12 +113,16 @@ def _find_semantic_match(data: Bangumi, candidates: list[Bangumi]) -> Optional[B
         is_exact_duplicate = (
             candidate.title_raw == data.title_raw
             and candidate.group_name == data.group_name
+            and candidate.season == data.season
+            and candidate.episode_type == data.episode_type
         )
         if is_exact_duplicate:
             continue
 
         is_semantic_match = (
-            candidate.dpi == data.dpi
+            candidate.season == data.season
+            and candidate.episode_type == data.episode_type
+            and candidate.dpi == data.dpi
             and candidate.subtitle == data.subtitle
             and candidate.source == data.source
             and _groups_are_similar(candidate.group_name, data.group_name)
@@ -151,16 +158,63 @@ def match_bangumi_in_list(
     (the job the old module-level TTL cache used to do). Returns the bangumi
     with the longest matching pattern for specificity.
     """
+    # Lazy import avoids the database -> parser -> database import cycle during
+    # application startup while still giving matching the typed parser result.
+    from module.parser.analyser.selector import parse_configured_release_title_outcome
+
+    parse_outcome = parse_configured_release_title_outcome(torrent_name)
+    release = parse_outcome.result
+    if parse_outcome.engine == "tokenizer":
+        from module.parser.release_policy import (
+            PersistenceTarget,
+            persistence_target,
+        )
+
+        if (
+            release is None
+            or persistence_target(release) is not PersistenceTarget.BANGUMI
+        ):
+            return None
     best_match: Optional[Bangumi] = None
-    best_match_len = 0
+    best_rank = (-1, -1, -1)
     for bangumi in bangumi_list:
-        if bangumi.deleted:
+        if bangumi.deleted or not _release_matches_bangumi(release, bangumi):
             continue
         for pattern in _all_title_patterns(bangumi):
-            if pattern in torrent_name and len(pattern) > best_match_len:
+            if pattern not in torrent_name:
+                continue
+            group_match = int(
+                release is not None
+                and _groups_are_similar(release.group, bangumi.group_name)
+            )
+            rank = (len(pattern), group_match, bangumi.season)
+            if rank > best_rank:
                 best_match = bangumi
-                best_match_len = len(pattern)
+                best_rank = rank
     return best_match
+
+
+def _release_matches_bangumi(release: "ParsedRelease | None", bangumi: Bangumi) -> bool:
+    if release is None:
+        return True
+    if release.is_mixed_collection:
+        return False
+
+    from module.parser.analyser.tokenizer import MediaType
+
+    if release.media_type in {MediaType.PV, MediaType.OPENING, MediaType.ENDING}:
+        return False
+    if release.media_type is MediaType.MOVIE:
+        expected_type = "movie"
+    elif release.media_type in {MediaType.OVA, MediaType.OAD, MediaType.SPECIAL}:
+        expected_type = "special"
+    else:
+        expected_type = "episode"
+    if bangumi.episode_type != expected_type:
+        return False
+    if expected_type == "special":
+        return bangumi.season == 0
+    return release.season is None or bangumi.season == release.season
 
 
 class BangumiDatabase:
@@ -247,7 +301,7 @@ class BangumiDatabase:
         return _all_title_patterns(bangumi)
 
     async def find_duplicate(self, data: Bangumi) -> Optional[Bangumi]:
-        """Find an existing bangumi with the same title_raw and group_name.
+        """Find an existing rule with the same typed subscription identity.
 
         Legacy data may contain multiple rows for the same key; return the
         oldest (lowest id) deterministically and warn instead of raising.
@@ -258,6 +312,8 @@ class BangumiDatabase:
                 and_(
                     Bangumi.title_raw == data.title_raw,
                     Bangumi.group_name == data.group_name,
+                    Bangumi.season == data.season,
+                    Bangumi.episode_type == data.episode_type,
                 )
             )
             .order_by(Bangumi.id)  # type: ignore[arg-type]
@@ -266,10 +322,13 @@ class BangumiDatabase:
         rows = list(result.scalars().all())
         if len(rows) > 1:
             logger.warning(
-                "Multiple bangumi rows share (title_raw=%s, group_name=%s); "
+                "Multiple bangumi rows share (title_raw=%s, group_name=%s, "
+                "season=%s, episode_type=%s); "
                 "using the oldest (id=%s)",
                 data.title_raw,
                 data.group_name,
+                data.season,
+                data.episode_type,
                 rows[0].id,
             )
         return rows[0] if rows else None
@@ -310,24 +369,38 @@ class BangumiDatabase:
         if not datas:
             return 0
 
-        # Batch query: get all existing (title_raw, group_name) combinations in one query
+        # Batch query: load all existing typed subscription identities at once.
         # This replaces N individual _is_duplicate() calls with a single SELECT
-        keys_to_check = [(d.title_raw, d.group_name) for d in datas]
+        keys_to_check = [
+            (d.title_raw, d.group_name, d.season, d.episode_type) for d in datas
+        ]
         conditions = [
-            and_(Bangumi.title_raw == tr, Bangumi.group_name == gn)
-            for tr, gn in keys_to_check
+            and_(
+                Bangumi.title_raw == tr,
+                Bangumi.group_name == gn,
+                Bangumi.season == season,
+                Bangumi.episode_type == episode_type,
+            )
+            for tr, gn, season, episode_type in keys_to_check
         ]
         if conditions:
-            statement = select(Bangumi.title_raw, Bangumi.group_name).where(
-                or_(*conditions)
-            )
+            statement = select(
+                Bangumi.title_raw,
+                Bangumi.group_name,
+                Bangumi.season,
+                Bangumi.episode_type,
+            ).where(or_(*conditions))
             result = await self.session.execute(statement)
             existing = set(result.all())
         else:
             existing = set()
 
         # Filter out exact duplicates
-        to_add = [d for d in datas if (d.title_raw, d.group_name) not in existing]
+        to_add = [
+            d
+            for d in datas
+            if (d.title_raw, d.group_name, d.season, d.episode_type) not in existing
+        ]
 
         # Batch query: load all semantic-duplicate candidates (grouped by
         # official_title) in one SELECT, instead of one find_semantic_duplicate()
@@ -376,7 +449,7 @@ class BangumiDatabase:
         seen = set()
         unique_to_add = []
         for d in really_to_add:
-            key = (d.title_raw, d.group_name)
+            key = (d.title_raw, d.group_name, d.season, d.episode_type)
             if key not in seen:
                 seen.add(key)
                 unique_to_add.append(d)
@@ -506,9 +579,17 @@ class BangumiDatabase:
         return bangumi
 
     async def search_official_title(self, official_title: str) -> Optional[Bangumi]:
-        statement = select(Bangumi).where(Bangumi.official_title == official_title)
+        statement = (
+            select(Bangumi)
+            .where(Bangumi.official_title == official_title)
+            .order_by(
+                Bangumi.episode_type,  # type: ignore[arg-type]
+                Bangumi.season,  # type: ignore[arg-type]
+                Bangumi.id,  # type: ignore[arg-type]
+            )
+        )
         result = await self.session.execute(statement)
-        return result.scalar_one_or_none()
+        return result.scalars().first()
 
     async def search_ids(self, ids: list[int]) -> list[Bangumi]:
         """Batch lookup multiple bangumi by their IDs."""
@@ -531,41 +612,21 @@ class BangumiDatabase:
         if not match_datas:
             return torrent_list
 
-        # Build index for O(1) lookup after regex match
-        # Include both title_raw and all aliases
-        title_index: dict[str, Bangumi] = {}
-        for m in match_datas:
-            # Add main title_raw (skip if None to avoid TypeError in sorted())
-            if m.title_raw:
-                title_index[m.title_raw] = m
-            # Add all aliases
-            for alias in _get_aliases_list(m):
-                if alias:
-                    title_index[alias] = m
-
-        # Build compiled regex pattern for fast substring matching
-        # Sort by length descending so longer (more specific) matches are found first
-        sorted_titles = sorted(title_index.keys(), key=len, reverse=True)
-        # Escape special regex characters and join with alternation
-        pattern = "|".join(re.escape(title) for title in sorted_titles)
-        title_regex = re.compile(pattern)
-
         unmatched = []
-        rss_updated = set()
+        rss_updated: set[int | tuple[str, int, str]] = set()
         for torrent in torrent_list:
-            match = title_regex.search(torrent.name)
-            if match:
-                matched_title = match.group(0)
-                match_data = title_index[matched_title]
-                # Use the bangumi's main title_raw for rss_updated tracking
-                if (
-                    rss_link not in match_data.rss_link
-                    and match_data.title_raw not in rss_updated
-                ):
+            match_data = match_bangumi_in_list(torrent.name, match_datas)
+            if match_data is not None:
+                match_key: int | tuple[str, int, str] = match_data.id or (
+                    match_data.title_raw,
+                    match_data.season,
+                    match_data.episode_type,
+                )
+                if rss_link not in match_data.rss_link and match_key not in rss_updated:
                     match_data = await self.session.merge(match_data)
                     match_data.rss_link += f",{rss_link}"
                     match_data.added = False
-                    rss_updated.add(match_data.title_raw)
+                    rss_updated.add(match_key)
             else:
                 unmatched.append(torrent)
         # Batch commit all rss_link updates

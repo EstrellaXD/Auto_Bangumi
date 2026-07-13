@@ -8,6 +8,8 @@ and is skipped unless explicitly opted into.
 
 import importlib
 import os
+from unittest.mock import patch
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 
@@ -18,6 +20,11 @@ from module.parser.analyser.tmdb_parser import tmdb_parser
 # object — so `import module.parser.analyser.tmdb_parser as x` would resolve
 # to the function, not the module. Go through importlib to get the module.
 tmdb_parser_module = importlib.import_module("module.parser.analyser.tmdb_parser")
+
+
+def _query_params(url: str) -> dict[str, list[str]]:
+    return parse_qs(urlsplit(url).query)
+
 
 _SHOW_INFO = {
     "genres": [{"id": 16, "name": "Animation"}],
@@ -88,10 +95,14 @@ async def test_tmdb_parser_movie_fallback_when_tv_search_misses(mocker):
     """When search/tv has no results at all, fall back to search/movie
     (e.g. for a theatrical release with no matching TV series)."""
 
+    search_requests: list[tuple[str, dict[str, list[str]]]] = []
+
     async def fake_get_json(url: str) -> dict:
         if "/search/tv" in url:
+            search_requests.append(("tv", _query_params(url)))
             return {"results": []}
         if "/search/movie" in url:
+            search_requests.append(("movie", _query_params(url)))
             return _MOVIE_SEARCH_RESULT
         return {}
 
@@ -107,6 +118,13 @@ async def test_tmdb_parser_movie_fallback_when_tv_search_misses(mocker):
     assert tmdb_info.original_title == "君の名は。"
     assert tmdb_info.year == "2016"
     assert tmdb_info.last_season == 0
+    assert [
+        (kind, query["query"], query["language"]) for kind, query in search_requests
+    ] == [
+        ("tv", ["你的名字"], ["zh-CN"]),
+        ("tv", ["你的名字"], ["zh-CN"]),
+        ("movie", ["你的名字"], ["zh-CN"]),
+    ]
 
 
 async def test_tmdb_parser_is_movie_queries_movie_search_directly(mocker):
@@ -134,6 +152,68 @@ async def test_tmdb_parser_is_movie_queries_movie_search_directly(mocker):
     assert tmdb_info.title == "你的名字。"
 
 
+async def test_tv_whitespace_retry_preserves_language(mocker):
+    search_requests: list[dict[str, list[str]]] = []
+
+    async def fake_get_json(url: str) -> dict:
+        if "/search/tv" in url:
+            query = _query_params(url)
+            search_requests.append(query)
+            if query["query"] == ["海 盗 战 记"]:
+                return {"results": []}
+            return {"results": [{"id": 82684}]}
+        if "/season/" in url:
+            return {"episodes": []}
+        return _SHOW_INFO
+
+    mocker.patch.object(
+        tmdb_parser_module.RequestContent, "get_json", side_effect=fake_get_json
+    )
+    tmdb_parser_module._tmdb_cache.clear()
+
+    tmdb_info = await tmdb_parser("海 盗 战 记", "jp", test=True)
+
+    assert tmdb_info is not None
+    assert [query["query"] for query in search_requests] == [
+        ["海 盗 战 记"],
+        ["海盗战记"],
+    ]
+    assert [query["language"] for query in search_requests] == [
+        ["ja-JP"],
+        ["ja-JP"],
+    ]
+
+
+async def test_movie_whitespace_retry_preserves_language(mocker):
+    search_requests: list[dict[str, list[str]]] = []
+
+    async def fake_get_json(url: str) -> dict:
+        if "/search/movie" not in url:
+            return {}
+        query = _query_params(url)
+        search_requests.append(query)
+        if query["query"] == ["Your Name"]:
+            return {"results": []}
+        return _MOVIE_SEARCH_RESULT
+
+    mocker.patch.object(
+        tmdb_parser_module.RequestContent, "get_json", side_effect=fake_get_json
+    )
+    tmdb_parser_module._tmdb_cache.clear()
+
+    tmdb_info = await tmdb_parser("Your Name", "en", test=True, is_movie=True)
+
+    assert tmdb_info is not None
+    assert [query["query"] for query in search_requests] == [
+        ["Your Name"],
+        ["YourName"],
+    ]
+    assert [query["language"] for query in search_requests] == [
+        ["en-US"],
+        ["en-US"],
+    ]
+
+
 async def test_tmdb_parser_movie_search_no_results_returns_none(mocker):
     async def fake_get_json(url: str) -> dict:
         return {"results": []}
@@ -148,29 +228,59 @@ async def test_tmdb_parser_movie_search_no_results_returns_none(mocker):
     assert tmdb_info is None
 
 
+@pytest.mark.parametrize(
+    ("builder_name", "path"),
+    (("search_url", "/3/search/tv"), ("search_movie_url", "/3/search/movie")),
+)
+@pytest.mark.parametrize(
+    ("language", "expected_locale"),
+    (("zh", "zh-CN"), ("jp", "ja-JP"), ("en", "en-US")),
+)
+def test_search_urls_encode_query_and_language(
+    builder_name: str,
+    path: str,
+    language: str,
+    expected_locale: str,
+):
+    title = "关于我转生变成史莱姆 & Friends"
+    with patch.object(tmdb_parser_module, "settings") as mock_settings:
+        mock_settings.network.tmdb_base_url = "https://tmdb.example/base/"
+        mock_settings.network.tmdb_api_key = "custom key"
+        builder = getattr(tmdb_parser_module, builder_name)
+        url = builder(title, language)
+
+    parsed = urlsplit(url)
+    assert parsed.scheme == "https"
+    assert parsed.netloc == "tmdb.example"
+    assert parsed.path == f"/base{path}"
+    assert parse_qs(parsed.query) == {
+        "api_key": ["custom key"],
+        "page": ["1"],
+        "query": [title],
+        "include_adult": ["false"],
+        "language": [expected_locale],
+    }
+
+
 def test_search_url_uses_custom_api_key():
     """用户自配的 TMDB API key 优先于内置共享 key (#975)。"""
-    from unittest.mock import patch
-
     with patch.object(tmdb_parser_module, "settings") as mock_settings:
         mock_settings.network.tmdb_base_url = "https://api.themoviedb.org"
         mock_settings.network.tmdb_api_key = "customkey123"
-        url = tmdb_parser_module.search_url("test")
+        url = tmdb_parser_module.search_url("test", "zh")
 
-    assert "api_key=customkey123" in url
+    assert _query_params(url)["api_key"] == ["customkey123"]
 
 
 def test_search_url_falls_back_to_builtin_key():
-    from unittest.mock import patch
-
     from module.conf import TMDB_API
 
     with patch.object(tmdb_parser_module, "settings") as mock_settings:
         mock_settings.network.tmdb_base_url = "https://api.themoviedb.org"
         mock_settings.network.tmdb_api_key = ""
-        url = tmdb_parser_module.search_url("test")
+        url = tmdb_parser_module.search_url("test", "zh")
 
-    assert f"api_key={TMDB_API}" in url
+    assert _query_params(url)["api_key"] == [TMDB_API]
 
 
 def test_network_config_tmdb_api_key_defaults_empty():

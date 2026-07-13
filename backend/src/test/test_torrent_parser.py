@@ -4,7 +4,13 @@ import pytest
 
 from module.models.torrent import SubtitleFile
 from module.parser.analyser import torrent_parser
+from module.parser.analyser.raw_parser import raw_parser
 from module.parser.analyser.torrent_parser import get_path_basename
+
+ISSUE_1072_TITLE = (
+    "[SubsPlease] Haibara-kun no Tsuyokute Seishun New Game - 06v2 "
+    "(1080p) [E931DD98].mkv"
+)
 
 
 def test_torrent_parser():
@@ -149,6 +155,52 @@ def test_torrent_parser():
     assert bf.group == "Sakurato"
     assert bf.episode == 12
     assert bf.season == 1
+
+
+class TestIssue1072VersionedEpisode:
+    def test_versioned_dash_episode_wins_before_crc_token(self):
+        episode = raw_parser(ISSUE_1072_TITLE)
+
+        assert episode is not None
+        assert episode.title_en == "Haibara-kun no Tsuyokute Seishun New Game"
+        assert episode.season == 1
+        assert episode.episode == 6
+        assert episode.group == "SubsPlease"
+        assert episode.episode_type == "episode"
+
+    @pytest.mark.parametrize(
+        ("token", "expected_episode"),
+        [
+            ("- 06", 6),
+            ("[06v2]", 6),
+            ("E13", 13),
+            ("EP13", 13),
+        ],
+    )
+    def test_supported_episode_tokens_remain_valid(self, token, expected_episode):
+        episode = raw_parser(
+            f"[SubsPlease] Haibara-kun no Tsuyokute Seishun New Game "
+            f"{token} [1080p].mkv"
+        )
+
+        assert episode is not None
+        assert episode.episode == expected_episode
+
+    def test_crc_token_is_not_an_episode_signal(self):
+        episode = raw_parser(
+            "[SubsPlease] Haibara-kun no Tsuyokute Seishun New Game "
+            "(1080p) [E931DD98].mkv"
+        )
+
+        assert episode is None
+
+    def test_title_without_episode_signal_remains_unparseable(self):
+        assert (
+            raw_parser(
+                "[SubsPlease] Haibara-kun no Tsuyokute Seishun New Game " "[1080p].mkv"
+            )
+            is None
+        )
 
 
 class TestMovieFile:

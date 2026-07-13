@@ -15,6 +15,10 @@
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",
     "test": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:chromium": "playwright test --project=chromium-desktop",
+    "test:e2e:webkit": "playwright test --project=webkit-mobile",
+    "test:e2e:typecheck": "tsc --noEmit -p tsconfig.e2e.json",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "generate-pwa-assets": "pwa-assets-generator --preset minimal public/images/logo.svg"
@@ -35,7 +39,9 @@
   "devDependencies": {
     "@antfu/eslint-config": "^0.38.6",
     "@icon-park/vue-next": "^1.4.2",
+    "@iconify-json/simple-icons": "1.2.89",
     "@intlify/unplugin-vue-i18n": "^0.11.0",
+    "@playwright/test": "1.61.1",
     "@storybook/addon-essentials": "^7.6.20",
     "@storybook/addon-interactions": "^7.6.20",
     "@storybook/addon-links": "^7.6.20",

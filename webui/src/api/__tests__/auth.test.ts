@@ -4,24 +4,26 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { mockApiSuccess, mockLoginSuccess } from '@/test/mocks/api';
+import { mockApiSuccess, mockSessionSuccess } from '@/test/mocks/api';
 import { createAxiosMock } from '@/test/mocks/axios';
 
 import { apiAuth } from '@/api/auth';
 import { axios } from '@/utils/axios';
+import type { SessionSuccess, Update } from '#/auth';
 
 vi.mock('@/utils/axios', () => ({ axios: createAxiosMock() }));
 
 describe('Auth API Data Structures', () => {
   describe('login response', () => {
-    it('should have access_token and token_type', () => {
-      expect(mockLoginSuccess.access_token).toBeDefined();
-      expect(mockLoginSuccess.token_type).toBe('bearer');
-    });
+    type HasAccessToken<T> = 'access_token' extends keyof T ? true : false;
+    const sessionHasAccessToken: HasAccessToken<SessionSuccess> = false;
+    const updateHasAccessToken: HasAccessToken<Update> = false;
 
-    it('should have string access_token', () => {
-      expect(typeof mockLoginSuccess.access_token).toBe('string');
-      expect(mockLoginSuccess.access_token.length).toBeGreaterThan(0);
+    it('should expose only non-secret cookie-session state', () => {
+      expect(mockSessionSuccess).toEqual({ authenticated: true });
+      expect(sessionHasAccessToken).toBe(false);
+      expect(updateHasAccessToken).toBe(false);
+      expect('access_token' in mockSessionSuccess).toBe(false);
     });
   });
 
@@ -77,7 +79,7 @@ describe('Auth API Data Structures', () => {
     });
 
     it('should POST api/v1/auth/login with form-encoded credentials when logging in', async () => {
-      (axios.post as any).mockResolvedValue({ data: mockLoginSuccess });
+      (axios.post as any).mockResolvedValue({ data: mockSessionSuccess });
       await apiAuth.login('testuser', 'testpassword');
 
       expect(axios.post).toHaveBeenCalledTimes(1);
@@ -91,14 +93,16 @@ describe('Auth API Data Structures', () => {
       );
     });
 
-    it('should GET api/v1/auth/refresh_token when refreshing the session', async () => {
-      (axios.get as any).mockResolvedValue({ data: mockLoginSuccess });
+    it('should POST api/v1/auth/refresh_token when refreshing the session', async () => {
+      (axios.post as any).mockResolvedValue({ data: mockSessionSuccess });
       await apiAuth.refresh();
       // silent: an expired-session refresh at startup must not toast; the 401
       // handler still logs out and routes to /login.
-      expect(axios.get).toHaveBeenCalledWith('api/v1/auth/refresh_token', {
-        silent: true,
-      });
+      expect(axios.post).toHaveBeenCalledWith(
+        'api/v1/auth/refresh_token',
+        undefined,
+        { silent: true }
+      );
     });
 
     it('should POST api/v1/auth/logout when logging out', async () => {
@@ -108,10 +112,7 @@ describe('Auth API Data Structures', () => {
     });
 
     it('should POST api/v1/auth/update with the new credentials when updating', async () => {
-      (axios.post as any).mockResolvedValue({
-        ...mockLoginSuccess,
-        message: 'update success',
-      });
+      (axios.post as any).mockResolvedValue({ data: mockSessionSuccess });
       await apiAuth.update('newuser', 'newpassword123');
       expect(axios.post).toHaveBeenCalledWith('api/v1/auth/update', {
         username: 'newuser',

@@ -50,6 +50,7 @@ vi.mock('@/hooks/useMyI18n', () => ({
 
 const replace = router.replace as ReturnType<typeof vi.fn>;
 const apiLogin = apiAuth.login as ReturnType<typeof vi.fn>;
+const apiUpdate = apiAuth.update as ReturnType<typeof vi.fn>;
 const passkeyLogin = webauthnLogin as unknown as ReturnType<typeof vi.fn>;
 
 describe('login redirect', () => {
@@ -59,7 +60,7 @@ describe('login redirect', () => {
   });
 
   it('should navigate to Index after a successful password login', async () => {
-    apiLogin.mockResolvedValue({ access_token: 'token' });
+    apiLogin.mockResolvedValue({ authenticated: true });
     const { user, login } = withSetup(() => useAuth());
     user.username = 'admin';
     user.password = 'validpassword123';
@@ -68,6 +69,19 @@ describe('login redirect', () => {
     await login();
 
     expect(replace).toHaveBeenCalledWith({ name: 'Index' });
+  });
+
+  it('should accept the non-secret session response after updating credentials', async () => {
+    apiUpdate.mockResolvedValue({ authenticated: true });
+    const { user, update } = withSetup(() => useAuth());
+    user.username = 'newadmin';
+    user.password = 'newpassword123';
+
+    await update();
+
+    expect(apiUpdate).toHaveBeenCalledWith('newadmin', 'newpassword123');
+    expect(user.username).toBe('');
+    expect(user.password).toBe('');
   });
 
   it('should navigate to Index after a successful passkey login', async () => {

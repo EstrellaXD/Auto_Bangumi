@@ -5,16 +5,14 @@
 import type { BangumiAPI, BangumiRule } from '#/bangumi';
 import type { RSS } from '#/rss';
 import type { ApiSuccess } from '#/api';
-import type { LoginSuccess } from '#/auth';
+import type { SessionSuccess } from '#/auth';
 
 // ============================================================================
 // Auth Mocks
 // ============================================================================
 
-export const mockLoginSuccess: LoginSuccess = {
-  access_token: 'mock_access_token_123',
-  token_type: 'bearer',
-  expire: Date.now() + 86400000, // 24 hours from now
+export const mockSessionSuccess: SessionSuccess = {
+  authenticated: true,
 };
 
 export const mockApiSuccess: ApiSuccess = {
@@ -129,6 +127,7 @@ export const mockConfig = {
   },
   rss_parser: {
     enable: true,
+    engine: 'classic',
     filter: ['720', '\\d+-\\d'],
     language: 'zh',
   },
@@ -136,6 +135,7 @@ export const mockConfig = {
     enable: true,
     eps_complete: false,
     rename_method: 'pn',
+    revision_conflict_policy: 'hold',
     group_tag: false,
     remove_bad_torrent: false,
     track_orphans: true,

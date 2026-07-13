@@ -1,7 +1,7 @@
 import logging
 import re
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from module.database import Database
@@ -38,6 +38,42 @@ class TorrentTagRequest(BaseModel):
 async def get_torrents():
     async with DownloadClient() as client:
         return await client.get_torrent_info(category="Bangumi", status_filter=None)
+
+
+@router.get("/rename-conflicts", dependencies=[Depends(get_current_user)])
+async def get_rename_conflicts():
+    """List durable media rename conflicts awaiting user action."""
+
+    async with Database() as db:
+        rows = await db.rename_operation.list_conflicts()
+    return [row.model_dump(mode="json") for row in rows]
+
+
+@router.post(
+    "/rename-conflicts/{operation_id}/retry",
+    dependencies=[Depends(get_current_user)],
+)
+async def retry_rename_conflict(operation_id: int):
+    """Clear one terminal conflict so the next rename pass revalidates it."""
+
+    async with Database() as db:
+        row = await db.rename_operation.get(operation_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="Rename conflict not found")
+        if row.state != "conflict" or row.kind != "conflict":
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Only non-destructive terminal conflicts can be retried; "
+                    "replacement recovery state must be preserved"
+                ),
+            )
+        await db.rename_operation.delete(operation_id)
+    return {
+        "status": True,
+        "msg_en": "Rename conflict cleared; it will be revalidated",
+        "msg_zh": "重命名冲突已清除，将在下一轮重新校验",
+    }
 
 
 @router.post("/torrents/pause", dependencies=[Depends(get_current_user)])

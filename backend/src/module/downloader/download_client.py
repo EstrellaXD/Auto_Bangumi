@@ -7,7 +7,7 @@ from module.conf import settings
 from module.models import Bangumi, Torrent
 from module.network import RequestContent
 
-from .base import AddResult, DownloaderClient
+from .base import AddResult, DownloaderClient, RenameOutcome, RenameResult
 from .path import gen_save_path
 
 logger = logging.getLogger(__name__)
@@ -312,18 +312,51 @@ class DownloadClient:
             return []
         return await self.client.torrents_files(torrent_hash=torrent_hash)
 
+    async def torrent_exists(self, torrent_hash: str) -> bool | None:
+        """Return task existence, or ``None`` when the backend cannot prove it.
+
+        Destructive recovery paths must distinguish a confirmed absence from
+        a transient query failure; an empty bulk snapshot is not sufficient.
+        """
+
+        if not self._supports("can_query", "torrent_exists"):
+            return None
+        return await self.client.torrent_exists(torrent_hash)
+
     async def rename_torrent_file(
         self, _hash, old_path, new_path, verify: bool = True
-    ) -> bool:
+    ) -> RenameResult:
         if not self._supports("can_rename", "rename_torrent_file"):
-            return False
-        result = await self.client.torrents_rename_file(
+            return RenameResult(
+                RenameOutcome.RETRYABLE_FAILURE,
+                detail=f"{type(self.client).__name__} does not support file rename",
+            )
+        raw_result = await self.client.torrents_rename_file(
             torrent_hash=_hash, old_path=old_path, new_path=new_path, verify=verify
         )
-        if result:
+        # Compatibility for test doubles and third-party clients that still
+        # implement the pre-3.3.4 boolean contract.  Concrete built-in clients
+        # all return RenameResult, and the facade always exposes RenameResult.
+        if isinstance(raw_result, RenameResult):
+            result = raw_result
+        else:
+            result = RenameResult(
+                (
+                    RenameOutcome.RENAMED
+                    if raw_result
+                    else RenameOutcome.RETRYABLE_FAILURE
+                ),
+                detail=None if raw_result else "legacy downloader returned false",
+            )
+        if result.succeeded:
             logger.info(f"{old_path} >> {new_path}")
         else:
-            logger.debug("Rename failed: %s >> %s", old_path, new_path)
+            logger.debug(
+                "Rename %s: %s >> %s",
+                result.outcome.value,
+                old_path,
+                new_path,
+            )
         return result
 
     async def delete_torrent(self, hashes, delete_files: bool = True) -> bool:

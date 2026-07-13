@@ -3,19 +3,32 @@ import logging
 import time
 
 from module.conf import settings
-from module.models import Bangumi
+from module.models import Bangumi, Movie
 from module.models.bangumi import Episode
 from module.models.config import LLM
 from module.parser.analyser import (
     LLMParser,
     mikan_parser,
-    raw_parser,
     tmdb_parser,
     torrent_parser,
 )
 from module.parser.analyser.providers.base import AuthExpiredError
 from module.parser.analyser.providers.credentials import auth_generation
-from module.parser.analyser.raw_parser import _detect_non_episodic_type
+from module.parser.analyser.selector import parse_configured_release_title_with_trace
+from module.parser.analyser.tokenizer import (
+    MediaType,
+    ParsedRelease,
+    ReleaseKind,
+)
+from module.parser.analyser.tokenizer.candidate import Claims
+from module.parser.analyser.tokenizer.compat import to_legacy_episode
+from module.parser.release_policy import (
+    PersistenceTarget,
+    bangumi_episode_type,
+    is_weak_title_only,
+    normalized_season,
+    persistence_target,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -206,6 +219,128 @@ def _record_llm_failure(conf: LLM) -> None:
         _llm_breaker_until = time.monotonic() + conf.failure_backoff
 
 
+def _llm_media_type(episode: Episode) -> MediaType:
+    if episode.episode_type == "movie" or episode.is_movie:
+        return MediaType.MOVIE
+    if episode.episode_type == "special":
+        return MediaType.SPECIAL
+    return MediaType.EPISODE
+
+
+def _project_classic_release(
+    raw: str, release: ParsedRelease | None
+) -> ParsedRelease | None:
+    """Apply the pre-refactor compatibility contract to a Classic result."""
+    if release is None:
+        return None
+    episode = to_legacy_episode(release)
+    if episode is None:
+        return None
+    return ParsedRelease(
+        raw=raw,
+        title_en=episode.title_en,
+        title_zh=episode.title_zh,
+        title_jp=episode.title_jp,
+        group=episode.group,
+        season=episode.season,
+        season_raw=episode.season_raw,
+        episode=episode.episode,
+        media_type=_llm_media_type(episode),
+        resolution=episode.resolution,
+        source=episode.source,
+        subtitle=episode.sub,
+    )
+
+
+def _has_structured_release_claims(claims: Claims) -> bool:
+    """Whether a title-less parse still identified a concrete resource kind."""
+    return any(
+        value is not None
+        for value in (
+            claims.season,
+            claims.episode,
+            claims.episode_end,
+            claims.media_type,
+            claims.release_kind,
+        )
+    )
+
+
+def _merge_llm_release(
+    raw: str,
+    episode: Episode,
+    deterministic: ParsedRelease | None,
+) -> ParsedRelease:
+    """Convert an LLM result without mutating the cached legacy object.
+
+    LLM titles keep their primary-mode semantics.  When deterministic parsing
+    found a structural bundle, its media/cardinality/season/episode/version
+    fields stay atomic so an LLM cannot create hybrids such as RANGE 7-12 or
+    turn a movie/PV into a weekly episode.
+    """
+
+    media_type = _llm_media_type(episode)
+    release_kind = ReleaseKind.SINGLE
+    use_deterministic_structure = False
+    if deterministic is not None:
+        if (
+            deterministic.media_type is not MediaType.UNKNOWN
+            or deterministic.is_mixed_collection
+        ):
+            media_type = deterministic.media_type
+        release_kind = deterministic.release_kind
+        use_deterministic_structure = bool(
+            deterministic.media_type is not MediaType.UNKNOWN
+            or deterministic.release_kind is not ReleaseKind.SINGLE
+            or deterministic.season is not None
+            or deterministic.episode is not None
+            or deterministic.episode_end is not None
+        )
+
+    season: int | None = episode.season
+    season_raw: str | None = episode.season_raw
+    episode_number: int | float | None = episode.episode
+    episode_end: int | float | None = None
+    episode_title: str | None = None
+    version: int | None = None
+    if deterministic is not None and use_deterministic_structure:
+        season = deterministic.season
+        season_raw = deterministic.season_raw
+        episode_number = deterministic.episode
+        episode_end = deterministic.episode_end
+        episode_title = deterministic.episode_title
+        version = deterministic.version
+
+    return ParsedRelease(
+        raw=raw,
+        title_en=episode.title_en
+        or (deterministic.title_en if deterministic else None),
+        title_zh=episode.title_zh
+        or (deterministic.title_zh if deterministic else None),
+        title_jp=episode.title_jp
+        or (deterministic.title_jp if deterministic else None),
+        group=episode.group or (deterministic.group if deterministic else None),
+        season=season,
+        season_raw=season_raw,
+        episode=episode_number,
+        episode_end=episode_end,
+        episode_title=episode_title,
+        media_type=media_type,
+        release_kind=release_kind,
+        resolution=episode.resolution
+        or (deterministic.resolution if deterministic else None),
+        source=episode.source or (deterministic.source if deterministic else None),
+        subtitle=episode.sub or (deterministic.subtitle if deterministic else None),
+        codecs=deterministic.codecs if deterministic else (),
+        audio=deterministic.audio if deterministic else (),
+        container=deterministic.container if deterministic else None,
+        version=version,
+        year=deterministic.year if deterministic else None,
+        tags=deterministic.tags if deterministic else (),
+        evidence=deterministic.evidence if deterministic else (),
+    )
+
+
 class TitleParser:
     def __init__(self):
         pass
@@ -254,67 +389,123 @@ class TitleParser:
             logger.warning("Please change bangumi info manually.")
 
     @staticmethod
-    async def raw_parser(raw: str) -> Bangumi | None:
+    def _resolve_titles(release: ParsedRelease) -> tuple[str | None, str | None]:
+        """Extract official_title and title_raw from a generic release."""
         language = settings.rss_parser.language
+        titles = {
+            "zh": release.title_zh,
+            "en": release.title_en,
+            "jp": release.title_jp,
+        }
+        title_raw = release.title_en or release.title_zh or release.title_jp
+        if titles[language]:
+            official_title = titles[language]
+        elif titles["zh"]:
+            official_title = titles["zh"]
+        elif titles["en"]:
+            official_title = titles["en"]
+        elif titles["jp"]:
+            official_title = titles["jp"]
+        else:
+            official_title = title_raw
+        return official_title, title_raw
+
+    @staticmethod
+    def _release_to_bangumi(
+        release: ParsedRelease, official_title: str, title_raw: str
+    ) -> Bangumi:
+        episode = release.episode
+        return Bangumi(
+            official_title=official_title,
+            title_raw=title_raw,
+            year=str(release.year) if release.year is not None else None,
+            season=normalized_season(release),
+            season_raw=release.season_raw,
+            group_name=release.group or "",
+            dpi=release.resolution,
+            source=release.source,
+            subtitle=release.subtitle,
+            eps_collect=episode is None or episode <= 1,
+            episode_offset=0,
+            filter=",".join(settings.rss_parser.filter),
+            episode_type=bangumi_episode_type(release),
+        )
+
+    @staticmethod
+    def _release_to_movie(
+        release: ParsedRelease, official_title: str, title_raw: str
+    ) -> Movie:
+        return Movie(
+            official_title=official_title,
+            title_raw=title_raw,
+            year=release.year,
+            group_name=release.group or "",
+            dpi=release.resolution,
+            source=release.source,
+            subtitle=release.subtitle,
+            filter=",".join(settings.rss_parser.filter),
+        )
+
+    @staticmethod
+    async def raw_parser(raw: str) -> Bangumi | Movie | None:
         try:
             llm_conf = _llm_config()
-            episode = None
-            from_llm = False
-            # primary 模式：LLM 优先解析每个标题；失败时用正则兜底，保证不丢标题
+            parse_outcome = parse_configured_release_title_with_trace(raw)
+            logger.debug(
+                "Parsing resource with %s engine: %s", parse_outcome.engine, raw
+            )
+            deterministic = parse_outcome.result
+            if parse_outcome.engine == "classic":
+                deterministic = _project_classic_release(raw, deterministic)
+            if (
+                deterministic is None
+                and parse_outcome.trace is not None
+                and _has_structured_release_claims(parse_outcome.trace.claims)
+            ):
+                logger.debug("Structured resource has no usable title: %s", raw)
+                return None
+            if deterministic is not None and not deterministic.primary_title:
+                logger.debug("Structured resource has no usable title: %s", raw)
+                return None
+            release: ParsedRelease | None = None
+
+            # primary 模式保留 LLM 标题语义，但确定性结构提示仍参与合并，
+            # 避免关键词误判并确保 range/PV 等准入策略无法被绕过。
             if llm_conf.enable and llm_conf.mode == "primary":
                 episode = await _llm_parse(raw)
-                from_llm = episode is not None
-            if episode is None:
-                episode = raw_parser(raw)
-            # fallback 模式（默认）：正则优先，仅当正则失败时才请求 LLM 兜底
-            if episode is None and llm_conf.enable and llm_conf.mode == "fallback":
-                episode = await _llm_parse(raw)
-                from_llm = episode is not None
-            if episode is None:
-                return None
-            # 正则路径已在剥离字幕组名后的标题上判定过 episode_type，这里只
-            # 给缺少该能力的 LLM 结果补分类；对完整 raw 判定会把组名/标签里
-            # 撞词（如 "[Movie-Fan]"）的普通周更集误判成剧场版/特别篇。
-            if from_llm:
-                detected_episode_type = _detect_non_episodic_type(raw)
-                if detected_episode_type is not None:
-                    episode.episode_type = detected_episode_type
+                if episode is not None:
+                    release = _merge_llm_release(raw, episode, deterministic)
 
-            titles = {
-                "zh": episode.title_zh,
-                "en": episode.title_en,
-                "jp": episode.title_jp,
-            }
-            title_raw = episode.title_en or episode.title_zh or episode.title_jp
-            if titles[language]:
-                official_title = titles[language]
-            elif titles["zh"]:
-                official_title = titles["zh"]
-            elif titles["en"]:
-                official_title = titles["en"]
-            elif titles["jp"]:
-                official_title = titles["jp"]
-            else:
-                official_title = title_raw
+            if release is None:
+                release = deterministic
+
+            # fallback 只处理“解析失败/只有弱标题”的输入。明确识别出的
+            # PV、range、batch、collection 直接遵守业务拒绝策略。
+            should_fallback = deterministic is None or is_weak_title_only(deterministic)
+            if llm_conf.enable and llm_conf.mode == "fallback" and should_fallback:
+                episode = await _llm_parse(raw)
+                if episode is not None:
+                    release = _merge_llm_release(raw, episode, deterministic)
+
+            if release is None:
+                return None
+            target = persistence_target(release)
+            if target is None:
+                logger.debug("Parsed but did not admit resource: %s", raw)
+                return None
+
+            official_title, title_raw = TitleParser._resolve_titles(release)
             if not title_raw:
                 logger.warning("Cannot extract title_raw from '%s', skipping", raw)
                 return None
-            _season = episode.season
+            if not official_title:
+                logger.warning("Cannot extract official_title from '%s', skipping", raw)
+                return None
             logger.debug("RAW:%s >> %s", raw, title_raw)
-            return Bangumi(
-                official_title=official_title,
-                title_raw=title_raw,
-                season=_season,
-                season_raw=episode.season_raw,
-                group_name=episode.group,
-                dpi=episode.resolution,
-                source=episode.source,
-                subtitle=episode.sub,
-                eps_collect=False if episode.episode > 1 else True,
-                offset=0,
-                filter=",".join(settings.rss_parser.filter),
-                episode_type=episode.episode_type,
-            )
+
+            if target is PersistenceTarget.MOVIE:
+                return TitleParser._release_to_movie(release, official_title, title_raw)
+            return TitleParser._release_to_bangumi(release, official_title, title_raw)
         except (ValueError, AttributeError, TypeError) as e:
             logger.warning(f"Cannot parse '{raw}': {type(e).__name__}: {e}")
             return None

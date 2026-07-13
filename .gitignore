@@ -191,6 +191,9 @@ lerna-debug.log*
 node_modules
 dist
 webui/.vite/deps/*
+webui/e2e/.auth/
+webui/playwright-report/
+webui/test-results/
 dist.zip
 dist-ssr
 *.local
@@ -216,6 +219,7 @@ dev-dist
 
 # test file
 test.*
+!webui/e2e/fixtures/test.ts
 
 # local config
 /backend/config/

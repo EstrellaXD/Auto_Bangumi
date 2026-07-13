@@ -1,0 +1,393 @@
+name: Hermetic E2E
+
+on:
+  pull_request: {}
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-pr-${{ github.event.pull_request.number || github.ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+env:
+  E2E_VERSION: 3.3.999-e2e.1
+  PNPM_VERSION: 9.11.0
+  PLAYWRIGHT_VERSION: 1.61.1
+
+jobs:
+  e2e-runtime:
+    name: e2e-runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AB_E2E_PROJECT: ab-e2e-pr-runtime-${{ github.run_id }}-${{ github.run_attempt }}
+      AB_E2E_APP_IMAGE: auto-bangumi:e2e-pr-runtime-${{ github.run_id }}-${{ github.run_attempt }}
+      AB_E2E_CACHE_IMAGE: auto-bangumi:e2e-cache
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare isolated work directory
+        id: paths
+        run: |
+          work_dir="$RUNNER_TEMP/$AB_E2E_PROJECT"
+          mkdir -p "$work_dir/artifacts"
+          {
+            echo "AB_E2E_WORK_DIR=$work_dir"
+            echo "AB_E2E_IMAGE_ARCHIVE=$RUNNER_TEMP/auto-bangumi-e2e-image.tar"
+            echo "UV_CACHE_DIR=$RUNNER_TEMP/uv-cache"
+          } >> "$GITHUB_ENV"
+          {
+            echo "work-dir=$work_dir"
+            echo "image-archive=$RUNNER_TEMP/auto-bangumi-e2e-image.tar"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "0.11.26"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: webui/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: |
+          uv sync --directory backend --locked --group dev
+          pnpm --dir webui install --frozen-lockfile
+
+      - name: Cache production WebUI
+        id: webui-dist
+        uses: actions/cache@v4
+        with:
+          path: webui/dist
+          key: webui-dist-v1-${{ runner.os }}-${{ hashFiles('webui/package.json', 'webui/pnpm-lock.yaml', 'webui/index.html', 'webui/vite.config.*', 'webui/tsconfig*.json', 'webui/src/**', 'webui/public/**') }}
+
+      - name: Build production WebUI
+        if: steps.webui-dist.outputs.cache-hit != 'true'
+        run: pnpm --dir webui run build
+
+      - name: Cache native E2E image
+        id: app-image
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.paths.outputs.image-archive }}
+          key: app-image-v1-3.3.999-e2e.1-${{ runner.os }}-${{ hashFiles('Dockerfile', '.dockerignore', 'entrypoint.sh', 'backend/pyproject.toml', 'backend/uv.lock', 'backend/src/**', 'webui/package.json', 'webui/pnpm-lock.yaml', 'webui/index.html', 'webui/vite.config.*', 'webui/tsconfig*.json', 'webui/src/**', 'webui/public/**') }}
+
+      - name: Load cached native E2E image
+        if: steps.app-image.outputs.cache-hit == 'true'
+        run: |
+          docker load --input "$AB_E2E_IMAGE_ARCHIVE"
+          docker tag "$AB_E2E_CACHE_IMAGE" "$AB_E2E_APP_IMAGE"
+
+      - name: Build and verify native E2E image
+        if: steps.app-image.outputs.cache-hit != 'true'
+        run: |
+          python3 e2e/scripts/build_test_image.py --version "$E2E_VERSION" --image "$AB_E2E_APP_IMAGE" --dist webui/dist
+          docker tag "$AB_E2E_APP_IMAGE" "$AB_E2E_CACHE_IMAGE"
+          docker save "$AB_E2E_CACHE_IMAGE" --output "$AB_E2E_IMAGE_ARCHIVE"
+
+      - name: Audit hermetic sources
+        run: python3 e2e/scripts/audit_sources.py
+
+      - name: Run runtime E2E
+        run: |
+          python3 e2e/scripts/stack.py run --profile browser --project-name "$AB_E2E_PROJECT" --work-dir "$AB_E2E_WORK_DIR" -- uv run --directory backend pytest src/test/e2e/runtime -m e2e -q --tb=long --junitxml="$AB_E2E_WORK_DIR/artifacts/runtime-junit.xml"
+
+      - name: Collect startup diagnostics
+        if: failure()
+        continue-on-error: true
+        run: |
+          python3 e2e/scripts/collect_artifacts.py --artifact-dir "$AB_E2E_WORK_DIR/artifacts/startup-diagnostics" --data-dir "$AB_E2E_WORK_DIR/data" --log-file "$AB_E2E_WORK_DIR/logs/log.txt" -- docker compose --project-name "$AB_E2E_PROJECT" --env-file "$AB_E2E_WORK_DIR/stack.env" --file e2e/compose/browser.yml
+
+      - name: Ensure stack teardown
+        if: always()
+        continue-on-error: true
+        run: |
+          python3 e2e/scripts/stack.py stop --profile browser --project-name "$AB_E2E_PROJECT" --work-dir "$AB_E2E_WORK_DIR"
+
+      - name: Upload runtime diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-runtime-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ steps.paths.outputs.work-dir }}/artifacts
+          if-no-files-found: warn
+          retention-days: 14
+
+  e2e-browser:
+    name: e2e-browser (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: chromium
+            browser: chromium
+            script: test:e2e:chromium
+          - project: webkit-mobile
+            browser: webkit
+            script: test:e2e:webkit
+    env:
+      AB_E2E_PROJECT: ab-e2e-pr-browser-${{ matrix.project }}-${{ github.run_id }}-${{ github.run_attempt }}
+      AB_E2E_APP_IMAGE: auto-bangumi:e2e-pr-browser-${{ matrix.project }}-${{ github.run_id }}-${{ github.run_attempt }}
+      AB_E2E_CACHE_IMAGE: auto-bangumi:e2e-cache
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare isolated work directory
+        id: paths
+        run: |
+          work_dir="$RUNNER_TEMP/$AB_E2E_PROJECT"
+          mkdir -p "$work_dir/artifacts"
+          {
+            echo "AB_E2E_WORK_DIR=$work_dir"
+            echo "AB_E2E_IMAGE_ARCHIVE=$RUNNER_TEMP/auto-bangumi-e2e-image.tar"
+            echo "PLAYWRIGHT_BROWSERS_PATH=$RUNNER_TEMP/ms-playwright"
+          } >> "$GITHUB_ENV"
+          {
+            echo "work-dir=$work_dir"
+            echo "image-archive=$RUNNER_TEMP/auto-bangumi-e2e-image.tar"
+            echo "playwright-path=$RUNNER_TEMP/ms-playwright"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: webui/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        run: pnpm --dir webui install --frozen-lockfile
+
+      - name: Cache Playwright browser
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.paths.outputs.playwright-path }}
+          key: playwright-v1-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}-${{ matrix.browser }}-${{ hashFiles('webui/pnpm-lock.yaml') }}
+
+      - name: Install Playwright browser and system dependencies
+        run: pnpm --dir webui exec playwright install --with-deps "${{ matrix.browser }}"
+
+      - name: Type-check Playwright tests
+        run: pnpm --dir webui run test:e2e:typecheck
+
+      - name: Cache production WebUI
+        id: webui-dist
+        uses: actions/cache@v4
+        with:
+          path: webui/dist
+          key: webui-dist-v1-${{ runner.os }}-${{ hashFiles('webui/package.json', 'webui/pnpm-lock.yaml', 'webui/index.html', 'webui/vite.config.*', 'webui/tsconfig*.json', 'webui/src/**', 'webui/public/**') }}
+
+      - name: Build production WebUI
+        if: steps.webui-dist.outputs.cache-hit != 'true'
+        run: pnpm --dir webui run build
+
+      - name: Cache native E2E image
+        id: app-image
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.paths.outputs.image-archive }}
+          key: app-image-v1-3.3.999-e2e.1-${{ runner.os }}-${{ hashFiles('Dockerfile', '.dockerignore', 'entrypoint.sh', 'backend/pyproject.toml', 'backend/uv.lock', 'backend/src/**', 'webui/package.json', 'webui/pnpm-lock.yaml', 'webui/index.html', 'webui/vite.config.*', 'webui/tsconfig*.json', 'webui/src/**', 'webui/public/**') }}
+
+      - name: Load cached native E2E image
+        if: steps.app-image.outputs.cache-hit == 'true'
+        run: |
+          docker load --input "$AB_E2E_IMAGE_ARCHIVE"
+          docker tag "$AB_E2E_CACHE_IMAGE" "$AB_E2E_APP_IMAGE"
+
+      - name: Build and verify native E2E image
+        if: steps.app-image.outputs.cache-hit != 'true'
+        run: |
+          python3 e2e/scripts/build_test_image.py --version "$E2E_VERSION" --image "$AB_E2E_APP_IMAGE" --dist webui/dist
+          docker tag "$AB_E2E_APP_IMAGE" "$AB_E2E_CACHE_IMAGE"
+          docker save "$AB_E2E_CACHE_IMAGE" --output "$AB_E2E_IMAGE_ARCHIVE"
+
+      - name: Run browser E2E
+        run: |
+          python3 e2e/scripts/stack.py run --profile browser --project-name "$AB_E2E_PROJECT" --work-dir "$AB_E2E_WORK_DIR" -- pnpm --dir webui run "${{ matrix.script }}" --retries=0
+
+      - name: Collect startup diagnostics
+        if: failure()
+        continue-on-error: true
+        run: |
+          python3 e2e/scripts/collect_artifacts.py --artifact-dir "$AB_E2E_WORK_DIR/artifacts/startup-diagnostics" --data-dir "$AB_E2E_WORK_DIR/data" --log-file "$AB_E2E_WORK_DIR/logs/log.txt" -- docker compose --project-name "$AB_E2E_PROJECT" --env-file "$AB_E2E_WORK_DIR/stack.env" --file e2e/compose/browser.yml
+
+      - name: Ensure stack teardown
+        if: always()
+        continue-on-error: true
+        run: |
+          python3 e2e/scripts/stack.py stop --profile browser --project-name "$AB_E2E_PROJECT" --work-dir "$AB_E2E_WORK_DIR"
+
+      - name: Upload browser diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-browser-${{ matrix.project }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ steps.paths.outputs.work-dir }}/artifacts
+            webui/playwright-report
+            webui/test-results
+          if-no-files-found: warn
+          retention-days: 14
+
+  e2e-downloader-image:
+    name: e2e-downloader-image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AB_E2E_PROJECT: ab-e2e-pr-downloader-image-${{ github.run_id }}-${{ github.run_attempt }}
+      AB_E2E_APP_IMAGE: auto-bangumi:e2e-pr-downloader-${{ github.run_id }}-${{ github.run_attempt }}
+      AB_E2E_CACHE_IMAGE: auto-bangumi:e2e-cache
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare isolated work directory
+        id: paths
+        run: |
+          work_dir="$RUNNER_TEMP/$AB_E2E_PROJECT"
+          mkdir -p "$work_dir/artifacts"
+          {
+            echo "AB_E2E_WORK_DIR=$work_dir"
+            echo "AB_E2E_IMAGE_ARCHIVE=$RUNNER_TEMP/auto-bangumi-e2e-image.tar"
+            echo "PLAYWRIGHT_BROWSERS_PATH=$RUNNER_TEMP/ms-playwright"
+          } >> "$GITHUB_ENV"
+          {
+            echo "work-dir=$work_dir"
+            echo "image-archive=$RUNNER_TEMP/auto-bangumi-e2e-image.tar"
+            echo "playwright-path=$RUNNER_TEMP/ms-playwright"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "0.11.26"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: webui/pnpm-lock.yaml
+
+      - name: Install downloader-lane dependencies
+        run: |
+          uv sync --directory backend --locked --group dev
+          pnpm --dir webui install --frozen-lockfile
+
+      - name: Cache Playwright Chromium
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.paths.outputs.playwright-path }}
+          key: playwright-v1-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}-chromium-${{ hashFiles('webui/pnpm-lock.yaml') }}
+
+      - name: Install Chromium and system dependencies
+        run: pnpm --dir webui exec playwright install --with-deps chromium
+
+      - name: Type-check Playwright tests
+        run: pnpm --dir webui run test:e2e:typecheck
+
+      - name: Cache production WebUI
+        id: webui-dist
+        uses: actions/cache@v4
+        with:
+          path: webui/dist
+          key: webui-dist-v1-${{ runner.os }}-${{ hashFiles('webui/package.json', 'webui/pnpm-lock.yaml', 'webui/index.html', 'webui/vite.config.*', 'webui/tsconfig*.json', 'webui/src/**', 'webui/public/**') }}
+
+      - name: Build production WebUI
+        if: steps.webui-dist.outputs.cache-hit != 'true'
+        run: pnpm --dir webui run build
+
+      - name: Cache native E2E image
+        id: app-image
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.paths.outputs.image-archive }}
+          key: app-image-v1-3.3.999-e2e.1-${{ runner.os }}-${{ hashFiles('Dockerfile', '.dockerignore', 'entrypoint.sh', 'backend/pyproject.toml', 'backend/uv.lock', 'backend/src/**', 'webui/package.json', 'webui/pnpm-lock.yaml', 'webui/index.html', 'webui/vite.config.*', 'webui/tsconfig*.json', 'webui/src/**', 'webui/public/**') }}
+
+      - name: Load cached native E2E image
+        if: steps.app-image.outputs.cache-hit == 'true'
+        run: |
+          docker load --input "$AB_E2E_IMAGE_ARCHIVE"
+          docker tag "$AB_E2E_CACHE_IMAGE" "$AB_E2E_APP_IMAGE"
+
+      - name: Build and verify native E2E image
+        if: steps.app-image.outputs.cache-hit != 'true'
+        run: |
+          python3 e2e/scripts/build_test_image.py --version "$E2E_VERSION" --image "$AB_E2E_APP_IMAGE" --dist webui/dist
+          docker tag "$AB_E2E_APP_IMAGE" "$AB_E2E_CACHE_IMAGE"
+          docker save "$AB_E2E_CACHE_IMAGE" --output "$AB_E2E_IMAGE_ARCHIVE"
+
+      - name: Run real downloader and packaged-image E2E
+        run: |
+          python3 e2e/scripts/stack.py run --profile downloader --project-name "$AB_E2E_PROJECT" --work-dir "$AB_E2E_WORK_DIR" -- python3 e2e/scripts/run_downloader_lane.py
+
+      - name: Collect startup diagnostics
+        if: failure()
+        continue-on-error: true
+        run: |
+          python3 e2e/scripts/collect_artifacts.py --artifact-dir "$AB_E2E_WORK_DIR/artifacts/startup-diagnostics" --data-dir "$AB_E2E_WORK_DIR/data" --log-file "$AB_E2E_WORK_DIR/logs/log.txt" -- docker compose --project-name "$AB_E2E_PROJECT" --env-file "$AB_E2E_WORK_DIR/stack.env" --file e2e/compose/browser.yml --file e2e/compose/downloader.yml
+
+      - name: Ensure stack teardown
+        if: always()
+        continue-on-error: true
+        run: |
+          python3 e2e/scripts/stack.py stop --profile downloader --project-name "$AB_E2E_PROJECT" --work-dir "$AB_E2E_WORK_DIR"
+
+      - name: Upload downloader diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-downloader-image-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ steps.paths.outputs.work-dir }}/artifacts
+            webui/playwright-report
+            webui/test-results
+          if-no-files-found: warn
+          retention-days: 14

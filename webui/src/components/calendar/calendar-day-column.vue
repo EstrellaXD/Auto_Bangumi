@@ -53,7 +53,7 @@ const emit = defineEmits<{
           :group="group"
           show-unpin
           @click="emit('card-click', group)"
-          @unpin="(event) => emit('unpin', group, event)"
+          @unpin="emit('unpin', group, $event)"
         />
       </template>
 

@@ -1,0 +1,105 @@
+{
+  "scenarios": {
+    "localized-tv-zh": {
+      "search": {
+        "kind": "tv",
+        "query": "Localized Show",
+        "language": "zh-CN",
+        "results": [{ "id": 1001, "name": "本地化动画" }]
+      },
+      "detail": {
+        "id": 1001,
+        "name": "本地化动画",
+        "original_name": "Localized Show",
+        "first_air_date": "2026-07-01",
+        "poster_path": null,
+        "status": "Returning Series",
+        "genres": [{ "id": 16, "name": "Animation" }],
+        "seasons": [
+          {
+            "season_number": 1,
+            "name": "第 1 季",
+            "air_date": "2026-07-01",
+            "episode_count": 12,
+            "poster_path": null
+          }
+        ]
+      }
+    },
+    "localized-tv-jp": {
+      "search": {
+        "kind": "tv",
+        "query": "Localized Show",
+        "language": "ja-JP",
+        "results": [{ "id": 1001, "name": "ローカライズアニメ" }]
+      },
+      "detail": {
+        "id": 1001,
+        "name": "ローカライズアニメ",
+        "original_name": "Localized Show",
+        "first_air_date": "2026-07-01",
+        "poster_path": null,
+        "status": "Returning Series",
+        "genres": [{ "id": 16, "name": "Animation" }],
+        "seasons": [
+          {
+            "season_number": 1,
+            "name": "第 1 季",
+            "air_date": "2026-07-01",
+            "episode_count": 12,
+            "poster_path": null
+          }
+        ]
+      }
+    },
+    "localized-movie-jp": {
+      "search": {
+        "kind": "movie",
+        "query": "Localized Movie",
+        "language": "ja-JP",
+        "results": [
+          {
+            "id": 2001,
+            "title": "ローカライズ映画",
+            "original_title": "Localized Movie",
+            "release_date": "2026-07-01",
+            "poster_path": null
+          }
+        ]
+      }
+    },
+    "localized-retry-jp": {
+      "search": {
+        "kind": "tv",
+        "query": "RetryLocalizedShow",
+        "initial_query": "Retry Localized Show",
+        "language": "ja-JP",
+        "results": [{ "id": 3001, "name": "再試行アニメ" }]
+      },
+      "detail": {
+        "id": 3001,
+        "name": "再試行アニメ",
+        "original_name": "Retry Localized Show",
+        "first_air_date": "2026-07-01",
+        "poster_path": null,
+        "status": "Returning Series",
+        "genres": [{ "id": 16, "name": "Animation" }],
+        "seasons": [
+          {
+            "season_number": 1,
+            "name": "第 1 季",
+            "air_date": "2026-07-01",
+            "episode_count": 12,
+            "poster_path": null
+          }
+        ]
+      }
+    }
+  },
+  "season": {
+    "episodes": [
+      { "episode_number": 1, "air_date": "2026-07-01" },
+      { "episode_number": 2, "air_date": "2026-07-08" }
+    ]
+  }
+}

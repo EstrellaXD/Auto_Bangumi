@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Offset Review Controls</title>
+    <link>http://mock-upstream:18888/rss/offset-review.xml</link>
+    <description>False-positive and true-positive offset fixtures</description>
+    <item>
+      <title>[SubsPlease] Haibara-kun no Tsuyokute Seishun New Game - 06v2 (1080p) [E931DD98].mkv</title>
+      <link>http://mock-upstream:18888/items/haibara-06v2</link>
+      <pubDate>Wed, 01 Jul 2026 12:00:00 GMT</pubDate>
+      <enclosure url="http://mock-upstream:18888/torrents/tiny-media.torrent" type="application/x-bittorrent" length="0" />
+    </item>
+    <item>
+      <title>[SubsPlease] Haibara-kun no Tsuyokute Seishun New Game - 13 (1080p) [ABCDEF12].mkv</title>
+      <link>http://mock-upstream:18888/items/haibara-13</link>
+      <pubDate>Wed, 08 Jul 2026 12:00:00 GMT</pubDate>
+      <enclosure url="http://mock-upstream:18888/torrents/tiny-media.torrent" type="application/x-bittorrent" length="0" />
+    </item>
+  </channel>
+</rss>

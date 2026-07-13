@@ -4,7 +4,7 @@ from collections import OrderedDict
 from typing import TypeAlias
 
 from module.conf import settings
-from module.models import Bangumi, RSSItem, Torrent
+from module.models import Bangumi, Movie, RSSItem, Torrent
 from module.network import RequestContent
 from module.parser.analyser.tmdb_parser import tmdb_parser
 from module.rss import RSSAnalyser
@@ -109,8 +109,8 @@ class SearchTorrent:
                     yield json.dumps(bangumi.dict(), separators=(",", ":"))
 
     @staticmethod
-    def special_url(data: Bangumi, site: str) -> RSSItem:
-        keywords = [getattr(data, key) for key in SEARCH_KEY if getattr(data, key)]
+    def special_url(data: Bangumi | Movie, site: str) -> RSSItem:
+        keywords = [value for key in SEARCH_KEY if (value := getattr(data, key, None))]
         url = search_url(site, keywords)
         return url
 

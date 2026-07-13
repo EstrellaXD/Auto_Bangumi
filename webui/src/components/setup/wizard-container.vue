@@ -10,7 +10,19 @@ const { t } = useMyI18n();
 <template>
   <div class="wizard-container">
     <div class="wizard-progress">
-      <div class="wizard-progress-bar">
+      <div
+        class="wizard-progress-bar"
+        role="progressbar"
+        :aria-label="
+          t('setup.nav.step', {
+            current: currentStep + 1,
+            total: totalSteps,
+          })
+        "
+        aria-valuemin="1"
+        :aria-valuemax="totalSteps"
+        :aria-valuenow="currentStep + 1"
+      >
         <!-- 按“已到第几步”计算，避免第一步进度条完全空白 -->
         <div
           class="wizard-progress-fill"

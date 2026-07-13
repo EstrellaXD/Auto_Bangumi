@@ -3,25 +3,31 @@ import ipaddress
 import logging
 import socket
 from pathlib import Path
+from typing import Annotated
 from urllib.parse import urlparse
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
+from module.application.auth import AuthenticationService
 from module.conf import VERSION, settings
 from module.core import AppContext
+from module.database import Database
 from module.models import Config, ResponseModel
 from module.models.config import NotificationProvider as ProviderConfig
+from module.models.user import UserUpdate
 from module.network import RequestContent
 from module.notification import PROVIDER_REGISTRY
-from module.security.jwt import get_password_hash, verify_password
+from module.security.api import CredentialKind, get_auth_service, get_principal
+from module.security.jwt import verify_password
 
 from .deps import get_context
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/setup", tags=["setup"])
+AuthService = Annotated[AuthenticationService, Depends(get_auth_service)]
 
 SENTINEL_PATH = Path("config/.setup_complete")
 
@@ -35,7 +41,9 @@ def _require_setup_needed():
         raise HTTPException(status_code=403, detail="Setup already completed.")
 
 
-async def _require_default_admin_or_authenticated(request: Request) -> None:
+async def _require_default_admin_or_authenticated(
+    request: Request, service: AuthenticationService
+) -> int:
     """Extra guard for /setup/complete specifically.
 
     ``_require_setup_needed()`` only compares the on-disk config to its
@@ -45,27 +53,44 @@ async def _require_default_admin_or_authenticated(request: Request) -> None:
     unauthenticated caller could hit /setup/complete on such an install and
     overwrite the admin's real credentials. Allow completion only if the
     caller already has a valid session, or the "admin" account still has the
-    untouched factory-default password.
+    untouched factory-default password. Return that authorization decision as
+    a stable database user ID so completion never re-resolves a mutable name.
     """
-    from module.security.api import get_current_user
-
     try:
-        await get_current_user(request, token=request.cookies.get("token"))
-        return
+        principal = await get_principal(
+            request,
+            token=request.cookies.get("token"),
+            service=service,
+        )
     except HTTPException:
-        pass
-
-    from module.database import Database
+        if request.headers.get("authorization"):
+            raise
+    else:
+        if principal.kind is CredentialKind.SESSION:
+            if principal.user is None or principal.user.id is None:
+                raise HTTPException(status_code=403, detail="Invalid setup session")
+            return principal.user.id
+        if principal.kind is not CredentialKind.DEVELOPMENT or request.headers.get(
+            "authorization"
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="A browser session is required to authorize setup",
+            )
 
     async with Database() as db:
         try:
             user = await db.user.get_user("admin")
-        except HTTPException:
-            # No admin account yet (fresh install) — setup may proceed.
-            return
+        except HTTPException as exc:
+            raise HTTPException(
+                status_code=403, detail="Setup administrator is not available."
+            ) from exc
 
     if not verify_password("adminadmin", user.password):
         raise HTTPException(status_code=403, detail="Setup already completed.")
+    if user.id is None:
+        raise HTTPException(status_code=403, detail="Invalid setup administrator")
+    return user.id
 
 
 def _validate_scheme(url: str) -> None:
@@ -360,23 +385,23 @@ async def test_notification(req: TestNotificationRequest):
 async def complete_setup(
     req: SetupCompleteRequest,
     request: Request,
+    response: Response,
+    service: AuthService,
     ctx: AppContext = Depends(get_context),
 ):
     """Save all wizard configuration and mark setup as complete."""
     _require_setup_needed()
-    await _require_default_admin_or_authenticated(request)
+    authorized_user_id = await _require_default_admin_or_authenticated(request, service)
 
     try:
-        # 1. Update user credentials
-        from module.database import Database
-
-        async with Database() as db:
-            from module.models.user import UserUpdate
-
-            await db.user.update_user(
-                "admin",
-                UserUpdate(username=req.username, password=req.password),
-            )
+        # 1. Update user credentials and revoke every pre-setup session through
+        # the application service's atomic user-mutation boundary. Setup does
+        # not issue a replacement session: the user signs in once afterwards.
+        await service.update_user(
+            authorized_user_id,
+            UserUpdate(username=req.username, password=req.password),
+        )
+        response.delete_cookie(key="token", httponly=True, samesite="strict")
 
         # 2. Update configuration
         config_dict = settings.dict()

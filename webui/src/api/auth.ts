@@ -1,4 +1,4 @@
-import type { LoginSuccess, Update } from '#/auth';
+import type { SessionSuccess, Update } from '#/auth';
 import type { ApiSuccess } from '#/api';
 
 export const apiAuth = {
@@ -8,7 +8,7 @@ export const apiAuth = {
       password,
     });
 
-    const { data } = await axios.post<LoginSuccess>(
+    const { data } = await axios.post<SessionSuccess>(
       'api/v1/auth/login',
       formData,
       {
@@ -24,8 +24,9 @@ export const apiAuth = {
   async refresh() {
     // silent: a startup refresh of an expired session must not flash a scary
     // error toast — the 401 handler still logs out and routes to /login.
-    const { data } = await axios.get<LoginSuccess>(
+    const { data } = await axios.post<SessionSuccess>(
       'api/v1/auth/refresh_token',
+      undefined,
       { silent: true }
     );
     return data;

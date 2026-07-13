@@ -1,6 +1,6 @@
 """Tests for module.mcp.security - McpAccessMiddleware, _is_allowed(), and clear_network_cache()."""
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from starlette.applications import Starlette
@@ -175,24 +175,52 @@ class TestMcpAccessMiddleware:
             response = client.get("/")
         assert response.status_code == 403
 
-    def test_bearer_token_bypasses_ip(self):
-        mock_settings = _make_mcp_settings(
-            mcp_whitelist=[], mcp_tokens=["secret-token-123"]
-        )
+    def test_database_mcp_token_bypasses_ip(self):
+        mock_settings = _make_mcp_settings(mcp_whitelist=[], mcp_tokens=[])
+        service = MagicMock()
+        service.authenticate_api_token = AsyncMock(return_value=MagicMock())
         app = _patch_client_ip(_make_app(), "8.8.8.8")
-        with patch("module.mcp.security.settings", mock_settings):
+        with (
+            patch("module.mcp.security.settings", mock_settings),
+            patch("module.mcp.security.auth_service", service),
+        ):
             client = TestClient(app, raise_server_exceptions=False)
             response = client.get(
                 "/", headers={"Authorization": "Bearer secret-token-123"}
             )
         assert response.status_code == 200
+        service.authenticate_api_token.assert_awaited_once_with(
+            "secret-token-123", scope="mcp"
+        )
+
+    def test_plaintext_config_mcp_token_is_rejected(self):
+        mock_settings = _make_mcp_settings(
+            mcp_whitelist=[], mcp_tokens=["legacy-plaintext-token"]
+        )
+        service = MagicMock()
+        service.authenticate_api_token = AsyncMock(return_value=None)
+        app = _patch_client_ip(_make_app(), "8.8.8.8")
+        with (
+            patch("module.mcp.security.settings", mock_settings),
+            patch("module.mcp.security.auth_service", service),
+        ):
+            client = TestClient(app, raise_server_exceptions=False)
+            response = client.get(
+                "/", headers={"Authorization": "Bearer legacy-plaintext-token"}
+            )
+        assert response.status_code == 403
 
     def test_invalid_bearer_token_denied(self):
         mock_settings = _make_mcp_settings(
             mcp_whitelist=[], mcp_tokens=["secret-token-123"]
         )
+        service = MagicMock()
+        service.authenticate_api_token = AsyncMock(return_value=None)
         app = _patch_client_ip(_make_app(), "8.8.8.8")
-        with patch("module.mcp.security.settings", mock_settings):
+        with (
+            patch("module.mcp.security.settings", mock_settings),
+            patch("module.mcp.security.auth_service", service),
+        ):
             client = TestClient(app, raise_server_exceptions=False)
             response = client.get("/", headers={"Authorization": "Bearer wrong-token"})
         assert response.status_code == 403

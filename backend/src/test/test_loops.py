@@ -21,6 +21,7 @@ from module.core.loops import (
 from module.models.bangumi import Notification
 from module.notification.events import (
     OffsetReviewEvent,
+    RenameConflictEvent,
     RssFailureEvent,
     UpdateAvailableEvent,
 )
@@ -144,6 +145,32 @@ class TestRssTick:
 
 
 class TestRenameTick:
+    async def test_persists_and_dispatches_conflict_event_when_push_disabled(self):
+        event = RenameConflictEvent(
+            task_id="new-v2",
+            torrent_name="Episode V2",
+            target_path="Show S01E01.mkv",
+            reason="target exists",
+        )
+        notifier = AsyncMock()
+        mock_renamer = AsyncMock()
+        mock_renamer.rename = AsyncMock(return_value=[])
+        mock_renamer.events = [event]
+
+        with (
+            patch(
+                "module.core.loops.DownloadClient",
+                return_value=_async_cm(AsyncMock()),
+            ),
+            patch("module.core.loops.Renamer", return_value=mock_renamer),
+            patch("module.core.loops.settings") as mock_settings,
+        ):
+            mock_settings.notification.enable = False
+            await rename_tick(notifier)
+
+        notifier.send_event.assert_awaited_once_with(event)
+        notifier.send_all.assert_not_awaited()
+
     async def test_sends_notification_per_renamed_item(self):
         """Every item Renamer.rename() returns is forwarded to the notifier."""
         notify = Notification(official_title="Test Anime", season=1, episode=1)

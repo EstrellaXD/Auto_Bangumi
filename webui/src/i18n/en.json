@@ -65,6 +65,10 @@
       "eps": "EPS complete",
       "group_tag": "Add Group Tag",
       "method": "Rename Method",
+      "revision_conflict_hint": "When replacement is enabled, the old torrent and its data are deleted only after the higher revision is promoted successfully.",
+      "revision_conflict_hold": "Keep Existing File",
+      "revision_conflict_policy": "Revision Conflict Policy",
+      "revision_conflict_replace": "Replace with Higher Revision",
       "title": "Manage Setting",
       "track_orphans": "Track Unmatched Torrents"
     },
@@ -101,6 +105,10 @@
     },
     "parser_set": {
       "enable": "Enable",
+      "engine": "Title Parser",
+      "engine_classic": "Classic Parser (Stable)",
+      "engine_tokenizer": "Universal Parser (Preview)",
+      "engine_hint": "Classic preserves existing parsing behavior. Preview supports episodes, OVAs, movies, ranges, and mixed collections. The two modes never fall back to each other automatically.",
       "exclude": "Exclude",
       "language": "Language",
       "source": "Source",
@@ -597,6 +605,43 @@
       "subscribe": "Subscribe"
     }
   },
+  "access": {
+    "title": "Users & Access",
+    "users": "Users",
+    "users_hint": "All enabled users have the same permissions.",
+    "tokens": "API tokens",
+    "tokens_hint": "Tokens are stored as hashes and shown only once.",
+    "add_user": "Add user",
+    "add_token": "Create token",
+    "user_created": "User created",
+    "username": "Username",
+    "password": "Password",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "toggle_user": "Toggle {username}",
+    "delete": "Delete",
+    "delete_user_confirm": "Delete {username}?",
+    "token_name": "Token name",
+    "token_scope": "Scope",
+    "token_created": "Token created",
+    "token_once": "Copy this token now. It cannot be shown again.",
+    "one_time_token": "One-time token",
+    "token_copied": "Token copied",
+    "copy": "Copy",
+    "revoke": "Revoke",
+    "revoke_token_confirm": "Revoke this token?",
+    "owner": "Owner",
+    "unknown_user": "Unknown user",
+    "last_used": "Last used",
+    "expires_at": "Expires",
+    "token_status_active": "Active",
+    "token_status_expired": "Expired",
+    "token_status_revoked": "Revoked",
+    "never": "Never",
+    "no_tokens": "No tokens",
+    "loading": "Loading…",
+    "create": "Create"
+  },
   "topbar": {
     "add": {
       "aggregate": "Aggregate RSS",
@@ -682,6 +727,10 @@
       "llm_plugin_install_failed": {
         "title": "LLM plugin install failed",
         "body": "{plugin_id}: {message}"
+      },
+      "rename_conflict": {
+        "title": "Media rename conflict",
+        "body": "{torrent_name} → {target_path}: {reason}"
       }
     }
   }

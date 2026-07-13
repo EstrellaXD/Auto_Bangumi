@@ -64,6 +64,7 @@ declare module '@vue/runtime-core' {
     CalendarDayColumn: typeof import('./../../src/components/calendar/calendar-day-column.vue')['default']
     CalendarMobileList: typeof import('./../../src/components/calendar/calendar-mobile-list.vue')['default']
     CalendarRuleListPopup: typeof import('./../../src/components/calendar/calendar-rule-list-popup.vue')['default']
+    ConfigAccess: typeof import('./../../src/components/setting/config-access.vue')['default']
     ConfigDownload: typeof import('./../../src/components/setting/config-download.vue')['default']
     ConfigLlm: typeof import('./../../src/components/setting/config-llm.vue')['default']
     ConfigManage: typeof import('./../../src/components/setting/config-manage.vue')['default']

@@ -7,6 +7,7 @@ from sqlmodel import SQLModel
 from module.models import Bangumi, User
 
 from .aria2 import Aria2GidDatabase
+from .auth import AuthDatabase
 from .bangumi import BangumiDatabase
 from .engine import async_engine, async_session_factory
 from .inbox import InboxDatabase
@@ -18,6 +19,8 @@ from .migrations import (  # noqa: F401  (re-exported for existing importers)
     create_tables_async,
     run_migrations_async,
 )
+from .movie import MovieDatabase
+from .rename_operation import RenameOperationDatabase
 from .rss import RSSDatabase
 from .torrent import TorrentDatabase
 from .user import UserDatabase
@@ -43,10 +46,13 @@ class Database:
         self.rss = RSSDatabase(self.session)
         self.torrent = TorrentDatabase(self.session)
         self.bangumi = BangumiDatabase(self.session)
+        self.movie = MovieDatabase(self.session)
         self.user = UserDatabase(self.session)
         self.aria2 = Aria2GidDatabase(self.session)
+        self.auth = AuthDatabase(self.session)
         self.inbox = InboxDatabase(self.session)
         self.llm_credential = LLMCredentialDatabase(self.session)
+        self.rename_operation = RenameOperationDatabase(self.session)
 
     async def __aenter__(self):
         return self
@@ -63,6 +69,20 @@ class Database:
 
     async def rollback(self):
         await self.session.rollback()
+
+    async def begin_write(self):
+        """Acquire the write transaction before invariant-checking reads.
+
+        SQLite's normal deferred transaction lets two writers observe the same
+        last-enabled-user state. ``BEGIN IMMEDIATE`` serializes them before the
+        first SELECT; other database backends use their normal explicit begin.
+        """
+        if self.session.in_transaction():
+            raise RuntimeError("Write transaction must begin before database access")
+        if self.session.get_bind().dialect.name == "sqlite":
+            await self.session.execute(text("BEGIN IMMEDIATE"))
+        else:
+            await self.session.begin()
 
     async def refresh(self, obj):
         await self.session.refresh(obj)

@@ -58,7 +58,7 @@ const unknownGroups = computed({
         :delay="`${index * 0.05}s`"
         @change="onDropToDay(index, $event)"
         @card-click="emit('card-click', $event)"
-        @unpin="(group, event) => onUnpin(group, event)"
+        @unpin="onUnpin"
       />
     </div>
 

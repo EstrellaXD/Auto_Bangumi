@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import type { BangumiRule } from '#/bangumi';
+
 definePage({
   name: 'Index',
   redirect: '/bangumi',
@@ -7,6 +9,29 @@ definePage({
 const { editRule } = storeToRefs(useBangumiStore());
 const { updateRule, enableRule, archiveRule, unarchiveRule, ruleManage } =
   useBangumiStore();
+
+function onEnableRule(id: number) {
+  enableRule(id);
+}
+
+function onArchiveRule(id: number) {
+  archiveRule(id);
+}
+
+function onUnarchiveRule(id: number) {
+  unarchiveRule(id);
+}
+
+function onDeleteFile(
+  type: 'disable' | 'delete',
+  { id, deleteFile }: { id: number; deleteFile: boolean }
+) {
+  ruleManage(type, id, deleteFile);
+}
+
+function onApplyRule(rule: BangumiRule) {
+  updateRule(rule.id, rule);
+}
 </script>
 
 <template>
@@ -36,13 +61,11 @@ const { updateRule, enableRule, archiveRule, unarchiveRule, ruleManage } =
     <ab-edit-rule
       v-model:show="editRule.show"
       v-model:rule="editRule.item"
-      @enable="(id) => enableRule(id)"
-      @archive="(id) => archiveRule(id)"
-      @unarchive="(id) => unarchiveRule(id)"
-      @delete-file="
-        (type, { id, deleteFile }) => ruleManage(type, id, deleteFile)
-      "
-      @apply="(rule) => updateRule(rule.id, rule)"
+      @enable="onEnableRule"
+      @archive="onArchiveRule"
+      @unarchive="onUnarchiveRule"
+      @delete-file="onDeleteFile"
+      @apply="onApplyRule"
     />
   </div>
 </template>

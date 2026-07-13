@@ -57,6 +57,10 @@ class RSSParser(BaseModel):
     enable: bool = Field(default=True, description="Enable RSS parser")
     filter: list[str] = Field(default=["720", r"\d+-\d+"], description="Filter")
     language: str = "zh"
+    engine: Literal["classic", "tokenizer"] = Field(
+        default="classic",
+        description="Title parser engine (classic or tokenizer Preview)",
+    )
 
 
 class BangumiManage(BaseModel):
@@ -67,6 +71,10 @@ class BangumiManage(BaseModel):
     rename_method: str = Field(default="pn", description="Rename method")
     group_tag: bool = Field(default=False, description="Enable group tag")
     remove_bad_torrent: bool = Field(default=False, description="Remove bad torrent")
+    revision_conflict_policy: Literal["hold", "replace"] = Field(
+        default="hold",
+        description="How to handle a higher revision targeting an existing episode",
+    )
     # 关闭后 refresh_rss 不再把未匹配种子入库（孤儿记录）；代价是这些条目
     # 每轮会被重新内存匹配（廉价），好处是后补规则能立即接住仍在源里的旧集
     track_orphans: bool = Field(

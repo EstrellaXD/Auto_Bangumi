@@ -1,6 +1,9 @@
 /build
 /dist
 /dev-dist
+/e2e/.auth
+/playwright-report
+/test-results
 /pnpm-lock.yaml
 auto-imports.d.ts
 components.d.ts

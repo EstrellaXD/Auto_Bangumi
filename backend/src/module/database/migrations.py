@@ -17,7 +17,7 @@ from pydantic_core import PydanticUndefined
 from sqlalchemy import Connection, Engine, inspect, text
 from sqlmodel import SQLModel
 
-from module.models import Bangumi, User
+from module.models import ApiToken, AuthSession, Bangumi, Movie, RenameOperation, User
 from module.models.inbox import InboxMessage
 from module.models.llm_credential import LLMCredential
 from module.models.passkey import Passkey
@@ -29,12 +29,16 @@ logger = logging.getLogger(__name__)
 # 所有需要进行空值填充的表模型
 TABLE_MODELS: list[type[SQLModel]] = [
     Bangumi,
+    Movie,
     RSSItem,
     Torrent,
     User,
     Passkey,
     InboxMessage,
     LLMCredential,
+    AuthSession,
+    ApiToken,
+    RenameOperation,
 ]
 
 # already_applied 守卫：接收 inspector，返回该迁移是否已生效
@@ -382,6 +386,400 @@ MIGRATIONS: tuple[Migration, ...] = (
             "ON llmcredential(provider_id)",
         ),
         table_exists("llmcredential"),
+    ),
+    Migration(
+        18,
+        "add multi-user account state and audit columns",
+        (
+            "ALTER TABLE user ADD COLUMN enabled BOOLEAN NOT NULL DEFAULT 1",
+            "ALTER TABLE user ADD COLUMN created_at TIMESTAMP NOT NULL "
+            "DEFAULT '1970-01-01 00:00:00'",
+            "ALTER TABLE user ADD COLUMN updated_at TIMESTAMP NOT NULL "
+            "DEFAULT '1970-01-01 00:00:00'",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_user_username ON user(username)",
+            "CREATE INDEX IF NOT EXISTS ix_user_enabled ON user(enabled)",
+        ),
+        all_checks(
+            column_exists("user", "enabled"),
+            column_exists("user", "created_at"),
+            column_exists("user", "updated_at"),
+            index_exists("user", "ix_user_username"),
+            index_exists("user", "ix_user_enabled"),
+        ),
+        (
+            (
+                "ALTER TABLE user ADD COLUMN enabled BOOLEAN NOT NULL DEFAULT 1",
+                column_exists("user", "enabled"),
+            ),
+            (
+                "ALTER TABLE user ADD COLUMN created_at TIMESTAMP NOT NULL "
+                "DEFAULT '1970-01-01 00:00:00'",
+                column_exists("user", "created_at"),
+            ),
+            (
+                "ALTER TABLE user ADD COLUMN updated_at TIMESTAMP NOT NULL "
+                "DEFAULT '1970-01-01 00:00:00'",
+                column_exists("user", "updated_at"),
+            ),
+            (
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_user_username ON user(username)",
+                index_exists("user", "ix_user_username"),
+            ),
+            (
+                "CREATE INDEX IF NOT EXISTS ix_user_enabled ON user(enabled)",
+                index_exists("user", "ix_user_enabled"),
+            ),
+        ),
+    ),
+    Migration(
+        19,
+        "create persistent sessions and scoped API tokens",
+        (
+            """CREATE TABLE IF NOT EXISTS auth_session (
+                id INTEGER PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES user(id),
+                token_hash VARCHAR(64) NOT NULL UNIQUE,
+                created_at TIMESTAMP NOT NULL,
+                last_seen_at TIMESTAMP NOT NULL,
+                expires_at TIMESTAMP NOT NULL,
+                revoked_at TIMESTAMP
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_auth_session_user_id "
+            "ON auth_session(user_id)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_auth_session_token_hash "
+            "ON auth_session(token_hash)",
+            "CREATE INDEX IF NOT EXISTS ix_auth_session_expires_at "
+            "ON auth_session(expires_at)",
+            "CREATE INDEX IF NOT EXISTS ix_auth_session_revoked_at "
+            "ON auth_session(revoked_at)",
+            """CREATE TABLE IF NOT EXISTS api_token (
+                id INTEGER PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES user(id),
+                name VARCHAR(64) NOT NULL,
+                scope VARCHAR(8) NOT NULL,
+                token_hash VARCHAR(64) NOT NULL UNIQUE,
+                prefix VARCHAR(16) NOT NULL,
+                created_at TIMESTAMP NOT NULL,
+                last_used_at TIMESTAMP,
+                expires_at TIMESTAMP,
+                revoked_at TIMESTAMP
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_api_token_user_id ON api_token(user_id)",
+            "CREATE INDEX IF NOT EXISTS ix_api_token_scope ON api_token(scope)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_api_token_token_hash "
+            "ON api_token(token_hash)",
+            "CREATE INDEX IF NOT EXISTS ix_api_token_expires_at "
+            "ON api_token(expires_at)",
+            "CREATE INDEX IF NOT EXISTS ix_api_token_revoked_at "
+            "ON api_token(revoked_at)",
+        ),
+        all_checks(table_exists("auth_session"), table_exists("api_token")),
+    ),
+    Migration(
+        20,
+        "make API token identity scope-aware and redact stored display prefixes",
+        (
+            """CREATE TABLE api_token_v20 (
+                id INTEGER PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES user(id),
+                name VARCHAR(64) NOT NULL,
+                scope VARCHAR(8) NOT NULL,
+                token_hash VARCHAR(64) NOT NULL,
+                prefix VARCHAR(16) NOT NULL,
+                created_at TIMESTAMP NOT NULL,
+                last_used_at TIMESTAMP,
+                expires_at TIMESTAMP,
+                revoked_at TIMESTAMP
+            )""",
+            """INSERT INTO api_token_v20 (
+                id, user_id, name, scope, token_hash, prefix, created_at,
+                last_used_at, expires_at, revoked_at
+            ) SELECT
+                id, user_id, name, scope, token_hash,
+                'legacy_' || substr(token_hash, 1, 8), created_at,
+                last_used_at, expires_at, revoked_at
+            FROM api_token""",
+            "DROP TABLE api_token",
+            "ALTER TABLE api_token_v20 RENAME TO api_token",
+            "CREATE INDEX ix_api_token_user_id ON api_token(user_id)",
+            "CREATE INDEX ix_api_token_scope ON api_token(scope)",
+            "CREATE UNIQUE INDEX ix_api_token_token_hash_scope "
+            "ON api_token(token_hash, scope)",
+            "CREATE INDEX ix_api_token_expires_at ON api_token(expires_at)",
+            "CREATE INDEX ix_api_token_revoked_at ON api_token(revoked_at)",
+        ),
+        # Schema shape alone cannot prove that existing prefixes were redacted:
+        # metadata.create_all or an out-of-band repair may already have added
+        # the composite index. The schema_version gate makes this one-time, so
+        # every database still below v20 must run the transactional rebuild.
+        lambda _inspector: False,
+    ),
+    Migration(
+        21,
+        "create movie table for standalone movie subscriptions",
+        (
+            """CREATE TABLE IF NOT EXISTS movie (
+                id INTEGER PRIMARY KEY,
+                official_title VARCHAR NOT NULL,
+                title_raw VARCHAR,
+                year INTEGER,
+                group_name VARCHAR,
+                dpi VARCHAR,
+                source VARCHAR,
+                subtitle VARCHAR,
+                poster_link VARCHAR,
+                rss_link VARCHAR,
+                added BOOLEAN NOT NULL DEFAULT 0,
+                deleted BOOLEAN NOT NULL DEFAULT 0,
+                save_path VARCHAR,
+                rule_name VARCHAR,
+                filter VARCHAR NOT NULL DEFAULT ''
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_movie_title_raw ON movie(title_raw)",
+            "CREATE INDEX IF NOT EXISTS ix_movie_deleted ON movie(deleted)",
+        ),
+        all_checks(
+            table_exists("movie"),
+            index_exists("movie", "ix_movie_title_raw"),
+            index_exists("movie", "ix_movie_deleted"),
+        ),
+        (
+            (
+                """CREATE TABLE IF NOT EXISTS movie (
+                    id INTEGER PRIMARY KEY,
+                    official_title VARCHAR NOT NULL,
+                    title_raw VARCHAR,
+                    year INTEGER,
+                    group_name VARCHAR,
+                    dpi VARCHAR,
+                    source VARCHAR,
+                    subtitle VARCHAR,
+                    poster_link VARCHAR,
+                    rss_link VARCHAR,
+                    added BOOLEAN NOT NULL DEFAULT 0,
+                    deleted BOOLEAN NOT NULL DEFAULT 0,
+                    save_path VARCHAR,
+                    rule_name VARCHAR,
+                    filter VARCHAR NOT NULL DEFAULT ''
+                )""",
+                table_exists("movie"),
+            ),
+            (
+                "CREATE INDEX IF NOT EXISTS ix_movie_title_raw ON movie(title_raw)",
+                index_exists("movie", "ix_movie_title_raw"),
+            ),
+            (
+                "CREATE INDEX IF NOT EXISTS ix_movie_deleted ON movie(deleted)",
+                index_exists("movie", "ix_movie_deleted"),
+            ),
+        ),
+    ),
+    Migration(
+        22,
+        "repair multi-user v18 fields after the divergent movie development schema",
+        (
+            "ALTER TABLE user ADD COLUMN enabled BOOLEAN NOT NULL DEFAULT 1",
+            "ALTER TABLE user ADD COLUMN created_at TIMESTAMP NOT NULL "
+            "DEFAULT '1970-01-01 00:00:00'",
+            "ALTER TABLE user ADD COLUMN updated_at TIMESTAMP NOT NULL "
+            "DEFAULT '1970-01-01 00:00:00'",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_user_username ON user(username)",
+            "CREATE INDEX IF NOT EXISTS ix_user_enabled ON user(enabled)",
+        ),
+        all_checks(
+            column_exists("user", "enabled"),
+            column_exists("user", "created_at"),
+            column_exists("user", "updated_at"),
+            index_exists("user", "ix_user_username"),
+            index_exists("user", "ix_user_enabled"),
+        ),
+        (
+            (
+                "ALTER TABLE user ADD COLUMN enabled BOOLEAN NOT NULL DEFAULT 1",
+                column_exists("user", "enabled"),
+            ),
+            (
+                "ALTER TABLE user ADD COLUMN created_at TIMESTAMP NOT NULL "
+                "DEFAULT '1970-01-01 00:00:00'",
+                column_exists("user", "created_at"),
+            ),
+            (
+                "ALTER TABLE user ADD COLUMN updated_at TIMESTAMP NOT NULL "
+                "DEFAULT '1970-01-01 00:00:00'",
+                column_exists("user", "updated_at"),
+            ),
+            (
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_user_username ON user(username)",
+                index_exists("user", "ix_user_username"),
+            ),
+            (
+                "CREATE INDEX IF NOT EXISTS ix_user_enabled ON user(enabled)",
+                index_exists("user", "ix_user_enabled"),
+            ),
+        ),
+    ),
+    Migration(
+        23,
+        "create durable rename/revision-replacement operation state",
+        (
+            """CREATE TABLE IF NOT EXISTS rename_operation (
+                id INTEGER PRIMARY KEY,
+                downloader_type VARCHAR(32) NOT NULL,
+                kind VARCHAR(32) NOT NULL DEFAULT 'conflict',
+                state VARCHAR(32) NOT NULL DEFAULT 'planned',
+                new_task_id VARCHAR NOT NULL,
+                old_task_id VARCHAR,
+                save_path VARCHAR NOT NULL,
+                source_path VARCHAR NOT NULL,
+                target_path VARCHAR NOT NULL,
+                staged_path VARCHAR,
+                bangumi_id INTEGER,
+                media_type VARCHAR(32),
+                season INTEGER,
+                episode REAL,
+                group_name VARCHAR,
+                resolution VARCHAR(32),
+                old_revision INTEGER,
+                new_revision INTEGER,
+                revision_metadata TEXT,
+                attempt_count INTEGER NOT NULL DEFAULT 0,
+                retry_at TIMESTAMP,
+                lease_owner VARCHAR(64),
+                lease_expires_at TIMESTAMP,
+                notified_at TIMESTAMP,
+                last_error TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT ck_rename_operation_state CHECK (
+                    state IN ('conflict', 'retry', 'running', 'planned', 'old_staged',
+                              'new_promoted', 'old_removed', 'done')
+                ),
+                CONSTRAINT ck_rename_operation_attempt_count CHECK (
+                    attempt_count >= 0
+                )
+            )""",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ux_rename_operation_identity "
+            "ON rename_operation(downloader_type, new_task_id, save_path, "
+            "source_path, target_path)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ux_rename_operation_active_target "
+            "ON rename_operation(downloader_type, save_path, target_path) "
+            "WHERE state NOT IN ('done')",
+            "CREATE INDEX IF NOT EXISTS ix_rename_operation_state_retry_at "
+            "ON rename_operation(state, retry_at)",
+            "CREATE INDEX IF NOT EXISTS ix_rename_operation_new_task_id "
+            "ON rename_operation(new_task_id)",
+            "CREATE INDEX IF NOT EXISTS ix_rename_operation_old_task_id "
+            "ON rename_operation(old_task_id)",
+        ),
+        all_checks(
+            table_exists("rename_operation"),
+            index_exists("rename_operation", "ux_rename_operation_identity"),
+            index_exists("rename_operation", "ux_rename_operation_active_target"),
+            index_exists("rename_operation", "ix_rename_operation_state_retry_at"),
+            index_exists("rename_operation", "ix_rename_operation_new_task_id"),
+            index_exists("rename_operation", "ix_rename_operation_old_task_id"),
+        ),
+        (
+            (
+                """CREATE TABLE IF NOT EXISTS rename_operation (
+                    id INTEGER PRIMARY KEY,
+                    downloader_type VARCHAR(32) NOT NULL,
+                    kind VARCHAR(32) NOT NULL DEFAULT 'conflict',
+                    state VARCHAR(32) NOT NULL DEFAULT 'planned',
+                    new_task_id VARCHAR NOT NULL,
+                    old_task_id VARCHAR,
+                    save_path VARCHAR NOT NULL,
+                    source_path VARCHAR NOT NULL,
+                    target_path VARCHAR NOT NULL,
+                    staged_path VARCHAR,
+                    bangumi_id INTEGER,
+                    media_type VARCHAR(32),
+                    season INTEGER,
+                    episode REAL,
+                    group_name VARCHAR,
+                    resolution VARCHAR(32),
+                    old_revision INTEGER,
+                    new_revision INTEGER,
+                    revision_metadata TEXT,
+                    attempt_count INTEGER NOT NULL DEFAULT 0,
+                    retry_at TIMESTAMP,
+                    lease_owner VARCHAR(64),
+                    lease_expires_at TIMESTAMP,
+                    notified_at TIMESTAMP,
+                    last_error TEXT,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT ck_rename_operation_state CHECK (
+                        state IN ('conflict', 'retry', 'running', 'planned', 'old_staged',
+                                  'new_promoted', 'old_removed', 'done')
+                    ),
+                    CONSTRAINT ck_rename_operation_attempt_count CHECK (
+                        attempt_count >= 0
+                    )
+                )""",
+                table_exists("rename_operation"),
+            ),
+            (
+                "CREATE UNIQUE INDEX IF NOT EXISTS ux_rename_operation_identity "
+                "ON rename_operation(downloader_type, new_task_id, save_path, "
+                "source_path, target_path)",
+                index_exists("rename_operation", "ux_rename_operation_identity"),
+            ),
+            (
+                "CREATE UNIQUE INDEX IF NOT EXISTS ux_rename_operation_active_target "
+                "ON rename_operation(downloader_type, save_path, target_path) "
+                "WHERE state NOT IN ('done')",
+                index_exists("rename_operation", "ux_rename_operation_active_target"),
+            ),
+            (
+                "CREATE INDEX IF NOT EXISTS ix_rename_operation_state_retry_at "
+                "ON rename_operation(state, retry_at)",
+                index_exists("rename_operation", "ix_rename_operation_state_retry_at"),
+            ),
+            (
+                "CREATE INDEX IF NOT EXISTS ix_rename_operation_new_task_id "
+                "ON rename_operation(new_task_id)",
+                index_exists("rename_operation", "ix_rename_operation_new_task_id"),
+            ),
+            (
+                "CREATE INDEX IF NOT EXISTS ix_rename_operation_old_task_id "
+                "ON rename_operation(old_task_id)",
+                index_exists("rename_operation", "ix_rename_operation_old_task_id"),
+            ),
+        ),
+    ),
+    Migration(
+        24,
+        "add durable filesystem rename intent to aria2 gid state",
+        (
+            """CREATE TABLE IF NOT EXISTS aria2_gid (
+                gid VARCHAR NOT NULL PRIMARY KEY,
+                bangumi_id INTEGER REFERENCES bangumi(id),
+                category VARCHAR,
+                dedup_key VARCHAR,
+                renamed_paths TEXT DEFAULT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )""",
+            "ALTER TABLE aria2_gid ADD COLUMN rename_intent TEXT DEFAULT NULL",
+        ),
+        column_exists("aria2_gid", "rename_intent"),
+        (
+            (
+                """CREATE TABLE IF NOT EXISTS aria2_gid (
+                    gid VARCHAR NOT NULL PRIMARY KEY,
+                    bangumi_id INTEGER REFERENCES bangumi(id),
+                    category VARCHAR,
+                    dedup_key VARCHAR,
+                    renamed_paths TEXT DEFAULT NULL,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )""",
+                table_exists("aria2_gid"),
+            ),
+            (
+                "ALTER TABLE aria2_gid ADD COLUMN rename_intent TEXT DEFAULT NULL",
+                column_exists("aria2_gid", "rename_intent"),
+            ),
+        ),
     ),
 )
 

@@ -38,6 +38,8 @@ const passwordError = computed(() => {
           <input
             v-model="accountData.username"
             type="text"
+            :aria-label="t('setup.account.username')"
+            autocomplete="username"
             placeholder="admin"
             class="setup-input"
           />
@@ -47,6 +49,8 @@ const passwordError = computed(() => {
           <input
             v-model="accountData.password"
             type="password"
+            :aria-label="t('setup.account.password')"
+            autocomplete="new-password"
             class="setup-input"
           />
         </ab-field>
@@ -55,6 +59,8 @@ const passwordError = computed(() => {
           <input
             v-model="accountData.confirmPassword"
             type="password"
+            :aria-label="t('setup.account.confirm_password')"
+            autocomplete="new-password"
             class="setup-input"
           />
         </ab-field>

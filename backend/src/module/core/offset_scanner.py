@@ -7,8 +7,9 @@ from module.database import Database
 from module.models import Bangumi
 from module.notification.events import OffsetReviewEvent
 from module.parser.analyser.offset_detector import detect_offset_mismatch
-from module.parser.analyser.raw_parser import raw_parser
+from module.parser.analyser.selector import parse_configured_release_title
 from module.parser.analyser.tmdb_parser import tmdb_parser
+from module.parser.release_policy import is_offset_signal
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,16 @@ class OffsetScanner:
         # Skip if already needs review
         if bangumi.needs_review:
             logger.debug(f"Skipping {bangumi.official_title}: already needs review")
+            return None
+
+        # OVA/OAD/SP are persisted as Bangumi for library compatibility, but
+        # they are not weekly episode streams and must never drive offsets.
+        if bangumi.episode_type != "episode":
+            logger.debug(
+                "Skipping %s: episode_type=%s",
+                bangumi.official_title,
+                bangumi.episode_type,
+            )
             return None
 
         # Skip if user has already configured offsets
@@ -114,11 +125,16 @@ class OffsetScanner:
 
         latest: int | None = None
         for torrent in torrents:
-            episode = raw_parser(torrent.name)
-            if episode is None or not episode.episode:
+            release = parse_configured_release_title(torrent.name)
+            if release is None or not is_offset_signal(release):
                 continue
-            if latest is None or episode.episode > latest:
-                latest = episode.episode
+            episode = release.episode
+            # ``is_offset_signal`` guarantees this at runtime; retain the local
+            # guard so static type checking can narrow ``int | float | None``.
+            if type(episode) is not int:
+                continue
+            if latest is None or episode > latest:
+                latest = episode
         return latest
 
     async def check_single(self, bangumi_id: int) -> bool:

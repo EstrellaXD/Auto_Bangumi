@@ -1,12 +1,8 @@
-export interface LoginSuccess {
-  access_token: string;
-  token_type: string;
-  expire: number;
+export interface SessionSuccess {
+  authenticated: true;
 }
 
-export interface Update extends LoginSuccess {
-  message: 'update success';
-}
+export type Update = SessionSuccess;
 
 export interface User {
   username: string;

@@ -7,8 +7,9 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import HTTPException
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import col, select
 
 from module.models.passkey import Passkey, PasskeyList
 
@@ -61,8 +62,15 @@ class PasskeyDatabase:
 
     async def delete_passkey(self, passkey_id: int, user_id: int) -> bool:
         """删除 Passkey"""
-        passkey = await self.get_passkey_by_id(passkey_id, user_id)
-        await self.session.delete(passkey)
+        result = await self.session.execute(
+            delete(Passkey).where(
+                col(Passkey.id) == passkey_id,
+                col(Passkey.user_id) == user_id,
+            )
+        )
+        if not getattr(result, "rowcount", 0):
+            await self.session.rollback()
+            raise HTTPException(status_code=404, detail="Passkey not found")
         await self.session.commit()
         logger.info(f"Deleted passkey id={passkey_id} for user_id={user_id}")
         return True

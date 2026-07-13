@@ -3,6 +3,8 @@ from .base import (
     CoreDownloaderClient,
     DownloaderCapabilities,
     DownloaderClient,
+    RenameOutcome,
+    RenameResult,
 )
 from .download_client import DownloadClient, shutdown
 
@@ -12,5 +14,7 @@ __all__ = [
     "DownloadClient",
     "DownloaderCapabilities",
     "DownloaderClient",
+    "RenameOutcome",
+    "RenameResult",
     "shutdown",
 ]

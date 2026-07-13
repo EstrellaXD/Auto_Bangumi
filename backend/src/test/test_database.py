@@ -1,9 +1,13 @@
 import json
 
-from module.database.bangumi import BangumiDatabase
+import pytest
+
+from module.conf import settings
+from module.database.bangumi import BangumiDatabase, match_bangumi_in_list
+from module.database.movie import MovieDatabase
 from module.database.rss import RSSDatabase
 from module.database.torrent import TorrentDatabase
-from module.models import Bangumi, RSSItem, Torrent
+from module.models import Bangumi, Movie, RSSItem, Torrent
 
 
 async def _ensure_bangumi(session, bangumi_id: int):
@@ -453,6 +457,174 @@ async def test_add_with_semantic_duplicate_creates_alias(db_session):
     original = (await db.search_all())[0]
     aliases = json.loads(original.title_aliases) if original.title_aliases else []
     assert "Frieren Beyond Journey's End" in aliases
+
+
+async def test_typed_bangumi_identities_can_coexist_and_match(db_session):
+    db = BangumiDatabase(db_session)
+    shared = dict(
+        official_title="Shared Anime",
+        title_raw="Shared Anime",
+        group_name="Group",
+        dpi="1080p",
+        source="WEB-DL",
+        subtitle="CHT",
+        rss_link="rss",
+    )
+    episode = Bangumi(**shared, season=1, episode_type="episode")
+    season_two = Bangumi(**shared, season=2, episode_type="episode")
+    special = Bangumi(**shared, season=0, episode_type="special")
+
+    assert await db.add(episode) is True
+    assert await db.add(season_two) is True
+    assert await db.add(special) is True
+
+    rows = await db.search_all()
+    assert len(rows) == 3
+    matched_s2 = match_bangumi_in_list("[Group] Shared Anime S02E01 [1080p]", rows)
+    matched_ova = match_bangumi_in_list("[Group] Shared Anime OVA01 [1080p]", rows)
+    matched_episode = match_bangumi_in_list("[Group] Shared Anime - 01 [1080p]", rows)
+    assert matched_s2 is not None and matched_s2.season == 2
+    assert matched_ova is not None and matched_ova.episode_type == "special"
+    assert matched_episode is not None and matched_episode.episode_type == "episode"
+
+
+@pytest.mark.parametrize(
+    "raw",
+    (
+        "[Group] Shared Anime [TV 01-12 + OVA 01-02] [1080p]",
+        "Shared Anime_TV+OVA+Manga+Novel+Music+Other_dub jpn sub cht",
+    ),
+)
+async def test_mixed_collection_does_not_match_episode_or_special_bangumi(
+    db_session, raw: str, monkeypatch
+):
+    monkeypatch.setattr(settings.rss_parser, "engine", "tokenizer")
+    db = BangumiDatabase(db_session)
+    shared = dict(
+        official_title="Shared Anime",
+        title_raw="Shared Anime",
+        group_name="Group",
+        rss_link="rss",
+    )
+    assert await db.add(Bangumi(**shared, season=1, episode_type="episode")) is True
+    assert await db.add(Bangumi(**shared, season=0, episode_type="special")) is True
+
+    matched = match_bangumi_in_list(raw, await db.search_all())
+
+    assert matched is None
+
+
+@pytest.mark.parametrize(
+    "raw",
+    (
+        "[TV+OVA] 86 [1080p]",
+        "86：[TV+OVA] [1080p]",
+        "86: [TV+OVA] [1080p]",
+    ),
+)
+def test_numeric_mixed_collection_does_not_fall_through_to_title_matching(
+    raw: str,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(settings.rss_parser, "engine", "tokenizer")
+    bangumi = Bangumi(
+        official_title="86",
+        title_raw="86",
+        group_name="Group",
+        rss_link="rss",
+        season=1,
+        episode_type="episode",
+    )
+
+    assert match_bangumi_in_list(raw, [bangumi]) is None
+
+
+def test_titleless_mixed_collection_does_not_bypass_typed_matching(monkeypatch) -> None:
+    monkeypatch.setattr(settings.rss_parser, "engine", "tokenizer")
+    bangumi = Bangumi(
+        official_title="名侦探柯南",
+        title_raw="名侦探柯南",
+        group_name="CONAN",
+        rss_link="rss",
+        season=1,
+        episode_type="episode",
+    )
+    raw = "[APTX4869][CONAN][名侦探柯南 1045&1046 降下天罚的生日派对]" "[TV+OVA][1080p]"
+
+    assert match_bangumi_in_list(raw, [bangumi]) is None
+
+
+def test_bangumi_matching_follows_selected_parser_engine(monkeypatch) -> None:
+    special = Bangumi(
+        official_title="Shared Anime",
+        title_raw="Shared Anime",
+        group_name="Group",
+        rss_link="rss",
+        season=0,
+        episode_type="special",
+    )
+    raw = "[Group] Shared Anime [TV+OVA] [1080p]"
+
+    monkeypatch.setattr(settings.rss_parser, "engine", "classic")
+    classic_match = match_bangumi_in_list(raw, [special])
+    monkeypatch.setattr(settings.rss_parser, "engine", "tokenizer")
+    preview_match = match_bangumi_in_list(raw, [special])
+
+    assert classic_match is special
+    assert preview_match is None
+
+
+def test_preview_parse_failure_is_fail_closed_but_classic_stays_permissive(
+    monkeypatch,
+) -> None:
+    raw = (
+        "[APTX4869][CONAN][名侦探柯南 1045&1046 降下天罚的生日派对]"
+        "[HDTV][1080P][简体MP4]"
+    )
+    bangumi = Bangumi(
+        official_title="名侦探柯南",
+        title_raw="名侦探柯南",
+        group_name="APTX4869",
+        rss_link="rss",
+        season=1,
+    )
+
+    monkeypatch.setattr(settings.rss_parser, "engine", "tokenizer")
+    preview_match = match_bangumi_in_list(raw, [bangumi])
+    monkeypatch.setattr(settings.rss_parser, "engine", "classic")
+    classic_match = match_bangumi_in_list(raw, [bangumi])
+
+    assert preview_match is None
+    assert classic_match is bangumi
+
+
+@pytest.mark.parametrize(
+    "raw",
+    (
+        "[Group] Anime EP01 ~ EP02 [1080p]",
+        "[Group] Anime Complete Batch [1080p]",
+        "[Group] Anime 合集 [1080p]",
+    ),
+)
+def test_preview_non_single_release_is_fail_closed_but_classic_stays_permissive(
+    raw: str,
+    monkeypatch,
+) -> None:
+    bangumi = Bangumi(
+        official_title="Anime",
+        title_raw="Anime",
+        group_name="Group",
+        rss_link="rss",
+        season=1,
+    )
+
+    monkeypatch.setattr(settings.rss_parser, "engine", "tokenizer")
+    preview_match = match_bangumi_in_list(raw, [bangumi])
+    monkeypatch.setattr(settings.rss_parser, "engine", "classic")
+    classic_match = match_bangumi_in_list(raw, [bangumi])
+
+    assert preview_match is None
+    assert classic_match is bangumi
 
 
 async def test_add_same_title_new_entry_inherits_year(db_session):
@@ -909,6 +1081,68 @@ async def test_match_list_with_aliases(db_session):
     unmatched = await db.match_list(torrents, "rss2")
     assert len(unmatched) == 1
     assert unmatched[0].name == "[OtherGroup] Different Anime - 01.mkv"
+
+
+async def test_bangumi_match_list_does_not_consume_same_title_ova(db_session):
+    db = BangumiDatabase(db_session)
+    await db.add(
+        Bangumi(
+            official_title="Shared Anime",
+            title_raw="Shared Anime",
+            season=1,
+            episode_type="episode",
+            group_name="Group",
+            rss_link="rss1",
+        )
+    )
+    episode = Torrent(name="[Group] Shared Anime - 01 [1080p]", url="episode")
+    ova = Torrent(name="[Group] Shared Anime OVA01 [1080p]", url="ova")
+
+    unmatched = await db.match_list([episode, ova], "rss2")
+
+    assert [torrent.url for torrent in unmatched] == ["ova"]
+
+
+async def test_movie_match_list_does_not_consume_same_title_episode(db_session):
+    db = MovieDatabase(db_session)
+    await db.add(
+        Movie(
+            official_title="Shared Anime",
+            title_raw="Shared Anime",
+            group_name="Group",
+            rss_link="rss1",
+        )
+    )
+    episode = Torrent(name="[Group] Shared Anime - 01 [1080p]", url="episode")
+    movie = Torrent(name="[Group] Shared Anime Movie [1080p]", url="movie")
+
+    unmatched = await db.match_list([episode, movie], "rss2")
+
+    assert [torrent.url for torrent in unmatched] == ["episode"]
+
+
+async def test_movie_match_list_follows_selected_parser_engine(db_session, monkeypatch):
+    db = MovieDatabase(db_session)
+    await db.add(
+        Movie(
+            official_title="Shared Anime",
+            title_raw="Shared Anime",
+            group_name="Group",
+            rss_link="rss1",
+        )
+    )
+    raw = "[Group] Shared Anime [TV+Movie] [1080p]"
+
+    monkeypatch.setattr(settings.rss_parser, "engine", "classic")
+    classic = Torrent(name=raw, url="classic")
+    classic_unmatched = await db.match_list([classic], "rss2")
+
+    monkeypatch.setattr(settings.rss_parser, "engine", "tokenizer")
+    preview = Torrent(name=raw, url="preview")
+    preview_unmatched = await db.match_list([preview], "rss3")
+
+    assert classic_unmatched == []
+    assert preview_unmatched == [preview]
 
 
 # ============================================================

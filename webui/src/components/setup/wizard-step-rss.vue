@@ -59,13 +59,19 @@ function handleNext() {
           <input
             v-model="rssData.url"
             type="text"
+            :aria-label="t('setup.rss.url')"
             placeholder="https://mikanani.me/RSS/..."
             class="setup-input setup-input-wide"
           />
         </ab-field>
 
         <ab-field v-if="rssData.name" :label="t('setup.rss.feed_name')">
-          <input v-model="rssData.name" type="text" class="setup-input" />
+          <input
+            v-model="rssData.name"
+            type="text"
+            :aria-label="t('setup.rss.feed_name')"
+            class="setup-input"
+          />
         </ab-field>
       </div>
 
