@@ -415,4 +415,50 @@ async function handleLogin() {
     cursor: not-allowed;
   }
 }
+
+@media screen and (max-width: 639px) {
+  .page-login {
+    box-sizing: border-box;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    align-items: flex-start;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: calc(24px + env(safe-area-inset-top, 0px))
+      calc(16px + env(safe-area-inset-right, 0px))
+      calc(24px + env(safe-area-inset-bottom, 0px))
+      calc(16px + env(safe-area-inset-left, 0px));
+  }
+
+  .login-bg {
+    display: none;
+  }
+
+  .login-card {
+    max-width: none;
+    margin: auto 0;
+    padding: 24px 0;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .login-header {
+    margin-bottom: 24px;
+  }
+
+  .login-input {
+    min-height: var(--touch-target);
+    font-size: 16px;
+  }
+
+  .login-actions :deep(.ab-btn),
+  .passkey-btn {
+    min-height: var(--touch-target);
+  }
+}
 </style>

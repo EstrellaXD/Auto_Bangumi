@@ -18,9 +18,12 @@ withDefaults(
     items: AbMenuItem[];
     /** 菜单相对触发器的对齐边 */
     align?: 'left' | 'right';
+    /** 菜单相对触发器的展开方向 */
+    placement?: 'bottom' | 'top';
   }>(),
   {
     align: 'left',
+    placement: 'bottom',
   }
 );
 
@@ -43,7 +46,10 @@ function onSelect(item: AbMenuItem) {
       <slot name="trigger"></slot>
     </MenuButton>
 
-    <MenuItems class="ab-menu-list" :class="`ab-menu-list--${align}`">
+    <MenuItems
+      class="ab-menu-list"
+      :class="[`ab-menu-list--${align}`, `ab-menu-list--${placement}`]"
+    >
       <MenuItem
         v-for="(item, index) in items"
         :key="item.key ?? index"
@@ -68,7 +74,9 @@ function onSelect(item: AbMenuItem) {
   </Menu>
 </template>
 
-<style lang="scss" scoped>
+<!-- Headless UI owns the rendered Menu roots, so scoped attributes do not
+     reliably reach them. The ab-menu prefix keeps these global rules isolated. -->
+<style lang="scss">
 .ab-menu {
   position: relative;
   display: inline-flex;
@@ -92,6 +100,13 @@ function onSelect(item: AbMenuItem) {
 
   &--right {
     right: 0;
+  }
+
+  &--top {
+    top: auto;
+    bottom: 100%;
+    margin-top: 0;
+    margin-bottom: 4px;
   }
 
   &:focus-visible {
@@ -139,5 +154,12 @@ function onSelect(item: AbMenuItem) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@media screen and (max-width: 639px) {
+  .ab-menu-item {
+    min-height: 44px;
+    padding: 10px;
+  }
 }
 </style>

@@ -27,7 +27,7 @@ const { confirm } = useConfirm();
 const configStore = useConfigStore();
 const { getConfig, setConfig } = configStore;
 const { dirtyGroups, isDirty } = storeToRefs(configStore);
-const { isMobileOrTablet } = useBreakpointQuery();
+const { isMobile, isMobileOrTablet } = useBreakpointQuery();
 
 async function onDiscardClick() {
   const ok = await confirm({
@@ -224,6 +224,13 @@ const dirtySectionTitles = computed(() =>
 const scrollEl = ref<HTMLElement | null>(null);
 const activeSection = ref(sections[0].id);
 const sectionEls = new Map<string, HTMLElement>();
+const mobileSectionId = computed(
+  () =>
+    visibleSections.value.find((section) => section.id === activeSection.value)
+      ?.id ??
+    visibleSections.value[0]?.id ??
+    ''
+);
 
 function setSectionEl(id: string, el: unknown) {
   if (el instanceof HTMLElement) sectionEls.set(id, el);
@@ -254,6 +261,26 @@ function jumpTo(id: string) {
   });
   activeSection.value = id;
 }
+
+function onMobileSectionChange(event: Event) {
+  const id = (event.target as HTMLSelectElement).value;
+  if (id) jumpTo(id);
+}
+
+watch(
+  [visibleSections, isMobile],
+  ([nextSections, mobile]) => {
+    if (
+      !mobile ||
+      nextSections.length === 0 ||
+      nextSections.some((section) => section.id === activeSection.value)
+    ) {
+      return;
+    }
+    jumpTo(nextSections[0].id);
+  },
+  { flush: 'post' }
+);
 
 // --- 保存 / 放弃 ---
 const isSaving = ref(false);
@@ -299,6 +326,28 @@ onBeforeRouteLeave(() => {
 
 <template>
   <div class="page-config">
+    <div v-if="isMobile" class="config-mobile-tools">
+      <ab-input
+        v-model="searchQuery"
+        class="config-mobile-search"
+        type="search"
+        :placeholder="$t('config.search_placeholder')"
+        :aria-label="$t('config.search_placeholder')"
+      />
+      <label class="config-mobile-section-label">
+        <span>{{ $t('mobile.settings_section') }}</span>
+        <select
+          class="config-mobile-section"
+          :value="mobileSectionId"
+          @change="onMobileSectionChange"
+        >
+          <option v-for="s in visibleSections" :key="s.id" :value="s.id">
+            {{ $t(s.titleKey) }}
+          </option>
+        </select>
+      </label>
+    </div>
+
     <div class="config-layout">
       <nav
         v-if="!isMobileOrTablet"
@@ -521,8 +570,56 @@ onBeforeRouteLeave(() => {
 }
 
 @media (max-width: 639px) {
+  .page-config,
+  .config-layout,
+  .config-scroll {
+    gap: 8px;
+  }
+
+  .config-mobile-tools,
+  .config-mobile-section-label {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .config-mobile-tools {
+    flex: 0 0 auto;
+    gap: 8px;
+  }
+
+  .config-mobile-search {
+    width: 100%;
+  }
+
+  .config-mobile-section-label {
+    gap: 4px;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+  }
+
+  .config-mobile-section {
+    width: 100%;
+    min-height: var(--touch-target);
+    padding: 0 12px;
+    color: var(--color-text);
+    background: var(--color-surface-2);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    font: inherit;
+
+    &:focus-visible {
+      border-color: var(--color-primary);
+      outline: 2px solid var(--color-primary-alpha);
+      outline-offset: 1px;
+    }
+  }
+
   .config-actions {
     flex-wrap: wrap;
+    flex: 0 0 auto;
+    gap: 8px;
+    padding: 8px;
 
     .unsaved-hint {
       width: 100%;
@@ -531,6 +628,11 @@ onBeforeRouteLeave(() => {
     :deep(.ab-btn) {
       flex: 1;
     }
+  }
+
+  .config-section {
+    width: 100%;
+    min-width: 0;
   }
 }
 </style>

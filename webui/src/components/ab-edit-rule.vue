@@ -1,7 +1,9 @@
 <script lang="ts" setup>
+import { More } from '@icon-park/vue-next';
 import { NCheckbox, NSelect, NSpin, useMessage } from 'naive-ui';
 import { onKeyStroke } from '@vueuse/core';
 import type { BangumiRule, DetectOffsetResponse } from '#/bangumi';
+import type { AbMenuItem } from '@/components/basic/ab-menu.vue';
 
 const emit = defineEmits<{
   (e: 'apply', rule: BangumiRule): void;
@@ -16,6 +18,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useMyI18n();
+const { isMobile } = useBreakpointQuery();
 
 const show = defineModel('show', { default: false });
 const rule = defineModel<BangumiRule>('rule', {
@@ -51,6 +54,32 @@ const deleteFileDialog = reactive<{
   type: 'disable',
 });
 const deleteLocalFiles = ref(false);
+const mobileActionsRef = ref<HTMLElement | null>(null);
+const mobileDeleteActive = computed(
+  () => isMobile.value && deleteFileDialog.show
+);
+
+function returnToEditor() {
+  deleteFileDialog.show = false;
+  nextTick(() => {
+    window.setTimeout(() => {
+      mobileActionsRef.value
+        ?.querySelector<HTMLButtonElement>('button')
+        ?.focus();
+    });
+  });
+}
+
+const editorModalShow = computed({
+  get: () => show.value,
+  set: (value: boolean) => {
+    if (!value && mobileDeleteActive.value) {
+      returnToEditor();
+      return;
+    }
+    show.value = value;
+  },
+});
 
 watch(show, (val) => {
   if (!val) {
@@ -160,7 +189,7 @@ function goToTorrents() {
 }
 
 onKeyStroke('Escape', () => {
-  if (!show.value) return;
+  if (!show.value || isMobile.value) return;
   // Inner delete dialog closes first, then the modal itself.
   if (deleteFileDialog.show) {
     deleteFileDialog.show = false;
@@ -199,6 +228,30 @@ function emitArchive() {
 function emitUnarchive() {
   emit('unarchive', rule.value.id);
 }
+
+const mobileRuleActions = computed<AbMenuItem[]>(() => [
+  {
+    key: 'torrents',
+    label: () => t('homepage.rule.view_torrents'),
+    handler: goToTorrents,
+  },
+  {
+    key: localRule.value.archived ? 'unarchive' : 'archive',
+    label: () =>
+      t(
+        localRule.value.archived
+          ? 'homepage.rule.unarchive'
+          : 'homepage.rule.archive'
+      ),
+    handler: localRule.value.archived ? emitUnarchive : emitArchive,
+  },
+  {
+    key: 'delete',
+    label: () => t('homepage.rule.delete'),
+    danger: true,
+    handler: showDeleteFileDialog,
+  },
+]);
 </script>
 
 <template>
@@ -224,15 +277,27 @@ function emitUnarchive() {
   <!-- Main edit modal -->
   <ab-modal
     v-else
-    v-model:show="show"
-    :title="$t('homepage.rule.edit_rule')"
+    v-model:show="editorModalShow"
+    :title="
+      mobileDeleteActive
+        ? $t('homepage.rule.delete')
+        : $t('homepage.rule.edit_rule')
+    "
     mobile-fullscreen
     :avoid-keyboard="false"
-    @close="close"
   >
+    <template v-if="mobileDeleteActive">
+      <p class="delete-message">
+        {{ $t('homepage.rule.delete_confirm') }}
+      </p>
+      <NCheckbox v-model:checked="deleteLocalFiles" class="delete-files-option">
+        {{ $t('homepage.rule.delete_files_label') }}
+      </NCheckbox>
+    </template>
+
     <!-- Needs Review Warning Banner -->
     <div
-      v-if="localRule.needs_review"
+      v-if="!mobileDeleteActive && localRule.needs_review"
       class="review-warning"
       role="status"
       :aria-label="$t('offset.needs_review')"
@@ -272,7 +337,7 @@ function emitUnarchive() {
     </div>
 
     <!-- Content -->
-    <div class="edit-content">
+    <div v-if="!mobileDeleteActive" class="edit-content">
       <bangumi-preview v-model:rule="localRule" :poster-src="posterSrc" />
 
       <bangumi-info-tags :tags="infoTags" />
@@ -379,6 +444,7 @@ function emitUnarchive() {
          Escape/遮罩点击挂起，只关闭内层 -->
     <!-- Delete confirmation dialog -->
     <ab-modal
+      v-if="!isMobile"
       v-model:show="deleteFileDialog.show"
       size="sm"
       :title="$t('homepage.rule.delete')"
@@ -405,26 +471,59 @@ function emitUnarchive() {
     </ab-modal>
 
     <template #footer>
-      <ab-button size="sm" variant="ghost" @click="goToTorrents">
-        {{ $t('homepage.rule.view_torrents') }}
-      </ab-button>
-      <ab-button v-if="localRule.archived" size="sm" @click="emitUnarchive">
-        {{ $t('homepage.rule.unarchive') }}
-      </ab-button>
-      <ab-button v-else size="sm" @click="emitArchive">
-        {{ $t('homepage.rule.archive') }}
-      </ab-button>
-      <ab-button
-        size="sm"
-        variant="danger"
-        class="footer-delete"
-        @click="showDeleteFileDialog"
-      >
-        {{ $t('homepage.rule.delete') }}
-      </ab-button>
-      <ab-button variant="primary" size="sm" @click="emitApply">
-        {{ $t('homepage.rule.apply') }}
-      </ab-button>
+      <template v-if="mobileDeleteActive">
+        <ab-button size="sm" @click="returnToEditor">
+          {{ $t('homepage.rule.cancel_btn') }}
+        </ab-button>
+        <ab-button
+          size="sm"
+          variant="danger"
+          @click="emitDeleteFile(deleteLocalFiles)"
+        >
+          {{ $t('homepage.rule.delete') }}
+        </ab-button>
+      </template>
+      <template v-else-if="isMobile">
+        <div ref="mobileActionsRef" class="rule-mobile-actions">
+          <ab-menu :items="mobileRuleActions" align="left" placement="top">
+            <template #trigger>
+              <ab-icon-button :label="$t('common.moreActions')">
+                <More :size="20" />
+              </ab-icon-button>
+            </template>
+          </ab-menu>
+        </div>
+        <ab-button
+          variant="primary"
+          size="sm"
+          class="rule-mobile-apply"
+          @click="emitApply"
+        >
+          {{ $t('homepage.rule.apply') }}
+        </ab-button>
+      </template>
+      <template v-else>
+        <ab-button size="sm" variant="ghost" @click="goToTorrents">
+          {{ $t('homepage.rule.view_torrents') }}
+        </ab-button>
+        <ab-button v-if="localRule.archived" size="sm" @click="emitUnarchive">
+          {{ $t('homepage.rule.unarchive') }}
+        </ab-button>
+        <ab-button v-else size="sm" @click="emitArchive">
+          {{ $t('homepage.rule.archive') }}
+        </ab-button>
+        <ab-button
+          size="sm"
+          variant="danger"
+          class="footer-delete"
+          @click="showDeleteFileDialog"
+        >
+          {{ $t('homepage.rule.delete') }}
+        </ab-button>
+        <ab-button variant="primary" size="sm" @click="emitApply">
+          {{ $t('homepage.rule.apply') }}
+        </ab-button>
+      </template>
     </template>
   </ab-modal>
 </template>
@@ -575,5 +674,49 @@ function emitUnarchive() {
   margin: 0;
   font-size: 11px;
   color: var(--color-text-secondary);
+}
+
+@media screen and (max-width: 639px) {
+  .weekday-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .weekday-select,
+  .preferred-input {
+    width: 100%;
+    max-width: none;
+  }
+
+  .review-warning {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+    margin: 8px 0;
+    padding: 10px 12px;
+  }
+
+  .review-warning-actions {
+    width: 100%;
+    flex-shrink: 1;
+  }
+
+  .review-warning-actions .detect-btn,
+  .review-warning-actions .dismiss-btn {
+    height: var(--touch-target);
+    min-width: 0;
+    flex: 1;
+  }
+
+  .rule-mobile-actions {
+    margin-right: auto;
+  }
+
+  .rule-mobile-actions :deep(.ab-icon-btn),
+  .rule-mobile-apply {
+    min-width: var(--touch-target);
+    min-height: var(--touch-target);
+  }
 }
 </style>

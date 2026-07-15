@@ -121,7 +121,7 @@ const ModalStub = defineComponent({
     show: Boolean,
     title: String,
   },
-  emits: ['update:show'],
+  emits: ['update:show', 'after-leave'],
   template: `
     <div v-if="show" class="stub-modal" :data-title="title">
       <button class="stub-modal-close" @click="$emit('update:show', false)">close</button>
@@ -166,6 +166,7 @@ const SwitchStub = defineComponent({
 interface AccessSetupState {
   issuedToken: string;
   password: string;
+  showTokenDialog: boolean;
   showTokenValue: boolean;
   showUserDialog: boolean;
   username: string;
@@ -188,7 +189,7 @@ function buttonWithText(
   return button;
 }
 
-function mountAccess() {
+function mountAccess(attachTo?: HTMLElement) {
   const active = ref(true);
   const Host = defineComponent({
     components: { ConfigAccess, KeepAlive },
@@ -201,6 +202,7 @@ function mountAccess() {
   });
 
   const wrapper = mount(Host, {
+    attachTo,
     global: {
       components: {
         AbButton: ButtonStub,
@@ -317,6 +319,11 @@ describe('config access', () => {
     await buttonWithText(tokenDialog, 'access.create').trigger('click');
     await flushPromises();
     expect(state.issuedToken).toBe('ab_api_one_time_secret');
+    wrapper
+      .findAllComponents(ModalStub)
+      .find((modal) => modal.props('title') === 'access.add_token')!
+      .vm.$emit('after-leave');
+    await nextTick();
     expect(wrapper.text()).toContain('ab_api_one_time_secret');
     expect(wrapper.find('[aria-label="access.one_time_token"]').text()).toBe(
       'ab_api_one_time_secret'
@@ -327,6 +334,77 @@ describe('config access', () => {
       .trigger('click');
     await nextTick();
     expect(state.issuedToken).toBe('');
+    wrapper.unmount();
+  });
+
+  it('reveals a created token only after the create dialog finishes leaving', async () => {
+    vi.mocked(apiTokens.create).mockResolvedValue({
+      ...tokens[0],
+      id: 11,
+      name: 'queued-token',
+      expires_at: null,
+      token: 'ab_api_queued_one_time_secret',
+    });
+    const { wrapper } = mountAccess();
+    await flushPromises();
+    const state = getAccessState(wrapper);
+
+    await buttonWithText(wrapper, 'access.add_token').trigger('click');
+    const tokenDialog = wrapper.find('[data-title="access.add_token"]');
+    await tokenDialog.find('input').setValue('queued-token');
+    await buttonWithText(tokenDialog, 'access.create').trigger('click');
+    await flushPromises();
+    const beforeLeave = state.showTokenValue;
+    wrapper
+      .findAllComponents(ModalStub)
+      .find((modal) => modal.props('title') === 'access.add_token')!
+      .vm.$emit('after-leave');
+    await nextTick();
+
+    expect({ beforeLeave, afterLeave: state.showTokenValue }).toEqual({
+      beforeLeave: false,
+      afterLeave: true,
+    });
+    wrapper.unmount();
+  });
+
+  it('should return final focus to the add-token trigger after the create dialog unmounts', async () => {
+    vi.mocked(apiTokens.create).mockResolvedValue({
+      ...tokens[0],
+      id: 12,
+      name: 'focus-token',
+      expires_at: null,
+      token: 'ab_api_focus_token',
+    });
+    const { wrapper } = mountAccess(document.body);
+    await flushPromises();
+    const trigger = buttonWithText(wrapper, 'access.add_token');
+    trigger.element.focus();
+    await trigger.trigger('click');
+    const tokenDialog = wrapper.find('[data-title="access.add_token"]');
+    await tokenDialog.find('input').setValue('focus-token');
+    const createButton = buttonWithText(tokenDialog, 'access.create');
+    createButton.element.focus();
+    await createButton.trigger('click');
+    await flushPromises();
+
+    wrapper
+      .findAllComponents(ModalStub)
+      .find((modal) => modal.props('title') === 'access.add_token')!
+      .vm.$emit('after-leave');
+    await nextTick();
+    const finalReturnFocus = document.activeElement;
+    const tokenValueDialog = wrapper.find(
+      '[data-title="access.token_created"]'
+    );
+    const closeButton =
+      tokenValueDialog.get<HTMLButtonElement>('.stub-modal-close');
+    closeButton.element.focus();
+    await closeButton.trigger('click');
+    await nextTick();
+    if (finalReturnFocus instanceof HTMLElement) finalReturnFocus.focus();
+
+    expect(document.activeElement === trigger.element).toBe(true);
     wrapper.unmount();
   });
 

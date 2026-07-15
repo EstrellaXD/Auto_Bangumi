@@ -7,6 +7,13 @@ import {
   ErrorPicture,
   Right,
 } from '@icon-park/vue-next';
+import {
+  Dialog,
+  DialogPanel,
+  DialogTitle,
+  TransitionChild,
+  TransitionRoot,
+} from '@headlessui/vue';
 import { NDynamicTags, NSpin, useMessage } from 'naive-ui';
 import type {
   BangumiRule,
@@ -14,6 +21,7 @@ import type {
   OffsetSuggestionDetail,
   TMDBSummary,
 } from '#/bangumi';
+import { useFocusHandoff } from '@/hooks/useFocusHandoff';
 
 const props = defineProps<{
   bangumi: BangumiRule;
@@ -26,6 +34,12 @@ const emit = defineEmits<{
 
 const message = useMessage();
 const { t } = useMyI18n();
+const { isMobile } = useBreakpointQuery();
+const { captureFocusTarget, restoreFocusTarget } = useFocusHandoff();
+
+// setup runs while the result trigger is still focused and before this
+// component's first Dialog mounts and moves focus inside itself.
+captureFocusTarget();
 
 // Local deep copy of bangumi for editing (prevents mutation of original prop)
 const localBangumi = ref<BangumiRule>(
@@ -36,6 +50,7 @@ const localBangumi = ref<BangumiRule>(
 watch(
   () => props.bangumi,
   (newVal) => {
+    resetOffsetFlow();
     localBangumi.value = JSON.parse(JSON.stringify(newVal));
     // Re-detect offset when bangumi changes
     detectOffsetMismatch();
@@ -52,11 +67,98 @@ const offsetLoading = ref(false);
 
 // Offset mismatch detection state
 const showOffsetDialog = ref(false);
+const showConfirmation = ref(true);
+const pendingOffsetOpen = ref(false);
+const reopenConfirmationAfterOffset = ref(false);
 const offsetSuggestion = ref<OffsetSuggestionDetail | null>(null);
 const tmdbInfo = ref<TMDBSummary | null>(null);
+let offsetDetectionRequest = 0;
+
+function resetOffsetFlow() {
+  offsetDetectionRequest += 1;
+  pendingOffsetOpen.value = false;
+  offsetSuggestion.value = null;
+  tmdbInfo.value = null;
+
+  if (
+    isMobile.value &&
+    (showOffsetDialog.value || reopenConfirmationAfterOffset.value)
+  ) {
+    reopenConfirmationAfterOffset.value = true;
+    showOffsetDialog.value = false;
+    showConfirmation.value = false;
+    return;
+  }
+
+  reopenConfirmationAfterOffset.value = false;
+  showOffsetDialog.value = false;
+  showConfirmation.value = true;
+}
+
+function openOffsetDialog() {
+  if (!isMobile.value) {
+    showOffsetDialog.value = true;
+    return;
+  }
+
+  pendingOffsetOpen.value = true;
+  showConfirmation.value = false;
+}
+
+function handleConfirmationAfterLeave() {
+  if (!pendingOffsetOpen.value) return;
+  pendingOffsetOpen.value = false;
+  restoreFocusTarget();
+  showOffsetDialog.value = true;
+}
+
+function closeOffsetDialog() {
+  if (isMobile.value) {
+    reopenConfirmationAfterOffset.value = true;
+  }
+  showOffsetDialog.value = false;
+}
+
+function handleOffsetAfterLeave() {
+  if (pendingOffsetOpen.value) {
+    pendingOffsetOpen.value = false;
+    reopenConfirmationAfterOffset.value = false;
+    restoreFocusTarget();
+    showOffsetDialog.value = true;
+    return;
+  }
+  if (!reopenConfirmationAfterOffset.value) return;
+  reopenConfirmationAfterOffset.value = false;
+  restoreFocusTarget();
+  showConfirmation.value = true;
+}
+
+watch(
+  isMobile,
+  (mobile) => {
+    if (mobile) {
+      if (showOffsetDialog.value) {
+        pendingOffsetOpen.value = true;
+        reopenConfirmationAfterOffset.value = false;
+        showOffsetDialog.value = false;
+        showConfirmation.value = false;
+      }
+      return;
+    }
+
+    const shouldKeepOffsetOpen =
+      showOffsetDialog.value || pendingOffsetOpen.value;
+    pendingOffsetOpen.value = false;
+    reopenConfirmationAfterOffset.value = false;
+    showConfirmation.value = true;
+    showOffsetDialog.value = shouldKeepOffsetOpen;
+  },
+  { flush: 'sync' }
+);
 
 // Detect offset mismatch on mount
 async function detectOffsetMismatch() {
+  const requestId = ++offsetDetectionRequest;
   if (!localBangumi.value.official_title || !localBangumi.value.season) return;
 
   try {
@@ -66,12 +168,15 @@ async function detectOffsetMismatch() {
       parsed_episode: 1, // Use episode 1 as baseline for detection
     });
 
+    if (requestId !== offsetDetectionRequest) return;
+
     if (result.has_mismatch && result.suggestion) {
       offsetSuggestion.value = result.suggestion;
       tmdbInfo.value = result.tmdb_info;
-      showOffsetDialog.value = true;
+      openOffsetDialog();
     }
   } catch (e) {
+    if (requestId !== offsetDetectionRequest) return;
     console.error('Failed to detect offset mismatch:', e);
   }
 }
@@ -83,17 +188,17 @@ function handleOffsetApply(offsets: {
 }) {
   localBangumi.value.season_offset = offsets.seasonOffset;
   localBangumi.value.episode_offset = offsets.episodeOffset;
-  showOffsetDialog.value = false;
+  closeOffsetDialog();
 }
 
 // Handle offset dialog keep (no change)
 function handleOffsetKeep() {
-  showOffsetDialog.value = false;
+  closeOffsetDialog();
 }
 
 // Handle offset dialog cancel
 function handleOffsetCancel() {
-  showOffsetDialog.value = false;
+  closeOffsetDialog();
 }
 
 // Run detection on mount
@@ -142,7 +247,11 @@ async function copyRssLink() {
 }
 
 onBeforeUnmount(() => {
+  offsetDetectionRequest += 1;
+  pendingOffsetOpen.value = false;
+  reopenConfirmationAfterOffset.value = false;
   clearTimeout(copyTimer);
+  restoreFocusTarget();
 });
 
 // Auto detect offset
@@ -166,178 +275,250 @@ function handleConfirm() {
 </script>
 
 <template>
-  <div class="confirm-backdrop" @click.self="emit('cancel')">
-    <div class="confirm-modal" role="dialog" aria-modal="true">
-      <!-- Header -->
-      <header class="confirm-header">
-        <h2 class="confirm-title">{{ $t('search.confirm.title') }}</h2>
-        <ab-icon-button
-          class="close-btn"
-          :label="$t('common.close')"
-          @click="emit('cancel')"
+  <TransitionRoot
+    appear
+    :show="showConfirmation"
+    as="template"
+    @after-leave="handleConfirmationAfterLeave"
+  >
+    <Dialog @close="emit('cancel')">
+      <TransitionChild
+        as="template"
+        enter="confirm-backdrop-enter-active"
+        enter-from="confirm-backdrop-enter-from"
+        leave="confirm-backdrop-leave-active"
+        leave-to="confirm-backdrop-leave-to"
+      >
+        <div class="confirm-backdrop" aria-hidden="true" />
+      </TransitionChild>
+
+      <div class="confirm-wrapper">
+        <TransitionChild
+          as="template"
+          enter="confirm-modal-enter-active"
+          enter-from="confirm-modal-enter-from"
+          leave="confirm-modal-leave-active"
+          leave-to="confirm-modal-leave-to"
         >
-          <Close theme="outline" size="18" />
-        </ab-icon-button>
-      </header>
-
-      <!-- Content -->
-      <div class="confirm-content">
-        <!-- Bangumi Info -->
-        <div class="bangumi-info">
-          <div class="bangumi-poster">
-            <template v-if="localBangumi.poster_link">
-              <img :src="posterSrc" :alt="localBangumi.official_title" />
-            </template>
-            <template v-else>
-              <div class="poster-placeholder">
-                <ErrorPicture theme="outline" size="32" />
+          <DialogPanel as="template">
+            <div class="confirm-modal">
+              <div class="confirm-handle" aria-hidden="true">
+                <span class="confirm-handle__bar" />
               </div>
-            </template>
-          </div>
-          <div class="bangumi-meta">
-            <h3 class="bangumi-title">{{ localBangumi.official_title }}</h3>
-            <p v-if="localBangumi.title_raw" class="bangumi-subtitle">
-              {{ localBangumi.title_raw }}
-            </p>
-            <p v-if="localBangumi.year" class="bangumi-year">
-              {{ localBangumi.year }}
-            </p>
-          </div>
-        </div>
 
-        <!-- Info Tags -->
-        <div v-if="infoTags.length > 0" class="info-tags">
-          <div
-            v-for="tag in infoTags"
-            :key="tag.type"
-            class="info-tag"
-            :class="`info-tag--${tag.type}`"
-          >
-            {{ tag.value }}
-          </div>
-        </div>
+              <!-- Header -->
+              <header class="confirm-header">
+                <DialogTitle as="template">
+                  <h2 class="confirm-title">
+                    {{ $t('search.confirm.title') }}
+                  </h2>
+                </DialogTitle>
+                <ab-icon-button
+                  class="close-btn"
+                  :label="$t('common.close')"
+                  @click="emit('cancel')"
+                >
+                  <Close theme="outline" size="18" />
+                </ab-icon-button>
+              </header>
 
-        <!-- RSS Link -->
-        <div class="rss-section">
-          <div class="info-row">
-            <span class="info-label">{{ $t('search.confirm.rss') }}:</span>
-            <span class="info-value info-value--link">
-              {{ localBangumi.rss_link?.[0] || '-' }}
-            </span>
-            <button
-              class="copy-btn"
-              :class="{ copied }"
-              :aria-label="$t('search.confirm.copy_rss')"
-              @click="copyRssLink"
-            >
-              <CheckOne v-if="copied" theme="outline" size="14" />
-              <Copy v-else theme="outline" size="14" />
-            </button>
-          </div>
-        </div>
-
-        <!-- Advanced settings -->
-        <div class="advanced-section">
-          <button class="advanced-toggle" @click="showAdvanced = !showAdvanced">
-            <component
-              :is="showAdvanced ? Down : Right"
-              theme="outline"
-              size="14"
-            />
-            {{ $t('search.confirm.advanced') }}
-          </button>
-
-          <transition name="expand">
-            <div v-show="showAdvanced" class="advanced-content">
-              <!-- Filter rules row -->
-              <div class="advanced-row advanced-row--tags">
-                <label class="advanced-label">{{
-                  $t('search.confirm.filter')
-                }}</label>
-                <div class="advanced-control filter-tags">
-                  <NDynamicTags
-                    v-model:value="localBangumi.filter"
-                    size="small"
-                  />
+              <!-- Content -->
+              <div class="confirm-content">
+                <!-- Bangumi Info -->
+                <div class="bangumi-info">
+                  <div class="bangumi-poster">
+                    <template v-if="localBangumi.poster_link">
+                      <img
+                        :src="posterSrc"
+                        :alt="localBangumi.official_title"
+                      />
+                    </template>
+                    <template v-else>
+                      <div class="poster-placeholder">
+                        <ErrorPicture theme="outline" size="32" />
+                      </div>
+                    </template>
+                  </div>
+                  <div class="bangumi-meta">
+                    <h3 class="bangumi-title">
+                      {{ localBangumi.official_title }}
+                    </h3>
+                    <p v-if="localBangumi.title_raw" class="bangumi-subtitle">
+                      {{ localBangumi.title_raw }}
+                    </p>
+                    <p v-if="localBangumi.year" class="bangumi-year">
+                      {{ localBangumi.year }}
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <!-- Season Offset row -->
-              <div class="advanced-row">
-                <label class="advanced-label">{{
-                  $t('homepage.rule.season_offset')
-                }}</label>
-                <div class="advanced-control offset-controls">
-                  <ab-input
-                    v-model="localBangumi.season_offset"
-                    type="number"
-                    class="offset-input"
-                  />
-                </div>
-              </div>
-
-              <!-- Episode Offset row -->
-              <div class="advanced-row">
-                <label class="advanced-label">{{
-                  $t('homepage.rule.episode_offset')
-                }}</label>
-                <div class="advanced-control offset-controls">
-                  <ab-input
-                    v-model="localBangumi.episode_offset"
-                    type="number"
-                    class="offset-input"
-                  />
-                  <button
-                    class="detect-btn"
-                    :disabled="offsetLoading"
-                    @click="autoDetectOffset"
+                <!-- Info Tags -->
+                <div v-if="infoTags.length > 0" class="info-tags">
+                  <div
+                    v-for="tag in infoTags"
+                    :key="tag.type"
+                    class="info-tag"
+                    :class="`info-tag--${tag.type}`"
                   >
-                    <NSpin v-if="offsetLoading" :size="14" />
-                    <span v-else>{{ $t('homepage.rule.auto_detect') }}</span>
+                    {{ tag.value }}
+                  </div>
+                </div>
+
+                <!-- RSS Link -->
+                <div class="rss-section">
+                  <div class="info-row">
+                    <span class="info-label"
+                      >{{ $t('search.confirm.rss') }}:</span
+                    >
+                    <span class="info-value info-value--link">
+                      {{ localBangumi.rss_link?.[0] || '-' }}
+                    </span>
+                    <button
+                      class="copy-btn"
+                      :class="{ copied }"
+                      :aria-label="$t('search.confirm.copy_rss')"
+                      @click="copyRssLink"
+                    >
+                      <CheckOne v-if="copied" theme="outline" size="14" />
+                      <Copy v-else theme="outline" size="14" />
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Advanced settings -->
+                <div class="advanced-section">
+                  <button
+                    class="advanced-toggle"
+                    @click="showAdvanced = !showAdvanced"
+                  >
+                    <component
+                      :is="showAdvanced ? Down : Right"
+                      theme="outline"
+                      size="14"
+                    />
+                    {{ $t('search.confirm.advanced') }}
                   </button>
+
+                  <transition name="expand">
+                    <div v-show="showAdvanced" class="advanced-content">
+                      <!-- Filter rules row -->
+                      <div class="advanced-row advanced-row--tags">
+                        <label class="advanced-label">{{
+                          $t('search.confirm.filter')
+                        }}</label>
+                        <div class="advanced-control filter-tags">
+                          <NDynamicTags
+                            v-model:value="localBangumi.filter"
+                            size="small"
+                          />
+                        </div>
+                      </div>
+
+                      <!-- Season Offset row -->
+                      <div class="advanced-row">
+                        <label class="advanced-label">{{
+                          $t('homepage.rule.season_offset')
+                        }}</label>
+                        <div class="advanced-control offset-controls">
+                          <ab-input
+                            v-model="localBangumi.season_offset"
+                            type="number"
+                            class="offset-input"
+                          />
+                        </div>
+                      </div>
+
+                      <!-- Episode Offset row -->
+                      <div class="advanced-row">
+                        <label class="advanced-label">{{
+                          $t('homepage.rule.episode_offset')
+                        }}</label>
+                        <div class="advanced-control offset-controls">
+                          <ab-input
+                            v-model="localBangumi.episode_offset"
+                            type="number"
+                            class="offset-input"
+                          />
+                          <button
+                            class="detect-btn"
+                            :disabled="offsetLoading"
+                            @click="autoDetectOffset"
+                          >
+                            <NSpin v-if="offsetLoading" :size="14" />
+                            <span v-else>{{
+                              $t('homepage.rule.auto_detect')
+                            }}</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </transition>
                 </div>
               </div>
+
+              <!-- Footer -->
+              <footer class="confirm-footer">
+                <ab-button @click="emit('cancel')">
+                  {{ $t('common.cancel') }}
+                </ab-button>
+                <ab-button variant="primary" @click="handleConfirm">
+                  {{ $t('search.confirm.subscribe') }}
+                </ab-button>
+              </footer>
             </div>
-          </transition>
-        </div>
+          </DialogPanel>
+        </TransitionChild>
       </div>
 
-      <!-- Footer -->
-      <footer class="confirm-footer">
-        <ab-button @click="emit('cancel')">
-          {{ $t('common.cancel') }}
-        </ab-button>
-        <ab-button variant="primary" @click="handleConfirm">
-          {{ $t('search.confirm.subscribe') }}
-        </ab-button>
-      </footer>
-    </div>
+      <!-- Offset Mismatch Dialog -->
+      <ab-offset-mismatch-dialog
+        v-if="!isMobile"
+        v-model:show="showOffsetDialog"
+        :bangumi-title="localBangumi.official_title"
+        :parsed-season="localBangumi.season"
+        :parsed-episode="1"
+        :tmdb-info="tmdbInfo"
+        :suggestion="offsetSuggestion"
+        @apply="handleOffsetApply"
+        @keep="handleOffsetKeep"
+        @cancel="handleOffsetCancel"
+      />
+    </Dialog>
+  </TransitionRoot>
 
-    <!-- Offset Mismatch Dialog -->
-    <ab-offset-mismatch-dialog
-      v-model:show="showOffsetDialog"
-      :bangumi-title="localBangumi.official_title"
-      :parsed-season="localBangumi.season"
-      :parsed-episode="1"
-      :tmdb-info="tmdbInfo"
-      :suggestion="offsetSuggestion"
-      @apply="handleOffsetApply"
-      @keep="handleOffsetKeep"
-      @cancel="handleOffsetCancel"
-    />
-  </div>
+  <!-- Mobile dialogs transition sequentially so focus traps never overlap. -->
+  <ab-offset-mismatch-dialog
+    v-if="isMobile"
+    v-model:show="showOffsetDialog"
+    :bangumi-title="localBangumi.official_title"
+    :parsed-season="localBangumi.season"
+    :parsed-episode="1"
+    :tmdb-info="tmdbInfo"
+    :suggestion="offsetSuggestion"
+    @apply="handleOffsetApply"
+    @keep="handleOffsetKeep"
+    @cancel="handleOffsetCancel"
+    @after-leave="handleOffsetAfterLeave"
+  />
 </template>
 
 <style lang="scss" scoped>
 .confirm-backdrop {
   position: fixed;
   inset: 0;
+  z-index: calc(var(--z-modal) + 10);
+  background: var(--color-overlay);
+}
+
+.confirm-wrapper {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-modal) + 11);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-overlay);
-  z-index: calc(var(--z-modal) + 10);
   padding: 16px;
+  overflow-y: auto;
 }
 
 .confirm-modal {
@@ -350,18 +531,31 @@ function handleConfirm() {
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
-  animation: modal-in 200ms ease-out;
 }
 
-@keyframes modal-in {
-  from {
-    opacity: 0;
-    transform: scale(0.95) translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+.confirm-handle {
+  display: none;
+}
+
+.confirm-modal-enter-active,
+.confirm-backdrop-enter-active {
+  transition: opacity 200ms ease-out, transform 200ms ease-out;
+}
+
+.confirm-modal-leave-active,
+.confirm-backdrop-leave-active {
+  transition: opacity 150ms ease-in, transform 150ms ease-in;
+}
+
+.confirm-modal-enter-from,
+.confirm-modal-leave-to {
+  opacity: 0;
+  transform: scale(0.95) translateY(10px);
+}
+
+.confirm-backdrop-enter-from,
+.confirm-backdrop-leave-to {
+  opacity: 0;
 }
 
 .confirm-header {
@@ -737,6 +931,120 @@ function handleConfirm() {
       background: var(--color-primary-hover);
       border-color: var(--color-primary-hover);
     }
+  }
+}
+
+@media screen and (max-width: 639px) {
+  .confirm-wrapper {
+    align-items: flex-end;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .confirm-modal {
+    width: 100%;
+    max-width: 640px;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+
+    @supports not (height: 1dvh) {
+      height: 100vh;
+      max-height: 100vh;
+    }
+  }
+
+  .confirm-handle {
+    display: flex;
+    flex-shrink: 0;
+    justify-content: center;
+    padding: calc(8px + env(safe-area-inset-top, 0px)) 0 6px;
+  }
+
+  .confirm-handle__bar {
+    width: 36px;
+    height: 4px;
+    border-radius: var(--radius-full);
+    background: var(--color-border);
+  }
+
+  .confirm-header {
+    min-height: 52px;
+    padding: 0 16px 8px;
+  }
+
+  .close-btn,
+  .copy-btn,
+  .advanced-toggle,
+  .detect-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .confirm-content {
+    min-height: 0;
+    padding: 16px;
+    overscroll-behavior: contain;
+  }
+
+  .rss-section,
+  .advanced-content {
+    padding: 12px;
+  }
+
+  .advanced-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .advanced-label {
+    line-height: 24px;
+  }
+
+  .advanced-control,
+  .advanced-control :deep(.n-dynamic-tags),
+  .offset-controls {
+    width: 100%;
+    height: auto;
+    min-height: 44px;
+    justify-content: flex-start;
+  }
+
+  .advanced-control :deep(.n-button),
+  .advanced-control :deep(.n-tag) {
+    min-width: 44px;
+    height: 44px;
+  }
+
+  .offset-input {
+    width: 80px;
+    height: 44px;
+  }
+
+  .confirm-footer {
+    flex-shrink: 0;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+
+    :deep(button) {
+      flex: 1;
+      min-height: 44px;
+    }
+  }
+
+  .confirm-modal-enter-from,
+  .confirm-modal-leave-to {
+    transform: translateY(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confirm-modal-enter-active,
+  .confirm-modal-leave-active,
+  .confirm-backdrop-enter-active,
+  .confirm-backdrop-leave-active {
+    transition: none;
   }
 }
 </style>

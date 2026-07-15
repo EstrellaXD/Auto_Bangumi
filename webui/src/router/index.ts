@@ -1,4 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router/auto';
+import { getRootRedirect } from '@/utils/mobile-navigation';
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -46,6 +47,10 @@ router.beforeEach(async (to) => {
     return { name: 'Login' };
   } else if (isLoggedIn.value && to.path === '/login') {
     return { name: 'Index' };
+  }
+
+  if (isLoggedIn.value && to.name === 'Index') {
+    return getRootRedirect();
   }
 
   if (type.value === 'jump' && url.value !== '' && to.path === '/player') {

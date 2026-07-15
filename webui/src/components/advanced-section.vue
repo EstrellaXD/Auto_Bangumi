@@ -83,6 +83,17 @@ const open = defineModel<boolean>('open', { default: false });
   margin-top: 8px;
 }
 
+@media screen and (max-width: 639px) {
+  .advanced-toggle {
+    width: 100%;
+    min-height: var(--touch-target);
+  }
+
+  .advanced-content {
+    padding: 12px;
+  }
+}
+
 // Expand transition
 .expand-enter-active,
 .expand-leave-active {

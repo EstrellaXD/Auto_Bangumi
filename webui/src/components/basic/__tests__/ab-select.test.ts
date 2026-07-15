@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { NSelect } from 'naive-ui';
@@ -22,5 +23,16 @@ describe('ab-select', () => {
     expect(nodeProps({ label: 'jp', value: 'jp' })).toEqual({
       role: 'option',
     });
+  });
+
+  it('should give teleported select options a strict mobile touch target', () => {
+    const globalStyles = readFileSync(
+      new URL('../../../style/global.scss', import.meta.url),
+      'utf8'
+    );
+
+    expect(globalStyles).toMatch(
+      /@media screen and \(max-width: 639px\)[\s\S]*?\.n-base-select-option[\s\S]*?min-height:\s*var\(--touch-target\)/
+    );
   });
 });

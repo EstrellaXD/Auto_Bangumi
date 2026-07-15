@@ -4,15 +4,24 @@ import type { BangumiRule } from '#/bangumi';
 export interface SearchFilters {
   group: string[];
   resolution: string[];
-  subtitleType: string[];
+  subtitle: string[];
   season: string[];
 }
 
 export interface FilterOptions {
   group: string[];
   resolution: string[];
-  subtitleType: string[];
+  subtitle: string[];
   season: string[];
+}
+
+function emptyFilters(): SearchFilters {
+  return {
+    group: [],
+    resolution: [],
+    subtitle: [],
+    season: [],
+  };
 }
 
 // Grouped bangumi result
@@ -42,6 +51,7 @@ export const useSearchStore = defineStore('search', () => {
   // Modal state
   const showModal = ref(false);
   const selectedResult = ref<BangumiRule | null>(null);
+  const activeFilters = ref<SearchFilters>(emptyFilters());
 
   const loading = computed(() => status.value !== 'CLOSED');
 
@@ -74,8 +84,11 @@ export const useSearchStore = defineStore('search', () => {
   });
 
   async function getProviders() {
-    providers.value = await apiSearch.getProvider();
-    provider.value = providers.value[0];
+    const availableProviders = await apiSearch.getProvider();
+    providers.value = availableProviders;
+    if (!availableProviders.includes(provider.value)) {
+      provider.value = availableProviders[0] ?? '';
+    }
   }
 
   function openModal() {
@@ -99,7 +112,12 @@ export const useSearchStore = defineStore('search', () => {
   function clearSearch() {
     keyword.value = '';
     searchData.value = [];
+    clearFilters();
     closeSearch();
+  }
+
+  function clearFilters() {
+    activeFilters.value = emptyFilters();
   }
 
   function selectResult(bangumi: BangumiRule) {
@@ -122,6 +140,7 @@ export const useSearchStore = defineStore('search', () => {
     if (!val.trim()) {
       closeSearch();
     }
+    clearFilters();
   });
 
   return {
@@ -134,9 +153,11 @@ export const useSearchStore = defineStore('search', () => {
     groupedResults,
     showModal,
     selectedResult,
+    activeFilters,
 
     // Actions
     clearSearch,
+    clearFilters,
     getProviders,
     onSearch,
     closeSearch,

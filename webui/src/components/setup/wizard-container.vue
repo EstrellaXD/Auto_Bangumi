@@ -107,4 +107,130 @@ const { t } = useMyI18n();
     }
   }
 }
+
+@media screen and (max-width: 639px) {
+  .wizard-container {
+    --setup-status-error: #b91c1c;
+    --setup-status-success: #166534;
+
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    gap: 16px;
+  }
+
+  :global(.dark) .wizard-container {
+    --setup-status-error: #fca5a5;
+    --setup-status-success: #86efac;
+  }
+
+  .wizard-step-indicator {
+    color: var(--color-text-secondary);
+  }
+
+  .wizard-content {
+    min-width: 0;
+
+    :deep(.wizard-step),
+    :deep(.container-card),
+    :deep(.container-body),
+    :deep(.step-content),
+    :deep(.welcome-content),
+    :deep(.form-fields),
+    :deep(.review-sections) {
+      min-width: 0;
+    }
+
+    :deep(.setup-input),
+    :deep(.setup-input-wide) {
+      width: 100%;
+      max-width: 100%;
+      min-height: var(--touch-target);
+      height: var(--touch-target);
+      box-sizing: border-box;
+      font-size: 16px;
+      text-align: left;
+    }
+
+    :deep(.n-select),
+    :deep(.type-select) {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    :deep(.wizard-actions .ab-btn),
+    :deep(.test-section .ab-btn),
+    :deep(.n-base-selection),
+    :deep(.n-base-selection-label) {
+      min-height: var(--touch-target);
+    }
+
+    :deep(.n-switch) {
+      min-width: var(--touch-target);
+      min-height: var(--touch-target);
+    }
+
+    :deep(.n-base-selection-label) {
+      font-size: 16px;
+    }
+
+    :deep(.wizard-actions),
+    :deep(.action-group),
+    :deep(.test-section),
+    :deep(.review-item) {
+      min-width: 0;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    :deep(.test-message) {
+      min-width: 0;
+      flex: 1 1 180px;
+      overflow-wrap: anywhere;
+    }
+
+    :deep(.error-text),
+    :deep(.test-message) {
+      color: var(--setup-status-error);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    :deep(.test-message.success) {
+      color: var(--setup-status-success);
+    }
+
+    :deep(.step-subtitle),
+    :deep(.untested-hint),
+    :deep(.review-label) {
+      color: var(--color-text-secondary);
+    }
+
+    :deep(.welcome-subtitle),
+    :deep(.welcome-description),
+    :deep(.step-subtitle),
+    :deep(.error-text),
+    :deep(.untested-hint),
+    :deep(.aria2-hint),
+    :deep(.feed-info),
+    :deep(.review-label),
+    :deep(.review-value) {
+      overflow-wrap: anywhere;
+    }
+
+    :deep(.review-label),
+    :deep(.review-value) {
+      min-width: 0;
+    }
+
+    :deep(.review-value) {
+      max-width: 60%;
+      overflow: visible;
+      text-overflow: clip;
+      white-space: normal;
+      text-align: right;
+    }
+  }
+}
 </style>
