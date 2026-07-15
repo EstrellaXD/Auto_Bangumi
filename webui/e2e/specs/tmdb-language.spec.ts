@@ -69,8 +69,10 @@ test('changing parser language re-queries the same TMDB title in that locale', a
   );
   expect(movie).toMatchObject({
     official_title: 'ローカライズ映画',
-    episode_type: 'movie',
-  });
+    title_raw: 'Localized Movie',
+    year: 2026,
+    group_name: 'E2E',
+  } satisfies Partial<typeof movie>);
 
   await activateTmdbScenario(environment, 'localized-retry-jp');
   const retried = await analyseTmdbFixture(

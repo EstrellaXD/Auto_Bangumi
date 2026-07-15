@@ -22,6 +22,13 @@ export interface BangumiRecord {
   [key: string]: unknown;
 }
 
+export interface MovieRecord {
+  official_title: string;
+  title_raw: string | null;
+  year: number | null;
+  group_name: string | null;
+}
+
 interface SeedRuleOptions {
   title: string;
   uniqueName: string;
@@ -99,11 +106,21 @@ export async function mockRequests(
   return payload.requests;
 }
 
+export function analyseTmdbFixture(
+  request: APIRequestContext,
+  environment: E2EEnvironment,
+  fixture: 'tmdb-movie.xml'
+): Promise<MovieRecord>;
+export function analyseTmdbFixture(
+  request: APIRequestContext,
+  environment: E2EEnvironment,
+  fixture?: 'tmdb-tv.xml' | 'tmdb-retry.xml'
+): Promise<BangumiRecord>;
 export async function analyseTmdbFixture(
   request: APIRequestContext,
   environment: E2EEnvironment,
   fixture = 'tmdb-tv.xml'
-): Promise<BangumiRecord> {
+): Promise<BangumiRecord | MovieRecord> {
   const response = await requireStatus(
     await request.post('/api/v1/rss/analysis', {
       data: {
@@ -116,7 +133,7 @@ export async function analyseTmdbFixture(
     }),
     200
   );
-  return response.json();
+  return (await response.json()) as BangumiRecord | MovieRecord;
 }
 
 async function analyseParserFixture(
