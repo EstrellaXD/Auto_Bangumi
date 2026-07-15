@@ -75,6 +75,29 @@ def test_qb_endpoints_and_successful_delete_update_state(fake_qb_url):
         assert client.get("/api/v2/torrents/info").status_code == 403
 
 
+def test_torrent_presets_include_webui_fields(fake_qb_url):
+    with httpx.Client(base_url=fake_qb_url) as client:
+        login(client)
+
+        torrent = client.get("/api/v2/torrents/info").json()[0]
+
+    assert {
+        "hash",
+        "name",
+        "size",
+        "progress",
+        "dlspeed",
+        "upspeed",
+        "num_seeds",
+        "num_leechs",
+        "state",
+        "eta",
+        "category",
+        "save_path",
+        "added_on",
+    } <= torrent.keys()
+
+
 def test_forced_delete_failure_is_atomic(fake_qb_url):
     with httpx.Client(base_url=fake_qb_url) as client:
         login(client)
