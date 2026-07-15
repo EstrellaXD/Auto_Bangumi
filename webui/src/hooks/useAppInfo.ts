@@ -5,12 +5,21 @@ export const useAppInfo = createSharedComposable(() => {
   const { connected: sseConnected, statusData } = useEventStream();
   const running = ref<boolean>(false);
   const version = ref<string>('');
+  const statusKnown = ref(false);
 
   // SSE 已连接时使用推送数据；否则回退到轮询。
   watch(statusData, (data) => {
     if (!data) return;
     running.value = data.status;
     version.value = data.version;
+    statusKnown.value = true;
+  });
+
+  watch(isLoggedIn, (loggedIn) => {
+    if (loggedIn) return;
+    running.value = false;
+    version.value = '';
+    statusKnown.value = false;
   });
 
   function getStatus() {
@@ -22,6 +31,7 @@ export const useAppInfo = createSharedComposable(() => {
         .then((res) => {
           running.value = res.status;
           version.value = res.version;
+          statusKnown.value = true;
         })
         .catch(() => {
           // Errors are already surfaced (throttled) by the axios interceptor;
@@ -43,6 +53,7 @@ export const useAppInfo = createSharedComposable(() => {
   return {
     running,
     version,
+    statusKnown,
 
     onUpdate,
     offUpdate,

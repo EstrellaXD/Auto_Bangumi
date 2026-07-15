@@ -1,166 +1,147 @@
 <script lang="ts" setup>
-import {
-  Calendar,
-  Download,
-  Home,
-  Log,
-  Moon,
-  SettingTwo,
-  Sun,
-} from '@icon-park/vue-next';
-import InlineSvg from 'vue-inline-svg';
+import { Home, More, Search } from '@icon-park/vue-next';
+import { computed } from 'vue';
+import { useRoute } from 'vue-router';
+import AbMobileMoreSheet from './ab-mobile-more-sheet.vue';
+import { useMyI18n } from '@/hooks/useMyI18n';
+import { useMobileShellStore } from '@/store/mobile-shell';
+import { getMobileNavDestination } from '@/utils/mobile-navigation';
 
 const { t } = useMyI18n();
 const route = useRoute();
-const { isDark, toggle: toggleDark } = useDarkMode();
+const mobileShell = useMobileShellStore();
 
-const RSS = h(
-  'span',
-  {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: '20px',
-      height: '20px',
-    },
-  },
-  h(InlineSvg, { src: './images/RSS.svg', width: '14', height: '14' })
+const moreOpen = computed(() => mobileShell.activeOverlay === 'more');
+const activeDestination = computed(() =>
+  moreOpen.value ? 'more' : getMobileNavDestination(route.path)
 );
 
-const navItems = [
-  { id: 1, icon: Home, label: () => t('sidebar.homepage'), path: '/bangumi' },
-  {
-    id: 2,
-    icon: Calendar,
-    label: () => t('sidebar.calendar'),
-    path: '/calendar',
-  },
-  { id: 3, icon: RSS, label: () => t('sidebar.rss'), path: '/rss' },
-  {
-    id: 5,
-    icon: Download,
-    label: () => t('sidebar.downloader'),
-    path: '/downloader',
-    hidden: localStorage.getItem('enable_downloader_iframe') !== '1',
-  },
-  { id: 6, icon: Log, label: () => t('sidebar.log'), path: '/log' },
-  {
-    id: 7,
-    icon: SettingTwo,
-    label: () => t('sidebar.config'),
-    path: '/config',
-  },
-];
+function closeMore() {
+  mobileShell.closeOverlay('more');
+}
 
-const visibleItems = computed(() => navItems.filter((i) => !i.hidden));
+function toggleMore() {
+  if (moreOpen.value) {
+    closeMore();
+  } else {
+    mobileShell.openOverlay('more');
+  }
+}
 </script>
 
 <template>
-  <nav class="mobile-nav" role="navigation" aria-label="Main navigation">
+  <nav class="mobile-nav" :aria-label="t('mobile.navigation')">
     <RouterLink
-      v-for="item in visibleItems"
-      :key="item.id"
-      :to="item.path"
-      replace
+      to="/home"
       class="mobile-nav__item"
-      :class="{ 'mobile-nav__item--active': route.path === item.path }"
-      :aria-label="item.label()"
+      :class="{ 'mobile-nav__item--active': activeDestination === 'home' }"
+      :aria-current="activeDestination === 'home' ? 'page' : undefined"
+      @click="closeMore"
     >
-      <Component :is="item.icon" :size="18" class="mobile-nav__icon" />
-      <span class="mobile-nav__label">{{ item.label() }}</span>
+      <Home :size="20" class="mobile-nav__icon" aria-hidden="true" />
+      <span class="mobile-nav__label">{{ t('mobile.home') }}</span>
+    </RouterLink>
+
+    <RouterLink
+      to="/search"
+      class="mobile-nav__item"
+      :class="{ 'mobile-nav__item--active': activeDestination === 'search' }"
+      :aria-current="activeDestination === 'search' ? 'page' : undefined"
+      @click="closeMore"
+    >
+      <Search :size="20" class="mobile-nav__icon" aria-hidden="true" />
+      <span class="mobile-nav__label">{{ t('mobile.search') }}</span>
     </RouterLink>
 
     <button
+      type="button"
       class="mobile-nav__item"
-      :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
-      @click="toggleDark"
+      :class="{ 'mobile-nav__item--active': activeDestination === 'more' }"
+      :aria-label="t('common.moreActions')"
+      aria-haspopup="dialog"
+      :aria-expanded="moreOpen"
+      @click="toggleMore"
     >
-      <Moon v-if="!isDark" :size="18" class="mobile-nav__icon" />
-      <Sun v-else :size="18" class="mobile-nav__icon" />
-      <span class="mobile-nav__label">{{
-        isDark ? t('theme.light') : t('theme.dark')
-      }}</span>
+      <More :size="20" class="mobile-nav__icon" aria-hidden="true" />
+      <span class="mobile-nav__label">{{ t('mobile.more') }}</span>
     </button>
   </nav>
+
+  <AbMobileMoreSheet :show="moreOpen" @update:show="closeMore" />
 </template>
 
 <style lang="scss" scoped>
 .mobile-nav {
-  // Thumb-reachable bottom bar. The nav is rendered inside .layout-main,
-  // which would otherwise place it at the top of the content column.
   position: fixed;
-  left: var(--layout-padding);
-  right: var(--layout-padding);
+  left: calc(var(--layout-padding) + env(safe-area-inset-left, 0px));
+  right: calc(var(--layout-padding) + env(safe-area-inset-right, 0px));
   bottom: var(--layout-padding);
   z-index: var(--z-fixed);
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
-  overflow-x: auto;
-  scrollbar-width: none;
+  overflow: hidden;
   @include safeAreaBottom(padding-bottom);
+}
 
-  &::-webkit-scrollbar {
-    display: none;
+.mobile-nav__item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  min-height: 56px;
+  padding: 6px 4px;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font: inherit;
+  text-decoration: none;
+  user-select: none;
+  transition: color var(--transition-fast),
+    background-color var(--transition-fast);
+
+  &:hover,
+  &:focus-visible {
+    color: var(--color-primary);
+    background: var(--color-primary-light);
   }
 
-  &__item {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    min-width: 0;
-    height: 56px;
-    padding: 6px 4px;
-    cursor: pointer;
-    user-select: none;
-    color: var(--color-text-muted);
-    background: transparent;
-    border: none;
-    border-radius: var(--radius-md);
-    transition: color var(--transition-fast),
-      background-color var(--transition-fast);
-    text-decoration: none;
-    font: inherit;
-    position: relative;
+  &--active {
+    color: var(--color-primary);
+    font-weight: 600;
 
-    &:active {
-      transform: scale(0.95);
-    }
-
-    &--active {
-      color: var(--color-primary);
-
-      &::after {
-        content: '';
-        position: absolute;
-        top: 4px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 20px;
-        height: 3px;
-        border-radius: var(--radius-full);
-        background: var(--color-primary);
-      }
+    &::after {
+      content: '';
+      position: absolute;
+      top: 4px;
+      left: 50%;
+      width: 22px;
+      height: 3px;
+      border-radius: var(--radius-full);
+      background: var(--color-primary);
+      transform: translateX(-50%);
     }
   }
+}
 
-  &__icon {
-    flex-shrink: 0;
-  }
+.mobile-nav__icon {
+  flex: 0 0 auto;
+}
 
-  &__label {
-    font-size: 11px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
-    line-height: 1.2;
-  }
+.mobile-nav__label {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

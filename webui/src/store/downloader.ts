@@ -4,12 +4,16 @@ export const useDownloaderStore = defineStore('downloader', () => {
   const torrents = shallowRef<QbTorrentInfo[]>([]);
   const selectedHashes = ref<string[]>([]);
   const loading = ref(false);
+  const hasLoaded = ref(false);
+  const loadFailed = ref(false);
 
   const { downloaderData } = useEventStream();
   // SSE 已连接时使用推送数据，省去 downloader.vue 页面自己的 5s 轮询请求。
   watch(downloaderData, (data) => {
     if (data === null) return;
     torrents.value = data;
+    hasLoaded.value = true;
+    loadFailed.value = false;
   });
 
   const groups = computed<TorrentGroup[]>(() => {
@@ -55,9 +59,12 @@ export const useDownloaderStore = defineStore('downloader', () => {
     loading.value = true;
     try {
       torrents.value = await apiDownloader.getTorrents();
+      hasLoaded.value = true;
+      loadFailed.value = false;
     } catch {
       // Keep the last known list — a failed 5s poll (e.g. during a backend
       // restart) must not blank the page into a fake "no torrents" state.
+      loadFailed.value = true;
     } finally {
       loading.value = false;
     }
@@ -120,6 +127,8 @@ export const useDownloaderStore = defineStore('downloader', () => {
     groups,
     selectedHashes,
     loading,
+    hasLoaded,
+    loadFailed,
 
     getAll,
     pauseSelected,

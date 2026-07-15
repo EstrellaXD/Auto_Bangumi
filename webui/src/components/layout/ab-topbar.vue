@@ -6,15 +6,15 @@ import {
   PlayOne,
   Power,
   Refresh,
-  Search,
 } from '@icon-park/vue-next';
+import { useRoute } from 'vue-router';
 import { ruleTemplate } from '#/bangumi';
 
 const { t, changeLocale } = useMyI18n();
-const { running, onUpdate, offUpdate } = useAppInfo();
+const { running, statusKnown, onUpdate, offUpdate } = useAppInfo();
 const { showAddRss: showAddRSS, closeAddRss } = useAddRss();
-const { toggleModal: openSearch } = useSearchStore();
 const { isMobile } = useBreakpointQuery();
+const route = useRoute();
 
 const showAccount = ref(false);
 const rssRule = ref(ruleTemplate);
@@ -109,27 +109,27 @@ onUnmounted(() => {
     </div>
 
     <!-- Desktop search bar -->
-    <div class="topbar-search">
+    <div v-if="!isMobile && route.path !== '/search'" class="topbar-search">
       <ab-search-bar />
     </div>
-
-    <!-- Mobile search button (fills space) -->
-    <button
-      v-if="isMobile"
-      class="topbar-mobile-search"
-      :aria-label="$t('topbar.search.click_to_search')"
-      @click="openSearch"
-    >
-      <Search theme="outline" size="18" />
-      <span class="topbar-mobile-search-text">{{
-        $t('topbar.search.click_to_search')
-      }}</span>
-    </button>
 
     <!-- Right side actions -->
     <div class="topbar-right">
       <ab-notification-center />
+      <ab-status
+        v-if="isMobile"
+        :state="statusKnown ? (running ? 'running' : 'stopped') : 'paused'"
+        :label="
+          statusKnown
+            ? running
+              ? t('mobile.running')
+              : t('mobile.stopped')
+            : t('mobile.unavailable')
+        "
+        size="sm"
+      />
       <ab-status-bar
+        v-else
         :items="items"
         :running="running"
         @click-add="() => (showAddRSS = true)"
@@ -207,40 +207,6 @@ onUnmounted(() => {
     flex: 1;
     max-width: 400px;
   }
-}
-
-.topbar-mobile-search {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  height: 40px;
-  padding: 0 12px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface-hover);
-  color: var(--color-text-muted);
-  cursor: pointer;
-  transition: color var(--transition-fast), border-color var(--transition-fast),
-    background-color var(--transition-fast);
-
-  &:hover {
-    color: var(--color-primary);
-    border-color: var(--color-primary);
-    background: var(--color-primary-light);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
-  }
-}
-
-.topbar-mobile-search-text {
-  font-size: 13px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .topbar-right {
