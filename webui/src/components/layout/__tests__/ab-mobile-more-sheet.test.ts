@@ -54,14 +54,18 @@ const actions = {
   toggleDark: vi.fn(),
 };
 
-function mountSheet(running = false, statusKnown = true) {
+function mountSheet(
+  running = false,
+  statusKnown = true,
+  returnFocusTarget?: HTMLElement
+) {
   vi.mocked(useAppInfo).mockReturnValue({
     running: ref(running),
     statusKnown: ref(statusKnown),
   } as ReturnType<typeof useAppInfo>);
 
   return mount(AbMobileMoreSheet, {
-    props: { show: true },
+    props: { show: true, returnFocusTarget },
     global: {
       stubs: {
         RouterLink: RouterLinkStub,
@@ -222,6 +226,19 @@ describe('ab-mobile-more-sheet', () => {
     await finishSheetLeave(wrapper);
 
     expect(wrapper.emitted('restore-trigger-focus')).toEqual([[]]);
+  });
+
+  it('should pass the persistent trigger to a destructive confirmation', async () => {
+    const trigger = document.createElement('button');
+    const wrapper = mountSheet(false, true, trigger);
+
+    await wrapper.find('[data-action="logout"]').trigger('click');
+    await finishSheetLeave(wrapper);
+
+    expect(actions.confirm).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'mobile.confirm_logout' }),
+      { returnFocus: trigger }
+    );
   });
 
   it('should not open Add RSS before More has fully left', async () => {

@@ -77,6 +77,7 @@ onUnmounted(closeMore);
 
   <AbMobileMoreSheet
     :show="moreOpen"
+    :return-focus-target="moreTriggerRef"
     @update:show="closeMore"
     @restore-trigger-focus="restoreMoreTriggerFocus"
   />

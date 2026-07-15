@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { defineComponent } from 'vue';
 import { mount } from '@vue/test-utils';
 import AbConfirmHost from '../ab-confirm-host.vue';
-import { useConfirm } from '@/hooks/useConfirm';
+import { useConfirm, useConfirmState } from '@/hooks/useConfirm';
 
 async function tick() {
   await new Promise((resolve) => setTimeout(resolve));
@@ -64,6 +64,68 @@ describe('useConfirm + ab-confirm-host', () => {
     expect(document.activeElement === trigger).toBe(true);
     wrapper.unmount();
     trigger.remove();
+  });
+
+  it('should restore an explicit trigger after transition teardown finishes', async () => {
+    const trigger = document.createElement('button');
+    const teardownTarget = document.createElement('button');
+    document.body.append(trigger, teardownTarget);
+    teardownTarget.focus();
+    const wrapper = mount(AbConfirmHost, {
+      attachTo: document.body,
+      global: { stubs: { AbModal: ModalStub } },
+    });
+    const { confirm } = useConfirm();
+    const result = confirm({ title: 'Log out?' }, { returnFocus: trigger });
+    await tick();
+
+    (document.querySelector('.ab-confirm-cancel') as HTMLButtonElement).click();
+    await result;
+    wrapper.getComponent(ModalStub).vm.$emit('after-leave');
+    teardownTarget.focus();
+    await tick();
+
+    expect(document.activeElement === trigger).toBe(true);
+    wrapper.unmount();
+    trigger.remove();
+    teardownTarget.remove();
+  });
+
+  it('should ignore a queued restoration from a stale focus cycle', async () => {
+    const firstTrigger = document.createElement('button');
+    const secondTrigger = document.createElement('button');
+    const teardownTarget = document.createElement('button');
+    document.body.append(firstTrigger, secondTrigger, teardownTarget);
+    firstTrigger.focus();
+    const firstTriggerFocus = vi.fn();
+    firstTrigger.addEventListener('focus', firstTriggerFocus);
+    const { confirm } = useConfirm();
+    const { settle, restoreFocus } = useConfirmState();
+
+    const first = confirm(
+      { title: 'First confirmation' },
+      { returnFocus: firstTrigger }
+    );
+    settle(false);
+    restoreFocus();
+    secondTrigger.focus();
+    const second = confirm(
+      { title: 'Second confirmation' },
+      { returnFocus: secondTrigger }
+    );
+    settle(false);
+    restoreFocus();
+    teardownTarget.focus();
+    await Promise.all([first, second]);
+    await tick();
+
+    expect({
+      staleFocusCount: firstTriggerFocus.mock.calls.length,
+      activeElement: document.activeElement,
+    }).toEqual({ staleFocusCount: 0, activeElement: secondTrigger });
+    firstTrigger.remove();
+    secondTrigger.remove();
+    teardownTarget.remove();
   });
 
   it('should preserve the original trigger when an open confirmation is replaced', async () => {

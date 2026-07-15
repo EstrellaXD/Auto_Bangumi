@@ -9,6 +9,11 @@ export interface ConfirmOptions {
   danger?: boolean;
 }
 
+export interface ConfirmFocusOptions {
+  /** 对话框取消后恢复焦点的持久元素。 */
+  returnFocus?: HTMLElement | null;
+}
+
 interface ConfirmRequest extends ConfirmOptions {
   resolve: (value: boolean) => void;
 }
@@ -18,13 +23,16 @@ const state = reactive<{ current: ConfirmRequest | null }>({ current: null });
 let returnFocusCycleActive = false;
 let cycleReturnFocus: HTMLElement | null = null;
 let restoreAfterLeave = false;
+let focusCycleGeneration = 0;
 
-function captureReturnFocus(): HTMLElement | null {
+function captureReturnFocus(
+  explicitTarget?: HTMLElement | null
+): HTMLElement | null {
   if (typeof document === 'undefined' || typeof HTMLElement === 'undefined') {
     return null;
   }
 
-  const target = document.activeElement;
+  const target = explicitTarget ?? document.activeElement;
   return target instanceof HTMLElement &&
     target !== document.body &&
     target !== document.documentElement &&
@@ -38,13 +46,17 @@ function captureReturnFocus(): HTMLElement | null {
  * `if (await confirm({ title, danger: true })) { … }`
  */
 export function useConfirm() {
-  function confirm(options: ConfirmOptions): Promise<boolean> {
+  function confirm(
+    options: ConfirmOptions,
+    focusOptions: ConfirmFocusOptions = {}
+  ): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
       // Replacements and dialogs reopened during a leave transition belong to
       // one focus cycle. Keep the first durable trigger for that whole cycle.
       if (!returnFocusCycleActive) {
-        cycleReturnFocus = captureReturnFocus();
+        cycleReturnFocus = captureReturnFocus(focusOptions.returnFocus);
         returnFocusCycleActive = true;
+        focusCycleGeneration += 1;
       }
       // 已有未决确认时，先取消旧的，避免悬挂的 Promise
       state.current?.resolve(false);
@@ -73,10 +85,26 @@ export function useConfirmState() {
 
     const target = cycleReturnFocus;
     const shouldRestore = restoreAfterLeave;
+    const generation = focusCycleGeneration;
     cycleReturnFocus = null;
     restoreAfterLeave = false;
     returnFocusCycleActive = false;
-    if (shouldRestore && target?.isConnected) target.focus();
+    if (!shouldRestore || !target?.isConnected) return;
+
+    // Headless UI may remove its focus trap after TransitionRoot emits
+    // after-leave. Restore in the next microtask so that teardown cannot
+    // override the persistent trigger, while rejecting stale focus cycles.
+    queueMicrotask(() => {
+      if (
+        focusCycleGeneration !== generation ||
+        returnFocusCycleActive ||
+        state.current ||
+        !target.isConnected
+      ) {
+        return;
+      }
+      target.focus();
+    });
   }
 
   return { state, settle, restoreFocus };

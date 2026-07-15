@@ -30,8 +30,9 @@ import { useDarkMode } from '@/hooks/useDarkMode';
 import { useMyI18n } from '@/hooks/useMyI18n';
 import { useProgramStore } from '@/store/program';
 
-defineProps<{
+const props = defineProps<{
   show: boolean;
+  returnFocusTarget?: HTMLElement | null;
 }>();
 
 const emit = defineEmits<{
@@ -73,8 +74,8 @@ function handleAfterLeave() {
   const action = pendingAction.value;
   pendingAction.value = null;
   if (action) {
-    // The next dialog captures the currently focused element as its return
-    // target. Restore the persistent trigger synchronously before it mounts.
+    // Restore the persistent trigger for queued dialogs that inspect the
+    // active element. Destructive confirms also receive it explicitly below.
     emit('restore-trigger-focus');
     action();
   }
@@ -107,11 +108,14 @@ function confirmAction(
   danger = false
 ) {
   runAfterLeave(async () => {
-    const accepted = await confirm({
-      title: t(titleKey),
-      body: t(bodyKey),
-      danger,
-    });
+    const accepted = await confirm(
+      {
+        title: t(titleKey),
+        body: t(bodyKey),
+        danger,
+      },
+      { returnFocus: props.returnFocusTarget }
+    );
     if (!accepted) return;
     await action();
   });
