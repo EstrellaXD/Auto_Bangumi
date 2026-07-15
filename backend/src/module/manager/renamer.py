@@ -247,11 +247,22 @@ class Renamer:
         bangumi_name: str,
         _hash: str,
         episode_offset: int,
+        notify_if_unchanged: bool = False,
     ) -> MediaRenameReport:
         if prepared.source_path == prepared.target_path:
+            notification = None
+            if notify_if_unchanged:
+                notification = Notification(
+                    official_title=bangumi_name,
+                    season=prepared.episode.season,
+                    episode=self._adjust_episode(
+                        prepared.episode.episode, episode_offset
+                    ),
+                )
             return MediaRenameReport(
                 result=RenameResult(RenameOutcome.ALREADY_APPLIED),
                 prepared=prepared,
+                notification=notification,
             )
         result = await self.client.rename_torrent_file(
             _hash=_hash,
@@ -309,6 +320,7 @@ class Renamer:
             bangumi_name=bangumi_name,
             _hash=_hash,
             episode_offset=episode_offset,
+            notify_if_unchanged=method == "none",
         )
 
     @staticmethod
@@ -1168,6 +1180,7 @@ class Renamer:
         identity: RevisionIdentity | None,
         bangumi_name: str,
         episode_offset: int,
+        notify_if_unchanged: bool = False,
     ) -> MediaRenameReport:
         """Claim and execute one non-replacement rename exactly once at a time."""
 
@@ -1299,6 +1312,7 @@ class Renamer:
                 bangumi_name=bangumi_name,
                 _hash=info["hash"],
                 episode_offset=episode_offset,
+                notify_if_unchanged=notify_if_unchanged,
             )
             if report.result.succeeded:
                 await self._set_operation_state(claimed, "done")
@@ -1519,6 +1533,7 @@ class Renamer:
             identity=identity,
             bangumi_name=bangumi_name,
             episode_offset=episode_offset,
+            notify_if_unchanged=method == "none",
         )
 
     @staticmethod

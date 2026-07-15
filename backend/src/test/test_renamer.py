@@ -495,13 +495,13 @@ class TestRenameFile:
 
         renamer.client.client.add_tag.assert_not_awaited()
 
-    async def test_none_method_does_not_tag(self, renamer):
-        """none 方法不做重命名，也不应打处理完成标签。"""
+    async def test_none_method_notifies_without_rename_or_tag(self, renamer):
+        """none 方法不改名、不打标签，但仍返回下载完成通知（#1082）。"""
         ep = EpisodeFile(
             media_path="old.mkv", title="My Anime", season=1, episode=5, suffix=".mkv"
         )
         with patch.object(renamer._parser, "torrent_parser", return_value=ep):
-            await renamer.rename_file(
+            result = await renamer.rename_file(
                 torrent_name="[Sub] My Anime - 05.mkv",
                 media_path="old.mkv",
                 bangumi_name="My Anime",
@@ -510,6 +510,8 @@ class TestRenameFile:
                 _hash="hash123",
             )
 
+        assert result == Notification(official_title="My Anime", season=1, episode=5)
+        renamer.client.client.torrents_rename_file.assert_not_awaited()
         renamer.client.client.add_tag.assert_not_awaited()
 
     async def test_parse_fails_no_remove(self, renamer):
