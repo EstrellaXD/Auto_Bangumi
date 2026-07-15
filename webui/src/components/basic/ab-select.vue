@@ -78,4 +78,12 @@ function optionNodeProps() {
     }
   }
 }
+
+@media screen and (max-width: 639px) {
+  .ab-select {
+    :deep(.n-base-selection) {
+      min-height: var(--touch-target);
+    }
+  }
+}
 </style>

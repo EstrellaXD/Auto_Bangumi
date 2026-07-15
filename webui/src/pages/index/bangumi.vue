@@ -1,5 +1,7 @@
 <script lang="ts" setup>
+import { More, Refresh } from '@icon-park/vue-next';
 import type { BangumiRule } from '#/bangumi';
+import type { AbMenuItem } from '@/components/basic/ab-menu.vue';
 
 definePage({
   name: 'Bangumi List',
@@ -14,8 +16,21 @@ const {
   activeBangumi,
   archivedBangumi,
 } = storeToRefs(useBangumiStore());
-const { getAll, openEditPopup } = useBangumiStore();
+const { getAll, openEditPopup, refreshPoster } = useBangumiStore();
 const { openAddRss } = useAddRss();
+const { isMobile } = useBreakpointQuery();
+const { t } = useMyI18n();
+
+const mobileActions: AbMenuItem[] = [
+  {
+    key: 'refresh-posters',
+    label: () => t('topbar.refresh_poster'),
+    icon: Refresh,
+    handler: async () => {
+      await refreshPoster();
+    },
+  },
+];
 
 // Show skeleton when initially loading (not yet loaded and loading)
 const showSkeleton = computed(() => !hasLoaded.value && isLoading.value);
@@ -117,6 +132,16 @@ function groupNeedsReview(group: BangumiGroup): boolean {
 <template>
   <ab-pull-refresh :loading="refreshing" @refresh="onRefresh">
     <div class="page-bangumi">
+      <div v-if="isMobile" class="bangumi-mobile-toolbar">
+        <ab-menu :items="mobileActions" align="right">
+          <template #trigger>
+            <ab-icon-button :label="t('common.moreActions')">
+              <More :size="20" />
+            </ab-icon-button>
+          </template>
+        </ab-menu>
+      </div>
+
       <!-- Skeleton loading state -->
       <div v-if="showSkeleton" class="bangumi-grid">
         <div
@@ -378,6 +403,13 @@ function groupNeedsReview(group: BangumiGroup): boolean {
   flex-grow: 1;
 }
 
+.bangumi-mobile-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  min-height: var(--touch-target);
+  padding: 0 2px;
+}
+
 .bangumi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -463,7 +495,8 @@ function groupNeedsReview(group: BangumiGroup): boolean {
   justify-content: center;
   background: var(--color-surface-hover);
   border: 2px dashed var(--color-border);
-  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+  transition: box-shadow var(--transition-fast),
+    transform var(--transition-fast);
 
   .others-card:hover &,
   .others-card:focus-visible & {
@@ -853,6 +886,49 @@ function groupNeedsReview(group: BangumiGroup): boolean {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media screen and (max-width: 639px) {
+  .page-bangumi {
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .bangumi-mobile-toolbar :deep(.ab-icon-btn) {
+    width: var(--touch-target);
+    height: var(--touch-target);
+  }
+
+  .bangumi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 8px 2px 12px;
+    justify-items: stretch;
+  }
+
+  .bangumi-group-wrapper,
+  .skeleton-card,
+  .others-card,
+  :deep(.card) {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .group-badge,
+  .others-count {
+    top: -6px;
+    right: 2px;
+  }
+
+  .archived-section {
+    margin-top: 16px;
+    padding: 0;
+  }
+
+  .archived-header {
+    min-height: var(--touch-target);
+    margin-bottom: 4px;
   }
 }
 </style>

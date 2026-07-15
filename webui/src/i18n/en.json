@@ -192,7 +192,9 @@
       "size": "Size",
       "dlspeed": "DL Speed",
       "upspeed": "UP Speed",
-      "peers": "Seeds/Peers"
+      "peers": "Seeds/Peers",
+      "eta": "ETA",
+      "save_path": "Save path"
     },
     "state": {
       "downloading": "Downloading",
@@ -208,7 +210,10 @@
       "pause": "Pause",
       "resume": "Resume",
       "delete": "Delete",
-      "delete_confirm": "Remove the selected torrents from the downloader? Downloaded files are kept."
+      "delete_confirm": "Remove the selected torrents from the downloader? Downloaded files are kept.",
+      "select_torrent": "Select {name}",
+      "show_details": "Show torrent details",
+      "hide_details": "Hide torrent details"
     }
   },
   "homepage": {
@@ -564,7 +569,8 @@
     "review": "Review",
     "no_active_anime": "No active anime rules",
     "search_title": "Search anime",
-    "search_subtitle": "Find a title and choose a subscription rule"
+    "search_subtitle": "Find a title and choose a subscription rule",
+    "settings_section": "Settings section"
   },
   "common": {
     "cancel": "Cancel",

@@ -136,6 +136,17 @@ withDefaults(
     color var(--transition-normal);
 }
 
+@media screen and (max-width: 639px) {
+  .fold-panel-header {
+    height: var(--touch-target);
+    padding: 0 12px;
+  }
+
+  .fold-panel-body {
+    padding: 10px 12px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fold-panel-collapse,
   .fold-panel-chevron {

@@ -5,11 +5,13 @@ const props = withDefaults(
     /** 0–100 */
     value: number;
     label?: string;
+    ariaLabel?: string;
     state?: 'active' | 'error';
   }>(),
   {
     value: 0,
     label: '',
+    ariaLabel: '',
     state: 'active',
   }
 );
@@ -25,7 +27,7 @@ const clamped = computed(() => Math.min(100, Math.max(0, props.value)));
       :aria-valuenow="Math.round(clamped)"
       aria-valuemin="0"
       aria-valuemax="100"
-      :aria-label="label || undefined"
+      :aria-label="ariaLabel || label || undefined"
     >
       <div
         class="ab-progress-fill"

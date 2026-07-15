@@ -1,7 +1,15 @@
 <script lang="tsx" setup>
 import { type DataTableColumns, NDataTable } from 'naive-ui';
 import AbProgress from '@/components/basic/ab-progress.vue';
+import AbDownloaderMobileList from '@/components/downloader/ab-downloader-mobile-list.vue';
 import { useConfirm } from '@/hooks/useConfirm';
+import {
+  formatTorrentEta,
+  formatTorrentSize,
+  formatTorrentSpeed,
+  torrentStateLabel,
+  torrentStateType,
+} from '@/utils/downloader-display';
 import type { QbTorrentInfo, TorrentGroup } from '#/downloader';
 
 definePage({
@@ -22,6 +30,7 @@ const {
   clearSelection,
 } = useDownloaderStore();
 const { confirm } = useConfirm();
+const { isMobile } = useBreakpointQuery();
 
 async function onDeleteSelected() {
   const ok = await confirm({
@@ -65,61 +74,6 @@ onDeactivated(() => {
   clearSelection();
 });
 
-function formatSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / 1024 ** i).toFixed(1)} ${units[i]}`;
-}
-
-function formatSpeed(bytesPerSec: number): string {
-  if (bytesPerSec === 0) return '-';
-  return `${formatSize(bytesPerSec)}/s`;
-}
-
-function formatEta(seconds: number): string {
-  if (seconds <= 0 || seconds === 8640000) return '-';
-  if (seconds < 60) return `${seconds}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  return `${h}h${m}m`;
-}
-
-function stateLabel(state: string): string {
-  const map: Record<string, string> = {
-    downloading: t('downloader.state.downloading'),
-    uploading: t('downloader.state.seeding'),
-    pausedDL: t('downloader.state.paused'),
-    pausedUP: t('downloader.state.paused'),
-    // qBittorrent 5.0+ 把 paused* 状态改名为 stopped*
-    stoppedDL: t('downloader.state.paused'),
-    stoppedUP: t('downloader.state.paused'),
-    stalledDL: t('downloader.state.stalled'),
-    stalledUP: t('downloader.state.seeding'),
-    queuedDL: t('downloader.state.queued'),
-    queuedUP: t('downloader.state.queued'),
-    checkingDL: t('downloader.state.checking'),
-    checkingUP: t('downloader.state.checking'),
-    error: t('downloader.state.error'),
-    missingFiles: t('downloader.state.error'),
-    metaDL: t('downloader.state.metadata'),
-  };
-  return map[state] || state;
-}
-
-function stateType(state: string): string {
-  if (state.includes('paused') || state.includes('stopped')) return 'neutral';
-  if (state === 'downloading' || state === 'forcedDL') return 'success';
-  if (state.includes('UP') || state === 'uploading') return 'info';
-  if (state === 'error' || state === 'missingFiles') return 'danger';
-  return 'info';
-}
-
-function isGroupAllSelected(group: TorrentGroup): boolean {
-  return group.torrents.every((t) => selectedHashes.value.includes(t.hash));
-}
-
 const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
   {
     type: 'selection',
@@ -154,7 +108,10 @@ const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
     width: 100,
     render(row: QbTorrentInfo) {
       return (
-        <ab-tag type={stateType(row.state)} title={stateLabel(row.state)} />
+        <ab-tag
+          type={torrentStateType(row.state)}
+          title={torrentStateLabel(row.state, t)}
+        />
       );
     },
   },
@@ -163,7 +120,7 @@ const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
     key: 'size',
     width: 100,
     render(row: QbTorrentInfo) {
-      return formatSize(row.size);
+      return formatTorrentSize(row.size);
     },
   },
   {
@@ -171,7 +128,7 @@ const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
     key: 'dlspeed',
     width: 110,
     render(row: QbTorrentInfo) {
-      return formatSpeed(row.dlspeed);
+      return formatTorrentSpeed(row.dlspeed);
     },
   },
   {
@@ -179,7 +136,7 @@ const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
     key: 'upspeed',
     width: 110,
     render(row: QbTorrentInfo) {
-      return formatSpeed(row.upspeed);
+      return formatTorrentSpeed(row.upspeed);
     },
   },
   {
@@ -187,7 +144,7 @@ const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
     key: 'eta',
     width: 80,
     render(row: QbTorrentInfo) {
-      return formatEta(row.eta);
+      return formatTorrentEta(row.eta);
     },
   },
   {
@@ -281,6 +238,14 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
         {{ $t('downloader.empty_torrents') }}
       </div>
 
+      <AbDownloaderMobileList
+        v-if="isMobile"
+        :groups="groups"
+        :selected-hashes="selectedHashes"
+        @toggle-hash="toggleHash"
+        @toggle-group="toggleGroup"
+      />
+
       <div v-else class="downloader-groups">
         <ab-fold-panel
           v-for="group in groups"
@@ -370,14 +335,30 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
   z-index: 100;
   max-width: calc(100vw - 32px);
 
-  @include forMobile {
+  // Preserve the pre-existing <1024px toolbar layout for tablets.
+  @media screen and (min-width: 640px) and (max-width: 1023px) {
+    right: 16px;
     bottom: calc(72px + env(safe-area-inset-bottom, 0px));
     left: 16px;
-    right: 16px;
     transform: none;
     flex-direction: column;
     gap: 8px;
     padding: 12px 16px;
+  }
+
+  @media screen and (max-width: 639px) {
+    right: calc(var(--layout-padding) + env(safe-area-inset-right, 0px));
+    left: calc(var(--layout-padding) + env(safe-area-inset-left, 0px));
+    transform: none;
+    display: grid;
+    max-width: none;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding: 8px;
+    bottom: calc(
+      var(--layout-padding) + var(--layout-padding) + var(--nav-height) +
+        env(safe-area-inset-bottom, 0px)
+    );
   }
 }
 
@@ -385,16 +366,32 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
   font-size: 13px;
   color: var(--color-text-secondary);
   white-space: nowrap;
+
+  @media screen and (max-width: 639px) {
+    grid-column: 1 / -1;
+  }
 }
 
 .action-bar-buttons {
   display: flex;
   gap: 8px;
 
-  @include forMobile {
+  @media screen and (min-width: 640px) and (max-width: 1023px) {
     width: 100%;
 
     :deep(.ab-btn) {
+      flex: 1;
+    }
+  }
+
+  @media screen and (max-width: 639px) {
+    display: contents;
+    width: 100%;
+
+    :deep(.ab-btn) {
+      min-width: 0;
+      min-height: var(--touch-target);
+      padding-inline: 6px;
       flex: 1;
     }
   }
@@ -533,6 +530,61 @@ function groupCheckedKeys(group: TorrentGroup): string[] {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media screen and (max-width: 639px) {
+  .page-downloader,
+  .downloader-content,
+  .downloader-groups {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .downloader-content {
+    padding-bottom: 104px;
+  }
+
+  .fade-enter-from,
+  .fade-leave-to {
+    transform: translateY(8px);
+  }
+
+  .empty-guide {
+    padding: 12px;
+  }
+
+  .empty-guide-header {
+    margin-bottom: 20px;
+  }
+
+  .empty-guide-steps {
+    gap: 10px;
+  }
+
+  .empty-guide-step {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .empty-guide-action {
+    display: inline-flex;
+    min-height: var(--touch-target);
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-enter-active,
+  .fade-leave-active {
+    transition: none;
+  }
+
+  .anim-fade-in,
+  .anim-slide-up {
+    animation: none;
   }
 }
 </style>

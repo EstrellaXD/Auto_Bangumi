@@ -250,4 +250,16 @@ function clear() {
     outline-offset: 1px;
   }
 }
+
+@media screen and (max-width: 639px) {
+  .ab-input {
+    height: var(--touch-target);
+  }
+
+  .ab-input-clear,
+  .ab-input-reveal {
+    width: var(--touch-target);
+    height: var(--touch-target);
+  }
+}
 </style>

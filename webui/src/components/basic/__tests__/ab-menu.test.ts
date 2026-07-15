@@ -47,4 +47,18 @@ describe('ab-menu', () => {
     const entries = wrapper.findAll('[role="menuitem"]');
     expect(entries[2].classes()).toContain('ab-menu-item--danger');
   });
+
+  it('should open above its trigger when placement is top', async () => {
+    const wrapper = mount(AbMenu, {
+      props: { items: items(), placement: 'top' },
+      slots: { trigger: '<button type="button">Actions</button>' },
+      attachTo: document.body,
+    });
+
+    await wrapper.find('button').trigger('click');
+
+    expect(wrapper.get('[role="menu"]').classes()).toContain(
+      'ab-menu-list--top'
+    );
+  });
 });

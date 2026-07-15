@@ -302,4 +302,32 @@ function onRuleSelect(rule: BangumiRule) {
     animation: none;
   }
 }
+
+@media screen and (max-width: 639px) {
+  .page-calendar {
+    min-width: 0;
+    gap: 8px;
+    overflow-x: hidden;
+  }
+
+  .calendar-header {
+    min-width: 0;
+    min-height: var(--touch-target);
+    gap: 8px;
+  }
+
+  .calendar-header-text,
+  .calendar-subtitle {
+    min-width: 0;
+  }
+
+  .calendar-subtitle {
+    line-height: 1.4;
+  }
+
+  .calendar-refresh-btn {
+    width: var(--touch-target);
+    height: var(--touch-target);
+  }
+}
 </style>

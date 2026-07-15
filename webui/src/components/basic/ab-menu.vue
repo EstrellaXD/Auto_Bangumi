@@ -18,9 +18,12 @@ withDefaults(
     items: AbMenuItem[];
     /** 菜单相对触发器的对齐边 */
     align?: 'left' | 'right';
+    /** 菜单相对触发器的展开方向 */
+    placement?: 'bottom' | 'top';
   }>(),
   {
     align: 'left',
+    placement: 'bottom',
   }
 );
 
@@ -43,7 +46,10 @@ function onSelect(item: AbMenuItem) {
       <slot name="trigger"></slot>
     </MenuButton>
 
-    <MenuItems class="ab-menu-list" :class="`ab-menu-list--${align}`">
+    <MenuItems
+      class="ab-menu-list"
+      :class="[`ab-menu-list--${align}`, `ab-menu-list--${placement}`]"
+    >
       <MenuItem
         v-for="(item, index) in items"
         :key="item.key ?? index"
@@ -92,6 +98,13 @@ function onSelect(item: AbMenuItem) {
 
   &--right {
     right: 0;
+  }
+
+  &--top {
+    top: auto;
+    bottom: 100%;
+    margin-top: 0;
+    margin-bottom: 4px;
   }
 
   &:focus-visible {

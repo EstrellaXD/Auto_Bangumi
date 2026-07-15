@@ -157,4 +157,11 @@ const show = defineModel<boolean>('show', { default: false });
   flex-shrink: 0;
   margin-top: 2px;
 }
+
+@media screen and (max-width: 639px) {
+  .rule-list {
+    width: 100%;
+    min-width: min(300px, 100%);
+  }
+}
 </style>

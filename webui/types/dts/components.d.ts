@@ -18,6 +18,7 @@ declare module '@vue/runtime-core' {
     AbChangeAccount: typeof import('./../../src/components/ab-change-account.vue')['default']
     AbConfirmHost: typeof import('./../../src/components/basic/ab-confirm-host.vue')['default']
     AbContainer: typeof import('./../../src/components/ab-container.vue')['default']
+    AbDownloaderMobileList: typeof import('./../../src/components/downloader/ab-downloader-mobile-list.vue')['default']
     AbEditRule: typeof import('./../../src/components/ab-edit-rule.vue')['default']
     AbEmpty: typeof import('./../../src/components/basic/ab-empty.vue')['default']
     AbField: typeof import('./../../src/components/basic/ab-field.vue')['default']

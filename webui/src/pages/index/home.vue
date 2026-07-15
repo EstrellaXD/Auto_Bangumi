@@ -507,6 +507,14 @@ onActivated(refresh);
   }
 }
 
+@media screen and (max-width: 639px) {
+  .page-home__section-heading a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch-target);
+  }
+}
+
 @include forTablet {
   .page-home__summaries {
     grid-template-columns: repeat(3, minmax(0, 1fr));

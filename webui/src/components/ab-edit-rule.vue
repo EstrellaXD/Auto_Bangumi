@@ -1,7 +1,9 @@
 <script lang="ts" setup>
+import { More } from '@icon-park/vue-next';
 import { NCheckbox, NSelect, NSpin, useMessage } from 'naive-ui';
 import { onKeyStroke } from '@vueuse/core';
 import type { BangumiRule, DetectOffsetResponse } from '#/bangumi';
+import type { AbMenuItem } from '@/components/basic/ab-menu.vue';
 
 const emit = defineEmits<{
   (e: 'apply', rule: BangumiRule): void;
@@ -16,6 +18,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useMyI18n();
+const { isMobile } = useBreakpointQuery();
 
 const show = defineModel('show', { default: false });
 const rule = defineModel<BangumiRule>('rule', {
@@ -199,6 +202,30 @@ function emitArchive() {
 function emitUnarchive() {
   emit('unarchive', rule.value.id);
 }
+
+const mobileRuleActions = computed<AbMenuItem[]>(() => [
+  {
+    key: 'torrents',
+    label: () => t('homepage.rule.view_torrents'),
+    handler: goToTorrents,
+  },
+  {
+    key: localRule.value.archived ? 'unarchive' : 'archive',
+    label: () =>
+      t(
+        localRule.value.archived
+          ? 'homepage.rule.unarchive'
+          : 'homepage.rule.archive'
+      ),
+    handler: localRule.value.archived ? emitUnarchive : emitArchive,
+  },
+  {
+    key: 'delete',
+    label: () => t('homepage.rule.delete'),
+    danger: true,
+    handler: showDeleteFileDialog,
+  },
+]);
 </script>
 
 <template>
@@ -405,26 +432,47 @@ function emitUnarchive() {
     </ab-modal>
 
     <template #footer>
-      <ab-button size="sm" variant="ghost" @click="goToTorrents">
-        {{ $t('homepage.rule.view_torrents') }}
-      </ab-button>
-      <ab-button v-if="localRule.archived" size="sm" @click="emitUnarchive">
-        {{ $t('homepage.rule.unarchive') }}
-      </ab-button>
-      <ab-button v-else size="sm" @click="emitArchive">
-        {{ $t('homepage.rule.archive') }}
-      </ab-button>
-      <ab-button
-        size="sm"
-        variant="danger"
-        class="footer-delete"
-        @click="showDeleteFileDialog"
-      >
-        {{ $t('homepage.rule.delete') }}
-      </ab-button>
-      <ab-button variant="primary" size="sm" @click="emitApply">
-        {{ $t('homepage.rule.apply') }}
-      </ab-button>
+      <template v-if="isMobile">
+        <div class="rule-mobile-actions">
+          <ab-menu :items="mobileRuleActions" align="left" placement="top">
+            <template #trigger>
+              <ab-icon-button :label="$t('common.moreActions')">
+                <More :size="20" />
+              </ab-icon-button>
+            </template>
+          </ab-menu>
+        </div>
+        <ab-button
+          variant="primary"
+          size="sm"
+          class="rule-mobile-apply"
+          @click="emitApply"
+        >
+          {{ $t('homepage.rule.apply') }}
+        </ab-button>
+      </template>
+      <template v-else>
+        <ab-button size="sm" variant="ghost" @click="goToTorrents">
+          {{ $t('homepage.rule.view_torrents') }}
+        </ab-button>
+        <ab-button v-if="localRule.archived" size="sm" @click="emitUnarchive">
+          {{ $t('homepage.rule.unarchive') }}
+        </ab-button>
+        <ab-button v-else size="sm" @click="emitArchive">
+          {{ $t('homepage.rule.archive') }}
+        </ab-button>
+        <ab-button
+          size="sm"
+          variant="danger"
+          class="footer-delete"
+          @click="showDeleteFileDialog"
+        >
+          {{ $t('homepage.rule.delete') }}
+        </ab-button>
+        <ab-button variant="primary" size="sm" @click="emitApply">
+          {{ $t('homepage.rule.apply') }}
+        </ab-button>
+      </template>
     </template>
   </ab-modal>
 </template>
@@ -575,5 +623,49 @@ function emitUnarchive() {
   margin: 0;
   font-size: 11px;
   color: var(--color-text-secondary);
+}
+
+@media screen and (max-width: 639px) {
+  .weekday-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .weekday-select,
+  .preferred-input {
+    width: 100%;
+    max-width: none;
+  }
+
+  .review-warning {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+    margin: 8px 0;
+    padding: 10px 12px;
+  }
+
+  .review-warning-actions {
+    width: 100%;
+    flex-shrink: 1;
+  }
+
+  .review-warning-actions .detect-btn,
+  .review-warning-actions .dismiss-btn {
+    height: var(--touch-target);
+    min-width: 0;
+    flex: 1;
+  }
+
+  .rule-mobile-actions {
+    margin-right: auto;
+  }
+
+  .rule-mobile-actions :deep(.ab-icon-btn),
+  .rule-mobile-apply {
+    min-width: var(--touch-target);
+    min-height: var(--touch-target);
+  }
 }
 </style>

@@ -192,7 +192,9 @@
       "size": "大小",
       "dlspeed": "下载速度",
       "upspeed": "上传速度",
-      "peers": "做种/下载"
+      "peers": "做种/下载",
+      "eta": "预计剩余时间",
+      "save_path": "保存路径"
     },
     "state": {
       "downloading": "下载中",
@@ -208,7 +210,10 @@
       "pause": "暂停",
       "resume": "恢复",
       "delete": "删除",
-      "delete_confirm": "从下载器中移除所选种子？已下载的文件将保留。"
+      "delete_confirm": "从下载器中移除所选种子？已下载的文件将保留。",
+      "select_torrent": "选择 {name}",
+      "show_details": "展开种子详情",
+      "hide_details": "收起种子详情"
     }
   },
   "homepage": {
@@ -564,7 +569,8 @@
     "review": "待确认",
     "no_active_anime": "暂无活动番剧规则",
     "search_title": "搜索番剧",
-    "search_subtitle": "按标题查找并选择订阅规则"
+    "search_subtitle": "按标题查找并选择订阅规则",
+    "settings_section": "设置分区"
   },
   "common": {
     "cancel": "取消",
