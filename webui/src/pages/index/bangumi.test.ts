@@ -130,4 +130,29 @@ describe('Bangumi page mobile actions', () => {
       afterLeave: true,
     });
   });
+
+  it('should hand focus back to the bangumi trigger before opening rule editing', async () => {
+    const trigger = document.createElement('button');
+    document.body.append(trigger);
+    trigger.focus();
+    const store = useBangumiStore();
+    store.bangumi = [
+      { ...mockBangumiRule, id: 1 },
+      { ...mockBangumiRule, id: 2, group_name: 'Second group' },
+    ];
+    const wrapper = mountPage();
+
+    await wrapper.get('ab-bangumi-card-stub').trigger('click');
+    const departingRule = document.createElement('button');
+    document.body.append(departingRule);
+    departingRule.focus();
+    await wrapper.get('.rule-list-item').trigger('click');
+    departingRule.remove();
+    wrapper.getComponent(ModalStub).vm.$emit('after-leave');
+    await wrapper.vm.$nextTick();
+
+    expect(document.activeElement === trigger).toBe(true);
+    wrapper.unmount();
+    trigger.remove();
+  });
 });

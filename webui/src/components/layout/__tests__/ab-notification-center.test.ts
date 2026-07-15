@@ -196,6 +196,62 @@ describe('ab-notification-center mobile sheet', () => {
     expect(notificationStore.fetchMessages).toHaveBeenCalledTimes(1);
   });
 
+  it('should clear the notifications overlay when the center unmounts', async () => {
+    const wrapper = mountNotificationCenter();
+    useMobileShellStore().openOverlay('notifications');
+    await nextTick();
+
+    wrapper.unmount();
+
+    expect(useMobileShellStore().activeOverlay).toBeNull();
+  });
+
+  it('should reset the notification panel state when the center unmounts', async () => {
+    const wrapper = mountNotificationCenter();
+    useMobileShellStore().openOverlay('notifications');
+    await nextTick();
+
+    wrapper.unmount();
+
+    expect(notificationStore.panelOpen).toBe(false);
+  });
+
+  it('should leave a different mobile overlay open when the center unmounts', () => {
+    const wrapper = mountNotificationCenter();
+    useMobileShellStore().openOverlay('action');
+
+    wrapper.unmount();
+
+    expect(useMobileShellStore().activeOverlay).toBe('action');
+  });
+
+  it('should keep notifications closed after the center remounts', async () => {
+    const wrapper = mountNotificationCenter();
+    useMobileShellStore().openOverlay('notifications');
+    await nextTick();
+
+    wrapper.unmount();
+    const remountedWrapper = mountNotificationCenter();
+
+    expect(
+      remountedWrapper.get('[data-bottom-sheet]').attributes('data-show')
+    ).toBe('false');
+  });
+
+  it('should fetch messages when notifications reopen after a remount', async () => {
+    const wrapper = mountNotificationCenter();
+    useMobileShellStore().openOverlay('notifications');
+    await nextTick();
+
+    wrapper.unmount();
+    mountNotificationCenter();
+    notificationStore.fetchMessages.mockClear();
+    useMobileShellStore().openOverlay('notifications');
+    await nextTick();
+
+    expect(notificationStore.fetchMessages).toHaveBeenCalledTimes(1);
+  });
+
   it('should render notification activation as a native button', async () => {
     const wrapper = mountNotificationCenter();
 

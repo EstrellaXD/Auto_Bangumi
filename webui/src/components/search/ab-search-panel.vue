@@ -95,7 +95,9 @@ onClickOutside(providerSelectRef, () => closeProvider(false));
 onKeyStroke('Escape', () => {
   if (!panelActive.value) return;
   if (selectedResult.value) {
-    clearSelectedResult();
+    // The selected-result component owns one or more Headless UI dialogs.
+    // Let its topmost dialog handle Escape so nested offset review can close
+    // back into the main confirmation instead of unmounting the whole flow.
     return;
   }
   if (showProvider.value) {

@@ -36,6 +36,7 @@ defineProps<{
 
 const emit = defineEmits<{
   (event: 'update:show', value: boolean): void;
+  (event: 'restore-trigger-focus'): void;
 }>();
 
 const { t, changeLocale } = useMyI18n();
@@ -71,7 +72,12 @@ function runAfterLeave(action: () => void | Promise<void>) {
 function handleAfterLeave() {
   const action = pendingAction.value;
   pendingAction.value = null;
-  if (action) action();
+  if (action) {
+    // The next dialog captures the currently focused element as its return
+    // target. Restore the persistent trigger synchronously before it mounts.
+    emit('restore-trigger-focus');
+    action();
+  }
 }
 
 function openAddRssSheet() {

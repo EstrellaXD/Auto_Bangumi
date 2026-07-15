@@ -17,12 +17,14 @@ import { useAccessStore } from '@/store/access';
 import { useMessage } from '@/hooks/useMessage';
 import { useMyI18n } from '@/hooks/useMyI18n';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useFocusHandoff } from '@/hooks/useFocusHandoff';
 
 const store = useAccessStore();
 const { users, tokens, loading } = storeToRefs(store);
 const { t } = useMyI18n();
 const message = useMessage();
 const { confirm } = useConfirm();
+const { captureFocusTarget, restoreFocusTarget } = useFocusHandoff();
 
 const showUserDialog = ref(false);
 const showTokenDialog = ref(false);
@@ -74,6 +76,11 @@ function setTokenDialogVisibility(show: boolean): void {
   }
 }
 
+function openTokenDialog(event: MouseEvent): void {
+  captureFocusTarget(event.currentTarget as Element | null);
+  setTokenDialogVisibility(true);
+}
+
 function setTokenValueVisibility(show: boolean): void {
   showTokenValue.value = show;
   if (!show) {
@@ -93,6 +100,7 @@ function handleTokenDialogAfterLeave(): void {
   if (!revealTokenAfterLeave) return;
   revealTokenAfterLeave = false;
   if (!accessActive || !issuedToken.value) return;
+  restoreFocusTarget();
   setTokenValueVisibility(true);
 }
 
@@ -235,7 +243,7 @@ function tokenStatus(token: ApiTokenPublic): ApiTokenStatus {
           <h3>{{ $t('access.tokens') }}</h3>
           <p>{{ $t('access.tokens_hint') }}</p>
         </div>
-        <ab-button size="sm" @click="setTokenDialogVisibility(true)">
+        <ab-button size="sm" @click="openTokenDialog">
           {{ $t('access.add_token') }}
         </ab-button>
       </div>

@@ -232,6 +232,15 @@ describe('ab-search-panel', () => {
     expect(document.activeElement).toBe(trigger.element);
   });
 
+  it('should leave Escape handling to an open result dialog', () => {
+    selectedResult.value = {};
+    mountPanel();
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+    expect(actions.clearSelectedResult).not.toHaveBeenCalled();
+  });
+
   it('should keep the provider disclosure closed after KeepAlive reactivation', async () => {
     const { active, wrapper } = mountKeptPanel();
     const panel = wrapper.findComponent(AbSearchPanel);

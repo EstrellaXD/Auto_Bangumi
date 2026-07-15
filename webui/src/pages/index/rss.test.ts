@@ -49,6 +49,17 @@ const ButtonStub = defineComponent({
     '<button @click="$emit(\'click\', $event)"><slot name="icon" /><slot /></button>',
 });
 
+const DataTableStub = defineComponent({
+  name: 'NDataTable',
+  props: {
+    checkedRowKeys: {
+      type: Array,
+      default: () => [],
+    },
+  },
+  template: '<div class="data-table-stub" />',
+});
+
 describe('RSS page mobile actions', () => {
   let RSSPage: Component;
 
@@ -82,5 +93,26 @@ describe('RSS page mobile actions', () => {
     expect(
       wrapper.get('.rss-selection-toolbar').findAll('button')
     ).toHaveLength(3);
+  });
+
+  it('should preserve selected rows when switching to the desktop table', () => {
+    isMobile.value = false;
+
+    const wrapper = mount(RSSPage, {
+      global: {
+        stubs: {
+          'ab-container': ContainerStub,
+          'ab-list': true,
+          'ab-button': ButtonStub,
+          AbButton: ButtonStub,
+          'ab-tag': true,
+          DataTable: DataTableStub,
+        },
+      },
+    });
+
+    expect(wrapper.getComponent(DataTableStub).props('checkedRowKeys')).toEqual(
+      [mockRSSItem.id]
+    );
   });
 });

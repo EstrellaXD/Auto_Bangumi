@@ -21,6 +21,7 @@ import type {
   OffsetSuggestionDetail,
   TMDBSummary,
 } from '#/bangumi';
+import { useFocusHandoff } from '@/hooks/useFocusHandoff';
 
 const props = defineProps<{
   bangumi: BangumiRule;
@@ -34,6 +35,11 @@ const emit = defineEmits<{
 const message = useMessage();
 const { t } = useMyI18n();
 const { isMobile } = useBreakpointQuery();
+const { captureFocusTarget, restoreFocusTarget } = useFocusHandoff();
+
+// setup runs while the result trigger is still focused and before this
+// component's first Dialog mounts and moves focus inside itself.
+captureFocusTarget();
 
 // Local deep copy of bangumi for editing (prevents mutation of original prop)
 const localBangumi = ref<BangumiRule>(
@@ -102,6 +108,7 @@ function openOffsetDialog() {
 function handleConfirmationAfterLeave() {
   if (!pendingOffsetOpen.value) return;
   pendingOffsetOpen.value = false;
+  restoreFocusTarget();
   showOffsetDialog.value = true;
 }
 
@@ -116,11 +123,13 @@ function handleOffsetAfterLeave() {
   if (pendingOffsetOpen.value) {
     pendingOffsetOpen.value = false;
     reopenConfirmationAfterOffset.value = false;
+    restoreFocusTarget();
     showOffsetDialog.value = true;
     return;
   }
   if (!reopenConfirmationAfterOffset.value) return;
   reopenConfirmationAfterOffset.value = false;
+  restoreFocusTarget();
   showConfirmation.value = true;
 }
 
@@ -242,6 +251,7 @@ onBeforeUnmount(() => {
   pendingOffsetOpen.value = false;
   reopenConfirmationAfterOffset.value = false;
   clearTimeout(copyTimer);
+  restoreFocusTarget();
 });
 
 // Auto detect offset

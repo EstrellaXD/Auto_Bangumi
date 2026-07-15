@@ -129,6 +129,7 @@ declare global {
   const useDarkMode: typeof import('../../src/hooks/useDarkMode')['useDarkMode']
   const useDownloaderStore: typeof import('../../src/store/downloader')['useDownloaderStore']
   const useEventStream: typeof import('../../src/hooks/useEventStream')['useEventStream']
+  const useFocusHandoff: typeof import('../../src/hooks/useFocusHandoff')['useFocusHandoff']
   const useI18n: typeof import('vue-i18n')['useI18n']
   const useIntervalFn: typeof import('@vueuse/core')['useIntervalFn']
   const useLocalStorage: typeof import('@vueuse/core')['useLocalStorage']

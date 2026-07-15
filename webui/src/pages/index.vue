@@ -1,10 +1,8 @@
 <script lang="ts" setup>
 import type { BangumiRule } from '#/bangumi';
-import { getRootRedirect } from '@/utils/mobile-navigation';
 
 definePage({
   name: 'Index',
-  redirect: () => getRootRedirect(),
 });
 
 const { editRule } = storeToRefs(useBangumiStore());

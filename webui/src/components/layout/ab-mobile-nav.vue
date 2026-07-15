@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { Home, More, Search } from '@icon-park/vue-next';
-import { computed } from 'vue';
+import { computed, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import AbMobileMoreSheet from './ab-mobile-more-sheet.vue';
 import { useMyI18n } from '@/hooks/useMyI18n';
@@ -10,6 +10,7 @@ import { getMobileNavDestination } from '@/utils/mobile-navigation';
 const { t } = useMyI18n();
 const route = useRoute();
 const mobileShell = useMobileShellStore();
+const moreTriggerRef = ref<HTMLButtonElement | null>(null);
 
 const moreOpen = computed(() => mobileShell.activeOverlay === 'more');
 const activeDestination = computed(() =>
@@ -27,6 +28,12 @@ function toggleMore() {
     mobileShell.openOverlay('more');
   }
 }
+
+function restoreMoreTriggerFocus() {
+  moreTriggerRef.value?.focus();
+}
+
+onUnmounted(closeMore);
 </script>
 
 <template>
@@ -54,6 +61,7 @@ function toggleMore() {
     </RouterLink>
 
     <button
+      ref="moreTriggerRef"
       type="button"
       class="mobile-nav__item"
       :class="{ 'mobile-nav__item--active': activeDestination === 'more' }"
@@ -67,7 +75,11 @@ function toggleMore() {
     </button>
   </nav>
 
-  <AbMobileMoreSheet :show="moreOpen" @update:show="closeMore" />
+  <AbMobileMoreSheet
+    :show="moreOpen"
+    @update:show="closeMore"
+    @restore-trigger-focus="restoreMoreTriggerFocus"
+  />
 </template>
 
 <style lang="scss" scoped>

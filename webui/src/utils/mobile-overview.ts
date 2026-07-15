@@ -54,7 +54,11 @@ export function summarizeDownloads(
       ACTIVE_DOWNLOAD_STATES.has(torrent.state)
     ).length,
     bytesPerSecond: torrents.reduce(
-      (total, torrent) => total + torrent.dlspeed,
+      (total, torrent) =>
+        total +
+        (Number.isFinite(torrent.dlspeed) && torrent.dlspeed >= 0
+          ? torrent.dlspeed
+          : 0),
       0
     ),
   };

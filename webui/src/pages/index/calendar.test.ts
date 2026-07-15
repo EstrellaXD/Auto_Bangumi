@@ -141,4 +141,40 @@ describe('Calendar page', () => {
       afterLeave: true,
     });
   });
+
+  it('should hand focus back to the calendar trigger before opening rule editing', async () => {
+    const trigger = document.createElement('button');
+    document.body.append(trigger);
+    trigger.focus();
+    const store = useBangumiStore();
+    const firstRule = { ...mockBangumiRule, id: 1, air_weekday: 0 };
+    store.bangumi = [
+      firstRule,
+      { ...mockBangumiRule, id: 2, air_weekday: 0, group_name: 'Second' },
+    ];
+    const wrapper = mountCalendar();
+    const board = wrapper.getComponent(CalendarBoardStub);
+    const group = (
+      board.props('groupedByDay') as Record<
+        string,
+        Array<{ rules: typeof store.bangumi }>
+      >
+    ).mon[0];
+
+    board.vm.$emit('card-click', group);
+    await wrapper.vm.$nextTick();
+    const popup = wrapper.getComponent(CalendarRuleListPopupStub);
+    const departingRule = document.createElement('button');
+    document.body.append(departingRule);
+    departingRule.focus();
+    popup.vm.$emit('select', firstRule);
+    await wrapper.vm.$nextTick();
+    departingRule.remove();
+    popup.vm.$emit('after-leave');
+    await wrapper.vm.$nextTick();
+
+    expect(document.activeElement === trigger).toBe(true);
+    wrapper.unmount();
+    trigger.remove();
+  });
 });

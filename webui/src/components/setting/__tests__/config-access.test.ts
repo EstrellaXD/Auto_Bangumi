@@ -189,7 +189,7 @@ function buttonWithText(
   return button;
 }
 
-function mountAccess() {
+function mountAccess(attachTo?: HTMLElement) {
   const active = ref(true);
   const Host = defineComponent({
     components: { ConfigAccess, KeepAlive },
@@ -202,6 +202,7 @@ function mountAccess() {
   });
 
   const wrapper = mount(Host, {
+    attachTo,
     global: {
       components: {
         AbButton: ButtonStub,
@@ -364,6 +365,46 @@ describe('config access', () => {
       beforeLeave: false,
       afterLeave: true,
     });
+    wrapper.unmount();
+  });
+
+  it('should return final focus to the add-token trigger after the create dialog unmounts', async () => {
+    vi.mocked(apiTokens.create).mockResolvedValue({
+      ...tokens[0],
+      id: 12,
+      name: 'focus-token',
+      expires_at: null,
+      token: 'ab_api_focus_token',
+    });
+    const { wrapper } = mountAccess(document.body);
+    await flushPromises();
+    const trigger = buttonWithText(wrapper, 'access.add_token');
+    trigger.element.focus();
+    await trigger.trigger('click');
+    const tokenDialog = wrapper.find('[data-title="access.add_token"]');
+    await tokenDialog.find('input').setValue('focus-token');
+    const createButton = buttonWithText(tokenDialog, 'access.create');
+    createButton.element.focus();
+    await createButton.trigger('click');
+    await flushPromises();
+
+    wrapper
+      .findAllComponents(ModalStub)
+      .find((modal) => modal.props('title') === 'access.add_token')!
+      .vm.$emit('after-leave');
+    await nextTick();
+    const finalReturnFocus = document.activeElement;
+    const tokenValueDialog = wrapper.find(
+      '[data-title="access.token_created"]'
+    );
+    const closeButton =
+      tokenValueDialog.get<HTMLButtonElement>('.stub-modal-close');
+    closeButton.element.focus();
+    await closeButton.trigger('click');
+    await nextTick();
+    if (finalReturnFocus instanceof HTMLElement) finalReturnFocus.focus();
+
+    expect(document.activeElement === trigger.element).toBe(true);
     wrapper.unmount();
   });
 

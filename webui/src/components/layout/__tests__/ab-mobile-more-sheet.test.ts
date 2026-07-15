@@ -215,6 +215,15 @@ describe('ab-mobile-more-sheet', () => {
     expect(actions.confirm).toHaveBeenCalledTimes(1);
   });
 
+  it('should request trigger focus before a queued dialog action runs', async () => {
+    const wrapper = mountSheet();
+
+    await wrapper.find('[data-action="logout"]').trigger('click');
+    await finishSheetLeave(wrapper);
+
+    expect(wrapper.emitted('restore-trigger-focus')).toEqual([[]]);
+  });
+
   it('should not open Add RSS before More has fully left', async () => {
     const wrapper = mountSheet();
 

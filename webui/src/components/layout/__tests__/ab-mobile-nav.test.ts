@@ -26,7 +26,9 @@ const RouterLinkStub = defineComponent({
 const MoreSheetStub = defineComponent({
   name: 'AbMobileMoreSheet',
   props: { show: Boolean },
-  template: '<div class="more-sheet-stub" :data-show="show" />',
+  emits: ['restore-trigger-focus'],
+  template:
+    '<button class="more-sheet-stub" :data-show="show" @click="$emit(\'restore-trigger-focus\')" />',
 });
 
 function mountNav() {
@@ -79,5 +81,38 @@ describe('ab-mobile-nav', () => {
     expect(
       wrapper.find('button.mobile-nav__item').attributes('aria-expanded')
     ).toBe('true');
+  });
+
+  it('should focus the More trigger when the sheet requests restoration', async () => {
+    const wrapper = mountNav();
+    const moreButton = wrapper.find<HTMLButtonElement>(
+      'button.mobile-nav__item'
+    );
+    const focus = vi.spyOn(moreButton.element, 'focus');
+
+    await wrapper.find('button.more-sheet-stub').trigger('click');
+
+    expect(focus).toHaveBeenCalledTimes(1);
+  });
+
+  it('should clear More when the mobile nav unmounts at the tablet breakpoint', () => {
+    const wrapper = mountNav();
+    useMobileShellStore().openOverlay('more');
+
+    wrapper.unmount();
+
+    expect(useMobileShellStore().activeOverlay).toBeNull();
+  });
+
+  it('should keep More closed after a mobile breakpoint round trip', () => {
+    const wrapper = mountNav();
+    useMobileShellStore().openOverlay('more');
+
+    wrapper.unmount();
+    const remountedWrapper = mountNav();
+
+    expect(
+      remountedWrapper.find('.more-sheet-stub').attributes('data-show')
+    ).toBe('false');
   });
 });

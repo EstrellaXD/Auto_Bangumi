@@ -101,4 +101,25 @@ describe('summarizeDownloads', () => {
   it('should sum current download speed across every torrent', () => {
     expect(summarizeDownloads(torrents).bytesPerSecond).toBe(300);
   });
+
+  it('should treat a missing download speed as zero', () => {
+    const missingSpeed = torrent('downloading', 0) as Partial<QbTorrentInfo>;
+    delete missingSpeed.dlspeed;
+
+    expect(
+      summarizeDownloads([missingSpeed as QbTorrentInfo]).bytesPerSecond
+    ).toBe(0);
+  });
+
+  it('should treat a non-finite download speed as zero', () => {
+    expect(
+      summarizeDownloads([torrent('downloading', Number.NaN)]).bytesPerSecond
+    ).toBe(0);
+  });
+
+  it('should treat a negative download speed as zero', () => {
+    expect(
+      summarizeDownloads([torrent('downloading', -1)]).bytesPerSecond
+    ).toBe(0);
+  });
 });

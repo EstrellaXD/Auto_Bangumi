@@ -45,7 +45,8 @@ const OffsetDialogStub = defineComponent({
   name: 'AbOffsetMismatchDialog',
   props: { show: Boolean },
   emits: ['update:show', 'apply', 'keep', 'cancel', 'after-leave'],
-  template: '<div v-if="show" role="dialog" data-offset-dialog />',
+  template:
+    '<div v-if="show" role="dialog" data-offset-dialog><button class="offset-action">offset</button></div>',
 });
 
 async function mountConfirm(season = 0) {
@@ -212,6 +213,32 @@ describe('ab-search-confirm', () => {
       dialogs: document.querySelectorAll('[role="dialog"]').length,
       offsetVisible: document.querySelector('[data-offset-dialog]') !== null,
     }).toEqual({ dialogs: 1, offsetVisible: false });
+  });
+
+  it('should restore the original trigger after a chained mobile dialog closes', async () => {
+    const trigger = document.createElement('button');
+    document.body.append(trigger);
+    trigger.focus();
+    const resolveMismatch = deferredMismatchResponse();
+    const wrapper = await mountConfirm(1);
+    await resolveMismatch();
+    await finishConfirmationLeave();
+    const offset = wrapper.findComponent(OffsetDialogStub);
+    const departingAction = wrapper.get<HTMLButtonElement>('.offset-action');
+    departingAction.element.focus();
+    offset.vm.$emit('cancel');
+    await nextTick();
+
+    offset.vm.$emit('after-leave');
+    await nextTick();
+    const finalClose = document.querySelector<HTMLButtonElement>('.close-btn');
+    if (!finalClose) throw new Error('Final confirmation did not reopen');
+    finalClose.click();
+    wrapper.unmount();
+    await nextTick();
+
+    expect(document.activeElement === trigger).toBe(true);
+    trigger.remove();
   });
 
   it('should reset a pending mobile handoff when the result changes', async () => {

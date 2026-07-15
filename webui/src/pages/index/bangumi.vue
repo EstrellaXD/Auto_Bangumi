@@ -2,6 +2,7 @@
 import { More, Refresh } from '@icon-park/vue-next';
 import type { BangumiRule } from '#/bangumi';
 import type { AbMenuItem } from '@/components/basic/ab-menu.vue';
+import { useFocusHandoff } from '@/hooks/useFocusHandoff';
 
 definePage({
   name: 'Bangumi List',
@@ -109,11 +110,13 @@ const ruleListPopup = reactive<{
   group: null,
 });
 const pendingEditRule = ref<BangumiRule | null>(null);
+const { captureFocusTarget, restoreFocusTarget } = useFocusHandoff();
 
 function onCardClick(group: BangumiGroup) {
   if (group.rules.length === 1) {
     openEditPopup(group.primary);
   } else {
+    captureFocusTarget();
     ruleListPopup.group = group;
     ruleListPopup.show = true;
   }
@@ -128,6 +131,7 @@ function onRuleListAfterLeave() {
   const rule = pendingEditRule.value;
   if (!rule) return;
   pendingEditRule.value = null;
+  restoreFocusTarget();
   openEditPopup(rule);
 }
 

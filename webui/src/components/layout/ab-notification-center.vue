@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 import { Attention, CloseOne, Delete, Info, Remind } from '@icon-park/vue-next';
 import { storeToRefs } from 'pinia';
@@ -125,6 +125,11 @@ watch(
   },
   { immediate: true }
 );
+
+onUnmounted(() => {
+  mobileShell.closeOverlay('notifications');
+  syncPanelOpen(false);
+});
 
 function closePanel(closePopover: () => void) {
   if (isMobile.value) {

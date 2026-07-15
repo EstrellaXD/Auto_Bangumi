@@ -240,6 +240,7 @@ function onSelectedRSSUpdate(keys: unknown[]) {
         :columns="rssColumns"
         :data="rss"
         :row-key="rssRowKey"
+        :checked-row-keys="selectedRSS"
         :loading="isLoading && rss.length === 0"
         :pagination="false"
         :bordered="false"
