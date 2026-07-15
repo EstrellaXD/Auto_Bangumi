@@ -1,4 +1,10 @@
 <script lang="ts" setup>
+import {
+  Dialog,
+  DialogPanel,
+  DialogTitle,
+  TransitionRoot,
+} from '@headlessui/vue';
 import { Caution, Close } from '@icon-park/vue-next';
 import type { OffsetSuggestionDetail, TMDBSummary } from '#/bangumi';
 
@@ -20,6 +26,7 @@ const emit = defineEmits<{
   (e: 'apply', offsets: { seasonOffset: number; episodeOffset: number }): void;
   (e: 'keep'): void;
   (e: 'cancel'): void;
+  (e: 'after-leave'): void;
 }>();
 
 const { t } = useMyI18n();
@@ -86,149 +93,172 @@ function handleCancel() {
 </script>
 
 <template>
-  <Teleport to="body">
-    <Transition name="modal">
-      <div v-if="show" class="dialog-backdrop" @click.self="handleCancel">
-        <div class="dialog-modal" role="dialog" aria-modal="true">
-          <!-- Header -->
-          <header class="dialog-header">
-            <div class="header-icon">
-              <Caution theme="filled" size="20" />
-            </div>
-            <h2 class="dialog-title">{{ t('offset.dialog_title') }}</h2>
-            <button class="close-btn" aria-label="Close" @click="handleCancel">
-              <Close theme="outline" size="18" />
-            </button>
-          </header>
-
-          <!-- Content -->
-          <div class="dialog-content">
-            <!-- Bangumi title -->
-            <div class="bangumi-title">{{ bangumiTitle }}</div>
-
-            <!-- Comparison section -->
-            <div class="comparison">
-              <!-- RSS parsed result -->
-              <div class="comparison-box">
-                <div class="comparison-label">
-                  {{ t('offset.parsed_result') }}
-                </div>
-                <div class="comparison-value">
-                  <span class="value-label">{{ t('offset.season') }}:</span>
-                  <span class="value-num">{{ parsedSeason }}</span>
-                </div>
-                <div class="comparison-value">
-                  <span class="value-label">{{ t('offset.episode') }}:</span>
-                  <span class="value-num">{{ parsedEpisode }}</span>
-                </div>
+  <TransitionRoot
+    appear
+    :show="show"
+    as="template"
+    enter="modal-enter-active"
+    enter-from="modal-enter-from"
+    enter-to="modal-enter-to"
+    leave="modal-leave-active"
+    leave-from="modal-leave-from"
+    leave-to="modal-leave-to"
+    @after-leave="emit('after-leave')"
+  >
+    <Dialog class="offset-dialog" @close="handleCancel">
+      <div class="dialog-backdrop">
+        <DialogPanel as="template">
+          <div class="dialog-modal">
+            <!-- Header -->
+            <header class="dialog-header">
+              <div class="header-icon">
+                <Caution theme="filled" size="20" />
               </div>
-
-              <div class="comparison-vs">&ne;</div>
-
-              <!-- TMDB data -->
-              <div class="comparison-box">
-                <div class="comparison-label">{{ t('offset.tmdb_data') }}</div>
-                <div v-if="tmdbInfo" class="comparison-value">
-                  <span class="value-label"
-                    >{{ t('offset.total_seasons') }}:</span
-                  >
-                  <span class="value-num">{{ tmdbInfo.total_seasons }}</span>
-                </div>
-                <div
-                  v-if="
-                    tmdbInfo &&
-                    tmdbInfo.season_episode_counts[
-                      parsedSeason + (suggestion?.season_offset ?? 0)
-                    ]
-                  "
-                  class="comparison-value"
-                >
-                  <span class="value-label"
-                    >S{{ parsedSeason + (suggestion?.season_offset ?? 0) }}
-                    {{ t('offset.episode') }}:</span
-                  >
-                  <span class="value-num">{{
-                    tmdbInfo.season_episode_counts[
-                      parsedSeason + (suggestion?.season_offset ?? 0)
-                    ]
-                  }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Reason -->
-            <div v-if="suggestion?.reason" class="reason-section">
-              <span
-                class="reason-badge"
-                :style="{ backgroundColor: confidenceColor }"
+              <DialogTitle as="template">
+                <h2 class="dialog-title">{{ t('offset.dialog_title') }}</h2>
+              </DialogTitle>
+              <button
+                class="close-btn"
+                :aria-label="t('common.close')"
+                @click="handleCancel"
               >
-                {{ suggestion.confidence }}
-              </span>
-              <span class="reason-text">{{ suggestion.reason }}</span>
+                <Close theme="outline" size="18" />
+              </button>
+            </header>
+
+            <!-- Content -->
+            <div class="dialog-content">
+              <!-- Bangumi title -->
+              <div class="bangumi-title">{{ bangumiTitle }}</div>
+
+              <!-- Comparison section -->
+              <div class="comparison">
+                <!-- RSS parsed result -->
+                <div class="comparison-box">
+                  <div class="comparison-label">
+                    {{ t('offset.parsed_result') }}
+                  </div>
+                  <div class="comparison-value">
+                    <span class="value-label">{{ t('offset.season') }}:</span>
+                    <span class="value-num">{{ parsedSeason }}</span>
+                  </div>
+                  <div class="comparison-value">
+                    <span class="value-label">{{ t('offset.episode') }}:</span>
+                    <span class="value-num">{{ parsedEpisode }}</span>
+                  </div>
+                </div>
+
+                <div class="comparison-vs">&ne;</div>
+
+                <!-- TMDB data -->
+                <div class="comparison-box">
+                  <div class="comparison-label">
+                    {{ t('offset.tmdb_data') }}
+                  </div>
+                  <div v-if="tmdbInfo" class="comparison-value">
+                    <span class="value-label"
+                      >{{ t('offset.total_seasons') }}:</span
+                    >
+                    <span class="value-num">{{ tmdbInfo.total_seasons }}</span>
+                  </div>
+                  <div
+                    v-if="
+                      tmdbInfo &&
+                      tmdbInfo.season_episode_counts[
+                        parsedSeason + (suggestion?.season_offset ?? 0)
+                      ]
+                    "
+                    class="comparison-value"
+                  >
+                    <span class="value-label"
+                      >S{{ parsedSeason + (suggestion?.season_offset ?? 0) }}
+                      {{ t('offset.episode') }}:</span
+                    >
+                    <span class="value-num">{{
+                      tmdbInfo.season_episode_counts[
+                        parsedSeason + (suggestion?.season_offset ?? 0)
+                      ]
+                    }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Reason -->
+              <div v-if="suggestion?.reason" class="reason-section">
+                <span
+                  class="reason-badge"
+                  :style="{ backgroundColor: confidenceColor }"
+                >
+                  {{ suggestion.confidence }}
+                </span>
+                <span class="reason-text">{{ suggestion.reason }}</span>
+              </div>
+
+              <!-- Offset inputs -->
+              <div class="offset-section">
+                <div class="offset-title">
+                  {{ t('offset.suggested_offset') }}
+                </div>
+                <div class="offset-row">
+                  <label class="offset-label"
+                    >{{ t('offset.season_offset') }}:</label
+                  >
+                  <input
+                    v-model.number="seasonOffset"
+                    type="number"
+                    class="offset-input"
+                  />
+                  <span class="offset-hint"
+                    >&rarr; S{{ parsedSeason }}
+                    {{ t('offset.season') === '季度' ? '变为' : 'becomes' }} S{{
+                      Math.max(1, parsedSeason + seasonOffset)
+                    }}</span
+                  >
+                </div>
+                <div class="offset-row">
+                  <label class="offset-label"
+                    >{{ t('offset.episode_offset') }}:</label
+                  >
+                  <input
+                    v-model.number="episodeOffset"
+                    type="number"
+                    class="offset-input"
+                  />
+                  <span class="offset-hint"
+                    >&rarr; E{{ parsedEpisode }}
+                    {{ t('offset.season') === '季度' ? '保持' : 'stays' }} E{{
+                      Math.max(1, parsedEpisode + episodeOffset)
+                    }}</span
+                  >
+                </div>
+              </div>
+
+              <!-- Preview -->
+              <div class="preview-section">
+                <span class="preview-label">{{ t('offset.preview') }}:</span>
+                <span class="preview-from">{{ preview.from }}</span>
+                <span class="preview-arrow">&rarr;</span>
+                <span class="preview-to">{{ preview.to }}</span>
+              </div>
             </div>
 
-            <!-- Offset inputs -->
-            <div class="offset-section">
-              <div class="offset-title">{{ t('offset.suggested_offset') }}</div>
-              <div class="offset-row">
-                <label class="offset-label"
-                  >{{ t('offset.season_offset') }}:</label
-                >
-                <input
-                  v-model.number="seasonOffset"
-                  type="number"
-                  class="offset-input"
-                />
-                <span class="offset-hint"
-                  >&rarr; S{{ parsedSeason }}
-                  {{ t('offset.season') === '季度' ? '变为' : 'becomes' }} S{{
-                    Math.max(1, parsedSeason + seasonOffset)
-                  }}</span
-                >
-              </div>
-              <div class="offset-row">
-                <label class="offset-label"
-                  >{{ t('offset.episode_offset') }}:</label
-                >
-                <input
-                  v-model.number="episodeOffset"
-                  type="number"
-                  class="offset-input"
-                />
-                <span class="offset-hint"
-                  >&rarr; E{{ parsedEpisode }}
-                  {{ t('offset.season') === '季度' ? '保持' : 'stays' }} E{{
-                    Math.max(1, parsedEpisode + episodeOffset)
-                  }}</span
-                >
-              </div>
-            </div>
-
-            <!-- Preview -->
-            <div class="preview-section">
-              <span class="preview-label">{{ t('offset.preview') }}:</span>
-              <span class="preview-from">{{ preview.from }}</span>
-              <span class="preview-arrow">&rarr;</span>
-              <span class="preview-to">{{ preview.to }}</span>
-            </div>
+            <!-- Footer -->
+            <footer class="dialog-footer">
+              <ab-button size="sm" variant="secondary" @click="handleCancel">
+                {{ t('offset.cancel') }}
+              </ab-button>
+              <ab-button variant="primary" size="sm" @click="handleKeep">
+                {{ t('offset.keep') }}
+              </ab-button>
+              <ab-button size="sm" variant="primary" @click="handleApply">
+                {{ t('offset.apply') }}
+              </ab-button>
+            </footer>
           </div>
-
-          <!-- Footer -->
-          <footer class="dialog-footer">
-            <ab-button size="sm" variant="secondary" @click="handleCancel">
-              {{ t('offset.cancel') }}
-            </ab-button>
-            <ab-button variant="primary" size="sm" @click="handleKeep">
-              {{ t('offset.keep') }}
-            </ab-button>
-            <ab-button size="sm" variant="primary" @click="handleApply">
-              {{ t('offset.apply') }}
-            </ab-button>
-          </footer>
-        </div>
+        </DialogPanel>
       </div>
-    </Transition>
-  </Teleport>
+    </Dialog>
+  </TransitionRoot>
 </template>
 
 <style lang="scss" scoped>
@@ -504,6 +534,97 @@ function handleCancel() {
   .dialog-modal {
     transform: scale(0.95) translateY(10px);
     opacity: 0;
+  }
+}
+
+@media screen and (max-width: 639px) {
+  .dialog-backdrop {
+    align-items: flex-end;
+    padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  }
+
+  .dialog-modal {
+    max-width: none;
+    max-height: calc(
+      100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+    );
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+
+    @supports not (max-height: 1dvh) {
+      max-height: calc(
+        100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+      );
+    }
+  }
+
+  .dialog-header {
+    padding: 10px 12px 10px 16px;
+  }
+
+  .close-btn {
+    flex-shrink: 0;
+    width: var(--touch-target);
+    height: var(--touch-target);
+  }
+
+  .dialog-content {
+    min-height: 0;
+    padding: 16px;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .comparison {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .comparison-vs {
+    min-height: 24px;
+    justify-content: center;
+  }
+
+  .offset-section {
+    padding: 12px;
+  }
+
+  .offset-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 72px;
+  }
+
+  .offset-label {
+    width: auto;
+  }
+
+  .offset-input {
+    width: 72px;
+    height: var(--touch-target);
+  }
+
+  .offset-hint {
+    grid-column: 1 / -1;
+  }
+
+  .preview-section {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .dialog-footer {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+
+    :deep(.ab-btn) {
+      width: 100%;
+      height: auto;
+      min-height: var(--touch-target);
+      padding: 6px;
+      white-space: normal;
+      line-height: 1.2;
+    }
   }
 }
 </style>

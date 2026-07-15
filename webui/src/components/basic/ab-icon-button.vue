@@ -95,6 +95,14 @@ function onClick(event: MouseEvent) {
     }
   }
 
+  @media screen and (max-width: 639px) {
+    &--md,
+    &--sm {
+      width: var(--touch-target);
+      height: var(--touch-target);
+    }
+  }
+
   &--solid {
     background: var(--color-primary);
     color: var(--color-white);

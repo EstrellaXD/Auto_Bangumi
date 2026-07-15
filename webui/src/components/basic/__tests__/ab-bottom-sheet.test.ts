@@ -1,5 +1,7 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
+import { TransitionRoot } from '@headlessui/vue';
 import AbBottomSheet from '../ab-bottom-sheet.vue';
 
 afterEach(() => {
@@ -79,5 +81,27 @@ describe('ab-bottom-sheet', () => {
     await mountSheet({ avoidKeyboard: false });
 
     expect(viewport.addEventListener).not.toHaveBeenCalled();
+  });
+
+  it('should signal when the sheet has fully left', async () => {
+    const wrapper = await mountSheet();
+    const transition = wrapper.getComponent(TransitionRoot);
+
+    await wrapper.setProps({ show: false });
+    transition.vm.$emit('afterLeave');
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.emitted('after-leave')).toHaveLength(1);
+  });
+
+  it('should provide a 44 pixel drag target below 640 pixels', () => {
+    const source = readFileSync(
+      new URL('../ab-bottom-sheet.vue', import.meta.url),
+      'utf8'
+    );
+
+    expect(source).toMatch(
+      /@media screen and \(max-width: 639px\)[\s\S]*?&__handle\s*\{[\s\S]*?min-height:\s*var\(--touch-target\)/
+    );
   });
 });

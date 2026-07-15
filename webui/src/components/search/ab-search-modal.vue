@@ -1,4 +1,10 @@
 <script lang="ts" setup>
+import {
+  Dialog,
+  DialogPanel,
+  TransitionChild,
+  TransitionRoot,
+} from '@headlessui/vue';
 import { storeToRefs } from 'pinia';
 import AbSearchPanel from './ab-search-panel.vue';
 import { useSearchStore } from '@/store/search';
@@ -18,30 +24,39 @@ function handleSubscribed() {
 </script>
 
 <template>
-  <Teleport to="body">
-    <transition name="overlay">
-      <div v-if="showModal" class="search-modal-backdrop" />
-    </transition>
-
-    <transition name="search-modal">
-      <div
-        v-if="showModal"
-        class="search-modal"
-        role="dialog"
-        aria-modal="true"
-        :aria-label="$t('mobile.search_title')"
-        @click.self="dismiss"
+  <TransitionRoot appear :show="showModal" as="template">
+    <Dialog :aria-label="$t('mobile.search_title')" @close="dismiss">
+      <TransitionChild
+        as="template"
+        enter="search-modal-backdrop-enter-active"
+        enter-from="search-modal-backdrop-enter-from"
+        leave="search-modal-backdrop-leave-active"
+        leave-to="search-modal-backdrop-leave-to"
       >
-        <div class="search-modal__content">
-          <AbSearchPanel
-            dismissible
-            @dismiss="dismiss"
-            @subscribed="handleSubscribed"
-          />
-        </div>
+        <div class="search-modal-backdrop" aria-hidden="true" />
+      </TransitionChild>
+
+      <div class="search-modal">
+        <TransitionChild
+          as="template"
+          enter="search-modal-enter-active"
+          enter-from="search-modal-enter-from"
+          leave="search-modal-leave-active"
+          leave-to="search-modal-leave-to"
+        >
+          <DialogPanel as="template">
+            <div class="search-modal__content">
+              <AbSearchPanel
+                dismissible
+                @dismiss="dismiss"
+                @subscribed="handleSubscribed"
+              />
+            </div>
+          </DialogPanel>
+        </TransitionChild>
       </div>
-    </transition>
-  </Teleport>
+    </Dialog>
+  </TransitionRoot>
 </template>
 
 <style lang="scss" scoped>
@@ -108,9 +123,24 @@ function handleSubscribed() {
   transform: scale(0.95) translateY(-10px);
 }
 
+.search-modal-backdrop-enter-active {
+  transition: opacity var(--transition-normal);
+}
+
+.search-modal-backdrop-leave-active {
+  transition: opacity 150ms ease-in;
+}
+
+.search-modal-backdrop-enter-from,
+.search-modal-backdrop-leave-to {
+  opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .search-modal-enter-active,
-  .search-modal-leave-active {
+  .search-modal-leave-active,
+  .search-modal-backdrop-enter-active,
+  .search-modal-backdrop-leave-active {
     transition: none;
   }
 }

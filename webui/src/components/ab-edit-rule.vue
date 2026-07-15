@@ -54,6 +54,32 @@ const deleteFileDialog = reactive<{
   type: 'disable',
 });
 const deleteLocalFiles = ref(false);
+const mobileActionsRef = ref<HTMLElement | null>(null);
+const mobileDeleteActive = computed(
+  () => isMobile.value && deleteFileDialog.show
+);
+
+function returnToEditor() {
+  deleteFileDialog.show = false;
+  nextTick(() => {
+    window.setTimeout(() => {
+      mobileActionsRef.value
+        ?.querySelector<HTMLButtonElement>('button')
+        ?.focus();
+    });
+  });
+}
+
+const editorModalShow = computed({
+  get: () => show.value,
+  set: (value: boolean) => {
+    if (!value && mobileDeleteActive.value) {
+      returnToEditor();
+      return;
+    }
+    show.value = value;
+  },
+});
 
 watch(show, (val) => {
   if (!val) {
@@ -163,7 +189,7 @@ function goToTorrents() {
 }
 
 onKeyStroke('Escape', () => {
-  if (!show.value) return;
+  if (!show.value || isMobile.value) return;
   // Inner delete dialog closes first, then the modal itself.
   if (deleteFileDialog.show) {
     deleteFileDialog.show = false;
@@ -251,15 +277,27 @@ const mobileRuleActions = computed<AbMenuItem[]>(() => [
   <!-- Main edit modal -->
   <ab-modal
     v-else
-    v-model:show="show"
-    :title="$t('homepage.rule.edit_rule')"
+    v-model:show="editorModalShow"
+    :title="
+      mobileDeleteActive
+        ? $t('homepage.rule.delete')
+        : $t('homepage.rule.edit_rule')
+    "
     mobile-fullscreen
     :avoid-keyboard="false"
-    @close="close"
   >
+    <template v-if="mobileDeleteActive">
+      <p class="delete-message">
+        {{ $t('homepage.rule.delete_confirm') }}
+      </p>
+      <NCheckbox v-model:checked="deleteLocalFiles" class="delete-files-option">
+        {{ $t('homepage.rule.delete_files_label') }}
+      </NCheckbox>
+    </template>
+
     <!-- Needs Review Warning Banner -->
     <div
-      v-if="localRule.needs_review"
+      v-if="!mobileDeleteActive && localRule.needs_review"
       class="review-warning"
       role="status"
       :aria-label="$t('offset.needs_review')"
@@ -299,7 +337,7 @@ const mobileRuleActions = computed<AbMenuItem[]>(() => [
     </div>
 
     <!-- Content -->
-    <div class="edit-content">
+    <div v-if="!mobileDeleteActive" class="edit-content">
       <bangumi-preview v-model:rule="localRule" :poster-src="posterSrc" />
 
       <bangumi-info-tags :tags="infoTags" />
@@ -406,6 +444,7 @@ const mobileRuleActions = computed<AbMenuItem[]>(() => [
          Escape/遮罩点击挂起，只关闭内层 -->
     <!-- Delete confirmation dialog -->
     <ab-modal
+      v-if="!isMobile"
       v-model:show="deleteFileDialog.show"
       size="sm"
       :title="$t('homepage.rule.delete')"
@@ -432,8 +471,20 @@ const mobileRuleActions = computed<AbMenuItem[]>(() => [
     </ab-modal>
 
     <template #footer>
-      <template v-if="isMobile">
-        <div class="rule-mobile-actions">
+      <template v-if="mobileDeleteActive">
+        <ab-button size="sm" @click="returnToEditor">
+          {{ $t('homepage.rule.cancel_btn') }}
+        </ab-button>
+        <ab-button
+          size="sm"
+          variant="danger"
+          @click="emitDeleteFile(deleteLocalFiles)"
+        >
+          {{ $t('homepage.rule.delete') }}
+        </ab-button>
+      </template>
+      <template v-else-if="isMobile">
+        <div ref="mobileActionsRef" class="rule-mobile-actions">
           <ab-menu :items="mobileRuleActions" align="left" placement="top">
             <template #trigger>
               <ab-icon-button :label="$t('common.moreActions')">

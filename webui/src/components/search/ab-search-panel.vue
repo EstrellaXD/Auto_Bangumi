@@ -10,7 +10,7 @@ import {
 } from '@icon-park/vue-next';
 import { NSpin } from 'naive-ui';
 import { useId } from 'vue';
-import { onKeyStroke } from '@vueuse/core';
+import { onClickOutside, onKeyStroke } from '@vueuse/core';
 import AbSearchConfirm from './ab-search-confirm.vue';
 import type { BangumiRule } from '#/bangumi';
 import type { GroupedBangumi } from '@/store/search';
@@ -58,6 +58,8 @@ const panelActive = ref(true);
 
 const showProvider = ref(false);
 const searchInputRef = ref<HTMLInputElement | null>(null);
+const providerSelectRef = ref<HTMLElement | null>(null);
+const providerButtonRef = ref<HTMLButtonElement | null>(null);
 const providerOptionsId = useId();
 
 // Max visible chips per category
@@ -85,7 +87,10 @@ onActivated(() => {
 
 onDeactivated(() => {
   panelActive.value = false;
+  closeProvider(false);
 });
+
+onClickOutside(providerSelectRef, () => closeProvider(false));
 
 onKeyStroke('Escape', () => {
   if (!panelActive.value) return;
@@ -94,7 +99,7 @@ onKeyStroke('Escape', () => {
     return;
   }
   if (showProvider.value) {
-    showProvider.value = false;
+    closeProvider(true);
     return;
   }
   if (props.dismissible) emit('dismiss');
@@ -121,10 +126,33 @@ watch(inputValue, () => {
 
 function onSelectProvider(site: string) {
   provider.value = site;
+  closeProvider(true);
+}
+
+function closeProvider(restoreFocus: boolean) {
+  if (!showProvider.value) return;
   showProvider.value = false;
+  if (restoreFocus) {
+    nextTick(() => providerButtonRef.value?.focus());
+  }
+}
+
+function toggleProvider() {
+  if (showProvider.value) {
+    closeProvider(false);
+  } else {
+    showProvider.value = true;
+  }
+}
+
+function handleProviderEscape(event: KeyboardEvent) {
+  if (!showProvider.value) return;
+  event.stopPropagation();
+  closeProvider(true);
 }
 
 function handleVariantSelect(bangumi: BangumiRule) {
+  closeProvider(false);
   selectResult(bangumi);
 }
 
@@ -638,13 +666,18 @@ function handleFilterClick(
           @keyup.enter="onSearch"
         />
 
-        <div class="provider-select">
+        <div
+          ref="providerSelectRef"
+          class="provider-select"
+          @keydown.esc="handleProviderEscape"
+        >
           <button
+            ref="providerButtonRef"
             class="provider-btn"
             aria-label="Select search provider"
             :aria-controls="providerOptionsId"
             :aria-expanded="showProvider"
-            @click="showProvider = !showProvider"
+            @click="toggleProvider"
           >
             <span class="provider-label">{{ provider }}</span>
             <Down :size="14" />
@@ -652,7 +685,7 @@ function handleFilterClick(
 
           <transition name="dropdown">
             <div
-              v-show="showProvider"
+              v-if="showProvider"
               :id="providerOptionsId"
               class="provider-dropdown"
             >
@@ -1124,6 +1157,12 @@ function handleFilterClick(
   &.active {
     background: var(--color-primary-light);
     color: var(--color-primary);
+  }
+}
+
+@media screen and (max-width: 639px) {
+  .provider-item {
+    min-height: 44px;
   }
 }
 

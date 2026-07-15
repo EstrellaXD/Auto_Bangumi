@@ -19,7 +19,7 @@ import {
   Sun,
   Translate,
 } from '@icon-park/vue-next';
-import { nextTick, ref } from 'vue';
+import { ref } from 'vue';
 import AbBottomSheet from '@/components/basic/ab-bottom-sheet.vue';
 import AbChangeAccount from '@/components/ab-change-account.vue';
 import { useAddRss } from '@/hooks/useAddRss';
@@ -47,6 +47,7 @@ const { confirm } = useConfirm();
 const { start, pause, restart, shutdown, resetRule } = useProgramStore();
 
 const showAccount = ref(false);
+const pendingAction = ref<(() => void | Promise<void>) | null>(null);
 
 const pageItems = [
   { path: '/bangumi', label: 'mobile.bangumi', icon: Home },
@@ -62,16 +63,25 @@ function close() {
   emit('update:show', false);
 }
 
-async function openAddRssSheet() {
+function runAfterLeave(action: () => void | Promise<void>) {
+  pendingAction.value = action;
   close();
-  await nextTick();
-  openAddRss();
 }
 
-async function openAccount() {
-  close();
-  await nextTick();
-  showAccount.value = true;
+function handleAfterLeave() {
+  const action = pendingAction.value;
+  pendingAction.value = null;
+  if (action) action();
+}
+
+function openAddRssSheet() {
+  runAfterLeave(openAddRss);
+}
+
+function openAccount() {
+  runAfterLeave(() => {
+    showAccount.value = true;
+  });
 }
 
 async function toggleProgram() {
@@ -84,21 +94,21 @@ async function toggleProgram() {
   }
 }
 
-async function confirmAction(
+function confirmAction(
   titleKey: string,
   bodyKey: string,
   action: () => unknown | Promise<unknown>,
   danger = false
 ) {
-  close();
-  await nextTick();
-  const accepted = await confirm({
-    title: t(titleKey),
-    body: t(bodyKey),
-    danger,
+  runAfterLeave(async () => {
+    const accepted = await confirm({
+      title: t(titleKey),
+      body: t(bodyKey),
+      danger,
+    });
+    if (!accepted) return;
+    await action();
   });
-  if (!accepted) return;
-  await action();
 }
 </script>
 
@@ -108,6 +118,7 @@ async function confirmAction(
     :title="t('common.moreActions')"
     :close-label="t('common.close')"
     @update:show="emit('update:show', $event)"
+    @after-leave="handleAfterLeave"
   >
     <div class="mobile-more">
       <section class="mobile-more__section" aria-labelledby="mobile-more-quick">

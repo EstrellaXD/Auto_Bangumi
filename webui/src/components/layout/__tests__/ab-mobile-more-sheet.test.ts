@@ -29,9 +29,16 @@ const RouterLinkStub = defineComponent({
 const BottomSheetStub = defineComponent({
   name: 'AbBottomSheet',
   props: { show: Boolean, title: String },
-  emits: ['update:show'],
+  emits: ['update:show', 'after-leave'],
   template:
     '<section v-if="show" class="sheet-stub" :data-title="title"><slot /></section>',
+});
+
+const AccountStub = defineComponent({
+  name: 'AbChangeAccount',
+  props: { show: Boolean },
+  emits: ['update:show'],
+  template: '<div class="account-stub" />',
 });
 
 const actions = {
@@ -60,10 +67,15 @@ function mountSheet(running = false, statusKnown = true) {
         RouterLink: RouterLinkStub,
         AbBottomSheet: BottomSheetStub,
         AbAddRss: true,
-        AbChangeAccount: true,
+        AbChangeAccount: AccountStub,
       },
     },
   });
+}
+
+async function finishSheetLeave(wrapper: ReturnType<typeof mountSheet>) {
+  wrapper.findComponent(BottomSheetStub).vm.$emit('after-leave');
+  await flushPromises();
 }
 
 describe('ab-mobile-more-sheet', () => {
@@ -163,7 +175,7 @@ describe('ab-mobile-more-sheet', () => {
     const wrapper = mountSheet();
 
     await wrapper.find('[data-action="restart"]').trigger('click');
-    await flushPromises();
+    await finishSheetLeave(wrapper);
 
     expect(actions.restart).toHaveBeenCalledTimes(1);
   });
@@ -173,32 +185,75 @@ describe('ab-mobile-more-sheet', () => {
     const wrapper = mountSheet();
 
     await wrapper.find('[data-action="restart"]').trigger('click');
-    await flushPromises();
+    await finishSheetLeave(wrapper);
 
     expect(actions.restart).not.toHaveBeenCalled();
   });
 
-  it('should close More before a destructive confirmation opens', async () => {
-    let closedBeforeConfirm = false;
+  it('should close More as soon as a destructive action is pressed', async () => {
     const wrapper = mountSheet();
-    actions.confirm.mockImplementation(async () => {
-      closedBeforeConfirm =
-        wrapper.emitted('update:show')?.some(([value]) => value === false) ??
-        false;
-      return false;
-    });
 
     await wrapper.find('[data-action="restart"]').trigger('click');
-    await flushPromises();
 
-    expect(closedBeforeConfirm).toBe(true);
+    expect(wrapper.emitted('update:show')).toEqual([[false]]);
+  });
+
+  it('should not open a destructive confirmation before More has fully left', async () => {
+    const wrapper = mountSheet();
+
+    await wrapper.find('[data-action="restart"]').trigger('click');
+
+    expect(actions.confirm).not.toHaveBeenCalled();
+  });
+
+  it('should open a destructive confirmation after More has fully left', async () => {
+    const wrapper = mountSheet();
+
+    await wrapper.find('[data-action="restart"]').trigger('click');
+    await finishSheetLeave(wrapper);
+
+    expect(actions.confirm).toHaveBeenCalledTimes(1);
+  });
+
+  it('should not open Add RSS before More has fully left', async () => {
+    const wrapper = mountSheet();
+
+    await wrapper.find('[data-action="add-rss"]').trigger('click');
+
+    expect(actions.openAddRss).not.toHaveBeenCalled();
+  });
+
+  it('should open Add RSS after More has fully left', async () => {
+    const wrapper = mountSheet();
+
+    await wrapper.find('[data-action="add-rss"]').trigger('click');
+    await finishSheetLeave(wrapper);
+
+    expect(actions.openAddRss).toHaveBeenCalledTimes(1);
+  });
+
+  it('should keep the account dialog closed before More has fully left', async () => {
+    const wrapper = mountSheet();
+
+    await wrapper.find('[data-action="account"]').trigger('click');
+
+    expect(wrapper.findComponent(AccountStub).props('show')).toBe(false);
+  });
+
+  it('should open the account dialog after More has fully left', async () => {
+    const wrapper = mountSheet();
+
+    await wrapper.find('[data-action="account"]').trigger('click');
+    await finishSheetLeave(wrapper);
+
+    expect(wrapper.findComponent(AccountStub).props('show')).toBe(true);
   });
 
   it('should request confirmation when logout is pressed', async () => {
     const wrapper = mountSheet();
 
     await wrapper.find('[data-action="logout"]').trigger('click');
-    await flushPromises();
+    await finishSheetLeave(wrapper);
 
     expect(actions.confirm).toHaveBeenCalledTimes(1);
   });

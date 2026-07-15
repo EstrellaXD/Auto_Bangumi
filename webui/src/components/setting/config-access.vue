@@ -35,6 +35,7 @@ const issuedToken = ref('');
 const submitting = ref(false);
 let accessActive = false;
 let tokenRevealGeneration = 0;
+let revealTokenAfterLeave = false;
 
 const ownerByUserId = computed(
   () => new Map(users.value.map((user) => [user.id, user.username]))
@@ -67,6 +68,7 @@ function setUserDialogVisibility(show: boolean): void {
 function setTokenDialogVisibility(show: boolean): void {
   showTokenDialog.value = show;
   if (!show) {
+    revealTokenAfterLeave = false;
     tokenRevealGeneration += 1;
     tokenName.value = '';
   }
@@ -85,6 +87,13 @@ function scrubSensitiveState(): void {
   setUserDialogVisibility(false);
   setTokenDialogVisibility(false);
   setTokenValueVisibility(false);
+}
+
+function handleTokenDialogAfterLeave(): void {
+  if (!revealTokenAfterLeave) return;
+  revealTokenAfterLeave = false;
+  if (!accessActive || !issuedToken.value) return;
+  setTokenValueVisibility(true);
 }
 
 onDeactivated(scrubSensitiveState);
@@ -131,7 +140,7 @@ async function handleCreateToken(): Promise<void> {
     if (!accessActive || revealGeneration !== tokenRevealGeneration) return;
     issuedToken.value = token;
     setTokenDialogVisibility(false);
-    setTokenValueVisibility(true);
+    revealTokenAfterLeave = true;
   } finally {
     submitting.value = false;
   }
@@ -316,6 +325,7 @@ function tokenStatus(token: ApiTokenPublic): ApiTokenStatus {
       size="sm"
       :title="$t('access.add_token')"
       @update:show="setTokenDialogVisibility"
+      @after-leave="handleTokenDialogAfterLeave"
     >
       <div class="dialog-form">
         <ab-field :label="$t('access.token_name')">

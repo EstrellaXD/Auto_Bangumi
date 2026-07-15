@@ -35,6 +35,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   (e: 'update:show', value: boolean): void;
   (e: 'close'): void;
+  (e: 'after-leave'): void;
 }>();
 
 const sheetRef = ref<HTMLElement | null>(null);
@@ -125,7 +126,7 @@ function close() {
 </script>
 
 <template>
-  <TransitionRoot :show="show" as="template">
+  <TransitionRoot :show="show" as="template" @after-leave="emit('after-leave')">
     <Dialog class="ab-bottom-sheet" @close="close">
       <!-- Backdrop -->
       <TransitionChild
@@ -309,6 +310,14 @@ function close() {
     gap: 8px;
     padding: 12px 20px;
     border-top: 1px solid var(--color-border);
+  }
+
+  @media screen and (max-width: 639px) {
+    &__handle {
+      align-items: center;
+      min-height: var(--touch-target);
+      padding: 0;
+    }
   }
 }
 </style>

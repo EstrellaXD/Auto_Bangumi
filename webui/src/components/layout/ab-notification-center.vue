@@ -1,12 +1,22 @@
 <script lang="ts" setup>
+import { computed, nextTick, ref, watch } from 'vue';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 import { Attention, CloseOne, Delete, Info, Remind } from '@icon-park/vue-next';
+import { storeToRefs } from 'pinia';
+import { useRouter } from 'vue-router';
 import type { InboxMessage } from '@/api/notification';
+import AbBottomSheet from '@/components/basic/ab-bottom-sheet.vue';
+import { useBreakpointQuery } from '@/hooks/useBreakpointQuery';
+import { useMyI18n } from '@/hooks/useMyI18n';
+import { useMobileShellStore } from '@/store/mobile-shell';
+import { useNotificationStore } from '@/store/notification';
 
 const { t } = useMyI18n();
 const router = useRouter();
 const store = useNotificationStore();
 const { messages, unreadCount, panelOpen } = storeToRefs(store);
+const { isMobile } = useBreakpointQuery();
+const mobileShell = useMobileShellStore();
 
 // 点条目跳转的目标页面；未列出的 kind 不跳转
 const KIND_ROUTES: Record<string, string> = {
@@ -27,10 +37,29 @@ const SEVERITY_ICONS = {
 } as const;
 
 const confirmClear = ref(false);
+const mobileTriggerRef = ref<HTMLButtonElement | null>(null);
+const restoreFocusAfterLeave = ref(false);
+const mobileOpen = computed(
+  () => mobileShell.activeOverlay === 'notifications'
+);
+const panelComponent = computed(() =>
+  isMobile.value ? AbBottomSheet : PopoverPanel
+);
+const panelProps = computed(() => {
+  if (!isMobile.value) {
+    return { class: 'notification-panel' };
+  }
+  return {
+    show: mobileOpen.value,
+    title: t('notifications.title'),
+    closeLabel: t('common.close'),
+    maxHeight: '85dvh',
+    'onUpdate:show': onMobileVisibilityChange,
+    onAfterLeave: restoreMobileTriggerFocus,
+  };
+});
 
-// PopoverPanel 挂载/卸载即打开/关闭：打开时拉取列表，关闭时复位确认态。
-function onPanelRef(el: unknown) {
-  const isOpen = !!el;
+function syncPanelOpen(isOpen: boolean) {
   if (isOpen && !panelOpen.value) {
     store.fetchMessages();
   }
@@ -40,15 +69,80 @@ function onPanelRef(el: unknown) {
   panelOpen.value = isOpen;
 }
 
+// PopoverPanel 挂载/卸载即打开/关闭：打开时拉取列表，关闭时复位确认态。
+function onPanelRef(el: unknown) {
+  if (isMobile.value) return;
+  syncPanelOpen(!!el);
+}
+
+function openMobile() {
+  restoreFocusAfterLeave.value = false;
+  mobileShell.openOverlay('notifications');
+}
+
+function closeMobile(restoreFocus = true) {
+  if (!mobileOpen.value) return;
+  restoreFocusAfterLeave.value = restoreFocus;
+  mobileShell.closeOverlay('notifications');
+}
+
+function toggleMobile() {
+  if (mobileOpen.value) {
+    closeMobile();
+  } else {
+    openMobile();
+  }
+}
+
+function onMobileVisibilityChange(show: boolean) {
+  if (show) {
+    openMobile();
+  } else {
+    closeMobile();
+  }
+}
+
+function restoreMobileTriggerFocus() {
+  if (!restoreFocusAfterLeave.value) return;
+  restoreFocusAfterLeave.value = false;
+  nextTick(() => mobileTriggerRef.value?.focus());
+}
+
+watch(
+  () => [isMobile.value, mobileOpen.value] as const,
+  ([mobile, open], previous) => {
+    if (mobile) {
+      syncPanelOpen(open);
+      return;
+    }
+
+    if (open) {
+      mobileShell.closeOverlay('notifications');
+    }
+    if (previous?.[0]) {
+      syncPanelOpen(false);
+    }
+  },
+  { immediate: true }
+);
+
+function closePanel(closePopover: () => void) {
+  if (isMobile.value) {
+    closeMobile();
+  } else {
+    closePopover();
+  }
+}
+
 function severityIcon(msg: InboxMessage) {
   return SEVERITY_ICONS[msg.severity] ?? Info;
 }
 
-function onItemClick(msg: InboxMessage, close: () => void) {
+function onItemClick(msg: InboxMessage, closePopover: () => void) {
   store.markRead(msg.id);
   const route = KIND_ROUTES[msg.kind];
   if (route) {
-    close();
+    closePanel(closePopover);
     router.push(route);
   }
 }
@@ -77,8 +171,13 @@ function relativeTime(iso: string): string {
 </script>
 
 <template>
-  <Popover class="notification-center">
+  <Popover
+    :key="isMobile ? 'mobile' : 'desktop'"
+    v-slot="{ close: closePopover }"
+    class="notification-center"
+  >
     <PopoverButton
+      v-if="!isMobile"
       class="notification-bell"
       :aria-label="$t('notifications.title')"
     >
@@ -86,14 +185,34 @@ function relativeTime(iso: string): string {
       <ab-badge class="notification-badge" :count="unreadCount" />
     </PopoverButton>
 
-    <PopoverPanel v-slot="{ close }" class="notification-panel">
+    <button
+      v-else
+      ref="mobileTriggerRef"
+      type="button"
+      class="notification-bell"
+      :aria-label="$t('notifications.title')"
+      aria-haspopup="dialog"
+      :aria-expanded="mobileOpen"
+      @click="toggleMobile"
+    >
+      <Remind theme="outline" size="1em" />
+      <ab-badge class="notification-badge" :count="unreadCount" />
+    </button>
+
+    <Component :is="panelComponent" v-bind="panelProps">
       <div :ref="onPanelRef" class="notification-panel-inner">
-        <div class="notification-head">
-          <span class="notification-head-title">
+        <div
+          v-if="!isMobile || unreadCount > 0 || messages.length > 0"
+          class="notification-head"
+        >
+          <span v-if="!isMobile" class="notification-head-title">
             {{ $t('notifications.title') }}
             <template v-if="unreadCount > 0">
               · {{ $t('notifications.unread', { n: unreadCount }) }}
             </template>
+          </span>
+          <span v-else-if="unreadCount > 0" class="notification-head-summary">
+            {{ $t('notifications.unread', { n: unreadCount }) }}
           </span>
           <div class="notification-head-actions">
             <ab-button
@@ -129,38 +248,40 @@ function relativeTime(iso: string): string {
             :key="msg.id"
             class="notification-item"
             :class="{ 'notification-item--unread': !msg.read }"
-            role="button"
-            tabindex="0"
-            @click="onItemClick(msg, close)"
-            @keydown.enter="onItemClick(msg, close)"
           >
-            <div class="notification-sev" :class="`is-${msg.severity}`">
-              <Component :is="severityIcon(msg)" theme="outline" size="14" />
-            </div>
-            <div class="notification-content">
-              <div class="notification-title">
-                {{ store.titleOf(msg) }}
-                <span v-if="msg.count > 1" class="notification-count"
-                  >×{{ msg.count }}</span
-                >
-              </div>
-              <div class="notification-body">{{ store.bodyOf(msg) }}</div>
-              <div class="notification-meta">
-                {{ relativeTime(msg.updated_at) }}
-              </div>
-            </div>
+            <button
+              type="button"
+              class="notification-item-action"
+              @click="onItemClick(msg, closePopover)"
+            >
+              <span class="notification-sev" :class="`is-${msg.severity}`">
+                <Component :is="severityIcon(msg)" theme="outline" size="14" />
+              </span>
+              <span class="notification-content">
+                <span class="notification-title">
+                  {{ store.titleOf(msg) }}
+                  <span v-if="msg.count > 1" class="notification-count"
+                    >×{{ msg.count }}</span
+                  >
+                </span>
+                <span class="notification-body">{{ store.bodyOf(msg) }}</span>
+                <span class="notification-meta">
+                  {{ relativeTime(msg.updated_at) }}
+                </span>
+              </span>
+            </button>
             <ab-icon-button
               size="sm"
               class="notification-delete"
               :label="$t('notifications.delete')"
-              @click.stop="store.remove(msg.id)"
+              @click="store.remove(msg.id)"
             >
               <Delete theme="outline" size="13" />
             </ab-icon-button>
           </div>
         </div>
       </div>
-    </PopoverPanel>
+    </Component>
   </Popover>
 </template>
 
@@ -235,6 +356,11 @@ function relativeTime(iso: string): string {
   transform-origin: top right;
 }
 
+.notification-panel-inner {
+  min-width: 0;
+  max-width: 100%;
+}
+
 @keyframes notification-dropdown-in {
   from {
     opacity: 0;
@@ -255,7 +381,8 @@ function relativeTime(iso: string): string {
   border-bottom: 1px solid var(--color-border);
 }
 
-.notification-head-title {
+.notification-head-title,
+.notification-head-summary {
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text);
@@ -280,10 +407,8 @@ function relativeTime(iso: string): string {
 
 .notification-item {
   display: flex;
-  gap: 10px;
-  padding: 10px 14px;
+  min-width: 0;
   border-bottom: 1px solid var(--color-border);
-  cursor: pointer;
   transition: background-color var(--transition-fast);
 
   &:last-child {
@@ -298,17 +423,33 @@ function relativeTime(iso: string): string {
     }
   }
 
-  &:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: -2px;
-  }
-
   &--unread {
     box-shadow: inset 3px 0 0 var(--color-primary);
   }
 
   &:not(.notification-item--unread) {
     opacity: 0.6;
+  }
+}
+
+.notification-item-action {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 10px 10px 14px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -2px;
   }
 }
 
@@ -339,6 +480,7 @@ function relativeTime(iso: string): string {
 }
 
 .notification-content {
+  display: block;
   flex: 1;
   min-width: 0;
 }
@@ -350,6 +492,7 @@ function relativeTime(iso: string): string {
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text);
+  overflow-wrap: anywhere;
 }
 
 .notification-count {
@@ -362,17 +505,18 @@ function relativeTime(iso: string): string {
 }
 
 .notification-body {
+  display: -webkit-box;
   font-size: 12.5px;
   color: var(--color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
-  display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow-wrap: anywhere;
 }
 
 .notification-meta {
+  display: block;
   margin-top: 2px;
   font-size: 11px;
   color: var(--color-text-muted);
@@ -386,6 +530,7 @@ function relativeTime(iso: string): string {
   cursor: pointer;
   color: var(--color-text-muted);
   padding: 4px;
+  margin: 10px 14px 0 0;
   border-radius: var(--radius-sm);
   opacity: 0;
   transition: opacity var(--transition-fast), color var(--transition-fast);
@@ -400,6 +545,50 @@ function relativeTime(iso: string): string {
   }
 
   @include forTouch {
+    opacity: 1;
+  }
+}
+
+@media screen and (max-width: 639px) {
+  .notification-bell {
+    min-width: var(--touch-target);
+    min-height: var(--touch-target);
+  }
+
+  .notification-panel-inner {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  .notification-head {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 10px 12px;
+  }
+
+  .notification-head-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .notification-list {
+    max-height: none;
+    min-width: 0;
+  }
+
+  .notification-item {
+    width: 100%;
+  }
+
+  .notification-item-action {
+    padding-left: 12px;
+    padding-right: 8px;
+  }
+
+  .notification-delete {
+    min-width: var(--touch-target);
+    min-height: var(--touch-target);
+    margin: 2px 4px 0 0;
     opacity: 1;
   }
 }

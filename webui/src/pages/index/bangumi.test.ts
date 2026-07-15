@@ -54,6 +54,15 @@ const MenuStub = defineComponent({
   `,
 });
 
+const ModalStub = {
+  props: {
+    show: Boolean,
+    title: String,
+  },
+  emits: ['update:show', 'after-leave'],
+  template: '<div v-if="show" data-testid="rule-list-modal"><slot /></div>',
+};
+
 describe('Bangumi page mobile actions', () => {
   let BangumiPage: Component;
 
@@ -78,7 +87,7 @@ describe('Bangumi page mobile actions', () => {
           'ab-menu': MenuStub,
           'ab-icon-button': { template: '<button><slot /></button>' },
           'ab-button': { template: '<button><slot /></button>' },
-          'ab-modal': { template: '<div><slot /></div>' },
+          'ab-modal': ModalStub,
           'ab-badge': true,
           'ab-tag': true,
         },
@@ -100,5 +109,25 @@ describe('Bangumi page mobile actions', () => {
     const wrapper = mountPage();
 
     expect(wrapper.find('.bangumi-mobile-toolbar').exists()).toBe(false);
+  });
+
+  it('should open rule editing only after the rule list finishes leaving', async () => {
+    const store = useBangumiStore();
+    store.bangumi = [
+      { ...mockBangumiRule, id: 1 },
+      { ...mockBangumiRule, id: 2, group_name: 'Second group' },
+    ];
+    const wrapper = mountPage();
+
+    await wrapper.get('ab-bangumi-card-stub').trigger('click');
+    await wrapper.get('.rule-list-item').trigger('click');
+    const beforeLeave = store.editRule.show;
+    wrapper.getComponent(ModalStub).vm.$emit('after-leave');
+    await wrapper.vm.$nextTick();
+
+    expect({ beforeLeave, afterLeave: store.editRule.show }).toEqual({
+      beforeLeave: false,
+      afterLeave: true,
+    });
   });
 });

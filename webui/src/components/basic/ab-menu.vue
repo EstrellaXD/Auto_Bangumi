@@ -74,7 +74,9 @@ function onSelect(item: AbMenuItem) {
   </Menu>
 </template>
 
-<style lang="scss" scoped>
+<!-- Headless UI owns the rendered Menu roots, so scoped attributes do not
+     reliably reach them. The ab-menu prefix keeps these global rules isolated. -->
+<style lang="scss">
 .ab-menu {
   position: relative;
   display: inline-flex;
@@ -152,5 +154,12 @@ function onSelect(item: AbMenuItem) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@media screen and (max-width: 639px) {
+  .ab-menu-item {
+    min-height: 44px;
+    padding: 10px;
+  }
 }
 </style>

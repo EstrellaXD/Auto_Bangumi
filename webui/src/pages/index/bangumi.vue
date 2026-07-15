@@ -108,6 +108,7 @@ const ruleListPopup = reactive<{
   show: false,
   group: null,
 });
+const pendingEditRule = ref<BangumiRule | null>(null);
 
 function onCardClick(group: BangumiGroup) {
   if (group.rules.length === 1) {
@@ -119,7 +120,14 @@ function onCardClick(group: BangumiGroup) {
 }
 
 function onRuleSelect(rule: BangumiRule) {
+  pendingEditRule.value = rule;
   ruleListPopup.show = false;
+}
+
+function onRuleListAfterLeave() {
+  const rule = pendingEditRule.value;
+  if (!rule) return;
+  pendingEditRule.value = null;
   openEditPopup(rule);
 }
 
@@ -341,6 +349,7 @@ function groupNeedsReview(group: BangumiGroup): boolean {
       <ab-modal
         v-model:show="ruleListPopup.show"
         :title="ruleListPopup.group?.primary.official_title || ''"
+        @after-leave="onRuleListAfterLeave"
       >
         <div v-if="ruleListPopup.group" class="rule-list">
           <div class="rule-list-hint">

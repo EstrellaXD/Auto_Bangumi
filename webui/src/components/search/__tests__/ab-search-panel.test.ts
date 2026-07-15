@@ -1,4 +1,5 @@
 /* eslint-disable vue/one-component-per-file */
+import { readFileSync } from 'node:fs';
 import { defineComponent, nextTick, ref } from 'vue';
 import type { ComponentPublicInstance } from 'vue';
 import { mount, shallowMount } from '@vue/test-utils';
@@ -183,9 +184,10 @@ describe('ab-search-panel', () => {
     expect(typeof vm.focusInput).toBe('function');
   });
 
-  it('should describe the provider disclosure without claiming listbox behavior', () => {
+  it('should describe the provider disclosure without claiming listbox behavior', async () => {
     const wrapper = mountPanel();
     const trigger = wrapper.get('.provider-btn');
+    await trigger.trigger('click');
     const options = wrapper.get('.provider-dropdown');
     const controls = trigger.attributes('aria-controls');
 
@@ -193,6 +195,64 @@ describe('ab-search-panel', () => {
       trigger.attributes('aria-haspopup'),
       Boolean(controls) && controls === options.attributes('id'),
     ]).toEqual([undefined, true]);
+  });
+
+  it('should close the provider disclosure when the user clicks outside', async () => {
+    const wrapper = mountPanel();
+    await wrapper.get('.provider-btn').trigger('click');
+    const outside = document.createElement('button');
+    document.body.append(outside);
+
+    outside.click();
+    await nextTick();
+
+    expect(wrapper.find('.provider-dropdown').exists()).toBe(false);
+  });
+
+  it('should restore provider-trigger focus after selecting an option', async () => {
+    const wrapper = mountPanel();
+    const trigger = wrapper.get<HTMLButtonElement>('.provider-btn');
+    await trigger.trigger('click');
+    const option = wrapper.get<HTMLButtonElement>('.provider-item');
+
+    await option.trigger('click');
+    await nextTick();
+
+    expect(document.activeElement).toBe(trigger.element);
+  });
+
+  it('should restore provider-trigger focus after Escape closes the disclosure', async () => {
+    const wrapper = mountPanel();
+    const trigger = wrapper.get<HTMLButtonElement>('.provider-btn');
+    await trigger.trigger('click');
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await nextTick();
+
+    expect(document.activeElement).toBe(trigger.element);
+  });
+
+  it('should keep the provider disclosure closed after KeepAlive reactivation', async () => {
+    const { active, wrapper } = mountKeptPanel();
+    const panel = wrapper.findComponent(AbSearchPanel);
+    await panel.get('.provider-btn').trigger('click');
+    active.value = false;
+    await nextTick();
+    active.value = true;
+    await nextTick();
+
+    expect(panel.find('.provider-dropdown').exists()).toBe(false);
+  });
+
+  it('should enforce 44 pixel provider options below 640 pixels', () => {
+    const source = readFileSync(
+      new URL('../ab-search-panel.vue', import.meta.url),
+      'utf8'
+    );
+
+    expect(source).toMatch(
+      /@media screen and \(max-width: 639px\)[\s\S]*?\.provider-item\s*\{[\s\S]*?min-height:\s*44px/
+    );
   });
 
   it('should ignore Escape when a kept search panel is deactivated', async () => {

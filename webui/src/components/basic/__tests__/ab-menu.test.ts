@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import AbMenu from '../ab-menu.vue';
@@ -59,6 +60,26 @@ describe('ab-menu', () => {
 
     expect(wrapper.get('[role="menu"]').classes()).toContain(
       'ab-menu-list--top'
+    );
+  });
+
+  it('should keep styles global for Headless UI rendered roots', () => {
+    const source = readFileSync(
+      new URL('../ab-menu.vue', import.meta.url),
+      'utf8'
+    );
+
+    expect(source).toContain('<style lang="scss">');
+  });
+
+  it('should enforce a 44 pixel menu target below 640 pixels', () => {
+    const source = readFileSync(
+      new URL('../ab-menu.vue', import.meta.url),
+      'utf8'
+    );
+
+    expect(source).toMatch(
+      /@media screen and \(max-width: 639px\)[\s\S]*?\.ab-menu-item\s*\{[\s\S]*?min-height:\s*44px/
     );
   });
 });
