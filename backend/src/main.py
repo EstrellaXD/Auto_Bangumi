@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     ctx = AppContext.build(settings)
-    app = FastAPI(lifespan=lifespan)
+    app = FastAPI(lifespan=lifespan, root_path=os.environ.get("ROOT_PATH", ""))
     app.state.ctx = ctx
 
     app.add_middleware(
