@@ -18,6 +18,11 @@ from module.mcp import create_mcp_app
 
 setup_logger(reset=True)
 logger = logging.getLogger(__name__)
+
+_ROOT_PATH = os.environ.get("AB_ROOT_PATH", "").strip()
+if _ROOT_PATH and not _ROOT_PATH.startswith("/"):
+    _ROOT_PATH = "/" + _ROOT_PATH
+_ROOT_PATH = _ROOT_PATH.rstrip("/")
 uvicorn_logging_config = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -52,7 +57,7 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     ctx = AppContext.build(settings)
-    app = FastAPI(lifespan=lifespan)
+    app = FastAPI(lifespan=lifespan, root_path=_ROOT_PATH)
     app.state.ctx = ctx
 
     app.add_middleware(
@@ -110,7 +115,7 @@ if VERSION != "DEV_VERSION":
         if path in _DIST_FILES:
             return FileResponse(f"dist/{path}")
         else:
-            context = {"request": request}
+            context = {"request": request, "base_path": _ROOT_PATH}
             return templates.TemplateResponse("index.html", context)
 
 else:
