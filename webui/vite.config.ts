@@ -14,6 +14,15 @@ import VueJsx from '@vitejs/plugin-vue-jsx';
 export default defineConfig(({ mode }) => ({
   base: './',
   plugins: [
+    {
+      name: 'dev-base-path',
+      transformIndexHtml(html, ctx) {
+        if (ctx?.server) {
+          return html.replace('"{{ base_path }}"', '""');
+        }
+        return html;
+      },
+    },
     VueJsx(),
     VueRouter({
       dts: 'types/dts/router-type.d.ts',
