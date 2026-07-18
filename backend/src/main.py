@@ -6,7 +6,7 @@ from pathlib import Path
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -93,6 +93,15 @@ def posters(path: str):
     if not str(resolved).startswith(str(_POSTERS_BASE)):
         return HTMLResponse(status_code=403)
     return FileResponse(str(resolved))
+
+
+@app.get("/manifest.webmanifest", tags=["pwa"])
+def manifest():
+    with open("dist/manifest.webmanifest") as f:
+        content = f.read()
+    if _ROOT_PATH:
+        content = content.replace("/images/", _ROOT_PATH + "/images/")
+    return Response(content=content, media_type="application/manifest+json")
 
 
 if VERSION != "DEV_VERSION":

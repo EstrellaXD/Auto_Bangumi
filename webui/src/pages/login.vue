@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { Fingerprint, Lock, User } from '@icon-park/vue-next';
+import { basePath } from '@/utils/base-path';
 
 definePage({
   name: 'Login',
@@ -60,9 +61,9 @@ async function handleLogin() {
       <div class="login-header">
         <div class="login-logo">
           <!-- Light mode: colored logo, Dark mode: light logo -->
-          <img src="/images/logo.svg" alt="AutoBangumi" class="logo-dark" />
+          <img :src="`${basePath()}/images/logo.svg`" alt="AutoBangumi" class="logo-dark" />
           <img
-            src="/images/logo-light.svg"
+            :src="`${basePath()}/images/logo-light.svg`"
             alt="AutoBangumi"
             class="logo-light"
           />

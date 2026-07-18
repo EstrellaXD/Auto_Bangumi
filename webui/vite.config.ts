@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
       name: 'dev-base-path',
       transformIndexHtml(html, ctx) {
         if (ctx?.server) {
-          return html.replace('"{{ base_path }}"', '""');
+          return html.replace(/\{\{ base_path \}\}/g, '');
         }
         return html;
       },
