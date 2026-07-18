@@ -5,3 +5,10 @@ declare module '*.vue' {
   const component: DefineComponent<{}, {}, any>;
   export default component;
 }
+
+declare global {
+  interface Window {
+    __BASE_PATH__: string;
+  }
+}
+export {};
