@@ -294,6 +294,40 @@ describe('ab-search-confirm', () => {
     expect(items[1].find('.rss-preview-status--blocked').exists()).toBe(true);
   });
 
+  it('toggles blocked preview rows visibility', async () => {
+    previewMock.mockResolvedValue({
+      items: [
+        {
+          name: '[TestGroup] Test Anime - 01 [1080p].mkv',
+          url: 'https://example.com/1.torrent',
+          homepage: null,
+        },
+        {
+          name: '[TestGroup] Test Anime - 01 [720p].mkv',
+          url: 'https://example.com/2.torrent',
+          homepage: null,
+        },
+      ],
+      global_filter: [],
+    });
+
+    const wrapper = mountComponent();
+    await flushPromises();
+
+    await wrapper.find('.preview-btn').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.findAll('.rss-preview-table-row')).toHaveLength(2);
+
+    await wrapper.find('.rss-preview-toggle-btn').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.findAll('.rss-preview-table-row')).toHaveLength(1);
+    expect(wrapper.find('.rss-preview-table-row').text()).toContain(
+      '[TestGroup] Test Anime - 01 [1080p].mkv'
+    );
+  });
+
   it('deduplicates preview filters in dialog', async () => {
     previewMock.mockResolvedValue({
       items: [],

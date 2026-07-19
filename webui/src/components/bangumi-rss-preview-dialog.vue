@@ -16,6 +16,7 @@ const rssPreviewLoading = ref(false);
 const rssPreviewError = ref(false);
 const rssPreviewItems = ref<RSSPreviewItem[]>([]);
 const globalFilter = ref<string[]>([]);
+const showBlockedItems = ref(true);
 let rssPreviewRequestToken = 0;
 
 type FilteredRSSPreviewItem = RSSPreviewItem & {
@@ -77,6 +78,16 @@ const previewRows = computed(() =>
   )
 );
 
+const blockedCount = computed(
+  () => previewRows.value.filter((item) => !item.passesFilter).length
+);
+
+const visiblePreviewRows = computed(() =>
+  showBlockedItems.value
+    ? previewRows.value
+    : previewRows.value.filter((item) => item.passesFilter)
+);
+
 function previewStatusLabel(passesFilter: boolean) {
   return t(
     passesFilter
@@ -90,6 +101,7 @@ function resetPreview() {
   rssPreviewError.value = false;
   rssPreviewItems.value = [];
   globalFilter.value = [];
+  showBlockedItems.value = true;
   rssPreviewRequestToken += 1;
 }
 
@@ -135,6 +147,7 @@ watch(show, (visible) => {
   if (!visible) {
     rssPreviewRequestToken += 1;
     rssPreviewLoading.value = false;
+    showBlockedItems.value = true;
     return;
   }
 
@@ -191,10 +204,49 @@ onBeforeUnmount(() => {
         {{ t('search.confirm.preview_empty') }}
       </div>
       <div v-else class="rss-preview-table">
-        <table class="rss-preview-table__table">
+        <div class="rss-preview-toolbar">
+          <div class="toolbar-stat">
+            <span>{{
+              t('search.confirm.preview_total_count', {
+                count: previewRows.length,
+              })
+            }}</span>
+            <span
+              v-if="!showBlockedItems && blockedCount > 0"
+              class="filtered-text"
+            >
+              {{
+                t('search.confirm.preview_hidden_blocked', {
+                  count: blockedCount,
+                })
+              }}
+            </span>
+          </div>
+          <button
+            v-if="blockedCount > 0"
+            type="button"
+            class="rss-preview-toggle-btn"
+            :aria-pressed="showBlockedItems"
+            @click="showBlockedItems = !showBlockedItems"
+          >
+            {{
+              showBlockedItems
+                ? t('search.confirm.preview_hide_blocked')
+                : t('search.confirm.preview_show_blocked')
+            }}
+          </button>
+        </div>
+
+        <div
+          v-if="visiblePreviewRows.length === 0"
+          class="rss-preview-state rss-preview-state--compact"
+        >
+          {{ t('search.confirm.preview_empty_visible') }}
+        </div>
+        <table v-else class="rss-preview-table__table">
           <tbody>
             <tr
-              v-for="item in previewRows"
+              v-for="item in visiblePreviewRows"
               :key="`${item.url}::${item.name}`"
               class="rss-preview-table-row"
             >
@@ -304,12 +356,57 @@ onBeforeUnmount(() => {
   &--error {
     color: var(--color-danger);
   }
+
+  &--compact {
+    min-height: 96px;
+  }
 }
 
 .rss-preview-table {
   overflow: hidden;
   background: var(--color-surface);
   border-radius: var(--radius-md);
+}
+
+.rss-preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-hover);
+}
+
+.toolbar-stat {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.filtered-text {
+  color: var(--color-text-muted);
+}
+
+.rss-preview-toggle-btn {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), color var(--transition-fast),
+    background-color var(--transition-fast);
+
+  &:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
 }
 
 .rss-preview-table__table {
@@ -353,7 +450,6 @@ onBeforeUnmount(() => {
   width: 16px;
   height: 16px;
   margin-top: 2px;
-
 
   &--passed {
     color: var(--color-success);
