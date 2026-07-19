@@ -185,10 +185,13 @@ class RSSEngine:
     @staticmethod
     def _compile_filter_terms(
         filter_terms: list[str], *, ignore_case: bool
-    ) -> re.Pattern | None:
+    ) -> re.Pattern:
         terms = [term for term in filter_terms if term]
         if not terms:
-            return None
+            # 如果没有任何过滤条件，返回一个匹配任意字符串的正则表达式
+            # 例如，外部使用： _compile_filter_terms(",,,".split(","), ignore_case=True)
+            # 等于没有约束，此时返回此正则表达式兜底
+            return re.compile(".*")
 
         flags = re.IGNORECASE if ignore_case else 0
         raw_pattern = "|".join(terms)
@@ -207,35 +210,8 @@ class RSSEngine:
             pattern = self._compile_filter_terms(
                 filter_str.split(","), ignore_case=True
             )
-            if pattern is None:
-                raise ValueError("filter_str must not be empty")
             self._filter_cache[filter_str] = pattern
         return self._filter_cache[filter_str]
-
-    def _get_global_filter_pattern(self) -> re.Pattern | None:
-        return self._compile_filter_terms(
-            list(settings.rss_parser.filter),
-            ignore_case=False,
-        )
-
-    def _is_torrent_filtered(self, torrent_name: str, filter_str: str = "") -> bool:
-        global_pattern = self._get_global_filter_pattern()
-        local_pattern = self._get_filter_pattern(filter_str) if filter_str else None
-        return (
-            global_pattern is not None
-            and global_pattern.search(torrent_name) is not None
-        ) or (
-            local_pattern is not None and local_pattern.search(torrent_name) is not None
-        )
-
-    def _get_downloadable_torrents(
-        self, torrents: list[Torrent], filter_str: str = ""
-    ) -> list[Torrent]:
-        return [
-            torrent
-            for torrent in torrents
-            if not self._is_torrent_filtered(torrent.name, filter_str)
-        ]
 
     def match_torrent(
         self, torrent: Torrent, bangumi_list: list[Bangumi]
