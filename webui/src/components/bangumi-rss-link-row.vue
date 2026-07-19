@@ -5,7 +5,7 @@ const props = defineProps<{
   link: string;
   copied: boolean;
   previewRuleFilter?: string[];
-  alwaysVisible?: boolean;
+  previewVisible?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -16,7 +16,7 @@ const showPreview = ref(false);
 </script>
 
 <template>
-  <div v-if="props.link || props.alwaysVisible" class="rss-section">
+  <div v-if="props.link" class="rss-section">
     <div class="info-row">
       <span class="info-label">{{ $t('search.confirm.rss') }}:</span>
       <span class="info-value info-value--link">{{ props.link || '-' }}</span>
@@ -26,13 +26,14 @@ const showPreview = ref(false);
           class="action-btn copy-btn"
           :class="{ copied: props.copied }"
           :label="$t('common.copy')"
+          :disabled="!props.link"
           @click="emit('copy')"
         >
           <CheckOne v-if="props.copied" theme="outline" size="14" />
           <Copy v-else theme="outline" size="14" />
         </ab-icon-button>
         <ab-icon-button
-          v-if="props.previewRuleFilter"
+          v-if="props.previewVisible"
           size="sm"
           class="action-btn preview-btn"
           :label="$t('search.confirm.preview_open')"

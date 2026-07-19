@@ -214,7 +214,7 @@ function handleConfirm() {
           :link="rssLink"
           :copied="copied"
           :preview-rule-filter="localBangumi.filter"
-          always-visible
+          :preview-visible="true"
           @copy="copyRssLink"
         />
 
