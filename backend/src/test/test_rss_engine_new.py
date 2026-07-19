@@ -89,6 +89,37 @@ class TestPullRss:
 
 
 # ---------------------------------------------------------------------------
+# preview_rss
+# ---------------------------------------------------------------------------
+
+
+class TestPreviewRss:
+    async def test_returns_raw_items_and_global_filter(self, rss_engine):
+        """preview_rss should return raw items plus the configured global filter."""
+        torrents = [
+            make_torrent(name="[Sub] Test Anime - 01 [1080p].mkv"),
+            make_torrent(name="[Sub] Test Anime - 01 [720p].mkv"),
+            make_torrent(name="[Sub] Test Anime - 01 [1080p][HEVC].mkv"),
+        ]
+
+        with (
+            patch(
+                "module.rss.engine.RequestContent.get_torrents",
+                new=AsyncMock(return_value=torrents),
+            ),
+            patch.object(settings.rss_parser, "filter", ["720"]),
+        ):
+            preview = await rss_engine.preview_rss(
+                "https://mikanani.me/RSS/Search?searchstr=test"
+            )
+
+        assert preview.global_filter == ["720"]
+        assert [item.name for item in preview.items] == [
+            torrent.name for torrent in torrents
+        ]
+
+
+# ---------------------------------------------------------------------------
 # match_torrent
 # ---------------------------------------------------------------------------
 
@@ -622,6 +653,49 @@ class TestRefreshRssRetry:
 
 
 class TestDownloadBangumi:
+    async def test_applies_global_and_rule_filters_before_download(self, rss_engine):
+        bangumi = make_bangumi(
+            official_title="Mushoku Tensei",
+            rss_link="https://example.com/rss",
+            filter="HEVC",
+        )
+        await rss_engine.db.bangumi.add(bangumi)
+        torrents = [
+            Torrent(
+                name="[Sub] Mushoku Tensei - 12 [1080p].mkv",
+                url="https://example.com/ep12.torrent",
+            ),
+            Torrent(
+                name="[Sub] Mushoku Tensei - 12 [720p].mkv",
+                url="https://example.com/ep12-720.torrent",
+            ),
+            Torrent(
+                name="[Sub] Mushoku Tensei - 12 [1080p][HEVC].mkv",
+                url="https://example.com/ep12-hevc.torrent",
+            ),
+        ]
+        with (
+            patch("module.rss.engine.RequestContent") as MockReq,
+            patch("module.rss.engine.DownloadClient") as MockClient,
+            patch.object(settings.rss_parser, "filter", ["720"]),
+        ):
+            req = AsyncMock()
+            req.get_torrents = AsyncMock(return_value=torrents)
+            MockReq.return_value.__aenter__ = AsyncMock(return_value=req)
+            MockReq.return_value.__aexit__ = AsyncMock(return_value=False)
+            client = AsyncMock()
+            client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
+            MockClient.return_value.__aenter__ = AsyncMock(return_value=client)
+            MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            resp = await rss_engine.download_bangumi(bangumi)
+
+        assert resp.status is True
+        passed_torrents = client.add_torrent.call_args.args[0]
+        assert [torrent.name for torrent in passed_torrents] == [
+            "[Sub] Mushoku Tensei - 12 [1080p].mkv"
+        ]
+
     async def test_success_persists_torrents_with_bangumi_id(self, rss_engine):
         """成功下载后种子行必须关联 bangumi_id，否则会被记成孤儿。"""
         bangumi = make_bangumi(

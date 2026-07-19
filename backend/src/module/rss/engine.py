@@ -10,7 +10,15 @@ from module.conf import settings
 from module.database import Database
 from module.database.bangumi import _groups_are_similar, match_bangumi_in_list
 from module.downloader import AddResult, DownloadClient
-from module.models import Bangumi, Movie, ResponseModel, RSSItem, Torrent
+from module.models import (
+    Bangumi,
+    Movie,
+    ResponseModel,
+    RSSItem,
+    RSSPreviewItem,
+    RSSPreviewResponse,
+    Torrent,
+)
 from module.network import RequestContent
 from module.notification.events import (
     DownloadFailureEvent,
@@ -81,6 +89,22 @@ class RSSEngine:
             return await self.db.torrent.search_rss(rss_id)
         else:
             return []
+
+    async def preview_rss(self, rss_link: str) -> RSSPreviewResponse:
+        async with RequestContent() as req:
+            torrents = await req.get_torrents(rss_link, _filter="")
+
+        return RSSPreviewResponse(
+            items=[
+                RSSPreviewItem(
+                    name=torrent.name,
+                    url=torrent.url,
+                    homepage=torrent.homepage,
+                )
+                for torrent in torrents
+            ],
+            global_filter=list(settings.rss_parser.filter),
+        )
 
     async def add_rss(
         self,
@@ -158,21 +182,38 @@ class RSSEngine:
             logger.warning(f"Failed to fetch RSS {rss_item.name}: {e}")
             return [], str(e)
 
+    @staticmethod
+    def _compile_filter_terms(
+        filter_str: str, *, ignore_case: bool
+    ) -> re.Pattern:
+        filter_terms = filter_str.split(",")
+        terms = [term for term in filter_terms if term]
+        if not terms:
+            # 如果没有任何过滤条件，返回一个匹配任意字符串的正则表达式
+            # 例如，外部使用： _compile_filter_terms(",,,".split(","), ignore_case=True)
+            # 等于没有约束，此时返回此正则表达式兜底
+            logger.warning(
+                "Filter %r is empty, using common matching",
+                filter_str,
+            )
+            return re.compile(".*")
+
+        flags = re.IGNORECASE if ignore_case else 0
+        raw_pattern = "|".join(terms)
+        try:
+            return re.compile(raw_pattern, flags)
+        except re.error:
+            escaped = "|".join(re.escape(term) for term in terms)
+            logger.warning(
+                "Filter %r contains invalid regex, using literal matching",
+                raw_pattern,
+            )
+            return re.compile(escaped, flags)
+
     def _get_filter_pattern(self, filter_str: str) -> re.Pattern:
         if filter_str not in self._filter_cache:
-            raw_pattern = filter_str.replace(",", "|")
-            try:
-                self._filter_cache[filter_str] = re.compile(raw_pattern, re.IGNORECASE)
-            except re.error:
-                # Filter contains invalid regex chars (e.g. unmatched '[')
-                # Fall back to escaping each term for literal matching
-                terms = filter_str.split(",")
-                escaped = "|".join(re.escape(t) for t in terms)
-                self._filter_cache[filter_str] = re.compile(escaped, re.IGNORECASE)
-                logger.warning(
-                    f"Filter '{filter_str}' contains invalid regex, "
-                    f"using literal matching"
-                )
+            pattern = self._compile_filter_terms(filter_str, ignore_case=True)
+            self._filter_cache[filter_str] = pattern
         return self._filter_cache[filter_str]
 
     def match_torrent(

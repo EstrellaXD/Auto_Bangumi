@@ -143,6 +143,20 @@ describe('RSS API Logic', () => {
       await apiRSS.getTorrent(5);
       expect(axios.get).toHaveBeenCalledWith('api/v1/rss/torrent/5');
     });
+
+    it('should POST api/v1/rss/preview with the rss link payload', async () => {
+      (axios.post as any).mockResolvedValue({
+        data: { items: [], global_filter: [] },
+      });
+      await apiRSS.preview('https://mikanani.me/RSS/Search?searchstr=test');
+      expect(axios.post).toHaveBeenCalledWith(
+        'api/v1/rss/preview',
+        { rss_link: 'https://mikanani.me/RSS/Search?searchstr=test' },
+        {
+          silent: true,
+        }
+      );
+    });
   });
 
   describe('update payload', () => {

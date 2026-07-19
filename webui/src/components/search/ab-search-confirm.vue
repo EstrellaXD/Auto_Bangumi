@@ -1,12 +1,5 @@
 <script lang="ts" setup>
-import {
-  CheckOne,
-  Close,
-  Copy,
-  Down,
-  ErrorPicture,
-  Right,
-} from '@icon-park/vue-next';
+import { Close, Down, ErrorPicture, Right } from '@icon-park/vue-next';
 import { NDynamicTags, NSpin, useMessage } from 'naive-ui';
 import type {
   BangumiRule,
@@ -49,6 +42,7 @@ const posterSrc = computed(() =>
 const showAdvanced = ref(false);
 const copied = ref(false);
 const offsetLoading = ref(false);
+const rssLink = computed(() => localBangumi.value.rss_link?.[0] || '');
 
 // Offset mismatch detection state
 const showOffsetDialog = ref(false);
@@ -130,9 +124,8 @@ const infoTags = computed(() => {
 let copyTimer: ReturnType<typeof setTimeout> | undefined;
 
 async function copyRssLink() {
-  const rssLink = localBangumi.value.rss_link?.[0] || '';
-  if (rssLink) {
-    await navigator.clipboard.writeText(rssLink);
+  if (rssLink.value) {
+    await navigator.clipboard.writeText(rssLink.value);
     copied.value = true;
     clearTimeout(copyTimer);
     copyTimer = setTimeout(() => {
@@ -217,24 +210,13 @@ function handleConfirm() {
           </div>
         </div>
 
-        <!-- RSS Link -->
-        <div class="rss-section">
-          <div class="info-row">
-            <span class="info-label">{{ $t('search.confirm.rss') }}:</span>
-            <span class="info-value info-value--link">
-              {{ localBangumi.rss_link?.[0] || '-' }}
-            </span>
-            <button
-              class="copy-btn"
-              :class="{ copied }"
-              :aria-label="$t('search.confirm.copy_rss')"
-              @click="copyRssLink"
-            >
-              <CheckOne v-if="copied" theme="outline" size="14" />
-              <Copy v-else theme="outline" size="14" />
-            </button>
-          </div>
-        </div>
+        <bangumi-rss-link-row
+          :link="rssLink"
+          :copied="copied"
+          :preview-rule-filter="localBangumi.filter"
+          :preview-visible="true"
+          @copy="copyRssLink"
+        />
 
         <!-- Advanced settings -->
         <div class="advanced-section">
@@ -499,72 +481,6 @@ function handleConfirm() {
   &--group {
     background: color-mix(in srgb, var(--color-warning) 12%, transparent);
     color: var(--color-warning);
-  }
-}
-
-// RSS section
-.rss-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  background: var(--color-surface-hover);
-  border-radius: var(--radius-md);
-  margin-bottom: 16px;
-}
-
-.info-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.info-label {
-  flex-shrink: 0;
-  width: 70px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-}
-
-.info-value {
-  flex: 1;
-  min-width: 0;
-  font-size: 13px;
-  color: var(--color-text);
-  word-break: break-all;
-
-  &--link {
-    color: var(--color-primary);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-}
-
-.copy-btn {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  color: var(--color-text-muted);
-  transition: all var(--transition-fast);
-
-  &:hover {
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-  }
-
-  &.copied {
-    background: var(--color-success);
-    border-color: var(--color-success);
-    color: #fff;
   }
 }
 

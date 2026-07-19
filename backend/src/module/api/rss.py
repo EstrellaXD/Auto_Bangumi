@@ -5,7 +5,16 @@ from module.conf.search_provider import get_provider
 from module.database import Database, get_db
 from module.downloader import DownloadClient
 from module.manager import SeasonCollector
-from module.models import APIResponse, Bangumi, Movie, RSSItem, RSSUpdate, Torrent
+from module.models import (
+    APIResponse,
+    Bangumi,
+    Movie,
+    RSSItem,
+    RSSPreviewResponse,
+    RSSUpdate,
+    Torrent,
+)
+from module.models.api import RssLink
 from module.rss import RSSAnalyser, RSSEngine
 from module.security.api import get_current_user
 
@@ -178,6 +187,19 @@ async def get_torrent(
 ):
     engine = RSSEngine(db)
     return await engine.get_rss_torrents(rss_id)
+
+
+@router.post(
+    path="/preview",
+    response_model=RSSPreviewResponse,
+    dependencies=[Depends(get_current_user)],
+)
+async def preview_rss(
+    rss: RssLink,
+    db: Database = Depends(get_db),
+):
+    engine = RSSEngine(db)
+    return await engine.preview_rss(rss.rss_link)
 
 
 # Old API
