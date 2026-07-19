@@ -184,13 +184,18 @@ class RSSEngine:
 
     @staticmethod
     def _compile_filter_terms(
-        filter_terms: list[str], *, ignore_case: bool
+        filter_str: str, *, ignore_case: bool
     ) -> re.Pattern:
+        filter_terms = filter_str.split(",")
         terms = [term for term in filter_terms if term]
         if not terms:
             # 如果没有任何过滤条件，返回一个匹配任意字符串的正则表达式
             # 例如，外部使用： _compile_filter_terms(",,,".split(","), ignore_case=True)
             # 等于没有约束，此时返回此正则表达式兜底
+            logger.warning(
+                "Filter %r is empty, using common matching",
+                filter_str,
+            )
             return re.compile(".*")
 
         flags = re.IGNORECASE if ignore_case else 0
@@ -207,9 +212,7 @@ class RSSEngine:
 
     def _get_filter_pattern(self, filter_str: str) -> re.Pattern:
         if filter_str not in self._filter_cache:
-            pattern = self._compile_filter_terms(
-                filter_str.split(","), ignore_case=True
-            )
+            pattern = self._compile_filter_terms(filter_str, ignore_case=True)
             self._filter_cache[filter_str] = pattern
         return self._filter_cache[filter_str]
 
