@@ -10,7 +10,15 @@ from module.conf import settings
 from module.database import Database
 from module.database.bangumi import _groups_are_similar, match_bangumi_in_list
 from module.downloader import AddResult, DownloadClient
-from module.models import Bangumi, Movie, ResponseModel, RSSItem, Torrent
+from module.models import (
+    Bangumi,
+    Movie,
+    ResponseModel,
+    RSSItem,
+    RSSPreviewItem,
+    RSSPreviewResponse,
+    Torrent,
+)
 from module.network import RequestContent
 from module.notification.events import (
     DownloadFailureEvent,
@@ -81,6 +89,22 @@ class RSSEngine:
             return await self.db.torrent.search_rss(rss_id)
         else:
             return []
+
+    async def preview_rss(self, rss_link: str) -> RSSPreviewResponse:
+        async with RequestContent() as req:
+            torrents = await req.get_torrents(rss_link, _filter="")
+
+        return RSSPreviewResponse(
+            items=[
+                RSSPreviewItem(
+                    name=torrent.name,
+                    url=torrent.url,
+                    homepage=torrent.homepage,
+                )
+                for torrent in torrents
+            ],
+            global_filter=list(settings.rss_parser.filter),
+        )
 
     async def add_rss(
         self,
@@ -158,22 +182,60 @@ class RSSEngine:
             logger.warning(f"Failed to fetch RSS {rss_item.name}: {e}")
             return [], str(e)
 
+    @staticmethod
+    def _compile_filter_terms(
+        filter_terms: list[str], *, ignore_case: bool
+    ) -> re.Pattern | None:
+        terms = [term for term in filter_terms if term]
+        if not terms:
+            return None
+
+        flags = re.IGNORECASE if ignore_case else 0
+        raw_pattern = "|".join(terms)
+        try:
+            return re.compile(raw_pattern, flags)
+        except re.error:
+            escaped = "|".join(re.escape(term) for term in terms)
+            logger.warning(
+                "Filter %r contains invalid regex, using literal matching",
+                raw_pattern,
+            )
+            return re.compile(escaped, flags)
+
     def _get_filter_pattern(self, filter_str: str) -> re.Pattern:
         if filter_str not in self._filter_cache:
-            raw_pattern = filter_str.replace(",", "|")
-            try:
-                self._filter_cache[filter_str] = re.compile(raw_pattern, re.IGNORECASE)
-            except re.error:
-                # Filter contains invalid regex chars (e.g. unmatched '[')
-                # Fall back to escaping each term for literal matching
-                terms = filter_str.split(",")
-                escaped = "|".join(re.escape(t) for t in terms)
-                self._filter_cache[filter_str] = re.compile(escaped, re.IGNORECASE)
-                logger.warning(
-                    f"Filter '{filter_str}' contains invalid regex, "
-                    f"using literal matching"
-                )
+            pattern = self._compile_filter_terms(
+                filter_str.split(","), ignore_case=True
+            )
+            if pattern is None:
+                raise ValueError("filter_str must not be empty")
+            self._filter_cache[filter_str] = pattern
         return self._filter_cache[filter_str]
+
+    def _get_global_filter_pattern(self) -> re.Pattern | None:
+        return self._compile_filter_terms(
+            list(settings.rss_parser.filter),
+            ignore_case=False,
+        )
+
+    def _is_torrent_filtered(self, torrent_name: str, filter_str: str = "") -> bool:
+        global_pattern = self._get_global_filter_pattern()
+        local_pattern = self._get_filter_pattern(filter_str) if filter_str else None
+        return (
+            global_pattern is not None
+            and global_pattern.search(torrent_name) is not None
+        ) or (
+            local_pattern is not None and local_pattern.search(torrent_name) is not None
+        )
+
+    def _get_downloadable_torrents(
+        self, torrents: list[Torrent], filter_str: str = ""
+    ) -> list[Torrent]:
+        return [
+            torrent
+            for torrent in torrents
+            if not self._is_torrent_filtered(torrent.name, filter_str)
+        ]
 
     def match_torrent(
         self, torrent: Torrent, bangumi_list: list[Bangumi]
