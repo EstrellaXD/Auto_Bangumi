@@ -56,7 +56,7 @@ export function useBangumiRuleForm(rule: Ref<BangumiRule>) {
 
   async function copyRssLink(link: string) {
     if (!link) return;
-    await navigator.clipboard.writeText(link);
+    await copyTextWithFallback(link);
     copied.value = true;
     clearTimeout(copyTimer);
     copyTimer = setTimeout(() => {
@@ -67,6 +67,45 @@ export function useBangumiRuleForm(rule: Ref<BangumiRule>) {
   onBeforeUnmount(() => {
     clearTimeout(copyTimer);
   });
+
+  /**
+   * 复制内容到剪切板
+   * 当环境为http 或者非安全上下文时，使用回退方案
+   * 注：回退方案已被标记为 deprecated，未来可能会被移除，所以并不能保证永远生效
+   * @param text
+   */
+  async function copyTextWithFallback(text: string): Promise<boolean> {
+    try {
+      if (
+        // 确认剪切板对象存在且当前为安全上下文
+        navigator.clipboard &&
+        window.isSecureContext
+      ) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch {
+    }
+
+    // fallback 方案：创建一个不可见的 textarea 元素，选中内容并执行复制命令
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    textarea.style.top = "-9999px";
+    textarea.setAttribute("readonly", "");
+
+    document.body.appendChild(textarea);
+
+    textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
+
+    const success = document.execCommand("copy");
+
+    document.body.removeChild(textarea);
+
+    return success;
+  }
 
   return {
     posterSrc,
