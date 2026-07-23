@@ -85,26 +85,30 @@ export function useBangumiRuleForm(rule: Ref<BangumiRule>) {
         return true;
       }
     } catch {
+      // 忽略报错，使用 fallback 复制方案
     }
 
     // fallback 方案：创建一个不可见的 textarea 元素，选中内容并执行复制命令
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.style.position = "fixed";
-    textarea.style.left = "-9999px";
-    textarea.style.top = "-9999px";
-    textarea.setAttribute("readonly", "");
+    const textarea = document.createElement('textarea');
+    try {
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      textarea.style.top = '-9999px';
+      textarea.setAttribute('readonly', '');
 
-    document.body.appendChild(textarea);
+      document.body.appendChild(textarea);
 
-    textarea.select();
-    textarea.setSelectionRange(0, textarea.value.length);
+      textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
 
-    const success = document.execCommand("copy");
+      return document.execCommand('copy');
+    } catch (err) {
+      return false;
+    } finally {
+      document.body.removeChild(textarea);
+    }
 
-    document.body.removeChild(textarea);
-
-    return success;
   }
 
   return {
