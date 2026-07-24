@@ -25,6 +25,7 @@ from module.parser.analyser.tokenizer.compat import to_legacy_episode
 from module.parser.release_policy import (
     PersistenceTarget,
     bangumi_episode_type,
+    has_release_evidence,
     is_weak_title_only,
     normalized_season,
     persistence_target,
@@ -235,6 +236,18 @@ def _project_classic_release(
         return None
     episode = to_legacy_episode(release)
     if episode is None:
+        title_count = sum(
+            bool(title)
+            for title in (release.title_en, release.title_zh, release.title_jp)
+        )
+        if (
+            title_count > 1
+            and release.episode is None
+            and release.media_type is MediaType.UNKNOWN
+            and release.release_kind is ReleaseKind.SINGLE
+            and has_release_evidence(release)
+        ):
+            return release
         return None
     return ParsedRelease(
         raw=raw,
