@@ -8,7 +8,16 @@ from fastapi.testclient import TestClient
 
 from module.api import v1
 from module.database import get_db
-from module.models import Bangumi, Movie, ResponseModel, RSSItem, RSSUpdate, Torrent
+from module.models import (
+    Bangumi,
+    Movie,
+    RSSPreviewItem,
+    RSSPreviewResponse,
+    ResponseModel,
+    RSSItem,
+    RSSUpdate,
+    Torrent,
+)
 from module.security.api import get_current_user
 from test.factories import make_bangumi, make_rss_item, make_torrent
 
@@ -284,6 +293,47 @@ class TestGetRssTorrents:
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 2
+
+
+# ---------------------------------------------------------------------------
+# POST /rss/preview
+# ---------------------------------------------------------------------------
+
+
+class TestPreviewRss:
+    def test_preview_rss(self, authed_client):
+        """POST /rss/preview returns preview rows for an arbitrary feed URL."""
+        preview = RSSPreviewResponse(
+            items=[
+                RSSPreviewItem(
+                    name="[Sub] Test Anime - 01 [1080p].mkv",
+                    url="https://example.com/1.torrent",
+                    homepage="https://example.com/1",
+                ),
+                RSSPreviewItem(
+                    name="[Sub] Test Anime - 01 [720p].mkv",
+                    url="https://example.com/2.torrent",
+                    homepage=None,
+                ),
+            ],
+            global_filter=["720"],
+        )
+        with patch("module.api.rss.RSSEngine") as MockEngine:
+            mock_eng = MockEngine.return_value
+            mock_eng.preview_rss = AsyncMock(return_value=preview)
+
+            response = authed_client.post(
+                "/api/v1/rss/preview",
+                json={"rss_link": "https://mikanani.me/RSS/Search?searchstr=test"},
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["global_filter"] == ["720"]
+        assert [row["name"] for row in data["items"]] == [
+            "[Sub] Test Anime - 01 [1080p].mkv",
+            "[Sub] Test Anime - 01 [720p].mkv",
+        ]
 
 
 # ---------------------------------------------------------------------------

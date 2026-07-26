@@ -1,4 +1,4 @@
-import type { RSS } from '#/rss';
+import type { RSS, RSSPreviewResponse } from '#/rss';
 import type { Torrent } from '#/torrent';
 import type { ApiSuccess } from '#/api';
 
@@ -73,6 +73,17 @@ export const apiRSS = {
 
   async getTorrent(rss_id: number) {
     const { data } = await axios.get<Torrent[]>(`api/v1/rss/torrent/${rss_id}`);
+    return data!;
+  },
+
+  async preview(rssLink: string) {
+    const { data } = await axios.post<RSSPreviewResponse>(
+      'api/v1/rss/preview',
+      { rss_link: rssLink },
+      {
+        silent: true,
+      }
+    );
     return data!;
   },
 };

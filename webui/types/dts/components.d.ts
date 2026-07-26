@@ -59,6 +59,7 @@ declare module '@vue/runtime-core' {
     BangumiOffsetField: typeof import('./../../src/components/bangumi-offset-field.vue')['default']
     BangumiPreview: typeof import('./../../src/components/bangumi-preview.vue')['default']
     BangumiRssLinkRow: typeof import('./../../src/components/bangumi-rss-link-row.vue')['default']
+    BangumiRssPreviewDialog: typeof import('./../../src/components/bangumi-rss-preview-dialog.vue')['default']
     CalendarBoard: typeof import('./../../src/components/calendar/calendar-board.vue')['default']
     CalendarCard: typeof import('./../../src/components/calendar/calendar-card.vue')['default']
     CalendarDayColumn: typeof import('./../../src/components/calendar/calendar-day-column.vue')['default']

@@ -21,3 +21,14 @@ export const rssTemplate: RSS = {
   last_checked_at: null,
   last_error: null,
 };
+
+export interface RSSPreviewItem {
+  name: string;
+  url: string;
+  homepage: string | null;
+}
+
+export interface RSSPreviewResponse {
+  items: RSSPreviewItem[];
+  global_filter: string[];
+}
