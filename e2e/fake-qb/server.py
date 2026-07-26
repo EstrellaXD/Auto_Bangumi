@@ -38,6 +38,12 @@ _PRESET_TORRENTS = (
         "state": "pausedUP",
         "progress": 1.0,
         "size": 65_536,
+        "dlspeed": 0,
+        "upspeed": 0,
+        "num_seeds": 0,
+        "num_leechs": 0,
+        "eta": 0,
+        "added_on": 0,
     },
     {
         "hash": NEIGHBOUR_HASH,
@@ -48,6 +54,12 @@ _PRESET_TORRENTS = (
         "state": "pausedUP",
         "progress": 1.0,
         "size": 65_536,
+        "dlspeed": 0,
+        "upspeed": 0,
+        "num_seeds": 0,
+        "num_leechs": 0,
+        "eta": 0,
+        "added_on": 0,
     },
     {
         "hash": DELETE_FAILURE_HASH,
@@ -58,6 +70,12 @@ _PRESET_TORRENTS = (
         "state": "pausedUP",
         "progress": 1.0,
         "size": 65_536,
+        "dlspeed": 0,
+        "upspeed": 0,
+        "num_seeds": 0,
+        "num_leechs": 0,
+        "eta": 0,
+        "added_on": 0,
     },
 )
 

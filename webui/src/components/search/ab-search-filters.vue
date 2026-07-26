@@ -19,7 +19,7 @@ const { t } = useMyI18n();
 const categories = [
   { key: 'group' as const, label: () => t('search.filter.group') },
   { key: 'resolution' as const, label: () => t('search.filter.resolution') },
-  { key: 'subtitleType' as const, label: () => t('search.filter.subtitle_type') },
+  { key: 'subtitle' as const, label: () => t('search.filter.subtitle_type') },
   { key: 'season' as const, label: () => t('search.filter.season') },
 ];
 
@@ -44,7 +44,10 @@ function getOverflowCount(options: string[]) {
 </script>
 
 <template>
-  <div v-if="Object.values(filterOptions).some(arr => arr.length > 0)" class="filters-section">
+  <div
+    v-if="Object.values(filterOptions).some((arr) => arr.length > 0)"
+    class="filters-section"
+  >
     <!-- Filter rows -->
     <div v-for="cat in categories" :key="cat.key" class="filter-row">
       <template v-if="filterOptions[cat.key].length > 0">
@@ -81,7 +84,8 @@ function getOverflowCount(options: string[]) {
       </button>
       <span class="results-count">
         <template v-if="hasActiveFilters">
-          {{ filteredCount }} / {{ totalCount }} {{ $t('search.filter.results') }}
+          {{ filteredCount }} / {{ totalCount }}
+          {{ $t('search.filter.results') }}
         </template>
         <template v-else>
           {{ totalCount }} {{ $t('search.filter.results') }}
@@ -99,7 +103,8 @@ function getOverflowCount(options: string[]) {
   padding: 12px 16px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
-  transition: background-color var(--transition-normal), border-color var(--transition-normal);
+  transition: background-color var(--transition-normal),
+    border-color var(--transition-normal);
 }
 
 .filter-row {

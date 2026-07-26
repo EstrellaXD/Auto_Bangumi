@@ -27,6 +27,7 @@ const field = inject(abFieldInjectionKey, null);
 <template>
   <NSwitch
     v-model:value="model"
+    class="ab-switch"
     :size="size"
     :disabled="disabled"
     :loading="loading"
@@ -34,3 +35,15 @@ const field = inject(abFieldInjectionKey, null);
     :aria-labelledby="field?.labelId"
   ></NSwitch>
 </template>
+
+<style lang="scss" scoped>
+@media screen and (max-width: 639px) {
+  .ab-switch {
+    min-width: var(--touch-target);
+    min-height: var(--touch-target);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+</style>

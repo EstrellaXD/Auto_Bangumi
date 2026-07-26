@@ -149,6 +149,14 @@ function onClick(event: MouseEvent) {
   }
 }
 
+@media screen and (max-width: 639px) {
+  .ab-btn--md,
+  .ab-btn--sm {
+    height: var(--touch-target);
+    min-height: var(--touch-target);
+  }
+}
+
 @keyframes ab-btn-rotate {
   to {
     transform: rotate(360deg);

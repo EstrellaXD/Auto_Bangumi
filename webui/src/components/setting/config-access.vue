@@ -17,12 +17,14 @@ import { useAccessStore } from '@/store/access';
 import { useMessage } from '@/hooks/useMessage';
 import { useMyI18n } from '@/hooks/useMyI18n';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useFocusHandoff } from '@/hooks/useFocusHandoff';
 
 const store = useAccessStore();
 const { users, tokens, loading } = storeToRefs(store);
 const { t } = useMyI18n();
 const message = useMessage();
 const { confirm } = useConfirm();
+const { captureFocusTarget, restoreFocusTarget } = useFocusHandoff();
 
 const showUserDialog = ref(false);
 const showTokenDialog = ref(false);
@@ -35,6 +37,7 @@ const issuedToken = ref('');
 const submitting = ref(false);
 let accessActive = false;
 let tokenRevealGeneration = 0;
+let revealTokenAfterLeave = false;
 
 const ownerByUserId = computed(
   () => new Map(users.value.map((user) => [user.id, user.username]))
@@ -67,9 +70,15 @@ function setUserDialogVisibility(show: boolean): void {
 function setTokenDialogVisibility(show: boolean): void {
   showTokenDialog.value = show;
   if (!show) {
+    revealTokenAfterLeave = false;
     tokenRevealGeneration += 1;
     tokenName.value = '';
   }
+}
+
+function openTokenDialog(event: MouseEvent): void {
+  captureFocusTarget(event.currentTarget as Element | null);
+  setTokenDialogVisibility(true);
 }
 
 function setTokenValueVisibility(show: boolean): void {
@@ -85,6 +94,14 @@ function scrubSensitiveState(): void {
   setUserDialogVisibility(false);
   setTokenDialogVisibility(false);
   setTokenValueVisibility(false);
+}
+
+function handleTokenDialogAfterLeave(): void {
+  if (!revealTokenAfterLeave) return;
+  revealTokenAfterLeave = false;
+  if (!accessActive || !issuedToken.value) return;
+  restoreFocusTarget();
+  setTokenValueVisibility(true);
 }
 
 onDeactivated(scrubSensitiveState);
@@ -131,7 +148,7 @@ async function handleCreateToken(): Promise<void> {
     if (!accessActive || revealGeneration !== tokenRevealGeneration) return;
     issuedToken.value = token;
     setTokenDialogVisibility(false);
-    setTokenValueVisibility(true);
+    revealTokenAfterLeave = true;
   } finally {
     submitting.value = false;
   }
@@ -226,7 +243,7 @@ function tokenStatus(token: ApiTokenPublic): ApiTokenStatus {
           <h3>{{ $t('access.tokens') }}</h3>
           <p>{{ $t('access.tokens_hint') }}</p>
         </div>
-        <ab-button size="sm" @click="setTokenDialogVisibility(true)">
+        <ab-button size="sm" @click="openTokenDialog">
           {{ $t('access.add_token') }}
         </ab-button>
       </div>
@@ -316,6 +333,7 @@ function tokenStatus(token: ApiTokenPublic): ApiTokenStatus {
       size="sm"
       :title="$t('access.add_token')"
       @update:show="setTokenDialogVisibility"
+      @after-leave="handleTokenDialogAfterLeave"
     >
       <div class="dialog-form">
         <ab-field :label="$t('access.token_name')">

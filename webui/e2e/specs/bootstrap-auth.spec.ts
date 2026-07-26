@@ -67,8 +67,10 @@ test('logout and browser back cannot revive a revoked session', async ({
     await expect(page).toHaveURL(/#\/login$/);
     await page.goBack();
     await expect(page).not.toHaveURL(/#\/bangumi$/);
-    await page.goto('/#/bangumi');
-    await expect(page).toHaveURL(/#\/login$/);
+
+    const directPage = await authenticated.context.newPage();
+    await directPage.goto('/#/bangumi');
+    await expect(directPage).toHaveURL(/#\/login$/);
   } finally {
     await closeAuthenticatedContexts([authenticated], testInfo);
   }

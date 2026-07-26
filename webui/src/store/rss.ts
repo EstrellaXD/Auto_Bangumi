@@ -4,6 +4,8 @@ export const useRSSStore = defineStore('rss', () => {
   const rss = ref<RSS[]>([]);
   const selectedRSS = ref<number[]>([]);
   const isLoading = ref(false);
+  const hasLoaded = ref(false);
+  const loadFailed = ref(false);
 
   async function getAll() {
     isLoading.value = true;
@@ -18,6 +20,10 @@ export const useRSSStore = defineStore('rss', () => {
       const disabled = sort(res.filter((e) => !e.enabled));
 
       rss.value = [...enabled, ...disabled];
+      hasLoaded.value = true;
+      loadFailed.value = false;
+    } catch {
+      loadFailed.value = true;
     } finally {
       isLoading.value = false;
     }
@@ -59,6 +65,8 @@ export const useRSSStore = defineStore('rss', () => {
     rss,
     selectedRSS,
     isLoading,
+    hasLoaded,
+    loadFailed,
 
     getAll,
     updateRSS,

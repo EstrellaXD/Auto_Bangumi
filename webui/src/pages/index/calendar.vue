@@ -2,6 +2,7 @@
 import { Refresh } from '@icon-park/vue-next';
 import type { BangumiRule } from '#/bangumi';
 import type { BangumiGroup } from '@/components/calendar/types';
+import { useFocusHandoff } from '@/hooks/useFocusHandoff';
 
 definePage({
   name: 'Calendar',
@@ -107,18 +108,29 @@ const ruleListPopup = reactive<{
   show: false,
   group: null,
 });
+const pendingEditRule = ref<BangumiRule | null>(null);
+const { captureFocusTarget, restoreFocusTarget } = useFocusHandoff();
 
 function onCardClick(group: BangumiGroup) {
   if (group.rules.length === 1) {
     openEditPopup(group.primary);
   } else {
+    captureFocusTarget();
     ruleListPopup.group = group;
     ruleListPopup.show = true;
   }
 }
 
 function onRuleSelect(rule: BangumiRule) {
+  pendingEditRule.value = rule;
   ruleListPopup.show = false;
+}
+
+function onRuleListAfterLeave() {
+  const rule = pendingEditRule.value;
+  if (!rule) return;
+  pendingEditRule.value = null;
+  restoreFocusTarget();
   openEditPopup(rule);
 }
 </script>
@@ -180,6 +192,7 @@ function onRuleSelect(rule: BangumiRule) {
       v-model:show="ruleListPopup.show"
       :group="ruleListPopup.group"
       @select="onRuleSelect"
+      @after-leave="onRuleListAfterLeave"
     />
   </div>
 </template>
@@ -300,6 +313,34 @@ function onRuleSelect(rule: BangumiRule) {
 @media (prefers-reduced-motion: reduce) {
   .anim-fade-in {
     animation: none;
+  }
+}
+
+@media screen and (max-width: 639px) {
+  .page-calendar {
+    min-width: 0;
+    gap: 8px;
+    overflow-x: hidden;
+  }
+
+  .calendar-header {
+    min-width: 0;
+    min-height: var(--touch-target);
+    gap: 8px;
+  }
+
+  .calendar-header-text,
+  .calendar-subtitle {
+    min-width: 0;
+  }
+
+  .calendar-subtitle {
+    line-height: 1.4;
+  }
+
+  .calendar-refresh-btn {
+    width: var(--touch-target);
+    height: var(--touch-target);
   }
 }
 </style>

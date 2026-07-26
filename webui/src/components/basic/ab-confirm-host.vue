@@ -5,7 +5,7 @@ import AbModal from './ab-modal.vue';
 import { useConfirmState } from '@/hooks/useConfirm';
 
 // 全局确认对话框宿主：挂载一次（App.vue），由 useConfirm() 驱动。
-const { state, settle } = useConfirmState();
+const { state, settle, restoreFocus } = useConfirmState();
 
 const show = computed({
   get: () => state.current !== null,
@@ -21,6 +21,7 @@ const show = computed({
     size="sm"
     :show-close="false"
     :title="state.current?.title ?? ''"
+    @after-leave="restoreFocus"
   >
     <template v-if="state.current?.body" #default>
       <p class="ab-confirm-body">

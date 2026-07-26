@@ -214,4 +214,52 @@ const { url } = storeToRefs(usePlayerStore());
     transform: translateY(0);
   }
 }
+
+@media screen and (max-width: 639px) {
+  .page-embed {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .embed-frame {
+    min-width: 0;
+    min-height: 320px;
+    border-radius: var(--radius-sm);
+  }
+
+  .empty-guide {
+    min-width: 0;
+    justify-content: flex-start;
+    padding: 12px;
+  }
+
+  .empty-guide-header {
+    margin-bottom: 20px;
+  }
+
+  .empty-guide-steps {
+    max-width: 100%;
+    gap: 10px;
+  }
+
+  .empty-guide-step {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .empty-guide-action {
+    display: inline-flex;
+    min-height: var(--touch-target);
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-fade-in,
+  .anim-slide-up {
+    animation: none;
+  }
+}
 </style>

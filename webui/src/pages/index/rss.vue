@@ -240,6 +240,7 @@ function onSelectedRSSUpdate(keys: unknown[]) {
         :columns="rssColumns"
         :data="rss"
         :row-key="rssRowKey"
+        :checked-row-keys="selectedRSS"
         :loading="isLoading && rss.length === 0"
         :pagination="false"
         :bordered="false"
@@ -247,7 +248,7 @@ function onSelectedRSSUpdate(keys: unknown[]) {
         @update:checked-row-keys="onSelectedRSSUpdate"
       ></NDataTable>
 
-      <div v-if="selectedRSS.length > 0">
+      <div v-if="selectedRSS.length > 0 && !isMobile">
         <div class="divider"></div>
         <div class="rss-actions">
           <AbButton variant="primary" @click="enableSelected">{{
@@ -262,6 +263,26 @@ function onSelectedRSSUpdate(keys: unknown[]) {
         </div>
       </div>
     </ab-container>
+
+    <div
+      v-if="isMobile && selectedRSS.length > 0"
+      class="rss-selection-toolbar"
+      role="toolbar"
+      :aria-label="$t('common.select')"
+    >
+      <span class="rss-selection-count">
+        {{ selectedRSS.length }} {{ $t('downloader.selected') }}
+      </span>
+      <AbButton size="sm" variant="primary" @click="enableSelected">{{
+        $t('rss.enable')
+      }}</AbButton>
+      <AbButton size="sm" variant="secondary" @click="disableSelected">{{
+        $t('rss.disable')
+      }}</AbButton>
+      <AbButton size="sm" variant="danger" @click="onDeleteSelected">{{
+        $t('rss.delete')
+      }}</AbButton>
+    </div>
   </div>
 </template>
 
@@ -343,5 +364,83 @@ function onSelectedRSSUpdate(keys: unknown[]) {
   display: flex;
   justify-content: flex-end;
   margin-top: 4px;
+}
+
+@media screen and (max-width: 639px) {
+  .page-rss {
+    width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .page-rss :deep(.container-card),
+  .page-rss :deep(.container-body),
+  .rss-card-content {
+    min-width: 0;
+  }
+
+  .page-rss :deep(.container-header) {
+    min-height: 52px;
+    height: auto;
+    padding: 4px 8px 4px 12px;
+  }
+
+  .page-rss :deep(.container-body) {
+    padding: 8px;
+  }
+
+  .page-rss :deep(.ab-list-header),
+  .page-rss :deep(.ab-list-selectall) {
+    min-height: var(--touch-target);
+  }
+
+  .page-rss :deep(.ab-list-row) {
+    min-width: 0;
+    min-height: var(--touch-target);
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .page-rss :deep(.ab-list-check) {
+    width: var(--touch-target);
+    height: var(--touch-target);
+    margin: -8px 0 -8px -8px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .page-rss :deep(.ab-btn),
+  .rss-card-actions :deep(.ab-btn) {
+    min-height: var(--touch-target);
+  }
+
+  .rss-selection-toolbar {
+    position: sticky;
+    bottom: 0;
+    z-index: var(--z-sticky);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    min-height: 60px;
+    padding: 8px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-md);
+  }
+
+  .rss-selection-toolbar :deep(.ab-btn) {
+    min-height: var(--touch-target);
+    padding-inline: 9px;
+  }
+
+  .rss-selection-count {
+    margin-right: auto;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
 }
 </style>

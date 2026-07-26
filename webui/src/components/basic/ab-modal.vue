@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { ref, watch } from 'vue';
 import {
   Dialog,
   DialogPanel,
@@ -22,6 +23,8 @@ const props = withDefaults(
     /** 隐藏右上角 X（confirm 类弹窗：Esc/遮罩仍可关闭） */
     showClose?: boolean;
     maxHeight?: string;
+    /** 可选的桌面最大宽度覆盖；移动端抽屉不受影响 */
+    desktopMaxWidth?: string;
     /** 移动端用整屏抽屉承载长表单 */
     mobileFullscreen?: boolean;
     /** 移动端软键盘出现时是否把抽屉整体上移 */
@@ -38,23 +41,46 @@ const props = withDefaults(
   }
 );
 
-const emit = defineEmits<{ close: [] }>();
+const emit = defineEmits<{ close: []; 'after-leave': [] }>();
 
 const show = defineModel<boolean>('show', { default: false });
 
 const { isMobile } = useBreakpointQuery();
+const mobileRenderer = ref(isMobile.value);
+let closeCyclePending = false;
+
+// Keep one renderer for the whole open/close cycle. Swapping branches while a
+// leave transition is running unmounts that transition before after-leave.
+watch(show, (visible, wasVisible) => {
+  if (visible) {
+    if (!closeCyclePending) {
+      mobileRenderer.value = isMobile.value;
+    }
+    closeCyclePending = false;
+  } else if (wasVisible) {
+    closeCyclePending = true;
+  }
+});
 
 function close() {
   if (!props.closable) return;
   show.value = false;
   emit('close');
 }
+
+function handleAfterLeave() {
+  if (!closeCyclePending) return;
+
+  closeCyclePending = false;
+  emit('after-leave');
+  mobileRenderer.value = isMobile.value;
+}
 </script>
 
 <template>
   <!-- 移动端：底部抽屉 -->
   <AbBottomSheet
-    v-if="isMobile"
+    v-if="mobileRenderer"
     :show="show"
     :title="title"
     :closeable="closable"
@@ -65,6 +91,7 @@ function close() {
     :avoid-keyboard="avoidKeyboard"
     @update:show="show = $event"
     @close="emit('close')"
+    @after-leave="handleAfterLeave"
   >
     <slot />
     <template v-if="$slots.footer" #footer>
@@ -73,7 +100,13 @@ function close() {
   </AbBottomSheet>
 
   <!-- 桌面/平板：居中对话框 -->
-  <TransitionRoot v-else appear :show="show" as="template">
+  <TransitionRoot
+    v-else
+    appear
+    :show="show"
+    as="template"
+    @after-leave="handleAfterLeave"
+  >
     <Dialog class="ab-modal" @close="close">
       <TransitionChild
         as="template"
@@ -103,6 +136,7 @@ function close() {
               `ab-modal-panel--${size}`,
               !$slots.default && 'ab-modal-panel--bare',
             ]"
+            :style="desktopMaxWidth ? { maxWidth: desktopMaxWidth } : undefined"
           >
             <header
               v-if="title || (closable && showClose)"

@@ -192,7 +192,9 @@
       "size": "Size",
       "dlspeed": "DL Speed",
       "upspeed": "UP Speed",
-      "peers": "Seeds/Peers"
+      "peers": "Seeds/Peers",
+      "eta": "ETA",
+      "save_path": "Save path"
     },
     "state": {
       "downloading": "Downloading",
@@ -208,7 +210,10 @@
       "pause": "Pause",
       "resume": "Resume",
       "delete": "Delete",
-      "delete_confirm": "Remove the selected torrents from the downloader? Downloaded files are kept."
+      "delete_confirm": "Remove the selected torrents from the downloader? Downloaded files are kept.",
+      "select_torrent": "Select {name}",
+      "show_details": "Show torrent details",
+      "hide_details": "Hide torrent details"
     }
   },
   "homepage": {
@@ -526,6 +531,46 @@
     "player": "Player",
     "rss": "RSS",
     "title": "Menu"
+  },
+  "mobile": {
+    "navigation": "Primary navigation",
+    "home": "Home",
+    "search": "Search",
+    "more": "More",
+    "bangumi": "Anime rules",
+    "pages": "Pages",
+    "quick_actions": "Quick actions",
+    "program": "Program",
+    "more_program_actions": "More program actions",
+    "preferences": "Preferences and account",
+    "language": "Switch language",
+    "confirm_restart": "Restart AutoBangumi?",
+    "confirm_restart_body": "The service will be briefly unavailable and then recover automatically.",
+    "confirm_shutdown": "Shut down AutoBangumi?",
+    "confirm_shutdown_body": "You must restart the service from the container or host.",
+    "confirm_reset": "Delete all anime rules?",
+    "confirm_reset_body": "All anime rules will be deleted. This cannot be undone.",
+    "confirm_logout": "Log out of this account?",
+    "confirm_logout_body": "You will need to authenticate again.",
+    "overview": "Runtime overview",
+    "overview_subtitle": "Check current status and items that need attention",
+    "refresh_overview": "Refresh runtime overview",
+    "system_status": "System status",
+    "running": "Running",
+    "stopped": "Stopped",
+    "unavailable": "Unavailable",
+    "needs_review": "need review",
+    "connection_errors": "connection errors",
+    "attention": "Needs attention",
+    "review_attention": "Some anime rules need a season or episode offset review.",
+    "active_anime": "Active anime",
+    "view_all": "View all",
+    "group_unknown": "Unknown group",
+    "review": "Review",
+    "no_active_anime": "No active anime rules",
+    "search_title": "Search anime",
+    "search_subtitle": "Find a title and choose a subscription rule",
+    "settings_section": "Settings section"
   },
   "common": {
     "cancel": "Cancel",

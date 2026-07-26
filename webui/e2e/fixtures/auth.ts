@@ -36,7 +36,10 @@ export async function loginThroughUI(
   expect(response.status()).toBe(expectedStatus);
   if (expectedStatus === 200) {
     expect(await response.json()).toEqual(SESSION_SUCCESS);
-    await expect(page).toHaveURL(/#\/bangumi$/);
+    const expectedPath = await page.evaluate(() =>
+      matchMedia('(max-width: 639px)').matches ? 'home' : 'bangumi'
+    );
+    await expect(page).toHaveURL(new RegExp(`#/${expectedPath}$`));
   }
   return response;
 }

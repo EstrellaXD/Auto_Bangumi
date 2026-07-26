@@ -74,6 +74,15 @@ input::-webkit-inner-spin-button {
   border-radius: var(--radius-sm);
 }
 
+@media screen and (max-width: 639px) {
+  // Naive UI teleports select menus outside component-scoped styles.
+  .n-base-selection,
+  .n-base-select-option,
+  .n-checkbox {
+    min-height: var(--touch-target);
+  }
+}
+
 // iOS Safari auto-zoom prevention
 // iOS Safari zooms in when focusing inputs with font-size < 16px
 // This rule ensures all form inputs are at least 16px on touch devices

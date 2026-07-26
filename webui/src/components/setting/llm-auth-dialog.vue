@@ -1,6 +1,7 @@
 <script lang="ts" setup>
-import { NInput, NModal } from 'naive-ui';
+import { NInput } from 'naive-ui';
 import type { LLMAuthChallenge } from '@/api/llm';
+import AbModal from '@/components/basic/ab-modal.vue';
 
 const props = defineProps<{
   show: boolean;
@@ -33,6 +34,10 @@ function close() {
   challenge.value = null;
   pastedCode.value = '';
   emit('update:show', false);
+}
+
+function onShowUpdate(show: boolean) {
+  if (!show) close();
 }
 
 async function begin() {
@@ -100,12 +105,12 @@ onUnmounted(stopPolling);
 </script>
 
 <template>
-  <NModal
+  <AbModal
     :show="show"
-    preset="card"
+    desktop-max-width="460px"
+    size="sm"
     :title="`${t('config.llm_set.connect')} · ${displayName}`"
-    style="max-width: 460px"
-    @update:show="(v: boolean) => !v && close()"
+    @update:show="onShowUpdate"
   >
     <div v-if="challenge" class="auth-body">
       <template v-if="challenge.method === 'device_code'">
@@ -134,11 +139,13 @@ onUnmounted(stopPolling);
         >
         <NInput
           v-model:value="pastedCode"
+          class="auth-code-input"
           type="textarea"
           :rows="2"
           :placeholder="t('config.llm_set.auth_paste_code')"
         />
         <ab-button
+          class="auth-submit"
           variant="primary"
           :loading="loading"
           :disabled="!pastedCode.trim()"
@@ -150,7 +157,7 @@ onUnmounted(stopPolling);
     <div v-else class="auth-body auth-loading">
       {{ t('config.llm_set.auth_pending') }}
     </div>
-  </NModal>
+  </AbModal>
 </template>
 
 <style lang="scss" scoped>
@@ -191,5 +198,15 @@ onUnmounted(stopPolling);
 .auth-loading {
   color: var(--color-text-muted);
   font-size: 13px;
+}
+
+@media screen and (max-width: 639px) {
+  .auth-code-input {
+    min-height: var(--touch-target);
+  }
+
+  .auth-submit {
+    min-height: var(--touch-target);
+  }
 }
 </style>

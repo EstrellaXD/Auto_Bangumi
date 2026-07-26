@@ -8,13 +8,18 @@ defineProps<{
 
 const emit = defineEmits<{
   (e: 'select', rule: BangumiRule): void;
+  (e: 'after-leave'): void;
 }>();
 
 const show = defineModel<boolean>('show', { default: false });
 </script>
 
 <template>
-  <ab-modal v-model:show="show" :title="group?.primary.official_title || ''">
+  <ab-modal
+    v-model:show="show"
+    :title="group?.primary.official_title || ''"
+    @after-leave="emit('after-leave')"
+  >
     <div v-if="group" class="rule-list">
       <div class="rule-list-hint">{{ $t('homepage.rule.select_hint') }}</div>
       <div
@@ -156,5 +161,12 @@ const show = defineModel<boolean>('show', { default: false });
   color: var(--color-text-muted);
   flex-shrink: 0;
   margin-top: 2px;
+}
+
+@media screen and (max-width: 639px) {
+  .rule-list {
+    width: 100%;
+    min-width: min(300px, 100%);
+  }
 }
 </style>

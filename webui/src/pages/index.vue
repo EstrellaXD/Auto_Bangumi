@@ -3,7 +3,6 @@ import type { BangumiRule } from '#/bangumi';
 
 definePage({
   name: 'Index',
-  redirect: '/bangumi',
 });
 
 const { editRule } = storeToRefs(useBangumiStore());
@@ -44,7 +43,10 @@ function onApplyRule(rule: BangumiRule) {
       <ab-sidebar />
 
       <div id="main-content" class="layout-content">
-        <ab-page-title :title="$route.name"></ab-page-title>
+        <ab-page-title
+          v-if="$route.name !== 'Home'"
+          :title="$route.name"
+        ></ab-page-title>
 
         <RouterView v-slot="{ Component }">
           <transition name="page" mode="out-in">
@@ -77,6 +79,10 @@ function onApplyRule(rule: BangumiRule) {
   overflow: hidden;
 
   padding: var(--layout-padding);
+  padding-top: calc(var(--layout-padding) + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(
+    var(--layout-padding) + env(safe-area-inset-bottom, 0px)
+  );
   padding-left: calc(var(--layout-padding) + env(safe-area-inset-left, 0px));
   padding-right: calc(var(--layout-padding) + env(safe-area-inset-right, 0px));
   gap: var(--layout-gap);

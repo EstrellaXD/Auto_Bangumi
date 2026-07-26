@@ -408,14 +408,6 @@ onDeactivated(() => {
   &.is-error {
     background: color-mix(in srgb, var(--color-danger) 8%, transparent);
   }
-
-  @media (max-width: 639px) {
-    grid-template-columns: 64px 1fr;
-
-    .log-message {
-      grid-column: 1 / -1;
-    }
-  }
 }
 
 .log-level {
@@ -522,6 +514,106 @@ onDeactivated(() => {
   li + li a {
     border-top: 1px solid var(--color-border);
     border-radius: 0;
+  }
+}
+
+@media screen and (max-width: 639px) {
+  .page-log,
+  .log-layout,
+  .log-main,
+  .log-viewer-card,
+  .log-sidebar {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .page-log {
+    overflow-x: hidden;
+  }
+
+  .log-health {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 10px;
+
+    :deep(.ab-btn) {
+      min-height: var(--touch-target);
+    }
+  }
+
+  .log-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    padding: 8px;
+  }
+
+  .filter-chips {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    :deep(.ab-btn) {
+      width: 100%;
+      min-width: 0;
+      min-height: var(--touch-target);
+    }
+  }
+
+  .log-search {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    min-height: var(--touch-target);
+  }
+
+  .log-actions {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-left: 0;
+
+    :deep(.ab-btn) {
+      width: 100%;
+      min-width: 0;
+      min-height: var(--touch-target);
+      padding-inline: 4px;
+      font-size: 12px;
+    }
+  }
+
+  .log-viewer {
+    max-width: 100%;
+    max-height: min(58vh, 560px);
+    min-height: 260px;
+    overflow-x: hidden;
+  }
+
+  .log-entry {
+    grid-template-columns: 52px minmax(0, 1fr);
+    gap: 6px;
+    padding: 7px 8px;
+    font-size: 12px;
+
+    .log-message {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .log-level {
+    min-width: 50px;
+    padding-inline: 3px;
+    font-size: 9.5px;
+  }
+
+  .log-date {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .about-links a {
+    min-height: var(--touch-target);
   }
 }
 </style>

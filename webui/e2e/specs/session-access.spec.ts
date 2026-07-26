@@ -1,4 +1,4 @@
-import { request as playwrightRequest } from '@playwright/test';
+import { type Page, request as playwrightRequest } from '@playwright/test';
 import { E2EApi } from '../fixtures/api';
 import type { AuthenticatedContext } from '../fixtures/auth';
 import {
@@ -9,6 +9,33 @@ import {
 import type { ApiTokenCreated } from '../fixtures/data';
 import { SESSION_SUCCESS, changedPassword } from '../fixtures/data';
 import { expect, test } from '../fixtures/test';
+
+async function openAccountDialog(page: Page) {
+  const isMobile = await page.evaluate(
+    () => matchMedia('(max-width: 639px)').matches
+  );
+
+  if (isMobile) {
+    const navigation = page.getByRole('navigation', {
+      name: 'Primary navigation',
+    });
+    await navigation.getByRole('button', { name: 'More actions' }).click();
+    const moreDialog = page.getByRole('dialog', { name: 'More actions' });
+    const morePanel = moreDialog.getByTestId('bottom-sheet-panel');
+    await expect(morePanel).toBeVisible();
+    await morePanel
+      .getByRole('button', { name: 'Profile', exact: true })
+      .click();
+    await expect(moreDialog).toHaveCount(0);
+  } else {
+    await page.getByRole('button', { name: 'System menu' }).click();
+    await page.getByRole('menuitem', { name: 'Profile', exact: true }).click();
+  }
+
+  const dialog = page.getByRole('dialog', { name: 'Change Account' });
+  await expect(dialog.getByLabel('Username')).toBeVisible();
+  return dialog;
+}
 
 test('password change rotates both browser contexts and rejects the old password', async ({
   api,
@@ -39,9 +66,7 @@ test('password change rotates both browser contexts and rejects the old password
       testInfo
     );
 
-    await first.page.getByRole('button', { name: 'System menu' }).click();
-    await first.page.getByRole('menuitem', { name: 'Profile' }).click();
-    const dialog = first.page.getByRole('dialog').last();
+    const dialog = await openAccountDialog(first.page);
     const nextCredentials = {
       username: credentials.username,
       password: changedPassword(uniqueName),
@@ -67,7 +92,6 @@ test('password change rotates both browser contexts and rejects the old password
     await expect(second.page).toHaveURL(/#\/login$/);
     await loginThroughUI(second.page, credentials, 401);
     await loginThroughUI(second.page, nextCredentials);
-    await expect(second.page).toHaveURL(/#\/bangumi$/);
   } finally {
     const contexts = [first, second].filter(
       (value): value is AuthenticatedContext => value !== undefined
