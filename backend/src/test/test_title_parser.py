@@ -212,6 +212,24 @@ class TestRawParserLLMPrimaryMode:
 
 
 class TestConfiguredParserEngine:
+    async def test_classic_admits_bilingual_release_without_episode_marker(self):
+        raw = (
+            "[LoliHouse] 海贼王：女英雄们的故事 / ONE PIECE HEROINES "
+            "[WebRip 1080p HEVC-10bit AAC][简繁内封字幕]"
+        )
+
+        with (
+            patch.object(settings, "llm", LLM(enable=False)),
+            patch.object(settings.rss_parser, "engine", "classic"),
+        ):
+            result = await TitleParser.raw_parser(raw)
+
+        assert isinstance(result, Bangumi)
+        assert result.title_raw == "ONE PIECE HEROINES"
+        assert result.group_name == "LoliHouse"
+        assert result.dpi == "1080p"
+        assert result.eps_collect is True
+
     async def test_classic_keeps_pre_refactor_range_behavior(self):
         raw = "Anime Title - EP01 ~ EP02 [1080p]"
         with (
