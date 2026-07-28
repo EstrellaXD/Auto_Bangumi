@@ -241,6 +241,62 @@ class TestTelegramProvider:
         assert result is True
         mock_post.assert_called_once()
 
+    async def test_send_prefers_poster_source_url(self, provider):
+        """有源 URL 时默认让 Telegram 服务端按 URL 拉图，不做本地上传（#1094）。"""
+        notify = Notification(
+            official_title="Test Anime",
+            season=1,
+            episode=5,
+            poster_path="posters/abc123.jpg",
+        )
+
+        with patch.object(provider, "post_data", new_callable=AsyncMock) as mock_post:
+            mock_post.return_value = MagicMock(status_code=200)
+            with patch(
+                "module.notification.providers.telegram.load_poster_url",
+                new_callable=AsyncMock,
+            ) as mock_url:
+                mock_url.return_value = "https://mikanani.me/img/a.jpg"
+                with patch(
+                    "module.notification.providers.telegram.load_image",
+                    new_callable=AsyncMock,
+                ) as mock_load:
+                    result = await provider.send(notify)
+
+        assert result is True
+        mock_post.assert_called_once()
+        assert mock_post.call_args[0][0] == provider.photo_url
+        assert mock_post.call_args[0][1]["photo"] == "https://mikanani.me/img/a.jpg"
+        mock_load.assert_not_called()
+
+    async def test_send_falls_back_to_text_when_photo_send_fails(self, provider):
+        """sendPhoto 失败（返回 None）不再崩溃，降级发纯文本消息（#1094）。"""
+        notify = Notification(
+            official_title="Test Anime",
+            season=1,
+            episode=5,
+            poster_path="posters/abc123.jpg",
+        )
+
+        with patch.object(provider, "post_data", new_callable=AsyncMock) as mock_post:
+            mock_post.side_effect = [None, MagicMock(status_code=200)]
+            with patch(
+                "module.notification.providers.telegram.load_poster_url",
+                new_callable=AsyncMock,
+            ) as mock_url:
+                mock_url.return_value = "https://mikanani.me/img/a.jpg"
+                with patch(
+                    "module.notification.providers.telegram.load_image",
+                    new_callable=AsyncMock,
+                ) as mock_load:
+                    mock_load.return_value = None
+                    result = await provider.send(notify)
+
+        assert result is True
+        assert mock_post.call_count == 2
+        assert mock_post.call_args_list[0][0][0] == provider.photo_url
+        assert mock_post.call_args_list[1][0][0] == provider.message_url
+
     async def test_test_success(self, provider):
         """Test method sends test message."""
         with patch.object(provider, "post_data", new_callable=AsyncMock) as mock_post:

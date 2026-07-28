@@ -54,10 +54,15 @@ async def mikan_parser(homepage: str):
             # (AttributeValueList); "style" is never multi-valued in practice.
             poster_path = poster_div.split("url('")[1].split("')")[0]  # type: ignore[union-attr]
             poster_path = poster_path.split("?")[0]
-            img = await req.get_content(f"https://{root_path}{poster_path}")
+            poster_url = f"https://{root_path}{poster_path}"
+            img = await req.get_content(poster_url)
             suffix = poster_path.split(".")[-1]
             # img can be None if the poster download failed; don't crash on it.
-            poster_link = (await save_image(img, suffix) or "") if img else ""
+            poster_link = (
+                (await save_image(img, suffix, source_url=poster_url) or "")
+                if img
+                else ""
+            )
             return _cache_result(homepage, (poster_link, official_title))
         return _cache_result(homepage, ("", official_title))
 

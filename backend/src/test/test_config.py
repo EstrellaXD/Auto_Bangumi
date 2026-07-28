@@ -742,3 +742,34 @@ class TestNetworkBaseUrls:
             await bgm_calendar.fetch_bgm_calendar()
 
         assert captured["url"] == "https://bgm.mirror.test/calendar"
+
+
+# ---------------------------------------------------------------------------
+# Settings._migrate_old_config: 掩码哨兵清洗
+# ---------------------------------------------------------------------------
+
+
+class TestScrubCorruptedMasks:
+    """3.2.3/3.2.4 只掩码不恢复，保存过配置的用户把字面 ******** 写进了
+    密码/密钥字段（代理认证因此失败，TG 报告）。加载时按空值清洗。"""
+
+    def test_literal_mask_in_sensitive_field_is_scrubbed(self):
+        config = {
+            "program": {},
+            "rss_parser": {},
+            "proxy": {"password": "********", "username": "u"},
+            "downloader": {"password": "********"},
+        }
+        result = Settings._migrate_old_config(config)
+        assert result["proxy"]["password"] == ""
+        assert result["downloader"]["password"] == ""
+
+    def test_real_values_and_non_sensitive_keys_are_untouched(self):
+        config = {
+            "program": {},
+            "rss_parser": {},
+            "proxy": {"password": "real-pass", "host": "********"},
+        }
+        result = Settings._migrate_old_config(config)
+        assert result["proxy"]["password"] == "real-pass"
+        assert result["proxy"]["host"] == "********"

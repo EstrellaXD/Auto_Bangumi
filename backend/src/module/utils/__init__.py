@@ -1,1 +1,1 @@
-from .cache_image import load_image, save_image
+from .cache_image import load_image, load_poster_url, save_image

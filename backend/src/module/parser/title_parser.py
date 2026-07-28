@@ -456,7 +456,20 @@ class TitleParser:
             )
             deterministic = parse_outcome.result
             if parse_outcome.engine == "classic":
-                deterministic = _project_classic_release(raw, deterministic)
+                projected = _project_classic_release(raw, deterministic)
+                if (
+                    projected is None
+                    and deterministic is not None
+                    and deterministic.episode is None
+                    and deterministic.media_type is MediaType.UNKNOWN
+                    and persistence_target(deterministic) is not None
+                ):
+                    # 字幕组未标记特别篇/剧场版等字样的无集数单发资源（#1092）：
+                    # 旧版投影契约会整条拒绝，导致订阅静默漏抓。与 Preview 的
+                    # 准入策略对齐，按 eps_collect 整理集接纳；带集数的旧版
+                    # 拒绝（如小数集）不受影响。
+                    projected = deterministic
+                deterministic = projected
             if (
                 deterministic is None
                 and parse_outcome.trace is not None

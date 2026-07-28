@@ -181,6 +181,16 @@ class RequestURL:
                 req = await self._client.post(url=url, headers=self.header, data=data)
                 req.raise_for_status()
                 return req
+            except httpx.HTTPStatusError as e:
+                # 服务端拒绝不是连接失败，重试无意义；把状态码和响应体
+                # （如 Telegram 的 JSON description）记下来便于排查（#1094）。
+                logger.warning(
+                    "HTTP %s from %s: %s",
+                    e.response.status_code,
+                    url,
+                    e.response.text[:200],
+                )
+                break
             except httpx.RequestError:
                 logger.warning(f"Cannot connect to {url}. Wait for 5 seconds.")
                 try_time += 1
@@ -219,7 +229,17 @@ class RequestURL:
             )
             req.raise_for_status()
             return req
-        except (httpx.RequestError, httpx.HTTPStatusError):
+        except httpx.HTTPStatusError as e:
+            # 别把服务端拒绝（4xx/5xx）误报成连接失败：响应体里通常带有明确的
+            # 拒绝原因（如 Telegram 的 JSON description），排查 #1094 全靠它。
+            logger.warning(
+                "HTTP %s from %s: %s",
+                e.response.status_code,
+                url,
+                e.response.text[:200],
+            )
+            return None
+        except httpx.RequestError:
             logger.warning(f"Cannot connect to {url}.")
             return None
 

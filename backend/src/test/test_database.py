@@ -112,6 +112,46 @@ async def test_rss_database(db_session):
     assert result.url == rss_url
 
 
+async def test_rss_add_reenables_disabled_duplicate(db_session):
+    """重新订阅已存在但被停用的 RSS（删除番剧后孤儿停用，#1095）应重新启用。"""
+    rss_url = "https://mikanani.me/RSS/Bangumi?bangumiId=4020&subgroupid=583"
+    db = RSSDatabase(db_session)
+
+    await db.add(RSSItem(url=rss_url, name="Test RSS"))
+    item = await db.search_url(rss_url)
+    assert item is not None
+    await db.disable(item.id)
+
+    assert await db.add(RSSItem(url=rss_url, name="Test RSS")) is True
+    item = await db.search_url(rss_url)
+    assert item is not None
+    assert item.enabled is True
+
+
+async def test_bangumi_delete_all_with_fk_references_succeeds(db_session):
+    """reset/all 全表重置：torrent/aria2_gid 行经外键引用 bangumi 时，
+    必须先清理引用，否则 PRAGMA foreign_keys=ON 下整个删除直接回滚。"""
+    from sqlalchemy import text
+    from sqlmodel import select as sql_select
+
+    from module.models.aria2 import Aria2Gid
+
+    await db_session.execute(text("PRAGMA foreign_keys=ON"))
+    await _ensure_bangumi(db_session, 1)
+    db_session.add(Torrent(name="ep01", url="https://example.com/1", bangumi_id=1))
+    db_session.add(Aria2Gid(gid="gid-1", bangumi_id=1))
+    await db_session.commit()
+
+    db = BangumiDatabase(db_session)
+    await db.delete_all()
+
+    assert await db.search_all() == []
+    torrents = (await db_session.execute(sql_select(Torrent))).scalars().all()
+    assert torrents == []
+    gid_row = (await db_session.execute(sql_select(Aria2Gid))).scalars().one()
+    assert gid_row.bangumi_id is None
+
+
 # ---------------------------------------------------------------------------
 # TorrentDatabase qb_hash methods
 # ---------------------------------------------------------------------------

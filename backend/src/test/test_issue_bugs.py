@@ -555,3 +555,77 @@ class TestIssue1005SearchOfficialTitle:
         db = BangumiDatabase(db_session)
         result = await db.search_official_title("不存在的番剧")
         assert result is None
+
+
+# ---------------------------------------------------------------------------
+# Issue #1092: 字幕组未标记特别篇等字样时，无集数标题无法解析
+# https://github.com/EstrellaXD/Auto_Bangumi/issues/1092
+#
+# LoliHouse 发布的 TV 特别篇（如 ONE PIECE HEROINES）标题中没有集数也没有
+# 特别篇/剧场版标记。Preview 引擎的准入策略按 eps_collect 整理集接纳这类
+# 带发布证据的单发资源，但 classic 引擎的旧版兼容投影会整条拒绝，导致
+# 默认配置下订阅静默漏抓。
+# ---------------------------------------------------------------------------
+
+
+class TestIssue1092UnmarkedEpisodelessRelease:
+    """Issue #1092: classic admission now matches the Preview policy."""
+
+    REPORTED_TITLE = (
+        "[LoliHouse] 海贼王：女英雄们的故事 / ONE PIECE HEROINES "
+        "[WebRip 1080p HEVC-10bit AAC][简繁内封字幕]"
+    )
+
+    async def test_classic_admits_reported_title_as_collect_bangumi(self):
+        from unittest.mock import patch
+
+        from module.conf import settings
+        from module.models import Bangumi
+        from module.models.config import LLM
+        from module.parser import TitleParser
+
+        with (
+            patch.object(settings, "llm", LLM(enable=False)),
+            patch.object(settings.rss_parser, "engine", "classic"),
+        ):
+            result = await TitleParser.raw_parser(self.REPORTED_TITLE)
+
+        assert isinstance(result, Bangumi)
+        assert result.official_title == "海贼王：女英雄们的故事"
+        assert result.group_name == "LoliHouse"
+        assert result.episode_type == "episode"
+        assert result.eps_collect is True
+
+    async def test_classic_and_preview_agree_on_reported_title(self):
+        from unittest.mock import patch
+
+        from module.conf import settings
+        from module.models import Bangumi
+        from module.models.config import LLM
+        from module.parser import TitleParser
+
+        with (
+            patch.object(settings, "llm", LLM(enable=False)),
+            patch.object(settings.rss_parser, "engine", "tokenizer"),
+        ):
+            preview_result = await TitleParser.raw_parser(self.REPORTED_TITLE)
+
+        assert isinstance(preview_result, Bangumi)
+        assert preview_result.official_title == "海贼王：女英雄们的故事"
+
+    async def test_classic_still_rejects_title_without_release_evidence(self):
+        from unittest.mock import patch
+
+        from module.conf import settings
+        from module.models.config import LLM
+        from module.parser import TitleParser
+
+        with (
+            patch.object(settings, "llm", LLM(enable=False)),
+            patch.object(settings.rss_parser, "engine", "classic"),
+        ):
+            result = await TitleParser.raw_parser(
+                "Random Non Matching Title No Digits At All"
+            )
+
+        assert result is None

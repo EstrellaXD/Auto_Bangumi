@@ -12,6 +12,35 @@ from .const import DEFAULT_SETTINGS, ENV_TO_ATTR
 logger = logging.getLogger(__name__)
 CONFIG_ROOT = Path("config")
 
+# 与 api/config.py 的掩码约定保持一致（此处不 import，避免 conf ← api 循环）
+_MASK_SENTINEL = "********"
+_SENSITIVE_KEYS = ("password", "api_key", "token", "secret")
+
+
+def _scrub_corrupted_masks(config: dict, path: str = "") -> None:
+    """把字面写入配置的掩码哨兵按空值清洗。
+
+    3.2.3/3.2.4 的配置接口只掩码不恢复，期间保存过配置的用户把 ``********``
+    字面写进了密码/密钥字段（代理/下载器认证因此失败）。原值已不可恢复，
+    置空并告警，提示用户重新输入。
+    """
+    for k, v in config.items():
+        key_path = f"{path}.{k}" if path else k
+        if isinstance(v, dict):
+            _scrub_corrupted_masks(v, key_path)
+        elif isinstance(v, list):
+            for i, item in enumerate(v):
+                if isinstance(item, dict):
+                    _scrub_corrupted_masks(item, f"{key_path}[{i}]")
+        elif v == _MASK_SENTINEL and any(s in k.lower() for s in _SENSITIVE_KEYS):
+            config[k] = ""
+            logger.warning(
+                "Config field '%s' contained a literal mask sentinel "
+                "(corrupted by a 3.2.3/3.2.4 save); cleared it — re-enter "
+                "the secret if one is required.",
+                key_path,
+            )
+
 
 try:
     from module.__version__ import VERSION
@@ -110,6 +139,8 @@ class Settings(Config):
                 # 旧版语义是 LLM 优先解析，迁移用户保持原有行为
                 "mode": "primary",
             }
+
+        _scrub_corrupted_masks(config)
 
         return config
 

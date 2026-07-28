@@ -374,11 +374,14 @@ async def tmdb_parser(
             year_number = (info_content.get("first_air_date") or "").split("-")[0]
             if poster_path:
                 if not test:
-                    img = await req.get_content(
-                        f"https://image.tmdb.org/t/p/w780{poster_path}"
-                    )
+                    poster_url = f"https://image.tmdb.org/t/p/w780{poster_path}"
+                    img = await req.get_content(poster_url)
                     # img is None if the poster download failed; don't crash on it.
-                    poster_link = await save_image(img, "jpg") if img else None
+                    poster_link = (
+                        await save_image(img, "jpg", source_url=poster_url)
+                        if img
+                        else None
+                    )
                 else:
                     poster_link = "https://image.tmdb.org/t/p/w780" + poster_path
             else:

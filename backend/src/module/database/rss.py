@@ -17,6 +17,14 @@ class RSSDatabase:
         result = await self.session.execute(statement)
         db_data = result.scalar_one_or_none()
         if db_data:
+            if not db_data.enabled:
+                # 删除番剧时孤儿 RSS 会被停用（#1053）；重新订阅同一 URL 表达了
+                # 恢复更新的意图，必须重新启用，否则番剧会静默断更（#1095）。
+                db_data.enabled = True
+                self.session.add(db_data)
+                await self.session.commit()
+                logger.info("Re-enabled disabled RSS Item %s.", data.url)
+                return True
             logger.debug("RSS Item %s already exists.", data.url)
             return False
         else:

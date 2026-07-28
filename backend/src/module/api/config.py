@@ -34,7 +34,9 @@ def _sanitize_dict(d: dict) -> dict:
             result[k] = [
                 _sanitize_dict(item) if isinstance(item, dict) else item for item in v
             ]
-        elif isinstance(v, str) and _is_sensitive(k):
+        elif isinstance(v, str) and v and _is_sensitive(k):
+            # 空值不打掩码：否则未设置密码的字段在前端永远显示一串幻影
+            # 掩码，用户误以为存了密码（并可能因此反复"删除保存"）。
             result[k] = _MASK
         else:
             result[k] = v

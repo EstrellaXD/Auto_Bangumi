@@ -233,14 +233,8 @@ class TestConfiguredParserEngine:
 
         assert result is None
 
-    @pytest.mark.parametrize(
-        "raw",
-        (
-            "[Group] Anime [1080p]",
-            "[Group] Anime EP07.5 [1080p]",
-        ),
-    )
-    async def test_classic_preserves_legacy_compatibility_rejections(self, raw):
+    async def test_classic_preserves_legacy_compatibility_rejections(self):
+        raw = "[Group] Anime EP07.5 [1080p]"
         parsed = parse_classic_release_title(raw)
 
         assert parsed is not None
@@ -253,6 +247,24 @@ class TestConfiguredParserEngine:
             result = await TitleParser.raw_parser(raw)
 
         assert result is None
+
+    async def test_classic_admits_episodeless_release_with_evidence(self):
+        """无集数且无类型标记但带发布证据的单发资源（#1092）：旧版 Episode
+        投影仍拒绝（冻结契约），但 classic 准入与 Preview 策略对齐后放行。"""
+        raw = "[Group] Anime [1080p]"
+        parsed = parse_classic_release_title(raw)
+
+        assert parsed is not None
+        assert to_legacy_episode(parsed) is None
+
+        with (
+            patch.object(settings, "llm", LLM(enable=False)),
+            patch.object(settings.rss_parser, "engine", "classic"),
+        ):
+            result = await TitleParser.raw_parser(raw)
+
+        assert isinstance(result, Bangumi)
+        assert result.eps_collect is True
 
     async def test_classic_projects_admitted_result_through_legacy_episode(self):
         raw = "[Group] Anime - 01 [2024][1080p]"

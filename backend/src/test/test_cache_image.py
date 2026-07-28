@@ -7,7 +7,7 @@ tmp_path so they never touch the real backend/data/ directory.
 
 import asyncio
 
-from module.utils.cache_image import load_image, save_image
+from module.utils.cache_image import load_image, load_poster_url, save_image
 
 
 class TestSaveImage:
@@ -66,6 +66,14 @@ class TestLoadImage:
 
         assert result == b"cached-poster-bytes"
 
+    async def test_load_image_returns_none_when_file_missing(
+        self, tmp_path, monkeypatch
+    ):
+        """海报缓存文件丢失（手动清理、迁移不完整）不应异常炸穿通知发送。"""
+        monkeypatch.chdir(tmp_path)
+
+        assert await load_image("posters/missing.jpg") is None
+
     async def test_load_image_offloads_read_to_a_thread(self, tmp_path, monkeypatch):
         """The read must go through asyncio.to_thread, not run inline on the
         event loop (regression test for the blocking-I/O fix)."""
@@ -86,3 +94,47 @@ class TestLoadImage:
         await load_image("posters/abc123.jpg")
 
         assert len(calls) == 1
+
+
+class TestPosterUrlSidecar:
+    """保存海报时同时记录源 URL（#1094）：Telegram 等通知可以直接发 URL，
+    让服务端自行拉图，绕开本地 multipart 上传的失败路径。"""
+
+    async def test_save_image_writes_url_sidecar_when_source_url_given(
+        self, tmp_path, monkeypatch
+    ):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "data" / "posters").mkdir(parents=True)
+
+        result = await save_image(
+            b"fake-image-bytes", "jpg", source_url="https://mikanani.me/img/a.jpg"
+        )
+
+        assert result is not None
+        sidecar = tmp_path / "data" / f"{result}.url"
+        assert sidecar.read_text() == "https://mikanani.me/img/a.jpg"
+
+    async def test_load_poster_url_returns_stored_source_url(
+        self, tmp_path, monkeypatch
+    ):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "data" / "posters").mkdir(parents=True)
+        path = await save_image(
+            b"fake-image-bytes", "jpg", source_url="https://mikanani.me/img/a.jpg"
+        )
+
+        assert await load_poster_url(path) == "https://mikanani.me/img/a.jpg"
+
+    async def test_load_poster_url_returns_none_without_sidecar(
+        self, tmp_path, monkeypatch
+    ):
+        """升级前缓存的旧海报没有 .url sidecar：降级为本地上传，不报错。"""
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "data" / "posters").mkdir(parents=True)
+        path = await save_image(b"fake-image-bytes", "jpg")
+
+        assert await load_poster_url(path) is None
+
+    async def test_load_poster_url_returns_none_for_falsy_path(self):
+        assert await load_poster_url(None) is None
+        assert await load_poster_url("") is None

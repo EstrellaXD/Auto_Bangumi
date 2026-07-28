@@ -339,6 +339,13 @@ class TestSanitizeDict:
         result = _sanitize_dict({"API_KEY": "abc"})
         assert result["API_KEY"] == "********"
 
+    def test_empty_sensitive_value_is_not_masked(self):
+        """空密码不打掩码：否则前端每次打开都显示一串幻影密码（TG 报告），
+        用户误以为存了密码。"""
+        result = _sanitize_dict({"password": "", "api_key": ""})
+        assert result["password"] == ""
+        assert result["api_key"] == ""
+
     def test_non_sensitive_keys_pass_through(self):
         """Non-sensitive keys are returned unchanged."""
         result = _sanitize_dict({"host": "localhost", "port": 8080, "enable": True})
@@ -412,10 +419,10 @@ class TestSanitizeDict:
         data = response.json()
         # Downloader password should be masked
         assert data["downloader"]["password"] == "********"
-        # LLM api_key should be masked (it's an empty string but still masked)
-        assert data["llm"]["api_key"] == "********"
-        # Legacy OpenAI api_key should be masked too
-        assert data["experimental_openai"]["api_key"] == "********"
+        # Unset (empty) secrets must NOT be masked: a phantom mask makes the
+        # UI show a password where none exists (TG report)
+        assert data["llm"]["api_key"] == ""
+        assert data["experimental_openai"]["api_key"] == ""
 
 
 # ---------------------------------------------------------------------------

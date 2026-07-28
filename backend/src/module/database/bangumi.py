@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
-from sqlmodel import and_, delete, false, or_, select
+from sqlmodel import and_, delete, false, or_, select, update
 
 from module.models import Bangumi, BangumiUpdate
 
@@ -559,8 +559,22 @@ class BangumiDatabase:
             logger.debug("Delete bangumi id: %s.", _id)
 
     async def delete_all(self):
-        statement = delete(Bangumi)
-        await self.session.execute(statement)
+        # torrent / aria2_gid 行经外键引用 bangumi.id（PRAGMA foreign_keys=ON），
+        # 必须先清理引用，否则整表重置在约束上直接回滚。种子记录随规则一起删
+        # （与 delete_rule 语义一致，重新添加后能重新下载）；aria2 映射行保留
+        # 但解除关联。
+        from module.models.aria2 import Aria2Gid
+        from module.models.torrent import Torrent
+
+        await self.session.execute(
+            delete(Torrent).where(Torrent.bangumi_id.is_not(None))  # type: ignore[union-attr]
+        )
+        await self.session.execute(
+            update(Aria2Gid)
+            .where(Aria2Gid.bangumi_id.is_not(None))  # type: ignore[union-attr]
+            .values(bangumi_id=None)
+        )
+        await self.session.execute(delete(Bangumi))
         await self.session.commit()
 
     async def search_all(self) -> list[Bangumi]:
