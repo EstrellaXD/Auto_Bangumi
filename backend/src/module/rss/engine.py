@@ -463,6 +463,26 @@ class RSSEngine:
                 bangumi.rss_link, bangumi.filter.replace(",", "|")
             )
             if torrents:
+                # 落库前按 URL 查重：同一合集被多个订阅/收集命中时，重复
+                # 投递会导致种子互相覆盖。只要有任一 URL 已在库中（已被
+                # 其他规则接管），整体停止本次下载——不投递、不落库、不
+                # 打 ab:<id> 标签。
+                new_torrents = await self.db.torrent.check_new(torrents)
+                if len(new_torrents) != len(torrents):
+                    return ResponseModel(
+                        status=False,
+                        status_code=406,
+                        msg_en=(
+                            f"Download {bangumi.official_title} failed: "
+                            "torrent already exists in database, likely "
+                            "downloaded by another subscription."
+                        ),
+                        msg_zh=(
+                            f"下载 {bangumi.official_title} 失败：种子已在库中，"
+                            "可能已被其他订阅下载。"
+                        ),
+                    )
+                torrents = new_torrents
                 async with DownloadClient() as client:
                     result = await client.add_torrent(torrents, bangumi)
                     if result is AddResult.FAILED:
