@@ -54,6 +54,30 @@ class SeasonCollector:
                     link, bangumi.filter.replace(",", "|")
                 )
         async with Database() as db:
+            # 落库前按 URL 查重：同一
+            # 合集被多个订阅/收集命中时，重复投递会导致种子互相覆盖。
+            # 只要有任一 URL 已在库中，整体停止本次收集——不落库、不
+            # 打 ab:<id> 标签，也不留下幽灵订阅规则。
+            new_torrents = await db.torrent.check_new(torrents)
+            if len(new_torrents) != len(torrents):
+                logger.warning(
+                    f"Already collected {bangumi.official_title} Season "
+                    f"{bangumi.season}: torrent already exists in database."
+                )
+                return ResponseModel(
+                    status=False,
+                    status_code=406,
+                    msg_en=(
+                        f"Collection of {bangumi.official_title} Season "
+                        f"{bangumi.season} failed: torrent already exists "
+                        "in database."
+                    ),
+                    msg_zh=(
+                        f"收集 {bangumi.official_title} 第 {bangumi.season} 季失败，"
+                        "种子已经在库中。"
+                    ),
+                )
+            torrents = new_torrents
             # bangumi 必须先落库拿到 id：add_torrent 用它打 ab:<id> 标签，
             # 种子行也要用它关联 bangumi_id——否则种子会被记成孤儿，
             # track_orphans 开关对这些"已匹配"的种子完全失效。

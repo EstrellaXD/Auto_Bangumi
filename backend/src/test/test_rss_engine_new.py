@@ -683,6 +683,47 @@ class TestDownloadBangumi:
         assert resp.status_code == 502
         assert await rss_engine.db.torrent.search_all() == []
 
+    async def test_duplicate_url_stops_without_downloading(self, rss_engine):
+        """种子 URL 已在库中（可能被其他订阅下载过）时整体停止：
+        不投递下载器、不打 ab 标签、不新增种子行。"""
+        bangumi = make_bangumi(
+            official_title="Mushoku Tensei",
+            rss_link="https://example.com/rss",
+            filter="",
+        )
+        await rss_engine.db.bangumi.add(bangumi)
+        existing = Torrent(
+            name="[Sub] Mushoku Tensei - 12 [1080p].mkv",
+            url="https://example.com/ep12.torrent",
+        )
+        await rss_engine.db.torrent.add(existing)
+
+        feed_torrent = Torrent(
+            name="[Sub] Mushoku Tensei - 12 [1080p].mkv",
+            url="https://example.com/ep12.torrent",
+        )
+        with (
+            patch("module.rss.engine.RequestContent") as MockReq,
+            patch("module.rss.engine.DownloadClient") as MockClient,
+        ):
+            req = AsyncMock()
+            req.get_torrents = AsyncMock(return_value=[feed_torrent])
+            MockReq.return_value.__aenter__ = AsyncMock(return_value=req)
+            MockReq.return_value.__aexit__ = AsyncMock(return_value=False)
+            client = AsyncMock()
+            client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
+            MockClient.return_value.__aenter__ = AsyncMock(return_value=client)
+            MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            resp = await rss_engine.download_bangumi(bangumi)
+
+        assert resp.status is False
+        assert resp.status_code == 406
+        client.add_torrent.assert_not_called()
+        stored = await rss_engine.db.torrent.search_all()
+        assert len(stored) == 1
+        assert stored[0].url == "https://example.com/ep12.torrent"
+
 
 # ---------------------------------------------------------------------------
 # add_rss
