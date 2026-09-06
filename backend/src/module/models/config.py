@@ -164,6 +164,16 @@ class NotificationProvider(BaseModel):
     url_: Optional[str] = Field(
         default=None, alias="url", description="URL for generic webhook provider"
     )
+    channel_: Optional[str] = Field(
+        default=None,
+        alias="channel",
+        description="Delivery channel for WPUSH (default wechat)",
+    )
+    topic_code_: Optional[str] = Field(
+        default=None,
+        alias="topic_code",
+        description="Optional WPUSH Topic broadcast code",
+    )
 
     @property
     def token(self) -> str:
@@ -196,6 +206,15 @@ class NotificationProvider(BaseModel):
     @property
     def url(self) -> str:
         return _expand(self.url_)
+
+    @property
+    def channel(self) -> str:
+        return _expand(self.channel_)
+
+    @property
+    def topic_code(self) -> str:
+        return _expand(self.topic_code_)
+
 
 
 class Notification(BaseModel):
