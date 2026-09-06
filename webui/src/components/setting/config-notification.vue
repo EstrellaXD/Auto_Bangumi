@@ -24,6 +24,7 @@ const providerTypes: {
   { value: 'gotify', label: 'Gotify' },
   { value: 'pushover', label: 'Pushover' },
   { value: 'webhook', label: 'Webhook' },
+  { value: 'wpush', label: 'WPUSH' },
 ];
 
 // Provider field configurations
@@ -70,6 +71,19 @@ const providerFields: Record<
   pushover: [
     { key: 'user_key', label: 'User Key', placeholder: 'user key' },
     { key: 'api_token', label: 'API Token', placeholder: 'api token' },
+  ],
+  wpush: [
+    { key: 'token', label: 'API Key', placeholder: 'WPUSHxxxxxxxx' },
+    {
+      key: 'channel',
+      label: 'Channel (optional)',
+      placeholder: 'wechat / app / feishu / ...',
+    },
+    {
+      key: 'topic_code',
+      label: 'Topic Code (optional)',
+      placeholder: 'topic code',
+    },
   ],
   webhook: [
     {
@@ -132,6 +146,7 @@ function getProviderIcon(type: string): string {
     gotify: 'i-carbon-notification-filled',
     pushover: 'i-carbon-mobile',
     webhook: 'i-carbon-webhook',
+    wpush: 'i-simple-icons-wechat',
   };
   return icons[type] || 'i-carbon-notification';
 }

@@ -132,6 +132,7 @@ const sections: ConfigSection[] = [
       'gotify',
       'pushover',
       'webhook',
+      'wpush',
       'token',
     ],
   },

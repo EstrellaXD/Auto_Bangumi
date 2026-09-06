@@ -21,7 +21,8 @@ export type NotificationType = [
   'wecom',
   'gotify',
   'pushover',
-  'webhook'
+  'webhook',
+  'wpush'
 ];
 /** LLM 提供商 id（内置三家 + 预设/插件，开放集合） */
 export type LLMProviderId = string;
@@ -98,6 +99,8 @@ export interface NotificationProviderConfig {
   device_key?: string;
   user_key?: string;
   api_token?: string;
+  channel?: string;
+  topic_code?: string;
   template?: string;
   url?: string;
 }
