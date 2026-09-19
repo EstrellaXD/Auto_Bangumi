@@ -175,13 +175,18 @@ def match_bangumi_in_list(
             or persistence_target(release) is not PersistenceTarget.BANGUMI
         ):
             return None
+    # title_raw 由解析器重组（剔除中间的集数、拼接 " / " 分隔的别名），未必是
+    # 种子名的子串（#1103、#1114）；与本种子重组出的标题完全相等也算命中。
+    release_title = release and (
+        release.title_en or release.title_zh or release.title_jp
+    )
     best_match: Optional[Bangumi] = None
     best_rank = (-1, -1, -1)
     for bangumi in bangumi_list:
         if bangumi.deleted or not _release_matches_bangumi(release, bangumi):
             continue
         for pattern in _all_title_patterns(bangumi):
-            if pattern not in torrent_name:
+            if pattern not in torrent_name and pattern != release_title:
                 continue
             group_match = int(
                 release is not None
@@ -215,6 +220,16 @@ def _release_matches_bangumi(release: "ParsedRelease | None", bangumi: Bangumi) 
     if expected_type == "special":
         return bangumi.season == 0
     return release.season is None or bangumi.season == release.season
+
+
+def release_fits_bangumi(torrent_name: str, bangumi: Bangumi) -> bool:
+    """种子的季度/类型与番剧不冲突。整订阅下载（subscribe/collect）不做标题
+    匹配，搜索类 RSS 会混入其他季，需用此过滤（#1105）。"""
+    from module.parser.analyser.selector import parse_configured_release_title
+
+    return _release_matches_bangumi(
+        parse_configured_release_title(torrent_name), bangumi
+    )
 
 
 class BangumiDatabase:

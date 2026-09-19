@@ -1,6 +1,7 @@
 import logging
 
 from module.database import Database
+from module.database.bangumi import release_fits_bangumi
 from module.downloader import AddResult, DownloadClient
 from module.models import Bangumi, ResponseModel
 from module.network import RequestContent
@@ -53,6 +54,7 @@ class SeasonCollector:
                 torrents = await req.get_torrents(
                     link, bangumi.filter.replace(",", "|")
                 )
+            torrents = [t for t in torrents if release_fits_bangumi(t.name, bangumi)]
         async with Database() as db:
             # bangumi 必须先落库拿到 id：add_torrent 用它打 ab:<id> 标签，
             # 种子行也要用它关联 bangumi_id——否则种子会被记成孤儿，

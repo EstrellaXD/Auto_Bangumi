@@ -28,6 +28,11 @@ services:
     # 应用内“一键更新”依赖此重启策略：更新后容器会自行退出，由 Docker 重启
     # 以应用更新，因此必须保留 restart: unless-stopped。
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment:
       - TZ=Asia/Shanghai
       - PGID=$(id -g)

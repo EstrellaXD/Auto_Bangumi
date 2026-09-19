@@ -88,6 +88,17 @@ async def get_shared_client() -> httpx.AsyncClient:
     return _shared_client
 
 
+async def _replace_stale_client(stale: httpx.AsyncClient) -> httpx.AsyncClient:
+    """#1104: httpcore 在 HTTP 代理 CONNECT 成功、TLS 握手失败时泄漏隧道连接，
+    连接池被占满后永久 PoolTimeout。换一个新 client 给后续请求；旧的不 aclose
+    （其他协程可能仍在使用，见 dc786a29），交给 GC 回收。"""
+    global _shared_client
+    # ponytail: 旧连接要等 GC 才释放；httpcore 修复 encode/httpcore#1087 发布后升级依赖并删除此函数
+    if _shared_client is stale:
+        _shared_client = None
+    return await get_shared_client()
+
+
 async def reset_shared_client():
     """关闭并清除共享客户端，下次请求时自动创建新连接池。"""
     global _shared_client, _shared_client_proxy_key
@@ -156,6 +167,8 @@ class RequestURL:
                 logger.warning(
                     f"Request error for {url}: {type(e).__name__}. Retry {try_time + 1}/{retry}"
                 )
+                if isinstance(e, httpx.PoolTimeout):
+                    self._client = await _replace_stale_client(self._client)
                 try_time += 1
                 if try_time >= retry:
                     break
@@ -191,8 +204,10 @@ class RequestURL:
                     e.response.text[:200],
                 )
                 break
-            except httpx.RequestError:
+            except httpx.RequestError as e:
                 logger.warning(f"Cannot connect to {url}. Wait for 5 seconds.")
+                if isinstance(e, httpx.PoolTimeout):
+                    self._client = await _replace_stale_client(self._client)
                 try_time += 1
                 if try_time >= retry:
                     break

@@ -63,7 +63,9 @@ VOLUME ["/app/config", "/app/data"]
 
 # Liveness probe against the unauthenticated /health route; give the app
 # room to run migrations on first boot before failures count.
+# healthcheck.py reads the configured WebUI port and probes IPv4 then IPv6
+# loopback (#1106).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD wget -qO- http://localhost:7892/health || exit 1
+    CMD python /app/healthcheck.py
 
 ENTRYPOINT ["tini", "-g", "--", "/entrypoint.sh"]

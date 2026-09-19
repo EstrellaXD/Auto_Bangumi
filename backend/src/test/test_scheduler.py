@@ -27,6 +27,20 @@ class TestPeriodicTask:
         assert task.running is False
         assert counter["n"] >= 2
 
+    async def test_nonpositive_interval_does_not_spin(self):
+        """#1117: rss_time/rename_time 配成 0 时循环空转、日志暴涨；应退回 1 秒间隔。"""
+        counter = {"n": 0}
+
+        async def body():
+            counter["n"] += 1
+
+        task = PeriodicTask("t", run=body, interval=lambda: 0)
+        task.start()
+        await asyncio.sleep(0.2)
+        await task.stop()
+
+        assert counter["n"] == 1
+
     async def test_stop_is_idempotent(self):
         """Calling stop() twice (or before start) does not raise."""
         task = PeriodicTask("t", run=lambda: asyncio.sleep(0), interval=lambda: 0.01)
