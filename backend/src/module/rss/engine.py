@@ -8,7 +8,11 @@ from urllib.parse import urlparse
 
 from module.conf import settings
 from module.database import Database
-from module.database.bangumi import _groups_are_similar, match_bangumi_in_list
+from module.database.bangumi import (
+    _groups_are_similar,
+    match_bangumi_in_list,
+    release_fits_bangumi,
+)
 from module.downloader import AddResult, DownloadClient
 from module.models import Bangumi, Movie, ResponseModel, RSSItem, Torrent
 from module.network import RequestContent
@@ -462,6 +466,7 @@ class RSSEngine:
             torrents = await req.get_torrents(
                 bangumi.rss_link, bangumi.filter.replace(",", "|")
             )
+            torrents = [t for t in torrents if release_fits_bangumi(t.name, bangumi)]
             if torrents:
                 async with DownloadClient() as client:
                     result = await client.add_torrent(torrents, bangumi)

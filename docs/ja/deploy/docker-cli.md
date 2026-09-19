@@ -40,6 +40,8 @@ docker run -d \
   --network=bridge \
   --dns=8.8.8.8 \
   --restart unless-stopped \
+  --log-opt max-size=10m \
+  --log-opt max-file=3 \
   ghcr.io/estrellaxd/auto_bangumi:latest
 ```
 

@@ -579,6 +579,37 @@ def test_numeric_mixed_collection_does_not_fall_through_to_title_matching(
     assert match_bangumi_in_list(raw, [bangumi]) is None
 
 
+@pytest.mark.parametrize(
+    ("title_raw", "raw"),
+    (
+        # #1103: 集数从标题中间被剔除，title_raw 不再是种子名的子串
+        (
+            "攻壳机动队「攻壳机动队 THE GHOST IN THE SHELL」 日英双语-多国字幕",
+            "攻壳机动队「攻壳机动队 THE GHOST IN THE SHELL」 S01E03 1080p 日英双语-多国字幕",
+        ),
+        # #1114: " / " 分隔的多个英文名被拼接成一个 title_raw
+        (
+            "20 Seiki Denki Mokuroku Nijusseiki Denki Mokuroku",
+            "[喵萌奶茶屋&LoliHouse] 二十世纪电气目录 / 20 Seiki Denki Mokuroku / "
+            "Nijusseiki Denki Mokuroku - 07 [WebRip 1080p HEVC-10bit AAC][简繁日内封字幕]",
+        ),
+    ),
+)
+def test_match_bangumi_in_list_reconstructed_title_raw_matches(
+    title_raw: str, raw: str, monkeypatch
+) -> None:
+    monkeypatch.setattr(settings.rss_parser, "engine", "classic")
+    bangumi = Bangumi(
+        official_title=title_raw,
+        title_raw=title_raw,
+        rss_link="rss",
+        season=1,
+        episode_type="episode",
+    )
+
+    assert match_bangumi_in_list(raw, [bangumi]) is bangumi
+
+
 def test_titleless_mixed_collection_does_not_bypass_typed_matching(monkeypatch) -> None:
     monkeypatch.setattr(settings.rss_parser, "engine", "tokenizer")
     bangumi = Bangumi(

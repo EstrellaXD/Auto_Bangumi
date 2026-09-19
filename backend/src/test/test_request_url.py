@@ -117,6 +117,42 @@ class TestRetryWithReset:
         assert result.status_code == 200
 
 
+class TestPoolTimeoutRecovery:
+    """#1104: httpcore 在 HTTP 代理 CONNECT 成功、TLS 握手失败时泄漏隧道连接，
+    共享连接池被占满后永久 PoolTimeout。遇到 PoolTimeout 时应换新 client。"""
+
+    async def _get_with_poisoned_pool(self):
+        import httpx
+
+        import module.network.request_url as mod
+
+        old, new = AsyncMock(), AsyncMock()
+        old.get.side_effect = httpx.PoolTimeout("pool full")
+        resp = MagicMock(status_code=200, raise_for_status=MagicMock())
+        new.get.return_value = resp
+        mod._shared_client = old
+        mod._shared_client_proxy_key = mod._proxy_config_key()
+        try:
+            with (
+                patch("module.network.request_url.asyncio.sleep", new=AsyncMock()),
+                patch("module.network.request_url.httpx.AsyncClient", return_value=new),
+            ):
+                async with RequestURL() as req:
+                    result = await req.get_url("https://example.com/x", retry=2)
+        finally:
+            mod._shared_client = None
+            mod._shared_client_proxy_key = None
+        return old, resp, result
+
+    async def test_get_url_pool_timeout_retries_on_fresh_client(self):
+        _, resp, result = await self._get_with_poisoned_pool()
+        assert result is resp
+
+    async def test_get_url_pool_timeout_does_not_close_old_client(self):
+        old, _, _ = await self._get_with_poisoned_pool()
+        old.aclose.assert_not_called()
+
+
 class TestReentrantContextManager:
     """Regression for the notification-dispatch concurrency restore.
 

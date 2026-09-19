@@ -70,7 +70,9 @@ class PeriodicTask:
                     raise
                 except Exception as e:
                     logger.error("%s tick failed: %s", self._name, e)
-                if await self._wait(self._interval()):
+                # 间隔 <= 0（配置为 0）会让循环空转、日志暴涨（#1117），退回 1 秒
+                interval = self._interval()
+                if await self._wait(interval if interval > 0 else 1):
                     return
         except asyncio.CancelledError:
             pass

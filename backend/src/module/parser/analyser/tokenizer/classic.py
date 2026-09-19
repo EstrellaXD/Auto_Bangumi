@@ -43,6 +43,8 @@ _SEASON_EPISODE_WORDS = re.compile(
 _SEASON = re.compile(r"(?<!\w)(S\d{1,2}|Season\s+\d{1,2})(?!\w)", re.I)
 _ORDINAL_SEASON = re.compile(r"\b(\d{1,2})(?:st|nd|rd|th)\s+Season\b", re.I)
 _CHINESE_SEASON = re.compile(r"第([零〇一二两三四五六七八九十百\d]+)[季期]")
+# Unicode 罗马数字 Ⅰ-Ⅻ（U+2160-216B）作季度标记，如 "Clevatess Ⅱ"（#1108）
+_ROMAN_SEASON = re.compile(r"(?<![A-Za-z])[Ⅰ-Ⅻ](?![A-Za-z])")
 _EXPLICIT_EPISODE = re.compile(
     r"(?<!\w)(?:Episode|EP?\.?|#)\s*[-_. ]?\s*" r"(\d{1,4}(?:\.\d+)?)(?:v(\d+))?(?!\w)",
     re.I,
@@ -536,6 +538,12 @@ def _extract_numbers(working: list[_WorkingSegment], state: _State) -> None:
             state.season_raw = match.group(0)
             state.evidence.append("season")
 
+        for match in _consume_all(work, _ROMAN_SEASON):
+            work.consume(match)
+            state.season = ord(match.group()) - 0x215F
+            state.season_raw = match.group()
+            state.evidence.append("season")
+
         for match in _consume_all(work, _ORDINAL_SEASON):
             if state.season is None:
                 work.consume(match)
@@ -876,6 +884,8 @@ def _clean_fragment(text: str) -> str:
 
 def _clean_title(text: str) -> str:
     text = _clean_fragment(text)
+    # 全角破折号包裹整段标题："－魔獸之王…－" → "魔獸之王…"（#1108）
+    text = re.sub(r"^－(.+)－$", r"\1", text).strip()
     return re.sub(r"_+", " ", text).strip()
 
 

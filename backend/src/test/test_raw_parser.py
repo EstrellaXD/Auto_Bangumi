@@ -514,3 +514,26 @@ class TestIssue1025NoGroupPrefix:
         # Before the fix all three title fields were None and title_parser
         # raised "Cannot extract title_raw". At least one must now be set.
         assert any([info.title_en, info.title_zh, info.title_jp])
+
+
+class TestIssue1108RomanNumeralSeason:
+    """Issue #1108: Unicode 罗马数字（Ⅱ）标记季度，全角破折号包裹中文标题。"""
+
+    CONTENT = (
+        "[ANi] Clevatess Ⅱ－魔獸之王與虛假的勇者傳承－ - 05 "
+        "[1080P][Baha][WEB-DL][AAC AVC][CHT].mp4"
+    )
+
+    def _parse(self):
+        info = raw_parser(self.CONTENT)
+        assert info is not None
+        return info
+
+    def test_roman_numeral_is_season(self):
+        assert self._parse().season == 2
+
+    def test_zh_title_strips_numeral_and_fullwidth_dashes(self):
+        assert self._parse().title_zh == "魔獸之王與虛假的勇者傳承"
+
+    def test_en_title_kept(self):
+        assert self._parse().title_en == "Clevatess"

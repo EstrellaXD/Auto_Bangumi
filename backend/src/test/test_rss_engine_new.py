@@ -683,6 +683,36 @@ class TestDownloadBangumi:
         assert resp.status_code == 502
         assert await rss_engine.db.torrent.search_all() == []
 
+    async def test_skips_torrents_of_another_season(self, rss_engine):
+        """#1105: 搜索 RSS 同时返回第一季和第二季，第二季不能按第一季下载。"""
+        bangumi = make_bangumi(
+            official_title="无职转生", rss_link="https://example.com/rss", filter=""
+        )
+        s1 = Torrent(
+            name="[沸班亚马制作组] 无职转生～到了异世界就拿出真本事～ - 01 [2160p]",
+            url="https://example.com/s1e01.torrent",
+        )
+        s2 = Torrent(
+            name="[沸班亚马制作组] 无职转生 第二季 ～到了异世界就拿出真本事～ - 01 [2160p]",
+            url="https://example.com/s2e01.torrent",
+        )
+        with (
+            patch("module.rss.engine.RequestContent") as MockReq,
+            patch("module.rss.engine.DownloadClient") as MockClient,
+        ):
+            req = AsyncMock()
+            req.get_torrents = AsyncMock(return_value=[s1, s2])
+            MockReq.return_value.__aenter__ = AsyncMock(return_value=req)
+            MockReq.return_value.__aexit__ = AsyncMock(return_value=False)
+            client = AsyncMock()
+            client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
+            MockClient.return_value.__aenter__ = AsyncMock(return_value=client)
+            MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            await rss_engine.download_bangumi(bangumi)
+
+        client.add_torrent.assert_awaited_once_with([s1], bangumi)
+
 
 # ---------------------------------------------------------------------------
 # add_rss

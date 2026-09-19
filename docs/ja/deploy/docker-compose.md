@@ -41,6 +41,11 @@ services:
     ports:
       - "7892:7892"
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     dns:
       - 8.8.8.8
     network_mode: bridge
