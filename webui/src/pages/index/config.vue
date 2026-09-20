@@ -224,6 +224,17 @@ const dirtySectionTitles = computed(() =>
 const scrollEl = ref<HTMLElement | null>(null);
 const activeSection = ref(sections[0].id);
 const sectionEls = new Map<string, HTMLElement>();
+let isProgrammaticScroll = false;
+let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+let savedScrollTop = 0;
+
+function clearProgrammaticScroll() {
+  isProgrammaticScroll = false;
+  if (scrollTimer) {
+    clearTimeout(scrollTimer);
+    scrollTimer = null;
+  }
+}
 
 function setSectionEl(id: string, el: unknown) {
   if (el instanceof HTMLElement) sectionEls.set(id, el);
@@ -231,13 +242,27 @@ function setSectionEl(id: string, el: unknown) {
 }
 
 function onScroll() {
+  if (isProgrammaticScroll) return;
   const container = scrollEl.value;
-  if (!container) return;
-  const anchor = container.scrollTop + 80;
+  if (!container || visibleSections.value.length === 0) return;
+
+  // 滚动到容器底部时，直接激活最后一个可见卡片
+  const isAtBottom =
+    container.scrollHeight - container.scrollTop - container.clientHeight <= 10;
+  if (isAtBottom) {
+    activeSection.value =
+      visibleSections.value[visibleSections.value.length - 1].id;
+    return;
+  }
+
+  const containerRect = container.getBoundingClientRect();
   let current = visibleSections.value[0]?.id ?? sections[0].id;
   for (const section of visibleSections.value) {
     const el = sectionEls.get(section.id);
-    if (el && el.offsetTop <= anchor) current = section.id;
+    if (el) {
+      const top = el.getBoundingClientRect().top - containerRect.top;
+      if (top <= 80) current = section.id;
+    }
   }
   activeSection.value = current;
 }
@@ -245,6 +270,27 @@ function onScroll() {
 function jumpTo(id: string) {
   const el = sectionEls.get(id);
   if (!el) return;
+
+  activeSection.value = id;
+  isProgrammaticScroll = true;
+
+  if (scrollTimer) clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(() => {
+    isProgrammaticScroll = false;
+    scrollTimer = null;
+  }, 600);
+
+  const container = scrollEl.value;
+  if (container && 'onscrollend' in window) {
+    container.addEventListener(
+      'scrollend',
+      () => {
+        clearProgrammaticScroll();
+      },
+      { once: true }
+    );
+  }
+
   const reduceMotion = window.matchMedia(
     '(prefers-reduced-motion: reduce)'
   ).matches;
@@ -252,8 +298,13 @@ function jumpTo(id: string) {
     behavior: reduceMotion ? 'auto' : 'smooth',
     block: 'start',
   });
-  activeSection.value = id;
 }
+
+watch(visibleSections, (list) => {
+  if (list.length > 0 && !list.some((s) => s.id === activeSection.value)) {
+    activeSection.value = list[0].id;
+  }
+});
 
 // --- 保存 / 放弃 ---
 const isSaving = ref(false);
@@ -280,11 +331,24 @@ async function handleDiscard() {
   }
 }
 
+onDeactivated(() => {
+  if (scrollEl.value) {
+    savedScrollTop = scrollEl.value.scrollTop;
+  }
+  clearProgrammaticScroll();
+});
+
 onActivated(() => {
   // 有未保存修改时不重新拉取，避免静默覆盖用户输入
   if (!isDirty.value) {
     getConfig();
   }
+  nextTick(() => {
+    if (scrollEl.value) {
+      scrollEl.value.scrollTop = savedScrollTop;
+      onScroll();
+    }
+  });
 });
 
 onBeforeRouteLeave(() => {
@@ -329,7 +393,14 @@ onBeforeRouteLeave(() => {
         </button>
       </nav>
 
-      <div ref="scrollEl" class="config-scroll" @scroll.passive="onScroll">
+      <div
+        ref="scrollEl"
+        class="config-scroll"
+        @scroll.passive="onScroll"
+        @wheel.passive="clearProgrammaticScroll"
+        @touchmove.passive="clearProgrammaticScroll"
+        @pointerdown.passive="clearProgrammaticScroll"
+      >
         <div v-if="visibleSections.length === 0" class="config-no-match">
           <p>{{ $t('config.no_match') }}</p>
           <ab-button size="sm" @click="searchQuery = ''">
@@ -455,6 +526,7 @@ onBeforeRouteLeave(() => {
 }
 
 .config-scroll {
+  position: relative;
   flex: 1;
   min-width: 0;
   overflow-y: auto;
