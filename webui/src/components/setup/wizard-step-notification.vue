@@ -14,6 +14,7 @@ const notificationTypes = [
   { id: 1, label: 'Server Chan', value: 'server-chan' },
   { id: 2, label: 'Bark', value: 'bark' },
   { id: 3, label: 'WeChat Work', value: 'wecom' },
+  { id: 4, label: 'WPUSH', value: 'wpush' },
 ];
 
 async function testNotification() {

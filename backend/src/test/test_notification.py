@@ -25,6 +25,7 @@ from module.notification.providers import (
     TelegramProvider,
     WebhookProvider,
     WecomProvider,
+    WPushProvider,
 )
 
 # ---------------------------------------------------------------------------
@@ -65,6 +66,11 @@ class TestProviderRegistry:
     def test_webhook(self):
         """Registry contains WebhookProvider for 'webhook' type."""
         assert PROVIDER_REGISTRY["webhook"] is WebhookProvider
+
+    def test_wpush(self):
+        """Registry contains WPushProvider for 'wpush' type."""
+        assert PROVIDER_REGISTRY["wpush"] is WPushProvider
+        assert PROVIDER_REGISTRY["w-push"] is WPushProvider
 
     def test_unknown_type(self):
         """Returns None for unknown notification type."""
@@ -775,3 +781,47 @@ class TestConfigMigration:
 
         assert len(new_config.providers) == 1
         assert new_config.providers[0].type == "discord"
+
+
+class TestWPushProvider:
+    def test_payload_defaults(self):
+        config = ProviderConfig(type="wpush", enabled=True, token="WPUSHkey")
+        provider = WPushProvider(config)
+        data = provider._payload("t", "c")
+        assert data == {
+            "apikey": "WPUSHkey",
+            "title": "t",
+            "content": "c",
+            "channel": "wechat",
+        }
+
+    def test_payload_with_channel_and_topic(self):
+        config = ProviderConfig(
+            type="wpush",
+            enabled=True,
+            token="WPUSHkey",
+            channel="feishu",
+            topic_code="abc",
+        )
+        provider = WPushProvider(config)
+        data = provider._payload("t", "c")
+        assert data["channel"] == "feishu"
+        assert data["topic_code"] == "abc"
+
+    @pytest.mark.asyncio
+    async def test_deliver_text_posts_json(self):
+        config = ProviderConfig(type="wpush", enabled=True, token="WPUSHkey")
+        provider = WPushProvider(config)
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"code": 0}
+        with patch.object(provider, "_post_json", new_callable=AsyncMock) as mock_post:
+            mock_post.return_value = mock_resp
+            ok = await provider._deliver_text("hello", "world")
+        assert ok is True
+        mock_post.assert_awaited_once()
+        args = mock_post.await_args.args
+        assert args[0] == "https://api.wpush.cn/api/v1/send"
+        assert args[1]["apikey"] == "WPUSHkey"
+        assert args[1]["title"] == "hello"
+        assert args[1]["content"] == "world"
