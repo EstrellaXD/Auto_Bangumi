@@ -174,9 +174,7 @@ Plugins from the local directory (`config/plugins/local/`) or from pip do not ha
 
 ## Roll back to 3.3
 
-::: danger Correct `version.info` first
-4.0 adds the line `4.0.0-beta.N` at the end of `config/version.info`. 3.3 compares only the minor version. If the last line is 4.0, 3.3 thinks that the data is from 3.0. It then creates all database tables again and keeps only the bangumi rules and the first user. All other data, for example torrent records, is lost. Before you roll back, restore the `data` backup or remove the 4.x lines from `version.info`.
-:::
+4.x writes its version to `config/version_v4.info` and does not change `config/version.info`. Thus 3.3 reads the correct data version when it starts. When 4.x starts on 3.3 data for the first time, AB makes a backup of the database at `data/data.db.v3.bak`.
 
 **If you have a full backup from before the upgrade** (recommended):
 
@@ -190,10 +188,10 @@ All changes that you made in 4.0 (new bangumi, new subscriptions, new settings) 
 
 1. Stop the container.
 2. Copy `config/config.json.v3.bak` to `config/config.json`. 3.3 does not know `plugins.instances`. If you do not restore the file, the downloader settings go back to their default values.
-3. Edit `config/version.info`. Remove all lines that start with `4.`. The last line must be a 3.3.x version.
+3. Copy `data/data.db.v3.bak` to `data/data.db`. 3.3 cannot use the database after 4.0 changed its tables.
 4. If you used the in-app update in 4.0, remove the `config/updates/` directory. If you do not, the 3.3 image loads the newer 4.0 code from that directory at startup.
 5. Change the image tag back to 3.3 (for example `3.3.6`). Create the container again.
 
-With this procedure, you keep the bangumi and torrent records that you added in 4.0. 3.3 ignores the database tables and columns that 4.0 added. The settings that you changed in 4.0 are lost.
+This procedure goes back to the state at the time of the upgrade. The bangumi, torrent records and settings that you added or changed in 4.0 are lost.
 
 When you upgrade to 4.0 again, the migration runs again and writes the new backup to `config.json.v3.bak.1`.
