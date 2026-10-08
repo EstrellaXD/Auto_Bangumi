@@ -1121,7 +1121,7 @@ class TestRevisionConflictFlow:
             target_path=self.TARGET,
         )
 
-        report = await renamer._run_ordinary_rename(
+        report = await renamer.saga.run_ordinary_rename(
             info=info,
             prepared=prepared,
             identity=None,
