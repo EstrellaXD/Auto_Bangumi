@@ -14,6 +14,7 @@ from ab_sdk import points
 from ab_sdk.downloader import DownloaderConnection
 
 from .registry import ExtensionPoint, ExtensionRegistry, ProviderEntry
+from .runner import HookRunner
 
 CORE = "core"
 
@@ -25,9 +26,21 @@ POINTS = (
     ExtensionPoint(points.LLM_PROVIDER, "provider", "LLM 解析提供商（llm.provider）"),
     ExtensionPoint(points.SEARCH_SITE, "provider", "搜索站点"),
     ExtensionPoint(points.SCHEDULED_TASK, "provider", "定时任务"),
+    # --- P3 ingest ---
+    ExtensionPoint(
+        points.METADATA_PROVIDER, "provider", "元数据源（RSS 订阅的 parser）"
+    ),
+    ExtensionPoint(
+        points.TORRENT_FILTER, "filter", "已匹配规则的种子是否下载", fail_open=True
+    ),
+    ExtensionPoint(points.TITLE_PARSED, "transform", "修正标题解析结果"),
+    ExtensionPoint(points.TORRENT_ADDING, "transform", "修改发给下载器的添加请求"),
+    ExtensionPoint(points.HTTP_REQUEST, "transform", "修改宿主 GET 请求的请求头"),
 )
 
 _registry: ExtensionRegistry | None = None
+# 由 AppContext 在构建时设置；未设置时（测试、CLI）钩子一律跳过，只执行宿主逻辑
+_runner: HookRunner | None = None
 
 
 def get_registry() -> ExtensionRegistry:
@@ -45,6 +58,25 @@ def provider(point: str, provider_id: str) -> Any | None:
     """调用 Provider 工厂取得实现；未登记时返回 None。"""
     entry = get_registry().providers(point).get(provider_id)
     return entry.factory() if entry is not None else None
+
+
+def set_runner(runner: HookRunner | None) -> None:
+    global _runner
+    _runner = runner
+
+
+def get_runner() -> HookRunner | None:
+    return _runner
+
+
+def hook_runner(point: str) -> HookRunner | None:
+    """返回可执行 ``point`` 钩子的 runner；未设置 runner 或该扩展点没有钩子
+    时返回 None，调用方据此走与无插件时完全相同的路径（逐条种子的热路径
+    不付出构造快照、调度协程的开销）。"""
+    runner = _runner
+    if runner is None or not runner.has_hooks(point):
+        return None
+    return runner
 
 
 def plugin_provider_ids(point: str) -> list[str]:
@@ -88,3 +120,18 @@ def _register_core(registry: ExtensionRegistry) -> None:
 
     for provider_id, provider_cls in PROVIDER_REGISTRY.items():
         _core(registry, points.NOTIFIER, provider_id, provider_cls)
+
+    # 元数据源：沿用 RSSItem.parser 的取值（mikan / tmdb），实现延迟 import
+    def metadata(name: str):
+        def factory():
+            from module.rss import metadata as core_metadata
+
+            return core_metadata.CORE_PROVIDERS[name]
+
+        return factory
+
+    for provider_id in ("mikan", "tmdb"):
+        registry.add_provider(
+            points.METADATA_PROVIDER,
+            ProviderEntry(CORE, provider_id, metadata(provider_id)),
+        )

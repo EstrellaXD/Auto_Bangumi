@@ -91,13 +91,48 @@ class HookRunner:
                 return verdict
         return Verdict.ok()
 
-    async def transform(self, point: str, value: Any, *args: Any, **kwargs: Any) -> Any:
-        """把 ``value`` 依次交给 transform 钩子；钩子失败或返回 None 时沿用原值。"""
+    def has_hooks(self, point: str) -> bool:
+        return self._registry.has_hooks(point)
+
+    async def transform(
+        self,
+        point: str,
+        value: Any,
+        *args: Any,
+        expect: type | tuple[type, ...] | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        """把 ``value`` 依次交给 transform 钩子；钩子失败或返回 None 时沿用原值。
+
+        ``expect`` 给出时，返回值不是该类型的结果按钩子失败处理（计入熔断），
+        避免一个插件的错误返回值传给后续钩子和宿主。
+        """
         for entry in self._registry.hooks(point, self._order(point)):
             ok, result = await self._call(entry, point, (value, *args), kwargs)
-            if ok and result is not None:
-                value = result
+            if not ok or result is None:
+                continue
+            if expect is not None and not isinstance(result, expect):
+                reason = f"{point} 返回了 {type(result).__name__}，已忽略"
+                logger.warning("[Plugin:%s] 钩子失败：%s", entry.plugin_id, reason)
+                self._breaker.record_failure(entry.plugin_id, reason)
+                continue
+            value = result
         return value
+
+    async def call_provider(
+        self,
+        plugin_id: str,
+        point: str,
+        func: Callable[..., Any],
+        *args: Any,
+        timeout: float | None = None,
+    ) -> tuple[bool, Any]:
+        """以钩子同样的超时与熔断规则调用插件 Provider 的方法。
+
+        返回 ``(是否成功, 结果)``；失败已记录日志并计入熔断。
+        """
+        entry = HookEntry(plugin_id, func, 0, timeout)
+        return await self._call(entry, point, args, {})
 
     async def _call(
         self,

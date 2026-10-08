@@ -403,7 +403,12 @@ class TestPluginsApi:
     def test_providers(self, authed_client, plugin_ctx, registry):
         add_plugin_provider(registry, points.DOWNLOADER, "fake", FakeDownloader)
         data = authed_client.get("/api/v1/plugins/providers").json()
-        assert data == {"downloader": ["fake"], "notifier": [], "search_site": []}
+        assert data == {
+            "downloader": ["fake"],
+            "notifier": [],
+            "search_site": [],
+            "metadata_provider": [],
+        }
 
     def test_config_get_masks_plugin_secrets(self, authed_client, plugin_ctx):
         settings.plugins.options["demo"] = {"site": "a", "cookie": "c=1"}
