@@ -59,7 +59,7 @@
 - **模板失效的后果**：已保存的模板若不再通过校验（手工改配置、Jinja2 升级），整个 `rename` 插件加载失败，`pn` / `advance` 随之消失，所有种子按 `none` 处理。插件因连续 5 次异常或非法返回值被熔断时同样如此。
 - **`media_files` 与 `conflict_policy`** 只解析固定的 core id `default`（`ab_sdk.rename.CORE_ID`）。插件可以登记实现，但选择要等 P2.5 的 `slots`。`conflict_policy` 的接口改为 `decide(ConflictRequest) -> ConflictDecision`：`ConflictRequest` 带上宿主读取的设置值 `configured`（`bangumi_manage.revision_conflict_policy`，测试 patch 的是 `module.manager.renamer.settings`，所以设置仍在 `renamer.py` 中读取）和宿主计算的 `strict_upgrade`。宿主仍只在「唯一占用者、双方都是单文件种子、双方身份完整」时执行替换。
 - **事件字段**：`FileRenamed` 的类别字段叫 `file_kind`，因为 `kind` 是 `Event` 的类变量；`OrganizedFile` 保留 `kind`。路径为下载器视角、以 `/` 拼接的绝对路径；`downloader_id` 在 P2.5 之前固定为 `"default"`。
-- **`TorrentOrganized` 的投递是至少一次**：进程内按 hash 记忆已发布的最终文件集合，重启后、或文件集合变化时会再次发布。重命名方式为 `none` 的种子同样发布。订阅者必须幂等。
+- **`TorrentOrganized` 的投递是至少一次**：进程内按 hash 记忆已发布的最终文件集合，重启后、或文件集合变化时会再次发布。重命名方式为 `none` 的种子同样发布；选中的策略未登记而按 `none` 处理时不发布，因为原名不是最终文件名，策略恢复后改名再发布会让硬链接在媒体库留下两份。订阅者必须幂等。
 - **WebUI**：重命名方式下拉框经 `usePluginProviders` 合并插件提供的 id（如 `template`），`rename_method` 类型放宽为字符串。`template` 在 设置 → 番剧管理设置 → 重命名方式 中选择，模板在 设置 → 插件 → 重命名 中填写。
 - `ab_sdk` 新增 `ab_sdk.rename`（契约与冻结快照 `RenameInput`、`Revision`、`RevisionTask`、`ConflictRequest`，以及 `pad()`），`SDK_VERSION` 升到 `0.4.0`。
 

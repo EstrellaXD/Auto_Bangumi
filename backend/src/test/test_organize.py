@@ -119,7 +119,8 @@ async def test_rename_unregistered_method_keeps_names_without_tag(plugins, renam
 
     renamer.client.client.torrents_rename_file.assert_not_called()
     renamer.client.client.add_tag.assert_not_called()
-    assert published(plugins.bus, TorrentOrganized)
+    # 原名不是最终文件名：策略恢复后会改名，此时发布会让硬链接留下两份
+    assert published(plugins.bus, TorrentOrganized) == []
 
 
 async def test_rename_plugin_strategy_renames_and_publishes_events(plugins, renamer):

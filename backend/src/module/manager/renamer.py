@@ -753,7 +753,12 @@ class Renamer(RevisionSaga):
 
     async def rename(self) -> list[Notification]:
         logger.debug("Start rename process.")
-        strategy = _rename_strategy(settings.plugins.slots.rename_strategy)
+        configured = settings.plugins.slots.rename_strategy
+        strategy = _rename_strategy(configured)
+        # 选中的策略未登记（重载窗口、熔断、模板失效）时文件保留原名，但原名不是
+        # 最终文件名：策略恢复后还会改名，这时发布 torrent.organized 会让订阅者
+        # （如硬链接）按两个文件名各处理一次
+        final_names = strategy.id == configured
         pending_infos = await self.client.get_torrent_info()
         # Owner counting and Saga recovery must see tasks outside the normal
         # Bangumi/completed filter (collections, paused tasks, changed category).
@@ -860,7 +865,7 @@ class Renamer(RevisionSaga):
                     media_list,
                     subtitle_list,
                     strategy.id,
-                    report.result.succeeded,
+                    report.result.succeeded and final_names,
                 )
             elif len(media_list) > 1:
                 logger.info("Start rename collection")
@@ -879,7 +884,11 @@ class Renamer(RevisionSaga):
                         await self._mark_renamed(torrent_hash, info.get("tags"))
                     await self.client.set_category(torrent_hash, "BangumiCollection")
                 self._finish_torrent(
-                    info, media_list, subtitle_list, strategy.id, collection_complete
+                    info,
+                    media_list,
+                    subtitle_list,
+                    strategy.id,
+                    collection_complete and final_names,
                 )
             else:
                 logger.warning(f"{torrent_name} has no media file")
