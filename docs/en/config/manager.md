@@ -65,6 +65,7 @@ The built-in `hardlink` plugin is **disabled by default**. Enable it under **Set
 - If the library already has a file with that name that the plugin did not create, the plugin skips it, **never overwrites it**, and sends a notification.
 - After a revision upgrade (a new release replaces the old torrent under the same file name), the link the plugin made earlier is atomically replaced with a link to the new file.
 - Deleting a torrent does not delete its links in the library.
+- If you delete a file that the plugin placed in the library, the plugin does not link it again. A backfill links it again.
 - Files downloaded before you enabled the plugin are not linked automatically. To link them, call `POST /api/v1/plugins/hardlink/backfill` (a settings button follows in a later release).
 - The settings form cannot edit `path_map` yet. Set it in `config/config.json` under `plugins.options.hardlink.path_map`, for example `[{"from": "/downloads", "to": "/media/downloads"}]`.
 

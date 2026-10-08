@@ -292,3 +292,29 @@ async def test_link_concurrent_copies_of_same_target_all_succeed(roots, monkeypa
     dst = library / SEASON / src.name
     assert dst.read_text() == "v1"
     assert [p.name for p in dst.parent.iterdir()] == [src.name]
+
+
+@pytest.mark.parametrize("via_backfill", [False, True])
+async def test_link_target_deleted_by_user_restored_only_by_backfill(
+    roots, via_backfill
+):
+    downloads, library = roots
+    plugin, ctx = make_plugin(roots)
+    src = write(downloads / SEASON / "Anime S01E01.mkv", "v1")
+    await plugin.on_organized(organized(src.name))
+    # 用户看完后从媒体库删掉；torrent.organized 重启后会再次投递
+    dst = library / SEASON / src.name
+    dst.unlink()
+
+    if via_backfill:
+        assert await plugin.backfill() == {
+            "linked": 1,
+            "exists": 0,
+            "conflict": 0,
+            "failed": 0,
+        }
+    else:
+        await plugin.on_organized(organized(src.name))
+
+    assert dst.exists() is via_backfill
+    assert ctx.bus.published == []
