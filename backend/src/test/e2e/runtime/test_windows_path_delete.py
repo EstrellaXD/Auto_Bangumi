@@ -103,7 +103,9 @@ def test_qb_delete_failure_is_reported_without_removing_neighbouring_torrents(
 
     response = backend.client.delete("/api/v1/bangumi/delete/2?file=true")
     assert response.status_code == 500
-    assert "deleting its torrents failed" in response.json()["msg_en"]
+    # 下载器删除失败时保留规则，再次删除可以重试
+    assert "the rule was kept" in response.json()["msg_en"]
+    assert backend.client.get("/api/v1/bangumi/get/2").status_code == 200
 
     state = fake_qb.client.get("/__admin/state").json()
     remaining_hashes = {torrent["hash"] for torrent in state["torrents"]}
