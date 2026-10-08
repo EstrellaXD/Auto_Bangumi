@@ -189,6 +189,24 @@ class TestMessageTemplate:
         assert await render_event(self.EVENT, "bark") == self.EVENT.describe()
         assert breaker._failures["ext"] == 1
 
+    async def test_render_event_bad_return_counts_against_its_own_plugin(
+        self, runner, registry, breaker
+    ):
+        def rewrite(message, event, channel):
+            return RenderedMessage(message.title, "rewritten")
+
+        registry.add_hook(
+            points.MESSAGE_TEMPLATE,
+            HookEntry("bad", lambda m, e, c: "not a message", 10, None),
+        )
+        registry.add_hook(
+            points.MESSAGE_TEMPLATE, HookEntry("good", rewrite, 100, None)
+        )
+        title, body = await render_event(self.EVENT, "bark")
+        assert (title, body) == (self.EVENT.describe()[0], "rewritten")
+        assert breaker._failures.get("bad") == 1
+        assert not breaker._failures.get("good")
+
     async def test_runtime_error_never_blocks_delivery(self, monkeypatch):
         bad = MagicMock()
         bad.transform = AsyncMock(side_effect=RuntimeError("undeclared point"))
@@ -437,6 +455,80 @@ class TestMcp:
         assert json.loads(missing) == {
             "error": "Unknown resource: autobangumi://plugins/demo/none"
         }
+
+    @pytest.mark.parametrize("resource_id", ["stats", "Weekly Stats", "统计"])
+    async def test_read_resource_via_protocol_returns_plugin_content(
+        self, registry, resource_id
+    ):
+        from mcp import types
+
+        from module.mcp import server
+
+        async def stats():
+            return {"count": 3}
+
+        add(
+            registry,
+            points.MCP_RESOURCE,
+            resource_id,
+            McpResource("Stats", stats),
+            "demo",
+        )
+        [listed] = [
+            r
+            for r in await server.list_resources()
+            if str(r.uri).startswith("autobangumi://plugins/")
+        ]
+        handler = server.server.request_handlers[types.ReadResourceRequest]
+        result = await handler(
+            types.ReadResourceRequest(
+                method="resources/read",
+                params=types.ReadResourceRequestParams(uri=listed.uri),
+            )
+        )
+        assert isinstance(result.root, types.ReadResourceResult)
+        [content] = result.root.contents
+        assert isinstance(content, types.TextResourceContents)
+        assert json.loads(content.text) == {"count": 3}
+
+    @pytest.mark.parametrize(
+        "point, impl",
+        [
+            (points.MCP_TOOL, McpTool("bad", _search, None)),  # type: ignore[arg-type]
+            (points.MCP_RESOURCE, McpResource(None, _search)),  # type: ignore[arg-type]
+        ],
+    )
+    def test_list_malformed_plugin_spec_skipped_and_counted(
+        self, registry, breaker, point, impl
+    ):
+        from module.mcp.resources import RESOURCES, all_resources
+        from module.mcp.tools import TOOLS, all_tools
+
+        add(registry, point, "bad", impl, "demo")
+        ctx = SimpleNamespace(plugins=SimpleNamespace(breaker=breaker))
+        with patch("module.mcp.plugins.get_context", return_value=ctx):
+            assert len(all_tools()) == len(TOOLS)
+            assert len(all_resources()) == len(RESOURCES)
+        assert breaker._failures["demo"] == 1
+
+    async def test_read_plugin_resource_hung_handler_times_out_and_counts(
+        self, registry, breaker, monkeypatch
+    ):
+        import asyncio
+
+        from module.mcp import plugins
+        from module.mcp.resources import handle_resource
+
+        async def hang():
+            await asyncio.Event().wait()
+
+        monkeypatch.setattr(plugins, "DEFAULT_TOOL_TIMEOUT", 0.01)
+        add(registry, points.MCP_RESOURCE, "hang", McpResource("H", hang), "demo")
+        ctx = SimpleNamespace(plugins=SimpleNamespace(breaker=breaker))
+        with patch("module.mcp.plugins.get_context", return_value=ctx):
+            raw = await handle_resource("autobangumi://plugins/demo/hang")
+        assert "error" in json.loads(raw)
+        assert breaker._failures["demo"] == 1
 
     async def test_mcp_server_handlers_include_plugins(self, registry):
         from module.mcp import server

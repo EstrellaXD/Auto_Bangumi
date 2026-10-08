@@ -14,8 +14,8 @@ async def render_event(event: SystemEvent, channel: str) -> tuple[str, str]:
     """返回推送到 ``channel`` 渠道的 (标题, 正文)。
 
     没有插件挂 ``message_template`` 钩子时与 ``event.describe()`` 完全一致；
-    钩子失败或超时沿用上一步的结果（并计入插件熔断），返回值类型不对时整体
-    回退到默认文案。
+    钩子失败、超时或返回值不是 ``RenderedMessage`` 时沿用上一步的结果（并计入
+    该插件的熔断）。
     """
     title, body = event.describe()
     runner = get_runner()
@@ -23,18 +23,15 @@ async def render_event(event: SystemEvent, channel: str) -> tuple[str, str]:
         return title, body
     try:
         message = await runner.transform(
-            points.MESSAGE_TEMPLATE, RenderedMessage(title, body), event, channel
+            points.MESSAGE_TEMPLATE,
+            RenderedMessage(title, body),
+            event,
+            channel,
+            expect=RenderedMessage,
         )
     except Exception:
         # 单个钩子的失败已在 runner 内隔离；这里兜底的是运行时本身的异常
         # （如扩展点未声明），任何情况下都不能让通知因模板而发不出去
         logger.warning("[Notification] 渲染通知模板失败，使用默认文案", exc_info=True)
-        return title, body
-    if not isinstance(message, RenderedMessage):
-        logger.warning(
-            "[Notification] message_template 钩子返回了 %s 而非 RenderedMessage，"
-            "使用默认文案",
-            type(message).__name__,
-        )
         return title, body
     return message.title, message.body

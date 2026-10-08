@@ -13,6 +13,7 @@ import logging
 from mcp import types
 from mcp.server import Server
 from mcp.server.sse import SseServerTransport
+from pydantic import AnyUrl
 from starlette.applications import Starlette
 from starlette.routing import Mount, Route
 from starlette.types import Receive, Scope, Send
@@ -50,9 +51,10 @@ async def list_resource_templates() -> list[types.ResourceTemplate]:
 
 
 @server.read_resource()
-async def read_resource(uri: str) -> str:
+async def read_resource(uri: AnyUrl) -> str:
     logger.debug("Resource read: %s", uri)
-    return await handle_resource(uri)
+    # 底层 read_resource 传入的是 pydantic AnyUrl，handle_resource 按字符串匹配
+    return await handle_resource(str(uri))
 
 
 class _SseEndpoint:
