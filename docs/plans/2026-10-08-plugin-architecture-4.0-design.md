@@ -45,6 +45,46 @@
 - **i18n（第 11 节风险 3）先给出 key**：`SystemEvent.i18n()` 返回 `notifications.kind.<kind>` 与 `payload()`，与前端现有文案键一致；外部推送与通知中心的中文兜底文案不变。插件事件的前端翻译依赖 P6 的 `host.i18n`。
 - 进程级访问器 `module.plugin.host.get_bus/set_bus`、`get_runner/set_runner`、`publish()`，由 `AppContext` 构造时设置，未设置时为空操作。MCP 的 `tools/list_changed` 通知未实现（客户端重新 list 即可看到插件工具变化）。
 
+### 实施中的调整（P4）
+
+拆分与扩展点：
+
+- **`renamer.py` 拆分**：revision 替换事务（普通改名日志、V1→V2 替换、恢复、操作状态、版本占用者）搬到 `manager/revision_saga.py` 的 `RevisionSaga`，`Renamer` 以 mixin 方式继承它（`class Renamer(RevisionSaga)`），而不是构造函数注入。这样第一个提交是纯搬移，测试仍能访问 `renamer._run_ordinary_rename`、`renamer.events`、`renamer._downloader_type`。`renamer.py` 从 1805 行降到 1061 行（含 P4 新增的扩展点接入）。
+- **重命名方式**：宿主只以 `core` 登记 `none`（`manager/rename_strategies.py` 的 `NoRename`）。`pn`、`advance`、`template` 由内置插件 `rename`（`module/plugins/builtin/rename/`，默认启用）提供。设置值 `bangumi_manage.rename_method` 直接作为 Provider id，`slots` 与迁移器留到 P2.5。id 未登记（插件停用或被熔断）时记录一次日志并按 `none` 处理。
+- **纯搬移的一处例外**：3.3 中未知重命名方式遇到电影文件时会改名为 `{title}{suffix}`；现在未知 id 一律按 `none` 处理，保留原名。
+- **`normal`**：`gen_path` 中已没有 `normal` 分支。`conf/config.py` 中 `normal → none` 的转换属于 3.x 兼容层（第 8.3 节），保留不动。
+- **字幕**：删除 `subtitle_pn` / `subtitle_advance`，类别由 `RenameInput.kind` 给出。因此 `test_renamer.py` 有 5 处调用参数从 `subtitle_*` 改为 `pn` / `advance`（断言未改），`test_plugin_extensions.py::test_providers` 的期望值增加 `rename_strategy: []`。既有测试依赖进程注册表中的 `pn` / `advance`，由 `conftest.py` 的 autouse fixture 登记内置插件 `rename`，与生产默认一致。除此之外，pn / advance / none 的输出与 3.3 逐字节一致。
+- **策略调用是同步的**：`HookRunner.call_provider_sync` 在熔断器内调用策略并校验返回值（非空字符串），没有超时；Jinja2 渲染也没有超时，只受沙箱 `MAX_RANGE` 限制。`RenameSkipped` 不计入熔断；其它异常与非法返回值计入熔断，并同样按跳过处理。
+- **跳过通知**：新增系统事件 `rename_skipped`（`RenameSkippedEvent`，WebUI 的 `KNOWN_KINDS`、i18n 与跳转路由同步增加），不复用 `rename_conflict`。同一 (种子 hash, 原因) 每个进程只通知一次。字幕被跳过同样会阻止打 `ab:renamed` 标签，用户修正后种子会被重试。
+- **模板失效的后果**：已保存的模板若不再通过校验（手工改配置、Jinja2 升级），整个 `rename` 插件加载失败，`pn` / `advance` 随之消失，所有种子按 `none` 处理。插件因连续 5 次异常或非法返回值被熔断时同样如此。
+- **`media_files` 与 `conflict_policy`** 只解析固定的 core id `default`（`ab_sdk.rename.CORE_ID`）。插件可以登记实现，但选择要等 P2.5 的 `slots`。`conflict_policy` 的接口改为 `decide(ConflictRequest) -> ConflictDecision`：`ConflictRequest` 带上宿主读取的设置值 `configured`（`bangumi_manage.revision_conflict_policy`，测试 patch 的是 `module.manager.renamer.settings`，所以设置仍在 `renamer.py` 中读取）和宿主计算的 `strict_upgrade`。宿主仍只在「唯一占用者、双方都是单文件种子、双方身份完整」时执行替换。
+- **事件字段**：`FileRenamed` 的类别字段叫 `file_kind`，因为 `kind` 是 `Event` 的类变量；`OrganizedFile` 保留 `kind`。路径为下载器视角、以 `/` 拼接的绝对路径；`downloader_id` 在 P2.5 之前固定为 `"default"`。
+- **`TorrentOrganized` 的投递是至少一次**：进程内按 hash 记忆已发布的最终文件集合，重启后、或文件集合变化时会再次发布。重命名方式为 `none` 的种子同样发布。订阅者必须幂等。
+- **WebUI**：重命名方式下拉框经 `usePluginProviders` 合并插件提供的 id（如 `template`），`rename_method` 类型放宽为字符串。`template` 在 设置 → 番剧管理设置 → 重命名方式 中选择，模板在 设置 → 插件 → 重命名 中填写。
+- `ab_sdk` 新增 `ab_sdk.rename`（契约与冻结快照 `RenameInput`、`Revision`、`RevisionTask`、`ConflictRequest`，以及 `pad()`），`SDK_VERSION` 升到 `0.4.0`。
+
+插件运行时（为内置插件 `hardlink` 补齐）：
+
+- **清单字段 `default_enabled`**（默认 `true`，只对内置插件生效）。`hardlink` 设为 `false`，内置但默认停用。
+- **`@subscribe(kind, timeout=...)`**：覆盖总线默认 30 秒的单个事件处理超时。跨盘复制一集常超过 30 秒，超时会计入熔断，5 个种子后插件就会被停用。`hardlink` 用 3600 秒，文件操作放在 `asyncio.to_thread` 中执行，不阻塞事件循环。
+- **插件的可通知事件进入通知中心**：P5 中插件发布的 `SystemEvent` 只进事件总线。现在 `PluginBus.publish` 把它交给 `NotificationManager.send_event`，与宿主事件一样写入通知中心、发布到总线、推送外部渠道。前端没有对应翻译的 kind 显示 `describe()` 的中文标题与正文。
+
+内置插件 `hardlink`（`module/plugins/builtin/hardlink/`）：
+
+- 插件 id 为 `hardlink`，不是第 4.4 / 7 节示例中的 `hardlink-organizer`。它订阅 `torrent.organized` 而不是第 2.3 节草图中的 `file.renamed`：前者给出种子的完整最终文件集合，重命名方式为 `none` 时也会发布。
+- `source_root`、`library_root` 为必填的绝对路径，`library_root` 不能位于 `source_root` 内；未填写时启用会加载失败，并在插件列表中显示原因。
+- 「由插件创建」记录在插件 KV 中：键 `link:<目标路径>`，值为源文件身份 `[st_dev, st_ino, st_size, st_mtime_ns]`。加入大小与修改时间，是因为复制模式下旧文件删除后 inode 可能被复用。目标存在且与源是同一文件，或记录的身份与当前源一致时，视为已完成。
+- 目标被占用、跨文件系统按 `skip` 跳过、源不在 `source_root` 下等问题，每个种子合并成一条 `hardlink.failed` 通知，`dedup_key` 为种子 hash。由于至少一次投递，长期存在的冲突在每次重启后会更新同一条通知。
+- 补链 `backfill()` 以插件路由 `POST /api/v1/plugins/hardlink/backfill` 提供，只在用户调用时运行，返回 `linked` / `exists` / `conflict` / `failed` 计数，不发通知。它遍历本地 `source_root`，不经过 `path_map`。插件不能 import `module.*`，所以按固定扩展名（`.mp4` / `.mkv` / `.ass` / `.srt`，与 `media_files` 的 core 实现相同）挑选文件。
+- **补链按钮推迟到 P6**：设置页的按钮依赖 P6 的 `settings.section` 挂载点，P4 只提供 REST 路由。
+- 删除种子不会删除媒体库中的链接。
+
+未实施（推迟）：
+
+- 第 10 节 P4 行中的 `file_parser` 扩展点。
+- 第 7 节的 `ab_sdk.testing.RenameStrategyContract` 契约测试套件。
+- 第 3.6 节的 `media-server-refresh` 示例插件。
+
 ## 1. 背景与目标
 
 AB 目前只有 **LLM 提供商** 是真正的运行时插件系统：签名下载、目录加载、懒导入、热重载。
@@ -591,7 +631,7 @@ organize: downloader.completed → media_files.classify → file_parser
 | **P2 迁移已有注册表** | 下载器、通知、LLM、搜索站点、定时任务改为扩展点，内置实现以 `core` 登记；`/api/v1/plugins`（列表、启停、配置、Provider 列表）与 WebUI 插件卡片（JSON Schema 表单）；`secret_field` 掩码；插件开发文档 | 已完成；内置行为不变（全量测试）。调整见第 0 节 |
 | **P2.5 多下载器** | 下载器多实例；`downloader_id` 列与迁移；按实例路由 add / rename / delete；organize 逐实例扫描 | qb + aria2 并存的 e2e 用例；单实例行为不变 |
 | **P3 流水线插件化：ingest** | `torrent.filter`、`title.parsed`、`torrent.adding`、`http.request` 钩子；`metadata_provider`（mikan / tmdb 以 `core` 登记）；内置插件 `ingest-filters`（包含过滤） | 已完成；无插件时行为不变（全量测试）。`feed_source`、`title_parser` 链、`admission_policy`、`matcher`、`ranker`、`save_path`、size 过滤、按订阅覆盖推迟，见第 0 节 |
-| **P4 流水线插件化：organize** | `media_files`、`file_parser`、`rename_strategy`（含 `template`）、`conflict_policy`、`file.renamed` 等事件 | 模板重命名；硬链接示例插件 |
+| **P4 流水线插件化：organize** | `media_files`、`file_parser`、`rename_strategy`（含 `template`）、`conflict_policy`、`file.renamed` 等事件 | 已完成：`renamer.py` 拆出 `revision_saga.py`；`rename_strategy` / `media_files` / `conflict_policy` 扩展点与 `file.renamed` / `torrent.organized` 事件；内置插件 `rename`（pn / advance / template，pn / advance / none 输出与 3.3 一致）与 `hardlink`（默认停用）。`file_parser`、`RenameStrategyContract`、补链设置按钮（P6）推迟，调整见第 0 节 |
 | **P5 事件与外部接口** | SSE 改订阅 bus；`api_router`、`mcp_tool` 扩展点；`message_template` | 已完成：系统事件上总线、通知中心 SSE 改为事件推送、插件路由 / MCP 工具与资源 / 通知模板；status 等快照类 SSE 仍按节拍采样。调整见第 0 节 |
 | **P6 前端插件** | Web Component 挂载点、`AbHost` 桥接、错误边界、`/plugins/<id>/web` 静态资源、`@autobangumi/plugin-ui` 包 | 示例插件「手动选种」以详情页标签形式可用 |
 | **P7 生态** | 插件管理页（安装、启停、日志、错误）、签名目录发布流程、模板仓库（含前端模板）、`ab-plugin` CLI、文档（中 / 英 / 日） | 6 个以上示例插件上架 |

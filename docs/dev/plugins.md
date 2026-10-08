@@ -17,6 +17,9 @@
 | REST 路由 | `points.API_ROUTER` | `fastapi.APIRouter` | 插件启用即生效 |
 | MCP 工具 | `points.MCP_TOOL` | `McpTool` | 插件启用即生效 |
 | MCP 资源 | `points.MCP_RESOURCE` | `McpResource` | 插件启用即生效 |
+| 重命名方式 | `points.RENAME_STRATEGY` | `RenameStrategy` | 设置 → 番剧管理设置 → 重命名方式 |
+| 文件分类 | `points.MEDIA_FILES` | `MediaFiles` | 暂只使用宿主实现（见下文） |
+| 版本冲突策略 | `points.CONFLICT_POLICY` | `ConflictPolicy` | 暂只使用宿主实现（见下文） |
 
 以及以下钩子（`@hook`，插件启用即生效）：
 
@@ -28,7 +31,7 @@
 | `http.request` | `points.HTTP_REQUEST` | transform | 修改 AB 发出的 GET 请求头（私有站 Cookie 等） |
 | `message_template` | `points.MESSAGE_TEMPLATE` | transform | 改写系统事件推送到外部渠道的文案 |
 
-此外，插件可以订阅系统事件（`@subscribe`），并使用私有的键值存储和数据目录。重命名等整理流水线的扩展点会在后续版本开放。
+此外，插件可以订阅系统事件与整理事件（`@subscribe`，如 `torrent.organized`），并使用私有的键值存储和数据目录。
 
 ## 目录结构
 
@@ -45,7 +48,7 @@ config/plugins/local/my-plugin/     # 目录名必须与清单中的 id 相同
 id = "my-plugin"              # 小写字母、数字、连字符
 name = "我的插件"
 version = "0.1.0"
-sdk = ">=0.3,<1"              # 依赖的 ab_sdk 版本范围
+sdk = ">=0.4,<1"              # 依赖的 ab_sdk 版本范围
 entry = "my_plugin:MyPlugin"  # 模块:Plugin 子类，相对插件目录
 description = "一句话说明"
 permissions = ["network"]     # 仅用于向用户展示，不做强制
@@ -118,7 +121,7 @@ class MyPlugin(Plugin[Options]):
 | --- | --- |
 | `@provider(point, id=...)` | 工厂方法，返回该扩展点约定的实现 |
 | `@hook(point, priority=...)` | 挂到宿主声明的 filter / transform 扩展点 |
-| `@subscribe(kind)` | 订阅事件，`"*"` 表示全部事件 |
+| `@subscribe(kind, timeout=...)` | 订阅事件，`"*"` 表示全部事件；`timeout` 覆盖默认 30 秒的单个事件处理超时 |
 
 扩展点名写错时，插件会加载失败并在插件列表里显示原因，不会被悄悄忽略。
 
@@ -302,6 +305,91 @@ class MyPlugin(Plugin):
 
 `request.kind` 区分番剧与电影，`request.torrent.homepage` 是种子的详情页。返回值是完整的新元数据，通常基于 `request.current` 修改。失败或超时时保留原值，并计入熔断。添加订阅时，「解析器」下拉框会列出插件提供的元数据源。
 
+### 重命名方式（rename_strategy）
+
+下载完成后，AB 为种子里的每个正片与字幕调用设置项「重命名方式」（`bangumi_manage.rename_method`）对应的 Provider。宿主只自带 `none`（保留原名）；`pn`、`advance` 与 `template` 由内置插件「重命名」（`rename`，默认启用）提供。插件登记的 id 会出现在 设置 → 番剧管理设置 → 重命名方式 的下拉框里。
+
+```python
+from ab_sdk import Plugin, points, provider
+from ab_sdk.rename import RenameInput, RenameSkipped, pad
+
+
+class JellyfinStyle:
+    def target_name(self, f: RenameInput) -> str:
+        language = f".{f.language}" if f.kind == "subtitle" else ""
+        if f.episode_type == "movie":
+            return f"{f.bangumi_name}{language}{f.suffix}"
+        if not f.bangumi_name:
+            raise RenameSkipped("缺少番剧文件夹名")
+        return f"{f.bangumi_name} - S{pad(f.season)}E{pad(f.episode)}{language}{f.suffix}"
+
+
+class MyRename(Plugin):
+    @provider(points.RENAME_STRATEGY, id="jellyfin-style")
+    def jellyfin(self):
+        return JellyfinStyle()
+```
+
+- `RenameInput` 是冻结快照：`kind`（`media` / `subtitle`）、`media_path`（种子内原相对路径）、`title`（解析自文件名）、`bangumi_name`（保存目录的番剧文件夹名）、`season`、`episode`（已应用集数偏移）、`suffix`（含点）、`episode_type`（`episode` / `movie` / `special`）、`language`（字幕语言）、`group`。字幕不再有单独的 `subtitle_*` 方式，按 `kind` 区分。
+- 返回种子内的新相对路径，通常只是文件名（扩展名与字幕语言由策略自己拼上）；返回 `f.media_path` 表示不改名。`pad(n, width=2)` 补零且保留半集的小数（`pad(9.5) == "09.5"`）。
+- 抛出 `RenameSkipped(原因)`：该文件保留原名，种子不打「已重命名」标签，每个种子按原因发一条 `rename_skipped` 通知；修正后下一轮自动重试。它表示输入或配置有问题，不计入熔断。
+- 抛出其它异常、返回空串或非字符串：同样保留原名并通知，同时计入熔断。
+- `target_name` 是同步调用，没有超时，请不要在里面做网络或磁盘 IO。
+- 设置里选择的 id 没有登记（如插件被停用或熔断）时，AB 记录一次日志并按 `none` 处理。
+
+内置的 `template` 使用 Jinja2 沙箱模板渲染文件名主体，在 设置 → 插件 → 重命名 中填写，例如 `{{ title }} - S{{ season|pad(2) }}E{{ episode|pad(2) }}`。可用变量为 `title`、`bangumi_name`、`season`、`episode`、`episode_type`、`group`、`kind`、`language`。保存时会编译并试渲染一次，不合法的模板直接被拒绝（HTTP 422）。运行时渲染失败或结果为空、含路径分隔符时，该文件保留原名并通知，不会退回 `pn`。
+
+### 文件分类与版本冲突（media_files / conflict_policy）
+
+- `media_files`：`classify(path) -> "media" | "subtitle" | "ignore"`，决定种子内哪些文件按正片、字幕重命名。宿主实现按扩展名判断（`.mp4` / `.mkv` 为正片，`.ass` / `.srt` 为字幕）。
+- `conflict_policy`：`decide(ConflictRequest) -> ConflictDecision("hold" | "replace")`，新种子的规范文件名已被另一个种子占用时决定保留旧的还是替换。宿主实现沿用设置项「版本冲突策略」。宿主只在「唯一占用者、双方都是单文件种子、双方解析身份完整」时执行替换，其它情况一律按 `hold` 处理。
+
+这两个扩展点目前只使用宿主实现（id 为 `default`）。插件可以登记自己的实现，但要等多下载器版本的 `plugins.slots` 提供后才能被选用。
+
+### 整理事件（file.renamed / torrent.organized）
+
+| kind | 事件类 | 字段 | 何时发布 |
+| --- | --- | --- | --- |
+| `file.renamed` | `FileRenamed` | `bangumi_id`、`old_path`、`new_path`、`file_kind`、`downloader_id` | 一个文件被实际重命名（含版本替换后的改名） |
+| `torrent.organized` | `TorrentOrganized` | `torrent_hash`、`bangumi_id`、`files`（`OrganizedFile(path, kind)` 元组）、`downloader_id` | 一个种子整理完成；重命名方式为 `none` 时同样发布，`files` 为原路径 |
+
+- 路径是**下载器视角**的绝对路径，保存目录与种子内路径以 `/` 拼接（Windows 下载器的 `\` 也统一为 `/`）。AB 与下载器看到的目录不同（如分别运行在不同容器）时，订阅者需要自己做路径映射。
+- `bangumi_id` 来自种子的 `ab:<id>` 标签，旧种子可能为 None。`downloader_id` 目前固定为 `"default"`，多下载器版本会给出实例 id。
+- `torrent.organized` 的投递是**至少一次**：未打「已重命名」标签的种子（如重命名方式为 `none`）在每次 AB 重启后会再发布一次，订阅者必须幂等。
+- 这两个事件只发布到事件总线，不进入通知中心。
+
+```python
+from ab_sdk import subscribe
+from ab_sdk.events import TorrentOrganized
+
+@subscribe("torrent.organized", timeout=600)
+async def on_organized(self, event: TorrentOrganized):
+    for f in event.files:
+        if f.kind == "media":
+            await self.refresh_library(f.path)
+```
+
+### 内置插件：硬链接到媒体库（hardlink）
+
+内置插件 `hardlink` 默认停用，在 设置 → 插件 中启用。它订阅 `torrent.organized`，把正片与字幕链接到媒体库目录，下载目录原样保留继续做种。
+
+| 选项 | 说明 |
+| --- | --- |
+| `source_root` | 下载根目录（AB 本地路径）。媒体库保持与它相同的目录结构：`library_root / (文件相对 source_root 的路径)` |
+| `library_root` | 媒体库目录（AB 本地路径），不能位于 `source_root` 内 |
+| `path_map` | `[{downloader, from, to}]`：把下载器路径前缀 `from` 换成 AB 本地路径 `to`。`downloader` 默认为 `default`；按最长前缀匹配，未匹配的路径原样使用 |
+| `cross_device` | 硬链接遇到跨文件系统（EXDEV）时：`copy`（默认，复制文件）、`symlink`（创建软链接）、`skip`（跳过并通知） |
+
+- 媒体库中已有同名文件、但不是本插件创建的：跳过，不覆盖，并为该种子发一条 `hardlink.failed` 通知。
+- 本插件之前为同一集创建的链接，在版本升级（新版本替换旧种子，规范文件名不变）后会被原子替换为指向新文件的链接。
+- 已链接的文件再次收到事件时不做任何事；插件在自己的键值存储里记录它创建过的目标路径。
+- **删除种子不会删除媒体库中的链接**。
+- 启用前已经下载的文件不会自动处理。调用 `POST /api/v1/plugins/hardlink/backfill` 按需补链：遍历 `source_root` 下的 `.mp4` / `.mkv` / `.ass` / `.srt`，返回 `{"linked", "exists", "conflict", "failed"}` 计数。设置页里的「补链已有文件」按钮将随前端插件挂载点一起提供。
+
+::: tip Docker
+硬链接不能跨文件系统。在 Docker 中，请把下载目录与媒体库放在同一块盘上，并以**同一个挂载点**映射进 AB 容器（例如把 `/mnt/media` 整体挂载为 `/media`，下载目录与媒体库都在其下），否则两个独立挂载的目录即使在同一块盘上，也会被视为不同文件系统，链接会退化为 `cross_device` 指定的行为。下载器运行在另一个容器里、看到的路径与 AB 不同时，用 `path_map` 做映射。
+:::
+
 ### REST 路由
 
 ```python
@@ -380,11 +468,14 @@ AB 发出的、会进入通知中心的事件都是 `ab_sdk.events.SystemEvent` 
 | `llm_auth_failure` | `LLMAuthFailureEvent` | 订阅类 LLM 提供商凭据失效 |
 | `llm_plugin_install_failed` | `LLMPluginInstallFailedEvent` | LLM 插件安装失败 |
 | `rename_conflict` | `RenameConflictEvent` | 媒体文件重命名遇到目标路径冲突 |
+| `rename_skipped` | `RenameSkippedEvent` | 重命名方式无法为种子中的文件给出名字，文件保留原名 |
 | `plugin.loaded` | `PluginLoaded` | 插件加载成功 |
 | `plugin.disabled` | `PluginDisabled` | 插件加载失败或被熔断 |
 | `inbox.changed` | — | 通知中心有新消息、已读或删除（宿主内部使用，供 SSE 推送） |
 
-系统事件的 `kind` 沿用 3.x 的取值（通知中心按它存储和翻译），因此不带 `.` 前缀；插件自己的事件仍必须以 `<插件 id>.` 开头。后续版本会陆续增加流水线事件（如 `torrent.added`、`file.renamed`）。
+系统事件的 `kind` 沿用 3.x 的取值（通知中心按它存储和翻译），因此不带 `.` 前缀；插件自己的事件仍必须以 `<插件 id>.` 开头。整理流水线事件 `file.renamed`、`torrent.organized` 见上文「整理事件」。
+
+插件也可以继承 `SystemEvent` 定义自己的可通知事件。用 `self.ctx.bus.publish(...)` 发布后，它与宿主事件走同一条路径：写入通知中心（前端没有对应翻译时显示 `describe()` 的标题与正文），发布到事件总线，再推送到外部通知渠道。`dedup_key()` 相同的事件在通知中心合并为一条。内置插件 `hardlink` 的 `hardlink.failed` 就是这样发出的。
 
 ### 通知文案模板
 
