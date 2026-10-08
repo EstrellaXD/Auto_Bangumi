@@ -131,6 +131,29 @@ async def test_on_organized_redelivery_does_not_copy_again(roots, monkeypatch):
     assert ctx.bus.published == []
 
 
+async def test_on_organized_interrupted_copy_leaves_no_target(roots, monkeypatch):
+    downloads, library = roots
+    plugin, ctx = make_plugin(roots)
+    src = write(downloads / SEASON / "Anime S01E01.mkv", "v1")
+    monkeypatch.setattr(os, "link", exdev)
+    real_copy2 = shutil.copy2
+
+    def disk_full(a, b):
+        Path(b).write_text("v")
+        raise OSError(errno.ENOSPC, "No space left on device")
+
+    monkeypatch.setattr(shutil, "copy2", disk_full)
+    await plugin.on_organized(organized(src.name))
+    monkeypatch.setattr(shutil, "copy2", real_copy2)
+    # 半个文件不能留在目标位置，否则重试时会被当成「不是本插件创建的」冲突
+    await plugin.on_organized(organized(src.name))
+
+    assert (library / SEASON / src.name).read_text() == "v1"
+    assert [p.name for p in (library / SEASON).iterdir()] == [src.name]
+    [failed] = ctx.bus.published
+    assert "No space left" in failed.files
+
+
 async def test_on_organized_revision_upgrade_replaces_own_link(roots):
     downloads, library = roots
     plugin, ctx = make_plugin(roots)

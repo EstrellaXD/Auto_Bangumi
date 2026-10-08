@@ -380,6 +380,9 @@ async def on_organized(self, event: TorrentOrganized):
 | `path_map` | `[{downloader, from, to}]`：把下载器路径前缀 `from` 换成 AB 本地路径 `to`。`downloader` 默认为 `default`；按最长前缀匹配，未匹配的路径原样使用 |
 | `cross_device` | 硬链接遇到跨文件系统（EXDEV）时：`copy`（默认，复制文件）、`symlink`（创建软链接）、`skip`（跳过并通知） |
 
+- 首次启用时 `source_root` 与 `library_root` 尚未填写，插件会显示加载失败；此时设置表单已出现，填写并保存后插件会重新加载。
+- `path_map` 是对象列表，目前的插件设置表单还不能编辑它（显示为「不支持的字段」），请在 `config/config.json` 的 `plugins.options.hardlink.path_map` 中填写，例如 `[{"from": "/downloads", "to": "/media/downloads"}]`。
+- 链接或副本先写到目标旁的临时文件，再原子地改名到目标位置，复制中断不会留下半个文件。
 - 媒体库中已有同名文件、但不是本插件创建的：跳过，不覆盖，并为该种子发一条 `hardlink.failed` 通知。
 - 本插件之前为同一集创建的链接，在版本升级（新版本替换旧种子，规范文件名不变）后会被原子替换为指向新文件的链接。
 - 已链接的文件再次收到事件时不做任何事；插件在自己的键值存储里记录它创建过的目标路径。

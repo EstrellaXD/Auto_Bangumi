@@ -72,7 +72,10 @@
 内置插件 `hardlink`（`module/plugins/builtin/hardlink/`）：
 
 - 插件 id 为 `hardlink`，不是第 4.4 / 7 节示例中的 `hardlink-organizer`。它订阅 `torrent.organized` 而不是第 2.3 节草图中的 `file.renamed`：前者给出种子的完整最终文件集合，重命名方式为 `none` 时也会发布。
-- `source_root`、`library_root` 为必填的绝对路径，`library_root` 不能位于 `source_root` 内；未填写时启用会加载失败，并在插件列表中显示原因。
+- `source_root`、`library_root` 为必填的绝对路径，`library_root` 不能位于 `source_root` 内。插件代码加载过一次后才有设置表单，所以首次启用必然加载失败（缺少必填项），用户随后在出现的表单中填写、保存，插件重新加载。
+- `path_map` 是对象列表，P2 的 JSON Schema 表单不支持对象数组（显示为「不支持的字段」），P4 期间只能在 `config.json` 中填写。表单支持对象数组留到 P6 / P7。
+- 所有放置（新建与版本升级替换）都先写到同目录的临时文件 `.<文件名>.ab-hardlink`，再 `os.replace` 到目标。复制中断不会在目标留下半个文件，否则重试时它会被当成「不是本插件创建的」冲突。
+- `hardlink.failed` 的通知正文只能显示种子 hash，因为 `TorrentOrganized` 不带种子名；补充种子名留到 P2.5 / P6。
 - 「由插件创建」记录在插件 KV 中：键 `link:<目标路径>`，值为源文件身份 `[st_dev, st_ino, st_size, st_mtime_ns]`。加入大小与修改时间，是因为复制模式下旧文件删除后 inode 可能被复用。目标存在且与源是同一文件，或记录的身份与当前源一致时，视为已完成。
 - 目标被占用、跨文件系统按 `skip` 跳过、源不在 `source_root` 下等问题，每个种子合并成一条 `hardlink.failed` 通知，`dedup_key` 为种子 hash。由于至少一次投递，长期存在的冲突在每次重启后会更新同一条通知。
 - 补链 `backfill()` 以插件路由 `POST /api/v1/plugins/hardlink/backfill` 提供，只在用户调用时运行，返回 `linked` / `exists` / `conflict` / `failed` 计数，不发通知。它遍历本地 `source_root`，不经过 `path_map`。插件不能 import `module.*`，所以按固定扩展名（`.mp4` / `.mkv` / `.ass` / `.srt`，与 `media_files` 的 core 实现相同）挑选文件。

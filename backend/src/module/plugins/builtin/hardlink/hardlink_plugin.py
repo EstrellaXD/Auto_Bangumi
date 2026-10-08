@@ -113,17 +113,23 @@ def _same(a: Path, b: Path) -> bool:
 
 
 def _make(src: Path, dst: Path, cross_device: str) -> tuple[Status, str]:
+    """先在同目录的临时文件上建立链接或副本，再原子地移到 ``dst``：复制中断
+    （磁盘满、插件重载、进程退出）不会在目标位置留下半个文件，版本升级时也
+    不会出现目标暂时缺失的窗口。"""
+    tmp = dst.with_name(f".{dst.name}.ab-hardlink")
+    tmp.unlink(missing_ok=True)
     try:
-        os.link(src, dst)
+        os.link(src, tmp)
     except OSError as e:
         if e.errno != errno.EXDEV:
             raise
         if cross_device == "skip":
             return "failed", "与媒体库不在同一文件系统，已跳过"
         if cross_device == "symlink":
-            os.symlink(src, dst)
+            os.symlink(src, tmp)
         else:
-            shutil.copy2(src, dst)
+            shutil.copy2(src, tmp)
+    os.replace(tmp, dst)
     return "linked", ""
 
 
@@ -133,20 +139,15 @@ def place(
     """在线程中执行的文件操作。``owned`` 是插件上次在 ``dst`` 放置文件时源文件
     的身份，None 表示 ``dst`` 不是插件创建的。"""
     ident = _identity(src)
-    if not os.path.lexists(dst):
+    if os.path.lexists(dst):
+        if _same(src, dst) or owned == ident:
+            return "exists", "", ident
+        if owned is None:
+            return "conflict", "媒体库中已有同名文件且不是本插件创建的", ident
+        # 否则是版本升级：同一集换成了新文件，替换插件之前创建的链接
+    else:
         dst.parent.mkdir(parents=True, exist_ok=True)
-        return (*_make(src, dst, cross_device), ident)
-    if _same(src, dst) or owned == ident:
-        return "exists", "", ident
-    if owned is None:
-        return "conflict", "媒体库中已有同名文件且不是本插件创建的", ident
-    # 版本升级：同一集换成了新文件。先在同目录生成临时文件，再原子替换
-    tmp = dst.with_name(f".{dst.name}.ab-hardlink")
-    tmp.unlink(missing_ok=True)
-    status, reason = _make(src, tmp, cross_device)
-    if status == "linked":
-        os.replace(tmp, dst)
-    return status, reason, ident
+    return (*_make(src, dst, cross_device), ident)
 
 
 class HardlinkPlugin(Plugin[Options]):
