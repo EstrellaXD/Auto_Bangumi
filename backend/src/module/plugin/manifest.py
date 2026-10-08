@@ -2,11 +2,12 @@
 
 import re
 import tomllib
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+from typing import Literal
 
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.version import InvalidVersion, Version
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from ab_sdk import SDK_VERSION
 
@@ -15,10 +16,56 @@ from .host import CORE
 MANIFEST_NAME = "plugin.toml"
 _ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 _ENTRY_RE = re.compile(r"^[A-Za-z_][\w.]*:[A-Za-z_]\w*$")
+# 合法的 custom element 名（小写、含连字符），统一以 ab-plugin- 开头避免与宿主冲突
+_ELEMENT_RE = re.compile(r"^ab-plugin-[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+# 前端挂载点（第 3.8 节）
+UiSlot = Literal[
+    "settings.section",
+    "bangumi.detail.tab",
+    "bangumi.card.action",
+    "page",
+    "dashboard.widget",
+]
+
+
+def owns_element(plugin_id: str, element: str) -> bool:
+    """element 是否落在 ``ab-plugin-<id>`` 命名空间内。"""
+    prefix = f"ab-plugin-{plugin_id}"
+    return element == prefix or element.startswith(prefix + "-")
 
 
 class ManifestError(ValueError):
     pass
+
+
+class PluginUi(BaseModel):
+    """``[[plugin.ui]]``：插件 ``web/`` 下的 ES module 定义的 custom element
+    挂到宿主的哪个位置。"""
+
+    slot: UiSlot
+    element: str = Field(description="custom element 名，须以 ab-plugin- 开头")
+    entry: str = Field(
+        description="定义该元素的 ES module，相对插件根目录，位于 web/ 下"
+    )
+    title: dict[str, str] = Field(
+        min_length=1, description="按语言的标题，如 {zh-CN = '…', en-US = '…'}"
+    )
+
+    @field_validator("element")
+    @classmethod
+    def _check_element(cls, value: str) -> str:
+        if not _ELEMENT_RE.match(value):
+            raise ValueError("element 须为以 ab-plugin- 开头的小写 custom element 名")
+        return value
+
+    @field_validator("entry")
+    @classmethod
+    def _check_entry(cls, value: str) -> str:
+        parts = PurePosixPath(value).parts
+        if "\\" in value or len(parts) < 2 or parts[0] != "web" or ".." in parts:
+            raise ValueError("entry 须为 web/ 下的相对路径，如 'web/index.js'")
+        return value
 
 
 class PluginManifest(BaseModel):
@@ -33,6 +80,7 @@ class PluginManifest(BaseModel):
     default_enabled: bool = Field(
         True, description="未设置启用开关时是否默认启用；只对内置插件生效"
     )
+    ui: list[PluginUi] = Field(default_factory=list)
 
     @field_validator("id")
     @classmethod
@@ -68,6 +116,18 @@ class PluginManifest(BaseModel):
         if not _ENTRY_RE.match(value):
             raise ValueError("entry 须形如 'my_plugin:MyPlugin'")
         return value
+
+    @model_validator(mode="after")
+    def _check_ui_elements(self) -> "PluginManifest":
+        # custom element 名是全局的：限定在 ab-plugin-<id> 命名空间内，
+        # 一个插件才不会占用别的插件的元素名
+        for ui in self.ui:
+            if not owns_element(self.id, ui.element):
+                raise ValueError(
+                    f"element {ui.element!r} 须为 ab-plugin-{self.id} "
+                    f"或以 ab-plugin-{self.id}- 开头"
+                )
+        return self
 
     @property
     def entry_module(self) -> str:

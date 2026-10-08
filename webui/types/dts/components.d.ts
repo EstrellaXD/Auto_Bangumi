@@ -81,6 +81,7 @@ declare module '@vue/runtime-core' {
     LlmAuthDialog: typeof import('./../../src/components/setting/llm-auth-dialog.vue')['default']
     MediaQuery: typeof import('./../../src/components/media-query.vue')['default']
     PluginSchemaForm: typeof import('./../../src/components/setting/plugin-schema-form.vue')['default']
+    PluginSlot: typeof import('./../../src/components/plugin-slot.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     UpdateCard: typeof import('./../../src/components/setting/update-card.vue')['default']

@@ -3,6 +3,8 @@ import { NCheckbox, NSelect, NSpin, useMessage } from 'naive-ui';
 import { onKeyStroke } from '@vueuse/core';
 import type { BangumiRule, DetectOffsetResponse } from '#/bangumi';
 import { useDownloaderInstances } from '@/hooks/useDownloaderInstances';
+import { slotTitle, useUiSlots } from '@/hooks/usePluginUi';
+import PluginSlot from '@/components/plugin-slot.vue';
 
 const emit = defineEmits<{
   (e: 'apply', rule: BangumiRule): void;
@@ -16,7 +18,7 @@ const emit = defineEmits<{
   ): void;
 }>();
 
-const { t } = useMyI18n();
+const { t, lang } = useMyI18n();
 
 const show = defineModel('show', { default: false });
 const rule = defineModel<BangumiRule>('rule', {
@@ -53,8 +55,25 @@ const deleteFileDialog = reactive<{
 });
 const deleteLocalFiles = ref(false);
 
+// 插件经 bangumi.detail.tab 挂载点追加的标签；'rule' 是原有的编辑表单
+const pluginTabs = useUiSlots('bangumi.detail.tab');
+const activeTab = ref('rule');
+const tabOptions = computed(() => [
+  { label: t('homepage.rule.tab_rule'), value: 'rule' },
+  ...pluginTabs.value.map((ui) => ({
+    label: slotTitle(ui, lang.value === 'zh-CN' ? 'zh-CN' : 'en-US'),
+    value: `${ui.plugin_id}:${ui.element}`,
+  })),
+]);
+const activePluginTab = computed(() =>
+  pluginTabs.value.find(
+    (ui) => `${ui.plugin_id}:${ui.element}` === activeTab.value
+  )
+);
+
 watch(show, (val) => {
   if (!val) {
+    activeTab.value = 'rule';
     deleteFileDialog.show = false;
     showAdvanced.value = false;
     offsetReason.value = '';
@@ -275,8 +294,24 @@ function emitUnarchive() {
       </div>
     </div>
 
+    <div v-if="pluginTabs.length" class="edit-tabs">
+      <ab-segmented
+        v-model:value="activeTab"
+        :options="tabOptions"
+        :aria-label="$t('homepage.rule.edit_rule')"
+      />
+    </div>
+
+    <div v-if="activePluginTab" class="edit-content">
+      <PluginSlot
+        :key="activeTab"
+        :ui="activePluginTab"
+        :context="{ bangumiId: rule.id }"
+      />
+    </div>
+
     <!-- Content -->
-    <div class="edit-content">
+    <div v-show="!activePluginTab" class="edit-content">
       <bangumi-preview v-model:rule="localRule" :poster-src="posterSrc" />
 
       <bangumi-info-tags :tags="infoTags" />
@@ -549,6 +584,10 @@ function emitUnarchive() {
     border-color: var(--color-text-muted);
     color: var(--color-text);
   }
+}
+
+.edit-tabs {
+  margin-bottom: 12px;
 }
 
 .edit-content {

@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from typing import ClassVar, cast
 
 import pytest
+from pydantic import ValidationError
 
 from ab_sdk import Event, Plugin, PluginDisabled, Verdict, hook, provider, subscribe
 from ab_sdk.events import SystemEvent
@@ -29,6 +30,14 @@ name = "Demo"
 version = "1.0.0"
 sdk = "{sdk}"
 entry = "{entry}"
+"""
+
+UI = """
+[[plugin.ui]]
+slot = "bangumi.detail.tab"
+element = "ab-plugin-manual-pick"
+entry = "web/index.js"
+title = { zh-CN = "手动选种", en-US = "Manual pick" }
 """
 
 
@@ -94,6 +103,63 @@ class TestManifest:
     def test_invalid_manifest(self, text, message):
         with pytest.raises(ManifestError, match=message):
             parse_manifest(text)
+
+    def test_ui_entries_parsed(self):
+        m = parse_manifest(
+            MANIFEST.format(id="manual-pick", sdk=">=0.1", entry="a:B") + UI
+        )
+        [ui] = m.ui
+        assert (ui.slot, ui.element, ui.entry) == (
+            "bangumi.detail.tab",
+            "ab-plugin-manual-pick",
+            "web/index.js",
+        )
+        assert ui.title == {"zh-CN": "手动选种", "en-US": "Manual pick"}
+        assert manifest().ui == []
+
+    @pytest.mark.parametrize(
+        "old, new, message",
+        [
+            ('"bangumi.detail.tab"', '"sidebar"', "slot"),
+            ('"ab-plugin-manual-pick"', '"manual-pick"', "ab-plugin-"),
+            ('"ab-plugin-manual-pick"', '"ab-plugin-Pick"', "ab-plugin-"),
+            ('"ab-plugin-manual-pick"', '"ab-plugin-"', "ab-plugin-"),
+            ('"web/index.js"', '"index.js"', "web/"),
+            ('"web/index.js"', '"web/../plugin.toml"', "web/"),
+            ('"web/index.js"', '"/web/index.js"', "web/"),
+            ('"web/index.js"', '"web/"', "web/"),
+            ('"web/index.js"', '"web\\\\index.js"', "web/"),
+            ('{ zh-CN = "手动选种", en-US = "Manual pick" }', "{}", "title"),
+        ],
+    )
+    def test_invalid_ui_entry(self, old, new, message):
+        text = MANIFEST.format(id="manual-pick", sdk=">=0.1", entry="a:B") + UI.replace(
+            old, new
+        )
+        with pytest.raises(ManifestError, match=message):
+            parse_manifest(text)
+
+    @pytest.mark.parametrize(
+        "plugin_id, element, valid",
+        [
+            ("manual-pick", "ab-plugin-manual-pick", True),
+            ("manual-pick", "ab-plugin-manual-pick-panel", True),
+            # 元素名须落在本插件 id 的命名空间内，不能占用别的插件的名字
+            ("other", "ab-plugin-manual-pick", False),
+            ("manual", "ab-plugin-manualpick", False),
+        ],
+    )
+    def test_ui_element_must_be_namespaced_by_plugin_id(
+        self, plugin_id, element, valid
+    ):
+        text = MANIFEST.format(id=plugin_id, sdk=">=0.1", entry="a:B") + UI.replace(
+            "ab-plugin-manual-pick", element
+        )
+        if valid:
+            assert parse_manifest(text).ui[0].element == element
+        else:
+            with pytest.raises(ManifestError, match=f"ab-plugin-{plugin_id}"):
+                parse_manifest(text)
 
 
 # ---------------------------------------------------------------- registry
@@ -607,6 +673,58 @@ class TestManager:
         await manager.start()
         assert manager.statuses()[0].state == "disabled"
         assert recorder.events == []
+
+    @pytest.mark.parametrize(
+        "source, allow_unsigned, expect_schema",
+        [("builtin", False, True), ("local", True, True), ("local", False, False)],
+    )
+    async def test_disabled_plugin_schema_loaded_only_if_trusted(
+        self, tmp_path, source, allow_unsigned, expect_schema
+    ):
+        recorder = Recorder()
+        manager, _ = make_manager(
+            candidate_for(build_plugin(recorder), source=source, default_enabled=False),
+            tmp_path=tmp_path,
+            allow_unsigned=allow_unsigned,
+        )
+        await manager.start()
+        [status] = manager.statuses()
+        assert status.state == "disabled"
+        # 只导入代码取 schema：不 setup、不注册扩展
+        assert recorder.events == []
+        assert (status.config_schema is not None) == expect_schema
+        if expect_schema:
+            assert "min_size" in status.config_schema["properties"]  # type: ignore[index]
+            manager.validate_options("demo", {"min_size": 3})
+            with pytest.raises(ValidationError):
+                manager.validate_options("demo", {"min_size": "x"})
+
+    @pytest.mark.parametrize("first_probe_fails", [False, True])
+    async def test_disabled_plugin_schema_refreshed_on_reload(
+        self, tmp_path, first_probe_fails
+    ):
+        from pydantic import BaseModel
+
+        class NewOptions(BaseModel):
+            level: int = 1
+
+        def broken():
+            raise RuntimeError("boom")
+
+        old = build_plugin(Recorder())
+        candidates = [candidate_for(old, default_enabled=False)]
+        if first_probe_fails:
+            candidates[0].load = broken  # type: ignore[method-assign]
+        manager, _ = make_manager(*candidates, tmp_path=tmp_path)
+        await manager.start()
+        assert (manager.statuses()[0].config_schema is None) == first_probe_fails
+
+        # 升级插件目录后重新发现：换成 config_model 不同的新类
+        new = type("NewPlugin", (Plugin,), {"config_model": NewOptions})
+        manager._discover = lambda: ([candidate_for(new, default_enabled=False)], [])
+        await manager.apply_settings()
+        [status] = manager.statuses()
+        assert list(status.config_schema["properties"]) == ["level"]  # type: ignore[index]
 
     @pytest.mark.parametrize(
         "conf, sdk, message",

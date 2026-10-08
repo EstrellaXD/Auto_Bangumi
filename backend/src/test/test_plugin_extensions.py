@@ -454,6 +454,91 @@ class TestSecrets:
         assert restored == {"site": "a", "cookie": "c=1", "n": 3}
 
 
+class Server(BaseModel):
+    host: str = ""
+    password: str = secret_field()
+
+
+class NestedOptions(BaseModel):
+    servers: list[Server] = []
+    primary: Server | None = None
+    by_name: dict[str, Server] = {}
+
+
+NESTED = NestedOptions.model_json_schema()
+
+
+class TestNestedSecrets:
+    def test_mask_options_nested_secrets_masked(self):
+        options = {
+            "servers": [{"host": "a", "password": "p1"}, {"host": "b", "password": ""}],
+            "primary": {"host": "c", "password": "p3"},
+            "by_name": {"x": {"host": "d", "password": "p4"}},
+        }
+        assert mask_options(options, NESTED) == {
+            "servers": [
+                {"host": "a", "password": MASK},
+                {"host": "b", "password": ""},
+            ],
+            "primary": {"host": "c", "password": MASK},
+            "by_name": {"x": {"host": "d", "password": MASK}},
+        }
+
+    def test_mask_options_nested_without_schema_masks_all_strings(self):
+        options = {"servers": [{"host": "a", "n": 1}], "k": {"v": "s"}}
+        assert mask_options(options, None) == {
+            "servers": [{"host": MASK, "n": 1}],
+            "k": {"v": MASK},
+        }
+
+    @pytest.mark.parametrize(
+        "incoming, expected",
+        [
+            # 原样回传：每行各自还原
+            (
+                [("a", MASK), ("b", MASK)],
+                [("a", "p1"), ("b", "p2")],
+            ),
+            # 删除第一行：第二行仍取回自己的密码
+            ([("b", MASK)], [("b", "p2")]),
+            # 调换顺序
+            ([("b", MASK), ("a", MASK)], [("b", "p2"), ("a", "p1")]),
+            # 新增行带明文；修改过的密码不被还原
+            ([("a", MASK), ("c", "new")], [("a", "p1"), ("c", "new")]),
+            # 行数未变、第二行改了主机：按位置还原
+            ([("a", MASK), ("c", MASK)], [("a", "p1"), ("c", "p2")]),
+            # 行数变了又改过内容：无法对应，丢弃该字段而不是取别行的密码
+            ([("c", MASK)], [("c", None)]),
+        ],
+    )
+    def test_restore_options_list_rows_restored_by_content(self, incoming, expected):
+        current = {
+            "servers": [
+                {"host": "a", "password": "p1"},
+                {"host": "b", "password": "p2"},
+            ]
+        }
+        body = {"servers": [{"host": h, "password": p} for h, p in incoming]}
+        restored = restore_options(body, current, NESTED)
+        assert restored["servers"] == [
+            {"host": h} if p is None else {"host": h, "password": p}
+            for h, p in expected
+        ]
+
+    def test_restore_options_nested_object_and_map_restored(self):
+        current = {
+            "primary": {"host": "c", "password": "p3"},
+            "by_name": {"x": {"host": "d", "password": "p4"}},
+        }
+        masked = mask_options(current, NESTED)
+        assert restore_options(masked, current, NESTED) == current
+
+    def test_restore_options_nested_without_schema_restored(self):
+        current = {"servers": [{"host": "a", "n": 1}]}
+        masked = mask_options(current, None)
+        assert restore_options(masked, current, None) == current
+
+
 # ---------------------------------------------------------------- API
 
 

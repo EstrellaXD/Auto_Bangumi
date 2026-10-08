@@ -7,6 +7,7 @@ export type SchemaFieldKind =
   | 'switch'
   | 'select'
   | 'tags'
+  | 'objects'
   | 'unsupported';
 
 export interface SchemaField {
@@ -18,6 +19,8 @@ export interface SchemaField {
   options: (string | number)[];
   /** integer 字段输入后取整 */
   integer: boolean;
+  /** objects（对象数组）每一行的字段 */
+  itemFields: SchemaField[];
   default: unknown;
 }
 
@@ -37,7 +40,10 @@ function resolve(
   return prop;
 }
 
-function kindOf(prop: JsonSchemaProperty): SchemaFieldKind {
+function kindOf(
+  prop: JsonSchemaProperty,
+  items: JsonSchemaProperty | undefined
+): SchemaFieldKind {
   if (prop.enum) return 'select';
   switch (prop.type) {
     case 'string':
@@ -50,28 +56,37 @@ function kindOf(prop: JsonSchemaProperty): SchemaFieldKind {
     case 'boolean':
       return 'switch';
     case 'array':
-      return prop.items?.type === 'string' ? 'tags' : 'unsupported';
+      if (items?.type === 'string') return 'tags';
+      return items?.properties ? 'objects' : 'unsupported';
     default:
       return 'unsupported';
   }
 }
 
-/** 把插件 config_model 的 JSON Schema 转成表单字段描述（保持声明顺序） */
-export function schemaFields(schema: JsonSchema | null): SchemaField[] {
-  if (!schema?.properties) return [];
-  const defs = schema.$defs ?? {};
-  return Object.entries(schema.properties).map(([key, raw]) => {
+function buildFields(
+  properties: Record<string, JsonSchemaProperty>,
+  defs: Record<string, JsonSchemaProperty>
+): SchemaField[] {
+  return Object.entries(properties).map(([key, raw]) => {
     const prop = resolve(raw, defs);
+    const items = prop.items && resolve(prop.items, defs);
     return {
       key,
       label: prop.title ?? key,
       description: prop.description ?? '',
-      kind: kindOf(prop),
+      kind: kindOf(prop, items),
       options: prop.enum ?? [],
       integer: prop.type === 'integer',
+      itemFields: items?.properties ? buildFields(items.properties, defs) : [],
       default: prop.default,
     };
   });
+}
+
+/** 把插件 config_model 的 JSON Schema 转成表单字段描述（保持声明顺序） */
+export function schemaFields(schema: JsonSchema | null): SchemaField[] {
+  if (!schema?.properties) return [];
+  return buildFields(schema.properties, schema.$defs ?? {});
 }
 
 /** 未保存过的字段用 schema 默认值填充，供表单初始展示 */

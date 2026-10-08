@@ -1,5 +1,7 @@
 <script lang="ts" setup>
 import type { Component } from 'vue';
+import PluginSlot from '@/components/plugin-slot.vue';
+import { slotTitle, useUiSlots } from '@/hooks/usePluginUi';
 import { useConfirm } from '@/hooks/useConfirm';
 import type { Config } from '#/config';
 import ConfigNormal from '@/components/setting/config-normal.vue';
@@ -23,7 +25,7 @@ definePage({
   name: 'Config',
 });
 
-const { t } = useMyI18n();
+const { t, lang } = useMyI18n();
 const { confirm } = useConfirm();
 const configStore = useConfigStore();
 const { getConfig, setConfig } = configStore;
@@ -58,9 +60,11 @@ interface ConfigSection {
   keywords: string[];
   /** 当前 locale 下也应参与搜索的可见字段/选项文案。 */
   keywordKeys?: string[];
+  /** 传给 component 的 props（插件分区用） */
+  props?: Record<string, unknown>;
 }
 
-const sections: ConfigSection[] = [
+const baseSections: ConfigSection[] = [
   {
     id: 'normal',
     titleKey: 'config.normal_set.title',
@@ -211,14 +215,43 @@ const sections: ConfigSection[] = [
   },
 ];
 
+// 插件经 settings.section 挂载点追加的分区；自行保存，不参与全局保存
+const settingSlots = useUiSlots('settings.section');
+const pluginTitles = computed(
+  () =>
+    new Map(
+      settingSlots.value.map((ui) => [
+        `${ui.plugin_id}:${ui.element}`,
+        slotTitle(ui, lang.value === 'zh-CN' ? 'zh-CN' : 'en-US'),
+      ])
+    )
+);
+const sections = computed<ConfigSection[]>(() => [
+  ...baseSections,
+  ...settingSlots.value.map((ui) => ({
+    id: `plugin-${ui.plugin_id}-${ui.element}`,
+    titleKey: `${ui.plugin_id}:${ui.element}`,
+    component: PluginSlot,
+    groups: [],
+    keywords: ['plugin', ui.plugin_id, '插件'],
+    props: { ui },
+  })),
+]);
+
+function sectionTitle(section: ConfigSection): string {
+  return pluginTitles.value.get(section.titleKey) ?? t(section.titleKey);
+}
+
 // --- 搜索 ---
 const searchQuery = ref('');
 
 function sectionMatches(section: ConfigSection): boolean {
-  return configSectionMatches(section, searchQuery.value, t);
+  return configSectionMatches(section, searchQuery.value, (key) =>
+    key === section.titleKey ? sectionTitle(section) : t(key)
+  );
 }
 
-const visibleSections = computed(() => sections.filter(sectionMatches));
+const visibleSections = computed(() => sections.value.filter(sectionMatches));
 
 // --- 脏值 ---
 function sectionDirty(section: ConfigSection): boolean {
@@ -226,12 +259,12 @@ function sectionDirty(section: ConfigSection): boolean {
 }
 
 const dirtySectionTitles = computed(() =>
-  sections.filter(sectionDirty).map((s) => t(s.titleKey))
+  sections.value.filter(sectionDirty).map(sectionTitle)
 );
 
 // --- 分区定位 ---
 const scrollEl = ref<HTMLElement | null>(null);
-const activeSection = ref(sections[0].id);
+const activeSection = ref(baseSections[0].id);
 const sectionEls = new Map<string, HTMLElement>();
 
 function setSectionEl(id: string, el: unknown) {
@@ -243,7 +276,7 @@ function onScroll() {
   const container = scrollEl.value;
   if (!container) return;
   const anchor = container.scrollTop + 80;
-  let current = visibleSections.value[0]?.id ?? sections[0].id;
+  let current = visibleSections.value[0]?.id ?? baseSections[0].id;
   for (const section of visibleSections.value) {
     const el = sectionEls.get(section.id);
     if (el && el.offsetTop <= anchor) current = section.id;
@@ -329,7 +362,7 @@ onBeforeRouteLeave(() => {
           :aria-current="activeSection === s.id ? 'true' : undefined"
           @click="jumpTo(s.id)"
         >
-          <span class="rail-link-title">{{ $t(s.titleKey) }}</span>
+          <span class="rail-link-title">{{ sectionTitle(s) }}</span>
           <span
             v-if="sectionDirty(s)"
             class="dirty-dot"
@@ -353,7 +386,7 @@ onBeforeRouteLeave(() => {
           class="config-section"
           :class="{ 'section-dirty': sectionDirty(s) }"
         >
-          <component :is="s.component" />
+          <component :is="s.component" v-bind="s.props" />
         </div>
       </div>
     </div>

@@ -135,4 +135,45 @@ describe('useEventStream', () => {
     expect(result.connected.value).toBe(false);
     expect(es.closed).toBe(true);
   });
+
+  it('should deliver bus frames to listeners of that kind until unsubscribed', async () => {
+    isLoggedIn.value = true;
+    const useEventStream = await freshEventStream();
+    const { onBus } = withSetup(() => useEventStream());
+    const es = MockEventSource.instances.at(-1)!;
+
+    const picked = vi.fn();
+    const other = vi.fn();
+    const off = onBus('manual-pick.picked', picked);
+    onBus('other.kind', other);
+
+    const frame = JSON.stringify({
+      kind: 'manual-pick.picked',
+      payload: { bangumi_id: 3 },
+    });
+    es.emit('bus', frame);
+    expect(picked).toHaveBeenCalledWith({ bangumi_id: 3 });
+    expect(other).not.toHaveBeenCalled();
+
+    off();
+    es.emit('bus', frame);
+    expect(picked).toHaveBeenCalledTimes(1);
+  });
+
+  it('should keep delivering when one bus listener throws', async () => {
+    isLoggedIn.value = true;
+    const useEventStream = await freshEventStream();
+    const { onBus } = withSetup(() => useEventStream());
+    const es = MockEventSource.instances.at(-1)!;
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const second = vi.fn();
+    onBus('k', () => {
+      throw new Error('plugin bug');
+    });
+    onBus('k', second);
+    es.emit('bus', JSON.stringify({ kind: 'k', payload: 1 }));
+
+    expect(second).toHaveBeenCalledWith(1);
+  });
 });

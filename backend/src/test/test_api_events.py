@@ -306,6 +306,32 @@ class TestNotificationEvent:
         assert frame["event"] == "notification"
         assert json.loads(frame["data"])["revision"] == inbox_revision()
 
+    async def test_bus_event_is_forwarded_as_bus_frame(self, tmp_path, bus):
+        from dataclasses import dataclass
+        from typing import ClassVar
+
+        from ab_sdk import Event
+
+        @dataclass(frozen=True, slots=True)
+        class Picked(Event):
+            kind: ClassVar[str] = "demo.picked"
+            torrent_id: int
+
+        gen, patches = self._generator(tmp_path, tick=30)
+        with patches[0], patches[1], patches[2], patches[3]:
+            try:
+                await self._collect(gen, 3)  # 第一个 tick
+                bus.publish(Picked(torrent_id=7))
+                [frame] = await self._collect(gen, 1)
+            finally:
+                await gen.aclose()
+
+        assert frame["event"] == "bus"
+        assert json.loads(frame["data"]) == {
+            "kind": "demo.picked",
+            "payload": {"torrent_id": 7},
+        }
+
     async def test_unsubscribes_when_stream_closes(self, tmp_path, bus):
         gen, patches = self._generator(tmp_path)
         with patches[0], patches[1], patches[2], patches[3]:

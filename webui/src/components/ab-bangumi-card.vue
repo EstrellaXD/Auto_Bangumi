@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import { ErrorPicture, Write } from '@icon-park/vue-next';
+import PluginSlot from './plugin-slot.vue';
 import type { BangumiRule } from '#/bangumi';
+import { useUiSlots } from '@/hooks/usePluginUi';
 
 const props = withDefaults(
   defineProps<{
@@ -13,6 +15,9 @@ const props = withDefaults(
 );
 
 defineEmits(['click']);
+
+// 插件经 bangumi.card.action 挂载点追加的操作
+const actionSlots = useUiSlots('bangumi.card.action');
 
 const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
 </script>
@@ -70,6 +75,21 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
       <div class="card-title" :title="bangumi.official_title">
         {{ bangumi.official_title }}
       </div>
+    </div>
+
+    <!-- 插件操作：不触发卡片的编辑点击 -->
+    <div
+      v-if="actionSlots.length"
+      class="card-actions"
+      @click.stop
+      @keydown.stop
+    >
+      <PluginSlot
+        v-for="ui in actionSlots"
+        :key="`${ui.plugin_id}:${ui.element}`"
+        :ui="ui"
+        :context="{ bangumiId: bangumi.id }"
+      />
     </div>
   </div>
 
@@ -144,6 +164,14 @@ const posterSrc = computed(() => resolvePosterUrl(props.bangumi.poster_link));
     outline-offset: 4px;
     border-radius: var(--radius-md);
   }
+}
+
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 4px;
 }
 
 .card-poster {

@@ -53,6 +53,8 @@ class PluginCandidate:
     source: PluginSource
     load: Callable[[], type[Plugin[Any]]]
     unload: Callable[[], None] = lambda: None
+    # 插件根目录（web/ 静态资源从这里读取）；pip 包不在文件系统上时为 None
+    root: Path | None = None
 
     @property
     def signed(self) -> bool:
@@ -124,6 +126,7 @@ def _directory_candidate(plugin_dir: Path, source: PluginSource) -> PluginCandid
         source=source,
         load=lambda: _load_directory(plugin_dir, manifest, package),
         unload=lambda: _unload_package(package, plugin_dir),
+        root=plugin_dir,
     )
 
 
@@ -186,9 +189,8 @@ def _unload_package(package: str, plugin_dir: Path) -> None:
 def _entry_point_candidate(ep: importlib.metadata.EntryPoint) -> PluginCandidate:
     top_package = ep.module.split(".", 1)[0]
     try:
-        text = (importlib.resources.files(top_package) / MANIFEST_NAME).read_text(
-            encoding="utf-8"
-        )
+        package_files = importlib.resources.files(top_package)
+        text = (package_files / MANIFEST_NAME).read_text(encoding="utf-8")
     except (ModuleNotFoundError, FileNotFoundError) as e:
         raise PluginLoadError(f"{top_package} 包内缺少 {MANIFEST_NAME}") from e
     manifest = parse_manifest(text, f"{top_package}/{MANIFEST_NAME}")
@@ -200,7 +202,13 @@ def _entry_point_candidate(ep: importlib.metadata.EntryPoint) -> PluginCandidate
             raise PluginLoadError(f"加载 entry point {ep.value} 失败：{e}") from e
         return _check_class(obj, manifest)
 
-    return PluginCandidate(manifest=manifest, source="pip", load=load)
+    return PluginCandidate(
+        manifest=manifest,
+        source="pip",
+        load=load,
+        # zip 等非文件系统安装没有可直接提供的 web/ 目录
+        root=package_files if isinstance(package_files, Path) else None,
+    )
 
 
 # ---------------------------------------------------------------- helpers

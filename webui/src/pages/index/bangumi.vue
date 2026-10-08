@@ -1,5 +1,7 @@
 <script lang="ts" setup>
 import type { BangumiRule } from '#/bangumi';
+import PluginSlot from '@/components/plugin-slot.vue';
+import { useUiSlots } from '@/hooks/usePluginUi';
 
 definePage({
   name: 'Bangumi List',
@@ -16,6 +18,9 @@ const {
 } = storeToRefs(useBangumiStore());
 const { getAll, openEditPopup } = useBangumiStore();
 const { openAddRss } = useAddRss();
+
+// 插件经 dashboard.widget 挂载点追加的小组件
+const widgets = useUiSlots('dashboard.widget');
 
 // Show skeleton when initially loading (not yet loaded and loading)
 const showSkeleton = computed(() => !hasLoaded.value && isLoading.value);
@@ -117,6 +122,14 @@ function groupNeedsReview(group: BangumiGroup): boolean {
 <template>
   <ab-pull-refresh :loading="refreshing" @refresh="onRefresh">
     <div class="page-bangumi">
+      <div v-if="widgets.length" class="plugin-widgets">
+        <PluginSlot
+          v-for="ui in widgets"
+          :key="`${ui.plugin_id}:${ui.element}`"
+          :ui="ui"
+        />
+      </div>
+
       <!-- Skeleton loading state -->
       <div v-if="showSkeleton" class="bangumi-grid">
         <div
@@ -378,6 +391,13 @@ function groupNeedsReview(group: BangumiGroup): boolean {
   flex-grow: 1;
 }
 
+.plugin-widgets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--layout-gap);
+  padding: 12px 12px 0;
+}
+
 .bangumi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -463,7 +483,8 @@ function groupNeedsReview(group: BangumiGroup): boolean {
   justify-content: center;
   background: var(--color-surface-hover);
   border: 2px dashed var(--color-border);
-  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+  transition: box-shadow var(--transition-fast),
+    transform var(--transition-fast);
 
   .others-card:hover &,
   .others-card:focus-visible & {

@@ -17,6 +17,8 @@ export interface JsonSchemaProperty {
   secret?: boolean;
   writeOnly?: boolean;
   items?: JsonSchemaProperty;
+  /** 对象类型（数组元素等）的子字段 */
+  properties?: Record<string, JsonSchemaProperty>;
   anyOf?: JsonSchemaProperty[];
   $ref?: string;
   minimum?: number;

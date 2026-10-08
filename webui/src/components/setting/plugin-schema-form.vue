@@ -1,14 +1,33 @@
 <script lang="ts" setup>
 import { NDynamicTags } from 'naive-ui';
+import AbButton from '../basic/ab-button.vue';
 import AbField from '../basic/ab-field.vue';
 import AbInput from '../basic/ab-input.vue';
 import AbSelect from '../basic/ab-select.vue';
 import AbSwitch from '../basic/ab-switch.vue';
+import { fillSchemaDefaults } from '@/utils/plugin-schema';
 import type { SchemaField } from '@/utils/plugin-schema';
 
 // 由插件 config_model 的 JSON Schema 渲染的表单；字段描述由 schemaFields() 生成
 defineProps<{ fields: SchemaField[] }>();
 const model = defineModel<Record<string, unknown>>({ required: true });
+
+function rowsOf(field: SchemaField): Record<string, unknown>[] {
+  return (
+    (model.value[field.key] as Record<string, unknown>[] | undefined) ?? []
+  );
+}
+
+function addRow(field: SchemaField) {
+  model.value[field.key] = [
+    ...rowsOf(field),
+    fillSchemaDefaults(field.itemFields, {}),
+  ];
+}
+
+function removeRow(field: SchemaField, index: number) {
+  model.value[field.key] = rowsOf(field).filter((_, i) => i !== index);
+}
 
 function setNumber(field: SchemaField, value: string | number) {
   const parsed = Number(value);
@@ -54,6 +73,21 @@ function setNumber(field: SchemaField, value: string | number) {
         size="small"
         @update:value="model[field.key] = $event"
       />
+      <div v-else-if="field.kind === 'objects'" class="schema-form__rows">
+        <div
+          v-for="(row, index) in rowsOf(field)"
+          :key="index"
+          class="schema-form__row"
+        >
+          <PluginSchemaForm :model-value="row" :fields="field.itemFields" />
+          <AbButton size="sm" variant="ghost" @click="removeRow(field, index)">
+            {{ $t('config.plugins_set.remove_row') }}
+          </AbButton>
+        </div>
+        <AbButton size="sm" class="schema-form__add" @click="addRow(field)">
+          {{ $t('config.plugins_set.add_row') }}
+        </AbButton>
+      </div>
       <AbInput
         v-else-if="field.kind === 'text' || field.kind === 'password'"
         :type="field.kind === 'password' ? 'password' : 'text'"
@@ -74,6 +108,27 @@ function setNumber(field: SchemaField, value: string | number) {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.schema-form__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.schema-form__row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.schema-form__add {
+  align-self: flex-start;
 }
 
 .schema-form__unsupported {

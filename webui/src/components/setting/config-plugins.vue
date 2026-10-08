@@ -8,6 +8,7 @@ import PluginSchemaForm from './plugin-schema-form.vue';
 import type { PluginInfo, PluginsOverview } from '#/plugins';
 import { apiPlugins } from '@/api/plugins';
 import { refreshPluginProviders } from '@/hooks/usePluginProviders';
+import { refreshPluginUi } from '@/hooks/usePluginUi';
 import { fillSchemaDefaults, schemaFields } from '@/utils/plugin-schema';
 
 // 插件卡片不参与全局保存：每次改动直接调 /plugins 接口落盘并应用，
@@ -52,6 +53,8 @@ async function run(key: string, action: () => Promise<PluginsOverview>) {
     await refreshGroup('plugins', ['enabled', 'options']);
     // 插件启停会增减下载器/通知渠道候选，同步刷新下拉框
     await refreshPluginProviders();
+    // 启停也会增减插件的前端挂载点
+    await refreshPluginUi();
     return true;
   } catch {
     message.error(t('config.plugins_set.save_failed'));

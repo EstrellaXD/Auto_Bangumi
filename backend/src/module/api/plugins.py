@@ -3,12 +3,14 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, ValidationError
 
 from ab_sdk import points
 from module.conf import settings
 from module.core import AppContext
 from module.plugin.host import plugin_provider_ids
+from module.plugin.manifest import UiSlot
 from module.plugin.secrets import mask_options, restore_options
 from module.security.api import get_current_user
 
@@ -49,6 +51,23 @@ class PluginsSettingsUpdate(BaseModel):
     allow_unsigned: bool
 
 
+class PluginUiSlot(BaseModel):
+    plugin_id: str
+    slot: UiSlot
+    element: str
+    # 相对插件根目录，经 GET /plugins/<plugin_id>/<entry> 获取
+    entry: str
+    title: dict[str, str]
+
+
+# 模块脚本要求 JavaScript MIME 类型；mimetypes 的结果依赖系统配置，这里固定
+_MEDIA_TYPES = {
+    ".js": "text/javascript",
+    ".mjs": "text/javascript",
+    ".css": "text/css",
+}
+
+
 def _overview(ctx: AppContext) -> PluginsOverview:
     conf = settings.plugins
     plugins = []
@@ -72,6 +91,39 @@ async def _save_and_apply(ctx: AppContext) -> None:
 async def list_plugins(ctx: AppContext = Depends(get_context)):
     """已发现的插件、运行状态、配置表单 schema 与（掩码后的）当前配置。"""
     return _overview(ctx)
+
+
+@router.get("/ui", response_model=list[PluginUiSlot])
+async def list_plugin_ui(ctx: AppContext = Depends(get_context)):
+    """已启用插件声明的前端挂载点（清单中的 ``[[plugin.ui]]``）。"""
+    return [
+        PluginUiSlot(plugin_id=plugin_id, **ui.model_dump())
+        for plugin_id, ui in ctx.plugins.ui_slots()
+    ]
+
+
+@router.get("/{plugin_id}/web/{path:path}", include_in_schema=False)
+async def plugin_web_file(
+    plugin_id: str, path: str, ctx: AppContext = Depends(get_context)
+):
+    """已启用插件 ``web/`` 目录下的静态文件（前端组件的 ES module 等）。
+
+    与其它 API 一样需要登录；浏览器的 ``<script type="module">`` / ``import()``
+    是同源请求，会带上会话 cookie。
+    """
+    web_dir = ctx.plugins.web_dir(plugin_id)
+    if web_dir is not None:
+        root = web_dir.resolve()
+        target = (root / path).resolve()
+        # resolve() 之后再比较，``..`` 与指向目录外的符号链接都会被拒绝
+        if target.is_relative_to(root) and target.is_file():
+            return FileResponse(
+                target,
+                media_type=_MEDIA_TYPES.get(target.suffix),
+                # 插件升级后文件名不变，每次都按 ETag 重新验证
+                headers={"Cache-Control": "no-cache"},
+            )
+    raise HTTPException(status_code=404, detail="Not Found")
 
 
 @router.put("/settings", response_model=PluginsOverview)

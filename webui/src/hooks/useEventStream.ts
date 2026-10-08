@@ -14,6 +14,12 @@ export interface NotificationStreamPayload {
   revision: number;
 }
 
+/** SSE `bus` 帧：事件总线上宿主与插件发布的事件 */
+export interface BusEvent {
+  kind: string;
+  payload: unknown;
+}
+
 const RECONNECT_BASE_DELAY_MS = 1000;
 const RECONNECT_MAX_DELAY_MS = 15000;
 
@@ -34,6 +40,18 @@ export const useEventStream = createSharedComposable(() => {
   const logData = ref<string | null>(null);
   const updateData = ref<UpdateProgress | null>(null);
   const notificationData = ref<NotificationStreamPayload | null>(null);
+
+  const busListeners = new Map<string, Set<(payload: unknown) => void>>();
+
+  /** 订阅总线事件 `kind`；连接中断重连期间发布的事件不会补发。返回取消函数 */
+  function onBus(kind: string, callback: (payload: unknown) => void) {
+    const listeners = busListeners.get(kind) ?? new Set();
+    listeners.add(callback);
+    busListeners.set(kind, listeners);
+    return () => {
+      listeners.delete(callback);
+    };
+  }
 
   let source: EventSource | null = null;
   let retryCount = 0;
@@ -63,7 +81,9 @@ export const useEventStream = createSharedComposable(() => {
     }
     teardown();
 
-    const es = new EventSource('api/v1/events/stream', { withCredentials: true });
+    const es = new EventSource('api/v1/events/stream', {
+      withCredentials: true,
+    });
     source = es;
 
     es.onopen = () => {
@@ -107,6 +127,24 @@ export const useEventStream = createSharedComposable(() => {
       }
     });
 
+    es.addEventListener('bus', (e) => {
+      try {
+        const { kind, payload } = JSON.parse(
+          (e as MessageEvent).data
+        ) as BusEvent;
+        // 回调出错不能影响其它订阅者与后续帧
+        busListeners.get(kind)?.forEach((callback) => {
+          try {
+            callback(payload);
+          } catch (error) {
+            console.error(`bus listener for ${kind} failed`, error);
+          }
+        });
+      } catch {
+        // Ignore malformed frames.
+      }
+    });
+
     es.onerror = () => {
       teardown();
       scheduleReconnect();
@@ -141,5 +179,6 @@ export const useEventStream = createSharedComposable(() => {
     logData,
     updateData,
     notificationData,
+    onBus,
   };
 });
