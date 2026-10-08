@@ -49,8 +49,8 @@ After these checks, AB unpacks the plugin to `config/plugins/<id>/<version>/`, w
 
 A catalog plugin can depend only on the standard library and on packages that AB already has. AB does not run pip. Put third-party pure-Python libraries in `vendor/`.
 
-::: warning The WebUI has no catalog page yet
-During the 4.0 preview, you can browse and install the catalog with the API only. The Settings → Plugins page has no buttons for it.
+::: tip Install from the WebUI
+In Settings → Plugins, go to the "Plugin catalog" area and select "Browse catalog". You can then install and update catalog plugins. A plugin installed from the catalog has an "Uninstall" button on its card. Built-in, local and pip plugins do not have one.
 :::
 
 API:

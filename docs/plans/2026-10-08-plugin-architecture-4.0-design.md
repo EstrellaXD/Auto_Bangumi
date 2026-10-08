@@ -248,7 +248,7 @@ bark / wecom 旧字段别名：
 
 - `docs/dev/plugins.md` 保留为总览与导航（侧边栏链接不变），旧版 529 行的内容拆为 `plugins/` 下的页面：核心概念、配置表单、事件、前端挂载点、命令行、签名与分发、内置插件、示例，以及 `points/` 下每个扩展点一页（16 页：`mcp_tool` 与 `mcp_resource` 合一页，其余一点一页）。每种语言 25 个文件，侧边栏由 `docs/.vitepress/config.ts` 的一张页面表生成。`vitepress build` 通过（含死链检查）。
 - **旧文档里与现状不符的地方一并改正**：下载器不再是 `downloader.type` 而是 `plugins.instances[].provider`；`hardlink` 的 `path_map` 已有对象数组表单；补链按钮已在 P6 提供；`file.renamed` / `torrent.organized` 加上 `downloader_id`。
-- 签名与分发页如实写明：WebUI 的设置 → 插件页**还没有**目录浏览与安装按钮（只有 API），以及上架流程只有持有签名私钥的维护者能执行。「提 issue 申请上架」是文档里写的临时约定，没有对应的自动化。
+- 签名与分发页如实写明：WebUI 的设置 → 插件页**还没有**目录浏览与安装按钮（只有 API；4.0 收尾时已补上界面，文档同步改写），以及上架流程只有持有签名私钥的维护者能执行。「提 issue 申请上架」是文档里写的临时约定，没有对应的自动化。
 
 插件作者 skill（`skills/autobangumi-plugin/`）：`SKILL.md`（触发描述、流程、扩展点速查表、易错规则）加 `references/` 三份（扩展点细节、测试 / CLI / 清单、前端）。内容面向模型，英文，与文档同源但不逐字复制。
 
@@ -266,9 +266,16 @@ bark / wecom 旧字段别名：
 - **通用插件与 LLM 插件共用 `config/plugins/<id>/` 的两处隔离**：LLM 注册表扫描跳过版本目录里是 `plugin.toml` 的目录（原先每次列举都对它打 `Skipping broken plugin` 警告）；通用安装器卸载时要求 `installed.json` 指向的版本目录含 `plugin.toml`，不能再通过 `DELETE /plugins/{id}` 删掉 LLM 插件（其凭据清理在 LLM 安装器里，不会被跳过）。
 - **在线更新 bundle 带上 `ab_sdk`（PR 说明中的选项 2）**。`build.yml` 把 `backend/src/ab_sdk` 打进 bundle，`min_image_version` 设为 `4.0.0-beta.1`；`boot_overlay.py` 要求已验签 bundle 同时有 `module` 与 `ab_sdk` 两棵树，先换 `/app/ab_sdk` 再换 `/app/module`，缺一棵即不应用。已发布的 3.3 镜像在 beta 通道会选中最新预发布，但 3.3 的更新器在应用时检查 `min_image_version`（与 4.0 的代码相同，已有测试覆盖），拒绝后不留存 bundle，3.3 的 `boot_overlay` 因此不会应用它。两次替换不是一个事务：`ab_sdk` 换完而 `module` 失败时留下新 SDK 与旧 module。
 
+插件目录界面（4.0 收尾）：
+
+- 设置 → 插件卡片底部新增「插件目录」区：点「浏览目录」才请求 `GET /plugins/catalog`（要访问 GitHub，不在打开设置页时请求），请求带 `silent`，失败时在区内显示后端给出的原因并可刷新重试，不弹全局提示。每个条目按本机已装版本显示「安装」「更新」或「已安装」；安装与更新走同一接口，成功后用返回的插件列表刷新卡片，并刷新 Provider 下拉与前端挂载点（与启停相同）。
+- 已安装插件的卡片显示「已签名」或「未签名」标记。「卸载」按钮只出现在来源为 `catalog` 的插件上，并经危险确认框。这与后端的卸载前提是同一条件：加载器只把 `installed.json` 指向含 `plugin.toml` 版本目录的插件判为 `catalog`，卸载接口也只接受这种目录。LLM 提供商插件不在 `GET /plugins` 中，仍在 LLM 设置里安装和卸载。目录插件视为已签名，与 `allow_unsigned` 无关，界面上的说明文字写明了这一点。
+- 修复：前端类型的 `PluginInfo.source` 缺少 `catalog`，两种语言都缺少 `source_catalog`，目录安装的插件在卡片上显示为未翻译的 key。
+- 版本比较只看「已装版本是否等于目录版本」，不等即显示「更新」，目录版本更低时也是如此。不在界面上预先检查 `min_ab_version`，由安装接口的 400 返回原因。
+
 未做（第一部分已列出，本部分也没有做）：
 
-- **插件管理页**：设置 → 插件页没有目录浏览、安装 / 卸载按钮，也没有 `dev_mode` 提示；`GET /plugins` 仍不返回 `dev_mode`。任务清单不含它，推迟到发布阶段前补。
+- **插件管理页**（目录部分已补，见下一节）：仍没有 `dev_mode` 提示，`GET /plugins` 仍不返回 `dev_mode`。
 - **模板仓库**（含前端模板的独立 GitHub 仓库）：前端模板已在 `webui/packages/plugin-ui/template/`，`ab-plugin new` 覆盖后端骨架，独立仓库没有创建。
 - **脚手架生成的 `pyproject.toml` 依赖 `autobangumi-sdk`** 但没有 uv 源：独立作者要等轮子上了 release 才能 `uv run pytest`。文档的上手步骤用 `uv tool install` 本地轮子文件绕过。
 
@@ -823,7 +830,7 @@ organize: downloader.completed → media_files.classify → file_parser
 | **P4 流水线插件化：organize** | `media_files`、`file_parser`、`rename_strategy`（含 `template`）、`conflict_policy`、`file.renamed` 等事件 | 已完成：`renamer.py` 拆出 `revision_saga.py`；`rename_strategy` / `media_files` / `conflict_policy` 扩展点与 `file.renamed` / `torrent.organized` 事件；内置插件 `rename`（pn / advance / template，pn / advance / none 输出与 3.3 一致）、`hardlink`（默认停用）与 `media-server-refresh`。`file_parser`、`RenameStrategyContract`、补链设置按钮（P6）推迟，调整见第 0 节 |
 | **P5 事件与外部接口** | SSE 改订阅 bus；`api_router`、`mcp_tool` 扩展点；`message_template` | 已完成：系统事件上总线、通知中心 SSE 改为事件推送、插件路由 / MCP 工具与资源 / 通知模板；status 等快照类 SSE 仍按节拍采样。调整见第 0 节 |
 | **P6 前端插件** | Web Component 挂载点、`AbHost` 桥接、错误边界、`/plugins/<id>/web` 静态资源、`@autobangumi/plugin-ui` 包 | 已完成：五个挂载点、`AbHost`、错误边界与 CSP；示例插件「手动选种」（`examples/plugins/manual-pick`）以详情页标签形式可用，内置 `hardlink` 的补链按钮走 `settings.section`；未启用插件的配置表单、对象数组表单、SSE `bus` 帧。调整见第 0 节 |
-| **P7 生态** | 插件管理页（安装、启停、日志、错误）、签名目录发布流程、模板仓库（含前端模板）、`ab-plugin` CLI、文档（中 / 英 / 日） | 6 个以上示例插件上架。已完成：`autobangumi-sdk` 轮子、`ab-plugin` CLI（new / validate / pack / dev）、`dev_mode` 文件监听、四个契约套件、签名目录来源（`plugins` tag、`catalog` 加载来源、安装 API、发布脚本）、bark / wecom 旧字段迁移；6 个示例插件（CI 逐个运行）、中 / 英 / 日文档（总览加 24 页）、插件作者 skill、release 附带 SDK 轮子与 skill。**管理页的目录浏览 / 安装按钮与独立模板仓库未做**，留到 P8 前补，调整见第 0 节 |
+| **P7 生态** | 插件管理页（安装、启停、日志、错误）、签名目录发布流程、模板仓库（含前端模板）、`ab-plugin` CLI、文档（中 / 英 / 日） | 6 个以上示例插件上架。已完成：`autobangumi-sdk` 轮子、`ab-plugin` CLI（new / validate / pack / dev）、`dev_mode` 文件监听、四个契约套件、签名目录来源（`plugins` tag、`catalog` 加载来源、安装 API、发布脚本）、bark / wecom 旧字段迁移；6 个示例插件（CI 逐个运行）、中 / 英 / 日文档（总览加 24 页）、插件作者 skill、release 附带 SDK 轮子与 skill。管理页的目录浏览 / 安装 / 更新 / 卸载已在 4.0 收尾时补上；**独立模板仓库与 `dev_mode` 提示未做**，调整见第 0 节 |
 | **P8 发布** | beta 测试、性能对比（RSS 刷新耗时、内存）、升级指南、`docs/changelog/4.0.md` | `4.0.0-beta.1` → `4.0.0` |
 
 阶段依赖：P0 → P1 → P2 → (P2.5 ∥ P3 ∥ P4) → P5 → (P6 ∥ P7) → P8。P2.5、P3、P4 可并行，P6 依赖 P5 的 `api_router` 与事件总线。

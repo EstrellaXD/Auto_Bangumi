@@ -178,7 +178,7 @@
     },
     "plugins_set": {
       "title": "Plugins",
-      "empty": "No plugins found. Put a plugin directory (named after the plugin id) into config/plugins/local/, or install it with pip, then restart.",
+      "empty": "No plugins found. Install one from the plugin catalog below. Or put a plugin directory (named after the plugin id) into config/plugins/local/, or install it with pip, then restart.",
       "allow_unsigned": "Allow unsigned plugins",
       "allow_unsigned_hint": "Plugins from the local directory or pip are unsigned and only load when this is on. Plugins run inside AutoBangumi with full privileges — only enable plugins you trust.",
       "enabled": "Enabled",
@@ -200,7 +200,28 @@
       "save_success": "Plugin options saved and applied",
       "save_failed": "Failed to save plugin options",
       "load_failed": "Failed to load plugins",
-      "plugin_provided": "From plugin"
+      "plugin_provided": "From plugin",
+      "source_catalog": "Catalog",
+      "signed": "Signed",
+      "uninstall": "Uninstall",
+      "uninstall_confirm_title": "Uninstall {name}?",
+      "uninstall_confirm_body": "The plugin files are deleted. Its options stay in config.json and apply again if you reinstall it.",
+      "uninstall_success": "Plugin uninstalled",
+      "uninstall_failed": "Failed to uninstall the plugin",
+      "catalog_title": "Plugin catalog",
+      "catalog_hint": "AutoBangumi signs the catalog and every plugin package, and checks the signature and sha256 before install. Catalog plugins count as signed and do not need \"Allow unsigned plugins\".",
+      "catalog_browse": "Browse catalog",
+      "catalog_refresh": "Refresh",
+      "catalog_failed": "Catalog unavailable.",
+      "catalog_failed_hint": "Check the network, then select Refresh.",
+      "catalog_empty": "The catalog has no plugins yet.",
+      "extension_points": "Extension points: {list}",
+      "install": "Install",
+      "update": "Update",
+      "installed": "Installed",
+      "installed_version": "Installed v{version}",
+      "install_success": "Plugin installed and enabled",
+      "install_failed": "Failed to install the plugin"
     }
   },
   "downloader": {
