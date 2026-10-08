@@ -1,7 +1,7 @@
 from os.path import expandvars
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field
 
 
 def _expand(value: str | None) -> str:
@@ -213,39 +213,6 @@ class Notification(BaseModel):
         ),
     )
 
-    # Legacy fields for backward compatibility (deprecated)
-    type: Optional[str] = Field(
-        default=None, description="[Deprecated] Use providers instead"
-    )
-    token_: Optional[str] = Field(
-        default=None, alias="token", description="[Deprecated]"
-    )
-    chat_id_: Optional[str] = Field(
-        default=None, alias="chat_id", description="[Deprecated]"
-    )
-
-    @property
-    def token(self) -> str:
-        return _expand(self.token_)
-
-    @property
-    def chat_id(self) -> str:
-        return _expand(self.chat_id_)
-
-    @model_validator(mode="after")
-    def migrate_legacy_config(self) -> "Notification":
-        """Auto-migrate old single-provider config to new format."""
-        if self.type and not self.providers:
-            # Old format detected, migrate to new format
-            legacy_provider = NotificationProvider(
-                type=self.type,
-                enabled=True,
-                token=self.token_ or "",
-                chat_id=self.chat_id_ or "",
-            )
-            self.providers = [legacy_provider]
-        return self
-
 
 class LLMProviderOverride(BaseModel):
     """单个提供商的凭据/模型/端点覆盖（键名含 api_key，掩码机制自动生效）。"""
@@ -324,37 +291,6 @@ class LLM(BaseModel):
         return override.api_key, override.model, override.base_url
 
 
-# [Deprecated] 旧版 OpenAI 解析配置，仅保留用于读取旧配置文件（向后兼容）。
-# 新配置请使用上方的 LLM 段；加载时会自动迁移（见 conf/config.py）。
-class ExperimentalOpenAI(BaseModel):
-    enable: bool = Field(default=False, description="Enable experimental OpenAI")
-    api_key: str = Field(default="", description="OpenAI api key")
-    api_base: str = Field(
-        default="https://api.openai.com/v1", description="OpenAI api base url"
-    )
-    api_type: Literal["azure", "openai"] = Field(
-        default="openai", description="OpenAI api type, usually for azure"
-    )
-    api_version: str = Field(
-        default="2023-05-15", description="OpenAI api version, only for Azure"
-    )
-    model: str = Field(
-        default="gpt-3.5-turbo",
-        description="OpenAI model, ignored when api type is azure",
-    )
-    deployment_id: str = Field(
-        default="",
-        description="Azure OpenAI deployment id, ignored when api type is openai",
-    )
-
-    @field_validator("api_base")
-    @classmethod
-    def validate_api_base(cls, value: str) -> str:
-        if value == "https://api.openai.com/":
-            return "https://api.openai.com/v1"
-        return value
-
-
 class Security(BaseModel):
     """Access control configuration for the login endpoint and MCP server.
 
@@ -421,8 +357,6 @@ class Config(BaseModel):
     proxy: Proxy = Proxy()
     notification: Notification = Notification()
     llm: LLM = LLM()
-    # [Deprecated] 仅用于读取旧配置，运行时逻辑请读 llm 段
-    experimental_openai: ExperimentalOpenAI = ExperimentalOpenAI()
     security: Security = Security()
     update: Update = Update()
 

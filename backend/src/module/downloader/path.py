@@ -117,19 +117,6 @@ def gen_save_path(data: Bangumi | BangumiUpdate | Movie | MovieUpdate) -> str:
     return str(save_path)
 
 
-def gen_movie_save_path(data: Movie | MovieUpdate) -> str:
-    """Generate the flat save directory used by a movie/gekijouban."""
-    return str(Path(settings.downloader.path) / _media_folder(data))
-
-
-def movie_rule_name(data: Movie) -> str:
-    return (
-        f"[{data.group_name}] {data.official_title}"
-        if settings.bangumi_manage.group_tag
-        else data.official_title
-    )
-
-
 def rule_name(data: Bangumi):
     name = (
         f"[{data.group_name}] {data.official_title} S{data.season}"
@@ -137,7 +124,3 @@ def rule_name(data: Bangumi):
         else f"{data.official_title} S{data.season}"
     )
     return name
-
-
-def join_path(*args):
-    return str(Path(*args))

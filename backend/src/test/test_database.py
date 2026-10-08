@@ -64,10 +64,6 @@ async def test_bangumi_database(db_session):
     assert result is not None
     assert result.official_title == test_data.official_title
 
-    # search poster
-    poster = await db.match_poster("无职转生，到了异世界就拿出真本事II (2021)")
-    assert poster == "/test/test.jpg"
-
     # match torrent
     result = await db.match_torrent(
         "[Lilith-Raws] 无职转生，到了异世界就拿出真本事 / Mushoku Tensei - 11 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
@@ -182,62 +178,6 @@ async def test_torrent_search_by_qb_hash_not_found(db_session):
 
     result = await db.search_by_qb_hash("nonexistent_hash")
     assert result is None
-
-
-async def test_torrent_search_by_url(db_session):
-    """Test searching torrent by URL."""
-    db = TorrentDatabase(db_session)
-
-    url = "https://mikanani.me/Download/torrent123.torrent"
-    torrent = Torrent(
-        name="[SubGroup] Test Anime - 02 [1080p].mkv",
-        url=url,
-    )
-    await db.add(torrent)
-
-    # Search by URL
-    result = await db.search_by_url(url)
-    assert result is not None
-    assert result.url == url
-    assert result.name == torrent.name
-
-
-async def test_torrent_search_by_url_not_found(db_session):
-    """Test searching non-existent URL returns None."""
-    db = TorrentDatabase(db_session)
-
-    result = await db.search_by_url("https://nonexistent.com/torrent.torrent")
-    assert result is None
-
-
-async def test_torrent_update_qb_hash(db_session):
-    """Test updating qb_hash for existing torrent."""
-    db = TorrentDatabase(db_session)
-
-    # Create torrent without qb_hash
-    torrent = Torrent(
-        name="[SubGroup] Test Anime - 03 [1080p].mkv",
-        url="https://example.com/torrent3",
-    )
-    await db.add(torrent)
-    assert torrent.qb_hash is None
-
-    # Update qb_hash
-    success = await db.update_qb_hash(torrent.id, "new_hash_value")
-    assert success is True
-
-    # Verify update
-    result = await db.search(torrent.id)
-    assert result is not None
-    assert result.qb_hash == "new_hash_value"
-
-
-async def test_torrent_update_qb_hash_nonexistent(db_session):
-    """Test updating qb_hash for non-existent torrent returns False."""
-    db = TorrentDatabase(db_session)
-
-    success = await db.update_qb_hash(99999, "some_hash")
-    assert success is False
 
 
 async def test_torrent_with_bangumi_id(db_session):
@@ -1091,37 +1031,6 @@ def test_groups_are_similar():
     assert _groups_are_similar(None, "LoliHouse") is False
     assert _groups_are_similar("LoliHouse", None) is False
     assert _groups_are_similar(None, None) is False
-
-
-async def test_get_all_title_patterns(db_session):
-    """Test getting all title patterns for a bangumi."""
-    db = BangumiDatabase(db_session)
-
-    bangumi = Bangumi(
-        official_title="Test Anime",
-        title_raw="Test Anime S1",
-        group_name="TestGroup",
-        dpi="1080p",
-        source="Web",
-        subtitle="CHT",
-        rss_link="test",
-    )
-    await db.add(bangumi)
-    bangumi_id = (await db.search_all())[0].id
-
-    # Add aliases
-    await db.add_title_alias(bangumi_id, "Test Anime Season 1")
-    await db.add_title_alias(bangumi_id, "TA S1")
-
-    # Get all patterns
-    updated = await db.search_id(bangumi_id)
-    assert updated is not None
-    patterns = db.get_all_title_patterns(updated)
-
-    assert len(patterns) == 3
-    assert "Test Anime S1" in patterns
-    assert "Test Anime Season 1" in patterns
-    assert "TA S1" in patterns
 
 
 async def test_match_list_with_aliases(db_session):

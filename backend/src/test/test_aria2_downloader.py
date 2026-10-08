@@ -1449,19 +1449,3 @@ class TestSetCategoryAddTag:
 # ---------------------------------------------------------------------------
 # check_connection
 # ---------------------------------------------------------------------------
-
-
-class TestCheckConnection:
-    async def test_returns_version_string(self):
-        aria2 = _aria2()
-        with patch.object(
-            aria2, "_call", AsyncMock(return_value={"version": "1.36.0"})
-        ):
-            result = await aria2.check_connection()
-        assert result == "1.36.0"
-
-    async def test_missing_version_field_returns_unknown(self):
-        aria2 = _aria2()
-        with patch.object(aria2, "_call", AsyncMock(return_value={})):
-            result = await aria2.check_connection()
-        assert result == "unknown"

@@ -1,3 +1,13 @@
+# [4.0.0] - Unreleased
+
+4.0 是插件化重构的大版本（设计见 `docs/plans/2026-10-08-plugin-architecture-4.0-design.md`）。本节随各阶段合入持续更新。
+
+- **破坏性变更（升级路径）**：只支持从 3.3.x 升级。检测到更早版本的数据（`config/version.info` 低于 3.3，或残留 2.x 的 `data/data.json`）时拒绝启动，并提示先升级到最新 3.3.x 启动一次完成迁移
+- **破坏性变更（API）**：移除 3.2 兼容的 GET 控制端点（`/api/v1/restart`、`/start`、`/stop`、`/shutdown`）和 `GET /api/v1/auth/refresh_token`，请改用 POST
+- **破坏性变更（配置）**：移除旧版 `experimental_openai` 配置节和通知的单 provider 旧字段（`type` / `token` / `chat_id`），3.3 已把它们迁移到 `llm` 与 `notification.providers`；移除废弃的 `normal` 重命名方式，已有配置自动改为语义相同的 `none`
+- **清理**：删除 3.0→3.1、3.1→3.2 跨版本迁移、旧 JWT 与内存会话实现，以及约 70 处无调用方的函数、方法和模型；CI 新增 vulture 死代码检查
+- **修复（版本记录）**：`version.info` 原先只比较次版本号，跨主版本升级（如 3.3 → 4.0）不会被记录；现按完整语义化版本比较
+
 # [3.3.6] - 2026-09-19
 
 3.3.6 是问题修复版本，修复 3.3.5 发布后报告的 RSS 匹配、网络、解析与部署问题。

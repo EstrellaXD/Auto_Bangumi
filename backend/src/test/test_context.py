@@ -9,6 +9,7 @@ from module.conf import settings as real_settings
 from module.core.context import AppContext
 from module.models import ResponseModel
 from module.notification import DownloaderUnavailableEvent
+from module.update import UnsupportedUpgradeError
 
 
 @pytest.fixture
@@ -77,42 +78,34 @@ class TestStartup:
         assert ctx.scheduler.running is False
 
     async def test_existing_db_runs_pending_migrations(self, ctx):
-        """Existing DB, same version => run_migrations() is invoked."""
+        """Existing DB from a supported version => run_migrations() is invoked."""
         with (
             patch("module.core.context.Checker.check_database", return_value=True),
-            patch("module.core.context.LEGACY_DATA_PATH") as legacy,
-            patch(
-                "module.core.context.Checker.check_version",
-                return_value=(True, None),
-            ),
+            patch("module.core.context.Checker.check_version", return_value=None),
             patch("module.core.context.Checker.check_img_cache", return_value=True),
             patch("module.core.context.run_migrations") as mock_run,
         ):
-            legacy.exists.return_value = False
             await ctx.startup()
 
         mock_run.assert_called_once()
         assert ctx.first_run_boot is False
         assert ctx._startup_done is True
 
-    async def test_version_bump_runs_cross_version_migrations(self, ctx):
-        """A version change from minor 0 triggers 3.0->3.1 then 3.1->3.2."""
+    async def test_unsupported_upgrade_aborts_startup(self, ctx):
+        """Data from a pre-3.3 install aborts boot before touching the schema."""
         with (
             patch("module.core.context.Checker.check_database", return_value=True),
-            patch("module.core.context.LEGACY_DATA_PATH") as legacy,
             patch(
                 "module.core.context.Checker.check_version",
-                return_value=(False, 0),
+                side_effect=UnsupportedUpgradeError("too old"),
             ),
-            patch("module.core.context.Checker.check_img_cache", return_value=True),
-            patch("module.core.context.from_30_to_31", new=AsyncMock()) as m_30_31,
-            patch("module.core.context.from_31_to_32", new=AsyncMock()) as m_31_32,
+            patch("module.core.context.run_migrations") as mock_run,
         ):
-            legacy.exists.return_value = False
-            await ctx.startup()
+            with pytest.raises(UnsupportedUpgradeError):
+                await ctx.startup()
 
-        m_30_31.assert_awaited_once()
-        m_31_32.assert_awaited_once()
+        mock_run.assert_not_called()
+        assert ctx._startup_done is False
 
     async def test_startup_is_idempotent(self, ctx):
         """A second startup() call returns immediately without re-running."""

@@ -1,7 +1,6 @@
 import json
 import logging
 from collections import OrderedDict
-from typing import TypeAlias
 
 from module.conf import settings
 from module.models import Bangumi, Movie, RSSItem, Torrent
@@ -22,7 +21,6 @@ SEARCH_KEY = [
     "dpi",
 ]
 
-BangumiJSON: TypeAlias = str
 
 # Cache for TMDB preview lookups by official_title. Bounded (LRU-ish,
 # oldest-evicted) like _tmdb_cache/_mikan_cache — was previously a plain dict
@@ -69,11 +67,6 @@ class SearchTorrent:
             _poster_cache.popitem(last=False)
         _poster_cache.setdefault(title, {})[language] = (localized_title, poster_link)
         return localized_title, poster_link
-
-    async def _fetch_tmdb_poster(self, title: str) -> str | None:
-        """Fetch poster from TMDB if not in cache."""
-        _, poster_link = await self._fetch_tmdb_preview(title)
-        return poster_link
 
     async def analyse_keyword(
         self, keywords: list[str], site: str = "mikan", limit: int = 100

@@ -1,4 +1,3 @@
-from types import SimpleNamespace
 from typing import Literal
 from unittest.mock import AsyncMock, patch
 
@@ -7,7 +6,7 @@ import pytest
 from module.conf import settings
 from module.models import Bangumi, Movie
 from module.models.bangumi import Episode
-from module.models.config import LLM, ExperimentalOpenAI
+from module.models.config import LLM
 from module.parser import title_parser as title_parser_module
 from module.parser.analyser.selector import ConfiguredParseOutcome
 from module.parser.analyser.tokenizer import (
@@ -20,7 +19,7 @@ from module.parser.analyser.tokenizer.classic import (
     parse_release_title as parse_classic_release_title,
 )
 from module.parser.analyser.tokenizer.compat import to_legacy_episode
-from module.parser.title_parser import TitleParser, _llm_config
+from module.parser.title_parser import TitleParser
 
 RAW_TITLE = (
     "[梦蓝字幕组]New Doraemon 哆啦A梦新番[747][2023.02.25][AVC][1080P][GB_JP][MP4]"
@@ -638,30 +637,6 @@ class TestLLMParseErrorHandling:
                 assert await title_parser_module._llm_parse("bad title 3") is None
 
         assert mock_parser.parse.await_count == 2
-
-
-class TestLLMConfigLegacyFallback:
-    """llm 段缺失时，_llm_config 回退读取旧的 experimental_openai 段。"""
-
-    def test_legacy_settings_used_when_llm_absent(self):
-        legacy_settings = SimpleNamespace(
-            experimental_openai=ExperimentalOpenAI(
-                enable=True, api_key="sk-legacy", model="gpt-4o"
-            )
-        )
-        with patch("module.parser.title_parser.settings", legacy_settings):
-            conf = _llm_config()
-
-        assert conf.enable is True
-        assert conf.provider == "openai"
-        assert conf.api_key == "sk-legacy"
-        assert conf.model == "gpt-4o"
-        # 旧配置的语义是 LLM 优先
-        assert conf.mode == "primary"
-
-    def test_llm_section_preferred_when_present(self):
-        conf = _llm_config()
-        assert conf is settings.llm
 
 
 class TestLLMParserResetCache:

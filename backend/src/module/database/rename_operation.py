@@ -366,24 +366,6 @@ class RenameOperationDatabase:
         )
         return list(result.scalars().all())
 
-    async def list_retryable(
-        self, now: datetime | None = None, limit: int = 100
-    ) -> list[RenameOperation]:
-        ready_at = now or utc_now()
-        result = await self.session.execute(
-            select(RenameOperation)
-            .where(
-                RenameOperation.state == "retry",
-                or_(
-                    col(RenameOperation.retry_at).is_(None),
-                    col(RenameOperation.retry_at) <= ready_at,
-                ),
-            )
-            .order_by(col(RenameOperation.retry_at).asc())
-            .limit(limit)
-        )
-        return list(result.scalars().all())
-
     async def list_active_replacements(self, limit: int = 100) -> list[RenameOperation]:
         result = await self.session.execute(
             select(RenameOperation)

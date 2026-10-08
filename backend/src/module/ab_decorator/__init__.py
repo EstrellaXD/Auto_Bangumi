@@ -44,19 +44,6 @@ def qb_connect_failed_wait(func):
     return wrapper
 
 
-def api_failed(func):
-    @functools.wraps(func)
-    async def wrapper(*args, **kwargs):
-        try:
-            return await func(*args, **kwargs)
-        except Exception as e:
-            logger.debug("URL: %s", args[0])
-            logger.warning("Wrong API response.")
-            logger.debug(e)
-
-    return wrapper
-
-
 def locked(func):
     @functools.wraps(func)
     async def wrapper(*args, **kwargs):

@@ -13,7 +13,6 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.0",
     "aiosqlite>=0.19.0",
     "pydantic>=2.0.0",
-    "pyjwt>=2.11.0",
     "bcrypt>=4.1",
     "cryptography>=42.0.0",
     "python-multipart>=0.0.6",
@@ -38,6 +37,7 @@ dev = [
     "black>=24.0.0",
     "pre-commit>=3.0.0",
     "mypy>=2.1.0",
+    "vulture>=2.16",
 ]
 
 [tool.pytest.ini_options]
@@ -97,3 +97,20 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "test.*"
 disable_error_code = ["method-assign"]
+
+[tool.vulture]
+# 死代码检查：新的未使用函数/类/方法会让 CI 失败。框架通过装饰器注册的入口
+# （路由、校验器等）由 ignore_decorators 排除；仅测试使用的辅助方法和 pydantic
+# 字段等误报登记在 vulture_whitelist.py。
+paths = ["src/module", "src/main.py", "vulture_whitelist.py"]
+min_confidence = 60
+ignore_decorators = [
+    "@router.*",
+    "@*_router.*",
+    "@model_validator",
+    "@field_validator",
+    "@property",
+    "@app.*",
+    "@server.*",
+    "@mcp.*",
+]

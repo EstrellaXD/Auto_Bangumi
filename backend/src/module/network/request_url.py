@@ -220,20 +220,6 @@ class RequestURL:
         logger.warning("Please check DNS/Connection settings")
         return None
 
-    async def check_url(self, url: str):
-        assert (
-            self._client is not None
-        ), "RequestURL must be used as an async context manager"
-        if "://" not in url:
-            url = f"http://{url}"
-        try:
-            req = await self._client.head(url=url, headers=self.header)
-            req.raise_for_status()
-            return True
-        except (httpx.RequestError, httpx.HTTPStatusError):
-            logger.debug("Cannot connect to %s.", url)
-            return False
-
     async def post_form(self, url: str, data: dict, files):
         assert (
             self._client is not None

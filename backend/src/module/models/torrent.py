@@ -19,10 +19,6 @@ class Torrent(SQLModel, table=True):
     qb_hash: Optional[str] = Field(None, alias="qb_hash", index=True)
 
 
-class TorrentUpdate(SQLModel):
-    downloaded: bool = Field(False, alias="downloaded")
-
-
 class EpisodeFile(BaseModel):
     media_path: str = Field(...)
     group: str | None = Field(None)

@@ -224,7 +224,7 @@ class TestPosterCache:
             "module.searcher.searcher.tmdb_parser", new=AsyncMock(return_value=None)
         ):
             for i in range(4):
-                await torrent._fetch_tmdb_poster(f"Title {i}")
+                await torrent._fetch_tmdb_preview(f"Title {i}")
 
         assert len(searcher_module._poster_cache) == 3
         # The oldest entry ("Title 0") was evicted; the rest remain.

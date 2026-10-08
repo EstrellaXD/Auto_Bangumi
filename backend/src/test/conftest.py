@@ -130,7 +130,6 @@ def mock_qb_client():
     client = AsyncMock()
     client.auth.return_value = True
     client.logout.return_value = None
-    client.check_host.return_value = True
     client.torrents_info.return_value = []
     client.torrent_exists.return_value = False
     client.torrents_files.return_value = []
@@ -140,17 +139,9 @@ def mock_qb_client():
     client.torrents_pause.return_value = None
     client.torrents_resume.return_value = None
     client.rss_set_rule.return_value = None
-    client.prefs_init.return_value = None
     client.add_category.return_value = None
-    client.get_app_prefs.return_value = {"save_path": "/downloads"}
     client.move_torrent.return_value = None
-    client.rss_add_feed.return_value = None
-    client.rss_remove_item.return_value = None
-    client.rss_get_feeds.return_value = {}
-    client.get_download_rule.return_value = {}
-    client.get_torrent_path.return_value = "/downloads/Bangumi"
     client.set_category.return_value = None
-    client.remove_rule.return_value = None
     return client
 
 

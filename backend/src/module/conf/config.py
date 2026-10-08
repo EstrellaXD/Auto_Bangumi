@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 from module.models.config import Config
 
-from .const import DEFAULT_SETTINGS, ENV_TO_ATTR
+from .const import ENV_TO_ATTR
 
 logger = logging.getLogger(__name__)
 CONFIG_ROOT = Path("config")
@@ -95,50 +95,11 @@ class Settings(Config):
 
     @staticmethod
     def _migrate_old_config(config: dict) -> dict:
-        """Migrate old config field names (3.1.x) to current format (3.2.x)."""
-        program = config.get("program", {})
-        # Rename sleep_time -> rss_time
-        if "sleep_time" in program and "rss_time" not in program:
-            program["rss_time"] = program.pop("sleep_time")
-        elif "sleep_time" in program:
-            program.pop("sleep_time")
-        # Rename times -> rename_time
-        if "times" in program and "rename_time" not in program:
-            program["rename_time"] = program.pop("times")
-        elif "times" in program:
-            program.pop("times")
-        # Remove deprecated data_version field
-        program.pop("data_version", None)
-
-        # Remove deprecated rss_parser fields
-        rss_parser = config.get("rss_parser", {})
-        for key in ("type", "custom_url", "token", "enable_tmdb"):
-            rss_parser.pop(key, None)
-
-        # Add security section if missing (preserves local-network MCP default)
-        if "security" not in config:
-            config["security"] = DEFAULT_SETTINGS["security"]
-
-        # 旧版 experimental_openai 配置自动迁移到 llm 段（幂等：
-        # llm 段已有有效内容时不再触碰，旧段保留以便降级回滚）
-        openai_conf = config.get("experimental_openai", {})
-        llm_conf = config.get("llm") or {}
-        llm_configured = llm_conf.get("enable") or llm_conf.get("api_key")
-        openai_configured = openai_conf.get("enable") or openai_conf.get("api_key")
-        if not llm_configured and openai_configured:
-            base_url = openai_conf.get("base_url", openai_conf.get("api_base", ""))
-            # 官方地址无需显式指定，空串即官方 API
-            if base_url in ("https://api.openai.com/v1", "https://api.openai.com/"):
-                base_url = ""
-            config["llm"] = {
-                "enable": openai_conf.get("enable", False),
-                "provider": "openai",
-                "api_key": openai_conf.get("api_key", ""),
-                "model": openai_conf.get("model", "gpt-5-mini"),
-                "base_url": base_url,
-                # 旧版语义是 LLM 优先解析，迁移用户保持原有行为
-                "mode": "primary",
-            }
+        """把 3.3.x 的配置改写为当前格式（更早版本的迁移已随 4.0 移除）。"""
+        bangumi_manage = config.get("bangumi_manage", {})
+        # "normal" 早已是无操作的废弃方法，语义等同 "none"
+        if bangumi_manage.get("rename_method") == "normal":
+            bangumi_manage["rename_method"] = "none"
 
         _scrub_corrupted_masks(config)
 
@@ -183,10 +144,6 @@ class Settings(Config):
         if isinstance(attr, tuple):
             return attr[1](os.environ[env])
         return os.environ[env]
-
-    @property
-    def group_rules(self):
-        return self.__dict__["group_rules"]
 
 
 settings = Settings()

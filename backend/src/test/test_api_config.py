@@ -87,8 +87,6 @@ def mock_settings():
     settings.notification.enable = False
     settings.llm = MagicMock()
     settings.llm.enable = False
-    settings.experimental_openai = MagicMock()
-    settings.experimental_openai.enable = False
     settings.save = MagicMock()
     settings.load = MagicMock()
     return settings
@@ -211,15 +209,6 @@ class TestUpdateConfig:
                 "token": "",
                 "chat_id": "",
             },
-            "experimental_openai": {
-                "enable": False,
-                "api_key": "",
-                "api_base": "https://api.openai.com/v1",
-                "api_type": "openai",
-                "api_version": "2023-05-15",
-                "model": "gpt-3.5-turbo",
-                "deployment_id": "",
-            },
         }
         with patch("module.api.config.settings", mock_settings):
             response = authed_client.patch("/api/v1/config/update", json=update_data)
@@ -275,15 +264,6 @@ class TestUpdateConfig:
                 "type": "telegram",
                 "token": "",
                 "chat_id": "",
-            },
-            "experimental_openai": {
-                "enable": False,
-                "api_key": "",
-                "api_base": "https://api.openai.com/v1",
-                "api_type": "openai",
-                "api_version": "2023-05-15",
-                "model": "gpt-3.5-turbo",
-                "deployment_id": "",
             },
         }
         with patch("module.api.config.settings", mock_settings):
@@ -422,7 +402,6 @@ class TestSanitizeDict:
         # Unset (empty) secrets must NOT be masked: a phantom mask makes the
         # UI show a password where none exists (TG report)
         assert data["llm"]["api_key"] == ""
-        assert data["experimental_openai"]["api_key"] == ""
 
 
 # ---------------------------------------------------------------------------
@@ -466,17 +445,17 @@ class TestRestoreMasked:
         incoming = {
             "downloader": {"password": "********"},
             "proxy": {"password": "new_proxy_pass"},
-            "experimental_openai": {"api_key": "********"},
+            "llm": {"api_key": "********"},
         }
         current = {
             "downloader": {"password": "qb_pass"},
             "proxy": {"password": "old_proxy_pass"},
-            "experimental_openai": {"api_key": "sk-real-key"},
+            "llm": {"api_key": "sk-real-key"},
         }
         _restore_masked(incoming, current)
         assert incoming["downloader"]["password"] == "qb_pass"
         assert incoming["proxy"]["password"] == "new_proxy_pass"
-        assert incoming["experimental_openai"]["api_key"] == "sk-real-key"
+        assert incoming["llm"]["api_key"] == "sk-real-key"
 
     def test_non_sensitive_mask_value_untouched(self):
         """A non-sensitive key with '********' value is not modified."""
@@ -666,15 +645,6 @@ class TestRestoreMasked:
                 "token": "",
                 "chat_id": "",
             },
-            "experimental_openai": {
-                "enable": False,
-                "api_key": "",
-                "api_base": "https://api.openai.com/v1",
-                "api_type": "openai",
-                "api_version": "2023-05-15",
-                "model": "gpt-3.5-turbo",
-                "deployment_id": "",
-            },
         }
         payload = {
             "program": {"rss_time": 900, "rename_time": 60, "webui_port": 7892},
@@ -708,15 +678,6 @@ class TestRestoreMasked:
                 "type": "telegram",
                 "token": "",
                 "chat_id": "",
-            },
-            "experimental_openai": {
-                "enable": False,
-                "api_key": "",
-                "api_base": "https://api.openai.com/v1",
-                "api_type": "openai",
-                "api_version": "2023-05-15",
-                "model": "gpt-3.5-turbo",
-                "deployment_id": "",
             },
         }
         with patch("module.api.config.settings", mock_settings):

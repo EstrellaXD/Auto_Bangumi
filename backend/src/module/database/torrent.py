@@ -33,11 +33,6 @@ class TorrentDatabase:
         self.session.add_all(datas)
         await self.session.commit()
 
-    async def update_one_user(self, data: Torrent):
-        self.session.add(data)
-        await self.session.commit()
-        logger.debug("Update %s in database.", data.name)
-
     async def search(self, _id: int) -> Torrent | None:
         result = await self.session.execute(select(Torrent).where(Torrent.id == _id))
         return result.scalar_one_or_none()
@@ -165,19 +160,3 @@ class TorrentDatabase:
         await self.session.delete(torrent)
         await self.session.commit()
         logger.debug("Deleted torrent %s.", torrent.id)
-
-    async def search_by_url(self, url: str) -> Torrent | None:
-        """Find torrent by URL."""
-        result = await self.session.execute(select(Torrent).where(Torrent.url == url))
-        return result.scalar_one_or_none()
-
-    async def update_qb_hash(self, torrent_id: int, qb_hash: str) -> bool:
-        """Update the qb_hash for a torrent."""
-        torrent = await self.search(torrent_id)
-        if torrent:
-            torrent.qb_hash = qb_hash
-            self.session.add(torrent)
-            await self.session.commit()
-            logger.debug("Updated qb_hash for torrent %s: %s", torrent_id, qb_hash)
-            return True
-        return False

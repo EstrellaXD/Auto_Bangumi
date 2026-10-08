@@ -139,20 +139,3 @@ class Episode:
             self.episode_type = "movie"
         elif self.episode_type == "movie":
             self.is_movie = True
-
-
-@dataclass(slots=True)
-class SeasonInfo:
-    official_title: str
-    title_raw: str
-    season: int
-    season_raw: str
-    group: str
-    filter: list | None
-    episode_offset: int | None
-    season_offset: int | None
-    dpi: str
-    source: str
-    subtitle: str
-    added: bool
-    eps_collect: bool

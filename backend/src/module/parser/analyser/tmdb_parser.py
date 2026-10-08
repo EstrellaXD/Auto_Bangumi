@@ -175,51 +175,6 @@ def detect_virtual_seasons(episodes: list[dict], gap_months: int = 6) -> list[in
     return virtual_season_starts
 
 
-async def get_aired_episode_count(
-    tv_id: int, season_number: int, language: str, req: RequestContent
-) -> int:
-    """Get the count of episodes that have actually aired for a season.
-
-    Args:
-        tv_id: TMDB TV show ID
-        season_number: Season number
-        language: Language code
-        req: Request content instance
-
-    Returns:
-        Number of episodes that have aired (air_date <= today)
-    """
-    import datetime
-
-    url = season_url(tv_id, season_number, language)
-    season_data = await req.get_json(url)
-    if not season_data:
-        return 0
-
-    episodes = season_data.get("episodes", [])
-    today = datetime.date.today()
-    aired_count = 0
-
-    for ep in episodes:
-        air_date_str = ep.get("air_date")
-        if air_date_str:
-            try:
-                air_date = datetime.date.fromisoformat(air_date_str)
-                if air_date <= today:
-                    aired_count += 1
-            except ValueError:
-                # Invalid date format, skip this episode
-                continue
-
-    logger.debug(
-        "Season %s: %s aired of %s total episodes",
-        season_number,
-        aired_count,
-        len(episodes),
-    )
-    return aired_count
-
-
 def get_season(seasons: list) -> tuple[int, str | None]:
     ss = [s for s in seasons if s["air_date"] is not None and "特别" not in s["season"]]
     if not ss:

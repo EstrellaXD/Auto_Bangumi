@@ -10,8 +10,7 @@ import logging
 import time
 
 from module.checker import Checker
-from module.conf import LEGACY_DATA_PATH, VERSION, settings
-from module.database import Database
+from module.conf import VERSION, settings
 from module.downloader.download_client import clear_credential_latch
 from module.downloader.download_client import shutdown as downloader_shutdown
 from module.models import ResponseModel
@@ -24,10 +23,7 @@ from module.rss import RSSAnalyser
 from module.searcher.searcher import reset_cache as reset_poster_cache
 from module.update import (
     cache_image,
-    data_migration,
     first_run,
-    from_30_to_31,
-    from_31_to_32,
     migrate_legacy_auth_tokens,
     run_migrations,
 )
@@ -207,28 +203,10 @@ class AppContext:
             self.first_run_boot = True
             self._startup_done = True
             return
-        if LEGACY_DATA_PATH.exists():
-            logger.info(
-                "Legacy data detected, starting data migration, please wait patiently."
-            )
-            # data_migration() writes into the bangumi/rssitem tables directly,
-            # so the schema must exist and be up to date first.
-            async with Database() as db:
-                await db.create_table()
-                await db.run_migrations()
-            await data_migration()
-        else:
-            is_same, last_minor = Checker.check_version()
-            if not is_same:
-                if last_minor is not None and last_minor == 0:
-                    await from_30_to_31()
-                    logger.info("Database migrated from 3.0 to 3.1.")
-                await from_31_to_32()
-                logger.info("Database updated.")
-            else:
-                # Always check schema version and run pending migrations,
-                # in case a previous migration was interrupted or failed.
-                await run_migrations()
+        # 低于 3.3 的数据会在这里抛 UnsupportedUpgradeError，中止启动。
+        Checker.check_version()
+        # 每次启动都检查 schema 版本，补跑新增或上次中断的迁移。
+        await run_migrations()
         await migrate_legacy_auth_tokens()
         if not Checker.check_img_cache():
             logger.info("No image cache exists, create image cache.")

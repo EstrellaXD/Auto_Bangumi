@@ -20,7 +20,7 @@ from module.models.user import UserUpdate
 from module.network import RequestContent
 from module.notification import PROVIDER_REGISTRY
 from module.security.api import CredentialKind, get_auth_service, get_principal
-from module.security.jwt import verify_password
+from module.security.password import verify_password
 
 from .deps import get_context
 

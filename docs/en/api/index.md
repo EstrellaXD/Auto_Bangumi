@@ -122,7 +122,7 @@ GET /config/get
 
 Retrieve the current application configuration.
 
-**Response:** Full configuration object including `program`, `downloader`, `rss_parser`, `bangumi_manager`, `notification`, `proxy`, and `experimental_openai` sections.
+**Response:** Full configuration object including `program`, `downloader`, `rss_parser`, `bangumi_manager`, `notification`, `proxy`, `llm`, and other sections.
 
 ### Update Configuration
 

@@ -9,9 +9,6 @@ from module.database import Database, get_db
 from module.downloader import DownloadClient
 from module.manager import Renamer, TorrentManager
 from module.models import APIResponse, Bangumi, BangumiUpdate, ResponseModel, Torrent
-from module.parser.analyser.offset_detector import (
-    OffsetSuggestion as DetectorSuggestion,
-)
 from module.parser.analyser.offset_detector import detect_offset_mismatch
 from module.parser.analyser.tmdb_parser import tmdb_parser
 from module.security.api import get_current_user
