@@ -54,3 +54,20 @@ API_ROUTER = "api_router"
 MCP_TOOL = "mcp_tool"
 MCP_RESOURCE = "mcp_resource"
 MESSAGE_TEMPLATE = "message_template"
+
+# --- P4 organize（契约见 :mod:`ab_sdk.rename`） ---
+#
+# Provider 扩展点：
+#
+# - ``RENAME_STRATEGY``：返回 :class:`ab_sdk.rename.RenameStrategy`，id 即
+#   ``bangumi_manage.rename_method`` 的取值。宿主自带 ``none``（不改名），
+#   内置插件 ``rename`` 提供 ``pn``、``advance``、``template``
+# - ``MEDIA_FILES``：返回 :class:`ab_sdk.rename.MediaFiles`
+# - ``CONFLICT_POLICY``：返回 :class:`ab_sdk.rename.ConflictPolicy`
+#
+# 事件（``@subscribe``）：``file.renamed``（:class:`ab_sdk.events.FileRenamed`）、
+# ``torrent.organized``（:class:`ab_sdk.events.TorrentOrganized`）
+
+RENAME_STRATEGY = "rename_strategy"
+MEDIA_FILES = "media_files"
+CONFLICT_POLICY = "conflict_policy"

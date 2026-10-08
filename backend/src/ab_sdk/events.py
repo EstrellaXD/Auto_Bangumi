@@ -7,6 +7,8 @@
 from dataclasses import dataclass
 from typing import ClassVar
 
+from .rename import FileKind
+
 
 @dataclass(frozen=True, slots=True)
 class Event:
@@ -334,3 +336,79 @@ class RenameConflictEvent(SystemEvent):
             f"种子：{self.torrent_name}\n目标：{self.target_path}\n"
             f"原因：{self.reason}",
         )
+
+
+@dataclass(frozen=True, slots=True)
+class RenameSkippedEvent(SystemEvent):
+    """重命名策略无法为种子中的文件给出名字（如模板渲染失败），文件保留原名。
+
+    同一种子、同一原因每个进程只通知一次；修正配置后下一轮会自动重试。
+    """
+
+    kind: ClassVar[str] = "rename_skipped"
+    severity: ClassVar[str] = "warning"
+    once: ClassVar[bool] = False
+
+    task_id: str
+    torrent_name: str
+    strategy: str
+    reason: str
+
+    def dedup_key(self) -> str | None:
+        return f"rename_skipped:{self.task_id}"
+
+    def payload(self) -> dict:
+        return {
+            "task_id": self.task_id,
+            "torrent_name": self.torrent_name,
+            "strategy": self.strategy,
+            "reason": self.reason,
+        }
+
+    def describe(self) -> tuple[str, str]:
+        return (
+            "文件未重命名",
+            f"种子：{self.torrent_name}\n重命名方式：{self.strategy}\n"
+            f"原因：{self.reason}\n文件已保留原名，修正后会自动重试。",
+        )
+
+
+# --- P4：organize 流水线事件（只发布到事件总线，不进通知中心） -------------------
+#
+# 路径均为下载器视角的绝对路径：保存目录与种子内相对路径以 "/" 拼接
+# （Windows 下载器的 "\" 也统一为 "/"）。AutoBangumi 与下载器不在同一文件系统
+# 视图时（容器挂载不同），订阅者需要自行做路径映射。
+
+
+@dataclass(frozen=True, slots=True)
+class FileRenamed(Event):
+    """下载器中的一个文件被重命名到规范名（正片或字幕）。"""
+
+    kind: ClassVar[str] = "file.renamed"
+    bangumi_id: int | None  # 来自种子的 ab:<id> 标签；旧种子可能没有
+    old_path: str
+    new_path: str
+    file_kind: FileKind
+    downloader_id: str = "default"
+
+
+@dataclass(frozen=True, slots=True)
+class OrganizedFile:
+    path: str
+    kind: FileKind
+
+
+@dataclass(frozen=True, slots=True)
+class TorrentOrganized(Event):
+    """一个种子整理完成：顶层正片都已在最终位置（重命名方式为 none 时即原位置）。
+
+    ``files`` 是正片与字幕的最终路径。投递语义为「至少一次」：未打
+    ``ab:renamed`` 标签的种子（如重命名方式为 none）每次进程重启后会再发布一次，
+    订阅者须保证幂等。
+    """
+
+    kind: ClassVar[str] = "torrent.organized"
+    torrent_hash: str
+    bangumi_id: int | None
+    files: tuple[OrganizedFile, ...]
+    downloader_id: str = "default"
