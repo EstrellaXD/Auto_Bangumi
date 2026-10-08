@@ -162,6 +162,25 @@ async def test_rename_plugin_strategy_renames_and_publishes_events(plugins, rena
     ]
 
 
+async def test_rename_plugin_removed_mid_tick_keeps_tick_strategy(plugins, renamer):
+    def target_name(f: RenameInput) -> str:
+        # 本轮处理中插件被停用（重载、熔断）：策略已从注册表移除
+        plugins.registry.remove_plugin("ext")
+        language = f".{f.language}" if f.kind == "subtitle" else ""
+        return f"{f.title} E{f.episode}{language}{f.suffix}"
+
+    add_strategy(plugins.registry, "custom", target_name)
+    await run(renamer, "custom")
+
+    # 打 ab:renamed 标签与生成文件名必须来自同一个策略：字幕也按本轮策略改名
+    renamed = [
+        c.kwargs["new_path"]
+        for c in renamer.client.client.torrents_rename_file.await_args_list
+    ]
+    assert renamed == ["Anime E1.mkv", "Anime E1.zh.ass"]
+    renamer.client.client.add_tag.assert_awaited_once_with("h1", "ab:renamed")
+
+
 async def test_rename_none_publishes_organized_once_per_process(plugins, renamer):
     await run(renamer, "none")
     await run(renamer, "none")

@@ -57,9 +57,12 @@ _organized_published: dict[str, tuple[OrganizedFile, ...]] = {}
 _skip_notified: set[tuple[str, str]] = set()
 
 
-def _rename_strategy(method: str) -> ProviderEntry:
+def _rename_strategy(method: str | ProviderEntry) -> ProviderEntry:
     """按 rename_method 取重命名策略；未登记（如 rename 插件未启用）时记录一次
-    日志并按 none 处理。"""
+    日志并按 none 处理。已解析的策略原样返回：一轮重命名只解析一次，轮中插件
+    被停用也不会让同一种子的文件名与 ab:renamed 标签来自不同策略。"""
+    if isinstance(method, ProviderEntry):
+        return method
     strategies = plugin_host.get_registry().providers(points.RENAME_STRATEGY)
     entry = strategies.get(method)
     if entry is not None:
@@ -134,7 +137,7 @@ class Renamer(RevisionSaga):
     def gen_path(
         file_info: EpisodeFile | SubtitleFile,
         bangumi_name: str,
-        method: str,
+        method: str | ProviderEntry,
         episode_offset: int = 0,
         season_offset: int = 0,  # Kept for API compatibility, but no longer used
     ) -> str:
@@ -169,7 +172,7 @@ class Renamer(RevisionSaga):
         torrent_name: str,
         media_path: str,
         bangumi_name: str,
-        method: str,
+        method: str | ProviderEntry,
         season: int,
         _hash: str,
         episode_offset: int = 0,
@@ -199,7 +202,7 @@ class Renamer(RevisionSaga):
         torrent_name: str,
         media_path: str,
         bangumi_name: str,
-        method: str,
+        method: str | ProviderEntry,
         season: int,
         episode_offset: int = 0,
         season_offset: int = 0,
@@ -231,7 +234,7 @@ class Renamer(RevisionSaga):
         torrent_name: str,
         media_path: str,
         bangumi_name: str,
-        method: str,
+        method: str | ProviderEntry,
         season: int,
         _hash: str,
         episode_offset: int = 0,
@@ -294,7 +297,7 @@ class Renamer(RevisionSaga):
         media_list: list[str],
         bangumi_name: str,
         season: int,
-        method: str,
+        method: str | ProviderEntry,
         _hash: str,
         episode_offset: int = 0,
         season_offset: int = 0,
@@ -390,7 +393,7 @@ class Renamer(RevisionSaga):
         torrent_name: str,
         bangumi_name: str,
         season: int,
-        method: str,
+        method: str | ProviderEntry,
         _hash,
         episode_offset: int = 0,
         season_offset: int = 0,
@@ -443,7 +446,7 @@ class Renamer(RevisionSaga):
         all_infos: list[dict],
         bangumi_name: str,
         season: int,
-        method: str,
+        method: str | ProviderEntry,
         episode_offset: int,
         season_offset: int,
         episode_type: str,
@@ -928,7 +931,7 @@ class Renamer(RevisionSaga):
 
     async def rename(self) -> list[Notification]:
         logger.debug("Start rename process.")
-        rename_method = _rename_strategy(settings.bangumi_manage.rename_method).id
+        strategy = _rename_strategy(settings.bangumi_manage.rename_method)
         pending_infos = await self.client.get_torrent_info()
         # Owner counting and Saga recovery must see tasks outside the normal
         # Bangumi/completed filter (collections, paused tasks, changed category).
@@ -995,7 +998,7 @@ class Renamer(RevisionSaga):
             kwargs = {
                 "torrent_name": torrent_name,
                 "bangumi_name": bangumi_name,
-                "method": rename_method,
+                "method": strategy,
                 "season": season,
                 "_hash": torrent_hash,
                 "episode_offset": episode_offset,
@@ -1011,7 +1014,7 @@ class Renamer(RevisionSaga):
                     all_infos=all_infos,
                     bangumi_name=bangumi_name,
                     season=season,
-                    method=rename_method,
+                    method=strategy,
                     episode_offset=episode_offset,
                     season_offset=season_offset,
                     episode_type=episode_type,
@@ -1023,13 +1026,13 @@ class Renamer(RevisionSaga):
                         await self.rename_subtitles(
                             subtitle_list=subtitle_list, **kwargs
                         )
-                    if rename_method != NO_RENAME and torrent_hash not in self._skipped:
+                    if strategy.id != NO_RENAME and torrent_hash not in self._skipped:
                         await self._mark_renamed(torrent_hash, info.get("tags"))
                 self._finish_torrent(
                     info,
                     media_list,
                     subtitle_list,
-                    rename_method,
+                    strategy.id,
                     report.result.succeeded,
                 )
             elif len(media_list) > 1:
@@ -1045,11 +1048,11 @@ class Renamer(RevisionSaga):
                 if collection_complete and subtitle_list:
                     await self.rename_subtitles(subtitle_list=subtitle_list, **kwargs)
                 if collection_complete:
-                    if rename_method != NO_RENAME and torrent_hash not in self._skipped:
+                    if strategy.id != NO_RENAME and torrent_hash not in self._skipped:
                         await self._mark_renamed(torrent_hash, info.get("tags"))
                     await self.client.set_category(torrent_hash, "BangumiCollection")
                 self._finish_torrent(
-                    info, media_list, subtitle_list, rename_method, collection_complete
+                    info, media_list, subtitle_list, strategy.id, collection_complete
                 )
             else:
                 logger.warning(f"{torrent_name} has no media file")
