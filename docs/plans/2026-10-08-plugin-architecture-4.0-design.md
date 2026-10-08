@@ -279,6 +279,19 @@ bark / wecom 旧字段别名：
 - **模板仓库**（含前端模板的独立 GitHub 仓库）：前端模板已在 `webui/packages/plugin-ui/template/`，`ab-plugin new` 覆盖后端骨架，独立仓库没有创建。
 - **脚手架生成的 `pyproject.toml` 依赖 `autobangumi-sdk`** 但没有 uv 源：独立作者要等轮子上了 release 才能 `uv run pytest`。文档的上手步骤用 `uv tool install` 本地轮子文件绕过。
 
+### 实施中的调整（final）
+
+4.0.0-beta.1 之前的收尾阶段（分支 `refactor/4.0-final`，叠在 P7 上）。各条细节已写在上面对应阶段的条目里，这里只列总表：
+
+- **P7 遗留**：在线更新 bundle 带上 `ab_sdk`，`min_image_version` 为 `4.0.0-beta.1`；删除规则时下载器不可用则保留规则与种子行，返回 500 等待重试；aria2 gid 映射按实例区分（数据库迁移 v27，主键改为 `(downloader_id, gid)`，`DownloaderConnection` 新增 `instance_id`）；设置 → 插件新增签名目录的浏览、安装、更新与卸载。
+- **插件运行时与安装器**：两个安装器共用 id 校验与卸载归属检查（LLM 卸载不再能删通用插件目录，未安装时返回 400）；清单解码失败与 pip 入口导入失败按加载失败报告；`setup()` 失败或超时会调用 `teardown`，注册阶段失败不调用；订阅者成功会清零熔断计数；停用失败插件后状态显示 `disabled`；过期的熔断不再停用重载后的新实例；`build_plugin_catalog.py` 默认 `min_ab_version` 为 `4.0.0-beta.1`。
+- **升级与配置**：设置向导把 Bark / WeCom 凭据写入 `device_key` / `webhook_url`；`data.json` 检查移到首次启动之前，缺少 `version.info` 时按数据库是否有 `rssitem` 表识别 3.0 数据并要求先升级到 3.1.x；拒绝提示写明先还原 `config.json.v3.bak`；配置迁移失败时把备份移回原文件，重启循环不再堆积 `.v3.bak.N`。
+- **多下载器**：更新规则先在所有实例上匹配种子，任一实例不可用则不做任何修改；WebUI 种子批量操作按实例汇总结果、选择键为 `下载器 id:hash`，下载器页按任一已配置实例判断是否为空。
+- **整理流水线**：`conflict_policy` 与 `media_files` 插件经熔断器调用，失败时退回宿主实现；重命名策略未登记而按 `none` 处理时不发布 `torrent.organized`；带 `ab:renamed` 的种子在每个进程内补发一次 `torrent.organized`（重启后硬链接会补链一次）；硬链接不再重建用户删除的文件（`backfill` 仍会恢复）；新增内部事件 `hardlink.linked`，媒体库刷新在硬链接放好文件后再刷新一次，刷新请求进行中到达的事件会再触发一次刷新。
+- **秘密字段**：标记写在 `anyOf` / `$ref` 外层或容器（`list` / `dict` / 嵌套模型）上时也掩码；`/config/get` 把插件通知渠道的未声明字段一律视为秘密并按身份还原。已知限制：同一插件类型、只在这些字段上不同的两行渠道身份相同，增删行时返回 400 要求重新输入。
+- **WebUI 插件卡片**：保存后刷新 `allow_unsigned`；只重建服务端配置变化的插件草稿；整数枚举下拉保留数值类型。
+- **清理**（净 −24 行）：删除 vulture 白名单中不再需要的 13 项；`ab-plugin` 复用 `ab_sdk.manifest.ID_RE`；删除前端 `OpenAIModel` / `OpenAIType`；改正描述旧行为的注释与文档字符串。
+
 ## 1. 背景与目标
 
 AB 目前只有 **LLM 提供商** 是真正的运行时插件系统：签名下载、目录加载、懒导入、热重载。
