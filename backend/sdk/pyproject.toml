@@ -1,0 +1,35 @@
+# AutoBangumi 插件 SDK 的独立打包：源码仍在 backend/src/ab_sdk，宿主直接 import，
+# 这里只负责把它构建成 autobangumi-sdk 轮子（uv build --wheel backend/sdk），
+# 供插件作者安装 ab_sdk 与 ab-plugin 命令行，无需整个宿主。
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autobangumi-sdk"
+dynamic = ["version"]
+description = "AutoBangumi plugin SDK and ab-plugin CLI"
+requires-python = ">=3.13"
+license = "MIT"
+dependencies = [
+    "pydantic>=2.0.0",
+    "httpx>=0.25.0",
+    "packaging>=26.0",
+]
+
+[project.optional-dependencies]
+# ab_sdk.testing 的契约测试套件以 pytest 运行
+test = ["pytest>=8.0.0"]
+
+[project.scripts]
+ab-plugin = "ab_sdk.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "../src" }
+packages = ["ab_sdk"]
+
+[tool.setuptools.dynamic]
+version = { attr = "ab_sdk.SDK_VERSION" }
+
+[tool.setuptools.package-data]
+ab_sdk = ["py.typed"]

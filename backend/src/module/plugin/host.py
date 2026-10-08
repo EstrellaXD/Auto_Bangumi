@@ -14,6 +14,7 @@ from typing import Any
 
 from ab_sdk import Event, points
 from ab_sdk.downloader import DownloaderConnection
+from ab_sdk.manifest import CORE_PLUGIN_ID
 from ab_sdk.rename import CORE_ID
 
 from .bus import EventBus
@@ -22,7 +23,7 @@ from .runner import HookRunner
 
 logger = logging.getLogger(__name__)
 
-CORE = "core"
+CORE = CORE_PLUGIN_ID
 
 POINTS = (
     ExtensionPoint(

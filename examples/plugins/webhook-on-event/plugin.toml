@@ -1,0 +1,9 @@
+[plugin]
+id = "webhook-on-event"
+name = "事件 Webhook"
+version = "0.1.0"
+sdk = ">=0.5,<1"
+entry = "webhook_on_event:WebhookOnEvent"
+description = "示例插件：把选中的事件以 JSON 形式 POST 到一个 URL，可选 HMAC 签名。演示 @subscribe、配置表单与秘密字段"
+authors = ["AutoBangumi"]
+permissions = ["network"]

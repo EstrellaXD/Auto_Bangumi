@@ -85,7 +85,7 @@
 未实施（推迟）：
 
 - 第 10 节 P4 行中的 `file_parser` 扩展点。
-- 第 7 节的 `ab_sdk.testing.RenameStrategyContract` 契约测试套件。
+- 第 7 节的 `ab_sdk.testing.RenameStrategyContract` 契约测试套件（P7 已补）。
 
 两份 P4 实现与移植：
 
@@ -194,6 +194,84 @@ slots 解析：
 - **未启用插件的 schema 每次重新发现后重新读取**（`_probe_schemas`）：插件目录升级后表单随之更新，首次导入失败也不再一直缓存为「无 schema」。代价是每次 `apply_settings` 会重新导入未启用的可信插件一次。
 - **custom element 名归插件所有**：清单要求 `element` 为 `ab-plugin-<id>` 或以 `ab-plugin-<id>-` 开头。id 含连字符时命名空间会重叠（`foo` 的前缀也匹配 `ab-plugin-foo-bar`），`PluginManager.ui_slots()` 按全部已发现插件取 id 最长者为归属，其余声明被忽略并在重新发现时写警告日志。
 - **前端按定义者校验元素**（`services/plugin-loader.ts`）：加载器包装 `customElements.define`，按调用栈里最近的 `/plugins/<id>/web/` 脚本地址记录每个名字由哪个插件定义；挂载点发现元素由其它插件定义时拒绝实例化并显示失败提示。这样插件即使在自己的模块里抢先定义别人的元素名，也拿不到别人挂载点的 `host`。归因依赖浏览器调用栈里带脚本地址（三大引擎都满足）；不经插件脚本定义的元素（定义者未知）不拦截。
+
+### 实施中的调整（P7 第一部分：SDK 打包、命令行、契约套件与签名目录）
+
+SDK 打包与清单：
+
+- **`autobangumi-sdk` 轮子**：`backend/sdk/pyproject.toml` 用 setuptools，`package-dir` 指向 `../src`，只打包 `ab_sdk`，版本取 `ab_sdk.SDK_VERSION`。依赖 pydantic、httpx、packaging；可选依赖 `test` 为 pytest。构建命令：`uv build --wheel backend/sdk`。后端的 `dev` 依赖组以可编辑方式安装它（`tool.uv.sources`），所以 `uv run ab-plugin` 可用。生产依赖不变：Docker 的 `uv sync --frozen --no-dev` 不需要 `sdk/` 目录（已用只含 `pyproject.toml` 与 `uv.lock` 的目录验证）。`uv.lock` 的 `revision` 保持 3，因为 Docker 里的 uv 较旧。
+- **清单解析移入 `ab_sdk.manifest`**：`ab-plugin` 与宿主共用，插件作者不必安装宿主。`module.plugin.manifest` 只再导出。保留 id 增加 `local`（`config/plugins/local/` 是本地插件目录，会与签名目录的 `config/plugins/<id>/` 冲突）。清单新增可选字段 `extension_points`，只用于签名目录展示，宿主以实际登记为准。`ab_sdk.manifest.check()` 校验清单、SDK 版本范围、入口模块、前端入口文件和原生扩展（`.so` / `.pyd` / `.dylib` / `.dll`），加载器、`ab-plugin` 与安装器都用它或其中的 `native_files()`。
+
+`ab-plugin` 命令行（`ab_sdk/cli.py`，只依赖 `ab_sdk`）：
+
+- **`new <id> [--kind rename|notifier|search]`**：生成 `plugin.toml`、包目录 `<id 的下划线形式>/__init__.py`（第 2.2 节布局）、`tests/test_contract.py`、仅用于开发的 `pyproject.toml` 和 README。生成的契约测试继承 `ab_sdk.testing` 的对应套件，测试用例对三种骨架各跑一遍。没有 `downloader` 骨架：下载器插件需要连接真实后端，一个能直接通过契约的骨架没有意义。
+- **`validate [path]`**：`check()` 的结果；有问题时退出码为 1。
+- **`pack [path] [-o dist]`**：先校验再打包。zip 内容在 zip 根，与 `llm-plugins` 包一致。排除 `tests/`、`pyproject.toml`、`uv.lock`、缓存和 `dist/`。文件顺序与时间戳固定，同样的内容得到同样的 sha256。
+- **`dev [path] [--config-dir config]`**：软链到 `<config-dir>/plugins/local/<id>`，并在宿主配置文件（先找 `config_dev.json`，再找 `config.json`）中写入 `plugins.dev_mode`、`plugins.allow_unsigned` 和 `plugins.enabled.<id>`。配置文件不存在时拒绝执行，不创建残缺的配置：宿主看到配置文件就不再从环境变量初始化。运行中的 AutoBangumi 不会重读配置文件，需要重启一次。同一 id 已链接到别处时拒绝。
+
+`dev_mode` 文件监听：
+
+- 新配置项 `plugins.dev_mode`（默认 `false`）。开启后 `PluginManager` 每秒（`watch_interval`）对「应当运行的本地插件」计算文件指纹（相对路径、修改时间、大小，忽略 `__pycache__`），变化后重新发现并重载该插件。上次加载失败的插件也被监听，修好源码后自动恢复。基线在监听任务创建时同步取得，所以创建任务与首次轮询之间的修改不会漏掉。
+- 新增 `PluginManager.reload(plugin_id)`：重新发现、卸载并加载一个插件，忽略配置快照。`apply_settings` 只在配置变化时重载，所以升级已安装插件（配置不变）要用它。
+- 用轮询而不是 `watchfiles`，不增加依赖；只监听本地目录来源，不监听 pip 包，也不发现新出现的目录（要等下一次 `apply_settings` 或重启）。`GET /api/v1/plugins` 暂不返回 `dev_mode`，WebUI 的提示留给第二部分。
+
+契约套件（`ab_sdk.testing`）：
+
+- `DownloaderContract`、`RenameStrategyContract`、`NotifierContract`、`SearchSiteContract`。子类实现 `create()`，pytest 收集其中的 `test_*`。用例是同步的（内部 `asyncio.run`），不要求安装 pytest-asyncio；`ab_sdk.testing` 本身不 import pytest。
+- `DownloaderContract` 总是检查结构（满足 `CoreDownloaderClient`、声明 `DownloaderCapabilities`、声明的能力都有对应方法）；行为检查（登录登出、添加种子、查询不存在的种子）只在子类设 `behavioral = True` 时运行。宿主里只有 `mock` 连着可用的后端，`qbittorrent` 与 `aria2` 只过结构检查。
+- `NotifierContract` 的契约对象是 SDK 的 `Notifier`（`send(NotificationMessage)`）。宿主自带渠道接收整条配置和 `Notification`，测试里用一个适配器包装，并把 HTTP 层换成固定状态码的替身，所以 8 个内置渠道都验证了「后端拒绝时返回 `False` 而不抛异常」。
+- 宿主侧 `test_provider_contracts.py` 验证 `mock` / `qbittorrent` / `aria2`、`none` / `pn` / `advance` / `template`（内置插件 `rename`）、8 个通知渠道和 4 个默认搜索站点。搜索站点没有以 `core` 登记（它们是 `search_provider.json` 的默认值），套件直接用 `DEFAULT_PROVIDER` 构造 `SearchSite`。这补上了 P4 推迟的 `RenameStrategyContract`。
+
+签名目录来源（泛化 LLM 安装器）：
+
+- **共用管线 `SignedCatalogInstaller`**（`module/plugin/installer.py`）：目录与插件包的验签、sha256、防 zip-slip、落盘到 `<root>/<id>/<version>/` 并写 `installed.json`。子类决定发布 tag、清单格式和安装后刷新。`PluginInstaller`（通用插件）用 tag `plugins`、目录 schema 2，条目含 `id`、`name`、`version`、`kind`、`extension_points`、`sdk`、`min_ab_version`、`asset`、`sha256`、`description`。LLM 安装器（`module/llm_plugins/installer.py`）变为同一基类的子类，tag 仍为 `llm-plugins`，清单仍为 `plugin.json`，行为和现有测试不变。
+- **`module/llm_plugins/` 没有按第 8.3 节删除**：已发布的两个 LLM 插件（`plugins/codex-chatgpt`、`plugins/github-copilot`）仍是 `plugin.json` + `LLMProviderAdapter` 格式，要并入需要把它们改写为 `Plugin` + `llm_provider` Provider 并重新发布。这一步留到发布阶段。
+- **加载器新增 `catalog` 来源**：优先级 builtin > catalog > local > pip。`config/plugins/<id>/installed.json` 指向的版本目录里有 `plugin.toml` 才算；`local` 目录、LLM 插件（只有 `plugin.json`）和损坏的指针都被忽略。`catalog` 来源视为已签名（`signed`），不受 `allow_unsigned` 限制。
+- **路径安全**：`id` 会拼进文件系统路径。通用安装器在任何下载之前拒绝不符合 id 规则、保留的（`core`、`local`）和与内置插件同名的 id；卸载只删除存在 `installed.json` 的目录，所以 `DELETE /plugins/local` 不会删掉用户的本地插件。安装后用 `check()` 校验，清单的 id、版本必须与目录条目一致，`sdk` 范围必须包含当前 SDK 版本。
+- **API**：`GET /api/v1/plugins/catalog`（目录条目加本机已装版本，目录不可达返回 502）、`POST /api/v1/plugins/{id}/install`、`DELETE /api/v1/plugins/{id}`。安装成功即写入 `plugins.enabled.<id> = true`（用户点了安装，视为同意它运行），再调用 `PluginManager.reload`；插件的必填配置缺失时进入错误状态，用户在表单中填写后恢复，与内置插件相同。`/plugins/{id}/install` 与 `/plugins/catalog` 由宿主注册在分发路由之前，因此插件自己的 `api_router` 不能使用 `install` 或 `catalog` 作为路由路径（与 P6 的 `web/` 同类限制）。
+- **发布脚本** `scripts/build_plugin_catalog.py`：输入 `ab-plugin pack` 的 zip，输出 `catalog.json`、各 zip 及其 `.sig`（ed25519，base64），整个目录上传到 release `plugins`。测试用该脚本的产物走一遍安装器，保证两端格式一致。release `plugins` 本身与首批插件的上架留到发布阶段。
+
+bark / wecom 旧字段别名：
+
+- Bark 渠道不再读 `token`（只读 `device_key`），WeCom 不再读 `chat_id`（只读 `webhook_url`）。**直接删除会让 3.3 的配置静默失效**，所以 v3 → v4 迁移器把这两个旧字段搬到新字段：新字段为空时取旧值，两者都有时丢弃旧值（与 3.x 的 `新字段 or 旧字段` 一致）。WeCom 的 `token`（`key`）和其它渠道的 `token` / `chat_id` 不动。这一步与下载器等字段一样会备份 `config.json.v3.bak`。
+
+### 实施中的调整（P7 第二部分：示例插件、文档与发布附件）
+
+示例插件（`examples/plugins/`，不在 Docker 镜像内）：
+
+- **6 个示例**：`manual-pick`（P6）、`webhook-on-event`、`custom-rss-site`、`template-rename`、`nfo-writer` 与计划外的 `ntfy-notifier`。设计文档要求「6 个以上」，任务列表只列了 5 个；补一个 `notifier` 示例，是为了让三个契约套件（重命名、通知、搜索站点）各有一个实物，文档的扩展点页也都有示例可指。
+- **每个示例都是 `ab-plugin new` 的目录布局**（包目录、`tests/`、仅开发用的 `pyproject.toml`），可在示例目录里单独 `uv run pytest`。`nfo-writer` 取代原计划的 `jellyfin-refresh`：刷新媒体库已有内置插件 `media-server-refresh`。
+- **「通过契约套件」只适用于有套件的三个**：`template-rename`（`RenameStrategyContract`）、`ntfy-notifier`（`NotifierContract`，含后端拒绝的用例）、`custom-rss-site`（`SearchSiteContract`）。`webhook-on-event` 与 `nfo-writer` 没有对应的 Provider 套件，用 `create_plugin` 写行为测试。契约套件当场发现了 `ntfy-notifier` 的一个真实缺陷（标题含中文时 httpx 的 `str` 请求头只接受 ASCII，`send` 抛 `UnicodeEncodeError`），修复为发送 UTF-8 的 `bytes` 请求头。
+- **`template-rename` 不用 Jinja2**：内置 `template` 已用 Jinja2；第三方插件不能依赖宿主是否带 jinja2，所以示例自带 `{字段|过滤器:参数}` 的小语法与过滤器表（`pad`、`sanitize`、`short`、`upper`、`lower`）。渲染不出可用文件名时抛 `RenameSkipped`，不退回别的命名方式。
+- **CI**：`scripts/test_example_plugins.sh` 对每个示例运行 `ab-plugin validate` 与它自己的测试（`-c <示例>/pyproject.toml --rootdir <示例>`，与作者在示例目录里运行一致），接入 `build.yml` 的 `test` 作业。`backend/src/test/test_plugin_examples.py` 另有一个宿主侧测试：把全部示例载入真实的 `PluginManager`，断言都进入 `active` 并登记了预期的 Provider 与钩子。该文件原有的 `manual-pick` 用例因此改为按 id 取状态。
+
+文档（`docs/dev/plugins.md` 与 `docs/dev/plugins/`，中 / 英 / 日各一份）：
+
+- `docs/dev/plugins.md` 保留为总览与导航（侧边栏链接不变），旧版 529 行的内容拆为 `plugins/` 下的页面：核心概念、配置表单、事件、前端挂载点、命令行、签名与分发、内置插件、示例，以及 `points/` 下每个扩展点一页（16 页：`mcp_tool` 与 `mcp_resource` 合一页，其余一点一页）。每种语言 25 个文件，侧边栏由 `docs/.vitepress/config.ts` 的一张页面表生成。`vitepress build` 通过（含死链检查）。
+- **旧文档里与现状不符的地方一并改正**：下载器不再是 `downloader.type` 而是 `plugins.instances[].provider`；`hardlink` 的 `path_map` 已有对象数组表单；补链按钮已在 P6 提供；`file.renamed` / `torrent.organized` 加上 `downloader_id`。
+- 签名与分发页如实写明：WebUI 的设置 → 插件页**还没有**目录浏览与安装按钮（只有 API），以及上架流程只有持有签名私钥的维护者能执行。「提 issue 申请上架」是文档里写的临时约定，没有对应的自动化。
+
+插件作者 skill（`skills/autobangumi-plugin/`）：`SKILL.md`（触发描述、流程、扩展点速查表、易错规则）加 `references/` 三份（扩展点细节、测试 / CLI / 清单、前端）。内容面向模型，英文，与文档同源但不逐字复制。
+
+发布接线（`.github/workflows/build.yml` 的 `release` 作业）：
+
+- 新增两步：`uv build --wheel backend/sdk --out-dir sdk-dist` 与 `zip -r autobangumi-plugin-skill-<版本>.zip autobangumi-plugin`（在 `skills/` 下压缩，解压后得到 `autobangumi-plugin/` 目录）。`softprops/action-gh-release` 的 `files` 加入 `sdk-dist/*.whl` 与该 zip。轮子的版本是 `ab_sdk.SDK_VERSION`（目前 0.5.0），不是发布 tag 的版本。
+- **「今天只有稳定版能创建 release」这一前提不成立**：`scripts/classify_release.py` 对 beta tag 已输出 `release=1`、`dev=1`，`release` 作业按 `dev == 1` 把 `prerelease` 设为 true，已有测试覆盖分类结果。所以没有改分类脚本与 Docker 标签（beta 仍推 `<版本>` 与 `dev-latest`）。新增一个测试，读 `build.yml` 断言 release 作业带预发布标志和两个新附件、skill 文件存在。
+- 校验：`uvx check-jsonschema --builtin-schema vendor.github-workflows` 通过；`actionlint` 只报告已有步骤的 SC2086 提示（本次改动之前就存在）。
+- **未验证**：轮子构建与 release 上传只在真实 tag 推送时才会被 CI 跑到；本地只验证了 `uv build --wheel backend/sdk`（第一部分）、YAML 语法与上面的测试。
+
+### 实施中的调整（P7 评审修复）
+
+- **原生扩展扫描与文件监听跳过工具链目录**：`native_files()` 原先遍历整个插件目录，`uv run pytest` 在插件目录里建出的 `.venv`（含 `pydantic_core` 的 `.so`）会让 `validate` / `pack` / `dev` 和宿主加载器都报「含原生扩展」，`dev_mode` 的指纹轮询也每秒遍历 `.venv`。`ab_sdk.manifest.TOOLING_DIRS`（`__pycache__`、`.git`、`.venv`、`dist`、`node_modules`、各类缓存）现在由原生扩展扫描、`pack` 与文件指纹共用；`pack` 仍额外排除 `tests`。
+- **v3 迁移不再把 `null` 当作旧字段**：`Settings.save()` 总是把 Bark 的 `token`、WeCom 的 `chat_id` 以 `null` 写回，`old in provider` 因此每次启动都成立，每次启动都新增 `config.json.v3.bak.N` 并改写配置。现在只在旧字段有值时迁移。
+- **通用插件与 LLM 插件共用 `config/plugins/<id>/` 的两处隔离**：LLM 注册表扫描跳过版本目录里是 `plugin.toml` 的目录（原先每次列举都对它打 `Skipping broken plugin` 警告）；通用安装器卸载时要求 `installed.json` 指向的版本目录含 `plugin.toml`，不能再通过 `DELETE /plugins/{id}` 删掉 LLM 插件（其凭据清理在 LLM 安装器里，不会被跳过）。
+- **未修：在线更新 bundle 不含 `ab_sdk`**。`boot_overlay.py` 是镜像自带的稳定脚本，只把 bundle 里的 `backend/src/module` 换进 `/app/module`；只在 `build.yml` 里多拷一份 `ab_sdk` 不会被旧镜像应用，要让 bundle 能更新 SDK 必须改覆盖层的应用方式。选项见 PR 说明，留作后续决定。
+
+未做（第一部分已列出，本部分也没有做）：
+
+- **插件管理页**：设置 → 插件页没有目录浏览、安装 / 卸载按钮，也没有 `dev_mode` 提示；`GET /plugins` 仍不返回 `dev_mode`。任务清单不含它，推迟到发布阶段前补。
+- **模板仓库**（含前端模板的独立 GitHub 仓库）：前端模板已在 `webui/packages/plugin-ui/template/`，`ab-plugin new` 覆盖后端骨架，独立仓库没有创建。
+- **脚手架生成的 `pyproject.toml` 依赖 `autobangumi-sdk`** 但没有 uv 源：独立作者要等轮子上了 release 才能 `uv run pytest`。文档的上手步骤用 `uv tool install` 本地轮子文件绕过。
 
 ## 1. 背景与目标
 
@@ -746,7 +824,7 @@ organize: downloader.completed → media_files.classify → file_parser
 | **P4 流水线插件化：organize** | `media_files`、`file_parser`、`rename_strategy`（含 `template`）、`conflict_policy`、`file.renamed` 等事件 | 已完成：`renamer.py` 拆出 `revision_saga.py`；`rename_strategy` / `media_files` / `conflict_policy` 扩展点与 `file.renamed` / `torrent.organized` 事件；内置插件 `rename`（pn / advance / template，pn / advance / none 输出与 3.3 一致）、`hardlink`（默认停用）与 `media-server-refresh`。`file_parser`、`RenameStrategyContract`、补链设置按钮（P6）推迟，调整见第 0 节 |
 | **P5 事件与外部接口** | SSE 改订阅 bus；`api_router`、`mcp_tool` 扩展点；`message_template` | 已完成：系统事件上总线、通知中心 SSE 改为事件推送、插件路由 / MCP 工具与资源 / 通知模板；status 等快照类 SSE 仍按节拍采样。调整见第 0 节 |
 | **P6 前端插件** | Web Component 挂载点、`AbHost` 桥接、错误边界、`/plugins/<id>/web` 静态资源、`@autobangumi/plugin-ui` 包 | 已完成：五个挂载点、`AbHost`、错误边界与 CSP；示例插件「手动选种」（`examples/plugins/manual-pick`）以详情页标签形式可用，内置 `hardlink` 的补链按钮走 `settings.section`；未启用插件的配置表单、对象数组表单、SSE `bus` 帧。调整见第 0 节 |
-| **P7 生态** | 插件管理页（安装、启停、日志、错误）、签名目录发布流程、模板仓库（含前端模板）、`ab-plugin` CLI、文档（中 / 英 / 日） | 6 个以上示例插件上架 |
+| **P7 生态** | 插件管理页（安装、启停、日志、错误）、签名目录发布流程、模板仓库（含前端模板）、`ab-plugin` CLI、文档（中 / 英 / 日） | 6 个以上示例插件上架。已完成：`autobangumi-sdk` 轮子、`ab-plugin` CLI（new / validate / pack / dev）、`dev_mode` 文件监听、四个契约套件、签名目录来源（`plugins` tag、`catalog` 加载来源、安装 API、发布脚本）、bark / wecom 旧字段迁移；6 个示例插件（CI 逐个运行）、中 / 英 / 日文档（总览加 24 页）、插件作者 skill、release 附带 SDK 轮子与 skill。**管理页的目录浏览 / 安装按钮与独立模板仓库未做**，留到 P8 前补，调整见第 0 节 |
 | **P8 发布** | beta 测试、性能对比（RSS 刷新耗时、内存）、升级指南、`docs/changelog/4.0.md` | `4.0.0-beta.1` → `4.0.0` |
 
 阶段依赖：P0 → P1 → P2 → (P2.5 ∥ P3 ∥ P4) → P5 → (P6 ∥ P7) → P8。P2.5、P3、P4 可并行，P6 依赖 P5 的 `api_router` 与事件总线。

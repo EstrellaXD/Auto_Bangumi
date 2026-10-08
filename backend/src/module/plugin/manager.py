@@ -4,6 +4,7 @@ import asyncio
 import inspect
 import json
 import logging
+import os
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -13,6 +14,7 @@ from pydantic import BaseModel
 
 from ab_sdk import SDK_VERSION, Plugin, PluginDisabled, PluginLoaded
 from ab_sdk.hooks import HOOK_ATTR, PROVIDER_ATTR, SUBSCRIBE_ATTR
+from ab_sdk.manifest import TOOLING_DIRS
 
 from .bus import EventBus
 from .context import PLUGIN_DATA_ROOT, HostPluginContext
@@ -25,8 +27,26 @@ logger = logging.getLogger(__name__)
 
 PluginState = Literal["active", "disabled", "error"]
 DEFAULT_SETUP_TIMEOUT = 30.0
+DEFAULT_WATCH_INTERVAL = 1.0
 
 Discover = Callable[[], tuple[list[PluginCandidate], list[DiscoveryError]]]
+
+Fingerprint = tuple[tuple[str, int, int], ...]
+
+
+def _fingerprint(root: Path) -> Fingerprint:
+    """目录下所有文件的（相对路径、修改时间、大小），用于判断插件源码是否变过。"""
+    stamps = []
+    for dirpath, dirs, names in os.walk(root):
+        dirs[:] = [d for d in dirs if d not in TOOLING_DIRS]
+        for name in names:
+            path = Path(dirpath, name)
+            try:
+                stat = path.stat()
+            except OSError:  # 编辑器保存时临时文件可能刚好消失
+                continue
+            stamps.append((str(path.relative_to(root)), stat.st_mtime_ns, stat.st_size))
+    return tuple(sorted(stamps))
 
 
 @dataclass(frozen=True)
@@ -63,8 +83,12 @@ class PluginManager:
         discover_fn: Discover = discover,
         setup_timeout: float = DEFAULT_SETUP_TIMEOUT,
         data_root: Path = PLUGIN_DATA_ROOT,
+        watch_interval: float = DEFAULT_WATCH_INTERVAL,
     ) -> None:
         self._settings = settings_obj
+        self._watch_interval = watch_interval
+        self._watcher: asyncio.Task | None = None
+        self._stamps: dict[str, Fingerprint] = {}
         self._discover = discover_fn
         self._setup_timeout = setup_timeout
         self._data_root = data_root
@@ -96,6 +120,7 @@ class PluginManager:
             for candidate in self._candidates.values():
                 if self._blocked_reason(candidate) is None:
                     await self._activate(candidate)
+            self._sync_watcher()
         logger.info(
             "[Plugin] %d 个插件已启用，共发现 %d 个",
             len(self._active),
@@ -104,6 +129,10 @@ class PluginManager:
         await self._notify_change()
 
     async def stop(self) -> None:
+        if self._watcher is not None:
+            self._watcher.cancel()
+            await asyncio.gather(self._watcher, return_exceptions=True)
+            self._watcher = None
         for task in list(self._pending):
             task.cancel()
         await asyncio.gather(*self._pending, return_exceptions=True)
@@ -132,7 +161,59 @@ class PluginManager:
                 if failed is not None and failed[0] == self._snapshot(plugin_id):
                     continue
                 await self._activate(candidate)
+            self._sync_watcher()
         await self._notify_change()
+
+    async def reload(self, plugin_id: str) -> None:
+        """从磁盘重新发现并重新加载一个插件（含上次加载失败的），忽略配置快照。
+
+        用于 dev_mode 下源码变更，以及安装 / 升级插件之后。
+        """
+        async with self._lock:
+            await self._deactivate(plugin_id)
+            self._failed.pop(plugin_id, None)
+            self._rediscover()
+            self._probe_schemas()
+            candidate = self._candidates.get(plugin_id)
+            if candidate is not None and self._blocked_reason(candidate) is None:
+                await self._activate(candidate)
+        await self._notify_change()
+
+    # ------------------------------------------------------------ dev_mode
+
+    def _sync_watcher(self) -> None:
+        """按 ``plugins.dev_mode`` 启停文件监听。"""
+        if self._settings.plugins.dev_mode and self._watcher is None:
+            # 同步取基线：监听任务启动前发生的修改也能被发现
+            self._stamps = {i: _fingerprint(r) for i, r in self._watched()}
+            self._watcher = asyncio.create_task(self._watch())
+        elif not self._settings.plugins.dev_mode and self._watcher is not None:
+            self._watcher.cancel()
+            self._watcher = None
+
+    def _watched(self) -> list[tuple[str, Path]]:
+        """被监听的插件：应当运行的本地插件（包括加载失败、等待修复的）。"""
+        return [
+            (plugin_id, candidate.root)
+            for plugin_id, candidate in self._candidates.items()
+            if candidate.source == "local"
+            and candidate.root is not None
+            and self._blocked_reason(candidate) is None
+        ]
+
+    async def _watch(self) -> None:
+        # ponytail: 轮询修改时间，插件目录很大时改用 watchfiles
+        while True:
+            await asyncio.sleep(self._watch_interval)
+            try:
+                for plugin_id, root in self._watched():
+                    stamp = await asyncio.to_thread(_fingerprint, root)
+                    if self._stamps.setdefault(plugin_id, stamp) != stamp:
+                        self._stamps[plugin_id] = stamp
+                        logger.info("[Plugin:%s] 源码已变更，重新加载", plugin_id)
+                        await self.reload(plugin_id)
+            except Exception:
+                logger.exception("[Plugin] dev_mode 文件监听出错")
 
     # ------------------------------------------------------------ status
 

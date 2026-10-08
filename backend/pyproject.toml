@@ -39,6 +39,8 @@ dev = [
     "pre-commit>=3.0.0",
     "mypy>=2.1.0",
     "vulture>=2.16",
+    # ab-plugin 命令行与 ab_sdk 轮子的打包配置（sdk/），可编辑安装，源码仍在 src/ab_sdk
+    "autobangumi-sdk",
 ]
 
 [tool.pytest.ini_options]
@@ -65,6 +67,9 @@ max-complexity = 10
 
 [tool.uv]
 package = false
+
+[tool.uv.sources]
+autobangumi-sdk = { path = "sdk", editable = true }
 
 [tool.black]
 line-length = 88

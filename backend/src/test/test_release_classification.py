@@ -108,3 +108,17 @@ def test_pr_title_is_never_a_version_source(pr_title):
 
     assert result["version"] == "Test"
     assert result["release"] == "0"
+
+
+def test_release_job_marks_dev_tags_prerelease_and_attaches_plugin_assets():
+    """beta 与稳定版共用 release 作业；dev=1 即预发布，两者都带 SDK 轮子与 skill。"""
+    workflow = SCRIPT_PATH.parents[1] / ".github" / "workflows" / "build.yml"
+    source = workflow.read_text(encoding="utf-8")
+    release = source[source.index("\n  release:\n") : source.index("\n  telegram:\n")]
+    assert "needs.version-info.outputs.release == 1" in release
+    assert "pre_release=true" in release
+    assert "sdk-dist/*.whl" in release
+    assert "autobangumi-plugin-skill-" in release
+    assert (
+        SCRIPT_PATH.parents[1] / "skills" / "autobangumi-plugin" / "SKILL.md"
+    ).is_file()

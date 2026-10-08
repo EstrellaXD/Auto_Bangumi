@@ -65,7 +65,7 @@ async def manager(tmp_path):
 async def test_manual_pick_routes_store_pick_and_publish_event(manager):
     from module.core.plugin_routes import PluginRoutes
 
-    [status] = manager.statuses()
+    [status] = [s for s in manager.statuses() if s.id == "manual-pick"]
     assert status.state == "active"
     assert [(pid, ui.slot) for pid, ui in manager.ui_slots()] == [
         ("manual-pick", "bangumi.detail.tab")
@@ -94,3 +94,33 @@ async def test_manual_pick_routes_store_pick_and_publish_event(manager):
     assert client.get(base).json() == {"torrent_id": 9}
     await manager.bus.drain()
     assert [(e.bangumi_id, e.torrent_id) for e in seen] == [(3, 9)]
+
+
+async def test_all_examples_load_in_host_with_expected_providers(tmp_path):
+    """每个示例都能在真实宿主里加载并登记预期的扩展（SDK 侧的契约套件在
+    ``scripts/test_example_plugins.sh`` 里跑）。"""
+    from module.plugin.host import POINTS
+
+    ids = sorted(p.name for p in EXAMPLES.iterdir() if (p / "plugin.toml").is_file())
+    registry = ExtensionRegistry()
+    for point in POINTS:
+        registry.declare(point)
+    mgr = PluginManager(
+        SimpleNamespace(
+            plugins=Plugins(allow_unsigned=True, enabled={i: True for i in ids})
+        ),
+        registry=registry,
+        discover_fn=lambda: (_discover(EXAMPLES, tmp_path / "none"), []),
+        data_root=tmp_path,
+    )
+    await mgr.start()
+    try:
+        assert {s.id: s.state for s in mgr.statuses()} == dict.fromkeys(ids, "active")
+        assert set(registry.providers(points.RENAME_STRATEGY)) == {"mini-template"}
+        assert set(registry.providers(points.NOTIFIER)) == {"ntfy"}
+        assert set(registry.providers(points.SEARCH_SITE)) == {"my-tracker"}
+        assert [h.plugin_id for h in registry.hooks(points.HTTP_REQUEST)] == [
+            "custom-rss-site"
+        ]
+    finally:
+        await mgr.stop()

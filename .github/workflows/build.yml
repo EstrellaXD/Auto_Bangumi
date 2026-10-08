@@ -34,6 +34,10 @@ jobs:
         run: |
           mkdir -p backend/config
           cd backend && uv run pytest src/test -v -m "not e2e"
+      # 示例插件：校验清单并跑各自的契约 / 行为测试（与插件作者在示例目录里
+      # `uv run pytest` 一致）
+      - name: Example plugins
+        run: scripts/test_example_plugins.sh
 
   webui-test:
     runs-on: ubuntu-latest
@@ -311,6 +315,16 @@ jobs:
           cd backend && zip -r app-v${{ needs.version-info.outputs.version }}.zip \
             src pyproject.toml uv.lock requirements.txt
 
+      # 插件作者用的两个附件：autobangumi-sdk 轮子（ab_sdk + ab-plugin，不发 PyPI，
+      # 作者从 release 下载安装）和 autobangumi-plugin agent skill 的 zip。
+      # beta（预发布）与稳定版 release 都会带上它们。
+      - name: Build plugin SDK wheel
+        run: uv build --wheel backend/sdk --out-dir sdk-dist
+
+      - name: Zip plugin-author skill
+        run: |
+          cd skills && zip -r "../autobangumi-plugin-skill-${{ needs.version-info.outputs.version }}.zip" autobangumi-plugin
+
       # 在线自动更新 bundle：module 源码树 + pyproject/uv.lock + 前端 dist + manifest。
       # 同时产出 .sha256（客户端下载后据此校验完整性）。min_image_version 是能应用
       # 此 bundle 布局的最低镜像版本（引入在线更新的首个版本）。
@@ -398,6 +412,8 @@ jobs:
             update-bundle-${{ needs.version-info.outputs.version }}.zip
             update-bundle-${{ needs.version-info.outputs.version }}.zip.sha256
             update-bundle-${{ needs.version-info.outputs.version }}.zip.sig
+            sdk-dist/*.whl
+            autobangumi-plugin-skill-${{ needs.version-info.outputs.version }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 

@@ -19,8 +19,7 @@ class BarkProvider(NotificationProvider):
 
     def __init__(self, config: "ProviderConfig"):
         super().__init__(config)
-        # Support both legacy token field and new device_key field
-        self.device_key = config.device_key or config.token
+        self.device_key = config.device_key
         server_url = config.server_url or self.DEFAULT_SERVER
         self.notification_url = f"{server_url.rstrip('/')}/push"
 

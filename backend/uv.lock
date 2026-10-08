@@ -155,6 +155,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "autobangumi-sdk" },
     { name = "black" },
     { name = "mypy" },
     { name = "pre-commit" },
@@ -194,6 +195,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "autobangumi-sdk", editable = "sdk" },
     { name = "black", specifier = ">=24.0.0" },
     { name = "mypy", specifier = ">=2.1.0" },
     { name = "pre-commit", specifier = ">=3.0.0" },
@@ -203,6 +205,24 @@ dev = [
     { name = "ruff", specifier = ">=0.1.0" },
     { name = "vulture", specifier = ">=2.16" },
 ]
+
+[[package]]
+name = "autobangumi-sdk"
+source = { editable = "sdk" }
+dependencies = [
+    { name = "httpx" },
+    { name = "packaging" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.25.0" },
+    { name = "packaging", specifier = ">=26.0" },
+    { name = "pydantic", specifier = ">=2.0.0" },
+    { name = "pytest", marker = "extra == 'test'", specifier = ">=8.0.0" },
+]
+provides-extras = ["test"]
 
 [[package]]
 name = "bcrypt"

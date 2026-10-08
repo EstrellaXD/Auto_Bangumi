@@ -145,3 +145,75 @@ def test_migrate_v3_config_existing_backup_kept_new_backup_beside_it(v3_config):
     assert first.read_text() == "original 3.3 config"
     second = v3_config.with_name("config.json.v3.bak.1")
     assert second.read_bytes() == FIXTURE.read_bytes()
+
+
+@pytest.mark.parametrize(
+    "provider, expected",
+    [
+        # Bark 旧版把 device key 放在 token
+        ({"type": "bark", "token": "k"}, {"type": "bark", "device_key": "k"}),
+        (
+            {"type": "bark", "token": "old", "device_key": "new"},
+            {"type": "bark", "device_key": "new"},
+        ),
+        # WeCom 旧版把 webhook 地址放在 chat_id
+        (
+            {"type": "wecom", "chat_id": "https://hook", "token": "key"},
+            {"type": "wecom", "webhook_url": "https://hook", "token": "key"},
+        ),
+        (
+            {"type": "WeCom", "chat_id": "old", "webhook_url": "new"},
+            {"type": "WeCom", "webhook_url": "new"},
+        ),
+    ],
+)
+def test_migrate_v3_dict_moves_legacy_notification_aliases(provider, expected):
+    config: dict[str, Any] = {"notification": {"providers": [provider]}}
+
+    moved = migrate_v3_dict(config)
+
+    assert config["notification"]["providers"] == [expected]
+    assert len(moved) == 1 and moved[0].startswith("notification.providers[0].")
+    # 只动通知渠道：没有顺带创建 plugins 段
+    assert "plugins" not in config
+
+
+def test_migrate_v3_dict_keeps_other_providers_token_and_chat_id():
+    telegram = {"type": "telegram", "token": "t", "chat_id": "1"}
+    config: dict[str, Any] = {"notification": {"providers": [dict(telegram)]}}
+
+    assert migrate_v3_dict(config) == []
+    assert config["notification"]["providers"] == [telegram]
+
+
+def test_migrate_v3_config_rewrites_file_with_legacy_bark_token(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(
+        json.dumps({"notification": {"providers": [{"type": "bark", "token": "k"}]}})
+    )
+
+    assert migrate_v3_config(path) is True
+
+    saved = json.loads(path.read_text())
+    assert saved["notification"]["providers"] == [{"type": "bark", "device_key": "k"}]
+    assert path.with_name("config.json.v3.bak").exists()
+
+
+@pytest.mark.parametrize(
+    "provider",
+    [
+        # Settings.save() 总是把渠道的旧字段以 null 写回，不能当作 3.3 配置
+        {"type": "bark", "token": None, "device_key": "k"},
+        {"type": "wecom", "chat_id": None, "webhook_url": "https://hook"},
+        {"type": "bark", "token": "", "device_key": ""},
+    ],
+)
+def test_migrate_v3_config_empty_legacy_alias_is_noop(tmp_path, provider):
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps({"notification": {"providers": [provider]}}))
+    before = path.read_bytes()
+
+    assert migrate_v3_config(path) is False
+
+    assert path.read_bytes() == before
+    assert list(tmp_path.glob("config.json.v3.bak*")) == []

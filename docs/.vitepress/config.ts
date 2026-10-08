@@ -33,6 +33,57 @@ const sharedConfig = {
   },
 }
 
+// 插件开发文档的页面表：[路径, 中文, English, 日本語]
+const pluginPages: [string, string, string, string][] = [
+  ['', '概览', 'Overview', '概要'],
+  ['/concepts', '核心概念', 'Concepts', '基本概念'],
+  ['/config-forms', '配置表单', 'Config forms', '設定フォーム'],
+  ['/events', '事件', 'Events', 'イベント'],
+  ['/frontend-slots', '前端挂载点', 'Frontend slots', 'フロントエンドスロット'],
+  ['/cli', '命令行 ab-plugin', 'The ab-plugin command', 'コマンド ab-plugin'],
+  ['/signing', '签名与分发', 'Signing and distribution', '署名と配布'],
+  ['/builtin', '内置插件', 'Built-in plugins', '組み込みプラグイン'],
+  ['/examples', '示例插件', 'Example plugins', 'サンプルプラグイン'],
+]
+const pluginPoints: [string, string, string, string][] = [
+  ['downloader', '下载器', 'Downloader', 'ダウンローダー'],
+  ['notifier', '通知渠道', 'Notifier', '通知チャンネル'],
+  ['llm-provider', 'LLM 提供商', 'LLM provider', 'LLM プロバイダー'],
+  ['search-site', '搜索站点', 'Search site', '検索サイト'],
+  ['scheduled-task', '定时任务', 'Scheduled task', '定期タスク'],
+  ['metadata-provider', '元数据源', 'Metadata provider', 'メタデータソース'],
+  ['rename-strategy', '重命名方式', 'Rename strategy', 'リネーム方式'],
+  ['media-files', '文件分类', 'Media files', 'ファイル分類'],
+  ['conflict-policy', '版本冲突策略', 'Conflict policy', 'バージョン競合ポリシー'],
+  ['api-router', 'REST 路由', 'REST routes', 'REST ルート'],
+  ['mcp', 'MCP 工具与资源', 'MCP tools and resources', 'MCP ツールとリソース'],
+  ['torrent-filter', '种子过滤', 'Torrent filter', 'トレントフィルター'],
+  ['title-parsed', '修正解析结果', 'Parsed title', '解析結果の補正'],
+  ['torrent-adding', '修改添加请求', 'Adding request', '追加リクエストの変更'],
+  ['http-request', '请求头', 'HTTP request', 'HTTP リクエスト'],
+  ['message-template', '通知文案模板', 'Message template', '通知メッセージテンプレート'],
+]
+
+// lang: 0 中文，1 English，2 日本語
+function pluginSidebar(lang: 0 | 1 | 2) {
+  const prefix = ['', '/en', '/ja'][lang]
+  const label = (row: string[]) => row[lang + 1]
+  return [
+    ...pluginPages.map((row) => ({
+      text: label(row),
+      link: `${prefix}/dev/plugins${row[0]}`,
+    })),
+    {
+      text: ['扩展点', 'Extension points', '拡張ポイント'][lang],
+      collapsed: true,
+      items: pluginPoints.map((row) => ({
+        text: label(row),
+        link: `${prefix}/dev/plugins/points/${row[0]}`,
+      })),
+    },
+  ]
+}
+
 // Chinese sidebar (default)
 const zhSidebar = [
   {
@@ -108,9 +159,9 @@ const zhSidebar = [
     text: '开发者指南',
     items: [
       { text: '参与贡献', link: '/dev/' },
-      { text: '插件开发', link: '/dev/plugins' },
     ],
   },
+  { text: '插件开发', items: pluginSidebar(0) },
 ]
 
 // Japanese sidebar
@@ -190,6 +241,7 @@ const jaSidebar = [
       { text: 'コントリビュート', link: '/ja/dev/' },
     ],
   },
+  { text: 'プラグイン開発', items: pluginSidebar(2) },
 ]
 
 // English sidebar
@@ -269,6 +321,7 @@ const enSidebar = [
       { text: 'Contributing', link: '/en/dev/' },
     ],
   },
+  { text: 'Plugin Development', items: pluginSidebar(1) },
 ]
 
 export default defineConfig({

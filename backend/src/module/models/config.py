@@ -412,6 +412,10 @@ class Plugins(BaseModel):
     allow_unsigned: bool = Field(
         default=False, description="Allow loading unsigned (local / pip) plugins"
     )
+    dev_mode: bool = Field(
+        default=False,
+        description="Reload local plugins automatically when their files change",
+    )
     enabled: dict[str, bool] = Field(
         default_factory=dict, description="Per-plugin enable switch, keyed by id"
     )
