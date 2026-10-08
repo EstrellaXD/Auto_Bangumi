@@ -1,2 +1,2 @@
-from .provider import SEARCH_CONFIG
+from .provider import available_sites
 from .searcher import SearchTorrent

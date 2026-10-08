@@ -4,7 +4,7 @@ import asyncio
 import inspect
 import json
 import logging
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
@@ -39,6 +39,10 @@ class PluginStatus:
     description: str = ""
     permissions: list[str] = field(default_factory=list)
     error: str | None = None
+    enabled: bool = False
+    # config_model 的 JSON Schema；插件代码加载过一次后才有（不为取 schema
+    # 去执行未启用插件的代码），未声明 config_model 时为 None
+    config_schema: dict[str, Any] | None = None
 
 
 @dataclass
@@ -53,6 +57,7 @@ class PluginManager:
         self,
         settings_obj,
         *,
+        registry: ExtensionRegistry | None = None,
         discover_fn: Discover = discover,
         setup_timeout: float = DEFAULT_SETUP_TIMEOUT,
         data_root: Path = PLUGIN_DATA_ROOT,
@@ -61,7 +66,7 @@ class PluginManager:
         self._discover = discover_fn
         self._setup_timeout = setup_timeout
         self._data_root = data_root
-        self.registry = ExtensionRegistry()
+        self.registry = registry if registry is not None else ExtensionRegistry()
         self.breaker = CircuitBreaker(on_trip=self._on_trip)
         self.bus = EventBus(on_error=self.breaker.record_failure)
         self.runner = HookRunner(
@@ -74,8 +79,11 @@ class PluginManager:
         # 失败记录：(失败时的配置快照, 原因)。配置未变时不重试，避免每次保存
         # 设置都把同一个坏插件重新加载一遍。
         self._failed: dict[str, tuple[str, str]] = {}
+        self._models: dict[str, type[BaseModel] | None] = {}
         self._lock = asyncio.Lock()
         self._pending: set[asyncio.Task] = set()
+        # 插件集合变化后的回调（宿主据此同步插件定时任务等派生状态）
+        self.on_change: Callable[[], Awaitable[None]] | None = None
 
     # ------------------------------------------------------------ lifecycle
 
@@ -90,6 +98,7 @@ class PluginManager:
             len(self._active),
             len(self._candidates),
         )
+        await self._notify_change()
 
     async def stop(self) -> None:
         for task in list(self._pending):
@@ -119,6 +128,7 @@ class PluginManager:
                 if failed is not None and failed[0] == self._snapshot(plugin_id):
                     continue
                 await self._activate(candidate)
+        await self._notify_change()
 
     # ------------------------------------------------------------ status
 
@@ -145,11 +155,27 @@ class PluginManager:
                     description=manifest.description,
                     permissions=list(manifest.permissions),
                     error=error,
+                    enabled=self._enabled(candidate),
+                    config_schema=self._schema(plugin_id),
                 )
             )
         return result
 
+    def validate_options(self, plugin_id: str, options: dict[str, Any]) -> None:
+        """按插件的 config_model 校验配置（插件代码未加载过时不校验）。
+
+        Raises:
+            pydantic.ValidationError: 配置不合法。
+        """
+        model = self._models.get(plugin_id)
+        if model is not None:
+            model.model_validate(options)
+
     # ------------------------------------------------------------ internals
+
+    def _schema(self, plugin_id: str) -> dict[str, Any] | None:
+        model = self._models.get(plugin_id)
+        return model.model_json_schema() if model is not None else None
 
     def _rediscover(self) -> None:
         # 清单错误已在 discover() 中记录日志
@@ -161,12 +187,16 @@ class PluginManager:
     def _blocked_reason(self, candidate: PluginCandidate) -> str | None:
         """插件不应运行的原因；None 表示应启用。"""
         conf = self._settings.plugins
-        default = candidate.source == "builtin"
-        if not conf.enabled.get(candidate.manifest.id, default):
+        if not self._enabled(candidate):
             return "未启用"
         if not candidate.signed and not conf.allow_unsigned:
             return "未签名插件需要开启 plugins.allow_unsigned"
         return None
+
+    def _enabled(self, candidate: PluginCandidate) -> bool:
+        """启用开关；未设置时内置插件默认启用，其它来源默认禁用。"""
+        default = candidate.source == "builtin"
+        return self._settings.plugins.enabled.get(candidate.manifest.id, default)
 
     def _snapshot(self, plugin_id: str) -> str:
         conf = self._settings.plugins
@@ -189,6 +219,7 @@ class PluginManager:
                     f"需要 ab_sdk {manifest.sdk}，当前为 {SDK_VERSION}"
                 )
             cls = candidate.load()
+            self._models[plugin_id] = cls.config_model
             config = self._validate_config(cls, plugin_id)
             ctx = HostPluginContext(plugin_id, config, self.bus, self._data_root)
             instance = cls(ctx)
@@ -277,3 +308,12 @@ class PluginManager:
             self._failed[plugin_id] = (active.snapshot, reason)
         logger.error("[Plugin:%s] %s", plugin_id, reason)
         self.bus.publish(PluginDisabled(plugin_id=plugin_id, reason=reason))
+        await self._notify_change()
+
+    async def _notify_change(self) -> None:
+        if self.on_change is None:
+            return
+        try:
+            await self.on_change()
+        except Exception:
+            logger.exception("[Plugin] 插件变更回调失败")

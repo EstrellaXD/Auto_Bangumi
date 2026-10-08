@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
-from module.conf.search_provider import get_provider
 from module.database import Database, get_db
 from module.downloader import DownloadClient
 from module.manager import SeasonCollector
 from module.models import APIResponse, Bangumi, Movie, RSSItem, RSSUpdate, Torrent
 from module.rss import RSSAnalyser, RSSEngine
+from module.searcher import available_sites
 from module.security.api import get_current_user
 
 from .response import u_response
@@ -216,7 +216,7 @@ async def subscribe(data: Bangumi, rss: RSSItem):
     # 且不参与站点映射——避免 "mikan" 这类与站点同名的解析器被配置改写。
     parser = rss.parser
     if parser not in PARSER_TYPES:
-        providers = get_provider()
+        providers = available_sites()
         if parser in providers:
             parser = providers[parser]["parser"]
     resp = await SeasonCollector.subscribe_season(data, parser=parser)

@@ -169,6 +169,30 @@
       "category_id_placeholder": "例如：402",
       "nexusphp_hint": "根据 Passkey 生成 torrentrss.php 搜索模板。注意：原生 NexusPHP 已停用 search 参数、对任何搜索词都返回最新种子，请先在站点上确认 RSS 搜索确实按词过滤。",
       "category_id_invalid": "分类 ID 必须是数字（多个用逗号分隔）"
+    },
+    "plugins_set": {
+      "title": "插件",
+      "empty": "未发现插件。把插件目录放进 config/plugins/local/（目录名与插件 id 相同）或用 pip 安装后重启，即可在此出现。",
+      "allow_unsigned": "允许未签名插件",
+      "allow_unsigned_hint": "本地目录与 pip 安装的插件未经签名，开启后才会加载。插件与 AutoBangumi 同进程运行，拥有完整权限，只启用你信任的插件。",
+      "enabled": "启用",
+      "state_active": "运行中",
+      "state_disabled": "未启用",
+      "state_error": "错误",
+      "source_builtin": "内置",
+      "source_local": "本地",
+      "source_pip": "pip",
+      "unsigned": "未签名",
+      "permissions": "声明的权限：{list}",
+      "options": "配置",
+      "no_options": "该插件没有可配置项",
+      "options_unavailable": "插件加载一次后才能显示配置表单，请先启用。",
+      "unsupported_field": "该字段类型暂不支持在界面中编辑，请直接修改 config.json",
+      "save": "保存配置",
+      "save_success": "插件配置已保存并应用",
+      "save_failed": "保存插件配置失败",
+      "load_failed": "加载插件列表失败",
+      "plugin_provided": "插件提供"
     }
   },
   "downloader": {

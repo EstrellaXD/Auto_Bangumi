@@ -169,6 +169,30 @@
       "category_id_placeholder": "e.g., 402",
       "nexusphp_hint": "Builds a torrentrss.php search template from your passkey. Note: stock NexusPHP ignores the search parameter and always returns the latest torrents — verify on your site that RSS search actually filters results.",
       "category_id_invalid": "Category IDs must be numeric (comma-separated for multiple)"
+    },
+    "plugins_set": {
+      "title": "Plugins",
+      "empty": "No plugins found. Put a plugin directory (named after the plugin id) into config/plugins/local/, or install it with pip, then restart.",
+      "allow_unsigned": "Allow unsigned plugins",
+      "allow_unsigned_hint": "Plugins from the local directory or pip are unsigned and only load when this is on. Plugins run inside AutoBangumi with full privileges — only enable plugins you trust.",
+      "enabled": "Enabled",
+      "state_active": "Running",
+      "state_disabled": "Disabled",
+      "state_error": "Error",
+      "source_builtin": "Built-in",
+      "source_local": "Local",
+      "source_pip": "pip",
+      "unsigned": "Unsigned",
+      "permissions": "Declared permissions: {list}",
+      "options": "Options",
+      "no_options": "This plugin has no options",
+      "options_unavailable": "The options form appears after the plugin has been loaded once. Enable it first.",
+      "unsupported_field": "This field type can't be edited here yet; edit config.json directly",
+      "save": "Save options",
+      "save_success": "Plugin options saved and applied",
+      "save_failed": "Failed to save plugin options",
+      "load_failed": "Failed to load plugins",
+      "plugin_provided": "From plugin"
     }
   },
   "downloader": {

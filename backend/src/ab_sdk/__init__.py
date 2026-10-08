@@ -5,12 +5,14 @@
 允许不兼容调整，4.1 冻结 1.0）。
 """
 
+from . import points
+from .config import secret_field
 from .context import KeyValueStore, PluginContext
 from .events import Event, PluginDisabled, PluginLoaded
 from .hooks import Verdict, hook, provider, subscribe
 from .plugin import Plugin
 
-SDK_VERSION = "0.1.0"
+SDK_VERSION = "0.2.0"
 
 __all__ = [
     "SDK_VERSION",
@@ -22,6 +24,8 @@ __all__ = [
     "PluginLoaded",
     "Verdict",
     "hook",
+    "points",
     "provider",
+    "secret_field",
     "subscribe",
 ]

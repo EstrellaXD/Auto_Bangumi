@@ -2,21 +2,28 @@
 import { Info } from '@icon-park/vue-next';
 import type { Downloader, DownloaderType } from '#/config';
 import type { SettingItem } from '#/components';
+import { usePluginProviders } from '@/hooks/usePluginProviders';
 
 const { t } = useMyI18n();
 const { getSettingGroup } = useConfigStore();
 
 const downloader = getSettingGroup('downloader');
-const downloaderType: DownloaderType = ['qbittorrent', 'aria2'];
+const builtinTypes: DownloaderType = ['qbittorrent', 'aria2'];
+const pluginProviders = usePluginProviders();
+// 插件提供的下载器 id 追加在内置选项之后
+const downloaderType = computed(() => [
+  ...builtinTypes,
+  ...pluginProviders.value.downloader,
+]);
 
-const items: SettingItem<Downloader>[] = [
+const items = computed<SettingItem<Downloader>[]>(() => [
   {
     configKey: 'type',
     label: () => t('config.downloader_set.type'),
     type: 'select',
     css: 'w-115',
     prop: {
-      items: downloaderType,
+      items: downloaderType.value,
     },
   },
   {
@@ -61,7 +68,7 @@ const items: SettingItem<Downloader>[] = [
     label: () => t('config.downloader_set.ssl'),
     type: 'switch',
   },
-];
+]);
 </script>
 
 <template>
@@ -93,8 +100,7 @@ const items: SettingItem<Downloader>[] = [
   border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
   color: var(--color-text-secondary);
   font-size: 12px;
-  transition:
-    background-color var(--transition-normal),
+  transition: background-color var(--transition-normal),
     border-color var(--transition-normal);
 }
 </style>

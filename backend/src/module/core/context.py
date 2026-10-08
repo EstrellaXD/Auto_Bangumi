@@ -20,6 +20,7 @@ from module.parser.analyser.mikan_parser import reset_cache as reset_mikan_cache
 from module.parser.analyser.tmdb_parser import reset_cache as reset_tmdb_cache
 from module.parser.title_parser import reset_cache as reset_llm_parser
 from module.plugin import PluginManager
+from module.plugin.host import get_registry
 from module.rss import RSSAnalyser
 from module.searcher.searcher import reset_cache as reset_poster_cache
 from module.update import (
@@ -36,6 +37,7 @@ from .loops import (
     rss_tick,
     update_check_tick,
 )
+from .plugin_tasks import PluginTasks
 from .scheduler import PeriodicTask, Scheduler
 
 logger = logging.getLogger(__name__)
@@ -83,7 +85,11 @@ class AppContext:
         self.scheduler = scheduler
         self.analyser = analyser
         # 插件随进程生命周期启停（lifespan），不随 /start、/stop 程序控制启停
-        self.plugins = plugins or PluginManager(settings_obj)
+        self.plugins = plugins or PluginManager(settings_obj, registry=get_registry())
+        self._plugin_tasks = PluginTasks(
+            scheduler, self.plugins.registry, self.plugins.breaker
+        )
+        self.plugins.on_change = self._on_plugins_changed
         # Downloader-status TTL cache (was ProgramStatus.check_downloader_status).
         self._downloader_status = False
         self._downloader_reason: str | None = None
@@ -99,6 +105,14 @@ class AppContext:
         # Program.startup() early-return.
         self.first_run_boot = False
 
+    async def _on_plugins_changed(self) -> None:
+        """插件加载/重载/停用后，重建依赖插件 Provider 的派生状态。"""
+        await self._plugin_tasks.sync()
+        # 插件提供的通知渠道在插件加载后才可解析；LLM 解析器可能缓存了旧的
+        # 插件适配器。下载器客户端缓存键包含 Provider 登记项，会自动换新。
+        self.notifier.rebuild()
+        reset_llm_parser()
+
     # ------------------------------------------------------------------ build
 
     @classmethod
@@ -110,7 +124,9 @@ class AppContext:
         reflected without re-wiring the tasks; ``interval`` reads settings live.
         """
         analyser = RSSAnalyser()
-        notifier = NotificationManager()
+        # 渠道可能由插件提供，插件启动后（plugins.on_change）才首次加载，
+        # 避免启动时对插件渠道误报「未知类型」
+        notifier = NotificationManager(load_providers=False)
         scheduler = Scheduler(
             [
                 PeriodicTask(

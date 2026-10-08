@@ -16,6 +16,7 @@ import ConfigPasskey from '@/components/setting/config-passkey.vue';
 import ConfigSecurity from '@/components/setting/config-security.vue';
 import ConfigAccess from '@/components/setting/config-access.vue';
 import UpdateCard from '@/components/setting/update-card.vue';
+import ConfigPlugins from '@/components/setting/config-plugins.vue';
 import { configSectionMatches } from '@/utils/config-search';
 
 definePage({
@@ -190,6 +191,14 @@ const sections: ConfigSection[] = [
     component: ConfigSecurity,
     groups: ['security'],
     keywords: ['security', 'whitelist', 'ip', 'token', 'mcp'],
+  },
+  {
+    id: 'plugins',
+    titleKey: 'config.plugins_set.title',
+    // 插件卡片经 /plugins 接口自行保存，不参与全局保存
+    component: ConfigPlugins,
+    groups: [],
+    keywords: ['plugin', 'extension', 'sdk', 'unsigned', '插件'],
   },
   {
     id: 'update',

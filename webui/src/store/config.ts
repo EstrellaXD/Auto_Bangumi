@@ -40,6 +40,16 @@ export const useConfigStore = defineStore('config', () => {
     return result;
   };
 
+  /**
+   * 某个配置段在别处（如插件卡片走 /plugins 接口）被直接保存后，用服务端的值
+   * 同时刷新编辑态与快照，避免之后的全局保存用旧值把它覆盖回去。
+   */
+  async function refreshGroup<Tkey extends keyof Config>(key: Tkey) {
+    const res = await apiConfig.getConfig();
+    config.value[key] = res[key];
+    savedConfig.value[key] = JSON.parse(JSON.stringify(res[key]));
+  }
+
   function getSettingGroup<Tkey extends keyof Config>(key: Tkey) {
     return computed<Config[Tkey]>({
       get() {
@@ -59,5 +69,6 @@ export const useConfigStore = defineStore('config', () => {
     getConfig,
     setConfig,
     getSettingGroup,
+    refreshGroup,
   };
 });

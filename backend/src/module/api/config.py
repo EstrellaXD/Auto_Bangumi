@@ -9,6 +9,7 @@ from module.conf import settings
 from module.core import AppContext
 from module.models import APIResponse, Config
 from module.parser.analyser.llm import LLMParser
+from module.plugin.secrets import mask_options, restore_options
 from module.security.api import UNAUTHORIZED, get_current_user
 
 from .deps import get_context
@@ -132,10 +133,19 @@ def _restore_masked(incoming: dict, current: dict) -> dict:
     return incoming
 
 
+def _plugin_schemas(ctx: AppContext) -> dict[str, dict | None]:
+    return {status.id: status.config_schema for status in ctx.plugins.statuses()}
+
+
 @router.get("/get", dependencies=[Depends(get_current_user)])
-async def get_config():
+async def get_config(ctx: AppContext = Depends(get_context)):
     """Return the current configuration with sensitive fields masked."""
-    return _sanitize_dict(settings.dict())
+    config = settings.dict()
+    schemas = _plugin_schemas(ctx)
+    options = config["plugins"]["options"]
+    for plugin_id, plugin_options in options.items():
+        options[plugin_id] = mask_options(plugin_options, schemas.get(plugin_id))
+    return _sanitize_dict(config)
 
 
 @router.patch(
@@ -144,7 +154,17 @@ async def get_config():
 async def update_config(config: Config, ctx: AppContext = Depends(get_context)):
     """Persist and reload configuration from the supplied payload."""
     try:
-        config_dict = _restore_masked(config.dict(), settings.dict())
+        config_dict = config.dict()
+        current = settings.dict()
+        schemas = _plugin_schemas(ctx)
+        current_options = current.get("plugins", {}).get("options", {})
+        for plugin_id, plugin_options in config_dict["plugins"]["options"].items():
+            restore_options(
+                plugin_options,
+                current_options.get(plugin_id, {}),
+                schemas.get(plugin_id),
+            )
+        config_dict = _restore_masked(config_dict, current)
         # settings.save() does synchronous file I/O; keep it off the event loop.
         await asyncio.to_thread(settings.save, config_dict=config_dict)
         # reload_settings reloads from disk, resets the shared HTTP client,

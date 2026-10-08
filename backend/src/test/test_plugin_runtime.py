@@ -82,6 +82,7 @@ class TestManifest:
             ("not toml [", "TOML"),
             ("[other]\nid = 'x'", "[plugin]"),
             (MANIFEST.format(id="Bad_ID", sdk=">=0.1", entry="a:B"), "id"),
+            (MANIFEST.format(id="core", sdk=">=0.1", entry="a:B"), "保留"),
             (MANIFEST.format(id="ok", sdk="garbage", entry="a:B"), "sdk"),
             (MANIFEST.format(id="ok", sdk=">=0.1", entry="no-colon"), "entry"),
         ],
@@ -702,8 +703,9 @@ class TestManager:
 
 
 class TestPluginsApi:
-    def test_list_plugins(self, app, authed_client, tmp_path):
+    def test_list_plugins(self, app, authed_client, monkeypatch):
         from module.api.deps import get_context
+        from module.conf import settings
         from module.plugin.manager import PluginStatus
 
         status = PluginStatus(
@@ -716,10 +718,11 @@ class TestPluginsApi:
             error="未签名插件需要开启 plugins.allow_unsigned",
         )
         ctx = SimpleNamespace(plugins=SimpleNamespace(statuses=lambda: [status]))
+        monkeypatch.setattr(settings, "plugins", Plugins())
         app.dependency_overrides[get_context] = lambda: ctx
         response = authed_client.get("/api/v1/plugins")
         assert response.status_code == 200
-        [item] = response.json()
+        [item] = response.json()["plugins"]
         assert item["id"] == "demo"
         assert item["state"] == "disabled"
         assert item["signed"] is False
