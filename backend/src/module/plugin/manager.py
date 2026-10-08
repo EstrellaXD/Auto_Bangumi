@@ -194,8 +194,9 @@ class PluginManager:
         return None
 
     def _enabled(self, candidate: PluginCandidate) -> bool:
-        """启用开关；未设置时内置插件默认启用，其它来源默认禁用。"""
-        default = candidate.source == "builtin"
+        """启用开关；未设置时内置插件默认启用（清单 ``default_enabled = false``
+        的除外），其它来源默认禁用。"""
+        default = candidate.source == "builtin" and candidate.manifest.default_enabled
         return self._settings.plugins.enabled.get(candidate.manifest.id, default)
 
     def _snapshot(self, plugin_id: str) -> str:
@@ -279,7 +280,12 @@ class PluginManager:
                     ProviderEntry(plugin_id, provider_spec.id, bound),
                 )
             if subscribe_spec is not None:
-                self.bus.subscribe(subscribe_spec.kind, bound, owner=plugin_id)
+                self.bus.subscribe(
+                    subscribe_spec.kind,
+                    bound,
+                    owner=plugin_id,
+                    timeout=subscribe_spec.timeout,
+                )
 
     async def _deactivate(self, plugin_id: str) -> None:
         active = self._active.pop(plugin_id, None)

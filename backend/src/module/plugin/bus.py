@@ -111,13 +111,18 @@ class EventBus:
         self.on_error = on_error
 
     def subscribe(
-        self, kind: str, handler: Handler, *, owner: str | None = None
+        self,
+        kind: str,
+        handler: Handler,
+        *,
+        owner: str | None = None,
+        timeout: float | None = None,
     ) -> Callable[[], None]:
         sub = _Subscriber(
             kind,
             handler,
             owner,
-            self._timeout,
+            timeout if timeout is not None else self._timeout,
             self._queue_size,
             self._report_error,
         )
