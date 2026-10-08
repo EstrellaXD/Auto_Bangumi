@@ -360,7 +360,8 @@ class PluginManager:
         manifest = candidate.manifest
         plugin_id = manifest.id
         snapshot = self._snapshot(plugin_id)
-        instance: Plugin | None = None
+        # setup 已开始执行的实例；失败时由 teardown 释放它已创建的任务、连接等
+        started: Plugin | None = None
         try:
             if not manifest.sdk_compatible():
                 raise PluginLoadError(
@@ -372,6 +373,7 @@ class PluginManager:
             ctx = HostPluginContext(plugin_id, config, self.bus, self._data_root)
             instance = cls(ctx)
             self._register(plugin_id, instance)
+            started = instance
             await asyncio.wait_for(instance.setup(), self._setup_timeout)
         except Exception as e:
             reason = (
@@ -381,9 +383,8 @@ class PluginManager:
             )
             self.registry.remove_plugin(plugin_id)
             await self.bus.close_owner(plugin_id)
-            if instance is not None:
-                # 释放 setup 失败前已创建的任务、连接等
-                await self._teardown(plugin_id, instance)
+            if started is not None:
+                await self._teardown(plugin_id, started)
             candidate.unload()
             self._failed[plugin_id] = (snapshot, reason)
             logger.error("[Plugin:%s] 加载失败：%s", plugin_id, reason)

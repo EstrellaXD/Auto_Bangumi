@@ -837,14 +837,21 @@ class TestManager:
         assert (status.state, status.error) == ("disabled", "未启用")
 
     async def test_unknown_extension_point_fails_load(self, tmp_path):
+        recorder = Recorder()
+
         class Typo(Plugin):
             @hook("torrent.filtr")
             def check(self, x):
                 return True
 
+            async def teardown(self):
+                recorder.events.append("teardown")
+
         manager, _ = make_manager(candidate_for(Typo), tmp_path=tmp_path)
         await manager.start()
         assert "未知扩展点" in (manager.statuses()[0].error or "")
+        # setup 未执行，没有需要释放的资源
+        assert recorder.events == []
 
     async def test_apply_settings_reloads_on_option_change_only(self, tmp_path):
         recorder = Recorder()
