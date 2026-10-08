@@ -122,3 +122,17 @@ def test_release_job_marks_dev_tags_prerelease_and_attaches_plugin_assets():
     assert (
         SCRIPT_PATH.parents[1] / "skills" / "autobangumi-plugin" / "SKILL.md"
     ).is_file()
+
+
+def test_update_bundle_carries_sdk_and_requires_4x_image():
+    """4.x bundle 带 ab_sdk 与新依赖；3.3 镜像在 beta 通道会选中它，
+    只能靠 min_image_version 拒绝（3.3 的 boot_overlay 不会替换 ab_sdk）。"""
+    workflow = SCRIPT_PATH.parents[1] / ".github" / "workflows" / "build.yml"
+    source = workflow.read_text(encoding="utf-8")
+    step = source[
+        source.index("- name: Build update bundle") : source.index(
+            "- name: Sign update bundle"
+        )
+    ]
+    assert 'MIN_IMAGE_VERSION="4.0.0-beta.1"' in step
+    assert 'cp -r backend/src/ab_sdk "$STAGE/backend/src/ab_sdk"' in step

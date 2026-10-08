@@ -265,7 +265,7 @@ bark / wecom 旧字段别名：
 - **原生扩展扫描与文件监听跳过工具链目录**：`native_files()` 原先遍历整个插件目录，`uv run pytest` 在插件目录里建出的 `.venv`（含 `pydantic_core` 的 `.so`）会让 `validate` / `pack` / `dev` 和宿主加载器都报「含原生扩展」，`dev_mode` 的指纹轮询也每秒遍历 `.venv`。`ab_sdk.manifest.TOOLING_DIRS`（`__pycache__`、`.git`、`.venv`、`dist`、`node_modules`、各类缓存）现在由原生扩展扫描、`pack` 与文件指纹共用；`pack` 仍额外排除 `tests`。
 - **v3 迁移不再把 `null` 当作旧字段**：`Settings.save()` 总是把 Bark 的 `token`、WeCom 的 `chat_id` 以 `null` 写回，`old in provider` 因此每次启动都成立，每次启动都新增 `config.json.v3.bak.N` 并改写配置。现在只在旧字段有值时迁移。
 - **通用插件与 LLM 插件共用 `config/plugins/<id>/` 的两处隔离**：LLM 注册表扫描跳过版本目录里是 `plugin.toml` 的目录（原先每次列举都对它打 `Skipping broken plugin` 警告）；通用安装器卸载时要求 `installed.json` 指向的版本目录含 `plugin.toml`，不能再通过 `DELETE /plugins/{id}` 删掉 LLM 插件（其凭据清理在 LLM 安装器里，不会被跳过）。
-- **未修：在线更新 bundle 不含 `ab_sdk`**。`boot_overlay.py` 是镜像自带的稳定脚本，只把 bundle 里的 `backend/src/module` 换进 `/app/module`；只在 `build.yml` 里多拷一份 `ab_sdk` 不会被旧镜像应用，要让 bundle 能更新 SDK 必须改覆盖层的应用方式。选项见 PR 说明，留作后续决定。
+- **在线更新 bundle 带上 `ab_sdk`（PR 说明中的选项 2）**。`build.yml` 把 `backend/src/ab_sdk` 打进 bundle，`min_image_version` 设为 `4.0.0-beta.1`；`boot_overlay.py` 要求已验签 bundle 同时有 `module` 与 `ab_sdk` 两棵树，先换 `/app/ab_sdk` 再换 `/app/module`，缺一棵即不应用。已发布的 3.3 镜像在 beta 通道会选中最新预发布，但 3.3 的更新器在应用时检查 `min_image_version`（与 4.0 的代码相同，已有测试覆盖），拒绝后不留存 bundle，3.3 的 `boot_overlay` 因此不会应用它。两次替换不是一个事务：`ab_sdk` 换完而 `module` 失败时留下新 SDK 与旧 module。
 
 未做（第一部分已列出，本部分也没有做）：
 

@@ -24,6 +24,7 @@
 - **新增（发布）**：beta 与稳定版的 GitHub Release 附带 `autobangumi-sdk` 轮子和 `autobangumi-plugin-skill-<版本>.zip`
 - **修复（插件开发工具）**：插件目录里的 `.venv`、`node_modules` 等工具链目录不再被当作原生扩展（`ab-plugin validate` / `pack` / `dev` 和宿主加载此前会报「含原生扩展」），`dev_mode` 也不再监听它们
 - **修复（配置迁移）**：配置里有 Bark 或 WeCom 渠道时，每次启动都会新增一份 `config.json.v3.bak.N` 并改写配置；现在只迁移带值的旧字段
+- **修复（在线更新）**：在线更新包带上 `ab_sdk`，4.0 镜像启动时与 `module` 一起替换；更新包要求镜像不低于 4.0.0-beta.1，已安装 3.3 的用户在 beta 通道不会应用 4.x 更新包（缺少 `ab_sdk` 与新依赖，应用后无法启动），需要拉取 4.0 镜像
 - **修复（插件安装）**：`DELETE /api/v1/plugins/{id}` 不再能卸载 LLM 提供商插件；安装通用插件后，LLM 插件列举不再反复输出 `Skipping broken plugin` 警告
 - **破坏性变更（升级路径）**：只支持从 3.3.x 升级。检测到更早版本的数据（`config/version.info` 低于 3.3，或残留 2.x 的 `data/data.json`）时拒绝启动，并提示先升级到最新 3.3.x 启动一次完成迁移
 - **破坏性变更（API）**：移除 3.2 兼容的 GET 控制端点（`/api/v1/restart`、`/start`、`/stop`、`/shutdown`）和 `GET /api/v1/auth/refresh_token`，请改用 POST
