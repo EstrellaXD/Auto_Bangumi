@@ -599,6 +599,40 @@ class TestRestoreMasked:
         assert incoming["providers"][0]["token"] == "tg-token"
         assert incoming["providers"][1]["token"] == "new-bark-token"
 
+    def test_config_plugin_notifier_extras_masked_and_restored(
+        self, authed_client, mock_settings
+    ):
+        """插件渠道的自定义字段没有 schema：读接口掩码，保存时按身份还原。"""
+        config = Config.model_validate(
+            {
+                "notification": {
+                    "providers": [
+                        {"type": "telegram", "token": "tg", "chat_id": "1"},
+                        {"type": "ext", "sendkey": "sk", "webhook": "https://h"},
+                    ]
+                }
+            }
+        )
+        with patch("module.api.config.settings", config):
+            data = authed_client.get("/api/v1/config/get").json()
+        providers = data["notification"]["providers"]
+        assert (providers[1]["sendkey"], providers[1]["webhook"]) == (
+            "********",
+            "********",
+        )
+        assert providers[0]["chat_id"] == "1"
+
+        # 删除第一个渠道后保存：插件渠道取回自己的值
+        providers.pop(0)
+        mock_settings.dict.return_value = config.dict()
+        with patch("module.api.config.settings", mock_settings):
+            response = authed_client.patch("/api/v1/config/update", json=data)
+        assert response.status_code == 200
+        [saved] = mock_settings.save.call_args[1]["config_dict"]["notification"][
+            "providers"
+        ]
+        assert (saved["sendkey"], saved["webhook"]) == ("sk", "https://h")
+
     def test_update_config_preserves_password_when_masked(
         self, authed_client, mock_settings
     ):

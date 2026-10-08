@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from collections.abc import Callable
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
@@ -8,6 +9,7 @@ from pydantic import BaseModel
 from module.conf import settings
 from module.core import AppContext
 from module.models import APIResponse, Config
+from module.models.config import NotificationProvider
 from module.parser.analyser.llm import LLMParser
 from module.plugin.secrets import mask_options, restore_options
 from module.security.api import UNAUTHORIZED, get_current_user
@@ -21,21 +23,35 @@ _SENSITIVE_KEYS = ("password", "api_key", "token", "secret")
 _MASK = "********"
 
 
+# 通知渠道模型声明的字段；其余字段是插件渠道自带的配置，没有 schema 可判断
+# 哪些是秘密，与无 schema 的插件选项一样全部按秘密处理
+_PROVIDER_FIELDS = frozenset(
+    f.alias or k for k, f in NotificationProvider.model_fields.items()
+)
+
+Sensitive = Callable[[str], bool]
+
+
 def _is_sensitive(key: str) -> bool:
     return any(s in key.lower() for s in _SENSITIVE_KEYS)
 
 
-def _sanitize_dict(d: dict) -> dict:
+def _is_provider_secret(key: str) -> bool:
+    return _is_sensitive(key) or key not in _PROVIDER_FIELDS
+
+
+def _sanitize_dict(d: dict, sensitive: Sensitive = _is_sensitive) -> dict:
     """Recursively mask string values whose keys contain sensitive keywords."""
     result: dict = {}
     for k, v in d.items():
         if isinstance(v, dict):
-            result[k] = _sanitize_dict(v)
+            result[k] = _sanitize_dict(v, sensitive)
         elif isinstance(v, list):
             result[k] = [
-                _sanitize_dict(item) if isinstance(item, dict) else item for item in v
+                _sanitize_dict(item, sensitive) if isinstance(item, dict) else item
+                for item in v
             ]
-        elif isinstance(v, str) and v and _is_sensitive(k):
+        elif isinstance(v, str) and v and sensitive(k):
             # 空值不打掩码：否则未设置密码的字段在前端永远显示一串幻影
             # 掩码，用户误以为存了密码（并可能因此反复"删除保存"）。
             result[k] = _MASK
@@ -48,13 +64,13 @@ class MaskRestoreError(ValueError):
     """无法为掩码密钥可靠定位旧值来源（列表项被删/重排且身份字段同时被改）。"""
 
 
-def _identity(d: dict) -> tuple:
+def _identity(d: dict, sensitive: Sensitive) -> tuple:
     """列表项的身份 = 全部非敏感标量字段（敏感侧是掩码，无法参与匹配）。"""
     return tuple(
         sorted(
             (k, v)
             for k, v in d.items()
-            if not isinstance(v, (dict, list)) and not _is_sensitive(k)
+            if not isinstance(v, (dict, list)) and not sensitive(k)
         )
     )
 
@@ -67,7 +83,9 @@ def _contains_mask(value) -> bool:
     return value == _MASK
 
 
-def _restore_masked_list(incoming: list, current: list) -> None:
+def _restore_masked_list(
+    incoming: list, current: list, sensitive: Sensitive = _is_sensitive
+) -> None:
     """按身份匹配列表项后再恢复各自的掩码密钥。
 
     掩码恢复不能盲目按下标：删掉第 0 个通知渠道后，幸存渠道的 ``********``
@@ -89,7 +107,9 @@ def _restore_masked_list(incoming: list, current: list) -> None:
 
     def match_unique_identity(i: int) -> None:
         candidates = [
-            j for j in unconsumed if _identity(current[j]) == _identity(incoming[i])
+            j
+            for j in unconsumed
+            if _identity(current[j], sensitive) == _identity(incoming[i], sensitive)
         ]
         if len(candidates) == 1:
             matched[i] = candidates[0]
@@ -97,7 +117,9 @@ def _restore_masked_list(incoming: list, current: list) -> None:
 
     if len(incoming) == len(current):
         for i in masked:
-            if i in unconsumed and _identity(incoming[i]) == _identity(current[i]):
+            if i in unconsumed and _identity(incoming[i], sensitive) == _identity(
+                current[i], sensitive
+            ):
                 matched[i] = i
                 unconsumed.discard(i)
         for i in masked:
@@ -113,7 +135,7 @@ def _restore_masked_list(incoming: list, current: list) -> None:
 
     for i in masked:
         if i in matched:
-            _restore_masked(incoming[i], current[matched[i]])
+            _restore_masked(incoming[i], current[matched[i]], sensitive)
         else:
             raise MaskRestoreError(
                 f"cannot determine which stored entry list item #{i} refers to; "
@@ -121,14 +143,16 @@ def _restore_masked_list(incoming: list, current: list) -> None:
             )
 
 
-def _restore_masked(incoming: dict, current: dict) -> dict:
+def _restore_masked(
+    incoming: dict, current: dict, sensitive: Sensitive = _is_sensitive
+) -> dict:
     """Replace masked sentinel values with real values from current config."""
     for k, v in incoming.items():
         if isinstance(v, dict) and isinstance(current.get(k), dict):
-            _restore_masked(v, current[k])
+            _restore_masked(v, current[k], sensitive)
         elif isinstance(v, list) and isinstance(current.get(k), list):
-            _restore_masked_list(v, current[k])
-        elif v == _MASK and _is_sensitive(k):
+            _restore_masked_list(v, current[k], sensitive)
+        elif v == _MASK and sensitive(k):
             incoming[k] = current.get(k, v)
     return incoming
 
@@ -145,6 +169,10 @@ async def get_config(ctx: AppContext = Depends(get_context)):
     options = config["plugins"]["options"]
     for plugin_id, plugin_options in options.items():
         options[plugin_id] = mask_options(plugin_options, schemas.get(plugin_id))
+    notification = config["notification"]
+    notification["providers"] = [
+        _sanitize_dict(p, _is_provider_secret) for p in notification["providers"]
+    ]
     return _sanitize_dict(config)
 
 
@@ -165,6 +193,11 @@ async def update_config(config: Config, ctx: AppContext = Depends(get_context)):
                 current_options.get(plugin_id, {}),
                 schemas.get(plugin_id),
             )
+        _restore_masked_list(
+            config_dict["notification"]["providers"],
+            current.get("notification", {}).get("providers", []),
+            _is_provider_secret,
+        )
         config_dict = _restore_masked(config_dict, current)
         # settings.save() does synchronous file I/O; keep it off the event loop.
         await asyncio.to_thread(settings.save, config_dict=config_dict)
