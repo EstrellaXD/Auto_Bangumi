@@ -109,6 +109,36 @@ def hook_runner(point: str) -> HookRunner | None:
     return runner
 
 
+def call_sync(
+    entry: ProviderEntry,
+    point: str,
+    method: Callable[[Any], Any],
+    check: Callable[[Any], bool],
+) -> tuple[bool, Any]:
+    """同步调用 Provider 实现上的方法 ``method(impl)``，返回 ``(是否成功, 结果)``。
+
+    core 实现直接调用；插件实现经 runner 调用，异常与 ``check`` 不通过的返回值
+    计入熔断。未设置 runner（脚本、CLI）时插件失败只记录日志。``check`` 也会
+    收到 None。
+    """
+    if entry.plugin_id == CORE:
+        return True, method(entry.factory())
+    runner = _runner
+    if runner is not None:
+        ok, result = runner.call_provider_sync(
+            entry.plugin_id, point, lambda: method(entry.factory()), check=check
+        )
+    else:
+        try:
+            result = method(entry.factory())
+        except Exception as e:
+            logger.warning("[Plugin:%s] %s 失败：%s", entry.plugin_id, point, e)
+            return False, None
+        ok = True
+    # runner 不校验 None（钩子返回 None 表示不修改），Provider 返回 None 同样无效
+    return ok and check(result), result
+
+
 def provider_impls(
     point: str, valid: Callable[[Any], bool] = lambda impl: True
 ) -> dict[str, Any]:

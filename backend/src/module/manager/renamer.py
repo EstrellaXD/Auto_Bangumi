@@ -7,7 +7,7 @@ from typing import Any
 from ab_sdk import points
 from ab_sdk.events import FileRenamed, OrganizedFile, TorrentOrganized
 from ab_sdk.rename import (
-    ConflictPolicy,
+    ConflictDecision,
     ConflictRequest,
     FileKind,
     RenameInput,
@@ -97,31 +97,17 @@ def _target_name(entry: ProviderEntry, f: RenameInput) -> str:
     插件策略经 runner 调用：异常与无效返回值计入熔断；策略主动抛出的
     RenameSkipped（输入或用户配置有问题）不计入。
     """
-    if entry.plugin_id == plugin_host.CORE:
-        return entry.factory().target_name(f)
 
-    def call() -> str | RenameSkipped:
+    def call(strategy: Any) -> str | RenameSkipped:
         try:
-            return entry.factory().target_name(f)
+            return strategy.target_name(f)
         except RenameSkipped as e:
             return e
 
-    runner = plugin_host.get_runner()
-    result: Any = None
-    if runner is not None:
-        ok, result = runner.call_provider_sync(
-            entry.plugin_id, points.RENAME_STRATEGY, call, check=_valid_name
-        )
-    else:
-        try:
-            result = call()
-            ok = _valid_name(result)
-        except Exception as e:
-            logger.warning("[Plugin:%s] 重命名策略失败：%s", entry.plugin_id, e)
-            ok = False
+    ok, result = plugin_host.call_sync(entry, points.RENAME_STRATEGY, call, _valid_name)
     if isinstance(result, RenameSkipped):
         raise result
-    if not ok or result is None:
+    if not ok:
         raise RenameSkipped(f"重命名方式 {entry.id} 执行失败，详见日志")
     return result
 
@@ -490,7 +476,7 @@ class Renamer(RevisionSaga):
         )
         if owners:
             owner = owners[0] if len(owners) == 1 else None
-            decision = self._conflict_policy().decide(
+            decision = self._decide_conflict(
                 ConflictRequest(
                     target_path=prepared.target_path,
                     incoming=RevisionTask(
@@ -638,11 +624,19 @@ class Renamer(RevisionSaga):
         )
 
     @staticmethod
-    def _conflict_policy() -> ConflictPolicy:
-        # 选中的策略未登记（插件停用或被熔断）时按 hold 处理，不会误删旧版本
+    def _decide_conflict(request: ConflictRequest) -> ConflictDecision:
+        # 选中的策略未登记（插件停用或被熔断）、抛出异常或返回值无效时按 hold
+        # 处理，不会误删旧版本；插件的失败已计入熔断
         policies = plugin_host.get_registry().providers(points.CONFLICT_POLICY)
-        entry = policies.get(settings.plugins.slots.conflict_policy) or policies["hold"]
-        return entry.factory()
+        hold = policies["hold"]
+        entry = policies.get(settings.plugins.slots.conflict_policy) or hold
+        ok, decision = plugin_host.call_sync(
+            entry,
+            points.CONFLICT_POLICY,
+            lambda policy: policy.decide(request),
+            lambda result: isinstance(result, ConflictDecision),
+        )
+        return decision if ok else hold.factory().decide(request)
 
     async def _batch_lookup_offsets(
         self, torrents_info: list[dict]

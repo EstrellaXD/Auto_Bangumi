@@ -23,6 +23,7 @@ from ab_sdk.rename import (
 )
 from ab_sdk.testing import RecordingBus, create_plugin
 from module.downloader import DownloadClient
+from module.downloader.path import check_files
 from module.manager import renamer as renamer_module
 from module.manager.renamer import Renamer
 from module.manager.revision_policy import CoreConflictPolicy
@@ -224,6 +225,22 @@ async def test_rename_strategy_failure_keeps_name_and_notifies_once(
     assert len(events) == 1
     assert events[0].task_id == "h1" and events[0].strategy == "custom"
     assert plugins.tripped == (["ext"] if counted else [])
+
+
+@pytest.mark.parametrize("classify", [lambda path: 1 / 0, lambda path: "video"])
+def test_check_files_plugin_media_files_failure_falls_back_to_suffix(plugins, classify):
+    impl = SimpleNamespace(classify=classify)
+    plugins.registry.add_provider(
+        points.MEDIA_FILES, ProviderEntry("ext", "custom", lambda: impl)
+    )
+    files = [{"name": NAME}, {"name": SUB}, {"name": "readme.txt"}]
+
+    with patch("module.downloader.path.settings") as mock_settings:
+        mock_settings.plugins.slots.media_files = "custom"
+        results = [check_files(files), check_files(files)]
+
+    assert results == [([NAME], [SUB])] * 2
+    assert plugins.tripped == ["ext"]
 
 
 def _task(file_count: int = 1, revision: int | None = 1) -> RevisionTask:

@@ -109,7 +109,7 @@
 
 slots 解析：
 
-- `rename_strategy` 读 `slots.rename_strategy`，未登记时仍记录一次日志并按 `none` 处理。`media_files` 读 `slots.media_files`，未登记时退回 `default`。`conflict_policy` 读 `slots.conflict_policy`，未登记时退回 `hold`，不会误删旧版本。后两者不记日志，因为每个文件都会解析一次。
+- `rename_strategy` 读 `slots.rename_strategy`，未登记时仍记录一次日志并按 `none` 处理。`media_files` 读 `slots.media_files`，未登记时退回 `default`。`conflict_policy` 读 `slots.conflict_policy`，未登记时退回 `hold`，不会误删旧版本。后两者不记日志，因为每个文件都会解析一次。插件实现与重命名策略一样经 `plugin_host.call_sync`（runner 的熔断器）调用：抛出异常或返回值无效（`conflict_policy` 不是 `ConflictDecision`，`media_files` 不是三种类别之一）时计入熔断，本次按 `hold` / `default` 处理，不中断这一轮重命名。
 - **冲突策略改为两个 Provider**：第 9 节把 `revision_conflict_policy` 迁到 `slots.conflict_policy`，slot 的值就是 Provider id。因此宿主以 `core` 登记 `hold` 与 `replace` 两个 `CoreConflictPolicy`，不再登记 `default`；`ConflictRequest` 删除 P4 加入的 `configured` 字段。`ab_sdk` 升至 0.5.0。`GET /api/v1/plugins/providers` 仍不列出 `conflict_policy` / `media_files` 的插件候选。
 
 迁移器（第 9 节，`module/update/v4.py`）：

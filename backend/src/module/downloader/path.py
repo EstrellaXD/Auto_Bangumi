@@ -2,6 +2,7 @@ import logging
 import re
 from os import PathLike
 from pathlib import PureWindowsPath
+from typing import get_args
 
 from ab_sdk import points
 from ab_sdk.rename import CORE_ID, MediaFiles, MediaKind
@@ -24,6 +25,7 @@ else:
 
 _MEDIA_SUFFIXES = frozenset({".mp4", ".mkv"})
 _SUBTITLE_SUFFIXES = frozenset({".ass", ".srt"})
+_MEDIA_KINDS = get_args(MediaKind)
 
 # Windows/qB 保留字符 + 控制字符：出现在路径片段里会被下载器拆成多级
 # 目录或直接丢字（qB 静默截断），必须在拼路径前替换掉 (#721)
@@ -56,17 +58,24 @@ class SuffixMediaFiles:
 def check_files(files: list[dict]):
     # 选中的实现未登记（插件停用或被熔断）时退回宿主实现
     providers = plugin_host.get_registry().providers(points.MEDIA_FILES)
-    entry = providers.get(settings.plugins.slots.media_files) or providers[CORE_ID]
-    media_files: MediaFiles = entry.factory()
-    media_list = []
-    subtitle_list = []
-    for f in files:
-        file_name = f["name"]
-        kind = media_files.classify(file_name)
-        if kind == "media":
-            media_list.append(file_name)
-        elif kind == "subtitle":
-            subtitle_list.append(file_name)
+    core = providers[CORE_ID]
+    entry = providers.get(settings.plugins.slots.media_files) or core
+    names = [f["name"] for f in files]
+
+    def classify(media_files: MediaFiles) -> list[MediaKind]:
+        return [media_files.classify(name) for name in names]
+
+    ok, kinds = plugin_host.call_sync(
+        entry,
+        points.MEDIA_FILES,
+        classify,
+        lambda result: all(kind in _MEDIA_KINDS for kind in result),
+    )
+    if not ok:
+        # 插件抛出异常或返回了无效类别（已计入熔断）：本次按宿主实现分类
+        kinds = classify(core.factory())
+    media_list = [name for name, kind in zip(names, kinds) if kind == "media"]
+    subtitle_list = [name for name, kind in zip(names, kinds) if kind == "subtitle"]
     return media_list, subtitle_list
 
 

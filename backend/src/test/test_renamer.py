@@ -1138,6 +1138,55 @@ class TestRevisionConflictFlow:
         assert restarted.events == []
         renamer.client.client.torrents_rename_file.assert_not_awaited()
 
+    @pytest.mark.parametrize(
+        "decide",
+        [
+            lambda request: 1 / 0,
+            lambda request: "replace",  # 不是 ConflictDecision
+        ],
+    )
+    async def test_plugin_conflict_policy_failure_holds_instead_of_aborting(
+        self, renamer, test_settings, decide
+    ):
+        from types import SimpleNamespace
+
+        from ab_sdk import points
+        from module.plugin import host
+        from module.plugin.registry import ProviderEntry
+
+        impl = SimpleNamespace(decide=decide)
+        host.get_registry().add_provider(
+            points.CONFLICT_POLICY, ProviderEntry("ext", "ext-policy", lambda: impl)
+        )
+        renamer.client.client.torrents_info.return_value = self._infos()
+
+        async def files(torrent_hash):
+            if torrent_hash == "old-v1":
+                return [{"name": self.TARGET}]
+            return [{"name": self.V2}]
+
+        renamer.client.client.torrents_files.side_effect = files
+        test_settings.plugins.slots.rename_strategy = "pn"
+        test_settings.plugins.slots.conflict_policy = "ext-policy"
+
+        try:
+            with (
+                patch("module.manager.renamer.settings", test_settings),
+                patch.object(
+                    renamer,
+                    "_batch_lookup_offsets",
+                    AsyncMock(return_value=self._offsets()),
+                ),
+            ):
+                assert await renamer.rename() == []
+        finally:
+            host.get_registry().remove_plugin("ext")
+
+        # 插件失败按 hold 处理：记录冲突并通知，不删除旧版本
+        assert len(renamer.events) == 1
+        renamer.client.client.torrents_rename_file.assert_not_awaited()
+        renamer.client.client.torrents_delete.assert_not_awaited()
+
     async def test_replace_stages_promotes_then_deletes_old(
         self, renamer, test_settings
     ):
