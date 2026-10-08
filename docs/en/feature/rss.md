@@ -38,6 +38,12 @@ AB supports parsing collection RSS links from all resource sites. Find the colle
 
 If parsing succeeds, a window will appear showing the parsed anime information. Click **Collect** or **Subscribe** to add it to the download queue.
 
+When you have more than one downloader, the dialog has a **Downloader** field. Use it to select the downloader for the torrents of this subscription. Leave it empty to use the default instance. See [Multiple Downloaders](./downloaders.md).
+
+### Global Include Filter
+
+The **Filter** of a rule excludes torrents. Since 4.0, the built-in `ingest-filters` plugin also supplies a global include filter. In **Settings → Plugins**, enter a list of regular expressions (case-insensitive) in the `include` option of `ingest-filters`. Then all subscriptions download only torrents whose name matches one of the expressions. When the list is empty, AB does not filter.
+
 ### Common Issues
 
 If a parsing error occurs, it may be due to an incorrect RSS link or an unsupported subtitle group naming format.
