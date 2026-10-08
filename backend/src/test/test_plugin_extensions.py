@@ -390,6 +390,29 @@ class TestPluginsApi:
         save.assert_not_awaited()
         assert "demo" not in settings.plugins.options
 
+    def test_update_reports_validator_errors_as_422(self, authed_client, plugin_ctx):
+        """field_validator 抛出的 ValueError 也返回 422（而不是序列化失败的 500）。"""
+        from pydantic import field_validator
+
+        class Strict(BaseModel):
+            site: str = ""
+
+            @field_validator("site")
+            @classmethod
+            def _check(cls, value: str) -> str:
+                raise ValueError("bad site")
+
+        ctx, save = plugin_ctx
+        ctx.plugins.validate_options.side_effect = lambda _pid, opts: (
+            Strict.model_validate(opts)
+        )
+        response = authed_client.put(
+            "/api/v1/plugins/demo", json={"options": {"site": "x"}}
+        )
+        assert response.status_code == 422
+        assert "bad site" in response.text
+        save.assert_not_awaited()
+
     def test_update_unknown_plugin(self, authed_client, plugin_ctx):
         assert authed_client.put("/api/v1/plugins/x", json={}).status_code == 404
 
@@ -403,7 +426,12 @@ class TestPluginsApi:
     def test_providers(self, authed_client, plugin_ctx, registry):
         add_plugin_provider(registry, points.DOWNLOADER, "fake", FakeDownloader)
         data = authed_client.get("/api/v1/plugins/providers").json()
-        assert data == {"downloader": ["fake"], "notifier": [], "search_site": []}
+        assert data == {
+            "downloader": ["fake"],
+            "notifier": [],
+            "search_site": [],
+            "rename_strategy": [],
+        }
 
     def test_config_get_masks_plugin_secrets(self, authed_client, plugin_ctx):
         settings.plugins.options["demo"] = {"site": "a", "cookie": "c=1"}

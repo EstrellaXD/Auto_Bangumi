@@ -13,8 +13,9 @@
 | LLM 解析提供商 | `points.LLM_PROVIDER` | `LLMProviderAdapter` 子类 | 设置 → LLM → 提供商 |
 | 搜索站点 | `points.SEARCH_SITE` | `SearchSite` | 搜索框的站点列表 |
 | 定时任务 | `points.SCHEDULED_TASK` | `ScheduledTask` | 插件启用即生效 |
+| 重命名方式 | `points.RENAME_STRATEGY` | `RenameStrategy` | 设置 → 番剧管理 → 重命名方式 |
 
-此外，插件可以订阅事件（`@subscribe`），并使用私有的键值存储和数据目录。RSS 过滤、重命名等流水线扩展点会在后续版本陆续开放。
+此外，插件可以订阅事件（`@subscribe`，如文件重命名后的 `file.renamed`），并使用私有的键值存储和数据目录。RSS 过滤等流水线扩展点会在后续版本陆续开放。
 
 ## 目录结构
 
@@ -172,6 +173,61 @@ def sync(self):
 ```
 
 任务与 RSS 刷新等内置任务一同启停，失败计入熔断。
+
+### 重命名方式
+
+需要 `sdk = ">=0.3,<1"`。
+
+```python
+from ab_sdk import Plugin, points, provider
+from ab_sdk.rename import RenameInput
+
+
+class Kebab:
+    def target_name(self, f: RenameInput) -> str:
+        if f.episode_type == "movie":
+            return f"{f.bangumi_name}{f.full_suffix}"
+        return f"{f.bangumi_name}-s{f.season:02d}e{f.episode:02}{f.full_suffix}"
+
+
+class MyPlugin(Plugin):
+    @provider(points.RENAME_STRATEGY, id="kebab")
+    def kebab(self):
+        return Kebab()
+```
+
+用户把 **设置 → 番剧管理 → 重命名方式** 设为 `kebab` 后，AB 对种子里的每个媒体文件和字幕文件各调用一次 `target_name`：
+
+- `RenameInput` 字段：`title`（从文件名解析的标题）、`bangumi_name`（番剧文件夹名）、`season`、`episode`、`suffix`（含点的扩展名）、`kind`（`media` / `subtitle`）、`language`（字幕语言）、`episode_type`（`episode` / `movie` / `special`）、`original_path`（种子内当前路径）、`group`。
+- 剧集偏移已经应用到 `episode`，季度取自番剧文件夹（同样已含季度偏移），策略只负责拼名字。半集（如 `12.5`）保留小数。
+- 返回种子内的新相对路径，**包括扩展名**。字幕可以直接拼 `f.full_suffix`，它会生成 `.zh.ass` 这样的后缀。返回 `f.original_path` 表示不改名。
+- 抛出异常、返回空字符串、绝对路径或含 `..` 的路径时，AB 记录错误并保持原文件名，不会中断整理流程。
+- 内置的 `pn`、`advance`、`none` 以 `core` 身份登记，不能被覆盖。内置插件「模板重命名」提供 `template`，可以作为参考实现。
+
+### 整理事件
+
+AB 在重命名完成后向事件总线发布两个事件，定义在 `ab_sdk.organize`：
+
+| 事件 | `kind` | 发布时机 |
+| --- | --- | --- |
+| `FileRenamed` | `file.renamed` | 下载器中的一个文件（媒体或字幕）被实际改名后；文件名已符合目标、无需改名时不发布 |
+| `TorrentOrganized` | `torrent.organized` | 一个种子的媒体文件全部就位、字幕也处理完、打上 `ab:renamed` 标签时；重命名方式为 `none` 时不发布 |
+
+```python
+from ab_sdk import Plugin, subscribe
+from ab_sdk.organize import FileRenamed
+
+
+class MyPlugin(Plugin):
+    @subscribe(FileRenamed.kind)
+    async def on_renamed(self, event: FileRenamed) -> None:
+        self.ctx.log.info("%s → %s", event.old_path, event.new_path)
+```
+
+- `FileRenamed` 字段：`torrent_hash`、`bangumi_id`（未关联到番剧时为 `None`）、`official_title`、`season`、`episode`（已含偏移）、`old_path`、`new_path`、`save_path`、`file_kind`（`media` / `subtitle`）。
+- `TorrentOrganized` 字段：`torrent_hash`、`torrent_name`、`bangumi_id`、`official_title`、`save_path`、`collection`（多文件合集）。
+- 路径都是**下载器视角**：`save_path` 是种子保存目录，`old_path` / `new_path` 是种子内的相对路径。AB 与下载器不在同一台机器，或两者的挂载路径不同时，插件要自己做路径映射。
+- 事件处理在独立队列里异步执行，有超时，失败计入熔断，不会拖慢或中断重命名。耗时操作（如调用媒体服务器）最好自己合并、延迟执行。内置插件「媒体库刷新」（`media-server-refresh`）就是这样做的：收到第一个 `file.renamed` 后等待一段时间，再请求 Jellyfin / Emby / Plex 刷新一次。
 
 ## 测试
 

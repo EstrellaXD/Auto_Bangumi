@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from ab_sdk import SDK_VERSION, Plugin, PluginDisabled, PluginLoaded
 from ab_sdk.hooks import HOOK_ATTR, PROVIDER_ATTR, SUBSCRIBE_ATTR
 
+from . import host
 from .bus import EventBus
 from .context import PLUGIN_DATA_ROOT, HostPluginContext
 from .loader import DiscoveryError, PluginCandidate, PluginLoadError, discover
@@ -88,6 +89,8 @@ class PluginManager:
     # ------------------------------------------------------------ lifecycle
 
     async def start(self) -> None:
+        # 宿主流水线（renamer 等）经 host.publish 发布到本总线
+        host.set_bus(self.bus)
         async with self._lock:
             self._rediscover()
             for candidate in self._candidates.values():
@@ -107,6 +110,8 @@ class PluginManager:
         async with self._lock:
             for plugin_id in list(self._active):
                 await self._deactivate(plugin_id)
+        if host.get_bus() is self.bus:
+            host.set_bus(None)
         await self.bus.close()
 
     async def apply_settings(self) -> None:

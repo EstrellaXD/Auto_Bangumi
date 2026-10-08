@@ -65,6 +65,7 @@
       "eps": "EPS complete",
       "group_tag": "Add Group Tag",
       "method": "Rename Method",
+      "method_hint": "The template method's naming pattern is configured under Plugins, Template Rename. Plugins can also provide more rename methods.",
       "revision_conflict_hint": "When replacement is enabled, the old torrent and its data are deleted only after the higher revision is promoted successfully.",
       "revision_conflict_hold": "Keep Existing File",
       "revision_conflict_policy": "Revision Conflict Policy",

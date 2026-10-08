@@ -9,6 +9,8 @@ Provider 扩展点（``@provider``）：
 - ``LLM_PROVIDER``：返回 :class:`ab_sdk.llm.LLMProviderAdapter` 子类
 - ``SEARCH_SITE``：返回 :class:`ab_sdk.search.SearchSite`，id 即站点名
 - ``SCHEDULED_TASK``：返回 :class:`ab_sdk.tasks.ScheduledTask`
+- ``RENAME_STRATEGY``：返回 :class:`ab_sdk.rename.RenameStrategy`，id 即
+  ``bangumi_manage.rename_method`` 的取值
 """
 
 DOWNLOADER = "downloader"
@@ -16,3 +18,4 @@ NOTIFIER = "notifier"
 LLM_PROVIDER = "llm_provider"
 SEARCH_SITE = "search_site"
 SCHEDULED_TASK = "scheduled_task"
+RENAME_STRATEGY = "rename_strategy"

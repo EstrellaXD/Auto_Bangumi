@@ -100,7 +100,9 @@ async def update_plugin(
             ctx.plugins.validate_options(plugin_id, options)
         except ValidationError as e:
             raise HTTPException(
-                status_code=422, detail=e.errors(include_url=False)
+                status_code=422,
+                # ctx 里可能带 ValueError 等不可 JSON 序列化的对象
+                detail=e.errors(include_url=False, include_context=False),
             ) from None
         conf.options[plugin_id] = options
     if body.enabled is not None:
@@ -114,5 +116,10 @@ async def list_plugin_providers():
     """插件提供的 Provider id（按扩展点），设置页把它们并入下拉候选。"""
     return {
         point: plugin_provider_ids(point)
-        for point in (points.DOWNLOADER, points.NOTIFIER, points.SEARCH_SITE)
+        for point in (
+            points.DOWNLOADER,
+            points.NOTIFIER,
+            points.SEARCH_SITE,
+            points.RENAME_STRATEGY,
+        )
     }

@@ -21,6 +21,17 @@
 - **扩展点改名**：`search_provider` 改为 `search_site`，以区分用户在搜索设置里维护的站点列表。
 - 签名目录来源（LLM 安装器泛化）、`dev_mode` 文件监听、bark / wecom 旧字段别名清理，移到 P7（生态）。
 
+### 实施中的调整（P4）
+
+- **`renamer.py` 拆分**：编排留在 `manager/renamer.py`，命名策略在 `manager/rename_strategy.py`，revision 替换事务在 `manager/revision_saga.py`（`RevisionSaga`，由 Renamer 组合注入 client、冲突事件列表、下载器类型与打标回调）。第 4.1 节的 `module/pipeline/organize.py` 暂不单独建立。
+- **`rename_strategy` 不经 `plugins.slots`**：与 P2 一致，`bangumi_manage.rename_method` 直接作为 Provider id 查找，未知 id 保持原路径并记录错误。策略返回种子内的新相对路径（含扩展名）；宿主拒绝空字符串、绝对路径和含 `..` 的结果。`RenameInput` 增加 `group` 与 `full_suffix`（字幕为 `.<语言><扩展名>`）。
+- **`template` 由内置插件提供**：`module/plugins/builtin/rename-template/`，模板在插件配置里（剧集模板 + 剧场版模板），没有新增 `bangumi_manage` 字段。模板只渲染文件名主体，扩展名由插件追加。
+- **事件模块**：`FileRenamed` / `TorrentOrganized` 放在 `ab_sdk.organize`（不是第 2.3 节示例里的 `ab_sdk.events`）；文件类型字段叫 `file_kind`，因为 `kind` 是事件类型的类变量。宿主在定时循环中拿不到 AppContext，经 `module.plugin.host.publish()` 发布到 `PluginManager` 启动时登记的进程级总线；未登记时为空操作，发布失败只记日志。
+- **示例插件**：选择 `media-server-refresh`（Jellyfin / Emby / Plex 刷新，合并一段时间内的重命名），硬链接插件留给 P7 生态。
+- **延后**：`media_files`、`file_parser`、`conflict_policy` 扩展点。saga 拆分后冲突策略的判定仍需要 `RevisionIdentity` 等内部模型，暴露为 SDK 契约前需要先设计只读视图，因此 `revision_conflict_policy` 仍是 `hold` / `replace` 两个内置值。
+- **第 11 节第 2 条（`release_replacement_lease`）**：确认冗余并删除。saga 每一步都以 `set_state_claimed` 结束，该 UPDATE 在写状态的同时清空租约；只有外部调用抛异常的路径会留下租约，最长占用一个租约周期（5 分钟，与重试冷却相同），只会推迟下一次尝试。
+- **第 8.3 节 `season_offset`**：已从 `gen_path` 和重命名链路中删除（季度偏移只体现在保存路径的 Season 文件夹上）。`_lookup_offsets` 合并进 `_batch_lookup_offsets`，后者返回 `BangumiLink`（偏移、类型、番剧 id、官方标题），原测试改为驱动批量版本。`rename_file` 删除，原测试改为驱动 `rename()` 的单文件路径。
+
 ## 1. 背景与目标
 
 AB 目前只有 **LLM 提供商** 是真正的运行时插件系统：签名下载、目录加载、懒导入、热重载。
@@ -567,7 +578,7 @@ organize: downloader.completed → media_files.classify → file_parser
 | **P2 迁移已有注册表** | 下载器、通知、LLM、搜索站点、定时任务改为扩展点，内置实现以 `core` 登记；`/api/v1/plugins`（列表、启停、配置、Provider 列表）与 WebUI 插件卡片（JSON Schema 表单）；`secret_field` 掩码；插件开发文档 | 已完成；内置行为不变（全量测试）。调整见第 0 节 |
 | **P2.5 多下载器** | 下载器多实例；`downloader_id` 列与迁移；按实例路由 add / rename / delete；organize 逐实例扫描 | qb + aria2 并存的 e2e 用例；单实例行为不变 |
 | **P3 流水线插件化：ingest** | `feed_source`、`title_parser` 链、`admission_policy`、`matcher`、`torrent.filter`、`ranker`、`metadata_provider` 链、`save_path`、`torrent.adding` | 新增 include / size 过滤；私有站 headers |
-| **P4 流水线插件化：organize** | `media_files`、`file_parser`、`rename_strategy`（含 `template`）、`conflict_policy`、`file.renamed` 等事件 | 模板重命名；硬链接示例插件 |
+| **P4 流水线插件化：organize** | `media_files`、`file_parser`、`rename_strategy`（含 `template`）、`conflict_policy`、`file.renamed` 等事件 | 已完成 `rename_strategy`（含 `template`）、`file.renamed` / `torrent.organized` 事件与 `media-server-refresh` 示例插件；`media_files`、`file_parser`、`conflict_policy` 延后。调整见第 0 节 |
 | **P5 事件与外部接口** | SSE 改订阅 bus；`api_router`、`mcp_tool` 扩展点；`message_template` | 删掉 SSE 轮询；插件 MCP 工具 |
 | **P6 前端插件** | Web Component 挂载点、`AbHost` 桥接、错误边界、`/plugins/<id>/web` 静态资源、`@autobangumi/plugin-ui` 包 | 示例插件「手动选种」以详情页标签形式可用 |
 | **P7 生态** | 插件管理页（安装、启停、日志、错误）、签名目录发布流程、模板仓库（含前端模板）、`ab-plugin` CLI、文档（中 / 英 / 日） | 6 个以上示例插件上架 |

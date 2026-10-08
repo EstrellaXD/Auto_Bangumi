@@ -1,0 +1,8 @@
+[plugin]
+id = "rename-template"
+name = "模板重命名"
+version = "1.0.0"
+sdk = ">=0.3,<1"
+entry = "rename_template:TemplateRename"
+description = "提供 template 重命名方式：用 Jinja2 模板自定义重命名后的文件名"
+authors = ["AutoBangumi"]

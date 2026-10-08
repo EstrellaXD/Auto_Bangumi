@@ -59,11 +59,6 @@ load_corpus  # tokenizer 基准测试工具
 run_benchmark
 render_text
 
-# --- 待 4.0 后续阶段处理（见 docs/plans/2026-10-08-plugin-architecture-4.0-design.md）---
-_.rename_file  # P4 重写 renamer 时与测试一起迁移
-_._lookup_offsets  # P4：与 _batch_lookup_offsets 合并
-_.release_replacement_lease  # 待确认是否 saga 遗漏调用（设计文档第 11 节）
-
 # --- 插件运行时（module/plugin）---
 # 公开接口：宿主在 P2/P3 迁移扩展点时调用（声明扩展点、执行 transform 钩子）
 _.declare
@@ -77,3 +72,9 @@ factory
 # 动态创建插件包时设置的模块属性
 _.__path__
 _.__package__
+
+# --- P4 organize ---
+# 内置插件：由插件管理器按 plugin.toml 加载，经 @provider / @subscribe 注册
+TemplateRename
+MediaServerRefresh
+_.on_file_renamed

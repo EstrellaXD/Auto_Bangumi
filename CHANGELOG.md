@@ -10,6 +10,8 @@
 - **破坏性变更（配置）**：移除旧版 `experimental_openai` 配置节和通知的单 provider 旧字段（`type` / `token` / `chat_id`），3.3 已把它们迁移到 `llm` 与 `notification.providers`；移除废弃的 `normal` 重命名方式，已有配置自动改为语义相同的 `none`
 - **清理**：删除 3.0→3.1、3.1→3.2 跨版本迁移、旧 JWT 与内存会话实现，以及约 70 处无调用方的函数、方法和模型；CI 新增 vulture 死代码检查
 - **修复（版本记录）**：`version.info` 原先只比较次版本号，跨主版本升级（如 3.3 → 4.0）不会被记录；现按完整语义化版本比较
+- **新增（整理流水线）**：重命名方式改为 `rename_strategy` 扩展点，内置 `pn` / `advance` / `none` 输出与此前逐字一致（有新旧实现的对照测试）；字幕不再使用 `subtitle_*` 平行方法名，而是同一方式按文件类型生成。新增内置插件「模板重命名」，提供 `template` 方式：用 Jinja2 沙箱模板自定义文件名（默认模板与 `pn` 相同），渲染为空或含路径分隔符时保持原名。重命名后向事件总线发布 `file.renamed` / `torrent.organized`（`ab_sdk.organize`），新增内置插件「媒体库刷新」：配置 Jellyfin / Emby / Plex 地址与 API Key 后，合并一段时间内的重命名并请求刷新媒体库，未配置时不做任何事。`ab_sdk` 升至 0.3.0
+- **重构（整理流水线）**：`manager/renamer.py` 拆为编排（`renamer.py`）、命名策略（`rename_strategy.py`）与 revision 替换事务（`revision_saga.py`）；删除仅测试使用的 `Renamer.rename_file` / `_lookup_offsets`、无调用方的 `release_replacement_lease`、`match_by_save_path`、`search_by_qb_hash`，以及在重命名链路中传递却从未使用的 `season_offset` 参数
 
 # [3.3.6] - 2026-09-19
 

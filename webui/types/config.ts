@@ -7,7 +7,7 @@ export type RssParserLang = ['zh', 'en', 'jp'];
 /** RSS 标题解析引擎（tokenizer 仍处于 Preview） */
 export type RssParserEngine = ['classic', 'tokenizer'];
 /** 重命名方式 */
-export type RenameMethod = ['pn', 'advance', 'none'];
+export type RenameMethod = ['pn', 'advance', 'none', 'template'];
 /** 修订版文件名冲突处理策略 */
 export type RevisionConflictPolicy = ['hold', 'replace'];
 /** 代理类型 */
@@ -62,7 +62,8 @@ export interface RssParser {
 export interface BangumiManage {
   enable: boolean;
   eps_complete: boolean;
-  rename_method: TupleToUnion<RenameMethod>;
+  /** 内置方式，或插件通过 rename_strategy 扩展点提供的 id */
+  rename_method: TupleToUnion<RenameMethod> | (string & {});
   revision_conflict_policy: TupleToUnion<RevisionConflictPolicy>;
   group_tag: boolean;
   remove_bad_torrent: boolean;

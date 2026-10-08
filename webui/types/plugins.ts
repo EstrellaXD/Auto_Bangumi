@@ -57,4 +57,5 @@ export interface PluginProviders {
   downloader: string[];
   notifier: string[];
   search_site: string[];
+  rename_strategy: string[];
 }

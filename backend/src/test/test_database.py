@@ -153,6 +153,12 @@ async def test_bangumi_delete_all_with_fk_references_succeeds(db_session):
 # ---------------------------------------------------------------------------
 
 
+async def _search_one(db: TorrentDatabase, qb_hash: str):
+    rows = await db.search_by_qb_hashes([qb_hash])
+    assert len(rows) <= 1
+    return rows[0] if rows else None
+
+
 async def test_torrent_search_by_qb_hash(db_session):
     """Test searching torrent by qBittorrent hash."""
     db = TorrentDatabase(db_session)
@@ -166,7 +172,7 @@ async def test_torrent_search_by_qb_hash(db_session):
     await db.add(torrent)
 
     # Search by qb_hash
-    result = await db.search_by_qb_hash("abc123def456")
+    result = await _search_one(db, "abc123def456")
     assert result is not None
     assert result.name == torrent.name
     assert result.qb_hash == "abc123def456"
@@ -176,7 +182,7 @@ async def test_torrent_search_by_qb_hash_not_found(db_session):
     """Test searching non-existent qb_hash returns None."""
     db = TorrentDatabase(db_session)
 
-    result = await db.search_by_qb_hash("nonexistent_hash")
+    result = await _search_one(db, "nonexistent_hash")
     assert result is None
 
 
@@ -197,7 +203,7 @@ async def test_torrent_with_bangumi_id(db_session):
     await db.add(torrent)
 
     # Search and verify bangumi_id is preserved
-    result = await db.search_by_qb_hash("hash_for_bangumi_42")
+    result = await _search_one(db, "hash_for_bangumi_42")
     assert result is not None
     assert result.bangumi_id == 42
 
@@ -216,16 +222,16 @@ async def test_torrent_qb_hash_index_efficient(db_session):
     await db.add_all(torrents)
 
     # Verify we can find specific torrents by hash
-    result = await db.search_by_qb_hash("hash_5")
+    result = await _search_one(db, "hash_5")
     assert result is not None
     assert result.name == "Torrent 5"
 
-    result = await db.search_by_qb_hash("hash_9")
+    result = await _search_one(db, "hash_9")
     assert result is not None
     assert result.name == "Torrent 9"
 
     # Non-existent hash
-    result = await db.search_by_qb_hash("hash_100")
+    result = await _search_one(db, "hash_100")
     assert result is None
 
 

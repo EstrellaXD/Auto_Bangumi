@@ -8,12 +8,16 @@ AB 自己的下载器、通知渠道与搜索站点和第三方插件走同一�
 任何上下文里都能解析 Provider。
 """
 
+import logging
 from typing import Any
 
-from ab_sdk import points
+from ab_sdk import Event, points
 from ab_sdk.downloader import DownloaderConnection
 
+from .bus import EventBus
 from .registry import ExtensionPoint, ExtensionRegistry, ProviderEntry
+
+logger = logging.getLogger(__name__)
 
 CORE = "core"
 
@@ -25,6 +29,9 @@ POINTS = (
     ExtensionPoint(points.LLM_PROVIDER, "provider", "LLM 解析提供商（llm.provider）"),
     ExtensionPoint(points.SEARCH_SITE, "provider", "搜索站点"),
     ExtensionPoint(points.SCHEDULED_TASK, "provider", "定时任务"),
+    ExtensionPoint(
+        points.RENAME_STRATEGY, "provider", "重命名方式（bangumi_manage.rename_method）"
+    ),
 )
 
 _registry: ExtensionRegistry | None = None
@@ -88,3 +95,37 @@ def _register_core(registry: ExtensionRegistry) -> None:
 
     for provider_id, provider_cls in PROVIDER_REGISTRY.items():
         _core(registry, points.NOTIFIER, provider_id, provider_cls)
+
+    from module.manager.rename_strategy import CORE_STRATEGIES
+
+    for provider_id, strategy in CORE_STRATEGIES.items():
+        _core(registry, points.RENAME_STRATEGY, provider_id, strategy)
+
+
+# ---------------------------------------------------------------- event bus
+# 宿主流水线（如在定时循环里运行、拿不到 AppContext 的 renamer）通过这里向
+# 插件总线发布事件。总线由 PluginManager 启动时设置、停止时清除；未设置时
+# 发布是空操作。
+
+
+_bus: EventBus | None = None
+
+
+def set_bus(bus: EventBus | None) -> None:
+    global _bus
+    _bus = bus
+
+
+def get_bus() -> EventBus | None:
+    return _bus
+
+
+def publish(event: Event) -> None:
+    """向插件总线发布宿主事件。永不抛出：发布失败只记录日志。"""
+    bus = _bus
+    if bus is None:
+        return
+    try:
+        bus.publish(event)
+    except Exception:
+        logger.exception("[Plugin] 发布事件 %s 失败", event.kind)

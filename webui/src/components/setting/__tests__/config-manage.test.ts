@@ -6,6 +6,17 @@ vi.mock('@/hooks/useMyI18n', () => ({
   useMyI18n: () => ({ t: (key: string) => key }),
 }));
 
+vi.mock('@/hooks/usePluginProviders', async () => {
+  const { ref } = await vi.importActual<typeof import('vue')>('vue');
+  const providers = ref({
+    downloader: [],
+    notifier: [],
+    search_site: [],
+    rename_strategy: ['template', 'my-style'],
+  });
+  return { usePluginProviders: () => providers };
+});
+
 vi.mock('@/store/config', async () => {
   const { computed } = await vi.importActual<typeof import('vue')>('vue');
   const manageState = {
@@ -38,7 +49,37 @@ const AbSettingStub = defineComponent({
   template: '<div class="setting-stub"></div>',
 });
 
+function mountManage() {
+  return mount(ConfigManage, {
+    global: {
+      stubs: {
+        'ab-fold-panel': { template: '<section><slot /></section>' },
+        'ab-setting': AbSettingStub,
+      },
+    },
+  });
+}
+
 describe('config-manage', () => {
+  it('offers built-in rename methods plus plugin-provided ones', () => {
+    const settings = mountManage().findAllComponents(AbSettingStub);
+    const method = settings.find((setting) => {
+      const label = setting.props('label') as () => string;
+      return label() === 'config.manage_set.method';
+    });
+
+    expect(method).toBeDefined();
+    if (!method) throw new Error('rename method setting not found');
+    expect(method.props('prop')?.items).toEqual([
+      'pn',
+      'advance',
+      'none',
+      'template',
+      'my-style',
+    ]);
+    expect(method.props('description')).toBe('config.manage_set.method_hint');
+  });
+
   it('offers a safe hold default and an explicit higher-revision replacement', async () => {
     const wrapper = mount(ConfigManage, {
       global: {

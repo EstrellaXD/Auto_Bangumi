@@ -1,12 +1,17 @@
 """重命名路径生成（命名策略）。
 
-``gen_path`` 根据重命名方式生成种子内的新文件路径；剧集偏移在这里统一应用。
+``gen_path`` 把解析出的文件转成 :class:`ab_sdk.rename.RenameInput`（剧集偏移在
+这里统一应用），再交给 ``rename_strategy`` 扩展点上 id 为重命名方式的策略。
+内置 ``pn`` / ``advance`` / ``none`` 以 ``core`` 身份登记，插件可以提供更多。
 """
 
 import logging
 from pathlib import PurePath
 
+from ab_sdk import points
+from ab_sdk.rename import RenameInput, RenameStrategy
 from module.models import EpisodeFile, SubtitleFile
+from module.plugin import host
 
 logger = logging.getLogger(__name__)
 
@@ -35,57 +40,126 @@ def format_episode(episode: int | float) -> str:
     return f"0{episode}" if episode < 10 else str(episode)
 
 
+def format_season(season: int) -> str:
+    return f"0{season}" if season < 10 else str(season)
+
+
+# ---------------------------------------------------------------- core strategies
+# 注意：group_tag 只影响 qB RSS 规则名（downloader/path.py 的 rule_name），
+# 从不写进重命名后的文件名——已有做种媒体库的文件名必须保持稳定，
+# 否则升级后会触发整库批量重命名，破坏 Plex/Jellyfin 索引与硬链接。
+# title/bangumi_name 来自已存在于磁盘上的文件/文件夹名（单个路径分量，不可能
+# 含分隔符），不做保留字符清洗——追加清洗会让既有做种库（如含 ":" 的标题）
+# 在升级后被整库批量重命名 (#721 评审)。
+
+
+class PnStrategy:
+    """``{title} S01E05.mkv``：标题取自文件名解析结果。"""
+
+    use_bangumi_name = False
+
+    def target_name(self, f: RenameInput) -> str:
+        base = f.bangumi_name if self.use_bangumi_name else f.title
+        if f.episode_type == "movie":
+            # 电影/剧场版：Title (Year).ext，不使用 SxxExx 编号。bangumi_name 与
+            # gen_save_path 的文件夹命名保持一致 (Title (Year))
+            return f"{base}{f.full_suffix}"
+        season = format_season(f.season)
+        episode = format_episode(f.episode)
+        return f"{base} S{season}E{episode}{f.full_suffix}"
+
+
+class AdvanceStrategy(PnStrategy):
+    """``{番剧文件夹名} S01E05.mkv``。"""
+
+    use_bangumi_name = True
+
+
+class NoneStrategy:
+    """不改名。"""
+
+    def target_name(self, f: RenameInput) -> str:
+        return f.original_path
+
+
+CORE_STRATEGIES: dict[str, RenameStrategy] = {
+    "pn": PnStrategy(),
+    "advance": AdvanceStrategy(),
+    "none": NoneStrategy(),
+}
+
+
+# ---------------------------------------------------------------- dispatch
+
+
+def build_input(
+    file_info: EpisodeFile | SubtitleFile, bangumi_name: str, episode_offset: int = 0
+) -> RenameInput:
+    language = file_info.language if isinstance(file_info, SubtitleFile) else None
+    return RenameInput(
+        title=file_info.title,
+        bangumi_name=bangumi_name,
+        # 季度取自文件夹名（"Season {season + season_offset}"），已含季度偏移
+        season=file_info.season,
+        episode=adjust_episode(file_info.episode, episode_offset),
+        suffix=file_info.suffix,
+        kind="media" if language is None else "subtitle",
+        language=language,
+        episode_type=file_info.episode_type,
+        original_path=file_info.media_path,
+        group=file_info.group,
+    )
+
+
+def _valid_target(path: object) -> bool:
+    if not isinstance(path, str) or not path.strip():
+        return False
+    normalized = path.replace("\\", "/")
+    if normalized.startswith("/") or PurePath(normalized).is_absolute():
+        return False
+    return ".." not in normalized.split("/")
+
+
+def target_name(method: str, f: RenameInput) -> str:
+    """用 ``method`` 对应的策略生成目标路径；策略缺失或出错时保持原路径。"""
+    try:
+        strategy = host.provider(points.RENAME_STRATEGY, method)
+    except Exception:
+        logger.exception("Failed to load rename method %s", method)
+        return f.original_path
+    if strategy is None:
+        logger.error(f"Unknown rename method: {method}")
+        return f.original_path
+    try:
+        result = strategy.target_name(f)
+    except Exception as e:
+        logger.error(
+            "Rename method %s failed for %s, keeping path: %s",
+            method,
+            f.original_path,
+            e,
+        )
+        return f.original_path
+    if not _valid_target(result):
+        logger.error(
+            "Rename method %s produced an invalid path %r for %s, keeping path",
+            method,
+            result,
+            f.original_path,
+        )
+        return f.original_path
+    return result
+
+
 def gen_path(
     file_info: EpisodeFile | SubtitleFile,
     bangumi_name: str,
     method: str,
     episode_offset: int = 0,
-    season_offset: int = 0,  # Kept for API compatibility, but no longer used
 ) -> str:
-    # Season comes from the folder name which already includes the offset
-    # (folder is now "Season {season + season_offset}")
-    # So we use file_info.season directly without applying offset again
-    season_num = file_info.season
-    season = f"0{season_num}" if season_num < 10 else season_num
-    episode = format_episode(adjust_episode(file_info.episode, episode_offset))
-    # 注意：group_tag 只影响 qB RSS 规则名（downloader/path.py 的 rule_name），
-    # 从不写进重命名后的文件名——已有做种媒体库的文件名必须保持稳定，
-    # 否则升级后会触发整库批量重命名，破坏 Plex/Jellyfin 索引与硬链接
-    if method == "none" or method == "subtitle_none":
-        return file_info.media_path
-    # 注意：这里的 title/bangumi_name 来自已存在于磁盘上的文件/文件夹名
-    # （单个路径分量，不可能含分隔符），不做保留字符清洗——追加清洗会让
-    # 既有做种库（如含 ":" 的标题）在升级后被整库批量重命名 (#721 评审)
-    title = file_info.title
-    if file_info.episode_type == "movie":
-        # 电影/剧场版：Title (Year).ext，不使用 SxxExx 编号。bangumi_name 由
-        # 调用方传入，与 gen_save_path 的文件夹命名保持一致 (Title (Year))
-        base = bangumi_name if "advance" in method else title
-        if method.startswith("subtitle_"):
-            assert isinstance(
-                file_info, SubtitleFile
-            ), "subtitle methods require a SubtitleFile"
-            return f"{base}.{file_info.language}{file_info.suffix}"
-        return f"{base}{file_info.suffix}"
-    elif method == "pn":
-        return f"{title} S{season}E{episode}{file_info.suffix}"
-    elif method == "advance":
-        return f"{bangumi_name} S{season}E{episode}{file_info.suffix}"
-    elif method == "subtitle_pn":
-        assert isinstance(
-            file_info, SubtitleFile
-        ), "subtitle_pn requires a SubtitleFile"
-        return f"{title} S{season}E{episode}.{file_info.language}{file_info.suffix}"
-    elif method == "subtitle_advance":
-        assert isinstance(
-            file_info, SubtitleFile
-        ), "subtitle_advance requires a SubtitleFile"
-        return (
-            f"{bangumi_name} S{season}E{episode}.{file_info.language}{file_info.suffix}"
-        )
-    else:
-        logger.error(f"Unknown rename method: {method}")
-        return file_info.media_path
+    """生成 ``file_info`` 在种子内的新路径。字幕（``SubtitleFile``）与媒体文件
+    使用同一个重命名方式，差别体现在 :attr:`RenameInput.kind`。"""
+    return target_name(method, build_input(file_info, bangumi_name, episode_offset))
 
 
 def gen_movie_extra_path(new_path: str, media_path: str) -> str:
