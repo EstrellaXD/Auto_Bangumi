@@ -8,12 +8,15 @@ AB 自己的下载器、通知渠道与搜索站点和第三方插件走同一�
 任何上下文里都能解析 Provider。
 """
 
+import logging
 from typing import Any
 
 from ab_sdk import points
 from ab_sdk.downloader import DownloaderConnection
 
 from .registry import ExtensionPoint, ExtensionRegistry, ProviderEntry
+
+logger = logging.getLogger(__name__)
 
 CORE = "core"
 
@@ -45,6 +48,19 @@ def provider(point: str, provider_id: str) -> Any | None:
     """调用 Provider 工厂取得实现；未登记时返回 None。"""
     entry = get_registry().providers(point).get(provider_id)
     return entry.factory() if entry is not None else None
+
+
+def provider_impls(point: str) -> dict[str, Any]:
+    """调用该扩展点全部 Provider 工厂；工厂出错的跳过并记录，不连累其它 Provider。"""
+    impls: dict[str, Any] = {}
+    for provider_id, entry in get_registry().providers(point).items():
+        try:
+            impls[provider_id] = entry.factory()
+        except Exception as e:
+            logger.warning(
+                "[Plugin:%s] %s %s 创建失败：%s", entry.plugin_id, point, provider_id, e
+            )
+    return impls
 
 
 def plugin_provider_ids(point: str) -> list[str]:

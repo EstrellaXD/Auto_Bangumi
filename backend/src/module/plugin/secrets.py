@@ -21,11 +21,16 @@ def secret_keys(schema: dict[str, Any] | None) -> set[str]:
     }
 
 
+def _keys(options: dict[str, Any], schema: dict[str, Any] | None) -> set[str]:
+    # 插件代码本进程未加载过时没有 schema，无法区分秘密字段：全部按秘密处理
+    return set(options) if schema is None else secret_keys(schema)
+
+
 def mask_options(
     options: dict[str, Any], schema: dict[str, Any] | None
 ) -> dict[str, Any]:
     masked = dict(options)
-    for key in secret_keys(schema):
+    for key in _keys(options, schema):
         if isinstance(masked.get(key), str) and masked[key]:
             masked[key] = MASK
     return masked
@@ -34,7 +39,7 @@ def mask_options(
 def restore_options(
     incoming: dict[str, Any], current: dict[str, Any], schema: dict[str, Any] | None
 ) -> dict[str, Any]:
-    for key in secret_keys(schema):
+    for key in _keys(incoming, schema):
         if incoming.get(key) == MASK:
             if key in current:
                 incoming[key] = current[key]

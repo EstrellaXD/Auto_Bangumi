@@ -8,21 +8,21 @@ const providers = ref<PluginProviders>({
 });
 let loaded = false;
 
+/** 重新拉取插件 Provider id；插件启停或配置变更后调用。 */
+export async function refreshPluginProviders() {
+  loaded = true;
+  try {
+    providers.value = await apiPlugins.providers();
+  } catch {
+    loaded = false;
+  }
+}
+
 /**
  * 插件提供的下载器 / 通知渠道 / 搜索站点 id，供设置页下拉框合并候选。
- * 全局只请求一次；请求失败（如未登录）时保持空列表，不影响内置选项。
+ * 首次使用时请求；请求失败（如未登录）时保持空列表，不影响内置选项。
  */
 export function usePluginProviders() {
-  if (!loaded) {
-    loaded = true;
-    apiPlugins
-      .providers()
-      .then((data) => {
-        providers.value = data;
-      })
-      .catch(() => {
-        loaded = false;
-      });
-  }
+  if (!loaded) refreshPluginProviders();
   return providers;
 }

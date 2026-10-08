@@ -47,6 +47,9 @@ class PluginTasks:
         plugin_id = entry.plugin_id
         try:
             spec: ScheduledTask = entry.factory()
+            spec_run, interval = spec.run, spec.interval
+            initial_delay = spec.initial_delay
+            enabled = spec.enabled or (lambda: True)
         except Exception as e:
             reason = f"{points.SCHEDULED_TASK} {task_id}: {type(e).__name__}: {e}"
             logger.warning("[Plugin:%s] 定时任务创建失败：%s", plugin_id, reason)
@@ -54,8 +57,12 @@ class PluginTasks:
             return None
 
         async def run() -> None:
+            # enabled 每轮重新读取（ScheduledTask 契约）；调度器只在启动时读
+            # enabled，故任务总是启动，停用时空转跳过
             try:
-                await spec.run()
+                if not enabled():
+                    return
+                await spec_run()
             except Exception as e:
                 reason = f"定时任务 {task_id}: {type(e).__name__}: {e}"
                 logger.warning("[Plugin:%s] %s", plugin_id, reason)
@@ -63,11 +70,9 @@ class PluginTasks:
                 return
             self._breaker.record_success(plugin_id)
 
-        interval = spec.interval
         return PeriodicTask(
             name=f"plugin:{plugin_id}:{task_id}",
             run=run,
             interval=interval if callable(interval) else (lambda: float(interval)),
-            initial_delay=spec.initial_delay,
-            enabled=spec.enabled or (lambda: True),
+            initial_delay=initial_delay,
         )

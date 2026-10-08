@@ -155,12 +155,23 @@ class TestNotifier:
         )
         assert len(NotificationManager()) == 1
 
+    def test_build_provider_mixed_case_plugin_id_resolves(self, registry):
+        from module.notification.resolve import PluginNotifier, build_provider
+
+        add_plugin_provider(registry, points.NOTIFIER, "MyChannel", RecordingNotifier)
+        provider = build_provider(ProviderConfig(type="MyChannel"))
+        assert isinstance(provider, PluginNotifier)
+
     def test_extra_fields_survive_config_roundtrip(self):
         cfg = ProviderConfig.model_validate({"type": "chat", "room": "42"})
         assert cfg.model_dump(by_alias=True)["room"] == "42"
 
 
 # ---------------------------------------------------------------- LLM
+
+
+def broken_factory():
+    raise RuntimeError("factory broken")
 
 
 def make_adapter(adapter_id: str):
@@ -196,6 +207,19 @@ class TestLLMProvider:
         with pytest.raises(ValueError):
             ProviderRegistry().resolve("claimed")
 
+    def test_provider_registry_broken_factory_skipped(self, registry):
+        from module.parser.analyser.providers.registry import ProviderRegistry
+
+        add_plugin_provider(
+            registry, points.LLM_PROVIDER, "ext-llm", make_adapter("ext-llm")
+        )
+        registry.add_provider(
+            points.LLM_PROVIDER, ProviderEntry("bad", "bad-llm", broken_factory)
+        )
+        llm_registry = ProviderRegistry()
+        assert "ext-llm" in {i.id for i in llm_registry.list_infos()}
+        assert llm_registry.resolve("ext-llm").info.id == "ext-llm"
+
     def test_builtin_cannot_be_shadowed(self, registry):
         from module.parser.analyser.providers.builtin import BUILTIN
         from module.parser.analyser.providers.registry import ProviderRegistry
@@ -228,6 +252,19 @@ class TestSearchSite:
         assert sites["acg"] == {"url": "https://acg/?q=%s", "parser": "tmdb"}
         assert item.url == "https://acg/?q=Frieren+S2"
         assert item.parser == "tmdb"
+
+    def test_available_sites_broken_factory_skipped(self, registry):
+        from module.searcher import available_sites
+
+        add_plugin_provider(
+            registry, points.SEARCH_SITE, "acg", SearchSite("https://acg/?q=%s")
+        )
+        registry.add_provider(
+            points.SEARCH_SITE, ProviderEntry("bad", "bad-site", broken_factory)
+        )
+        with patch("module.searcher.provider.get_provider", return_value={}):
+            sites = available_sites()
+        assert set(sites) == {"acg"}
 
 
 # ---------------------------------------------------------------- tasks
@@ -307,6 +344,66 @@ class TestPluginTasks:
         await bridge.sync()
         assert scheduler.tasks == []
 
+    @pytest.mark.parametrize("bad_spec", [None, object()])
+    async def test_sync_malformed_spec_skipped_and_recorded(self, registry, bad_spec):
+        scheduler, bridge, tripped = self.make(registry, threshold=1)
+        registry.add_provider(
+            points.SCHEDULED_TASK, ProviderEntry("bad", "a", lambda: bad_spec)
+        )
+        registry.add_provider(
+            points.SCHEDULED_TASK,
+            ProviderEntry("ext", "b", lambda: ScheduledTask(AsyncMock(), 60)),
+        )
+        await bridge.sync()
+        assert [t.name for t in scheduler.tasks] == ["plugin:ext:b"]
+        assert tripped == ["bad"]
+
+    async def test_enabled_flip_skips_run(self, registry):
+        scheduler, bridge, _ = self.make(registry)
+        state = {"on": True}
+        run = AsyncMock()
+        registry.add_provider(
+            points.SCHEDULED_TASK,
+            ProviderEntry(
+                "ext",
+                "sync",
+                lambda: ScheduledTask(run, 0.01, enabled=lambda: state["on"]),
+            ),
+        )
+        await bridge.sync()
+        scheduler.start_all()
+        for _ in range(50):
+            if run.await_count:
+                break
+            await asyncio.sleep(0.02)
+        state["on"] = False
+        await asyncio.sleep(0.05)
+        count = run.await_count
+        await asyncio.sleep(0.1)
+        await scheduler.stop_all()
+        assert count >= 1 and run.await_count == count
+
+    async def test_enabled_raising_counts_toward_breaker(self, registry):
+        scheduler, bridge, tripped = self.make(registry, threshold=2)
+
+        def enabled() -> bool:
+            raise RuntimeError("bad")
+
+        registry.add_provider(
+            points.SCHEDULED_TASK,
+            ProviderEntry(
+                "ext", "sync", lambda: ScheduledTask(AsyncMock(), 0.01, enabled=enabled)
+            ),
+        )
+        await bridge.sync()
+        scheduler.start_all()
+        for _ in range(100):
+            if tripped:
+                break
+            await asyncio.sleep(0.02)
+        await scheduler.stop_all()
+        assert tripped == ["ext"]
+
 
 # ---------------------------------------------------------------- secrets
 
@@ -327,6 +424,13 @@ class TestSecrets:
         assert restored == {"site": "a", "cookie": "c=1"}
         assert restore_options({"cookie": MASK}, {}, SCHEMA) == {}
         assert mask_options({"cookie": ""}, SCHEMA) == {"cookie": ""}
+
+    def test_mask_options_without_schema_masks_all(self):
+        masked = mask_options({"site": "a", "cookie": "c=1", "n": 3}, None)
+        assert masked == {"site": MASK, "cookie": MASK, "n": 3}
+        current = {"site": "a", "cookie": "c=1"}
+        restored = restore_options(dict(masked), current, None)
+        assert restored == {"site": "a", "cookie": "c=1", "n": 3}
 
 
 # ---------------------------------------------------------------- API

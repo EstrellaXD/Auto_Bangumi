@@ -47,7 +47,9 @@ class PluginNotifier(NotificationProvider):
 
 def build_provider(config: "ProviderConfig") -> NotificationProvider | None:
     """构造渠道实例；``type`` 未登记时返回 None。"""
-    entry = get_registry().providers(points.NOTIFIER).get(config.type.lower())
+    # 先按原样匹配（插件 id 可含大写），再按小写兼容内置渠道的旧配置
+    entries = get_registry().providers(points.NOTIFIER)
+    entry = entries.get(config.type) or entries.get(config.type.lower())
     if entry is None:
         return None
     impl = entry.factory()
