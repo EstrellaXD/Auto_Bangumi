@@ -26,7 +26,7 @@ AB downloads `catalog.json` from the GitHub release `plugins`. The catalog conta
       "kind": "plugin",
       "extension_points": ["notifier"],
       "sdk": ">=0.5,<1",
-      "min_ab_version": "4.0.0",
+      "min_ab_version": "4.0.0-beta.1",
       "description": "…",
       "asset": "ntfy-notifier-0.1.0.zip",
       "sha256": "…"
@@ -75,11 +75,11 @@ Only a maintainer who has the signing private key can publish the catalog. The s
 
    ```bash
    uv run --no-project --with cryptography python scripts/build_plugin_catalog.py \
-       --key ~/.autobangumi/update-signing-key.pem --min-ab 4.0.0 \
+       --key ~/.autobangumi/update-signing-key.pem --min-ab 4.0.0-beta.1 \
        --out release-assets dist/*.zip
    ```
 
-   The script writes `catalog.json`, the zips and their `.sig` files.
+   The script writes `catalog.json`, the zips and their `.sig` files. Do not set `--min-ab` to `4.0.0`: in semver, `4.0.0-beta.N` is lower than `4.0.0`, so 4.0 beta users cannot install the plugin.
 4. The maintainer uploads the whole directory to the release `plugins` (and overwrites the old files).
 
 A user sees the new version through `GET /api/v1/plugins/catalog`.

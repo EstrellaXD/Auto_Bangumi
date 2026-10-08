@@ -241,7 +241,11 @@ class TestInstall:
 
 
 class TestReleaseScript:
-    async def test_catalog_built_by_release_script_installs(self, tmp_path, keypair):
+    # 默认 --min-ab 须放行 4.0 的 beta 宿主（semver 中 4.0.0-beta.N < 4.0.0）
+    @pytest.mark.parametrize("app_version", ["4.0.0-beta.1", "4.0.0"])
+    async def test_catalog_built_by_release_script_installs(
+        self, tmp_path, keypair, app_version
+    ):
         script = (
             Path(__file__).resolve().parents[3] / "scripts" / "build_plugin_catalog.py"
         )
@@ -258,7 +262,7 @@ class TestReleaseScript:
         archive.parent.mkdir()
         archive.write_bytes(build_zip(tmp_path))
 
-        module.build([archive], tmp_path / "release", key_path, "4.0.0")
+        module.build([archive], tmp_path / "release", key_path)
 
         released = tmp_path / "release"
 
@@ -270,7 +274,7 @@ class TestReleaseScript:
             root=tmp_path / "plugins",
             pubkey_path=pubkey_path,
             client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
-            app_version="4.0.0",
+            app_version=app_version,
         )
         [entry] = await installer.fetch_catalog()
         assert entry["extension_points"] == ["rename_strategy"]

@@ -26,7 +26,7 @@ AB 从 GitHub release `plugins` 下载 `catalog.json`。目录包含：
       "kind": "plugin",
       "extension_points": ["notifier"],
       "sdk": ">=0.5,<1",
-      "min_ab_version": "4.0.0",
+      "min_ab_version": "4.0.0-beta.1",
       "description": "…",
       "asset": "ntfy-notifier-0.1.0.zip",
       "sha256": "…"
@@ -75,11 +75,11 @@ API：
 
    ```bash
    uv run --no-project --with cryptography python scripts/build_plugin_catalog.py \
-       --key ~/.autobangumi/update-signing-key.pem --min-ab 4.0.0 \
+       --key ~/.autobangumi/update-signing-key.pem --min-ab 4.0.0-beta.1 \
        --out release-assets dist/*.zip
    ```
 
-   脚本输出 `catalog.json`、各 zip 及其 `.sig`。
+   脚本输出 `catalog.json`、各 zip 及其 `.sig`。`--min-ab` 不要写成 `4.0.0`：按 semver，`4.0.0-beta.N` 低于 `4.0.0`，4.0 beta 用户将无法安装。
 4. 维护者把整个目录上传到 release `plugins`（覆盖旧文件）。
 
 用户端通过 `GET /api/v1/plugins/catalog` 看到新版本。
