@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import math
+from collections.abc import Mapping
 from typing import Any
 
 import httpx
@@ -111,13 +112,22 @@ async def reset_shared_client():
     _shared_client_proxy_key = None
 
 
+def _valid_http_request(request: HttpRequest) -> bool:
+    """请求头须是 str → str 的映射，否则每个 GET 都会失败。"""
+    return isinstance(request.headers, Mapping) and all(
+        isinstance(k, str) and isinstance(v, str) for k, v in request.headers.items()
+    )
+
+
 async def _apply_http_hooks(url: str, headers: dict) -> dict:
     """``http.request``：插件按 URL 修改请求头（私有站 Cookie、UA 等）。"""
     runner = plugin_host.hook_runner(points.HTTP_REQUEST)
     if runner is None:
         return headers
     request = HttpRequest(method="GET", url=url, headers=dict(headers))
-    result = await runner.transform(points.HTTP_REQUEST, request, expect=HttpRequest)
+    result = await runner.transform(
+        points.HTTP_REQUEST, request, expect=HttpRequest, check=_valid_http_request
+    )
     # url / method 不允许被改写，只取请求头
     return dict(result.headers)
 

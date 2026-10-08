@@ -221,6 +221,47 @@ class TestTorrentFilter:
         sent = client.add_torrent.call_args.args[0]
         assert [t.url for t in sent] == ["https://e/11.torrent"]
 
+    async def test_collect_season_applies_filter(self, plugins):
+        from module.manager.collector import SeasonCollector
+
+        add_hook(
+            plugins.registry,
+            points.TORRENT_FILTER,
+            lambda t, r, b: "- 12" not in t.name,
+        )
+        torrents = [
+            Torrent(name=TORRENT_NAME, url="https://e/12.torrent"),
+            Torrent(
+                name="[Sub] Mushoku Tensei - 11 [1080p].mkv", url="https://e/11.torrent"
+            ),
+        ]
+        req = AsyncMock()
+        req.get_torrents = AsyncMock(return_value=torrents)
+        client = AsyncMock()
+        client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
+        bangumi = make_bangumi(title_raw="Mushoku Tensei", filter="")
+        with patch("module.manager.collector.RequestContent") as MockReq:
+            MockReq.return_value.__aenter__ = AsyncMock(return_value=req)
+            MockReq.return_value.__aexit__ = AsyncMock(return_value=False)
+            await SeasonCollector(client).collect_season(bangumi, "https://e/rss")
+        sent = client.add_torrent.call_args.args[0]
+        assert [t.url for t in sent] == ["https://e/11.torrent"]
+
+    async def test_filter_receives_title_parsed_release(self, rss_engine, plugins):
+        await seed(rss_engine)
+        add_hook(
+            plugins.registry, points.TITLE_PARSED, lambda r: replace(r, group="Alias")
+        )
+        add_hook(
+            plugins.registry,
+            points.TORRENT_FILTER,
+            lambda t, r, b: r is not None and r.group == "Alias",
+        )
+        client = await refresh_with(
+            rss_engine, [Torrent(name=TORRENT_NAME, url="https://e/1.torrent")]
+        )
+        client.add_torrent.assert_called_once()
+
 
 # ---------------------------------------------------------------- title.parsed
 
@@ -346,6 +387,26 @@ class TestTorrentAdding:
         kwargs = mock_qb_client.add_torrents.call_args.kwargs
         assert (kwargs["category"], kwargs["tags"]) == ("Bangumi", "ab:3")
 
+    @pytest.mark.parametrize(
+        "changes",
+        [{"tags": None}, {"tags": "a,b"}, {"tags": (1,)}, {"save_path": 1}],
+    )
+    async def test_invalid_request_fields_fall_back_and_trip(
+        self, plugins, download_client, mock_qb_client, changes
+    ):
+        add_hook(
+            plugins.registry,
+            points.TORRENT_ADDING,
+            lambda request: replace(request, **changes),
+        )
+        bangumi = make_bangumi(id=3)
+        for _ in range(3):
+            assert await add_magnet(download_client, bangumi) is AddResult.ADDED
+        kwargs = mock_qb_client.add_torrents.call_args.kwargs
+        assert (kwargs["category"], kwargs["tags"]) == ("Bangumi", "ab:3")
+        assert kwargs["save_path"] == bangumi.save_path
+        assert plugins.tripped == ["ext"]
+
 
 # ---------------------------------------------------------------- http.request
 
@@ -383,6 +444,18 @@ class TestHttpRequest:
         add_hook(plugins.registry, points.HTTP_REQUEST, boom)
         headers = await self.fetch()
         assert "Cookie" not in headers and headers["User-Agent"]
+
+    @pytest.mark.parametrize("headers", [None, {"X-Retry": 1}])
+    async def test_invalid_headers_keep_defaults_and_trip(self, plugins, headers):
+        add_hook(
+            plugins.registry,
+            points.HTTP_REQUEST,
+            lambda request: replace(request, headers=headers),
+        )
+        for _ in range(3):
+            fetched = await self.fetch()
+        assert "X-Retry" not in fetched and fetched["User-Agent"]
+        assert plugins.tripped == ["ext"]
 
 
 # ---------------------------------------------------------------- metadata
@@ -444,6 +517,20 @@ class TestMetadataProvider:
         bangumi = make_bangumi(official_title="Frieren")
         await RSSAnalyser().official_title_parser(bangumi, movie_rss, make_torrent())
         assert bangumi.official_title == "Frieren"
+
+    @pytest.mark.parametrize(
+        "changes", [{"official_title": None}, {"official_title": ""}, {"season": None}]
+    )
+    async def test_plugin_provider_invalid_fields_ignored(self, plugins, changes):
+        current = Metadata(official_title="Frieren", season=1)
+        add_metadata(plugins.registry, "bgm", FakeMetadata(replace(current, **changes)))
+        bangumi = make_bangumi(official_title="Frieren", season=1)
+        for _ in range(3):
+            await RSSAnalyser().official_title_parser(
+                bangumi, make_rss_item(parser="bgm"), make_torrent()
+            )
+        assert (bangumi.official_title, bangumi.season) == ("Frieren", 1)
+        assert plugins.tripped == ["ext"]
 
     async def test_unknown_parser_is_noop(self, plugins):
         bangumi = make_bangumi(official_title="A.B", poster_link="x")
