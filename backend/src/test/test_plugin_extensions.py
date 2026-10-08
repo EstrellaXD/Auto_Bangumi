@@ -6,7 +6,7 @@ from typing import ClassVar
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from ab_sdk import points, secret_field
 from ab_sdk.downloader import (
@@ -506,6 +506,28 @@ class TestPluginsApi:
         assert response.status_code == 422
         save.assert_not_awaited()
         assert "demo" not in settings.plugins.options
+
+    def test_update_plugin_validator_error_returns_422(self, authed_client, plugin_ctx):
+        """field_validator 抛出的 ValueError 也返回 422（而不是序列化失败的 500）。"""
+
+        class Strict(BaseModel):
+            site: str = ""
+
+            @field_validator("site")
+            @classmethod
+            def _check(cls, value: str) -> str:
+                raise ValueError("bad site")
+
+        ctx, save = plugin_ctx
+        ctx.plugins.validate_options.side_effect = lambda _pid, opts: (
+            Strict.model_validate(opts)
+        )
+        response = authed_client.put(
+            "/api/v1/plugins/demo", json={"options": {"site": "x"}}
+        )
+        assert response.status_code == 422
+        assert "bad site" in response.text
+        save.assert_not_awaited()
 
     def test_update_unknown_plugin(self, authed_client, plugin_ctx):
         assert authed_client.put("/api/v1/plugins/x", json={}).status_code == 404
