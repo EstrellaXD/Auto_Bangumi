@@ -58,7 +58,8 @@ _unavailable: set[str] = set()
 # 已记录过「未登记」日志的重命名方式（每个进程只记一次，重新登记后清除）
 _missing_methods: set[str] = set()
 # 已发布过的 TorrentOrganized（种子 hash → 最终文件）。未打 ab:renamed 标签的
-# 种子（重命名方式为 none）每轮都会重新处理，文件不变时不重复发布。
+# 种子（重命名方式为 none）每轮都会重新处理，文件不变时不重复发布；已打标签的
+# 种子不在其中时补发一次（_republish_organized）。
 # ponytail: 进程内字典，重启后重发一次（事件约定为至少一次）；条目随种子数增长
 _organized_published: dict[str, tuple[OrganizedFile, ...]] = {}
 # 已发送过「文件未重命名」通知的 (种子 hash, 原因)
@@ -638,6 +639,21 @@ class Renamer(RevisionSaga):
         )
         return decision if ok else hold.factory().decide(request)
 
+    async def _republish_organized(self, infos: list[dict], method: str) -> None:
+        """已打 ab:renamed 的种子不再整理，但本进程还没发布过它的
+        torrent.organized（重启后；上个进程发布的事件可能没被订阅者处理完）：
+        按当前文件名补发一次，使投递为至少一次。没有总线时发布是空操作，
+        不查询文件。"""
+        if not infos or plugin_host.get_bus() is None:
+            return
+        all_files = await asyncio.gather(
+            *[self.client.get_torrent_files(info["hash"]) for info in infos]
+        )
+        for info, files in zip(infos, all_files):
+            media_list, subtitle_list = check_files(files)
+            if media_list:
+                self._finish_torrent(info, media_list, subtitle_list, method, True)
+
     async def _batch_lookup_offsets(
         self, torrents_info: list[dict]
     ) -> dict[str, tuple[int, str]]:
@@ -802,6 +818,16 @@ class Renamer(RevisionSaga):
             if info.get("hash") in active_replacement_ids
             or not self._has_tag(info.get("tags"), _RENAMED_TAG)
         ]
+        await self._republish_organized(
+            [
+                info
+                for info in all_infos
+                if info["hash"] not in _organized_published
+                and info["hash"] not in active_replacement_ids
+                and self._has_tag(info.get("tags"), _RENAMED_TAG)
+            ],
+            strategy.id,
+        )
         renamed_info: list[Notification] = []
         if not torrents_info:
             logger.debug("Rename process finished: no pending torrents")

@@ -1003,7 +1003,13 @@ class TestRevisionConflictFlow:
     def _offsets():
         return {"new-v2": (0, "episode")}
 
-    async def test_renamed_tag_skips_before_file_and_offset_queries(self, renamer):
+    async def test_renamed_tag_skips_before_file_and_offset_queries(
+        self, renamer, monkeypatch
+    ):
+        from module.manager import renamer as renamer_module
+
+        # 本进程已发布过它的 torrent.organized（否则会按当前文件名补发一次）
+        monkeypatch.setitem(renamer_module._organized_published, "old-v1", ())
         renamer.client.client.torrents_info.return_value = [self._infos()[0]]
         with patch.object(renamer, "_batch_lookup_offsets", AsyncMock()) as lookup:
             assert await renamer.rename() == []

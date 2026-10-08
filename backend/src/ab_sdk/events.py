@@ -406,9 +406,9 @@ class OrganizedFile:
 class TorrentOrganized(Event):
     """一个种子整理完成：顶层正片都已在最终位置（重命名方式为 none 时即原位置）。
 
-    ``files`` 是正片与字幕的最终路径。投递语义为「至少一次」：未打
-    ``ab:renamed`` 标签的种子（如重命名方式为 none）每次进程重启后会再发布一次，
-    订阅者须保证幂等。
+    ``files`` 是正片与字幕的最终路径。投递语义为「至少一次」：下载器中已整理
+    的种子（含已打 ``ab:renamed`` 标签的）每次进程重启后会再发布一次，订阅者
+    须保证幂等。选中的重命名方式未登记时不发布：原名不是最终文件名。
     """
 
     kind: ClassVar[str] = "torrent.organized"

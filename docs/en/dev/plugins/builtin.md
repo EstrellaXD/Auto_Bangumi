@@ -47,7 +47,7 @@ Subscribes to `torrent.organized` and links media files and subtitles into the m
 - The plugin writes the link or copy to a temporary file next to the target, then renames it atomically. An interrupted copy leaves no half file.
 - If the library has a file with the same name that this plugin did not create, the plugin skips it, does not overwrite it, and sends a `hardlink.failed` notification.
 - A link that this plugin made for the same episode is replaced atomically after a version upgrade (a new version replaces the old torrent and the canonical name stays the same). The new link points to the new file.
-- When the plugin receives an event for a file that is already linked, it does nothing. It records the targets that it created in its own key-value store.
+- When the plugin receives an event for a file that is already linked, it does nothing. It records the targets that it created in its own key-value store. If the user deletes a file that the plugin placed, a new event does not create it again. Only a backfill creates it again.
 - **Deleting a torrent does not delete the links in the library.**
 - AB does not process files that were downloaded before you enabled the plugin. Click "Link existing files" in the settings section of the plugin, or call `POST /api/v1/plugins/hardlink/backfill`. It walks `.mp4` / `.mkv` / `.ass` / `.srt` files under `source_root` and returns the counts `{"linked", "exists", "conflict", "failed"}`.
 

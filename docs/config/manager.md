@@ -82,7 +82,7 @@
 - 版本升级（新版本种子替换旧种子，文件名不变）后，本插件之前创建的链接会被原子替换为指向新文件的链接。
 - 删除种子不会删除媒体库中的链接。
 - 本插件放置后被你从媒体库删除的文件不会被重新链接；补链会重建它们。
-- 启用前已经下载的文件不会自动处理，需要按需补链：调用 `POST /api/v1/plugins/hardlink/backfill`（设置页按钮将在后续版本提供）。
+- 启用前已经下载的文件：仍在下载器中的已整理种子在 AB 下次重启后被链接，其它文件需要按需补链：调用 `POST /api/v1/plugins/hardlink/backfill`（设置页按钮将在后续版本提供）。
 - `path_map` 目前的设置表单还不能编辑，请在 `config/config.json` 的 `plugins.options.hardlink.path_map` 中填写，例如 `[{"from": "/downloads", "to": "/media/downloads"}]`。
 
 ::: tip Docker

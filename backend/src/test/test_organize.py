@@ -195,6 +195,35 @@ async def test_rename_none_publishes_organized_once_per_process(plugins, renamer
     assert organized[0].files[0] == OrganizedFile(f"{SAVE_PATH}/{NAME}", "media")
 
 
+async def test_rename_tagged_torrent_republishes_organized_once_per_process(
+    plugins, renamer
+):
+    # 已改名、打了 ab:renamed 的种子：上个进程发布的事件可能没被处理完
+    # （重启、订阅者被取消），本进程按当前文件名补发一次
+    renamer.client.client.torrents_info.return_value = [
+        {**INFO, "tags": "ab:7, ab:renamed"}
+    ]
+    renamer.client.client.torrents_files.return_value = [
+        {"name": "Anime S01E01.mkv"},
+        {"name": "Anime S01E01.zh.ass"},
+    ]
+
+    await run(renamer, "pn")
+    await run(renamer, "pn")
+
+    renamer.client.client.torrents_rename_file.assert_not_called()
+    assert published(plugins.bus, TorrentOrganized) == [
+        TorrentOrganized(
+            torrent_hash="h1",
+            bangumi_id=7,
+            files=(
+                OrganizedFile(f"{SAVE_PATH}/Anime S01E01.mkv", "media"),
+                OrganizedFile(f"{SAVE_PATH}/Anime S01E01.zh.ass", "subtitle"),
+            ),
+        )
+    ]
+
+
 def _skip(f: RenameInput) -> str:
     raise RenameSkipped("模板渲染失败：'titel' is undefined")
 
