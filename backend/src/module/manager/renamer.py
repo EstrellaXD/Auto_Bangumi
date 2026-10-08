@@ -2,7 +2,19 @@ import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import PurePath
+from typing import Any
 
+from ab_sdk import points
+from ab_sdk.events import FileRenamed, OrganizedFile, TorrentOrganized
+from ab_sdk.rename import (
+    CORE_ID,
+    ConflictPolicy,
+    ConflictRequest,
+    FileKind,
+    RenameInput,
+    RenameSkipped,
+    RevisionTask,
+)
 from module.conf import settings
 from module.database import Database
 from module.database.bangumi import (
@@ -13,11 +25,17 @@ from module.database.bangumi import (
 from module.downloader import DownloadClient, RenameOutcome, RenameResult
 from module.downloader.path import check_files, is_ep, path_to_bangumi
 from module.models import EpisodeFile, Notification, SubtitleFile
-from module.notification import RenameConflictEvent
+from module.notification import RenameSkippedEvent, SystemEvent
 from module.parser import TitleParser
+from module.plugin import host as plugin_host
+from module.plugin.registry import ProviderEntry
 
-from .rename_strategies import STRATEGIES
-from .revision_policy import is_strict_upgrade, parse_revision_identity
+from .rename_strategies import NO_RENAME
+from .revision_policy import (
+    is_strict_upgrade,
+    parse_revision_identity,
+    revision_snapshot,
+)
 from .revision_saga import (
     _RENAMED_TAG,
     MediaRenameReport,
@@ -27,20 +45,89 @@ from .revision_saga import (
 
 logger = logging.getLogger(__name__)
 
+# 下载器 id：多下载器（P2.5）之前只有一个
+_DOWNLOADER_ID = "default"
+# 已记录过「未登记」日志的重命名方式（每个进程只记一次，重新登记后清除）
+_missing_methods: set[str] = set()
+# 已发布过的 TorrentOrganized（种子 hash → 最终文件）。未打 ab:renamed 标签的
+# 种子（重命名方式为 none）每轮都会重新处理，文件不变时不重复发布。
+# ponytail: 进程内字典，重启后重发一次（事件约定为至少一次）；条目随种子数增长
+_organized_published: dict[str, tuple[OrganizedFile, ...]] = {}
+# 已发送过「文件未重命名」通知的 (种子 hash, 原因)
+_skip_notified: set[tuple[str, str]] = set()
+
+
+def _rename_strategy(method: str) -> ProviderEntry:
+    """按 rename_method 取重命名策略；未登记（如 rename 插件未启用）时记录一次
+    日志并按 none 处理。"""
+    strategies = plugin_host.get_registry().providers(points.RENAME_STRATEGY)
+    entry = strategies.get(method)
+    if entry is not None:
+        _missing_methods.discard(method)
+        return entry
+    if method not in _missing_methods:
+        _missing_methods.add(method)
+        logger.warning(
+            "[Renamer] 重命名方式 %s 未登记（提供它的插件未启用？），文件保留原名",
+            method,
+        )
+    return strategies[NO_RENAME]
+
+
+def _valid_name(result: Any) -> bool:
+    return isinstance(result, RenameSkipped) or (
+        isinstance(result, str) and result != ""
+    )
+
+
+def _target_name(entry: ProviderEntry, f: RenameInput) -> str:
+    """调用重命名策略。策略给不出合法名字时抛出 RenameSkipped。
+
+    插件策略经 runner 调用：异常与无效返回值计入熔断；策略主动抛出的
+    RenameSkipped（输入或用户配置有问题）不计入。
+    """
+    if entry.plugin_id == plugin_host.CORE:
+        return entry.factory().target_name(f)
+
+    def call() -> str | RenameSkipped:
+        try:
+            return entry.factory().target_name(f)
+        except RenameSkipped as e:
+            return e
+
+    runner = plugin_host.get_runner()
+    if runner is not None:
+        ok, result = runner.call_provider_sync(
+            entry.plugin_id, points.RENAME_STRATEGY, call, check=_valid_name
+        )
+    else:
+        try:
+            result = call()
+            ok = _valid_name(result)
+        except Exception as e:
+            logger.warning("[Plugin:%s] 重命名策略失败：%s", entry.plugin_id, e)
+            ok = False
+    if isinstance(result, RenameSkipped):
+        raise result
+    if not ok or result is None:
+        raise RenameSkipped(f"重命名方式 {entry.id} 执行失败，详见日志")
+    return result
+
+
+def _downloader_path(save_path: str, name: str) -> str:
+    """下载器视角的绝对路径，统一以 "/" 分隔。"""
+    relative = name.replace("\\", "/")
+    return f"{normalize_save_path(save_path)}/{relative}"
+
 
 class Renamer(RevisionSaga):
     def __init__(self, client: DownloadClient):
         self.client = client
         self._parser = TitleParser()
-        self.events: list[RenameConflictEvent] = []
-
-    @staticmethod
-    def _format_episode(episode: int | float) -> str:
-        # 总集篇等半集（12.5）保留小数，否则会覆盖同季的整数集 (#667)；
-        # 整数值沿用两位补零
-        if isinstance(episode, float) and episode.is_integer():
-            episode = int(episode)
-        return f"0{episode}" if episode < 10 else str(episode)
+        self.events: list[SystemEvent] = []
+        # 本轮各种子的实际重命名 (原路径, 新路径, 类别) 与被跳过的原因
+        self._moves: dict[str, list[tuple[str, str, FileKind]]] = {}
+        self._skipped: dict[str, str] = {}
 
     @staticmethod
     def gen_path(
@@ -50,24 +137,31 @@ class Renamer(RevisionSaga):
         episode_offset: int = 0,
         season_offset: int = 0,  # Kept for API compatibility, but no longer used
     ) -> str:
+        """按重命名方式生成种子内的目标路径。
+
+        策略给不出合法名字时抛出 RenameSkipped，调用方保留原文件名。
+        """
         # Season comes from the folder name which already includes the offset
         # (folder is now "Season {season + season_offset}")
         # So we use file_info.season directly without applying offset again
-        season_num = file_info.season
-        season = f"0{season_num}" if season_num < 10 else season_num
-        episode = Renamer._format_episode(
-            Renamer._adjust_episode(file_info.episode, episode_offset)
-        )
         # 注意：group_tag 只影响 qB RSS 规则名（downloader/path.py 的 rule_name），
         # 从不写进重命名后的文件名——已有做种媒体库的文件名必须保持稳定，
         # 否则升级后会触发整库批量重命名，破坏 Plex/Jellyfin 索引与硬链接
-        if method == "none" or method == "subtitle_none":
-            return file_info.media_path
-        strategy = STRATEGIES.get(method)
-        if strategy is None:
-            logger.error(f"Unknown rename method: {method}")
-            return file_info.media_path
-        return strategy(file_info, bangumi_name, str(season), episode)
+        f = RenameInput(
+            kind="subtitle" if isinstance(file_info, SubtitleFile) else "media",
+            media_path=file_info.media_path,
+            title=file_info.title,
+            bangumi_name=bangumi_name,
+            season=file_info.season,
+            episode=Renamer._adjust_episode(file_info.episode, episode_offset),
+            suffix=file_info.suffix,
+            episode_type=file_info.episode_type,
+            language=(
+                file_info.language if isinstance(file_info, SubtitleFile) else ""
+            ),
+            group=file_info.group,
+        )
+        return _target_name(_rename_strategy(method), f)
 
     async def rename_file(
         self,
@@ -94,7 +188,7 @@ class Renamer(RevisionSaga):
             season_offset=season_offset,
             episode_type=episode_type,
         )
-        if report.result.succeeded and method != "none":
+        if report.result.succeeded and _rename_strategy(method).id != NO_RENAME:
             await self._mark_renamed(_hash, existing_tags)
         return report.notification
 
@@ -143,16 +237,19 @@ class Renamer(RevisionSaga):
         season_offset: int = 0,
         episode_type: str = "episode",
     ) -> MediaRenameReport:
-        prepared = self._prepare_media_rename(
-            torrent_name=torrent_name,
-            media_path=media_path,
-            bangumi_name=bangumi_name,
-            method=method,
-            season=season,
-            episode_offset=episode_offset,
-            season_offset=season_offset,
-            episode_type=episode_type,
-        )
+        try:
+            prepared = self._prepare_media_rename(
+                torrent_name=torrent_name,
+                media_path=media_path,
+                bangumi_name=bangumi_name,
+                method=method,
+                season=season,
+                episode_offset=episode_offset,
+                season_offset=season_offset,
+                episode_type=episode_type,
+            )
+        except RenameSkipped as e:
+            return self._skip(_hash, media_path, e)
         if prepared is None:
             logger.warning("%s parse failed", media_path)
             if settings.bangumi_manage.remove_bad_torrent:
@@ -182,6 +279,14 @@ class Renamer(RevisionSaga):
         if stem.startswith(prefix):
             stem = stem[len(prefix) :]
         return f"{base} - {stem}{suffix}"
+
+    def _skip(self, _hash: str, path: str, error: RenameSkipped) -> MediaRenameReport:
+        """策略给不出名字：保留原文件名，记录原因（本轮结束时通知、不打标签）。"""
+        logger.warning("[Renamer] %s 保留原名：%s", path, error)
+        self._skipped.setdefault(_hash, str(error))
+        return MediaRenameReport(
+            result=RenameResult(RenameOutcome.RETRYABLE_FAILURE, detail=str(error))
+        )
 
     async def rename_collection(
         self,
@@ -218,13 +323,18 @@ class Renamer(RevisionSaga):
                     episode_type=episode_type,
                 )
                 if ep:
-                    new_path = self.gen_path(
-                        ep,
-                        bangumi_name,
-                        method=method,
-                        episode_offset=episode_offset,
-                        season_offset=season_offset,
-                    )
+                    try:
+                        new_path = self.gen_path(
+                            ep,
+                            bangumi_name,
+                            method=method,
+                            episode_offset=episode_offset,
+                            season_offset=season_offset,
+                        )
+                    except RenameSkipped as e:
+                        self._skip(_hash, media_path, e)
+                        all_renamed = False
+                        continue
                     if (
                         movie_primary is not None
                         and media_path != movie_primary
@@ -261,13 +371,15 @@ class Renamer(RevisionSaga):
                                 old_path=media_path,
                                 new_path=new_path,
                             )
+                            if result.outcome is RenameOutcome.RENAMED:
+                                self._record_move(_hash, media_path, new_path, "media")
                         if not result.succeeded:
                             all_renamed = False
                             logger.warning(f"{media_path} rename failed")
                 else:
                     # 解析失败的媒体文件不会被重命名——不能算处理完成
                     all_renamed = False
-        if all_renamed and mark_complete and method != "none":
+        if all_renamed and mark_complete and _rename_strategy(method).id != NO_RENAME:
             await self._mark_renamed(_hash, existing_tags)
         return all_renamed
 
@@ -284,7 +396,6 @@ class Renamer(RevisionSaga):
         episode_type: str = "episode",
         **kwargs,
     ):
-        method = "subtitle_" + method
         for subtitle_path in subtitle_list:
             sub = self._parser.torrent_parser(
                 torrent_path=subtitle_path,
@@ -294,13 +405,17 @@ class Renamer(RevisionSaga):
                 episode_type=episode_type,
             )
             if sub:
-                new_path = self.gen_path(
-                    sub,
-                    bangumi_name,
-                    method=method,
-                    episode_offset=episode_offset,
-                    season_offset=season_offset,
-                )
+                try:
+                    new_path = self.gen_path(
+                        sub,
+                        bangumi_name,
+                        method=method,
+                        episode_offset=episode_offset,
+                        season_offset=season_offset,
+                    )
+                except RenameSkipped as e:
+                    self._skip(_hash, subtitle_path, e)
+                    continue
                 if subtitle_path != new_path:
                     # Skip verification for subtitles to reduce latency
                     renamed = await self.client.rename_torrent_file(
@@ -309,6 +424,8 @@ class Renamer(RevisionSaga):
                         new_path=new_path,
                         verify=False,
                     )
+                    if renamed.outcome is RenameOutcome.RENAMED:
+                        self._record_move(_hash, subtitle_path, new_path, "subtitle")
                     if not renamed:
                         logger.warning(f"{subtitle_path} rename failed")
 
@@ -330,16 +447,19 @@ class Renamer(RevisionSaga):
         season_offset: int,
         episode_type: str,
     ) -> MediaRenameReport:
-        prepared = self._prepare_media_rename(
-            torrent_name=info["name"],
-            media_path=media_path,
-            bangumi_name=bangumi_name,
-            method=method,
-            season=season,
-            episode_offset=episode_offset,
-            season_offset=season_offset,
-            episode_type=episode_type,
-        )
+        try:
+            prepared = self._prepare_media_rename(
+                torrent_name=info["name"],
+                media_path=media_path,
+                bangumi_name=bangumi_name,
+                method=method,
+                season=season,
+                episode_offset=episode_offset,
+                season_offset=season_offset,
+                episode_type=episode_type,
+            )
+        except RenameSkipped as e:
+            return self._skip(info["hash"], media_path, e)
         if prepared is None:
             logger.warning("%s parse failed", media_path)
             if settings.bangumi_manage.remove_bad_torrent:
@@ -439,21 +559,42 @@ class Renamer(RevisionSaga):
         )
         if owners:
             owner = owners[0] if len(owners) == 1 else None
-            reason = "canonical path has more than one downloader owner"
-            can_replace = bool(
-                owner is not None
+            decision = self._conflict_policy().decide(
+                ConflictRequest(
+                    target_path=prepared.target_path,
+                    incoming=RevisionTask(
+                        info["hash"],
+                        info.get("name", ""),
+                        len(files),
+                        revision_snapshot(incoming_identity),
+                    ),
+                    owners=tuple(
+                        RevisionTask(
+                            o.info["hash"],
+                            o.info.get("name", ""),
+                            len(o.files),
+                            revision_snapshot(o.identity),
+                        )
+                        for o in owners
+                    ),
+                    configured=settings.bangumi_manage.revision_conflict_policy,
+                    strict_upgrade=bool(
+                        owner is not None
+                        and incoming_identity is not None
+                        and owner.identity is not None
+                        and is_strict_upgrade(owner.identity, incoming_identity)
+                    ),
+                )
+            )
+            # 替换 saga 只支持「唯一占用者、双方单文件、身份完整」的情形
+            if (
+                decision.action == "replace"
+                and owner is not None
                 and len(files) == 1
                 and len(owner.files) == 1
                 and incoming_identity is not None
                 and owner.identity is not None
-                and is_strict_upgrade(owner.identity, incoming_identity)
-            )
-            if (
-                settings.bangumi_manage.revision_conflict_policy == "replace"
-                and can_replace
             ):
-                assert owner is not None
-                assert incoming_identity is not None
                 notification = await self._start_replacement(
                     info=info,
                     prepared=prepared,
@@ -484,16 +625,7 @@ class Renamer(RevisionSaga):
                     notification=notification,
                 )
 
-            if len(owners) == 1:
-                assert owner is not None
-                if len(files) != 1 or len(owner.files) != 1:
-                    reason = "automatic replacement requires two single-file torrents"
-                elif incoming_identity is None or owner.identity is None:
-                    reason = "revision identity is incomplete"
-                elif not is_strict_upgrade(owner.identity, incoming_identity):
-                    reason = "existing and incoming releases are not a strict revision upgrade"
-                else:
-                    reason = "revision conflict policy is hold"
+            reason = decision.reason or "automatic replacement is not possible"
             await self._persist_conflict(
                 info=info,
                 prepared=prepared,
@@ -512,6 +644,75 @@ class Renamer(RevisionSaga):
             identity=identity,
             bangumi_name=bangumi_name,
             episode_offset=episode_offset,
+        )
+
+    def _finish_torrent(
+        self,
+        info: dict,
+        media_list: list[str],
+        subtitle_list: list[str],
+        method: str,
+        organized: bool,
+    ) -> None:
+        """发布该种子本轮的 file.renamed；整理完成时发布 torrent.organized；
+        有文件因策略给不出名字而保留原名时改为发一条通知（同一原因只发一次）。"""
+        torrent_hash = info["hash"]
+        save_path = info["save_path"]
+        bangumi_id = self._parse_bangumi_id_from_tags(info.get("tags"))
+        final: dict[str, str] = {}
+        for old, new, kind in self._moves.pop(torrent_hash, []):
+            final[old] = new
+            plugin_host.publish(
+                FileRenamed(
+                    bangumi_id=bangumi_id,
+                    old_path=_downloader_path(save_path, old),
+                    new_path=_downloader_path(save_path, new),
+                    file_kind=kind,
+                    downloader_id=_DOWNLOADER_ID,
+                )
+            )
+        reason = self._skipped.pop(torrent_hash, None)
+        if reason is not None:
+            if (torrent_hash, reason) not in _skip_notified:
+                _skip_notified.add((torrent_hash, reason))
+                self.events.append(
+                    RenameSkippedEvent(
+                        task_id=torrent_hash,
+                        torrent_name=info["name"],
+                        strategy=method,
+                        reason=reason,
+                    )
+                )
+            return
+        if not organized:
+            return
+        kinds: tuple[tuple[list[str], FileKind], ...] = (
+            (media_list, "media"),
+            (subtitle_list, "subtitle"),
+        )
+        files = tuple(
+            OrganizedFile(_downloader_path(save_path, final.get(name, name)), kind)
+            for names, kind in kinds
+            for name in names
+        )
+        if _organized_published.get(torrent_hash) == files:
+            return
+        _organized_published[torrent_hash] = files
+        plugin_host.publish(
+            TorrentOrganized(
+                torrent_hash=torrent_hash,
+                bangumi_id=bangumi_id,
+                files=files,
+                downloader_id=_DOWNLOADER_ID,
+            )
+        )
+
+    @staticmethod
+    def _conflict_policy() -> ConflictPolicy:
+        return (
+            plugin_host.get_registry()
+            .providers(points.CONFLICT_POLICY)[CORE_ID]
+            .factory()
         )
 
     @staticmethod
@@ -726,7 +927,7 @@ class Renamer(RevisionSaga):
 
     async def rename(self) -> list[Notification]:
         logger.debug("Start rename process.")
-        rename_method = settings.bangumi_manage.rename_method
+        rename_method = _rename_strategy(settings.bangumi_manage.rename_method).id
         pending_infos = await self.client.get_torrent_info()
         # Owner counting and Saga recovery must see tasks outside the normal
         # Bangumi/completed filter (collections, paused tasks, changed category).
@@ -821,8 +1022,15 @@ class Renamer(RevisionSaga):
                         await self.rename_subtitles(
                             subtitle_list=subtitle_list, **kwargs
                         )
-                    if rename_method != "none":
+                    if rename_method != NO_RENAME and torrent_hash not in self._skipped:
                         await self._mark_renamed(torrent_hash, info.get("tags"))
+                self._finish_torrent(
+                    info,
+                    media_list,
+                    subtitle_list,
+                    rename_method,
+                    report.result.succeeded,
+                )
             elif len(media_list) > 1:
                 logger.info("Start rename collection")
                 file_sizes = {f["name"]: f.get("size") or 0 for f in files}
@@ -836,9 +1044,12 @@ class Renamer(RevisionSaga):
                 if collection_complete and subtitle_list:
                     await self.rename_subtitles(subtitle_list=subtitle_list, **kwargs)
                 if collection_complete:
-                    if rename_method != "none":
+                    if rename_method != NO_RENAME and torrent_hash not in self._skipped:
                         await self._mark_renamed(torrent_hash, info.get("tags"))
                     await self.client.set_category(torrent_hash, "BangumiCollection")
+                self._finish_torrent(
+                    info, media_list, subtitle_list, rename_method, collection_complete
+                )
             else:
                 logger.warning(f"{torrent_name} has no media file")
         async with Database() as db:

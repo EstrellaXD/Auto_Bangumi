@@ -79,7 +79,7 @@ class TestGenPath:
             language="zh",
             suffix=".ass",
         )
-        result = Renamer.gen_path(sub, "Bangumi", method="subtitle_pn")
+        result = Renamer.gen_path(sub, "Bangumi", method="pn")
         assert result == "My Anime S01E03.zh.ass"
 
     def test_subtitle_advance_method(self):
@@ -92,7 +92,7 @@ class TestGenPath:
             language="zh-tw",
             suffix=".srt",
         )
-        result = Renamer.gen_path(sub, "Bangumi Name", method="subtitle_advance")
+        result = Renamer.gen_path(sub, "Bangumi Name", method="advance")
         assert result == "Bangumi Name S02E07.zh-tw.srt"
 
     def test_zero_padding_single_digit(self):
@@ -215,7 +215,7 @@ class TestGenPathMovie:
             suffix=".ass",
             episode_type="movie",
         )
-        result = Renamer.gen_path(sub, "天气之子 (2019)", method="subtitle_advance")
+        result = Renamer.gen_path(sub, "天气之子 (2019)", method="advance")
         assert result == "天气之子 (2019).zh.ass"
 
     def test_gen_path_movie_group_tag_enabled_keeps_clean_name(self):
@@ -296,7 +296,7 @@ class TestGenPathGroupTagStability:
             suffix=".ass",
         )
         with patch.object(settings.bangumi_manage, "group_tag", True):
-            result = Renamer.gen_path(sub, "Bangumi Name", method="subtitle_pn")
+            result = Renamer.gen_path(sub, "Bangumi Name", method="pn")
         assert result == "My Anime S01E05.zh.ass"
 
     def test_gen_path_group_tag_disabled_no_prefix(self):
@@ -1686,9 +1686,7 @@ class TestGenPathWithOffsets:
             language="zh",
             suffix=".ass",
         )
-        result = Renamer.gen_path(
-            sub, "Bangumi", method="subtitle_pn", episode_offset=-12
-        )
+        result = Renamer.gen_path(sub, "Bangumi", method="pn", episode_offset=-12)
         assert "E13" in result  # 25 - 12 = 13
 
     def test_offset_none_method_unchanged(self):

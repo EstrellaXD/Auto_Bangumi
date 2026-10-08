@@ -119,5 +119,6 @@ async def list_plugin_providers():
             points.NOTIFIER,
             points.SEARCH_SITE,
             points.METADATA_PROVIDER,
+            points.RENAME_STRATEGY,
         )
     }

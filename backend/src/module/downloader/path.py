@@ -3,9 +3,12 @@ import re
 from os import PathLike
 from pathlib import PureWindowsPath
 
+from ab_sdk import points
+from ab_sdk.rename import CORE_ID, MediaFiles, MediaKind
 from module.conf import PLATFORM, settings
 from module.models import Bangumi, BangumiUpdate
 from module.models.movie import Movie, MovieUpdate
+from module.plugin import host as plugin_host
 
 logger = logging.getLogger(__name__)
 
@@ -38,15 +41,30 @@ def sanitize_path_fragment(name: str) -> str:
     return cleaned.rstrip(". ")
 
 
+class SuffixMediaFiles:
+    """宿主自带的 ``media_files`` Provider：按扩展名区分正片与字幕。"""
+
+    def classify(self, path: str) -> MediaKind:
+        suffix = Path(path).suffix.lower()
+        if suffix in _MEDIA_SUFFIXES:
+            return "media"
+        if suffix in _SUBTITLE_SUFFIXES:
+            return "subtitle"
+        return "ignore"
+
+
 def check_files(files: list[dict]):
+    media_files: MediaFiles = (
+        plugin_host.get_registry().providers(points.MEDIA_FILES)[CORE_ID].factory()
+    )
     media_list = []
     subtitle_list = []
     for f in files:
         file_name = f["name"]
-        suffix = Path(file_name).suffix.lower()
-        if suffix in _MEDIA_SUFFIXES:
+        kind = media_files.classify(file_name)
+        if kind == "media":
             media_list.append(file_name)
-        elif suffix in _SUBTITLE_SUFFIXES:
+        elif kind == "subtitle":
             subtitle_list.append(file_name)
     return media_list, subtitle_list
 

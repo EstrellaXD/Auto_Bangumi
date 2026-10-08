@@ -14,6 +14,7 @@ from typing import Any
 
 from ab_sdk import Event, points
 from ab_sdk.downloader import DownloaderConnection
+from ab_sdk.rename import CORE_ID
 
 from .bus import EventBus
 from .registry import ExtensionPoint, ExtensionRegistry, ProviderEntry
@@ -51,6 +52,12 @@ POINTS = (
     ExtensionPoint(points.MCP_TOOL, "provider", "MCP 工具", scoped=True),
     ExtensionPoint(points.MCP_RESOURCE, "provider", "MCP 资源", scoped=True),
     ExtensionPoint(points.MESSAGE_TEMPLATE, "transform", "系统事件通知文案"),
+    # --- P4 organize ---
+    ExtensionPoint(
+        points.RENAME_STRATEGY, "provider", "重命名方式（bangumi_manage.rename_method）"
+    ),
+    ExtensionPoint(points.MEDIA_FILES, "provider", "种子内文件分类（正片 / 字幕）"),
+    ExtensionPoint(points.CONFLICT_POLICY, "provider", "目标路径被占用时保留或替换"),
 )
 
 _registry: ExtensionRegistry | None = None
@@ -173,6 +180,22 @@ def _register_core(registry: ExtensionRegistry) -> None:
             points.METADATA_PROVIDER,
             ProviderEntry(CORE, provider_id, metadata(provider_id)),
         )
+
+    # organize：重命名方式 none、按扩展名分类、版本冲突策略
+    from module.downloader.path import SuffixMediaFiles
+    from module.manager.rename_strategies import (
+        NO_RENAME,
+        AdvanceRename,
+        NoRename,
+        PnRename,
+    )
+    from module.manager.revision_policy import CoreConflictPolicy
+
+    _core(registry, points.RENAME_STRATEGY, NO_RENAME, NoRename())
+    _core(registry, points.RENAME_STRATEGY, "pn", PnRename())
+    _core(registry, points.RENAME_STRATEGY, "advance", AdvanceRename())
+    _core(registry, points.MEDIA_FILES, CORE_ID, SuffixMediaFiles())
+    _core(registry, points.CONFLICT_POLICY, CORE_ID, CoreConflictPolicy())
 
 
 # --- P5 events/api ---------------------------------------------------------

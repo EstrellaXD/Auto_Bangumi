@@ -139,6 +139,25 @@ class HookRunner:
         entry = HookEntry(plugin_id, func, 0, timeout)
         return await self._call(entry, point, args, {}, check)
 
+    def call_provider_sync(
+        self,
+        plugin_id: str,
+        point: str,
+        func: Callable[..., Any],
+        *args: Any,
+        check: Check | None = None,
+    ) -> tuple[bool, Any]:
+        """同步 Provider 方法（如重命名策略）的调用：没有超时，失败与返回值
+        校验的规则同 :meth:`call_provider`。"""
+        try:
+            result = func(*args)
+            _check(result, check)
+        except Exception as e:
+            self._fail(plugin_id, f"{point}: {type(e).__name__}: {e}")
+            return False, None
+        self._breaker.record_success(plugin_id)
+        return True, result
+
     async def _call(
         self,
         entry: HookEntry,
@@ -152,20 +171,29 @@ class HookRunner:
             result = entry.func(*args, **kwargs)
             if inspect.isawaitable(result):
                 result = await asyncio.wait_for(result, timeout)
-            # 返回值校验在记成功之前：无效结果必须计入熔断，而不是先清零再计一次
-            if result is not None and check is not None and not check(result):
-                raise TypeError(f"返回了无效结果 {type(result).__name__}，已忽略")
+            _check(result, check)
         except Exception as e:
-            reason = (
-                f"{point} 超时（{timeout}s）"
-                if isinstance(e, TimeoutError)
-                else f"{point}: {type(e).__name__}: {e}"
+            self._fail(
+                entry.plugin_id,
+                (
+                    f"{point} 超时（{timeout}s）"
+                    if isinstance(e, TimeoutError)
+                    else f"{point}: {type(e).__name__}: {e}"
+                ),
             )
-            logger.warning("[Plugin:%s] 钩子失败：%s", entry.plugin_id, reason)
-            self._breaker.record_failure(entry.plugin_id, reason)
             return False, None
         self._breaker.record_success(entry.plugin_id)
         return True, result
+
+    def _fail(self, plugin_id: str, reason: str) -> None:
+        logger.warning("[Plugin:%s] 钩子失败：%s", plugin_id, reason)
+        self._breaker.record_failure(plugin_id, reason)
+
+
+def _check(result: Any, check: Check | None) -> None:
+    # 返回值校验在记成功之前：无效结果必须计入熔断，而不是先清零再计一次
+    if result is not None and check is not None and not check(result):
+        raise TypeError(f"返回了无效结果 {type(result).__name__}，已忽略")
 
 
 def _as_verdict(result: Any) -> Verdict | None:

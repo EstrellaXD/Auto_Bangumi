@@ -8,57 +8,35 @@
 与 gen_save_path 的文件夹命名保持一致 (Title (Year))。
 """
 
-from collections.abc import Callable
+from ab_sdk.rename import RenameInput, pad
 
-from module.models import EpisodeFile, SubtitleFile
-
-Strategy = Callable[[EpisodeFile | SubtitleFile, str, str, str], str]
+NO_RENAME = "none"
 
 
-def _subtitle(file_info: EpisodeFile | SubtitleFile) -> SubtitleFile:
-    assert isinstance(
-        file_info, SubtitleFile
-    ), "subtitle methods require a SubtitleFile"
-    return file_info
+class NoRename:
+    """``none``：保留原路径。"""
+
+    def target_name(self, f: RenameInput) -> str:
+        return f.media_path
 
 
-def pn(
-    file_info: EpisodeFile | SubtitleFile, bangumi_name: str, season: str, episode: str
-) -> str:
-    if file_info.episode_type == "movie":
-        return f"{file_info.title}{file_info.suffix}"
-    return f"{file_info.title} S{season}E{episode}{file_info.suffix}"
+def standard_name(base: str, f: RenameInput) -> str:
+    """``{base} SxxEyy[.语言].ext``；电影为 ``{base}[.语言].ext``。"""
+    language = f".{f.language}" if f.kind == "subtitle" else ""
+    if f.episode_type == "movie":
+        return f"{base}{language}{f.suffix}"
+    return f"{base} S{pad(f.season)}E{pad(f.episode)}{language}{f.suffix}"
 
 
-def advance(
-    file_info: EpisodeFile | SubtitleFile, bangumi_name: str, season: str, episode: str
-) -> str:
-    if file_info.episode_type == "movie":
-        return f"{bangumi_name}{file_info.suffix}"
-    return f"{bangumi_name} S{season}E{episode}{file_info.suffix}"
+class PnRename:
+    """``pn``：以文件名解析出的标题命名。"""
+
+    def target_name(self, f: RenameInput) -> str:
+        return standard_name(f.title, f)
 
 
-def subtitle_pn(
-    file_info: EpisodeFile | SubtitleFile, bangumi_name: str, season: str, episode: str
-) -> str:
-    sub = _subtitle(file_info)
-    if sub.episode_type == "movie":
-        return f"{sub.title}.{sub.language}{sub.suffix}"
-    return f"{sub.title} S{season}E{episode}.{sub.language}{sub.suffix}"
+class AdvanceRename:
+    """``advance``：以番剧文件夹名命名。"""
 
-
-def subtitle_advance(
-    file_info: EpisodeFile | SubtitleFile, bangumi_name: str, season: str, episode: str
-) -> str:
-    sub = _subtitle(file_info)
-    if sub.episode_type == "movie":
-        return f"{bangumi_name}.{sub.language}{sub.suffix}"
-    return f"{bangumi_name} S{season}E{episode}.{sub.language}{sub.suffix}"
-
-
-STRATEGIES: dict[str, Strategy] = {
-    "pn": pn,
-    "advance": advance,
-    "subtitle_pn": subtitle_pn,
-    "subtitle_advance": subtitle_advance,
-}
+    def target_name(self, f: RenameInput) -> str:
+        return standard_name(f.bangumi_name, f)

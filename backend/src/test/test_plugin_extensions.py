@@ -525,6 +525,7 @@ class TestPluginsApi:
             "notifier": [],
             "search_site": [],
             "metadata_provider": [],
+            "rename_strategy": [],
         }
 
     def test_config_get_masks_plugin_secrets(self, authed_client, plugin_ctx):

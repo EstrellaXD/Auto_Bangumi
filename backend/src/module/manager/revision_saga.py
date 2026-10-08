@@ -15,13 +15,14 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.exc import IntegrityError
 
+from ab_sdk.rename import FileKind
 from module.conf import settings
 from module.database import Database
 from module.database.bangumi import normalize_save_path
 from module.downloader import DownloadClient, RenameOutcome, RenameResult
 from module.downloader.path import path_to_bangumi
 from module.models import EpisodeFile, Notification, RenameOperation, SubtitleFile
-from module.notification import RenameConflictEvent
+from module.notification import RenameConflictEvent, SystemEvent
 
 from .revision_policy import (
     RevisionIdentity,
@@ -62,10 +63,16 @@ class RevisionOwner:
 
 
 class RevisionSaga:
-    """由 Renamer 继承；子类提供下载器门面 ``client`` 与冲突事件列表 ``events``。"""
+    """由 Renamer 继承；子类提供下载器门面 ``client``、冲突事件列表 ``events``
+    与本轮重命名记录 ``_moves``。"""
 
     client: DownloadClient
-    events: list[RenameConflictEvent]
+    events: list[SystemEvent]
+    _moves: dict[str, list[tuple[str, str, FileKind]]]
+
+    def _record_move(self, _hash: str, old: str, new: str, kind: FileKind) -> None:
+        """记录一次已生效的重命名，供本轮结束时发布 file.renamed / torrent.organized。"""
+        self._moves.setdefault(_hash, []).append((old, new, kind))
 
     @staticmethod
     def _adjust_episode(original: int | float, episode_offset: int) -> int | float:
@@ -116,6 +123,9 @@ class RevisionSaga:
         )
         notification = None
         if result.outcome is RenameOutcome.RENAMED:
+            self._record_move(
+                _hash, prepared.source_path, prepared.target_path, "media"
+            )
             notification = Notification(
                 official_title=bangumi_name,
                 season=prepared.episode.season,
@@ -549,6 +559,13 @@ class RevisionSaga:
                         old_path=operation.source_path,
                         new_path=operation.target_path,
                     )
+                    if result.outcome is RenameOutcome.RENAMED:
+                        self._record_move(
+                            operation.new_task_id,
+                            operation.source_path,
+                            operation.target_path,
+                            "media",
+                        )
                     if result.succeeded:
                         operation = await self._set_operation_state(
                             operation, "new_promoted"
@@ -565,6 +582,12 @@ class RevisionSaga:
                         == operation.target_path
                         for item in new_files
                     ):
+                        self._record_move(
+                            operation.new_task_id,
+                            operation.source_path,
+                            operation.target_path,
+                            "media",
+                        )
                         operation = await self._set_operation_state(
                             operation, "new_promoted"
                         )
