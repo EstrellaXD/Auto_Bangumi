@@ -18,11 +18,12 @@ def _make_db(path, *tables: str) -> None:
 
 @pytest.fixture
 def paths(tmp_path, monkeypatch):
-    version_path = tmp_path / "version.info"
+    version_path = tmp_path / "version_v4.info"
     legacy_path = tmp_path / "data.json"
     db_path = tmp_path / "data.db"
     _make_db(db_path, "bangumi", "rssitem")
     monkeypatch.setattr(vc, "VERSION_PATH", version_path)
+    monkeypatch.setattr(vc, "V3_VERSION_PATH", tmp_path / "version.info")
     monkeypatch.setattr(vc, "LEGACY_DATA_PATH", legacy_path)
     monkeypatch.setattr(vc, "DATABASE_PATH", db_path)
     monkeypatch.setattr(vc, "VERSION", "4.0.0")
@@ -49,18 +50,40 @@ def test_missing_version_file_with_30_database_is_refused(paths, tmp_path, monke
     assert not version_path.exists()
 
 
-def test_upgrade_from_33_is_recorded(paths):
+def test_upgrade_from_33_keeps_v3_record_and_backs_up_database(paths, tmp_path):
+    """3.3 只比较 version.info 末行的 minor：写入 4.x 会被读成 3.0 并重建数据库。"""
     version_path, _ = paths
-    version_path.write_text("3.2.7\n3.3.6\n")
+    v3_path = tmp_path / "version.info"
+    v3_path.write_text("3.2.7\n3.3.6\n")
     last = vc.version_check()
     assert str(last) == "3.3.6"
-    assert version_path.read_text().splitlines()[-1] == "4.0.0"
+    assert v3_path.read_text() == "3.2.7\n3.3.6\n"
+    assert version_path.read_text() == "4.0.0\n"
+    with closing(sqlite3.connect(tmp_path / "data.db.v3.bak")) as conn:
+        tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master")}
+    assert tables == {"bangumi", "rssitem"}
 
 
-def test_upgrade_from_33_prerelease_is_allowed(paths):
-    version_path, _ = paths
-    version_path.write_text("3.3.0-beta.2\n")
+def test_upgrade_does_not_replace_existing_database_backup(paths, tmp_path):
+    (tmp_path / "version.info").write_text("3.3.6\n")
+    backup = tmp_path / "data.db.v3.bak"
+    backup.write_text("older")
+    vc.version_check()
+    assert backup.read_text() == "older"
+
+
+def test_upgrade_from_33_prerelease_is_allowed(paths, tmp_path):
+    (tmp_path / "version.info").write_text("3.3.0-beta.2\n")
     assert str(vc.version_check()) == "3.3.0-beta.2"
+
+
+def test_later_4x_boot_makes_no_database_backup(paths, tmp_path):
+    version_path, _ = paths
+    (tmp_path / "version.info").write_text("3.3.6\n")
+    version_path.write_text("4.0.0-beta.1\n")
+    assert str(vc.version_check()) == "4.0.0-beta.1"
+    assert version_path.read_text() == "4.0.0-beta.1\n4.0.0\n"
+    assert not (tmp_path / "data.db.v3.bak").exists()
 
 
 def test_same_version_is_not_duplicated(paths):
@@ -78,15 +101,17 @@ def test_downgrade_is_not_recorded(paths):
 
 
 @pytest.mark.parametrize("previous", ["3.2.7", "3.1.0", "2.6.4"])
-def test_upgrade_from_pre_33_is_refused(paths, previous):
+def test_upgrade_from_pre_33_is_refused(paths, tmp_path, previous):
     version_path, _ = paths
-    version_path.write_text(previous + "\n")
+    v3_path = tmp_path / "version.info"
+    v3_path.write_text(previous + "\n")
     with pytest.raises(vc.UnsupportedUpgradeError, match=previous) as exc:
         vc.version_check()
     # 本次启动已把 config.json 改写为 4.0 格式，提示要先还原备份再回到旧版本
     assert "config.json.v3.bak" in str(exc.value)
     # 拒绝时不改写记录，用户回退到 3.3.x 后仍能正常迁移
-    assert version_path.read_text() == previous + "\n"
+    assert v3_path.read_text() == previous + "\n"
+    assert not version_path.exists()
 
 
 def test_legacy_data_json_is_refused(paths):
