@@ -1,4 +1,4 @@
-# [4.0.0] - Unreleased
+# [4.0.0-beta.1] - 2026-10-08
 
 4.0 是插件化重构的大版本（设计见 `docs/plans/2026-10-08-plugin-architecture-4.0-design.md`）。本节随各阶段合入持续更新。
 
