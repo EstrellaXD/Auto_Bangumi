@@ -9,6 +9,7 @@ AB 自己的下载器、通知渠道与搜索站点和第三方插件走同一�
 """
 
 import logging
+from collections.abc import Callable
 from typing import Any
 
 from ab_sdk import Event, points
@@ -96,16 +97,23 @@ def hook_runner(point: str) -> HookRunner | None:
     return runner
 
 
-def provider_impls(point: str) -> dict[str, Any]:
-    """调用该扩展点全部 Provider 工厂；工厂出错的跳过并记录，不连累其它 Provider。"""
+def provider_impls(
+    point: str, valid: Callable[[Any], bool] = lambda impl: True
+) -> dict[str, Any]:
+    """调用该扩展点全部 Provider 工厂；工厂出错或产物不合契约（``valid``
+    返回 False）的跳过并记录，不连累其它 Provider。"""
     impls: dict[str, Any] = {}
     for provider_id, entry in get_registry().providers(point).items():
         try:
-            impls[provider_id] = entry.factory()
+            impl = entry.factory()
+            if not valid(impl):
+                raise TypeError(f"不合契约的返回值 {impl!r}")
         except Exception as e:
             logger.warning(
                 "[Plugin:%s] %s %s 创建失败：%s", entry.plugin_id, point, provider_id, e
             )
+            continue
+        impls[provider_id] = impl
     return impls
 
 

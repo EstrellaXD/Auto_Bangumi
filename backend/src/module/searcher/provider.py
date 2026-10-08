@@ -7,6 +7,14 @@ from module.models import RSSItem
 from module.plugin.host import provider_impls
 
 
+def _valid_site(site: object) -> bool:
+    return (
+        isinstance(site, SearchSite)
+        and isinstance(site.url, str)
+        and isinstance(site.parser, str)
+    )
+
+
 def available_sites() -> dict[str, ProviderConfig]:
     """可用搜索站点：插件提供的站点 + 用户配置的站点（同名时用户配置优先）。
 
@@ -14,7 +22,7 @@ def available_sites() -> dict[str, ProviderConfig]:
     """
     sites: dict[str, ProviderConfig] = {}
     site: SearchSite
-    for site_id, site in provider_impls(points.SEARCH_SITE).items():
+    for site_id, site in provider_impls(points.SEARCH_SITE, _valid_site).items():
         sites[site_id] = {"url": site.url, "parser": site.parser}
     sites.update(get_provider())
     return sites
