@@ -1,8 +1,20 @@
 import type { QbTorrentInfo, TorrentGroup } from '#/downloader';
+import type { PluginInstance } from '#/config';
+import type { ApiSuccess } from '#/api';
+
+/** 选择用的种子键：同一 hash 可能同时存在于多个下载器实例 */
+export function torrentKey(t: QbTorrentInfo): string {
+  return `${t.downloader_id}:${t.hash}`;
+}
+
+/** 有任一下载器实例已配置；插件提供的下载器可能没有 host 字段，视为已配置 */
+export function hasConfiguredDownloader(instances: PluginInstance[]): boolean {
+  return instances.some((i) => !('host' in i.options) || !!i.options.host);
+}
 
 export const useDownloaderStore = defineStore('downloader', () => {
   const torrents = shallowRef<QbTorrentInfo[]>([]);
-  const selectedHashes = ref<string[]>([]);
+  const selectedKeys = ref<string[]>([]);
   const loading = ref(false);
 
   const { downloaderData } = useEventStream();
@@ -63,30 +75,47 @@ export const useDownloaderStore = defineStore('downloader', () => {
     }
   }
 
+  const message = useMessage();
+  const { returnUserLangMsg } = useMyI18n();
+
+  // 部分实例失败时其它实例可能已生效，无论成败都刷新列表
   const opts = {
     showMessage: true,
     onSuccess() {
-      getAll();
-      selectedHashes.value = [];
+      selectedKeys.value = [];
     },
+    onFinally: getAll,
   };
 
-  /** 选中的种子按所在下载器实例分组，每个实例发一次请求 */
-  async function perInstance<T>(
-    run: (hashes: string[], downloaderId: string) => Promise<T>
+  /**
+   * 选中的种子按所在下载器实例分组，每个实例发一次请求。
+   * 每个实例都执行；任一实例请求失败或返回 status: false 时整体按失败处理，
+   * 不让其它实例的成功结果掩盖它。
+   */
+  async function perInstance(
+    run: (hashes: string[], downloaderId: string) => Promise<ApiSuccess>
   ) {
     const byInstance = new Map<string, string[]>();
     for (const t of torrents.value) {
-      if (!selectedHashes.value.includes(t.hash)) continue;
+      if (!selectedKeys.value.includes(torrentKey(t))) continue;
       const hashes = byInstance.get(t.downloader_id) ?? [];
       hashes.push(t.hash);
       byInstance.set(t.downloader_id, hashes);
     }
-    let result: T | undefined;
-    for (const [downloaderId, hashes] of byInstance) {
-      result = await run(hashes, downloaderId);
+    const results = await Promise.allSettled(
+      [...byInstance].map(([downloaderId, hashes]) => run(hashes, downloaderId))
+    );
+    let last: ApiSuccess | undefined;
+    for (const r of results) {
+      // 请求异常已由 axios 拦截器提示
+      if (r.status === 'rejected') throw r.reason;
+      if (r.value.status === false) {
+        message.error(returnUserLangMsg(r.value));
+        throw r.value;
+      }
+      last = r.value;
     }
-    return result;
+    return last;
   }
 
   const { execute: pauseSelected } = useApi(
@@ -105,47 +134,43 @@ export const useDownloaderStore = defineStore('downloader', () => {
     opts
   );
 
-  function toggleHash(hash: string) {
-    const idx = selectedHashes.value.indexOf(hash);
+  function toggleKey(key: string) {
+    const idx = selectedKeys.value.indexOf(key);
     if (idx === -1) {
-      selectedHashes.value.push(hash);
+      selectedKeys.value.push(key);
     } else {
-      selectedHashes.value.splice(idx, 1);
+      selectedKeys.value.splice(idx, 1);
     }
   }
 
   function toggleGroup(group: TorrentGroup) {
-    const groupHashes = group.torrents.map((t) => t.hash);
-    const allSelected = groupHashes.every((h) =>
-      selectedHashes.value.includes(h)
-    );
+    const groupKeys = group.torrents.map(torrentKey);
+    const allSelected = groupKeys.every((k) => selectedKeys.value.includes(k));
     if (allSelected) {
-      selectedHashes.value = selectedHashes.value.filter(
-        (h) => !groupHashes.includes(h)
+      selectedKeys.value = selectedKeys.value.filter(
+        (k) => !groupKeys.includes(k)
       );
     } else {
-      const toAdd = groupHashes.filter(
-        (h) => !selectedHashes.value.includes(h)
-      );
-      selectedHashes.value.push(...toAdd);
+      const toAdd = groupKeys.filter((k) => !selectedKeys.value.includes(k));
+      selectedKeys.value.push(...toAdd);
     }
   }
 
   function clearSelection() {
-    selectedHashes.value = [];
+    selectedKeys.value = [];
   }
 
   return {
     torrents,
     groups,
-    selectedHashes,
+    selectedKeys,
     loading,
 
     getAll,
     pauseSelected,
     resumeSelected,
     deleteSelected,
-    toggleHash,
+    toggleKey,
     toggleGroup,
     clearSelection,
   };

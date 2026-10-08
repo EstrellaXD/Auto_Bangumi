@@ -25,6 +25,7 @@ from module.rss import RSSAnalyser
 from module.searcher.searcher import reset_cache as reset_poster_cache
 from module.update.auth import migrate_legacy_auth_tokens
 from module.update.startup import cache_image, first_run, run_migrations
+from module.update.version_check import refuse_legacy_data
 
 from .loops import (
     calendar_tick,
@@ -219,6 +220,7 @@ class AppContext:
         if self._startup_done:
             return
         self._start_info()
+        refuse_legacy_data()
         if not Checker.check_database():
             await first_run()
             await migrate_legacy_auth_tokens()

@@ -91,8 +91,8 @@ def test_migrate_v3_config_invalid_field_restores_and_refuses(
         migrate_v3_config(v3_config)
 
     assert v3_config.read_text() == original
-    assert v3_config.with_name("config.json.v3.bak").read_text() == original
-    assert not v3_config.with_name("config.json.tmp").exists()
+    # 每次失败的启动都不留下新的备份（容器重启循环不会堆积 .v3.bak.N）
+    assert not list(v3_config.parent.glob("config.json.*"))
 
 
 @pytest.mark.parametrize(

@@ -82,6 +82,7 @@
 - 媒体库中已有同名文件、但不是本插件创建的：跳过，**绝不覆盖**，并发送「硬链接未完成」通知。
 - 版本升级（新版本种子替换旧种子，文件名不变）后，本插件之前创建的链接会被原子替换为指向新文件的链接。
 - 删除种子不会删除媒体库中的链接。
+- 本插件放置后被你从媒体库删除的文件不会被重新链接；补链会重建它们。
 - 启用前已经下载的文件不会自动处理。启用插件后，设置页出现「硬链接补链」分区，点击 **链接已有文件** 把下载根目录下已有的正片与字幕补链到媒体库，已链接的文件跳过。该按钮调用 `POST /api/v1/plugins/hardlink/backfill`。
 - `path_map` 在插件配置表单中按行编辑（**添加一行**）。在 `config/config.json` 中对应 `plugins.options.hardlink.path_map`，例如 `[{"downloader": "default", "from": "/downloads", "to": "/media/downloads"}]`。
 
@@ -91,7 +92,7 @@
 
 ## 媒体库刷新
 
-内置插件「媒体库刷新」（`media-server-refresh`）在种子整理完成后请求 Jellyfin、Emby 或 Plex 刷新媒体库。在 **设置 → 插件 → 媒体库刷新** 中选择服务器类型，填写服务器地址与 API Key（Plex 为 `X-Plex-Token`）后生效；未填写时不做任何事。收到事件后等待「延迟」秒（默认 30），期间整理完成的种子合并为一次刷新。
+内置插件「媒体库刷新」（`media-server-refresh`）在种子整理完成后请求 Jellyfin、Emby 或 Plex 刷新媒体库。在 **设置 → 插件 → 媒体库刷新** 中选择服务器类型，填写服务器地址与 API Key（Plex 为 `X-Plex-Token`）后生效；未填写时不做任何事。收到事件后等待「延迟」秒（默认 30），期间整理完成的种子合并为一次刷新；刷新请求发出后到达的事件会再排一次刷新。启用「硬链接到媒体库」时，文件放入媒体库后会再刷新一次，跨盘复制慢于延迟时新剧集也能出现。
 
 [1]: https://www.autobangumi.org/faq/#download-path
 [2]: https://www.autobangumi.org/faq/#file-renaming

@@ -16,6 +16,8 @@ class Aria2Gid(SQLModel, table=True):
 
     __tablename__ = "aria2_gid"
 
+    # 不同 aria2 实例可能分配到相同的 gid，主键按实例区分
+    downloader_id: str = Field(primary_key=True)
     gid: str = Field(primary_key=True)
     bangumi_id: Optional[int] = Field(default=None, foreign_key="bangumi.id")
     category: Optional[str] = None

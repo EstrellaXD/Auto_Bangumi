@@ -11,7 +11,7 @@
   → ``webhook_url``（渠道实现不再读旧字段）
 
 在 ``Settings`` 读写配置文件之前运行。改写前把原文件备份为 ``<文件名>.v3.bak``；
-失败时从备份恢复并抛出 :class:`ConfigMigrationError`，拒绝启动。
+失败时从备份恢复（不留下备份）并抛出 :class:`ConfigMigrationError`，拒绝启动。
 本模块不能 import ``module.conf``：它在 ``settings`` 构造之前被调用。
 """
 
@@ -147,11 +147,12 @@ def migrate_v3_config(path: Path) -> bool:
         )
         os.replace(tmp, path)
     except Exception as e:
-        shutil.copy2(backup, path)
+        # 移回而不是复制：备份与原文件相同，留着会让每次失败的重启多一份
+        os.replace(backup, path)
         message = (
             f"config migration to 4.0 failed at {_failed_field(e)}; "
-            f"{path.name} was restored from {backup.name}. Fix the field and restart. "
-            f"配置迁移失败，已从备份恢复 {path.name}，请修正该字段后重新启动。"
+            f"{path.name} was left unchanged. Fix the field and restart. "
+            f"配置迁移失败，{path.name} 未改动，请修正该字段后重新启动。"
         )
         logger.critical(message)
         raise ConfigMigrationError(message) from e

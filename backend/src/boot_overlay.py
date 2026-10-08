@@ -9,7 +9,8 @@
 CI 签名的 ``bundle.zip`` + ``bundle.zip.sig``。因此每次启动都重新验签留存的
 zip，并且 module 树 / 前端 dist **直接从验签通过的 zip 解包**，绝不从 ab 可写
 的 ``current/`` 目录复制——否则拿到 ab 权限的攻击者伪造 applied.json/current
-即可让 root 把任意代码落到 /app 并跨镜像升级持久化。
+即可让 root 把任意代码落到 /app 并跨镜像升级持久化。``ab_sdk`` 与 module
+同理（4.0 起 bundle 带它，module 依赖同版本的 SDK）。
 
 版本比较也以 zip 内 manifest 为准：覆盖层版本高于镜像基线（``/app/
 IMAGE_VERSION``）才应用，否则清除过期覆盖层，镜像版本生效。
@@ -395,17 +396,24 @@ def apply_overlay(
             logger.error("Failed to unpack verified bundle: %s", exc)
             return False
 
-        src_module = tmp / "backend" / "src" / "module"
-        if not src_module.exists():
-            logger.warning("Verified bundle has no module tree; skipping.")
+        # module 依赖同版本的 ab_sdk，两棵树缺一不可：只换其一会在启动时 ImportError。
+        # ponytail: 两次替换不是一个事务，ab_sdk 换完后 module 失败会留下新 SDK +
+        # 旧 module；真要原子就得把两棵树放进同一个目录一起 rename。
+        trees = [
+            (tmp / "backend" / "src" / name, app_root / name)
+            for name in ("ab_sdk", "module")
+        ]
+        if not all(src.exists() for src, _ in trees):
+            logger.warning("Verified bundle lacks the module or ab_sdk tree; skipping.")
             return False
 
-        try:
-            _replace_tree(src_module, app_root / "module")
-        except Exception as exc:
-            logger.error("Failed to overlay module tree: %s", exc)
-            return False
-        _chown_app_tree(app_root / "module")
+        for src, dst in trees:
+            try:
+                _replace_tree(src, dst)
+            except Exception as exc:
+                logger.error("Failed to overlay %s tree: %s", dst.name, exc)
+                return False
+            _chown_app_tree(dst)
 
         src_dist = tmp / "webui-dist"
         if src_dist.exists():

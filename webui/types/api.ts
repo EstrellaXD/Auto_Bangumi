@@ -20,6 +20,8 @@ export interface ApiError {
 }
 
 export interface ApiSuccess {
+  /** 部分接口以 200 + status: false 表示执行失败 */
+  status?: boolean;
   msg_en: string;
   msg_zh: string;
 }

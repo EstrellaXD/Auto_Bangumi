@@ -42,11 +42,11 @@ AB が通知センターに送るイベントは、すべて `ab_sdk.events.Syst
 | kind | イベントクラス | フィールド | 発行のタイミング |
 | --- | --- | --- | --- |
 | `file.renamed` | `FileRenamed` | `bangumi_id`、`old_path`、`new_path`、`file_kind`、`downloader_id` | ファイルが実際にリネームされたとき（バージョン置換後のリネームを含む） |
-| `torrent.organized` | `TorrentOrganized` | `torrent_hash`、`bangumi_id`、`files`（`OrganizedFile(path, kind)` のタプル）、`downloader_id` | トレントの整理が完了したとき。リネーム方式が `none` でも発行され、`files` は元のパスです |
+| `torrent.organized` | `TorrentOrganized` | `torrent_hash`、`bangumi_id`、`files`（`OrganizedFile(path, kind)` のタプル）、`downloader_id` | トレントの整理が完了したとき。リネーム方式が `none` でも発行され、`files` は元のパスです。選択したリネーム方式が未登録（プラグインが無効、または遮断済み）の間は発行されません |
 
 - パスは**ダウンローダーから見た**絶対パスで、`/` で連結されます（Windows ダウンローダーの `\` も `/` に統一されます）。AB とダウンローダーで見えるディレクトリが異なる場合（別々のコンテナで動作している場合など）は、購読者側でパスを変換する必要があります。
 - `bangumi_id` はトレントの `ab:<id>` タグに由来します。古いトレントでは `None` の場合があります。`downloader_id` はトレントがあるダウンローダーインスタンスの id です。インスタンスごとにパスの見え方が異なることがあります。
-- `torrent.organized` の配信は**少なくとも 1 回**（at-least-once）です。「リネーム済み」タグのないトレント（リネーム方式が `none` の場合など）は、AB を再起動するたびにもう一度発行されます。購読者は冪等にしてください。
+- `torrent.organized` の配信は**少なくとも 1 回**（at-least-once）です。ダウンローダーにある整理済みのトレントは、「リネーム済み」タグがあっても、AB を再起動するたびにもう一度発行されます。購読者は冪等にしてください。
 - この 2 つのイベントはイベントバスにだけ発行されます。通知センターには入りません。
 
 ## 独自イベント

@@ -38,7 +38,8 @@ export interface PluginInfo {
   id: string;
   name: string;
   version: string;
-  source: 'builtin' | 'local' | 'pip';
+  /** catalog：经签名目录安装，只有它能在界面上卸载 */
+  source: 'builtin' | 'catalog' | 'local' | 'pip';
   signed: boolean;
   state: PluginState;
   enabled: boolean;
@@ -52,6 +53,18 @@ export interface PluginInfo {
 export interface PluginsOverview {
   allow_unsigned: boolean;
   plugins: PluginInfo[];
+}
+
+/** 签名目录（GitHub release `plugins`）中的插件，以及本机已安装的版本 */
+export interface CatalogEntry {
+  id: string;
+  name: string;
+  version: string;
+  kind: string;
+  extension_points: string[];
+  description: string;
+  min_ab_version: string;
+  installed_version: string | null;
 }
 
 /** 插件提供的 Provider id，按扩展点分组 */

@@ -6,14 +6,13 @@
 import argparse
 import json
 import os
-import re
 import sys
 import zipfile
 from pathlib import Path
 from string import Template
 
 from . import SDK_VERSION, points
-from .manifest import MANIFEST_NAME, TOOLING_DIRS, PluginManifest, check
+from .manifest import ID_RE, MANIFEST_NAME, TOOLING_DIRS, PluginManifest, check
 
 # 打包时排除的目录名与文件后缀：开发产物、测试与作者侧的工程文件
 _PACK_EXCLUDE_DIRS = TOOLING_DIRS | {"tests"}
@@ -164,8 +163,6 @@ uv run ab-plugin pack .       # 打包为 dist/$id-<版本>.zip
 ```
 """)
 
-_ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
-
 
 def scaffold(target: Path, plugin_id: str, kind: str) -> list[Path]:
     """在 ``target`` 下创建插件骨架，返回创建的文件。"""
@@ -265,7 +262,7 @@ def link_dev(plugin_dir: Path, config_dir: Path, manifest: PluginManifest) -> Pa
 
 
 def _cmd_new(args: argparse.Namespace) -> int:
-    if not _ID_RE.match(args.id):
+    if not ID_RE.match(args.id):
         print("错误：id 只能由小写字母、数字和连字符组成", file=sys.stderr)
         return 1
     target = Path(args.dir) / args.id

@@ -3,7 +3,7 @@
 用法（需要更新签名私钥，见 CLAUDE.md 的发布说明）::
 
     uv run --no-project --with cryptography python scripts/build_plugin_catalog.py \
-        --key ~/.autobangumi/update-signing-key.pem --min-ab 4.0.0 \
+        --key ~/.autobangumi/update-signing-key.pem \
         --out release-assets  dist/*.zip
 
 输入是 ``ab-plugin pack`` 打出的 zip。输出目录里有 ``catalog.json``、每个 zip 以及
@@ -24,6 +24,8 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 
 CATALOG_SCHEMA = 2
+# semver 中 4.0.0-beta.N < 4.0.0，写 4.0.0 会把全部 4.0 beta 宿主挡在外面
+DEFAULT_MIN_AB = "4.0.0-beta.1"
 
 
 def _entry(archive: Path, min_ab: str) -> dict:
@@ -48,7 +50,9 @@ def _sign(key: Ed25519PrivateKey, path: Path) -> None:
     Path(str(path) + ".sig").write_text(base64.b64encode(signature).decode() + "\n")
 
 
-def build(archives: list[Path], out: Path, key_path: Path, min_ab: str) -> Path:
+def build(
+    archives: list[Path], out: Path, key_path: Path, min_ab: str = DEFAULT_MIN_AB
+) -> Path:
     key = load_pem_private_key(key_path.read_bytes(), password=None)
     if not isinstance(key, Ed25519PrivateKey):
         raise SystemExit("签名密钥必须是 ed25519")
@@ -72,6 +76,6 @@ if __name__ == "__main__":
     parser.add_argument("archives", nargs="+", type=Path)
     parser.add_argument("--key", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
-    parser.add_argument("--min-ab", default="4.0.0")
+    parser.add_argument("--min-ab", default=DEFAULT_MIN_AB)
     args = parser.parse_args()
     print(build(args.archives, args.out, args.key, args.min_ab))

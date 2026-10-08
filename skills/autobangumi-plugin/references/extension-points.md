@@ -8,7 +8,7 @@ All imports come from `ab_sdk`. Constants live in `ab_sdk.points`.
 ```python
 from ab_sdk.downloader import AddResult, DownloaderCapabilities, DownloaderConnection
 ```
-- Factory is called with `DownloaderConnection(host, username, password, ssl)`; return a client object. Provider `id` is the instance type the user picks (`plugins.instances[].provider`).
+- Factory is called with `DownloaderConnection(host, username, password, ssl, instance_id)`; return a client object. `instance_id` is the user-assigned instance id; key any local state by it, since two instances of the same type can coexist. Provider `id` is the instance type the user picks (`plugins.instances[].provider`).
 - Minimum (`CoreDownloaderClient`): class attribute `capabilities = DownloaderCapabilities(can_query, can_rename, can_manage, can_rss_rules)`, `async auth(retry=3) -> bool`, `async logout()`, `async add_torrents(torrent_urls, torrent_files, save_path, category, tags=None) -> AddResult` (`ADDED` / `DUPLICATE` / `FAILED`).
 - A declared capability requires its methods: `can_query` -> `torrents_info`, `torrent_exists`, `torrents_files`; `can_rename` -> `torrents_rename_file` (returns `RenameResult`); `can_manage` -> delete/pause/resume/move/category/tag methods. Undeclared operations are skipped and logged.
 - Test: subclass `DownloaderContract`; set `behavioral = True` only when `create()` returns a client with a working backend or stub.

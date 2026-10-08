@@ -178,7 +178,7 @@
     },
     "plugins_set": {
       "title": "插件",
-      "empty": "未发现插件。把插件目录放进 config/plugins/local/（目录名与插件 id 相同）或用 pip 安装后重启，即可在此出现。",
+      "empty": "未发现插件。从下方的插件目录安装；或把插件目录放进 config/plugins/local/（目录名与插件 id 相同）、用 pip 安装，重启后即可在此出现。",
       "allow_unsigned": "允许未签名插件",
       "allow_unsigned_hint": "本地目录与 pip 安装的插件未经签名，开启后才会加载。插件与 AutoBangumi 同进程运行，拥有完整权限，只启用你信任的插件。",
       "enabled": "启用",
@@ -200,7 +200,28 @@
       "save_success": "插件配置已保存并应用",
       "save_failed": "保存插件配置失败",
       "load_failed": "加载插件列表失败",
-      "plugin_provided": "插件提供"
+      "plugin_provided": "插件提供",
+      "source_catalog": "签名目录",
+      "signed": "已签名",
+      "uninstall": "卸载",
+      "uninstall_confirm_title": "卸载 {name}？",
+      "uninstall_confirm_body": "插件文件会被删除。它的配置保留在 config.json 中，重新安装后继续生效。",
+      "uninstall_success": "插件已卸载",
+      "uninstall_failed": "卸载插件失败",
+      "catalog_title": "插件目录",
+      "catalog_hint": "目录与插件包由 AutoBangumi 签名，安装前校验签名与 sha256。从目录安装的插件视为已签名，不需要开启“允许未签名插件”。",
+      "catalog_browse": "浏览目录",
+      "catalog_refresh": "刷新",
+      "catalog_failed": "目录不可用。",
+      "catalog_failed_hint": "检查网络后点击“刷新”重试。",
+      "catalog_empty": "目录中暂时没有插件。",
+      "extension_points": "扩展点：{list}",
+      "install": "安装",
+      "update": "更新",
+      "installed": "已安装",
+      "installed_version": "已安装 v{version}",
+      "install_success": "插件已安装并启用",
+      "install_failed": "安装插件失败"
     }
   },
   "downloader": {

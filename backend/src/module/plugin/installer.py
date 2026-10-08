@@ -77,6 +77,8 @@ def safe_extract(zip_path: Path, dest: Path) -> None:
 class SignedCatalogInstaller:
     tag: ClassVar[str]
     catalog_schema: ClassVar[int]
+    # 版本目录里的清单文件名，卸载时据此确认目录归本安装器所有
+    manifest_name: ClassVar[str]
 
     def __init__(
         self,
@@ -169,7 +171,7 @@ class SignedCatalogInstaller:
                 return InstallResult(success=False, message=str(e))
 
     async def _install(self, plugin_id: str) -> InstallResult:
-        if reason := self._reject_reason(plugin_id):
+        if reason := self._check_id(plugin_id):
             return InstallResult(success=False, message=reason)
         catalog = await self.fetch_catalog()
         entry = next((p for p in catalog if p.get("id") == plugin_id), None)
@@ -221,7 +223,7 @@ class SignedCatalogInstaller:
 
     async def uninstall(self, plugin_id: str) -> InstallResult:
         async with self._lock:
-            if reason := self._reject_reason(plugin_id):
+            if reason := self._check_id(plugin_id):
                 return InstallResult(success=False, message=reason)
             if reason := self._uninstall_reject_reason(plugin_id):
                 return InstallResult(success=False, message=reason)
@@ -230,8 +232,22 @@ class SignedCatalogInstaller:
             self._reload(plugin_id)
             return InstallResult(success=True)
 
+    def _check_id(self, plugin_id: str) -> Optional[str]:
+        """id 不合法或不允许经安装器安装 / 卸载的原因；可以时为 None。"""
+        # 同时挡住 "local"（本地插件目录）与路径穿越：id 会拼进文件系统路径
+        if not ID_RE.match(plugin_id) or plugin_id in RESERVED_IDS:
+            return f"Invalid plugin id: {plugin_id}"
+        return self._reject_reason(plugin_id)
+
     def _uninstall_reject_reason(self, plugin_id: str) -> Optional[str]:
-        """卸载前的额外检查；默认没有。"""
+        # 只删经本安装器装入的目录（installed.json 指向含本类清单的版本目录），
+        # 绝不碰 config/plugins/ 下的其它内容：本地插件、另一类安装器装入的插件
+        version = installed_version(self.root, plugin_id)
+        if (
+            not version
+            or not (self.root / plugin_id / version / self.manifest_name).is_file()
+        ):
+            return f"Plugin not installed: {plugin_id}"
         return None
 
     async def _after_uninstall(self, plugin_id: str) -> None:
@@ -248,24 +264,11 @@ class PluginInstaller(SignedCatalogInstaller):
 
     tag = "plugins"
     catalog_schema = 2
+    manifest_name = MANIFEST_NAME
 
     def _reject_reason(self, plugin_id: str) -> Optional[str]:
-        # 同时挡住 "local"（本地插件目录）与路径穿越：id 会拼进文件系统路径
-        if not ID_RE.match(plugin_id) or plugin_id in RESERVED_IDS:
-            return f"Invalid plugin id: {plugin_id}"
         if (BUILTIN_ROOT / plugin_id).is_dir():
             return f"{plugin_id} is a builtin plugin"
-        return None
-
-    def _uninstall_reject_reason(self, plugin_id: str) -> Optional[str]:
-        # 只删经本安装器装入的目录（installed.json 指向含 plugin.toml 的版本目录），
-        # 绝不碰 config/plugins/ 下的其它内容，包括同样带 installed.json 的 LLM 插件
-        version = installed_version(self.root, plugin_id)
-        if (
-            not version
-            or not (self.root / plugin_id / version / MANIFEST_NAME).is_file()
-        ):
-            return f"Plugin not installed: {plugin_id}"
         return None
 
     def _validate_manifest(

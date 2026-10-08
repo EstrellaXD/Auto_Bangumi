@@ -59,7 +59,7 @@
 - **模板失效的后果**：已保存的模板若不再通过校验（手工改配置、Jinja2 升级），整个 `rename` 插件加载失败，`pn` / `advance` 随之消失，所有种子按 `none` 处理。插件因连续 5 次异常或非法返回值被熔断时同样如此。
 - **`media_files` 与 `conflict_policy`** 只解析固定的 core id `default`（`ab_sdk.rename.CORE_ID`）。插件可以登记实现，但选择要等 P2.5 的 `slots`。`conflict_policy` 的接口改为 `decide(ConflictRequest) -> ConflictDecision`：`ConflictRequest` 带上宿主读取的设置值 `configured`（`bangumi_manage.revision_conflict_policy`，测试 patch 的是 `module.manager.renamer.settings`，所以设置仍在 `renamer.py` 中读取）和宿主计算的 `strict_upgrade`。宿主仍只在「唯一占用者、双方都是单文件种子、双方身份完整」时执行替换。
 - **事件字段**：`FileRenamed` 的类别字段叫 `file_kind`，因为 `kind` 是 `Event` 的类变量；`OrganizedFile` 保留 `kind`。路径为下载器视角、以 `/` 拼接的绝对路径；`downloader_id` 在 P2.5 之前固定为 `"default"`。
-- **`TorrentOrganized` 的投递是至少一次**：进程内按 hash 记忆已发布的最终文件集合，重启后、或文件集合变化时会再次发布。重命名方式为 `none` 的种子同样发布。订阅者必须幂等。
+- **`TorrentOrganized` 的投递是至少一次**：进程内按 hash 记忆已发布的最终文件集合，重启后、或文件集合变化时会再次发布。已打 `ab:renamed` 标签的种子不再整理，但本进程未发布过时按当前文件名补发一次（`Renamer._republish_organized`），否则订阅者处理中被取消（重启、插件重载）的事件不会再投递；没有事件总线时不查询文件。重命名方式为 `none` 的种子同样发布；选中的策略未登记而按 `none` 处理时不发布，因为原名不是最终文件名，策略恢复后改名再发布会让硬链接在媒体库留下两份。订阅者必须幂等。
 - **WebUI**：重命名方式下拉框经 `usePluginProviders` 合并插件提供的 id（如 `template`），`rename_method` 类型放宽为字符串。`template` 在 设置 → 番剧管理设置 → 重命名方式 中选择，模板在 设置 → 插件 → 重命名 中填写。
 - `ab_sdk` 新增 `ab_sdk.rename`（契约与冻结快照 `RenameInput`、`Revision`、`RevisionTask`、`ConflictRequest`，以及 `pad()`），`SDK_VERSION` 升到 `0.4.0`。
 
@@ -76,7 +76,7 @@
 - `path_map` 是对象列表，P2 的 JSON Schema 表单不支持对象数组（显示为「不支持的字段」），P4 期间只能在 `config.json` 中填写。表单支持对象数组留到 P6 / P7。
 - 所有放置（新建与版本升级替换）都先写到同目录的临时文件 `.<文件名>.<随机串>.ab-hardlink`，再 `os.replace` 到目标；失败时删除临时文件。复制中断不会在目标留下半个文件，否则重试时它会被当成「不是本插件创建的」冲突。临时文件名每次不同，因为补链与订阅可能同时处理同一个目标。
 - `hardlink.failed` 的通知正文只能显示种子 hash，因为 `TorrentOrganized` 不带种子名；补充种子名留到 P2.5 / P6。
-- 「由插件创建」记录在插件 KV 中：键 `link:<目标路径>`，值为 `[源文件身份, 目标身份]`，身份为 `lstat` 的 `[st_dev, st_ino, st_size, st_mtime_ns]`。加入大小与修改时间，是因为旧文件删除后 inode 可能被复用。目标是源的硬链接、软链接或大小与修改时间相同的副本，或两个身份都与记录一致时，视为已完成并补写记录：放置后、写记录前协程被取消或进程退出，留下的文件不会被当成冲突。版本升级只替换目标身份与记录一致的文件，用户在原位置放的文件不会被覆盖。
+- 「由插件创建」记录在插件 KV 中：键 `link:<目标路径>`，值为 `[源文件身份, 目标身份]`，身份为 `lstat` 的 `[st_dev, st_ino, st_size, st_mtime_ns]`。加入大小与修改时间，是因为旧文件删除后 inode 可能被复用。目标是源的硬链接、软链接或大小与修改时间相同的副本，或两个身份都与记录一致时，视为已完成并补写记录：放置后、写记录前协程被取消或进程退出，留下的文件不会被当成冲突。版本升级只替换目标身份与记录一致的文件，用户在原位置放的文件不会被覆盖。目标不存在、而记录中的源身份与当前源相同时，表示插件放置后被用户删除：重复投递的事件不重建，只有补链（`restore=True`）重建。
 - 目标被占用、跨文件系统按 `skip` 跳过、源不在 `source_root` 下等问题，每个种子合并成一条 `hardlink.failed` 通知，`dedup_key` 为种子 hash。由于至少一次投递，长期存在的冲突在每次重启后会更新同一条通知。
 - 补链 `backfill()` 以插件路由 `POST /api/v1/plugins/hardlink/backfill` 提供，只在用户调用时运行，返回 `linked` / `exists` / `conflict` / `failed` 计数，不发通知。它遍历本地 `source_root`，不经过 `path_map`。插件不能 import `module.*`，所以按固定扩展名（`.mp4` / `.mkv` / `.ass` / `.srt`，与 `media_files` 的 core 实现相同）挑选文件。
 - **补链按钮推迟到 P6**：设置页的按钮依赖 P6 的 `settings.section` 挂载点，P4 只提供 REST 路由。
@@ -91,7 +91,7 @@
 
 - P4 有两份独立实现。另一个会话的版本（提交 a0706513、12e7e2f5，基于旧 P5 0b6de315）曾推到 `refactor/4.0-p4-organize`，现保留为 `refactor/4.0-p4-organize-cloud`（head 544628f6）。本分支保留本节上文的设计，因为它符合已确认的决策：`pn` / `advance` / `template` 都在内置插件 `rename` 中，坏模板跳过文件并通知、不退回 `pn`，另有 `hardlink`。另一份的 `rename-template` 插件、`BangumiLink`、`ab_sdk.organize` 与由 `PluginManager` 设置进程级总线的做法没有移植。
 - 从另一份移植并按本分支改写的内容：
-  - **内置插件 `media-server-refresh`**：订阅 `torrent.organized`（另一份订阅 `file.renamed`；前者在重命名方式为 `none` 时也会发布），等待 `delay` 秒，把期间的事件合并成一次 Jellyfin / Emby / Plex 刷新请求。未填写地址或 API Key 时不做任何事，所以与另一份相同，默认启用。由于至少一次投递，已配置时每次重启最多多出一次合并后的刷新。
+  - **内置插件 `media-server-refresh`**：订阅 `torrent.organized`（另一份订阅 `file.renamed`；前者在重命名方式为 `none` 时也会发布），等待 `delay` 秒，把期间的事件合并成一次 Jellyfin / Emby / Plex 刷新请求。未填写地址或 API Key 时不做任何事，所以与另一份相同，默认启用。由于至少一次投递，已配置时每次重启最多多出一次合并后的刷新。它同时订阅 `hardlink` 在新放入文件后发布的 `hardlink.linked`（普通 `Event`，不是通知）：两者各自订阅同一个事件，跨盘复制慢于 `delay` 时刷新会早于文件到位，所以文件放好后再刷新一次；刷新请求发出后到达的事件再排一次刷新，不再被忽略。
   - **死代码**：删除 `Renamer.rename_file` / `_rename_media_file`、`_lookup_offsets` / `_normalize_path`、`BangumiDatabase.match_by_save_path`、`TorrentDatabase.search_by_qb_hash`、`RenameOperationDatabase.release_replacement_lease`。删除前确认它们在本分支（含 `revision_saga.py`）没有生产调用方。原测试改为经 `rename()` 与 `_batch_lookup_offsets` 驱动。`season_offset` 从 `gen_path` 起整条重命名链路移除，`_batch_lookup_offsets` 的结果从 `(集数偏移, 季度偏移, 类型)` 改为 `(集数偏移, 类型)`：季度偏移已体现在 Season 文件夹，文件名从未使用它。
   - **插件配置 422**：`field_validator` 抛出的 `ValueError` 会留在 `ValidationError.errors()` 的 `ctx` 中，无法 JSON 序列化，保存配置返回 500（`hardlink` 的路径校验、`rename` 的模板校验都会触发）。现在以 `include_context=False` 返回 422。
   - **用户文档**：`docs/{,en/,ja/}config/manager.md` 增加 `template`、`hardlink`（含 `path_map` 与 Docker 下硬链接不能跨文件系统的说明）与 `media-server-refresh` 三节，按本分支的设计重写；`CHANGELOG.md` 增加 P4 条目。
@@ -109,7 +109,7 @@
 
 slots 解析：
 
-- `rename_strategy` 读 `slots.rename_strategy`，未登记时仍记录一次日志并按 `none` 处理。`media_files` 读 `slots.media_files`，未登记时退回 `default`。`conflict_policy` 读 `slots.conflict_policy`，未登记时退回 `hold`，不会误删旧版本。后两者不记日志，因为每个文件都会解析一次。
+- `rename_strategy` 读 `slots.rename_strategy`，未登记时仍记录一次日志并按 `none` 处理。`media_files` 读 `slots.media_files`，未登记时退回 `default`。`conflict_policy` 读 `slots.conflict_policy`，未登记时退回 `hold`，不会误删旧版本。后两者不记日志，因为每个文件都会解析一次。插件实现与重命名策略一样经 `plugin_host.call_sync`（runner 的熔断器）调用：抛出异常或返回值无效（`conflict_policy` 不是 `ConflictDecision`，`media_files` 不是三种类别之一）时计入熔断，本次按 `hold` / `default` 处理，不中断这一轮重命名。
 - **冲突策略改为两个 Provider**：第 9 节把 `revision_conflict_policy` 迁到 `slots.conflict_policy`，slot 的值就是 Provider id。因此宿主以 `core` 登记 `hold` 与 `replace` 两个 `CoreConflictPolicy`，不再登记 `default`；`ConflictRequest` 删除 P4 加入的 `configured` 字段。`ab_sdk` 升至 0.5.0。`GET /api/v1/plugins/providers` 仍不列出 `conflict_policy` / `media_files` 的插件候选。
 
 迁移器（第 9 节，`module/update/v4.py`）：
@@ -148,7 +148,7 @@ slots 解析：
 
 - **保存目录随实例重新生成**：`save_path_for(data, root)`（`downloader/path.py`）在已存的 `save_path` 位于该实例下载目录之下时沿用它，否则按该实例的下载目录重新生成（比较用 `PureWindowsPath`，`\` 与 `/` 都认）。`add_torrent` 每次投递都经过它并写回规则，所以默认实例切换、规则的实例被删除、订阅指向别的实例时，新种子都进目标实例的目录。代价：单实例用户修改下载目录后，存量规则的新种子也进新目录（3.3 沿用旧目录）。只在「属于另一个已配置实例」时重算做不到「实例被删除」的情况，所以按「不在本实例目录之下」判断。
 - **按实例匹配与移动**：`TorrentManager` 在每个实例上按两个目录匹配种子：已存的 `save_path`（与之前相同，单实例改过下载目录时仍能找到旧种子），以及 `save_path_for(规则, 该实例目录)`。更新规则且实例不变时，对种子行记录的每个实例（加上规则当前的实例）分别计算新目录并移动。qB RSS 规则只在有匹配种子的实例与规则自己的实例上改写，因为 `rss/setRule` 在别的 qB 上会新建一条启用的自动下载规则。这样「规则未指定实例、种子经订阅进了另一实例」时也会移动。规则自身的实例仍不带订阅后备，因为种子行已记录实际位置。
-- **删除逐实例隔离**：一个实例不可用或删除失败时，其它实例照常删除，最后返回 500 并列出失败的实例。删除规则时种子行已先删除，不可用实例上的种子之后没有记录（见第二部分结尾的推迟项）。
+- **删除逐实例隔离**：一个实例不可用或删除失败时，其它实例照常删除，最后返回 500 并列出失败的实例。删除规则（删除文件）时先删各实例上的种子，全部成功才删种子行与番剧；有实例失败时两者都保留并返回 500，实例恢复后可重试（已删净的实例匹配不到种子，直接跳过）。种子行经外键引用番剧，所以不能只保留失败实例的种子行。不删文件时不连接下载器，与之前相同。
 - **整季补全与自动打标跳过不可用实例**：`eps_complete` 跳过该规则（不标记 `eps_collect`，下一轮重试），其它规则照常补全并保存；`POST /downloader/torrents/tag/auto` 改用 `DownloaderPool`，不可用实例跳过。
 - **版本替换事务的过滤只在多实例时生效**：只有一个下载器实例时 `list_active_replacements(None)` 返回全部事务，与 3.3 相同；否则改了主机地址（键里含主机哈希）后进行中的事务永远不会恢复。多实例下改主机地址仍有这个问题（见推迟项）。
 - **迁移备份不覆盖已有备份**：`.v3.bak` 已存在时依次取 `.v3.bak.1`、`.v3.bak.2` …，失败恢复与日志都用本次写的备份。降级回 3.3 再升级时，第一份备份里的真实下载器凭据因此保留。
@@ -156,10 +156,9 @@ slots 解析：
 未实施（推迟）：
 
 - 第 10 节验收中的 qb + aria2 并存 **Docker e2e** 未加。以进程内测试替代：两个 mock 实例并列（按规则 / 订阅投递、在另一实例重命名、一个实例不可用、规则换实例后删除），以及 qB 与 aria2 实例各自得到对应后端与不同的 `downloader_type`。Docker 版需要在 `e2e/compose/downloader.yml` 加入固定 digest 的 aria2 镜像。
-- aria2 的 gid ↔ 番剧映射表（`database/aria2.py`）不区分实例；两个 aria2 实例的 gid 相同的概率很低，未处理。
+- **aria2 的 gid ↔ 番剧映射按实例区分**（v27）。`aria2_gid` 主键改为 `(downloader_id, gid)`，SQLite 不能改主键，所以重建表，存量行归属实例 `default`。`Aria2GidDatabase` 构造时绑定实例 id，所有读写（包括按 `dedup_key` 判重）都限定在该实例内，`Database.aria2(downloader_id)` 取得它。实例 id 经 `DownloaderConnection.instance_id`（新增，默认 `"default"`，位置参数构造不受影响）传给下载器工厂；`ab_sdk` 仍为 0.5.0。
 - `GET /api/v1/plugins/providers` 仍不列出 `conflict_policy` / `media_files` 的插件候选；插件下载器的 options schema 与按 schema 掩码（见上文）。
 - 多实例时修改某个实例的主机地址，该实例上进行中的版本替换事务找不到（`_downloader_type` 键含主机哈希）。可选做法：键改为 `<type>:<instance_id>` 并兼容旧键查询，或按「键不属于任何已配置实例」把孤儿事务交给同类型的唯一实例。
-- 删除规则（删除文件）时某个实例不可用：该实例上的种子不删，种子行却已删除，之后无法重试。可选做法：保留失败实例的种子行，或先删种子再删行（与「仅删数据库不依赖下载器」冲突）。
 
 ### 实施中的调整（P6 第一部分：后端与 `@autobangumi/plugin-ui` 包）
 
@@ -249,7 +248,7 @@ bark / wecom 旧字段别名：
 
 - `docs/dev/plugins.md` 保留为总览与导航（侧边栏链接不变），旧版 529 行的内容拆为 `plugins/` 下的页面：核心概念、配置表单、事件、前端挂载点、命令行、签名与分发、内置插件、示例，以及 `points/` 下每个扩展点一页（16 页：`mcp_tool` 与 `mcp_resource` 合一页，其余一点一页）。每种语言 25 个文件，侧边栏由 `docs/.vitepress/config.ts` 的一张页面表生成。`vitepress build` 通过（含死链检查）。
 - **旧文档里与现状不符的地方一并改正**：下载器不再是 `downloader.type` 而是 `plugins.instances[].provider`；`hardlink` 的 `path_map` 已有对象数组表单；补链按钮已在 P6 提供；`file.renamed` / `torrent.organized` 加上 `downloader_id`。
-- 签名与分发页如实写明：WebUI 的设置 → 插件页**还没有**目录浏览与安装按钮（只有 API），以及上架流程只有持有签名私钥的维护者能执行。「提 issue 申请上架」是文档里写的临时约定，没有对应的自动化。
+- 签名与分发页如实写明：WebUI 的设置 → 插件页**还没有**目录浏览与安装按钮（只有 API；4.0 收尾时已补上界面，文档同步改写），以及上架流程只有持有签名私钥的维护者能执行。「提 issue 申请上架」是文档里写的临时约定，没有对应的自动化。
 
 插件作者 skill（`skills/autobangumi-plugin/`）：`SKILL.md`（触发描述、流程、扩展点速查表、易错规则）加 `references/` 三份（扩展点细节、测试 / CLI / 清单、前端）。内容面向模型，英文，与文档同源但不逐字复制。
 
@@ -265,13 +264,33 @@ bark / wecom 旧字段别名：
 - **原生扩展扫描与文件监听跳过工具链目录**：`native_files()` 原先遍历整个插件目录，`uv run pytest` 在插件目录里建出的 `.venv`（含 `pydantic_core` 的 `.so`）会让 `validate` / `pack` / `dev` 和宿主加载器都报「含原生扩展」，`dev_mode` 的指纹轮询也每秒遍历 `.venv`。`ab_sdk.manifest.TOOLING_DIRS`（`__pycache__`、`.git`、`.venv`、`dist`、`node_modules`、各类缓存）现在由原生扩展扫描、`pack` 与文件指纹共用；`pack` 仍额外排除 `tests`。
 - **v3 迁移不再把 `null` 当作旧字段**：`Settings.save()` 总是把 Bark 的 `token`、WeCom 的 `chat_id` 以 `null` 写回，`old in provider` 因此每次启动都成立，每次启动都新增 `config.json.v3.bak.N` 并改写配置。现在只在旧字段有值时迁移。
 - **通用插件与 LLM 插件共用 `config/plugins/<id>/` 的两处隔离**：LLM 注册表扫描跳过版本目录里是 `plugin.toml` 的目录（原先每次列举都对它打 `Skipping broken plugin` 警告）；通用安装器卸载时要求 `installed.json` 指向的版本目录含 `plugin.toml`，不能再通过 `DELETE /plugins/{id}` 删掉 LLM 插件（其凭据清理在 LLM 安装器里，不会被跳过）。
-- **未修：在线更新 bundle 不含 `ab_sdk`**。`boot_overlay.py` 是镜像自带的稳定脚本，只把 bundle 里的 `backend/src/module` 换进 `/app/module`；只在 `build.yml` 里多拷一份 `ab_sdk` 不会被旧镜像应用，要让 bundle 能更新 SDK 必须改覆盖层的应用方式。选项见 PR 说明，留作后续决定。
+- **在线更新 bundle 带上 `ab_sdk`（PR 说明中的选项 2）**。`build.yml` 把 `backend/src/ab_sdk` 打进 bundle，`min_image_version` 设为 `4.0.0-beta.1`；`boot_overlay.py` 要求已验签 bundle 同时有 `module` 与 `ab_sdk` 两棵树，先换 `/app/ab_sdk` 再换 `/app/module`，缺一棵即不应用。已发布的 3.3 镜像在 beta 通道会选中最新预发布，但 3.3 的更新器在应用时检查 `min_image_version`（与 4.0 的代码相同，已有测试覆盖），拒绝后不留存 bundle，3.3 的 `boot_overlay` 因此不会应用它。两次替换不是一个事务：`ab_sdk` 换完而 `module` 失败时留下新 SDK 与旧 module。
+
+插件目录界面（4.0 收尾）：
+
+- 设置 → 插件卡片底部新增「插件目录」区：点「浏览目录」才请求 `GET /plugins/catalog`（要访问 GitHub，不在打开设置页时请求），请求带 `silent`，失败时在区内显示后端给出的原因并可刷新重试，不弹全局提示。每个条目按本机已装版本显示「安装」「更新」或「已安装」；安装与更新走同一接口，成功后用返回的插件列表刷新卡片，并刷新 Provider 下拉与前端挂载点（与启停相同）。
+- 已安装插件的卡片显示「已签名」或「未签名」标记。「卸载」按钮只出现在来源为 `catalog` 的插件上，并经危险确认框。这与后端的卸载前提是同一条件：加载器只把 `installed.json` 指向含 `plugin.toml` 版本目录的插件判为 `catalog`，卸载接口也只接受这种目录。LLM 提供商插件不在 `GET /plugins` 中，仍在 LLM 设置里安装和卸载。目录插件视为已签名，与 `allow_unsigned` 无关，界面上的说明文字写明了这一点。
+- 修复：前端类型的 `PluginInfo.source` 缺少 `catalog`，两种语言都缺少 `source_catalog`，目录安装的插件在卡片上显示为未翻译的 key。
+- 版本比较只看「已装版本是否等于目录版本」，不等即显示「更新」，目录版本更低时也是如此。不在界面上预先检查 `min_ab_version`，由安装接口的 400 返回原因。
 
 未做（第一部分已列出，本部分也没有做）：
 
-- **插件管理页**：设置 → 插件页没有目录浏览、安装 / 卸载按钮，也没有 `dev_mode` 提示；`GET /plugins` 仍不返回 `dev_mode`。任务清单不含它，推迟到发布阶段前补。
+- **插件管理页**（目录部分已补，见下一节）：仍没有 `dev_mode` 提示，`GET /plugins` 仍不返回 `dev_mode`。
 - **模板仓库**（含前端模板的独立 GitHub 仓库）：前端模板已在 `webui/packages/plugin-ui/template/`，`ab-plugin new` 覆盖后端骨架，独立仓库没有创建。
 - **脚手架生成的 `pyproject.toml` 依赖 `autobangumi-sdk`** 但没有 uv 源：独立作者要等轮子上了 release 才能 `uv run pytest`。文档的上手步骤用 `uv tool install` 本地轮子文件绕过。
+
+### 实施中的调整（final）
+
+4.0.0-beta.1 之前的收尾阶段（分支 `refactor/4.0-final`，叠在 P7 上）。各条细节已写在上面对应阶段的条目里，这里只列总表：
+
+- **P7 遗留**：在线更新 bundle 带上 `ab_sdk`，`min_image_version` 为 `4.0.0-beta.1`；删除规则时下载器不可用则保留规则与种子行，返回 500 等待重试；aria2 gid 映射按实例区分（数据库迁移 v27，主键改为 `(downloader_id, gid)`，`DownloaderConnection` 新增 `instance_id`）；设置 → 插件新增签名目录的浏览、安装、更新与卸载。
+- **插件运行时与安装器**：两个安装器共用 id 校验与卸载归属检查（LLM 卸载不再能删通用插件目录，未安装时返回 400）；清单解码失败与 pip 入口导入失败按加载失败报告；`setup()` 失败或超时会调用 `teardown`，注册阶段失败不调用；订阅者成功会清零熔断计数；停用失败插件后状态显示 `disabled`；过期的熔断不再停用重载后的新实例；`build_plugin_catalog.py` 默认 `min_ab_version` 为 `4.0.0-beta.1`。
+- **升级与配置**：设置向导把 Bark / WeCom 凭据写入 `device_key` / `webhook_url`；`data.json` 检查移到首次启动之前，缺少 `version.info` 时按数据库是否有 `rssitem` 表识别 3.0 数据并要求先升级到 3.1.x；拒绝提示写明先还原 `config.json.v3.bak`；配置迁移失败时把备份移回原文件，重启循环不再堆积 `.v3.bak.N`。
+- **多下载器**：更新规则先在所有实例上匹配种子，任一实例不可用则不做任何修改；WebUI 种子批量操作按实例汇总结果、选择键为 `下载器 id:hash`，下载器页按任一已配置实例判断是否为空。
+- **整理流水线**：`conflict_policy` 与 `media_files` 插件经熔断器调用，失败时退回宿主实现；重命名策略未登记而按 `none` 处理时不发布 `torrent.organized`；带 `ab:renamed` 的种子在每个进程内补发一次 `torrent.organized`（重启后硬链接会补链一次）；硬链接不再重建用户删除的文件（`backfill` 仍会恢复）；新增内部事件 `hardlink.linked`，媒体库刷新在硬链接放好文件后再刷新一次，刷新请求进行中到达的事件会再触发一次刷新。
+- **秘密字段**：标记写在 `anyOf` / `$ref` 外层或容器（`list` / `dict` / 嵌套模型）上时也掩码；`/config/get` 把插件通知渠道的未声明字段一律视为秘密并按身份还原。已知限制：同一插件类型、只在这些字段上不同的两行渠道身份相同，增删行时返回 400 要求重新输入。
+- **WebUI 插件卡片**：保存后刷新 `allow_unsigned`；只重建服务端配置变化的插件草稿；整数枚举下拉保留数值类型。
+- **清理**（净 −24 行）：删除 vulture 白名单中不再需要的 13 项；`ab-plugin` 复用 `ab_sdk.manifest.ID_RE`；删除前端 `OpenAIModel` / `OpenAIType`；改正描述旧行为的注释与文档字符串。
 
 ## 1. 背景与目标
 
@@ -824,7 +843,7 @@ organize: downloader.completed → media_files.classify → file_parser
 | **P4 流水线插件化：organize** | `media_files`、`file_parser`、`rename_strategy`（含 `template`）、`conflict_policy`、`file.renamed` 等事件 | 已完成：`renamer.py` 拆出 `revision_saga.py`；`rename_strategy` / `media_files` / `conflict_policy` 扩展点与 `file.renamed` / `torrent.organized` 事件；内置插件 `rename`（pn / advance / template，pn / advance / none 输出与 3.3 一致）、`hardlink`（默认停用）与 `media-server-refresh`。`file_parser`、`RenameStrategyContract`、补链设置按钮（P6）推迟，调整见第 0 节 |
 | **P5 事件与外部接口** | SSE 改订阅 bus；`api_router`、`mcp_tool` 扩展点；`message_template` | 已完成：系统事件上总线、通知中心 SSE 改为事件推送、插件路由 / MCP 工具与资源 / 通知模板；status 等快照类 SSE 仍按节拍采样。调整见第 0 节 |
 | **P6 前端插件** | Web Component 挂载点、`AbHost` 桥接、错误边界、`/plugins/<id>/web` 静态资源、`@autobangumi/plugin-ui` 包 | 已完成：五个挂载点、`AbHost`、错误边界与 CSP；示例插件「手动选种」（`examples/plugins/manual-pick`）以详情页标签形式可用，内置 `hardlink` 的补链按钮走 `settings.section`；未启用插件的配置表单、对象数组表单、SSE `bus` 帧。调整见第 0 节 |
-| **P7 生态** | 插件管理页（安装、启停、日志、错误）、签名目录发布流程、模板仓库（含前端模板）、`ab-plugin` CLI、文档（中 / 英 / 日） | 6 个以上示例插件上架。已完成：`autobangumi-sdk` 轮子、`ab-plugin` CLI（new / validate / pack / dev）、`dev_mode` 文件监听、四个契约套件、签名目录来源（`plugins` tag、`catalog` 加载来源、安装 API、发布脚本）、bark / wecom 旧字段迁移；6 个示例插件（CI 逐个运行）、中 / 英 / 日文档（总览加 24 页）、插件作者 skill、release 附带 SDK 轮子与 skill。**管理页的目录浏览 / 安装按钮与独立模板仓库未做**，留到 P8 前补，调整见第 0 节 |
+| **P7 生态** | 插件管理页（安装、启停、日志、错误）、签名目录发布流程、模板仓库（含前端模板）、`ab-plugin` CLI、文档（中 / 英 / 日） | 6 个以上示例插件上架。已完成：`autobangumi-sdk` 轮子、`ab-plugin` CLI（new / validate / pack / dev）、`dev_mode` 文件监听、四个契约套件、签名目录来源（`plugins` tag、`catalog` 加载来源、安装 API、发布脚本）、bark / wecom 旧字段迁移；6 个示例插件（CI 逐个运行）、中 / 英 / 日文档（总览加 24 页）、插件作者 skill、release 附带 SDK 轮子与 skill。管理页的目录浏览 / 安装 / 更新 / 卸载已在 4.0 收尾时补上；**独立模板仓库与 `dev_mode` 提示未做**，调整见第 0 节 |
 | **P8 发布** | beta 测试、性能对比（RSS 刷新耗时、内存）、升级指南、`docs/changelog/4.0.md` | `4.0.0-beta.1` → `4.0.0` |
 
 阶段依赖：P0 → P1 → P2 → (P2.5 ∥ P3 ∥ P4) → P5 → (P6 ∥ P7) → P8。P2.5、P3、P4 可并行，P6 依赖 P5 的 `api_router` 与事件总线。

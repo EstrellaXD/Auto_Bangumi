@@ -832,6 +832,32 @@ MIGRATIONS: tuple[Migration, ...] = (
             for table, column in _DOWNLOADER_ID_COLUMNS.items()
         ),
     ),
+    Migration(
+        27,
+        "scope aria2_gid by downloader instance",
+        # SQLite 不能修改主键，重建表；存量映射都属于 3.3 的下载器，即实例 default
+        (
+            """CREATE TABLE aria2_gid_new (
+                downloader_id VARCHAR NOT NULL,
+                gid VARCHAR NOT NULL,
+                bangumi_id INTEGER REFERENCES bangumi(id),
+                category VARCHAR,
+                dedup_key VARCHAR,
+                renamed_paths TEXT DEFAULT NULL,
+                rename_intent TEXT DEFAULT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (downloader_id, gid)
+            )""",
+            "INSERT INTO aria2_gid_new (downloader_id, gid, bangumi_id, category, "
+            "dedup_key, renamed_paths, rename_intent, created_at) "
+            "SELECT 'default', gid, bangumi_id, category, dedup_key, renamed_paths, "
+            "rename_intent, created_at FROM aria2_gid",
+            "DROP TABLE aria2_gid",
+            "ALTER TABLE aria2_gid_new RENAME TO aria2_gid",
+            "CREATE INDEX ix_aria2_gid_dedup_key ON aria2_gid(dedup_key)",
+        ),
+        _has_downloader_id("aria2_gid"),
+    ),
 )
 
 # 由迁移列表派生，新增迁移时无需手动同步

@@ -50,3 +50,31 @@ describe('Plugins API contract (path + HTTP method)', () => {
     expect(axios.get).toHaveBeenCalledWith('api/v1/plugins/providers');
   });
 });
+
+describe('Plugins API contract (signed catalog)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should GET api/v1/plugins/catalog silently when browsing', async () => {
+    (axios.get as any).mockResolvedValue({ data: [] });
+    expect(await apiPlugins.catalog()).toEqual([]);
+    expect(axios.get).toHaveBeenCalledWith('api/v1/plugins/catalog', {
+      silent: true,
+    });
+  });
+
+  it('should POST api/v1/plugins/:id/install with an encoded id', async () => {
+    (axios.post as any).mockResolvedValue({ data: overview });
+    expect(await apiPlugins.install('my plugin')).toEqual(overview);
+    expect(axios.post).toHaveBeenCalledWith(
+      'api/v1/plugins/my%20plugin/install'
+    );
+  });
+
+  it('should DELETE api/v1/plugins/:id with an encoded id', async () => {
+    (axios.delete as any).mockResolvedValue({ data: overview });
+    expect(await apiPlugins.uninstall('my plugin')).toEqual(overview);
+    expect(axios.delete).toHaveBeenCalledWith('api/v1/plugins/my%20plugin');
+  });
+});

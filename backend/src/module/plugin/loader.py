@@ -222,10 +222,14 @@ def _unload_package(package: str, plugin_dir: Path) -> None:
 def _entry_point_candidate(ep: importlib.metadata.EntryPoint) -> PluginCandidate:
     top_package = ep.module.split(".", 1)[0]
     try:
+        # 取包内文件会执行插件包顶层代码，语法错误、缺依赖等都在这里出现
         package_files = importlib.resources.files(top_package)
+    except Exception as e:
+        raise PluginLoadError(f"导入 {top_package} 失败：{e}") from e
+    try:
         text = (package_files / MANIFEST_NAME).read_text(encoding="utf-8")
-    except (ModuleNotFoundError, FileNotFoundError) as e:
-        raise PluginLoadError(f"{top_package} 包内缺少 {MANIFEST_NAME}") from e
+    except (OSError, UnicodeDecodeError) as e:
+        raise PluginLoadError(f"{top_package} 包内无法读取 {MANIFEST_NAME}：{e}") from e
     manifest = parse_manifest(text, f"{top_package}/{MANIFEST_NAME}")
 
     def load() -> type[Plugin[Any]]:

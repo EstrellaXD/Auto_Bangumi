@@ -140,6 +140,8 @@ def _make_v19_auth_engine() -> Engine:
     engine = create_engine("sqlite://")
     with engine.begin() as conn:
         conn.execute(text("PRAGMA foreign_keys=ON"))
+        # 真实数据库总有 bangumi 表；v27 重建 aria2_gid 时外键检查要求它存在
+        conn.execute(text("CREATE TABLE bangumi (id INTEGER PRIMARY KEY)"))
         conn.execute(
             text(
                 "CREATE TABLE user ("
@@ -737,6 +739,40 @@ class TestRunMigrations:
                     text(f"SELECT downloader_id FROM {table}")
                 ).scalars()
                 assert list(values) == [expected.get(table, "default")], table
+
+    def test_v27_aria2_gid_existing_rows_scoped_to_default_instance(self, monkeypatch):
+        """v27：aria2_gid 主键加上实例 id，存量行归属 default，各列原样保留；
+        另一个实例可以有同一个 gid。"""
+        engine = _make_v0_engine()
+        _run_through_version(engine, 26, monkeypatch)
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO aria2_gid (gid, category, dedup_key, renamed_paths, "
+                    "rename_intent, created_at) "
+                    "VALUES ('g1', 'Bangumi', 'url:x', '{}', 'i', '2026-01-01')"
+                )
+            )
+
+        run_migrations(engine)
+
+        with engine.begin() as conn:
+            row = conn.execute(
+                text(
+                    "SELECT downloader_id, category, dedup_key, renamed_paths, "
+                    "rename_intent FROM aria2_gid"
+                )
+            ).one()
+            conn.execute(
+                text(
+                    "INSERT INTO aria2_gid (downloader_id, gid, created_at) "
+                    "VALUES ('b', 'g1', '2026-01-01')"
+                )
+            )
+        assert tuple(row) == ("default", "Bangumi", "url:x", "{}", "i")
+        assert "ix_aria2_gid_dedup_key" in {
+            ix["name"] for ix in inspect(engine).get_indexes("aria2_gid")
+        }
 
     def test_is_idempotent(self):
         engine = _make_v0_engine()

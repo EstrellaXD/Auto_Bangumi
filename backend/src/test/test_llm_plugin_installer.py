@@ -206,6 +206,29 @@ class TestInstallRejections:
         assert result.success is False
 
 
+class TestUninstallScope:
+    @pytest.mark.parametrize("plugin_id", ["..", "local", "generic-plugin"])
+    async def test_uninstall_foreign_or_unsafe_id_deletes_nothing(
+        self, tmp_path, keypair, plugin_id
+    ):
+        installer = _installer(tmp_path, keypair, _make_plugin_zip())
+        root = tmp_path / "plugins"
+        # 本地插件源码、经通用安装器装入的插件，以及插件根之外的配置
+        (root / "local" / "mine").mkdir(parents=True)
+        generic = root / "generic-plugin"
+        (generic / "0.1.0").mkdir(parents=True)
+        (generic / "0.1.0" / "plugin.toml").write_text("")
+        (generic / "installed.json").write_text('{"version": "0.1.0"}')
+        (tmp_path / "data.db").write_text("")
+
+        result = await installer.uninstall(plugin_id)
+
+        assert result.success is False
+        assert (root / "local" / "mine").is_dir()
+        assert (generic / "installed.json").is_file()
+        assert (tmp_path / "data.db").is_file()
+
+
 class TestUninstallClearsCredential:
     async def test_uninstall_deletes_credential_row(self, tmp_path, keypair):
         from unittest.mock import AsyncMock, patch

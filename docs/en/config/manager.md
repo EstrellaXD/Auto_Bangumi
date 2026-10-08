@@ -66,6 +66,7 @@ The built-in `hardlink` plugin is **disabled by default**. Enable it under **Set
 - If the library already has a file with that name that the plugin did not create, the plugin skips it, **never overwrites it**, and sends a notification.
 - After a revision upgrade (a new release replaces the old torrent under the same file name), the link the plugin made earlier is atomically replaced with a link to the new file.
 - Deleting a torrent does not delete its links in the library.
+- If you delete a file that the plugin placed in the library, the plugin does not link it again. A backfill links it again.
 - Files downloaded before you enabled the plugin are not linked automatically. When the plugin is enabled, the settings page shows a "Hardlink backfill" section. Click **Link existing files** to link the videos and subtitles already in the download root into the library. Files that are already linked are skipped. The button calls `POST /api/v1/plugins/hardlink/backfill`.
 - Edit `path_map` in the plugin options form, one row per entry (**Add row**). In `config/config.json` it is `plugins.options.hardlink.path_map`, for example `[{"downloader": "default", "from": "/downloads", "to": "/media/downloads"}]`.
 
@@ -75,7 +76,7 @@ Hard links cannot cross file systems. In Docker, keep the download folder and th
 
 ## Media server refresh
 
-The built-in `media-server-refresh` plugin asks Jellyfin, Emby or Plex to refresh the library after a torrent is organized. Under **Settings → Plugins → media-server-refresh**, select the server type and enter the server URL and API key (for Plex, the `X-Plex-Token`). Without them the plugin does nothing. After an event it waits `delay` seconds (default 30) and sends one refresh for all torrents organized in that time.
+The built-in `media-server-refresh` plugin asks Jellyfin, Emby or Plex to refresh the library after a torrent is organized. Under **Settings → Plugins → media-server-refresh**, select the server type and enter the server URL and API key (for Plex, the `X-Plex-Token`). Without them the plugin does nothing. After an event it waits `delay` seconds (default 30) and sends one refresh for all torrents organized in that time. Events that arrive after the refresh request is sent cause one more refresh. When the hardlink plugin is enabled, the plugin refreshes again after the files are in the library, so a copy across disks that takes longer than the delay does not hide the new episode.
 
 ## `config.json`
 

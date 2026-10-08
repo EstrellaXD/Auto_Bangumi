@@ -2,9 +2,9 @@ name: Deploy Docs
 
 on:
   push:
-    # 只从开发分支部署：main 仍是 3.3 文档，两边都部署会互相覆盖。4.0 正式版后改为 main。
+    # 只从 4.0-dev 部署：main 与 3.3-dev 仍是 3.3 文档，多分支部署会互相覆盖。4.0 正式版后改为 main。
     branches:
-      - "*-dev"
+      - 4.0-dev
     paths:
       - "docs/**"
       - ".github/workflows/docs.yml"
