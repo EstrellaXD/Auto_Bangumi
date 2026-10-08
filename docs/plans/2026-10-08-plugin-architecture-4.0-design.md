@@ -161,6 +161,18 @@ slots 解析：
 - 多实例时修改某个实例的主机地址，该实例上进行中的版本替换事务找不到（`_downloader_type` 键含主机哈希）。可选做法：键改为 `<type>:<instance_id>` 并兼容旧键查询，或按「键不属于任何已配置实例」把孤儿事务交给同类型的唯一实例。
 - 删除规则（删除文件）时某个实例不可用：该实例上的种子不删，种子行却已删除，之后无法重试。可选做法：保留失败实例的种子行，或先删种子再删行（与「仅删数据库不依赖下载器」冲突）。
 
+### 实施中的调整（P6 第一部分：后端与 `@autobangumi/plugin-ui` 包）
+
+- **清单 `[[plugin.ui]]`** 由 `module/plugin/manifest.py` 的 `PluginUi` 校验：`slot` 取五个挂载点之一，`element` 须匹配 `^ab-plugin-[a-z0-9]+(-[a-z0-9]+)*$`，`entry` 须是 `web/` 下的相对路径（不含 `..`、反斜杠），`title` 至少一种语言。校验失败时整个清单被拒绝，与其它清单字段一致。
+- **挂载点列表用新路由 `GET /api/v1/plugins/ui`**（不改 `GET /plugins` 的形状），只列已启用插件，按插件 id 排序。`PluginCandidate` 新增 `root`（目录插件与 pip 包在文件系统上时有值；zip 安装的 pip 包为 None，没有 `web/` 可提供）。
+- **静态资源 `GET /api/v1/plugins/{id}/web/{path}`** 用 `FileResponse` 提供，只读已启用插件的 `web/` 目录；`resolve()` 后用 `is_relative_to` 判定，`..`、绝对路径、指向目录外的符号链接和未启用插件都返回 404。`.js` / `.mjs` 固定为 `text/javascript`（不依赖系统 `mimetypes`），带 `Cache-Control: no-cache`（插件升级后文件名不变，按 ETag 重新验证）。
+- **鉴权沿用路由器级的 `get_current_user`**。WebUI 用 HttpOnly 会话 cookie（`token`，`SameSite=Strict`，路径 `/`）登录，同源的 `<script type="module">` 与 `import()` 会带上它，无需 header。此路由必须注册在 `plugin_routes_router` 的分发路由之前（`api/__init__.py` 已是这个顺序）；因此插件自己的 `api_router` 不能使用 `web/` 前缀。
+- **CSP `script-src 'self'` 只加在 SPA 文档上**（`index.html`、`sw.js` 等 dist 根文件），不加在 API 与 `/docs`：Swagger 页面依赖内联脚本与 CDN。`main.py` 的 SPA 挂载抽成 `mount_webui(app, dist)` 以便测试。
+- **`index.html` 的内联深色模式脚本移到 `public/theme-init.js`**，否则 CSP 会拦下它。在线更新若换入旧版 dist（仍带内联脚本），只会失去首屏深色模式的预先应用（页面载入后 `useDarkMode` 仍会设置），不影响功能。构建产物 `dist/index.html` 经 headless Chrome 验证：登录页在该 CSP 下正常渲染。
+- **Vite 只给 `preview` 加 CSP，不给 dev**：dev 服务器与 `vite-plugin-pwa` 的开发态都会注入内联模块脚本，加了会拦下它们。
+- **`@autobangumi/plugin-ui` 是 pnpm 工作区包**（`webui/pnpm-workspace.yaml`，`private`，不发布），WebUI 以 `workspace:*` 作为 devDependency。内容：`src/index.ts`（`AbHost`、`PluginUiSlot`、各挂载点的 `AbSlotContext`、`AbPluginElement`）、`tokens.css`（`--ab-*` 变量，取值回落到宿主的 `--color-*` 等设计令牌，深浅色随宿主切换）、`template/`（Vite 库模式：单文件自包含 ES module，输出到 `../web/index.js`，把 `tokens.css` 以 `?inline` 放进 Shadow DOM）。宿主侧的挂载、`AbHost` 实现与错误边界在第二部分。
+- **`AbHost.api` 的范围**：不以 `/` 开头的路径相对 `/api/v1/plugins/<id>/`；以 `/api/v1/` 开头的宿主 API 只允许 GET（第 3.8 节的「公开只读 API」）。接口形状为暂定，4.0 期间可能调整。
+
 ## 1. 背景与目标
 
 AB 目前只有 **LLM 提供商** 是真正的运行时插件系统：签名下载、目录加载、懒导入、热重载。

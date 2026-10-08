@@ -10,6 +10,10 @@ import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import VueJsx from '@vitejs/plugin-vue-jsx';
 
+// 与后端给 SPA 文档加的响应头一致（backend/src/main.py）。只加在 preview：
+// dev 服务器与 vite-plugin-pwa 的开发态会注入内联脚本，会被这个策略拦下
+const headers = { 'Content-Security-Policy': "script-src 'self'" };
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   base: './',
@@ -115,6 +119,7 @@ export default defineConfig(({ mode }) => ({
       '#': resolve(__dirname, 'types'),
     },
   },
+  preview: { headers },
   server: {
     proxy: {
       '^/api/.*': {

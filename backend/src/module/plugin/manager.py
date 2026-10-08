@@ -17,6 +17,7 @@ from ab_sdk.hooks import HOOK_ATTR, PROVIDER_ATTR, SUBSCRIBE_ATTR
 from .bus import EventBus
 from .context import PLUGIN_DATA_ROOT, HostPluginContext
 from .loader import DiscoveryError, PluginCandidate, PluginLoadError, discover
+from .manifest import PluginUi
 from .registry import ExtensionRegistry, HookEntry, ProviderEntry
 from .runner import CircuitBreaker, HookRunner
 
@@ -160,6 +161,22 @@ class PluginManager:
                 )
             )
         return result
+
+    def ui_slots(self) -> list[tuple[str, PluginUi]]:
+        """已启用插件声明的前端挂载点，按插件 id 排序。"""
+        return [
+            (plugin_id, ui)
+            for plugin_id, active in sorted(self._active.items())
+            for ui in active.candidate.manifest.ui
+        ]
+
+    def web_dir(self, plugin_id: str) -> Path | None:
+        """已启用插件的 ``web/`` 目录；未启用或没有该目录时为 None。"""
+        active = self._active.get(plugin_id)
+        if active is None or active.candidate.root is None:
+            return None
+        web = active.candidate.root / "web"
+        return web if web.is_dir() else None
 
     def validate_options(self, plugin_id: str, options: dict[str, Any]) -> None:
         """按插件的 config_model 校验配置（插件代码未加载过时不校验）。

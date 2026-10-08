@@ -31,6 +31,14 @@ sdk = "{sdk}"
 entry = "{entry}"
 """
 
+UI = """
+[[plugin.ui]]
+slot = "bangumi.detail.tab"
+element = "ab-plugin-manual-pick"
+entry = "web/index.js"
+title = { zh-CN = "手动选种", en-US = "Manual pick" }
+"""
+
 
 def write_plugin(
     root: Path,
@@ -92,6 +100,37 @@ class TestManifest:
         ],
     )
     def test_invalid_manifest(self, text, message):
+        with pytest.raises(ManifestError, match=message):
+            parse_manifest(text)
+
+    def test_ui_entries_parsed(self):
+        m = parse_manifest(MANIFEST.format(id="ok", sdk=">=0.1", entry="a:B") + UI)
+        [ui] = m.ui
+        assert (ui.slot, ui.element, ui.entry) == (
+            "bangumi.detail.tab",
+            "ab-plugin-manual-pick",
+            "web/index.js",
+        )
+        assert ui.title == {"zh-CN": "手动选种", "en-US": "Manual pick"}
+        assert manifest().ui == []
+
+    @pytest.mark.parametrize(
+        "old, new, message",
+        [
+            ('"bangumi.detail.tab"', '"sidebar"', "slot"),
+            ('"ab-plugin-manual-pick"', '"manual-pick"', "ab-plugin-"),
+            ('"ab-plugin-manual-pick"', '"ab-plugin-Pick"', "ab-plugin-"),
+            ('"ab-plugin-manual-pick"', '"ab-plugin-"', "ab-plugin-"),
+            ('"web/index.js"', '"index.js"', "web/"),
+            ('"web/index.js"', '"web/../plugin.toml"', "web/"),
+            ('"web/index.js"', '"/web/index.js"', "web/"),
+            ('"web/index.js"', '"web/"', "web/"),
+            ('"web/index.js"', '"web\\\\index.js"', "web/"),
+            ('{ zh-CN = "手动选种", en-US = "Manual pick" }', "{}", "title"),
+        ],
+    )
+    def test_invalid_ui_entry(self, old, new, message):
+        text = MANIFEST.format(id="ok", sdk=">=0.1", entry="a:B") + UI.replace(old, new)
         with pytest.raises(ManifestError, match=message):
             parse_manifest(text)
 

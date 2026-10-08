@@ -120,6 +120,7 @@ declare global {
   const useCssModule: typeof import('vue')['useCssModule']
   const useCssVars: typeof import('vue')['useCssVars']
   const useDarkMode: typeof import('../../src/hooks/useDarkMode')['useDarkMode']
+  const useDownloaderInstances: typeof import('../../src/hooks/useDownloaderInstances')['useDownloaderInstances']
   const useDownloaderStore: typeof import('../../src/store/downloader')['useDownloaderStore']
   const useEventStream: typeof import('../../src/hooks/useEventStream')['useEventStream']
   const useI18n: typeof import('vue-i18n')['useI18n']

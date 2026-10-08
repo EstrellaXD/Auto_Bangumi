@@ -1,0 +1,12 @@
+{
+  "name": "@autobangumi/plugin-ui",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AutoBangumi 前端插件组件的宿主接口类型与主题变量（工作区包，不发布）",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens.css": "./tokens.css"
+  },
+  "types": "./src/index.ts"
+}

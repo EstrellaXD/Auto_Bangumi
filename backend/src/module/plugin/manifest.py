@@ -2,7 +2,8 @@
 
 import re
 import tomllib
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+from typing import Literal
 
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.version import InvalidVersion, Version
@@ -15,10 +16,50 @@ from .host import CORE
 MANIFEST_NAME = "plugin.toml"
 _ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 _ENTRY_RE = re.compile(r"^[A-Za-z_][\w.]*:[A-Za-z_]\w*$")
+# 合法的 custom element 名（小写、含连字符），统一以 ab-plugin- 开头避免与宿主冲突
+_ELEMENT_RE = re.compile(r"^ab-plugin-[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+# 前端挂载点（第 3.8 节）
+UiSlot = Literal[
+    "settings.section",
+    "bangumi.detail.tab",
+    "bangumi.card.action",
+    "page",
+    "dashboard.widget",
+]
 
 
 class ManifestError(ValueError):
     pass
+
+
+class PluginUi(BaseModel):
+    """``[[plugin.ui]]``：插件 ``web/`` 下的 ES module 定义的 custom element
+    挂到宿主的哪个位置。"""
+
+    slot: UiSlot
+    element: str = Field(description="custom element 名，须以 ab-plugin- 开头")
+    entry: str = Field(
+        description="定义该元素的 ES module，相对插件根目录，位于 web/ 下"
+    )
+    title: dict[str, str] = Field(
+        min_length=1, description="按语言的标题，如 {zh-CN = '…', en-US = '…'}"
+    )
+
+    @field_validator("element")
+    @classmethod
+    def _check_element(cls, value: str) -> str:
+        if not _ELEMENT_RE.match(value):
+            raise ValueError("element 须为以 ab-plugin- 开头的小写 custom element 名")
+        return value
+
+    @field_validator("entry")
+    @classmethod
+    def _check_entry(cls, value: str) -> str:
+        parts = PurePosixPath(value).parts
+        if "\\" in value or len(parts) < 2 or parts[0] != "web" or ".." in parts:
+            raise ValueError("entry 须为 web/ 下的相对路径，如 'web/index.js'")
+        return value
 
 
 class PluginManifest(BaseModel):
@@ -33,6 +74,7 @@ class PluginManifest(BaseModel):
     default_enabled: bool = Field(
         True, description="未设置启用开关时是否默认启用；只对内置插件生效"
     )
+    ui: list[PluginUi] = Field(default_factory=list)
 
     @field_validator("id")
     @classmethod
