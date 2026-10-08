@@ -10,6 +10,7 @@ from .log import router as log_router
 from .movie import router as movie_router
 from .notification import router as notification_router
 from .passkey import router as passkey_router
+from .plugins import router as plugins_router
 from .program import router as program_router
 from .rss import router as rss_router
 from .search import router as search_router
@@ -39,3 +40,4 @@ v1.include_router(setup_router)
 v1.include_router(notification_router)
 v1.include_router(update_router)
 v1.include_router(llm_router)
+v1.include_router(plugins_router)

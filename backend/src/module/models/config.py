@@ -1,5 +1,5 @@
 from os.path import expandvars
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -345,6 +345,28 @@ class Update(BaseModel):
     auto_check: bool = Field(default=True, description="Auto-check for updates")
 
 
+class Plugins(BaseModel):
+    """插件系统配置。
+
+    启用状态缺省时：内置插件启用，其它来源的插件禁用。本地目录与 pip 安装的
+    插件未经签名，必须先开启 ``allow_unsigned`` 才能加载。
+    """
+
+    allow_unsigned: bool = Field(
+        default=False, description="Allow loading unsigned (local / pip) plugins"
+    )
+    enabled: dict[str, bool] = Field(
+        default_factory=dict, description="Per-plugin enable switch, keyed by id"
+    )
+    options: dict[str, dict[str, Any]] = Field(
+        default_factory=dict, description="Per-plugin options, keyed by id"
+    )
+    hook_order: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description="Explicit hook order per extension point (plugin ids)",
+    )
+
+
 class Config(BaseModel):
     """Root configuration model composed of all subsection models."""
 
@@ -359,6 +381,7 @@ class Config(BaseModel):
     llm: LLM = LLM()
     security: Security = Security()
     update: Update = Update()
+    plugins: Plugins = Plugins()
 
     def model_dump(self, *args, by_alias=True, **kwargs):
         return super().model_dump(*args, by_alias=by_alias, **kwargs)
