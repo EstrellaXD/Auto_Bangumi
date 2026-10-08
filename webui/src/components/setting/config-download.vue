@@ -121,12 +121,18 @@ const items = computed<SettingItem<DownloaderOptions>[]>(() => [
         class="instance-row"
         :class="{ 'is-editing': i.id === downloader?.id }"
       >
-        <button type="button" class="instance-main" @click="editingId = i.id">
+        <ab-button
+          variant="ghost"
+          size="sm"
+          class="instance-main"
+          :aria-pressed="i.id === downloader?.id"
+          @click="editingId = i.id"
+        >
           <span class="instance-id">{{ i.id }}</span>
           <span class="instance-meta"
             >{{ i.provider }} · {{ i.options.host }}</span
           >
-        </button>
+        </ab-button>
         <span v-if="i.id === plugins.slots.downloader" class="instance-default">
           {{ $t('config.downloader_set.default') }}
         </span>
@@ -217,16 +223,9 @@ const items = computed<SettingItem<DownloaderOptions>[]>(() => [
 .instance-main {
   flex: 1;
   min-width: 0;
-  display: flex;
-  align-items: baseline;
+  justify-content: flex-start;
   gap: 12px;
-  min-height: var(--touch-target, 36px);
-  background: none;
-  border: none;
-  padding: 0;
-  text-align: left;
   color: var(--color-text);
-  cursor: pointer;
 }
 
 .instance-id {

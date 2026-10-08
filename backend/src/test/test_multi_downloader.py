@@ -291,6 +291,26 @@ class TestRuleOnAnotherInstance:
             )
         return 1
 
+    async def test_update_rule_without_downloader_field_keeps_rule_instance(
+        self, two_instances
+    ):
+        """只改其它字段的部分更新（未带 downloader_id）不能把规则改回默认实例。"""
+        from module.manager import TorrentManager
+        from module.models import BangumiUpdate
+
+        bangumi_id = await self._rule_with_torrent_on_a()
+        async with Database() as db:
+            bangumi = await db.bangumi.search_id(bangumi_id)
+            assert bangumi is not None
+            bangumi.downloader_id = "b"
+            await db.bangumi.update(bangumi)
+            fields = bangumi.model_dump(exclude={"id", "downloader_id"})
+            await TorrentManager(db).update_rule(bangumi_id, BangumiUpdate(**fields))
+            new = await db.bangumi.search_id(bangumi_id)
+
+        assert new is not None and new.downloader_id == "b"
+        assert new.save_path == "/b/Bangumi/Test Anime (2024)/Season 1"
+
     async def test_update_rule_new_instance_keeps_old_torrents_in_place(
         self, two_instances
     ):

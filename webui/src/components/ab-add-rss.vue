@@ -21,7 +21,7 @@ const rule = defineModel<BangumiRule>('rule', {
 });
 const pluginProviders = usePluginProviders();
 // 订阅的下载器实例：由它新建的规则继承；留空跟随默认实例
-const downloaders = useDownloaderInstances();
+const downloaders = useDownloaderInstances(show);
 // 内置元数据源 + 插件登记的元数据源（metadata_provider 扩展点）
 const parserTypes = computed(() => [
   'tmdb',

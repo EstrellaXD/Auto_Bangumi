@@ -187,7 +187,12 @@ class TorrentManager:
         old_data = await self.db.bangumi.search_id(bangumi_id)
         if old_data:
             old_instance = resolve_downloader_id(old_data.downloader_id)
-            new_instance = resolve_downloader_id(data.downloader_id)
+            # 部分更新（未带 downloader_id）保持规则原来的实例
+            new_instance = resolve_downloader_id(
+                data.downloader_id
+                if "downloader_id" in data.model_fields_set
+                else old_data.downloader_id
+            )
             new_path = gen_save_path(
                 data, settings.downloader_instance(new_instance).path
             )

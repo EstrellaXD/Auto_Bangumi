@@ -93,7 +93,7 @@ const resolutionOptions = ['2160p', '1080p', '720p'].map((r) => ({
 }));
 
 // 下载器实例：留空跟随默认实例；只有一个实例时不显示
-const downloaders = useDownloaderInstances();
+const downloaders = useDownloaderInstances(show);
 
 const selectMenuProps = { role: 'listbox' } as const;
 
