@@ -4,6 +4,7 @@ import { useConfirm } from '@/hooks/useConfirm';
 import type { NotificationProviderConfig, NotificationType } from '#/config';
 import type { TupleToUnion } from '#/utils';
 import { apiNotification } from '@/api/notification';
+import { usePluginProviders } from '@/hooks/usePluginProviders';
 
 const { t, returnUserLangText } = useMyI18n();
 const { confirm } = useConfirm();
@@ -12,8 +13,8 @@ const { getSettingGroup } = useConfigStore();
 const notificationRef = getSettingGroup('notification');
 
 // Provider types with display names
-const providerTypes: {
-  value: TupleToUnion<NotificationType>;
+const builtinProviderTypes: {
+  value: TupleToUnion<NotificationType> | (string & {});
   label: string;
 }[] = [
   { value: 'telegram', label: 'Telegram' },
@@ -25,6 +26,15 @@ const providerTypes: {
   { value: 'pushover', label: 'Pushover' },
   { value: 'webhook', label: 'Webhook' },
 ];
+const pluginProviders = usePluginProviders();
+// 插件提供的渠道追加在内置渠道之后；其凭据在插件自己的配置里填写
+const providerTypes = computed(() => [
+  ...builtinProviderTypes,
+  ...pluginProviders.value.notifier.map((id) => ({
+    value: id,
+    label: `${id}（${t('config.plugins_set.plugin_provided')}）`,
+  })),
+]);
 
 // Provider field configurations
 const providerFields: Record<
@@ -119,7 +129,7 @@ if (!notificationRef.value.providers) {
 }
 
 function getProviderLabel(type: string): string {
-  return providerTypes.find((p) => p.value === type)?.label || type;
+  return providerTypes.value.find((p) => p.value === type)?.label || type;
 }
 
 function getProviderIcon(type: string): string {

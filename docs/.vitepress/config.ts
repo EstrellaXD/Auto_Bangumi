@@ -108,6 +108,7 @@ const zhSidebar = [
     text: '开发者指南',
     items: [
       { text: '参与贡献', link: '/dev/' },
+      { text: '插件开发', link: '/dev/plugins' },
     ],
   },
 ]

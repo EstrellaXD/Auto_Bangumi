@@ -14,6 +14,13 @@
 | pip entry point 来源 | **纳入 4.0**（第 2.4 节） |
 | 插件 REST 路由 / MCP 工具 | **纳入 4.0**（第 3.9 节） |
 
+### 实施中的调整（P2）
+
+- **内置实现以 `core` 身份登记**。qB / aria2 / mock 下载器和各通知渠道，与第三方插件使用同一个扩展注册表和同一套 `ab_sdk` 契约。区别是它们由宿主直接登记，不经插件管理器加载，因此不能被禁用，也不会因插件故障被熔断。LLM 内置适配器与预设仍由原 LLM 注册表管理，插件适配器作为第三个来源并入。
+- **内置实现的配置不迁移**。`downloader.type`、`notification.providers[].type`、`llm.provider` 直接作为 Provider id 查找。第 4.4 节的 `slots` / `instances` 与第 9 节的配置迁移器暂不实施，P2.5 多下载器时再统一设计。
+- **扩展点改名**：`search_provider` 改为 `search_site`，以区分用户在搜索设置里维护的站点列表。
+- 签名目录来源（LLM 安装器泛化）、`dev_mode` 文件监听、bark / wecom 旧字段别名清理，移到 P7（生态）。
+
 ## 1. 背景与目标
 
 AB 目前只有 **LLM 提供商** 是真正的运行时插件系统：签名下载、目录加载、懒导入、热重载。
@@ -557,7 +564,7 @@ organize: downloader.completed → media_files.classify → file_parser
 |---|---|---|
 | **P0 清理** | 第 8 节：死代码、3.x 兼容层；`renamer.py` 先做纯搬移式拆分（不改行为） | 生产代码行数减少；vulture CI；测试全绿 |
 | **P1 插件运行时 + SDK 骨架** | `ab_sdk` 包（含 `ab_sdk.testing`）、`module/plugin/`（清单、加载、注册表、runner、熔断、EventBus、插件 KV）、`plugins` 配置段、`GET /api/v1/plugins`；SDK 边界测试 | 本地插件可加载、配置、随配置变更重载；已完成。签名目录来源与 LLM 安装器泛化、`dev_mode` 文件监听移到 P2 |
-| **P2 迁移已有注册表** | LLM、通知、下载器、搜索、定时任务改为内置插件；`/api/v1/plugins` + 通用 JSON Schema 表单；vendor 加载 + pip entry point 发现 | 行为与 3.3.6 一致（e2e 回归）；配置迁移器 |
+| **P2 迁移已有注册表** | 下载器、通知、LLM、搜索站点、定时任务改为扩展点，内置实现以 `core` 登记；`/api/v1/plugins`（列表、启停、配置、Provider 列表）与 WebUI 插件卡片（JSON Schema 表单）；`secret_field` 掩码；插件开发文档 | 已完成；内置行为不变（全量测试）。调整见第 0 节 |
 | **P2.5 多下载器** | 下载器多实例；`downloader_id` 列与迁移；按实例路由 add / rename / delete；organize 逐实例扫描 | qb + aria2 并存的 e2e 用例；单实例行为不变 |
 | **P3 流水线插件化：ingest** | `feed_source`、`title_parser` 链、`admission_policy`、`matcher`、`torrent.filter`、`ranker`、`metadata_provider` 链、`save_path`、`torrent.adding` | 新增 include / size 过滤；私有站 headers |
 | **P4 流水线插件化：organize** | `media_files`、`file_parser`、`rename_strategy`（含 `template`）、`conflict_policy`、`file.renamed` 等事件 | 模板重命名；硬链接示例插件 |

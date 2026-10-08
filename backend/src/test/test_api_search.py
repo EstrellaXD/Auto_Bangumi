@@ -99,7 +99,7 @@ class TestSearchProvider:
     def test_get_provider_list(self, authed_client):
         """GET /search/provider returns list of available providers."""
         mock_config = {"mikan": "url1", "dmhy": "url2", "nyaa": "url3"}
-        with patch("module.api.search.SEARCH_CONFIG", mock_config):
+        with patch("module.api.search.available_sites", return_value=mock_config):
             response = authed_client.get("/api/v1/search/provider")
 
         assert response.status_code == 200

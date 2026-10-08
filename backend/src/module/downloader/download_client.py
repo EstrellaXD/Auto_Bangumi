@@ -3,11 +3,19 @@ import logging
 from collections import defaultdict
 from urllib.parse import urlparse
 
+from ab_sdk import points
 from module.conf import settings
 from module.models import Bangumi, Torrent
 from module.network import RequestContent
+from module.plugin import host as plugin_host
 
-from .base import AddResult, DownloaderClient, RenameOutcome, RenameResult
+from .base import (
+    AddResult,
+    DownloaderClient,
+    DownloaderConnection,
+    RenameOutcome,
+    RenameResult,
+)
 from .path import gen_save_path
 
 logger = logging.getLogger(__name__)
@@ -78,7 +86,9 @@ _warned_unsupported: set[tuple[str, str]] = set()
 
 def _settings_key() -> tuple:
     d = settings.downloader
-    return (d.type, d.host, d.username, d.password, d.ssl)
+    # 带上 Provider 登记项：插件重载后登记项换新，旧客户端随之退役
+    entry = plugin_host.get_registry().providers(points.DOWNLOADER).get(d.type)
+    return (d.type, d.host, d.username, d.password, d.ssl, entry)
 
 
 def _reset_client_cache() -> None:
@@ -148,33 +158,26 @@ class DownloadClient:
 
     @staticmethod
     def __getClient() -> DownloaderClient:
-        """Instantiate the configured downloader client (qbittorrent | aria2 | mock)."""
+        """按 ``downloader.type`` 从扩展注册表取下载器工厂并实例化。
+
+        内置的 qbittorrent / aria2 / mock 与插件提供的下载器走同一条路径。
+        """
         downloader_type = settings.downloader.type
-        host = settings.downloader.host
-        username = settings.downloader.username
-        password = settings.downloader.password
-        ssl = settings.downloader.ssl
-        if downloader_type == "qbittorrent":
-            from .client.qb_downloader import QbDownloader
-
-            return QbDownloader(host, username, password, ssl)
-        elif downloader_type == "aria2":
-            from .client.aria2_downloader import Aria2Downloader
-
-            # Aria2Downloader implements query/rename/manage for real (see its
-            # `capabilities`), but has no qB-native RSS-rule/prefs surface
-            # (can_rss_rules=False), so it stays structurally narrower than
-            # the full `DownloaderClient` protocol -- the facade skips the
-            # rss/prefs methods it never calls on this backend.
-            return Aria2Downloader(host, username, password)  # type: ignore[return-value]
-        elif downloader_type == "mock":
-            from .client.mock_downloader import MockDownloader
-
-            logger.debug("Using MockDownloader for local development")
-            return MockDownloader()
-        else:
+        factory = plugin_host.provider(points.DOWNLOADER, downloader_type)
+        if factory is None:
             logger.error("Unsupported downloader type: %s", downloader_type)
             raise Exception(f"Unsupported downloader type: {downloader_type}")
+        if downloader_type == "mock":
+            logger.debug("Using MockDownloader for local development")
+        conn = DownloaderConnection(
+            host=settings.downloader.host,
+            username=settings.downloader.username,
+            password=settings.downloader.password,
+            ssl=settings.downloader.ssl,
+        )
+        # 只实现 CoreDownloaderClient 的后端（如 aria2 没有 qB 的 RSS 规则）
+        # 由 _supports() 按 capabilities 跳过不支持的操作
+        return factory(conn)  # type: ignore[no-any-return]
 
     @property
     def last_auth_error(self) -> str | None:

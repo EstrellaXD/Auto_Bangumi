@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sse_starlette.sse import EventSourceResponse
 
 from module.conf.search_provider import get_provider, save_provider
-from module.searcher import SEARCH_CONFIG, SearchTorrent
+from module.searcher import SearchTorrent, available_sites
 from module.security.api import get_current_user
 
 router = APIRouter(prefix="/search", tags=["search"])
@@ -29,7 +29,7 @@ async def search_torrents(site: str = "mikan", keywords: str = Query(None)):
     "/provider", response_model=list[str], dependencies=[Depends(get_current_user)]
 )
 async def search_provider():
-    return list(SEARCH_CONFIG.keys())
+    return list(available_sites())
 
 
 @router.get(

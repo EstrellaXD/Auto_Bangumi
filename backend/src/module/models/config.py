@@ -1,7 +1,7 @@
 from os.path import expandvars
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 def _expand(value: str | None) -> str:
@@ -126,6 +126,10 @@ class Proxy(BaseModel):
 
 class NotificationProvider(BaseModel):
     """Configuration for a single notification provider."""
+
+    # 插件提供的渠道可以携带自己的字段（作为 NotifierSettings.extra 传给插件），
+    # 保留未知字段以免保存配置时被丢弃
+    model_config = ConfigDict(extra="allow")
 
     type: str = Field(..., description="Provider type (telegram, discord, bark, etc.)")
     enabled: bool = Field(default=True, description="Whether this provider is enabled")

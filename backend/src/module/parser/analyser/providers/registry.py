@@ -1,4 +1,7 @@
-"""LLM 提供商注册表：内置适配器 + base_url 预设 + 已安装插件的统一入口。
+"""LLM 提供商注册表：内置适配器 + base_url 预设 + 已安装插件 + 扩展插件的统一入口。
+
+扩展插件指通过 ``ab_sdk`` 以 ``points.LLM_PROVIDER`` 登记的适配器（随插件启停，
+不缓存）；已安装插件指旧的签名 LLM 插件目录（config/plugins/<id>/<版本>/）。
 
 - ``list_infos()`` 只读静态描述（内置/预设直接读 info；插件读 manifest，
   首次不触发插件 Python 导入）；
@@ -10,6 +13,8 @@ import json
 import logging
 from pathlib import Path
 from typing import Optional
+
+from ab_sdk import points
 
 from .base import LLMProviderAdapter, ProviderInfo
 from .builtin import BUILTIN
@@ -69,7 +74,30 @@ class ProviderRegistry:
                     plugin_version=manifest.get("version"),
                 )
             )
+        known = {info.id for info in infos}
+        for adapter_cls in self._extension_adapters().values():
+            if adapter_cls.info.id not in known:
+                infos.append(adapter_cls.info.model_copy(update={"builtin": False}))
         return infos
+
+    @staticmethod
+    def _extension_adapters() -> dict[str, type[LLMProviderAdapter]]:
+        """插件以 points.LLM_PROVIDER 登记的适配器类，按 id 索引。"""
+        from module.plugin.host import get_registry
+
+        result: dict[str, type[LLMProviderAdapter]] = {}
+        for provider_id, entry in get_registry().providers(points.LLM_PROVIDER).items():
+            adapter_cls = entry.factory()
+            if adapter_cls.info.id != provider_id:
+                logger.warning(
+                    "LLM provider %s from plugin %s declares info.id=%s; skipped",
+                    provider_id,
+                    entry.plugin_id,
+                    adapter_cls.info.id,
+                )
+                continue
+            result[provider_id] = adapter_cls
+        return result
 
     def resolve(self, provider_id: str) -> type[LLMProviderAdapter]:
         """按 id 解析适配器类；未知 id 抛 ValueError。"""
@@ -86,6 +114,9 @@ class ProviderRegistry:
             loaded = load_adapter_class(version_dir, manifest)
             self._plugin_cache[provider_id] = loaded
             return loaded
+        extension = self._extension_adapters().get(provider_id)
+        if extension is not None:
+            return extension
         raise ValueError(f"Unsupported LLM provider: {provider_id}")
 
     def invalidate(self, provider_id: str | None = None) -> None:

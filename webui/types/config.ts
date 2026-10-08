@@ -45,7 +45,8 @@ export interface Program {
 }
 
 export interface Downloader {
-  type: TupleToUnion<DownloaderType>;
+  /** 内置类型，或插件提供的下载器 id */
+  type: TupleToUnion<DownloaderType> | (string & {});
   host: string;
   username: string;
   password: string;
@@ -87,7 +88,8 @@ export interface Network {
 }
 /** Notification provider configuration */
 export interface NotificationProviderConfig {
-  type: TupleToUnion<NotificationType>;
+  /** 内置渠道，或插件提供的渠道 id */
+  type: TupleToUnion<NotificationType> | (string & {});
   enabled: boolean;
   // Common fields
   token?: string;

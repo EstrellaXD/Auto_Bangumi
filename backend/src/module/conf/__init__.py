@@ -3,7 +3,6 @@ from pathlib import Path
 
 from .config import IMAGE_VERSION, VERSION, settings
 from .log import LOG_PATH, setup_logger
-from .search_provider import SEARCH_CONFIG
 
 TMDB_API = "32b19d6a05b512190a056fa4e747cbbc"
 DATA_PATH = "sqlite:///data/data.db"

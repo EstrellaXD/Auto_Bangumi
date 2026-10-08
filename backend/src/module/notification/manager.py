@@ -20,9 +20,10 @@ logger = logging.getLogger(__name__)
 class NotificationManager:
     """Manager for handling notifications across multiple providers."""
 
-    def __init__(self):
+    def __init__(self, load_providers: bool = True):
         self.providers: list["NotificationProvider"] = []
-        self._load_providers()
+        if load_providers:
+            self._load_providers()
 
     def rebuild(self):
         """Reload providers from current settings, mutating in place.
@@ -35,22 +36,21 @@ class NotificationManager:
 
     def _load_providers(self):
         """Initialize providers from configuration."""
-        from module.notification.providers import PROVIDER_REGISTRY
+        from module.notification.resolve import build_provider
 
         for cfg in settings.notification.providers:
             if not cfg.enabled:
                 continue
-
-            provider_cls = PROVIDER_REGISTRY.get(cfg.type.lower())
-            if provider_cls:
-                try:
-                    provider = provider_cls(cfg)
-                    self.providers.append(provider)
-                    logger.debug("Loaded notification provider: %s", cfg.type)
-                except Exception as e:
-                    logger.warning(f"Failed to load provider {cfg.type}: {e}")
-            else:
+            try:
+                provider = build_provider(cfg)
+            except Exception as e:
+                logger.warning(f"Failed to load provider {cfg.type}: {e}")
+                continue
+            if provider is None:
                 logger.warning(f"Unknown notification provider type: {cfg.type}")
+                continue
+            self.providers.append(provider)
+            logger.debug("Loaded notification provider: %s", cfg.type)
 
     async def _get_poster(self, notification: Notification):
         """Fetch poster path from database if not already set."""
@@ -172,14 +172,12 @@ class NotificationManager:
         Returns:
             A tuple of (success, message).
         """
-        from module.notification.providers import PROVIDER_REGISTRY
-
-        provider_cls = PROVIDER_REGISTRY.get(config.type.lower())
-        if not provider_cls:
-            return False, f"Unknown provider type: {config.type}"
+        from module.notification.resolve import build_provider
 
         try:
-            provider = provider_cls(config)
+            provider = build_provider(config)
+            if provider is None:
+                return False, f"Unknown provider type: {config.type}"
             async with provider:
                 return await provider.test()
         except Exception as e:
