@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 Handler = Callable[[Event], Awaitable[None] | None]
 ErrorCallback = Callable[[str, str], None]
+SuccessCallback = Callable[[str], None]
 
 ALL_EVENTS = "*"
 DEFAULT_HANDLER_TIMEOUT = 30.0
@@ -31,12 +32,14 @@ class _Subscriber:
         timeout: float,
         queue_size: int,
         on_error: ErrorCallback | None,
+        on_success: SuccessCallback | None,
     ) -> None:
         self.kind = kind
         self.handler = handler
         self.owner = owner
         self._timeout = timeout
         self._on_error = on_error
+        self._on_success = on_success
         self._queue: asyncio.Queue[Event] = asyncio.Queue(maxsize=queue_size)
         self._worker: asyncio.Task | None = None
 
@@ -80,6 +83,9 @@ class _Subscriber:
                 )
                 if self._on_error is not None and self.owner is not None:
                     self._on_error(self.owner, reason)
+            else:
+                if self._on_success is not None and self.owner is not None:
+                    self._on_success(self.owner)
             finally:
                 self._queue.task_done()
 
@@ -103,12 +109,14 @@ class EventBus:
         handler_timeout: float = DEFAULT_HANDLER_TIMEOUT,
         queue_size: int = DEFAULT_QUEUE_SIZE,
         on_error: ErrorCallback | None = None,
+        on_success: SuccessCallback | None = None,
     ) -> None:
         self._timeout = handler_timeout
         self._queue_size = queue_size
         self._subscribers: list[_Subscriber] = []
-        # 订阅者失败回调（owner, reason），宿主用它驱动插件熔断
+        # 订阅者失败 / 成功回调，宿主用它驱动插件熔断（成功时清零连续失败计数）
         self.on_error = on_error
+        self.on_success = on_success
 
     def subscribe(
         self,
@@ -125,6 +133,7 @@ class EventBus:
             timeout if timeout is not None else self._timeout,
             self._queue_size,
             self._report_error,
+            self._report_success,
         )
         self._subscribers.append(sub)
 
@@ -157,3 +166,7 @@ class EventBus:
     def _report_error(self, owner: str, reason: str) -> None:
         if self.on_error is not None:
             self.on_error(owner, reason)
+
+    def _report_success(self, owner: str) -> None:
+        if self.on_success is not None:
+            self.on_success(owner)

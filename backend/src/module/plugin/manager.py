@@ -94,7 +94,10 @@ class PluginManager:
         self._data_root = data_root
         self.registry = registry if registry is not None else ExtensionRegistry()
         self.breaker = CircuitBreaker(on_trip=self._on_trip)
-        self.bus = EventBus(on_error=self.breaker.record_failure)
+        self.bus = EventBus(
+            on_error=self.breaker.record_failure,
+            on_success=self.breaker.record_success,
+        )
         self.runner = HookRunner(
             self.registry,
             self.breaker,
@@ -155,7 +158,11 @@ class PluginManager:
                 ):
                     await self._deactivate(plugin_id)
             for plugin_id, candidate in self._candidates.items():
-                if plugin_id in self._active or self._blocked_reason(candidate):
+                if plugin_id in self._active:
+                    continue
+                if self._blocked_reason(candidate):
+                    # 已被关闭的插件不再显示旧的失败原因，重新开启时也会重试
+                    self._failed.pop(plugin_id, None)
                     continue
                 failed = self._failed.get(plugin_id)
                 if failed is not None and failed[0] == self._snapshot(plugin_id):
@@ -353,6 +360,7 @@ class PluginManager:
         manifest = candidate.manifest
         plugin_id = manifest.id
         snapshot = self._snapshot(plugin_id)
+        instance: Plugin | None = None
         try:
             if not manifest.sdk_compatible():
                 raise PluginLoadError(
@@ -373,6 +381,9 @@ class PluginManager:
             )
             self.registry.remove_plugin(plugin_id)
             await self.bus.close_owner(plugin_id)
+            if instance is not None:
+                # 释放 setup 失败前已创建的任务、连接等
+                await self._teardown(plugin_id, instance)
             candidate.unload()
             self._failed[plugin_id] = (snapshot, reason)
             logger.error("[Plugin:%s] 加载失败：%s", plugin_id, reason)
@@ -432,25 +443,31 @@ class PluginManager:
             return
         self.registry.remove_plugin(plugin_id)
         await self.bus.close_owner(plugin_id)
-        try:
-            await asyncio.wait_for(active.instance.teardown(), self._setup_timeout)
-        except Exception as e:
-            logger.warning("[Plugin:%s] teardown 失败：%s", plugin_id, e)
+        await self._teardown(plugin_id, active.instance)
         active.candidate.unload()
         logger.info("[Plugin:%s] 已停用", plugin_id)
 
+    async def _teardown(self, plugin_id: str, instance: Plugin) -> None:
+        try:
+            await asyncio.wait_for(instance.teardown(), self._setup_timeout)
+        except Exception as e:
+            logger.warning("[Plugin:%s] teardown 失败：%s", plugin_id, e)
+
     def _on_trip(self, plugin_id: str, reason: str) -> None:
-        task = asyncio.create_task(self._disable(plugin_id, reason))
+        # 记下触发熔断的实例：禁用任务拿到锁前插件可能已被重新加载
+        tripped = self._active.get(plugin_id)
+        task = asyncio.create_task(self._disable(plugin_id, reason, tripped))
         self._pending.add(task)
         task.add_done_callback(self._pending.discard)
 
-    async def _disable(self, plugin_id: str, reason: str) -> None:
+    async def _disable(
+        self, plugin_id: str, reason: str, tripped: _Active | None
+    ) -> None:
         async with self._lock:
-            active = self._active.get(plugin_id)
-            if active is None:
+            if tripped is None or self._active.get(plugin_id) is not tripped:
                 return
             await self._deactivate(plugin_id)
-            self._failed[plugin_id] = (active.snapshot, reason)
+            self._failed[plugin_id] = (tripped.snapshot, reason)
         logger.error("[Plugin:%s] %s", plugin_id, reason)
         self.bus.publish(PluginDisabled(plugin_id=plugin_id, reason=reason))
         await self._notify_change()

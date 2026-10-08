@@ -555,6 +555,38 @@ class TestLoader:
         with pytest.raises(PluginLoadError, match=message):
             candidates[0].load()
 
+    def test_undecodable_manifest_is_reported(self, tmp_path):
+        local = tmp_path / "local"
+        (local / "demo").mkdir(parents=True)
+        (local / "demo" / "plugin.toml").write_bytes(b"\xff\xfe[plugin]\n")
+        candidates, errors = discover(
+            builtin_root=tmp_path / "none",
+            local_root=local,
+            entry_point_group="ab-test-none",
+        )
+        assert candidates == []
+        assert len(errors) == 1
+
+    def test_entry_point_import_failure_is_reported(self, tmp_path, monkeypatch):
+        import importlib.metadata
+
+        package = tmp_path / "ab_broken_ep"
+        package.mkdir()
+        (package / "__init__.py").write_text("from os import ab_missing_name\n")
+        monkeypatch.syspath_prepend(str(tmp_path))
+        ep = importlib.metadata.EntryPoint(
+            "broken", "ab_broken_ep.plugin:BrokenPlugin", "ab-test-broken"
+        )
+        monkeypatch.setattr(importlib.metadata, "entry_points", lambda group: [ep])
+        candidates, errors = discover(
+            builtin_root=tmp_path / "none",
+            local_root=tmp_path / "none",
+            entry_point_group="ab-test-broken",
+        )
+        assert candidates == []
+        [error] = errors
+        assert "ab_missing_name" in error.error
+
 
 # ---------------------------------------------------------------- manager
 
@@ -771,18 +803,38 @@ class TestManager:
         await manager.stop()
 
     async def test_failed_setup_rolls_back_registrations(self, tmp_path):
+        recorder = Recorder()
+
         class Broken(Plugin):
             @hook("torrent.filter")
             def check(self, x):
                 return True
 
             async def setup(self):
+                recorder.events.append("setup")
                 raise RuntimeError("cannot connect")
+
+            async def teardown(self):
+                recorder.events.append("teardown")
 
         manager, _ = make_manager(candidate_for(Broken), tmp_path=tmp_path)
         await manager.start()
         assert manager.registry.hooks("torrent.filter") == []
         assert manager.statuses()[0].error == "cannot connect"
+        # setup 中途创建的资源由 teardown 释放
+        assert recorder.events == ["setup", "teardown"]
+
+    async def test_disabling_failed_plugin_shows_disabled(self, tmp_path):
+        class Broken(Plugin):
+            async def setup(self):
+                raise RuntimeError("cannot connect")
+
+        manager, settings_obj = make_manager(candidate_for(Broken), tmp_path=tmp_path)
+        await manager.start()
+        settings_obj.plugins.enabled = {"demo": False}
+        await manager.apply_settings()
+        [status] = manager.statuses()
+        assert (status.state, status.error) == ("disabled", "未启用")
 
     async def test_unknown_extension_point_fails_load(self, tmp_path):
         class Typo(Plugin):
@@ -846,6 +898,37 @@ class TestManager:
         assert "连续失败" in (status.error or "")
         assert manager.registry.hooks("torrent.filter") == []
         assert len(seen) == 1
+        await manager.stop()
+
+    async def test_subscriber_success_resets_failure_count(self, tmp_path):
+        class Sometimes(Plugin):
+            @subscribe("demo.happened")
+            def on_demo(self, event):
+                if event.value < 0:
+                    raise RuntimeError("transient")
+
+        manager, _ = make_manager(candidate_for(Sometimes), tmp_path=tmp_path)
+        await manager.start()
+        for value in [-1] * 4 + [1] + [-1] * 4:
+            manager.bus.publish(DemoEvent(value))
+        await manager.bus.drain()
+        await asyncio.gather(*manager._pending)
+        assert manager.statuses()[0].state == "active"
+        await manager.stop()
+
+    async def test_stale_breaker_trip_spares_reloaded_instance(self, tmp_path):
+        recorder = Recorder()
+        manager, _ = make_manager(
+            candidate_for(build_plugin(recorder)), tmp_path=tmp_path
+        )
+        await manager.start()
+        # 熔断任务尚未拿到锁时，插件已被重新加载（安装升级 / dev_mode）
+        manager._on_trip("demo", "连续失败 5 次")
+        await manager.reload("demo")
+        await asyncio.gather(*manager._pending)
+        [status] = manager.statuses()
+        assert status.state == "active"
+        assert recorder.events == ["setup:0", "teardown", "setup:0"]
         await manager.stop()
 
     async def test_end_to_end_from_directory(self, tmp_path):
