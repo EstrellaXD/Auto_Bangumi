@@ -8,12 +8,17 @@ AB 自己的下载器、通知渠道与搜索站点和第三方插件走同一�
 任何上下文里都能解析 Provider。
 """
 
+import logging
 from typing import Any
 
-from ab_sdk import points
+from ab_sdk import Event, points
 from ab_sdk.downloader import DownloaderConnection
 
+from .bus import EventBus
 from .registry import ExtensionPoint, ExtensionRegistry, ProviderEntry
+from .runner import HookRunner
+
+logger = logging.getLogger(__name__)
 
 CORE = "core"
 
@@ -25,9 +30,23 @@ POINTS = (
     ExtensionPoint(points.LLM_PROVIDER, "provider", "LLM 解析提供商（llm.provider）"),
     ExtensionPoint(points.SEARCH_SITE, "provider", "搜索站点"),
     ExtensionPoint(points.SCHEDULED_TASK, "provider", "定时任务"),
+    # --- P5 events/api ---
+    ExtensionPoint(
+        points.API_ROUTER,
+        "provider",
+        "插件 REST 路由（/api/v1/plugins/<id>/）",
+        scoped=True,
+    ),
+    ExtensionPoint(points.MCP_TOOL, "provider", "MCP 工具", scoped=True),
+    ExtensionPoint(points.MCP_RESOURCE, "provider", "MCP 资源", scoped=True),
+    ExtensionPoint(points.MESSAGE_TEMPLATE, "transform", "系统事件通知文案"),
 )
 
 _registry: ExtensionRegistry | None = None
+# 进程级事件总线与钩子执行器，由 AppContext 在构造时设置（即 PluginManager
+# 持有的那一份）；未设置时（单元测试、脚本）发布事件与执行钩子均为空操作
+_bus: EventBus | None = None
+_runner: HookRunner | None = None
 
 
 def get_registry() -> ExtensionRegistry:
@@ -88,3 +107,39 @@ def _register_core(registry: ExtensionRegistry) -> None:
 
     for provider_id, provider_cls in PROVIDER_REGISTRY.items():
         _core(registry, points.NOTIFIER, provider_id, provider_cls)
+
+
+# --- P5 events/api ---------------------------------------------------------
+
+
+def get_bus() -> EventBus | None:
+    return _bus
+
+
+def set_bus(bus: EventBus | None) -> None:
+    global _bus
+    _bus = bus
+
+
+def get_runner() -> HookRunner | None:
+    return _runner
+
+
+def set_runner(runner: HookRunner | None) -> None:
+    global _runner
+    _runner = runner
+
+
+def publish(event: Event) -> None:
+    """把宿主事件发布到进程级总线；总线未设置时什么也不做。
+
+    发布只负责入队，订阅者的失败不会影响调用方。没有运行中的事件循环时
+    （同步上下文）无法投递，记录日志后忽略。
+    """
+    bus = _bus
+    if bus is None:
+        return
+    try:
+        bus.publish(event)
+    except RuntimeError:
+        logger.debug("[EventBus] 无事件循环，丢弃事件 %s", event.kind)

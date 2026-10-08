@@ -18,10 +18,10 @@ from starlette.requests import Request
 from starlette.responses import Response
 from starlette.routing import Mount, Route
 
-from .resources import RESOURCE_TEMPLATES, RESOURCES, handle_resource
+from .resources import RESOURCE_TEMPLATES, all_resources, handle_resource
 from .runtime import set_context
 from .security import McpAccessMiddleware
-from .tools import TOOLS, handle_tool
+from .tools import all_tools, handle_tool
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ sse = SseServerTransport("/messages/")
 
 @server.list_tools()
 async def list_tools() -> list[types.Tool]:
-    return TOOLS
+    return all_tools()
 
 
 @server.call_tool()
@@ -42,7 +42,7 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
 
 @server.list_resources()
 async def list_resources() -> list[types.Resource]:
-    return RESOURCES
+    return all_resources()
 
 
 @server.list_resource_templates()

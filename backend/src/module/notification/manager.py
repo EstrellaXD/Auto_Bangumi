@@ -9,6 +9,7 @@ from module.database import Database
 from module.models.bangumi import Notification
 from module.notification.events import SystemEvent
 from module.notification.inbox import record_event
+from module.plugin.host import publish
 
 if TYPE_CHECKING:
     from module.models.config import NotificationProvider as ProviderConfig
@@ -118,8 +119,9 @@ class NotificationManager:
     async def send_event(self, event: SystemEvent):
         """Persist a system event to the in-app inbox, then broadcast it.
 
-        持久化不受 ``settings.notification.enable`` 影响（该开关只管外部
-        推送），失败也不阻塞外部广播。
+        顺序：写入站内通知中心 → 发布到插件事件总线 → 推送到外部渠道。
+        持久化与总线发布不受 ``settings.notification.enable`` 影响（该开关只管
+        外部推送），持久化失败也不阻塞后两步。
 
         Args:
             event: The system event to send.
@@ -132,6 +134,8 @@ class NotificationManager:
                 type(event).__name__,
                 exc_info=True,
             )
+        # 插件 @subscribe(event.kind) 的订阅者在各自队列中异步处理，不阻塞这里
+        publish(event)
         if not settings.notification.enable:
             return
 

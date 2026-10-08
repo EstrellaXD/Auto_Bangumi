@@ -21,6 +21,17 @@
 - **扩展点改名**：`search_provider` 改为 `search_site`，以区分用户在搜索设置里维护的站点列表。
 - 签名目录来源（LLM 安装器泛化）、`dev_mode` 文件监听、bark / wecom 旧字段别名清理，移到 P7（生态）。
 
+### 实施中的调整（P5）
+
+- **系统事件类移入 `ab_sdk.events`**，`SystemEvent` 由封闭 Union 改为基类（插件也可定义可通知事件）；`module.notification.events` 只做再导出。`kind` 沿用 3.x 取值（`rss_failure` 等，通知中心按它存储与翻译），不改成 `rss.failure` 式的点分名。
+- **通知管理器仍是事件入口**：第 4.2 节设想的「通知管理器、inbox 都作为总线订阅者」未实施。`NotificationManager.send_event` 依次写通知中心、发布到总线、推送外部渠道，调用方与外部行为不变；改成纯总线驱动要等 P3/P4 的流水线事件稳定后再统一。
+- **SSE 只有 `notification` 改为订阅总线**（`inbox.changed`，通知中心写入 / 已读 / 删除时发布，立即推送）。status / downloader / log / update 是状态快照而非事件，仍按节拍采样；`inbox_revision` 计数保留，作为帧里的 `revision` 字段。
+- **插件路由用分发路由实现**：FastAPI 不能卸载路由，宿主只注册 `/api/v1/plugins/{plugin_id}/{path:path}`（鉴权依赖在此强制），按插件 id 转发给由插件 `APIRouter` 合并成的 ASGI 应用，插件变更时重建。插件路由不进 OpenAPI。
+- **按插件作用域的 Provider id**：`ExtensionPoint` 新增 `scoped`，`api_router` / `mcp_tool` / `mcp_resource` 的 id 只需在插件内唯一（注册表键为 `<plugin_id>/<id>`）。MCP 工具名用 `<plugin-id>__<id>` 而非 `.`，因为 Anthropic / OpenAI 等 LLM API 的工具名只接受 `^[a-zA-Z0-9_-]{1,64}$`。
+- **`message_template` 只作用于系统事件的外部推送**，钩子签名 `(RenderedMessage, event, channel)`，按渠道各调用一次；「新集数」通知仍用渠道里的单集模板（`_format_message` 是同步接口，改造留到通知渠道迁到 `config_model` 时）。
+- **i18n（第 11 节风险 3）先给出 key**：`SystemEvent.i18n()` 返回 `notifications.kind.<kind>` 与 `payload()`，与前端现有文案键一致；外部推送与通知中心的中文兜底文案不变。插件事件的前端翻译依赖 P6 的 `host.i18n`。
+- 进程级访问器 `module.plugin.host.get_bus/set_bus`、`get_runner/set_runner`、`publish()`，由 `AppContext` 构造时设置，未设置时为空操作。MCP 的 `tools/list_changed` 通知未实现（客户端重新 list 即可看到插件工具变化）。
+
 ## 1. 背景与目标
 
 AB 目前只有 **LLM 提供商** 是真正的运行时插件系统：签名下载、目录加载、懒导入、热重载。
@@ -568,7 +579,7 @@ organize: downloader.completed → media_files.classify → file_parser
 | **P2.5 多下载器** | 下载器多实例；`downloader_id` 列与迁移；按实例路由 add / rename / delete；organize 逐实例扫描 | qb + aria2 并存的 e2e 用例；单实例行为不变 |
 | **P3 流水线插件化：ingest** | `feed_source`、`title_parser` 链、`admission_policy`、`matcher`、`torrent.filter`、`ranker`、`metadata_provider` 链、`save_path`、`torrent.adding` | 新增 include / size 过滤；私有站 headers |
 | **P4 流水线插件化：organize** | `media_files`、`file_parser`、`rename_strategy`（含 `template`）、`conflict_policy`、`file.renamed` 等事件 | 模板重命名；硬链接示例插件 |
-| **P5 事件与外部接口** | SSE 改订阅 bus；`api_router`、`mcp_tool` 扩展点；`message_template` | 删掉 SSE 轮询；插件 MCP 工具 |
+| **P5 事件与外部接口** | SSE 改订阅 bus；`api_router`、`mcp_tool` 扩展点；`message_template` | 已完成：系统事件上总线、通知中心 SSE 改为事件推送、插件路由 / MCP 工具与资源 / 通知模板；status 等快照类 SSE 仍按节拍采样。调整见第 0 节 |
 | **P6 前端插件** | Web Component 挂载点、`AbHost` 桥接、错误边界、`/plugins/<id>/web` 静态资源、`@autobangumi/plugin-ui` 包 | 示例插件「手动选种」以详情页标签形式可用 |
 | **P7 生态** | 插件管理页（安装、启停、日志、错误）、签名目录发布流程、模板仓库（含前端模板）、`ab-plugin` CLI、文档（中 / 英 / 日） | 6 个以上示例插件上架 |
 | **P8 发布** | beta 测试、性能对比（RSS 刷新耗时、内存）、升级指南、`docs/changelog/4.0.md` | `4.0.0-beta.1` → `4.0.0` |
