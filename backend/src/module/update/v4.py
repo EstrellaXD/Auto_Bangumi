@@ -7,6 +7,8 @@
 - ``bangumi_manage.rename_method`` → ``plugins.slots.rename_strategy``
   （废弃的 ``normal`` 改为 ``none``）
 - ``bangumi_manage.revision_conflict_policy`` → ``plugins.slots.conflict_policy``
+- 通知渠道的旧字段别名：Bark 的 ``token`` → ``device_key``，WeCom 的 ``chat_id``
+  → ``webhook_url``（渠道实现不再读旧字段）
 
 在 ``Settings`` 读写配置文件之前运行。改写前把原文件备份为 ``<文件名>.v3.bak``；
 失败时从备份恢复并抛出 :class:`ConfigMigrationError`，拒绝启动。
@@ -32,6 +34,13 @@ _SLOT_FIELDS = {
 }
 
 
+# 渠道类型 → (旧字段, 新字段)；3.x 的渠道实现以 ``新字段 or 旧字段`` 读取
+_PROVIDER_ALIASES = {
+    "bark": ("token", "device_key"),
+    "wecom": ("chat_id", "webhook_url"),
+}
+
+
 class ConfigMigrationError(RuntimeError):
     """配置迁移失败；配置文件已从备份恢复。"""
 
@@ -50,6 +59,26 @@ def migrate_v3_dict(config: dict[str, Any]) -> list[str]:
 
     下载器字段合并到已有的 ``default`` 实例上，没有时新建；未出现的字段保持原样。
     """
+    return _migrate_plugin_fields(config) + _migrate_provider_aliases(config)
+
+
+def _migrate_provider_aliases(config: dict[str, Any]) -> list[str]:
+    moved = []
+    providers = _section(config, "notification").get("providers")
+    for i, provider in enumerate(providers if isinstance(providers, list) else []):
+        if not isinstance(provider, dict):
+            continue
+        old, new = _PROVIDER_ALIASES.get(
+            str(provider.get("type", "")).lower(), ("", "")
+        )
+        if old in provider:
+            legacy = provider.pop(old)
+            provider[new] = provider.get(new) or legacy
+            moved.append(f"notification.providers[{i}].{old}")
+    return moved
+
+
+def _migrate_plugin_fields(config: dict[str, Any]) -> list[str]:
     downloader = _section(config, "downloader")
     bangumi_manage = _section(config, "bangumi_manage")
     moved = [f"bangumi_manage.{key}" for key in _SLOT_FIELDS if key in bangumi_manage]
