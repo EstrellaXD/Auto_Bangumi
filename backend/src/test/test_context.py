@@ -80,6 +80,21 @@ class TestStartup:
         assert ctx._startup_done is True
         assert ctx.scheduler.running is False
 
+    async def test_first_run_with_legacy_data_json_aborts_startup(self, ctx, tmp_path):
+        """2.x 的卷只有 data.json 没有数据库：首次启动就拒绝，不建新库。"""
+        legacy = tmp_path / "data.json"
+        legacy.write_text("{}")
+        with (
+            patch("module.update.version_check.LEGACY_DATA_PATH", legacy),
+            patch("module.core.context.Checker.check_database", return_value=False),
+            patch("module.core.context.first_run") as mock_first_run,
+        ):
+            with pytest.raises(UnsupportedUpgradeError, match="2.x"):
+                await ctx.startup()
+
+        mock_first_run.assert_not_called()
+        assert ctx._startup_done is False
+
     async def test_existing_db_runs_pending_migrations(self, ctx):
         """Existing DB from a supported version => run_migrations() is invoked."""
         with (
