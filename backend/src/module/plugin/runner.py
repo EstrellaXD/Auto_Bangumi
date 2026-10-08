@@ -16,6 +16,8 @@ DEFAULT_HOOK_TIMEOUT = 30.0
 DEFAULT_FAILURE_THRESHOLD = 5
 
 TripCallback = Callable[[str, str], None]
+# 校验插件返回值（None 不经校验，表示不修改）
+Check = Callable[[Any], bool]
 
 
 class CircuitBreaker:
@@ -91,13 +93,51 @@ class HookRunner:
                 return verdict
         return Verdict.ok()
 
-    async def transform(self, point: str, value: Any, *args: Any, **kwargs: Any) -> Any:
-        """把 ``value`` 依次交给 transform 钩子；钩子失败或返回 None 时沿用原值。"""
+    def has_hooks(self, point: str) -> bool:
+        return self._registry.has_hooks(point)
+
+    async def transform(
+        self,
+        point: str,
+        value: Any,
+        *args: Any,
+        expect: type | tuple[type, ...] | None = None,
+        check: Check | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        """把 ``value`` 依次交给 transform 钩子；钩子失败或返回 None 时沿用原值。
+
+        ``expect`` 给出时，返回值不是该类型的结果按钩子失败处理（计入熔断）；
+        ``check`` 再校验字段取值。避免一个插件的错误返回值传给后续钩子和宿主。
+        """
+
+        def valid(result: Any) -> bool:
+            return (expect is None or isinstance(result, expect)) and (
+                check is None or check(result)
+            )
+
         for entry in self._registry.hooks(point, self._order(point)):
-            ok, result = await self._call(entry, point, (value, *args), kwargs)
-            if ok and result is not None:
-                value = result
+            ok, result = await self._call(entry, point, (value, *args), kwargs, valid)
+            if not ok or result is None:
+                continue
+            value = result
         return value
+
+    async def call_provider(
+        self,
+        plugin_id: str,
+        point: str,
+        func: Callable[..., Any],
+        *args: Any,
+        timeout: float | None = None,
+        check: Check | None = None,
+    ) -> tuple[bool, Any]:
+        """以钩子同样的超时与熔断规则调用插件 Provider 的方法。
+
+        返回 ``(是否成功, 结果)``；失败（含 ``check`` 不通过）已记录日志并计入熔断。
+        """
+        entry = HookEntry(plugin_id, func, 0, timeout)
+        return await self._call(entry, point, args, {}, check)
 
     async def _call(
         self,
@@ -105,12 +145,16 @@ class HookRunner:
         point: str,
         args: tuple[Any, ...],
         kwargs: dict[str, Any],
+        check: Check | None = None,
     ) -> tuple[bool, Any]:
         timeout = entry.timeout or self._default_timeout
         try:
             result = entry.func(*args, **kwargs)
             if inspect.isawaitable(result):
                 result = await asyncio.wait_for(result, timeout)
+            # 返回值校验在记成功之前：无效结果必须计入熔断，而不是先清零再计一次
+            if result is not None and check is not None and not check(result):
+                raise TypeError(f"返回了无效结果 {type(result).__name__}，已忽略")
         except Exception as e:
             reason = (
                 f"{point} 超时（{timeout}s）"

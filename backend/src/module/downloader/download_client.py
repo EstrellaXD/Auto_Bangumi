@@ -4,10 +4,12 @@ from collections import defaultdict
 from urllib.parse import urlparse
 
 from ab_sdk import points
+from ab_sdk.ingest import AddRequest
 from module.conf import settings
 from module.models import Bangumi, Torrent
 from module.network import RequestContent
 from module.plugin import host as plugin_host
+from module.plugin.views import bangumi_info, torrent_info
 
 from .base import (
     AddResult,
@@ -48,6 +50,52 @@ async def _fetch_torrent_files(
         *[_fetch_host_group(items) for items in by_host.values()]
     )
     return [f for group in groups for f in group]
+
+
+def _valid_add_request(request: AddRequest) -> bool:
+    """宿主直接使用这些字段；类型不对的结果按钩子失败处理（str 标签也拒绝）。"""
+    return (
+        isinstance(request.save_path, (str, type(None)))
+        and isinstance(request.category, str)
+        and isinstance(request.tags, (tuple, list))
+        and all(isinstance(t, str) for t in request.tags)
+    )
+
+
+async def _apply_adding_hooks(
+    torrent: Torrent | list[Torrent],
+    bangumi: Bangumi,
+    save_path: str,
+    category: str,
+    tags: str | None,
+) -> tuple[str, str, str | None]:
+    """``torrent.adding``：插件修改保存路径、分类与标签。
+
+    ``ab:<id>`` 标签是重命名时定位番剧的依据，钩子删掉时补回并告警。
+    """
+    runner = plugin_host.hook_runner(points.TORRENT_ADDING)
+    if runner is None:
+        return save_path, category, tags
+    torrents = torrent if isinstance(torrent, list) else [torrent]
+    request = AddRequest(
+        bangumi=bangumi_info(bangumi),
+        torrents=tuple(torrent_info(t) for t in torrents),
+        save_path=save_path,
+        category=category,
+        tags=tuple(tags.split(",")) if tags else (),
+    )
+    result = await runner.transform(
+        points.TORRENT_ADDING, request, expect=AddRequest, check=_valid_add_request
+    )
+    new_tags = [t.strip() for t in result.tags if t.strip()]
+    if tags and tags not in new_tags:
+        logger.warning(
+            "torrent.adding removed required tag %s for %s; restored",
+            tags,
+            bangumi.official_title,
+        )
+        new_tags.insert(0, tags)
+    return result.save_path, result.category, ",".join(new_tags) or None
 
 
 # ---------------------------------------------------------------------------
@@ -425,12 +473,17 @@ class DownloadClient:
                     torrent_url = None
         # Create tag with bangumi_id for offset lookup during rename
         tags = f"ab:{bangumi.id}" if bangumi.id else None
+        save_path, category = bangumi.save_path, "Bangumi"
+        if plugin_host.hook_runner(points.TORRENT_ADDING) is not None:
+            save_path, category, tags = await _apply_adding_hooks(
+                torrent, bangumi, save_path, category, tags
+            )
         try:
             result = await self.client.add_torrents(
                 torrent_urls=torrent_url,
                 torrent_files=torrent_file,
-                save_path=bangumi.save_path,
-                category="Bangumi",
+                save_path=save_path,
+                category=category,
                 tags=tags,
             )
             if result is AddResult.ADDED:

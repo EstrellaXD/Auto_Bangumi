@@ -20,6 +20,7 @@ from module.parser.analyser.mikan_parser import reset_cache as reset_mikan_cache
 from module.parser.analyser.tmdb_parser import reset_cache as reset_tmdb_cache
 from module.parser.title_parser import reset_cache as reset_llm_parser
 from module.plugin import PluginManager
+from module.plugin import host as plugin_host
 from module.plugin.host import get_registry
 from module.rss import RSSAnalyser
 from module.searcher.searcher import reset_cache as reset_poster_cache
@@ -90,6 +91,9 @@ class AppContext:
             scheduler, self.plugins.registry, self.plugins.breaker
         )
         self.plugins.on_change = self._on_plugins_changed
+        # 模块级代码（RSS 引擎、下载门面、网络层）没有 ctx，经进程级访问器
+        # 拿到 runner 执行 ingest 钩子
+        plugin_host.set_runner(self.plugins.runner)
         # Downloader-status TTL cache (was ProgramStatus.check_downloader_status).
         self._downloader_status = False
         self._downloader_reason: str | None = None

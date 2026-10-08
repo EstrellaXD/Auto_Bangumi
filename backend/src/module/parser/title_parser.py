@@ -2,6 +2,7 @@ import asyncio
 import logging
 import time
 
+from ab_sdk import points
 from module.conf import settings
 from module.models import Bangumi, Movie
 from module.models.bangumi import Episode
@@ -29,6 +30,7 @@ from module.parser.release_policy import (
     normalized_season,
     persistence_target,
 )
+from module.plugin import host as plugin_host
 
 logger = logging.getLogger(__name__)
 
@@ -327,6 +329,14 @@ def _merge_llm_release(
     )
 
 
+async def _apply_title_hooks(release: ParsedRelease) -> ParsedRelease:
+    """``title.parsed``：插件在准入判定前修正解析结果（字幕组别名、季数等）。"""
+    runner = plugin_host.hook_runner(points.TITLE_PARSED)
+    if runner is None:
+        return release
+    return await runner.transform(points.TITLE_PARSED, release, expect=ParsedRelease)
+
+
 class TitleParser:
     def __init__(self):
         pass
@@ -488,6 +498,7 @@ class TitleParser:
 
             if release is None:
                 return None
+            release = await _apply_title_hooks(release)
             target = persistence_target(release)
             if target is None:
                 logger.debug("Parsed but did not admit resource: %s", raw)

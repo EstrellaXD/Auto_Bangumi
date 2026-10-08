@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from urllib.parse import urlparse
 
+from ab_sdk import points
 from module.conf import settings
 from module.database import Database
 from module.database.bangumi import (
@@ -30,6 +31,9 @@ from module.parser.analyser.tokenizer import (
     ParsedRelease,
 )
 from module.parser.release_policy import preference_identity, preference_revision
+from module.parser.title_parser import _apply_title_hooks
+from module.plugin import host as plugin_host
+from module.plugin.views import bangumi_info, torrent_info
 
 logger = logging.getLogger(__name__)
 
@@ -196,6 +200,50 @@ class RSSEngine:
         return None
 
     @staticmethod
+    async def plugin_accepts(torrent: Torrent, bangumi: Bangumi) -> bool:
+        """``torrent.filter``：在规则自带的排除过滤之后，由插件决定是否下载。
+
+        没有插件钩子时直接放行，不做任何额外解析。
+        """
+        runner = plugin_host.hook_runner(points.TORRENT_FILTER)
+        if runner is None:
+            return True
+        try:
+            release = parse_configured_release_title(torrent.name)
+        except Exception as e:
+            # 解析失败不应让过滤阶段中断整轮刷新，钩子收到 None
+            logger.debug("Cannot parse %s for plugin filters: %s", torrent.name, e)
+            release = None
+        if release is not None:
+            # 与建规则时一致：过滤钩子收到经 title.parsed 修正后的解析结果
+            release = await _apply_title_hooks(release)
+        verdict = await runner.filter(
+            points.TORRENT_FILTER,
+            torrent_info(torrent),
+            release,
+            bangumi_info(bangumi),
+        )
+        if not verdict.accept:
+            logger.debug(
+                "Plugin filter rejected %s: %s", torrent.name, verdict.reason or ""
+            )
+        return verdict.accept
+
+    async def _apply_plugin_filters(
+        self, torrents: list[Torrent], matches: list[Optional[Bangumi]]
+    ) -> list[Optional[Bangumi]]:
+        if plugin_host.hook_runner(points.TORRENT_FILTER) is None:
+            return matches
+        result: list[Optional[Bangumi]] = []
+        for torrent, matched in zip(torrents, matches):
+            if matched is not None and not await self.plugin_accepts(torrent, matched):
+                # 与排除过滤一致：被拒的种子不关联番剧（见 match_torrent）
+                torrent.bangumi_id = None
+                matched = None
+            result.append(matched)
+        return result
+
+    @staticmethod
     def _select_preference_skips(
         matched: list[tuple[Torrent, Bangumi]],
         preference_bangumi: dict[int, Bangumi],
@@ -347,6 +395,7 @@ class RSSEngine:
         ] = []
         for rss_item, (new_torrents, error) in item_results:
             matches = [self.match_torrent(t, bangumi_list) for t in new_torrents]
+            matches = await self._apply_plugin_filters(new_torrents, matches)
             item_matches.append((rss_item, new_torrents, error, matches))
 
         skip_ids = self._select_preference_skips(
@@ -426,6 +475,10 @@ class RSSEngine:
                 bangumi.rss_link, bangumi.filter.replace(",", "|")
             )
             torrents = [t for t in torrents if release_fits_bangumi(t.name, bangumi)]
+            if plugin_host.hook_runner(points.TORRENT_FILTER) is not None:
+                torrents = [
+                    t for t in torrents if await self.plugin_accepts(t, bangumi)
+                ]
             if torrents:
                 async with DownloadClient() as client:
                     result = await client.add_torrent(torrents, bangumi)

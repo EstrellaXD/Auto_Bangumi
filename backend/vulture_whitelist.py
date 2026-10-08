@@ -77,3 +77,8 @@ factory
 # 动态创建插件包时设置的模块属性
 _.__path__
 _.__package__
+
+# --- P3 ingest ---
+# 内置插件：由插件加载器按 plugin.toml 的 entry 导入，钩子经 @hook 扫描登记
+IngestFilters
+_.include_regex

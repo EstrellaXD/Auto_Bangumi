@@ -13,7 +13,12 @@ vi.mock('@/api/plugins', () => ({
   apiPlugins: { providers: vi.fn() },
 }));
 
-const empty = { downloader: [], notifier: [], search_site: [] };
+const empty = {
+  downloader: [],
+  notifier: [],
+  search_site: [],
+  metadata_provider: [],
+};
 
 describe('usePluginProviders', () => {
   it('should refetch provider ids when refreshPluginProviders is called', async () => {
