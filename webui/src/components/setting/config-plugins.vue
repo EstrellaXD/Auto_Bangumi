@@ -36,12 +36,18 @@ const stateType = {
   error: 'danger',
 } as const;
 
+// 只重建服务端配置或 schema 有变化的插件草稿，其它卡片里未保存的编辑保留
 function apply(data: PluginsOverview) {
+  const saved = (p?: PluginInfo) =>
+    p && JSON.stringify([p.options, p.config_schema]);
+  const prev = new Map(overview.value?.plugins.map((p) => [p.id, p]));
   overview.value = data;
   drafts.value = Object.fromEntries(
     data.plugins.map((p) => [
       p.id,
-      fillSchemaDefaults(schemaFields(p.config_schema), p.options),
+      drafts.value[p.id] && saved(prev.get(p.id)) === saved(p)
+        ? drafts.value[p.id]
+        : fillSchemaDefaults(schemaFields(p.config_schema), p.options),
     ])
   );
 }
@@ -63,7 +69,7 @@ async function run(
   try {
     apply(await action());
     // 只刷新插件卡片保存的字段，保留未保存的下载器实例与 slots 修改
-    await refreshGroup('plugins', ['enabled', 'options']);
+    await refreshGroup('plugins', ['allow_unsigned', 'enabled', 'options']);
     // 插件启停会增减下载器/通知渠道候选，同步刷新下拉框
     await refreshPluginProviders();
     // 启停也会增减插件的前端挂载点

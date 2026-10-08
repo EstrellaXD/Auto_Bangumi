@@ -8,6 +8,8 @@ import { apiPlugins } from '@/api/plugins';
 vi.mock('@/api/plugins', () => ({
   apiPlugins: {
     list: vi.fn(),
+    update: vi.fn(),
+    updateSettings: vi.fn(),
     catalog: vi.fn(),
     install: vi.fn(),
     uninstall: vi.fn(),
@@ -28,8 +30,9 @@ vi.mock('@/hooks/usePluginProviders', () => ({
   refreshPluginProviders: vi.fn(),
 }));
 vi.mock('@/hooks/usePluginUi', () => ({ refreshPluginUi: vi.fn() }));
+const refreshGroupMock = vi.fn();
 vi.mock('@/store/config', () => ({
-  useConfigStore: () => ({ refreshGroup: vi.fn() }),
+  useConfigStore: () => ({ refreshGroup: refreshGroupMock }),
 }));
 
 const api = vi.mocked(apiPlugins);
@@ -221,5 +224,45 @@ describe('config-plugins', () => {
     const alert = wrapper.find('[role="alert"]');
     expect(alert.text()).toContain('config.plugins_set.catalog_failed');
     expect(alert.text()).toContain('catalog signature verification failed');
+  });
+
+  it('should refresh allow_unsigned in the config store when the card toggles it', async () => {
+    api.updateSettings.mockResolvedValue({ allow_unsigned: true, plugins: [] });
+    const wrapper = await mountPage([]);
+
+    wrapper
+      .findAllComponents({ name: 'AbSwitch' })[0]
+      .vm.$emit('update:model-value', true);
+    await flushPromises();
+
+    expect(api.updateSettings).toHaveBeenCalledWith(true);
+    expect(refreshGroupMock).toHaveBeenCalledWith(
+      'plugins',
+      expect.arrayContaining(['allow_unsigned'])
+    );
+  });
+
+  it('should keep unsaved edits of other plugins when one plugin is toggled', async () => {
+    const schema = { properties: { url: { type: 'string' as const } } };
+    const a = plugin({
+      id: 'a',
+      config_schema: schema,
+      options: { url: 'old' },
+    });
+    const b = plugin({ id: 'b', config_schema: schema, enabled: false });
+    api.update.mockResolvedValue(overview([a, { ...b, enabled: true }]));
+    const wrapper = await mountPage([a, b]);
+
+    await wrapper.find('input').setValue('typed');
+    // 第 0 个开关是 allow_unsigned，之后依次是插件 a、b
+    wrapper
+      .findAllComponents({ name: 'AbSwitch' })[2]
+      .vm.$emit('update:model-value', true);
+    await flushPromises();
+
+    expect(api.update).toHaveBeenCalledWith('b', { enabled: true });
+    expect((wrapper.find('input').element as HTMLInputElement).value).toBe(
+      'typed'
+    );
   });
 });
