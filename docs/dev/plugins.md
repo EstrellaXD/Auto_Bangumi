@@ -337,7 +337,9 @@ class MyRename(Plugin):
 - `target_name` 是同步调用，没有超时，请不要在里面做网络或磁盘 IO。
 - 设置里选择的 id 没有登记（如插件被停用或熔断）时，AB 记录一次日志并按 `none` 处理。
 
+::: v-pre
 内置的 `template` 使用 Jinja2 沙箱模板渲染文件名主体，在 设置 → 插件 → 重命名 中填写，例如 `{{ title }} - S{{ season|pad(2) }}E{{ episode|pad(2) }}`。可用变量为 `title`、`bangumi_name`、`season`、`episode`、`episode_type`、`group`、`kind`、`language`。保存时会编译并试渲染一次，不合法的模板直接被拒绝（HTTP 422）。运行时渲染失败或结果为空、含路径分隔符时，该文件保留原名并通知，不会退回 `pn`。
+:::
 
 ### 文件分类与版本冲突（media_files / conflict_policy）
 
