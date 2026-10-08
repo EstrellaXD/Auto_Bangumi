@@ -6,7 +6,7 @@ from module.database import Database
 from module.downloader import AddResult
 from module.models import EpisodeFile, Torrent
 from module.rss.engine import RSSEngine
-from test.factories import make_bangumi, make_rss_item
+from test.factories import SingleClientPool, make_bangumi, make_rss_item
 
 # ---------------------------------------------------------------------------
 # RSS → Download Flow
@@ -58,7 +58,7 @@ class TestRssToDownloadFlow:
             mock_client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
 
             # 5. Execute refresh_rss
-            await engine.refresh_rss(mock_client)
+            await engine.refresh_rss(SingleClientPool(mock_client))
 
         # 6. Verify: matched torrents were downloaded
         assert mock_client.add_torrent.call_count == 2
@@ -109,7 +109,7 @@ class TestRssToDownloadFlow:
             mock_get.return_value = torrents
             mock_client = AsyncMock()
             mock_client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
-            await engine.refresh_rss(mock_client)
+            await engine.refresh_rss(SingleClientPool(mock_client))
 
         # Only 1080p should be downloaded (720p is filtered)
         assert mock_client.add_torrent.call_count == 1
@@ -149,7 +149,7 @@ class TestRssToDownloadFlow:
             mock_get.return_value = torrents
             mock_client = AsyncMock()
             mock_client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
-            await engine.refresh_rss(mock_client)
+            await engine.refresh_rss(SingleClientPool(mock_client))
 
         # Only ep02 should be downloaded (ep01 already exists)
         assert mock_client.add_torrent.call_count == 1
@@ -210,7 +210,7 @@ class TestRenameFlow:
 
         with patch.object(renamer._parser, "torrent_parser", return_value=ep):
             with patch("module.manager.renamer.settings") as mock_mgr_settings:
-                mock_mgr_settings.bangumi_manage.rename_method = "pn"
+                mock_mgr_settings.plugins.slots.rename_strategy = "pn"
                 mock_mgr_settings.bangumi_manage.remove_bad_torrent = False
                 with patch("module.downloader.path.settings") as mock_path_settings:
                     mock_path_settings.downloader.path = "/downloads/Bangumi"
@@ -273,7 +273,7 @@ class TestRenameFlow:
 
         with patch.object(renamer._parser, "torrent_parser", side_effect=mock_parser):
             with patch("module.manager.renamer.settings") as mock_mgr_settings:
-                mock_mgr_settings.bangumi_manage.rename_method = "pn"
+                mock_mgr_settings.plugins.slots.rename_strategy = "pn"
                 mock_mgr_settings.bangumi_manage.remove_bad_torrent = False
                 with patch("module.downloader.path.settings") as mock_path_settings:
                     mock_path_settings.downloader.path = "/downloads/Bangumi"

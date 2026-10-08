@@ -71,17 +71,37 @@ export const useDownloaderStore = defineStore('downloader', () => {
     },
   };
 
+  /** 选中的种子按所在下载器实例分组，每个实例发一次请求 */
+  async function perInstance<T>(
+    run: (hashes: string[], downloaderId: string) => Promise<T>
+  ) {
+    const byInstance = new Map<string, string[]>();
+    for (const t of torrents.value) {
+      if (!selectedHashes.value.includes(t.hash)) continue;
+      const hashes = byInstance.get(t.downloader_id) ?? [];
+      hashes.push(t.hash);
+      byInstance.set(t.downloader_id, hashes);
+    }
+    let result: T | undefined;
+    for (const [downloaderId, hashes] of byInstance) {
+      result = await run(hashes, downloaderId);
+    }
+    return result;
+  }
+
   const { execute: pauseSelected } = useApi(
-    () => apiDownloader.pause(selectedHashes.value),
+    () => perInstance(apiDownloader.pause),
     opts
   );
   const { execute: resumeSelected } = useApi(
-    () => apiDownloader.resume(selectedHashes.value),
+    () => perInstance(apiDownloader.resume),
     opts
   );
   const { execute: deleteSelected } = useApi(
     (deleteFiles = false) =>
-      apiDownloader.deleteTorrents(selectedHashes.value, deleteFiles),
+      perInstance((hashes, downloaderId) =>
+        apiDownloader.deleteTorrents(hashes, downloaderId, deleteFiles)
+      ),
     opts
   );
 

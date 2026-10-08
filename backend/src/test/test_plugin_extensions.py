@@ -71,13 +71,21 @@ class FakeDownloader:
         return AddResult.ADDED
 
 
+def _default_downloader():
+    return next(
+        i
+        for i in settings.plugins.instances
+        if i.id == settings.plugins.slots.downloader
+    )
+
+
 class TestDownloader:
     def test_plugin_downloader_is_used_by_facade(self, registry, monkeypatch):
         from module.downloader import DownloadClient
 
         add_plugin_provider(registry, points.DOWNLOADER, "fake", FakeDownloader)
-        monkeypatch.setattr(settings.downloader, "type", "fake")
-        monkeypatch.setattr(settings.downloader, "host_", "example:1234")
+        monkeypatch.setattr(_default_downloader(), "provider", "fake")
+        monkeypatch.setitem(_default_downloader().options, "host", "example:1234")
         client = DownloadClient()
         assert isinstance(client.client, FakeDownloader)
         assert client.client.conn.host == "example:1234"
@@ -86,7 +94,7 @@ class TestDownloader:
     def test_unknown_type_raises(self, registry, monkeypatch):
         from module.downloader import DownloadClient
 
-        monkeypatch.setattr(settings.downloader, "type", "nope")
+        monkeypatch.setattr(_default_downloader(), "provider", "nope")
         with pytest.raises(Exception, match="Unsupported downloader type"):
             DownloadClient()
 
@@ -576,7 +584,7 @@ class TestPluginChangeRebuildsState:
         from module.downloader import DownloadClient
 
         add_plugin_provider(registry, points.DOWNLOADER, "fake", FakeDownloader)
-        monkeypatch.setattr(settings.downloader, "type", "fake")
+        monkeypatch.setattr(_default_downloader(), "provider", "fake")
         first = DownloadClient().client
         assert DownloadClient().client is first
         # 插件重载：同 id 的新登记项

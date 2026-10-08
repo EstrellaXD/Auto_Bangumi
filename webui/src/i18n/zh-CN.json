@@ -19,7 +19,13 @@
       "ssl": "SSL",
       "title": "下载设置",
       "type": "下载器类型",
-      "username": "用户名"
+      "username": "用户名",
+      "add": "添加",
+      "default": "默认",
+      "set_default": "设为默认",
+      "delete": "删除下载器",
+      "delete_confirm": "删除下载器「{id}」？使用它的规则改用默认下载器，其中已有的种子不受影响。",
+      "new_id": "新下载器 id"
     },
     "llm_set": {
       "api_key": "API 密钥",
@@ -216,7 +222,8 @@
       "size": "大小",
       "dlspeed": "下载速度",
       "upspeed": "上传速度",
-      "peers": "做种/下载"
+      "peers": "做种/下载",
+      "instance": "下载器"
     },
     "state": {
       "downloading": "下载中",
@@ -289,7 +296,9 @@
       "season": "季度",
       "year": "年份",
       "yes_btn": "是",
-      "view_torrents": "查看种子"
+      "view_torrents": "查看种子",
+      "downloader": "下载器",
+      "downloader_default": "默认（{id}）"
     },
     "others": {
       "title": "未匹配种子"
@@ -677,7 +686,8 @@
       "placeholder_name": "可选",
       "rss_link": "RSS 链接",
       "subscribe": "订阅",
-      "title": "添加 RSS"
+      "title": "添加 RSS",
+      "downloader": "下载器"
     },
     "pause": "暂停",
     "profile": {

@@ -61,6 +61,10 @@ class Bangumi(SQLModel, table=True):
     episode_type: str = Field(
         default="episode", alias="episode_type", title="剧集类型"
     )  # "episode" | "movie" | "special"
+    # 为空时用默认下载器实例（plugins.slots.downloader）
+    downloader_id: Optional[str] = Field(
+        default=None, alias="downloader_id", title="下载器实例"
+    )
 
 
 class BangumiUpdate(SQLModel):
@@ -84,6 +88,9 @@ class BangumiUpdate(SQLModel):
     added: bool = Field(default=False, alias="added", title="是否已添加")
     rule_name: Optional[str] = Field(alias="rule_name", title="番剧规则名")
     save_path: Optional[str] = Field(alias="save_path", title="番剧保存路径")
+    downloader_id: Optional[str] = Field(
+        default=None, alias="downloader_id", title="下载器实例"
+    )
     deleted: bool = Field(False, alias="deleted", title="是否已删除")
     archived: bool = Field(default=False, alias="archived", title="是否已归档")
     air_weekday: Optional[int] = Field(

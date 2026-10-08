@@ -13,6 +13,8 @@ class RSSItem(SQLModel, table=True):
     connection_status: Optional[str] = Field(None, alias="connection_status")
     last_checked_at: Optional[str] = Field(None, alias="last_checked_at")
     last_error: Optional[str] = Field(None, alias="last_error")
+    # 由此订阅新建的规则继承；为空时用默认下载器实例
+    downloader_id: Optional[str] = Field(None, alias="downloader_id")
 
 
 class RSSUpdate(SQLModel):
@@ -21,3 +23,4 @@ class RSSUpdate(SQLModel):
     aggregate: Optional[bool] = Field(True, alias="aggregate")
     parser: Optional[str] = Field("mikan", alias="parser")
     enabled: Optional[bool] = Field(True, alias="enabled")
+    downloader_id: Optional[str] = Field(None, alias="downloader_id")

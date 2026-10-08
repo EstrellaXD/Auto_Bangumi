@@ -25,7 +25,9 @@ logger = logging.getLogger(__name__)
 CORE = "core"
 
 POINTS = (
-    ExtensionPoint(points.DOWNLOADER, "provider", "下载器后端（downloader.type）"),
+    ExtensionPoint(
+        points.DOWNLOADER, "provider", "下载器后端（plugins.instances[].provider）"
+    ),
     ExtensionPoint(
         points.NOTIFIER, "provider", "通知渠道（notification.providers[].type）"
     ),
@@ -54,7 +56,9 @@ POINTS = (
     ExtensionPoint(points.MESSAGE_TEMPLATE, "transform", "系统事件通知文案"),
     # --- P4 organize ---
     ExtensionPoint(
-        points.RENAME_STRATEGY, "provider", "重命名方式（bangumi_manage.rename_method）"
+        points.RENAME_STRATEGY,
+        "provider",
+        "重命名方式（plugins.slots.rename_strategy）",
     ),
     ExtensionPoint(points.MEDIA_FILES, "provider", "种子内文件分类（正片 / 字幕）"),
     ExtensionPoint(points.CONFLICT_POLICY, "provider", "目标路径被占用时保留或替换"),
@@ -189,7 +193,8 @@ def _register_core(registry: ExtensionRegistry) -> None:
 
     _core(registry, points.RENAME_STRATEGY, NO_RENAME, NoRename())
     _core(registry, points.MEDIA_FILES, CORE_ID, SuffixMediaFiles())
-    _core(registry, points.CONFLICT_POLICY, CORE_ID, CoreConflictPolicy())
+    _core(registry, points.CONFLICT_POLICY, "hold", CoreConflictPolicy("hold"))
+    _core(registry, points.CONFLICT_POLICY, "replace", CoreConflictPolicy("replace"))
 
 
 # --- P5 events/api ---------------------------------------------------------

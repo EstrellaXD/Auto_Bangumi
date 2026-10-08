@@ -14,7 +14,7 @@ from module.notification.events import DownloadFailureEvent, RssFailureEvent
 from module.parser.analyser.selector import parse_configured_release_title
 from module.parser.analyser.tokenizer import ReleaseKind
 from module.rss.engine import RSSEngine
-from test.factories import make_bangumi, make_rss_item, make_torrent
+from test.factories import SingleClientPool, make_bangumi, make_rss_item, make_torrent
 
 
 @pytest_asyncio.fixture
@@ -281,7 +281,7 @@ class TestRefreshRss:
             client = AsyncMock()
             client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
 
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
 
         # Verify download was attempted
         client.add_torrent.assert_called_once()
@@ -305,7 +305,7 @@ class TestRefreshRss:
         ) as mock_get:
             mock_get.return_value = [unmatched]
             client = AsyncMock()
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
 
         client.add_torrent.assert_not_called()
         all_torrents = await rss_engine.db.torrent.search_all()
@@ -341,7 +341,7 @@ class TestRefreshRss:
             mock_get.return_value = [matched, unmatched]
             client = AsyncMock()
             client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
 
         all_torrents = await rss_engine.db.torrent.search_all()
         assert len(all_torrents) == 1
@@ -372,7 +372,7 @@ class TestRefreshRss:
             mock_get.return_value = [matched, unmatched]
             client = AsyncMock()
             client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
 
         all_torrents = await rss_engine.db.torrent.search_all()
         assert len(all_torrents) == 2
@@ -390,7 +390,7 @@ class TestRefreshRss:
         ) as mock_get:
             mock_get.return_value = []
             client = AsyncMock()
-            await rss_engine.refresh_rss(client, rss_id=2)
+            await rss_engine.refresh_rss(SingleClientPool(client), rss_id=2)
 
         # Only called once (for rss_id=2)
         mock_get.assert_called_once()
@@ -401,7 +401,7 @@ class TestRefreshRss:
             RSSEngine, "_get_torrents", new_callable=AsyncMock
         ) as mock_get:
             client = AsyncMock()
-            await rss_engine.refresh_rss(client, rss_id=999)
+            await rss_engine.refresh_rss(SingleClientPool(client), rss_id=999)
 
         mock_get.assert_not_called()
 
@@ -426,7 +426,7 @@ class TestRefreshRssEvents:
         ) as mock_pull:
             mock_pull.return_value = ([], "connection refused")
             client = AsyncMock()
-            events = await rss_engine.refresh_rss(client)
+            events = await rss_engine.refresh_rss(SingleClientPool(client))
 
         assert len(events) == 1
         assert isinstance(events[0], RssFailureEvent)
@@ -443,8 +443,8 @@ class TestRefreshRssEvents:
         ) as mock_pull:
             mock_pull.return_value = ([], "connection refused")
             client = AsyncMock()
-            first_events = await rss_engine.refresh_rss(client)
-            second_events = await rss_engine.refresh_rss(client)
+            first_events = await rss_engine.refresh_rss(SingleClientPool(client))
+            second_events = await rss_engine.refresh_rss(SingleClientPool(client))
 
         assert len(first_events) == 1
         assert second_events == []
@@ -459,7 +459,7 @@ class TestRefreshRssEvents:
         ) as mock_pull:
             mock_pull.return_value = ([], None)
             client = AsyncMock()
-            events = await rss_engine.refresh_rss(client)
+            events = await rss_engine.refresh_rss(SingleClientPool(client))
 
         assert events == []
 
@@ -481,7 +481,7 @@ class TestRefreshRssEvents:
             client = AsyncMock()
             client.add_torrent = AsyncMock(return_value=AddResult.FAILED)
 
-            events = await rss_engine.refresh_rss(client)
+            events = await rss_engine.refresh_rss(SingleClientPool(client))
 
         assert len(events) == 1
         assert isinstance(events[0], DownloadFailureEvent)
@@ -512,7 +512,7 @@ class TestRefreshRssEvents:
             client = AsyncMock()
             client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
 
-            events = await rss_engine.refresh_rss(client)
+            events = await rss_engine.refresh_rss(SingleClientPool(client))
 
         assert events == []
 
@@ -537,7 +537,7 @@ class TestRefreshRssEvents:
             client = AsyncMock()
             client.add_torrent = AsyncMock(return_value=AddResult.DUPLICATE)
 
-            events = await rss_engine.refresh_rss(client)
+            events = await rss_engine.refresh_rss(SingleClientPool(client))
 
         assert events == []
         all_torrents = await rss_engine.db.torrent.search_all()
@@ -573,14 +573,14 @@ class TestRefreshRssRetry:
             # Tick 1: transient failure
             mock_get.return_value = [feed_torrent()]
             client.add_torrent = AsyncMock(return_value=AddResult.FAILED)
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
             client.add_torrent.assert_called_once()
             assert await rss_engine.db.torrent.search_all() == []
 
             # Tick 2: same feed item is still there, add now succeeds
             mock_get.return_value = [feed_torrent()]
             client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
             client.add_torrent.assert_called_once()
 
         all_torrents = await rss_engine.db.torrent.search_all()
@@ -610,9 +610,9 @@ class TestRefreshRssRetry:
             client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
 
             mock_get.return_value = [feed_torrent()]
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
             mock_get.return_value = [feed_torrent()]
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
 
         client.add_torrent.assert_not_called()
         all_torrents = await rss_engine.db.torrent.search_all()
@@ -811,7 +811,7 @@ class TestRefreshRssConcurrency:
             rss_engine, "_pull_rss_with_status", side_effect=track_concurrency
         ):
             client = AsyncMock()
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
 
         assert max_active <= 5
 
@@ -855,7 +855,7 @@ class TestRefreshRssPerHostThrottle:
             ),
             patch("module.rss.engine.RSS_PER_HOST_DELAY", 0),
         ):
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
 
         assert max_active["nyaa.example"] == 1
         assert max_active["mikan.example"] == 1
@@ -878,7 +878,7 @@ class TestRefreshRssPerHostThrottle:
             ),
             patch("module.rss.engine.RSS_PER_HOST_DELAY", 0),
         ):
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
 
         for rss_id in (1, 2):
             item = await rss_engine.db.rss.search_id(rss_id)
@@ -1334,7 +1334,7 @@ class TestRefreshRssPreferenceDedup:
             client = AsyncMock()
             client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
 
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
 
             parsed_after_refresh = parse_configured_release_title(torrent.name)
             assert parsed_after_refresh is not None
@@ -1365,7 +1365,7 @@ class TestRefreshRssPreferenceDedup:
             client = AsyncMock()
             client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
 
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
 
         client.add_torrent.assert_called_once()
         called_torrent = client.add_torrent.call_args[0][0]
@@ -1400,6 +1400,6 @@ class TestRefreshRssPreferenceDedup:
             client = AsyncMock()
             client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
 
-            await rss_engine.refresh_rss(client)
+            await rss_engine.refresh_rss(SingleClientPool(client))
 
         assert client.add_torrent.call_count == 2

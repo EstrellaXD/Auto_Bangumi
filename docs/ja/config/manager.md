@@ -82,7 +82,8 @@
 | --- | --- | --- | --- | --- |
 | `enable` | 管理機能を有効化 | 真偽値 | 有効化 | `true` |
 | `eps_complete` | 話数補完を有効化 | 真偽値 | 話数補完 | `false` |
-| `rename_method` | リネーム方式 | 文字列 | リネーム方式 | `pn` |
 | `group_tag` | グループタグ追加 | 真偽値 | グループタグ追加 | `false` |
 | `remove_bad_torrent` | エラーTorrent削除 | 真偽値 | 不良Torrent削除 | `false` |
 | `track_orphans` | 未一致Torrentを記録 | 真偽値 | 未一致Torrentを記録 | `true` |
+
+リネーム方式とリビジョン競合ポリシーは Provider の選択として `plugins.slots` に保存されます：`rename_strategy`（リネーム方式、既定値 `pn`）と `conflict_policy`（`hold` / `replace`、既定値 `hold`）。3.3 の `bangumi_manage.rename_method` と `revision_conflict_policy` は、4.0 へのアップグレード後の初回起動時に自動で移行されます。

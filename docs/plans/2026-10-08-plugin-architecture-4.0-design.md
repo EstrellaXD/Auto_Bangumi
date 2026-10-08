@@ -97,6 +97,70 @@
   - **用户文档**：`docs/{,en/,ja/}config/manager.md` 增加 `template`、`hardlink`（含 `path_map` 与 Docker 下硬链接不能跨文件系统的说明）与 `media-server-refresh` 三节，按本分支的设计重写；`CHANGELOG.md` 增加 P4 条目。
 - 移植时发现并修复：vulture 白名单缺少 `rename` / `hardlink` 内置插件的入口（CI 的 vulture 检查会失败）；VitePress 不给行内代码加 `v-pre`，文档里行内代码中的 Jinja2 示例在构建时报 `_ctx.pad is not a function`，现在用 `::: v-pre` 容器包住（含本设计文档第 3.6 节与插件开发文档）。
 
+### 实施中的调整（P2.5）
+
+配置模型（第 4.4 节）：
+
+- **`downloader` 配置节移出运行时模型**。下载器是 `plugins.instances` 中的 `PluginInstance`（`id`、`point`、`provider`、`options`），第 4.4 节草图中的 `plugin` 字段改为 `point` + `provider`，`default?` 标记改为由 `slots.downloader` 指定默认实例。新配置默认带一个 qB 实例 `default`，默认值与 3.3 相同。
+- **`plugins.slots` 是带默认值的类型化模型**（`downloader="default"`、`rename_strategy="pn"`、`conflict_policy="hold"`、`media_files="default"`），不是任意 `dict`，也不接受其它键。原因是 WebUI 需要固定的键来绑定，新安装也要有完整的值。`title_parser` / `metadata_provider` 链等到对应扩展点实施时再加。
+- **`plugins` 段的校验**：实例 id 唯一；下载器实例的 `options` 按 `DownloaderOptions`（host / username / password / path / ssl，`$VAR` 展开规则不变）校验；`slots.downloader` 必须指向一个下载器实例。PATCH /config 的请求体不符合时返回 422。
+- **`Config.downloader` 保留为只读属性**，返回 `slots.downloader` 所指实例的冻结视图 `DownloaderInstance`（`type` 即 `provider`）；`Config.downloader_instance(id)` 按 id 取实例。它不参与序列化，也不接受输入。第一部分的调用方（下载门面、`path.py`、checker、`revision_saga._downloader_type`、`AppContext`）因此不变，`_downloader_type` 的取值也不变（存量 `rename_operation` 行依赖它）。按实例路由在 P2.5 第二部分。
+- **秘密字段**：`DownloaderOptions.password` 带 `secret` 标记（与 `secret_field()` 相同；直接写 `Field`，因为 mypy 的 pydantic 插件看不到经 `**kwargs` 传入的别名）。GET / PATCH /config 没有另加按 schema 的实例掩码：现有的按键名掩码已覆盖 `password`，列表项的掩码还原按身份匹配，身份包含实例 `id`。对下载器来说按 schema 掩码的结果完全相同。插件下载器有了自己的 options schema 后再加。
+
+slots 解析：
+
+- `rename_strategy` 读 `slots.rename_strategy`，未登记时仍记录一次日志并按 `none` 处理。`media_files` 读 `slots.media_files`，未登记时退回 `default`。`conflict_policy` 读 `slots.conflict_policy`，未登记时退回 `hold`，不会误删旧版本。后两者不记日志，因为每个文件都会解析一次。
+- **冲突策略改为两个 Provider**：第 9 节把 `revision_conflict_policy` 迁到 `slots.conflict_policy`，slot 的值就是 Provider id。因此宿主以 `core` 登记 `hold` 与 `replace` 两个 `CoreConflictPolicy`，不再登记 `default`；`ConflictRequest` 删除 P4 加入的 `configured` 字段。`ab_sdk` 升至 0.5.0。`GET /api/v1/plugins/providers` 仍不列出 `conflict_policy` / `media_files` 的插件候选。
+
+迁移器（第 9 节，`module/update/v4.py`）：
+
+- 按源字段是否存在触发：`downloader`、`bangumi_manage.rename_method`、`bangumi_manage.revision_conflict_policy`。字段是「移动」而不是复制，第二次运行看不到源字段，什么也不做，也不会用 4.0 格式的文件覆盖 `.v3.bak`。下载器字段合并到已有的 `default` 实例上，没有时新建。
+- `normal → none` 并入 `rename_method → slots.rename_strategy` 的迁移，`Settings._migrate_old_config` 中的对应分支随之删除（第 8.3 节）。掩码哨兵清洗保留在 `_migrate_old_config`。
+- 只有需要迁移时才备份。新文件先写到 `<文件名>.tmp` 再 `os.replace`。迁移后的字典先用 `Config.model_validate` 校验；任何失败都从备份恢复原文件，记录 `critical` 日志并抛出 `ConfigMigrationError`。日志与异常消息写明出错字段（取 pydantic 错误的 `loc`），因为此时 `setup_logger` 还没有运行。配置文件本身不是合法 JSON 时由 `json` 直接报错，与之前相同。
+- **接线**：迁移器在 `Settings.__init__` 中、`load()` / `save()` 之前调用，所以 `import module.conf` 失败即拒绝启动。`module/update/__init__.py` 原先在包初始化时 import 依赖 `module.conf` 的子模块，`module.conf` 无法 import `module.update.v4`。现在包初始化不 import 任何子模块，6 处调用方改为直接 import 子模块。没有用模块级 `__getattr__` 懒加载，因为 mypy 会把这些名字推断为 `Any`。
+- **版本闸门不动**，仍在 `AppContext.startup` 中。P0 发现的「`Settings()` 在版本闸门之前改写 config.json」由备份解决：低于 3.3 的配置仍会先被迁移、再被闸门拒绝，原文件保存在 `config.json.v3.bak`，退回 3.3 时要用它恢复。`Settings` 加载后仍立即保存一次，与之前相同。
+- **环境变量**：`ENV_TO_ATTR` 不变，仍按 3.3 的位置写入（`AB_DOWNLOADER_*` / `AB_DOWNLOAD_PATH` → `downloader`，`AB_METHOD` / `AB_REVISION_CONFLICT_POLICY` → `bangumi_manage`），再由同一个 `migrate_v3_dict` 移到默认实例与 slots。设置向导（`/setup/complete`）把下载器写入 `slots.downloader` 所指的实例。
+
+数据库与 WebUI：
+
+- 迁移 v26 为 `bangumi`、`movie`、`rssitem`、`torrent` 增加 `downloader_id`。每张表一个守卫：列已存在，或表不存在（之后由 `create_all` 按模型建表，自带该列）时跳过。取值见下文第二部分（规则、订阅与电影为空表示跟随默认实例，种子默认 `default`）。
+- WebUI：「下载器设置」编辑 `slots.downloader` 所指的实例（`provider` 与 `options`），「番剧管理设置」中的重命名方式与版本冲突策略绑定到 `plugins.slots`。两个分区的未保存标记都以 `plugins` 配置段判断，所以修改其中一个，两个分区都会显示未保存。插件卡片保存后 `refreshGroup('plugins')` 会用服务端的值覆盖整个 `plugins` 段，包括尚未保存的下载器与 slots 修改（之前只影响插件 options）。
+- 用户文档 `docs/{,en/,ja/}config/{downloader,manager}.md` 与插件开发文档改为新的配置位置。
+
+第二部分（路由、整理与 WebUI）：
+
+- **`DownloadClient(instance_id=None)`**，`None` 为默认实例。客户端缓存与凭据闩锁按实例 id 分开；引用计数本来按具体客户端对象计，不变。第 3.5 节的统一工厂 `create(config: PluginConfig)` 未实施：工厂仍接收 P2 契约的 `DownloaderConnection`，实例 `options` 目前就是 `DownloaderOptions` 的字段。
+- **`DownloaderPool`**：一次操作（一轮 RSS、整季补全）内按实例 id 惰性进入 `DownloadClient`，退出时全部释放。进入失败的实例在这次操作内记住，之后直接抛 `ConnectionError`，不再重复登录。`RSSEngine.refresh_rss` 的参数由 `DownloadClient` 改为 `DownloaderPool`，测试改用 `test.factories.SingleClientPool`（27 处调用）。
+- **实例选择**：`resolve_downloader_id(*候选)` 取第一个已配置的实例 id，都为空时用 `slots.downloader`。指向已删除实例的候选记 warning 后跳过，因此删除实例后，选择它的规则与订阅改用默认实例。新种子按 规则 → 订阅 → 默认 选择；由订阅新建的规则在解析时继承订阅的 `downloader_id`（`rss/analyser.py`）；手动收集与整季补全按 规则 → 默认。
+- **规则、订阅与电影的 `downloader_id` 为空表示跟随默认实例**。第一部分的 v26 给这三张表 `DEFAULT 'default'`，这样「规则 → 订阅」的继承永远走不到订阅，用户改默认实例后存量规则也仍钉在 `default`，与第 3.5 节「为空时用默认实例」矛盾。v26 尚未发布，所以直接修改它：这三张表加列不带默认值（存量为 `NULL`），`torrent` 仍为 `DEFAULT 'default'`（存量种子都在 3.3 的下载器中）。已经运行过第一部分 v26 的开发库需要手动把这三列置空。`BangumiUpdate`、`MovieUpdate`、`RSSUpdate` 加入该字段，`POST /rss/add` 保存它。
+- **种子行的 `downloader_id`** 由 `DownloadClient.add_torrent` 写入投递的实例；未匹配的孤儿种子保持 `default`。投递时实例不可用：种子不入库、下一轮重试，不发 `DownloadFailureEvent`（不可用由重命名轮次通知）。
+- **重命名逐实例运行**：`manager/renamer.py` 的 `rename_all()` 供 `loops.rename_tick` 与 apply-offset 使用。进入失败（连不上、凭据被拒、Provider 未登记）的实例跳过，其它实例照常处理；`DownloaderUnavailableEvent` 只在「可用 → 不可用」时产生一次（进程内集合），恢复后再次不可用会再通知。`Renamer` 自身抛出的异常仍中断本轮，与之前相同。apply-offset 触发的重命名丢弃事件（之前也丢弃）；实例恰好在这一次变为不可用时，这次不可用不会通知。启动等待循环仍只检查默认实例。
+- **`DownloaderUnavailableEvent`** 增加 `instance_id`（默认 `"default"`），`dedup_key` 由 `downloader:<host>` 改为 `downloader:<instance_id>`，payload 增加 `instance`。`ab_sdk` 仍为 0.5.0（本阶段未发布）。
+- **版本替换事务按实例过滤**：`list_active_replacements(downloader_type)` 只返回本实例的事务。否则实例 A 的轮次在 A 上查不到 B 的新种子，会进入破坏性的 `_recover_missing_replacement`。`_downloader_type()` 改读 `self.client.instance`。
+- **offset 查找**：同一 hash 有多条种子行时以本实例的行为准，其它实例的行作为后备。`path_to_bangumi` / `gen_save_path` 增加 `root`（实例的下载目录），重命名与新规则保存目录按实例计算。
+- `FileRenamed` / `TorrentOrganized` 带真实的 `downloader_id`；`hardlink` 的 `path_map` 本来就按它取映射，无需改动。
+- **规则换实例**：删除规则（删除文件）时按种子行记录的实例加上规则当前的实例逐个删除。更新规则时实例变了：旧种子不移动，原实例上的 qB RSS 规则不改，只按新实例的下载目录重算 `save_path`；实例不变且路径变化时才移动（路径不变时不再连接下载器）。
+- **API**：`GET /downloader/torrents` 汇总所有实例、每条带 `downloader_id`，不可用实例跳过，全部不可用时返回 503（原先连接异常直接 500）。暂停 / 恢复 / 删除 / 打标请求带 `downloader_id`（空为默认实例），未知 id 返回 404；自动打标逐实例进行。新增 `GET /downloader/instances`（`id`、`provider` 与默认 id），供规则 / 订阅选择下载器。SSE 的 downloader 帧同样汇总，超时按实例计算。MCP `list_downloads` 汇总所有实例并带 `downloader` 字段，全部不可用时返回空列表（原先抛错）。
+- **WebUI**：「下载器设置」列出所有实例（点击编辑、添加、删除、设为默认，默认实例不能删除；新 id 只接受字母、数字、`_`、`-`，这是前端限制）。规则编辑的高级选项与添加订阅新增下载器选择，留空为默认实例，只有一个实例时不显示；实例列表每次打开时请求，设置页增删实例后无需刷新。下载器页在多实例时加「下载器」列，规则 / 孤儿种子列表在已下载的种子上标出实例。批量操作仍按 hash 选择，按所在实例分组请求；同一 hash 同时在两个实例中时会作用于两个实例。
+- **`refreshGroup` 只刷新给定字段**：插件卡片保存后只刷新 `plugins.enabled` / `options`，不再覆盖未保存的实例与 slots 修改（第一部分记录的问题）。「下载器设置」与「番剧管理设置」仍共用 `plugins` 未保存标记。
+
+审阅修正（覆盖上文相应条目）：
+
+- **保存目录随实例重新生成**：`save_path_for(data, root)`（`downloader/path.py`）在已存的 `save_path` 位于该实例下载目录之下时沿用它，否则按该实例的下载目录重新生成（比较用 `PureWindowsPath`，`\` 与 `/` 都认）。`add_torrent` 每次投递都经过它并写回规则，所以默认实例切换、规则的实例被删除、订阅指向别的实例时，新种子都进目标实例的目录。代价：单实例用户修改下载目录后，存量规则的新种子也进新目录（3.3 沿用旧目录）。只在「属于另一个已配置实例」时重算做不到「实例被删除」的情况，所以按「不在本实例目录之下」判断。
+- **按实例匹配与移动**：`TorrentManager` 在每个实例上按两个目录匹配种子：已存的 `save_path`（与之前相同，单实例改过下载目录时仍能找到旧种子），以及 `save_path_for(规则, 该实例目录)`。更新规则且实例不变时，对种子行记录的每个实例（加上规则当前的实例）分别计算新目录并移动。qB RSS 规则只在有匹配种子的实例与规则自己的实例上改写，因为 `rss/setRule` 在别的 qB 上会新建一条启用的自动下载规则。这样「规则未指定实例、种子经订阅进了另一实例」时也会移动。规则自身的实例仍不带订阅后备，因为种子行已记录实际位置。
+- **删除逐实例隔离**：一个实例不可用或删除失败时，其它实例照常删除，最后返回 500 并列出失败的实例。删除规则时种子行已先删除，不可用实例上的种子之后没有记录（见第二部分结尾的推迟项）。
+- **整季补全与自动打标跳过不可用实例**：`eps_complete` 跳过该规则（不标记 `eps_collect`，下一轮重试），其它规则照常补全并保存；`POST /downloader/torrents/tag/auto` 改用 `DownloaderPool`，不可用实例跳过。
+- **版本替换事务的过滤只在多实例时生效**：只有一个下载器实例时 `list_active_replacements(None)` 返回全部事务，与 3.3 相同；否则改了主机地址（键里含主机哈希）后进行中的事务永远不会恢复。多实例下改主机地址仍有这个问题（见推迟项）。
+- **迁移备份不覆盖已有备份**：`.v3.bak` 已存在时依次取 `.v3.bak.1`、`.v3.bak.2` …，失败恢复与日志都用本次写的备份。降级回 3.3 再升级时，第一份备份里的真实下载器凭据因此保留。
+
+未实施（推迟）：
+
+- 第 10 节验收中的 qb + aria2 并存 **Docker e2e** 未加。以进程内测试替代：两个 mock 实例并列（按规则 / 订阅投递、在另一实例重命名、一个实例不可用、规则换实例后删除），以及 qB 与 aria2 实例各自得到对应后端与不同的 `downloader_type`。Docker 版需要在 `e2e/compose/downloader.yml` 加入固定 digest 的 aria2 镜像。
+- aria2 的 gid ↔ 番剧映射表（`database/aria2.py`）不区分实例；两个 aria2 实例的 gid 相同的概率很低，未处理。
+- `GET /api/v1/plugins/providers` 仍不列出 `conflict_policy` / `media_files` 的插件候选；插件下载器的 options schema 与按 schema 掩码（见上文）。
+- 多实例时修改某个实例的主机地址，该实例上进行中的版本替换事务找不到（`_downloader_type` 键含主机哈希）。可选做法：键改为 `<type>:<instance_id>` 并兼容旧键查询，或按「键不属于任何已配置实例」把孤儿事务交给同类型的唯一实例。
+- 删除规则（删除文件）时某个实例不可用：该实例上的种子不删，种子行却已删除，之后无法重试。可选做法：保留失败实例的种子行，或先删种子再删行（与「仅删数据库不依赖下载器」冲突）。
+
 ## 1. 背景与目标
 
 AB 目前只有 **LLM 提供商** 是真正的运行时插件系统：签名下载、目录加载、懒导入、热重载。
@@ -643,7 +707,7 @@ organize: downloader.completed → media_files.classify → file_parser
 | **P0 清理** | 第 8 节：死代码、3.x 兼容层；`renamer.py` 先做纯搬移式拆分（不改行为） | 生产代码行数减少；vulture CI；测试全绿 |
 | **P1 插件运行时 + SDK 骨架** | `ab_sdk` 包（含 `ab_sdk.testing`）、`module/plugin/`（清单、加载、注册表、runner、熔断、EventBus、插件 KV）、`plugins` 配置段、`GET /api/v1/plugins`；SDK 边界测试 | 本地插件可加载、配置、随配置变更重载；已完成。签名目录来源与 LLM 安装器泛化、`dev_mode` 文件监听移到 P2 |
 | **P2 迁移已有注册表** | 下载器、通知、LLM、搜索站点、定时任务改为扩展点，内置实现以 `core` 登记；`/api/v1/plugins`（列表、启停、配置、Provider 列表）与 WebUI 插件卡片（JSON Schema 表单）；`secret_field` 掩码；插件开发文档 | 已完成；内置行为不变（全量测试）。调整见第 0 节 |
-| **P2.5 多下载器** | 下载器多实例；`downloader_id` 列与迁移；按实例路由 add / rename / delete；organize 逐实例扫描 | qb + aria2 并存的 e2e 用例；单实例行为不变 |
+| **P2.5 多下载器** | 下载器多实例；`downloader_id` 列与迁移；按实例路由 add / rename / delete；organize 逐实例扫描 | 已完成：`plugins.instances` / `slots` 与 3.3 配置迁移器（`update/v4.py`）；按实例缓存客户端与路由投递、重命名、删除；重命名逐实例运行，不可用实例跳过并通知；WebUI 多实例管理与规则 / 订阅的下载器选择；单实例行为不变（全量测试）。qb + aria2 Docker e2e 未加，以进程内并存测试替代，调整见第 0 节 |
 | **P3 流水线插件化：ingest** | `torrent.filter`、`title.parsed`、`torrent.adding`、`http.request` 钩子；`metadata_provider`（mikan / tmdb 以 `core` 登记）；内置插件 `ingest-filters`（包含过滤） | 已完成；无插件时行为不变（全量测试）。`feed_source`、`title_parser` 链、`admission_policy`、`matcher`、`ranker`、`save_path`、size 过滤、按订阅覆盖推迟，见第 0 节 |
 | **P4 流水线插件化：organize** | `media_files`、`file_parser`、`rename_strategy`（含 `template`）、`conflict_policy`、`file.renamed` 等事件 | 已完成：`renamer.py` 拆出 `revision_saga.py`；`rename_strategy` / `media_files` / `conflict_policy` 扩展点与 `file.renamed` / `torrent.organized` 事件；内置插件 `rename`（pn / advance / template，pn / advance / none 输出与 3.3 一致）、`hardlink`（默认停用）与 `media-server-refresh`。`file_parser`、`RenameStrategyContract`、补链设置按钮（P6）推迟，调整见第 0 节 |
 | **P5 事件与外部接口** | SSE 改订阅 bus；`api_router`、`mcp_tool` 扩展点；`message_template` | 已完成：系统事件上总线、通知中心 SSE 改为事件推送、插件路由 / MCP 工具与资源 / 通知模板；status 等快照类 SSE 仍按节拍采样。调整见第 0 节 |

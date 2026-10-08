@@ -20,11 +20,11 @@ describe('dirtyConfigGroups', () => {
 
   it('should report multiple changed groups', () => {
     const current = clone(initConfig);
-    current.downloader.host = 'nas:8080';
+    current.plugins.instances[0].options.host = 'nas:8080';
     current.proxy.enable = true;
     expect(dirtyConfigGroups(initConfig, current)).toEqual([
-      'downloader',
       'proxy',
+      'plugins',
     ]);
   });
 

@@ -307,7 +307,7 @@ class MyPlugin(Plugin):
 
 ### 重命名方式（rename_strategy）
 
-下载完成后，AB 为种子里的每个正片与字幕调用设置项「重命名方式」（`bangumi_manage.rename_method`）对应的 Provider。宿主只自带 `none`（保留原名）；`pn`、`advance` 与 `template` 由内置插件「重命名」（`rename`，默认启用）提供。插件登记的 id 会出现在 设置 → 番剧管理设置 → 重命名方式 的下拉框里。
+下载完成后，AB 为种子里的每个正片与字幕调用设置项「重命名方式」（`plugins.slots.rename_strategy`）对应的 Provider。宿主只自带 `none`（保留原名）；`pn`、`advance` 与 `template` 由内置插件「重命名」（`rename`，默认启用）提供。插件登记的 id 会出现在 设置 → 番剧管理设置 → 重命名方式 的下拉框里。
 
 ```python
 from ab_sdk import Plugin, points, provider
@@ -344,9 +344,9 @@ class MyRename(Plugin):
 ### 文件分类与版本冲突（media_files / conflict_policy）
 
 - `media_files`：`classify(path) -> "media" | "subtitle" | "ignore"`，决定种子内哪些文件按正片、字幕重命名。宿主实现按扩展名判断（`.mp4` / `.mkv` 为正片，`.ass` / `.srt` 为字幕）。
-- `conflict_policy`：`decide(ConflictRequest) -> ConflictDecision("hold" | "replace")`，新种子的规范文件名已被另一个种子占用时决定保留旧的还是替换。宿主实现沿用设置项「版本冲突策略」。宿主只在「唯一占用者、双方都是单文件种子、双方解析身份完整」时执行替换，其它情况一律按 `hold` 处理。
+- `conflict_policy`：`decide(ConflictRequest) -> ConflictDecision("hold" | "replace")`，新种子的规范文件名已被另一个种子占用时决定保留旧的还是替换。宿主自带 `hold` 与 `replace` 两个实现，即设置项「版本冲突策略」的两个选项。宿主只在「唯一占用者、双方都是单文件种子、双方解析身份完整」时执行替换，其它情况一律按 `hold` 处理。
 
-这两个扩展点目前只使用宿主实现（id 为 `default`）。插件可以登记自己的实现，但要等多下载器版本的 `plugins.slots` 提供后才能被选用。
+两者按 `plugins.slots.media_files`（默认 `default`）与 `plugins.slots.conflict_policy`（默认 `hold`）选择 Provider id。选中的 id 未登记（插件停用或被熔断）时，退回宿主的 `default` 与 `hold`。
 
 ### 整理事件（file.renamed / torrent.organized）
 
@@ -356,7 +356,7 @@ class MyRename(Plugin):
 | `torrent.organized` | `TorrentOrganized` | `torrent_hash`、`bangumi_id`、`files`（`OrganizedFile(path, kind)` 元组）、`downloader_id` | 一个种子整理完成；重命名方式为 `none` 时同样发布，`files` 为原路径 |
 
 - 路径是**下载器视角**的绝对路径，保存目录与种子内路径以 `/` 拼接（Windows 下载器的 `\` 也统一为 `/`）。AB 与下载器看到的目录不同（如分别运行在不同容器）时，订阅者需要自己做路径映射。
-- `bangumi_id` 来自种子的 `ab:<id>` 标签，旧种子可能为 None。`downloader_id` 目前固定为 `"default"`，多下载器版本会给出实例 id。
+- `bangumi_id` 来自种子的 `ab:<id>` 标签，旧种子可能为 None。`downloader_id` 是种子所在下载器实例的 id（`plugins.instances`），多个实例的路径视角可能不同。
 - `torrent.organized` 的投递是**至少一次**：未打「已重命名」标签的种子（如重命名方式为 `none`）在每次 AB 重启后会再发布一次，订阅者必须幂等。
 - 这两个事件只发布到事件总线，不进入通知中心。
 
@@ -467,7 +467,7 @@ AB 发出的、会进入通知中心的事件都是 `ab_sdk.events.SystemEvent` 
 | `rss_failure` | `RssFailureEvent` | RSS 订阅从正常变为连接异常 |
 | `download_failure` | `DownloadFailureEvent` | 种子重试后仍添加失败 |
 | `offset_review` | `OffsetReviewEvent` | 番剧的季度 / 集数偏移需要人工确认 |
-| `downloader_unavailable` | `DownloaderUnavailableEvent` | 下载器连不上、凭据错误或 IP 被封 |
+| `downloader_unavailable` | `DownloaderUnavailableEvent` | 下载器连不上、凭据错误或 IP 被封；`instance_id` 为下载器实例 id，每个实例从可用变为不可用时发布一次 |
 | `update_available` | `UpdateAvailableEvent` | 检查到新版本 |
 | `update_applied` / `update_failed` | `UpdateAppliedEvent` | 在线更新成功 / 失败（`kind` 随 `success` 变化） |
 | `llm_auth_failure` | `LLMAuthFailureEvent` | 订阅类 LLM 提供商凭据失效 |

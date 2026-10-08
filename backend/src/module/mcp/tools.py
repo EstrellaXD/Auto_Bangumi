@@ -6,7 +6,7 @@ from mcp import types
 
 from module.conf import VERSION
 from module.database import Database
-from module.downloader import DownloadClient
+from module.downloader import DownloaderPool, list_torrents
 from module.manager import SeasonCollector, TorrentManager
 from module.models import Bangumi, BangumiUpdate, RSSItem
 from module.rss import RSSAnalyser, RSSEngine
@@ -301,10 +301,7 @@ async def _unsubscribe_anime(bangumi_id: int, delete: bool) -> dict:
 
 async def _list_downloads(status: str) -> list[dict]:
     status_filter = None if status == "all" else status
-    async with DownloadClient() as client:
-        torrents = await client.get_torrent_info(
-            status_filter=status_filter, category="Bangumi"
-        )
+    torrents = await list_torrents(status_filter) or []
     return [
         {
             "name": t.get("name", ""),
@@ -314,6 +311,7 @@ async def _list_downloads(status: str) -> list[dict]:
             "dlspeed": t.get("dlspeed", 0),
             "upspeed": t.get("upspeed", 0),
             "eta": t.get("eta", 0),
+            "downloader": t["downloader_id"],
         }
         for t in torrents
     ]
@@ -348,10 +346,10 @@ def _get_program_status() -> dict:
 
 
 async def _refresh_feeds() -> dict:
-    async with DownloadClient() as client:
+    async with DownloaderPool() as downloaders:
         async with Database() as db:
             engine = RSSEngine(db)
-            await engine.refresh_rss(client)
+            await engine.refresh_rss(downloaders)
     return {"status": True, "message": "RSS feeds refreshed successfully"}
 
 

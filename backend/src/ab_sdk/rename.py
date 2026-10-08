@@ -2,14 +2,14 @@
 
 扩展点一览（常量见 :mod:`ab_sdk.points`）：
 
-- ``rename_strategy``（Provider）：返回 :class:`RenameStrategy`，id 即设置项
-  ``bangumi_manage.rename_method`` 的取值
+- ``rename_strategy``（Provider）：返回 :class:`RenameStrategy`
 - ``media_files``（Provider）：返回 :class:`MediaFiles`，判断种子内文件的类别
 - ``conflict_policy``（Provider）：返回 :class:`ConflictPolicy`，目标路径已被
   另一个种子占用时决定保留还是替换
 
-``media_files`` 与 ``conflict_policy`` 目前只使用宿主自带的实现（id
-:data:`CORE_ID`），插件实现的选择随 P2.5 的 ``plugins.slots`` 一起提供。
+三者都按 ``plugins.slots`` 中同名的键选择 Provider id。宿主自带 ``none``
+（重命名）、:data:`CORE_ID`（文件分类）与 ``hold`` / ``replace``（冲突策略）；
+选中的 id 未登记（插件停用或被熔断）时退回宿主实现。
 
 整理完成后宿主发布 :class:`ab_sdk.events.FileRenamed` 与
 :class:`ab_sdk.events.TorrentOrganized`，插件用 ``@subscribe`` 接收。
@@ -22,7 +22,7 @@ FileKind = Literal["media", "subtitle"]
 MediaKind = Literal["media", "subtitle", "ignore"]
 ConflictAction = Literal["hold", "replace"]
 
-# media_files / conflict_policy 的宿主实现 id
+# media_files 的宿主实现 id
 CORE_ID = "default"
 
 
@@ -114,8 +114,6 @@ class ConflictRequest:
     target_path: str
     incoming: RevisionTask
     owners: tuple[RevisionTask, ...]
-    # 用户在设置中选择的版本冲突策略（bangumi_manage.revision_conflict_policy）
-    configured: ConflictAction
     # 唯一占用者与新种子是同一发布、且新种子版本号更高
     strict_upgrade: bool
 

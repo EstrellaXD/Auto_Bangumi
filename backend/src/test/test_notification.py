@@ -561,9 +561,13 @@ class TestEventInboxContract:
         assert event.kind == "downloader_unavailable"
         assert event.severity == "error"
         assert event.once is False
-        # reason 不进 dedup_key：unreachable→credentials 的翻转合并为一条
-        assert event.dedup_key() == "downloader:http://qb:8080"
-        assert event.payload() == {"host": "http://qb:8080", "reason": "credentials"}
+        # 按实例去重，reason 不进 dedup_key：unreachable→credentials 的翻转合并为一条
+        assert event.dedup_key() == "downloader:default"
+        assert event.payload() == {
+            "host": "http://qb:8080",
+            "reason": "credentials",
+            "instance": "default",
+        }
         title, body = event.describe()
         assert "下载器" in title
         assert "密码" in body

@@ -1,7 +1,10 @@
+from dataclasses import dataclass
 from os.path import expandvars
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from ab_sdk.rename import CORE_ID
 
 
 def _expand(value: str | None) -> str:
@@ -17,23 +20,25 @@ class Program(BaseModel):
     webui_port: int = Field(default=7892, description="WebUI port")
 
 
-class Downloader(BaseModel):
-    """Download client connection settings.
+class DownloaderOptions(BaseModel):
+    """下载器实例的连接参数（``plugins.instances`` 中 point 为 downloader 的 options）。
 
-    Credential fields (``host``, ``username``, ``password``) are stored with a
-    trailing underscore and exposed via properties that expand ``$VAR``
-    environment variable references at access time.
+    ``host`` / ``username`` / ``password`` 以带下划线的字段存储，通过属性读取，
+    读取时展开 ``$VAR`` 环境变量引用。
     """
 
-    type: str = Field(default="qbittorrent", description="Downloader type")
     host_: str = Field(
         default="172.17.0.1:8080", alias="host", description="Downloader host"
     )
     username_: str = Field(
         default="admin", alias="username", description="Downloader username"
     )
+    # 等同 ab_sdk.secret_field()；直接写 Field 以便 mypy 识别别名
     password_: str = Field(
-        default="adminadmin", alias="password", description="Downloader password"
+        default="adminadmin",
+        alias="password",
+        description="Downloader password",
+        json_schema_extra={"secret": True},
     )
     path: str = Field(default="/downloads/Bangumi", description="Downloader path")
     ssl: bool = Field(default=False, description="Downloader ssl")
@@ -49,6 +54,19 @@ class Downloader(BaseModel):
     @property
     def password(self):
         return _expand(self.password_)
+
+
+@dataclass(frozen=True)
+class DownloaderInstance:
+    """一个下载器实例的只读视图（``type`` 即 Provider id），变量已展开。"""
+
+    id: str
+    type: str
+    host: str
+    username: str
+    password: str
+    path: str
+    ssl: bool
 
 
 class RSSParser(BaseModel):
@@ -68,13 +86,8 @@ class BangumiManage(BaseModel):
 
     enable: bool = Field(default=True, description="Enable bangumi manage")
     eps_complete: bool = Field(default=False, description="Enable eps complete")
-    rename_method: str = Field(default="pn", description="Rename method")
     group_tag: bool = Field(default=False, description="Enable group tag")
     remove_bad_torrent: bool = Field(default=False, description="Remove bad torrent")
-    revision_conflict_policy: Literal["hold", "replace"] = Field(
-        default="hold",
-        description="How to handle a higher revision targeting an existing episode",
-    )
     # 关闭后 refresh_rss 不再把未匹配种子入库（孤儿记录）；代价是这些条目
     # 每轮会被重新内存匹配（廉价），好处是后补规则能立即接住仍在源里的旧集
     track_orphans: bool = Field(
@@ -349,6 +362,46 @@ class Update(BaseModel):
     auto_check: bool = Field(default=True, description="Auto-check for updates")
 
 
+DOWNLOADER_POINT = "downloader"
+DEFAULT_DOWNLOADER_ID = "default"
+
+
+class PluginInstance(BaseModel):
+    """多实例扩展点（目前只有下载器）的一个实例：用 ``provider`` 实现，``options``
+    为该实现的配置。秘密字段按 ``secret_field`` 规则掩码。"""
+
+    id: str = Field(min_length=1, description="Instance id")
+    point: str = Field(description="Extension point")
+    provider: str = Field(description="Provider id")
+    options: dict[str, Any] = Field(default_factory=dict)
+
+
+def _default_instances() -> list[PluginInstance]:
+    return [
+        PluginInstance(
+            id=DEFAULT_DOWNLOADER_ID,
+            point=DOWNLOADER_POINT,
+            provider="qbittorrent",
+            options=DownloaderOptions().model_dump(by_alias=True),
+        )
+    ]
+
+
+class Slots(BaseModel):
+    """Provider 选择：扩展点 → Provider id；下载器选的是实例 id。"""
+
+    downloader: str = Field(
+        default=DEFAULT_DOWNLOADER_ID, description="Default downloader instance id"
+    )
+    rename_strategy: str = Field(default="pn", description="Rename method")
+    # 内置的 hold / replace 只在新种子是唯一占用者的严格版本升级时才可能替换
+    conflict_policy: str = Field(
+        default="hold",
+        description="How to handle a higher revision targeting an existing episode",
+    )
+    media_files: str = Field(default=CORE_ID, description="Media file classifier")
+
+
 class Plugins(BaseModel):
     """插件系统配置。
 
@@ -369,13 +422,32 @@ class Plugins(BaseModel):
         default_factory=dict,
         description="Explicit hook order per extension point (plugin ids)",
     )
+    slots: Slots = Field(default_factory=Slots)
+    instances: list[PluginInstance] = Field(default_factory=_default_instances)
+
+    @model_validator(mode="after")
+    def _check_instances(self) -> "Plugins":
+        ids = [i.id for i in self.instances]
+        if len(ids) != len(set(ids)):
+            raise ValueError(f"duplicate plugin instance id in {ids}")
+        for instance in self.instances:
+            if instance.point == DOWNLOADER_POINT:
+                DownloaderOptions.model_validate(instance.options)
+        if not any(
+            i.id == self.slots.downloader and i.point == DOWNLOADER_POINT
+            for i in self.instances
+        ):
+            raise ValueError(
+                f"slots.downloader {self.slots.downloader!r} "
+                "is not a downloader instance"
+            )
+        return self
 
 
 class Config(BaseModel):
     """Root configuration model composed of all subsection models."""
 
     program: Program = Program()
-    downloader: Downloader = Downloader()
     rss_parser: RSSParser = RSSParser()
     bangumi_manage: BangumiManage = BangumiManage()
     log: Log = Log()
@@ -386,6 +458,33 @@ class Config(BaseModel):
     security: Security = Security()
     update: Update = Update()
     plugins: Plugins = Plugins()
+
+    @property
+    def downloader(self) -> DownloaderInstance:
+        """默认下载器实例（``plugins.slots.downloader``）。"""
+        return self.downloader_instance(self.plugins.slots.downloader)
+
+    def downloader_instance(self, instance_id: str) -> DownloaderInstance:
+        instance = next(
+            (
+                i
+                for i in self.plugins.instances
+                if i.id == instance_id and i.point == DOWNLOADER_POINT
+            ),
+            None,
+        )
+        if instance is None:
+            raise KeyError(f"unknown downloader instance {instance_id!r}")
+        options = DownloaderOptions.model_validate(instance.options)
+        return DownloaderInstance(
+            id=instance.id,
+            type=instance.provider,
+            host=options.host,
+            username=options.username,
+            password=options.password,
+            path=options.path,
+            ssl=options.ssl,
+        )
 
     def model_dump(self, *args, by_alias=True, **kwargs):
         return super().model_dump(*args, by_alias=by_alias, **kwargs)

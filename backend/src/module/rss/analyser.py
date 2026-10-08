@@ -70,6 +70,7 @@ class RSSAnalyser:
                     movie=result, rss=rss, torrent=torrent
                 )
                 result.rss_link = rss.url
+                result.downloader_id = rss.downloader_id
                 seen_identities.add(identity)
                 new_movies.append(result)
                 logger.info(f"New movie found: {result.official_title}")
@@ -78,6 +79,7 @@ class RSSAnalyser:
                     bangumi=result, rss=rss, torrent=torrent
                 )
                 result.rss_link = rss.url
+                result.downloader_id = rss.downloader_id
                 if not full_parse:
                     return [result], new_movies
                 seen_identities.add(identity)
@@ -98,6 +100,7 @@ class RSSAnalyser:
                     fetch_poster=fetch_poster,
                 )
                 result.rss_link = rss.url
+                result.downloader_id = rss.downloader_id
             else:
                 await self.official_title_parser(
                     bangumi=result,
@@ -106,6 +109,7 @@ class RSSAnalyser:
                     fetch_poster=fetch_poster,
                 )
                 result.rss_link = rss.url
+                result.downloader_id = rss.downloader_id
             return result
         return None
 

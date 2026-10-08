@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 
+from module.downloader import DownloaderPool
 from module.models import Bangumi, RSSItem, Torrent
 from module.models.config import Config
 from module.models.passkey import Passkey
@@ -85,3 +86,14 @@ def make_passkey(**overrides) -> Passkey:
     )
     defaults.update(overrides)
     return Passkey(**defaults)
+
+
+class SingleClientPool(DownloaderPool):
+    """所有实例都返回同一个（模拟）客户端的下载器池。"""
+
+    def __init__(self, client) -> None:
+        super().__init__()
+        self.client = client
+
+    async def get(self, instance_id: str):
+        return self.client

@@ -19,7 +19,13 @@
       "ssl": "SSL",
       "title": "Downloader Setting",
       "type": "Downloader Type",
-      "username": "Username"
+      "username": "Username",
+      "add": "Add",
+      "default": "default",
+      "set_default": "Set default",
+      "delete": "Delete downloader",
+      "delete_confirm": "Delete downloader \"{id}\"? Rules that use it switch to the default downloader. Torrents already in it are not touched.",
+      "new_id": "New downloader id"
     },
     "llm_set": {
       "api_key": "API Key",
@@ -216,7 +222,8 @@
       "size": "Size",
       "dlspeed": "DL Speed",
       "upspeed": "UP Speed",
-      "peers": "Seeds/Peers"
+      "peers": "Seeds/Peers",
+      "instance": "Downloader"
     },
     "state": {
       "downloading": "Downloading",
@@ -289,7 +296,9 @@
       "season": "Season",
       "year": "Year",
       "yes_btn": "Yes",
-      "view_torrents": "View torrents"
+      "view_torrents": "View torrents",
+      "downloader": "Downloader",
+      "downloader_default": "Default ({id})"
     },
     "others": {
       "title": "Unmatched torrents"
@@ -677,7 +686,8 @@
       "placeholder_name": "Optional",
       "rss_link": "RSS Link",
       "subscribe": "Subscribe",
-      "title": "Add RSS"
+      "title": "Add RSS",
+      "downloader": "Downloader"
     },
     "pause": "Pause",
     "profile": {

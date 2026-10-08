@@ -33,6 +33,15 @@ export interface QbTorrentInfo {
   category: string;
   save_path: string;
   added_on: number;
+  /** 种子所在的下载器实例 id */
+  downloader_id: string;
+}
+
+/** 下载器实例列表（GET /downloader/instances） */
+export interface DownloaderInstances {
+  /** 默认实例 id（plugins.slots.downloader） */
+  default: string;
+  instances: { id: string; provider: string }[];
 }
 
 export interface TorrentGroup {

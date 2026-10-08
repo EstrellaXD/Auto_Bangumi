@@ -2,6 +2,7 @@
 import { NCheckbox, NSelect, NSpin, useMessage } from 'naive-ui';
 import { onKeyStroke } from '@vueuse/core';
 import type { BangumiRule, DetectOffsetResponse } from '#/bangumi';
+import { useDownloaderInstances } from '@/hooks/useDownloaderInstances';
 
 const emit = defineEmits<{
   (e: 'apply', rule: BangumiRule): void;
@@ -90,6 +91,9 @@ const resolutionOptions = ['2160p', '1080p', '720p'].map((r) => ({
   label: r,
   value: r,
 }));
+
+// 下载器实例：留空跟随默认实例；只有一个实例时不显示
+const downloaders = useDownloaderInstances(show);
 
 const selectMenuProps = { role: 'listbox' } as const;
 
@@ -330,6 +334,29 @@ function emitUnarchive() {
             :node-props="selectOptionNodeProps"
             size="small"
             :aria-label="$t('homepage.rule.episode_type')"
+            class="weekday-select"
+          />
+        </div>
+
+        <div v-if="downloaders.multiple.value" class="weekday-row">
+          <label class="weekday-label">{{
+            $t('homepage.rule.downloader')
+          }}</label>
+          <NSelect
+            v-model:value="localRule.downloader_id"
+            :options="downloaders.options.value"
+            role="combobox"
+            aria-haspopup="listbox"
+            :menu-props="selectMenuProps"
+            :node-props="selectOptionNodeProps"
+            clearable
+            size="small"
+            :placeholder="
+              $t('homepage.rule.downloader_default', {
+                id: downloaders.data.value.default,
+              })
+            "
+            :aria-label="$t('homepage.rule.downloader')"
             class="weekday-select"
           />
         </div>

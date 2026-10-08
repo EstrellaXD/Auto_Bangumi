@@ -3,6 +3,7 @@ import { Close, Delete, FullSelection } from '@icon-park/vue-next';
 import { useConfirm } from '@/hooks/useConfirm';
 import type { Torrent } from '#/torrent';
 import { useTorrentList } from '@/hooks/useTorrentList';
+import { useDownloaderInstances } from '@/hooks/useDownloaderInstances';
 
 const props = defineProps<{
   title: string;
@@ -22,6 +23,8 @@ const {
 } = useTorrentList(props.loadFn);
 
 const { t } = useI18n();
+// 多个下载器实例时标出种子所在的实例
+const downloaders = useDownloaderInstances();
 const { confirm } = useConfirm();
 
 async function handleDeleteOne(id: number) {
@@ -124,6 +127,11 @@ onActivated(load);
               v-if="torrent.downloaded"
               type="success"
               :title="$t('homepage.torrents.downloaded')"
+            />
+            <ab-tag
+              v-if="torrent.downloaded && downloaders.multiple.value"
+              type="neutral"
+              :title="torrent.downloader_id"
             />
             <ab-tag v-if="torrent.rss_id" type="info" title="RSS" />
             <ab-tag

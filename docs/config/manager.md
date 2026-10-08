@@ -26,10 +26,11 @@
 | --- | --- | --- | --- | --- |
 | `enable` | 启用番剧管理器 | 布尔值 | 启用 | `true` |
 | `eps_complete` | 启用剧集补全 | 布尔值 | 番剧补全 | `false` |
-| `rename_method` | 重命名方式 | 字符串 | 重命名方式 | `pn` |
 | `group_tag` | 添加字幕组标签 | 布尔值 | 添加组标签 | `false` |
 | `remove_bad_torrent` | 删除错误种子 | 布尔值 | 删除坏种 | `false` |
 | `track_orphans` | 记录未匹配种子 | 布尔值 | 记录未匹配种子 | `true` |
+
+重命名方式与版本冲突策略是 Provider 选择，保存在 `plugins.slots`：`rename_strategy`（重命名方式，默认 `pn`）与 `conflict_policy`（`hold` / `replace`，默认 `hold`）。3.3 的 `bangumi_manage.rename_method` 与 `revision_conflict_policy` 在升级到 4.0 后第一次启动时自动迁移。
 
 ## 模板重命名
 

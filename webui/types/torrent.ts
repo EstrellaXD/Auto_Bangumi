@@ -7,4 +7,6 @@ export interface Torrent {
   bangumi_id: number | null;
   rss_id: number | null;
   qb_hash: string | null;
+  /** 种子实际添加到的下载器实例 */
+  downloader_id: string;
 }

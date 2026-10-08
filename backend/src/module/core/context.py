@@ -23,12 +23,8 @@ from module.plugin import PluginManager
 from module.plugin.host import get_registry, set_bus, set_runner
 from module.rss import RSSAnalyser
 from module.searcher.searcher import reset_cache as reset_poster_cache
-from module.update import (
-    cache_image,
-    first_run,
-    migrate_legacy_auth_tokens,
-    run_migrations,
-)
+from module.update.auth import migrate_legacy_auth_tokens
+from module.update.startup import cache_image, first_run, run_migrations
 
 from .loops import (
     calendar_tick,
@@ -275,7 +271,9 @@ class AppContext:
         try:
             await self.notifier.send_event(
                 DownloaderUnavailableEvent(
-                    host=self.settings.downloader.host, reason=reason
+                    host=self.settings.downloader.host,
+                    reason=reason,
+                    instance_id=self.settings.plugins.slots.downloader,
                 )
             )
         except Exception:

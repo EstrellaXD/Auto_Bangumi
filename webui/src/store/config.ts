@@ -43,11 +43,19 @@ export const useConfigStore = defineStore('config', () => {
   /**
    * 某个配置段在别处（如插件卡片走 /plugins 接口）被直接保存后，用服务端的值
    * 同时刷新编辑态与快照，避免之后的全局保存用旧值把它覆盖回去。
+   * 只刷新 ``fields``，段内其它未保存的修改（如下载器实例）保留。
    */
-  async function refreshGroup<Tkey extends keyof Config>(key: Tkey) {
+  async function refreshGroup<Tkey extends keyof Config>(
+    key: Tkey,
+    fields: (keyof Config[Tkey])[]
+  ) {
     const res = await apiConfig.getConfig();
-    config.value[key] = res[key];
-    savedConfig.value[key] = JSON.parse(JSON.stringify(res[key]));
+    for (const field of fields) {
+      config.value[key][field] = res[key][field];
+      savedConfig.value[key][field] = JSON.parse(
+        JSON.stringify(res[key][field])
+      );
+    }
   }
 
   function getSettingGroup<Tkey extends keyof Config>(key: Tkey) {

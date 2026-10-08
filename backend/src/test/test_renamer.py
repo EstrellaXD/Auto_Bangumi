@@ -350,7 +350,7 @@ class TestRenameSingleFile:
             mock_settings.downloader.path = "/downloads/Bangumi"
             mock_settings.bangumi_manage.group_tag = False
             mock_settings.bangumi_manage.remove_bad_torrent = False
-            mock_settings.bangumi_manage.rename_method = "pn"
+            mock_settings.plugins.slots.rename_strategy = "pn"
             with patch(
                 "module.downloader.download_client.DownloadClient._DownloadClient__getClient",
                 return_value=mock_qb_client,
@@ -391,7 +391,7 @@ class TestRenameSingleFile:
             patch("module.manager.renamer.settings") as mock_settings,
             patch("module.downloader.path.settings") as mock_path_settings,
         ):
-            mock_settings.bangumi_manage.rename_method = method
+            mock_settings.plugins.slots.rename_strategy = method
             mock_settings.bangumi_manage.remove_bad_torrent = remove_bad_torrent
             mock_path_settings.downloader.path = "/downloads/Bangumi"
             return await renamer.rename()
@@ -847,7 +847,7 @@ class TestRenameFlow:
         )
         with patch.object(renamer._parser, "torrent_parser", return_value=ep):
             with patch("module.manager.renamer.settings") as mock_settings:
-                mock_settings.bangumi_manage.rename_method = "pn"
+                mock_settings.plugins.slots.rename_strategy = "pn"
                 mock_settings.bangumi_manage.remove_bad_torrent = False
                 with patch("module.downloader.path.settings") as mock_path_settings:
                     mock_path_settings.downloader.path = "/downloads/Bangumi"
@@ -884,7 +884,7 @@ class TestRenameFlow:
 
         with patch.object(renamer._parser, "torrent_parser", side_effect=mock_parser):
             with patch("module.manager.renamer.settings") as mock_settings:
-                mock_settings.bangumi_manage.rename_method = "pn"
+                mock_settings.plugins.slots.rename_strategy = "pn"
                 mock_settings.bangumi_manage.remove_bad_torrent = False
                 with patch("module.downloader.path.settings") as mock_path_settings:
                     mock_path_settings.downloader.path = "/downloads/Bangumi"
@@ -916,7 +916,7 @@ class TestRenameFlow:
             AsyncMock(return_value={"h1": (0, "movie")}),
         ):
             with patch("module.manager.renamer.settings") as mock_settings:
-                mock_settings.bangumi_manage.rename_method = "advance"
+                mock_settings.plugins.slots.rename_strategy = "advance"
                 mock_settings.bangumi_manage.remove_bad_torrent = False
                 with patch("module.downloader.path.settings") as mock_path_settings:
                     mock_path_settings.downloader.path = "/downloads/Bangumi"
@@ -941,7 +941,7 @@ class TestRenameFlow:
             {"name": "info.nfo"},
         ]
         with patch("module.manager.renamer.settings") as mock_settings:
-            mock_settings.bangumi_manage.rename_method = "pn"
+            mock_settings.plugins.slots.rename_strategy = "pn"
             with patch("module.downloader.path.settings") as mock_path_settings:
                 mock_path_settings.downloader.path = "/downloads/Bangumi"
                 result = await renamer.rename()
@@ -1022,7 +1022,7 @@ class TestRevisionConflictFlow:
         renamer.client.client.torrents_rename_file.return_value = RenameResult(
             RenameOutcome.RENAMED
         )
-        test_settings.bangumi_manage.rename_method = "pn"
+        test_settings.plugins.slots.rename_strategy = "pn"
         other = Renamer(renamer.client)
 
         with (
@@ -1108,8 +1108,8 @@ class TestRevisionConflictFlow:
             return [{"name": self.V2}]
 
         renamer.client.client.torrents_files.side_effect = files
-        test_settings.bangumi_manage.rename_method = "pn"
-        test_settings.bangumi_manage.revision_conflict_policy = "hold"
+        test_settings.plugins.slots.rename_strategy = "pn"
+        test_settings.plugins.slots.conflict_policy = "hold"
 
         with (
             patch("module.manager.renamer.settings", test_settings),
@@ -1160,8 +1160,8 @@ class TestRevisionConflictFlow:
         renamer.client.client.torrents_files.side_effect = files
         renamer.client.client.torrents_rename_file.side_effect = rename
         renamer.client.client.torrents_delete.side_effect = delete
-        test_settings.bangumi_manage.rename_method = "pn"
-        test_settings.bangumi_manage.revision_conflict_policy = "replace"
+        test_settings.plugins.slots.rename_strategy = "pn"
+        test_settings.plugins.slots.conflict_policy = "replace"
 
         with (
             patch("module.manager.renamer.settings", test_settings),
@@ -1202,8 +1202,8 @@ class TestRevisionConflictFlow:
         renamer.client.client.torrents_files.side_effect = files
         renamer.client.client.torrents_rename_file.side_effect = rename
         renamer.client.client.torrents_delete.return_value = True
-        test_settings.bangumi_manage.rename_method = "pn"
-        test_settings.bangumi_manage.revision_conflict_policy = "replace"
+        test_settings.plugins.slots.rename_strategy = "pn"
+        test_settings.plugins.slots.conflict_policy = "replace"
 
         with (
             patch("module.manager.renamer.settings", test_settings),
@@ -1241,8 +1241,8 @@ class TestRevisionConflictFlow:
             return [{"name": self.V2}, {"name": "尼古喵喵 - 01.ass"}]
 
         renamer.client.client.torrents_files.side_effect = files
-        test_settings.bangumi_manage.rename_method = "pn"
-        test_settings.bangumi_manage.revision_conflict_policy = "replace"
+        test_settings.plugins.slots.rename_strategy = "pn"
+        test_settings.plugins.slots.conflict_policy = "replace"
 
         with (
             patch("module.manager.renamer.settings", test_settings),
@@ -1281,8 +1281,8 @@ class TestRevisionConflictFlow:
 
         renamer.client.client.torrents_files.side_effect = files
         renamer.client.client.torrents_rename_file.side_effect = rename
-        test_settings.bangumi_manage.rename_method = "pn"
-        test_settings.bangumi_manage.revision_conflict_policy = "replace"
+        test_settings.plugins.slots.rename_strategy = "pn"
+        test_settings.plugins.slots.conflict_policy = "replace"
 
         with (
             patch("module.manager.renamer.settings", test_settings),
@@ -1310,8 +1310,8 @@ class TestRevisionConflictFlow:
             return [{"name": self.V2}]
 
         renamer.client.client.torrents_files.side_effect = files
-        test_settings.bangumi_manage.rename_method = "pn"
-        test_settings.bangumi_manage.revision_conflict_policy = "replace"
+        test_settings.plugins.slots.rename_strategy = "pn"
+        test_settings.plugins.slots.conflict_policy = "replace"
 
         with (
             patch("module.manager.renamer.settings", test_settings),
@@ -1345,9 +1345,9 @@ class TestRevisionConflictFlow:
         renamer.client.client.torrents_rename_file.return_value = RenameResult(
             RenameOutcome.DESTINATION_EXISTS, detail="target exists"
         )
-        test_settings.bangumi_manage.rename_method = "pn"
+        test_settings.plugins.slots.rename_strategy = "pn"
         test_settings.bangumi_manage.remove_bad_torrent = True
-        test_settings.bangumi_manage.revision_conflict_policy = "replace"
+        test_settings.plugins.slots.conflict_policy = "replace"
 
         def parse(torrent_path, **kwargs):
             episode = 1 if "01" in torrent_path else 2
@@ -1408,8 +1408,8 @@ class TestRevisionConflictFlow:
         renamer.client.client.torrents_files.side_effect = files
         renamer.client.client.torrents_rename_file.side_effect = rename
         renamer.client.client.torrents_delete.return_value = False
-        test_settings.bangumi_manage.rename_method = "pn"
-        test_settings.bangumi_manage.revision_conflict_policy = "replace"
+        test_settings.plugins.slots.rename_strategy = "pn"
+        test_settings.plugins.slots.conflict_policy = "replace"
 
         with (
             patch("module.manager.renamer.settings", test_settings),

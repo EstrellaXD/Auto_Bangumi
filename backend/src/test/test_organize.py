@@ -79,6 +79,7 @@ def add_strategy(registry, provider_id: str, target_name, plugin_id: str = "ext"
 @pytest.fixture
 def renamer(mock_qb_client):
     with patch("module.downloader.download_client.settings") as mock_settings:
+        mock_settings.downloader.id = "default"
         mock_settings.downloader.type = "qbittorrent"
         mock_settings.downloader.host = "localhost:8080"
         mock_settings.downloader.path = "/downloads/Bangumi"
@@ -102,7 +103,7 @@ async def run(renamer: Renamer, method: str) -> None:
         patch("module.manager.renamer.settings") as mock_settings,
         patch("module.downloader.path.settings") as mock_path_settings,
     ):
-        mock_settings.bangumi_manage.rename_method = method
+        mock_settings.plugins.slots.rename_strategy = method
         mock_settings.bangumi_manage.remove_bad_torrent = False
         mock_path_settings.downloader.path = "/downloads/Bangumi"
         await renamer.rename()
@@ -276,8 +277,8 @@ def _task(file_count: int = 1, revision: int | None = 1) -> RevisionTask:
 def test_core_conflict_policy_decide_matches_3x_reasons(
     owners, incoming, configured, strict, action, reason
 ):
-    decision = CoreConflictPolicy().decide(
-        ConflictRequest("t.mkv", incoming, owners, configured, strict)
+    decision = CoreConflictPolicy(configured).decide(
+        ConflictRequest("t.mkv", incoming, owners, strict)
     )
     assert (decision.action, decision.reason) == (action, reason)
 

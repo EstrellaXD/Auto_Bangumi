@@ -7,7 +7,7 @@ import unicodedata
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 
-from ab_sdk.rename import ConflictDecision, ConflictRequest, Revision
+from ab_sdk.rename import ConflictAction, ConflictDecision, ConflictRequest, Revision
 from module.parser.analyser.selector import parse_configured_release_title
 from module.parser.analyser.tokenizer import MediaType
 from module.parser.release_policy import preference_identity, preference_revision
@@ -108,8 +108,11 @@ def revision_snapshot(identity: RevisionIdentity | None) -> Revision | None:
 
 
 class CoreConflictPolicy:
-    """宿主自带的 ``conflict_policy``：只在唯一占用者与新种子都是单文件、
-    且新种子是严格的版本升级时，按用户设置决定是否替换。"""
+    """宿主自带的 ``conflict_policy``（``hold`` / ``replace``）：只在唯一占用者
+    与新种子都是单文件、且新种子是严格的版本升级时，按 ``action`` 决定是否替换。"""
+
+    def __init__(self, action: ConflictAction) -> None:
+        self.action = action
 
     def decide(self, request: ConflictRequest) -> ConflictDecision:
         if len(request.owners) != 1:
@@ -128,7 +131,7 @@ class CoreConflictPolicy:
                 "hold",
                 "existing and incoming releases are not a strict revision upgrade",
             )
-        if request.configured == "replace":
+        if self.action == "replace":
             return ConflictDecision("replace")
         return ConflictDecision("hold", "revision conflict policy is hold")
 

@@ -60,7 +60,7 @@ MESSAGE_TEMPLATE = "message_template"
 # Provider 扩展点：
 #
 # - ``RENAME_STRATEGY``：返回 :class:`ab_sdk.rename.RenameStrategy`，id 即
-#   ``bangumi_manage.rename_method`` 的取值。宿主自带 ``none``（不改名），
+#   ``plugins.slots.rename_strategy`` 的取值。宿主自带 ``none``（不改名），
 #   内置插件 ``rename`` 提供 ``pn``、``advance``、``template``
 # - ``MEDIA_FILES``：返回 :class:`ab_sdk.rename.MediaFiles`
 # - ``CONFLICT_POLICY``：返回 :class:`ab_sdk.rename.ConflictPolicy`

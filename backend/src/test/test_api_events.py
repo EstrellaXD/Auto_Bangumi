@@ -84,10 +84,12 @@ class TestDownloaderPayload:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("module.api.events.DownloadClient", return_value=mock_client):
+        with patch(
+            "module.downloader.download_client.DownloadClient", return_value=mock_client
+        ):
             result = await _downloader_payload()
 
-        assert result == torrents
+        assert result == [{**torrents[0], "downloader_id": "default"}]
         mock_client.get_torrent_info.assert_called_once_with(
             category="Bangumi", status_filter=None
         )
@@ -99,7 +101,9 @@ class TestDownloaderPayload:
         mock_client.__aenter__ = AsyncMock(side_effect=RuntimeError("no downloader"))
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("module.api.events.DownloadClient", return_value=mock_client):
+        with patch(
+            "module.downloader.download_client.DownloadClient", return_value=mock_client
+        ):
             result = await _downloader_payload()
 
         assert result is None
@@ -132,7 +136,10 @@ class TestDownloaderPayloadTimeout:
         mock_client = _make_hung_client(cancelled)
 
         with (
-            patch("module.api.events.DownloadClient", return_value=mock_client),
+            patch(
+                "module.downloader.download_client.DownloadClient",
+                return_value=mock_client,
+            ),
             patch("module.api.events._DOWNLOADER_TIMEOUT_SECONDS", 0.05),
         ):
             start = time.monotonic()
@@ -163,7 +170,10 @@ class TestEventGeneratorNonBlocking:
         mock_client = _make_hung_client(cancelled)
 
         with (
-            patch("module.api.events.DownloadClient", return_value=mock_client),
+            patch(
+                "module.downloader.download_client.DownloadClient",
+                return_value=mock_client,
+            ),
             patch("module.api.events._DOWNLOADER_TIMEOUT_SECONDS", 0.05),
             patch("module.api.events.LOG_PATH", tmp_path / "missing.log"),
         ):

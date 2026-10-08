@@ -704,6 +704,40 @@ class TestRunMigrations:
             assert get_schema_version(conn) == CURRENT_SCHEMA_VERSION
         assert prefix == "legacy_cccccccc"
 
+    @pytest.mark.parametrize("preexisting", [None, "torrent"])
+    def test_v26_downloader_id_existing_rows_follow_default(
+        self, preexisting, monkeypatch
+    ):
+        """v26：存量种子归属实例 default；番剧 / 电影 / 订阅为空（跟随默认实例）。
+        已有该列的表（如被 create_all 提前建出）跳过，其它表照常补列。"""
+        engine = _make_v0_engine()
+        with engine.begin() as conn:
+            if preexisting:
+                conn.execute(
+                    text(
+                        f"ALTER TABLE {preexisting} ADD COLUMN downloader_id VARCHAR "
+                        "DEFAULT 'default'"
+                    )
+                )
+            conn.execute(
+                text("INSERT INTO bangumi (id, official_title) VALUES (1, 'a')")
+            )
+            conn.execute(text("INSERT INTO rssitem (id, name) VALUES (1, 'r')"))
+            conn.execute(text("INSERT INTO torrent (id, name) VALUES (1, 't')"))
+        _run_through_version(engine, 25, monkeypatch)
+        with engine.begin() as conn:
+            conn.execute(text("INSERT INTO movie (official_title) VALUES ('m')"))
+
+        run_migrations(engine)
+
+        expected = {"bangumi": None, "movie": None, "rssitem": None}
+        with engine.connect() as conn:
+            for table in ("bangumi", "movie", "rssitem", "torrent"):
+                values = conn.execute(
+                    text(f"SELECT downloader_id FROM {table}")
+                ).scalars()
+                assert list(values) == [expected.get(table, "default")], table
+
     def test_is_idempotent(self):
         engine = _make_v0_engine()
         run_migrations(engine)

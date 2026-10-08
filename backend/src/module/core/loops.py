@@ -9,11 +9,12 @@ import logging
 
 from module.conf import settings
 from module.database import Database
-from module.downloader import DownloadClient
-from module.manager import Renamer, TorrentManager, eps_complete
+from module.downloader import DownloaderPool
+from module.manager import TorrentManager, eps_complete
+from module.manager.renamer import rename_all
 from module.notification import NotificationManager, UpdateAvailableEvent
 from module.rss import RSSAnalyser, RSSEngine
-from module.update import updater
+from module.update.updater import updater
 
 from .offset_scanner import OffsetScanner
 
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 async def rss_tick(analyser: RSSAnalyser, notifier: NotificationManager) -> None:
     """Analyse aggregate RSS feeds and refresh the RSS engine once."""
-    async with DownloadClient() as client:
+    async with DownloaderPool() as downloaders:
         async with Database() as db:
             engine = RSSEngine(db)
             # Analyse RSS
@@ -46,7 +47,7 @@ async def rss_tick(analyser: RSSAnalyser, notifier: NotificationManager) -> None
                             exc_info=True,
                         )
             # Run RSS Engine
-            events = await engine.refresh_rss(client)
+            events = await engine.refresh_rss(downloaders)
     if events:
         # 站内通知中心要求事件总是送达 notifier（send_event 内部先落库，
         # 再按 settings.notification.enable 决定是否外发）。
@@ -61,11 +62,8 @@ async def rss_tick(analyser: RSSAnalyser, notifier: NotificationManager) -> None
 
 
 async def rename_tick(notifier: NotificationManager) -> None:
-    """Rename completed downloads and notify via the shared notifier."""
-    async with DownloadClient() as client:
-        renamer = Renamer(client)
-        renamed_info = await renamer.rename()
-        rename_events = list(renamer.events)
+    """Rename completed downloads on every downloader instance and notify."""
+    renamed_info, rename_events = await rename_all()
     if rename_events:
         await asyncio.gather(*[notifier.send_event(event) for event in rename_events])
     if settings.notification.enable and renamed_info:

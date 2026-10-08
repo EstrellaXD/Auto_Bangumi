@@ -53,6 +53,7 @@ export const mockBangumiAPI: BangumiAPI = {
   preferred_group: null,
   preferred_resolution: null,
   episode_type: 'episode',
+  downloader_id: null,
 };
 
 export const mockBangumiRule: BangumiRule = {
@@ -95,6 +96,7 @@ export const mockRSSItem: RSS = {
   connection_status: null,
   last_checked_at: null,
   last_error: null,
+  downloader_id: null,
 };
 
 export const mockRSSList: RSS[] = [
@@ -117,14 +119,6 @@ export const mockConfig = {
     rename_time: 60,
     webui_port: 7892,
   },
-  downloader: {
-    type: 'qbittorrent',
-    host: '172.17.0.1:8080',
-    username: 'admin',
-    password: 'adminadmin',
-    path: '/downloads/Bangumi',
-    ssl: false,
-  },
   rss_parser: {
     enable: true,
     engine: 'classic',
@@ -134,8 +128,6 @@ export const mockConfig = {
   bangumi_manage: {
     enable: true,
     eps_complete: false,
-    rename_method: 'pn',
-    revision_conflict_policy: 'hold',
     group_tag: false,
     remove_bad_torrent: false,
     track_orphans: true,
@@ -167,6 +159,32 @@ export const mockConfig = {
     model: 'gpt-4o-mini',
     base_url: '',
     mode: 'fallback',
+  },
+  plugins: {
+    allow_unsigned: false,
+    enabled: {},
+    options: {},
+    hook_order: {},
+    slots: {
+      downloader: 'default',
+      rename_strategy: 'pn',
+      conflict_policy: 'hold',
+      media_files: 'default',
+    },
+    instances: [
+      {
+        id: 'default',
+        point: 'downloader',
+        provider: 'qbittorrent',
+        options: {
+          host: '172.17.0.1:8080',
+          username: 'admin',
+          password: 'adminadmin',
+          path: '/downloads/Bangumi',
+          ssl: false,
+        },
+      },
+    ],
   },
 };
 

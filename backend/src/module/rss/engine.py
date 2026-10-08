@@ -14,7 +14,12 @@ from module.database.bangumi import (
     match_bangumi_in_list,
     release_fits_bangumi,
 )
-from module.downloader import AddResult, DownloadClient
+from module.downloader import (
+    AddResult,
+    DownloadClient,
+    DownloaderPool,
+    resolve_downloader_id,
+)
 from module.models import Bangumi, ResponseModel, RSSItem, Torrent
 from module.network import RequestContent
 from module.notification.events import (
@@ -95,6 +100,7 @@ class RSSEngine:
         name: str | None = None,
         aggregate: bool = True,
         parser: str = "mikan",
+        downloader_id: str | None = None,
     ):
         if not name:
             async with RequestContent() as req:
@@ -106,7 +112,13 @@ class RSSEngine:
                         msg_en="Failed to get RSS title.",
                         msg_zh="无法获取 RSS 标题。",
                     )
-        rss_data = RSSItem(name=name, url=rss_link, aggregate=aggregate, parser=parser)
+        rss_data = RSSItem(
+            name=name,
+            url=rss_link,
+            aggregate=aggregate,
+            parser=parser,
+            downloader_id=downloader_id,
+        )
         if await self.db.rss.add(rss_data):
             return ResponseModel(
                 status=True,
@@ -323,14 +335,17 @@ class RSSEngine:
         return skip_ids
 
     async def refresh_rss(
-        self, client: DownloadClient, rss_id: Optional[int] = None
+        self, downloaders: DownloaderPool, rss_id: Optional[int] = None
     ) -> list[SystemEvent]:
-        """Refresh feeds with one parser engine for the complete workflow."""
+        """Refresh feeds with one parser engine for the complete workflow.
+
+        匹配到的种子投递到规则的下载器实例，规则未指定时用订阅的，再退回默认实例。
+        """
         with parser_engine_snapshot():
-            return await self._refresh_rss(client, rss_id)
+            return await self._refresh_rss(downloaders, rss_id)
 
     async def _refresh_rss(
-        self, client: DownloadClient, rss_id: Optional[int] = None
+        self, downloaders: DownloaderPool, rss_id: Optional[int] = None
     ) -> list[SystemEvent]:
         # Get All RSS Items
         if not rss_id:
@@ -438,6 +453,17 @@ class RSSEngine:
                             matched_data.official_title,
                         )
                         continue
+                    try:
+                        client = await downloaders.get(
+                            resolve_downloader_id(
+                                matched_data.downloader_id, rss_item.downloader_id
+                            )
+                        )
+                    except ConnectionError as e:
+                        # 实例不可用：不入库，下一轮重试；不可用由重命名轮次通知
+                        logger.warning("Skip %s: %s", torrent.name, e)
+                        failed_ids.add(id(torrent))
+                        continue
                     result = await client.add_torrent(torrent, matched_data)
                     if result is AddResult.FAILED:
                         # 投递失败：不入库（check_new 按 URL 去重，入库就
@@ -480,7 +506,9 @@ class RSSEngine:
                     t for t in torrents if await self.plugin_accepts(t, bangumi)
                 ]
             if torrents:
-                async with DownloadClient() as client:
+                async with DownloadClient(
+                    resolve_downloader_id(bangumi.downloader_id)
+                ) as client:
                     result = await client.add_torrent(torrents, bangumi)
                     if result is AddResult.FAILED:
                         return ResponseModel(
