@@ -96,6 +96,19 @@ def hook_runner(point: str) -> HookRunner | None:
     return runner
 
 
+def provider_impls(point: str) -> dict[str, Any]:
+    """调用该扩展点全部 Provider 工厂；工厂出错的跳过并记录，不连累其它 Provider。"""
+    impls: dict[str, Any] = {}
+    for provider_id, entry in get_registry().providers(point).items():
+        try:
+            impls[provider_id] = entry.factory()
+        except Exception as e:
+            logger.warning(
+                "[Plugin:%s] %s %s 创建失败：%s", entry.plugin_id, point, provider_id, e
+            )
+    return impls
+
+
 def plugin_provider_ids(point: str) -> list[str]:
     """由插件（而非 core）提供的 Provider id，供设置页合并到候选列表。"""
     return sorted(

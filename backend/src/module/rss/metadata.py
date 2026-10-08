@@ -66,6 +66,18 @@ CORE_PROVIDERS: dict[str, MetadataProvider] = {
 }
 
 
+def _valid_metadata(result: Metadata) -> bool:
+    """字段会直接写入新规则；标题为空、季度非整数等结果按失败处理。"""
+    return (
+        isinstance(result, Metadata)
+        and isinstance(result.official_title, str)
+        and result.official_title != ""
+        and isinstance(result.season, int)
+        and isinstance(result.year, (str, type(None)))
+        and isinstance(result.poster_link, (str, type(None)))
+    )
+
+
 async def _resolve(parser_id: str, request: MetadataRequest) -> Metadata | None:
     entry = (
         plugin_host.get_registry().providers(points.METADATA_PROVIDER).get(parser_id)
@@ -82,7 +94,7 @@ async def _resolve(parser_id: str, request: MetadataRequest) -> Metadata | None:
     runner = plugin_host.get_runner()
     if runner is not None:
         ok, result = await runner.call_provider(
-            entry.plugin_id, points.METADATA_PROVIDER, call
+            entry.plugin_id, points.METADATA_PROVIDER, call, check=_valid_metadata
         )
         if not ok:
             return None
@@ -92,9 +104,9 @@ async def _resolve(parser_id: str, request: MetadataRequest) -> Metadata | None:
         except Exception as e:
             logger.warning("[Plugin:%s] 元数据源失败：%s", entry.plugin_id, e)
             return None
-    if result is not None and not isinstance(result, Metadata):
+    if result is not None and not _valid_metadata(result):
         logger.warning(
-            "[Plugin:%s] 元数据源返回了 %s，已忽略",
+            "[Plugin:%s] 元数据源返回了无效结果 %s，已忽略",
             entry.plugin_id,
             type(result).__name__,
         )

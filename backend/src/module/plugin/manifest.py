@@ -10,6 +10,8 @@ from pydantic import BaseModel, Field, field_validator
 
 from ab_sdk import SDK_VERSION
 
+from .host import CORE
+
 MANIFEST_NAME = "plugin.toml"
 _ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 _ENTRY_RE = re.compile(r"^[A-Za-z_][\w.]*:[A-Za-z_]\w*$")
@@ -34,6 +36,9 @@ class PluginManifest(BaseModel):
     def _check_id(cls, value: str) -> str:
         if not _ID_RE.match(value):
             raise ValueError("id 只能由小写字母、数字和连字符组成")
+        if value == CORE:
+            # core 是宿主内置实现的登记身份，插件占用会与之共享 Provider 归属
+            raise ValueError(f"id {CORE!r} 为宿主保留")
         return value
 
     @field_validator("version")

@@ -4,7 +4,7 @@ from ab_sdk import points
 from ab_sdk.search import SearchSite
 from module.conf.search_provider import ProviderConfig, get_provider
 from module.models import RSSItem
-from module.plugin.host import get_registry
+from module.plugin.host import provider_impls
 
 
 def available_sites() -> dict[str, ProviderConfig]:
@@ -13,8 +13,8 @@ def available_sites() -> dict[str, ProviderConfig]:
     每次调用都重新读取，用户保存的站点与插件启停都能立即生效。
     """
     sites: dict[str, ProviderConfig] = {}
-    for site_id, entry in get_registry().providers(points.SEARCH_SITE).items():
-        site: SearchSite = entry.factory()
+    site: SearchSite
+    for site_id, site in provider_impls(points.SEARCH_SITE).items():
         sites[site_id] = {"url": site.url, "parser": site.parser}
     sites.update(get_provider())
     return sites

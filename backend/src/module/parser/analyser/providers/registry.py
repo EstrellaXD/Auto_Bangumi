@@ -83,16 +83,14 @@ class ProviderRegistry:
     @staticmethod
     def _extension_adapters() -> dict[str, type[LLMProviderAdapter]]:
         """插件以 points.LLM_PROVIDER 登记的适配器类，按 id 索引。"""
-        from module.plugin.host import get_registry
+        from module.plugin.host import provider_impls
 
         result: dict[str, type[LLMProviderAdapter]] = {}
-        for provider_id, entry in get_registry().providers(points.LLM_PROVIDER).items():
-            adapter_cls = entry.factory()
+        for provider_id, adapter_cls in provider_impls(points.LLM_PROVIDER).items():
             if adapter_cls.info.id != provider_id:
                 logger.warning(
-                    "LLM provider %s from plugin %s declares info.id=%s; skipped",
+                    "LLM provider %s declares info.id=%s; skipped",
                     provider_id,
-                    entry.plugin_id,
                     adapter_cls.info.id,
                 )
                 continue

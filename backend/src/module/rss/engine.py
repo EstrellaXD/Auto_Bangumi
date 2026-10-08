@@ -31,6 +31,7 @@ from module.parser.analyser.tokenizer import (
     ParsedRelease,
 )
 from module.parser.release_policy import preference_identity, preference_revision
+from module.parser.title_parser import _apply_title_hooks
 from module.plugin import host as plugin_host
 from module.plugin.views import bangumi_info, torrent_info
 
@@ -213,6 +214,9 @@ class RSSEngine:
             # 解析失败不应让过滤阶段中断整轮刷新，钩子收到 None
             logger.debug("Cannot parse %s for plugin filters: %s", torrent.name, e)
             release = None
+        if release is not None:
+            # 与建规则时一致：过滤钩子收到经 title.parsed 修正后的解析结果
+            release = await _apply_title_hooks(release)
         verdict = await runner.filter(
             points.TORRENT_FILTER,
             torrent_info(torrent),

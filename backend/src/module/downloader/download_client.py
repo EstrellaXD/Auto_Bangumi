@@ -52,6 +52,16 @@ async def _fetch_torrent_files(
     return [f for group in groups for f in group]
 
 
+def _valid_add_request(request: AddRequest) -> bool:
+    """宿主直接使用这些字段；类型不对的结果按钩子失败处理（str 标签也拒绝）。"""
+    return (
+        isinstance(request.save_path, (str, type(None)))
+        and isinstance(request.category, str)
+        and isinstance(request.tags, (tuple, list))
+        and all(isinstance(t, str) for t in request.tags)
+    )
+
+
 async def _apply_adding_hooks(
     torrent: Torrent | list[Torrent],
     bangumi: Bangumi,
@@ -74,7 +84,9 @@ async def _apply_adding_hooks(
         category=category,
         tags=tuple(tags.split(",")) if tags else (),
     )
-    result = await runner.transform(points.TORRENT_ADDING, request, expect=AddRequest)
+    result = await runner.transform(
+        points.TORRENT_ADDING, request, expect=AddRequest, check=_valid_add_request
+    )
     new_tags = [t.strip() for t in result.tags if t.strip()]
     if tags and tags not in new_tags:
         logger.warning(
