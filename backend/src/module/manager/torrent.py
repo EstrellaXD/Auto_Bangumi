@@ -120,26 +120,29 @@ class TorrentManager:
     async def delete_rule(self, _id: int | str, file: bool = False):
         data = await self.db.bangumi.search_id(int(_id))
         if isinstance(data, Bangumi):
-            # 种子行删除前先记下种子所在的实例
-            instance_ids = await self._torrent_instances(data) if file else []
+            torrent_message = None
+            if file:
+                # Only the file-cleanup path needs the downloader, so an
+                # unreachable downloader shouldn't block a DB-only delete.
+                torrent_message = await self.delete_torrents(
+                    data, await self._torrent_instances(data)
+                )
+                if torrent_message.status_code == 500:
+                    # 种子行经外键引用番剧，且记录了种子所在的实例：两者都保留，
+                    # 实例恢复后重试删除（已删净的实例上匹配不到种子，直接跳过）
+                    return ResponseModel(
+                        status_code=500,
+                        status=False,
+                        msg_en=f"Deleting torrents for {data.official_title} "
+                        "failed; the rule was kept, retry later.",
+                        msg_zh=f"删除 {data.official_title} 的种子失败，"
+                        "规则已保留，请稍后重试。",
+                    )
             # Clean up torrent records so re-adding the same anime can re-download
             await self.db.torrent.delete_by_bangumi_id(int(_id))
             await self.db.bangumi.delete_one(int(_id))
             # 番剧删除后停用其独立订阅的孤儿 RSS；聚合订阅不受影响
             await self._disable_orphan_sub_rss(data)
-            torrent_message = None
-            if file:
-                # Only the file-cleanup path needs the downloader, so an
-                # unreachable downloader shouldn't block a DB-only delete.
-                torrent_message = await self.delete_torrents(data, instance_ids)
-                if torrent_message.status_code == 500:
-                    return ResponseModel(
-                        status_code=500,
-                        status=False,
-                        msg_en=f"Deleted rule for {data.official_title}, "
-                        "but deleting its torrents failed.",
-                        msg_zh=f"已删除 {data.official_title} 规则，但删除种子失败。",
-                    )
             logger.info(f"Delete rule for {data.official_title}")
             return ResponseModel(
                 status_code=200,
