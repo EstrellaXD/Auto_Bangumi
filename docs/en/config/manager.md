@@ -14,6 +14,7 @@
 - **EPS complete**: tries to backfill missing episodes in the current season.
 - **Add Group Tag**: adds subgroup-related tags to downloader tasks.
 - **Delete Bad Torrent**: removes errored downloader tasks.
+- **Revision Conflict Policy**: when a torrent with a higher revision targets an existing episode, select **Keep Existing File** or **Replace with Higher Revision**. With replacement, the old torrent and its data are deleted only after the higher revision is in place.
 - **Track Unmatched Torrents**: stores torrents that do not match any rule as orphan records. Disable it if you want newly added rules to catch old feed items immediately, at the cost of rechecking those old items on each RSS refresh.
 
 ## Template rename
@@ -25,7 +26,7 @@ With `template`, file names come from the template of the built-in `rename` plug
 {{ title }} S{{ season|pad(2) }}E{{ episode|pad(2) }}
 ```
 
-The default produces the same names as `pn`. Templates use sandboxed [Jinja2](https://jinja.palletsprojects.com/) syntax with these variables:
+For normal episodes the default produces the same names as `pn`. For movies, `pn` adds no `SxxExx`, but the default template does. Templates use sandboxed [Jinja2](https://jinja.palletsprojects.com/) syntax with these variables:
 
 | Variable | Meaning | Example |
 | --- | --- | --- |
@@ -65,8 +66,8 @@ The built-in `hardlink` plugin is **disabled by default**. Enable it under **Set
 - If the library already has a file with that name that the plugin did not create, the plugin skips it, **never overwrites it**, and sends a notification.
 - After a revision upgrade (a new release replaces the old torrent under the same file name), the link the plugin made earlier is atomically replaced with a link to the new file.
 - Deleting a torrent does not delete its links in the library.
-- Files downloaded before you enabled the plugin are not linked automatically. To link them, call `POST /api/v1/plugins/hardlink/backfill` (a settings button follows in a later release).
-- The settings form cannot edit `path_map` yet. Set it in `config/config.json` under `plugins.options.hardlink.path_map`, for example `[{"from": "/downloads", "to": "/media/downloads"}]`.
+- Files downloaded before you enabled the plugin are not linked automatically. When the plugin is enabled, the settings page shows a "Hardlink backfill" section. Click **Link existing files** to link the videos and subtitles already in the download root into the library. Files that are already linked are skipped. The button calls `POST /api/v1/plugins/hardlink/backfill`.
+- Edit `path_map` in the plugin options form, one row per entry (**Add row**). In `config/config.json` it is `plugins.options.hardlink.path_map`, for example `[{"downloader": "default", "from": "/downloads", "to": "/media/downloads"}]`.
 
 ::: tip Docker
 Hard links cannot cross file systems. In Docker, keep the download folder and the library on the same disk and mount them into the AutoBangumi container through **one** mount (for example, mount `/mnt/media` as `/media` with both folders below it). Two separate mounts count as different file systems even on the same disk; the plugin then follows `cross_device` (by default it copies, which uses twice the space). If the downloader runs in another container and sees different paths, use `path_map`.
@@ -88,4 +89,4 @@ Section: `bangumi_manage`
 | `remove_bad_torrent` | Delete errored torrents | boolean | Delete Bad Torrent | `false` |
 | `track_orphans` | Track unmatched torrents | boolean | Track Unmatched Torrents | `true` |
 
-The rename method and the revision conflict policy are provider choices. They are stored in `plugins.slots`: `rename_strategy` (rename method, default `pn`) and `conflict_policy` (`hold` / `replace`, default `hold`). On the first start after an upgrade to 4.0, the 3.3 keys `bangumi_manage.rename_method` and `revision_conflict_policy` move there automatically.
+The rename method and the revision conflict policy are provider choices. They are stored in `plugins.slots`: `rename_strategy` (rename method, default `pn`) and `conflict_policy` (`hold` / `replace`, default `hold`). On the first start after an upgrade to 4.0, the 3.3 keys `bangumi_manage.rename_method` and `revision_conflict_policy` move there automatically. For details, see [Plugin Settings](/en/config/plugins#slots).

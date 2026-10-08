@@ -62,10 +62,13 @@ A downloader is an entry in `plugins.instances` whose `point` is `downloader`. `
 }
 ```
 
-On the first start after an upgrade to 4.0, the 3.3 `downloader` section moves to the `default` instance automatically. The original file is kept as `config.json.v3.bak`. The environment variables `AB_DOWNLOADER_HOST`, `AB_DOWNLOADER_USERNAME`, `AB_DOWNLOADER_PASSWORD` and `AB_DOWNLOAD_PATH` still work and set the default instance.
+On the first start after an upgrade to 4.0, the 3.3 `downloader` section moves to the `default` instance automatically. The original file is kept as `config.json.v3.bak`. If the migration fails, AutoBangumi restores the original file and does not start. See [Plugin Settings](/en/config/plugins#upgrade-from-3-3).
+
+AutoBangumi reads the environment variables `AB_DOWNLOADER_HOST`, `AB_DOWNLOADER_USERNAME`, `AB_DOWNLOADER_PASSWORD` and `AB_DOWNLOAD_PATH` only on the first start, when no config file exists. They set the default instance. The values of `host`, `username` and `password` can contain environment variable references in the form `$VAR`. AutoBangumi expands them when it uses the values.
 
 | Key | Description | Type | WebUI field | Default |
 | --- | --- | --- | --- | --- |
+| `id` | Instance id | string | New downloader id | `default` |
 | `provider` | Downloader type | string | Downloader Type | `qbittorrent` |
 | `host` | Downloader address | string | Host | `172.17.0.1:8080` |
 | `username` | Downloader username | string | Username | `admin` |
