@@ -99,6 +99,10 @@ class ExtensionRegistry:
             key=lambda e: (rank.get(e.plugin_id, len(rank)), e.priority, e.plugin_id),
         )
 
+    def has_hooks(self, point_name: str) -> bool:
+        """是否有钩子登记在该扩展点上。热路径（逐条种子）用它跳过空扩展点。"""
+        return bool(self._hooks.get(point_name))
+
     def providers(self, point_name: str) -> dict[str, ProviderEntry]:
         """按 Provider id 索引；``scoped`` 扩展点的键为 ``<plugin_id>/<id>``。"""
         self.point(point_name)

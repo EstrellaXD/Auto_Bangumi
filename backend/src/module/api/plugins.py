@@ -114,5 +114,10 @@ async def list_plugin_providers():
     """插件提供的 Provider id（按扩展点），设置页把它们并入下拉候选。"""
     return {
         point: plugin_provider_ids(point)
-        for point in (points.DOWNLOADER, points.NOTIFIER, points.SEARCH_SITE)
+        for point in (
+            points.DOWNLOADER,
+            points.NOTIFIER,
+            points.SEARCH_SITE,
+            points.METADATA_PROVIDER,
+        )
     }

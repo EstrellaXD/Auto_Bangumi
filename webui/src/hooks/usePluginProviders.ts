@@ -5,11 +5,12 @@ const providers = ref<PluginProviders>({
   downloader: [],
   notifier: [],
   search_site: [],
+  metadata_provider: [],
 });
 let loaded = false;
 
 /**
- * 插件提供的下载器 / 通知渠道 / 搜索站点 id，供设置页下拉框合并候选。
+ * 插件提供的下载器 / 通知渠道 / 搜索站点 / 元数据源 id，供设置页下拉框合并候选。
  * 全局只请求一次；请求失败（如未登录）时保持空列表，不影响内置选项。
  */
 export function usePluginProviders() {

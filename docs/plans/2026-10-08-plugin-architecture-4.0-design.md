@@ -21,6 +21,19 @@
 - **扩展点改名**：`search_provider` 改为 `search_site`，以区分用户在搜索设置里维护的站点列表。
 - 签名目录来源（LLM 安装器泛化）、`dev_mode` 文件监听、bark / wecom 旧字段别名清理，移到 P7（生态）。
 
+### 实施中的调整（P3）
+
+- **ingest 不拆成独立的 `pipeline/ingest.py`**。钩子与 Provider 直接接入现有 `rss/engine.py`、`parser/title_parser.py`、`downloader/download_client.py`、`network/request_url.py`、`rss/analyser.py`，宿主逻辑原样保留，只在原位置调用扩展点。模块级代码通过 `module.plugin.host.get_runner()` / `hook_runner(point)` 拿到 runner（由 `AppContext` 构建时设置）；未设置 runner 或扩展点上没有钩子时直接走原路径，不构造快照。
+- **钩子参数是冻结快照，不是 ORM 对象**。`ab_sdk.ingest` 定义 `TorrentInfo`、`BangumiInfo`、`AddRequest`、`HttpRequest`、`Metadata` / `MetadataRequest`；解析结果直接传冻结的 `ParsedRelease`，SDK 只给出只读 Protocol `Release`。transform 钩子返回类型不符时按失败处理并计入熔断（`HookRunner.transform(expect=...)`）。
+- **`torrent.filter`** 在规则自带的排除过滤之后执行，排除过滤仍是宿主逻辑，语义不变。被拒的种子与排除过滤一样不关联番剧。手动「收集」整季（`download_bangumi`）同样经过该钩子。
+- **`title.parsed`** 只接在 `TitleParser.raw_parser`（新规则创建、收集）的准入判定前。偏好去重 `_select_preference_skips` 使用的同步解析不经过钩子。
+- **`torrent.adding`** 允许修改 `save_path`、`category`、`tags`。宿主保证 `ab:<id>` 标签存在（被删时补回）。暂停状态暂不开放，因为 `add_torrents` 契约没有对应参数。
+- **`http.request`** 只作用于 `RequestURL.get_url`（RSS、种子文件、站点页面），只能改请求头；POST（通知）不经过。
+- **`metadata_provider` 暂不做链式**，仍由 `RSSItem.parser` 选择单个 Provider，列不迁移。内置 mikan / tmdb 以 `core` 登记，行为与 3.x 完全一致，包括 TMDB 未命中时清空年份与海报、mikan 非 `AttributeError` 异常照旧上抛。Provider 返回完整的新 `Metadata`，而不是增量 patch，这样「置空」也能表达。
+- **内置插件 `ingest-filters`**（`module/plugins/builtin/ingest-filters/`）只实现全局「包含过滤」，默认启用、留空不生效。种子大小目前不在 RSS 解析结果中（`Torrent` 无 size 列），`size-limit` 推迟到 `feed_source` 解析 enclosure length 之后；按订阅覆盖需要 `Bangumi.plugin_options` 列，同样推迟。
+- **推迟**：`feed_source`（与 `FeedConfig.source` 替代 `RSSItem.parser` 一起设计）、`title_parser` 链、`admission_policy`、`bangumi_matcher`、`release_ranker`、`rule.created`、`save_path` Provider，以及第 11 节的批量 `accept_many`。
+- `module/plugin/context.py` 改为延迟 import `module.database`，否则网络层引用 `module.plugin.host` 会形成循环依赖。
+
 ### 实施中的调整（P5）
 
 - **系统事件类移入 `ab_sdk.events`**，`SystemEvent` 由封闭 Union 改为基类（插件也可定义可通知事件）；`module.notification.events` 只做再导出。`kind` 沿用 3.x 取值（`rss_failure` 等，通知中心按它存储与翻译），不改成 `rss.failure` 式的点分名。
@@ -577,7 +590,7 @@ organize: downloader.completed → media_files.classify → file_parser
 | **P1 插件运行时 + SDK 骨架** | `ab_sdk` 包（含 `ab_sdk.testing`）、`module/plugin/`（清单、加载、注册表、runner、熔断、EventBus、插件 KV）、`plugins` 配置段、`GET /api/v1/plugins`；SDK 边界测试 | 本地插件可加载、配置、随配置变更重载；已完成。签名目录来源与 LLM 安装器泛化、`dev_mode` 文件监听移到 P2 |
 | **P2 迁移已有注册表** | 下载器、通知、LLM、搜索站点、定时任务改为扩展点，内置实现以 `core` 登记；`/api/v1/plugins`（列表、启停、配置、Provider 列表）与 WebUI 插件卡片（JSON Schema 表单）；`secret_field` 掩码；插件开发文档 | 已完成；内置行为不变（全量测试）。调整见第 0 节 |
 | **P2.5 多下载器** | 下载器多实例；`downloader_id` 列与迁移；按实例路由 add / rename / delete；organize 逐实例扫描 | qb + aria2 并存的 e2e 用例；单实例行为不变 |
-| **P3 流水线插件化：ingest** | `feed_source`、`title_parser` 链、`admission_policy`、`matcher`、`torrent.filter`、`ranker`、`metadata_provider` 链、`save_path`、`torrent.adding` | 新增 include / size 过滤；私有站 headers |
+| **P3 流水线插件化：ingest** | `torrent.filter`、`title.parsed`、`torrent.adding`、`http.request` 钩子；`metadata_provider`（mikan / tmdb 以 `core` 登记）；内置插件 `ingest-filters`（包含过滤） | 已完成；无插件时行为不变（全量测试）。`feed_source`、`title_parser` 链、`admission_policy`、`matcher`、`ranker`、`save_path`、size 过滤、按订阅覆盖推迟，见第 0 节 |
 | **P4 流水线插件化：organize** | `media_files`、`file_parser`、`rename_strategy`（含 `template`）、`conflict_policy`、`file.renamed` 等事件 | 模板重命名；硬链接示例插件 |
 | **P5 事件与外部接口** | SSE 改订阅 bus；`api_router`、`mcp_tool` 扩展点；`message_template` | 已完成：系统事件上总线、通知中心 SSE 改为事件推送、插件路由 / MCP 工具与资源 / 通知模板；status 等快照类 SSE 仍按节拍采样。调整见第 0 节 |
 | **P6 前端插件** | Web Component 挂载点、`AbHost` 桥接、错误边界、`/plugins/<id>/web` 静态资源、`@autobangumi/plugin-ui` 包 | 示例插件「手动选种」以详情页标签形式可用 |

@@ -6,7 +6,10 @@ from typing import Any
 import httpx
 from httpx_socks import AsyncProxyTransport
 
+from ab_sdk import points
+from ab_sdk.ingest import HttpRequest
 from module.conf import settings
+from module.plugin import host as plugin_host
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +111,17 @@ async def reset_shared_client():
     _shared_client_proxy_key = None
 
 
+async def _apply_http_hooks(url: str, headers: dict) -> dict:
+    """``http.request``：插件按 URL 修改请求头（私有站 Cookie、UA 等）。"""
+    runner = plugin_host.hook_runner(points.HTTP_REQUEST)
+    if runner is None:
+        return headers
+    request = HttpRequest(method="GET", url=url, headers=dict(headers))
+    result = await runner.transform(points.HTTP_REQUEST, request, expect=HttpRequest)
+    # url / method 不允许被改写，只取请求头
+    return dict(result.headers)
+
+
 class RequestURL:
     # More complete User-Agent to avoid Cloudflare blocking
     DEFAULT_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -138,7 +152,7 @@ class RequestURL:
             self._client is not None
         ), "RequestURL must be used as an async context manager"
         try_time = 0
-        headers = self._get_headers(url)
+        headers = await _apply_http_hooks(url, self._get_headers(url))
         while True:
             try:
                 req = await self._client.get(url=url, headers=headers)

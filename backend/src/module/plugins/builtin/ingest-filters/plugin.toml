@@ -1,0 +1,8 @@
+[plugin]
+id = "ingest-filters"
+name = "种子过滤"
+version = "1.0.0"
+sdk = ">=0.3,<1"
+entry = "ingest_filters:IngestFilters"
+description = "在规则的排除过滤之外，按包含关键词进一步筛选要下载的种子（留空不生效）"
+authors = ["AutoBangumi"]

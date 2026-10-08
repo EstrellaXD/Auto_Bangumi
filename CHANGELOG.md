@@ -4,9 +4,12 @@
 
 - **新增（插件运行时）**：新增插件 SDK `ab_sdk`，包括 `Plugin` 基类、`@hook` / `@provider` / `@subscribe`、`PluginContext`，以及供插件作者写单元测试的 `ab_sdk.testing`；新增宿主运行时 `module/plugin`，负责清单解析、内置 / 本地目录 / pip entry point 三种来源的发现与加载、扩展点注册表、钩子超时与熔断、事件总线和插件私有 KV 存储（数据库迁移 v25）。新增 `plugins` 配置段和 `GET /api/v1/plugins`。本地与 pip 插件未签名，需开启 `plugins.allow_unsigned` 才会加载
 - **新增（插件扩展点）**：插件可以提供下载器、通知渠道、LLM 解析提供商、搜索站点和定时任务（`ab_sdk.points`）。内置的 qB / aria2 和各通知渠道走同一套扩展注册表。设置页新增「插件」卡片，可查看状态、启停插件，并通过插件配置模型自动生成的表单修改配置；`secret_field` 声明的秘密字段在读取接口中一律掩码。下载器类型和通知渠道下拉框会列出插件提供的选项。新增插件开发文档（开发者指南 → 插件开发）
+- **新增（ingest 扩展点）**：RSS 下载流程开放 `torrent.filter`（种子过滤）、`title.parsed`（修正解析结果）、`torrent.adding`（修改保存路径 / 分类 / 标签）、`http.request`（为私有站点添加 Cookie 等请求头）四个钩子，以及 `metadata_provider` 元数据源扩展点：内置 mikan / tmdb 以 `core` 身份登记，插件可按 RSS 订阅的「解析器」取值提供新的元数据源，添加订阅时的解析器下拉框会列出插件选项。插件 SDK 升至 0.3.0，新增 `ab_sdk.ingest`。未安装插件时行为不变
+- **新增（种子过滤）**：新增默认启用的内置插件「种子过滤」（`ingest-filters`）。在 设置 → 插件 中填写「包含过滤」后，只下载名称匹配任一表达式的种子（对所有订阅生效）；留空时不过滤
 - **新增（事件与外部接口）**：系统事件（RSS 订阅异常、种子添加失败、下载器不可用、新版本等）在写入通知中心后发布到插件事件总线，插件可用 `@subscribe("rss_failure")` 等订阅；事件类移入 `ab_sdk.events`（`SystemEvent` 基类，新增 `i18n()` 返回前端 i18n key 与参数）。插件可以提供 REST 路由（挂载于 `/api/v1/plugins/<id>/`，强制登录鉴权，随插件启停出现和消失）、MCP 工具（工具名 `<插件 id>__<id>`）与 MCP 资源（`autobangumi://plugins/<插件 id>/<id>`），并可通过 `message_template` 钩子按事件类型和渠道改写系统通知的标题与正文。`ab_sdk` 升至 0.3.0
 - **优化（通知中心推送）**：SSE 的 `notification` 帧改为订阅事件总线，通知中心有新消息、已读或删除时立即推送（原先每 3 秒比较一次修订号），推送格式不变
 - **修复（搜索）**：`GET /api/v1/search/provider` 读取的是导入时的站点快照，新保存的搜索站点要重启后才会出现在列表中；现在实时读取
+- **修复（MCP）**：MCP 客户端每次断开 SSE 连接后，日志都会出现 `AssertionError: Unexpected message http.response.start`（3.x 起存在）。原因是 `/sse` 端点在 SSE 响应结束后又返回了一个空 `Response`，现在改为裸 ASGI 端点
 - **破坏性变更（升级路径）**：只支持从 3.3.x 升级。检测到更早版本的数据（`config/version.info` 低于 3.3，或残留 2.x 的 `data/data.json`）时拒绝启动，并提示先升级到最新 3.3.x 启动一次完成迁移
 - **破坏性变更（API）**：移除 3.2 兼容的 GET 控制端点（`/api/v1/restart`、`/start`、`/stop`、`/shutdown`）和 `GET /api/v1/auth/refresh_token`，请改用 POST
 - **破坏性变更（配置）**：移除旧版 `experimental_openai` 配置节和通知的单 provider 旧字段（`type` / `token` / `chat_id`），3.3 已把它们迁移到 `llm` 与 `notification.providers`；移除废弃的 `normal` 重命名方式，已有配置自动改为语义相同的 `none`

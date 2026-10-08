@@ -564,3 +564,40 @@ async def test_plugin_end_to_end(registry, monkeypatch, tmp_path):
         assert await render_event(event, "bark") == event.describe()
     finally:
         await manager.stop()
+
+
+# ---------------------------------------------------------------- MCP SSE
+
+
+async def test_mcp_sse_endpoint_sends_response_only_once(monkeypatch):
+    """/sse 结束后不能再发第二次 http.response.start（3.x 起每次断开都报
+    AssertionError）。"""
+    from contextlib import asynccontextmanager
+
+    from module.mcp import server as mcp_server
+
+    @asynccontextmanager
+    async def fake_connect_sse(scope, receive, send):
+        await send({"type": "http.response.start", "status": 200, "headers": []})
+        await send({"type": "http.response.body", "body": b"", "more_body": False})
+        yield (object(), object())
+
+    async def fake_run(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(mcp_server.sse, "connect_sse", fake_connect_sse)
+    monkeypatch.setattr(mcp_server.server, "run", fake_run)
+    sent: list[dict] = []
+
+    async def receive():
+        return {"type": "http.disconnect"}
+
+    async def send(message):
+        sent.append(message)
+
+    await mcp_server.handle_sse(
+        {"type": "http", "method": "GET", "path": "/sse", "headers": []},
+        receive,
+        send,
+    )
+    assert [m["type"] for m in sent].count("http.response.start") == 1
