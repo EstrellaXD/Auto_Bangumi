@@ -20,7 +20,7 @@ from .base import (
     RenameOutcome,
     RenameResult,
 )
-from .path import gen_save_path
+from .path import save_path_for
 
 logger = logging.getLogger(__name__)
 
@@ -463,8 +463,7 @@ class DownloadClient:
         返回 :class:`AddResult`，区分"新增成功 / 已添加过 / 投递失败"，
         调用方据此决定是否重试或发送失败通知。
         """
-        if not bangumi.save_path:
-            bangumi.save_path = gen_save_path(bangumi, self.instance.path)
+        bangumi.save_path = save_path_for(bangumi, self.instance.path)
         # 种子行记录实际投递的实例，之后的重命名 / 删除按它路由
         for t in torrent if isinstance(torrent, list) else [torrent]:
             t.downloader_id = self.instance_id

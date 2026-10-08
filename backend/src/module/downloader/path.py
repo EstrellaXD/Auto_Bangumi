@@ -145,6 +145,20 @@ def gen_save_path(
     return str(save_path)
 
 
+def save_path_for(data: Bangumi | BangumiUpdate, root: str) -> str:
+    """番剧在某个下载器实例上的保存目录。
+
+    已存的目录在该实例下载目录之下时沿用；否则它是按另一个实例的下载目录
+    生成的（默认实例切换、规则的实例被删除、订阅指向别的实例），按 ``root``
+    重新生成。用 PureWindowsPath 比较，``\\`` 与 ``/`` 分隔的目录都能认出。
+    """
+    if data.save_path and PureWindowsPath(data.save_path).is_relative_to(
+        PureWindowsPath(root)
+    ):
+        return data.save_path
+    return gen_save_path(data, root)
+
+
 def rule_name(data: Bangumi):
     name = (
         f"[{data.group_name}] {data.official_title} S{data.season}"

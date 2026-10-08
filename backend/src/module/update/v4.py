@@ -100,7 +100,13 @@ def migrate_v3_config(path: Path) -> bool:
     moved = migrate_v3_dict(config)
     if not moved:
         return False
+    # 已有的备份不覆盖（降级回 3.3 再升级时，第一份备份里才有真实的下载器
+    # 凭据），本次备份另取 .v3.bak.1、.v3.bak.2 …
     backup = path.with_name(path.name + ".v3.bak")
+    n = 0
+    while backup.exists():
+        n += 1
+        backup = path.with_name(f"{path.name}.v3.bak.{n}")
     shutil.copy2(path, backup)
     try:
         Config.model_validate(config)

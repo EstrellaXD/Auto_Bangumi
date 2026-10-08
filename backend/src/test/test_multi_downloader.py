@@ -172,6 +172,47 @@ class TestRssRouting:
         (added,) = _mock(expected)._torrents.values()
         assert added["save_path"].startswith(f"/{expected}/Bangumi/")
 
+    @pytest.mark.parametrize(
+        "default, bangumi_instance, rss_instance",
+        [("b", None, None), ("b", "gone", None), ("a", None, "b")],
+    )
+    async def test_refresh_rss_save_path_of_other_instance_rerooted(
+        self,
+        two_instances,
+        db_engine,
+        monkeypatch,
+        default,
+        bangumi_instance,
+        rss_instance,
+    ):
+        """默认实例切换、规则的实例被删除、订阅指向另一实例：已存的保存目录
+        属于实例 a，新种子进实例 b 时必须换成 b 的下载目录。"""
+        monkeypatch.setattr(two_instances.slots, "downloader", default)
+        engine = RSSEngine(Database(engine=db_engine))
+        await engine.db.rss.add(make_rss_item(enabled=True, downloader_id=rss_instance))
+        await engine.db.bangumi.add(
+            make_bangumi(
+                title_raw="Mushoku Tensei",
+                filter="",
+                save_path="/a/Bangumi/Test Anime (2024)/Season 1",
+                downloader_id=bangumi_instance,
+            )
+        )
+        torrent = Torrent(
+            name="[Sub] Mushoku Tensei - 12 [1080p].mkv",
+            url="magnet:?xt=urn:btih:12",
+        )
+        with patch.object(
+            RSSEngine, "_get_torrents", AsyncMock(return_value=[torrent])
+        ):
+            async with DownloaderPool() as pool:
+                await engine.refresh_rss(pool)
+
+        (added,) = _mock("b")._torrents.values()
+        assert added["save_path"] == "/b/Bangumi/Test Anime (2024)/Season 1"
+        (rule,) = await engine.db.bangumi.search_all()
+        assert rule.save_path == "/b/Bangumi/Test Anime (2024)/Season 1"
+
     async def test_refresh_rss_unavailable_instance_torrent_not_persisted(
         self, two_instances, db_engine
     ):
@@ -268,6 +309,37 @@ class TestRenameAll:
         recover.assert_not_awaited()
 
 
+async def test_rename_single_instance_replacement_after_host_change_recovered(
+    monkeypatch,
+):
+    """只有一个实例时，改了主机地址（同一个 qB）后仍要恢复进行中的版本替换。"""
+    from module.models.rename_operation import RenameOperation
+
+    monkeypatch.setattr(
+        settings,
+        "plugins",
+        Plugins(instances=[_instance("a", "/a/Bangumi")], slots=Slots(downloader="a")),
+    )
+    async with Database() as db:
+        db.add(
+            RenameOperation(
+                kind="replacement",
+                state="old_staged",
+                downloader_type="mock:old-host-hash",
+                new_task_id="gone",
+                save_path="/a/Bangumi/Show/Season 1",
+                target_path="Show S01E01.mkv",
+                source_path="x.mkv",
+            )
+        )
+        await db.commit()
+
+    with patch.object(Renamer, "_recover_missing_replacement", AsyncMock()) as recover:
+        async with DownloadClient("a") as client:
+            await Renamer(client).rename()
+    recover.assert_awaited_once()
+
+
 async def test_list_torrents_one_instance_down_lists_the_other(two_instances):
     _mock("a")._torrents["ha"] = _completed("A", "ha", "/a/Bangumi/A/Season 1")
     _mock("b").auth = AsyncMock(return_value=False)  # type: ignore[method-assign]
@@ -349,6 +421,70 @@ class TestRuleOnAnotherInstance:
         assert _mock("a")._torrents == {}
         assert _mock("b")._torrents == {}
 
+    async def test_update_rule_moves_torrents_on_instance_of_torrent_rows(
+        self, two_instances
+    ):
+        """规则未指定实例，种子经订阅进了实例 b：改季度要移动 b 上的种子。"""
+        from module.manager import TorrentManager
+        from module.models import BangumiUpdate
+
+        _mock("b")._torrents["hb"] = _completed(
+            "B", "hb", "/b/Bangumi/Test Anime (2024)/Season 1"
+        )
+        async with Database() as db:
+            await db.bangumi.add(
+                make_bangumi(save_path="/a/Bangumi/Test Anime (2024)/Season 1")
+            )
+            await db.torrent.add(
+                Torrent(name="B", url="u-b", bangumi_id=1, downloader_id="b")
+            )
+            old = await db.bangumi.search_id(1)
+            assert old is not None
+            update = BangumiUpdate(**old.model_dump(exclude={"id"}))
+            update.season = 2
+            await TorrentManager(db).update_rule(1, update)
+
+        moved = _mock("b")._torrents["hb"]["save_path"]
+        assert moved == "/b/Bangumi/Test Anime (2024)/Season 2"
+
+    async def test_delete_rule_unavailable_instance_others_still_deleted(
+        self, two_instances
+    ):
+        from module.manager import TorrentManager
+
+        bangumi_id = await self._rule_with_torrent_on_a()
+        _mock("b")._torrents["new"] = _completed(
+            "New", "new", "/b/Bangumi/Test Anime (2024)/Season 1"
+        )
+        _mock("a").auth = AsyncMock(return_value=False)  # type: ignore[method-assign]
+        async with Database() as db:
+            await db.torrent.add(
+                Torrent(name="New", url="u-new", bangumi_id=1, downloader_id="b")
+            )
+            resp = await TorrentManager(db).delete_rule(bangumi_id, file=True)
+
+        assert _mock("b")._torrents == {}
+        assert resp.status is False and resp.status_code == 500
+
+
+async def test_eps_complete_unavailable_instance_other_rules_collected(two_instances):
+    from module.manager import collector
+
+    async with Database() as db:
+        await db.bangumi.add(make_bangumi(official_title="On B", downloader_id="b"))
+        await db.bangumi.add(make_bangumi(official_title="On A", title_raw="A raw"))
+    _mock("b").auth = AsyncMock(return_value=False)  # type: ignore[method-assign]
+
+    with patch.object(
+        collector.SeasonCollector, "collect_season", AsyncMock()
+    ) as collect:
+        await collector.eps_complete()
+
+    assert [c.args[0].official_title for c in collect.await_args_list] == ["On A"]
+    async with Database() as db:
+        rules = {b.official_title: b.eps_collect for b in await db.bangumi.search_all()}
+    assert rules == {"On B": False, "On A": True}
+
 
 class TestDownloaderApi:
     def test_pause_routes_to_given_instance(self, two_instances, authed_client):
@@ -378,6 +514,13 @@ class TestDownloaderApi:
                 {"id": "b", "provider": "mock"},
             ],
         }
+
+    def test_auto_tag_unavailable_instance_skipped(self, two_instances, authed_client):
+        _mock("a")._torrents["ha"] = _completed("A", "ha", "/a/Bangumi/A/Season 1")
+        _mock("b").auth = AsyncMock(return_value=False)  # type: ignore[method-assign]
+        resp = authed_client.post("/api/v1/downloader/torrents/tag/auto")
+        assert resp.status_code == 200
+        assert [t["hash"] for t in resp.json()["unmatched"]] == ["ha"]
 
     def test_add_rss_keeps_downloader_instance(self, two_instances, authed_client):
         resp = authed_client.post(

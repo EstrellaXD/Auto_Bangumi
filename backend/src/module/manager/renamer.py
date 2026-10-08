@@ -770,9 +770,12 @@ class Renamer(RevisionSaga):
         for info in pending_infos:
             info_by_hash.setdefault(info["hash"], info)
         all_infos = list(info_by_hash.values())
+        # 只有一个实例时不按实例过滤：键里含主机哈希，改了主机地址（同一个
+        # 下载器）后进行中的事务仍要恢复；多个实例时只恢复本实例的
+        instance_key = self._downloader_type() if len(downloader_ids()) > 1 else None
         async with Database() as db:
             active_replacements = await db.rename_operation.list_active_replacements(
-                self._downloader_type()
+                instance_key
             )
         active_replacement_ids = {
             operation.new_task_id for operation in active_replacements

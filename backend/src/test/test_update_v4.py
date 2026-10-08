@@ -133,3 +133,15 @@ def test_migrate_v3_dict_downloader_merges_into_existing_default_instance():
         }
     ]
     assert config["plugins"]["slots"] == {"downloader": "default"}
+
+
+def test_migrate_v3_config_existing_backup_kept_new_backup_beside_it(v3_config):
+    """降级回 3.3 再升级：第一次迁移留下的备份（含真实凭据）不能被覆盖。"""
+    first = v3_config.with_name("config.json.v3.bak")
+    first.write_text("original 3.3 config")
+
+    assert migrate_v3_config(v3_config) is True
+
+    assert first.read_text() == "original 3.3 config"
+    second = v3_config.with_name("config.json.v3.bak.1")
+    assert second.read_bytes() == FIXTURE.read_bytes()

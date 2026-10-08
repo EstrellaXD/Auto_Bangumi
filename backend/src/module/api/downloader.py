@@ -11,7 +11,12 @@ from module.database.bangumi import (
     match_bangumi_in_list,
     normalize_save_path,
 )
-from module.downloader import DownloadClient, downloader_ids, list_torrents
+from module.downloader import (
+    DownloadClient,
+    DownloaderPool,
+    downloader_ids,
+    list_torrents,
+)
 from module.models.config import DOWNLOADER_POINT
 from module.security.api import get_current_user
 
@@ -178,8 +183,14 @@ async def auto_tag_torrents():
         bangumi_list = await db.bangumi.search_all()
     save_path_index = build_save_path_index(bangumi_list)
 
-    for instance_id in downloader_ids():
-        async with DownloadClient(instance_id) as client:
+    async with DownloaderPool() as downloaders:
+        for instance_id in downloader_ids():
+            try:
+                client = await downloaders.get(instance_id)
+            except ConnectionError as e:
+                # 不可用的实例跳过，其它实例照常打标签
+                logger.warning("Skip auto-tag on %s: %s", instance_id, e)
+                continue
             # Get all Bangumi torrents
             torrents = await client.get_torrent_info(
                 category="Bangumi", status_filter=None

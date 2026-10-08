@@ -357,20 +357,22 @@ class RenameOperationDatabase:
         return list(result.scalars().all())
 
     async def list_active_replacements(
-        self, downloader_type: str, limit: int = 100
+        self, downloader_type: str | None, limit: int = 100
     ) -> list[RenameOperation]:
-        """某个下载器实例（``downloader_type``）上未完成的版本替换事务。"""
-        result = await self.session.execute(
-            select(RenameOperation)
-            .where(
-                RenameOperation.downloader_type == downloader_type,
-                RenameOperation.kind == "replacement",
-                col(RenameOperation.state).in_(
-                    ("planned", "old_staged", "new_promoted", "old_removed")
-                ),
+        """某个下载器实例（``downloader_type``）上未完成的版本替换事务；
+        ``None`` 时不限实例。"""
+        statement = select(RenameOperation).where(
+            RenameOperation.kind == "replacement",
+            col(RenameOperation.state).in_(
+                ("planned", "old_staged", "new_promoted", "old_removed")
+            ),
+        )
+        if downloader_type is not None:
+            statement = statement.where(
+                RenameOperation.downloader_type == downloader_type
             )
-            .order_by(col(RenameOperation.updated_at).asc())
-            .limit(limit)
+        result = await self.session.execute(
+            statement.order_by(col(RenameOperation.updated_at).asc()).limit(limit)
         )
         return list(result.scalars().all())
 

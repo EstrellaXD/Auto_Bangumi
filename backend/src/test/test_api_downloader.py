@@ -464,7 +464,7 @@ class TestAutoTagTorrents:
             },
         ]
 
-        with patch("module.api.downloader.DownloadClient") as MockClient:
+        with patch("module.downloader.download_client.DownloadClient") as MockClient:
             MockClient.return_value.__aenter__ = AsyncMock(
                 return_value=mock_download_client
             )
@@ -500,7 +500,7 @@ class TestAutoTagTorrents:
             },
         ]
 
-        with patch("module.api.downloader.DownloadClient") as MockClient:
+        with patch("module.downloader.download_client.DownloadClient") as MockClient:
             MockClient.return_value.__aenter__ = AsyncMock(
                 return_value=mock_download_client
             )

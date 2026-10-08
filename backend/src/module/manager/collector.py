@@ -137,9 +137,16 @@ async def eps_complete():
             async with DownloaderPool() as downloaders:
                 for data in datas:
                     if not data.eps_collect:
-                        client = await downloaders.get(
-                            resolve_downloader_id(data.downloader_id)
-                        )
+                        try:
+                            client = await downloaders.get(
+                                resolve_downloader_id(data.downloader_id)
+                            )
+                        except ConnectionError as e:
+                            # 实例不可用：跳过这条规则，下一轮重试
+                            logger.warning(
+                                "Skip collecting %s: %s", data.official_title, e
+                            )
+                            continue
                         await SeasonCollector(client).collect_season(data)
                     data.eps_collect = True
             await db.bangumi.update_all(datas)
