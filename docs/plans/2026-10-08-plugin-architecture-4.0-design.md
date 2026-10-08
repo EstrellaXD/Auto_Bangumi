@@ -97,6 +97,36 @@
   - **用户文档**：`docs/{,en/,ja/}config/manager.md` 增加 `template`、`hardlink`（含 `path_map` 与 Docker 下硬链接不能跨文件系统的说明）与 `media-server-refresh` 三节，按本分支的设计重写；`CHANGELOG.md` 增加 P4 条目。
 - 移植时发现并修复：vulture 白名单缺少 `rename` / `hardlink` 内置插件的入口（CI 的 vulture 检查会失败）；VitePress 不给行内代码加 `v-pre`，文档里行内代码中的 Jinja2 示例在构建时报 `_ctx.pad is not a function`，现在用 `::: v-pre` 容器包住（含本设计文档第 3.6 节与插件开发文档）。
 
+### 实施中的调整（P2.5）
+
+配置模型（第 4.4 节）：
+
+- **`downloader` 配置节移出运行时模型**。下载器是 `plugins.instances` 中的 `PluginInstance`（`id`、`point`、`provider`、`options`），第 4.4 节草图中的 `plugin` 字段改为 `point` + `provider`，`default?` 标记改为由 `slots.downloader` 指定默认实例。新配置默认带一个 qB 实例 `default`，默认值与 3.3 相同。
+- **`plugins.slots` 是带默认值的类型化模型**（`downloader="default"`、`rename_strategy="pn"`、`conflict_policy="hold"`、`media_files="default"`），不是任意 `dict`，也不接受其它键。原因是 WebUI 需要固定的键来绑定，新安装也要有完整的值。`title_parser` / `metadata_provider` 链等到对应扩展点实施时再加。
+- **`plugins` 段的校验**：实例 id 唯一；下载器实例的 `options` 按 `DownloaderOptions`（host / username / password / path / ssl，`$VAR` 展开规则不变）校验；`slots.downloader` 必须指向一个下载器实例。PATCH /config 的请求体不符合时返回 422。
+- **`Config.downloader` 保留为只读属性**，返回 `slots.downloader` 所指实例的冻结视图 `DownloaderInstance`（`type` 即 `provider`）；`Config.downloader_instance(id)` 按 id 取实例。它不参与序列化，也不接受输入。第一部分的调用方（下载门面、`path.py`、checker、`revision_saga._downloader_type`、`AppContext`）因此不变，`_downloader_type` 的取值也不变（存量 `rename_operation` 行依赖它）。按实例路由在 P2.5 第二部分。
+- **秘密字段**：`DownloaderOptions.password` 带 `secret` 标记（与 `secret_field()` 相同；直接写 `Field`，因为 mypy 的 pydantic 插件看不到经 `**kwargs` 传入的别名）。GET / PATCH /config 没有另加按 schema 的实例掩码：现有的按键名掩码已覆盖 `password`，列表项的掩码还原按身份匹配，身份包含实例 `id`。对下载器来说按 schema 掩码的结果完全相同。插件下载器有了自己的 options schema 后再加。
+
+slots 解析：
+
+- `rename_strategy` 读 `slots.rename_strategy`，未登记时仍记录一次日志并按 `none` 处理。`media_files` 读 `slots.media_files`，未登记时退回 `default`。`conflict_policy` 读 `slots.conflict_policy`，未登记时退回 `hold`，不会误删旧版本。后两者不记日志，因为每个文件都会解析一次。
+- **冲突策略改为两个 Provider**：第 9 节把 `revision_conflict_policy` 迁到 `slots.conflict_policy`，slot 的值就是 Provider id。因此宿主以 `core` 登记 `hold` 与 `replace` 两个 `CoreConflictPolicy`，不再登记 `default`；`ConflictRequest` 删除 P4 加入的 `configured` 字段。`ab_sdk` 升至 0.5.0。`GET /api/v1/plugins/providers` 仍不列出 `conflict_policy` / `media_files` 的插件候选。
+
+迁移器（第 9 节，`module/update/v4.py`）：
+
+- 按源字段是否存在触发：`downloader`、`bangumi_manage.rename_method`、`bangumi_manage.revision_conflict_policy`。字段是「移动」而不是复制，第二次运行看不到源字段，什么也不做，也不会用 4.0 格式的文件覆盖 `.v3.bak`。下载器字段合并到已有的 `default` 实例上，没有时新建。
+- `normal → none` 并入 `rename_method → slots.rename_strategy` 的迁移，`Settings._migrate_old_config` 中的对应分支随之删除（第 8.3 节）。掩码哨兵清洗保留在 `_migrate_old_config`。
+- 只有需要迁移时才备份。新文件先写到 `<文件名>.tmp` 再 `os.replace`。迁移后的字典先用 `Config.model_validate` 校验；任何失败都从备份恢复原文件，记录 `critical` 日志并抛出 `ConfigMigrationError`。日志与异常消息写明出错字段（取 pydantic 错误的 `loc`），因为此时 `setup_logger` 还没有运行。配置文件本身不是合法 JSON 时由 `json` 直接报错，与之前相同。
+- **接线**：迁移器在 `Settings.__init__` 中、`load()` / `save()` 之前调用，所以 `import module.conf` 失败即拒绝启动。`module/update/__init__.py` 原先在包初始化时 import 依赖 `module.conf` 的子模块，`module.conf` 无法 import `module.update.v4`。现在包初始化不 import 任何子模块，6 处调用方改为直接 import 子模块。没有用模块级 `__getattr__` 懒加载，因为 mypy 会把这些名字推断为 `Any`。
+- **版本闸门不动**，仍在 `AppContext.startup` 中。P0 发现的「`Settings()` 在版本闸门之前改写 config.json」由备份解决：低于 3.3 的配置仍会先被迁移、再被闸门拒绝，原文件保存在 `config.json.v3.bak`，退回 3.3 时要用它恢复。`Settings` 加载后仍立即保存一次，与之前相同。
+- **环境变量**：`ENV_TO_ATTR` 不变，仍按 3.3 的位置写入（`AB_DOWNLOADER_*` / `AB_DOWNLOAD_PATH` → `downloader`，`AB_METHOD` / `AB_REVISION_CONFLICT_POLICY` → `bangumi_manage`），再由同一个 `migrate_v3_dict` 移到默认实例与 slots。设置向导（`/setup/complete`）把下载器写入 `slots.downloader` 所指的实例。
+
+数据库与 WebUI：
+
+- 迁移 v26 为 `bangumi`、`movie`、`rssitem`、`torrent` 增加 `downloader_id VARCHAR DEFAULT 'default'`，存量行由 SQLite 按默认值填充。每张表一个守卫：列已存在，或表不存在（之后由 `create_all` 按模型建表，自带该列）时跳过。四个表模型的 `downloader_id` 默认为 `"default"`；`BangumiUpdate` / `MovieUpdate` 尚未加入该字段。
+- WebUI：「下载器设置」编辑 `slots.downloader` 所指的实例（`provider` 与 `options`），「番剧管理设置」中的重命名方式与版本冲突策略绑定到 `plugins.slots`。两个分区的未保存标记都以 `plugins` 配置段判断，所以修改其中一个，两个分区都会显示未保存。插件卡片保存后 `refreshGroup('plugins')` 会用服务端的值覆盖整个 `plugins` 段，包括尚未保存的下载器与 slots 修改（之前只影响插件 options）。
+- 用户文档 `docs/{,en/,ja/}config/{downloader,manager}.md` 与插件开发文档改为新的配置位置。
+
 ## 1. 背景与目标
 
 AB 目前只有 **LLM 提供商** 是真正的运行时插件系统：签名下载、目录加载、懒导入、热重载。

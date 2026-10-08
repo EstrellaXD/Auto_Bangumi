@@ -35,11 +35,27 @@ Use the path from the downloader's point of view:
 
 ## `config.json`
 
-Section: `downloader`
+A downloader is an entry in `plugins.instances` whose `point` is `downloader`. `plugins.slots.downloader` is the id of the default instance (`default` by default). The settings page edits the default instance:
+
+```json
+"plugins": {
+    "slots": { "downloader": "default" },
+    "instances": [
+        {
+            "id": "default",
+            "point": "downloader",
+            "provider": "qbittorrent",
+            "options": { "host": "172.17.0.1:8080", "username": "admin", "password": "adminadmin", "path": "/downloads/Bangumi", "ssl": false }
+        }
+    ]
+}
+```
+
+On the first start after an upgrade to 4.0, the 3.3 `downloader` section moves to the `default` instance automatically. The original file is kept as `config.json.v3.bak`. The environment variables `AB_DOWNLOADER_HOST`, `AB_DOWNLOADER_USERNAME`, `AB_DOWNLOADER_PASSWORD` and `AB_DOWNLOAD_PATH` still work and set the default instance.
 
 | Key | Description | Type | WebUI field | Default |
 | --- | --- | --- | --- | --- |
-| `type` | Downloader type | string | Downloader Type | `qbittorrent` |
+| `provider` | Downloader type | string | Downloader Type | `qbittorrent` |
 | `host` | Downloader address | string | Host | `172.17.0.1:8080` |
 | `username` | Downloader username | string | Username | `admin` |
 | `password` | Downloader password or aria2 RPC secret | string | Password | `adminadmin` |

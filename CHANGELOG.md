@@ -15,6 +15,7 @@
 - **新增（媒体库刷新）**：新增内置插件「媒体库刷新」（`media-server-refresh`）：配置 Jellyfin / Emby / Plex 地址与 API Key 后，合并一段时间内整理完成的种子，请求刷新媒体库；未配置时不做任何事
 - **重构（整理流水线）**：`manager/renamer.py` 拆为编排（`renamer.py`）与 revision 替换事务（`revision_saga.py`）；删除仅测试使用的 `Renamer.rename_file` / `_lookup_offsets`、无调用方的 `release_replacement_lease`、`match_by_save_path`、`search_by_qb_hash`，以及在重命名链路中传递却从未使用的 `season_offset` 参数
 - **修复（插件配置）**：插件配置模型的校验器（`field_validator`）报错时，保存接口返回 500 而不是 422（错误详情中的异常对象无法序列化）
+- **破坏性变更（配置，多下载器）**：下载器改为 `plugins.instances` 中的实例，`plugins.slots.downloader` 指向默认实例；重命名方式与版本冲突策略移到 `plugins.slots.rename_strategy` / `conflict_policy`（另有 `media_files`），插件提供的实现也可以通过 slots 选用。升级后第一次启动时，3.3 的 `downloader`、`bangumi_manage.rename_method`、`bangumi_manage.revision_conflict_policy` 自动迁移，原文件备份为 `config.json.v3.bak`；迁移失败时从备份恢复配置并拒绝启动，日志写明出错的字段。`AB_DOWNLOADER_*`、`AB_DOWNLOAD_PATH`、`AB_METHOD`、`AB_REVISION_CONFLICT_POLICY` 环境变量照常生效。番剧、电影、RSS 订阅与种子新增 `downloader_id` 列（数据库迁移 v26），存量数据归属 `default`。`ab_sdk` 升至 0.5.0：`ConflictRequest` 删除 `configured`，宿主的冲突策略改为 `hold` / `replace` 两个 Provider
 - **破坏性变更（升级路径）**：只支持从 3.3.x 升级。检测到更早版本的数据（`config/version.info` 低于 3.3，或残留 2.x 的 `data/data.json`）时拒绝启动，并提示先升级到最新 3.3.x 启动一次完成迁移
 - **破坏性变更（API）**：移除 3.2 兼容的 GET 控制端点（`/api/v1/restart`、`/start`、`/stop`、`/shutdown`）和 `GET /api/v1/auth/refresh_token`，请改用 POST
 - **破坏性变更（配置）**：移除旧版 `experimental_openai` 配置节和通知的单 provider 旧字段（`type` / `token` / `chat_id`），3.3 已把它们迁移到 `llm` 与 `notification.providers`；移除废弃的 `normal` 重命名方式，已有配置自动改为语义相同的 `none`

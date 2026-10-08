@@ -43,11 +43,27 @@ AB 中的下载路径用于生成保存位置和后续整理路径。请填写**
 
 ## `config.json` 配置选项
 
-配置节：`downloader`
+下载器是 `plugins.instances` 中 `point` 为 `downloader` 的实例，`plugins.slots.downloader` 是默认实例的 id（默认为 `default`）。设置页编辑的是默认实例：
+
+```json
+"plugins": {
+    "slots": { "downloader": "default" },
+    "instances": [
+        {
+            "id": "default",
+            "point": "downloader",
+            "provider": "qbittorrent",
+            "options": { "host": "172.17.0.1:8080", "username": "admin", "password": "adminadmin", "path": "/downloads/Bangumi", "ssl": false }
+        }
+    ]
+}
+```
+
+3.3 的 `downloader` 配置节在升级到 4.0 后第一次启动时自动迁移到 `default` 实例，原文件备份为 `config.json.v3.bak`。环境变量 `AB_DOWNLOADER_HOST`、`AB_DOWNLOADER_USERNAME`、`AB_DOWNLOADER_PASSWORD`、`AB_DOWNLOAD_PATH` 照常生效，写入默认实例。
 
 | 参数 | 说明 | 类型 | WebUI 选项 | 默认值 |
 | --- | --- | --- | --- | --- |
-| `type` | 下载器类型 | 字符串 | 下载器类型 | `qbittorrent` |
+| `provider` | 下载器类型 | 字符串 | 下载器类型 | `qbittorrent` |
 | `host` | 下载器地址 | 字符串 | 下载器地址 | `172.17.0.1:8080` |
 | `username` | 下载器用户名 | 字符串 | 用户名 | `admin` |
 | `password` | 下载器密码或 aria2 RPC secret | 字符串 | 密码 | `adminadmin` |

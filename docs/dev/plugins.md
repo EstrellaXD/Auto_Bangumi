@@ -307,7 +307,7 @@ class MyPlugin(Plugin):
 
 ### 重命名方式（rename_strategy）
 
-下载完成后，AB 为种子里的每个正片与字幕调用设置项「重命名方式」（`bangumi_manage.rename_method`）对应的 Provider。宿主只自带 `none`（保留原名）；`pn`、`advance` 与 `template` 由内置插件「重命名」（`rename`，默认启用）提供。插件登记的 id 会出现在 设置 → 番剧管理设置 → 重命名方式 的下拉框里。
+下载完成后，AB 为种子里的每个正片与字幕调用设置项「重命名方式」（`plugins.slots.rename_strategy`）对应的 Provider。宿主只自带 `none`（保留原名）；`pn`、`advance` 与 `template` 由内置插件「重命名」（`rename`，默认启用）提供。插件登记的 id 会出现在 设置 → 番剧管理设置 → 重命名方式 的下拉框里。
 
 ```python
 from ab_sdk import Plugin, points, provider
@@ -344,9 +344,9 @@ class MyRename(Plugin):
 ### 文件分类与版本冲突（media_files / conflict_policy）
 
 - `media_files`：`classify(path) -> "media" | "subtitle" | "ignore"`，决定种子内哪些文件按正片、字幕重命名。宿主实现按扩展名判断（`.mp4` / `.mkv` 为正片，`.ass` / `.srt` 为字幕）。
-- `conflict_policy`：`decide(ConflictRequest) -> ConflictDecision("hold" | "replace")`，新种子的规范文件名已被另一个种子占用时决定保留旧的还是替换。宿主实现沿用设置项「版本冲突策略」。宿主只在「唯一占用者、双方都是单文件种子、双方解析身份完整」时执行替换，其它情况一律按 `hold` 处理。
+- `conflict_policy`：`decide(ConflictRequest) -> ConflictDecision("hold" | "replace")`，新种子的规范文件名已被另一个种子占用时决定保留旧的还是替换。宿主自带 `hold` 与 `replace` 两个实现，即设置项「版本冲突策略」的两个选项。宿主只在「唯一占用者、双方都是单文件种子、双方解析身份完整」时执行替换，其它情况一律按 `hold` 处理。
 
-这两个扩展点目前只使用宿主实现（id 为 `default`）。插件可以登记自己的实现，但要等多下载器版本的 `plugins.slots` 提供后才能被选用。
+两者按 `plugins.slots.media_files`（默认 `default`）与 `plugins.slots.conflict_policy`（默认 `hold`）选择 Provider id。选中的 id 未登记（插件停用或被熔断）时，退回宿主的 `default` 与 `hold`。
 
 ### 整理事件（file.renamed / torrent.organized）
 

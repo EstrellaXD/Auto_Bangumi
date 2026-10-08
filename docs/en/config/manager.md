@@ -84,7 +84,8 @@ Section: `bangumi_manage`
 | --- | --- | --- | --- | --- |
 | `enable` | Enable manager | boolean | Enable | `true` |
 | `eps_complete` | Enable episode completion | boolean | EPS complete | `false` |
-| `rename_method` | Rename method | string | Rename Method | `pn` |
 | `group_tag` | Add subgroup tags | boolean | Add Group Tag | `false` |
 | `remove_bad_torrent` | Delete errored torrents | boolean | Delete Bad Torrent | `false` |
 | `track_orphans` | Track unmatched torrents | boolean | Track Unmatched Torrents | `true` |
+
+The rename method and the revision conflict policy are provider choices. They are stored in `plugins.slots`: `rename_strategy` (rename method, default `pn`) and `conflict_policy` (`hold` / `replace`, default `hold`). On the first start after an upgrade to 4.0, the 3.3 keys `bangumi_manage.rename_method` and `revision_conflict_policy` move there automatically.
