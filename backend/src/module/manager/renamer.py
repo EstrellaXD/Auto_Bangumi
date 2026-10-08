@@ -96,6 +96,7 @@ def _target_name(entry: ProviderEntry, f: RenameInput) -> str:
             return e
 
     runner = plugin_host.get_runner()
+    result: Any = None
     if runner is not None:
         ok, result = runner.call_provider_sync(
             entry.plugin_id, points.RENAME_STRATEGY, call, check=_valid_name

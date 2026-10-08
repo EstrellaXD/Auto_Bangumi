@@ -181,13 +181,18 @@ def _crash(f: RenameInput) -> str:
     raise ValueError("boom")
 
 
+@pytest.mark.parametrize("with_runner", [True, False])
 @pytest.mark.parametrize(
     ("target_name", "counted"),
     [(_skip, False), (_crash, True), (lambda f: "", True), (lambda f: 3, True)],
 )
 async def test_rename_strategy_failure_keeps_name_and_notifies_once(
-    plugins, renamer, target_name, counted
+    plugins, renamer, monkeypatch, target_name, counted, with_runner
 ):
+    if not with_runner:
+        # 未设置 runner（脚本、CLI）：插件失败只记录日志，不计入熔断
+        monkeypatch.setattr(host, "_runner", None)
+        counted = False
     add_strategy(plugins.registry, "custom", target_name)
     await run(renamer, "custom")
     await run(renamer, "custom")
