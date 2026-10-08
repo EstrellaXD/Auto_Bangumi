@@ -34,7 +34,7 @@ Status = Literal["linked", "exists", "conflict", "failed"]
 LINK_TIMEOUT = 3600.0
 
 # ponytail: 补链按扩展名挑文件，与宿主 media_files 的 core 实现同一组；插件不能
-# import module.*，若用户换了 media_files 实现（P2.5 slots），这里需要改为经 SDK 查询
+# import module.*，若用户在 plugins.slots.media_files 换了实现，这里需要改为经 SDK 查询
 BACKFILL_SUFFIXES = frozenset({".mp4", ".mkv", ".ass", ".srt"})
 
 

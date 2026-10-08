@@ -150,7 +150,7 @@ class EventBus:
                 sub.offer(event)
 
     async def drain(self) -> None:
-        """等待当前已入队的事件全部处理完（测试与关闭流程使用）。"""
+        """等待当前已入队的事件全部处理完（测试使用）。"""
         await asyncio.gather(*(sub.join() for sub in list(self._subscribers)))
 
     async def close_owner(self, owner: str) -> None:
