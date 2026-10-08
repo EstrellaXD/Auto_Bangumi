@@ -260,6 +260,13 @@ bark / wecom 旧字段别名：
 - 校验：`uvx check-jsonschema --builtin-schema vendor.github-workflows` 通过；`actionlint` 只报告已有步骤的 SC2086 提示（本次改动之前就存在）。
 - **未验证**：轮子构建与 release 上传只在真实 tag 推送时才会被 CI 跑到；本地只验证了 `uv build --wheel backend/sdk`（第一部分）、YAML 语法与上面的测试。
 
+### 实施中的调整（P7 评审修复）
+
+- **原生扩展扫描与文件监听跳过工具链目录**：`native_files()` 原先遍历整个插件目录，`uv run pytest` 在插件目录里建出的 `.venv`（含 `pydantic_core` 的 `.so`）会让 `validate` / `pack` / `dev` 和宿主加载器都报「含原生扩展」，`dev_mode` 的指纹轮询也每秒遍历 `.venv`。`ab_sdk.manifest.TOOLING_DIRS`（`__pycache__`、`.git`、`.venv`、`dist`、`node_modules`、各类缓存）现在由原生扩展扫描、`pack` 与文件指纹共用；`pack` 仍额外排除 `tests`。
+- **v3 迁移不再把 `null` 当作旧字段**：`Settings.save()` 总是把 Bark 的 `token`、WeCom 的 `chat_id` 以 `null` 写回，`old in provider` 因此每次启动都成立，每次启动都新增 `config.json.v3.bak.N` 并改写配置。现在只在旧字段有值时迁移。
+- **通用插件与 LLM 插件共用 `config/plugins/<id>/` 的两处隔离**：LLM 注册表扫描跳过版本目录里是 `plugin.toml` 的目录（原先每次列举都对它打 `Skipping broken plugin` 警告）；通用安装器卸载时要求 `installed.json` 指向的版本目录含 `plugin.toml`，不能再通过 `DELETE /plugins/{id}` 删掉 LLM 插件（其凭据清理在 LLM 安装器里，不会被跳过）。
+- **未修：在线更新 bundle 不含 `ab_sdk`**。`boot_overlay.py` 是镜像自带的稳定脚本，只把 bundle 里的 `backend/src/module` 换进 `/app/module`；只在 `build.yml` 里多拷一份 `ab_sdk` 不会被旧镜像应用，要让 bundle 能更新 SDK 必须改覆盖层的应用方式。选项见 PR 说明，留作后续决定。
+
 未做（第一部分已列出，本部分也没有做）：
 
 - **插件管理页**：设置 → 插件页没有目录浏览、安装 / 卸载按钮，也没有 `dev_mode` 提示；`GET /plugins` 仍不返回 `dev_mode`。任务清单不含它，推迟到发布阶段前补。

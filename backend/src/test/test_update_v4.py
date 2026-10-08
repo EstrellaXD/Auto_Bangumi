@@ -197,3 +197,23 @@ def test_migrate_v3_config_rewrites_file_with_legacy_bark_token(tmp_path):
     saved = json.loads(path.read_text())
     assert saved["notification"]["providers"] == [{"type": "bark", "device_key": "k"}]
     assert path.with_name("config.json.v3.bak").exists()
+
+
+@pytest.mark.parametrize(
+    "provider",
+    [
+        # Settings.save() 总是把渠道的旧字段以 null 写回，不能当作 3.3 配置
+        {"type": "bark", "token": None, "device_key": "k"},
+        {"type": "wecom", "chat_id": None, "webhook_url": "https://hook"},
+        {"type": "bark", "token": "", "device_key": ""},
+    ],
+)
+def test_migrate_v3_config_empty_legacy_alias_is_noop(tmp_path, provider):
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps({"notification": {"providers": [provider]}}))
+    before = path.read_bytes()
+
+    assert migrate_v3_config(path) is False
+
+    assert path.read_bytes() == before
+    assert list(tmp_path.glob("config.json.v3.bak*")) == []

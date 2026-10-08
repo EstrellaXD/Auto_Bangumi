@@ -3,6 +3,7 @@
 宿主加载器与 ``ab-plugin`` 命令行共用，所以放在 SDK 里：插件作者不装宿主也能校验。
 """
 
+import os
 import re
 import tomllib
 from pathlib import Path, PurePosixPath
@@ -17,6 +18,19 @@ from . import SDK_VERSION
 MANIFEST_NAME = "plugin.toml"
 # 只允许纯 Python 代码（设计文档第 2.4 节）：带这些后缀的文件一律拒绝
 NATIVE_SUFFIXES = (".so", ".pyd", ".dylib", ".dll")
+# 工具链产生的目录（虚拟环境、缓存、构建产物）：不属于插件代码，扫描与打包都跳过
+TOOLING_DIRS = frozenset(
+    {
+        "__pycache__",
+        ".git",
+        ".venv",
+        "dist",
+        "node_modules",
+        ".pytest_cache",
+        ".ruff_cache",
+        ".mypy_cache",
+    }
+)
 ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 _ENTRY_RE = re.compile(r"^[A-Za-z_][\w.]*:[A-Za-z_]\w*$")
 # 合法的 custom element 名（小写、含连字符），统一以 ab-plugin- 开头避免与宿主冲突
@@ -179,11 +193,15 @@ def load_manifest(plugin_dir: Path) -> PluginManifest:
 
 def native_files(plugin_dir: Path) -> list[Path]:
     """插件目录中的原生扩展文件（相对路径）。"""
-    return [
-        p.relative_to(plugin_dir)
-        for p in sorted(plugin_dir.rglob("*"))
-        if p.suffix in NATIVE_SUFFIXES
-    ]
+    found = []
+    for root, dirs, names in os.walk(plugin_dir):
+        dirs[:] = sorted(d for d in dirs if d not in TOOLING_DIRS)
+        found += [
+            (Path(root) / n).relative_to(plugin_dir)
+            for n in names
+            if n.endswith(NATIVE_SUFFIXES)
+        ]
+    return sorted(found)
 
 
 def check(plugin_dir: Path) -> tuple[PluginManifest | None, list[str]]:

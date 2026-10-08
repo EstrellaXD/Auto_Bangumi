@@ -71,7 +71,8 @@ def _migrate_provider_aliases(config: dict[str, Any]) -> list[str]:
         old, new = _PROVIDER_ALIASES.get(
             str(provider.get("type", "")).lower(), ("", "")
         )
-        if old in provider:
+        # Settings.save() 总是把旧字段以 null 写回，只有带值的才是 3.3 遗留
+        if provider.get(old):
             legacy = provider.pop(old)
             provider[new] = provider.get(new) or legacy
             moved.append(f"notification.providers[{i}].{old}")

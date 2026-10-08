@@ -50,6 +50,9 @@ class ProviderRegistry:
             try:
                 version = json.loads(pointer.read_text(encoding="utf-8"))["version"]
                 version_dir = plugin_dir / version
+                # 通用插件（plugin.toml）与 LLM 插件共用此目录布局，不属于这里
+                if (version_dir / "plugin.toml").exists():
+                    continue
                 manifest = json.loads(
                     (version_dir / "plugin.json").read_text(encoding="utf-8")
                 )

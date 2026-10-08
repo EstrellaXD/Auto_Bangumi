@@ -227,6 +227,18 @@ class TestInstall:
 
         assert not result.success and unmanaged.is_dir()
 
+    async def test_uninstall_leaves_llm_provider_plugins_alone(self, tmp_path, keypair):
+        installer = make_installer(tmp_path, keypair, build_zip(tmp_path))
+        # LLM 插件：有 installed.json 与 plugin.json，没有 plugin.toml
+        llm_dir = tmp_path / "plugins" / "github-copilot"
+        (llm_dir / "1.0.0").mkdir(parents=True)
+        (llm_dir / "1.0.0" / "plugin.json").write_text("{}")
+        (llm_dir / "installed.json").write_text('{"version": "1.0.0"}')
+
+        result = await installer.uninstall("github-copilot")
+
+        assert not result.success and (llm_dir / "installed.json").is_file()
+
 
 class TestReleaseScript:
     async def test_catalog_built_by_release_script_installs(self, tmp_path, keypair):

@@ -28,8 +28,8 @@ from typing import Any, ClassVar, Optional
 import httpx
 import semver
 
-from ab_sdk.manifest import ID_RE, RESERVED_IDS, check
-from module.plugin.loader import BUILTIN_ROOT, INSTALLED_FILE
+from ab_sdk.manifest import ID_RE, MANIFEST_NAME, RESERVED_IDS, check
+from module.plugin.loader import BUILTIN_ROOT, INSTALLED_FILE, installed_version
 from module.update.signing import DEFAULT_PUBKEY_PATH, verify_bundle_signature
 
 logger = logging.getLogger(__name__)
@@ -258,8 +258,13 @@ class PluginInstaller(SignedCatalogInstaller):
         return None
 
     def _uninstall_reject_reason(self, plugin_id: str) -> Optional[str]:
-        # 只删经安装器装入的目录，绝不碰 config/plugins/ 下的其它内容
-        if not (self.root / plugin_id / INSTALLED_FILE).is_file():
+        # 只删经本安装器装入的目录（installed.json 指向含 plugin.toml 的版本目录），
+        # 绝不碰 config/plugins/ 下的其它内容，包括同样带 installed.json 的 LLM 插件
+        version = installed_version(self.root, plugin_id)
+        if (
+            not version
+            or not (self.root / plugin_id / version / MANIFEST_NAME).is_file()
+        ):
             return f"Plugin not installed: {plugin_id}"
         return None
 

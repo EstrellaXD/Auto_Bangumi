@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 from ab_sdk import SDK_VERSION, Plugin, PluginDisabled, PluginLoaded
 from ab_sdk.hooks import HOOK_ATTR, PROVIDER_ATTR, SUBSCRIBE_ATTR
+from ab_sdk.manifest import TOOLING_DIRS
 
 from .bus import EventBus
 from .context import PLUGIN_DATA_ROOT, HostPluginContext
@@ -37,7 +38,7 @@ def _fingerprint(root: Path) -> Fingerprint:
     """目录下所有文件的（相对路径、修改时间、大小），用于判断插件源码是否变过。"""
     stamps = []
     for dirpath, dirs, names in os.walk(root):
-        dirs[:] = [d for d in dirs if d != "__pycache__"]
+        dirs[:] = [d for d in dirs if d not in TOOLING_DIRS]
         for name in names:
             path = Path(dirpath, name)
             try:

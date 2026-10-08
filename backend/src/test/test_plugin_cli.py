@@ -69,6 +69,27 @@ def test_validate_broken_plugin_fails(tmp_path, capsys, problem):
     assert "错误" in capsys.readouterr().err
 
 
+@pytest.mark.parametrize("tooling_dir", [".venv", "node_modules", ".mypy_cache"])
+def test_validate_ignores_native_files_in_tooling_dirs(tmp_path, tooling_dir):
+    plugin_dir = _new(tmp_path)
+    native = plugin_dir / tooling_dir / "lib" / "_core.so"
+    native.parent.mkdir(parents=True)
+    native.write_bytes(b"")
+
+    assert main(["validate", str(plugin_dir)]) == 0
+
+
+def test_fingerprint_ignores_tooling_dirs(tmp_path):
+    from module.plugin.manager import _fingerprint
+
+    plugin_dir = _new(tmp_path)
+    before = _fingerprint(plugin_dir)
+    (plugin_dir / ".venv").mkdir()
+    (plugin_dir / ".venv" / "x.py").write_text("x")
+
+    assert _fingerprint(plugin_dir) == before
+
+
 def test_pack_puts_contents_at_zip_root_and_is_reproducible(tmp_path):
     plugin_dir = _new(tmp_path)
     (plugin_dir / "my_plugin" / "__pycache__").mkdir()
