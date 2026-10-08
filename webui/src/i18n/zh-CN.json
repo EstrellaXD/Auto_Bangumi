@@ -755,6 +755,10 @@
       "rename_conflict": {
         "title": "媒体文件重命名冲突",
         "body": "{torrent_name} → {target_path}：{reason}"
+      },
+      "rename_skipped": {
+        "title": "文件未重命名",
+        "body": "{torrent_name}（{strategy}）：{reason}"
       }
     }
   }

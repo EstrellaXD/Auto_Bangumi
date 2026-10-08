@@ -5,12 +5,21 @@ import type {
   RevisionConflictPolicy,
 } from '#/config';
 import type { SelectItem, SettingItem } from '#/components';
+import { usePluginProviders } from '@/hooks/usePluginProviders';
 
 const { t } = useMyI18n();
 const { getSettingGroup } = useConfigStore();
 
 const manage = getSettingGroup('bangumi_manage');
-const renameMethod: RenameMethod = ['pn', 'advance', 'none'];
+const builtinMethods: RenameMethod = ['pn', 'advance', 'none'];
+const pluginProviders = usePluginProviders();
+// pn / advance 也由内置插件 rename 提供；插件新增的方式（如 template）追加在后
+const renameMethod = computed(() => [
+  ...builtinMethods,
+  ...pluginProviders.value.rename_strategy.filter(
+    (id) => !(builtinMethods as readonly string[]).includes(id)
+  ),
+]);
 const revisionConflictPolicies: RevisionConflictPolicy = ['hold', 'replace'];
 
 const revisionConflictOptions = computed<SelectItem[]>(() => [
@@ -37,7 +46,7 @@ const items = computed<SettingItem<BangumiManage>[]>(() => [
     label: () => t('config.manage_set.method'),
     type: 'select',
     prop: {
-      items: renameMethod,
+      items: renameMethod.value,
     },
   },
   {

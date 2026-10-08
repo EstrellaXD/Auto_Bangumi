@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
+from pydantic import ValidationError
 
 from ab_sdk import points
 from ab_sdk.events import (
@@ -20,13 +21,15 @@ from ab_sdk.rename import (
     Revision,
     RevisionTask,
 )
-from ab_sdk.testing import RecordingBus
+from ab_sdk.testing import RecordingBus, create_plugin
 from module.downloader import DownloadClient
 from module.manager import renamer as renamer_module
 from module.manager.renamer import Renamer
 from module.manager.revision_policy import CoreConflictPolicy
 from module.models import EpisodeFile, SubtitleFile
-from module.plugin import host
+from module.models.config import Plugins
+from module.plugin import PluginManager, host
+from module.plugin.loader import BUILTIN_ROOT, discover
 from module.plugin.registry import ProviderEntry
 from module.plugin.runner import CircuitBreaker, HookRunner
 
@@ -253,3 +256,123 @@ def test_core_conflict_policy_decide_matches_3x_reasons(
         ConflictRequest("t.mkv", incoming, owners, configured, strict)
     )
     assert (decision.action, decision.reason) == (action, reason)
+
+
+# ---------------------------------------------------------------- built-in plugin
+
+
+def load_rename_plugin():
+    candidates, errors = discover(
+        local_root=BUILTIN_ROOT / "__missing__", entry_point_group="ab-test-none"
+    )
+    assert errors == []
+    return {c.manifest.id: c for c in candidates}["rename"]
+
+
+def template_strategy(tmp_path, template: str):
+    plugin, _ = create_plugin(
+        load_rename_plugin().load(), {"template": template}, data_dir=tmp_path
+    )
+    return plugin.template_strategy()
+
+
+def rename_input(**overrides) -> RenameInput:
+    fields = {
+        "kind": "media",
+        "media_path": NAME,
+        "title": "Anime",
+        "bangumi_name": "Anime (2024)",
+        "season": 1,
+        "episode": 1,
+        "suffix": ".mkv",
+        "group": "Sub",
+    }
+    return RenameInput(**{**fields, **overrides})
+
+
+@pytest.mark.parametrize(
+    ("template", "overrides", "expected"),
+    [
+        (None, {}, "Anime S01E01.mkv"),
+        (None, {"episode": 12.5}, "Anime S01E12.5.mkv"),
+        (
+            "{{ title }} - S{{ season|pad(2) }}E{{ episode|pad(3) }}",
+            {"kind": "subtitle", "language": "zh-tw", "suffix": ".ass"},
+            "Anime - S01E001.zh-tw.ass",
+        ),
+        (
+            "{% if episode_type == 'movie' %}{{ bangumi_name }}"
+            "{% else %}[{{ group }}] {{ title }} {{ episode }}{% endif %}",
+            {"episode_type": "movie"},
+            "Anime (2024).mkv",
+        ),
+    ],
+)
+def test_template_strategy_renders_stem_and_appends_suffix(
+    tmp_path, template, overrides, expected
+):
+    plugin, _ = create_plugin(
+        load_rename_plugin().load(),
+        {} if template is None else {"template": template},
+        data_dir=tmp_path,
+    )
+    strategy = plugin.template_strategy()
+    assert strategy.target_name(rename_input(**overrides)) == expected
+
+
+@pytest.mark.parametrize(
+    "template",
+    [
+        "{{ title ",  # 语法错误
+        "{{ titel }}",  # 未定义变量
+        "{{ title.__class__ }}",  # 沙箱拒绝
+        "{{ group }}/{{ title }}",  # 路径分隔符
+        "{{ '' }}",  # 空文件名
+        "..",
+    ],
+)
+def test_template_options_invalid_template_rejected(template):
+    options_model = load_rename_plugin().load().config_model
+    with pytest.raises(ValidationError):
+        options_model.model_validate({"template": template})
+
+
+@pytest.mark.parametrize(
+    ("template", "overrides"),
+    [
+        ("{{ group }}", {"group": None}),  # 运行时渲染为空
+        ("{{ title }}", {"title": "a/b"}),  # 运行时出现分隔符
+        ("{{ (episode / season)|int }}", {"season": 0}),  # 运行时渲染异常
+    ],
+)
+def test_template_strategy_bad_runtime_name_raises_skipped(
+    tmp_path, template, overrides
+):
+    strategy = template_strategy(tmp_path, template)
+    with pytest.raises(RenameSkipped):
+        strategy.target_name(rename_input(**overrides))
+
+
+async def test_rename_plugin_loaded_by_manager_enabled_by_default(plugins, tmp_path):
+    manager = PluginManager(
+        SimpleNamespace(plugins=Plugins()),
+        registry=plugins.registry,
+        discover_fn=lambda: ([load_rename_plugin()], []),
+        data_root=tmp_path,
+    )
+    await manager.start()
+    try:
+        status = {s.id: s for s in manager.statuses()}["rename"]
+        assert status.state == "active"
+        strategies = plugins.registry.providers(points.RENAME_STRATEGY)
+        assert {pid: e.plugin_id for pid, e in strategies.items()} == {
+            "none": "core",
+            "pn": "rename",
+            "advance": "rename",
+            "template": "rename",
+        }
+        with pytest.raises(ValidationError):
+            manager.validate_options("rename", {"template": "{{ nope }}"})
+    finally:
+        await manager.stop()
+    assert set(plugins.registry.providers(points.RENAME_STRATEGY)) == {"none"}

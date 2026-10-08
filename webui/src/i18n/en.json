@@ -755,6 +755,10 @@
       "rename_conflict": {
         "title": "Media rename conflict",
         "body": "{torrent_name} → {target_path}: {reason}"
+      },
+      "rename_skipped": {
+        "title": "Files kept their names",
+        "body": "{torrent_name} ({strategy}): {reason}"
       }
     }
   }

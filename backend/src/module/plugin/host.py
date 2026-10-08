@@ -181,19 +181,13 @@ def _register_core(registry: ExtensionRegistry) -> None:
             ProviderEntry(CORE, provider_id, metadata(provider_id)),
         )
 
-    # organize：重命名方式 none、按扩展名分类、版本冲突策略
+    # organize：重命名方式 none（pn / advance / template 由内置插件 rename 提供）、
+    # 按扩展名分类、版本冲突策略
     from module.downloader.path import SuffixMediaFiles
-    from module.manager.rename_strategies import (
-        NO_RENAME,
-        AdvanceRename,
-        NoRename,
-        PnRename,
-    )
+    from module.manager.rename_strategies import NO_RENAME, NoRename
     from module.manager.revision_policy import CoreConflictPolicy
 
     _core(registry, points.RENAME_STRATEGY, NO_RENAME, NoRename())
-    _core(registry, points.RENAME_STRATEGY, "pn", PnRename())
-    _core(registry, points.RENAME_STRATEGY, "advance", AdvanceRename())
     _core(registry, points.MEDIA_FILES, CORE_ID, SuffixMediaFiles())
     _core(registry, points.CONFLICT_POLICY, CORE_ID, CoreConflictPolicy())
 
