@@ -21,5 +21,5 @@ class Alerts(Plugin):
 
 - The hook affects only the external push. The frontend renders the text in the notification center from `i18n()`, so it does not change.
 - AB calls the hook one time for each enabled channel. `channel` is the channel type, for example `telegram`.
-- If a hook fails or times out, AB keeps the text of the previous step, and the failure counts toward the breaker. If the return value has the wrong type, the whole message goes back to the default text.
+- If a hook fails, times out or returns a value that is not a `RenderedMessage`, AB keeps the text of the previous step. The failure counts toward the breaker. The next hooks run as usual.
 - "New episode" notifications do not pass through this hook yet. They still use the single-episode template of the notification channel.

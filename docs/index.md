@@ -18,7 +18,7 @@ hero:
       link: /home/
     - theme: alt
       text: 更新日志
-      link: /changelog/3.3
+      link: /changelog/4.0
 
 features:
   - icon:
@@ -28,7 +28,7 @@ features:
   - icon:
       src: /image/icons/qbittorrent-logo.svg
     title: qBittorrent / aria2 下载器
-    details: 使用 qBittorrent 或 aria2 下载番剧资源。在 AutoBangumi 中即可管理现有番剧、下载往期番剧以及删除条目。
+    details: 使用 qBittorrent 或 aria2 下载番剧资源。在 AutoBangumi 中即可管理现有番剧、下载往期番剧以及删除条目。4.0 起可以同时连接多个下载器，规则与订阅可以分别指定。
   - icon:
       src: /image/icons/tmdb-icon.png
     title: TMDB 元数据匹配
@@ -36,7 +36,14 @@ features:
   - icon:
       src: /image/icons/plex-icon.png
     title: Plex / Jellyfin / Infuse ...
-    details: 根据匹配结果自动整理文件名和目录结构，确保媒体库软件能够高成功率地刮削元数据。
+    details: 根据匹配结果自动整理文件名和目录结构，确保媒体库软件能够高成功率地刮削元数据。可选把文件硬链接到媒体库，并在整理完成后通知 Jellyfin / Emby / Plex 刷新。
+  - icon:
+      light: /image/icons/light-icon.svg
+      dark: /image/icons/dark-icon.svg
+    title: 插件扩展
+    details: 4.0 起，下载器、通知渠道、元数据源、搜索站点与重命名方式都可以由插件提供。用 SDK 与 ab-plugin 命令行编写自己的插件。
+    link: /dev/plugins
+    linkText: 插件开发
 ---
 
 

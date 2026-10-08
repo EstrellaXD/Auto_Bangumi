@@ -17,7 +17,7 @@
 | --- | --- | --- | --- | --- |
 | `login_whitelist` | 登录 IP 白名单 | 字符串数组 | 登录 IP 白名单 | `[]` |
 | `login_tokens` | 登录 API 令牌 | 字符串数组 | 登录 API 令牌 | `[]` |
-| `mcp_whitelist` | MCP IP 白名单 | 字符串数组 | MCP IP 白名单 | 局域网与本机 CIDR 或 `[]` |
+| `mcp_whitelist` | MCP IP 白名单 | 字符串数组 | MCP IP 白名单 | `[]` |
 | `mcp_tokens` | MCP API 令牌 | 字符串数组 | MCP API 令牌 | `[]` |
 | `webauthn_rp_id` | Passkey RP ID | 字符串 | 暂无 WebUI 项 | `""` |
 | `webauthn_origin` | Passkey Origin | 字符串 | 暂无 WebUI 项 | `""` |

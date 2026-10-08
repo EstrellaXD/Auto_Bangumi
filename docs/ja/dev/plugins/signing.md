@@ -86,4 +86,4 @@ API：
 
 ## SDK の公開
 
-SDK は、4.0 beta / 正式版の GitHub Release の添付ファイルとして wheel で配布します。CI が `uv build --wheel backend/sdk` でビルドします。同じ release に `autobangumi-plugin-skill-<バージョン>.zip` も添付されます。AI コーディングアシスタント向けのプラグイン開発 skill です。アシスタントの skills ディレクトリに展開してください。
+SDK の wheel とプラグイン開発 skill は CI がビルドし、4.0 の各 beta / 正式版の GitHub Release に添付します。メンテナーが手動で公開する必要はありません。ダウンロードとインストールは [SDK の入手](/ja/dev/plugins/sdk) を参照してください。

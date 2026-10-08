@@ -18,7 +18,7 @@ hero:
       link: /en/home/
     - theme: alt
       text: Changelog
-      link: /en/changelog/3.3
+      link: /en/changelog/4.0
 
 features:
   - icon:
@@ -28,7 +28,7 @@ features:
   - icon:
       src: /image/icons/qbittorrent-logo.svg
     title: qBittorrent / aria2 Downloaders
-    details: Download anime with qBittorrent or aria2, manage existing series, fetch missed episodes, and remove entries from AutoBangumi.
+    details: Download anime with qBittorrent or aria2, manage existing series, fetch missed episodes, and remove entries from AutoBangumi. From 4.0, connect more than one downloader and select one for each rule or subscription.
   - icon:
       src: /image/icons/tmdb-icon.png
     title: TMDB Metadata Matching
@@ -36,7 +36,14 @@ features:
   - icon:
       src: /image/icons/plex-icon.png
     title: Plex / Jellyfin / Infuse ...
-    details: Organize filenames and folders for media libraries, improving metadata scraping success in Plex, Jellyfin, Infuse, and similar apps.
+    details: Organize filenames and folders for media libraries, improving metadata scraping success in Plex, Jellyfin, Infuse, and similar apps. Optionally hard link files into a media library and tell Jellyfin / Emby / Plex to refresh.
+  - icon:
+      light: /image/icons/light-icon.svg
+      dark: /image/icons/dark-icon.svg
+    title: Plugins
+    details: From 4.0, plugins can supply downloaders, notification channels, metadata sources, search sites, and rename methods. Write your own plugin with the SDK and the ab-plugin command line.
+    link: /en/dev/plugins
+    linkText: Plugin Development
 ---
 
 

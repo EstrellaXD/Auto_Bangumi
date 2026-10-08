@@ -8,23 +8,25 @@
 
 ## 五分钟上手
 
-1. 安装 SDK 与命令行。轮子随每个 4.0 beta / 正式版发布在 [GitHub Releases](https://github.com/EstrellaXD/Auto_Bangumi/releases) 的附件中（文件名 `autobangumi_sdk-<版本>-py3-none-any.whl`），不发布到 PyPI：
+1. 安装 SDK 与命令行。轮子随每个 4.0 beta / 正式版发布在 [GitHub Releases](https://github.com/EstrellaXD/Auto_Bangumi/releases) 的附件中（文件名 `autobangumi_sdk-<SDK 版本>-py3-none-any.whl`），不发布到 PyPI。详见 [获取 SDK](/dev/plugins/sdk)。
 
    ```bash
    uv tool install ./autobangumi_sdk-0.5.0-py3-none-any.whl
    ```
 
-2. 生成骨架并测试：
+2. 生成骨架并测试。骨架的 `pyproject.toml` 依赖 `autobangumi-sdk`，而 PyPI 上没有这个包，所以先用 `uv add` 让它指向下载的轮子：
 
    ```bash
    ab-plugin new my-rename --kind rename   # 也可选 notifier、search
-   cd my-rename && uv run pytest           # 骨架自带契约测试
+   cd my-rename
+   uv add ../autobangumi_sdk-0.5.0-py3-none-any.whl   # 换成轮子的实际路径
+   uv run pytest                                      # 骨架自带契约测试
    ```
 
-3. 链接到本机的 AutoBangumi 并热重载（先启动过一次 AB，使 `config/` 下有配置文件）：
+3. 链接到本机的 AutoBangumi 并热重载。先启动过一次 AB，使它的配置目录下有配置文件；`--config-dir` 指向这个目录（源码运行时为 `backend/src/config`）：
 
    ```bash
-   ab-plugin dev .
+   ab-plugin dev . --config-dir /path/to/autobangumi/config
    ```
 
    重启 AB 一次后，修改插件目录里的文件会自动重载。
@@ -33,6 +35,8 @@
 ## 文档导航
 
 **基础**
+
+- [获取 SDK](/dev/plugins/sdk)：GitHub Release 中的轮子与插件开发 skill
 
 - [核心概念](/dev/plugins/concepts)：`Plugin`、`ctx`、三种扩展声明、清单、隔离与熔断
 - [配置表单](/dev/plugins/config-forms)：`config_model` 如何变成 WebUI 表单

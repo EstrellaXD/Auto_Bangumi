@@ -49,4 +49,4 @@ class MyPlugin(Plugin[Options]):
 
 ## 超出表单的界面
 
-表单满足不了时（图表、操作按钮、列表），插件可以提供前端组件，见 [前端挂载点](/dev/plugins/frontend-slots)。内置 `hardlink` 的「补链已有文件」按钮就是一个 `settings.section` 组件。
+表单满足不了时（图表、操作按钮、列表），插件可以提供前端组件，见 [前端挂载点](/dev/plugins/frontend-slots)。内置 `hardlink` 的「链接已有文件」按钮就是一个 `settings.section` 组件。

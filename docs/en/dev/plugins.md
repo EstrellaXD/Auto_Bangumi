@@ -8,23 +8,25 @@ A plugin is a Python package, with optional frontend components. It runs inside 
 
 ## Five-minute start
 
-1. Install the SDK and the command line. The wheel is an attachment of each 4.0 beta and stable release on [GitHub Releases](https://github.com/EstrellaXD/Auto_Bangumi/releases). The file name is `autobangumi_sdk-<version>-py3-none-any.whl`. The wheel is not on PyPI.
+1. Install the SDK and the command line. The wheel is an attachment of each 4.0 beta and stable release on [GitHub Releases](https://github.com/EstrellaXD/Auto_Bangumi/releases). The file name is `autobangumi_sdk-<SDK version>-py3-none-any.whl`. The wheel is not on PyPI. Refer to [Get the SDK](/en/dev/plugins/sdk).
 
    ```bash
    uv tool install ./autobangumi_sdk-0.5.0-py3-none-any.whl
    ```
 
-2. Create a skeleton and run its tests:
+2. Create a skeleton and run its tests. The `pyproject.toml` of the skeleton needs `autobangumi-sdk`. This package is not on PyPI. Thus, first use `uv add` to point the dependency to the wheel that you downloaded:
 
    ```bash
    ab-plugin new my-rename --kind rename   # or notifier, search
-   cd my-rename && uv run pytest           # the skeleton includes a contract test
+   cd my-rename
+   uv add ../autobangumi_sdk-0.5.0-py3-none-any.whl   # use the real path of the wheel
+   uv run pytest                                      # the skeleton includes a contract test
    ```
 
-3. Link the plugin to your local AutoBangumi and enable hot reload. Start AB one time first, so that a config file exists in `config/`:
+3. Link the plugin to your local AutoBangumi and enable hot reload. Start AB one time first, so that a config file exists in its config directory. Set `--config-dir` to this directory (`backend/src/config` when you run AB from source):
 
    ```bash
-   ab-plugin dev .
+   ab-plugin dev . --config-dir /path/to/autobangumi/config
    ```
 
    Restart AB one time. After that, AB reloads the plugin when you change its files.
@@ -33,6 +35,8 @@ A plugin is a Python package, with optional frontend components. It runs inside 
 ## Documentation map
 
 **Basics**
+
+- [Get the SDK](/en/dev/plugins/sdk): the wheel and the plugin-author skill on the GitHub release
 
 - [Concepts](/en/dev/plugins/concepts): `Plugin`, `ctx`, the three extension declarations, the manifest, isolation and the circuit breaker
 - [Config forms](/en/dev/plugins/config-forms): how `config_model` becomes a WebUI form

@@ -14,6 +14,7 @@
 - **番剧补全**：检测当季缺失集数并尝试补全下载。
 - **添加组标签**：为下载器中的任务添加字幕组相关标签。
 - **删除坏种**：移除下载器中状态异常的种子。
+- **修订版冲突处理**：更高修订版的种子指向已有剧集时，选择「保留现有文件」或「替换为更高修订版」。启用替换后，仅在更高修订版成功就位后删除旧种子及其数据。
 - **记录未匹配种子**：把当前没有匹配到规则的种子记录为“未匹配种子”。关闭后，后续新增规则可以立即接住 RSS 中仍存在的旧条目，但这些旧条目会在每轮 RSS 刷新时重新尝试匹配。
 - [关于文件路径][1]
 - [关于重命名][2]
@@ -30,7 +31,7 @@
 | `remove_bad_torrent` | 删除错误种子 | 布尔值 | 删除坏种 | `false` |
 | `track_orphans` | 记录未匹配种子 | 布尔值 | 记录未匹配种子 | `true` |
 
-重命名方式与版本冲突策略是 Provider 选择，保存在 `plugins.slots`：`rename_strategy`（重命名方式，默认 `pn`）与 `conflict_policy`（`hold` / `replace`，默认 `hold`）。3.3 的 `bangumi_manage.rename_method` 与 `revision_conflict_policy` 在升级到 4.0 后第一次启动时自动迁移。
+重命名方式与版本冲突策略是 Provider 选择，保存在 `plugins.slots`：`rename_strategy`（重命名方式，默认 `pn`）与 `conflict_policy`（`hold` / `replace`，默认 `hold`）。3.3 的 `bangumi_manage.rename_method` 与 `revision_conflict_policy` 在升级到 4.0 后第一次启动时自动迁移。完整说明见 [插件设置](/config/plugins#slots)。
 
 ## 模板重命名
 
@@ -41,7 +42,7 @@
 {{ title }} S{{ season|pad(2) }}E{{ episode|pad(2) }}
 ```
 
-默认模板与 `pn` 的结果相同。模板使用 [Jinja2](https://jinja.palletsprojects.com/) 语法（沙箱模式），可用变量：
+默认模板对普通剧集与 `pn` 的结果相同；剧场版 `pn` 不加 `SxxExx`，默认模板会加。模板使用 [Jinja2](https://jinja.palletsprojects.com/) 语法（沙箱模式），可用变量：
 
 | 变量 | 含义 | 示例 |
 | --- | --- | --- |
@@ -82,8 +83,8 @@
 - 版本升级（新版本种子替换旧种子，文件名不变）后，本插件之前创建的链接会被原子替换为指向新文件的链接。
 - 删除种子不会删除媒体库中的链接。
 - 本插件放置后被你从媒体库删除的文件不会被重新链接；补链会重建它们。
-- 启用前已经下载的文件：仍在下载器中的已整理种子在 AB 下次重启后被链接，其它文件需要按需补链：调用 `POST /api/v1/plugins/hardlink/backfill`（设置页按钮将在后续版本提供）。
-- `path_map` 目前的设置表单还不能编辑，请在 `config/config.json` 的 `plugins.options.hardlink.path_map` 中填写，例如 `[{"from": "/downloads", "to": "/media/downloads"}]`。
+- 启用前已经下载的文件不会自动处理。启用插件后，设置页出现「硬链接补链」分区，点击 **链接已有文件** 把下载根目录下已有的正片与字幕补链到媒体库，已链接的文件跳过。该按钮调用 `POST /api/v1/plugins/hardlink/backfill`。
+- `path_map` 在插件配置表单中按行编辑（**添加一行**）。在 `config/config.json` 中对应 `plugins.options.hardlink.path_map`，例如 `[{"downloader": "default", "from": "/downloads", "to": "/media/downloads"}]`。
 
 ::: tip Docker
 硬链接不能跨文件系统。在 Docker 中，请把下载目录与媒体库放在同一块盘上，并以**同一个挂载点**映射进 AB 容器（例如把 `/mnt/media` 整体挂载为 `/media`，下载目录与媒体库都在其下）。两个分别挂载的目录即使在同一块盘上，也会被视为不同的文件系统，此时按 `cross_device` 处理（默认复制，占用双倍空间）。下载器运行在另一个容器里、看到的路径与 AB 不同时，用 `path_map` 映射。

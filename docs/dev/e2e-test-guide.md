@@ -1,145 +1,62 @@
-# E2E Integration Test Guide
+# E2E 测试指南
 
-End-to-end tests that exercise the full AutoBangumi workflow against real
-Docker services (qBittorrent + mock RSS server).
+端到端测试用生产构建的 AutoBangumi 镜像，对接本地的、确定性的上游服务（模拟 RSS、TMDB、播放器与 qBittorrent）。测试不访问任何公网服务。Docker Compose 在回环地址上发布随机端口，服务之间走内部网络。
 
-## Prerequisites
+完整说明（各条测试线、诊断产物、添加模拟场景、更新 qBittorrent 镜像摘要）在仓库的 [`e2e/README.md`](https://github.com/EstrellaXD/Auto_Bangumi/blob/main/e2e/README.md)。本页只给出本地运行的最短路径。
 
-- **Docker** with `docker compose` (v2)
-- **uv** for Python dependency management
-- Ports **7892**, **18080**, **18888** must be free
+## 准备
 
-## Quick Start
-
-```bash
-# 1. Build the mock RSS server image
-cd backend/src/test/e2e
-docker build -f Dockerfile.mock-rss -t ab-mock-rss .
-
-# 2. Start test infrastructure
-docker compose -f docker-compose.test.yml up -d --wait
-
-# 3. Verify services are healthy
-docker compose -f docker-compose.test.yml ps
-
-# 4. Run E2E tests
-cd backend && uv run pytest -m e2e -v --tb=long
-
-# 5. Cleanup
-docker compose -f backend/src/test/e2e/docker-compose.test.yml down -v
-```
-
-## Architecture
-
-```
-Host machine
-├── pytest (test runner)
-│   └── Drives HTTP requests to AutoBangumi at localhost:7892
-├── AutoBangumi subprocess
-│   ├── Isolated config/ and data/ in temp directory
-│   └── Uses mock downloader (no real qB coupling during setup)
-├── qBittorrent container (localhost:18080)
-│   └── linuxserver/qbittorrent:latest
-└── Mock RSS server container (localhost:18888)
-    └── Serves static XML fixtures from fixtures/
-```
-
-## Test Phases
-
-| Phase | Tests | What It Validates |
-|-------|-------|-------------------|
-| 1. Setup Wizard | `test_01` - `test_06` | First-run detection, mock downloader, setup completion, 403 guard |
-| 2. Authentication | `test_10` - `test_13` | Login, cookie-based JWT, token refresh, logout |
-| 3. Configuration | `test_20` - `test_22` | Config CRUD, password masking |
-| 4. RSS Management | `test_30` - `test_32` | Add, list, delete RSS feeds |
-| 5. Program Lifecycle | `test_40` - `test_41` | Status check, restart |
-| 6. Downloader | `test_50` - `test_51` | Mock downloader health, direct qB connectivity |
-| 7. Cleanup | `test_90` | Logout |
-
-## Key Design Decisions
-
-### Mock Downloader for Setup
-
-The setup wizard's `_validate_url()` blocks private/loopback IPs (SSRF
-protection). Since the Docker qBittorrent instance is on `localhost`, the
-setup wizard's "test downloader" endpoint would reject it. Instead:
-
-1. Setup uses `downloader_type: "mock"` (bypasses URL validation)
-2. Config can be updated to point to real qBittorrent after auth
-3. Direct qBittorrent connectivity is tested independently (`test_51`)
-
-### DEV_VERSION Auth Bypass
-
-When running from source, `VERSION == "DEV_VERSION"` which bypasses JWT
-validation (`get_current_user` returns `"dev_user"` unconditionally). Tests
-document this behavior: login/refresh/logout endpoints still work, but
-unauthenticated access is also allowed. In production builds, test_13
-would expect HTTP 401.
-
-### CWD-Based Isolation
-
-AutoBangumi resolves all paths relative to the working directory:
-- `config/` - config files, JWT secret, setup sentinel
-- `data/` - SQLite database, posters, logs
-
-The `ab_process` fixture creates a temp directory with these subdirs and
-runs `main.py` from there, ensuring complete isolation from any existing
-installation.
-
-### qBittorrent Password Extraction
-
-Recent `linuxserver/qbittorrent` images generate a random temporary
-password on first start. The `qb_password` fixture polls `docker logs`
-until it finds the line:
-
-```
-A temporary password is provided for this session: XXXXXXXX
-```
-
-## Debugging Failures
-
-### AutoBangumi won't start
+- Docker Engine 与 Compose v2
+- Python 3.13 与 `uv`
+- Node.js 20 与 pnpm 9.11
 
 ```bash
-# Check if port 7892 is in use
-lsof -i :7892
-
-# Run manually to see startup logs
-cd /tmp/test-workdir && uv run python /path/to/backend/src/main.py
+uv sync --directory backend --locked --group dev
+pnpm --dir webui install --frozen-lockfile
+pnpm --dir webui exec playwright install --with-deps chromium webkit firefox
 ```
 
-### qBittorrent issues
+## 构建测试镜像
 
 ```bash
-docker logs ab-test-qbittorrent
-docker exec ab-test-qbittorrent curl -s http://localhost:18080
+pnpm --dir webui run build
+python3 e2e/scripts/build_test_image.py \
+  --version 3.3.999-e2e.1 \
+  --image auto-bangumi:e2e \
+  --dist webui/dist
 ```
 
-### Mock RSS server issues
+构建脚本在临时的 Docker 上下文里放入 WebUI 产物和生成的版本模块，不会写入源码树。
+
+## 运行
+
+每次运行都用新的项目名和工作目录。重用工作目录会同时重用设置状态，首次运行的覆盖就失效了。
 
 ```bash
-docker logs ab-test-mock-rss
-curl http://localhost:18888/health
-curl http://localhost:18888/rss/mikan.xml
+export LANE=runtime
+export AB_E2E_PROJECT="ab-e2e-local-$LANE-$$"
+export AB_E2E_WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ab-e2e-$LANE.XXXXXX")"
+export AB_E2E_APP_IMAGE=auto-bangumi:e2e
+
+# 运行时 API 与进程测试
+python3 e2e/scripts/stack.py run \
+  --profile browser \
+  --project-name "$AB_E2E_PROJECT" \
+  --work-dir "$AB_E2E_WORK_DIR" \
+  -- uv run --directory backend pytest src/test/e2e/runtime -m e2e -q
 ```
 
-### Test infrastructure stuck
+| 测试线 | `--` 之后的命令 | `--profile` |
+| --- | --- | --- |
+| 运行时 | `uv run --directory backend pytest src/test/e2e/runtime -m e2e -q` | `browser` |
+| Chromium 桌面 | `pnpm --dir webui run test:e2e:chromium --retries=0` | `browser` |
+| WebKit 移动端 | `pnpm --dir webui run test:e2e:webkit --retries=0` | `browser` |
+| 真实 qBittorrent 与打包镜像 | `python3 e2e/scripts/run_downloader_lane.py` | `downloader` |
 
-```bash
-# Force cleanup
-docker compose -f backend/src/test/e2e/docker-compose.test.yml down -v --remove-orphans
-```
+- 普通的 `pytest` 会跳过 E2E 用例，必须显式传入 `-m e2e`。
+- `stack.py run` 在拆除 Compose 之前收集诊断信息，写到 `$AB_E2E_WORK_DIR/artifacts`。Playwright 的截图与视频在 `webui/test-results`，HTML 报告在 `webui/playwright-report`。
+- 停止一个栈：`python3 e2e/scripts/stack.py stop --profile browser --project-name "$AB_E2E_PROJECT" --work-dir "$AB_E2E_WORK_DIR"`。
 
-## Adding New Test Scenarios
+## CI
 
-1. Add new test methods to `TestE2EWorkflow` in definition order
-2. Use `api_client` for HTTP requests (cookies persist across tests)
-3. Use `e2e_state` dict to share data between tests
-4. For new RSS fixtures, add XML files to `fixtures/` directory
-5. Keep test names ordered: `test_XX_description` where XX reflects the phase
-
-### Adding a new fixture feed
-
-1. Create `backend/src/test/e2e/fixtures/your_feed.xml`
-2. Access via `http://localhost:18888/rss/your_feed.xml`
-3. Rebuild the mock RSS image: `docker compose ... build mock-rss`
+`.github/workflows/e2e.yml` 在每个 PR 上运行运行时线、浏览器线（Chromium、WebKit 移动端）和真实下载器线。`e2e-nightly.yml` 每晚运行 Firefox 线，并把浏览器线和下载器线各独立运行两遍。端点结构、参数校验等更快的契约测试仍在 `backend/src/test/test_api_*.py` 中。

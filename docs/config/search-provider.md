@@ -2,7 +2,7 @@
 
 ![search provider](/image/config/search-provider.png){width=700}{class=ab-shadow-card}
 
-搜索源用于 WebUI 的种子搜索与订阅。内置源包括 `mikan`、`nyaa` 和 `dmhy`；默认源不能删除，但可以编辑 URL 模板。
+搜索源用于 WebUI 的种子搜索与订阅。内置源包括 `mikan`、`anibt`、`nyaa` 和 `dmhy`；默认源不能删除，但可以编辑 URL 模板。
 
 搜索源设置是即时保存项，添加、编辑或删除后会立即写入 `config/search_provider.json`，不需要点击底部 **保存并重启**。
 

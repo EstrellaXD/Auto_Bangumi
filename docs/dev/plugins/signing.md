@@ -1,6 +1,6 @@
 # 签名与分发
 
-插件有三种来源，信任级别不同：
+插件有四种来源，信任级别不同：
 
 | 来源 | 位置 | 签名 | 如何启用 |
 | --- | --- | --- | --- |
@@ -86,4 +86,4 @@ API：
 
 ## 发布 SDK
 
-SDK 以轮子发布在 4.0 beta / 正式版的 GitHub Release 附件里，由 CI 用 `uv build --wheel backend/sdk` 构建。同一个 Release 还附带 `autobangumi-plugin-skill-<版本>.zip`：给 AI 编码助手使用的插件开发 skill，解压到助手的 skills 目录即可。
+SDK 轮子与插件开发 skill 由 CI 构建，附在每个 4.0 beta / 正式版的 GitHub Release 上，维护者不需要手动发布。下载和安装见 [获取 SDK](/dev/plugins/sdk)。

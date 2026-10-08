@@ -81,3 +81,8 @@ Click **Advanced Settings** in the edit modal to access additional options:
 - **Season Offset**: Adjust the season number offset
 - **Episode Offset**: Adjust the episode number offset
 - **Filter**: Custom regex filter for torrent matching
+- **Downloader**: the downloader that receives new torrents of this rule. This field shows only when you have more than one downloader. Leave it empty to use the default instance. See [Multiple Downloaders](./downloaders.md)
+
+## Plugin Interface
+
+Plugins can add tabs to the edit dialog ("Rule" is the usual edit form). They can also add action buttons below the title of a bangumi card and widgets at the top of the bangumi list page. See [Plugins](./plugins.md#plugin-interface).

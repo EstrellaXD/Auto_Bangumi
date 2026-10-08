@@ -54,10 +54,13 @@ Docker Bridgeモードでは、ダウンローダーとAutoBangumiが同じネ�
 }
 ```
 
-3.3 の `downloader` セクションは、4.0 へのアップグレード後の初回起動時に `default` インスタンスへ自動で移行され、元のファイルは `config.json.v3.bak` として保存されます。環境変数 `AB_DOWNLOADER_HOST`、`AB_DOWNLOADER_USERNAME`、`AB_DOWNLOADER_PASSWORD`、`AB_DOWNLOAD_PATH` は引き続き既定インスタンスに反映されます。
+3.3 の `downloader` セクションは、4.0 へのアップグレード後の初回起動時に `default` インスタンスへ自動で移行され、元のファイルは `config.json.v3.bak` として保存されます。移行に失敗した場合は元のファイルを復元して起動を中止します。詳しくは [プラグイン設定](/ja/config/plugins) を参照してください。
+
+環境変数 `AB_DOWNLOADER_HOST`、`AB_DOWNLOADER_USERNAME`、`AB_DOWNLOADER_PASSWORD`、`AB_DOWNLOAD_PATH` は、設定ファイルがまだない初回起動時にだけ読み込まれ、既定インスタンスに反映されます。`host`、`username`、`password` の値には `$VAR` 形式の環境変数参照を書けます。使用時に展開されます。
 
 | キー | 説明 | 型 | WebUI項目 | 既定値 |
 | --- | --- | --- | --- | --- |
+| `id` | インスタンス id | 文字列 | 新しいダウンローダー id | `default` |
 | `provider` | ダウンローダー種類 | 文字列 | ダウンローダー種類 | `qbittorrent` |
 | `host` | ダウンローダーアドレス | 文字列 | ホスト | `172.17.0.1:8080` |
 | `username` | ユーザー名 | 文字列 | ユーザー名 | `admin` |

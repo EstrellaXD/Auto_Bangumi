@@ -17,7 +17,7 @@
 | --- | --- | --- | --- | --- |
 | `login_whitelist` | ログインIPホワイトリスト | 文字列配列 | ログインIPホワイトリスト | `[]` |
 | `login_tokens` | ログインAPIトークン | 文字列配列 | ログインAPIトークン | `[]` |
-| `mcp_whitelist` | MCP IPホワイトリスト | 文字列配列 | MCP IPホワイトリスト | ローカルネットワークCIDRまたは `[]` |
+| `mcp_whitelist` | MCP IPホワイトリスト | 文字列配列 | MCP IPホワイトリスト | `[]` |
 | `mcp_tokens` | MCP APIトークン | 文字列配列 | MCP APIトークン | `[]` |
 | `webauthn_rp_id` | Passkey RP ID | 文字列 | 設定ファイルのみ | `""` |
 | `webauthn_origin` | Passkey Origin | 文字列 | 設定ファイルのみ | `""` |

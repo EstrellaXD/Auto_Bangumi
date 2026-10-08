@@ -14,6 +14,7 @@
 - **話数補完**：不足している話数を補完ダウンロードします。
 - **グループタグ追加**：字幕組関連タグをダウンローダータスクに追加します。
 - **不良Torrent削除**：エラー状態のタスクを削除します。
+- **リビジョン競合ポリシー**：より高いリビジョンのトレントが既存の話数を対象にするとき、「既存ファイルを保持」または「より高いリビジョンに置き換え」を選びます。置き換えを有効にすると、高いリビジョンが配置に成功した後でだけ古いトレントとそのデータを削除します。
 - **未一致Torrentを記録**：ルールに一致しないTorrentを孤児レコードとして保存します。
 
 ## テンプレートリネーム
@@ -25,7 +26,7 @@
 {{ title }} S{{ season|pad(2) }}E{{ episode|pad(2) }}
 ```
 
-既定値は `pn` と同じ結果になります。サンドボックス化された [Jinja2](https://jinja.palletsprojects.com/) 構文で、次の変数が使えます。
+通常のエピソードでは既定値は `pn` と同じ結果になります。劇場版では `pn` は `SxxExx` を付けませんが、既定のテンプレートは付けます。サンドボックス化された [Jinja2](https://jinja.palletsprojects.com/) 構文で、次の変数が使えます。
 
 | 変数 | 意味 | 例 |
 | --- | --- | --- |
@@ -64,8 +65,8 @@
 - リビジョン更新（新しいリリースが同じファイル名で古い Torrent を置き換える）の後、プラグインが以前作成したリンクは新しいファイルへのリンクにアトミックに置き換えられます。
 - Torrent を削除しても、ライブラリのリンクは削除されません。
 - プラグインが配置した後にライブラリから削除したファイルは、再びリンクされません。バックフィルを実行すると再作成されます。
-- 有効化する前にダウンロード済みのファイル：ダウンローダーに残っている整理済みトレントは、次に AB を再起動したときにリンクされます。それ以外のファイルは `POST /api/v1/plugins/hardlink/backfill` を呼び出すとリンクします（設定画面のボタンは今後のリリースで提供予定）。
-- `path_map` は設定フォームでまだ編集できません。`config/config.json` の `plugins.options.hardlink.path_map` に記入してください（例：`[{"from": "/downloads", "to": "/media/downloads"}]`）。
+- 有効化する前にダウンロード済みのファイルは自動ではリンクされません。プラグインを有効にすると設定画面に「Hardlink backfill」セクションが表示されます。**Link existing files** をクリックすると、ダウンロードルートにある本編と字幕をライブラリにリンクします。リンク済みのファイルはスキップされます。このボタンは `POST /api/v1/plugins/hardlink/backfill` を呼び出します。
+- `path_map` はプラグインの設定フォームで 1 行ずつ編集できます（**Add row**）。`config/config.json` では `plugins.options.hardlink.path_map` です（例：`[{"downloader": "default", "from": "/downloads", "to": "/media/downloads"}]`）。
 
 ::: tip Docker
 ハードリンクはファイルシステムをまたげません。Docker では、ダウンロードフォルダーとライブラリを同じディスクに置き、**1 つのマウント**で AutoBangumi コンテナに渡してください（例：`/mnt/media` を `/media` としてまとめてマウントし、両方をその下に置く）。別々にマウントしたフォルダーは同じディスク上でも別のファイルシステムとして扱われ、`cross_device` の設定に従います（既定はコピーで、容量を 2 倍使います）。ダウンローダーが別のコンテナで動作し、見えるパスが異なる場合は `path_map` を使います。
@@ -87,4 +88,4 @@
 | `remove_bad_torrent` | エラーTorrent削除 | 真偽値 | 不良Torrent削除 | `false` |
 | `track_orphans` | 未一致Torrentを記録 | 真偽値 | 未一致Torrentを記録 | `true` |
 
-リネーム方式とリビジョン競合ポリシーは Provider の選択として `plugins.slots` に保存されます：`rename_strategy`（リネーム方式、既定値 `pn`）と `conflict_policy`（`hold` / `replace`、既定値 `hold`）。3.3 の `bangumi_manage.rename_method` と `revision_conflict_policy` は、4.0 へのアップグレード後の初回起動時に自動で移行されます。
+リネーム方式とリビジョン競合ポリシーは Provider の選択として `plugins.slots` に保存されます：`rename_strategy`（リネーム方式、既定値 `pn`）と `conflict_policy`（`hold` / `replace`、既定値 `hold`）。3.3 の `bangumi_manage.rename_method` と `revision_conflict_policy` は、4.0 へのアップグレード後の初回起動時に自動で移行されます。詳しくは [プラグイン設定](/ja/config/plugins#slots) を参照してください。

@@ -70,10 +70,13 @@ AB 中的下载路径用于生成保存位置和后续整理路径。请填写**
 }
 ```
 
-3.3 的 `downloader` 配置节在升级到 4.0 后第一次启动时自动迁移到 `default` 实例，原文件备份为 `config.json.v3.bak`。环境变量 `AB_DOWNLOADER_HOST`、`AB_DOWNLOADER_USERNAME`、`AB_DOWNLOADER_PASSWORD`、`AB_DOWNLOAD_PATH` 照常生效，写入默认实例。
+3.3 的 `downloader` 配置节在升级到 4.0 后第一次启动时自动迁移到 `default` 实例，原文件备份为 `config.json.v3.bak`。迁移失败时 AB 恢复原文件并拒绝启动，见 [插件设置](/config/plugins#从-3-3-升级)。
+
+环境变量 `AB_DOWNLOADER_HOST`、`AB_DOWNLOADER_USERNAME`、`AB_DOWNLOADER_PASSWORD`、`AB_DOWNLOAD_PATH` 只在首次启动、还没有配置文件时读取，写入默认实例。`host`、`username`、`password` 的值可以写成 `$VAR` 形式的环境变量引用，使用时展开。
 
 | 参数 | 说明 | 类型 | WebUI 选项 | 默认值 |
 | --- | --- | --- | --- | --- |
+| `id` | 实例 id | 字符串 | 新下载器 id | `default` |
 | `provider` | 下载器类型 | 字符串 | 下载器类型 | `qbittorrent` |
 | `host` | 下载器地址 | 字符串 | 下载器地址 | `172.17.0.1:8080` |
 | `username` | 下载器用户名 | 字符串 | 用户名 | `admin` |
