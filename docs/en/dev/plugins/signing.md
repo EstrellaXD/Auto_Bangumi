@@ -49,11 +49,7 @@ After these checks, AB unpacks the plugin to `config/plugins/<id>/<version>/`, w
 
 A catalog plugin can depend only on the standard library and on packages that AB already has. AB does not run pip. Put third-party pure-Python libraries in `vendor/`.
 
-::: warning The WebUI has no catalog page yet
-During the 4.0 preview, you can browse and install the catalog with the API only. The Settings → Plugins page has no buttons for it.
-:::
-
-API:
+In the WebUI, the "Plugin catalog" section of **Settings → Plugins** lets you browse the catalog and install, update and remove plugins. API:
 
 | Request | Description |
 | --- | --- |
@@ -86,4 +82,4 @@ A user sees the new version through `GET /api/v1/plugins/catalog`.
 
 ## Publish the SDK
 
-The SDK is a wheel in the attachments of the 4.0 beta and stable GitHub releases. CI builds it with `uv build --wheel backend/sdk`. The same release has `autobangumi-plugin-skill-<version>.zip`. It is a plugin-development skill for AI coding assistants. Unpack it in the skills directory of the assistant.
+CI builds the SDK wheel and the plugin-author skill. It attaches them to each 4.0 beta and stable GitHub release. Maintainers do not publish them manually. To download and install them, refer to [Get the SDK](/en/dev/plugins/sdk).

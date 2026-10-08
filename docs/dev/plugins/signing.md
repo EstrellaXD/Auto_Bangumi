@@ -1,6 +1,6 @@
 # 签名与分发
 
-插件有三种来源，信任级别不同：
+插件有四种来源，信任级别不同：
 
 | 来源 | 位置 | 签名 | 如何启用 |
 | --- | --- | --- | --- |
@@ -49,11 +49,7 @@ AB 从 GitHub release `plugins` 下载 `catalog.json`。目录包含：
 
 签名目录的插件只能依赖标准库和 AB 已有的包，不做 pip 安装。需要第三方纯 Python 库时放进 `vendor/`。
 
-::: warning WebUI 尚无目录界面
-4.0 预览期间，目录的浏览和安装只有 API，设置 → 插件 页还没有对应的按钮。
-:::
-
-API：
+在 WebUI 中，**设置 → 插件** 的「插件目录」区域可以浏览目录，并安装、更新与卸载插件。API：
 
 | 请求 | 说明 |
 | --- | --- |
@@ -86,4 +82,4 @@ API：
 
 ## 发布 SDK
 
-SDK 以轮子发布在 4.0 beta / 正式版的 GitHub Release 附件里，由 CI 用 `uv build --wheel backend/sdk` 构建。同一个 Release 还附带 `autobangumi-plugin-skill-<版本>.zip`：给 AI 编码助手使用的插件开发 skill，解压到助手的 skills 目录即可。
+SDK 轮子与插件开发 skill 由 CI 构建，附在每个 4.0 beta / 正式版的 GitHub Release 上，维护者不需要手动发布。下载和安装见 [获取 SDK](/dev/plugins/sdk)。

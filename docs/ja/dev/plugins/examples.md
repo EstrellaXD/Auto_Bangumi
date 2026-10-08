@@ -21,10 +21,12 @@ cp -r examples/plugins/ntfy-notifier config/plugins/local/
 
 ## サンプルのテストを実行する
 
+リポジトリのルートで実行します。スクリプトは各サンプルのマニフェストを検証し、そのテストを実行します（CI と同じ）。
+
 ```bash
-cd examples/plugins/ntfy-notifier && uv run pytest
-# すべてのサンプルを実行する場合（リポジトリのルートで）：
 scripts/test_example_plugins.sh
 ```
+
+スクリプトは `backend/` の環境で動き、そこには SDK が編集可能モードでインストールされています。サンプルの `pyproject.toml` は `autobangumi-sdk` に依存しますが、このパッケージは PyPI にありません。サンプルをリポジトリの外にコピーして単独でテストする場合は、先にサンプルのディレクトリで `uv add <wheel のパス>` を実行してから `uv run pytest` を実行します。
 
 Jellyfin / Emby / Plex のライブラリ更新にプラグインを書く必要はありません。組み込みプラグイン `media-server-refresh` が対応しています。

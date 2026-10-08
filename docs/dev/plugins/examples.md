@@ -21,10 +21,12 @@ cp -r examples/plugins/ntfy-notifier config/plugins/local/
 
 ## 运行示例的测试
 
+在仓库根目录运行，脚本逐个校验示例的清单并运行它的测试（与 CI 相同）：
+
 ```bash
-cd examples/plugins/ntfy-notifier && uv run pytest
-# 或一次跑完全部示例（在仓库根目录）：
 scripts/test_example_plugins.sh
 ```
+
+脚本在 `backend/` 的环境里运行，SDK 以可编辑方式装在那里。示例的 `pyproject.toml` 依赖 `autobangumi-sdk`，PyPI 上没有这个包；把示例复制到仓库外单独测试时，先在示例目录里 `uv add <轮子路径>`，再 `uv run pytest`。
 
 刷新 Jellyfin / Emby / Plex 媒体库不需要写插件：内置插件 `media-server-refresh` 已经支持。

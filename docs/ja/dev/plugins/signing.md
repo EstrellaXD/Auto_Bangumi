@@ -49,11 +49,7 @@ AB は GitHub release `plugins` から `catalog.json` をダウンロードし�
 
 カタログのプラグインが依存できるのは、標準ライブラリと AB に既にあるパッケージだけです。AB は pip を実行しません。サードパーティの純 Python ライブラリは `vendor/` に入れてください。
 
-::: warning WebUI にはまだカタログの画面がありません
-4.0 のプレビュー期間中、カタログの閲覧とインストールは API だけです。設定 → プラグインのページには対応するボタンがありません。
-:::
-
-API：
+WebUI では、**設定 → プラグイン** の「Plugin catalog」（插件目录）セクションでカタログを閲覧し、プラグインをインストール・更新・削除できます。API：
 
 | リクエスト | 説明 |
 | --- | --- |
@@ -86,4 +82,4 @@ API：
 
 ## SDK の公開
 
-SDK は、4.0 beta / 正式版の GitHub Release の添付ファイルとして wheel で配布します。CI が `uv build --wheel backend/sdk` でビルドします。同じ release に `autobangumi-plugin-skill-<バージョン>.zip` も添付されます。AI コーディングアシスタント向けのプラグイン開発 skill です。アシスタントの skills ディレクトリに展開してください。
+SDK の wheel とプラグイン開発 skill は CI がビルドし、4.0 の各 beta / 正式版の GitHub Release に添付します。メンテナーが手動で公開する必要はありません。ダウンロードとインストールは [SDK の入手](/ja/dev/plugins/sdk) を参照してください。

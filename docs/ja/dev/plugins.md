@@ -8,23 +8,25 @@
 
 ## 5 分で始める
 
-1. SDK とコマンドラインをインストールします。wheel は 4.0 の各 beta / 正式版の [GitHub Releases](https://github.com/EstrellaXD/Auto_Bangumi/releases) に添付されます（ファイル名は `autobangumi_sdk-<バージョン>-py3-none-any.whl`）。PyPI には公開しません。
+1. SDK とコマンドラインをインストールします。wheel は 4.0 の各 beta / 正式版の [GitHub Releases](https://github.com/EstrellaXD/Auto_Bangumi/releases) に添付されます（ファイル名は `autobangumi_sdk-<SDK バージョン>-py3-none-any.whl`）。PyPI には公開しません。詳しくは [SDK の入手](/ja/dev/plugins/sdk) を参照してください。
 
    ```bash
    uv tool install ./autobangumi_sdk-0.5.0-py3-none-any.whl
    ```
 
-2. ひな形を作ってテストします。
+2. ひな形を作ってテストします。ひな形の `pyproject.toml` は `autobangumi-sdk` に依存しますが、このパッケージは PyPI にありません。先に `uv add` でダウンロードした wheel を指定します。
 
    ```bash
    ab-plugin new my-rename --kind rename   # notifier、search も選べます
-   cd my-rename && uv run pytest           # ひな形にはコントラクトテストが付いています
+   cd my-rename
+   uv add ../autobangumi_sdk-0.5.0-py3-none-any.whl   # wheel の実際のパスに置き換えます
+   uv run pytest                                      # ひな形にはコントラクトテストが付いています
    ```
 
-3. ローカルの AutoBangumi にリンクし、ホットリロードを有効にします。先に AB を一度起動して、`config/` に設定ファイルを作っておきます。
+3. ローカルの AutoBangumi にリンクし、ホットリロードを有効にします。先に AB を一度起動して、設定ディレクトリに設定ファイルを作っておきます。`--config-dir` にはこのディレクトリを指定します（ソースから実行する場合は `backend/src/config`）。
 
    ```bash
-   ab-plugin dev .
+   ab-plugin dev . --config-dir /path/to/autobangumi/config
    ```
 
    AB を一度再起動します。以後は、プラグインのファイルを変更すると自動でリロードされます。
@@ -33,6 +35,8 @@
 ## ドキュメント一覧
 
 **基本**
+
+- [SDK の入手](/ja/dev/plugins/sdk)：GitHub Release の wheel とプラグイン開発 skill
 
 - [基本概念](/ja/dev/plugins/concepts)：`Plugin`、`ctx`、3 種類の拡張宣言、マニフェスト、分離とサーキットブレーカー
 - [設定フォーム](/ja/dev/plugins/config-forms)：`config_model` が WebUI のフォームになる仕組み

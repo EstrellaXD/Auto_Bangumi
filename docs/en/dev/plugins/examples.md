@@ -21,10 +21,12 @@ Turn on "Allow unsigned plugins" in Settings → Plugins, then enable the plugin
 
 ## Run the tests of an example
 
+Run the script in the repository root. It validates the manifest of each example and runs its tests, the same as CI:
+
 ```bash
-cd examples/plugins/ntfy-notifier && uv run pytest
-# or run all examples (in the repository root):
 scripts/test_example_plugins.sh
 ```
+
+The script runs in the `backend/` environment, which has an editable install of the SDK. The `pyproject.toml` of each example needs `autobangumi-sdk`, and this package is not on PyPI. To test an example outside the repository, first run `uv add <path to the wheel>` in the example directory. Then run `uv run pytest`.
 
 You do not need a plugin to refresh a Jellyfin, Emby or Plex library. The built-in plugin `media-server-refresh` does it.

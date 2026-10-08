@@ -1,394 +1,146 @@
 # Database Developer Guide
 
-This guide covers the database architecture, models, and operations in AutoBangumi.
+This page describes the data layer of the AutoBangumi backend: the engine, the `Database` facade, the repositories, the session rules and the schema migrations. The code is in `backend/src/module/database/`.
 
 ## Overview
 
-AutoBangumi uses **SQLite** as its database with **SQLModel** (Pydantic + SQLAlchemy hybrid) for ORM. The database file is located at `data/data.db`.
-
-### Architecture
+- The database is the SQLite file `data/data.db`. The ORM is SQLModel (Pydantic + SQLAlchemy).
+- The whole application uses only the async engine `sqlite+aiosqlite`. Each connection sets `PRAGMA journal_mode=WAL`, `busy_timeout=5000` and `foreign_keys=ON`. Thus, more than one connection can write at the same time, and a write that collides waits instead of failing at once with `database is locked`.
+- Foreign key constraints apply. Before you delete a row that other rows refer to, handle those rows first. For example, `BangumiDatabase.delete_all` deletes the torrent records first.
 
 ```
 module/database/
-├── engine.py       # SQLAlchemy engine configuration
-├── combine.py      # Database class, migrations, session management
-├── bangumi.py      # Bangumi (anime subscription) operations
-├── rss.py          # RSS feed operations
-├── torrent.py      # Torrent tracking operations
-└── user.py         # User authentication operations
+├── __init__.py          # Database, get_db (FastAPI dependency)
+├── engine.py            # async_engine, async_session_factory, connection PRAGMAs
+├── combine.py           # Database: one session plus all repositories
+├── migrations.py        # the MIGRATIONS table and the migration runner
+├── bangumi.py, rss.py, torrent.py, movie.py, user.py, auth.py,
+├── inbox.py, llm_credential.py, rename_operation.py, aria2.py,
+└── plugin_kv.py, passkey.py   # one repository for each table
 ```
 
-## Core Components
+## Database and sessions
 
-### Database Class
-
-The `Database` class in `combine.py` is the main entry point. It inherits from SQLModel's `Session` and provides access to all sub-databases:
+`Database` is an async context manager. It creates one `AsyncSession` and attaches the repositories to itself. When the `async with` block ends, it closes the session.
 
 ```python
 from module.database import Database
 
-with Database() as db:
-    # Access sub-databases
-    bangumis = db.bangumi.search_all()
-    rss_items = db.rss.search_active()
-    torrents = db.torrent.search_all()
+async with Database() as db:
+    rules = await db.bangumi.search_all()
+    feeds = await db.rss.search_all()
 ```
 
-### Sub-Database Classes
+| Attribute | Repository | Table |
+| --- | --- | --- |
+| `db.bangumi` | `BangumiDatabase` | `bangumi` |
+| `db.rss` | `RSSDatabase` | `rssitem` |
+| `db.torrent` | `TorrentDatabase` | `torrent` |
+| `db.movie` | `MovieDatabase` | `movie` |
+| `db.user` | `UserDatabase` | `user` |
+| `db.auth` | `AuthDatabase` | `auth_session`, `api_token` |
+| `db.inbox` | `InboxDatabase` | notification center |
+| `db.llm_credential` | `LLMCredentialDatabase` | LLM subscription credentials |
+| `db.rename_operation` | `RenameOperationDatabase` | `rename_operation` (rename conflicts and progress) |
+| `db.aria2` | `Aria2GidDatabase` | `aria2_gid` |
+| `db.plugin_kv` | `PluginKVDatabase` | `plugin_kv` (the `ctx.kv` of plugins) |
 
-| Class | Model | Purpose |
-|-------|-------|---------|
-| `BangumiDatabase` | `Bangumi` | Anime subscription rules |
-| `RSSDatabase` | `RSSItem` | RSS feed sources |
-| `TorrentDatabase` | `Torrent` | Downloaded torrent tracking |
-| `UserDatabase` | `User` | Authentication |
+`PasskeyDatabase` is not attached to `Database`. When you need it, make it with `PasskeyDatabase(db.session)`.
 
-## Models
+`Database` also forwards some session methods: `add` (synchronous, it only queues the object), `commit`, `rollback`, `refresh` and `close`. On SQLite, `begin_write()` runs `BEGIN IMMEDIATE`. Use it when you read and then write and an invariant must stay true. Call it before the first access in the session.
 
-### Bangumi Model
+### Session rules
 
-Core model for anime subscriptions:
+**Use one session for each operation.** Do not keep a session or a `Database` on an object that lives longer than one request or one loop pass. `AppContext` holds no session.
+
+- Routes use dependency injection:
+
+  ```python
+  from fastapi import Depends
+  from module.database import Database, get_db
+
+  @router.get("/example")
+  async def example(db: Database = Depends(get_db)):
+      return await db.bangumi.search_all()
+  ```
+
+- Scheduled loops and services open their own session for each run: `async with Database() as db:`.
+- Services get their dependencies in the constructor: `RSSEngine(db)`, `TorrentManager(db)`. A service uses `self.db.<repository>`. A caller that needs only one repository uses `db.<repository>` directly.
+- The session factory sets `expire_on_commit=False`. After a commit, you can still read the attributes of an object, but the object is not attached to a new session. To change it, query it again in the new session.
+
+## Repositories
+
+A repository takes an `AsyncSession`. All of its methods are `async def`, and most of them commit inside the method. When you add a query:
+
+- Put it in the repository of its table. Do not write SQL in a route or a service.
+- For many rows, get them in one query with `in_`. Do not query row by row in a loop.
+- Soft delete: `bangumi` and `movie` have a `deleted` field. To "disable" a rule, `disable_rule` sets `deleted` to `True`. Only `delete_one` removes the row. When you query active rules, filter on `deleted`.
+
+### More than one downloader
+
+4.0 supports more than one downloader instance (the `plugins.instances` config). `bangumi`, `movie`, `rssitem` and `torrent` all have a `downloader_id` column:
+
+- On rules and feeds, an empty value means "use the default instance" (`plugins.slots.downloader`).
+- On a torrent record, it is the instance that has the torrent. Torrents that came from 3.3 have `default`.
+
+## Schema migrations
+
+The migrations are in the `MIGRATIONS` tuple in `migrations.py`. The runner works from this table. The `schema_version` table in the database records the applied version.
 
 ```python
-class Bangumi(SQLModel, table=True):
-    id: int                          # Primary key
-    official_title: str              # Display name (e.g., "Mushoku Tensei")
-    title_raw: str                   # Raw title for torrent matching (indexed)
-    season: int = 1                  # Season number
-    episode_offset: int = 0          # Episode numbering adjustment
-    season_offset: int = 0           # Season numbering adjustment
-    rss_link: str                    # Comma-separated RSS feed URLs
-    filter: str                      # Exclusion filter (e.g., "720,\\d+-\\d+")
-    poster_link: str                 # TMDB poster URL
-    save_path: str                   # Download destination path
-    rule_name: str                   # qBittorrent RSS rule name
-    added: bool = False              # Whether rule is added to downloader
-    deleted: bool = False            # Soft delete flag (indexed)
-    archived: bool = False           # For completed series (indexed)
-    needs_review: bool = False       # Offset mismatch detected
-    needs_review_reason: str         # Reason for review
-    suggested_season_offset: int     # Suggested season offset
-    suggested_episode_offset: int    # Suggested episode offset
-    air_weekday: int                 # Airing day (0=Sunday, 6=Saturday)
+Migration(
+    26,
+    "add downloader_id to bangumi, movie, rssitem and torrent",
+    (...SQL statements...),
+    already_applied=...,          # guard: is this migration already in effect?
+    guarded_statements=(...),     # optional: one guard for each statement
+)
 ```
 
-### RSSItem Model
+At startup, AB first runs `SQLModel.metadata.create_all`, then `run_migrations()`:
 
-RSS feed subscriptions:
+1. It reads `schema_version` and skips each migration whose version is not larger.
+2. For each pending migration, it inspects the database again and calls the guard. If the migration is already in effect (for example, `create_all` made a new database from the models), it only records the version.
+3. Otherwise, it runs the statements in one SAVEPOINT. If a statement fails, the migration rolls back and the error goes up. The whole migration transaction rolls back and AB does not start. AB never runs on a schema that is only half migrated.
+4. If a migration ran, at the end it fills `NULL` values in existing rows with the model defaults (`fill_null_with_defaults_conn`). It skips primary keys, `default_factory` fields and optional fields whose default is `None`.
+
+### Add a migration
+
+1. Change the model in `module/models/` first. A new database gets the new structure from `create_all`.
+2. Append a `Migration` to the end of `MIGRATIONS`. Its version is the previous version plus 1. `CURRENT_SCHEMA_VERSION` comes from the list. Do not edit it manually.
+3. Give an `already_applied` guard: `column_exists(table, column)`, `table_exists(table)` or `index_exists(table, index)`. To combine conditions, use `all_checks(...)`. If one migration changes many tables and each table can be in a different state, use `guarded_statements` to give each statement its own guard.
+4. Add a test for the migration in `backend/src/test/`: start from the old schema, run the migration and check the result.
 
 ```python
-class RSSItem(SQLModel, table=True):
-    id: int                          # Primary key
-    name: str                        # Display name
-    url: str                         # Feed URL (unique, indexed)
-    aggregate: bool = True           # Whether to parse torrents
-    parser: str = "mikan"            # Parser type: mikan, dmhy, nyaa
-    enabled: bool = True             # Active flag
-    connection_status: str           # "healthy" or "error"
-    last_checked_at: str             # ISO timestamp
-    last_error: str                  # Last error message
+Migration(
+    27,
+    "add note to bangumi",
+    ("ALTER TABLE bangumi ADD COLUMN note TEXT DEFAULT ''",),
+    column_exists("bangumi", "note"),
+)
 ```
 
-### Torrent Model
+## Tests
 
-Tracks downloaded torrents:
+`backend/src/test/conftest.py` provides an in-memory database:
+
+- `db_engine`: `sqlite+aiosqlite://` with `StaticPool`. Each test gets a new one, with tables made from the models.
+- `db_session`: an `AsyncSession` bound to `db_engine`.
+
+To test a repository directly, use `Database(engine=db_engine)`, or make one repository from `db_session`:
 
 ```python
-class Torrent(SQLModel, table=True):
-    id: int                          # Primary key
-    name: str                        # Torrent name (indexed)
-    url: str                         # Torrent/magnet URL (unique, indexed)
-    rss_id: int                      # Source RSS feed ID
-    bangumi_id: int                  # Linked Bangumi ID (nullable)
-    qb_hash: str                     # qBittorrent info hash (indexed)
-    downloaded: bool = False         # Download completed
+from module.database import Database
+from module.database.bangumi import BangumiDatabase
+from test.factories import make_bangumi
+
+async def test_add_bangumi(db_engine):
+    async with Database(engine=db_engine) as db:
+        assert await db.bangumi.add(make_bangumi())
+
+async def test_search(db_session):
+    repo = BangumiDatabase(db_session)
+    assert await repo.search_all() == []
 ```
 
-## Common Operations
-
-### BangumiDatabase
-
-```python
-with Database() as db:
-    # Create
-    db.bangumi.add(bangumi)              # Single insert
-    db.bangumi.add_all(bangumi_list)     # Batch insert (deduplicates)
-
-    # Read
-    db.bangumi.search_all()              # All records (cached, 5min TTL)
-    db.bangumi.search_id(123)            # By ID
-    db.bangumi.match_torrent("torrent name")  # Find by title_raw match
-    db.bangumi.not_complete()            # Incomplete series
-    db.bangumi.get_needs_review()        # Flagged for review
-
-    # Update
-    db.bangumi.update(bangumi)           # Update single record
-    db.bangumi.update_all(bangumi_list)  # Batch update
-
-    # Delete
-    db.bangumi.delete_one(123)           # Hard delete
-    db.bangumi.disable_rule(123)         # Soft delete (deleted=True)
-```
-
-### RSSDatabase
-
-```python
-with Database() as db:
-    # Create
-    db.rss.add(rss_item)                 # Single insert
-    db.rss.add_all(rss_items)            # Batch insert (deduplicates)
-
-    # Read
-    db.rss.search_all()                  # All feeds
-    db.rss.search_active()               # Enabled feeds only
-    db.rss.search_aggregate()            # Enabled + aggregate=True
-
-    # Update
-    db.rss.update(id, rss_update)        # Partial update
-    db.rss.enable(id)                    # Enable feed
-    db.rss.disable(id)                   # Disable feed
-    db.rss.enable_batch([1, 2, 3])       # Batch enable
-    db.rss.disable_batch([1, 2, 3])      # Batch disable
-```
-
-### TorrentDatabase
-
-```python
-with Database() as db:
-    # Create
-    db.torrent.add(torrent)              # Single insert
-    db.torrent.add_all(torrents)         # Batch insert
-
-    # Read
-    db.torrent.search_all()              # All torrents
-    db.torrent.search_by_qb_hash(hash)   # By qBittorrent hash
-    db.torrent.search_by_url(url)        # By URL
-    db.torrent.check_new(torrents)       # Filter out existing
-
-    # Update
-    db.torrent.update_qb_hash(id, hash)  # Set qb_hash
-```
-
-## Caching
-
-### Bangumi Cache
-
-`search_all()` results are cached at the module level with a 5-minute TTL:
-
-```python
-# Module-level cache in bangumi.py
-_bangumi_cache: list[Bangumi] | None = None
-_bangumi_cache_time: float = 0
-_BANGUMI_CACHE_TTL: float = 300.0  # 5 minutes
-
-# Cache invalidation
-def _invalidate_bangumi_cache():
-    global _bangumi_cache, _bangumi_cache_time
-    _bangumi_cache = None
-    _bangumi_cache_time = 0
-```
-
-**Important:** The cache is automatically invalidated on:
-- `add()`, `add_all()`
-- `update()`, `update_all()`
-- `delete_one()`, `delete_all()`
-- `archive_one()`, `unarchive_one()`
-- Any RSS link update operations
-
-### Session Expunge
-
-Cached objects are **expunged** from the session to prevent `DetachedInstanceError`:
-
-```python
-for b in bangumis:
-    self.session.expunge(b)  # Detach from session
-```
-
-## Migration System
-
-### Schema Versioning
-
-Migrations are tracked via a `schema_version` table:
-
-```python
-CURRENT_SCHEMA_VERSION = 7
-
-# Each migration: (version, description, [SQL statements])
-MIGRATIONS = [
-    (1, "add air_weekday column", [...]),
-    (2, "add connection status columns", [...]),
-    (3, "create passkey table", [...]),
-    (4, "add archived column", [...]),
-    (5, "rename offset to episode_offset", [...]),
-    (6, "add qb_hash column", [...]),
-    (7, "add suggested offset columns", [...]),
-]
-```
-
-### Adding a New Migration
-
-1. Increment `CURRENT_SCHEMA_VERSION` in `combine.py`
-2. Add migration tuple to `MIGRATIONS` list:
-
-```python
-MIGRATIONS = [
-    # ... existing migrations ...
-    (
-        8,
-        "add my_new_column to bangumi",
-        [
-            "ALTER TABLE bangumi ADD COLUMN my_new_column TEXT DEFAULT NULL",
-        ],
-    ),
-]
-```
-
-3. Add idempotency check in `run_migrations()`:
-
-```python
-if "bangumi" in tables and version == 8:
-    columns = [col["name"] for col in inspector.get_columns("bangumi")]
-    if "my_new_column" in columns:
-        needs_run = False
-```
-
-4. Update the corresponding Pydantic model in `module/models/`
-
-### Default Value Backfill
-
-After migrations, `_fill_null_with_defaults()` automatically fills NULL values based on model defaults:
-
-```python
-# If model defines:
-class Bangumi(SQLModel, table=True):
-    my_field: bool = False
-
-# Then existing rows with NULL will be updated to False
-```
-
-## Performance Patterns
-
-### Batch Queries
-
-`add_all()` uses a single query to check for duplicates instead of N queries:
-
-```python
-# Efficient: single SELECT
-keys_to_check = [(d.title_raw, d.group_name) for d in datas]
-conditions = [
-    and_(Bangumi.title_raw == tr, Bangumi.group_name == gn)
-    for tr, gn in keys_to_check
-]
-statement = select(Bangumi.title_raw, Bangumi.group_name).where(or_(*conditions))
-```
-
-### Regex Matching
-
-`match_list()` compiles a single regex pattern for all title matches:
-
-```python
-# Compile once, match many
-sorted_titles = sorted(title_index.keys(), key=len, reverse=True)
-pattern = "|".join(re.escape(title) for title in sorted_titles)
-title_regex = re.compile(pattern)
-
-# O(1) lookup per torrent instead of O(n)
-for torrent in torrent_list:
-    match = title_regex.search(torrent.name)
-```
-
-### Indexed Columns
-
-The following columns have indexes for fast lookups:
-
-| Table | Column | Index Type |
-|-------|--------|------------|
-| `bangumi` | `title_raw` | Regular |
-| `bangumi` | `deleted` | Regular |
-| `bangumi` | `archived` | Regular |
-| `rssitem` | `url` | Unique |
-| `torrent` | `name` | Regular |
-| `torrent` | `url` | Unique |
-| `torrent` | `qb_hash` | Regular |
-
-## Testing
-
-### Test Database Setup
-
-Tests use an in-memory SQLite database:
-
-```python
-# conftest.py
-@pytest.fixture
-def db_engine():
-    engine = create_engine("sqlite:///:memory:")
-    SQLModel.metadata.create_all(engine)
-    yield engine
-    engine.dispose()
-
-@pytest.fixture
-def db_session(db_engine):
-    with Session(db_engine) as session:
-        yield session
-```
-
-### Factory Functions
-
-Use factory functions for creating test data:
-
-```python
-from test.factories import make_bangumi, make_torrent, make_rss_item
-
-def test_bangumi_search():
-    bangumi = make_bangumi(title_raw="Test Title", season=2)
-    # ... test logic
-```
-
-## Design Notes
-
-### No Foreign Keys
-
-SQLite foreign key enforcement is disabled by default. Relationships (like `Torrent.bangumi_id`) are managed in application logic rather than database constraints.
-
-### Soft Deletes
-
-The `Bangumi.deleted` flag enables soft deletes. Queries should filter by `deleted=False` for user-facing data:
-
-```python
-statement = select(Bangumi).where(Bangumi.deleted == false())
-```
-
-### Torrent Tagging
-
-Torrents are tagged in qBittorrent with `ab:{bangumi_id}` for offset lookup during rename operations. This enables fast bangumi identification without database queries.
-
-## Common Issues
-
-### DetachedInstanceError
-
-If you access cached objects from a different session:
-
-```python
-# Wrong: accessing cached object in new session
-bangumis = db.bangumi.search_all()  # Cached
-with Database() as new_db:
-    new_db.session.add(bangumis[0])  # Error!
-
-# Right: objects are expunged, work independently
-bangumis = db.bangumi.search_all()
-bangumis[0].title_raw = "New Title"  # OK, but won't persist
-```
-
-### Cache Staleness
-
-If manual SQL updates bypass the ORM, invalidate the cache:
-
-```python
-from module.database.bangumi import _invalidate_bangumi_cache
-
-with engine.connect() as conn:
-    conn.execute(text("UPDATE bangumi SET ..."))
-    conn.commit()
-
-_invalidate_bangumi_cache()  # Important!
-```
+The backend pytest config sets `asyncio_mode = "auto"`, so async test functions need no extra decorator. To run: `cd backend && uv run pytest src/test/test_xxx.py -v`.

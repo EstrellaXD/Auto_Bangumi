@@ -49,7 +49,7 @@
 - 本插件之前为同一集创建的链接，在版本升级（新版本替换旧种子，规范文件名不变）后被原子替换为指向新文件的链接。
 - 已链接的文件再次收到事件时不做任何事；插件在自己的键值存储里记录它创建过的目标路径。
 - **删除种子不会删除媒体库中的链接。**
-- 启用前已经下载的文件不会自动处理。在插件的设置分区点「补链已有文件」，或调用 `POST /api/v1/plugins/hardlink/backfill`：遍历 `source_root` 下的 `.mp4` / `.mkv` / `.ass` / `.srt`，返回 `{"linked", "exists", "conflict", "failed"}` 计数。
+- 启用前已经下载的文件不会自动处理。在插件的设置分区点「链接已有文件」，或调用 `POST /api/v1/plugins/hardlink/backfill`：遍历 `source_root` 下的 `.mp4` / `.mkv` / `.ass` / `.srt`，返回 `{"linked", "exists", "conflict", "failed"}` 计数。
 
 ::: tip Docker
 硬链接不能跨文件系统。在 Docker 中，请把下载目录与媒体库放在同一块盘上，并以**同一个挂载点**映射进 AB 容器（例如把 `/mnt/media` 整体挂载为 `/media`，下载目录与媒体库都在其下）。两个独立挂载的目录即使在同一块盘上，也会被视为不同文件系统，链接会退化为 `cross_device` 指定的行为。下载器运行在另一个容器里、看到的路径与 AB 不同时，用 `path_map` 做映射。
