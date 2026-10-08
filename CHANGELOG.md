@@ -20,6 +20,8 @@
 - **新增（插件开发工具）**：`ab_sdk` 可单独打包为 `autobangumi-sdk` 轮子（`uv build --wheel backend/sdk`），带 `ab-plugin` 命令行：`new` 生成插件骨架与契约测试，`validate` 校验清单和 SDK 版本范围，`pack` 打包为可安装的 zip，`dev` 把插件目录链接到 `config/plugins/local/` 并开启 `plugins.dev_mode`。开启 `dev_mode` 后，修改本地插件的文件会自动重新加载该插件（包括上次加载失败的）。`ab_sdk.testing` 新增 `DownloaderContract`、`RenameStrategyContract`、`NotifierContract`、`SearchSiteContract` 契约测试套件，内置的下载器、重命名方式、通知渠道和默认搜索站点都通过它们
 - **新增（签名插件目录）**：LLM 插件的安装器泛化为通用的签名目录安装器：`GET /api/v1/plugins/catalog` 列出目录（GitHub release `plugins`）中的插件，`POST /api/v1/plugins/{id}/install` 验签（目录、sha256、ed25519）后安装并启用，`DELETE /api/v1/plugins/{id}` 卸载。已安装的插件来源为 `catalog`，视为已签名。插件 id `local` 改为保留
 - **破坏性变更（通知渠道）**：Bark 不再读取旧字段 `token`（改用 `device_key`），WeCom 不再读取 `chat_id`（改用 `webhook_url`）。升级后第一次启动时自动把旧字段迁移到新字段，原文件备份为 `config.json.v3.bak`
+- **新增（插件文档与示例）**：插件开发文档拆为总览、核心概念、配置表单、事件、前端挂载点、命令行、签名与分发、内置插件、示例和每个扩展点一页（中 / 英 / 日）。`examples/plugins/` 新增 `webhook-on-event`、`custom-rss-site`、`template-rename`、`nfo-writer`、`ntfy-notifier`，CI 逐个校验并运行它们的测试。新增插件作者 skill（`skills/autobangumi-plugin/`）
+- **新增（发布）**：beta 与稳定版的 GitHub Release 附带 `autobangumi-sdk` 轮子和 `autobangumi-plugin-skill-<版本>.zip`
 - **破坏性变更（升级路径）**：只支持从 3.3.x 升级。检测到更早版本的数据（`config/version.info` 低于 3.3，或残留 2.x 的 `data/data.json`）时拒绝启动，并提示先升级到最新 3.3.x 启动一次完成迁移
 - **破坏性变更（API）**：移除 3.2 兼容的 GET 控制端点（`/api/v1/restart`、`/start`、`/stop`、`/shutdown`）和 `GET /api/v1/auth/refresh_token`，请改用 POST
 - **破坏性变更（配置）**：移除旧版 `experimental_openai` 配置节和通知的单 provider 旧字段（`type` / `token` / `chat_id`），3.3 已把它们迁移到 `llm` 与 `notification.providers`；移除废弃的 `normal` 重命名方式，已有配置自动改为语义相同的 `none`
