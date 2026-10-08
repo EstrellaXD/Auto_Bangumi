@@ -26,7 +26,7 @@ AB downloads `catalog.json` from the GitHub release `plugins`. The catalog conta
       "kind": "plugin",
       "extension_points": ["notifier"],
       "sdk": ">=0.5,<1",
-      "min_ab_version": "4.0.0",
+      "min_ab_version": "4.0.0-beta.1",
       "description": "…",
       "asset": "ntfy-notifier-0.1.0.zip",
       "sha256": "…"
@@ -49,8 +49,8 @@ After these checks, AB unpacks the plugin to `config/plugins/<id>/<version>/`, w
 
 A catalog plugin can depend only on the standard library and on packages that AB already has. AB does not run pip. Put third-party pure-Python libraries in `vendor/`.
 
-::: warning The WebUI has no catalog page yet
-During the 4.0 preview, you can browse and install the catalog with the API only. The Settings → Plugins page has no buttons for it.
+::: tip Install from the WebUI
+In Settings → Plugins, go to the "Plugin catalog" area and select "Browse catalog". You can then install and update catalog plugins. A plugin installed from the catalog has an "Uninstall" button on its card. Built-in, local and pip plugins do not have one.
 :::
 
 API:
@@ -75,11 +75,11 @@ Only a maintainer who has the signing private key can publish the catalog. The s
 
    ```bash
    uv run --no-project --with cryptography python scripts/build_plugin_catalog.py \
-       --key ~/.autobangumi/update-signing-key.pem --min-ab 4.0.0 \
+       --key ~/.autobangumi/update-signing-key.pem --min-ab 4.0.0-beta.1 \
        --out release-assets dist/*.zip
    ```
 
-   The script writes `catalog.json`, the zips and their `.sig` files.
+   The script writes `catalog.json`, the zips and their `.sig` files. Do not set `--min-ab` to `4.0.0`: in semver, `4.0.0-beta.N` is lower than `4.0.0`, so 4.0 beta users cannot install the plugin.
 4. The maintainer uploads the whole directory to the release `plugins` (and overwrites the old files).
 
 A user sees the new version through `GET /api/v1/plugins/catalog`.

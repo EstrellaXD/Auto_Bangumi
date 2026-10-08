@@ -1,5 +1,5 @@
 import type { PluginUiSlot } from '@autobangumi/plugin-ui';
-import type { PluginProviders, PluginsOverview } from '#/plugins';
+import type { CatalogEntry, PluginProviders, PluginsOverview } from '#/plugins';
 
 export const apiPlugins = {
   /** 已发现的插件、状态、配置 schema 与（掩码后的）当前配置 */
@@ -24,6 +24,30 @@ export const apiPlugins = {
     const { data } = await axios.put<PluginsOverview>(
       'api/v1/plugins/settings',
       { allow_unsigned: allowUnsigned }
+    );
+    return data;
+  },
+
+  /** 签名目录；目录不可达（502）由调用方在页面内提示，不弹全局 toast */
+  async catalog() {
+    const { data } = await axios.get<CatalogEntry[]>('api/v1/plugins/catalog', {
+      silent: true,
+    });
+    return data;
+  },
+
+  /** 从签名目录安装或升级插件，后端安装后即启用 */
+  async install(id: string) {
+    const { data } = await axios.post<PluginsOverview>(
+      `api/v1/plugins/${encodeURIComponent(id)}/install`
+    );
+    return data;
+  },
+
+  /** 卸载经签名目录安装的插件（后端拒绝内置、本地、pip 与 LLM 插件） */
+  async uninstall(id: string) {
+    const { data } = await axios.delete<PluginsOverview>(
+      `api/v1/plugins/${encodeURIComponent(id)}`
     );
     return data;
   },

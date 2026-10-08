@@ -26,7 +26,7 @@ AB 从 GitHub release `plugins` 下载 `catalog.json`。目录包含：
       "kind": "plugin",
       "extension_points": ["notifier"],
       "sdk": ">=0.5,<1",
-      "min_ab_version": "4.0.0",
+      "min_ab_version": "4.0.0-beta.1",
       "description": "…",
       "asset": "ntfy-notifier-0.1.0.zip",
       "sha256": "…"
@@ -49,8 +49,8 @@ AB 从 GitHub release `plugins` 下载 `catalog.json`。目录包含：
 
 签名目录的插件只能依赖标准库和 AB 已有的包，不做 pip 安装。需要第三方纯 Python 库时放进 `vendor/`。
 
-::: warning WebUI 尚无目录界面
-4.0 预览期间，目录的浏览和安装只有 API，设置 → 插件 页还没有对应的按钮。
+::: tip 在 WebUI 中安装
+在 设置 → 插件 的「插件目录」区点击「浏览目录」，可以安装、更新目录中的插件。经目录安装的插件卡片上有「卸载」按钮；内置、本地和 pip 插件没有。
 :::
 
 API：
@@ -75,11 +75,11 @@ API：
 
    ```bash
    uv run --no-project --with cryptography python scripts/build_plugin_catalog.py \
-       --key ~/.autobangumi/update-signing-key.pem --min-ab 4.0.0 \
+       --key ~/.autobangumi/update-signing-key.pem --min-ab 4.0.0-beta.1 \
        --out release-assets dist/*.zip
    ```
 
-   脚本输出 `catalog.json`、各 zip 及其 `.sig`。
+   脚本输出 `catalog.json`、各 zip 及其 `.sig`。`--min-ab` 不要写成 `4.0.0`：按 semver，`4.0.0-beta.N` 低于 `4.0.0`，4.0 beta 用户将无法安装。
 4. 维护者把整个目录上传到 release `plugins`（覆盖旧文件）。
 
 用户端通过 `GET /api/v1/plugins/catalog` 看到新版本。

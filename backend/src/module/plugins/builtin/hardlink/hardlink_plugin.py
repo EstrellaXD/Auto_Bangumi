@@ -8,7 +8,8 @@
 - 跨文件系统（EXDEV）时按 ``cross_device`` 复制、建软链接或跳过；
 - 目标已存在且不是本插件创建的：跳过并通知；是本插件之前为同一集创建的
   （版本升级后同名文件换成了新文件）：原子替换；
-- 事件投递为「至少一次」，已链接的文件再次收到时不做任何事。
+- 事件投递为「至少一次」，已链接的文件再次收到时不做任何事；插件放置后被
+  用户从媒体库删除的文件也不重建，只有补链会重建。
 """
 
 import asyncio
@@ -25,7 +26,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ab_sdk import Plugin, points, provider, subscribe
-from ab_sdk.events import SystemEvent, TorrentOrganized
+from ab_sdk.events import Event, SystemEvent, TorrentOrganized
 
 Status = Literal["linked", "exists", "conflict", "failed"]
 
@@ -33,7 +34,7 @@ Status = Literal["linked", "exists", "conflict", "failed"]
 LINK_TIMEOUT = 3600.0
 
 # ponytail: 补链按扩展名挑文件，与宿主 media_files 的 core 实现同一组；插件不能
-# import module.*，若用户换了 media_files 实现（P2.5 slots），这里需要改为经 SDK 查询
+# import module.*，若用户在 plugins.slots.media_files 换了实现，这里需要改为经 SDK 查询
 BACKFILL_SUFFIXES = frozenset({".mp4", ".mkv", ".ass", ".srt"})
 
 
@@ -101,6 +102,16 @@ class HardlinkFailed(SystemEvent):
         return ("硬链接未完成", f"种子：{self.torrent_hash}\n{self.files}")
 
 
+@dataclass(frozen=True, slots=True)
+class HardlinkLinked(Event):
+    """种子有文件新放入了媒体库。跨盘复制可能比媒体库刷新的延迟更久，
+    media-server-refresh 订阅它，在文件放好后再刷新一次。"""
+
+    kind: ClassVar[str] = "hardlink.linked"
+
+    torrent_hash: str
+
+
 def _identity(path: Path) -> list[int]:
     """文件身份（不跟随软链接）。含大小与修改时间：旧文件删除后 inode 可能被复用。"""
     st = os.lstat(path)
@@ -151,10 +162,11 @@ Record = list[list[int]]
 
 
 def place(
-    src: Path, dst: Path, owned: Record | None, cross_device: str
+    src: Path, dst: Path, owned: Record | None, cross_device: str, restore: bool
 ) -> tuple[Status, str, Record | None]:
     """在线程中执行的文件操作。``owned`` 是插件上次在 ``dst`` 放置文件时的记录，
-    None 表示 ``dst`` 不是插件创建的。返回 linked / exists 时附带新记录。"""
+    None 表示 ``dst`` 不是插件创建的。``restore`` 为 False 时，插件放置过、之后
+    被删除的同一文件不再重建。返回 linked / exists 时附带新记录。"""
     ident = _identity(src)
     if os.path.lexists(dst):
         here = _identity(dst)
@@ -166,6 +178,10 @@ def place(
         if owned is None or owned[1] != here:
             return "conflict", "媒体库中已有同名文件且不是本插件创建的", None
         # 否则是版本升级：同一集换成了新文件，替换插件之前创建的链接
+    elif owned is not None and owned[0] == ident and not restore:
+        # 插件放置过同一文件、之后被删除（用户清理已看完的剧集）：重复投递的
+        # 事件不再放回，只有用户主动补链时才重建
+        return "exists", "", owned
     else:
         dst.parent.mkdir(parents=True, exist_ok=True)
     status, reason = _make(src, dst, cross_device)
@@ -189,7 +205,7 @@ class HardlinkPlugin(Plugin[Options]):
             return path
         return best[1] + path[len(best[0]) :]
 
-    async def link(self, src: Path) -> tuple[Status, str]:
+    async def link(self, src: Path, restore: bool = False) -> tuple[Status, str]:
         try:
             rel = Path(os.path.normpath(src)).relative_to(self.config.source_root)
         except ValueError:
@@ -199,7 +215,7 @@ class HardlinkPlugin(Plugin[Options]):
         owned = await self.ctx.kv.get(key)
         try:
             status, reason, record = await asyncio.to_thread(
-                place, src, dst, owned, self.config.cross_device
+                place, src, dst, owned, self.config.cross_device, restore
             )
         except OSError as e:
             return "failed", str(e)
@@ -210,12 +226,16 @@ class HardlinkPlugin(Plugin[Options]):
     @subscribe(TorrentOrganized.kind, timeout=LINK_TIMEOUT)
     async def on_organized(self, event: TorrentOrganized) -> None:
         problems: list[str] = []
+        linked = False
         for f in event.files:
             status, reason = await self.link(
                 Path(self.to_local(f.path, event.downloader_id))
             )
+            linked = linked or status == "linked"
             if status in ("conflict", "failed"):
                 problems.append(f"{f.path}：{reason}")
+        if linked:
+            self.ctx.bus.publish(HardlinkLinked(torrent_hash=event.torrent_hash))
         if problems:
             self.ctx.log.warning("种子 %s 未完成链接：%s", event.torrent_hash, problems)
             self.ctx.bus.publish(
@@ -241,7 +261,7 @@ class HardlinkPlugin(Plugin[Options]):
             "failed": 0,
         }
         for src in files:
-            status, _ = await self.link(src)
+            status, _ = await self.link(src, restore=True)
             counts[status] += 1
         self.ctx.log.info("补链完成：%s", counts)
         return counts

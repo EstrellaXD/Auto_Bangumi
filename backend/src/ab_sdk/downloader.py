@@ -4,7 +4,7 @@
 :data:`DownloaderFactory`：接收连接参数，返回实现 :class:`DownloaderClient`
 （至少 :class:`CoreDownloaderClient`）的对象。不同下载器能力不同，通过
 ``capabilities`` 类属性声明，门面会跳过不支持的操作而不是报错。
-用户在设置里把 ``downloader.type`` 设为该 id 即可启用。
+用户在设置里把下载器实例的 ``provider`` 设为该 id 即可启用。
 """
 
 from collections.abc import Callable
@@ -144,6 +144,8 @@ class DownloaderConnection:
     username: str
     password: str
     ssl: bool
+    # 实例 id（``plugins.instances[].id``），供需要按实例保存本地状态的下载器使用
+    instance_id: str = "default"
 
 
 DownloaderFactory = Callable[[DownloaderConnection], CoreDownloaderClient]

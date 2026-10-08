@@ -42,11 +42,11 @@ The `kind` of a system event keeps the 3.x value (the notification center stores
 | kind | Event class | Fields | When AB publishes it |
 | --- | --- | --- | --- |
 | `file.renamed` | `FileRenamed` | `bangumi_id`, `old_path`, `new_path`, `file_kind`, `downloader_id` | A file is renamed (including a rename after a version replacement) |
-| `torrent.organized` | `TorrentOrganized` | `torrent_hash`, `bangumi_id`, `files` (a tuple of `OrganizedFile(path, kind)`), `downloader_id` | A torrent is organized. AB also publishes it when the rename strategy is `none`; `files` then holds the original paths |
+| `torrent.organized` | `TorrentOrganized` | `torrent_hash`, `bangumi_id`, `files` (a tuple of `OrganizedFile(path, kind)`), `downloader_id` | A torrent is organized. AB also publishes it when the rename strategy is `none`; `files` then holds the original paths. AB does not publish it while the selected rename strategy is not registered (its plugin is disabled or tripped) |
 
 - Paths are absolute paths **as the downloader sees them**, joined with `/` (a `\` from a Windows downloader is also changed to `/`). If AB and the downloader see different directories (for example, they run in different containers), the subscriber must map the paths.
 - `bangumi_id` comes from the `ab:<id>` tag of the torrent. An old torrent can have `None`. `downloader_id` is the id of the downloader instance that holds the torrent. Different instances can have different path views.
-- `torrent.organized` has **at-least-once** delivery. AB publishes it again after each restart for torrents without the "renamed" tag (for example, when the rename strategy is `none`). Subscribers must be idempotent.
+- `torrent.organized` has **at-least-once** delivery. AB publishes it again after each restart for the organized torrents in the downloader, also for torrents with the "renamed" tag. Subscribers must be idempotent.
 - These two events go to the event bus only. They do not go to the notification center.
 
 ## Custom events

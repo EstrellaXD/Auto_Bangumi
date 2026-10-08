@@ -21,6 +21,7 @@ from module.network import RequestContent
 from module.notification import PROVIDER_REGISTRY
 from module.security.api import CredentialKind, get_auth_service, get_principal
 from module.security.password import verify_password
+from module.update.v4 import migrate_v3_dict
 
 from .deps import get_context
 
@@ -30,6 +31,14 @@ router = APIRouter(prefix="/setup", tags=["setup"])
 AuthService = Annotated[AuthenticationService, Depends(get_auth_service)]
 
 SENTINEL_PATH = Path("config/.setup_complete")
+
+
+def _wizard_provider(type_: str, token: str, chat_id: str) -> dict:
+    """向导只有通用的 token / chat_id 输入，按渠道改写到实际读取的字段
+    （Bark 的 device_key、WeCom 的 webhook_url）。"""
+    provider = {"type": type_, "enabled": True, "token": token, "chat_id": chat_id}
+    migrate_v3_dict({"notification": {"providers": [provider]}})
+    return provider
 
 
 def _require_setup_needed():
@@ -351,11 +360,8 @@ async def test_notification(req: TestNotificationRequest):
 
     try:
         # Create provider config
-        config = ProviderConfig(
-            type=req.type,
-            enabled=True,
-            token=req.token,
-            chat_id=req.chat_id,
+        config = ProviderConfig.model_validate(
+            _wizard_provider(req.type, req.token, req.chat_id)
         )
         provider = provider_cls(config)
         async with provider:
@@ -422,12 +428,11 @@ async def complete_setup(
             config_dict["notification"] = {
                 "enable": True,
                 "providers": [
-                    {
-                        "type": req.notification_type,
-                        "enabled": True,
-                        "token": req.notification_token,
-                        "chat_id": req.notification_chat_id,
-                    }
+                    _wizard_provider(
+                        req.notification_type,
+                        req.notification_token,
+                        req.notification_chat_id,
+                    )
                 ],
             }
 

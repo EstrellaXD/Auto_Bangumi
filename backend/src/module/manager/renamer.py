@@ -7,7 +7,7 @@ from typing import Any
 from ab_sdk import points
 from ab_sdk.events import FileRenamed, OrganizedFile, TorrentOrganized
 from ab_sdk.rename import (
-    ConflictPolicy,
+    ConflictDecision,
     ConflictRequest,
     FileKind,
     RenameInput,
@@ -58,7 +58,8 @@ _unavailable: set[str] = set()
 # 已记录过「未登记」日志的重命名方式（每个进程只记一次，重新登记后清除）
 _missing_methods: set[str] = set()
 # 已发布过的 TorrentOrganized（种子 hash → 最终文件）。未打 ab:renamed 标签的
-# 种子（重命名方式为 none）每轮都会重新处理，文件不变时不重复发布。
+# 种子（重命名方式为 none）每轮都会重新处理，文件不变时不重复发布；已打标签的
+# 种子不在其中时补发一次（_republish_organized）。
 # ponytail: 进程内字典，重启后重发一次（事件约定为至少一次）；条目随种子数增长
 _organized_published: dict[str, tuple[OrganizedFile, ...]] = {}
 # 已发送过「文件未重命名」通知的 (种子 hash, 原因)
@@ -97,31 +98,17 @@ def _target_name(entry: ProviderEntry, f: RenameInput) -> str:
     插件策略经 runner 调用：异常与无效返回值计入熔断；策略主动抛出的
     RenameSkipped（输入或用户配置有问题）不计入。
     """
-    if entry.plugin_id == plugin_host.CORE:
-        return entry.factory().target_name(f)
 
-    def call() -> str | RenameSkipped:
+    def call(strategy: Any) -> str | RenameSkipped:
         try:
-            return entry.factory().target_name(f)
+            return strategy.target_name(f)
         except RenameSkipped as e:
             return e
 
-    runner = plugin_host.get_runner()
-    result: Any = None
-    if runner is not None:
-        ok, result = runner.call_provider_sync(
-            entry.plugin_id, points.RENAME_STRATEGY, call, check=_valid_name
-        )
-    else:
-        try:
-            result = call()
-            ok = _valid_name(result)
-        except Exception as e:
-            logger.warning("[Plugin:%s] 重命名策略失败：%s", entry.plugin_id, e)
-            ok = False
+    ok, result = plugin_host.call_sync(entry, points.RENAME_STRATEGY, call, _valid_name)
     if isinstance(result, RenameSkipped):
         raise result
-    if not ok or result is None:
+    if not ok:
         raise RenameSkipped(f"重命名方式 {entry.id} 执行失败，详见日志")
     return result
 
@@ -490,7 +477,7 @@ class Renamer(RevisionSaga):
         )
         if owners:
             owner = owners[0] if len(owners) == 1 else None
-            decision = self._conflict_policy().decide(
+            decision = self._decide_conflict(
                 ConflictRequest(
                     target_path=prepared.target_path,
                     incoming=RevisionTask(
@@ -638,11 +625,34 @@ class Renamer(RevisionSaga):
         )
 
     @staticmethod
-    def _conflict_policy() -> ConflictPolicy:
-        # 选中的策略未登记（插件停用或被熔断）时按 hold 处理，不会误删旧版本
+    def _decide_conflict(request: ConflictRequest) -> ConflictDecision:
+        # 选中的策略未登记（插件停用或被熔断）、抛出异常或返回值无效时按 hold
+        # 处理，不会误删旧版本；插件的失败已计入熔断
         policies = plugin_host.get_registry().providers(points.CONFLICT_POLICY)
-        entry = policies.get(settings.plugins.slots.conflict_policy) or policies["hold"]
-        return entry.factory()
+        hold = policies["hold"]
+        entry = policies.get(settings.plugins.slots.conflict_policy) or hold
+        ok, decision = plugin_host.call_sync(
+            entry,
+            points.CONFLICT_POLICY,
+            lambda policy: policy.decide(request),
+            lambda result: isinstance(result, ConflictDecision),
+        )
+        return decision if ok else hold.factory().decide(request)
+
+    async def _republish_organized(self, infos: list[dict], method: str) -> None:
+        """已打 ab:renamed 的种子不再整理，但本进程还没发布过它的
+        torrent.organized（重启后；上个进程发布的事件可能没被订阅者处理完）：
+        按当前文件名补发一次，使投递为至少一次。没有总线时发布是空操作，
+        不查询文件。"""
+        if not infos or plugin_host.get_bus() is None:
+            return
+        all_files = await asyncio.gather(
+            *[self.client.get_torrent_files(info["hash"]) for info in infos]
+        )
+        for info, files in zip(infos, all_files):
+            media_list, subtitle_list = check_files(files)
+            if media_list:
+                self._finish_torrent(info, media_list, subtitle_list, method, True)
 
     async def _batch_lookup_offsets(
         self, torrents_info: list[dict]
@@ -759,7 +769,12 @@ class Renamer(RevisionSaga):
 
     async def rename(self) -> list[Notification]:
         logger.debug("Start rename process.")
-        strategy = _rename_strategy(settings.plugins.slots.rename_strategy)
+        configured = settings.plugins.slots.rename_strategy
+        strategy = _rename_strategy(configured)
+        # 选中的策略未登记（重载窗口、熔断、模板失效）时文件保留原名，但原名不是
+        # 最终文件名：策略恢复后还会改名，这时发布 torrent.organized 会让订阅者
+        # （如硬链接）按两个文件名各处理一次
+        final_names = strategy.id == configured
         pending_infos = await self.client.get_torrent_info()
         # Owner counting and Saga recovery must see tasks outside the normal
         # Bangumi/completed filter (collections, paused tasks, changed category).
@@ -803,6 +818,16 @@ class Renamer(RevisionSaga):
             if info.get("hash") in active_replacement_ids
             or not self._has_tag(info.get("tags"), _RENAMED_TAG)
         ]
+        await self._republish_organized(
+            [
+                info
+                for info in all_infos
+                if info["hash"] not in _organized_published
+                and info["hash"] not in active_replacement_ids
+                and self._has_tag(info.get("tags"), _RENAMED_TAG)
+            ],
+            strategy.id,
+        )
         renamed_info: list[Notification] = []
         if not torrents_info:
             logger.debug("Rename process finished: no pending torrents")
@@ -866,7 +891,7 @@ class Renamer(RevisionSaga):
                     media_list,
                     subtitle_list,
                     strategy.id,
-                    report.result.succeeded,
+                    report.result.succeeded and final_names,
                 )
             elif len(media_list) > 1:
                 logger.info("Start rename collection")
@@ -885,7 +910,11 @@ class Renamer(RevisionSaga):
                         await self._mark_renamed(torrent_hash, info.get("tags"))
                     await self.client.set_category(torrent_hash, "BangumiCollection")
                 self._finish_torrent(
-                    info, media_list, subtitle_list, strategy.id, collection_complete
+                    info,
+                    media_list,
+                    subtitle_list,
+                    strategy.id,
+                    collection_complete and final_names,
                 )
             else:
                 logger.warning(f"{torrent_name} has no media file")

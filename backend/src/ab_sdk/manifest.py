@@ -186,7 +186,7 @@ def load_manifest(plugin_dir: Path) -> PluginManifest:
     path = plugin_dir / MANIFEST_NAME
     try:
         text = path.read_text(encoding="utf-8")
-    except OSError as e:
+    except (OSError, UnicodeDecodeError) as e:
         raise ManifestError(f"{path}: 无法读取：{e}") from e
     return parse_manifest(text, str(path))
 

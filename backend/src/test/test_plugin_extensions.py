@@ -6,7 +6,7 @@ from typing import ClassVar
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from ab_sdk import points, secret_field
 from ab_sdk.downloader import (
@@ -468,6 +468,13 @@ class NestedOptions(BaseModel):
 NESTED = NestedOptions.model_json_schema()
 
 
+class WrappedSecrets(BaseModel):
+    cookie: str | None = secret_field()
+    tokens: list[str] = Field(default=[], json_schema_extra={"secret": True})
+    headers: dict[str, str] = Field(default={}, json_schema_extra={"secret": True})
+    server: Server | None = secret_field()
+
+
 class TestNestedSecrets:
     def test_mask_options_nested_secrets_masked(self):
         options = {
@@ -532,6 +539,30 @@ class TestNestedSecrets:
         }
         masked = mask_options(current, NESTED)
         assert restore_options(masked, current, NESTED) == current
+
+    @pytest.mark.parametrize(
+        "field, value, masked",
+        [
+            # 可选字段：秘密标记在 anyOf 外层
+            ("cookie", "c=1", MASK),
+            # 秘密标记在容器上：元素 / 字典值 / 嵌套对象都按秘密处理
+            ("tokens", ["t1", "t2"], [MASK, MASK]),
+            ("headers", {"auth": "h"}, {"auth": MASK}),
+            (
+                "server",
+                {"host": "a", "password": "p"},
+                {"host": MASK, "password": MASK},
+            ),
+        ],
+    )
+    def test_mask_options_secret_on_wrapper_masked_and_restored(
+        self, field, value, masked
+    ):
+        schema = WrappedSecrets.model_json_schema()
+        assert mask_options({field: value}, schema) == {field: masked}
+        assert restore_options({field: masked}, {field: value}, schema) == {
+            field: value
+        }
 
     def test_restore_options_nested_without_schema_restored(self):
         current = {"servers": [{"host": "a", "n": 1}]}

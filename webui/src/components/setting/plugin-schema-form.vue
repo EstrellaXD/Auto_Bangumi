@@ -56,7 +56,9 @@ function setNumber(field: SchemaField, value: string | number) {
       <AbSelect
         v-else-if="field.kind === 'select'"
         :model-value="(model[field.key] as string | number | null) ?? null"
-        :items="field.options.map(String)"
+        :options="
+          field.options.map((value) => ({ label: String(value), value }))
+        "
         :aria-label="field.label"
         @update:model-value="model[field.key] = $event"
       />

@@ -23,6 +23,7 @@ from ab_sdk.rename import (
 )
 from ab_sdk.testing import RecordingBus, create_plugin
 from module.downloader import DownloadClient
+from module.downloader.path import check_files
 from module.manager import renamer as renamer_module
 from module.manager.renamer import Renamer
 from module.manager.revision_policy import CoreConflictPolicy
@@ -118,7 +119,8 @@ async def test_rename_unregistered_method_keeps_names_without_tag(plugins, renam
 
     renamer.client.client.torrents_rename_file.assert_not_called()
     renamer.client.client.add_tag.assert_not_called()
-    assert published(plugins.bus, TorrentOrganized)
+    # 原名不是最终文件名：策略恢复后会改名，此时发布会让硬链接留下两份
+    assert published(plugins.bus, TorrentOrganized) == []
 
 
 async def test_rename_plugin_strategy_renames_and_publishes_events(plugins, renamer):
@@ -193,6 +195,35 @@ async def test_rename_none_publishes_organized_once_per_process(plugins, renamer
     assert organized[0].files[0] == OrganizedFile(f"{SAVE_PATH}/{NAME}", "media")
 
 
+async def test_rename_tagged_torrent_republishes_organized_once_per_process(
+    plugins, renamer
+):
+    # 已改名、打了 ab:renamed 的种子：上个进程发布的事件可能没被处理完
+    # （重启、订阅者被取消），本进程按当前文件名补发一次
+    renamer.client.client.torrents_info.return_value = [
+        {**INFO, "tags": "ab:7, ab:renamed"}
+    ]
+    renamer.client.client.torrents_files.return_value = [
+        {"name": "Anime S01E01.mkv"},
+        {"name": "Anime S01E01.zh.ass"},
+    ]
+
+    await run(renamer, "pn")
+    await run(renamer, "pn")
+
+    renamer.client.client.torrents_rename_file.assert_not_called()
+    assert published(plugins.bus, TorrentOrganized) == [
+        TorrentOrganized(
+            torrent_hash="h1",
+            bangumi_id=7,
+            files=(
+                OrganizedFile(f"{SAVE_PATH}/Anime S01E01.mkv", "media"),
+                OrganizedFile(f"{SAVE_PATH}/Anime S01E01.zh.ass", "subtitle"),
+            ),
+        )
+    ]
+
+
 def _skip(f: RenameInput) -> str:
     raise RenameSkipped("模板渲染失败：'titel' is undefined")
 
@@ -224,6 +255,22 @@ async def test_rename_strategy_failure_keeps_name_and_notifies_once(
     assert len(events) == 1
     assert events[0].task_id == "h1" and events[0].strategy == "custom"
     assert plugins.tripped == (["ext"] if counted else [])
+
+
+@pytest.mark.parametrize("classify", [lambda path: 1 / 0, lambda path: "video"])
+def test_check_files_plugin_media_files_failure_falls_back_to_suffix(plugins, classify):
+    impl = SimpleNamespace(classify=classify)
+    plugins.registry.add_provider(
+        points.MEDIA_FILES, ProviderEntry("ext", "custom", lambda: impl)
+    )
+    files = [{"name": NAME}, {"name": SUB}, {"name": "readme.txt"}]
+
+    with patch("module.downloader.path.settings") as mock_settings:
+        mock_settings.plugins.slots.media_files = "custom"
+        results = [check_files(files), check_files(files)]
+
+    assert results == [([NAME], [SUB])] * 2
+    assert plugins.tripped == ["ext"]
 
 
 def _task(file_count: int = 1, revision: int | None = 1) -> RevisionTask:

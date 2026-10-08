@@ -90,6 +90,7 @@ def test_download_client_qb_and_aria2_side_by_side(monkeypatch):
     assert isinstance(qb.client, QbDownloader)
     assert isinstance(ar.client, Aria2Downloader)
     assert ar.client.host.endswith("ar:6800")
+    assert ar.client.instance_id == "ar"
     assert Renamer(qb)._downloader_type() != Renamer(ar)._downloader_type()
 
 
@@ -447,24 +448,73 @@ class TestRuleOnAnotherInstance:
         moved = _mock("b")._torrents["hb"]["save_path"]
         assert moved == "/b/Bangumi/Test Anime (2024)/Season 2"
 
-    async def test_delete_rule_unavailable_instance_others_still_deleted(
+    async def test_update_rule_unavailable_instance_changes_nothing_for_retry(
         self, two_instances
     ):
+        """实例 b 不可用：a 上的种子不移动、规则不改，b 恢复后重试两边一起移动。"""
+        from module.manager import TorrentManager
+        from module.models import BangumiUpdate
+
+        bangumi_id = await self._rule_with_torrent_on_a()
+        hb = _completed("B", "hb", "/b/Bangumi/Test Anime (2024)/Season 1")
+        _mock("b")._torrents["hb"] = hb
+        _mock("b").auth = AsyncMock(return_value=False)  # type: ignore[method-assign]
+        async with Database() as db:
+            await db.torrent.add(
+                Torrent(name="B", url="u-b", bangumi_id=1, downloader_id="b")
+            )
+            old = await db.bangumi.search_id(bangumi_id)
+            assert old is not None
+            update = BangumiUpdate(**old.model_dump(exclude={"id"}))
+            update.season = 2
+            resp = await TorrentManager(db).update_rule(bangumi_id, update)
+            assert resp.status is False and resp.status_code == 500
+            assert _mock("a")._torrents["old"]["save_path"] == old.save_path
+            kept = await db.bangumi.search_id(bangumi_id)
+            assert kept is not None and kept.save_path == old.save_path
+
+            # 登录失败会丢弃缓存的客户端，恢复后是新的客户端实例
+            _mock("b")._torrents["hb"] = hb
+            update = BangumiUpdate(**old.model_dump(exclude={"id"}))
+            update.season = 2
+            retry = await TorrentManager(db).update_rule(bangumi_id, update)
+            assert retry.status is True
+            new = await db.bangumi.search_id(bangumi_id)
+
+        season2 = "Bangumi/Test Anime (2024)/Season 2"
+        assert new is not None and new.save_path == f"/a/{season2}"
+        assert _mock("a")._torrents["old"]["save_path"] == f"/a/{season2}"
+        assert _mock("b")._torrents["hb"]["save_path"] == f"/b/{season2}"
+
+    async def test_delete_rule_unavailable_instance_keeps_rule_for_retry(
+        self, two_instances
+    ):
+        """实例 a 不可用：b 上的种子照常删除，规则与种子行保留，a 恢复后重试删净。"""
         from module.manager import TorrentManager
 
         bangumi_id = await self._rule_with_torrent_on_a()
         _mock("b")._torrents["new"] = _completed(
             "New", "new", "/b/Bangumi/Test Anime (2024)/Season 1"
         )
+        auth = _mock("a").auth
         _mock("a").auth = AsyncMock(return_value=False)  # type: ignore[method-assign]
         async with Database() as db:
             await db.torrent.add(
                 Torrent(name="New", url="u-new", bangumi_id=1, downloader_id="b")
             )
             resp = await TorrentManager(db).delete_rule(bangumi_id, file=True)
+            assert _mock("b")._torrents == {}
+            assert resp.status is False and resp.status_code == 500
+            assert await db.bangumi.search_id(bangumi_id) is not None
+            rows = await db.torrent.search_by_bangumi_id(bangumi_id)
+            assert "a" in {r.downloader_id for r in rows}
 
-        assert _mock("b")._torrents == {}
-        assert resp.status is False and resp.status_code == 500
+            _mock("a").auth = auth  # type: ignore[method-assign]
+            retry = await TorrentManager(db).delete_rule(bangumi_id, file=True)
+            assert retry.status is True
+            assert _mock("a")._torrents == {}
+            assert await db.bangumi.search_id(bangumi_id) is None
+            assert await db.torrent.search_by_bangumi_id(bangumi_id) == []
 
 
 async def test_eps_complete_unavailable_instance_other_rules_collected(two_instances):

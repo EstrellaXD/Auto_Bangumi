@@ -26,7 +26,7 @@ AB は GitHub release `plugins` から `catalog.json` をダウンロードし�
       "kind": "plugin",
       "extension_points": ["notifier"],
       "sdk": ">=0.5,<1",
-      "min_ab_version": "4.0.0",
+      "min_ab_version": "4.0.0-beta.1",
       "description": "…",
       "asset": "ntfy-notifier-0.1.0.zip",
       "sha256": "…"
@@ -49,8 +49,8 @@ AB は GitHub release `plugins` から `catalog.json` をダウンロードし�
 
 カタログのプラグインが依存できるのは、標準ライブラリと AB に既にあるパッケージだけです。AB は pip を実行しません。サードパーティの純 Python ライブラリは `vendor/` に入れてください。
 
-::: warning WebUI にはまだカタログの画面がありません
-4.0 のプレビュー期間中、カタログの閲覧とインストールは API だけです。設定 → プラグインのページには対応するボタンがありません。
+::: tip WebUI からインストールする
+設定 → プラグインの「Plugin catalog」（プラグインカタログ）で「Browse catalog」を選ぶと、カタログのプラグインをインストール・更新できます。カタログからインストールしたプラグインのカードには「Uninstall」ボタンがあります。組み込み、ローカル、pip のプラグインにはありません。
 :::
 
 API：
@@ -75,11 +75,11 @@ API：
 
    ```bash
    uv run --no-project --with cryptography python scripts/build_plugin_catalog.py \
-       --key ~/.autobangumi/update-signing-key.pem --min-ab 4.0.0 \
+       --key ~/.autobangumi/update-signing-key.pem --min-ab 4.0.0-beta.1 \
        --out release-assets dist/*.zip
    ```
 
-   スクリプトは `catalog.json`、各 zip、およびその `.sig` を出力します。
+   スクリプトは `catalog.json`、各 zip、およびその `.sig` を出力します。`--min-ab` に `4.0.0` を指定しないでください。semver では `4.0.0-beta.N` は `4.0.0` より低いため、4.0 beta のユーザーがインストールできなくなります。
 4. メンテナーがディレクトリ全体を release `plugins` にアップロードします（古いファイルは上書きします）。
 
 ユーザーは `GET /api/v1/plugins/catalog` で新しいバージョンを確認できます。

@@ -120,26 +120,29 @@ class TorrentManager:
     async def delete_rule(self, _id: int | str, file: bool = False):
         data = await self.db.bangumi.search_id(int(_id))
         if isinstance(data, Bangumi):
-            # 种子行删除前先记下种子所在的实例
-            instance_ids = await self._torrent_instances(data) if file else []
+            torrent_message = None
+            if file:
+                # Only the file-cleanup path needs the downloader, so an
+                # unreachable downloader shouldn't block a DB-only delete.
+                torrent_message = await self.delete_torrents(
+                    data, await self._torrent_instances(data)
+                )
+                if torrent_message.status_code == 500:
+                    # 种子行经外键引用番剧，且记录了种子所在的实例：两者都保留，
+                    # 实例恢复后重试删除（已删净的实例上匹配不到种子，直接跳过）
+                    return ResponseModel(
+                        status_code=500,
+                        status=False,
+                        msg_en=f"Deleting torrents for {data.official_title} "
+                        "failed; the rule was kept, retry later.",
+                        msg_zh=f"删除 {data.official_title} 的种子失败，"
+                        "规则已保留，请稍后重试。",
+                    )
             # Clean up torrent records so re-adding the same anime can re-download
             await self.db.torrent.delete_by_bangumi_id(int(_id))
             await self.db.bangumi.delete_one(int(_id))
             # 番剧删除后停用其独立订阅的孤儿 RSS；聚合订阅不受影响
             await self._disable_orphan_sub_rss(data)
-            torrent_message = None
-            if file:
-                # Only the file-cleanup path needs the downloader, so an
-                # unreachable downloader shouldn't block a DB-only delete.
-                torrent_message = await self.delete_torrents(data, instance_ids)
-                if torrent_message.status_code == 500:
-                    return ResponseModel(
-                        status_code=500,
-                        status=False,
-                        msg_en=f"Deleted rule for {data.official_title}, "
-                        "but deleting its torrents failed.",
-                        msg_zh=f"已删除 {data.official_title} 规则，但删除种子失败。",
-                    )
             logger.info(f"Delete rule for {data.official_title}")
             return ResponseModel(
                 status_code=200,
@@ -218,13 +221,33 @@ class TorrentManager:
             # 没换：规则的种子可能经订阅进了别的实例，逐个实例按各自的
             # 下载目录移动
             if new_instance == old_instance:
-                for instance_id in await self._torrent_instances(old_data):
-                    root = settings.downloader_instance(instance_id).path
-                    moved_path = gen_save_path(data, root)
-                    old_paths = _save_paths(old_data, root)
-                    if old_paths == {normalize_save_path(moved_path)}:
-                        continue
-                    match_list = await self.__match_torrents_list(old_data, instance_id)
+                # 先在所有实例上匹配种子：任一实例不可用就什么都不改，
+                # 避免一部分实例已移动而规则仍记着旧目录
+                moves = []
+                try:
+                    for instance_id in await self._torrent_instances(old_data):
+                        root = settings.downloader_instance(instance_id).path
+                        moved_path = gen_save_path(data, root)
+                        old_paths = _save_paths(old_data, root)
+                        if old_paths == {normalize_save_path(moved_path)}:
+                            continue
+                        match_list = await self.__match_torrents_list(
+                            old_data, instance_id
+                        )
+                        moves.append((instance_id, moved_path, old_paths, match_list))
+                except ConnectionError as e:
+                    logger.warning(
+                        "[Manager] Can't update rule %s: %s", old_data.rule_name, e
+                    )
+                    return ResponseModel(
+                        status_code=500,
+                        status=False,
+                        msg_en=f"Updating {old_data.official_title} failed: a "
+                        "downloader is unreachable; nothing was changed, retry later.",
+                        msg_zh=f"更新 {old_data.official_title} 失败：下载器不可用，"
+                        "规则未修改，请稍后重试。",
+                    )
+                for instance_id, moved_path, old_paths, match_list in moves:
                     async with DownloadClient(instance_id) as client:
                         # Move existing torrents to new location if path changed
                         if match_list:
