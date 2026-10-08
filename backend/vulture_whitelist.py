@@ -85,5 +85,6 @@ _.pn_strategy
 _.advance_strategy
 _.template_strategy
 HardlinkPlugin
-_.on_organized
+MediaServerRefresh
+_.on_organized  # hardlink 与 media-server-refresh 共用
 _.api  # 插件 HTTP 路由，宿主挂载到 /api/v1/plugins/<id>/
