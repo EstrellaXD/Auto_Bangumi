@@ -166,12 +166,13 @@ class DownloaderUnavailableEvent(SystemEvent):
 
     host: str
     reason: str  # unreachable | credentials | banned
+    instance_id: str = "default"  # 下载器实例 id（plugins.instances）
 
     def dedup_key(self) -> str | None:
-        return f"downloader:{self.host}"
+        return f"downloader:{self.instance_id}"
 
     def payload(self) -> dict:
-        return {"host": self.host, "reason": self.reason}
+        return {"host": self.host, "reason": self.reason, "instance": self.instance_id}
 
     def describe(self) -> tuple[str, str]:
         details = {
@@ -180,7 +181,10 @@ class DownloaderUnavailableEvent(SystemEvent):
             "unreachable": "无法连接下载器，请检查地址、端口和网络。",
         }
         detail = details.get(self.reason, details["unreachable"])
-        return ("下载器连接异常", f"下载器：{self.host}\n{detail}")
+        return (
+            "下载器连接异常",
+            f"下载器：{self.instance_id}（{self.host}）\n{detail}",
+        )
 
 
 @dataclass(frozen=True, slots=True)

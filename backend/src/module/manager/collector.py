@@ -2,7 +2,12 @@ import logging
 
 from module.database import Database
 from module.database.bangumi import release_fits_bangumi
-from module.downloader import AddResult, DownloadClient
+from module.downloader import (
+    AddResult,
+    DownloadClient,
+    DownloaderPool,
+    resolve_downloader_id,
+)
 from module.models import Bangumi, ResponseModel
 from module.network import RequestContent
 from module.rss import RSSEngine
@@ -129,10 +134,12 @@ async def eps_complete():
         datas = await db.bangumi.not_complete()
         if datas:
             logger.info("Start collecting full season...")
-            async with DownloadClient() as client:
-                collector = SeasonCollector(client)
+            async with DownloaderPool() as downloaders:
                 for data in datas:
                     if not data.eps_collect:
-                        await collector.collect_season(data)
+                        client = await downloaders.get(
+                            resolve_downloader_id(data.downloader_id)
+                        )
+                        await SeasonCollector(client).collect_season(data)
                     data.eps_collect = True
             await db.bangumi.update_all(datas)

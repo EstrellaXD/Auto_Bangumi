@@ -4,13 +4,15 @@ import re
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from module.conf import settings
 from module.database import Database
 from module.database.bangumi import (
     build_save_path_index,
     match_bangumi_in_list,
     normalize_save_path,
 )
-from module.downloader import DownloadClient
+from module.downloader import DownloadClient, downloader_ids, list_torrents
+from module.models.config import DOWNLOADER_POINT
 from module.security.api import get_current_user
 
 logger = logging.getLogger(__name__)
@@ -20,10 +22,11 @@ router = APIRouter(prefix="/downloader", tags=["downloader"])
 
 class TorrentHashesRequest(BaseModel):
     hashes: list[str]
+    # 种子所在的下载器实例；为空时为默认实例
+    downloader_id: str | None = None
 
 
-class TorrentDeleteRequest(BaseModel):
-    hashes: list[str]
+class TorrentDeleteRequest(TorrentHashesRequest):
     delete_files: bool = False
 
 
@@ -32,12 +35,37 @@ class TorrentTagRequest(BaseModel):
 
     hash: str
     bangumi_id: int
+    downloader_id: str | None = None
+
+
+def _client(downloader_id: str | None) -> DownloadClient:
+    if downloader_id is not None and downloader_id not in downloader_ids():
+        raise HTTPException(
+            status_code=404, detail=f"Downloader instance {downloader_id} not found"
+        )
+    return DownloadClient(downloader_id)
+
+
+@router.get("/instances", dependencies=[Depends(get_current_user)])
+async def get_instances():
+    """下载器实例列表（供规则 / 订阅选择下载器）。"""
+    return {
+        "default": settings.plugins.slots.downloader,
+        "instances": [
+            {"id": i.id, "provider": i.provider}
+            for i in settings.plugins.instances
+            if i.point == DOWNLOADER_POINT
+        ],
+    }
 
 
 @router.get("/torrents", dependencies=[Depends(get_current_user)])
 async def get_torrents():
-    async with DownloadClient() as client:
-        return await client.get_torrent_info(category="Bangumi", status_filter=None)
+    """所有下载器实例的种子（每条带 downloader_id）；不可用的实例跳过。"""
+    torrents = await list_torrents()
+    if torrents is None:
+        raise HTTPException(status_code=503, detail="No downloader is reachable")
+    return torrents
 
 
 @router.get("/rename-conflicts", dependencies=[Depends(get_current_user)])
@@ -79,7 +107,7 @@ async def retry_rename_conflict(operation_id: int):
 @router.post("/torrents/pause", dependencies=[Depends(get_current_user)])
 async def pause_torrents(req: TorrentHashesRequest):
     hashes = "|".join(req.hashes)
-    async with DownloadClient() as client:
+    async with _client(req.downloader_id) as client:
         await client.pause_torrent(hashes)
     return {"msg_en": "Torrents paused", "msg_zh": "种子已暂停"}
 
@@ -87,7 +115,7 @@ async def pause_torrents(req: TorrentHashesRequest):
 @router.post("/torrents/resume", dependencies=[Depends(get_current_user)])
 async def resume_torrents(req: TorrentHashesRequest):
     hashes = "|".join(req.hashes)
-    async with DownloadClient() as client:
+    async with _client(req.downloader_id) as client:
         await client.resume_torrent(hashes)
     return {"msg_en": "Torrents resumed", "msg_zh": "种子已恢复"}
 
@@ -95,7 +123,7 @@ async def resume_torrents(req: TorrentHashesRequest):
 @router.post("/torrents/delete", dependencies=[Depends(get_current_user)])
 async def delete_torrents(req: TorrentDeleteRequest):
     hashes = "|".join(req.hashes)
-    async with DownloadClient() as client:
+    async with _client(req.downloader_id) as client:
         ok = await client.delete_torrent(hashes, delete_files=req.delete_files)
     if not ok:
         return {
@@ -124,7 +152,7 @@ async def tag_torrent(req: TorrentTagRequest):
             }
 
     tag = f"ab:{req.bangumi_id}"
-    async with DownloadClient() as client:
+    async with _client(req.downloader_id) as client:
         await client.add_tag(req.hash, tag)
 
     return {
@@ -150,42 +178,45 @@ async def auto_tag_torrents():
         bangumi_list = await db.bangumi.search_all()
     save_path_index = build_save_path_index(bangumi_list)
 
-    async with DownloadClient() as client:
-        # Get all Bangumi torrents
-        torrents = await client.get_torrent_info(category="Bangumi", status_filter=None)
+    for instance_id in downloader_ids():
+        async with DownloadClient(instance_id) as client:
+            # Get all Bangumi torrents
+            torrents = await client.get_torrent_info(
+                category="Bangumi", status_filter=None
+            )
 
-        for torrent in torrents:
-            torrent_hash = torrent["hash"]
-            torrent_name = torrent["name"]
-            save_path = torrent["save_path"]
-            tags = torrent.get("tags", "")
+            for torrent in torrents:
+                torrent_hash = torrent["hash"]
+                torrent_name = torrent["name"]
+                save_path = torrent["save_path"]
+                tags = torrent.get("tags", "")
 
-            # Skip if already has an ab:<id> link tag。必须精确匹配数字 id：
-            # ab:renamed（处理完成标记）等同前缀标签不代表已关联番剧
-            if re.search(r"ab:\d+", tags):
-                continue
+                # Skip if already has an ab:<id> link tag。必须精确匹配数字 id：
+                # ab:renamed（处理完成标记）等同前缀标签不代表已关联番剧
+                if re.search(r"ab:\d+", tags):
+                    continue
 
-            # First try by torrent name, then fall back to save_path
-            bangumi = match_bangumi_in_list(torrent_name, bangumi_list)
-            if not bangumi:
-                bangumi = save_path_index.get(normalize_save_path(save_path))
+                # First try by torrent name, then fall back to save_path
+                bangumi = match_bangumi_in_list(torrent_name, bangumi_list)
+                if not bangumi:
+                    bangumi = save_path_index.get(normalize_save_path(save_path))
 
-            if bangumi and not bangumi.deleted:
-                tag = f"ab:{bangumi.id}"
-                await client.add_tag(torrent_hash, tag)
-                tagged_count += 1
-                logger.info(
-                    f"Tagged '{torrent_name[:50]}...' with {tag} "
-                    f"(matched: {bangumi.official_title})"
-                )
-            else:
-                unmatched.append(
-                    {
-                        "hash": torrent_hash,
-                        "name": torrent_name,
-                        "save_path": save_path,
-                    }
-                )
+                if bangumi and not bangumi.deleted:
+                    tag = f"ab:{bangumi.id}"
+                    await client.add_tag(torrent_hash, tag)
+                    tagged_count += 1
+                    logger.info(
+                        f"Tagged '{torrent_name[:50]}...' with {tag} "
+                        f"(matched: {bangumi.official_title})"
+                    )
+                else:
+                    unmatched.append(
+                        {
+                            "hash": torrent_hash,
+                            "name": torrent_name,
+                            "save_path": save_path,
+                        }
+                    )
 
     return {
         "status": True,

@@ -167,13 +167,14 @@ class RevisionSaga:
         return value <= datetime.now(timezone.utc)
 
     def _downloader_type(self) -> str:
-        configured = settings.downloader.type
+        instance = self.client.instance
+        configured = instance.type
         downloader_type = (
             configured
             if isinstance(configured, str)
             else type(self.client.client).__name__.lower()
         )
-        host = settings.downloader.host
+        host = instance.host
         if not isinstance(host, str) or not host:
             return downloader_type
         instance_hash = hashlib.sha256(host.strip().lower().encode()).hexdigest()[:12]
@@ -191,7 +192,9 @@ class RevisionSaga:
 
         incoming_id = self._parse_bangumi_id_from_tags(incoming.get("tags"))
         _, incoming_season = path_to_bangumi(
-            incoming.get("save_path", ""), incoming.get("name", "")
+            incoming.get("save_path", ""),
+            incoming.get("name", ""),
+            self.client.instance.path,
         )
         incoming_identity = parse_revision_identity(
             incoming.get("name", ""),
@@ -229,7 +232,9 @@ class RevisionSaga:
             ):
                 continue
             _, old_season = path_to_bangumi(
-                info.get("save_path", ""), info.get("name", "")
+                info.get("save_path", ""),
+                info.get("name", ""),
+                self.client.instance.path,
             )
             owners.append(
                 RevisionOwner(

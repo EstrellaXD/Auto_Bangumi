@@ -22,7 +22,7 @@ from module.api.log import _read_log_tail
 from module.conf import LOG_PATH, VERSION
 from module.core import AppContext
 from module.database import Database
-from module.downloader import DownloadClient
+from module.downloader import list_torrents
 from module.notification.inbox import InboxChanged, inbox_revision
 from module.plugin.host import get_bus
 from module.security.api import get_current_user
@@ -54,25 +54,14 @@ def _status_payload(ctx: AppContext) -> dict:
     }
 
 
-async def _fetch_torrents() -> list[dict]:
-    async with DownloadClient() as client:
-        return await client.get_torrent_info(category="Bangumi", status_filter=None)
-
-
 async def _downloader_payload() -> list[dict] | None:
-    """获取种子列表；下载器未配置、不可达或超时时返回 None。
+    """获取所有下载器实例的种子列表；全部实例不可达或超时时返回 None。
 
-    asyncio.wait_for 超时会取消内部任务并等待其退出，慢查询不会泄漏；
-    None 会以 null 推送给前端，作为显式的"下载器不可用"信号。
+    超时按实例计算，一个实例不可用不影响其它实例的种子；asyncio.wait_for
+    超时会取消内部任务并等待其退出，慢查询不会泄漏。None 会以 null 推送给
+    前端，作为显式的"下载器不可用"信号。
     """
-    try:
-        return await asyncio.wait_for(_fetch_torrents(), _DOWNLOADER_TIMEOUT_SECONDS)
-    except asyncio.TimeoutError:
-        logger.debug("SSE: downloader status fetch timed out")
-        return None
-    except Exception:
-        logger.debug("SSE: downloader status unavailable", exc_info=True)
-        return None
+    return await list_torrents(timeout=_DOWNLOADER_TIMEOUT_SECONDS)
 
 
 async def _notification_payload() -> dict:

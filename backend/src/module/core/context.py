@@ -271,7 +271,9 @@ class AppContext:
         try:
             await self.notifier.send_event(
                 DownloaderUnavailableEvent(
-                    host=self.settings.downloader.host, reason=reason
+                    host=self.settings.downloader.host,
+                    reason=reason,
+                    instance_id=self.settings.plugins.slots.downloader,
                 )
             )
         except Exception:

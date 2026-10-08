@@ -182,7 +182,7 @@ class TestOtherAuthRequired:
 class TestGetTorrents:
     def test_get_torrents_success(self, authed_client, mock_download_client):
         """GET /downloader/torrents returns list of torrents."""
-        with patch("module.api.downloader.DownloadClient") as MockClient:
+        with patch("module.downloader.download_client.DownloadClient") as MockClient:
             MockClient.return_value.__aenter__ = AsyncMock(
                 return_value=mock_download_client
             )
@@ -194,11 +194,12 @@ class TestGetTorrents:
         data = response.json()
         assert len(data) == 2
         assert data[0]["hash"] == "abc123"
+        assert data[0]["downloader_id"] == "default"
 
     def test_get_torrents_empty(self, authed_client, mock_download_client):
         """GET /downloader/torrents returns empty list when no torrents."""
         mock_download_client.get_torrent_info.return_value = []
-        with patch("module.api.downloader.DownloadClient") as MockClient:
+        with patch("module.downloader.download_client.DownloadClient") as MockClient:
             MockClient.return_value.__aenter__ = AsyncMock(
                 return_value=mock_download_client
             )

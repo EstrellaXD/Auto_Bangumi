@@ -99,7 +99,7 @@ class TestRssTick:
 
         with (
             patch(
-                "module.core.loops.DownloadClient",
+                "module.core.loops.DownloaderPool",
                 return_value=_async_cm(AsyncMock()),
             ),
             patch("module.core.loops.Database", return_value=_async_cm(mock_db)),
@@ -125,7 +125,7 @@ class TestRssTick:
 
         with (
             patch(
-                "module.core.loops.DownloadClient",
+                "module.core.loops.DownloaderPool",
                 return_value=_async_cm(AsyncMock()),
             ),
             patch("module.core.loops.Database", return_value=_async_cm(mock_db)),
@@ -144,6 +144,15 @@ class TestRssTick:
 # ---------------------------------------------------------------------------
 
 
+def _rename_all(renamer):
+    """rename_all 的替身：返回模拟 Renamer 的结果与事件。"""
+
+    async def run():
+        return await renamer.rename(), list(renamer.events)
+
+    return run
+
+
 class TestRenameTick:
     async def test_persists_and_dispatches_conflict_event_when_push_disabled(self):
         event = RenameConflictEvent(
@@ -158,11 +167,7 @@ class TestRenameTick:
         mock_renamer.events = [event]
 
         with (
-            patch(
-                "module.core.loops.DownloadClient",
-                return_value=_async_cm(AsyncMock()),
-            ),
-            patch("module.core.loops.Renamer", return_value=mock_renamer),
+            patch("module.core.loops.rename_all", _rename_all(mock_renamer)),
             patch("module.core.loops.settings") as mock_settings,
         ):
             mock_settings.notification.enable = False
@@ -180,11 +185,7 @@ class TestRenameTick:
         mock_renamer.rename = AsyncMock(return_value=[notify])
 
         with (
-            patch(
-                "module.core.loops.DownloadClient",
-                return_value=_async_cm(AsyncMock()),
-            ),
-            patch("module.core.loops.Renamer", return_value=mock_renamer),
+            patch("module.core.loops.rename_all", _rename_all(mock_renamer)),
             patch("module.core.loops.settings") as mock_settings,
         ):
             mock_settings.notification.enable = True
@@ -200,11 +201,7 @@ class TestRenameTick:
         mock_renamer.rename = AsyncMock(return_value=[notify])
 
         with (
-            patch(
-                "module.core.loops.DownloadClient",
-                return_value=_async_cm(AsyncMock()),
-            ),
-            patch("module.core.loops.Renamer", return_value=mock_renamer),
+            patch("module.core.loops.rename_all", _rename_all(mock_renamer)),
             patch("module.core.loops.settings") as mock_settings,
         ):
             mock_settings.notification.enable = False
@@ -232,11 +229,7 @@ class TestRenameTick:
         mock_renamer.rename = AsyncMock(return_value=notifications)
 
         with (
-            patch(
-                "module.core.loops.DownloadClient",
-                return_value=_async_cm(AsyncMock()),
-            ),
-            patch("module.core.loops.Renamer", return_value=mock_renamer),
+            patch("module.core.loops.rename_all", _rename_all(mock_renamer)),
             patch("module.core.loops.settings") as mock_settings,
         ):
             mock_settings.notification.enable = True

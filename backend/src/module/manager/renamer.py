@@ -21,10 +21,19 @@ from module.database.bangumi import (
     match_bangumi_in_list,
     normalize_save_path,
 )
-from module.downloader import DownloadClient, RenameOutcome, RenameResult
+from module.downloader import (
+    DownloadClient,
+    RenameOutcome,
+    RenameResult,
+    downloader_ids,
+)
 from module.downloader.path import check_files, is_ep, path_to_bangumi
 from module.models import EpisodeFile, Notification, SubtitleFile
-from module.notification import RenameSkippedEvent, SystemEvent
+from module.notification import (
+    DownloaderUnavailableEvent,
+    RenameSkippedEvent,
+    SystemEvent,
+)
 from module.parser import TitleParser
 from module.plugin import host as plugin_host
 from module.plugin.registry import ProviderEntry
@@ -44,8 +53,8 @@ from .revision_saga import (
 
 logger = logging.getLogger(__name__)
 
-# 下载器 id：多下载器（P2.5）之前只有一个
-_DOWNLOADER_ID = "default"
+# 上一轮不可用的下载器实例：只在「可用 → 不可用」时通知一次
+_unavailable: set[str] = set()
 # 已记录过「未登记」日志的重命名方式（每个进程只记一次，重新登记后清除）
 _missing_methods: set[str] = set()
 # 已发布过的 TorrentOrganized（种子 hash → 最终文件）。未打 ab:renamed 标签的
@@ -589,7 +598,7 @@ class Renamer(RevisionSaga):
                     old_path=_downloader_path(save_path, old),
                     new_path=_downloader_path(save_path, new),
                     file_kind=kind,
-                    downloader_id=_DOWNLOADER_ID,
+                    downloader_id=self.client.instance_id,
                 )
             )
         reason = self._skipped.pop(torrent_hash, None)
@@ -624,7 +633,7 @@ class Renamer(RevisionSaga):
                 torrent_hash=torrent_hash,
                 bangumi_id=bangumi_id,
                 files=files,
-                downloader_id=_DOWNLOADER_ID,
+                downloader_id=self.client.instance_id,
             )
         )
 
@@ -651,6 +660,10 @@ class Renamer(RevisionSaga):
                 # Collect all hashes for batch query
                 hashes = [info["hash"] for info in torrents_info]
                 torrent_records = await db.torrent.search_by_qb_hashes(hashes)
+                # 同一 hash 在多个实例都有记录时，以本实例的记录为准（排在后面覆盖）
+                torrent_records.sort(
+                    key=lambda r: r.downloader_id == self.client.instance_id
+                )
                 hash_to_bangumi_id = {
                     r.qb_hash: r.bangumi_id for r in torrent_records if r.bangumi_id
                 }
@@ -758,7 +771,9 @@ class Renamer(RevisionSaga):
             info_by_hash.setdefault(info["hash"], info)
         all_infos = list(info_by_hash.values())
         async with Database() as db:
-            active_replacements = await db.rename_operation.list_active_replacements()
+            active_replacements = await db.rename_operation.list_active_replacements(
+                self._downloader_type()
+            )
         active_replacement_ids = {
             operation.new_task_id for operation in active_replacements
         }
@@ -808,7 +823,9 @@ class Renamer(RevisionSaga):
                 )
                 continue
             media_list, subtitle_list = check_files(files)
-            bangumi_name, season = path_to_bangumi(save_path, torrent_name)
+            bangumi_name, season = path_to_bangumi(
+                save_path, torrent_name, self.client.instance.path
+            )
             episode_offset, episode_type = offset_map[torrent_hash]
             kwargs = {
                 "torrent_name": torrent_name,
@@ -875,3 +892,38 @@ class Renamer(RevisionSaga):
             )
         logger.debug("Rename process finished.")
         return renamed_info
+
+
+async def rename_all() -> tuple[list[Notification], list[SystemEvent]]:
+    """逐个下载器实例运行一轮重命名。
+
+    进不去的实例（连不上、凭据被拒、Provider 未登记）跳过，不影响其它实例；
+    它从可用变为不可用时产生一条 :class:`DownloaderUnavailableEvent`。
+    """
+    renamed: list[Notification] = []
+    events: list[SystemEvent] = []
+    for instance_id in downloader_ids():
+        client: DownloadClient | None = None
+        try:
+            client = DownloadClient(instance_id)
+            await client.__aenter__()
+        except Exception as e:
+            logger.warning("Downloader %s unavailable, skipped: %s", instance_id, e)
+            if instance_id not in _unavailable:
+                _unavailable.add(instance_id)
+                events.append(
+                    DownloaderUnavailableEvent(
+                        host=settings.downloader_instance(instance_id).host,
+                        reason=(client and client.last_auth_error) or "unreachable",
+                        instance_id=instance_id,
+                    )
+                )
+            continue
+        _unavailable.discard(instance_id)
+        try:
+            renamer = Renamer(client)
+            renamed += await renamer.rename()
+            events += renamer.events
+        finally:
+            await client.__aexit__(None, None, None)
+    return renamed, events

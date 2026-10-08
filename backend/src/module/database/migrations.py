@@ -100,8 +100,14 @@ class Migration:
         return self.statements
 
 
-# 存量行归属默认下载器实例（plugins.instances 中 id 为 default 的实例）
-_DOWNLOADER_ID_TABLES = ("bangumi", "movie", "rssitem", "torrent")
+# 规则与订阅的 downloader_id 为空表示「用默认实例」，存量行保持为空；
+# 种子记录实际所在的实例，存量种子都在 3.3 的下载器，即实例 default
+_DOWNLOADER_ID_COLUMNS = {
+    "bangumi": "downloader_id VARCHAR",
+    "movie": "downloader_id VARCHAR",
+    "rssitem": "downloader_id VARCHAR",
+    "torrent": "downloader_id VARCHAR DEFAULT 'default'",
+}
 
 
 def _has_downloader_id(table: str) -> AppliedCheck:
@@ -817,17 +823,13 @@ MIGRATIONS: tuple[Migration, ...] = (
         26,
         "add downloader_id to bangumi, movie, rssitem and torrent",
         tuple(
-            f"ALTER TABLE {table} ADD COLUMN downloader_id VARCHAR DEFAULT 'default'"
-            for table in _DOWNLOADER_ID_TABLES
+            f"ALTER TABLE {table} ADD COLUMN {column}"
+            for table, column in _DOWNLOADER_ID_COLUMNS.items()
         ),
-        all_checks(*(_has_downloader_id(table) for table in _DOWNLOADER_ID_TABLES)),
+        all_checks(*(_has_downloader_id(table) for table in _DOWNLOADER_ID_COLUMNS)),
         tuple(
-            (
-                f"ALTER TABLE {table} ADD COLUMN downloader_id VARCHAR "
-                "DEFAULT 'default'",
-                _has_downloader_id(table),
-            )
-            for table in _DOWNLOADER_ID_TABLES
+            (f"ALTER TABLE {table} ADD COLUMN {column}", _has_downloader_id(table))
+            for table, column in _DOWNLOADER_ID_COLUMNS.items()
         ),
     ),
 )

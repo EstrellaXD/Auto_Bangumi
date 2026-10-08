@@ -466,10 +466,15 @@ class Config(BaseModel):
 
     def downloader_instance(self, instance_id: str) -> DownloaderInstance:
         instance = next(
-            i
-            for i in self.plugins.instances
-            if i.id == instance_id and i.point == DOWNLOADER_POINT
+            (
+                i
+                for i in self.plugins.instances
+                if i.id == instance_id and i.point == DOWNLOADER_POINT
+            ),
+            None,
         )
+        if instance is None:
+            raise KeyError(f"unknown downloader instance {instance_id!r}")
         options = DownloaderOptions.model_validate(instance.options)
         return DownloaderInstance(
             id=instance.id,

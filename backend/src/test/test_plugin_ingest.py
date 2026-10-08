@@ -31,7 +31,7 @@ from module.plugin.registry import HookEntry, ProviderEntry
 from module.plugin.runner import CircuitBreaker, HookRunner
 from module.rss.analyser import RSSAnalyser
 from module.rss.engine import RSSEngine
-from test.factories import make_bangumi, make_rss_item, make_torrent
+from test.factories import SingleClientPool, make_bangumi, make_rss_item, make_torrent
 
 TORRENT_NAME = "[Sub] Mushoku Tensei - 12 [1080p].mkv"
 
@@ -69,7 +69,7 @@ async def refresh_with(engine: RSSEngine, torrents: list[Torrent]):
     client.add_torrent = AsyncMock(return_value=AddResult.ADDED)
     with patch.object(RSSEngine, "_get_torrents", new_callable=AsyncMock) as get:
         get.return_value = torrents
-        await engine.refresh_rss(client)
+        await engine.refresh_rss(SingleClientPool(client))
     return client
 
 

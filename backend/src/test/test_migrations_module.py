@@ -705,8 +705,10 @@ class TestRunMigrations:
         assert prefix == "legacy_cccccccc"
 
     @pytest.mark.parametrize("preexisting", [None, "torrent"])
-    def test_v26_downloader_id_existing_rows_default(self, preexisting, monkeypatch):
-        """v26：存量番剧 / 电影 / 订阅 / 种子都归属默认下载器实例；
+    def test_v26_downloader_id_existing_rows_follow_default(
+        self, preexisting, monkeypatch
+    ):
+        """v26：存量种子归属实例 default；番剧 / 电影 / 订阅为空（跟随默认实例）。
         已有该列的表（如被 create_all 提前建出）跳过，其它表照常补列。"""
         engine = _make_v0_engine()
         with engine.begin() as conn:
@@ -728,12 +730,13 @@ class TestRunMigrations:
 
         run_migrations(engine)
 
+        expected = {"bangumi": None, "movie": None, "rssitem": None}
         with engine.connect() as conn:
             for table in ("bangumi", "movie", "rssitem", "torrent"):
                 values = conn.execute(
                     text(f"SELECT downloader_id FROM {table}")
                 ).scalars()
-                assert list(values) == ["default"], table
+                assert list(values) == [expected.get(table, "default")], table
 
     def test_is_idempotent(self):
         engine = _make_v0_engine()

@@ -70,12 +70,15 @@ def check_files(files: list[dict]):
     return media_list, subtitle_list
 
 
-def path_to_bangumi(save_path: PathLike[str] | str, torrent_name: str = ""):
+def path_to_bangumi(
+    save_path: PathLike[str] | str, torrent_name: str = "", root: str | None = None
+):
+    """``root`` 为种子所在下载器实例的下载目录，缺省为默认实例的。"""
     # Use PureWindowsPath regardless of the host AB runs on: it accepts
     # both "\" and "/" separators, so a qBittorrent-on-Windows save_path
     # reaching a Linux AB still splits into segments correctly (#1016).
     save_parts = PureWindowsPath(save_path).parts
-    download_parts = PureWindowsPath(settings.downloader.path).parts
+    download_parts = PureWindowsPath(root or settings.downloader.path).parts
     # Get bangumi name and season
     bangumi_name = ""
     season = 1
@@ -107,8 +110,12 @@ def _media_folder(data: Bangumi | BangumiUpdate | Movie | MovieUpdate) -> str:
     return "Unknown Bangumi"
 
 
-def gen_save_path(data: Bangumi | BangumiUpdate | Movie | MovieUpdate) -> str:
+def gen_save_path(
+    data: Bangumi | BangumiUpdate | Movie | MovieUpdate, root: str | None = None
+) -> str:
     """Generate save path for a bangumi.
+
+    ``root`` 为目标下载器实例的下载目录，缺省为默认实例的。
 
     The save path uses the adjusted season number (season + season_offset)
     so files are saved directly to the correct season folder.
@@ -121,7 +128,7 @@ def gen_save_path(data: Bangumi | BangumiUpdate | Movie | MovieUpdate) -> str:
     episode_type = getattr(data, "episode_type", "episode")
     if isinstance(data, (Movie, MovieUpdate)) or episode_type == "movie":
         # 电影/剧场版：Title (Year)/Title (Year).ext，不建 Season 子目录
-        return str(Path(settings.downloader.path) / folder)
+        return str(Path(root or settings.downloader.path) / folder)
     # Apply season_offset to get the adjusted season number for the folder
     adjusted_season = data.season + getattr(data, "season_offset", 0)
     # 季号下限：普通剧集最小为 1——偏移到 Season 0 会被 Plex/Jellyfin 当作
@@ -132,7 +139,9 @@ def gen_save_path(data: Bangumi | BangumiUpdate | Movie | MovieUpdate) -> str:
         logger.warning(
             f"Season offset would result in invalid season for {data.official_title}, using original season"
         )
-    save_path = Path(settings.downloader.path) / folder / f"Season {adjusted_season}"
+    save_path = (
+        Path(root or settings.downloader.path) / folder / f"Season {adjusted_season}"
+    )
     return str(save_path)
 
 
