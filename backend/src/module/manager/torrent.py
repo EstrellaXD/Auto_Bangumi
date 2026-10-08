@@ -221,13 +221,33 @@ class TorrentManager:
             # 没换：规则的种子可能经订阅进了别的实例，逐个实例按各自的
             # 下载目录移动
             if new_instance == old_instance:
-                for instance_id in await self._torrent_instances(old_data):
-                    root = settings.downloader_instance(instance_id).path
-                    moved_path = gen_save_path(data, root)
-                    old_paths = _save_paths(old_data, root)
-                    if old_paths == {normalize_save_path(moved_path)}:
-                        continue
-                    match_list = await self.__match_torrents_list(old_data, instance_id)
+                # 先在所有实例上匹配种子：任一实例不可用就什么都不改，
+                # 避免一部分实例已移动而规则仍记着旧目录
+                moves = []
+                try:
+                    for instance_id in await self._torrent_instances(old_data):
+                        root = settings.downloader_instance(instance_id).path
+                        moved_path = gen_save_path(data, root)
+                        old_paths = _save_paths(old_data, root)
+                        if old_paths == {normalize_save_path(moved_path)}:
+                            continue
+                        match_list = await self.__match_torrents_list(
+                            old_data, instance_id
+                        )
+                        moves.append((instance_id, moved_path, old_paths, match_list))
+                except ConnectionError as e:
+                    logger.warning(
+                        "[Manager] Can't update rule %s: %s", old_data.rule_name, e
+                    )
+                    return ResponseModel(
+                        status_code=500,
+                        status=False,
+                        msg_en=f"Updating {old_data.official_title} failed: a "
+                        "downloader is unreachable; nothing was changed, retry later.",
+                        msg_zh=f"更新 {old_data.official_title} 失败：下载器不可用，"
+                        "规则未修改，请稍后重试。",
+                    )
+                for instance_id, moved_path, old_paths, match_list in moves:
                     async with DownloadClient(instance_id) as client:
                         # Move existing torrents to new location if path changed
                         if match_list:
