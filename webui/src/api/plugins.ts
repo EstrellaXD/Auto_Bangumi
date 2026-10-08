@@ -1,3 +1,4 @@
+import type { PluginUiSlot } from '@autobangumi/plugin-ui';
 import type { PluginProviders, PluginsOverview } from '#/plugins';
 
 export const apiPlugins = {
@@ -24,6 +25,12 @@ export const apiPlugins = {
       'api/v1/plugins/settings',
       { allow_unsigned: allowUnsigned }
     );
+    return data;
+  },
+
+  /** 已启用插件声明的前端挂载点 */
+  async ui() {
+    const { data } = await axios.get<PluginUiSlot[]>('api/v1/plugins/ui');
     return data;
   },
 

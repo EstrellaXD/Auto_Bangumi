@@ -41,8 +41,9 @@ class PluginStatus:
     permissions: list[str] = field(default_factory=list)
     error: str | None = None
     enabled: bool = False
-    # config_model 的 JSON Schema；插件代码加载过一次后才有（不为取 schema
-    # 去执行未启用插件的代码），未声明 config_model 时为 None
+    # config_model 的 JSON Schema；内置插件与已开启 allow_unsigned 的插件在
+    # 未启用时也会导入代码取得（不 setup），其余要启用过一次才有；未声明
+    # config_model 时为 None
     config_schema: dict[str, Any] | None = None
 
 
@@ -91,6 +92,7 @@ class PluginManager:
     async def start(self) -> None:
         async with self._lock:
             self._rediscover()
+            self._probe_schemas()
             for candidate in self._candidates.values():
                 if self._blocked_reason(candidate) is None:
                     await self._activate(candidate)
@@ -114,6 +116,7 @@ class PluginManager:
         """配置变更后调用：停用被关闭/配置变化/已消失的插件，启用新开启的插件。"""
         async with self._lock:
             self._rediscover()
+            self._probe_schemas()
             for plugin_id, active in list(self._active.items()):
                 candidate = self._candidates.get(plugin_id)
                 if (
@@ -193,6 +196,26 @@ class PluginManager:
     def _schema(self, plugin_id: str) -> dict[str, Any] | None:
         model = self._models.get(plugin_id)
         return model.model_json_schema() if model is not None else None
+
+    def _probe_schemas(self) -> None:
+        """未加载过的可信插件：只导入代码取 config_model，让设置表单在首次启用
+        前就可用。未签名插件须先开启 allow_unsigned；导入失败记为无 schema，
+        真正启用时会再次加载并报告原因。"""
+        conf = self._settings.plugins
+        for plugin_id, candidate in self._candidates.items():
+            if plugin_id in self._models or plugin_id in self._active:
+                continue
+            if not (candidate.signed or conf.allow_unsigned):
+                continue
+            if not candidate.manifest.sdk_compatible():
+                continue
+            try:
+                self._models[plugin_id] = candidate.load().config_model
+            except Exception as e:
+                self._models[plugin_id] = None
+                logger.warning("[Plugin:%s] 读取配置 schema 失败：%s", plugin_id, e)
+            finally:
+                candidate.unload()
 
     def _rediscover(self) -> None:
         # 清单错误已在 discover() 中记录日志

@@ -48,6 +48,7 @@ declare module 'vue-router/auto/routes' {
     'Downloader': RouteRecordInfo<'Downloader', '/downloader', Record<never, never>, Record<never, never>>,
     'Log': RouteRecordInfo<'Log', '/log', Record<never, never>, Record<never, never>>,
     'Player': RouteRecordInfo<'Player', '/player', Record<never, never>, Record<never, never>>,
+    'Plugin': RouteRecordInfo<'Plugin', '/plugins/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'RSS': RouteRecordInfo<'RSS', '/rss', Record<never, never>, Record<never, never>>,
     'Login': RouteRecordInfo<'Login', '/login', Record<never, never>, Record<never, never>>,
     'Setup': RouteRecordInfo<'Setup', '/setup', Record<never, never>, Record<never, never>>,

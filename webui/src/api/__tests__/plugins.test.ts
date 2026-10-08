@@ -22,6 +22,12 @@ describe('Plugins API contract (path + HTTP method)', () => {
     expect(axios.get).toHaveBeenCalledWith('api/v1/plugins');
   });
 
+  it('should GET api/v1/plugins/ui when listing UI slots', async () => {
+    (axios.get as any).mockResolvedValue({ data: [] });
+    expect(await apiPlugins.ui()).toEqual([]);
+    expect(axios.get).toHaveBeenCalledWith('api/v1/plugins/ui');
+  });
+
   it('should PUT api/v1/plugins/:id with an encoded id', async () => {
     (axios.put as any).mockResolvedValue({ data: overview });
     await apiPlugins.update('my plugin', { enabled: true });

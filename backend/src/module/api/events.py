@@ -8,15 +8,21 @@
 notification（通知中心未读数）由事件驱动：每个连接在插件事件总线上订阅
 ``inbox.changed``（通知中心写入/已读/删除时发布），收到后立即查库推送，
 不再按节拍比较修订号。连接建立时推送一帧作为初始状态。
+
+总线上的其它事件（宿主与插件发布的）以 ``bus`` 帧转发，供前端插件组件的
+``host.events.on(kind, ...)`` 订阅；帧为 ``{"kind": ..., "payload": {...}}``。
 """
 
 import asyncio
+import dataclasses
 import json
 import logging
+from collections import deque
 
 from fastapi import APIRouter, Depends, Request
 from sse_starlette.sse import EventSourceResponse
 
+from ab_sdk import Event
 from module.api.deps import get_context
 from module.api.log import _read_log_tail
 from module.conf import LOG_PATH, VERSION
@@ -24,6 +30,7 @@ from module.core import AppContext
 from module.database import Database
 from module.downloader import list_torrents
 from module.notification.inbox import InboxChanged, inbox_revision
+from module.plugin.bus import ALL_EVENTS
 from module.plugin.host import get_bus
 from module.security.api import get_current_user
 from module.update.updater import get_update_progress
@@ -43,6 +50,9 @@ _LOG_EVERY = 10
 # 20-30s，而 SSE 是单连接串行推送——不设上限会把 status/log 事件一起卡住。
 # 取值需明显小于 downloader 的 5s 推送间隔。
 _DOWNLOADER_TIMEOUT_SECONDS = 3.0
+
+# 单个连接最多积压的待转发总线事件数
+_FORWARD_BACKLOG = 200
 
 
 def _status_payload(ctx: AppContext) -> dict:
@@ -82,7 +92,7 @@ async def _log_payload() -> str | None:
 
 
 class _InboxWatch:
-    """一个 SSE 连接对通知中心变化的订阅。
+    """一个 SSE 连接对事件总线的订阅：通知中心变化与待转发的其它事件。
 
     总线回调只置位 ``wake``；``pending`` 表示还欠前端一帧（初始帧、或上次查库
     失败需要重试）。帧的 ``revision`` 取推送时的修订号，与旧版轮询一致。
@@ -91,14 +101,29 @@ class _InboxWatch:
     def __init__(self) -> None:
         self.wake = asyncio.Event()
         self.pending = True
+        self._inbox_changed = False
+        # 前端来不及消费时丢最旧的，不让一个慢连接无限堆积
+        self._forward: deque[dict] = deque(maxlen=_FORWARD_BACKLOG)
         bus = get_bus()
         self._unsubscribe = (
-            bus.subscribe(InboxChanged.kind, self._on_change)
-            if bus is not None
-            else None
+            bus.subscribe(ALL_EVENTS, self._on_event) if bus is not None else None
         )
 
-    def _on_change(self, _event) -> None:
+    def _on_event(self, event: Event) -> None:
+        if event.kind == InboxChanged.kind:
+            self._inbox_changed = True
+        else:
+            payload = (
+                dataclasses.asdict(event) if dataclasses.is_dataclass(event) else {}
+            )
+            self._forward.append(
+                {
+                    "event": "bus",
+                    "data": json.dumps(
+                        {"kind": event.kind, "payload": payload}, default=str
+                    ),
+                }
+            )
         self.wake.set()
 
     def close(self) -> None:
@@ -106,10 +131,16 @@ class _InboxWatch:
             self._unsubscribe()
             self._unsubscribe = None
 
+    def forwarded(self) -> list[dict]:
+        """取走待转发的总线事件帧。"""
+        frames = list(self._forward)
+        self._forward.clear()
+        return frames
+
     async def frame(self) -> dict | None:
         """有待推送的变化时查库并返回 SSE 帧；没有或查库失败时返回 None。"""
-        if self.wake.is_set():
-            self.wake.clear()
+        if self._inbox_changed:
+            self._inbox_changed = False
             self.pending = True
         if not self.pending:
             return None
@@ -124,7 +155,7 @@ class _InboxWatch:
         return {"event": "notification", "data": json.dumps(payload)}
 
     async def wait(self, deadline: float) -> bool:
-        """等到 ``deadline``（事件循环时间）或通知中心有变化；有变化返回 True。"""
+        """等到 ``deadline``（事件循环时间）或总线有事件；有事件返回 True。"""
         remaining = deadline - asyncio.get_running_loop().time()
         if remaining <= 0:
             return False
@@ -132,6 +163,7 @@ class _InboxWatch:
             await asyncio.wait_for(self.wake.wait(), remaining)
         except TimeoutError:
             return False
+        self.wake.clear()
         return True
 
 
@@ -173,12 +205,16 @@ async def _event_generator(request: Request, ctx: AppContext):
             frame = await inbox.frame()
             if frame is not None:
                 yield frame
+            for frame in inbox.forwarded():
+                yield frame
 
-            # 等待下一个 tick；其间 inbox.changed 到达时立即推送
+            # 等待下一个 tick；其间总线事件到达时立即推送
             deadline = loop.time() + _TICK_SECONDS
             while await inbox.wait(deadline):
                 frame = await inbox.frame()
                 if frame is not None:
+                    yield frame
+                for frame in inbox.forwarded():
                     yield frame
             tick += 1
     finally:

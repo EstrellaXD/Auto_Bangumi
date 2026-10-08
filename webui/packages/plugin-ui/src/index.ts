@@ -65,7 +65,11 @@ export interface AbHost {
   };
   toast(message: string, kind?: 'info' | 'error'): void;
   events: {
-    /** 订阅宿主事件流中的 `kind`，返回取消订阅函数 */
+    /**
+     * 订阅宿主事件总线（SSE 的 `bus` 帧）上的事件 `kind`，回调收到事件的
+     * 字段（dataclass 展开成对象，不含 `kind`）。返回取消订阅函数；组件
+     * 卸载时宿主也会取消它的全部订阅。
+     */
     on(kind: string, callback: (payload: unknown) => void): () => void;
   };
 }

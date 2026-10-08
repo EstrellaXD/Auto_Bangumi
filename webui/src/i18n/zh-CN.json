@@ -192,7 +192,9 @@
       "permissions": "声明的权限：{list}",
       "options": "配置",
       "no_options": "该插件没有可配置项",
-      "options_unavailable": "插件加载一次后才能显示配置表单，请先启用。",
+      "options_unavailable": "该插件暂时无法显示配置表单。未签名插件需先开启“允许未签名插件”；加载失败的插件会在上方显示原因。",
+      "add_row": "添加一行",
+      "remove_row": "删除",
       "unsupported_field": "该字段类型暂不支持在界面中编辑，请直接修改 config.json",
       "save": "保存配置",
       "save_success": "插件配置已保存并应用",
@@ -268,6 +270,7 @@
       "disable": "禁用",
       "edit": "编辑",
       "edit_rule": "编辑规则",
+      "tab_rule": "规则",
       "enable": "启用",
       "enable_hit": "确定启用该规则？",
       "enable_rule": "启用规则",
@@ -548,6 +551,11 @@
       "skip": "跳过",
       "step": "第 {current} 步，共 {total} 步"
     }
+  },
+  "plugin": {
+    "load_failed": "插件组件加载失败。",
+    "page_missing": "该插件没有页面",
+    "page_missing_hint": "插件未启用，或没有声明页面。"
   },
   "sidebar": {
     "calendar": "番剧日历",

@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { BangumiRule } from '#/bangumi';
+import { slotTitle, usePluginUi } from '@/hooks/usePluginUi';
 
 definePage({
   name: 'Index',
@@ -7,6 +8,21 @@ definePage({
 });
 
 const { editRule } = storeToRefs(useBangumiStore());
+
+// 插件页面的标题取自清单；其它页面沿用路由名
+const route = useRoute();
+const { lang } = useMyI18n();
+const { slots } = usePluginUi();
+const pageTitle = computed(() => {
+  const name = String(route.name ?? '');
+  if (name !== 'Plugin') return name;
+  const ui = slots.value.find(
+    (s) =>
+      s.slot === 'page' &&
+      s.plugin_id === (route.params as Record<string, string>).id
+  );
+  return ui ? slotTitle(ui, lang.value === 'zh-CN' ? 'zh-CN' : 'en-US') : name;
+});
 const { updateRule, enableRule, archiveRule, unarchiveRule, ruleManage } =
   useBangumiStore();
 
@@ -44,7 +60,7 @@ function onApplyRule(rule: BangumiRule) {
       <ab-sidebar />
 
       <div id="main-content" class="layout-content">
-        <ab-page-title :title="$route.name"></ab-page-title>
+        <ab-page-title :title="pageTitle"></ab-page-title>
 
         <RouterView v-slot="{ Component }">
           <transition name="page" mode="out-in">

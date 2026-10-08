@@ -192,7 +192,9 @@
       "permissions": "Declared permissions: {list}",
       "options": "Options",
       "no_options": "This plugin has no options",
-      "options_unavailable": "The options form appears after the plugin has been loaded once. Enable it first.",
+      "options_unavailable": "The options form is not available for this plugin yet. Unsigned plugins need \"Allow unsigned plugins\"; a plugin that failed to load shows its error above.",
+      "add_row": "Add row",
+      "remove_row": "Remove",
       "unsupported_field": "This field type can't be edited here yet; edit config.json directly",
       "save": "Save options",
       "save_success": "Plugin options saved and applied",
@@ -268,6 +270,7 @@
       "disable": "Disable",
       "edit": "Edit",
       "edit_rule": "Edit Rule",
+      "tab_rule": "Rule",
       "enable": "Enable",
       "enable_hit": "Do you want to enable this rule?",
       "enable_rule": "Enable Rule",
@@ -548,6 +551,11 @@
       "skip": "Skip",
       "step": "Step {current} of {total}"
     }
+  },
+  "plugin": {
+    "load_failed": "Plugin component failed to load.",
+    "page_missing": "This plugin has no page",
+    "page_missing_hint": "The plugin is disabled, or it does not declare a page."
   },
   "sidebar": {
     "calendar": "Calendar",

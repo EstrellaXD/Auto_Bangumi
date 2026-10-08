@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from typing import ClassVar, cast
 
 import pytest
+from pydantic import ValidationError
 
 from ab_sdk import Event, Plugin, PluginDisabled, Verdict, hook, provider, subscribe
 from ab_sdk.events import SystemEvent
@@ -646,6 +647,31 @@ class TestManager:
         await manager.start()
         assert manager.statuses()[0].state == "disabled"
         assert recorder.events == []
+
+    @pytest.mark.parametrize(
+        "source, allow_unsigned, expect_schema",
+        [("builtin", False, True), ("local", True, True), ("local", False, False)],
+    )
+    async def test_disabled_plugin_schema_loaded_only_if_trusted(
+        self, tmp_path, source, allow_unsigned, expect_schema
+    ):
+        recorder = Recorder()
+        manager, _ = make_manager(
+            candidate_for(build_plugin(recorder), source=source, default_enabled=False),
+            tmp_path=tmp_path,
+            allow_unsigned=allow_unsigned,
+        )
+        await manager.start()
+        [status] = manager.statuses()
+        assert status.state == "disabled"
+        # 只导入代码取 schema：不 setup、不注册扩展
+        assert recorder.events == []
+        assert (status.config_schema is not None) == expect_schema
+        if expect_schema:
+            assert "min_size" in status.config_schema["properties"]  # type: ignore[index]
+            manager.validate_options("demo", {"min_size": 3})
+            with pytest.raises(ValidationError):
+                manager.validate_options("demo", {"min_size": "x"})
 
     @pytest.mark.parametrize(
         "conf, sdk, message",

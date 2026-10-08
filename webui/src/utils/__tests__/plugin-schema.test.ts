@@ -48,6 +48,43 @@ describe('schemaFields', () => {
     expect(fields.find((f) => f.key === 'ratio')!.integer).toBe(false);
   });
 
+  it('maps arrays of objects to nested item fields', () => {
+    const [field] = schemaFields({
+      properties: {
+        path_map: {
+          type: 'array',
+          title: 'Path map',
+          items: { $ref: '#/$defs/PathMap' },
+          default: [],
+        },
+      },
+      $defs: {
+        PathMap: {
+          type: 'object',
+          properties: {
+            downloader: {
+              type: 'string',
+              title: 'Downloader',
+              default: 'default',
+            },
+            from: { type: 'string', title: 'From' },
+            to: { type: 'string', title: 'To' },
+          },
+        },
+      },
+    });
+    expect(field.kind).toBe('objects');
+    expect(field.itemFields.map((f) => [f.key, f.kind])).toEqual([
+      ['downloader', 'text'],
+      ['from', 'text'],
+      ['to', 'text'],
+    ]);
+    // 新增一行时只带有默认值的字段
+    expect(fillSchemaDefaults(field.itemFields, {})).toEqual({
+      downloader: 'default',
+    });
+  });
+
   it('returns no fields without a schema', () => {
     expect(schemaFields(null)).toEqual([]);
   });

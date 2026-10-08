@@ -8,3 +8,9 @@ description = "整理完成后把正片与字幕硬链接到媒体库目录，�
 authors = ["AutoBangumi"]
 permissions = ["fs.write"]
 default_enabled = false
+
+[[plugin.ui]]
+slot = "settings.section"
+element = "ab-plugin-hardlink-backfill"
+entry = "web/index.js"
+title = { zh-CN = "硬链接补链", en-US = "Hardlink backfill" }

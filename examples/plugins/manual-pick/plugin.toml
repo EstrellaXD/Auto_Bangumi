@@ -1,0 +1,14 @@
+[plugin]
+id = "manual-pick"
+name = "手动选种"
+version = "0.1.0"
+sdk = ">=0.5,<1"
+entry = "manual_pick:ManualPick"
+description = "示例插件：在番剧详情页列出规则的种子，记录用户选中的一个。演示前端挂载点、插件路由与事件订阅"
+authors = ["AutoBangumi"]
+
+[[plugin.ui]]
+slot = "bangumi.detail.tab"
+element = "ab-plugin-manual-pick"
+entry = "web/index.js"
+title = { zh-CN = "手动选种", en-US = "Manual pick" }

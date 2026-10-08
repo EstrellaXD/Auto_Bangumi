@@ -173,6 +173,20 @@ slots 解析：
 - **`@autobangumi/plugin-ui` 是 pnpm 工作区包**（`webui/pnpm-workspace.yaml`，`private`，不发布），WebUI 以 `workspace:*` 作为 devDependency。内容：`src/index.ts`（`AbHost`、`PluginUiSlot`、各挂载点的 `AbSlotContext`、`AbPluginElement`）、`tokens.css`（`--ab-*` 变量，取值回落到宿主的 `--color-*` 等设计令牌，深浅色随宿主切换）、`template/`（Vite 库模式：单文件自包含 ES module，输出到 `../web/index.js`，把 `tokens.css` 以 `?inline` 放进 Shadow DOM）。宿主侧的挂载、`AbHost` 实现与错误边界在第二部分。
 - **`AbHost.api` 的范围**：不以 `/` 开头的路径相对 `/api/v1/plugins/<id>/`；以 `/api/v1/` 开头的宿主 API 只允许 GET（第 3.8 节的「公开只读 API」）。接口形状为暂定，4.0 期间可能调整。
 
+### 实施中的调整（P6 第二部分：WebUI 宿主与示例插件）
+
+- **`PluginSlot`（`components/plugin-slot.vue`）** 是五个挂载点共用的宿主组件：导入模块（`services/plugin-loader.ts`，同一 URL 只导入一次，失败不缓存）、确认 custom element 已定义、创建元素，先设置 `host` 与 `context`，再插入宿主自己创建的 Shadow DOM 包裹层。包裹层隔离宿主的全局样式，并在其中注入 `tokens.css`，所以不构建的插件（如内置 `hardlink`）直接用 `--ab-*` 变量即可；用 Vite 模板构建的插件仍在自己的 Shadow DOM 里再引一份，值相同。`context` 变化时重建元素，组件不必自己监听。
+- **`AbHost` 的实现**（`services/plugin-host.ts`，依赖由 `hooks/usePluginHostDeps.ts` 注入，测试用替身）：路径用 `new URL()` 解析后再判定，`..`、`%2e%2e`、`//host`、完整 URL 都按越界处理；不以 `/` 开头的路径相对 `/api/v1/plugins/<id>/`，`/api/v1/` 开头的宿主 API 只允许 GET（包括其它插件的 GET 路由，视为公开只读）。这是防误用的边界，不是安全边界（组件与主站同源）。请求用 `silent: true`，错误提示由插件自己决定；`locale` 把 WebUI 的 `en` 映射为 `en-US`；`theme.mode` 与 `theme.tokens` 是 getter，随深浅色实时取值；`i18n.t` 只翻译宿主文案，缺失时返回 key。接口形状未变，只补充了 `events.on` 的文档。
+- **事件：SSE 新增 `bus` 帧**（后端 `api/events.py`）。每个 SSE 连接在总线上订阅 `*`：`inbox.changed` 仍驱动 `notification` 帧，其余事件以 `{"kind": ..., "payload": {...}}` 转发（`dataclasses.asdict`，不可序列化的字段转字符串），每连接最多积压 200 帧，连接重连期间发布的事件不补发。`host.events.on(kind, cb)` 只订阅总线事件，回调收到 `payload`；`status` / `downloader` 等快照帧不对插件开放。
+- **错误边界按插件归因，不按元素**：custom element 回调、事件处理函数与 Promise 里抛出的错误不会经过 `append` 回到宿主，只会成为 `window` 的 `error` / `unhandledrejection`。宿主按脚本地址（`/plugins/<id>/web/`）把它们归给插件，该插件当时已挂载的所有挂载点一起显示「插件组件加载失败」，其它插件与页面不受影响；没有重试按钮，重新打开页面会重新导入。
+- **挂载点位置**：`settings.section` 在设置页分区列表末尾追加（侧栏与搜索可见，`groups: []` 不参与全局保存）；`bangumi.detail.tab` 是番剧编辑弹窗里的 `ab-segmented` 标签（有插件标签时才出现，「规则」为原表单）；`bangumi.card.action` 是卡片标题下的操作条，而不是 `ab-menu` 下拉，因为插件元素自己渲染，不是 label / handler 菜单项，点击不触发卡片的编辑；`dashboard.widget` 在番剧列表页顶部的网格里；`page` 在侧边栏加入口（`Puzzle` 图标，排在设置之前）与路由 `/plugins/:id`，页面标题取清单标题。**移动端底部导航没有加插件页入口**（位置不够），手机上只能直接访问地址。
+- **P4 遗留（a）：未启用插件的配置表单**。`PluginManager._probe_schemas()` 在 `start()` 与 `apply_settings()` 中，对内置插件和已开启 `allow_unsigned` 的插件导入代码取 `config_model` 后立即 `unload()`（不 `setup`、不注册扩展）；导入失败记为无 schema 并写日志，启用时再报告原因。未签名且未开 `allow_unsigned` 的插件仍不执行任何代码，schema 为空。因此首次启用前即可填写并保存配置（`PUT /plugins/<id>` 的校验同样可用）。
+- **P4 遗留（b）：对象数组表单**。`schemaFields()` 为 `array` 且元素是对象的字段给出 `kind: 'objects'` 与 `itemFields`，`PluginSchemaForm` 递归渲染每一行并提供「添加一行 / 删除」；新行只带有默认值的字段，必填字段留空，由后端校验返回 422（界面只显示统一的保存失败提示）。
+- **P4 遗留（c）：补链按钮由 `hardlink` 插件自己提供**，即 `settings.section` 元素 `ab-plugin-hardlink-backfill`（`web/index.js`，不构建的原生 ES module），调用插件自己的 `POST /backfill` 并显示四种计数。这样同时验证了内置插件也能带前端；未用宿主按钮。
+- **示例插件 `examples/plugins/manual-pick/`**（不在 Docker 镜像内，README 说明复制到 `config/plugins/local/`）：`bangumi.detail.tab` 元素经宿主只读 API 列出规则的种子，选择经插件自己的 `PUT /picks/<bangumi_id>` 存入插件 KV 并发布 `manual-pick.picked` 事件，打开着的详情页经 `host.events.on` 刷新。SDK 0.x 没有「让下载器下载指定种子」的接口，所以插件只记录选择，不触发下载。
+- **验证**：除 vitest / pytest 外，用 `vite preview`（带 CSP）加真实后端、系统 Chrome 无头跑过：详情页标签列出种子并选用、选择经 SSE `bus` 帧刷新、设置页补链按钮返回计数、`page` / `bangumi.card.action` 挂载点、崩溃与未定义元素显示失败提示，页面未报 CSP 违例。
+- 踩坑：UnoCSS 的 attributify 会把源码里的 `` `[plugin:${id}]` `` 当成样式规则并让构建失败；`plugin-slot.vue` 里的日志不要用这种写法。
+
 ## 1. 背景与目标
 
 AB 目前只有 **LLM 提供商** 是真正的运行时插件系统：签名下载、目录加载、懒导入、热重载。
@@ -723,7 +737,7 @@ organize: downloader.completed → media_files.classify → file_parser
 | **P3 流水线插件化：ingest** | `torrent.filter`、`title.parsed`、`torrent.adding`、`http.request` 钩子；`metadata_provider`（mikan / tmdb 以 `core` 登记）；内置插件 `ingest-filters`（包含过滤） | 已完成；无插件时行为不变（全量测试）。`feed_source`、`title_parser` 链、`admission_policy`、`matcher`、`ranker`、`save_path`、size 过滤、按订阅覆盖推迟，见第 0 节 |
 | **P4 流水线插件化：organize** | `media_files`、`file_parser`、`rename_strategy`（含 `template`）、`conflict_policy`、`file.renamed` 等事件 | 已完成：`renamer.py` 拆出 `revision_saga.py`；`rename_strategy` / `media_files` / `conflict_policy` 扩展点与 `file.renamed` / `torrent.organized` 事件；内置插件 `rename`（pn / advance / template，pn / advance / none 输出与 3.3 一致）、`hardlink`（默认停用）与 `media-server-refresh`。`file_parser`、`RenameStrategyContract`、补链设置按钮（P6）推迟，调整见第 0 节 |
 | **P5 事件与外部接口** | SSE 改订阅 bus；`api_router`、`mcp_tool` 扩展点；`message_template` | 已完成：系统事件上总线、通知中心 SSE 改为事件推送、插件路由 / MCP 工具与资源 / 通知模板；status 等快照类 SSE 仍按节拍采样。调整见第 0 节 |
-| **P6 前端插件** | Web Component 挂载点、`AbHost` 桥接、错误边界、`/plugins/<id>/web` 静态资源、`@autobangumi/plugin-ui` 包 | 示例插件「手动选种」以详情页标签形式可用 |
+| **P6 前端插件** | Web Component 挂载点、`AbHost` 桥接、错误边界、`/plugins/<id>/web` 静态资源、`@autobangumi/plugin-ui` 包 | 已完成：五个挂载点、`AbHost`、错误边界与 CSP；示例插件「手动选种」（`examples/plugins/manual-pick`）以详情页标签形式可用，内置 `hardlink` 的补链按钮走 `settings.section`；未启用插件的配置表单、对象数组表单、SSE `bus` 帧。调整见第 0 节 |
 | **P7 生态** | 插件管理页（安装、启停、日志、错误）、签名目录发布流程、模板仓库（含前端模板）、`ab-plugin` CLI、文档（中 / 英 / 日） | 6 个以上示例插件上架 |
 | **P8 发布** | beta 测试、性能对比（RSS 刷新耗时、内存）、升级指南、`docs/changelog/4.0.md` | `4.0.0-beta.1` → `4.0.0` |
 
