@@ -67,15 +67,6 @@ def to_legacy_episode(parsed: ParsedRelease) -> Episode | None:
     )
 
 
-def legacy_non_episodic_type(media_type: MediaType) -> str | None:
-    """Map a generic media type to the legacy non-episodic classifier."""
-    if media_type is MediaType.MOVIE:
-        return "movie"
-    if media_type in _SPECIAL_MEDIA:
-        return "special"
-    return None
-
-
 def tokenize_title(raw: str) -> Episode | None:
     """Project the low-level Preview parser result onto the legacy contract.
 

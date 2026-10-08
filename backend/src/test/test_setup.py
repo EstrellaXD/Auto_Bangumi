@@ -8,7 +8,7 @@ from module.api.deps import get_context
 from module.api.setup import SENTINEL_PATH, router
 from module.models.user import User
 from module.security.api import get_auth_service
-from module.security.jwt import get_password_hash
+from module.security.password import get_password_hash
 
 
 @pytest.fixture

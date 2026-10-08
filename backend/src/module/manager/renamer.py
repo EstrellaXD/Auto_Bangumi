@@ -65,16 +65,7 @@ class Renamer:
     def __init__(self, client: DownloadClient):
         self.client = client
         self._parser = TitleParser()
-        self._offset_cache: dict[str, tuple[int, int]] = {}
         self.events: list[RenameConflictEvent] = []
-
-    @staticmethod
-    def print_result(torrent_count, rename_count):
-        if rename_count != 0:
-            logger.info(
-                f"Finished checking {torrent_count} files' name, renamed {rename_count} files."
-            )
-        logger.debug("Checked %s files", torrent_count)
 
     @staticmethod
     def _adjust_episode(original: int | float, episode_offset: int) -> int | float:
@@ -99,16 +90,6 @@ class Renamer:
         if isinstance(episode, float) and episode.is_integer():
             episode = int(episode)
         return f"0{episode}" if episode < 10 else str(episode)
-
-    @staticmethod
-    def gen_movie_path(
-        file_info: EpisodeFile | SubtitleFile,
-        movie_name: str,
-        method: str,
-    ) -> str:
-        if method in ("none", "subtitle_none"):
-            return file_info.media_path
-        return f"{movie_name}{file_info.suffix}"
 
     @staticmethod
     def gen_path(
@@ -149,9 +130,6 @@ class Renamer:
             return f"{title} S{season}E{episode}{file_info.suffix}"
         elif method == "advance":
             return f"{bangumi_name} S{season}E{episode}{file_info.suffix}"
-        elif method == "normal":
-            logger.warning("Normal rename method is deprecated.")
-            return file_info.media_path
         elif method == "subtitle_pn":
             assert isinstance(
                 file_info, SubtitleFile
@@ -204,7 +182,7 @@ class Renamer:
             season_offset=season_offset,
             episode_type=episode_type,
         )
-        if report.result.succeeded and method not in ("none", "normal"):
+        if report.result.succeeded and method != "none":
             await self._mark_renamed(_hash, existing_tags)
         return report.notification
 
@@ -324,35 +302,6 @@ class Renamer:
             stem = stem[len(prefix) :]
         return f"{base} - {stem}{suffix}"
 
-    async def rename_movie_file(
-        self,
-        torrent_name: str,
-        media_path: str,
-        movie_name: str,
-        method: str,
-        _hash: str,
-        **kwargs,
-    ):
-        ep = self._parser.torrent_parser(
-            torrent_name=torrent_name,
-            torrent_path=media_path,
-            episode_type="movie",
-        )
-        if ep:
-            new_path = self.gen_movie_path(ep, movie_name, method=method)
-            if media_path != new_path:
-                if await self.client.rename_torrent_file(
-                    _hash=_hash, old_path=media_path, new_path=new_path
-                ):
-                    return Notification(
-                        official_title=movie_name,
-                        season=0,
-                        episode=0,
-                    )
-        else:
-            logger.warning(f"{media_path} parse failed (movie)")
-        return None
-
     async def rename_collection(
         self,
         media_list: list[str],
@@ -437,7 +386,7 @@ class Renamer:
                 else:
                     # 解析失败的媒体文件不会被重命名——不能算处理完成
                     all_renamed = False
-        if all_renamed and mark_complete and method not in ("none", "normal"):
+        if all_renamed and mark_complete and method != "none":
             await self._mark_renamed(_hash, existing_tags)
         return all_renamed
 
@@ -1828,7 +1777,7 @@ class Renamer:
                         await self.rename_subtitles(
                             subtitle_list=subtitle_list, **kwargs
                         )
-                    if rename_method not in ("none", "normal"):
+                    if rename_method != "none":
                         await self._mark_renamed(torrent_hash, info.get("tags"))
             elif len(media_list) > 1:
                 logger.info("Start rename collection")
@@ -1843,7 +1792,7 @@ class Renamer:
                 if collection_complete and subtitle_list:
                     await self.rename_subtitles(subtitle_list=subtitle_list, **kwargs)
                 if collection_complete:
-                    if rename_method not in ("none", "normal"):
+                    if rename_method != "none":
                         await self._mark_renamed(torrent_hash, info.get("tags"))
                     await self.client.set_category(torrent_hash, "BangumiCollection")
             else:

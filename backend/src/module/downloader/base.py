@@ -9,7 +9,7 @@ unsupported operations instead of blowing up on a missing method.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, ClassVar, Protocol, runtime_checkable
+from typing import ClassVar, Protocol, runtime_checkable
 
 
 class AddResult(Enum):
@@ -56,7 +56,7 @@ class RenameResult:
 class DownloaderCapabilities:
     """What a concrete download client can do.
 
-    can_query     -- torrents_info / torrents_files / get_torrents_by_tag
+    can_query     -- torrents_info / torrents_files
     can_rename    -- torrents_rename_file
     can_manage    -- delete / pause / resume / move / category / tags
     can_rss_rules -- qB-native RSS feeds + auto-download rules + prefs
@@ -99,12 +99,7 @@ class DownloaderClient(Protocol):
 
     async def logout(self) -> None: ...
 
-    async def check_connection(self) -> str: ...
-
     # Preferences / setup
-    async def prefs_init(self, prefs: dict) -> Any: ...
-
-    async def get_app_prefs(self) -> dict: ...
 
     async def add_category(self, category: str) -> None: ...
 

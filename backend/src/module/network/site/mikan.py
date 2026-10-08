@@ -20,7 +20,3 @@ def rss_parser(soup):
             logger.warning("Failed to parse RSS item: %s", e)
             continue
     return results
-
-
-def mikan_title(soup):
-    return soup.find("title").text

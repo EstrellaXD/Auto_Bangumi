@@ -26,6 +26,8 @@ jobs:
         run: cd backend && uv sync --group dev
       - name: Lint
         run: cd backend && uv run ruff check src
+      - name: Dead code
+        run: cd backend && uv run vulture
       - name: Type check
         run: cd backend && uv run mypy src
       - name: Test

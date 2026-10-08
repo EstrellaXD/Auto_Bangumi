@@ -122,7 +122,7 @@ GET /config/get
 
 获取当前应用程序配置。
 
-**响应：** 完整配置对象，包括 `program`、`downloader`、`rss_parser`、`bangumi_manager`、`notification`、`proxy` 和 `experimental_openai` 部分。
+**响应：** 完整配置对象，包括 `program`、`downloader`、`rss_parser`、`bangumi_manager`、`notification`、`proxy`、`llm` 等部分。
 
 ### 更新配置
 

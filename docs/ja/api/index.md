@@ -122,7 +122,7 @@ GET /config/get
 
 現在のアプリケーション設定を取得します。
 
-**レスポンス:** `program`、`downloader`、`rss_parser`、`bangumi_manager`、`notification`、`proxy`、`experimental_openai`セクションを含む完全な設定オブジェクト。
+**レスポンス:** `program`、`downloader`、`rss_parser`、`bangumi_manager`、`notification`、`proxy`、`llm` などのセクションを含む完全な設定オブジェクト。
 
 ### 設定の更新
 

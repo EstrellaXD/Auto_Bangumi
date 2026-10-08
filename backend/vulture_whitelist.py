@@ -1,0 +1,65 @@
+# vulture 白名单：这里登记的名字被确认为「不是死代码」，按原因分组。
+# 新增条目前先确认它确实有用；真正的死代码应当删除而不是加进来。
+# ruff: noqa
+# type: ignore
+_ = object()
+
+# --- pydantic / SQLModel 字段：经序列化（API 响应、数据库列）使用 ---
+suggested_offset
+total_seasons
+has_mismatch
+created
+connected
+message_zh
+message_en
+family
+item_count
+last_seen_at
+needs_review_reason
+_.needs_review_reason
+backup_state
+new_revision
+model_config
+published_at
+is_prerelease
+applied_version
+can_rollback
+_.applied_version
+_.can_rollback
+phase
+percent
+candidate_ids
+credentials
+can_query
+can_rename
+can_manage
+can_rss_rules
+
+# --- 协议 / 回调签名要求的参数 ---
+connection_record  # SQLAlchemy connect 事件回调
+exc_value  # __aexit__
+traceback  # __aexit__
+user_input  # LLMProviderAdapter.complete_auth 的接口参数
+hash_  # for 循环解包
+
+# --- 框架回调 ---
+_.dispatch  # Starlette BaseHTTPMiddleware
+
+# --- 测试 / e2e 支撑：生产路径不调用 ---
+_.check_single  # e2e worker
+_.set_renamed_path  # aria2 测试构造状态
+_.add_mock_torrent  # MockDownloader 测试辅助
+_.get_state  # MockDownloader 测试辅助
+_reset_client_cache  # conftest
+create_tables  # 同步建表，迁移测试使用
+clear_network_cache  # 测试隔离 lru_cache
+_.contains  # tokenizer Span API，测试覆盖
+_.decision_for  # tokenizer trace API，测试覆盖
+load_corpus  # tokenizer 基准测试工具
+run_benchmark
+render_text
+
+# --- 待 4.0 后续阶段处理（见 docs/plans/2026-10-08-plugin-architecture-4.0-design.md）---
+_.rename_file  # P4 重写 renamer 时与测试一起迁移
+_._lookup_offsets  # P4：与 _batch_lookup_offsets 合并
+_.release_replacement_lease  # 待确认是否 saga 遗漏调用（设计文档第 11 节）

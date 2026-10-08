@@ -10,7 +10,7 @@ const { t } = useMyI18n();
 const { getSettingGroup } = useConfigStore();
 
 const manage = getSettingGroup('bangumi_manage');
-const renameMethod: RenameMethod = ['normal', 'pn', 'advance', 'none'];
+const renameMethod: RenameMethod = ['pn', 'advance', 'none'];
 const revisionConflictPolicies: RevisionConflictPolicy = ['hold', 'replace'];
 
 const revisionConflictOptions = computed<SelectItem[]>(() => [

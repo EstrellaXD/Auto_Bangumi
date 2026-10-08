@@ -264,29 +264,6 @@ class QbDownloader:
             self._client = None
         self._authed = False
 
-    async def check_host(self):
-        try:
-            resp = await self._get("app/version")
-            return resp.status_code == 200
-        except (httpx.ConnectError, httpx.RequestError):
-            return False
-
-    def check_rss(self, rss_link: str):
-        pass
-
-    @qb_connect_failed_wait
-    async def prefs_init(self, prefs):
-        resp = await self._post(
-            "app/setPreferences",
-            data={"json": json.dumps(prefs)},
-        )
-        return resp
-
-    @qb_connect_failed_wait
-    async def get_app_prefs(self):
-        resp = await self._get("app/preferences")
-        return resp.json()
-
     async def add_category(self, category):
         await self._post(
             "torrents/createCategory",
@@ -518,10 +495,6 @@ class QbDownloader:
                     )
                     raise
 
-    async def get_torrents_by_tag(self, tag: str) -> list[dict]:
-        resp = await self._get("torrents/info", params={"tag": tag})
-        return resp.json()
-
     @staticmethod
     def _normalize_hashes(hashes: str | list[str] | tuple[str, ...]) -> str:
         """qBittorrent expects one pipe-joined "hashes" field; a Python list
@@ -631,26 +604,6 @@ class QbDownloader:
             logger.warning(f"Failed to rename file {old_path}: {e}")
             return RenameResult(RenameOutcome.RETRYABLE_FAILURE, detail=str(e))
 
-    async def rss_add_feed(self, url, item_path):
-        resp = await self._post(
-            "rss/addFeed",
-            data={"url": url, "path": item_path},
-        )
-        if resp.status_code == 409:
-            logger.warning(f"RSS feed {url} already exists")
-
-    async def rss_remove_item(self, item_path):
-        resp = await self._post(
-            "rss/removeItem",
-            data={"path": item_path},
-        )
-        if resp.status_code == 409:
-            logger.warning(f"RSS item {item_path} does not exist")
-
-    async def rss_get_feeds(self):
-        resp = await self._get("rss/items")
-        return resp.json()
-
     async def rss_set_rule(self, rule_name, rule_def):
         await self._post(
             "rss/setRule",
@@ -662,17 +615,6 @@ class QbDownloader:
             "torrents/setLocation",
             data={"hashes": self._normalize_hashes(hashes), "location": new_location},
         )
-
-    async def get_download_rule(self):
-        resp = await self._get("rss/rules")
-        return resp.json()
-
-    async def get_torrent_path(self, _hash):
-        resp = await self._get("torrents/info", params={"hashes": _hash})
-        torrents = resp.json()
-        if torrents:
-            return torrents[0].get("save_path", "")
-        return ""
 
     async def set_category(self, _hash, category):
         hashes = self._normalize_hashes(_hash)
@@ -687,16 +629,6 @@ class QbDownloader:
                 "torrents/setCategory",
                 data={"hashes": hashes, "category": category},
             )
-
-    async def check_connection(self):
-        resp = await self._get("app/version")
-        return resp.text
-
-    async def remove_rule(self, rule_name):
-        await self._post(
-            "rss/removeRule",
-            data={"ruleName": rule_name},
-        )
 
     async def add_tag(self, _hash, tag):
         await self._post(

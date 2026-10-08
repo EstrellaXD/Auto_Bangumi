@@ -6,7 +6,6 @@
 
 - **Enable**: enables file organization and rename behavior.
 - **Rename Method**:
-  - `normal`: conservative title and episode naming.
   - `pn`: keeps more release-title information, using a `Torrent title S0XE0X` style.
   - `advance`: uses official title and standard season/episode naming.
   - `none`: do not rename files.

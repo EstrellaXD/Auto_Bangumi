@@ -175,12 +175,6 @@ class Claims:
             (ClaimField.TAGS, self.tags),
         )
 
-    @property
-    def is_empty(self) -> bool:
-        return not self.scalar_items() and not any(
-            values for _, values in self.repeatable_items()
-        )
-
 
 @dataclass(frozen=True, slots=True)
 class Candidate:

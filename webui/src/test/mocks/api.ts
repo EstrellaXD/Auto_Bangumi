@@ -158,9 +158,7 @@ export const mockConfig = {
   },
   notification: {
     enable: false,
-    type: 'telegram',
-    token: '',
-    chat_id: '',
+    providers: [],
   },
   llm: {
     enable: false,
@@ -169,15 +167,6 @@ export const mockConfig = {
     model: 'gpt-4o-mini',
     base_url: '',
     mode: 'fallback',
-  },
-  experimental_openai: {
-    enable: false,
-    api_key: '',
-    api_base: 'https://api.openai.com/v1',
-    api_type: 'openai',
-    api_version: '2023-05-15',
-    model: 'gpt-3.5-turbo',
-    deployment_id: '',
   },
 };
 

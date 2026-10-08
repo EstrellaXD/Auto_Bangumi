@@ -1,17 +1,13 @@
 # 旧実験的機能
 
 ::: warning
-旧 `experimental_openai` セクションは新しい [LLMパーサー](/ja/config/llm) に置き換えられました。このページは旧設定ファイルと旧リンクのために残しています。
+4.0 では旧 `experimental_openai` セクションは削除されました。代わりに [LLMパーサー](/ja/config/llm) を使用してください。
 :::
 
-3.3以降、AIタイトル解析は `llm` セクションで設定します。
+3.3 以降、AB は起動のたびに `experimental_openai` を `llm` セクションへ自動移行し、設定ファイルに書き戻していました。4.0 は 3.3.x からのアップグレードのみをサポートするため、この移行はすでに完了しています。4.0 は旧セクションを読み込まず、次に設定を保存したときにファイルから削除します。
 
-- 旧OpenAI設定にAPI Keyまたは有効化状態があり、新 `llm` が未設定の場合、起動時に自動移行されます。
-- 旧動作はLLM優先だったため、移行後は `mode: "primary"` になります。
-- `experimental_openai` はダウングレード互換のため設定ファイルに残ります。
-
-新規設定では以下を使ってください：
+関連設定：
 
 - [LLMパーサー](/ja/config/llm)
-- [プロキシ設定](/ja/config/proxy)
-- [ネットワーク設定](/ja/config/network)
+- [プロキシ](/ja/config/proxy)
+- [ネットワーク](/ja/config/network)

@@ -230,10 +230,10 @@ async def test_expired_replacement_phase_lease_can_be_reclaimed(db_session):
     assert reclaimed.attempt_count == 2
 
 
-async def test_retry_query_and_done_pruning(db_session):
+async def test_conflict_query_and_done_pruning(db_session):
     repo = RenameOperationDatabase(db_session)
     now = datetime.now(timezone.utc)
-    due, _ = await repo.get_or_create(
+    await repo.get_or_create(
         _operation(state="retry", retry_at=now - timedelta(seconds=1))
     )
     await repo.get_or_create(
@@ -253,7 +253,6 @@ async def test_retry_query_and_done_pruning(db_session):
         )
     )
 
-    assert [row.id for row in await repo.list_retryable(now)] == [due.id]
     assert [row.id for row in await repo.list_conflicts()] == [conflict.id]
 
     await repo.set_state(conflict.id, "done")

@@ -7,7 +7,7 @@ export type RssParserLang = ['zh', 'en', 'jp'];
 /** RSS 标题解析引擎（tokenizer 仍处于 Preview） */
 export type RssParserEngine = ['classic', 'tokenizer'];
 /** 重命名方式 */
-export type RenameMethod = ['normal', 'pn', 'advance', 'none'];
+export type RenameMethod = ['pn', 'advance', 'none'];
 /** 修订版文件名冲突处理策略 */
 export type RevisionConflictPolicy = ['hold', 'replace'];
 /** 代理类型 */
@@ -105,10 +105,6 @@ export interface NotificationProviderConfig {
 export interface Notification {
   enable: boolean;
   providers: NotificationProviderConfig[];
-  // Legacy fields (deprecated, for backward compatibility)
-  type?: 'telegram' | 'server-chan' | 'bark' | 'wecom';
-  token?: string;
-  chat_id?: string;
 }
 export interface LLM {
   enable: boolean;
@@ -130,18 +126,6 @@ export interface LLM {
   failure_backoff: number;
   /** 按提供商 id 存放的凭据/模型/端点覆盖 */
   providers: Record<string, LLMProviderOverride>;
-}
-
-/** @deprecated 旧版 OpenAI 解析配置，已被 LLM 段取代（保留向后兼容） */
-export interface ExperimentalOpenAI {
-  enable: boolean;
-  api_key: string;
-  api_base: string;
-  model: TupleToUnion<OpenAIModel>;
-  // azure
-  api_type: TupleToUnion<OpenAIType>;
-  api_version?: string;
-  deployment_id?: string;
 }
 
 /** Access control for the login endpoint and MCP server.
@@ -173,8 +157,6 @@ export interface Config {
   network: Network;
   notification: Notification;
   llm: LLM;
-  /** @deprecated 已被 llm 段取代 */
-  experimental_openai: ExperimentalOpenAI;
   security: Security;
   update: Update;
 }
@@ -202,7 +184,7 @@ export const initConfig: Config = {
   bangumi_manage: {
     enable: true,
     eps_complete: true,
-    rename_method: 'normal',
+    rename_method: 'pn',
     revision_conflict_policy: 'hold',
     group_tag: true,
     remove_bad_torrent: true,
@@ -243,16 +225,6 @@ export const initConfig: Config = {
     failure_threshold: 3,
     failure_backoff: 300,
     providers: {},
-  },
-  experimental_openai: {
-    enable: false,
-    api_key: '',
-    api_base: 'https://api.openai.com/v1/',
-    model: 'gpt-3.5-turbo',
-    // azure
-    api_type: 'openai',
-    api_version: '2020-05-03',
-    deployment_id: '',
   },
   security: {
     login_whitelist: [],

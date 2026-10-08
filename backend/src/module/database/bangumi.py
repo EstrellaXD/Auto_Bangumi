@@ -311,10 +311,6 @@ class BangumiDatabase:
         )
         return True
 
-    def get_all_title_patterns(self, bangumi: Bangumi) -> list[str]:
-        """Get all title patterns for matching (title_raw + all aliases)."""
-        return _all_title_patterns(bangumi)
-
     async def find_duplicate(self, data: Bangumi) -> Optional[Bangumi]:
         """Find an existing rule with the same typed subscription identity.
 
@@ -524,27 +520,6 @@ class BangumiDatabase:
         await self.session.commit()
         logger.debug("Update %s bangumi.", len(datas))
 
-    async def update_rss(self, title_raw: str, rss_set: str):
-        statement = select(Bangumi).where(Bangumi.title_raw == title_raw)
-        result = await self.session.execute(statement)
-        bangumi = result.scalar_one_or_none()
-        if bangumi:
-            bangumi.rss_link = rss_set
-            bangumi.added = False
-            self.session.add(bangumi)
-            await self.session.commit()
-            logger.debug("Update %s rss_link to %s.", title_raw, rss_set)
-
-    async def update_poster(self, title_raw: str, poster_link: str):
-        statement = select(Bangumi).where(Bangumi.title_raw == title_raw)
-        result = await self.session.execute(statement)
-        bangumi = result.scalar_one_or_none()
-        if bangumi:
-            bangumi.poster_link = poster_link
-            self.session.add(bangumi)
-            await self.session.commit()
-            logger.debug("Update %s poster_link to %s.", title_raw, poster_link)
-
     async def restore_one(self, _id: int) -> bool:
         """取消软删除（重新启用规则）。行不存在或本就未删除时不写库。"""
         bangumi = await self.session.get(Bangumi, _id)
@@ -628,14 +603,6 @@ class BangumiDatabase:
         result = await self.session.execute(statement)
         return list(result.scalars().all())
 
-    async def match_poster(self, bangumi_name: str) -> str:
-        statement = select(Bangumi).where(
-            func.instr(bangumi_name, Bangumi.official_title) > 0
-        )
-        result = await self.session.execute(statement)
-        data = result.scalar_one_or_none()
-        return (data.poster_link or "") if data else ""
-
     async def match_list(self, torrent_list: list, rss_link: str) -> list:
         match_datas = await self.search_all()
         if not match_datas:
@@ -681,19 +648,6 @@ class BangumiDatabase:
             and_(Bangumi.eps_collect == false(), Bangumi.deleted == false())
         )
         result = await self.session.execute(condition)
-        return list(result.scalars().all())
-
-    async def not_added(self) -> list[Bangumi]:
-        # SQLModel 类属性在 mypy 看来是普通字段类型而非 InstrumentedAttribute，
-        # 无法识别 .is_() 等查询方法（无官方 mypy 插件支持）。
-        conditions = select(Bangumi).where(
-            or_(
-                Bangumi.added == 0,
-                Bangumi.rule_name.is_(None),  # type: ignore[union-attr]
-                Bangumi.save_path.is_(None),  # type: ignore[union-attr]
-            )
-        )
-        result = await self.session.execute(conditions)
         return list(result.scalars().all())
 
     async def disable_rule(self, _id: int):

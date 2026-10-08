@@ -141,10 +141,6 @@ class Aria2Downloader:
             await self._client.aclose()
             self._client = None
 
-    async def check_connection(self) -> str:
-        version = await self._call("getVersion")
-        return (version or {}).get("version", "unknown")
-
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------

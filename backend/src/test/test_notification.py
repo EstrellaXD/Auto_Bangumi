@@ -744,22 +744,6 @@ class TestDeliverText:
 
 
 class TestConfigMigration:
-    def test_legacy_config_migration(self):
-        """Old single-provider config migrates to new format."""
-        from module.models.config import Notification as NotificationConfig
-
-        # Old format
-        old_config = NotificationConfig(
-            enable=True,
-            type="telegram",
-            token="old_token",
-            chat_id="old_chat_id",
-        )
-
-        # Should have migrated to new format
-        assert len(old_config.providers) == 1
-        assert old_config.providers[0].type == "telegram"
-        assert old_config.providers[0].enabled is True
 
     def test_new_config_no_migration(self):
         """New format with providers doesn't trigger migration."""
