@@ -47,9 +47,17 @@ class PluginTasks:
         plugin_id = entry.plugin_id
         try:
             spec: ScheduledTask = entry.factory()
-            spec_run, interval = spec.run, spec.interval
-            initial_delay = spec.initial_delay
+            spec_run, interval_src = spec.run, spec.interval
+            initial_delay = float(spec.initial_delay)
             enabled = spec.enabled or (lambda: True)
+
+            def read_interval() -> float:
+                src = interval_src
+                return float(src() if callable(src) else src)
+
+            # 间隔由插件代码给出，只在受保护的 run() 里读取；调度器拿到的是
+            # 已校验的值，插件出错不会打断调度循环
+            interval = read_interval()
         except Exception as e:
             reason = f"{points.SCHEDULED_TASK} {task_id}: {type(e).__name__}: {e}"
             logger.warning("[Plugin:%s] 定时任务创建失败：%s", plugin_id, reason)
@@ -57,22 +65,25 @@ class PluginTasks:
             return None
 
         async def run() -> None:
-            # enabled 每轮重新读取（ScheduledTask 契约）；调度器只在启动时读
-            # enabled，故任务总是启动，停用时空转跳过
+            # enabled 与 interval 每轮重新读取（ScheduledTask 契约）；调度器只在
+            # 启动时读 enabled，故任务总是启动，停用时空转跳过
+            nonlocal interval
             try:
-                if not enabled():
-                    return
-                await spec_run()
+                ran = enabled()
+                if ran:
+                    await spec_run()
+                interval = read_interval()
             except Exception as e:
                 reason = f"定时任务 {task_id}: {type(e).__name__}: {e}"
                 logger.warning("[Plugin:%s] %s", plugin_id, reason)
                 self._breaker.record_failure(plugin_id, reason)
                 return
-            self._breaker.record_success(plugin_id)
+            if ran:
+                self._breaker.record_success(plugin_id)
 
         return PeriodicTask(
             name=f"plugin:{plugin_id}:{task_id}",
             run=run,
-            interval=interval if callable(interval) else (lambda: float(interval)),
+            interval=lambda: interval,
             initial_delay=initial_delay,
         )
