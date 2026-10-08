@@ -207,14 +207,15 @@ class TestLLMProvider:
         with pytest.raises(ValueError):
             ProviderRegistry().resolve("claimed")
 
-    def test_provider_registry_broken_factory_skipped(self, registry):
+    @pytest.mark.parametrize("bad_factory", [broken_factory, object])
+    def test_provider_registry_broken_factory_skipped(self, registry, bad_factory):
         from module.parser.analyser.providers.registry import ProviderRegistry
 
         add_plugin_provider(
             registry, points.LLM_PROVIDER, "ext-llm", make_adapter("ext-llm")
         )
         registry.add_provider(
-            points.LLM_PROVIDER, ProviderEntry("bad", "bad-llm", broken_factory)
+            points.LLM_PROVIDER, ProviderEntry("bad", "bad-llm", bad_factory)
         )
         llm_registry = ProviderRegistry()
         assert "ext-llm" in {i.id for i in llm_registry.list_infos()}
@@ -253,14 +254,17 @@ class TestSearchSite:
         assert item.url == "https://acg/?q=Frieren+S2"
         assert item.parser == "tmdb"
 
-    def test_available_sites_broken_factory_skipped(self, registry):
+    @pytest.mark.parametrize(
+        "bad_factory", [broken_factory, object, lambda: SearchSite(None)]  # type: ignore[arg-type]
+    )
+    def test_available_sites_broken_factory_skipped(self, registry, bad_factory):
         from module.searcher import available_sites
 
         add_plugin_provider(
             registry, points.SEARCH_SITE, "acg", SearchSite("https://acg/?q=%s")
         )
         registry.add_provider(
-            points.SEARCH_SITE, ProviderEntry("bad", "bad-site", broken_factory)
+            points.SEARCH_SITE, ProviderEntry("bad", "bad-site", bad_factory)
         )
         with patch("module.searcher.provider.get_provider", return_value={}):
             sites = available_sites()
@@ -344,7 +348,16 @@ class TestPluginTasks:
         await bridge.sync()
         assert scheduler.tasks == []
 
-    @pytest.mark.parametrize("bad_spec", [None, object()])
+    @pytest.mark.parametrize(
+        "bad_spec",
+        [
+            None,
+            object(),
+            ScheduledTask(AsyncMock(), "abc"),  # type: ignore[arg-type]
+            ScheduledTask(AsyncMock(), lambda: 1 / 0),
+            ScheduledTask(AsyncMock(), 60, initial_delay=None),  # type: ignore[arg-type]
+        ],
+    )
     async def test_sync_malformed_spec_skipped_and_recorded(self, registry, bad_spec):
         scheduler, bridge, tripped = self.make(registry, threshold=1)
         registry.add_provider(

@@ -86,7 +86,13 @@ class ProviderRegistry:
         from module.plugin.host import provider_impls
 
         result: dict[str, type[LLMProviderAdapter]] = {}
-        for provider_id, adapter_cls in provider_impls(points.LLM_PROVIDER).items():
+
+        def valid(impl: object) -> bool:
+            return isinstance(impl, type) and issubclass(impl, LLMProviderAdapter)
+
+        for provider_id, adapter_cls in provider_impls(
+            points.LLM_PROVIDER, valid
+        ).items():
             if adapter_cls.info.id != provider_id:
                 logger.warning(
                     "LLM provider %s declares info.id=%s; skipped",
