@@ -8,6 +8,7 @@ AB 自己的下载器、通知渠道与搜索站点和第三方插件走同一�
 任何上下文里都能解析 Provider。
 """
 
+import asyncio
 import logging
 from typing import Any
 
@@ -16,6 +17,7 @@ from ab_sdk.downloader import DownloaderConnection
 
 from .bus import EventBus
 from .registry import ExtensionPoint, ExtensionRegistry, ProviderEntry
+from .runner import HookRunner
 
 logger = logging.getLogger(__name__)
 
@@ -29,12 +31,38 @@ POINTS = (
     ExtensionPoint(points.LLM_PROVIDER, "provider", "LLM 解析提供商（llm.provider）"),
     ExtensionPoint(points.SEARCH_SITE, "provider", "搜索站点"),
     ExtensionPoint(points.SCHEDULED_TASK, "provider", "定时任务"),
+    # --- P3 ingest ---
+    ExtensionPoint(
+        points.METADATA_PROVIDER, "provider", "元数据源（RSS 订阅的 parser）"
+    ),
+    ExtensionPoint(
+        points.TORRENT_FILTER, "filter", "已匹配规则的种子是否下载", fail_open=True
+    ),
+    ExtensionPoint(points.TITLE_PARSED, "transform", "修正标题解析结果"),
+    ExtensionPoint(points.TORRENT_ADDING, "transform", "修改发给下载器的添加请求"),
+    ExtensionPoint(points.HTTP_REQUEST, "transform", "修改宿主 GET 请求的请求头"),
+    # --- P5 events/api ---
+    ExtensionPoint(
+        points.API_ROUTER,
+        "provider",
+        "插件 REST 路由（/api/v1/plugins/<id>/）",
+        scoped=True,
+    ),
+    ExtensionPoint(points.MCP_TOOL, "provider", "MCP 工具", scoped=True),
+    ExtensionPoint(points.MCP_RESOURCE, "provider", "MCP 资源", scoped=True),
+    ExtensionPoint(points.MESSAGE_TEMPLATE, "transform", "系统事件通知文案"),
+    # --- P4 organize ---
     ExtensionPoint(
         points.RENAME_STRATEGY, "provider", "重命名方式（bangumi_manage.rename_method）"
     ),
 )
 
 _registry: ExtensionRegistry | None = None
+# 进程级事件总线与钩子执行器，由 AppContext 在构造时设置（即 PluginManager
+# 持有的那一份）；未设置时（单元测试、脚本、CLI）发布事件为空操作、钩子一律
+# 跳过，只执行宿主逻辑
+_bus: EventBus | None = None
+_runner: HookRunner | None = None
 
 
 def get_registry() -> ExtensionRegistry:
@@ -52,6 +80,25 @@ def provider(point: str, provider_id: str) -> Any | None:
     """调用 Provider 工厂取得实现；未登记时返回 None。"""
     entry = get_registry().providers(point).get(provider_id)
     return entry.factory() if entry is not None else None
+
+
+def set_runner(runner: HookRunner | None) -> None:
+    global _runner
+    _runner = runner
+
+
+def get_runner() -> HookRunner | None:
+    return _runner
+
+
+def hook_runner(point: str) -> HookRunner | None:
+    """返回可执行 ``point`` 钩子的 runner；未设置 runner 或该扩展点没有钩子
+    时返回 None，调用方据此走与无插件时完全相同的路径（逐条种子的热路径
+    不付出构造快照、调度协程的开销）。"""
+    runner = _runner
+    if runner is None or not runner.has_hooks(point):
+        return None
+    return runner
 
 
 def plugin_provider_ids(point: str) -> list[str]:
@@ -101,14 +148,27 @@ def _register_core(registry: ExtensionRegistry) -> None:
     for provider_id, strategy in CORE_STRATEGIES.items():
         _core(registry, points.RENAME_STRATEGY, provider_id, strategy)
 
+    # 元数据源：沿用 RSSItem.parser 的取值（mikan / tmdb），实现延迟 import
+    def metadata(name: str):
+        def factory():
+            from module.rss import metadata as core_metadata
 
-# ---------------------------------------------------------------- event bus
-# 宿主流水线（如在定时循环里运行、拿不到 AppContext 的 renamer）通过这里向
-# 插件总线发布事件。总线由 PluginManager 启动时设置、停止时清除；未设置时
-# 发布是空操作。
+            return core_metadata.CORE_PROVIDERS[name]
+
+        return factory
+
+    for provider_id in ("mikan", "tmdb"):
+        registry.add_provider(
+            points.METADATA_PROVIDER,
+            ProviderEntry(CORE, provider_id, metadata(provider_id)),
+        )
 
 
-_bus: EventBus | None = None
+# --- P5 events/api ---------------------------------------------------------
+
+
+def get_bus() -> EventBus | None:
+    return _bus
 
 
 def set_bus(bus: EventBus | None) -> None:
@@ -116,16 +176,22 @@ def set_bus(bus: EventBus | None) -> None:
     _bus = bus
 
 
-def get_bus() -> EventBus | None:
-    return _bus
-
-
 def publish(event: Event) -> None:
-    """向插件总线发布宿主事件。永不抛出：发布失败只记录日志。"""
+    """把宿主事件发布到进程级总线；总线未设置时什么也不做。
+
+    发布只负责入队，订阅者的失败不会影响调用方。没有运行中的事件循环时
+    （同步上下文）无法投递，记录日志后忽略。
+    """
     bus = _bus
     if bus is None:
         return
     try:
         bus.publish(event)
     except Exception:
-        logger.exception("[Plugin] 发布事件 %s 失败", event.kind)
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            # 同步上下文没有事件循环，订阅者的 worker 无法启动
+            logger.debug("[EventBus] 无事件循环，丢弃事件 %s", event.kind)
+            return
+        logger.exception("[EventBus] 发布事件 %s 失败", event.kind)

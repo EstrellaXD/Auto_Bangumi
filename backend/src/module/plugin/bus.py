@@ -44,6 +44,9 @@ class _Subscriber:
         return self.kind == ALL_EVENTS or self.kind == event.kind
 
     def offer(self, event: Event) -> None:
+        # 先确认有运行中的事件循环：否则 worker 无法启动，事件入队也只会滞留
+        # （同步上下文里由调用方决定如何记录）
+        asyncio.get_running_loop()
         try:
             self._queue.put_nowait(event)
         except asyncio.QueueFull:

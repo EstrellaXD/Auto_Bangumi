@@ -275,6 +275,19 @@ async def test_publish_swallows_bus_errors(monkeypatch, caplog):
     assert "torrent.organized" in caplog.text
 
 
+def test_publish_without_event_loop_is_quiet(monkeypatch, caplog):
+    """同步上下文里订阅者的 worker 无法启动：丢弃事件，只记 debug 日志。"""
+    from module.plugin.bus import EventBus
+
+    bus = EventBus()
+    bus.subscribe(TorrentOrganized.kind, lambda event: None)
+    monkeypatch.setattr(host, "_bus", bus)
+    with caplog.at_level(logging.DEBUG):
+        host.publish(TorrentOrganized("h", "n", None, "T", "/p"))
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+    assert "无事件循环" in caplog.text
+
+
 async def test_plugin_manager_owns_process_bus(monkeypatch, tmp_path):
     monkeypatch.setattr(host, "_bus", None)
     manager = PluginManager(

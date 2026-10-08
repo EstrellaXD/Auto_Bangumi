@@ -430,6 +430,7 @@ class TestPluginsApi:
             "downloader": ["fake"],
             "notifier": [],
             "search_site": [],
+            "metadata_provider": [],
             "rename_strategy": [],
         }
 

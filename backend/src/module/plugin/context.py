@@ -7,11 +7,18 @@ from typing import Any
 from pydantic import BaseModel
 
 from ab_sdk import Event
-from module.database import Database
 
 from .bus import EventBus, Handler
 
 PLUGIN_DATA_ROOT = Path("config") / "plugin-data"
+
+
+def _database():
+    # 延迟 import：module.plugin.host 被网络层、解析器等底层模块引用，
+    # 顶层 import module.database 会形成循环依赖
+    from module.database import Database
+
+    return Database()
 
 
 class DatabaseKV:
@@ -21,16 +28,16 @@ class DatabaseKV:
         self._plugin_id = plugin_id
 
     async def get(self, key: str, default: Any = None) -> Any:
-        async with Database() as db:
+        async with _database() as db:
             found, value = await db.plugin_kv.get(self._plugin_id, key)
         return value if found else default
 
     async def set(self, key: str, value: Any) -> None:
-        async with Database() as db:
+        async with _database() as db:
             await db.plugin_kv.set(self._plugin_id, key, value)
 
     async def delete(self, key: str) -> None:
-        async with Database() as db:
+        async with _database() as db:
             await db.plugin_kv.delete(self._plugin_id, key)
 
 

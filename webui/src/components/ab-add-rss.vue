@@ -5,6 +5,7 @@ import type { BangumiRule } from '#/bangumi';
 import type { RSS } from '#/rss';
 import { rssTemplate } from '#/rss';
 import { ruleTemplate } from '#/bangumi';
+import { usePluginProviders } from '@/hooks/usePluginProviders';
 
 /** v-model show */
 const show = defineModel('show', { default: false });
@@ -17,7 +18,14 @@ const rss = ref<RSS>({ ...rssTemplate });
 const rule = defineModel<BangumiRule>('rule', {
   default: () => ({ ...ruleTemplate }),
 });
-const parserTypes = ['tmdb', 'mikan', 'parser'] as const;
+const pluginProviders = usePluginProviders();
+// 内置元数据源 + 插件登记的元数据源（metadata_provider 扩展点）
+const parserTypes = computed(() => [
+  'tmdb',
+  'mikan',
+  'parser',
+  ...pluginProviders.value.metadata_provider,
+]);
 
 // UI state
 const step = ref<'input' | 'confirm'>('input');

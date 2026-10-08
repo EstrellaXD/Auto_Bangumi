@@ -73,6 +73,11 @@ factory
 _.__path__
 _.__package__
 
+# --- P3 ingest ---
+# 内置插件：由插件加载器按 plugin.toml 的 entry 导入，钩子经 @hook 扫描登记
+IngestFilters
+_.include_regex
+
 # --- P4 organize ---
 # 内置插件：由插件管理器按 plugin.toml 加载，经 @provider / @subscribe 注册
 TemplateRename
