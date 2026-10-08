@@ -7,6 +7,7 @@ import unicodedata
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 
+from ab_sdk.rename import ConflictDecision, ConflictRequest, Revision
 from module.parser.analyser.selector import parse_configured_release_title
 from module.parser.analyser.tokenizer import MediaType
 from module.parser.release_policy import preference_identity, preference_revision
@@ -89,6 +90,47 @@ def same_release_identity(old: RevisionIdentity, new: RevisionIdentity) -> bool:
         and old.group == new.group
         and old.resolution == new.resolution
     )
+
+
+def revision_snapshot(identity: RevisionIdentity | None) -> Revision | None:
+    """交给 conflict_policy 的只读快照。"""
+    if identity is None:
+        return None
+    return Revision(
+        bangumi_id=identity.bangumi_id,
+        media_type=identity.media_type.value,
+        season=identity.season,
+        episode=identity.episode,
+        group=identity.group,
+        resolution=identity.resolution,
+        revision=identity.revision,
+    )
+
+
+class CoreConflictPolicy:
+    """宿主自带的 ``conflict_policy``：只在唯一占用者与新种子都是单文件、
+    且新种子是严格的版本升级时，按用户设置决定是否替换。"""
+
+    def decide(self, request: ConflictRequest) -> ConflictDecision:
+        if len(request.owners) != 1:
+            return ConflictDecision(
+                "hold", "canonical path has more than one downloader owner"
+            )
+        owner = request.owners[0]
+        if request.incoming.file_count != 1 or owner.file_count != 1:
+            return ConflictDecision(
+                "hold", "automatic replacement requires two single-file torrents"
+            )
+        if request.incoming.revision is None or owner.revision is None:
+            return ConflictDecision("hold", "revision identity is incomplete")
+        if not request.strict_upgrade:
+            return ConflictDecision(
+                "hold",
+                "existing and incoming releases are not a strict revision upgrade",
+            )
+        if request.configured == "replace":
+            return ConflictDecision("replace")
+        return ConflictDecision("hold", "revision conflict policy is hold")
 
 
 def replacement_staged_path(

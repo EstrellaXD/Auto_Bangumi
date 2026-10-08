@@ -292,7 +292,14 @@ class RenameOperationDatabase:
         retry_at: datetime | None = None,
         last_error: str | None = None,
     ) -> RenameOperation | None:
-        """Advance a replacement only while the caller still owns its lease."""
+        """Advance a replacement only while the caller still owns its lease.
+
+        The same UPDATE clears the lease, so every saga step that ends in a
+        state write releases it atomically; there is no separate "release"
+        call.  A step aborted by an exception keeps the lease until it expires
+        (``claim_replacement_lease``'s ``lease_for``, equal to the retry
+        cooldown), which only delays the next attempt.
+        """
 
         if operation_id is None:
             return None
@@ -319,23 +326,6 @@ class RenameOperationDatabase:
         if not result.rowcount:  # type: ignore[attr-defined]
             return None
         return await self.get(operation_id)
-
-    async def release_replacement_lease(
-        self, operation_id: int | None, *, owner: str
-    ) -> bool:
-        if operation_id is None:
-            return False
-        result = await self.session.execute(
-            update(RenameOperation)
-            .where(
-                col(RenameOperation.id) == operation_id,
-                col(RenameOperation.lease_owner) == owner,
-            )
-            .values(lease_owner=None, lease_expires_at=None, updated_at=utc_now())
-            .execution_options(synchronize_session="fetch")
-        )
-        await self.session.commit()
-        return bool(result.rowcount)  # type: ignore[attr-defined]
 
     async def mark_notified(
         self, operation_id: int | None, when: datetime | None = None

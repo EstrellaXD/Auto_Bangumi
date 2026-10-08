@@ -1,6 +1,17 @@
 import { mount } from '@vue/test-utils';
-import { defineComponent, nextTick } from 'vue';
+import { defineComponent, nextTick, ref } from 'vue';
 import ConfigManage from '../config-manage.vue';
+
+vi.mock('@/hooks/usePluginProviders', () => ({
+  usePluginProviders: () =>
+    ref({
+      downloader: [],
+      notifier: [],
+      search_site: [],
+      metadata_provider: [],
+      rename_strategy: ['advance', 'pn', 'template'],
+    }),
+}));
 
 vi.mock('@/hooks/useMyI18n', () => ({
   useMyI18n: () => ({ t: (key: string) => key }),
@@ -79,5 +90,30 @@ describe('config-manage', () => {
       __manageState: { revision_conflict_policy: string };
     };
     expect(store.__manageState.revision_conflict_policy).toBe('replace');
+  });
+
+  it('should append plugin rename strategies when the rename plugin provides them', () => {
+    const wrapper = mount(ConfigManage, {
+      global: {
+        stubs: {
+          'ab-fold-panel': { template: '<section><slot /></section>' },
+          'ab-setting': AbSettingStub,
+        },
+      },
+    });
+    const method = wrapper
+      .findAllComponents(AbSettingStub)
+      .find(
+        (setting) =>
+          (setting.props('label') as () => string)() ===
+          'config.manage_set.method'
+      );
+
+    expect(method?.props('prop')?.items).toEqual([
+      'pn',
+      'advance',
+      'none',
+      'template',
+    ]);
   });
 });

@@ -1,0 +1,8 @@
+[plugin]
+id = "rename"
+name = "重命名"
+version = "1.0.0"
+sdk = ">=0.4,<1"
+entry = "rename_plugin:RenamePlugin"
+description = "提供重命名方式 pn、advance 与自定义模板 template。停用后所有番剧按 none 处理（保留原文件名）"
+authors = ["AutoBangumi"]

@@ -62,7 +62,8 @@ export interface RssParser {
 export interface BangumiManage {
   enable: boolean;
   eps_complete: boolean;
-  rename_method: TupleToUnion<RenameMethod>;
+  /** 内置方式，或插件提供的重命名方式 id（如 template） */
+  rename_method: TupleToUnion<RenameMethod> | (string & {});
   revision_conflict_policy: TupleToUnion<RevisionConflictPolicy>;
   group_tag: boolean;
   remove_bad_torrent: boolean;

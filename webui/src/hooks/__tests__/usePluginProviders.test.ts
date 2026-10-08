@@ -18,6 +18,7 @@ const empty = {
   notifier: [],
   search_site: [],
   metadata_provider: [],
+  rename_strategy: [],
 };
 
 describe('usePluginProviders', () => {

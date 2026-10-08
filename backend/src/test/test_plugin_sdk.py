@@ -3,10 +3,12 @@
 import ast
 from pathlib import Path
 
+import pytest
 from pydantic import BaseModel
 
 import ab_sdk
 from ab_sdk import Plugin, Verdict, hook, subscribe
+from ab_sdk.rename import pad
 from ab_sdk.testing import create_plugin
 
 SDK_ROOT = Path(ab_sdk.__file__).parent
@@ -58,3 +60,20 @@ async def test_create_plugin_validates_options_and_drives_plugin(tmp_path):
     ctx.bus.subscribe("*", plugin.remember)
     await ctx.bus.deliver(ab_sdk.PluginLoaded(plugin_id="x", version="1"))
     assert await ctx.kv.get("last") == "plugin.loaded"
+
+
+@pytest.mark.parametrize(
+    ("value", "width", "expected"),
+    [
+        (5, 2, "05"),
+        (0, 2, "00"),
+        (12, 2, "12"),
+        (123, 2, "123"),
+        (12.0, 2, "12"),
+        (9.5, 2, "09.5"),
+        (12.5, 2, "12.5"),
+        (7, 3, "007"),
+    ],
+)
+def test_pad_number_keeps_fraction_and_zero_pads_whole(value, width, expected):
+    assert pad(value, width) == expected

@@ -11,6 +11,7 @@ from typing import ClassVar, cast
 import pytest
 
 from ab_sdk import Event, Plugin, PluginDisabled, Verdict, hook, provider, subscribe
+from ab_sdk.events import SystemEvent
 from module.models.config import Plugins
 from module.plugin import ExtensionPoint, ExtensionRegistry, RegistryError
 from module.plugin.bus import EventBus
@@ -51,8 +52,11 @@ def write_plugin(
     return plugin_dir
 
 
-def manifest(plugin_id: str = "demo", sdk: str = ">=0.1,<1") -> PluginManifest:
-    return parse_manifest(MANIFEST.format(id=plugin_id, sdk=sdk, entry="x:Y"))
+def manifest(
+    plugin_id: str = "demo", sdk: str = ">=0.1,<1", default_enabled: bool = True
+) -> PluginManifest:
+    text = MANIFEST.format(id=plugin_id, sdk=sdk, entry="x:Y")
+    return parse_manifest(f"{text}default_enabled = {str(default_enabled).lower()}\n")
 
 
 @dataclass(frozen=True, slots=True)
@@ -328,6 +332,33 @@ class TestHostContext:
             ctx.bus.publish(PluginDisabled(plugin_id="x", reason="fake"))
         await bus.close()
 
+    async def test_plugin_system_event_goes_through_notification_center(
+        self, tmp_path, monkeypatch
+    ):
+        from module.notification.manager import NotificationManager
+        from module.plugin import context
+
+        @dataclass(frozen=True, slots=True)
+        class Synced(SystemEvent):
+            kind: ClassVar[str] = "demo.synced"
+
+        sent: list[Event] = []
+
+        async def send_event(self, event):
+            sent.append(event)
+
+        monkeypatch.setattr(NotificationManager, "send_event", send_event)
+        bus = EventBus()
+        on_bus: list[Event] = []
+        bus.subscribe("*", on_bus.append)
+        ctx = HostPluginContext("demo", None, bus, tmp_path)
+        ctx.bus.publish(Synced())
+        await asyncio.gather(*context._notify_tasks)
+        await bus.drain()
+        # send_event 自己负责发布到总线，PluginBus 不再重复入队
+        assert sent == [Synced()] and on_bus == []
+        await bus.close()
+
     async def test_data_dir_created_lazily(self, tmp_path):
         ctx = HostPluginContext("demo", None, EventBus(), tmp_path)
         assert not (tmp_path / "demo").exists()
@@ -470,9 +501,12 @@ def candidate_for(
     plugin_id: str = "demo",
     source: str = "builtin",
     sdk: str = ">=0.1,<1",
+    default_enabled: bool = True,
 ) -> PluginCandidate:
     return PluginCandidate(
-        manifest=manifest(plugin_id, sdk), source=source, load=lambda: cls  # type: ignore[arg-type]
+        manifest=manifest(plugin_id, sdk, default_enabled),
+        source=source,  # type: ignore[arg-type]
+        load=lambda: cls,
     )
 
 
@@ -558,10 +592,15 @@ class TestManager:
         assert manager.statuses()[0].state == "active"
         await manager.stop()
 
-    async def test_non_builtin_disabled_by_default(self, tmp_path):
+    @pytest.mark.parametrize(
+        "source, default_enabled", [("local", True), ("builtin", False)]
+    )
+    async def test_disabled_by_default(self, tmp_path, source, default_enabled):
         recorder = Recorder()
         manager, _ = make_manager(
-            candidate_for(build_plugin(recorder), source="local"),
+            candidate_for(
+                build_plugin(recorder), source=source, default_enabled=default_enabled
+            ),
             tmp_path=tmp_path,
             allow_unsigned=True,
         )
@@ -589,6 +628,26 @@ class TestManager:
         assert message in (status.error or "")
         await manager.bus.drain()
         assert len(seen) == 1
+        await manager.stop()
+
+    async def test_subscribe_timeout_overrides_bus_default(self, tmp_path):
+        seen: list[int] = []
+
+        class Slow(Plugin):
+            @subscribe("demo.happened", timeout=5)
+            async def on_demo(self, event):
+                await asyncio.sleep(0.05)
+                seen.append(event.value)
+
+        manager, _ = make_manager(candidate_for(Slow), tmp_path=tmp_path)
+        errors: list[str] = []
+        manager.bus = EventBus(
+            handler_timeout=0.01, on_error=lambda owner, reason: errors.append(reason)
+        )
+        await manager.start()
+        manager.bus.publish(DemoEvent(1))
+        await manager.bus.drain()
+        assert (seen, errors) == ([1], [])
         await manager.stop()
 
     async def test_failed_setup_rolls_back_registrations(self, tmp_path):

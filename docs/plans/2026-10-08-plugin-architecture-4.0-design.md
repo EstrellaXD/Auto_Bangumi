@@ -45,6 +45,58 @@
 - **i18n（第 11 节风险 3）先给出 key**：`SystemEvent.i18n()` 返回 `notifications.kind.<kind>` 与 `payload()`，与前端现有文案键一致；外部推送与通知中心的中文兜底文案不变。插件事件的前端翻译依赖 P6 的 `host.i18n`。
 - 进程级访问器 `module.plugin.host.get_bus/set_bus`、`get_runner/set_runner`、`publish()`，由 `AppContext` 构造时设置，未设置时为空操作。MCP 的 `tools/list_changed` 通知未实现（客户端重新 list 即可看到插件工具变化）。
 
+### 实施中的调整（P4）
+
+拆分与扩展点：
+
+- **`renamer.py` 拆分**：revision 替换事务（普通改名日志、V1→V2 替换、恢复、操作状态、版本占用者）搬到 `manager/revision_saga.py` 的 `RevisionSaga`，`Renamer` 以 mixin 方式继承它（`class Renamer(RevisionSaga)`），而不是构造函数注入。这样第一个提交是纯搬移，测试仍能访问 `renamer._run_ordinary_rename`、`renamer.events`、`renamer._downloader_type`。`renamer.py` 从 1805 行降到 1061 行（含 P4 新增的扩展点接入）。
+- **重命名方式**：宿主只以 `core` 登记 `none`（`manager/rename_strategies.py` 的 `NoRename`）。`pn`、`advance`、`template` 由内置插件 `rename`（`module/plugins/builtin/rename/`，默认启用）提供。设置值 `bangumi_manage.rename_method` 直接作为 Provider id，`slots` 与迁移器留到 P2.5。id 未登记（插件停用或被熔断）时记录一次日志并按 `none` 处理。
+- **纯搬移的一处例外**：3.3 中未知重命名方式遇到电影文件时会改名为 `{title}{suffix}`；现在未知 id 一律按 `none` 处理，保留原名。
+- **`normal`**：`gen_path` 中已没有 `normal` 分支。`conf/config.py` 中 `normal → none` 的转换属于 3.x 兼容层（第 8.3 节），保留不动。
+- **字幕**：删除 `subtitle_pn` / `subtitle_advance`，类别由 `RenameInput.kind` 给出。因此 `test_renamer.py` 有 5 处调用参数从 `subtitle_*` 改为 `pn` / `advance`（断言未改），`test_plugin_extensions.py::test_providers` 的期望值增加 `rename_strategy: []`。既有测试依赖进程注册表中的 `pn` / `advance`，由 `conftest.py` 的 autouse fixture 登记内置插件 `rename`，与生产默认一致。除此之外，pn / advance / none 的输出与 3.3 逐字节一致。
+- **策略调用是同步的**：`HookRunner.call_provider_sync` 在熔断器内调用策略并校验返回值（非空字符串），没有超时；Jinja2 渲染也没有超时，只受沙箱 `MAX_RANGE` 限制。`RenameSkipped` 不计入熔断；其它异常与非法返回值计入熔断，并同样按跳过处理。
+- **跳过通知**：新增系统事件 `rename_skipped`（`RenameSkippedEvent`，WebUI 的 `KNOWN_KINDS`、i18n 与跳转路由同步增加），不复用 `rename_conflict`。同一 (种子 hash, 原因) 每个进程只通知一次。字幕被跳过同样会阻止打 `ab:renamed` 标签，用户修正后种子会被重试。
+- **模板失效的后果**：已保存的模板若不再通过校验（手工改配置、Jinja2 升级），整个 `rename` 插件加载失败，`pn` / `advance` 随之消失，所有种子按 `none` 处理。插件因连续 5 次异常或非法返回值被熔断时同样如此。
+- **`media_files` 与 `conflict_policy`** 只解析固定的 core id `default`（`ab_sdk.rename.CORE_ID`）。插件可以登记实现，但选择要等 P2.5 的 `slots`。`conflict_policy` 的接口改为 `decide(ConflictRequest) -> ConflictDecision`：`ConflictRequest` 带上宿主读取的设置值 `configured`（`bangumi_manage.revision_conflict_policy`，测试 patch 的是 `module.manager.renamer.settings`，所以设置仍在 `renamer.py` 中读取）和宿主计算的 `strict_upgrade`。宿主仍只在「唯一占用者、双方都是单文件种子、双方身份完整」时执行替换。
+- **事件字段**：`FileRenamed` 的类别字段叫 `file_kind`，因为 `kind` 是 `Event` 的类变量；`OrganizedFile` 保留 `kind`。路径为下载器视角、以 `/` 拼接的绝对路径；`downloader_id` 在 P2.5 之前固定为 `"default"`。
+- **`TorrentOrganized` 的投递是至少一次**：进程内按 hash 记忆已发布的最终文件集合，重启后、或文件集合变化时会再次发布。重命名方式为 `none` 的种子同样发布。订阅者必须幂等。
+- **WebUI**：重命名方式下拉框经 `usePluginProviders` 合并插件提供的 id（如 `template`），`rename_method` 类型放宽为字符串。`template` 在 设置 → 番剧管理设置 → 重命名方式 中选择，模板在 设置 → 插件 → 重命名 中填写。
+- `ab_sdk` 新增 `ab_sdk.rename`（契约与冻结快照 `RenameInput`、`Revision`、`RevisionTask`、`ConflictRequest`，以及 `pad()`），`SDK_VERSION` 升到 `0.4.0`。
+
+插件运行时（为内置插件 `hardlink` 补齐）：
+
+- **清单字段 `default_enabled`**（默认 `true`，只对内置插件生效）。`hardlink` 设为 `false`，内置但默认停用。
+- **`@subscribe(kind, timeout=...)`**：覆盖总线默认 30 秒的单个事件处理超时。跨盘复制一集常超过 30 秒，超时会计入熔断，5 个种子后插件就会被停用。`hardlink` 用 3600 秒，文件操作放在 `asyncio.to_thread` 中执行，不阻塞事件循环。
+- **插件的可通知事件进入通知中心**：P5 中插件发布的 `SystemEvent` 只进事件总线。现在 `PluginBus.publish` 把它交给 `NotificationManager.send_event`，与宿主事件一样写入通知中心、发布到总线、推送外部渠道。前端没有对应翻译的 kind 显示 `describe()` 的中文标题与正文。
+
+内置插件 `hardlink`（`module/plugins/builtin/hardlink/`）：
+
+- 插件 id 为 `hardlink`，不是第 4.4 / 7 节示例中的 `hardlink-organizer`。它订阅 `torrent.organized` 而不是第 2.3 节草图中的 `file.renamed`：前者给出种子的完整最终文件集合，重命名方式为 `none` 时也会发布。
+- `source_root`、`library_root` 为必填的绝对路径，`library_root` 不能位于 `source_root` 内。插件代码加载过一次后才有设置表单，所以首次启用必然加载失败（缺少必填项），用户随后在出现的表单中填写、保存，插件重新加载。
+- `path_map` 是对象列表，P2 的 JSON Schema 表单不支持对象数组（显示为「不支持的字段」），P4 期间只能在 `config.json` 中填写。表单支持对象数组留到 P6 / P7。
+- 所有放置（新建与版本升级替换）都先写到同目录的临时文件 `.<文件名>.<随机串>.ab-hardlink`，再 `os.replace` 到目标；失败时删除临时文件。复制中断不会在目标留下半个文件，否则重试时它会被当成「不是本插件创建的」冲突。临时文件名每次不同，因为补链与订阅可能同时处理同一个目标。
+- `hardlink.failed` 的通知正文只能显示种子 hash，因为 `TorrentOrganized` 不带种子名；补充种子名留到 P2.5 / P6。
+- 「由插件创建」记录在插件 KV 中：键 `link:<目标路径>`，值为 `[源文件身份, 目标身份]`，身份为 `lstat` 的 `[st_dev, st_ino, st_size, st_mtime_ns]`。加入大小与修改时间，是因为旧文件删除后 inode 可能被复用。目标是源的硬链接、软链接或大小与修改时间相同的副本，或两个身份都与记录一致时，视为已完成并补写记录：放置后、写记录前协程被取消或进程退出，留下的文件不会被当成冲突。版本升级只替换目标身份与记录一致的文件，用户在原位置放的文件不会被覆盖。
+- 目标被占用、跨文件系统按 `skip` 跳过、源不在 `source_root` 下等问题，每个种子合并成一条 `hardlink.failed` 通知，`dedup_key` 为种子 hash。由于至少一次投递，长期存在的冲突在每次重启后会更新同一条通知。
+- 补链 `backfill()` 以插件路由 `POST /api/v1/plugins/hardlink/backfill` 提供，只在用户调用时运行，返回 `linked` / `exists` / `conflict` / `failed` 计数，不发通知。它遍历本地 `source_root`，不经过 `path_map`。插件不能 import `module.*`，所以按固定扩展名（`.mp4` / `.mkv` / `.ass` / `.srt`，与 `media_files` 的 core 实现相同）挑选文件。
+- **补链按钮推迟到 P6**：设置页的按钮依赖 P6 的 `settings.section` 挂载点，P4 只提供 REST 路由。
+- 删除种子不会删除媒体库中的链接。
+
+未实施（推迟）：
+
+- 第 10 节 P4 行中的 `file_parser` 扩展点。
+- 第 7 节的 `ab_sdk.testing.RenameStrategyContract` 契约测试套件。
+
+两份 P4 实现与移植：
+
+- P4 有两份独立实现。另一个会话的版本（提交 a0706513、12e7e2f5，基于旧 P5 0b6de315）曾推到 `refactor/4.0-p4-organize`，现保留为 `refactor/4.0-p4-organize-cloud`（head 544628f6）。本分支保留本节上文的设计，因为它符合已确认的决策：`pn` / `advance` / `template` 都在内置插件 `rename` 中，坏模板跳过文件并通知、不退回 `pn`，另有 `hardlink`。另一份的 `rename-template` 插件、`BangumiLink`、`ab_sdk.organize` 与由 `PluginManager` 设置进程级总线的做法没有移植。
+- 从另一份移植并按本分支改写的内容：
+  - **内置插件 `media-server-refresh`**：订阅 `torrent.organized`（另一份订阅 `file.renamed`；前者在重命名方式为 `none` 时也会发布），等待 `delay` 秒，把期间的事件合并成一次 Jellyfin / Emby / Plex 刷新请求。未填写地址或 API Key 时不做任何事，所以与另一份相同，默认启用。由于至少一次投递，已配置时每次重启最多多出一次合并后的刷新。
+  - **死代码**：删除 `Renamer.rename_file` / `_rename_media_file`、`_lookup_offsets` / `_normalize_path`、`BangumiDatabase.match_by_save_path`、`TorrentDatabase.search_by_qb_hash`、`RenameOperationDatabase.release_replacement_lease`。删除前确认它们在本分支（含 `revision_saga.py`）没有生产调用方。原测试改为经 `rename()` 与 `_batch_lookup_offsets` 驱动。`season_offset` 从 `gen_path` 起整条重命名链路移除，`_batch_lookup_offsets` 的结果从 `(集数偏移, 季度偏移, 类型)` 改为 `(集数偏移, 类型)`：季度偏移已体现在 Season 文件夹，文件名从未使用它。
+  - **插件配置 422**：`field_validator` 抛出的 `ValueError` 会留在 `ValidationError.errors()` 的 `ctx` 中，无法 JSON 序列化，保存配置返回 500（`hardlink` 的路径校验、`rename` 的模板校验都会触发）。现在以 `include_context=False` 返回 422。
+  - **用户文档**：`docs/{,en/,ja/}config/manager.md` 增加 `template`、`hardlink`（含 `path_map` 与 Docker 下硬链接不能跨文件系统的说明）与 `media-server-refresh` 三节，按本分支的设计重写；`CHANGELOG.md` 增加 P4 条目。
+- 移植时发现并修复：vulture 白名单缺少 `rename` / `hardlink` 内置插件的入口（CI 的 vulture 检查会失败）；VitePress 不给行内代码加 `v-pre`，文档里行内代码中的 Jinja2 示例在构建时报 `_ctx.pad is not a function`，现在用 `::: v-pre` 容器包住（含本设计文档第 3.6 节与插件开发文档）。
+
 ## 1. 背景与目标
 
 AB 目前只有 **LLM 提供商** 是真正的运行时插件系统：签名下载、目录加载、懒导入、热重载。
@@ -266,7 +318,9 @@ TMDB 常量（genre 16、`w780`、`gap_months=6`）收进插件配置。
 | `torrent.organized` | Observer hook | 整个种子处理完成 | 无 |
 
 内置 `rename_strategy` 包括 `pn`、`advance`、`none`，并新增 `template`：
+::: v-pre
 - `template` 使用 Jinja2 沙箱模板，例如 `{{ title }} - S{{ season|pad(2) }}E{{ episode|pad(2) }}`。项目已依赖 Jinja2，能覆盖 80% 的定制需求。
+:::
 - 字幕不再是 `subtitle_*` 平行方法，改为 `RenameInput.kind`。
 - 删除废弃的 `normal`。
 
@@ -591,7 +645,7 @@ organize: downloader.completed → media_files.classify → file_parser
 | **P2 迁移已有注册表** | 下载器、通知、LLM、搜索站点、定时任务改为扩展点，内置实现以 `core` 登记；`/api/v1/plugins`（列表、启停、配置、Provider 列表）与 WebUI 插件卡片（JSON Schema 表单）；`secret_field` 掩码；插件开发文档 | 已完成；内置行为不变（全量测试）。调整见第 0 节 |
 | **P2.5 多下载器** | 下载器多实例；`downloader_id` 列与迁移；按实例路由 add / rename / delete；organize 逐实例扫描 | qb + aria2 并存的 e2e 用例；单实例行为不变 |
 | **P3 流水线插件化：ingest** | `torrent.filter`、`title.parsed`、`torrent.adding`、`http.request` 钩子；`metadata_provider`（mikan / tmdb 以 `core` 登记）；内置插件 `ingest-filters`（包含过滤） | 已完成；无插件时行为不变（全量测试）。`feed_source`、`title_parser` 链、`admission_policy`、`matcher`、`ranker`、`save_path`、size 过滤、按订阅覆盖推迟，见第 0 节 |
-| **P4 流水线插件化：organize** | `media_files`、`file_parser`、`rename_strategy`（含 `template`）、`conflict_policy`、`file.renamed` 等事件 | 模板重命名；硬链接示例插件 |
+| **P4 流水线插件化：organize** | `media_files`、`file_parser`、`rename_strategy`（含 `template`）、`conflict_policy`、`file.renamed` 等事件 | 已完成：`renamer.py` 拆出 `revision_saga.py`；`rename_strategy` / `media_files` / `conflict_policy` 扩展点与 `file.renamed` / `torrent.organized` 事件；内置插件 `rename`（pn / advance / template，pn / advance / none 输出与 3.3 一致）、`hardlink`（默认停用）与 `media-server-refresh`。`file_parser`、`RenameStrategyContract`、补链设置按钮（P6）推迟，调整见第 0 节 |
 | **P5 事件与外部接口** | SSE 改订阅 bus；`api_router`、`mcp_tool` 扩展点；`message_template` | 已完成：系统事件上总线、通知中心 SSE 改为事件推送、插件路由 / MCP 工具与资源 / 通知模板；status 等快照类 SSE 仍按节拍采样。调整见第 0 节 |
 | **P6 前端插件** | Web Component 挂载点、`AbHost` 桥接、错误边界、`/plugins/<id>/web` 静态资源、`@autobangumi/plugin-ui` 包 | 示例插件「手动选种」以详情页标签形式可用 |
 | **P7 生态** | 插件管理页（安装、启停、日志、错误）、签名目录发布流程、模板仓库（含前端模板）、`ab-plugin` CLI、文档（中 / 英 / 日） | 6 个以上示例插件上架 |
@@ -604,7 +658,7 @@ organize: downloader.completed → media_files.classify → file_parser
 已决议题（SDK 版本、插件依赖、前端插件、多下载器）见第 0 节。剩余风险：
 
 1. **性能**。每个种子都要经过多段 hook，RSS 一次可能有几百条。Filter hook 需要支持批量接口 `accept_many`，并加基准测试。
-2. **`release_replacement_lease` 无调用方**。初步判断冗余：状态迁移会清租约，租约也有过期时间。P0 删除前，确认 claim 之后的提前退出路径只靠过期回收是否可以接受（最长占用一个租约周期）。
+2. ~~**`release_replacement_lease` 无调用方**~~。已在 P4 删除：`set_state_claimed` 的同一条 UPDATE 写入状态并清除租约；异常退出的步骤只靠过期回收，最长占用一个租约周期（5 分钟，与重试冷却相同），只会推迟下一次尝试。
 3. **翻译**。事件 `describe()` 当前硬编码中文。插件化后要走 i18n key，否则第三方插件消息无法翻译。前端组件通过 `host.i18n` 拿当前语言。
 4. **多下载器的跨实例一致性**。同一番剧中途更换下载器时，已下载种子仍留在旧实例。renamer 按 `torrent.downloader_id` 路由即可，但 UI 要明确展示每个种子所在实例。此外不做跨实例迁移。
 5. **前端插件的 0.x 期 API 变动**。`AbHost` 与挂载点同样遵循 SDK 0.x → 1.0 的节奏，4.0 期间可能调整，文档要标注。

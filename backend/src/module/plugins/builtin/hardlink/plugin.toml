@@ -1,0 +1,10 @@
+[plugin]
+id = "hardlink"
+name = "硬链接到媒体库"
+version = "1.0.0"
+sdk = ">=0.4,<1"
+entry = "hardlink_plugin:HardlinkPlugin"
+description = "整理完成后把正片与字幕硬链接到媒体库目录，下载目录保持原样继续做种"
+authors = ["AutoBangumi"]
+permissions = ["fs.write"]
+default_enabled = false

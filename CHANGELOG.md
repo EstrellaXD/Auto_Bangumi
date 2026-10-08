@@ -10,6 +10,11 @@
 - **优化（通知中心推送）**：SSE 的 `notification` 帧改为订阅事件总线，通知中心有新消息、已读或删除时立即推送（原先每 3 秒比较一次修订号），推送格式不变
 - **修复（搜索）**：`GET /api/v1/search/provider` 读取的是导入时的站点快照，新保存的搜索站点要重启后才会出现在列表中；现在实时读取
 - **修复（MCP）**：MCP 客户端每次断开 SSE 连接后，日志都会出现 `AssertionError: Unexpected message http.response.start`（3.x 起存在）。原因是 `/sse` 端点在 SSE 响应结束后又返回了一个空 `Response`，现在改为裸 ASGI 端点
+- **新增（整理流水线）**：重命名方式改为 `rename_strategy` 扩展点：`pn` / `advance` / `template` 由默认启用的内置插件「重命名」（`rename`）提供，`none` 由宿主提供；`pn` / `advance` 的输出与此前逐字一致。字幕不再使用 `subtitle_*` 平行方式，同一方式按文件类型生成。`template` 用 Jinja2 沙箱模板自定义文件名（默认模板与 `pn` 相同），保存时试渲染、不合法直接拒绝；运行时渲染失败的文件保留原名并发送「文件未重命名」通知，不会退回 `pn`。文件分类（`media_files`）与版本冲突策略（`conflict_policy`）改为宿主 Provider。重命名后向事件总线发布 `file.renamed` / `torrent.organized`（`ab_sdk.events`）。`ab_sdk` 升至 0.4.0
+- **新增（硬链接）**：新增默认停用的内置插件「硬链接到媒体库」（`hardlink`）：种子整理完成后把正片与字幕链接到媒体库目录，按下载器实例做路径映射（`path_map`），跨文件系统时默认复制；不覆盖不是它创建的文件，版本升级后替换自己创建的链接；已有文件经 `POST /api/v1/plugins/hardlink/backfill` 按需补链
+- **新增（媒体库刷新）**：新增内置插件「媒体库刷新」（`media-server-refresh`）：配置 Jellyfin / Emby / Plex 地址与 API Key 后，合并一段时间内整理完成的种子，请求刷新媒体库；未配置时不做任何事
+- **重构（整理流水线）**：`manager/renamer.py` 拆为编排（`renamer.py`）与 revision 替换事务（`revision_saga.py`）；删除仅测试使用的 `Renamer.rename_file` / `_lookup_offsets`、无调用方的 `release_replacement_lease`、`match_by_save_path`、`search_by_qb_hash`，以及在重命名链路中传递却从未使用的 `season_offset` 参数
+- **修复（插件配置）**：插件配置模型的校验器（`field_validator`）报错时，保存接口返回 500 而不是 422（错误详情中的异常对象无法序列化）
 - **破坏性变更（升级路径）**：只支持从 3.3.x 升级。检测到更早版本的数据（`config/version.info` 低于 3.3，或残留 2.x 的 `data/data.json`）时拒绝启动，并提示先升级到最新 3.3.x 启动一次完成迁移
 - **破坏性变更（API）**：移除 3.2 兼容的 GET 控制端点（`/api/v1/restart`、`/start`、`/stop`、`/shutdown`）和 `GET /api/v1/auth/refresh_token`，请改用 POST
 - **破坏性变更（配置）**：移除旧版 `experimental_openai` 配置节和通知的单 provider 旧字段（`type` / `token` / `chat_id`），3.3 已把它们迁移到 `llm` 与 `notification.providers`；移除废弃的 `normal` 重命名方式，已有配置自动改为语义相同的 `none`

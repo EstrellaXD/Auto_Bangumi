@@ -30,6 +30,9 @@ class PluginManifest(BaseModel):
     description: str = ""
     authors: list[str] = Field(default_factory=list)
     permissions: list[str] = Field(default_factory=list)
+    default_enabled: bool = Field(
+        True, description="未设置启用开关时是否默认启用；只对内置插件生效"
+    )
 
     @field_validator("id")
     @classmethod

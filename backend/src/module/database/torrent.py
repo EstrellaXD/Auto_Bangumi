@@ -58,13 +58,6 @@ class TorrentDatabase:
         existing_urls = set(result.scalars().all())
         return [t for t in torrents_list if t.url not in existing_urls]
 
-    async def search_by_qb_hash(self, qb_hash: str) -> Torrent | None:
-        """Find torrent by qBittorrent hash."""
-        result = await self.session.execute(
-            select(Torrent).where(Torrent.qb_hash == qb_hash)
-        )
-        return result.scalar_one_or_none()
-
     async def search_by_qb_hashes(self, qb_hashes: list[str]) -> list[Torrent]:
         """Find torrents by multiple qBittorrent hashes (batch query)."""
         if not qb_hashes:

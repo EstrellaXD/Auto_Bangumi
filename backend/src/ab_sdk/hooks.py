@@ -32,6 +32,7 @@ class ProviderSpec:
 @dataclass(frozen=True, slots=True)
 class SubscribeSpec:
     kind: str
+    timeout: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,15 +84,16 @@ def provider(point: str, *, id: str):
     return mark
 
 
-def subscribe(kind: str):
+def subscribe(kind: str, *, timeout: float | None = None):
     """把方法声明为事件订阅者，参数为事件对象。
 
     订阅者在独立队列中按发布顺序异步执行，失败或超时不影响发布方。
-    ``kind`` 为 ``"*"`` 时接收全部事件。
+    ``kind`` 为 ``"*"`` 时接收全部事件。``timeout`` 覆盖宿主默认的单个事件
+    处理超时（秒），适合复制大文件等耗时操作。
     """
 
     def mark(func: F) -> F:
-        setattr(func, SUBSCRIBE_ATTR, SubscribeSpec(kind))
+        setattr(func, SUBSCRIBE_ATTR, SubscribeSpec(kind, timeout))
         return func
 
     return mark

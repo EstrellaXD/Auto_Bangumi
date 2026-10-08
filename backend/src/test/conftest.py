@@ -41,6 +41,42 @@ def _reset_downloader_client_cache():
 
 
 # ---------------------------------------------------------------------------
+# Built-in rename plugin
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="session")
+def _rename_plugin_cls():
+    from module.plugin.loader import BUILTIN_ROOT, discover
+
+    candidates, _ = discover(
+        local_root=BUILTIN_ROOT / "__missing__", entry_point_group="ab-test-none"
+    )
+    return {c.manifest.id: c for c in candidates}["rename"].load()
+
+
+@pytest.fixture(autouse=True)
+def _builtin_rename_plugin(_rename_plugin_cls, tmp_path):
+    """内置插件 rename 默认启用：与生产一致，单元测试里 pn / advance /
+    template 也已登记在进程级注册表中。"""
+    from ab_sdk.hooks import PROVIDER_ATTR
+    from ab_sdk.testing import create_plugin
+    from module.plugin import host
+    from module.plugin.registry import ProviderEntry
+
+    plugin, _ = create_plugin(_rename_plugin_cls, plugin_id="rename", data_dir=tmp_path)
+    registry = host.get_registry()
+    for name, member in vars(_rename_plugin_cls).items():
+        spec = getattr(member, PROVIDER_ATTR, None)
+        if spec is not None:
+            registry.add_provider(
+                spec.point, ProviderEntry("rename", spec.id, getattr(plugin, name))
+            )
+    yield
+    registry.remove_plugin("rename")
+
+
+# ---------------------------------------------------------------------------
 # Database Fixtures
 # ---------------------------------------------------------------------------
 

@@ -18,6 +18,7 @@ const KIND_ROUTES: Record<string, string> = {
   offset_review: '/bangumi',
   download_failure: '/bangumi',
   rename_conflict: '/downloader',
+  rename_skipped: '/downloader',
 };
 
 const SEVERITY_ICONS = {
