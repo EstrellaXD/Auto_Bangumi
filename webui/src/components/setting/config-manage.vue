@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type {
   BangumiManage,
+  PluginSlots,
   RenameMethod,
   RevisionConflictPolicy,
 } from '#/config';
@@ -11,6 +12,8 @@ const { t } = useMyI18n();
 const { getSettingGroup } = useConfigStore();
 
 const manage = getSettingGroup('bangumi_manage');
+// 重命名方式与版本冲突策略是 Provider 选择，存放在 plugins.slots
+const plugins = getSettingGroup('plugins');
 const builtinMethods: RenameMethod = ['pn', 'advance', 'none'];
 const pluginProviders = usePluginProviders();
 // pn / advance 也由内置插件 rename 提供；插件新增的方式（如 template）追加在后
@@ -35,14 +38,15 @@ const revisionConflictOptions = computed<SelectItem[]>(() => [
   },
 ]);
 
-const items = computed<SettingItem<BangumiManage>[]>(() => [
+const enableItem = computed<SettingItem<BangumiManage>>(() => ({
+  configKey: 'enable',
+  label: () => t('config.manage_set.enable'),
+  type: 'switch',
+}));
+
+const slotItems = computed<SettingItem<PluginSlots>[]>(() => [
   {
-    configKey: 'enable',
-    label: () => t('config.manage_set.enable'),
-    type: 'switch',
-  },
-  {
-    configKey: 'rename_method',
+    configKey: 'rename_strategy',
     label: () => t('config.manage_set.method'),
     type: 'select',
     prop: {
@@ -50,7 +54,7 @@ const items = computed<SettingItem<BangumiManage>[]>(() => [
     },
   },
   {
-    configKey: 'revision_conflict_policy',
+    configKey: 'conflict_policy',
     label: () => t('config.manage_set.revision_conflict_policy'),
     description: t('config.manage_set.revision_conflict_hint'),
     type: 'select',
@@ -59,6 +63,9 @@ const items = computed<SettingItem<BangumiManage>[]>(() => [
     },
     bottomLine: true,
   },
+]);
+
+const items = computed<SettingItem<BangumiManage>[]>(() => [
   {
     configKey: 'eps_complete',
     label: () => t('config.manage_set.eps'),
@@ -85,6 +92,13 @@ const items = computed<SettingItem<BangumiManage>[]>(() => [
 <template>
   <ab-fold-panel :title="$t('config.manage_set.title')">
     <div space-y-8>
+      <ab-setting v-bind="enableItem" v-model:data="manage.enable"></ab-setting>
+      <ab-setting
+        v-for="i in slotItems"
+        :key="i.configKey"
+        v-bind="i"
+        v-model:data="plugins.slots[i.configKey]"
+      ></ab-setting>
       <ab-setting
         v-for="i in items"
         :key="i.configKey"

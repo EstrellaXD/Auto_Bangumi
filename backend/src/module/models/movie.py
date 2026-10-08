@@ -25,6 +25,9 @@ class Movie(SQLModel, table=True):
     save_path: str | None = Field(default=None, alias="save_path", title="保存路径")
     rule_name: str | None = Field(default=None, alias="rule_name", title="规则名")
     filter: str = Field(default="", alias="filter", title="过滤器")
+    downloader_id: str = Field(
+        default="default", alias="downloader_id", title="下载器实例"
+    )
 
 
 class MovieUpdate(SQLModel):

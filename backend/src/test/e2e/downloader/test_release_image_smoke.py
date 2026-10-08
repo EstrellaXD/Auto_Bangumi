@@ -115,7 +115,7 @@ def test_native_image_version_and_config_survive_restart(downloader_stack):
         assert persisted["rss_parser"]["language"] == "jp"
         assert persisted["bangumi_manage"]["enable"] is False
         assert (
-            persisted["downloader"]["host"]
+            persisted["plugins"]["instances"][0]["options"]["host"]
             == downloader_stack.environment["AB_E2E_QB_INTERNAL_URL"]
         )
         assert persisted["network"]["tmdb_base_url"] == (

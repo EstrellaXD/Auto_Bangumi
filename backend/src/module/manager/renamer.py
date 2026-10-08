@@ -7,7 +7,6 @@ from typing import Any
 from ab_sdk import points
 from ab_sdk.events import FileRenamed, OrganizedFile, TorrentOrganized
 from ab_sdk.rename import (
-    CORE_ID,
     ConflictPolicy,
     ConflictRequest,
     FileKind,
@@ -58,7 +57,7 @@ _skip_notified: set[tuple[str, str]] = set()
 
 
 def _rename_strategy(method: str | ProviderEntry) -> ProviderEntry:
-    """按 rename_method 取重命名策略；未登记（如 rename 插件未启用）时记录一次
+    """按 slots.rename_strategy 取重命名策略；未登记（如 rename 插件未启用）时记录一次
     日志并按 none 处理。已解析的策略原样返回：一轮重命名只解析一次，轮中插件
     被停用也不会让同一种子的文件名与 ab:renamed 标签来自不同策略。"""
     if isinstance(method, ProviderEntry):
@@ -500,7 +499,6 @@ class Renamer(RevisionSaga):
                         )
                         for o in owners
                     ),
-                    configured=settings.bangumi_manage.revision_conflict_policy,
                     strict_upgrade=bool(
                         owner is not None
                         and incoming_identity is not None
@@ -632,11 +630,10 @@ class Renamer(RevisionSaga):
 
     @staticmethod
     def _conflict_policy() -> ConflictPolicy:
-        return (
-            plugin_host.get_registry()
-            .providers(points.CONFLICT_POLICY)[CORE_ID]
-            .factory()
-        )
+        # 选中的策略未登记（插件停用或被熔断）时按 hold 处理，不会误删旧版本
+        policies = plugin_host.get_registry().providers(points.CONFLICT_POLICY)
+        entry = policies.get(settings.plugins.slots.conflict_policy) or policies["hold"]
+        return entry.factory()
 
     async def _batch_lookup_offsets(
         self, torrents_info: list[dict]
@@ -749,7 +746,7 @@ class Renamer(RevisionSaga):
 
     async def rename(self) -> list[Notification]:
         logger.debug("Start rename process.")
-        strategy = _rename_strategy(settings.bangumi_manage.rename_method)
+        strategy = _rename_strategy(settings.plugins.slots.rename_strategy)
         pending_infos = await self.client.get_torrent_info()
         # Owner counting and Saga recovery must see tasks outside the normal
         # Bangumi/completed filter (collections, paused tasks, changed category).

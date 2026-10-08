@@ -61,6 +61,9 @@ class Bangumi(SQLModel, table=True):
     episode_type: str = Field(
         default="episode", alias="episode_type", title="剧集类型"
     )  # "episode" | "movie" | "special"
+    downloader_id: str = Field(
+        default="default", alias="downloader_id", title="下载器实例"
+    )
 
 
 class BangumiUpdate(SQLModel):

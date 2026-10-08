@@ -6,6 +6,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from module.models.config import Config
+from module.update.v4 import migrate_v3_config, migrate_v3_dict
 
 from .const import ENV_TO_ATTR
 
@@ -68,9 +69,9 @@ CONFIG_PATH = (
 class Settings(Config):
     """Runtime configuration singleton.
 
-    On construction, loads from ``CONFIG_PATH`` if the file exists (and
-    immediately re-saves to apply any migrations), otherwise bootstraps
-    defaults from environment variables via ``init()``.
+    On construction, migrates a 3.3 ``CONFIG_PATH`` to 4.0 (see
+    ``module.update.v4``), loads it and immediately re-saves it; otherwise
+    bootstraps defaults from environment variables via ``init()``.
 
     Use ``settings`` module-level instance rather than instantiating directly.
     """
@@ -78,6 +79,8 @@ class Settings(Config):
     def __init__(self):
         super().__init__()
         if CONFIG_PATH.exists():
+            # 必须先于 load / save：否则 3.3 的下载器等字段会被当作未知字段丢弃
+            migrate_v3_config(CONFIG_PATH)
             self.load()
             self.save()
         else:
@@ -95,12 +98,7 @@ class Settings(Config):
 
     @staticmethod
     def _migrate_old_config(config: dict) -> dict:
-        """把 3.3.x 的配置改写为当前格式（更早版本的迁移已随 4.0 移除）。"""
-        bangumi_manage = config.get("bangumi_manage", {})
-        # "normal" 早已是无操作的废弃方法，语义等同 "none"
-        if bangumi_manage.get("rename_method") == "normal":
-            bangumi_manage["rename_method"] = "none"
-
+        """清洗字面写入的掩码哨兵（3.3 → 4.0 的字段迁移见 ``module.update.v4``）。"""
         _scrub_corrupted_masks(config)
 
         return config
@@ -125,15 +123,17 @@ class Settings(Config):
         for key, section in ENV_TO_ATTR.items():
             for env, attr in section.items():
                 if env in os.environ:
+                    section = config_dict.setdefault(key, {})
                     if isinstance(attr, list):
                         for _attr in attr:
                             attr_name = _attr[0] if isinstance(_attr, tuple) else _attr
-                            config_dict[key][attr_name] = self.__val_from_env(
-                                env, _attr
-                            )
+                            section[attr_name] = self.__val_from_env(env, _attr)
                     else:
                         attr_name = attr[0] if isinstance(attr, tuple) else attr
-                        config_dict[key][attr_name] = self.__val_from_env(env, attr)
+                        section[attr_name] = self.__val_from_env(env, attr)
+        # ENV_TO_ATTR 按 3.3 的位置写入（AB_DOWNLOADER_* → downloader、
+        # AB_METHOD → bangumi_manage），再由迁移器移到默认下载器实例与 slots
+        migrate_v3_dict(config_dict)
         config_obj = Config.model_validate(config_dict)
         self.__dict__.update(config_obj.__dict__)
         logger.debug("Config loaded from env")

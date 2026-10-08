@@ -13,6 +13,7 @@ class RSSItem(SQLModel, table=True):
     connection_status: Optional[str] = Field(None, alias="connection_status")
     last_checked_at: Optional[str] = Field(None, alias="last_checked_at")
     last_error: Optional[str] = Field(None, alias="last_error")
+    downloader_id: str = Field("default", alias="downloader_id")
 
 
 class RSSUpdate(SQLModel):

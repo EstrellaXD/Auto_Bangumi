@@ -26,7 +26,7 @@ from module.downloader import DownloadClient
 from module.notification.inbox import InboxChanged, inbox_revision
 from module.plugin.host import get_bus
 from module.security.api import get_current_user
-from module.update import get_update_progress
+from module.update.updater import get_update_progress
 
 logger = logging.getLogger(__name__)
 

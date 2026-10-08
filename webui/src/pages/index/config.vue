@@ -93,14 +93,14 @@ const sections: ConfigSection[] = [
     id: 'downloader',
     titleKey: 'config.downloader_set.title',
     component: ConfigDownload,
-    groups: ['downloader'],
+    groups: ['plugins'],
     keywords: ['qbittorrent', 'host', 'username', 'password', 'ssl', 'path'],
   },
   {
     id: 'manage',
     titleKey: 'config.manage_set.title',
     component: ConfigManage,
-    groups: ['bangumi_manage'],
+    groups: ['bangumi_manage', 'plugins'],
     keywords: [
       'rename',
       'method',

@@ -21,7 +21,7 @@ from module.conf import settings
 from module.core import AppContext
 from module.notification import UpdateAppliedEvent
 from module.security.api import get_current_user
-from module.update import updater
+from module.update.updater import updater
 
 from .deps import get_context
 

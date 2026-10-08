@@ -34,7 +34,9 @@ async function onDeleteSelected() {
 }
 
 const isNull = computed(() => {
-  return config.value.downloader.host === '';
+  const { slots, instances } = config.value.plugins;
+  const downloader = instances.find((i) => i.id === slots.downloader);
+  return !downloader?.options.host;
 });
 
 const { connected: sseConnected } = useEventStream();

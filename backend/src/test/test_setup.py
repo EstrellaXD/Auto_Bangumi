@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from module.api.deps import get_context
 from module.api.setup import SENTINEL_PATH, router
+from module.models.config import Config
 from module.models.user import User
 from module.security.api import get_auth_service
 from module.security.password import get_password_hash
@@ -56,12 +57,10 @@ def mock_first_run():
     with (
         patch("module.api.setup.SENTINEL_PATH") as mock_sentinel,
         patch("module.api.setup.settings") as mock_settings,
-        patch("module.api.setup.Config") as mock_config,
     ):
         mock_sentinel.exists.return_value = False
-        mock_settings.dict.return_value = {"test": "default"}
-        mock_config.return_value.dict.return_value = {"test": "default"}
-        yield
+        mock_settings.dict.side_effect = lambda: Config().dict()
+        yield mock_settings
 
 
 @pytest.fixture
@@ -349,6 +348,34 @@ class TestSetupComplete:
             "notification_token": "",
             "notification_chat_id": "",
         }
+
+    def test_complete_writes_downloader_to_default_instance(
+        self, client, mock_first_run, auth_service
+    ):
+        auth_service.authenticate_session.return_value = User(
+            id=7, username="admin", password="hashed-password", enabled=True
+        )
+        client.cookies.set("token", "pre-setup-session")
+        payload = self._payload() | {"downloader_type": "aria2"}
+        response = client.post("/api/v1/setup/complete", json=payload)
+
+        assert response.status_code == 200
+        saved = mock_first_run.save.call_args.args[0]
+        assert "downloader" not in saved
+        assert saved["plugins"]["instances"] == [
+            {
+                "id": "default",
+                "point": "downloader",
+                "provider": "aria2",
+                "options": {
+                    "host": "localhost:8080",
+                    "username": "admin",
+                    "password": "admin",
+                    "path": "/downloads",
+                    "ssl": False,
+                },
+            }
+        ]
 
     def test_complete_routes_through_ctx_reload_settings(
         self, client, mock_first_run, mock_ctx, auth_service

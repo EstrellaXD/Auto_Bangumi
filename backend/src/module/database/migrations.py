@@ -100,6 +100,20 @@ class Migration:
         return self.statements
 
 
+# 存量行归属默认下载器实例（plugins.instances 中 id 为 default 的实例）
+_DOWNLOADER_ID_TABLES = ("bangumi", "movie", "rssitem", "torrent")
+
+
+def _has_downloader_id(table: str) -> AppliedCheck:
+    # 表不存在时由 create_all 按模型建表，自带该列
+    def check(inspector) -> bool:
+        return table not in inspector.get_table_names() or column_exists(
+            table, "downloader_id"
+        )(inspector)
+
+    return check
+
+
 # 迁移按版本顺序执行；版本号与 3.2.x 的历史保持一致，旧数据库照常升级。
 MIGRATIONS: tuple[Migration, ...] = (
     Migration(
@@ -798,6 +812,23 @@ MIGRATIONS: tuple[Migration, ...] = (
             "CREATE INDEX IF NOT EXISTS ix_plugin_kv_plugin_id ON plugin_kv (plugin_id)",
         ),
         table_exists("plugin_kv"),
+    ),
+    Migration(
+        26,
+        "add downloader_id to bangumi, movie, rssitem and torrent",
+        tuple(
+            f"ALTER TABLE {table} ADD COLUMN downloader_id VARCHAR DEFAULT 'default'"
+            for table in _DOWNLOADER_ID_TABLES
+        ),
+        all_checks(*(_has_downloader_id(table) for table in _DOWNLOADER_ID_TABLES)),
+        tuple(
+            (
+                f"ALTER TABLE {table} ADD COLUMN downloader_id VARCHAR "
+                "DEFAULT 'default'",
+                _has_downloader_id(table),
+            )
+            for table in _DOWNLOADER_ID_TABLES
+        ),
     ),
 )
 

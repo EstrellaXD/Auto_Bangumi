@@ -44,9 +44,8 @@ export interface Program {
   webui_port: number;
 }
 
-export interface Downloader {
-  /** 内置类型，或插件提供的下载器 id */
-  type: TupleToUnion<DownloaderType> | (string & {});
+/** 下载器实例的连接参数（plugins.instances[].options） */
+export interface DownloaderOptions {
   host: string;
   username: string;
   password: string;
@@ -62,9 +61,6 @@ export interface RssParser {
 export interface BangumiManage {
   enable: boolean;
   eps_complete: boolean;
-  /** 内置方式，或插件提供的重命名方式 id（如 template） */
-  rename_method: TupleToUnion<RenameMethod> | (string & {});
-  revision_conflict_policy: TupleToUnion<RevisionConflictPolicy>;
   group_tag: boolean;
   remove_bad_torrent: boolean;
   track_orphans: boolean;
@@ -150,6 +146,24 @@ export interface Update {
   auto_check: boolean;
 }
 
+/** 多实例扩展点（目前只有下载器）的一个实例 */
+export interface PluginInstance {
+  id: string;
+  point: string;
+  /** 内置类型，或插件提供的 Provider id */
+  provider: TupleToUnion<DownloaderType> | (string & {});
+  options: Record<string, unknown>;
+}
+
+/** Provider 选择：扩展点 → Provider id；下载器选的是实例 id */
+export interface PluginSlots {
+  downloader: string;
+  /** 内置方式，或插件提供的重命名方式 id（如 template） */
+  rename_strategy: TupleToUnion<RenameMethod> | (string & {});
+  conflict_policy: TupleToUnion<RevisionConflictPolicy> | (string & {});
+  media_files: string;
+}
+
 /** 插件系统配置；启用状态缺省时内置插件启用、其它来源禁用 */
 export interface Plugins {
   /** 允许加载未签名（本地目录 / pip）插件 */
@@ -158,11 +172,12 @@ export interface Plugins {
   options: Record<string, Record<string, unknown>>;
   /** 各扩展点的显式钩子顺序（插件 id 列表） */
   hook_order: Record<string, string[]>;
+  slots: PluginSlots;
+  instances: PluginInstance[];
 }
 
 export interface Config {
   program: Program;
-  downloader: Downloader;
   rss_parser: RssParser;
   bangumi_manage: BangumiManage;
   log: Log;
@@ -181,14 +196,6 @@ export const initConfig: Config = {
     rename_time: 0,
     webui_port: 0,
   },
-  downloader: {
-    type: 'qbittorrent',
-    host: '',
-    username: '',
-    password: '',
-    path: '',
-    ssl: false,
-  },
   rss_parser: {
     enable: true,
     engine: 'classic',
@@ -198,8 +205,6 @@ export const initConfig: Config = {
   bangumi_manage: {
     enable: true,
     eps_complete: true,
-    rename_method: 'pn',
-    revision_conflict_policy: 'hold',
     group_tag: true,
     remove_bad_torrent: true,
     track_orphans: true,
@@ -255,5 +260,19 @@ export const initConfig: Config = {
     enabled: {},
     options: {},
     hook_order: {},
+    slots: {
+      downloader: 'default',
+      rename_strategy: 'pn',
+      conflict_policy: 'hold',
+      media_files: 'default',
+    },
+    instances: [
+      {
+        id: 'default',
+        point: 'downloader',
+        provider: 'qbittorrent',
+        options: { host: '', username: '', password: '', path: '', ssl: false },
+      },
+    ],
   },
 };

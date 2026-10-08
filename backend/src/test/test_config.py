@@ -9,7 +9,7 @@ import pytest
 from module.conf.config import Settings
 from module.models.config import (
     Config,
-    Downloader,
+    DownloaderOptions,
     NotificationProvider,
     RSSParser,
     Security,
@@ -61,10 +61,10 @@ class TestConfigDefaults:
         """BangumiManage has correct default values."""
         config = Config()
         assert config.bangumi_manage.enable is True
-        assert config.bangumi_manage.rename_method == "pn"
+        assert config.plugins.slots.rename_strategy == "pn"
         assert config.bangumi_manage.group_tag is False
         assert config.bangumi_manage.remove_bad_torrent is False
-        assert config.bangumi_manage.revision_conflict_policy == "hold"
+        assert config.plugins.slots.conflict_policy == "hold"
         assert config.bangumi_manage.eps_complete is False
 
     def test_proxy_defaults(self):
@@ -85,14 +85,65 @@ class TestConfigDefaults:
 # ---------------------------------------------------------------------------
 
 
+class TestPluginInstances:
+    @pytest.mark.parametrize(
+        "plugins",
+        [
+            {"slots": {"downloader": "missing"}},
+            {
+                "instances": [
+                    {"id": "default", "point": "downloader", "provider": "qb"},
+                    {"id": "default", "point": "downloader", "provider": "aria2"},
+                ]
+            },
+            {
+                "instances": [
+                    {
+                        "id": "default",
+                        "point": "downloader",
+                        "provider": "qbittorrent",
+                        "options": {"ssl": "sometimes"},
+                    }
+                ]
+            },
+        ],
+    )
+    def test_invalid_downloader_instances_rejected(self, plugins):
+        with pytest.raises(ValueError):
+            Config.model_validate({"plugins": plugins})
+
+    def test_downloader_view_follows_slot(self):
+        config = Config.model_validate(
+            {
+                "plugins": {
+                    "slots": {"downloader": "nas"},
+                    "instances": [
+                        {"id": "default", "point": "downloader", "provider": "qb"},
+                        {
+                            "id": "nas",
+                            "point": "downloader",
+                            "provider": "aria2",
+                            "options": {"host": "nas:6800"},
+                        },
+                    ],
+                }
+            }
+        )
+        assert (config.downloader.id, config.downloader.type) == ("nas", "aria2")
+        assert config.downloader.host == "nas:6800"
+        # 未填写的字段取默认值
+        assert config.downloader.path == "/downloads/Bangumi"
+
+
 class TestConfigSerialization:
     def test_dict_uses_alias(self):
         """Config.dict() uses field aliases (by_alias=True)."""
         config = Config()
         d = config.dict()
-        # Downloader uses alias 'host' not 'host_'
-        assert "host" in d["downloader"]
-        assert "host_" not in d["downloader"]
+        # 下载器实例的 options 用别名 host 而不是 host_
+        options = d["plugins"]["instances"][0]["options"]
+        assert "host" in options
+        assert "host_" not in options
 
     def test_roundtrip_json(self, tmp_path):
         """Config can be serialized to JSON and loaded back."""
@@ -127,18 +178,6 @@ class TestMigrateOldConfig:
         result = Settings._migrate_old_config(current_config)
         assert result["program"]["rss_time"] == 900
         assert result["program"]["rename_time"] == 60
-
-    def test_normal_rename_method_becomes_none(self):
-        """废弃的 normal 重命名方法迁移为语义相同的 none。"""
-        config = {"bangumi_manage": {"rename_method": "normal"}}
-        result = Settings._migrate_old_config(config)
-        assert result["bangumi_manage"]["rename_method"] == "none"
-
-    @pytest.mark.parametrize("method", ["pn", "advance", "none"])
-    def test_supported_rename_methods_untouched(self, method):
-        config = {"bangumi_manage": {"rename_method": method}}
-        result = Settings._migrate_old_config(config)
-        assert result["bangumi_manage"]["rename_method"] == method
 
 
 # ---------------------------------------------------------------------------
@@ -191,7 +230,8 @@ class TestSettingsLoad:
         with open(config_file) as f:
             data = json.load(f)
         assert "program" in data
-        assert "downloader" in data
+        assert "downloader" not in data
+        assert data["plugins"]["instances"][0]["provider"] == "qbittorrent"
         # 新配置文件包含 llm 段
         assert "llm" in data
         assert data["rss_parser"]["engine"] == "classic"
@@ -222,18 +262,34 @@ class TestSettingsLoad:
 
 
 class TestEnvOverrides:
-    def test_downloader_host_from_env(self, tmp_path):
-        """AB_DOWNLOADER_HOST env var overrides downloader host."""
+    def test_downloader_env_maps_onto_default_instance(self, tmp_path):
+        """AB_DOWNLOADER_* / AB_DOWNLOAD_PATH / AB_METHOD 写入默认下载器实例与 slots。"""
         config_file = tmp_path / "config.json"
 
-        env = {"AB_DOWNLOADER_HOST": "192.168.1.100:9090"}
+        env = {
+            "AB_DOWNLOADER_HOST": "192.168.1.100:9090",
+            "AB_DOWNLOADER_USERNAME": "ab",
+            "AB_DOWNLOADER_PASSWORD": "pw",
+            "AB_DOWNLOAD_PATH": "/data/Bangumi",
+            "AB_METHOD": "Advance",
+        }
         with patch.dict(os.environ, env, clear=False):
             with patch("module.conf.config.CONFIG_PATH", config_file):
                 s = Settings.__new__(Settings)
                 Config.__init__(s)
                 s.init()
 
-        assert "192.168.1.100:9090" in s.downloader.host
+        assert (s.downloader.host, s.downloader.username, s.downloader.password) == (
+            "192.168.1.100:9090",
+            "ab",
+            "pw",
+        )
+        assert s.downloader.path == "/data/Bangumi"
+        assert s.downloader.type == "qbittorrent"
+        assert s.plugins.slots.rename_strategy == "advance"
+        saved = json.loads(config_file.read_text())
+        assert "downloader" not in saved
+        assert len(saved["plugins"]["instances"]) == 1
 
     def test_rss_parser_engine_from_env(self, tmp_path):
         """AB_RSS_PARSER_ENGINE selects a supported parser engine."""
@@ -260,7 +316,7 @@ class TestEnvOverrides:
                 Config.__init__(s)
                 s.init()
 
-        assert s.bangumi_manage.revision_conflict_policy == "replace"
+        assert s.plugins.slots.conflict_policy == "replace"
 
 
 # ---------------------------------------------------------------------------
@@ -401,26 +457,26 @@ class TestNotificationProviders:
 
 class TestDownloaderEnvExpansion:
     def test_host_expands_env_var(self, monkeypatch):
-        """Downloader.host expands $VAR references."""
+        """DownloaderOptions.host expands $VAR references."""
         monkeypatch.setenv("QB_HOST", "192.168.5.10:8080")
-        d = Downloader(host="$QB_HOST")
+        d = DownloaderOptions(host="$QB_HOST")
         assert d.host == "192.168.5.10:8080"
 
     def test_username_expands_env_var(self, monkeypatch):
-        """Downloader.username expands $VAR references."""
+        """DownloaderOptions.username expands $VAR references."""
         monkeypatch.setenv("QB_USER", "myuser")
-        d = Downloader(username="$QB_USER")
+        d = DownloaderOptions(username="$QB_USER")
         assert d.username == "myuser"
 
     def test_password_expands_env_var(self, monkeypatch):
-        """Downloader.password expands $VAR references."""
+        """DownloaderOptions.password expands $VAR references."""
         monkeypatch.setenv("QB_PASS", "s3cret")
-        d = Downloader(password="$QB_PASS")
+        d = DownloaderOptions(password="$QB_PASS")
         assert d.password == "s3cret"
 
     def test_literal_host_not_expanded(self):
         """Literal host strings without $ are returned as-is."""
-        d = Downloader(host="localhost:8080")
+        d = DownloaderOptions(host="localhost:8080")
         assert d.host == "localhost:8080"
 
 
@@ -446,7 +502,7 @@ class TestDefaultSettings:
         assert Config().rss_parser.engine == "classic"
 
     def test_revision_conflict_policy_defaults_to_hold(self):
-        assert Config().bangumi_manage.revision_conflict_policy == "hold"
+        assert Config().plugins.slots.conflict_policy == "hold"
 
 
 class TestNetworkBaseUrls:

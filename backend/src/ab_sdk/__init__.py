@@ -12,7 +12,7 @@ from .events import Event, PluginDisabled, PluginLoaded
 from .hooks import Verdict, hook, provider, subscribe
 from .plugin import Plugin
 
-SDK_VERSION = "0.4.0"
+SDK_VERSION = "0.5.0"
 
 __all__ = [
     "SDK_VERSION",

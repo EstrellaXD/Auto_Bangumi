@@ -9,7 +9,7 @@ from module.conf import settings as real_settings
 from module.core.context import AppContext
 from module.models import ResponseModel
 from module.notification import DownloaderUnavailableEvent
-from module.update import UnsupportedUpgradeError
+from module.update.version_check import UnsupportedUpgradeError
 
 
 @pytest.fixture

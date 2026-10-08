@@ -54,9 +54,10 @@ class SuffixMediaFiles:
 
 
 def check_files(files: list[dict]):
-    media_files: MediaFiles = (
-        plugin_host.get_registry().providers(points.MEDIA_FILES)[CORE_ID].factory()
-    )
+    # 选中的实现未登记（插件停用或被熔断）时退回宿主实现
+    providers = plugin_host.get_registry().providers(points.MEDIA_FILES)
+    entry = providers.get(settings.plugins.slots.media_files) or providers[CORE_ID]
+    media_files: MediaFiles = entry.factory()
     media_list = []
     subtitle_list = []
     for f in files:

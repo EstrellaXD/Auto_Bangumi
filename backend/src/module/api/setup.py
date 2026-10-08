@@ -405,8 +405,13 @@ async def complete_setup(
 
         # 2. Update configuration
         config_dict = settings.dict()
-        config_dict["downloader"] = {
-            "type": req.downloader_type,
+        # 向导填写的下载器写入默认实例（slots.downloader 指向的实例）
+        plugins = config_dict["plugins"]
+        default = next(
+            i for i in plugins["instances"] if i["id"] == plugins["slots"]["downloader"]
+        )
+        default["provider"] = req.downloader_type
+        default["options"] = {
             "host": req.downloader_host,
             "username": req.downloader_username,
             "password": req.downloader_password,

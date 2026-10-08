@@ -13,7 +13,7 @@ from module.downloader import DownloadClient
 from module.manager import Renamer, TorrentManager, eps_complete
 from module.notification import NotificationManager, UpdateAvailableEvent
 from module.rss import RSSAnalyser, RSSEngine
-from module.update import updater
+from module.update.updater import updater
 
 from .offset_scanner import OffsetScanner
 

@@ -210,7 +210,7 @@ class TestRenameFlow:
 
         with patch.object(renamer._parser, "torrent_parser", return_value=ep):
             with patch("module.manager.renamer.settings") as mock_mgr_settings:
-                mock_mgr_settings.bangumi_manage.rename_method = "pn"
+                mock_mgr_settings.plugins.slots.rename_strategy = "pn"
                 mock_mgr_settings.bangumi_manage.remove_bad_torrent = False
                 with patch("module.downloader.path.settings") as mock_path_settings:
                     mock_path_settings.downloader.path = "/downloads/Bangumi"
@@ -273,7 +273,7 @@ class TestRenameFlow:
 
         with patch.object(renamer._parser, "torrent_parser", side_effect=mock_parser):
             with patch("module.manager.renamer.settings") as mock_mgr_settings:
-                mock_mgr_settings.bangumi_manage.rename_method = "pn"
+                mock_mgr_settings.plugins.slots.rename_strategy = "pn"
                 mock_mgr_settings.bangumi_manage.remove_bad_torrent = False
                 with patch("module.downloader.path.settings") as mock_path_settings:
                     mock_path_settings.downloader.path = "/downloads/Bangumi"

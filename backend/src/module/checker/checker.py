@@ -5,7 +5,7 @@ import semver
 
 from module.conf import VERSION, settings
 from module.models import Config
-from module.update import version_check
+from module.update.version_check import version_check
 
 logger = logging.getLogger(__name__)
 

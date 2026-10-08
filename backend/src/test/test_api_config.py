@@ -61,13 +61,6 @@ def mock_settings():
     settings.program.rss_time = 900
     settings.program.rename_time = 60
     settings.program.webui_port = 7892
-    settings.downloader = MagicMock()
-    settings.downloader.type = "qbittorrent"
-    settings.downloader.host = "172.17.0.1:8080"
-    settings.downloader.username = "admin"
-    settings.downloader.password = "adminadmin"
-    settings.downloader.path = "/downloads/Bangumi"
-    settings.downloader.ssl = False
     settings.rss_parser = MagicMock()
     settings.rss_parser.enable = True
     settings.rss_parser.filter = ["720", r"\d+-\d"]
@@ -76,7 +69,6 @@ def mock_settings():
     settings.bangumi_manage = MagicMock()
     settings.bangumi_manage.enable = True
     settings.bangumi_manage.eps_complete = False
-    settings.bangumi_manage.rename_method = "pn"
     settings.bangumi_manage.group_tag = False
     settings.bangumi_manage.remove_bad_torrent = False
     settings.log = MagicMock()
@@ -126,7 +118,8 @@ class TestGetConfig:
         assert response.status_code == 200
         data = response.json()
         assert "program" in data
-        assert "downloader" in data
+        assert "downloader" not in data
+        assert data["plugins"]["instances"][0]["id"] == "default"
         assert "rss_parser" in data
         assert data["program"]["rss_time"] == 900
         assert data["program"]["webui_port"] == 7892
@@ -190,7 +183,6 @@ class TestUpdateConfig:
             "bangumi_manage": {
                 "enable": True,
                 "eps_complete": False,
-                "rename_method": "pn",
                 "group_tag": False,
                 "remove_bad_torrent": False,
             },
@@ -246,7 +238,6 @@ class TestUpdateConfig:
             "bangumi_manage": {
                 "enable": True,
                 "eps_complete": False,
-                "rename_method": "pn",
                 "group_tag": False,
                 "remove_bad_torrent": False,
             },
@@ -398,7 +389,7 @@ class TestSanitizeDict:
         assert response.status_code == 200
         data = response.json()
         # Downloader password should be masked
-        assert data["downloader"]["password"] == "********"
+        assert data["plugins"]["instances"][0]["options"]["password"] == "********"
         # Unset (empty) secrets must NOT be masked: a phantom mask makes the
         # UI show a password where none exists (TG report)
         assert data["llm"]["api_key"] == ""
@@ -614,19 +605,26 @@ class TestRestoreMasked:
         """PATCH /config/update must not overwrite a real password with '********'."""
         mock_settings.dict.return_value = {
             "program": {"rss_time": 900, "rename_time": 60, "webui_port": 7892},
-            "downloader": {
-                "type": "qbittorrent",
-                "host": "192.168.1.1:8080",
-                "username": "admin",
-                "password": "realpassword",
-                "path": "/downloads",
-                "ssl": True,
+            "plugins": {
+                "instances": [
+                    {
+                        "id": "default",
+                        "point": "downloader",
+                        "provider": "qbittorrent",
+                        "options": {
+                            "host": "192.168.1.1:8080",
+                            "username": "admin",
+                            "password": "realpassword",
+                            "path": "/downloads",
+                            "ssl": True,
+                        },
+                    }
+                ]
             },
             "rss_parser": {"enable": True, "filter": [], "language": "zh"},
             "bangumi_manage": {
                 "enable": True,
                 "eps_complete": False,
-                "rename_method": "pn",
                 "group_tag": False,
                 "remove_bad_torrent": False,
             },
@@ -648,19 +646,26 @@ class TestRestoreMasked:
         }
         payload = {
             "program": {"rss_time": 900, "rename_time": 60, "webui_port": 7892},
-            "downloader": {
-                "type": "qbittorrent",
-                "host": "192.168.1.1:8080",
-                "username": "admin",
-                "password": "********",
-                "path": "/downloads",
-                "ssl": False,
+            "plugins": {
+                "instances": [
+                    {
+                        "id": "default",
+                        "point": "downloader",
+                        "provider": "qbittorrent",
+                        "options": {
+                            "host": "192.168.1.1:8080",
+                            "username": "admin",
+                            "password": "********",
+                            "path": "/downloads",
+                            "ssl": False,
+                        },
+                    }
+                ]
             },
             "rss_parser": {"enable": True, "filter": [], "language": "zh"},
             "bangumi_manage": {
                 "enable": True,
                 "eps_complete": False,
-                "rename_method": "pn",
                 "group_tag": False,
                 "remove_bad_torrent": False,
             },
@@ -685,8 +690,9 @@ class TestRestoreMasked:
 
         assert response.status_code == 200
         saved = mock_settings.save.call_args[1]["config_dict"]
-        assert saved["downloader"]["password"] == "realpassword"
-        assert saved["downloader"]["ssl"] is False
+        options = saved["plugins"]["instances"][0]["options"]
+        assert options["password"] == "realpassword"
+        assert options["ssl"] is False
 
 
 class TestListLLMModels:
