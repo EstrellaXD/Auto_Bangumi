@@ -21,6 +21,7 @@ from module.models import ApiToken, AuthSession, Bangumi, Movie, RenameOperation
 from module.models.inbox import InboxMessage
 from module.models.llm_credential import LLMCredential
 from module.models.passkey import Passkey
+from module.models.plugin_kv import PluginKV
 from module.models.rss import RSSItem
 from module.models.torrent import Torrent
 
@@ -39,6 +40,7 @@ TABLE_MODELS: list[type[SQLModel]] = [
     AuthSession,
     ApiToken,
     RenameOperation,
+    PluginKV,
 ]
 
 # already_applied 守卫：接收 inspector，返回该迁移是否已生效
@@ -780,6 +782,22 @@ MIGRATIONS: tuple[Migration, ...] = (
                 column_exists("aria2_gid", "rename_intent"),
             ),
         ),
+    ),
+    Migration(
+        25,
+        "add plugin key-value store",
+        (
+            """CREATE TABLE IF NOT EXISTS plugin_kv (
+                id INTEGER NOT NULL PRIMARY KEY,
+                plugin_id VARCHAR NOT NULL,
+                key VARCHAR NOT NULL,
+                value VARCHAR NOT NULL,
+                updated_at DATETIME NOT NULL,
+                CONSTRAINT uq_plugin_kv UNIQUE (plugin_id, key)
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_plugin_kv_plugin_id ON plugin_kv (plugin_id)",
+        ),
+        table_exists("plugin_kv"),
     ),
 )
 

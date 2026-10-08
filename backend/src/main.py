@@ -38,6 +38,8 @@ async def lifespan(app: FastAPI):
     ctx: AppContext = app.state.ctx
     # Run migrations before serving; failure here aborts boot loudly.
     await ctx.startup()
+    # 插件在迁移之后启动（插件 KV 表由迁移创建），且早于后台任务
+    await ctx.plugins.start()
     # First run just created the DB — do not auto-start loops (matches the old
     # Program.startup early return); the user starts them after setup.
     if not ctx.first_run_boot:
@@ -48,6 +50,7 @@ async def lifespan(app: FastAPI):
     yield
     # Shutdown
     await ctx.stop()
+    await ctx.plugins.stop()
 
 
 def create_app() -> FastAPI:

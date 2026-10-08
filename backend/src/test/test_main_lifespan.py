@@ -14,6 +14,8 @@ def _lifespan_ctx(first_run_boot: bool = False) -> MagicMock:
     ctx.startup = AsyncMock()
     ctx.start_tasks = AsyncMock(return_value=None)
     ctx.stop = AsyncMock()
+    ctx.plugins.start = AsyncMock()
+    ctx.plugins.stop = AsyncMock()
     ctx.first_run_boot = first_run_boot
     return ctx
 
@@ -35,8 +37,10 @@ class TestLifespan:
             with TestClient(app):
                 pass
         ctx.startup.assert_awaited_once()
+        ctx.plugins.start.assert_awaited_once()
         ctx.start_tasks.assert_called_once()
         ctx.stop.assert_awaited_once()
+        ctx.plugins.stop.assert_awaited_once()
 
     def test_first_run_boot_skips_task_start(self):
         """On a first-run boot the background tasks are not auto-started."""
@@ -58,3 +62,5 @@ class TestLifespan:
             with pytest.raises(RuntimeError, match="startup boom"):
                 with TestClient(app):
                     pass
+        # 迁移失败时插件不应启动（插件 KV 表由迁移创建）
+        ctx.plugins.start.assert_not_called()

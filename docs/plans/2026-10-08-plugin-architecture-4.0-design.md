@@ -61,7 +61,7 @@ Hook 再细分三种：
 
 - **Filter hook** 返回 `accept / reject(reason)`，任一 reject 即短路。
 - **Transform hook** 接收并返回修改后的上下文，用于改写标题或路径。
-- **Observer hook** 只订阅事件，异步执行，失败不影响主流程。
+- **Observer hook** 只订阅事件（`@subscribe`），异步执行，失败不影响主流程。
 
 ### 2.2 插件包结构
 
@@ -93,9 +93,9 @@ permissions = ["fs.write", "downloader.read"]   # 声明式，展示给用户，
 ### 2.3 插件入口：一个类注册多个扩展
 
 ```python
-from ab_sdk import Plugin, hook, provider
-from ab_sdk.rename import RenameStrategy, RenameInput
-from ab_sdk.events import FileRenamed
+from ab_sdk import Plugin, Verdict, hook, provider, subscribe
+from ab_sdk.rename import RenameStrategy, RenameInput   # P4 提供
+from ab_sdk.events import FileRenamed                   # P4 提供
 from pydantic import BaseModel
 
 class Config(BaseModel):
@@ -103,18 +103,23 @@ class Config(BaseModel):
     mode: Literal["hardlink", "symlink", "copy"] = "hardlink"
 
 class HardlinkPlugin(Plugin):
-    config_model = Config                     # 自动生成 WebUI 表单
+    config_model = Config                     # 自动生成 WebUI 表单；self.ctx.config 为校验后的实例
 
-    async def setup(self, ctx): ...            # 生命周期：加载 / 配置变更
+    async def setup(self): ...                # 生命周期：加载 / 配置变更后重建
     async def teardown(self): ...
 
-    @hook("file.renamed", priority=100)       # Observer
+    @subscribe("file.renamed")                # Observer：事件订阅，独立队列异步执行
     async def link(self, event: FileRenamed): ...
 
-    @provider("rename_strategy", id="jellyfin-style")
-    class JellyfinRename(RenameStrategy):
-        def target_name(self, f: RenameInput) -> str: ...
+    @hook("torrent.filter", priority=50)      # Filter / Transform：必须是宿主声明的扩展点
+    def only_hevc(self, torrent, release) -> Verdict: ...
+
+    @provider("rename_strategy", id="jellyfin-style")   # Provider：工厂方法，返回实现对象
+    def jellyfin(self) -> RenameStrategy:
+        return JellyfinRename(self.ctx.config)
 ```
+
+Observer 用独立的 `@subscribe` 而不是 `@hook`：`@hook` 只接受已声明的 filter / transform 扩展点，写错名字会在加载时报「未知扩展点」，而不是悄悄变成一个永远收不到事件的订阅。
 
 不使用 pluggy：它是同步模型，而 AB 全异步，且需要类型化的上下文与超时控制。
 采用自研的轻量类型化注册表，实现集中在 `module/plugin/registry.py`。
@@ -551,7 +556,7 @@ organize: downloader.completed → media_files.classify → file_parser
 | 阶段 | 内容 | 产出 / 验收 |
 |---|---|---|
 | **P0 清理** | 第 8 节：死代码、3.x 兼容层；`renamer.py` 先做纯搬移式拆分（不改行为） | 生产代码行数减少；vulture CI；测试全绿 |
-| **P1 插件运行时 + SDK 骨架** | `ab_sdk` 包、`module/plugin/`（清单、加载、注册表、runner、配置、EventBus）；泛化 LLM installer；import-linter | 空插件可加载、配置、热重载；契约测试框架 |
+| **P1 插件运行时 + SDK 骨架** | `ab_sdk` 包（含 `ab_sdk.testing`）、`module/plugin/`（清单、加载、注册表、runner、熔断、EventBus、插件 KV）、`plugins` 配置段、`GET /api/v1/plugins`；SDK 边界测试 | 本地插件可加载、配置、随配置变更重载；已完成。签名目录来源与 LLM 安装器泛化、`dev_mode` 文件监听移到 P2 |
 | **P2 迁移已有注册表** | LLM、通知、下载器、搜索、定时任务改为内置插件；`/api/v1/plugins` + 通用 JSON Schema 表单；vendor 加载 + pip entry point 发现 | 行为与 3.3.6 一致（e2e 回归）；配置迁移器 |
 | **P2.5 多下载器** | 下载器多实例；`downloader_id` 列与迁移；按实例路由 add / rename / delete；organize 逐实例扫描 | qb + aria2 并存的 e2e 用例；单实例行为不变 |
 | **P3 流水线插件化：ingest** | `feed_source`、`title_parser` 链、`admission_policy`、`matcher`、`torrent.filter`、`ranker`、`metadata_provider` 链、`save_path`、`torrent.adding` | 新增 include / size 过滤；私有站 headers |

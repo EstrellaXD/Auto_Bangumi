@@ -17,6 +17,7 @@ from .migrations import (  # noqa: F401  (re-exported for existing importers)
     run_migrations_async,
 )
 from .movie import MovieDatabase
+from .plugin_kv import PluginKVDatabase
 from .rename_operation import RenameOperationDatabase
 from .rss import RSSDatabase
 from .torrent import TorrentDatabase
@@ -50,6 +51,7 @@ class Database:
         self.inbox = InboxDatabase(self.session)
         self.llm_credential = LLMCredentialDatabase(self.session)
         self.rename_operation = RenameOperationDatabase(self.session)
+        self.plugin_kv = PluginKVDatabase(self.session)
 
     async def __aenter__(self):
         return self

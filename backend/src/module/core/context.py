@@ -19,6 +19,7 @@ from module.notification import DownloaderUnavailableEvent, NotificationManager
 from module.parser.analyser.mikan_parser import reset_cache as reset_mikan_cache
 from module.parser.analyser.tmdb_parser import reset_cache as reset_tmdb_cache
 from module.parser.title_parser import reset_cache as reset_llm_parser
+from module.plugin import PluginManager
 from module.rss import RSSAnalyser
 from module.searcher.searcher import reset_cache as reset_poster_cache
 from module.update import (
@@ -75,11 +76,14 @@ class AppContext:
         notifier: NotificationManager,
         scheduler: Scheduler,
         analyser: RSSAnalyser,
+        plugins: PluginManager | None = None,
     ) -> None:
         self.settings = settings_obj
         self.notifier = notifier
         self.scheduler = scheduler
         self.analyser = analyser
+        # 插件随进程生命周期启停（lifespan），不随 /start、/stop 程序控制启停
+        self.plugins = plugins or PluginManager(settings_obj)
         # Downloader-status TTL cache (was ProgramStatus.check_downloader_status).
         self._downloader_status = False
         self._downloader_reason: str | None = None
@@ -406,6 +410,7 @@ class AppContext:
         # 允许重试（哪怕保存的值没变——qB 侧密码可能被改回来了）。
         clear_credential_latch()
         self.notifier.rebuild()
+        await self.plugins.apply_settings()
         if self.scheduler.running:
             await self.scheduler.stop_all()
             self.scheduler.start_all()

@@ -36,6 +36,9 @@ def ctx():
     scheduler.start_all.side_effect = _mark_running
     scheduler.stop_all.side_effect = _mark_stopped
     ctx.scheduler = scheduler
+    plugins = MagicMock()
+    plugins.apply_settings = AsyncMock()
+    ctx.plugins = plugins
     return ctx
 
 
@@ -282,6 +285,7 @@ class TestReloadSettings:
         mock_settings.load.assert_called_once()
         mock_reset.assert_awaited_once()
         ctx.notifier.rebuild.assert_called_once()
+        ctx.plugins.apply_settings.assert_awaited_once()
         ctx.scheduler.stop_all.assert_awaited_once()
         ctx.scheduler.start_all.assert_called_once()
 

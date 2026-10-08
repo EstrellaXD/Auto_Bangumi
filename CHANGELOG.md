@@ -2,6 +2,7 @@
 
 4.0 是插件化重构的大版本（设计见 `docs/plans/2026-10-08-plugin-architecture-4.0-design.md`）。本节随各阶段合入持续更新。
 
+- **新增（插件运行时）**：新增插件 SDK `ab_sdk`，包括 `Plugin` 基类、`@hook` / `@provider` / `@subscribe`、`PluginContext`，以及供插件作者写单元测试的 `ab_sdk.testing`；新增宿主运行时 `module/plugin`，负责清单解析、内置 / 本地目录 / pip entry point 三种来源的发现与加载、扩展点注册表、钩子超时与熔断、事件总线和插件私有 KV 存储（数据库迁移 v25）。新增 `plugins` 配置段和 `GET /api/v1/plugins`。本地与 pip 插件未签名，需开启 `plugins.allow_unsigned` 才会加载
 - **破坏性变更（升级路径）**：只支持从 3.3.x 升级。检测到更早版本的数据（`config/version.info` 低于 3.3，或残留 2.x 的 `data/data.json`）时拒绝启动，并提示先升级到最新 3.3.x 启动一次完成迁移
 - **破坏性变更（API）**：移除 3.2 兼容的 GET 控制端点（`/api/v1/restart`、`/start`、`/stop`、`/shutdown`）和 `GET /api/v1/auth/refresh_token`，请改用 POST
 - **破坏性变更（配置）**：移除旧版 `experimental_openai` 配置节和通知的单 provider 旧字段（`type` / `token` / `chat_id`），3.3 已把它们迁移到 `llm` 与 `notification.providers`；移除废弃的 `normal` 重命名方式，已有配置自动改为语义相同的 `none`

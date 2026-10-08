@@ -63,3 +63,17 @@ render_text
 _.rename_file  # P4 重写 renamer 时与测试一起迁移
 _._lookup_offsets  # P4：与 _batch_lookup_offsets 合并
 _.release_replacement_lease  # 待确认是否 saga 遗漏调用（设计文档第 11 节）
+
+# --- 插件运行时（module/plugin）---
+# 公开接口：宿主在 P2/P3 迁移扩展点时调用（声明扩展点、执行 transform 钩子）
+_.declare
+_.transform
+_.runner
+_.drain  # 等待事件处理完，测试与关闭流程使用
+# 插件通过 ctx 访问的能力、清单与注册表的数据字段
+_.kv
+authors
+factory
+# 动态创建插件包时设置的模块属性
+_.__path__
+_.__package__

@@ -147,6 +147,16 @@ export interface Update {
   auto_check: boolean;
 }
 
+/** 插件系统配置；启用状态缺省时内置插件启用、其它来源禁用 */
+export interface Plugins {
+  /** 允许加载未签名（本地目录 / pip）插件 */
+  allow_unsigned: boolean;
+  enabled: Record<string, boolean>;
+  options: Record<string, Record<string, unknown>>;
+  /** 各扩展点的显式钩子顺序（插件 id 列表） */
+  hook_order: Record<string, string[]>;
+}
+
 export interface Config {
   program: Program;
   downloader: Downloader;
@@ -159,6 +169,7 @@ export interface Config {
   llm: LLM;
   security: Security;
   update: Update;
+  plugins: Plugins;
 }
 
 export const initConfig: Config = {
@@ -235,5 +246,11 @@ export const initConfig: Config = {
   update: {
     channel: 'stable',
     auto_check: true,
+  },
+  plugins: {
+    allow_unsigned: false,
+    enabled: {},
+    options: {},
+    hook_order: {},
   },
 };
