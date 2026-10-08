@@ -63,6 +63,36 @@ def _completed(name: str, torrent_hash: str, save_path: str) -> dict:
     }
 
 
+def test_download_client_qb_and_aria2_side_by_side(monkeypatch):
+    """qB 与 aria2 实例并存：各自的后端、地址与版本替换事务命名空间。"""
+    from module.downloader.client.aria2_downloader import Aria2Downloader
+    from module.downloader.client.qb_downloader import QbDownloader
+
+    plugins = Plugins(
+        instances=[
+            PluginInstance(
+                id="qb",
+                point="downloader",
+                provider="qbittorrent",
+                options={"host": "qb:8080"},
+            ),
+            PluginInstance(
+                id="ar",
+                point="downloader",
+                provider="aria2",
+                options={"host": "ar:6800"},
+            ),
+        ],
+        slots=Slots(downloader="qb"),
+    )
+    monkeypatch.setattr(settings, "plugins", plugins)
+    qb, ar = DownloadClient("qb"), DownloadClient("ar")
+    assert isinstance(qb.client, QbDownloader)
+    assert isinstance(ar.client, Aria2Downloader)
+    assert ar.client.host.endswith("ar:6800")
+    assert Renamer(qb)._downloader_type() != Renamer(ar)._downloader_type()
+
+
 class TestClientCache:
     def test_download_client_two_instances_separate_cached_clients(self, two_instances):
         a, b = _mock("a"), _mock("b")

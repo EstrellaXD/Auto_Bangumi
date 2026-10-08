@@ -356,7 +356,7 @@ class MyRename(Plugin):
 | `torrent.organized` | `TorrentOrganized` | `torrent_hash`、`bangumi_id`、`files`（`OrganizedFile(path, kind)` 元组）、`downloader_id` | 一个种子整理完成；重命名方式为 `none` 时同样发布，`files` 为原路径 |
 
 - 路径是**下载器视角**的绝对路径，保存目录与种子内路径以 `/` 拼接（Windows 下载器的 `\` 也统一为 `/`）。AB 与下载器看到的目录不同（如分别运行在不同容器）时，订阅者需要自己做路径映射。
-- `bangumi_id` 来自种子的 `ab:<id>` 标签，旧种子可能为 None。`downloader_id` 目前固定为 `"default"`，多下载器版本会给出实例 id。
+- `bangumi_id` 来自种子的 `ab:<id>` 标签，旧种子可能为 None。`downloader_id` 是种子所在下载器实例的 id（`plugins.instances`），多个实例的路径视角可能不同。
 - `torrent.organized` 的投递是**至少一次**：未打「已重命名」标签的种子（如重命名方式为 `none`）在每次 AB 重启后会再发布一次，订阅者必须幂等。
 - 这两个事件只发布到事件总线，不进入通知中心。
 
@@ -467,7 +467,7 @@ AB 发出的、会进入通知中心的事件都是 `ab_sdk.events.SystemEvent` 
 | `rss_failure` | `RssFailureEvent` | RSS 订阅从正常变为连接异常 |
 | `download_failure` | `DownloadFailureEvent` | 种子重试后仍添加失败 |
 | `offset_review` | `OffsetReviewEvent` | 番剧的季度 / 集数偏移需要人工确认 |
-| `downloader_unavailable` | `DownloaderUnavailableEvent` | 下载器连不上、凭据错误或 IP 被封 |
+| `downloader_unavailable` | `DownloaderUnavailableEvent` | 下载器连不上、凭据错误或 IP 被封；`instance_id` 为下载器实例 id，每个实例从可用变为不可用时发布一次 |
 | `update_available` | `UpdateAvailableEvent` | 检查到新版本 |
 | `update_applied` / `update_failed` | `UpdateAppliedEvent` | 在线更新成功 / 失败（`kind` 随 `success` 变化） |
 | `llm_auth_failure` | `LLMAuthFailureEvent` | 订阅类 LLM 提供商凭据失效 |

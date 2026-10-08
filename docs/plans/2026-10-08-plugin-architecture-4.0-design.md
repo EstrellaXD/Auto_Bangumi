@@ -123,9 +123,32 @@ slots 解析：
 
 数据库与 WebUI：
 
-- 迁移 v26 为 `bangumi`、`movie`、`rssitem`、`torrent` 增加 `downloader_id VARCHAR DEFAULT 'default'`，存量行由 SQLite 按默认值填充。每张表一个守卫：列已存在，或表不存在（之后由 `create_all` 按模型建表，自带该列）时跳过。四个表模型的 `downloader_id` 默认为 `"default"`；`BangumiUpdate` / `MovieUpdate` 尚未加入该字段。
+- 迁移 v26 为 `bangumi`、`movie`、`rssitem`、`torrent` 增加 `downloader_id`。每张表一个守卫：列已存在，或表不存在（之后由 `create_all` 按模型建表，自带该列）时跳过。取值见下文第二部分（规则、订阅与电影为空表示跟随默认实例，种子默认 `default`）。
 - WebUI：「下载器设置」编辑 `slots.downloader` 所指的实例（`provider` 与 `options`），「番剧管理设置」中的重命名方式与版本冲突策略绑定到 `plugins.slots`。两个分区的未保存标记都以 `plugins` 配置段判断，所以修改其中一个，两个分区都会显示未保存。插件卡片保存后 `refreshGroup('plugins')` 会用服务端的值覆盖整个 `plugins` 段，包括尚未保存的下载器与 slots 修改（之前只影响插件 options）。
 - 用户文档 `docs/{,en/,ja/}config/{downloader,manager}.md` 与插件开发文档改为新的配置位置。
+
+第二部分（路由、整理与 WebUI）：
+
+- **`DownloadClient(instance_id=None)`**，`None` 为默认实例。客户端缓存与凭据闩锁按实例 id 分开；引用计数本来按具体客户端对象计，不变。第 3.5 节的统一工厂 `create(config: PluginConfig)` 未实施：工厂仍接收 P2 契约的 `DownloaderConnection`，实例 `options` 目前就是 `DownloaderOptions` 的字段。
+- **`DownloaderPool`**：一次操作（一轮 RSS、整季补全）内按实例 id 惰性进入 `DownloadClient`，退出时全部释放。进入失败的实例在这次操作内记住，之后直接抛 `ConnectionError`，不再重复登录。`RSSEngine.refresh_rss` 的参数由 `DownloadClient` 改为 `DownloaderPool`，测试改用 `test.factories.SingleClientPool`（27 处调用）。
+- **实例选择**：`resolve_downloader_id(*候选)` 取第一个已配置的实例 id，都为空时用 `slots.downloader`。指向已删除实例的候选记 warning 后跳过，因此删除实例后，选择它的规则与订阅改用默认实例。新种子按 规则 → 订阅 → 默认 选择；由订阅新建的规则在解析时继承订阅的 `downloader_id`（`rss/analyser.py`）；手动收集与整季补全按 规则 → 默认。
+- **规则、订阅与电影的 `downloader_id` 为空表示跟随默认实例**。第一部分的 v26 给这三张表 `DEFAULT 'default'`，这样「规则 → 订阅」的继承永远走不到订阅，用户改默认实例后存量规则也仍钉在 `default`，与第 3.5 节「为空时用默认实例」矛盾。v26 尚未发布，所以直接修改它：这三张表加列不带默认值（存量为 `NULL`），`torrent` 仍为 `DEFAULT 'default'`（存量种子都在 3.3 的下载器中）。已经运行过第一部分 v26 的开发库需要手动把这三列置空。`BangumiUpdate`、`MovieUpdate`、`RSSUpdate` 加入该字段，`POST /rss/add` 保存它。
+- **种子行的 `downloader_id`** 由 `DownloadClient.add_torrent` 写入投递的实例；未匹配的孤儿种子保持 `default`。投递时实例不可用：种子不入库、下一轮重试，不发 `DownloadFailureEvent`（不可用由重命名轮次通知）。
+- **重命名逐实例运行**：`manager/renamer.py` 的 `rename_all()` 供 `loops.rename_tick` 与 apply-offset 使用。进入失败（连不上、凭据被拒、Provider 未登记）的实例跳过，其它实例照常处理；`DownloaderUnavailableEvent` 只在「可用 → 不可用」时产生一次（进程内集合），恢复后再次不可用会再通知。`Renamer` 自身抛出的异常仍中断本轮，与之前相同。apply-offset 触发的重命名丢弃事件（之前也丢弃）；实例恰好在这一次变为不可用时，这次不可用不会通知。启动等待循环仍只检查默认实例。
+- **`DownloaderUnavailableEvent`** 增加 `instance_id`（默认 `"default"`），`dedup_key` 由 `downloader:<host>` 改为 `downloader:<instance_id>`，payload 增加 `instance`。`ab_sdk` 仍为 0.5.0（本阶段未发布）。
+- **版本替换事务按实例过滤**：`list_active_replacements(downloader_type)` 只返回本实例的事务。否则实例 A 的轮次在 A 上查不到 B 的新种子，会进入破坏性的 `_recover_missing_replacement`。`_downloader_type()` 改读 `self.client.instance`。
+- **offset 查找**：同一 hash 有多条种子行时以本实例的行为准，其它实例的行作为后备。`path_to_bangumi` / `gen_save_path` 增加 `root`（实例的下载目录），重命名与新规则保存目录按实例计算。
+- `FileRenamed` / `TorrentOrganized` 带真实的 `downloader_id`；`hardlink` 的 `path_map` 本来就按它取映射，无需改动。
+- **规则换实例**：删除规则（删除文件）时按种子行记录的实例加上规则当前的实例逐个删除。更新规则时实例变了：旧种子不移动，原实例上的 qB RSS 规则不改，只按新实例的下载目录重算 `save_path`；实例不变且路径变化时才移动（路径不变时不再连接下载器）。
+- **API**：`GET /downloader/torrents` 汇总所有实例、每条带 `downloader_id`，不可用实例跳过，全部不可用时返回 503（原先连接异常直接 500）。暂停 / 恢复 / 删除 / 打标请求带 `downloader_id`（空为默认实例），未知 id 返回 404；自动打标逐实例进行。新增 `GET /downloader/instances`（`id`、`provider` 与默认 id），供规则 / 订阅选择下载器。SSE 的 downloader 帧同样汇总，超时按实例计算。MCP `list_downloads` 汇总所有实例并带 `downloader` 字段，全部不可用时返回空列表（原先抛错）。
+- **WebUI**：「下载器设置」列出所有实例（点击编辑、添加、删除、设为默认，默认实例不能删除；新 id 只接受字母、数字、`_`、`-`，这是前端限制）。规则编辑的高级选项与添加订阅新增下载器选择，留空为默认实例，只有一个实例时不显示；实例列表每次打开时请求，设置页增删实例后无需刷新。下载器页在多实例时加「下载器」列，规则 / 孤儿种子列表在已下载的种子上标出实例。批量操作仍按 hash 选择，按所在实例分组请求；同一 hash 同时在两个实例中时会作用于两个实例。
+- **`refreshGroup` 只刷新给定字段**：插件卡片保存后只刷新 `plugins.enabled` / `options`，不再覆盖未保存的实例与 slots 修改（第一部分记录的问题）。「下载器设置」与「番剧管理设置」仍共用 `plugins` 未保存标记。
+
+未实施（推迟）：
+
+- 第 10 节验收中的 qb + aria2 并存 **Docker e2e** 未加。以进程内测试替代：两个 mock 实例并列（按规则 / 订阅投递、在另一实例重命名、一个实例不可用、规则换实例后删除），以及 qB 与 aria2 实例各自得到对应后端与不同的 `downloader_type`。Docker 版需要在 `e2e/compose/downloader.yml` 加入固定 digest 的 aria2 镜像。
+- aria2 的 gid ↔ 番剧映射表（`database/aria2.py`）不区分实例；两个 aria2 实例的 gid 相同的概率很低，未处理。
+- `GET /api/v1/plugins/providers` 仍不列出 `conflict_policy` / `media_files` 的插件候选；插件下载器的 options schema 与按 schema 掩码（见上文）。
 
 ## 1. 背景与目标
 
@@ -673,7 +696,7 @@ organize: downloader.completed → media_files.classify → file_parser
 | **P0 清理** | 第 8 节：死代码、3.x 兼容层；`renamer.py` 先做纯搬移式拆分（不改行为） | 生产代码行数减少；vulture CI；测试全绿 |
 | **P1 插件运行时 + SDK 骨架** | `ab_sdk` 包（含 `ab_sdk.testing`）、`module/plugin/`（清单、加载、注册表、runner、熔断、EventBus、插件 KV）、`plugins` 配置段、`GET /api/v1/plugins`；SDK 边界测试 | 本地插件可加载、配置、随配置变更重载；已完成。签名目录来源与 LLM 安装器泛化、`dev_mode` 文件监听移到 P2 |
 | **P2 迁移已有注册表** | 下载器、通知、LLM、搜索站点、定时任务改为扩展点，内置实现以 `core` 登记；`/api/v1/plugins`（列表、启停、配置、Provider 列表）与 WebUI 插件卡片（JSON Schema 表单）；`secret_field` 掩码；插件开发文档 | 已完成；内置行为不变（全量测试）。调整见第 0 节 |
-| **P2.5 多下载器** | 下载器多实例；`downloader_id` 列与迁移；按实例路由 add / rename / delete；organize 逐实例扫描 | qb + aria2 并存的 e2e 用例；单实例行为不变 |
+| **P2.5 多下载器** | 下载器多实例；`downloader_id` 列与迁移；按实例路由 add / rename / delete；organize 逐实例扫描 | 已完成：`plugins.instances` / `slots` 与 3.3 配置迁移器（`update/v4.py`）；按实例缓存客户端与路由投递、重命名、删除；重命名逐实例运行，不可用实例跳过并通知；WebUI 多实例管理与规则 / 订阅的下载器选择；单实例行为不变（全量测试）。qb + aria2 Docker e2e 未加，以进程内并存测试替代，调整见第 0 节 |
 | **P3 流水线插件化：ingest** | `torrent.filter`、`title.parsed`、`torrent.adding`、`http.request` 钩子；`metadata_provider`（mikan / tmdb 以 `core` 登记）；内置插件 `ingest-filters`（包含过滤） | 已完成；无插件时行为不变（全量测试）。`feed_source`、`title_parser` 链、`admission_policy`、`matcher`、`ranker`、`save_path`、size 过滤、按订阅覆盖推迟，见第 0 节 |
 | **P4 流水线插件化：organize** | `media_files`、`file_parser`、`rename_strategy`（含 `template`）、`conflict_policy`、`file.renamed` 等事件 | 已完成：`renamer.py` 拆出 `revision_saga.py`；`rename_strategy` / `media_files` / `conflict_policy` 扩展点与 `file.renamed` / `torrent.organized` 事件；内置插件 `rename`（pn / advance / template，pn / advance / none 输出与 3.3 一致）、`hardlink`（默认停用）与 `media-server-refresh`。`file_parser`、`RenameStrategyContract`、补链设置按钮（P6）推迟，调整见第 0 节 |
 | **P5 事件与外部接口** | SSE 改订阅 bus；`api_router`、`mcp_tool` 扩展点；`message_template` | 已完成：系统事件上总线、通知中心 SSE 改为事件推送、插件路由 / MCP 工具与资源 / 通知模板；status 等快照类 SSE 仍按节拍采样。调整见第 0 节 |

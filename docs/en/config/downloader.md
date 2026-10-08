@@ -14,6 +14,17 @@
 
 After changing downloader settings, click **Save & restart** so the downloader client is recreated.
 
+## Multiple downloaders
+
+The top of the settings section lists every downloader instance. Click an instance to edit it below. Type a new id and click **Add** to create an instance; its type can be qBittorrent, aria2 or a downloader from a plugin. **Set default** changes the default instance. You cannot delete the default instance.
+
+- The rule editor (advanced options) and the add-subscription dialog have a downloader field. Leave it empty to use the default instance. The field is hidden when there is only one downloader.
+- A new torrent goes to the downloader of its rule. If the rule has none, it goes to the downloader of the subscription, then to the default instance. A rule created from a subscription takes the downloader of the subscription.
+- Each torrent records the downloader it was added to. Rename and delete use that downloader. When a rule moves to another downloader, its existing torrents stay where they are.
+- Rename runs once per downloader. An unreachable downloader is skipped, and a "Downloader unavailable" notification is sent the first time it becomes unreachable. The other downloaders continue.
+- With more than one downloader, the downloader page and the torrent lists show the downloader of each torrent.
+- After you delete a downloader, rules and subscriptions that used it use the default instance. Torrents already in the deleted downloader are not touched.
+
 ## Downloader Address
 
 ::: warning
@@ -35,7 +46,7 @@ Use the path from the downloader's point of view:
 
 ## `config.json`
 
-A downloader is an entry in `plugins.instances` whose `point` is `downloader`. `plugins.slots.downloader` is the id of the default instance (`default` by default). The settings page edits the default instance:
+A downloader is an entry in `plugins.instances` whose `point` is `downloader`. `plugins.slots.downloader` is the id of the default instance (`default` by default). When you add an instance on the settings page, its id can contain only letters, digits, `_` and `-`:
 
 ```json
 "plugins": {
