@@ -86,6 +86,7 @@ declare global {
   const reactive: typeof import('vue')['reactive']
   const readonly: typeof import('vue')['readonly']
   const ref: typeof import('vue')['ref']
+  const refreshPluginProviders: typeof import('../../src/hooks/usePluginProviders')['refreshPluginProviders']
   const resolveComponent: typeof import('vue')['resolveComponent']
   const resolvePosterUrl: typeof import('../../src/utils/poster')['resolvePosterUrl']
   const schemaFields: typeof import('../../src/utils/plugin-schema')['schemaFields']
