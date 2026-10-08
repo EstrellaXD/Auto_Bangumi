@@ -70,7 +70,7 @@ Details, imports and field lists: `references/extension-points.md`.
 - Hooks get frozen snapshots. Return `dataclasses.replace(obj, ...)`; return `None` for "no change". A wrong return type counts as a failure.
 - Five consecutive failures trip the circuit breaker and disable the plugin. `RenameSkipped` is not a failure. Never fall back to another naming method after a failure.
 - Filter hooks fail open (a crash accepts the torrent). Notifier `send` returns `False` on a backend refusal; it does not raise.
-- Events: plugin event `kind` must start with `<plugin-id>.`. Subclass `SystemEvent` to make a notifiable event. `torrent.organized` is delivered at least once: make handlers idempotent. Event paths are downloader-side paths; map them (`path_from` / `path_to` options) before touching the disk.
+- Events: plugin event `kind` must start with `<plugin-id>.`. Subclass `SystemEvent` to make a notifiable event. `torrent.organized` is delivered at least once: make handlers idempotent. Event paths are downloader-side paths; map them to local paths before touching the disk (for example a `path_map` option of `downloader`/`from`/`to` rows, as in the built-in hardlink plugin).
 - Blocking work (file IO, copies) goes in `asyncio.to_thread`; `target_name` is sync with no timeout, so no IO there.
 - Validate config deeply in `field_validator` so bad values give HTTP 422 at save time.
 - No native extensions (`.so`, `.pyd`, `.dylib`, `.dll`). Third-party pure-Python deps go in `vendor/`; AB does not run pip for catalog or local plugins.
