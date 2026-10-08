@@ -15,16 +15,20 @@ MASK = "********"
 
 # 无 schema（插件代码本进程未加载过）时无法区分秘密字段：所有字符串都按秘密处理
 _ALL: dict[str, Any] = {"secret": True}
-_ALL["additionalProperties"] = _ALL["items"] = _ALL
 _MISSING = object()
 
 
 def _branches(schema: dict[str, Any], root: dict[str, Any]) -> list[dict[str, Any]]:
-    """展开 $ref 与 anyOf / oneOf（如 ``Server | None``）后的候选分支。"""
+    """展开 $ref 与 anyOf / oneOf（如 ``Server | None``）后的候选分支。
+
+    外层节点也保留：``secret_field()`` 的标记写在 anyOf / $ref 的外层。
+    """
+    nodes = [schema]
     while "$ref" in schema:
         schema = root["$defs"][schema["$ref"].rsplit("/", 1)[-1]]
+        nodes.append(schema)
     subs = schema.get("anyOf", []) + schema.get("oneOf", [])
-    return [b for s in subs for b in _branches(s, root)] if subs else [schema]
+    return nodes + [b for s in subs for b in _branches(s, root)]
 
 
 def _is_secret(branches: list[dict[str, Any]]) -> bool:
@@ -34,17 +38,24 @@ def _is_secret(branches: list[dict[str, Any]]) -> bool:
     )
 
 
+def _union(branches: list[dict[str, Any]], subs: list[Any]) -> dict[str, Any]:
+    # 容器整体是秘密时，其中的元素 / 字典值 / 嵌套字段也是秘密
+    return {
+        "anyOf": [s for s in subs if isinstance(s, dict)],
+        "secret": _is_secret(branches),
+    }
+
+
 def _child(branches: list[dict[str, Any]], key: str) -> dict[str, Any]:
     subs = [
         b.get("properties", {}).get(key, b.get("additionalProperties"))
         for b in branches
     ]
-    return {"anyOf": [s for s in subs if isinstance(s, dict)]}
+    return _union(branches, subs)
 
 
 def _items(branches: list[dict[str, Any]]) -> dict[str, Any]:
-    subs = [b.get("items") for b in branches]
-    return {"anyOf": [s for s in subs if isinstance(s, dict)]}
+    return _union(branches, [b.get("items") for b in branches])
 
 
 def _mask(value: Any, schema: dict[str, Any], root: dict[str, Any]) -> Any:
