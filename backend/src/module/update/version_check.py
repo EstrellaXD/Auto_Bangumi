@@ -5,7 +5,13 @@ from pathlib import Path
 
 import semver
 
-from module.conf import DATA_PATH, LEGACY_DATA_PATH, VERSION, VERSION_PATH
+from module.conf import (
+    DATA_PATH,
+    LEGACY_DATA_PATH,
+    V3_VERSION_PATH,
+    VERSION,
+    VERSION_PATH,
+)
 from module.conf.config import CONFIG_PATH
 
 logger = logging.getLogger(__name__)
@@ -67,6 +73,30 @@ def _read_last_version() -> semver.Version | None:
         return None
 
 
+def _read_v3_version() -> semver.Version | None:
+    """3.x 的记录只读不写：回退到 3.3 时它仍要看到自己的版本。"""
+    try:
+        lines = V3_VERSION_PATH.read_text().splitlines()
+        return semver.Version.parse(lines[-1].strip())
+    except (IndexError, ValueError) as e:
+        logger.warning(f"{V3_VERSION_PATH} is empty or malformed ({e}).")
+        return None
+
+
+def _backup_v3_database() -> None:
+    """首次以 4.x 启动 3.x 数据时备份数据库，供回退 3.3 时还原；已有备份不覆盖。"""
+    backup = DATABASE_PATH.with_name(DATABASE_PATH.name + ".v3.bak")
+    if backup.exists():
+        return
+    # 用 SQLite 备份接口而不是复制文件：WAL 中未合并的数据也要带上
+    with (
+        closing(sqlite3.connect(DATABASE_PATH)) as src,
+        closing(sqlite3.connect(backup)) as dst,
+    ):
+        src.backup(dst)
+    logger.info(f"Backed up the 3.x database to {backup}.")
+
+
 def version_check() -> semver.Version | None:
     """校验并记录版本，返回上一次运行的版本（未知时为 None）。
 
@@ -75,17 +105,25 @@ def version_check() -> semver.Version | None:
     """
     if VERSION in ("DEV_VERSION", "local"):
         return None
-    if not VERSION_PATH.exists():
+    if VERSION_PATH.exists():
+        last_ver = _read_last_version()
+        if last_ver is None:
+            return None
+    elif V3_VERSION_PATH.exists():
+        last_ver = _read_v3_version()
+        if last_ver is not None and (last_ver.major, last_ver.minor) < (
+            MIN_UPGRADE_FROM
+        ):
+            raise UnsupportedUpgradeError(_upgrade_hint(str(last_ver)))
+        _backup_v3_database()
+        VERSION_PATH.write_text(VERSION + "\n")
+        return last_ver
+    else:
         # 3.3 也不补跑 3.0 → 3.1 的数据迁移（缺 version.info 时跳过），只有 3.1.x 会
         if _is_v30_database():
             raise UnsupportedUpgradeError(_upgrade_hint("3.0", via="3.1.x"))
         VERSION_PATH.write_text(VERSION + "\n")
         return None
-    last_ver = _read_last_version()
-    if last_ver is None:
-        return None
-    if (last_ver.major, last_ver.minor) < MIN_UPGRADE_FROM:
-        raise UnsupportedUpgradeError(_upgrade_hint(str(last_ver)))
     if semver.Version.parse(VERSION) > last_ver:
         with VERSION_PATH.open("a") as f:
             f.write(VERSION + "\n")
