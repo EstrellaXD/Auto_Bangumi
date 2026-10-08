@@ -7,9 +7,11 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, ValidationError
 
 from ab_sdk import points
-from module.conf import settings
+from module.conf import VERSION, settings
 from module.core import AppContext
 from module.plugin.host import plugin_provider_ids
+from module.plugin.installer import PluginInstaller
+from module.plugin.loader import CATALOG_ROOT, installed_version
 from module.plugin.manifest import UiSlot
 from module.plugin.secrets import mask_options, restore_options
 from module.security.api import get_current_user
@@ -49,6 +51,19 @@ class PluginUpdate(BaseModel):
 
 class PluginsSettingsUpdate(BaseModel):
     allow_unsigned: bool
+
+
+class CatalogEntry(BaseModel):
+    """签名目录里的一个插件，以及本机已安装的版本。"""
+
+    id: str
+    name: str = ""
+    version: str
+    kind: str = "plugin"
+    extension_points: list[str] = []
+    description: str = ""
+    min_ab_version: str = "0.0.0"
+    installed_version: str | None
 
 
 class PluginUiSlot(BaseModel):
@@ -91,6 +106,24 @@ async def _save_and_apply(ctx: AppContext) -> None:
 async def list_plugins(ctx: AppContext = Depends(get_context)):
     """已发现的插件、运行状态、配置表单 schema 与（掩码后的）当前配置。"""
     return _overview(ctx)
+
+
+@router.get("/catalog", response_model=list[CatalogEntry])
+async def get_catalog():
+    """签名目录（GitHub release ``plugins``）里可安装的插件。"""
+    try:
+        entries = await PluginInstaller(app_version=VERSION).fetch_catalog()
+    except Exception as e:  # noqa: BLE001 - 网络或验签失败统一报 502
+        logger.warning("Plugin catalog unavailable: %s", e)
+        raise HTTPException(
+            status_code=502, detail=f"Plugin catalog unavailable: {e}"
+        ) from None
+    return [
+        CatalogEntry(
+            **entry, installed_version=installed_version(CATALOG_ROOT, entry["id"])
+        )
+        for entry in entries
+    ]
 
 
 @router.get("/ui", response_model=list[PluginUiSlot])
@@ -160,6 +193,29 @@ async def update_plugin(
     if body.enabled is not None:
         conf.enabled[plugin_id] = body.enabled
     await _save_and_apply(ctx)
+    return _overview(ctx)
+
+
+@router.post("/{plugin_id}/install", response_model=PluginsOverview)
+async def install_plugin(plugin_id: str, ctx: AppContext = Depends(get_context)):
+    """从签名目录安装（或升级）插件并启用：用户点安装即同意其运行。"""
+    result = await PluginInstaller(app_version=VERSION).install(plugin_id)
+    if not result.success:
+        raise HTTPException(status_code=400, detail=result.message)
+    settings.plugins.enabled[plugin_id] = True
+    await asyncio.to_thread(settings.save)
+    # 升级时配置快照没有变化，apply_settings 不会重新加载，所以按 id 重载
+    await ctx.plugins.reload(plugin_id)
+    return _overview(ctx)
+
+
+@router.delete("/{plugin_id}", response_model=PluginsOverview)
+async def uninstall_plugin(plugin_id: str, ctx: AppContext = Depends(get_context)):
+    """卸载经签名目录安装的插件；内置与本地插件不受影响。"""
+    result = await PluginInstaller(app_version=VERSION).uninstall(plugin_id)
+    if not result.success:
+        raise HTTPException(status_code=400, detail=result.message)
+    await ctx.plugins.reload(plugin_id)
     return _overview(ctx)
 
 

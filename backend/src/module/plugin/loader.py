@@ -3,18 +3,20 @@
 来源（优先级从高到低，同 id 只取最高优先级来源）：
 
 - ``builtin``：``module/plugins/builtin/<id>/``，随镜像发布
+- ``catalog``：经安装器从签名目录装入的 ``config/plugins/<id>/<version>/``，
+  版本由 ``installed.json`` 指定
 - ``local``：``config/plugins/local/<id>/``，用户二次开发，未签名
 - ``pip``：``autobangumi.plugins`` entry point，未签名
 
 目录型插件以 ``ab_plugin_<id>`` 为包名加载，插件内部可以使用相对导入；
 ``vendor/`` 下的纯 Python 依赖追加到 ``sys.path`` 末尾（宿主依赖优先）。
-签名目录来源（由 LLM 插件安装器泛化）在 P2 接入。
 """
 
 import importlib
 import importlib.metadata
 import importlib.resources
 import importlib.util
+import json
 import logging
 import sys
 import types
@@ -36,10 +38,12 @@ from .manifest import (
 
 logger = logging.getLogger(__name__)
 
-PluginSource = Literal["builtin", "local", "pip"]
+PluginSource = Literal["builtin", "catalog", "local", "pip"]
 
 BUILTIN_ROOT = Path(__file__).resolve().parent.parent / "plugins" / "builtin"
-LOCAL_ROOT = Path("config") / "plugins" / "local"
+CATALOG_ROOT = Path("config") / "plugins"
+LOCAL_ROOT = CATALOG_ROOT / "local"
+INSTALLED_FILE = "installed.json"
 ENTRY_POINT_GROUP = "autobangumi.plugins"
 
 
@@ -58,7 +62,7 @@ class PluginCandidate:
 
     @property
     def signed(self) -> bool:
-        return self.source == "builtin"
+        return self.source in ("builtin", "catalog")
 
 
 @dataclass(frozen=True)
@@ -70,6 +74,7 @@ class DiscoveryError:
 def discover(
     *,
     builtin_root: Path = BUILTIN_ROOT,
+    catalog_root: Path = CATALOG_ROOT,
     local_root: Path = LOCAL_ROOT,
     entry_point_group: str = ENTRY_POINT_GROUP,
 ) -> tuple[list[PluginCandidate], list[DiscoveryError]]:
@@ -91,10 +96,15 @@ def discover(
             return
         found[pid] = candidate
 
-    for source, root in (("builtin", builtin_root), ("local", local_root)):
-        for plugin_dir in _plugin_dirs(root):
+    dirs_by_source: list[tuple[PluginSource, list[Path]]] = [
+        ("builtin", _plugin_dirs(builtin_root)),
+        ("catalog", _installed_dirs(catalog_root)),
+        ("local", _plugin_dirs(local_root)),
+    ]
+    for source, plugin_dirs in dirs_by_source:
+        for plugin_dir in plugin_dirs:
             try:
-                add(_directory_candidate(plugin_dir, source))  # type: ignore[arg-type]
+                add(_directory_candidate(plugin_dir, source))
             except ManifestError as e:
                 errors.append(DiscoveryError(str(plugin_dir), str(e)))
     for ep in importlib.metadata.entry_points(group=entry_point_group):
@@ -113,12 +123,38 @@ def _plugin_dirs(root: Path) -> list[Path]:
     return sorted(p for p in root.iterdir() if (p / MANIFEST_NAME).is_file())
 
 
+def installed_version(root: Path, plugin_id: str) -> str | None:
+    """``<root>/<id>/installed.json`` 指向的版本；未安装或指针损坏时为 None。"""
+    try:
+        data = json.loads((root / plugin_id / INSTALLED_FILE).read_text("utf-8"))
+        return str(data["version"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def _installed_dirs(root: Path) -> list[Path]:
+    """签名目录已安装的插件：``installed.json`` 指向的版本目录。
+
+    root 下还有本地插件目录 ``local`` 与 LLM 提供商插件（``plugin.json``，
+    没有 ``plugin.toml``），都不是这里的插件。"""
+    if not root.is_dir():
+        return []
+    dirs = []
+    for plugin_root in sorted(root.iterdir()):
+        version = installed_version(root, plugin_root.name)
+        if version and (plugin_root / version / MANIFEST_NAME).is_file():
+            dirs.append(plugin_root / version)
+    return dirs
+
+
 # ---------------------------------------------------------------- directory
 
 
 def _directory_candidate(plugin_dir: Path, source: PluginSource) -> PluginCandidate:
     manifest = load_manifest(plugin_dir)
-    if plugin_dir.name != manifest.id:
+    # 签名目录的版本目录是 <id>/<version>，id 是上一级目录名
+    dir_id = plugin_dir.parent.name if source == "catalog" else plugin_dir.name
+    if dir_id != manifest.id:
         raise ManifestError(f"{plugin_dir}: 目录名须与清单 id 一致（{manifest.id}）")
     package = "ab_plugin_" + manifest.id.replace("-", "_")
     return PluginCandidate(
