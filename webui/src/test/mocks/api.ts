@@ -53,6 +53,7 @@ export const mockBangumiAPI: BangumiAPI = {
   preferred_group: null,
   preferred_resolution: null,
   episode_type: 'episode',
+  downloader_id: null,
 };
 
 export const mockBangumiRule: BangumiRule = {
@@ -95,6 +96,7 @@ export const mockRSSItem: RSS = {
   connection_status: null,
   last_checked_at: null,
   last_error: null,
+  downloader_id: null,
 };
 
 export const mockRSSList: RSS[] = [

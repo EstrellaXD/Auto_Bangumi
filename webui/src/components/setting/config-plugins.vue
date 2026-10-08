@@ -48,7 +48,8 @@ async function run(key: string, action: () => Promise<PluginsOverview>) {
   busy.value = key;
   try {
     apply(await action());
-    await refreshGroup('plugins');
+    // 只刷新插件卡片保存的字段，保留未保存的下载器实例与 slots 修改
+    await refreshGroup('plugins', ['enabled', 'options']);
     // 插件启停会增减下载器/通知渠道候选，同步刷新下拉框
     await refreshPluginProviders();
     return true;

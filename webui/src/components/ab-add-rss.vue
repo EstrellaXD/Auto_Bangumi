@@ -6,6 +6,7 @@ import type { RSS } from '#/rss';
 import { rssTemplate } from '#/rss';
 import { ruleTemplate } from '#/bangumi';
 import { usePluginProviders } from '@/hooks/usePluginProviders';
+import { useDownloaderInstances } from '@/hooks/useDownloaderInstances';
 
 /** v-model show */
 const show = defineModel('show', { default: false });
@@ -19,6 +20,8 @@ const rule = defineModel<BangumiRule>('rule', {
   default: () => ({ ...ruleTemplate }),
 });
 const pluginProviders = usePluginProviders();
+// 订阅的下载器实例：由它新建的规则继承；留空跟随默认实例
+const downloaders = useDownloaderInstances();
 // 内置元数据源 + 插件登记的元数据源（metadata_provider 扩展点）
 const parserTypes = computed(() => [
   'tmdb',
@@ -203,6 +206,21 @@ function subscribe() {
           <NSelect
             v-model:value="rss.parser"
             :options="parserTypes.map((p) => ({ label: p, value: p }))"
+            class="parser-select"
+          />
+        </div>
+
+        <div v-if="downloaders.multiple.value" class="option-item">
+          <label class="option-label">{{ $t('topbar.add.downloader') }}</label>
+          <NSelect
+            v-model:value="rss.downloader_id"
+            :options="downloaders.options.value"
+            clearable
+            :placeholder="
+              $t('homepage.rule.downloader_default', {
+                id: downloaders.data.value.default,
+              })
+            "
             class="parser-select"
           />
         </div>

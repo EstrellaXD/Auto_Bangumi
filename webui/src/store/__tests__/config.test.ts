@@ -33,12 +33,37 @@ describe('config store refreshGroup', () => {
     store.config.program.rss_time = 1234;
     server.plugins.enabled = { demo: true };
     vi.mocked(apiConfig.getConfig).mockResolvedValue(clone(server));
-    await store.refreshGroup('plugins');
+    await store.refreshGroup('plugins', ['enabled', 'options']);
 
     expect(store.config.plugins.enabled).toEqual({ demo: true });
     expect(store.config.program.rss_time).toBe(1234);
     // plugins 段不再算作未保存，program 段仍然是脏的
     expect(store.dirtyGroups).toContain('program');
     expect(store.dirtyGroups).not.toContain('plugins');
+  });
+
+  it('should keep unsaved downloader and slot edits when only plugin fields are refreshed', async () => {
+    const server = clone(initConfig);
+    vi.mocked(apiConfig.getConfig).mockResolvedValue(clone(server));
+    const store = useConfigStore();
+    await store.getConfig();
+
+    store.config.plugins.slots.downloader = 'nas';
+    store.config.plugins.instances.push({
+      ...store.config.plugins.instances[0],
+      id: 'nas',
+    });
+    server.plugins.enabled = { demo: true };
+    vi.mocked(apiConfig.getConfig).mockResolvedValue(clone(server));
+    await store.refreshGroup('plugins', ['enabled', 'options']);
+
+    expect(store.config.plugins.enabled).toEqual({ demo: true });
+    expect(store.config.plugins.slots.downloader).toBe('nas');
+    expect(store.config.plugins.instances.map((i) => i.id)).toEqual([
+      'default',
+      'nas',
+    ]);
+    // 实例与 slots 的修改仍未保存
+    expect(store.dirtyGroups).toContain('plugins');
   });
 });

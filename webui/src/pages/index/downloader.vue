@@ -3,6 +3,7 @@ import { type DataTableColumns, NDataTable } from 'naive-ui';
 import AbProgress from '@/components/basic/ab-progress.vue';
 import { useConfirm } from '@/hooks/useConfirm';
 import type { QbTorrentInfo, TorrentGroup } from '#/downloader';
+import { useDownloaderInstances } from '@/hooks/useDownloaderInstances';
 
 definePage({
   name: 'Downloader',
@@ -122,6 +123,9 @@ function isGroupAllSelected(group: TorrentGroup): boolean {
   return group.torrents.every((t) => selectedHashes.value.includes(t.hash));
 }
 
+// 多个下载器实例时标出每个种子所在的实例
+const downloaders = useDownloaderInstances();
+
 const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
   {
     type: 'selection',
@@ -132,6 +136,16 @@ const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
     ellipsis: { tooltip: true },
     minWidth: 200,
   },
+  ...(downloaders.multiple.value
+    ? [
+        {
+          title: t('downloader.torrent.instance'),
+          key: 'downloader_id',
+          width: 110,
+          ellipsis: { tooltip: true },
+        },
+      ]
+    : []),
   {
     title: t('downloader.torrent.progress'),
     key: 'progress',

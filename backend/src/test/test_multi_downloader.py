@@ -328,3 +328,12 @@ class TestDownloaderApi:
                 {"id": "b", "provider": "mock"},
             ],
         }
+
+    def test_add_rss_keeps_downloader_instance(self, two_instances, authed_client):
+        resp = authed_client.post(
+            "/api/v1/rss/add",
+            json={"url": "https://e/rss", "name": "Feed", "downloader_id": "b"},
+        )
+        assert resp.status_code == 200
+        (feed,) = authed_client.get("/api/v1/rss").json()
+        assert feed["downloader_id"] == "b"

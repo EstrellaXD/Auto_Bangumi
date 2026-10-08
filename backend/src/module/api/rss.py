@@ -30,7 +30,9 @@ async def get_rss(db: Database = Depends(get_db)):
 )
 async def add_rss(rss: RSSItem, db: Database = Depends(get_db)):
     engine = RSSEngine(db)
-    result = await engine.add_rss(rss.url, rss.name, rss.aggregate, rss.parser)
+    result = await engine.add_rss(
+        rss.url, rss.name, rss.aggregate, rss.parser, rss.downloader_id
+    )
     return u_response(result)
 
 

@@ -100,6 +100,7 @@ class RSSEngine:
         name: str | None = None,
         aggregate: bool = True,
         parser: str = "mikan",
+        downloader_id: str | None = None,
     ):
         if not name:
             async with RequestContent() as req:
@@ -111,7 +112,13 @@ class RSSEngine:
                         msg_en="Failed to get RSS title.",
                         msg_zh="无法获取 RSS 标题。",
                     )
-        rss_data = RSSItem(name=name, url=rss_link, aggregate=aggregate, parser=parser)
+        rss_data = RSSItem(
+            name=name,
+            url=rss_link,
+            aggregate=aggregate,
+            parser=parser,
+            downloader_id=downloader_id,
+        )
         if await self.db.rss.add(rss_data):
             return ResponseModel(
                 status=True,
