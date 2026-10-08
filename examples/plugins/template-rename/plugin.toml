@@ -1,0 +1,9 @@
+[plugin]
+id = "template-rename"
+name = "过滤器模板重命名"
+version = "0.1.0"
+sdk = ">=0.5,<1"
+entry = "template_rename:TemplateRename"
+description = "示例插件：带自有过滤器的文件名模板（{field|filter:arg}）。在「番剧管理设置 → 重命名方式」选择 mini-template 启用。演示 rename_strategy"
+authors = ["AutoBangumi"]
+extension_points = ["rename_strategy"]
