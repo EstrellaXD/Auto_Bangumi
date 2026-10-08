@@ -91,7 +91,7 @@
 
 - P4 有两份独立实现。另一个会话的版本（提交 a0706513、12e7e2f5，基于旧 P5 0b6de315）曾推到 `refactor/4.0-p4-organize`，现保留为 `refactor/4.0-p4-organize-cloud`（head 544628f6）。本分支保留本节上文的设计，因为它符合已确认的决策：`pn` / `advance` / `template` 都在内置插件 `rename` 中，坏模板跳过文件并通知、不退回 `pn`，另有 `hardlink`。另一份的 `rename-template` 插件、`BangumiLink`、`ab_sdk.organize` 与由 `PluginManager` 设置进程级总线的做法没有移植。
 - 从另一份移植并按本分支改写的内容：
-  - **内置插件 `media-server-refresh`**：订阅 `torrent.organized`（另一份订阅 `file.renamed`；前者在重命名方式为 `none` 时也会发布），等待 `delay` 秒，把期间的事件合并成一次 Jellyfin / Emby / Plex 刷新请求。未填写地址或 API Key 时不做任何事，所以与另一份相同，默认启用。由于至少一次投递，已配置时每次重启最多多出一次合并后的刷新。
+  - **内置插件 `media-server-refresh`**：订阅 `torrent.organized`（另一份订阅 `file.renamed`；前者在重命名方式为 `none` 时也会发布），等待 `delay` 秒，把期间的事件合并成一次 Jellyfin / Emby / Plex 刷新请求。未填写地址或 API Key 时不做任何事，所以与另一份相同，默认启用。由于至少一次投递，已配置时每次重启最多多出一次合并后的刷新。它同时订阅 `hardlink` 在新放入文件后发布的 `hardlink.linked`（普通 `Event`，不是通知）：两者各自订阅同一个事件，跨盘复制慢于 `delay` 时刷新会早于文件到位，所以文件放好后再刷新一次；刷新请求发出后到达的事件再排一次刷新，不再被忽略。
   - **死代码**：删除 `Renamer.rename_file` / `_rename_media_file`、`_lookup_offsets` / `_normalize_path`、`BangumiDatabase.match_by_save_path`、`TorrentDatabase.search_by_qb_hash`、`RenameOperationDatabase.release_replacement_lease`。删除前确认它们在本分支（含 `revision_saga.py`）没有生产调用方。原测试改为经 `rename()` 与 `_batch_lookup_offsets` 驱动。`season_offset` 从 `gen_path` 起整条重命名链路移除，`_batch_lookup_offsets` 的结果从 `(集数偏移, 季度偏移, 类型)` 改为 `(集数偏移, 类型)`：季度偏移已体现在 Season 文件夹，文件名从未使用它。
   - **插件配置 422**：`field_validator` 抛出的 `ValueError` 会留在 `ValidationError.errors()` 的 `ctx` 中，无法 JSON 序列化，保存配置返回 500（`hardlink` 的路径校验、`rename` 的模板校验都会触发）。现在以 `include_context=False` 返回 422。
   - **用户文档**：`docs/{,en/,ja/}config/manager.md` 增加 `template`、`hardlink`（含 `path_map` 与 Docker 下硬链接不能跨文件系统的说明）与 `media-server-refresh` 三节，按本分支的设计重写；`CHANGELOG.md` 增加 P4 条目。

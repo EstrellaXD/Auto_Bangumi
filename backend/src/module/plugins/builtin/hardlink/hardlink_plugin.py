@@ -26,7 +26,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ab_sdk import Plugin, points, provider, subscribe
-from ab_sdk.events import SystemEvent, TorrentOrganized
+from ab_sdk.events import Event, SystemEvent, TorrentOrganized
 
 Status = Literal["linked", "exists", "conflict", "failed"]
 
@@ -100,6 +100,16 @@ class HardlinkFailed(SystemEvent):
 
     def describe(self) -> tuple[str, str]:
         return ("硬链接未完成", f"种子：{self.torrent_hash}\n{self.files}")
+
+
+@dataclass(frozen=True, slots=True)
+class HardlinkLinked(Event):
+    """种子有文件新放入了媒体库。跨盘复制可能比媒体库刷新的延迟更久，
+    media-server-refresh 订阅它，在文件放好后再刷新一次。"""
+
+    kind: ClassVar[str] = "hardlink.linked"
+
+    torrent_hash: str
 
 
 def _identity(path: Path) -> list[int]:
@@ -216,12 +226,16 @@ class HardlinkPlugin(Plugin[Options]):
     @subscribe(TorrentOrganized.kind, timeout=LINK_TIMEOUT)
     async def on_organized(self, event: TorrentOrganized) -> None:
         problems: list[str] = []
+        linked = False
         for f in event.files:
             status, reason = await self.link(
                 Path(self.to_local(f.path, event.downloader_id))
             )
+            linked = linked or status == "linked"
             if status in ("conflict", "failed"):
                 problems.append(f"{f.path}：{reason}")
+        if linked:
+            self.ctx.bus.publish(HardlinkLinked(torrent_hash=event.torrent_hash))
         if problems:
             self.ctx.log.warning("种子 %s 未完成链接：%s", event.torrent_hash, problems)
             self.ctx.bus.publish(

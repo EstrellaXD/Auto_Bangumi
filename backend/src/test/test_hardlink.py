@@ -60,6 +60,10 @@ def organized(*names: str, downloader: str = "default") -> TorrentOrganized:
     )
 
 
+def failures(ctx) -> list:
+    return [e for e in ctx.bus.published if e.kind == "hardlink.failed"]
+
+
 def exdev(src, dst):
     raise OSError(errno.EXDEV, "Invalid cross-device link")
 
@@ -90,7 +94,7 @@ async def test_on_organized_maps_longest_prefix_of_same_downloader_and_links(
 
     assert os.path.samefile(src, library / SEASON / src.name)
     assert os.path.samefile(sub, library / SEASON / sub.name)
-    assert ctx.bus.published == []
+    assert failures(ctx) == []
 
 
 @pytest.mark.parametrize("mode", ["copy", "symlink", "skip"])
@@ -105,12 +109,12 @@ async def test_on_organized_cross_device_applies_policy(roots, monkeypatch, mode
     dst = library / SEASON / src.name
     if mode == "skip":
         assert not dst.exists()
-        [event] = ctx.bus.published
+        [event] = failures(ctx)
         assert event.kind == "hardlink.failed" and src.name in event.files
         return
     assert dst.read_text() == "v1"
     assert dst.is_symlink() is (mode == "symlink")
-    assert ctx.bus.published == []
+    assert failures(ctx) == []
 
 
 async def test_on_organized_redelivery_does_not_copy_again(roots, monkeypatch):
@@ -130,7 +134,7 @@ async def test_on_organized_redelivery_does_not_copy_again(roots, monkeypatch):
     await plugin.on_organized(organized(src.name))
 
     assert len(copies) == 1
-    assert ctx.bus.published == []
+    assert failures(ctx) == []
 
 
 async def test_on_organized_interrupted_copy_leaves_no_target(roots, monkeypatch):
@@ -152,7 +156,7 @@ async def test_on_organized_interrupted_copy_leaves_no_target(roots, monkeypatch
 
     assert (library / SEASON / src.name).read_text() == "v1"
     assert [p.name for p in (library / SEASON).iterdir()] == [src.name]
-    [failed] = ctx.bus.published
+    [failed] = failures(ctx)
     assert "No space left" in failed.files
 
 
@@ -170,7 +174,7 @@ async def test_on_organized_revision_upgrade_replaces_own_link(roots):
     dst = library / SEASON / src.name
     assert os.path.samefile(src, dst) and dst.read_text() == "v2"
     assert [p.name for p in dst.parent.iterdir()] == [src.name]
-    assert ctx.bus.published == []
+    assert failures(ctx) == []
 
 
 async def test_on_organized_problem_files_kept_and_notified_once(roots, tmp_path):
@@ -189,7 +193,7 @@ async def test_on_organized_problem_files_kept_and_notified_once(roots, tmp_path
     await plugin.on_organized(organized(taken.name, "outside/x.mkv"))
 
     assert (library / SEASON / taken.name).read_text() == "user file"
-    [event] = ctx.bus.published
+    [event] = failures(ctx)
     assert event.kind == "hardlink.failed" and event.torrent_hash == "h1"
     assert taken.name in event.files and "x.mkv" in event.files
 
@@ -213,7 +217,7 @@ def test_backfill_route_links_existing_files_and_counts(roots):
         downloads / SEASON / "new.zh.ass", library / SEASON / "new.zh.ass"
     )
     assert not (library / SEASON / "note.nfo").exists()
-    assert ctx.bus.published == []
+    assert failures(ctx) == []
 
 
 @pytest.mark.parametrize(
@@ -250,7 +254,7 @@ async def test_on_organized_unrecorded_own_copy_adopted_and_upgraded(
     await plugin.on_organized(organized(src.name))
 
     assert dst.read_text() == "v2"
-    assert ctx.bus.published == []
+    assert failures(ctx) == []
 
 
 async def test_on_organized_user_file_at_former_link_kept(roots):
@@ -268,7 +272,7 @@ async def test_on_organized_user_file_at_former_link_kept(roots):
     await plugin.on_organized(organized(src.name))
 
     assert dst.read_text() == "user file"
-    [event] = ctx.bus.published
+    [event] = failures(ctx)
     assert event.kind == "hardlink.failed" and src.name in event.files
 
 
@@ -317,4 +321,18 @@ async def test_link_target_deleted_by_user_restored_only_by_backfill(
         await plugin.on_organized(organized(src.name))
 
     assert dst.exists() is via_backfill
-    assert ctx.bus.published == []
+    assert failures(ctx) == []
+
+
+async def test_on_organized_publishes_linked_only_when_file_placed(roots):
+    downloads, library = roots
+    plugin, ctx = make_plugin(roots)
+    src = write(downloads / SEASON / "Anime S01E01.mkv", "v1")
+
+    await plugin.on_organized(organized(src.name))
+    await plugin.on_organized(organized(src.name))
+
+    # 媒体库刷新据此在文件放好后再刷新一次；已链接的重复投递不再发布
+    assert [(e.kind, e.torrent_hash) for e in ctx.bus.published] == [
+        ("hardlink.linked", "h1")
+    ]

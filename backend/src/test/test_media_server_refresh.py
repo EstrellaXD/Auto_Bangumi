@@ -2,11 +2,13 @@
 
 import asyncio
 import logging
+from types import SimpleNamespace
 
 import httpx
 import pytest
 
 from ab_sdk.events import OrganizedFile, TorrentOrganized
+from ab_sdk.hooks import SUBSCRIBE_ATTR
 from ab_sdk.testing import create_plugin
 from module.plugin.loader import BUILTIN_ROOT, discover
 
@@ -134,3 +136,41 @@ async def test_teardown_pending_refresh_cancelled():
     await plugin.teardown()
     assert pending.cancelled()
     assert requests == []
+
+
+async def test_on_organized_during_refresh_request_refreshes_again():
+    plugin, _ = make_plugin({"url": "http://srv", "api_key": "k", "delay": 0})
+    requests: list[httpx.Request] = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if len(requests) == 1:
+            # 刷新请求已发出、尚未返回时又有种子整理完成
+            await plugin.on_organized(organized(2))
+        return httpx.Response(204)
+
+    plugin.client_factory = lambda: httpx.AsyncClient(
+        transport=httpx.MockTransport(handler)
+    )
+    await plugin.on_organized(organized(1))
+    assert plugin._pending is not None
+    await asyncio.wait_for(plugin._pending, 1)
+
+    assert len(requests) == 2
+
+
+async def test_hardlink_linked_event_schedules_refresh():
+    plugin, requests = make_plugin({"url": "http://srv", "api_key": "k", "delay": 0})
+    # 硬链接（跨盘复制可能比 delay 更久）放好文件后再刷新一次
+    [handler] = [
+        getattr(plugin, name)
+        for name, member in vars(type(plugin)).items()
+        if getattr(getattr(member, SUBSCRIBE_ATTR, None), "kind", None)
+        == "hardlink.linked"
+    ]
+
+    await handler(SimpleNamespace(kind="hardlink.linked", torrent_hash="h1"))
+    assert plugin._pending is not None
+    await asyncio.wait_for(plugin._pending, 1)
+
+    assert len(requests) == 1

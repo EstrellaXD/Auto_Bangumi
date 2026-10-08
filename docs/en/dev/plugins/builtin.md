@@ -23,7 +23,7 @@ Adds an include filter. The rule already has an exclude filter. Set a list of re
 
 ## media-server-refresh
 
-Subscribes to `torrent.organized`. After the first event, it waits `delay` seconds. The torrents that finish in this time share one refresh request.
+Subscribes to `torrent.organized` and to `hardlink.linked`, which `hardlink` publishes when it places new files in the library. After the first event, it waits `delay` seconds. The events in this time share one refresh request. An event that arrives after the request is sent causes one more refresh.
 
 | Option | Description |
 | --- | --- |

@@ -1,6 +1,7 @@
 """内置插件：种子整理完成后通知媒体服务器刷新媒体库（订阅 ``torrent.organized``）。
 
 收到第一个事件后等待 ``delay`` 秒，期间整理完成的所有种子合并成一次刷新请求。
+同时订阅 hardlink 插件的 ``hardlink.linked``：文件放入媒体库后再刷新一次。
 未填写服务器地址或 API Key 时什么也不做，所以默认启用也无副作用。
 
 ``torrent.organized`` 投递为「至少一次」：下载器中已整理的种子每次进程重启后
@@ -15,7 +16,7 @@ import httpx
 from pydantic import BaseModel, Field
 
 from ab_sdk import Plugin, PluginContext, secret_field, subscribe
-from ab_sdk.events import TorrentOrganized
+from ab_sdk.events import Event, TorrentOrganized
 
 ServerType = Literal["jellyfin", "emby", "plex"]
 
@@ -61,6 +62,8 @@ class MediaServerRefresh(Plugin[Options]):
     def __init__(self, ctx: PluginContext) -> None:
         super().__init__(ctx)
         self._pending: asyncio.Task[None] | None = None
+        # 刷新请求发出后又有新事件：这次刷新之后再排一次
+        self._again = False
         # 测试可替换为带 MockTransport 的客户端
         self.client_factory: Callable[[], httpx.AsyncClient] = lambda: (
             httpx.AsyncClient(timeout=10)
@@ -81,18 +84,34 @@ class MediaServerRefresh(Plugin[Options]):
 
     @subscribe(TorrentOrganized.kind)
     async def on_organized(self, event: TorrentOrganized) -> None:
+        self._schedule(event.kind)
+
+    # hardlink 插件把文件放入媒体库后发布；跨盘复制可能比 delay 更久，
+    # 放好后再刷新一次（期间的事件同样合并）
+    @subscribe("hardlink.linked")
+    async def on_linked(self, event: Event) -> None:
+        self._schedule(event.kind)
+
+    def _schedule(self, kind: str) -> None:
         if not self.configured:
             return
         if self._pending is None or self._pending.done():
-            self.ctx.log.debug("种子 %s 整理完成，计划刷新媒体库", event.torrent_hash)
+            self.ctx.log.debug("收到 %s，计划刷新媒体库", kind)
             self._pending = asyncio.create_task(self._refresh_later())
+        else:
+            self._again = True
 
     async def _refresh_later(self) -> None:
-        await asyncio.sleep(self.config.delay)
-        try:
-            await self.refresh()
-        except Exception as e:
-            self.ctx.log.warning("刷新媒体库失败：%s", e)
+        again = True
+        while again:
+            await asyncio.sleep(self.config.delay)
+            # 等待期间到达的事件由这次刷新覆盖
+            self._again = False
+            try:
+                await self.refresh()
+            except Exception as e:
+                self.ctx.log.warning("刷新媒体库失败：%s", e)
+            again = self._again
 
     async def refresh(self) -> bool:
         method, url, headers = build_request(self.config)

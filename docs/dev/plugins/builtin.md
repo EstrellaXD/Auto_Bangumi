@@ -23,7 +23,7 @@
 
 ## media-server-refresh
 
-订阅 `torrent.organized`。收到第一个事件后等待 `delay` 秒，期间整理完成的种子合并成一次刷新请求。
+订阅 `torrent.organized` 与 `hardlink` 发布的 `hardlink.linked`（文件新放入媒体库）。收到第一个事件后等待 `delay` 秒，期间的事件合并成一次刷新请求；刷新请求发出后到达的事件再排一次。
 
 | 选项 | 说明 |
 | --- | --- |

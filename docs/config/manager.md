@@ -91,7 +91,7 @@
 
 ## 媒体库刷新
 
-内置插件「媒体库刷新」（`media-server-refresh`）在种子整理完成后请求 Jellyfin、Emby 或 Plex 刷新媒体库。在 **设置 → 插件 → 媒体库刷新** 中选择服务器类型，填写服务器地址与 API Key（Plex 为 `X-Plex-Token`）后生效；未填写时不做任何事。收到事件后等待「延迟」秒（默认 30），期间整理完成的种子合并为一次刷新。
+内置插件「媒体库刷新」（`media-server-refresh`）在种子整理完成后请求 Jellyfin、Emby 或 Plex 刷新媒体库。在 **设置 → 插件 → 媒体库刷新** 中选择服务器类型，填写服务器地址与 API Key（Plex 为 `X-Plex-Token`）后生效；未填写时不做任何事。收到事件后等待「延迟」秒（默认 30），期间整理完成的种子合并为一次刷新；刷新请求发出后到达的事件会再排一次刷新。启用「硬链接到媒体库」时，文件放入媒体库后会再刷新一次，跨盘复制慢于延迟时新剧集也能出现。
 
 [1]: https://www.autobangumi.org/faq/#download-path
 [2]: https://www.autobangumi.org/faq/#file-renaming

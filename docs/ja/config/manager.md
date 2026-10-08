@@ -73,7 +73,7 @@
 
 ## メディアサーバーの更新
 
-内蔵プラグイン `media-server-refresh` は、Torrent の整理後に Jellyfin・Emby・Plex へライブラリの更新を要求します。**設定 → プラグイン → media-server-refresh** でサーバー種別を選び、サーバー URL と API Key（Plex は `X-Plex-Token`）を入力すると有効になります。未入力の間は何もしません。イベントを受け取ると `delay` 秒（既定 30）待ち、その間に整理された Torrent をまとめて 1 回だけ更新します。
+内蔵プラグイン `media-server-refresh` は、Torrent の整理後に Jellyfin・Emby・Plex へライブラリの更新を要求します。**設定 → プラグイン → media-server-refresh** でサーバー種別を選び、サーバー URL と API Key（Plex は `X-Plex-Token`）を入力すると有効になります。未入力の間は何もしません。イベントを受け取ると `delay` 秒（既定 30）待ち、その間に整理された Torrent をまとめて 1 回だけ更新します。更新リクエストの送信後に届いたイベントは、もう 1 回の更新になります。ハードリンクプラグインが有効な場合は、ファイルがライブラリに入った後にもう一度更新します。ディスクをまたぐコピーが遅延より長くかかっても、新しいエピソードが表示されます。
 
 ## `config.json`
 

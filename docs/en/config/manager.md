@@ -75,7 +75,7 @@ Hard links cannot cross file systems. In Docker, keep the download folder and th
 
 ## Media server refresh
 
-The built-in `media-server-refresh` plugin asks Jellyfin, Emby or Plex to refresh the library after a torrent is organized. Under **Settings → Plugins → media-server-refresh**, select the server type and enter the server URL and API key (for Plex, the `X-Plex-Token`). Without them the plugin does nothing. After an event it waits `delay` seconds (default 30) and sends one refresh for all torrents organized in that time.
+The built-in `media-server-refresh` plugin asks Jellyfin, Emby or Plex to refresh the library after a torrent is organized. Under **Settings → Plugins → media-server-refresh**, select the server type and enter the server URL and API key (for Plex, the `X-Plex-Token`). Without them the plugin does nothing. After an event it waits `delay` seconds (default 30) and sends one refresh for all torrents organized in that time. Events that arrive after the refresh request is sent cause one more refresh. When the hardlink plugin is enabled, the plugin refreshes again after the files are in the library, so a copy across disks that takes longer than the delay does not hide the new episode.
 
 ## `config.json`
 
