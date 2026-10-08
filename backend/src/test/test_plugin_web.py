@@ -92,6 +92,22 @@ class TestManager:
         assert manager.ui_slots() == []
         assert manager.web_dir("demo") is None
 
+    async def test_ui_slots_element_owned_by_longest_matching_plugin_id(self, tmp_path):
+        # 「foo」的命名空间前缀也匹配 ab-plugin-foo-bar，但该名字属于更长的 id「foo-bar」
+        foo = candidate(tmp_path, "foo")
+        foo.manifest.ui[0].element = "ab-plugin-foo-bar"
+        foo_bar = candidate(tmp_path, "foo-bar")
+        mgr = PluginManager(
+            SimpleNamespace(plugins=Plugins()),
+            discover_fn=lambda: ([foo, foo_bar], []),
+            data_root=tmp_path / "data",
+        )
+        await mgr.start()
+        assert [(pid, ui.element) for pid, ui in mgr.ui_slots()] == [
+            ("foo-bar", "ab-plugin-foo-bar")
+        ]
+        await mgr.stop()
+
 
 class TestApi:
     def test_list_ui_slots(self, client):

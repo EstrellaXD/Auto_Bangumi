@@ -12,6 +12,24 @@ export function moduleUrl(ui: Pick<PluginUiSlot, 'plugin_id' | 'entry'>) {
   ).href;
 }
 
+// custom element 名是文档全局的。记录每个名字由哪个插件的脚本定义，
+// 挂载点只接受本插件自己定义的元素，其它插件抢先定义（或守卫跳过）的不用。
+const owners = new Map<string, string>();
+const PLUGIN_FRAME = /\/plugins\/([^/]+)\/web\//;
+let tracking = false;
+
+// 须在任何插件代码运行前安装；按调用栈里最近的插件脚本地址判定定义者
+function trackDefinitions() {
+  if (tracking) return;
+  tracking = true;
+  const define = customElements.define.bind(customElements);
+  customElements.define = (name, ctor, options) => {
+    define(name, ctor, options);
+    const frame = new Error(name).stack?.match(PLUGIN_FRAME);
+    if (frame) owners.set(name, decodeURIComponent(frame[1]));
+  };
+}
+
 /**
  * 导入挂载点所在的模块并确认 custom element 已定义。同一模块只导入一次，
  * 失败不缓存（插件修复后重新打开页面即可重试）。
@@ -20,6 +38,7 @@ export async function loadPluginElement(
   ui: PluginUiSlot,
   importer: Importer = (url) => import(/* @vite-ignore */ url)
 ): Promise<void> {
+  trackDefinitions();
   const url = moduleUrl(ui);
   let pending = loading.get(url);
   if (!pending) {
@@ -28,6 +47,12 @@ export async function loadPluginElement(
     pending.catch(() => loading.delete(url));
   }
   await pending;
+  const owner = owners.get(ui.element);
+  if (owner && owner !== ui.plugin_id) {
+    throw new Error(
+      `custom element <${ui.element}> is defined by plugin ${owner}`
+    );
+  }
   if (!customElements.get(ui.element)) {
     throw new Error(`custom element <${ui.element}> is not defined`);
   }

@@ -17,7 +17,7 @@ from ab_sdk.hooks import HOOK_ATTR, PROVIDER_ATTR, SUBSCRIBE_ATTR
 from .bus import EventBus
 from .context import PLUGIN_DATA_ROOT, HostPluginContext
 from .loader import DiscoveryError, PluginCandidate, PluginLoadError, discover
-from .manifest import PluginUi
+from .manifest import PluginUi, owns_element
 from .registry import ExtensionRegistry, HookEntry, ProviderEntry
 from .runner import CircuitBreaker, HookRunner
 
@@ -171,7 +171,16 @@ class PluginManager:
             (plugin_id, ui)
             for plugin_id, active in sorted(self._active.items())
             for ui in active.candidate.manifest.ui
+            if self._element_owner(ui.element) == plugin_id
         ]
+
+    def _element_owner(self, element: str) -> str | None:
+        """custom element 名的归属：命名空间匹配的插件里 id 最长者。
+
+        ``foo`` 的命名空间前缀也匹配 ``ab-plugin-foo-bar``，该名字应归 ``foo-bar``。
+        按全部已发现的插件判定，启停插件不会改变归属。"""
+        owners = [i for i in self._candidates if owns_element(i, element)]
+        return max(owners, key=len, default=None)
 
     def web_dir(self, plugin_id: str) -> Path | None:
         """已启用插件的 ``web/`` 目录；未启用或没有该目录时为 None。"""
@@ -200,10 +209,11 @@ class PluginManager:
     def _probe_schemas(self) -> None:
         """未加载过的可信插件：只导入代码取 config_model，让设置表单在首次启用
         前就可用。未签名插件须先开启 allow_unsigned；导入失败记为无 schema，
-        真正启用时会再次加载并报告原因。"""
+        真正启用时会再次加载并报告原因。每次重新发现后都重新取，插件目录升级后
+        表单随之更新，首次失败也不会一直缓存。"""
         conf = self._settings.plugins
         for plugin_id, candidate in self._candidates.items():
-            if plugin_id in self._models or plugin_id in self._active:
+            if plugin_id in self._active:
                 continue
             if not (candidate.signed or conf.allow_unsigned):
                 continue
@@ -221,6 +231,14 @@ class PluginManager:
         # 清单错误已在 discover() 中记录日志
         candidates, _ = self._discover()
         self._candidates = {c.manifest.id: c for c in candidates}
+        for plugin_id, candidate in self._candidates.items():
+            for ui in candidate.manifest.ui:
+                if self._element_owner(ui.element) != plugin_id:
+                    logger.warning(
+                        "[Plugin:%s] 元素名 %s 属于更长 id 的插件，挂载点已忽略",
+                        plugin_id,
+                        ui.element,
+                    )
         for plugin_id in [p for p in self._failed if p not in self._candidates]:
             del self._failed[plugin_id]
 

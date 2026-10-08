@@ -7,7 +7,7 @@ from typing import Literal
 
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.version import InvalidVersion, Version
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from ab_sdk import SDK_VERSION
 
@@ -27,6 +27,12 @@ UiSlot = Literal[
     "page",
     "dashboard.widget",
 ]
+
+
+def owns_element(plugin_id: str, element: str) -> bool:
+    """element 是否落在 ``ab-plugin-<id>`` 命名空间内。"""
+    prefix = f"ab-plugin-{plugin_id}"
+    return element == prefix or element.startswith(prefix + "-")
 
 
 class ManifestError(ValueError):
@@ -110,6 +116,18 @@ class PluginManifest(BaseModel):
         if not _ENTRY_RE.match(value):
             raise ValueError("entry 须形如 'my_plugin:MyPlugin'")
         return value
+
+    @model_validator(mode="after")
+    def _check_ui_elements(self) -> "PluginManifest":
+        # custom element 名是全局的：限定在 ab-plugin-<id> 命名空间内，
+        # 一个插件才不会占用别的插件的元素名
+        for ui in self.ui:
+            if not owns_element(self.id, ui.element):
+                raise ValueError(
+                    f"element {ui.element!r} 须为 ab-plugin-{self.id} "
+                    f"或以 ab-plugin-{self.id}- 开头"
+                )
+        return self
 
     @property
     def entry_module(self) -> str:

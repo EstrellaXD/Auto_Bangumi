@@ -70,6 +70,39 @@ describe('loadPluginElement', () => {
   });
 });
 
+/** 让 define 调用的调用栈带上插件脚本地址，模拟插件模块顶层代码 */
+function defineFrom(pluginId: string, name: string, guarded = false) {
+  const body = `
+    if (!${guarded} || !customElements.get(name)) {
+      customElements.define(name, class extends HTMLElement {});
+    }
+    //# sourceURL=http://ab.local/api/v1/plugins/${pluginId}/web/index.js`;
+  // eslint-disable-next-line no-new-func
+  new Function('name', body)(name);
+}
+
+describe('element ownership', () => {
+  it('should reject an element that another plugin defined first', async () => {
+    const slot = makeSlot();
+    // 别的插件抢先定义了本插件声明的元素名，本插件自己的 define 被守卫跳过
+    const importer = async () => {
+      defineFrom('squatter', slot.element);
+      defineFrom(slot.plugin_id, slot.element, true);
+    };
+
+    await expect(loadPluginElement(slot, importer)).rejects.toThrow(
+      /defined by plugin squatter/
+    );
+  });
+
+  it('should accept an element that the plugin defined itself', async () => {
+    const slot = makeSlot();
+    await loadPluginElement(slot, async () =>
+      defineFrom(slot.plugin_id, slot.element)
+    );
+  });
+});
+
 describe('watchPluginErrors', () => {
   const stops: Array<() => void> = [];
   afterEach(() => stops.splice(0).forEach((stop) => stop()));

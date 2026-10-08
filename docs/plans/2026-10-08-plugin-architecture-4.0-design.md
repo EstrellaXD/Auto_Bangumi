@@ -187,6 +187,14 @@ slots 解析：
 - **验证**：除 vitest / pytest 外，用 `vite preview`（带 CSP）加真实后端、系统 Chrome 无头跑过：详情页标签列出种子并选用、选择经 SSE `bus` 帧刷新、设置页补链按钮返回计数、`page` / `bangumi.card.action` 挂载点、崩溃与未定义元素显示失败提示，页面未报 CSP 违例。
 - 踩坑：UnoCSS 的 attributify 会把源码里的 `` `[plugin:${id}]` `` 当成样式规则并让构建失败；`plugin-slot.vue` 里的日志不要用这种写法。
 
+### 实施中的调整（P6 评审修复）
+
+- **秘密字段掩码覆盖嵌套结构**（`module/plugin/secrets.py`）：`mask_options` / `restore_options` 沿 JSON Schema 递归（`$ref`、`anyOf` / `oneOf`、对象、数组 `items`、字典 `additionalProperties`），对象数组行里的 `secret_field()` 也会掩码。无 schema 时仍把全部字符串按秘密处理，现在同样递归。`secret_keys()` 无其它调用方，已删除；`/config/update` 改为使用返回值。
+- **数组行没有稳定 id，还原按「掩码后内容相同」对应已保存的行**：删除、调换行不会串用密码。行内容也被改过时，行数未变则按位置对应；行数已变则无法确定，丢弃该掩码字段（密码留空，由插件的校验或用户重新输入处理），不取别行的密码。
+- **未启用插件的 schema 每次重新发现后重新读取**（`_probe_schemas`）：插件目录升级后表单随之更新，首次导入失败也不再一直缓存为「无 schema」。代价是每次 `apply_settings` 会重新导入未启用的可信插件一次。
+- **custom element 名归插件所有**：清单要求 `element` 为 `ab-plugin-<id>` 或以 `ab-plugin-<id>-` 开头。id 含连字符时命名空间会重叠（`foo` 的前缀也匹配 `ab-plugin-foo-bar`），`PluginManager.ui_slots()` 按全部已发现插件取 id 最长者为归属，其余声明被忽略并在重新发现时写警告日志。
+- **前端按定义者校验元素**（`services/plugin-loader.ts`）：加载器包装 `customElements.define`，按调用栈里最近的 `/plugins/<id>/web/` 脚本地址记录每个名字由哪个插件定义；挂载点发现元素由其它插件定义时拒绝实例化并显示失败提示。这样插件即使在自己的模块里抢先定义别人的元素名，也拿不到别人挂载点的 `host`。归因依赖浏览器调用栈里带脚本地址（三大引擎都满足）；不经插件脚本定义的元素（定义者未知）不拦截。
+
 ## 1. 背景与目标
 
 AB 目前只有 **LLM 提供商** 是真正的运行时插件系统：签名下载、目录加载、懒导入、热重载。

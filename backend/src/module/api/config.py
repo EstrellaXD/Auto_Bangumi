@@ -158,8 +158,9 @@ async def update_config(config: Config, ctx: AppContext = Depends(get_context)):
         current = settings.dict()
         schemas = _plugin_schemas(ctx)
         current_options = current.get("plugins", {}).get("options", {})
-        for plugin_id, plugin_options in config_dict["plugins"]["options"].items():
-            restore_options(
+        options = config_dict["plugins"]["options"]
+        for plugin_id, plugin_options in options.items():
+            options[plugin_id] = restore_options(
                 plugin_options,
                 current_options.get(plugin_id, {}),
                 schemas.get(plugin_id),
