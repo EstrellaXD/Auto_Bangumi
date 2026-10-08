@@ -30,6 +30,7 @@ from .manifest import (
     ManifestError,
     PluginManifest,
     load_manifest,
+    native_files,
     parse_manifest,
 )
 
@@ -40,7 +41,6 @@ PluginSource = Literal["builtin", "local", "pip"]
 BUILTIN_ROOT = Path(__file__).resolve().parent.parent / "plugins" / "builtin"
 LOCAL_ROOT = Path("config") / "plugins" / "local"
 ENTRY_POINT_GROUP = "autobangumi.plugins"
-_NATIVE_SUFFIXES = (".so", ".pyd", ".dylib", ".dll")
 
 
 class PluginLoadError(Exception):
@@ -151,11 +151,8 @@ def _load_directory(
 
 
 def _reject_native_code(plugin_dir: Path) -> None:
-    for path in plugin_dir.rglob("*"):
-        if path.suffix in _NATIVE_SUFFIXES:
-            raise PluginLoadError(
-                f"插件包含原生扩展 {path.relative_to(plugin_dir)}，只允许纯 Python 代码"
-            )
+    if native := native_files(plugin_dir):
+        raise PluginLoadError(f"插件包含原生扩展 {native[0]}，只允许纯 Python 代码")
 
 
 def _activate_vendor(plugin_dir: Path, plugin_id: str) -> None:
