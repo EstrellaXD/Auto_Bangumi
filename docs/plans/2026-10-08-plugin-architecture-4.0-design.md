@@ -1,6 +1,18 @@
 # AutoBangumi 4.0 插件化重构设计
 
-> 状态：草案 · 目标分支：`4.0-dev` · 基线：`main@3.3.6`
+> 状态：草案（核心决策已确认）· 目标分支：`4.0-dev` · 基线：`main@3.3.6`
+
+## 0. 已确认决策
+
+| 议题 | 决策 |
+|---|---|
+| 升级路径 | 4.0 **只支持从 3.3.x 升级**，3.0 / 3.1 / 3.2 兼容层全部删除（第 8.3 节） |
+| SDK 版本 | `ab_sdk` 在 4.0 期间为 `0.x`，允许破坏性调整；4.1 冻结 `1.0`，此后严格 semver |
+| 插件依赖 | 允许 `vendor/` 自带**纯 Python** 依赖，禁止 C 扩展；不做运行时 pip 安装 |
+| 按订阅选择下载器 | **纳入 4.0**（第 3.5 节） |
+| 前端插件组件 | **纳入 4.0**（第 3.9 节） |
+| pip entry point 来源 | **纳入 4.0**（第 2.4 节） |
+| 插件 REST 路由 / MCP 工具 | **纳入 4.0**（第 3.8 节） |
 
 ## 1. 背景与目标
 
@@ -27,14 +39,13 @@ AB 目前只有 **LLM 提供商** 是真正的运行时插件系统：签名下�
 
 1. 所有「用户可能想换掉或追加」的行为都变成**扩展点**，内置实现本身也是插件（自举 / dogfooding）。
 2. 提供**稳定、版本化的插件 SDK**（`ab_sdk`），与内部实现解耦。内部重构不应破坏第三方插件。
-3. 插件可声明配置 schema，WebUI **自动渲染**配置表单，无需改前端。
+3. 插件可声明配置 schema，WebUI **自动渲染**配置表单，无需改前端；需要自定义界面时可提供前端组件（第 3.9 节）。
 4. 插件崩溃或超时**不拖垮主流程**：隔离、熔断、自动禁用。
 5. 借大版本窗口**清理死代码与 3.x 兼容层**（见第 8 节）。
 
 **非目标**
 
 - 不做进程级沙箱。插件与 AB 同进程、同权限，信任靠「签名目录 + 用户显式允许本地插件」。
-- 不做前端插件（自定义 Vue 组件）。4.0 只做 schema 驱动的表单，前端组件扩展留到 4.x。
 - 不改 qB/aria2 的外部 API 语义。
 
 ## 2. 核心概念
@@ -122,7 +133,14 @@ class HardlinkPlugin(Plugin):
    - 开启开发模式（`plugins.dev_mode`）后监听文件变更，自动热重载。
 4. **pip entry point**：`[project.entry-points."autobangumi.plugins"]`。
    - 面向非 Docker 部署和插件作者本地测试。
-   - 只有这一种来源允许额外依赖。
+   - 依赖由用户的 pip 环境负责，AB 只校验 `sdk` 版本范围。
+
+**依赖规则**（适用于签名目录与本地目录两种来源）：
+
+- 插件可在 `vendor/` 目录自带纯 Python 依赖。加载时把 `vendor/` 以插件私有前缀插入模块搜索路径，避免与宿主或其他插件的同名包冲突。
+- 禁止 C 扩展。`ab-plugin validate` 和安装器都要拒绝 `.so` / `.pyd` 文件。
+- 不做运行时 pip 安装：Docker 镜像保持不可变，也不扩大攻击面。
+- 宿主已有的依赖（httpx、pydantic、Jinja2 等）在 SDK 文档中列为「可直接使用」，并随 SDK 主版本保证存在。
 
 同一 id 只能来自一个来源，冲突时以高优先级为准并告警。
 
@@ -188,6 +206,15 @@ TMDB 常量（genre 16、`w780`、`gap_months=6`）收进插件配置。
 | `save_path` | Provider | `save_path(item) -> str`；`parse_save_path(path) -> (name, season)` | `downloader/path.py:91`、`:54` |
 | `torrent.adding` | Transform hook | 修改 category、tag、save_path、暂停状态 | `download_client.py:424`（硬编码 `"Bangumi"`、`ab:<id>`） |
 
+**按订阅选择下载器**：下载器改为**多实例**。
+
+- `plugins.instances` 中可配置多个下载器实例（如 `qb-main`、`aria2-nas`），其中一个设为默认。
+- `Bangumi`、`Movie` 新增 `downloader_id` 列。为空时用默认实例。RSS 订阅也可设默认下载器，新规则继承。
+- `torrent` 表记录实际使用的 `downloader_id`，重命名、删种、offset 查找按此路由。
+- organize 流水线**逐实例**拉取已完成种子。某个实例不可用只跳过该实例，并发布 `DownloaderUnavailable(instance)` 事件。
+- 现有 `ab:<id>` tag、`Bangumi` category 语义保持不变，在各实例内独立。
+- `_client_cache` 从「单个设置 key」改为按实例 id 缓存。凭证闩锁、引用计数也按实例隔离。
+
 下载器工厂统一为 `create(config: PluginConfig) -> DownloaderClient`。
 这样可以消除各后端构造参数不一致的问题。
 缓存、引用计数、凭证闩锁留在 facade 中，与具体后端无关。
@@ -224,6 +251,47 @@ TMDB 常量（genre 16、`w780`、`gap_months=6`）收进插件配置。
 | 任意事件 | Observer hook | 见 4.2 | — |
 
 `NotificationProvider` 配置从「所有字段的大并集」改为每个插件自己的 `config_model`。
+
+### 3.9 前端组件（WebUI 扩展）
+
+方案采用 **Web Component**，不用 iframe。理由：插件后端本就与 AB 同进程、同信任级别，iframe 隔离带来的安全收益有限，主题、尺寸和通信的成本却很高。
+
+- 插件可在 `web/` 目录提供已构建的 ES module，在其中定义 custom element（如 `<ab-plugin-manual-pick>`）。宿主通过 `/api/v1/plugins/<id>/web/<file>` 提供这些文件，需要鉴权。
+- 清单声明挂载点：
+
+  ```toml
+  [[plugin.ui]]
+  slot = "bangumi.detail.tab"    # 番剧详情页标签
+  element = "ab-plugin-manual-pick"
+  entry = "web/index.js"
+  title = { zh-CN = "手动选种", en-US = "Manual pick" }
+  ```
+
+- 初始挂载点：
+  - `settings.section`：设置页分区，替代或补充 JSON Schema 表单
+  - `bangumi.detail.tab`：番剧详情页标签
+  - `bangumi.card.action`：番剧卡片操作菜单
+  - `page`：侧边栏独立页面，路由 `/plugins/<id>`
+  - `dashboard.widget`：首页小组件
+- **宿主桥接**：组件只通过注入的 `host` 对象与宿主交互，不直接用全局 axios 或 store。
+
+  ```ts
+  interface AbHost {
+    pluginId: string
+    api: { get, post, put, delete }   // 自动带鉴权，限定 /api/v1/plugins/<id>/ 前缀与公开只读 API
+    i18n: { locale: string; t(key: string): string }
+    theme: { mode: 'light' | 'dark'; tokens: Record<string, string> }  // CSS 变量
+    toast(msg: string, kind?: 'info' | 'error'): void
+    events: { on(kind: string, cb): () => void }  // 订阅 SSE 事件总线
+  }
+  ```
+
+- 组件以 Shadow DOM 渲染，主题通过 CSS 变量下发。
+- 加载失败或抛错由宿主的错误边界兜住：只显示「插件组件加载失败」，不影响页面其余部分。
+- 安全：
+  - 组件运行在主站 origin，等同于可以执行任意 JS。签名目录插件随包签名，本地插件沿用 `allow_unsigned` 门控。
+  - UI 资源只从插件目录读取，CSP 禁止远程脚本。
+- 提供 `@autobangumi/plugin-ui` npm 包：`AbHost` 类型定义、主题 CSS 变量、基础样式，以及 Vite 库模式模板。
 
 ### 3.8 调度 / API / MCP
 
@@ -321,7 +389,7 @@ class PluginContext(Protocol):
 }
 ```
 
-- 多实例插件（多个 Telegram、多个下载器预留）用 `instances: [{id, plugin, options}]`。
+- 多实例插件（多个 Telegram、多个下载器）用 `instances: [{id, plugin, options, default?}]`。`slots.downloader` 指向默认下载器实例 id。
 - `GET /api/v1/plugins` 返回每个插件的 `config_model.model_json_schema()`。前端用通用 JSON Schema 表单组件渲染，`config-notification.vue` 等专用页面逐步退化为通用表单。
 - 秘密字段用 `Field(json_schema_extra={"secret": True})` 标注，读 API 不返回，沿用现有「不回传 secret」规则。
 - `AppContext.reload_settings()` 改为：重新校验插件配置，并对受影响插件调用 `teardown` + `setup`。现在在 `context.py:405` 显式 import 的各种 `reset_cache()` 改为插件在 `settings.reloaded` 事件中自行处理。
@@ -463,7 +531,7 @@ organize: downloader.completed → media_files.classify → file_parser
 
 | 3.x | 4.0 |
 |---|---|
-| `downloader.type` + 连接字段 | `plugins.slots.downloader` + `plugins.options.<type>` |
+| `downloader.type` + 连接字段 | 下载器实例 `default`（`plugins.instances`），`slots.downloader = "default"`；存量 `bangumi` / `torrent` 的 `downloader_id` 置为 `default` |
 | `rss_parser.engine` + `llm.mode` | `plugins.slots.title_parser` 链 |
 | `rss_parser.filter` | `exclude-regex` 插件默认选项 |
 | `bangumi_manage.rename_method` | `plugins.slots.rename_strategy` |
@@ -473,7 +541,7 @@ organize: downloader.completed → media_files.classify → file_parser
 | `RSSItem.parser` 列 | `rssitem.source` + `metadata` 两列（DB migration） |
 | `config/plugins/<llm-id>/` | 路径不变，清单从 `plugin.json` 转为 `plugin.toml` |
 
-数据库新增 `plugin_kv`、`bangumi.plugin_options`，并对 `rssitem` 拆列。
+数据库新增 `plugin_kv` 表，`bangumi.plugin_options`、`bangumi.downloader_id`、`movie.downloader_id`、`rssitem.downloader_id`、`torrent.downloader_id` 列，并对 `rssitem` 拆列。
 按 CLAUDE.md 的方式追加 `Migration` 条目。
 
 ## 10. 分阶段计划
@@ -484,21 +552,24 @@ organize: downloader.completed → media_files.classify → file_parser
 |---|---|---|
 | **P0 清理** | 第 8 节：死代码、3.x 兼容层；`renamer.py` 先做纯搬移式拆分（不改行为） | 生产代码行数减少；vulture CI；测试全绿 |
 | **P1 插件运行时 + SDK 骨架** | `ab_sdk` 包、`module/plugin/`（清单、加载、注册表、runner、配置、EventBus）；泛化 LLM installer；import-linter | 空插件可加载、配置、热重载；契约测试框架 |
-| **P2 迁移已有注册表** | LLM、通知、下载器、搜索、定时任务改为内置插件；`/api/v1/plugins` + 通用 JSON Schema 表单 | 行为与 3.3.6 一致（e2e 回归）；配置迁移器 |
+| **P2 迁移已有注册表** | LLM、通知、下载器、搜索、定时任务改为内置插件；`/api/v1/plugins` + 通用 JSON Schema 表单；vendor 加载 + pip entry point 发现 | 行为与 3.3.6 一致（e2e 回归）；配置迁移器 |
+| **P2.5 多下载器** | 下载器多实例；`downloader_id` 列与迁移；按实例路由 add / rename / delete；organize 逐实例扫描 | qb + aria2 并存的 e2e 用例；单实例行为不变 |
 | **P3 流水线插件化：ingest** | `feed_source`、`title_parser` 链、`admission_policy`、`matcher`、`torrent.filter`、`ranker`、`metadata_provider` 链、`save_path`、`torrent.adding` | 新增 include / size 过滤；私有站 headers |
 | **P4 流水线插件化：organize** | `media_files`、`file_parser`、`rename_strategy`（含 `template`）、`conflict_policy`、`file.renamed` 等事件 | 模板重命名；硬链接示例插件 |
 | **P5 事件与外部接口** | SSE 改订阅 bus；`api_router`、`mcp_tool` 扩展点；`message_template` | 删掉 SSE 轮询；插件 MCP 工具 |
-| **P6 生态** | 插件管理页（安装、启停、日志、错误）、签名目录发布流程、模板仓库、`ab-plugin` CLI、文档（中 / 英 / 日） | 6 个示例插件上架 |
-| **P7 发布** | beta 测试、性能对比（RSS 刷新耗时、内存）、升级指南、`docs/changelog/4.0.md` | `4.0.0-beta.1` → `4.0.0` |
+| **P6 前端插件** | Web Component 挂载点、`AbHost` 桥接、错误边界、`/plugins/<id>/web` 静态资源、`@autobangumi/plugin-ui` 包 | 示例插件「手动选种」以详情页标签形式可用 |
+| **P7 生态** | 插件管理页（安装、启停、日志、错误）、签名目录发布流程、模板仓库（含前端模板）、`ab-plugin` CLI、文档（中 / 英 / 日） | 6 个以上示例插件上架 |
+| **P8 发布** | beta 测试、性能对比（RSS 刷新耗时、内存）、升级指南、`docs/changelog/4.0.md` | `4.0.0-beta.1` → `4.0.0` |
 
-阶段依赖：P0 → P1 → P2 → (P3 ∥ P4) → P5 → P6 → P7。P3 和 P4 可并行。
+阶段依赖：P0 → P1 → P2 → (P2.5 ∥ P3 ∥ P4) → P5 → (P6 ∥ P7) → P8。P2.5、P3、P4 可并行，P6 依赖 P5 的 `api_router` 与事件总线。
 
 ## 11. 风险与待决问题
 
-1. **SDK 稳定性承诺**。`ab_sdk` 一旦发布就要遵守 semver。建议 4.0 期间标为 `0.x`（beta），4.1 冻结 1.0。
-2. **性能**。每个种子都要经过多段 hook，RSS 一次可能有几百条。Filter hook 需要支持批量接口 `accept_many`，并加基准测试。
-3. **本地插件的依赖**。Docker 镜像中无法 pip 安装。是否提供 `config/plugins/<id>/vendor/` 预打包依赖？倾向于允许纯 Python vendor，不允许 C 扩展。
-4. **前端插件**。部分插件需要自定义 UI（例如手动选种界面），4.0 只给 JSON Schema 表单。是否在 4.x 引入 iframe 或 Web Component 方案，待定。
-5. **多下载器并存**。`slots.downloader` 是单选。是否允许按订阅选择下载器？会牵动 renamer 的「列出完成种子」逻辑。建议 4.0 预留数据结构，暂不实现。
-6. **`release_replacement_lease` 无调用方**。初步判断冗余：状态迁移会清租约，租约也有过期时间。P0 删除前，确认 claim 之后的提前退出路径只靠过期回收是否可以接受（最长占用一个租约周期）。
-7. **翻译**。事件 `describe()` 当前硬编码中文。插件化后要走 i18n key，否则第三方插件消息无法翻译。
+已决议题（SDK 版本、插件依赖、前端插件、多下载器）见第 0 节。剩余风险：
+
+1. **性能**。每个种子都要经过多段 hook，RSS 一次可能有几百条。Filter hook 需要支持批量接口 `accept_many`，并加基准测试。
+2. **`release_replacement_lease` 无调用方**。初步判断冗余：状态迁移会清租约，租约也有过期时间。P0 删除前，确认 claim 之后的提前退出路径只靠过期回收是否可以接受（最长占用一个租约周期）。
+3. **翻译**。事件 `describe()` 当前硬编码中文。插件化后要走 i18n key，否则第三方插件消息无法翻译。前端组件通过 `host.i18n` 拿当前语言。
+4. **多下载器的跨实例一致性**。同一番剧中途更换下载器时，已下载种子仍留在旧实例。renamer 按 `torrent.downloader_id` 路由即可，但 UI 要明确展示每个种子所在实例。此外不做跨实例迁移。
+5. **前端插件的 0.x 期 API 变动**。`AbHost` 与挂载点同样遵循 SDK 0.x → 1.0 的节奏，4.0 期间可能调整，文档要标注。
+6. **vendor 依赖冲突**。两个插件 vendor 同一个包的不同版本时，私有前缀隔离能避免冲突。但包内的绝对 import 可能需要重写，需要在 P2 验证可行性。若不可行，退回为「vendor 包加入全局 path，同名包先到先得并告警」。
