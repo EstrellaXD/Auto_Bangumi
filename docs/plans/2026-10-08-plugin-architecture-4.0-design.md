@@ -228,7 +228,7 @@ SDK 打包与清单：
 - **`module/llm_plugins/` 没有按第 8.3 节删除**：已发布的两个 LLM 插件（`plugins/codex-chatgpt`、`plugins/github-copilot`）仍是 `plugin.json` + `LLMProviderAdapter` 格式，要并入需要把它们改写为 `Plugin` + `llm_provider` Provider 并重新发布。这一步留到发布阶段。
 - **加载器新增 `catalog` 来源**：优先级 builtin > catalog > local > pip。`config/plugins/<id>/installed.json` 指向的版本目录里有 `plugin.toml` 才算；`local` 目录、LLM 插件（只有 `plugin.json`）和损坏的指针都被忽略。`catalog` 来源视为已签名（`signed`），不受 `allow_unsigned` 限制。
 - **路径安全**：`id` 会拼进文件系统路径。通用安装器在任何下载之前拒绝不符合 id 规则、保留的（`core`、`local`）和与内置插件同名的 id；卸载只删除存在 `installed.json` 的目录，所以 `DELETE /plugins/local` 不会删掉用户的本地插件。安装后用 `check()` 校验，清单的 id、版本必须与目录条目一致，`sdk` 范围必须包含当前 SDK 版本。
-- **API**：`GET /api/v1/plugins/catalog`（目录条目加本机已装版本，目录不可达返回 502）、`POST /api/v1/plugins/{id}/install`、`DELETE /api/v1/plugins/{id}`。安装成功即写入 `plugins.enabled.<id> = true`（用户点了安装，视为同意它运行），再调用 `PluginManager.reload`；插件的必填配置缺失时进入错误状态，用户在表单中填写后恢复，与内置插件相同。
+- **API**：`GET /api/v1/plugins/catalog`（目录条目加本机已装版本，目录不可达返回 502）、`POST /api/v1/plugins/{id}/install`、`DELETE /api/v1/plugins/{id}`。安装成功即写入 `plugins.enabled.<id> = true`（用户点了安装，视为同意它运行），再调用 `PluginManager.reload`；插件的必填配置缺失时进入错误状态，用户在表单中填写后恢复，与内置插件相同。`/plugins/{id}/install` 与 `/plugins/catalog` 由宿主注册在分发路由之前，因此插件自己的 `api_router` 不能使用 `install` 或 `catalog` 作为路由路径（与 P6 的 `web/` 同类限制）。
 - **发布脚本** `scripts/build_plugin_catalog.py`：输入 `ab-plugin pack` 的 zip，输出 `catalog.json`、各 zip 及其 `.sig`（ed25519，base64），整个目录上传到 release `plugins`。测试用该脚本的产物走一遍安装器，保证两端格式一致。release `plugins` 本身与首批插件的上架留到发布阶段。
 
 bark / wecom 旧字段别名：
