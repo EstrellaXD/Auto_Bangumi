@@ -33,10 +33,6 @@ export interface LLMProviderOverride {
 }
 /** LLM 解析模式（fallback：正则优先；primary：LLM 优先） */
 export type LLMParseMode = ['fallback', 'primary'];
-/** OpenAI Model List */
-export type OpenAIModel = ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'];
-/** OpenAI API Type */
-export type OpenAIType = ['openai', 'azure'];
 
 export interface Program {
   rss_time: number;
