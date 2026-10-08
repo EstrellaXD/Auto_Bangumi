@@ -2,6 +2,10 @@
 
 DSM 7.2 支持 Docker Compose，因此我们建议使用 Docker Compose 进行一键部署。
 
+::: tip 4.0 测试版
+本页使用 `latest` 标签，安装的是 3.3 正式版。要使用 4.0 测试版，把镜像标签换成 `4.0.0-beta.N`（例如 `4.0.0-beta.1`）。从 3.3 升级前请阅读 [从 3.3 升级到 4.0](./upgrade-4.0)。
+:::
+
 ## 创建配置和数据目录
 
 在 `/volume1/docker/` 下创建 `AutoBangumi` 文件夹，然后在其中创建 `config` 和 `data` 子文件夹。

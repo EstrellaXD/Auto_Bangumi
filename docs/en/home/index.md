@@ -65,6 +65,10 @@ The organized file names and directory structure are directly compatible with [P
 - Zero maintenance, completely transparent operation
 - Built-in TMDB parser for generating complete TMDB-formatted files and anime metadata
 - Reverse proxy support for Mikan RSS feeds
+- Plugins (4.0): plugins can supply downloaders, notification channels, metadata sources, search sites, and rename methods. The SDK, the `ab-plugin` command line, and example plugins are available. Refer to [Plugin Development](../dev/plugins)
+- More than one downloader (4.0): connect more than one qBittorrent or aria2 instance, and select a downloader for each rule or subscription
+- Template rename (4.0): make file names from a template that you write
+- Hard links and media server refresh (4.0): the download directory continues to seed while AB links the organized files into the media library. After AB organizes a torrent, it can tell Jellyfin / Emby / Plex to refresh
 
 ## Community
 

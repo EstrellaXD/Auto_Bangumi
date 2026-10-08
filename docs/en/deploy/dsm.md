@@ -2,6 +2,10 @@
 
 DSM 7.2 supports Docker Compose, so we recommend using Docker Compose for one-click deployment.
 
+::: tip 4.0 beta
+This page uses the `latest` tag, which installs the 3.3 stable release. To use the 4.0 beta, change the image tag to `4.0.0-beta.N` (for example `4.0.0-beta.1`). Before you upgrade from 3.3, read [Upgrade from 3.3 to 4.0](./upgrade-4.0).
+:::
+
 ## Create Configuration and Data Directories
 
 Create an `AutoBangumi` folder under `/volume1/docker/`, then create `config` and `data` subfolders inside it.
