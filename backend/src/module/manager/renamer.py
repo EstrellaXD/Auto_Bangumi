@@ -139,7 +139,6 @@ class Renamer(RevisionSaga):
         bangumi_name: str,
         method: str | ProviderEntry,
         episode_offset: int = 0,
-        season_offset: int = 0,  # Kept for API compatibility, but no longer used
     ) -> str:
         """按重命名方式生成种子内的目标路径。
 
@@ -167,35 +166,6 @@ class Renamer(RevisionSaga):
         )
         return _target_name(_rename_strategy(method), f)
 
-    async def rename_file(
-        self,
-        torrent_name: str,
-        media_path: str,
-        bangumi_name: str,
-        method: str | ProviderEntry,
-        season: int,
-        _hash: str,
-        episode_offset: int = 0,
-        season_offset: int = 0,
-        episode_type: str = "episode",
-        existing_tags: str | None = None,
-        **kwargs,
-    ):
-        report = await self._rename_media_file(
-            torrent_name=torrent_name,
-            media_path=media_path,
-            bangumi_name=bangumi_name,
-            method=method,
-            season=season,
-            _hash=_hash,
-            episode_offset=episode_offset,
-            season_offset=season_offset,
-            episode_type=episode_type,
-        )
-        if report.result.succeeded and _rename_strategy(method).id != NO_RENAME:
-            await self._mark_renamed(_hash, existing_tags)
-        return report.notification
-
     def _prepare_media_rename(
         self,
         *,
@@ -205,7 +175,6 @@ class Renamer(RevisionSaga):
         method: str | ProviderEntry,
         season: int,
         episode_offset: int = 0,
-        season_offset: int = 0,
         episode_type: str = "episode",
     ) -> PreparedMediaRename | None:
         ep = self._parser.torrent_parser(
@@ -224,51 +193,7 @@ class Renamer(RevisionSaga):
                 bangumi_name,
                 method=method,
                 episode_offset=episode_offset,
-                season_offset=season_offset,
             ),
-        )
-
-    async def _rename_media_file(
-        self,
-        *,
-        torrent_name: str,
-        media_path: str,
-        bangumi_name: str,
-        method: str | ProviderEntry,
-        season: int,
-        _hash: str,
-        episode_offset: int = 0,
-        season_offset: int = 0,
-        episode_type: str = "episode",
-    ) -> MediaRenameReport:
-        try:
-            prepared = self._prepare_media_rename(
-                torrent_name=torrent_name,
-                media_path=media_path,
-                bangumi_name=bangumi_name,
-                method=method,
-                season=season,
-                episode_offset=episode_offset,
-                season_offset=season_offset,
-                episode_type=episode_type,
-            )
-        except RenameSkipped as e:
-            return self._skip(_hash, media_path, e)
-        if prepared is None:
-            logger.warning("%s parse failed", media_path)
-            if settings.bangumi_manage.remove_bad_torrent:
-                await self.client.delete_torrent(hashes=_hash)
-            return MediaRenameReport(
-                result=RenameResult(
-                    RenameOutcome.RETRYABLE_FAILURE,
-                    detail="media path could not be parsed",
-                )
-            )
-        return await self._execute_media_rename(
-            prepared=prepared,
-            bangumi_name=bangumi_name,
-            _hash=_hash,
-            episode_offset=episode_offset,
         )
 
     @staticmethod
@@ -300,7 +225,6 @@ class Renamer(RevisionSaga):
         method: str | ProviderEntry,
         _hash: str,
         episode_offset: int = 0,
-        season_offset: int = 0,
         episode_type: str = "episode",
         file_sizes: dict[str, int] | None = None,
         existing_tags: str | None = None,
@@ -333,7 +257,6 @@ class Renamer(RevisionSaga):
                             bangumi_name,
                             method=method,
                             episode_offset=episode_offset,
-                            season_offset=season_offset,
                         )
                     except RenameSkipped as e:
                         self._skip(_hash, media_path, e)
@@ -396,7 +319,6 @@ class Renamer(RevisionSaga):
         method: str | ProviderEntry,
         _hash,
         episode_offset: int = 0,
-        season_offset: int = 0,
         episode_type: str = "episode",
         **kwargs,
     ):
@@ -415,7 +337,6 @@ class Renamer(RevisionSaga):
                         bangumi_name,
                         method=method,
                         episode_offset=episode_offset,
-                        season_offset=season_offset,
                     )
                 except RenameSkipped as e:
                     self._skip(_hash, subtitle_path, e)
@@ -448,7 +369,6 @@ class Renamer(RevisionSaga):
         season: int,
         method: str | ProviderEntry,
         episode_offset: int,
-        season_offset: int,
         episode_type: str,
     ) -> MediaRenameReport:
         try:
@@ -459,7 +379,6 @@ class Renamer(RevisionSaga):
                 method=method,
                 season=season,
                 episode_offset=episode_offset,
-                season_offset=season_offset,
                 episode_type=episode_type,
             )
         except RenameSkipped as e:
@@ -719,25 +638,14 @@ class Renamer(RevisionSaga):
             .factory()
         )
 
-    @staticmethod
-    def _normalize_path(path: str) -> str:
-        """Normalize path by removing trailing slashes and standardizing separators."""
-        if not path:
-            return path
-        # Replace backslashes with forward slashes for consistency
-        normalized = path.replace("\\", "/")
-        # Remove trailing slashes
-        return normalized.rstrip("/")
-
     async def _batch_lookup_offsets(
         self, torrents_info: list[dict]
-    ) -> dict[str, tuple[int, int, str]]:
+    ) -> dict[str, tuple[int, str]]:
         """Batch lookup offsets for all torrents in a single database session.
 
-        Returns a dict mapping torrent_hash to
-        (episode_offset, season_offset, episode_type).
+        Returns a dict mapping torrent_hash to (episode_offset, episode_type).
         """
-        result: dict[str, tuple[int, int, str]] = {}
+        result: dict[str, tuple[int, str]] = {}
         if not torrents_info:
             return result
 
@@ -782,22 +690,14 @@ class Renamer(RevisionSaga):
                     bangumi_id = hash_to_bangumi_id.get(torrent_hash)
                     if bangumi_id and bangumi_id in bangumi_map:
                         b = bangumi_map[bangumi_id]
-                        result[torrent_hash] = (
-                            b.episode_offset,
-                            b.season_offset,
-                            b.episode_type,
-                        )
+                        result[torrent_hash] = (b.episode_offset, b.episode_type)
                         continue
 
                     # 2. Try by tag
                     bangumi_id = tag_bangumi_ids.get(torrent_hash)
                     if bangumi_id and bangumi_id in bangumi_map:
                         b = bangumi_map[bangumi_id]
-                        result[torrent_hash] = (
-                            b.episode_offset,
-                            b.season_offset,
-                            b.episode_type,
-                        )
+                        result[torrent_hash] = (b.episode_offset, b.episode_type)
                         continue
 
                     unresolved.append(info)
@@ -805,9 +705,7 @@ class Renamer(RevisionSaga):
                 # 3./4. Fall back to name/save_path matching for whatever is
                 # left. Load the full bangumi list once (same idiom as
                 # RSSEngine.refresh_rss / auto_tag_torrents) and match every
-                # remaining torrent in memory, instead of running up to 3
-                # queries per torrent (match_torrent()'s own search_all() +
-                # up to 2 match_by_save_path() calls).
+                # remaining torrent in memory, instead of querying per torrent.
                 if unresolved:
                     bangumi_list = await db.bangumi.search_all()
                     save_path_index = build_save_path_index(bangumi_list)
@@ -818,10 +716,8 @@ class Renamer(RevisionSaga):
 
                         bangumi = match_bangumi_in_list(torrent_name, bangumi_list)
                         if not bangumi:
-                            # normalize_save_path() already folds "\\" -> "/"
-                            # and strips trailing slashes, so a single lookup
-                            # covers every variation match_by_save_path() used
-                            # to try separately.
+                            # normalize_save_path() folds "\\" -> "/" and strips
+                            # trailing slashes, so one lookup covers every variation.
                             bangumi = save_path_index.get(
                                 normalize_save_path(save_path)
                             )
@@ -829,12 +725,11 @@ class Renamer(RevisionSaga):
                         if bangumi:
                             result[torrent_hash] = (
                                 bangumi.episode_offset,
-                                bangumi.season_offset,
                                 bangumi.episode_type,
                             )
                         else:
                             # Default: no offset
-                            result[torrent_hash] = (0, 0, "episode")
+                            result[torrent_hash] = (0, "episode")
 
         except Exception as e:
             missing = [
@@ -847,87 +742,10 @@ class Renamer(RevisionSaga):
                 e,
             )
             # Leave the unresolved torrents out of the map entirely so
-            # rename() skips them instead of silently defaulting to (0, 0),
+            # rename() skips them instead of silently defaulting to offset 0,
             # which would apply a wrong offset instead of no offset.
 
         return result
-
-    async def _lookup_offsets(
-        self, torrent_hash: str, torrent_name: str, save_path: str, tags: str = ""
-    ) -> tuple[int, int]:
-        """Look up episode and season offsets for a bangumi.
-
-        Lookup order (most to least reliable):
-        1. By qb_hash in Torrent table (links directly to bangumi via torrent record)
-        2. By bangumi_id extracted from tags (handles multiple subscriptions perfectly)
-        3. By torrent_name matching (handles most cases)
-        4. By save_path matching (legacy fallback, may fail with multiple subscriptions)
-
-        Args:
-            torrent_hash: The qBittorrent hash to lookup in Torrent table
-            torrent_name: The torrent name to match against bangumi.title_raw
-            save_path: The save path to match against bangumi.save_path
-            tags: Comma-separated torrent tags, may contain 'ab:ID' for bangumi_id
-
-        Returns:
-            tuple[int, int]: (episode_offset, season_offset)
-        """
-        try:
-            async with Database() as db:
-                # First try by qb_hash in Torrent table (most reliable for existing torrents)
-                torrent_record = await db.torrent.search_by_qb_hash(torrent_hash)
-                if torrent_record and torrent_record.bangumi_id:
-                    bangumi = await db.bangumi.search_id(torrent_record.bangumi_id)
-                    if bangumi and not bangumi.deleted:
-                        logger.debug(
-                            "Found offsets via qb_hash: ep=%s, season=%s",
-                            bangumi.episode_offset,
-                            bangumi.season_offset,
-                        )
-                        return bangumi.episode_offset, bangumi.season_offset
-
-                # Then try by bangumi_id from tags (for newly added torrents)
-                bangumi_id = self._parse_bangumi_id_from_tags(tags)
-                if bangumi_id:
-                    bangumi = await db.bangumi.search_id(bangumi_id)
-                    if bangumi and not bangumi.deleted:
-                        logger.debug(
-                            "Found offsets via tag ab:%s: ep=%s, season=%s",
-                            bangumi_id,
-                            bangumi.episode_offset,
-                            bangumi.season_offset,
-                        )
-                        return bangumi.episode_offset, bangumi.season_offset
-
-                # Then try matching by torrent name
-                bangumi = await db.bangumi.match_torrent(torrent_name)
-                if bangumi:
-                    logger.info(
-                        f"Matched bangumi '{bangumi.official_title}' (id={bangumi.id}) via name, "
-                        f"offsets: ep={bangumi.episode_offset}, season={bangumi.season_offset}"
-                    )
-                    return bangumi.episode_offset, bangumi.season_offset
-
-                # Finally fall back to save_path matching with normalization
-                normalized_save_path = self._normalize_path(save_path)
-                bangumi = await db.bangumi.match_by_save_path(save_path)
-                if not bangumi:
-                    # Try with normalized path if exact match failed
-                    bangumi = await db.bangumi.match_by_save_path(normalized_save_path)
-                if bangumi:
-                    logger.info(
-                        f"Matched bangumi '{bangumi.official_title}' (id={bangumi.id}) via save_path, "
-                        f"offsets: ep={bangumi.episode_offset}, season={bangumi.season_offset}"
-                    )
-                    return bangumi.episode_offset, bangumi.season_offset
-
-                logger.info(
-                    f"No bangumi match for torrent (using offset=0): "
-                    f"name={torrent_name[:60] if torrent_name else 'N/A'}..."
-                )
-        except Exception as e:
-            logger.debug("Could not lookup offsets for %s: %s", save_path, e)
-        return 0, 0
 
     async def rename(self) -> list[Notification]:
         logger.debug("Start rename process.")
@@ -986,7 +804,7 @@ class Renamer(RevisionSaga):
             if torrent_hash not in offset_map:
                 # Offset lookup failed for this torrent this cycle (see
                 # _batch_lookup_offsets) -- skip renaming rather than
-                # guessing offset (0, 0), which could misname episodes.
+                # guessing offset 0, which could misname episodes.
                 logger.warning(
                     "Skipping %s: offset lookup failed this cycle",
                     torrent_name,
@@ -994,7 +812,7 @@ class Renamer(RevisionSaga):
                 continue
             media_list, subtitle_list = check_files(files)
             bangumi_name, season = path_to_bangumi(save_path, torrent_name)
-            episode_offset, season_offset, episode_type = offset_map[torrent_hash]
+            episode_offset, episode_type = offset_map[torrent_hash]
             kwargs = {
                 "torrent_name": torrent_name,
                 "bangumi_name": bangumi_name,
@@ -1002,7 +820,6 @@ class Renamer(RevisionSaga):
                 "season": season,
                 "_hash": torrent_hash,
                 "episode_offset": episode_offset,
-                "season_offset": season_offset,
                 "episode_type": episode_type,
                 "existing_tags": info.get("tags"),
             }
@@ -1016,7 +833,6 @@ class Renamer(RevisionSaga):
                     season=season,
                     method=strategy,
                     episode_offset=episode_offset,
-                    season_offset=season_offset,
                     episode_type=episode_type,
                 )
                 if report.notification:

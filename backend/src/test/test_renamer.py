@@ -1,4 +1,4 @@
-"""Tests for Renamer: gen_path, rename_file, rename_collection, rename flow."""
+"""Tests for Renamer: gen_path, single-file / collection rename, rename flow."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -329,11 +329,15 @@ class TestGenPathGroupTagStability:
 
 
 # ---------------------------------------------------------------------------
-# rename_file
+# single-file torrent (rename() → _process_single_torrent)
 # ---------------------------------------------------------------------------
 
 
-class TestRenameFile:
+class TestRenameSingleFile:
+    """单文件种子走生产路径 rename() 的行为（原 rename_file 测试迁移而来）。"""
+
+    SAVE_PATH = "/downloads/Bangumi/My Anime/Season 1"
+
     @pytest.fixture
     def renamer(self, mock_qb_client):
         """Create Renamer with mocked internals."""
@@ -355,27 +359,62 @@ class TestRenameFile:
         client.client = mock_qb_client
         return Renamer(client)
 
+    async def _rename(
+        self,
+        renamer,
+        ep,
+        *,
+        media_path="old.mkv",
+        method="pn",
+        _hash="hash123",
+        tags="",
+        remove_bad_torrent=False,
+    ) -> list[Notification]:
+        renamer.client.client.torrents_info.return_value = [
+            {
+                "hash": _hash,
+                "name": "[Sub] My Anime - 05.mkv",
+                "save_path": self.SAVE_PATH,
+                "tags": tags,
+            }
+        ]
+        renamer.client.client.torrents_files.return_value = [
+            {"name": media_path, "size": 1}
+        ]
+        with (
+            patch.object(renamer._parser, "torrent_parser", return_value=ep),
+            patch.object(
+                renamer,
+                "_batch_lookup_offsets",
+                AsyncMock(return_value={_hash: (0, "episode")}),
+            ),
+            patch("module.manager.renamer.settings") as mock_settings,
+            patch("module.downloader.path.settings") as mock_path_settings,
+        ):
+            mock_settings.bangumi_manage.rename_method = method
+            mock_settings.bangumi_manage.remove_bad_torrent = remove_bad_torrent
+            mock_path_settings.downloader.path = "/downloads/Bangumi"
+            return await renamer.rename()
+
     async def test_successful_rename(self, renamer):
-        """rename_file parses, generates new path, renames, returns Notification."""
+        """解析、生成新路径、重命名并返回 Notification。"""
         ep = EpisodeFile(
             media_path="old.mkv", title="My Anime", season=1, episode=5, suffix=".mkv"
         )
-        with patch.object(renamer._parser, "torrent_parser", return_value=ep):
-            renamer.client.client.torrents_rename_file.return_value = True
-            result = await renamer.rename_file(
-                torrent_name="[Sub] My Anime - 05.mkv",
-                media_path="old.mkv",
-                bangumi_name="My Anime",
-                method="pn",
-                season=1,
-                _hash="hash123",
-            )
+        renamer.client.client.torrents_rename_file.return_value = True
+        result = await self._rename(renamer, ep)
 
-        assert result is not None
-        assert isinstance(result, Notification)
-        assert result.official_title == "My Anime"
-        assert result.season == 1
-        assert result.episode == 5
+        assert len(result) == 1
+        assert isinstance(result[0], Notification)
+        assert result[0].official_title == "My Anime"
+        assert result[0].season == 1
+        assert result[0].episode == 5
+        renamer.client.client.torrents_rename_file.assert_awaited_once_with(
+            torrent_hash="hash123",
+            old_path="old.mkv",
+            new_path="My Anime S01E05.mkv",
+            verify=True,
+        )
 
     async def test_fractional_episode_notification_keeps_fraction(self, renamer):
         """半集重命名后通知里的集数保留小数 (#667)。"""
@@ -386,35 +425,19 @@ class TestRenameFile:
             episode=12.5,
             suffix=".mkv",
         )
-        with patch.object(renamer._parser, "torrent_parser", return_value=ep):
-            renamer.client.client.torrents_rename_file.return_value = True
-            result = await renamer.rename_file(
-                torrent_name="[Sub] My Anime - 12.5.mkv",
-                media_path="old.mkv",
-                bangumi_name="My Anime",
-                method="pn",
-                season=1,
-                _hash="hash123",
-            )
+        renamer.client.client.torrents_rename_file.return_value = True
+        result = await self._rename(renamer, ep)
 
-        assert result is not None
-        assert result.episode == 12.5
+        assert len(result) == 1
+        assert result[0].episode == 12.5
 
     async def test_successful_rename_adds_renamed_tag(self, renamer):
         """重命名成功后给种子打 ab:renamed 标签，供外部脚本识别 (#147)。"""
         ep = EpisodeFile(
             media_path="old.mkv", title="My Anime", season=1, episode=5, suffix=".mkv"
         )
-        with patch.object(renamer._parser, "torrent_parser", return_value=ep):
-            renamer.client.client.torrents_rename_file.return_value = True
-            await renamer.rename_file(
-                torrent_name="[Sub] My Anime - 05.mkv",
-                media_path="old.mkv",
-                bangumi_name="My Anime",
-                method="pn",
-                season=1,
-                _hash="hash123",
-            )
+        renamer.client.client.torrents_rename_file.return_value = True
+        await self._rename(renamer, ep)
 
         renamer.client.client.add_tag.assert_awaited_once_with("hash123", "ab:renamed")
 
@@ -427,35 +450,26 @@ class TestRenameFile:
             episode=5,
             suffix=".mkv",
         )
-        with patch.object(renamer._parser, "torrent_parser", return_value=ep):
-            await renamer.rename_file(
-                torrent_name="[Sub] My Anime - 05.mkv",
-                media_path="My Anime S01E05.mkv",
-                bangumi_name="My Anime",
-                method="pn",
-                season=1,
-                _hash="hash123",
-            )
+        result = await self._rename(renamer, ep, media_path="My Anime S01E05.mkv")
 
+        assert result == []
         renamer.client.client.torrents_rename_file.assert_not_awaited()
         renamer.client.client.add_tag.assert_awaited_once_with("hash123", "ab:renamed")
 
     async def test_existing_renamed_tag_not_re_added(self, renamer):
+        await renamer._mark_renamed("hash123", "ab:42, ab:renamed")
+
+        renamer.client.client.add_tag.assert_not_awaited()
+
+    async def test_renamed_torrent_is_skipped(self, renamer):
+        """已带 ab:renamed 的种子在 rename() 里直接跳过，不再打标签。"""
         ep = EpisodeFile(
             media_path="old.mkv", title="My Anime", season=1, episode=5, suffix=".mkv"
         )
-        with patch.object(renamer._parser, "torrent_parser", return_value=ep):
-            renamer.client.client.torrents_rename_file.return_value = True
-            await renamer.rename_file(
-                torrent_name="[Sub] My Anime - 05.mkv",
-                media_path="old.mkv",
-                bangumi_name="My Anime",
-                method="pn",
-                season=1,
-                _hash="hash123",
-                existing_tags="ab:42, ab:renamed",
-            )
+        result = await self._rename(renamer, ep, tags="ab:42, ab:renamed")
 
+        assert result == []
+        renamer.client.client.torrents_rename_file.assert_not_awaited()
         renamer.client.client.add_tag.assert_not_awaited()
 
     async def test_tagging_failure_does_not_break_rename(self, renamer):
@@ -463,36 +477,21 @@ class TestRenameFile:
         ep = EpisodeFile(
             media_path="old.mkv", title="My Anime", season=1, episode=5, suffix=".mkv"
         )
-        with patch.object(renamer._parser, "torrent_parser", return_value=ep):
-            renamer.client.client.torrents_rename_file.return_value = True
-            renamer.client.client.add_tag.side_effect = RuntimeError("qB down")
-            result = await renamer.rename_file(
-                torrent_name="[Sub] My Anime - 05.mkv",
-                media_path="old.mkv",
-                bangumi_name="My Anime",
-                method="pn",
-                season=1,
-                _hash="hash-tag-fail",
-            )
+        renamer.client.client.torrents_rename_file.return_value = True
+        renamer.client.client.add_tag.side_effect = RuntimeError("qB down")
+        result = await self._rename(renamer, ep, _hash="hash-tag-fail")
 
-        assert result is not None
-        assert result.episode == 5
+        assert len(result) == 1
+        assert result[0].episode == 5
 
     async def test_failed_rename_does_not_tag(self, renamer):
         ep = EpisodeFile(
             media_path="old.mkv", title="My Anime", season=1, episode=5, suffix=".mkv"
         )
-        with patch.object(renamer._parser, "torrent_parser", return_value=ep):
-            renamer.client.client.torrents_rename_file.return_value = False
-            await renamer.rename_file(
-                torrent_name="[Sub] My Anime - 05.mkv",
-                media_path="old.mkv",
-                bangumi_name="My Anime",
-                method="pn",
-                season=1,
-                _hash="hash-fail-tag",
-            )
+        renamer.client.client.torrents_rename_file.return_value = False
+        result = await self._rename(renamer, ep, _hash="hash-fail-tag")
 
+        assert result == []
         renamer.client.client.add_tag.assert_not_awaited()
 
     async def test_none_method_does_not_tag(self, renamer):
@@ -500,74 +499,29 @@ class TestRenameFile:
         ep = EpisodeFile(
             media_path="old.mkv", title="My Anime", season=1, episode=5, suffix=".mkv"
         )
-        with patch.object(renamer._parser, "torrent_parser", return_value=ep):
-            await renamer.rename_file(
-                torrent_name="[Sub] My Anime - 05.mkv",
-                media_path="old.mkv",
-                bangumi_name="My Anime",
-                method="none",
-                season=1,
-                _hash="hash123",
-            )
+        await self._rename(renamer, ep, method="none")
 
+        renamer.client.client.torrents_rename_file.assert_not_awaited()
         renamer.client.client.add_tag.assert_not_awaited()
 
-    async def test_parse_fails_no_remove(self, renamer):
-        """When parser returns None and remove_bad_torrent=False, returns None."""
-        with patch.object(renamer._parser, "torrent_parser", return_value=None):
-            with patch("module.manager.renamer.settings") as mock_settings:
-                mock_settings.bangumi_manage.remove_bad_torrent = False
-                result = await renamer.rename_file(
-                    torrent_name="garbage",
-                    media_path="bad.mkv",
-                    bangumi_name="Test",
-                    method="pn",
-                    season=1,
-                    _hash="hash123",
-                )
-
-        assert result is None
-        renamer.client.client.torrents_delete.assert_not_called()
-
-    async def test_parse_fails_remove_bad(self, renamer):
-        """When parser fails and remove_bad_torrent=True, deletes torrent."""
-        with patch.object(renamer._parser, "torrent_parser", return_value=None):
-            with patch("module.manager.renamer.settings") as mock_settings:
-                mock_settings.bangumi_manage.remove_bad_torrent = True
-                await renamer.rename_file(
-                    torrent_name="garbage",
-                    media_path="bad.mkv",
-                    bangumi_name="Test",
-                    method="pn",
-                    season=1,
-                    _hash="hash_bad",
-                )
-
-        renamer.client.client.torrents_delete.assert_called_once_with(
-            "hash_bad", delete_files=True
+    @pytest.mark.parametrize("remove_bad_torrent", [False, True])
+    async def test_parse_fails(self, renamer, remove_bad_torrent):
+        """解析失败时不返回通知；仅 remove_bad_torrent=True 时删除种子。"""
+        result = await self._rename(
+            renamer,
+            None,
+            media_path="bad.mkv",
+            _hash="hash_bad",
+            remove_bad_torrent=remove_bad_torrent,
         )
 
-    async def test_same_path_skipped(self, renamer):
-        """When generated path equals current path, no rename occurs."""
-        ep = EpisodeFile(
-            media_path="My Anime S01E05.mkv",
-            title="My Anime",
-            season=1,
-            episode=5,
-            suffix=".mkv",
-        )
-        with patch.object(renamer._parser, "torrent_parser", return_value=ep):
-            result = await renamer.rename_file(
-                torrent_name="test",
-                media_path="My Anime S01E05.mkv",
-                bangumi_name="My Anime",
-                method="pn",
-                season=1,
-                _hash="hash123",
+        assert result == []
+        if remove_bad_torrent:
+            renamer.client.client.torrents_delete.assert_called_once_with(
+                "hash_bad", delete_files=True
             )
-
-        assert result is None
-        renamer.client.client.torrents_rename_file.assert_not_called()
+        else:
+            renamer.client.client.torrents_delete.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -959,7 +913,7 @@ class TestRenameFlow:
         with patch.object(
             renamer,
             "_batch_lookup_offsets",
-            AsyncMock(return_value={"h1": (0, 0, "movie")}),
+            AsyncMock(return_value={"h1": (0, "movie")}),
         ):
             with patch("module.manager.renamer.settings") as mock_settings:
                 mock_settings.bangumi_manage.rename_method = "advance"
@@ -1047,7 +1001,7 @@ class TestRevisionConflictFlow:
 
     @staticmethod
     def _offsets():
-        return {"new-v2": (0, 0, "episode")}
+        return {"new-v2": (0, "episode")}
 
     async def test_renamed_tag_skips_before_file_and_offset_queries(self, renamer):
         renamer.client.client.torrents_info.return_value = [self._infos()[0]]
@@ -1411,7 +1365,7 @@ class TestRevisionConflictFlow:
             patch.object(
                 renamer,
                 "_batch_lookup_offsets",
-                AsyncMock(return_value={"season-pack": (0, 0, "episode")}),
+                AsyncMock(return_value={"season-pack": (0, "episode")}),
             ),
         ):
             assert await renamer.rename() == []
@@ -1428,7 +1382,7 @@ class TestRevisionConflictFlow:
             patch.object(
                 restarted,
                 "_batch_lookup_offsets",
-                AsyncMock(return_value={"season-pack": (0, 0, "episode")}),
+                AsyncMock(return_value={"season-pack": (0, "episode")}),
             ),
         ):
             assert await restarted.rename() == []
@@ -1574,7 +1528,7 @@ class TestParseBangumiIdFromTags:
 
 
 class TestGenPathWithOffsets:
-    """Tests for gen_path with episode_offset and season_offset parameters."""
+    """Tests for gen_path with episode offsets; season offsets live in the folder."""
 
     def test_episode_offset_positive(self):
         """Episode offset adds to episode number."""
@@ -1616,40 +1570,19 @@ class TestGenPathWithOffsets:
         result = Renamer.gen_path(ep, "Bangumi", method="pn", episode_offset=0)
         assert "E00" in result  # Episode 0 is valid for specials
 
-    def test_season_offset_positive(self):
-        """Season offset is now applied to folder path, not filename.
-
-        The season_offset parameter is kept for API compatibility but no longer
-        affects the filename. The folder path (generated by _gen_save_path)
-        already includes the offset, so the season from the folder is used directly.
-        """
-        # Simulate file in Season 2 folder (offset already applied to folder)
+    @pytest.mark.parametrize("season", [1, 2])
+    def test_season_from_folder_used_directly(self, season):
+        """季度偏移只作用于文件夹（gen_save_path 已计入），gen_path 直接使用
+        从文件夹解析出的季度，不再叠加偏移。"""
         ep = EpisodeFile(
-            media_path="old.mkv", title="My Anime", season=2, episode=5, suffix=".mkv"
+            media_path="old.mkv",
+            title="My Anime",
+            season=season,
+            episode=5,
+            suffix=".mkv",
         )
-        result = Renamer.gen_path(ep, "Bangumi", method="pn", season_offset=1)
-        assert (
-            "S02" in result
-        )  # Season from folder used directly, offset not re-applied
-
-    def test_season_offset_negative(self):
-        """Season offset is now applied to folder path, not filename."""
-        # Simulate file in Season 2 folder (offset already applied to folder)
-        ep = EpisodeFile(
-            media_path="old.mkv", title="My Anime", season=2, episode=5, suffix=".mkv"
-        )
-        result = Renamer.gen_path(ep, "Bangumi", method="pn", season_offset=-1)
-        assert (
-            "S02" in result
-        )  # Season from folder used directly, offset not re-applied
-
-    def test_season_offset_negative_below_one_ignored(self):
-        """Season offset parameter no longer affects filename."""
-        ep = EpisodeFile(
-            media_path="old.mkv", title="My Anime", season=1, episode=5, suffix=".mkv"
-        )
-        result = Renamer.gen_path(ep, "Bangumi", method="pn", season_offset=-5)
-        assert "S01" in result  # Season from folder used directly
+        result = Renamer.gen_path(ep, "Bangumi", method="pn")
+        assert f"S0{season}E05" in result
 
     def test_both_offsets_combined(self):
         """Episode offset applied to filename, season offset applied to folder path.
@@ -1661,9 +1594,7 @@ class TestGenPathWithOffsets:
         ep = EpisodeFile(
             media_path="old.mkv", title="My Anime", season=2, episode=13, suffix=".mkv"
         )
-        result = Renamer.gen_path(
-            ep, "Bangumi", method="pn", episode_offset=-12, season_offset=1
-        )
+        result = Renamer.gen_path(ep, "Bangumi", method="pn", episode_offset=-12)
         assert "S02E01" in result  # Season 2 from folder, Episode 13-12=1
 
     def test_offset_with_advance_method(self):
@@ -1703,12 +1634,22 @@ class TestGenPathWithOffsets:
 
 
 # ---------------------------------------------------------------------------
-# _lookup_offsets
+# _batch_lookup_offsets
 # ---------------------------------------------------------------------------
 
 
+async def _lookup_one(renamer, *, torrent_hash, torrent_name, save_path, tags):
+    info = {
+        "hash": torrent_hash,
+        "name": torrent_name,
+        "save_path": save_path,
+        "tags": tags,
+    }
+    return (await renamer._batch_lookup_offsets([info])).get(torrent_hash)
+
+
 class TestLookupOffsets:
-    """Tests for Renamer._lookup_offsets method with multi-tier lookup."""
+    """Renamer._batch_lookup_offsets：按 qb_hash → 标签 → 种子名 → 保存路径的顺序关联番剧。"""
 
     @pytest.fixture
     def renamer(self, mock_qb_client):
@@ -1765,7 +1706,8 @@ class TestLookupOffsets:
             mock_db.bangumi = BangumiDatabase(db_session)
             MockDatabase.return_value = mock_db
 
-            episode_offset, season_offset = await renamer._lookup_offsets(
+            episode_offset, _ = await _lookup_one(
+                renamer,
                 torrent_hash="abc123hash",
                 torrent_name="irrelevant",
                 save_path="/irrelevant/path",
@@ -1773,7 +1715,6 @@ class TestLookupOffsets:
             )
 
         assert episode_offset == -12
-        assert season_offset == 1
 
     async def test_lookup_by_tag_when_hash_not_found(self, renamer, db_session):
         """Second priority: lookup by ab:ID tag when qb_hash not found."""
@@ -1801,7 +1742,8 @@ class TestLookupOffsets:
             mock_db.bangumi = BangumiDatabase(db_session)
             MockDatabase.return_value = mock_db
 
-            episode_offset, season_offset = await renamer._lookup_offsets(
+            episode_offset, _ = await _lookup_one(
+                renamer,
                 torrent_hash="nonexistent_hash",
                 torrent_name="irrelevant",
                 save_path="/irrelevant/path",
@@ -1809,7 +1751,6 @@ class TestLookupOffsets:
             )
 
         assert episode_offset == 5
-        assert season_offset == 0
 
     async def test_lookup_by_torrent_name(self, renamer, db_session):
         """Third priority: lookup by torrent name matching title_raw."""
@@ -1837,7 +1778,8 @@ class TestLookupOffsets:
             mock_db.bangumi = BangumiDatabase(db_session)
             MockDatabase.return_value = mock_db
 
-            episode_offset, season_offset = await renamer._lookup_offsets(
+            episode_offset, _ = await _lookup_one(
+                renamer,
                 torrent_hash="nonexistent_hash",
                 torrent_name="[SubGroup] Name Match - 01 [1080p].mkv",
                 save_path="/irrelevant/path",
@@ -1845,7 +1787,6 @@ class TestLookupOffsets:
             )
 
         assert episode_offset == -6
-        assert season_offset == 2
 
     async def test_lookup_by_save_path_fallback(self, renamer, db_session):
         """Fourth priority: lookup by save_path when other methods fail."""
@@ -1874,7 +1815,8 @@ class TestLookupOffsets:
             mock_db.bangumi = BangumiDatabase(db_session)
             MockDatabase.return_value = mock_db
 
-            episode_offset, season_offset = await renamer._lookup_offsets(
+            episode_offset, _ = await _lookup_one(
+                renamer,
                 torrent_hash="nonexistent_hash",
                 torrent_name="completely_different_name.mkv",
                 save_path="/downloads/Bangumi/Path Match Anime (2024)/Season 1",
@@ -1882,10 +1824,9 @@ class TestLookupOffsets:
             )
 
         assert episode_offset == 10
-        assert season_offset == -1
 
     async def test_lookup_returns_zero_when_not_found(self, renamer, db_session):
-        """Returns (0, 0) when no matching bangumi found."""
+        """No matching bangumi: offset 0."""
         from module.database.bangumi import BangumiDatabase
         from module.database.torrent import TorrentDatabase
 
@@ -1897,7 +1838,8 @@ class TestLookupOffsets:
             mock_db.bangumi = BangumiDatabase(db_session)
             MockDatabase.return_value = mock_db
 
-            episode_offset, season_offset = await renamer._lookup_offsets(
+            episode_offset, _ = await _lookup_one(
+                renamer,
                 torrent_hash="nonexistent",
                 torrent_name="no_match",
                 save_path="/no/match/path",
@@ -1905,7 +1847,6 @@ class TestLookupOffsets:
             )
 
         assert episode_offset == 0
-        assert season_offset == 0
 
     async def test_lookup_skips_deleted_bangumi(self, renamer, db_session):
         """Skips deleted bangumi even if hash/tag matches."""
@@ -1934,31 +1875,31 @@ class TestLookupOffsets:
             mock_db.bangumi = BangumiDatabase(db_session)
             MockDatabase.return_value = mock_db
 
-            episode_offset, season_offset = await renamer._lookup_offsets(
+            episode_offset, _ = await _lookup_one(
+                renamer,
                 torrent_hash="nonexistent",
                 torrent_name="no_match",
                 save_path="/no/match",
                 tags=f"ab:{bangumi.id}",
             )
 
-        # Should return (0, 0) because bangumi is deleted
+        # bangumi 已删除：不使用它的偏移
         assert episode_offset == 0
-        assert season_offset == 0
 
     async def test_lookup_handles_database_exception(self, renamer):
-        """Returns (0, 0) when database throws exception."""
+        """数据库异常时不给出偏移：rename() 本轮跳过该种子，而不是按 0 猜测。"""
         with patch("module.manager.renamer.Database") as MockDatabase:
             MockDatabase.side_effect = Exception("Database connection failed")
 
-            episode_offset, season_offset = await renamer._lookup_offsets(
+            link = await _lookup_one(
+                renamer,
                 torrent_hash="any",
                 torrent_name="any",
                 save_path="/any",
                 tags="",
             )
 
-        assert episode_offset == 0
-        assert season_offset == 0
+        assert link is None
 
     async def test_lookup_by_save_path_with_trailing_slash(self, renamer, db_session):
         """Save path matching works with trailing slashes."""
@@ -1988,7 +1929,8 @@ class TestLookupOffsets:
             MockDatabase.return_value = mock_db
 
             # Query WITH trailing slash - should still match
-            episode_offset, season_offset = await renamer._lookup_offsets(
+            episode_offset, _ = await _lookup_one(
+                renamer,
                 torrent_hash="nonexistent",
                 torrent_name="no_match",
                 save_path="/downloads/Bangumi/Test (2024)/Season 1/",
@@ -1996,7 +1938,6 @@ class TestLookupOffsets:
             )
 
         assert episode_offset == 5
-        assert season_offset == 2
 
     async def test_lookup_by_save_path_with_backslashes(self, renamer, db_session):
         """Save path matching works with Windows-style backslashes."""
@@ -2026,7 +1967,8 @@ class TestLookupOffsets:
             MockDatabase.return_value = mock_db
 
             # Query with backslashes - should still match after normalization
-            episode_offset, season_offset = await renamer._lookup_offsets(
+            episode_offset, _ = await _lookup_one(
+                renamer,
                 torrent_hash="nonexistent",
                 torrent_name="no_match",
                 save_path="\\downloads\\Bangumi\\Test (2024)\\Season 1",
@@ -2034,33 +1976,3 @@ class TestLookupOffsets:
             )
 
         assert episode_offset == 3
-        assert season_offset == 1
-
-
-class TestNormalizePath:
-    """Tests for Renamer._normalize_path static method."""
-
-    def test_empty_path(self):
-        from module.manager.renamer import Renamer
-
-        assert Renamer._normalize_path("") == ""
-
-    def test_removes_trailing_slash(self):
-        from module.manager.renamer import Renamer
-
-        assert Renamer._normalize_path("/path/to/dir/") == "/path/to/dir"
-
-    def test_removes_trailing_backslash(self):
-        from module.manager.renamer import Renamer
-
-        assert Renamer._normalize_path("C:\\path\\to\\dir\\") == "C:/path/to/dir"
-
-    def test_converts_backslashes(self):
-        from module.manager.renamer import Renamer
-
-        assert Renamer._normalize_path("C:\\path\\to\\dir") == "C:/path/to/dir"
-
-    def test_preserves_forward_slashes(self):
-        from module.manager.renamer import Renamer
-
-        assert Renamer._normalize_path("/path/to/dir") == "/path/to/dir"
