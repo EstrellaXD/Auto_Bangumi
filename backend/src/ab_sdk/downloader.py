@@ -144,6 +144,8 @@ class DownloaderConnection:
     username: str
     password: str
     ssl: bool
+    # 实例 id（``plugins.instances[].id``），供需要按实例保存本地状态的下载器使用
+    instance_id: str = "default"
 
 
 DownloaderFactory = Callable[[DownloaderConnection], CoreDownloaderClient]

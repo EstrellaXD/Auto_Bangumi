@@ -156,7 +156,7 @@ slots 解析：
 未实施（推迟）：
 
 - 第 10 节验收中的 qb + aria2 并存 **Docker e2e** 未加。以进程内测试替代：两个 mock 实例并列（按规则 / 订阅投递、在另一实例重命名、一个实例不可用、规则换实例后删除），以及 qB 与 aria2 实例各自得到对应后端与不同的 `downloader_type`。Docker 版需要在 `e2e/compose/downloader.yml` 加入固定 digest 的 aria2 镜像。
-- aria2 的 gid ↔ 番剧映射表（`database/aria2.py`）不区分实例；两个 aria2 实例的 gid 相同的概率很低，未处理。
+- **aria2 的 gid ↔ 番剧映射按实例区分**（v27）。`aria2_gid` 主键改为 `(downloader_id, gid)`，SQLite 不能改主键，所以重建表，存量行归属实例 `default`。`Aria2GidDatabase` 构造时绑定实例 id，所有读写（包括按 `dedup_key` 判重）都限定在该实例内，`Database.aria2(downloader_id)` 取得它。实例 id 经 `DownloaderConnection.instance_id`（新增，默认 `"default"`，位置参数构造不受影响）传给下载器工厂；`ab_sdk` 仍为 0.5.0。
 - `GET /api/v1/plugins/providers` 仍不列出 `conflict_policy` / `media_files` 的插件候选；插件下载器的 options schema 与按 schema 掩码（见上文）。
 - 多实例时修改某个实例的主机地址，该实例上进行中的版本替换事务找不到（`_downloader_type` 键含主机哈希）。可选做法：键改为 `<type>:<instance_id>` 并兼容旧键查询，或按「键不属于任何已配置实例」把孤儿事务交给同类型的唯一实例。
 

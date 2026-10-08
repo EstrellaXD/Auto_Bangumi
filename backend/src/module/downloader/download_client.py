@@ -248,6 +248,7 @@ class DownloadClient:
             username=instance.username,
             password=instance.password,
             ssl=instance.ssl,
+            instance_id=instance.id,
         )
         # 只实现 CoreDownloaderClient 的后端（如 aria2 没有 qB 的 RSS 规则）
         # 由 _supports() 按 capabilities 跳过不支持的操作

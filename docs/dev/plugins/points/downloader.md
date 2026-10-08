@@ -13,7 +13,7 @@ class MyClient:
     )
 
     def __init__(self, conn: DownloaderConnection) -> None:
-        self.conn = conn  # host / username / password / ssl
+        self.conn = conn  # host / username / password / ssl / instance_id
 
     async def auth(self, retry: int = 3) -> bool: ...
     async def logout(self) -> None: ...

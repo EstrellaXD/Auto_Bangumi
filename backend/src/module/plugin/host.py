@@ -152,7 +152,9 @@ def _register_core(registry: ExtensionRegistry) -> None:
     def aria2(conn: DownloaderConnection):
         from module.downloader.client.aria2_downloader import Aria2Downloader
 
-        return Aria2Downloader(conn.host, conn.username, conn.password)
+        return Aria2Downloader(
+            conn.host, conn.username, conn.password, conn.instance_id
+        )
 
     def mock(conn: DownloaderConnection):
         from module.downloader.client.mock_downloader import MockDownloader

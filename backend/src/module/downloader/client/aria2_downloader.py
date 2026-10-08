@@ -72,8 +72,10 @@ class Aria2Downloader:
         can_rss_rules=False,
     )
 
-    def __init__(self, host: str, username: str, password: str):
+    def __init__(self, host: str, username: str, password: str, instance_id: str):
         self.host = host
+        # gid 只在 aria2 实例内唯一，本地映射按实例 id 区分
+        self.instance_id = instance_id
         self.secret = password
         self._client: httpx.AsyncClient | None = None
         self._authed = False
@@ -302,7 +304,7 @@ class Aria2Downloader:
                     "removing and re-adding",
                     gid,
                 )
-                await db.aria2.delete(gid)
+                await db.aria2(self.instance_id).delete(gid)
                 return True
             logger.debug("Cannot verify gid %s, keeping record: %s", gid, e)
             return None
@@ -320,7 +322,7 @@ class Aria2Downloader:
                 "removing and re-adding",
                 gid,
             )
-            await db.aria2.delete(gid)
+            await db.aria2(self.instance_id).delete(gid)
             return True
         return False
 
@@ -387,7 +389,9 @@ class Aria2Downloader:
                 )
                 for url in urls:
                     dedup_key = f"url:{url}"
-                    existing_gid = await db.aria2.find_by_dedup_key(dedup_key)
+                    existing_gid = await db.aria2(self.instance_id).find_by_dedup_key(
+                        dedup_key
+                    )
                     if existing_gid:
                         stale = await self._dedup_record_is_stale(db, existing_gid)
                         if stale is None:
@@ -405,7 +409,9 @@ class Aria2Downloader:
                         failed_any = True
                         continue
                     gid = await self._resolve_followed_by_gid(gid)
-                    await db.aria2.upsert(gid, bangumi_id, category, dedup_key)
+                    await db.aria2(self.instance_id).upsert(
+                        gid, bangumi_id, category, dedup_key
+                    )
                     added_any = True
             if torrent_files:
                 files = (
@@ -415,7 +421,9 @@ class Aria2Downloader:
                 )
                 for f in files:
                     dedup_key = f"file:{hashlib.sha1(f).hexdigest()}"
-                    existing_gid = await db.aria2.find_by_dedup_key(dedup_key)
+                    existing_gid = await db.aria2(self.instance_id).find_by_dedup_key(
+                        dedup_key
+                    )
                     if existing_gid:
                         stale = await self._dedup_record_is_stale(db, existing_gid)
                         if stale is None:
@@ -433,7 +441,9 @@ class Aria2Downloader:
                         failed_any = True
                         continue
                     gid = await self._resolve_followed_by_gid(gid)
-                    await db.aria2.upsert(gid, bangumi_id, category, dedup_key)
+                    await db.aria2(self.instance_id).upsert(
+                        gid, bangumi_id, category, dedup_key
+                    )
                     added_any = True
         # 部分成功按 ADDED 报告（与 qB 的批量语义一致）：已经真正开始下载
         # 的任务必须让上层入库，否则会与 aria2 状态脱节；全部失败才算 FAILED。
@@ -467,8 +477,8 @@ class Aria2Downloader:
         gids = [followed_by.get(d["gid"], d["gid"]) for d in raw if d.get("gid")]
         async with Database() as db:
             for old_gid, new_gid in followed_by.items():
-                await db.aria2.replace_gid(old_gid, new_gid)
-            meta = await db.aria2.get_many(gids)
+                await db.aria2(self.instance_id).replace_gid(old_gid, new_gid)
+            meta = await db.aria2(self.instance_id).get_many(gids)
 
         allowed_statuses = (
             _STATUS_FILTER_MAP.get(status_filter) if status_filter else None
@@ -560,7 +570,9 @@ class Aria2Downloader:
         except (Aria2RpcError, Aria2ConnectionError) as e:
             logger.debug("Could not resolve dir for %s: %s", torrent_hash, e)
         async with Database() as db:
-            renamed_paths = await db.aria2.get_renamed_paths(torrent_hash)
+            renamed_paths = await db.aria2(self.instance_id).get_renamed_paths(
+                torrent_hash
+            )
         result = []
         for f in files or []:
             path = f.get("path", "")
@@ -598,7 +610,9 @@ class Aria2Downloader:
             asyncio.to_thread(os.path.exists, new_abs),
         )
         async with Database() as db:
-            persisted_intent = await db.aria2.get_rename_intent(torrent_hash)
+            persisted_intent = await db.aria2(self.instance_id).get_rename_intent(
+                torrent_hash
+            )
 
         if not old_exists:
             matching_intent = (
@@ -611,7 +625,7 @@ class Aria2Downloader:
             if not new_exists:
                 if matching_intent is not None:
                     async with Database() as db:
-                        await db.aria2.clear_rename_intent(
+                        await db.aria2(self.instance_id).clear_rename_intent(
                             torrent_hash, matching_intent
                         )
                 return RenameResult(
@@ -632,13 +646,15 @@ class Aria2Downloader:
                 return RenameResult(RenameOutcome.RETRYABLE_FAILURE, detail=str(e))
             if not self._intent_matches_stat(matching_intent, target_stat):
                 async with Database() as db:
-                    await db.aria2.clear_rename_intent(torrent_hash, matching_intent)
+                    await db.aria2(self.instance_id).clear_rename_intent(
+                        torrent_hash, matching_intent
+                    )
                 return RenameResult(
                     RenameOutcome.DESTINATION_EXISTS,
                     detail=f"destination does not match durable rename intent: {new_abs}",
                 )
             async with Database() as db:
-                finalized = await db.aria2.finalize_rename_intent(
+                finalized = await db.aria2(self.instance_id).finalize_rename_intent(
                     torrent_hash, matching_intent
                 )
             if not finalized:
@@ -654,12 +670,14 @@ class Aria2Downloader:
             return RenameResult(RenameOutcome.RETRYABLE_FAILURE, detail=str(e))
         intent = self._rename_intent(old_path, new_path, source_stat)
         async with Database() as db:
-            await db.aria2.set_rename_intent(torrent_hash, intent)
+            await db.aria2(self.instance_id).set_rename_intent(torrent_hash, intent)
         try:
             await asyncio.to_thread(self._move_file, old_abs, new_abs)
         except FileExistsError:
             async with Database() as db:
-                await db.aria2.clear_rename_intent(torrent_hash, intent)
+                await db.aria2(self.instance_id).clear_rename_intent(
+                    torrent_hash, intent
+                )
             logger.warning(
                 "Refusing to overwrite existing file %s, rename of %s skipped",
                 new_abs,
@@ -671,7 +689,9 @@ class Aria2Downloader:
             )
         except OSError as e:
             async with Database() as db:
-                await db.aria2.clear_rename_intent(torrent_hash, intent)
+                await db.aria2(self.instance_id).clear_rename_intent(
+                    torrent_hash, intent
+                )
             logger.warning("Failed to rename file %s -> %s: %s", old_abs, new_abs, e)
             return RenameResult(RenameOutcome.RETRYABLE_FAILURE, detail=str(e))
         try:
@@ -683,13 +703,17 @@ class Aria2Downloader:
             return RenameResult(RenameOutcome.RETRYABLE_FAILURE, detail=str(e))
         if not self._intent_matches_stat(intent, target_stat):
             async with Database() as db:
-                await db.aria2.clear_rename_intent(torrent_hash, intent)
+                await db.aria2(self.instance_id).clear_rename_intent(
+                    torrent_hash, intent
+                )
             return RenameResult(
                 RenameOutcome.DESTINATION_EXISTS,
                 detail=f"renamed target identity changed unexpectedly: {new_abs}",
             )
         async with Database() as db:
-            finalized = await db.aria2.finalize_rename_intent(torrent_hash, intent)
+            finalized = await db.aria2(self.instance_id).finalize_rename_intent(
+                torrent_hash, intent
+            )
         if not finalized:
             return RenameResult(
                 RenameOutcome.RETRYABLE_FAILURE,
@@ -720,7 +744,7 @@ class Aria2Downloader:
                             # The task disappeared after a previous successful
                             # cleanup (or was removed externally).  There is no
                             # downloader-owned file list left to resolve.
-                            await db.aria2.delete(gid)
+                            await db.aria2(self.instance_id).delete(gid)
                             continue
                         logger.warning(
                             "Cannot safely delete current files for %s: %s", gid, e
@@ -737,7 +761,9 @@ class Aria2Downloader:
                         ok = False
                         continue
 
-                    renamed_paths = await db.aria2.get_renamed_paths(gid)
+                    renamed_paths = await db.aria2(self.instance_id).get_renamed_paths(
+                        gid
+                    )
                     files_removed = True
                     for f in files or []:
                         raw_path = f.get("path")
@@ -797,7 +823,7 @@ class Aria2Downloader:
                 # may still own the task; delete only after confirmed removal
                 # or an explicit not-found response.
                 if removed:
-                    await db.aria2.delete(gid)
+                    await db.aria2(self.instance_id).delete(gid)
         return ok
 
     async def torrents_pause(self, hashes: str | list[str]) -> None:
@@ -846,7 +872,7 @@ class Aria2Downloader:
     async def set_category(self, _hash, category) -> None:
         async with Database() as db:
             for gid in self._normalize_hashes(_hash):
-                await db.aria2.set_category(gid, category)
+                await db.aria2(self.instance_id).set_category(gid, category)
 
     async def add_tag(self, _hash: str, tag: str) -> None:
         """只认识 'ab:<bangumi_id>' 格式的 tag（用于 offset 关联），其余忽略。"""
@@ -855,4 +881,4 @@ class Aria2Downloader:
             logger.debug("Ignoring unsupported tag: %s", tag)
             return
         async with Database() as db:
-            await db.aria2.upsert(_hash, bangumi_id=bangumi_id)
+            await db.aria2(self.instance_id).upsert(_hash, bangumi_id=bangumi_id)

@@ -52,8 +52,16 @@ class Aria2RenameIntent:
 
 
 class Aria2GidDatabase:
-    def __init__(self, session: AsyncSession):
+    """一个 aria2 实例的 gid 映射，所有读写都限定在 ``downloader_id`` 内。"""
+
+    def __init__(self, session: AsyncSession, downloader_id: str):
         self.session = session
+        self.downloader_id = downloader_id
+
+    async def _get(self, gid: str) -> Aria2Gid | None:
+        return await self.session.get(
+            Aria2Gid, {"downloader_id": self.downloader_id, "gid": gid}
+        )
 
     async def upsert(
         self,
@@ -64,10 +72,11 @@ class Aria2GidDatabase:
         renamed_paths: str | None = None,
     ) -> None:
         """新增一条 gid 记录，或者用非空字段覆盖已有记录。"""
-        existing = await self.session.get(Aria2Gid, gid)
+        existing = await self._get(gid)
         if existing is None:
             self.session.add(
                 Aria2Gid(
+                    downloader_id=self.downloader_id,
                     gid=gid,
                     bangumi_id=bangumi_id,
                     category=category,
@@ -88,20 +97,26 @@ class Aria2GidDatabase:
         await self.session.commit()
 
     async def get(self, gid: str) -> Aria2Gid | None:
-        return await self.session.get(Aria2Gid, gid)
+        return await self._get(gid)
 
     async def get_many(self, gids: list[str]) -> dict[str, Aria2Gid]:
         if not gids:
             return {}
         result = await self.session.execute(
-            select(Aria2Gid).where(Aria2Gid.gid.in_(gids))  # type: ignore[attr-defined]
+            select(Aria2Gid).where(
+                Aria2Gid.downloader_id == self.downloader_id,  # type: ignore[arg-type]
+                Aria2Gid.gid.in_(gids),  # type: ignore[attr-defined]
+            )
         )
         return {row.gid: row for row in result.scalars().all()}
 
     async def find_by_dedup_key(self, dedup_key: str) -> str | None:
         """返回携带该 dedup_key 的已有 gid（没有则 None），用于新增前判重。"""
         result = await self.session.execute(
-            select(Aria2Gid.gid).where(Aria2Gid.dedup_key == dedup_key)  # type: ignore[arg-type]
+            select(Aria2Gid.gid).where(
+                Aria2Gid.downloader_id == self.downloader_id,  # type: ignore[arg-type]
+                Aria2Gid.dedup_key == dedup_key,  # type: ignore[arg-type]
+            )
         )
         return result.scalars().first()
 
@@ -112,13 +127,14 @@ class Aria2GidDatabase:
         """Move local metadata from an aria2 metadata gid to its followedBy gid."""
         if old_gid == new_gid:
             return
-        old = await self.session.get(Aria2Gid, old_gid)
+        old = await self._get(old_gid)
         if old is None:
             return
-        existing = await self.session.get(Aria2Gid, new_gid)
+        existing = await self._get(new_gid)
         if existing is None:
             self.session.add(
                 Aria2Gid(
+                    downloader_id=self.downloader_id,
                     gid=new_gid,
                     bangumi_id=old.bangumi_id,
                     category=old.category,
@@ -145,7 +161,7 @@ class Aria2GidDatabase:
         await self.session.commit()
 
     async def get_renamed_paths(self, gid: str) -> dict[str, str]:
-        record = await self.session.get(Aria2Gid, gid)
+        record = await self._get(gid)
         if record is None or not record.renamed_paths:
             return {}
         try:
@@ -166,7 +182,7 @@ class Aria2GidDatabase:
         await self.upsert(gid, renamed_paths=json.dumps(mapping, ensure_ascii=False))
 
     async def get_rename_intent(self, gid: str) -> Aria2RenameIntent | None:
-        record = await self.session.get(Aria2Gid, gid)
+        record = await self._get(gid)
         if record is None or not record.rename_intent:
             return None
         intent = Aria2RenameIntent.from_json(record.rename_intent)
@@ -175,9 +191,9 @@ class Aria2GidDatabase:
         return intent
 
     async def set_rename_intent(self, gid: str, intent: Aria2RenameIntent) -> None:
-        record = await self.session.get(Aria2Gid, gid)
+        record = await self._get(gid)
         if record is None:
-            record = Aria2Gid(gid=gid)
+            record = Aria2Gid(downloader_id=self.downloader_id, gid=gid)
         record.rename_intent = intent.to_json()
         self.session.add(record)
         await self.session.commit()
@@ -187,7 +203,7 @@ class Aria2GidDatabase:
         gid: str,
         expected: Aria2RenameIntent | None = None,
     ) -> bool:
-        record = await self.session.get(Aria2Gid, gid)
+        record = await self._get(gid)
         if record is None:
             return False
         if (
@@ -204,7 +220,7 @@ class Aria2GidDatabase:
         self, gid: str, expected: Aria2RenameIntent
     ) -> bool:
         """Commit the sidecar mapping and clear its matching intent together."""
-        record = await self.session.get(Aria2Gid, gid)
+        record = await self._get(gid)
         if (
             record is None
             or Aria2RenameIntent.from_json(record.rename_intent) != expected
@@ -222,7 +238,7 @@ class Aria2GidDatabase:
         return True
 
     async def delete(self, gid: str) -> None:
-        existing = await self.session.get(Aria2Gid, gid)
+        existing = await self._get(gid)
         if existing is not None:
             await self.session.delete(existing)
             await self.session.commit()

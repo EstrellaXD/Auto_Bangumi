@@ -90,6 +90,7 @@ def test_download_client_qb_and_aria2_side_by_side(monkeypatch):
     assert isinstance(qb.client, QbDownloader)
     assert isinstance(ar.client, Aria2Downloader)
     assert ar.client.host.endswith("ar:6800")
+    assert ar.client.instance_id == "ar"
     assert Renamer(qb)._downloader_type() != Renamer(ar)._downloader_type()
 
 

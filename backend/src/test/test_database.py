@@ -135,7 +135,7 @@ async def test_bangumi_delete_all_with_fk_references_succeeds(db_session):
     await db_session.execute(text("PRAGMA foreign_keys=ON"))
     await _ensure_bangumi(db_session, 1)
     db_session.add(Torrent(name="ep01", url="https://example.com/1", bangumi_id=1))
-    db_session.add(Aria2Gid(gid="gid-1", bangumi_id=1))
+    db_session.add(Aria2Gid(downloader_id="default", gid="gid-1", bangumi_id=1))
     await db_session.commit()
 
     db = BangumiDatabase(db_session)

@@ -46,12 +46,15 @@ class Database:
         self.bangumi = BangumiDatabase(self.session)
         self.movie = MovieDatabase(self.session)
         self.user = UserDatabase(self.session)
-        self.aria2 = Aria2GidDatabase(self.session)
         self.auth = AuthDatabase(self.session)
         self.inbox = InboxDatabase(self.session)
         self.llm_credential = LLMCredentialDatabase(self.session)
         self.rename_operation = RenameOperationDatabase(self.session)
         self.plugin_kv = PluginKVDatabase(self.session)
+
+    def aria2(self, downloader_id: str) -> Aria2GidDatabase:
+        """某个 aria2 实例的 gid 映射（gid 只在实例内唯一）。"""
+        return Aria2GidDatabase(self.session, downloader_id)
 
     async def __aenter__(self):
         return self
