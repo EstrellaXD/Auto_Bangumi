@@ -24,6 +24,7 @@ _MANIFEST_SCHEMA = 1
 class PluginInstaller(SignedCatalogInstaller):
     tag = "llm-plugins"
     catalog_schema = _MANIFEST_SCHEMA
+    manifest_name = "plugin.json"
 
     def _reject_reason(self, plugin_id: str) -> Optional[str]:
         from module.parser.analyser.providers.builtin import BUILTIN
