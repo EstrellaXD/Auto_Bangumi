@@ -14,7 +14,9 @@
 import asyncio
 import errno
 import os
+import secrets
 import shutil
+import stat
 from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar, Literal
@@ -100,54 +102,74 @@ class HardlinkFailed(SystemEvent):
 
 
 def _identity(path: Path) -> list[int]:
-    """源文件身份。含大小与修改时间：复制模式下旧文件删除后 inode 可能被复用。"""
-    st = os.stat(path)
+    """文件身份（不跟随软链接）。含大小与修改时间：旧文件删除后 inode 可能被复用。"""
+    st = os.lstat(path)
     return [st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns]
 
 
-def _same(a: Path, b: Path) -> bool:
+def _same(src: Path, dst: Path) -> bool:
+    """dst 是 src 的硬链接、软链接，或 copy2 的副本（大小与修改时间相同）。"""
     try:
-        return os.path.samefile(a, b)
+        if os.path.samefile(src, dst):
+            return True
     except OSError:  # 断开的软链接
         return False
+    s, d = os.stat(src), os.lstat(dst)
+    return stat.S_ISREG(d.st_mode) and (s.st_size, s.st_mtime_ns) == (
+        d.st_size,
+        d.st_mtime_ns,
+    )
 
 
 def _make(src: Path, dst: Path, cross_device: str) -> tuple[Status, str]:
     """先在同目录的临时文件上建立链接或副本，再原子地移到 ``dst``：复制中断
     （磁盘满、插件重载、进程退出）不会在目标位置留下半个文件，版本升级时也
-    不会出现目标暂时缺失的窗口。"""
-    tmp = dst.with_name(f".{dst.name}.ab-hardlink")
-    tmp.unlink(missing_ok=True)
+    不会出现目标暂时缺失的窗口。临时文件名每次不同：补链与订阅可能同时处理
+    同一个目标。"""
+    tmp = dst.with_name(f".{dst.name}.{secrets.token_hex(4)}.ab-hardlink")
     try:
-        os.link(src, tmp)
-    except OSError as e:
-        if e.errno != errno.EXDEV:
-            raise
-        if cross_device == "skip":
-            return "failed", "与媒体库不在同一文件系统，已跳过"
-        if cross_device == "symlink":
-            os.symlink(src, tmp)
-        else:
-            shutil.copy2(src, tmp)
-    os.replace(tmp, dst)
+        try:
+            os.link(src, tmp)
+        except OSError as e:
+            if e.errno != errno.EXDEV:
+                raise
+            if cross_device == "skip":
+                return "failed", "与媒体库不在同一文件系统，已跳过"
+            if cross_device == "symlink":
+                os.symlink(src, tmp)
+            else:
+                shutil.copy2(src, tmp)
+        os.replace(tmp, dst)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
     return "linked", ""
 
 
+# 插件放置的文件：[源文件身份, 目标身份]
+Record = list[list[int]]
+
+
 def place(
-    src: Path, dst: Path, owned: list[int] | None, cross_device: str
-) -> tuple[Status, str, list[int]]:
-    """在线程中执行的文件操作。``owned`` 是插件上次在 ``dst`` 放置文件时源文件
-    的身份，None 表示 ``dst`` 不是插件创建的。"""
+    src: Path, dst: Path, owned: Record | None, cross_device: str
+) -> tuple[Status, str, Record | None]:
+    """在线程中执行的文件操作。``owned`` 是插件上次在 ``dst`` 放置文件时的记录，
+    None 表示 ``dst`` 不是插件创建的。返回 linked / exists 时附带新记录。"""
     ident = _identity(src)
     if os.path.lexists(dst):
-        if _same(src, dst) or owned == ident:
-            return "exists", "", ident
-        if owned is None:
-            return "conflict", "媒体库中已有同名文件且不是本插件创建的", ident
+        here = _identity(dst)
+        # 指向源文件或是它的副本：即使记录没来得及写入（协程被取消、进程退出）
+        # 也认作本插件放置的，并补上记录
+        if _same(src, dst) or owned == [ident, here]:
+            return "exists", "", [ident, here]
+        # 目标被换成了别的文件（用户放的），不能覆盖
+        if owned is None or owned[1] != here:
+            return "conflict", "媒体库中已有同名文件且不是本插件创建的", None
         # 否则是版本升级：同一集换成了新文件，替换插件之前创建的链接
     else:
         dst.parent.mkdir(parents=True, exist_ok=True)
-    return (*_make(src, dst, cross_device), ident)
+    status, reason = _make(src, dst, cross_device)
+    return status, reason, [ident, _identity(dst)] if status == "linked" else None
 
 
 class HardlinkPlugin(Plugin[Options]):
@@ -176,13 +198,13 @@ class HardlinkPlugin(Plugin[Options]):
         key = f"link:{dst}"
         owned = await self.ctx.kv.get(key)
         try:
-            status, reason, ident = await asyncio.to_thread(
+            status, reason, record = await asyncio.to_thread(
                 place, src, dst, owned, self.config.cross_device
             )
         except OSError as e:
             return "failed", str(e)
-        if status == "linked":
-            await self.ctx.kv.set(key, ident)
+        if record is not None and record != owned:
+            await self.ctx.kv.set(key, record)
         return status, reason
 
     @subscribe(TorrentOrganized.kind, timeout=LINK_TIMEOUT)

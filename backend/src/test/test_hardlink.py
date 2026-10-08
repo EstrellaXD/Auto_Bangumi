@@ -1,8 +1,10 @@
 """内置插件 hardlink：订阅 torrent.organized，把整理好的文件链接到媒体库。"""
 
+import asyncio
 import errno
 import os
 import shutil
+import threading
 from pathlib import Path
 
 import pytest
@@ -228,3 +230,65 @@ def test_options_invalid_roots_rejected(overrides):
         model.model_validate(
             {"source_root": "/downloads", "library_root": "/media", **overrides}
         )
+
+
+async def test_on_organized_unrecorded_own_copy_adopted_and_upgraded(
+    roots, monkeypatch
+):
+    downloads, library = roots
+    plugin, ctx = make_plugin(roots)
+    src = write(downloads / SEASON / "Anime S01E01.mkv", "v1")
+    monkeypatch.setattr(os, "link", exdev)
+    # 上次复制已放到目标位置，但协程被取消或进程退出，所有权没来得及记录
+    dst = library / SEASON / src.name
+    dst.parent.mkdir(parents=True)
+    shutil.copy2(src, dst)
+
+    await plugin.on_organized(organized(src.name))
+    src.unlink()
+    write(src, "v2")
+    await plugin.on_organized(organized(src.name))
+
+    assert dst.read_text() == "v2"
+    assert ctx.bus.published == []
+
+
+async def test_on_organized_user_file_at_former_link_kept(roots):
+    downloads, library = roots
+    plugin, ctx = make_plugin(roots)
+    src = write(downloads / SEASON / "Anime S01E01.mkv", "v1")
+    await plugin.on_organized(organized(src.name))
+    # 用户删掉插件的链接，在同一位置放了自己的文件
+    dst = library / SEASON / src.name
+    dst.unlink()
+    write(dst, "user file")
+    src.unlink()
+    write(src, "v2")
+
+    await plugin.on_organized(organized(src.name))
+
+    assert dst.read_text() == "user file"
+    [event] = ctx.bus.published
+    assert event.kind == "hardlink.failed" and src.name in event.files
+
+
+async def test_link_concurrent_copies_of_same_target_all_succeed(roots, monkeypatch):
+    downloads, library = roots
+    plugin, ctx = make_plugin(roots)
+    src = write(downloads / SEASON / "Anime S01E01.mkv", "v1")
+    monkeypatch.setattr(os, "link", exdev)
+    both_copying = threading.Barrier(2, timeout=5)
+
+    def copy2(a, b):
+        both_copying.wait()
+        return shutil.copyfile(a, b)
+
+    monkeypatch.setattr(shutil, "copy2", copy2)
+
+    # 补链与订阅同时处理同一个目标
+    results = await asyncio.gather(plugin.link(src), plugin.link(src))
+
+    assert [status for status, _ in results] == ["linked", "linked"]
+    dst = library / SEASON / src.name
+    assert dst.read_text() == "v1"
+    assert [p.name for p in dst.parent.iterdir()] == [src.name]
