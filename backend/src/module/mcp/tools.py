@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Any
 
 from mcp import types
 
@@ -11,6 +12,7 @@ from module.models import Bangumi, BangumiUpdate, RSSItem
 from module.rss import RSSAnalyser, RSSEngine
 from module.searcher import SearchTorrent
 
+from .plugins import call_plugin_tool, list_plugin_tools
 from .runtime import get_context
 
 logger = logging.getLogger(__name__)
@@ -175,6 +177,11 @@ TOOLS = [
 ]
 
 
+def all_tools() -> list[types.Tool]:
+    """内置工具 + 当前已启用插件提供的工具（``<plugin-id>__<id>``）。"""
+    return TOOLS + list_plugin_tools()
+
+
 def _bangumi_to_dict(b: Bangumi) -> dict:
     return {
         "id": b.id,
@@ -202,7 +209,9 @@ async def handle_tool(name: str, arguments: dict) -> list[types.TextContent]:
     try:
         result = await _dispatch(name, arguments)
         return [
-            types.TextContent(type="text", text=json.dumps(result, ensure_ascii=False))
+            types.TextContent(
+                type="text", text=json.dumps(result, ensure_ascii=False, default=str)
+            )
         ]
     except Exception as e:
         logger.exception("Tool %s failed", name)
@@ -213,7 +222,7 @@ async def handle_tool(name: str, arguments: dict) -> list[types.TextContent]:
         ]
 
 
-async def _dispatch(name: str, args: dict) -> dict | list:
+async def _dispatch(name: str, args: dict) -> Any:
     if name == "list_anime":
         return await _list_anime(args.get("active_only", False))
     elif name == "get_anime":
@@ -234,8 +243,10 @@ async def _dispatch(name: str, args: dict) -> dict | list:
         return await _refresh_feeds()
     elif name == "update_anime":
         return await _update_anime(args)
-    else:
-        return {"error": f"Unknown tool: {name}"}
+    handled, result = await call_plugin_tool(name, args)
+    if handled:
+        return result
+    return {"error": f"Unknown tool: {name}"}
 
 
 async def _list_anime(active_only: bool) -> list[dict]:

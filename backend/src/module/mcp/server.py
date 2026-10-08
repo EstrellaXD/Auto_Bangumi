@@ -13,15 +13,15 @@ import logging
 from mcp import types
 from mcp.server import Server
 from mcp.server.sse import SseServerTransport
+from pydantic import AnyUrl
 from starlette.applications import Starlette
-from starlette.requests import Request
-from starlette.responses import Response
 from starlette.routing import Mount, Route
+from starlette.types import Receive, Scope, Send
 
-from .resources import RESOURCE_TEMPLATES, RESOURCES, handle_resource
+from .resources import RESOURCE_TEMPLATES, all_resources, handle_resource
 from .runtime import set_context
 from .security import McpAccessMiddleware
-from .tools import TOOLS, handle_tool
+from .tools import all_tools, handle_tool
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ sse = SseServerTransport("/messages/")
 
 @server.list_tools()
 async def list_tools() -> list[types.Tool]:
-    return TOOLS
+    return all_tools()
 
 
 @server.call_tool()
@@ -42,7 +42,7 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
 
 @server.list_resources()
 async def list_resources() -> list[types.Resource]:
-    return RESOURCES
+    return all_resources()
 
 
 @server.list_resource_templates()
@@ -51,22 +51,30 @@ async def list_resource_templates() -> list[types.ResourceTemplate]:
 
 
 @server.read_resource()
-async def read_resource(uri: str) -> str:
+async def read_resource(uri: AnyUrl) -> str:
     logger.debug("Resource read: %s", uri)
-    return await handle_resource(uri)
+    # 底层 read_resource 传入的是 pydantic AnyUrl，handle_resource 按字符串匹配
+    return await handle_resource(str(uri))
 
 
-async def handle_sse(request: Request):
-    """Accept an SSE connection, run the MCP session until the client disconnects."""
-    async with sse.connect_sse(
-        request.scope, request.receive, request._send
-    ) as streams:
-        await server.run(
-            streams[0],
-            streams[1],
-            server.create_initialization_options(),
-        )
-    return Response()
+class _SseEndpoint:
+    """``GET /sse`` 的裸 ASGI 端点：建立 SSE 连接并运行 MCP 会话直到客户端断开。
+
+    ``connect_sse`` 自己经 ``send`` 写出整个 HTTP 响应，所以这里不能是返回
+    ``Response`` 的普通 endpoint 函数——Starlette 会在 SSE 结束后再发一次
+    ``http.response.start``，每次断开都触发 ``AssertionError``。
+    """
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        async with sse.connect_sse(scope, receive, send) as streams:
+            await server.run(
+                streams[0],
+                streams[1],
+                server.create_initialization_options(),
+            )
+
+
+handle_sse = _SseEndpoint()
 
 
 def create_mcp_starlette_app(ctx=None) -> Starlette:

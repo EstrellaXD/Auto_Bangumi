@@ -18,6 +18,9 @@ class ExtensionPoint:
     description: str = ""
     # 仅 filter：钩子出错/超时时是否放行（True）还是视为拒绝（False）
     fail_open: bool = True
+    # 仅 provider：True 时 Provider id 只需在插件内唯一（宿主对外暴露时会加
+    # 插件 id 前缀，如插件路由、MCP 工具），注册表按 ``<plugin_id>/<id>`` 存储
+    scoped: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,13 +71,14 @@ class ExtensionRegistry:
         if point.kind != "provider":
             raise RegistryError(f"{point_name} 是 {point.kind} 扩展点，请使用 @hook")
         slot = self._providers.setdefault(point_name, {})
-        owner = slot.get(entry.id)
+        key = f"{entry.plugin_id}/{entry.id}" if point.scoped else entry.id
+        owner = slot.get(key)
         if owner is not None:
             raise RegistryError(
                 f"{point_name} 的 Provider id {entry.id!r} 已被插件 "
                 f"{owner.plugin_id} 占用"
             )
-        slot[entry.id] = entry
+        slot[key] = entry
 
     def remove_plugin(self, plugin_id: str) -> None:
         for name, entries in self._hooks.items():
@@ -100,5 +104,6 @@ class ExtensionRegistry:
         return bool(self._hooks.get(point_name))
 
     def providers(self, point_name: str) -> dict[str, ProviderEntry]:
+        """按 Provider id 索引；``scoped`` 扩展点的键为 ``<plugin_id>/<id>``。"""
         self.point(point_name)
         return dict(self._providers.get(point_name, {}))

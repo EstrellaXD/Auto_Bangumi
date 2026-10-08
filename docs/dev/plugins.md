@@ -14,6 +14,9 @@
 | 搜索站点 | `points.SEARCH_SITE` | `SearchSite` | 搜索框的站点列表 |
 | 定时任务 | `points.SCHEDULED_TASK` | `ScheduledTask` | 插件启用即生效 |
 | 元数据源 | `points.METADATA_PROVIDER` | `MetadataProvider` | RSS 订阅的「解析器」 |
+| REST 路由 | `points.API_ROUTER` | `fastapi.APIRouter` | 插件启用即生效 |
+| MCP 工具 | `points.MCP_TOOL` | `McpTool` | 插件启用即生效 |
+| MCP 资源 | `points.MCP_RESOURCE` | `McpResource` | 插件启用即生效 |
 
 以及以下钩子（`@hook`，插件启用即生效）：
 
@@ -23,8 +26,9 @@
 | `title.parsed` | `points.TITLE_PARSED` | transform | 修正标题解析结果 |
 | `torrent.adding` | `points.TORRENT_ADDING` | transform | 修改发给下载器的保存路径、分类、标签 |
 | `http.request` | `points.HTTP_REQUEST` | transform | 修改 AB 发出的 GET 请求头（私有站 Cookie 等） |
+| `message_template` | `points.MESSAGE_TEMPLATE` | transform | 改写系统事件推送到外部渠道的文案 |
 
-此外，插件可以订阅事件（`@subscribe`），并使用私有的键值存储和数据目录。重命名等整理流水线的扩展点会在后续版本开放。
+此外，插件可以订阅系统事件（`@subscribe`），并使用私有的键值存储和数据目录。重命名等整理流水线的扩展点会在后续版本开放。
 
 ## 目录结构
 
@@ -296,7 +300,112 @@ class MyPlugin(Plugin):
         return BangumiTv()
 ```
 
-`request.kind` 区分番剧与电影，`request.torrent.homepage` 是种子的详情页。返回值是完整的新元数据，通常基于 `request.current` 修改。失败或超时时保留原值，并计入熔断。目前 WebUI 的订阅表单只提供内置取值，插件元数据源需要通过 API 设置订阅的 `parser` 字段。
+`request.kind` 区分番剧与电影，`request.torrent.homepage` 是种子的详情页。返回值是完整的新元数据，通常基于 `request.current` 修改。失败或超时时保留原值，并计入熔断。添加订阅时，「解析器」下拉框会列出插件提供的元数据源。
+
+### REST 路由
+
+```python
+from fastapi import APIRouter
+
+@provider(points.API_ROUTER, id="api")
+def api(self):
+    router = APIRouter()
+
+    @router.get("/stats")
+    async def stats():
+        return {"count": await self.ctx.kv.get("count", 0)}
+
+    return router
+```
+
+- 路由挂载在 `/api/v1/plugins/<插件 id>/` 下，上例即 `GET /api/v1/plugins/my-plugin/stats`。
+- **所有插件路由都强制登录鉴权**，与 WebUI 其它接口使用同一套凭据（会话 Cookie 或 `scope=api` 的 API 令牌）。插件无法注册匿名端点；未登录返回 401。
+- 路由随插件启用出现、随停用消失，无需重启。同一插件可以提供多个 `API_ROUTER`，它们会合并到同一前缀下。
+- 处理函数抛出 `HTTPException` 正常返回对应状态码；抛出其它异常返回 500，并计入熔断。
+- 插件路由不出现在 `/docs` 的 OpenAPI 文档中。
+
+### MCP 工具与资源
+
+```python
+from ab_sdk.mcp import McpResource, McpTool
+
+@provider(points.MCP_TOOL, id="search")
+def search_tool(self):
+    async def handler(args: dict):
+        return {"results": [...], "keyword": args["keyword"]}
+
+    return McpTool(
+        description="在私有站点搜索",
+        handler=handler,
+        input_schema={
+            "type": "object",
+            "properties": {"keyword": {"type": "string"}},
+            "required": ["keyword"],
+        },
+    )
+
+@provider(points.MCP_RESOURCE, id="stats")
+def stats_resource(self):
+    async def handler():
+        return {"count": 3}
+
+    return McpResource(name="统计", handler=handler)
+```
+
+- 对外名称自动加插件 id 前缀，避免冲突：工具名为 `<插件 id>__<id>`（双下划线），资源 URI 为 `autobangumi://plugins/<插件 id>/<id>`。不用 `.` 分隔，是因为不少 MCP 客户端会把工具名原样交给 LLM API，而后者通常只接受 `^[a-zA-Z0-9_-]{1,64}$`；不合规的工具名会被跳过并记录日志。
+- 工具处理函数返回可 JSON 序列化的对象；资源处理函数返回字符串（原样返回）或可 JSON 序列化的对象。抛出的异常以 `{"error": "..."}` 返回给客户端，并计入熔断。工具默认超时 60 秒（`McpTool(timeout=...)`）。
+- MCP 端点沿用 AB 的访问控制（IP 白名单或 `scope=mcp` 令牌），插件无需自行鉴权。
+
+### 订阅系统事件
+
+```python
+from ab_sdk import subscribe
+from ab_sdk.events import RssFailureEvent
+
+@subscribe("rss_failure")
+async def on_rss_failure(self, event: RssFailureEvent):
+    self.ctx.log.warning("订阅 %s 失败：%s", event.rss_name, event.error)
+```
+
+AB 发出的、会进入通知中心的事件都是 `ab_sdk.events.SystemEvent` 的子类，带有 `severity`、`payload()`、`describe()`（默认中文标题与正文）和 `i18n()`（前端 i18n key 与参数）。它们先写入通知中心，再发布到事件总线，最后推送到外部通知渠道；关闭「通知」开关只影响外部推送，不影响插件收到事件。
+
+| kind | 事件类 | 何时发布 |
+| --- | --- | --- |
+| `rss_failure` | `RssFailureEvent` | RSS 订阅从正常变为连接异常 |
+| `download_failure` | `DownloadFailureEvent` | 种子重试后仍添加失败 |
+| `offset_review` | `OffsetReviewEvent` | 番剧的季度 / 集数偏移需要人工确认 |
+| `downloader_unavailable` | `DownloaderUnavailableEvent` | 下载器连不上、凭据错误或 IP 被封 |
+| `update_available` | `UpdateAvailableEvent` | 检查到新版本 |
+| `update_applied` / `update_failed` | `UpdateAppliedEvent` | 在线更新成功 / 失败（`kind` 随 `success` 变化） |
+| `llm_auth_failure` | `LLMAuthFailureEvent` | 订阅类 LLM 提供商凭据失效 |
+| `llm_plugin_install_failed` | `LLMPluginInstallFailedEvent` | LLM 插件安装失败 |
+| `rename_conflict` | `RenameConflictEvent` | 媒体文件重命名遇到目标路径冲突 |
+| `plugin.loaded` | `PluginLoaded` | 插件加载成功 |
+| `plugin.disabled` | `PluginDisabled` | 插件加载失败或被熔断 |
+| `inbox.changed` | — | 通知中心有新消息、已读或删除（宿主内部使用，供 SSE 推送） |
+
+系统事件的 `kind` 沿用 3.x 的取值（通知中心按它存储和翻译），因此不带 `.` 前缀；插件自己的事件仍必须以 `<插件 id>.` 开头。后续版本会陆续增加流水线事件（如 `torrent.added`、`file.renamed`）。
+
+### 通知文案模板
+
+系统事件推送到外部渠道前，会依次经过 `message_template` 钩子。钩子拿到默认文案、事件和渠道类型，返回新的 `RenderedMessage` 即可改写，返回 `None` 表示不修改：
+
+```python
+from ab_sdk import hook, points
+from ab_sdk.notify import RenderedMessage
+
+@hook(points.MESSAGE_TEMPLATE)
+def template(self, message: RenderedMessage, event, channel: str):
+    if event.kind != "rss_failure":
+        return None
+    if channel == "telegram":
+        return RenderedMessage(f"[告警] {message.title}", f"<b>{event.rss_name}</b>\n{event.error}")
+    return None
+```
+
+- 只影响外部推送；通知中心里的文案由前端按 `i18n()` 渲染，不受影响。
+- 钩子对每个启用的渠道各调用一次。钩子出错或超时时沿用上一步的文案，并计入熔断；返回值类型不对时整条消息回退到默认文案。
+- 「新集数」通知暂不经过该钩子，仍使用通知渠道里配置的单集模板。
 
 ## 测试
 

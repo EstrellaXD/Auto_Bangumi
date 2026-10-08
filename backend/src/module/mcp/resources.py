@@ -17,6 +17,7 @@ from module.manager import TorrentManager
 from module.models import Bangumi
 from module.rss import RSSEngine
 
+from .plugins import list_plugin_resources, read_plugin_resource
 from .runtime import get_context
 from .tools import _bangumi_to_dict
 
@@ -53,6 +54,11 @@ RESOURCE_TEMPLATES = [
 ]
 
 
+def all_resources() -> list[types.Resource]:
+    """内置资源 + 当前已启用插件提供的资源（``autobangumi://plugins/<id>/...``）。"""
+    return RESOURCES + list_plugin_resources()
+
+
 async def handle_resource(uri: str) -> str:
     """Return a JSON string for the given MCP resource URI.
 
@@ -61,6 +67,7 @@ async def handle_resource(uri: str) -> str:
     - ``autobangumi://status`` - program version and running state
     - ``autobangumi://rss/feeds`` - configured RSS feeds
     - ``autobangumi://anime/{id}`` - single anime by integer ID
+    - ``autobangumi://plugins/<plugin-id>/<id>`` - 插件提供的资源
     """
     if uri == "autobangumi://anime/list":
         async with Database() as db:
@@ -107,5 +114,15 @@ async def handle_resource(uri: str) -> str:
         if isinstance(result, Bangumi):
             return json.dumps(_bangumi_to_dict(result), ensure_ascii=False)
         return json.dumps({"error": result.msg_en})
+
+    try:
+        handled, content = await read_plugin_resource(uri)
+    except Exception as e:
+        logger.warning("Plugin resource %s failed: %s", uri, e)
+        return json.dumps({"error": str(e)}, ensure_ascii=False)
+    if handled:
+        if isinstance(content, str):
+            return content
+        return json.dumps(content, ensure_ascii=False, default=str)
 
     return json.dumps({"error": f"Unknown resource: {uri}"})

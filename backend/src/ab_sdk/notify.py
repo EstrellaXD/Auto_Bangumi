@@ -46,3 +46,15 @@ class Notifier(Protocol):
 
 
 NotifierFactory = Callable[[NotifierSettings], Notifier]
+
+
+@dataclass(frozen=True)
+class RenderedMessage:
+    """``message_template`` 钩子处理的消息：系统事件推送前的标题与正文。
+
+    初始值来自事件的 ``describe()``；钩子返回新的 RenderedMessage 即可改写，
+    返回 None 表示不修改。多个钩子按优先级依次处理，后一个拿到前一个的结果。
+    """
+
+    title: str
+    body: str

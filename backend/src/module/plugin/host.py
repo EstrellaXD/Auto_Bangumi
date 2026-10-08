@@ -12,9 +12,10 @@ import logging
 from collections.abc import Callable
 from typing import Any
 
-from ab_sdk import points
+from ab_sdk import Event, points
 from ab_sdk.downloader import DownloaderConnection
 
+from .bus import EventBus
 from .registry import ExtensionPoint, ExtensionRegistry, ProviderEntry
 from .runner import HookRunner
 
@@ -40,10 +41,23 @@ POINTS = (
     ExtensionPoint(points.TITLE_PARSED, "transform", "修正标题解析结果"),
     ExtensionPoint(points.TORRENT_ADDING, "transform", "修改发给下载器的添加请求"),
     ExtensionPoint(points.HTTP_REQUEST, "transform", "修改宿主 GET 请求的请求头"),
+    # --- P5 events/api ---
+    ExtensionPoint(
+        points.API_ROUTER,
+        "provider",
+        "插件 REST 路由（/api/v1/plugins/<id>/）",
+        scoped=True,
+    ),
+    ExtensionPoint(points.MCP_TOOL, "provider", "MCP 工具", scoped=True),
+    ExtensionPoint(points.MCP_RESOURCE, "provider", "MCP 资源", scoped=True),
+    ExtensionPoint(points.MESSAGE_TEMPLATE, "transform", "系统事件通知文案"),
 )
 
 _registry: ExtensionRegistry | None = None
-# 由 AppContext 在构建时设置；未设置时（测试、CLI）钩子一律跳过，只执行宿主逻辑
+# 进程级事件总线与钩子执行器，由 AppContext 在构造时设置（即 PluginManager
+# 持有的那一份）；未设置时（单元测试、脚本、CLI）发布事件为空操作、钩子一律
+# 跳过，只执行宿主逻辑
+_bus: EventBus | None = None
 _runner: HookRunner | None = None
 
 
@@ -159,3 +173,30 @@ def _register_core(registry: ExtensionRegistry) -> None:
             points.METADATA_PROVIDER,
             ProviderEntry(CORE, provider_id, metadata(provider_id)),
         )
+
+
+# --- P5 events/api ---------------------------------------------------------
+
+
+def get_bus() -> EventBus | None:
+    return _bus
+
+
+def set_bus(bus: EventBus | None) -> None:
+    global _bus
+    _bus = bus
+
+
+def publish(event: Event) -> None:
+    """把宿主事件发布到进程级总线；总线未设置时什么也不做。
+
+    发布只负责入队，订阅者的失败不会影响调用方。没有运行中的事件循环时
+    （同步上下文）无法投递，记录日志后忽略。
+    """
+    bus = _bus
+    if bus is None:
+        return
+    try:
+        bus.publish(event)
+    except RuntimeError:
+        logger.debug("[EventBus] 无事件循环，丢弃事件 %s", event.kind)
