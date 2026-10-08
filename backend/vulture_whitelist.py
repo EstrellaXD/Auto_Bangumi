@@ -29,11 +29,6 @@ _.can_rollback
 phase
 percent
 candidate_ids
-credentials
-can_query
-can_rename
-can_manage
-can_rss_rules
 extension_points
 min_ab_version
 
@@ -41,11 +36,7 @@ min_ab_version
 connection_record  # SQLAlchemy connect 事件回调
 exc_value  # __aexit__
 traceback  # __aexit__
-user_input  # LLMProviderAdapter.complete_auth 的接口参数
 hash_  # for 循环解包
-
-# --- 框架回调 ---
-_.dispatch  # Starlette BaseHTTPMiddleware
 
 # --- 测试 / e2e 支撑：生产路径不调用 ---
 _.check_single  # e2e worker
@@ -62,15 +53,7 @@ run_benchmark
 render_text
 
 # --- 插件运行时（module/plugin）---
-# 公开接口：宿主在 P2/P3 迁移扩展点时调用（声明扩展点、执行 transform 钩子）
-_.declare
-_.transform
-_.runner
-_.drain  # 等待事件处理完，测试与关闭流程使用
-# 插件通过 ctx 访问的能力、清单与注册表的数据字段
-_.kv
-authors
-factory
+_.drain  # 等待事件处理完，测试使用
 # 动态创建插件包时设置的模块属性
 _.__path__
 _.__package__
