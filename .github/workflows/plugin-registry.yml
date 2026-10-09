@@ -1,18 +1,25 @@
 name: Plugin Registry
 
 # 插件市场：plugins/registry/<id>.toml 指向作者仓库的固定 commit。
-# - check：PR 上运行作者的代码（测试、pnpm 构建），所以只读权限、不读任何 secret。
-# - build：合并后打包，同样没有密钥；commit 未变的条目复用已发布的 zip。
-# - sign：只有这个 job 读 PLUGIN_SIGNING_KEY，它不运行作者的任何代码，
-#   只用 build_plugin_catalog.py 读 zip 里的 plugin.toml 并签名。
+# - check：PR 上运行作者的代码（测试、pnpm 构建），只读权限、不读 secret。
+#   检查脚本与 ab_sdk 取自 base 分支，PR 不能改掉检查规则。
+# - plan / build：合并后。build 每个插件一个 job（会运行作者的前端构建，没有密钥），
+#   一个插件的构建篡改不到别的插件。
+# - sign：唯一读 PLUGIN_SIGNING_KEY 的 job，不运行作者代码。它自己下载复用的 zip
+#   并校验 sha256，核对每个新 zip 的 id 与来源，再签名发布。
 on:
   pull_request:
     branches: ["4.0-dev"]
-    paths: ["plugins/**", "scripts/plugin_registry.py", ".github/workflows/plugin-registry.yml"]
+    paths: ["plugins/**"]
   push:
     branches: ["4.0-dev"]
     paths: ["plugins/**"]
   workflow_dispatch:
+    inputs:
+      rebuild:
+        description: "忽略已发布的 zip，全部重新打包（打包逻辑变更后使用）"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -21,6 +28,9 @@ concurrency:
   group: plugin-registry-${{ github.event_name == 'pull_request' && github.ref || 'publish' }}
   cancel-in-progress: false
 
+env:
+  REBUILD: ${{ inputs.rebuild && 'true' || '' }}
+
 jobs:
   check:
     if: github.event_name == 'pull_request'
@@ -28,7 +38,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 需要 base 分支上的旧条目
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Fetch PR head
+        run: |
+          git fetch -q origin "refs/pull/${{ github.event.number }}/head"
+          # 引入本脚本的那个 PR 时 base 上还没有它，只能用 PR 自己的版本
+          if [ ! -f scripts/plugin_registry.py ]; then
+            echo "::warning::base 分支没有 scripts/plugin_registry.py，使用 PR 中的版本"
+            git checkout FETCH_HEAD -- scripts/plugin_registry.py
+          fi
       - &python
         uses: actions/setup-python@v5
         with:
@@ -49,48 +69,85 @@ jobs:
       - &deps
         name: Install backend
         run: mkdir -p backend/config && cd backend && uv sync --group dev
+      - &catalog
+        name: Download published catalog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download plugins -p catalog.json -D old || echo "release plugins 还不存在"
       - name: Check changed entries
         run: |
           set -o pipefail
           uv run --project backend python scripts/plugin_registry.py check \
-            --base "origin/${{ github.base_ref }}" --out dist | tee -a "$GITHUB_STEP_SUMMARY"
+            --base "${{ github.event.pull_request.base.sha }}" --head FETCH_HEAD \
+            --catalog old/catalog.json --out dist | tee -a "$GITHUB_STEP_SUMMARY"
 
-  build:
-    if: github.event_name != 'pull_request'
+  plan:
+    # 带着签名密钥的发布只从 4.0-dev 运行
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/4.0-dev'
     runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.plan.outputs.build }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - *python
+      - *uv
+      - *deps
+      - *catalog
+      - id: plan
+        run: |
+          uv run --project backend python scripts/plugin_registry.py plan --catalog old/catalog.json ${REBUILD:+--rebuild} > plan.json
+          cat plan.json
+          echo "build=$(jq -c .build plan.json)" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: plan
+    if: needs.plan.outputs.build != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        id: ${{ fromJSON(needs.plan.outputs.build) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - *python
       - *uv
       - *pnpm
       - *node
       - *deps
-      - name: Download current catalog
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release download plugins -p catalog.json -D old || echo "release plugins 还不存在，全部重新打包"
-      - name: Build
-        run: uv run --project backend python scripts/plugin_registry.py build --old old/catalog.json --out dist
+      - run: uv run --project backend python scripts/plugin_registry.py build-one "${{ matrix.id }}" --out dist
       - uses: actions/upload-artifact@v4
         with:
-          name: plugins-dist
+          name: plugin-${{ matrix.id }}
           path: dist/
           retention-days: 7
 
   sign:
-    needs: build
+    needs: [plan, build]
+    if: always() && needs.plan.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v4
         with:
-          version: "latest"
+          persist-credentials: false
+      - *python
+      - *uv
+      - *deps
+      - *catalog
       - uses: actions/download-artifact@v4
         with:
-          name: plugins-dist
+          pattern: plugin-*
           path: dist
+      - name: Collect
+        run: |
+          mkdir -p dist
+          uv run --project backend python scripts/plugin_registry.py collect \
+            --catalog old/catalog.json ${REBUILD:+--rebuild} --dist dist --out stage
       - name: Sign catalog
         env:
           PLUGIN_SIGNING_KEY: ${{ secrets.PLUGIN_SIGNING_KEY }}
@@ -102,7 +159,7 @@ jobs:
           umask 077
           printf '%s\n' "$PLUGIN_SIGNING_KEY" > "$RUNNER_TEMP/key.pem"
           uv run --no-project --with cryptography python scripts/build_plugin_catalog.py \
-            --key "$RUNNER_TEMP/key.pem" --sources dist/sources.json --out release-assets dist/*.zip
+            --key "$RUNNER_TEMP/key.pem" --sources stage/sources.json --out release-assets stage/*.zip
           rm -f "$RUNNER_TEMP/key.pem"
       - name: Publish
         env:

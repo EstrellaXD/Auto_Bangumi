@@ -47,6 +47,7 @@ def _entry(archive: Path, min_ab: str, sources: dict[str, dict[str, str]]) -> di
         "has_web": bool(plugin.get("ui")),
         "repo": source.get("repo", ""),
         "commit": source.get("commit", ""),
+        "path": source.get("path", "."),
         "readme": source.get("readme", ""),
         "asset": archive.name,
         "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),

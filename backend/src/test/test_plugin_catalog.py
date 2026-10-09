@@ -231,6 +231,8 @@ class TestInstall:
     def test_default_pubkey_is_the_plugin_key_not_the_update_key(self):
         assert PluginInstaller().pubkey_path == PLUGIN_PUBKEY_PATH
         assert PLUGIN_PUBKEY_PATH != DEFAULT_PUBKEY_PATH
+        # 公钥随 module/ 进入在线更新包，旧镜像更新后也有它
+        assert PLUGIN_PUBKEY_PATH.is_file()
 
     async def test_uninstall_leaves_llm_provider_plugins_alone(self, tmp_path, keypair):
         installer = make_installer(tmp_path, keypair, build_zip(tmp_path))

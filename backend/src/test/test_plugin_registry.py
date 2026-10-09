@@ -2,6 +2,7 @@
 
 import hashlib
 import importlib.util
+import json
 from pathlib import Path
 
 import pytest
@@ -115,7 +116,40 @@ def test_committed_web_without_web_src_is_rejected(reg, tmp_path):
         reg.build_web(src)
 
 
-class TestBuild:
+def test_symlink_in_packed_files_is_rejected(reg, tmp_path):
+    src = scaffold(tmp_path)
+    (src / "leak").symlink_to("/etc/hosts")
+    entry = reg.Entry.parse(PLUGIN_ID, entry_text())
+    with pytest.raises(reg.Reject, match="符号链接"):
+        reg.verify(entry, src, None, None)
+
+
+def test_summary_escapes_author_output(reg):
+    result = reg.Result(PLUGIN_ID, False, [("拒绝", "x |\n| tests | ✓ fake |")])
+    text = reg.summary([result], [], [])
+    assert "| tests | ✓ fake |" not in text
+    assert "&#124;" in text
+
+
+def test_unexpected_error_is_reported_per_entry(reg, tmp_path, monkeypatch):
+    monkeypatch.setattr(reg, "_git", lambda *a: (_ for _ in ()).throw(OSError("boom")))
+    result = reg.check_entry(PLUGIN_ID, "base", "head", {}, tmp_path, tmp_path)
+    assert not result.ok and result.lines == [("错误", "OSError: boom")]
+
+
+def published_catalog(**overrides):
+    prev = {
+        "id": PLUGIN_ID,
+        "version": "0.1.0",
+        "repo": "alice/ab-demo",
+        "commit": SHA,
+        "asset": f"{PLUGIN_ID}-0.1.0.zip",
+        "sha256": "0" * 64,
+    }
+    return {PLUGIN_ID: prev | overrides}
+
+
+class TestPublish:
     @pytest.fixture
     def registry(self, reg, tmp_path, monkeypatch):
         root = tmp_path / "registry"
@@ -124,64 +158,94 @@ class TestBuild:
         monkeypatch.setattr(reg, "REGISTRY", root)
         return root
 
-    def test_unchanged_commit_reuses_released_zip(
+    @pytest.mark.parametrize(
+        ("published", "rebuild", "expected"),
+        [
+            ({}, False, "build"),
+            (published_catalog(), False, "reuse"),
+            (published_catalog(), True, "build"),
+            (published_catalog(commit="b" * 40), False, "build"),
+            (published_catalog(path="other"), False, "build"),
+        ],
+    )
+    def test_plan_reuses_only_unchanged_sources(
+        self, reg, registry, published, rebuild, expected
+    ):
+        assert reg.plan(published, rebuild)[expected] == [PLUGIN_ID]
+
+    def test_collect_reuses_released_zip(self, reg, registry, tmp_path, monkeypatch):
+        src = scaffold(tmp_path / "src")
+        data = pack(src, tmp_path / "old", load_manifest(src)).read_bytes()
+        published = published_catalog(
+            sha256=hashlib.sha256(data).hexdigest(), readme="hi"
+        )
+        monkeypatch.setattr(reg, "_download", lambda url: data)
+
+        reg.collect(published, False, tmp_path / "dist", tmp_path / "stage")
+
+        assert (tmp_path / "stage" / f"{PLUGIN_ID}-0.1.0.zip").read_bytes() == data
+        sources = json.loads((tmp_path / "stage" / "sources.json").read_text())
+        assert sources[PLUGIN_ID]["readme"] == "hi"
+
+    def test_collect_rejects_reused_zip_with_wrong_sha256(
         self, reg, registry, tmp_path, monkeypatch
     ):
+        monkeypatch.setattr(reg, "_download", lambda url: b"tampered")
+        with pytest.raises(SystemExit, match="sha256"):
+            reg.collect(
+                published_catalog(), False, tmp_path / "dist", tmp_path / "stage"
+            )
+
+    def test_build_one_then_collect(self, reg, registry, tmp_path, monkeypatch):
         src = scaffold(tmp_path / "src")
-        archive = pack(src, tmp_path / "old", load_manifest(src))
-        data = archive.read_bytes()
-        old = {
-            "plugins": [
-                {
-                    "id": PLUGIN_ID,
-                    "version": "0.1.0",
-                    "repo": "alice/ab-demo",
-                    "commit": SHA,
-                    "asset": archive.name,
-                    "readme": "hi",
-                    "sha256": hashlib.sha256(data).hexdigest(),
-                }
-            ]
-        }
-        monkeypatch.setattr(reg, "_download", lambda url: data)
-        monkeypatch.setattr(reg, "fetch", lambda *a: pytest.fail("must not fetch"))
+        (src / "README.md").write_text("# demo\n")
+        monkeypatch.setattr(reg, "fetch", lambda entry, workdir: src)
+        reg.build_one(PLUGIN_ID, tmp_path / "dist" / f"plugin-{PLUGIN_ID}")
 
-        sources = reg.build(old, tmp_path / "out", tmp_path / "tmp")
+        reg.collect({}, False, tmp_path / "dist", tmp_path / "stage")
 
-        assert (tmp_path / "out" / archive.name).read_bytes() == data
+        assert (tmp_path / "stage" / f"{PLUGIN_ID}-0.1.0.zip").is_file()
+        sources = json.loads((tmp_path / "stage" / "sources.json").read_text())
         assert sources[PLUGIN_ID] == {
             "repo": "alice/ab-demo",
             "commit": SHA,
-            "readme": "hi",
+            "path": ".",
+            "readme": "# demo\n",
         }
 
-    def test_reused_zip_with_wrong_sha256_fails(
-        self, reg, registry, tmp_path, monkeypatch
-    ):
-        old = {
-            "plugins": [
-                {
-                    "id": PLUGIN_ID,
-                    "version": "0.1.0",
-                    "repo": "alice/ab-demo",
-                    "commit": SHA,
-                    "asset": "x.zip",
-                    "sha256": "0" * 64,
-                }
-            ]
-        }
-        monkeypatch.setattr(reg, "_download", lambda url: b"tampered")
-        with pytest.raises(SystemExit, match="sha256"):
-            reg.build(old, tmp_path / "out", tmp_path / "tmp")
-
-    def test_changed_commit_is_fetched_and_packed(
-        self, reg, registry, tmp_path, monkeypatch
+    @pytest.mark.parametrize("tamper", ["extra_zip", "wrong_source"])
+    def test_collect_rejects_tampered_build_output(
+        self, reg, registry, tmp_path, monkeypatch, tamper
     ):
         src = scaffold(tmp_path / "src")
-        (src / "README.md").write_text("# demo\n")
-        monkeypatch.setattr(reg, "fetch", lambda repo, commit, path, workdir: src)
+        monkeypatch.setattr(reg, "fetch", lambda entry, workdir: src)
+        built = tmp_path / "dist" / f"plugin-{PLUGIN_ID}"
+        reg.build_one(PLUGIN_ID, built)
+        if tamper == "extra_zip":
+            other = scaffold(tmp_path / "other", "other-plugin")
+            pack(other, built, load_manifest(other))
+        else:
+            (built / "source.json").write_text(
+                json.dumps({"repo": "mallory/x", "commit": SHA, "path": "."})
+            )
+        with pytest.raises(SystemExit):
+            reg.collect({}, False, tmp_path / "dist", tmp_path / "stage")
 
-        sources = reg.build({}, tmp_path / "out", tmp_path / "tmp")
 
-        assert (tmp_path / "out" / f"{PLUGIN_ID}-0.1.0.zip").is_file()
-        assert sources[PLUGIN_ID]["readme"] == "# demo\n"
+def test_diff_lists_registry_changes_between_commits(reg, tmp_path, monkeypatch):
+    def git(*args: str) -> None:
+        reg._run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *args], tmp_path)
+
+    git("init", "-q")
+    (tmp_path / "README.md").write_text("x\n")
+    git("add", "-A")
+    git("commit", "-qm", "base")
+    (tmp_path / "plugins" / "registry").mkdir(parents=True)
+    (tmp_path / "plugins" / "registry" / f"{PLUGIN_ID}.toml").write_text(entry_text())
+    git("add", "-A")
+    git("commit", "-qm", "add")
+    monkeypatch.setattr(reg, "ROOT", tmp_path)
+
+    changed = reg._diff("HEAD~1", "HEAD", "--diff-filter=AMR", "--", "plugins/registry")
+
+    assert changed == [f"plugins/registry/{PLUGIN_ID}.toml"]

@@ -40,8 +40,9 @@ GITHUB_REPO = "Auto_Bangumi"
 _DL_HEADERS = {"User-Agent": "AutoBangumi-Plugins"}
 DEFAULT_PLUGINS_ROOT = Path("config") / "plugins"
 # 通用插件目录的公钥（与在线更新分开的一把密钥，私钥在 CI 的 PLUGIN_SIGNING_KEY）：
-# 插件签名只代表“维护者审查过这份代码”，不能用来批准更新包
-PLUGIN_PUBKEY_PATH = Path("ab_plugin_pubkey.pem")
+# 插件签名只代表“维护者审查过这份代码”，不能用来批准更新包。放在 module/ 里，
+# 随在线更新包一起分发（更新包本身由更新密钥验签），旧镜像更新后也能验签目录
+PLUGIN_PUBKEY_PATH = Path(__file__).with_name("ab_plugin_pubkey.pem")
 
 
 def release_base(tag: str) -> str:
