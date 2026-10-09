@@ -1,6 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import ConfigPlugins from '../config-plugins.vue';
-import type { CatalogEntry, PluginInfo, PluginsOverview } from '#/plugins';
+import type { PluginInfo, PluginsOverview } from '#/plugins';
 import en from '@/i18n/en.json';
 import zhCN from '@/i18n/zh-CN.json';
 import { apiPlugins } from '@/api/plugins';
@@ -10,11 +10,12 @@ vi.mock('@/api/plugins', () => ({
     list: vi.fn(),
     update: vi.fn(),
     updateSettings: vi.fn(),
-    catalog: vi.fn(),
-    install: vi.fn(),
     uninstall: vi.fn(),
   },
 }));
+
+const pushMock = vi.fn();
+vi.stubGlobal('useRouter', () => ({ push: pushMock }));
 
 const confirmMock = vi.fn();
 vi.mock('@/hooks/useConfirm', () => ({
@@ -71,26 +72,6 @@ function plugin(overrides: Partial<PluginInfo> = {}): PluginInfo {
 
 function overview(plugins: PluginInfo[]): PluginsOverview {
   return { allow_unsigned: false, plugins };
-}
-
-function entry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
-  return {
-    id: 'ntfy',
-    name: 'ntfy',
-    version: '0.2.0',
-    kind: 'plugin',
-    extension_points: ['notifier'],
-    description: '',
-    min_ab_version: '4.0.0',
-    authors: [],
-    permissions: [],
-    has_web: false,
-    repo: '',
-    commit: '',
-    readme: '',
-    installed_version: null,
-    ...overrides,
-  };
 }
 
 async function mountPage(plugins: PluginInfo[]) {
@@ -157,93 +138,12 @@ describe('config-plugins', () => {
     }
   );
 
-  it('should load the catalog only when the user browses it', async () => {
-    api.catalog.mockResolvedValue([]);
+  it('should link to the plugin market instead of listing the catalog', async () => {
     const wrapper = await mountPage([]);
-    expect(api.catalog).not.toHaveBeenCalled();
 
-    await button(wrapper, 'config.plugins_set.catalog_browse')[0].trigger(
-      'click'
-    );
-    await flushPromises();
+    await button(wrapper, 'config.plugins_set.open_market')[0].trigger('click');
 
-    expect(api.catalog).toHaveBeenCalledTimes(1);
-    expect(wrapper.text()).toContain('config.plugins_set.catalog_empty');
-  });
-
-  it('should show the install action for each catalog state', async () => {
-    api.catalog.mockResolvedValue([
-      entry({ id: 'fresh' }),
-      entry({ id: 'stale', installed_version: '0.1.0' }),
-      entry({ id: 'current', installed_version: '0.2.0' }),
-    ]);
-    const wrapper = await mountPage([]);
-    await button(wrapper, 'config.plugins_set.catalog_browse')[0].trigger(
-      'click'
-    );
-    await flushPromises();
-
-    const rows = wrapper.findAll('.catalog__entry');
-    expect(rows.map((r) => r.find('button').exists())).toEqual([
-      true,
-      true,
-      false,
-    ]);
-    expect(rows[0].find('button').text()).toBe('config.plugins_set.install');
-    expect(rows[1].find('button').text()).toBe('config.plugins_set.update');
-    expect(rows[2].text()).toContain('config.plugins_set.installed');
-  });
-
-  it('should install, apply the returned overview and mark the entry installed', async () => {
-    api.catalog.mockResolvedValue([entry()]);
-    api.install.mockResolvedValue(
-      overview([plugin({ name: 'ntfy-installed', version: '0.2.0' })])
-    );
-    const wrapper = await mountPage([]);
-    await button(wrapper, 'config.plugins_set.catalog_browse')[0].trigger(
-      'click'
-    );
-    await flushPromises();
-
-    await button(wrapper, 'config.plugins_set.install')[0].trigger('click');
-    await flushPromises();
-
-    expect(api.install).toHaveBeenCalledWith('ntfy');
-    expect(wrapper.text()).toContain('ntfy-installed');
-    expect(button(wrapper, 'config.plugins_set.install')).toHaveLength(0);
-    expect(wrapper.find('.catalog__entry').text()).toContain(
-      'config.plugins_set.installed'
-    );
-  });
-
-  it('should keep the entry installable when install fails', async () => {
-    api.catalog.mockResolvedValue([entry()]);
-    api.install.mockRejectedValue(new Error('signature invalid'));
-    const wrapper = await mountPage([]);
-    await button(wrapper, 'config.plugins_set.catalog_browse')[0].trigger(
-      'click'
-    );
-    await flushPromises();
-
-    await button(wrapper, 'config.plugins_set.install')[0].trigger('click');
-    await flushPromises();
-
-    expect(button(wrapper, 'config.plugins_set.install')).toHaveLength(1);
-  });
-
-  it('should show the backend detail inline when the catalog is unavailable', async () => {
-    api.catalog.mockRejectedValue({
-      response: { data: { detail: 'catalog signature verification failed' } },
-    });
-    const wrapper = await mountPage([]);
-    await button(wrapper, 'config.plugins_set.catalog_browse')[0].trigger(
-      'click'
-    );
-    await flushPromises();
-
-    const alert = wrapper.find('[role="alert"]');
-    expect(alert.text()).toContain('config.plugins_set.catalog_failed');
-    expect(alert.text()).toContain('catalog signature verification failed');
+    expect(pushMock).toHaveBeenCalledWith('/market');
   });
 
   it('should refresh allow_unsigned in the config store when the card toggles it', async () => {

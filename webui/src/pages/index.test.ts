@@ -11,7 +11,7 @@ vi.stubGlobal('useRoute', () => ({
 }));
 vi.mock('@/hooks/useMyI18n', async () => {
   const { ref } = await vi.importActual<typeof import('vue')>('vue');
-  return { useMyI18n: () => ({ lang: ref('en') }) };
+  return { useMyI18n: () => ({ t: (k: string) => k, lang: ref('en') }) };
 });
 
 const slots = ref<unknown[]>([]);

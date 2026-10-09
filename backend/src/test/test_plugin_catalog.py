@@ -370,6 +370,7 @@ class TestPluginsApi:
         assert response.status_code == 200
         [item] = response.json()
         assert item["id"] == PLUGIN_ID and item["installed_version"] is None
+        assert item["path"] == "."
 
     def test_catalog_unreachable_returns_502(self, authed_client, ctx, monkeypatch):
         from module.api import plugins as plugins_api

@@ -64,6 +64,8 @@ class CatalogEntry(BaseModel):
     kind: str = "plugin"
     extension_points: list[str] = []
     description: str = ""
+    # 插件依赖的 ab_sdk 版本范围（清单中的 sdk）
+    sdk: str = ""
     min_ab_version: str = "0.0.0"
     authors: list[str] = []
     permissions: list[str] = []
@@ -71,6 +73,8 @@ class CatalogEntry(BaseModel):
     # 源码位置：作者仓库与固定的 commit（插件市场的索引条目）
     repo: str = ""
     commit: str = ""
+    # 插件在仓库中的子目录，"." 为仓库根
+    path: str = "."
     readme: str = ""
     installed_version: str | None
 

@@ -67,6 +67,8 @@ export interface CatalogEntry {
   kind: string;
   extension_points: string[];
   description: string;
+  /** 插件依赖的 ab_sdk 版本范围 */
+  sdk: string;
   min_ab_version: string;
   authors: string[];
   permissions: string[];
@@ -74,6 +76,8 @@ export interface CatalogEntry {
   /** 源码位置：作者仓库与固定的 commit */
   repo: string;
   commit: string;
+  /** 插件在仓库中的子目录，"." 为仓库根 */
+  path: string;
   readme: string;
   installed_version: string | null;
 }

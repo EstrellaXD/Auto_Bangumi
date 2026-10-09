@@ -2,6 +2,7 @@
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 import { Attention, CloseOne, Delete, Info, Remind } from '@icon-park/vue-next';
 import type { InboxMessage } from '@/api/notification';
+import { relativeTime } from '@/utils/relative-time';
 
 const { t } = useMyI18n();
 const router = useRouter();
@@ -61,19 +62,6 @@ function onClearClick() {
   }
   confirmClear.value = false;
   store.clearAll();
-}
-
-function relativeTime(iso: string): string {
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return '';
-  const minutes = Math.floor((Date.now() - then) / 60000);
-  if (minutes < 1) return t('notifications.time.just_now');
-  if (minutes < 60) return t('notifications.time.minutes_ago', { n: minutes });
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return t('notifications.time.hours_ago', { n: hours });
-  const days = Math.floor(hours / 24);
-  if (days < 7) return t('notifications.time.days_ago', { n: days });
-  return new Date(iso).toLocaleDateString();
 }
 </script>
 
@@ -147,7 +135,7 @@ function relativeTime(iso: string): string {
               </div>
               <div class="notification-body">{{ store.bodyOf(msg) }}</div>
               <div class="notification-meta">
-                {{ relativeTime(msg.updated_at) }}
+                {{ relativeTime(t, msg.updated_at) }}
               </div>
             </div>
             <ab-icon-button

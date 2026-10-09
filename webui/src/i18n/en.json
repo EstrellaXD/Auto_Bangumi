@@ -190,7 +190,7 @@
     },
     "plugins_set": {
       "title": "Plugins",
-      "empty": "No plugins found. Install one from the plugin catalog below. Or put a plugin directory (named after the plugin id) into config/plugins/local/, or install it with pip, then restart.",
+      "empty": "No plugins found. Install one from the plugin market, or put a plugin directory (named after the plugin id) into config/plugins/local/ or install it with pip, then restart.",
       "allow_unsigned": "Allow unsigned plugins",
       "allow_unsigned_hint": "Plugins from the local directory or pip are unsigned and only load when this is on. Plugins run inside AutoBangumi with full privileges — only enable plugins you trust.",
       "enabled": "Enabled",
@@ -219,20 +219,6 @@
       "uninstall_confirm_body": "The plugin files are deleted. Its options stay in config.json and apply again if you reinstall it.",
       "uninstall_success": "Plugin uninstalled",
       "uninstall_failed": "Failed to uninstall the plugin",
-      "catalog_title": "Plugin catalog",
-      "catalog_hint": "AutoBangumi signs the catalog and every plugin package, and checks the signature and sha256 before install. Catalog plugins count as signed and do not need \"Allow unsigned plugins\".",
-      "catalog_browse": "Browse catalog",
-      "catalog_refresh": "Refresh",
-      "catalog_failed": "Catalog unavailable.",
-      "catalog_failed_hint": "Check the network, then select Refresh.",
-      "catalog_empty": "The catalog has no plugins yet.",
-      "extension_points": "Extension points: {list}",
-      "install": "Install",
-      "update": "Update",
-      "installed": "Installed",
-      "installed_version": "Installed v{version}",
-      "install_success": "Plugin installed and enabled",
-      "install_failed": "Failed to install the plugin",
       "retry": "Retry",
       "enabled_for": "Enable {name}",
       "unsaved": "Unsaved changes",
@@ -258,7 +244,8 @@
       },
       "permission_labels": {
         "fs_write": "Write files",
-        "network": "Network access"
+        "network": "Network access",
+        "filesystem": "File system access"
       },
       "disable": "Disable",
       "disable_confirm_title": "Disable {name}?",
@@ -270,7 +257,9 @@
       "remove_row_confirm_body": "The values in this row are deleted when you save the options.",
       "field_required": "Required",
       "field_min": "Must be {n} or more",
-      "field_max": "Must be {n} or less"
+      "field_max": "Must be {n} or less",
+      "market_hint": "Install and update plugins in the plugin market.",
+      "open_market": "Open plugin market"
     }
   },
   "downloader": {
@@ -641,7 +630,8 @@
     "logout": "Logout",
     "player": "Player",
     "rss": "RSS",
-    "title": "Menu"
+    "title": "Menu",
+    "market": "Plugin market"
   },
   "common": {
     "cancel": "Cancel",
@@ -854,5 +844,67 @@
         "body": "{torrent_name} (rename method: {strategy}). Detail: {reason}. The files keep their original names. Fix the rename setting. AutoBangumi retries on the next run."
       }
     }
+  },
+  "market": {
+    "title": "Plugin market",
+    "catalog_verified": "Catalog signature verified",
+    "updated": "Updated {time}",
+    "refresh": "Refresh",
+    "search": "Search by name, id, author or description",
+    "state_filter": "Install state",
+    "state_all": "All states",
+    "state": {
+      "installed": "Installed",
+      "update": "Update available",
+      "available": "Not installed"
+    },
+    "update_from": "Update available · {version} installed",
+    "categories": "Categories",
+    "category_all": "All",
+    "category": {
+      "source": "Sources",
+      "notify": "Notifications",
+      "organize": "Organizing",
+      "interface": "UI & API",
+      "other": "Other"
+    },
+    "list_label": "Plugins",
+    "version": "Version",
+    "version_sdk": "{version} · SDK {sdk}",
+    "authors": "Authors",
+    "source": "Source",
+    "review": "Review",
+    "reviewed": "The catalog maintainers reviewed this commit.",
+    "extension_points": "Extension points",
+    "permissions": "Declared permissions",
+    "permission_added": "new in this version",
+    "permission_removed": "no longer declared",
+    "frontend": "Web UI",
+    "yes": "Yes",
+    "no": "No",
+    "none": "None",
+    "install": "Install",
+    "update": "Update",
+    "install_enable": "Install and enable",
+    "back": "Back",
+    "confirm_install": "Install {name}",
+    "confirm_update": "Update {name}",
+    "warning_lead": "Note",
+    "warning": "The plugin runs inside the AutoBangumi process and can read and change your settings and downloaders. The permissions are only what the author declares; AutoBangumi cannot enforce them.",
+    "ack_permissions": "I understand the new permissions",
+    "install_success": "{name} installed and enabled",
+    "update_success": "{name} updated to {version}",
+    "install_failed": "Could not install {name}",
+    "update_failed": "Could not update {name}",
+    "load_failed": "Could not load the plugin catalog",
+    "load_failed_hint": "Check the network or proxy settings, then try again.",
+    "retry": "Retry",
+    "stale_lead": "Catalog unavailable",
+    "stale": "Showing the catalog from {time}. You can install and update again once the connection is back.",
+    "no_match": "No plugins match “{query}”",
+    "clear_search": "Clear search",
+    "no_filter_match": "No plugins match these filters",
+    "show_all": "Show all plugins",
+    "empty": "The catalog has no plugins yet"
   }
 }

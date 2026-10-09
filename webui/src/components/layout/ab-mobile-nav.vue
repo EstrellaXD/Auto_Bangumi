@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import {
+  AppStore,
   Calendar,
   Download,
   Home,
@@ -48,6 +49,12 @@ const navItems = [
   },
   { id: 6, icon: Log, label: () => t('sidebar.log'), path: '/log' },
   {
+    id: 8,
+    icon: AppStore,
+    label: () => t('sidebar.market'),
+    path: '/market',
+  },
+  {
     id: 7,
     icon: SettingTwo,
     label: () => t('sidebar.config'),
@@ -77,7 +84,10 @@ const visibleItems = computed(() => {
       :to="item.path"
       replace
       class="mobile-nav__item"
-      :class="{ 'mobile-nav__item--active': route.path === item.path }"
+      :class="{
+        'mobile-nav__item--active':
+          route.path === item.path || route.path.startsWith(`${item.path}/`),
+      }"
       :aria-label="item.label()"
     >
       <Component :is="item.icon" :size="18" class="mobile-nav__icon" />

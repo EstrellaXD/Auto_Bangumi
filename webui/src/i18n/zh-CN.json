@@ -190,7 +190,7 @@
     },
     "plugins_set": {
       "title": "插件",
-      "empty": "未发现插件。从下方的插件目录安装；或把插件目录放进 config/plugins/local/（目录名与插件 id 相同）、用 pip 安装，重启后即可在此出现。",
+      "empty": "未发现插件。可以在插件市场中安装；或把插件目录放进 config/plugins/local/（目录名与插件 id 相同）、用 pip 安装，然后重启。",
       "allow_unsigned": "允许未签名插件",
       "allow_unsigned_hint": "本地目录与 pip 安装的插件未经签名，开启后才会加载。插件与 AutoBangumi 同进程运行，拥有完整权限，只启用你信任的插件。",
       "enabled": "启用",
@@ -219,20 +219,6 @@
       "uninstall_confirm_body": "插件文件会被删除。它的配置保留在 config.json 中，重新安装后继续生效。",
       "uninstall_success": "插件已卸载",
       "uninstall_failed": "卸载插件失败",
-      "catalog_title": "插件目录",
-      "catalog_hint": "目录与插件包由 AutoBangumi 签名，安装前校验签名与 sha256。从目录安装的插件视为已签名，不需要开启「允许未签名插件」。",
-      "catalog_browse": "浏览目录",
-      "catalog_refresh": "刷新",
-      "catalog_failed": "目录不可用。",
-      "catalog_failed_hint": "检查网络后点击「刷新」重试。",
-      "catalog_empty": "目录中暂时没有插件。",
-      "extension_points": "扩展点：{list}",
-      "install": "安装",
-      "update": "更新",
-      "installed": "已安装",
-      "installed_version": "已安装 v{version}",
-      "install_success": "插件已安装并启用",
-      "install_failed": "安装插件失败",
       "retry": "重试",
       "enabled_for": "启用 {name}",
       "unsaved": "有未保存的修改",
@@ -258,7 +244,8 @@
       },
       "permission_labels": {
         "fs_write": "写入文件",
-        "network": "访问网络"
+        "network": "访问网络",
+        "filesystem": "访问文件系统"
       },
       "disable": "停用",
       "disable_confirm_title": "停用 {name}？",
@@ -270,7 +257,9 @@
       "remove_row_confirm_body": "保存插件选项后，该行的内容会被删除。",
       "field_required": "必填",
       "field_min": "不能小于 {n}",
-      "field_max": "不能大于 {n}"
+      "field_max": "不能大于 {n}",
+      "market_hint": "在插件市场中安装和更新插件。",
+      "open_market": "打开插件市场"
     }
   },
   "downloader": {
@@ -641,7 +630,8 @@
     "logout": "退出",
     "player": "播放器",
     "rss": "RSS 管理",
-    "title": "菜单"
+    "title": "菜单",
+    "market": "插件市场"
   },
   "common": {
     "cancel": "取消",
@@ -854,5 +844,67 @@
         "body": "{torrent_name}（重命名方式：{strategy}）。详情：{reason}。文件保留原名。请修正重命名设置，下次运行时会自动重试。"
       }
     }
+  },
+  "market": {
+    "title": "插件市场",
+    "catalog_verified": "目录签名有效",
+    "updated": "{time}更新",
+    "refresh": "刷新",
+    "search": "搜索名称、id、作者或描述",
+    "state_filter": "安装状态",
+    "state_all": "全部状态",
+    "state": {
+      "installed": "已安装",
+      "update": "可更新",
+      "available": "未安装"
+    },
+    "update_from": "可更新 · 已装 {version}",
+    "categories": "分类",
+    "category_all": "全部",
+    "category": {
+      "source": "来源",
+      "notify": "通知",
+      "organize": "整理",
+      "interface": "界面与接口",
+      "other": "其他"
+    },
+    "list_label": "插件列表",
+    "version": "版本",
+    "version_sdk": "{version} · SDK {sdk}",
+    "authors": "作者",
+    "source": "源码",
+    "review": "审查",
+    "reviewed": "目录维护者审查过这个 commit。",
+    "extension_points": "扩展点",
+    "permissions": "权限声明",
+    "permission_added": "新版本新增",
+    "permission_removed": "新版本不再声明",
+    "frontend": "前端",
+    "yes": "有",
+    "no": "无",
+    "none": "无",
+    "install": "安装",
+    "update": "更新",
+    "install_enable": "安装并启用",
+    "back": "返回",
+    "confirm_install": "安装 {name}",
+    "confirm_update": "更新 {name}",
+    "warning_lead": "注意",
+    "warning": "插件在 AutoBangumi 的进程中运行，可以读写你的配置和下载器。权限只是作者的声明，AutoBangumi 不能强制。",
+    "ack_permissions": "我已了解新增的权限",
+    "install_success": "已安装并启用 {name}",
+    "update_success": "已将 {name} 更新到 {version}",
+    "install_failed": "安装 {name} 失败",
+    "update_failed": "更新 {name} 失败",
+    "load_failed": "无法获取插件目录",
+    "load_failed_hint": "检查网络或代理设置后重试。",
+    "retry": "重试",
+    "stale_lead": "目录不可用",
+    "stale": "下面是 {time} 的目录，安装和更新要等连接恢复。",
+    "no_match": "没有与 “{query}” 匹配的插件",
+    "clear_search": "清除搜索",
+    "no_filter_match": "没有符合筛选条件的插件",
+    "show_all": "显示全部插件",
+    "empty": "目录中还没有插件"
   }
 }
