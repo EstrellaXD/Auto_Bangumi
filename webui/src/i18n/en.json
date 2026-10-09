@@ -259,7 +259,11 @@
       "field_min": "Must be {n} or more",
       "field_max": "Must be {n} or less",
       "market_hint": "Install and update plugins in the plugin market.",
-      "open_market": "Open plugin market"
+      "open_market": "Open plugin market",
+      "reason": {
+        "not_enabled": "Not enabled",
+        "unsigned_blocked": "Unsigned plugins only load when “Allow unsigned plugins” is on."
+      }
     }
   },
   "downloader": {
@@ -906,5 +910,82 @@
     "no_filter_match": "No plugins match these filters",
     "show_all": "Show all plugins",
     "empty": "The catalog has no plugins yet"
+  },
+  "builtin_plugins": {
+    "hardlink": {
+      "name": "Hardlink to media library",
+      "description": "After organizing, hardlink episodes and subtitles into the media library folder. The download folder stays as it is and keeps seeding.",
+      "fields": {
+        "path_map": {
+          "title": "Path mapping",
+          "description": "When the downloader and AutoBangumi see different file systems (for example, separate containers), replace the downloader's path prefix with a local path. The longest matching prefix wins. Paths that do not match are used as they are.",
+          "downloader": {
+            "title": "Downloader",
+            "description": "Downloader instance id"
+          },
+          "from": {
+            "title": "Downloader path",
+            "description": "Path prefix as the downloader sees it"
+          },
+          "to": {
+            "title": "Local path",
+            "description": "The same location as AutoBangumi sees it"
+          }
+        },
+        "source_root": {
+          "title": "Download root",
+          "description": "Local path. The media library keeps the same folder structure."
+        },
+        "library_root": {
+          "title": "Media library folder",
+          "description": "Links go here. Hardlinks need the same file system as the download root."
+        },
+        "cross_device": {
+          "title": "Across file systems",
+          "description": "copy copies the file, symlink creates a symbolic link, skip skips it and sends a notification"
+        }
+      }
+    },
+    "ingest_filters": {
+      "name": "Torrent filter",
+      "description": "On top of each rule's exclude filters, only download torrents that match include keywords. Has no effect when empty.",
+      "fields": {
+        "include": {
+          "title": "Include filter",
+          "description": "Only download torrents whose name matches any of these expressions (regex, case-insensitive), for example 1080p or 简体. Empty means no limit. Applies to all subscriptions."
+        }
+      }
+    },
+    "media_server_refresh": {
+      "name": "Media server refresh",
+      "description": "After torrents are organized, tell Jellyfin, Emby or Plex to refresh the library. Takes effect once the server URL and API key are set.",
+      "fields": {
+        "server": {
+          "title": "Server type"
+        },
+        "url": {
+          "title": "Server URL",
+          "description": "For example http://192.168.1.10:8096 (Plex uses port 32400 by default). Leave empty to skip refreshing."
+        },
+        "api_key": {
+          "title": "API key",
+          "description": "The Jellyfin or Emby API key, or the Plex X-Plex-Token"
+        },
+        "delay": {
+          "title": "Delay (seconds)",
+          "description": "How long to wait after an organize event before refreshing. Events in that window are merged into one refresh."
+        }
+      }
+    },
+    "rename": {
+      "name": "Rename",
+      "description": "Provides the rename methods pn and advance, and a custom template. When disabled, all bangumi use none and keep their original file names.",
+      "fields": {
+        "template": {
+          "title": "File name template",
+          "description": "The Jinja2 template used when the rename method is template. It renders the file name without the extension (subtitles get the language appended). Variables: title, bangumi_name, season, episode, episode_type (episode / movie / special), group, kind (media / subtitle), language. The filter pad(n) zero-pads a number to n digits. A file whose template fails or whose result contains a path separator keeps its original name, and you get a notification."
+        }
+      }
+    }
   }
 }

@@ -331,12 +331,12 @@ class PluginManager:
             del self._failed[plugin_id]
 
     def _blocked_reason(self, candidate: PluginCandidate) -> str | None:
-        """插件不应运行的原因；None 表示应启用。"""
+        """插件不应运行的原因代码（前端按代码翻译）；None 表示应启用。"""
         conf = self._settings.plugins
         if not self._enabled(candidate):
-            return "未启用"
+            return "not_enabled"
         if not candidate.signed and not conf.allow_unsigned:
-            return "未签名插件需要开启 plugins.allow_unsigned"
+            return "unsigned_blocked"
         return None
 
     def _enabled(self, candidate: PluginCandidate) -> bool:

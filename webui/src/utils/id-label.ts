@@ -11,6 +11,11 @@ export function idLabel(
   id: string
 ): string {
   const key = `${group}.${id.replaceAll('.', '_')}`;
+  return hasKey(key) ? t(key) : id;
+}
+
+/** en.json 中是否有这条文案（en 与 zh-CN 的 key 集合由测试保证一致） */
+export function hasKey(key: string): boolean {
   const found = key
     .split('.')
     .reduce<unknown>(
@@ -18,5 +23,5 @@ export function idLabel(
       en
     );
   // 构建时 i18n 插件把文案预编译成消息函数，测试里则是原始字符串
-  return typeof found === 'string' || typeof found === 'function' ? t(key) : id;
+  return typeof found === 'string' || typeof found === 'function';
 }
