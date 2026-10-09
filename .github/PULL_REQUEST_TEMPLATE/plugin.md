@@ -11,6 +11,7 @@
 
 - [ ] This PR changes only files under `plugins/registry/`.
 - [ ] `commit` is a full 40-character SHA, and it is pushed to a public repository.
+- [ ] `sha256` matches the value in the CI summary (leave it out in the first push; CI shows it).
 - [ ] The file name equals the `id` in `plugin.toml`.
 - [ ] `tests/` has at least 1 test, and all tests pass.
 - [ ] `ab-plugin validate` passes.

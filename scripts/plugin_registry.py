@@ -1,10 +1,14 @@
 """插件市场的索引工具：``plugins/registry/<id>.toml`` → 校验、测试、打包、汇总。
 
-条目只有三个字段，代码留在作者自己的仓库，用完整 SHA 固定（tag 可以移动）::
+代码留在作者自己的仓库，用完整 SHA 固定（tag 可以移动）::
 
     repo = "owner/name"
     commit = "<40 位 SHA>"
     path = "."            # 可选，插件在仓库中的子目录
+    sha256 = "<64 位>"    # PR 检查打出的 zip；签名只认这份审查过的字节
+
+``sha256`` 留空时 PR 检查会给出应填的值。合并后重新打包的 zip 必须与它一致才会签名，
+所以构建在 PR 和合并后产出不同字节时发布会失败，而不是签下没审过的内容。
 
 在仓库根目录运行（backend 的虚拟环境里有 ab_sdk）::
 
@@ -53,7 +57,8 @@ RELEASE_BASE = "https://github.com/EstrellaXD/Auto_Bangumi/releases/download/plu
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 README_LIMIT = 16 * 1024
-_FIELDS = {"repo", "commit", "path"}
+DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
+_FIELDS = {"repo", "commit", "path", "sha256"}
 
 
 class Reject(Exception):
@@ -66,6 +71,7 @@ class Entry:
     repo: str
     commit: str
     path: str = "."
+    sha256: str = ""
 
     @classmethod
     def parse(cls, plugin_id: str, text: str) -> "Entry":
@@ -84,6 +90,7 @@ class Entry:
             str(data["repo"]),
             str(data["commit"]),
             str(data.get("path", ".")),
+            str(data.get("sha256", "")),
         )
         if not REPO_RE.match(entry.repo):
             raise Reject("repo 必须是 GitHub 的 owner/name")
@@ -92,6 +99,8 @@ class Entry:
         path = PurePosixPath(entry.path)
         if path.is_absolute() or ".." in path.parts:
             raise Reject("path 必须是仓库内的相对路径")
+        if entry.sha256 and not DIGEST_RE.match(entry.sha256):
+            raise Reject("sha256 必须是 64 位小写十六进制")
         return entry
 
     @property
@@ -316,6 +325,10 @@ def check_entry(
         archive = pack(src, out, manifest)
         digest = hashlib.sha256(archive.read_bytes()).hexdigest()
         lines.append(("zip", f"{archive.name} · sha256 {digest}"))
+        if entry.sha256 != digest:
+            raise Reject(
+                f'在条目中写入 sha256 = "{digest}"（当前为 {entry.sha256 or "空"}）'
+            )
         return Result(plugin_id, True, lines)
     except Reject as e:
         lines.append(("拒绝", str(e)))
@@ -382,14 +395,14 @@ def cmd_check(base: str, head: str, catalog: Path | None, out: Path) -> int:
 
 
 def plan(published: dict[str, dict], rebuild: bool) -> dict[str, list[str]]:
-    """来源（repo、commit、path）未变的条目复用已发布的 zip，其余重新打包。"""
+    """来源（repo、commit、path）与 sha256 都未变的条目复用已发布的 zip，其余重新打包。"""
     build: list[str] = []
     reuse: list[str] = []
     for entry in registry_entries():
         prev = published.get(entry.id, {})
         same = {
             k: prev.get(k, "." if k == "path" else None) for k in entry.source
-        } == entry.source
+        } == entry.source and prev.get("sha256") == entry.sha256
         (reuse if same and not rebuild else build).append(entry.id)
     return {"build": build, "reuse": reuse}
 
@@ -402,8 +415,13 @@ def build_one(plugin_id: str, out: Path) -> None:
         src = fetch(entry, Path(tmp))
         build_web(src)
         manifest = verify(entry, src, None, None)
-        pack(src, out, manifest)
+        archive = pack(src, out, manifest)
         source = {**entry.source, "readme": readme(src)}
+    digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+    if digest != entry.sha256:
+        raise Reject(
+            f"打出的 zip sha256 {digest} 与条目中审查过的 {entry.sha256} 不一致"
+        )
     (out / "source.json").write_text(
         json.dumps(source, ensure_ascii=False), encoding="utf-8"
     )
@@ -432,8 +450,8 @@ def collect(published: dict[str, dict], rebuild: bool, dist: Path, stage: Path) 
     for plugin_id in todo["reuse"]:
         prev = published[plugin_id]
         data = _download(f"{RELEASE_BASE}/{prev['asset']}")
-        if hashlib.sha256(data).hexdigest() != prev["sha256"]:
-            raise SystemExit(f"{prev['asset']} 与已发布 catalog 的 sha256 不一致")
+        if hashlib.sha256(data).hexdigest() != entries[plugin_id].sha256:
+            raise SystemExit(f"{prev['asset']} 与条目中的 sha256 不一致")
         (stage / prev["asset"]).write_bytes(data)
         sources[plugin_id] = {
             **entries[plugin_id].source,
@@ -444,6 +462,12 @@ def collect(published: dict[str, dict], rebuild: bool, dist: Path, stage: Path) 
         zips = sorted(built.glob("*.zip"))
         if len(zips) != 1 or _zip_id(zips[0]) != plugin_id:
             raise SystemExit(f"{plugin_id} 的构建产物不是恰好一个 id 相符的 zip")
+        # 构建 job 运行过作者代码：只认条目里审查过的 sha256
+        if (
+            hashlib.sha256(zips[0].read_bytes()).hexdigest()
+            != entries[plugin_id].sha256
+        ):
+            raise SystemExit(f"{plugin_id} 的构建产物与条目中的 sha256 不一致")
         source = json.loads((built / "source.json").read_text("utf-8"))
         if {k: source.get(k) for k in entries[plugin_id].source} != entries[
             plugin_id

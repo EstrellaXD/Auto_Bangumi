@@ -1,3 +1,4 @@
 repo = "EstrellaXD/Auto_Bangumi"
 commit = "f3359b17fde62ebfe32179071e7ae579431fd0cd"
 path = "examples/plugins/webhook-on-event"
+sha256 = "e9acde2f67984ecbc84beea78011007d077be45b7cb9fb458bf31e35fecbca3a"

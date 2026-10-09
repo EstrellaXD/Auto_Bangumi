@@ -4,7 +4,9 @@ import base64
 import hashlib
 import importlib.util
 import json
+import zipfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -48,6 +50,7 @@ class TestEntryParse:
             (PLUGIN_ID, entry_text(commit="abc1234"), "40 位"),
             (PLUGIN_ID, entry_text(repo="https://github.com/a/b"), "owner/name"),
             (PLUGIN_ID, entry_text(path="../other"), "相对路径"),
+            (PLUGIN_ID, entry_text(sha256="ABC"), "64 位"),
             (PLUGIN_ID, entry_text(tag="v1"), "未知字段"),
             (PLUGIN_ID, 'repo = "alice/ab-demo"\n', "缺少字段"),
             ("Bad_Id", entry_text(), "不是合法的插件 id"),
@@ -134,10 +137,37 @@ def test_summary_escapes_author_output(reg):
     assert "&#124;" in text
 
 
+@pytest.mark.parametrize("given", ["", "e" * 64])
+def test_check_tells_author_the_reviewed_sha256(reg, tmp_path, monkeypatch, given):
+    src = scaffold(tmp_path / "src")
+    text = entry_text(sha256=given) if given else entry_text()
+    monkeypatch.setattr(
+        reg,
+        "_git",
+        lambda *a: SimpleNamespace(
+            returncode=0 if a[0] == "show" and "head" in a[1] else 1,
+            stdout=text if a[0] == "show" else "",
+        ),
+    )
+    monkeypatch.setattr(reg, "fetch", lambda entry, workdir: src)
+
+    result = reg.check_entry(PLUGIN_ID, "base", "head", {}, tmp_path / "out", tmp_path)
+
+    expected = hashlib.sha256(next((tmp_path / "out").glob("*.zip")).read_bytes())
+    assert not result.ok
+    assert result.lines[-1] == (
+        "拒绝",
+        f'在条目中写入 sha256 = "{expected.hexdigest()}"（当前为 {given or "空"}）',
+    )
+
+
 def test_unexpected_error_is_reported_per_entry(reg, tmp_path, monkeypatch):
     monkeypatch.setattr(reg, "_git", lambda *a: (_ for _ in ()).throw(OSError("boom")))
     result = reg.check_entry(PLUGIN_ID, "base", "head", {}, tmp_path, tmp_path)
     assert not result.ok and result.lines == [("错误", "OSError: boom")]
+
+
+DIGEST = "d" * 64
 
 
 def published_catalog(**overrides):
@@ -147,7 +177,7 @@ def published_catalog(**overrides):
         "repo": "alice/ab-demo",
         "commit": SHA,
         "asset": f"{PLUGIN_ID}-0.1.0.zip",
-        "sha256": "0" * 64,
+        "sha256": DIGEST,
     }
     return {PLUGIN_ID: prev | overrides}
 
@@ -157,9 +187,25 @@ class TestPublish:
     def registry(self, reg, tmp_path, monkeypatch):
         root = tmp_path / "registry"
         root.mkdir()
-        (root / f"{PLUGIN_ID}.toml").write_text(entry_text())
         monkeypatch.setattr(reg, "REGISTRY", root)
-        return root
+
+        def write(sha256: str = DIGEST) -> None:
+            (root / f"{PLUGIN_ID}.toml").write_text(entry_text(sha256=sha256))
+
+        write()
+        return write
+
+    @pytest.fixture
+    def built(self, reg, registry, tmp_path, monkeypatch):
+        """脚手架插件经 build-one 打包；条目写入它审查过的 sha256。"""
+        src = scaffold(tmp_path / "src")
+        (src / "README.md").write_text("# demo\n")
+        monkeypatch.setattr(reg, "fetch", lambda entry, workdir: src)
+        data = pack(src, tmp_path / "probe", load_manifest(src)).read_bytes()
+        registry(hashlib.sha256(data).hexdigest())
+        out = tmp_path / "dist" / f"plugin-{PLUGIN_ID}"
+        reg.build_one(PLUGIN_ID, out)
+        return out, data
 
     @pytest.mark.parametrize(
         ("published", "rebuild", "expected"),
@@ -169,6 +215,7 @@ class TestPublish:
             (published_catalog(), True, "build"),
             (published_catalog(commit="b" * 40), False, "build"),
             (published_catalog(path="other"), False, "build"),
+            (published_catalog(sha256="e" * 64), False, "build"),
         ],
     )
     def test_plan_reuses_only_unchanged_sources(
@@ -177,8 +224,8 @@ class TestPublish:
         assert reg.plan(published, rebuild)[expected] == [PLUGIN_ID]
 
     def test_collect_reuses_released_zip(self, reg, registry, tmp_path, monkeypatch):
-        src = scaffold(tmp_path / "src")
-        data = pack(src, tmp_path / "old", load_manifest(src)).read_bytes()
+        data = b"released zip"
+        registry(hashlib.sha256(data).hexdigest())
         published = published_catalog(
             sha256=hashlib.sha256(data).hexdigest(), readme="hi"
         )
@@ -199,15 +246,10 @@ class TestPublish:
                 published_catalog(), False, tmp_path / "dist", tmp_path / "stage"
             )
 
-    def test_build_one_then_collect(self, reg, registry, tmp_path, monkeypatch):
-        src = scaffold(tmp_path / "src")
-        (src / "README.md").write_text("# demo\n")
-        monkeypatch.setattr(reg, "fetch", lambda entry, workdir: src)
-        reg.build_one(PLUGIN_ID, tmp_path / "dist" / f"plugin-{PLUGIN_ID}")
-
+    def test_build_one_then_collect(self, reg, built, tmp_path):
         reg.collect({}, False, tmp_path / "dist", tmp_path / "stage")
 
-        assert (tmp_path / "stage" / f"{PLUGIN_ID}-0.1.0.zip").is_file()
+        assert (tmp_path / "stage" / f"{PLUGIN_ID}-0.1.0.zip").read_bytes() == built[1]
         sources = json.loads((tmp_path / "stage" / "sources.json").read_text())
         assert sources[PLUGIN_ID] == {
             "repo": "alice/ab-demo",
@@ -216,21 +258,27 @@ class TestPublish:
             "readme": "# demo\n",
         }
 
-    @pytest.mark.parametrize("tamper", ["extra_zip", "wrong_source"])
-    def test_collect_rejects_tampered_build_output(
-        self, reg, registry, tmp_path, monkeypatch, tamper
+    def test_build_one_refuses_bytes_that_differ_from_review(
+        self, reg, built, registry, tmp_path
     ):
-        src = scaffold(tmp_path / "src")
-        monkeypatch.setattr(reg, "fetch", lambda entry, workdir: src)
-        built = tmp_path / "dist" / f"plugin-{PLUGIN_ID}"
-        reg.build_one(PLUGIN_ID, built)
+        registry("e" * 64)
+        with pytest.raises(reg.Reject, match="不一致"):
+            reg.build_one(PLUGIN_ID, tmp_path / "again")
+
+    @pytest.mark.parametrize("tamper", ["extra_zip", "wrong_source", "other_bytes"])
+    def test_collect_rejects_tampered_build_output(self, reg, built, tmp_path, tamper):
+        out, _ = built
         if tamper == "extra_zip":
             other = scaffold(tmp_path / "other", "other-plugin")
-            pack(other, built, load_manifest(other))
-        else:
-            (built / "source.json").write_text(
+            pack(other, out, load_manifest(other))
+        elif tamper == "wrong_source":
+            (out / "source.json").write_text(
                 json.dumps({"repo": "mallory/x", "commit": SHA, "path": "."})
             )
+        else:
+            zip_path = next(out.glob("*.zip"))
+            with zipfile.ZipFile(zip_path, "a") as zf:
+                zf.writestr("evil.py", "import os\n")
         with pytest.raises(SystemExit):
             reg.collect({}, False, tmp_path / "dist", tmp_path / "stage")
 

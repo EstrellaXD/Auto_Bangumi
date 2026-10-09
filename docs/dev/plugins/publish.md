@@ -10,17 +10,19 @@ AutoBangumi 4.0.0-beta.2 及之后的版本信任插件密钥。4.0.0-beta.1 无
 
 ## 登记文件
 
-文件 `plugins/registry/<id>.toml` 只有三个字段：
+文件 `plugins/registry/<id>.toml` 有四个字段：
 
 ```toml
 repo = "owner/name"   # 公开的 GitHub 仓库
 commit = "<40 位完整 SHA>"   # tag 可以移动，SHA 不能
 path = "."   # 可选。插件所在子目录，默认是仓库根
+sha256 = "<64 位>"   # PR 检查打出的 zip 的 sha256；先留空，CI 会给出应填的值
 ```
 
 - 文件名必须等于 `plugin.toml` 里的 `id`。
 - `commit` 必须是 40 位完整 SHA。短 SHA 和 tag 会被拒绝。
 - 名称、版本、`sdk` 范围、作者、权限都从该 commit 的 `plugin.toml` 读取，不在登记文件里重复写。
+- `sha256` 绑定审查过的字节：合并后重新打包的 zip 必须与它完全相同，CI 才会签名。第一次提交 PR 时可以不写，CI 会在摘要里给出应填的值，补上后再推送一次。
 
 一个 PR 可以改多个登记文件。建议一个 PR 只含一个插件。
 
@@ -80,7 +82,7 @@ path = "."   # 可选。插件所在子目录，默认是仓库根
 
 1. 在自己的仓库里改代码，并提高 `plugin.toml` 里的 `version`。
 2. 推送，用 `git rev-parse HEAD` 取得新的完整 SHA。
-3. 向 `4.0-dev` 提交 PR，只把 `plugins/registry/<id>.toml` 里的 `commit` 改成新 SHA。
+3. 向 `4.0-dev` 提交 PR，把 `plugins/registry/<id>.toml` 里的 `commit` 改成新 SHA，再按 CI 摘要更新 `sha256`。
 
 版本必须高于目录中已有的版本，否则 CI 拒绝。
 

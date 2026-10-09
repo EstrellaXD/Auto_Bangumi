@@ -10,17 +10,19 @@ AutoBangumi 4.0.0-beta.2 and later trust the plugin key. 4.0.0-beta.1 cannot ins
 
 ## The registry entry
 
-The file `plugins/registry/<id>.toml` has three fields:
+The file `plugins/registry/<id>.toml` has four fields:
 
 ```toml
 repo = "owner/name"   # public GitHub repository
 commit = "<40-char full SHA>"   # tags can move, a SHA cannot
 path = "."   # optional subdirectory of the plugin, default is the repo root
+sha256 = "<64 hex>"   # sha256 of the zip the PR check builds; leave it out first, CI tells you the value
 ```
 
 - The file name must equal the `id` in `plugin.toml`.
 - `commit` must be a full 40-character SHA. A short SHA or a tag is rejected.
 - The name, version, `sdk` range, authors and permissions come from `plugin.toml` at that commit. Do not repeat them in the entry.
+- `sha256` binds the signature to the reviewed bytes: after merge, CI signs the rebuilt zip only if it is identical. You can leave it out in the first push. CI shows the value in the summary. Add it and push again.
 
 A PR can change several entries. We recommend one plugin per PR.
 
@@ -80,7 +82,7 @@ A user sees the new plugin or version through `GET /api/v1/plugins/catalog`. For
 
 1. Change the code in your repository and raise `version` in `plugin.toml`.
 2. Push, then get the new full SHA with `git rev-parse HEAD`.
-3. Open a PR to `4.0-dev`. In `plugins/registry/<id>.toml`, change only `commit` to the new SHA.
+3. Open a PR to `4.0-dev`. In `plugins/registry/<id>.toml`, change `commit` to the new SHA, then set `sha256` to the value from the CI summary.
 
 The version must be higher than the listed version. If not, CI rejects the PR.
 
