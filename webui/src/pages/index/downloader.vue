@@ -137,16 +137,6 @@ const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
     ellipsis: { tooltip: true },
     minWidth: 200,
   },
-  ...(downloaders.multiple.value
-    ? [
-        {
-          title: t('downloader.torrent.instance'),
-          key: 'downloader_id',
-          width: 110,
-          ellipsis: { tooltip: true },
-        },
-      ]
-    : []),
   {
     title: t('downloader.torrent.progress'),
     key: 'progress',
@@ -215,6 +205,16 @@ const tableColumnsValue = computed<DataTableColumns<QbTorrentInfo>>(() => [
       return `${row.num_seeds} / ${row.num_leechs}`;
     },
   },
+  // 放在最后并完整显示 id（触屏没有悬停提示）
+  ...(downloaders.multiple.value
+    ? [
+        {
+          title: t('downloader.torrent.instance'),
+          key: 'downloader_id',
+          minWidth: 110,
+        },
+      ]
+    : []),
 ]);
 
 function onCheckedChange(group: TorrentGroup, keys: string[]) {

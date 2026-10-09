@@ -22,6 +22,11 @@ export interface SchemaField {
   /** objects（对象数组）每一行的字段 */
   itemFields: SchemaField[];
   default: unknown;
+  /** 出现在 schema 的 required 列表中（pydantic 中没有默认值的字段） */
+  required: boolean;
+  /** number 字段的取值范围 */
+  minimum?: number;
+  maximum?: number;
 }
 
 /** 解开 pydantic 生成的 $ref 与 Optional（anyOf: [T, null]） */
@@ -65,7 +70,8 @@ function kindOf(
 
 function buildFields(
   properties: Record<string, JsonSchemaProperty>,
-  defs: Record<string, JsonSchemaProperty>
+  defs: Record<string, JsonSchemaProperty>,
+  required: string[] = []
 ): SchemaField[] {
   return Object.entries(properties).map(([key, raw]) => {
     const prop = resolve(raw, defs);
@@ -77,8 +83,13 @@ function buildFields(
       kind: kindOf(prop, items),
       options: prop.enum ?? [],
       integer: prop.type === 'integer',
-      itemFields: items?.properties ? buildFields(items.properties, defs) : [],
+      itemFields: items?.properties
+        ? buildFields(items.properties, defs, items.required)
+        : [],
       default: prop.default,
+      required: required.includes(key),
+      minimum: prop.minimum,
+      maximum: prop.maximum,
     };
   });
 }
@@ -86,7 +97,7 @@ function buildFields(
 /** 把插件 config_model 的 JSON Schema 转成表单字段描述（保持声明顺序） */
 export function schemaFields(schema: JsonSchema | null): SchemaField[] {
   if (!schema?.properties) return [];
-  return buildFields(schema.properties, schema.$defs ?? {});
+  return buildFields(schema.properties, schema.$defs ?? {}, schema.required);
 }
 
 /** 未保存过的字段用 schema 默认值填充，供表单初始展示 */

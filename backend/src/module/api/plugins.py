@@ -37,6 +37,8 @@ class PluginInfo(BaseModel):
     error: str | None
     config_schema: dict[str, Any] | None
     options: dict[str, Any]
+    # 该插件当前登记的 Provider id（按扩展点，只含非空项）；未启用时为空
+    providers: dict[str, list[str]]
 
 
 class PluginsOverview(BaseModel):
@@ -75,6 +77,15 @@ class PluginUiSlot(BaseModel):
     title: dict[str, str]
 
 
+# 设置页关心的、由插件提供 Provider 的扩展点
+_PROVIDER_POINTS = (
+    points.DOWNLOADER,
+    points.NOTIFIER,
+    points.SEARCH_SITE,
+    points.METADATA_PROVIDER,
+    points.RENAME_STRATEGY,
+)
+
 # 模块脚本要求 JavaScript MIME 类型；mimetypes 的结果依赖系统配置，这里固定
 _MEDIA_TYPES = {
     ".js": "text/javascript",
@@ -90,7 +101,12 @@ def _overview(ctx: AppContext) -> PluginsOverview:
         info = vars(status) | {
             "options": mask_options(
                 conf.options.get(status.id, {}), status.config_schema
-            )
+            ),
+            "providers": {
+                point: ids
+                for point in _PROVIDER_POINTS
+                if (ids := plugin_provider_ids(point, status.id))
+            },
         }
         plugins.append(PluginInfo(**info))
     return PluginsOverview(allow_unsigned=conf.allow_unsigned, plugins=plugins)
@@ -222,13 +238,4 @@ async def uninstall_plugin(plugin_id: str, ctx: AppContext = Depends(get_context
 @router.get("/providers", response_model=dict[str, list[str]])
 async def list_plugin_providers():
     """插件提供的 Provider id（按扩展点），设置页把它们并入下拉候选。"""
-    return {
-        point: plugin_provider_ids(point)
-        for point in (
-            points.DOWNLOADER,
-            points.NOTIFIER,
-            points.SEARCH_SITE,
-            points.METADATA_PROVIDER,
-            points.RENAME_STRATEGY,
-        )
-    }
+    return {point: plugin_provider_ids(point) for point in _PROVIDER_POINTS}

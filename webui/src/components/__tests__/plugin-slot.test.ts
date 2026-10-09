@@ -2,6 +2,8 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import type { PluginUiSlot } from '@autobangumi/plugin-ui';
 import AbAlert from '../basic/ab-alert.vue';
+import AbButton from '../basic/ab-button.vue';
+import AbSkeleton from '../basic/ab-skeleton.vue';
 import PluginSlot from '../plugin-slot.vue';
 
 const loadPluginElement = vi.fn();
@@ -54,7 +56,7 @@ function makeUi(plugin_id = 'demo'): PluginUiSlot {
 function mountSlot(ui: PluginUiSlot, context?: Record<string, unknown>) {
   return mount(PluginSlot, {
     props: { ui, context },
-    global: { components: { AbAlert } },
+    global: { components: { AbAlert, AbButton, AbSkeleton } },
     attachTo: document.body,
   });
 }
@@ -148,5 +150,36 @@ describe('plugin-slot', () => {
     wrapper.unmount();
 
     expect(offBus).toHaveBeenCalledTimes(1);
+  });
+
+  it('should show a skeleton until the plugin module has loaded', async () => {
+    let release!: () => void;
+    loadPluginElement.mockReturnValueOnce(
+      new Promise<void>((resolve) => (release = resolve))
+    );
+    const wrapper = mountSlot(makeUi());
+    await flushPromises();
+    expect(wrapper.findComponent(AbSkeleton).exists()).toBe(true);
+
+    release();
+    await flushPromises();
+    expect(wrapper.findComponent(AbSkeleton).exists()).toBe(false);
+  });
+
+  it('should show the reason and a next step, and retry on demand', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    loadPluginElement.mockRejectedValueOnce(new Error('bundle 404'));
+    const wrapper = mountSlot(makeUi('broken'));
+    await flushPromises();
+
+    const alert = wrapper.findComponent(AbAlert);
+    expect(alert.text()).toContain('bundle 404');
+    expect(alert.text()).toContain('plugin.load_failed_hint');
+
+    await alert.findComponent(AbButton).trigger('click');
+    await flushPromises();
+
+    expect(wrapper.findComponent(AbAlert).exists()).toBe(false);
+    expect(shadowText(wrapper)).toContain('plugin content');
   });
 });

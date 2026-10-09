@@ -25,7 +25,11 @@
       "set_default": "设为默认",
       "delete": "删除下载器",
       "delete_confirm": "删除下载器「{id}」？使用它的规则改用默认下载器，其中已有的种子不受影响。",
-      "new_id": "新下载器 id"
+      "new_id": "新下载器 id",
+      "id_invalid": "仅支持字母、数字、- 和 _。",
+      "id_taken": "该 id 已存在。",
+      "new_id_hint": "下载器的名称：字母、数字、- 和 _。",
+      "plugin_label": "{id}（插件）"
     },
     "llm_set": {
       "api_key": "API 密钥",
@@ -76,7 +80,13 @@
       "revision_conflict_policy": "修订版冲突处理",
       "revision_conflict_replace": "替换为更高修订版",
       "title": "番剧管理设置",
-      "track_orphans": "记录未匹配种子"
+      "track_orphans": "记录未匹配种子",
+      "strategy_labels": {
+        "pn": "发布标题",
+        "advance": "官方标题",
+        "template": "自定义模板",
+        "none": "不重命名"
+      }
     },
     "media_player_set": {
       "title": "播放器设置",
@@ -107,7 +117,9 @@
       "enable_provider": "启用",
       "disable": "禁用",
       "test_success": "测试成功",
-      "test_failed": "测试失败"
+      "test_failed": "测试失败",
+      "plugin_label": "{id}（插件）",
+      "plugin_hint": "此渠道由插件提供，这里没有可填字段。请在插件设置中该插件的配置里填写凭据。"
     },
     "parser_set": {
       "enable": "启用",
@@ -190,9 +202,9 @@
       "source_pip": "pip",
       "unsigned": "未签名",
       "permissions": "声明的权限：{list}",
-      "options": "配置",
+      "options": "插件选项",
       "no_options": "该插件没有可配置项",
-      "options_unavailable": "该插件暂时无法显示配置表单。未签名插件需先开启“允许未签名插件”；加载失败的插件会在上方显示原因。",
+      "options_unavailable": "该插件暂时无法显示配置表单。未签名插件需先开启「允许未签名插件」；加载失败的插件会在上方显示原因。",
       "add_row": "添加一行",
       "remove_row": "删除",
       "unsupported_field": "该字段类型暂不支持在界面中编辑，请直接修改 config.json",
@@ -201,19 +213,18 @@
       "save_failed": "保存插件配置失败",
       "load_failed": "加载插件列表失败",
       "plugin_provided": "插件提供",
-      "source_catalog": "签名目录",
-      "signed": "已签名",
+      "source_catalog": "目录",
       "uninstall": "卸载",
       "uninstall_confirm_title": "卸载 {name}？",
       "uninstall_confirm_body": "插件文件会被删除。它的配置保留在 config.json 中，重新安装后继续生效。",
       "uninstall_success": "插件已卸载",
       "uninstall_failed": "卸载插件失败",
       "catalog_title": "插件目录",
-      "catalog_hint": "目录与插件包由 AutoBangumi 签名，安装前校验签名与 sha256。从目录安装的插件视为已签名，不需要开启“允许未签名插件”。",
+      "catalog_hint": "目录与插件包由 AutoBangumi 签名，安装前校验签名与 sha256。从目录安装的插件视为已签名，不需要开启「允许未签名插件」。",
       "catalog_browse": "浏览目录",
       "catalog_refresh": "刷新",
       "catalog_failed": "目录不可用。",
-      "catalog_failed_hint": "检查网络后点击“刷新”重试。",
+      "catalog_failed_hint": "检查网络后点击「刷新」重试。",
       "catalog_empty": "目录中暂时没有插件。",
       "extension_points": "扩展点：{list}",
       "install": "安装",
@@ -221,7 +232,45 @@
       "installed": "已安装",
       "installed_version": "已安装 v{version}",
       "install_success": "插件已安装并启用",
-      "install_failed": "安装插件失败"
+      "install_failed": "安装插件失败",
+      "retry": "重试",
+      "enabled_for": "启用 {name}",
+      "unsaved": "有未保存的修改",
+      "remove_row_n": "移除 {field} 第 {n} 行",
+      "point_labels": {
+        "downloader": "下载器",
+        "notifier": "通知渠道",
+        "llm_provider": "LLM 提供商",
+        "search_site": "搜索站点",
+        "scheduled_task": "定时任务",
+        "metadata_provider": "元数据源",
+        "torrent_filter": "种子过滤",
+        "title_parsed": "标题解析修正",
+        "torrent_adding": "添加种子请求",
+        "http_request": "HTTP 请求头",
+        "api_router": "API 接口",
+        "mcp_tool": "MCP 工具",
+        "mcp_resource": "MCP 资源",
+        "message_template": "消息模板",
+        "rename_strategy": "重命名方式",
+        "media_files": "媒体文件选择",
+        "conflict_policy": "修订版冲突处理"
+      },
+      "permission_labels": {
+        "fs_write": "写入文件",
+        "network": "访问网络"
+      },
+      "disable": "停用",
+      "disable_confirm_title": "停用 {name}？",
+      "in_use": "以下设置正在使用此插件，停用后将无法工作：{list}。",
+      "uses_downloader": "下载器实例 {id}",
+      "uses_notifier": "通知渠道 {type}",
+      "uses_rename": "重命名方式 {name}",
+      "remove_row_confirm_title": "删除 {field} 第 {n} 行？",
+      "remove_row_confirm_body": "保存插件选项后，该行的内容会被删除。",
+      "field_required": "必填",
+      "field_min": "不能小于 {n}",
+      "field_max": "不能大于 {n}"
     }
   },
   "downloader": {
@@ -344,7 +393,8 @@
       "delete_failed": "删除失败",
       "source": {
         "manual": "手动/订阅"
-      }
+      },
+      "downloader_tag": "下载器：{id}"
     }
   },
   "log": {
@@ -576,7 +626,10 @@
   "plugin": {
     "load_failed": "插件组件加载失败。",
     "page_missing": "该插件没有页面",
-    "page_missing_hint": "插件未启用，或没有声明页面。"
+    "page_missing_hint": "插件未启用，或没有声明页面。",
+    "load_failed_hint": "请重试或刷新页面。仍然失败时，请在 设置 > 插件 中停用该插件。",
+    "retry": "重试",
+    "load_failed_page": "无法加载插件页面"
   },
   "sidebar": {
     "calendar": "番剧日历",
@@ -797,7 +850,7 @@
       },
       "rename_skipped": {
         "title": "文件未重命名",
-        "body": "{torrent_name}（{strategy}）：{reason}"
+        "body": "{torrent_name}（重命名方式：{strategy}）。详情：{reason}。文件保留原名。请修正重命名设置，下次运行时会自动重试。"
       }
     }
   }

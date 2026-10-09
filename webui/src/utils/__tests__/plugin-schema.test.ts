@@ -85,6 +85,33 @@ describe('schemaFields', () => {
     });
   });
 
+  it('marks fields from the required lists at top level and in $ref items', () => {
+    const fields = schemaFields({
+      properties: {
+        url: { type: 'string' },
+        note: { type: 'string', default: '' },
+        rows: { type: 'array', items: { $ref: '#/$defs/Row' } },
+      },
+      required: ['url'],
+      $defs: {
+        Row: {
+          type: 'object',
+          properties: { from: { type: 'string' }, to: { type: 'string' } },
+          required: ['to'],
+        },
+      },
+    });
+    expect(fields.map((f) => [f.key, f.required])).toEqual([
+      ['url', true],
+      ['note', false],
+      ['rows', false],
+    ]);
+    expect(fields[2].itemFields.map((f) => [f.key, f.required])).toEqual([
+      ['from', false],
+      ['to', true],
+    ]);
+  });
+
   it('returns no fields without a schema', () => {
     expect(schemaFields(null)).toEqual([]);
   });

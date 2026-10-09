@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Delete, Info, Plus } from '@icon-park/vue-next';
+import { Delete, Plus } from '@icon-park/vue-next';
 import type { DownloaderOptions, DownloaderType } from '#/config';
 import type { SettingItem } from '#/components';
 import { useConfirm } from '@/hooks/useConfirm';
@@ -22,11 +22,34 @@ const downloader = computed(
 );
 
 const newId = ref('');
-const canAdd = computed(
-  () =>
-    /^[\w-]+$/.test(newId.value) &&
-    !plugins.value.instances.some((i) => i.id === newId.value)
+const idValid = computed(() => /^[\w-]+$/.test(newId.value));
+const idTaken = computed(() =>
+  plugins.value.instances.some((i) => i.id === newId.value)
 );
+const canAdd = computed(() => idValid.value && !idTaken.value);
+// 输入非空且不可用时说明原因
+const idError = computed(() => {
+  if (!newId.value) return '';
+  if (!idValid.value) return t('config.downloader_set.id_invalid');
+  return idTaken.value ? t('config.downloader_set.id_taken') : '';
+});
+
+// 空白 options；切换下载器类型时重置，避免旧类型的凭据带入新类型
+function defaultOptions() {
+  return {
+    host: '',
+    username: '',
+    password: '',
+    path: '/downloads/Bangumi',
+    ssl: false,
+  } satisfies DownloaderOptions;
+}
+
+function setProvider(provider: string) {
+  if (!downloader.value || downloader.value.provider === provider) return;
+  downloader.value.provider = provider;
+  downloader.value.options = defaultOptions();
+}
 
 function addInstance() {
   if (!canAdd.value) return;
@@ -34,13 +57,7 @@ function addInstance() {
     id: newId.value,
     point: 'downloader',
     provider: 'qbittorrent',
-    options: {
-      host: '',
-      username: '',
-      password: '',
-      path: '/downloads/Bangumi',
-      ssl: false,
-    },
+    options: defaultOptions(),
   });
   editingId.value = newId.value;
   newId.value = '';
@@ -58,14 +75,25 @@ async function removeInstance(id: string) {
   if (editingId.value === id) editingId.value = plugins.value.slots.downloader;
 }
 const builtinTypes: DownloaderType = ['qbittorrent', 'aria2'];
+// 内置下载器显示产品名；插件提供的 id 标明来自插件
+const builtinLabels: Record<string, string> = {
+  qbittorrent: 'qBittorrent',
+  aria2: 'aria2',
+};
+function providerLabel(id: string) {
+  return builtinLabels[id] ?? t('config.downloader_set.plugin_label', { id });
+}
 const pluginProviders = usePluginProviders();
 // 插件提供的下载器 id 追加在内置选项之后
-const downloaderType = computed(() => [
-  ...builtinTypes,
-  ...pluginProviders.value.downloader,
-]);
+const downloaderType = computed(() =>
+  [...builtinTypes, ...pluginProviders.value.downloader].map((value, id) => ({
+    id,
+    value,
+    label: providerLabel(value),
+  }))
+);
 
-const items = computed<SettingItem<DownloaderOptions>[]>(() => [
+const allItems = computed<SettingItem<DownloaderOptions>[]>(() => [
   {
     configKey: 'host',
     label: () => t('config.downloader_set.host'),
@@ -109,6 +137,13 @@ const items = computed<SettingItem<DownloaderOptions>[]>(() => [
     type: 'switch',
   },
 ]);
+// aria2 以 RPC secret 认证，不使用用户名
+const items = computed(() =>
+  allItems.value.filter(
+    (i) =>
+      !(downloader.value?.provider === 'aria2' && i.configKey === 'username')
+  )
+);
 </script>
 
 <template>
@@ -129,9 +164,11 @@ const items = computed<SettingItem<DownloaderOptions>[]>(() => [
           @click="editingId = i.id"
         >
           <span class="instance-id">{{ i.id }}</span>
-          <span class="instance-meta"
-            >{{ i.provider }} · {{ i.options.host }}</span
-          >
+          <span class="instance-meta">{{
+            i.options.host
+              ? `${providerLabel(i.provider)} · ${i.options.host}`
+              : providerLabel(i.provider)
+          }}</span>
         </ab-button>
         <span v-if="i.id === plugins.slots.downloader" class="instance-default">
           {{ $t('config.downloader_set.default') }}
@@ -145,30 +182,26 @@ const items = computed<SettingItem<DownloaderOptions>[]>(() => [
           >
             {{ $t('config.downloader_set.set_default') }}
           </ab-button>
-          <ab-button
+          <ab-icon-button
             size="sm"
-            variant="ghost"
             data-action="delete"
-            :aria-label="$t('config.downloader_set.delete')"
+            :label="$t('config.downloader_set.delete')"
             @click="removeInstance(i.id)"
           >
             <Delete size="16" />
-          </ab-button>
+          </ab-icon-button>
         </template>
       </div>
       <div class="instance-add" data-new-instance>
-        <ab-input
-          v-model="newId"
-          :placeholder="$t('config.downloader_set.new_id')"
-          :aria-label="$t('config.downloader_set.new_id')"
-          @keyup.enter="addInstance"
-        />
-        <ab-button
-          size="sm"
-          data-action="add"
-          :disabled="!canAdd"
-          @click="addInstance"
+        <ab-field
+          class="instance-add-field"
+          :label="$t('config.downloader_set.new_id')"
+          :description="$t('config.downloader_set.new_id_hint')"
+          :error="idError"
         >
+          <ab-input v-model="newId" @keyup.enter="addInstance" />
+        </ab-field>
+        <ab-button data-action="add" :disabled="!canAdd" @click="addInstance">
           <Plus size="16" />
           {{ $t('config.downloader_set.add') }}
         </ab-button>
@@ -176,17 +209,17 @@ const items = computed<SettingItem<DownloaderOptions>[]>(() => [
     </div>
 
     <div v-if="downloader" space-y-8>
-      <div v-if="downloader.provider === 'aria2'" class="downloader-hint">
-        <Info size="16" />
-        <span>{{ $t('config.downloader_set.aria2_hint') }}</span>
-      </div>
+      <ab-alert v-if="downloader.provider === 'aria2'">
+        {{ $t('config.downloader_set.aria2_hint') }}
+      </ab-alert>
 
       <ab-setting
-        v-model:data="downloader.provider"
+        :data="downloader.provider"
         :label="() => t('config.downloader_set.type')"
         type="select"
         css="w-115"
         :prop="{ items: downloaderType }"
+        @update:data="setProvider"
       ></ab-setting>
       <ab-setting
         v-for="i in items"
@@ -212,11 +245,9 @@ const items = computed<SettingItem<DownloaderOptions>[]>(() => [
   gap: 8px;
   padding: 4px 8px;
   border-radius: var(--radius-sm);
-  border-left: 2px solid transparent;
 
   &.is-editing {
-    background: var(--color-surface-2);
-    border-left-color: var(--color-primary);
+    background: var(--color-primary-light);
   }
 }
 
@@ -244,21 +275,12 @@ const items = computed<SettingItem<DownloaderOptions>[]>(() => [
 
 .instance-add {
   display: flex;
+  align-items: flex-start;
   gap: 8px;
   margin-top: 4px;
 }
 
-.downloader-hint {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  transition: background-color var(--transition-normal),
-    border-color var(--transition-normal);
+.instance-add-field {
+  flex: 1;
 }
 </style>

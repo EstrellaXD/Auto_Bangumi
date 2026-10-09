@@ -11,6 +11,7 @@ import { apiPlugins } from '@/api/plugins';
 import { useConfirm } from '@/hooks/useConfirm';
 import { refreshPluginProviders } from '@/hooks/usePluginProviders';
 import { refreshPluginUi } from '@/hooks/usePluginUi';
+import { idLabel } from '@/utils/id-label';
 import { fillSchemaDefaults, schemaFields } from '@/utils/plugin-schema';
 
 // 插件卡片不参与全局保存：每次改动直接调 /plugins 接口落盘并应用，
@@ -18,11 +19,14 @@ import { fillSchemaDefaults, schemaFields } from '@/utils/plugin-schema';
 const { t } = useMyI18n();
 const message = useMessage();
 const { confirm } = useConfirm();
-const { refreshGroup } = useConfigStore();
+const configStore = useConfigStore();
+const { refreshGroup } = configStore;
 
 const overview = ref<PluginsOverview | null>(null);
 const drafts = ref<Record<string, Record<string, unknown>>>({});
-const busy = ref<string | null>(null);
+// 并发操作各自占用一个 key，互不覆盖对方的加载态
+const busy = ref(new Set<string>());
+const loadError = ref(false);
 
 // 签名目录要访问 GitHub，用户点「浏览目录」时才拉取；
 // catalogError 为 '' 表示失败但后端没给出原因
@@ -53,11 +57,22 @@ function apply(data: PluginsOverview) {
 }
 
 async function load() {
+  loadError.value = false;
   try {
     apply(await apiPlugins.list());
   } catch {
+    loadError.value = true;
     message.error(t('config.plugins_set.load_failed'));
   }
+}
+
+// 草稿与服务端配置不同即为未保存
+function isDirty(plugin: PluginInfo) {
+  const saved = fillSchemaDefaults(
+    schemaFields(plugin.config_schema),
+    plugin.options
+  );
+  return JSON.stringify(drafts.value[plugin.id]) !== JSON.stringify(saved);
 }
 
 async function run(
@@ -65,7 +80,7 @@ async function run(
   action: () => Promise<PluginsOverview>,
   failKey = 'save_failed'
 ) {
-  busy.value = key;
+  busy.value.add(key);
   try {
     apply(await action());
     // 只刷新插件卡片保存的字段，保留未保存的下载器实例与 slots 修改
@@ -80,7 +95,7 @@ async function run(
     message.error(t(`config.plugins_set.${failKey}`));
     return false;
   } finally {
-    busy.value = null;
+    busy.value.delete(key);
   }
 }
 
@@ -88,7 +103,49 @@ function setAllowUnsigned(value: boolean) {
   run('__settings', () => apiPlugins.updateSettings(value));
 }
 
-function setEnabled(plugin: PluginInfo, enabled: boolean) {
+// 正在引用该插件 Provider 的设置项；停用或卸载后它们会失效
+function usages(plugin: PluginInfo): string[] {
+  const own = plugin.providers;
+  const { plugins, notification } = configStore.config;
+  const strategy = plugins.slots.rename_strategy;
+  return [
+    ...plugins.instances
+      .filter((i) => own.downloader?.includes(i.provider))
+      .map((i) => t('config.plugins_set.uses_downloader', { id: i.id })),
+    ...notification.providers
+      .filter((p) => own.notifier?.includes(p.type))
+      .map((p) => t('config.plugins_set.uses_notifier', { type: p.type })),
+    ...(own.rename_strategy?.includes(strategy)
+      ? [
+          t('config.plugins_set.uses_rename', {
+            name: idLabel(t, 'config.manage_set.strategy_labels', strategy),
+          }),
+        ]
+      : []),
+  ];
+}
+
+function impactText(plugin: PluginInfo) {
+  const used = usages(plugin);
+  return used.length
+    ? t('config.plugins_set.in_use', { list: used.join(', ') })
+    : '';
+}
+
+async function setEnabled(plugin: PluginInfo, enabled: boolean) {
+  const impact = enabled ? '' : impactText(plugin);
+  if (
+    impact &&
+    !(await confirm({
+      title: t('config.plugins_set.disable_confirm_title', {
+        name: plugin.name,
+      }),
+      body: impact,
+      confirmText: t('config.plugins_set.disable'),
+      danger: true,
+    }))
+  )
+    return;
   run(plugin.id, () => apiPlugins.update(plugin.id, { enabled }));
 }
 
@@ -132,7 +189,9 @@ async function uninstall(plugin: PluginInfo) {
     title: t('config.plugins_set.uninstall_confirm_title', {
       name: plugin.name,
     }),
-    body: t('config.plugins_set.uninstall_confirm_body'),
+    body: [impactText(plugin), t('config.plugins_set.uninstall_confirm_body')]
+      .filter(Boolean)
+      .join(' '),
     confirmText: t('config.plugins_set.uninstall'),
     danger: true,
   });
@@ -153,14 +212,24 @@ onMounted(load);
 
 <template>
   <ab-fold-panel :title="$t('config.plugins_set.title')">
-    <div v-if="overview" class="plugins">
+    <AbAlert
+      v-if="loadError && !overview"
+      type="danger"
+      :title="$t('config.plugins_set.load_failed')"
+    >
+      <AbButton size="sm" @click="load">{{
+        $t('config.plugins_set.retry')
+      }}</AbButton>
+    </AbAlert>
+    <AbSkeleton v-else-if="!overview" preset="row" />
+    <div v-else class="plugins">
       <AbField
         :label="$t('config.plugins_set.allow_unsigned')"
         :description="$t('config.plugins_set.allow_unsigned_hint')"
       >
         <AbSwitch
           :model-value="overview.allow_unsigned"
-          :loading="busy === '__settings'"
+          :loading="busy.has('__settings')"
           :aria-label="$t('config.plugins_set.allow_unsigned')"
           @update:model-value="setAllowUnsigned"
         />
@@ -184,8 +253,10 @@ onMounted(load);
           </div>
           <AbSwitch
             :model-value="plugin.enabled"
-            :loading="busy === plugin.id"
-            :aria-label="$t('config.plugins_set.enabled')"
+            :loading="busy.has(plugin.id)"
+            :aria-label="
+              $t('config.plugins_set.enabled_for', { name: plugin.name })
+            "
             @update:model-value="setEnabled(plugin, $event)"
           />
         </header>
@@ -195,10 +266,7 @@ onMounted(load);
             {{ $t(`config.plugins_set.state_${plugin.state}`) }}
           </AbTag>
           <AbTag>{{ $t(`config.plugins_set.source_${plugin.source}`) }}</AbTag>
-          <AbTag v-if="plugin.signed" type="success">
-            {{ $t('config.plugins_set.signed') }}
-          </AbTag>
-          <AbTag v-else type="warning">
+          <AbTag v-if="!plugin.signed" type="warning">
             {{ $t('config.plugins_set.unsigned') }}
           </AbTag>
         </div>
@@ -209,13 +277,22 @@ onMounted(load);
         <AbAlert
           v-if="plugin.error"
           :type="plugin.state === 'error' ? 'danger' : 'info'"
+          :title="$t(`config.plugins_set.state_${plugin.state}`)"
         >
           {{ plugin.error }}
         </AbAlert>
-        <p v-if="plugin.permissions.length" class="plugin__desc">
+        <p
+          v-if="plugin.permissions.length"
+          class="plugin__desc"
+          :title="plugin.permissions.join(', ')"
+        >
           {{
             $t('config.plugins_set.permissions', {
-              list: plugin.permissions.join(', '),
+              list: plugin.permissions
+                .map((id) =>
+                  idLabel(t, 'config.plugins_set.permission_labels', id)
+                )
+                .join(', '),
             })
           }}
         </p>
@@ -227,15 +304,20 @@ onMounted(load);
               v-model="drafts[plugin.id]"
               :fields="schemaFields(plugin.config_schema)"
             />
-            <AbButton
-              size="sm"
-              variant="primary"
-              class="plugin__save"
-              :loading="busy === plugin.id"
-              @click="saveOptions(plugin)"
-            >
-              {{ $t('config.plugins_set.save') }}
-            </AbButton>
+            <div class="plugin__save">
+              <AbButton
+                size="sm"
+                variant="primary"
+                :loading="busy.has(plugin.id)"
+                :disabled="!isDirty(plugin)"
+                @click="saveOptions(plugin)"
+              >
+                {{ $t('config.plugins_set.save') }}
+              </AbButton>
+              <span v-if="isDirty(plugin)" class="plugin__desc">
+                {{ $t('config.plugins_set.unsaved') }}
+              </span>
+            </div>
           </template>
           <p v-else-if="plugin.state === 'active'" class="plugin__desc">
             {{ $t('config.plugins_set.no_options') }}
@@ -250,7 +332,7 @@ onMounted(load);
           size="sm"
           variant="danger"
           class="plugin__uninstall"
-          :loading="busy === `uninstall:${plugin.id}`"
+          :loading="busy.has(`uninstall:${plugin.id}`)"
           @click="uninstall(plugin)"
         >
           {{ $t('config.plugins_set.uninstall') }}
@@ -296,10 +378,18 @@ onMounted(load);
               <span v-if="entry.description" class="plugin__desc">
                 {{ entry.description }}
               </span>
-              <span v-if="entry.extension_points.length" class="plugin__desc">
+              <span
+                v-if="entry.extension_points.length"
+                class="plugin__desc"
+                :title="entry.extension_points.join(', ')"
+              >
                 {{
                   $t('config.plugins_set.extension_points', {
-                    list: entry.extension_points.join(', '),
+                    list: entry.extension_points
+                      .map((id) =>
+                        idLabel(t, 'config.plugins_set.point_labels', id)
+                      )
+                      .join(', '),
                   })
                 }}
               </span>
@@ -321,7 +411,7 @@ onMounted(load);
               <AbButton
                 size="sm"
                 variant="primary"
-                :loading="busy === `install:${entry.id}`"
+                :loading="busy.has(`install:${entry.id}`)"
                 @click="install(entry)"
               >
                 {{
@@ -342,7 +432,7 @@ onMounted(load);
 .plugins {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--layout-padding);
 }
 
 .plugins__empty,
@@ -352,20 +442,20 @@ onMounted(load);
   font-size: 12px;
 }
 
+// 插件之间用分隔线（与下方目录段一致），不在折叠面板里再套一层卡片
 .plugin {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  gap: var(--layout-gap);
+  padding-top: var(--layout-padding);
+  border-top: 1px solid var(--color-border);
 }
 
 .plugin__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--layout-gap);
 }
 
 .plugin__title {
@@ -381,13 +471,24 @@ onMounted(load);
 }
 
 .plugin__options summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--touch-target);
+  margin-bottom: var(--layout-gap);
   cursor: pointer;
   font-size: 13px;
-  margin-bottom: 8px;
+}
+
+.plugin__options summary:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .plugin__save {
-  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: var(--layout-gap);
+  margin-top: var(--layout-gap);
 }
 
 .plugin__uninstall {

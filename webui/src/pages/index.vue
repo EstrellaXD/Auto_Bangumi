@@ -9,7 +9,7 @@ definePage({
 
 const { editRule } = storeToRefs(useBangumiStore());
 
-// 插件页面的标题取自清单；其它页面沿用路由名
+// 插件页面的标题取自清单（清单到达前留空，避免闪出路由名 Plugin）；其它页面沿用路由名
 const route = useRoute();
 const { lang } = useMyI18n();
 const { slots } = usePluginUi();
@@ -21,7 +21,7 @@ const pageTitle = computed(() => {
       s.slot === 'page' &&
       s.plugin_id === (route.params as Record<string, string>).id
   );
-  return ui ? slotTitle(ui, lang.value === 'zh-CN' ? 'zh-CN' : 'en-US') : name;
+  return ui ? slotTitle(ui, lang.value === 'zh-CN' ? 'zh-CN' : 'en-US') : '';
 });
 const { updateRule, enableRule, archiveRule, unarchiveRule, ruleManage } =
   useBangumiStore();

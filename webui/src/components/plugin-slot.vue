@@ -14,6 +14,8 @@ const props = defineProps<{
 
 const container = ref<HTMLElement>();
 const failed = ref(false);
+const loading = ref(true);
+const reason = ref('');
 const hostDeps = usePluginHostDeps();
 
 let generation = 0;
@@ -23,6 +25,8 @@ function fail(error: unknown) {
   // 不用 `[plugin:id]` 式模板串：UnoCSS 的 attributify 会把它当成样式规则
   console.error('plugin component failed:', props.ui.plugin_id, error);
   failed.value = true;
+  loading.value = false;
+  reason.value = error instanceof Error ? error.message : String(error ?? '');
   teardown?.();
   teardown = null;
 }
@@ -32,6 +36,7 @@ async function mount() {
   if (!target) return;
   const current = ++generation;
   failed.value = false;
+  loading.value = true;
   try {
     await loadPluginElement(props.ui);
     // 等待导入期间已卸载或上下文又变了：丢弃这一次
@@ -58,6 +63,7 @@ async function mount() {
       root.replaceChildren();
     };
     root.append(element);
+    loading.value = false;
   } catch (error) {
     fail(error);
   }
@@ -82,9 +88,15 @@ watch(
 </script>
 
 <template>
-  <div class="plugin-slot">
+  <div class="plugin-slot" :aria-busy="loading">
+    <ab-skeleton v-if="loading" preset="lines" :count="2" />
     <ab-alert v-if="failed" type="danger" :title="$t('plugin.load_failed')">
       <span class="plugin-slot__id">{{ ui.plugin_id }}</span>
+      <span v-if="reason" class="plugin-slot__id">{{ reason }}</span>
+      {{ $t('plugin.load_failed_hint') }}
+      <template #action>
+        <ab-button size="sm" @click="mount">{{ $t('plugin.retry') }}</ab-button>
+      </template>
     </ab-alert>
     <div v-show="!failed" ref="container" class="plugin-slot__body"></div>
   </div>

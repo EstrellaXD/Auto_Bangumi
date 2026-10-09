@@ -25,7 +25,11 @@
       "set_default": "Set default",
       "delete": "Delete downloader",
       "delete_confirm": "Delete downloader \"{id}\"? Rules that use it switch to the default downloader. Torrents already in it are not touched.",
-      "new_id": "New downloader id"
+      "new_id": "New downloader id",
+      "id_invalid": "Use letters, digits, - and _ only.",
+      "id_taken": "This id already exists.",
+      "new_id_hint": "A name for this downloader: letters, digits, - and _.",
+      "plugin_label": "{id} (plugin)"
     },
     "llm_set": {
       "api_key": "API Key",
@@ -76,7 +80,13 @@
       "revision_conflict_policy": "Revision Conflict Policy",
       "revision_conflict_replace": "Replace with Higher Revision",
       "title": "Manage Setting",
-      "track_orphans": "Track Unmatched Torrents"
+      "track_orphans": "Track Unmatched Torrents",
+      "strategy_labels": {
+        "pn": "Release title",
+        "advance": "Official title",
+        "template": "Custom template",
+        "none": "Keep original names"
+      }
     },
     "media_player_set": {
       "title": "Media Player Setting",
@@ -107,7 +117,9 @@
       "enable_provider": "Enable",
       "disable": "Disable",
       "test_success": "Test successful",
-      "test_failed": "Test failed"
+      "test_failed": "Test failed",
+      "plugin_label": "{id} (plugin)",
+      "plugin_hint": "This channel comes from a plugin and has no fields here. Enter its credentials in the plugin's options in the Plugins section."
     },
     "parser_set": {
       "enable": "Enable",
@@ -202,7 +214,6 @@
       "load_failed": "Failed to load plugins",
       "plugin_provided": "From plugin",
       "source_catalog": "Catalog",
-      "signed": "Signed",
       "uninstall": "Uninstall",
       "uninstall_confirm_title": "Uninstall {name}?",
       "uninstall_confirm_body": "The plugin files are deleted. Its options stay in config.json and apply again if you reinstall it.",
@@ -221,7 +232,45 @@
       "installed": "Installed",
       "installed_version": "Installed v{version}",
       "install_success": "Plugin installed and enabled",
-      "install_failed": "Failed to install the plugin"
+      "install_failed": "Failed to install the plugin",
+      "retry": "Retry",
+      "enabled_for": "Enable {name}",
+      "unsaved": "Unsaved changes",
+      "remove_row_n": "Remove {field} row {n}",
+      "point_labels": {
+        "downloader": "Downloader",
+        "notifier": "Notification channel",
+        "llm_provider": "LLM provider",
+        "search_site": "Search site",
+        "scheduled_task": "Scheduled task",
+        "metadata_provider": "Metadata source",
+        "torrent_filter": "Torrent filter",
+        "title_parsed": "Title parse fix",
+        "torrent_adding": "Torrent add request",
+        "http_request": "HTTP request headers",
+        "api_router": "API routes",
+        "mcp_tool": "MCP tool",
+        "mcp_resource": "MCP resource",
+        "message_template": "Message template",
+        "rename_strategy": "Rename method",
+        "media_files": "Media file selection",
+        "conflict_policy": "Revision conflict policy"
+      },
+      "permission_labels": {
+        "fs_write": "Write files",
+        "network": "Network access"
+      },
+      "disable": "Disable",
+      "disable_confirm_title": "Disable {name}?",
+      "in_use": "These settings use this plugin and stop working: {list}.",
+      "uses_downloader": "downloader instance {id}",
+      "uses_notifier": "notification channel {type}",
+      "uses_rename": "rename method {name}",
+      "remove_row_confirm_title": "Remove row {n} of {field}?",
+      "remove_row_confirm_body": "The values in this row are deleted when you save the options.",
+      "field_required": "Required",
+      "field_min": "Must be {n} or more",
+      "field_max": "Must be {n} or less"
     }
   },
   "downloader": {
@@ -344,7 +393,8 @@
       "delete_failed": "Failed to delete",
       "source": {
         "manual": "Manual"
-      }
+      },
+      "downloader_tag": "Downloader: {id}"
     }
   },
   "log": {
@@ -576,7 +626,10 @@
   "plugin": {
     "load_failed": "Plugin component failed to load.",
     "page_missing": "This plugin has no page",
-    "page_missing_hint": "The plugin is disabled, or it does not declare a page."
+    "page_missing_hint": "The plugin is disabled, or it does not declare a page.",
+    "load_failed_hint": "Retry, or reload the page. If it keeps failing, disable the plugin in Settings > Plugins.",
+    "retry": "Retry",
+    "load_failed_page": "Could not load plugin pages"
   },
   "sidebar": {
     "calendar": "Calendar",
@@ -797,7 +850,7 @@
       },
       "rename_skipped": {
         "title": "Files kept their names",
-        "body": "{torrent_name} ({strategy}): {reason}"
+        "body": "{torrent_name} (rename method: {strategy}). Detail: {reason}. The files keep their original names. Fix the rename setting. AutoBangumi retries on the next run."
       }
     }
   }
