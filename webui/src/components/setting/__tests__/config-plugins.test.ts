@@ -68,6 +68,12 @@ function entry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
     extension_points: ['notifier'],
     description: '',
     min_ab_version: '4.0.0',
+    authors: [],
+    permissions: [],
+    has_web: false,
+    repo: '',
+    commit: '',
+    readme: '',
     installed_version: null,
     ...overrides,
   };

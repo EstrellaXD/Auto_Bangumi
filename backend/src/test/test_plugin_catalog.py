@@ -23,8 +23,9 @@ from cryptography.hazmat.primitives.serialization import (
 from ab_sdk.cli import main, pack
 from ab_sdk.manifest import load_manifest
 from module.models.config import Plugins
-from module.plugin.installer import PluginInstaller
+from module.plugin.installer import PLUGIN_PUBKEY_PATH, PluginInstaller
 from module.plugin.loader import discover
+from module.update.signing import DEFAULT_PUBKEY_PATH
 
 PLUGIN_ID = "catalog-demo"
 
@@ -227,6 +228,10 @@ class TestInstall:
 
         assert not result.success and unmanaged.is_dir()
 
+    def test_default_pubkey_is_the_plugin_key_not_the_update_key(self):
+        assert PluginInstaller().pubkey_path == PLUGIN_PUBKEY_PATH
+        assert PLUGIN_PUBKEY_PATH != DEFAULT_PUBKEY_PATH
+
     async def test_uninstall_leaves_llm_provider_plugins_alone(self, tmp_path, keypair):
         installer = make_installer(tmp_path, keypair, build_zip(tmp_path))
         # LLM 插件：有 installed.json 与 plugin.json，没有 plugin.toml
@@ -262,7 +267,10 @@ class TestReleaseScript:
         archive.parent.mkdir()
         archive.write_bytes(build_zip(tmp_path))
 
-        module.build([archive], tmp_path / "release", key_path)
+        source = {"repo": "alice/ab-demo", "commit": "a" * 40, "readme": "# demo"}
+        module.build(
+            [archive], tmp_path / "release", key_path, sources={PLUGIN_ID: source}
+        )
 
         released = tmp_path / "release"
 
@@ -278,6 +286,8 @@ class TestReleaseScript:
         )
         [entry] = await installer.fetch_catalog()
         assert entry["extension_points"] == ["rename_strategy"]
+        assert {k: entry[k] for k in source} == source
+        assert entry["has_web"] is False
         assert (await installer.install(PLUGIN_ID)).success
 
 

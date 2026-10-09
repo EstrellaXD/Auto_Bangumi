@@ -63,6 +63,13 @@ class CatalogEntry(BaseModel):
     extension_points: list[str] = []
     description: str = ""
     min_ab_version: str = "0.0.0"
+    authors: list[str] = []
+    permissions: list[str] = []
+    has_web: bool = False
+    # 源码位置：作者仓库与固定的 commit（插件市场的索引条目）
+    repo: str = ""
+    commit: str = ""
+    readme: str = ""
     installed_version: str | None
 
 

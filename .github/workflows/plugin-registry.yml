@@ -1,0 +1,119 @@
+name: Plugin Registry
+
+# 插件市场：plugins/registry/<id>.toml 指向作者仓库的固定 commit。
+# - check：PR 上运行作者的代码（测试、pnpm 构建），所以只读权限、不读任何 secret。
+# - build：合并后打包，同样没有密钥；commit 未变的条目复用已发布的 zip。
+# - sign：只有这个 job 读 PLUGIN_SIGNING_KEY，它不运行作者的任何代码，
+#   只用 build_plugin_catalog.py 读 zip 里的 plugin.toml 并签名。
+on:
+  pull_request:
+    branches: ["4.0-dev"]
+    paths: ["plugins/**", "scripts/plugin_registry.py", ".github/workflows/plugin-registry.yml"]
+  push:
+    branches: ["4.0-dev"]
+    paths: ["plugins/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: plugin-registry-${{ github.event_name == 'pull_request' && github.ref || 'publish' }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 需要 base 分支上的旧条目
+      - &python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - &uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - &pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+      - &node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - &deps
+        name: Install backend
+        run: mkdir -p backend/config && cd backend && uv sync --group dev
+      - name: Check changed entries
+        run: |
+          set -o pipefail
+          uv run --project backend python scripts/plugin_registry.py check \
+            --base "origin/${{ github.base_ref }}" --out dist | tee -a "$GITHUB_STEP_SUMMARY"
+
+  build:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - *python
+      - *uv
+      - *pnpm
+      - *node
+      - *deps
+      - name: Download current catalog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download plugins -p catalog.json -D old || echo "release plugins 还不存在，全部重新打包"
+      - name: Build
+        run: uv run --project backend python scripts/plugin_registry.py build --old old/catalog.json --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugins-dist
+          path: dist/
+          retention-days: 7
+
+  sign:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugins-dist
+          path: dist
+      - name: Sign catalog
+        env:
+          PLUGIN_SIGNING_KEY: ${{ secrets.PLUGIN_SIGNING_KEY }}
+        run: |
+          if [ -z "$PLUGIN_SIGNING_KEY" ]; then
+            echo "::error::PLUGIN_SIGNING_KEY secret is not set" >&2
+            exit 1
+          fi
+          umask 077
+          printf '%s\n' "$PLUGIN_SIGNING_KEY" > "$RUNNER_TEMP/key.pem"
+          uv run --no-project --with cryptography python scripts/build_plugin_catalog.py \
+            --key "$RUNNER_TEMP/key.pem" --sources dist/sources.json --out release-assets dist/*.zip
+          rm -f "$RUNNER_TEMP/key.pem"
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # tag 名不含 beta / alpha，不会触发 build.yml 的镜像构建
+          gh release view plugins >/dev/null 2>&1 || gh release create plugins \
+            --target "${{ github.sha }}" --latest=false --title "Plugin catalog" \
+            --notes "AutoBangumi 插件市场的签名目录，由 plugin-registry 工作流维护。"
+          gh release upload plugins release-assets/* --clobber
+          # 下架：删除不在新目录中的旧 zip 与签名
+          for asset in $(gh release view plugins --json assets -q '.assets[].name'); do
+            [ -e "release-assets/$asset" ] || gh release delete-asset plugins "$asset" -y
+          done

@@ -39,6 +39,9 @@ GITHUB_OWNER = "EstrellaXD"
 GITHUB_REPO = "Auto_Bangumi"
 _DL_HEADERS = {"User-Agent": "AutoBangumi-Plugins"}
 DEFAULT_PLUGINS_ROOT = Path("config") / "plugins"
+# 通用插件目录的公钥（与在线更新分开的一把密钥，私钥在 CI 的 PLUGIN_SIGNING_KEY）：
+# 插件签名只代表“维护者审查过这份代码”，不能用来批准更新包
+PLUGIN_PUBKEY_PATH = Path("ab_plugin_pubkey.pem")
 
 
 def release_base(tag: str) -> str:
@@ -265,6 +268,10 @@ class PluginInstaller(SignedCatalogInstaller):
     tag = "plugins"
     catalog_schema = 2
     manifest_name = MANIFEST_NAME
+
+    def __init__(self, **kwargs: Any) -> None:
+        kwargs.setdefault("pubkey_path", PLUGIN_PUBKEY_PATH)
+        super().__init__(**kwargs)
 
     def _reject_reason(self, plugin_id: str) -> Optional[str]:
         if (BUILTIN_ROOT / plugin_id).is_dir():

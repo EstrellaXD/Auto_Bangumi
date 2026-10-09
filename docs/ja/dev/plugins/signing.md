@@ -28,6 +28,12 @@ AB は GitHub release `plugins` から `catalog.json` をダウンロードし�
       "sdk": ">=0.5,<1",
       "min_ab_version": "4.0.0-beta.1",
       "description": "…",
+      "authors": ["…"],
+      "repo": "owner/ntfy-notifier",
+      "commit": "…",
+      "permissions": ["network"],
+      "has_web": false,
+      "readme": "…",
       "asset": "ntfy-notifier-0.1.0.zip",
       "sha256": "…"
     }
@@ -35,7 +41,18 @@ AB は GitHub release `plugins` から `catalog.json` をダウンロードし�
 }
 ```
 
-`catalog.json` と各 zip には、同名の `.sig` ファイルが付きます。ファイル全体のバイト列に対する ed25519 署名を base64 で符号化したものです。公開鍵は AB イメージに含まれます。オンライン更新と同じ鍵です。
+エントリのフィールド：
+
+| フィールド | 説明 |
+| --- | --- |
+| `authors` | 作者のリスト。`plugin.toml` から取得 |
+| `repo` | ソースがある GitHub リポジトリ |
+| `commit` | パックに使った 40 文字の完全な SHA |
+| `permissions` | マニフェストが宣言する権限。表示のみ |
+| `has_web` | プラグインにフロントエンドがあるか |
+| `readme` | README のテキスト。最大 16 KB |
+
+`catalog.json` と各 zip には、同名の `.sig` ファイルが付きます。ファイル全体のバイト列に対する ed25519 署名を base64 で符号化したものです。公開鍵は AB イメージに含まれます。カタログは専用のプラグイン署名鍵を使います。オンライン更新の鍵とは別の鍵です。4.0.0-beta.2 以降の AB はこのプラグイン鍵を信頼します。4.0.0-beta.1 は新しいカタログからインストールできません。
 
 インストール時、AB は次の順に検査します。
 
@@ -67,22 +84,9 @@ API：
 
 ## プラグインを公開する
 
-カタログを公開できるのは、署名用の秘密鍵を持つメンテナーだけです。手順は次のとおりです。
+作者は `EstrellaXD/Auto_Bangumi` に PR を作り、プラグインのソースのリポジトリと commit を登録します。CI が検査し、メンテナーが確認してマージします。マージ後、CI がカタログを再構築し、プラグイン署名鍵で署名して、release `plugins` にアップロードします。秘密鍵は CI の secret にだけ存在します。作者も PR の CI も、秘密鍵には触れられません。
 
-1. 作者が `ab-plugin pack .` を実行し、zip を作ります。
-2. 作者が zip とソースの場所を添えて GitHub issue を作り、掲載を依頼します。
-3. メンテナーがソースを確認し、1 つ以上の zip に対して次のコマンドを実行します。
-
-   ```bash
-   uv run --no-project --with cryptography python scripts/build_plugin_catalog.py \
-       --key ~/.autobangumi/update-signing-key.pem --min-ab 4.0.0-beta.1 \
-       --out release-assets dist/*.zip
-   ```
-
-   スクリプトは `catalog.json`、各 zip、およびその `.sig` を出力します。`--min-ab` に `4.0.0` を指定しないでください。semver では `4.0.0-beta.N` は `4.0.0` より低いため、4.0 beta のユーザーがインストールできなくなります。
-4. メンテナーがディレクトリ全体を release `plugins` にアップロードします（古いファイルは上書きします）。
-
-ユーザーは `GET /api/v1/plugins/catalog` で新しいバージョンを確認できます。
+詳しい手順は [プラグインを掲載する](/ja/dev/plugins/publish) を参照してください。
 
 ## SDK の公開
 
