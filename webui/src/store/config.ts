@@ -71,6 +71,7 @@ export const useConfigStore = defineStore('config', () => {
 
   return {
     config,
+    savedConfig,
     lastSaveError,
     dirtyGroups,
     isDirty,

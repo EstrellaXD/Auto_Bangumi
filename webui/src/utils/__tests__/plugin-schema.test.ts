@@ -85,6 +85,33 @@ describe('schemaFields', () => {
     });
   });
 
+  it('marks fields from the required lists at top level and in $ref items', () => {
+    const fields = schemaFields({
+      properties: {
+        url: { type: 'string' },
+        note: { type: 'string', default: '' },
+        rows: { type: 'array', items: { $ref: '#/$defs/Row' } },
+      },
+      required: ['url'],
+      $defs: {
+        Row: {
+          type: 'object',
+          properties: { from: { type: 'string' }, to: { type: 'string' } },
+          required: ['to'],
+        },
+      },
+    });
+    expect(fields.map((f) => [f.key, f.required])).toEqual([
+      ['url', true],
+      ['note', false],
+      ['rows', false],
+    ]);
+    expect(fields[2].itemFields.map((f) => [f.key, f.required])).toEqual([
+      ['from', false],
+      ['to', true],
+    ]);
+  });
+
   it('returns no fields without a schema', () => {
     expect(schemaFields(null)).toEqual([]);
   });
@@ -103,5 +130,24 @@ describe('fillSchemaDefaults', () => {
     expect(result.note).toBeNull();
     (result.tags as string[]).push('x');
     expect(schema.properties!.tags.default).toEqual([]);
+  });
+});
+
+describe('fillSchemaDefaults deep copy', () => {
+  // 草稿与已保存的 options 共用嵌套行时，编辑行会同时改到"已保存"，脏值检测失效
+  it('should not share nested rows with the saved options', () => {
+    const saved = { rows: [{ from: 'a' }] };
+    const draft = fillSchemaDefaults([], saved);
+    (draft.rows as { from: string }[])[0].from = 'b';
+    expect(saved.rows[0].from).toBe('a');
+  });
+});
+
+describe('schemaFields nullable', () => {
+  it('should mark Optional (anyOf with null) fields as nullable', () => {
+    const fields = schemaFields(schema);
+    const nullable = Object.fromEntries(fields.map((f) => [f.key, f.nullable]));
+    expect(nullable.note).toBe(true);
+    expect(nullable.limit).toBe(false);
   });
 });

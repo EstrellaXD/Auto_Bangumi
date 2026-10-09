@@ -13,7 +13,7 @@ import {
   Sun,
 } from '@icon-park/vue-next';
 import InlineSvg from 'vue-inline-svg';
-import { slotTitle, useUiSlots } from '@/hooks/usePluginUi';
+import { slotTitle, usePluginPages } from '@/hooks/usePluginUi';
 
 const props = withDefaults(
   defineProps<{
@@ -94,7 +94,7 @@ const items = [
 ];
 
 // 插件经 page 挂载点提供的页面，排在设置之前
-const pageSlots = useUiSlots('page');
+const pageSlots = usePluginPages();
 const navItems = computed(() => {
   const pluginItems = pageSlots.value.map((ui, index) => ({
     id: 100 + index,

@@ -8,7 +8,8 @@ import { usePluginProviders } from '@/hooks/usePluginProviders';
 
 const { t, returnUserLangText } = useMyI18n();
 const { confirm } = useConfirm();
-const { getSettingGroup } = useConfigStore();
+const configStore = useConfigStore();
+const { getSettingGroup } = configStore;
 
 const notificationRef = getSettingGroup('notification');
 
@@ -32,7 +33,7 @@ const providerTypes = computed(() => [
   ...builtinProviderTypes,
   ...pluginProviders.value.notifier.map((id) => ({
     value: id,
-    label: `${id}（${t('config.plugins_set.plugin_provided')}）`,
+    label: t('config.notification_set.plugin_label', { id }),
   })),
 ]);
 
@@ -104,9 +105,22 @@ const newProvider = ref<NotificationProviderConfig>({
   enabled: true,
 });
 
-// Testing state
+// Testing state：列表与对话框各用一份结果，互不串扰
+interface TestResult {
+  success: boolean;
+  message: string;
+}
 const testingIndex = ref(-1);
-const testResult = ref<{ success: boolean; message: string } | null>(null);
+const listResult = ref<TestResult | null>(null);
+const dialogResult = ref<TestResult | null>(null);
+// 对话框打开或关闭都清掉上一次的测试结果
+watch([showAddDialog, showEditDialog], () => {
+  dialogResult.value = null;
+});
+// 插件提供的渠道没有内置字段，凭据在插件自己的配置里填写
+const isPluginType = computed(
+  () => !(newProvider.value.type in providerFields)
+);
 
 // Computed properties to access notification settings
 const notificationEnabled = computed({
@@ -151,14 +165,12 @@ function openAddDialog() {
     type: 'telegram',
     enabled: true,
   };
-  testResult.value = null;
   showAddDialog.value = true;
 }
 
 function openEditDialog(index: number) {
   editingIndex.value = index;
   newProvider.value = { ...providers.value[index] };
-  testResult.value = null;
   showEditDialog.value = true;
 }
 
@@ -202,14 +214,12 @@ function toggleProvider(index: number) {
   providers.value = newProviders;
 }
 
-async function testProvider(index: number) {
-  testingIndex.value = index;
-  testResult.value = null;
+async function runTest(
+  request: () => ReturnType<typeof apiNotification.testProvider>
+): Promise<TestResult> {
   try {
-    const response = await apiNotification.testProvider({
-      provider_index: index,
-    });
-    testResult.value = {
+    const response = await request();
+    return {
       success: response.data.success,
       message: returnUserLangText({
         en: response.data.message_en,
@@ -217,37 +227,41 @@ async function testProvider(index: number) {
       }),
     };
   } catch {
-    testResult.value = {
+    return {
       success: false,
       message: t('config.notification_set.test_failed'),
     };
-  } finally {
-    testingIndex.value = -1;
   }
+}
+
+// 已保存且未改动的行按下标使用后端保存的配置：前端拿到的密钥是掩码，
+// 发回去必然失败；插件渠道的自带字段也只有后端的完整配置里才有。
+// 其余行（新增、删除后下标错位、已编辑）在后端没有对应项，按当前配置测试
+async function testProvider(index: number) {
+  testingIndex.value = index;
+  listResult.value = null;
+  const provider = providers.value[index];
+  const saved = configStore.savedConfig.notification.providers?.[index];
+  const unchanged = JSON.stringify(saved) === JSON.stringify(provider);
+  const result = await runTest(() =>
+    unchanged
+      ? apiNotification.testProvider({ provider_index: index })
+      : apiNotification.testProviderConfig(provider as any)
+  );
+  listResult.value = {
+    ...result,
+    message: `${getProviderLabel(provider.type)}: ${result.message}`,
+  };
+  testingIndex.value = -1;
 }
 
 async function testNewProvider() {
   testingIndex.value = -999; // Special index for new provider
-  testResult.value = null;
-  try {
-    const response = await apiNotification.testProviderConfig(
-      newProvider.value as any
-    );
-    testResult.value = {
-      success: response.data.success,
-      message: returnUserLangText({
-        en: response.data.message_en,
-        'zh-CN': response.data.message_zh,
-      }),
-    };
-  } catch {
-    testResult.value = {
-      success: false,
-      message: t('config.notification_set.test_failed'),
-    };
-  } finally {
-    testingIndex.value = -1;
-  }
+  dialogResult.value = null;
+  dialogResult.value = await runTest(() =>
+    apiNotification.testProviderConfig(newProvider.value as any)
+  );
+  testingIndex.value = -1;
 }
 
 function getFieldsForType(type: string) {
@@ -333,11 +347,11 @@ function getFieldsForType(type: string) {
 
         <!-- Test result message -->
         <div
-          v-if="testResult"
+          v-if="listResult"
           class="test-result"
-          :class="testResult.success ? 'test-success' : 'test-error'"
+          :class="listResult.success ? 'test-success' : 'test-error'"
         >
-          {{ testResult.message }}
+          {{ listResult.message }}
         </div>
 
         <div line></div>
@@ -386,17 +400,22 @@ function getFieldsForType(type: string) {
           />
         </ab-field>
 
+        <p v-if="isPluginType" class="plugin-hint">
+          {{ $t('config.notification_set.plugin_hint') }}
+        </p>
+
         <div
-          v-if="testResult"
+          v-if="dialogResult"
           class="test-result"
-          :class="testResult.success ? 'test-success' : 'test-error'"
+          :class="dialogResult.success ? 'test-success' : 'test-error'"
         >
-          {{ testResult.message }}
+          {{ dialogResult.message }}
         </div>
       </div>
 
       <template #footer>
         <ab-button
+          v-if="!isPluginType"
           size="sm"
           class="footer-test"
           :disabled="testingIndex === -999"
@@ -450,17 +469,22 @@ function getFieldsForType(type: string) {
           />
         </ab-field>
 
+        <p v-if="isPluginType" class="plugin-hint">
+          {{ $t('config.notification_set.plugin_hint') }}
+        </p>
+
         <div
-          v-if="testResult"
+          v-if="dialogResult"
           class="test-result"
-          :class="testResult.success ? 'test-success' : 'test-error'"
+          :class="dialogResult.success ? 'test-success' : 'test-error'"
         >
-          {{ testResult.message }}
+          {{ dialogResult.message }}
         </div>
       </div>
 
       <template #footer>
         <ab-button
+          v-if="!isPluginType"
           size="sm"
           class="footer-test"
           :disabled="testingIndex === -999"
@@ -575,6 +599,11 @@ function getFieldsForType(type: string) {
   @include forTablet {
     width: 220px;
   }
+}
+
+.plugin-hint {
+  font-size: 12px;
+  color: var(--color-text-secondary);
 }
 
 .test-result {

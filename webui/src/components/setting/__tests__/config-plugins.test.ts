@@ -31,8 +31,21 @@ vi.mock('@/hooks/usePluginProviders', () => ({
 }));
 vi.mock('@/hooks/usePluginUi', () => ({ refreshPluginUi: vi.fn() }));
 const refreshGroupMock = vi.fn();
+const storeConfig = {
+  plugins: {
+    instances: [
+      { id: 'main', point: 'downloader', provider: 'qbittorrent', options: {} },
+      { id: 'box', point: 'downloader', provider: 'tr', options: {} },
+    ],
+    slots: { rename_strategy: 'pn' },
+  },
+  notification: { providers: [{ type: 'ntfy', enabled: true }] },
+};
 vi.mock('@/store/config', () => ({
-  useConfigStore: () => ({ refreshGroup: refreshGroupMock }),
+  useConfigStore: () => ({
+    refreshGroup: refreshGroupMock,
+    config: storeConfig,
+  }),
 }));
 
 const api = vi.mocked(apiPlugins);
@@ -51,6 +64,7 @@ function plugin(overrides: Partial<PluginInfo> = {}): PluginInfo {
     error: null,
     config_schema: null,
     options: {},
+    providers: {},
     ...overrides,
   };
 }
@@ -269,6 +283,113 @@ describe('config-plugins', () => {
     expect(api.update).toHaveBeenCalledWith('b', { enabled: true });
     expect((wrapper.find('input').element as HTMLInputElement).value).toBe(
       'typed'
+    );
+  });
+});
+
+describe('config-plugins states', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should show an error with retry when the initial load fails', async () => {
+    api.list.mockRejectedValueOnce(new Error('x'));
+    const wrapper = mount(ConfigPlugins, {
+      global: {
+        stubs: {
+          'ab-fold-panel': { template: '<section><slot /></section>' },
+          AbSwitch: true,
+        },
+      },
+    });
+    await flushPromises();
+    expect(wrapper.text()).toContain('config.plugins_set.retry');
+
+    api.list.mockResolvedValue(overview([plugin({ name: 'recovered' })]));
+    await button(wrapper as never, 'config.plugins_set.retry')[0].trigger(
+      'click'
+    );
+    await flushPromises();
+    expect(wrapper.text()).toContain('recovered');
+  });
+
+  it('should name each enable switch after its plugin', async () => {
+    const wrapper = await mountPage([plugin({ name: 'ntfy' })]);
+    expect(
+      wrapper.findAllComponents({ name: 'AbSwitch' })[1].props('ariaLabel')
+    ).toBe('config.plugins_set.enabled_for');
+  });
+
+  it('should enable Save and show an unsaved marker only after an edit', async () => {
+    const wrapper = await mountPage([
+      plugin({
+        config_schema: { properties: { url: { type: 'string', default: '' } } },
+        options: { url: 'a' },
+      }),
+    ]);
+    const save = () => button(wrapper, 'config.plugins_set.save')[0];
+    expect(save().attributes('disabled')).toBeDefined();
+    expect(wrapper.text()).not.toContain('config.plugins_set.unsaved');
+
+    await wrapper.find('input').setValue('b');
+    expect(save().attributes('disabled')).toBeUndefined();
+    expect(wrapper.text()).toContain('config.plugins_set.unsaved');
+  });
+});
+
+describe('config-plugins impact warning', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    api.update.mockResolvedValue(overview([]));
+  });
+
+  function toggleOff(wrapper: Awaited<ReturnType<typeof mountPage>>) {
+    // 第 0 个开关是 allow_unsigned
+    wrapper
+      .findAllComponents({ name: 'AbSwitch' })[1]
+      .vm.$emit('update:model-value', false);
+    return flushPromises();
+  }
+
+  it.each([
+    // [插件 Provider, 确认结果, 是否询问, 是否停用]
+    [{}, undefined, false, true],
+    [{ downloader: ['aria2'] }, undefined, false, true],
+    [{ downloader: ['tr'] }, false, true, false],
+    [{ downloader: ['tr'] }, true, true, true],
+    [{ notifier: ['ntfy'] }, true, true, true],
+    [{ rename_strategy: ['pn', 'advance'] }, false, true, false],
+  ])(
+    'should confirm disabling when providers %j are in use (confirm=%s)',
+    async (providers, confirmed, asked, disabled) => {
+      confirmMock.mockResolvedValue(confirmed);
+      const wrapper = await mountPage([plugin({ providers })]);
+
+      await toggleOff(wrapper);
+
+      expect(confirmMock).toHaveBeenCalledTimes(asked ? 1 : 0);
+      if (asked)
+        expect(confirmMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            danger: true,
+            body: 'config.plugins_set.in_use',
+          })
+        );
+      expect(api.update).toHaveBeenCalledTimes(disabled ? 1 : 0);
+    }
+  );
+
+  it('should name the affected settings in the uninstall confirm', async () => {
+    confirmMock.mockResolvedValue(false);
+    const wrapper = await mountPage([
+      plugin({ providers: { downloader: ['tr'] } }),
+    ]);
+
+    await button(wrapper, 'config.plugins_set.uninstall')[0].trigger('click');
+    await flushPromises();
+
+    expect(confirmMock.mock.calls[0][0].body).toBe(
+      'config.plugins_set.in_use config.plugins_set.uninstall_confirm_body'
     );
   });
 });

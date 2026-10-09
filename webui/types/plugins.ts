@@ -23,6 +23,8 @@ export interface JsonSchemaProperty {
   $ref?: string;
   minimum?: number;
   maximum?: number;
+  /** 对象类型（数组元素等）中必填的子字段 */
+  required?: string[];
 }
 
 export interface JsonSchema {
@@ -48,6 +50,8 @@ export interface PluginInfo {
   error: string | null;
   config_schema: JsonSchema | null;
   options: Record<string, unknown>;
+  /** 该插件当前登记的 Provider id，按扩展点分组（只含非空项；未启用时为空） */
+  providers: Partial<PluginProviders>;
 }
 
 export interface PluginsOverview {

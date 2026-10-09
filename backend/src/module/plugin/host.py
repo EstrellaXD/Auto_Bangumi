@@ -159,12 +159,16 @@ def provider_impls(
     return impls
 
 
-def plugin_provider_ids(point: str) -> list[str]:
-    """由插件（而非 core）提供的 Provider id，供设置页合并到候选列表。"""
+def plugin_provider_ids(point: str, plugin_id: str | None = None) -> list[str]:
+    """由插件（而非 core）提供的 Provider id，供设置页合并到候选列表。
+
+    给出 ``plugin_id`` 时只返回该插件登记的 id，设置页据此在停用/卸载前提示影响。
+    """
     return sorted(
         pid
         for pid, entry in get_registry().providers(point).items()
         if entry.plugin_id != CORE
+        and (plugin_id is None or entry.plugin_id == plugin_id)
     )
 
 
