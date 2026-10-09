@@ -1,26 +1,25 @@
-// 手动选种：番剧详情页标签。无需构建；宿主在包裹元素的 Shadow DOM 中注入
-// --ab-* 主题变量，这里直接使用。
-const TEXT = {
-  'zh-CN': {
-    empty: '这条规则还没有种子记录',
-    pick: '选用',
-    picked: '已选',
-    failed: '保存选择失败',
+const s = {
+  "zh-CN": {
+    empty: "这条规则还没有种子记录",
+    pick: "选用",
+    picked: "已选",
+    failed: "保存选择失败"
   },
-  'en-US': {
-    empty: 'This rule has no torrent records yet',
-    pick: 'Pick',
-    picked: 'Picked',
-    failed: 'Failed to save the pick',
-  },
+  "en-US": {
+    empty: "This rule has no torrent records yet",
+    pick: "Pick",
+    picked: "Picked",
+    failed: "Failed to save the pick"
+  }
 };
-
-class ManualPick extends HTMLElement {
+class c extends HTMLElement {
+  constructor() {
+    super(...arguments), this.text = s["en-US"], this.bangumiId = 0;
+  }
   async connectedCallback() {
-    this.text = TEXT[this.host.i18n.locale] ?? TEXT['en-US'];
-    this.bangumiId = this.context.bangumiId;
-    const root = this.shadowRoot ?? this.attachShadow({ mode: 'open' });
-    root.innerHTML = `
+    this.text = s[this.host.i18n.locale] ?? s["en-US"], this.bangumiId = this.context.bangumiId;
+    const t = this.shadowRoot ?? this.attachShadow({ mode: "open" });
+    t.innerHTML = `
       <style>
         :host { display: block; }
         ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
@@ -38,69 +37,48 @@ class ManualPick extends HTMLElement {
         p { margin: 0; font-size: 13px; color: var(--ab-color-text-secondary); }
       </style>
       <div></div>
-    `;
-    this.body = root.querySelector('div');
-    // 别的会话或标签页选种后，打开着的详情页也会刷新
-    this.unsubscribe = this.host.events.on('manual-pick.picked', (payload) => {
-      if (payload?.bangumi_id === this.bangumiId) this.load();
-    });
-    await this.load();
+    `, this.body = t.querySelector("div"), this.unsubscribe = this.host.events.on("manual-pick.picked", (i) => {
+      (i == null ? void 0 : i.bangumi_id) === this.bangumiId && this.load();
+    }), await this.load();
   }
-
   disconnectedCallback() {
-    this.unsubscribe?.();
+    var t;
+    (t = this.unsubscribe) == null || t.call(this);
   }
-
   async load() {
-    const [torrents, pick] = await Promise.all([
+    const [t, i] = await Promise.all([
       // 宿主的只读 API：以 /api/v1/ 开头的路径只允许 GET
       this.host.api.get(`/api/v1/bangumi/${this.bangumiId}/torrents`),
-      this.host.api.get(`picks/${this.bangumiId}`),
+      this.host.api.get(`picks/${this.bangumiId}`)
     ]);
-    this.render(torrents, pick.torrent_id);
+    this.render(t, i.torrent_id);
   }
-
-  render(torrents, pickedId) {
-    this.body.replaceChildren();
-    if (!torrents.length) {
-      const empty = document.createElement('p');
-      empty.textContent = this.text.empty;
-      this.body.append(empty);
+  render(t, i) {
+    if (this.body.replaceChildren(), !t.length) {
+      const n = document.createElement("p");
+      n.textContent = this.text.empty, this.body.append(n);
       return;
     }
-    const list = document.createElement('ul');
-    for (const torrent of torrents) {
-      const item = document.createElement('li');
-      const name = document.createElement('span');
-      name.className = 'name';
-      name.textContent = torrent.name;
-      item.append(name);
-      if (torrent.id === pickedId) {
-        const mark = document.createElement('span');
-        mark.className = 'mark';
-        mark.title = this.text.picked;
-        item.append(mark);
+    const r = document.createElement("ul");
+    for (const n of t) {
+      const a = document.createElement("li"), o = document.createElement("span");
+      if (o.className = "name", o.textContent = n.name, a.append(o), n.id === i) {
+        const e = document.createElement("span");
+        e.className = "mark", e.title = this.text.picked, a.append(e);
       } else {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.textContent = this.text.pick;
-        button.addEventListener('click', () => this.pick(torrent.id));
-        item.append(button);
+        const e = document.createElement("button");
+        e.type = "button", e.textContent = this.text.pick, e.addEventListener("click", () => this.pick(n.id)), a.append(e);
       }
-      list.append(item);
+      r.append(a);
     }
-    this.body.append(list);
+    this.body.append(r);
   }
-
-  async pick(torrentId) {
+  async pick(t) {
     try {
-      await this.host.api.put(`picks/${this.bangumiId}`, { torrent_id: torrentId });
+      await this.host.api.put(`picks/${this.bangumiId}`, { torrent_id: t });
     } catch {
-      this.host.toast(this.text.failed, 'error');
+      this.host.toast(this.text.failed, "error");
     }
   }
 }
-
-if (!customElements.get('ab-plugin-manual-pick')) {
-  customElements.define('ab-plugin-manual-pick', ManualPick);
-}
+customElements.get("ab-plugin-manual-pick") || customElements.define("ab-plugin-manual-pick", c);

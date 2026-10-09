@@ -15,7 +15,7 @@ from . import SDK_VERSION, points
 from .manifest import ID_RE, MANIFEST_NAME, TOOLING_DIRS, PluginManifest, check
 
 # 打包时排除的目录名与文件后缀：开发产物、测试与作者侧的工程文件
-_PACK_EXCLUDE_DIRS = TOOLING_DIRS | {"tests"}
+_PACK_EXCLUDE_DIRS = TOOLING_DIRS | {"tests", "web-src"}  # web-src 是前端源码，运行时只用构建出的 web/
 _PACK_EXCLUDE_FILES = frozenset({".DS_Store", "pyproject.toml", "uv.lock"})
 _ZIP_EPOCH = (1980, 1, 1, 0, 0, 0)  # 固定时间戳，同样的内容打出同样的 sha256
 
